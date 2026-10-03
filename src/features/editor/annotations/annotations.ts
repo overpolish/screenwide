@@ -210,11 +210,6 @@ export type AnnotationShape =
 
 export type Annotation = {
   /**
-   * Whether the annotation is drawn over the camera bubble rather than under
-   * it. Screenshots have no bubble; the recording compositor will honour this.
-   */
-  aboveCamera: boolean;
-  /**
    * Whether a timed annotation draws itself in at the start of its clip and
    * undraws at the end. Stills have no clip to animate over and draw whole.
    */
@@ -243,36 +238,44 @@ export const annotationTextEdit = (
   value === "begin" || value === "update" || value === "end" ? value : null;
 
 /**
- * The annotations with their counters numbered 1, 2, 3 in the order of the
- * numbers they already carry, the one earlier in the list first on a tie.
+ * Every list with its counters numbered 1, 2, 3 as one run, in the order of
+ * the numbers they already carry: on a tie, the earlier list first, then the
+ * one earlier in its list.
  *
  * A counter keeps the number it was given: moving it, or changing which
- * annotations it is drawn over, never renumbers it. Only the gaps close, so
- * deleting the second of three counters leaves 1 and 2 rather than 1 and 3,
- * and a delete, an undo and a reorder all land on the same numbers without
- * any of them knowing about counters. The list is returned unchanged when
- * nothing moved, so an unchanged document is never rewritten.
+ * annotations or layers it is drawn over, never renumbers it. Only the gaps
+ * close, so deleting the second of three counters leaves 1 and 2 rather than
+ * 1 and 3, and a delete, an undo and a reorder all land on the same numbers
+ * without any of them knowing about counters. A list in which nothing moved
+ * is handed back as it was, so an unchanged document is never rewritten.
  */
-export const renumberedCounters = (annotations: Annotation[]): Annotation[] => {
-  const order = annotations
-    .flatMap((annotation, index) =>
-      annotation.shape.kind === "counter"
-        ? [{ index, value: annotation.shape.value }]
-        : [],
+export const renumberedCounterLists = (
+  lists: readonly Annotation[][],
+): Annotation[][] => {
+  const order = lists
+    .flatMap((annotations, list) =>
+      annotations.flatMap((annotation, index) =>
+        annotation.shape.kind === "counter"
+          ? [{ index, list, value: annotation.shape.value }]
+          : [],
+      ),
     )
-    .sort((a, b) => a.value - b.value || a.index - b.index);
-  const values = new Map(order.map(({ index }, place) => [index, place + 1]));
-  const renumbered = annotations.map((annotation, index) => {
-    const value = values.get(index);
-    if (annotation.shape.kind !== "counter" || value === undefined)
-      return annotation;
-    return annotation.shape.value === value
-      ? annotation
-      : { ...annotation, shape: { ...annotation.shape, value } };
+    .sort((a, b) => a.value - b.value || a.list - b.list || a.index - b.index);
+  const values = lists.map(() => new Map<number, number>());
+  order.forEach(({ index, list }, place) => values[list].set(index, place + 1));
+  return lists.map((annotations, list) => {
+    const renumbered = annotations.map((annotation, index) => {
+      const value = values[list].get(index);
+      if (annotation.shape.kind !== "counter" || value === undefined)
+        return annotation;
+      return annotation.shape.value === value
+        ? annotation
+        : { ...annotation, shape: { ...annotation.shape, value } };
+    });
+    return renumbered.every(
+      (annotation, index) => annotation === annotations[index],
+    )
+      ? annotations
+      : renumbered;
   });
-  return renumbered.every(
-    (annotation, index) => annotation === annotations[index],
-  )
-    ? annotations
-    : renumbered;
 };

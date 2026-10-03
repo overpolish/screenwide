@@ -63,6 +63,7 @@ impl RecordingPreviewSurface {
             selection_snapping_enabled: false,
             selection_snap_guide_x: None,
             selection_snap_guide_y: None,
+            selection_hit_testing: false,
             selection_targets: Vec::new(),
             viewport: PreviewSurfaceRect {
               height: 0.0,

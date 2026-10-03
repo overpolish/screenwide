@@ -52,6 +52,18 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_has_group(ScreenwidePreviewSurface *s
          annotation_active_mode(surface) != ScreenwideAnnotationModeNone;
 }
 
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_still_choice(ScreenwidePreviewSurface *surface) {
+  NSUInteger count = 0;
+  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+  NSInteger selected = surface.annotationSelected;
+  if (selected >= 0 && (NSUInteger)selected < count) return items[selected].layer_id < 0;
+  if (!annotation_has_group(surface)) return NO;
+  for (NSUInteger at = 0; at < count; at++)
+    if (items[at].layer_id < 0 && (items[at].flags & ScreenwideAnnotationFlagGrouped) != 0)
+      return YES;
+  return NO;
+}
+
 SCREENWIDE_PREVIEW_PRIVATE int32_t annotation_group_layer_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   if (!annotation_has_group(surface)) return INT32_MIN;

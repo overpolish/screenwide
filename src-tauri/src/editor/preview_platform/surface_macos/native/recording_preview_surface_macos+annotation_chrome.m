@@ -7,6 +7,8 @@
 #import "recording_preview_surface_macos_private.h"
 #include <math.h>
 
+#include "recording_preview_annotation_layers_macos.h"
+
 /// How long the hover halo takes to grow, matching the ruler's own hover
 /// pulse. The widths it grows between live with the halo itself, on the Rust
 /// side that turns this progress into the shader's uniform.
@@ -185,10 +187,17 @@ static CGFloat annotation_hover_progress(ScreenwidePreviewSurface *surface) {
 }
 
 /// Tells Rust where the halo stands, with the picture's on-screen width so it
-/// can turn the halo's points into the canvas pixels the shader draws in.
+/// can turn the halo's points into the canvas pixels the shader draws in. The
+/// width is that of the hovered annotation's own layer, which need not be the
+/// selected one.
 static void report_annotation_hover(ScreenwidePreviewSurface *surface) {
   if (surface.annotationHoverCallback == NULL) return;
-  NSRect image = annotation_image_frame(surface);
+  NSUInteger count = 0;
+  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+  NSInteger hovered = surface.annotationHovered;
+  NSRect image = hovered >= 0 && (NSUInteger)hovered < count
+                     ? annotation_layer_image(surface, items[hovered].layer_id)
+                     : annotation_image_frame(surface);
   surface.annotationHoverCallback(
       (int32_t)surface.annotationHovered,
       surface.annotationHovered < 0 ? 0.0 : annotation_hover_progress(surface),

@@ -161,20 +161,27 @@ pub(crate) fn install(
           if !image_points.is_finite() || image_points <= 0.0 {
             return None;
           }
-          let output_width = manager
+          let settings = manager
             .sources
             .as_ref()?
             .composition_settings
             .as_ref()?
             .read()
-            .ok()
-            .map(|settings| {
-              if pane == 0 {
-                settings.recording_output.primary.width
-              } else {
-                settings.recording_output.camera.width
-              }
-            })?;
+            .ok()?;
+          // In One video the camera's annotations are drawn in the screen's
+          // pane, after the screen's own, and its image is as wide on the
+          // canvas as the overlay places it.
+          if pane == 1 && settings.bake_camera {
+            let width = crate::editor::screenshot_preview::hover_width_points(progress)
+              * settings.camera_overlay.camera_width
+              / image_points;
+            return Some((0, manager.pane_annotations(0).len() + local, width as f32));
+          }
+          let output_width = if pane == 0 {
+            settings.recording_output.primary.width
+          } else {
+            settings.recording_output.camera.width
+          };
           let width = crate::editor::screenshot_preview::hover_width_points(progress)
             * f64::from(output_width)
             / image_points;

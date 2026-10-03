@@ -92,6 +92,7 @@ impl RecordingPreviewSurface {
       state.editor_active = false;
       state.selection = None;
       state.selection_targets.clear();
+      state.selection_hit_testing = false;
       state.gesture = None;
       // A hidden surface has no drag to finish; never keep the DOM locked out
       // of the pane geometry behind it.

@@ -131,14 +131,14 @@ export function useRecordingPreviewTransport(
       isFramed: selection.isFramed,
       previewSourceDimensions,
     });
-  // The tool the annotation chrome is drawn from. A baked camera layer has no
-  // annotations of its own, and a camera saved as a separate file is not drawn
-  // at all, so selecting either puts the tool down. One value feeds both the
-  // native chrome (through the layout, beside the selection it has to agree
-  // with) and the editor's own delete shortcut.
+  // The tool the annotation chrome is drawn from. A camera saved as a
+  // separate file is not drawn at all, so selecting it puts the tool down; a
+  // camera drawn into the video carries annotations of its own, as the
+  // screen does. One value feeds both the native chrome (through the layout,
+  // beside the selection it has to agree with) and the editor's own delete
+  // shortcut.
   const annotationTool =
-    (activeVideoTrack === "camera" &&
-      (bakeCamera || !composedVideoTracks.has("camera"))) ||
+    (activeVideoTrack === "camera" && !composedVideoTracks.has("camera")) ||
     !isAnnotationTool(canvasTool)
       ? null
       : canvasTool;
@@ -190,6 +190,7 @@ export function useRecordingPreviewTransport(
     [recordingTimelineEdit, artifactId],
   );
   const annotations = useRecordingAnnotations({
+    bakedLayers: selection.bakedLayers,
     edit: annotationEdit,
     frames: previewSourceDimensions,
     getPositionMs: player.getPositionMs,
@@ -201,14 +202,13 @@ export function useRecordingPreviewTransport(
       timelineBlade.blade.selectSegment(null);
       onSelectedTrackChange?.(track);
     },
+    screenCaptureScale: props.screenCaptureScale ?? 1,
     sessionId: player.sessionId,
     sourceDurationMs: durationMs,
     tool: annotationTool,
     trackId:
       activeVideoTrack && composedVideoTracks.has(activeVideoTrack)
-        ? bakeCamera
-          ? "primary"
-          : activeVideoTrack
+        ? activeVideoTrack
         : null,
   });
   clearAnnotationRef.current = annotations.clearSelection;

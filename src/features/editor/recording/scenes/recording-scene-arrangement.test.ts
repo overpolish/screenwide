@@ -67,6 +67,18 @@ describe("arrangedRecordingScene", () => {
     expect(arranged(12_000)).toBeNull();
   });
 
+  it("holds a scene that runs to the end of the video, with nothing to leave for", () => {
+    const video = (endMs: number) => [
+      { playbackRate: 1, sourceEndMs: endMs, sourceStartMs: 0 },
+    ];
+    const settled = arranged(5_000, { ranges: video(10_000) });
+    // 200ms from the end, inside the window it would leave over.
+    const atTheEnd = arranged(9_800, { ranges: video(10_000) });
+    expect(atTheEnd?.output).toEqual(settled?.output);
+    const leaving = arranged(9_800, { ranges: video(12_000) });
+    expect(leaving?.output.cropX).not.toBeCloseTo(settled?.output.cropX ?? NaN);
+  });
+
   it("places the panes and frames the camera where the preview draws them", () => {
     const scene = arranged(5_000);
     const panes = recordingScenePanes(

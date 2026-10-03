@@ -52,7 +52,7 @@ pub(super) fn compose_screenshot_workspace(
     let picture = background_image_layer(&output.canvas);
     let mut composed = crate::screenshots::compose_output_layers(
       &first.image,
-      &output.output_for(first),
+      &output.output_for(first, items),
       0.0,
       true,
       None,
@@ -65,7 +65,7 @@ pub(super) fn compose_screenshot_workspace(
     for item in &ordered_items[1..] {
       let layer = crate::screenshots::compose_output_layers(
         &item.image,
-        &output.output_for(item),
+        &output.output_for(item, items),
         0.0,
         true,
         None,
@@ -93,12 +93,12 @@ pub(super) fn compose_screenshot_workspace(
     let surface = preview_platform::RecordingPreviewSurface::from_window(&window)?;
     let layers = ordered_items
       .iter()
-      .map(|item| (&item.image, output.output_for(item)))
+      .map(|item| (&item.image, output.output_for(item, items)))
       .collect::<Vec<_>>();
     surface.compose_screenshot_layers_to_image(&layers)
   }
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
-    compose_screenshot(&first.image, &output.output_for(first))
+    compose_screenshot(&first.image, &output.output_for(first, items))
   }
 }

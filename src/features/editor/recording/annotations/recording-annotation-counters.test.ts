@@ -14,7 +14,6 @@ const counterClip = (
   startMs: number,
 ): RecordingAnnotationClip => ({
   annotation: {
-    aboveCamera: false,
     animated: true,
     id,
     shape: { angle: 0, center: { x: 10, y: 10 }, kind: "counter", value },

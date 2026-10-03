@@ -13,7 +13,6 @@ import {
 } from "./screenshot-output";
 
 const arrow = (id: string): Annotation => ({
-  aboveCamera: false,
   animated: true,
   id,
   shape: {

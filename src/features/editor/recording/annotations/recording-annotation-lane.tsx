@@ -20,6 +20,7 @@ import {
 import { TimelineTrackHeader } from "../../timeline/tracks/timeline-track-header";
 
 import { RecordingAnnotationClipEdges } from "./recording-annotation-clip-edges";
+import { RecordingCameraPlacement } from "./recording-annotation-layers";
 import {
   ANNOTATION_CLIP_MINIMUM_WIDTH_PX,
   recordingAnnotationRows,
@@ -43,6 +44,7 @@ import { useRecordingAnnotationDrag } from "./use-recording-annotation-drag";
 import { RecordingPinStatus } from "./use-recording-pin-status";
 
 export function RecordingAnnotationLane({
+  cameraPlacement = null,
   clips,
   edit,
   onChange,
@@ -68,6 +70,9 @@ export function RecordingAnnotationLane({
   selectedIds: ReadonlySet<string>;
   sourceDurationMs: number;
   viewport: TimelineViewportState;
+  /** Where One video draws the screen and the camera at the playhead, which
+   * a clip's menu moves its annotation between. */
+  cameraPlacement?: RecordingCameraPlacement | null;
   onPreview?: (clips: RecordingAnnotationClip[] | null) => void;
   onSeek?: SeekHandler;
   /** How each pinned clip's path is coming along, by annotation id. */
@@ -116,6 +121,7 @@ export function RecordingAnnotationLane({
   };
   const openKeyframeMenu = usePinKeyframeMenu(deleteKeyframe);
   const openClipMenu = useAnnotationClipMenu({
+    cameraPlacement,
     clips,
     idPrefix: "annotation-clip:",
     onClipsChange: onChange,

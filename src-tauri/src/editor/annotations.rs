@@ -40,6 +40,9 @@ pub(crate) mod arrow;
 /// and the spotlight.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod box_gesture;
+/// A camera's annotations drawn inside the screen's composition, as One
+/// video draws the camera.
+pub(crate) mod camera_baked;
 /// The counter tool's own half of the model.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod counter;

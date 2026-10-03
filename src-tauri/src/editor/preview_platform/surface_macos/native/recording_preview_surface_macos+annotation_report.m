@@ -85,3 +85,27 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_choose(ScreenwidePreviewSurface *surf
                           (uint32_t)index, ScreenwideAnnotationHandleBody,
                           point);
 }
+
+// The rule `drawing_layer` keeps in `src-tauri/src/editor/annotations/gesture.rs`:
+// the topmost picture, the canvas frame and the keyboard overlay being none.
+SCREENWIDE_PREVIEW_PRIVATE void annotation_take_layer_at_point(
+    ScreenwidePreviewSurface *surface, NSPoint point) {
+  for (NSValue *value in surface.selectionTargets.reverseObjectEnumerator) {
+    ScreenwidePreviewSelection target;
+    [value getValue:&target size:sizeof(target)];
+    if (target.layer_id == ScreenwideFrameLayerId || selection_is_keyboard(target)) continue;
+    if (!NSPointInRect(point, selection_image_frame_for(surface, target))) continue;
+    if (surface.hasSelection && surface.selection.pane_index == target.pane_index &&
+        surface.selection.layer_id == target.layer_id)
+      return;
+    surface.hasSelection = YES;
+    surface.selection = target;
+    surface.annotationSelected = -1;
+    clear_selection_snap_guides(surface);
+    if (surface.selectionCallback != NULL)
+      surface.selectionCallback((int32_t)target.layer_id, surface.selectionContext);
+    redraw_selection(surface);
+    invalidate_selection_cursor_rects(surface);
+    return;
+  }
+}

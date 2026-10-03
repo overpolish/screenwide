@@ -219,7 +219,7 @@ mod picking_chrome;
 mod picking_distance;
 use picking::{
   handle_at_point, image_frame, item_image_frame, layer_selection, selected_item, shaft_at_point,
-  text_geometry,
+  take_drawing_layer, text_geometry,
 };
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
 

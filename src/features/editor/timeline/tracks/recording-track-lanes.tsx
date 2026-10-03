@@ -32,6 +32,7 @@ const NO_SCENES: RecordingSceneClip[] = [];
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   adjustedKeyboardFragmentIds,
+  annotationCameraPlacement,
   annotationClips = [],
   annotationPinStatus,
   annotationPinning,
@@ -197,6 +198,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
           onAnnotationsClear &&
           onAnnotationsSweep ? (
             <RecordingAnnotationLane
+              cameraPlacement={annotationCameraPlacement}
               clips={annotationClips}
               edit={blade.edit}
               onChange={onAnnotationsChange}

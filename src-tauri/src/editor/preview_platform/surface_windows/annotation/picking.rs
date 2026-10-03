@@ -11,7 +11,7 @@
 use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
 use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::gesture::{MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
+use crate::editor::annotations::gesture::{drawing_layer, MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
 use crate::editor::annotations::highlight::geometry::HighlightFlow;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::prepare_text;
@@ -59,6 +59,33 @@ pub(super) fn item_image_frame(state: &SurfaceState, index: i32) -> Option<Previ
 /// The image the selected arrow's grips, and the snap chrome, are placed in.
 pub(super) fn image_frame(state: &SurfaceState) -> Option<PreviewSurfaceRect> {
   item_image_frame(state, state.annotation.selected)
+}
+
+/// Puts the picture under a drawing press in hand, as a press with the select
+/// tool would, so the fresh annotation joins it and the panel and the chrome
+/// follow: the topmost laid-out picture under `point`, by the rule
+/// [`drawing_layer`] keeps. Over no picture the selected layer keeps the
+/// annotation. Answers the layer to report where the choice changed.
+pub(super) fn take_drawing_layer(
+  inner: &SurfaceInner,
+  state: &mut SurfaceState,
+  point: (f64, f64),
+) -> Option<u32> {
+  let pictures = state.selection_targets.iter().filter_map(|target| {
+    let rect = layer_image_rect(state, target.layer_id as i32)?;
+    Some((target.layer_id, [rect.x, rect.y, rect.width, rect.height]))
+  });
+  let target = layer_selection(state, drawing_layer(pictures, point)? as i32)?;
+  if state.selection.is_some_and(|current| {
+    current.pane_index == target.pane_index && current.layer_id == target.layer_id
+  }) {
+    return None;
+  }
+  state.selection = Some(target);
+  state.annotation.selected = -1;
+  clear_selection_snap_guides(state);
+  draw_selection(inner, state);
+  Some(target.layer_id)
 }
 
 pub(super) fn selected_item(state: &SurfaceState) -> Option<&NativeAnnotationHandles> {

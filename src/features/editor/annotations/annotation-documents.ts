@@ -75,7 +75,6 @@ export const validAnnotations = (value: unknown): Annotation[] => {
       width: Math.max(0, style.width),
     };
     const common = {
-      aboveCamera: annotation.aboveCamera === true,
       animated: annotation.animated !== false,
       id: typeof annotation.id === "string" ? annotation.id : "",
       ...(annotation.pen === true ? { pen: true as const } : {}),

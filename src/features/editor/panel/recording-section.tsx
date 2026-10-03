@@ -118,6 +118,7 @@ export function RecordingSection({
         }}
         recordingOutput={recordingOutput}
         recordingTimelineEdit={recordingTimelineEdit}
+        screenCaptureScale={sourceScalePercent(artifact) / 100}
         selectedTrack={selectedTrack}
       />
     </div>

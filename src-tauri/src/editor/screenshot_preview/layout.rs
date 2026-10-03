@@ -4,9 +4,9 @@
 use tauri::AppHandle;
 
 use super::super::preview_platform::workspace_editor::WorldRect;
+use super::super::preview_platform::PreviewSurfaceRect;
 #[cfg(target_os = "macos")]
 use super::super::preview_platform::SelectionGestureOperation;
-use super::super::preview_platform::{PreviewSelection, PreviewSurfaceRect};
 use super::super::ScreenshotWorkspaceOutputSettings;
 use super::payloads::{ScreenshotSelectionOverlay, ScreenshotSurfacePane};
 use super::state::{PreviewManager, ScreenshotPreviewState};
@@ -158,11 +158,11 @@ pub async fn layout_screenshot_preview_surface(
   }
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = hover_cleared;
-  let selection = selection.map(preview_selection);
+  let selection = selection.map(ScreenshotSelectionOverlay::preview_selection);
   let selection_targets = selection_targets.map(|targets| {
     targets
       .into_iter()
-      .map(preview_selection)
+      .map(ScreenshotSelectionOverlay::preview_selection)
       .collect::<Vec<_>>()
   });
   // On macOS every setter below would redraw the workspace at once, from the
@@ -180,7 +180,16 @@ pub async fn layout_screenshot_preview_surface(
   // macOS `set_selection` performs the draw, so everything it depends on -
   // the targets, and which tool owns the chrome - has to be in place first,
   // or the layer's chrome shows for a frame as the arrow tool comes in hand.
-  surface.set_selection_targets(selection_targets.as_deref());
+  // Under a drawing tool the targets only say which picture a fresh
+  // annotation is drawn on: a press there never picks up or moves a layer.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  let picks_layers = crate::editor::annotations::gesture::drawing_kind(
+    crate::editor::annotations::gesture::annotation_mode(annotation_tool.as_deref()),
+  )
+  .is_none();
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let picks_layers = true;
+  surface.set_selection_targets(selection_targets.as_deref(), picks_layers);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_annotations(
     &annotation_layout.handles,
@@ -269,31 +278,4 @@ pub async fn layout_screenshot_preview_surface(
   }
   drop(batch);
   Ok(())
-}
-
-fn preview_selection(overlay: ScreenshotSelectionOverlay) -> PreviewSelection {
-  PreviewSelection {
-    recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
-    recenter_width: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.width),
-    recenter_x: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.x),
-    recenter_y: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.y),
-    crop_mode: u32::from(overlay.crop_mode),
-    image_height: overlay.image.map_or(0.0, |image| image.height),
-    image_width: overlay.image.map_or(0.0, |image| image.width),
-    image_x: overlay.image.map_or(0.0, |image| image.x),
-    image_y: overlay.image.map_or(0.0, |image| image.y),
-    layer_id: overlay.layer_id.unwrap_or(overlay.pane_index),
-    #[cfg(target_os = "macos")]
-    pane_index: 0,
-    #[cfg(not(target_os = "macos"))]
-    pane_index: overlay.pane_index,
-    x: overlay.rect.x,
-    y: overlay.rect.y,
-    width: overlay.rect.width,
-    height: overlay.rect.height,
-    radius_percent: overlay.radius_percent,
-    minimum_scale: 0.0,
-    maximum_scale: 0.0,
-    ..PreviewSelection::default()
-  }
 }

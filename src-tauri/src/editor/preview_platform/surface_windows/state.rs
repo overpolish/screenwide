@@ -36,6 +36,10 @@ pub(super) struct SurfaceState {
   pub(super) selection_snapping_enabled: bool,
   pub(super) selection_snap_guide_x: Option<snapping::SnapGuide>,
   pub(super) selection_snap_guide_y: Option<snapping::SnapGuide>,
+  /// Whether a press picks layers the way the select tool does. Off while a
+  /// drawing tool is in hand, when the targets only say which picture a fresh
+  /// annotation is drawn on.
+  pub(super) selection_hit_testing: bool,
   pub(super) selection_targets: Vec<PreviewSelection>,
   pub(super) viewport: PreviewSurfaceRect,
   /// Recording marker layouts fill the viewport even above one point per

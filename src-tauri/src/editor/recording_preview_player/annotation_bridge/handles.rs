@@ -10,14 +10,20 @@ impl PreviewPlayerManager {
   /// picture. A gesture in flight keeps the mode it began under. Changing the
   /// tool retires the halo, which the pointer may never move to retire; the
   /// next move halos whatever the new tool picks.
+  ///
+  /// Answers whether the layers are picked up under `tool`. A drawing tool
+  /// picks none: the layers' targets only say which picture a fresh
+  /// annotation starts on, and where the annotations of the layer not in hand
+  /// are measured.
   pub(in crate::editor::recording_preview_player) fn set_annotation_tool(
     &mut self,
     tool: Option<&str>,
-  ) {
-    if self.annotation.gesture.is_some() || self.annotation.group.is_some() {
-      return;
-    }
+  ) -> bool {
     let mode = annotation_mode(tool);
+    let picks_layers = drawing_kind(mode).is_none();
+    if self.annotation.gesture.is_some() || self.annotation.group.is_some() {
+      return picks_layers;
+    }
     if mode != self.annotation.mode {
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       if let Some(surface) = self
@@ -29,49 +35,7 @@ impl PreviewPlayerManager {
       }
     }
     self.annotation.mode = mode;
-  }
-
-  /// Re-presents the frame the pane already holds with the annotations the
-  /// clips resolve to at `position_ms`, without touching the decoder. Reports
-  /// whether there was a frame to redraw; a pane with nothing composed yet has
-  /// to be restarted the ordinary way. Only the D3D11 panes can do this - the
-  /// macOS workspace re-encodes from its retained scene instead.
-  #[cfg(target_os = "windows")]
-  pub(super) fn redraw_annotation_frame(&self, pane: u32, position_ms: u64) -> bool {
-    let Some(sources) = self.sources.as_ref() else {
-      return false;
-    };
-    let Some(surface) = sources.preview_surface.as_ref() else {
-      return false;
-    };
-    let Some(layout) = sources.layout.panes.get(pane as usize) else {
-      return false;
-    };
-    let annotations = crate::editor::annotations::timing::revealed_annotations(
-      &sources
-        .annotation_clips
-        .read()
-        .map(|clips| clips.clone())
-        .unwrap_or_default(),
-      super::gesture::track(pane),
-      &sources
-        .animation_ranges
-        .read()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()),
-      position_ms,
-      0.0,
-      (layout.source_width, layout.source_height),
-    );
-    surface.redraw_recording_annotations(
-      pane,
-      &annotations,
-      (layout.source_width, layout.source_height),
-    )
-  }
-
-  #[cfg(not(target_os = "windows"))]
-  pub(super) fn redraw_annotation_frame(&self, _pane: u32, _position_ms: u64) -> bool {
-    false
+    picks_layers
   }
 }
 
@@ -160,7 +124,10 @@ impl PreviewPlayerManager {
 impl PreviewPlayerManager {
   /// What `pane` draws at the playhead: a gesture's working list while one
   /// holds that pane, and otherwise the clips live there.
-  pub(super) fn pane_annotations(&self, pane: u32) -> Vec<Annotation> {
+  pub(in crate::editor::recording_preview_player) fn pane_annotations(
+    &self,
+    pane: u32,
+  ) -> Vec<Annotation> {
     if let Some(gesture) = &self.annotation.gesture {
       if gesture.pane == pane {
         return gesture.working.clone();

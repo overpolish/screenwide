@@ -176,6 +176,30 @@ pub(crate) fn screen_only(mode: u32) -> bool {
   )
 }
 
+/// The first layer id that is not a picture: the keyboard overlay, then the
+/// canvas frame above it.
+#[cfg(any(target_os = "windows", test))]
+const FIRST_NON_PICTURE_LAYER: u32 = u32::MAX - 1;
+
+/// The layer a fresh annotation is drawn on: the topmost picture under the
+/// press, out of `layers` listed back to front with their pictures' rects as
+/// x, y, width and height. `None` over no picture leaves the annotation to the
+/// layer already selected. The twin of `annotation_take_layer_at_point` in
+/// `recording_preview_surface_macos+annotation_report.m`.
+#[cfg(any(target_os = "windows", test))]
+pub(crate) fn drawing_layer(
+  layers: impl DoubleEndedIterator<Item = (u32, [f64; 4])>,
+  (x, y): (f64, f64),
+) -> Option<u32> {
+  layers
+    .rev()
+    .filter(|(layer, _)| *layer < FIRST_NON_PICTURE_LAYER)
+    .find(|(_, [left, top, width, height])| {
+      x >= *left && x <= left + width && y >= *top && y <= top + height
+    })
+    .map(|(layer, _)| layer)
+}
+
 impl AnnotationGestureTarget {
   /// Reads the target the native interaction view reported: a new annotation
   /// (0), a grip of the annotation at `index` (1), no annotation at all (2), a

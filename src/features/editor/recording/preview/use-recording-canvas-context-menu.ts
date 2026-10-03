@@ -5,6 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
 import { pointerAnchor } from "../../../popup-panel/use-popup-menu";
+import { RecordingCameraPlacement } from "../annotations/recording-annotation-layers";
 import { RecordingAnnotationClip } from "../annotations/recording-annotations";
 import {
   AnnotationClipPinning,
@@ -12,9 +13,10 @@ import {
 } from "../annotations/use-annotation-clip-menu";
 
 /** What a right press on an annotation needs: the clips to find it among and
- * to reorder, the pin actions its menu offers, and the choice it may be one
- * of. */
+ * to reorder, where One video draws the pictures they move between, the pin
+ * actions its menu offers, and the choice it may be one of. */
 type CanvasMenuAnnotations = {
+  cameraPlacement: RecordingCameraPlacement | null;
   clips: RecordingAnnotationClip[];
   onClipsChange: (clips: RecordingAnnotationClip[]) => void;
   pinning: AnnotationClipPinning;
@@ -31,6 +33,7 @@ export function useRecordingCanvasContextMenu(
   annotations: CanvasMenuAnnotations,
 ) {
   const openAnnotationMenu = useAnnotationClipMenu({
+    cameraPlacement: annotations.cameraPlacement,
     clips: annotations.clips,
     idPrefix: "annotation-canvas:",
     onClipsChange: annotations.onClipsChange,

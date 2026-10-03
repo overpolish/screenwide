@@ -12,7 +12,6 @@ const FRAME = { height: 1_080, width: 1_920 };
 const DIAGONAL = Math.hypot(FRAME.width, FRAME.height);
 
 const dressed = (shape: AnnotationShape): Annotation => ({
-  aboveCamera: false,
   animated: true,
   id: "a",
   shape,

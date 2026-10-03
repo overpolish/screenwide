@@ -15,7 +15,6 @@ import {
 } from "./recording-annotations";
 
 const annotation: Annotation = {
-  aboveCamera: false,
   animated: true,
   id: "arrow-1",
   shape: {

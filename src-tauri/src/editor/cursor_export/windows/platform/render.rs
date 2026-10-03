@@ -134,7 +134,12 @@ pub(super) fn render_video(
         )
       })
     });
-    let annotations = clips.at(position_ms, window_ms);
+    let annotations = clips.with_camera_at(
+      position_ms,
+      window_ms,
+      output,
+      arranged.as_ref().and_then(|(_, options)| *options),
+    );
     let texture = compositor.compose_with_camera(
       &current.texture,
       current.subresource,

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::preview_platform::PreviewSurfaceRect;
+use super::super::preview_platform::{PreviewSelection, PreviewSurfaceRect};
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,6 +24,37 @@ pub struct ScreenshotSelectionOverlay {
   #[serde(default)]
   pub(super) recenter_bounds: Option<PreviewSurfaceRect>,
   pub(super) rect: PreviewSurfaceRect,
+}
+
+impl ScreenshotSelectionOverlay {
+  /// The overlay as the native surface reads a layer: on macOS every layer
+  /// is drawn into the one workspace pane, so its pane is always 0 there.
+  pub(super) fn preview_selection(self) -> PreviewSelection {
+    PreviewSelection {
+      recenter_height: self.recenter_bounds.map_or(0.0, |bounds| bounds.height),
+      recenter_width: self.recenter_bounds.map_or(0.0, |bounds| bounds.width),
+      recenter_x: self.recenter_bounds.map_or(0.0, |bounds| bounds.x),
+      recenter_y: self.recenter_bounds.map_or(0.0, |bounds| bounds.y),
+      crop_mode: u32::from(self.crop_mode),
+      image_height: self.image.map_or(0.0, |image| image.height),
+      image_width: self.image.map_or(0.0, |image| image.width),
+      image_x: self.image.map_or(0.0, |image| image.x),
+      image_y: self.image.map_or(0.0, |image| image.y),
+      layer_id: self.layer_id.unwrap_or(self.pane_index),
+      #[cfg(target_os = "macos")]
+      pane_index: 0,
+      #[cfg(not(target_os = "macos"))]
+      pane_index: self.pane_index,
+      x: self.rect.x,
+      y: self.rect.y,
+      width: self.rect.width,
+      height: self.rect.height,
+      radius_percent: self.radius_percent,
+      minimum_scale: 0.0,
+      maximum_scale: 0.0,
+      ..PreviewSelection::default()
+    }
+  }
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -78,6 +109,18 @@ pub(super) struct ScreenshotAnnotationHoverEvent {
 #[serde(rename_all = "camelCase")]
 pub(super) struct ScreenshotAnnotationMenuEvent {
   pub(super) annotation_id: String,
+  pub(super) pane_index: u32,
+  pub(super) session_id: u64,
+  pub(super) x: f64,
+  pub(super) y: f64,
+}
+
+/// A right press on a bare layer, for React to open the layer's menu at `x`,
+/// `y` in the window's content. `pane_index` is the layer's workspace order.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ScreenshotLayerMenuEvent {
   pub(super) pane_index: u32,
   pub(super) session_id: u64,
   pub(super) x: f64,

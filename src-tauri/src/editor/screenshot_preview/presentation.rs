@@ -36,6 +36,18 @@ impl PreviewManager {
     if output.canvas.width < 64 || output.canvas.height < 64 {
       return Ok(true);
     }
+    let source_width = |id| {
+      sources
+        .iter()
+        .find(|source| source.id == id)
+        .map(|source| source.image.width)
+    };
+    // Every layer draws the other layers' spotlights under its own
+    // annotations, so the halo's place in its list moves up by as many.
+    let hover = hover.map(|(layer, index, width)| {
+      let borrowed = output.borrowed_spotlights(layer, &source_width).len();
+      (layer, index + borrowed, width)
+    });
     #[cfg(target_os = "macos")]
     {
       let layers = output
@@ -46,7 +58,7 @@ impl PreviewManager {
           Some((
             item_output.id,
             source.image.as_ref(),
-            output.output_for_id(item_output.id, source.capture),
+            output.output_for_id(item_output.id, source.capture, &source_width),
           ))
         })
         .collect::<Vec<_>>();
@@ -70,7 +82,7 @@ impl PreviewManager {
         continue;
       };
       has_source = true;
-      let item_settings = output.output_for_id(item_output.id, source.capture);
+      let item_settings = output.output_for_id(item_output.id, source.capture, &source_width);
       staged &= surface.present_screenshot_layer(
         index as u32,
         item_output.id,

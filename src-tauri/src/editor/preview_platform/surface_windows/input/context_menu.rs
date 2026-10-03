@@ -32,6 +32,11 @@ pub(super) fn open(inner: &std::sync::Arc<SurfaceInner>, point: (f64, f64)) {
   let Ok(mut state) = inner.state.lock() else {
     return;
   };
+  // Layers are only picked while the select tool is in hand; an annotation
+  // tool picks annotations, above, and nothing else.
+  if !state.selection_hit_testing {
+    return;
+  }
   let Some((target, _)) = shared_selection_hit(inner, &state, point) else {
     return;
   };

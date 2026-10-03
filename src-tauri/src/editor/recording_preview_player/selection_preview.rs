@@ -58,6 +58,11 @@ impl PreviewPlayerManager {
 
   #[cfg(target_os = "macos")]
   pub(super) fn refresh_selection_preview(&mut self, layer_id: u32) -> Result<(), String> {
+    // The retained scene keeps the annotations it was staged with, and in One
+    // video the camera's are carried in the screen's list, placed where the
+    // camera was. A camera that carries any is composed afresh as it moves,
+    // so they move with it.
+    let carries_annotations = !self.pane_annotations(1).is_empty();
     let retained = self
       .sources
       .as_ref()
@@ -65,7 +70,7 @@ impl PreviewPlayerManager {
         let surface = sources.preview_surface.as_ref()?;
         let composition =
           self.arranged_composition(&sources.composition_settings.as_ref()?.read().ok()?.clone());
-        if layer_id != 1 {
+        if layer_id != 1 || (composition.bake_camera && carries_annotations) {
           return None;
         }
         let mut panes = vec![(0, &composition.recording_output.primary)];

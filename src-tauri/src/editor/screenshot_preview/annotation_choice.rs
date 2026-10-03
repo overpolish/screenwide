@@ -4,8 +4,8 @@
 //! The two ways a press on a still changes the choice without editing
 //! anything: a click with the toggle modifier, which adds one annotation or
 //! takes it out, and a marquee band, which chooses every annotation it
-//! touches. A still's choice belongs to its selected layer, so a band drawn
-//! over another layer chooses nothing.
+//! touches. A still's choice belongs to one layer, so a choice made on
+//! another layer starts that layer's afresh and selects it.
 
 use super::super::preview_platform::SelectionGesturePhase;
 use super::annotation_gesture::AnnotationCommit;
@@ -33,13 +33,14 @@ impl PreviewManager {
     index: usize,
   ) -> Option<AnnotationCommit> {
     let id = self.annotations_for(pane_index)?.get(index)?.id.clone();
-    let chosen = &mut self.annotation_selected;
+    let mut chosen = self.choice_on(pane_index);
     match chosen.iter().position(|item| *item == id) {
       Some(at) => {
         chosen.remove(at);
       }
       None => chosen.push(id),
     }
+    self.annotation_selected = chosen;
     self.commit_choice(pane_index)
   }
 
@@ -75,21 +76,17 @@ impl PreviewManager {
           .annotation_band
           .take()
           .filter(|band| band.pane_index == pane_index)?;
-        let swept = if self.annotation_pane_index == Some(pane_index) {
-          let image_width = self.annotation_image_width(pane_index).unwrap_or_default();
-          swept_annotations(
-            self.annotations_for(pane_index)?,
-            (band.from, point),
-            source_per_size(source, image_width),
-            |_| true,
-          )
-        } else {
-          Vec::new()
-        };
+        let image_width = self.annotation_image_width(pane_index).unwrap_or_default();
+        let swept = swept_annotations(
+          self.annotations_for(pane_index)?,
+          (band.from, point),
+          source_per_size(source, image_width),
+          |_| true,
+        );
         // Command held at either end adds: it may be taken up part way
         // through the band, as it may through any other drag.
         let additive = band.additive || SnapModifiers::from_bits(snap).position;
-        self.annotation_selected = chosen_after_band(&self.annotation_selected, swept, additive);
+        self.annotation_selected = chosen_after_band(&self.choice_on(pane_index), swept, additive);
         self.commit_choice(pane_index)
       }
     }
@@ -101,5 +98,15 @@ impl PreviewManager {
     let chosen = self.annotation_selected.clone();
     self.present_annotation_gesture(pane_index, &chosen);
     self.commit_for(pane_index, chosen)
+  }
+
+  /// The choice a press on `pane_index` adds to or takes from: the standing
+  /// one on the selected layer, and nothing on any other.
+  fn choice_on(&self, pane_index: u32) -> Vec<String> {
+    if self.annotation_pane_index == Some(pane_index) {
+      self.annotation_selected.clone()
+    } else {
+      Vec::new()
+    }
   }
 }

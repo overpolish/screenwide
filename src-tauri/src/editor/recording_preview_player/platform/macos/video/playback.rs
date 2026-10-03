@@ -110,6 +110,10 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
             camera_size,
           );
         }
+        crate::editor::recording_preview_player::annotation_preview::carry_camera_annotations(
+          &mut composition,
+          annotation_pictures,
+        );
         let raw_screen = match screen.pixel_frame_at(target_ms) {
           Ok(Some(frame)) => frame,
           Ok(None) | Err(_) => break,

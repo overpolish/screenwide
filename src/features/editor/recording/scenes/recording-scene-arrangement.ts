@@ -104,7 +104,12 @@ export function arrangedRecordingScene({
   const length = outputAt(ranges, clip.endMs) - from;
   if (!(length > 0)) return null;
   const elapsed = Math.max(0, outputAt(ranges, sourceMs) - from);
-  const window = Math.min(TRANSITION_MS, length / 2);
+  // A scene that runs on to the end of the video holds to its last frame:
+  // there is nothing after it to leave for. The last kept range ends the
+  // video, to within a millisecond of rounding.
+  const runsToEnd =
+    ranges.length > 0 && clip.endMs + 1 > ranges[ranges.length - 1].sourceEndMs;
+  const window = Math.min(TRANSITION_MS, runsToEnd ? length : length / 2);
   const eased = (share: number) =>
     easeInOutCubic(Math.min(1, Math.max(0, share)));
   const previous = index > 0 ? clips[index - 1] : undefined;
@@ -116,7 +121,8 @@ export function arrangedRecordingScene({
           target,
           eased(elapsed / window),
         )
-      : !(next?.startMs === clip.endMs && targetOf(next)) &&
+      : !runsToEnd &&
+          !(next?.startMs === clip.endMs && targetOf(next)) &&
           length - elapsed < window
         ? towardPlacement(base, target, eased((length - elapsed) / window))
         : target;

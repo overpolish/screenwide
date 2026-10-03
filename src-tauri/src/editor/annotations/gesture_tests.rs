@@ -4,8 +4,8 @@
 use super::arrow::bend::curve_midpoint;
 use super::counter::new_counter;
 use super::gesture::{
-  annotation_mode, drawing_kind, next_annotation_id, AnnotationDragOrigin, AnnotationHandle,
-  MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
+  annotation_mode, drawing_kind, drawing_layer, next_annotation_id, AnnotationDragOrigin,
+  AnnotationHandle, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
 };
 use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationKind, AnnotationPoint, AnnotationShape, AnnotationStyle,
@@ -392,4 +392,18 @@ fn a_counter_body_drag_carries_the_disc_by_the_travel() {
 #[test]
 fn fresh_ids_do_not_repeat() {
   assert_ne!(next_annotation_id(), next_annotation_id());
+}
+
+#[test]
+fn a_fresh_annotation_joins_the_topmost_picture_under_the_press() {
+  // Two overlapping pictures, back to front, and the canvas frame over all.
+  let layers = [
+    (0, [0.0, 0.0, 100.0, 100.0]),
+    (1, [50.0, 50.0, 100.0, 100.0]),
+    (u32::MAX, [0.0, 0.0, 200.0, 200.0]),
+  ];
+  assert_eq!(drawing_layer(layers.into_iter(), (75.0, 75.0)), Some(1));
+  assert_eq!(drawing_layer(layers.into_iter(), (20.0, 20.0)), Some(0));
+  // Only the frame is here: no picture takes the annotation.
+  assert_eq!(drawing_layer(layers.into_iter(), (180.0, 20.0)), None);
 }

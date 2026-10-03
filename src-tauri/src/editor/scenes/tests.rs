@@ -187,6 +187,25 @@ fn a_faster_stretch_keeps_the_transition_its_length_on_screen() {
 }
 
 #[test]
+fn a_scene_that_runs_to_the_end_of_the_video_holds_there() {
+  let video = |end_ms: u64| {
+    [TimelineRange {
+      output_start_us: 0,
+      source_end_us: end_ms * 1_000,
+      source_start_us: 0,
+      playback_rate: 1.0,
+    }]
+  };
+  let clips = [split("a", 4_000, 10_000)];
+  let (settled, _) = arranged(&clips, &video(10_000), 7_000);
+  // 200ms from the end, inside the window it would leave over.
+  let (at_the_end, _) = arranged(&clips, &video(10_000), 9_800);
+  assert_eq!(at_the_end, settled);
+  let (leaving, _) = arranged(&clips, &video(12_000), 9_800);
+  assert!(!close(leaving.crop_x, settled.crop_x));
+}
+
+#[test]
 fn a_zoom_shows_less_of_the_screen_in_the_same_box() {
   let (start, _) = base();
   let (output, overlay) = arranged(&[zoomed((0.5, 0.5), 2.0)], &[], 5_000);

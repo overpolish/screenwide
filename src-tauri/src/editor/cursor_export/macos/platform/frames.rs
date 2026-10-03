@@ -171,7 +171,12 @@ impl<'a> FrameComposer<'a> {
         ))
       })
       .transpose()?;
-    let annotations = self.annotations.at(source_ms, frame.frame_ms);
+    let annotations = self.annotations.with_camera_at(
+      source_ms,
+      frame.frame_ms,
+      settings,
+      arranged.as_ref().and_then(|(_, options)| *options),
+    );
     let prepared = prepared_arrows(&annotations, source.size, settings, None, None, None)?;
     let grid = grid_index(frame.source_us);
     self.compositor.draw_with_camera(

@@ -26,7 +26,6 @@ const style: AnnotationStyle = {
 /** A highlight from (10, 100) to (200, 300), fitted to two lines of text
  * 20 pixels tall. */
 const fitted: Annotation = {
-  aboveCamera: false,
   animated: true,
   id: "h",
   shape: {

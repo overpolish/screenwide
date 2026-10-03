@@ -17,7 +17,7 @@ import {
   sweptAnnotationIds,
   toggledAnnotationIds,
 } from "./annotation-selection";
-import { Annotation, AnnotationStyle, renumberedCounters } from "./annotations";
+import { Annotation, AnnotationStyle } from "./annotations";
 import { relaidHighlight } from "./highlight-strokes";
 
 const NOTHING_CHOSEN: ReadonlySet<string> = new Set();
@@ -25,11 +25,14 @@ const anyGroupable = () => true;
 
 /** Selection and editing behaviour shared by screenshot and recording
  * annotations. One annotation or several may be chosen; only one on its own
- * is dressed by the panel and gripped on the picture. */
+ * is dressed by the panel and gripped on the picture. Counters are numbered by
+ * the document that owns them, across all of its lists: a screenshot across
+ * its layers, a recording by clip time. One list on its own cannot know where
+ * its counters fall in that run, so this hook leaves their numbers alone. */
 export function useAnnotations({
   annotations,
   groupable = anyGroupable,
-  onCommit,
+  onCommit: commit,
   workspace,
 }: {
   annotations: Annotation[];
@@ -47,12 +50,6 @@ export function useAnnotations({
   const selected =
     annotations.find((annotation) => annotation.id === selectedId) ?? null;
 
-  // Counters keep the numbers they were given, so every list this hook writes
-  // is renumbered on the way out only to close the gaps: a delete leaves 1
-  // and 2 behind rather than 1 and 3.
-  const commit = (next: Annotation[]) => {
-    onCommit(renumberedCounters(next));
-  };
   // Where a counter's tail points is remembered however it was turned - by
   // its grip on the picture or by the panel's own control - so the next one
   // is dropped aiming the same way.

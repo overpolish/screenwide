@@ -158,12 +158,20 @@ impl RecordingPreviewSurface {
     }
   }
 
-  pub(crate) fn set_selection_targets(&self, targets: Option<&[PreviewSelection]>) {
+  /// The layers a press can land on. `hit_testing` lets a press pick and move
+  /// them, as the select tool's do; without it they only say which picture a
+  /// fresh annotation is drawn on. With no layers there is nothing to pick.
+  pub(crate) fn set_selection_targets(
+    &self,
+    targets: Option<&[PreviewSelection]>,
+    hit_testing: bool,
+  ) {
     if let Ok(mut state) = self.inner.state.lock() {
       state.selection_targets.clear();
       state
         .selection_targets
         .extend_from_slice(targets.unwrap_or_default());
+      state.selection_hit_testing = hit_testing && targets.is_some();
     }
   }
 }

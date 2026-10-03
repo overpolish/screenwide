@@ -21,6 +21,7 @@ import {
   resizeScreenshotWorkspaceCanvasEdges,
   screenshotLayout,
   screenshotWorkspaceItemOutput,
+  screenshotGestureShift,
   screenshotOutputDimensions,
 } from "../screenshot/screenshot-output";
 import { screenshotAnnotationOutput } from "../screenshot/screenshot-preview-events";
@@ -339,11 +340,9 @@ export function PreviewViewport({
     const cropOperation = isCropOperation(event.operation);
     const shouldApply =
       event.phase === "end" ? cropOperation || differsFromLastUpdate : changed;
-    // Native gesture deltas arrive as a share of the canvas.
-    const moveX = event.deltaX * output.width;
-    const moveY = event.deltaY * output.height;
-    const cropX = active.snapshot.cropX + moveX;
-    const cropY = active.snapshot.cropY + moveY;
+    const move = screenshotGestureShift(event, active.workspaceSnapshot);
+    const cropX = active.snapshot.cropX + move.x;
+    const cropY = active.snapshot.cropY + move.y;
     let next: ScreenshotOutputSettings;
     if (isCropOperation(event.operation)) {
       const source = items.find((item) => item.id === active.itemId);
@@ -389,8 +388,8 @@ export function PreviewViewport({
         ...active.snapshot,
         cropX,
         cropY,
-        imageX: active.snapshot.imageX + moveX,
-        imageY: active.snapshot.imageY + moveY,
+        imageX: active.snapshot.imageX + move.x,
+        imageY: active.snapshot.imageY + move.y,
       };
     }
     if (shouldApply) {
@@ -461,7 +460,7 @@ export function PreviewViewport({
           }
         : null;
   const selectionTargets =
-    (isSelecting || isEditing) && workspaceOutput
+    (isSelecting || isEditing || isDrawingArrows) && workspaceOutput
       ? screenshotSelectionTargets(items, workspaceOutput, {
           ...output,
           cropMode: isEditing,

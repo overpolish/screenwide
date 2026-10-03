@@ -9,7 +9,6 @@ import {
 } from "./screenshot-preview-events";
 
 const arrow = {
-  aboveCamera: false,
   animated: true,
   id: "arrow-1",
   shape: {

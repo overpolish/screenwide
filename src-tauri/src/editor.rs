@@ -41,6 +41,7 @@ pub use recording_model::{
 };
 
 mod screenshot_model;
+mod screenshot_spotlights;
 pub use screenshot_model::{ScreenshotItem, ScreenshotWorkspaceOutputSettings};
 mod workspace_kind;
 use workspace_kind::kind_of_window;

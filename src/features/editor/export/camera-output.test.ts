@@ -17,7 +17,6 @@ import {
 } from "./camera-output";
 
 const arrow: Annotation = {
-  aboveCamera: false,
   animated: true,
   id: "arrow",
   shape: {

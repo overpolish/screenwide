@@ -120,10 +120,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
     // go, and the press carries on to the layer underneath. Recording
     // selection clears the annotation together with the new layer; screenshots
     // still publish their selected-image annotation document separately.
-    NSInteger selected = surface.annotationSelected;
-    BOOL still = selected >= 0 && (NSUInteger)selected < count
-                     ? items[selected].layer_id < 0
-                     : annotation_has_group(surface) && count > 0 && items[0].layer_id < 0;
+    BOOL still = annotation_still_choice(surface);
     if (still) {
       surface.annotationSelected = -1;
       emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetNone, 0,
@@ -182,10 +179,12 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
       annotation_choose(surface, shaft, point);
     return YES;
   }
-  // Empty picture: a new annotation. An arrow is drawn out, so it waits for the
-  // press to prove a drag and a click leaves no stub behind. A counter and a
-  // text box are dropped whole where the press lands, so they begin at once
-  // and a click alone makes them; the drag that may follow carries them.
+  // Empty picture: a new annotation, on the picture under the press. An arrow
+  // is drawn out, so it waits for the press to prove a drag and a click leaves
+  // no stub behind. A counter and a text box are dropped whole where the press
+  // lands, so they begin at once and a click alone makes them; the drag that
+  // may follow carries them.
+  annotation_take_layer_at_point(surface, point);
   view.annotationDragTargetKind = ScreenwideAnnotationTargetNew;
   view.annotationDragIndex = 0;
   if (mode == ScreenwideAnnotationModeCounter || mode == ScreenwideAnnotationModeText) {

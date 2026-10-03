@@ -9,70 +9,78 @@ import {
   annotationArrangeItems,
   annotationArrangementPicked,
 } from "../annotations/annotation-arrange-items";
-import {
-  arrangedGroup,
-  availableGroupArrangements,
-} from "../annotations/annotation-order";
+import { Arrangement } from "../annotations/annotation-order";
 import { annotationMenuTargets } from "../annotations/annotation-selection";
 import { Annotation } from "../annotations/annotations";
 
-const MENU_WIDTH = 200;
+import { screenshotAnnotationArrangements } from "./screenshot-annotation-layers";
+import { ScreenshotWorkspaceOutputSettings } from "./screenshot-output";
 
-// A still draws every annotation on a layer together, so any two meet.
-const meet = () => true;
+const MENU_WIDTH = 200;
 
 /**
  * A right press on an annotation in the screenshot preview, answered with the
- * app's own menu at the pointer: it moves the annotation through its layer's
- * drawing order, or every one chosen with it when it is one of several. The
- * native chrome only hit-tests the selected layer, so the annotation is looked
- * for among `annotations`, that layer's; a report naming one that is not there
- * opens nothing.
+ * app's own menu at the pointer: it moves the annotation through the
+ * stacking, or every one chosen with it when it is one of several, and a step
+ * past the end of its layer carries it into the next one. The native chrome
+ * picks annotations on every layer, so the report names the layer the
+ * annotation is drawn on; a report naming one that is not there opens
+ * nothing.
  */
 export function useScreenshotAnnotationMenu({
-  annotations,
-  onCommit,
+  arrange,
   selectedIds,
+  workspace,
 }: {
-  annotations: Annotation[];
-  onCommit: (annotations: Annotation[]) => void;
+  arrange: (
+    arrangement: Arrangement,
+    itemId: number,
+    isMember: (annotation: Annotation) => boolean,
+  ) => void;
   selectedIds: ReadonlySet<string>;
+  workspace: ScreenshotWorkspaceOutputSettings | undefined;
 }) {
+  // The layer the menu was opened on, held while it is open: the pick
+  // arrives as a separate event, after the workspace may have moved on.
+  const layerRef = useRef<number | null>(null);
   const openMenu = usePopupMenu({
     idPrefix: "screenshot-annotation:",
     label: "Annotation actions",
     mode: "menu",
     onSelect: (itemId, annotationId) => {
       const arrangement = annotationArrangementPicked(itemId);
-      if (!arrangement) return;
+      const layerId = layerRef.current;
+      if (!arrangement || layerId === null) return;
       const targets = annotationMenuTargets(annotationId, selectedIds);
-      const next = arrangedGroup(
-        annotations,
-        (annotation) => targets.has(annotation.id),
-        { arrangement, meets: meet },
-      );
-      if (next !== annotations) onCommit(next);
+      arrange(arrangement, layerId, (annotation) => targets.has(annotation.id));
     },
     width: MENU_WIDTH,
   });
   const openRef = useRef(
-    (_: { annotationId: string; x: number; y: number }) => {},
+    (_: {
+      annotationId: string;
+      paneIndex: number;
+      x: number;
+      y: number;
+    }) => {},
   );
-  openRef.current = ({ annotationId, x, y }) => {
+  openRef.current = ({ annotationId, paneIndex, x, y }) => {
+    const items = workspace?.items ?? [];
+    if (!workspace || paneIndex < 0 || paneIndex >= items.length) return;
+    const layerId = items[paneIndex].id;
     const targets = annotationMenuTargets(annotationId, selectedIds);
-    const items = annotationArrangeItems(
-      availableGroupArrangements(
-        annotations,
-        (annotation) => targets.has(annotation.id),
-        meet,
+    const rows = annotationArrangeItems(
+      screenshotAnnotationArrangements(workspace, layerId, (annotation) =>
+        targets.has(annotation.id),
       ),
     );
-    if (items.length > 0)
-      void openMenu({
-        anchor: pointerAnchor(x, y),
-        context: annotationId,
-        items,
-      });
+    if (rows.length === 0) return;
+    layerRef.current = layerId;
+    void openMenu({
+      anchor: pointerAnchor(x, y),
+      context: annotationId,
+      items: rows,
+    });
   };
   useEffect(() => {
     // The subscription lands after a hop; a cleanup that runs first must
@@ -82,15 +90,20 @@ export function useScreenshotAnnotationMenu({
     void listen<unknown>("screenshot-preview://annotation-menu", (event) => {
       const payload = event.payload;
       if (disposed || typeof payload !== "object" || payload === null) return;
-      const { annotationId, x, y } = payload as Record<string, unknown>;
+      const { annotationId, paneIndex, x, y } = payload as Record<
+        string,
+        unknown
+      >;
       if (
         typeof annotationId === "string" &&
+        typeof paneIndex === "number" &&
+        Number.isInteger(paneIndex) &&
         typeof x === "number" &&
         typeof y === "number" &&
         Number.isFinite(x) &&
         Number.isFinite(y)
       )
-        openRef.current({ annotationId, x, y });
+        openRef.current({ annotationId, paneIndex, x, y });
     }).then((dispose) => {
       if (disposed) dispose();
       else unlisten = dispose;

@@ -274,6 +274,13 @@ export function useRecordingPreviewSelection(
   });
   return {
     applyGesture,
+    /** The screen and the camera at the playhead, where One video bakes it. */
+    bakedLayers: canPreviewBakedCamera
+      ? {
+          cameraOverlay: selectionCameraOverlay,
+          screen: selectionOutput.primary,
+        }
+      : null,
     /** Whether a scene places the panes at the playhead. */
     isFramed,
     keyboardCanvas,

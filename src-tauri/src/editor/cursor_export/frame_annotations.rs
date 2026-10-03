@@ -5,12 +5,15 @@
 //! shared compositor exactly as the preview resolves them.
 
 use super::CursorExportRequest;
+use crate::editor::annotations::camera_baked::camera_annotations_on_screen;
 use crate::editor::annotations::timing::{
   revealed_annotations, AnnotationTrack, RecordingAnnotationClip,
 };
 use crate::editor::annotations::{Annotation, AnnotationKind};
+use crate::editor::media_preview::BakedVideoExportOptions;
 use crate::editor::recording_preview_player::{held_surfaces, pin_paths};
 use crate::editor::timeline_edit::TimelineRange;
+use crate::screenshots::ScreenshotOutputSettings;
 
 /// The export's annotation clips, ready to be revealed frame by frame, and
 /// what their reveal is measured against.
@@ -19,6 +22,9 @@ pub(super) struct ExportAnnotations {
   track: AnnotationTrack,
   ranges: Vec<TimelineRange>,
   picture: (u32, u32),
+  /// Where the camera is drawn into the screen's video, in One video: its
+  /// annotations are drawn over it there.
+  baked_camera: Option<BakedVideoExportOptions>,
 }
 
 impl ExportAnnotations {
@@ -67,6 +73,10 @@ impl ExportAnnotations {
         .map_or(&[][..], |timeline| timeline.ranges())
         .to_vec(),
       picture: (request.width, request.height),
+      baked_camera: request
+        .camera
+        .filter(|_| request.annotation_track == AnnotationTrack::Primary)
+        .map(|(_, options)| options),
     }
   }
 
@@ -83,6 +93,44 @@ impl ExportAnnotations {
       self.picture,
     );
     held_surfaces::resolve_surfaces(&mut annotations, &self.clips, position_ms);
+    annotations
+  }
+
+  /// [`Self::at`], with the camera's annotations carried over it where the
+  /// camera is drawn into this video. `screen` is the output the frame is
+  /// drawn with, and `scene_camera` where a scene puts the camera this
+  /// frame, if one does.
+  pub(super) fn with_camera_at(
+    &self,
+    position_ms: u64,
+    window_ms: f32,
+    screen: &ScreenshotOutputSettings,
+    scene_camera: Option<BakedVideoExportOptions>,
+  ) -> Vec<Annotation> {
+    let mut annotations = self.at(position_ms, window_ms);
+    let Some(camera) = scene_camera.or(self.baked_camera) else {
+      return annotations;
+    };
+    let picture = (camera.camera_width, camera.camera_height);
+    let on_camera = revealed_annotations(
+      &self.clips,
+      AnnotationTrack::Camera,
+      &self.ranges,
+      position_ms,
+      window_ms,
+      picture,
+    );
+    annotations.extend(camera_annotations_on_screen(
+      &on_camera,
+      picture,
+      camera.overlay,
+      (
+        f64::from(camera.screen_width),
+        f64::from(camera.screen_height),
+      ),
+      screen,
+      self.picture,
+    ));
     annotations
   }
 }

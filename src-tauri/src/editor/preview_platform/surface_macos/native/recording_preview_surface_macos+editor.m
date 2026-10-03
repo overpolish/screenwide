@@ -519,7 +519,7 @@
       width = start.width * scale; height = start.height * scale;
       ScreenwidePreviewSelection resized = start;
       resized.x = x; resized.y = y; resized.width = width; resized.height = height;
-      self.surface.selection = resized;
+      self.surface.selection = selection_carrying_image(start, resized);
       update_keyboard_transform(self.surface, resized, scale);
       apply_editor_transform(self.surface);
       emit_selection_gesture(self.surface, 1, 1, edges, scale,
@@ -660,7 +660,7 @@
         self.surface.editorPanX = self.selectionMovePanStart.x;
         self.surface.editorPanY = self.selectionMovePanStart.y;
       }
-      self.surface.selection = moved;
+      self.surface.selection = selection_carrying_image(self.selectionDragStart, moved);
       update_keyboard_transform(self.surface, moved, 1.0);
       apply_editor_transform(self.surface);
       if (autoFit && self.surface.transformCallback)

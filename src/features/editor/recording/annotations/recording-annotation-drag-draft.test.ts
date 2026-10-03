@@ -15,7 +15,6 @@ const clip = (
   endMs: number,
 ): RecordingAnnotationClip => ({
   annotation: {
-    aboveCamera: false,
     animated: true,
     id,
     shape: {

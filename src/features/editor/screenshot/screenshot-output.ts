@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { withScreenshotCountersNumbered } from "./screenshot-counters";
 import { fullSourceRect } from "./screenshot-geometry";
 import { screenshotLayout } from "./screenshot-layout";
 import {
@@ -47,20 +48,22 @@ export const normalizedScreenshotWorkspaceOutput = (
  * layer. Two things are the layer's alone and must never reach it: the colour
  * behind its padding, and the annotations drawn on it - the canvas is what a
  * new layer and the next capture are built from, so anything left on it is
- * inherited by pictures it was never drawn on.
+ * inherited by pictures it was never drawn on. Counters are numbered across
+ * every layer, so a change to one layer's can renumber another's.
  */
 export const withScreenshotWorkspaceItemOutput = (
   workspace: ScreenshotWorkspaceOutputSettings,
   settings: ScreenshotOutputSettings,
   itemId: number | null,
-): ScreenshotWorkspaceOutputSettings => ({
-  ...workspace,
-  ...screenshotOutputTemplate(settings),
-  items: workspace.items.map((item) =>
-    item.id === itemId ? { ...item, output: settings } : item,
-  ),
-  recenterInsetColor: workspace.recenterInsetColor,
-});
+): ScreenshotWorkspaceOutputSettings =>
+  withScreenshotCountersNumbered({
+    ...workspace,
+    ...screenshotOutputTemplate(settings),
+    items: workspace.items.map((item) =>
+      item.id === itemId ? { ...item, output: settings } : item,
+    ),
+    recenterInsetColor: workspace.recenterInsetColor,
+  });
 
 export const screenshotWorkspaceItemOutput = (
   settings: ScreenshotWorkspaceOutputSettings,
@@ -100,6 +103,18 @@ export const screenshotOutputDimensions = (
   height: Math.max(1, Math.round(settings.height)),
   width: Math.max(1, Math.round(settings.width)),
 });
+
+/** A native gesture's travel in canvas pixels. Its deltas are a share of
+ * `canvas`, the canvas it started on: an auto-fit move grows the live one
+ * under it, and measuring against that would carry the layer further than
+ * the pointer went. */
+export const screenshotGestureShift = (
+  { deltaX, deltaY }: { deltaX: number; deltaY: number },
+  canvas: ScreenshotOutputSettings,
+) => {
+  const { height, width } = screenshotOutputDimensions(canvas);
+  return { x: deltaX * width, y: deltaY * height };
+};
 
 const screenshotPlacement = (
   source: { height: number; width: number },

@@ -8,7 +8,7 @@ use crate::editor::annotations::group::{group_boxes, NativeAnnotationGroupBox};
 use crate::editor::annotations::handles::{
   annotation_handles, NativeAnnotationHandles, HANDLE_FLAG_GROUPED,
 };
-use crate::editor::annotations::AnnotationStyle;
+use crate::editor::annotations::{Annotation, AnnotationShape, AnnotationStyle};
 
 /// The tool modes and their mapping live with the gesture model, so the two
 /// workspaces take the tool in hand the same way.
@@ -77,67 +77,133 @@ pub(super) fn apply_annotation_layout(
   (layout, hover_cleared)
 }
 
-/// The arrow grips for the pane the OSC is drawn against. The geometry comes
-/// from the manager's own output rather than the layout's payload, so a
-/// gesture sample and the layout that echoes it publish the same handles.
+/// The arrow grips for every layer: the chrome halos and picks an annotation
+/// on any layer, so a choice never waits for its layer to be selected first.
+/// The geometry comes from the manager's own output rather than the layout's
+/// payload, so a gesture sample and the layout that echoes it publish the
+/// same handles.
 /// `selected` is every annotation chosen: one on its own shows its grips,
 /// and several are marked and boxed as a group.
+///
+/// The selected pane's grips carry no layer of their own, as a still's
+/// always have: the native chrome measures them against the selection, and
+/// a press beside them lets the choice go. Every other layer's carry the
+/// layer they are drawn on, which the chrome looks up among its targets.
 pub(super) fn annotation_layout(
   manager: &super::state::PreviewManager,
   pane_index: Option<u32>,
   mode: u32,
   selected: &[String],
 ) -> AnnotationLayout {
-  let mut paths = Vec::new();
+  let mut layout = AnnotationLayout {
+    handles: Vec::new(),
+    paths: Vec::new(),
+    selected_index: -1,
+    mode,
+    group: Vec::new(),
+  };
   let grouped = |id: &str| selected.len() > 1 && selected.iter().any(|chosen| chosen == id);
-  let pane = pane_index.and_then(|pane_index| {
-    Some((
-      manager.annotations_for(pane_index)?,
-      manager.annotation_source(pane_index)?,
-      manager.annotation_image_width(pane_index)?,
-    ))
-  });
-  let handles = pane
-    .map(|(annotations, source, image_width)| {
-      annotation_handles(annotations, source, image_width, &mut paths)
+  for (pane, annotations, source, image_width) in manager.published_panes() {
+    let layer = if Some(pane) == pane_index {
+      -1
+    } else {
+      pane as i32
+    };
+    if let [id] = selected {
+      if let Some(index) = annotations.iter().position(|item| item.id == *id) {
+        layout.selected_index = i32::try_from(layout.handles.len() + index).unwrap_or(-1);
+      }
+    }
+    let handles = annotation_handles(annotations, source, image_width, &mut layout.paths);
+    layout.handles.extend(
+      handles
         .into_iter()
         .zip(annotations)
         .map(|(mut handle, annotation)| {
+          handle.layer_id = layer;
           if grouped(&annotation.id) {
             handle.flags |= HANDLE_FLAG_GROUPED;
           }
           handle
-        })
-        .collect()
-    })
-    .unwrap_or_default();
-  let selected_index = match (pane, selected) {
-    (Some((annotations, ..)), [id]) => annotations
-      .iter()
-      .position(|item| item.id == *id)
-      .map_or(-1, |index| i32::try_from(index).unwrap_or(-1)),
-    _ => -1,
-  };
-  AnnotationLayout {
-    handles,
-    paths,
-    selected_index,
-    mode,
+        }),
+    );
     // A still shows every annotation on its layer, so every member is shown.
-    group: pane
-      .map(|(annotations, source, image_width)| {
-        let members: Vec<_> = annotations
-          .iter()
-          .filter(|annotation| grouped(&annotation.id))
-          .collect();
-        group_boxes(
-          &members,
-          |_| true,
-          source,
-          crate::editor::annotations::snap::source_per_size(source, image_width),
-          -1,
-        )
-      })
-      .unwrap_or_default(),
+    let members: Vec<_> = annotations
+      .iter()
+      .filter(|annotation| grouped(&annotation.id))
+      .collect();
+    layout.group.extend(group_boxes(
+      &members,
+      |_| true,
+      source,
+      crate::editor::annotations::snap::source_per_size(source, image_width),
+      layer,
+    ));
+  }
+  layout
+}
+
+impl super::state::PreviewManager {
+  /// Every layer whose grips the chrome is given, in the order they are
+  /// published: its list, its source's pixel size, and how wide its picture is
+  /// drawn in points of annotation size.
+  pub(super) fn published_panes(
+    &self,
+  ) -> impl Iterator<Item = (u32, &Vec<Annotation>, (u32, u32), f64)> + '_ {
+    let count = self.output.as_ref().map_or(0, |output| output.items.len());
+    (0..u32::try_from(count).unwrap_or(u32::MAX)).filter_map(move |pane| {
+      Some((
+        pane,
+        self.annotations_for(pane)?,
+        self.annotation_source(pane)?,
+        self.annotation_image_width(pane)?,
+      ))
+    })
+  }
+
+  /// The annotation at `index` among the published grips, which is how the
+  /// native chrome names one it halos or opens a menu on: its layer, its
+  /// place in that layer's list, and the annotation.
+  pub(super) fn published_annotation(&self, index: usize) -> Option<(u32, usize, &Annotation)> {
+    let mut start = 0;
+    for (pane, annotations, ..) in self.published_panes() {
+      if let Some(annotation) = index.checked_sub(start).and_then(|at| annotations.get(at)) {
+        return Some((pane, index - start, annotation));
+      }
+      start += annotations.len();
+    }
+    None
+  }
+
+  /// Renumbers the counter `id` that was just dropped on `pane_index`, which
+  /// its own list numbered after that layer's counters alone, to follow every
+  /// counter on the other layers too: a still's counters are one run across
+  /// the whole picture, in the order they were placed.
+  pub(super) fn number_fresh_counter(&mut self, pane_index: u32, id: &str) {
+    let Some(output) = self.output.as_mut() else {
+      return;
+    };
+    let elsewhere = output
+      .items
+      .iter()
+      .enumerate()
+      .filter(|(pane, _)| *pane != pane_index as usize)
+      .flat_map(|(_, item)| &item.output.annotations)
+      .filter(|annotation| matches!(annotation.shape, AnnotationShape::Counter { .. }))
+      .count() as u32;
+    let fresh = output.items.get_mut(pane_index as usize).and_then(|item| {
+      item
+        .output
+        .annotations
+        .iter_mut()
+        .find(|annotation| annotation.id == id)
+    });
+    if let Some(Annotation {
+      shape: AnnotationShape::Counter { value, .. },
+      ..
+    }) = fresh
+    {
+      *value += elsewhere;
+    }
   }
 }

@@ -99,13 +99,20 @@ impl RecordingPreviewSurface {
     }
   }
 
-  pub(crate) fn set_selection_targets(&self, targets: Option<&[PreviewSelection]>) {
+  /// The layers a press can land on. `hit_testing` lets a press pick and move
+  /// them, as the select tool's do; without it they only say which picture a
+  /// fresh annotation is drawn on. With no layers there is nothing to pick.
+  pub(crate) fn set_selection_targets(
+    &self,
+    targets: Option<&[PreviewSelection]>,
+    hit_testing: bool,
+  ) {
     unsafe {
       screenwide_preview_surface_set_selection_targets(
         self.handle,
         targets.map_or(std::ptr::null(), |targets| targets.as_ptr()),
         targets.map_or(0, <[PreviewSelection]>::len),
-        i32::from(targets.is_some()),
+        i32::from(hit_testing && targets.is_some()),
       );
     }
   }

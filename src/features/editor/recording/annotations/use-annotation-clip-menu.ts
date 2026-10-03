@@ -10,17 +10,15 @@ import {
   annotationArrangeItems,
   annotationArrangementPicked,
 } from "../../annotations/annotation-arrange-items";
-import {
-  arrangedGroup,
-  availableGroupArrangements,
-} from "../../annotations/annotation-order";
 import { annotationMenuTargets } from "../../annotations/annotation-selection";
 
-import { isPinnable, pinCorrections } from "./recording-annotation-pins";
 import {
-  RecordingAnnotationClip,
-  recordingAnnotationClipsMeet,
-} from "./recording-annotations";
+  arrangedRecordingAnnotations,
+  RecordingCameraPlacement,
+  recordingAnnotationArrangements,
+} from "./recording-annotation-layers";
+import { isPinnable, pinCorrections } from "./recording-annotation-pins";
+import { RecordingAnnotationClip } from "./recording-annotations";
 
 const MENU_WIDTH = 200;
 
@@ -48,8 +46,9 @@ const SECTION = "Tracking";
 /**
  * A right click on an annotation, on its clip or on the picture, or its clip's
  * menu key, answered with the app's own menu. Under an Arrange heading it
- * moves the annotation through the drawing order, past the clips showing at
- * the same time as it; under a Tracking heading it pins the annotation to the
+ * moves the annotation through its picture's drawing order, past the clips
+ * showing at the same time as it, and in One video on past the end of it to
+ * the other picture; under a Tracking heading it pins the annotation to the
  * content or lets it go, says its content is out of view from here or back in
  * view, and takes its corrections away when it has any. The panel draws no
  * disabled rows, so an action is left out until it applies, and a menu with
@@ -63,12 +62,16 @@ const SECTION = "Tracking";
  * opens this menu names it with a prefix of its own.
  */
 export function useAnnotationClipMenu({
+  cameraPlacement,
   clips,
   idPrefix,
   onClipsChange,
   pinning,
   selectedIds,
 }: {
+  /** Where One video draws the screen and the camera at the playhead, or
+   * null where an annotation cannot move between them. */
+  cameraPlacement: RecordingCameraPlacement | null;
   clips: RecordingAnnotationClip[];
   idPrefix: string;
   onClipsChange: (clips: RecordingAnnotationClip[]) => void;
@@ -83,11 +86,12 @@ export function useAnnotationClipMenu({
       const arrangement = annotationArrangementPicked(itemId);
       if (arrangement) {
         const targets = annotationMenuTargets(annotationId, selectedIds);
-        const next = arrangedGroup(
+        const next = arrangedRecordingAnnotations({
+          arrangement,
           clips,
-          (clip) => targets.has(clip.annotation.id),
-          { arrangement, meets: recordingAnnotationClipsMeet },
-        );
+          isMember: (clip) => targets.has(clip.annotation.id),
+          placement: cameraPlacement,
+        });
         if (next !== clips) onClipsChange(next);
       } else if (itemId === "pin") pinning?.onPinnedChange(annotationId, true);
       else if (itemId === "unpin") pinning?.onPinnedChange(annotationId, false);
@@ -120,10 +124,10 @@ export function useAnnotationClipMenu({
         : [];
     const items = [
       ...annotationArrangeItems(
-        availableGroupArrangements(
+        recordingAnnotationArrangements(
           clips,
           (item) => targets.has(item.annotation.id),
-          recordingAnnotationClipsMeet,
+          cameraPlacement,
         ),
       ),
       ...tracking.map((item) => ({ ...item, section: SECTION })),

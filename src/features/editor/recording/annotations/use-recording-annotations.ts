@@ -6,24 +6,29 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
 import {
+  AnnotationTool,
   useAnnotationAngleDefault,
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
 } from "../../annotations/annotation-defaults";
-import { arrangedGroup, Arrangement } from "../../annotations/annotation-order";
+import { Arrangement } from "../../annotations/annotation-order";
 import { AnnotationFrame, pacedClip } from "../../annotations/annotation-pace";
 import { Annotation, AnnotationTextEdit } from "../../annotations/annotations";
 import { useAnnotations } from "../../annotations/use-annotations";
+import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { drawingToolKind } from "../../tool-panels/tool-registry";
-import { RecordingVideoTrackId } from "../../types";
+import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 
+import {
+  arrangedRecordingAnnotations,
+  recordingCameraPlacement,
+} from "./recording-annotation-layers";
 import { recordingAnnotationPinning } from "./recording-annotation-pinning";
 import {
   mergeRecordingAnnotationClips,
   RecordingAnnotationClip,
-  recordingAnnotationClipsMeet,
   RecordingAnnotationPinCommit,
   renumberedAnnotationClips,
 } from "./recording-annotations";
@@ -46,16 +51,25 @@ type AnnotationHoverEvent = { annotationId: string | null; sessionId: number };
 const EMPTY_CLIPS: RecordingAnnotationClip[] = [];
 
 export function useRecordingAnnotations({
+  bakedLayers,
   edit,
   frames,
   getPositionMs,
   onEdit,
   onSelectTrack,
+  screenCaptureScale,
   sessionId,
   sourceDurationMs,
   tool,
   trackId,
 }: {
+  /** The screen's output and the camera's placement on it at the playhead,
+   * where One video draws the camera into the screen's video; null where it
+   * does not, and annotations cannot move between the two. */
+  bakedLayers: {
+    cameraOverlay: CameraOverlaySettings;
+    screen: ScreenshotOutputSettings;
+  } | null;
   edit: RecordingTimelineEdit;
   /** Each pane's picture, in its own source pixels: what an annotation's
    * path is paced against. */
@@ -63,15 +77,25 @@ export function useRecordingAnnotations({
   /** Where the playhead is, in source time: where a fresh pin is made. */
   getPositionMs: () => number;
   onEdit: (edit: RecordingTimelineEdit) => void;
+  /** Captured pixels per logical point of the screen. */
+  screenCaptureScale: number;
   sessionId: number | null;
   sourceDurationMs: number;
   /** The annotation tool in hand, when one is. The native chrome learns it
    * from the layout; here it only decides what the keyboard can delete. */
-  tool: import("../../annotations/annotation-defaults").AnnotationTool | null;
+  tool: AnnotationTool | null;
   trackId: RecordingVideoTrackId | null;
   onSelectTrack?: (track: RecordingVideoTrackId) => void;
 }) {
   const clips = edit.annotationClips ?? EMPTY_CLIPS;
+  const cameraPlacement =
+    bakedLayers &&
+    recordingCameraPlacement({
+      ...bakedLayers,
+      cameraSource: frames.camera,
+      screenCaptureScale,
+      screenSource: frames.primary,
+    });
   // A fresh annotation's dress and whether it animates both travel with the
   // layout the native tool draws from; animation is the annotation's own
   // property, so it rides beside the style rather than inside it. The dress is
@@ -224,17 +248,28 @@ export function useRecordingAnnotations({
     ...selection,
     /** Moves the annotations in hand past the clips showing with them,
      * several together keeping their own stacking, answering whether there
-     * were any. */
+     * were any. A step past the end of their track hands them to the other
+     * picture, which is then the one in hand. */
     arrangeSelected: (arrangement: Arrangement) => {
       if (selection.selectedIds.size === 0) return false;
-      const next = arrangedGroup(
+      const isMember = (clip: RecordingAnnotationClip) =>
+        selection.selectedIds.has(clip.annotation.id);
+      const next = arrangedRecordingAnnotations({
+        arrangement,
         clips,
-        (clip) => selection.selectedIds.has(clip.annotation.id),
-        { arrangement, meets: recordingAnnotationClipsMeet },
-      );
-      if (next !== clips) commitClips(next);
+        isMember,
+        placement: cameraPlacement,
+      });
+      if (next === clips) return true;
+      commitClips(next);
+      const moved = next.find(isMember);
+      if (moved && moved.trackId !== clips.find(isMember)?.trackId)
+        onSelectTrack?.(moved.trackId);
       return true;
     },
+    /** Where One video draws the screen and the camera at the playhead, which
+     * a move between the two keeps an annotation's place against. */
+    cameraPlacement,
     canDelete: selection.hasSelection || (tool !== null && selection.canDelete),
     clips,
     onClipsChange: commitClips,

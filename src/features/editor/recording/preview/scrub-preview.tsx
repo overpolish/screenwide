@@ -54,6 +54,9 @@ export type ScrubPreviewProps = {
   >;
   recordingOutput?: RecordingOutputSettings;
   recordingTimelineEdit?: RecordingTimelineEdit | null;
+  /** Captured pixels per logical point of the screen, which a screen
+   * annotation's size is measured in. */
+  screenCaptureScale?: number;
   selectedTrack?: RecordingTrackId | null;
 };
 

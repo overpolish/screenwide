@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { RecordingCameraPlacement } from "../../recording/annotations/recording-annotation-layers";
 import { RecordingAnnotationClip } from "../../recording/annotations/recording-annotations";
 import { AnnotationClipPinning } from "../../recording/annotations/use-annotation-clip-menu";
 import { RecordingPinStatus } from "../../recording/annotations/use-recording-pin-status";
@@ -41,6 +42,9 @@ export type RecordingTrackLanesProps = {
   sourceDurationMs: number;
   thumbnails: RecordingTimelineThumbnails;
   volumes: AudioTrackVolumes;
+  /** Where One video draws the screen and the camera at the playhead, which
+   * an annotation clip's menu moves its annotation between. */
+  annotationCameraPlacement?: RecordingCameraPlacement | null;
   annotationClips?: RecordingAnnotationClip[];
   /** How each pinned annotation's path is coming along, by annotation id. */
   annotationPinStatus?: ReadonlyMap<string, RecordingPinStatus>;

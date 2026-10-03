@@ -6,7 +6,10 @@ import {
   RecordingOutputSettings,
   screenshotOutputDimensions,
 } from "../../screenshot/screenshot-output";
-import { isAnnotationTool } from "../../tool-panels/tool-registry";
+import {
+  drawingToolKind,
+  isAnnotationTool,
+} from "../../tool-panels/tool-registry";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
@@ -15,6 +18,16 @@ import { normalizedRecordingSelection } from "./recording-selection";
 import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
 
 const FRAME_LAYER_ID = 0xffffffff;
+
+/** The tools that only draw on the screen: an effect reads or changes the
+ * screen's own frames, which the camera has none of. The twin of
+ * `screen_only` in `src-tauri/src/editor/annotations/gesture.rs`. */
+const SCREEN_ONLY_TOOLS: ReadonlySet<RecordingCanvasTool> = new Set([
+  "highlight",
+  "magnify",
+  "redact",
+  "spotlight",
+]);
 
 type VideoSourceDimensions = Partial<
   Record<RecordingVideoTrackId, { height: number; width: number }>
@@ -217,39 +230,45 @@ export function recordingVideoSelectionTargets({
           ]
         : [],
     );
-  // The marquee reaches every pane, as the select tool does: a band may be
-  // drawn over whichever picture it starts on.
-  if (canvasTool === "marquee")
-    return recordingVideoSelectionTargets({
-      cameraOverlay,
-      canPreviewBakedCamera,
-      canvasTool: "select",
-      effectiveRecordingOutput,
-      isFramed,
-      previewSourceDimensions,
-      selectedVideoTracks,
-    });
-  if (canvasTool !== "select" && canvasTool !== "crop") return null;
+  // The marquee and the drawing tools reach every pane as the select tool
+  // does: a band may be drawn over whichever picture it starts on, a fresh
+  // annotation starts on the picture under the press, and an annotation is
+  // measured against its own picture whichever layer is in hand. A drawing
+  // tool picks no layer up; the native side is told so with the layout.
+  const mode =
+    canvasTool === "crop"
+      ? "crop"
+      : canvasTool === "select" ||
+          canvasTool === "marquee" ||
+          drawingToolKind(canvasTool) !== null
+        ? "select"
+        : null;
+  if (mode === null) return null;
+  // An effect is drawn on the screen alone, so the camera over it never takes
+  // its press.
+  const reachesCamera = !SCREEN_ONLY_TOOLS.has(canvasTool);
   if (canPreviewBakedCamera) {
     const primarySource = previewSourceDimensions.primary;
     const cameraSource = previewSourceDimensions.camera;
     if (!primarySource || !cameraSource) return null;
     const output = screenshotOutputDimensions(effectiveRecordingOutput.primary);
+    const screen = {
+      ...normalizedRecordingSelection({
+        mode: isFramed ? "select" : mode,
+        output: effectiveRecordingOutput.primary,
+        paneIndex: 0,
+        source: primarySource,
+      }),
+      framed: isFramed,
+    };
+    if (!reachesCamera) return [screen];
     return [
-      {
-        ...normalizedRecordingSelection({
-          mode: isFramed ? "select" : canvasTool,
-          output: effectiveRecordingOutput.primary,
-          paneIndex: 0,
-          source: primarySource,
-        }),
-        framed: isFramed,
-      },
+      screen,
       {
         ...bakedCameraSelection({
           cameraOverlay,
           cameraSource,
-          isCropping: canvasTool === "crop" && !isFramed,
+          isCropping: mode === "crop" && !isFramed,
           output,
           primarySource,
         }),
@@ -259,13 +278,14 @@ export function recordingVideoSelectionTargets({
   }
   return (["primary", "camera"] as const).flatMap((trackId) => {
     if (!selectedVideoTracks.has(trackId)) return [];
+    if (trackId === "camera" && !reachesCamera) return [];
     const source = previewSourceDimensions[trackId];
     if (!source) return [];
     const framesPane = isFramed && trackId === "primary";
     return [
       {
         ...normalizedRecordingSelection({
-          mode: framesPane ? "select" : canvasTool,
+          mode: framesPane ? "select" : mode,
           output: effectiveRecordingOutput[trackId],
           paneIndex: trackId === "primary" ? 0 : 1,
           source,

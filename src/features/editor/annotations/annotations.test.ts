@@ -5,10 +5,9 @@ import { describe, expect, it } from "vitest";
 
 import { validAnnotations } from "./annotation-documents";
 import { annotationLaneLabel } from "./annotation-kinds";
-import { Annotation, renumberedCounters } from "./annotations";
+import { Annotation, renumberedCounterLists } from "./annotations";
 
 const arrow = (id: string): Annotation => ({
-  aboveCamera: false,
   animated: true,
   id,
   shape: {
@@ -35,7 +34,6 @@ const arrow = (id: string): Annotation => ({
 });
 
 const counter = (id: string, value: number): Annotation => ({
-  aboveCamera: false,
   animated: true,
   id,
   shape: { angle: 0, center: { x: 20, y: 30 }, kind: "counter", value },
@@ -56,37 +54,47 @@ const counter = (id: string, value: number): Annotation => ({
   },
 });
 
-describe("renumberedCounters", () => {
+describe("renumberedCounterLists", () => {
+  const values = (lists: Annotation[][]) =>
+    lists.map((list) =>
+      list.flatMap((annotation) =>
+        annotation.shape.kind === "counter" ? [annotation.shape.value] : [],
+      ),
+    );
+
   it("closes the gap a deleted counter leaves", () => {
-    const renumbered = renumberedCounters([counter("a", 1), counter("c", 3)]);
-    expect(renumbered.map((annotation) => annotation.shape)).toEqual([
-      expect.objectContaining({ value: 1 }),
-      expect.objectContaining({ value: 2 }),
+    const [renumbered] = renumberedCounterLists([
+      [counter("a", 1), counter("c", 3)],
     ]);
+    expect(values([renumbered])).toEqual([[1, 2]]);
   });
 
   it("numbers by place in the list, arrows in between and all", () => {
-    const renumbered = renumberedCounters([
-      counter("a", 9),
-      arrow("b"),
-      counter("c", 9),
+    const [renumbered] = renumberedCounterLists([
+      [counter("a", 9), arrow("b"), counter("c", 9)],
     ]);
     expect(renumbered.map((annotation) => annotation.shape.kind)).toEqual([
       "counter",
       "arrow",
       "counter",
     ]);
-    expect(
-      renumbered
-        .map((annotation) => annotation.shape)
-        .filter((shape) => shape.kind === "counter")
-        .map((shape) => shape.value),
-    ).toEqual([1, 2]);
+    expect(values([renumbered])).toEqual([[1, 2]]);
   });
 
-  it("hands back the very same list when nothing moved", () => {
-    const annotations = [counter("a", 1), counter("b", 2)];
-    expect(renumberedCounters(annotations)).toBe(annotations);
+  it("numbers every list as one run, in the order the counters were placed", () => {
+    const renumbered = renumberedCounterLists([
+      [counter("a", 1), counter("c", 4)],
+      [counter("b", 2)],
+    ]);
+    expect(values(renumbered)).toEqual([[1, 3], [2]]);
+  });
+
+  it("hands back the very same lists when nothing moved", () => {
+    const first = [counter("a", 1)];
+    const second = [counter("b", 2)];
+    const [a, b] = renumberedCounterLists([first, second]);
+    expect(a).toBe(first);
+    expect(b).toBe(second);
   });
 });
 

@@ -40,9 +40,10 @@ impl PreviewManager {
   }
 
   /// One report from the native hover pulse. `index` is the arrow under the
-  /// pointer, or negative for none; `image_points` is how wide the layer's
-  /// picture is drawn on screen, which converts the halo's points into the
-  /// canvas pixels the shader measures its distances in.
+  /// pointer among every layer's published grips, or negative for none;
+  /// `image_points` is how wide that layer's picture is drawn on screen, which
+  /// converts the halo's points into the canvas pixels the shader measures its
+  /// distances in.
   ///
   /// The answer is the arrow the pointer has moved onto, and only when that
   /// changed: every frame of the pulse widens the halo, but the arrow under
@@ -81,11 +82,8 @@ impl PreviewManager {
     if !image_points.is_finite() || image_points <= 0.0 {
       return None;
     }
-    // The chrome only ever hit-tests the selected pane, which is the one the
-    // grips were published for.
-    let pane_index = self.annotation_pane_index?;
+    let (pane_index, index, annotation) = self.published_annotation(index)?;
     let item = self.output.as_ref()?.items.get(pane_index as usize)?;
-    let annotation = item.output.annotations.get(index)?;
     let width = hover_width_points(progress) * item.output.image_width / image_points;
     Some(AnnotationHover {
       id: annotation.id.clone(),

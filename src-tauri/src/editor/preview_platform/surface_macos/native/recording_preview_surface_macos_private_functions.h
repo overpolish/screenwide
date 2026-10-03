@@ -58,6 +58,9 @@ void emit_selection_gesture(ScreenwidePreviewSurface *surface,
                                    uint32_t phase, uint32_t operation,
                                    uint32_t edges, double scale,
                                    double deltaX, double deltaY);
+/// `moved` with the picture it is cut from moved and scaled with it.
+ScreenwidePreviewSelection selection_carrying_image(ScreenwidePreviewSelection start,
+                                                    ScreenwidePreviewSelection moved);
 uint32_t selection_handle_edges(ScreenwidePreviewSurface *surface,
                                        NSPoint point);
 BOOL selection_radius_hit(ScreenwidePreviewSurface *surface,
@@ -174,9 +177,18 @@ void emit_annotation_gesture(ScreenwidePreviewSurface *surface, uint32_t phase,
 /// does: its layer becomes the selection and Rust commits the choice.
 void annotation_choose(ScreenwidePreviewSurface *surface, NSInteger index,
                        NSPoint point);
+/// Puts the topmost picture under a drawing press in hand, as a press with
+/// the select tool would, so the fresh annotation joins it. Over no picture
+/// the selected layer keeps the annotation.
+void annotation_take_layer_at_point(ScreenwidePreviewSurface *surface,
+                                    NSPoint point);
 /// Whether several annotations are chosen together, which is when the group
 /// chrome is drawn and a press on a member carries them all.
 BOOL annotation_has_group(ScreenwidePreviewSurface *surface);
+/// Whether the choice is a still's: an annotation, or a group, on the
+/// selected layer of a screenshot, whose grips carry no layer of their own.
+/// Every other layer's grips, and every recording's, carry their layer.
+BOOL annotation_still_choice(ScreenwidePreviewSurface *surface);
 /// The layer whose whole-group box `point` lands inside, or `INT32_MIN`.
 int32_t annotation_group_layer_at_point(ScreenwidePreviewSurface *surface,
                                         NSPoint point);

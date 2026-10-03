@@ -141,9 +141,11 @@ pub struct AnnotationStyle {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Annotation {
-  /// Whether the annotation is drawn over the camera bubble rather than under
-  /// it. Screenshots have no bubble; the recording kernel will honour this.
-  #[serde(default)]
+  /// Drawn over a baked camera rather than under it. A document never carries
+  /// it: an annotation is drawn with its own layer, and only a camera's
+  /// annotations, carried into the screen's composition by `camera_baked`,
+  /// are drawn over the camera there.
+  #[serde(skip)]
   pub above_camera: bool,
   /// Whether a timed annotation draws itself in at the start of its clip and
   /// undraws at the end. Stills have no clip to animate over, so they ignore
@@ -250,7 +252,9 @@ mod tests {
       },
     };
     let json = serde_json::to_string(&annotation).unwrap();
-    assert!(json.contains("\"aboveCamera\":false"), "{json}");
+    // Whether it is drawn over a baked camera is the frame's, never the
+    // document's.
+    assert!(!json.contains("aboveCamera"), "{json}");
     assert!(json.contains("\"animated\":true"), "{json}");
     // The reveal is this frame's state, not the document's.
     assert!(!json.contains("reveal"), "{json}");
@@ -270,7 +274,6 @@ mod tests {
         "style":{"color":"#fff000","width":4}}"##,
     )
     .unwrap();
-    assert!(!annotation.above_camera);
     // A document written before annotations could animate still animates.
     assert!(annotation.animated);
     assert!(annotation.reveal.is_whole());

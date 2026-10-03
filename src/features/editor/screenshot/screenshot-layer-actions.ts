@@ -3,6 +3,7 @@
 
 import { arranged, Arrangement } from "../annotations/annotation-order";
 
+import { withScreenshotCountersNumbered } from "./screenshot-counters";
 import { ScreenshotWorkspaceOutputSettings } from "./screenshot-output";
 
 /** The workspace with one layer moved through the stacking. Every layer is
@@ -25,6 +26,8 @@ export const moveScreenshotLayer = ({
   return items === settings.items ? settings : { ...settings, items };
 };
 
+/** The workspace without one layer. Its counters go with it, and the rest
+ * close up behind them. */
 export const deleteScreenshotLayer = ({
   itemId,
   settings,
@@ -38,6 +41,6 @@ export const deleteScreenshotLayer = ({
   const items = settings.items.filter((item) => item.id !== itemId);
   return {
     nextSelectedItemId: items[Math.min(index, items.length - 1)]?.id ?? null,
-    settings: { ...settings, items },
+    settings: withScreenshotCountersNumbered({ ...settings, items }),
   };
 };

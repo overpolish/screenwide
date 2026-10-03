@@ -15,8 +15,6 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 
 use super::super::preview_platform::{RecordingPreviewSurface, SelectionGesturePhase};
 use super::annotation_gesture::AnnotationCommit;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use super::payloads::ScreenshotAnnotationMenuEvent;
 use super::payloads::{
   ScreenshotAnnotationChangeEvent, ScreenshotAnnotationHoverEvent, ScreenshotPreviewTransformEvent,
   ScreenshotSelectionChangeEvent, ScreenshotSelectionGestureEvent,
@@ -26,8 +24,19 @@ use crate::editor::annotations::gesture::AnnotationGestureTarget;
 
 /// Hands a finished arrow gesture to React. Only the end of a gesture reports
 /// one: everything in between is drawn natively from the manager's own
-/// working copy, so the document takes exactly one edit per drag.
+/// working copy, so the document takes exactly one edit per drag. A choice
+/// made on another layer selects that layer first, the way a press with the
+/// select tool does, so the panel finds the annotation on the layer in hand.
 fn emit_annotation_change(app: &AppHandle, session_id: u64, commit: AnnotationCommit) {
+  if commit.selects_layer {
+    let _ = app.emit(
+      "screenshot-preview://selection-change",
+      ScreenshotSelectionChangeEvent {
+        pane_index: Some(commit.pane_index),
+        session_id,
+      },
+    );
+  }
   let _ = app.emit(
     "screenshot-preview://annotation-change",
     ScreenshotAnnotationChangeEvent {
@@ -206,48 +215,7 @@ pub(super) fn install(
     },
   ));
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  {
-    // A right press on an annotation opens its menu in React. The chrome only
-    // hit-tests the selected pane, so the index is into that pane's list.
-    let event_app = app.clone();
-    surface.set_context_menu_callback(Box::new(move |_layer, annotation, x, y| {
-      let Some(index) = annotation else {
-        return;
-      };
-      let state = event_app.state::<ScreenshotPreviewState>();
-      // Never wait for this mutex from AppKit's main thread; a menu that does
-      // not open is pressed for again.
-      let Ok(manager) = state.0.try_lock() else {
-        return;
-      };
-      if manager.session_id != Some(session_id) {
-        return;
-      }
-      let Some(pane_index) = manager.annotation_pane_index else {
-        return;
-      };
-      let Some(annotation_id) = manager
-        .output
-        .as_ref()
-        .and_then(|output| output.items.get(pane_index as usize))
-        .and_then(|item| item.output.annotations.get(index as usize))
-        .map(|annotation| annotation.id.clone())
-      else {
-        return;
-      };
-      drop(manager);
-      let _ = event_app.emit(
-        "screenshot-preview://annotation-menu",
-        ScreenshotAnnotationMenuEvent {
-          annotation_id,
-          pane_index,
-          session_id,
-          x,
-          y,
-        },
-      );
-    }));
-  }
+  super::start_menu_callback::install(app, surface, session_id);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
     let event_app = app.clone();

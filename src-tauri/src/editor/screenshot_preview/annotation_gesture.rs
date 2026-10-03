@@ -33,6 +33,9 @@ pub(crate) struct AnnotationCommit {
   /// Every annotation chosen once the commit lands.
   pub(crate) selected_annotation_ids: Vec<String>,
   pub(crate) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
+  /// Whether the choice landed on a layer other than the selected one, which
+  /// then becomes the selected layer: an annotation is chosen with its layer.
+  pub(crate) selects_layer: bool,
 }
 
 pub(super) struct AnnotationGestureOverride {
@@ -107,6 +110,7 @@ impl PreviewManager {
     Some(AnnotationCommit {
       annotations: self.annotations_for(pane_index)?.clone(),
       pane_index,
+      selects_layer: !selected.is_empty() && self.annotation_pane_index != Some(pane_index),
       selected_annotation_ids: selected,
       text_edit: None,
     })
@@ -265,9 +269,14 @@ impl PreviewManager {
     if edit.wants_picture(annotations) {
       edit.set_picture(picture);
     }
+    let id = edit.selected_id().to_owned();
+    if target == AnnotationGestureTarget::New {
+      self.number_fresh_counter(pane_index, &id);
+    }
+    let annotations = self.annotations_for(pane_index)?;
     // The field excludes the annotation the gesture holds, so a counter can
     // never snap back to the place it started from.
-    let field = SnapField::new(source, annotations, edit.selected_id(), image_width);
+    let field = SnapField::new(source, annotations, &id, image_width);
     let chosen = edit.chosen_id().map(str::to_owned);
     self.annotation_gesture = Some(AnnotationGestureOverride {
       pane_index,

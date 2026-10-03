@@ -220,6 +220,22 @@ SCREENWIDE_PREVIEW_PRIVATE void emit_selection_gesture(ScreenwidePreviewSurface 
                                      surface.selectionGestureContext);
 }
 
+/// `moved` with its picture carried along by the same shift and scale that
+/// took `start`'s rectangle to `moved`'s. A drag edits the rectangle live
+/// while the layout that would place the picture is held back until it ends,
+/// and annotations are measured against the picture, so without this they
+/// stay behind where the layer was picked up.
+SCREENWIDE_PREVIEW_PRIVATE ScreenwidePreviewSelection selection_carrying_image(
+    ScreenwidePreviewSelection start, ScreenwidePreviewSelection moved) {
+  double scaleX = start.width > 0.0 ? moved.width / start.width : 1.0;
+  double scaleY = start.height > 0.0 ? moved.height / start.height : 1.0;
+  moved.image_x = moved.x + (start.image_x - start.x) * scaleX;
+  moved.image_y = moved.y + (start.image_y - start.y) * scaleY;
+  moved.image_width = start.image_width * scaleX;
+  moved.image_height = start.image_height * scaleY;
+  return moved;
+}
+
 // Selection edges use the same names as the DOM implementation: left=1,
 // right=2, top=4, bottom=8. Hit regions are 16 points square around each
 // visible four-point handle and are checked before the selection body.

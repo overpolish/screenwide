@@ -143,6 +143,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     canEditActiveTrack && (!bakeCamera || canPreviewBakedCamera);
   const hasVisiblePanes = visiblePaneEntries.length > 0;
   useRecordingCanvasContextMenu({
+    cameraPlacement: annotations.cameraPlacement,
     clips: annotations.clips,
     onClipsChange: annotations.onClipsChange,
     pinning: annotations.pinning,

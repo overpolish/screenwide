@@ -116,6 +116,7 @@ export function RecordingPreviewTimelineBand({
       ) : (
         <RecordingTrackLanes
           adjustedKeyboardFragmentIds={keyboardTimeline.adjustedFragmentIds}
+          annotationCameraPlacement={annotations.cameraPlacement}
           annotationClips={annotations.clips}
           annotationPinning={annotations.pinning}
           annotationPinStatus={annotations.pinStatus}

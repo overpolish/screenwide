@@ -30,6 +30,7 @@ mod group;
 /// does on macOS.
 pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
   let mut samples = Vec::new();
+  let mut taken_layer = None;
   let taken = {
     let Ok(mut state) = inner.state.lock() else {
       return false;
@@ -45,14 +46,18 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
     // Read before the match: the arms take the state by mutable reference,
     // which a borrow held by the scrutinee would forbid.
     let drawing = drawing_kind(state.annotation.mode);
+    // A fresh annotation joins the picture under the press.
+    if handle.is_none() && shaft.is_none() && drawing.is_some() {
+      taken_layer = take_drawing_layer(inner, &mut state, point);
+    }
     match (handle, shaft) {
       (None, None) if drawing.is_none() && group::arm_empty(&mut state, point) => true,
       (None, None) => match drawing {
         None => {
           // Empty picture with only the select tool in hand: the arrow chrome
-          // lets go, and the press carries on to the layer underneath. A live
-          // annotation - one with no layer of its own - has its choice cleared
-          // first, and so has a group of them.
+          // lets go, and the press carries on to the layer underneath. A
+          // still's annotation - one on the selected layer, with no layer of
+          // its own - has its choice cleared first, and so has a group of them.
           let still = match selected_item(&state) {
             Some(item) => item.layer_id < 0,
             None => {
@@ -60,8 +65,8 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
                 && state
                   .annotation
                   .handles
-                  .first()
-                  .is_some_and(|item| item.layer_id < 0)
+                  .iter()
+                  .any(|item| item.layer_id < 0 && item.flags & HANDLE_FLAG_GROUPED != 0)
             }
           };
           if still {
@@ -139,6 +144,11 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       }
     }
   };
+  // The new layer is reported before the gesture, as a press with the select
+  // tool reports its layer before the move it starts.
+  if let Some(layer) = taken_layer {
+    emit_selection(inner, Some(layer));
+  }
   report(inner, &samples);
   taken
 }

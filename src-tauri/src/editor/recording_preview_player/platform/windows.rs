@@ -79,6 +79,10 @@ pub(super) fn present_native_frame(
         );
       }
       sources.arrange_scene(&mut settings, frame.timestamp_ms, frame_ms);
+      crate::editor::recording_preview_player::annotation_preview::carry_camera_annotations(
+        &mut settings,
+        sources.annotation_pictures(),
+      );
       // Annotations are authored against the full-resolution source; this frame
       // was decoded on its own grid, so the points move with it.
       let track = if index == 0 {

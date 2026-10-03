@@ -53,6 +53,34 @@ pub(super) fn apply_clips(
   );
 }
 
+/// One video draws the camera inside the screen's composition, so the
+/// camera's annotations are carried into the screen's list to be drawn over
+/// it, placed where the arranged scene puts the camera. Called once the scene
+/// has arranged `composition`; `pictures` are the primary's and the camera's
+/// source sizes. With the camera a pane of its own, it draws its own.
+pub(super) fn carry_camera_annotations(
+  composition: &mut PreviewCompositionSettings,
+  pictures: [(u32, u32); 2],
+) {
+  if !composition.bake_camera {
+    return;
+  }
+  let primary = &composition.recording_output.primary;
+  let carried = crate::editor::annotations::camera_baked::camera_annotations_on_screen(
+    &composition.recording_output.camera.annotations,
+    pictures[1],
+    composition.camera_overlay,
+    (f64::from(primary.width), f64::from(primary.height)),
+    primary,
+    pictures[0],
+  );
+  composition
+    .recording_output
+    .primary
+    .annotations
+    .extend(carried);
+}
+
 /// The preview's held fills, where the platform decodes the frames they are
 /// read from.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -137,6 +165,7 @@ impl PlayerSources {
     );
     drop(ranges);
     self.arrange_scene(&mut composition, source_ms, 0.0);
+    carry_camera_annotations(&mut composition, self.annotation_pictures());
     Some(composition)
   }
 }

@@ -1051,7 +1051,9 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     let unannotated = result;
     result = composite_annotation_layers(result, base, pixel, first, last, annotation_feather,
                                          annotation_atlas, run == 0u);
-    result = mix(unannotated, result, screen_opacity);
+    // The run over the camera is the camera's own annotations, which a scene
+    // fades with the camera rather than with the screen.
+    result = mix(unannotated, result, select(screen_opacity, canvas.scene_opacity.y, run == 1u));
     let shade = annotation_blur_spotlight();
     if (annotation_blur_mode() == 1u && shade >= first && shade < last) {
       // Drawing the layer: the run stopped under the shade.

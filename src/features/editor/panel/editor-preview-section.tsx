@@ -4,15 +4,10 @@
 import { useRef } from "react";
 
 import { useAnnotationDraft } from "../annotations/annotation-draft";
-import { Arrangement } from "../annotations/annotation-order";
 import { useToolFollowsAnnotation } from "../annotations/use-tool-follows-annotation";
 import { PreviewViewport } from "../preview/preview-viewport";
 import { usePreviewZoom } from "../preview/use-preview-zoom";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
-import {
-  deleteScreenshotLayer,
-  moveScreenshotLayer,
-} from "../screenshot/screenshot-layer-actions";
 import {
   screenshotWorkspaceItemOutput,
   ScreenshotOutputSettings,
@@ -23,6 +18,7 @@ import {
   useScreenshotTools,
 } from "../screenshot/screenshot-tools";
 import { useScreenshotAnnotations } from "../screenshot/use-screenshot-annotations";
+import { useScreenshotLayerActions } from "../screenshot/use-screenshot-layer-actions";
 import { useScreenshotRecenter } from "../screenshot/use-screenshot-recenter";
 import { useScreenshotTool } from "../screenshot/use-screenshot-tool";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
@@ -75,8 +71,12 @@ export function ScreenshotSection({
   // the edits that reach them.
   const annotations = useScreenshotAnnotations({
     onOutputChange,
+    onSelectedItemChange,
+    onWorkspaceChange: onCanvasResize,
     selectedItemId,
     selectedOutput,
+    sourceWidths: new Map(artifact.items.map((item) => [item.id, item.width])),
+    workspace: screenshotOutput,
   });
   // The panel follows the tool in hand, so choosing one is all a button or a
   // shortcut has to do - except while an arrow is chosen, whose own panel
@@ -99,33 +99,13 @@ export function ScreenshotSection({
   // that was chosen with it: the panel and the next press never disagree.
   useToolFollowsAnnotation(annotations.selectedKind, tool, setTool);
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
-  const moveSelectedLayer = (
-    arrangement: Arrangement,
-    itemId = selectedItemId,
-  ) => {
-    if (!screenshotOutput || itemId === null) return;
-    const next = moveScreenshotLayer({
-      arrangement,
-      itemId,
-      settings: screenshotOutput,
+  const { deleteLayer: deleteSelectedLayer, moveLayer: moveSelectedLayer } =
+    useScreenshotLayerActions({
+      onCanvasResize,
+      onSelectedItemChange,
+      screenshotOutput,
+      selectedItemId,
     });
-    if (next !== screenshotOutput) onCanvasResize?.(next);
-  };
-  const deleteSelectedLayer = (itemId = selectedItemId) => {
-    if (
-      !screenshotOutput ||
-      itemId === null ||
-      screenshotOutput.items.length <= 1
-    )
-      return;
-    const result = deleteScreenshotLayer({
-      itemId,
-      settings: screenshotOutput,
-    });
-    if (!result) return;
-    onCanvasResize?.(result.settings);
-    onSelectedItemChange?.(result.nextSelectedItemId);
-  };
   const recenter = useScreenshotRecenter({
     artifactId: artifact.id,
     onOutputChange,

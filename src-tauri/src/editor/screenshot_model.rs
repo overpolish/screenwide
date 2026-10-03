@@ -53,12 +53,31 @@ pub struct ScreenshotWorkspaceOutputSettings {
 }
 
 impl ScreenshotWorkspaceOutputSettings {
-  pub(crate) fn output_for(&self, item: &ScreenshotItem) -> ScreenshotOutputSettings {
-    self.output_for_id(item.id, item.capture())
+  /// The settings `item` is drawn with; `items` are every layer's pictures.
+  pub(crate) fn output_for(
+    &self,
+    item: &ScreenshotItem,
+    items: &[ScreenshotItem],
+  ) -> ScreenshotOutputSettings {
+    let source_width = |id| {
+      items
+        .iter()
+        .find(|candidate| candidate.id == id)
+        .map(|candidate| candidate.image.width)
+    };
+    self.output_for_id(item.id, item.capture(), &source_width)
   }
 
-  /// The layer `id`'s settings, for an image captured at `capture`.
-  pub(crate) fn output_for_id(&self, id: u64, capture: Capture) -> ScreenshotOutputSettings {
+  /// The settings layer `id` is drawn with, for an image captured at
+  /// `capture`. `source_width` is each layer's source width in pixels, by id:
+  /// the layer draws every other layer's spotlights under its own
+  /// annotations, so a spotlight lights the whole picture.
+  pub(crate) fn output_for_id(
+    &self,
+    id: u64,
+    capture: Capture,
+    source_width: &impl Fn(u64) -> Option<u32>,
+  ) -> ScreenshotOutputSettings {
     let mut output = self
       .items
       .iter()
@@ -74,6 +93,10 @@ impl ScreenshotWorkspaceOutputSettings {
         },
         |candidate| candidate.output.clone(),
       );
+    let borrowed = self.borrowed_spotlights(id, source_width);
+    if !borrowed.is_empty() {
+      output.annotations.splice(0..0, borrowed);
+    }
     output.background_color = self.canvas.background_color.clone();
     output.background_image_path = self.canvas.background_image_path.clone();
     output.background_type = self.canvas.background_type.clone();

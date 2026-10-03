@@ -42,6 +42,8 @@ mod refresh;
 mod start;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod start_callbacks;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod start_menu_callback;
 mod state;
 
 pub use controls::{

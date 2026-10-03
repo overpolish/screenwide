@@ -43,9 +43,9 @@ pub async fn layout_recording_preview_surface(
   // commands let one land first, which paints the layer's frame for a frame
   // as the tool comes in hand or goes back down.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  manager.set_annotation_tool(annotation_tool.as_deref());
+  let picking = manager.set_annotation_tool(annotation_tool.as_deref());
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  let _ = annotation_tool;
+  let (_, picking) = (annotation_tool, true);
   let sources = manager
     .sources
     .as_ref()
@@ -238,7 +238,7 @@ pub async fn layout_recording_preview_surface(
   let chrome_batch = surface.present_batch();
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   manager.publish_annotation_handles();
-  surface.set_selection_targets(selection_targets.as_deref());
+  surface.set_selection_targets(selection_targets.as_deref(), picking);
   surface.set_selection(selection);
   #[cfg(target_os = "windows")]
   drop(chrome_batch);
