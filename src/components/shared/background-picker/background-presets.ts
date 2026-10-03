@@ -114,12 +114,10 @@ const solidPresets: BackgroundPreset[] = [
   { background: solid("#14532D"), id: "solid-forest", name: "Forest" },
 ];
 
-/** One picture the system already ships as a desktop background, as the
- * native side describes it. */
+/** A picture on the desktop right now, as the native side describes it. */
 export type SystemWallpaper = {
   name: string;
   path: string;
-  thumbnailPath?: string | null;
 };
 
 /**
@@ -127,9 +125,9 @@ export type SystemWallpaper = {
  *
  * The generators first, since a gradient is what a canvas is usually given,
  * then the flat tones a screenshot is trimmed to for a document or a slide.
- * The system's own pictures are not in here: they are only known once the
- * native side has read the folder they live in, so a caller without them
- * simply has no wallpaper tiles.
+ * The desktop's pictures are not in here: they are only known once the
+ * native side has read them, so a caller without them simply has no wallpaper
+ * tiles.
  */
 export const BUILT_IN_BACKGROUND_PRESETS: BackgroundPreset[] = [
   ...meshPresets,
@@ -137,22 +135,19 @@ export const BUILT_IN_BACKGROUND_PRESETS: BackgroundPreset[] = [
 ];
 
 /**
- * The built-ins with the system's own desktop pictures folded in.
+ * The built-ins with the desktop's pictures folded in.
  *
  * Wallpapers sit between the generators and the flat tones, since they are
- * the same kind of choice as a gradient but a heavier one. A picture the system
- * has a thumbnail for carries it: the picture itself is tens of megabytes,
- * and a swatch is a few dozen pixels across.
+ * the same kind of choice as a gradient but a heavier one.
  */
 export const backgroundPresetsWithWallpapers = (
   wallpapers: SystemWallpaper[],
 ): BackgroundPreset[] => [
   ...meshPresets,
-  ...wallpapers.map(({ name, path, thumbnailPath }) => ({
+  ...wallpapers.map(({ name, path }) => ({
     background: { kind: "image" as const, path },
     id: `system-wallpaper:${name}`,
     name,
-    ...(thumbnailPath ? { thumbnailPath } : {}),
   })),
   ...solidPresets,
 ];

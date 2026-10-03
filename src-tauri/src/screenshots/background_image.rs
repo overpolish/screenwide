@@ -31,11 +31,19 @@ fn native_decode(_path: &str, _max_pixel_size: u32) -> Option<image::RgbaImage> 
 /// scale to: a picture already smaller than it comes back at its own size, and
 /// only the system decoder honours it, since it is the one that would
 /// otherwise hand back tens of megapixels for a swatch.
+///
+/// The format is read from the file's contents rather than its name: the
+/// picture Windows puts on the desktop, `TranscodedWallpaper`, has no
+/// extension.
 pub(crate) fn load(path: &str, max_pixel_size: u32) -> Option<image::RgbaImage> {
   if let Some(picture) = native_decode(path, max_pixel_size) {
     return Some(picture);
   }
-  Some(image::open(path).ok()?.into_rgba8())
+  let reader = image::ImageReader::open(path)
+    .ok()?
+    .with_guessed_format()
+    .ok()?;
+  Some(reader.decode().ok()?.into_rgba8())
 }
 
 /// A chosen picture, filled to the canvas.
@@ -148,29 +156,23 @@ mod tests {
     assert_eq!(filled.get_pixel(0, 0), &image::Rgba([255, 0, 0, 255]));
   }
 
-  /// The system's own desktop pictures are HEIC, which the `image` crate here
-  /// cannot read: this proves the picture goes through the system decoder and
-  /// comes back at the size the caller asked for rather than its own.
-  #[cfg(target_os = "macos")]
-  #[test]
-  fn decodes_a_system_heic_wallpaper_within_its_cap() {
-    let Some(wallpaper) = crate::settings::wallpapers::system_wallpapers(None)
-      .into_iter()
-      .find(|one| one.path.to_ascii_lowercase().ends_with(".heic"))
-    else {
-      return;
-    };
-    let picture = load(&wallpaper.path, 256).expect("the system decoded its own wallpaper");
-    let (width, height) = picture.dimensions();
-    assert!(width > 0 && height > 0);
-    assert!(
-      width <= 256 && height <= 256,
-      "{width}x{height} past the cap"
-    );
-  }
-
   #[test]
   fn answers_nothing_for_a_file_that_is_not_there() {
     assert!(background_image_canvas("/no/such/background.png", 32, 32).is_none());
+  }
+
+  #[test]
+  fn decodes_a_picture_without_an_extension() {
+    let directory = std::env::temp_dir().join("screenwide-background-image-test");
+    std::fs::create_dir_all(&directory).unwrap();
+    let png = directory.join("png.png");
+    image::RgbaImage::from_pixel(4, 2, image::Rgba([10, 200, 30, 255]))
+      .save(&png)
+      .unwrap();
+    let bare = directory.join("TranscodedWallpaper");
+    std::fs::rename(&png, &bare).unwrap();
+    let picture = load(bare.to_str().unwrap(), 64).expect("the format came from the contents");
+    assert_eq!(picture.dimensions(), (4, 2));
+    let _ = std::fs::remove_dir_all(&directory);
   }
 }

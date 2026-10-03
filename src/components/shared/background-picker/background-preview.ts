@@ -67,39 +67,34 @@ export const backgroundTileStyle = (background: Background): CSSProperties => {
 const thumbnailPixels = (size: number) =>
   Math.round(size * Math.min(globalThis.devicePixelRatio || 1, 3));
 
-/** A background, a size, and the file it is drawn from as one name: two tiles
- * that ask for the same picture share one render. */
-const thumbnailKey = (
-  background: Background,
-  size: number,
-  sourcePath: string | undefined,
-) => `${JSON.stringify(background)}@${String(size)}@${sourcePath ?? ""}`;
+/** A background and a size as one name: two tiles that ask for the same
+ * background share one render. */
+const thumbnailKey = (background: Background, size: number) =>
+  `${JSON.stringify(background)}@${String(size)}`;
 
 /** One rendered swatch per background and size, shared by every tile that
- * shows it: a grid asks for each picture once, and a reopened panel finds it
- * already in hand. */
+ * shows it: a grid asks for each mesh once, and a reopened panel finds it
+ * already in hand. A picture is not held: the desktop's picture keeps its
+ * path when the wallpaper changes, and the native side names the swatch by
+ * the file's contents, so it is asked again each time a tile mounts. */
 const thumbnails = new Map<string, Promise<string>>();
 
-const thumbnailUrl = (
-  background: Background,
-  size: number,
-  sourcePath: string | undefined,
-) => {
-  const key = thumbnailKey(background, size, sourcePath);
+const renderThumbnail = (background: Background, size: number) =>
+  invoke<string>("render_background_thumbnail", { background, size }).then(
+    convertFileSrc,
+  );
+
+const thumbnailUrl = (background: Background, size: number) => {
+  if (background.kind === "image") return renderThumbnail(background, size);
+  const key = thumbnailKey(background, size);
   const held = thumbnails.get(key);
   if (held) return held;
-  const rendered = invoke<string>("render_background_thumbnail", {
-    background,
-    size,
-    sourcePath,
-  })
-    .then(convertFileSrc)
-    .catch((error: unknown) => {
-      // A failed render leaves the CSS likeness in place rather than an empty
-      // tile, and is not held, so the next look tries again.
-      thumbnails.delete(key);
-      throw error;
-    });
+  const rendered = renderThumbnail(background, size).catch((error: unknown) => {
+    // A failed render leaves the CSS likeness in place rather than an empty
+    // tile, and is not held, so the next look tries again.
+    thumbnails.delete(key);
+    throw error;
+  });
   thumbnails.set(key, rendered);
   return rendered;
 };
@@ -108,11 +103,6 @@ const thumbnailUrl = (
  * The background painted by the code that paints it for real, at a tile's
  * size.
  *
- * `sourcePath` is a smaller copy of the same picture to draw from, where
- * whoever offered the background has one: the system keeps swatch-sized
- * copies of its own desktop pictures, and those are HEIC, which the webview
- * cannot show but the native decoder can.
- *
  * Null until it arrives, and for the backgrounds a tile can draw itself: a
  * flat colour is a flat colour, and outside the app there is no renderer to
  * ask, so the CSS likeness stands in both times.
@@ -120,12 +110,11 @@ const thumbnailUrl = (
 export const useBackgroundThumbnail = (
   background: Background | undefined,
   size: number,
-  sourcePath?: string,
 ): string | null => {
   const pixels = thumbnailPixels(size);
   // The background travels as a value rather than as an identity, so a
   // rerender with an equal background asks for nothing new.
-  const key = background ? thumbnailKey(background, pixels, sourcePath) : null;
+  const key = background ? thumbnailKey(background, pixels) : null;
   const [rendered, setRendered] = useState<{ key: string; url: string } | null>(
     null,
   );
@@ -134,7 +123,7 @@ export const useBackgroundThumbnail = (
     if (!key || !background || background.kind === "solid" || !isTauri())
       return;
     let current = true;
-    void thumbnailUrl(background, pixels, sourcePath).then(
+    void thumbnailUrl(background, pixels).then(
       (url) => {
         if (current) setRendered({ key, url });
       },
@@ -146,7 +135,7 @@ export const useBackgroundThumbnail = (
       current = false;
     };
     // eslint-disable-next-line @eslint-react/exhaustive-deps
-  }, [key, pixels, sourcePath]);
+  }, [key, pixels]);
 
   return rendered && rendered.key === key ? rendered.url : null;
 };

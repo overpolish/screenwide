@@ -39,10 +39,6 @@ export type BackgroundPreset = {
   background: Background;
   id: string;
   name: string;
-  /** A small copy of the picture, where whoever offered it already has one.
-   * The system's desktop pictures are tens of megabytes each, so a swatch
-   * shows the system's own thumbnail rather than the picture itself. */
-  thumbnailPath?: string;
 };
 
 const sameColors = (a: string[], b: string[]) =>

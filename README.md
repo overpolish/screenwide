@@ -49,7 +49,7 @@
 
 <div>
 	<h3>Wallpapers and Custom Backgrounds</h3>
-	Default macOS/Windows wallpapers and custom images.
+	Your current desktop wallpaper and custom images.
 </div>
 
 <div>

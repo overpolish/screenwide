@@ -50,23 +50,35 @@ fn names_a_file_per_background_and_size() {
     color: "#000000".to_owned(),
   };
   assert_ne!(
-    cache_key(&solid, 32, None).unwrap(),
-    cache_key(&other, 32, None).unwrap()
+    cache_key(&solid, 32).unwrap(),
+    cache_key(&other, 32).unwrap()
   );
   assert_ne!(
-    cache_key(&solid, 32, None).unwrap(),
-    cache_key(&solid, 64, None).unwrap()
+    cache_key(&solid, 32).unwrap(),
+    cache_key(&solid, 64).unwrap()
   );
   assert_eq!(
-    cache_key(&solid, 32, None).unwrap(),
-    cache_key(&solid, 32, None).unwrap()
+    cache_key(&solid, 32).unwrap(),
+    cache_key(&solid, 32).unwrap()
   );
-  // The file a swatch is drawn from is part of what names it, so the same
-  // background drawn from the system's small copy is its own entry.
-  assert_ne!(
-    cache_key(&solid, 32, None).unwrap(),
-    cache_key(&solid, 32, Some("/a/thumbnail.heic")).unwrap()
-  );
+}
+
+/// The desktop's picture keeps its path when the wallpaper changes, so the
+/// file's contents have to be part of what names its swatch.
+#[test]
+fn renames_a_picture_swatch_when_the_file_changes() {
+  let directory = std::env::temp_dir().join("screenwide-thumbnail-key-test");
+  std::fs::create_dir_all(&directory).unwrap();
+  let picture = directory.join("TranscodedWallpaper");
+  std::fs::write(&picture, b"first").unwrap();
+  let background = Background::Image {
+    path: picture.to_string_lossy().into_owned(),
+  };
+  let before = cache_key(&background, 32).unwrap();
+  assert_eq!(cache_key(&background, 32).unwrap(), before);
+  std::fs::write(&picture, b"the second wallpaper").unwrap();
+  assert_ne!(cache_key(&background, 32).unwrap(), before);
+  let _ = std::fs::remove_dir_all(&directory);
 }
 
 #[test]
@@ -76,7 +88,6 @@ fn paints_a_flat_colour_across_the_swatch() {
       color: "#112233".to_owned(),
     },
     16,
-    None,
   )
   .unwrap();
   assert_eq!(canvas.dimensions(), (16, 16));
@@ -90,7 +101,6 @@ fn falls_back_to_a_colour_when_the_picture_is_not_there() {
       path: "/no/such/wallpaper.png".to_owned(),
     },
     16,
-    None,
   )
   .unwrap();
   assert_eq!(canvas.dimensions(), (16, 16));
@@ -118,30 +128,7 @@ fn falls_back_to_a_colour_for_a_mesh_without_geometry() {
       warp_percent,
     },
     16,
-    None,
   )
   .unwrap();
   assert_eq!(canvas.get_pixel(0, 0), &image::Rgba([27, 31, 59, 255]));
-}
-
-/// The tile stands for the wallpaper, which is a file the webview cannot
-/// decode; the pixels come from the small copy beside it. This proves the
-/// source is what is drawn, and that an unreadable one falls back rather
-/// than failing.
-#[test]
-fn draws_a_picture_from_the_source_it_is_given() {
-  let directory = std::env::temp_dir().join("screenwide-thumbnail-source-test");
-  std::fs::create_dir_all(&directory).unwrap();
-  let source = directory.join("source.png");
-  image::RgbaImage::from_pixel(8, 8, image::Rgba([10, 200, 30, 255]))
-    .save(&source)
-    .unwrap();
-  let background = Background::Image {
-    path: "/no/such/wallpaper.heic".to_owned(),
-  };
-  let canvas = render(&background, 16, source.to_str()).unwrap();
-  assert_eq!(canvas.get_pixel(8, 8), &image::Rgba([10, 200, 30, 255]));
-  let fallback = render(&background, 16, Some("/no/such/source.png")).unwrap();
-  assert_eq!(fallback.dimensions(), (16, 16));
-  let _ = std::fs::remove_dir_all(&directory);
 }

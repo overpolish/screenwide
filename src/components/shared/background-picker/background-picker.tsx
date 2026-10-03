@@ -127,7 +127,6 @@ export function BackgroundPicker({
       onPress={() => {
         choose(chosenFrom(preset, isSaved));
       }}
-      thumbnailPath={preset.thumbnailPath}
     />
   );
 

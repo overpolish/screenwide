@@ -141,10 +141,8 @@ fn main() {
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/drag_point.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/target.h");
     println!("cargo:rerun-if-changed=src/screenshots/macos/image_decode_macos.m");
-    println!("cargo:rerun-if-changed=src/screenshots/macos/video_still_macos.m");
     cc::Build::new()
       .file("src/screenshots/macos/image_decode_macos.m")
-      .file("src/screenshots/macos/video_still_macos.m")
       .file("src/glide/macos/drag_start.m")
       .file("src/glide/macos/spaces/native.m")
       .file("src/glide/macos/spaces/carry.m")

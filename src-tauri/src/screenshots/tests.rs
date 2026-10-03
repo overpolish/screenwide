@@ -290,7 +290,7 @@ fn a_generator_tile_is_drawn_rather_than_filled() {
     seed: 4_242,
     warp_percent: 9.0,
   };
-  let swatch = thumbnail::render(&background, 32, None).unwrap();
+  let swatch = thumbnail::render(&background, 32).unwrap();
   let spread = |channel: usize| {
     let values = swatch.pixels().map(|pixel| pixel.0[channel]);
     values.clone().max().unwrap() - values.min().unwrap()

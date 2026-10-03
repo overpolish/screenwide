@@ -53,12 +53,14 @@ fn stamp(path: &str) -> Stamp {
   }
 }
 
+/// The picture at its own size, through the same loader as an export so a
+/// HEIC or an extensionless file previews the way it exports.
 fn upload(gpu: &crate::gpu::Gpu, path: &str) -> Option<BackgroundImage> {
-  let pixels = image::open(path).ok()?.into_rgba8();
-  let (width, height) = pixels.dimensions();
   // A picture larger than the device takes is treated as unreadable, which
   // paints the solid colour rather than a device error.
   let largest = gpu.device.limits().max_texture_dimension_2d;
+  let pixels = crate::screenshots::load_background_image(path, largest)?;
+  let (width, height) = pixels.dimensions();
   if width == 0 || height == 0 || width > largest || height > largest {
     return None;
   }

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { isTauri } from "@tauri-apps/api/core";
 import { MouseEventHandler, ReactNode } from "react";
 import { ToggleButton } from "react-aria-components";
 
@@ -21,12 +20,9 @@ const TILE_SIZE = 28;
  * for the two that stand for an action rather than a colour.
  *
  * A swatch is the background rendered by the code that renders it for the
- * canvas, so a mesh and a picture are shown rather than approximated. That
- * holds for a wallpaper too: the small copy the system keeps is HEIC, which
- * the webview has no decoder for, so it is handed to the renderer as the file
- * to draw from rather than to the tile as a URL. The CSS likeness stands in
- * until the picture arrives, and in a story, where there is no renderer to
- * ask.
+ * canvas, so a mesh and a picture are shown rather than approximated. The CSS
+ * likeness stands in until the render arrives, and in a story, where there is
+ * no renderer to ask.
  *
  * The chosen tile carries the accent ring the app draws selection with, held
  * off the tile by an offset so a dark background keeps its own edge.
@@ -40,7 +36,6 @@ export function BackgroundTile({
   isSelected,
   onContextMenu,
   onPress,
-  thumbnailPath,
 }: {
   ariaLabel: string;
   id: string;
@@ -52,15 +47,8 @@ export function BackgroundTile({
   isDisabled?: boolean;
   isSelected?: boolean;
   onContextMenu?: MouseEventHandler<HTMLDivElement>;
-  /** A small copy of the picture, where whoever offered it already has one.
-   * Given, it is what the swatch is drawn from: the system's own desktop
-   * pictures are tens of megabytes, and this is a file a tile's size. */
-  thumbnailPath?: string;
 }) {
-  const rendered = useBackgroundThumbnail(background, TILE_SIZE, thumbnailPath);
-  // Outside the app there is no renderer, so a story shows the small copy as
-  // the picture it is.
-  const thumbnail = rendered ?? (isTauri() ? null : thumbnailPath);
+  const thumbnail = useBackgroundThumbnail(background, TILE_SIZE);
   const style = background
     ? thumbnail
       ? {
