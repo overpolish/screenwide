@@ -7,6 +7,7 @@
 //! platform brings the frames in and takes the canvas out.
 
 mod background;
+mod camera;
 mod canvas_pipelines;
 mod cursor_artwork;
 mod draw;
@@ -25,6 +26,7 @@ mod tiles;
 #[cfg(target_os = "macos")]
 pub(crate) mod video_planes;
 
+pub(crate) use camera::CameraComposition;
 pub(crate) use layer::{CanvasGeometry, LayerDraw, LayerPlacement};
 
 use super::background_image::BackgroundImageCache;
@@ -213,6 +215,8 @@ pub(crate) struct Compositor {
   tiles: tiles::AnnotationTiles,
   canvas: canvas_pipelines::CanvasPipelines,
   redactor: redact::Redactor,
+  /// The pictures baked cameras are composed into, one for each slot.
+  camera_canvases: std::sync::Mutex<std::collections::HashMap<usize, SourceTexture>>,
   mark_blur: mark_blur::MarkBlur,
   sampler: wgpu::Sampler,
   point_sampler: wgpu::Sampler,

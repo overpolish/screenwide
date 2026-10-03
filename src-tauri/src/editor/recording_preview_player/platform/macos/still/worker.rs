@@ -199,26 +199,6 @@ pub(super) fn run(
         .bake_camera
         .then_some(cache.camera.as_ref())
         .flatten();
-      let camera_output = (!composition.bake_camera).then(|| {
-        let factor = super::super::still_decode::pane_factor(
-          &target_sizes,
-          1,
-          composition.recording_output.camera.width,
-        );
-        let mut output = scaled_output(&composition.recording_output.camera, factor);
-        if let (Some(source), Some(metadata)) = (
-          sources.playback_layout.panes.get(1),
-          camera_metadata.as_ref(),
-        ) {
-          crate::editor::recording_preview_player::annotation_preview::remap_source(
-            &mut output,
-            (source.source_width, source.source_height),
-            (metadata.width, metadata.height),
-            composition.recording_output.camera.width,
-          );
-        }
-        output
-      });
       let (screen_source, screen_pixels) = match cache.screen.rgba() {
         Some(source) => (Some(source), None),
         None => (
@@ -243,35 +223,23 @@ pub(super) fn run(
         camera_pixels: baked_camera
           .and_then(|camera| camera.pixels().map(|pixels| (pixels, camera.dimensions()))),
         overlay: overlay.as_ref(),
+        camera_settings: composition.bake_camera.then(|| {
+          (
+            &composition.recording_output.camera,
+            sources.annotation_pictures()[1],
+          )
+        }),
         clip_cursor_at_video_edge: cursor_settings.clip_at_video_edge,
         foreground_only: false,
       }];
-      if let (Some(camera), Some(camera_output)) = (cache.camera.as_ref(), camera_output) {
-        if camera_output.width >= 64 && camera_output.height >= 64 {
-          let (source, source_pixels) = match camera.rgba() {
-            Some(source) => (Some(source), None),
-            None => (
-              None,
-              camera.pixels().map(|pixels| (pixels, camera.dimensions())),
-            ),
-          };
-          layers.push(RecordingWorkspaceLayer {
-            pane_index: 1,
-            source_token: (camera_position_ms.unwrap_or(0) << 2) | 1,
-            source,
-            source_pixels,
-            settings: camera_output,
-            placement: NativeWorkspacePlacement::default(),
-            seconds: screen_position_ms as f64 / 1_000.0,
-            cursor: None,
-            keyboard: None,
-            camera: None,
-            camera_pixels: None,
-            overlay: None,
-            clip_cursor_at_video_edge: false,
-            foreground_only: false,
-          });
-        }
+      if let Some(camera) = cache.camera.as_ref().filter(|_| !composition.bake_camera) {
+        layers.extend(super::camera_pane::camera_pane_layer(
+          composition,
+          &sources,
+          &target_sizes,
+          camera,
+          (camera_position_ms.unwrap_or(0), screen_position_ms),
+        ));
       }
       surface
         .present_recording_workspace(

@@ -3,9 +3,11 @@
 
 import { mappedAnnotationShape } from "../annotations/annotation-mapping";
 import {
+  annotationKindsStack,
   arrangedGroup,
   Arrangement,
   availableGroupArrangements,
+  withRedactionsUnderneath,
 } from "../annotations/annotation-order";
 import { Annotation } from "../annotations/annotations";
 
@@ -18,8 +20,10 @@ import {
 /** Each layer's source width in pixels, by layer id. */
 export type ScreenshotSourceWidths = ReadonlyMap<number, number>;
 
-// A still draws every annotation on a layer together, so any two meet.
-const meet = () => true;
+// A still draws every annotation on a layer together, so any two meet, but a
+// redaction is under every mark.
+const meet = (a: Annotation, b: Annotation) =>
+  annotationKindsStack(a.shape.kind, b.shape.kind);
 
 /**
  * An annotation belongs to the layer it is drawn on, and its place in the
@@ -112,10 +116,12 @@ export const arrangedScreenshotAnnotations = ({
       y: (source.y + point.y * source.scale - target.y) / target.scale,
     })),
   }));
-  const landed =
+  const landed = withRedactionsUnderneath(
     arrangement === "forward"
       ? [...carried, ...to.output.annotations]
-      : [...to.output.annotations, ...carried];
+      : [...to.output.annotations, ...carried],
+    (annotation) => annotation.shape.kind,
+  );
   return {
     itemId: to.id,
     workspace: withLayerAnnotations(workspace, [

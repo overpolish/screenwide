@@ -161,7 +161,7 @@ pub async fn start_recording_preview_player(
   // A redaction drawn before its clip's first frame was decoded shows flat;
   // once the frame lands, a paused preview is drawn again with its fill.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  if let Some(held_fills) = sources.held_fills.as_ref() {
+  for held_fills in sources.held_fills.iter().flatten() {
     let ready_app = app.clone();
     held_fills.set_on_ready(Arc::new(move || {
       let state = ready_app.state::<RecordingPreviewPlayerState>();

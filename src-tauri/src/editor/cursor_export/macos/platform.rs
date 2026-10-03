@@ -18,6 +18,7 @@ use ffi::{
 mod frames;
 use frames::FrameComposer;
 
+mod frame_camera;
 mod frame_grid;
 mod frame_placement;
 mod mux;
@@ -158,6 +159,8 @@ pub(in super::super) fn export(
 
 #[cfg(test)]
 mod annotation_tests;
+#[cfg(test)]
+mod camera_effect_video_tests;
 #[cfg(test)]
 mod counter_tests;
 #[cfg(test)]

@@ -28,6 +28,12 @@ pub(super) struct Pane {
   /// its layer: the arrow's place in that layer's list and the halo's width
   /// in canvas pixels. Preview chrome, resolved when the layer is presented.
   pub(super) annotation_halo: Option<(usize, f32)>,
+  /// The annotations a baked camera has composed into its frame before the
+  /// canvas draws it, and the halo on one of them, its width in canvas
+  /// pixels. Kept with the camera overlay, so a local redraw composes them
+  /// again.
+  pub(super) camera_composition: Option<std::sync::Arc<compositor::CameraComposition>>,
+  pub(super) camera_halo: Option<(usize, f32)>,
   /// The box being typed into, if it belongs to this pane's layer: its place
   /// in that layer's list and the caret and selection drawn into its type.
   /// Kept across presents, so every redraw the typing causes carries it.

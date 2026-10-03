@@ -23,7 +23,7 @@ pub(crate) use self::layers::{LayerPicture, StagedLayer};
 use crate::editor::cursor_effects::GpuArtwork;
 use crate::editor::preview_platform::annotation_gpu::SourceAnnotations;
 use crate::editor::preview_platform::compositor::{
-  CanvasGeometry, Compositor, CursorArtwork, NativeCursors,
+  CameraComposition, CanvasGeometry, Compositor, CursorArtwork, NativeCursors,
 };
 use crate::screenshots::{ScreenshotOutputSettings, StillOverlay};
 
@@ -99,7 +99,16 @@ impl WorkspaceScene {
         .map(|picture| {
           let picture = ScenePicture::new(&state.compositor, picture)?;
           let overlay = layer.overlay.unwrap_or(&no_overlay);
-          Ok::<_, String>(LayerCamera::new(overlay, Some(Arc::new(picture))))
+          let composition = layer
+            .camera_settings
+            .map(|(settings, source)| {
+              CameraComposition::new(settings, source, picture.texture.size)
+            })
+            .transpose()?
+            .flatten();
+          let mut camera = LayerCamera::new(overlay, Some(Arc::new(picture)));
+          camera.composition = composition.map(Arc::new);
+          Ok::<_, String>(camera)
         })
         .transpose()?;
       staged.push(SceneLayer {
@@ -194,21 +203,35 @@ impl WorkspaceScene {
     else {
       return false;
     };
-    *camera = LayerCamera::new(overlay, camera.picture.take());
+    let composed = LayerCamera::new(overlay, camera.picture.take());
+    *camera = LayerCamera {
+      composition: camera.composition.take(),
+      hover: camera.hover,
+      ..composed
+    };
     true
   }
 
   /// Puts the hover halo on the annotation at `index` in `pane_index`'s own
   /// list, with its width in canvas pixels, and takes it off every other.
-  /// `None` only clears.
+  /// `None` only clears. With no layer of its own, the camera's annotations
+  /// are the ones composed into the camera frame a layer carries.
   pub(super) fn set_hover(&self, pane_index: u32, hover: Option<(usize, f32)>) -> bool {
     let Ok(mut state) = self.state() else {
       return false;
     };
-    let mut found = false;
+    let own = state
+      .layers
+      .iter()
+      .any(|layer| layer.pane_index == pane_index);
+    let mut found = own;
     for layer in &mut state.layers {
-      found |= layer.pane_index == pane_index;
       layer.hover = hover.filter(|_| layer.pane_index == pane_index);
+      if let Some(camera) = layer.camera.as_mut() {
+        let composed = !own && pane_index == 1 && camera.composition.is_some();
+        found |= composed;
+        camera.hover = hover.filter(|_| composed);
+      }
     }
     found
   }

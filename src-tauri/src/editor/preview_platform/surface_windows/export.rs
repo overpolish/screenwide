@@ -40,6 +40,9 @@ impl RecordingPreviewSurface {
 }
 
 impl WindowsExportCompositor {
+  /// `camera_composition` is what the baked camera has composed into its
+  /// frame before the canvas draws it.
+  #[allow(clippy::too_many_arguments)]
   pub(in crate::editor) fn compose_with_camera(
     &self,
     texture: &ID3D11Texture2D,
@@ -47,6 +50,7 @@ impl WindowsExportCompositor {
     settings: &ScreenshotOutputSettings,
     composition: ComposedFrame,
     camera: Option<(&ID3D11Texture2D, u32, BakeGeometry, bool, bool)>,
+    camera_composition: Option<&compositor::CameraComposition>,
     // What this frame draws. A timed annotation has already had its reveal
     // resolved for this frame by the caller, which owns the timeline.
     annotations: &[crate::editor::annotations::Annotation],
@@ -60,12 +64,21 @@ impl WindowsExportCompositor {
     gpu
       .compositor
       .copy_source(gpu.d3d11, &self.source, texture, subresource)?;
+    let mut drawn_camera = None;
     if let (Some(camera_source), Some((camera_texture, camera_subresource, _, _, _))) =
       (&self.camera, camera)
     {
       gpu
         .compositor
         .copy_source(gpu.d3d11, camera_source, camera_texture, camera_subresource)?;
+      // The preview composes its camera in slot 0; the export keeps its own.
+      drawn_camera = camera_composition
+        .map(|composed| {
+          gpu
+            .compositor
+            .composed_camera(camera_source, composed, None, 1, false)
+        })
+        .transpose()?;
     }
     // Sink Writer retains DXGI surfaces and feeds the hardware encoder
     // asynchronously. A single repainted render target therefore lets a later
@@ -110,9 +123,9 @@ impl WindowsExportCompositor {
       settings,
       composition,
       camera.and_then(|(_, _, geometry, drop_shadow, camera_on_top)| {
-        self
-          .camera
+        drawn_camera
           .as_ref()
+          .or(self.camera.as_ref())
           .map(|source| (source, geometry, drop_shadow, camera_on_top))
       }),
       None,

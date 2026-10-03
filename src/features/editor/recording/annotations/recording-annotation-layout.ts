@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { RECORDING_VIDEO_TRACK_ORDER } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import {
   timelineFractionToX,
@@ -30,8 +31,11 @@ export type LaneBox = {
 /**
  * The annotation lane's rows, which show the drawing order: a clip sits one
  * row above the highest clip it overlaps and is drawn over, so of any two
- * that overlap, the one in front is the one higher up. Clips that never
- * overlap share rows, keeping the lane a single row tall in the common case.
+ * that overlap, the one in front is the one higher up. A picture's
+ * annotations are drawn with it, so every clip on the picture in front sits
+ * over every clip on the one behind, as `RECORDING_VIDEO_TRACK_ORDER` stacks
+ * them. Clips that never overlap share rows, keeping the lane a single row
+ * tall in the common case.
  */
 export const recordingAnnotationRows = (
   clips: RecordingAnnotationClip[],
@@ -52,9 +56,12 @@ export const recordingAnnotationRows = (
     else
       runs.set(fragment.item.id, { ...fragment, fragmentId: fragment.item.id });
   }
-  // The runs come in drawing order, bottom first. Each rests on the highest
+  // The runs come in drawing order, bottom first: the picture behind's, then
+  // the picture in front's, each in its own order. Each rests on the highest
   // run beneath it that it overlaps; its level counts up from the bottom row.
-  const stacked = [...runs.values()];
+  const depth = (run: (typeof fragments)[number]) =>
+    -RECORDING_VIDEO_TRACK_ORDER.indexOf(run.item.trackId);
+  const stacked = [...runs.values()].sort((a, b) => depth(a) - depth(b));
   const levels: number[] = [];
   for (const [index, run] of stacked.entries())
     levels.push(

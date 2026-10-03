@@ -91,6 +91,33 @@ impl RecordingPreviewSurface {
     } else {
       1.0
     };
+    // A baked camera's redactions and highlights change its own pixels, so
+    // they are composed into its frame before the canvas draws it. The
+    // frame is overwritten by the next decode, so nothing is kept.
+    let composed = match (camera, pane.camera_composition.as_deref()) {
+      (Some((raw, geometry, _, _)), Some(composition)) => {
+        let frame_pixels = geometry.crop_width as f32 / geometry.frame_width.max(1) as f32;
+        let halo = pane
+          .camera_halo
+          .map(|(index, width)| (index, width * frame_pixels));
+        Some(
+          self
+            .inner
+            .gpu
+            .compositor
+            .composed_camera(raw, composition, halo, 0, false)?,
+        )
+      }
+      _ => None,
+    };
+    let camera = camera.map(|(raw, geometry, drop_shadow, camera_on_top)| {
+      (
+        composed.as_ref().unwrap_or(raw),
+        geometry,
+        drop_shadow,
+        camera_on_top,
+      )
+    });
     self.inner.gpu.compositor.draw_with_camera(
       &frame.texture.create_view(&Default::default()),
       source,

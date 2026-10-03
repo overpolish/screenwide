@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::editor::annotations::camera_baked::{baked_places, BakedPlace};
 
 pub(crate) fn install(
   surface: &mut RecordingPreviewSurface,
@@ -168,14 +169,20 @@ pub(crate) fn install(
             .as_ref()?
             .read()
             .ok()?;
-          // In One video the camera's annotations are drawn in the screen's
-          // pane, after the screen's own, and its image is as wide on the
-          // canvas as the overlay places it.
+          // In One video the camera's annotations are drawn into its frame or
+          // in the screen's pane after the screen's own, and its image is as
+          // wide on the canvas as the overlay places it.
           if pane == 1 && settings.bake_camera {
             let width = crate::editor::screenshot_preview::hover_width_points(progress)
               * settings.camera_overlay.camera_width
               / image_points;
-            return Some((0, manager.pane_annotations(0).len() + local, width as f32));
+            let places = baked_places(&manager.pane_annotations(1));
+            return match places.get(local).copied()? {
+              BakedPlace::Within(within) => Some((1, within, width as f32)),
+              BakedPlace::Over(over) => {
+                Some((0, manager.pane_annotations(0).len() + over, width as f32))
+              }
+            };
           }
           let output_width = if pane == 0 {
             settings.recording_output.primary.width

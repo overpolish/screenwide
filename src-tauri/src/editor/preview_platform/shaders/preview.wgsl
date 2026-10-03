@@ -482,6 +482,26 @@ fn annotation_spotlight_blur() -> AnnotationSpotlightBlur {
                                  select(0u, canvas.annotation_options.y, annotations_drawn));
 }
 
+// The first annotation drawn over the camera, which a loupe showing what
+// lies under it lays the camera under; past every annotation where the camera
+// is not drawn over them.
+fn annotation_camera_run() -> u32 {
+  if (!annotations_drawn || canvas.camera_effects.y == 0.0 || canvas.camera_effects.w == 0.0) {
+    return 0xffffffffu;
+  }
+  return canvas.annotation_options.x;
+}
+
+// The camera laid over `rgba` at canvas point `point`, where the canvas
+// draws it, without the averaging a moving layout adds: a loupe shows it
+// enlarged, standing still.
+fn annotation_camera_over(rgba: vec4<f32>, point: vec2<f32>) -> vec4<f32> {
+  let picture = vec2<f32>(textureDimensions(camera_image));
+  let crop = vec4<f32>(canvas.camera_crop.xy / picture, canvas.camera_crop.zw / picture);
+  return mix(rgba, camera_layer_at(rgba, point, canvas.camera_frame, crop),
+             canvas.scene_opacity.y);
+}
+
 // Whether this pass draws the annotations' blur layer (1), draws the cursor's
 // (3), reads them (2), or none of these.
 fn annotation_blur_mode() -> u32 {
@@ -1049,8 +1069,8 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     let first = select(below, 0u, run == 0u);
     let last = select(total, below, run == 0u);
     let unannotated = result;
-    result = composite_annotation_layers(result, base, pixel, first, last, annotation_feather,
-                                         annotation_atlas, run == 0u);
+    result = composite_annotation_layers(result, base, pixel, first, last, total,
+                                         annotation_feather, annotation_atlas, run == 0u);
     // The run over the camera is the camera's own annotations, which a scene
     // fades with the camera rather than with the screen.
     result = mix(unannotated, result, select(screen_opacity, canvas.scene_opacity.y, run == 1u));

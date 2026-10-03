@@ -58,6 +58,7 @@ export function useRecordingPreviewTransport(
     reportZoom,
     screenCanvasRef,
     selectedStreamIndices,
+    selectedVideoTracks,
     selection,
     setPreviewPositionMs,
     zoomRequest,
@@ -78,6 +79,8 @@ export function useRecordingPreviewTransport(
     reportZoom: ReturnType<typeof usePreviewZoom>["reportZoom"];
     screenCanvasRef: RefObject<HTMLCanvasElement | null>;
     selectedStreamIndices: number[];
+    /** The video tracks turned on, which leave out one the user turned off. */
+    selectedVideoTracks: Set<RecordingVideoTrackId>;
     selection: ReturnType<typeof useRecordingPreviewSelection>;
     setPreviewPositionMs: Dispatch<SetStateAction<number>>;
     zoomRequest: ReturnType<typeof usePreviewZoom>["zoomRequest"];
@@ -204,6 +207,7 @@ export function useRecordingPreviewTransport(
     },
     screenCaptureScale: props.screenCaptureScale ?? 1,
     sessionId: player.sessionId,
+    shownTracks: selectedVideoTracks,
     sourceDurationMs: durationMs,
     tool: annotationTool,
     trackId:

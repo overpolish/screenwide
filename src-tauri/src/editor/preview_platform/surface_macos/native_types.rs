@@ -41,6 +41,9 @@ pub(crate) struct RecordingWorkspaceLayer<'a> {
   pub camera: Option<&'a CapturedImage>,
   pub camera_pixels: Option<(*mut std::ffi::c_void, (u32, u32))>,
   pub overlay: Option<&'a StillOverlay>,
+  /// In One video, the camera's own settings, carrying the annotations drawn
+  /// into its frame, and the camera's source size, which they are placed in.
+  pub camera_settings: Option<(&'a ScreenshotOutputSettings, (u32, u32))>,
   pub clip_cursor_at_video_edge: bool,
   pub foreground_only: bool,
 }

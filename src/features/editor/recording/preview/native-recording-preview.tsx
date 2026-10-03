@@ -120,6 +120,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     reportZoom,
     screenCanvasRef,
     selectedStreamIndices,
+    selectedVideoTracks,
     selection,
     setPreviewPositionMs,
     zoomRequest,

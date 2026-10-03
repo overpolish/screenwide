@@ -11,6 +11,7 @@ use cidre::cv;
 
 use super::super::super::frame_annotations::ExportAnnotations;
 use super::super::super::frame_scene::ExportScenes;
+use super::frame_camera::drawn_camera;
 use super::frame_grid::{grid_frame, grid_index};
 use super::frame_placement::{carried_cursor, on_canvas};
 use super::*;
@@ -22,7 +23,7 @@ use crate::editor::preview_platform::compositor::video_planes::VideoPlanes;
 use crate::editor::preview_platform::compositor::{
   ComposedFrame, Compositor, CursorArtwork, NativeCursors, SourceTexture, FORMAT,
 };
-use crate::gpu::macos::{bgra_buffer_texture, buffer_plane_texture};
+use crate::gpu::macos::buffer_plane_texture;
 use crate::gpu::Gpu;
 use crate::screenshots::ScreenshotOutputSettings;
 
@@ -156,28 +157,20 @@ impl<'a> FrameComposer<'a> {
       )),
       _ => self.camera,
     };
-    let camera = unsafe { pixel_buffer(frame.camera) }
-      .zip(placement)
-      .map(|(pixels, placement)| {
-        let texture = bgra_buffer_texture(gpu, pixels, "export camera")?;
-        Ok::<_, String>((
-          SourceTexture {
-            size: (texture.width(), texture.height()),
-            view: texture.create_view(&Default::default()),
-            texture,
-            picture: None,
-          },
-          placement,
-        ))
-      })
-      .transpose()?;
     let annotations = self.annotations.with_camera_at(
       source_ms,
       frame.frame_ms,
       settings,
       arranged.as_ref().and_then(|(_, options)| *options),
     );
-    let prepared = prepared_arrows(&annotations, source.size, settings, None, None, None)?;
+    let camera = unsafe { pixel_buffer(frame.camera) }
+      .zip(placement)
+      .map(|(pixels, placement)| {
+        let drawn = drawn_camera(&self.compositor, pixels, annotations.camera.as_ref())?;
+        Ok::<_, String>((drawn, placement))
+      })
+      .transpose()?;
+    let prepared = prepared_arrows(&annotations.screen, source.size, settings, None, None, None)?;
     let grid = grid_index(frame.source_us);
     self.compositor.draw_with_camera(
       &self.canvas,

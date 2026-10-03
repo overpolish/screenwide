@@ -140,6 +140,21 @@ pub(super) fn render_video(
       output,
       arranged.as_ref().and_then(|(_, options)| *options),
     );
+    // The redactions and highlights drawn on the camera change its own
+    // pixels, so they are composed into its frame, decoded at its own size.
+    let camera_composition = annotations
+      .camera
+      .as_ref()
+      .zip(request.camera)
+      .map(|((camera, source), (_, options))| {
+        crate::editor::preview_platform::compositor::CameraComposition::new(
+          camera,
+          *source,
+          (options.camera_width, options.camera_height),
+        )
+      })
+      .transpose()?
+      .flatten();
     let texture = compositor.compose_with_camera(
       &current.texture,
       current.subresource,
@@ -158,7 +173,8 @@ pub(super) fn render_video(
         seconds: position_ms as f64 / 1_000.0,
       },
       camera_frame,
-      &annotations,
+      camera_composition.as_ref(),
+      &annotations.screen,
     )?;
     sink.write(
       &texture,

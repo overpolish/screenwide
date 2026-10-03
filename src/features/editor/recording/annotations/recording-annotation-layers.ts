@@ -6,6 +6,7 @@ import {
   arrangedGroup,
   Arrangement,
   availableGroupArrangements,
+  withRedactionsUnderneath,
 } from "../../annotations/annotation-order";
 import { AnnotationPoint } from "../../annotations/annotations";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
@@ -13,16 +14,12 @@ import { CameraOverlaySettings } from "../../types";
 
 import {
   RecordingAnnotationClip,
-  recordingAnnotationClipsMeet,
+  recordingAnnotationClipsStack,
 } from "./recording-annotations";
 
 /** How far a camera annotation's weight follows the camera down; the twin of
  * `SMALLEST_WEIGHT` in `src-tauri/src/editor/annotations/camera_baked.rs`. */
 const SMALLEST_WEIGHT = 0.5;
-
-/** The kinds that only mark the picture, which can move between the screen
- * and the camera; an effect reads its own picture's frames. */
-const MARKS = new Set(["arrow", "counter", "draw", "shape", "text"]);
 
 /** Where the screen's and the camera's pixels fall on the canvas, as One
  * video draws them at the playhead: each picture's top-left corner and how
@@ -72,14 +69,9 @@ export const recordingCameraPlacement = ({
   };
 };
 
-// Clips stack among those on their own track: each is drawn with its own
-// picture.
-const meet = (a: RecordingAnnotationClip, b: RecordingAnnotationClip) =>
-  a.trackId === b.trackId && recordingAnnotationClipsMeet(a, b);
-
 /** The track the group is handed to by a step past the end of its own, or
- * null where it cannot be: it spans both tracks, holds an effect or a pinned
- * clip, or the camera is not drawn into the video. */
+ * null where it cannot be: it spans both tracks, holds a pinned clip, which
+ * follows the screen's content, or the camera is not drawn into the video. */
 const handoverTarget = (
   clips: RecordingAnnotationClip[],
   isMember: (clip: RecordingAnnotationClip) => boolean,
@@ -88,14 +80,7 @@ const handoverTarget = (
   const members = clips.filter(isMember);
   if (!placement || members.length === 0) return null;
   const track = members[0].trackId;
-  if (
-    members.some(
-      (clip) =>
-        clip.trackId !== track ||
-        clip.pin !== undefined ||
-        !MARKS.has(clip.annotation.shape.kind),
-    )
-  )
+  if (members.some((clip) => clip.trackId !== track || clip.pin !== undefined))
     return null;
   return track === "primary" ? "camera" : "primary";
 };
@@ -111,7 +96,11 @@ export const recordingAnnotationArrangements = (
   isMember: (clip: RecordingAnnotationClip) => boolean,
   placement: RecordingCameraPlacement | null,
 ) => {
-  const own = availableGroupArrangements(clips, isMember, meet);
+  const own = availableGroupArrangements(
+    clips,
+    isMember,
+    recordingAnnotationClipsStack,
+  );
   const target = handoverTarget(clips, isMember, placement);
   return {
     canBringForward: own.canBringForward || target === "camera",
@@ -139,7 +128,10 @@ export const arrangedRecordingAnnotations = ({
   isMember: (clip: RecordingAnnotationClip) => boolean;
   placement: RecordingCameraPlacement | null;
 }): RecordingAnnotationClip[] => {
-  const within = arrangedGroup(clips, isMember, { arrangement, meets: meet });
+  const within = arrangedGroup(clips, isMember, {
+    arrangement,
+    meets: recordingAnnotationClipsStack,
+  });
   if (within !== clips) return within;
   const target = handoverTarget(clips, isMember, placement);
   if (
@@ -176,5 +168,8 @@ export const arrangedRecordingAnnotations = ({
     trackId: target,
   }));
   const rest = clips.filter((clip) => !isMember(clip));
-  return toCamera ? [...carried, ...rest] : [...rest, ...carried];
+  return withRedactionsUnderneath(
+    toCamera ? [...carried, ...rest] : [...rest, ...carried],
+    (clip) => clip.annotation.shape.kind,
+  );
 };

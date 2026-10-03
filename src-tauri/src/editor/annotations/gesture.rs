@@ -160,22 +160,6 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
   }
 }
 
-/// Whether the tool in hand only draws on a recording's screen: a redaction,
-/// a highlight and a spotlight each read or change the screen's own frames,
-/// which a camera pane has none of, and a magnifier enlarges them.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) fn screen_only(mode: u32) -> bool {
-  matches!(
-    drawing_kind(mode),
-    Some(
-      AnnotationKind::Redact
-        | AnnotationKind::Highlight
-        | AnnotationKind::Spotlight
-        | AnnotationKind::Magnify
-    )
-  )
-}
-
 /// The first layer id that is not a picture: the keyboard overlay, then the
 /// canvas frame above it.
 #[cfg(any(target_os = "windows", test))]

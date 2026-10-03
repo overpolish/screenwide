@@ -43,6 +43,7 @@ impl RecordingPreviewSurface {
         keyboard: None,
         camera: None,
         overlay: None,
+        camera_settings: None,
         foreground_only: index > 0,
         hover: hover
           .filter(|(layer, _, _)| layer == source_token)

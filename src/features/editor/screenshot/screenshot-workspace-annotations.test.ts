@@ -79,6 +79,35 @@ describe("a layer's annotations against the shared canvas", () => {
 
     expect(next.backgroundColor).toBe("#123456");
   });
+
+  it("switches every layer's spotlights' blur with one layer's", () => {
+    const spotlight = (id: string, blur: boolean): Annotation => ({
+      ...arrow(id),
+      shape: {
+        end: { x: 10, y: 10 },
+        kind: "spotlight",
+        start: { x: 0, y: 0 },
+      },
+      style: { ...arrow(id).style, blur },
+    });
+    const canvas = defaultScreenshotOutput(100, 100);
+    const current: ScreenshotWorkspaceOutputSettings = {
+      ...canvas,
+      items: [
+        { id: 1, output: { ...canvas, annotations: [spotlight("a", false)] } },
+        { id: 2, output: { ...canvas, annotations: [spotlight("b", false)] } },
+      ],
+    };
+    const next = withScreenshotWorkspaceItemOutput(
+      current,
+      { ...canvas, annotations: [spotlight("a", true)] },
+      1,
+    );
+
+    expect(
+      next.items.map((item) => item.output.annotations[0].style.blur),
+    ).toEqual([true, true]);
+  });
 });
 
 describe("screenshotOutputTemplate", () => {

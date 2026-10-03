@@ -95,7 +95,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
             target_ms,
             frame_ms,
             annotation_pictures,
-            held_fills.as_ref(),
+            &held_fills,
           );
         }
         if let Ok(clips) = scene_clips.read() {
@@ -175,19 +175,28 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           Ok(value) => value,
           Err(_) => break,
         };
-        let mut camera_output = super::super::still_decode::scaled_output(
-          &composition.recording_output.camera,
-          camera_factor,
-        );
-        if let (Some(source), Some(metadata)) = (source_dimensions.get(1), camera_metadata.as_ref())
-        {
-          crate::editor::recording_preview_player::annotation_preview::remap_source(
-            &mut camera_output,
-            *source,
-            (metadata.width, metadata.height),
-            composition.recording_output.camera.width,
+        // A camera pane is drawn at its own output; a baked camera's settings
+        // only carry what is composed into its frame, which is placed there
+        // against the frame itself.
+        let camera_output = if composition.bake_camera {
+          composition.recording_output.camera.clone()
+        } else {
+          let mut output = super::super::still_decode::scaled_output(
+            &composition.recording_output.camera,
+            camera_factor,
           );
-        }
+          if let (Some(source), Some(metadata)) =
+            (source_dimensions.get(1), camera_metadata.as_ref())
+          {
+            crate::editor::recording_preview_player::annotation_preview::remap_source(
+              &mut output,
+              *source,
+              (metadata.width, metadata.height),
+              composition.recording_output.camera.width,
+            );
+          }
+          output
+        };
         let mut frame = VideoFrame {
           presentation_elapsed_ms: presentation_elapsed_ms(index),
           payload: VideoFramePayload::Native {

@@ -210,6 +210,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               pinning={annotationPinning}
               pinStatus={annotationPinStatus}
               selectedIds={selectedAnnotationIds}
+              showsLayer={layout.panes.some((pane) => pane.kind === "camera")}
               sourceDurationMs={sourceDurationMs}
               viewport={timeline.viewport}
             />

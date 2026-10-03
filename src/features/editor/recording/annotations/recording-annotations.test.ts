@@ -208,6 +208,34 @@ it("puts the clip drawn in front on the row above one it overlaps, across a remo
   });
 });
 
+it("stacks every camera clip over the screen clips it overlaps, whatever the list order", () => {
+  const edit = createRecordingTimelineEdit(1);
+  const camera = {
+    annotation: { ...annotation, id: "camera" },
+    endMs: 30_000,
+    startMs: 0,
+    trackId: "camera" as const,
+  };
+  const screen = [
+    { ...camera, annotation, trackId: "primary" as const },
+    {
+      ...camera,
+      annotation: { ...annotation, id: "screen" },
+      trackId: "primary" as const,
+    },
+  ];
+  const rows = recordingAnnotationRows(
+    [camera, ...screen],
+    edit,
+    120_000,
+  ).fragments.map((fragment) => [fragment.item.annotation.id, fragment.row]);
+  expect(rows).toEqual([
+    [annotation.id, 2],
+    ["screen", 1],
+    ["camera", 0],
+  ]);
+});
+
 it("moves a clip by output time while preserving duration through a speed change", () => {
   const edit = {
     ...createRecordingTimelineEdit(1),

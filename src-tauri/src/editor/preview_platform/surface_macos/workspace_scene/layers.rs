@@ -11,7 +11,9 @@ use crate::editor::cursor_effects::GpuCursor;
 use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::editor::media_preview::BakeGeometry;
 use crate::editor::preview_platform::annotation_gpu::SourceAnnotations;
-use crate::editor::preview_platform::compositor::{CanvasGeometry, Compositor, SourceTexture};
+use crate::editor::preview_platform::compositor::{
+  CameraComposition, CanvasGeometry, Compositor, SourceTexture,
+};
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings, StillOverlay};
 
 /// A picture a layer is drawn from: a decoded image, or a CoreVideo buffer a
@@ -41,6 +43,9 @@ pub(crate) struct StagedLayer<'a> {
   /// it; without an overlay the frame is held but not drawn.
   pub(crate) camera: Option<LayerPicture<'a>>,
   pub(crate) overlay: Option<&'a StillOverlay>,
+  /// The camera's own settings, carrying the annotations drawn into its
+  /// frame, and the camera's source size, which they are placed in.
+  pub(crate) camera_settings: Option<(&'a ScreenshotOutputSettings, (u32, u32))>,
   pub(crate) foreground_only: bool,
   pub(crate) hover: Option<(usize, f32)>,
 }
@@ -96,7 +101,7 @@ impl LayerPicture<'_> {
 }
 
 /// A layer's camera bubble: its frame, the part of it shown and where that
-/// sits on the canvas.
+/// sits on the canvas, and the annotations composed into the frame first.
 #[derive(Clone)]
 pub(super) struct LayerCamera {
   pub(super) picture: Option<Arc<ScenePicture>>,
@@ -104,6 +109,10 @@ pub(super) struct LayerCamera {
   pub(super) geometry: BakeGeometry,
   pub(super) drop_shadow: bool,
   pub(super) on_top: bool,
+  pub(super) composition: Option<Arc<CameraComposition>>,
+  /// The halo on one of the composed annotations, its width in canvas
+  /// pixels.
+  pub(super) hover: Option<(usize, f32)>,
 }
 
 impl LayerCamera {
@@ -125,7 +134,29 @@ impl LayerCamera {
       },
       drop_shadow: overlay.camera_drop_shadow != 0,
       on_top: overlay.camera_on_top != 0,
+      composition: None,
+      hover: None,
     }
+  }
+
+  /// The frame the canvas draws: the camera's own, with the composed
+  /// annotations drawn into it first where it has any. `slot` is the layer's.
+  pub(super) fn drawn(
+    &self,
+    compositor: &Compositor,
+    picture: &ScenePicture,
+    slot: usize,
+  ) -> Result<SourceTexture, String> {
+    let Some(composition) = &self.composition else {
+      return Ok(picture.texture.clone());
+    };
+    // The halo's width arrives in canvas pixels; the frame is drawn into the
+    // canvas at the crop's size over the frame's.
+    let hover = self.hover.map(|(index, width)| {
+      let frame_pixels = self.geometry.crop_width as f32 / self.geometry.frame_width.max(1) as f32;
+      (index, width * frame_pixels)
+    });
+    compositor.composed_camera(&picture.texture, composition, hover, slot, true)
   }
 }
 

@@ -6,6 +6,7 @@
 //! composed by the same GPU compositor, so a paused frame is pixel-identical
 //! to the playing frame at that position. Scrubbing decodes at the presented
 //! size and the settled frame is refined at full resolution.
+mod camera_pane;
 mod worker;
 use worker::run;
 

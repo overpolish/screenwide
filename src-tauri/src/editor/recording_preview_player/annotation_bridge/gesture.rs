@@ -5,7 +5,6 @@
 //! showing, and the provisional clips a drag writes through until it commits.
 
 use super::*;
-use crate::editor::annotations::gesture::screen_only;
 use crate::editor::annotations::pin::fold;
 use crate::editor::annotations::{AnnotationKind, AnnotationShape};
 
@@ -126,9 +125,6 @@ impl PreviewPlayerManager {
         _ => {}
       }
       let redacting = drawing_kind(self.annotation.mode) == Some(AnnotationKind::Redact);
-      if target == AnnotationGestureTarget::New && screen_only(self.annotation.mode) && pane != 0 {
-        return None;
-      }
       let before = clips.read().ok()?.clone();
       // A disc's diameter and a text box's type size are in points, so the
       // pane's drawn width in points is what turns them into source pixels.

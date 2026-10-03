@@ -19,6 +19,7 @@ import {
 } from "../../timeline/tracks/timed-lane-layout";
 import { TimelineTrackHeader } from "../../timeline/tracks/timeline-track-header";
 
+import { RecordingAnnotationClipBody } from "./recording-annotation-clip-body";
 import { RecordingAnnotationClipEdges } from "./recording-annotation-clip-edges";
 import { RecordingCameraPlacement } from "./recording-annotation-layers";
 import {
@@ -56,6 +57,7 @@ export function RecordingAnnotationLane({
   pinStatus,
   pinning,
   selectedIds,
+  showsLayer = false,
   sourceDurationMs,
   viewport,
 }: {
@@ -80,6 +82,9 @@ export function RecordingAnnotationLane({
   /** What a clip's menu does to its pin. Without it, the lane offers no
    * pinning. */
   pinning?: AnnotationClipPinning;
+  /** Whether each clip shows the picture it is drawn on: only a recording
+   * with a camera has more than one. */
+  showsLayer?: boolean;
 }) {
   const { beginDrag, draft, laneRef, movedRef } = useRecordingAnnotationDrag({
     clips,
@@ -197,30 +202,18 @@ export function RecordingAnnotationLane({
                   width: `${String((fragment.outputEnd - fragment.outputStart) * 100)}%`,
                 }}
               >
-                <button
-                  aria-label={label}
-                  aria-pressed={selected}
-                  className="h-full w-full truncate px-control-inset text-left focus-visible:outline-2 focus-visible:outline-primary"
+                <RecordingAnnotationClipBody
+                  label={label}
                   onClick={clickBody}
-                  // The menu key opens the right-click menu from the
-                  // keyboard, hung off the block it acts on.
-                  onKeyDown={(event) => {
-                    const menuKey =
-                      event.key === "ContextMenu" ||
-                      (event.key === "F10" && event.shiftKey);
-                    if (!menuKey) return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    void openClipMenu(
-                      boundsAnchor(event.currentTarget.getBoundingClientRect()),
-                      clip,
-                    );
+                  onMenu={(bounds) => {
+                    void openClipMenu(boundsAnchor(bounds), clip);
                   }}
                   onPointerDown={pressBody}
-                  type="button"
-                >
-                  {fragment.showLabel ? label : null}
-                </button>
+                  selected={selected}
+                  showsLabel={fragment.showLabel}
+                  showsLayer={showsLayer}
+                  trackId={clip.trackId}
+                />
                 {clip.pin ? (
                   <RecordingAnnotationPinOverlay
                     {...block}

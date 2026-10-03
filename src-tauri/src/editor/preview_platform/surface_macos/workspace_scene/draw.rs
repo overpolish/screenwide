@@ -55,13 +55,17 @@ impl WorkspaceScene {
           let picture = camera.picture.as_ref()?;
           let mut geometry = camera.geometry;
           (geometry.output_width, geometry.output_height) = layer.geometry.size;
-          Some((
-            &picture.texture,
+          Some((camera, picture, geometry))
+        })
+        .map(|(camera, picture, geometry)| {
+          Ok::<_, String>((
+            camera.drawn(&state.compositor, picture, index)?,
             geometry,
             camera.drop_shadow,
             camera.on_top,
           ))
-        });
+        })
+        .transpose()?;
       // The bottom layer is drawn whole even when it is only a foreground:
       // there is nothing under it to lay it over.
       let picture = state.compositor.draw_layer(
@@ -75,7 +79,9 @@ impl WorkspaceScene {
           foreground_only: layer.foreground_only && index > 0,
           seconds: layer.seconds,
         },
-        camera,
+        camera
+          .as_ref()
+          .map(|(picture, geometry, shadow, on_top)| (picture, *geometry, *shadow, *on_top)),
         None,
         &prepared,
         LayerDraw {

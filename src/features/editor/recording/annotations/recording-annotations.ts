@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { freshAnnotationIndex } from "../../annotations/annotation-order";
+import {
+  annotationKindsStack,
+  freshAnnotationIndex,
+} from "../../annotations/annotation-order";
 import {
   AnnotationFrame,
   annotationDrawInMs,
@@ -52,12 +55,18 @@ export type RecordingAnnotationClip = {
   pin?: RecordingAnnotationPin;
 };
 
-/** Whether two clips are ever showing at once, and so drawn one over the
- * other: what a move through the drawing order passes. */
-export const recordingAnnotationClipsMeet = (
+/** Whether two clips are drawn one over the other: on the same picture,
+ * ever showing at once, and both redactions or neither. A step through the
+ * drawing order passes only these; the other picture's annotations are all
+ * over or all under the clip's, and a redaction is under every mark. */
+export const recordingAnnotationClipsStack = (
   a: RecordingAnnotationClip,
   b: RecordingAnnotationClip,
-) => a.startMs < b.endMs && b.startMs < a.endMs;
+) =>
+  a.trackId === b.trackId &&
+  annotationKindsStack(a.annotation.shape.kind, b.annotation.shape.kind) &&
+  a.startMs < b.endMs &&
+  b.startMs < a.endMs;
 
 /**
  * The clips with their counters numbered 1, 2, 3 in the order their clips

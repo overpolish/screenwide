@@ -100,6 +100,11 @@ pub(super) fn redraw_composed_panes(
     pane.annotation_halo = hover
       .filter(|(layer, _, _)| pane.source_token == Some(*layer) || *layer == index as u64)
       .map(|(_, hovered, width)| (hovered, width));
+    // A baked camera's own annotations are the camera's, listed as its pane's
+    // though drawn into this pane's camera frame.
+    pane.camera_halo = hover
+      .filter(|(layer, _, _)| pane.camera_composition.is_some() && *layer == 1)
+      .map(|(_, hovered, width)| (hovered, width));
     let (Some(settings), Some(composition), true) = (
       pane.settings.clone(),
       pane.last_composition,

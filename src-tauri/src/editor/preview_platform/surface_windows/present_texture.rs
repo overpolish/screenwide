@@ -51,6 +51,9 @@ impl RecordingPreviewSurface {
     Ok(staged)
   }
 
+  /// `camera_settings` are the camera's own, carrying the annotations
+  /// composed into its frame, and the camera's source size, which they are
+  /// placed in.
   #[allow(clippy::too_many_arguments)]
   pub(crate) fn present_baked_camera_texture(
     &self,
@@ -59,6 +62,7 @@ impl RecordingPreviewSurface {
     subresource: u32,
     size: (u32, u32),
     settings: &ScreenshotOutputSettings,
+    camera_settings: (&ScreenshotOutputSettings, (u32, u32)),
     overlay: crate::editor::CameraOverlaySettings,
     drop_shadow: bool,
     camera_on_top: bool,
@@ -147,12 +151,18 @@ impl RecordingPreviewSurface {
         source_scale_percent: 100,
       },
     })?;
+    let camera_halo = recording_halo(&state, 1);
     let Some(pane) = state.panes.first_mut().and_then(Option::as_mut) else {
       return Ok(true);
     };
     if pane.source.is_none() {
       return Ok(true);
     }
+    let (camera_output, camera_picture) = camera_settings;
+    pane.camera_composition =
+      compositor::CameraComposition::new(camera_output, camera_picture, camera.size)?
+        .map(std::sync::Arc::new);
+    pane.camera_halo = camera_halo;
     let staged = self.present_cached_source_with_camera(
       pane,
       settings,
@@ -174,16 +184,20 @@ impl RecordingPreviewSurface {
   ///
   /// `source` is the full-resolution grid the annotations are authored in; they
   /// are moved onto the decoded frame's own grid here, as a live present does.
+  /// `camera` is a baked camera's own settings, carrying the annotations
+  /// composed into its frame, and its source size.
   pub(crate) fn redraw_recording_annotations(
     &self,
     index: u32,
     annotations: &[crate::editor::annotations::Annotation],
     source: (u32, u32),
+    camera: Option<(&ScreenshotOutputSettings, (u32, u32))>,
   ) -> bool {
     let Ok(mut state) = self.inner.state.lock() else {
       return false;
     };
     let halo = recording_halo(&state, index);
+    let camera_halo = recording_halo(&state, 1);
     let camera_source = state.camera_source.clone();
     let Some(pane) = state.panes.get_mut(index as usize).and_then(Option::as_mut) else {
       return false;
@@ -205,8 +219,17 @@ impl RecordingPreviewSurface {
       output_width,
     );
     let camera = match (pane.last_camera, camera_source.as_ref()) {
-      (Some((geometry, drop_shadow, camera_on_top)), Some(camera)) => {
-        Some((camera, geometry, drop_shadow, camera_on_top))
+      (Some((geometry, drop_shadow, camera_on_top)), Some(camera_frame)) => {
+        if let Some((camera_output, camera_picture)) = camera {
+          let Ok(composed) =
+            compositor::CameraComposition::new(camera_output, camera_picture, camera_frame.size)
+          else {
+            return false;
+          };
+          pane.camera_composition = composed.map(std::sync::Arc::new);
+          pane.camera_halo = camera_halo;
+        }
+        Some((camera_frame, geometry, drop_shadow, camera_on_top))
       }
       (Some(_), None) => return false,
       (None, _) => None,

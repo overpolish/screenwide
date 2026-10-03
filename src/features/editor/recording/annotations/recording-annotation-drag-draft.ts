@@ -17,7 +17,7 @@ import { TIMED_LANE_ROW_HEIGHT_PX } from "../../timeline/tracks/timed-lane-layou
 import { moveRecordingAnnotationClip } from "./recording-annotation-geometry";
 import {
   RecordingAnnotationClip,
-  recordingAnnotationClipsMeet,
+  recordingAnnotationClipsStack,
   renumberedAnnotationClips,
 } from "./recording-annotations";
 
@@ -45,8 +45,9 @@ export const previewedWhole = (
 /**
  * `clips` with the ones named in `ids` carried `rows` rows up the lane, or
  * down for a negative count, until none of them has anything left to pass.
- * Each row is one step of the group through the drawing order, so the group
- * keeps its own stacking.
+ * Each row is one step of the group through its own picture's drawing order,
+ * so the group keeps its own stacking and never leaves its picture: the
+ * other picture's clips are all over or all under it.
  */
 const carriedThroughRows = (
   clips: RecordingAnnotationClip[],
@@ -57,7 +58,7 @@ const carriedThroughRows = (
   for (let step = 0; step < Math.abs(rows); step += 1) {
     const next = arrangedGroup(carried, (clip) => ids.has(clip.annotation.id), {
       arrangement: rows > 0 ? "forward" : "backward",
-      meets: recordingAnnotationClipsMeet,
+      meets: recordingAnnotationClipsStack,
     });
     if (next === carried) break;
     carried = next;

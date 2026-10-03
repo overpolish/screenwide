@@ -82,6 +82,8 @@ impl Gpu {
       .map_err(|error| format!("The Windows preview pane could not be shown: {error}"))?;
     Ok(Pane {
       annotation_halo: None,
+      camera_composition: None,
+      camera_halo: None,
       annotation_typing: None,
       base_rect: PreviewSurfaceRect {
         height: 0.0,

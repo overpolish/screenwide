@@ -12,6 +12,7 @@ import {
   screenshotSourceCrop,
   withScreenshotSourceCrop,
 } from "./screenshot-output-settings";
+import { withScreenshotSpotlightBlurShared } from "./screenshot-spotlight-blur";
 
 export { screenshotLayout } from "./screenshot-layout";
 export type { ScreenshotLayout } from "./screenshot-layout";
@@ -49,21 +50,25 @@ export const normalizedScreenshotWorkspaceOutput = (
  * behind its padding, and the annotations drawn on it - the canvas is what a
  * new layer and the next capture are built from, so anything left on it is
  * inherited by pictures it was never drawn on. Counters are numbered across
- * every layer, so a change to one layer's can renumber another's.
+ * every layer, and spotlights share one Blur setting across them, so a change
+ * to one layer's can reach another's.
  */
 export const withScreenshotWorkspaceItemOutput = (
   workspace: ScreenshotWorkspaceOutputSettings,
   settings: ScreenshotOutputSettings,
   itemId: number | null,
 ): ScreenshotWorkspaceOutputSettings =>
-  withScreenshotCountersNumbered({
-    ...workspace,
-    ...screenshotOutputTemplate(settings),
-    items: workspace.items.map((item) =>
-      item.id === itemId ? { ...item, output: settings } : item,
-    ),
-    recenterInsetColor: workspace.recenterInsetColor,
-  });
+  withScreenshotSpotlightBlurShared(
+    withScreenshotCountersNumbered({
+      ...workspace,
+      ...screenshotOutputTemplate(settings),
+      items: workspace.items.map((item) =>
+        item.id === itemId ? { ...item, output: settings } : item,
+      ),
+      recenterInsetColor: workspace.recenterInsetColor,
+    }),
+    workspace,
+  );
 
 export const screenshotWorkspaceItemOutput = (
   settings: ScreenshotWorkspaceOutputSettings,

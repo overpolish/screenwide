@@ -70,8 +70,8 @@ impl ScreenshotWorkspaceOutputSettings {
 
   /// The settings layer `id` is drawn with, for an image captured at
   /// `capture`. `source_width` is each layer's source width in pixels, by id:
-  /// the layer draws every other layer's spotlights under its own
-  /// annotations, so a spotlight lights the whole picture.
+  /// the layer draws the other layers' spotlights the shade's place in the
+  /// stack calls for.
   pub(crate) fn output_for_id(
     &self,
     id: u64,
@@ -93,10 +93,9 @@ impl ScreenshotWorkspaceOutputSettings {
         },
         |candidate| candidate.output.clone(),
       );
-    let borrowed = self.borrowed_spotlights(id, source_width);
-    if !borrowed.is_empty() {
-      output.annotations.splice(0..0, borrowed);
-    }
+    self
+      .borrowed_spotlights(id, source_width)
+      .lay_into(&mut output.annotations);
     output.background_color = self.canvas.background_color.clone();
     output.background_image_path = self.canvas.background_image_path.clone();
     output.background_type = self.canvas.background_type.clone();

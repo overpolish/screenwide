@@ -75,6 +75,13 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
       if let Some(surface) = &sources.preview_surface {
         use crate::editor::preview_platform::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
         let source_token = (seconds * 1_000.0).round().max(0.0) as u64;
+        // A baked camera's settings carry what is composed into its frame;
+        // a camera pane's are its own layer's.
+        let (baked_settings, pane_settings) = if bake_camera {
+          (Some(camera_output), None)
+        } else {
+          (None, Some(camera_output))
+        };
         let mut layers = vec![RecordingWorkspaceLayer {
           pane_index: 0,
           source_token: source_token << 2,
@@ -91,10 +98,13 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
             .flatten()
             .map(|frame| (frame.as_ptr(), (frame.width, frame.height))),
           overlay: overlay.as_ref(),
+          camera_settings: baked_settings
+            .as_ref()
+            .map(|settings| (settings, sources.annotation_pictures()[1])),
           clip_cursor_at_video_edge,
           foreground_only: false,
         }];
-        if !bake_camera {
+        if let Some(camera_output) = pane_settings {
           if let Some(camera) = camera.as_ref() {
             layers.push(RecordingWorkspaceLayer {
               pane_index: 1,
@@ -109,6 +119,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
               camera: None,
               camera_pixels: None,
               overlay: None,
+              camera_settings: None,
               clip_cursor_at_video_edge: false,
               foreground_only: false,
             });

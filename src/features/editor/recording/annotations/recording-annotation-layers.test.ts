@@ -112,7 +112,7 @@ describe("annotations moving between the screen and the camera", () => {
     expect(move(there, "backward", "a")).toEqual(start);
   });
 
-  it("keeps an effect, and moves to the front or back, on its own picture", () => {
+  it("hands a redaction to the camera under the camera's own marks", () => {
     const redaction: RecordingAnnotationClip = {
       ...arrow("r", "primary"),
       annotation: annotation("r", {
@@ -122,16 +122,31 @@ describe("annotations moving between the screen and the camera", () => {
         start: { x: 0, y: 0 },
       }),
     };
-    const clips = [redaction, arrow("a", "primary")];
-    expect(move(clips, "forward", "a")).not.toBe(clips);
+    const moved = move(
+      [redaction, arrow("a", "primary"), arrow("c", "camera")],
+      "forward",
+      "r",
+    );
+    expect(moved.map((clip) => [clip.annotation.id, clip.trackId])).toEqual([
+      ["r", "camera"],
+      ["a", "primary"],
+      ["c", "camera"],
+    ]);
+  });
+
+  it("keeps a pinned clip, and moves to the front or back, on its own picture", () => {
+    const pinned: RecordingAnnotationClip = {
+      ...arrow("p", "primary"),
+      pin: { keyframes: [], pinnedMs: 0 },
+    };
     expect(move([arrow("a", "primary")], "front", "a")).toHaveLength(1);
     expect(move([arrow("a", "primary")], "front", "a")[0].trackId).toBe(
       "primary",
     );
     expect(
       recordingAnnotationArrangements(
-        [redaction],
-        (clip) => clip.annotation.id === "r",
+        [pinned],
+        (clip) => clip.annotation.id === "p",
         placement,
       ).canBringForward,
     ).toBe(false);

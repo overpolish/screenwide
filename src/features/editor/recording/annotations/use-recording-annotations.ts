@@ -27,11 +27,17 @@ import {
 } from "./recording-annotation-layers";
 import { recordingAnnotationPinning } from "./recording-annotation-pinning";
 import {
+  laneAnnotationClips,
+  useHiddenAnnotationsLetGo,
+  withShownAnnotations,
+} from "./recording-annotation-visibility";
+import {
   mergeRecordingAnnotationClips,
   RecordingAnnotationClip,
   RecordingAnnotationPinCommit,
   renumberedAnnotationClips,
 } from "./recording-annotations";
+import { withRecordingSpotlightBlurShared } from "./recording-spotlight-blur";
 import { useRecordingPinStatus } from "./use-recording-pin-status";
 
 type AnnotationEvent = {
@@ -59,6 +65,7 @@ export function useRecordingAnnotations({
   onSelectTrack,
   screenCaptureScale,
   sessionId,
+  shownTracks,
   sourceDurationMs,
   tool,
   trackId,
@@ -80,6 +87,8 @@ export function useRecordingAnnotations({
   /** Captured pixels per logical point of the screen. */
   screenCaptureScale: number;
   sessionId: number | null;
+  /** The video tracks turned on, whose annotations the lane shows. */
+  shownTracks: ReadonlySet<RecordingVideoTrackId>;
   sourceDurationMs: number;
   /** The annotation tool in hand, when one is. The native chrome learns it
    * from the layout; here it only decides what the keyboard can delete. */
@@ -114,10 +123,12 @@ export function useRecordingAnnotations({
     // numbered by clip time: dragging one clip in front of another in time
     // renumbers the pair, while reordering the drawing order does not. Every
     // clip is paced by its annotation as it now stands, so a path drawn
-    // longer takes longer to draw in.
-    const next = renumberedAnnotationClips(unnumbered, clips).map((clip) =>
-      pacedClip(clip, frames[clip.trackId]),
-    );
+    // longer takes longer to draw in. Spotlights shown together share one
+    // Blur setting, whichever edit brings them together.
+    const next = renumberedAnnotationClips(
+      withRecordingSpotlightBlurShared(unnumbered, clips),
+      clips,
+    ).map((clip) => pacedClip(clip, frames[clip.trackId]));
     if (JSON.stringify(next) !== JSON.stringify(clips))
       onEdit({ ...edit, annotationClips: next });
   };
@@ -137,22 +148,21 @@ export function useRecordingAnnotations({
   const pinned = new Set(
     clips.flatMap((clip) => (clip.pin ? [clip.annotation.id] : [])),
   );
+  // A track turned off keeps its annotations out of the lane and the choice;
+  // an edit made without them lays them back where they were.
+  const lane = laneAnnotationClips(clips, shownTracks, {
+    commit: commitClips,
+    preview: setPreviewClips,
+  });
   const selection = useAnnotations({
-    annotations: clips.map((clip) => clip.annotation),
+    annotations: lane.clips.map((clip) => clip.annotation),
     groupable: (id) => !pinned.has(id),
     onCommit: (annotations) => {
-      const byId = new Map(
-        annotations.map((annotation) => [annotation.id, annotation]),
-      );
-      commitClips(
-        clips.flatMap((clip) => {
-          const annotation = byId.get(clip.annotation.id);
-          return annotation ? [{ ...clip, annotation }] : [];
-        }),
-      );
+      commitClips(withShownAnnotations(clips, annotations, shownTracks));
     },
     workspace: "recording",
   });
+  useHiddenAnnotationsLetGo(shownTracks, selection);
   const eventRef = useRef({
     commit: (_: AnnotationEvent) => {},
     hover: selection.onHoverChange,
@@ -271,13 +281,11 @@ export function useRecordingAnnotations({
      * a move between the two keeps an annotation's place against. */
     cameraPlacement,
     canDelete: selection.hasSelection || (tool !== null && selection.canDelete),
-    clips,
-    onClipsChange: commitClips,
-    onPreviewClips: setPreviewClips,
+    ...lane,
     /** Choose the clip named `id` alone, or with `toggle`, add it to the
      * choice or take it away. Its pane becomes the one in hand. */
     onSelect: (id: string, toggle: boolean) => {
-      const clip = clips.find((item) => item.annotation.id === id);
+      const clip = lane.clips.find((item) => item.annotation.id === id);
       if (!clip) return;
       selection.selectAnnotation(id, toggle);
       onSelectTrack?.(clip.trackId);

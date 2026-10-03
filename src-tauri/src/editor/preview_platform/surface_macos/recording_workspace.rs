@@ -46,6 +46,7 @@ impl RecordingPreviewSurface {
           keyboard: layer.keyboard,
           camera: picture(layer.camera, layer.camera_pixels),
           overlay: layer.overlay,
+          camera_settings: layer.camera_settings,
           foreground_only: layer.foreground_only,
           // The halo is set on the scene by `redraw_annotation_hover`.
           hover: None,

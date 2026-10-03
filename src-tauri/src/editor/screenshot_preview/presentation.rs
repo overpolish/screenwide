@@ -42,11 +42,11 @@ impl PreviewManager {
         .find(|source| source.id == id)
         .map(|source| source.image.width)
     };
-    // Every layer draws the other layers' spotlights under its own
-    // annotations, so the halo's place in its list moves up by as many.
+    // A layer may draw other layers' spotlights under its own annotations,
+    // which moves the halo's place in its list up by as many.
     let hover = hover.map(|(layer, index, width)| {
-      let borrowed = output.borrowed_spotlights(layer, &source_width).len();
-      (layer, index + borrowed, width)
+      let shift = output.borrowed_spotlights(layer, &source_width).shift();
+      (layer, index + shift, width)
     });
     #[cfg(target_os = "macos")]
     {

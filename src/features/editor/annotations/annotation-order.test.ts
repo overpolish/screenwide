@@ -4,12 +4,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  annotationKindsStack,
+  arranged,
   arrangedGroup,
   availableArrangements,
   availableGroupArrangements,
-  arranged,
   freshAnnotationIndex,
 } from "./annotation-order";
+import { AnnotationShape } from "./annotations";
 
 describe("freshAnnotationIndex", () => {
   const drawn = ["redact", "highlight", "spotlight", "arrow", "text"] as const;
@@ -24,6 +26,40 @@ describe("freshAnnotationIndex", () => {
 
   it("puts anything else on top", () => {
     expect(freshAnnotationIndex(drawn, "counter")).toBe(drawn.length);
+  });
+
+  it("puts a redaction over the redactions and under everything else", () => {
+    expect(freshAnnotationIndex(drawn, "redact")).toBe(1);
+  });
+});
+
+describe("redactions", () => {
+  type Kinded = [string, AnnotationShape["kind"]];
+  const stack = (a: Kinded, b: Kinded) => annotationKindsStack(a[1], b[1]);
+  const items: Kinded[] = [
+    ["r1", "redact"],
+    ["r2", "redact"],
+    ["arrow", "arrow"],
+    ["text", "text"],
+  ];
+  const named = (list: Kinded[]) => list.map(([id]) => id);
+
+  it("move to the front of the redactions, under every mark", () => {
+    expect(
+      named(arranged(items, 0, { arrangement: "front", meets: stack })),
+    ).toEqual(["r2", "r1", "arrow", "text"]);
+    expect(availableArrangements(items, 1, stack).canBringForward).toBe(false);
+  });
+
+  it("hold every mark over them, even sent to the back", () => {
+    expect(
+      named(
+        arrangedGroup(items, ([id]) => id === "text", {
+          arrangement: "back",
+          meets: stack,
+        }),
+      ),
+    ).toEqual(["r1", "r2", "text", "arrow"]);
   });
 });
 

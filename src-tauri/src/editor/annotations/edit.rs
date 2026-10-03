@@ -195,15 +195,17 @@ impl AnnotationEdit {
 }
 
 /// Where a fresh annotation of `kind` goes in a document kept bottom first. A
-/// highlight recolours the page, so it goes under every spotlight and every
-/// annotation drawn over the page; a spotlight goes over the highlights and
-/// under the rest, so what is drawn next stays lit. Everything else goes on
-/// top. A redaction is applied to the picture wherever it sits, so it never
-/// holds a fresh one back. The twin of `freshAnnotationIndex` in
+/// redaction changes the picture itself, so it goes under everything but the
+/// redactions, which a document keeps at its bottom. A highlight recolours
+/// the page, so it goes under every spotlight and every annotation drawn over
+/// the page; a spotlight goes over the highlights and under the rest, so
+/// what is drawn next stays lit. Everything else goes on top. The twin of
+/// `freshAnnotationIndex` in
 /// `src/features/editor/annotations/annotation-order.ts`.
 fn fresh_annotation_index(annotations: &[Annotation], kind: AnnotationKind) -> usize {
   use AnnotationKind::{Highlight, Redact, Spotlight};
   let beneath = |other: AnnotationKind| match kind {
+    Redact => other == Redact,
     Highlight => matches!(other, Highlight | Redact),
     Spotlight => matches!(other, Highlight | Spotlight | Redact),
     _ => true,

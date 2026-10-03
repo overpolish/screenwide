@@ -54,6 +54,7 @@ impl PreviewPlayerManager {
       super::gesture::track(pane),
       (layout.source_width, layout.source_height),
     );
+    let mut camera = None;
     if let Some(mut composition) = composition.filter(|_| baked) {
       let pictures = sources.annotation_pictures();
       composition.recording_output.primary.annotations = annotations;
@@ -61,12 +62,16 @@ impl PreviewPlayerManager {
         resolve(AnnotationTrack::Camera, pictures[1]);
       sources.arrange_scene(&mut composition, position_ms, 0.0);
       super::super::annotation_preview::carry_camera_annotations(&mut composition, pictures);
-      annotations = composition.recording_output.primary.annotations;
+      annotations = std::mem::take(&mut composition.recording_output.primary.annotations);
+      camera = Some((composition.recording_output.camera, pictures[1]));
     }
     surface.redraw_recording_annotations(
       pane,
       &annotations,
       (layout.source_width, layout.source_height),
+      camera
+        .as_ref()
+        .map(|(settings, picture)| (settings, *picture)),
     )
   }
 

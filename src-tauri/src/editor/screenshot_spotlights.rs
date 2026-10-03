@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A still's spotlights light the whole picture, not only the layer they are
-//! drawn on. Each layer is drawn on its own and the layers are laid together
-//! after, so every layer is handed the other layers' spotlights as well as
-//! its own: each then shades its own pixels by the same light, and the
-//! composite is shaded once, evenly, whichever layer a spotlight is on.
-//!
-//! The borrowed spotlights go under everything the layer draws itself. Its
-//! picture is shaded by them, while its own annotations are not: those keep
-//! the place in the shade their own layer gives them. A spotlight's radius
-//! and softness are shares of its box, so only its corners have to move from
-//! one layer's source pixels into another's.
+//! A still's layers stack in workspace order, each with its annotations over
+//! its picture, and the spotlights lay one shade over that stack, at the
+//! topmost of them: it darkens everything under it and nothing above, and
+//! every spotlight cuts its hole in it, whichever layer it is on. Each layer
+//! is drawn on its own and the layers are laid together after, so a layer
+//! the shade reaches is handed the other layers' spotlights as well as its
+//! own: under everything it draws when its own spotlight is the topmost, so
+//! they only cut their holes, and over everything when a higher layer holds
+//! the shade, so all of it lies in the shade. A layer above the topmost
+//! spotlight borrows none and stays bright. A spotlight's radius and
+//! softness are shares of its box, so only its corners have to move from one
+//! layer's source pixels into another's.
 
 use super::annotations::{Annotation, AnnotationPoint, AnnotationShape};
 use super::ScreenshotWorkspaceOutputSettings;
@@ -35,26 +36,71 @@ fn source_on_canvas(
   ))
 }
 
+/// The spotlights a layer draws from the other layers, in workspace order and
+/// moved into its source pixels, and whether they go over its own annotations
+/// rather than under them.
+pub(crate) struct BorrowedSpotlights {
+  pub(crate) spotlights: Vec<Annotation>,
+  pub(crate) over: bool,
+}
+
+impl BorrowedSpotlights {
+  /// How far the borrowed spotlights move the layer's own annotations up its
+  /// drawn list.
+  pub(crate) fn shift(&self) -> usize {
+    if self.over {
+      0
+    } else {
+      self.spotlights.len()
+    }
+  }
+
+  /// Lays the borrowed spotlights into the layer's own `annotations`.
+  pub(crate) fn lay_into(self, annotations: &mut Vec<Annotation>) {
+    if self.over {
+      annotations.extend(self.spotlights);
+    } else {
+      annotations.splice(0..0, self.spotlights);
+    }
+  }
+}
+
+fn lights(annotation: &Annotation) -> bool {
+  matches!(annotation.shape, AnnotationShape::Spotlight { .. }) && annotation.shape.placed()
+}
+
 impl ScreenshotWorkspaceOutputSettings {
-  /// Every spotlight on the layers other than `id`, in workspace order and
-  /// moved into `id`'s source pixels: what layer `id` draws under its own
-  /// annotations so the spotlights shade it too. `source_width` is each
-  /// layer's source width in pixels, by id.
+  /// The other layers' spotlights layer `id` draws so the one shade lies
+  /// over the stack as the module describes. `source_width` is each layer's
+  /// source width in pixels, by id.
   pub(crate) fn borrowed_spotlights(
     &self,
     id: u64,
     source_width: &impl Fn(u64) -> Option<u32>,
-  ) -> Vec<Annotation> {
-    let Some((target_x, target_y, target_scale)) = self
+  ) -> BorrowedSpotlights {
+    let none = || BorrowedSpotlights {
+      spotlights: Vec::new(),
+      over: false,
+    };
+    let Some(place) = self.items.iter().position(|item| item.id == id) else {
+      return none();
+    };
+    let Some(shade) = self
       .items
       .iter()
-      .find(|item| item.id == id)
-      .zip(source_width(id))
-      .and_then(|(item, width)| source_on_canvas(&item.output, width))
+      .rposition(|item| item.output.annotations.iter().any(lights))
     else {
-      return Vec::new();
+      return none();
     };
-    let mut borrowed = Vec::new();
+    if shade < place {
+      return none();
+    }
+    let Some((target_x, target_y, target_scale)) =
+      source_width(id).and_then(|width| source_on_canvas(&self.items[place].output, width))
+    else {
+      return none();
+    };
+    let mut spotlights = Vec::new();
     for item in self.items.iter().filter(|item| item.id != id) {
       let Some((x, y, scale)) =
         source_width(item.id).and_then(|width| source_on_canvas(&item.output, width))
@@ -65,22 +111,22 @@ impl ScreenshotWorkspaceOutputSettings {
         x: (x + point.x * scale - target_x) / target_scale,
         y: (y + point.y * scale - target_y) / target_scale,
       };
-      borrowed.extend(
+      spotlights.extend(
         item
           .output
           .annotations
           .iter()
-          .filter(|annotation| {
-            matches!(annotation.shape, AnnotationShape::Spotlight { .. })
-              && annotation.shape.placed()
-          })
+          .filter(|annotation| lights(annotation))
           .map(|annotation| Annotation {
             shape: annotation.shape.mapped(into_target),
             ..annotation.clone()
           }),
       );
     }
-    borrowed
+    BorrowedSpotlights {
+      spotlights,
+      over: shade > place,
+    }
   }
 }
 
@@ -116,8 +162,8 @@ mod tests {
     }
   }
 
-  /// Both layers have 400 pixel wide sources. The first is drawn at half
-  /// size from x 100, the second at full size from x 300, so a point keeps
+  /// Both layers have 400 pixel wide sources. The first is drawn at full
+  /// size from x 300, the second at half size from x 100, so a point keeps
   /// its place on the canvas only when it is moved and doubled in scale.
   #[test]
   fn a_spotlight_lights_the_same_place_on_the_canvas_from_every_layer() {
@@ -127,14 +173,14 @@ mod tests {
       None,
     );
     let output = workspace(vec![
-      layer(1, 100.0, 200.0, vec![light]),
-      layer(2, 300.0, 400.0, Vec::new()),
+      layer(1, 300.0, 400.0, Vec::new()),
+      layer(2, 100.0, 200.0, vec![light]),
     ]);
-    let borrowed = output.borrowed_spotlights(2, &|_| Some(400));
-    let [annotation] = borrowed.as_slice() else {
-      panic!("{borrowed:?}");
+    let borrowed = output.borrowed_spotlights(1, &|_| Some(400));
+    let [annotation] = borrowed.spotlights.as_slice() else {
+      panic!("{:?}", borrowed.spotlights);
     };
-    // The first corner is at canvas (120, 20); the second layer's source
+    // The first corner is at canvas (120, 20); the first layer's source
     // starts at (300, 10), one source pixel to one canvas pixel.
     assert_eq!(
       annotation.shape,
@@ -145,9 +191,13 @@ mod tests {
     );
   }
 
+  /// Three layers, the middle one holding the topmost spotlight: the layer
+  /// under it lies wholly in the shade, the middle one takes the lower
+  /// spotlight's hole under its own, and the layer above stays bright.
   #[test]
-  fn a_layer_borrows_only_the_other_layers_spotlights() {
-    let own = new_spotlight("own".to_owned(), [point(0.0, 0.0), point(10.0, 10.0)], None);
+  fn the_shade_darkens_the_layers_under_the_topmost_spotlight_only() {
+    let spotlight =
+      |id: &str| new_spotlight(id.to_owned(), [point(0.0, 0.0), point(10.0, 10.0)], None);
     let arrow = crate::editor::annotations::arrow::model::new_arrow(
       "arrow".to_owned(),
       point(0.0, 0.0),
@@ -155,17 +205,22 @@ mod tests {
       None,
     );
     let output = workspace(vec![
-      layer(1, 0.0, 400.0, vec![own]),
-      layer(2, 0.0, 400.0, vec![arrow]),
+      layer(1, 0.0, 400.0, vec![spotlight("low")]),
+      layer(2, 0.0, 400.0, vec![spotlight("high")]),
+      layer(3, 0.0, 400.0, vec![arrow]),
     ]);
-    let ids = |id| {
-      output
-        .borrowed_spotlights(id, &|_| Some(400))
-        .into_iter()
-        .map(|annotation| annotation.id)
+    let borrowed = |id| {
+      let borrowed = output.borrowed_spotlights(id, &|_| Some(400));
+      let ids = borrowed
+        .spotlights
+        .iter()
+        .map(|annotation| annotation.id.as_str())
         .collect::<Vec<_>>()
+        .join(",");
+      (ids, borrowed.over)
     };
-    assert_eq!(ids(1), Vec::<String>::new());
-    assert_eq!(ids(2), vec!["own".to_owned()]);
+    assert_eq!(borrowed(1), ("high".to_owned(), true));
+    assert_eq!(borrowed(2), ("low".to_owned(), false));
+    assert_eq!(borrowed(3), (String::new(), false));
   }
 }

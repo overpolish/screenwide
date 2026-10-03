@@ -103,15 +103,17 @@ fn annotation_stack_shaded(stack_in: AnnotationStack, base: vec4<f32>, point: ve
 
 /// The cursor over `rgba` at `point`, as `[first, last)` treat it: lying on
 /// the picture, so darkened by the spotlights' shade and hidden by every
-/// loupe, but drawn over every mark. `pixel` is one drawn pixel there.
+/// loupe, but drawn over every mark. `[0, shade_last)` holds the spotlights
+/// whose shade it lies under here, none where the shade is laid in a later
+/// run, which darkens it there. `pixel` is one drawn pixel there.
 fn annotation_stack_cursor(rgba: vec4<f32>, point: vec2<f32>, first: u32, last: u32,
-                           feather: f32, pixel: f32) -> vec4<f32> {
+                           shade_last: u32, feather: f32, pixel: f32) -> vec4<f32> {
   var pointer = annotation_cursor_seen(point, pixel);
   if (pointer.a <= 0.0) {
     return rgba;
   }
   pointer = vec4<f32>(pointer.rgb * (1.0 - annotation_spotlight_dim *
-      annotation_spotlight_cover(point, first, last, feather, false)), pointer.a);
+      annotation_spotlight_cover(point, 0u, shade_last, feather, false)), pointer.a);
   var hidden = 0.0;
   for (var loupe = annotation_next(point, first, last); loupe < last;
        loupe = annotation_next(point, loupe + 1u, last)) {
@@ -126,27 +128,47 @@ fn annotation_stack_cursor(rgba: vec4<f32>, point: vec2<f32>, first: u32, last: 
 /// What a loupe shows at canvas point `point` of its zoom area, premultiplied:
 /// the picture and `[first, last)`, everything below the magnifier, shaded and
 /// blurred as the canvas draws them, and the cursor where `cursor` says the
-/// layer carries it. One loupe pixel spans `span` canvas pixels there, and
-/// `feather` is half of the smaller.
+/// layer carries it. A loupe over the camera shows the camera too, laid
+/// between the annotations under it and those over it as the canvas lays it.
+/// One loupe pixel spans `span` canvas pixels there, and `feather` is half of
+/// the smaller.
 fn annotation_loupe_content(point: vec2<f32>, span: vec2<f32>, first: u32, last: u32,
                             feather: f32, number_atlas: AnnotationTextAtlas, cursor: bool)
     -> vec4<f32> {
   let picture = annotation_magnify_sample(point, span);
   let base = vec4<f32>(picture.rgb * picture.a, picture.a);
   let shade_at = annotation_shade_at(point, first, last);
+  let camera_at = annotation_camera_run();
   var stack = AnnotationStack(base, base, false);
+  // The camera lies under the annotation at `camera_at`, so under the
+  // magnifier itself when that is the magnifier.
+  var camera_laid = camera_at > last;
   for (var index = annotation_next(point, first, last); index < last;
        index = annotation_next(point, index + 1u, last)) {
+    if (!camera_laid && index >= camera_at) {
+      stack = annotation_stack_camera(stack, point);
+      camera_laid = true;
+    }
     if (index == shade_at) {
       stack = annotation_stack_shaded(stack, base, point, first, index, last, feather);
     }
     stack = annotation_stack_draw(stack, annotation_arrows[index], point, feather, number_atlas,
                                   cursor);
   }
+  if (!camera_laid) {
+    stack = annotation_stack_camera(stack, point);
+  }
   if (!cursor) {
     return stack.rgba;
   }
-  return annotation_stack_cursor(stack.rgba, point, first, last, feather, 2.0 * feather);
+  return annotation_stack_cursor(stack.rgba, point, first, last, last, feather, 2.0 * feather);
+}
+
+/// `stack` with the camera laid over it at `point`, both what is drawn and
+/// what a highlight recolours.
+fn annotation_stack_camera(stack: AnnotationStack, point: vec2<f32>) -> AnnotationStack {
+  return AnnotationStack(annotation_camera_over(stack.rgba, point),
+                         annotation_camera_over(stack.bare, point), stack.highlighted);
 }
 
 /// What one placed loupe shows at `probe` of everything in `[0, last)`.
@@ -162,10 +184,10 @@ fn annotation_loupe_at(shape: PreviewGeometry, probe: vec2<f32>, last: u32, feat
 }
 
 /// Lays the magnifier at `index` over `stack`, its loupe showing everything
-/// below it. The loupe ignores the camera, as the picture it reads does, so
-/// it shows the annotations under the camera too. One that moved while the
-/// shutter was open is drawn whole at every exposure sample, as
-/// `annotation_magnify_layer` draws it.
+/// below it. Under the camera, the loupe shows what the camera covers, the
+/// annotations under it too; over it, the camera as the canvas draws it. One
+/// that moved while the shutter was open is drawn whole at every exposure
+/// sample, as `annotation_magnify_layer` draws it.
 fn annotation_stack_magnifier(stack: AnnotationStack, index: u32, point: vec2<f32>,
                               feather: f32, number_atlas: AnnotationTextAtlas, cursor: bool)
     -> AnnotationStack {
@@ -210,13 +232,16 @@ fn annotation_stack_magnifier(stack: AnnotationStack, index: u32, point: vec2<f3
 /// pixel as drawn there.
 ///
 /// The range is how the camera ordering is expressed: Rust sorts the
-/// annotations that sit under the camera ahead of those above it, keeping the
-/// document's order within each, so each pass draws one contiguous run rather
-/// than testing a flag per annotation per pixel.
+/// screen's annotations ahead of the camera's, keeping each one's order, so
+/// each pass draws one contiguous run rather than testing a flag per
+/// annotation per pixel. `[0, all)` is every run: the spotlights' one shade
+/// lies at the topmost of them in any run, so it darkens everything drawn
+/// before it, the camera too when a camera spotlight holds it, and nothing
+/// after; every spotlight cuts its hole in it, whichever run it is in.
 fn composite_annotation_layers(rgba_in: vec4<f32>, base: vec4<f32>, canvas_point: vec2<f32>,
-                               first: u32, last: u32, feather: f32,
+                               first: u32, last: u32, all: u32, feather: f32,
                                number_atlas: AnnotationTextAtlas, cursor: bool) -> vec4<f32> {
-  let shade_at = annotation_shade_at(canvas_point, first, last);
+  let shade_at = annotation_shade_at(canvas_point, 0u, all);
   var stack = AnnotationStack(rgba_in, rgba_in, false);
   for (var index = annotation_next(canvas_point, first, last); index < last;
        index = annotation_next(canvas_point, index + 1u, last)) {
@@ -224,7 +249,7 @@ fn composite_annotation_layers(rgba_in: vec4<f32>, base: vec4<f32>, canvas_point
       if (annotation_blur_mode() == 1u && index == annotation_blur_spotlight()) {
         return stack.rgba;
       }
-      stack = annotation_stack_shaded(stack, base, canvas_point, first, index, last, feather);
+      stack = annotation_stack_shaded(stack, base, canvas_point, 0u, index, all, feather);
     }
     let annotation = annotation_arrows[index];
     if (annotation.kind == annotation_magnify_kind) {
@@ -238,6 +263,8 @@ fn composite_annotation_layers(rgba_in: vec4<f32>, base: vec4<f32>, canvas_point
   if (!cursor) {
     return stack.rgba;
   }
-  return annotation_stack_cursor(stack.rgba, canvas_point, first, last, feather,
+  let shaded_here = shade_at >= first && shade_at < last;
+  return annotation_stack_cursor(stack.rgba, canvas_point, first, last,
+                                 select(0u, all, shaded_here), feather,
                                  max(2.0 * feather, 1e-4));
 }

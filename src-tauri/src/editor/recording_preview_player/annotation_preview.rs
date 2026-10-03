@@ -12,8 +12,8 @@ use crate::editor::annotations::timing::{
 /// motion blur is measured over. A paused composition passes zero: nothing
 /// is moving, so nothing is blurred. `ranges` is the timeline the reveals are
 /// timed on, and `pictures` the primary's and the camera's source sizes.
-/// `held` hands the screen's redactions the fills read from their clips'
-/// first frames; only the screen takes a redaction.
+/// `held` hands each pane's redactions the fills read from their clips'
+/// first frames, the screen's then the camera's.
 pub(super) fn apply_clips(
   composition: &mut PreviewCompositionSettings,
   clips: &[RecordingAnnotationClip],
@@ -21,43 +21,40 @@ pub(super) fn apply_clips(
   source_ms: u64,
   frame_ms: f32,
   pictures: [(u32, u32); 2],
-  held: Option<&HeldFillsHandle>,
+  held: &[Option<HeldFillsHandle>; 2],
 ) {
-  let primary = &mut composition.recording_output.primary;
-  primary.annotations = revealed_annotations(
-    clips,
-    AnnotationTrack::Primary,
-    ranges,
-    source_ms,
-    frame_ms,
-    pictures[0],
-  );
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  if let Some(held) = held {
-    held.attach(
-      &mut primary.annotations,
-      clips,
-      primary.capture_width_points,
-      source_ms,
-    );
+  let output = &mut composition.recording_output;
+  for (pane, (settings, track)) in [
+    (&mut output.primary, AnnotationTrack::Primary),
+    (&mut output.camera, AnnotationTrack::Camera),
+  ]
+  .into_iter()
+  .enumerate()
+  {
+    settings.annotations =
+      revealed_annotations(clips, track, ranges, source_ms, frame_ms, pictures[pane]);
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    if let Some(held) = &held[pane] {
+      held.attach(
+        &mut settings.annotations,
+        clips,
+        settings.capture_width_points,
+        source_ms,
+      );
+    }
   }
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = held;
-  composition.recording_output.camera.annotations = revealed_annotations(
-    clips,
-    AnnotationTrack::Camera,
-    ranges,
-    source_ms,
-    frame_ms,
-    pictures[1],
-  );
 }
 
 /// One video draws the camera inside the screen's composition, so the
-/// camera's annotations are carried into the screen's list to be drawn over
-/// it, placed where the arranged scene puts the camera. Called once the scene
-/// has arranged `composition`; `pictures` are the primary's and the camera's
-/// source sizes. With the camera a pane of its own, it draws its own.
+/// camera's annotations are split between its own picture and the screen's
+/// list, placed where the arranged scene puts the camera. The camera's
+/// settings keep the ones composed into its picture, in its own pixels; the
+/// rest are carried into the screen's list to be drawn over it. Called once
+/// the scene has arranged `composition`; `pictures` are the primary's and the
+/// camera's source sizes. With the camera a pane of its own, it draws its
+/// own.
 pub(super) fn carry_camera_annotations(
   composition: &mut PreviewCompositionSettings,
   pictures: [(u32, u32); 2],
@@ -66,7 +63,7 @@ pub(super) fn carry_camera_annotations(
     return;
   }
   let primary = &composition.recording_output.primary;
-  let carried = crate::editor::annotations::camera_baked::camera_annotations_on_screen(
+  let split = crate::editor::annotations::camera_baked::baked_camera_annotations(
     &composition.recording_output.camera.annotations,
     pictures[1],
     composition.camera_overlay,
@@ -74,11 +71,9 @@ pub(super) fn carry_camera_annotations(
     primary,
     pictures[0],
   );
-  composition
-    .recording_output
-    .primary
-    .annotations
-    .extend(carried);
+  let output = &mut composition.recording_output;
+  output.primary.annotations.extend(split.over);
+  output.camera.annotations = split.within;
 }
 
 /// The preview's held fills, where the platform decodes the frames they are
@@ -161,7 +156,7 @@ impl PlayerSources {
       source_ms,
       0.0,
       self.annotation_pictures(),
-      self.held_fills.as_ref(),
+      &self.held_fills,
     );
     drop(ranges);
     self.arrange_scene(&mut composition, source_ms, 0.0);

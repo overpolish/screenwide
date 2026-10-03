@@ -19,16 +19,6 @@ import type { AnnotationKind } from "../../../../components/shared/annotation-st
 
 const FRAME_LAYER_ID = 0xffffffff;
 
-/** The tools that only draw on the screen: an effect reads or changes the
- * screen's own frames, which the camera has none of. The twin of
- * `screen_only` in `src-tauri/src/editor/annotations/gesture.rs`. */
-const SCREEN_ONLY_TOOLS: ReadonlySet<RecordingCanvasTool> = new Set([
-  "highlight",
-  "magnify",
-  "redact",
-  "spotlight",
-]);
-
 type VideoSourceDimensions = Partial<
   Record<RecordingVideoTrackId, { height: number; width: number }>
 >;
@@ -244,9 +234,6 @@ export function recordingVideoSelectionTargets({
         ? "select"
         : null;
   if (mode === null) return null;
-  // An effect is drawn on the screen alone, so the camera over it never takes
-  // its press.
-  const reachesCamera = !SCREEN_ONLY_TOOLS.has(canvasTool);
   if (canPreviewBakedCamera) {
     const primarySource = previewSourceDimensions.primary;
     const cameraSource = previewSourceDimensions.camera;
@@ -261,7 +248,6 @@ export function recordingVideoSelectionTargets({
       }),
       framed: isFramed,
     };
-    if (!reachesCamera) return [screen];
     return [
       screen,
       {
@@ -278,7 +264,6 @@ export function recordingVideoSelectionTargets({
   }
   return (["primary", "camera"] as const).flatMap((trackId) => {
     if (!selectedVideoTracks.has(trackId)) return [];
-    if (trackId === "camera" && !reachesCamera) return [];
     const source = previewSourceDimensions[trackId];
     if (!source) return [];
     const framesPane = isFramed && trackId === "primary";

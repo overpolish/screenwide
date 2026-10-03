@@ -3,6 +3,8 @@
 
 use super::*;
 
+mod keyboard;
+
 #[derive(Clone)]
 pub(super) struct PlayerSources {
   pub(super) annotation_clips:
@@ -26,8 +28,9 @@ pub(super) struct PlayerSources {
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
   pub(super) duration_ms: u64,
   pub(super) frames_per_second: Option<f64>,
-  /// The fills the screen's redactions read from their clips' first frames.
-  pub(super) held_fills: Option<super::annotation_preview::HeldFillsHandle>,
+  /// The fills each pane's redactions read from their clips' first frames,
+  /// the screen's then the camera's.
+  pub(super) held_fills: [Option<super::annotation_preview::HeldFillsHandle>; 2],
   /// Zero when OSCs are hidden, one for the primary pane and two for camera.
   pub(super) layout: RecordingPreviewLayout,
   pub(super) playback_layout: RecordingPreviewLayout,
@@ -200,34 +203,7 @@ pub(super) fn sources_with_surface(
     .transpose()?;
   let keyboard = keyboard_path
     .as_ref()
-    .map(|keyboard_path| {
-      let deleted_ids = settings
-        .map(|settings| settings.deleted_keyboard_shortcut_ids.clone())
-        .unwrap_or_else(|| {
-          persisted.as_ref().map_or_else(Vec::new, |plan| {
-            plan.deleted_keyboard_shortcut_ids().to_vec()
-          })
-        });
-      let deleted_ranges = settings
-        .map(|settings| settings.deleted_keyboard_shortcut_ranges.clone())
-        .unwrap_or_else(|| {
-          persisted.as_ref().map_or_else(Vec::new, |plan| {
-            plan.deleted_keyboard_shortcut_ranges().to_vec()
-          })
-        });
-      let compositor =
-        KeyboardCompositor::open_with_deleted(keyboard_path, &deleted_ids, &deleted_ranges)?;
-      let positions = settings
-        .map(|settings| settings.keyboard_shortcut_positions.as_slice())
-        .or_else(|| {
-          persisted
-            .as_ref()
-            .map(|plan| plan.keyboard_shortcut_positions())
-        })
-        .unwrap_or(&[]);
-      compositor.set_shortcut_positions(positions);
-      Ok::<_, String>(Arc::new(compositor))
-    })
+    .map(|path| keyboard::keyboard_compositor(path, settings, persisted.as_ref()))
     .transpose()?;
   #[cfg(target_os = "macos")]
   let cursor_artworks = cursor
@@ -271,10 +247,18 @@ pub(super) fn sources_with_surface(
     duration_ms,
     frames_per_second,
     #[cfg(any(target_os = "macos", target_os = "windows"))]
-    held_fills: (primary_kind != PrimaryRecordingKind::Audio)
-      .then(|| Arc::new(super::held_fills::HeldFills::new(path.clone(), duration_ms))),
+    held_fills: [
+      (primary_kind != PrimaryRecordingKind::Audio)
+        .then(|| Arc::new(super::held_fills::HeldFills::new(path.clone(), duration_ms))),
+      camera.as_ref().map(|camera| {
+        Arc::new(super::held_fills::HeldFills::new(
+          camera.path.clone(),
+          camera.duration_ms,
+        ))
+      }),
+    ],
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    held_fills: None,
+    held_fills: [None, None],
     layout,
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     pins: playback_layout

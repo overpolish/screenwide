@@ -42,7 +42,7 @@ pub(crate) struct Redactor {
   records: std::sync::Mutex<wgpu::Buffer>,
   zones: GpuBuffer,
   /// The copies for each redaction slot.
-  work: std::sync::Mutex<Vec<Option<Work>>>,
+  work: std::sync::Mutex<std::collections::HashMap<usize, Work>>,
   /// The cells a classically pixelated box averages, one pixel a cell.
   cells: Scratch,
   /// A blurred box's rows, blurred along and premultiplied, one pixel a pixel
@@ -75,7 +75,7 @@ impl Redactor {
       layout,
       records: std::sync::Mutex::new(records_buffer(gpu, 8)),
       zones: GpuBuffer::new(gpu, "Screenwide redaction zones"),
-      work: std::sync::Mutex::new(Vec::new()),
+      work: std::sync::Mutex::new(std::collections::HashMap::new()),
       cells,
       rows,
       unused: gpu
@@ -119,22 +119,20 @@ impl Redactor {
       .work
       .lock()
       .map_err(|_| "The redaction copies are poisoned".to_owned())?;
-    if slots.len() <= slot {
-      slots.resize_with(slot + 1, || None);
-    }
-    let work = &mut slots[slot];
-    if work
-      .as_ref()
-      .is_none_or(|work| work.size != size || work.format != format)
-    {
-      *work = Some(Work {
+    let work = slots.entry(slot).or_insert_with(|| Work {
+      size,
+      format,
+      copies: [target(gpu, size, format), target(gpu, size, format)],
+      kept: None,
+    });
+    if work.size != size || work.format != format {
+      *work = Work {
         size,
         format,
         copies: [target(gpu, size, format), target(gpu, size, format)],
         kept: None,
-      });
+      };
     }
-    let work = work.as_mut().expect("the redaction copies were just made");
     if let Some((kept, records, index)) = &work.kept {
       if retained && *kept == source.texture && records == redactions {
         return Ok(Some(work.copies[*index].view.clone()));

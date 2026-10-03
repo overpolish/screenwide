@@ -152,7 +152,7 @@ fn test_sources() -> PlayerSources {
     keyboard_settings: Default::default(),
     duration_ms: 1_000,
     frames_per_second: Some(60.0),
-    held_fills: None,
+    held_fills: [None, None],
     layout: layout.clone(),
     playback_layout: layout,
     #[cfg(any(target_os = "macos", target_os = "windows"))]

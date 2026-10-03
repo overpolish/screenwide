@@ -163,6 +163,32 @@ export const Group: Story = {
   },
 };
 
+/** A recording with a camera: each clip says which picture it is drawn on,
+ * and the camera's sit over the screen's they meet, as they are drawn. */
+export const ScreenAndCamera: Story = {
+  render: function ScreenAndCameraLane() {
+    const [clips, setClips] = useState(() => [
+      { ...arrow("arrow-b", 22_000, 48_000), trackId: "camera" as const },
+      arrow("arrow-a", 8_000, 31_000),
+      arrow("arrow-c", 40_000, 70_000),
+    ]);
+    const selection = useLaneAnnotationSelection(clips, ["arrow-b"]);
+    return (
+      <div className="p-window-inset">
+        <RecordingAnnotationLane
+          clips={clips}
+          edit={createRecordingTimelineEdit(1)}
+          onChange={setClips}
+          showsLayer
+          sourceDurationMs={120_000}
+          viewport={fitTimelineViewport()}
+          {...selection}
+        />
+      </div>
+    );
+  },
+};
+
 export const Empty: Story = {
   render: () => (
     <div className="p-window-inset">

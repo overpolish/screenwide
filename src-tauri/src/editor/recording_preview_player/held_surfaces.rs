@@ -11,7 +11,9 @@ use crate::editor::annotations::redact::native::{
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::editor::annotations::redact::surface_timeline::surface_at;
 use crate::editor::annotations::redact::surface_timeline::{timeline, SAMPLE_MS};
-use crate::editor::annotations::timing::{placed_annotation, RecordingAnnotationClip};
+use crate::editor::annotations::timing::{
+  placed_annotation, AnnotationTrack, RecordingAnnotationClip,
+};
 use crate::editor::annotations::{AnnotationPoint, AnnotationRedaction, AnnotationShape};
 use crate::editor::surface_colour::surrounding_colour;
 use crate::screenshots::CapturedImage;
@@ -84,19 +86,20 @@ pub(crate) fn clip_surfaces(
   timeline(&samples)
 }
 
-/// Hands each redaction among an export's `clips` that reads the picture its
-/// fill: a secure pixelation's zones from its clip's first frame, and the
-/// surface timeline across the clip. Each first frame is decoded once,
-/// however many clips start on it. `capture_width_points` is how many
-/// logical points the recording is wide.
+/// Hands each redaction on `track` among an export's `clips` that reads the
+/// picture its fill: a secure pixelation's zones from its clip's first frame,
+/// and the surface timeline across the clip, read from that track's recording
+/// at `path`. Each first frame is decoded once, however many clips start on
+/// it. `capture_width_points` is how many logical points that recording is
+/// wide.
 pub(crate) fn attach_for_export(
-  path: &std::path::Path,
+  (path, track): (&std::path::Path, AnnotationTrack),
   duration_ms: u64,
   clips: &mut [RecordingAnnotationClip],
   capture_width_points: f64,
 ) {
   let mut frames: HashMap<u64, Option<CapturedImage>> = HashMap::new();
-  for clip in clips {
+  for clip in clips.iter_mut().filter(|clip| clip.track_id == track) {
     let Some((start, end)) = first_box(clip) else {
       continue;
     };
