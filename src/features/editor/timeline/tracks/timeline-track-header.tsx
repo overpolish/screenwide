@@ -86,6 +86,11 @@ export function TimelineTrackHeader({
     <div
       className={cn(
         "flex h-control-height w-timeline-gutter shrink-0 items-center",
+        // A lane of stacked rows can be taller than the band shows. Pinned to
+        // both edges, the label stays centred while the lane fits and holds
+        // to whichever edge cuts it off otherwise, never leaving its lane.
+        // Rows wrapped in a tooltip are single-row tracks, which never need it.
+        "sticky top-0 bottom-0",
         "rounded-control transition-[background-color,opacity]",
         // Selection is the accent tint the app marks a chosen row with; the
         // label keeps its own colour so the switch beside it stays readable.
