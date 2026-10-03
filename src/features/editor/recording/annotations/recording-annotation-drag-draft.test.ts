@@ -7,6 +7,7 @@ import { createRecordingTimelineEdit } from "../../timeline/editing/recording-ti
 import { TIMED_LANE_ROW_HEIGHT_PX } from "../../timeline/tracks/timed-lane-layout";
 
 import { carriedClips } from "./recording-annotation-drag-draft";
+import { trimRecordingAnnotationClips } from "./recording-annotation-geometry";
 import { RecordingAnnotationClip } from "./recording-annotations";
 
 const clip = (
@@ -109,5 +110,52 @@ describe("carriedClips", () => {
       { rows: -1 },
     );
     expect(order(lowered)).toEqual(["x", "a", "b"]);
+  });
+});
+
+describe("trimRecordingAnnotationClips", () => {
+  const clips = [clip("a", 10_000, 20_000), clip("b", 30_000, 34_000)];
+  const trim = (edge: "startMs" | "endMs", output: number, ids = ["a", "b"]) =>
+    trimRecordingAnnotationClips({
+      clips,
+      edge,
+      edit: createRecordingTimelineEdit(1),
+      id: "a",
+      ids: new Set(ids),
+      output,
+      sourceDurationMs: 100_000,
+    }).map(({ endMs, startMs }) => [startMs, endMs]);
+
+  it("moves the same edge of every chosen clip by the same time", () => {
+    expect(trim("endMs", 0.25)).toEqual([
+      [10_000, 25_000],
+      [30_000, 39_000],
+    ]);
+  });
+
+  it("stops them all where the first would shrink away", () => {
+    // "b" is the shorter, so it reaches its last millisecond first.
+    expect(trim("endMs", 0.1)).toEqual([
+      [10_000, 16_001],
+      [30_000, 30_001],
+    ]);
+  });
+
+  it("stops them all where the first would pass an end of the video", () => {
+    expect(trim("startMs", 0.05)).toEqual([
+      [5_000, 20_000],
+      [25_000, 34_000],
+    ]);
+    expect(trim("startMs", -0.2)).toEqual([
+      [0, 20_000],
+      [20_000, 34_000],
+    ]);
+  });
+
+  it("trims the pressed clip alone when it is the only one named", () => {
+    expect(trim("endMs", 0.1, ["a"])).toEqual([
+      [10_000, 10_001],
+      [30_000, 34_000],
+    ]);
   });
 });

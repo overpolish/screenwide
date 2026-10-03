@@ -179,9 +179,9 @@ fn a_faster_stretch_keeps_the_transition_its_length_on_screen() {
     source_start_us: 0,
     playback_rate: 2.0,
   }];
-  let clips = [split("a", 0, 10_000)];
+  let clips = [split("a", 1_000, 10_000)];
   let (settled, _) = arranged(&clips, &ranges, 5_000);
-  let (halfway, _) = arranged(&clips, &ranges, 600);
+  let (halfway, _) = arranged(&clips, &ranges, 1_600);
   let (start, _) = base();
   assert!((halfway.crop_x - (start.crop_x + settled.crop_x) / 2.0).abs() < 1e-6);
 }
@@ -203,6 +203,46 @@ fn a_scene_that_runs_to_the_end_of_the_video_holds_there() {
   assert_eq!(at_the_end, settled);
   let (leaving, _) = arranged(&clips, &video(12_000), 9_800);
   assert!(!close(leaving.crop_x, settled.crop_x));
+}
+
+#[test]
+fn a_scene_that_starts_the_video_is_in_place_from_its_first_frame() {
+  let video = |start_ms: u64| {
+    [TimelineRange {
+      output_start_us: 0,
+      source_end_us: 20_000_000,
+      source_start_us: start_ms * 1_000,
+      playback_rate: 1.0,
+    }]
+  };
+  let clips = [split("a", 0, 10_000)];
+  let (settled, _) = arranged(&clips, &video(0), 5_000);
+  let (first, _) = arranged(&clips, &video(0), 0);
+  assert_eq!(first, settled);
+  // A start the timeline cut away leaves the first kept frame in place too.
+  let (first_kept, _) = arranged(&clips, &video(2_000), 2_000);
+  assert_eq!(first_kept, settled);
+  // It still leaves at its end.
+  let (leaving, _) = arranged(&clips, &video(0), 9_800);
+  assert!(!close(leaving.crop_x, settled.crop_x));
+  // One that starts a second in still arrives.
+  let (arriving, _) = arranged(&[split("a", 1_000, 10_000)], &video(0), 1_000);
+  assert!(!close(arriving.crop_x, settled.crop_x));
+}
+
+#[test]
+fn a_scene_that_spans_the_whole_video_never_moves() {
+  let video = [TimelineRange {
+    output_start_us: 0,
+    source_end_us: 10_000_000,
+    source_start_us: 0,
+    playback_rate: 1.0,
+  }];
+  let clips = [split("a", 0, 10_000)];
+  let (settled, _) = arranged(&clips, &video, 5_000);
+  for at in [0, 100, 9_900, 9_999] {
+    assert_eq!(arranged(&clips, &video, at).0, settled);
+  }
 }
 
 #[test]

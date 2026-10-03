@@ -31,14 +31,14 @@ const split: RecordingSceneClip = {
   endMs: 10_000,
   id: "a",
   preset: "split-two-thirds",
-  startMs: 0,
+  startMs: 1_000,
 };
 const zoom: RecordingSceneClip = {
   endMs: 10_000,
   id: "z",
   preset: "full",
   screen: { focusX: 0.5, focusY: 0.5, zoom: 2 },
-  startMs: 0,
+  startMs: 1_000,
 };
 const uncut = [{ playbackRate: 1, sourceEndMs: 20_000, sourceStartMs: 0 }];
 
@@ -79,6 +79,25 @@ describe("arrangedRecordingScene", () => {
     expect(leaving?.output.cropX).not.toBeCloseTo(settled?.output.cropX ?? NaN);
   });
 
+  it("holds a scene that starts the video, with nothing to arrive from", () => {
+    const video = (startMs: number) => [
+      { playbackRate: 1, sourceEndMs: 20_000, sourceStartMs: startMs },
+    ];
+    const opening = { ...split, startMs: 0 };
+    const settled = arranged(5_000, { clip: opening, ranges: video(0) });
+    expect(arranged(0, { clip: opening, ranges: video(0) })?.output).toEqual(
+      settled?.output,
+    );
+    // A start the timeline cut away is in place on the first kept frame.
+    expect(
+      arranged(2_000, { clip: opening, ranges: video(2_000) })?.output,
+    ).toEqual(settled?.output);
+    // It still leaves at its end.
+    expect(
+      arranged(9_800, { clip: opening, ranges: video(0) })?.output.cropX,
+    ).not.toBeCloseTo(settled?.output.cropX ?? NaN);
+  });
+
   it("places the panes and frames the camera where the preview draws them", () => {
     const scene = arranged(5_000);
     const panes = recordingScenePanes(
@@ -97,7 +116,7 @@ describe("arrangedRecordingScene", () => {
   });
 
   it("is halfway there halfway through its arrival", () => {
-    const scene = arranged(300);
+    const scene = arranged(1_300);
     const settled = arranged(5_000);
     expect(scene?.output.cropX).toBeCloseTo(
       (output.cropX + (settled?.output.cropX ?? 0)) / 2,
@@ -109,8 +128,8 @@ describe("arrangedRecordingScene", () => {
       { playbackRate: 2, sourceEndMs: 20_000, sourceStartMs: 0 },
     ];
     // 600 ms of a doubled stretch plays in 300 ms: halfway through arriving.
-    expect(arranged(600, { ranges: doubled })?.output.cropX).toBeCloseTo(
-      arranged(300)?.output.cropX ?? 0,
+    expect(arranged(1_600, { ranges: doubled })?.output.cropX).toBeCloseTo(
+      arranged(1_300)?.output.cropX ?? 0,
     );
   });
 

@@ -121,23 +121,55 @@ fn reveal_at(
   revealed_annotations(&[clip], AnnotationTrack::Primary, ranges, at, 0.0, (0, 0))[0].reveal
 }
 
-/// A clip whose start the timeline trimmed away arrives from the first
-/// frame it is seen, rather than already part way in.
+/// A clip whose start a cut took arrives from the first frame it is seen,
+/// rather than already part way in.
 #[test]
-fn a_trimmed_start_arrives_where_the_clip_is_first_seen() {
-  let ranges = [kept(3_000, 20_000, 1.0)];
+fn a_cut_start_arrives_where_the_clip_is_first_seen() {
+  let ranges = [
+    kept(0, 500, 1.0),
+    TimelineRange {
+      output_start_us: 500_000,
+      ..kept(3_000, 20_000, 1.0)
+    },
+  ];
   assert_eq!(reveal_at(&ranges, 3_000).high, 0.0);
   assert!(reveal_at(&ranges, 3_500).high < 1.0);
   assert_eq!(reveal_at(&ranges, 4_000).high, 1.0);
 }
 
-/// A clip whose end the timeline trimmed away has left by the last frame
-/// that is kept, rather than being cut off whole.
+/// A clip whose end a cut took has left by the last frame that is kept,
+/// rather than being cut off whole.
 #[test]
-fn a_trimmed_end_leaves_before_the_cut() {
-  let ranges = [kept(0, 6_000, 1.0)];
+fn a_cut_end_leaves_before_the_cut() {
+  let ranges = [
+    kept(0, 6_000, 1.0),
+    TimelineRange {
+      output_start_us: 6_000_000,
+      ..kept(12_000, 20_000, 1.0)
+    },
+  ];
   assert!(reveal_at(&ranges, 5_999).low > 0.99);
   assert!(reveal_at(&[], 5_999).is_whole());
+}
+
+/// A clip at either end of the video is whole there, with nothing before
+/// it to arrive from or after it to leave for, and still animates at its
+/// other end. Trimming the video down to the clip counts as reaching it.
+#[test]
+fn a_clip_at_an_end_of_the_video_holds_there() {
+  for ranges in [[kept(1_000, 20_000, 1.0)], [kept(3_000, 20_000, 1.0)]] {
+    let first = ranges[0].source_start_us / 1_000;
+    assert!(reveal_at(&ranges, first).is_whole());
+    assert!(reveal_at(&ranges, 9_999).low > 0.99);
+  }
+  for ranges in [[kept(0, 10_000, 1.0)], [kept(0, 6_000, 1.0)]] {
+    let last = ranges[0].source_end_us / 1_000 - 1;
+    assert!(reveal_at(&ranges, last).is_whole());
+    assert_eq!(reveal_at(&ranges, 1_000).high, 0.0);
+  }
+  for at in [1_000, 1_100, 9_900, 9_999] {
+    assert!(reveal_at(&[kept(1_000, 10_000, 1.0)], at).is_whole());
+  }
 }
 
 /// Arriving takes the same output time at any speed.

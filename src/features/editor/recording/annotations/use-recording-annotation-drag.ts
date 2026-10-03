@@ -24,7 +24,7 @@ import {
   carriedDraft,
   previewedWhole,
 } from "./recording-annotation-drag-draft";
-import { resizeRecordingAnnotationClip } from "./recording-annotation-geometry";
+import { trimRecordingAnnotationClips } from "./recording-annotation-geometry";
 import {
   RecordingAnnotationClip,
   renumberedAnnotationClips,
@@ -34,8 +34,8 @@ type Edge = "startMs" | "endMs";
 type Drag = {
   edge: Edge | "body";
   id: string;
-  /** Every clip a body drag carries: the one pressed, or the whole choice
-   * it belongs to. */
+  /** Every clip the gesture carries or trims: the one pressed, or the whole
+   * choice it belongs to. */
   ids: ReadonlySet<string>;
   /** Where the pointer last was, for a Shift press to resample. */
   last: { x: number; y: number };
@@ -139,8 +139,9 @@ export function useRecordingAnnotationDrag({
    * Takes a press on a clip or one of its edges and owns the gesture until
    * the pointer is released. A clip's body carried sideways moves it in time
    * and carried up or down moves it through the drawing order, a row at a
-   * time; `ids` names the clips carried with it when it is one of several
-   * chosen. An edge trims the one clip it belongs to.
+   * time. An edge trims its clip by the time the pointer travels. `ids`
+   * names the clips carried or trimmed with it when it is one of several
+   * chosen.
    *
    * The moves and the release are listened for on the window rather than on
    * the element pressed. The lane restacks its clips as they are dragged -
@@ -154,25 +155,24 @@ export function useRecordingAnnotationDrag({
     clientY,
     edge,
     id,
-    ids = new Set([id]),
+    ids,
   }: {
     clientX: number;
     clientY: number;
     edge: Edge | "body";
     id: string;
-    ids?: ReadonlySet<string>;
+    ids: ReadonlySet<string>;
   }) => {
     detachRef.current();
-    const carried = edge === "body" ? ids : new Set([id]);
     dragRef.current = {
       edge,
       id,
-      ids: carried,
+      ids,
       last: { x: clientX, y: clientY },
       moved: false,
       original: clips,
       snap: beginTimelineSnapGesture(snap, {
-        excludeAnnotationIds: carried,
+        excludeAnnotationIds: ids,
         mapTarget: (source) => recordingTimelineSourceToOutput(edit, source),
         threshold: 0,
       }),
@@ -256,11 +256,12 @@ export function useRecordingAnnotationDrag({
     const target = nearestTimelineSnapTarget(drag.snap, reached);
     drag.snap.showGuide(target);
     const next = renumberedAnnotationClips(
-      resizeRecordingAnnotationClip({
+      trimRecordingAnnotationClips({
         clips: drag.original,
         edge: drag.edge,
         edit,
         id: drag.id,
+        ids: drag.ids,
         output: target ?? reached,
         sourceDurationMs,
       }),

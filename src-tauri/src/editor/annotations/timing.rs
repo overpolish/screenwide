@@ -105,6 +105,23 @@ pub(crate) fn output_progress(
   (duration > 0.0).then(|| ((at(source_ms) - from).max(0.0) as f32, duration as f32))
 }
 
+/// Whether the stretch `[start_ms, end_ms)` reaches the first and the last
+/// moment the timeline keeps, to within a millisecond of rounding: there is
+/// nothing before it to arrive from, or after it to leave for. With no
+/// ranges it reaches neither.
+pub(crate) fn reaches_video_ends(
+  ranges: &[TimelineRange],
+  [start_ms, end_ms]: [u64; 2],
+) -> (bool, bool) {
+  let starts = ranges
+    .first()
+    .is_some_and(|first| start_ms.saturating_mul(1_000) < first.source_start_us + 1_000);
+  let ends = ranges
+    .last()
+    .is_some_and(|last| (end_ms + 1).saturating_mul(1_000) > last.source_end_us);
+  (starts, ends)
+}
+
 /// The annotations a frame draws, each carrying the reveal window its own
 /// clip is at. A pinned annotation arrives and leaves over each stretch its
 /// content is on the frame rather than over its whole clip, and spotlights
@@ -141,7 +158,20 @@ pub(crate) fn revealed_annotations(
       if annotation.animated {
         // A stretch the timeline cut away entirely is never seen, so it is
         // left whole for the handles and gestures that still reach it.
-        if let Some((elapsed_ms, duration_ms)) = output_progress(ranges, shown, source_ms) {
+        let progress =
+          output_progress(ranges, shown, source_ms).and_then(|(elapsed_ms, duration_ms)| {
+            // An annotation at either end of the video neither arrives nor
+            // leaves there. Every kind caps each phase at a third of the length
+            // it is given, so timing it over twice its length puts the phase it
+            // skips wholly outside what is seen and still fits the other inside.
+            match reaches_video_ends(ranges, shown) {
+              (true, true) => None,
+              (true, false) => Some((elapsed_ms + duration_ms, duration_ms * 2.0)),
+              (false, true) => Some((elapsed_ms, duration_ms * 2.0)),
+              (false, false) => Some((elapsed_ms, duration_ms)),
+            }
+          });
+        if let Some((elapsed_ms, duration_ms)) = progress {
           let kind = annotation.shape.kind();
           if kind == super::AnnotationKind::Spotlight {
             annotation = joined(

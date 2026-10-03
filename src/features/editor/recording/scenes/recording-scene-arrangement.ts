@@ -104,24 +104,30 @@ export function arrangedRecordingScene({
   const length = outputAt(ranges, clip.endMs) - from;
   if (!(length > 0)) return null;
   const elapsed = Math.max(0, outputAt(ranges, sourceMs) - from);
-  // A scene that runs on to the end of the video holds to its last frame:
-  // there is nothing after it to leave for. The last kept range ends the
-  // video, to within a millisecond of rounding.
-  const runsToEnd =
+  // A scene at either end of the video holds there: there is nothing before
+  // it to arrive from, or after it to leave for. Its other transition may then
+  // take the whole clip. The kept ranges bound the video, to within a
+  // millisecond of rounding.
+  const startsVideo =
+    ranges.length > 0 && clip.startMs < ranges[0].sourceStartMs + 1;
+  const endsVideo =
     ranges.length > 0 && clip.endMs + 1 > ranges[ranges.length - 1].sourceEndMs;
-  const window = Math.min(TRANSITION_MS, runsToEnd ? length : length / 2);
+  const window = Math.min(
+    TRANSITION_MS,
+    startsVideo || endsVideo ? length : length / 2,
+  );
   const eased = (share: number) =>
     easeInOutCubic(Math.min(1, Math.max(0, share)));
   const previous = index > 0 ? clips[index - 1] : undefined;
   const next = index + 1 < clips.length ? clips[index + 1] : undefined;
   const placed =
-    elapsed < window
+    !startsVideo && elapsed < window
       ? towardPlacement(
           (previous?.endMs === clip.startMs && targetOf(previous)) || base,
           target,
           eased(elapsed / window),
         )
-      : !runsToEnd &&
+      : !endsVideo &&
           !(next?.startMs === clip.endMs && targetOf(next)) &&
           length - elapsed < window
         ? towardPlacement(base, target, eased((length - elapsed) / window))

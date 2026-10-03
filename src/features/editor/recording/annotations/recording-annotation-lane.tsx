@@ -168,7 +168,11 @@ export function RecordingAnnotationLane({
               } else onSelect(id, togglesChoice(event));
             };
             // A press with the toggle held is a click to come, never a drag.
-            // One on a clip of several chosen carries them all.
+            // One on a clip of several chosen carries or trims them all.
+            const ids =
+              selectedIds.size > 1 && selectedIds.has(id)
+                ? selectedIds
+                : new Set([id]);
             const pressBody = (event: PointerEvent) => {
               if (event.button !== 0) return;
               event.stopPropagation();
@@ -178,10 +182,7 @@ export function RecordingAnnotationLane({
                 clientY: event.clientY,
                 edge: "body",
                 id,
-                ids:
-                  selectedIds.size > 1 && selectedIds.has(id)
-                    ? selectedIds
-                    : undefined,
+                ids,
               });
             };
             return (
@@ -243,6 +244,7 @@ export function RecordingAnnotationLane({
                   continuedByNext={fragment.continuedByNext}
                   continuesPrevious={fragment.continuesPrevious}
                   edit={edit}
+                  ids={ids}
                   label={label}
                   onChange={onChange}
                   onPress={(edge, event) => {
@@ -253,6 +255,7 @@ export function RecordingAnnotationLane({
                       clientY: event.clientY,
                       edge,
                       id,
+                      ids,
                     });
                   }}
                   onSeek={onSeek}

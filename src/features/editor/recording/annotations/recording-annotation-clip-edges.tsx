@@ -11,7 +11,7 @@ import {
 import { SeekHandler } from "../../timeline/timeline-seek";
 
 import { previewedWhole } from "./recording-annotation-drag-draft";
-import { resizeRecordingAnnotationClip } from "./recording-annotation-geometry";
+import { trimRecordingAnnotationClips } from "./recording-annotation-geometry";
 import { RecordingAnnotationClip } from "./recording-annotations";
 
 type Edge = "startMs" | "endMs";
@@ -21,9 +21,9 @@ type Edge = "startMs" | "endMs";
  * drag, and shows the annotation whole at the edge it took hold of: the frame
  * under a trim handle is the one frame the annotation is barely there, which
  * is no use for deciding where the handle belongs. The arrow keys step the
- * edge a tenth of a second, a whole second with Shift. A fragment that
- * continues into its neighbour across a cut has no handle on that side: the
- * clip does not end there.
+ * edge a tenth of a second, a whole second with Shift, trimming every clip in
+ * `ids` with it. A fragment that continues into its neighbour across a cut
+ * has no handle on that side: the clip does not end there.
  */
 export function RecordingAnnotationClipEdges({
   clip,
@@ -31,6 +31,7 @@ export function RecordingAnnotationClipEdges({
   continuedByNext,
   continuesPrevious,
   edit,
+  ids,
   label,
   onChange,
   onPress,
@@ -42,6 +43,9 @@ export function RecordingAnnotationClipEdges({
   continuedByNext: boolean;
   continuesPrevious: boolean;
   edit: RecordingTimelineEdit;
+  /** The clips a trim of this one trims together: it, or the choice it is
+   * one of. */
+  ids: ReadonlySet<string>;
   label: string;
   onChange: (clips: RecordingAnnotationClip[]) => void;
   onPress: (edge: Edge, event: PointerEvent) => void;
@@ -74,11 +78,12 @@ export function RecordingAnnotationClipEdges({
             (event.shiftKey ? 1000 : 100) /
             (sourceDurationMs * recordingTimelineRetainedDuration(edit));
           onChange(
-            resizeRecordingAnnotationClip({
+            trimRecordingAnnotationClips({
               clips,
               edge,
               edit,
               id: clip.annotation.id,
+              ids,
               output: output + (event.key === "ArrowLeft" ? -step : step),
               sourceDurationMs,
             }),

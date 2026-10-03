@@ -6,14 +6,15 @@
 //! over what the timeline keeps, so a speed change never hurries a transition.
 //! Two clips that butt hand over directly, morphing from one to the other
 //! without passing back through the composition the recording has outside
-//! them, and a clip that runs on to the end of the video never leaves.
+//! them, a clip that starts the video is in place from its first frame, and
+//! one that runs on to the end of the video never leaves.
 
 use super::framing::{drawn_frame, SceneFraming};
 use super::geometry::{preset_panes, Rect};
 use super::model::{RecordingSceneClip, RecordingScenePreset};
 use super::motion::SceneMotion;
 use super::placement::Placement;
-use crate::editor::annotations::timing::output_progress;
+use crate::editor::annotations::timing::{output_progress, reaches_video_ends};
 use crate::editor::effect_animation::ease_in_out_cubic;
 use crate::editor::timeline_edit::TimelineRange;
 use crate::editor::CameraOverlaySettings;
@@ -164,15 +165,17 @@ fn placement_at(
   let clip = &clips[index];
   let target = base.target(clip)?;
   let (elapsed, length) = output_progress(ranges, [clip.start_ms, clip.end_ms], source_ms)?;
-  // A scene that runs on to the end of the video holds to its last frame:
-  // there is nothing after it to leave for. The last kept range ends the
-  // video, to within a millisecond of rounding.
-  let runs_to_end = ranges
-    .last()
-    .is_some_and(|last| (clip.end_ms + 1).saturating_mul(1_000) > last.source_end_us);
-  let window = TRANSITION_MS.min(if runs_to_end { length } else { length / 2.0 });
+  // A scene at either end of the video holds there: there is nothing before
+  // it to arrive from, or after it to leave for. Its other transition may then
+  // take the whole clip.
+  let (starts_video, ends_video) = reaches_video_ends(ranges, [clip.start_ms, clip.end_ms]);
+  let window = TRANSITION_MS.min(if starts_video || ends_video {
+    length
+  } else {
+    length / 2.0
+  });
   let ease = |share: f32| f64::from(ease_in_out_cubic(share.clamp(0.0, 1.0)));
-  if elapsed < window {
+  if !starts_video && elapsed < window {
     let from = index
       .checked_sub(1)
       .map(|previous| &clips[previous])
@@ -184,7 +187,7 @@ fn placement_at(
   let handed_on = clips
     .get(index + 1)
     .is_some_and(|next| next.start_ms == clip.end_ms && base.target(next).is_some());
-  if !handed_on && !runs_to_end && length - elapsed < window {
+  if !handed_on && !ends_video && length - elapsed < window {
     return Some(
       base
         .placement
