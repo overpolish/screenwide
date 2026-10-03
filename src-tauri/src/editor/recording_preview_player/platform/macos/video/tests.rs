@@ -64,7 +64,7 @@ fn cached_native_sample_preserves_repeats_seek_and_end_of_stream() {
   let mut actual = Vec::with_capacity(reset.rgba.len());
   for row in 0..64 {
     let bytes = unsafe { std::slice::from_raw_parts(base.add(row * stride), 64 * 4) };
-    for bgra in bytes.chunks_exact(4) {
+    for bgra in bytes.as_chunks::<4>().0.iter() {
       actual.extend_from_slice(&[bgra[2], bgra[1], bgra[0], bgra[3]]);
     }
   }

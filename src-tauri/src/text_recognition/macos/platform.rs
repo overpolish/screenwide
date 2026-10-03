@@ -46,7 +46,12 @@ pub fn recognize(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedL
     let target =
       unsafe { std::slice::from_raw_parts_mut(base.add(row * stride), width as usize * 4) };
     let source = &rgba[row * width as usize * 4..(row + 1) * width as usize * 4];
-    for (source, target) in source.chunks_exact(4).zip(target.chunks_exact_mut(4)) {
+    for (source, target) in source
+      .as_chunks::<4>()
+      .0
+      .iter()
+      .zip(target.as_chunks_mut::<4>().0.iter_mut())
+    {
       target.copy_from_slice(&[source[2], source[1], source[0], source[3]]);
     }
   }

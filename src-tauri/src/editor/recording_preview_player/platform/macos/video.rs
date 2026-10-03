@@ -214,7 +214,12 @@ impl NativeVideoReader {
       for row in 0..height {
         let source = unsafe { std::slice::from_raw_parts(base.add(row * stride), width * 4) };
         let target = &mut rgba[row * width * 4..(row + 1) * width * 4];
-        for (source, target) in source.chunks_exact(4).zip(target.chunks_exact_mut(4)) {
+        for (source, target) in source
+          .as_chunks::<4>()
+          .0
+          .iter()
+          .zip(target.as_chunks_mut::<4>().0.iter_mut())
+        {
           target[0] = source[2];
           target[1] = source[1];
           target[2] = source[0];

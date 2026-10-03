@@ -29,7 +29,9 @@ fn exported_yellow(destination: &std::path::Path, time: &str, width: u32, height
   assert_eq!(frame.stdout.len(), width as usize * height as usize * 3);
   frame
     .stdout
-    .chunks_exact(3)
+    .as_chunks::<3>()
+    .0
+    .iter()
     .filter(|rgb| rgb[0] > 160 && rgb[1] > 100 && rgb[2] < 80)
     .count()
 }
@@ -245,19 +247,25 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
         assert_eq!(frame.stdout.len(), width as usize * height as usize * 3);
         let red = frame
           .stdout
-          .chunks_exact(3)
+          .as_chunks::<3>()
+          .0
+          .iter()
           .filter(|rgb| rgb[0] > 160 && rgb[1] < 80 && rgb[2] < 80)
           .count();
         assert_eq!(red > 50, baked, "camera visibility at {scale}%");
         let yellow = frame
           .stdout
-          .chunks_exact(3)
+          .as_chunks::<3>()
+          .0
+          .iter()
           .filter(|rgb| rgb[0] > 160 && rgb[1] > 100 && rgb[2] < 80)
           .count();
         if visible {
           let yellow_x: Vec<_> = frame
             .stdout
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .enumerate()
             .filter(|(_, rgb)| rgb[0] > 160 && rgb[1] > 100 && rgb[2] < 80)
             .map(|(index, _)| index % width as usize)

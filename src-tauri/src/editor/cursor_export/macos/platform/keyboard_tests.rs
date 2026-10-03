@@ -174,7 +174,9 @@ fn exports_keyboard_shortcuts_into_a_real_movie() {
   assert_eq!(frame.stdout.len(), 640 * 360 * 3);
   let bright_bottom = frame
     .stdout
-    .chunks_exact(3)
+    .as_chunks::<3>()
+    .0
+    .iter()
     .enumerate()
     .filter(|(index, pixel)| index / 640 > 300 && pixel.iter().all(|channel| *channel > 170))
     .count();
@@ -184,7 +186,9 @@ fn exports_keyboard_shortcuts_into_a_real_movie() {
   );
   let keycap_bottom = frame
     .stdout
-    .chunks_exact(3)
+    .as_chunks::<3>()
+    .0
+    .iter()
     .enumerate()
     .filter(|(index, pixel)| index / 640 > 300 && pixel.iter().all(|channel| *channel > 10))
     .count();

@@ -55,7 +55,7 @@ const ANNOTATION_REDACT_SIZES = [4, 6, 8, 12, 16];
  * The first is the twin of `MIN_CLASSIC_BLOCK` in
  * `src-tauri/src/editor/annotations/redact/cells.rs`.
  */
-export const ANNOTATION_CLASSIC_SIZES = [8, 12, 16, 24, 32];
+const ANNOTATION_CLASSIC_SIZES = [8, 12, 16, 24, 32];
 
 /** The block sizes a redaction drawn `redaction` offers: classic
  * pixelation's own coarser steps, or the kind's. */

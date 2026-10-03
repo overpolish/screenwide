@@ -99,7 +99,7 @@ mod tests {
 
   fn frame(rectangles: &[(u32, u32, u32, u32)]) -> Vec<u8> {
     let mut rgba = vec![30; 120 * 120 * 4];
-    for pixel in rgba.chunks_exact_mut(4) {
+    for pixel in rgba.as_chunks_mut::<4>().0.iter_mut() {
       pixel[3] = 255;
     }
     for &(x, y, width, height) in rectangles {

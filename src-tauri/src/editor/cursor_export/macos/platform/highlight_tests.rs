@@ -216,15 +216,22 @@ fn a_tint_marks_light_like_a_highlighter_and_lifts_dark() {
   );
 }
 
+/// Drawn in as far as `high` and standing still there: the shutter opened on
+/// the same reveal, so nothing smears from where it was.
+fn drawn_to(high: f32) -> AnnotationReveal {
+  AnnotationReveal {
+    low: 0.0,
+    high,
+    previous: [0.0, high, 1.0, 1.0],
+    ..AnnotationReveal::WHOLE
+  }
+}
+
 #[test]
 fn a_highlight_half_drawn_in_leads_with_its_first_line() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let mut annotation = highlight(HighlightTone::default(), false);
-  annotation.reveal = AnnotationReveal {
-    low: 0.0,
-    high: 0.45,
-    ..AnnotationReveal::WHOLE
-  };
+  annotation.reveal = drawn_to(0.45);
   let image = composed(&source, vec![annotation]);
   assert!(
     near(at(&image, 64, 50), YELLOW, 6),
@@ -270,11 +277,7 @@ fn a_clean_box_has_no_notch_where_two_strokes_meet() {
 fn a_box_of_many_strokes_draws_each_at_a_hands_pace() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let mut annotation = clean_box();
-  annotation.reveal = AnnotationReveal {
-    low: 0.0,
-    high: 0.2,
-    ..AnnotationReveal::WHOLE
-  };
+  annotation.reveal = drawn_to(0.2);
   let image = composed(&source, vec![annotation]);
   // A fifth of the way through, the first stroke is still going down rather
   // than done, however many strokes the box takes.
@@ -295,11 +298,7 @@ fn a_highlight_lands_on_its_end_rather_than_jumping_out_to_it() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let frame = |high: f32| {
     let mut annotation = highlight(HighlightTone::default(), false);
-    annotation.reveal = AnnotationReveal {
-      low: 0.0,
-      high,
-      ..AnnotationReveal::WHOLE
-    };
+    annotation.reveal = drawn_to(high);
     composed(&source, vec![annotation])
   };
   // Near the top of the last line's band, where a round tip and a square end

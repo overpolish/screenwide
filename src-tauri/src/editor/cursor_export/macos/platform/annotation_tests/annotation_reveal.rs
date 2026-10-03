@@ -237,7 +237,13 @@ fn the_tail_catches_up_to_the_head() {
 /// How much of the canvas the annotation inked, which is the only measure of a
 /// frame that catches a jump anywhere in it at once.
 fn ink(image: &crate::screenshots::CapturedImage) -> usize {
-  image.rgba.chunks_exact(4).filter(|p| p[0] > 128).count()
+  image
+    .rgba
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .filter(|p| p[0] > 128)
+    .count()
 }
 
 /// Nothing appears before the reveal has anything to show, and what shows

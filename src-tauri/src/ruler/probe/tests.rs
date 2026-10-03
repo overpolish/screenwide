@@ -55,7 +55,7 @@ fn isolated_speckle_does_not_stop_a_probe() {
 fn a_bright_one_pixel_stroke_still_has_detectable_endpoints() {
   let (width, height) = (37, 26);
   let mut rgba = vec![51; width * height * 4];
-  for pixel in rgba.chunks_exact_mut(4) {
+  for pixel in rgba.as_chunks_mut::<4>().0.iter_mut() {
     pixel[3] = 255;
   }
   for x in 14..=23 {

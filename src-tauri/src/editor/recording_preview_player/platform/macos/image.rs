@@ -39,7 +39,7 @@ pub(super) fn captured_image(image: &cg::Image) -> Result<CapturedImage, String>
     );
     CGContextRelease(context);
   }
-  for pixel in rgba.chunks_exact_mut(4) {
+  for pixel in rgba.as_chunks_mut::<4>().0.iter_mut() {
     pixel.swap(0, 2);
   }
   Ok(CapturedImage {

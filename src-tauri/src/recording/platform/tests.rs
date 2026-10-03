@@ -423,7 +423,7 @@ fn writes_a_movie_at_an_unaligned_display_size() {
     String::from_utf8_lossy(&decoded.stderr)
   );
 
-  let pixels: Vec<_> = decoded.stdout.chunks_exact(3).collect();
+  let pixels: Vec<_> = decoded.stdout.as_chunks::<3>().0.iter().collect();
   assert!(!pixels.is_empty(), "no frames came back out");
   println!(
     "hidpi: {} frames, bottom-quarter average rgb {:?}",

@@ -49,7 +49,7 @@ pub(super) fn waveform(
     }
     remainder.extend_from_slice(&bytes[..read]);
     let complete = remainder.len() / 4 * 4;
-    for sample in remainder[..complete].chunks_exact(4) {
+    for sample in remainder[..complete].as_chunks::<4>().0.iter() {
       let value = f32::from_le_bytes([sample[0], sample[1], sample[2], sample[3]]);
       let bucket = ((sample_index.saturating_mul(WAVEFORM_POINTS as u64)) / expected_samples)
         .min((WAVEFORM_POINTS - 1) as u64) as usize;

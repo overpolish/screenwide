@@ -64,12 +64,16 @@ pub fn rounded_corners(image: &CapturedImage, radius_percent: f64) -> CapturedIm
 }
 
 fn is_opaque(rgba: &[u8]) -> bool {
-  rgba.chunks_exact(4).all(|pixel| pixel[3] == u8::MAX)
+  rgba
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .all(|pixel| pixel[3] == u8::MAX)
 }
 
 fn rgb_from_rgba(rgba: &[u8]) -> Vec<u8> {
   let mut rgb = Vec::with_capacity(rgba.len() / 4 * 3);
-  for pixel in rgba.chunks_exact(4) {
+  for pixel in rgba.as_chunks::<4>().0.iter() {
     rgb.extend_from_slice(&pixel[..3]);
   }
   rgb
@@ -86,7 +90,7 @@ fn exact_palette(rgb: &[u8]) -> Option<(Vec<[u8; 3]>, Vec<u8>)> {
   let mut index_of: HashMap<[u8; 3], u8> = HashMap::new();
   let mut indices = Vec::with_capacity(rgb.len() / 3);
 
-  for pixel in rgb.chunks_exact(3) {
+  for pixel in rgb.as_chunks::<3>().0.iter() {
     let colour = [pixel[0], pixel[1], pixel[2]];
     let index = match index_of.get(&colour) {
       Some(index) => *index,

@@ -88,8 +88,8 @@ pub(super) fn spawn(
         let mut queue = thread_queue
           .lock()
           .unwrap_or_else(|value| value.into_inner());
-        for chunk in bytes[..count].chunks_exact(4) {
-          queue.push_back(f32::from_le_bytes(chunk.try_into().unwrap_or([0; 4])));
+        for chunk in bytes[..count].as_chunks::<4>().0 {
+          queue.push_back(f32::from_le_bytes(*chunk));
         }
         drop(queue);
         while thread_queue

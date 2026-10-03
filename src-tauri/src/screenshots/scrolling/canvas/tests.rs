@@ -275,7 +275,12 @@ fn clamps_a_leading_crop_that_would_break_the_pairs_overlap() {
   // terminal tile starting below where the previous tile stops, opening a
   // band of untouched canvas between them.
   let image = compose_terminal_header_case(200);
-  assert!(image.rgba.chunks_exact(4).all(|pixel| pixel[3] != 0));
+  assert!(image
+    .rgba
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .all(|pixel| pixel[3] != 0));
 }
 
 const FIRST: [u8; 4] = [255, 0, 0, 255];
@@ -362,7 +367,12 @@ fn a_backward_pair_crops_the_chrome_on_its_overlapping_side() {
   assert_eq!(at(&image, 50, 8), SECOND);
   // Deep inside the previous tile, past the current tile's cropped edge.
   assert_eq!(at(&image, 300, 8), FIRST);
-  assert!(image.rgba.chunks_exact(4).all(|pixel| pixel[3] != 0));
+  assert!(image
+    .rgba
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .all(|pixel| pixel[3] != 0));
 }
 
 #[test]
@@ -374,7 +384,12 @@ fn a_forward_pair_keeps_cropping_the_current_tiles_origin_edge() {
   assert_eq!(at(&image, 50, 8), FIRST);
   assert_eq!(at(&image, 170, 8), FIRST);
   assert_eq!(at(&image, 200, 8), SECOND);
-  assert!(image.rgba.chunks_exact(4).all(|pixel| pixel[3] != 0));
+  assert!(image
+    .rgba
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .all(|pixel| pixel[3] != 0));
 }
 
 #[test]

@@ -71,13 +71,16 @@ fn composites_keyboard_pixels_into_a_gpu_still() {
     false,
   )
   .unwrap();
-  let changed = plain
-    .rgba
-    .chunks_exact(4)
-    .zip(composed.rgba.chunks_exact(4))
+  let changed = pixels::<4>(&plain.rgba)
+    .zip(pixels::<4>(&composed.rgba))
     .filter(|(before, after)| before != after)
     .count();
   assert!(changed > 500, "the keyboard changed only {changed} pixels");
+}
+
+/// `bytes` as pixels of `N` channels each.
+fn pixels<const N: usize>(bytes: &[u8]) -> std::slice::Iter<'_, [u8; N]> {
+  bytes.as_chunks().0.iter()
 }
 
 #[test]
@@ -226,9 +229,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       frame.stdout.len(),
       exported_width as usize * exported_height as usize * 3
     );
-    let lit = frame
-      .stdout
-      .chunks_exact(3)
+    let lit = pixels::<3>(&frame.stdout)
       .enumerate()
       .filter(|(_, pixel)| pixel.iter().any(|channel| *channel > 200))
       .map(|(index, _)| {
@@ -447,9 +448,7 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
     .unwrap();
   assert!(frame.status.success());
   assert_eq!(frame.stdout.len(), 320 * 180 * 3);
-  let lit = frame
-    .stdout
-    .chunks_exact(3)
+  let lit = pixels::<3>(&frame.stdout)
     .enumerate()
     .filter(|(_, pixel)| pixel.iter().all(|channel| *channel > 200))
     .map(|(index, _)| (index % 320, index / 320))
@@ -618,16 +617,11 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
       .unwrap();
     assert!(frame.status.success());
     assert_eq!(
-      frame
-        .stdout
-        .chunks_exact(3)
-        .any(|pixel| pixel[0] > 180 && pixel[1] < 80 && pixel[2] < 80),
+      pixels::<3>(&frame.stdout).any(|pixel| pixel[0] > 180 && pixel[1] < 80 && pixel[2] < 80),
       camera_on_top,
       "the camera should only remain visible when it is above the opaque screen"
     );
-    let cursor_is_visible = frame
-      .stdout
-      .chunks_exact(3)
+    let cursor_is_visible = pixels::<3>(&frame.stdout)
       .enumerate()
       .filter(|(index, _)| {
         let x = index % 320;

@@ -24,7 +24,7 @@ fn whole(width: u32, height: u32) -> ImageRegion {
 fn finds_a_dominant_background_behind_a_smaller_foreground_patch() {
   let background = [29, 31, 30, 255];
   let mut rgba = background.repeat(100);
-  for pixel in rgba.chunks_exact_mut(4).take(20) {
+  for pixel in rgba.as_chunks_mut::<4>().0.iter_mut().take(20) {
     pixel.copy_from_slice(&[220, 80, 40, 255]);
   }
 
