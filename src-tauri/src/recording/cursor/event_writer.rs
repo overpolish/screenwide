@@ -22,6 +22,12 @@ impl StreamWriter {
     let Some(timestamp_us) = timestamp_us else {
       return Ok(false);
     };
+    if matches!(event.kind, RawCursorEventKind::AppSwitch) {
+      self.write(&CursorRecord::AppSwitch { timestamp_us })?;
+      self.writer.flush().map_err(|error| error.to_string())?;
+      self.last_flush = event.at;
+      return Ok(true);
+    }
 
     if self.last_visibility == Some(false)
       && matches!(
@@ -45,7 +51,7 @@ impl StreamWriter {
     }
 
     match event.kind {
-      RawCursorEventKind::Appearance => {}
+      RawCursorEventKind::Appearance | RawCursorEventKind::AppSwitch => {}
       RawCursorEventKind::Move | RawCursorEventKind::Snapshot => {
         if matches!(event.kind, RawCursorEventKind::Move)
           && self

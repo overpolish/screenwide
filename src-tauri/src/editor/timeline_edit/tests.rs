@@ -152,7 +152,7 @@ fn live_annotation_clips_become_the_recordings_first_edit() {
     end_ms: 8_000,
   };
 
-  persist_initial_annotation_clips(&recording, 7, vec![clip.clone()]).unwrap();
+  persist_initial_edit(&recording, 7, vec![clip.clone()], Vec::new()).unwrap();
   let (revision, restored) = for_recording(&recording, 7).unwrap();
 
   assert_eq!(revision, 0);

@@ -43,7 +43,7 @@ export function recordingSceneEdits({
   /** The pane of a clip the panel's zoom, position and radius reach. */
   paneOf: (clip: RecordingSceneClip) => ScenePaneFraming | null;
   sourceDurationMs: number;
-}): RecordingSceneControls {
+}): Omit<RecordingSceneControls, "autoZoom"> {
   const reframeCurrent = (
     reframe: (clip: RecordingSceneClip) => RecordingSceneClip,
   ) => {

@@ -217,6 +217,7 @@ export function useRecordingPreviewTransport(
   });
   clearAnnotationRef.current = annotations.clearSelection;
   const scenes = useRecordingScenes({
+    artifactId,
     cameraOverlay,
     edit: annotationEdit,
     frames: previewSourceDimensions,

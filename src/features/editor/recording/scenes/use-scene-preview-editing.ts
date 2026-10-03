@@ -12,6 +12,7 @@ import { recordingTimelinePlaybackRanges } from "../../timeline/recording-timeli
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
 import { arrangedRecordingScene } from "./recording-scene-arrangement";
+import { ownEditedAutoZooms } from "./recording-scene-auto-zoom";
 import { pictureRect } from "./recording-scene-custom-crop";
 import { reframeWindow } from "./recording-scene-framing";
 import { SceneRect } from "./recording-scene-geometry";
@@ -119,8 +120,13 @@ export function useScenePreviewEditing({
       : null;
   const gesture = useRecordingSceneGesture({
     editGesture,
+    // A zoom reframed on the canvas is yours from then on.
     onClipsChange: (clips) => {
-      if (edit) onEditChange?.({ ...edit, sceneClips: clips });
+      if (edit)
+        onEditChange?.({
+          ...edit,
+          sceneClips: ownEditedAutoZooms(edit.sceneClips ?? [], clips),
+        });
     },
     primaryOutput: output,
     target,

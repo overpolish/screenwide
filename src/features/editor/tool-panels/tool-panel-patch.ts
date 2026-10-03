@@ -37,6 +37,8 @@ export type ToolPanelPatch = Partial<
   /** Play the selected audio track this much louder or quieter than it was
    * recorded, in decibels. */
   audioVolume?: number;
+  /** Make the auto zooms again, the scenes of your own left as they are. */
+  autoZoomScenes?: true;
   /** Draw the camera into the screen's video, or save it as a file of its
    * own. */
   bakeCamera?: boolean;

@@ -54,6 +54,10 @@ export type RecordingSceneClip = {
   id: string;
   preset: RecordingScenePreset;
   startMs: number;
+  /** Set on a zoom the auto zoom made that nobody has edited since. Making
+   * the auto zooms again replaces these and leaves every other scene alone.
+   * The twin of `auto` on `RecordingSceneClip` in `model.rs`. */
+  auto?: true;
   /** Set, a custom scene: the panes sit in these boxes instead of the
    * preset's, which a reset returns them to. */
   boxes?: SceneBoxes;

@@ -19,8 +19,9 @@ mod template;
 mod variant;
 
 pub(crate) use arrange::{arrange, camera_target};
+pub(crate) use framing::SceneFraming;
 pub use model::RecordingSceneClip;
-pub(crate) use model::{validate_clips, SceneRadius};
+pub(crate) use model::{validate_clips, RecordingScenePreset, SceneRadius};
 pub use motion::SceneMotion;
 pub use template::SceneTemplate;
 

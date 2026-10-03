@@ -26,6 +26,7 @@ use core_graphics::event::{
 use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 use objc2_app_kit::NSCursor;
 
+use super::front_app::FrontApp;
 use super::{
   ButtonState, CursorAppearance, CursorButton, CursorStyle, EventSink, RawCursorEvent,
   RawCursorEventKind,
@@ -206,6 +207,7 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
         let _ = ready.send(Ok(()));
       }
       let mut wrote_initial = false;
+      let mut front = cidre::objc::ar_pool(FrontApp::new);
       while !stop.load(Ordering::Acquire) {
         // This is a plain `std::thread`, so it has no autorelease pool of its
         // own. Reading the cursor asks AppKit for `currentSystemCursor` and
@@ -226,6 +228,11 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
           if wrote_initial {
             if let Some(event) = current_event(&catalog, RawCursorEventKind::Appearance) {
               sink(event);
+            }
+            if front.switched() {
+              if let Some(event) = current_event(&catalog, RawCursorEventKind::AppSwitch) {
+                sink(event);
+              }
             }
           }
         });

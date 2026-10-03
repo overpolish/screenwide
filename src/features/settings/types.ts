@@ -130,6 +130,9 @@ export type GeneralSettings = {
   /** Colours the annotation tools were given that none of their presets
    * offers, newest last. */
   annotationColors: string[];
+  /** Whether a new recording opens with zoom scenes made from its clicks and
+   * typing. */
+  autoZoom: boolean;
   /** Backgrounds saved from the editor's background picker. */
   backgroundPresets: BackgroundPreset[];
   launchAtLogin: boolean;

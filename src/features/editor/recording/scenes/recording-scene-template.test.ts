@@ -45,26 +45,29 @@ const plain: RecordingSceneClip = {
 };
 
 describe("scene templates", () => {
-  it("keeps the layout and zoom of a custom scene, not where the zoom looks", () => {
+  it("keeps the layout of a custom scene, not its zoom", () => {
     expect(saved()).toEqual({
       boxes: custom.boxes,
       canvasAspect: WIDE,
       id: "t",
       name: "Template 1",
       radius: { camera: 50 },
-      zoom: { screen: 2 },
     });
     expect(sceneTemplateLayout(plain, WIDE)).toBeNull();
   });
 
-  it("lays a scene out as it was saved on a canvas of the same shape", () => {
-    const laid = clipFromTemplate(plain, {
+  it("lays a scene out as it was saved, keeping the scene's own zoom", () => {
+    const zoomed: RecordingSceneClip = {
+      ...plain,
+      screen: { focusX: 0.7, focusY: 0.3, zoom: 1.6 },
+    };
+    const laid = clipFromTemplate(zoomed, {
       canvasAspect: WIDE,
       template: saved(),
     });
     expect(laid.boxes?.screen).toEqual(custom.boxes?.screen);
     expect(laid.boxes?.camera?.x).toBeCloseTo(0.7);
-    expect(laid.screen).toEqual({ focusX: 0.5, focusY: 0.5, zoom: 2 });
+    expect(laid.screen).toEqual(zoomed.screen);
     expect(laid.camera).toBeUndefined();
     expect(laid.radius).toEqual({ camera: 50 });
     expect(laid.preset).toBe("split-two-thirds");

@@ -6,15 +6,17 @@
 use super::*;
 
 /// Writes the first edit a recording has ever had, carrying the annotations
-/// that were drawn live while it was being captured. The editor loads this as
-/// the recording's own timeline, so those annotations arrive already editable,
-/// stacked the way the live overlay drew them.
+/// that were drawn live while it was being captured and the auto zooms made
+/// from it. The editor loads this as the recording's own timeline, so both
+/// arrive already editable, the annotations stacked the way the live overlay
+/// drew them.
 ///
 /// The timeline itself is the untouched whole: one segment at full rate.
-pub(in crate::editor) fn persist_initial_annotation_clips(
+pub(in crate::editor) fn persist_initial_edit(
   recording: &Path,
   artifact_id: u64,
   mut annotation_clips: Vec<crate::editor::annotations::timing::RecordingAnnotationClip>,
+  scene_clips: Vec<crate::editor::scenes::RecordingSceneClip>,
 ) -> Result<(), String> {
   super::stacking::stack_by_kind(&mut annotation_clips);
   persist(
@@ -25,7 +27,7 @@ pub(in crate::editor) fn persist_initial_annotation_clips(
       annotation_clips,
       artifact_id,
       keyboard_deletions: Box::default(),
-      scene_clips: Vec::new(),
+      scene_clips,
       next_segment_id: 1,
       segments: vec![RecordingTimelineSegment {
         id: 0,

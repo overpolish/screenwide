@@ -24,6 +24,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   let general: GeneralSettings = {
     accent: "system",
     annotationColors: [],
+    autoZoom: true,
     backgroundPresets: [],
     launchAtLogin: false,
     openLocationAfterExport: true,

@@ -210,12 +210,20 @@ pub fn present_recording(
   }
 
   let id = next_id(app);
-  if !annotation_clips.is_empty() {
+  let scene_clips = super::auto_zoom::for_new_recording(
+    app,
+    cursor_path.as_deref(),
+    keyboard_path.as_deref(),
+    duration_ms,
+  );
+  if !annotation_clips.is_empty() || !scene_clips.is_empty() {
     // The snapshot the editor window loads reads this sidecar, so annotations
-    // drawn live have to be in it before the artifact is presented.
-    if let Err(error) = timeline_edit::persist_initial_annotation_clips(&path, id, annotation_clips)
+    // drawn live and the auto zooms have to be in it before the artifact is
+    // presented.
+    if let Err(error) =
+      timeline_edit::persist_initial_edit(&path, id, annotation_clips, scene_clips)
     {
-      eprintln!("Could not keep this recording's live annotations: {error}");
+      eprintln!("Could not keep this recording's live annotations and auto zooms: {error}");
     }
   }
 

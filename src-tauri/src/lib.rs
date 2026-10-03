@@ -125,6 +125,7 @@ pub fn run() {
       editor::screenshot_preview::set_screenshot_preview_fit_basis,
       editor::screenshot_preview::start_screenshot_preview,
       editor::screenshot_preview::stop_screenshot_preview,
+      editor::auto_zoom::plan_recording_auto_zoom,
       editor::commands::set_export_directory,
       editor::commands::set_recording_timeline_edit,
       editor::commands::set_screenshot_background_radius,

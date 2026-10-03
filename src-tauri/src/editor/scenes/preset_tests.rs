@@ -39,6 +39,7 @@ fn clip(preset: RecordingScenePreset) -> RecordingSceneClip {
     boxes: None,
     radius: None,
     variant: None,
+    auto: false,
   }
 }
 

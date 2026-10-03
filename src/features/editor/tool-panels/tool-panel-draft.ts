@@ -82,6 +82,7 @@ export function resolveToolPanelSnapshot(
     annotationStyle,
     applyShortcutToAll: _applyShortcutToAll,
     audioVolume,
+    autoZoomScenes: _autoZoomScenes,
     bakeCamera,
     chooseSceneTemplate: _chooseSceneTemplate,
     clearDrawings: _clearDrawings,

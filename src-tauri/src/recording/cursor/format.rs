@@ -7,7 +7,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-pub(crate) const FORMAT_VERSION: u16 = 2;
+/// Version 3 adds the moments the app in front changed.
+pub(crate) const FORMAT_VERSION: u16 = 3;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -112,6 +113,11 @@ pub enum CursorRecord {
     timestamp_us: u64,
     x: f64,
     y: f64,
+  },
+  /// Another app came to the front. Only the moment is kept, never which app
+  /// it was; Screenwide's own windows coming forward are not counted.
+  AppSwitch {
+    timestamp_us: u64,
   },
 }
 

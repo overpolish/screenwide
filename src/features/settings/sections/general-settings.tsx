@@ -28,6 +28,12 @@ const recordingToggle = {
   title: "Show camera and sound while recording",
 } satisfies ToggleItem;
 
+const autoZoomToggle = {
+  description: "Zoom in where you click and type.",
+  key: "autoZoom",
+  title: "Zoom in automatically",
+} satisfies ToggleItem;
+
 const captureToggle = {
   description: "Show Screenwide's own windows in recordings and screenshots.",
   key: "recordScreenwideWindows",
@@ -152,6 +158,7 @@ export function GeneralSettingsPanel({
       </GroupBox>
       <GroupBox title="Recording">
         {toggle(recordingToggle)}
+        {toggle(autoZoomToggle)}
         <ControlRow title="Recording countdown">
           {(controlProps) => (
             <div {...controlProps} role="group">

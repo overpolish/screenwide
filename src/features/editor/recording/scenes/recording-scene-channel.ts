@@ -25,6 +25,9 @@ import type { Arrangement } from "../../annotations/annotation-order";
 export type RecordingSceneControls = {
   /** Move `pane` through the order of a custom scene's two panes. */
   arrangePane: (pane: ScenePane, move: Arrangement) => void;
+  /** Make the auto zooms again from the recording's cursor and keys, in
+   * place of the ones made before; your own scenes stay as they are. */
+  autoZoom: () => void;
   choosePreset: (preset: RecordingScenePreset) => void;
   /** Lay the scene out as `template`, fitted to this canvas. */
   chooseTemplate: (template: SceneTemplate) => void;
@@ -84,6 +87,9 @@ export function usePublishRecordingScene(
       controls: {
         arrangePane: (pane, move) => {
           controlsRef.current.arrangePane(pane, move);
+        },
+        autoZoom: () => {
+          controlsRef.current.autoZoom();
         },
         choosePreset: (next) => {
           controlsRef.current.choosePreset(next);

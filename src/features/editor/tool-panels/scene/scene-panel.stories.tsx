@@ -48,11 +48,13 @@ const scene = {
 
 /** The panel over a zoom: a custom scene kept in the recording's own boxes,
  * Custom filled with the accent, the zoom and the part of the screen it shows
- * following, and the actions ending the panel. */
+ * following, then Auto zoom for a recording with cursor movement, and the
+ * actions ending the panel. */
 export const OverZoom: Story = {
   beforeEach: () => {
     seed({
       cameraOutput: "combined",
+      hasCursorData: true,
       isLocked: false,
       scene: {
         ...scene,

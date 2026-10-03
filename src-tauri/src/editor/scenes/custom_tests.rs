@@ -35,6 +35,7 @@ fn custom(preset: RecordingScenePreset, camera: Option<SceneBox>) -> RecordingSc
     }),
     radius: None,
     variant: None,
+    auto: false,
   }
 }
 

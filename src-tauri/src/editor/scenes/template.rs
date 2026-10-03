@@ -8,18 +8,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::framing::MAX_ZOOM;
 use super::model::{SceneBoxes, SceneRadius};
 
-/// How far a template zooms into each pane; unset shows the whole picture.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
-pub struct SceneZoom {
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub screen: Option<f64>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub camera: Option<f64>,
-}
-
+/// Where a layout puts the panes and how round it makes them. How far a
+/// scene zooms is the scene's own, so a template never holds a zoom; one
+/// saved with a zoom before is read without it.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SceneTemplate {
@@ -30,15 +23,13 @@ pub struct SceneTemplate {
   pub canvas_aspect: f64,
   pub boxes: SceneBoxes,
   #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub zoom: Option<SceneZoom>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub radius: Option<SceneRadius>,
 }
 
 impl SceneTemplate {
   /// Whether the template holds a layout a scene can take: named, made on a
-  /// canvas with a shape, its boxes, zooms and radii each within what a
-  /// custom scene allows.
+  /// canvas with a shape, its boxes and radii each within what a custom
+  /// scene allows.
   pub(crate) fn is_valid(&self) -> bool {
     !self.id.is_empty()
       && !self.name.is_empty()
@@ -46,12 +37,6 @@ impl SceneTemplate {
       && self.canvas_aspect > 0.0
       && self.boxes.is_valid()
       && self.radius.is_none_or(SceneRadius::is_valid)
-      && self.zoom.is_none_or(|zoom| {
-        [zoom.screen, zoom.camera]
-          .into_iter()
-          .flatten()
-          .all(|zoom| (1.0..=MAX_ZOOM).contains(&zoom))
-      })
   }
 }
 
@@ -66,7 +51,6 @@ mod tests {
         "screen": { "x": 0.05, "y": 0.1, "width": 0.6, "height": 0.6 },
         "camera": { "x": 0.7, "y": 0.3, "width": 0.25, "height": 0.4 }
       },
-      "zoom": { "screen": 2.0 },
       "radius": { "camera": 50.0 }
     }))
     .unwrap()
@@ -83,19 +67,24 @@ mod tests {
   }
 
   #[test]
+  fn a_layout_saved_with_a_zoom_is_read_as_its_layout() {
+    let mut saved = serde_json::to_value(template()).unwrap();
+    saved["zoom"] = serde_json::json!({ "screen": 2.0 });
+    assert_eq!(
+      serde_json::from_value::<SceneTemplate>(saved).unwrap(),
+      template()
+    );
+  }
+
+  #[test]
   fn a_layout_no_scene_could_take_is_refused() {
     let mut lost = template();
     lost.boxes.screen.x = 3.0;
     let mut flat = template();
     flat.canvas_aspect = 0.0;
-    let mut zoomed_out = template();
-    zoomed_out.zoom = Some(SceneZoom {
-      screen: Some(0.5),
-      camera: None,
-    });
     let mut unnamed = template();
     unnamed.name.clear();
-    for template in [lost, flat, zoomed_out, unnamed] {
+    for template in [lost, flat, unnamed] {
       assert!(!template.is_valid(), "{template:?}");
     }
   }

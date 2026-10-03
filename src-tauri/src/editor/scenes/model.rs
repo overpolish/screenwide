@@ -162,6 +162,10 @@ pub struct RecordingSceneClip {
   /// How the preset is laid out, each option its default where unset.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub variant: Option<SceneVariant>,
+  /// Set on a zoom the auto zoom made that nobody has edited since. Making
+  /// the auto zooms again replaces these and leaves every other scene alone.
+  #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  pub auto: bool,
 }
 
 impl RecordingSceneClip {

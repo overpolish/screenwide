@@ -30,6 +30,7 @@ pub(crate) use visibility::set_cursor_visibility;
 mod tests;
 
 mod event_writer;
+mod front_app;
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -68,6 +69,8 @@ pub(super) enum RawCursorEventKind {
     click_count: u8,
     state: ButtonState,
   },
+  /// Another app came to the front.
+  AppSwitch,
 }
 
 #[derive(Clone, Debug)]

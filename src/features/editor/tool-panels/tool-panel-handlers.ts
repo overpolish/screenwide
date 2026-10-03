@@ -72,6 +72,8 @@ export type ToolPanelHandlers = {
   onKeyboardShortcutsResetAll?: () => void;
   /** Bring back every shortcut deleted from the timeline. */
   onKeyboardShortcutsRestore?: () => void;
+  /** Make the auto zooms again, the scenes of your own left as they are. */
+  onSceneAutoZoom?: () => void;
   /** Make the scene under the playhead custom, or add a custom scene there
    * where there is none. */
   onSceneCustomize?: () => void;

@@ -5,17 +5,16 @@ import {
   RecordingSceneClip,
   SceneBox,
   SceneBoxes,
-  SceneFraming,
   SceneRadius,
 } from "./recording-scenes";
 
 /**
  * A custom scene's layout kept under a name for any recording: its boxes as
- * shares of the canvas it was made on, that canvas's shape, and how far it
- * zooms into and rounds each pane. Where the part of a picture a zoom shows
- * is about one recording, so a template keeps the zoom and not the position.
- * The twin of `SceneTemplate` in `src-tauri/src/editor/scenes/template.rs`,
- * which keeps it sound in the settings.
+ * shares of the canvas it was made on, that canvas's shape, and how round it
+ * makes each pane. How far a scene zooms, and where, is the scene's own, so
+ * a template keeps neither. The twin of `SceneTemplate` in
+ * `src-tauri/src/editor/scenes/template.rs`, which keeps it sound in the
+ * settings.
  */
 export type SceneTemplate = {
   boxes: SceneBoxes;
@@ -24,7 +23,6 @@ export type SceneTemplate = {
   id: string;
   name: string;
   radius?: SceneRadius;
-  zoom?: { camera?: number; screen?: number };
 };
 
 /** What a template keeps of a scene, before it has a name. */
@@ -35,23 +33,14 @@ export type SceneTemplateLayout = Omit<SceneTemplate, "id" | "name">;
 export const sceneTemplateLayout = (
   clip: RecordingSceneClip,
   canvasAspect: number,
-): SceneTemplateLayout | null => {
-  if (!clip.boxes) return null;
-  const zoom = {
-    ...(clip.screen && clip.screen.zoom > 1
-      ? { screen: clip.screen.zoom }
-      : {}),
-    ...(clip.camera && clip.boxes.camera && clip.camera.zoom > 1
-      ? { camera: clip.camera.zoom }
-      : {}),
-  };
-  return {
-    boxes: clip.boxes,
-    canvasAspect,
-    ...(clip.radius ? { radius: clip.radius } : {}),
-    ...(Object.keys(zoom).length > 0 ? { zoom } : {}),
-  };
-};
+): SceneTemplateLayout | null =>
+  clip.boxes
+    ? {
+        boxes: clip.boxes,
+        canvasAspect,
+        ...(clip.radius ? { radius: clip.radius } : {}),
+      }
+    : null;
 
 /** The next of the names templates are given, one past the highest
  * "Template N" kept. */
@@ -91,36 +80,20 @@ export const fittedTemplateBoxes = (
   };
 };
 
-const centred = (zoom: number): SceneFraming => ({
-  focusX: 0.5,
-  focusY: 0.5,
-  zoom,
-});
-
 /**
  * `clip` laid out as `template` on a canvas of `canvasAspect`: a custom
- * scene in the template's boxes, rounded and zoomed as it was, each zoom
- * from the middle of its picture. Nothing ties the scene to the template
- * afterwards.
+ * scene in the template's boxes, rounded as it was, each pane still zoomed
+ * into what the scene showed of it, as a preset keeps it. Nothing ties the
+ * scene to the template afterwards.
  */
 export const clipFromTemplate = (
   clip: RecordingSceneClip,
   { canvasAspect, template }: { canvasAspect: number; template: SceneTemplate },
 ): RecordingSceneClip => {
-  const {
-    boxes: _boxes,
-    camera: _camera,
-    radius: _radius,
-    screen: _screen,
-    ...rest
-  } = clip;
-  const boxes = fittedTemplateBoxes(template, canvasAspect);
-  const { zoom } = template;
+  const { radius: _radius, ...rest } = clip;
   return {
     ...rest,
-    boxes,
-    ...(zoom?.screen ? { screen: centred(zoom.screen) } : {}),
-    ...(zoom?.camera && boxes.camera ? { camera: centred(zoom.camera) } : {}),
+    boxes: fittedTemplateBoxes(template, canvasAspect),
     ...(template.radius ? { radius: template.radius } : {}),
   };
 };

@@ -73,9 +73,12 @@ export function RecordingTrackLanesPreview({
   );
   const annotationSelection = useLaneAnnotationSelection(annotationClips);
   const [sceneClips, setSceneClips] = useState(STORY_SCENE_CLIPS);
+  // The story's playhead only moves the drawn playhead, so the choice stays
+  // where it is made rather than following it.
   const sceneSelection = useRecordingSceneSelection({
     clips: sceneClips,
     commit: setSceneClips,
+    currentId: null,
   });
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);

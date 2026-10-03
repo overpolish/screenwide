@@ -9,6 +9,12 @@ import { Playhead } from "../../timeline/scrub-playhead";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
 import {
+  ownEditedAutoZooms,
+  planRecordingAutoZoom,
+  visibleScreenArea,
+  withAutoZooms,
+} from "./recording-scene-auto-zoom";
+import {
   RecordingSceneControls,
   usePublishRecordingScene,
 } from "./recording-scene-channel";
@@ -53,6 +59,7 @@ export type RecordingScenes = {
  * recording and undone with the rest of the timeline.
  */
 export function useRecordingScenes({
+  artifactId,
   cameraOverlay,
   edit,
   frames,
@@ -67,6 +74,7 @@ export function useRecordingScenes({
   sessionId,
   sourceDurationMs,
 }: {
+  artifactId: number;
   /** Where the recording's own composition puts the camera. */
   cameraOverlay: CameraOverlaySettings;
   edit: RecordingTimelineEdit;
@@ -108,11 +116,21 @@ export function useRecordingScenes({
       ? { aspect: cameraAspect, overlay: cameraOverlay }
       : null;
   const clips = edit.sceneClips ?? EMPTY_CLIPS;
+  // A plan arrives after the edit it was asked from may have moved on, so it
+  // lands on the latest one.
+  const editRef = useRef(edit);
+  editRef.current = edit;
   // A press that changes nothing, a drag let go where it began, must leave
   // nothing to undo.
+  const commitClips = (next: RecordingSceneClip[]) => {
+    const latest = editRef.current;
+    if (
+      JSON.stringify(next) !== JSON.stringify(latest.sceneClips ?? EMPTY_CLIPS)
+    )
+      onEdit({ ...latest, sceneClips: next });
+  };
   const commit = (next: RecordingSceneClip[]) => {
-    if (JSON.stringify(next) !== JSON.stringify(clips))
-      onEdit({ ...edit, sceneClips: next });
+    commitClips(ownEditedAutoZooms(clips, next));
   };
   // The panel follows the scene under the playhead. While the recording plays
   // the settled position stands still, so the playhead itself is read, and
@@ -138,7 +156,11 @@ export function useRecordingScenes({
     selectedPaneFraming({ camera: sceneCamera, clip, output, selectsCamera });
   const currentPane = current ? paneOf(current) : null;
   const showDraft = useScenePreviewSync({ clips, sessionId });
-  const selection = useRecordingSceneSelection({ clips, commit });
+  const selection = useRecordingSceneSelection({
+    clips,
+    commit,
+    currentId: current?.id ?? null,
+  });
   // A composition from before placement was measured in output pixels has no
   // crop; the whole frame is its screen.
   const crop =
@@ -157,15 +179,31 @@ export function useRecordingScenes({
     x: rect.x / Math.max(1, output.width),
     y: rect.y / Math.max(1, output.height),
   });
-  const controls = recordingSceneEdits({
-    camera: sceneCamera,
-    clips,
-    commit,
-    getPositionMs,
-    output,
-    paneOf,
-    sourceDurationMs,
-  });
+  const controls: RecordingSceneControls = {
+    ...recordingSceneEdits({
+      camera: sceneCamera,
+      clips,
+      commit,
+      getPositionMs,
+      output,
+      paneOf,
+      sourceDurationMs,
+    }),
+    autoZoom: () => {
+      planRecordingAutoZoom(
+        artifactId,
+        visibleScreenArea(output, frames.primary),
+      )
+        .then((planned) => {
+          commitClips(
+            withAutoZooms(editRef.current.sceneClips ?? EMPTY_CLIPS, planned),
+          );
+        })
+        .catch((cause: unknown) => {
+          console.error("Could not make the auto zooms", cause);
+        });
+    },
+  };
   usePublishRecordingScene(
     "recording",
     isAvailable

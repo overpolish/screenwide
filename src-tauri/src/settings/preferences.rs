@@ -32,6 +32,9 @@ pub struct GeneralSettings {
   pub open_location_after_export: bool,
   pub record_screenwide_windows: bool,
   pub show_recording_confidence_checks: bool,
+  /// Whether a new recording opens with zoom scenes made from its clicks and
+  /// typing.
+  pub auto_zoom: bool,
   /// Custom scene layouts saved from the Scene panel, oldest first, offered
   /// in every recording.
   pub scene_templates: Vec<SceneTemplate>,
@@ -51,6 +54,7 @@ impl Default for GeneralSettings {
       open_location_after_export: true,
       record_screenwide_windows: false,
       show_recording_confidence_checks: true,
+      auto_zoom: true,
       scene_templates: Vec::new(),
       launch_at_login: false,
       show_recording_bar_on_launch: true,

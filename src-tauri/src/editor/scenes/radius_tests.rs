@@ -22,6 +22,7 @@ fn rounded_split() -> RecordingSceneClip {
       camera: None,
     }),
     variant: None,
+    auto: false,
   }
 }
 

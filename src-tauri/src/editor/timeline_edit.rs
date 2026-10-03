@@ -6,7 +6,7 @@ pub(crate) use time_mapping::{output_at_us, rate_at, source_to_output_us};
 mod validation;
 use validation::validate;
 mod initial_edit;
-pub(in crate::editor) use initial_edit::persist_initial_annotation_clips;
+pub(in crate::editor) use initial_edit::persist_initial_edit;
 mod stacking;
 
 pub(crate) use time_mapping::source_after_output_duration_us;

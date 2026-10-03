@@ -44,13 +44,15 @@ import { SceneVariantRows } from "./scene-variant-rows";
  * composition; pressing a preset or a template adds one laid out so. Over a
  * scene, a press turns the scene under the playhead into that arrangement,
  * Custom keeping its panes where they are for the select tool to move and
- * resize. The actions end the panel: a custom scene kept as a template, the
- * preset's boxes and the whole screen and camera shown again, or the scene
- * taken away.
+ * resize. Auto zoom makes the zooms that follow the cursor again, leaving
+ * the scenes you made or edited alone. The actions end the panel: a custom
+ * scene kept as a template, the preset's boxes and the whole screen and
+ * camera shown again, or the scene taken away.
  */
 export function ScenePanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { cameraOutput, isLocked, scene, sceneTemplates } = snapshot;
+  const { cameraOutput, hasCursorData, isLocked, scene, sceneTemplates } =
+    snapshot;
 
   if (!scene) {
     return (
@@ -218,6 +220,24 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
           paneName={paneName}
           radius={radius}
         />
+      ) : null}
+
+      {/* The zooms follow the cursor, so a recording without one has none
+          to make. */}
+      {hasCursorData ? (
+        <ControlRow title="Auto zoom">
+          {(controlProps) => (
+            <Button
+              {...controlProps}
+              isDisabled={isLocked}
+              onPress={() => {
+                change({ autoZoomScenes: true });
+              }}
+            >
+              Regenerate
+            </Button>
+          )}
+        </ControlRow>
       ) : null}
 
       {scene.hasSceneAtPlayhead ? (

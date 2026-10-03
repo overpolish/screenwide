@@ -27,6 +27,7 @@ use windows::Win32::{
   },
 };
 
+use super::front_app::FrontApp;
 use super::{
   ButtonState, CursorAppearance, CursorButton, CursorStyle, EventSink, RawCursorEvent,
   RawCursorEventKind,
@@ -145,6 +146,7 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
   let mut last_position = None;
   let mut last_cursor = None;
   let mut current_appearance = None;
+  let mut front = FrontApp::new();
   while !stop.load(Ordering::Acquire) {
     let kind = if wrote_initial {
       RawCursorEventKind::Move
@@ -197,6 +199,11 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
           sink(button_event);
           *was_pressed = is_pressed;
         }
+      }
+      if front.switched() {
+        let mut switched = event.clone();
+        switched.kind = RawCursorEventKind::AppSwitch;
+        sink(switched);
       }
       last_position = Some(position);
     }

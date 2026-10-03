@@ -5,6 +5,7 @@ pub(crate) mod annotations;
 mod artifact;
 mod artifact_snapshot;
 mod audio_save;
+pub(crate) mod auto_zoom;
 mod camera_save;
 pub(crate) mod commands;
 pub(crate) mod cursor_effects;
