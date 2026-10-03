@@ -94,24 +94,14 @@ const meshPresets: BackgroundPreset[] = BACKGROUND_GENERATORS.map(
 );
 
 const solidPresets: BackgroundPreset[] = [
-  // Neutrals, then the saturated tones of the system palette: the colours a
-  // backdrop is usually chosen from, with none so pale it reads as unset.
-  { background: solid("#FFFFFF"), id: "solid-white", name: "White" },
-  { background: solid("#D4D4D8"), id: "solid-light-grey", name: "Light grey" },
-  { background: solid("#52525B"), id: "solid-grey", name: "Grey" },
+  // A small starting set, two of each: pastels, brights, and darks for
+  // dark-mode captures. Users save their own beyond these.
+  { background: solid("#CFE3D3"), id: "solid-sage", name: "Sage" },
+  { background: solid("#F6D6C2"), id: "solid-peach", name: "Peach" },
+  { background: solid("#2563EB"), id: "solid-blue", name: "Blue" },
+  { background: solid("#FACC15"), id: "solid-yellow", name: "Yellow" },
   { background: solid("#171717"), id: "solid-graphite", name: "Graphite" },
-  { background: solid("#000000"), id: "solid-black", name: "Black" },
-  { background: solid("#FF3B30"), id: "solid-red", name: "Red" },
-  { background: solid("#FF9500"), id: "solid-orange", name: "Orange" },
-  { background: solid("#FFCC00"), id: "solid-yellow", name: "Yellow" },
-  { background: solid("#34C759"), id: "solid-green", name: "Green" },
-  { background: solid("#00C7BE"), id: "solid-teal", name: "Teal" },
-  { background: solid("#007AFF"), id: "solid-blue", name: "Blue" },
-  { background: solid("#5856D6"), id: "solid-indigo", name: "Indigo" },
-  { background: solid("#AF52DE"), id: "solid-purple", name: "Purple" },
-  { background: solid("#A2845E"), id: "solid-brown", name: "Brown" },
-  { background: solid("#1E293B"), id: "solid-navy", name: "Navy" },
-  { background: solid("#14532D"), id: "solid-forest", name: "Forest" },
+  { background: solid("#1E293B"), id: "solid-midnight", name: "Midnight" },
 ];
 
 /** A picture on the desktop right now, as the native side describes it. */
