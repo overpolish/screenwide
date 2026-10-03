@@ -3,6 +3,8 @@
 
 #[path = "build/wgsl.rs"]
 mod wgsl;
+#[path = "build/windows_manifest.rs"]
+mod windows_manifest;
 
 fn main() {
   wgsl::assemble();
@@ -236,5 +238,9 @@ fn main() {
     println!("cargo:rustc-link-search=framework=/System/Library/PrivateFrameworks");
     println!("cargo:rustc-link-lib=framework=MultitouchSupport");
   }
-  tauri_build::build()
+  let attributes =
+    tauri_build::Attributes::new().windows_attributes(windows_manifest::windows_attributes());
+  if let Err(error) = tauri_build::try_build(attributes) {
+    panic!("{error:#}");
+  }
 }

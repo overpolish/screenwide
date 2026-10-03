@@ -16,6 +16,5 @@ pub(crate) use arrows::{
 /// A counter's number and a text box's lines are type, so they are
 /// rasterised rather than drawn by the shader.
 pub(crate) use counter_artwork::{numbered_arrows, CounterAtlas};
-#[cfg(target_os = "macos")]
 pub(crate) use prepare::SourceAnnotations;
 pub(crate) use prepare::{placed_arrows, prepared_arrows};
