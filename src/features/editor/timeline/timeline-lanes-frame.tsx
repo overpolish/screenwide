@@ -15,9 +15,8 @@ import { timelineLanesHeight } from "./timeline-band-metrics";
  *
  * The ruler and the rows line up because both carry the same gutter column -
  * the zoom toolbar in the ruler, the track header in each row, each a
- * `w-timeline-gutter` box before the same `gap-section` - and because
- * OverlayScrollbars draws its bar over the content rather than beside it, so
- * a scrollbar appearing never narrows the rows out from under the ruler.
+ * `w-timeline-gutter` box before the same `gap-section`. The rows scroll
+ * without a visible scrollbar; the edge shadows show where they are cut off.
  *
  * It is laid out with `grow` rather than `flex-1` throughout: with the basis
  * left at the rows' own height, the frame fills a band that bounds it and
@@ -85,7 +84,7 @@ export function TimelineLanesFrame({
       <div className="relative flex min-w-0 grow flex-col gap-control">
         <div className="shrink-0 pl-window-inset">{ruler}</div>
         <div className="min-h-0 grow" ref={viewportRef}>
-          <ScrollArea edgeEffect="shadow">
+          <ScrollArea edgeEffect="shadow" scrollbarHidden>
             {/* The strip's bottom inset travels with the rows, so the last
                 lane clears the band's edge once it is scrolled to. */}
             <div
