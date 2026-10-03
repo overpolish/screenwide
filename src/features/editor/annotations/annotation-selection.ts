@@ -42,15 +42,6 @@ export const toggledAnnotationIds = (
     ? current
     : selectTimelineItem(current, id, toggle);
 
-/** The choice after a band swept over `ids`: those alone, or added to what
- * was chosen already. */
-export const sweptAnnotationIds = (
-  current: ReadonlySet<string>,
-  ids: readonly string[],
-  additive: boolean,
-): ReadonlySet<string> =>
-  additive ? new Set([...current, ...ids]) : new Set(ids);
-
 /**
  * What a menu opened on `id` acts on: everything chosen when it is one of
  * several chosen together, and otherwise it alone.

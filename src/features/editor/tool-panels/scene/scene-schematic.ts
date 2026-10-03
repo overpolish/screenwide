@@ -13,10 +13,12 @@ import { RecordingScenePreset } from "../../recording/scenes/recording-scenes";
 export type SchematicRect = SceneRect;
 
 /** Where a scene puts the screen and the camera as shares of the canvas,
- * null for a pane it does not show. */
+ * null for a pane it does not show, and whether the camera is drawn behind
+ * the screen rather than in front of it. */
 export type SchematicComposition = {
   camera: SchematicRect | null;
   screen: SchematicRect | null;
+  cameraBehind?: boolean;
 };
 
 /**

@@ -58,6 +58,7 @@ impl Base {
           overlay.map_or(0.0, |overlay| overlay.radius_percent),
         ),
         opacity: (1.0, 1.0),
+        camera_front: 1.0,
       },
       canvas: (f64::from(output.width), f64::from(output.height)),
       camera_aspect: camera.map(|(_, aspect)| aspect),
@@ -146,6 +147,7 @@ impl Base {
         radius.camera.unwrap_or(camera_radius),
       ),
       opacity: (opacity(shown.0), opacity(shown.1)),
+      camera_front: clip.camera_front(),
     })
   }
 }
@@ -248,6 +250,7 @@ pub(crate) fn arrange(
   output.crop_height = placed.screen.height;
   output.radius_percent = placed.radius.0;
   output.scene_opacity = Some([placed.opacity.0 as f32, placed.opacity.1 as f32]);
+  output.scene_camera_front = Some(placed.camera_front as f32);
   if let Some((overlay, _)) = camera {
     overlay.frame_x = placed.frame.x;
     overlay.frame_y = placed.frame.y;

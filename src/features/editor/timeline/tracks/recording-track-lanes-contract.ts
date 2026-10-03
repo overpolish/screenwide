@@ -67,12 +67,18 @@ export type RecordingTrackLanesProps = {
   onSceneActivate?: () => void;
   /** Open the Scene panel, from the lane's header. */
   onScenePanelOpen?: () => void;
+  /** Choose a scene alone, or with `toggle`, add or take it away. */
+  onSceneSelect?: (id: string, toggle: boolean) => void;
   /** Without it the recording has nothing to arrange, and the lane is not
    * drawn. */
   onScenesChange?: (clips: RecordingSceneClip[]) => void;
+  /** Let every scene go, from a click on empty scene lane. */
+  onScenesClear?: () => void;
   /** Shows a scene drag's draft in the preview while it lasts, or the
    * committed clips again for null. */
   onScenesDraftChange?: (clips: RecordingSceneClip[] | null) => void;
+  /** Choose what a band over the scene lane swept, alone or added. */
+  onScenesSweep?: (ids: string[], additive: boolean) => void;
   /** Picking a keyboard shortcut puts it in hand: the caller clears the
    * annotation selection and takes up the Select tool, mirroring what the
    * annotation lane's select does. */
@@ -81,6 +87,7 @@ export type RecordingTrackLanesProps = {
   /** Whether the camera is not baked in, which leaves the scenes idle. */
   scenesPaused?: boolean;
   selectedAnnotationIds?: ReadonlySet<string>;
+  selectedSceneIds?: ReadonlySet<string>;
 };
 
 /**

@@ -5,9 +5,9 @@ import { useState } from "react";
 
 import {
   chosenAnnotationIds,
-  sweptAnnotationIds,
   toggledAnnotationIds,
 } from "../../annotations/annotation-selection";
+import { sweptTimelineItems } from "../../timeline/tracks/timeline-item-selection";
 
 import { RecordingAnnotationClip } from "./recording-annotations";
 
@@ -38,7 +38,7 @@ export function useLaneAnnotationSelection(
       setChosen(toggledAnnotationIds(selectedIds, id, { groupable, toggle }));
     },
     onSelectSwept: (ids: string[], additive: boolean) => {
-      setChosen(sweptAnnotationIds(selectedIds, ids, additive));
+      setChosen(sweptTimelineItems(selectedIds, ids, additive));
     },
     selectedIds,
   };

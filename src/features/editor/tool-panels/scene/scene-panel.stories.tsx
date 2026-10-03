@@ -115,6 +115,31 @@ export const Custom: Story = {
   },
 };
 
+/** A picture in picture made custom and swapped: the camera fills the frame
+ * behind a small screen in its corner, the Custom tile draws the screen over
+ * it, and Swap trades them back. */
+export const Swapped: Story = {
+  beforeEach: () => {
+    seed({
+      cameraOutput: "combined",
+      isLocked: false,
+      scene: {
+        ...scene,
+        boxes: {
+          camera: STORY_COMPOSITION.screen,
+          cameraBehind: true,
+          screen: { height: 0.3, width: 0.3, x: 0.65, y: 0.62 },
+        },
+        framing: { focusX: 0.5, focusY: 0.5, zoom: 1 },
+        hasSceneAtPlayhead: true,
+        preset: "picture-in-picture",
+        radius: 12,
+        variant: {},
+      },
+    });
+  },
+};
+
 /** The custom scene above laid out as a saved template, beside one made on
  * a tall canvas: the template's tile is chosen, the tall one is drawn fitted
  * into this wide frame, and the custom scene can be kept as another. */

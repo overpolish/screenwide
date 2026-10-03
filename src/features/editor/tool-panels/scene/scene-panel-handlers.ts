@@ -32,6 +32,7 @@ export const scenePanelHandlers = (
   | "onSceneDelete"
   | "onSceneFramingChange"
   | "onSceneFramingReset"
+  | "onScenePanesSwap"
   | "onScenePresetChoose"
   | "onSceneRadiusChange"
   | "onSceneTemplateChoose"
@@ -50,6 +51,9 @@ export const scenePanelHandlers = (
   },
   onSceneFramingReset: () => {
     recordingSceneControls(workspace)?.resetFraming();
+  },
+  onScenePanesSwap: () => {
+    recordingSceneControls(workspace)?.swapPanes();
   },
   onScenePresetChoose: (preset) => {
     recordingSceneControls(workspace)?.choosePreset(preset);

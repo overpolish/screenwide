@@ -14,7 +14,7 @@ import {
 } from "../../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 
-import type { ToolPanelPatch } from "../tool-panel-store";
+import type { ToolPanelPatch } from "../tool-panel-patch";
 
 /**
  * How a redaction covers what is under it: the mode, and a pixelation's

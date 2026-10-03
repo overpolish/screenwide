@@ -6,10 +6,10 @@ import { useEffect, useState } from "react";
 import { EditorKind } from "../types";
 
 import { resolveToolPanelSnapshot, ToolPanelDraft } from "./tool-panel-draft";
+import { ToolPanelPatch } from "./tool-panel-patch";
 import {
   DEFAULT_TOOL_PANEL_SNAPSHOT,
   sendToolPanelRequest,
-  ToolPanelPatch,
   useToolPanelStore,
 } from "./tool-panel-store";
 

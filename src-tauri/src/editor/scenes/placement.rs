@@ -13,9 +13,11 @@ const VANISHED_SCALE: f64 = 0.25;
 /// the whole screen image behind it by its corner and width, then the
 /// camera's box and the camera picture behind it by its centre and width;
 /// the screen's and the camera's corner radii in percent of their boxes'
-/// shorter sides; and how opaque each pane is drawn, zero for a pane the
-/// scene hides. The image and the picture only ever move and scale, so
-/// annotations and the cursor carried on them follow.
+/// shorter sides; how opaque each pane is drawn, zero for a pane the scene
+/// hides; and how far the camera is drawn in front of the screen, one in
+/// front and zero behind, between the two while a scene changes the order.
+/// The image and the picture only ever move and scale, so annotations and the
+/// cursor carried on them follow.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Placement {
   pub screen: Rect,
@@ -24,6 +26,7 @@ pub(super) struct Placement {
   pub camera: (f64, f64, f64),
   pub radius: (f64, f64),
   pub opacity: (f64, f64),
+  pub camera_front: f64,
 }
 
 /// For a pane whose opacity goes from `from` to `to`, whether it vanishes,
@@ -54,7 +57,8 @@ impl Placement {
   /// both moves and resizes between them. A pane one of them hides has
   /// nowhere to move to, so it stays at its place in the other, shrinking to
   /// a quarter of its size about its middle as it fades out, or growing from
-  /// there as it fades in.
+  /// there as it fades in. A change of order crosses over with the move, so
+  /// where the panes overlap one fades through the other.
   pub fn toward(self, to: Self, t: f64) -> Self {
     let mix = |a: f64, b: f64| a + (b - a) * t;
     let rect = |a: Rect, b: Rect| Rect {
@@ -78,6 +82,7 @@ impl Placement {
         mix(self.opacity.0, to.opacity.0),
         mix(self.opacity.1, to.opacity.1),
       ),
+      camera_front: mix(self.camera_front, to.camera_front),
     };
     if let Some((vanishes, factor)) = settling(self.opacity.0, to.opacity.0, t) {
       let from = if vanishes { self } else { to };

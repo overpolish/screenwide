@@ -63,11 +63,11 @@ export const nextSceneTemplateName = (templates: readonly SceneTemplate[]) => {
 };
 
 /**
- * `template`'s boxes on a canvas of `canvasAspect`, as shares of it. The
- * canvas the layout was made on is fitted inside this one, as large as fits
- * and centred, and every box carried with it, so each keeps its shape and
- * its size beside the other: the same canvas shape gets the layout as it was
- * made, another gets it smaller with room around it.
+ * `template`'s boxes on a canvas of `canvasAspect`, as shares of it, in the
+ * template's order. The canvas the layout was made on is fitted inside this
+ * one, as large as fits and centred, and every box carried with it, so each
+ * keeps its shape and its size beside the other: the same canvas shape gets
+ * the layout as it was made, another gets it smaller with room around it.
  */
 export const fittedTemplateBoxes = (
   template: SceneTemplateLayout,
@@ -87,6 +87,7 @@ export const fittedTemplateBoxes = (
   return {
     screen: fitted(template.boxes.screen),
     ...(template.boxes.camera ? { camera: fitted(template.boxes.camera) } : {}),
+    ...(template.boxes.cameraBehind ? { cameraBehind: true } : {}),
   };
 };
 
@@ -133,15 +134,17 @@ const sameBox = (a: SceneBox | undefined, b: SceneBox | undefined) =>
     Math.abs(a.width - b.width) < 1e-6 &&
     Math.abs(a.height - b.height) < 1e-6);
 
-/** Whether `boxes` are where `template` puts the panes on a canvas of
- * `canvasAspect`, which marks its tile chosen. */
+/** Whether `boxes` are where, and in the order, `template` puts the panes on
+ * a canvas of `canvasAspect`, which marks its tile chosen. */
 export const isTemplateLayout = (
   boxes: SceneBoxes,
   { canvasAspect, template }: { canvasAspect: number; template: SceneTemplate },
 ) => {
   const fitted = fittedTemplateBoxes(template, canvasAspect);
   return (
-    sameBox(boxes.screen, fitted.screen) && sameBox(boxes.camera, fitted.camera)
+    sameBox(boxes.screen, fitted.screen) &&
+    sameBox(boxes.camera, fitted.camera) &&
+    Boolean(boxes.cameraBehind) === Boolean(fitted.cameraBehind)
   );
 };
 
@@ -154,14 +157,19 @@ export const chosenSceneTemplate = (
     boxes,
     canvasAspect,
   }: {
-    boxes: { camera: SceneBox | null; screen: SceneBox | null } | null;
+    boxes: {
+      camera: SceneBox | null;
+      screen: SceneBox | null;
+      cameraBehind?: boolean;
+    } | null;
     canvasAspect: number;
   },
 ) => {
   if (!boxes?.screen) return null;
-  const sceneBoxes = {
+  const sceneBoxes: SceneBoxes = {
     screen: boxes.screen,
     ...(boxes.camera ? { camera: boxes.camera } : {}),
+    ...(boxes.cameraBehind ? { cameraBehind: true } : {}),
   };
   return (
     templates.find((template) =>

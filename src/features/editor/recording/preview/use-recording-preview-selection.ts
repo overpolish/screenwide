@@ -14,6 +14,7 @@ import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useScenePreviewEditing } from "../scenes/use-scene-preview-editing";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { scenePanePicks } from "./recording-scene-picks";
 import {
   recordingVideoSelectionOverlay,
   recordingVideoSelectionTargets,
@@ -21,10 +22,7 @@ import {
 import { useRecordingSelectionGesture } from "./use-recording-selection-gesture";
 import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 
-import type {
-  RecordingPreviewSelection,
-  RecordingSelectionGestureEvent,
-} from "../use-recording-preview-surface";
+import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
 
 /** A normalized coordinate as the panel's percent field shows it, held to two
@@ -188,41 +186,20 @@ export function useRecordingPreviewSelection(
   const reframe = activeVideoTrack
     ? scene.reframeSelections?.[activeVideoTrack]
     : undefined;
-  // A custom scene's box moves and resizes like any layer, but the canvas it
-  // sits on is the scene's to size, so dragging it never grows the canvas.
-  const placedFreely = (selection: RecordingPreviewSelection) =>
-    isFramed &&
-    !selection.framed &&
-    !selection.cropMode &&
-    (selection.layerId ?? selection.paneIndex) <= 1
-      ? { ...selection, inScene: true }
-      : selection;
-  // A pane the scene hides is neither drawn nor picked.
-  const opacity = sceneArrangement?.opacity;
-  const isHidden = (selection: RecordingPreviewSelection) => {
-    const layer = selection.layerId ?? selection.paneIndex;
-    return (
-      opacity !== undefined &&
-      ((layer === 0 && opacity.screen === 0) ||
-        (layer === 1 && canPreviewBakedCamera && opacity.camera === 0))
-    );
-  };
-  const paneOverlay = reframe ?? videoSelectionOverlay;
+  const picks = scenePanePicks({
+    arrangement: sceneArrangement,
+    canPreviewBakedCamera,
+    isFramed,
+    overlay: videoSelectionOverlay,
+    reframe,
+    targets: videoSelectionTargets,
+  });
   const selectionOverlay = hasKeyboardSelection
     ? keyboardSelection
-    : paneOverlay && !isHidden(paneOverlay)
-      ? placedFreely(paneOverlay)
-      : null;
-  const sceneTargets = videoSelectionTargets
-    ?.filter((target) => !isHidden(target))
-    .map((target) =>
-      reframe && target.layerId === reframe.layerId
-        ? reframe
-        : placedFreely(target),
-    );
+    : picks.overlay;
   const selectionTargets = keyboardSelection
-    ? [...(sceneTargets ?? []), keyboardSelection]
-    : sceneTargets;
+    ? [...(picks.targets ?? []), keyboardSelection]
+    : picks.targets;
   // The shortcut in hand, for the Selection panel in the panel window.
   const keyboardGeometry = keyboardPreview.geometry;
   usePublishKeyboardShortcut(

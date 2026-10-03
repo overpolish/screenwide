@@ -6,6 +6,7 @@ import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingSceneControls } from "./recording-scene-channel";
 import { customRecordingSceneClip } from "./recording-scene-custom";
 import { framingWithin } from "./recording-scene-framing";
+import { arrangedScenePane, swappedScenePanes } from "./recording-scene-order";
 import { ScenePaneFraming } from "./recording-scene-pane-framing";
 import { SceneCamera } from "./recording-scene-placement";
 import {
@@ -75,6 +76,9 @@ export function recordingSceneEdits({
     commit(next.map((clip) => (clip.id === target.id ? remake(clip) : clip)));
   };
   return {
+    arrangePane: (pane, move) => {
+      reframeCurrent((clip) => arrangedScenePane(clip, pane, move));
+    },
     // A preset chosen for a custom scene puts its panes back in the preset's
     // boxes. The variant stays, so a swapped pair stays swapped.
     choosePreset: (preset) => {
@@ -144,6 +148,9 @@ export function recordingSceneEdits({
         ...clip,
         variant: { ...clip.variant, ...variant },
       }));
+    },
+    swapPanes: () => {
+      reframeCurrent(swappedScenePanes);
     },
     templateLayout: () => {
       const current = recordingSceneClipAt(clips, getPositionMs());

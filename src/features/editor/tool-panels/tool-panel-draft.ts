@@ -4,7 +4,8 @@
 import { EditorKind } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
-import { ToolPanelPatch, ToolPanelSnapshot } from "./tool-panel-store";
+import { ToolPanelPatch } from "./tool-panel-patch";
+import { ToolPanelSnapshot } from "./tool-panel-store";
 
 export type ToolPanelDraft = {
   seq: number;
@@ -115,6 +116,7 @@ export function resolveToolPanelSnapshot(
     selectionOutput,
     selectionRadius,
     shortcutPlacement,
+    swapScenePanes: _swapScenePanes,
     ...values
   } = draft.values;
   const resolved = {

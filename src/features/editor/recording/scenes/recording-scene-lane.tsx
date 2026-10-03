@@ -17,6 +17,12 @@ import {
   TIMED_LANE_ROW_HEIGHT_PX,
   timedLaneFragmentBox,
 } from "../../timeline/tracks/timed-lane-layout";
+import {
+  sweptLaneItems,
+  togglesChoice,
+  useTimelineLaneBand,
+} from "../../timeline/tracks/timeline-lane-band";
+import { TimelineLaneBandBox } from "../../timeline/tracks/timeline-lane-band-box";
 import { TimelineTrackHeader } from "../../timeline/tracks/timeline-track-header";
 
 import { recordingSceneLabel } from "./recording-scene-labels";
@@ -34,16 +40,18 @@ import {
 const SCENE_CLIP_MINIMUM_WIDTH_PX = 12;
 
 /**
- * The lane the recording's scenes sit in, above every track. Scenes are
- * never selected: a click on one takes up the Scene tool with the playhead
- * parked in the middle of it, so the panel shows that scene. Its body slides
- * it in time, past its neighbours into whichever gap it is dropped in, and its
- * edges trim it; the arrow keys step a focused edge a tenth of a second, a
- * whole second with Shift. A clip that crosses a cut is drawn in pieces, with
- * handles only on its true ends. The header opens the Scene panel, where
- * scenes are added. A scene that places the camera is dimmed while the
- * camera is not baked in: it is kept and can still be moved, but nothing
- * draws it until one is chosen in the panel again.
+ * The lane the recording's scenes sit in, above every track. A click chooses
+ * a scene and takes up the Scene tool with the playhead parked in the middle
+ * of it, so the panel shows that scene; Cmd or Ctrl adds a scene to the
+ * choice or takes it away, and a band drawn from empty lane chooses every
+ * scene it touches. Its body slides it in time, past its neighbours into
+ * whichever gap it is dropped in, and its edges trim it; the arrow keys step
+ * a focused edge a tenth of a second, a whole second with Shift. A clip that
+ * crosses a cut is drawn in pieces, with handles only on its true ends. The
+ * header opens the Scene panel, where scenes are added. A scene that places
+ * the camera is dimmed while the camera is not baked in: it is kept and can
+ * still be moved, but nothing draws it until one is chosen in the panel
+ * again.
  */
 export function RecordingSceneLane({
   clips,
@@ -51,9 +59,13 @@ export function RecordingSceneLane({
   isPaused = false,
   onActivate,
   onChange,
+  onClearSelection,
   onDraftChange,
   onOpenPanel,
   onSeek,
+  onSelect,
+  onSelectSwept,
+  selectedIds,
   sourceDurationMs,
   viewport,
 }: {
@@ -62,6 +74,13 @@ export function RecordingSceneLane({
   /** A scene was clicked rather than dragged: take up the Scene tool. */
   onActivate: () => void;
   onChange: (clips: RecordingSceneClip[]) => void;
+  /** Let every scene go, from a click on empty lane. */
+  onClearSelection: () => void;
+  /** Choose the scene `id` alone, or with `toggle`, add or take it away. */
+  onSelect: (id: string, toggle: boolean) => void;
+  /** Choose the scenes a band swept over, alone or added to the choice. */
+  onSelectSwept: (ids: string[], additive: boolean) => void;
+  selectedIds: ReadonlySet<string>;
   sourceDurationMs: number;
   viewport: TimelineViewportState;
   /** Whether the camera is not baked in, which leaves the scenes that place
@@ -86,10 +105,28 @@ export function RecordingSceneLane({
     items: draft ?? clips,
     sourceDurationMs,
   });
+  const { band, pressLane } = useTimelineLaneBand({
+    laneRef,
+    onClear: onClearSelection,
+    onSweep: onSelectSwept,
+    sweep: (box, laneWidthPx) =>
+      sweptLaneItems(fragments, box, {
+        laneWidthPx,
+        minimumWidthPx: SCENE_CLIP_MINIMUM_WIDTH_PX,
+        viewport,
+      }),
+  });
+  // While a band is drawn, the lane shows the choice it will make.
+  const isSelected = (id: string) =>
+    band
+      ? band.ids.has(id) || (band.additive && selectedIds.has(id))
+      : selectedIds.has(id);
   const press =
     (id: string, edge: RecordingSceneDragEdge) => (event: PointerEvent) => {
       if (event.button !== 0) return;
       event.stopPropagation();
+      // A press with the toggle held is a click to come, never a drag.
+      if (edge === "body" && togglesChoice(event)) return;
       beginDrag({ clientX: event.clientX, edge, id });
     };
   // The middle of what the timeline keeps of the clip, so a clip that loses
@@ -141,6 +178,8 @@ export function RecordingSceneLane({
       />
       <div
         className="relative min-w-0 grow overflow-hidden rounded-control bg-fill-tertiary"
+        // Every press on a clip stops here, so what arrives is empty lane.
+        onPointerDown={pressLane}
         ref={laneRef}
         style={{ height: TIMED_LANE_ROW_HEIGHT_PX }}
       >
@@ -149,11 +188,12 @@ export function RecordingSceneLane({
             const clip = fragment.item;
             const label = recordingSceneLabel(clip);
             const isIdle = isPaused && sceneNeedsCamera(clip);
+            const selected = isSelected(clip.id);
             const continuesPrevious = fragments[index - 1]?.item.id === clip.id;
             const continuedByNext = fragments[index + 1]?.item.id === clip.id;
             return (
               <div
-                className={`absolute overflow-hidden rounded-control bg-fill-secondary text-footnote text-content-fg transition-opacity ${isIdle ? "opacity-50" : ""} ${continuesPrevious ? "rounded-l-none" : ""} ${continuedByNext ? "rounded-r-none" : ""}`}
+                className={`absolute overflow-hidden rounded-control text-footnote transition-opacity ${selected ? "bg-primary-surface text-primary-fg" : "bg-fill-secondary text-content-fg"} ${isIdle ? "opacity-50" : ""} ${continuesPrevious ? "rounded-l-none" : ""} ${continuedByNext ? "rounded-r-none" : ""}`}
                 key={fragment.fragmentId}
                 style={{
                   ...timedLaneFragmentBox(0),
@@ -164,11 +204,17 @@ export function RecordingSceneLane({
               >
                 <button
                   aria-label={label}
+                  aria-pressed={selected}
                   className="h-full w-full truncate px-control-inset text-left focus-visible:outline-2 focus-visible:outline-primary"
                   // A press that slid the clip was a drag, not a click.
-                  onClick={() => {
-                    if (movedRef.current) movedRef.current = false;
-                    else activate(clip);
+                  onClick={(event) => {
+                    if (movedRef.current) {
+                      movedRef.current = false;
+                      return;
+                    }
+                    const toggle = togglesChoice(event);
+                    onSelect(clip.id, toggle);
+                    if (!toggle) activate(clip);
                   }}
                   onPointerDown={press(clip.id, "body")}
                   type="button"
@@ -195,6 +241,7 @@ export function RecordingSceneLane({
             );
           })}
         </TimelineViewportContent>
+        {band ? <TimelineLaneBandBox box={band.box} /> : null}
       </div>
     </div>
   );

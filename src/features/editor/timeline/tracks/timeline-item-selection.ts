@@ -21,6 +21,15 @@ export function selectTimelineItem<ItemId>(
   return next;
 }
 
+/** The choice after a band swept over `ids`: those alone, or added to what
+ * was chosen already. */
+export const sweptTimelineItems = <ItemId>(
+  current: ReadonlySet<ItemId>,
+  ids: readonly ItemId[],
+  additive: boolean,
+): ReadonlySet<ItemId> =>
+  additive ? new Set([...current, ...ids]) : new Set(ids);
+
 export function useTimelineItemSelection<ItemId>(
   onSelectionStart?: () => void,
 ): TimelineItemSelection<ItemId> {

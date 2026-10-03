@@ -28,6 +28,7 @@ import { useRecordingPreviewCanvasTool } from "./use-recording-preview-canvas-to
 import { useRecordingPreviewSelection } from "./use-recording-preview-selection";
 import { useRecordingPreviewShortcuts } from "./use-recording-preview-shortcuts";
 import { useRecordingPreviewTransport } from "./use-recording-preview-transport";
+import { useRecordingSceneCanvas } from "./use-recording-scene-canvas";
 import { useRecordingToolbar } from "./use-recording-toolbar";
 
 import type { ScrubPreviewProps } from "./scrub-preview";
@@ -138,18 +139,30 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   useEffect(() => {
     if (isSheetOpen && isPlaying) pausePlayer();
   }, [isPlaying, isSheetOpen, pausePlayer]);
+  const sceneCanvas = useRecordingSceneCanvas({
+    activeVideoTrack,
+    otherSelectionMade:
+      annotations.hasSelection ||
+      selection.keyboardTimeline.selection.ids.size > 0 ||
+      transport.timelineBlade.blade.rangeSelection !== null ||
+      transport.timelineBlade.blade.selectedSegmentId !== null,
+    scenes: transport.scenes,
+  });
   const canEditActiveTrack =
     activeVideoTrack !== null && composedVideoTracks.has(activeVideoTrack);
   const canResizeActiveTrack =
     canEditActiveTrack && (!bakeCamera || canPreviewBakedCamera);
   const hasVisiblePanes = visiblePaneEntries.length > 0;
-  useRecordingCanvasContextMenu({
-    cameraPlacement: annotations.cameraPlacement,
-    clips: annotations.clips,
-    onClipsChange: annotations.onClipsChange,
-    pinning: annotations.pinning,
-    selectedIds: annotations.selectedIds,
-  });
+  useRecordingCanvasContextMenu(
+    {
+      cameraPlacement: annotations.cameraPlacement,
+      clips: annotations.clips,
+      onClipsChange: annotations.onClipsChange,
+      pinning: annotations.pinning,
+      selectedIds: annotations.selectedIds,
+    },
+    sceneCanvas.paneMenu,
+  );
   const { changeCanvasTool, isCropping, leaveCropTool, toggleTool } =
     useRecordingPreviewCanvasTool({
       activeVideoTrack,
@@ -193,11 +206,13 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   useRecordingPreviewShortcuts({
     ...panelToggles,
     annotations,
+    arrangeScenePane: sceneCanvas.arrangeSelectedPane,
     canEditActiveTrack,
     canResizeActiveTrack,
     canvasTool,
     hasCursorData,
     hasKeyboardData,
+    hasSceneSelection: transport.scenes.selection.ids.size > 0,
     hasScenes: transport.scenes.isAvailable,
     hasVisiblePanes,
     isCropping,

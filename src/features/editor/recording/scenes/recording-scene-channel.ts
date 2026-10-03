@@ -6,9 +6,12 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { ToolPanelScene } from "../../tool-panels/tool-panel-scene";
 import { EditorKind } from "../../types";
 
+import { ScenePane } from "./recording-scene-order";
 import { SceneTemplate, SceneTemplateLayout } from "./recording-scene-template";
 import { SceneVariant } from "./recording-scene-variant";
 import { RecordingScenePreset, SceneFraming } from "./recording-scenes";
+
+import type { Arrangement } from "../../annotations/annotation-order";
 
 /**
  * The scene under the preview's playhead, and the edits that change it,
@@ -20,6 +23,8 @@ import { RecordingScenePreset, SceneFraming } from "./recording-scenes";
  * shortcut is published.
  */
 export type RecordingSceneControls = {
+  /** Move `pane` through the order of a custom scene's two panes. */
+  arrangePane: (pane: ScenePane, move: Arrangement) => void;
   choosePreset: (preset: RecordingScenePreset) => void;
   /** Lay the scene out as `template`, fitted to this canvas. */
   chooseTemplate: (template: SceneTemplate) => void;
@@ -35,6 +40,8 @@ export type RecordingSceneControls = {
   setRadius: (radius: number) => void;
   /** Change the preset's options a field at a time. */
   setVariant: (variant: SceneVariant) => void;
+  /** Trade a custom scene's two panes: boxes and order. */
+  swapPanes: () => void;
   /** What a template would keep of the scene, null where it is not custom. */
   templateLayout: () => SceneTemplateLayout | null;
 };
@@ -75,6 +82,9 @@ export function usePublishRecordingScene(
       // The controls are read through the ref when called, so a panel that
       // holds this object still reaches the preview's current edit.
       controls: {
+        arrangePane: (pane, move) => {
+          controlsRef.current.arrangePane(pane, move);
+        },
         choosePreset: (next) => {
           controlsRef.current.choosePreset(next);
         },
@@ -98,6 +108,9 @@ export function usePublishRecordingScene(
         },
         setVariant: (variant) => {
           controlsRef.current.setVariant(variant);
+        },
+        swapPanes: () => {
+          controlsRef.current.swapPanes();
         },
         templateLayout: () => controlsRef.current.templateLayout(),
       },

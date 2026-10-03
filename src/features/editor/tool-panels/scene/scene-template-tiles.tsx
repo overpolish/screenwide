@@ -51,7 +51,11 @@ export function SceneTemplateTiles({
         onPress={() => {
           onChoose(template);
         }}
-        schematic={{ camera: boxes.camera ?? null, screen: boxes.screen }}
+        schematic={{
+          camera: boxes.camera ?? null,
+          cameraBehind: boxes.cameraBehind ?? false,
+          screen: boxes.screen,
+        }}
       />
     );
   });

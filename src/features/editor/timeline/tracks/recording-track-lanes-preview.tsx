@@ -4,6 +4,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { useLaneAnnotationSelection } from "../../recording/annotations/use-lane-annotation-selection";
+import { useRecordingSceneSelection } from "../../recording/scenes/use-recording-scene-selection";
 import { useEditorWindowShortcuts } from "../../shortcuts/use-editor-window-shortcuts";
 import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
 import {
@@ -72,6 +73,10 @@ export function RecordingTrackLanesPreview({
   );
   const annotationSelection = useLaneAnnotationSelection(annotationClips);
   const [sceneClips, setSceneClips] = useState(STORY_SCENE_CLIPS);
+  const sceneSelection = useRecordingSceneSelection({
+    clips: sceneClips,
+    commit: setSceneClips,
+  });
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);
   const [isRangeActive, setIsRangeActive] = useState(false);
@@ -266,6 +271,9 @@ export function RecordingTrackLanesPreview({
         onEnabledVideoTracksChange={setEnabledVideo}
         onSceneActivate={() => undefined}
         onScenesChange={setSceneClips}
+        onScenesClear={sceneSelection.onClear}
+        onSceneSelect={sceneSelection.onSelect}
+        onScenesSweep={sceneSelection.onSelectSwept}
         onSeek={(ratio) => {
           playheadRatioRef.current = ratio;
           playhead.publish((ratio * timelineDurationMs) / 1_000, ratio);
@@ -274,6 +282,7 @@ export function RecordingTrackLanesPreview({
         playhead={playhead}
         sceneClips={sceneClips}
         selectedAnnotationIds={annotationSelection.selectedIds}
+        selectedSceneIds={sceneSelection.ids}
         selectedTrack={selectedTrack}
         sourceDurationMs={STORY_DURATION_MS}
         thumbnails={STORY_THUMBNAILS}

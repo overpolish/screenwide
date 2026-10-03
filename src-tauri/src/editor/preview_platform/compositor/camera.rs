@@ -80,6 +80,7 @@ impl CameraComposition {
       recenter_inset_color: None,
       scene_motion: None,
       scene_opacity: None,
+      scene_camera_front: None,
       source_crop: NormalizedSourceRect {
         height: 1.0,
         width: 1.0,

@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 
+import { sweptTimelineItems } from "../timeline/tracks/timeline-item-selection";
 import { EditorKind } from "../types";
 
 import { usePublishAnnotationSelection } from "./annotation-channel";
@@ -14,7 +15,6 @@ import {
 import {
   annotationDeleteTargets,
   chosenAnnotationIds,
-  sweptAnnotationIds,
   toggledAnnotationIds,
 } from "./annotation-selection";
 import { Annotation, AnnotationStyle } from "./annotations";
@@ -220,7 +220,7 @@ export function useAnnotations({
     },
     /** Choose what a band swept over, alone or added to the choice. */
     selectAnnotations: (ids: readonly string[], additive: boolean) => {
-      setChosen(sweptAnnotationIds(selectedIds, ids, additive));
+      setChosen(sweptTimelineItems(selectedIds, ids, additive));
     },
     /** The one annotation in hand, or null with none or several chosen. */
     selectedId,

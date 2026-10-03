@@ -18,11 +18,13 @@ export type Picture = { width: number; x: number; y: number };
 /** Where the panes are, in the canvas's output pixels: the screen's box and
  * the whole screen image behind it by its corner and width, then the
  * camera's box and the camera picture behind it by its centre and width;
- * each pane's corner radius in percent of its box's shorter side; and how
- * opaque each pane is drawn, zero for a pane the scene hides. The twin of
- * `Placement` in `src-tauri/src/editor/scenes/placement.rs`. */
+ * each pane's corner radius in percent of its box's shorter side; how
+ * opaque each pane is drawn, zero for a pane the scene hides; and how far the
+ * camera is drawn in front of the screen, one in front and zero behind. The
+ * twin of `Placement` in `src-tauri/src/editor/scenes/placement.rs`. */
 export type Placement = {
   camera: Picture;
+  cameraFront: number;
   frame: SceneRect;
   image: Picture;
   opacity: { camera: number; screen: number };
@@ -47,6 +49,7 @@ export const basePlacement = (
         y: camera.overlay.cameraY,
       }
     : { width: 0, x: 0, y: 0 },
+  cameraFront: 1,
   // Where the camera is drawn rather than where its box is stored, so a
   // scene arriving starts from the camera on screen.
   frame: camera
@@ -158,6 +161,7 @@ export const targeting =
         camera && cameraFraming
           ? placedPicture(cameraFraming, frame, camera.aspect)
           : base.camera,
+      cameraFront: clip.boxes?.cameraBehind ? 0 : 1,
       frame,
       image,
       opacity: {

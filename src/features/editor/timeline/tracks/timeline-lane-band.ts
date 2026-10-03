@@ -9,14 +9,23 @@ import {
   useState,
 } from "react";
 
-import { TimelineViewportState } from "../../timeline/timeline-viewport";
-import { StackedLaneFragment } from "../../timeline/tracks/timed-lane-layout";
+import {
+  timelineFractionToX,
+  TimelineViewportState,
+} from "../timeline-viewport";
 
-import { LaneBox, sweptAnnotationClips } from "./recording-annotation-layout";
-import { RecordingAnnotationClip } from "./recording-annotations";
+import { timedLaneFragmentBox } from "./timed-lane-layout";
+
+/** A rectangle in a lane's own CSS pixels. */
+export type LaneBox = {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+};
 
 /** How far a press on empty lane travels before it draws a band rather than
- * clearing the choice; the lane's clip drags wait the same. */
+ * clearing the choice; the lanes' clip drags wait the same. */
 const BAND_SLOP_PX = 4;
 
 /** Whether a press adds to the choice rather than replacing it: the modifier
@@ -24,38 +33,80 @@ const BAND_SLOP_PX = 4;
 export const togglesChoice = (event: { ctrlKey: boolean; metaKey: boolean }) =>
   event.metaKey || event.ctrlKey;
 
+/**
+ * The ids of the items a band over `box` touches, as a lane `laneWidthPx`
+ * wide draws `fragments` under `viewport`, each at least `minimumWidthPx`
+ * wide. An item drawn in several fragments is named once.
+ */
+export const sweptLaneItems = (
+  fragments: readonly {
+    item: { id: string };
+    outputEnd: number;
+    outputStart: number;
+    row?: number;
+  }[],
+  box: LaneBox,
+  {
+    laneWidthPx,
+    minimumWidthPx,
+    viewport,
+  }: {
+    laneWidthPx: number;
+    minimumWidthPx: number;
+    viewport: TimelineViewportState;
+  },
+): string[] => {
+  const lane = { left: 0, width: laneWidthPx };
+  const swept = new Set<string>();
+  for (const { item, outputEnd, outputStart, row = 0 } of fragments) {
+    const left = timelineFractionToX(outputStart, viewport, lane);
+    const right = Math.max(
+      timelineFractionToX(outputEnd, viewport, lane),
+      left + minimumWidthPx,
+    );
+    const { height, top } = timedLaneFragmentBox(row);
+    if (
+      left <= box.right &&
+      box.left <= right &&
+      top <= box.bottom &&
+      box.top <= top + height
+    )
+      swept.add(item.id);
+  }
+  return [...swept];
+};
+
 type Band = {
   /** Whether the band adds to what was chosen when it began. */
   additive: boolean;
   box: LaneBox;
-  /** The clips under the band, shown chosen while it is drawn. */
+  /** The items under the band, shown chosen while it is drawn. */
   ids: ReadonlySet<string>;
 };
 
 /**
- * A band drawn from a press on empty lane space, choosing every clip it
+ * A band drawn from a press on empty lane space, choosing every item it
  * touches on release; Cmd or Ctrl held at the press adds them to the choice,
- * as the same modifier adds a single clip. A press that never travels clears
- * the choice instead, and Escape abandons a band in flight.
+ * as the same modifier adds a single item. A press that never travels clears
+ * the choice instead, and Escape abandons a band in flight. `sweep` names the
+ * items under a box in the lane's own pixels.
  */
-export function useRecordingAnnotationBand({
-  fragments,
+export function useTimelineLaneBand({
   laneRef,
   onClear,
   onSweep,
-  viewport,
+  sweep,
 }: {
-  fragments: StackedLaneFragment<RecordingAnnotationClip & { id: string }>[];
   laneRef: RefObject<HTMLDivElement | null>;
   onClear: () => void;
   onSweep: (ids: string[], additive: boolean) => void;
-  viewport: TimelineViewportState;
+  sweep: (box: LaneBox, laneWidthPx: number) => string[];
 }) {
   const [band, setBand] = useState<Band | null>(null);
   // The window listeners live for one gesture while these are rebuilt every
   // render, so the listeners read them through a ref.
-  const latestRef = useRef({ fragments, onClear, onSweep, viewport });
-  latestRef.current = { fragments, onClear, onSweep, viewport };
+  const latestRef = useRef({ onClear, onSweep, sweep });
+  latestRef.current = { onClear, onSweep, sweep };
   const detachRef = useRef<() => void>(() => undefined);
   useEffect(
     () => () => {
@@ -89,11 +140,7 @@ export function useRecordingAnnotationBand({
         right: x(Math.max(origin.x, clientX)),
         top: y(Math.min(origin.y, clientY)),
       };
-      const { fragments, viewport } = latestRef.current;
-      swept = sweptAnnotationClips(fragments, box, {
-        laneWidthPx: bounds.width,
-        viewport,
-      });
+      swept = latestRef.current.sweep(box, bounds.width);
       setBand({ additive, box, ids: new Set(swept) });
     };
     const move = (moved: PointerEvent) => {

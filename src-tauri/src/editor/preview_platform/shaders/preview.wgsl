@@ -484,9 +484,10 @@ fn annotation_spotlight_blur() -> AnnotationSpotlightBlur {
 
 // The first annotation drawn over the camera, which a loupe showing what
 // lies under it lays the camera under; past every annotation where the camera
-// is not drawn over them.
+// is not drawn over them. While a scene crosses the order over, the nearer
+// order stands.
 fn annotation_camera_run() -> u32 {
-  if (!annotations_drawn || canvas.camera_effects.y == 0.0 || canvas.camera_effects.w == 0.0) {
+  if (!annotations_drawn || canvas.camera_effects.y == 0.0 || canvas.camera_effects.w < 0.5) {
     return 0xffffffffu;
   }
   return canvas.annotation_options.x;
@@ -1018,6 +1019,94 @@ fn crop_magnifier(result: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
   return vec4<f32>(rgb, 1.0);
 }
 
+// The panes and their annotations over the background; `base` is the canvas
+// under the run of annotations last drawn, before any of them, which the mark
+// blur's layer is the difference from, and `stopped` says the pass drawing
+// that layer stopped under the shade it is for.
+struct Panes {
+  rgba: vec4<f32>,
+  base: vec4<f32>,
+  stopped: bool,
+}
+
+// The screen over `result_in`, faded as a scene hides or shows it with the
+// cursor it carries, then the crop preview over it.
+fn screen_pane(result_in: vec4<f32>, pixel: vec2<f32>, foreground_only: bool) -> vec4<f32> {
+  var result = result_in;
+  let screen_opacity = canvas.scene_opacity.x;
+  if (screen_opacity > 0.0) {
+    result = mix(result, moving_screen_layer(result, pixel, foreground_only), screen_opacity);
+  }
+  return crop_preview_layer(result, pixel);
+}
+
+// One run of annotations over `result_in`: the screen's, which carries the
+// cursor, over every mark but shaded and hidden by what acts on the picture,
+// or the camera's own, which a scene fades with the camera rather than with
+// the screen.
+fn annotation_run(result_in: vec4<f32>, base: vec4<f32>, pixel: vec2<f32>, camera_run: bool,
+                  feather: f32, atlas: AnnotationTextAtlas) -> Panes {
+  let below = select(0u, canvas.annotation_options.x, annotations_drawn);
+  let total = select(0u, canvas.annotation_options.y, annotations_drawn);
+  let first = select(0u, below, camera_run);
+  let last = select(below, total, camera_run);
+  var result = composite_annotation_layers(result_in, base, pixel, first, last, total, feather,
+                                           atlas, !camera_run);
+  result = mix(result_in, result,
+               select(canvas.scene_opacity.x, canvas.scene_opacity.y, camera_run));
+  let shade = annotation_blur_spotlight();
+  return Panes(result, base, annotation_blur_mode() == 1u && shade >= first && shade < last);
+}
+
+// Whether the camera carries annotations of its own, a second run.
+fn has_camera_run() -> bool {
+  return annotations_drawn && canvas.annotation_options.y > canvas.annotation_options.x;
+}
+
+// The screen and its annotations, then the camera and its own. Both runs go
+// through the one call: the composite is large, and the GPU compiler inlines
+// every call site whole, which multiplies how long the pipeline takes to
+// build.
+fn panes_camera_in_front(start: vec4<f32>, pixel: vec2<f32>, foreground_only: bool,
+                         feather: f32, atlas: AnnotationTextAtlas) -> Panes {
+  var result = screen_pane(start, pixel, foreground_only);
+  let base = result;
+  let runs = select(1u, 2u, has_camera_run());
+  for (var run = 0u; run < runs; run++) {
+    let drawn = annotation_run(result, base, pixel, run == 1u, feather, atlas);
+    if (drawn.stopped) {
+      return drawn;
+    }
+    result = drawn.rgba;
+    if (run == 0u) {
+      result = camera_layer(result, pixel);
+    }
+  }
+  return Panes(result, base, false);
+}
+
+// The camera and its own annotations, then the screen and its annotations
+// over them, each run over the canvas its own pane was just laid on.
+fn panes_camera_behind(start: vec4<f32>, pixel: vec2<f32>, foreground_only: bool,
+                       feather: f32, atlas: AnnotationTextAtlas) -> Panes {
+  var result = camera_layer(start, pixel);
+  var base = result;
+  let runs = select(1u, 2u, has_camera_run());
+  for (var run = 0u; run < runs; run++) {
+    let camera_run = run + 1u < runs;
+    if (!camera_run) {
+      result = screen_pane(result, pixel, foreground_only);
+      base = result;
+    }
+    let drawn = annotation_run(result, base, pixel, camera_run, feather, atlas);
+    if (drawn.stopped) {
+      return drawn;
+    }
+    result = drawn.rgba;
+  }
+  return Panes(result, base, false);
+}
+
 @fragment
 fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let pixel = (position.xy - canvas.placement.xy) * canvas.placement.zw;
@@ -1036,16 +1125,6 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   if (!foreground_only) {
     result = vec4<f32>(background(pixel), 1.0);
   }
-  if (canvas.camera_effects.w == 0.0) {
-    result = camera_layer(result, pixel);
-  }
-  // A scene fades the screen as it hides or shows it, its annotations and
-  // the cursor it carries with it.
-  let screen_opacity = canvas.scene_opacity.x;
-  if (screen_opacity > 0.0) {
-    result = mix(result, moving_screen_layer(result, pixel, foreground_only), screen_opacity);
-  }
-  result = crop_preview_layer(result, pixel);
   // Every annotation edge feathers over one *drawn* pixel, not one canvas
   // pixel: a canvas shown smaller than its resolution would otherwise take its
   // whole antialiasing band from inside a single drawn pixel and come out
@@ -1054,35 +1133,31 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   // The atlas's size and, in `motion.w`, how many atlas pixels it holds per
   // canvas pixel.
   let annotation_atlas = AnnotationTextAtlas(canvas.annotation_options.zw, canvas.motion.w);
-  // The screen layer carries the cursor, over every mark but shaded and
-  // hidden by what acts on the picture. The run below the camera is drawn
-  // first, then the camera, then the run above it. Both runs go through the
-  // one call: the composite is large, and the GPU compiler inlines every call
-  // site whole, which multiplies how long the pipeline takes to build.
-  let below = select(0u, canvas.annotation_options.x, annotations_drawn);
-  let total = select(0u, canvas.annotation_options.y, annotations_drawn);
-  let runs = select(1u, 2u, total > below);
-  // The canvas before any annotation, which the mark blur's layer is the
-  // difference from.
-  let base = result;
-  for (var run = 0u; run < runs; run++) {
-    let first = select(below, 0u, run == 0u);
-    let last = select(total, below, run == 0u);
-    let unannotated = result;
-    result = composite_annotation_layers(result, base, pixel, first, last, total,
-                                         annotation_feather, annotation_atlas, run == 0u);
-    // The run over the camera is the camera's own annotations, which a scene
-    // fades with the camera rather than with the screen.
-    result = mix(unannotated, result, select(screen_opacity, canvas.scene_opacity.y, run == 1u));
-    let shade = annotation_blur_spotlight();
-    if (annotation_blur_mode() == 1u && shade >= first && shade < last) {
-      // Drawing the layer: the run stopped under the shade.
-      return result - base;
-    }
-    if (run == 0u && canvas.camera_effects.w != 0.0) {
-      result = camera_layer(result, pixel);
-    }
+  // While a scene crosses the order over, both orders are drawn and mixed:
+  // outside the panes' overlap they agree, so only the overlap fades from one
+  // pane to the other. The mark blur's layer is drawn from the nearer order.
+  let camera_front = canvas.camera_effects.w;
+  var panes: Panes;
+  if (canvas.camera_effects.y == 0.0 || camera_front >= 1.0 ||
+      (annotation_blur_mode() == 1u && camera_front >= 0.5)) {
+    panes = panes_camera_in_front(result, pixel, foreground_only, annotation_feather,
+                                  annotation_atlas);
+  } else if (camera_front <= 0.0 || annotation_blur_mode() == 1u) {
+    panes = panes_camera_behind(result, pixel, foreground_only, annotation_feather,
+                                annotation_atlas);
+  } else {
+    let behind = panes_camera_behind(result, pixel, foreground_only, annotation_feather,
+                                     annotation_atlas);
+    let ahead = panes_camera_in_front(result, pixel, foreground_only, annotation_feather,
+                                      annotation_atlas);
+    panes = Panes(mix(behind.rgba, ahead.rgba, camera_front),
+                  mix(behind.base, ahead.base, camera_front), false);
   }
+  if (panes.stopped) {
+    // Drawing the layer: the run stopped under the shade.
+    return panes.rgba - panes.base;
+  }
+  result = panes.rgba;
   result = composite_keyboard(result, pixel, canvas.output_source.xy);
   if (!foreground_only) {
     // Hashed at the drawn pixel's corner, as every macOS canvas has dithered.

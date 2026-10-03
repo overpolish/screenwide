@@ -69,6 +69,7 @@ export const towardPlacement = (
 ): Placement => {
   const next: Placement = {
     camera: mixedPicture(from.camera, to.camera, t),
+    cameraFront: mixed(from.cameraFront, to.cameraFront, t),
     frame: mixedRect(from.frame, to.frame, t),
     image: mixedPicture(from.image, to.image, t),
     opacity: {

@@ -89,11 +89,14 @@ pub struct ScreenshotOutputSettings {
   /// arrangement; never sent by the webview or saved.
   #[serde(skip)]
   pub scene_motion: Option<crate::editor::scenes::SceneMotion>,
-  /// How opaque a scene draws the screen and the camera, which fade as a
-  /// scene hides or shows them. Set per drawn frame by the scene arrangement;
-  /// never sent by the webview or saved. Unset, both are drawn whole.
+  /// How opaque a scene draws the screen and the camera as it hides or shows
+  /// them, and how far it draws the camera in front, one to zero. Set per
+  /// drawn frame by the scene arrangement, never sent or saved; unset, both
+  /// are drawn whole in the composition's own order.
   #[serde(skip)]
   pub scene_opacity: Option<[f32; 2]>,
+  #[serde(skip)]
+  pub scene_camera_front: Option<f32>,
   pub mesh_colors: Vec<String>,
   /// Which picture the mesh background paints. Settings written before the
   /// ported generators existed carry none, and are the app's own blob mesh.

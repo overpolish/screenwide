@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { EditorKind } from "../types";
 
 import { ToolPanelHandlers } from "./tool-panel-handlers";
+import { ToolPanelPatch } from "./tool-panel-patch";
 import {
-  ToolPanelPatch,
   ToolPanelSnapshot,
   useToolPanelRequestStore,
   useToolPanelStore,
@@ -95,6 +95,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onSceneTemplateRemove?.(values.removeSceneTemplate);
   if (values.resetSceneFraming) on.onSceneFramingReset?.();
   if (values.deleteScene) on.onSceneDelete?.();
+  if (values.swapScenePanes) on.onScenePanesSwap?.();
 };
 
 /**

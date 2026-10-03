@@ -72,10 +72,15 @@ export type RecordingSceneClip = {
  * height. */
 export type SceneBox = { height: number; width: number; x: number; y: number };
 
-/** Where a custom scene puts its panes. The camera keeps the recording's own
- * box where it has none. The twin of `SceneBoxes` in
+/** Where a custom scene puts its panes, and which of them is drawn in front.
+ * The camera keeps the recording's own box where it has none, and is drawn
+ * in front unless `cameraBehind` is set. The twin of `SceneBoxes` in
  * `src-tauri/src/editor/scenes/model.rs`. */
-export type SceneBoxes = { screen: SceneBox; camera?: SceneBox };
+export type SceneBoxes = {
+  screen: SceneBox;
+  camera?: SceneBox;
+  cameraBehind?: true;
+};
 
 /** The corner radius a scene gives each pane, as a share of the pane's
  * shorter side in percent, like the recording's own. A pane without one

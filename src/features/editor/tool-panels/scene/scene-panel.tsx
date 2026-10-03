@@ -4,7 +4,9 @@
 import { ToggleButtonGroup } from "react-aria-components";
 
 import { Button } from "../../../../components/base/button/button";
+import { Switch } from "../../../../components/base/switch/switch";
 import { Text } from "../../../../components/base/text/text";
+import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import {
   RECORDING_SCENE_CUSTOM_LABEL,
   RECORDING_SCENE_LABELS,
@@ -28,13 +30,13 @@ import { SceneVariantRows } from "./scene-variant-rows";
 /**
  * The Scene tool's controls: the output first, since it decides what a scene
  * can place, then Custom, the presets and your templates, each drawn as it
- * looks, then the options of the preset under the playhead, then for that
- * scene how far it zooms into its selected pane, how round that pane's
- * corners are, and which part of it the zoom shows. The camera is that pane
- * while it is selected and the scene places it; the screen otherwise. The
- * presets, and the templates that place a camera, are only offered while
- * there is a camera drawn into the screen's video; over a scene that is
- * paused for want of one, only the output is.
+ * looks, then the options of the preset under the playhead, or a custom
+ * scene's Swap, then for that scene how far it zooms into its selected pane,
+ * how round that pane's corners are, and which part of it the zoom shows.
+ * The camera is that pane while it is selected and the scene places it; the
+ * screen otherwise. The presets, and the templates that place a camera, are
+ * only offered while there is a camera drawn into the screen's video; over a
+ * scene that is paused for want of one, only the output is.
  *
  * Between scenes Custom is chosen and stands for the recording's own
  * composition, so edits change the whole recording and no scene is made.
@@ -184,6 +186,23 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
           preset={preset}
           variant={scene.variant}
         />
+      ) : null}
+
+      {/* A custom scene's Swap trades its panes' boxes and their order, so
+          it reads on wherever the camera sits behind the screen. */}
+      {scene.hasSceneAtPlayhead && scene.boxes?.camera ? (
+        <ControlRow title="Swap">
+          {(controlProps) => (
+            <Switch
+              {...controlProps}
+              isDisabled={isLocked}
+              isSelected={scene.boxes?.cameraBehind ?? false}
+              onChange={() => {
+                change({ swapScenePanes: true });
+              }}
+            />
+          )}
+        </ControlRow>
       ) : null}
 
       {framing ? (

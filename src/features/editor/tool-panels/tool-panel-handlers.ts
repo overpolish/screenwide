@@ -15,7 +15,7 @@ import {
 import { CursorEffectSettings, KeyboardEffectSettings } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
-import { ToolPanelPatch } from "./tool-panel-store";
+import { ToolPanelPatch } from "./tool-panel-patch";
 
 /**
  * What a tool panel can ask for. Each one is an editor handler that already
@@ -82,6 +82,8 @@ export type ToolPanelHandlers = {
   onSceneFramingChange?: (framing: Partial<SceneFraming>) => void;
   /** Show the whole screen and camera again in the scene under the playhead. */
   onSceneFramingReset?: () => void;
+  /** Trade the panes of the custom scene under the playhead. */
+  onScenePanesSwap?: () => void;
   /** Give the scene under the playhead this preset, or add a scene there
    * with it where there is none. */
   onScenePresetChoose?: (preset: RecordingScenePreset) => void;

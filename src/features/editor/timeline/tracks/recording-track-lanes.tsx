@@ -26,7 +26,7 @@ import { TimelineItemLane } from "./timeline-item-lane";
 /** The narrowest a shortcut badge is drawn, in pixels; kept here beside the
  * lane that carries it so the lane and the meter agree on one number. */
 const KEYBOARD_MINIMUM_ITEM_WIDTH_PX = 48;
-const NO_ANNOTATIONS: ReadonlySet<string> = new Set();
+const NO_IDS: ReadonlySet<string> = new Set();
 const NO_SCENES: RecordingSceneClip[] = [];
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
@@ -56,15 +56,19 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onEnabledVideoTracksChange,
   onSceneActivate,
   onScenePanelOpen,
+  onSceneSelect,
   onScenesChange,
+  onScenesClear,
   onScenesDraftChange,
+  onScenesSweep,
   onSeek,
   onSelectKeyboardShortcut,
   onSelectedTrackChange,
   playhead,
   sceneClips = NO_SCENES,
   scenesPaused = false,
-  selectedAnnotationIds = NO_ANNOTATIONS,
+  selectedAnnotationIds = NO_IDS,
+  selectedSceneIds = NO_IDS,
   selectedTrack,
   sourceDurationMs,
   thumbnails,
@@ -128,16 +132,24 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
             />
           }
         >
-          {onScenesChange && onSceneActivate ? (
+          {onScenesChange &&
+          onSceneActivate &&
+          onSceneSelect &&
+          onScenesClear &&
+          onScenesSweep ? (
             <RecordingSceneLane
               clips={sceneClips}
               edit={blade.edit}
               isPaused={scenesPaused}
               onActivate={onSceneActivate}
               onChange={onScenesChange}
+              onClearSelection={onScenesClear}
               onDraftChange={onScenesDraftChange}
               onOpenPanel={onScenePanelOpen}
               onSeek={onSeek}
+              onSelect={onSceneSelect}
+              onSelectSwept={onScenesSweep}
+              selectedIds={selectedSceneIds}
               sourceDurationMs={sourceDurationMs}
               viewport={timeline.viewport}
             />

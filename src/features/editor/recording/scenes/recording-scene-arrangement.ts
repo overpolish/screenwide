@@ -25,6 +25,9 @@ import {
 const TRANSITION_MS = 600;
 
 export type RecordingSceneArrangement = {
+  /** Whether the camera is drawn in front of the screen now; the nearer
+   * order while a scene crosses it over. */
+  cameraInFront: boolean;
   /** The camera's overlay as the scene draws it, null without a camera. */
   cameraOverlay: CameraOverlaySettings | null;
   /** Where the clip settles the camera's box and the framing it shows there,
@@ -139,6 +142,7 @@ export function arrangedRecordingScene({
         : cameraFramingOf(sceneCamera.overlay, sceneCamera.aspect)))
     : null;
   return {
+    cameraInFront: placed.cameraFront >= 0.5,
     cameraOverlay: sceneCamera
       ? {
           ...sceneCamera.overlay,

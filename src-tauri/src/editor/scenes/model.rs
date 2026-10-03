@@ -94,13 +94,18 @@ impl SceneBox {
   }
 }
 
-/// Where a custom scene puts its panes in place of its preset's boxes. The
-/// camera keeps the recording's own box where it has none.
+/// Where a custom scene puts its panes in place of its preset's boxes, and
+/// which of them is drawn in front. The camera keeps the recording's own box
+/// where it has none, and is drawn in front unless `camera_behind` says
+/// otherwise.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SceneBoxes {
   pub screen: SceneBox,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub camera: Option<SceneBox>,
+  #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  pub camera_behind: bool,
 }
 
 impl SceneBoxes {
@@ -166,6 +171,16 @@ impl RecordingSceneClip {
     self
       .boxes
       .map_or(self.preset.needs_camera(), |boxes| boxes.camera.is_some())
+  }
+
+  /// One where the camera is drawn in front of the screen, zero where a
+  /// custom scene puts it behind.
+  pub(crate) fn camera_front(&self) -> f64 {
+    if self.boxes.is_some_and(|boxes| boxes.camera_behind) {
+      0.0
+    } else {
+      1.0
+    }
   }
 }
 

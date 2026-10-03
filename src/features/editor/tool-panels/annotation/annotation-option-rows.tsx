@@ -11,7 +11,7 @@ import { ControlRow } from "../../../../components/shared/control-row/control-ro
 
 import type { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import type { AnnotationStyle } from "../../annotations/annotations";
-import type { ToolPanelPatch } from "../tool-panel-store";
+import type { ToolPanelPatch } from "../tool-panel-patch";
 
 /**
  * The options only some kinds carry: an arrow's heads, a text box's

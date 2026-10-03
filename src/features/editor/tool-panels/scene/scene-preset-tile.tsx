@@ -82,7 +82,7 @@ export function ScenePresetTile({
   label,
   onContextMenu,
   onPress,
-  schematic: { camera, screen },
+  schematic: { camera, cameraBehind = false, screen },
 }: {
   /** The finished frame's width over its height. */
   canvasAspect: number;
@@ -97,6 +97,16 @@ export function ScenePresetTile({
   /** A press of the secondary button, which is how a template is removed. */
   onContextMenu?: MouseEventHandler<HTMLDivElement>;
 }) {
+  const screenPane = screen ? (
+    <SchematicPane isSelected={isSelected} key="screen" rect={screen}>
+      <Monitor aria-hidden="true" />
+    </SchematicPane>
+  ) : null;
+  const cameraPane = camera ? (
+    <SchematicPane isSelected={isSelected} key="camera" rect={camera}>
+      <Camera aria-hidden="true" />
+    </SchematicPane>
+  ) : null;
   // The pencil sits in the corner furthest from the camera, so it never
   // covers the pane that tells the layouts apart.
   const cameraRight = camera ? camera.x + camera.width / 2 >= 0.5 : false;
@@ -121,16 +131,7 @@ export function ScenePresetTile({
         className="relative mx-auto block h-full"
         style={{ aspectRatio: canvasAspect }}
       >
-        {screen ? (
-          <SchematicPane isSelected={isSelected} rect={screen}>
-            <Monitor aria-hidden="true" />
-          </SchematicPane>
-        ) : null}
-        {camera ? (
-          <SchematicPane isSelected={isSelected} rect={camera}>
-            <Camera aria-hidden="true" />
-          </SchematicPane>
-        ) : null}
+        {cameraBehind ? [cameraPane, screenPane] : [screenPane, cameraPane]}
       </span>
       {hasEditBadge ? (
         <span

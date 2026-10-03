@@ -86,6 +86,14 @@ export function RecordingPreviewTimelineBand({
   const openScenePanel = () => {
     changeCanvasTool("scene");
   };
+  // Choosing scenes lets go of whatever else was chosen, so Delete only ever
+  // takes away one kind of thing.
+  const clearOtherSelections = () => {
+    annotations.clearSelection();
+    keyboardTimeline.selection.onClear();
+    timelineBlade.blade.clearRangeSelection();
+    timelineBlade.blade.selectSegment(null);
+  };
   return (
     <ResizableRecordingTimelineArea
       artifactId={artifactId}
@@ -152,15 +160,21 @@ export function RecordingPreviewTimelineBand({
           // A scene clicked in its lane takes up the Scene tool, the way a
           // chosen annotation takes up Select: what else was chosen lets go.
           onSceneActivate={() => {
-            annotations.clearSelection();
-            keyboardTimeline.selection.onClear();
-            timelineBlade.blade.clearRangeSelection();
-            timelineBlade.blade.selectSegment(null);
+            clearOtherSelections();
             openScenePanel();
           }}
           onScenePanelOpen={openScenePanel}
           onScenesChange={scenes.isAvailable ? scenes.onClipsChange : undefined}
+          onScenesClear={scenes.selection.onClear}
           onScenesDraftChange={scenes.onDraftChange}
+          onSceneSelect={(id, toggle) => {
+            clearOtherSelections();
+            scenes.selection.onSelect(id, toggle);
+          }}
+          onScenesSweep={(ids, additive) => {
+            if (ids.length > 0) clearOtherSelections();
+            scenes.selection.onSelectSwept(ids, additive);
+          }}
           onSeek={timelineBlade.seek}
           onSelectedTrackChange={changeSelectedTrack}
           onSelectKeyboardShortcut={() => {
@@ -174,6 +188,7 @@ export function RecordingPreviewTimelineBand({
           sceneClips={scenes.clips}
           scenesPaused={!scenes.canPlaceCamera}
           selectedAnnotationIds={annotations.selectedIds}
+          selectedSceneIds={scenes.selection.ids}
           selectedTrack={annotations.hasSelection ? null : selectedTrack}
           sourceDurationMs={durationMs}
           thumbnails={timelineThumbnails}

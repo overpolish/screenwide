@@ -5,10 +5,8 @@ import { Button } from "../../../../components/base/button/button";
 import { NumberField } from "../../../../components/base/input-fields/number-field";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
-import {
-  ToolPanelPatch,
-  ToolPanelShortcutSelection,
-} from "../tool-panel-store";
+import { ToolPanelPatch } from "../tool-panel-patch";
+import { ToolPanelShortcutSelection } from "../tool-panel-store";
 
 /**
  * The Select tool's controls for the shortcut on screen: how big it is drawn

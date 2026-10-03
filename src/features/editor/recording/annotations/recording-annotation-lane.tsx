@@ -17,6 +17,11 @@ import {
   TIMED_LANE_ROW_HEIGHT_PX,
   timedLaneFragmentBox,
 } from "../../timeline/tracks/timed-lane-layout";
+import {
+  togglesChoice,
+  useTimelineLaneBand,
+} from "../../timeline/tracks/timeline-lane-band";
+import { TimelineLaneBandBox } from "../../timeline/tracks/timeline-lane-band-box";
 import { TimelineTrackHeader } from "../../timeline/tracks/timeline-track-header";
 
 import { RecordingAnnotationClipBody } from "./recording-annotation-clip-body";
@@ -25,6 +30,7 @@ import { RecordingCameraPlacement } from "./recording-annotation-layers";
 import {
   ANNOTATION_CLIP_MINIMUM_WIDTH_PX,
   recordingAnnotationRows,
+  sweptAnnotationClips,
 } from "./recording-annotation-layout";
 import {
   RecordingAnnotationPinBadge,
@@ -37,10 +43,6 @@ import {
   useAnnotationClipMenu,
 } from "./use-annotation-clip-menu";
 import { usePinKeyframeMenu } from "./use-pin-keyframe-menu";
-import {
-  togglesChoice,
-  useRecordingAnnotationBand,
-} from "./use-recording-annotation-band";
 import { useRecordingAnnotationDrag } from "./use-recording-annotation-drag";
 import { RecordingPinStatus } from "./use-recording-pin-status";
 
@@ -103,12 +105,12 @@ export function RecordingAnnotationLane({
     edit,
     sourceDurationMs,
   );
-  const { band, pressLane } = useRecordingAnnotationBand({
-    fragments: laidOut.fragments,
+  const { band, pressLane } = useTimelineLaneBand({
     laneRef,
     onClear: onClearSelection,
     onSweep: onSelectSwept,
-    viewport,
+    sweep: (box, laneWidthPx) =>
+      sweptAnnotationClips(laidOut.fragments, box, { laneWidthPx, viewport }),
   });
   // While a band is drawn, the lane shows the choice it will make.
   const isSelected = (id: string) =>
@@ -272,18 +274,7 @@ export function RecordingAnnotationLane({
             );
           })}
         </TimelineViewportContent>
-        {band ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute bg-primary/15 inset-ring inset-ring-primary"
-            style={{
-              height: band.box.bottom - band.box.top,
-              left: band.box.left,
-              top: band.box.top,
-              width: band.box.right - band.box.left,
-            }}
-          />
-        ) : null}
+        {band ? <TimelineLaneBandBox box={band.box} /> : null}
       </div>
     </div>
   );

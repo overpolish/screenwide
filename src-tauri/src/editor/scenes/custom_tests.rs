@@ -31,6 +31,7 @@ fn custom(preset: RecordingScenePreset, camera: Option<SceneBox>) -> RecordingSc
     boxes: Some(SceneBoxes {
       screen: SCREEN,
       camera,
+      camera_behind: false,
     }),
     radius: None,
     variant: None,
@@ -107,6 +108,47 @@ fn a_custom_scene_without_a_camera_box_plays_without_a_camera() {
 }
 
 #[test]
+fn a_scene_putting_the_camera_behind_crosses_the_order_over_as_it_arrives() {
+  let front = RecordingSceneClip {
+    end_ms: 5_000,
+    ..custom(RecordingScenePreset::Full, Some(CAMERA))
+  };
+  let mut behind: RecordingSceneClip = serde_json::from_value(serde_json::json!({
+    "id": "b", "startMs": 5_000, "endMs": 10_000, "preset": "full",
+    "boxes": {
+      "screen": { "x": 0.1, "y": 0.1, "width": 0.5, "height": 0.5 },
+      "camera": { "x": 0.7, "y": 0.6, "width": 0.2, "height": 0.3 },
+      "cameraBehind": true
+    }
+  }))
+  .unwrap();
+  assert!(behind.boxes.is_some_and(|boxes| boxes.camera_behind));
+  let order = |clips: &[RecordingSceneClip], source_ms: u64| {
+    let mut output = test_output_settings(1_600, 900);
+    arrange(
+      clips,
+      &[],
+      source_ms,
+      0.0,
+      &mut output,
+      Some((&mut overlay(), (1_280, 720))),
+    );
+    output.scene_camera_front
+  };
+  let clips = [front, behind.clone()];
+  assert_eq!(order(&clips, 2_000), Some(1.0));
+  // Halfway through the hand-over the two orders are mixed evenly.
+  assert!(order(&clips, 5_300).is_some_and(|front| (front - 0.5).abs() < 1e-6));
+  assert_eq!(order(&clips, 8_000), Some(0.0));
+  // A scene that leaves the order alone keeps the camera in front.
+  behind.boxes = behind.boxes.map(|boxes| SceneBoxes {
+    camera_behind: false,
+    ..boxes
+  });
+  assert_eq!(order(&[behind], 8_000), Some(1.0));
+}
+
+#[test]
 fn a_box_dragged_away_keeps_its_middle_on_the_canvas() {
   let dragged = SCREEN.moved((2.0, -2.0), 1.0);
   assert_eq!((dragged.x, dragged.y), (0.75, -0.25));
@@ -122,6 +164,7 @@ fn boxes_whose_middle_leaves_the_canvas_are_refused() {
   lost.boxes = Some(SceneBoxes {
     screen: SceneBox { x: 0.9, ..SCREEN },
     camera: None,
+    camera_behind: false,
   });
   assert!(validate_clips(&[lost]).is_err());
 }

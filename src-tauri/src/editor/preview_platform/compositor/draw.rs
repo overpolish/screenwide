@@ -205,12 +205,12 @@ impl Compositor {
         } else {
           0.0
         };
-        [
-          geometry.radius as f32,
-          1.0,
-          sigma,
-          if camera_on_top { 1.0 } else { 0.0 },
-        ]
+        // A scene's order, crossing over while it changes, overrides the
+        // composition's own.
+        let in_front = settings
+          .scene_camera_front
+          .unwrap_or(if camera_on_top { 1.0 } else { 0.0 });
+        [geometry.radius as f32, 1.0, sigma, in_front.clamp(0.0, 1.0)]
       }),
       magnifier: magnifier.map_or([0.0; 4], |value| value.geometry),
       magnifier_options: magnifier.map_or([0.0; 4], |value| value.options),

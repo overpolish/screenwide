@@ -8,11 +8,18 @@ import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline
 import { Playhead } from "../../timeline/scrub-playhead";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
-import { usePublishRecordingScene } from "./recording-scene-channel";
+import {
+  RecordingSceneControls,
+  usePublishRecordingScene,
+} from "./recording-scene-channel";
 import { recordingSceneEdits } from "./recording-scene-edits";
 import { drawnCameraFrame } from "./recording-scene-framing";
 import { selectedPaneFraming } from "./recording-scene-pane-framing";
 import { RecordingSceneClip, recordingSceneClipAt } from "./recording-scenes";
+import {
+  RecordingSceneSelection,
+  useRecordingSceneSelection,
+} from "./use-recording-scene-selection";
 import { useScenePreviewSync } from "./use-scene-preview-sync";
 
 const EMPTY_CLIPS: RecordingSceneClip[] = [];
@@ -23,20 +30,27 @@ export type RecordingScenes = {
    * neither shown nor exported, while full scenes still play. */
   canPlaceCamera: boolean;
   clips: RecordingSceneClip[];
+  /** The edits the Scene panel makes, which the preview's own menus and keys
+   * reach as well. */
+  controls: RecordingSceneControls;
+  /** The scene under the playhead, null between scenes. */
+  current: RecordingSceneClip | null;
   /** Whether the recording has a screen to arrange. */
   isAvailable: boolean;
   onClipsChange: (clips: RecordingSceneClip[]) => void;
   /** Shows a lane drag's draft in the preview while it lasts, or the
    * committed clips again for null. */
   onDraftChange: (clips: RecordingSceneClip[] | null) => void;
+  /** The scenes chosen in their lane. */
+  selection: RecordingSceneSelection;
 };
 
 /**
  * The recording's scene clips and the edits the lane and the Scene panel
- * make to them. Scenes are never selected: the panel acts on whichever one is
- * under the playhead, and adds one there where there is none. Every change is
- * a timeline edit, so it is saved with the recording and undone with the rest
- * of the timeline.
+ * make to them. The panel acts on whichever scene is under the playhead, and
+ * adds one there where there is none; the scenes chosen in the lane are what
+ * Delete takes away. Every change is a timeline edit, so it is saved with the
+ * recording and undone with the rest of the timeline.
  */
 export function useRecordingScenes({
   cameraOverlay,
@@ -124,6 +138,7 @@ export function useRecordingScenes({
     selectedPaneFraming({ camera: sceneCamera, clip, output, selectsCamera });
   const currentPane = current ? paneOf(current) : null;
   const showDraft = useScenePreviewSync({ clips, sessionId });
+  const selection = useRecordingSceneSelection({ clips, commit });
   // A composition from before placement was measured in output pixels has no
   // crop; the whole frame is its screen.
   const crop =
@@ -142,6 +157,15 @@ export function useRecordingScenes({
     x: rect.x / Math.max(1, output.width),
     y: rect.y / Math.max(1, output.height),
   });
+  const controls = recordingSceneEdits({
+    camera: sceneCamera,
+    clips,
+    commit,
+    getPositionMs,
+    output,
+    paneOf,
+    sourceDurationMs,
+  });
   usePublishRecordingScene(
     "recording",
     isAvailable
@@ -149,6 +173,7 @@ export function useRecordingScenes({
           boxes: current?.boxes
             ? {
                 camera: current.boxes.camera ?? null,
+                cameraBehind: current.boxes.cameraBehind ?? false,
                 screen: current.boxes.screen,
               }
             : null,
@@ -179,21 +204,16 @@ export function useRecordingScenes({
           variant: current ? (current.variant ?? {}) : null,
         }
       : null,
-    recordingSceneEdits({
-      camera: sceneCamera,
-      clips,
-      commit,
-      getPositionMs,
-      output,
-      paneOf,
-      sourceDurationMs,
-    }),
+    controls,
   );
   return {
     canPlaceCamera: hasCamera && isBaked,
     clips,
+    controls,
+    current,
     isAvailable,
     onClipsChange: commit,
     onDraftChange: showDraft,
+    selection,
   };
 }

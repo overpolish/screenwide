@@ -268,7 +268,7 @@ export function useRecordingPreviewTransport(
     onChange: onRecordingTimelineEditChange,
     onTrimPreviewRestore: trimPreview.restore,
     onTrimPreviewStart: trimPreview.start,
-    ownsDelete: !annotations.canDelete,
+    ownsDelete: !annotations.canDelete && scenes.selection.ids.size === 0,
     playhead,
     seekPlayer: player.seek,
     shortcutsEnabled: Boolean(layout),

@@ -3,6 +3,7 @@
 
 import { useCallback } from "react";
 
+import { Arrangement } from "../../annotations/annotation-order";
 import { useEditorWindowShortcuts } from "../../shortcuts/use-editor-window-shortcuts";
 import { useRecordingTimelineBlade } from "../../timeline/editing/use-recording-timeline-blade";
 import { RecordingPreviewLayout } from "../../types";
@@ -17,11 +18,13 @@ import { useRecordingPreviewSelection } from "./use-recording-preview-selection"
  * toggle the space bar drives. */
 export function useRecordingPreviewShortcuts({
   annotations,
+  arrangeScenePane,
   canEditActiveTrack,
   canResizeActiveTrack,
   canvasTool,
   hasCursorData,
   hasKeyboardData,
+  hasSceneSelection,
   hasScenes,
   hasVisiblePanes,
   isCropping,
@@ -35,11 +38,17 @@ export function useRecordingPreviewShortcuts({
   toggleTool,
 }: {
   annotations: ReturnType<typeof useRecordingAnnotations>;
+  /** Move the selected pane through the order of the custom scene under the
+   * playhead; unset where there is no such scene or pane. */
+  arrangeScenePane: ((move: Arrangement) => void) | undefined;
   canEditActiveTrack: boolean;
   canResizeActiveTrack: boolean;
   canvasTool: RecordingCanvasTool;
   hasCursorData: boolean;
   hasKeyboardData: boolean;
+  /** Scenes chosen in their lane own Delete, so nothing under the pointer
+   * goes with them. */
+  hasSceneSelection: boolean;
   hasScenes: boolean;
   hasVisiblePanes: boolean;
   isCropping: boolean;
@@ -64,15 +73,19 @@ export function useRecordingPreviewShortcuts({
   const canNudgeActiveTrack =
     canvasTool === "select" && canEditActiveTrack && !annotations.hasSelection;
   useEditorWindowShortcuts({
-    // A chosen annotation moves through the drawing order. The video layers
-    // keep theirs: the camera is always drawn over the screen.
+    // A chosen annotation moves through the drawing order. Outside a custom
+    // scene the video layers keep theirs, the camera drawn over the screen;
+    // in one, the selected pane moves through the scene's order.
     onArrange: annotations.hasSelection
       ? (move) => {
           annotations.arrangeSelected(move);
         }
-      : undefined,
+      : arrangeScenePane,
     onConfirm: isCropping ? leaveCropTool : undefined,
-    onDelete: annotations.canDelete ? annotations.deleteTargeted : undefined,
+    onDelete:
+      annotations.canDelete && !hasSceneSelection
+        ? annotations.deleteTargeted
+        : undefined,
     onDeselect: annotations.hasSelection
       ? annotations.clearSelection
       : isCropping

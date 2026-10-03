@@ -80,7 +80,9 @@ impl Plan {
     }
     let below = (values.annotation_options[0] as usize).min(arrows.len());
     let total = (values.annotation_options[1] as usize).min(arrows.len());
-    let camera_between = values.camera_effects[1] != 0.0 && values.camera_effects[3] != 0.0;
+    // While a scene crosses the order over, the blur layer follows the
+    // nearer order, as the shader draws that layer.
+    let camera_between = values.camera_effects[1] != 0.0 && values.camera_effects[3] >= 0.5;
     let topmost = |first: usize, last: usize| {
       (first..last)
         .rev()

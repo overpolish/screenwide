@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The layouts that hide a pane or take a variant, through the real video
-//! export: the camera alone across the canvas, and a stacked pair swapped so
-//! the camera is on top.
+//! The layouts that hide a pane, take a variant or change the panes' order,
+//! through the real video export: the camera alone across the canvas, a
+//! stacked pair swapped so the camera is on top, and a custom scene that puts
+//! the camera behind the screen.
 
 use super::scene_video_tests::{
   blue, clip, directory, exported, frame_at, pixel, red, timeline, HEIGHT, WIDTH,
@@ -94,5 +95,30 @@ fn exports_a_stacked_pair_swapped_with_the_camera_on_top() {
   assert!(black(pixel(&settled, 320, 20)));
   assert!(black(pixel(&settled, 100, 180)));
   assert!(black(pixel(&settled, 600, 320)));
+  let _ = std::fs::remove_dir_all(directory);
+}
+
+#[test]
+fn exports_a_custom_scene_with_the_camera_behind_the_screen() {
+  // The screen fills the canvas and the camera's box sits in its middle, 128
+  // by 72 from x 256, y 144: behind the screen, so hidden there.
+  let (directory, destination) = export_scene(
+    "camera-behind",
+    serde_json::json!({
+      "id": "b", "startMs": 500, "endMs": 1_900, "preset": "full",
+      "boxes": {
+        "screen": { "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0 },
+        "camera": { "x": 0.4, "y": 0.4, "width": 0.2, "height": 0.2 },
+        "cameraBehind": true
+      }
+    }),
+  );
+  // Outside the scene the camera stays in front, in the recording's corner.
+  let before = frame_at(&destination, 0.25);
+  assert!(red(pixel(&before, 600, 320)));
+  let settled = frame_at(&destination, 1.2);
+  for (x, y) in [(320, 180), (270, 160), (600, 320)] {
+    assert!(blue(pixel(&settled, x, y)), "screen at {x}, {y}");
+  }
   let _ = std::fs::remove_dir_all(directory);
 }
