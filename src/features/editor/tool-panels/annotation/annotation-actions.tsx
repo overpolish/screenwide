@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowLeftRight, Eraser, FlipHorizontal2 } from "lucide-react";
-
 import { Button } from "../../../../components/base/button/button";
 
 import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
@@ -42,11 +40,6 @@ export function AnnotationActions({
             change({ reverseAnnotation: true });
           }}
         >
-          {sticker ? (
-            <FlipHorizontal2 aria-hidden="true" />
-          ) : (
-            <ArrowLeftRight aria-hidden="true" />
-          )}
           {sticker ? "Flip" : "Reverse"}
         </Button>
       </div>
@@ -62,7 +55,6 @@ export function AnnotationActions({
           change({ clearDrawings: true });
         }}
       >
-        <Eraser aria-hidden="true" />
         Clear all
       </Button>
     </div>

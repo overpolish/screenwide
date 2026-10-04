@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowUpRight, X } from "lucide-react";
-
 import { Button } from "../../../components/base/button/button";
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import { TextField } from "../../../components/base/input-fields/text-field";
@@ -261,12 +259,8 @@ export function EditorExportForm({
             Estimated size {estimate}
           </Text>
         ) : null}
-        <Button onPress={onCancel}>
-          <X />
-          Cancel
-        </Button>
+        <Button onPress={onCancel}>Cancel</Button>
         <Button color="primary" isDisabled={!canExport} onPress={onExport}>
-          <ArrowUpRight />
           Export
         </Button>
       </div>

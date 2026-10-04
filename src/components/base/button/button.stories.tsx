@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Meta, StoryObj } from "@storybook/react";
-import { Circle, DoorOpen } from "lucide-react";
+import { Circle, ClipboardCopy, Upload } from "lucide-react";
 
 import { Text } from "../text/text";
 
@@ -121,7 +121,6 @@ export const Sizes: Story = {
             {size}
           </Text>
           <Button {...args} size={size}>
-            <DoorOpen />
             Sign out
           </Button>
           <Button {...args} color="primary" size={size}>
@@ -138,16 +137,23 @@ export const Sizes: Story = {
   ),
 };
 
-/** A symbol goes before the label. Trailing glyphs are reserved for a menu
+/** Text buttons carry no icon, whatever their colour. The exception is a
+ * window toolbar, such as the Editor titlebar or the recording bar, where every
+ * text command pairs a leading symbol with its label, as macOS toolbar items
+ * and Windows command bar buttons do. A trailing glyph is reserved for a menu
  * or disclosure indicator drawn by the control itself. */
 export const WithIcon: Story = {
-  args: {
-    children: (
-      <>
-        <DoorOpen />
-        Sign out
-      </>
-    ),
-  },
   parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="gap-control flex items-center">
+      <Button variant="ghost">
+        <ClipboardCopy />
+        Copy
+      </Button>
+      <Button color="primary">
+        <Upload />
+        Export
+      </Button>
+    </div>
+  ),
 };

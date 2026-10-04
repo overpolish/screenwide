@@ -34,6 +34,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - Use switches for settings that take effect immediately. Use checkboxes for selection or checklist semantics, such as release-note task lists.
 - Use `Text` for body/help copy, `Keyboard` and `Shortcut` for shortcut display, `HotkeyField` for capture, and `PathField` for file/folder controls.
 - Use Lucide icons. Size them through the shared control sizing, not through ancestor selectors that reach into nested primitives.
+- Text buttons carry no icon, primary or neutral: dialogs, sheets, Settings, forms, footers, and tool panel actions are text only, as on macOS and Windows. A window toolbar (the Editor titlebar, the recording bar) is the exception: there every text command takes a leading icon, and an action always uses the same icon. Icon-only buttons are unaffected. Exempt are icons that belong to a control or its content rather than decorating a label: `PathField`, `HotkeyField`, `Select`, `NumberField` steppers, source thumbnails, and `ConfirmActionButton`, whose icon signals its armed state.
 - Preserve keyboard navigation, accessible names, focus behaviour, and disabled states. Reuse the existing Escape-cancellation handling where applicable.
 - Settings uses icon-only `SidebarNav` with tooltips.
 

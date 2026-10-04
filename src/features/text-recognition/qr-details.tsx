@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ExternalLink } from "lucide-react";
-
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
 import { Text } from "../../components/base/text/text";
@@ -62,7 +60,6 @@ export function QrDetails({
         {payload.kind === "action" && onAction ? (
           <footer className="flex items-center justify-end">
             <Button color="primary" onPress={onAction}>
-              <ExternalLink aria-hidden />
               {payload.label}
             </Button>
           </footer>

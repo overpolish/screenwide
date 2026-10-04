@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowRight } from "lucide-react";
-
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
 import { ControlRow } from "../../components/shared/control-row/control-row";
@@ -38,7 +36,6 @@ export function SoftwareUpdateSetting({
               onPress={onPress}
             >
               Update to v{updateVersion}
-              <ArrowRight aria-hidden />
             </Button>
           ) : (
             <Button
