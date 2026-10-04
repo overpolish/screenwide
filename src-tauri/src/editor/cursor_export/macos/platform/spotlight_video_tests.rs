@@ -208,7 +208,8 @@ fn an_exported_spotlight_shades_and_blurs_only_outside_its_light() {
 }
 
 /// A two-second recording of one flat mid-grey, where a share of light reads
-/// the same at every pixel.
+/// the same at every pixel. Sixty frames a second: an export keeps its
+/// source's rate, and the glide's middle needs a frame of its own.
 fn grey_recording(directory: &Path) -> PathBuf {
   let path = directory.join("grey.mov");
   assert!(Command::new(media_preview::ffmpeg_path())
@@ -221,7 +222,7 @@ fn grey_recording(directory: &Path) -> PathBuf {
       "lavfi",
       "-i"
     ])
-    .arg(format!("color=c=0x808080:s={WIDTH}x{HEIGHT}:r=10:d=2"))
+    .arg(format!("color=c=0x808080:s={WIDTH}x{HEIGHT}:r=60:d=2"))
     .args(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "8"])
     .arg(&path)
     .status()
@@ -240,6 +241,9 @@ fn butted_spotlights_hold_the_shade_through_the_join() {
   std::fs::create_dir_all(&directory).unwrap();
   let source = grey_recording(&directory);
   let plain = exported(&source, &directory.join("plain.mp4"), &[]);
+  // The second ends short of the video's end: one that runs to it never
+  // leaves, so its arrival may take longer than a third of its clip, and the
+  // glide would run at its own pace rather than the third it is held to here.
   let joined = exported(
     &source,
     &directory.join("joined.mp4"),
@@ -248,7 +252,7 @@ fn butted_spotlights_hold_the_shade_through_the_join() {
       spotlight(
         "second",
         [200.0, 100.0, 300.0, 170.0],
-        [1_000, 2_000],
+        [1_000, 1_900],
         false,
       ),
     ],
@@ -260,20 +264,21 @@ fn butted_spotlights_hold_the_shade_through_the_join() {
     let ratio = mean(&frame(&joined, time), outside) / mean(&frame(&plain, time), outside);
     assert!((ratio - 0.6).abs() < 0.05, "shaded to {ratio} at {time}s");
   }
-  // Halfway through the glide, a tenth and a half of a second in, the light
-  // is halfway between the boxes, over a stretch inside neither; once the
-  // glide is done that stretch is shaded again.
-  let between = [232, 80, 256, 96];
+  // The glide takes a third of the second's 900 ms. About halfway through,
+  // the light lies over a stretch inside neither box; once the glide is done
+  // that stretch is shaded again. The stretch is lit for the middle half of
+  // the glide, so the frame read need not be its exact middle.
+  let between = [236, 88, 244, 92];
   let ratio = |time| mean(&frame(&joined, time), between) / mean(&frame(&plain, time), between);
   assert!(
-    ratio("1.15") > 0.95,
+    ratio("1.13") > 0.95,
     "the light between them is at {}",
-    ratio("1.15")
+    ratio("1.13")
   );
   assert!(
-    (ratio("1.3") - 0.6).abs() < 0.05,
+    (ratio("1.4") - 0.6).abs() < 0.05,
     "shaded to {} after the glide",
-    ratio("1.3")
+    ratio("1.4")
   );
   std::fs::remove_dir_all(directory).unwrap();
 }
