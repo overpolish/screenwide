@@ -4,9 +4,10 @@
 //! The canvas variants the build compiled (`build/precompiled_shaders.rs`):
 //! the one with no annotation, which a preview's first frame waits for, and
 //! the one with every kind, which an editing preview draws with while any
-//! other set compiles. They are DXIL, handed to the device as they are, so
-//! only the GPU driver's own pass is left. A build for any other platform has
-//! none, and its variants compile from WGSL.
+//! other set compiles. They are DXIL on Windows and Metal libraries on macOS,
+//! handed to the device as they are, so only the GPU driver's own pass is
+//! left. A build for any other platform has none, and its variants compile
+//! from WGSL.
 
 use std::borrow::Cow;
 
@@ -14,7 +15,7 @@ use super::canvas_modules::CanvasModules;
 use super::canvas_variants::{every_kind, KindMask};
 
 /// A variant's stages as the build compiled them.
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 struct Stages {
   vertex: &'static [u8],
   fragment: &'static [u8],
@@ -39,6 +40,10 @@ pub(super) fn modules(device: &wgpu::Device, kinds: KindMask) -> Option<CanvasMo
   {
     return None;
   }
+  #[cfg_attr(
+    not(any(target_os = "macos", target_os = "windows")),
+    allow(unused_variables)
+  )]
   let module = |bytes: &'static [u8], entry: &'static str| {
     let descriptor = wgpu::ShaderModuleDescriptorPassthrough {
       label: Some("Screenwide precompiled preview shader"),
@@ -46,13 +51,18 @@ pub(super) fn modules(device: &wgpu::Device, kinds: KindMask) -> Option<CanvasMo
         name: entry.into(),
         workgroup_size: (0, 0, 0),
       }]),
+      #[cfg(target_os = "windows")]
       dxil: Some(Cow::Borrowed(bytes)),
+      #[cfg(target_os = "macos")]
+      metallib: Some(Cow::Borrowed(bytes)),
       ..Default::default()
     };
     // SAFETY: the build compiled these bytes from this crate's canvas shader
     // against the bindings `preview_bindings` lists, laid out the way wgpu 30
     // lays out that bind group; `precompiled_tests` draws with them and with
-    // the same shader compiled from WGSL and requires the same pixels.
+    // the same shader compiled from WGSL and requires the same pixels. The
+    // Metal libraries leave buffer accesses unchecked, as wgpu cannot give
+    // them buffer lengths (`build/precompiled_shaders/metallib.rs`).
     unsafe { device.create_shader_module_passthrough(descriptor) }
   };
   Some(CanvasModules {

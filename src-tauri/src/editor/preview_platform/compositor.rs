@@ -288,11 +288,11 @@ type ArtworkConstants = ([f32; 4], [f32; 4], [u32; 4]);
 mod crop_preview_tests;
 #[cfg(all(test, target_os = "windows", target_arch = "x86_64"))]
 mod fpu_tests;
-#[cfg(all(test, target_os = "windows"))]
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod precompiled_tests;
 #[cfg(all(test, target_os = "windows"))]
 mod redact_tests;
-#[cfg(all(test, target_os = "windows"))]
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod render_test_helpers;
 #[cfg(all(test, target_os = "windows"))]
 mod render_tests;

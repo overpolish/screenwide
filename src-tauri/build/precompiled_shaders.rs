@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The canvas shader's variant with no annotation and its variant with every
-//! kind, compiled to DXIL here rather than on the user's machine: DXC took
-//! about 7 seconds over the first and 30 over the second on every launch, as
-//! nothing keeps its output. The GPU driver's own pass still runs at runtime,
-//! and the driver keeps what that makes. macOS builds compile both at runtime,
-//! as wgpu's Metal backend tells a precompiled library nothing of the buffer
-//! sizes the shader's bounds checks read.
+//! kind, compiled here rather than on the user's machine: to DXIL for Windows
+//! and to Metal libraries for macOS. On Windows DXC took about 7 seconds over
+//! the first and 30 over the second on every launch, as nothing keeps its
+//! output. On macOS the system keeps what Metal compiles, so the gain is
+//! smaller: about 0.4 seconds before a first launch's first frame, and about
+//! 15 ms per variant on every later launch. The GPU driver's own pass still
+//! runs at runtime, and the driver keeps what that makes.
+//!
+//! A macOS build needs Apple's Metal compiler, which Xcode 26 leaves out
+//! until `xcodebuild -downloadComponent MetalToolchain` downloads it; a
+//! Windows build needs the DXC `pnpm dxc:prepare` places.
 //!
 //! Writes `OUT_DIR/precompiled_shaders.rs`, which
 //! `src/editor/preview_platform/compositor/canvas_precompiled.rs` includes:
@@ -15,14 +20,17 @@
 //! target. Every compile is cached under `target/shader-cache`, keyed by all
 //! that goes into it, so a build that changes no shader compiles nothing.
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "windows")]
 #[path = "precompiled_shaders/dxil.rs"]
 mod dxil;
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+#[cfg(target_os = "macos")]
+#[path = "precompiled_shaders/metallib.rs"]
+mod metallib;
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 #[path = "../src/editor/preview_platform/compositor/preview_bindings.rs"]
 mod preview_bindings;
 
@@ -32,7 +40,7 @@ const DRAWN: &str = "const annotations_drawn: bool = true;";
 const LEFT_OUT: &str = "const annotations_drawn: bool = false;";
 
 /// A variant's compiled stages, as files.
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 struct Stages {
   vertex: PathBuf,
   fragment: PathBuf,
@@ -60,9 +68,9 @@ pub(crate) fn precompile(out_dir: &Path) {
   let compiled = if target == std::env::consts::OS {
     compile_for_host(&variants, &cache)
   } else {
-    if target == "windows" {
+    if target == "windows" || target == "macos" {
       println!(
-        "cargo:warning=The canvas shader is not precompiled when cross-compiling for Windows; \
+        "cargo:warning=The canvas shader is not precompiled when cross-compiling for {target}; \
          it compiles at runtime instead"
       );
     }
@@ -92,14 +100,20 @@ fn compile_for_host(variants: &[(&str, String)], cache: &Path) -> Vec<Option<Sta
   in_parallel(variants, |source| compiler.compile(source, cache))
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+fn compile_for_host(variants: &[(&str, String)], cache: &Path) -> Vec<Option<Stages>> {
+  let compiler = metallib::Compiler::installed();
+  in_parallel(variants, |source| compiler.compile(source, cache))
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn compile_for_host(variants: &[(&str, String)], _cache: &Path) -> Vec<Option<Stages>> {
   variants.iter().map(|_| None).collect()
 }
 
 /// Each variant compiled on a thread of its own: the one with every kind
 /// takes far longer than the other, which is done in its shadow.
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn in_parallel(
   variants: &[(&str, String)],
   compile: impl Fn(&str) -> Stages + Sync,
@@ -119,7 +133,7 @@ fn in_parallel(
 /// The file `key` names in `cache`, made by `compile` unless an earlier build
 /// made it. `compile` writes to the path it is given, which is moved into
 /// place once complete, so an interrupted build leaves nothing behind.
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn cached(cache: &Path, key: impl Hash, extension: &str, compile: impl FnOnce(&Path)) -> PathBuf {
   let mut hasher = DefaultHasher::new();
   key.hash(&mut hasher);

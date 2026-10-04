@@ -4,7 +4,8 @@
 //! The one wgpu device every renderer shares. Shaders are WGSL everywhere:
 //! on macOS they run on Metal; on Windows on Direct3D 12, compiled through
 //! the bundled DXC, because wgpu's default there, FXC, takes minutes on the
-//! larger shaders.
+//! larger shaders. The canvas variants the build precompiled are the
+//! exception on both.
 
 #[cfg(target_os = "windows")]
 mod windows;
@@ -51,9 +52,9 @@ impl Gpu {
     let (device, queue) = adapter
       .request_device(&wgpu::DeviceDescriptor {
         label: Some("Screenwide"),
-        // The canvas variants the build compiled for Windows are handed over
-        // as DXIL; without it they are compiled from WGSL instead.
-        required_features: if cfg!(target_os = "windows") {
+        // The canvas variants the build compiled are handed over as DXIL or
+        // a Metal library; without it they are compiled from WGSL instead.
+        required_features: if cfg!(any(target_os = "macos", target_os = "windows")) {
           adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
         } else {
           wgpu::Features::empty()

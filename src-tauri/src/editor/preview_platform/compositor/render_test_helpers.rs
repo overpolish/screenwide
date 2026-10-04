@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+// On macOS only `precompiled_tests` draws, and it needs a few of these.
+#![cfg_attr(target_os = "macos", allow(dead_code))]
+
 use super::*;
 
 pub(super) const OUTPUT: (u32, u32) = (1920, 1080);
@@ -56,7 +59,7 @@ pub(super) fn draw(
       &view(target),
       source,
       settings,
-      crate::editor::preview_platform::ComposedFrame {
+      ComposedFrame {
         cursor: None,
         keyboard: None,
         foreground_only: false,

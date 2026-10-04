@@ -205,7 +205,25 @@ pub(crate) fn prewarm(window: tauri::WebviewWindow) {
   });
 }
 
-#[cfg(not(target_os = "windows"))]
+/// Opens the GPU and starts compiling the canvas variants a preview leans on
+/// while the editor webview is still hidden, as the Windows prewarm does
+/// through its surface. Every compositor on the device shares them, so the
+/// first preview finds them compiling or ready. The surface itself is not
+/// built here: it inserts views into the window, which AppKit allows only on
+/// the main thread.
+#[cfg(target_os = "macos")]
+pub(crate) fn prewarm(_window: tauri::WebviewWindow) {
+  tauri::async_runtime::spawn_blocking(|| {
+    match crate::gpu::shared()
+      .and_then(|gpu| compositor::Compositor::new(gpu, compositor::NativeCursors::none()))
+    {
+      Ok(compositor) => compositor.compile_annotation_kinds_in_background(),
+      Err(error) => eprintln!("Could not prewarm the macOS canvas shaders: {error}"),
+    }
+  });
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(crate) fn prewarm(_window: tauri::WebviewWindow) {}
 
 /// A pane or viewport rectangle in webview points, relative to the window.

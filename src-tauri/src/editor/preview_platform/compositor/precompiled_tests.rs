@@ -17,7 +17,6 @@ use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::counter::new_counter;
 use crate::editor::annotations::redact::new_redact;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
-use crate::editor::preview_platform::ComposedFrame;
 use crate::screenshots::{test_output_settings, CapturedImage};
 
 /// A 64 pixel square of colour changing across it, so a misread texture or
@@ -121,9 +120,10 @@ fn compiled_from_wgsl() -> Compositor {
   compositor
 }
 
-/// The WGSL build compiles for the device's newest shader model and the
-/// build for 6.0, and the two may round a channel apart by one. A binding laid
-/// out wrongly reads the wrong texture or buffer and differs by far more.
+/// The WGSL build compiles for the device's newest shader model or Metal
+/// language and the build for an older one, and the two may round a channel
+/// apart by one. A binding laid out wrongly reads the wrong texture or buffer
+/// and differs by far more.
 fn assert_same_pixels(precompiled: &[u8], compiled: &[u8], what: &str) {
   let differences: Vec<u8> = precompiled
     .iter()
