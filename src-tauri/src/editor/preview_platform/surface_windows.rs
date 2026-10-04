@@ -12,7 +12,6 @@ mod annotation;
 mod batch;
 mod callbacks;
 mod creation;
-#[cfg(debug_assertions)]
 mod editor_controls;
 mod export;
 mod geometry;
