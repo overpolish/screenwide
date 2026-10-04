@@ -188,7 +188,6 @@
      up to the panel radius; Fluent keeps the control corner at any height. */
   --radius-capture: var(--radius-panel);
 
-  --animate-gradient: gradient 10s ease-in-out infinite;
   --animate-mesh-drift: mesh-drift 18s ease-in-out infinite alternate;
   /* Selection halo breathing; entry/exit fades come from an opacity
      transition on the always-mounted halo element. */
@@ -197,18 +196,6 @@
   @keyframes halo-pulse {
     50% {
       opacity: 0.55;
-    }
-  }
-
-  @keyframes gradient {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
     }
   }
 
@@ -266,20 +253,9 @@
   --color-primary-stroke: transparent;
   --color-primary-stroke-top: transparent;
   --color-primary-stroke-bottom: transparent;
-  /* The window title's gradient: the accent with a lighter and a deeper stop
-     around it, so the identity moment follows the OS accent like everything
-     else. */
+  /* The window title's colour: the accent, so the identity moment follows the
+     OS accent like everything else. */
   --color-accent-heading: var(--color-primary);
-  --color-accent-heading-warm: color-mix(
-    in oklab,
-    var(--color-primary),
-    white 25%
-  );
-  --color-accent-heading-vivid: color-mix(
-    in oklab,
-    var(--color-primary),
-    black 15%
-  );
   --color-primary-tint: color-mix(
     in oklab,
     var(--color-primary) 50%,
@@ -488,20 +464,10 @@
     );
     /* Accent-coloured text takes WinUI's text tone (AccentDark2 in light,
        AccentLight3 in dark), which sits further from the surface than the
-       fill; the window title's gradient is built around it. */
+       fill. */
     --color-accent-heading: var(
       --system-accent-light-text,
       var(--color-primary)
-    );
-    --color-accent-heading-warm: color-mix(
-      in oklab,
-      var(--color-accent-heading),
-      white 15%
-    );
-    --color-accent-heading-vivid: color-mix(
-      in oklab,
-      var(--color-accent-heading),
-      black 10%
     );
     --color-primary-surface-hover: color-mix(
       in srgb,

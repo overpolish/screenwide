@@ -40,7 +40,6 @@ export type EditorPanelProps = {
   enabledVideoTracks?: RecordingVideoTrackId[];
   error?: string | null;
   estimatedSizeBytes?: number | null;
-  etaSeconds?: number | null;
   isCancelingSave?: boolean;
   isEstimatingSize?: boolean;
   isPreparingRecordingAudio?: boolean;
@@ -83,8 +82,6 @@ export type EditorPanelProps = {
   recordingPreviewTracks?: PreparedAudioTrack[];
   recordingTimelineEdit?: RecordingTimelineEdit | null;
   resolutionScalePercent?: number;
-  savePhase?: "camera" | "finalizing" | "recording";
-  saveProgress?: number | null;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
   selectedScreenshotItemId?: number | null;
   selectedTrack?: RecordingTrackId | null;

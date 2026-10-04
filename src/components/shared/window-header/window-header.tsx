@@ -95,10 +95,7 @@ export function WindowHeader({
       >
         <Text
           as="h1"
-          className={cn(
-            variant === "display" &&
-              "from-accent-heading-warm via-accent-heading to-accent-heading-vivid animate-gradient bg-linear-to-r bg-clip-text bg-size-[300%] text-transparent motion-reduce:animate-none",
-          )}
+          className={cn(variant === "display" && "text-accent-heading")}
           variant="title"
         >
           {onTitleChange ? (

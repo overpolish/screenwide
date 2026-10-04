@@ -8,6 +8,10 @@ import {
 } from "react-aria-components";
 import { VariantProps } from "tailwind-variants";
 
+import {
+  progressPercent,
+  useProgressTransition,
+} from "../../../lib/progress-transition";
 import { tv } from "../../../lib/variants";
 
 const ANIMATION_DURATION = 1.25;
@@ -57,6 +61,9 @@ export function CircularProgress({
   const strokeWidth = (strokeWidths[size] * 100) / boxSizes[size];
   const radius = 50 - strokeWidth / 2;
   const circumference = 2 * Math.PI * radius;
+  const transition = useProgressTransition(
+    progressPercent(props.value, props.minValue, props.maxValue),
+  );
 
   return (
     <AriaProgressBar
@@ -124,7 +131,7 @@ export function CircularProgress({
               r={radius}
               strokeDasharray="1 1"
               transform="rotate(-90 50 50)"
-              transition={{ duration: 0.1, ease: "easeOut" }}
+              transition={transition}
             />
           ) : null}
         </svg>

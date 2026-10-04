@@ -63,6 +63,7 @@ fn render_gpu_video(
     cancelled: request.cancelled,
     duration_ms: request.duration_ms,
     on_progress: request.on_progress,
+    progress_pace: Default::default(),
     composer,
     error: None,
   };

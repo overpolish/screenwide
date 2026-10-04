@@ -4,6 +4,7 @@
 import { useEffect, useRef } from "react";
 
 import { EditorKind } from "../../types";
+import { ExportProgress, useExportProgressStore } from "../use-export-progress";
 
 import {
   ExportOptionsPatch,
@@ -11,6 +12,13 @@ import {
   useExportOptionsRequestStore,
   useExportOptionsStore,
 } from "./store";
+
+/** What the editor's own props carry: the snapshot less the running save's
+ * progress, which the bridge reads from its store instead. */
+export type ExportOptionsSettings = Omit<
+  ExportOptionsSnapshot,
+  keyof ExportProgress
+>;
 
 /**
  * What the options window can ask for. Each one is an editor handler that
@@ -57,7 +65,8 @@ const applyPatch = (values: ExportOptionsPatch, on: ExportOptionsHandlers) => {
 
 /**
  * The editor's half of the export options window: it publishes the settings
- * the form shows, and applies what the form asks for.
+ * the form shows, with the running save's progress, and applies what the form
+ * asks for.
  *
  * Only the editor window owns this state, so the options window never writes
  * a setting itself; it sends a request, and reads the result back out of the
@@ -65,23 +74,38 @@ const applyPatch = (values: ExportOptionsPatch, on: ExportOptionsHandlers) => {
  */
 export function useExportOptionsBridge(
   kind: EditorKind,
-  snapshot: ExportOptionsSnapshot,
+  settings: ExportOptionsSettings,
   handlers: ExportOptionsHandlers,
 ) {
   const lastRequest = useExportOptionsRequestStore(
     (state) => state.lastRequest,
   );
   const handlersRef = useRef(handlers);
+  const settingsRef = useRef(settings);
 
   useEffect(() => {
     handlersRef.current = handlers;
   });
 
   useEffect(() => {
+    settingsRef.current = settings;
     // A no-op when nothing changed, so republishing on every render costs a
     // shallow comparison rather than a `localStorage` write.
-    useExportOptionsStore.getState().publish(kind, snapshot);
-  }, [kind, snapshot]);
+    useExportOptionsStore
+      .getState()
+      .publish(kind, { ...settings, ...useExportProgressStore.getState() });
+  }, [kind, settings]);
+
+  // Progress is published as it changes, without re-rendering the editor.
+  useEffect(
+    () =>
+      useExportProgressStore.subscribe((progress) => {
+        useExportOptionsStore
+          .getState()
+          .publish(kind, { ...settingsRef.current, ...progress });
+      }),
+    [kind],
+  );
 
   useEffect(() => {
     if (

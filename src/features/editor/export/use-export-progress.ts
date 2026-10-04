@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { listen } from "@tauri-apps/api/event";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { create } from "zustand";
 
 const EXPORT_PROGRESS_EVENT = "export://progress";
 
@@ -44,13 +45,59 @@ type ExportProgressEvent = {
   progressPercent: number;
 };
 
-export function useExportProgress(artifactId?: number) {
-  const [phase, setPhase] = useState<ExportPhase>("recording");
-  const [progress, setProgress] = useState<number | null>(null);
-  const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
+/** The running save's progress, as the export options window shows it. */
+export type ExportProgress = {
+  /** How long the save still has, in whole seconds, once measurable. */
+  etaSeconds: number | null;
+  savePhase: ExportPhase;
+  /** Whole percent complete, or `null` while the save reports no figure. */
+  saveProgress: number | null;
+};
 
+const IDLE: ExportProgress = {
+  etaSeconds: null,
+  savePhase: "recording",
+  saveProgress: null,
+};
+
+/**
+ * The running save's progress, held outside React. Events arrive several
+ * times a second; as editor state, each one re-rendered the whole editor,
+ * which reads none of it. Only the export options bridge subscribes, and only
+ * a change to the whole percent or second it shows reaches it.
+ */
+export const useExportProgressStore = create<ExportProgress>()(() => IDLE);
+
+const round = (value: number | null) =>
+  value === null ? null : Math.round(value);
+
+const show = (change: Partial<ExportProgress>) => {
+  const current = useExportProgressStore.getState();
+  const next: ExportProgress = {
+    etaSeconds:
+      "etaSeconds" in change
+        ? round(change.etaSeconds ?? null)
+        : current.etaSeconds,
+    savePhase: change.savePhase ?? current.savePhase,
+    saveProgress:
+      "saveProgress" in change
+        ? round(change.saveProgress ?? null)
+        : current.saveProgress,
+  };
+  if (
+    next.etaSeconds === current.etaSeconds &&
+    next.savePhase === current.savePhase &&
+    next.saveProgress === current.saveProgress
+  )
+    return;
+  useExportProgressStore.setState(next);
+};
+
+/** Follows the save of `artifactId` into {@link useExportProgressStore}, and
+ * answers the editor's own steps: a save beginning, completing or stopping. */
+export function useExportProgress(artifactId?: number) {
   // Wall-clock timing state for the ETA. Kept in refs so it survives renders
-  // and never itself triggers one; only the derived `etaSeconds` is state.
+  // and never itself triggers one.
   const samplesRef = useRef<EtaSample[]>([]);
   const displayedEtaRef = useRef<number | null>(null);
   const slowdownSinceRef = useRef<number | null>(null);
@@ -59,7 +106,7 @@ export function useExportProgress(artifactId?: number) {
     samplesRef.current = [];
     displayedEtaRef.current = null;
     slowdownSinceRef.current = null;
-    setEtaSeconds(null);
+    show({ etaSeconds: null });
   }, []);
 
   useEffect(() => {
@@ -69,11 +116,10 @@ export function useExportProgress(artifactId?: number) {
     let unlisten: (() => void) | undefined;
     void listen<ExportProgressEvent>(EXPORT_PROGRESS_EVENT, ({ payload }) => {
       if (disposed || payload.artifactId !== artifactId) return;
-      setPhase(payload.phase);
       // The backend weights screen and camera work and reserves the final one
       // percent for validating that both atomic renames have published.
       const measured = Math.min(99, payload.progressPercent);
-      setProgress(measured);
+      show({ savePhase: payload.phase, saveProgress: measured });
 
       const now = Date.now();
       const samples = samplesRef.current;
@@ -115,7 +161,7 @@ export function useExportProgress(artifactId?: number) {
           // Count down freely.
           displayedEtaRef.current = raw;
           slowdownSinceRef.current = null;
-          setEtaSeconds(raw);
+          show({ etaSeconds: raw });
         } else {
           const margin = Math.max(
             ETA_SLOWDOWN_MIN_MARGIN_S,
@@ -128,7 +174,7 @@ export function useExportProgress(artifactId?: number) {
             if (now - slowdownSinceRef.current >= ETA_SLOWDOWN_SUSTAIN_MS) {
               displayedEtaRef.current = raw;
               slowdownSinceRef.current = null;
-              setEtaSeconds(raw);
+              show({ etaSeconds: raw });
             }
           } else {
             slowdownSinceRef.current = null;
@@ -153,21 +199,22 @@ export function useExportProgress(artifactId?: number) {
 
   const begin = useCallback(
     (hasMeasuredProgress: boolean) => {
-      setPhase("recording");
-      setProgress(hasMeasuredProgress ? 0 : null);
+      show({
+        savePhase: "recording",
+        saveProgress: hasMeasuredProgress ? 0 : null,
+      });
       resetEta();
     },
     [resetEta],
   );
   const complete = useCallback(() => {
-    setProgress(100);
+    show({ saveProgress: 100 });
     resetEta();
   }, [resetEta]);
   const reset = useCallback(() => {
-    setPhase("recording");
-    setProgress(null);
+    show({ savePhase: "recording", saveProgress: null });
     resetEta();
   }, [resetEta]);
 
-  return { begin, complete, etaSeconds, phase, progress, reset };
+  return { begin, complete, reset };
 }

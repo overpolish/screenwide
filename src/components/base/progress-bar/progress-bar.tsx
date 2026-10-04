@@ -7,6 +7,10 @@ import {
   ProgressBarProps as AriaProgressBarProps,
 } from "react-aria-components";
 
+import {
+  progressPercent,
+  useProgressTransition,
+} from "../../../lib/progress-transition";
 import { cn } from "../../../lib/styling";
 
 /** One sweep of the indeterminate segment, in seconds. */
@@ -26,6 +30,9 @@ export function ProgressBar({
   ...props
 }: ProgressBarProps) {
   const prefersReducedMotion = useReducedMotion();
+  const transition = useProgressTransition(
+    progressPercent(props.value, props.minValue, props.maxValue),
+  );
 
   return (
     <AriaProgressBar
@@ -62,7 +69,7 @@ export function ProgressBar({
             animate={{ width: `${String(percentage ?? 0)}%` }}
             className="absolute inset-y-0 left-0 rounded-full bg-primary-surface"
             initial={false}
-            transition={{ duration: 0.1, ease: "easeOut" }}
+            transition={transition}
           />
         )
       }

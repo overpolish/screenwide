@@ -465,7 +465,6 @@ export function EditorWindow() {
         enabledVideoTracks={enabledVideoTracks}
         error={error}
         estimatedSizeBytes={estimatedSizeBytes}
-        etaSeconds={saveProgress.etaSeconds}
         fileStem={fileStem}
         isCancelingSave={isCancelingSave}
         isEstimatingSize={isEstimatingSize}
@@ -666,8 +665,6 @@ export function EditorWindow() {
         recordingPreviewTracks={recordingPreviewTracks}
         recordingTimelineEdit={recordingTimelineEdit}
         resolutionScalePercent={resolutionScalePercent}
-        savePhase={saveProgress.phase}
-        saveProgress={saveProgress.progress}
         screenshotOutput={screenshotOutput}
         selectedScreenshotItemId={selectedScreenshotItemId}
         selectedTrack={selectedTrackId}

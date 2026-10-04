@@ -16,6 +16,7 @@ pub(super) struct ExportContext<'a> {
   pub(super) cancelled: &'a std::sync::atomic::AtomicBool,
   pub(super) duration_ms: u64,
   pub(super) on_progress: &'a mut dyn FnMut(u64),
+  pub(super) progress_pace: super::super::super::progress_pace::ProgressPace,
   pub(super) composer: FrameComposer<'a>,
   /// Why a frame could not be composed, which outranks the loop's own
   /// report of the frame it then stopped on.
@@ -30,7 +31,13 @@ pub(super) unsafe extern "C" fn should_cancel(context: *mut c_void) -> bool {
 pub(super) unsafe extern "C" fn progress(context: *mut c_void, position_ms: u64) {
   let context = unsafe { &mut *(context.cast::<ExportContext<'_>>()) };
   let position_ms = position_ms.min(context.duration_ms);
-  (context.on_progress)(position_ms.saturating_mul(GPU_PROGRESS_PERCENT) / 100);
+  let finishes = position_ms == context.duration_ms;
+  if context
+    .progress_pace
+    .due(std::time::Instant::now(), finishes)
+  {
+    (context.on_progress)(position_ms.saturating_mul(GPU_PROGRESS_PERCENT) / 100);
+  }
 }
 
 pub(super) unsafe extern "C" fn compose_frame(

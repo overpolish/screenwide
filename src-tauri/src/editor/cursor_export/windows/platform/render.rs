@@ -71,6 +71,7 @@ pub(super) fn render_video(
     .saturating_mul(10_000);
   let clips = super::super::super::frame_annotations::ExportAnnotations::for_request(request);
   let scenes = super::super::super::frame_scene::ExportScenes::for_request(request);
+  let mut progress_pace = super::super::super::progress_pace::ProgressPace::default();
   loop {
     if request.cancelled.load(Ordering::Acquire) {
       let _ = std::fs::remove_file(path);
@@ -183,17 +184,19 @@ pub(super) fn render_video(
         .saturating_mul(10),
       next_pts_100ns.saturating_sub(pts_100ns),
     )?;
-    (request.on_progress)(
-      output_us
-        .div_ceil(1_000)
-        .min(
-          request
-            .timeline
-            .map_or(request.duration_ms, |timeline| timeline.duration_ms()),
-        )
-        .saturating_mul(GPU_PROGRESS_PERCENT)
-        / 100,
-    );
+    if progress_pace.due(std::time::Instant::now(), next.is_none()) {
+      (request.on_progress)(
+        output_us
+          .div_ceil(1_000)
+          .min(
+            request
+              .timeline
+              .map_or(request.duration_ms, |timeline| timeline.duration_ms()),
+          )
+          .saturating_mul(GPU_PROGRESS_PERCENT)
+          / 100,
+      );
+    }
     let Some(next) = next else {
       break;
     };

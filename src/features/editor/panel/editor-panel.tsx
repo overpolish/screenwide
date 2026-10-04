@@ -43,7 +43,6 @@ export function EditorPanel({
   enabledStreamIndices,
   enabledVideoTracks = [],
   estimatedSizeBytes,
-  etaSeconds = null,
   fileStem,
   isCancelingSave = false,
   isEstimatingSize,
@@ -87,8 +86,6 @@ export function EditorPanel({
   recordingPreviewTracks,
   recordingTimelineEdit,
   resolutionScalePercent,
-  savePhase = "recording",
-  saveProgress = null,
   screenshotOutput,
   selectedScreenshotItemId = null,
   selectedTrack = null,
@@ -134,10 +131,6 @@ export function EditorPanel({
       directory,
       enabledAudioTrackCount: enabledAudioTrackCount ?? 0,
       estimatedSizeBytes: estimatedSizeBytes ?? null,
-      // Rounded before it crosses: the mirror is a `localStorage` write per
-      // change, and progress arrives per encoded frame. A whole percent and a
-      // whole second are all the ring and the estimate ever show.
-      etaSeconds: etaSeconds === null ? null : Math.round(etaSeconds),
       extension: isAudioOnly ? "m4a" : (artifact?.extension ?? ""),
       fileStem,
       includeCamera: enabledVideoTracks.includes("camera"),
@@ -147,8 +140,6 @@ export function EditorPanel({
       isSaving: Boolean(isSaving),
       recordingOutput: recordingOutput ?? null,
       resolutionScalePercent: resolutionScalePercent ?? 100,
-      savePhase,
-      saveProgress: saveProgress === null ? null : Math.round(saveProgress),
     },
     {
       onBrowse,

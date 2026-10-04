@@ -43,9 +43,7 @@ const colorTokens = [
   "bg-info",
   "bg-warning",
   "bg-error",
-  "bg-accent-heading-warm",
   "bg-accent-heading",
-  "bg-accent-heading-vivid",
 ];
 
 const contentForegroundTokens = [

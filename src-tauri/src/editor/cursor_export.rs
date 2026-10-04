@@ -25,6 +25,8 @@ mod frame_annotations;
 mod frame_scene;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod progress_pace;
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "macos")]
