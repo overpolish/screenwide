@@ -162,7 +162,7 @@ fn a_highlight_drawn_out_over_a_picture_covers_the_lines_it_crosses() {
     point(30.0, 28.0),
     None,
     Some(AnnotationKind::Highlight),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     1.0,
   )
   .unwrap();
@@ -199,7 +199,7 @@ fn drawn_over_two_lines(from: AnnotationPoint, to: AnnotationPoint, manual: bool
     from,
     Some(&style),
     Some(AnnotationKind::Highlight),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     1.0,
   )
   .unwrap();

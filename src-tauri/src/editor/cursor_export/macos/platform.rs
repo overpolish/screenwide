@@ -204,6 +204,8 @@ mod spotlight_tests;
 #[cfg(test)]
 mod spotlight_video_tests;
 #[cfg(test)]
+mod sticker_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod text_tests;

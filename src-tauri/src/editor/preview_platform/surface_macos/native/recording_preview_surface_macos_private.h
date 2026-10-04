@@ -293,5 +293,6 @@ typedef struct {
 @end
 #import "recording_preview_annotation_text_macos.h"
 #import "recording_preview_annotation_group_macos.h"
+#import "recording_preview_sticker_drop_macos.h"
 #import "recording_preview_surface_macos_private_functions.h"
 #endif

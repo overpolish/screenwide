@@ -9,7 +9,11 @@
 //! em, and the atlas sets type at twice its drawn size, so any large box or
 //! counter came out with stepped edges.
 
+/// An emoji drawn in its own colours, for a sticker.
+mod emoji;
 mod engine;
+
+pub(crate) use emoji::draw_emoji;
 #[cfg(test)]
 mod tests;
 

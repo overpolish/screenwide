@@ -246,7 +246,7 @@ impl PreviewManager {
     }
     let defaults = self.annotation_defaults.clone();
     let mode = self.annotation_mode;
-    let angle = self.annotation_counter_angle;
+    let fresh = self.annotation_fresh.within(source);
     let image_width = self.annotation_image_width(pane_index).unwrap_or_default();
     let picture = self.annotation_picture(pane_index);
     let annotations = &mut self
@@ -262,7 +262,7 @@ impl PreviewManager {
       point,
       defaults.as_ref(),
       drawing_kind(mode),
-      angle,
+      &fresh,
       source_per_size(source, image_width),
     )?;
     edit.set_source_size(source);

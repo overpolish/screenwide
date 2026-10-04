@@ -3,6 +3,10 @@
 
 import { RefObject, useEffect, useRef } from "react";
 
+import {
+  useAnnotationAngleDefault,
+  useAnnotationStickerDefault,
+} from "../annotations/annotation-defaults";
 import { AnnotationStyle } from "../annotations/annotations";
 import {
   layoutScreenshotPreviewSurface,
@@ -55,7 +59,6 @@ let sessionSequence = 0;
  * every settings change is a single GPU pass with no pixels crossing IPC.
  */
 export function useScreenshotPreviewSurface({
-  annotationCounterAngle,
   annotationDefaults,
   annotationTool,
   artifactId,
@@ -82,9 +85,8 @@ export function useScreenshotPreviewSurface({
   isEnabled: boolean;
   /** The dress the next fresh arrow is drawn in, when the editor has settled
    * on one. It rides along with the layout so the native tool can draw a new
-   * arrow in it without a round trip of its own. */
-  /** Where a fresh counter's tail points, in radians clockwise from east. */
-  annotationCounterAngle?: number | null;
+   * arrow in it without a round trip of its own, as do where a fresh
+   * counter's tail points and the picture a fresh sticker shows. */
   annotationDefaults?: AnnotationStyle | null;
   /** The annotation tool in hand, when one is. */
   annotationTool?: import("../annotations/annotation-defaults").AnnotationTool;
@@ -143,8 +145,12 @@ export function useScreenshotPreviewSurface({
   annotationToolRef.current = annotationTool;
   const annotationDefaultsRef = useRef(annotationDefaults);
   annotationDefaultsRef.current = annotationDefaults;
+  const annotationCounterAngle = useAnnotationAngleDefault();
   const annotationAngleRef = useRef(annotationCounterAngle);
   annotationAngleRef.current = annotationCounterAngle;
+  const annotationSticker = useAnnotationStickerDefault();
+  const annotationStickerRef = useRef(annotationSticker);
+  annotationStickerRef.current = annotationSticker;
   const selectedAnnotationIdsRef = useRef(selectedAnnotationIds);
   selectedAnnotationIdsRef.current = selectedAnnotationIds;
   // Compared by value: the choice is rebuilt as a new list every render.
@@ -293,6 +299,7 @@ export function useScreenshotPreviewSurface({
           const nextLayout = JSON.stringify({
             annotationCounterAngle: annotationAngleRef.current,
             annotationDefaults: annotationDefaultsRef.current,
+            annotationSticker: annotationStickerRef.current,
             annotationTool: annotationToolRef.current,
             backdrop,
             // A suspended editor stays enabled and keeps its transform;
@@ -320,6 +327,7 @@ export function useScreenshotPreviewSurface({
             pendingLayout = {
               annotationCounterAngle: annotationAngleRef.current,
               annotationDefaults: annotationDefaultsRef.current,
+              annotationSticker: annotationStickerRef.current,
               annotationTool: annotationToolRef.current,
               backdrop,
               fitWidth: resizeFitWidth(
@@ -365,6 +373,7 @@ export function useScreenshotPreviewSurface({
     measureRef.current();
   }, [
     annotationCounterAngle,
+    annotationSticker,
     annotationDefaults,
     annotationTool,
     outputKey,

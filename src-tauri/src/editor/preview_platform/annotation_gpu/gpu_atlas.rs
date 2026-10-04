@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/// The atlas's BGRA texture.
+/// An atlas's BGRA texture: the type atlas's, and the sticker atlas's.
 pub(super) struct GpuAtlas {
   texture: wgpu::Texture,
   pub(super) view: wgpu::TextureView,
@@ -11,9 +11,9 @@ impl GpuAtlas {
   /// A texture for a fresh layout. Its contents start undefined, which is
   /// safe because every cell is drawn whole, margin included, before it is
   /// sampled, and the shader reads nowhere else.
-  pub(super) fn new(gpu: &crate::gpu::Gpu, size: (u32, u32)) -> Self {
+  pub(super) fn new(gpu: &crate::gpu::Gpu, label: &str, size: (u32, u32)) -> Self {
     let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
-      label: Some("Screenwide counter atlas"),
+      label: Some(label),
       size: wgpu::Extent3d {
         width: size.0,
         height: size.1,

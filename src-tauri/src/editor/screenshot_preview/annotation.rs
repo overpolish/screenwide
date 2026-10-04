@@ -59,14 +59,14 @@ pub(super) struct AnnotationLayout {
 pub(super) fn apply_annotation_layout(
   manager: &mut super::state::PreviewManager,
   defaults: Option<AnnotationStyle>,
-  counter_angle: Option<f64>,
+  fresh: crate::editor::annotations::edit::FreshAnnotation,
   tool: Option<&str>,
   pane_index: Option<u32>,
   selected: &[String],
 ) -> (AnnotationLayout, bool) {
   let mode = annotation_mode(tool);
   manager.annotation_defaults = defaults;
-  manager.annotation_counter_angle = counter_angle;
+  manager.annotation_fresh = fresh;
   let changed = manager.annotation_mode != mode;
   manager.annotation_mode = mode;
   manager.annotation_pane_index = pane_index;

@@ -218,9 +218,10 @@ mod picking_chrome;
 /// How far a press is from each kind of annotation.
 mod picking_distance;
 use picking::{
-  handle_at_point, image_frame, item_image_frame, layer_selection, selected_item, shaft_at_point,
-  take_drawing_layer, text_geometry,
+  handle_at_point, image_frame, item_image_frame, layer_selection, on_picture, selected_item,
+  shaft_at_point, text_geometry,
 };
+pub(super) use picking::{layer_image_rect, take_drawing_layer};
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
 
 /// A redaction's box, grips and radius dot.
@@ -229,6 +230,9 @@ pub(super) use redact_chrome::selected_box as selected_redaction;
 
 /// A magnifier's loupe: where it is picked and the grip that sets its size.
 mod magnify_chrome;
+
+/// A sticker's turned picture and the grip that turns it.
+mod sticker_chrome;
 
 /// What a snapped sample draws, and where.
 mod snap_chrome;

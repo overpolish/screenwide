@@ -8,7 +8,10 @@ import {
   EDITOR_TOOL_SHORTCUTS,
 } from "../tool-panels/tool-registry";
 
-import { editorToolKeyAction } from "./editor-tool-keys";
+import {
+  editorCommandKeyAction,
+  editorToolKeyAction,
+} from "./editor-tool-keys";
 
 describe("the editor's tool keys", () => {
   it("reaches every tool that states a letter", () => {
@@ -73,5 +76,20 @@ describe("the editor's tool keys", () => {
     expect(keys.onToggleCrop).not.toHaveBeenCalled();
     expect(keys.onTool).not.toHaveBeenCalled();
     expect(editorToolKeyAction("KeyA", keys, true)).toBeNull();
+  });
+
+  it("leaves cut, copy and paste to a field being typed in, but not Export", () => {
+    const keys = {
+      onCopy: vi.fn(),
+      onCutTimeline: vi.fn(),
+      onExport: vi.fn(),
+      onPaste: vi.fn(),
+    };
+    for (const code of ["KeyB", "KeyC", "KeyV"])
+      expect(editorCommandKeyAction(code, keys, true)).toBeNull();
+    editorCommandKeyAction("KeyE", keys, true)?.();
+    editorCommandKeyAction("KeyV", keys, false)?.();
+    expect(keys.onExport).toHaveBeenCalledOnce();
+    expect(keys.onPaste).toHaveBeenCalledOnce();
   });
 });

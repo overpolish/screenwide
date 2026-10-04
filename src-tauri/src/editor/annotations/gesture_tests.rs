@@ -4,8 +4,8 @@
 use super::arrow::bend::curve_midpoint;
 use super::counter::new_counter;
 use super::gesture::{
-  annotation_mode, drawing_kind, drawing_layer, next_annotation_id, AnnotationDragOrigin,
-  AnnotationHandle, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
+  annotation_mode, drawing_kind, drawing_layer, next_annotation_id, over_a_picture,
+  AnnotationDragOrigin, AnnotationHandle, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
 };
 use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationKind, AnnotationPoint, AnnotationShape, AnnotationStyle,
@@ -406,4 +406,9 @@ fn a_fresh_annotation_joins_the_topmost_picture_under_the_press() {
   assert_eq!(drawing_layer(layers.into_iter(), (20.0, 20.0)), Some(0));
   // Only the frame is here: no picture takes the annotation.
   assert_eq!(drawing_layer(layers.into_iter(), (180.0, 20.0)), None);
+  // A press there is off every picture; with no picture laid out at all,
+  // nothing can be missed.
+  assert!(over_a_picture(&layers, (75.0, 75.0)));
+  assert!(!over_a_picture(&layers, (180.0, 20.0)));
+  assert!(over_a_picture(&layers[2..], (180.0, 20.0)));
 }

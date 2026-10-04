@@ -46,8 +46,18 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
     // Read before the match: the arms take the state by mutable reference,
     // which a borrow held by the scrutinee would forbid.
     let drawing = drawing_kind(state.annotation.mode);
+    let empty = handle.is_none() && shaft.is_none();
+    let stickered = empty && drawing == Some(AnnotationKind::Sticker);
+    if let Some(sample) = stickered
+      .then(|| group::sticker_lets_go(&mut state, point))
+      .flatten()
+    {
+      drop(state);
+      report(inner, sample.as_slice());
+      return true;
+    }
     // A fresh annotation joins the picture under the press.
-    if handle.is_none() && shaft.is_none() && drawing.is_some() {
+    if empty && drawing.is_some() {
       taken_layer = take_drawing_layer(inner, &mut state, point);
     }
     match (handle, shaft) {
@@ -82,11 +92,11 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
           }
           false
         }
-        Some(AnnotationKind::Counter | AnnotationKind::Text) => {
-          // Empty picture under the counter or text tool: the annotation is
-          // dropped whole where the press lands, so it begins at once and a
-          // click alone makes it; the drag that may follow carries it. A
-          // fresh text box goes straight on to being typed into.
+        Some(AnnotationKind::Counter | AnnotationKind::Text | AnnotationKind::Sticker) => {
+          // Empty picture under the counter, text or sticker tool: the
+          // annotation is dropped whole where the press lands, so it begins
+          // at once and a click alone makes it; the drag that may follow
+          // carries it. A fresh text box goes straight on to being typed into.
           state.annotation.drag = Some(Drag::begun(TARGET_NEW, 0, HANDLE_BODY, point));
           samples.extend(resolve(
             &state,

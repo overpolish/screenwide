@@ -98,6 +98,23 @@ pub enum AnnotationShape {
     loupe: AnnotationPoint,
     size: f64,
   },
+  /// A picture laid over the source: a bundled emoji or one of your own.
+  /// `center` is its middle and `size` its longer side, in source pixels;
+  /// `aspect` is the picture's width over its height, `angle` how far it is
+  /// turned clockwise, in radians, and `flip` whether it is mirrored across
+  /// its upright axis. `asset` names the picture in the sticker library, and
+  /// `play` how it plays where the picture moves.
+  Sticker {
+    center: AnnotationPoint,
+    size: f64,
+    angle: f64,
+    aspect: f64,
+    #[serde(default)]
+    flip: bool,
+    asset: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    play: Option<super::sticker::StickerPlay>,
+  },
 }
 
 impl AnnotationShape {
@@ -113,156 +130,7 @@ impl AnnotationShape {
       Self::Spotlight { .. } => AnnotationKind::Spotlight,
       Self::Draw { .. } => AnnotationKind::Draw,
       Self::Magnify { .. } => AnnotationKind::Magnify,
-    }
-  }
-
-  /// The points the shape is placed by, for the coarse bounds and finiteness
-  /// tests every space-changing path runs. A counter reports its centre
-  /// three times and a text box its corner: the disc, the tail and the box
-  /// all reach past them, so a box over these points is smaller than the
-  /// annotation. A text box's pointer is held against the box, not placed.
-  pub(crate) fn points(&self) -> [AnnotationPoint; 3] {
-    match self {
-      Self::Arrow {
-        start,
-        control,
-        end,
-      } => [*start, *control, *end],
-      Self::Counter { center, .. } => [*center; 3],
-      Self::Text { origin, .. } => [*origin; 3],
-      Self::Redact { start, end, .. }
-      | Self::Shape { start, end, .. }
-      | Self::Spotlight { start, end } => [*start, *end, *end],
-      Self::Magnify {
-        start, end, loupe, ..
-      } => [*start, *end, *loupe],
-      Self::Highlight {
-        start, end, bands, ..
-      } => {
-        let (low, high) = super::highlight::model::bounds(*start, *end, bands);
-        [low, high, high]
-      }
-      Self::Draw { points, .. } => {
-        let (low, high) = super::freehand::model::bounds(points);
-        [low, high, high]
-      }
-    }
-  }
-
-  /// Whether the shape is somewhere it can be drawn. A document read from
-  /// disk carries whatever it was written with.
-  pub(crate) fn placed(&self) -> bool {
-    match self {
-      Self::Arrow {
-        start,
-        control,
-        end,
-      } => super::arrow::model::placed(*start, *control, *end),
-      Self::Counter { center, angle, .. } => super::counter::model::placed(*center, *angle),
-      Self::Text {
-        origin, pointer, ..
-      } => super::text::model::placed(*origin, pointer),
-      Self::Redact { start, end, .. } => super::redact::model::placed(*start, *end),
-      Self::Shape { start, end, .. } => super::outline::model::placed(*start, *end),
-      Self::Spotlight { start, end } => super::spotlight::model::placed(*start, *end),
-      Self::Highlight {
-        start, end, bands, ..
-      } => super::highlight::model::placed(*start, *end, bands),
-      Self::Draw { points, .. } => super::freehand::model::placed(points),
-      Self::Magnify {
-        start,
-        end,
-        loupe,
-        size,
-      } => super::magnify::model::placed(*start, *end, *loupe, *size),
-    }
-  }
-
-  /// The same shape with every point moved by `map`. What an annotation *is*
-  /// does not change with the space it is drawn in, so the angle, the number
-  /// and the text ride through untouched: every space an annotation travels
-  /// between keeps the picture's aspect, so a direction in one is the same
-  /// direction in the next.
-  pub(crate) fn mapped(&self, map: impl Fn(AnnotationPoint) -> AnnotationPoint) -> Self {
-    match self {
-      Self::Arrow {
-        start,
-        control,
-        end,
-      } => Self::Arrow {
-        start: map(*start),
-        control: map(*control),
-        end: map(*end),
-      },
-      Self::Counter {
-        center,
-        value,
-        angle,
-      } => Self::Counter {
-        center: map(*center),
-        value: *value,
-        angle: *angle,
-      },
-      Self::Text {
-        origin,
-        pointer,
-        text,
-      } => Self::Text {
-        origin: map(*origin),
-        pointer: *pointer,
-        text: text.clone(),
-      },
-      Self::Redact { start, end, seed } => Self::Redact {
-        start: map(*start),
-        end: map(*end),
-        seed: *seed,
-      },
-      Self::Highlight {
-        start,
-        end,
-        bands,
-        tone,
-        seed,
-      } => Self::Highlight {
-        start: map(*start),
-        end: map(*end),
-        bands: bands.iter().map(|band| band.mapped(&map)).collect(),
-        tone: *tone,
-        seed: *seed,
-      },
-      Self::Shape { start, end, seed } => Self::Shape {
-        start: map(*start),
-        end: map(*end),
-        seed: *seed,
-      },
-      Self::Spotlight { start, end } => Self::Spotlight {
-        start: map(*start),
-        end: map(*end),
-      },
-      Self::Draw { points, smooth } => Self::Draw {
-        points: points.iter().map(|point| map(*point)).collect(),
-        smooth: *smooth,
-      },
-      Self::Magnify {
-        start,
-        end,
-        loupe,
-        size,
-      } => {
-        // A length rides through as far as the space it moves into
-        // stretches it; every such space keeps the picture's aspect.
-        let centre = map(*loupe);
-        let edge = map(AnnotationPoint {
-          x: loupe.x + size,
-          y: loupe.y,
-        });
-        Self::Magnify {
-          start: map(*start),
-          end: map(*end),
-          loupe: centre,
-          size: (edge.x - centre.x).abs(),
-        }
-      }
+      Self::Sticker { .. } => AnnotationKind::Sticker,
     }
   }
 
@@ -283,7 +151,8 @@ impl AnnotationShape {
       | Self::Shape { .. }
       | Self::Spotlight { .. }
       | Self::Draw { .. }
-      | Self::Magnify { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
+      | Self::Magnify { .. }
+      | Self::Sticker { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
     }
   }
 }
@@ -294,3 +163,7 @@ mod draw;
 /// What a gesture asks of each kind: how a grip moves it, how a fresh one is
 /// made and carried, and how it arrives over its clip.
 mod edit;
+
+/// Where each kind sits in the source's pixels, and the same shape carried
+/// into another space.
+mod space;

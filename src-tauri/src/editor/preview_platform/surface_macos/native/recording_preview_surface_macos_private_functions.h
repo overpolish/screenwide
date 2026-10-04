@@ -168,6 +168,8 @@ uint32_t annotation_body_handle(ScreenwidePreviewSurface *surface, NSInteger ind
                                 NSPoint point);
 /// Where a magnifier's loupe grip sits, in display points.
 NSPoint annotation_magnify_grip(NSRect image, ScreenwidePreviewAnnotation item);
+/// Where a sticker's turning grip sits, above its top side, in display points.
+NSPoint annotation_sticker_turn_grip(NSRect image, ScreenwidePreviewAnnotation item);
 /// Reports one annotation gesture sample to Rust. `index` is the item's place
 /// in the published list for an existing or chosen annotation.
 void emit_annotation_gesture(ScreenwidePreviewSurface *surface, uint32_t phase,
@@ -182,6 +184,13 @@ void annotation_choose(ScreenwidePreviewSurface *surface, NSInteger index,
 /// the selected layer keeps the annotation.
 void annotation_take_layer_at_point(ScreenwidePreviewSurface *surface,
                                     NSPoint point);
+/// Whether `point` lands on a picture a fresh annotation could join; with no
+/// pictures laid out, every press does.
+BOOL annotation_picture_at_point(ScreenwidePreviewSurface *surface, NSPoint point);
+/// A press on no annotation under the sticker tool: while something is in
+/// hand, or off every picture, lets the choice go and takes the press, so it
+/// reaches nothing else. `NO` leaves the press to place a sticker.
+BOOL annotation_sticker_lets_go(ScreenwidePreviewInteractionView *view, NSPoint point);
 /// Whether several annotations are chosen together, which is when the group
 /// chrome is drawn and a press on a member carries them all.
 BOOL annotation_has_group(ScreenwidePreviewSurface *surface);

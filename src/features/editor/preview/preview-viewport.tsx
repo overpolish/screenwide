@@ -3,10 +3,7 @@
 
 import { useRef, useState } from "react";
 
-import {
-  useAnnotationAngleDefault,
-  useAnnotationDefaults,
-} from "../annotations/annotation-defaults";
+import { useAnnotationDefaults } from "../annotations/annotation-defaults";
 import {
   applyScreenshotCropGesture,
   commitScreenshotCrop,
@@ -139,7 +136,6 @@ export function PreviewViewport({
   // different measurements of different things.
   const annotationKind = drawingToolKind(annotationTool) ?? "arrow";
   const annotationDefaults = useAnnotationDefaults(annotationKind);
-  const annotationCounterAngle = useAnnotationAngleDefault();
   const [canvasResizeDraft, setCanvasResizeDraft] =
     useState<ScreenshotWorkspaceOutputSettings | null>(null);
   const workspaceOutput =
@@ -468,7 +464,6 @@ export function PreviewViewport({
       : null;
   const { fitDuringResize, fitPreview, setFitBasis } =
     useScreenshotPreviewSurface({
-      annotationCounterAngle,
       annotationDefaults,
       annotationTool,
       artifactId,

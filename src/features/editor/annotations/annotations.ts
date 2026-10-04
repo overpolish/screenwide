@@ -37,15 +37,15 @@ export type AnnotationStyle = {
    * strokes `width` tall, rather than fitted to the text under it; the other
    * kinds carry `false`. */
   manual: boolean;
-  /** A redaction's, a shape's, a spotlight's or a magnifier's corner radius,
-   * as a percentage of its box's shorter side from 0 to 50; the other kinds
-   * carry zero. */
+  /** A redaction's, a shape's, a spotlight's, a magnifier's or a sticker's
+   * corner radius, as a percentage of its box's shorter side from 0 to 50;
+   * the other kinds carry zero. */
   radius: number;
   /** How a redaction covers what is under it; the other kinds carry the
    * default. */
   redaction: AnnotationRedaction;
-  /** Whether a magnifier's loupe casts a shadow onto the picture; the other
-   * kinds carry `false`. */
+  /** Whether a magnifier's loupe or a sticker casts a shadow onto the
+   * picture; the other kinds carry `false`. */
   shadow: boolean;
   /** How far a spotlight's edge fades from lit to dim, as a percentage of its
    * box's shorter side from 0 to 50; the other kinds carry zero. */
@@ -160,6 +160,53 @@ type AnnotationMagnify = {
   start: AnnotationPoint;
 };
 
+/**
+ * How a sticker showing a moving picture - a GIF, an animated PNG or WebP -
+ * plays: how long one run lasts and how many frames it has, the frame a
+ * still shows and playback starts on, and whether a recording plays it
+ * through once, its clip then lasting exactly one run, rather than looping.
+ * The twin of `StickerPlay` in
+ * `src-tauri/src/editor/annotations/sticker/play.rs`.
+ */
+export type StickerPlay = {
+  cycleMs: number;
+  frame: number;
+  frames: number;
+  once: boolean;
+};
+
+/**
+ * What a sticker shows: its picture by library id, that picture's width
+ * over its height, and how it plays where it moves. As the picture the next
+ * sticker is made with, it also carries how many pixels long a picture of
+ * its own is on its longer side, which a fresh sticker takes as its size; an
+ * emoji has none. The twin of `StickerArt` in
+ * `src-tauri/src/editor/annotations/sticker/model.rs`.
+ */
+export type StickerArt = {
+  aspect: number;
+  asset: string;
+  pixels?: number;
+  play?: StickerPlay;
+};
+
+/**
+ * A picture laid over the source. `center` is its middle and `size` its
+ * longer side, in source pixels; `aspect` is the picture's width over its
+ * height, `angle` how far it is turned clockwise, in radians, and `flip`
+ * whether it is mirrored across its upright axis. `asset` names the picture
+ * in the sticker library, and `play` how it plays where the picture moves.
+ * The twin of `AnnotationShape::Sticker` in
+ * `src-tauri/src/editor/annotations/shape.rs`.
+ */
+type AnnotationSticker = Omit<StickerArt, "pixels"> & {
+  angle: number;
+  center: AnnotationPoint;
+  flip: boolean;
+  kind: "sticker";
+  size: number;
+};
+
 /** One line a highlight covers, in source pixels. */
 export type HighlightBand = {
   bottom: number;
@@ -206,6 +253,7 @@ export type AnnotationShape =
   | AnnotationOutline
   | AnnotationRedact
   | AnnotationSpotlight
+  | AnnotationSticker
   | AnnotationText;
 
 export type Annotation = {
@@ -236,46 +284,3 @@ export const annotationTextEdit = (
   value: unknown,
 ): AnnotationTextEdit | null =>
   value === "begin" || value === "update" || value === "end" ? value : null;
-
-/**
- * Every list with its counters numbered 1, 2, 3 as one run, in the order of
- * the numbers they already carry: on a tie, the earlier list first, then the
- * one earlier in its list.
- *
- * A counter keeps the number it was given: moving it, or changing which
- * annotations or layers it is drawn over, never renumbers it. Only the gaps
- * close, so deleting the second of three counters leaves 1 and 2 rather than
- * 1 and 3, and a delete, an undo and a reorder all land on the same numbers
- * without any of them knowing about counters. A list in which nothing moved
- * is handed back as it was, so an unchanged document is never rewritten.
- */
-export const renumberedCounterLists = (
-  lists: readonly Annotation[][],
-): Annotation[][] => {
-  const order = lists
-    .flatMap((annotations, list) =>
-      annotations.flatMap((annotation, index) =>
-        annotation.shape.kind === "counter"
-          ? [{ index, list, value: annotation.shape.value }]
-          : [],
-      ),
-    )
-    .sort((a, b) => a.value - b.value || a.list - b.list || a.index - b.index);
-  const values = lists.map(() => new Map<number, number>());
-  order.forEach(({ index, list }, place) => values[list].set(index, place + 1));
-  return lists.map((annotations, list) => {
-    const renumbered = annotations.map((annotation, index) => {
-      const value = values[list].get(index);
-      if (annotation.shape.kind !== "counter" || value === undefined)
-        return annotation;
-      return annotation.shape.value === value
-        ? annotation
-        : { ...annotation, shape: { ...annotation.shape, value } };
-    });
-    return renumbered.every(
-      (annotation, index) => annotation === annotations[index],
-    )
-      ? annotations
-      : renumbered;
-  });
-};

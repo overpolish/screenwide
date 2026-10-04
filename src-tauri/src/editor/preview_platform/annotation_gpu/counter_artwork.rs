@@ -107,7 +107,7 @@ impl CounterAtlas {
         .as_ref()
         .is_none_or(|storage| storage.size() != placed.size)
     {
-      *storage = Some(GpuAtlas::new(gpu, placed.size));
+      *storage = Some(GpuAtlas::new(gpu, "Screenwide counter atlas", placed.size));
     }
     let Some(storage) = storage.as_ref() else {
       return Ok(None);
@@ -127,13 +127,11 @@ impl CounterAtlas {
   }
 }
 
-/// The atlas's texture.
-mod gpu_atlas;
 /// The DirectWrite rasterisation the atlas is drawn by: a counter's number,
 /// and a text box's lines.
 mod rasterize;
 mod text_box;
-use gpu_atlas::GpuAtlas;
+use super::gpu_atlas::GpuAtlas;
 
 /// What the atlas keys a piece of type by: its text, and for a box being
 /// typed into its caret, its selection and the caret's width in atlas pixels
@@ -217,7 +215,8 @@ pub(crate) fn numbered_arrows(
           | AnnotationKind::Shape
           | AnnotationKind::Spotlight
           | AnnotationKind::Draw
-          | AnnotationKind::Magnify,
+          | AnnotationKind::Magnify
+          | AnnotationKind::Sticker,
         )
         | None => continue,
       }

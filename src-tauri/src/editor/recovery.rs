@@ -165,4 +165,10 @@ pub fn initialize(app: &AppHandle) {
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = load_recording_choices(app);
   sweep_orphaned_recordings(app);
+  // After the recordings' own sweep, so an edit swept away with its
+  // recording keeps no picture alive.
+  if let Ok(data) = app.path().app_data_dir() {
+    let recordings = crate::recording::recordings_directory(app).ok();
+    super::stickers::store::initialize(&data, recordings.as_deref());
+  }
 }

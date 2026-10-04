@@ -179,3 +179,35 @@ fn a_faster_timeline_does_not_hurry_the_arrival() {
   assert!(reveal_at(&ranges, 2_000).high < 1.0);
   assert_eq!(reveal_at(&ranges, 3_000).high, 1.0);
 }
+
+/// A moving sticker plays from the start of its clip in recording time,
+/// whatever the timeline does to the reveal around it, and a still sticker
+/// carries no clock to play by.
+#[test]
+fn a_moving_sticker_is_timed_from_the_start_of_its_clip() {
+  use crate::editor::annotations::sticker::{model::new_sticker, StickerArt, StickerPlay};
+  let sticker = |play: Option<StickerPlay>| {
+    let art = StickerArt {
+      asset: "image:0123456789abcdef0123456789abcdef".to_owned(),
+      aspect: 1.0,
+      pixels: None,
+      play,
+    };
+    let mut moving = clip("a", AnnotationTrack::Primary, 1_000, 10_000);
+    moving.annotation = new_sticker("a".to_owned(), Default::default(), Some(&art), None, 1.0);
+    let drawn = revealed_annotations(&[moving], AnnotationTrack::Primary, &[], 1_750, 0.0, (0, 0));
+    match &drawn[0].shape {
+      AnnotationShape::Sticker { play, .. } => play.and_then(|play| play.clock_ms),
+      _ => unreachable!(),
+    }
+  };
+  let play = StickerPlay {
+    cycle_ms: 400.0,
+    frames: 4,
+    frame: 0,
+    once: false,
+    clock_ms: None,
+  };
+  assert_eq!(sticker(Some(play)), Some(750.0));
+  assert_eq!(sticker(None), None);
+}

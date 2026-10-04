@@ -56,7 +56,7 @@ fn moved_to(
     from,
     None,
     Some(AnnotationKind::Counter),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();

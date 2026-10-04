@@ -12,6 +12,7 @@ import {
   RedactToolIcon,
   ShapeToolIcon,
   SpotlightToolIcon,
+  StickerToolIcon,
   TextToolIcon,
 } from "../../../components/shared/annotation-style/annotation-tool-icons";
 import { ToolPanelKind } from "../../popup-panel/store";
@@ -144,6 +145,14 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     name: "Spotlight a region",
     panel: "annotation",
     shortcut: "S",
+  },
+  sticker: {
+    drawsOnLayer: true,
+    icon: StickerToolIcon,
+    label: "Sticker",
+    name: "Place a sticker",
+    panel: "annotation",
+    shortcut: "E",
   },
   text: {
     drawsOnLayer: true,

@@ -25,6 +25,9 @@ pub async fn layout_screenshot_preview_surface(
   // Where the next fresh counter's tail points, in radians clockwise from
   // east: whatever the last counter was turned to. Absent until one has been.
   annotation_counter_angle: Option<f64>,
+  // The picture the next fresh sticker shows: whatever the last sticker was
+  // given. Absent until one has been.
+  annotation_sticker: Option<crate::editor::annotations::sticker::StickerArt>,
   // `annotation_tool` is the tool in hand, when one is. "select" hit-tests
   // the arrows already on the layer and lets every other press fall through
   // to it; "arrow" also draws a new one on empty picture.
@@ -55,6 +58,7 @@ pub async fn layout_screenshot_preview_surface(
   let _ = (
     &annotation_defaults,
     &annotation_counter_angle,
+    &annotation_sticker,
     &annotation_tool,
     &selected_annotation_ids,
   );
@@ -131,7 +135,10 @@ pub async fn layout_screenshot_preview_surface(
     let (annotation_layout, hover_cleared) = super::annotation::apply_annotation_layout(
       &mut manager,
       annotation_defaults,
-      annotation_counter_angle,
+      crate::editor::annotations::edit::FreshAnnotation {
+        angle: annotation_counter_angle,
+        sticker: annotation_sticker,
+      },
       annotation_tool.as_deref(),
       selection.as_ref().map(|overlay| overlay.pane_index),
       &selected_annotation_ids,

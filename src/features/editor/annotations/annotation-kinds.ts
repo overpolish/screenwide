@@ -4,7 +4,8 @@
 /**
  * What each kind of annotation is and can do, one row per kind: how it is read
  * from a document, how long it takes to arrive, what the lane calls it and
- * which controls the panel offers it.
+ * which controls the panel offers it. `annotation-kind-lookup.ts` reads the
+ * table for one stored kind or one annotation.
  */
 
 import { ANNOTATION_SIZES } from "../../../components/shared/annotation-style/widths";
@@ -18,11 +19,12 @@ import {
   outlineShape,
   redactShape,
   spotlightShape,
+  stickerShape,
   textShape,
 } from "./annotation-shape-parsers";
 
 import type { AnnotationKindRow } from "./annotation-kind-row";
-import type { Annotation, AnnotationShape } from "./annotations";
+import type { AnnotationShape } from "./annotations";
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
 /**
@@ -240,6 +242,31 @@ export const ANNOTATION_KINDS: {
     reversible: false,
     startsStill: false,
   },
+  sticker: {
+    ...ANNOTATION_SIZES.sticker,
+    // It pops in and out the way a counter does. It shows a picture of its
+    // own rather than a colour, is sized by its grips, turned by its own grip
+    // or the angle control, and mirrored rather than turned end for end.
+    animates: true,
+    drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
+    hasAlign: false,
+    hasAngle: true,
+    hasBlur: false,
+    hasColor: false,
+    hasFit: false,
+    hasHandDrawn: false,
+    hasHead: false,
+    hasInk: false,
+    hasRadius: true,
+    hasRedaction: false,
+    hasShadow: true,
+    hasSize: false,
+    hasSoftness: false,
+    laneLabel: (_shape, index) => `Sticker ${String(index + 1)}`,
+    parseShape: stickerShape,
+    reversible: true,
+    startsStill: false,
+  },
   text: {
     ...ANNOTATION_SIZES.text,
     animates: true,
@@ -269,20 +296,4 @@ export const ANNOTATION_KINDS: {
     reversible: false,
     startsStill: false,
   },
-};
-
-/** Whether `value` names a kind this build knows how to draw. */
-export const isAnnotationKind = (value: unknown): value is AnnotationKind =>
-  typeof value === "string" && value in ANNOTATION_KINDS;
-
-/** What the timeline lane calls `annotation`, `index` being its place there. */
-export const annotationLaneLabel = (annotation: Annotation, index: number) => {
-  const { shape } = annotation;
-  // The row is looked up by the shape's own kind, so the two always agree;
-  // TypeScript cannot carry that correlation through the lookup.
-  const label = ANNOTATION_KINDS[shape.kind].laneLabel as (
-    shape: AnnotationShape,
-    index: number,
-  ) => string;
-  return label(shape, index);
 };

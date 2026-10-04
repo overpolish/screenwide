@@ -21,6 +21,7 @@ use super::outline::geometry::{prepare_shape, shape_distance};
 use super::redact::geometry::{prepare_redact, redact_distance};
 use super::reveal::AnnotationReveal;
 use super::spotlight::geometry::{prepare_spotlight, spotlight_distance};
+use super::sticker::geometry::{prepare_sticker, sticker_distance};
 use super::text::geometry::{prepare_text, text_distance};
 use super::AnnotationKind;
 
@@ -37,7 +38,10 @@ use super::AnnotationKind;
 /// point, as `outline::native` keeps them; a spotlight's `p1` carries its
 /// radius and its softness the same way. A stroke's box runs from `p0` to
 /// `p2`, and `p1` is `p0` moved one source pixel across and down, which is
-/// how the shader places the fitted line its record carries.
+/// how the shader places the fitted line its record carries. A sticker
+/// places its middle at `p0` and the middles of its right and bottom sides at
+/// `p1` and `p2`, and reads its corner radius out of `width` and whether it
+/// is mirrored out of `head`.
 ///
 /// A number no kind owns prepares nothing. It cannot come from a retained
 /// annotation, and drawing it as an arrow would draw some future kind as a
@@ -81,6 +85,9 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
     Some(AnnotationKind::Draw) => {
       prepare_freehand([p0x, p0y], [p1x, p1y], [p2x, p2y], width, reveal)
     }
+    Some(AnnotationKind::Sticker) => {
+      prepare_sticker([p0x, p0y], [p1x, p1y], [p2x, p2y], width, head != 0, reveal)
+    }
     // A magnifier's zoom and rounding are not among these; it prepares
     // through `magnify::ffi::screenwide_magnify_prepare`.
     Some(AnnotationKind::Magnify) | None => ArrowGeometry::default(),
@@ -119,6 +126,7 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
     Some(AnnotationKind::Shape) => shape_distance([px, py], geometry),
     Some(AnnotationKind::Spotlight) => spotlight_distance([px, py], geometry),
     Some(AnnotationKind::Magnify) => magnify_distance([px, py], geometry),
+    Some(AnnotationKind::Sticker) => sticker_distance([px, py], geometry),
     // A highlight's record places bands it does not carry, and a stroke's
     // the line it does not; the chrome picks them through
     // [`screenwide_highlight_distance`] and [`screenwide_freehand_distance`].

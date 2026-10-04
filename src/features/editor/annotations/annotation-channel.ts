@@ -9,9 +9,13 @@ import { EditorKind } from "../types";
 import {
   rememberAnnotationAngle,
   rememberAnnotationAnimated,
+  rememberAnnotationSticker,
   rememberAnnotationStyle,
 } from "./annotation-defaults";
-import { AnnotationStyle } from "./annotations";
+import { AnnotationStyle, StickerArt, StickerPlay } from "./annotations";
+
+/** What the panel changes about how a moving sticker plays. */
+export type StickerPlayChange = Partial<Pick<StickerPlay, "frame" | "once">>;
 
 /**
  * The annotation the preview has in hand, and the edits that dress it,
@@ -32,6 +36,10 @@ type PublishedAnnotation = {
   applyDelete: () => void;
   applyReverse: () => void;
   applyShuffle: () => void;
+  /** Give the chosen sticker another picture. */
+  applySticker: (art: StickerArt) => void;
+  /** Change how the chosen moving sticker plays. */
+  applyStickerPlay: (play: StickerPlayChange) => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
   /** Whether the picture the workspace edits has any stroke to clear. */
   canClearDrawings: boolean;
@@ -95,6 +103,12 @@ export function usePublishAnnotationSelection(
       },
       applyShuffle: () => {
         applyRef.current.applyShuffle();
+      },
+      applySticker: (art) => {
+        applyRef.current.applySticker(art);
+      },
+      applyStickerPlay: (play) => {
+        applyRef.current.applyStickerPlay(play);
       },
       applyStyle: (style) => {
         applyRef.current.applyStyle(style);
@@ -207,6 +221,26 @@ export const applyAnnotationAngle = (workspace: EditorKind, angle: number) => {
  * nothing drawn yet to turn. */
 export const applyAnnotationReverse = (workspace: EditorKind) => {
   chosen(workspace)?.applyReverse();
+};
+
+/** Give the chosen sticker the picture `art`; with none chosen, the next
+ * sticker. */
+export const applyAnnotationSticker = (
+  workspace: EditorKind,
+  art: StickerArt,
+) => {
+  const published = chosen(workspace);
+  if (published) published.applySticker(art);
+  else if (drafts.has(workspace)) rememberAnnotationSticker(art);
+};
+
+/** Change how the chosen moving sticker plays. A no-op with none chosen: a
+ * fresh sticker always starts on its first frame and loops. */
+export const applyAnnotationStickerPlay = (
+  workspace: EditorKind,
+  play: StickerPlayChange,
+) => {
+  chosen(workspace)?.applyStickerPlay(play);
 };
 
 /** Lay the chosen redaction's blocks out again, or draw the chosen hand-drawn

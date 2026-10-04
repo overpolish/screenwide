@@ -30,7 +30,7 @@ fn boxed(kind: AnnotationKind) -> Vec<Annotation> {
     point(10.0, 10.0),
     None,
     Some(kind),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();
@@ -60,7 +60,7 @@ fn rounded(annotations: &mut Vec<Annotation>, to: AnnotationPoint, source_per_po
     point(30.0, 30.0),
     None,
     None,
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();

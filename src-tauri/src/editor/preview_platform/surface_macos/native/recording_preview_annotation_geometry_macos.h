@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <math.h>
 #include "../../../annotations/geometry.h"
 
 /// One annotation prepared in display points, from the normalised record the
@@ -51,6 +52,22 @@ static inline AnnotationArrowGeometry annotation_prepared(
                                (float)item.start_head,
                                (float)(item.width * image.size.width),
                                annotation_reveal_whole(), &prepared);
+    return prepared;
+  }
+  if (item.kind == ScreenwideAnnotationKindSticker) {
+    // The middle rides in `middle`, the turn in `start_head`, and the half
+    // width and half height in `end_head` and `width`, as shares of the
+    // drawn width; the picture's own sides are placed from them here, where
+    // points are the same length in either axis.
+    NSPoint centre = annotation_display_point(image, item.middle_x, item.middle_y);
+    double across = item.end_head * image.size.width;
+    double down = item.width * image.size.width;
+    double sine = sin(item.start_head);
+    double cosine = cos(item.start_head);
+    screenwide_annotation_prepare(item.kind, centre.x, centre.y, centre.x + cosine * across,
+                                  centre.y + sine * across, centre.x - sine * down,
+                                  centre.y + cosine * down, 0.0f, 0,
+                                  annotation_reveal_whole(), &prepared);
     return prepared;
   }
   // A middle handle is reported rather than the curve's control point, so the

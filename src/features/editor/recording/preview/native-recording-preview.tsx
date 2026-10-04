@@ -210,6 +210,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     canEditActiveTrack,
     canResizeActiveTrack,
     canvasTool,
+    changeCanvasTool,
     hasCursorData,
     hasKeyboardData,
     hasSceneSelection: transport.scenes.selection.ids.size > 0,

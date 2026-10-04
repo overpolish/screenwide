@@ -22,6 +22,7 @@ import type {
   AnnotationHighlight,
   AnnotationShape,
   AnnotationText,
+  StickerPlay,
 } from "./annotations";
 
 type Shape<Kind extends AnnotationShape["kind"]> = Extract<
@@ -119,6 +120,55 @@ export const spotlightShape = (value: unknown): Shape<"spotlight"> | null => {
   const start = annotationPoint(shape.start);
   const end = annotationPoint(shape.end);
   return start && end ? { end, kind: "spotlight", start } : null;
+};
+
+/** A finite number above zero, or null. */
+const positive = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : null;
+
+/** How a moving sticker plays, or undefined for one that does not move:
+ * fewer than two frames, or no time for them, is a still. */
+const stickerPlay = (value: unknown): StickerPlay | undefined => {
+  const play = (value ?? {}) as Record<string, unknown>;
+  const cycleMs = positive(play.cycleMs);
+  const frames = positive(play.frames);
+  if (cycleMs === null || frames === null || frames < 2) return undefined;
+  const count = Math.floor(frames);
+  const frame = typeof play.frame === "number" ? Math.floor(play.frame) : 0;
+  return {
+    cycleMs,
+    frame: Math.min(Math.max(frame, 0), count - 1),
+    frames: count,
+    once: play.once === true,
+  };
+};
+
+export const stickerShape = (value: unknown): Shape<"sticker"> | null => {
+  const shape = (value ?? {}) as Record<string, unknown>;
+  const center = annotationPoint(shape.center);
+  const size = positive(shape.size);
+  const aspect = positive(shape.aspect);
+  const angle = shape.angle;
+  const play = stickerPlay(shape.play);
+  return center &&
+    size !== null &&
+    aspect !== null &&
+    typeof angle === "number" &&
+    Number.isFinite(angle) &&
+    typeof shape.asset === "string"
+    ? {
+        angle,
+        aspect,
+        asset: shape.asset,
+        center,
+        flip: shape.flip === true,
+        kind: "sticker",
+        ...(play ? { play } : {}),
+        size,
+      }
+    : null;
 };
 
 export const textShape = (value: unknown): Shape<"text"> | null => {

@@ -12,7 +12,9 @@
 // `p1` points at a surface timeline in the side buffer. `HAND_DRAWN` marks a
 // highlight drawn as a marker stroke rather than a clean band, and
 // `LAID_BY_HAND` one laid over a box, whose bands are strokes rather than
-// lines of text. `SHADOW` marks a magnifier whose loupe casts a shadow.
+// lines of text. `SHADOW` marks a magnifier whose loupe casts a shadow, and a
+// sticker that casts one. `ONCE` marks a sticker whose animation plays
+// through once rather than looping, which only the sticker atlas reads.
 #![allow(dead_code)]
 
 pub(crate) const FILL: u32 = 1 << 0;
@@ -24,3 +26,4 @@ pub(crate) const SURFACES: u32 = 1 << 5;
 pub(crate) const HAND_DRAWN: u32 = 1 << 6;
 pub(crate) const SHADOW: u32 = 1 << 7;
 pub(crate) const LAID_BY_HAND: u32 = 1 << 8;
+pub(crate) const ONCE: u32 = 1 << 9;

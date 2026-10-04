@@ -52,10 +52,11 @@ pub(super) struct PreviewManager {
   /// which case the arrow tool's own first dress stands.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_defaults: Option<crate::editor::annotations::AnnotationStyle>,
-  /// Where a fresh counter's tail points, in radians clockwise from east:
-  /// whatever the last counter was turned to, so a row of them is dropped
-  /// aiming the same way. None until one has been turned.
-  pub(super) annotation_counter_angle: Option<f64>,
+  /// What a fresh annotation is made with beyond its dress: where a fresh
+  /// counter's tail points, whatever the last counter was turned to, so a
+  /// row of them is dropped aiming the same way, and the picture the last
+  /// sticker was given. Each absent until it has been settled.
+  pub(super) annotation_fresh: crate::editor::annotations::edit::FreshAnnotation,
   /// The arrow the pointer rests on, and how wide its halo has grown.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_hover: Option<AnnotationHover>,
@@ -100,7 +101,7 @@ impl PreviewManager {
     {
       self.annotation_anchor_cache.clear();
       self.annotation_defaults = None;
-      self.annotation_counter_angle = None;
+      self.annotation_fresh = Default::default();
       self.annotation_gesture = None;
       self.annotation_group = None;
       self.annotation_band = None;

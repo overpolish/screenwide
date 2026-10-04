@@ -12,7 +12,8 @@ use crate::editor::annotations::outline::geometry::{prepare_shape, shape_distanc
 use crate::editor::annotations::redact::geometry::{prepare_redact, redact_distance};
 use crate::editor::annotations::reveal::AnnotationReveal;
 
-/// Whether `kind` is held by a box and its eight grips.
+/// Whether `kind` is held by a box and its eight grips. A sticker's is the
+/// upright box its turned picture fits in.
 pub(super) fn is_box(kind: AnnotationKind) -> bool {
   matches!(
     kind,
@@ -21,12 +22,14 @@ pub(super) fn is_box(kind: AnnotationKind) -> bool {
       | AnnotationKind::Spotlight
       | AnnotationKind::Draw
       | AnnotationKind::Magnify
+      | AnnotationKind::Sticker
   )
 }
 
-/// Whether a box of `kind` has a radius dot: a stroke has no corners to round.
+/// Whether a box of `kind` has a radius dot: a stroke has no corners to
+/// round, and a sticker's box is not its picture's, which the panel rounds.
 fn has_radius(kind: AnnotationKind) -> bool {
-  kind != AnnotationKind::Draw
+  !matches!(kind, AnnotationKind::Draw | AnnotationKind::Sticker)
 }
 
 /// The box on screen, in display points, from the normalised corners Rust
@@ -75,7 +78,8 @@ fn grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> [((f64, f
 }
 
 /// The grip of a box under `point`, as the handle it reports. A magnifier's
-/// loupe grip comes after its zoom area's.
+/// loupe grip comes after its zoom area's, and a sticker's turning grip
+/// after its box's.
 pub(super) fn grip_at(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -83,16 +87,17 @@ pub(super) fn grip_at(
 ) -> Option<u32> {
   let near =
     |(x, y): (f64, f64)| (point.0 - x).abs() <= HANDLE_HIT && (point.1 - y).abs() <= HANDLE_HIT;
+  let tail = match item.shape_kind() {
+    AnnotationKind::Magnify => Some(super::magnify_chrome::loupe_grip(image, item)),
+    AnnotationKind::Sticker => Some(super::sticker_chrome::turn_grip(image, item)),
+    _ => None,
+  };
   grips(image, item)
     .into_iter()
     .filter(|(_, handle)| *handle != RADIUS_HANDLE || has_radius(item.shape_kind()))
     .find(|(grip, _)| near(*grip))
     .map(|(_, handle)| handle)
-    .or_else(|| {
-      (item.shape_kind() == AnnotationKind::Magnify
-        && near(super::magnify_chrome::loupe_grip(image, item)))
-      .then_some(HANDLE_TAIL)
-    })
+    .or_else(|| tail.filter(|grip| near(*grip)).map(|_| HANDLE_TAIL))
 }
 
 /// How far `point` is from a redaction's or a spotlight's rounded box, in

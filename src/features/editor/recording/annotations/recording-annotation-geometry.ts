@@ -9,6 +9,7 @@ import {
 
 import { shiftedPin } from "./recording-annotation-pins";
 import { RecordingAnnotationClip } from "./recording-annotations";
+import { heldLengthMs } from "./sticker-once";
 
 /** Moves a clip by output time while keeping its visible output duration. */
 export const moveRecordingAnnotationClip = ({
@@ -56,7 +57,8 @@ export const moveRecordingAnnotationClip = ({
  * `clips` with the `edge` of every clip named in `ids` trimmed by the output
  * time that takes the pressed clip `id`'s edge to `output`, so a choice of
  * several trims together. The shift stops for all of them where the first
- * would shrink below a millisecond or pass an end of the video.
+ * would shrink below a millisecond or pass an end of the video. A clip held
+ * to a length of its own is left as it is.
  */
 export const trimRecordingAnnotationClips = ({
   clips,
@@ -82,7 +84,7 @@ export const trimRecordingAnnotationClips = ({
   let least = -Infinity;
   let most = Infinity;
   for (const clip of clips) {
-    if (!ids.has(clip.annotation.id)) continue;
+    if (!ids.has(clip.annotation.id) || heldLengthMs(clip) !== null) continue;
     const at = outputOf(clip[edge]);
     const [low, high] =
       edge === "startMs"
@@ -96,7 +98,8 @@ export const trimRecordingAnnotationClips = ({
     Math.min(most, Math.max(0, Math.min(1, output)) - outputOf(pressed[edge])),
   );
   return clips.map((clip) => {
-    if (!ids.has(clip.annotation.id)) return clip;
+    if (!ids.has(clip.annotation.id) || heldLengthMs(clip) !== null)
+      return clip;
     const source = Math.round(
       recordingTimelineOutputToSource(
         edit,

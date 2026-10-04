@@ -103,7 +103,8 @@ impl Stroke {
         | AnnotationKind::Shape
         | AnnotationKind::Spotlight
         | AnnotationKind::Draw
-        | AnnotationKind::Magnify => settings.default_width,
+        | AnnotationKind::Magnify
+        | AnnotationKind::Sticker => settings.default_width,
         AnnotationKind::Counter => settings.default_counter_size,
         AnnotationKind::Highlight => {
           crate::editor::annotations::highlight::model::NEW_HIGHLIGHT_WIDTH
@@ -156,7 +157,11 @@ impl Stroke {
         line.style.width = style.width;
         line
       }),
-      AnnotationKind::Text | AnnotationKind::Redact | AnnotationKind::Magnify => None,
+      // Not live overlay tools: the editor draws them alone.
+      AnnotationKind::Text
+      | AnnotationKind::Redact
+      | AnnotationKind::Magnify
+      | AnnotationKind::Sticker => None,
     }
   }
 
@@ -179,7 +184,10 @@ impl Stroke {
         AnnotationShape::Draw { points, .. } => points.len() > 1,
         _ => true,
       }),
-      AnnotationKind::Text | AnnotationKind::Redact | AnnotationKind::Magnify => false,
+      AnnotationKind::Text
+      | AnnotationKind::Redact
+      | AnnotationKind::Magnify
+      | AnnotationKind::Sticker => false,
     }
   }
 

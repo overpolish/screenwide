@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
-import { AnnotationStyle } from "../annotations/annotations";
+import { StickerPlayChange } from "../annotations/annotation-channel";
+import { AnnotationStyle, StickerArt } from "../annotations/annotations";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -28,6 +29,13 @@ export type ToolPanelPatch = Partial<
    * travels beside the style rather than inside it. It also becomes the next
    * arrow's default. */
   annotationAnimated?: boolean;
+  /** Give the chosen sticker this picture, which the next sticker shows too.
+   * The picture is the annotation's own property rather than part of its
+   * dress. */
+  annotationSticker?: StickerArt;
+  /** Change how the chosen moving sticker plays: the frame it shows or
+   * starts on, and whether a recording plays it through once. */
+  annotationStickerPlay?: StickerPlayChange;
   /** Dress the chosen annotation, a field at a time so a panel never has to
    * send the whole style back. Each one also becomes the next arrow's default.
    */
@@ -86,7 +94,8 @@ export type ToolPanelPatch = Partial<
   resetShortcut?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
-  /** Turn the chosen annotation round, so its head points the other way. */
+  /** Turn the chosen annotation round, so its head points the other way, or
+   * mirror the chosen sticker. */
   reverseAnnotation?: true;
   /** Keep a colour of your own, so it is on offer next time. Sent once a
    * colour is settled on rather than on every step of a drag. */

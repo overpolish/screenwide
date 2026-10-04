@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationStyle } from "../annotations/annotations";
+import { AnnotationStyle, StickerArt } from "../annotations/annotations";
 
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
@@ -90,11 +90,13 @@ export type ToolPanelAnnotation = {
   id: string;
   kind: AnnotationKind;
   style: AnnotationStyle;
-  /** A counter's aim, in radians clockwise from east. Absent on an arrow,
-   * which is aimed by its own two ends. */
+  /** A counter's aim or a sticker's turn, in radians clockwise from east.
+   * Absent on an arrow, which is aimed by its own two ends. */
   angle?: number;
   /** Whether this is no annotation yet but the dress the tool in hand draws
    * its next one in. Its edits dress that one, and what only a drawn
    * annotation can do - turning it round, drawing it again - is not offered. */
   isDraft?: boolean;
+  /** The picture a sticker shows, or the next sticker will. */
+  sticker?: StickerArt;
 };

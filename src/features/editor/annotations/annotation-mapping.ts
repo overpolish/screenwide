@@ -7,9 +7,10 @@ import { AnnotationPoint, AnnotationShape } from "./annotations";
  * The same shape with every point moved by `map`, the twin of
  * `AnnotationShape::mapped` in `src-tauri/src/editor/annotations/shape.rs`.
  * What a shape *is* rides through untouched - a counter's angle and number,
- * a text box's words and its pointer, which is held against the box - because
- * every space an annotation travels between keeps the picture's aspect. A
- * length is carried as far as `map` stretches it.
+ * a text box's words and its pointer, which is held against the box, a
+ * sticker's turn and picture - because every space an annotation travels
+ * between keeps the picture's aspect. A length is carried as far as `map`
+ * stretches it.
  */
 export const mappedAnnotationShape = (
   shape: AnnotationShape,
@@ -55,6 +56,11 @@ export const mappedAnnotationShape = (
         size: Math.abs(edge.x - loupe.x),
         start: map(shape.start),
       };
+    }
+    case "sticker": {
+      const center = map(shape.center);
+      const edge = map({ x: shape.center.x + shape.size, y: shape.center.y });
+      return { ...shape, center, size: Math.abs(edge.x - center.x) };
     }
     case "redact":
     case "shape":

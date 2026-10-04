@@ -121,6 +121,7 @@ pub(super) struct EditorCallbacks {
   pub(super) gesture: Option<SelectionGestureCallback>,
   pub(super) pointer_down: Option<PointerDownCallback>,
   pub(super) selection: Option<SelectionCallback>,
+  pub(super) sticker_drop: Option<StickerDropCallback>,
   pub(super) transform: Option<TransformCallback>,
 }
 

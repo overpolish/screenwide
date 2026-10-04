@@ -27,7 +27,7 @@ use crate::editor::annotations::gesture::AnnotationGestureTarget;
 /// working copy, so the document takes exactly one edit per drag. A choice
 /// made on another layer selects that layer first, the way a press with the
 /// select tool does, so the panel finds the annotation on the layer in hand.
-fn emit_annotation_change(app: &AppHandle, session_id: u64, commit: AnnotationCommit) {
+pub(super) fn emit_annotation_change(app: &AppHandle, session_id: u64, commit: AnnotationCommit) {
   if commit.selects_layer {
     let _ = app.emit(
       "screenshot-preview://selection-change",
@@ -82,6 +82,10 @@ pub(super) fn install(
     );
   }));
   surface.set_selection_snapping(true);
+  let drop_app = app.clone();
+  surface.set_sticker_drop_callback(Box::new(move |picture, at| {
+    crate::editor::stickers::dropped::deliver(&drop_app, "screenshot", picture, at);
+  }));
   let event_app = app.clone();
   surface.set_selection_callback(Box::new(move |pane_index| {
     let _ = event_app.emit(

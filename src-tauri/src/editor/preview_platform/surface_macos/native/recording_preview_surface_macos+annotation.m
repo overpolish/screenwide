@@ -36,7 +36,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode
          mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact ||
          mode == ScreenwideAnnotationModeHighlight || mode == ScreenwideAnnotationModeShape ||
          mode == ScreenwideAnnotationModeSpotlight || mode == ScreenwideAnnotationModeDraw ||
-         mode == ScreenwideAnnotationModeMagnify;
+         mode == ScreenwideAnnotationModeMagnify || mode == ScreenwideAnnotationModeSticker;
 }
 
 /// What a press does if it never travels: an ordinary press, a toggle of the
@@ -104,6 +104,9 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
   BOOL toggles = annotation_press_toggles();
   BOOL marquee = mode == ScreenwideAnnotationModeMarquee;
+  if (mode == ScreenwideAnnotationModeSticker && handle < 0 && shaft < 0 &&
+      annotation_sticker_lets_go(view, point))
+    return YES;
   // Empty picture under the marquee draws a band over the layer beneath it.
   int32_t marqueeLayer = marquee && handle < 0 && shaft < 0
                              ? annotation_marquee_layer_at_point(surface, point)
@@ -181,13 +184,14 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
   }
   // Empty picture: a new annotation, on the picture under the press. An arrow
   // is drawn out, so it waits for the press to prove a drag and a click leaves
-  // no stub behind. A counter and a text box are dropped whole where the press
-  // lands, so they begin at once and a click alone makes them; the drag that
-  // may follow carries them.
+  // no stub behind. A counter, a text box and a sticker are dropped whole
+  // where the press lands, so they begin at once and a click alone makes
+  // them; the drag that may follow carries them.
   annotation_take_layer_at_point(surface, point);
   view.annotationDragTargetKind = ScreenwideAnnotationTargetNew;
   view.annotationDragIndex = 0;
-  if (mode == ScreenwideAnnotationModeCounter || mode == ScreenwideAnnotationModeText) {
+  if (mode == ScreenwideAnnotationModeCounter || mode == ScreenwideAnnotationModeText ||
+      mode == ScreenwideAnnotationModeSticker) {
     view.annotationDragHandle = ScreenwideAnnotationHandleBody;
     view.annotationDragBegun = YES;
     emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetNew, 0,

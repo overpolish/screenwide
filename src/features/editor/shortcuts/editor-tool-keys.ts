@@ -119,6 +119,32 @@ export const editorToolKeyAction = (
   );
 };
 
+/** The ⌘ or Ctrl letters a window answers, without Shift. */
+export type EditorCommandKeys = {
+  onCopy?: () => void;
+  onCutTimeline?: () => void;
+  onExport?: () => void;
+  /** ⌘V or Ctrl+V outside a text field. */
+  onPaste?: () => void;
+};
+
+/** What ⌘ or Ctrl with `code` does in this window, or null where it does
+ * nothing. A field being typed in keeps its own cut, copy and paste, so only
+ * Export reaches past one. */
+export const editorCommandKeyAction = (
+  code: string,
+  keys: EditorCommandKeys,
+  inTextField: boolean,
+) =>
+  (inTextField && code !== "KeyE"
+    ? null
+    : {
+        KeyB: keys.onCutTimeline,
+        KeyC: keys.onCopy,
+        KeyE: keys.onExport,
+        KeyV: keys.onPaste,
+      }[code]) ?? null;
+
 /** The arrow keys as directions, for nudging a layer or stepping the playhead. */
 export const arrowDirections = new Map([
   ["ArrowDown", { x: 0, y: 1 }],

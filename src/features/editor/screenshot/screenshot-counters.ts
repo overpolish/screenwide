@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { renumberedCounterLists } from "../annotations/annotations";
+import { renumberedCounterLists } from "../annotations/annotation-counters";
 
 import type { ScreenshotWorkspaceOutputSettings } from "./screenshot-output";
 

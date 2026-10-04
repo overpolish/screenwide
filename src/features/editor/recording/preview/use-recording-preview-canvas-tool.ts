@@ -93,6 +93,7 @@ export function useRecordingPreviewCanvasTool({
       select: toggle("select"),
       shape: toggle("shape"),
       spotlight: toggle("spotlight"),
+      sticker: toggle("sticker"),
       text: toggle("text"),
     };
   }, [changeCanvasTool]);

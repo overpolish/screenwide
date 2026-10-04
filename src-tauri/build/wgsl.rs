@@ -73,6 +73,7 @@ const MODULES: &[(&str, &[&str])] = &[
       "src/editor/preview_platform/shaders/annotation_spotlight.wgsl",
       "src/editor/preview_platform/shaders/annotation_magnify.wgsl",
       "src/editor/preview_platform/shaders/annotation_highlight.wgsl",
+      "src/editor/preview_platform/shaders/annotation_sticker.wgsl",
       "src/editor/preview_platform/shaders/annotation_layers.wgsl",
       "src/editor/preview_platform/shaders/annotation_tiles.wgsl",
     ],

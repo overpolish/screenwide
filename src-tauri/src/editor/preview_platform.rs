@@ -92,7 +92,6 @@ use self::surface_windows as surface;
 
 #[cfg(target_os = "windows")]
 pub(crate) use compositor::ComposedFrame;
-#[cfg(target_os = "windows")]
 pub(crate) use surface::type_device;
 pub(crate) use surface::RecordingPreviewSurface;
 #[cfg(target_os = "macos")]
@@ -175,6 +174,18 @@ pub(crate) enum AnnotationTextPhase {
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) type AnnotationTextCallback =
   Box<dyn FnMut(AnnotationTextPhase, u32, u32, String, u64) + Send + 'static>;
+
+/// A picture dropped on the workspace, and where it landed: the layer under
+/// it and the point in that layer's image-normalised space, or `None` off
+/// every picture.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) type StickerDropCallback = Box<
+  dyn FnMut(
+      crate::editor::stickers::dropped::DroppedPicture,
+      Option<crate::editor::stickers::dropped::StickerPoint>,
+    ) + Send
+    + 'static,
+>;
 
 pub(crate) type SelectionGestureCallback = Box<
   dyn FnMut(SelectionGesturePhase, u32, SelectionGestureOperation, u32, f64, f64, f64)

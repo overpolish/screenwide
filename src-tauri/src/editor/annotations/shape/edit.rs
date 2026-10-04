@@ -47,6 +47,9 @@ impl super::super::Annotation {
       AnnotationKind::Magnify => {
         super::super::magnify::gesture::drag(self, handle, point, origin, shift, snap)
       }
+      AnnotationKind::Sticker => {
+        super::super::sticker::gesture::drag(self, handle, point, origin, shift, snap)
+      }
     }
   }
 
@@ -85,22 +88,25 @@ impl super::super::Annotation {
       AnnotationKind::Magnify => {
         super::super::magnify::gesture::drag_new(self, point, origin, shift, snap)
       }
+      AnnotationKind::Sticker => super::super::sticker::gesture::drag_new(self, point, snap),
     }
   }
 }
 
 impl AnnotationKind {
   /// The annotation a fresh press of this tool makes at `point`, in `style`
-  /// or in the tool's own first dress. `angle` is where a counter's tail
-  /// points, `existing` the list it is numbered against, and
-  /// `source_per_size` what sizes a text box so it can centre on `point`.
+  /// or in the tool's own first dress. `fresh` is what the editor has
+  /// settled on beyond the dress - where a counter's tail points, which
+  /// picture a sticker shows - `existing` the list a counter is numbered
+  /// against, and `source_per_size` what sizes a text box so it can centre on
+  /// `point`, and a sticker.
   #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub(crate) fn new_annotation(
     self,
     id: String,
     point: AnnotationPoint,
     style: Option<&super::super::AnnotationStyle>,
-    angle: Option<f64>,
+    fresh: &super::super::edit::FreshAnnotation,
     existing: &[super::super::Annotation],
     source_per_size: f64,
   ) -> super::super::Annotation {
@@ -111,7 +117,7 @@ impl AnnotationKind {
         point,
         super::super::counter::next_counter_value(existing),
         style,
-        angle,
+        fresh.angle,
       ),
       Self::Text => super::super::text::new_text(id, point, style, source_per_size),
       Self::Redact => super::super::redact::new_redact(id, point, style),
@@ -127,6 +133,13 @@ impl AnnotationKind {
       Self::Spotlight => super::super::spotlight::model::new_spotlight(id, [point, point], style),
       Self::Draw => super::super::freehand::model::new_draw(id, point, style),
       Self::Magnify => super::super::magnify::model::new_magnify(id, point, style),
+      Self::Sticker => super::super::sticker::model::new_sticker(
+        id,
+        point,
+        fresh.sticker.as_ref(),
+        style,
+        source_per_size,
+      ),
     }
   }
 
@@ -155,6 +168,10 @@ impl AnnotationKind {
         super::super::reveal::reveal_window(elapsed_ms, duration_ms, frame_ms, path_ms)
       }
       Self::Counter => {
+        super::super::counter::reveal::counter_reveal_window(elapsed_ms, duration_ms, frame_ms)
+      }
+      // A sticker pops in and out the way a counter does.
+      Self::Sticker => {
         super::super::counter::reveal::counter_reveal_window(elapsed_ms, duration_ms, frame_ms)
       }
       Self::Text => {
@@ -188,7 +205,7 @@ impl AnnotationKind {
         own.unwrap_or(super::super::reveal::REVEAL_DRAW_IN_MS)
       }
       Self::Text => own.unwrap_or(super::super::text::reveal::POINTER_IN_MS),
-      Self::Counter | Self::Redact | Self::Spotlight | Self::Magnify => 0.0,
+      Self::Counter | Self::Redact | Self::Spotlight | Self::Magnify | Self::Sticker => 0.0,
     }
   }
 
@@ -204,7 +221,7 @@ impl AnnotationKind {
       Self::Arrow | Self::Highlight | Self::Shape | Self::Draw => {
         path_ms * (1.0 + REVEAL_OUT_SHARE)
       }
-      Self::Counter => COUNTER_REVEAL_IN_MS + COUNTER_REVEAL_OUT_MS,
+      Self::Counter | Self::Sticker => COUNTER_REVEAL_IN_MS + COUNTER_REVEAL_OUT_MS,
       Self::Text => super::super::text::reveal::text_reveal_span_ms(path_ms),
       // A redaction ramps in and never leaves.
       Self::Redact => COUNTER_REVEAL_IN_MS,

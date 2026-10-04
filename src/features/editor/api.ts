@@ -3,7 +3,7 @@
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 
-import { AnnotationStyle } from "./annotations/annotations";
+import { AnnotationStyle, StickerArt } from "./annotations/annotations";
 import {
   normalizedCameraOverlay,
   normalizedCursorEffects,
@@ -265,6 +265,7 @@ export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
 export const layoutScreenshotPreviewSurface = ({
   annotationCounterAngle,
   annotationDefaults,
+  annotationSticker,
   annotationTool,
   backdrop,
   fitWidth,
@@ -290,13 +291,15 @@ export const layoutScreenshotPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
-  /** The dress the next fresh arrow is drawn in: whatever the editor's last
-   * annotation edit settled on. Absent until it has settled on anything, and
-   * the native tool falls back to the accent at its own stroke. */
   /** Where a fresh counter's tail points, in radians clockwise from east:
    * whatever the last counter was turned to. */
   annotationCounterAngle?: number | null;
+  /** The dress the next fresh arrow is drawn in: whatever the editor's last
+   * annotation edit settled on. Absent until it has settled on anything, and
+   * the native tool falls back to the accent at its own stroke. */
   annotationDefaults?: AnnotationStyle | null;
+  /** The picture a fresh sticker shows: whatever the last sticker was given. */
+  annotationSticker?: StickerArt | null;
   /** The annotation tool in hand. "select" hit-tests the annotations already on
    * the layer and lets every other press fall through to it; "arrow" and
    * "counter" also make a new annotation on empty picture. */
@@ -310,6 +313,7 @@ export const layoutScreenshotPreviewSurface = ({
   invoke<null>("layout_screenshot_preview_surface", {
     annotationCounterAngle: annotationCounterAngle ?? null,
     annotationDefaults: annotationDefaults ?? null,
+    annotationSticker: annotationSticker ?? null,
     annotationTool: annotationTool ?? null,
     backdrop,
     fitWidth,

@@ -137,6 +137,9 @@ impl NativeAnnotationData {
     if let super::AnnotationShape::Magnify { size, .. } = &annotation.shape {
       super::magnify::native::fill(&mut record, *size, &annotation.style);
     }
+    if let super::AnnotationShape::Sticker { play, .. } = &annotation.shape {
+      super::sticker::native::fill(&mut record, &annotation.style, play.as_ref());
+    }
     if let Some(fill) = fill {
       record.color = fill.color;
       record.flags = fill.flags;

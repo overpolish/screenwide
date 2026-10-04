@@ -43,7 +43,7 @@ fn counter_move(
     from,
     None,
     Some(AnnotationKind::Counter),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap()
@@ -189,7 +189,7 @@ fn dragging_an_arrow_tip_snaps_it_to_a_detected_element() {
     point(80.0, 80.0),
     None,
     Some(AnnotationKind::Arrow),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();
@@ -252,7 +252,7 @@ fn the_bend_and_the_shaft_of_an_arrow_never_snap() {
       point(400.0, 200.0),
       None,
       Some(AnnotationKind::Arrow),
-      None,
+      &crate::editor::annotations::edit::FreshAnnotation::default(),
       0.0,
     )
     .unwrap();

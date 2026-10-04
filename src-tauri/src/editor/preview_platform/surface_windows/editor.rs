@@ -140,6 +140,7 @@ impl EditorWindow {
     // A freshly created child lands at the bottom of the sibling z-order, so
     // raise it above WebView2 before the first `set_frame` arrives.
     raise(hwnd);
+    super::sticker_drop::register(hwnd);
     Ok(Self {
       hwnd,
       typing: typing_window::create(hwnd)?,
@@ -226,6 +227,7 @@ impl Drop for EditorWindow {
   // process-lifetime registry keyed by its host window and is never dropped in
   // practice.
   fn drop(&mut self) {
+    super::sticker_drop::revoke(self.hwnd);
     let _ = unsafe { DestroyWindow(self.hwnd) };
   }
 }

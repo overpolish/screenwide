@@ -39,7 +39,7 @@ fn drawn(from: AnnotationPoint, to: AnnotationPoint, shift: bool) -> Vec<Annotat
     from,
     None,
     Some(AnnotationKind::Redact),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();
@@ -61,7 +61,7 @@ fn dragged(
     from,
     None,
     None,
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();

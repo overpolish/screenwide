@@ -114,6 +114,7 @@ pub(crate) const MODE_MAGNIFY: u32 = 10;
 /// The marquee: it picks annotations up as the select tool does, and a drag
 /// over empty picture draws a band that chooses everything it touches.
 pub(crate) const MODE_MARQUEE: u32 = 11;
+pub(crate) const MODE_STICKER: u32 = 12;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
@@ -127,6 +128,7 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("spotlight") => MODE_SPOTLIGHT,
     Some("draw") => MODE_DRAW,
     Some("magnify") => MODE_MAGNIFY,
+    Some("sticker") => MODE_STICKER,
     Some("select") => MODE_SELECT,
     Some("marquee") => MODE_MARQUEE,
     _ => MODE_NONE,
@@ -156,6 +158,7 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
     MODE_SPOTLIGHT => Some(AnnotationKind::Spotlight),
     MODE_DRAW => Some(AnnotationKind::Draw),
     MODE_MAGNIFY => Some(AnnotationKind::Magnify),
+    MODE_STICKER => Some(AnnotationKind::Sticker),
     _ => None,
   }
 }
@@ -182,6 +185,19 @@ pub(crate) fn drawing_layer(
       x >= *left && x <= left + width && y >= *top && y <= top + height
     })
     .map(|(layer, _)| layer)
+}
+
+/// Whether a press at `point` lands on a picture a fresh annotation could
+/// join, out of `layers` as [`drawing_layer`] reads them. With no pictures
+/// laid out there is nothing to miss, so every press is on one. The twin of
+/// `annotation_picture_at_point` in
+/// `recording_preview_surface_macos+annotation_report.m`.
+#[cfg(any(target_os = "windows", test))]
+pub(crate) fn over_a_picture(layers: &[(u32, [f64; 4])], point: (f64, f64)) -> bool {
+  !layers
+    .iter()
+    .any(|(layer, _)| *layer < FIRST_NON_PICTURE_LAYER)
+    || drawing_layer(layers.iter().copied(), point).is_some()
 }
 
 impl AnnotationGestureTarget {

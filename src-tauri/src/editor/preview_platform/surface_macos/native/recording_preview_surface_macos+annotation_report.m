@@ -109,3 +109,38 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_take_layer_at_point(
     return;
   }
 }
+
+// Whether `point` lands on a picture a fresh annotation could join. With no
+// pictures laid out there is nothing to miss, so every press is on one. The
+// twin of `over_a_picture` in `src-tauri/src/editor/annotations/gesture.rs`.
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_picture_at_point(ScreenwidePreviewSurface *surface,
+                                                           NSPoint point) {
+  BOOL any = NO;
+  for (NSValue *value in surface.selectionTargets) {
+    ScreenwidePreviewSelection target;
+    [value getValue:&target size:sizeof(target)];
+    if (target.layer_id == ScreenwideFrameLayerId || selection_is_keyboard(target)) continue;
+    any = YES;
+    if (NSPointInRect(point, selection_image_frame_for(surface, target))) return YES;
+  }
+  return !any;
+}
+
+// A press on no annotation under the sticker tool places nothing while
+// something is in hand, or off every picture: it lets the choice go, so the
+// next sticker's picture can be chosen, and goes no further, leaving the
+// frame and the layers as they were. The next press on the picture places.
+// `NO` leaves the press to place a sticker.
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_sticker_lets_go(ScreenwidePreviewInteractionView *view,
+                                                          NSPoint point) {
+  ScreenwidePreviewSurface *surface = view.surface;
+  BOOL held = surface.annotationSelected >= 0 || annotation_has_group(surface);
+  if (!held && annotation_picture_at_point(surface, point)) return NO;
+  if (held) {
+    surface.annotationSelected = -1;
+    emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetNone, 0,
+                            ScreenwideAnnotationHandleBody, point);
+  }
+  view.annotationPressIgnored = YES;
+  return YES;
+}

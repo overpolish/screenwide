@@ -104,6 +104,7 @@ use keyboard_hit::{keyboard_transform_start, redraw_keyboard_transform};
 mod recenter;
 mod selection;
 mod snapping;
+mod sticker_drop;
 mod view_fit;
 mod window;
 mod workspace_layout;
@@ -119,7 +120,7 @@ use super::{
   AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, AnnotationTextPhase,
   ContextMenuCallback, PointerDownCallback, PreviewSelection, PreviewSurfaceRect,
   SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
-  TransformCallback,
+  StickerDropCallback, TransformCallback,
 };
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::gpu::surface::{Frame, Surface};

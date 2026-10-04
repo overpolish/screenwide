@@ -10,6 +10,10 @@ pub(crate) fn install(
   clips: Arc<RwLock<Vec<RecordingAnnotationClip>>>,
 ) {
   let event_clips = Arc::clone(&clips);
+  let drop_app = app.clone();
+  surface.set_sticker_drop_callback(Box::new(move |picture, at| {
+    crate::editor::stickers::dropped::deliver(&drop_app, "recording", picture, at);
+  }));
   let event_app = app.clone();
   surface.set_annotation_gesture_callback(Box::new(
     move |phase, pane, kind, index, handle, x, y, snap, image_points| {

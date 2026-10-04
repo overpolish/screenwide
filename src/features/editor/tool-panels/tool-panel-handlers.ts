@@ -5,7 +5,8 @@ import {
   Background,
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
-import { AnnotationStyle } from "../annotations/annotations";
+import { StickerPlayChange } from "../annotations/annotation-channel";
+import { AnnotationStyle, StickerArt } from "../annotations/annotations";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -37,6 +38,10 @@ export type ToolPanelHandlers = {
   /** Lay the chosen redaction's blocks out again, or draw the chosen
    * hand-drawn highlight's stroke again, from a fresh seed. */
   onAnnotationShuffle?: () => void;
+  /** Give the chosen sticker, or the next one, another picture. */
+  onAnnotationStickerChange?: (art: StickerArt) => void;
+  /** Change how the chosen moving sticker plays. */
+  onAnnotationStickerPlayChange?: (play: StickerPlayChange) => void;
   /** Dress the chosen annotation, a field at a time, through the same commit
    * path the drag on the picture uses. */
   onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;

@@ -30,11 +30,11 @@ pub(super) struct AnnotationState {
   /// in hand, whose grips the chrome draws.
   selected: Vec<String>,
   defaults: Option<AnnotationStyle>,
-  /// Whether the next arrow animates and where the next counter's tail points.
-  /// Both are the annotation's own rather than part of its dress, so they
-  /// travel beside the style defaults.
+  /// Whether the next arrow animates, and what the next annotation is made
+  /// with beyond its dress. Both are the annotation's own rather than part
+  /// of its dress, so they travel beside the style defaults.
   animated: Option<bool>,
-  counter_angle: Option<f64>,
+  fresh: crate::editor::annotations::edit::FreshAnnotation,
   gesture: Option<Gesture>,
   /// The chosen group being carried by a press on the picture.
   group: Option<group::GroupDrag>,
@@ -71,6 +71,7 @@ pub async fn set_recording_preview_annotations(
   defaults: Option<AnnotationStyle>,
   animated: Option<bool>,
   counter_angle: Option<f64>,
+  sticker: Option<crate::editor::annotations::sticker::StickerArt>,
 ) -> Result<(), String> {
   let mut clips = clips;
   validate_clips(&clips)?;
@@ -104,7 +105,10 @@ pub async fn set_recording_preview_annotations(
   manager.annotation.selected = selected_ids;
   manager.annotation.defaults = defaults;
   manager.annotation.animated = animated;
-  manager.annotation.counter_angle = counter_angle;
+  manager.annotation.fresh = crate::editor::annotations::edit::FreshAnnotation {
+    angle: counter_angle,
+    sticker,
+  };
   manager.publish_annotation_handles();
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   if recounted {
@@ -229,3 +233,5 @@ mod tests;
 mod handles;
 
 mod redraw;
+
+pub mod sticker;

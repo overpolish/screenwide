@@ -11,6 +11,8 @@ import {
   applyAnnotationReverse,
   applyAnnotationShuffle,
   applyAnnotationsDelete,
+  applyAnnotationSticker,
+  applyAnnotationStickerPlay,
   applyAnnotationStyle,
   applyClearDrawings,
 } from "../../annotations/annotation-channel";
@@ -34,6 +36,8 @@ export const annotationPanelHandlers = (
   | "onAnnotationColorSave"
   | "onAnnotationReverse"
   | "onAnnotationShuffle"
+  | "onAnnotationStickerChange"
+  | "onAnnotationStickerPlayChange"
   | "onAnnotationsDelete"
   | "onAnnotationStyleChange"
   | "onDrawingsClear"
@@ -55,6 +59,12 @@ export const annotationPanelHandlers = (
   },
   onAnnotationShuffle: () => {
     applyAnnotationShuffle(workspace);
+  },
+  onAnnotationStickerChange: (art) => {
+    applyAnnotationSticker(workspace, art);
+  },
+  onAnnotationStickerPlayChange: (play) => {
+    applyAnnotationStickerPlay(workspace, play);
   },
   onAnnotationStyleChange: (style) => {
     applyAnnotationStyle(workspace, style);

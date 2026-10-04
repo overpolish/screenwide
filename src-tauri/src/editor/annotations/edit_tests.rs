@@ -32,7 +32,7 @@ fn cancelling_a_new_arrow_restores_the_original_list() {
     point(20.0, 30.0),
     None,
     Some(AnnotationKind::Arrow),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();
@@ -66,7 +66,7 @@ fn a_fresh_annotation_takes_the_place_its_kind_is_drawn_at() {
       point(10.0, 10.0),
       None,
       Some(kind),
-      None,
+      &crate::editor::annotations::edit::FreshAnnotation::default(),
       0.0,
     )
     .unwrap();
@@ -113,7 +113,7 @@ fn a_new_text_box_is_centred_on_the_press_and_carried_there() {
     point(200.0, 150.0),
     None,
     Some(AnnotationKind::Text),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     SOURCE_PER_SIZE,
   )
   .unwrap();
@@ -138,7 +138,7 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
     point(50.0, 0.0),
     None,
     Some(AnnotationKind::Arrow),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();
@@ -164,7 +164,7 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
     point(50.0, 0.0),
     None,
     Some(AnnotationKind::Arrow),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   )
   .unwrap();
@@ -197,7 +197,7 @@ fn selection_and_a_missing_annotation_do_not_open_an_edit() {
       point(0.0, 0.0),
       None,
       Some(AnnotationKind::Arrow),
-      None,
+      &crate::editor::annotations::edit::FreshAnnotation::default(),
       0.0
     )
     .is_none());
@@ -217,7 +217,7 @@ fn a_long_document_still_takes_a_new_annotation() {
     point(10.0, 10.0),
     None,
     Some(AnnotationKind::Arrow),
-    None,
+    &crate::editor::annotations::edit::FreshAnnotation::default(),
     0.0,
   );
   assert!(edit.is_some());

@@ -67,6 +67,14 @@ pub(crate) fn annotation_travel(
           .abs()
           .max((reveal.high - previous[1]).abs())
     }
+    // A sticker grows out of its middle, so its corners sweep furthest: half
+    // its diagonal, `b` and `c` being the middles of its right and bottom
+    // sides.
+    AnnotationKind::Sticker => {
+      let across = ((b[0] - a[0]) * scale[0]).hypot((b[1] - a[1]) * scale[1]);
+      let down = ((c[0] - a[0]) * scale[0]).hypot((c[1] - a[1]) * scale[1]);
+      across.hypot(down) * (reveal.scale - previous[2]).abs()
+    }
     // A redaction never moves over a clip: it is whole for as long as it is
     // shown, and a spotlight only fades. A highlight's bands and a stroke's
     // line are not in their records' points, so `highlight_travel` measures

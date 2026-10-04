@@ -13,6 +13,7 @@ import { SeekHandler } from "../../timeline/timeline-seek";
 import { previewedWhole } from "./recording-annotation-drag-draft";
 import { trimRecordingAnnotationClips } from "./recording-annotation-geometry";
 import { RecordingAnnotationClip } from "./recording-annotations";
+import { heldLengthMs } from "./sticker-once";
 
 type Edge = "startMs" | "endMs";
 
@@ -23,7 +24,9 @@ type Edge = "startMs" | "endMs";
  * is no use for deciding where the handle belongs. The arrow keys step the
  * edge a tenth of a second, a whole second with Shift, trimming every clip in
  * `ids` with it. A fragment that continues into its neighbour across a cut
- * has no handle on that side: the clip does not end there.
+ * has no handle on that side: the clip does not end there. A clip held to a
+ * length of its own - a moving sticker played once - has none at all; it
+ * still moves whole.
  */
 export function RecordingAnnotationClipEdges({
   clip,
@@ -52,6 +55,7 @@ export function RecordingAnnotationClipEdges({
   sourceDurationMs: number;
   onSeek?: SeekHandler;
 }) {
+  if (heldLengthMs(clip) !== null) return null;
   return (["startMs", "endMs"] as const).map((edge) => {
     if (
       (edge === "startMs" && continuesPrevious) ||

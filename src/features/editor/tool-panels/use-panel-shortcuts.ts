@@ -55,6 +55,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
         { shiftKey },
       );
     },
+    onPaste: () => {
+      forward("KeyV", { ctrlKey: true, key: "v" });
+    },
     onRedo: () => {
       forward("KeyZ", { ctrlKey: true, key: "z", shiftKey: true });
     },

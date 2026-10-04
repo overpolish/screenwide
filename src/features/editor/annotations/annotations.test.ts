@@ -3,9 +3,10 @@
 
 import { describe, expect, it } from "vitest";
 
+import { renumberedCounterLists } from "./annotation-counters";
 import { validAnnotations } from "./annotation-documents";
-import { annotationLaneLabel } from "./annotation-kinds";
-import { Annotation, renumberedCounterLists } from "./annotations";
+import { annotationLaneLabel } from "./annotation-kind-lookup";
+import { Annotation } from "./annotations";
 
 const arrow = (id: string): Annotation => ({
   animated: true,

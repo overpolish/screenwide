@@ -56,6 +56,8 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+crop_draw.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+framed.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+context_menu.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+drop.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_sticker_drop_macos.h");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+cursor.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+keyboard.m");
@@ -177,6 +179,7 @@ fn main() {
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+crop_draw.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+framed.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+context_menu.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+drop.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+cursor.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+keyboard.m")

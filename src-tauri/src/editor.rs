@@ -27,6 +27,8 @@ mod recovery;
 pub(crate) mod save;
 pub(crate) mod scenes;
 pub(crate) mod screenshot_preview;
+/// The pictures stickers show.
+pub(crate) mod stickers;
 pub(crate) mod surface_colour;
 mod timeline_edit;
 mod track_selection;

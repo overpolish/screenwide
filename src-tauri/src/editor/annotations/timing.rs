@@ -152,6 +152,9 @@ pub(crate) fn revealed_annotations(
       // A spotlight held on for the one it hands to is drawn where it ended.
       let at = source_ms.min(clip.end_ms.saturating_sub(1));
       let (mut annotation, mut shown) = placed_annotation(clip, at)?;
+      // A moving sticker plays from the start of its clip, in recording time,
+      // so a scrub lands on the frame playback showed there.
+      super::sticker::play::clocked(&mut annotation, at.saturating_sub(clip.start_ms) as f64);
       if shown[1] == clip.end_ms {
         shown[1] = drawn_until(clips, &links, index);
       }

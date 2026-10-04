@@ -1,23 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  AnnotationTool,
-  useAnnotationAngleDefault,
-  useAnnotationAnimatedDefault,
-  useAnnotationDefaults,
-} from "../../annotations/annotation-defaults";
+import { AnnotationTool } from "../../annotations/annotation-defaults";
 import { Arrangement } from "../../annotations/annotation-order";
 import { AnnotationFrame, pacedClip } from "../../annotations/annotation-pace";
 import { Annotation, AnnotationTextEdit } from "../../annotations/annotations";
 import { useAnnotations } from "../../annotations/use-annotations";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
-import { drawingToolKind } from "../../tool-panels/tool-registry";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 
@@ -38,6 +31,8 @@ import {
   renumberedAnnotationClips,
 } from "./recording-annotations";
 import { withRecordingSpotlightBlurShared } from "./recording-spotlight-blur";
+import { heldLengthClip } from "./sticker-once";
+import { useRecordingAnnotationSync } from "./use-recording-annotation-sync";
 import { useRecordingPinStatus } from "./use-recording-pin-status";
 
 type AnnotationEvent = {
@@ -105,14 +100,6 @@ export function useRecordingAnnotations({
       screenCaptureScale,
       screenSource: frames.primary,
     });
-  // A fresh annotation's dress and whether it animates both travel with the
-  // layout the native tool draws from; animation is the annotation's own
-  // property, so it rides beside the style rather than inside it. The dress is
-  // the tool's own: a disc and a stroke are different measurements, so the size
-  // the counter tool sends is the one counters were last drawn at.
-  const defaults = useAnnotationDefaults(drawingToolKind(tool) ?? "arrow");
-  const animated = useAnnotationAnimatedDefault();
-  const counterAngle = useAnnotationAngleDefault();
   const editGesture = useEditorEditGesture();
   const [previewClips, setPreviewClips] = useState<
     RecordingAnnotationClip[] | null
@@ -123,12 +110,16 @@ export function useRecordingAnnotations({
     // numbered by clip time: dragging one clip in front of another in time
     // renumbers the pair, while reordering the drawing order does not. Every
     // clip is paced by its annotation as it now stands, so a path drawn
-    // longer takes longer to draw in. Spotlights shown together share one
-    // Blur setting, whichever edit brings them together.
+    // longer takes longer to draw in, and a sticker played once lasts one
+    // run of its animation, whatever edit asked for another length.
+    // Spotlights shown together share one Blur setting, whichever edit
+    // brings them together.
     const next = renumberedAnnotationClips(
       withRecordingSpotlightBlurShared(unnumbered, clips),
       clips,
-    ).map((clip) => pacedClip(clip, frames[clip.trackId]));
+    ).map((clip) =>
+      pacedClip(heldLengthClip(clip, sourceDurationMs), frames[clip.trackId]),
+    );
     if (JSON.stringify(next) !== JSON.stringify(clips))
       onEdit({ ...edit, annotationClips: next });
   };
@@ -225,28 +216,13 @@ export function useRecordingAnnotations({
       for (const stop of stops) stop();
     };
   }, [sessionId]);
-  useEffect(() => {
-    if (sessionId === null) return;
-    void invoke("set_recording_preview_annotations", {
-      animated,
-      clips: nativeClips,
-      counterAngle,
-      defaults,
-      paneIndex: trackId === null ? null : trackId === "primary" ? 0 : 1,
-      selectedIds: [...selection.selectedIds],
-      sessionId,
-    }).catch((cause: unknown) => {
-      console.error("Could not update recording annotations", cause);
-    });
-  }, [
-    animated,
-    counterAngle,
-    nativeClips,
-    defaults,
+  useRecordingAnnotationSync({
+    clips: nativeClips,
+    selectedIds: selection.selectedIds,
     sessionId,
-    selection.selectedIds,
+    tool,
     trackId,
-  ]);
+  });
   const pinning = recordingAnnotationPinning({
     clips,
     getPositionMs,

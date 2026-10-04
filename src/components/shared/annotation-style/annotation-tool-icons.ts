@@ -10,6 +10,7 @@ import {
   Pencil,
   ScanSearch,
   Square,
+  Sticker,
   Type,
 } from "lucide-react";
 
@@ -30,3 +31,4 @@ export const ShapeToolIcon = Square;
 export const SpotlightToolIcon = Flashlight;
 export const DrawToolIcon = Pencil;
 export const MagnifyToolIcon = ScanSearch;
+export const StickerToolIcon = Sticker;

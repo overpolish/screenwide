@@ -38,6 +38,9 @@ serde_json = "1"
 xcap = "0.9.8"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 tauri-plugin-clipboard-manager = "2.3.2"
+# The clipboard-manager plugin's own clipboard crate, used directly for what
+# the plugin does not expose: the files a copy in Finder or Explorer holds.
+arboard = "3.6.1"
 image = "0.25.10"
 getrandom = "0.3"
 rqrr = { version = "0.10.1", default-features = false, features = ["img"] }
@@ -103,6 +106,7 @@ windows = { version = "0.62.2", features = [
   "Win32_System_Ole",
   "Win32_System_ProcessStatus",
   "Win32_System_Registry",
+  "Win32_System_SystemServices",
   "Win32_System_Threading",
   "Win32_System_Variant",
   "Win32_System_WinRT",
@@ -118,6 +122,9 @@ windows = { version = "0.62.2", features = [
   "Win32_UI_WindowsAndMessaging",
 ] }
 windows-numerics = "0.3.1"
+# What `windows::core::implement` expands to names this crate, so the drop
+# target's COM object needs it in scope: the version `windows` itself uses.
+windows-core = "0.62.2"
 wasapi = "0.23.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]

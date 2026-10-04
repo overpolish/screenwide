@@ -5,6 +5,8 @@ import { useCallback } from "react";
 
 import { Arrangement } from "../../annotations/annotation-order";
 import { useEditorWindowShortcuts } from "../../shortcuts/use-editor-window-shortcuts";
+import { placeRecordingSticker } from "../../stickers/sticker-api";
+import { useIncomingStickers } from "../../stickers/use-incoming-stickers";
 import { useRecordingTimelineBlade } from "../../timeline/editing/use-recording-timeline-blade";
 import { RecordingPreviewLayout } from "../../types";
 import { useRecordingAnnotations } from "../annotations/use-recording-annotations";
@@ -22,6 +24,7 @@ export function useRecordingPreviewShortcuts({
   canEditActiveTrack,
   canResizeActiveTrack,
   canvasTool,
+  changeCanvasTool,
   hasCursorData,
   hasKeyboardData,
   hasSceneSelection,
@@ -44,6 +47,9 @@ export function useRecordingPreviewShortcuts({
   canEditActiveTrack: boolean;
   canResizeActiveTrack: boolean;
   canvasTool: RecordingCanvasTool;
+  changeCanvasTool: ReturnType<
+    typeof useRecordingPreviewCanvasTool
+  >["changeCanvasTool"];
   hasCursorData: boolean;
   hasKeyboardData: boolean;
   /** Scenes chosen in their lane own Delete, so nothing under the pointer
@@ -108,4 +114,17 @@ export function useRecordingPreviewShortcuts({
       : undefined,
     ownsEscape: isCropping || annotations.hasSelection,
   });
+  useIncomingStickers(
+    "recording",
+    hasVisiblePanes ? placeRecordingSticker : undefined,
+    {
+      // The sticker placed is chosen; a tool that shows it is put in hand,
+      // unless the select tool or the sticker tool already is.
+      onPlaced: () => {
+        if (canvasTool !== "select" && canvasTool !== "sticker")
+          changeCanvasTool("sticker");
+      },
+      settle: isPlaying ? player.pauseSettled : undefined,
+    },
+  );
 }

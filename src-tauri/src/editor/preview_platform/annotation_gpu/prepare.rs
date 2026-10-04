@@ -6,7 +6,9 @@
 //! sampling for an annotation that moved since the shutter opened, so a
 //! moving arrow smears along the path it actually travelled.
 
-use super::{PreparedArrows, PreparedType, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES};
+use super::{
+  PreparedArrows, PreparedSticker, PreparedType, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
+};
 use crate::editor::annotations::exposure::{annotation_travel, highlight_travel, magnify_travel};
 use crate::editor::annotations::native::{native_annotations, NativeAnnotations};
 use crate::editor::annotations::redact::native::RedactSource;
@@ -215,6 +217,21 @@ fn placed_native(
         // Only a counter and a text box carry type.
         _ => PreparedType::default(),
       });
+      // A sticker's picture is drawn at its full size, from its placed
+      // middle and the middles of its right and bottom sides, and a moving
+      // one at the frame its record says this moment shows.
+      if annotation.shape_kind() == AnnotationKind::Sticker {
+        let half = |side: [f32; 2]| (side[0] - a[0]).hypot(side[1] - a[1]);
+        let clock = annotation.params[2];
+        prepared.stickers.push(PreparedSticker {
+          index: prepared.arrows.len(),
+          asset: text(),
+          size: [2.0 * half(b), 2.0 * half(c)],
+          frame: annotation.params[1].max(0.0) as u32,
+          clock_ms: (clock >= 0.0).then_some(clock),
+          once: annotation.flags & crate::editor::annotations::flags::ONCE != 0,
+        });
+      }
       prepared.arrows.push(arrow);
     }
     if above == 0 {

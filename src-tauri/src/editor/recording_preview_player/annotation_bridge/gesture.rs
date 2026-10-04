@@ -135,7 +135,7 @@ impl PreviewPlayerManager {
         point,
         self.annotation.defaults.as_ref(),
         drawing_kind(self.annotation.mode),
-        self.annotation.counter_angle,
+        &self.annotation.fresh.within(source_size),
         source_per_size(source_size, image_width),
       )?;
       edit.set_source_size(source_size);

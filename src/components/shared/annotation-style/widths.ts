@@ -144,6 +144,13 @@ export const ANNOTATION_SIZES: Record<
     sizeLabel: "Width",
     sizes: [1],
   },
+  // A sticker is sized by its grips and draws no stroke: it carries the
+  // least width every clip must, the twin of `default_sticker_style`'s.
+  sticker: {
+    defaultSize: 1,
+    sizeLabel: "Size",
+    sizes: [1],
+  },
   text: {
     defaultSize: DEFAULT_ANNOTATION_TEXT_SIZE,
     sizeLabel: "Size",

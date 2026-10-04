@@ -425,7 +425,7 @@ export function useRecordingPreviewPlayer({
     playbackRateRef,
     updatePlaying,
   ]);
-  const pause = useCallback(() => {
+  const pauseSettled = useCallback(async () => {
     if (!isEnabled) return;
     resumeAfterSeekRef.current = false;
     wantsPlaybackRef.current = false;
@@ -434,10 +434,13 @@ export function useRecordingPreviewPlayer({
     scrubFinishedRef.current = true;
     lastSentSeekRef.current = null;
     updatePlaying(false);
-    void pauseRecordingPreview(sessionIdRef.current).catch((cause: unknown) => {
-      setError(String(cause));
-    });
+    await pauseRecordingPreview(sessionIdRef.current).catch(
+      (cause: unknown) => {
+        setError(String(cause));
+      },
+    );
   }, [isEnabled, updatePlaying]);
+  const pause = useCallback(() => void pauseSettled(), [pauseSettled]);
   const seek: SeekHandler = (positionMs, phase, annotationClips) => {
     if (!isEnabled) return;
     const normalized = Math.max(0, Math.round(positionMs));
@@ -517,6 +520,7 @@ export function useRecordingPreviewPlayer({
     isPreparing,
     layout,
     pause,
+    pauseSettled,
     play,
     playbackRate,
     seek,

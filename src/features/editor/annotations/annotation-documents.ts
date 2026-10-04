@@ -8,7 +8,8 @@
 
 import { DEFAULT_BLUR_STRENGTH } from "../../../components/shared/annotation-style/widths";
 
-import { ANNOTATION_KINDS, isAnnotationKind } from "./annotation-kinds";
+import { isAnnotationKind } from "./annotation-kind-lookup";
+import { ANNOTATION_KINDS } from "./annotation-kinds";
 
 import type { Annotation } from "./annotations";
 import type {

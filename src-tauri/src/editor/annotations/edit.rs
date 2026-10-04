@@ -11,6 +11,27 @@ use super::gesture::{next_annotation_id, AnnotationDragOrigin, AnnotationGesture
 use super::snap::{SnapModifiers, SnapRequest, SnapResult};
 use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle};
 
+/// What a fresh annotation is made with beyond its dress: what the editor
+/// last settled on for the annotation's own properties, which are not part
+/// of a style. `angle` is where a counter's tail points and `sticker` the
+/// picture a sticker shows; absent until one has been chosen.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct FreshAnnotation {
+  pub(crate) angle: Option<f64>,
+  pub(crate) sticker: Option<super::sticker::StickerArt>,
+}
+
+impl FreshAnnotation {
+  /// What a fresh annotation on a picture `source` pixels across is made
+  /// with: a sticker's picture of its own is held inside it.
+  pub(crate) fn within(&self, source: (u32, u32)) -> Self {
+    Self {
+      angle: self.angle,
+      sticker: self.sticker.as_ref().map(|art| art.fitted(source)),
+    }
+  }
+}
+
 pub(crate) struct AnnotationEdit {
   before: Vec<Annotation>,
   index: usize,
@@ -20,13 +41,17 @@ pub(crate) struct AnnotationEdit {
   /// A stroke fresh from the pen: its rest at the end, and what it was taken
   /// for. Such a stroke is never left chosen.
   stroke: Option<StrokeHold>,
+  /// Whether the annotation is let go once the gesture ends: a fresh stroke,
+  /// and a fresh sticker, so the panel goes on offering the next one's
+  /// picture rather than the placed one's.
+  lets_go: bool,
 }
 
 impl AnnotationEdit {
   /// Selection-only presses are handled by the workspace, without opening an
   /// edit. `kind` is the shape the tool in hand draws - absent where the tool
   /// draws nothing, which declines a press that would have made one - and
-  /// `angle` where a fresh counter's tail points. Only a
+  /// `fresh` what it is made with beyond its dress. Only a
   /// [`AnnotationGestureTarget::New`] press reads either.
   ///
   /// `source_per_size` is source pixels per point of a style's size for this
@@ -39,7 +64,7 @@ impl AnnotationEdit {
     point: AnnotationPoint,
     defaults: Option<&AnnotationStyle>,
     kind: Option<AnnotationKind>,
-    angle: Option<f64>,
+    fresh: &FreshAnnotation,
     source_per_size: f64,
   ) -> Option<Self> {
     let index = match target {
@@ -52,7 +77,7 @@ impl AnnotationEdit {
       let id = next_annotation_id();
       annotations.insert(
         index,
-        kind?.new_annotation(id, point, defaults, angle, &before, source_per_size),
+        kind?.new_annotation(id, point, defaults, fresh, &before, source_per_size),
       );
     }
     let annotation = &annotations[index];
@@ -67,6 +92,11 @@ impl AnnotationEdit {
       stroke: (target == AnnotationGestureTarget::New
         && annotation.shape.kind() == AnnotationKind::Draw)
         .then(|| StrokeHold::new(point, Instant::now())),
+      lets_go: target == AnnotationGestureTarget::New
+        && matches!(
+          annotation.shape.kind(),
+          AnnotationKind::Draw | AnnotationKind::Sticker
+        ),
     })
   }
 
@@ -76,10 +106,11 @@ impl AnnotationEdit {
 
   /// The annotation this gesture leaves chosen. A stroke fresh from the pen is
   /// let go, so the next press draws another rather than picking it up and no
-  /// box stands over the drawing; every other annotation stays in hand for its
-  /// panel to dress.
+  /// box stands over the drawing, and so is a sticker just placed, so the
+  /// next one's picture can be chosen; every other annotation stays in hand
+  /// for its panel to dress.
   pub(crate) fn chosen_id(&self) -> Option<&str> {
-    self.stroke.is_none().then_some(self.id.as_str())
+    (!self.lets_go).then_some(self.id.as_str())
   }
 
   /// Whether this gesture is drawing a fresh stroke, which a clock outside

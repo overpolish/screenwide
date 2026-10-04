@@ -11,7 +11,9 @@
 use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
 use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::gesture::{drawing_layer, MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
+use crate::editor::annotations::gesture::{
+  drawing_layer, over_a_picture, MODE_DRAW, MODE_MARQUEE, MODE_SELECT,
+};
 use crate::editor::annotations::highlight::geometry::HighlightFlow;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::prepare_text;
@@ -34,7 +36,10 @@ pub(super) fn layer_selection(state: &SurfaceState, layer: i32) -> Option<Previe
 
 /// The whole source image's rectangle on screen for one layer. Every
 /// normalised handle is placed inside it.
-pub(super) fn layer_image_rect(state: &SurfaceState, layer: i32) -> Option<PreviewSurfaceRect> {
+pub(in super::super) fn layer_image_rect(
+  state: &SurfaceState,
+  layer: i32,
+) -> Option<PreviewSurfaceRect> {
   let mut selection = layer_selection(state, layer)?;
   selection.x = selection.image_x;
   selection.y = selection.image_y;
@@ -66,7 +71,7 @@ pub(super) fn image_frame(state: &SurfaceState) -> Option<PreviewSurfaceRect> {
 /// follow: the topmost laid-out picture under `point`, by the rule
 /// [`drawing_layer`] keeps. Over no picture the selected layer keeps the
 /// annotation. Answers the layer to report where the choice changed.
-pub(super) fn take_drawing_layer(
+pub(in super::super) fn take_drawing_layer(
   inner: &SurfaceInner,
   state: &mut SurfaceState,
   point: (f64, f64),
@@ -86,6 +91,20 @@ pub(super) fn take_drawing_layer(
   clear_selection_snap_guides(state);
   draw_selection(inner, state);
   Some(target.layer_id)
+}
+
+/// Whether `point` lands on a laid-out picture a fresh annotation could
+/// join, by the rule [`over_a_picture`] keeps.
+pub(super) fn on_picture(state: &SurfaceState, point: (f64, f64)) -> bool {
+  let pictures: Vec<_> = state
+    .selection_targets
+    .iter()
+    .filter_map(|target| {
+      let rect = layer_image_rect(state, target.layer_id as i32)?;
+      Some((target.layer_id, [rect.x, rect.y, rect.width, rect.height]))
+    })
+    .collect();
+  over_a_picture(&pictures, point)
 }
 
 pub(super) fn selected_item(state: &SurfaceState) -> Option<&NativeAnnotationHandles> {
@@ -127,7 +146,8 @@ fn grip_at_point(
     | AnnotationKind::Shape
     | AnnotationKind::Spotlight
     | AnnotationKind::Draw
-    | AnnotationKind::Magnify => found,
+    | AnnotationKind::Magnify
+    | AnnotationKind::Sticker => found,
   })
 }
 
@@ -199,6 +219,8 @@ pub(super) fn item_grips(
     | AnnotationKind::Spotlight
     | AnnotationKind::Draw => Vec::new(),
     AnnotationKind::Magnify => vec![super::magnify_chrome::loupe_grip(image, item)],
+    // The grip that turns it stands above its top side.
+    AnnotationKind::Sticker => vec![super::sticker_chrome::turn_grip(image, item)],
     AnnotationKind::Highlight => {
       let flow = highlight_flow(image, item);
       [flow.start_grip(), flow.end_grip()]

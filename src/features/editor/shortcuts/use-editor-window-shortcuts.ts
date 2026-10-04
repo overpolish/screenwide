@@ -5,6 +5,8 @@ import { useEffect, useRef } from "react";
 
 import {
   arrowDirections,
+  editorCommandKeyAction,
+  EditorCommandKeys,
   editorToolKeyAction,
   EditorToolKeys,
 } from "./editor-tool-keys";
@@ -40,6 +42,7 @@ export function useEditorWindowShortcuts({
   onExport,
   onMarqueeTool,
   onNudge,
+  onPaste,
   onRedo,
   onResizeCanvas,
   onSceneTool,
@@ -55,24 +58,22 @@ export function useEditorWindowShortcuts({
   onTool,
   onUndo,
   ownsEscape = false,
-}: EditorToolKeys & {
-  /** Enter: done with whatever this window is in the middle of. */
-  onConfirm?: () => void;
-  onCopy?: () => void;
-  onCutTimeline?: () => void;
-  onDelete?: () => void;
-  onDeselect?: () => void;
-  onExport?: () => void;
-  /** Moves the selected layer by one arrow press; `coarse` is the Shift jump. */
-  onNudge?: (directionX: number, directionY: number, coarse: boolean) => void;
-  onRedo?: () => void;
-  /** Moves the playhead by one arrow press; `coarse` is the Shift jump. */
-  onStep?: (direction: -1 | 1, coarse: boolean) => void;
-  onUndo?: () => void;
-  /** This hook's Escape outranks every plain `onDeselect` on the window:
-   * leaving the tool in hand comes before clearing a selection under it. */
-  ownsEscape?: boolean;
-}) {
+}: EditorToolKeys &
+  EditorCommandKeys & {
+    /** Enter: done with whatever this window is in the middle of. */
+    onConfirm?: () => void;
+    onDelete?: () => void;
+    onDeselect?: () => void;
+    /** Moves the selected layer by one arrow press; `coarse` is the Shift jump. */
+    onNudge?: (directionX: number, directionY: number, coarse: boolean) => void;
+    onRedo?: () => void;
+    /** Moves the playhead by one arrow press; `coarse` is the Shift jump. */
+    onStep?: (direction: -1 | 1, coarse: boolean) => void;
+    onUndo?: () => void;
+    /** This hook's Escape outranks every plain `onDeselect` on the window:
+     * leaving the tool in hand comes before clearing a selection under it. */
+    ownsEscape?: boolean;
+  }) {
   const focusIntentRef = useRef<"keyboard" | "pointer">("keyboard");
   useEffect(() => {
     if (ownsEscape) escapeClaims += 1;
@@ -180,17 +181,14 @@ export function useEditorWindowShortcuts({
         return;
       }
       if (commandKey && !event.shiftKey) {
-        if (event.code === "KeyB" && onCutTimeline) {
-          if (ownsTextEditingKeys(event.target)) return;
+        const action = editorCommandKeyAction(
+          event.code,
+          { onCopy, onCutTimeline, onExport, onPaste },
+          ownsTextEditingKeys(event.target),
+        );
+        if (action) {
           consume(event);
-          onCutTimeline();
-        } else if (event.code === "KeyC" && onCopy) {
-          if (ownsTextEditingKeys(event.target)) return;
-          consume(event);
-          onCopy();
-        } else if (event.code === "KeyE" && onExport) {
-          consume(event);
-          onExport();
+          action();
         }
         return;
       }
@@ -276,6 +274,7 @@ export function useEditorWindowShortcuts({
     onExport,
     onMarqueeTool,
     onNudge,
+    onPaste,
     onRedo,
     onResizeCanvas,
     onSceneTool,

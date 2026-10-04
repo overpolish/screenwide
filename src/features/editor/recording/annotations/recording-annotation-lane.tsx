@@ -8,7 +8,7 @@ import {
   boundsAnchor,
   pointerAnchor,
 } from "../../../popup-panel/use-popup-menu";
-import { annotationLaneLabel } from "../../annotations/annotation-kinds";
+import { annotationLaneLabel } from "../../annotations/annotation-kind-lookup";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { SeekHandler } from "../../timeline/timeline-seek";
 import { TimelineViewportState } from "../../timeline/timeline-viewport";
