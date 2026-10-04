@@ -41,7 +41,7 @@ pub fn supports_compression() -> bool {
   static AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
   *AVAILABLE.get_or_init(|| {
-    Command::new(ffmpeg_path())
+    ffmpeg_command()
       .args(["-hide_banner", "-encoders"])
       .stdin(Stdio::null())
       .output()
@@ -118,7 +118,7 @@ pub fn estimate_compressed_video_bytes(
   };
 
   let temporary = estimate_temp_path(source);
-  let mut command = Command::new(ffmpeg_path());
+  let mut command = ffmpeg_command();
   command.args(["-hide_banner", "-loglevel", "error", "-nostdin", "-y"]);
   for start in &starts {
     command

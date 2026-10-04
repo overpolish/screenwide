@@ -14,7 +14,7 @@ pub fn duration_ms(path: &Path) -> Option<u64> {
   if let Some(info) = super::recording_info(path) {
     return Some(info.duration_ms);
   }
-  let output = Command::new(ffprobe_path())
+  let output = ffprobe_command()
     .args([
       "-v",
       "error",

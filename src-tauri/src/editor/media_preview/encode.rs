@@ -63,7 +63,7 @@ pub(in crate::editor) fn remux_error(stderr: &[u8]) -> String {
 /// working file has been superseded.
 pub fn remux(source: &Path, destination: &Path) -> Result<(), String> {
   let temporary = remux_temp_path(destination);
-  let output = Command::new(ffmpeg_path())
+  let output = ffmpeg_command()
     .args(remux_args(source, &temporary))
     .output()
     .map_err(|error| {
@@ -202,7 +202,7 @@ pub(super) fn ffmpeg_runs() -> bool {
   static AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
   *AVAILABLE.get_or_init(|| {
-    Command::new(ffmpeg_path())
+    ffmpeg_command()
       .args(["-hide_banner", "-version"])
       .stdin(Stdio::null())
       .stdout(Stdio::null())

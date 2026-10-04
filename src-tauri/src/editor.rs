@@ -61,7 +61,7 @@ use commands::store_export_directory;
 use directory::current_directory;
 pub use export_window::hide as hide_export_options_for;
 #[cfg(target_os = "windows")]
-pub(crate) use media_preview::ffmpeg_path;
+pub(crate) use media_preview::ffmpeg_command;
 use naming::sanitize_file_stem;
 use preferences::{
   load_cursor_effects, load_keyboard_effects, load_recording_choices, load_recording_output,

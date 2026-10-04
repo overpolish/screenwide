@@ -10,7 +10,7 @@ pub(in crate::editor) fn run_export(
   cancelled: &AtomicBool,
   on_progress: &mut dyn FnMut(u64),
 ) -> Result<ExportRunResult, String> {
-  let mut child = Command::new(ffmpeg_path())
+  let mut child = ffmpeg_command()
     .args(args)
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())

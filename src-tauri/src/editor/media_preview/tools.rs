@@ -54,11 +54,36 @@ pub(super) fn ffprobe_path() -> PathBuf {
   tool_path("ffprobe")
 }
 
+/// FFmpeg, to be started without a console window. A Windows release build is
+/// a GUI-subsystem process, so each console program it starts is given a
+/// console of its own: that flashes a window, and on the launch path it held
+/// the main thread for over five seconds where the run itself takes 40 ms.
+pub(crate) fn ffmpeg_command() -> Command {
+  without_console(ffmpeg_path())
+}
+
+/// FFprobe, started as [`ffmpeg_command`] starts FFmpeg.
+pub(super) fn ffprobe_command() -> Command {
+  without_console(ffprobe_path())
+}
+
+fn without_console(program: PathBuf) -> Command {
+  #[cfg_attr(not(windows), allow(unused_mut))]
+  let mut command = Command::new(program);
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    command.creation_flags(CREATE_NO_WINDOW);
+  }
+  command
+}
+
 pub fn inspect_audio_tracks(source: &Path) -> Result<Vec<RecordingAudioTrack>, String> {
   // FFmpeg prints container metadata before it complains that no output was
   // supplied. That gives recovery everything it needs without shipping a
   // second, almost equally large FFprobe executable.
-  let output = Command::new(ffmpeg_path())
+  let output = ffmpeg_command()
     .args(["-hide_banner", "-nostdin", "-i"])
     .arg(source)
     .output()

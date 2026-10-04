@@ -8,7 +8,7 @@ pub(super) fn waveform(
   track: &RecordingAudioTrack,
   duration_ms: u64,
 ) -> Result<Vec<f32>, String> {
-  let mut child = Command::new(ffmpeg_path())
+  let mut child = ffmpeg_command()
     .args(["-hide_banner", "-loglevel", "error", "-nostdin", "-i"])
     .arg(source)
     .args([

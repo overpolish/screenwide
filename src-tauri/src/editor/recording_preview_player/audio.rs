@@ -10,7 +10,7 @@ use output::output_stream;
 use std::{
   collections::VecDeque,
   io::Read,
-  process::{Child, Command, Stdio},
+  process::{Child, Stdio},
   sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex, RwLock,
@@ -58,7 +58,7 @@ pub(super) fn spawn(
     Arc::clone(&audio_volumes),
     stream_indices,
   )?;
-  let mut process = Command::new(media_preview::ffmpeg_path());
+  let mut process = media_preview::ffmpeg_command();
   process
     .args(args(sources, ranges, &config, playback_rate))
     .stdout(Stdio::piped())
