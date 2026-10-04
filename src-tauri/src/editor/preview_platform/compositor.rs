@@ -8,13 +8,16 @@
 
 mod background;
 mod camera;
+mod canvas_modules;
 mod canvas_pipelines;
+mod canvas_precompiled;
 mod canvas_variants;
 mod cursor_artwork;
 mod draw;
 mod layer;
 mod mark_blur;
 mod pipeline;
+mod preview_bindings;
 mod redact;
 mod redact_pipeline;
 mod redact_targets;
@@ -285,6 +288,8 @@ type ArtworkConstants = ([f32; 4], [f32; 4], [u32; 4]);
 mod crop_preview_tests;
 #[cfg(all(test, target_os = "windows", target_arch = "x86_64"))]
 mod fpu_tests;
+#[cfg(all(test, target_os = "windows"))]
+mod precompiled_tests;
 #[cfg(all(test, target_os = "windows"))]
 mod redact_tests;
 #[cfg(all(test, target_os = "windows"))]

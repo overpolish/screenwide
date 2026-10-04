@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::preview_bindings::{PreviewBinding, PREVIEW_BINDINGS};
 use super::*;
 
 impl Compositor {
@@ -78,53 +79,38 @@ impl Compositor {
   }
 }
 
-/// The bindings `preview.wgsl` and `annotations.wgsl` declare.
+/// The bindings `preview.wgsl` and `annotations.wgsl` declare, as
+/// [`PREVIEW_BINDINGS`] lists them.
 fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-  let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
-    binding,
-    visibility: wgpu::ShaderStages::FRAGMENT,
+  let buffer = |ty| wgpu::BindingType::Buffer {
     ty,
-    count: None,
-  };
-  let uniform = wgpu::BindingType::Buffer {
-    ty: wgpu::BufferBindingType::Uniform,
     has_dynamic_offset: false,
     min_binding_size: None,
   };
-  let storage = wgpu::BindingType::Buffer {
-    ty: wgpu::BufferBindingType::Storage { read_only: true },
-    has_dynamic_offset: false,
-    min_binding_size: None,
-  };
-  let texture = |dimension| wgpu::BindingType::Texture {
+  let texture = |view_dimension| wgpu::BindingType::Texture {
     sample_type: wgpu::TextureSampleType::Float { filterable: true },
-    view_dimension: dimension,
+    view_dimension,
     multisampled: false,
   };
-  let plane = texture(wgpu::TextureViewDimension::D2);
-  let sampler = wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
+  let entries: Vec<_> = PREVIEW_BINDINGS
+    .iter()
+    .zip(0..)
+    .map(|(binding, index)| wgpu::BindGroupLayoutEntry {
+      binding: index,
+      visibility: wgpu::ShaderStages::FRAGMENT,
+      ty: match binding {
+        PreviewBinding::Uniform => buffer(wgpu::BufferBindingType::Uniform),
+        PreviewBinding::Storage => buffer(wgpu::BufferBindingType::Storage { read_only: true }),
+        PreviewBinding::Texture => texture(wgpu::TextureViewDimension::D2),
+        PreviewBinding::TextureArray => texture(wgpu::TextureViewDimension::D2Array),
+        PreviewBinding::Sampler => wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+      },
+      count: None,
+    })
+    .collect();
   device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
     label: Some("Screenwide preview bindings"),
-    entries: &[
-      entry(0, uniform),
-      entry(1, uniform),
-      entry(2, plane),
-      entry(3, texture(wgpu::TextureViewDimension::D2Array)),
-      entry(4, plane),
-      entry(5, plane),
-      entry(6, plane),
-      entry(7, storage),
-      entry(8, storage),
-      entry(9, plane),
-      entry(10, storage),
-      entry(11, storage),
-      entry(12, sampler),
-      entry(13, sampler),
-      entry(14, storage),
-      entry(15, plane),
-      entry(16, plane),
-      entry(17, plane),
-    ],
+    entries: &entries,
   })
 }
 

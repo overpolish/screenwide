@@ -51,6 +51,13 @@ impl Gpu {
     let (device, queue) = adapter
       .request_device(&wgpu::DeviceDescriptor {
         label: Some("Screenwide"),
+        // The canvas variants the build compiled for Windows are handed over
+        // as DXIL; without it they are compiled from WGSL instead.
+        required_features: if cfg!(target_os = "windows") {
+          adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+          wgpu::Features::empty()
+        },
         ..Default::default()
       })
       .await
@@ -71,6 +78,11 @@ impl Gpu {
 #[cfg(target_os = "windows")]
 fn instance_descriptor() -> Result<wgpu::InstanceDescriptor, String> {
   let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
+  // wgpu's DEBUG flag, on by default in debug builds, compiles every shader
+  // with DXC's `-Od`: the preview shader then takes seconds to compile even
+  // with no annotation in it. Validation stays on.
+  descriptor.flags =
+    wgpu::InstanceFlags::from_build_config().difference(wgpu::InstanceFlags::DEBUG);
   descriptor.backends = wgpu::Backends::DX12;
   descriptor.backend_options.dx12 = wgpu::Dx12BackendOptions {
     shader_compiler: wgpu::Dx12Compiler::DynamicDxc {

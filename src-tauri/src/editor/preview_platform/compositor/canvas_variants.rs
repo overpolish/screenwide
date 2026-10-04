@@ -48,7 +48,9 @@ pub(super) fn every_kind() -> KindMask {
 }
 
 /// The canvas shader's text drawing `kinds`; with none, it draws no
-/// annotation at all.
+/// annotation at all. Every kind is the shader as written, whose constant
+/// holds every bit: the build compiles that text and the one with none
+/// (`build/precompiled_shaders.rs`), and these must stay the same text.
 pub(super) fn source(kinds: KindMask) -> String {
   debug_assert!(
     SHADER.contains(ALL_KINDS) && SHADER.contains(DRAWN),
@@ -56,6 +58,9 @@ pub(super) fn source(kinds: KindMask) -> String {
   );
   if kinds == 0 {
     return SHADER.replacen(DRAWN, LEFT_OUT, 1);
+  }
+  if kinds == every_kind() {
+    return SHADER.to_owned();
   }
   SHADER.replacen(
     ALL_KINDS,

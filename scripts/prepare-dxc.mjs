@@ -5,7 +5,9 @@
 // on the larger shaders, so the pinned Microsoft release is placed beside the
 // app: in `src-tauri/binaries` for bundling and debug runs of tests, and in
 // `src-tauri/target/debug` for `tauri dev`. From this release on, DXC signs
-// shaders itself, so the validator (`dxil.dll`) is not needed.
+// shaders itself, so the validator (`dxil.dll`) is not needed. The build
+// script precompiles the canvas shader with `dxc.exe`, which is placed beside
+// the library it loads and is not bundled.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -22,6 +24,10 @@ const archiveSha256 =
 const libraries = {
   arm64: "add120337487e273af0d649446aa61ff0b90475dc1a31ffb2774e870d4ec6830",
   x64: "f79943b02f73b621421b58a569fd6ee120d0023fb6bfa23844ecad6b00d6a295",
+};
+const executables = {
+  arm64: "e0a7f8fd076350aa442f44820822d5154c318cfa0d416ba1eb21c2829872bd34",
+  x64: "ae4bf100b8c64ab03cdc0ee5996d5f212e96c59d6d37340359342d714ac6c004",
 };
 const licenses = ["LICENSE-LLVM.txt", "LICENSE-MIT.txt"];
 
@@ -44,15 +50,18 @@ if (platform !== "win32") {
   exit(0);
 }
 const librarySha256 = libraries[arch];
-if (!librarySha256) {
+const executableSha256 = executables[arch];
+if (!librarySha256 || !executableSha256) {
   throw new Error(`Screenwide does not package DXC for Windows ${arch}`);
 }
 
 const binaries = resolve("src-tauri", "binaries");
 const library = join(binaries, "dxcompiler.dll");
+const executable = join(binaries, "dxc.exe");
 const licenseTargets = licenses.map((name) => join(binaries, `DXC-${name}`));
 const prepared =
   (await matches(library, librarySha256)) &&
+  (await matches(executable, executableSha256)) &&
   (
     await Promise.all(
       licenseTargets.map((path) => sha256(path).then(Boolean, () => false)),
@@ -80,8 +89,13 @@ if (!prepared) {
     if (!(await matches(source, librarySha256))) {
       throw new Error("The extracted DXC library failed SHA-256 verification");
     }
+    const sourceExecutable = join(extracted, "bin", arch, "dxc.exe");
+    if (!(await matches(sourceExecutable, executableSha256))) {
+      throw new Error("The extracted DXC compiler failed SHA-256 verification");
+    }
     await mkdir(binaries, { recursive: true });
     await copyFile(source, library);
+    await copyFile(sourceExecutable, executable);
     await Promise.all(
       licenses.map((name, index) =>
         copyFile(join(extracted, name), licenseTargets[index]),

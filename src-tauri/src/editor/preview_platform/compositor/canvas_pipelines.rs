@@ -8,23 +8,26 @@
 //! ([`super::mark_blur`]).
 //!
 //! A variant is compiled the first time something asks for it, and every
-//! compositor on the device shares them. The first time on a machine that
-//! takes from a third of a second for one kind to about twenty seconds for
-//! them all; the system keeps what it compiled, so later runs find it in
-//! milliseconds. A draw takes its own variant where it is ready; otherwise
-//! the smallest ready variant holding all its kinds, which draws the same
-//! picture more slowly; and only otherwise waits for its own. An export
-//! prepares every set its timeline shows before its first frame, all at
-//! once. A preview keeps the variant with every kind ready, so a kind new to
-//! what it draws is drawn at once, and compiles the set it was missing in the
-//! background, which the frames after it change to.
+//! compositor on the device shares them. The variant with no annotation and
+//! the one with every kind come compiled from the build
+//! ([`super::canvas_precompiled`]), so all that is left of them here is the
+//! GPU driver's own pass, which the system keeps. Any other set is compiled
+//! from WGSL when first asked for: on Windows that takes seconds, every
+//! launch, as nothing keeps DXC's output. A draw takes its own variant where
+//! it is ready; otherwise the smallest ready variant holding all its kinds,
+//! which draws the same picture more slowly; and only otherwise waits for its
+//! own. An export prepares every set its timeline shows before its first
+//! frame, all at once. A preview keeps the variant with every kind ready, so a
+//! kind new to what it draws is drawn at once, and compiles the set it was
+//! missing in the background, which the frames after it change to.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
-use super::canvas_variants::{covers, every_kind, source, KindMask};
-use super::{mark_blur::LAYER_FORMAT, Compositor, FORMAT};
+use super::canvas_modules::{self, CanvasModules};
+use super::canvas_variants::{covers, every_kind, KindMask};
+use super::Compositor;
 use crate::gpu::Gpu;
 
 /// What a canvas pipeline draws into.
@@ -45,6 +48,9 @@ pub(super) struct CanvasPipelines {
   /// Whether a draw missing its variant starts compiling it on another
   /// thread, as a preview's does, rather than only waiting for it.
   in_background: AtomicBool,
+  /// Whether the variants the build compiled are used, rather than compiled
+  /// here from WGSL like any other.
+  precompiled: bool,
 }
 
 /// The canvas pipelines every compositor on `gpu` shares, and the bind group
@@ -70,7 +76,8 @@ pub(super) fn shared(
 /// The canvas shader built for `kinds`, compiled for each target as asked.
 struct Variant {
   kinds: KindMask,
-  module: OnceLock<wgpu::ShaderModule>,
+  precompiled: bool,
+  modules: OnceLock<CanvasModules>,
   pipelines: [OnceLock<wgpu::RenderPipeline>; 3],
   /// Which targets a background thread is compiling already.
   queued: [AtomicBool; 3],
@@ -86,19 +93,34 @@ impl Variant {
     target: Target,
   ) -> &wgpu::RenderPipeline {
     self.pipelines[target as usize].get_or_init(|| {
-      let module = self.module.get_or_init(|| {
-        device.create_shader_module(wgpu::ShaderModuleDescriptor {
-          label: Some("Screenwide preview shader"),
-          source: wgpu::ShaderSource::Wgsl(source(self.kinds).into()),
-        })
-      });
-      pipeline(device, layout, module, target)
+      let modules = self
+        .modules
+        .get_or_init(|| canvas_modules::modules(device, self.kinds, self.precompiled));
+      canvas_modules::pipeline(device, layout, modules, target)
     })
   }
 }
 
 impl CanvasPipelines {
   pub(super) fn new(device: &wgpu::Device, bindings: &wgpu::BindGroupLayout) -> Self {
+    Self::with_precompiled(device, bindings, true)
+  }
+
+  /// Pipelines that compile every variant from WGSL, the precompiled ones
+  /// included: what the build's output is checked against.
+  #[cfg(test)]
+  pub(super) fn compiled_from_wgsl(
+    device: &wgpu::Device,
+    bindings: &wgpu::BindGroupLayout,
+  ) -> Self {
+    Self::with_precompiled(device, bindings, false)
+  }
+
+  fn with_precompiled(
+    device: &wgpu::Device,
+    bindings: &wgpu::BindGroupLayout,
+    precompiled: bool,
+  ) -> Self {
     let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
       label: Some("Screenwide preview layout"),
       bind_group_layouts: &[Some(bindings)],
@@ -109,6 +131,7 @@ impl CanvasPipelines {
       layout,
       variants: Mutex::default(),
       in_background: AtomicBool::new(false),
+      precompiled,
     }
   }
 
@@ -117,7 +140,8 @@ impl CanvasPipelines {
     Arc::clone(variants.entry(kinds).or_insert_with(|| {
       Arc::new(Variant {
         kinds,
-        module: OnceLock::new(),
+        precompiled: self.precompiled,
+        modules: OnceLock::new(),
         pipelines: Default::default(),
         queued: Default::default(),
       })
@@ -221,51 +245,4 @@ impl Compositor {
         }
       });
   }
-}
-
-fn pipeline(
-  device: &wgpu::Device,
-  layout: &wgpu::PipelineLayout,
-  module: &wgpu::ShaderModule,
-  target: Target,
-) -> wgpu::RenderPipeline {
-  let format = match target {
-    Target::Canvas | Target::Layer => FORMAT,
-    Target::Delta => LAYER_FORMAT,
-  };
-  // A layer's canvas is premultiplied, so it lays over what is under it as
-  // `source + destination * (1 - source alpha)`.
-  let over = wgpu::BlendComponent {
-    src_factor: wgpu::BlendFactor::One,
-    dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-    operation: wgpu::BlendOperation::Add,
-  };
-  device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-    label: Some("Screenwide preview pipeline"),
-    layout: Some(layout),
-    vertex: wgpu::VertexState {
-      module,
-      entry_point: Some("vs_main"),
-      compilation_options: Default::default(),
-      buffers: &[],
-    },
-    fragment: Some(wgpu::FragmentState {
-      module,
-      entry_point: Some("fs_main"),
-      compilation_options: Default::default(),
-      targets: &[Some(wgpu::ColorTargetState {
-        format,
-        blend: matches!(target, Target::Layer).then_some(wgpu::BlendState {
-          color: over,
-          alpha: over,
-        }),
-        write_mask: wgpu::ColorWrites::ALL,
-      })],
-    }),
-    primitive: Default::default(),
-    depth_stencil: None,
-    multisample: Default::default(),
-    multiview_mask: None,
-    cache: None,
-  })
 }
