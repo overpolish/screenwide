@@ -4,8 +4,8 @@
 use super::arrow::bend::curve_midpoint;
 use super::counter::new_counter;
 use super::gesture::{
-  annotation_mode, drawing_kind, drawing_layer, next_annotation_id, over_a_picture,
-  AnnotationDragOrigin, AnnotationHandle, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
+  annotation_mode, drawing_kind, drawing_layer, next_annotation_id, AnnotationDragOrigin,
+  AnnotationHandle, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
 };
 use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationKind, AnnotationPoint, AnnotationShape, AnnotationStyle,
@@ -400,15 +400,25 @@ fn a_fresh_annotation_joins_the_topmost_picture_under_the_press() {
   let layers = [
     (0, [0.0, 0.0, 100.0, 100.0]),
     (1, [50.0, 50.0, 100.0, 100.0]),
-    (u32::MAX, [0.0, 0.0, 200.0, 200.0]),
+    (u32::MAX, [0.0, 0.0, 300.0, 300.0]),
   ];
   assert_eq!(drawing_layer(layers.into_iter(), (75.0, 75.0)), Some(1));
   assert_eq!(drawing_layer(layers.into_iter(), (20.0, 20.0)), Some(0));
-  // Only the frame is here: no picture takes the annotation.
-  assert_eq!(drawing_layer(layers.into_iter(), (180.0, 20.0)), None);
-  // A press there is off every picture; with no picture laid out at all,
-  // nothing can be missed.
-  assert!(over_a_picture(&layers, (75.0, 75.0)));
-  assert!(!over_a_picture(&layers, (180.0, 20.0)));
-  assert!(over_a_picture(&layers[2..], (180.0, 20.0)));
+}
+
+#[test]
+fn a_fresh_annotation_on_the_frame_joins_the_nearest_picture() {
+  // Side by side, with the canvas frame over both.
+  let layers = [
+    (0, [0.0, 0.0, 100.0, 100.0]),
+    (1, [200.0, 0.0, 100.0, 100.0]),
+    (u32::MAX, [-50.0, -50.0, 400.0, 200.0]),
+  ];
+  assert_eq!(drawing_layer(layers.into_iter(), (130.0, 50.0)), Some(0));
+  assert_eq!(drawing_layer(layers.into_iter(), (170.0, 50.0)), Some(1));
+  assert_eq!(drawing_layer(layers.into_iter(), (-40.0, -40.0)), Some(0));
+  // Equally near both: the topmost takes it.
+  assert_eq!(drawing_layer(layers.into_iter(), (150.0, 50.0)), Some(1));
+  // With only the frame laid out, no picture takes it.
+  assert_eq!(drawing_layer(layers[2..].iter().copied(), (0.0, 0.0)), None);
 }

@@ -350,3 +350,26 @@ fn the_press_that_switched_apps_does_not_frame_the_work_after_it() {
   assert!((framing.focus_x - 0.53).abs() < 0.05, "{framing:?}");
   assert!((framing.focus_y - 0.55).abs() < 0.05, "{framing:?}");
 }
+
+#[test]
+fn typing_is_framed_on_itself_and_pans_to_a_click_away_from_it() {
+  // Typing into a field near the left, then a click a quarter of the screen
+  // to its right: a middle between them would cut the field off.
+  let keys: Vec<u64> = (0..10).map(|key| 10_300 + key * 300).collect();
+  let clips = planned(
+    &[(10_000, (300.0, 100.0)), (14_500, (560.0, 100.0))],
+    &keys,
+    VisibleArea::WHOLE,
+  );
+  assert_playable(&clips);
+  let typing = zoom_at(&clips, 12_000).expect("the typing is zoomed into");
+  let framing = typing.screen.unwrap();
+  assert!((framing.focus_x - 0.3).abs() < 0.02, "{framing:?}");
+  let click = zoom_at(&clips, 14_600).expect("the click is zoomed into");
+  assert!(
+    (click.screen.unwrap().focus_x - 0.56).abs() < 0.02,
+    "{clips:#?}"
+  );
+  // The camera pans across rather than zooming out between them.
+  assert_eq!(typing.end_ms, click.start_ms, "{clips:#?}");
+}

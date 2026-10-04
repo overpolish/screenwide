@@ -88,9 +88,9 @@ fn keep(picture: DroppedPicture) -> Result<StickerArt, String> {
 }
 
 /// Keeps `picture` and tells the `workspace` editor to place it `at` the
-/// point it landed on, or in the middle of the layer in hand where it landed
-/// off every picture. Returns at once: decoding a large picture is no work
-/// for the thread a drop arrives on.
+/// point it landed on, or in the middle of the layer in hand where no picture
+/// was laid out. Returns at once: decoding a large picture is no work for the
+/// thread a drop arrives on.
 pub(crate) fn deliver(
   app: &AppHandle,
   workspace: &'static str,

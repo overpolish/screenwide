@@ -11,9 +11,7 @@
 use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
 use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::gesture::{
-  drawing_layer, over_a_picture, MODE_DRAW, MODE_MARQUEE, MODE_SELECT,
-};
+use crate::editor::annotations::gesture::{drawing_layer, MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
 use crate::editor::annotations::highlight::geometry::HighlightFlow;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::prepare_text;
@@ -66,11 +64,12 @@ pub(super) fn image_frame(state: &SurfaceState) -> Option<PreviewSurfaceRect> {
   item_image_frame(state, state.annotation.selected)
 }
 
-/// Puts the picture under a drawing press in hand, as a press with the select
+/// Puts the picture a drawing press joins in hand, as a press with the select
 /// tool would, so the fresh annotation joins it and the panel and the chrome
-/// follow: the topmost laid-out picture under `point`, by the rule
-/// [`drawing_layer`] keeps. Over no picture the selected layer keeps the
-/// annotation. Answers the layer to report where the choice changed.
+/// follow: the topmost laid-out picture under `point`, or the nearest one off
+/// every picture, by the rule [`drawing_layer`] keeps. With no picture laid
+/// out the selected layer keeps the annotation. Answers the layer to report
+/// where the choice changed.
 pub(in super::super) fn take_drawing_layer(
   inner: &SurfaceInner,
   state: &mut SurfaceState,
@@ -91,20 +90,6 @@ pub(in super::super) fn take_drawing_layer(
   clear_selection_snap_guides(state);
   draw_selection(inner, state);
   Some(target.layer_id)
-}
-
-/// Whether `point` lands on a laid-out picture a fresh annotation could
-/// join, by the rule [`over_a_picture`] keeps.
-pub(super) fn on_picture(state: &SurfaceState, point: (f64, f64)) -> bool {
-  let pictures: Vec<_> = state
-    .selection_targets
-    .iter()
-    .filter_map(|target| {
-      let rect = layer_image_rect(state, target.layer_id as i32)?;
-      Some((target.layer_id, [rect.x, rect.y, rect.width, rect.height]))
-    })
-    .collect();
-  over_a_picture(&pictures, point)
 }
 
 pub(super) fn selected_item(state: &SurfaceState) -> Option<&NativeAnnotationHandles> {

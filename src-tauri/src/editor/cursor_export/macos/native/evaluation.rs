@@ -21,7 +21,7 @@ pub(in crate::editor::cursor_export) fn evaluate(
   let Some(cursor_path) = request.cursor else {
     return Ok(None);
   };
-  let cursor = CursorCompositor::open(cursor_path)?;
+  let cursor = CursorCompositor::open(cursor_path, request.keyboard)?;
   let (output_width, output_height) = scaled_size(request)?;
   let placement =
     crate::screenshots::output_placement(request.width, request.height, request.output)?;

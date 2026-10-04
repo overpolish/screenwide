@@ -56,7 +56,7 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       report(inner, sample.as_slice());
       return true;
     }
-    // A fresh annotation joins the picture under the press.
+    // A fresh annotation joins the picture under the press, or the nearest.
     if empty && drawing.is_some() {
       taken_layer = take_drawing_layer(inner, &mut state, point);
     }

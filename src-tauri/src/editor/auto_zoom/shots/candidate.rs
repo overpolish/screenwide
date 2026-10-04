@@ -57,6 +57,9 @@ const PUMP_COST: f64 = 0.3;
 const COVER_COST: f64 = 0.25;
 /// How far outside its frame the pointer may be and still count as seen.
 const COVER_MARGIN: f64 = 0.02;
+/// How far inside a typing shot's frame other work must sit to share it, as
+/// a share of the frame.
+const TYPING_SHARE_INSET: f64 = 0.1;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) struct Candidate {
@@ -87,7 +90,19 @@ pub(super) fn candidate(
   if shares_a_brought_forward_press || beats.iter().any(|beat| beat.is_switch) {
     return None;
   }
-  let area = beats.iter().map(|beat| beat.area).reduce(Area::union)?;
+  // Typing is framed on where it goes, never a middle between it and other
+  // work: the text runs on from there, so it would be cut off. Other work
+  // shares the shot only well inside that frame; anywhere else, it is a shot
+  // of its own that the camera pans or zooms out to.
+  let typed = beats
+    .iter()
+    .filter(|beat| beat.typed)
+    .map(|beat| beat.area)
+    .reduce(Area::union);
+  let area = match typed {
+    Some(area) => area,
+    None => beats.iter().map(|beat| beat.area).reduce(Area::union)?,
+  };
   let zoom = (FILL / area.span().max(FILL / MAX_AUTO_ZOOM)).min(MAX_AUTO_ZOOM);
   if zoom < MIN_USEFUL_ZOOM {
     return None;
@@ -102,6 +117,16 @@ pub(super) fn candidate(
     right: focus.0 + half,
     bottom: focus.1 + half,
   };
+  let inset = 2.0 * half * TYPING_SHARE_INSET;
+  let shares_typing = |beat: &Beat| {
+    beat.area.left >= frame.left + inset
+      && beat.area.right <= frame.right - inset
+      && beat.area.top >= frame.top + inset
+      && beat.area.bottom <= frame.bottom - inset
+  };
+  if typed.is_some() && !beats.iter().all(|beat| beat.typed || shares_typing(beat)) {
+    return None;
+  }
   let first_ms = beats.first()?.start_ms;
   let last_ms = beats.last()?.end_ms;
   let cap = |ms: u64| {

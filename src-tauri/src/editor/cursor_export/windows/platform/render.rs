@@ -21,7 +21,10 @@ pub(super) fn render_video(
     Some(reader) => reader.next_frame()?,
     None => None,
   };
-  let mut cursor = request.cursor.map(CursorCompositor::open).transpose()?;
+  let mut cursor = request
+    .cursor
+    .map(|path| CursorCompositor::open(path, request.keyboard))
+    .transpose()?;
   let keyboard = request
     .keyboard
     .map(|path| {

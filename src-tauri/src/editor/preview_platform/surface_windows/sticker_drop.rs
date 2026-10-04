@@ -55,9 +55,10 @@ pub(super) fn revoke(hwnd: HWND) {
 }
 
 /// Where a drop at `client`, in the editor window's pixels, lands: the
-/// topmost picture under it and the point in its image-normalised space,
-/// with the layer taken in hand where that changed the choice, as a press
-/// with the sticker tool there would.
+/// picture a press there would draw on, by the rule [`drawing_layer`] keeps,
+/// and the point in its image-normalised space - beyond 0 to 1 for a drop on
+/// the frame - with the layer taken in hand where that changed the choice,
+/// as a press with the sticker tool there would.
 fn landing(inner: &SurfaceInner, client: (f64, f64)) -> (Option<StickerPoint>, Option<u32>) {
   let Ok(mut state) = inner.state.lock() else {
     return (None, None);

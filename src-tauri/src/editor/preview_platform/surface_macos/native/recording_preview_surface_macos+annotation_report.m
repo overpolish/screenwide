@@ -87,60 +87,60 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_choose(ScreenwidePreviewSurface *surf
 }
 
 // The rule `drawing_layer` keeps in `src-tauri/src/editor/annotations/gesture.rs`:
-// the topmost picture, the canvas frame and the keyboard overlay being none.
-SCREENWIDE_PREVIEW_PRIVATE void annotation_take_layer_at_point(
-    ScreenwidePreviewSurface *surface, NSPoint point) {
+// the topmost picture under `point`, or off every picture the nearest one,
+// the topmost of any equally near; the canvas frame and the keyboard overlay
+// are none. `NO` only with no picture laid out.
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_target(ScreenwidePreviewSurface *surface,
+                                                         NSPoint point,
+                                                         ScreenwidePreviewSelection *found) {
+  BOOL any = NO;
+  CGFloat best = 0.0;
   for (NSValue *value in surface.selectionTargets.reverseObjectEnumerator) {
     ScreenwidePreviewSelection target;
     [value getValue:&target size:sizeof(target)];
     if (target.layer_id == ScreenwideFrameLayerId || selection_is_keyboard(target)) continue;
-    if (!NSPointInRect(point, selection_image_frame_for(surface, target))) continue;
-    if (surface.hasSelection && surface.selection.pane_index == target.pane_index &&
-        surface.selection.layer_id == target.layer_id)
-      return;
-    surface.hasSelection = YES;
-    surface.selection = target;
-    surface.annotationSelected = -1;
-    clear_selection_snap_guides(surface);
-    if (surface.selectionCallback != NULL)
-      surface.selectionCallback((int32_t)target.layer_id, surface.selectionContext);
-    redraw_selection(surface);
-    invalidate_selection_cursor_rects(surface);
-    return;
+    NSRect image = selection_image_frame_for(surface, target);
+    CGFloat dx = MAX(MAX(NSMinX(image) - point.x, point.x - NSMaxX(image)), 0.0);
+    CGFloat dy = MAX(MAX(NSMinY(image) - point.y, point.y - NSMaxY(image)), 0.0);
+    CGFloat distance = hypot(dx, dy);
+    if (any && distance >= best) continue;
+    any = YES;
+    best = distance;
+    *found = target;
+    if (distance == 0.0) break;
   }
+  return any;
 }
 
-// Whether `point` lands on a picture a fresh annotation could join. With no
-// pictures laid out there is nothing to miss, so every press is on one. The
-// twin of `over_a_picture` in `src-tauri/src/editor/annotations/gesture.rs`.
-SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_picture_at_point(ScreenwidePreviewSurface *surface,
-                                                           NSPoint point) {
-  BOOL any = NO;
-  for (NSValue *value in surface.selectionTargets) {
-    ScreenwidePreviewSelection target;
-    [value getValue:&target size:sizeof(target)];
-    if (target.layer_id == ScreenwideFrameLayerId || selection_is_keyboard(target)) continue;
-    any = YES;
-    if (NSPointInRect(point, selection_image_frame_for(surface, target))) return YES;
-  }
-  return !any;
+SCREENWIDE_PREVIEW_PRIVATE void annotation_take_layer_at_point(
+    ScreenwidePreviewSurface *surface, NSPoint point) {
+  ScreenwidePreviewSelection target;
+  if (!annotation_drawing_target(surface, point, &target)) return;
+  if (surface.hasSelection && surface.selection.pane_index == target.pane_index &&
+      surface.selection.layer_id == target.layer_id)
+    return;
+  surface.hasSelection = YES;
+  surface.selection = target;
+  surface.annotationSelected = -1;
+  clear_selection_snap_guides(surface);
+  if (surface.selectionCallback != NULL)
+    surface.selectionCallback((int32_t)target.layer_id, surface.selectionContext);
+  redraw_selection(surface);
+  invalidate_selection_cursor_rects(surface);
 }
 
 // A press on no annotation under the sticker tool places nothing while
-// something is in hand, or off every picture: it lets the choice go, so the
-// next sticker's picture can be chosen, and goes no further, leaving the
-// frame and the layers as they were. The next press on the picture places.
+// something is in hand: it lets the choice go, so the next sticker's picture
+// can be chosen rather than replace the chosen one's, and goes no further,
+// leaving the frame and the layers as they were. The next press places.
 // `NO` leaves the press to place a sticker.
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_sticker_lets_go(ScreenwidePreviewInteractionView *view,
                                                           NSPoint point) {
   ScreenwidePreviewSurface *surface = view.surface;
-  BOOL held = surface.annotationSelected >= 0 || annotation_has_group(surface);
-  if (!held && annotation_picture_at_point(surface, point)) return NO;
-  if (held) {
-    surface.annotationSelected = -1;
-    emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetNone, 0,
-                            ScreenwideAnnotationHandleBody, point);
-  }
+  if (surface.annotationSelected < 0 && !annotation_has_group(surface)) return NO;
+  surface.annotationSelected = -1;
+  emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetNone, 0,
+                          ScreenwideAnnotationHandleBody, point);
   view.annotationPressIgnored = YES;
   return YES;
 }

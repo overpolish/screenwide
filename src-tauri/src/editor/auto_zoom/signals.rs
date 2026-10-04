@@ -51,8 +51,11 @@ pub(super) struct CursorSample {
 pub(super) struct Signals {
   /// Sorted by start.
   pub activities: Vec<Activity>,
-  /// When a key was pressed, sorted.
+  /// When a key was pressed or text typed, sorted.
   pub keys: Vec<u64>,
+  /// When text was typed, sorted: the keys that are typing rather than a
+  /// shortcut.
+  pub typing: Vec<u64>,
   /// Sorted by time.
   pub cursor: Vec<CursorSample>,
   /// When another app came to the front, sorted.
@@ -151,11 +154,16 @@ impl Signals {
       .iter()
       .filter_map(|record| match record {
         KeyboardRecord::Shortcut { timestamp_us, .. }
-        | KeyboardRecord::KeyDown { timestamp_us, .. } => Some(timestamp_us / 1_000),
+        | KeyboardRecord::KeyDown { timestamp_us, .. }
+        | KeyboardRecord::Typing { timestamp_us } => Some(timestamp_us / 1_000),
         _ => None,
       })
       .collect();
     signals.keys.sort_unstable();
+    signals.typing = crate::recording::keyboard::typing_times_us(keyboard)
+      .into_iter()
+      .map(|timestamp_us| timestamp_us / 1_000)
+      .collect();
     signals
   }
 }

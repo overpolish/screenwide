@@ -85,7 +85,7 @@ mod tests {
       .collect::<Vec<_>>()
       .join("\n");
     std::fs::write(&path, format!("{json}\n")).unwrap();
-    let cursor = CursorCompositor::open(&path).unwrap();
+    let cursor = CursorCompositor::open(&path, None).unwrap();
     let _ = std::fs::remove_dir_all(&directory);
     cursor
   }

@@ -218,8 +218,8 @@ mod picking_chrome;
 /// How far a press is from each kind of annotation.
 mod picking_distance;
 use picking::{
-  handle_at_point, image_frame, item_image_frame, layer_selection, on_picture, selected_item,
-  shaft_at_point, text_geometry,
+  handle_at_point, image_frame, item_image_frame, layer_selection, selected_item, shaft_at_point,
+  text_geometry,
 };
 pub(super) use picking::{layer_image_rect, take_drawing_layer};
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};

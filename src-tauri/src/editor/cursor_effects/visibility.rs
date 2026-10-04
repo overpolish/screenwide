@@ -28,6 +28,44 @@ pub(super) fn segment(positions: &mut [Position], events: &[(u64, bool)]) {
   }
 }
 
+/// How far the pointer must move, in the recording's points, to come back
+/// after typing hid it: a hand resting on the mouse still jitters it.
+const TYPING_RETURN_DISTANCE: f64 = 3.0;
+const TYPING_FADE_OUT_US: f32 = 200_000.0;
+const TYPING_FADE_IN_US: f32 = 120_000.0;
+
+/// When typing hid the pointer, as it does on screen: from a key at `typing`
+/// until the pointer next moves from where it rested, or for good where it
+/// never does. `positions` and `typing` are sorted by time.
+pub(super) fn typing_hidden(positions: &[Position], typing: &[u64]) -> Vec<(u64, u64)> {
+  let mut hidden = Vec::new();
+  let mut keys = typing.iter().copied().peekable();
+  while let Some(start) = keys.next() {
+    let after = positions.partition_point(|position| position.timestamp_us <= start);
+    let Some(rest) = after.checked_sub(1).and_then(|index| positions.get(index)) else {
+      continue;
+    };
+    let end = positions[after..]
+      .iter()
+      .find(|position| (position.x - rest.x).hypot(position.y - rest.y) > TYPING_RETURN_DISTANCE)
+      .map_or(u64::MAX, |position| position.timestamp_us);
+    hidden.push((start, end));
+    while keys.next_if(|&key| key < end).is_some() {}
+  }
+  hidden
+}
+
+/// The pointer's share of opacity over a stretch typing hid it from `start`
+/// to `end`: it fades out from the key, and back in from the movement, from
+/// however far it had got.
+fn typing_share((start, end): (u64, u64), timestamp_us: u64) -> f32 {
+  let out = |at: u64| 1.0 - (at.saturating_sub(start) as f32 / TYPING_FADE_OUT_US).clamp(0.0, 1.0);
+  if timestamp_us < end {
+    return out(timestamp_us);
+  }
+  (out(end) + timestamp_us.saturating_sub(end) as f32 / TYPING_FADE_IN_US).min(1.0)
+}
+
 impl CursorCompositor {
   pub(super) fn visibility_opacity(&self, timestamp_us: u64) -> f32 {
     const FADE_US: f32 = 120_000.0;
@@ -44,6 +82,14 @@ impl CursorCompositor {
     if let Some(&(at, false)) = self.visibility.get(index) {
       opacity = opacity.min((at.saturating_sub(timestamp_us) as f32 / FADE_US).clamp(0.0, 1.0));
     }
+    // The stretch under way, and the one before it in case the pointer is
+    // still fading back in from that.
+    let typed = self
+      .typing_hidden
+      .partition_point(|stretch| stretch.0 <= timestamp_us);
+    for stretch in &self.typing_hidden[typed.saturating_sub(2)..typed] {
+      opacity = opacity.min(typing_share(*stretch, timestamp_us));
+    }
     opacity * opacity * (3.0 - 2.0 * opacity)
   }
 }
@@ -53,7 +99,11 @@ mod tests {
   use super::*;
 
   fn compositor() -> CursorCompositor {
-    CursorCompositor::from_records(&[
+    CursorCompositor::from_records(&records(), &[]).unwrap()
+  }
+
+  fn records() -> Vec<CursorRecord> {
+    vec![
       CursorRecord::Header {
         coordinate_space: "global-logical-points".into(),
         platform: "test".into(),
@@ -101,8 +151,7 @@ mod tests {
         x: 900.0,
         y: 800.0,
       },
-    ])
-    .unwrap()
+    ]
   }
 
   #[test]
@@ -151,5 +200,32 @@ mod tests {
     let mut compositor = compositor();
     compositor.visibility.clear();
     assert_eq!(compositor.visibility_opacity(225_000), 1.0);
+  }
+
+  #[test]
+  fn typing_hides_the_pointer_until_it_moves_away_from_where_it_rested() {
+    let mut records = records();
+    let at = |timestamp_us, x| CursorRecord::Position {
+      timestamp_us,
+      x,
+      y: 800.0,
+    };
+    // A hand resting on the mouse nudges it a point; then it really moves.
+    records.extend([at(2_000_000, 901.0), at(3_000_000, 960.0)]);
+    let compositor =
+      CursorCompositor::from_records(&records, &[1_000_000, 1_300_000, 3_500_000]).unwrap();
+    let opacity = |timestamp_us| compositor.visibility_opacity(timestamp_us);
+    assert_eq!(opacity(900_000), 1.0);
+    assert_eq!(opacity(1_100_000), 0.5);
+    assert_eq!(opacity(1_500_000), 0.0);
+    assert_eq!(opacity(2_500_000), 0.0);
+    assert!(compositor
+      .evaluate(2_500_000, CursorEffectSettings::default())
+      .is_none());
+    assert_eq!(opacity(3_060_000), 0.5);
+    assert_eq!(opacity(3_200_000), 1.0);
+    // Typing again with the pointer still keeps it hidden to the end.
+    assert_eq!(opacity(3_700_000), 0.0);
+    assert_eq!(opacity(60_000_000), 0.0);
   }
 }

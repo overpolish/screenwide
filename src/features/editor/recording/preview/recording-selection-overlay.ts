@@ -222,9 +222,10 @@ export function recordingVideoSelectionTargets({
     );
   // The marquee and the drawing tools reach every pane as the select tool
   // does: a band may be drawn over whichever picture it starts on, a fresh
-  // annotation starts on the picture under the press, and an annotation is
-  // measured against its own picture whichever layer is in hand. A drawing
-  // tool picks no layer up; the native side is told so with the layout.
+  // annotation starts on the picture under the press or, on the frame, the
+  // nearest one, and an annotation is measured against its own picture
+  // whichever layer is in hand. A drawing tool picks no layer up; the native
+  // side is told so with the layout.
   const mode =
     canvasTool === "crop"
       ? "crop"

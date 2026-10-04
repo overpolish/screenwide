@@ -97,7 +97,7 @@ fn custom_arrow_fallback_keeps_the_recorded_arrow_size() {
       y: 500.0,
     },
   ];
-  let compositor = CursorCompositor::from_records(&records).unwrap();
+  let compositor = CursorCompositor::from_records(&records, &[]).unwrap();
   let cursor = compositor
     .gpu_cursor(
       1_500,
@@ -186,7 +186,7 @@ fn gpu_cursor_position_is_rounded_to_the_output_pixel_grid() {
       y: 10.6,
     },
   ];
-  let compositor = CursorCompositor::from_records(&records).unwrap();
+  let compositor = CursorCompositor::from_records(&records, &[]).unwrap();
   let cursor = compositor
     .gpu_cursor(0, (100, 100), CursorEffectSettings::default())
     .unwrap();

@@ -199,7 +199,7 @@ pub(super) fn sources_with_surface(
     .unwrap_or(0);
   let cursor = cursor_path
     .as_ref()
-    .map(|path| CursorCompositor::open(path).map(Arc::new))
+    .map(|path| CursorCompositor::open(path, keyboard_path.as_deref()).map(Arc::new))
     .transpose()?;
   let keyboard = keyboard_path
     .as_ref()

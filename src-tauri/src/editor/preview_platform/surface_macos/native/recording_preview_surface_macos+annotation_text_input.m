@@ -30,15 +30,16 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_press(
   surface.annotationTextOpensAtPoint = NO;
   // The text view takes the presses on its own text. Any other press ends
   // the typing and then carries on as the press it is, so one press can pick
-  // up this box or another, grab the OSC, choose a layer or pan. Two only end
-  // it: one on empty picture under the text tool, since clicking away is how
-  // typing is finished and must not drop a fresh box as well; and one that
-  // leaves the box with nothing to read, because Rust removes that box and
-  // the grips this press would be read against still count it.
+  // up this box or another, grab the OSC, choose a layer or pan - or, on
+  // empty picture under the text tool, drop the next box, so a run of boxes
+  // takes a press each. Only one press just ends it: one that leaves the box
+  // with nothing to read and lands on something other than empty picture,
+  // because Rust removes that box and the grips this press would be read
+  // against still count it. A fresh box is read against no grip.
   if (annotation_text_editing(surface)) {
     NSPoint point = [view convertPoint:event.locationInWindow fromView:nil];
     BOOL drops = annotation_press_drops_text(surface, point);
-    if (annotation_text_finish(surface) && !drops) return NO;
+    if (annotation_text_finish(surface) || drops) return NO;
     view.annotationPressIgnored = YES;
     return YES;
   }

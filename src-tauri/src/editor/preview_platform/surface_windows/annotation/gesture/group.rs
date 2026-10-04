@@ -148,20 +148,16 @@ pub(super) fn clicked(state: &mut SurfaceState, drag: Drag, point: (f64, f64)) -
 }
 
 /// A press on no annotation under the sticker tool places nothing while
-/// something is in hand, or off every picture: it lets the choice go, so the
-/// next sticker's picture can be chosen, and reaches nothing else; the next
-/// press on the picture places. The sample to report, or `None` when the
+/// something is in hand: it lets the choice go, so the next sticker's picture
+/// can be chosen rather than replace the chosen one's, and reaches nothing
+/// else; the next press places. The sample to report, or `None` when the
 /// press is left to place a sticker. The twin of `annotation_sticker_lets_go`.
 pub(super) fn sticker_lets_go(
   state: &mut SurfaceState,
   point: (f64, f64),
 ) -> Option<Option<Sample>> {
-  let held = state.annotation.selected >= 0 || has_group(state);
-  if !held && on_picture(state, point) {
+  if state.annotation.selected < 0 && !has_group(state) {
     return None;
-  }
-  if !held {
-    return Some(None);
   }
   state.annotation.selected = -1;
   Some(resolve(

@@ -7,6 +7,7 @@ fn compositor(positions: Vec<Position>, button_events: Vec<ButtonEvent>) -> Curs
   let raw_positions = positions.clone();
   CursorCompositor {
     visibility: Vec::new(),
+    typing_hidden: Vec::new(),
     appearances: Vec::new(),
     button_events,
     dwell_anchors: Vec::new(),

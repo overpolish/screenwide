@@ -124,6 +124,8 @@ pub(crate) struct GpuCursor {
 #[derive(Clone)]
 pub struct CursorCompositor {
   visibility: Vec<(u64, bool)>,
+  /// When typing hid the pointer: from a key until it next moved.
+  typing_hidden: Vec<(u64, u64)>,
   appearances: Vec<Appearance>,
   button_events: Vec<ButtonEvent>,
   dwell_anchors: Vec<DwellAnchor>,

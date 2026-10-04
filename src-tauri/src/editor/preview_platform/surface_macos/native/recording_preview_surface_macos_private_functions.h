@@ -102,6 +102,9 @@ BOOL annotation_mouse_down(ScreenwidePreviewInteractionView *view,
                            NSPoint point);
 BOOL annotation_mouse_dragged(ScreenwidePreviewInteractionView *view,
                               NSPoint point);
+/// The release also halos what now lies under the resting pointer - an
+/// annotation just placed or carried there - which a press had put out, so it
+/// can be deleted without the pointer moving first.
 BOOL annotation_mouse_up(ScreenwidePreviewInteractionView *view, NSPoint point);
 /// The crop tool's press on nothing, or on the body of a crop that crops
 /// nothing yet: it arms a new crop window, which begins only once the press
@@ -179,17 +182,18 @@ void emit_annotation_gesture(ScreenwidePreviewSurface *surface, uint32_t phase,
 /// does: its layer becomes the selection and Rust commits the choice.
 void annotation_choose(ScreenwidePreviewSurface *surface, NSInteger index,
                        NSPoint point);
-/// Puts the topmost picture under a drawing press in hand, as a press with
-/// the select tool would, so the fresh annotation joins it. Over no picture
-/// the selected layer keeps the annotation.
+/// The picture a fresh annotation pressed at `point` joins: the topmost one
+/// under it, or off every picture the nearest. `NO` with no picture laid out.
+BOOL annotation_drawing_target(ScreenwidePreviewSurface *surface, NSPoint point,
+                               ScreenwidePreviewSelection *found);
+/// Puts the picture a drawing press joins in hand, as a press with the select
+/// tool would, so the fresh annotation joins it. With no picture laid out the
+/// selected layer keeps the annotation.
 void annotation_take_layer_at_point(ScreenwidePreviewSurface *surface,
                                     NSPoint point);
-/// Whether `point` lands on a picture a fresh annotation could join; with no
-/// pictures laid out, every press does.
-BOOL annotation_picture_at_point(ScreenwidePreviewSurface *surface, NSPoint point);
 /// A press on no annotation under the sticker tool: while something is in
-/// hand, or off every picture, lets the choice go and takes the press, so it
-/// reaches nothing else. `NO` leaves the press to place a sticker.
+/// hand, lets the choice go and takes the press, so it reaches nothing else.
+/// `NO` leaves the press to place a sticker.
 BOOL annotation_sticker_lets_go(ScreenwidePreviewInteractionView *view, NSPoint point);
 /// Whether several annotations are chosen together, which is when the group
 /// chrome is drawn and a press on a member carries them all.

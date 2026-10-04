@@ -47,12 +47,13 @@ fn drops_text(state: &SurfaceState, point: (f64, f64)) -> bool {
 /// A press while a box is typed into. In the box it places the caret, and a
 /// double-click selects the word it lands on. Anywhere else it ends the
 /// typing and then carries on as the press it is, so one press can pick up
-/// this box or another, grab the OSC, choose a layer or pan. Two only end
-/// it: one on empty picture under the text tool, since clicking away is how
-/// typing is finished and must not drop a fresh box as well; and one that
-/// leaves the box with nothing to read, which Rust removes, so the grips the
-/// press would be read against may still count it. Answers whether typing
-/// took the press.
+/// this box or another, grab the OSC, choose a layer or pan - or, on empty
+/// picture under the text tool, drop the next box, so a run of boxes takes a
+/// press each. Only one press just ends it: one that leaves the box with
+/// nothing to read and lands on something other than empty picture, since
+/// Rust removes that box, so the grips the press would be read against may
+/// still count it; a fresh box is read against no grip. Answers whether
+/// typing took the press.
 pub(crate) fn press(inner: &Arc<SurfaceInner>, point: (f64, f64), double: bool) -> bool {
   let (in_box, carries_on) = {
     let Ok(mut state) = inner.state.lock() else {
@@ -79,7 +80,7 @@ pub(crate) fn press(inner: &Arc<SurfaceInner>, point: (f64, f64), double: bool) 
       redraw_composed_panes(inner, &mut state);
     }
     let in_box = place.is_some();
-    let carries_on = !in_box && readable && !drops_text(&state, point);
+    let carries_on = !in_box && (readable || drops_text(&state, point));
     state.annotation.press_taken = !carries_on;
     (in_box, carries_on)
   };

@@ -6,13 +6,15 @@ import { invoke } from "@tauri-apps/api/core";
 import type { StickerArt } from "../annotations/annotations";
 import type { EditorKind } from "../types";
 
-/** Where a dropped picture landed: the layer under it and the point in that
- * layer's image, each from 0 to 1. The twin of `StickerPoint` in
+/** Where a dropped picture landed: the layer it joins and the point in that
+ * layer's image, from 0 to 1 across it and beyond for a drop on the frame
+ * around it. The twin of `StickerPoint` in
  * `src-tauri/src/editor/stickers/dropped.rs`. */
 export type StickerPoint = { layer: number; x: number; y: number };
 
 /** A picture dropped on a workspace, kept: which editor it was dropped on,
- * what the sticker shows, and where it landed, or null off every picture. */
+ * what the sticker shows, and where it landed, or null with no picture laid
+ * out. */
 export type StickerDrop = {
   art: StickerArt;
   at: StickerPoint | null;

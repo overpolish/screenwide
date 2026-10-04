@@ -168,36 +168,34 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
 #[cfg(any(target_os = "windows", test))]
 const FIRST_NON_PICTURE_LAYER: u32 = u32::MAX - 1;
 
-/// The layer a fresh annotation is drawn on: the topmost picture under the
-/// press, out of `layers` listed back to front with their pictures' rects as
-/// x, y, width and height. `None` over no picture leaves the annotation to the
-/// layer already selected. The twin of `annotation_take_layer_at_point` in
+/// The layer a fresh annotation is drawn on, out of `layers` listed back to
+/// front with their pictures' rects as x, y, width and height: the topmost
+/// picture under the press, or off every picture - on the canvas frame - the
+/// picture nearest it, the topmost of any equally near. `None` only where no
+/// picture is laid out, leaving the annotation to the layer already selected.
+/// The twin of `annotation_take_layer_at_point` in
 /// `recording_preview_surface_macos+annotation_report.m`.
 #[cfg(any(target_os = "windows", test))]
 pub(crate) fn drawing_layer(
   layers: impl DoubleEndedIterator<Item = (u32, [f64; 4])>,
   (x, y): (f64, f64),
 ) -> Option<u32> {
-  layers
-    .rev()
-    .filter(|(layer, _)| *layer < FIRST_NON_PICTURE_LAYER)
-    .find(|(_, [left, top, width, height])| {
-      x >= *left && x <= left + width && y >= *top && y <= top + height
-    })
-    .map(|(layer, _)| layer)
-}
-
-/// Whether a press at `point` lands on a picture a fresh annotation could
-/// join, out of `layers` as [`drawing_layer`] reads them. With no pictures
-/// laid out there is nothing to miss, so every press is on one. The twin of
-/// `annotation_picture_at_point` in
-/// `recording_preview_surface_macos+annotation_report.m`.
-#[cfg(any(target_os = "windows", test))]
-pub(crate) fn over_a_picture(layers: &[(u32, [f64; 4])], point: (f64, f64)) -> bool {
-  !layers
-    .iter()
-    .any(|(layer, _)| *layer < FIRST_NON_PICTURE_LAYER)
-    || drawing_layer(layers.iter().copied(), point).is_some()
+  let mut nearest: Option<(u32, f64)> = None;
+  for (layer, [left, top, width, height]) in layers.rev() {
+    if layer >= FIRST_NON_PICTURE_LAYER {
+      continue;
+    }
+    let dx = (left - x).max(x - (left + width)).max(0.0);
+    let dy = (top - y).max(y - (top + height)).max(0.0);
+    let distance = dx.hypot(dy);
+    if distance == 0.0 {
+      return Some(layer);
+    }
+    if nearest.is_none_or(|(_, best)| distance < best) {
+      nearest = Some((layer, distance));
+    }
+  }
+  nearest.map(|(layer, _)| layer)
 }
 
 impl AnnotationGestureTarget {

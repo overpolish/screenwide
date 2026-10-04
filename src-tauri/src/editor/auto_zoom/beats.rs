@@ -35,6 +35,9 @@ pub(super) struct Beat {
   /// that press lands, a title bar or wherever the window was caught, says
   /// little about the work to come, so it is zoomed into only on its own.
   pub brought_forward: bool,
+  /// Text was typed in it. Where typing goes is all the beat says, and the
+  /// text runs on from there, so a shot of it is framed on it.
+  pub typed: bool,
 }
 
 impl Beat {
@@ -51,6 +54,7 @@ impl Beat {
       weight: 0.0,
       is_switch: true,
       brought_forward: false,
+      typed: false,
     }
   }
 }
@@ -83,6 +87,7 @@ pub(super) fn group(signals: &Signals) -> Vec<Beat> {
       weight: activity.weight,
       is_switch: false,
       brought_forward: activity.brought_forward,
+      typed: false,
     });
   }
   beats.extend(switches.map(Beat::switch));
@@ -94,7 +99,7 @@ pub(super) fn group(signals: &Signals) -> Vec<Beat> {
     .collect();
   for (beat, next_start) in beats.iter_mut().zip(next_starts) {
     if !beat.is_switch {
-      hold_for_typing(beat, &signals.keys, next_start);
+      hold_for_typing(beat, signals, next_start);
       take_in_pointer(beat, &signals.cursor);
     }
   }
@@ -103,7 +108,8 @@ pub(super) fn group(signals: &Signals) -> Vec<Beat> {
 
 /// Keys pressed during `beat`, or soon after and before the next beat starts,
 /// hold it on and make it matter more: typed text is small on screen.
-fn hold_for_typing(beat: &mut Beat, keys: &[u64], next_start: u64) {
+fn hold_for_typing(beat: &mut Beat, signals: &Signals, next_start: u64) {
+  let keys = &signals.keys;
   let first = keys.partition_point(|&key| key < beat.start_ms);
   let mut typed = 0_u32;
   for &key in &keys[first..] {
@@ -114,6 +120,9 @@ fn hold_for_typing(beat: &mut Beat, keys: &[u64], next_start: u64) {
     typed += 1;
   }
   beat.weight += (f64::from(typed) * TYPING_WEIGHT_PER_KEY).min(MAX_TYPING_WEIGHT);
+  let typing = &signals.typing;
+  beat.typed = typing.partition_point(|&key| key < beat.start_ms)
+    < typing.partition_point(|&key| key <= beat.end_ms);
 }
 
 /// Widens `beat` to where the pointer spent most of its time over it, where

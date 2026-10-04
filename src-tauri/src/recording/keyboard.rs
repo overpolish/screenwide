@@ -5,7 +5,9 @@
 //!
 //! Native adapters report physical key presses and focused-control context.
 //! This shared layer owns acceptance, recording time, pause removal and the
-//! versioned file format. It never receives or persists typed characters.
+//! versioned file format. It never receives or persists typed characters:
+//! typing into a field is kept only as when it happened, twice a second at
+//! most, for the cursor to hide and a zoom to hold on.
 
 #[cfg(target_os = "macos")]
 mod platform_macos;
@@ -38,7 +40,7 @@ use std::{
   io::{BufWriter, Write},
 };
 
-pub(crate) use format::{read, KeyboardModifier, KeyboardRecord, FORMAT_VERSION};
+pub(crate) use format::{read, typing_times_us, KeyboardModifier, KeyboardRecord, FORMAT_VERSION};
 #[cfg(test)]
 use writer::modifier_transition_is_down;
 use writer::StreamWriter;
@@ -122,6 +124,7 @@ impl KeyboardRecorder {
       clock: SidecarClock::new(origin),
       failure: None,
       writer,
+      last_typing_us: None,
     }));
     let sink_state = Arc::clone(&state);
     let sink: EventSink = Arc::new(move |event| {

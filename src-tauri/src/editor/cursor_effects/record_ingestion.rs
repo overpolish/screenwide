@@ -4,12 +4,19 @@
 use super::*;
 
 impl CursorCompositor {
-  pub fn open(path: &Path) -> Result<Self, String> {
+  /// The cursor saved at `path`, hidden while the keys saved at `keyboard`
+  /// show typing. Keys only hide it, so a key file that cannot be read leaves
+  /// the cursor showing throughout.
+  pub fn open(path: &Path, keyboard: Option<&Path>) -> Result<Self, String> {
     let records = cursor::read(path)?;
-    Self::from_records(&records)
+    let typing = keyboard
+      .and_then(|path| crate::recording::keyboard::read(path).ok())
+      .map(|records| crate::recording::keyboard::typing_times_us(&records))
+      .unwrap_or_default();
+    Self::from_records(&records, &typing)
   }
 
-  pub(super) fn from_records(records: &[CursorRecord]) -> Result<Self, String> {
+  pub(super) fn from_records(records: &[CursorRecord], typing: &[u64]) -> Result<Self, String> {
     let source = records
       .iter()
       .find_map(|record| match record {
@@ -122,6 +129,7 @@ impl CursorCompositor {
       }
     }
     Ok(Self {
+      typing_hidden: visibility::typing_hidden(&raw_positions, typing),
       visibility,
       appearances: stable,
       button_events,

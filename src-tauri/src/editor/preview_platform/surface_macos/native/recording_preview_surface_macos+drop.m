@@ -57,24 +57,20 @@ void screenwide_preview_surface_set_sticker_drop_callback(
   });
 }
 
-/// The topmost picture under `point`, and `point` in its image-normalised
-/// space, by the rule `annotation_take_layer_at_point` keeps. `NO` off every
-/// picture.
+/// The picture a press at `point` would draw on, by the rule
+/// `annotation_drawing_target` keeps, and `point` in its image-normalised
+/// space - beyond 0 to 1 for a drop on the frame. `NO` with no picture laid
+/// out.
 static BOOL sticker_drop_point(ScreenwidePreviewSurface *surface, NSPoint point, int32_t *layer,
                                double *x, double *y) {
-  for (NSValue *value in surface.selectionTargets.reverseObjectEnumerator) {
-    ScreenwidePreviewSelection target;
-    [value getValue:&target size:sizeof(target)];
-    if (target.layer_id == ScreenwideFrameLayerId || selection_is_keyboard(target)) continue;
-    NSRect image = annotation_layer_image(surface, (int32_t)target.layer_id);
-    if (!NSPointInRect(point, image) || image.size.width <= 0.0 || image.size.height <= 0.0)
-      continue;
-    *layer = (int32_t)target.layer_id;
-    *x = (point.x - NSMinX(image)) / image.size.width;
-    *y = (point.y - NSMinY(image)) / image.size.height;
-    return YES;
-  }
-  return NO;
+  ScreenwidePreviewSelection target;
+  if (!annotation_drawing_target(surface, point, &target)) return NO;
+  NSRect image = selection_image_frame_for(surface, target);
+  if (image.size.width <= 0.0 || image.size.height <= 0.0) return NO;
+  *layer = (int32_t)target.layer_id;
+  *x = (point.x - NSMinX(image)) / image.size.width;
+  *y = (point.y - NSMinY(image)) / image.size.height;
+  return YES;
 }
 
 @implementation ScreenwidePreviewInteractionView (Drop)
@@ -105,7 +101,7 @@ static BOOL sticker_drop_point(ScreenwidePreviewSurface *surface, NSPoint point,
 
 /// Hands the dropped picture over in the form that keeps the most of it: a
 /// file of its own first, then its data, then a file the dragging app writes
-/// out for the drop, as browsers do for an image. The picture under the drop
+/// out for the drop, as browsers do for an image. The picture the drop joins
 /// is taken in hand, as a press with the sticker tool there would.
 - (BOOL)performDragOperation:(id<NSDraggingInfo>)info {
   if (![self stickerDropAccepts:info]) return NO;

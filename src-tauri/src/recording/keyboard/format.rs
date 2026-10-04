@@ -46,6 +46,38 @@ pub enum KeyboardRecord {
     modifiers: Vec<KeyboardModifier>,
     timestamp_us: u64,
   },
+  /// Text was being typed. A key typed into a text field is never recorded,
+  /// so this says only when, and no more often than the writer allows.
+  Typing { timestamp_us: u64 },
+}
+
+/// When `records` show typing: the typing marks, and every key pressed
+/// without Command or Control that is not itself a modifier - Return,
+/// Backspace, an arrow, or a letter typed outside a text field.
+pub(crate) fn typing_times_us(records: &[KeyboardRecord]) -> Vec<u64> {
+  let mut times: Vec<u64> = records
+    .iter()
+    .filter_map(|record| match record {
+      KeyboardRecord::Typing { timestamp_us } => Some(*timestamp_us),
+      KeyboardRecord::KeyDown {
+        key_code,
+        modifiers,
+        timestamp_us,
+      } if !matches!(key_code, 54..=63)
+        && !modifiers.iter().any(|modifier| {
+          matches!(
+            modifier,
+            KeyboardModifier::Command | KeyboardModifier::Control
+          )
+        }) =>
+      {
+        Some(*timestamp_us)
+      }
+      _ => None,
+    })
+    .collect();
+  times.sort_unstable();
+  times
 }
 
 /// Reads every complete shortcut record. A crash may truncate only the final

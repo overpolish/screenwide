@@ -182,11 +182,10 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
       annotation_choose(surface, shaft, point);
     return YES;
   }
-  // Empty picture: a new annotation, on the picture under the press. An arrow
-  // is drawn out, so it waits for the press to prove a drag and a click leaves
-  // no stub behind. A counter, a text box and a sticker are dropped whole
-  // where the press lands, so they begin at once and a click alone makes
-  // them; the drag that may follow carries them.
+  // Empty picture or the frame: a new annotation, on the picture under the
+  // press or the nearest one. An arrow waits for the press to prove a drag, so
+  // a click leaves no stub; a counter, a text box and a sticker are dropped
+  // whole at once, and the drag that may follow carries them.
   annotation_take_layer_at_point(surface, point);
   view.annotationDragTargetKind = ScreenwideAnnotationTargetNew;
   view.annotationDragIndex = 0;
@@ -264,6 +263,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_up(
   view.annotationDragPending = NO;
   view.annotationDragBegun = NO;
   view.annotationPressKind = AnnotationPressOrdinary;
+  annotation_update_hover(surface, point, NO);
   return YES;
 }
 

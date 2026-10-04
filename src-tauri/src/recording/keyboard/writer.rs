@@ -12,11 +12,18 @@ use super::{
 };
 use crate::recording::clock::SidecarClock;
 
+/// The least time between two typing marks. Typing is what hides the cursor
+/// and holds a zoom on, both of which need only roughly when it happened, so
+/// the pace of the keys is not kept.
+const TYPING_MARK_US: u64 = 500_000;
+
 pub(super) struct StreamWriter {
   pub(super) active_keys: HashSet<u16>,
   pub(super) clock: SidecarClock,
   pub(super) failure: Option<String>,
   pub(super) writer: BufWriter<File>,
+  /// When the last typing mark was written.
+  pub(super) last_typing_us: Option<u64>,
 }
 
 pub(super) fn modifier_transition_is_down(was_active: bool, aggregate_flag: bool) -> bool {
@@ -46,11 +53,40 @@ impl StreamWriter {
     true
   }
 
+  /// Whether `event` is a key typed into a text field: one `accepts` keeps
+  /// out for what it would give away, and which is noted only as typing. A
+  /// password field gives nothing away, not even that.
+  fn types(event: &RawKeyboardEvent) -> bool {
+    matches!(
+      event.kind,
+      RawKeyboardEventKind::KeyDown {
+        is_printable: true,
+        is_repeat: false,
+      }
+    ) && !matches!(event.focus, FocusContext::NonText | FocusContext::Secure)
+      && !event.modifiers.iter().any(|modifier| {
+        matches!(
+          modifier,
+          KeyboardModifier::Command | KeyboardModifier::Control
+        )
+      })
+  }
+
   pub(super) fn record(&mut self, event: RawKeyboardEvent) -> Result<bool, String> {
     let Some(timestamp_us) = self.clock.timestamp_us(event.at) else {
       return Ok(false);
     };
     let record = match event.kind {
+      RawKeyboardEventKind::KeyDown { .. } if Self::types(&event) => {
+        if self
+          .last_typing_us
+          .is_some_and(|last| timestamp_us < last + TYPING_MARK_US)
+        {
+          return Ok(false);
+        }
+        self.last_typing_us = Some(timestamp_us);
+        KeyboardRecord::Typing { timestamp_us }
+      }
       RawKeyboardEventKind::KeyDown { .. } => {
         if !Self::accepts(&event) || !self.active_keys.insert(event.key_code) {
           return Ok(false);

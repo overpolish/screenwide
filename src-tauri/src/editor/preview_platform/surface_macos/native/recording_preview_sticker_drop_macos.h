@@ -17,8 +17,8 @@ typedef NS_ENUM(uint32_t, ScreenwideStickerDrop) {
 };
 
 /// A picture dropped on the workspace: what it is, as `kind` says, in `data`,
-/// and the layer and image-normalised point it landed on, `layer` -1 where it
-/// landed off every picture.
+/// and the layer and image-normalised point it landed on, the nearest
+/// picture's for a drop on the frame; `layer` -1 with no picture laid out.
 typedef void (*screenwide_preview_sticker_drop_callback)(uint32_t kind, int32_t layer, double x,
                                                           double y, const uint8_t *data,
                                                           size_t length, void *context);

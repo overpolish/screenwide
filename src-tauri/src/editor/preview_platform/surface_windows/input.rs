@@ -108,6 +108,10 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
         if let Ok(mut state) = inner.state.lock() {
           state.last_pointer = logical(x, y);
         }
+        // What now lies under the resting pointer - an annotation just placed
+        // or carried there - is haloed, so it can be deleted without the
+        // pointer moving first; the press had put the halo out.
+        annotation::update_hover(inner, logical(x, y), false);
         refresh_cursor_for(inner);
         return;
       }

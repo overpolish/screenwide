@@ -142,6 +142,7 @@ fn accepted_key_down_and_matching_key_up_have_distinct_timestamps() {
     clock: SidecarClock::new(shared_origin),
     failure: None,
     writer: std::io::BufWriter::new(file),
+    last_typing_us: None,
   };
   let mut down = event(FocusContext::NonText, true, vec![]);
   down.at = origin + Duration::from_millis(10);
@@ -173,9 +174,52 @@ fn key_up_without_accepted_key_down_is_discarded() {
     clock: SidecarClock::new(shared_origin),
     failure: None,
     writer: std::io::BufWriter::new(file),
+    last_typing_us: None,
   };
   assert!(!writer.record(key_up(99)).unwrap());
   let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn typing_in_a_field_is_marked_by_time_alone_and_never_in_a_password() {
+  let origin = Instant::now();
+  let shared_origin = Arc::new(OnceLock::new());
+  shared_origin.set(origin).unwrap();
+  let path = std::env::temp_dir().join(format!(
+    "screenwide-keyboard-typing-{}.jsonl",
+    std::process::id()
+  ));
+  let file = std::fs::File::create(&path).unwrap();
+  let mut writer = StreamWriter {
+    active_keys: std::collections::HashSet::new(),
+    clock: SidecarClock::new(shared_origin),
+    failure: None,
+    writer: std::io::BufWriter::new(file),
+    last_typing_us: None,
+  };
+  let at = |focus, ms| {
+    let mut key = event(focus, true, vec![]);
+    key.at = origin + Duration::from_millis(ms);
+    key
+  };
+  // A password typed first leaves nothing, not even when.
+  assert!(!writer.record(at(FocusContext::Secure, 0)).unwrap());
+  // Keys a quarter of a second apart: one mark per half second of them.
+  let marked: Vec<bool> = [100, 350, 600, 850]
+    .into_iter()
+    .map(|ms| writer.record(at(FocusContext::Text, ms)).unwrap())
+    .collect();
+  assert_eq!(marked, [true, false, true, false]);
+  writer.writer.flush().unwrap();
+  let lines = std::fs::read_to_string(&path).unwrap();
+  let _ = std::fs::remove_file(path);
+  assert_eq!(
+    lines.lines().collect::<Vec<_>>(),
+    [
+      r#"{"type":"typing","timestampUs":100000}"#,
+      r#"{"type":"typing","timestampUs":600000}"#,
+    ]
+  );
 }
 
 #[test]
