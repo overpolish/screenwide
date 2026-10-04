@@ -6,12 +6,14 @@ use super::*;
 impl Compositor {
   pub(crate) fn new(gpu: &'static Gpu, cursors: NativeCursors) -> Result<Self, String> {
     let device = &gpu.device;
+    // The tile binning reads the full module: it compiles only its own entry
+    // point, which needs every kind's reach. The canvas pass compiles a
+    // variant per set of kinds instead, when one is first asked for.
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
       label: Some("Screenwide preview shader"),
       source: wgpu::ShaderSource::Wgsl(SHADER.into()),
     });
-    let layout = bind_group_layout(device);
-    let canvas = super::canvas_pipelines::CanvasPipelines::new(device, &layout, &module);
+    let (layout, canvas) = super::canvas_pipelines::shared(gpu, || bind_group_layout(device));
     let uniform = |label, size: usize| {
       device.create_buffer(&wgpu::BufferDescriptor {
         label: Some(label),

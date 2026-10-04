@@ -34,6 +34,9 @@ impl Gpu {
     unsafe { editor_target.SetRoot(&editor_root) }
       .map_err(|error| format!("The Windows selection visual could not be attached: {error}"))?;
     let compositor = compositor::Compositor::new(shared, cursor_artwork::native_cursors()?)?;
+    // Drawn as it is edited: a set of kinds new to it is compiled on another
+    // thread while the frames go on with a variant that holds it.
+    compositor.compile_annotation_kinds_in_background();
     let audio_ribbon = audio_ribbon::AudioRibbon::new(shared, &composition, &root)?;
     let selection = selection::SelectionOverlay::new(shared, &composition, &editor_root)?;
     unsafe { composition.Commit() }

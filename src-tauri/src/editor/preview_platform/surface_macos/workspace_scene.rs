@@ -44,9 +44,13 @@ pub(crate) struct WorkspaceScene {
 impl WorkspaceScene {
   pub(super) fn new() -> Result<Self, String> {
     let gpu = crate::gpu::shared()?;
+    let compositor = Compositor::new(gpu, NativeCursors::none())?;
+    // Drawn as it is edited: a set of kinds new to it is compiled on another
+    // thread while the frames go on with a variant that holds it.
+    compositor.compile_annotation_kinds_in_background();
     Ok(Self {
       state: Mutex::new(SceneState {
-        compositor: Compositor::new(gpu, NativeCursors::none())?,
+        compositor,
         loupe: loupe::Loupe::new(gpu),
         layers: Vec::new(),
         resize: None,

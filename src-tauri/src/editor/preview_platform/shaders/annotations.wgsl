@@ -366,11 +366,26 @@ fn annotation_redact_halo_bounds(annotation: PreviewArrow, feather: f32) -> vec4
 /// the picture, over `rgba`.
 fn annotation_picture_layer(rgba: vec4<f32>, annotation: PreviewArrow, canvas_point: vec2<f32>,
                             feather: f32, cursor: bool) -> vec4<f32> {
-  if (annotation.kind == annotation_magnify_kind) {
+  if (annotation_kind_drawn(annotation_magnify_kind) && annotation.kind == annotation_magnify_kind) {
     return annotation_magnify_layer(rgba, annotation, canvas_point, feather,
                                     max(annotation.hover, 0.0), cursor);
   }
+  if (!annotation_kind_drawn(annotation_spotlight_kind)) {
+    return rgba;
+  }
   return annotation_redact_halo(rgba, annotation, canvas_point, feather);
+}
+
+// The kinds this module is built to draw, a bit for each by its number. The
+// line is replaced, with the kinds a draw shows, before the canvas pipelines
+// compile the module (`compositor/canvas_variants.rs`): every branch below
+// asks this of a constant kind, so the compiler leaves out the code for each
+// kind whose bit is clear. Code that is present but never taken still costs:
+// the compiler sizes every pixel's registers for the deepest path it keeps.
+const annotation_kinds_drawn: u32 = 0xffffffffu;
+
+fn annotation_kind_drawn(kind: u32) -> bool {
+  return (annotation_kinds_drawn & (1u << kind)) != 0u;
 }
 
 /// Draws one prepared arrow over `rgba`.
@@ -420,26 +435,29 @@ fn annotation_arrow_bounds(arrow: PreviewGeometry, halo: f32, feather: f32) -> v
 fn annotation_layer(rgba: vec4<f32>, annotation: PreviewArrow, canvas_point: vec2<f32>,
                     feather: f32, number_atlas: AnnotationTextAtlas) -> vec4<f32> {
   let color = annotation_color(annotation);
-  if (annotation.kind == 3u) {
+  if (annotation_kind_drawn(3u) && annotation.kind == 3u) {
     return annotation_redact_halo(rgba, annotation, canvas_point, feather);
   }
   let halo = max(annotation.hover, 0.0);
   if (color.a <= 0.0 || annotation.geometry.width <= 0.0) {
     return rgba;
   }
-  if (annotation.kind == 1u) {
+  if (annotation_kind_drawn(1u) && annotation.kind == 1u) {
     return annotation_counter_layer(rgba, annotation, color, canvas_point, feather, halo,
                                     number_atlas);
   }
-  if (annotation.kind == 2u) {
+  if (annotation_kind_drawn(2u) && annotation.kind == 2u) {
     return annotation_text_layer(rgba, annotation, color, canvas_point, feather, halo,
                                  number_atlas);
   }
-  if (annotation.kind == annotation_shape_kind) {
+  if (annotation_kind_drawn(annotation_shape_kind) && annotation.kind == annotation_shape_kind) {
     return annotation_shape_layer(rgba, annotation, color, canvas_point, feather, halo);
   }
-  if (annotation.kind == annotation_draw_kind) {
+  if (annotation_kind_drawn(annotation_draw_kind) && annotation.kind == annotation_draw_kind) {
     return annotation_draw_layer(rgba, annotation, color, canvas_point, feather, halo);
+  }
+  if (!annotation_kind_drawn(0u)) {
+    return rgba;
   }
   return annotation_arrow_layer(rgba, annotation, color, canvas_point, feather, halo);
 }
@@ -448,7 +466,8 @@ fn annotation_layer(rgba: vec4<f32>, annotation: PreviewArrow, canvas_point: vec
 /// shades and blurs it, and a magnifier enlarges it. Each covers the marks
 /// below it, and lies over the cursor.
 fn annotation_acts_on_picture(kind: u32) -> bool {
-  return kind == annotation_spotlight_kind || kind == annotation_magnify_kind;
+  return (annotation_kind_drawn(annotation_spotlight_kind) && kind == annotation_spotlight_kind) ||
+      (annotation_kind_drawn(annotation_magnify_kind) && kind == annotation_magnify_kind);
 }
 
 // Each shader that includes this file defines `annotation_next(probe, start,

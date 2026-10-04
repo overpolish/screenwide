@@ -48,19 +48,24 @@ fn annotation_stack_draw(stack_in: AnnotationStack, annotation: PreviewArrow, po
                          feather: f32, number_atlas: AnnotationTextAtlas, cursor: bool)
     -> AnnotationStack {
   var stack = stack_in;
-  if (annotation.kind == annotation_highlight_kind) {
+  if (annotation_kind_drawn(annotation_highlight_kind) &&
+      annotation.kind == annotation_highlight_kind) {
     let under = stack.rgba;
     stack.rgba = annotation_highlight_layer(stack.rgba, stack.bare, annotation, point, feather);
     stack.highlighted = stack.highlighted || any(stack.rgba != under);
     return stack;
   }
-  let sides = select(1u, 2u, stack.highlighted);
+  // Only a highlight sets `highlighted`; asked of the constant, the second
+  // side and its draw drop out of a module built without highlights.
+  let sides = select(1u, 2u,
+                     annotation_kind_drawn(annotation_highlight_kind) && stack.highlighted);
   for (var side = 0u; side < sides; side++) {
     let under = select(stack.rgba, stack.bare, side == 1u);
     var drawn: vec4<f32>;
     if (annotation_acts_on_picture(annotation.kind)) {
       drawn = annotation_picture_layer(under, annotation, point, feather, cursor);
-    } else if (annotation.kind == annotation_sticker_kind) {
+    } else if (annotation_kind_drawn(annotation_sticker_kind) &&
+               annotation.kind == annotation_sticker_kind) {
       drawn = annotation_sticker_layer(under, annotation, point, feather);
     } else {
       drawn = annotation_layer(under, annotation, point, feather, number_atlas);
@@ -120,7 +125,8 @@ fn annotation_stack_cursor(rgba: vec4<f32>, point: vec2<f32>, first: u32, last: 
   var hidden = 0.0;
   for (var loupe = annotation_next(point, first, last); loupe < last;
        loupe = annotation_next(point, loupe + 1u, last)) {
-    if (annotation_arrows[loupe].kind == annotation_magnify_kind) {
+    if (annotation_kind_drawn(annotation_magnify_kind) &&
+        annotation_arrows[loupe].kind == annotation_magnify_kind) {
       hidden = max(hidden, annotation_magnify_cover(annotation_arrows[loupe], point, feather));
     }
   }
@@ -248,14 +254,15 @@ fn composite_annotation_layers(rgba_in: vec4<f32>, base: vec4<f32>, canvas_point
   var stack = AnnotationStack(rgba_in, rgba_in, false);
   for (var index = annotation_next(canvas_point, first, last); index < last;
        index = annotation_next(canvas_point, index + 1u, last)) {
-    if (index == shade_at) {
+    if (annotation_kind_drawn(annotation_spotlight_kind) && index == shade_at) {
       if (annotation_blur_mode() == 1u && index == annotation_blur_spotlight()) {
         return stack.rgba;
       }
       stack = annotation_stack_shaded(stack, base, canvas_point, 0u, index, all, feather);
     }
     let annotation = annotation_arrows[index];
-    if (annotation.kind == annotation_magnify_kind) {
+    if (annotation_kind_drawn(annotation_magnify_kind) &&
+        annotation.kind == annotation_magnify_kind) {
       stack = annotation_stack_magnifier(stack, index, canvas_point, feather, number_atlas,
                                          cursor);
     } else {

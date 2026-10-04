@@ -40,6 +40,13 @@ impl RecordingPreviewSurface {
 }
 
 impl WindowsExportCompositor {
+  /// Compiles the canvas pipelines for each set of annotation kinds an
+  /// export draws, before its first frame; see
+  /// [`compositor::Compositor::prepare_annotation_kinds`].
+  pub(in crate::editor) fn prepare_annotation_kinds(&self, sets: &[compositor::KindMask]) {
+    self.inner.gpu.compositor.prepare_annotation_kinds(sets);
+  }
+
   /// `camera_composition` is what the baked camera has composed into its
   /// frame before the canvas draws it.
   #[allow(clippy::too_many_arguments)]

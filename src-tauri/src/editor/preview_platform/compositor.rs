@@ -9,6 +9,7 @@
 mod background;
 mod camera;
 mod canvas_pipelines;
+mod canvas_variants;
 mod cursor_artwork;
 mod draw;
 mod layer;
@@ -27,6 +28,7 @@ mod tiles;
 pub(crate) mod video_planes;
 
 pub(crate) use camera::CameraComposition;
+pub(crate) use canvas_variants::KindMask;
 pub(crate) use layer::{CanvasGeometry, LayerDraw, LayerPlacement};
 
 use super::background_image::BackgroundImageCache;
@@ -215,7 +217,8 @@ pub(crate) struct Compositor {
   fallback_view: wgpu::TextureView,
   layout: wgpu::BindGroupLayout,
   tiles: tiles::AnnotationTiles,
-  canvas: canvas_pipelines::CanvasPipelines,
+  /// Shared by every compositor on the device; see `canvas_pipelines`.
+  canvas: std::sync::Arc<canvas_pipelines::CanvasPipelines>,
   redactor: redact::Redactor,
   /// The pictures baked cameras are composed into, one for each slot.
   camera_canvases: std::sync::Mutex<std::collections::HashMap<usize, SourceTexture>>,

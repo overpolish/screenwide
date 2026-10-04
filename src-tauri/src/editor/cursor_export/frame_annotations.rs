@@ -6,11 +6,13 @@
 
 use super::CursorExportRequest;
 use crate::editor::annotations::camera_baked::baked_camera_annotations;
+use crate::editor::annotations::spotlight::handoff::{drawn_until, spotlight_links};
 use crate::editor::annotations::timing::{
   revealed_annotations, AnnotationTrack, RecordingAnnotationClip,
 };
 use crate::editor::annotations::{Annotation, AnnotationKind};
 use crate::editor::media_preview::BakedVideoExportOptions;
+use crate::editor::preview_platform::compositor::KindMask;
 use crate::editor::recording_preview_player::{held_surfaces, pin_paths};
 use crate::editor::timeline_edit::TimelineRange;
 use crate::screenshots::ScreenshotOutputSettings;
@@ -169,6 +171,54 @@ impl ExportAnnotations {
         )
       }),
     }
+  }
+
+  /// Every set of annotation kinds whose clips are drawn together somewhere,
+  /// on either track. A frame draws at most the clips running at its moment,
+  /// so one of these holds every kind it shows, and the canvas pipelines
+  /// compiled for them leave no frame waiting.
+  pub(super) fn kind_sets(&self) -> Vec<KindMask> {
+    let links = spotlight_links(&self.clips);
+    let mut edges: Vec<(u64, bool, AnnotationKind)> = self
+      .clips
+      .iter()
+      .enumerate()
+      .flat_map(|(index, clip)| {
+        // A spotlight handing to the next is drawn on until it takes over,
+        // as the reveal draws it.
+        let end = drawn_until(&self.clips, &links, index);
+        let kind = clip.annotation.shape.kind();
+        (end > clip.start_ms)
+          .then_some([(clip.start_ms, true, kind), (end, false, kind)])
+          .into_iter()
+          .flatten()
+      })
+      .collect();
+    // At one moment, clips that end there go before those that start: the
+    // two are never drawn in the same frame.
+    edges.sort_by_key(|&(at, starts, _)| (at, starts));
+    let mut running = [0_u32; KindMask::BITS as usize];
+    let mut sets = Vec::new();
+    for (index, &(at, starts, kind)) in edges.iter().enumerate() {
+      let count = &mut running[kind.raw() as usize];
+      *count = if starts {
+        *count + 1
+      } else {
+        count.saturating_sub(1)
+      };
+      if edges.get(index + 1).is_some_and(|next| next.0 == at) {
+        continue;
+      }
+      let kinds = running
+        .iter()
+        .zip(0..)
+        .filter(|(count, _)| **count > 0)
+        .fold(0, |kinds, (_, bit)| kinds | 1 << bit);
+      if kinds != 0 && !sets.contains(&kinds) {
+        sets.push(kinds);
+      }
+    }
+    sets
   }
 }
 

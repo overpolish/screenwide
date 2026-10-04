@@ -477,9 +477,10 @@ fn annotation_cursor_near(probe: vec2<f32>, margin: f32) -> bool {
 }
 
 fn annotation_spotlight_blur() -> AnnotationSpotlightBlur {
+  let blurs = annotations_drawn && annotation_kind_drawn(annotation_spotlight_kind);
   return AnnotationSpotlightBlur(canvas.cursor_blur.z,
-                                 select(0.0, canvas.cursor_blur.w, annotations_drawn),
-                                 select(0u, canvas.annotation_options.y, annotations_drawn));
+                                 select(0.0, canvas.cursor_blur.w, blurs),
+                                 select(0u, canvas.annotation_options.y, blurs));
 }
 
 // The first annotation drawn over the camera, which a loupe showing what
@@ -504,8 +505,12 @@ fn annotation_camera_over(rgba: vec4<f32>, point: vec2<f32>) -> vec4<f32> {
 }
 
 // Whether this pass draws the annotations' blur layer (1), draws the cursor's
-// (3), reads them (2), or none of these.
+// (3), reads them (2), or none of these. Only a spotlight blurs, so a module
+// built without spotlights leaves every layer path out.
 fn annotation_blur_mode() -> u32 {
+  if (!annotation_kind_drawn(annotation_spotlight_kind)) {
+    return 0u;
+  }
   return u32(canvas.annotation_blur.y);
 }
 

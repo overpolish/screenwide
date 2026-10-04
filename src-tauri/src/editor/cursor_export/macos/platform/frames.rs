@@ -95,6 +95,7 @@ impl<'a> FrameComposer<'a> {
       })
       .transpose()?;
     let annotations = ExportAnnotations::for_request(request);
+    compositor.prepare_annotation_kinds(&annotations.kind_sets());
     let scenes = ExportScenes::for_request(request);
     Ok(Self {
       gpu,

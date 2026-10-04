@@ -44,6 +44,9 @@ fn annotation_spotlight_light(shape: PreviewGeometry, probe: vec2<f32>, pixel: f
 // has no source, asks for the blur here.
 fn annotation_spotlight_cover(probe: vec2<f32>, first: u32, last: u32, feather: f32,
                               blurring: bool) -> f32 {
+  if (!annotation_kind_drawn(annotation_spotlight_kind)) {
+    return 0.0;
+  }
   let pixel = max(2.0 * feather, 1e-4);
   var layer = 0.0;
   var lit = 0.0;
@@ -87,7 +90,7 @@ struct AnnotationSpotlightBlur {
 // blur's. The twin of `redact_spotlight_share`, which blurs the source.
 fn annotation_spotlight_blur_share(probe: vec2<f32>, blur: AnnotationSpotlightBlur,
                                    pixel: f32) -> f32 {
-  if (blur.strength <= 0.0) {
+  if (!annotation_kind_drawn(annotation_spotlight_kind) || blur.strength <= 0.0) {
     return 0.0;
   }
   var lit = 0.0;

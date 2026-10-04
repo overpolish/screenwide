@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::canvas_pipelines::Target;
 use super::*;
 
 impl Compositor {
@@ -40,6 +41,11 @@ impl Compositor {
     );
     let total = values.annotation_options[1];
     values.annotation_tiles = super::tiles::grid(size, total);
+    let kinds = if total == 0 {
+      0
+    } else {
+      super::canvas_variants::kinds_of(&annotations)
+    };
     let blur = super::mark_blur::Plan::of(&values, &annotations, size);
     if let Some(plan) = blur {
       values.annotation_blur = plan.reading();
@@ -140,10 +146,11 @@ impl Compositor {
     let blurred = blur
       .map(|plan| {
         let [marks, cursor] = &self.mark_blur.constants;
+        let delta = self.canvas.get(Target::Delta, kinds);
         self.mark_blur.record(
           gpu,
           &mut encoder,
-          self.canvas.delta(&gpu.device),
+          &delta,
           [
             &bind(marks, [fallback, fallback]),
             &bind(cursor, [fallback, fallback]),
@@ -194,11 +201,12 @@ impl Compositor {
         if let Some([x, y, width, height]) = scissor {
           pass.set_scissor_rect(x, y, width, height);
         }
-        pass.set_pipeline(
-          self
-            .canvas
-            .get(&gpu.device, composition.foreground_only, total == 0),
-        );
+        let target = if composition.foreground_only {
+          Target::Layer
+        } else {
+          Target::Canvas
+        };
+        pass.set_pipeline(&self.canvas.get(target, kinds));
         pass.set_bind_group(0, &bindings, &[]);
         pass.draw(0..3, 0..1);
       }
