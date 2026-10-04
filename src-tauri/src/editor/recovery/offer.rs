@@ -103,7 +103,7 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
     path,
     width: 0,
   });
-  if let Err(error) = present_recording(
+  if let Err(error) = present_recovered_recording(
     app,
     FinalizeInfo {
       // A recovered recording keeps whatever timeline sidecar it already

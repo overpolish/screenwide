@@ -3,6 +3,7 @@
 
 pub(crate) mod annotations;
 mod artifact;
+mod artifact_present;
 mod artifact_snapshot;
 mod audio_save;
 pub(crate) mod auto_zoom;
@@ -35,7 +36,8 @@ mod track_selection;
 mod validation;
 mod workspace;
 
-pub use artifact::{discard, present_recording, present_screenshot};
+pub use artifact::discard;
+pub use artifact_present::{present_recording, present_screenshot};
 mod recording_model;
 mod screenshot_composition;
 pub use recording_model::{
@@ -54,6 +56,7 @@ use screenshot_composition::compose_screenshot_workspace;
 
 use annotations::Annotation;
 use artifact::{emit_snapshot, snapshots, take_artifact};
+use artifact_present::present_recovered_recording;
 use artifact_snapshot::snapshot;
 pub use artifact_snapshot::EditorArtifactSnapshot;
 use camera_save::validate_camera_overlay;
