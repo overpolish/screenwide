@@ -79,6 +79,7 @@ export function resolveToolPanelSnapshot(
   const {
     annotationAngle,
     annotationAnimated,
+    annotationImageSway,
     annotationStyle,
     applyShortcutToAll: _applyShortcutToAll,
     audioVolume,
@@ -165,8 +166,8 @@ export function resolveToolPanelSnapshot(
       : resolved.cameraOutput;
   // A colour being dragged in the system panel shows at once: the mirror
   // catches up an edit later, and the swatch must not blink back meanwhile.
-  // The Animate switch and the aim are held the same way, so neither flicks
-  // back to the mirror's value between the edit and the commit.
+  // The Animate and Sway switches and the aim are held the same way, so none
+  // flicks back to the mirror's value between the edit and the commit.
   const aimed =
     resolved.annotation && annotationAngle !== undefined
       ? { ...resolved.annotation, angle: annotationAngle }
@@ -175,10 +176,14 @@ export function resolveToolPanelSnapshot(
     aimed && annotationAnimated !== undefined
       ? { ...aimed, animated: annotationAnimated }
       : aimed;
-  const annotation =
-    switched && annotationStyle
-      ? { ...switched, style: { ...switched.style, ...annotationStyle } }
+  const swayed =
+    switched && annotationImageSway !== undefined
+      ? { ...switched, sway: annotationImageSway }
       : switched;
+  const annotation =
+    swayed && annotationStyle
+      ? { ...swayed, style: { ...swayed.style, ...annotationStyle } }
+      : swayed;
   return {
     ...resolved,
     annotation,

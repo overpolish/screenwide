@@ -43,8 +43,19 @@ impl super::AnnotationShape {
         size,
         angle,
         aspect,
+        sway,
+        clock_ms,
         ..
-      } => super::super::image::native::draw_points(*center, *size, *angle, *aspect),
+      } => {
+        // Only the drawn picture sways; the chrome places its frame and grips
+        // from where the image rests.
+        let moved = super::super::image::sway::sway_at(*sway, *clock_ms, *size);
+        let center = super::super::AnnotationPoint {
+          x: center.x + moved.shift.x,
+          y: center.y + moved.shift.y,
+        };
+        super::super::image::native::draw_points(center, *size, *angle + moved.turn, *aspect)
+      }
     }
   }
 

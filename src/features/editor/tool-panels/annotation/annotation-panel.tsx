@@ -24,6 +24,7 @@ import {
 } from "./annotation-redaction-rows";
 import { ImageFrameRow, ImagePlaybackRow } from "./image-play-rows";
 import { ImageSourceRow } from "./image-source-row";
+import { ImageSwayRow } from "./image-sway-row";
 import { useAnnotationColorMenu } from "./use-annotation-color-menu";
 
 /**
@@ -234,6 +235,12 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         isLocked={isLocked}
         kind={kind}
         style={annotation.style}
+      />
+      <ImageSwayRow
+        annotation={annotation}
+        change={change}
+        isLocked={isLocked}
+        workspace={workspace}
       />
 
       {/* Drawing in and out happens over a clip, and only a recording has

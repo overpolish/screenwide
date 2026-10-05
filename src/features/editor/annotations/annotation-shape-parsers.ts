@@ -152,6 +152,8 @@ export const imageShape = (value: unknown): Shape<"image"> | null => {
   const aspect = positive(shape.aspect);
   const angle = shape.angle;
   const play = imagePlay(shape.play);
+  // A seed that cannot be read leaves the image standing still.
+  const sway = annotationSeed(shape.sway);
   return center &&
     size !== null &&
     aspect !== null &&
@@ -167,6 +169,7 @@ export const imageShape = (value: unknown): Shape<"image"> | null => {
         kind: "image",
         ...(play ? { play } : {}),
         size,
+        ...(sway === null ? {} : { sway }),
       }
     : null;
 };

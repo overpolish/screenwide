@@ -36,6 +36,9 @@ export type ToolPanelPatch = Partial<
   /** Change how the chosen moving image plays: the frame it shows or
    * starts on, and whether a recording plays it through once. */
   annotationImagePlay?: ImagePlayChange;
+  /** Sway the chosen image over its clip, or stand it still. Turning it on
+   * gives it a sway of its own; the dice gives it another. */
+  annotationImageSway?: boolean;
   /** Dress the chosen annotation, a field at a time so a panel never has to
    * send the whole style back. Each one also becomes the next arrow's default.
    */

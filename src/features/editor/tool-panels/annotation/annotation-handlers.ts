@@ -14,6 +14,7 @@ import {
   applyAnnotationImage,
   applyAnnotationImagePlay,
   applyAnnotationStyle,
+  applyAnnotationSway,
   applyClearDrawings,
 } from "../../annotations/annotation-channel";
 import { EditorKind } from "../../types";
@@ -36,6 +37,7 @@ export const annotationPanelHandlers = (
   | "onAnnotationColorSave"
   | "onAnnotationImageChange"
   | "onAnnotationImagePlayChange"
+  | "onAnnotationImageSwayChange"
   | "onAnnotationReverse"
   | "onAnnotationShuffle"
   | "onAnnotationsDelete"
@@ -59,6 +61,9 @@ export const annotationPanelHandlers = (
   },
   onAnnotationImagePlayChange: (play) => {
     applyAnnotationImagePlay(workspace, play);
+  },
+  onAnnotationImageSwayChange: (sway) => {
+    applyAnnotationSway(workspace, sway);
   },
   onAnnotationReverse: () => {
     applyAnnotationReverse(workspace);

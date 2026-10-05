@@ -3,9 +3,9 @@
 
 import { Switch } from "../../../../components/base/switch/switch";
 import { AnnotationAlignGroup } from "../../../../components/shared/annotation-style/annotation-align-group";
-import { AnnotationHandDrawnToggle } from "../../../../components/shared/annotation-style/annotation-hand-drawn-toggle";
 import { AnnotationHeadGroup } from "../../../../components/shared/annotation-style/annotation-head-group";
 import { AnnotationInkGroup } from "../../../../components/shared/annotation-style/annotation-ink-group";
+import { AnnotationShuffleSwitch } from "../../../../components/shared/annotation-style/annotation-shuffle-switch";
 import { SOFT_SPOTLIGHT_EDGE } from "../../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 
@@ -97,9 +97,10 @@ export function AnnotationOptionRows({
         <ControlRow title="Hand-drawn">
           {(controlProps) => (
             <div {...controlProps} role="group">
-              <AnnotationHandDrawnToggle
+              <AnnotationShuffleSwitch
                 isDisabled={isLocked}
                 isSelected={style.handDrawn}
+                label="Hand-drawn"
                 onChange={(next) => {
                   change({ annotationStyle: { handDrawn: next } });
                 }}

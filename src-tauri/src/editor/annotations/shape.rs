@@ -102,8 +102,9 @@ pub enum AnnotationShape {
   /// `center` is its middle and `size` its longer side, in source pixels;
   /// `aspect` is the picture's width over its height, `angle` how far it is
   /// turned clockwise, in radians, and `flip` whether it is mirrored across
-  /// its upright axis. `asset` names the picture in the image library, and
-  /// `play` how it plays where the picture moves.
+  /// its upright axis. `asset` names the picture in the image library,
+  /// `play` how it plays where the picture moves, and `sway` the seed of the
+  /// slight turn and drift a recording gives it, absent where it stands still.
   Image {
     center: AnnotationPoint,
     size: f64,
@@ -114,6 +115,13 @@ pub enum AnnotationShape {
     asset: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     play: Option<super::image::ImagePlay>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sway: Option<u32>,
+    /// How far into its clip the frame being drawn is, in milliseconds,
+    /// where it plays or sways; absent on a screenshot and outside a clip.
+    /// Derived every frame and never stored, as an annotation's reveal is.
+    #[serde(skip)]
+    clock_ms: Option<f64>,
   },
 }
 

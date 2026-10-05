@@ -137,8 +137,8 @@ impl NativeAnnotationData {
     if let super::AnnotationShape::Magnify { size, .. } = &annotation.shape {
       super::magnify::native::fill(&mut record, *size, &annotation.style);
     }
-    if let super::AnnotationShape::Image { play, .. } = &annotation.shape {
-      super::image::native::fill(&mut record, &annotation.style, play.as_ref());
+    if let super::AnnotationShape::Image { play, clock_ms, .. } = &annotation.shape {
+      super::image::native::fill(&mut record, &annotation.style, play.as_ref(), *clock_ms);
     }
     if let Some(fill) = fill {
       record.color = fill.color;

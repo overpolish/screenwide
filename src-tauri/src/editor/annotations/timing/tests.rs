@@ -203,13 +203,13 @@ fn a_faster_timeline_does_not_hurry_the_arrival() {
   assert_eq!(reveal_at(&ranges, 3_000).high, 1.0);
 }
 
-/// A moving image plays from the start of its clip in recording time,
-/// whatever the timeline does to the reveal around it, and a still image
-/// carries no clock to play by.
+/// A moving or swaying image is timed from the start of its clip in
+/// recording time, whatever the timeline does to the reveal around it, and
+/// an image that neither plays nor sways carries no clock.
 #[test]
-fn a_moving_image_is_timed_from_the_start_of_its_clip() {
+fn a_moving_or_swaying_image_is_timed_from_the_start_of_its_clip() {
   use crate::editor::annotations::image::{model::new_image, ImageArt, ImagePlay};
-  let image = |play: Option<ImagePlay>| {
+  let image = |play: Option<ImagePlay>, seed: Option<u32>| {
     let art = ImageArt {
       asset: "image:0123456789abcdef0123456789abcdef".to_owned(),
       aspect: 1.0,
@@ -218,9 +218,12 @@ fn a_moving_image_is_timed_from_the_start_of_its_clip() {
     };
     let mut moving = clip("a", AnnotationTrack::Primary, 1_000, 10_000);
     moving.annotation = new_image("a".to_owned(), Default::default(), &art, None, 1.0);
+    if let AnnotationShape::Image { sway, .. } = &mut moving.annotation.shape {
+      *sway = seed;
+    }
     let drawn = revealed_annotations(&[moving], AnnotationTrack::Primary, &[], 1_750, 0.0, (0, 0));
     match &drawn[0].shape {
-      AnnotationShape::Image { play, .. } => play.and_then(|play| play.clock_ms),
+      AnnotationShape::Image { clock_ms, .. } => *clock_ms,
       _ => unreachable!(),
     }
   };
@@ -229,8 +232,8 @@ fn a_moving_image_is_timed_from_the_start_of_its_clip() {
     frames: 4,
     frame: 0,
     once: false,
-    clock_ms: None,
   };
-  assert_eq!(image(Some(play)), Some(750.0));
-  assert_eq!(image(None), None);
+  assert_eq!(image(Some(play), None), Some(750.0));
+  assert_eq!(image(None, Some(3)), Some(750.0));
+  assert_eq!(image(None, None), None);
 }

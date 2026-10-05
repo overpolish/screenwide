@@ -42,6 +42,8 @@ type PublishedAnnotation = {
   applyReverse: () => void;
   applyShuffle: () => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
+  /** Sway the chosen image over its clip, or stand it still. */
+  applySway: (sway: boolean) => void;
   /** Whether the picture the workspace edits has any stroke to clear. */
   canClearDrawings: boolean;
   /** How many annotations are chosen; only one on its own is `selection`. */
@@ -113,6 +115,9 @@ export function usePublishAnnotationSelection(
       },
       applyStyle: (style) => {
         applyRef.current.applyStyle(style);
+      },
+      applySway: (sway) => {
+        applyRef.current.applySway(sway);
       },
       canClearDrawings,
       count,
@@ -247,11 +252,18 @@ export const applyAnnotationImagePlay = (
   chosen(workspace)?.applyImagePlay(play);
 };
 
-/** Lay the chosen redaction's blocks out again, or draw the chosen hand-drawn
- * highlight's stroke again, from a fresh seed. A no-op with none chosen: every
- * fresh one is drawn from a seed of its own. */
+/** Lay the chosen redaction's blocks out again, draw the chosen hand-drawn
+ * highlight's stroke again, or sway the chosen image another way, from a
+ * fresh seed. A no-op with none chosen: every fresh one is drawn from a seed
+ * of its own. */
 export const applyAnnotationShuffle = (workspace: EditorKind) => {
   chosen(workspace)?.applyShuffle();
+};
+
+/** Sway the chosen image over its clip, or stand it still. A no-op with
+ * none chosen: a fresh image always stands still. */
+export const applyAnnotationSway = (workspace: EditorKind, sway: boolean) => {
+  chosen(workspace)?.applySway(sway);
 };
 
 /** Take every stroke off the picture this workspace edits, chosen or not. */

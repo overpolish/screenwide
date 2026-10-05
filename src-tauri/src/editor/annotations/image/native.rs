@@ -4,10 +4,11 @@
 //! An image's retained draw record.
 //!
 //! `p0` is the picture's middle, `p1` the middle of its right side and `p2`
-//! of its bottom side, all placed like any point, so a placement carries its
-//! size and turn with it. `head` says whether it is mirrored, `params[0]`
-//! carries its corner radius as a percentage of its shorter side, which no
-//! placement touches, and `flags` carries `SHADOW` where it casts one. Its
+//! of its bottom side, all placed like any point and swayed where it sways,
+//! so a placement carries its size and turn with it. `head` says whether it
+//! is mirrored, `params[0]` carries its corner radius as a percentage of its
+//! shorter side, which no placement touches, and `flags` carries `SHADOW`
+//! where it casts one. Its
 //! asset id travels as the record's text. It has no colour of its own: the
 //! record's white carries only how present it is. An image whose picture
 //! moves carries the frame it shows or starts on in `params[1]`, how far
@@ -41,16 +42,19 @@ pub(crate) fn draw_points(
   ]
 }
 
-/// Writes what an image's record carries beyond its points.
+/// Writes what an image's record carries beyond its points. `clock_ms` is
+/// how far into its clip the frame is, which only a moving picture's record
+/// carries.
 pub(crate) fn fill(
   record: &mut NativeAnnotation,
   style: &AnnotationStyle,
   play: Option<&ImagePlay>,
+  clock_ms: Option<f64>,
 ) {
   let (frame, clock) = play.map_or((0.0, -1.0), |play| {
     (
       play.frame as f32,
-      play.clock_ms.map_or(-1.0, |clock| clock as f32),
+      clock_ms.map_or(-1.0, |clock| clock as f32),
     )
   });
   record.params = [style.radius as f32, frame, clock];

@@ -21,7 +21,18 @@ import {
   chosenAnnotationIds,
   toggledAnnotationIds,
 } from "./annotation-selection";
-import { Annotation, AnnotationStyle, ImageArt } from "./annotations";
+import {
+  freshSeed,
+  reversedShape,
+  shuffledShape,
+  swayedShape,
+} from "./annotation-shape-edits";
+import {
+  Annotation,
+  AnnotationShape,
+  AnnotationStyle,
+  ImageArt,
+} from "./annotations";
 import { relaidHighlight } from "./highlight-strokes";
 
 const NOTHING_CHOSEN: ReadonlySet<string> = new Set();
@@ -124,6 +135,21 @@ export function useAnnotations({
       ),
     );
   };
+  // Give the chosen annotation `shape` in one edit; null leaves it as it is.
+  const reshape = (shape: AnnotationShape | null) => {
+    if (!selected || shape === null) return;
+    commit(
+      annotations.map((annotation) =>
+        annotation.id === selected.id ? { ...annotation, shape } : annotation,
+      ),
+    );
+  };
+  // Whether a recording gives the chosen image its slight turn and drift.
+  // Turning it on draws a fresh seed, as the dice does.
+  const applySway = (sway: boolean) => {
+    if (selected)
+      reshape(swayedShape(selected.shape, sway ? freshSeed() : null));
+  };
   const applyStyle = (style: Partial<AnnotationStyle>) => {
     if (!selected) return;
     const dressed = { ...selected.style, ...style };
@@ -153,51 +179,11 @@ export function useAnnotations({
     );
   };
 
-  // Turn the arrow round: the head rides the end point, so swapping the ends
-  // points it the other way. The bend keeps its control, so the curve is the
-  // mirror of itself rather than a different one. An image is mirrored
-  // instead. A counter has no ends to swap; the panel does not offer the row
-  // for one.
   const applyReverse = () => {
-    if (!selected) return;
-    const shape = selected.shape;
-    const reversed =
-      shape.kind === "arrow"
-        ? { ...shape, end: shape.start, start: shape.end }
-        : shape.kind === "image"
-          ? { ...shape, flip: !shape.flip }
-          : null;
-    if (reversed === null) return;
-    commit(
-      annotations.map((annotation) =>
-        annotation.id === selected.id
-          ? { ...annotation, shape: reversed }
-          : annotation,
-      ),
-    );
+    if (selected) reshape(reversedShape(selected.shape));
   };
-
-  // Lay a redaction's blocks out again, or draw a hand-drawn highlight's or
-  // shape's stroke again. The seed comes from the browser's secure generator,
-  // as a fresh redaction's does from the system's; the blocks carry nothing of
-  // the picture's layout whatever the seed.
   const applyShuffle = () => {
-    if (!selected) return;
-    const shape = selected.shape;
-    if (
-      shape.kind !== "redact" &&
-      shape.kind !== "highlight" &&
-      shape.kind !== "shape"
-    )
-      return;
-    const [seed] = crypto.getRandomValues(new Uint32Array(1));
-    commit(
-      annotations.map((annotation) =>
-        annotation.id === selected.id
-          ? { ...annotation, shape: { ...shape, seed } }
-          : annotation,
-      ),
-    );
+    if (selected) reshape(shuffledShape(selected.shape, freshSeed()));
   };
 
   // A deleted annotation stays in the choice while it is gone: the choice
@@ -236,6 +222,9 @@ export function useAnnotations({
             image: art ?? undefined,
             kind: selected.shape.kind,
             style: selected.style,
+            ...(selected.shape.kind === "image"
+              ? { sway: selected.shape.sway !== undefined }
+              : {}),
           }
         : null,
     },
@@ -249,6 +238,7 @@ export function useAnnotations({
       applyReverse,
       applyShuffle,
       applyStyle,
+      applySway,
     },
   );
 

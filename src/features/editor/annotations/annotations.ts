@@ -194,8 +194,9 @@ export type ImageArt = {
  * longer side, in source pixels; `aspect` is the picture's width over its
  * height, `angle` how far it is turned clockwise, in radians, and `flip`
  * whether it is mirrored across its upright axis. `asset` names the picture
- * in the image library, and `play` how it plays where the picture moves.
- * The twin of `AnnotationShape::Image` in
+ * in the image library, `play` how it plays where the picture moves, and
+ * `sway` the seed of the slight turn and drift a recording gives it, absent
+ * where it stands still. The twin of `AnnotationShape::Image` in
  * `src-tauri/src/editor/annotations/shape.rs`.
  */
 type AnnotationImage = Omit<ImageArt, "pixels"> & {
@@ -204,6 +205,7 @@ type AnnotationImage = Omit<ImageArt, "pixels"> & {
   flip: boolean;
   kind: "image";
   size: number;
+  sway?: number;
 };
 
 /** One line a highlight covers, in source pixels. */

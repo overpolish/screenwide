@@ -29,11 +29,6 @@ pub struct ImagePlay {
   /// exactly one run.
   #[serde(default)]
   pub once: bool,
-  /// How far into its clip the frame being drawn is, in milliseconds; absent
-  /// on a still. Derived from the clip and the frame's source time every
-  /// frame and never stored, as an annotation's reveal is.
-  #[serde(skip)]
-  pub clock_ms: Option<f64>,
 }
 
 impl ImagePlay {
@@ -41,17 +36,6 @@ impl ImagePlay {
   /// read from disk carries whatever it was written with.
   pub(crate) fn is_usable(&self) -> bool {
     self.frames > 1 && self.cycle_ms.is_finite() && self.cycle_ms > 0.0
-  }
-}
-
-/// Sets how far into its clip `annotation` is drawn, where it is an image
-/// whose picture moves; anything else is left as it is.
-pub(crate) fn clocked(annotation: &mut crate::editor::annotations::Annotation, clock_ms: f64) {
-  if let crate::editor::annotations::AnnotationShape::Image {
-    play: Some(play), ..
-  } = &mut annotation.shape
-  {
-    play.clock_ms = Some(clock_ms);
   }
 }
 

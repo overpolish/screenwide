@@ -183,9 +183,12 @@ impl super::AnnotationShape {
         flip,
         asset,
         play,
+        sway,
+        clock_ms,
       } => {
         // Its size rides through as the magnifier's does; the turn, the
-        // mirroring and how it plays are the same in every space.
+        // mirroring, how it plays and how it sways are the same in every
+        // space, the drift being a share of its size.
         let centre = map(*center);
         let edge = map(AnnotationPoint {
           x: center.x + size,
@@ -199,6 +202,8 @@ impl super::AnnotationShape {
           flip: *flip,
           asset: asset.clone(),
           play: *play,
+          sway: *sway,
+          clock_ms: *clock_ms,
         }
       }
     }

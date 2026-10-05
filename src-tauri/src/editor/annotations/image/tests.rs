@@ -59,6 +59,8 @@ fn a_press_drops_the_chosen_picture_and_the_drag_carries_it() {
       flip: false,
       asset: PICTURE.to_owned(),
       play: None,
+      sway: None,
+      clock_ms: None,
     }
   );
   // Placed, it is let go, so the next image's picture can be chosen.
@@ -140,19 +142,24 @@ fn a_document_image_reads_back_unmirrored_and_still_when_it_does_not_say() {
       flip: false,
       asset: PICTURE.to_owned(),
       play: None,
+      sway: None,
+      clock_ms: None,
     }
   );
   assert!(shape.placed());
 }
 
 #[test]
-fn an_animated_image_keeps_how_it_plays_but_never_its_clock() {
+fn an_image_keeps_how_it_plays_and_sways_but_never_its_clock() {
   let mut shape: AnnotationShape = serde_json::from_str(
-    r#"{"kind":"image","center":{"x":0,"y":0},"size":64,"angle":0,"aspect":1,"asset":"image:x","play":{"cycleMs":400,"frames":3,"frame":1,"once":true}}"#,
+    r#"{"kind":"image","center":{"x":0,"y":0},"size":64,"angle":0,"aspect":1,"asset":"image:x","play":{"cycleMs":400,"frames":3,"frame":1,"once":true},"sway":7}"#,
   )
   .expect("a stored image");
   let AnnotationShape::Image {
-    play: Some(play), ..
+    play: Some(play),
+    sway,
+    clock_ms,
+    ..
   } = &mut shape
   else {
     panic!("no play");
@@ -161,10 +168,11 @@ fn an_animated_image_keeps_how_it_plays_but_never_its_clock() {
     (play.cycle_ms, play.frames, play.frame, play.once),
     (400.0, 3, 1, true)
   );
-  play.clock_ms = Some(120.0);
+  assert_eq!(*sway, Some(7));
+  *clock_ms = Some(120.0);
   let written = serde_json::to_string(&shape).expect("a written image");
   assert!(
-    written.contains(r#""play":{"cycleMs":400.0,"frames":3,"frame":1,"once":true}"#),
+    written.contains(r#""play":{"cycleMs":400.0,"frames":3,"frame":1,"once":true},"sway":7}"#),
     "{written}"
   );
 }

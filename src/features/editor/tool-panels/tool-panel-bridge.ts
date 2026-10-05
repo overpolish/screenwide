@@ -30,6 +30,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAnnotationImageChange?.(values.annotationImage);
   if (values.annotationImagePlay !== undefined)
     on.onAnnotationImagePlayChange?.(values.annotationImagePlay);
+  if (values.annotationImageSway !== undefined)
+    on.onAnnotationImageSwayChange?.(values.annotationImageSway);
   if (values.reverseAnnotation) on.onAnnotationReverse?.();
   if (values.shuffleAnnotation) on.onAnnotationShuffle?.();
   if (values.clearDrawings) on.onDrawingsClear?.();

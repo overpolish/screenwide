@@ -172,7 +172,6 @@ fn import_animation(bytes: &[u8], animation: ImageAnimation) -> Result<ImageArt,
     frames: animation.frames.len() as u32,
     frame: 0,
     once: false,
-    clock_ms: None,
   };
   cache::remember_animation(&name, animation);
   Ok(ImageArt {

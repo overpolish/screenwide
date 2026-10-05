@@ -130,6 +130,8 @@ pub(crate) fn new_image(
       flip: false,
       asset: art.asset,
       play: art.play,
+      sway: None,
+      clock_ms: None,
     },
     style: style.cloned().unwrap_or_else(default_image_style),
   }

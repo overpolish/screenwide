@@ -99,4 +99,6 @@ export type ToolPanelAnnotation = {
    * its next one in. Its edits dress that one, and what only a drawn
    * annotation can do - turning it round, drawing it again - is not offered. */
   isDraft?: boolean;
+  /** Whether a placed image sways over its clip. Absent on anything else. */
+  sway?: boolean;
 };

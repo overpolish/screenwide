@@ -30,9 +30,28 @@ pub(crate) mod model;
 pub(crate) mod native;
 /// How an animated picture plays, and which frame a moment shows.
 pub(crate) mod play;
+/// The slight turn and drift a recording can give it, worked out per frame.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) mod sway;
 
 pub(crate) use model::ImageArt;
 pub(crate) use play::ImagePlay;
+
+/// Sets how far into its clip `annotation` is drawn, where it is an image
+/// whose picture moves or that sways; anything else is left as it is.
+pub(crate) fn clocked(annotation: &mut super::Annotation, clock_ms: f64) {
+  if let super::AnnotationShape::Image {
+    play,
+    sway,
+    clock_ms: clock,
+    ..
+  } = &mut annotation.shape
+  {
+    if play.is_some() || sway.is_some() {
+      *clock = Some(clock_ms);
+    }
+  }
+}
 
 #[cfg(test)]
 mod tests;

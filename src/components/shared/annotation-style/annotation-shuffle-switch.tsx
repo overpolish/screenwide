@@ -8,19 +8,21 @@ import { Switch } from "../../base/switch/switch";
 import { NativeTooltipTrigger } from "../native-tooltip/native-tooltip-trigger";
 
 /**
- * Whether a highlight is drawn by hand. While it is, the dice draws the stroke
- * again from a fresh seed; it is only offered where there is a stroke in hand
- * to redraw, so the live overlay's toolbar, which dresses the next stroke,
- * leaves `onRandomise` out.
+ * A switch for something drawn from a seed: a hand-drawn stroke, an image's
+ * sway. While it is on, the dice draws it again from a fresh seed; the dice
+ * is only offered where there is something in hand to redraw, so a control
+ * that dresses the next annotation leaves `onRandomise` out.
  */
-export function AnnotationHandDrawnToggle({
+export function AnnotationShuffleSwitch({
   isDisabled,
   isSelected,
+  label,
   onChange,
   onRandomise,
 }: {
   isSelected: boolean;
-  onChange: (handDrawn: boolean) => void;
+  label: string;
+  onChange: (isSelected: boolean) => void;
   isDisabled?: boolean;
   onRandomise?: () => void;
 }) {
@@ -38,7 +40,7 @@ export function AnnotationHandDrawnToggle({
         </NativeTooltipTrigger>
       ) : null}
       <Switch
-        aria-label="Hand-drawn"
+        aria-label={label}
         isDisabled={isDisabled}
         isSelected={isSelected}
         onChange={onChange}

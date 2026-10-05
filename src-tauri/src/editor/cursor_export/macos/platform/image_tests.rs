@@ -159,12 +159,14 @@ fn a_moving_image_shows_the_frame_its_moment_falls_in() {
   assert_eq!((play.frames, play.cycle_ms), (2, 200.0));
   let at = |frame: u32, clock_ms: Option<f64>| {
     let mut annotation = image(&art.asset, art.aspect, 0.0);
-    if let AnnotationShape::Image { play: shown, .. } = &mut annotation.shape {
-      *shown = Some(crate::editor::annotations::image::ImagePlay {
-        frame,
-        clock_ms,
-        ..play
-      });
+    if let AnnotationShape::Image {
+      play: shown,
+      clock_ms: clock,
+      ..
+    } = &mut annotation.shape
+    {
+      *shown = Some(crate::editor::annotations::image::ImagePlay { frame, ..play });
+      *clock = clock_ms;
     }
     pixel(&composed(annotation, [0, 0, 0, 255]), CENTRE.0, CENTRE.1)
   };

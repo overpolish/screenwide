@@ -36,11 +36,14 @@ export type ToolPanelHandlers = {
   onAnnotationImageChange?: (art: ImageArt) => void;
   /** Change how the chosen moving image plays. */
   onAnnotationImagePlayChange?: (play: ImagePlayChange) => void;
+  /** Sway the chosen image over its clip, or stand it still. */
+  onAnnotationImageSwayChange?: (sway: boolean) => void;
   /** Turn the chosen annotation round, through the same commit path the drag on
    * the picture uses. */
   onAnnotationReverse?: () => void;
-  /** Lay the chosen redaction's blocks out again, or draw the chosen
-   * hand-drawn highlight's stroke again, from a fresh seed. */
+  /** Lay the chosen redaction's blocks out again, draw the chosen hand-drawn
+   * highlight's stroke again, or sway the chosen image another way, from a
+   * fresh seed. */
   onAnnotationShuffle?: () => void;
   /** Dress the chosen annotation, a field at a time, through the same commit
    * path the drag on the picture uses. */
