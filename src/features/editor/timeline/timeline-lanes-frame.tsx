@@ -74,7 +74,9 @@ export function TimelineLanesFrame({
     };
   }, []);
   return (
-    <div className="flex min-h-0 grow items-stretch gap-control">
+    // The frame owns the right inset, so the rows keep it with or without a
+    // meter beside them.
+    <div className="flex min-h-0 grow items-stretch gap-control pr-window-inset">
       {/* The overlays are positioned against this column, which spans the
           ruler and the visible rows: a playhead line runs the full height of
           both, and none of it scrolls away with the rows. Their
@@ -98,7 +100,7 @@ export function TimelineLanesFrame({
         {overlays}
       </div>
       {meter ? (
-        <div className="flex shrink-0 flex-col gap-control pr-window-inset">
+        <div className="flex shrink-0 flex-col gap-control">
           {/* The ruler's row, kept as a real row in the meter's column so the
               meter starts beside the first lane instead of being pushed down
               by a margin the ruler's height has to be guessed into. */}
