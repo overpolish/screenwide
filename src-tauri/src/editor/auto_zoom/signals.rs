@@ -170,9 +170,10 @@ impl Signals {
 
 /// A press that brought another app to the front is the first thing done in
 /// that app, so it is moved to the switch it caused: the app reports coming
-/// forward a moment after the press that did it.
+/// forward a moment after the press that did it, or, where the front app is
+/// polled beside the buttons as on Windows, in the same moment.
 fn move_to_switch(activity: &mut Activity, switches: &[u64]) {
-  let next = switches.partition_point(|&switch| switch <= activity.start_ms);
+  let next = switches.partition_point(|&switch| switch < activity.start_ms);
   if let Some(&switch) = switches
     .get(next)
     .filter(|&&switch| switch <= activity.start_ms + SWITCH_CAUSE_MS)

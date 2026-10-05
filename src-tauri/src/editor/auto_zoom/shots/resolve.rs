@@ -6,20 +6,11 @@ use super::candidate::{butts, handover, Candidate, MIN_OVERVIEW_MS};
 use super::{From, Shot, ShotState};
 use crate::editor::scenes::SceneFraming;
 
-/// The shots `chosen` makes, each timed against its neighbours: a handover
+/// The shots `plan` makes, each timed against its neighbours: a handover
 /// shared with a shot it butts, or the whole screen shown for long enough
 /// over the beats between it and the last one, and clear of the beats after
 /// the last shot of all.
-pub(super) fn resolve(
-  chosen: &[(ShotState, From)],
-  candidates: &[Vec<Option<Candidate>>],
-  beats: &[Beat],
-) -> Vec<Shot> {
-  let candidate_of = |state: ShotState| candidates[state.last][state.len];
-  let plan: Vec<(ShotState, Candidate, From)> = chosen
-    .iter()
-    .filter_map(|&(state, from)| Some((state, candidate_of(state)?, from)))
-    .collect();
+pub(super) fn resolve(plan: &[(ShotState, Candidate, From)], beats: &[Beat]) -> Vec<Shot> {
   let mut starts: Vec<u64> = plan.iter().map(|(_, shot, _)| shot.start_ideal).collect();
   let mut ends: Vec<u64> = plan.iter().map(|(_, shot, _)| shot.end_ideal).collect();
   for (index, &(state, shot, from)) in plan.iter().enumerate() {

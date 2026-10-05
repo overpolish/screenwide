@@ -79,11 +79,14 @@ pub(super) struct Candidate {
 }
 
 /// The best zoom into `beats` together, or `None` where they are spread too
-/// far for a zoom to be worth it.
+/// far for a zoom to be worth it. A shot that cannot arrive before
+/// `not_before`, because the whole screen shows the beat before it until
+/// then, holds on from that late arrival for as long as the shortest shot.
 pub(super) fn candidate(
   beats: &[Beat],
   cursor: &[CursorSample],
   duration_ms: u64,
+  not_before: u64,
 ) -> Option<Candidate> {
   let shares_a_brought_forward_press =
     beats.len() > 1 && beats.iter().any(|beat| beat.brought_forward);
@@ -136,14 +139,14 @@ pub(super) fn candidate(
       ms
     }
   };
-  let start_ideal = first_ms.saturating_sub(LEAD_MS);
+  let start_ideal = first_ms.saturating_sub(LEAD_MS).max(not_before);
   let start_latest = first_ms.saturating_sub(TRANSITION_MS);
-  let end_earliest = cap((last_ms + MIN_TAIL_MS).max(start_latest + MIN_CLIP_MS));
+  let arrived = start_latest.max(not_before);
+  let end_earliest = cap((last_ms + MIN_TAIL_MS).max(arrived + MIN_CLIP_MS));
   let end_ideal = cap((last_ms + TAIL_MS).max(start_ideal + MIN_CLIP_MS)).max(end_earliest);
-  let handover_earliest =
-    cap((last_ms + HANDOVER_HOLD_MS).max(start_latest + MIN_HANDOVER_CLIP_MS));
+  let handover_earliest = cap((last_ms + HANDOVER_HOLD_MS).max(arrived + MIN_HANDOVER_CLIP_MS));
   // Arriving late, it still holds for as long as the shortest shot.
-  let start_late = end_earliest.saturating_sub(MIN_CLIP_MS).max(start_latest);
+  let start_late = end_earliest.saturating_sub(MIN_CLIP_MS).max(arrived);
   let weight: f64 = beats.iter().map(|beat| beat.weight).sum();
   let outside = outside_seconds(cursor, frame, first_ms, last_ms + MIN_TAIL_MS);
   Some(Candidate {

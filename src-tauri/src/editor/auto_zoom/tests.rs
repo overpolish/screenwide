@@ -316,6 +316,32 @@ fn typing_straight_after_switching_apps_is_zoomed_into_once_the_switch_shows() {
   assert!(typed.end_ms >= keys[keys.len() - 1]);
 }
 
+/// The recording that showed it: the first click of a recording on Windows
+/// brought an app forward in the same poll that saw it pressed, and a second
+/// of typing followed. Too short for a shot that arrives once the switch has
+/// shown to end with it, the shot holds on past it instead.
+#[test]
+fn brief_work_straight_after_switching_apps_is_still_zoomed_into() {
+  let keys = [3_400, 3_976, 4_496];
+  // Polled beside the buttons, and reported a moment after the press.
+  for switched_ms in [2_104, 2_150] {
+    let clips = planned_across(
+      &[(2_104, (150.0, 130.0)), (2_290, (150.0, 130.0))],
+      &keys,
+      &[switched_ms],
+      VisibleArea::WHOLE,
+    );
+    assert_playable(&clips);
+    let typed = zoom_at(&clips, keys[0]).expect("the typing is zoomed into");
+    assert!(typed.start_ms >= switched_ms, "{clips:#?}");
+    assert!(typed.end_ms > keys[keys.len() - 1], "{clips:#?}");
+    let framing = typed.screen.unwrap();
+    let half = 0.5 / framing.zoom;
+    assert!((framing.focus_x - half..=framing.focus_x + half).contains(&0.15));
+    assert!((framing.focus_y - half..=framing.focus_y + half).contains(&0.13));
+  }
+}
+
 #[test]
 fn no_zoom_carries_across_a_switch_even_to_the_same_place() {
   let clicks = [(10_000, (300.0, 300.0)), (12_000, (310.0, 305.0))];

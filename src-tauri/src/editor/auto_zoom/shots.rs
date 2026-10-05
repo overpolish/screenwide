@@ -53,6 +53,8 @@ enum From {
 struct Entry {
   score: f64,
   from: From,
+  /// The shot as timed for the way it is reached.
+  shot: Candidate,
 }
 
 /// The best plan of the beats before one, which leaves the whole screen
@@ -67,6 +69,16 @@ fn best(options: impl Iterator<Item = (f64, From)>) -> Option<(f64, From)> {
   options.max_by(|a, b| a.0.total_cmp(&b.0))
 }
 
+/// When a shot starting on beat `first` may arrive at the earliest, with the
+/// beat before it on the whole screen, where that beat holds it back: another
+/// app coming forward, or the press that brought it, has to show before any
+/// zoom does. A shot arriving after any other beat only chases a click, so
+/// it keeps to arriving in time for its own work.
+fn held_back_until(beats: &[Beat], first: usize) -> Option<u64> {
+  let before = &beats[first.checked_sub(1)?];
+  (before.is_switch || before.brought_forward).then_some(before.end_ms)
+}
+
 /// The shots that best show `beats`, in order and never overlapping. Each
 /// shot is reached straight from the shot before it, or across beats shown
 /// on the whole screen for long enough not to pump; the best way to each is
@@ -76,7 +88,7 @@ pub(super) fn plan(beats: &[Beat], cursor: &[CursorSample], duration_ms: u64) ->
   let candidates: Vec<Vec<Option<Candidate>>> = (0..count)
     .map(|last| {
       (0..MAX_BEATS_PER_SHOT.min(last + 1))
-        .map(|len| candidate(&beats[last - len..=last], cursor, duration_ms))
+        .map(|len| candidate(&beats[last - len..=last], cursor, duration_ms, 0))
         .collect()
     })
     .collect();
@@ -89,41 +101,50 @@ pub(super) fn plan(beats: &[Beat], cursor: &[CursorSample], duration_ms: u64) ->
     let ending = candidates[last]
       .iter()
       .enumerate()
-      .map(|(len, candidate)| {
-        let candidate = candidate.as_ref()?;
+      .map(|(len, straight)| {
+        let straight = straight.as_ref()?;
         let first = last - len;
         let Some(before) = first.checked_sub(1) else {
           return Some(Entry {
-            score: candidate.score,
+            score: straight.score,
             from: From::Start,
+            shot: *straight,
           });
         };
-        let (score, from) = best(
-          reached(beats, &candidates, &shots, &free, candidate, first)
-            .into_iter()
-            .chain(direct(
-              &candidates[before],
-              &shots[before],
-              candidate,
-              before,
-            )),
-        )?;
-        Some(Entry {
-          score: score + candidate.score,
+        // Arriving late holds the shot on longer, so it is timed afresh.
+        let shown = match held_back_until(beats, first) {
+          Some(not_before) => candidate(&beats[first..=last], cursor, duration_ms, not_before)?,
+          None => *straight,
+        };
+        let across =
+          best(reached(beats, &shots, &free, &shown, first).into_iter()).map(|(score, from)| {
+            Entry {
+              score: score + shown.score,
+              from,
+              shot: shown,
+            }
+          });
+        let direct = best(direct(&shots[before], straight, before)).map(|(score, from)| Entry {
+          score: score + straight.score,
           from,
-        })
+          shot: *straight,
+        });
+        across
+          .into_iter()
+          .chain(direct)
+          .max_by(|a, b| a.score.total_cmp(&b.score))
       })
       .collect::<Vec<_>>();
     // The whole screen shows by the next beat after the shots that have left
     // before it starts.
     let mut next = free[last];
     for (len, entry) in ending.iter().enumerate() {
-      let (Some(entry), Some(candidate)) = (entry, candidates[last][len].as_ref()) else {
+      let Some(entry) = entry else {
         continue;
       };
       let clear = beats
         .get(last + 1)
-        .is_none_or(|beat| candidate.end_earliest <= beat.start_ms);
+        .is_none_or(|beat| entry.shot.end_earliest <= beat.start_ms);
       if clear && entry.score > next.score {
         next = Free {
           score: entry.score,
@@ -140,14 +161,14 @@ pub(super) fn plan(beats: &[Beat], cursor: &[CursorSample], duration_ms: u64) ->
     let Some(entry) = shots[shot.last][shot.len] else {
       break;
     };
-    chosen.push((shot, entry.from));
+    chosen.push((shot, entry.shot, entry.from));
     state = match entry.from {
       From::Start => None,
       From::Direct(previous) | From::Across(previous) => Some(previous),
     };
   }
   chosen.reverse();
-  resolve::resolve(&chosen, &candidates, beats)
+  resolve::resolve(&chosen, beats)
 }
 
 /// The ways to reach `candidate`, the shot starting on beat `first`, with
@@ -155,7 +176,6 @@ pub(super) fn plan(beats: &[Beat], cursor: &[CursorSample], duration_ms: u64) ->
 /// shot that left in time for the whole screen to show long enough.
 fn reached(
   beats: &[Beat],
-  candidates: &[Vec<Option<Candidate>>],
   shots: &[Vec<Option<Entry>>],
   free: &[Free],
   candidate: &Candidate,
@@ -183,10 +203,11 @@ fn reached(
   // leave the whole screen up long enough before this one arrives.
   for (skipped, skipped_beat) in beats.iter().enumerate().take(first).skip(long_ago.max(1)) {
     let before = skipped - 1;
-    for (len, previous) in candidates[before].iter().enumerate() {
-      let (Some(previous), Some(entry)) = (previous, shots[before][len]) else {
+    for (len, entry) in shots[before].iter().enumerate() {
+      let Some(entry) = entry else {
         continue;
       };
+      let previous = entry.shot;
       let start = arrive.max(previous.end_earliest + MIN_OVERVIEW_MS);
       if previous.end_earliest <= skipped_beat.start_ms && start <= candidate.start_late {
         options.push((
@@ -202,20 +223,15 @@ fn reached(
 /// The ways to reach `candidate` straight from a shot ending on beat
 /// `before`, the one just before it.
 fn direct<'a>(
-  previous: &'a [Option<Candidate>],
   entries: &'a [Option<Entry>],
   candidate: &'a Candidate,
   before: usize,
 ) -> impl Iterator<Item = (f64, From)> + 'a {
-  previous
-    .iter()
-    .zip(entries)
-    .enumerate()
-    .filter_map(move |(len, (previous, entry))| {
-      let link = link(previous.as_ref()?, candidate)?;
-      Some((
-        entry.as_ref()?.score + link,
-        From::Direct(ShotState { last: before, len }),
-      ))
-    })
+  entries.iter().enumerate().filter_map(move |(len, entry)| {
+    let entry = entry.as_ref()?;
+    Some((
+      entry.score + link(&entry.shot, candidate)?,
+      From::Direct(ShotState { last: before, len }),
+    ))
+  })
 }
