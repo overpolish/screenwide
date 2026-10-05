@@ -14,15 +14,16 @@ use std::{
 };
 
 use windows::Win32::{
+  Foundation::POINT,
   Graphics::Gdi::DeleteObject,
   UI::{
     Input::KeyboardAndMouse::{
       GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON, VK_XBUTTON1, VK_XBUTTON2,
     },
     WindowsAndMessaging::{
-      GetCursorInfo, GetIconInfo, GetSystemMetrics, LoadCursorW, CURSORINFO, CURSOR_SHOWING,
-      HCURSOR, IDC_ARROW, IDC_CROSS, IDC_HAND, IDC_IBEAM, IDC_NO, IDC_SIZENS, IDC_SIZEWE,
-      SM_CXCURSOR, SM_CYCURSOR,
+      GetAncestor, GetCursorInfo, GetIconInfo, GetSystemMetrics, GetWindowThreadProcessId,
+      LoadCursorW, WindowFromPoint, CURSORINFO, CURSOR_SHOWING, GA_ROOT, HCURSOR, IDC_ARROW,
+      IDC_CROSS, IDC_HAND, IDC_IBEAM, IDC_NO, IDC_SIZENS, IDC_SIZEWE, SM_CXCURSOR, SM_CYCURSOR,
     },
   },
 };
@@ -123,6 +124,28 @@ fn current_cursor(cursors: StandardCursors) -> Result<(f64, f64, HCURSOR), Strin
 
 fn pressed(key: i32) -> bool {
   (unsafe { GetAsyncKeyState(key) }) < 0
+}
+
+/// Whether a press at a point, in physical desktop pixels, lands on one of
+/// Screenwide's own windows. The hit test passes through click-through
+/// windows as the press does, and a webview's child window answers for the
+/// top-level window it sits in.
+pub(super) fn on_own_window(x: f64, y: f64) -> bool {
+  let point = POINT {
+    x: x as i32,
+    y: y as i32,
+  };
+  let hit = unsafe { WindowFromPoint(point) };
+  if hit.is_invalid() {
+    return false;
+  }
+  let window = unsafe { GetAncestor(hit, GA_ROOT) };
+  if window.is_invalid() {
+    return false;
+  }
+  let mut process = 0;
+  unsafe { GetWindowThreadProcessId(window, Some(&mut process)) };
+  process == std::process::id()
 }
 
 fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), String>>) {

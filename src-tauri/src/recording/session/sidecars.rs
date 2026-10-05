@@ -22,6 +22,9 @@ pub(super) struct SidecarPlan {
   pub cursor_path: Option<PathBuf>,
   pub cursor_source: Option<CursorSource>,
   pub keyboard_path: Option<PathBuf>,
+  /// Whether the recording shows Screenwide's own windows, so that presses
+  /// on them belong in the cursor sidecar.
+  pub include_own_windows: bool,
   /// Live annotations are recorded in the desktop's coordinate space, so they
   /// ride with the modes that record the desktop.
   pub records_annotations: bool,
@@ -45,11 +48,17 @@ impl RecordingSidecars {
       cursor_path,
       cursor_source,
       keyboard_path,
+      include_own_windows,
       records_annotations,
     } = plan;
     let annotation_source = records_annotations.then(|| cursor_source.clone()).flatten();
     let cursor = match (cursor_path, cursor_source) {
-      (Some(path), Some(source)) => Some(CursorRecorder::start(path, origin.clone(), source)?),
+      (Some(path), Some(source)) => Some(CursorRecorder::start(
+        path,
+        origin.clone(),
+        source,
+        include_own_windows,
+      )?),
       (None, _) => None,
       (Some(_), None) => {
         return Err("The capture source has no cursor coordinate space".to_owned())

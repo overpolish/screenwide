@@ -48,6 +48,7 @@ pub(in crate::recording) fn begin_capture(
     .then(|| directory.join(encoding::cursor_temp_file_name(started_at)));
   let keyboard_path = records_keyboard(options.mode, options.capture_keyboard_shortcuts)
     .then(|| directory.join(encoding::keyboard_temp_file_name(started_at)));
+  let include_own_windows = crate::settings::current(app).record_screenwide_windows;
 
   // Reported at most once per recording, from the writer thread, however many
   // frames the failure goes on to affect.
@@ -92,7 +93,7 @@ pub(in crate::recording) fn begin_capture(
   } = capture::begin_blocking(CaptureStartupConfig {
     camera,
     camera_path: camera_path.clone(),
-    include_own_windows: crate::settings::current(app).record_screenwide_windows,
+    include_own_windows,
     microphone_id: options.microphone_id.clone(),
     monitor,
     on_failure,
@@ -121,6 +122,7 @@ pub(in crate::recording) fn begin_capture(
       cursor_path,
       cursor_source,
       keyboard_path,
+      include_own_windows,
       records_annotations: records_cursor(options.mode),
     },
     timeline_origin,

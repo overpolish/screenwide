@@ -31,6 +31,7 @@ mod tests;
 
 mod event_writer;
 mod front_app;
+mod own_presses;
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -104,10 +105,13 @@ pub struct CursorRecorder {
 }
 
 impl CursorRecorder {
+  /// `include_own_windows` says whether the recording shows Screenwide's own
+  /// windows; where it does not, presses on them are left out.
   pub fn start(
     path: PathBuf,
     origin: Arc<OnceLock<Instant>>,
     source: CursorSource,
+    include_own_windows: bool,
   ) -> Result<Self, String> {
     let file = File::create(&path).map_err(|error| error.to_string())?;
     let mut writer = BufWriter::new(file);
@@ -139,7 +143,10 @@ impl CursorRecorder {
       last_position: None,
       writer,
     }));
-    let sink = visibility::sink(&state);
+    let mut sink = visibility::sink(&state);
+    if !include_own_windows {
+      sink = own_presses::without_own_presses(sink, platform::on_own_window);
+    }
     let stop = Arc::new(AtomicBool::new(false));
     let worker = platform::start(Arc::clone(&stop), sink).inspect_err(|_| {
       let _ = std::fs::remove_file(&path);

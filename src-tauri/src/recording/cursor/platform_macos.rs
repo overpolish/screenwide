@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod events;
+/// Which window a press lands on.
+mod own_window;
 /// What a cursor no stock image matches is, read from its shape.
 mod picture;
 use events::current_event;
 use events::is_motion;
 use events::raw_event;
+pub(super) use own_window::on_own_window;
 
 use std::cell::{Cell, RefCell};
 use std::collections::hash_map::DefaultHasher;

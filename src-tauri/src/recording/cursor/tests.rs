@@ -185,6 +185,7 @@ fn windows_sampler_writes_a_live_semantic_snapshot() {
       x: 0.0,
       y: 0.0,
     },
+    true,
   )
   .unwrap();
   std::thread::sleep(Duration::from_millis(40));
