@@ -31,6 +31,13 @@ type NativeRecordingWorkspaceViewportProps = {
   isSelecting?: boolean;
 };
 
+/** What a recording arrangement hands the viewport: its marker panes and the
+ * workspace they are laid out in. */
+export type NativeRecordingWorkspace = Pick<
+  NativeRecordingWorkspaceViewportProps,
+  "ariaLabel" | "panes" | "workspaceHeight" | "workspaceWidth"
+>;
+
 const VIEWPORT_GUTTER = 8;
 
 /**

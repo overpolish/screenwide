@@ -12,10 +12,13 @@ import {
 import { NativeAudioRibbon } from "../../timeline/audio/native-audio-ribbon";
 import { useRecordingPreviewTracks } from "../../timeline/tracks/use-recording-preview-tracks";
 
-import { BakedCameraPreviewViewport } from "./baked-camera-preview-viewport";
+import { NativeRecordingWorkspaceViewport } from "./native-recording-workspace-viewport";
 import { RecordingCanvasTool } from "./recording-crop-toggle";
-import { RecordingOutputPreviewViewport } from "./recording-output-preview-viewport";
-import { RecordingPreviewViewport } from "./recording-preview-viewport";
+import {
+  bakedCameraWorkspace,
+  recordingLayoutWorkspace,
+  recordingOutputWorkspace,
+} from "./recording-workspaces";
 import { useRecordingPreviewTransport } from "./use-recording-preview-transport";
 
 import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
@@ -34,8 +37,9 @@ function PreviewError({ message }: { message?: string | null }) {
   );
 }
 
-/** The picture above the timeline: whichever viewport the tracks on screen ask
- * for, with the audio ribbon standing in when there is no video at all. */
+/** The picture above the timeline: the workspace arranged the way the tracks
+ * on screen ask, with the audio ribbon standing in when there is no video at
+ * all. */
 export function RecordingPreviewStage({
   activeRecordingOutput,
   artifactId,
@@ -84,6 +88,45 @@ export function RecordingPreviewStage({
     activeRecordingOutput?: RecordingOutputSettings;
     copyError?: string | null;
   }) {
+  const isPreparing =
+    previewLayout === undefined && (player.isPreparing || isPreparingPreview);
+  const isSelecting = canvasTool === "select";
+  const shownLayout =
+    visibleLayout && visibleLayout.panes.length > 0 ? visibleLayout : null;
+  // Every arrangement shares one viewport element. Swapping One video for
+  // Separate files would otherwise mount a fresh viewport at zero size, and
+  // the native layout reads unsized markers as a recording with no video:
+  // it hides every pane until the new viewport has measured itself.
+  const workspace = !layout
+    ? null
+    : canPreviewBakedCamera && screenPane && cameraPane
+      ? {
+          ...bakedCameraWorkspace(
+            // Draft output keeps the frame and workspace on the resize
+            // before it reaches the editor window's state.
+            activeRecordingOutput?.primary ??
+              defaultScreenshotOutput(screenPane.width, screenPane.height),
+            screenCanvasRef,
+          ),
+          isBusy: isPreparing,
+          isSelecting,
+        }
+      : shownLayout && activeRecordingOutput
+        ? {
+            ...recordingOutputWorkspace(
+              visiblePaneEntries,
+              activeRecordingOutput,
+            ),
+            isBusy: false,
+            isSelecting,
+          }
+        : shownLayout
+          ? {
+              ...recordingLayoutWorkspace(shownLayout, visibleCanvasRefs),
+              isBusy: isPreparing,
+              isSelecting: false,
+            }
+          : null;
   return (
     <section className="relative flex min-h-0 min-w-0 grow flex-col">
       <div className="flex min-h-0 grow items-stretch justify-center">
@@ -95,43 +138,9 @@ export function RecordingPreviewStage({
             />
             Preparing recording preview
           </div>
-        ) : canPreviewBakedCamera && screenPane && cameraPane ? (
+        ) : workspace ? (
           <div className="flex min-h-0 min-w-0 grow flex-col">
-            <BakedCameraPreviewViewport
-              isBusy={
-                previewLayout === undefined &&
-                (player.isPreparing || isPreparingPreview)
-              }
-              outputSettings={
-                // Draft output keeps the frame and workspace on the resize
-                // before it reaches the editor window's state.
-                activeRecordingOutput?.primary ??
-                defaultScreenshotOutput(screenPane.width, screenPane.height)
-              }
-              screenCanvasRef={screenCanvasRef}
-              tool={canvasTool}
-            />
-          </div>
-        ) : visibleLayout &&
-          visibleLayout.panes.length > 0 &&
-          activeRecordingOutput ? (
-          <div className="flex min-h-0 min-w-0 grow flex-col">
-            <RecordingOutputPreviewViewport
-              entries={visiblePaneEntries}
-              outputs={activeRecordingOutput}
-              tool={canvasTool}
-            />
-          </div>
-        ) : visibleLayout && visibleLayout.panes.length > 0 ? (
-          <div className="flex min-h-0 min-w-0 grow flex-col">
-            <RecordingPreviewViewport
-              canvasRefs={visibleCanvasRefs}
-              isBusy={
-                previewLayout === undefined &&
-                (player.isPreparing || isPreparingPreview)
-              }
-              layout={visibleLayout}
-            />
+            <NativeRecordingWorkspaceViewport {...workspace} />
           </div>
         ) : (
           <NativeAudioRibbon

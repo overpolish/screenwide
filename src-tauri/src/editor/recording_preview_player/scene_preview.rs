@@ -240,7 +240,10 @@ impl PreviewPlayerManager {
 }
 
 /// Hands the preview the recording's scene clips, redrawing a paused frame
-/// that they change.
+/// that they change. A scene only moves pictures that are already decoded,
+/// so the paused frame is recomposed from the cached sources; a decoder
+/// restart would land the picture well after the selection the webview moves
+/// with the same edit.
 #[tauri::command]
 pub async fn set_recording_preview_scenes(
   state: tauri::State<'_, RecordingPreviewPlayerState>,
@@ -267,7 +270,7 @@ pub async fn set_recording_preview_scenes(
   }
   *current = clips;
   drop(current);
-  if !manager.is_playing {
+  if !manager.is_playing && !manager.recompose_paused_still() {
     manager.restart(PlaybackMode::InteractiveStill)?;
   }
   Ok(())

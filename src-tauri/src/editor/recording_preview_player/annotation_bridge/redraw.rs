@@ -12,7 +12,11 @@ impl PreviewPlayerManager {
   /// the camera is drawn in the screen's pane, with its annotations over it,
   /// so a change on either redraws that pane.
   #[cfg(target_os = "windows")]
-  pub(super) fn redraw_annotation_frame(&self, pane: u32, position_ms: u64) -> bool {
+  pub(in crate::editor::recording_preview_player) fn redraw_annotation_frame(
+    &self,
+    pane: u32,
+    position_ms: u64,
+  ) -> bool {
     let Some(sources) = self.sources.as_ref() else {
       return false;
     };
@@ -76,7 +80,11 @@ impl PreviewPlayerManager {
   }
 
   #[cfg(not(target_os = "windows"))]
-  pub(super) fn redraw_annotation_frame(&self, _pane: u32, _position_ms: u64) -> bool {
+  pub(in crate::editor::recording_preview_player) fn redraw_annotation_frame(
+    &self,
+    _pane: u32,
+    _position_ms: u64,
+  ) -> bool {
     false
   }
 }

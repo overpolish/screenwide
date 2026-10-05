@@ -56,21 +56,54 @@ impl PreviewPlayerManager {
     self.redraw_still_now().map(|_| ())
   }
 
+  /// Redraws the paused still a layout changed, from the cached sources. A
+  /// bake toggle moves the camera in or out of the picture, which the
+  /// annotations carried for it follow.
+  #[cfg(target_os = "windows")]
+  pub(super) fn redraw_layout_still(&self, bake_changed: bool) -> bool {
+    if bake_changed {
+      self.recompose_paused_still()
+    } else {
+      self.redraw_still_now().unwrap_or(false)
+    }
+  }
+
+  /// Recomposes the paused still from the cached sources after the camera's
+  /// place in it changed: a scene moved it, or One video drew it in or took
+  /// it out. The screen carries the camera's annotations where the camera
+  /// was, so they are resolved again for where it is now, in the same
+  /// present. `false` means a source is not cached yet and the decoder has to
+  /// supply the frame.
+  #[cfg(target_os = "windows")]
+  pub(super) fn recompose_paused_still(&self) -> bool {
+    let Some(surface) = self
+      .sources
+      .as_ref()
+      .and_then(|sources| sources.preview_surface.as_ref())
+    else {
+      return false;
+    };
+    let _batch = surface.present_batch();
+    self.redraw_still_now().unwrap_or(false) && self.redraw_annotation_frame(0, self.position_ms)
+  }
+
+  /// Recomposes the retained workspace against the current composition, as
+  /// the scenes arrange it, without asking the decoder for the same source
+  /// pixels. `false` where it has to: the retained scene keeps the
+  /// annotations it was staged with, and in One video the camera's are
+  /// carried in the screen's list, placed where the camera was, so a camera
+  /// that carries any is composed afresh as it moves.
   #[cfg(target_os = "macos")]
-  pub(super) fn refresh_selection_preview(&mut self, layer_id: u32) -> Result<(), String> {
-    // The retained scene keeps the annotations it was staged with, and in One
-    // video the camera's are carried in the screen's list, placed where the
-    // camera was. A camera that carries any is composed afresh as it moves,
-    // so they move with it.
+  pub(super) fn recompose_paused_still(&self) -> bool {
     let carries_annotations = !self.pane_annotations(1).is_empty();
-    let retained = self
+    self
       .sources
       .as_ref()
       .and_then(|sources| {
         let surface = sources.preview_surface.as_ref()?;
         let composition =
           self.arranged_composition(&sources.composition_settings.as_ref()?.read().ok()?.clone());
-        if layer_id != 1 || (composition.bake_camera && carries_annotations) {
+        if composition.bake_camera && carries_annotations {
           return None;
         }
         let mut panes = vec![(0, &composition.recording_output.primary)];
@@ -90,8 +123,17 @@ impl PreviewPlayerManager {
           .filter(|updated| *updated)
           .map(|_| surface.redraw_recording_workspace())
       })
-      .unwrap_or(false);
-    if retained {
+      .unwrap_or(false)
+  }
+
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  pub(super) fn recompose_paused_still(&self) -> bool {
+    false
+  }
+
+  #[cfg(target_os = "macos")]
+  pub(super) fn refresh_selection_preview(&mut self, layer_id: u32) -> Result<(), String> {
+    if layer_id == 1 && self.recompose_paused_still() {
       return Ok(());
     }
     self.restart(PlaybackMode::InteractiveStill)

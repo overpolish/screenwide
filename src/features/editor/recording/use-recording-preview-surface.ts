@@ -472,7 +472,6 @@ export function useRecordingPreviewSurface({
       measure();
       return () => {
         disposed = true;
-        clearBackdropMasks();
         measureRef.current = () => undefined;
       };
     }
@@ -541,7 +540,6 @@ export function useRecordingPreviewSurface({
       cancelAnimationFrame(animation);
       mutationObserver?.disconnect();
       observer.disconnect();
-      clearBackdropMasks();
       measureRef.current = () => undefined;
     };
   }, [
@@ -555,6 +553,14 @@ export function useRecordingPreviewSurface({
     sessionIdRef,
     startedRef,
   ]);
+
+  // The holes go with the preview, not with a layout change: the effect above
+  // re-runs when One video is switched, and holes cleared there would let the
+  // window backdrop cover the native panes until the next measure.
+  useEffect(() => {
+    if (!isEnabled) return;
+    return clearBackdropMasks;
+  }, [isEnabled]);
 
   useEffect(() => {
     if (!isEnabled) return;

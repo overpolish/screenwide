@@ -212,13 +212,12 @@ pub async fn layout_recording_preview_surface(
   // The decoder can produce its first still before the DOM has supplied a
   // native pane, in which case there is nowhere to present it. Ask for that
   // initial frame again once the first real layout exists. A bake toggle
-  // also needs the decoder: the newly active mode's source cache is absent
-  // or stale. Every other Windows change redraws synchronously from the
-  // cached sources below - the decoder only ever supplies frames.
+  // also asks it: the cached camera frame may show another moment. Windows
+  // redraws every other change, a bake toggle too, from the cached sources.
   let needs_decoder_still = wants_still
     && !retained_recomposition
     && (!cfg!(target_os = "windows") || needs_initial_frame || bake_changed);
-  let redraw_still = cfg!(target_os = "windows") && wants_still && !needs_decoder_still;
+  let redraw_still = cfg!(target_os = "windows") && wants_still && !needs_initial_frame;
   // Hold the pane size while a new composed or live frame is on its way.
   let defer_resize = needs_decoder_still || redraw_still || manager.is_playing;
   surface.set_scale(scale);
@@ -229,11 +228,14 @@ pub async fn layout_recording_preview_surface(
       .map(RecordingPreviewSelection::into_native)
       .collect::<Vec<_>>()
   });
-  // Publish the grips before the selection: `set_selection` performs the
-  // draw, so the mode that decides which chrome owns the screen has to be in
-  // place first. The batch coalesces both into one draw, so putting the tool
-  // down cannot paint the standing selection with the tool already gone
-  // either.
+  // Opened first, a redraw's batch draws the selection with the frame it
+  // outlines. Publish the grips before the selection: `set_selection`
+  // performs the draw, so the mode that decides which chrome owns the screen
+  // has to be in place first. The batch coalesces both into one draw, so
+  // putting the tool down cannot paint the standing selection with the tool
+  // already gone either.
+  #[cfg(target_os = "windows")]
+  let layout_batch = (redraw_still || fit_width.is_some()).then(|| surface.present_batch());
   #[cfg(target_os = "windows")]
   let chrome_batch = surface.present_batch();
   #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -245,8 +247,6 @@ pub async fn layout_recording_preview_surface(
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor);
   surface.begin_layout();
-  #[cfg(target_os = "windows")]
-  let layout_batch = (redraw_still || fit_width.is_some()).then(|| surface.present_batch());
   surface.set_viewport(viewport, backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]));
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
@@ -277,10 +277,8 @@ pub async fn layout_recording_preview_surface(
     surface.redraw_recording_workspace();
   }
   surface.finish_layout();
-  // Same composition this invoke just wrote into `composition_settings`, so
-  // the shared helper draws exactly what the explicit arguments used to.
   #[cfg(target_os = "windows")]
-  let redraw_failed = redraw_still && !manager.redraw_still_now().unwrap_or(false);
+  let redraw_failed = redraw_still && !manager.redraw_layout_still(bake_changed);
   #[cfg(target_os = "windows")]
   drop(layout_batch);
   #[cfg(not(target_os = "windows"))]
