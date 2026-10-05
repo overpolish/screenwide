@@ -3,6 +3,10 @@
 
 use super::*;
 
+/// A decoded frame as the decoder holds it: its texture, the subresource the
+/// frame is in, and its size.
+pub(crate) type DecodedTexture<'a> = (&'a ID3D11Texture2D, u32, (u32, u32));
+
 impl RecordingPreviewSurface {
   pub(crate) fn present_composed_texture(
     &self,
@@ -51,16 +55,16 @@ impl RecordingPreviewSurface {
     Ok(staged)
   }
 
-  /// `camera_settings` are the camera's own, carrying the annotations
-  /// composed into its frame, and the camera's source size, which they are
-  /// placed in.
+  /// Takes the frames one moment decoded to and composes the canvas once.
+  /// Either may be absent, as where one stream ends before the other; that
+  /// pane keeps the picture it last copied. `camera_settings` are the
+  /// camera's own, carrying the annotations composed into its frame, and the
+  /// camera's source size, which they are placed in.
   #[allow(clippy::too_many_arguments)]
-  pub(crate) fn present_baked_camera_texture(
+  pub(crate) fn present_baked_camera_textures(
     &self,
-    index: u32,
-    texture: &ID3D11Texture2D,
-    subresource: u32,
-    size: (u32, u32),
+    screen: Option<DecodedTexture<'_>>,
+    camera: Option<DecodedTexture<'_>>,
     settings: &ScreenshotOutputSettings,
     camera_settings: (&ScreenshotOutputSettings, (u32, u32)),
     overlay: crate::editor::CameraOverlaySettings,
@@ -71,27 +75,24 @@ impl RecordingPreviewSurface {
     let Ok(mut state) = self.inner.state.lock() else {
       return Ok(false);
     };
-    if index == 1 {
+    let gpu = &self.inner.gpu;
+    if let Some((texture, subresource, size)) = camera {
       if state
         .camera_source
         .as_ref()
         .is_none_or(|source| source.size != size)
       {
-        state.camera_source = Some(
-          self
-            .inner
-            .gpu
-            .compositor
-            .source(self.inner.gpu.d3d11, size)?,
-        );
+        state.camera_source = Some(gpu.compositor.source(gpu.d3d11, size)?);
       }
       if let Some(camera) = &state.camera_source {
-        let gpu = &self.inner.gpu;
         gpu
           .compositor
           .copy_source(gpu.d3d11, camera, texture, subresource)?;
       }
-    } else {
+    }
+    // A tick without a screen frame keeps the cursor and shortcuts the
+    // screen's last frame carried.
+    let composition = if let Some((texture, subresource, size)) = screen {
       state.primary_composition = Some(composition);
       let halo = recording_halo(&state, 0);
       let Some(pane) = state.panes.first_mut().and_then(Option::as_mut) else {
@@ -103,25 +104,20 @@ impl RecordingPreviewSurface {
         .as_ref()
         .is_none_or(|source| source.size != size)
       {
-        pane.source = Some(
-          self
-            .inner
-            .gpu
-            .compositor
-            .source(self.inner.gpu.d3d11, size)?,
-        );
-        pane.source_token = None;
+        pane.source = Some(gpu.compositor.source(gpu.d3d11, size)?);
       }
       let source = pane
         .source
         .as_ref()
         .ok_or_else(|| "The preview source texture is unavailable".to_owned())?;
-      let gpu = &self.inner.gpu;
       gpu
         .compositor
         .copy_source(gpu.d3d11, source, texture, subresource)?;
       pane.source_token = None;
-    }
+      composition
+    } else {
+      state.primary_composition.unwrap_or(composition)
+    };
     let Some(camera) = state.camera_source.clone() else {
       let Some(pane) = state.panes.first_mut().and_then(Option::as_mut) else {
         return Ok(true);
@@ -132,11 +128,6 @@ impl RecordingPreviewSurface {
       let staged = self.present_cached_source(pane, settings, composition)?;
       redraw_stale_selection(&self.inner, &mut state);
       return Ok(staged);
-    };
-    let composition = if index == 1 {
-      state.primary_composition.unwrap_or(composition)
-    } else {
-      composition
     };
     let geometry = crate::editor::media_preview::bake_geometry(BakedVideoExportOptions {
       camera_drop_shadow: drop_shadow,

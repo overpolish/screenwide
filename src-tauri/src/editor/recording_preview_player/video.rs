@@ -8,9 +8,10 @@
 //! on the GPU hands over decoded surfaces while a fallback backend hands over
 //! encoded bytes for the webview to draw.
 
+use std::time::{Duration, Instant};
+
 use super::platform::VideoFramePayload;
 
-#[cfg_attr(target_os = "windows", allow(dead_code))]
 pub(super) const OUTPUT_FPS: u64 = 60;
 
 pub(super) fn source_position_ms(start_ms: u64, output_frame: u64, playback_rate: f64) -> u64 {
@@ -26,6 +27,37 @@ pub(super) const fn presentation_elapsed_ms(output_frame: u64) -> u64 {
 pub(super) struct VideoFrame {
   pub payload: VideoFramePayload,
   pub presentation_elapsed_ms: u64,
+}
+
+/// Which frames playback skips for being late. A frame drawn after its moment
+/// would leave the picture behind the playhead for the rest of the range, so
+/// one more than a frame late is dropped instead, which releases the decoder
+/// to catch up on the next. Something is still drawn every so often should the
+/// decoder itself fall behind.
+pub(super) struct LateFrames {
+  drawn_at: Instant,
+}
+
+/// The longest playback goes without drawing while it skips late frames.
+const MAX_UNDRAWN: Duration = Duration::from_millis(100);
+
+impl Default for LateFrames {
+  fn default() -> Self {
+    Self {
+      drawn_at: Instant::now(),
+    }
+  }
+}
+
+impl LateFrames {
+  /// Whether a frame `late_ms` past its moment is dropped.
+  pub(super) fn skips(&self, late_ms: i64) -> bool {
+    late_ms > (1_000 / OUTPUT_FPS) as i64 && self.drawn_at.elapsed() < MAX_UNDRAWN
+  }
+
+  pub(super) fn drew(&mut self) {
+    self.drawn_at = Instant::now();
+  }
 }
 
 #[cfg(test)]

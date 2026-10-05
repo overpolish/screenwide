@@ -233,17 +233,124 @@ fn annotation_shape_distance(probe: vec2<f32>, shape: PreviewGeometry) -> f32 {
   return nearest - shape.width * 0.5;
 }
 
+/// The clean outline's point `along` the walk, a lap of `lap` round a box
+/// `half_size` across each way with corners rounded by `rounding`: what the
+/// pen's line strays from by its wander alone.
+fn annotation_shape_walk_point(half_size: vec2<f32>, rounding: f32, lap: f32,
+                               along_walk: f32) -> vec2<f32> {
+  let inner = half_size - rounding;
+  let bend = annotation_shape_quarter * rounding;
+  let q = annotation_shape_quarter;
+  var side_from = array<vec2<f32>, 4>(vec2<f32>(-inner.x, -half_size.y),
+                                      vec2<f32>(half_size.x, -inner.y),
+                                      vec2<f32>(inner.x, half_size.y),
+                                      vec2<f32>(-half_size.x, inner.y));
+  var side_toward = array<vec2<f32>, 4>(vec2<f32>(1.0, 0.0), vec2<f32>(0.0, 1.0),
+                                        vec2<f32>(-1.0, 0.0), vec2<f32>(0.0, -1.0));
+  var corner_centre = array<vec2<f32>, 4>(vec2<f32>(inner.x, -inner.y), inner,
+                                          vec2<f32>(-inner.x, inner.y), -inner);
+  var corner_angle = array<f32, 4>(-q, 0.0, q, 2.0 * q);
+  var along = along_walk - lap * floor(along_walk / max(lap, 1e-6));
+  for (var quarter = 0u; quarter < 4u; quarter++) {
+    let run = select(2.0 * inner.y, 2.0 * inner.x, (quarter & 1u) == 0u);
+    if (along <= run) {
+      return side_from[quarter] + side_toward[quarter] * along;
+    }
+    along -= run;
+    if (along <= bend || quarter == 3u) {
+      let angle = corner_angle[quarter] + min(along, bend) / max(rounding, 1e-6);
+      return corner_centre[quarter] + rounding * vec2<f32>(cos(angle), sin(angle));
+    }
+    along -= bend;
+  }
+  return side_from[0];
+}
+
+/// Whether the stretch of the stroke from `span.x` to `span.y` into it can
+/// reach `local`, measured from the box's middle, within `reach`. The clean
+/// outline is walked by its own length, so that stretch of it lies within half
+/// its length of its middle, and the pen's line strays from it by no more than
+/// the wander `reach` already allows.
+fn annotation_shape_stretch_near(local: vec2<f32>, shape: PreviewGeometry, half_size: vec2<f32>,
+                                 rounding: f32, lap: f32, span: vec2<f32>, reach: f32) -> bool {
+  if (span.y <= span.x) {
+    return false;
+  }
+  let middle = annotation_shape_walk_point(half_size, rounding, lap,
+                                           shape.cx + 0.5 * (span.x + span.y));
+  return length(local - middle) <= 0.5 * (span.y - span.x) + reach;
+}
+
 /// Accumulated exposure coverage for a shape: the stroke is drawn at every
 /// prepared sample between the shutter start and now, so an arriving one
 /// smears along the outline it covered. Each sample carries its own opacity.
+///
+/// The samples differ only in the window of the stroke they draw, and each
+/// window's ends move one way across the exposure, so the first and last
+/// samples bound them. Every window holds the part all of them share, so a
+/// sample's distance is the nearer of that shared part's, measured once, and
+/// that of the stretch only its own window adds at either end. A point the
+/// shared part already covers is covered by every sample, and one no added
+/// stretch can reach is covered by every sample as the shared part covers it.
 fn annotation_shape_exposure(probe: vec2<f32>, annotation: PreviewArrow, feather: f32) -> f32 {
-  var total = 0.0;
-  for (var tap = 0u; tap < annotation.sample_count; tap++) {
-    let sample = annotation_samples[annotation.sample_first + tap];
-    total += annotation_edge(annotation_shape_distance(probe, sample.geometry), feather) *
-        sample.opacity;
+  let count = annotation.sample_count;
+  let first = annotation_samples[annotation.sample_first].geometry;
+  let last = annotation_samples[annotation.sample_first + count - 1u].geometry;
+  var overlap = first;
+  overlap.low = max(first.low, last.low);
+  overlap.high = min(first.high, last.high);
+  var opacity = 0.0;
+  for (var tap = 0u; tap < count; tap++) {
+    opacity += annotation_samples[annotation.sample_first + tap].opacity;
   }
-  return total / f32(annotation.sample_count);
+  if (overlap.low > overlap.high) {
+    // The windows share nothing, so each sample is measured whole.
+    var total = 0.0;
+    for (var tap = 0u; tap < count; tap++) {
+      let sample = annotation_samples[annotation.sample_first + tap];
+      total += annotation_edge(annotation_shape_distance(probe, sample.geometry), feather) *
+          sample.opacity;
+    }
+    return total / f32(count);
+  }
+  let overlap_distance = annotation_shape_distance(probe, overlap);
+  let overlap_coverage = annotation_edge(overlap_distance, feather);
+  if (overlap_coverage >= 1.0) {
+    return opacity / f32(count);
+  }
+  let low = vec2<f32>(first.ax, first.ay);
+  let high = vec2<f32>(first.bx, first.by);
+  let half_size = (high - low) * 0.5;
+  let rounding = max(min(first.rounding, min(half_size.x, half_size.y)), 0.0);
+  let lap = annotation_shape_perimeter(half_size, rounding);
+  let local = probe - (low + high) * 0.5;
+  let reach = annotation_shape_reach(first, 0.0, feather);
+  let leading = annotation_shape_stretch_near(
+      local, first, half_size, rounding, lap,
+      vec2<f32>(min(first.low, last.low), overlap.low) * first.cy, reach);
+  let trailing = annotation_shape_stretch_near(
+      local, first, half_size, rounding, lap,
+      vec2<f32>(overlap.high, max(first.high, last.high)) * first.cy, reach);
+  if (!leading && !trailing) {
+    return overlap_coverage * opacity / f32(count);
+  }
+  var total = 0.0;
+  for (var tap = 0u; tap < count; tap++) {
+    let sample = annotation_samples[annotation.sample_first + tap];
+    var distance = overlap_distance;
+    if (leading && sample.geometry.low < overlap.low) {
+      var stretch = sample.geometry;
+      stretch.high = overlap.low;
+      distance = min(distance, annotation_shape_distance(probe, stretch));
+    }
+    if (trailing && sample.geometry.high > overlap.high) {
+      var stretch = sample.geometry;
+      stretch.low = overlap.high;
+      distance = min(distance, annotation_shape_distance(probe, stretch));
+    }
+    total += annotation_edge(distance, feather) * sample.opacity;
+  }
+  return total / f32(count);
 }
 
 /// Where a shape's stroke can reach: within the pen and its wander of the
@@ -275,12 +382,17 @@ fn annotation_shape_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: v
   if (abs(length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - rounding) > reach) {
     return rgba_in;
   }
-  let distance = annotation_shape_distance(canvas_point, shape);
-  let rgba = annotation_halo(rgba_in, color, distance, halo, feather);
   // A still frame draws the prepared stroke directly, its opacity already
-  // folded into the colour; a moving one averages it over the exposure.
+  // folded into the colour; a moving one averages it over the exposure, and
+  // measures the stroke as prepared only for a halo.
+  let still = annotation.sample_count == 0u;
+  var distance = 1e20;
+  if (still || halo > 0.0) {
+    distance = annotation_shape_distance(canvas_point, shape);
+  }
+  let rgba = annotation_halo(rgba_in, color, distance, halo, feather);
   var coverage: f32;
-  if (annotation.sample_count == 0u) {
+  if (still) {
     coverage = annotation_edge(distance, feather);
   } else {
     coverage = annotation_shape_exposure(canvas_point, annotation, feather);

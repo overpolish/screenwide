@@ -22,6 +22,7 @@ mod magnifier;
 mod pane;
 mod present_cached;
 mod present_texture;
+pub(crate) use present_texture::DecodedTexture;
 mod readback;
 mod resources;
 mod selection_draw;

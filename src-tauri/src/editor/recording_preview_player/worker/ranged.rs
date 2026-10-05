@@ -15,7 +15,7 @@ use tauri::ipc::Channel;
 
 use super::{audio, platform, send_error, stop_child};
 use crate::editor::recording_preview_player::audio_visualizer::present_audio_position;
-use crate::editor::recording_preview_player::video::VideoFrame;
+use crate::editor::recording_preview_player::video::{LateFrames, VideoFrame};
 use crate::editor::recording_preview_player::{
   AudioTrackVolume, PlayerSources, RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
 };
@@ -156,6 +156,7 @@ pub(super) fn run(context: RunContext) {
     .map(|range| VideoPlayback::spawn(&context, *range));
   let mut output_offset_ms = 0;
   let mut failed = false;
+  let mut late_frames = LateFrames::default();
 
   for (range_index, range) in ranges.iter().copied().enumerate() {
     let rate = effective_rate(range, context.playback_rate);
@@ -167,6 +168,11 @@ pub(super) fn run(context: RunContext) {
         Err(_) => break,
       };
       let frame_output_ms = output_offset_ms + frame.presentation_elapsed_ms;
+      // Negative: early, and slept until due. Positive: drawn this late.
+      let late_ms = elapsed_ms() as i64 - frame_output_ms as i64;
+      if context.sources.presents_video() && late_frames.skips(late_ms) {
+        continue;
+      }
       while elapsed_ms() < frame_output_ms && !context.cancelled.load(Ordering::Acquire) {
         std::thread::sleep(Duration::from_millis(2));
       }
@@ -193,6 +199,7 @@ pub(super) fn run(context: RunContext) {
         failed = true;
         break;
       }
+      late_frames.drew();
       let _ = context
         .event_channel
         .send(RecordingPreviewPlayerEvent::Position {

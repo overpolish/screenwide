@@ -94,6 +94,8 @@ use self::surface_windows as surface;
 pub(crate) use compositor::ComposedFrame;
 #[cfg(target_os = "windows")]
 pub(crate) use surface::type_device;
+#[cfg(target_os = "windows")]
+pub(crate) use surface::DecodedTexture;
 pub(crate) use surface::RecordingPreviewSurface;
 #[cfg(target_os = "macos")]
 pub(crate) use surface::{run_on_main_queue, NativeWorkspacePlacement, RecordingWorkspaceLayer};

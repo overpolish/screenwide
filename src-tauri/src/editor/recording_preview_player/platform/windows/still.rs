@@ -10,7 +10,7 @@ use std::{
 
 use tauri::ipc::Channel;
 
-use super::{gpu_decoder::GpuVideoReader, present_native_frame};
+use super::{gpu_decoder::GpuVideoReader, present_native_frames};
 use crate::editor::recording_preview_player::{PlayerSources, RecordingPreviewPlayerEvent};
 
 enum DecoderCommand {
@@ -105,6 +105,7 @@ fn run(
       break;
     };
     let mut presented = true;
+    let mut frames = [None, None];
     for (index, (path, reader)) in paths.iter().zip(readers.iter_mut()).enumerate() {
       // Repeated SetCurrentPosition calls can leave Media Foundation's D3D
       // source reader at a premature EOF even though later samples exist.
@@ -179,10 +180,18 @@ fn run(
       };
       if sources.playing.load(Ordering::Acquire) {
         presented = false;
+        frames = [None, None];
         break;
       }
-      // A paused still is not moving, so its annotations are not blurred.
-      presented &= present_native_frame(&sources, index as u32, &frame, 0.0);
+      if let Some(slot) = frames.get_mut(index) {
+        *slot = Some(frame);
+      }
+    }
+    // A pane that failed still shows the others' frames. A paused still is
+    // not moving, so its annotations are not blurred.
+    let [screen, camera] = &frames;
+    if screen.is_some() || camera.is_some() {
+      presented &= present_native_frames(&sources, screen.as_ref(), camera.as_ref(), 0.0);
     }
     if presented {
       let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {

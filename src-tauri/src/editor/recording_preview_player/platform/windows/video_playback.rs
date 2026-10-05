@@ -56,7 +56,7 @@ pub(crate) fn spawn_video(
       let mut output_frame = 0_u64;
       while !cancelled.load(Ordering::Acquire) {
         let target_ms = source_position_ms(start_ms, output_frame, playback_rate);
-        let mut sent = false;
+        let mut frames = [None, None];
         for (index, duration_ms, reader) in &mut streams {
           if target_ms >= *duration_ms {
             continue;
@@ -73,41 +73,45 @@ pub(crate) fn spawn_video(
           frame.timestamp_100ns = i64::try_from(target_ms)
             .unwrap_or(i64::MAX / 10_000)
             .saturating_mul(10_000);
-          // The decoder's sample owns a pooled DXGI surface. Keep it retained
-          // until this output tick has submitted the texture; repeated slow-
-          // motion ticks safely reuse the retained sample before decoding on.
-          let (presented_tx, presented_rx) = mpsc::sync_channel(0);
-          let mut frame = VideoFrame {
-            presentation_elapsed_ms: presentation_elapsed_ms(output_frame),
-            payload: VideoFramePayload::Native {
-              frame,
-              index: *index,
-              presented: Some(presented_tx),
-            },
-          };
-          loop {
-            match sender.try_send(frame) {
-              Ok(()) => break,
-              Err(TrySendError::Full(returned)) => {
-                if cancelled.load(Ordering::Acquire) {
-                  return;
-                }
-                frame = returned;
-                std::thread::yield_now();
-              }
-              Err(TrySendError::Disconnected(_)) => return,
-            }
+          if let Some(slot) = frames.get_mut(*index as usize) {
+            *slot = Some(frame);
           }
-          while !cancelled.load(Ordering::Acquire) {
-            match presented_rx.recv_timeout(Duration::from_millis(50)) {
-              Ok(()) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
-              Err(mpsc::RecvTimeoutError::Timeout) => {}
-            }
-          }
-          sent = true;
         }
-        if !sent {
+        let [screen, camera] = frames;
+        if screen.is_none() && camera.is_none() {
           break;
+        }
+        // Each decoder's sample owns a pooled DXGI surface. Keep them retained
+        // until this output tick has submitted the textures; repeated slow-
+        // motion ticks safely reuse the retained samples before decoding on.
+        let (presented_tx, presented_rx) = mpsc::sync_channel(0);
+        let mut frame = VideoFrame {
+          presentation_elapsed_ms: presentation_elapsed_ms(output_frame),
+          payload: VideoFramePayload::Native {
+            screen,
+            camera,
+            presented: Some(presented_tx),
+          },
+        };
+        loop {
+          match sender.try_send(frame) {
+            Ok(()) => break,
+            Err(TrySendError::Full(returned)) => {
+              if cancelled.load(Ordering::Acquire) {
+                return;
+              }
+              frame = returned;
+              std::thread::yield_now();
+            }
+            Err(TrySendError::Disconnected(_)) => return,
+          }
+        }
+        // A frame the worker drops for being late drops its sender too.
+        while !cancelled.load(Ordering::Acquire) {
+          match presented_rx.recv_timeout(Duration::from_millis(50)) {
+            Ok(()) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+          }
         }
         output_frame = output_frame.saturating_add(1);
       }
