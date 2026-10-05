@@ -154,6 +154,9 @@
   /* Leading inset that clears the three traffic lights, which sit at x 14,
      plus the window inset before the first toolbar item. Tuned live. */
   --spacing-traffic-lights: 5.5rem;
+  /* The least a title bar that carries tools leaves its logo and title before
+     the tools give way, about a dozen characters. */
+  --spacing-window-title: 8.75rem;
   --spacing-focus-safe: 0.125rem;
   /* Icon sizes matched to SF Symbols in AppKit controls, measured on macOS 26:
      a 13pt regular control draws its symbol in a 17x16 box, small (11pt) in

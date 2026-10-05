@@ -3,14 +3,7 @@
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
-import {
-  AppWindowMac,
-  ArrowBigDownDash,
-  ClipboardCopy,
-  ImageDown,
-  Trash2,
-  Volume2,
-} from "lucide-react";
+import { AppWindowMac, Volume2 } from "lucide-react";
 import { ReactNode, useLayoutEffect, useRef } from "react";
 import {
   Header,
@@ -27,25 +20,12 @@ import { hotkeyKeys } from "../../components/shared/hotkey-field/hotkey";
 
 import { hidePopupPanel } from "./api";
 import { emptyPopupPanelHeight, popupPanelMaxHeight } from "./layout";
+import { PopupPanelItemGlyph } from "./popup-panel-item-glyph";
 import {
-  PopupPanelIcon,
   PopupPanelItem,
   PopupPanelListContent,
   usePopupPanelStore,
 } from "./store";
-
-// Items cross a window boundary as data, so a glyph travels by name.
-const itemGlyphs = {
-  clipboard: ClipboardCopy,
-  image: ImageDown,
-  scrolling: ArrowBigDownDash,
-  trash: Trash2,
-};
-
-function ItemGlyph({ icon }: { icon: PopupPanelIcon }) {
-  const Glyph = itemGlyphs[icon];
-  return <Glyph />;
-}
 
 type PopupPanelGroup = {
   id: string;
@@ -73,7 +53,8 @@ const groupItemsBySection = (items: PopupPanelItem[]): PopupPanelGroup[] => {
 };
 
 /** The panel as a list of choices: a menu, a pop-up button's list, or a
- * checklist. It fits the window to its items, up to the list ceiling. */
+ * checklist. It fits the window to its items, up to the list ceiling unless
+ * the list asks to be shown whole. */
 export function PopupPanelList({
   content,
   focusContents,
@@ -94,6 +75,7 @@ export function PopupPanelList({
   const listboxRef = useRef<HTMLDivElement>(null);
   const selectingRef = useRef(false);
   const activeItemCount = content.items.length;
+  const showsAllItems = content.showsAllItems === true;
 
   useLayoutEffect(() => {
     if (!listboxRef.current) return;
@@ -108,13 +90,13 @@ export function PopupPanelList({
       const currentSize = (await window.innerSize()).toLogical(scaleFactor);
       if (cancelled) return;
 
+      const contentHeight = scrollContent?.scrollHeight ?? listbox.scrollHeight;
       const height =
         activeItemCount === 0
           ? emptyPopupPanelHeight
-          : Math.min(
-              scrollContent?.scrollHeight ?? listbox.scrollHeight,
-              popupPanelMaxHeight,
-            );
+          : showsAllItems
+            ? contentHeight
+            : Math.min(contentHeight, popupPanelMaxHeight);
       await window.setSize(new LogicalSize(currentSize.width, height));
     };
 
@@ -129,7 +111,7 @@ export function PopupPanelList({
       cancelled = true;
       observer.disconnect();
     };
-  }, [activeId, activeItemCount]);
+  }, [activeId, activeItemCount, showsAllItems]);
 
   // A menu runs actions rather than holding a pick, so nothing is ever drawn
   // as selected and the gutter that would carry the checkmark is dropped.
@@ -219,7 +201,7 @@ export function PopupPanelList({
             src={convertFileSrc(item.iconPath)}
           />
         ) : item.icon ? (
-          <ItemGlyph icon={item.icon} />
+          <PopupPanelItemGlyph icon={item.icon} />
         ) : item.id === content.exclusiveId ? (
           <Volume2 />
         ) : content.selectionMode === "multiple" ? (

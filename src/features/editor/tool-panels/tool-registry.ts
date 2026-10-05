@@ -171,10 +171,28 @@ const editorToolIds = () => Object.keys(EDITOR_TOOLS) as EditorToolId[];
 export const isDrawingTool = (id: EditorToolId): id is AnnotationKind =>
   EDITOR_TOOLS[id].drawsOnLayer === true;
 
-/** The drawing tools, in the order the toolbars show them. */
-export const ANNOTATION_TOOLS = editorToolIds().flatMap((id) =>
-  isDrawingTool(id) ? [{ ...EDITOR_TOOLS[id], id }] : [],
-);
+/** The drawing tools in the order the toolbars show them, most used first:
+ * a narrow window moves the tail into its overflow menu, so the tools that
+ * end up there are the ones least missed. */
+const ANNOTATION_TOOL_ORDER: readonly AnnotationKind[] = [
+  "image",
+  "arrow",
+  "text",
+  "redact",
+  "draw",
+  "shape",
+  "highlight",
+  "counter",
+  "spotlight",
+  "magnify",
+];
+
+export const ANNOTATION_TOOLS = ANNOTATION_TOOL_ORDER.map((id) => ({
+  ...EDITOR_TOOLS[id],
+  id,
+}));
+
+export type AnnotationTool = (typeof ANNOTATION_TOOLS)[number];
 
 /** Which shape the tool in hand draws, or null where it draws nothing - the
  * select tool, the crop, or no tool at all. The twin of `drawing_kind` in

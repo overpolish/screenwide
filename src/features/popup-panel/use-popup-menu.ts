@@ -55,6 +55,9 @@ type PopupMenuOptions = {
   /** `context` is whatever `open` was given, carried back through the id. */
   onSelect: (itemId: string, context: string) => void;
   width: number;
+  /** Opens at the full height of its items instead of scrolling past the
+   * list ceiling. */
+  showsAllItems?: boolean;
 };
 
 type PopupMenuRequest = {
@@ -64,6 +67,15 @@ type PopupMenuRequest = {
   context?: string;
   selectedIds?: string[];
 };
+
+/** Puts the menu opened under `idPrefix` away, if it is the one showing. */
+export async function closePopupMenu(idPrefix: string) {
+  const state = usePopupPanelStore.getState();
+  const active = activePopupPanel(state, SHARED_POPUP_PANEL);
+  if (!active?.id.startsWith(idPrefix)) return;
+  state.close(SHARED_POPUP_PANEL);
+  await hidePopupPanel(active.focusContents, SHARED_POPUP_PANEL);
+}
 
 /**
  * A context menu drawn in the app's own panel window.
@@ -78,6 +90,7 @@ export function usePopupMenu({
   label,
   mode,
   onSelect,
+  showsAllItems = false,
   width,
 }: PopupMenuOptions) {
   const lastSelection = usePopupPanelStore((state) => state.lastSelection);
@@ -145,6 +158,7 @@ export function usePopupMenu({
         mode,
         selectedIds,
         selectionMode: "single",
+        showsAllItems,
       },
       focusContents: false,
       id,
@@ -165,6 +179,7 @@ export function usePopupMenu({
         initialPopupPanelHeight(
           items.length,
           new Set(items.flatMap((item) => item.section ?? [])).size,
+          showsAllItems,
         ),
       ),
       triggerId: id,

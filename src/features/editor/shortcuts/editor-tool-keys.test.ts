@@ -28,9 +28,10 @@ describe("the editor's tool keys", () => {
       expect(action, `${id} has no action on ${shortcut}`).not.toBeNull();
       action?.();
     }
-    // A drawing tool arrives through the one callback, under its own name.
-    expect(keys.onTool.mock.calls.flat()).toEqual(
-      ANNOTATION_TOOLS.map((tool) => tool.id),
+    // A drawing tool arrives through the one callback, under its own name,
+    // and every drawing tool the toolbars show has a letter.
+    expect(keys.onTool.mock.calls.flat().sort()).toEqual(
+      ANNOTATION_TOOLS.map((tool) => tool.id).sort(),
     );
     expect(keys.onMarqueeTool).toHaveBeenCalledOnce();
     expect(keys.onSelectTool).toHaveBeenCalledOnce();

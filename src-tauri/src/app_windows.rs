@@ -70,6 +70,7 @@ pub(crate) mod overlay_surface;
 mod panel_presentation_macos;
 pub(crate) mod panel_space;
 pub(crate) mod platform;
+mod popover_dismissal;
 pub(crate) mod region;
 pub(crate) mod region_gesture;
 pub(crate) mod screenshot_region;
@@ -100,6 +101,7 @@ pub use lifecycle::{
 };
 #[cfg(target_os = "windows")]
 pub(crate) use platform::round_corners;
+pub use popover_dismissal::manage_transient_popover_dismissal;
 pub use region::{
   hide_region_selector, is_region_selector_visible, set_region_selector_passthrough,
 };
@@ -182,97 +184,3 @@ pub fn hide_recording_bar(app: &AppHandle) -> tauri::Result<()> {
 
   Ok(())
 }
-
-#[derive(Clone, Copy, Default)]
-struct PopoversOpenOnPress {
-  source_selector: bool,
-  standalone_listbox: bool,
-}
-
-impl PopoversOpenOnPress {
-  fn capture() -> Self {
-    Self {
-      source_selector: source_selector::is_expanded(),
-      standalone_listbox: options::is_standalone_listbox_open(),
-    }
-  }
-
-  fn dismiss_outside(self, app: &AppHandle, x: f64, y: f64) {
-    source_selector::dismiss_if_outside(app, self.source_selector, x, y);
-    options::dismiss_standalone_listbox_if_outside(app, self.standalone_listbox, x, y);
-  }
-}
-
-#[cfg(target_os = "windows")]
-pub fn manage_transient_popover_dismissal(app: &AppHandle) {
-  use std::sync::mpsc;
-
-  use rdev::{listen, Button, EventType};
-
-  let (dismiss_tx, dismiss_rx) = mpsc::channel::<(PopoversOpenOnPress, f64, f64)>();
-  let dismiss_app = app.clone();
-  std::thread::spawn(move || {
-    while let Ok((open_on_press, x, y)) = dismiss_rx.recv() {
-      open_on_press.dismiss_outside(&dismiss_app, x, y);
-    }
-  });
-  std::thread::spawn(move || {
-    let mut position = (0.0, 0.0);
-    let mut open_on_press = PopoversOpenOnPress::default();
-    let result = listen(move |event| match event.event_type {
-      EventType::MouseMove { x, y } => {
-        position = (x, y);
-      }
-      EventType::ButtonPress(Button::Left) => {
-        open_on_press = PopoversOpenOnPress::capture();
-      }
-      EventType::ButtonRelease(Button::Left) => {
-        let (x, y) = position;
-        // rdev invokes this callback before CallNextHookEx. Defer dismissal
-        // because its window geometry queries synchronously wait for the UI
-        // thread, which cannot process them while the hook callback is live.
-        if open_on_press.source_selector || open_on_press.standalone_listbox {
-          let _ = dismiss_tx.send((open_on_press, x, y));
-        }
-        open_on_press = PopoversOpenOnPress::default();
-      }
-      _ => {}
-    });
-
-    if let Err(error) = result {
-      eprintln!("Could not monitor clicks for transient popover dismissal: {error:?}");
-    }
-  });
-}
-
-#[cfg(target_os = "macos")]
-pub fn manage_transient_popover_dismissal(app: &AppHandle) {
-  use cidre::cg::{Event, EventSrcState, MouseButton};
-
-  let app = app.clone();
-  std::thread::spawn(move || {
-    let mut was_pressed = EventSrcState::CombinedSession.button_state(MouseButton::Left);
-    let mut open_on_press = PopoversOpenOnPress::default();
-
-    loop {
-      let is_pressed = EventSrcState::CombinedSession.button_state(MouseButton::Left);
-      if !was_pressed && is_pressed {
-        open_on_press = PopoversOpenOnPress::capture();
-      }
-      if was_pressed && !is_pressed {
-        let Some(event) = Event::with_src(None) else {
-          break;
-        };
-        let position = event.location();
-        open_on_press.dismiss_outside(&app, position.x, position.y);
-        open_on_press = PopoversOpenOnPress::default();
-      }
-
-      was_pressed = is_pressed;
-      std::thread::sleep(std::time::Duration::from_millis(8));
-    }
-  });
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn manage_transient_popover_dismissal(_app: &AppHandle) {}

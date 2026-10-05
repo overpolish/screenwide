@@ -176,15 +176,8 @@ pub(super) fn hide(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
-pub(super) fn dismiss_if_outside(app: &AppHandle, open_on_press: bool, x: f64, y: f64) {
-  if POPOVER.should_dismiss(
-    app,
-    open_on_press,
-    false,
-    x,
-    y,
-    &[WindowLabel::RecordingSourceSelector],
-  ) {
+pub(super) fn dismiss_if_outside(app: &AppHandle, x: f64, y: f64) {
+  if POPOVER.should_dismiss(app, false, x, y, &[WindowLabel::RecordingSourceSelector]) {
     let _ = collapse(app.clone(), Some(false));
   }
 }

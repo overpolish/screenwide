@@ -13,18 +13,22 @@ const focusSafeInset = 4;
 const sectionHeaderHeight = 22;
 
 /** `sectionCount` counts the headers drawn above the items, so a grouped
- * panel opens at the height it will settle at rather than growing on show. */
-export const initialPopupPanelHeight = (itemCount: number, sectionCount = 0) =>
-  itemCount === 0
-    ? emptyPopupPanelHeight
-    : Math.min(
-        itemCount * compactItemHeight +
-          sectionCount * sectionHeaderHeight +
-          Math.max(itemCount + sectionCount - 1, 0) * itemGap +
-          listboxPadding +
-          focusSafeInset,
-        popupPanelMaxHeight,
-      );
+ * panel opens at the height it will settle at rather than growing on show.
+ * `showsAllItems` lifts the list ceiling for a list that is never scrolled. */
+export const initialPopupPanelHeight = (
+  itemCount: number,
+  sectionCount = 0,
+  showsAllItems = false,
+) => {
+  if (itemCount === 0) return emptyPopupPanelHeight;
+  const height =
+    itemCount * compactItemHeight +
+    sectionCount * sectionHeaderHeight +
+    Math.max(itemCount + sectionCount - 1, 0) * itemGap +
+    listboxPadding +
+    focusSafeInset;
+  return showsAllItems ? height : Math.min(height, popupPanelMaxHeight);
+};
 
 /** Tool panels are one fixed width, wide enough for a labelled slider row and
  * narrow enough to sit over a preview without covering it. */

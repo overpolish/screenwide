@@ -10,6 +10,10 @@ import { ScrollArea } from "../../base/scroll-area/scroll-area";
 import { Text } from "../../base/text/text";
 
 import { EditableWindowTitle } from "./editable-window-title";
+import {
+  useWindowHeaderCenterWidth,
+  WindowHeaderCenterWidthContext,
+} from "./window-header-center-width";
 
 /**
  * The platform this build runs on, read the same way `main.tsx` reads it.
@@ -28,7 +32,9 @@ export type WindowHeaderProps = {
   /**
    * Tools carried in the title bar itself, centred in the window the way a
    * unified toolbar sets them. Given one, the bar becomes three columns so the
-   * centre is the window's true middle and the title truncates to make room.
+   * centre is the window's true middle and the title truncates to make room,
+   * down to `window-title`. The room the tools may take is published through
+   * `WindowHeaderCenterWidthContext`, for tools that fold away to fit it.
    */
   center?: ReactNode;
   className?: string;
@@ -67,11 +73,18 @@ export function WindowHeader({
     Boolean(actions) ||
     Boolean(closeAction) ||
     (isWindows && Boolean(onMinimize || onToggleMaximize || onClose));
+  const centerWidth = useWindowHeaderCenterWidth(Boolean(center));
 
   const leading = (
     <div
-      className="pointer-events-none flex min-w-0 grow items-center gap-control-inset"
+      className={cn(
+        "pointer-events-none flex grow items-center gap-control-inset",
+        // With tools in the bar the title keeps a readable minimum; the tools
+        // fold away before it is squeezed further.
+        center ? "min-w-window-title" : "min-w-0",
+      )}
       data-tauri-drag-region={isDraggable ? "" : undefined}
+      ref={centerWidth.leadingRef}
     >
       {/* The proxy icon of a native title bar is drawn at the standard
           symbol size. */}
@@ -115,7 +128,11 @@ export function WindowHeader({
       className={cn(
         "flex shrink-0 items-center justify-end gap-section",
         isWindows && "self-stretch",
+        // Content-sized in the grid, so the centre's measurement reads what
+        // the side needs rather than the column it was given.
+        center && "justify-self-end",
       )}
+      ref={centerWidth.trailingRef}
     >
       {actions ? (
         <div className="-my-tight flex shrink-0 items-center">{actions}</div>
@@ -176,11 +193,14 @@ export function WindowHeader({
         className,
       )}
       data-tauri-drag-region={isDraggable ? "deep" : undefined}
+      ref={centerWidth.headerRef}
     >
       {leading}
       {center ? (
         <div className="-my-tight flex shrink-0 items-center justify-center gap-section">
-          {center}
+          <WindowHeaderCenterWidthContext value={centerWidth.width}>
+            {center}
+          </WindowHeaderCenterWidthContext>
         </div>
       ) : null}
       {center ? (trailing ?? <div />) : trailing}

@@ -6,7 +6,6 @@ import { ButtonGroup } from "../../../../components/base/button-group/button-gro
 import { useProvideEditorToolbarTools } from "../../panel/editor-toolbar-context";
 import { CursorToolToggle } from "../../tool-panels/cursor/cursor-tool-toggle";
 import { KeyboardToolToggle } from "../../tool-panels/keyboard/keyboard-tool-toggle";
-import { SceneToolToggle } from "../../tool-panels/scene/scene-tool-toggle";
 import { useToolPanel } from "../../tool-panels/use-tool-panel";
 
 import {
@@ -72,16 +71,8 @@ export function useRecordingToolbar({
     () =>
       hasVisiblePanes ? (
         <>
-          {hasCursorData || hasKeyboardData || hasScenes ? (
+          {hasCursorData || hasKeyboardData ? (
             <ButtonGroup aria-label="Effects" className="gap-control">
-              {hasScenes ? (
-                <SceneToolToggle
-                  isSelected={canvasTool === "scene"}
-                  onSelectedChange={(selected) => {
-                    changeCanvasTool(selected ? "scene" : null);
-                  }}
-                />
-              ) : null}
               {hasCursorData ? (
                 <CursorToolToggle onDismiss={dismissToolPanel} />
               ) : null}
@@ -91,6 +82,7 @@ export function useRecordingToolbar({
             </ButtonGroup>
           ) : null}
           <RecordingCanvasTools
+            hasScenes={hasScenes}
             isArrowEnabled={hasVisiblePanes}
             isEnabled={canEditActiveTrack}
             isFrameEnabled={canResizeActiveTrack}

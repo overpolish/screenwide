@@ -6,7 +6,12 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { EditorKind } from "../editor/types";
 
-export type PopupPanelIcon = "clipboard" | "image" | "scrolling" | "trash";
+import type { AnnotationKind } from "../../components/shared/annotation-style/types";
+
+/** `tool-` names an annotation tool's own glyph, kept apart from `image`, the
+ * export-an-image glyph. */
+export type PopupPanelIcon =
+  "clipboard" | "image" | "scrolling" | "trash" | `tool-${AnnotationKind}`;
 
 type PopupPanelMode = "menu" | "select";
 
@@ -54,6 +59,9 @@ export type PopupPanelListContent = {
   selectedIds: string[];
   selectionMode: "multiple" | "single";
   exclusiveId?: string;
+  /** Shown whole rather than scrolled past the list ceiling: a short menu
+   * whose every entry should be in view at once. */
+  showsAllItems?: boolean;
 };
 
 /** An editor tool's own controls, rendered by the workspace that owns them

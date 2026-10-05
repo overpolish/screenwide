@@ -51,17 +51,17 @@ impl TransientPopover {
     self.revision.fetch_add(1, Ordering::Relaxed);
   }
 
+  /// Whether a press at `x`, `y`, made while this popover was open, falls
+  /// outside it and what it owns.
   pub fn should_dismiss(
     &self,
     app: &AppHandle,
-    open_on_press: bool,
     inside_anchor: bool,
     x: f64,
     y: f64,
     owned_windows: &[WindowLabel],
   ) -> bool {
-    open_on_press
-      && self.is_open()
+    self.is_open()
       && !inside_anchor
       && !owned_windows.iter().any(|label| {
         app

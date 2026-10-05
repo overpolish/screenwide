@@ -51,15 +51,13 @@ fn anchor_contains(app: &AppHandle, context: &StandaloneListboxContext, x: f64, 
   x >= left && x <= left + anchor.width && y >= top && y <= top + anchor.height
 }
 
+/// Answers a press made while a panel was open: each open, non-sticky panel
+/// the press landed outside of is put away, unless it landed on its trigger.
 pub(in crate::app_windows) fn dismiss_standalone_listbox_if_outside(
   app: &AppHandle,
-  open_on_press: bool,
   x: f64,
   y: f64,
 ) {
-  if !open_on_press {
-    return;
-  }
   let dismissible = dismissible_panels(&standalone_listbox_contexts());
   for panel in dismissible {
     let Some(context) = context_for(&panel) else {
