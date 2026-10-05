@@ -172,6 +172,29 @@ fn a_clip_at_an_end_of_the_video_holds_there() {
   }
 }
 
+/// A clip that rounding left a millisecond short of either end still
+/// reaches it, and is drawn on the last frame; two milliseconds is a real gap.
+#[test]
+fn a_clip_a_millisecond_short_of_an_end_still_reaches_it() {
+  let ranges = [kept(1_000, 10_000, 1.0)];
+  assert_eq!(reaches_video_ends(&ranges, [1_001, 9_999]), (true, true));
+  assert_eq!(reaches_video_ends(&ranges, [1_002, 9_998]), (false, false));
+  let clips = [clip("a", AnnotationTrack::Primary, 1_000, 10_000)];
+  let drawn = |end_ms: u64| {
+    let ranges = [kept(0, end_ms, 1.0)];
+    revealed_annotations(
+      &clips,
+      AnnotationTrack::Primary,
+      &ranges,
+      10_000,
+      0.0,
+      (0, 0),
+    )
+  };
+  assert!(drawn(10_001)[0].reveal.is_whole());
+  assert!(drawn(10_002).is_empty());
+}
+
 /// Arriving takes the same output time at any speed.
 #[test]
 fn a_faster_timeline_does_not_hurry_the_arrival() {

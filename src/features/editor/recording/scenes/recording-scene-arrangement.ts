@@ -90,8 +90,16 @@ export function arrangedRecordingScene({
   if (output.cropWidth <= 0 || output.cropHeight <= 0 || output.imageWidth <= 0)
     return null;
   const sceneCamera = camera && camera.aspect > 0 ? camera : null;
+  const videoEndMs =
+    ranges.length > 0 ? ranges[ranges.length - 1].sourceEndMs : null;
+  // The kept ranges bound the video, to within a millisecond of rounding. A
+  // clip that reaches its end holds to it, so the last frame never falls just
+  // past the clip.
+  const reachesEnd = (clip: RecordingSceneClip) =>
+    videoEndMs !== null && clip.endMs + 1 >= videoEndMs;
   const index = clips.findIndex(
-    (clip) => clip.startMs <= sourceMs && sourceMs < clip.endMs,
+    (clip) =>
+      clip.startMs <= sourceMs && (sourceMs < clip.endMs || reachesEnd(clip)),
   );
   if (index < 0) return null;
   const clip = clips[index];
@@ -109,12 +117,10 @@ export function arrangedRecordingScene({
   const elapsed = Math.max(0, outputAt(ranges, sourceMs) - from);
   // A scene at either end of the video holds there: there is nothing before
   // it to arrive from, or after it to leave for. Its other transition may then
-  // take the whole clip. The kept ranges bound the video, to within a
-  // millisecond of rounding.
+  // take the whole clip.
   const startsVideo =
-    ranges.length > 0 && clip.startMs < ranges[0].sourceStartMs + 1;
-  const endsVideo =
-    ranges.length > 0 && clip.endMs + 1 > ranges[ranges.length - 1].sourceEndMs;
+    ranges.length > 0 && clip.startMs <= ranges[0].sourceStartMs + 1;
+  const endsVideo = reachesEnd(clip);
   const window = Math.min(
     TRANSITION_MS,
     startsVideo || endsVideo ? length : length / 2,

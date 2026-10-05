@@ -115,11 +115,23 @@ pub(crate) fn reaches_video_ends(
 ) -> (bool, bool) {
   let starts = ranges
     .first()
-    .is_some_and(|first| start_ms.saturating_mul(1_000) < first.source_start_us + 1_000);
+    .is_some_and(|first| start_ms.saturating_mul(1_000) <= first.source_start_us + 1_000);
   let ends = ranges
     .last()
-    .is_some_and(|last| (end_ms + 1).saturating_mul(1_000) > last.source_end_us);
+    .is_some_and(|last| (end_ms + 1).saturating_mul(1_000) >= last.source_end_us);
   (starts, ends)
+}
+
+/// Whether a clip over `[start_ms, end_ms)` shows `source_ms` into the
+/// recording. Its bounds are half open, but one that reaches the end of the
+/// video holds to it: rounding can leave its end a millisecond short of the
+/// last frame, which would otherwise fall just past it.
+pub(crate) fn covers(
+  ranges: &[TimelineRange],
+  [start_ms, end_ms]: [u64; 2],
+  source_ms: u64,
+) -> bool {
+  start_ms <= source_ms && (source_ms < end_ms || reaches_video_ends(ranges, [start_ms, end_ms]).1)
 }
 
 /// The annotations a frame draws, each carrying the reveal window its own
@@ -145,8 +157,11 @@ pub(crate) fn revealed_annotations(
     .enumerate()
     .filter(|(index, clip)| {
       clip.track_id == track
-        && clip.start_ms <= source_ms
-        && source_ms < drawn_until(clips, &links, *index)
+        && covers(
+          ranges,
+          [clip.start_ms, drawn_until(clips, &links, *index)],
+          source_ms,
+        )
     })
     .filter_map(|(index, clip)| {
       // A spotlight held on for the one it hands to is drawn where it ended.

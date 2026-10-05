@@ -77,6 +77,18 @@ describe("arrangedRecordingScene", () => {
     expect(atTheEnd?.output).toEqual(settled?.output);
     const leaving = arranged(9_800, { ranges: video(12_000) });
     expect(leaving?.output.cropX).not.toBeCloseTo(settled?.output.cropX ?? NaN);
+    // A millisecond of rounding still reaches the end; two do not.
+    expect(arranged(9_800, { ranges: video(10_001) })?.output).toEqual(
+      settled?.output,
+    );
+    expect(
+      arranged(9_800, { ranges: video(10_002) })?.output.cropX,
+    ).not.toBeCloseTo(settled?.output.cropX ?? NaN);
+    // The last frame of the video is still the scene's.
+    expect(arranged(10_000, { ranges: video(10_001) })?.output).toEqual(
+      settled?.output,
+    );
+    expect(arranged(10_000, { ranges: video(10_002) })).toBeNull();
   });
 
   it("holds a scene that starts the video, with nothing to arrive from", () => {

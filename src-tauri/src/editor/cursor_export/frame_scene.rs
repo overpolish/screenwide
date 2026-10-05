@@ -5,6 +5,7 @@
 //! preview resolves it.
 
 use super::CursorExportRequest;
+use crate::editor::annotations::timing::covers;
 use crate::editor::media_preview::{BakedVideoExportOptions, VideoExportOptions};
 use crate::editor::scenes::{self, RecordingSceneClip};
 use crate::editor::timeline_edit::TimelineRange;
@@ -47,7 +48,7 @@ impl ExportScenes {
     if !self
       .clips
       .iter()
-      .any(|clip| clip.start_ms <= source_ms && source_ms < clip.end_ms)
+      .any(|clip| covers(&self.ranges, [clip.start_ms, clip.end_ms], source_ms))
     {
       return None;
     }

@@ -197,6 +197,13 @@ fn present_recording_with(
     source_scale_factor,
     width,
   } = info;
+  // The container keeps the length on its own time grid, which the writer's
+  // clock does not land on. A reopened recording is measured from the file,
+  // so a new one is measured the same way: auto zooms capped at a shorter
+  // writer length would stop short of the end the timeline later reads.
+  let duration_ms = media_preview::duration_ms(&path)
+    .filter(|ms| *ms > 0)
+    .unwrap_or(duration_ms);
 
   let mut audio_tracks = recording_audio_tracks(has_system_audio, has_microphone);
   if audio_tracks.is_empty() {

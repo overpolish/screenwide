@@ -204,6 +204,9 @@ fn a_scene_that_runs_to_the_end_of_the_video_holds_there() {
   assert_eq!(at_the_end, settled);
   let (leaving, _) = arranged(&clips, &video(12_000), 9_800);
   assert!(!close(leaving.crop_x, settled.crop_x));
+  // The last frame of the video is still the scene's.
+  assert_eq!(arranged(&clips, &video(10_001), 10_000).0, settled);
+  assert_eq!(arranged(&clips, &video(10_002), 10_000).0, base().0);
 }
 
 #[test]

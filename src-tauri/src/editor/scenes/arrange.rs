@@ -14,7 +14,7 @@ use super::geometry::{preset_panes, Rect};
 use super::model::{RecordingSceneClip, RecordingScenePreset};
 use super::motion::SceneMotion;
 use super::placement::Placement;
-use crate::editor::annotations::timing::{output_progress, reaches_video_ends};
+use crate::editor::annotations::timing::{covers, output_progress, reaches_video_ends};
 use crate::editor::effect_animation::ease_in_out_cubic;
 use crate::editor::timeline_edit::TimelineRange;
 use crate::editor::CameraOverlaySettings;
@@ -163,7 +163,7 @@ fn placement_at(
 ) -> Option<Placement> {
   let index = clips
     .iter()
-    .position(|clip| clip.start_ms <= source_ms && source_ms < clip.end_ms)?;
+    .position(|clip| covers(ranges, [clip.start_ms, clip.end_ms], source_ms))?;
   let clip = &clips[index];
   let target = base.target(clip)?;
   let (elapsed, length) = output_progress(ranges, [clip.start_ms, clip.end_ms], source_ms)?;
