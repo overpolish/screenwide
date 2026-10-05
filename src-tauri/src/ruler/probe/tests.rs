@@ -25,7 +25,7 @@ fn probes_stop_at_sustained_edges_on_both_axes() {
     maps.gy[(8 * maps.width + x) as usize] = 30;
   }
   assert_eq!(
-    ProbeIndex::new(&maps, 24).probes_at(6, 4),
+    probes_at_threshold(&maps, 6, 4, 24),
     [
       PixelProbe {
         axis: ProbeAxis::Horizontal,
@@ -47,7 +47,7 @@ fn probes_stop_at_sustained_edges_on_both_axes() {
 fn isolated_speckle_does_not_stop_a_probe() {
   let mut maps = maps(10, 5);
   maps.gx[(2 * maps.width + 7) as usize] = 255;
-  let horizontal = ProbeIndex::new(&maps, 24).probes_at(4, 2)[0];
+  let horizontal = probes_at_threshold(&maps, 4, 2, 24)[0];
   assert_eq!((horizontal.start, horizontal.end), (0, 9));
 }
 
@@ -80,12 +80,12 @@ fn split_antialiasing_mass_reaches_the_threshold() {
     maps.gx[(y * maps.width + 7) as usize] = 12;
     maps.gx[(y * maps.width + 8) as usize] = 12;
   }
-  let horizontal = ProbeIndex::new(&maps, 18).probes_at(4, 2)[0];
+  let horizontal = probes_at_threshold(&maps, 4, 2, 18)[0];
   assert_eq!(horizontal.end, 7);
 }
 
 #[test]
-fn cursor_local_scan_applies_sensitivity_without_rebuilding_the_index() {
+fn probe_sensitivity_follows_the_threshold() {
   let mut maps = maps(12, 7);
   for y in 2..=4 {
     maps.gx[(y * maps.width + 3) as usize] = 7;
@@ -98,13 +98,13 @@ fn cursor_local_scan_applies_sensitivity_without_rebuilding_the_index() {
 }
 
 #[test]
-fn indexed_lookup_uses_the_edge_under_the_pointer_only_as_the_start() {
+fn an_edge_under_the_pointer_is_only_the_start() {
   let mut maps = maps(10, 5);
   for y in 1..=3 {
     maps.gx[(y * maps.width + 4) as usize] = 30;
     maps.gx[(y * maps.width + 8) as usize] = 30;
   }
-  let horizontal = ProbeIndex::new(&maps, 24).probes_at(4, 2)[0];
+  let horizontal = probes_at_threshold(&maps, 4, 2, 24)[0];
   assert_eq!((horizontal.start, horizontal.end), (4, 8));
 }
 
@@ -127,9 +127,7 @@ fn probes_find_the_peak_of_a_settled_soft_transition_on_both_axes() {
     }
   }
   let maps = super::super::analysis::compute_gradients(&rgba, width as u32, width as u32);
-  let indexed = ProbeIndex::new(&maps, 24).probes_at(25, 25);
-  let scanned = probes_at_threshold(&maps, 25, 25, 24);
-  assert_eq!(indexed, scanned);
-  assert_eq!(indexed[0].start, 16);
-  assert_eq!(indexed[1].start, 16);
+  let probes = probes_at_threshold(&maps, 25, 25, 24);
+  assert_eq!(probes[0].start, 16);
+  assert_eq!(probes[1].start, 16);
 }

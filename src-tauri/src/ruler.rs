@@ -151,6 +151,12 @@ async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   adapter::present(&window)?;
   capture_overlays::emit_lifecycle(app, true);
   crate::app_windows::sync_recording_ui_escape(app, true);
+  // Probes and the loupe need only the gradients `install` computed, so the
+  // element boxes for snapping, radius and centre lines follow off-screen.
+  let app = app.clone();
+  tauri::async_runtime::spawn_blocking(move || {
+    app.state::<RulerState>().analyze_boxes(generation);
+  });
   Ok(())
 }
 

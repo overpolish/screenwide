@@ -14,7 +14,7 @@ pub(crate) use model::{
 };
 
 use std::{
-  sync::Mutex,
+  sync::{Arc, Mutex},
   time::{Duration, Instant},
 };
 
@@ -27,7 +27,7 @@ use crate::{
   ruler::{
     analysis::{compute_gradients, detect_boxes, ComponentBox, GradientMaps},
     centerlines,
-    probe::{probes_at_threshold, ProbeAxis, ProbeIndex},
+    probe::{probes_at_threshold, ProbeAxis},
     radius::{corner_radius_at, Corner},
   },
   screenshots::CapturedImage,
@@ -71,6 +71,7 @@ struct Session {
 pub struct RulerState(Mutex<Session>);
 
 mod artifact_accessors;
+mod box_analysis;
 mod gesture_modes;
 mod labels_viewport;
 mod lifecycle;

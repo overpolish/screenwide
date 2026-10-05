@@ -84,11 +84,7 @@ pub(in crate::ruler::snapshot) fn automatic_probes(
   let y = (((pointer.world.y - display.origin.y) / display.size.height) * f64::from(image_height))
     .floor()
     .clamp(0.0, f64::from(image_height.saturating_sub(1))) as u32;
-  let pixel_probes = if session.tolerance == Tolerance::Balanced {
-    snapshot.probes.probes_at(x, y)
-  } else {
-    probes_at_threshold(&snapshot.gradients, x, y, session.tolerance.threshold())
-  };
+  let pixel_probes = probes_at_threshold(&snapshot.gradients, x, y, session.tolerance.threshold());
   let mut visuals: [RulerProbeVisual; 2] = pixel_probes
     .into_iter()
     .map(|probe| {

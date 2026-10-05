@@ -62,6 +62,7 @@ fn radius_candidates_are_cached_for_each_tolerance() {
       },
     )],
   ));
+  assert!(state.analyze_boxes(generation));
   let session = state.0.lock().unwrap();
   let snapshot = &session.displays[0];
   assert!(snapshot.boxes_by_tolerance[Tolerance::ClearEdges.index()].is_empty());

@@ -92,8 +92,7 @@ impl RulerVisual {
 pub(in crate::ruler::snapshot) struct DisplaySnapshot {
   pub(crate) display: DesktopDisplay,
   pub(crate) image: CapturedImage,
-  pub(crate) gradients: GradientMaps,
-  pub(crate) probes: ProbeIndex,
+  pub(crate) gradients: Arc<GradientMaps>,
   pub(crate) boxes_by_tolerance: [Vec<ComponentBox>; 3],
   pub(crate) viewport: Viewport,
 }

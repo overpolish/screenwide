@@ -35,37 +35,25 @@ impl RulerState {
     if !session.active || session.generation != generation {
       return false;
     }
+    // Probes and the loupe read only gradients, so Ruler is shown as soon as
+    // these exist; element boxes follow from `analyze_boxes` in the background.
     session.displays = displays
       .iter()
       .filter_map(|display| {
         snapshots
           .iter()
           .find(|(id, _)| *id == display.id)
-          .map(|(_, image)| {
-            let gradients = compute_gradients(&image.rgba, image.width, image.height);
-            let probes = ProbeIndex::new(&gradients, Tolerance::Balanced.threshold());
-            let boxes_by_tolerance = [
-              detect_boxes(&gradients, Tolerance::ClearEdges.threshold()),
-              detect_boxes(&gradients, Tolerance::Balanced.threshold()),
-              detect_boxes(&gradients, Tolerance::SubtleEdges.threshold()),
-            ];
-            DisplaySnapshot {
-              display: *display,
-              image: image.clone(),
-              gradients,
-              probes,
-              boxes_by_tolerance,
-              viewport: Viewport::default(),
-            }
+          .map(|(_, image)| DisplaySnapshot {
+            display: *display,
+            image: image.clone(),
+            gradients: Arc::new(compute_gradients(&image.rgba, image.width, image.height)),
+            boxes_by_tolerance: Default::default(),
+            viewport: Viewport::default(),
           })
       })
       .collect();
     session.tolerance = Tolerance::Balanced;
-    session.boxes = session
-      .displays
-      .iter()
-      .flat_map(|snapshot| detected_boxes(snapshot, Tolerance::Balanced))
-      .collect();
+    session.boxes.clear();
     session.visual = None;
     session.copied_until = None;
     session.tolerance_until = None;

@@ -233,6 +233,7 @@ fn tolerance_changes_every_live_edge_detector_and_preserves_stamped_artifacts() 
     height: 100,
   };
   assert!(state.install(generation, &[display], &[(1, image)]));
+  assert!(state.analyze_boxes(generation));
   let balanced_boxes = state.0.lock().unwrap().boxes.clone();
   assert!(balanced_boxes.is_empty());
   let pointer = state.map_pointer(Point { x: 50.0, y: 50.0 }).unwrap();

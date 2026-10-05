@@ -19,57 +19,6 @@ pub(crate) struct PixelProbe {
   pub position: u32,
 }
 
-pub(crate) struct ProbeIndex {
-  width: u32,
-  height: u32,
-  horizontal: Vec<Vec<u32>>,
-  vertical: Vec<Vec<u32>>,
-}
-
-impl ProbeIndex {
-  pub(crate) fn new(maps: &GradientMaps, threshold: u8) -> Self {
-    let horizontal = (0..maps.height)
-      .map(|y| {
-        (1..maps.width)
-          .filter(|x| is_edge(maps, ProbeAxis::Horizontal, *x, y, threshold))
-          .collect()
-      })
-      .collect();
-    let vertical = (0..maps.width)
-      .map(|x| {
-        (1..maps.height)
-          .filter(|y| is_edge(maps, ProbeAxis::Vertical, *y, x, threshold))
-          .collect()
-      })
-      .collect();
-    Self {
-      width: maps.width,
-      height: maps.height,
-      horizontal,
-      vertical,
-    }
-  }
-
-  pub(crate) fn probes_at(&self, x: u32, y: u32) -> [PixelProbe; 2] {
-    [
-      indexed_probe(
-        ProbeAxis::Horizontal,
-        x,
-        y,
-        self.width.saturating_sub(1),
-        self.horizontal.get(y as usize).map_or(&[], Vec::as_slice),
-      ),
-      indexed_probe(
-        ProbeAxis::Vertical,
-        y,
-        x,
-        self.height.saturating_sub(1),
-        self.vertical.get(x as usize).map_or(&[], Vec::as_slice),
-      ),
-    ]
-  }
-}
-
 pub(crate) fn probes_at_threshold(
   maps: &GradientMaps,
   x: u32,
@@ -120,26 +69,6 @@ fn scanned_probe(
     axis,
     start,
     end,
-    position: across,
-  }
-}
-
-fn indexed_probe(
-  axis: ProbeAxis,
-  target: u32,
-  across: u32,
-  limit: u32,
-  edges: &[u32],
-) -> PixelProbe {
-  let split = edges.partition_point(|edge| *edge <= target);
-  PixelProbe {
-    axis,
-    start: split
-      .checked_sub(1)
-      .and_then(|index| edges.get(index))
-      .copied()
-      .unwrap_or(0),
-    end: edges.get(split).copied().unwrap_or(limit),
     position: across,
   }
 }
