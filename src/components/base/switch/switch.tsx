@@ -38,17 +38,21 @@ const trackStyles = cn(
 // negative margin, so it spreads from the knob's centre rather than its
 // leading edge. The knob slides by the travel less its own width, and the
 // margin is folded in, so it lands the same distance from the far inset that
-// it rests from the near one whatever its size.
+// it rests from the near one whatever its size. The slide reads the width
+// from a variable rather than as a percentage of the knob: WebKit runs the
+// slide on the compositor and resolves a percentage once, against the width
+// the knob has when the slide starts, so the slide trails the growth and
+// snaps into place when it ends.
 const knobStyles = cn(
   // On its own compositor layer for good, as the icon button is: a layer
   // that appears only while the slide runs is rasterised at whatever
   // fraction of a pixel it lands on and its edge snaps differently from the
   // track's, which shows as a jagged rim on the knob and the track.
-  "h-3 w-[21px] transform-gpu backface-hidden will-change-transform rounded-full bg-white shadow-sm [--knob-margin:0px] m-(--knob-margin) transition-[translate,width,height,margin,background-color] ease-out",
-  "group-data-[selected]:translate-x-[calc(var(--spacing-switch-travel)-100%-2*var(--knob-margin))]",
-  "windows:size-3 windows:bg-content-fg-secondary windows:shadow-none",
-  "windows:group-data-[hovered]:size-3.5 windows:group-data-[hovered]:[--knob-margin:-1px]",
-  "windows:group-data-[pressed]:h-3.5 windows:group-data-[pressed]:w-[17px] windows:group-data-[pressed]:[--knob-margin:-1px]",
+  "transform-gpu backface-hidden will-change-transform rounded-full bg-white shadow-sm [--knob-width:21px] [--knob-height:12px] [--knob-margin:0px] w-(--knob-width) h-(--knob-height) m-(--knob-margin) transition-[translate,width,height,margin,background-color] ease-out",
+  "group-data-[selected]:translate-x-[calc(var(--spacing-switch-travel)-var(--knob-width)-2*var(--knob-margin))]",
+  "windows:[--knob-width:12px] windows:bg-content-fg-secondary windows:shadow-none",
+  "windows:group-data-[hovered]:[--knob-width:14px] windows:group-data-[hovered]:[--knob-height:14px] windows:group-data-[hovered]:[--knob-margin:-1px]",
+  "windows:group-data-[pressed]:[--knob-width:17px] windows:group-data-[pressed]:[--knob-height:14px] windows:group-data-[pressed]:[--knob-margin:-1px]",
   "windows:group-data-[selected]:bg-primary-fg",
   "windows:group-data-[disabled]:bg-control-fg-disabled",
   "windows:group-data-[disabled]:group-data-[selected]:bg-primary-fg-disabled",
