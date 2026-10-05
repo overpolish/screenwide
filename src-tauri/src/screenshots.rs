@@ -4,6 +4,7 @@
 mod background_image;
 mod capture;
 mod clipboard;
+pub(crate) mod delayed;
 pub(crate) mod desktop;
 pub(crate) mod encoding;
 mod hex_colour;

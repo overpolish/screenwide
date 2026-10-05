@@ -31,3 +31,8 @@ export const captureStill = ({ destination, target }: CaptureStillOptions) =>
 
 export const captureScrollingStill = (target: ScrollingScreenshotTarget) =>
   invoke<null>("capture_scrolling_still", { target });
+
+/** Hides the recording UI and takes `target` once the Settings delay has run
+ * down; the shot always opens in the editor. */
+export const startDelayedScreenshot = (target: ScreenshotTarget) =>
+  invoke<null>("start_delayed_screenshot", { target });

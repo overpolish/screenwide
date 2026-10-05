@@ -6,6 +6,7 @@ import {
   ClipboardCopy,
   ImageDown,
   LucideIcon,
+  Timer,
   Trash2,
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
   clipboard: ClipboardCopy,
   image: ImageDown,
   scrolling: ArrowBigDownDash,
+  timer: Timer,
   "tool-arrow": ArrowToolIcon,
   "tool-counter": CounterToolIcon,
   "tool-draw": DrawToolIcon,

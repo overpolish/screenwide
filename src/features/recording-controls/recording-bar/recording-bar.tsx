@@ -42,6 +42,7 @@ type RecordingBarProps = {
   onCancel?: () => void;
   onChooseMonitor?: (anchor: DOMRect, fromKeyboard: boolean) => void;
   onChooseWindow?: (anchor: DOMRect, fromKeyboard: boolean) => void;
+  onDelayedScreenshot?: () => void;
   onFocusPendingEditor?: () => void;
   onInputChange?: (input: keyof RecordingInputs, selected: boolean) => void;
   onInteract?: () => void;
@@ -99,6 +100,7 @@ export function RecordingBar(props: RecordingBarProps) {
     onCancel,
     onChooseMonitor,
     onChooseWindow,
+    onDelayedScreenshot,
     onFocusPendingEditor,
     onInputChange,
     onInteract,
@@ -239,6 +241,7 @@ export function RecordingBar(props: RecordingBarProps) {
         isCapturing={isCapturing}
         isLocked={Boolean(isLocked)}
         isRecordBlockedByEditor={isRecordBlockedByEditor}
+        onDelayedScreenshot={onDelayedScreenshot}
         onFocusPendingEditor={onFocusPendingEditor}
         onRecord={onRecord}
         onRequiredPermissionsPress={onRequiredPermissionsPress}

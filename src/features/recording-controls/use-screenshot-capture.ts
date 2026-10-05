@@ -7,7 +7,11 @@ import {
   hideRecordingUi,
   setRegionSelectorOscFrameVisible,
 } from "../recording-sources/api";
-import { captureScrollingStill, captureStill } from "../screenshots/api";
+import {
+  captureScrollingStill,
+  captureStill,
+  startDelayedScreenshot,
+} from "../screenshots/api";
 
 import { screenshotTarget } from "./recording-request";
 import { ScreenshotAction, ScreenshotState } from "./types";
@@ -102,5 +106,21 @@ export function useScreenshotCapture() {
     })();
   };
 
-  return { screenshotFeedback, takeScreenshot, takeScrollingScreenshot };
+  // Rust runs the countdown and hides the bar, so there is no feedback to
+  // show here: the tray carries it.
+  const takeDelayedScreenshot = () => {
+    const target = screenshotTarget(true);
+    if (!target) return;
+
+    startDelayedScreenshot(target).catch((error: unknown) => {
+      console.error("Could not start the delayed screenshot", error);
+    });
+  };
+
+  return {
+    screenshotFeedback,
+    takeDelayedScreenshot,
+    takeScreenshot,
+    takeScrollingScreenshot,
+  };
 }

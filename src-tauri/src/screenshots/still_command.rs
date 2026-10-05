@@ -23,6 +23,17 @@ pub async fn capture_still(
   show_cursor: bool,
   destination: ScreenshotDestination,
 ) -> Result<Option<PathBuf>, String> {
+  take_still(app, target, show_cursor, destination).await
+}
+
+/// The shutter every still shares: the Quick Screenshot command's and Delayed
+/// Screenshot's.
+pub(crate) async fn take_still(
+  app: AppHandle,
+  target: ScreenshotTarget,
+  show_cursor: bool,
+  destination: ScreenshotDestination,
+) -> Result<Option<PathBuf>, String> {
   if !crate::recording::is_idle(&app) {
     return Err("A screenshot cannot be taken while a recording is active".to_owned());
   }

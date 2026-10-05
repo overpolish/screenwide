@@ -41,6 +41,8 @@ pub struct GeneralSettings {
   pub launch_at_login: bool,
   pub show_recording_bar_on_launch: bool,
   pub recording_countdown_seconds: u8,
+  /// How long Delayed Screenshot waits before the shutter fires.
+  pub screenshot_delay_seconds: u8,
 }
 
 impl Default for GeneralSettings {
@@ -59,6 +61,7 @@ impl Default for GeneralSettings {
       launch_at_login: false,
       show_recording_bar_on_launch: true,
       recording_countdown_seconds: 0,
+      screenshot_delay_seconds: 3,
     }
   }
 }
@@ -98,6 +101,9 @@ fn write(app: &AppHandle, settings: &GeneralSettings) -> Result<(), String> {
 fn validate(settings: &GeneralSettings) -> Result<(), String> {
   if !matches!(settings.recording_countdown_seconds, 0 | 3 | 5) {
     return Err("The countdown must be off, 3 seconds or 5 seconds".to_owned());
+  }
+  if !matches!(settings.screenshot_delay_seconds, 3 | 5 | 10) {
+    return Err("The screenshot delay must be 3, 5 or 10 seconds".to_owned());
   }
   for directory in [
     settings.recording_directory.as_ref(),

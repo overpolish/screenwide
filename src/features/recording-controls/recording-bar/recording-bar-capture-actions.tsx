@@ -42,6 +42,7 @@ type RecordingBarCaptureActionsProps = {
   isLocked: boolean;
   isRecordBlockedByEditor: boolean;
   className?: string;
+  onDelayedScreenshot?: () => void;
   onFocusPendingEditor?: () => void;
   onRecord?: () => void;
   onRequiredPermissionsPress?: () => void;
@@ -59,6 +60,7 @@ export function RecordingBarCaptureActions({
   isCapturing,
   isLocked,
   isRecordBlockedByEditor,
+  onDelayedScreenshot,
   onFocusPendingEditor,
   onRecord,
   onRequiredPermissionsPress,
@@ -76,6 +78,7 @@ export function RecordingBarCaptureActions({
     () => [
       { icon: "image", id: "save", label: "Save Screenshot" },
       { icon: "clipboard", id: "clipboard", label: "Copy to Clipboard" },
+      { icon: "timer", id: "delayed", label: "Delayed Screenshot" },
       ...(canScrollingScreenshot
         ? [
             {
@@ -110,9 +113,11 @@ export function RecordingBarCaptureActions({
     const selected = lastSelection.selectedIds[0];
     if (selected === "save") onScreenshot?.();
     else if (selected === "clipboard") onScreenshotToClipboard?.();
+    else if (selected === "delayed") onDelayedScreenshot?.();
     else if (selected === "scrolling") onScrollingScreenshot?.();
   }, [
     lastSelection,
+    onDelayedScreenshot,
     onScreenshot,
     onScreenshotToClipboard,
     onScrollingScreenshot,

@@ -11,7 +11,12 @@ import type { AnnotationKind } from "../../components/shared/annotation-style/ty
 /** `tool-` names an annotation tool's own glyph, kept apart from `image`, the
  * export-an-image glyph. */
 export type PopupPanelIcon =
-  "clipboard" | "image" | "scrolling" | "trash" | `tool-${AnnotationKind}`;
+  | "clipboard"
+  | "image"
+  | "scrolling"
+  | "timer"
+  | "trash"
+  | `tool-${AnnotationKind}`;
 
 type PopupPanelMode = "menu" | "select";
 

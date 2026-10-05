@@ -16,6 +16,7 @@ import {
   ScanText,
   Settings,
   Square,
+  Timer,
   Trash2,
   X,
 } from "lucide-react";
@@ -47,6 +48,7 @@ for (const [name, icon] of Object.entries({
   settings: Settings,
   stop: Square,
   text: ScanText,
+  timer: Timer,
 })) {
   const glyph = renderToStaticMarkup(
     createElement(icon, {

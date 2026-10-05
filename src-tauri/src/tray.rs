@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::image::Image;
 use tauri::menu::{IconMenuItemBuilder, Menu, MenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Wry};
@@ -10,6 +9,7 @@ use crate::app_windows;
 use crate::recording::RecordingStatus;
 
 mod icons;
+mod status;
 #[cfg(target_os = "windows")]
 mod windows_menu;
 #[cfg(target_os = "windows")]
@@ -17,6 +17,7 @@ mod windows_theme;
 
 const ANNOTATE_MENU_ID: &str = "annotate";
 const ANNOTATE_CLEAR_MENU_ID: &str = "annotate-clear";
+const DELAYED_SCREENSHOT_MENU_ID: &str = "delayed-screenshot";
 const DISCARD_MENU_ID: &str = "discard-recording";
 const OPEN_CLIPBOARD_SCREENSHOT_MENU_ID: &str = "open-clipboard-screenshot";
 const OPEN_MENU_ID: &str = "open-screenwide";
@@ -28,51 +29,27 @@ const SETTINGS_MENU_ID: &str = "open-settings";
 const STOP_MENU_ID: &str = "stop-recording";
 const TRAY_ID: &str = "screenwide";
 
-#[cfg(target_os = "windows")]
-fn status_icon(status: RecordingStatus) -> tauri::Result<Image<'static>> {
-  let image = Image::from_bytes(match status {
-    RecordingStatus::Idle => include_bytes!("../icons/tray-default.ico").as_slice(),
-    RecordingStatus::Starting | RecordingStatus::Stopping => {
-      include_bytes!("../icons/tray-loading.ico").as_slice()
-    }
-    RecordingStatus::Recording => include_bytes!("../icons/tray-recording.ico").as_slice(),
-    RecordingStatus::Paused => include_bytes!("../icons/tray-paused.ico").as_slice(),
-  })?;
-  Ok(icons::apply_system_foreground(image))
-}
-
-#[cfg(not(target_os = "windows"))]
-fn status_icon(status: RecordingStatus) -> tauri::Result<Image<'static>> {
-  Image::from_bytes(match status {
-    RecordingStatus::Idle => include_bytes!("../icons/tray-default.png").as_slice(),
-    RecordingStatus::Starting | RecordingStatus::Stopping => {
-      include_bytes!("../icons/tray-loading.png").as_slice()
-    }
-    RecordingStatus::Recording => include_bytes!("../icons/tray-recording.png").as_slice(),
-    RecordingStatus::Paused => include_bytes!("../icons/tray-paused.png").as_slice(),
-  })
-}
-
-const fn status_tooltip(status: RecordingStatus) -> &'static str {
-  match status {
-    RecordingStatus::Idle => "Screenwide",
-    RecordingStatus::Starting => "Screenwide - Starting a recording",
-    RecordingStatus::Recording => "Screenwide - Recording",
-    RecordingStatus::Paused => "Screenwide - Recording paused",
-    RecordingStatus::Stopping => "Screenwide - Finishing the recording",
-  }
-}
-
 /// The recording controls join the menu only while there is a recording to
 /// control. Quit always stays, because the tray is not the only way out.
 fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wry>> {
+  // While a countdown runs, the item that started it is the way to stop it.
+  let delayed_screenshot = if crate::screenshots::delayed::remaining().is_some() {
+    IconMenuItemBuilder::with_id(DELAYED_SCREENSHOT_MENU_ID, "Cancel Delayed Screenshot")
+      .icon(icons::load(icons::CANCEL)?)
+  } else {
+    IconMenuItemBuilder::with_id(DELAYED_SCREENSHOT_MENU_ID, "Delayed Screenshot")
+      .icon(icons::load(icons::TIMER)?)
+      .enabled(status == RecordingStatus::Idle)
+  }
+  .build(app)?;
   let mut builder = MenuBuilder::new(app)
     .icon(OPEN_MENU_ID, "Open Screenwide", icons::load(icons::OPEN)?)
     .icon(
       OPEN_CLIPBOARD_SCREENSHOT_MENU_ID,
       "Open Screenshot from Clipboard",
       icons::load(icons::CLIPBOARD)?,
-    );
+    )
+    .item(&delayed_screenshot);
 
   if matches!(status, RecordingStatus::Recording | RecordingStatus::Paused) {
     let pause_label = if status == RecordingStatus::Paused {
@@ -169,14 +146,14 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
   let menu = build_menu(app.handle(), RecordingStatus::Idle)?;
 
   let tray = TrayIconBuilder::with_id(TRAY_ID)
-    .icon(status_icon(RecordingStatus::Idle)?)
+    .icon(status::icon(RecordingStatus::Idle, None)?)
     .icon_as_template(cfg!(target_os = "macos"))
     .menu(&menu)
     .show_menu_on_left_click(false)
-    .tooltip(status_tooltip(RecordingStatus::Idle))
+    .tooltip(status::tooltip(RecordingStatus::Idle, None))
     .on_menu_event(|app, event| {
       let preserved: &[crate::capture_overlays::CaptureOverlay] = match event.id().as_ref() {
-        ANNOTATE_CLEAR_MENU_ID | ANNOTATE_MENU_ID => {
+        ANNOTATE_CLEAR_MENU_ID | ANNOTATE_MENU_ID | DELAYED_SCREENSHOT_MENU_ID => {
           &[crate::capture_overlays::CaptureOverlay::Annotate]
         }
         RECOGNIZE_TEXT_MENU_ID => &[crate::capture_overlays::CaptureOverlay::TextRecognition],
@@ -190,6 +167,16 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
         }
         ANNOTATE_CLEAR_MENU_ID => {
           crate::annotate::clear(app);
+        }
+        DELAYED_SCREENSHOT_MENU_ID => {
+          if crate::screenshots::delayed::remaining().is_some() {
+            crate::screenshots::delayed::cancel(app);
+          } else if let Err(error) = crate::screenshots::delayed::start(
+            app,
+            crate::screenshots::delayed::DelayedTarget::DisplayUnderPointer,
+          ) {
+            eprintln!("Could not start a delayed screenshot from the tray: {error}");
+          }
         }
         DISCARD_MENU_ID => report("discard", crate::recording::cancel(app)),
         OPEN_CLIPBOARD_SCREENSHOT_MENU_ID => {
@@ -249,14 +236,7 @@ pub fn apply_recording_status(app: &AppHandle, status: RecordingStatus) {
       return;
     };
 
-    if let Ok(icon) = status_icon(status) {
-      let _ = tray.set_icon(Some(icon));
-    }
-
-    #[cfg(target_os = "macos")]
-    let _ = tray.set_icon_as_template(true);
-
-    let _ = tray.set_tooltip(Some(status_tooltip(status)));
+    apply_icon(&tray, status);
 
     if let Ok(menu) = build_menu(&app, status) {
       #[cfg(target_os = "windows")]
@@ -273,6 +253,31 @@ pub fn apply_recording_status(app: &AppHandle, status: RecordingStatus) {
 
 pub fn refresh(app: &AppHandle) {
   apply_recording_status(app, crate::recording::snapshot(app).status);
+}
+
+/// Updates the icon and tooltip alone, for a Delayed Screenshot's countdown.
+/// Rebuilding the menu every second would close it under a user reaching for
+/// Cancel.
+pub fn refresh_icon(app: &AppHandle) {
+  let status = crate::recording::snapshot(app).status;
+  let app = app.clone();
+  let _ = app.clone().run_on_main_thread(move || {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+      apply_icon(&tray, status);
+    }
+  });
+}
+
+/// The countdown is read here, on the main thread, rather than passed in: a
+/// tick queued behind a cancellation then shows what is current, not what was.
+fn apply_icon(tray: &tauri::tray::TrayIcon, status: RecordingStatus) {
+  let countdown = crate::screenshots::delayed::remaining();
+  if let Ok(icon) = status::icon(status, countdown) {
+    let _ = tray.set_icon(Some(icon));
+  }
+  #[cfg(target_os = "macos")]
+  let _ = tray.set_icon_as_template(true);
+  let _ = tray.set_tooltip(Some(status::tooltip(status, countdown)));
 }
 
 fn report(action: &str, result: Result<(), String>) {

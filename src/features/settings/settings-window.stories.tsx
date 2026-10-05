@@ -32,6 +32,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     recordingCountdownSeconds: 3,
     recordingDirectory: null,
     sceneTemplates: [],
+    screenshotDelaySeconds: 3,
     screenshotDirectory: null,
     showRecordingBarOnLaunch: true,
     showRecordingConfidenceChecks: true,

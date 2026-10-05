@@ -142,6 +142,7 @@ export type GeneralSettings = {
   recordingDirectory: string | null;
   /** Custom scene layouts saved from the Scene panel, oldest first. */
   sceneTemplates: SceneTemplate[];
+  screenshotDelaySeconds: 3 | 5 | 10;
   screenshotDirectory: string | null;
   showRecordingBarOnLaunch: boolean;
   showRecordingConfidenceChecks: boolean;

@@ -19,6 +19,7 @@ mod assets {
   pub const SETTINGS: &[u8] = include_bytes!("../../icons/menu/windows/settings.png");
   pub const STOP: &[u8] = include_bytes!("../../icons/menu/windows/stop.png");
   pub const TEXT: &[u8] = include_bytes!("../../icons/menu/windows/text.png");
+  pub const TIMER: &[u8] = include_bytes!("../../icons/menu/windows/timer.png");
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -35,6 +36,7 @@ mod assets {
   pub const SETTINGS: &[u8] = include_bytes!("../../icons/menu/settings.png");
   pub const STOP: &[u8] = include_bytes!("../../icons/menu/stop.png");
   pub const TEXT: &[u8] = include_bytes!("../../icons/menu/text.png");
+  pub const TIMER: &[u8] = include_bytes!("../../icons/menu/timer.png");
 }
 pub use assets::*;
 

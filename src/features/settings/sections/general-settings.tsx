@@ -203,7 +203,31 @@ export function GeneralSettingsPanel({
           )}
         </ControlRow>
       </GroupBox>
-      <GroupBox title="Capture">{toggle(captureToggle)}</GroupBox>
+      <GroupBox title="Capture">
+        {toggle(captureToggle)}
+        <ControlRow title="Delayed Screenshot">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <PillGroup
+                aria-label="Delayed Screenshot"
+                display="label"
+                isDisabled={isSaving}
+                items={[
+                  { id: "3", label: "3s" },
+                  { id: "5", label: "5s" },
+                  { id: "10", label: "10s" },
+                ]}
+                onSelectionChange={(seconds) => {
+                  update({
+                    screenshotDelaySeconds: Number(seconds) as 3 | 5 | 10,
+                  });
+                }}
+                selected={String(settings.screenshotDelaySeconds)}
+              />
+            </div>
+          )}
+        </ControlRow>
+      </GroupBox>
       <GroupBox title="Startup">
         {startupToggles.map((item) => toggle(item))}
       </GroupBox>

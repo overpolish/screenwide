@@ -183,6 +183,7 @@ pub fn run() {
       ruler::settings::set_ruler_settings,
       ruler::cancel_ruler,
       ruler::set_ruler_screenshot_mode,
+      screenshots::delayed::start_delayed_screenshot,
       screenshots::scrolling::command::capture_scrolling_still,
       screenshots::still_command::capture_still,
       screenshots::thumbnail::render_background_thumbnail,

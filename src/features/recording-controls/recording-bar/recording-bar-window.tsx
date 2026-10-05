@@ -201,8 +201,12 @@ export function RecordingBarWindow() {
   const hydrated = usePermissionStore((state) => state.hydrated);
   const permissions = usePermissionStore((state) => state.permissions);
   const status = useRecordingStore(selectStatus);
-  const { screenshotFeedback, takeScreenshot, takeScrollingScreenshot } =
-    useScreenshotCapture();
+  const {
+    screenshotFeedback,
+    takeDelayedScreenshot,
+    takeScreenshot,
+    takeScrollingScreenshot,
+  } = useScreenshotCapture();
   const [isCaptureOverlayActive, setIsCaptureOverlayActive] = useState(false);
   const [isRecordingUiVisible, setIsRecordingUiVisible] = useState(false);
   const {
@@ -490,6 +494,7 @@ export function RecordingBarWindow() {
           expandRecordingSourceSelector(true, fromKeyboard),
         );
       }}
+      onDelayedScreenshot={takeDelayedScreenshot}
       onFocusPendingEditor={() => {
         // Only a pending recording routes here now; a screenshot workspace
         // never blocks a capture.
