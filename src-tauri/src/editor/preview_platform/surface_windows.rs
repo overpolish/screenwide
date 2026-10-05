@@ -100,10 +100,10 @@ mod font;
 mod keyboard_hit;
 pub(crate) mod keyboard_raster;
 use keyboard_hit::{keyboard_transform_start, redraw_keyboard_transform};
+mod image_drop;
 mod recenter;
 mod selection;
 mod snapping;
-mod sticker_drop;
 mod view_fit;
 mod window;
 mod workspace_layout;
@@ -117,9 +117,9 @@ use super::{
   },
   workspace_transform::WorkspaceTransform,
   AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, AnnotationTextPhase,
-  ContextMenuCallback, PointerDownCallback, PreviewSelection, PreviewSurfaceRect,
-  SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
-  StickerDropCallback, TransformCallback,
+  ContextMenuCallback, ImageDropCallback, PointerDownCallback, PreviewSelection,
+  PreviewSurfaceRect, SelectionCallback, SelectionGestureCallback, SelectionGestureOperation,
+  SelectionGesturePhase, TransformCallback,
 };
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::gpu::surface::{Frame, Surface};

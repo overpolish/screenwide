@@ -7,13 +7,13 @@ import { sweptTimelineItems } from "../timeline/tracks/timeline-item-selection";
 import { EditorKind } from "../types";
 
 import {
-  StickerPlayChange,
+  ImagePlayChange,
   usePublishAnnotationSelection,
 } from "./annotation-channel";
 import {
   rememberAnnotationAngle,
   rememberAnnotationAnimated,
-  rememberAnnotationSticker,
+  rememberAnnotationImage,
   rememberAnnotationStyle,
 } from "./annotation-defaults";
 import {
@@ -21,7 +21,7 @@ import {
   chosenAnnotationIds,
   toggledAnnotationIds,
 } from "./annotation-selection";
-import { Annotation, AnnotationStyle, StickerArt } from "./annotations";
+import { Annotation, AnnotationStyle, ImageArt } from "./annotations";
 import { relaidHighlight } from "./highlight-strokes";
 
 const NOTHING_CHOSEN: ReadonlySet<string> = new Set();
@@ -56,10 +56,10 @@ export function useAnnotations({
 
   // Where a counter's tail points is remembered however it was turned - by
   // its grip on the picture or by the panel's own control - so the next one
-  // is dropped aiming the same way. A sticker is turned the same two ways,
+  // is dropped aiming the same way. An image is turned the same two ways,
   // but a fresh one always stands upright.
   const angle =
-    selected?.shape.kind === "counter" || selected?.shape.kind === "sticker"
+    selected?.shape.kind === "counter" || selected?.shape.kind === "image"
       ? selected.shape.angle
       : null;
   const counterAngle =
@@ -68,12 +68,12 @@ export function useAnnotations({
     if (counterAngle !== null) rememberAnnotationAngle(counterAngle);
   }, [counterAngle]);
 
-  /** Turn the chosen counter's tail or sticker, in radians clockwise from
+  /** Turn the chosen counter's tail or image, in radians clockwise from
    * east. */
   const applyAngle = (next: number) => {
     if (
       !selected ||
-      (selected.shape.kind !== "counter" && selected.shape.kind !== "sticker")
+      (selected.shape.kind !== "counter" && selected.shape.kind !== "image")
     )
       return;
     const shape = selected.shape;
@@ -86,19 +86,19 @@ export function useAnnotations({
       ),
     );
   };
-  // A sticker given another picture keeps its place, size and turn, and
+  // An image given another picture keeps its place, size and turn, and
   // takes the new picture's proportions and, where it moves, how it plays;
-  // the next sticker shows it too.
-  const sticker = selected?.shape.kind === "sticker" ? selected.shape : null;
-  const art: StickerArt | null = sticker
-    ? { aspect: sticker.aspect, asset: sticker.asset, play: sticker.play }
+  // the next image shows it too.
+  const image = selected?.shape.kind === "image" ? selected.shape : null;
+  const art: ImageArt | null = image
+    ? { aspect: image.aspect, asset: image.asset, play: image.play }
     : null;
-  const applySticker = (next: StickerArt) => {
-    if (!selected || selected.shape.kind !== "sticker") return;
-    rememberAnnotationSticker(next);
+  const applyImage = (next: ImageArt) => {
+    if (!selected || selected.shape.kind !== "image") return;
+    rememberAnnotationImage(next);
     const shape = selected.shape;
     if (shape.asset === next.asset && shape.aspect === next.aspect) return;
-    // A placed sticker keeps its size: only the picture and its proportions
+    // A placed image keeps its size: only the picture and its proportions
     // change, whatever size the new picture is of its own.
     const { aspect, asset, play } = next;
     commit(
@@ -109,10 +109,10 @@ export function useAnnotations({
       ),
     );
   };
-  // A moving sticker's frame, which a still shows and playback starts on,
+  // A moving image's frame, which a still shows and playback starts on,
   // and whether a recording plays it through once.
-  const applyStickerPlay = (next: StickerPlayChange) => {
-    if (!selected || selected.shape.kind !== "sticker" || !selected.shape.play)
+  const applyImagePlay = (next: ImagePlayChange) => {
+    if (!selected || selected.shape.kind !== "image" || !selected.shape.play)
       return;
     const shape = selected.shape;
     const play = { ...selected.shape.play, ...next };
@@ -155,7 +155,7 @@ export function useAnnotations({
 
   // Turn the arrow round: the head rides the end point, so swapping the ends
   // points it the other way. The bend keeps its control, so the curve is the
-  // mirror of itself rather than a different one. A sticker is mirrored
+  // mirror of itself rather than a different one. An image is mirrored
   // instead. A counter has no ends to swap; the panel does not offer the row
   // for one.
   const applyReverse = () => {
@@ -164,7 +164,7 @@ export function useAnnotations({
     const reversed =
       shape.kind === "arrow"
         ? { ...shape, end: shape.start, start: shape.end }
-        : shape.kind === "sticker"
+        : shape.kind === "image"
           ? { ...shape, flip: !shape.flip }
           : null;
     if (reversed === null) return;
@@ -233,8 +233,8 @@ export function useAnnotations({
             angle: angle ?? undefined,
             animated: selected.animated,
             id: selected.id,
+            image: art ?? undefined,
             kind: selected.shape.kind,
-            sticker: art ?? undefined,
             style: selected.style,
           }
         : null,
@@ -244,10 +244,10 @@ export function useAnnotations({
       applyAnimated,
       applyClearDrawings,
       applyDelete,
+      applyImage,
+      applyImagePlay,
       applyReverse,
       applyShuffle,
-      applySticker,
-      applyStickerPlay,
       applyStyle,
     },
   );

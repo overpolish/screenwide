@@ -39,7 +39,7 @@ fn annotation_shade_at(point: vec2<f32>, first: u32, last: u32) -> u32 {
 }
 
 /// Lays one annotation over `stack`, a magnifier showing the picture alone:
-/// a highlight recolours it, a spotlight adds its hover halo, a sticker lays
+/// a highlight recolours it, a spotlight adds its hover halo, an image lays
 /// its picture over it, and everything else draws itself, once over what is
 /// drawn and again over `bare` while a highlight has made the two differ.
 /// The draw has the one call site, looped over the two, because the GPU
@@ -64,9 +64,9 @@ fn annotation_stack_draw(stack_in: AnnotationStack, annotation: PreviewArrow, po
     var drawn: vec4<f32>;
     if (annotation_acts_on_picture(annotation.kind)) {
       drawn = annotation_picture_layer(under, annotation, point, feather, cursor);
-    } else if (annotation_kind_drawn(annotation_sticker_kind) &&
-               annotation.kind == annotation_sticker_kind) {
-      drawn = annotation_sticker_layer(under, annotation, point, feather);
+    } else if (annotation_kind_drawn(annotation_image_kind) &&
+               annotation.kind == annotation_image_kind) {
+      drawn = annotation_image_layer(under, annotation, point, feather);
     } else {
       drawn = annotation_layer(under, annotation, point, feather, number_atlas);
     }

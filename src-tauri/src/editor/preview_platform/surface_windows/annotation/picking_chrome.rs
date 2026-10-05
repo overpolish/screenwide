@@ -48,9 +48,16 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<edit
     return Some(editor::CursorKind::IBeam);
   }
   // An annotation under the pointer is something to take hold of, so the
-  // pointer says so; a redaction's grip resizes, and says which way.
+  // pointer says so; a box's grip resizes, and says which way. An image's
+  // grips turn with it, and so do the ways they resize.
   let handle = handle_at_point(state, point);
-  if let Some(cursor) = handle.and_then(super::redact_chrome::grip_cursor) {
+  let resize = match (handle, selected_item(state)) {
+    (Some(handle), Some(item)) if item.shape_kind() == AnnotationKind::Image => {
+      super::image_chrome::grip_cursor(item, handle)
+    }
+    _ => handle,
+  };
+  if let Some(cursor) = resize.and_then(super::redact_chrome::grip_cursor) {
     return Some(cursor);
   }
   // A magnifier's loupe grip sizes the loupe from the middle of its right side.

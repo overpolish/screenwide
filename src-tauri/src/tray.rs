@@ -156,7 +156,7 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
     .item(&ruler_overlay)
     .item(&annotate)
     .item(&clear_annotations)
-    .icon(SETTINGS_MENU_ID, "Settings…", icons::load(icons::SETTINGS)?)
+    .icon(SETTINGS_MENU_ID, "Settings", icons::load(icons::SETTINGS)?)
     .separator()
     .icon(QUIT_MENU_ID, "Quit Screenwide", icons::load(icons::QUIT)?)
     .build()?;

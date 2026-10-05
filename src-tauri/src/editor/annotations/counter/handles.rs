@@ -41,5 +41,6 @@ pub(crate) fn grips(
     start_head: angle,
     end_head: 0.0,
     width: stroke_width(style, image_width),
+    radius: 0.0,
   }
 }

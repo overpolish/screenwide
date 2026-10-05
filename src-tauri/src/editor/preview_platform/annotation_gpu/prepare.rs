@@ -7,7 +7,7 @@
 //! moving arrow smears along the path it actually travelled.
 
 use super::{
-  PreparedArrows, PreparedSticker, PreparedType, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
+  PreparedArrows, PreparedImage, PreparedType, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
 };
 use crate::editor::annotations::exposure::{annotation_travel, highlight_travel, magnify_travel};
 use crate::editor::annotations::native::{native_annotations, NativeAnnotations};
@@ -217,13 +217,13 @@ fn placed_native(
         // Only a counter and a text box carry type.
         _ => PreparedType::default(),
       });
-      // A sticker's picture is drawn at its full size, from its placed
+      // An image's picture is drawn at its full size, from its placed
       // middle and the middles of its right and bottom sides, and a moving
       // one at the frame its record says this moment shows.
-      if annotation.shape_kind() == AnnotationKind::Sticker {
+      if annotation.shape_kind() == AnnotationKind::Image {
         let half = |side: [f32; 2]| (side[0] - a[0]).hypot(side[1] - a[1]);
         let clock = annotation.params[2];
-        prepared.stickers.push(PreparedSticker {
+        prepared.images.push(PreparedImage {
           index: prepared.arrows.len(),
           asset: text(),
           size: [2.0 * half(b), 2.0 * half(c)],

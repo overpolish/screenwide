@@ -54,7 +54,7 @@ export type AnnotationKindRow<Shape extends AnnotationShape> =
     laneLabel: (shape: Shape, index: number) => string;
     /** The shape as stored, or null where the compositor could not place it. */
     parseShape: (value: unknown) => Shape | null;
-    /** Whether it can be turned round end for end, or for a sticker,
+    /** Whether it can be turned round end for end, or for an image,
      * mirrored. */
     reversible: boolean;
     /** Whether a fresh one arrives without drawing itself in, whatever the

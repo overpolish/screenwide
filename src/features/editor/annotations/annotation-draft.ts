@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { DEFAULT_STICKER } from "../stickers/sticker-library";
 import { drawingToolKind } from "../tool-panels/tool-registry";
 import { EditorKind } from "../types";
 
@@ -11,7 +10,7 @@ import {
   useAnnotationAngleDefault,
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
-  useAnnotationStickerDefault,
+  useAnnotationImageDefault,
 } from "./annotation-defaults";
 import { ANNOTATION_KINDS } from "./annotation-kinds";
 
@@ -19,16 +18,16 @@ import { ANNOTATION_KINDS } from "./annotation-kinds";
  * Publish the dress the drawing tool in hand draws its next annotation in, so
  * the panel can show and change it before anything is drawn: the dress last
  * settled on for that kind, or the tool's own first one. A counter carries the
- * aim its next one is dropped at, a sticker the picture its next one shows,
- * and whether the next one draws itself in rides along - except for a kind
- * that always arrives still.
+ * aim its next one is dropped at, an image the picture its next one shows
+ * once one has been chosen, and whether the next one draws itself in rides
+ * along - except for a kind that always arrives still.
  */
 export function useAnnotationDraft(workspace: EditorKind, tool: string | null) {
   const kind = drawingToolKind(tool);
   const remembered = useAnnotationDefaults(kind ?? "arrow");
   const animated = useAnnotationAnimatedDefault();
   const angle = useAnnotationAngleDefault();
-  const sticker = useAnnotationStickerDefault();
+  const image = useAnnotationImageDefault();
   usePublishAnnotationDraft(
     workspace,
     kind === null
@@ -40,9 +39,7 @@ export function useAnnotationDraft(workspace: EditorKind, tool: string | null) {
           kind,
           style: remembered ?? firstAnnotationDress(kind),
           ...(kind === "counter" ? { angle: angle ?? 0 } : {}),
-          ...(kind === "sticker"
-            ? { sticker: sticker ?? DEFAULT_STICKER }
-            : {}),
+          ...(kind === "image" && image ? { image } : {}),
         },
   );
 }

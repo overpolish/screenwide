@@ -86,6 +86,7 @@ export function useRecordingPreviewCanvasTool({
       crop: toggle("crop"),
       draw: toggle("draw"),
       highlight: toggle("highlight"),
+      image: toggle("image"),
       magnify: toggle("magnify"),
       marquee: toggle("marquee"),
       redact: toggle("redact"),
@@ -93,7 +94,6 @@ export function useRecordingPreviewCanvasTool({
       select: toggle("select"),
       shape: toggle("shape"),
       spotlight: toggle("spotlight"),
-      sticker: toggle("sticker"),
       text: toggle("text"),
     };
   }, [changeCanvasTool]);

@@ -128,14 +128,11 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
   // The overlay's annotations cannot be picked up again, so a text box could
   // never be typed into there, nor a magnifier's zoom area moved onto what
   // it is meant to enlarge. A redaction drawn on the live desktop hides
-  // nothing from the screen it covers, so the overlay offers none. A sticker
+  // nothing from the screen it covers, so the overlay offers none. An image
   // is chosen and placed in the editor alone.
   if matches!(
     settings.default_shape,
-    AnnotationKind::Text
-      | AnnotationKind::Redact
-      | AnnotationKind::Magnify
-      | AnnotationKind::Sticker
+    AnnotationKind::Text | AnnotationKind::Redact | AnnotationKind::Magnify | AnnotationKind::Image
   ) {
     return Err(
       "The live overlay draws arrows, counters, highlights, shapes, spotlights and strokes"

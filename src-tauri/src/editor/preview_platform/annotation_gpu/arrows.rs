@@ -143,12 +143,12 @@ pub(crate) struct PreparedType {
   pub(crate) marks: Option<crate::editor::annotations::text::typing::TypingMarks>,
 }
 
-/// One sticker a composition draws: its place in the list, its picture's
+/// One image a composition draws: its place in the list, its picture's
 /// asset id, its full width and height in canvas pixels, which it is
 /// rasterised at however far it has arrived, so a pop in draws it once, and
 /// which frame of a moving picture this moment shows.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct PreparedSticker {
+pub(crate) struct PreparedImage {
   pub(crate) index: usize,
   pub(crate) asset: String,
   pub(crate) size: [f32; 2],
@@ -166,8 +166,8 @@ pub(crate) struct PreparedArrows {
   pub(crate) arrows: Vec<PreviewArrow>,
   /// Each annotation's type, in draw order.
   pub(crate) types: Vec<PreparedType>,
-  /// The stickers, with where they are in `arrows`.
-  pub(crate) stickers: Vec<PreparedSticker>,
+  /// The images, with where they are in `arrows`.
+  pub(crate) images: Vec<PreparedImage>,
   pub(crate) points: Vec<[f32; 2]>,
   pub(crate) text: Vec<u8>,
   pub(crate) samples: Vec<PreviewSample>,

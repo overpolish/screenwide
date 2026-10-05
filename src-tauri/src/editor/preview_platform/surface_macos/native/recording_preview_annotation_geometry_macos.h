@@ -54,7 +54,7 @@ static inline AnnotationArrowGeometry annotation_prepared(
                                annotation_reveal_whole(), &prepared);
     return prepared;
   }
-  if (item.kind == ScreenwideAnnotationKindSticker) {
+  if (item.kind == ScreenwideAnnotationKindImage) {
     // The middle rides in `middle`, the turn in `start_head`, and the half
     // width and half height in `end_head` and `width`, as shares of the
     // drawn width; the picture's own sides are placed from them here, where

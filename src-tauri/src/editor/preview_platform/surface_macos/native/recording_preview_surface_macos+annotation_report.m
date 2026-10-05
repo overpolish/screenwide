@@ -129,12 +129,12 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_take_layer_at_point(
   invalidate_selection_cursor_rects(surface);
 }
 
-// A press on no annotation under the sticker tool places nothing while
-// something is in hand: it lets the choice go, so the next sticker's picture
+// A press on no annotation under the image tool places nothing while
+// something is in hand: it lets the choice go, so the next image's picture
 // can be chosen rather than replace the chosen one's, and goes no further,
 // leaving the frame and the layers as they were. The next press places.
-// `NO` leaves the press to place a sticker.
-SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_sticker_lets_go(ScreenwidePreviewInteractionView *view,
+// `NO` leaves the press to place an image.
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_image_lets_go(ScreenwidePreviewInteractionView *view,
                                                           NSPoint point) {
   ScreenwidePreviewSurface *surface = view.surface;
   if (surface.annotationSelected < 0 && !annotation_has_group(surface)) return NO;

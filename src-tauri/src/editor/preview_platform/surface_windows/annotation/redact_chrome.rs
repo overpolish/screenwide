@@ -4,7 +4,8 @@
 //! A box's chrome - a redaction's, a shape's, a spotlight's or a magnifier's
 //! zoom area: the layer selection's own box, with its eight grips and its radius
 //! dot, around the chosen one. A hovered one wears the compositor's halo
-//! instead. The twin of `recording_preview_surface_macos+annotation_redact.m`.
+//! instead. An image wears a frame of its own, turned with it:
+//! `image_chrome`. The twin of `recording_preview_surface_macos+annotation_redact.m`.
 
 use super::*;
 use crate::editor::annotations::gesture::{BOX_HANDLES, MODE_MARQUEE, MODE_SELECT, RADIUS_HANDLE};
@@ -12,8 +13,7 @@ use crate::editor::annotations::outline::geometry::{prepare_shape, shape_distanc
 use crate::editor::annotations::redact::geometry::{prepare_redact, redact_distance};
 use crate::editor::annotations::reveal::AnnotationReveal;
 
-/// Whether `kind` is held by a box and its eight grips. A sticker's is the
-/// upright box its turned picture fits in.
+/// Whether `kind` is held by an upright box and its eight grips.
 pub(super) fn is_box(kind: AnnotationKind) -> bool {
   matches!(
     kind,
@@ -22,14 +22,13 @@ pub(super) fn is_box(kind: AnnotationKind) -> bool {
       | AnnotationKind::Spotlight
       | AnnotationKind::Draw
       | AnnotationKind::Magnify
-      | AnnotationKind::Sticker
   )
 }
 
 /// Whether a box of `kind` has a radius dot: a stroke has no corners to
-/// round, and a sticker's box is not its picture's, which the panel rounds.
+/// round.
 fn has_radius(kind: AnnotationKind) -> bool {
-  !matches!(kind, AnnotationKind::Draw | AnnotationKind::Sticker)
+  kind != AnnotationKind::Draw
 }
 
 /// The box on screen, in display points, from the normalised corners Rust
@@ -78,8 +77,7 @@ fn grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> [((f64, f
 }
 
 /// The grip of a box under `point`, as the handle it reports. A magnifier's
-/// loupe grip comes after its zoom area's, and a sticker's turning grip
-/// after its box's.
+/// loupe grip comes after its zoom area's.
 pub(super) fn grip_at(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -87,11 +85,8 @@ pub(super) fn grip_at(
 ) -> Option<u32> {
   let near =
     |(x, y): (f64, f64)| (point.0 - x).abs() <= HANDLE_HIT && (point.1 - y).abs() <= HANDLE_HIT;
-  let tail = match item.shape_kind() {
-    AnnotationKind::Magnify => Some(super::magnify_chrome::loupe_grip(image, item)),
-    AnnotationKind::Sticker => Some(super::sticker_chrome::turn_grip(image, item)),
-    _ => None,
-  };
+  let tail = (item.shape_kind() == AnnotationKind::Magnify)
+    .then(|| super::magnify_chrome::loupe_grip(image, item));
   grips(image, item)
     .into_iter()
     .filter(|(_, handle)| *handle != RADIUS_HANDLE || has_radius(item.shape_kind()))

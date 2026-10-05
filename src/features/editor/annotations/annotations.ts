@@ -37,14 +37,14 @@ export type AnnotationStyle = {
    * strokes `width` tall, rather than fitted to the text under it; the other
    * kinds carry `false`. */
   manual: boolean;
-  /** A redaction's, a shape's, a spotlight's, a magnifier's or a sticker's
+  /** A redaction's, a shape's, a spotlight's, a magnifier's or an image's
    * corner radius, as a percentage of its box's shorter side from 0 to 50;
    * the other kinds carry zero. */
   radius: number;
   /** How a redaction covers what is under it; the other kinds carry the
    * default. */
   redaction: AnnotationRedaction;
-  /** Whether a magnifier's loupe or a sticker casts a shadow onto the
+  /** Whether a magnifier's loupe or an image casts a shadow onto the
    * picture; the other kinds carry `false`. */
   shadow: boolean;
   /** How far a spotlight's edge fades from lit to dim, as a percentage of its
@@ -161,14 +161,14 @@ type AnnotationMagnify = {
 };
 
 /**
- * How a sticker showing a moving picture - a GIF, an animated PNG or WebP -
+ * How an image showing a moving picture - a GIF, an animated PNG or WebP -
  * plays: how long one run lasts and how many frames it has, the frame a
  * still shows and playback starts on, and whether a recording plays it
  * through once, its clip then lasting exactly one run, rather than looping.
- * The twin of `StickerPlay` in
- * `src-tauri/src/editor/annotations/sticker/play.rs`.
+ * The twin of `ImagePlay` in
+ * `src-tauri/src/editor/annotations/image/play.rs`.
  */
-export type StickerPlay = {
+export type ImagePlay = {
   cycleMs: number;
   frame: number;
   frames: number;
@@ -176,18 +176,17 @@ export type StickerPlay = {
 };
 
 /**
- * What a sticker shows: its picture by library id, that picture's width
+ * What an image shows: its picture by library id, that picture's width
  * over its height, and how it plays where it moves. As the picture the next
- * sticker is made with, it also carries how many pixels long a picture of
- * its own is on its longer side, which a fresh sticker takes as its size; an
- * emoji has none. The twin of `StickerArt` in
- * `src-tauri/src/editor/annotations/sticker/model.rs`.
+ * image is made with, it also carries how many pixels long the picture is
+ * on its longer side, which a fresh image takes as its size. The twin of
+ * `ImageArt` in `src-tauri/src/editor/annotations/image/model.rs`.
  */
-export type StickerArt = {
+export type ImageArt = {
   aspect: number;
   asset: string;
   pixels?: number;
-  play?: StickerPlay;
+  play?: ImagePlay;
 };
 
 /**
@@ -195,15 +194,15 @@ export type StickerArt = {
  * longer side, in source pixels; `aspect` is the picture's width over its
  * height, `angle` how far it is turned clockwise, in radians, and `flip`
  * whether it is mirrored across its upright axis. `asset` names the picture
- * in the sticker library, and `play` how it plays where the picture moves.
- * The twin of `AnnotationShape::Sticker` in
+ * in the image library, and `play` how it plays where the picture moves.
+ * The twin of `AnnotationShape::Image` in
  * `src-tauri/src/editor/annotations/shape.rs`.
  */
-type AnnotationSticker = Omit<StickerArt, "pixels"> & {
+type AnnotationImage = Omit<ImageArt, "pixels"> & {
   angle: number;
   center: AnnotationPoint;
   flip: boolean;
-  kind: "sticker";
+  kind: "image";
   size: number;
 };
 
@@ -253,7 +252,7 @@ export type AnnotationShape =
   | AnnotationOutline
   | AnnotationRedact
   | AnnotationSpotlight
-  | AnnotationSticker
+  | AnnotationImage
   | AnnotationText;
 
 export type Annotation = {

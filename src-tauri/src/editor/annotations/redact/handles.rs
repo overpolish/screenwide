@@ -40,5 +40,6 @@ pub(crate) fn grips(
     },
     end_head: 0.0,
     width: 0.0,
+    radius: 0.0,
   }
 }

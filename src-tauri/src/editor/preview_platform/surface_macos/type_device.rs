@@ -37,46 +37,6 @@ unsafe extern "C" {
     count: u32,
     coverage: *mut u8,
   ) -> u32;
-  fn screenwide_emoji_draw(
-    text: *const u8,
-    length: u32,
-    size: f64,
-    width: u32,
-    height: u32,
-    x: f64,
-    y: f64,
-    pixels: *mut u8,
-  ) -> u32;
-}
-
-/// `emoji` set in Apple Color Emoji at `size` pixels to the em into a cell of
-/// `cell` pixels, its line's top-left at `origin`: premultiplied BGRA rows,
-/// top row first, clear wherever the emoji is not drawn.
-pub(crate) fn draw_emoji(
-  emoji: &str,
-  size: f64,
-  cell: (u32, u32),
-  origin: (f64, f64),
-) -> Result<Vec<u8>, String> {
-  let mut pixels = vec![0_u8; cell.0 as usize * cell.1 as usize * 4];
-  let drawn = !pixels.is_empty()
-    && size > 0.0
-    && unsafe {
-      screenwide_emoji_draw(
-        emoji.as_ptr(),
-        u32::try_from(emoji.len()).unwrap_or(u32::MAX),
-        size,
-        cell.0,
-        cell.1,
-        origin.0,
-        origin.1,
-        pixels.as_mut_ptr(),
-      )
-    } != 0;
-  if !drawn {
-    return Err("Core Text could not draw the emoji".to_owned());
-  }
-  Ok(pixels)
 }
 
 impl TypeDevice {

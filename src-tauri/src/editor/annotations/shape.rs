@@ -98,13 +98,13 @@ pub enum AnnotationShape {
     loupe: AnnotationPoint,
     size: f64,
   },
-  /// A picture laid over the source: a bundled emoji or one of your own.
+  /// A picture of your own laid over the source.
   /// `center` is its middle and `size` its longer side, in source pixels;
   /// `aspect` is the picture's width over its height, `angle` how far it is
   /// turned clockwise, in radians, and `flip` whether it is mirrored across
-  /// its upright axis. `asset` names the picture in the sticker library, and
+  /// its upright axis. `asset` names the picture in the image library, and
   /// `play` how it plays where the picture moves.
-  Sticker {
+  Image {
     center: AnnotationPoint,
     size: f64,
     angle: f64,
@@ -113,7 +113,7 @@ pub enum AnnotationShape {
     flip: bool,
     asset: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    play: Option<super::sticker::StickerPlay>,
+    play: Option<super::image::ImagePlay>,
   },
 }
 
@@ -130,7 +130,7 @@ impl AnnotationShape {
       Self::Spotlight { .. } => AnnotationKind::Spotlight,
       Self::Draw { .. } => AnnotationKind::Draw,
       Self::Magnify { .. } => AnnotationKind::Magnify,
-      Self::Sticker { .. } => AnnotationKind::Sticker,
+      Self::Image { .. } => AnnotationKind::Image,
     }
   }
 
@@ -152,7 +152,7 @@ impl AnnotationShape {
       | Self::Spotlight { .. }
       | Self::Draw { .. }
       | Self::Magnify { .. }
-      | Self::Sticker { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
+      | Self::Image { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
     }
   }
 }

@@ -36,7 +36,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode
          mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact ||
          mode == ScreenwideAnnotationModeHighlight || mode == ScreenwideAnnotationModeShape ||
          mode == ScreenwideAnnotationModeSpotlight || mode == ScreenwideAnnotationModeDraw ||
-         mode == ScreenwideAnnotationModeMagnify || mode == ScreenwideAnnotationModeSticker;
+         mode == ScreenwideAnnotationModeMagnify || mode == ScreenwideAnnotationModeImage;
 }
 
 /// What a press does if it never travels: an ordinary press, a toggle of the
@@ -104,8 +104,8 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
   BOOL toggles = annotation_press_toggles();
   BOOL marquee = mode == ScreenwideAnnotationModeMarquee;
-  if (mode == ScreenwideAnnotationModeSticker && handle < 0 && shaft < 0 &&
-      annotation_sticker_lets_go(view, point))
+  if (mode == ScreenwideAnnotationModeImage && handle < 0 && shaft < 0 &&
+      annotation_image_lets_go(view, point))
     return YES;
   // Empty picture under the marquee draws a band over the layer beneath it.
   int32_t marqueeLayer = marquee && handle < 0 && shaft < 0
@@ -184,13 +184,13 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
   }
   // Empty picture or the frame: a new annotation, on the picture under the
   // press or the nearest one. An arrow waits for the press to prove a drag, so
-  // a click leaves no stub; a counter, a text box and a sticker are dropped
+  // a click leaves no stub; a counter, a text box and an image are dropped
   // whole at once, and the drag that may follow carries them.
   annotation_take_layer_at_point(surface, point);
   view.annotationDragTargetKind = ScreenwideAnnotationTargetNew;
   view.annotationDragIndex = 0;
   if (mode == ScreenwideAnnotationModeCounter || mode == ScreenwideAnnotationModeText ||
-      mode == ScreenwideAnnotationModeSticker) {
+      mode == ScreenwideAnnotationModeImage) {
     view.annotationDragHandle = ScreenwideAnnotationHandleBody;
     view.annotationDragBegun = YES;
     emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetNew, 0,
@@ -276,7 +276,7 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_add_osc(
   // marquee band shows the ground it is covering.
   annotation_group_add_osc(vertices, count, size, surface, scale);
   annotation_marquee_add_osc(vertices, count, size, surface, scale);
-  // A chosen redaction or shape wears the selection's box rather than discs.
+  if (annotation_image_add_osc(vertices, count, size, surface, scale)) return;
   if (annotation_redact_add_osc(vertices, count, size, surface, scale)) return;
   if (list == NULL || surface.annotationSelected < 0 ||
       (NSUInteger)surface.annotationSelected >= items)

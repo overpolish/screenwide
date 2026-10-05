@@ -231,8 +231,10 @@ pub(super) use redact_chrome::selected_box as selected_redaction;
 /// A magnifier's loupe: where it is picked and the grip that sets its size.
 mod magnify_chrome;
 
-/// A sticker's turned picture and the grip that turns it.
-mod sticker_chrome;
+/// An image's turned picture, its own frame, its radius dot and the grip
+/// that turns it.
+mod image_chrome;
+pub(super) use image_chrome::selected_frame as selected_image_frame;
 
 /// What a snapped sample draws, and where.
 mod snap_chrome;

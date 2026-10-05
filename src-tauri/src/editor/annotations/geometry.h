@@ -81,3 +81,25 @@ float screenwide_freehand_distance(float px, float py, const float *chain, uint3
 float screenwide_highlight_distance(float px, float py, float start_x, float start_y,
                                     float first_bottom, float last_top, float end_x,
                                     float end_y, float block_left, float block_right);
+
+/// An image's own selection frame, in the display points its middle and half
+/// extents are given in, as `image/frame.rs` places it: its four corners
+/// clockwise from the picture's own top-left, then its nine grips - the
+/// frame's eight, clockwise from that corner, and its radius dot - with the
+/// handle each reports.
+typedef struct {
+  AnnotationVector corners[4];
+  AnnotationVector grips[9];
+  uint32_t handles[9];
+} AnnotationImageFrame;
+_Static_assert(sizeof(AnnotationImageFrame) == 140, "Image frame ABI");
+
+/// The frame of an image whose middle is at `center`, turned `angle` radians
+/// clockwise and rounded `radius` percent of its shorter side.
+void screenwide_image_frame(float center_x, float center_y, float half_width,
+                            float half_height, float angle, float radius,
+                            AnnotationImageFrame *out);
+
+/// The upright sides whose resize cursor runs the way a grip moving `sides`
+/// of an image turned `angle` does on screen.
+uint32_t screenwide_image_cursor_sides(uint32_t sides, float angle);

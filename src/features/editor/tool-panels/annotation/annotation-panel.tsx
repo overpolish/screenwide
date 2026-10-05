@@ -12,9 +12,6 @@ import { AnnotationWidthSlider } from "../../../../components/shared/annotation-
 import { redactionSizePresets } from "../../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
-import { browseStickerImage } from "../../stickers/sticker-api";
-import { DEFAULT_STICKER } from "../../stickers/sticker-library";
-import { StickerPicker } from "../../stickers/sticker-picker";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
@@ -25,7 +22,8 @@ import {
   AnnotationRedactionNote,
   AnnotationRedactionRows,
 } from "./annotation-redaction-rows";
-import { StickerFrameRow, StickerPlaybackRow } from "./sticker-play-rows";
+import { ImageFrameRow, ImagePlaybackRow } from "./image-play-rows";
+import { ImageSourceRow } from "./image-source-row";
 import { useAnnotationColorMenu } from "./use-annotation-color-menu";
 
 /**
@@ -40,7 +38,7 @@ import { useAnnotationColorMenu } from "./use-annotation-color-menu";
  * pixelated, a strength only when blurred and a colour only when filled with
  * one; a spotlight has no colour, only its corners, its fade and its blur; a
  * magnifier rounds its zoom area and its loupe and may cast a shadow; a
- * sticker chooses its picture, its turn and its corners and may cast a
+ * image chooses its picture, its turn and its corners and may cast a
  * shadow; a stroke can clear every stroke off the picture at once.
  *
  * This panel belongs to the annotation in hand. It comes up the moment one is
@@ -108,21 +106,34 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
     kind.animates &&
     !(isDraft && kind.startsStill);
   const animated = animates && annotation.animated;
-  // A placed sticker whose picture moves; the next one always starts on its
+  // A placed image whose picture moves; the next one always starts on its
   // first frame and loops.
-  const stickerPlay = isDraft ? undefined : annotation.sticker?.play;
+  const imagePlay = isDraft ? undefined : annotation.image?.play;
   // Rows follow the order every tool panel keeps: mode, size, geometry,
-  // options, Animate, colour, notes, then actions.
+  // options, Animate, colour, notes, then actions. An image's own picture
+  // rows - which picture, which frame, how it plays - lead as its mode.
   return (
     <div className="flex flex-col gap-section">
-      {annotation.kind === "sticker" ? (
-        <StickerPicker
-          isDisabled={isLocked}
-          onChange={(art) => {
-            change({ annotationSticker: art });
-          }}
-          onPickImage={browseStickerImage}
-          value={annotation.sticker ?? DEFAULT_STICKER}
+      {annotation.kind === "image" ? (
+        <ImageSourceRow
+          change={change}
+          isLocked={isLocked}
+          isPlaced={!isDraft}
+        />
+      ) : null}
+      {imagePlay ? (
+        <ImageFrameRow
+          change={change}
+          isLocked={isLocked}
+          play={imagePlay}
+          workspace={workspace}
+        />
+      ) : null}
+      {imagePlay && workspace === "recording" ? (
+        <ImagePlaybackRow
+          change={change}
+          isLocked={isLocked}
+          play={imagePlay}
         />
       ) : null}
 
@@ -196,12 +207,12 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         </ControlRow>
       ) : null}
 
-      {/* A counter is aimed by its tail, and a sticker turned by its grip, on
+      {/* A counter is aimed by its tail, and an image turned by its grip, on
           the picture or here. The dial's notch stands where the tail does,
           and a held Shift snaps it to the same eighth of a turn a drag on the
-          picture snaps to. A fresh sticker always stands upright, so there is
+          picture snaps to. A fresh image always stands upright, so there is
           no turn to choose before one is placed. */}
-      {kind.hasAngle && !(isDraft && annotation.kind === "sticker") ? (
+      {kind.hasAngle && !(isDraft && annotation.kind === "image") ? (
         <ControlRow title="Angle">
           {(controlProps) => (
             <div {...controlProps} role="group">
@@ -225,14 +236,6 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         style={annotation.style}
       />
 
-      {stickerPlay ? (
-        <StickerFrameRow
-          change={change}
-          isLocked={isLocked}
-          play={stickerPlay}
-          workspace={workspace}
-        />
-      ) : null}
       {/* Drawing in and out happens over a clip, and only a recording has
           one: a screenshot is one instant, so the row is not offered there at
           all. It follows every other setting, so its absence moves none. */}
@@ -249,14 +252,6 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
             />
           )}
         </ControlRow>
-      ) : null}
-
-      {stickerPlay && workspace === "recording" ? (
-        <StickerPlaybackRow
-          change={change}
-          isLocked={isLocked}
-          play={stickerPlay}
-        />
       ) : null}
       {/* The swatches say what they are, so the row carries no heading; it
           keeps the section gap its labelled neighbours sit on. */}

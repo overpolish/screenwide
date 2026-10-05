@@ -6,7 +6,7 @@
 //! A tool's shape lives in one module under this one ([`arrow`],
 //! [`counter`], [`text`], [`redact`], [`highlight`], [`outline`] for the
 //! shape tool, [`spotlight`], [`freehand`] for the draw tool, [`magnify`],
-//! [`sticker`])
+//! [`image`])
 //! and nothing else branches on which kind an annotation is.
 //! Adding a tool is therefore:
 //!
@@ -80,6 +80,8 @@ pub(crate) mod group;
 pub(crate) mod handles;
 /// The highlight tool's own half of the model.
 pub(crate) mod highlight;
+/// The image tool's own half of the model: a picture laid over the source.
+pub(crate) mod image;
 /// The magnifier tool's own half of the model: a loupe showing a zoom area
 /// enlarged.
 pub(crate) mod magnify;
@@ -108,8 +110,6 @@ mod snap_tail_tests;
 /// The spotlight tool's own half of the model: a box left bright while the
 /// picture around it dims.
 pub(crate) mod spotlight;
-/// The sticker tool's own half of the model: a picture laid over the source.
-pub(crate) mod sticker;
 /// The text tool's own half of the model.
 pub(crate) mod text;
 

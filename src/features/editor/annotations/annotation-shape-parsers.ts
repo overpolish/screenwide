@@ -22,7 +22,7 @@ import type {
   AnnotationHighlight,
   AnnotationShape,
   AnnotationText,
-  StickerPlay,
+  ImagePlay,
 } from "./annotations";
 
 type Shape<Kind extends AnnotationShape["kind"]> = Extract<
@@ -128,9 +128,9 @@ const positive = (value: unknown) =>
     ? value
     : null;
 
-/** How a moving sticker plays, or undefined for one that does not move:
+/** How a moving image plays, or undefined for one that does not move:
  * fewer than two frames, or no time for them, is a still. */
-const stickerPlay = (value: unknown): StickerPlay | undefined => {
+const imagePlay = (value: unknown): ImagePlay | undefined => {
   const play = (value ?? {}) as Record<string, unknown>;
   const cycleMs = positive(play.cycleMs);
   const frames = positive(play.frames);
@@ -145,13 +145,13 @@ const stickerPlay = (value: unknown): StickerPlay | undefined => {
   };
 };
 
-export const stickerShape = (value: unknown): Shape<"sticker"> | null => {
+export const imageShape = (value: unknown): Shape<"image"> | null => {
   const shape = (value ?? {}) as Record<string, unknown>;
   const center = annotationPoint(shape.center);
   const size = positive(shape.size);
   const aspect = positive(shape.aspect);
   const angle = shape.angle;
-  const play = stickerPlay(shape.play);
+  const play = imagePlay(shape.play);
   return center &&
     size !== null &&
     aspect !== null &&
@@ -164,7 +164,7 @@ export const stickerShape = (value: unknown): Shape<"sticker"> | null => {
         asset: shape.asset,
         center,
         flip: shape.flip === true,
-        kind: "sticker",
+        kind: "image",
         ...(play ? { play } : {}),
         size,
       }

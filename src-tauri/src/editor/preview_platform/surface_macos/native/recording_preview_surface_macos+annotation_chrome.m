@@ -43,6 +43,12 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
   // pointer says so - never the crosshair the empty picture draws with. A
   // redaction's box grip resizes, and says which way.
   NSInteger handle = annotation_handle_at_point(surface, point);
+  NSUInteger count = 0;
+  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+  BOOL chosen = surface.annotationSelected >= 0 && (NSUInteger)surface.annotationSelected < count;
+  // An image's grips turn with it, and so do the ways they resize.
+  NSCursor *turned = chosen ? annotation_image_cursor(items[surface.annotationSelected], handle) : nil;
+  if (turned != nil) return turned;
   // The radius dot drags diagonally, as the layer selection's does.
   if (handle == ScreenwideAnnotationHandleRadius)
     return screenwide_region_resize_cursor(1 | 4) ?: [NSCursor arrowCursor];
@@ -50,10 +56,7 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
     return screenwide_region_resize_cursor((uint32_t)(handle - ScreenwideAnnotationHandleBox))
         ?: [NSCursor arrowCursor];
   // A magnifier's loupe grip sizes the loupe from the middle of its right side.
-  NSUInteger count = 0;
-  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
-  if (handle == ScreenwideAnnotationHandleTail && surface.annotationSelected >= 0 &&
-      (NSUInteger)surface.annotationSelected < count &&
+  if (handle == ScreenwideAnnotationHandleTail && chosen &&
       items[surface.annotationSelected].kind == ScreenwideAnnotationKindMagnify)
     return screenwide_region_resize_cursor(2) ?: [NSCursor arrowCursor];
   if (handle >= 0 || annotation_shaft_at_point(surface, point) >= 0)

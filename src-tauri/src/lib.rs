@@ -113,7 +113,7 @@ pub fn run() {
       editor::recording_preview_player::annotation_bridge::recording_preview_pin_statuses,
       editor::recording_preview_player::annotation_bridge::recording_preview_pin_back_in_view,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
-      editor::recording_preview_player::annotation_bridge::sticker::place_recording_sticker,
+      editor::recording_preview_player::annotation_bridge::image::place_recording_image,
       editor::recording_preview_player::commands::start_recording_preview_player,
       editor::recording_preview_player::commands::stop_recording_preview_player,
         editor::recording_preview_player::timeline_thumbnails::copy_recording_preview_frame_to_clipboard,
@@ -128,9 +128,9 @@ pub fn run() {
       editor::screenshot_preview::start_screenshot_preview,
       editor::screenshot_preview::stop_screenshot_preview,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
-      editor::screenshot_preview::sticker_placement::place_screenshot_sticker,
-      editor::stickers::import::browse_sticker_image,
-      editor::stickers::import::read_clipboard_sticker,
+      editor::screenshot_preview::image_placement::place_screenshot_image,
+      editor::images::import::browse_annotation_image,
+      editor::images::import::read_clipboard_image,
       editor::auto_zoom::plan_recording_auto_zoom,
       editor::commands::set_export_directory,
       editor::commands::set_recording_timeline_edit,

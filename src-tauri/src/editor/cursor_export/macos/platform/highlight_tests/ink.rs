@@ -169,7 +169,7 @@ fn a_label_the_line_is_drawn_on_is_tinted_with_its_type() {
   // A terminal's red label with black type on it, the line's height and
   // wider than any stroke. Taken for one big glyph, it would be inked dark
   // and its type, at the page's brightness, turned the highlight's yellow.
-  // As a fill it is tinted like a marker over a sticker: still red, with its
+  // As a fill it is tinted like a marker over an image: still red, with its
   // type still darker than it.
   let mut source = page([24, 26, 30], [235, 235, 235]);
   // Set a word's width apart from the white words, so only the label's own

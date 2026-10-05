@@ -14,6 +14,7 @@ import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 
+import { heldLengthClip } from "./image-once";
 import {
   arrangedRecordingAnnotations,
   recordingCameraPlacement,
@@ -31,7 +32,6 @@ import {
   renumberedAnnotationClips,
 } from "./recording-annotations";
 import { withRecordingSpotlightBlurShared } from "./recording-spotlight-blur";
-import { heldLengthClip } from "./sticker-once";
 import { useRecordingAnnotationSync } from "./use-recording-annotation-sync";
 import { useRecordingPinStatus } from "./use-recording-pin-status";
 
@@ -110,7 +110,7 @@ export function useRecordingAnnotations({
     // numbered by clip time: dragging one clip in front of another in time
     // renumbers the pair, while reordering the drawing order does not. Every
     // clip is paced by its annotation as it now stands, so a path drawn
-    // longer takes longer to draw in, and a sticker played once lasts one
+    // longer takes longer to draw in, and an image played once lasts one
     // run of its animation, whatever edit asked for another length.
     // Spotlights shown together share one Blur setting, whichever edit
     // brings them together.

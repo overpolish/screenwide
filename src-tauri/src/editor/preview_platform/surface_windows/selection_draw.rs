@@ -89,10 +89,15 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     grips
   });
   // A chosen redaction wears the layer selection's own box, grips and radius
-  // dot inside the annotation chrome.
+  // dot inside the annotation chrome, and a chosen image its own frame,
+  // turned with it.
   let annotation_box = annotation_handles
     .is_some()
     .then(|| annotation::selected_redaction(state, scale))
+    .flatten();
+  let annotation_frame = annotation_handles
+    .is_some()
+    .then(|| annotation::selected_image_frame(state, scale))
     .flatten();
   let (group, marquee) = if annotation_handles.is_some() {
     (
@@ -162,6 +167,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       magnifier_box,
       annotation_handles.as_deref(),
       annotation_box,
+      annotation_frame,
       snap.bounds,
       &snap.gaps,
       &group,

@@ -7,9 +7,9 @@ import {
   recordingTimelineSourceToOutput,
 } from "../../timeline/editing/recording-timeline-edit";
 
+import { heldLengthMs } from "./image-once";
 import { shiftedPin } from "./recording-annotation-pins";
 import { RecordingAnnotationClip } from "./recording-annotations";
-import { heldLengthMs } from "./sticker-once";
 
 /** Moves a clip by output time while keeping its visible output duration. */
 export const moveRecordingAnnotationClip = ({

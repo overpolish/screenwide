@@ -19,7 +19,7 @@ import {
   outlineShape,
   redactShape,
   spotlightShape,
-  stickerShape,
+  imageShape,
   textShape,
 } from "./annotation-shape-parsers";
 
@@ -144,6 +144,31 @@ export const ANNOTATION_KINDS: {
     reversible: false,
     startsStill: false,
   },
+  image: {
+    ...ANNOTATION_SIZES.image,
+    // It pops in and out the way a counter does. It shows a picture of its
+    // own rather than a colour, is sized by its grips, turned by its own grip
+    // or the angle control, and mirrored rather than turned end for end.
+    animates: true,
+    drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
+    hasAlign: false,
+    hasAngle: true,
+    hasBlur: false,
+    hasColor: false,
+    hasFit: false,
+    hasHandDrawn: false,
+    hasHead: false,
+    hasInk: false,
+    hasRadius: true,
+    hasRedaction: false,
+    hasShadow: true,
+    hasSize: false,
+    hasSoftness: false,
+    laneLabel: (_shape, index) => `Image ${String(index + 1)}`,
+    parseShape: imageShape,
+    reversible: true,
+    startsStill: false,
+  },
   magnify: {
     ...ANNOTATION_SIZES.magnify,
     // The loupe comes out of its zoom area and grows to its place as it
@@ -240,31 +265,6 @@ export const ANNOTATION_KINDS: {
     laneLabel: (_shape, index) => `Spotlight ${String(index + 1)}`,
     parseShape: spotlightShape,
     reversible: false,
-    startsStill: false,
-  },
-  sticker: {
-    ...ANNOTATION_SIZES.sticker,
-    // It pops in and out the way a counter does. It shows a picture of its
-    // own rather than a colour, is sized by its grips, turned by its own grip
-    // or the angle control, and mirrored rather than turned end for end.
-    animates: true,
-    drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
-    hasAlign: false,
-    hasAngle: true,
-    hasBlur: false,
-    hasColor: false,
-    hasFit: false,
-    hasHandDrawn: false,
-    hasHead: false,
-    hasInk: false,
-    hasRadius: true,
-    hasRedaction: false,
-    hasShadow: true,
-    hasSize: false,
-    hasSoftness: false,
-    laneLabel: (_shape, index) => `Sticker ${String(index + 1)}`,
-    parseShape: stickerShape,
-    reversible: true,
     startsStill: false,
   },
   text: {

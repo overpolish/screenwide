@@ -71,7 +71,7 @@ pub async fn set_recording_preview_annotations(
   defaults: Option<AnnotationStyle>,
   animated: Option<bool>,
   counter_angle: Option<f64>,
-  sticker: Option<crate::editor::annotations::sticker::StickerArt>,
+  image: Option<crate::editor::annotations::image::ImageArt>,
 ) -> Result<(), String> {
   let mut clips = clips;
   validate_clips(&clips)?;
@@ -107,7 +107,7 @@ pub async fn set_recording_preview_annotations(
   manager.annotation.animated = animated;
   manager.annotation.fresh = crate::editor::annotations::edit::FreshAnnotation {
     angle: counter_angle,
-    sticker,
+    image,
   };
   manager.publish_annotation_handles();
   #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -234,4 +234,4 @@ mod handles;
 
 mod redraw;
 
-pub mod sticker;
+pub mod image;

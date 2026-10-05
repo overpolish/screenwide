@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/// An atlas's BGRA texture: the type atlas's, and the sticker atlas's.
+/// An atlas's BGRA texture: the type atlas's, and the image atlas's.
 pub(super) struct GpuAtlas {
   texture: wgpu::Texture,
   pub(super) view: wgpu::TextureView,

@@ -62,7 +62,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+framed.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+context_menu.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+drop.m");
-    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_sticker_drop_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_image_drop_macos.h");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+cursor.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+keyboard.m");
@@ -76,6 +76,9 @@ fn main() {
     );
     println!(
       "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_redact.m"
+    );
+    println!(
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_image.m"
     );
     println!(
       "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_picking.m"
@@ -194,6 +197,7 @@ fn main() {
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_chrome.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_redact.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_image.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_state.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_report.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_group.m")

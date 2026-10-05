@@ -10,13 +10,13 @@ use crate::editor::annotations::counter::geometry::prepare_counter;
 use crate::editor::annotations::freehand::geometry::prepare_freehand;
 use crate::editor::annotations::geometry::ArrowGeometry;
 use crate::editor::annotations::highlight::geometry::prepare_highlight;
+use crate::editor::annotations::image::geometry::prepare_image;
 use crate::editor::annotations::magnify::geometry::prepare_magnify;
 use crate::editor::annotations::native::NativeAnnotation;
 use crate::editor::annotations::outline::geometry::prepare_shape;
 use crate::editor::annotations::redact::geometry::prepare_redact;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::spotlight::geometry::prepare_spotlight;
-use crate::editor::annotations::sticker::geometry::prepare_sticker;
 use crate::editor::annotations::text::geometry::prepare_text;
 
 /// `annotation` prepared at `reveal`, its points `p0`, `p1` and `p2` placed at
@@ -30,7 +30,7 @@ use crate::editor::annotations::text::geometry::prepare_text;
 /// spotlight's `p1` is never placed either. A magnifier places all three -
 /// its zoom area's corners and its loupe's centre - and reads its loupe's
 /// size out of `params`, stretched by `scale`, and its rounding beside it. A
-/// sticker places all three - its middle and the middles of its right and
+/// image places all three - its middle and the middles of its right and
 /// bottom sides - and reads its rounding out of `params` and its mirroring
 /// out of `head`.
 pub(super) fn prepared_geometry(
@@ -75,8 +75,8 @@ pub(super) fn prepared_geometry(
       annotation.width,
       reveal,
     ),
-    AnnotationKind::Sticker => {
-      prepare_sticker(a, b, c, annotation.params[0], annotation.head != 0, reveal)
+    AnnotationKind::Image => {
+      prepare_image(a, b, c, annotation.params[0], annotation.head != 0, reveal)
     }
   }
 }

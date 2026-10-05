@@ -42,5 +42,6 @@ pub(crate) fn grips(
     start_head: radius(style),
     end_head: f64::from(hand(style.hand_drawn, seed)),
     width: stroke_width(style, image_width),
+    radius: 0.0,
   }
 }

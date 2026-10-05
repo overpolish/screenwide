@@ -55,7 +55,7 @@ pub(super) struct PreviewManager {
   /// What a fresh annotation is made with beyond its dress: where a fresh
   /// counter's tail points, whatever the last counter was turned to, so a
   /// row of them is dropped aiming the same way, and the picture the last
-  /// sticker was given. Each absent until it has been settled.
+  /// image was given. Each absent until it has been settled.
   pub(super) annotation_fresh: crate::editor::annotations::edit::FreshAnnotation,
   /// The arrow the pointer rests on, and how wide its halo has grown.
   #[cfg(any(target_os = "macos", target_os = "windows"))]

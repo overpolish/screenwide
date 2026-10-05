@@ -13,13 +13,13 @@ mod audio_ribbon;
 mod callbacks;
 mod editor;
 mod ffi;
+mod image_drop;
 /// Core Graphics' keyboard-shortcut strip, for the shared compositor.
 pub(crate) mod keyboard_raster;
 mod layout;
 mod native_types;
 mod recording_workspace;
 mod screenshot_workspace;
-mod sticker_drop;
 /// Inter SemiBold set by Core Text, which measures and draws the annotation
 /// atlas's type.
 pub(crate) mod type_device;
@@ -47,7 +47,7 @@ pub(crate) use self::native_types::{NativeWorkspacePlacement, RecordingWorkspace
 use self::workspace_scene::WorkspaceScene;
 use super::{
   AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, ContextMenuCallback,
-  PointerDownCallback, SelectionCallback, SelectionGestureCallback, StickerDropCallback,
+  ImageDropCallback, PointerDownCallback, SelectionCallback, SelectionGestureCallback,
   TransformCallback,
 };
 use crate::screenshots::CapturedImage;
@@ -63,7 +63,7 @@ pub(crate) struct RecordingPreviewSurface {
   pub(super) context_menu_callback: Option<Box<ContextMenuCallback>>,
   pub(super) transform_callback: Option<Box<TransformCallback>>,
   pub(super) selection_gesture_callback: Option<Box<SelectionGestureCallback>>,
-  pub(super) sticker_drop_callback: Option<Box<StickerDropCallback>>,
+  pub(super) image_drop_callback: Option<Box<ImageDropCallback>>,
 }
 
 unsafe impl Send for RecordingPreviewSurface {}
@@ -93,7 +93,7 @@ impl RecordingPreviewSurface {
       context_menu_callback: None,
       transform_callback: None,
       selection_gesture_callback: None,
-      sticker_drop_callback: None,
+      image_drop_callback: None,
     })
   }
   pub(crate) fn present(&self, index: u32, image: &CapturedImage) -> bool {
@@ -146,7 +146,7 @@ impl Drop for RecordingPreviewSurface {
         None,
         std::ptr::null_mut(),
       );
-      sticker_drop::screenwide_preview_surface_set_sticker_drop_callback(
+      image_drop::screenwide_preview_surface_set_image_drop_callback(
         self.handle,
         None,
         std::ptr::null_mut(),
@@ -161,7 +161,7 @@ impl Drop for RecordingPreviewSurface {
     release_callback_on_main(self.annotation_gesture_callback.take());
     release_callback_on_main(self.annotation_hover_callback.take());
     release_callback_on_main(self.annotation_text_callback.take());
-    release_callback_on_main(self.sticker_drop_callback.take());
+    release_callback_on_main(self.image_drop_callback.take());
   }
 }
 

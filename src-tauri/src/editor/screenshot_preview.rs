@@ -35,6 +35,8 @@ mod geometry;
 mod gesture;
 #[cfg(test)]
 mod gesture_tests;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub mod image_placement;
 mod layout;
 mod payloads;
 mod presentation;
@@ -45,8 +47,6 @@ mod start_callbacks;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod start_menu_callback;
 mod state;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub mod sticker_placement;
 
 pub use controls::{
   __cmd__reset_screenshot_preview_view, __cmd__set_screenshot_preview_editor_suspended,

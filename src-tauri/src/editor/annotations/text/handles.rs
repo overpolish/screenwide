@@ -48,5 +48,6 @@ pub(crate) fn grips(
     start_head: f64::from(style.align.raw()),
     end_head: 0.0,
     width: share,
+    radius: 0.0,
   }
 }

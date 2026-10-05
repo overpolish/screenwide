@@ -64,7 +64,7 @@ impl Compositor {
       #[cfg(target_os = "macos")]
       cursor_artwork_key: 0,
       counter_atlas: CounterAtlas::default(),
-      sticker_atlas: StickerAtlas::default(),
+      image_atlas: ImageAtlas::default(),
       keyboard_cache: KeyboardArtworkCache::default(),
       fallback_view,
       layout,

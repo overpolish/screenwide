@@ -10,10 +10,10 @@ import {
 } from "../../timeline/editing/recording-timeline-edit";
 import { SeekHandler } from "../../timeline/timeline-seek";
 
+import { heldLengthMs } from "./image-once";
 import { previewedWhole } from "./recording-annotation-drag-draft";
 import { trimRecordingAnnotationClips } from "./recording-annotation-geometry";
 import { RecordingAnnotationClip } from "./recording-annotations";
-import { heldLengthMs } from "./sticker-once";
 
 type Edge = "startMs" | "endMs";
 
@@ -25,7 +25,7 @@ type Edge = "startMs" | "endMs";
  * edge a tenth of a second, a whole second with Shift, trimming every clip in
  * `ids` with it. A fragment that continues into its neighbour across a cut
  * has no handle on that side: the clip does not end there. A clip held to a
- * length of its own - a moving sticker played once - has none at all; it
+ * length of its own - a moving image played once - has none at all; it
  * still moves whole.
  */
 export function RecordingAnnotationClipEdges({

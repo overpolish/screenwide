@@ -55,5 +55,6 @@ pub(crate) fn grips(
     start_head: first as f64,
     end_head: chain.len() as f64,
     width: stroke_width(style, image_width),
+    radius: 0.0,
   }
 }

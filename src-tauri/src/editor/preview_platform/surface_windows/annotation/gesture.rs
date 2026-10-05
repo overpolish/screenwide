@@ -47,9 +47,9 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
     // which a borrow held by the scrutinee would forbid.
     let drawing = drawing_kind(state.annotation.mode);
     let empty = handle.is_none() && shaft.is_none();
-    let stickered = empty && drawing == Some(AnnotationKind::Sticker);
-    if let Some(sample) = stickered
-      .then(|| group::sticker_lets_go(&mut state, point))
+    let placing_image = empty && drawing == Some(AnnotationKind::Image);
+    if let Some(sample) = placing_image
+      .then(|| group::image_lets_go(&mut state, point))
       .flatten()
     {
       drop(state);
@@ -92,8 +92,8 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
           }
           false
         }
-        Some(AnnotationKind::Counter | AnnotationKind::Text | AnnotationKind::Sticker) => {
-          // Empty picture under the counter, text or sticker tool: the
+        Some(AnnotationKind::Counter | AnnotationKind::Text | AnnotationKind::Image) => {
+          // Empty picture under the counter, text or image tool: the
           // annotation is dropped whole where the press lands, so it begins
           // at once and a click alone makes it; the drag that may follow
           // carries it. A fresh text box goes straight on to being typed into.

@@ -5,8 +5,8 @@ import {
   Background,
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
-import { StickerPlayChange } from "../annotations/annotation-channel";
-import { AnnotationStyle, StickerArt } from "../annotations/annotations";
+import { ImagePlayChange } from "../annotations/annotation-channel";
+import { AnnotationStyle, ImageArt } from "../annotations/annotations";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -32,16 +32,16 @@ export type ToolPanelHandlers = {
   onAnnotationColorRemove?: (color: string) => void;
   /** Keep a colour of your own, so it is on offer next time. */
   onAnnotationColorSave?: (color: string) => void;
+  /** Give the chosen image, or the next one, another picture. */
+  onAnnotationImageChange?: (art: ImageArt) => void;
+  /** Change how the chosen moving image plays. */
+  onAnnotationImagePlayChange?: (play: ImagePlayChange) => void;
   /** Turn the chosen annotation round, through the same commit path the drag on
    * the picture uses. */
   onAnnotationReverse?: () => void;
   /** Lay the chosen redaction's blocks out again, or draw the chosen
    * hand-drawn highlight's stroke again, from a fresh seed. */
   onAnnotationShuffle?: () => void;
-  /** Give the chosen sticker, or the next one, another picture. */
-  onAnnotationStickerChange?: (art: StickerArt) => void;
-  /** Change how the chosen moving sticker plays. */
-  onAnnotationStickerPlayChange?: (play: StickerPlayChange) => void;
   /** Dress the chosen annotation, a field at a time, through the same commit
    * path the drag on the picture uses. */
   onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;

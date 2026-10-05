@@ -5,6 +5,8 @@ import { useRef } from "react";
 
 import { useAnnotationDraft } from "../annotations/annotation-draft";
 import { useToolFollowsAnnotation } from "../annotations/use-tool-follows-annotation";
+import { placeScreenshotImage } from "../images/image-api";
+import { useIncomingImages } from "../images/use-incoming-images";
 import { PreviewViewport } from "../preview/preview-viewport";
 import { usePreviewZoom } from "../preview/use-preview-zoom";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
@@ -22,8 +24,6 @@ import { useScreenshotLayerActions } from "../screenshot/use-screenshot-layer-ac
 import { useScreenshotRecenter } from "../screenshot/use-screenshot-recenter";
 import { useScreenshotTool } from "../screenshot/use-screenshot-tool";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
-import { placeScreenshotSticker } from "../stickers/sticker-api";
-import { useIncomingStickers } from "../stickers/use-incoming-stickers";
 import {
   EditorToolId,
   drawingToolKind,
@@ -241,12 +241,12 @@ export function ScreenshotSection({
     },
     ownsEscape: isCropping || isAnnotating || hasSelectedAnnotation,
   });
-  useIncomingStickers("screenshot", placeScreenshotSticker, {
-    // The sticker placed is chosen; a tool that shows it is put in hand,
-    // unless the select tool or the sticker tool already is.
+  useIncomingImages("screenshot", placeScreenshotImage, {
+    // The image placed is chosen; a tool that shows it is put in hand,
+    // unless the select tool or the image tool already is.
     onPlaced: () => {
       setTool((current) =>
-        current === "select" || current === "sticker" ? current : "sticker",
+        current === "select" || current === "image" ? current : "image",
       );
     },
   });

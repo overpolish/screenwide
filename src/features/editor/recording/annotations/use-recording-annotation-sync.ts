@@ -9,7 +9,7 @@ import {
   useAnnotationAngleDefault,
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
-  useAnnotationStickerDefault,
+  useAnnotationImageDefault,
 } from "../../annotations/annotation-defaults";
 import { drawingToolKind } from "../../tool-panels/tool-registry";
 import { RecordingVideoTrackId } from "../../types";
@@ -23,7 +23,7 @@ import { RecordingAnnotationClip } from "./recording-annotations";
  * A fresh annotation's dress and whether it animates both travel with the
  * clips the native tool draws from; animation is the annotation's own
  * property, so it rides beside the style rather than inside it, and so do
- * where a fresh counter's tail points and the picture a fresh sticker shows.
+ * where a fresh counter's tail points and the picture a fresh image shows.
  * The dress is the tool's own: a disc and a stroke are different
  * measurements, so the size the counter tool sends is the one counters were
  * last drawn at.
@@ -44,7 +44,7 @@ export function useRecordingAnnotationSync({
   const defaults = useAnnotationDefaults(drawingToolKind(tool) ?? "arrow");
   const animated = useAnnotationAnimatedDefault();
   const counterAngle = useAnnotationAngleDefault();
-  const sticker = useAnnotationStickerDefault();
+  const image = useAnnotationImageDefault();
   useEffect(() => {
     if (sessionId === null) return;
     void invoke("set_recording_preview_annotations", {
@@ -52,10 +52,10 @@ export function useRecordingAnnotationSync({
       clips,
       counterAngle,
       defaults,
+      image,
       paneIndex: trackId === null ? null : trackId === "primary" ? 0 : 1,
       selectedIds: [...selectedIds],
       sessionId,
-      sticker,
     }).catch((cause: unknown) => {
       console.error("Could not update recording annotations", cause);
     });
@@ -64,9 +64,9 @@ export function useRecordingAnnotationSync({
     clips,
     counterAngle,
     defaults,
+    image,
     selectedIds,
     sessionId,
-    sticker,
     trackId,
   ]);
 }

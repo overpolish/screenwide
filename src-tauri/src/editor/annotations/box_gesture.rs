@@ -52,8 +52,8 @@ pub(crate) fn drag(
 /// The screen points the radius dot sits in from the box's corner at no
 /// radius, and how far further in it moves per point of radius: the layer
 /// selection's own placing, which the native chrome draws the dot by.
-const RADIUS_INSET_POINTS: f64 = 10.0;
-const RADIUS_TRAVEL: f64 = 0.55;
+pub(crate) const RADIUS_INSET_POINTS: f64 = 10.0;
+pub(crate) const RADIUS_TRAVEL: f64 = 0.55;
 
 /// The corner radius, as a percentage of the box's shorter side, that puts
 /// the dot under `point`, read along the diagonal the way the layer

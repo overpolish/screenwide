@@ -23,6 +23,9 @@
 /// normalised offset is a different length in each axis on a picture that is
 /// not square, and this side works in isotropic display points.
 ///
+/// An image's corner radius rides in `radius`, the one slot none of its
+/// others is free for; every other kind leaves it zero.
+///
 /// Rust solves the Bezier and owns the stroke's units; this side only places
 /// and hit-tests.
 typedef struct {
@@ -31,6 +34,7 @@ typedef struct {
   double end_x, end_y;
   double start_head, end_head;
   double width;
+  double radius;
   int32_t layer_id;
   uint32_t index;
   /// `ScreenwideAnnotationKind`.
@@ -38,7 +42,7 @@ typedef struct {
   /// `ScreenwideAnnotationFlag` bits.
   uint32_t flags;
 } ScreenwidePreviewAnnotation;
-_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
+_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 96,
                "Rust/C annotation handle layout mismatch");
 /// What a record's `flags` say. `Grouped` is an annotation chosen together
 /// with others: a press on it carries the group rather than choosing it.
@@ -91,7 +95,7 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationGroupBoxKind) {
 /// box's and one on the loupe's rim, which sizes the loupe; a press inside
 /// the loupe carries the loupe.
 ///
-/// A sticker puts the upright box its turned picture fits in in `start` and
+/// An image puts the upright box its turned picture fits in in `start` and
 /// `end`, its middle in `middle`, its turn in `start_head`, and its half
 /// width and half height as shares of the drawn width in `end_head` and
 /// `width`. Its grips are that box's, which size the picture, and one above
@@ -106,7 +110,7 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindSpotlight = 6,
   ScreenwideAnnotationKindDraw = 7,
   ScreenwideAnnotationKindMagnify = 8,
-  ScreenwideAnnotationKindSticker = 9,
+  ScreenwideAnnotationKindImage = 9,
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
@@ -125,7 +129,7 @@ typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeDraw = 9,
   ScreenwideAnnotationModeMagnify = 10,
   ScreenwideAnnotationModeMarquee = 11,
-  ScreenwideAnnotationModeSticker = 12,
+  ScreenwideAnnotationModeImage = 12,
 };
 /// Which grip a press took hold of. A box's grips - a redaction's, a shape's
 /// or a spotlight's - report `Box` plus the sides they move - 1 left, 2 right, 4 top,

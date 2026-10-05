@@ -120,6 +120,13 @@ export const ANNOTATION_SIZES: Record<
     sizeLabel: "Height",
     sizes: [DEFAULT_ANNOTATION_HIGHLIGHT_SIZE],
   },
+  // An image is sized by its grips and draws no stroke: it carries the
+  // least width every clip must, the twin of `default_image_style`'s.
+  image: {
+    defaultSize: 1,
+    sizeLabel: "Size",
+    sizes: [1],
+  },
   // A loupe's rim is always an arrow's pen, the twin of `NEW_MAGNIFY_WIDTH`,
   // and offers no size to choose.
   magnify: {
@@ -142,13 +149,6 @@ export const ANNOTATION_SIZES: Record<
   spotlight: {
     defaultSize: 1,
     sizeLabel: "Width",
-    sizes: [1],
-  },
-  // A sticker is sized by its grips and draws no stroke: it carries the
-  // least width every clip must, the twin of `default_sticker_style`'s.
-  sticker: {
-    defaultSize: 1,
-    sizeLabel: "Size",
     sizes: [1],
   },
   text: {

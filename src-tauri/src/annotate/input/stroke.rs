@@ -104,7 +104,7 @@ impl Stroke {
         | AnnotationKind::Spotlight
         | AnnotationKind::Draw
         | AnnotationKind::Magnify
-        | AnnotationKind::Sticker => settings.default_width,
+        | AnnotationKind::Image => settings.default_width,
         AnnotationKind::Counter => settings.default_counter_size,
         AnnotationKind::Highlight => {
           crate::editor::annotations::highlight::model::NEW_HIGHLIGHT_WIDTH
@@ -161,7 +161,7 @@ impl Stroke {
       AnnotationKind::Text
       | AnnotationKind::Redact
       | AnnotationKind::Magnify
-      | AnnotationKind::Sticker => None,
+      | AnnotationKind::Image => None,
     }
   }
 
@@ -187,7 +187,7 @@ impl Stroke {
       AnnotationKind::Text
       | AnnotationKind::Redact
       | AnnotationKind::Magnify
-      | AnnotationKind::Sticker => false,
+      | AnnotationKind::Image => false,
     }
   }
 

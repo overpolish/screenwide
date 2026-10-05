@@ -9,7 +9,7 @@ import {
   SOFT_SPOTLIGHT_EDGE,
 } from "../../../components/shared/annotation-style/widths";
 
-import { AnnotationStyle, StickerArt } from "./annotations";
+import { AnnotationStyle, ImageArt } from "./annotations";
 
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
@@ -40,18 +40,18 @@ export type AnnotationTool = AnnotationKind | "marquee" | "select";
  * does a spotlight, which is no colour at all, and whose corners and fade
  * are its own rather than a shape's. A magnifier keeps its own as well: its
  * rim frames a picture rather than marking it out, and its zoom, cone and
- * shadow mean nothing to any other kind. A sticker keeps its own: its
+ * shadow mean nothing to any other kind. An image keeps its own: its
  * corners round a picture rather than a box, and it has no colour to share.
  */
 type DressGroup =
-  "highlight" | "magnify" | "redact" | "shared" | "spotlight" | "sticker";
+  "highlight" | "magnify" | "redact" | "shared" | "spotlight" | "image";
 const lastUsed = new Map<DressGroup, AnnotationStyle>();
 const dressGroup = (kind: AnnotationKind): DressGroup =>
   kind === "redact" ||
   kind === "highlight" ||
   kind === "spotlight" ||
   kind === "magnify" ||
-  kind === "sticker"
+  kind === "image"
     ? kind
     : "shared";
 const lastSize = new Map<AnnotationKind, number>();
@@ -68,10 +68,10 @@ let lastAnimated: boolean | null = null;
  */
 let lastAngle: number | null = null;
 /**
- * And the picture the last sticker was given, so the next one is placed
+ * And the picture the last image was given, so the next one is placed
  * showing it. The annotation's own property too.
  */
-let lastSticker: StickerArt | null = null;
+let lastImage: ImageArt | null = null;
 const listeners = new Set<() => void>();
 
 const subscribe = (listener: () => void) => {
@@ -125,15 +125,15 @@ export const rememberAnnotationAngle = (angle: number) => {
   for (const listener of listeners) listener();
 };
 
-/** Remember the picture the last sticker was given. */
-export const rememberAnnotationSticker = (art: StickerArt) => {
+/** Remember the picture the last image was given. */
+export const rememberAnnotationImage = (art: ImageArt) => {
   if (
-    lastSticker?.asset === art.asset &&
-    lastSticker.aspect === art.aspect &&
-    lastSticker.pixels === art.pixels
+    lastImage?.asset === art.asset &&
+    lastImage.aspect === art.aspect &&
+    lastImage.pixels === art.pixels
   )
     return;
-  lastSticker = { ...art };
+  lastImage = { ...art };
   for (const listener of listeners) listener();
 };
 
@@ -172,7 +172,7 @@ const SPOTLIGHT_RADIUS = 12;
  * The twins of `default_arrow_style`, `default_counter_style`,
  * `default_text_style`, `default_redact_style`, `default_highlight_style`,
  * `default_shape_style`, `default_spotlight_style`, `default_magnify_style`
- * and `default_sticker_style` in `src-tauri/src/editor/annotations`, which
+ * and `default_image_style` in `src-tauri/src/editor/annotations`, which
  * dress a fresh annotation where the editor sends no dress of its own.
  */
 export const firstAnnotationDress = (
@@ -225,7 +225,7 @@ export const useAnnotationAnimatedDefault = () =>
 export const useAnnotationAngleDefault = () =>
   useSyncExternalStore(subscribe, () => lastAngle);
 
-/** The picture a fresh sticker shows, or null while none has been chosen and
+/** The picture a fresh image shows, or null while none has been chosen and
  * the tool's own default stands. */
-export const useAnnotationStickerDefault = () =>
-  useSyncExternalStore(subscribe, () => lastSticker);
+export const useAnnotationImageDefault = () =>
+  useSyncExternalStore(subscribe, () => lastImage);

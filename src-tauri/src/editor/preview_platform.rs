@@ -92,6 +92,7 @@ use self::surface_windows as surface;
 
 #[cfg(target_os = "windows")]
 pub(crate) use compositor::ComposedFrame;
+#[cfg(target_os = "windows")]
 pub(crate) use surface::type_device;
 pub(crate) use surface::RecordingPreviewSurface;
 #[cfg(target_os = "macos")]
@@ -179,10 +180,10 @@ pub(crate) type AnnotationTextCallback =
 /// it and the point in that layer's image-normalised space, or `None` off
 /// every picture.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) type StickerDropCallback = Box<
+pub(crate) type ImageDropCallback = Box<
   dyn FnMut(
-      crate::editor::stickers::dropped::DroppedPicture,
-      Option<crate::editor::stickers::dropped::StickerPoint>,
+      crate::editor::images::dropped::DroppedPicture,
+      Option<crate::editor::images::dropped::ImagePoint>,
     ) + Send
     + 'static,
 >;

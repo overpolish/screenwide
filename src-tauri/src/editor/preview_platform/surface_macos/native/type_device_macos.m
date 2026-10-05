@@ -3,8 +3,7 @@
 
 /// Inter SemiBold set by Core Text, for the annotation atlas Rust lays out:
 /// the face's metrics at a size, how far a line advances, and lines drawn as
-/// coverage; and an emoji set in Apple Color Emoji, drawn in its own colours
-/// for a sticker. The twin of DirectWrite's `type_device` on Windows.
+/// coverage. The twin of DirectWrite's `type_device` on Windows.
 
 #import <AppKit/AppKit.h>
 #import <CoreText/CoreText.h>
@@ -90,54 +89,6 @@ uint32_t screenwide_type_draw(double size, uint32_t tabular, uint32_t width, uin
       CTLineDraw(line, context);
       CFRelease(line);
     }
-    CGContextFlush(context);
-    CGContextRelease(context);
-    return 1;
-  }
-}
-
-/// `text` set in Apple Color Emoji at `size`, its line's top-left at `x`, `y`
-/// and its baseline the font's ascent below that, drawn in its own colours
-/// into `pixels`: `width` by `height` premultiplied BGRA pixels, top row
-/// first, clear around it. Returns 0 when nothing could be drawn.
-uint32_t screenwide_emoji_draw(const uint8_t *text, uint32_t length, double size,
-                               uint32_t width, uint32_t height, double x, double y,
-                               uint8_t *pixels) {
-  if (text == NULL || length == 0 || pixels == NULL || width == 0 || height == 0 ||
-      !(size > 0.0))
-    return 0;
-  memset(pixels, 0, (size_t)width * height * 4);
-  @autoreleasepool {
-    NSString *value = [[NSString alloc] initWithBytes:text
-                                               length:length
-                                             encoding:NSUTF8StringEncoding];
-    if (value.length == 0) return 0;
-    CTFontRef font = CTFontCreateWithName(CFSTR("AppleColorEmoji"), size, NULL);
-    if (font == NULL) return 0;
-    NSAttributedString *attributed = [[NSAttributedString alloc]
-        initWithString:value
-            attributes:@{(__bridge NSString *)kCTFontAttributeName : (__bridge id)font}];
-    CTLineRef line = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)attributed);
-    double ascent = CTFontGetAscent(font);
-    CFRelease(font);
-    if (line == NULL) return 0;
-    CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-    // Little-endian, alpha first: the bytes run blue, green, red, alpha.
-    CGContextRef context = CGBitmapContextCreate(
-        pixels, width, height, 8, (size_t)width * 4, space,
-        (CGBitmapInfo)kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
-    CGColorSpaceRelease(space);
-    if (context == NULL) {
-      CFRelease(line);
-      return 0;
-    }
-    CGContextSetAllowsAntialiasing(context, true);
-    CGContextSetShouldAntialias(context, true);
-    CGContextSetInterpolationQuality(context, kCGInterpolationHigh);
-    // Core Graphics counts up from the bottom row.
-    CGContextSetTextPosition(context, x, (double)height - (y + ascent));
-    CTLineDraw(line, context);
-    CFRelease(line);
     CGContextFlush(context);
     CGContextRelease(context);
     return 1;

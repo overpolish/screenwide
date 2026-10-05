@@ -166,9 +166,9 @@ impl PinTarget {
         ],
         redaction: false,
       },
-      // A sticker follows what lies under it as one region, and keeps its
+      // An image follows what lies under it as one region, and keeps its
       // size and turn.
-      AnnotationShape::Sticker {
+      AnnotationShape::Image {
         center,
         size,
         angle,
@@ -176,7 +176,7 @@ impl PinTarget {
         ..
       } => {
         let (low, high) =
-          crate::editor::annotations::sticker::model::bounds(*center, *size, *angle, *aspect);
+          crate::editor::annotations::image::model::bounds(*center, *size, *angle, *aspect);
         Self {
           anchor: [center.x, center.y],
           region: [low.x, low.y, high.x, high.y],

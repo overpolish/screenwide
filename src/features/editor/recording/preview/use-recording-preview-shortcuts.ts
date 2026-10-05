@@ -4,9 +4,9 @@
 import { useCallback } from "react";
 
 import { Arrangement } from "../../annotations/annotation-order";
+import { placeRecordingImage } from "../../images/image-api";
+import { useIncomingImages } from "../../images/use-incoming-images";
 import { useEditorWindowShortcuts } from "../../shortcuts/use-editor-window-shortcuts";
-import { placeRecordingSticker } from "../../stickers/sticker-api";
-import { useIncomingStickers } from "../../stickers/use-incoming-stickers";
 import { useRecordingTimelineBlade } from "../../timeline/editing/use-recording-timeline-blade";
 import { RecordingPreviewLayout } from "../../types";
 import { useRecordingAnnotations } from "../annotations/use-recording-annotations";
@@ -114,15 +114,15 @@ export function useRecordingPreviewShortcuts({
       : undefined,
     ownsEscape: isCropping || annotations.hasSelection,
   });
-  useIncomingStickers(
+  useIncomingImages(
     "recording",
-    hasVisiblePanes ? placeRecordingSticker : undefined,
+    hasVisiblePanes ? placeRecordingImage : undefined,
     {
-      // The sticker placed is chosen; a tool that shows it is put in hand,
-      // unless the select tool or the sticker tool already is.
+      // The image placed is chosen; a tool that shows it is put in hand,
+      // unless the select tool or the image tool already is.
       onPlaced: () => {
-        if (canvasTool !== "select" && canvasTool !== "sticker")
-          changeCanvasTool("sticker");
+        if (canvasTool !== "select" && canvasTool !== "image")
+          changeCanvasTool("image");
       },
       settle: isPlaying ? player.pauseSettled : undefined,
     },

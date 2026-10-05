@@ -234,5 +234,7 @@ pub(crate) fn add_selection(
 }
 
 mod crop;
+mod turned;
 
 pub(crate) use crop::{add_crop, add_crop_with_handles};
+pub(crate) use turned::add_turned_selection;

@@ -39,7 +39,7 @@ use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
 use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::editor::media_preview::BakeGeometry;
 use crate::editor::preview_platform::annotation_gpu::{
-  numbered_arrows, place_stickers, CounterAtlas, GpuBuffer, PreparedArrows, StickerAtlas,
+  numbered_arrows, place_images, CounterAtlas, GpuBuffer, ImageAtlas, PreparedArrows,
 };
 use crate::gpu::Gpu;
 use crate::screenshots::{
@@ -212,10 +212,10 @@ pub(crate) struct Compositor {
   #[cfg(target_os = "macos")]
   cursor_artwork_key: u64,
   counter_atlas: CounterAtlas,
-  sticker_atlas: StickerAtlas,
+  image_atlas: ImageAtlas,
   keyboard_cache: KeyboardArtworkCache,
   /// Bound where no shortcut is on screen, no background picture is chosen,
-  /// no camera is composed, no type was rasterised or no sticker drawn: one
+  /// no camera is composed, no type was rasterised or no image drawn: one
   /// transparent texel.
   fallback_view: wgpu::TextureView,
   layout: wgpu::BindGroupLayout,

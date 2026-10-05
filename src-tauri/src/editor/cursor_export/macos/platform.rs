@@ -173,6 +173,8 @@ mod draw_tests;
 #[cfg(test)]
 mod highlight_tests;
 #[cfg(test)]
+mod image_tests;
+#[cfg(test)]
 mod keyboard_tests;
 #[cfg(test)]
 mod magnify_tests;
@@ -204,8 +206,6 @@ mod shape_tests;
 mod spotlight_tests;
 #[cfg(test)]
 mod spotlight_video_tests;
-#[cfg(test)]
-mod sticker_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

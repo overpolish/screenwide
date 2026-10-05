@@ -44,8 +44,8 @@ fn annotation_reach(annotation: PreviewArrow, feather: f32) -> vec4<f32> {
   if (kind == annotation_magnify_kind) {
     return annotation_magnify_bounds(annotation, feather);
   }
-  if (kind == annotation_sticker_kind) {
-    return annotation_sticker_bounds(annotation, halo, feather);
+  if (kind == annotation_image_kind) {
+    return annotation_image_bounds(annotation, halo, feather);
   }
   if (kind == annotation_highlight_kind) {
     return annotation_highlight_bounds(annotation, feather);

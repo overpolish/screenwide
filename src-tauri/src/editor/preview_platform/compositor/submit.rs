@@ -22,7 +22,7 @@ impl Compositor {
   ) -> Result<wgpu::TextureView, String> {
     let gpu = self.gpu;
     let (numbers, mut annotations) = numbered_arrows(&self.counter_atlas, gpu, prepared)?;
-    let stickers = place_stickers(&self.sticker_atlas, gpu, prepared, &mut annotations)?;
+    let images = place_images(&self.image_atlas, gpu, prepared, &mut annotations)?;
     values.annotation_options[2] = numbers.as_ref().map_or(0, |atlas| atlas.size.0);
     values.annotation_options[3] = numbers.as_ref().map_or(0, |atlas| atlas.size.1);
     values.motion[3] = numbers.as_ref().map_or(0.0, |atlas| atlas.scale);
@@ -139,7 +139,7 @@ impl Compositor {
           buffer(14, &tile_buffer),
           texture(15, marks),
           texture(16, cursor),
-          texture(17, stickers.as_ref().unwrap_or(fallback)),
+          texture(17, images.as_ref().unwrap_or(fallback)),
         ],
       })
     };

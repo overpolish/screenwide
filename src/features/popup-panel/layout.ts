@@ -28,7 +28,7 @@ export const initialPopupPanelHeight = (itemCount: number, sectionCount = 0) =>
 
 /** Tool panels are one fixed width, wide enough for a labelled slider row and
  * narrow enough to sit over a preview without covering it. */
-export const toolPanelWidth = 320;
+export const toolPanelWidth = 344;
 
 /** `--spacing-section` in logical px. A panel is placed and clamped in window
  * and screen coordinates, where the CSS token cannot be read. */

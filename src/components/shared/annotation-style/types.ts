@@ -40,5 +40,5 @@ export type AnnotationKind =
   | "redact"
   | "shape"
   | "spotlight"
-  | "sticker"
+  | "image"
   | "text";

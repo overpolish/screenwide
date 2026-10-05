@@ -110,9 +110,15 @@ fn material_backdrop(pixel_position: vec2<f32>) -> vec4<f32> {
   return vec4<f32>(mix(luminosity_base, tint, select(0.36, 0.30, is_light())), 1.0);
 }
 
-// A quad's size in pixels, from how fast its unit uv changes across one.
+// A quad's size in pixels, from how fast its unit uv changes across one. The
+// rate is the length of each coordinate's screen gradient rather than its
+// `fwidth`, so a quad turned off the screen's axes, such as a turned image's
+// grip, measures its own sides rather than the box it fits in.
 fn quad_pixels(uv: vec2<f32>) -> vec2<f32> {
-  return 1.0 / max(fwidth(uv), vec2<f32>(0.0001));
+  let x = dpdx(uv);
+  let y = dpdy(uv);
+  let rate = vec2<f32>(length(vec2<f32>(x.x, y.x)), length(vec2<f32>(x.y, y.y)));
+  return 1.0 / max(rate, vec2<f32>(0.0001));
 }
 
 // The lens the constants describe; `lens.wgsl` draws it.
@@ -332,6 +338,22 @@ fn handle(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   return color;
 }
 
+// A side of a turned frame: a line whose quad is padded one pixel either side
+// so its edges can be anti-aliased, with `uv.y` running across it. 50 is the
+// line in the controls' fill and 51 the halo in their outline.
+fn soft_line(kind: u32, uv: vec2<f32>) -> vec4<f32> {
+  let dimensions = quad_pixels(uv);
+  let across = abs(uv.y - 0.5) * dimensions.y;
+  let half = dimensions.y * 0.5 - 1.0;
+  let coverage = clamp(half - across + 0.5, 0.0, 1.0);
+  if (coverage <= 0.0) {
+    discard;
+  }
+  var color = select(osc.control_colors[0], osc.control_colors[1], kind == 51u);
+  color.a *= coverage;
+  return color;
+}
+
 @fragment
 fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   let kind = input.kind;
@@ -455,6 +477,9 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   }
   if (kind == 3u || kind == 16u) {
     return handle(kind, uv);
+  }
+  if (kind == 50u || kind == 51u) {
+    return soft_line(kind, uv);
   }
   let guide = kind == 4u || kind == 5u;
   if (guide) {

@@ -6,7 +6,7 @@
 //! space.
 
 use super::super::{
-  arrow, counter, freehand, highlight, magnify, outline, redact, spotlight, sticker, text,
+  arrow, counter, freehand, highlight, image, magnify, outline, redact, spotlight, text,
   AnnotationPoint,
 };
 
@@ -31,14 +31,14 @@ impl super::AnnotationShape {
       Self::Magnify {
         start, end, loupe, ..
       } => [*start, *end, *loupe],
-      Self::Sticker {
+      Self::Image {
         center,
         size,
         angle,
         aspect,
         ..
       } => {
-        let (low, high) = sticker::model::bounds(*center, *size, *angle, *aspect);
+        let (low, high) = image::model::bounds(*center, *size, *angle, *aspect);
         [low, high, *center]
       }
       Self::Highlight {
@@ -80,13 +80,13 @@ impl super::AnnotationShape {
         loupe,
         size,
       } => magnify::model::placed(*start, *end, *loupe, *size),
-      Self::Sticker {
+      Self::Image {
         center,
         size,
         angle,
         aspect,
         ..
-      } => sticker::model::placed(*center, *size, *angle, *aspect),
+      } => image::model::placed(*center, *size, *angle, *aspect),
     }
   }
 
@@ -175,7 +175,7 @@ impl super::AnnotationShape {
           size: (edge.x - centre.x).abs(),
         }
       }
-      Self::Sticker {
+      Self::Image {
         center,
         size,
         angle,
@@ -191,7 +191,7 @@ impl super::AnnotationShape {
           x: center.x + size,
           y: center.y,
         });
-        Self::Sticker {
+        Self::Image {
           center: centre,
           size: (edge.x - centre.x).abs(),
           angle: *angle,

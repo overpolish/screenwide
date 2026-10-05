@@ -13,8 +13,8 @@
 // highlight drawn as a marker stroke rather than a clean band, and
 // `LAID_BY_HAND` one laid over a box, whose bands are strokes rather than
 // lines of text. `SHADOW` marks a magnifier whose loupe casts a shadow, and a
-// sticker that casts one. `ONCE` marks a sticker whose animation plays
-// through once rather than looping, which only the sticker atlas reads.
+// image that casts one. `ONCE` marks an image whose animation plays
+// through once rather than looping, which only the image atlas reads.
 #![allow(dead_code)]
 
 pub(crate) const FILL: u32 = 1 << 0;

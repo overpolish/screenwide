@@ -44,9 +44,9 @@ SCREENWIDE_PREVIEW_PRIVATE NSPoint annotation_magnify_grip(NSRect image,
   return NSMakePoint(prepared.end_head.c.x, prepared.end_head.c.y);
 }
 
-/// Where a sticker's turning grip sits: above its top side, where Rust's
+/// Where an image's turning grip sits: above its top side, where Rust's
 /// preparation placed it.
-SCREENWIDE_PREVIEW_PRIVATE NSPoint annotation_sticker_turn_grip(NSRect image,
+SCREENWIDE_PREVIEW_PRIVATE NSPoint annotation_image_turn_grip(NSRect image,
                                                                 ScreenwidePreviewAnnotation item) {
   AnnotationArrowGeometry prepared = annotation_prepared(image, item);
   return NSMakePoint(prepared.end_head.c.x, prepared.end_head.c.y);
@@ -81,11 +81,13 @@ static double annotation_draw_distance(ScreenwidePreviewSurface *surface, NSRect
 
 // An arrow has three grips; a counter one, the tip of its tail; a text box
 // one, its pointer's tip; a redaction, a shape or a spotlight the eight of
-// its box; a magnifier those of its zoom area's box and one on its loupe; a
-// sticker those of the box it fits in and one that turns it; a highlight the
-// selection's two ends.
+// its box; a magnifier those of its zoom area's box and one on its loupe; an
+// image the eight of its own turned frame, its radius dot and one that turns
+// it; a highlight the selection's two ends.
 SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_grips(
     NSRect image, ScreenwidePreviewAnnotation item, NSPoint *handles, uint32_t *kinds) {
+  if (item.kind == ScreenwideAnnotationKindImage)
+    return annotation_image_grips(image, item, handles, kinds);
   if (annotation_kind_is_box(item.kind))
     return annotation_redact_grips(image, item, handles, kinds);
   if (item.kind == ScreenwideAnnotationKindHighlight) {

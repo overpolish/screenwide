@@ -216,7 +216,7 @@ pub(crate) fn numbered_arrows(
           | AnnotationKind::Spotlight
           | AnnotationKind::Draw
           | AnnotationKind::Magnify
-          | AnnotationKind::Sticker,
+          | AnnotationKind::Image,
         )
         | None => continue,
       }

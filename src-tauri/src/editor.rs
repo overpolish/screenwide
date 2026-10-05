@@ -14,6 +14,8 @@ mod cursor_export;
 mod directory;
 pub(crate) mod effect_animation;
 pub(crate) mod export_window;
+/// The pictures images show.
+pub(crate) mod images;
 pub(crate) mod keyboard_effects;
 mod media_preview;
 mod naming;
@@ -28,8 +30,6 @@ mod recovery;
 pub(crate) mod save;
 pub(crate) mod scenes;
 pub(crate) mod screenshot_preview;
-/// The pictures stickers show.
-pub(crate) mod stickers;
 pub(crate) mod surface_colour;
 mod timeline_edit;
 mod track_selection;

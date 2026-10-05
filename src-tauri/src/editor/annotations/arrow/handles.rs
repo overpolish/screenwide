@@ -41,5 +41,6 @@ pub(crate) fn grips(
     start_head: head_reach(style, head == AnnotationHead::Both, image_width),
     end_head: head_reach(style, head != AnnotationHead::None, image_width),
     width: stroke_width(style, image_width),
+    radius: 0.0,
   }
 }

@@ -3,19 +3,20 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
+import { requestImagePlacement } from "../images/image-requests";
 import { ToolPanelAnnotation } from "../tool-panels/tool-panel-selection";
 import { EditorKind } from "../types";
 
 import {
   rememberAnnotationAngle,
   rememberAnnotationAnimated,
-  rememberAnnotationSticker,
+  rememberAnnotationImage,
   rememberAnnotationStyle,
 } from "./annotation-defaults";
-import { AnnotationStyle, StickerArt, StickerPlay } from "./annotations";
+import { AnnotationStyle, ImageArt, ImagePlay } from "./annotations";
 
-/** What the panel changes about how a moving sticker plays. */
-export type StickerPlayChange = Partial<Pick<StickerPlay, "frame" | "once">>;
+/** What the panel changes about how a moving image plays. */
+export type ImagePlayChange = Partial<Pick<ImagePlay, "frame" | "once">>;
 
 /**
  * The annotation the preview has in hand, and the edits that dress it,
@@ -34,12 +35,12 @@ type PublishedAnnotation = {
   applyClearDrawings: () => void;
   /** Delete every chosen annotation, in one edit. */
   applyDelete: () => void;
+  /** Give the chosen image another picture. */
+  applyImage: (art: ImageArt) => void;
+  /** Change how the chosen moving image plays. */
+  applyImagePlay: (play: ImagePlayChange) => void;
   applyReverse: () => void;
   applyShuffle: () => void;
-  /** Give the chosen sticker another picture. */
-  applySticker: (art: StickerArt) => void;
-  /** Change how the chosen moving sticker plays. */
-  applyStickerPlay: (play: StickerPlayChange) => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
   /** Whether the picture the workspace edits has any stroke to clear. */
   canClearDrawings: boolean;
@@ -98,17 +99,17 @@ export function usePublishAnnotationSelection(
       applyDelete: () => {
         applyRef.current.applyDelete();
       },
+      applyImage: (art) => {
+        applyRef.current.applyImage(art);
+      },
+      applyImagePlay: (play) => {
+        applyRef.current.applyImagePlay(play);
+      },
       applyReverse: () => {
         applyRef.current.applyReverse();
       },
       applyShuffle: () => {
         applyRef.current.applyShuffle();
-      },
-      applySticker: (art) => {
-        applyRef.current.applySticker(art);
-      },
-      applyStickerPlay: (play) => {
-        applyRef.current.applyStickerPlay(play);
       },
       applyStyle: (style) => {
         applyRef.current.applyStyle(style);
@@ -223,24 +224,27 @@ export const applyAnnotationReverse = (workspace: EditorKind) => {
   chosen(workspace)?.applyReverse();
 };
 
-/** Give the chosen sticker the picture `art`; with none chosen, the next
- * sticker. */
-export const applyAnnotationSticker = (
-  workspace: EditorKind,
-  art: StickerArt,
-) => {
+/** Give the chosen image the picture `art`. With none chosen, an image
+ * showing it is placed in the middle of the layer in hand, and the next
+ * image shows it too. */
+export const applyAnnotationImage = (workspace: EditorKind, art: ImageArt) => {
   const published = chosen(workspace);
-  if (published) published.applySticker(art);
-  else if (drafts.has(workspace)) rememberAnnotationSticker(art);
+  if (published) {
+    published.applyImage(art);
+    return;
+  }
+  if (!drafts.has(workspace)) return;
+  rememberAnnotationImage(art);
+  requestImagePlacement(workspace, art);
 };
 
-/** Change how the chosen moving sticker plays. A no-op with none chosen: a
- * fresh sticker always starts on its first frame and loops. */
-export const applyAnnotationStickerPlay = (
+/** Change how the chosen moving image plays. A no-op with none chosen: a
+ * fresh image always starts on its first frame and loops. */
+export const applyAnnotationImagePlay = (
   workspace: EditorKind,
-  play: StickerPlayChange,
+  play: ImagePlayChange,
 ) => {
-  chosen(workspace)?.applyStickerPlay(play);
+  chosen(workspace)?.applyImagePlay(play);
 };
 
 /** Lay the chosen redaction's blocks out again, or draw the chosen hand-drawn

@@ -109,6 +109,9 @@ fn grip_at_point(
   item: &NativeAnnotationHandles,
   point: (f64, f64),
 ) -> Option<u32> {
+  if item.shape_kind() == AnnotationKind::Image {
+    return super::image_chrome::grip_at(image, item, point);
+  }
   if super::redact_chrome::is_box(item.shape_kind()) {
     return super::redact_chrome::grip_at(image, item, point);
   }
@@ -132,7 +135,7 @@ fn grip_at_point(
     | AnnotationKind::Spotlight
     | AnnotationKind::Draw
     | AnnotationKind::Magnify
-    | AnnotationKind::Sticker => found,
+    | AnnotationKind::Image => found,
   })
 }
 
@@ -169,12 +172,14 @@ pub(super) fn highlight_flow(
 }
 
 /// The grips one annotation shows as discs, in display points: an arrow's
-/// three, the tip of a counter's tail or of a text box's pointer, and a
-/// magnifier's loupe grip. A redaction's, a shape's and a spotlight's, and a
-/// magnifier's zoom area's, are the selection box's own, which `redact_chrome`
-/// draws and hits. The tail is placed here rather than sent because a
-/// normalised offset is a different length in each axis on a picture that is
-/// not square, while display points are isotropic.
+/// three, the tip of a counter's tail or of a text box's pointer, a
+/// magnifier's loupe grip and an image's turning grip. A redaction's, a
+/// shape's and a spotlight's, and a magnifier's zoom area's, are the
+/// selection box's own, which `redact_chrome` draws and hits, and an image's
+/// frame is its own, which `image_chrome` does. The tail is placed here
+/// rather than sent because a normalised offset is a different length in
+/// each axis on a picture that is not square, while display points are
+/// isotropic.
 pub(super) fn item_grips(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -205,7 +210,7 @@ pub(super) fn item_grips(
     | AnnotationKind::Draw => Vec::new(),
     AnnotationKind::Magnify => vec![super::magnify_chrome::loupe_grip(image, item)],
     // The grip that turns it stands above its top side.
-    AnnotationKind::Sticker => vec![super::sticker_chrome::turn_grip(image, item)],
+    AnnotationKind::Image => vec![super::image_chrome::turn_grip(image, item)],
     AnnotationKind::Highlight => {
       let flow = highlight_flow(image, item);
       [flow.start_grip(), flow.end_grip()]

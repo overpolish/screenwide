@@ -281,17 +281,17 @@ fn a_fresh_arrow_takes_the_remembered_animate_setting() {
 }
 
 /// A paste places its picture whatever tool is in hand, as a press with the
-/// sticker tool in the pane's middle would; a drop places it where it
+/// image tool in the pane's middle would; a drop places it where it
 /// landed. Either is at its own size held inside the pane and kept in hand.
 /// The tool the press borrowed is put back, and nothing is placed over a
 /// playing recording.
 #[test]
 fn a_pasted_or_dropped_picture_lands_chosen_whatever_tool_is_in_hand() {
-  use crate::editor::annotations::sticker::StickerArt;
+  use crate::editor::annotations::image::ImageArt;
   use crate::editor::annotations::AnnotationShape;
-  use crate::editor::stickers::dropped::StickerPoint;
+  use crate::editor::images::dropped::ImagePoint;
 
-  let art = StickerArt {
+  let art = ImageArt {
     asset: "image:0123456789abcdef0123456789abcdef".to_owned(),
     aspect: 2.0,
     pixels: Some(4_000.0),
@@ -299,9 +299,9 @@ fn a_pasted_or_dropped_picture_lands_chosen_whatever_tool_is_in_hand() {
   };
   let placed = |commit: &gesture::Commit| {
     let Some(fresh) = commit.annotations.last() else {
-      panic!("a sticker was not placed");
+      panic!("an image was not placed");
     };
-    let AnnotationShape::Sticker {
+    let AnnotationShape::Image {
       center,
       size,
       aspect,
@@ -309,7 +309,7 @@ fn a_pasted_or_dropped_picture_lands_chosen_whatever_tool_is_in_hand() {
       ..
     } = &fresh.shape
     else {
-      panic!("a sticker was not placed");
+      panic!("an image was not placed");
     };
     assert_eq!((asset.as_str(), *aspect), (art.asset.as_str(), art.aspect));
     assert_eq!(commit.selected_annotation_ids, vec![fresh.id.clone()]);
@@ -318,19 +318,19 @@ fn a_pasted_or_dropped_picture_lands_chosen_whatever_tool_is_in_hand() {
   let mut manager = manager();
   manager.annotation.mode = 0;
   manager.is_playing = true;
-  assert!(manager.place_sticker(art.clone(), None).is_none());
+  assert!(manager.place_image(art.clone(), None).is_none());
   manager.is_playing = false;
-  let commit = manager.place_sticker(art.clone(), None).unwrap();
+  let commit = manager.place_image(art.clone(), None).unwrap();
   assert_eq!(manager.annotation.mode, 0);
-  assert!(manager.annotation.fresh.sticker.is_none());
+  assert!(manager.annotation.fresh.image.is_none());
   assert_eq!(placed(&commit), (960.0, 540.0, 1920.0));
   assert_eq!(manager.annotation.selected, commit.selected_annotation_ids);
-  let dropped = StickerPoint {
+  let dropped = ImagePoint {
     layer: 0,
     x: 0.25,
     y: 0.75,
   };
-  let commit = manager.place_sticker(art.clone(), Some(dropped)).unwrap();
+  let commit = manager.place_image(art.clone(), Some(dropped)).unwrap();
   assert_eq!(placed(&commit), (480.0, 810.0, 1920.0));
   assert_eq!(manager.annotation.selected, commit.selected_annotation_ids);
 }

@@ -11,7 +11,7 @@ SCREENWIDE_PREVIEW_PRIVATE void on_main_async(dispatch_block_t block);
 /// the picture in is the picture itself. The TIFF a browser adds beside it
 /// is a conversion, read only where nothing else is offered. All are formats
 /// the `image` crate reads.
-static NSArray<NSPasteboardType> *sticker_drop_data_types(void) {
+static NSArray<NSPasteboardType> *image_drop_data_types(void) {
   return @[
     NSPasteboardTypePNG, @"com.compuserve.gif", @"org.webmproject.webp", @"public.jpeg",
     NSPasteboardTypeTIFF
@@ -19,8 +19,8 @@ static NSArray<NSPasteboardType> *sticker_drop_data_types(void) {
 }
 
 /// Only files, and only pictures: a drag of a document or a folder offers
-/// nothing a sticker can show.
-static NSDictionary<NSPasteboardReadingOptionKey, id> *sticker_drop_file_options(void) {
+/// nothing an image can show.
+static NSDictionary<NSPasteboardReadingOptionKey, id> *image_drop_file_options(void) {
   return @{
     NSPasteboardURLReadingFileURLsOnlyKey : @YES,
     NSPasteboardURLReadingContentsConformToTypesKey : @[ @"public.image" ]
@@ -29,7 +29,7 @@ static NSDictionary<NSPasteboardReadingOptionKey, id> *sticker_drop_file_options
 
 /// Where the files a dragging app writes out for a drop are received, off
 /// the main thread.
-static NSOperationQueue *sticker_drop_queue(void) {
+static NSOperationQueue *image_drop_queue(void) {
   static NSOperationQueue *queue;
   static dispatch_once_t once;
   dispatch_once(&once, ^{
@@ -39,19 +39,19 @@ static NSOperationQueue *sticker_drop_queue(void) {
   return queue;
 }
 
-void screenwide_preview_surface_set_sticker_drop_callback(
-    void *handle, screenwide_preview_sticker_drop_callback callback, void *context) {
+void screenwide_preview_surface_set_image_drop_callback(
+    void *handle, screenwide_preview_image_drop_callback callback, void *context) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   on_main_async(^{
-    surface.stickerDropCallback = callback;
-    surface.stickerDropContext = context;
+    surface.imageDropCallback = callback;
+    surface.imageDropContext = context;
     if (callback == NULL) {
       [surface.interaction unregisterDraggedTypes];
       return;
     }
     NSMutableArray<NSPasteboardType> *types = [NSMutableArray arrayWithObject:NSPasteboardTypeFileURL];
-    [types addObjectsFromArray:sticker_drop_data_types()];
+    [types addObjectsFromArray:image_drop_data_types()];
     [types addObjectsFromArray:NSFilePromiseReceiver.readableDraggedTypes];
     [surface.interaction registerForDraggedTypes:types];
   });
@@ -61,7 +61,7 @@ void screenwide_preview_surface_set_sticker_drop_callback(
 /// `annotation_drawing_target` keeps, and `point` in its image-normalised
 /// space - beyond 0 to 1 for a drop on the frame. `NO` with no picture laid
 /// out.
-static BOOL sticker_drop_point(ScreenwidePreviewSurface *surface, NSPoint point, int32_t *layer,
+static BOOL image_drop_point(ScreenwidePreviewSurface *surface, NSPoint point, int32_t *layer,
                                double *x, double *y) {
   ScreenwidePreviewSelection target;
   if (!annotation_drawing_target(surface, point, &target)) return NO;
@@ -77,57 +77,57 @@ static BOOL sticker_drop_point(ScreenwidePreviewSurface *surface, NSPoint point,
 
 /// Whether the workspace takes drops now, and the drag holds a picture in a
 /// form one can be read from.
-- (BOOL)stickerDropAccepts:(id<NSDraggingInfo>)info {
+- (BOOL)imageDropAccepts:(id<NSDraggingInfo>)info {
   ScreenwidePreviewSurface *surface = self.surface;
-  if (surface.stickerDropCallback == NULL || !surface.editorEnabled || surface.editorSuspended)
+  if (surface.imageDropCallback == NULL || !surface.editorEnabled || surface.editorSuspended)
     return NO;
   NSPasteboard *pasteboard = info.draggingPasteboard;
-  return [pasteboard canReadObjectForClasses:@[ NSURL.class ] options:sticker_drop_file_options()] ||
-         [pasteboard availableTypeFromArray:sticker_drop_data_types()] != nil ||
+  return [pasteboard canReadObjectForClasses:@[ NSURL.class ] options:image_drop_file_options()] ||
+         [pasteboard availableTypeFromArray:image_drop_data_types()] != nil ||
          [pasteboard canReadObjectForClasses:@[ NSFilePromiseReceiver.class ] options:nil];
 }
 
 - (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)info {
-  return [self stickerDropAccepts:info] ? NSDragOperationCopy : NSDragOperationNone;
+  return [self imageDropAccepts:info] ? NSDragOperationCopy : NSDragOperationNone;
 }
 
 - (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)info {
-  return [self stickerDropAccepts:info] ? NSDragOperationCopy : NSDragOperationNone;
+  return [self imageDropAccepts:info] ? NSDragOperationCopy : NSDragOperationNone;
 }
 
 - (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)info {
-  return [self stickerDropAccepts:info];
+  return [self imageDropAccepts:info];
 }
 
 /// Hands the dropped picture over in the form that keeps the most of it: a
 /// file of its own first, then its data, then a file the dragging app writes
 /// out for the drop, as browsers do for an image. The picture the drop joins
-/// is taken in hand, as a press with the sticker tool there would.
+/// is taken in hand, as a press with the image tool there would.
 - (BOOL)performDragOperation:(id<NSDraggingInfo>)info {
-  if (![self stickerDropAccepts:info]) return NO;
+  if (![self imageDropAccepts:info]) return NO;
   ScreenwidePreviewSurface *surface = self.surface;
   NSPoint point = [self convertPoint:info.draggingLocation fromView:nil];
   int32_t layer = -1;
   double x = 0.5;
   double y = 0.5;
-  sticker_drop_point(surface, point, &layer, &x, &y);
+  image_drop_point(surface, point, &layer, &x, &y);
   annotation_take_layer_at_point(surface, point);
   NSPasteboard *pasteboard = info.draggingPasteboard;
-  void (^deliver)(ScreenwideStickerDrop, const void *, size_t) =
-      ^(ScreenwideStickerDrop kind, const void *bytes, size_t length) {
-        surface.stickerDropCallback(kind, layer, x, y, bytes, length, surface.stickerDropContext);
+  void (^deliver)(ScreenwideImageDrop, const void *, size_t) =
+      ^(ScreenwideImageDrop kind, const void *bytes, size_t length) {
+        surface.imageDropCallback(kind, layer, x, y, bytes, length, surface.imageDropContext);
       };
   NSArray<NSURL *> *files =
-      [pasteboard readObjectsForClasses:@[ NSURL.class ] options:sticker_drop_file_options()];
+      [pasteboard readObjectsForClasses:@[ NSURL.class ] options:image_drop_file_options()];
   if (files.count > 0) {
     const char *path = files.firstObject.fileSystemRepresentation;
-    deliver(ScreenwideStickerDropFile, path, strlen(path));
+    deliver(ScreenwideImageDropFile, path, strlen(path));
     return YES;
   }
-  NSPasteboardType type = [pasteboard availableTypeFromArray:sticker_drop_data_types()];
+  NSPasteboardType type = [pasteboard availableTypeFromArray:image_drop_data_types()];
   NSData *data = type != nil ? [pasteboard dataForType:type] : nil;
   if (data.length > 0) {
-    deliver(ScreenwideStickerDropData, data.bytes, data.length);
+    deliver(ScreenwideImageDropData, data.bytes, data.length);
     return YES;
   }
   NSFilePromiseReceiver *promise =
@@ -153,19 +153,19 @@ static BOOL sticker_drop_point(ScreenwidePreviewSurface *surface, NSPoint point,
     dispatch_async(dispatch_get_main_queue(), ^{
       // A drag may carry several files; the first that arrives is the one.
       ScreenwidePreviewSurface *live = weakSurface;
-      if (taken || live == nil || live.stickerDropCallback == NULL) {
+      if (taken || live == nil || live.imageDropCallback == NULL) {
         [NSFileManager.defaultManager removeItemAtPath:path error:nil];
         return;
       }
       taken = YES;
       const char *bytes = path.fileSystemRepresentation;
-      live.stickerDropCallback(ScreenwideStickerDropWritten, layer, x, y, (const uint8_t *)bytes,
-                               strlen(bytes), live.stickerDropContext);
+      live.imageDropCallback(ScreenwideImageDropWritten, layer, x, y, (const uint8_t *)bytes,
+                               strlen(bytes), live.imageDropContext);
     });
   };
   [promise receivePromisedFilesAtDestination:folder
                                      options:@{}
-                              operationQueue:sticker_drop_queue()
+                              operationQueue:image_drop_queue()
                                       reader:received];
   return YES;
 }

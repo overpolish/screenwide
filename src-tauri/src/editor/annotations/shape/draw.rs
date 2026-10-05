@@ -38,13 +38,13 @@ impl super::AnnotationShape {
       Self::Magnify {
         start, end, loupe, ..
       } => super::super::magnify::native::draw_points(*start, *end, *loupe),
-      Self::Sticker {
+      Self::Image {
         center,
         size,
         angle,
         aspect,
         ..
-      } => super::super::sticker::native::draw_points(*center, *size, *angle, *aspect),
+      } => super::super::image::native::draw_points(*center, *size, *angle, *aspect),
     }
   }
 
@@ -66,7 +66,7 @@ impl super::AnnotationShape {
       | Self::Draw { .. }
       | Self::Magnify { .. } => 0,
       // Which way the picture faces: the shader mirrors it on one.
-      Self::Sticker { flip, .. } => u32::from(*flip),
+      Self::Image { flip, .. } => u32::from(*flip),
     }
   }
 
@@ -82,8 +82,8 @@ impl super::AnnotationShape {
       | Self::Spotlight { .. }
       | Self::Draw { .. }
       | Self::Magnify { .. } => std::borrow::Cow::Borrowed(""),
-      // The picture's library id, which the sticker atlas draws it from.
-      Self::Sticker { asset, .. } => std::borrow::Cow::Borrowed(asset),
+      // The picture's library id, which the image atlas draws it from.
+      Self::Image { asset, .. } => std::borrow::Cow::Borrowed(asset),
       Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
       Self::Text { text, .. } => std::borrow::Cow::Borrowed(text),
     }
@@ -171,13 +171,21 @@ impl super::AnnotationShape {
         source,
         image_width,
       ),
-      Self::Sticker {
+      Self::Image {
         center,
         size,
         angle,
         aspect,
         ..
-      } => super::super::sticker::handles::grips(*center, *size, *angle, *aspect, index, source),
+      } => super::super::image::handles::grips(
+        *center,
+        *size,
+        *angle,
+        *aspect,
+        style.radius,
+        index,
+        source,
+      ),
     }
   }
 
@@ -202,13 +210,13 @@ impl super::AnnotationShape {
       Self::Spotlight { start, end } => super::super::spotlight::model::field_box(*start, *end),
       Self::Draw { points, .. } => super::super::freehand::model::field_box(points),
       Self::Magnify { start, end, .. } => super::super::magnify::model::field_box(*start, *end),
-      Self::Sticker {
+      Self::Image {
         center,
         size,
         angle,
         aspect,
         ..
-      } => super::super::sticker::model::field_box(*center, *size, *angle, *aspect),
+      } => super::super::image::model::field_box(*center, *size, *angle, *aspect),
       // A highlight lies over the text it marks; nothing lines up against it.
       Self::Highlight { .. } => None,
     }
@@ -236,7 +244,7 @@ impl super::AnnotationShape {
       | Self::Spotlight { .. }
       | Self::Draw { .. }
       | Self::Magnify { .. }
-      | Self::Sticker { .. } => None,
+      | Self::Image { .. } => None,
     }
   }
 }

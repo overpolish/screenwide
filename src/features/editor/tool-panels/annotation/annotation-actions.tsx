@@ -8,11 +8,11 @@ import type { ToolPanelPatch } from "../tool-panel-patch";
 
 /**
  * The one-shot actions at the foot of the annotation panel, in a row of their
- * own. An arrow is turned round and a sticker mirrored, both through the same
- * commit path the drag on the picture uses; neither is offered before
- * anything is drawn. Clearing belongs to the pen rather than to one stroke,
- * so it is offered before anything is drawn too; one undo brings every
- * stroke back.
+ * own. An arrow is turned round through the same commit path the drag on the
+ * picture uses, and not offered before anything is drawn; an image is
+ * mirrored from its own Image row instead. Clearing belongs to the pen rather
+ * than to one stroke, so it is offered before anything is drawn too; one undo
+ * brings every stroke back.
  */
 export function AnnotationActions({
   canClearDrawings,
@@ -29,22 +29,20 @@ export function AnnotationActions({
   kind: AnnotationKind;
   reversible: boolean;
 }) {
-  if (reversible && !isDraft) {
-    const sticker = kind === "sticker";
+  if (reversible && !isDraft && kind !== "image")
     return (
       <div className="flex justify-end">
         <Button
-          aria-label={sticker ? "Mirror the sticker" : "Reverse the arrow"}
+          aria-label="Reverse the arrow"
           isDisabled={isLocked}
           onPress={() => {
             change({ reverseAnnotation: true });
           }}
         >
-          {sticker ? "Flip" : "Reverse"}
+          Reverse
         </Button>
       </div>
     );
-  }
   if (kind !== "draw") return null;
   return (
     <div className="flex justify-end">

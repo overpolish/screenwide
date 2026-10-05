@@ -151,6 +151,12 @@ void screenwide_region_osc_add_selection(
 void screenwide_region_osc_add_selection_frame(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
     NSRect frame, CGFloat scale);
+/// A turned picture's own frame: the selection's outline along its four
+/// sides, its corner discs, the pills on its sides lying along them, and its
+/// radius dot. `corners` run clockwise from the picture's own top-left.
+void screenwide_region_osc_add_turned_selection(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
+    const NSPoint corners[4], NSPoint radius_dot, CGFloat scale);
 void screenwide_region_osc_add_ruler_box(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
     NSRect frame, CGFloat scale, BOOL hovered, CGFloat hover_width);

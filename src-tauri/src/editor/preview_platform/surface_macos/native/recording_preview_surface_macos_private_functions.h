@@ -171,8 +171,8 @@ uint32_t annotation_body_handle(ScreenwidePreviewSurface *surface, NSInteger ind
                                 NSPoint point);
 /// Where a magnifier's loupe grip sits, in display points.
 NSPoint annotation_magnify_grip(NSRect image, ScreenwidePreviewAnnotation item);
-/// Where a sticker's turning grip sits, above its top side, in display points.
-NSPoint annotation_sticker_turn_grip(NSRect image, ScreenwidePreviewAnnotation item);
+/// Where an image's turning grip sits, above its top side, in display points.
+NSPoint annotation_image_turn_grip(NSRect image, ScreenwidePreviewAnnotation item);
 /// Reports one annotation gesture sample to Rust. `index` is the item's place
 /// in the published list for an existing or chosen annotation.
 void emit_annotation_gesture(ScreenwidePreviewSurface *surface, uint32_t phase,
@@ -191,10 +191,10 @@ BOOL annotation_drawing_target(ScreenwidePreviewSurface *surface, NSPoint point,
 /// selected layer keeps the annotation.
 void annotation_take_layer_at_point(ScreenwidePreviewSurface *surface,
                                     NSPoint point);
-/// A press on no annotation under the sticker tool: while something is in
+/// A press on no annotation under the image tool: while something is in
 /// hand, lets the choice go and takes the press, so it reaches nothing else.
-/// `NO` leaves the press to place a sticker.
-BOOL annotation_sticker_lets_go(ScreenwidePreviewInteractionView *view, NSPoint point);
+/// `NO` leaves the press to place an image.
+BOOL annotation_image_lets_go(ScreenwidePreviewInteractionView *view, NSPoint point);
 /// Whether several annotations are chosen together, which is when the group
 /// chrome is drawn and a press on a member carries them all.
 BOOL annotation_has_group(ScreenwidePreviewSurface *surface);
@@ -252,7 +252,8 @@ NSUInteger annotation_grips(NSRect image, ScreenwidePreviewAnnotation item,
 /// selection's order, then its radius dot.
 NSUInteger annotation_redact_grips(NSRect image, ScreenwidePreviewAnnotation item,
                                    NSPoint *handles, uint32_t *kinds);
-/// Whether an annotation of `kind` is held by a box and its eight grips.
+/// Whether an annotation of `kind` is held by an upright box and its eight
+/// grips.
 BOOL annotation_kind_is_box(uint32_t kind);
 /// The layer selection's own box chrome around the chosen redaction or
 /// shape. Answers whether the chosen annotation is one, whose box chrome
@@ -260,4 +261,17 @@ BOOL annotation_kind_is_box(uint32_t kind);
 BOOL annotation_redact_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
                                NSSize size, ScreenwidePreviewSurface *surface,
                                CGFloat scale);
+/// An image's grips: its own frame's eight, clockwise from the picture's own
+/// top-left corner, its radius dot, then the grip that turns it.
+NSUInteger annotation_image_grips(NSRect image, ScreenwidePreviewAnnotation item,
+                                  NSPoint *handles, uint32_t *kinds);
+/// The resize cursor an image's frame grip or radius dot shows, turned with
+/// the picture; nil for any other grip or kind.
+NSCursor *annotation_image_cursor(ScreenwidePreviewAnnotation item, NSInteger handle);
+/// The chosen image's own frame, grips and turning grip. Answers whether the
+/// chosen annotation is an image, whose frame stands in for the grips
+/// `annotation_add_osc` would draw.
+BOOL annotation_image_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
+                              NSSize size, ScreenwidePreviewSurface *surface,
+                              CGFloat scale);
 #endif

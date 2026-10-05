@@ -37,5 +37,6 @@ pub(crate) fn grips(
     start_head: share(style.radius),
     end_head: 0.0,
     width: 0.0,
+    radius: 0.0,
   }
 }

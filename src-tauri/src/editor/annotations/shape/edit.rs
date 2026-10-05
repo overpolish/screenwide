@@ -47,8 +47,8 @@ impl super::super::Annotation {
       AnnotationKind::Magnify => {
         super::super::magnify::gesture::drag(self, handle, point, origin, shift, snap)
       }
-      AnnotationKind::Sticker => {
-        super::super::sticker::gesture::drag(self, handle, point, origin, shift, snap)
+      AnnotationKind::Image => {
+        super::super::image::gesture::drag(self, handle, point, origin, shift, snap)
       }
     }
   }
@@ -88,7 +88,7 @@ impl super::super::Annotation {
       AnnotationKind::Magnify => {
         super::super::magnify::gesture::drag_new(self, point, origin, shift, snap)
       }
-      AnnotationKind::Sticker => super::super::sticker::gesture::drag_new(self, point, snap),
+      AnnotationKind::Image => super::super::image::gesture::drag_new(self, point, snap),
     }
   }
 }
@@ -97,9 +97,10 @@ impl AnnotationKind {
   /// The annotation a fresh press of this tool makes at `point`, in `style`
   /// or in the tool's own first dress. `fresh` is what the editor has
   /// settled on beyond the dress - where a counter's tail points, which
-  /// picture a sticker shows - `existing` the list a counter is numbered
+  /// picture an image shows - `existing` the list a counter is numbered
   /// against, and `source_per_size` what sizes a text box so it can centre on
-  /// `point`, and a sticker.
+  /// `point`, and an image. `None` for an image before any picture has been
+  /// chosen: a press with nothing to show places nothing.
   #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub(crate) fn new_annotation(
     self,
@@ -109,8 +110,8 @@ impl AnnotationKind {
     fresh: &super::super::edit::FreshAnnotation,
     existing: &[super::super::Annotation],
     source_per_size: f64,
-  ) -> super::super::Annotation {
-    match self {
+  ) -> Option<super::super::Annotation> {
+    Some(match self {
       Self::Arrow => super::super::arrow::model::new_arrow(id, point, point, style),
       Self::Counter => super::super::counter::model::new_counter(
         id,
@@ -133,14 +134,14 @@ impl AnnotationKind {
       Self::Spotlight => super::super::spotlight::model::new_spotlight(id, [point, point], style),
       Self::Draw => super::super::freehand::model::new_draw(id, point, style),
       Self::Magnify => super::super::magnify::model::new_magnify(id, point, style),
-      Self::Sticker => super::super::sticker::model::new_sticker(
+      Self::Image => super::super::image::model::new_image(
         id,
         point,
-        fresh.sticker.as_ref(),
+        fresh.image.as_ref()?,
         style,
         source_per_size,
       ),
-    }
+    })
   }
 
   /// The reveal window a clip of this kind is at: an arrow is drawn along its
@@ -170,8 +171,8 @@ impl AnnotationKind {
       Self::Counter => {
         super::super::counter::reveal::counter_reveal_window(elapsed_ms, duration_ms, frame_ms)
       }
-      // A sticker pops in and out the way a counter does.
-      Self::Sticker => {
+      // An image pops in and out the way a counter does.
+      Self::Image => {
         super::super::counter::reveal::counter_reveal_window(elapsed_ms, duration_ms, frame_ms)
       }
       Self::Text => {
@@ -205,7 +206,7 @@ impl AnnotationKind {
         own.unwrap_or(super::super::reveal::REVEAL_DRAW_IN_MS)
       }
       Self::Text => own.unwrap_or(super::super::text::reveal::POINTER_IN_MS),
-      Self::Counter | Self::Redact | Self::Spotlight | Self::Magnify | Self::Sticker => 0.0,
+      Self::Counter | Self::Redact | Self::Spotlight | Self::Magnify | Self::Image => 0.0,
     }
   }
 
@@ -221,7 +222,7 @@ impl AnnotationKind {
       Self::Arrow | Self::Highlight | Self::Shape | Self::Draw => {
         path_ms * (1.0 + REVEAL_OUT_SHARE)
       }
-      Self::Counter | Self::Sticker => COUNTER_REVEAL_IN_MS + COUNTER_REVEAL_OUT_MS,
+      Self::Counter | Self::Image => COUNTER_REVEAL_IN_MS + COUNTER_REVEAL_OUT_MS,
       Self::Text => super::super::text::reveal::text_reveal_span_ms(path_ms),
       // A redaction ramps in and never leaves.
       Self::Redact => COUNTER_REVEAL_IN_MS,

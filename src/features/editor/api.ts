@@ -3,7 +3,7 @@
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 
-import { AnnotationStyle, StickerArt } from "./annotations/annotations";
+import { AnnotationStyle, ImageArt } from "./annotations/annotations";
 import {
   normalizedCameraOverlay,
   normalizedCursorEffects,
@@ -265,7 +265,7 @@ export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
 export const layoutScreenshotPreviewSurface = ({
   annotationCounterAngle,
   annotationDefaults,
-  annotationSticker,
+  annotationImage,
   annotationTool,
   backdrop,
   fitWidth,
@@ -298,8 +298,8 @@ export const layoutScreenshotPreviewSurface = ({
    * annotation edit settled on. Absent until it has settled on anything, and
    * the native tool falls back to the accent at its own stroke. */
   annotationDefaults?: AnnotationStyle | null;
-  /** The picture a fresh sticker shows: whatever the last sticker was given. */
-  annotationSticker?: StickerArt | null;
+  /** The picture a fresh image shows: whatever the last image was given. */
+  annotationImage?: ImageArt | null;
   /** The annotation tool in hand. "select" hit-tests the annotations already on
    * the layer and lets every other press fall through to it; "arrow" and
    * "counter" also make a new annotation on empty picture. */
@@ -313,7 +313,7 @@ export const layoutScreenshotPreviewSurface = ({
   invoke<null>("layout_screenshot_preview_surface", {
     annotationCounterAngle: annotationCounterAngle ?? null,
     annotationDefaults: annotationDefaults ?? null,
-    annotationSticker: annotationSticker ?? null,
+    annotationImage: annotationImage ?? null,
     annotationTool: annotationTool ?? null,
     backdrop,
     fitWidth,

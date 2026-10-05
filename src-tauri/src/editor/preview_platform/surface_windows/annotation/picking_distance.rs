@@ -61,7 +61,7 @@ pub(super) fn arrow_distance(
     // reads; its grips alone cannot place it.
     AnnotationKind::Draw => return f32::INFINITY,
     AnnotationKind::Magnify => return super::magnify_chrome::distance(image, item, point),
-    AnnotationKind::Sticker => return super::sticker_chrome::distance(image, item, point),
+    AnnotationKind::Image => return super::image_chrome::distance(image, item, point),
     AnnotationKind::Arrow => {}
   }
   let middle = display_point(image, item.middle_x, item.middle_y);

@@ -169,6 +169,6 @@ pub fn initialize(app: &AppHandle) {
   // recording keeps no picture alive.
   if let Ok(data) = app.path().app_data_dir() {
     let recordings = crate::recording::recordings_directory(app).ok();
-    super::stickers::store::initialize(&data, recordings.as_deref());
+    super::images::store::initialize(&data, recordings.as_deref());
   }
 }

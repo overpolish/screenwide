@@ -7,8 +7,8 @@
 //! never taken: the GPU compiler sizes each pixel's registers for the deepest
 //! path it keeps, and the full canvas shader outgrows them, so every pixel of
 //! every annotated frame paid for the memory it spilled to. Measured on a
-//! recording's stickers, the canvas pass took about 6 ms a frame with every
-//! kind compiled in and under 2 ms with stickers alone. Each variant is the
+//! recording's images, the canvas pass took about 6 ms a frame with every
+//! kind compiled in and under 2 ms with images alone. Each variant is the
 //! one source with its kinds named in a constant, which the compiler folds,
 //! leaving the other kinds' code out.
 

@@ -25,6 +25,9 @@ impl SelectionOverlay {
     // percentage, drawn as the layer selection draws its own; a stroke's has
     // no radius dot.
     annotation_box: Option<([f32; 4], Option<f64>)>,
+    // The chosen image's own frame in device pixels: its four corners,
+    // clockwise from the picture's own top-left, then its radius dot.
+    annotation_frame: Option<[[f32; 2]; 5]>,
     // The element an arrow's tip has snapped to, outlined a device pixel
     // wide so the anchor it took reads as part of that element.
     annotation_bounds: Option<[f32; 4]>,
@@ -96,6 +99,13 @@ impl SelectionOverlay {
           radius_percent.unwrap_or(0.0),
           radius_percent.is_some(),
         );
+      }
+      if let Some(frame) = annotation_frame {
+        let [a, b, c, d, dot] = frame.map(|[x, y]| Point {
+          x: f64::from(x) / scale,
+          y: f64::from(y) / scale,
+        });
+        osc_gpu::add_turned_selection(&mut vertices, view, [a, b, c, d], dot, scale);
       }
       for frame in annotation_group {
         osc_gpu::add_group_frame(&mut vertices, view, logical_rect(*frame, scale), scale);

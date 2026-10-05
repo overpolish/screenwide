@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A box's chrome - a redaction's, a shape's, a spotlight's, a stroke's, a
-//! magnifier's zoom area or the box a sticker fits in: the layer selection's
-//! own box, with its eight grips and, for a redaction, a shape, a spotlight
-//! and a magnifier, its radius dot, around the chosen one. A magnifier adds
-//! the grip on its loupe's rim, and a sticker the grip that turns it. A
-//! hovered one wears the compositor's halo instead.
+//! A box's chrome - a redaction's, a shape's, a spotlight's, a stroke's or a
+//! magnifier's zoom area: the layer selection's own box, with its eight grips
+//! and, for a redaction, a shape, a spotlight and a magnifier, its radius dot,
+//! around the chosen one. A magnifier adds the grip on its loupe's rim. A
+//! hovered one wears the compositor's halo instead. An image wears a frame
+//! of its own, turned with it: `+annotation_image.m`.
 
 #import "recording_preview_surface_macos_private.h"
 #include "recording_preview_annotation_layers_macos.h"
@@ -14,27 +14,20 @@
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_kind_is_box(uint32_t kind) {
   return kind == ScreenwideAnnotationKindRedact || kind == ScreenwideAnnotationKindShape ||
          kind == ScreenwideAnnotationKindSpotlight || kind == ScreenwideAnnotationKindDraw ||
-         kind == ScreenwideAnnotationKindMagnify || kind == ScreenwideAnnotationKindSticker;
+         kind == ScreenwideAnnotationKindMagnify;
 }
 
-/// Whether a box has a radius dot: a stroke has no corners to round, and a
-/// sticker's box is not its picture's, which the panel rounds.
+/// Whether a box has a radius dot: a stroke has no corners to round.
 static BOOL annotation_box_has_radius(uint32_t kind) {
-  return kind != ScreenwideAnnotationKindDraw && kind != ScreenwideAnnotationKindSticker;
+  return kind != ScreenwideAnnotationKindDraw;
 }
 
 /// The grip a box carries beyond its eight and its radius dot, if any: a
-/// magnifier's on its loupe's rim, or a sticker's turning grip.
+/// magnifier's on its loupe's rim.
 static BOOL annotation_box_tail(NSRect image, ScreenwidePreviewAnnotation item, NSPoint *grip) {
-  if (item.kind == ScreenwideAnnotationKindMagnify) {
-    *grip = annotation_magnify_grip(image, item);
-    return YES;
-  }
-  if (item.kind == ScreenwideAnnotationKindSticker) {
-    *grip = annotation_sticker_turn_grip(image, item);
-    return YES;
-  }
-  return NO;
+  if (item.kind != ScreenwideAnnotationKindMagnify) return NO;
+  *grip = annotation_magnify_grip(image, item);
+  return YES;
 }
 
 /// The box on screen, from the normalised corners Rust published.
@@ -101,7 +94,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_redact_add_osc(
                                       radius ? list[selected].start_head : 0.0, radius);
   NSPoint grip;
   if (annotation_box_tail(image, list[selected], &grip)) {
-    // The loupe's and the turning grip wear the same disc an arrow's grips do.
+    // The loupe's grip wears the same disc an arrow's grips do.
     CGFloat extent = 4.0 + 2.0 / scale;
     CGFloat x = round(grip.x * scale) / scale;
     CGFloat y = round(grip.y * scale) / scale;
