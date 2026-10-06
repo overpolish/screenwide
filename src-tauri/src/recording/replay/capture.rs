@@ -5,7 +5,6 @@
 //! them as a recording the editor opens like any other.
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -18,7 +17,7 @@ use crate::recording::cursor::RollingCursorRecorder;
 use crate::recording::keyboard::RollingKeyboardRecorder;
 use crate::recording::monitor::RecordingMonitor;
 use crate::recording::session::{
-  capture_sources, drop_unavailable_inputs, recordings_directory, records_cursor, records_keyboard,
+  capture_sources, check_inputs, recordings_directory, records_cursor, records_keyboard,
   CaptureSources, FIRST_FRAME_TIMEOUT,
 };
 use crate::recording::{
@@ -49,16 +48,15 @@ pub(super) fn start(
   app: &AppHandle,
   options: &StartRecordingOptions,
 ) -> Result<RunningReplay, String> {
-  let mut options = options.clone();
-  let skipped = drop_unavailable_inputs(&mut options);
-  if !skipped.is_empty() {
-    eprintln!("Replay buffer started without unavailable inputs: {skipped:?}");
+  check_inputs(options)?;
+  if crate::fault::active(crate::fault::Fault::ReplayStart) {
+    return Err(crate::fault::message(crate::fault::Fault::ReplayStart));
   }
   let CaptureSources {
     camera,
     primary,
     system_audio,
-  } = capture_sources(&options);
+  } = capture_sources(options);
   let include_own_windows = crate::settings::current(app).record_screenwide_windows;
   let reporter = app.clone();
   let capture::ReplayCapture {
@@ -76,7 +74,7 @@ pub(super) fn start(
       // The buffer's own: the dock shows a recording's levels, not these.
       monitor: Arc::new(RecordingMonitor::default()),
       on_failure: Arc::new(move |reason: String| {
-        super::report(&reporter, &reason);
+        super::report(&reporter, "Replay buffer stopped", &reason);
         let app = reporter.clone();
         // The writer that failed is the one reporting; stopping joins it, so
         // that happens on a thread of its own.
@@ -85,7 +83,6 @@ pub(super) fn start(
       path: std::path::PathBuf::new(),
       primary,
       system_audio,
-      system_audio_skipped: Arc::new(AtomicBool::new(false)),
     },
     REPLAY_LENGTH,
   )?;

@@ -44,7 +44,7 @@ pub(in crate::recording) fn did_wake(app: &AppHandle) {
       }
     }
     if let Err(error) = super::start(&app, options) {
-      report(&app, &error);
+      report(&app, "Replay buffer could not turn back on", &error);
     }
   });
 }

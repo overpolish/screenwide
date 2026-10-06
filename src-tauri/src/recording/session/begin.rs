@@ -9,13 +9,9 @@ pub(in crate::recording) fn begin_capture(
   app: &AppHandle,
   options: &StartRecordingOptions,
 ) -> Result<(CaptureHandles, Receiver<Result<(), String>>), String> {
-  // A device that vanished since it was selected must not sink the whole
-  // start: drop it, record what was dropped, and tell the user below once the
-  // capture is actually running.
-  let mut options = options.clone();
-  let mut skipped_inputs = drop_unavailable_inputs(&mut options);
-  let system_audio_skipped = Arc::new(std::sync::atomic::AtomicBool::new(false));
-  let options = &options;
+  if crate::fault::active(crate::fault::Fault::RecordingStart) {
+    return Err(crate::fault::message(crate::fault::Fault::RecordingStart));
+  }
   let camera_primary = options.mode == RecordingMode::Camera;
   let CaptureSources {
     camera,
@@ -48,7 +44,7 @@ pub(in crate::recording) fn begin_capture(
   // frames the failure goes on to affect.
   let reporter = app.clone();
   let on_failure = std::sync::Arc::new(move |reason: String| {
-    emit_error(&reporter, "capture", &reason);
+    report_failure(&reporter, "capture", &reason);
   });
 
   crate::camera_preview::stop_all(app);
@@ -74,7 +70,6 @@ pub(in crate::recording) fn begin_capture(
     path: output_path.clone(),
     primary,
     system_audio,
-    system_audio_skipped: Arc::clone(&system_audio_skipped),
   })
   .inspect_err(|_| {
     // A start that never got going leaves an empty container behind.
@@ -108,37 +103,14 @@ pub(in crate::recording) fn begin_capture(
     }
   };
 
-  let system_audio_recorded =
-    options.system_audio && !system_audio_skipped.load(std::sync::atomic::Ordering::Acquire);
-  if options.system_audio && !system_audio_recorded {
-    skipped_inputs.push("systemAudio");
-    // The dock was configured before startup discovered the drop; align its
-    // layout with what is actually being recorded.
-    state(app).monitor.configure(
-      false,
-      options.microphone_id.is_some(),
-      options.camera_id.is_some(),
-    );
-  }
-  if !skipped_inputs.is_empty() {
-    // The capture is up; the dock layout already reflects the sanitized
-    // inputs via `monitor.configure` above. This tells the user why.
-    let _ = app.emit(
-      RECORDING_INPUTS_SKIPPED_EVENT,
-      RecordingInputsSkippedPayload {
-        inputs: skipped_inputs,
-      },
-    );
-  }
-
-  // The scale factor, and which inputs actually made it into the capture, are
-  // known only here. Recording them next to the movie is what lets a recovered
-  // recording be offered back as what it was rather than as a 1x guess.
+  // The scale factor is known only here. Recording it next to the movie,
+  // with the inputs, is what lets a recovered recording be offered back as
+  // what it was rather than as a 1x guess.
   meta_sidecar::write(
     &output_path,
     &meta_sidecar::RecordingMetaSidecar {
       has_microphone: options.microphone_id.is_some(),
-      has_system_audio: system_audio_recorded,
+      has_system_audio: options.system_audio,
       primary_kind: match options.mode {
         RecordingMode::Audio => crate::recording::PrimaryRecordingKind::Audio,
         RecordingMode::Camera => crate::recording::PrimaryRecordingKind::Camera,

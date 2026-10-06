@@ -136,7 +136,10 @@ fn update<T>(app: &AppHandle, change: impl FnOnce(&mut Inner) -> T) -> T {
   result
 }
 
-fn report(app: &AppHandle, message: &str) {
+/// Tells the user the buffer failed: as an event for the bar, and in an alert
+/// titled `title`, since the buffer may have been started from the tray or by
+/// a wake with nothing else on screen.
+fn report(app: &AppHandle, title: &str, message: &str) {
   eprintln!("Replay buffer: {message}");
   let _ = app.emit(
     REPLAY_ERROR_EVENT,
@@ -144,6 +147,7 @@ fn report(app: &AppHandle, message: &str) {
       message: message.to_owned(),
     },
   );
+  crate::alert::show(app, title, message);
 }
 
 /// Starts the buffer with `options`, the recording bar's settings as they are
@@ -180,7 +184,7 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
           Err(error) => {
             inner.status = ReplayStatus::Off;
             inner.options = None;
-            report(&app, &error);
+            report(&app, "Replay buffer could not turn on", &error);
             None
           }
         }
@@ -244,7 +248,7 @@ pub fn save(app: &AppHandle) -> Result<(), String> {
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
       if let Err(error) = capture::save(&app, &running, at) {
-        report(&app, &error);
+        report(&app, "Replay could not be saved", &error);
       }
       update(&app, |inner| inner.saving = false);
     });

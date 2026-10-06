@@ -61,7 +61,8 @@ export function useReplayBuffer(canStart: boolean) {
       setSnapshot(payload);
       if (payload.status !== "starting") trayStartPending = false;
     }).then(keep);
-    // There is no toast surface; the switch follows the state Rust settles on.
+    // Rust says what went wrong in an alert; this window shows itself for a
+    // failed tray start so the input warnings sit beside it.
     void listen<{ message: string }>(REPLAY_ERROR_EVENT, ({ payload }) => {
       console.error(`Replay buffer: ${payload.message}`);
       failTrayStart();

@@ -145,25 +145,30 @@ export const InputsEnabled: Story = {
   },
 };
 
+const cameraModeGone = "This camera no longer offers 1920 × 1080 at 30 fps";
+const microphoneGone = "This microphone is no longer connected";
+const applicationGone = "A selected app is no longer running";
+
+/** A warned input says why on hover, in the native tooltip window. */
 export const MissingEnabledInputs: Story = {
   args: {
-    hasCameraWarning: true,
-    hasMicrophoneWarning: true,
-    hasSystemAudioWarning: true,
+    cameraWarning: cameraModeGone,
     initialInputs: {
       camera: true,
       microphone: true,
       systemAudio: true,
     },
+    microphoneWarning: microphoneGone,
+    systemAudioWarning: applicationGone,
   },
 };
 
 /** Missing sources stay quiet until their corresponding input is enabled. */
 export const MissingDisabledInputs: Story = {
   args: {
-    hasCameraWarning: true,
-    hasMicrophoneWarning: true,
-    hasSystemAudioWarning: true,
+    cameraWarning: cameraModeGone,
+    microphoneWarning: microphoneGone,
+    systemAudioWarning: applicationGone,
   },
 };
 
@@ -193,7 +198,7 @@ export const CameraOnlyPreservesScreenCameraOff: Story = {
 
 export const CameraOnlyMissing: Story = {
   args: {
-    hasCameraWarning: true,
+    cameraWarning: "This camera is no longer connected",
     initialMode: "camera",
   },
 };
@@ -222,18 +227,18 @@ export const AudioOnlyWithSystemAudio: Story = {
 
 export const AudioOnlyWithAllSourcesMissing: Story = {
   args: {
-    hasMicrophoneWarning: true,
-    hasSystemAudioWarning: true,
     initialInputs: { microphone: true, systemAudio: true },
     initialMode: "audio",
+    microphoneWarning: microphoneGone,
+    systemAudioWarning: applicationGone,
   },
 };
 
 export const AudioOnlyWithOneValidSource: Story = {
   args: {
-    hasMicrophoneWarning: true,
     initialInputs: { microphone: true, systemAudio: true },
     initialMode: "audio",
+    microphoneWarning: microphoneGone,
   },
 };
 

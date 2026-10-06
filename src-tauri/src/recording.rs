@@ -51,9 +51,9 @@ pub use types::{
 
 pub(crate) use session::cancelled_marker;
 use session::{
-  begin_capture, discard_capture, emit_error, finalize_capture, mark_capture_cancelled,
-  pause_capture, require_status, resume_capture, store_handles, take_handles, validate_options,
-  FIRST_FRAME_TIMEOUT,
+  begin_capture, check_inputs, discard_capture, emit_error, finalize_capture,
+  mark_capture_cancelled, pause_capture, report_failure, require_status, resume_capture,
+  store_handles, take_handles, validate_options, FIRST_FRAME_TIMEOUT,
 };
 #[cfg(test)]
 use state::apply_transition;
@@ -100,7 +100,7 @@ pub fn resume(app: &AppHandle) -> Result<(), String> {
     handles.as_ref().map_or(Ok(()), resume_capture)
   };
   if let Err(error) = resumed {
-    emit_error(app, "resume", &error);
+    report_failure(app, "resume", &error);
     return Err(error);
   }
 
@@ -138,6 +138,11 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
   // task the way the window animations do.
   tauri::async_runtime::spawn_blocking(move || {
     let finalized = handles.map(|handles| finalize_capture(handles, stopped_at));
+    let finalized = if crate::fault::active(crate::fault::Fault::Stop) {
+      Some(Err(crate::fault::message(crate::fault::Fault::Stop)))
+    } else {
+      finalized
+    };
 
     restore_windows(&app);
     if let Err(error) = transition(&app, RecordingStatus::Idle, None) {
@@ -148,13 +153,13 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
       Some(Ok((info, suggested_file_stem))) => {
         if let Err(error) = crate::editor::present_recording(&app, info, suggested_file_stem) {
           crate::editor::release_recording_workspace(&app);
-          emit_error(&app, "stop", &error);
+          report_failure(&app, "stop", &error);
           show_recording_ui(&app);
         }
       }
       Some(Err(error)) => {
         crate::editor::release_recording_workspace(&app);
-        emit_error(&app, "stop", &error);
+        report_failure(&app, "stop", &error);
         show_recording_ui(&app);
       }
       None => {

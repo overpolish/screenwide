@@ -1,20 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  CameraOff,
-  Lock,
-  Mic,
-  MicOff,
-  TriangleAlert,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
-import { ReactNode, useMemo } from "react";
+import { CameraOff, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { useMemo } from "react";
 
 import { ToggleMenuButton } from "../../../components/base/button/toggle-menu-button";
 import { cn } from "../../../lib/styling";
-import { AudioMeter } from "../../audio-inputs/audio-meter";
 import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { useRecordingInputStore } from "../../recording-inputs/store";
 import { RecordingInputs } from "../../recording-inputs/types";
@@ -23,6 +14,11 @@ import { useCameraPreview } from "../../recording-inputs/use-camera-preview";
 import { RecordingMode } from "../../recording-sources/types";
 
 import { useRecordingBarInputDevices } from "./recording-bar-input-devices";
+import {
+  inputBadge,
+  inputMeter,
+  warnedToggle,
+} from "./recording-bar-input-parts";
 import {
   closeIfOpen,
   showCameraPicker,
@@ -46,34 +42,36 @@ type RecordingBarInputsProps = {
   isPreviewActive: boolean;
   mode: RecordingMode;
   onInputChange: (input: keyof RecordingInputs, selected: boolean) => void;
+  /** Why the selected camera cannot be recorded, shown as the camera's
+   * warning badge and, on hover, its tooltip. */
+  cameraWarning?: string;
   className?: string;
-  hasCameraWarning?: boolean;
-  hasMicrophoneWarning?: boolean;
-  hasSystemAudioWarning?: boolean;
   isCameraLocked?: boolean;
   isDisabled?: boolean;
   isMicrophoneLocked?: boolean;
+  microphoneWarning?: string;
   onCameraLockedPress?: () => void;
   onMicrophoneLockedPress?: () => void;
+  systemAudioWarning?: string;
 };
 
 /** The bar's inputs group: what is being captured alongside the screen, each
  * input a toggle naming the device it is set to, which opens that input's
  * picker. */
 export function RecordingBarInputs({
+  cameraWarning,
   className,
-  hasCameraWarning = false,
-  hasMicrophoneWarning = false,
-  hasSystemAudioWarning = false,
   inputs,
   isCameraLocked = false,
   isDisabled = false,
   isMicrophoneLocked = false,
   isPreviewActive,
+  microphoneWarning,
   mode,
   onCameraLockedPress,
   onInputChange,
   onMicrophoneLockedPress,
+  systemAudioWarning,
 }: RecordingBarInputsProps) {
   const {
     cameraFlippedById,
@@ -134,30 +132,6 @@ export function RecordingBarInputs({
     processIds: capturesAllSystemAudio ? undefined : selectedProcessIds,
   });
 
-  const badge = (hasWarning: boolean, isLocked: boolean): ReactNode =>
-    hasWarning ? (
-      <TriangleAlert className="text-warning" />
-    ) : isLocked ? (
-      <Lock className="text-content-fg-secondary" />
-    ) : null;
-
-  // An audio input keeps its glyph and shows its level as a thin bar under
-  // the device name, drawn disabled while the input is off so the control
-  // keeps one shape in both states. A vertical meter in the glyph's place
-  // read as a divider whenever the input was quiet.
-  const meter = (isOn: boolean, decibels: number, peak: number) => (
-    <AudioMeter
-      decibels={decibels}
-      disabled={!isOn}
-      height={3}
-      hidePeakTick
-      hideTicks
-      peak={peak}
-      radius={1.5}
-      width="100%"
-    />
-  );
-
   const cameraStageSize = cameraPreview.frameSize ?? selectedCameraMode;
 
   return (
@@ -165,7 +139,10 @@ export function RecordingBarInputs({
       <div className="flex" data-popup-panel-trigger={CAMERA_PANEL_ID}>
         <ToggleMenuButton
           aria-label="Camera"
-          badge={badge(hasCameraWarning && isCameraOn, isCameraLocked)}
+          badge={inputBadge(
+            isCameraOn ? cameraWarning : undefined,
+            isCameraLocked,
+          )}
           isMenuDisabled={isDisabled || isAudioOnly}
           isSelected={isCameraOn}
           isToggleDisabled={isDisabled || isAudioOnly}
@@ -192,6 +169,7 @@ export function RecordingBarInputs({
               selectedCameraMode,
             });
           }}
+          renderToggle={warnedToggle(isCameraOn ? cameraWarning : undefined)}
           size="capture"
           variant="ghost"
         >
@@ -223,11 +201,11 @@ export function RecordingBarInputs({
       <div className="flex" data-popup-panel-trigger={MICROPHONE_PANEL_ID}>
         <ToggleMenuButton
           aria-label="Microphone"
-          badge={badge(
-            hasMicrophoneWarning && inputs.microphone,
+          badge={inputBadge(
+            inputs.microphone ? microphoneWarning : undefined,
             isMicrophoneLocked,
           )}
-          detail={meter(
+          detail={inputMeter(
             inputs.microphone,
             microphonePreview.decibels,
             microphonePreview.peak,
@@ -252,6 +230,9 @@ export function RecordingBarInputs({
               selectedMicrophone,
             });
           }}
+          renderToggle={warnedToggle(
+            inputs.microphone ? microphoneWarning : undefined,
+          )}
           size="capture"
           variant="ghost"
         >
@@ -262,8 +243,11 @@ export function RecordingBarInputs({
       <div className="flex" data-popup-panel-trigger={SYSTEM_AUDIO_PANEL_ID}>
         <ToggleMenuButton
           aria-label="System audio"
-          badge={badge(hasSystemAudioWarning && inputs.systemAudio, false)}
-          detail={meter(
+          badge={inputBadge(
+            inputs.systemAudio ? systemAudioWarning : undefined,
+            false,
+          )}
+          detail={inputMeter(
             inputs.systemAudio,
             systemAudioPreview.decibels,
             systemAudioPreview.peak,
@@ -286,6 +270,9 @@ export function RecordingBarInputs({
               selectedSystemAudio,
             });
           }}
+          renderToggle={warnedToggle(
+            inputs.systemAudio ? systemAudioWarning : undefined,
+          )}
           size="capture"
           variant="ghost"
         >

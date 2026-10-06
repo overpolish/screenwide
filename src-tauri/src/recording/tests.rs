@@ -308,57 +308,23 @@ fn screen_options() -> StartRecordingOptions {
 }
 
 #[test]
-fn vanished_secondary_inputs_are_dropped_not_fatal() {
+fn a_vanished_microphone_refuses_the_start() {
   let mut options = screen_options();
   options.microphone_id = Some("screenwide-test-missing-microphone".to_owned());
+  assert!(session::check_inputs(&options).is_err());
+}
+
+#[test]
+fn a_vanished_camera_refuses_the_start() {
+  let mut options = screen_options();
   options.camera_id = Some("screenwide-test-missing-camera".to_owned());
   options.camera_width = Some(1_920);
   options.camera_height = Some(1_080);
   options.camera_fps = Some(30);
-  options.camera_flipped = true;
-  let skipped = session::drop_unavailable_inputs(&mut options);
-  assert_eq!(skipped, ["microphone", "camera"]);
-  assert_eq!(options.microphone_id, None);
-  assert_eq!(options.camera_id, None);
-  assert_eq!(options.camera_width, None);
-  assert_eq!(options.camera_height, None);
-  assert_eq!(options.camera_fps, None);
-  assert!(!options.camera_flipped);
+  assert!(session::check_inputs(&options).is_err());
 }
 
 #[test]
-fn a_camera_recording_keeps_its_vanished_camera_so_the_start_fails_loudly() {
-  let mut options = screen_options();
-  options.mode = RecordingMode::Camera;
-  options.monitor_id = None;
-  options.camera_id = Some("screenwide-test-missing-camera".to_owned());
-  options.camera_width = Some(1_920);
-  options.camera_height = Some(1_080);
-  options.camera_fps = Some(30);
-  let skipped = session::drop_unavailable_inputs(&mut options);
-  assert!(skipped.is_empty());
-  assert!(options.camera_id.is_some());
-}
-
-#[test]
-fn an_audio_recording_keeps_its_sole_vanished_microphone() {
-  let mut options = screen_options();
-  options.mode = RecordingMode::Audio;
-  options.monitor_id = None;
-  options.microphone_id = Some("screenwide-test-missing-microphone".to_owned());
-  let skipped = session::drop_unavailable_inputs(&mut options);
-  assert!(skipped.is_empty());
-  assert!(options.microphone_id.is_some());
-}
-
-#[test]
-fn an_audio_recording_with_system_audio_drops_a_vanished_microphone() {
-  let mut options = screen_options();
-  options.mode = RecordingMode::Audio;
-  options.monitor_id = None;
-  options.system_audio = true;
-  options.microphone_id = Some("screenwide-test-missing-microphone".to_owned());
-  let skipped = session::drop_unavailable_inputs(&mut options);
-  assert_eq!(skipped, ["microphone"]);
-  assert_eq!(options.microphone_id, None);
+fn a_start_without_device_inputs_needs_no_devices() {
+  assert_eq!(session::check_inputs(&screen_options()), Ok(()));
 }

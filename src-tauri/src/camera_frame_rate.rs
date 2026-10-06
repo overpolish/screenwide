@@ -28,15 +28,15 @@ pub(crate) fn resolve_device(
     .ok_or_else(|| "The selected camera is no longer available".to_owned())
 }
 
-/// Selects the format that matches `width`/`height` and brackets `fps`, then
-/// pins the active min and max frame duration to `1/fps`.
-pub(crate) fn pin_frame_rate(
-  device: &mut av::CaptureDevice,
+/// The format that matches `width`/`height` and brackets `fps`: the one a
+/// recording opens, and the test of whether a selected mode still exists.
+pub(crate) fn find_format(
+  device: &av::CaptureDevice,
   width: u32,
   height: u32,
   fps: u32,
-) -> Result<(), String> {
-  let format = device
+) -> Option<arc::R<av::CaptureDeviceFormat>> {
+  device
     .formats()
     .iter()
     .find(|format| {
@@ -49,6 +49,17 @@ pub(crate) fn pin_frame_rate(
           .any(|range| range.min_frame_rate() <= fps as f64 && range.max_frame_rate() >= fps as f64)
     })
     .map(|format| format.retained())
+}
+
+/// Selects [`find_format`]'s format, then pins the active min and max frame
+/// duration to `1/fps`.
+pub(crate) fn pin_frame_rate(
+  device: &mut av::CaptureDevice,
+  width: u32,
+  height: u32,
+  fps: u32,
+) -> Result<(), String> {
+  let format = find_format(device, width, height, fps)
     .ok_or_else(|| "The selected camera format is no longer available".to_owned())?;
   let frame_duration = cm::Time::new(1, fps as cm::TimeScale);
   let mut lock = device.config_lock().map_err(|error| error.to_string())?;

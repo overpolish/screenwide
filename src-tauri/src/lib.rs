@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
+mod alert;
 mod annotate;
 mod app_windows;
 mod audio_preview;
@@ -19,6 +20,7 @@ mod confirm_sheet;
 mod cursor_scrub;
 mod desktop_capture;
 mod editor;
+mod fault;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod glide;
 mod gpu;
@@ -52,6 +54,7 @@ pub fn run() {
     .manage(annotate::AnnotateState::default())
     .manage(audio_preview::AudioPreviewState::default())
     .manage(camera_preview::CameraPreviewState::default())
+    .manage(alert::AlertState::default())
     .manage(confirm_sheet::ConfirmSheetState::default())
     .manage(editor::EditorState::default())
     .manage(editor::recording_preview_player::RecordingPreviewPlayerState::default())
@@ -74,6 +77,9 @@ pub fn run() {
       cursor_scrub::begin_cursor_scrub,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       cursor_scrub::end_cursor_scrub,
+      alert::dismiss_alert,
+      alert::fit_alert,
+      alert::get_alert,
       confirm_sheet::fit_confirm_sheet,
       confirm_sheet::get_confirm_sheet,
       confirm_sheet::resolve_confirm_sheet,
@@ -160,6 +166,7 @@ pub fn run() {
       recording::commands::stop_recording_monitor,
       recording::commands::stop_recording,
       recording::commands::stop_replay_buffer,
+      recording_inputs::camera_mode::get_camera_mode_status,
       recording_inputs::list_cameras,
       recording_inputs::list_microphones,
       recording_sources::list_applications,

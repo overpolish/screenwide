@@ -25,6 +25,7 @@
     "dev": "pnpm ffmpeg:prepare && pnpm dxc:prepare && vite",
     "docs:dev": "python3 -m http.server 4173 --directory docs",
     "dev:permissions": "node scripts/dev-permissions-preview.mjs",
+    "dev:recording-failures": "node scripts/dev-recording-failures-preview.mjs",
     "dev:screenshot-failures": "node scripts/dev-screenshot-failures-preview.mjs",
     "dev:storybook-native": "node scripts/dev-storybook-native.mjs",
     "dev:updater": "node scripts/dev-updater-preview.mjs",

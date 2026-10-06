@@ -19,6 +19,8 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   crate::shortcuts::diagnostics::initialize(app.handle());
   #[cfg(target_os = "windows")]
   crate::tooltip_window::initialize(app.handle())?;
+  #[cfg(target_os = "windows")]
+  crate::alert::initialize(app.handle())?;
   // Before any overlay can be shown: the watch has to be in place by the time
   // another application first takes the foreground over one.
   #[cfg(target_os = "windows")]

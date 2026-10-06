@@ -23,16 +23,14 @@ use super::{
 };
 
 mod cancellation;
+mod inputs;
 mod sidecars;
 
 pub(crate) use cancellation::cancelled_marker;
 pub(super) use cancellation::{discard_capture, mark_capture_cancelled};
+pub(super) use inputs::check_inputs;
 use sidecars::{RecordingSidecars, SidecarPlan};
 const RECORDING_ERROR_EVENT: &str = "recording://error";
-/// Emitted when a recording starts without one or more selected inputs whose
-/// devices were no longer available; the bar tells the user instead of the
-/// start failing outright.
-const RECORDING_INPUTS_SKIPPED_EVENT: &str = "recording://inputs-skipped";
 /// The folder working files are written to, under the app's data directory.
 const RECORDINGS_DIRECTORY: &str = "Recordings";
 /// How long a start may go without producing a frame before it is called a
@@ -70,42 +68,18 @@ pub(super) fn emit_error(app: &AppHandle, phase: &'static str, message: &str) {
   );
 }
 
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct RecordingInputsSkippedPayload {
-  inputs: Vec<&'static str>,
-}
-
-/// Drops selected secondary inputs whose devices no longer exist, so a stale
-/// selection degrades the recording instead of failing the start. The primary
-/// source is never dropped: a camera recording without its camera must still
-/// fail loudly, and an audio recording keeps its sole input so the resolve
-/// error names what actually went wrong.
-pub(super) fn drop_unavailable_inputs(options: &mut StartRecordingOptions) -> Vec<&'static str> {
-  let mut skipped = Vec::new();
-  if let Some(microphone_id) = options.microphone_id.clone() {
-    let sole_audio_source = options.mode == RecordingMode::Audio && !options.system_audio;
-    if !sole_audio_source
-      && crate::recording_inputs::resolve_microphone(Some(&microphone_id)).is_err()
-    {
-      options.microphone_id = None;
-      skipped.push("microphone");
-    }
-  }
-  if options.mode != RecordingMode::Camera {
-    if let Some(camera_id) = options.camera_id.clone() {
-      if !crate::recording_inputs::camera_is_available(&camera_id) {
-        options.camera_id = None;
-        options.camera_width = None;
-        options.camera_height = None;
-        options.camera_fps = None;
-        options.camera_flipped = false;
-        options.camera_pal = false;
-        skipped.push("camera");
-      }
-    }
-  }
-  skipped
+/// A failure the user has to be told about: emitted as `emit_error` does, and
+/// said in an alert. Rejections by the state machine, such as a second Stop
+/// or a Pause while idle, go through `emit_error` alone, since nothing failed.
+pub(super) fn report_failure(app: &AppHandle, phase: &'static str, message: &str) {
+  emit_error(app, phase, message);
+  let title = match phase {
+    "start" => "Recording could not start",
+    "capture" => "Recording ran into a problem",
+    "resume" => "Recording could not resume",
+    _ => "Recording could not finish",
+  };
+  crate::alert::show(app, title, message);
 }
 
 pub(super) fn require_status(

@@ -48,6 +48,14 @@ The platform part only needs to provide:
 
 The platform is picked at compile time. It is not a plugin system.
 
+### Inputs and failures
+
+A start never goes ahead without an input the user chose. Before the countdown, `session/inputs.rs` checks that the selected microphone still exists and that the selected camera still offers the exact size and rate asked for, and fails the start if either is gone; the replay buffer runs the same check. The camera answer comes from `recording_inputs/camera_mode.rs`, which uses the lookups the camera start itself makes (`camera_format::resolve_exact_camera_format` on Windows, `camera_frame_rate::find_format` on macOS), and the recording bar polls the same reader through `get_camera_mode_status`, so the warning on the camera control and the start cannot disagree. A warned control explains itself in the native tooltip window, since the bar's own window is too short for an in-page tooltip.
+
+Failures the user has to hear about go through `session::report_failure` and `replay::report`, which emit the usual error events and put the message in the app-drawn alert (`src-tauri/src/alert.rs`). It is one window, reused: it belongs to no other window, centres on the display under the pointer and stays out of every capture. Alerts that arrive while one is showing wait their turn, and one identical to an alert already showing or waiting is dropped, so retrying a start that keeps failing for the same reason leaves a single alert. Rejections by the state machine, such as a second Stop, only emit the event.
+
+Debug builds can fake each failure with `SCREENWIDE_FAULT` (`fault.rs`): `pnpm dev:recording-failures camera-mode,stop` runs the app with the camera mode reading as gone and stopping failing. The names are `camera-mode`, `microphone`, `recording-start`, `capture`, `stop` and `replay-start`. Release builds compile it out.
+
 ## macOS
 
 ```mermaid

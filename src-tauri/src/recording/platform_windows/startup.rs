@@ -23,7 +23,6 @@ pub(super) fn begin(
     path,
     primary,
     system_audio,
-    system_audio_skipped: _,
   } = config;
   let replay_horizon_ns = replay.map(replay::horizon_ns);
   let keyframes = replay::KeyframeLink::new();

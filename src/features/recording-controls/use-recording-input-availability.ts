@@ -4,12 +4,14 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  listCameras,
+  CameraModeStatus,
+  getCameraModeStatus,
   listMicrophones,
   listSystemAudioSources,
 } from "../recording-inputs/devices-api";
 import {
   CameraDevice,
+  CameraResolution,
   InputDevice,
   SystemAudioSource,
 } from "../recording-inputs/types";
@@ -23,15 +25,15 @@ const selectedDeviceIsDetected = (
   detected.some((device) => device.id === selected.id) ||
   (selected.id === "default" && detected.some((device) => device.isDefault));
 
-type DetectionResult = {
-  detected: boolean;
+type DetectionResult<T> = {
   key: string;
+  value: T;
 };
 
 type DetectionState = {
-  camera: DetectionResult | null;
-  microphone: DetectionResult | null;
-  systemAudio: DetectionResult | null;
+  camera: DetectionResult<CameraModeStatus> | null;
+  microphone: DetectionResult<boolean> | null;
+  systemAudio: DetectionResult<boolean> | null;
 };
 
 const initialDetection: DetectionState = {
@@ -40,27 +42,46 @@ const initialDetection: DetectionState = {
   systemAudio: null,
 };
 
+/** What a warned input's tooltip says. A missing input fails the start, so
+ * each one is a reason the user can act on. */
+const cameraWarning = (
+  status: CameraModeStatus | undefined,
+  mode: CameraResolution | null,
+) => {
+  if (status === "missing") return "This camera is no longer connected";
+  if (status === "modeUnavailable" && mode) {
+    return `This camera no longer offers ${String(mode.width)} × ${String(mode.height)} at ${String(mode.fps)} fps`;
+  }
+  return undefined;
+};
+
+/**
+ * Whether each selected input could still be recorded, checked while the bar
+ * is in use. An input that could not is returned as the warning its control
+ * shows; the camera is asked about its exact mode, by the same lookups the
+ * start makes, so the warning and the start never disagree.
+ */
 export function useRecordingInputAvailability({
   active,
   cameraEnabled,
-  cameraFps,
   cameraPermissionGranted,
   microphoneEnabled,
   microphonePermissionGranted,
   screenRecordingPermissionGranted,
   selectedCamera,
+  selectedCameraMode,
   selectedMicrophone,
   selectedSystemAudio,
   systemAudioEnabled,
 }: {
   active: boolean;
   cameraEnabled: boolean;
-  cameraFps: number[];
   cameraPermissionGranted: boolean;
   microphoneEnabled: boolean;
   microphonePermissionGranted: boolean;
   screenRecordingPermissionGranted: boolean;
   selectedCamera: CameraDevice | null;
+  selectedCameraMode: CameraResolution | null;
   selectedMicrophone: InputDevice | null;
   selectedSystemAudio: SystemAudioSource[];
   systemAudioEnabled: boolean;
@@ -69,18 +90,12 @@ export function useRecordingInputAvailability({
     () => selectedSystemAudio.filter((source) => source.kind === "application"),
     [selectedSystemAudio],
   );
-  // The caller rebuilds the preference list on every render, so the polling
-  // effect keys off its text and re-derives the array from that instead.
-  const cameraFpsKey = cameraFps.join("/");
-  const preferredFps = useMemo(
-    () => cameraFpsKey.split("/").map(Number),
-    [cameraFpsKey],
-  );
   const checkCamera =
     active &&
     cameraEnabled &&
     cameraPermissionGranted &&
-    selectedCamera !== null;
+    selectedCamera !== null &&
+    selectedCameraMode !== null;
   const checkMicrophone =
     active &&
     microphoneEnabled &&
@@ -91,7 +106,9 @@ export function useRecordingInputAvailability({
     systemAudioEnabled &&
     screenRecordingPermissionGranted &&
     selectedApplications.length > 0;
-  const cameraKey = checkCamera ? `${selectedCamera.id}:${cameraFpsKey}` : null;
+  const cameraKey = checkCamera
+    ? `${selectedCamera.id}:${selectedCameraMode.id}`
+    : null;
   const microphoneKey = checkMicrophone ? selectedMicrophone.id : null;
   const systemAudioKey = checkSystemAudio
     ? selectedApplications
@@ -108,8 +125,12 @@ export function useRecordingInputAvailability({
     const refresh = async () => {
       if (refreshing) return;
       refreshing = true;
-      const [cameras, microphones, applications] = await Promise.all([
-        checkCamera ? listCameras(preferredFps).catch(() => null) : null,
+      const [camera, microphones, applications] = await Promise.all([
+        checkCamera
+          ? getCameraModeStatus(selectedCamera.id, selectedCameraMode).catch(
+              () => null,
+            )
+          : null,
         checkMicrophone ? listMicrophones().catch(() => null) : null,
         checkSystemAudio ? listSystemAudioSources().catch(() => null) : null,
       ]);
@@ -117,30 +138,24 @@ export function useRecordingInputAvailability({
       if (disposed) return;
 
       setDetected({
-        camera:
-          cameras && selectedCamera && cameraKey
-            ? {
-                detected: selectedDeviceIsDetected(selectedCamera, cameras),
-                key: cameraKey,
-              }
-            : null,
+        camera: camera && cameraKey ? { key: cameraKey, value: camera } : null,
         microphone:
           microphones && selectedMicrophone && microphoneKey
             ? {
-                detected: selectedDeviceIsDetected(
+                key: microphoneKey,
+                value: selectedDeviceIsDetected(
                   selectedMicrophone,
                   microphones,
                 ),
-                key: microphoneKey,
               }
             : null,
         systemAudio:
           applications && systemAudioKey
             ? {
-                detected: selectedApplications.every((selected) =>
+                key: systemAudioKey,
+                value: selectedApplications.every((selected) =>
                   applications.some((source) => source.id === selected.id),
                 ),
-                key: systemAudioKey,
               }
             : null,
       });
@@ -166,21 +181,25 @@ export function useRecordingInputAvailability({
     checkSystemAudio,
     cameraKey,
     microphoneKey,
-    preferredFps,
     selectedApplications,
     selectedCamera,
+    selectedCameraMode,
     selectedMicrophone,
     systemAudioKey,
   ]);
 
+  const camera =
+    detected.camera?.key === cameraKey ? detected.camera.value : undefined;
   return {
-    cameraMissing:
-      detected.camera?.key === cameraKey && !detected.camera.detected,
-    microphoneMissing:
-      detected.microphone?.key === microphoneKey &&
-      !detected.microphone.detected,
-    systemAudioMissing:
+    cameraWarning: cameraWarning(camera, selectedCameraMode),
+    microphoneWarning:
+      detected.microphone?.key === microphoneKey && !detected.microphone.value
+        ? "This microphone is no longer connected"
+        : undefined,
+    systemAudioWarning:
       detected.systemAudio?.key === systemAudioKey &&
-      !detected.systemAudio.detected,
+      !detected.systemAudio.value
+        ? "A selected app is no longer running"
+        : undefined,
   };
 }

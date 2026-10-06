@@ -18,6 +18,8 @@ pub enum WindowLabel {
   ToolPanelScreenshot,
   /// The shared confirmation sheet, a child of whichever window asked.
   ConfirmSheet,
+  /// The shared alert that reports a failure, nobody's child.
+  Alert,
   /// The shared tooltip, a floating panel that describes whatever is hovered.
   Tooltip,
   #[cfg(target_os = "macos")]
@@ -48,6 +50,7 @@ impl WindowLabel {
     Self::ToolPanelRecording,
     Self::ToolPanelScreenshot,
     Self::ConfirmSheet,
+    Self::Alert,
     Self::Tooltip,
     #[cfg(target_os = "macos")]
     Self::Permissions,
@@ -75,6 +78,7 @@ impl WindowLabel {
       Self::ToolPanelRecording => "tool-panel-recording",
       Self::ToolPanelScreenshot => "tool-panel-screenshot",
       Self::ConfirmSheet => "confirm-sheet",
+      Self::Alert => "alert",
       Self::Tooltip => "tooltip",
       #[cfg(target_os = "macos")]
       Self::Permissions => "permissions",

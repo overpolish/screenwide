@@ -24,11 +24,12 @@ import { RecordingBarInputs } from "./recording-bar-inputs";
 import { RecordingTypePicker } from "./recording-type-picker";
 
 type RecordingBarProps = {
-  hasCameraWarning?: boolean;
-  hasMicrophoneWarning?: boolean;
+  /** Why the selected camera cannot be recorded, when it cannot; shown on
+   * the camera control and as its tooltip. The microphone and system audio
+   * warnings say the same of theirs. */
+  cameraWarning?: string;
   hasSelectedMonitor?: boolean;
   hasSelectedWindow?: boolean;
-  hasSystemAudioWarning?: boolean;
   initialInputs?: Partial<RecordingInputs>;
   initialMode?: RecordingMode;
   inputs?: RecordingInputs;
@@ -39,6 +40,7 @@ type RecordingBarProps = {
    * streams, and a dismissed bar stays mounted. */
   isPreviewActive?: boolean;
   isScreenshotLocked?: boolean;
+  microphoneWarning?: string;
   mode?: RecordingMode;
   /** A still of each attached display by its id, drawn as the Screen
    * segment's icon for whichever display is chosen. */
@@ -74,6 +76,7 @@ type RecordingBarProps = {
   selectedMonitor?: MonitorDetails | null;
   selectedWindow?: WindowDetails | null;
   status?: RecordingStatus;
+  systemAudioWarning?: string;
 };
 
 const defaultInputs: RecordingInputs = {
@@ -89,11 +92,9 @@ const defaultInputs: RecordingInputs = {
  */
 export function RecordingBar(props: RecordingBarProps) {
   const {
-    hasCameraWarning = false,
-    hasMicrophoneWarning = false,
+    cameraWarning,
     hasSelectedMonitor = false,
     hasSelectedWindow = false,
-    hasSystemAudioWarning = false,
     initialInputs,
     initialMode = "screen",
     inputs: controlledInputs,
@@ -102,6 +103,7 @@ export function RecordingBar(props: RecordingBarProps) {
     isMicrophoneLocked,
     isPreviewActive = true,
     isScreenshotLocked,
+    microphoneWarning,
     mode: controlledMode,
     monitorThumbnails = {},
     onCameraLockedPress,
@@ -128,6 +130,7 @@ export function RecordingBar(props: RecordingBarProps) {
     selectedMonitor = null,
     selectedWindow = null,
     status = "idle",
+    systemAudioWarning,
   } = props;
   const [uncontrolledInputs, setUncontrolledInputs] = useState<RecordingInputs>(
     { ...defaultInputs, ...initialInputs },
@@ -161,11 +164,11 @@ export function RecordingBar(props: RecordingBarProps) {
   const canRecordIgnoringEditor =
     status === "idle" &&
     canStartRecording({
-      hasCameraWarning,
-      hasMicrophoneWarning,
+      hasCameraWarning: cameraWarning !== undefined,
+      hasMicrophoneWarning: microphoneWarning !== undefined,
       hasSelectedMonitor,
       hasSelectedWindow,
-      hasSystemAudioWarning,
+      hasSystemAudioWarning: systemAudioWarning !== undefined,
       inputs,
       isCameraLocked: Boolean(isCameraLocked),
       isMicrophoneLocked: Boolean(isMicrophoneLocked),
@@ -230,18 +233,18 @@ export function RecordingBar(props: RecordingBarProps) {
       />
 
       <RecordingBarInputs
-        hasCameraWarning={hasCameraWarning}
-        hasMicrophoneWarning={hasMicrophoneWarning}
-        hasSystemAudioWarning={hasSystemAudioWarning}
+        cameraWarning={cameraWarning}
         inputs={inputs}
         isCameraLocked={Boolean(isCameraLocked)}
         isDisabled={status !== "idle" || Boolean(isLocked)}
         isMicrophoneLocked={Boolean(isMicrophoneLocked)}
         isPreviewActive={isPreviewActive}
+        microphoneWarning={microphoneWarning}
         mode={mode}
         onCameraLockedPress={onCameraLockedPress}
         onInputChange={changeInput}
         onMicrophoneLockedPress={onMicrophoneLockedPress}
+        systemAudioWarning={systemAudioWarning}
       />
 
       <RecordingBarCaptureActions

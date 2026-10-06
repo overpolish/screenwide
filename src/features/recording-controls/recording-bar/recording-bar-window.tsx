@@ -25,7 +25,6 @@ import {
 } from "../../permissions/store";
 import { PermissionKind, PermissionStatus } from "../../permissions/types";
 import { useRecordingInputStore } from "../../recording-inputs/store";
-import { cameraRequestFps } from "../../recording-inputs/types";
 import {
   collapseRecordingSourceSelector,
   expandRecordingSourceSelector,
@@ -64,19 +63,12 @@ const RECORDING_DISMISS_REQUESTED_EVENT = "recording-ui://dismiss-requested";
 const RULER_DISMISS_REQUESTED_EVENT = "ruler://dismiss-requested";
 const TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT =
   "text-recognition://dismiss-requested";
-/** A recording started without selected inputs whose devices had vanished. */
-const RECORDING_INPUTS_SKIPPED_EVENT = "recording://inputs-skipped";
 const SOURCE_AVAILABILITY_INTERVAL_MS = 1_500;
 
 const dismissRecordingUi = () => {
   void hideRecordingUi();
 };
 
-const SKIPPED_INPUT_LABELS: Record<string, string> = {
-  camera: "camera",
-  microphone: "microphone",
-  systemAudio: "system audio",
-};
 /**
  * Clears a window that can no longer be recorded while window mode is active.
  * `refreshIcon` repoints the remembered app icon at a freshly extracted file:
@@ -222,10 +214,9 @@ export function RecordingBarWindow() {
   } = useRecordingSourceStore((state) => state);
   const isScreenMode = recordingMode === "screen";
   const {
-    cameraPalById,
-    fps,
     inputs,
     selectedCamera,
+    selectedCameraMode,
     selectedMicrophone,
     selectedSystemAudio,
     setInput,
@@ -239,26 +230,25 @@ export function RecordingBarWindow() {
       screenshotFeedback.state !== "pending" &&
       status === "idle",
     cameraEnabled: inputs.camera || recordingMode === "camera",
-    cameraFps: cameraRequestFps(
-      fps,
-      selectedCamera ? (cameraPalById[selectedCamera.id] ?? false) : false,
-    ),
     cameraPermissionGranted: hydrated && permissions.camera.granted,
     microphoneEnabled: inputs.microphone,
     microphonePermissionGranted: hydrated && permissions.microphone.granted,
     screenRecordingPermissionGranted:
       hydrated && permissions.screenRecording.granted,
     selectedCamera,
+    selectedCameraMode,
     selectedMicrophone,
     selectedSystemAudio,
     systemAudioEnabled: inputs.systemAudio,
   });
+  const { cameraWarning, microphoneWarning, systemAudioWarning } =
+    inputAvailability;
   const readiness: RecordingReadiness = {
-    hasCameraWarning: inputAvailability.cameraMissing,
-    hasMicrophoneWarning: inputAvailability.microphoneMissing,
+    hasCameraWarning: cameraWarning !== undefined,
+    hasMicrophoneWarning: microphoneWarning !== undefined,
     hasSelectedMonitor: selectedMonitor !== null,
     hasSelectedWindow: selectedWindow !== null,
-    hasSystemAudioWarning: inputAvailability.systemAudioMissing,
+    hasSystemAudioWarning: systemAudioWarning !== undefined,
     inputs,
     isCameraLocked: !hydrated || !canRecordCamera,
     isMicrophoneLocked: !hydrated || !canRecordMicrophone,
@@ -437,8 +427,8 @@ export function RecordingBarWindow() {
     let unlisten: UnlistenFn | undefined;
     let disposed = false;
 
-    // There is no toast surface, so a failure is logged and the UI simply
-    // follows the state Rust reverted to.
+    // Rust puts failures the user has to know about in an alert; the bar
+    // follows the state Rust reverted to and logs the detail.
     void listen<RecordingError>(RECORDING_ERROR_EVENT, ({ payload }) => {
       console.error(`Recording ${payload.phase} failed: ${payload.message}`);
     }).then((listener) => {
@@ -449,41 +439,17 @@ export function RecordingBarWindow() {
       }
     });
 
-    let unlistenSkipped: (() => void) | undefined;
-    // The dock already reflects the sanitized inputs (their meters are gone);
-    // this names what was dropped and why the recording still started.
-    void listen<{ inputs: string[] }>(
-      RECORDING_INPUTS_SKIPPED_EVENT,
-      ({ payload }) => {
-        const labels = payload.inputs
-          .map((input) => SKIPPED_INPUT_LABELS[input] ?? input)
-          .join(", ");
-        console.warn(
-          `Recording started without ${labels}: the selected device is no longer available.`,
-        );
-      },
-    ).then((listener) => {
-      if (disposed) {
-        listener();
-      } else {
-        unlistenSkipped = listener;
-      }
-    });
-
     return () => {
       disposed = true;
       unlisten?.();
-      unlistenSkipped?.();
     };
   }, []);
 
   return (
     <RecordingBar
-      hasCameraWarning={readiness.hasCameraWarning}
-      hasMicrophoneWarning={readiness.hasMicrophoneWarning}
+      cameraWarning={cameraWarning}
       hasSelectedMonitor={readiness.hasSelectedMonitor}
       hasSelectedWindow={readiness.hasSelectedWindow}
-      hasSystemAudioWarning={readiness.hasSystemAudioWarning}
       initialMode={recordingMode}
       inputs={inputs}
       isCameraLocked={readiness.isCameraLocked}
@@ -493,6 +459,7 @@ export function RecordingBarWindow() {
       // bar goes away rather than streaming on behind it.
       isPreviewActive={isRecordingUiVisible && status === "idle"}
       isScreenshotLocked={hydrated && !canScreenshot}
+      microphoneWarning={microphoneWarning}
       mode={recordingMode}
       monitorThumbnails={monitorThumbnails}
       onCameraLockedPress={() => {
@@ -571,6 +538,7 @@ export function RecordingBarWindow() {
       selectedMonitor={selectedMonitor}
       selectedWindow={selectedWindow}
       status={status}
+      systemAudioWarning={systemAudioWarning}
     />
   );
 }

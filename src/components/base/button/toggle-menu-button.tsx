@@ -38,6 +38,11 @@ type ToggleMenuButtonProps = {
   isToggleDisabled?: boolean;
   onChange?: (isSelected: boolean) => void;
   ref?: Ref<HTMLButtonElement>;
+  /** Wraps the leading toggle, which carries the badge. It is how a feature
+   * hangs a tooltip drawn in a window of its own off the toggle, where a
+   * small window would clip the in-page `tooltip`; takes its place when
+   * both are given. */
+  renderToggle?: (toggle: ReactNode) => ReactNode;
   /** `capture` is the taller control the recording bar carries: the regular
    * glyph and text at the bar's 40px control height. */
   size?: "regular" | "capture";
@@ -104,6 +109,7 @@ export function ToggleMenuButton({
   onChange,
   onMenuPress,
   ref,
+  renderToggle,
   size = "regular",
   tooltip,
   variant = "filled",
@@ -189,7 +195,9 @@ export function ToggleMenuButton({
       data-toggle-menu-button=""
     >
       <div className="relative flex rounded-l-[inherit]">
-        {tooltip ? (
+        {renderToggle ? (
+          renderToggle(toggle)
+        ) : tooltip ? (
           <TooltipTrigger delay={400}>
             {toggle}
             <Tooltip>{tooltip}</Tooltip>

@@ -5,7 +5,7 @@ use super::*;
 
 /// Unwinds a start that could not be completed, from wherever it failed.
 pub(super) fn abandon_start(app: &AppHandle, error: &str) {
-  emit_error(app, "start", error);
+  report_failure(app, "start", error);
   state(app).cancel();
   discard_capture(take_handles(app));
   restore_windows(app);
@@ -45,6 +45,14 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
   // macOS-only in this crate, so this is a blocking task the way finalize is -
   // and either way it must not run on the thread that draws.
   tauri::async_runtime::spawn_blocking(move || {
+    // Before the countdown: a missing input fails the start now rather than
+    // after the user has watched the numbers run down.
+    if let Err(error) = check_inputs(&options) {
+      if state(&app).is_current(generation) {
+        abandon_start(&app, &error);
+      }
+      return;
+    }
     for seconds in (1..=countdown_seconds).rev() {
       if !state(&app).is_current(generation) {
         return;
@@ -101,6 +109,13 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
         }
         if let Err(error) = app_windows::show_recording_dock(&app) {
           emit_error(&app, "start", &error.to_string());
+        }
+        if crate::fault::active(crate::fault::Fault::Capture) {
+          report_failure(
+            &app,
+            "capture",
+            &crate::fault::message(crate::fault::Fault::Capture),
+          );
         }
       }
       Err(error) => abandon_start(&app, &error),

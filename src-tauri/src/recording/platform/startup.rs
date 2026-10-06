@@ -40,7 +40,6 @@ pub(super) async fn begin(
     path,
     primary,
     system_audio,
-    system_audio_skipped,
   } = config;
   if matches!(primary, PrimaryCaptureSource::Audio) {
     return audio_only::begin(microphone_id, monitor, on_failure, path, system_audio, sink).await;
@@ -176,7 +175,9 @@ pub(super) async fn begin(
   let queue = dispatch::Queue::serial_with_ar_pool();
   let (watch, stream_reports) = stream_recovery::watch();
   let mut streams = Vec::new();
-  let system_audio_streams = match audio_stream::create(
+  // Selected applications that have all quit fail the start here, rather
+  // than leaving the recording without the audio the user chose.
+  let system_audio_streams = audio_stream::create(
     &system_audio,
     content.as_deref(),
     output.as_ref(),
@@ -185,19 +186,7 @@ pub(super) async fn begin(
     primary_video
       .as_ref()
       .is_some_and(ResolvedVideo::can_capture_all_audio),
-  ) {
-    Ok(streams) => streams,
-    // Every selected application quit between selection and start. The
-    // screen/camera recording is still worth having without its system audio;
-    // the flag lets the session tell the user it started without it. (The
-    // audio-only mode never reaches here - it returns via `audio_only::begin`
-    // above - so a recording that would have nothing left still fails.)
-    Err(error) if error.contains("selected applications") => {
-      system_audio_skipped.store(true, std::sync::atomic::Ordering::Release);
-      audio_stream::SystemAudioStreams::default()
-    }
-    Err(error) => return Err(error),
-  };
+  )?;
   let video_captures_all_audio = system_audio_streams.video_captures_all;
   let video_stream = match primary_video.as_ref() {
     Some(ResolvedVideo::Direct(video)) => Some(screen_stream::create_video(VideoStreamRequest {

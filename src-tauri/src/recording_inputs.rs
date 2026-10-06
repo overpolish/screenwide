@@ -4,6 +4,8 @@
 #[cfg(test)]
 mod tests;
 
+pub(crate) mod camera_mode;
+pub(crate) use camera_mode::require_camera_mode;
 mod mode_preferences;
 #[cfg(any(test, target_os = "macos"))]
 use mode_preferences::choose_fps;
@@ -88,16 +90,6 @@ fn enumerate_microphones() -> Result<Vec<InputDeviceDetails>, String> {
 
 fn is_user_selectable_microphone(description: &DeviceDescription) -> bool {
   description.interface_type() != InterfaceType::Aggregate
-}
-
-/// Whether the camera the user selected earlier still enumerates. Used at
-/// recording start to drop a vanished overlay camera instead of failing the
-/// whole recording; enumeration errors count as unavailable so the recording
-/// still starts without it.
-pub(crate) fn camera_is_available(device_id: &str) -> bool {
-  query(ApiBackend::Auto)
-    .map(|cameras| cameras.iter().any(|camera| camera_id(camera) == device_id))
-    .unwrap_or(false)
 }
 
 pub(crate) fn resolve_microphone(
