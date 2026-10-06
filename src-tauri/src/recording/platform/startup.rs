@@ -174,12 +174,14 @@ pub(super) async fn begin(
     })
   });
   let queue = dispatch::Queue::serial_with_ar_pool();
+  let (watch, stream_reports) = stream_recovery::watch();
   let mut streams = Vec::new();
   let system_audio_streams = match audio_stream::create(
     &system_audio,
     content.as_deref(),
     output.as_ref(),
     &queue,
+    &watch,
     primary_video
       .as_ref()
       .is_some_and(ResolvedVideo::can_capture_all_audio),
@@ -203,6 +205,7 @@ pub(super) async fn begin(
       output: output.as_ref().expect("content has output"),
       queue: &queue,
       video,
+      watch: &watch,
     })?),
     _ => None,
   };
@@ -223,6 +226,7 @@ pub(super) async fn begin(
         queue: &queue,
         show_cursor: video.show_cursor,
         stats: Arc::clone(&stats),
+        watch: &watch,
       },
     )?),
     _ => None,
@@ -231,16 +235,16 @@ pub(super) async fn begin(
   let microphone = microphone_stream::start(microphone_source, &commands, &monitor, &stats)?;
 
   system_audio_streams.start().await?;
-  if let Some(stream) = &video_stream {
-    if let Err(error) = stream.start().await {
+  if let Some(video) = &video_stream {
+    if let Err(error) = video.stream.start().await {
       system_audio_streams.stop();
       return Err(error.to_string());
     }
   }
   if let Some(desktop) = &desktop_streams {
     if let Err(error) = desktop.start().await {
-      if let Some(stream) = &video_stream {
-        stream.stop_with_ch(|_| {});
+      if let Some(video) = &video_stream {
+        video.stream.stop_with_ch(|_| {});
       }
       system_audio_streams.stop();
       return Err(error);
@@ -281,7 +285,7 @@ pub(super) async fn begin(
         _output: output,
         desktop,
         queue,
-        streams,
+        streams: RecoveringStreams::new(watch, stream_reports, streams),
       },
       primary_camera,
       worker: Some(worker),

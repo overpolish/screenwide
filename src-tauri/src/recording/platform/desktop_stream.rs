@@ -68,16 +68,16 @@ impl OutputImpl for DesktopOutput {
 
 pub(super) struct DesktopStreams {
   outputs: Vec<arc::R<DesktopOutput>>,
-  streams: Vec<arc::R<sc::Stream>>,
+  streams: Vec<WatchedStream>,
   worker: DesktopCompositionWorker,
 }
 
 impl DesktopStreams {
   pub async fn start(&self) -> Result<(), String> {
-    for (started, stream) in self.streams.iter().enumerate() {
-      if let Err(error) = stream.start().await {
-        for stream in &self.streams[..started] {
-          stream.stop_with_ch(|_| {});
+    for (started, watched) in self.streams.iter().enumerate() {
+      if let Err(error) = watched.stream.start().await {
+        for watched in &self.streams[..started] {
+          watched.stream.stop_with_ch(|_| {});
         }
         return Err(error.to_string());
       }
@@ -85,7 +85,7 @@ impl DesktopStreams {
     Ok(())
   }
 
-  pub fn into_parts(self) -> (Vec<arc::R<sc::Stream>>, DesktopKeepalive) {
+  pub fn into_parts(self) -> (Vec<WatchedStream>, DesktopKeepalive) {
     (
       self.streams,
       DesktopKeepalive {
@@ -118,6 +118,7 @@ pub(super) struct DesktopStreamRequest<'a> {
   pub queue: &'a dispatch::Queue,
   pub stats: Arc<CaptureStats>,
   pub show_cursor: bool,
+  pub watch: &'a StreamWatch,
 }
 
 pub(super) fn create(request: DesktopStreamRequest<'_>) -> Result<DesktopStreams, String> {
@@ -147,7 +148,7 @@ pub(super) fn create(request: DesktopStreamRequest<'_>) -> Result<DesktopStreams
       stats: Arc::clone(&request.stats),
     });
     let captures_audio = request.audio_output.is_some() && Some(piece.display_id) == anchor_display;
-    let stream = stream_for_piece(
+    let (filter, cfg) = piece_stream(
       display,
       display_geometry.scale,
       piece,
@@ -156,20 +157,18 @@ pub(super) fn create(request: DesktopStreamRequest<'_>) -> Result<DesktopStreams
       captures_audio,
       request.show_cursor,
     );
-    stream
-      .add_stream_output(output.as_ref(), sc::OutputType::Screen, Some(request.queue))
-      .map_err(|error| error.to_string())?;
+    let mut recipe = StreamRecipe::new(&filter, cfg, request.queue).output(
+      RecipeOutput::Desktop(output.clone()),
+      sc::OutputType::Screen,
+    );
     if captures_audio {
-      stream
-        .add_stream_output(
-          request.audio_output.expect("checked above").as_ref(),
-          sc::OutputType::Audio,
-          Some(request.queue),
-        )
-        .map_err(|error| error.to_string())?;
+      recipe = recipe.output(
+        RecipeOutput::Screen(request.audio_output.expect("checked above").clone()),
+        sc::OutputType::Audio,
+      );
     }
     outputs.push(output);
-    streams.push(stream);
+    streams.push(recipe.build(request.watch)?);
   }
   Ok(DesktopStreams {
     outputs,
@@ -178,7 +177,8 @@ pub(super) fn create(request: DesktopStreamRequest<'_>) -> Result<DesktopStreams
   })
 }
 
-fn stream_for_piece(
+/// The filter and configuration of one piece's stream.
+fn piece_stream(
   display: &sc::Display,
   scale: f64,
   piece: &CapturePiece,
@@ -186,7 +186,7 @@ fn stream_for_piece(
   fps: u32,
   captures_audio: bool,
   show_cursor: bool,
-) -> arc::R<sc::Stream> {
+) -> (arc::R<sc::ContentFilter>, arc::R<sc::StreamCfg>) {
   let filter = sc::ContentFilter::with_display_excluding_windows(display, excluded);
   let mut cfg = sc::StreamCfg::new();
   cfg.set_width(piece.source_pixels.width as usize);
@@ -211,7 +211,7 @@ fn stream_for_piece(
     configure_system_audio(&mut cfg);
   }
   cfg.set_color_space_name(cg::color_space::names::srgb());
-  sc::Stream::new(&filter, &cfg)
+  (filter, cfg)
 }
 
 #[cfg(test)]

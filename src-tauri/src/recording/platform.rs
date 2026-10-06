@@ -34,6 +34,7 @@ mod output;
 mod replay;
 mod session;
 mod startup;
+mod stream_recovery;
 mod writer;
 
 use std::path::PathBuf;
@@ -64,6 +65,7 @@ use output::{AudioSample, CaptureStats, Command, Frame, ScreenOutput, ScreenOutp
 pub use replay::{begin_blocking as begin_replay_blocking, ReplayCapture, ReplaySession};
 pub use session::CaptureSession;
 use session::StreamObjects;
+use stream_recovery::{RecipeOutput, RecoveringStreams, StreamRecipe, StreamWatch, WatchedStream};
 use writer::{Container, Writer, WriterConfig};
 
 pub struct CaptureStart {

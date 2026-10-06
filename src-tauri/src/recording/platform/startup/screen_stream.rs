@@ -9,14 +9,16 @@ pub(super) struct VideoStreamRequest<'a> {
   pub output: &'a arc::R<ScreenOutput>,
   pub queue: &'a dispatch::Queue,
   pub video: &'a PrimaryVideo,
+  pub watch: &'a StreamWatch,
 }
 
-pub(super) fn create_video(request: VideoStreamRequest<'_>) -> Result<arc::R<sc::Stream>, String> {
+pub(super) fn create_video(request: VideoStreamRequest<'_>) -> Result<WatchedStream, String> {
   let VideoStreamRequest {
     captures_audio,
     output,
     queue,
     video,
+    watch,
   } = request;
   let mut cfg = sc::StreamCfg::new();
   cfg.set_width(video.width as usize);
@@ -40,16 +42,12 @@ pub(super) fn create_video(request: VideoStreamRequest<'_>) -> Result<arc::R<sc:
   }
   cfg.set_color_space_name(cg::color_space::names::srgb());
 
-  let stream = sc::Stream::new(&video.filter, &cfg);
-  stream
-    .add_stream_output(output.as_ref(), sc::OutputType::Screen, Some(queue))
-    .map_err(|error| error.to_string())?;
+  let mut recipe = StreamRecipe::new(&video.filter, cfg, queue)
+    .output(RecipeOutput::Screen(output.clone()), sc::OutputType::Screen);
   if captures_audio {
-    stream
-      .add_stream_output(output.as_ref(), sc::OutputType::Audio, Some(queue))
-      .map_err(|error| error.to_string())?;
+    recipe = recipe.output(RecipeOutput::Screen(output.clone()), sc::OutputType::Audio);
   }
-  Ok(stream)
+  recipe.build(watch)
 }
 
 pub(super) struct AllAudioStreamRequest<'a> {
@@ -57,24 +55,24 @@ pub(super) struct AllAudioStreamRequest<'a> {
   pub display: &'a sc::Display,
   pub output: &'a arc::R<ScreenOutput>,
   pub queue: &'a dispatch::Queue,
+  pub watch: &'a StreamWatch,
 }
 
 pub(super) fn create_all_audio(
   request: AllAudioStreamRequest<'_>,
-) -> Result<arc::R<sc::Stream>, String> {
+) -> Result<WatchedStream, String> {
   let AllAudioStreamRequest {
     content,
     display,
     output,
     queue,
+    watch,
   } = request;
   let filter = sc::ContentFilter::with_display_excluding_windows(display, &our_windows(content));
   let mut cfg = sc::StreamCfg::new();
   cfg.set_captures_audio(true);
   configure_system_audio(&mut cfg);
-  let stream = sc::Stream::new(&filter, &cfg);
-  stream
-    .add_stream_output(output.as_ref(), sc::OutputType::Audio, Some(queue))
-    .map_err(|error| error.to_string())?;
-  Ok(stream)
+  StreamRecipe::new(&filter, cfg, queue)
+    .output(RecipeOutput::Screen(output.clone()), sc::OutputType::Audio)
+    .build(watch)
 }

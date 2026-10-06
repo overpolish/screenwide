@@ -8,7 +8,8 @@ use super::*;
 /// The ScreenCaptureKit objects a running session keeps alive.
 pub(super) struct StreamObjects {
   pub(super) queue: arc::R<dispatch::Queue>,
-  pub(super) streams: Vec<arc::R<sc::Stream>>,
+  /// Restarted if macOS stops them, until the capture itself stops.
+  pub(super) streams: RecoveringStreams,
   pub(super) _output: Option<arc::R<ScreenOutput>>,
   pub(super) desktop: Option<DesktopKeepalive>,
 }
@@ -78,8 +79,11 @@ impl CaptureSession {
         stream.stop();
       }
     }
+    // No stream may come back while the capture is being finished.
+    self.objects.streams.halt();
+    let streams = self.objects.streams.current();
     let (stopped, did_stop) = mpsc::channel();
-    for stream in &self.objects.streams {
+    for stream in &streams {
       let stopped = stopped.clone();
       stream.stop_with_ch(move |error| {
         let result = error.map_or_else(|| Ok(()), |error| Err(error.to_string()));
@@ -87,7 +91,7 @@ impl CaptureSession {
       });
     }
     drop(stopped);
-    for _ in 0..self.objects.streams.len() {
+    for _ in 0..streams.len() {
       match did_stop.recv_timeout(FINALIZE_TIMEOUT) {
         Ok(Ok(())) => {}
         Ok(Err(error)) => eprintln!("ScreenCaptureKit reported an error while stopping: {error}"),
@@ -167,7 +171,8 @@ impl CaptureSession {
       return;
     }
 
-    for stream in &self.objects.streams {
+    self.objects.streams.halt();
+    for stream in self.objects.streams.current() {
       stream.stop_with_ch(|_| {});
     }
     if let Some(desktop) = self.objects.desktop.as_mut() {

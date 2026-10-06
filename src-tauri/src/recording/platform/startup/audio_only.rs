@@ -87,11 +87,13 @@ pub(super) async fn begin(
     })
   });
   let queue = dispatch::Queue::serial_with_ar_pool();
+  let (watch, stream_reports) = stream_recovery::watch();
   let system_audio_streams = audio_stream::create(
     &system_audio,
     content.as_deref(),
     output.as_ref(),
     &queue,
+    &watch,
     false,
   )?;
   let microphone = microphone_stream::start(microphone_source, &commands, &monitor, &stats)?;
@@ -115,7 +117,7 @@ pub(super) async fn begin(
         _output: output,
         desktop: None,
         queue,
-        streams,
+        streams: RecoveringStreams::new(watch, stream_reports, streams),
       },
       primary_camera: None,
       worker: Some(worker),

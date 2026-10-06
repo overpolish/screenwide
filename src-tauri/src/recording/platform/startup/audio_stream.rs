@@ -7,20 +7,24 @@ use crate::recording::SystemAudioSelection;
 
 #[derive(Default)]
 pub(super) struct SystemAudioStreams {
-  pub all: Option<arc::R<sc::Stream>>,
-  pub selected: Option<arc::R<sc::Stream>>,
+  pub all: Option<WatchedStream>,
+  pub selected: Option<WatchedStream>,
   pub video_captures_all: bool,
 }
 
 impl SystemAudioStreams {
   pub(super) async fn start(&self) -> Result<(), String> {
-    if let Some(stream) = &self.selected {
-      stream.start().await.map_err(|error| error.to_string())?;
+    if let Some(selected) = &self.selected {
+      selected
+        .stream
+        .start()
+        .await
+        .map_err(|error| error.to_string())?;
     }
-    if let Some(stream) = &self.all {
-      if let Err(error) = stream.start().await {
-        if let Some(stream) = &self.selected {
-          stream.stop_with_ch(|_| {});
+    if let Some(all) = &self.all {
+      if let Err(error) = all.stream.start().await {
+        if let Some(selected) = &self.selected {
+          selected.stream.stop_with_ch(|_| {});
         }
         return Err(error.to_string());
       }
@@ -29,21 +33,14 @@ impl SystemAudioStreams {
   }
 
   pub(super) fn stop(&self) {
-    if let Some(stream) = &self.selected {
-      stream.stop_with_ch(|_| {});
-    }
-    if let Some(stream) = &self.all {
-      stream.stop_with_ch(|_| {});
+    for watched in self.selected.iter().chain(&self.all) {
+      watched.stream.stop_with_ch(|_| {});
     }
   }
 
-  pub(super) fn append_to(self, streams: &mut Vec<arc::R<sc::Stream>>) {
-    if let Some(stream) = self.all {
-      streams.push(stream);
-    }
-    if let Some(stream) = self.selected {
-      streams.push(stream);
-    }
+  pub(super) fn append_to(self, streams: &mut Vec<WatchedStream>) {
+    streams.extend(self.all);
+    streams.extend(self.selected);
   }
 }
 
@@ -52,6 +49,7 @@ pub(super) fn create(
   content: Option<&sc::ShareableContent>,
   output: Option<&arc::R<ScreenOutput>>,
   queue: &dispatch::Queue,
+  watch: &StreamWatch,
   video_can_capture_all: bool,
 ) -> Result<SystemAudioStreams, String> {
   let captures_selected = selection.enabled && !selection.application_ids.is_empty();
@@ -74,6 +72,7 @@ pub(super) fn create(
         display,
         output,
         queue,
+        watch,
       },
     )?)
   } else {
@@ -84,11 +83,11 @@ pub(super) fn create(
     let mut cfg = sc::StreamCfg::new();
     cfg.set_captures_audio(true);
     configure_system_audio(&mut cfg);
-    let stream = sc::Stream::new(&filter, &cfg);
-    stream
-      .add_stream_output(output.as_ref(), sc::OutputType::Audio, Some(queue))
-      .map_err(|error| error.to_string())?;
-    Some(stream)
+    Some(
+      StreamRecipe::new(&filter, cfg, queue)
+        .output(RecipeOutput::Screen(output.clone()), sc::OutputType::Audio)
+        .build(watch)?,
+    )
   } else {
     None
   };
