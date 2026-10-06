@@ -399,3 +399,70 @@ fn typing_is_framed_on_itself_and_pans_to_a_click_away_from_it() {
   // The camera pans across rather than zooming out between them.
   assert_eq!(typing.end_ms, click.start_ms, "{clips:#?}");
 }
+
+fn moved(ms: u64, (x, y): (f64, f64)) -> CursorRecord {
+  CursorRecord::Position {
+    timestamp_us: ms * 1_000,
+    x,
+    y,
+  }
+}
+
+/// Two clicks in one place, five seconds apart, with the pointer away
+/// elsewhere for three of them: the zoom does not wait out the time the
+/// pointer spends somewhere it does not show.
+#[test]
+fn a_zoom_does_not_hold_while_the_pointer_works_elsewhere() {
+  let duration_ms = 9_553;
+  let cursor = [
+    vec![header(), moved(4_000, (553.0, 95.0))],
+    click(4_300, (553.0, 95.0)).to_vec(),
+    vec![
+      moved(4_800, (444.0, 300.0)),
+      moved(4_900, (330.0, 600.0)),
+      moved(8_100, (430.0, 500.0)),
+      moved(8_300, (600.0, 250.0)),
+      moved(8_900, (565.0, 100.0)),
+    ],
+    click(9_380, (565.0, 100.0)).to_vec(),
+  ]
+  .concat();
+  let signals = Signals::read(&cursor, &[], VisibleArea::WHOLE);
+  let clips = clips(&signals, duration_ms);
+  assert!(validate_clips(&clips).is_ok(), "{clips:#?}");
+  assert!(zoom_at(&clips, 6_500).is_none(), "{clips:#?}");
+}
+
+#[test]
+fn a_zoom_leaves_soon_after_the_pointer_does() {
+  let cursor = [
+    vec![header(), moved(9_500, (300.0, 300.0))],
+    click(10_000, (300.0, 300.0)).to_vec(),
+    vec![moved(10_300, (900.0, 900.0))],
+  ]
+  .concat();
+  let signals = Signals::read(&cursor, &[], VisibleArea::WHOLE);
+  let clips = clips(&signals, DURATION_MS);
+  assert_playable(&clips);
+  let [clip] = clips.as_slice() else {
+    panic!("the click is zoomed into: {clips:#?}");
+  };
+  // It holds on for the least a shot may after its click, not its usual tail.
+  assert!(clip.end_ms <= 11_000, "{clip:#?}");
+}
+
+#[test]
+fn typing_holds_its_zoom_with_the_pointer_parked_aside() {
+  let cursor = [
+    vec![header()],
+    click(10_000, (300.0, 300.0)).to_vec(),
+    vec![moved(10_400, (900.0, 900.0))],
+  ]
+  .concat();
+  let keyboard: Vec<_> = (0..20).map(|index| key(10_500 + index * 300)).collect();
+  let signals = Signals::read(&cursor, &keyboard, VisibleArea::WHOLE);
+  let clips = clips(&signals, DURATION_MS);
+  assert_playable(&clips);
+  let typed = zoom_at(&clips, 14_000).expect("the typing is zoomed into");
+  assert!(typed.end_ms >= 16_200, "{clips:#?}");
+}

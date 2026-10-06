@@ -8,10 +8,11 @@
 //! or pan from one to the other rather than zooming out and back in.
 
 mod candidate;
+mod pointer;
 mod resolve;
 
 use super::beats::Beat;
-use super::signals::CursorSample;
+use super::signals::Signals;
 use crate::editor::scenes::SceneFraming;
 use candidate::{candidate, lateness, link, Candidate, MIN_OVERVIEW_MS};
 
@@ -83,12 +84,12 @@ fn held_back_until(beats: &[Beat], first: usize) -> Option<u64> {
 /// shot is reached straight from the shot before it, or across beats shown
 /// on the whole screen for long enough not to pump; the best way to each is
 /// kept, and the best plan of every beat is followed back.
-pub(super) fn plan(beats: &[Beat], cursor: &[CursorSample], duration_ms: u64) -> Vec<Shot> {
+pub(super) fn plan(beats: &[Beat], signals: &Signals, duration_ms: u64) -> Vec<Shot> {
   let count = beats.len();
   let candidates: Vec<Vec<Option<Candidate>>> = (0..count)
     .map(|last| {
       (0..MAX_BEATS_PER_SHOT.min(last + 1))
-        .map(|len| candidate(&beats[last - len..=last], cursor, duration_ms, 0))
+        .map(|len| candidate(&beats[last - len..=last], signals, duration_ms, 0))
         .collect()
     })
     .collect();
@@ -113,7 +114,7 @@ pub(super) fn plan(beats: &[Beat], cursor: &[CursorSample], duration_ms: u64) ->
         };
         // Arriving late holds the shot on longer, so it is timed afresh.
         let shown = match held_back_until(beats, first) {
-          Some(not_before) => candidate(&beats[first..=last], cursor, duration_ms, not_before)?,
+          Some(not_before) => candidate(&beats[first..=last], signals, duration_ms, not_before)?,
           None => *straight,
         };
         let across =
@@ -124,11 +125,12 @@ pub(super) fn plan(beats: &[Beat], cursor: &[CursorSample], duration_ms: u64) ->
               shot: shown,
             }
           });
-        let direct = best(direct(&shots[before], straight, before)).map(|(score, from)| Entry {
-          score: score + straight.score,
-          from,
-          shot: *straight,
-        });
+        let direct =
+          best(direct(&shots[before], straight, before, signals)).map(|(score, from)| Entry {
+            score: score + straight.score,
+            from,
+            shot: *straight,
+          });
         across
           .into_iter()
           .chain(direct)
@@ -226,11 +228,12 @@ fn direct<'a>(
   entries: &'a [Option<Entry>],
   candidate: &'a Candidate,
   before: usize,
+  signals: &'a Signals,
 ) -> impl Iterator<Item = (f64, From)> + 'a {
   entries.iter().enumerate().filter_map(move |(len, entry)| {
     let entry = entry.as_ref()?;
     Some((
-      entry.score + link(&entry.shot, candidate)?,
+      entry.score + link(&entry.shot, candidate, signals)?,
       From::Direct(ShotState { last: before, len }),
     ))
   })

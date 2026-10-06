@@ -131,7 +131,7 @@ pub(in crate::editor) fn for_new_recording(
 
 fn clips(signals: &Signals, duration_ms: u64) -> Vec<RecordingSceneClip> {
   let beats = beats::group(signals);
-  shots::plan(&beats, &signals.cursor, duration_ms)
+  shots::plan(&beats, signals, duration_ms)
     .into_iter()
     .map(|shot| RecordingSceneClip {
       // Shots never share a start, so their ids never meet; a scene of your

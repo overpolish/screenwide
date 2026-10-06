@@ -5,8 +5,9 @@
 //! it and the move to the next one are worth.
 
 use super::super::beats::Beat;
-use super::super::signals::CursorSample;
+use super::super::signals::Signals;
 use super::super::Area;
+use super::pointer::{away, outside_seconds};
 
 /// How long a scene takes to arrive or leave; the twin of `TRANSITION_MS` in
 /// `scenes/arrange.rs`.
@@ -55,8 +56,13 @@ const MICRO_COST: f64 = 0.4;
 const PUMP_COST: f64 = 0.3;
 /// What each second the pointer spends outside a shot's frame costs.
 const COVER_COST: f64 = 0.25;
-/// How far outside its frame the pointer may be and still count as seen.
-const COVER_MARGIN: f64 = 0.02;
+/// The longest the pointer may be away from a shot's frame at a stretch while
+/// the shot holds on. The pointer is where the attention is: away for longer,
+/// the camera goes with it rather than waiting on the work it left.
+const MAX_AWAY_MS: u64 = 1_500;
+/// How long the pointer must stay out of a shot's frame after its last beat
+/// for the shot to leave with it. Shorter is a flick.
+const LEFT_MS: u64 = 300;
 /// How far inside a typing shot's frame other work must sit to share it, as
 /// a share of the frame.
 const TYPING_SHARE_INSET: f64 = 0.1;
@@ -76,6 +82,9 @@ pub(super) struct Candidate {
   pub focus: (f64, f64),
   pub zoom: f64,
   pub score: f64,
+  /// What it shows, and when the pointer left that after its last beat.
+  frame: Area,
+  left_ms: Option<u64>,
 }
 
 /// The best zoom into `beats` together, or `None` where they are spread too
@@ -84,7 +93,7 @@ pub(super) struct Candidate {
 /// then, holds on from that late arrival for as long as the shortest shot.
 pub(super) fn candidate(
   beats: &[Beat],
-  cursor: &[CursorSample],
+  signals: &Signals,
   duration_ms: u64,
   not_before: u64,
 ) -> Option<Candidate> {
@@ -132,6 +141,13 @@ pub(super) fn candidate(
   }
   let first_ms = beats.first()?.start_ms;
   let last_ms = beats.last()?.end_ms;
+  // A shot never waits out the pointer working somewhere it does not show.
+  if away(signals, frame, first_ms, last_ms)
+    .iter()
+    .any(|&(from, to)| to - from > MAX_AWAY_MS)
+  {
+    return None;
+  }
   let cap = |ms: u64| {
     if duration_ms > 0 {
       ms.min(duration_ms)
@@ -142,13 +158,25 @@ pub(super) fn candidate(
   let start_ideal = first_ms.saturating_sub(LEAD_MS).max(not_before);
   let start_latest = first_ms.saturating_sub(TRANSITION_MS);
   let arrived = start_latest.max(not_before);
-  let end_earliest = cap((last_ms + MIN_TAIL_MS).max(arrived + MIN_CLIP_MS));
-  let end_ideal = cap((last_ms + TAIL_MS).max(start_ideal + MIN_CLIP_MS)).max(end_earliest);
-  let handover_earliest = cap((last_ms + HANDOVER_HOLD_MS).max(arrived + MIN_HANDOVER_CLIP_MS));
+  // Once the pointer has left, the shot leaves with it, as soon as its last
+  // beat has had its shortest hold, however short that leaves the shot.
+  let left_ms = away(signals, frame, last_ms, cap(u64::MAX))
+    .into_iter()
+    .find(|&(from, to)| to - from >= LEFT_MS)
+    .map(|(from, _)| from);
+  let leave_by = left_ms.map_or(u64::MAX, |left| {
+    cap((left + TRANSITION_MS).max(last_ms + MIN_TAIL_MS))
+  });
+  let end_earliest = cap((last_ms + MIN_TAIL_MS).max(arrived + MIN_CLIP_MS)).min(leave_by);
+  let end_ideal = cap((last_ms + TAIL_MS).max(start_ideal + MIN_CLIP_MS))
+    .min(leave_by)
+    .max(end_earliest);
+  let handover_earliest =
+    cap((last_ms + HANDOVER_HOLD_MS).max(arrived + MIN_HANDOVER_CLIP_MS)).min(leave_by);
   // Arriving late, it still holds for as long as the shortest shot.
   let start_late = end_earliest.saturating_sub(MIN_CLIP_MS).max(arrived);
   let weight: f64 = beats.iter().map(|beat| beat.weight).sum();
-  let outside = outside_seconds(cursor, frame, first_ms, last_ms + MIN_TAIL_MS);
+  let outside = outside_seconds(signals, frame, first_ms, last_ms + MIN_TAIL_MS);
   Some(Candidate {
     start_ideal,
     start_latest,
@@ -159,6 +187,8 @@ pub(super) fn candidate(
     focus,
     zoom,
     score: weight * zoom.log2() - 2.0 * TRANSITION_COST - COVER_COST * outside,
+    frame,
+    left_ms,
   })
 }
 
@@ -183,8 +213,10 @@ pub(super) fn handover(previous: &Candidate, next: &Candidate) -> u64 {
 }
 
 /// What going from `previous` to `next` adds to the score, or `None` where
-/// they are too close to pan between and too close to zoom out between.
-pub(super) fn link(previous: &Candidate, next: &Candidate) -> Option<f64> {
+/// they are too close to pan between and too close to zoom out between, or
+/// where holding `previous` until the pan would wait out the pointer working
+/// somewhere neither shows.
+pub(super) fn link(previous: &Candidate, next: &Candidate, signals: &Signals) -> Option<f64> {
   if !butts(previous, next) {
     let gap = next.start_ideal - previous.end_ideal;
     let brief =
@@ -194,6 +226,19 @@ pub(super) fn link(previous: &Candidate, next: &Candidate) -> Option<f64> {
   if previous.handover_earliest > next.start_latest {
     return None;
   }
+  if let Some(left) = previous.left_ms {
+    let pan = handover(previous, next);
+    let unseen = away(signals, previous.frame, left, pan)
+      .into_iter()
+      .any(|(from, to)| {
+        away(signals, next.frame, from, to)
+          .iter()
+          .any(|&(from, to)| to - from > MAX_AWAY_MS)
+      });
+    if unseen {
+      return None;
+    }
+  }
   // In frames: how far the middle travels, and how many doublings of zoom.
   let frame = (1.0 / previous.zoom).max(1.0 / next.zoom);
   let moved = (next.focus.0 - previous.focus.0).hypot(next.focus.1 - previous.focus.1) / frame
@@ -201,23 +246,4 @@ pub(super) fn link(previous: &Candidate, next: &Candidate) -> Option<f64> {
   let twitch = if moved < MICRO_MOVE { MICRO_COST } else { 0.0 };
   // One handover takes the place of a leaving and an arrival.
   Some(TRANSITION_COST - PAN_COST * moved - twitch)
-}
-
-/// The seconds the pointer spends outside `frame` from `from` to `to`.
-fn outside_seconds(cursor: &[CursorSample], frame: Area, from: u64, to: u64) -> f64 {
-  let first = cursor
-    .partition_point(|sample| sample.ms <= from)
-    .saturating_sub(1);
-  let mut outside_ms = 0;
-  for (index, sample) in cursor.iter().enumerate().skip(first) {
-    if sample.ms >= to {
-      break;
-    }
-    let begin = sample.ms.max(from);
-    let end = cursor.get(index + 1).map_or(to, |next| next.ms.min(to));
-    if end > begin && !frame.contains(sample.x, sample.y, COVER_MARGIN) {
-      outside_ms += end - begin;
-    }
-  }
-  outside_ms as f64 / 1_000.0
 }
