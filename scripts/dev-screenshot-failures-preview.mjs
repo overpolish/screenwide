@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { spawnSync } from "node:child_process";
-import { argv, env, exit, platform } from "node:process";
+import { argv, env, exit } from "node:process";
 
-const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
+import { spawnPnpmSync } from "./pnpm.mjs";
+
 const arguments_ = argv.slice(2);
 if (arguments_[0] === "--") arguments_.shift();
-const result = spawnSync(command, ["tauri", "dev", ...arguments_], {
+const result = spawnPnpmSync(["tauri", "dev", ...arguments_], {
   env: {
     ...env,
     SCREENWIDE_SHOW_RECORDING_BAR: "1",

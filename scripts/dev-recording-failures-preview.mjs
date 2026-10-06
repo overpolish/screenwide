@@ -9,17 +9,23 @@
 //
 // Anything after it goes to `tauri dev`.
 
-import { spawnSync } from "node:child_process";
-import { argv, env, exit, platform } from "node:process";
+import { argv, env, exit } from "node:process";
 
-const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
+import { spawnPnpmSync } from "./pnpm.mjs";
+
 const arguments_ = argv.slice(2);
 if (arguments_[0] === "--") arguments_.shift();
+// PowerShell reads `camera-mode,stop` as an array, and pnpm's PowerShell shim
+// passes it on joined with spaces, so spaces separate faults as well.
 const faults =
   arguments_[0] && !arguments_[0].startsWith("-")
-    ? arguments_.shift()
+    ? arguments_
+        .shift()
+        .split(/[\s,]+/)
+        .filter(Boolean)
+        .join(",")
     : "camera-mode";
-const result = spawnSync(command, ["tauri", "dev", ...arguments_], {
+const result = spawnPnpmSync(["tauri", "dev", ...arguments_], {
   env: {
     ...env,
     SCREENWIDE_FAULT: faults,

@@ -3,7 +3,8 @@
 
 import { readFile } from "node:fs/promises";
 import { argv, env, exit, platform } from "node:process";
-import { spawnSync } from "node:child_process";
+
+import { spawnPnpmSync } from "./pnpm.mjs";
 
 const arguments_ = argv.slice(2);
 if (arguments_[0] === "--") arguments_.shift();
@@ -41,7 +42,6 @@ const hasBundleOption = extraOptions.some(
 const defaultBundles = hasBundleOption
   ? []
   : ["--bundles", platform === "win32" ? "nsis" : "app"];
-const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 console.log(
   `Building Screenwide ${clientVersion} as an updater test client (source version ${String(packageJson.version)})`,
@@ -51,8 +51,7 @@ console.log(
   "The release must be published (a GitHub draft is not downloadable by the app).\n",
 );
 
-const result = spawnSync(
-  command,
+const result = spawnPnpmSync(
   [
     "tauri",
     "build",
