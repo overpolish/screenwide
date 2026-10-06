@@ -5,12 +5,7 @@ use super::*;
 
 impl StreamWriter {
   pub(super) fn write(&mut self, record: &CursorRecord) -> Result<(), String> {
-    serde_json::to_writer(&mut self.writer, record).map_err(|error| error.to_string())?;
-    self
-      .writer
-      .write_all(b"\n")
-      .map_err(|error| error.to_string())?;
-    Ok(())
+    self.output.write(record)
   }
 
   pub(super) fn record(&mut self, event: RawCursorEvent) -> Result<bool, String> {
@@ -24,7 +19,7 @@ impl StreamWriter {
     };
     if matches!(event.kind, RawCursorEventKind::AppSwitch) {
       self.write(&CursorRecord::AppSwitch { timestamp_us })?;
-      self.writer.flush().map_err(|error| error.to_string())?;
+      self.output.flush()?;
       self.last_flush = event.at;
       return Ok(true);
     }
@@ -80,13 +75,13 @@ impl StreamWriter {
           x: event.x,
           y: event.y,
         })?;
-        self.writer.flush().map_err(|error| error.to_string())?;
+        self.output.flush()?;
         self.last_flush = event.at;
       }
     }
 
     if event.at.saturating_duration_since(self.last_flush) >= FLUSH_INTERVAL {
-      self.writer.flush().map_err(|error| error.to_string())?;
+      self.output.flush()?;
       self.last_flush = event.at;
     }
     Ok(true)

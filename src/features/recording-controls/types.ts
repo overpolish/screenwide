@@ -59,3 +59,22 @@ export type RecordingError = {
   message: string;
   phase: RecordingErrorPhase;
 };
+
+type ReplayStatus = "off" | "on" | "starting";
+
+/** The replay buffer, which runs beside recordings rather than as one. */
+export type ReplaySnapshot = {
+  /** Whether this platform has a replay buffer at all. */
+  available: boolean;
+  lengthSeconds: number;
+  /** A clip is being written. */
+  saving: boolean;
+  status: ReplayStatus;
+};
+
+export const initialReplaySnapshot: ReplaySnapshot = {
+  available: false,
+  lengthSeconds: 30,
+  saving: false,
+  status: "off",
+};

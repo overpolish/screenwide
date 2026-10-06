@@ -17,7 +17,9 @@ mod platform;
 mod platform_unsupported;
 #[cfg(target_os = "windows")]
 mod platform_windows;
+pub(crate) mod replay;
 mod session;
+pub(crate) mod sidecar_output;
 mod state;
 mod types;
 mod ui;
@@ -38,6 +40,7 @@ use platform_unsupported as capture;
 use platform_windows as capture;
 
 pub use encoding::{CameraFinalizeInfo, FinalizeInfo, PrimaryRecordingKind};
+pub use replay::{ReplaySnapshot, ReplayState};
 pub use session::recordings_directory;
 pub use state::{is_idle, snapshot, RecordingState};
 pub use types::{

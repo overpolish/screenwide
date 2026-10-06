@@ -7,6 +7,7 @@ import { displayThumbnail } from "../../../storybook/display-thumbnail";
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 import { seedRecordingInputDevices } from "../../../storybook/recording-input-fixtures";
 import { MonitorDetails, WindowDetails } from "../../recording-sources/types";
+import { ReplaySnapshot } from "../types";
 
 import { RecordingBar } from "./recording-bar";
 
@@ -41,11 +42,19 @@ const longTitledWindow: WindowDetails = {
   title: "Quarterly Planning Notes and Follow-ups — Safari",
 };
 
+const replayOff: ReplaySnapshot = {
+  available: true,
+  lengthSeconds: 30,
+  saving: false,
+  status: "off",
+};
+
 const meta = {
   args: {
     hasSelectedMonitor: true,
     monitorThumbnails: displayThumbnails,
     onScrollingScreenshot: () => undefined,
+    replay: replayOff,
     selectedMonitor: builtInDisplay,
     selectedWindow: null,
   },
@@ -56,7 +65,7 @@ const meta = {
       // read as absent; the store is seeded with a typical Mac's instead.
       seedRecordingInputDevices();
       return (
-        <FeatureStoryStage height={56} viewMode={context.viewMode} width={843}>
+        <FeatureStoryStage height={56} viewMode={context.viewMode} width={891}>
           <Story />
         </FeatureStoryStage>
       );
@@ -230,4 +239,14 @@ export const AudioOnlyWithOneValidSource: Story = {
 
 export const Starting: Story = {
   args: { status: "starting" },
+};
+
+/** The replay buffer runs whatever the bar is set to now; the switch turns it
+ * off. */
+export const ReplayOn: Story = {
+  args: { replay: { ...replayOff, status: "on" } },
+};
+
+export const ReplayStarting: Story = {
+  args: { replay: { ...replayOff, status: "starting" } },
 };

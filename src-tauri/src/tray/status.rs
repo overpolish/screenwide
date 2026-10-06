@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What the tray icon and its tooltip show: the recording state, or the
-//! seconds left before a Delayed Screenshot.
+//! What the tray icon and its tooltip show: the recording state, the
+//! seconds left before a Delayed Screenshot, or that the replay buffer is on.
 
 use std::borrow::Cow;
 
@@ -27,33 +27,74 @@ const COUNTDOWN: [&[u8]; 10] = [
   include_bytes!("../../icons/tray-countdown/10.png"),
 ];
 
-/// A countdown only runs while idle. It is shown only then too, so a
-/// recording started a moment before the countdown notices and stops is
-/// never hidden behind it.
-fn shown_countdown(status: RecordingStatus, countdown: Option<u8>) -> Option<u8> {
-  countdown.filter(|_| status == RecordingStatus::Idle)
+/// Drawn by `scripts/prepare-tray-countdown-icons.mjs`.
+const REPLAY: &[u8] = include_bytes!("../../icons/tray-replay.png");
+
+/// What the tray shows, in order of precedence: a recording's own state, then
+/// a Delayed Screenshot's countdown, then a running replay buffer, then the
+/// plain mark. A countdown only runs while idle and is shown only then too, so
+/// a recording started a moment before the countdown notices and stops is
+/// never hidden behind it. The replay buffer runs beside everything, so it
+/// only ever shows when nothing else has anything to say.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) enum Shown {
+  Countdown(u8),
+  Replay,
+  Status(RecordingStatus),
 }
 
-pub(super) fn icon(
-  status: RecordingStatus,
-  countdown: Option<u8>,
-) -> tauri::Result<Image<'static>> {
-  match shown_countdown(status, countdown) {
-    Some(seconds) => countdown_icon(seconds),
-    None => status_icon(status),
+impl Shown {
+  pub(super) fn of(status: RecordingStatus, countdown: Option<u8>, replay_on: bool) -> Self {
+    match (status, countdown) {
+      (RecordingStatus::Idle, Some(seconds)) => Self::Countdown(seconds),
+      (RecordingStatus::Idle, None) if replay_on => Self::Replay,
+      _ => Self::Status(status),
+    }
   }
 }
 
-pub(super) fn tooltip(status: RecordingStatus, countdown: Option<u8>) -> Cow<'static, str> {
-  match shown_countdown(status, countdown) {
-    Some(seconds) => Cow::Owned(format!("Screenwide - Screenshot in {seconds}s")),
-    None => Cow::Borrowed(status_tooltip(status)),
+/// The countdown and replay state are read here, on the main thread, rather
+/// than passed in: a tick queued behind a cancellation then shows what is
+/// current, not what was.
+pub(super) fn apply(tray: &tauri::tray::TrayIcon, status: RecordingStatus) {
+  let shown = Shown::of(
+    status,
+    crate::screenshots::delayed::remaining(),
+    crate::recording::replay::is_on(tray.app_handle()),
+  );
+  if let Ok(icon) = icon(shown) {
+    let _ = tray.set_icon(Some(icon));
+  }
+  #[cfg(target_os = "macos")]
+  let _ = tray.set_icon_as_template(true);
+  let _ = tray.set_tooltip(Some(tooltip(shown)));
+}
+
+pub(super) fn icon(shown: Shown) -> tauri::Result<Image<'static>> {
+  match shown {
+    Shown::Countdown(seconds) => countdown_icon(seconds),
+    Shown::Replay => mask_icon(REPLAY),
+    Shown::Status(status) => status_icon(status),
+  }
+}
+
+pub(super) fn tooltip(shown: Shown) -> Cow<'static, str> {
+  match shown {
+    Shown::Countdown(seconds) => Cow::Owned(format!("Screenwide - Screenshot in {seconds}s")),
+    Shown::Replay => Cow::Borrowed("Screenwide - Replay buffer on"),
+    Shown::Status(status) => Cow::Borrowed(status_tooltip(status)),
   }
 }
 
 fn countdown_icon(seconds: u8) -> tauri::Result<Image<'static>> {
   let index = usize::from(seconds).clamp(1, COUNTDOWN.len()) - 1;
-  let image = Image::from_bytes(COUNTDOWN[index])?;
+  mask_icon(COUNTDOWN[index])
+}
+
+/// A drawn state icon: a template image on macOS, recoloured to the taskbar's
+/// foreground on Windows.
+fn mask_icon(bytes: &'static [u8]) -> tauri::Result<Image<'static>> {
+  let image = Image::from_bytes(bytes)?;
   #[cfg(target_os = "windows")]
   let image = icons::apply_system_foreground(image);
   Ok(image)
@@ -93,3 +134,6 @@ const fn status_tooltip(status: RecordingStatus) -> &'static str {
     RecordingStatus::Stopping => "Screenwide - Finishing the recording",
   }
 }
+
+#[cfg(test)]
+mod tests;

@@ -5,12 +5,12 @@ use std::time::Duration;
 
 use super::*;
 use crate::editor::annotations::arrow::new_arrow;
-use crate::editor::annotations::timing::validate_clips;
+use crate::editor::annotations::timing::{validate_clips, AnnotationTrack};
 use crate::editor::annotations::{AnnotationPoint, AnnotationShape};
 use crate::recording::cursor::CursorSourceKind;
 
 /// A 1000x500 point display, at the desktop origin, recorded at 2x.
-fn source() -> CursorSource {
+pub(super) fn source() -> CursorSource {
   CursorSource {
     height: 500.0,
     kind: CursorSourceKind::Screen,
@@ -24,7 +24,7 @@ fn source() -> CursorSource {
 }
 
 /// A short arrow starting at `x`, in global logical points.
-fn annotation(id: &str, x: f64) -> Annotation {
+pub(super) fn annotation(id: &str, x: f64) -> Annotation {
   new_arrow(
     id.to_owned(),
     AnnotationPoint { x, y: 10.0 },

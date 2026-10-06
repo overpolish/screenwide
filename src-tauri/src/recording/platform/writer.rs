@@ -251,6 +251,7 @@ impl Writer {
         self.writer.cancel_writing();
         return ControlFlow::Break(());
       }
+      Command::Replay(request) => request.refuse(),
     }
     ControlFlow::Continue(())
   }

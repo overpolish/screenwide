@@ -4,13 +4,13 @@
 //! Privacy filtering and JSONL writing for keyboard events.
 
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::{BufWriter, Write};
 
+use super::rolling::KeyboardBaseline;
 use super::{
   FocusContext, KeyboardModifier, KeyboardRecord, RawKeyboardEvent, RawKeyboardEventKind,
 };
 use crate::recording::clock::SidecarClock;
+use crate::recording::sidecar_output::SidecarOutput;
 
 /// The least time between two typing marks. Typing is what hides the cursor
 /// and holds a zoom on, both of which need only roughly when it happened, so
@@ -21,7 +21,7 @@ pub(super) struct StreamWriter {
   pub(super) active_keys: HashSet<u16>,
   pub(super) clock: SidecarClock,
   pub(super) failure: Option<String>,
-  pub(super) writer: BufWriter<File>,
+  pub(super) output: SidecarOutput<KeyboardRecord, KeyboardBaseline>,
   /// When the last typing mark was written.
   pub(super) last_typing_us: Option<u64>,
 }
@@ -134,12 +134,8 @@ impl StreamWriter {
         }
       }
     };
-    serde_json::to_writer(&mut self.writer, &record).map_err(|error| error.to_string())?;
-    self
-      .writer
-      .write_all(b"\n")
-      .map_err(|error| error.to_string())?;
-    self.writer.flush().map_err(|error| error.to_string())?;
+    self.output.write(&record)?;
+    self.output.flush()?;
     Ok(true)
   }
 }

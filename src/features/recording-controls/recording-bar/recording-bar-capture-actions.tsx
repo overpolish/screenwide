@@ -9,6 +9,7 @@ import {
 import {
   Check,
   Circle,
+  History,
   ImageDown,
   Lock,
   OctagonAlert,
@@ -17,7 +18,10 @@ import {
 import { useEffect, useMemo, useRef } from "react";
 
 import { Button } from "../../../components/base/button/button";
-import { IconButton } from "../../../components/base/button/icon-button";
+import {
+  IconButton,
+  IconToggleButton,
+} from "../../../components/base/button/icon-button";
 import { cn } from "../../../lib/styling";
 import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
 import { initialPopupPanelHeight } from "../../popup-panel/layout";
@@ -27,7 +31,7 @@ import {
   SHARED_POPUP_PANEL,
   usePopupPanelStore,
 } from "../../popup-panel/store";
-import { ScreenshotState } from "../types";
+import { ReplaySnapshot, ScreenshotState } from "../types";
 
 /** Identifies this trigger in the shared popup panel window. */
 const SCREENSHOT_MENU_ID = "recording-bar-screenshot";
@@ -38,6 +42,8 @@ type RecordingBarCaptureActionsProps = {
   canRecord: boolean;
   canScreenshot: boolean;
   canScrollingScreenshot: boolean;
+  /** Whether the bar's settings could start the replay buffer now. */
+  canStartReplay: boolean;
   isCapturing: boolean;
   isLocked: boolean;
   isRecordBlockedByEditor: boolean;
@@ -45,10 +51,12 @@ type RecordingBarCaptureActionsProps = {
   onDelayedScreenshot?: () => void;
   onFocusPendingEditor?: () => void;
   onRecord?: () => void;
+  onReplayChange?: (on: boolean) => void;
   onRequiredPermissionsPress?: () => void;
   onScreenshot?: () => void;
   onScreenshotToClipboard?: () => void;
   onScrollingScreenshot?: () => void;
+  replay?: ReplaySnapshot;
   screenshotState?: ScreenshotState;
 };
 
@@ -56,6 +64,7 @@ export function RecordingBarCaptureActions({
   canRecord,
   canScreenshot,
   canScrollingScreenshot,
+  canStartReplay,
   className,
   isCapturing,
   isLocked,
@@ -63,10 +72,12 @@ export function RecordingBarCaptureActions({
   onDelayedScreenshot,
   onFocusPendingEditor,
   onRecord,
+  onReplayChange,
   onRequiredPermissionsPress,
   onScreenshot,
   onScreenshotToClipboard,
   onScrollingScreenshot,
+  replay,
   screenshotState = "idle",
 }: RecordingBarCaptureActionsProps) {
   const close = usePopupPanelStore((state) => state.close);
@@ -168,6 +179,28 @@ export function RecordingBarCaptureActions({
 
   return (
     <div className={cn("flex items-center gap-control-inset", className)}>
+      {replay?.available ? (
+        <IconToggleButton
+          aria-label={`Replay buffer, keeps the last ${String(replay.lengthSeconds)} seconds`}
+          // Starting needs settings the bar could record with; turning it off
+          // is always allowed, whatever the bar is set to now.
+          isDisabled={
+            replay.status === "starting" ||
+            (replay.status === "off" && !canStartReplay)
+          }
+          isSelected={replay.status !== "off"}
+          onChange={onReplayChange}
+          size="capture"
+        >
+          <History
+            className={cn(
+              replay.status === "starting" &&
+                "animate-pulse text-content-fg-secondary",
+            )}
+          />
+        </IconToggleButton>
+      ) : null}
+
       {/* Marked as a trigger so closing the panel with the keyboard returns
           focus to the button rather than to the window. */}
       <div data-popup-panel-trigger={SCREENSHOT_MENU_ID}>

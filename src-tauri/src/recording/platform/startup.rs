@@ -15,9 +15,21 @@ mod writer_thread;
 use camera_writer::CameraWriterSetup;
 use screen_stream::VideoStreamRequest;
 use video_source::ResolvedVideo;
-use writer_thread::{both_first_frames, spawn_writer, WriterThread};
+use writer_thread::{both_first_frames, spawn_replay_writer, spawn_writer, WriterThread};
 
-pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, String> {
+/// What a capture's writers make of what it captures.
+#[derive(Clone, Copy)]
+pub(super) enum Sink {
+  /// Working movies at `config.path` and `config.camera_path`.
+  Movie,
+  /// The last `length` held in memory; the config's paths are not used.
+  Replay { length: Duration },
+}
+
+pub(super) async fn begin(
+  config: CaptureStartupConfig,
+  sink: Sink,
+) -> Result<CaptureStart, String> {
   let CaptureStartupConfig {
     camera,
     camera_path,
@@ -31,7 +43,7 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
     system_audio_skipped,
   } = config;
   if matches!(primary, PrimaryCaptureSource::Audio) {
-    return audio_only::begin(microphone_id, monitor, on_failure, path, system_audio).await;
+    return audio_only::begin(microphone_id, monitor, on_failure, path, system_audio, sink).await;
   }
   let camera_primary = matches!(primary, PrimaryCaptureSource::Camera);
   let camera_flipped = camera.as_ref().is_some_and(|camera| camera.flipped);
@@ -89,46 +101,69 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
   } else {
     VideoEncoder::H264
   };
+  // The primary's keyframes, for a camera writer beside it to follow.
+  let keyframes = super::replay::KeyframeLink::new();
   let WriterThread {
     commands,
     first_frame,
     worker,
-  } = spawn_writer(
-    WriterConfig {
-      path,
-      width,
-      height,
-      fps: primary_fps,
-      encoder: primary_encoder,
-      system_audio: system_audio.enabled,
-      microphone_format,
-      stats: Arc::clone(&stats),
-      on_failure: Arc::clone(&on_failure),
-      container: Container::quicktime_fragmented(),
-      primary_video: true,
-      source: if camera_primary {
-        VideoSource::Camera
-      } else {
-        VideoSource::Screen
+  } = match sink {
+    Sink::Movie => spawn_writer(
+      WriterConfig {
+        path,
+        width,
+        height,
+        fps: primary_fps,
+        encoder: primary_encoder,
+        system_audio: system_audio.enabled,
+        microphone_format,
+        stats: Arc::clone(&stats),
+        on_failure: Arc::clone(&on_failure),
+        container: Container::quicktime_fragmented(),
+        primary_video: true,
+        source: if camera_primary {
+          VideoSource::Camera
+        } else {
+          VideoSource::Screen
+        },
+        timeline_origin: Arc::clone(&timeline_origin),
       },
-      timeline_origin: Arc::clone(&timeline_origin),
-    },
-    "screenwide-recording-writer",
-  )?;
+      "screenwide-recording-writer",
+    )?,
+    Sink::Replay { length } => spawn_replay_writer(
+      super::replay::ReplayWriterConfig {
+        encoder: Some(primary_encoder),
+        fps: primary_fps,
+        height,
+        keyframes: keyframes.clone(),
+        length,
+        microphone_format,
+        on_failure: Arc::clone(&on_failure),
+        primary_video: true,
+        stats: Arc::clone(&stats),
+        system_audio: system_audio.enabled,
+        timeline_origin: Arc::clone(&timeline_origin),
+        width,
+      },
+      "screenwide-replay-writer",
+    )?,
+  };
 
   let CameraWriterSetup {
     first_frame: camera_first_frame,
     primary_spec: primary_camera_spec,
     secondary: secondary_camera,
-  } = camera_writer::prepare(
-    camera_spec,
-    camera_primary,
+  } = camera_writer::prepare(camera_writer::CameraWriterRequest {
     camera_flipped,
     camera_path,
-    &timeline_origin,
-    &monitor,
-    &on_failure,
-  )?;
+    camera_primary,
+    keyframes,
+    monitor: &monitor,
+    on_failure: &on_failure,
+    sink,
+    spec: camera_spec,
+    timeline_origin: &timeline_origin,
+  })?;
   let mut primary_camera = None;
 
   let output = content.as_ref().map(|_| {

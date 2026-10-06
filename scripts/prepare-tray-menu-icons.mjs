@@ -8,6 +8,7 @@ import { Resvg } from "@resvg/resvg-js";
 import {
   ClipboardPaste,
   DoorOpen,
+  History,
   Monitor,
   Pause,
   PenTool,
@@ -43,6 +44,7 @@ for (const [name, icon] of Object.entries({
   open: Monitor,
   pause: Pause,
   quit: DoorOpen,
+  replay: History,
   resume: Play,
   ruler: Ruler,
   settings: Settings,

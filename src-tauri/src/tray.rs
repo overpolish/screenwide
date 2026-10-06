@@ -9,6 +9,7 @@ use crate::app_windows;
 use crate::recording::RecordingStatus;
 
 mod icons;
+mod replay;
 mod status;
 #[cfg(target_os = "windows")]
 mod windows_menu;
@@ -82,6 +83,8 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
     );
   }
 
+  builder = replay::append(app, builder)?;
+
   let mut recognize_text =
     IconMenuItemBuilder::with_id(RECOGNIZE_TEXT_MENU_ID, "Recognize Text/QR")
       .icon(icons::load(icons::TEXT)?)
@@ -146,12 +149,19 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
   let menu = build_menu(app.handle(), RecordingStatus::Idle)?;
 
   let tray = TrayIconBuilder::with_id(TRAY_ID)
-    .icon(status::icon(RecordingStatus::Idle, None)?)
+    .icon(status::icon(status::Shown::Status(RecordingStatus::Idle))?)
     .icon_as_template(cfg!(target_os = "macos"))
     .menu(&menu)
     .show_menu_on_left_click(false)
-    .tooltip(status::tooltip(RecordingStatus::Idle, None))
+    .tooltip(status::tooltip(status::Shown::Status(
+      RecordingStatus::Idle,
+    )))
     .on_menu_event(|app, event| {
+      // The replay items leave every overlay up: a save looks back at what
+      // was on screen.
+      if replay::handle(app, event.id().as_ref()) {
+        return;
+      }
       let preserved: &[crate::capture_overlays::CaptureOverlay] = match event.id().as_ref() {
         ANNOTATE_CLEAR_MENU_ID | ANNOTATE_MENU_ID | DELAYED_SCREENSHOT_MENU_ID => {
           &[crate::capture_overlays::CaptureOverlay::Annotate]
@@ -236,7 +246,7 @@ pub fn apply_recording_status(app: &AppHandle, status: RecordingStatus) {
       return;
     };
 
-    apply_icon(&tray, status);
+    status::apply(&tray, status);
 
     if let Ok(menu) = build_menu(&app, status) {
       #[cfg(target_os = "windows")]
@@ -263,21 +273,9 @@ pub fn refresh_icon(app: &AppHandle) {
   let app = app.clone();
   let _ = app.clone().run_on_main_thread(move || {
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
-      apply_icon(&tray, status);
+      status::apply(&tray, status);
     }
   });
-}
-
-/// The countdown is read here, on the main thread, rather than passed in: a
-/// tick queued behind a cancellation then shows what is current, not what was.
-fn apply_icon(tray: &tauri::tray::TrayIcon, status: RecordingStatus) {
-  let countdown = crate::screenshots::delayed::remaining();
-  if let Ok(icon) = status::icon(status, countdown) {
-    let _ = tray.set_icon(Some(icon));
-  }
-  #[cfg(target_os = "macos")]
-  let _ = tray.set_icon_as_template(true);
-  let _ = tray.set_tooltip(Some(status::tooltip(status, countdown)));
 }
 
 fn report(action: &str, result: Result<(), String>) {

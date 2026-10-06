@@ -3,6 +3,8 @@
 
 mod begin;
 pub(super) use begin::begin_capture;
+#[cfg(target_os = "macos")]
+pub(super) use begin::{capture_sources, CaptureSources};
 
 use std::{
   path::PathBuf,

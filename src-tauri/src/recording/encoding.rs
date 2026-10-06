@@ -237,8 +237,9 @@ impl Timeline {
   /// Produces a video timestamp from the monotonic wall clock and advances
   /// the same ordering guard used by source-timestamped frames. Windows uses
   /// this for change-driven windows and GPU-cropped regions, keeping their
-  /// presentation cadence fixed even when capture delivery is uneven.
-  #[cfg(target_os = "windows")]
+  /// presentation cadence fixed even when capture delivery is uneven; the
+  /// macOS replay buffer for the frames it re-encodes as keyframes.
+  #[cfg(any(target_os = "windows", target_os = "macos"))]
   pub fn wall_frame_pts_ns(&mut self, wall_ns: i64) -> i64 {
     let mut pts = self.wall_pts_ns(wall_ns);
     if let Some(last) = self.last_pts_ns {

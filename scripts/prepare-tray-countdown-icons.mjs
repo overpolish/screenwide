@@ -7,10 +7,11 @@ import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 
 // The tray shows Delayed Screenshot's seconds left as one of these, from the
-// longest delay Settings offers down to one. Like the recording, paused and
-// loading icons, each is the tray mark's arc with its own glyph where the dot
-// sits: here, the number. They are full-alpha masks: macOS shows them as
-// template images and Windows recolours them to the taskbar's foreground.
+// longest delay Settings offers down to one, and a running replay buffer as a
+// rewind mark. Like the recording, paused and loading icons, each is the tray
+// mark's arc with its own glyph where the dot sits. They are full-alpha
+// masks: macOS shows them as template images and Windows recolours them to
+// the taskbar's foreground.
 // Commit the PNGs so normal builds need neither Node nor an SVG renderer.
 const LONGEST_DELAY = 10;
 const SIZE = 32;
@@ -85,6 +86,19 @@ function measureInk(content) {
   };
 }
 
+/** The tray mark's arc with `glyph` drawn over it, as a PNG. */
+const iconWith = (glyph) =>
+  new Resvg(
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${SIZE}" height="${SIZE}">
+  <clipPath id="arc"><rect x="0" y="${ARC_TOP}" width="${SIZE}" height="${SIZE - ARC_TOP}"/></clipPath>
+  <image clip-path="url(#arc)" width="${SIZE}" height="${SIZE}" xlink:href="data:image/png;base64,${arc}"/>
+  ${glyph}
+</svg>`,
+    { font: fontOptions },
+  )
+    .render()
+    .asPng();
+
 for (let seconds = 1; seconds <= LONGEST_DELAY; seconds += 1) {
   // resvg draws the variable font at its default weight, so a stroke gives
   // the number the weight of the arc. Two digits sit closer to fit the box.
@@ -101,11 +115,19 @@ for (let seconds = 1; seconds <= LONGEST_DELAY; seconds += 1) {
   const centreX = seconds === 1 ? ink.lowerHalfX : (ink.left + ink.right) / 2;
   const x = GLYPH_CENTRE[0] - centreX * scale;
   const y = GLYPH_CENTRE[1] - ((ink.top + ink.bottom) / 2) * scale;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${SIZE}" height="${SIZE}">
-  <clipPath id="arc"><rect x="0" y="${ARC_TOP}" width="${SIZE}" height="${SIZE - ARC_TOP}"/></clipPath>
-  <image clip-path="url(#arc)" width="${SIZE}" height="${SIZE}" xlink:href="data:image/png;base64,${arc}"/>
-  <g transform="translate(${x} ${y}) scale(${scale})">${number}</g>
-</svg>`;
-  const png = new Resvg(svg, { font: fontOptions }).render().asPng();
+  const png = iconWith(
+    `<g transform="translate(${x} ${y}) scale(${scale})">${number}</g>`,
+  );
   await writeFile(new URL(`${seconds}.png`, output), png);
 }
+
+// Two rewind triangles filling the glyph box, softened at the corners with
+// the arc's own round joins.
+const [centreX, centreY] = GLYPH_CENTRE;
+const [left, right] = [centreX - GLYPH_WIDTH / 2, centreX + GLYPH_WIDTH / 2];
+const [top, bottom] = [centreY - GLYPH_HEIGHT / 2, centreY + GLYPH_HEIGHT / 2];
+const inset = 1;
+const triangle = (tip, back) =>
+  `M${back} ${top + inset} L${back} ${bottom - inset} L${tip + inset} ${centreY} Z`;
+const rewind = `<path d="${triangle(left, centreX)} ${triangle(centreX, right - inset)}" fill="black" stroke="black" stroke-width="2" stroke-linejoin="round"/>`;
+await writeFile(new URL("tray-replay.png", icons), iconWith(rewind));

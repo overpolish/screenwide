@@ -113,6 +113,7 @@ impl AudioWriter {
         return ControlFlow::Break(());
       }
       Command::Frame(_) => self.fail("Audio-only capture received a video frame".to_owned()),
+      Command::Replay(request) => request.refuse(),
     }
     ControlFlow::Continue(())
   }

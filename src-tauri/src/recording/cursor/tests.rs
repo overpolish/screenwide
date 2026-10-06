@@ -104,7 +104,7 @@ fn initial_snapshot_starts_at_zero_and_motion_keeps_hardware_cadence() {
     "screenwide-cursor-stream-{}.jsonl",
     std::process::id()
   ));
-  let file = File::create(&path).unwrap();
+  let file = std::fs::File::create(&path).unwrap();
   let mut stream = StreamWriter {
     clock: SidecarClock::new(shared_origin),
     failure: None,
@@ -113,7 +113,7 @@ fn initial_snapshot_starts_at_zero_and_motion_keeps_hardware_cadence() {
     last_move: None,
     last_visibility: None,
     last_position: None,
-    writer: BufWriter::new(file),
+    output: SidecarOutput::File(std::io::BufWriter::new(file)),
   };
 
   stream
@@ -134,7 +134,7 @@ fn initial_snapshot_starts_at_zero_and_motion_keeps_hardware_cadence() {
       RawCursorEventKind::Move,
     ))
     .unwrap();
-  stream.writer.flush().unwrap();
+  stream.output.flush().unwrap();
   drop(stream);
 
   let records = std::fs::read_to_string(&path)
@@ -225,7 +225,9 @@ fn visibility_records_exact_landings_and_keeps_hidden_button_releases() {
     last_move: None,
     last_visibility: None,
     last_position: None,
-    writer: BufWriter::new(File::create(&path).unwrap()),
+    output: SidecarOutput::File(std::io::BufWriter::new(
+      std::fs::File::create(&path).unwrap(),
+    )),
   };
   stream
     .record(test_event(origin, RawCursorEventKind::Snapshot))
@@ -250,7 +252,7 @@ fn visibility_records_exact_landings_and_keeps_hidden_button_releases() {
   stream
     .record_visibility(40_000, true, Some((900.0, 800.0)))
     .unwrap();
-  stream.writer.flush().unwrap();
+  stream.output.flush().unwrap();
   let records: Vec<CursorRecord> = std::fs::read_to_string(&path)
     .unwrap()
     .lines()

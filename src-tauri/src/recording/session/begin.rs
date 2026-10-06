@@ -17,17 +17,11 @@ pub(in crate::recording) fn begin_capture(
   let system_audio_skipped = Arc::new(std::sync::atomic::AtomicBool::new(false));
   let options = &options;
   let camera_primary = options.mode == RecordingMode::Camera;
-  let camera = options
-    .camera_id
-    .as_ref()
-    .map(|device_id| CameraCaptureMode {
-      device_id: device_id.clone(),
-      flipped: options.camera_flipped,
-      fps: options.camera_fps.expect("validated above"),
-      height: options.camera_height.expect("validated above"),
-      pal: options.camera_pal,
-      width: options.camera_width.expect("validated above"),
-    });
+  let CaptureSources {
+    camera,
+    primary,
+    system_audio,
+  } = capture_sources(options);
   let directory = recordings_directory(app)?;
   std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
   let started_at = Local::now().naive_local();
@@ -64,26 +58,6 @@ pub(in crate::recording) fn begin_capture(
     options.microphone_id.is_some(),
     options.camera_id.is_some(),
   );
-  let primary = match options.mode {
-    RecordingMode::Screen => PrimaryCaptureSource::Screen {
-      fps: options.fps,
-      monitor_id: options.monitor_id.expect("validated above"),
-      show_cursor: options.show_cursor,
-    },
-    RecordingMode::Region => PrimaryCaptureSource::Region {
-      fps: options.fps,
-      monitor_id: options.monitor_id.expect("validated above"),
-      region: options.region.expect("validated above"),
-      show_cursor: options.show_cursor,
-    },
-    RecordingMode::Window => PrimaryCaptureSource::Window {
-      fps: options.fps,
-      show_cursor: options.show_cursor,
-      window_id: options.window_id.expect("validated above"),
-    },
-    RecordingMode::Camera => PrimaryCaptureSource::Camera,
-    RecordingMode::Audio => PrimaryCaptureSource::Audio,
-  };
   let capture::CaptureStart {
     cursor_source,
     first_frame,
@@ -99,11 +73,7 @@ pub(in crate::recording) fn begin_capture(
     on_failure,
     path: output_path.clone(),
     primary,
-    system_audio: SystemAudioSelection {
-      application_ids: options.system_audio_application_ids.clone(),
-      enabled: options.system_audio,
-      process_ids: options.system_audio_process_ids.clone(),
-    },
+    system_audio,
     system_audio_skipped: Arc::clone(&system_audio_skipped),
   })
   .inspect_err(|_| {
@@ -188,4 +158,56 @@ pub(in crate::recording) fn begin_capture(
     },
     first_frame,
   ))
+}
+
+/// What `options` asks the platform to capture.
+pub(in crate::recording) struct CaptureSources {
+  pub camera: Option<CameraCaptureMode>,
+  pub primary: PrimaryCaptureSource,
+  pub system_audio: SystemAudioSelection,
+}
+
+/// `options` as the platform's capture sources. Validated options only:
+/// every source the mode needs is present.
+pub(in crate::recording) fn capture_sources(options: &StartRecordingOptions) -> CaptureSources {
+  let camera = options
+    .camera_id
+    .as_ref()
+    .map(|device_id| CameraCaptureMode {
+      device_id: device_id.clone(),
+      flipped: options.camera_flipped,
+      fps: options.camera_fps.expect("validated above"),
+      height: options.camera_height.expect("validated above"),
+      pal: options.camera_pal,
+      width: options.camera_width.expect("validated above"),
+    });
+  let primary = match options.mode {
+    RecordingMode::Screen => PrimaryCaptureSource::Screen {
+      fps: options.fps,
+      monitor_id: options.monitor_id.expect("validated above"),
+      show_cursor: options.show_cursor,
+    },
+    RecordingMode::Region => PrimaryCaptureSource::Region {
+      fps: options.fps,
+      monitor_id: options.monitor_id.expect("validated above"),
+      region: options.region.expect("validated above"),
+      show_cursor: options.show_cursor,
+    },
+    RecordingMode::Window => PrimaryCaptureSource::Window {
+      fps: options.fps,
+      show_cursor: options.show_cursor,
+      window_id: options.window_id.expect("validated above"),
+    },
+    RecordingMode::Camera => PrimaryCaptureSource::Camera,
+    RecordingMode::Audio => PrimaryCaptureSource::Audio,
+  };
+  CaptureSources {
+    camera,
+    primary,
+    system_audio: SystemAudioSelection {
+      application_ids: options.system_audio_application_ids.clone(),
+      enabled: options.system_audio,
+      process_ids: options.system_audio_process_ids.clone(),
+    },
+  }
 }

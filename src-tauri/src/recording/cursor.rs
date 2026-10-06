@@ -32,10 +32,9 @@ mod tests;
 mod event_writer;
 mod front_app;
 mod own_presses;
+mod rolling;
 
-use std::fs::File;
-use std::io::{BufWriter, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::JoinHandle;
@@ -46,7 +45,9 @@ pub(crate) use self::format::CursorSourceKind;
 pub(crate) use self::format::{
   read, ButtonState, CursorButton, CursorRecord, CursorSource, CursorStyle, FORMAT_VERSION,
 };
+pub(crate) use self::rolling::CursorBaseline;
 use crate::recording::clock::SidecarClock;
+use crate::recording::sidecar_output::{self, RollingRecords, SidecarOutput};
 const MOVEMENT_INTERVAL: Duration = Duration::from_micros(7_500);
 const FLUSH_INTERVAL: Duration = Duration::from_secs(1);
 
@@ -91,48 +92,41 @@ struct StreamWriter {
   last_move: Option<Instant>,
   last_visibility: Option<bool>,
   last_position: Option<(f64, f64)>,
-  writer: BufWriter<File>,
+  output: SidecarOutput<CursorRecord, CursorBaseline>,
 }
 
 type EventSink = Arc<dyn Fn(RawCursorEvent) -> bool + Send + Sync>;
 
-/// A cursor sidecar being filled beside one native recording.
-pub struct CursorRecorder {
-  path: PathBuf,
+fn header(source: CursorSource) -> CursorRecord {
+  CursorRecord::Header {
+    coordinate_space: if cfg!(target_os = "windows") {
+      "global-physical-pixels".to_owned()
+    } else {
+      "global-logical-points".to_owned()
+    },
+    platform: std::env::consts::OS.to_owned(),
+    source,
+    timebase: "recording-microseconds".to_owned(),
+    version: FORMAT_VERSION,
+  }
+}
+
+/// The native pointer tap and the stream it feeds, whatever that stream is
+/// written to.
+struct Tap {
   state: Arc<Mutex<StreamWriter>>,
   stop: Arc<AtomicBool>,
   worker: Option<JoinHandle<()>>,
 }
 
-impl CursorRecorder {
+impl Tap {
   /// `include_own_windows` says whether the recording shows Screenwide's own
   /// windows; where it does not, presses on them are left out.
-  pub fn start(
-    path: PathBuf,
+  fn start(
+    output: SidecarOutput<CursorRecord, CursorBaseline>,
     origin: Arc<OnceLock<Instant>>,
-    source: CursorSource,
     include_own_windows: bool,
   ) -> Result<Self, String> {
-    let file = File::create(&path).map_err(|error| error.to_string())?;
-    let mut writer = BufWriter::new(file);
-    serde_json::to_writer(
-      &mut writer,
-      &CursorRecord::Header {
-        coordinate_space: if cfg!(target_os = "windows") {
-          "global-physical-pixels".to_owned()
-        } else {
-          "global-logical-points".to_owned()
-        },
-        platform: std::env::consts::OS.to_owned(),
-        source,
-        timebase: "recording-microseconds".to_owned(),
-        version: FORMAT_VERSION,
-      },
-    )
-    .map_err(|error| error.to_string())?;
-    writer.write_all(b"\n").map_err(|error| error.to_string())?;
-    writer.flush().map_err(|error| error.to_string())?;
-
     let state = Arc::new(Mutex::new(StreamWriter {
       clock: SidecarClock::new(origin),
       failure: None,
@@ -141,45 +135,78 @@ impl CursorRecorder {
       last_move: None,
       last_visibility: None,
       last_position: None,
-      writer,
+      output,
     }));
     let mut sink = visibility::sink(&state);
     if !include_own_windows {
       sink = own_presses::without_own_presses(sink, platform::on_own_window);
     }
     let stop = Arc::new(AtomicBool::new(false));
-    let worker = platform::start(Arc::clone(&stop), sink).inspect_err(|_| {
-      let _ = std::fs::remove_file(&path);
-    })?;
-
+    let worker = platform::start(Arc::clone(&stop), sink)?;
     Ok(Self {
-      path,
       state,
       stop,
       worker: Some(worker),
     })
   }
 
-  pub fn pause(&self, at: Instant) {
+  fn state(&self) -> std::sync::MutexGuard<'_, StreamWriter> {
     self
       .state
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
-      .clock
-      .pause(at);
+  }
+
+  fn finish(&mut self) -> Result<(), String> {
+    self.state().clock.stop();
+    self.stop.store(true, Ordering::Release);
+    if let Some(worker) = self.worker.take() {
+      worker
+        .join()
+        .map_err(|_| "The cursor recorder stopped unexpectedly".to_owned())?;
+    }
+    let mut state = self.state();
+    state.output.flush()?;
+    state.failure.take().map_or(Ok(()), Err)
+  }
+}
+
+impl Drop for Tap {
+  fn drop(&mut self) {
+    let _ = self.finish();
+  }
+}
+
+/// A cursor sidecar being filled beside one native recording.
+pub struct CursorRecorder {
+  path: PathBuf,
+  tap: Tap,
+}
+
+impl CursorRecorder {
+  pub fn start(
+    path: PathBuf,
+    origin: Arc<OnceLock<Instant>>,
+    source: CursorSource,
+    include_own_windows: bool,
+  ) -> Result<Self, String> {
+    let output = SidecarOutput::file(&path, &header(source))?;
+    let tap = Tap::start(output, origin, include_own_windows).inspect_err(|_| {
+      let _ = std::fs::remove_file(&path);
+    })?;
+    Ok(Self { path, tap })
+  }
+
+  pub fn pause(&self, at: Instant) {
+    self.tap.state().clock.pause(at);
   }
 
   pub fn resume(&self, at: Instant) {
-    self
-      .state
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner())
-      .clock
-      .resume(at);
+    self.tap.state().clock.resume(at);
   }
 
   pub fn stop(mut self) -> Result<PathBuf, String> {
-    if let Err(error) = self.finish() {
+    if let Err(error) = self.tap.finish() {
       let _ = std::fs::remove_file(&self.path);
       return Err(error);
     }
@@ -187,35 +214,48 @@ impl CursorRecorder {
   }
 
   pub fn cancel(mut self) {
-    let _ = self.finish();
+    let _ = self.tap.finish();
     let _ = std::fs::remove_file(&self.path);
-  }
-
-  fn finish(&mut self) -> Result<(), String> {
-    {
-      let mut state = self
-        .state
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-      state.clock.stop();
-    }
-    self.stop.store(true, Ordering::Release);
-    if let Some(worker) = self.worker.take() {
-      worker
-        .join()
-        .map_err(|_| "The cursor recorder stopped unexpectedly".to_owned())?;
-    }
-    let mut state = self
-      .state
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    state.writer.flush().map_err(|error| error.to_string())?;
-    state.failure.take().map_or(Ok(()), Err)
   }
 }
 
-impl Drop for CursorRecorder {
-  fn drop(&mut self) {
-    let _ = self.finish();
+/// The cursor over the last stretch of time, for the replay buffer to cut
+/// clips from. It owns no file until a clip is written.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub struct RollingCursorRecorder {
+  header: CursorRecord,
+  tap: Tap,
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+impl RollingCursorRecorder {
+  pub fn start(
+    origin: Arc<OnceLock<Instant>>,
+    source: CursorSource,
+    include_own_windows: bool,
+    horizon: Duration,
+  ) -> Result<Self, String> {
+    let horizon_us = u64::try_from(horizon.as_micros()).unwrap_or(u64::MAX);
+    let output = SidecarOutput::Rolling(RollingRecords::new(horizon_us));
+    Ok(Self {
+      header: header(source),
+      tap: Tap::start(output, origin, include_own_windows)?,
+    })
+  }
+
+  /// Writes the sidecar for the clip `start_us..=end_us` of recording time.
+  pub fn write_clip(&self, path: &Path, start_us: u64, end_us: u64) -> Result<(), String> {
+    let records = {
+      let state = self.tap.state();
+      if let Some(failure) = &state.failure {
+        return Err(failure.clone());
+      }
+      state
+        .output
+        .rolling()
+        .expect("a rolling recorder writes to a rolling output")
+        .clip(start_us, end_us)
+    };
+    sidecar_output::write_file(path, &self.header, &records)
   }
 }

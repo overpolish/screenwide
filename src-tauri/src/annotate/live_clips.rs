@@ -12,20 +12,25 @@
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
-use super::geometry::source_annotation;
-use crate::editor::annotations::pace::path_ms;
-use crate::editor::annotations::reveal::clip_ms_for_visible;
-use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
+use crate::editor::annotations::timing::RecordingAnnotationClip;
 use crate::editor::annotations::Annotation;
 use crate::recording::clock::SidecarClock;
 use crate::recording::cursor::CursorSource;
 
+mod clip;
+mod replay;
+use clip::annotation_clip;
+pub(crate) use replay::ReplayAnnotationRecorder;
+use replay::ReplayTimed;
+
 /// An annotation on screen. `shown_at_ms` is recording time, and stays absent
 /// until a running recording has seen the annotation: one drawn during a pause
 /// enters the recording at the resume rather than at the wall-clock moment it
-/// was drawn.
+/// was drawn. `replay_shown_at_us` is the same moment on the replay buffer's
+/// timeline, which runs independently of any recording.
 struct LiveAnnotation {
   annotation: Annotation,
+  replay_shown_at_us: Option<u64>,
   shown_at_ms: Option<u64>,
 }
 
@@ -38,14 +43,9 @@ struct Timed {
 }
 
 impl Timed {
-  /// Closes out one annotation that stopped being visible at `at`, paced by
-  /// its path on the recording's own frame, as the editor paces the clips it
-  /// writes.
-  ///
-  /// An animated annotation's clip runs past that moment by its own closing
-  /// phase, so it is still whole when it goes and starts leaving afterwards
-  /// rather than before. [`LiveAnnotations::stop`] trims whatever the
-  /// recording had no room for.
+  /// Closes out one annotation that stopped being visible at `at`.
+  /// [`LiveAnnotations::stop`] trims a closing phase the recording had no
+  /// room for.
   fn close(&mut self, live: &LiveAnnotation, at: Instant) {
     // No start means the annotation was drawn during a pause the recording
     // never came back from, so it was never part of it.
@@ -55,27 +55,9 @@ impl Timed {
     let Some(gone_ms) = self.clock.elapsed_us(at).map(millis) else {
       return;
     };
-    let Some(annotation) = source_annotation(&live.annotation, &self.source) else {
-      return;
-    };
-    let visible_ms = gone_ms.saturating_sub(start_ms);
-    let frame = (self.source.video_width, self.source.video_height);
-    let path_ms = path_ms(&annotation, frame);
-    let length_ms = if annotation.animated {
-      clip_ms_for_visible(visible_ms as f32, path_ms).round() as u64
-    } else {
-      visible_ms
-    };
-    self.clips.push(RecordingAnnotationClip {
-      path_ms,
-      pin: None,
-      annotation,
-      track_id: AnnotationTrack::Primary,
-      start_ms,
-      // An annotation drawn and cleared inside one millisecond is still a clip
-      // the editor has to be able to see and grab.
-      end_ms: (start_ms + length_ms).max(start_ms + 1),
-    });
+    if let Some(clip) = annotation_clip(&live.annotation, &self.source, start_ms, gone_ms) {
+      self.clips.push(clip);
+    }
   }
 }
 
@@ -83,6 +65,7 @@ impl Timed {
 #[derive(Default)]
 pub(crate) struct LiveAnnotations {
   annotations: Vec<LiveAnnotation>,
+  replay: Option<ReplayTimed>,
   timed: Option<Timed>,
 }
 
@@ -106,8 +89,13 @@ impl LiveAnnotations {
         .map(millis)
         .or_else(|| timed.clock.is_live().then_some(0))
     });
+    let replay_shown_at_us = self
+      .replay
+      .as_ref()
+      .and_then(|replay| replay.shown_at_us(at));
     self.annotations.push(LiveAnnotation {
       annotation,
+      replay_shown_at_us,
       shown_at_ms,
     });
   }
@@ -122,6 +110,9 @@ impl LiveAnnotations {
     if let Some(timed) = self.timed.as_mut() {
       timed.close(&live, at);
     }
+    if let Some(replay) = self.replay.as_mut() {
+      replay.close(&live, at);
+    }
     true
   }
 
@@ -129,6 +120,11 @@ impl LiveAnnotations {
   /// dismissed.
   fn clear(&mut self, at: Instant) {
     let annotations = std::mem::take(&mut self.annotations);
+    if let Some(replay) = self.replay.as_mut() {
+      for live in &annotations {
+        replay.close(live, at);
+      }
+    }
     let Some(timed) = self.timed.as_mut() else {
       return;
     };

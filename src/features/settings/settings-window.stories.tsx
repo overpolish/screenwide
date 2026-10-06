@@ -56,6 +56,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
       },
       { action: "startStopRecording", shortcut: null },
       { action: "pauseResumeRecording", shortcut: null },
+      { action: "saveReplay", shortcut: "CommandOrControl+Shift+Digit9" },
       {
         action: "recognizeText",
         shortcut: "CommandOrControl+Shift+KeyT",

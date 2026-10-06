@@ -12,6 +12,7 @@ export type ShortcutAction =
   | "toggleRecordingBar"
   | "startStopRecording"
   | "pauseResumeRecording"
+  | "saveReplay"
   | "takeScreenshot"
   | "takeScreenshotToClipboard"
   | "recognizeText"

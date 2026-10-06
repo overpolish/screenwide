@@ -3,7 +3,11 @@
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 
-import { RecordingSnapshot, StartRecordingOptions } from "./types";
+import {
+  RecordingSnapshot,
+  ReplaySnapshot,
+  StartRecordingOptions,
+} from "./types";
 
 export const getRecordingSnapshot = () =>
   invoke<RecordingSnapshot>("get_recording_snapshot");
@@ -49,3 +53,15 @@ export const startRecordingMonitor = (
 
 export const stopRecordingMonitor = (subscriptionId: number) =>
   invoke<null>("stop_recording_monitor", { subscriptionId });
+
+export const getReplaySnapshot = () =>
+  invoke<ReplaySnapshot>("get_replay_snapshot");
+
+/** Starts the replay buffer with the bar's settings as they are now. */
+export const startReplayBuffer = async (options: StartRecordingOptions) => {
+  await invoke<null>("start_replay_buffer", { options });
+};
+
+export const stopReplayBuffer = async () => {
+  await invoke<null>("stop_replay_buffer");
+};

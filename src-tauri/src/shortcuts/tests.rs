@@ -6,45 +6,43 @@ use std::collections::HashSet;
 use super::*;
 
 #[test]
-fn defaults_open_the_recording_bar_take_screenshots_and_recognize_text() {
+fn defaults_open_the_bar_save_replays_take_screenshots_and_recognize_text() {
   let settings = ShortcutSettings::default();
   let assigned = settings
     .bindings
     .iter()
     .filter(|binding| binding.shortcut.is_some())
+    .map(|binding| (binding.action, binding.shortcut.as_deref().unwrap()))
     .collect::<Vec<_>>();
-  assert_eq!(assigned.len(), 6);
-  assert_eq!(assigned[0].action, ShortcutAction::ToggleRecordingBar);
-  assert_eq!(assigned[1].action, ShortcutAction::TakeScreenshot);
   assert_eq!(
-    assigned[1].shortcut.as_deref(),
-    Some("CommandOrControl+Shift+Digit8")
+    assigned,
+    [
+      (
+        ShortcutAction::ToggleRecordingBar,
+        "CommandOrControl+Shift+Digit6"
+      ),
+      (ShortcutAction::SaveReplay, "CommandOrControl+Shift+Digit9"),
+      (
+        ShortcutAction::TakeScreenshot,
+        "CommandOrControl+Shift+Digit8"
+      ),
+      (ShortcutAction::RecognizeText, "CommandOrControl+Shift+KeyT"),
+      (ShortcutAction::RulerOverlay, "CommandOrControl+Shift+KeyR"),
+      (
+        ShortcutAction::AnnotateOverlay,
+        "CommandOrControl+Shift+KeyA"
+      ),
+      (
+        ShortcutAction::AnnotateClear,
+        "CommandOrControl+Shift+Backspace"
+      ),
+    ]
   );
   assert!(settings
     .bindings
     .iter()
     .find(|binding| binding.action == ShortcutAction::TakeScreenshotToClipboard)
     .is_some_and(|binding| binding.shortcut.is_none()));
-  assert_eq!(assigned[2].action, ShortcutAction::RecognizeText);
-  assert_eq!(
-    assigned[2].shortcut.as_deref(),
-    Some("CommandOrControl+Shift+KeyT")
-  );
-  assert_eq!(assigned[3].action, ShortcutAction::RulerOverlay);
-  assert_eq!(
-    assigned[3].shortcut.as_deref(),
-    Some("CommandOrControl+Shift+KeyR")
-  );
-  assert_eq!(assigned[4].action, ShortcutAction::AnnotateOverlay);
-  assert_eq!(
-    assigned[4].shortcut.as_deref(),
-    Some("CommandOrControl+Shift+KeyA")
-  );
-  assert_eq!(assigned[5].action, ShortcutAction::AnnotateClear);
-  assert_eq!(
-    assigned[5].shortcut.as_deref(),
-    Some("CommandOrControl+Shift+Backspace")
-  );
 }
 
 #[test]
@@ -80,6 +78,36 @@ fn a_saved_file_that_predates_an_action_leaves_it_on_its_default() {
   assert_eq!(
     shortcut(ShortcutAction::RulerOverlay).as_deref(),
     Some("Command+Shift+KeyR")
+  );
+}
+
+#[test]
+fn a_new_default_on_keys_the_user_already_bound_is_left_unbound() {
+  let stored = ShortcutSettings {
+    bindings: vec![ShortcutBinding {
+      action: ShortcutAction::TakeScreenshotToClipboard,
+      shortcut: Some("Super+Shift+Digit9".to_owned()),
+    }],
+  };
+  let merged = merge(Some(stored));
+  let shortcut = |action| {
+    merged
+      .bindings
+      .iter()
+      .find(|binding| binding.action == action)
+      .and_then(|binding| binding.shortcut.clone())
+  };
+
+  // Save Replay's default is the same keys spelled another way.
+  assert_eq!(shortcut(ShortcutAction::SaveReplay), None);
+  assert_eq!(
+    shortcut(ShortcutAction::TakeScreenshotToClipboard).as_deref(),
+    Some("Super+Shift+Digit9")
+  );
+  // Other new defaults on free keys still arrive.
+  assert_eq!(
+    shortcut(ShortcutAction::AnnotateOverlay).as_deref(),
+    Some("CommandOrControl+Shift+KeyA")
   );
 }
 

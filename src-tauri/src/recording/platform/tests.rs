@@ -19,7 +19,7 @@ use super::*;
 /// identifiable by its brightness alone, with a little per-column, per-tick
 /// dither so the encoder has real work to do and a frozen frame shows up.
 /// Chroma is left neutral, so the movie decodes grey and any green is damage.
-fn synthetic_frame(width: u32, height: u32, source_ns: i64, wall: Instant) -> Frame {
+pub(super) fn synthetic_frame(width: u32, height: u32, source_ns: i64, wall: Instant) -> Frame {
   let mut buf = cv::PixelBuf::new(
     width as usize,
     height as usize,

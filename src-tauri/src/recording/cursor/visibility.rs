@@ -58,7 +58,7 @@ impl StreamWriter {
         x,
         y,
       })?;
-      self.writer.flush().map_err(|error| error.to_string())?;
+      self.output.flush()?;
     }
     self.last_visibility = Some(visible);
     self.last_position = Some((x, y));

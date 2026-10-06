@@ -15,7 +15,9 @@ pub(super) struct StreamObjects {
 
 pub(super) struct CameraObjects {
   pub(super) commands: SyncSender<Command>,
-  pub(super) path: PathBuf,
+  /// The camera's working movie; `None` for the replay buffer, which keeps
+  /// its camera in memory.
+  pub(super) path: Option<PathBuf>,
   pub(super) stream: Option<CameraStream>,
   pub(super) worker: Option<JoinHandle<()>>,
 }
@@ -137,7 +139,9 @@ impl CaptureSession {
         }
         Err(error) => {
           eprintln!("Camera recording could not be finalized: {error}");
-          let _ = std::fs::remove_file(&camera.path);
+          if let Some(path) = &camera.path {
+            let _ = std::fs::remove_file(path);
+          }
         }
       }
     }
@@ -180,7 +184,9 @@ impl CaptureSession {
       if let Some(worker) = camera.worker.take() {
         let _ = worker.join();
       }
-      let _ = std::fs::remove_file(camera.path);
+      if let Some(path) = camera.path {
+        let _ = std::fs::remove_file(path);
+      }
     }
     self.microphone.take();
     let _ = self.commands.send(Command::Cancel);

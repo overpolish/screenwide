@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::audio_writer::AudioWriter;
+use super::super::replay::{KeyframeLink, ReplayWriterConfig};
 use super::super::*;
 use super::audio_stream;
 use super::microphone_stream;
+use super::writer_thread::{spawn_replay_writer, WriterThread};
+use super::Sink;
 use crate::recording::encoding::FailureReport;
 use crate::recording::monitor::RecordingMonitor;
 use crate::recording::SystemAudioSelection;
@@ -15,6 +18,7 @@ pub(super) async fn begin(
   on_failure: FailureReport,
   path: PathBuf,
   system_audio: SystemAudioSelection,
+  sink: Sink,
 ) -> Result<CaptureStart, String> {
   let microphone_source = microphone_id
     .as_deref()
@@ -22,19 +26,49 @@ pub(super) async fn begin(
     .transpose()?;
   let microphone_format = microphone_source.as_ref().map(MicrophoneSource::format);
   let stats = Arc::new(CaptureStats::default());
-  let (commands, inbox) = mpsc::sync_channel(FRAME_QUEUE_DEPTH);
-  let (first_frame, first_framed) = mpsc::channel();
-  let writer = AudioWriter::new(
-    path,
-    system_audio.enabled,
-    microphone_format,
-    Arc::clone(&stats),
-    Arc::clone(&on_failure),
-  )?;
-  let worker = std::thread::Builder::new()
-    .name("screenwide-audio-writer".to_owned())
-    .spawn(move || writer.run(&inbox, first_frame))
-    .map_err(|error| error.to_string())?;
+  let timeline_origin = Arc::new(OnceLock::new());
+  let (commands, first_framed, worker) = match sink {
+    Sink::Movie => {
+      let (commands, inbox) = mpsc::sync_channel(FRAME_QUEUE_DEPTH);
+      let (first_frame, first_framed) = mpsc::channel();
+      let writer = AudioWriter::new(
+        path,
+        system_audio.enabled,
+        microphone_format,
+        Arc::clone(&stats),
+        Arc::clone(&on_failure),
+      )?;
+      let worker = std::thread::Builder::new()
+        .name("screenwide-audio-writer".to_owned())
+        .spawn(move || writer.run(&inbox, first_frame))
+        .map_err(|error| error.to_string())?;
+      (commands, first_framed, worker)
+    }
+    Sink::Replay { length } => {
+      let WriterThread {
+        commands,
+        first_frame,
+        worker,
+      } = spawn_replay_writer(
+        ReplayWriterConfig {
+          encoder: None,
+          fps: 0,
+          height: 0,
+          keyframes: KeyframeLink::new(),
+          length,
+          microphone_format,
+          on_failure: Arc::clone(&on_failure),
+          primary_video: false,
+          stats: Arc::clone(&stats),
+          system_audio: system_audio.enabled,
+          timeline_origin: Arc::clone(&timeline_origin),
+          width: 0,
+        },
+        "screenwide-replay-audio-writer",
+      )?;
+      (commands, first_frame, worker)
+    }
+  };
 
   let content = if system_audio.enabled {
     Some(
@@ -62,7 +96,6 @@ pub(super) async fn begin(
   )?;
   let microphone = microphone_stream::start(microphone_source, &commands, &monitor, &stats)?;
   system_audio_streams.start().await?;
-  let timeline_origin = Arc::new(OnceLock::new());
   let begin_at = Instant::now();
   let _ = timeline_origin.set(begin_at);
   commands

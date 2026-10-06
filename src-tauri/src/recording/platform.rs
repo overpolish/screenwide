@@ -31,6 +31,7 @@ mod desktop_compositor;
 mod desktop_stream;
 mod media;
 mod output;
+mod replay;
 mod session;
 mod startup;
 mod writer;
@@ -60,6 +61,7 @@ use super::{CameraCaptureMode, CaptureStartupConfig, PrimaryCaptureSource};
 use media::microphone_buffer_from_origin;
 use media::{even, frame_status, time_to_ns, VideoEncoder};
 use output::{AudioSample, CaptureStats, Command, Frame, ScreenOutput, ScreenOutputInner};
+pub use replay::{begin_blocking as begin_replay_blocking, ReplayCapture, ReplaySession};
 pub use session::CaptureSession;
 use session::StreamObjects;
 use writer::{Container, Writer, WriterConfig};
@@ -77,7 +79,7 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
     .enable_all()
     .build()
     .map_err(|error| error.to_string())?
-    .block_on(startup::begin(config))
+    .block_on(startup::begin(config, startup::Sink::Movie))
 }
 
 /// AVFoundation's localized writer error is often only "The operation could

@@ -80,6 +80,8 @@ pub(super) enum Command {
     reply: mpsc::Sender<Result<FinalizeInfo, String>>,
   },
   Cancel,
+  /// The replay buffer asking for what it holds; only its own writer answers.
+  Replay(super::replay::ClipRequest),
 }
 
 /// Counters shared by the capture callback and the writer thread, so a

@@ -12,7 +12,12 @@ import {
   WindowDetails,
 } from "../../recording-sources/types";
 import { canStartRecording } from "../can-record";
-import { RecordingStatus, ScreenshotAction, ScreenshotState } from "../types";
+import {
+  RecordingStatus,
+  ReplaySnapshot,
+  ScreenshotAction,
+  ScreenshotState,
+} from "../types";
 
 import { RecordingBarCaptureActions } from "./recording-bar-capture-actions";
 import { RecordingBarInputs } from "./recording-bar-inputs";
@@ -50,6 +55,7 @@ type RecordingBarProps = {
   onModeChange?: (mode: RecordingMode) => void;
   onPointerUp?: () => void;
   onRecord?: () => void;
+  onReplayChange?: (on: boolean) => void;
   onRequiredPermissionsPress?: () => void;
   onScreenshot?: () => void;
   onScreenshotToClipboard?: () => void;
@@ -61,6 +67,8 @@ type RecordingBarProps = {
   pendingEditors?: { recording: boolean; screenshot: boolean };
   /** The bar's root, which a window can measure to size itself to it. */
   ref?: Ref<HTMLElement>;
+  /** The replay buffer, which keeps running whatever the bar is set to. */
+  replay?: ReplaySnapshot;
   screenshotAction?: ScreenshotAction;
   screenshotState?: ScreenshotState;
   selectedMonitor?: MonitorDetails | null;
@@ -108,12 +116,14 @@ export function RecordingBar(props: RecordingBarProps) {
     onModeChange,
     onPointerUp,
     onRecord,
+    onReplayChange,
     onRequiredPermissionsPress,
     onScreenshot,
     onScreenshotToClipboard,
     onScrollingScreenshot,
     pendingEditors = { recording: false, screenshot: false },
     ref,
+    replay,
     screenshotState = "idle",
     selectedMonitor = null,
     selectedWindow = null,
@@ -238,16 +248,19 @@ export function RecordingBar(props: RecordingBarProps) {
         canRecord={canRecord}
         canScreenshot={canScreenshot}
         canScrollingScreenshot={canScrollingScreenshot}
+        canStartReplay={canRecordIgnoringEditor}
         isCapturing={isCapturing}
         isLocked={Boolean(isLocked)}
         isRecordBlockedByEditor={isRecordBlockedByEditor}
         onDelayedScreenshot={onDelayedScreenshot}
         onFocusPendingEditor={onFocusPendingEditor}
         onRecord={onRecord}
+        onReplayChange={onReplayChange}
         onRequiredPermissionsPress={onRequiredPermissionsPress}
         onScreenshot={onScreenshot}
         onScreenshotToClipboard={onScreenshotToClipboard}
         onScrollingScreenshot={onScrollingScreenshot}
+        replay={replay}
         screenshotState={screenshotState}
       />
     </main>

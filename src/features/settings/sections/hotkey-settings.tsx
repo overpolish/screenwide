@@ -28,6 +28,11 @@ const groups: { rows: ShortcutRow[]; title: string }[] = [
         action: "pauseResumeRecording",
         label: "Pause or resume recording",
       },
+      {
+        action: "saveReplay",
+        description: "Works while the replay buffer is on.",
+        label: "Save replay",
+      },
     ],
     title: "Recording",
   },

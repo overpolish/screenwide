@@ -53,6 +53,7 @@ import { selectStatus, useRecordingStore } from "../store";
 import { RecordingError } from "../types";
 import { useRecordingBarShortcuts } from "../use-recording-bar-shortcuts";
 import { useRecordingInputAvailability } from "../use-recording-input-availability";
+import { useReplayBuffer } from "../use-replay-buffer";
 import { useScreenshotCapture } from "../use-screenshot-capture";
 
 import { RecordingBar } from "./recording-bar";
@@ -229,6 +230,7 @@ export function RecordingBarWindow() {
     setInput,
   } = useRecordingInputStore((state) => state);
   useRecordingBarShortcuts();
+  const { replay, setReplayOn } = useReplayBuffer();
   const inputAvailability = useRecordingInputAvailability({
     active:
       isRecordingUiVisible &&
@@ -526,6 +528,7 @@ export function RecordingBarWindow() {
           console.error("Could not start the recording", error);
         });
       }}
+      onReplayChange={setReplayOn}
       onRequiredPermissionsPress={() => {
         void openPermissionsWindow();
       }}
@@ -547,6 +550,7 @@ export function RecordingBarWindow() {
         screenshot: hasPendingScreenshot,
       }}
       ref={barRef}
+      replay={replay}
       screenshotAction={screenshotFeedback.action}
       screenshotState={screenshotFeedback.state}
       selectedMonitor={selectedMonitor}

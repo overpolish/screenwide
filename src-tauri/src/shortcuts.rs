@@ -31,9 +31,11 @@ pub use registration::{
 };
 pub use registration::{begin_shortcut_capture, end_shortcut_capture, initialize};
 
+mod defaults;
+use defaults::merge;
 mod feature_availability;
 pub(crate) use feature_availability::{
-  sync_annotate_enabled, sync_ocr_enabled, sync_ruler_enabled,
+  sync_annotate_enabled, sync_ocr_enabled, sync_replay_enabled, sync_ruler_enabled,
 };
 
 const SHORTCUTS_FILE: &str = "shortcuts.json";
@@ -74,6 +76,7 @@ pub enum ShortcutAction {
   ToggleRecordingBar,
   StartStopRecording,
   PauseResumeRecording,
+  SaveReplay,
   TakeScreenshot,
   TakeScreenshotToClipboard,
   RecognizeText,
@@ -95,51 +98,6 @@ pub struct ShortcutSettings {
   pub bindings: Vec<ShortcutBinding>,
 }
 
-impl Default for ShortcutSettings {
-  fn default() -> Self {
-    Self {
-      bindings: vec![
-        ShortcutBinding {
-          action: ShortcutAction::ToggleRecordingBar,
-          shortcut: Some("CommandOrControl+Shift+Digit6".to_owned()),
-        },
-        ShortcutBinding {
-          action: ShortcutAction::StartStopRecording,
-          shortcut: None,
-        },
-        ShortcutBinding {
-          action: ShortcutAction::PauseResumeRecording,
-          shortcut: None,
-        },
-        ShortcutBinding {
-          action: ShortcutAction::TakeScreenshot,
-          shortcut: Some("CommandOrControl+Shift+Digit8".to_owned()),
-        },
-        ShortcutBinding {
-          action: ShortcutAction::TakeScreenshotToClipboard,
-          shortcut: None,
-        },
-        ShortcutBinding {
-          action: ShortcutAction::RecognizeText,
-          shortcut: Some("CommandOrControl+Shift+KeyT".to_owned()),
-        },
-        ShortcutBinding {
-          action: ShortcutAction::RulerOverlay,
-          shortcut: Some("CommandOrControl+Shift+KeyR".to_owned()),
-        },
-        ShortcutBinding {
-          action: ShortcutAction::AnnotateOverlay,
-          shortcut: Some("CommandOrControl+Shift+KeyA".to_owned()),
-        },
-        ShortcutBinding {
-          action: ShortcutAction::AnnotateClear,
-          shortcut: Some("CommandOrControl+Shift+Backspace".to_owned()),
-        },
-      ],
-    }
-  }
-}
-
 #[derive(Default)]
 pub struct ShortcutSettingsState(Mutex<ShortcutSettings>);
 
@@ -154,26 +112,6 @@ fn load(app: &AppHandle) -> ShortcutSettings {
       .and_then(|path| std::fs::read(path).ok())
       .and_then(|contents| serde_json::from_slice::<ShortcutSettings>(&contents).ok()),
   )
-}
-
-/// The saved bindings over the defaults. An action the saved file has never
-/// heard of keeps its default, so a shortcut introduced by an update reaches
-/// an existing install; one the user cleared is stored as null and stays
-/// cleared.
-fn merge(stored: Option<ShortcutSettings>) -> ShortcutSettings {
-  let mut settings = ShortcutSettings::default();
-  if let Some(stored) = stored {
-    for binding in &mut settings.bindings {
-      if let Some(saved) = stored
-        .bindings
-        .iter()
-        .find(|candidate| candidate.action == binding.action)
-      {
-        binding.shortcut = saved.shortcut.clone();
-      }
-    }
-  }
-  settings
 }
 
 fn store(app: &AppHandle, settings: &ShortcutSettings) -> Result<(), String> {

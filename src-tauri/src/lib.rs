@@ -58,6 +58,7 @@ pub fn run() {
     .manage(editor::screenshot_preview::ScreenshotPreviewState::default())
     .manage(permissions::PermissionState::default())
     .manage(recording::RecordingState::default())
+    .manage(recording::ReplayState::default())
     .manage(ruler::RulerState::default())
     .manage(settings::GeneralSettingsState::default())
     .manage(shortcuts::ShortcutSettingsState::default())
@@ -149,12 +150,16 @@ pub fn run() {
       permissions::restart_app,
       recording::commands::cancel_recording,
       recording::commands::get_recording_snapshot,
+      recording::commands::get_replay_snapshot,
       recording::commands::pause_recording,
       recording::commands::resume_recording,
+      recording::commands::save_replay,
       recording::commands::start_recording_monitor,
       recording::commands::start_recording,
+      recording::commands::start_replay_buffer,
       recording::commands::stop_recording_monitor,
       recording::commands::stop_recording,
+      recording::commands::stop_replay_buffer,
       recording_inputs::list_cameras,
       recording_inputs::list_microphones,
       recording_sources::list_applications,

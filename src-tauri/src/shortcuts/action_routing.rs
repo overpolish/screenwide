@@ -22,7 +22,8 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
     ShortcutAction::AnnotateClear
     | ShortcutAction::AnnotateOverlay
     | ShortcutAction::PauseResumeRecording
-    | ShortcutAction::RulerOverlay => None,
+    | ShortcutAction::RulerOverlay
+    | ShortcutAction::SaveReplay => None,
   }
 }
 
@@ -49,6 +50,12 @@ pub(super) const fn preserved_capture_overlays(
       crate::capture_overlays::CaptureOverlay::Ruler,
     ],
     ShortcutAction::RulerOverlay => &[crate::capture_overlays::CaptureOverlay::Ruler],
+    // Saving looks back at what was on screen; whatever is up stays up.
+    ShortcutAction::SaveReplay => &[
+      crate::capture_overlays::CaptureOverlay::Annotate,
+      crate::capture_overlays::CaptureOverlay::Ruler,
+      crate::capture_overlays::CaptureOverlay::TextRecognition,
+    ],
     _ => &[],
   }
 }
@@ -176,6 +183,10 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     ShortcutAction::AnnotateClear => {
       crate::annotate::clear(app);
       record_native_result(action, "cleared", None);
+    }
+    ShortcutAction::SaveReplay => {
+      let result = crate::recording::replay::save(app);
+      record_native_result(action, "replay_saved", result.err());
     }
   }
 }

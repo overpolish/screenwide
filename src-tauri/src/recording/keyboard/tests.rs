@@ -141,7 +141,7 @@ fn accepted_key_down_and_matching_key_up_have_distinct_timestamps() {
     active_keys: std::collections::HashSet::new(),
     clock: SidecarClock::new(shared_origin),
     failure: None,
-    writer: std::io::BufWriter::new(file),
+    output: SidecarOutput::File(std::io::BufWriter::new(file)),
     last_typing_us: None,
   };
   let mut down = event(FocusContext::NonText, true, vec![]);
@@ -150,7 +150,7 @@ fn accepted_key_down_and_matching_key_up_have_distinct_timestamps() {
   up.at = origin + Duration::from_millis(35);
   assert!(writer.record(down).unwrap());
   assert!(writer.record(up).unwrap());
-  writer.writer.flush().unwrap();
+  writer.output.flush().unwrap();
   let lines = std::fs::read_to_string(&path).unwrap();
   let _ = std::fs::remove_file(path);
   assert!(lines.contains("\"type\":\"keyDown\""));
@@ -173,7 +173,7 @@ fn key_up_without_accepted_key_down_is_discarded() {
     active_keys: std::collections::HashSet::new(),
     clock: SidecarClock::new(shared_origin),
     failure: None,
-    writer: std::io::BufWriter::new(file),
+    output: SidecarOutput::File(std::io::BufWriter::new(file)),
     last_typing_us: None,
   };
   assert!(!writer.record(key_up(99)).unwrap());
@@ -194,7 +194,7 @@ fn typing_in_a_field_is_marked_by_time_alone_and_never_in_a_password() {
     active_keys: std::collections::HashSet::new(),
     clock: SidecarClock::new(shared_origin),
     failure: None,
-    writer: std::io::BufWriter::new(file),
+    output: SidecarOutput::File(std::io::BufWriter::new(file)),
     last_typing_us: None,
   };
   let at = |focus, ms| {
@@ -210,7 +210,7 @@ fn typing_in_a_field_is_marked_by_time_alone_and_never_in_a_password() {
     .map(|ms| writer.record(at(FocusContext::Text, ms)).unwrap())
     .collect();
   assert_eq!(marked, [true, false, true, false]);
-  writer.writer.flush().unwrap();
+  writer.output.flush().unwrap();
   let lines = std::fs::read_to_string(&path).unwrap();
   let _ = std::fs::remove_file(path);
   assert_eq!(

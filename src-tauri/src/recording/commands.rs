@@ -6,7 +6,8 @@
 use tauri::{AppHandle, State};
 
 use super::{
-  cancel, pause, resume, start, stop, RecordingSnapshot, RecordingState, StartRecordingOptions,
+  cancel, pause, replay, resume, start, stop, RecordingSnapshot, RecordingState, ReplaySnapshot,
+  StartRecordingOptions,
 };
 
 #[tauri::command]
@@ -54,4 +55,24 @@ pub fn stop_recording(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn cancel_recording(app: AppHandle) -> Result<(), String> {
   cancel(&app)
+}
+
+#[tauri::command]
+pub fn get_replay_snapshot(app: AppHandle) -> ReplaySnapshot {
+  replay::snapshot(&app)
+}
+
+#[tauri::command]
+pub fn start_replay_buffer(app: AppHandle, options: StartRecordingOptions) -> Result<(), String> {
+  replay::start(&app, options)
+}
+
+#[tauri::command]
+pub fn stop_replay_buffer(app: AppHandle) {
+  replay::stop(&app);
+}
+
+#[tauri::command]
+pub fn save_replay(app: AppHandle) -> Result<(), String> {
+  replay::save(&app)
 }
