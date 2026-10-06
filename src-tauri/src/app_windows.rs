@@ -14,11 +14,13 @@ pub use glide_preview_control::show_glide_preview;
 mod recording_ui;
 pub use recording_ui::hide_recording_ui;
 pub use recording_ui::is_recording_ui_visible;
+pub use recording_ui::open_recording_ui;
 pub use recording_ui::recording_ui_visible;
 pub use recording_ui::show_recording_ui;
 pub(crate) use recording_ui::sync_recording_ui_escape;
 pub use recording_ui::toggle_recording_ui;
 pub use recording_ui::{__cmd__hide_recording_ui, __tauri_command_name_hide_recording_ui};
+pub use recording_ui::{__cmd__open_recording_ui, __tauri_command_name_open_recording_ui};
 pub use recording_ui::{__cmd__recording_ui_visible, __tauri_command_name_recording_ui_visible};
 pub use recording_ui::{__cmd__toggle_recording_ui, __tauri_command_name_toggle_recording_ui};
 

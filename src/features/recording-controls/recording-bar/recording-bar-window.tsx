@@ -48,6 +48,7 @@ import { type RecordingMode } from "../../recording-sources/types";
 import { cancelRuler } from "../../region-selector/ruler-screenshot-mode";
 import { cancelTextRecognition } from "../../text-recognition/api";
 import { startRecording } from "../api";
+import { canStartRecording, RecordingReadiness } from "../can-record";
 import { startRecordingOptions } from "../recording-request";
 import { selectStatus, useRecordingStore } from "../store";
 import { RecordingError } from "../types";
@@ -230,7 +231,6 @@ export function RecordingBarWindow() {
     setInput,
   } = useRecordingInputStore((state) => state);
   useRecordingBarShortcuts();
-  const { replay, setReplayOn } = useReplayBuffer();
   const inputAvailability = useRecordingInputAvailability({
     active:
       isRecordingUiVisible &&
@@ -253,6 +253,21 @@ export function RecordingBarWindow() {
     selectedSystemAudio,
     systemAudioEnabled: inputs.systemAudio,
   });
+  const readiness: RecordingReadiness = {
+    hasCameraWarning: inputAvailability.cameraMissing,
+    hasMicrophoneWarning: inputAvailability.microphoneMissing,
+    hasSelectedMonitor: selectedMonitor !== null,
+    hasSelectedWindow: selectedWindow !== null,
+    hasSystemAudioWarning: inputAvailability.systemAudioMissing,
+    inputs,
+    isCameraLocked: !hydrated || !canRecordCamera,
+    isMicrophoneLocked: !hydrated || !canRecordMicrophone,
+    isScreenLocked: hydrated && !canRecordScreen,
+    mode: recordingMode,
+  };
+  // Not gated on an idle recording state as the bar's toggle is: the buffer
+  // runs beside a recording, and the tray offers it during one.
+  const { replay, setReplayOn } = useReplayBuffer(canStartRecording(readiness));
 
   useEffect(() => {
     // Any screenshot session that outlived a previous run belongs to a window
@@ -464,16 +479,16 @@ export function RecordingBarWindow() {
 
   return (
     <RecordingBar
-      hasCameraWarning={inputAvailability.cameraMissing}
-      hasMicrophoneWarning={inputAvailability.microphoneMissing}
-      hasSelectedMonitor={selectedMonitor !== null}
-      hasSelectedWindow={selectedWindow !== null}
-      hasSystemAudioWarning={inputAvailability.systemAudioMissing}
+      hasCameraWarning={readiness.hasCameraWarning}
+      hasMicrophoneWarning={readiness.hasMicrophoneWarning}
+      hasSelectedMonitor={readiness.hasSelectedMonitor}
+      hasSelectedWindow={readiness.hasSelectedWindow}
+      hasSystemAudioWarning={readiness.hasSystemAudioWarning}
       initialMode={recordingMode}
       inputs={inputs}
-      isCameraLocked={!hydrated || !canRecordCamera}
-      isLocked={hydrated && !canRecordScreen}
-      isMicrophoneLocked={!hydrated || !canRecordMicrophone}
+      isCameraLocked={readiness.isCameraLocked}
+      isLocked={readiness.isScreenLocked}
+      isMicrophoneLocked={readiness.isMicrophoneLocked}
       // The window is only hidden, never unmounted: the previews stop when the
       // bar goes away rather than streaming on behind it.
       isPreviewActive={isRecordingUiVisible && status === "idle"}

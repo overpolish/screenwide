@@ -228,6 +228,7 @@ pub fn run() {
       app_windows::dock::resize_recording_dock,
       app_windows::dock::first_reveal::recording_dock_painted,
       app_windows::hide_recording_ui,
+      app_windows::open_recording_ui,
       app_windows::recording_ui_visible,
       app_windows::toggle_recording_ui,
       app_windows::region::hide_region_selector,

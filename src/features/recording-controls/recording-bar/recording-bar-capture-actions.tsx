@@ -179,28 +179,6 @@ export function RecordingBarCaptureActions({
 
   return (
     <div className={cn("flex items-center gap-control-inset", className)}>
-      {replay?.available ? (
-        <IconToggleButton
-          aria-label={`Replay buffer, keeps the last ${String(replay.lengthSeconds)} seconds`}
-          // Starting needs settings the bar could record with; turning it off
-          // is always allowed, whatever the bar is set to now.
-          isDisabled={
-            replay.status === "starting" ||
-            (replay.status === "off" && !canStartReplay)
-          }
-          isSelected={replay.status !== "off"}
-          onChange={onReplayChange}
-          size="capture"
-        >
-          <History
-            className={cn(
-              replay.status === "starting" &&
-                "animate-pulse text-content-fg-secondary",
-            )}
-          />
-        </IconToggleButton>
-      ) : null}
-
       {/* Marked as a trigger so closing the panel with the keyboard returns
           focus to the button rather than to the window. */}
       <div data-popup-panel-trigger={SCREENSHOT_MENU_ID}>
@@ -257,6 +235,28 @@ export function RecordingBarCaptureActions({
           <Circle />
         )}
       </Button>
+
+      {replay?.available ? (
+        <IconToggleButton
+          aria-label={`Replay buffer, keeps the last ${String(replay.lengthSeconds)} seconds`}
+          // Starting needs settings the bar could record with; turning it off
+          // is always allowed, whatever the bar is set to now.
+          isDisabled={
+            replay.status === "starting" ||
+            (replay.status === "off" && !canStartReplay)
+          }
+          isSelected={replay.status !== "off"}
+          onChange={onReplayChange}
+          size="capture"
+        >
+          <History
+            className={cn(
+              replay.status === "starting" &&
+                "animate-pulse text-content-fg-secondary",
+            )}
+          />
+        </IconToggleButton>
+      ) : null}
     </div>
   );
 }

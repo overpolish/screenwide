@@ -50,6 +50,13 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
   )
 }
 
+/// The bar showing itself: a start the tray asked of it could not happen, and
+/// its warnings say why.
+#[tauri::command]
+pub fn open_recording_ui(app: AppHandle) -> tauri::Result<()> {
+  show_recording_ui(&app)
+}
+
 pub fn is_recording_ui_visible() -> bool {
   RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed)
 }

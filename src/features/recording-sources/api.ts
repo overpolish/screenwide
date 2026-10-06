@@ -50,6 +50,8 @@ export const finishRecordingBarDrag = () =>
 
 export const hideRecordingUi = () => invoke<null>("hide_recording_ui");
 
+export const openRecordingUi = () => invoke<null>("open_recording_ui");
+
 export const recordingUiVisible = () => invoke<boolean>("recording_ui_visible");
 
 export const toggleRecordingUi = () => invoke<null>("toggle_recording_ui");
