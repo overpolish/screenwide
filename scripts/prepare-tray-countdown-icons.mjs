@@ -5,16 +5,22 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
+import { History } from "lucide-react";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 // The tray shows Delayed Screenshot's seconds left as one of these, from the
-// longest delay Settings offers down to one, and a running replay buffer as a
-// rewind mark. Like the recording, paused and loading icons, each is the tray
-// mark's arc with its own glyph where the dot sits. They are full-alpha
-// masks: macOS shows them as template images and Windows recolours them to
-// the taskbar's foreground.
+// longest delay Settings offers down to one, and a running replay buffer as
+// the History icon its menu item wears. Like the recording, paused and
+// loading icons, each is the tray mark's arc with its own glyph where the dot
+// sits. They are full-alpha masks: macOS shows them as template images and
+// Windows recolours them to the taskbar's foreground. Only their alpha
+// counts, but the glyphs are white like the arc they sit on, so every tray
+// icon looks the same as a file too.
 // Commit the PNGs so normal builds need neither Node nor an SVG renderer.
 const LONGEST_DELAY = 10;
 const SIZE = 32;
+const INK = "white";
 
 /** The arc's top edge: everything above it in the loading icon is its dots. */
 const ARC_TOP = 12;
@@ -23,6 +29,10 @@ const ARC_TOP = 12;
 const GLYPH_CENTRE = [18.5, 7];
 const GLYPH_HEIGHT = 12;
 const GLYPH_WIDTH = 16;
+/** The History icon's size and line weight. Its own weight would be under a
+ * pixel at this size and blur; this one keeps its hands legible. */
+const HISTORY_SIZE = 13;
+const HISTORY_STROKE = 1.75;
 
 const icons = new URL("../src-tauri/icons/", import.meta.url);
 const output = new URL("tray-countdown/", icons);
@@ -103,7 +113,7 @@ for (let seconds = 1; seconds <= LONGEST_DELAY; seconds += 1) {
   // resvg draws the variable font at its default weight, so a stroke gives
   // the number the weight of the arc. Two digits sit closer to fit the box.
   const spacing = seconds < 10 ? 0 : -1.5;
-  const number = `<text x="0" y="0" font-family="Roboto Mono" font-size="20" letter-spacing="${spacing}" stroke="black" stroke-width="2.4" stroke-linejoin="round">${seconds}</text>`;
+  const number = `<text x="0" y="0" font-family="Roboto Mono" font-size="20" letter-spacing="${spacing}" fill="${INK}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round">${seconds}</text>`;
   const ink = measureInk(number);
   const scale = Math.min(
     GLYPH_HEIGHT / (ink.bottom - ink.top),
@@ -121,13 +131,15 @@ for (let seconds = 1; seconds <= LONGEST_DELAY; seconds += 1) {
   await writeFile(new URL(`${seconds}.png`, output), png);
 }
 
-// Two rewind triangles filling the glyph box, softened at the corners with
-// the arc's own round joins.
 const [centreX, centreY] = GLYPH_CENTRE;
-const [left, right] = [centreX - GLYPH_WIDTH / 2, centreX + GLYPH_WIDTH / 2];
-const [top, bottom] = [centreY - GLYPH_HEIGHT / 2, centreY + GLYPH_HEIGHT / 2];
-const inset = 1;
-const triangle = (tip, back) =>
-  `M${back} ${top + inset} L${back} ${bottom - inset} L${tip + inset} ${centreY} Z`;
-const rewind = `<path d="${triangle(left, centreX)} ${triangle(centreX, right - inset)}" fill="black" stroke="black" stroke-width="2" stroke-linejoin="round"/>`;
-await writeFile(new URL("tray-replay.png", icons), iconWith(rewind));
+const history = renderToStaticMarkup(
+  createElement(History, {
+    absoluteStrokeWidth: true,
+    color: INK,
+    size: HISTORY_SIZE,
+    strokeWidth: HISTORY_STROKE,
+    x: centreX - HISTORY_SIZE / 2,
+    y: centreY - HISTORY_SIZE / 2,
+  }),
+);
+await writeFile(new URL("tray-replay.png", icons), iconWith(history));
