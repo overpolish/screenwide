@@ -223,19 +223,31 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {/* The zooms follow the cursor, so a recording without one has none
-          to make. */}
+          to make. Clear all stays in place while there is nothing to clear,
+          so the row never shifts as zooms come and go. */}
       {hasCursorData ? (
-        <ControlRow title="Auto zoom">
+        <ControlRow controlClassName="gap-control" title="Auto zoom">
           {(controlProps) => (
-            <Button
-              {...controlProps}
-              isDisabled={isLocked}
-              onPress={() => {
-                change({ autoZoomScenes: true });
-              }}
-            >
-              Regenerate
-            </Button>
+            <>
+              <Button
+                {...controlProps}
+                isDisabled={isLocked}
+                onPress={() => {
+                  change({ autoZoomScenes: true });
+                }}
+              >
+                Regenerate
+              </Button>
+              <Button
+                aria-label="Clear all auto zooms"
+                isDisabled={isLocked || !scene.hasAutoZooms}
+                onPress={() => {
+                  change({ clearAutoZooms: true });
+                }}
+              >
+                Clear all
+              </Button>
+            </>
           )}
         </ControlRow>
       ) : null}

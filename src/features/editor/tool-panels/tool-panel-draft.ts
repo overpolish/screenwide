@@ -86,6 +86,7 @@ export function resolveToolPanelSnapshot(
     autoZoomScenes: _autoZoomScenes,
     bakeCamera,
     chooseSceneTemplate: _chooseSceneTemplate,
+    clearAutoZooms: _clearAutoZooms,
     clearDrawings: _clearDrawings,
     cropSize,
     customizeScene: _customizeScene,

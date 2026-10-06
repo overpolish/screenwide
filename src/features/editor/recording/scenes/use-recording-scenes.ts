@@ -203,6 +203,9 @@ export function useRecordingScenes({
           console.error("Could not make the auto zooms", cause);
         });
     },
+    clearAutoZooms: () => {
+      commitClips(withAutoZooms(editRef.current.sceneClips ?? EMPTY_CLIPS, []));
+    },
   };
   usePublishRecordingScene(
     "recording",
@@ -226,6 +229,7 @@ export function useRecordingScenes({
           },
           framing: currentPane?.framing ?? null,
           framingPane: currentPane?.pane ?? "screen",
+          hasAutoZooms: clips.some((clip) => clip.auto),
           hasCamera,
           hasSceneAtPlayhead: current !== null,
           isBaked,

@@ -33,6 +33,17 @@ describe("withAutoZooms", () => {
     expect(next.map((clip) => clip.id)).toEqual(["mine", "new"]);
   });
 
+  it("clears the untouched auto zooms and keeps the ones you edited", () => {
+    const before = [zoom("a", 0, 4_000), zoom("b", 10_000, 14_000)];
+    const edited = ownEditedAutoZooms(before, [
+      before[0],
+      { ...before[1], endMs: 16_000 },
+      own("mine", 20_000, 30_000),
+    ]);
+    const cleared = withAutoZooms(edited, []);
+    expect(cleared.map((clip) => clip.id)).toEqual(["b", "mine"]);
+  });
+
   it("fits a zoom beside a scene of your own it runs into", () => {
     const [mine, fitted] = withAutoZooms(
       [own("mine", 10_000, 20_000)],

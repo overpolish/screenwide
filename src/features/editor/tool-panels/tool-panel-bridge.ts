@@ -101,6 +101,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onSceneTemplateRemove?.(values.removeSceneTemplate);
   if (values.resetSceneFraming) on.onSceneFramingReset?.();
   if (values.autoZoomScenes) on.onSceneAutoZoom?.();
+  if (values.clearAutoZooms) on.onSceneAutoZoomsClear?.();
   if (values.deleteScene) on.onSceneDelete?.();
   if (values.swapScenePanes) on.onScenePanesSwap?.();
 };

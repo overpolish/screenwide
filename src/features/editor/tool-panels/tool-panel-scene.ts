@@ -31,6 +31,8 @@ export type ToolPanelScene = {
   /** The pane `framing` belongs to: the camera while it is selected and the
    * scene places it, else the screen. */
   framingPane: "camera" | "screen";
+  /** Whether the timeline holds any auto zoom for Clear all to take off. */
+  hasAutoZooms: boolean;
   /** Whether the recording has a camera for an arrangement to place. */
   hasCamera: boolean;
   hasSceneAtPlayhead: boolean;

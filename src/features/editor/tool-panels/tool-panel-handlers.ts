@@ -82,6 +82,9 @@ export type ToolPanelHandlers = {
   onKeyboardShortcutsRestore?: () => void;
   /** Make the auto zooms again, the scenes of your own left as they are. */
   onSceneAutoZoom?: () => void;
+  /** Take every auto zoom off the timeline, the scenes of your own left as
+   * they are. */
+  onSceneAutoZoomsClear?: () => void;
   /** Make the scene under the playhead custom, or add a custom scene there
    * where there is none. */
   onSceneCustomize?: () => void;

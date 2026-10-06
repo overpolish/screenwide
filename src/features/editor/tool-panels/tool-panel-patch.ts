@@ -55,6 +55,9 @@ export type ToolPanelPatch = Partial<
   bakeCamera?: boolean;
   /** Lay the scene under the playhead out as this template. */
   chooseSceneTemplate?: SceneTemplate;
+  /** Take every auto zoom off the timeline, the scenes of your own left as
+   * they are. */
+  clearAutoZooms?: true;
   /** Take every stroke off the picture being edited. */
   clearDrawings?: true;
   /** Cut a crop of this size, in source pixels, keeping it where it sits. */

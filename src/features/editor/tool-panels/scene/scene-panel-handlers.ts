@@ -29,6 +29,7 @@ export const scenePanelHandlers = (
 ): Pick<
   ToolPanelHandlers,
   | "onSceneAutoZoom"
+  | "onSceneAutoZoomsClear"
   | "onSceneCustomize"
   | "onSceneDelete"
   | "onSceneFramingChange"
@@ -43,6 +44,9 @@ export const scenePanelHandlers = (
 > => ({
   onSceneAutoZoom: () => {
     recordingSceneControls(workspace)?.autoZoom();
+  },
+  onSceneAutoZoomsClear: () => {
+    recordingSceneControls(workspace)?.clearAutoZooms();
   },
   onSceneCustomize: () => {
     recordingSceneControls(workspace)?.customize();

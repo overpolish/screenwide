@@ -41,6 +41,7 @@ const scene = {
   canvasAspect: 16 / 9,
   composition: STORY_COMPOSITION,
   framingPane: "screen",
+  hasAutoZooms: false,
   hasCamera: true,
   isBaked: true,
   screenAspect: 16 / 10,
@@ -48,8 +49,8 @@ const scene = {
 
 /** The panel over a zoom: a custom scene kept in the recording's own boxes,
  * Custom filled with the accent, the zoom and the part of the screen it shows
- * following, then Auto zoom for a recording with cursor movement, and the
- * actions ending the panel. */
+ * following, then Auto zoom for a recording with cursor movement, with auto
+ * zooms to clear, and the actions ending the panel. */
 export const OverZoom: Story = {
   beforeEach: () => {
     seed({
@@ -60,6 +61,7 @@ export const OverZoom: Story = {
         ...scene,
         boxes: STORY_COMPOSITION,
         framing: { focusX: 0.3, focusY: 0.4, zoom: 2 },
+        hasAutoZooms: true,
         hasSceneAtPlayhead: true,
         preset: "full",
         radius: 12,
@@ -252,6 +254,26 @@ export const WithoutCamera: Story = {
         composition: { ...STORY_COMPOSITION, camera: null },
         framing: null,
         hasCamera: false,
+        hasSceneAtPlayhead: false,
+        preset: null,
+        radius: null,
+        variant: null,
+      },
+    });
+  },
+};
+
+/** Between scenes once every auto zoom is cleared: Regenerate makes them
+ * again, and Clear all has nothing left to take off. */
+export const AutoZoomsCleared: Story = {
+  beforeEach: () => {
+    seed({
+      cameraOutput: "combined",
+      hasCursorData: true,
+      isLocked: false,
+      scene: {
+        ...scene,
+        framing: null,
         hasSceneAtPlayhead: false,
         preset: null,
         radius: null,

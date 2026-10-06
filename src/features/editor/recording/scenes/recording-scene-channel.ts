@@ -31,6 +31,9 @@ export type RecordingSceneControls = {
   choosePreset: (preset: RecordingScenePreset) => void;
   /** Lay the scene out as `template`, fitted to this canvas. */
   chooseTemplate: (template: SceneTemplate) => void;
+  /** Take every auto zoom off the timeline; your own scenes stay as they
+   * are. */
+  clearAutoZooms: () => void;
   /** Make the scene custom, its panes kept where it puts them now. */
   customize: () => void;
   remove: () => void;
@@ -96,6 +99,9 @@ export function usePublishRecordingScene(
         },
         chooseTemplate: (template) => {
           controlsRef.current.chooseTemplate(template);
+        },
+        clearAutoZooms: () => {
+          controlsRef.current.clearAutoZooms();
         },
         customize: () => {
           controlsRef.current.customize();
