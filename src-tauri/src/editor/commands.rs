@@ -39,17 +39,6 @@ pub async fn get_screenshot_content_bounds(
   .map_err(|error| error.to_string())
 }
 
-/// Brings the window holding a pending artifact to the front.
-///
-/// The recording bar keeps its capture buttons enabled while an editor is
-/// open, so pressing one has to lead somewhere: the same focus the global
-/// shortcuts already fall back to. It names the workspace explicitly because
-/// it is asking on another window's behalf, not its own.
-#[tauri::command]
-pub fn focus_editor_window(app: AppHandle, kind: EditorKind) {
-  super::workspace::focus_pending(&app, kind);
-}
-
 /// Requests cancellation of the save currently processing, if there is one.
 ///
 /// The worker owns the FFmpeg child and performs the actual kill and wait. The
@@ -74,11 +63,14 @@ pub fn cancel_export_job(app: AppHandle, window: tauri::WebviewWindow) -> bool {
   true
 }
 
+/// Copies the screenshot as the window shows it and closes the editor, moving
+/// its project to the Trash after when `delete_project_after_export` says so.
 #[tauri::command]
 pub fn copy_editor_to_clipboard(
   app: AppHandle,
   window: tauri::WebviewWindow,
   screenshot_output: ScreenshotWorkspaceOutputSettings,
+  delete_project_after_export: bool,
 ) -> Result<(), String> {
   let kind = kind_of_window(&window)?;
   // Refused before the artifact is taken, not after: the clipboard cannot hold
@@ -99,7 +91,7 @@ pub fn copy_editor_to_clipboard(
   }
 
   let artifact = take_artifact(&app, kind).ok_or_else(|| "There is nothing to copy".to_owned())?;
-  let EditorArtifact::Screenshot { items, .. } = artifact else {
+  let EditorArtifact::Screenshot { items, project, .. } = artifact else {
     return Err("There is nothing to copy".to_owned());
   };
   let composed = compose_screenshot_workspace(&app, &items, &screenshot_output)?;
@@ -111,9 +103,20 @@ pub fn copy_editor_to_clipboard(
   if let Err(error) = remember_screenshot_output(&app, screenshot_output.canvas) {
     eprintln!("Could not remember screenshot export settings: {error}");
   }
+  if let Err(error) =
+    remember_screenshot_delete_project_after_export(&app, delete_project_after_export)
+  {
+    eprintln!("Could not remember the screenshot copy choice: {error}");
+  }
 
   let _ = window::hide(&app, kind);
   emit_snapshot(&app, kind);
+  // Only once the picture is on the clipboard and the editor has let go of it.
+  if delete_project_after_export {
+    if let Err(error) = crate::project::library::trash(&app, &project) {
+      eprintln!("Could not delete the copied project: {error}");
+    }
+  }
 
   Ok(())
 }
@@ -141,13 +144,16 @@ pub fn set_recording_timeline_edit(
     .artifact
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
-  let Some(EditorArtifact::Recording { id, path, .. }) = artifact.as_ref() else {
+  let Some(EditorArtifact::Recording { id, project, .. }) = artifact.as_ref() else {
     return Err("There is no recording to edit".to_owned());
   };
   if *id != artifact_id {
     return Err("That recording is no longer available in the editor".to_owned());
   }
-  timeline_edit::persist(path, artifact_id, revision, edit)
+  // The pictures the edit's images show go into the project with it, so it
+  // shows them on another computer.
+  super::project_look::carry_pictures(project, &edit.annotation_clips);
+  timeline_edit::persist(project, artifact_id, revision, edit)
 }
 
 #[tauri::command]

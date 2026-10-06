@@ -8,9 +8,8 @@
 //! contents, so an image carries only `image:` and that name, and the same
 //! picture pasted twice is kept once. A still is kept as a PNG, shrunk as it
 //! arrives where it is larger than any image is drawn; a moving one is kept
-//! as the file it came as, since no still could hold it. Nothing outside the
-//! app points at these files, so each launch removes the ones nothing still
-//! names; see [`sweep`].
+//! as the file it came as, since no still could hold it. A project anywhere
+//! on disk can name any of them, so none is removed.
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -21,9 +20,9 @@ use super::animation::{decode, extension, ImageAnimation};
 use crate::editor::annotations::image::{ImageArt, ImagePlay};
 
 mod cache;
+mod portable;
 pub(crate) use cache::load;
-mod sweep;
-use sweep::sweep;
+pub(crate) use portable::{adopt, content_file_name, stored_file};
 
 /// The prefix a stored picture's asset id carries.
 pub(crate) const IMAGE_PREFIX: &str = "image:";
@@ -43,13 +42,16 @@ fn directory() -> Option<&'static Path> {
   DIRECTORY.get().map(PathBuf::as_path)
 }
 
-/// Settles where pictures are stored, and clears out every one that no
-/// edit in `recordings` still names. Runs at launch, before any editor
-/// opens, so nothing on screen can be showing a picture it removes.
-pub(crate) fn initialize(data: &Path, recordings: Option<&Path>) {
-  let folder = data.join("images");
-  let _ = DIRECTORY.set(folder.clone());
-  sweep(&folder, recordings);
+/// Where Screenwide keeps a background picture a project remembers but no
+/// longer shows, beside the stored pictures, once the app has said.
+pub(crate) fn backgrounds_directory() -> Option<PathBuf> {
+  directory()?.parent().map(|data| data.join("backgrounds"))
+}
+
+/// Settles where pictures are stored. Runs at launch, before any editor
+/// opens.
+pub(crate) fn initialize(data: &Path) {
+  let _ = DIRECTORY.set(data.join("images"));
 }
 
 /// Whether `name` could be one this store gave out.

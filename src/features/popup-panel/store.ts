@@ -12,7 +12,9 @@ import type { AnnotationKind } from "../../components/shared/annotation-style/ty
  * export-an-image glyph. */
 export type PopupPanelIcon =
   | "clipboard"
+  | "folder"
   | "image"
+  | "remove"
   | "scrolling"
   | "timer"
   | "trash"

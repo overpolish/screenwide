@@ -18,16 +18,8 @@ import {
   KeyboardEffectSettings,
 } from "../types";
 
-export const copyRecordingPreviewFrameToClipboard = ({
-  annotationClips,
-  artifactId,
-  bakeCamera,
-  cameraOverlay,
-  cursorEffects,
-  keyboardEffects,
-  positionMs,
-  recordingOutput,
-}: {
+/** One composed frame of the open recording, at a source position. */
+export type RecordingFrameRequest = {
   artifactId: number;
   bakeCamera: boolean;
   cameraOverlay: CameraOverlaySettings;
@@ -36,20 +28,41 @@ export const copyRecordingPreviewFrameToClipboard = ({
   positionMs: number;
   recordingOutput: RecordingOutputSettings;
   annotationClips?: import("./annotations/recording-annotations").RecordingAnnotationClip[];
-}) =>
+};
+
+const frame = ({
+  annotationClips,
+  artifactId,
+  bakeCamera,
+  cameraOverlay,
+  cursorEffects,
+  keyboardEffects,
+  positionMs,
+  recordingOutput,
+}: RecordingFrameRequest) => ({
+  annotationClips,
+  artifactId,
+  bakeCamera,
+  cameraOverlay: normalizedCameraOverlay(
+    cameraOverlay,
+    recordingOutput.primary,
+  ),
+  cursorEffects: normalizedCursorEffects(cursorEffects),
+  keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
+  positionMs: Math.max(0, Math.round(positionMs)),
+  recordingOutput: {
+    camera: normalizedScreenshotOutput(recordingOutput.camera),
+    primary: normalizedScreenshotOutput(recordingOutput.primary),
+  },
+});
+
+export const copyRecordingPreviewFrameToClipboard = (
+  request: RecordingFrameRequest,
+) =>
   invoke<null>("copy_recording_preview_frame_to_clipboard", {
-    annotationClips,
-    artifactId,
-    bakeCamera,
-    cameraOverlay: normalizedCameraOverlay(
-      cameraOverlay,
-      recordingOutput.primary,
-    ),
-    cursorEffects: normalizedCursorEffects(cursorEffects),
-    keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
-    positionMs: Math.max(0, Math.round(positionMs)),
-    recordingOutput: {
-      camera: normalizedScreenshotOutput(recordingOutput.camera),
-      primary: normalizedScreenshotOutput(recordingOutput.primary),
-    },
+    frame: frame(request),
   });
+
+/** Keeps the frame, smaller, as the project browser's still for it. */
+export const saveRecordingProjectStill = (request: RecordingFrameRequest) =>
+  invoke<null>("save_recording_project_still", { frame: frame(request) });

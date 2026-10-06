@@ -15,6 +15,7 @@ pub async fn save_export(
   let RecordingExportOptions {
     camera_compression,
     compression,
+    delete_project_after_export,
     cursor_effects,
     keyboard_effects,
     recording_output,
@@ -106,31 +107,12 @@ pub async fn save_export(
 
   let path = match result {
     Ok(Some(path)) => path,
-    Ok(None) => {
-      *app
-        .state::<EditorState>()
-        .slot(kind)
-        .artifact
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(artifact);
+    unfinished => {
+      restore(&app, kind, artifact);
       emit_snapshot(&app, kind);
-      return Ok(None);
-    }
-    Err(error) => {
-      *app
-        .state::<EditorState>()
-        .slot(kind)
-        .artifact
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(artifact);
-      emit_snapshot(&app, kind);
-      return Err(error);
+      return unfinished;
     }
   };
-
-  if let EditorArtifact::Recording { path: working, .. } = &artifact {
-    timeline_edit::remove_for_recording(working);
-  }
 
   store_export_directory(&app, kind, directory)?;
   remember_completed_export(
@@ -141,17 +123,59 @@ pub async fn save_export(
   );
   // Saving is transactional: keep the native player alive while the artifact
   // may still be restored by Cancel or an export error, then retire it only
-  // once the finished files have been published.
-  if kind == EditorKind::Recording {
-    artifact::clear_recording_preview(&app);
+  // once the finished files have been published. A recording opened while
+  // this one exported owns the window now, and stays in it.
+  if !is_occupied(&app, kind) {
+    if kind == EditorKind::Recording {
+      artifact::clear_recording_preview(&app);
+    }
+    let _ = window::hide(&app, kind);
+    emit_snapshot(&app, kind);
   }
-  let _ = window::hide(&app, kind);
-  emit_snapshot(&app, kind);
-
+  // Only once the files are published and the editor has let go of it.
+  if kind == EditorKind::Screenshot {
+    if let Err(error) =
+      remember_screenshot_delete_project_after_export(&app, delete_project_after_export)
+    {
+      eprintln!("Could not remember the screenshot export choice: {error}");
+    }
+  }
+  if delete_project_after_export {
+    if let Some(project) = artifact.project() {
+      if let Err(error) = crate::project::library::trash(&app, project) {
+        eprintln!("Could not delete the exported project: {error}");
+      }
+    }
+  }
   if crate::settings::current(&app).open_location_after_export {
     if let Err(error) = location::open_containing_folder(&path) {
       eprintln!("Could not open the export location: {error}");
     }
   }
   Ok(Some(path))
+}
+
+fn is_occupied(app: &AppHandle, kind: EditorKind) -> bool {
+  app
+    .state::<EditorState>()
+    .slot(kind)
+    .artifact
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .is_some()
+}
+
+/// Puts back an artifact whose export did not finish, so it can be tried
+/// again. A recording opened in its place meanwhile wins: the one that was
+/// exporting is safe in its project.
+fn restore(app: &AppHandle, kind: EditorKind, artifact: EditorArtifact) {
+  let state = app.state::<EditorState>();
+  let mut slot = state
+    .slot(kind)
+    .artifact
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  if slot.is_none() {
+    *slot = Some(artifact);
+  }
 }

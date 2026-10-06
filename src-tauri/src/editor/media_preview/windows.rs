@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Media metadata used by Windows export recovery without FFprobe.
+//! Media metadata for opening a project, read without FFprobe.
 
 use std::path::Path;
 

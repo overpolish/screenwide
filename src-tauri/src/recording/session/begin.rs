@@ -18,26 +18,24 @@ pub(in crate::recording) fn begin_capture(
     primary,
     system_audio,
   } = capture_sources(options);
-  let directory = recordings_directory(app)?;
-  std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
   let started_at = Local::now().naive_local();
-  let output_path = directory.join(if options.mode == RecordingMode::Audio {
-    encoding::audio_temp_file_name(started_at)
+  let project = crate::project::create(app, &crate::screenshots::capture_file_stem(started_at))?;
+  let output_path = project.media.join(if options.mode == RecordingMode::Audio {
+    encoding::AUDIO_FILE
   } else {
-    encoding::temp_file_name(started_at)
+    encoding::PRIMARY_FILE
   });
   let camera_path = options
     .camera_id
     .as_ref()
     .filter(|_| !camera_primary)
-    .map(|_| directory.join(encoding::camera_temp_file_name(started_at)));
+    .map(|_| project.media.join(encoding::CAMERA_FILE));
   // Cursor metadata remains available independently of whether native capture
   // pixels include the pointer. This lets an original-cursor recording turn
   // baking off, or a clean recording turn the editable cursor layer on.
-  let cursor_path = records_cursor(options.mode)
-    .then(|| directory.join(encoding::cursor_temp_file_name(started_at)));
+  let cursor_path = records_cursor(options.mode).then(|| project.media.join(encoding::CURSOR_FILE));
   let keyboard_path = records_keyboard(options.mode, options.capture_keyboard_shortcuts)
-    .then(|| directory.join(encoding::keyboard_temp_file_name(started_at)));
+    .then(|| project.media.join(encoding::KEYBOARD_FILE));
   let include_own_windows = crate::settings::current(app).record_screenwide_windows;
 
   // Reported at most once per recording, from the writer thread, however many
@@ -72,21 +70,15 @@ pub(in crate::recording) fn begin_capture(
     system_audio,
   })
   .inspect_err(|_| {
-    // A start that never got going leaves an empty container behind.
-    let _ = std::fs::remove_file(&output_path);
-    if let Some(camera_path) = &camera_path {
-      let _ = std::fs::remove_file(camera_path);
-    }
-    if let Some(keyboard_path) = &keyboard_path {
-      let _ = std::fs::remove_file(keyboard_path);
-    }
+    // A start that never got going leaves no project behind.
+    project.remove();
   })?;
 
   let sidecars = match RecordingSidecars::start(
     SidecarPlan {
-      cursor_path,
+      cursor_path: cursor_path.clone(),
       cursor_source,
-      keyboard_path,
+      keyboard_path: keyboard_path.clone(),
       include_own_windows,
       records_annotations: records_cursor(options.mode),
     },
@@ -95,41 +87,60 @@ pub(in crate::recording) fn begin_capture(
     Ok(sidecars) => sidecars,
     Err(error) => {
       session.cancel();
-      let _ = std::fs::remove_file(&output_path);
-      if let Some(camera_path) = &camera_path {
-        let _ = std::fs::remove_file(camera_path);
-      }
+      project.remove();
       return Err(error);
     }
   };
 
-  // The scale factor is known only here. Recording it next to the movie,
-  // with the inputs, is what lets a recovered recording be offered back as
-  // what it was rather than as a 1x guess.
-  meta_sidecar::write(
+  // Written as soon as the capture runs, so the project opens even if the app
+  // dies before it stops. The scale factor is known only here.
+  let manifest = crate::project::RecordingMedia::relative_to(
+    &project.file,
     &output_path,
-    &meta_sidecar::RecordingMetaSidecar {
-      has_microphone: options.microphone_id.is_some(),
-      has_system_audio: options.system_audio,
-      primary_kind: match options.mode {
-        RecordingMode::Audio => crate::recording::PrimaryRecordingKind::Audio,
-        RecordingMode::Camera => crate::recording::PrimaryRecordingKind::Camera,
-        _ => crate::recording::PrimaryRecordingKind::Screen,
-      },
-      source_scale_factor,
-    },
-  );
+    camera_path.as_deref(),
+    cursor_path.as_deref(),
+    keyboard_path.as_deref(),
+  )
+  .and_then(|media| {
+    crate::project::write(
+      &project.file,
+      &crate::project::Manifest::recording(crate::project::RecordingManifest {
+        // Unknown until the capture stops.
+        duration_ms: None,
+        has_microphone: options.microphone_id.is_some(),
+        has_system_audio: options.system_audio,
+        media,
+        primary_kind: primary_kind(options.mode),
+        source_scale_factor,
+        origin: crate::project::RecordingOrigin::Capture,
+      }),
+    )
+  });
+  if let Err(error) = manifest {
+    sidecars.cancel();
+    session.cancel();
+    project.remove();
+    return Err(error);
+  }
 
   Ok((
     CaptureHandles {
       sidecars,
-      output_path,
+      project,
       session,
       source_scale_factor,
-      started_at,
     },
     first_frame,
   ))
+}
+
+/// What a recording made in `mode` is mainly of.
+pub(in crate::recording) fn primary_kind(mode: RecordingMode) -> PrimaryRecordingKind {
+  match mode {
+    RecordingMode::Audio => PrimaryRecordingKind::Audio,
+    RecordingMode::Camera => PrimaryRecordingKind::Camera,
+    _ => PrimaryRecordingKind::Screen,
+  }
 }
 
 /// What `options` asks the platform to capture.

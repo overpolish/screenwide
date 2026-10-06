@@ -28,6 +28,7 @@ export type SeededExportChoices = {
   cameraResolutionScalePercent: number;
   collapseAudio: boolean;
   compression: number;
+  deleteProjectAfterExport: boolean;
   resolutionScalePercent: number;
 };
 
@@ -174,6 +175,7 @@ export const seededExportChoices = ({
         : 100,
     collapseAudio: choices.collapseAudio ?? false,
     compression: compressionFor(choices.compression),
+    deleteProjectAfterExport: choices.deleteProjectAfterExport ?? false,
     resolutionScalePercent: recording
       ? restoredResolutionScale(recording, choices.resolutionScaleRatio)
       : 100,

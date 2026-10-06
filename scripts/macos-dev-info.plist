@@ -34,5 +34,45 @@ SPDX-License-Identifier: GPL-3.0-or-later
   <string>Screenwide uses your camera when you include it in a recording.</string>
   <key>NSMicrophoneUsageDescription</key>
   <string>Screenwide uses your microphone when you record audio.</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>screenwide</string>
+      </array>
+      <key>CFBundleTypeName</key>
+      <string>Screenwide Project</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>LSHandlerRank</key>
+      <string>Owner</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>co.overpolish.screenwide.project</string>
+      </array>
+    </dict>
+  </array>
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+        <string>public.content</string>
+      </array>
+      <key>UTTypeDescription</key>
+      <string>Screenwide Project</string>
+      <key>UTTypeIdentifier</key>
+      <string>co.overpolish.screenwide.project</string>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key>
+        <array>
+          <string>screenwide</string>
+        </array>
+      </dict>
+    </dict>
+  </array>
 </dict>
 </plist>

@@ -17,12 +17,12 @@ use crate::recording::cursor::RollingCursorRecorder;
 use crate::recording::keyboard::RollingKeyboardRecorder;
 use crate::recording::monitor::RecordingMonitor;
 use crate::recording::session::{
-  capture_sources, check_inputs, recordings_directory, records_cursor, records_keyboard,
+  capture_sources, check_inputs, primary_kind, records_cursor, records_keyboard, write_manifest,
   CaptureSources, FIRST_FRAME_TIMEOUT,
 };
 use crate::recording::{
-  capture, encoding, CameraFinalizeInfo, CaptureStartupConfig, FinalizeInfo, PrimaryRecordingKind,
-  RecordingMode, StartRecordingOptions,
+  capture, encoding, CameraFinalizeInfo, CaptureStartupConfig, FinalizeInfo, RecordingMode,
+  StartRecordingOptions,
 };
 
 /// What the sidecars keep beyond the buffer's length. A clip starts on a
@@ -122,49 +122,65 @@ pub(super) fn start(
   })
 }
 
-/// Writes the clip ending at `at` and opens it in the editor. Only a clip
-/// the editor took moves where the next one starts.
+/// Writes the clip ending at `at` into a new project and keeps it, without
+/// opening it: a save is a mark made mid-task, and the tray's tick says it
+/// worked. The project is listed with the recent ones.
 pub(super) fn save(app: &AppHandle, running: &RunningReplay, at: Instant) -> Result<(), String> {
-  let directory = recordings_directory(app)?;
-  std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
-  crate::editor::reserve_recording_workspace(app)?;
   let since_ns = *running
     .last_saved_ns
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
-  let presented = write_clip(running, at, since_ns, &directory).and_then(|(info, stem, end_ns)| {
-    crate::editor::present_recording(app, info, stem)?;
-    Ok(end_ns)
+  let (project, info, end_ns) = write_clip(app, running, at, since_ns)?;
+  *running
+    .last_saved_ns
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(end_ns);
+  crate::editor::keep_recording(app, &project, info);
+  crate::tray::confirm_replay_saved(app);
+  Ok(())
+}
+
+/// Writes the clip and its manifest into a project of its own, which goes
+/// again if any of it fails.
+fn write_clip(
+  app: &AppHandle,
+  running: &RunningReplay,
+  at: Instant,
+  since_ns: Option<i64>,
+) -> Result<(PathBuf, FinalizeInfo, i64), String> {
+  // Named for the moment of the save: how far back the clip reaches is
+  // known only once it is written.
+  let title = crate::screenshots::capture_file_stem(Local::now().naive_local());
+  let project = crate::project::create(app, &title)?;
+  let written = write_media(running, at, since_ns, &project.media).and_then(|(info, end_ns)| {
+    write_manifest(
+      &project.file,
+      &info,
+      crate::project::RecordingOrigin::Replay,
+    )?;
+    Ok((info, end_ns))
   });
-  match presented {
-    Ok(end_ns) => {
-      *running
-        .last_saved_ns
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(end_ns);
-      Ok(())
-    }
+  match written {
+    Ok((info, end_ns)) => Ok((project.file.clone(), info, end_ns)),
     Err(error) => {
-      crate::editor::release_recording_workspace(app);
+      project.remove();
       Err(error)
     }
   }
 }
 
-fn write_clip(
+fn write_media(
   running: &RunningReplay,
   at: Instant,
   since_ns: Option<i64>,
-  directory: &Path,
-) -> Result<(FinalizeInfo, String, i64), String> {
-  let saved_at = Local::now().naive_local();
-  let audio_only = running.mode == RecordingMode::Audio;
-  let path = directory.join(if audio_only {
-    encoding::audio_temp_file_name(saved_at)
+  media: &Path,
+) -> Result<(FinalizeInfo, i64), String> {
+  let path = media.join(if running.mode == RecordingMode::Audio {
+    encoding::AUDIO_FILE
   } else {
-    encoding::temp_file_name(saved_at)
+    encoding::PRIMARY_FILE
   });
-  let camera_path = directory.join(encoding::camera_temp_file_name(saved_at));
+  let camera_path = media.join(encoding::CAMERA_FILE);
   let clip = running
     .session
     .lock()
@@ -173,15 +189,10 @@ fn write_clip(
 
   let start_us = u64::try_from(clip.start_ns / 1_000).unwrap_or_default();
   let end_us = u64::try_from(clip.end_ns / 1_000).unwrap_or_default();
-  let cursor_path = directory.join(encoding::cursor_temp_file_name(saved_at));
-  let keyboard_path = directory.join(encoding::keyboard_temp_file_name(saved_at));
-  let (cursor, keyboard) = write_sidecars(running, &cursor_path, &keyboard_path, start_us, end_us)
-    .inspect_err(|_| remove(&[&path, &camera_path, &cursor_path, &keyboard_path]))?;
+  let cursor_path = media.join(encoding::CURSOR_FILE);
+  let keyboard_path = media.join(encoding::KEYBOARD_FILE);
+  let (cursor, keyboard) = write_sidecars(running, &cursor_path, &keyboard_path, start_us, end_us)?;
 
-  // The suggested name reads as when the clip begins, as a recording's reads
-  // as when it was started.
-  let clip_length = Duration::from_millis(clip.duration_ms);
-  let started_at = saved_at - chrono::Duration::from_std(clip_length).unwrap_or_default();
   let info = FinalizeInfo {
     annotation_clips: running
       .annotations
@@ -201,19 +212,11 @@ fn write_clip(
     duration_ms: clip.duration_ms,
     height: clip.height,
     path,
-    primary_kind: match running.mode {
-      RecordingMode::Audio => PrimaryRecordingKind::Audio,
-      RecordingMode::Camera => PrimaryRecordingKind::Camera,
-      _ => PrimaryRecordingKind::Screen,
-    },
+    primary_kind: primary_kind(running.mode),
     source_scale_factor: running.source_scale_factor,
     width: clip.width,
   };
-  Ok((
-    info,
-    crate::screenshots::capture_file_stem(started_at),
-    clip.end_ns,
-  ))
+  Ok((info, clip.end_ns))
 }
 
 fn write_sidecars(
@@ -238,10 +241,4 @@ fn write_sidecars(
     None => None,
   };
   Ok((cursor, keyboard))
-}
-
-fn remove(paths: &[&Path]) {
-  for path in paths {
-    let _ = std::fs::remove_file(path);
-  }
 }

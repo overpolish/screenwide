@@ -484,3 +484,28 @@ export const restoredRecordingOutput = ({
     primary: restore("primary", primary),
   };
 };
+
+/**
+ * A recording's own saved output, as it was left. Unlike the remembered
+ * look, which was laid out for another recording and so is fitted again,
+ * this was laid out for this very recording: its canvas size, crop and the
+ * picture's size and position all stand.
+ */
+export const reopenedRecordingOutput = ({
+  camera,
+  primary,
+  saved,
+}: {
+  primary: { height: number; width: number };
+  saved: RecordingOutputSettings;
+  camera?: { height: number; width: number } | null;
+}): RecordingOutputSettings => {
+  const defaults = defaultRecordingOutput({ camera, primary });
+  const reopen = (key: "camera" | "primary") => ({
+    ...defaults[key],
+    ...saved[key],
+    backgroundRadiusPercent: 0,
+    recenterInsetColor: null,
+  });
+  return { camera: reopen("camera"), primary: reopen("primary") };
+};

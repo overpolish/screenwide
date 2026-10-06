@@ -30,20 +30,27 @@ import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingExportEstimate } from "./export/use-recording-export-estimate";
 import { EditorPanel } from "./panel/editor-panel";
 import { recordingOutputForEdit } from "./recording/recording-output-edit";
+import {
+  seededTrackChoices,
+  useProjectLook,
+} from "./recording/use-project-look";
 import { useRecordingEditorPreview } from "./recording/use-recording-editor-preview";
 import { sourceScalePercent } from "./resolution";
 import {
   defaultRecordingOutput,
   defaultScreenshotOutput,
   RecordingOutputSettings,
+  reopenedRecordingOutput,
   restoredRecordingOutput,
   ScreenshotWorkspaceOutputSettings,
   withScreenshotWorkspaceItemOutput,
 } from "./screenshot/screenshot-output";
 import {
+  reopenedScreenshotWorkspace,
   seedScreenshotItemOutput,
   seedScreenshotWorkspace,
 } from "./screenshot/screenshot-seed";
+import { useScreenshotProject } from "./screenshot/use-screenshot-project";
 import {
   selectArtifact,
   selectDirectory,
@@ -79,11 +86,14 @@ export function EditorWindow() {
     recordingExportChoices: persistedRecordingExportChoices,
     recordingOutput: persistedRecordingOutput,
     screenshotBackgroundRadiusPercent: persistedScreenshotBackgroundRadius,
+    screenshotDeleteProjectAfterExport: persistedScreenshotDeleteProject,
     screenshotOutput: persistedScreenshotOutput,
     screenshotRadiusPercent: persistedScreenshotRadius,
   } = useEditorStore(selectSnapshot(kind));
   const [fileStem, setFileStem] = useState("");
   const [collapseAudio, setCollapseAudio] = useState(false);
+  const [deleteProjectAfterExport, setDeleteProjectAfterExport] =
+    useState(false);
   const [compression, setCompression] = useState(DEFAULT_COMPRESSION);
   const [cameraCompression, setCameraCompression] =
     useState(DEFAULT_COMPRESSION);
@@ -345,29 +355,43 @@ export function EditorWindow() {
   );
 
   useEffect(() => {
-    const seededRecordingOutput = restoredRecordingOutput({
+    // A project that kept its look reopens with it exactly as it was left;
+    // one that kept none takes the remembered look, fitted to this recording.
+    const look =
+      artifact?.kind === "recording" ? (artifact.projectLook ?? null) : null;
+    const sources = {
       camera: artifact?.kind === "recording" ? artifact.camera : undefined,
-      persisted: persistedRecordingOutput,
-      primary: {
-        height: artifact?.height ?? 1,
-        width: artifact?.width ?? 1,
-      },
-    });
+      primary: { height: artifact?.height ?? 1, width: artifact?.width ?? 1 },
+    };
+    const seededRecordingOutput = look
+      ? reopenedRecordingOutput({ ...sources, saved: look.recordingOutput })
+      : restoredRecordingOutput({
+          ...sources,
+          persisted: persistedRecordingOutput,
+        });
     const seeded = seededExportChoices({
       artifact,
       choices: persistedRecordingExportChoices,
       screen: seededRecordingOutput.primary,
     });
+    const tracks = seededTrackChoices(artifactId, look);
     /* eslint-disable @eslint-react/set-state-in-effect */
-    setTrackSelection(null);
-    setVideoTrackSelection(null);
+    setTrackSelection(tracks.trackSelection);
+    setVideoTrackSelection(tracks.videoTrackSelection);
     setSelectedTrack(null);
-    setAudioTrackVolumes(null);
-    setBakeCamera(seeded.bakeCamera);
-    setCameraOverlay(seeded.cameraOverlay);
-    setCursorEffects(persistedCursorEffects);
-    setKeyboardEffects(persistedKeyboardEffects);
+    setAudioTrackVolumes(tracks.audioTrackVolumes);
+    setBakeCamera(look?.bakeCamera ?? seeded.bakeCamera);
+    setCameraOverlay(look?.cameraOverlay ?? seeded.cameraOverlay);
+    setCursorEffects(look?.cursorEffects ?? persistedCursorEffects);
+    setKeyboardEffects(look?.keyboardEffects ?? persistedKeyboardEffects);
     setCollapseAudio(seeded.collapseAudio);
+    // Each kind keeps its own choice, as a screenshot is far cheaper to make
+    // again than a recording.
+    setDeleteProjectAfterExport(
+      artifact?.kind === "screenshot"
+        ? (persistedScreenshotDeleteProject ?? false)
+        : seeded.deleteProjectAfterExport,
+    );
     setCompression(seeded.compression);
     setCameraCompression(seeded.cameraCompression);
     setCameraResolutionScalePercent(seeded.cameraResolutionScalePercent);
@@ -376,12 +400,14 @@ export function EditorWindow() {
     screenshotRadiusRef.current = persistedScreenshotRadius;
     screenshotBackgroundRadiusRef.current = persistedScreenshotBackgroundRadius;
     setScreenshotOutput(
-      seedScreenshotWorkspace({
-        artifact,
-        backgroundRadius: persistedScreenshotBackgroundRadius,
-        persisted: persistedScreenshotOutput,
-        radius: persistedScreenshotRadius,
-      }),
+      artifact?.kind === "screenshot" && artifact.projectWorkspace
+        ? reopenedScreenshotWorkspace(artifact, artifact.projectWorkspace)
+        : seedScreenshotWorkspace({
+            artifact,
+            backgroundRadius: persistedScreenshotBackgroundRadius,
+            persisted: persistedScreenshotOutput,
+            radius: persistedScreenshotRadius,
+          }),
     );
     setSelectedScreenshotItemId(
       artifact?.kind === "screenshot"
@@ -400,6 +426,26 @@ export function EditorWindow() {
     // must not be reset merely because the object was deserialized again.
     // eslint-disable-next-line @eslint-react/exhaustive-deps
   }, [artifactId]);
+  useProjectLook({
+    audioTrackVolumes,
+    bakeCamera,
+    cameraOverlay,
+    cursorEffects,
+    keyboardEffects,
+    recordingId:
+      artifact?.kind === "recording" && seededArtifactId === artifact.id
+        ? artifact.id
+        : undefined,
+    recordingOutput,
+    trackSelection,
+    videoTrackSelection,
+  });
+  useScreenshotProject(
+    artifact?.kind === "screenshot" && seededArtifactId === artifact.id
+      ? artifact.id
+      : undefined,
+    screenshotOutput,
+  );
 
   const screenshotItems =
     artifact?.kind === "screenshot" ? artifact.items : null;
@@ -459,6 +505,7 @@ export function EditorWindow() {
         collapseAudio={collapseAudio}
         compression={compression}
         cursorEffects={cursorEffects}
+        deleteProjectAfterExport={deleteProjectAfterExport}
         directory={directory}
         enabledAudioTrackCount={enabledStreamIndices?.length ?? 0}
         enabledStreamIndices={enabledStreamIndices ?? undefined}
@@ -525,9 +572,13 @@ export function EditorWindow() {
           setError(null);
         }}
         onCopy={() => {
-          copyEditorToClipboard(screenshotOutput).catch(report("copy"));
+          copyEditorToClipboard(
+            screenshotOutput,
+            deleteProjectAfterExport,
+          ).catch(report("copy"));
         }}
         onCursorEffectsChange={setCursorEffects}
+        onDeleteProjectAfterExportChange={setDeleteProjectAfterExport}
         onEnabledTracksChange={onEnabledTracksChange}
         onEnabledVideoTracksChange={(tracks) => {
           if (artifactId === undefined) return;
@@ -584,6 +635,7 @@ export function EditorWindow() {
           setError(null);
           saveExport({
             ...plan.options,
+            deleteProjectAfterExport,
             fileStem,
             screenshotOutput,
             timelineEdit: exportEdits.timelineEdit,

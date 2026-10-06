@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{
-  recovery::{
-    camera_for_recording, orphaned_recordings, sweep_cancelled_recordings, sweep_orphaned_meta,
-    sweep_preview_files, sweep_unclaimed_cameras, OrphanPlan,
-  },
-  save::{save_recording, save_selected_recording},
+  save::{save_recording_copy, save_selected_recording_copy},
   *,
 };
 
@@ -69,37 +65,6 @@ fn caps_an_absurdly_long_name() {
   assert_eq!(stem.len(), MAX_FILE_STEM);
 }
 
-#[test]
-fn tells_a_preview_from_a_recording_however_far_it_got() {
-  let directory = std::env::temp_dir()
-    .join("screenwide-tests")
-    .join("preview-sweep");
-  let _ = std::fs::remove_dir_all(&directory);
-  std::fs::create_dir_all(&directory).unwrap();
-
-  let recording = directory.join("recording-20260808-143205.000.mov");
-  let mix = directory.join("preview-42-7-mix-0-1.mp4");
-  let abandoned = directory.join("preview-42-7-mix-0-1.mp4.3.part");
-  for path in [&recording, &mix, &abandoned] {
-    std::fs::write(path, b"movie").unwrap();
-  }
-
-  // Neither derivative may be offered back as the recording an earlier run
-  // never saved - one is a mixdown, the other is not even a whole file.
-  let orphans = orphaned_recordings(&directory);
-  assert_eq!(
-    orphans.iter().map(|(path, _)| path).collect::<Vec<_>>(),
-    vec![&recording]
-  );
-
-  // Both go at startup, though: an interrupted encode is as worthless as a
-  // finished mix once the artifact it belonged to is gone.
-  sweep_preview_files(&directory);
-  assert!(recording.is_file());
-  assert!(!mix.exists());
-  assert!(!abandoned.exists());
-}
-
 /// A directory of this test module's own, so a test that writes files cannot
 /// be confused by anything else on the machine.
 fn test_directory(name: &str) -> PathBuf {
@@ -110,94 +75,14 @@ fn test_directory(name: &str) -> PathBuf {
 }
 
 #[test]
-fn recovers_an_unsaved_recording_whichever_container_it_was_written_in() {
-  let directory = test_directory("orphan-containers");
-
-  // What this version writes, and what the version before it wrote. Someone
-  // who upgraded with an unsaved recording still on disk has the second.
-  let quicktime = directory.join("recording-20260808-143205.000.mov");
-  let audio = directory.join("audio-20260808-153205.000.mov");
-  let legacy = directory.join("recording-20260807-091500.000.mp4");
-  // Case is the file system's business, not ours.
-  let shouted = directory.join("recording-20260806-091500.000.MOV");
-  let unrelated = directory.join("notes.txt");
-  for path in [&quicktime, &audio, &legacy, &shouted, &unrelated] {
-    std::fs::write(path, b"movie").unwrap();
-  }
-
-  let mut found: Vec<PathBuf> = orphaned_recordings(&directory)
-    .into_iter()
-    .map(|(path, _)| path)
-    .collect();
-  found.sort();
-  let mut expected = vec![quicktime, audio, legacy, shouted];
-  expected.sort();
-
-  assert_eq!(found, expected);
-}
-
-#[test]
-fn keeps_a_metadata_sidecar_out_of_the_recovery_candidates() {
-  let directory = test_directory("meta-sidecar-orphans");
-  let recording = directory.join("recording-20260808-143205.000.mov");
-  let meta = directory.join("recording-20260808-143205.000.meta.json");
-  std::fs::write(&recording, b"movie").unwrap();
-  crate::recording::meta_sidecar::write(
-    &recording,
-    &crate::recording::meta_sidecar::RecordingMetaSidecar {
-      has_microphone: false,
-      has_system_audio: false,
-      primary_kind: PrimaryRecordingKind::Screen,
-      source_scale_factor: 2.0,
-    },
-  );
-  assert!(meta.is_file());
-
-  // The sidecar sits next to the recording under the same stem, and is not a
-  // recording of its own to be offered back.
-  let found: Vec<PathBuf> = orphaned_recordings(&directory)
-    .into_iter()
-    .map(|(path, _)| path)
-    .collect();
-  assert_eq!(found, vec![recording.clone()]);
-
-  // Its recording is still there, so it is still worth something.
-  sweep_orphaned_meta(&directory);
-  assert!(meta.is_file());
-  assert_eq!(
-    crate::recording::meta_sidecar::read(&recording).map(|meta| meta.source_scale_factor),
-    Some(2.0)
-  );
-
-  // Once the recording goes, the sidecar describes nothing.
-  std::fs::remove_file(&recording).unwrap();
-  sweep_orphaned_meta(&directory);
-  assert!(!meta.exists());
-}
-
-#[test]
-fn never_recovers_a_deliberately_cancelled_recording() {
-  let directory = test_directory("cancelled-recording-recovery");
-  let recording = directory.join("recording-20260808-143205.000.mp4");
-  let marker = crate::recording::cancelled_marker(&recording);
-  std::fs::write(&recording, b"partial movie").unwrap();
-  std::fs::write(&marker, []).unwrap();
-
-  assert!(orphaned_recordings(&directory).is_empty());
-  sweep_cancelled_recordings(&directory);
-  assert!(!recording.exists());
-  assert!(!marker.exists());
-}
-
-#[test]
 fn describes_a_recording_by_the_file_the_user_will_actually_get() {
   let working = Path::new("/tmp/recording-20260808-143205.000.mov");
   assert_eq!(delivered_extension(working, true), "mp4");
   // Nothing to copy it with, so what is offered is the movie itself - never
   // that movie under a name it does not answer to.
   assert_eq!(delivered_extension(working, false), "mov");
-  // A recording recovered from a version that wrote .mp4 is already what it
-  // would have been remuxed into.
+  // A project recorded on Windows is already what it would have been
+  // remuxed into.
   assert_eq!(
     delivered_extension(Path::new("/tmp/recording-1.mp4"), false),
     "mp4"
@@ -301,12 +186,12 @@ fn saves_a_recording_as_an_mp4_when_it_can_be_copied_into_one() {
   let working = directory.join("recording-20260808-143205.000.mov");
   std::fs::write(&working, b"movie").unwrap();
 
-  let saved = save_recording(&working, &directory, "Keeper", Some(copies)).unwrap();
+  let saved = save_recording_copy(&working, &directory, "Keeper", Some(copies)).unwrap();
 
   assert_eq!(saved, directory.join("Keeper.mp4"));
   assert!(saved.is_file());
-  // The working file is let go of only once its replacement exists.
-  assert!(!working.exists());
+  // The recording stays in its project, ready to export again.
+  assert!(working.is_file());
 }
 
 #[test]
@@ -315,14 +200,14 @@ fn saves_a_recording_as_the_movie_it_is_when_there_is_nothing_to_copy_it_with() 
   let working = directory.join("recording-20260808-143205.000.mov");
   std::fs::write(&working, b"movie").unwrap();
 
-  let saved = save_recording(&working, &directory, "Keeper", None).unwrap();
+  let saved = save_recording_copy(&working, &directory, "Keeper", None).unwrap();
 
   // A .mov named .mp4 is a file that lies about itself, so the honest name
   // is the one the user gets.
   assert_eq!(saved, directory.join("Keeper.mov"));
   assert!(saved.is_file());
   assert!(!directory.join("Keeper.mp4").exists());
-  assert!(!working.exists());
+  assert!(working.is_file());
 }
 
 #[test]
@@ -331,7 +216,7 @@ fn saves_a_recording_as_the_movie_it_is_when_the_copy_fails() {
   let working = directory.join("recording-20260808-143205.000.mov");
   std::fs::write(&working, b"movie").unwrap();
 
-  let saved = save_recording(&working, &directory, "Keeper", Some(refuses)).unwrap();
+  let saved = save_recording_copy(&working, &directory, "Keeper", Some(refuses)).unwrap();
 
   // FFmpeg refusing the file is no reason to lose a recording someone just
   // asked to keep.
@@ -347,7 +232,7 @@ fn saves_beside_a_name_that_is_already_taken() {
   std::fs::write(&working, b"movie").unwrap();
   std::fs::write(directory.join("Keeper.mp4"), b"someone else's").unwrap();
 
-  let saved = save_recording(&working, &directory, "Keeper", Some(copies)).unwrap();
+  let saved = save_recording_copy(&working, &directory, "Keeper", Some(copies)).unwrap();
 
   assert_eq!(saved, directory.join("Keeper (2).mp4"));
 }
@@ -362,7 +247,7 @@ fn saves_a_selected_audio_layout_without_changing_the_working_movie() {
   let cancelled = AtomicBool::new(false);
   let mut ignore_progress = |_| {};
 
-  let saved = save_selected_recording(
+  let saved = save_selected_recording_copy(
     &working,
     &directory,
     "Keeper",
@@ -383,7 +268,7 @@ fn saves_a_selected_audio_layout_without_changing_the_working_movie() {
   .unwrap();
 
   assert_eq!(saved, Some(directory.join("Keeper.mp4")));
-  assert!(!working.exists());
+  assert!(working.is_file());
 }
 
 #[test]
@@ -396,7 +281,7 @@ fn keeps_the_working_movie_when_a_selected_audio_export_fails() {
   let cancelled = AtomicBool::new(false);
   let mut ignore_progress = |_| {};
 
-  assert!(save_selected_recording(
+  assert!(save_selected_recording_copy(
     &working,
     &directory,
     "Keeper",
@@ -469,7 +354,7 @@ fn carries_every_recorded_track_into_the_saved_mp4() {
     return;
   }
 
-  let saved = save_recording(&working, &directory, "Keeper", Some(remux)).unwrap();
+  let saved = save_recording_copy(&working, &directory, "Keeper", Some(remux)).unwrap();
   assert_eq!(saved, directory.join("Keeper.mp4"));
 
   // Three streams in, three streams out. Dropping the second audio track
@@ -492,120 +377,31 @@ fn streams(path: &Path) -> usize {
     .count()
 }
 
-const NOW: SystemTime = SystemTime::UNIX_EPOCH;
-
-fn aged(name: &str, ago: Duration) -> (PathBuf, SystemTime) {
-  (PathBuf::from(name), NOW - ago)
-}
-
-#[test]
-fn offers_back_the_newest_unsaved_recording() {
-  let plan = orphan_plan(
-    vec![
-      aged("/tmp/old.mov", Duration::from_secs(3_600)),
-      aged("/tmp/newest.mov", Duration::from_secs(60)),
-      aged("/tmp/middle.mov", Duration::from_secs(600)),
-    ],
-    NOW,
-  );
-
-  assert_eq!(plan.present.as_deref(), Some(Path::new("/tmp/newest.mov")));
-  // Still inside their keeping age, so a later run can still offer them.
-  assert!(plan.delete.is_empty());
-}
-
-#[test]
-fn sweeps_away_anything_past_its_keeping_age() {
-  let plan = orphan_plan(
-    vec![
-      aged("/tmp/ancient.mov", ORPHAN_MAX_AGE + Duration::from_secs(1)),
-      aged("/tmp/recent.mov", Duration::from_secs(60)),
-    ],
-    NOW,
-  );
-
-  assert_eq!(plan.delete, vec![PathBuf::from("/tmp/ancient.mov")]);
-  assert_eq!(plan.present.as_deref(), Some(Path::new("/tmp/recent.mov")));
-}
-
-#[test]
-fn offers_nothing_back_when_everything_is_too_old() {
-  let plan = orphan_plan(vec![aged("/tmp/ancient.mov", ORPHAN_MAX_AGE * 2)], NOW);
-
-  assert_eq!(plan.present, None);
-  assert_eq!(plan.delete.len(), 1);
-}
-
-#[test]
-fn keeps_a_recording_stamped_in_the_future() {
-  // A clock that moved backwards makes an age impossible to read, and
-  // deleting someone's recording is the worse half of that guess.
-  let plan = orphan_plan(
-    vec![(
-      PathBuf::from("/tmp/ahead.mov"),
-      NOW + Duration::from_secs(60),
-    )],
-    NOW,
-  );
-
-  assert_eq!(plan.present.as_deref(), Some(Path::new("/tmp/ahead.mov")));
-  assert!(plan.delete.is_empty());
-}
-
-#[test]
-fn does_nothing_with_an_empty_directory() {
-  assert_eq!(orphan_plan(Vec::new(), NOW), OrphanPlan::default());
-}
-
-#[test]
-fn pairs_a_camera_sidecar_with_its_recording() {
-  let directory = std::env::temp_dir()
-    .join("screenwide-tests")
-    .join("camera-pair");
-  let _ = std::fs::remove_dir_all(&directory);
-  std::fs::create_dir_all(&directory).unwrap();
-
-  let recording = directory.join("recording-20260809-060151.000.mov");
-  let camera = directory.join("camera-20260809-060151.000.mov");
-  std::fs::write(&recording, b"screen").unwrap();
-  std::fs::write(&camera, b"camera").unwrap();
-
-  assert_eq!(
-    camera_for_recording(&recording).as_deref(),
-    Some(camera.as_path())
-  );
-
-  std::fs::remove_dir_all(directory).unwrap();
-}
-
-#[test]
-fn sweeps_only_unclaimed_camera_sidecars() {
-  let directory = std::env::temp_dir()
-    .join("screenwide-tests")
-    .join("camera-sweep");
-  let _ = std::fs::remove_dir_all(&directory);
-  std::fs::create_dir_all(&directory).unwrap();
-
-  let kept = directory.join("camera-kept.mov");
-  let abandoned = directory.join("camera-abandoned.mov");
-  let unrelated = directory.join("notes.txt");
-  for path in [&kept, &abandoned, &unrelated] {
-    std::fs::write(path, b"data").unwrap();
-  }
-
-  sweep_unclaimed_cameras(&directory, Some(&kept));
-
-  assert!(kept.exists());
-  assert!(!abandoned.exists());
-  assert!(unrelated.exists());
-
-  std::fs::remove_dir_all(directory).unwrap();
-}
-
 #[test]
 fn keeps_a_dot_inside_the_name() {
   assert_eq!(
     sanitize_file_stem("v1.2.3 build").as_deref(),
     Some("v1.2.3 build")
   );
+}
+
+#[test]
+fn opens_the_project_a_launch_names_relative_to_where_it_ran() {
+  let cwd = Path::new("/Users/demo/Desktop");
+  assert_eq!(
+    project_argument(
+      [
+        "C:\\Program Files\\Screenwide\\screenwide.exe",
+        "--flag",
+        "Demo.SCREENWIDE"
+      ],
+      cwd,
+    ),
+    Some(cwd.join("Demo.SCREENWIDE"))
+  );
+  assert_eq!(
+    project_argument(["/a/First.screenwide", "/b/Second.screenwide"], cwd),
+    Some(PathBuf::from("/b/Second.screenwide"))
+  );
+  assert_eq!(project_argument(["movie.mov", "-psn_0_1234"], cwd), None);
 }

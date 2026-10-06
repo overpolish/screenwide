@@ -19,6 +19,8 @@ import {
 } from "./export-resolution-items";
 import { ExportResolutionSelect } from "./export-resolution-select";
 
+const isWindows = () => document.documentElement.dataset.platform === "windows";
+
 export type EditorExportFormProps = {
   artifact: EditorArtifact | null;
   directory: string | null;
@@ -37,6 +39,8 @@ export type EditorExportFormProps = {
   canExport?: boolean;
   collapseAudio?: boolean;
   compression?: number;
+  /** Moves the recording's project to the Trash once it has been saved. */
+  deleteProjectAfterExport?: boolean;
   enabledAudioTrackCount?: number;
   estimatedSizeBytes?: number | null;
   /** Whether the camera is one of the enabled video tracks. */
@@ -47,6 +51,7 @@ export type EditorExportFormProps = {
   onCameraResolutionScaleChange?: (scale: number) => void;
   onCollapseAudioChange?: (collapse: boolean) => void;
   onCompressionChange?: (compression: number) => void;
+  onDeleteProjectAfterExportChange?: (remove: boolean) => void;
   onOpenLocationAfterExportChange?: (open: boolean) => void;
   onResolutionScaleChange?: (scale: number) => void;
   /** Reveals the saved file once it has been written. A stored preference. */
@@ -67,6 +72,7 @@ export function EditorExportForm({
   canExport = true,
   collapseAudio = false,
   compression = 0,
+  deleteProjectAfterExport = false,
   directory,
   enabledAudioTrackCount = 0,
   estimatedSizeBytes,
@@ -81,6 +87,7 @@ export function EditorExportForm({
   onCancel,
   onCollapseAudioChange,
   onCompressionChange,
+  onDeleteProjectAfterExportChange,
   onExport,
   onFileStemChange,
   onOpenLocationAfterExportChange,
@@ -246,6 +253,26 @@ export function EditorExportForm({
               isDisabled={isSaving}
               isSelected={openLocationAfterExport}
               onChange={onOpenLocationAfterExportChange}
+            />
+          )}
+        </ExportRow>
+        <ExportRow
+          controlClassName="items-start py-1"
+          description={`Moves it to the ${isWindows() ? "Recycle Bin" : "Trash"}, where it can be restored.`}
+          // A screenshot is also copied from the editor, which the choice
+          // covers as well.
+          title={
+            recording
+              ? "Delete project after saving"
+              : "Delete project after saving or copying"
+          }
+        >
+          {(props) => (
+            <Checkbox
+              {...props}
+              isDisabled={isSaving}
+              isSelected={deleteProjectAfterExport}
+              onChange={onDeleteProjectAfterExportChange}
             />
           )}
         </ExportRow>

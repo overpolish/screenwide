@@ -13,7 +13,6 @@ import {
   ImageDown,
   Lock,
   OctagonAlert,
-  PanelsTopLeft,
 } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 
@@ -46,10 +45,8 @@ type RecordingBarCaptureActionsProps = {
   canStartReplay: boolean;
   isCapturing: boolean;
   isLocked: boolean;
-  isRecordBlockedByEditor: boolean;
   className?: string;
   onDelayedScreenshot?: () => void;
-  onFocusPendingEditor?: () => void;
   onRecord?: () => void;
   onReplayChange?: (on: boolean) => void;
   onRequiredPermissionsPress?: () => void;
@@ -68,9 +65,7 @@ export function RecordingBarCaptureActions({
   className,
   isCapturing,
   isLocked,
-  isRecordBlockedByEditor,
   onDelayedScreenshot,
-  onFocusPendingEditor,
   onRecord,
   onReplayChange,
   onRequiredPermissionsPress,
@@ -209,31 +204,13 @@ export function RecordingBarCaptureActions({
       </div>
 
       <Button
-        aria-label={
-          isLocked
-            ? "Open permissions"
-            : isRecordBlockedByEditor
-              ? "Show Editor"
-              : "Record"
-        }
+        aria-label={isLocked ? "Open permissions" : "Record"}
         color="primary"
-        isDisabled={!canRecord && !isRecordBlockedByEditor && !isLocked}
-        onPress={
-          isLocked
-            ? onRequiredPermissionsPress
-            : isRecordBlockedByEditor
-              ? onFocusPendingEditor
-              : onRecord
-        }
+        isDisabled={!canRecord && !isLocked}
+        onPress={isLocked ? onRequiredPermissionsPress : onRecord}
         size="capture"
       >
-        {isLocked ? (
-          <Lock />
-        ) : isRecordBlockedByEditor ? (
-          <PanelsTopLeft />
-        ) : (
-          <Circle />
-        )}
+        {isLocked ? <Lock /> : <Circle />}
       </Button>
 
       {replay?.available ? (

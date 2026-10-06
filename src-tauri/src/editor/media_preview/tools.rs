@@ -81,7 +81,7 @@ fn without_console(program: PathBuf) -> Command {
 
 pub fn inspect_audio_tracks(source: &Path) -> Result<Vec<RecordingAudioTrack>, String> {
   // FFmpeg prints container metadata before it complains that no output was
-  // supplied. That gives recovery everything it needs without shipping a
+  // supplied. That gives a recording's audio tracks without shipping a
   // second, almost equally large FFprobe executable.
   let output = ffmpeg_command()
     .args(["-hide_banner", "-nostdin", "-i"])

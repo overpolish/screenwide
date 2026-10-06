@@ -19,19 +19,6 @@ fn test_directory(name: &str) -> PathBuf {
   directory
 }
 
-#[test]
-fn recognises_its_own_derivatives_by_name() {
-  assert!(is_preview_file(Path::new("/tmp/preview-42-7-mix-0-1.mp4")));
-  // An abandoned encode too: it is named after the mix it was going to
-  // become, so the startup sweep reclaims it without knowing it exists.
-  assert!(is_preview_file(Path::new(
-    "/tmp/preview-42-7-mix-0-1.mp4.3.part"
-  )));
-  assert!(!is_preview_file(Path::new(
-    "/tmp/recording-20260808-143205.000.mp4"
-  )));
-}
-
 fn tracks(count: usize) -> Vec<RecordingAudioTrack> {
   (0..count)
     .map(|stream_index| RecordingAudioTrack {

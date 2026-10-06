@@ -44,6 +44,7 @@ const fn policy(label: WindowLabel) -> Policy {
     WindowLabel::EditorRecording
     | WindowLabel::EditorScreenshot
     | WindowLabel::QrDetails
+    | WindowLabel::Projects
     | WindowLabel::Settings
     | WindowLabel::Update => Policy::Recoverable,
     #[cfg(target_os = "macos")]
@@ -53,7 +54,6 @@ const fn policy(label: WindowLabel) -> Policy {
     // recentred on it whenever that moves, so it never carries stale geometry.
     // The alert is recentred on the pointer's display each time it opens.
     WindowLabel::Alert
-    | WindowLabel::ConfirmSheet
     | WindowLabel::Tooltip
     | WindowLabel::ExportRecording
     | WindowLabel::ExportScreenshot

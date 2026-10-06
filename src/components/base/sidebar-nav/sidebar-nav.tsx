@@ -40,6 +40,9 @@ export type SidebarNavProps = {
   isExpandable?: boolean;
   isExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  /** A right click on a row, with the row's id and the pointer's position in
+   * the window. */
+  onItemContextMenu?: (id: string, point: { x: number; y: number }) => void;
 };
 
 export function SidebarNav({
@@ -51,6 +54,7 @@ export function SidebarNav({
   isExpanded,
   items,
   onExpandedChange,
+  onItemContextMenu,
   onSelectionChange,
   selected,
 }: SidebarNavProps) {
@@ -77,7 +81,18 @@ export function SidebarNav({
       initial={false}
       transition={transition}
     >
-      <div id={groupId}>
+      <div
+        id={groupId}
+        onContextMenu={(event) => {
+          const row = (event.target as Element).closest<HTMLElement>(
+            "[data-item-id]",
+          );
+          const id = row?.dataset.itemId;
+          if (!onItemContextMenu || !id) return;
+          event.preventDefault();
+          onItemContextMenu(id, { x: event.clientX, y: event.clientY });
+        }}
+      >
         <ToggleButtonGroup
           aria-label={label}
           className="flex flex-col gap-tight"
@@ -97,11 +112,13 @@ export function SidebarNav({
                 aria-label={item.label}
                 // A source-list row: 32px, inset and gap on the control-inset
                 // step, label and symbol in the label colour. Rows do not react
-                // to hover; the selected row is the accent tint with white
-                // label and symbol, as System Settings draws it.
+                // to hover; the selected row is filled with the accent, opaque
+                // as native fills are, with white label and symbol, as System
+                // Settings draws it. A translucent tint washes out to a pale
+                // row the white label can barely be read on.
                 className={cn(
                   "group relative flex h-8 w-full cursor-default items-center gap-control-inset overflow-hidden rounded-control px-control-inset text-left text-body text-content-fg outline-none transition-colors",
-                  "data-[pressed]:bg-fill-secondary data-[selected]:bg-primary-tint data-[selected]:text-primary-fg",
+                  "data-[pressed]:bg-fill-secondary data-[selected]:bg-primary-surface data-[selected]:text-primary-fg",
                   "data-[disabled]:text-control-fg-disabled data-[disabled]:data-[selected]:bg-fill-quaternary",
                   // A Fluent navigation item takes the subtle fill on hover
                   // and press, and when selected keeps its label colour
@@ -117,6 +134,9 @@ export function SidebarNav({
                   "data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content",
                   "windows:data-[selected]:data-[focus-visible]:ring-offset-1 windows:data-[selected]:data-[focus-visible]:ring-offset-focus-ring-inner",
                 )}
+                // React Aria takes `id` as the row's key and does not put it
+                // on the button, so the context menu reads it from here.
+                data-item-id={item.id}
                 id={item.id}
                 isDisabled={item.isDisabled}
                 style={{

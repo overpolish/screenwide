@@ -5,7 +5,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
-import { History } from "lucide-react";
+import { Check, History } from "lucide-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -132,14 +132,21 @@ for (let seconds = 1; seconds <= LONGEST_DELAY; seconds += 1) {
 }
 
 const [centreX, centreY] = GLYPH_CENTRE;
-const history = renderToStaticMarkup(
-  createElement(History, {
-    absoluteStrokeWidth: true,
-    color: INK,
-    size: HISTORY_SIZE,
-    strokeWidth: HISTORY_STROKE,
-    x: centreX - HISTORY_SIZE / 2,
-    y: centreY - HISTORY_SIZE / 2,
-  }),
+/** A Lucide glyph in the state icons' slot, at the History icon's size. */
+const glyph = (icon) =>
+  renderToStaticMarkup(
+    createElement(icon, {
+      absoluteStrokeWidth: true,
+      color: INK,
+      size: HISTORY_SIZE,
+      strokeWidth: HISTORY_STROKE,
+      x: centreX - HISTORY_SIZE / 2,
+      y: centreY - HISTORY_SIZE / 2,
+    }),
+  );
+await writeFile(new URL("tray-replay.png", icons), iconWith(glyph(History)));
+// Shown for a moment after a replay clip is saved.
+await writeFile(
+  new URL("tray-replay-saved.png", icons),
+  iconWith(glyph(Check)),
 );
-await writeFile(new URL("tray-replay.png", icons), iconWith(history));

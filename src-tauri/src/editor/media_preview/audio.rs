@@ -8,12 +8,41 @@ pub(super) fn waveform(
   track: &RecordingAudioTrack,
   duration_ms: u64,
 ) -> Result<Vec<f32>, String> {
-  let mut child = ffmpeg_command()
-    .args(["-hide_banner", "-loglevel", "error", "-nostdin", "-i"])
+  peaks(
+    source,
+    track.stream_index,
+    &track.label,
+    (0, duration_ms),
+    WAVEFORM_POINTS,
+  )
+}
+
+/// The peak level of each of `points` equal stretches of audio stream
+/// `stream_index`, over `window`: a start and a length in milliseconds. A
+/// window from the start reads to the end, so a recording a little longer
+/// than its stated length still lands in the last stretch.
+pub(in crate::editor) fn peaks(
+  source: &Path,
+  stream_index: usize,
+  label: &str,
+  (start_ms, length_ms): (u64, u64),
+  points: usize,
+) -> Result<Vec<f32>, String> {
+  let mut command = ffmpeg_command();
+  command.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
+  if start_ms > 0 {
+    command
+      .arg("-ss")
+      .arg(format!("{:.3}", start_ms as f64 / 1_000.0))
+      .arg("-t")
+      .arg(format!("{:.3}", length_ms as f64 / 1_000.0));
+  }
+  let mut child = command
+    .arg("-i")
     .arg(source)
     .args([
       "-map",
-      &format!("0:a:{}", track.stream_index),
+      &format!("0:a:{stream_index}"),
       "-vn",
       "-ac",
       "1",
@@ -32,11 +61,12 @@ pub(super) fn waveform(
     .stdout
     .take()
     .ok_or_else(|| "FFmpeg did not expose its waveform output".to_owned())?;
-  let expected_samples = duration_ms
+  let expected_samples = length_ms
     .saturating_mul(WAVEFORM_SAMPLE_RATE)
     .div_ceil(1_000)
     .max(1);
-  let mut peaks = vec![0.0_f32; WAVEFORM_POINTS];
+  let points = points.max(1);
+  let mut peaks = vec![0.0_f32; points];
   let mut reader = BufReader::new(stdout);
   let mut bytes = [0_u8; 16 * 1024];
   let mut remainder = Vec::with_capacity(3);
@@ -51,8 +81,8 @@ pub(super) fn waveform(
     let complete = remainder.len() / 4 * 4;
     for sample in remainder[..complete].as_chunks::<4>().0.iter() {
       let value = f32::from_le_bytes([sample[0], sample[1], sample[2], sample[3]]);
-      let bucket = ((sample_index.saturating_mul(WAVEFORM_POINTS as u64)) / expected_samples)
-        .min((WAVEFORM_POINTS - 1) as u64) as usize;
+      let bucket = ((sample_index.saturating_mul(points as u64)) / expected_samples)
+        .min((points - 1) as u64) as usize;
       peaks[bucket] = peaks[bucket].max(value.abs().min(1.0));
       sample_index = sample_index.saturating_add(1);
     }
@@ -65,7 +95,7 @@ pub(super) fn waveform(
   if !output.status.success() {
     let detail = String::from_utf8_lossy(&output.stderr).trim().to_owned();
     return Err(if detail.is_empty() {
-      format!("FFmpeg could not read the {} waveform", track.label)
+      format!("FFmpeg could not read the {label} waveform")
     } else {
       detail
     });

@@ -56,9 +56,11 @@ pub fn supports_compression() -> bool {
 
 static ESTIMATE_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 
-pub(super) fn estimate_temp_path(source: &Path) -> PathBuf {
+/// In the system's temporary folder, never beside the recording: that is a
+/// project the user may be syncing or about to send.
+pub(super) fn estimate_temp_path() -> PathBuf {
   let attempt = ESTIMATE_ATTEMPTS.fetch_add(1, Ordering::Relaxed);
-  source.with_file_name(format!(
+  std::env::temp_dir().join(format!(
     "{PREVIEW_PREFIX}estimate-{}-{attempt}.h264.part",
     std::process::id()
   ))
@@ -117,7 +119,7 @@ pub fn estimate_compressed_video_bytes(
     _ => vec![0.0, last_start / 2.0, last_start],
   };
 
-  let temporary = estimate_temp_path(source);
+  let temporary = estimate_temp_path();
   let mut command = ffmpeg_command();
   command.args(["-hide_banner", "-loglevel", "error", "-nostdin", "-y"]);
   for start in &starts {

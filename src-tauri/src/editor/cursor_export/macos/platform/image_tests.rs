@@ -21,7 +21,7 @@ fn store_ready() {
     let folder = std::env::temp_dir()
       .join("screenwide-tests")
       .join("image-pictures");
-    store::initialize(&folder, None);
+    store::initialize(&folder);
   });
 }
 

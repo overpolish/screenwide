@@ -18,6 +18,7 @@ pub async fn estimate_recording_export(
     camera_resolution_scale_percent,
     collapse_audio,
     compression,
+    delete_project_after_export: _,
     cursor_effects,
     keyboard_effects,
     enabled_stream_indices,
@@ -43,6 +44,7 @@ pub async fn estimate_recording_export(
     let state = app.state::<EditorState>();
     let (
       path,
+      project,
       tracks,
       duration_ms,
       original_size,
@@ -70,6 +72,7 @@ pub async fn estimate_recording_export(
         id,
         path,
         primary_kind,
+        project,
         source_scale_percent,
         width,
         ..
@@ -82,6 +85,7 @@ pub async fn estimate_recording_export(
       }
       (
         path.clone(),
+        project.clone(),
         audio_tracks.clone(),
         *duration_ms,
         std::fs::metadata(path).map_or(0, |metadata| metadata.len()),
@@ -120,18 +124,8 @@ pub async fn estimate_recording_export(
     } else {
       track_selection::AudioLayout::SeparateTracks
     };
-    let persisted_timeline;
-    let timeline_edit = if let Some(edit) = timeline_model
-      .as_ref()
-      .filter(|edit| edit.artifact_id == artifact_id)
-    {
-      Some(edit)
-    } else {
-      persisted_timeline = timeline_edit::for_recording(&path, artifact_id).map(|(_, edit)| edit);
-      persisted_timeline.as_ref()
-    };
     let timeline =
-      timeline_edit.and_then(|edit| timeline_edit::TimelinePlan::from_edit(edit, duration_ms));
+      timeline_edit::export_plan(timeline_model.as_ref(), &project, artifact_id, duration_ms);
     let selected_audio = selection.estimated_audio_bytes(&tracks, layout, duration_ms);
 
     let all_indices = tracks

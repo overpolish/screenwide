@@ -154,6 +154,8 @@ fn icon_for(item: &MenuItemKind<Wry>) -> Option<&'static [u8]> {
   let id = item.id().as_ref();
   Some(if id == super::OPEN_MENU_ID {
     super::icons::OPEN
+  } else if id == super::OPEN_PROJECT_MENU_ID {
+    super::icons::PROJECT
   } else if id == super::OPEN_CLIPBOARD_SCREENSHOT_MENU_ID {
     super::icons::CLIPBOARD
   } else if id == super::RECOGNIZE_TEXT_MENU_ID {

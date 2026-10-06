@@ -8,8 +8,11 @@ use tauri::{App, AppHandle, Wry};
 use crate::app_windows;
 use crate::recording::RecordingStatus;
 
+mod actions;
 mod icons;
 mod replay;
+mod replay_saved;
+pub use replay_saved::confirm as confirm_replay_saved;
 mod status;
 #[cfg(target_os = "windows")]
 mod windows_menu;
@@ -22,6 +25,7 @@ const DELAYED_SCREENSHOT_MENU_ID: &str = "delayed-screenshot";
 const DISCARD_MENU_ID: &str = "discard-recording";
 const OPEN_CLIPBOARD_SCREENSHOT_MENU_ID: &str = "open-clipboard-screenshot";
 const OPEN_MENU_ID: &str = "open-screenwide";
+const OPEN_PROJECT_MENU_ID: &str = "open-project";
 const PAUSE_MENU_ID: &str = "pause-recording";
 const QUIT_MENU_ID: &str = "quit-screenwide";
 const RECOGNIZE_TEXT_MENU_ID: &str = "recognize-text";
@@ -45,6 +49,11 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   .build(app)?;
   let mut builder = MenuBuilder::new(app)
     .icon(OPEN_MENU_ID, "Open Screenwide", icons::load(icons::OPEN)?)
+    .icon(
+      OPEN_PROJECT_MENU_ID,
+      "Projects",
+      icons::load(icons::PROJECT)?,
+    )
     .icon(
       OPEN_CLIPBOARD_SCREENSHOT_MENU_ID,
       "Open Screenshot from Clipboard",
@@ -156,60 +165,7 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
     .tooltip(status::tooltip(status::Shown::Status(
       RecordingStatus::Idle,
     )))
-    .on_menu_event(|app, event| {
-      // The replay items leave every overlay up: a save looks back at what
-      // was on screen.
-      if replay::handle(app, event.id().as_ref()) {
-        return;
-      }
-      let preserved: &[crate::capture_overlays::CaptureOverlay] = match event.id().as_ref() {
-        ANNOTATE_CLEAR_MENU_ID | ANNOTATE_MENU_ID | DELAYED_SCREENSHOT_MENU_ID => {
-          &[crate::capture_overlays::CaptureOverlay::Annotate]
-        }
-        RECOGNIZE_TEXT_MENU_ID => &[crate::capture_overlays::CaptureOverlay::TextRecognition],
-        RULER_OVERLAY_MENU_ID => &[crate::capture_overlays::CaptureOverlay::Ruler],
-        _ => &[],
-      };
-      crate::capture_overlays::dismiss_except(app, preserved);
-      match event.id().as_ref() {
-        ANNOTATE_MENU_ID => {
-          crate::annotate::toggle_detached(app);
-        }
-        ANNOTATE_CLEAR_MENU_ID => {
-          crate::annotate::clear(app);
-        }
-        DELAYED_SCREENSHOT_MENU_ID => {
-          if crate::screenshots::delayed::remaining().is_some() {
-            crate::screenshots::delayed::cancel(app);
-          } else if let Err(error) = crate::screenshots::delayed::start(
-            app,
-            crate::screenshots::delayed::DelayedTarget::DisplayUnderPointer,
-          ) {
-            eprintln!("Could not start a delayed screenshot from the tray: {error}");
-          }
-        }
-        DISCARD_MENU_ID => report("discard", crate::recording::cancel(app)),
-        OPEN_CLIPBOARD_SCREENSHOT_MENU_ID => {
-          crate::screenshots::open_clipboard_in_export(app);
-        }
-        OPEN_MENU_ID => show_main_window(app),
-        PAUSE_MENU_ID => report("pause", crate::recording::toggle_pause(app)),
-        QUIT_MENU_ID => app.exit(0),
-        RECOGNIZE_TEXT_MENU_ID => {
-          crate::text_recognition::start_detached(app);
-        }
-        RULER_OVERLAY_MENU_ID => {
-          crate::ruler::start_detached(app);
-        }
-        SETTINGS_MENU_ID => {
-          if let Err(error) = crate::settings::show(app) {
-            eprintln!("Could not open settings from the tray: {error}");
-          }
-        }
-        STOP_MENU_ID => report("stop", crate::recording::stop(app)),
-        _ => {}
-      }
-    })
+    .on_menu_event(|app, event| actions::handle(app, event.id().as_ref()))
     .on_tray_icon_event(|tray, event| {
       if let TrayIconEvent::Click {
         button: MouseButton::Left,
@@ -276,12 +232,6 @@ pub fn refresh_icon(app: &AppHandle) {
       status::apply(&tray, status);
     }
   });
-}
-
-fn report(action: &str, result: Result<(), String>) {
-  if let Err(error) = result {
-    eprintln!("Could not {action} the recording from the tray: {error}");
-  }
 }
 
 fn show_main_window(app: &AppHandle) {

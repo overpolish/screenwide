@@ -67,6 +67,7 @@ function EditorExportPreview({
   const [cameraResolution, setCameraResolution] = useState(100);
   const [collapseAudio, setCollapseAudio] = useState(false);
   const [compression, setCompression] = useState(2);
+  const [deleteProject, setDeleteProject] = useState(false);
   const [openLocation, setOpenLocation] = useState(true);
   const [resolution, setResolution] = useState(200);
 
@@ -79,6 +80,7 @@ function EditorExportPreview({
         cameraResolutionScalePercent: cameraResolution,
         collapseAudio,
         compression,
+        deleteProjectAfterExport: deleteProject,
         directory,
         enabledAudioTrackCount,
         estimatedSizeBytes,
@@ -95,6 +97,7 @@ function EditorExportPreview({
         onCancel: () => undefined,
         onCollapseAudioChange: setCollapseAudio,
         onCompressionChange: setCompression,
+        onDeleteProjectAfterExportChange: setDeleteProject,
         onExport: () => undefined,
         onFileStemChange: setFileStem,
         onOpenLocationAfterExportChange: setOpenLocation,

@@ -5,12 +5,22 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 
-export function EditableWindowTitle({
+/**
+ * A name edited where it is shown: click and type, Enter or a click away
+ * keeps it, Escape puts it back. Nothing moves when editing starts, and an
+ * emptied name keeps the one it had. Text styles come from the parent.
+ */
+export function EditableTitle({
+  className,
+  label,
   onChange,
   title,
 }: {
+  /** The field's accessible name, such as "Project name". */
+  label: string;
   onChange: (title: string) => void;
   title: string;
+  className?: string;
 }) {
   const titleRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -46,13 +56,14 @@ export function EditableWindowTitle({
 
   return (
     <span
-      aria-label="Document name"
+      aria-label={label}
       aria-multiline={false}
       autoCorrect="off"
       className={cn(
-        "pointer-events-auto block cursor-text select-text whitespace-nowrap rounded-control text-left outline-none caret-content-fg focus:selection:bg-content-fg/25",
+        "pointer-events-auto block cursor-text select-text whitespace-nowrap text-left outline-none caret-content-fg focus:selection:bg-content-fg/25",
         focusStyles,
         elementFocusVisible,
+        className,
       )}
       contentEditable="plaintext-only"
       // Nothing is committed until the edit ends, so `title` is the name as

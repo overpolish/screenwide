@@ -50,7 +50,6 @@ type RecordingBarProps = {
   onChooseMonitor?: (anchor: DOMRect, fromKeyboard: boolean) => void;
   onChooseWindow?: (anchor: DOMRect, fromKeyboard: boolean) => void;
   onDelayedScreenshot?: () => void;
-  onFocusPendingEditor?: () => void;
   onInputChange?: (input: keyof RecordingInputs, selected: boolean) => void;
   onInteract?: () => void;
   onMicrophoneLockedPress?: () => void;
@@ -62,11 +61,6 @@ type RecordingBarProps = {
   onScreenshot?: () => void;
   onScreenshotToClipboard?: () => void;
   onScrollingScreenshot?: () => void;
-  /**
-   * Which workspaces are holding unsaved work. Each has a window of its own,
-   * so only a pending recording stands in the way of starting another.
-   */
-  pendingEditors?: { recording: boolean; screenshot: boolean };
   /** The bar's root, which a window can measure to size itself to it. */
   ref?: Ref<HTMLElement>;
   /** The replay buffer, which keeps running whatever the bar is set to. */
@@ -111,7 +105,6 @@ export function RecordingBar(props: RecordingBarProps) {
     onChooseMonitor,
     onChooseWindow,
     onDelayedScreenshot,
-    onFocusPendingEditor,
     onInputChange,
     onInteract,
     onMicrophoneLockedPress,
@@ -123,7 +116,6 @@ export function RecordingBar(props: RecordingBarProps) {
     onScreenshot,
     onScreenshotToClipboard,
     onScrollingScreenshot,
-    pendingEditors = { recording: false, screenshot: false },
     ref,
     replay,
     screenshotState = "idle",
@@ -161,7 +153,7 @@ export function RecordingBar(props: RecordingBarProps) {
   const isCapturing = screenshotState === "pending";
   // The bar is hidden by Rust while a recording runs; disabling it as well
   // keeps a stale window from starting a second one.
-  const canRecordIgnoringEditor =
+  const canRecord =
     status === "idle" &&
     canStartRecording({
       hasCameraWarning: cameraWarning !== undefined,
@@ -175,13 +167,6 @@ export function RecordingBar(props: RecordingBarProps) {
       isScreenLocked: Boolean(isLocked),
       mode,
     });
-  const isRecordingWorkspaceOpen = pendingEditors.recording;
-  const canRecord = canRecordIgnoringEditor && !isRecordingWorkspaceOpen;
-  // Recording that only the pending recording stands in the way of: the button
-  // stays pressable and brings that editor forward rather than going dead,
-  // which is the same escape hatch the global shortcuts take.
-  const isRecordBlockedByEditor =
-    canRecordIgnoringEditor && isRecordingWorkspaceOpen;
 
   return (
     <main
@@ -251,12 +236,10 @@ export function RecordingBar(props: RecordingBarProps) {
         canRecord={canRecord}
         canScreenshot={canScreenshot}
         canScrollingScreenshot={canScrollingScreenshot}
-        canStartReplay={canRecordIgnoringEditor}
+        canStartReplay={canRecord}
         isCapturing={isCapturing}
         isLocked={Boolean(isLocked)}
-        isRecordBlockedByEditor={isRecordBlockedByEditor}
         onDelayedScreenshot={onDelayedScreenshot}
-        onFocusPendingEditor={onFocusPendingEditor}
         onRecord={onRecord}
         onReplayChange={onReplayChange}
         onRequiredPermissionsPress={onRequiredPermissionsPress}

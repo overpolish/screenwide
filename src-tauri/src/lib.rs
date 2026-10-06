@@ -15,7 +15,6 @@ mod capture_geometry;
 #[cfg(target_os = "macos")]
 mod capture_kit;
 mod capture_overlays;
-mod confirm_sheet;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod cursor_scrub;
 mod desktop_capture;
@@ -29,6 +28,8 @@ mod monitor_topology;
 mod osc;
 mod permissions;
 mod plugins;
+mod project;
+mod project_browser;
 mod recording;
 mod recording_inputs;
 mod recording_sources;
@@ -55,7 +56,6 @@ pub fn run() {
     .manage(audio_preview::AudioPreviewState::default())
     .manage(camera_preview::CameraPreviewState::default())
     .manage(alert::AlertState::default())
-    .manage(confirm_sheet::ConfirmSheetState::default())
     .manage(editor::EditorState::default())
     .manage(editor::recording_preview_player::RecordingPreviewPlayerState::default())
     .manage(editor::screenshot_preview::ScreenshotPreviewState::default())
@@ -80,14 +80,10 @@ pub fn run() {
       alert::dismiss_alert,
       alert::fit_alert,
       alert::get_alert,
-      confirm_sheet::fit_confirm_sheet,
-      confirm_sheet::get_confirm_sheet,
-      confirm_sheet::resolve_confirm_sheet,
       editor::commands::browse_background_image,
       editor::commands::browse_export_directory,
       editor::commands::cancel_export_job,
       editor::commands::copy_editor_to_clipboard,
-      editor::commands::focus_editor_window,
       editor::export_window::hide_export_options,
       editor::export_window::resize_export_options,
       editor::export_window::show_export_options,
@@ -125,6 +121,10 @@ pub fn run() {
       editor::recording_preview_player::commands::stop_recording_preview_player,
         editor::recording_preview_player::timeline_thumbnails::copy_recording_preview_frame_to_clipboard,
       editor::recording_preview_player::timeline_thumbnails::stream_recording_timeline_thumbnails,
+      editor::project_thumbnail::edited::save_recording_project_still,
+      editor::project_look::set_recording_project_look,
+      editor::screenshot_project::workspace::set_screenshot_project_workspace,
+      editor::screenshot_project::workspace::save_screenshot_project_still,
       editor::save::save_export,
       editor::screenshot_preview::layout_screenshot_preview_surface,
       editor::screenshot_preview::refresh_screenshot_preview_sources,
@@ -255,6 +255,20 @@ pub fn run() {
       app_windows::options::placement::move_standalone_listbox,
       app_windows::panel_space::grow_editor_for_panel,
       app_windows::source_selector::expand_recording_source_selector,
+      project_browser::show_project_browser,
+      project_browser::hide_project_browser,
+      project_browser::get_project_locations,
+      project_browser::list_projects,
+      project_browser::get_project_thumbnail,
+      project_browser::actions::open_project_file,
+      project_browser::actions::open_other_project,
+      project_browser::actions::reveal_project,
+      project_browser::actions::open_project_location,
+      project_browser::actions::rename_project,
+      project_browser::actions::trash_project,
+      project_browser::actions::forget_recent_project,
+      project_browser::actions::add_project_location,
+      project_browser::actions::remove_project_location,
     ])
     .setup(startup::setup)
     .build(tauri::generate_context!())
@@ -263,8 +277,13 @@ pub fn run() {
   #[cfg(target_os = "macos")]
   let mut app = app;
   #[cfg(target_os = "macos")]
-  if !editor::has_pending_workspace(app.handle()) {
-    app.set_dock_visibility(false);
-  }
-  app.run(|_, _| {});
+  app.set_dock_visibility(false);
+  app.run(|app, event| {
+    #[cfg(target_os = "macos")]
+    if let tauri::RunEvent::Opened { urls } = event {
+      startup::open_files(app, urls);
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, event);
+  });
 }

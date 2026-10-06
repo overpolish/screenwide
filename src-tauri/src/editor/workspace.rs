@@ -9,6 +9,7 @@ pub(super) fn focus_pending(app: &AppHandle, kind: EditorKind) {
   let _ = window::show(app, kind);
 }
 
+/// Whether the workspace has something open.
 pub fn has_pending_kind(app: &AppHandle, kind: EditorKind) -> bool {
   app
     .state::<EditorState>()
@@ -17,25 +18,6 @@ pub fn has_pending_kind(app: &AppHandle, kind: EditorKind) -> bool {
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner())
     .is_some()
-}
-
-/// Whether any workspace is holding unsaved work.
-pub fn has_pending(app: &AppHandle) -> bool {
-  EditorKind::ALL
-    .into_iter()
-    .any(|kind| has_pending_kind(app, kind))
-}
-
-/// Focuses a pending recording and reports whether the requested action should
-/// stop. Only the recording workspace is consulted: an open screenshot never
-/// stood in the way of the recording controls, and now it has its own window
-/// that would be the wrong one to raise.
-pub fn focus_if_pending(app: &AppHandle) -> bool {
-  let pending = has_pending_kind(app, EditorKind::Recording);
-  if pending {
-    focus_pending(app, EditorKind::Recording);
-  }
-  pending
 }
 
 /// Screenshot tools open over whatever else is waiting: each workspace has its
@@ -57,26 +39,17 @@ pub fn focus_if_screenshot_blocked(app: &AppHandle) -> bool {
   true
 }
 
-/// Reserves the empty recording workspace before countdown and stream
-/// initialization. Every recording entry point therefore sees the same
-/// pending-work rule.
+/// Reserves the recording workspace before countdown and stream
+/// initialization, so only one capture is ever being set up. A recording
+/// already open does not stand in the way: it is saved in its project, and the
+/// new one takes its place when it finishes.
 pub fn reserve_recording(app: &AppHandle) -> Result<(), String> {
   let state = app.state::<EditorState>();
-  let artifact = state
-    .recording
-    .artifact
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner());
   let mut reservation = state
     .capture_reservation
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
-  if artifact.is_some() {
-    drop(reservation);
-    drop(artifact);
-    focus_pending(app, EditorKind::Recording);
-    Err("Finish or discard the open recording before starting another".to_owned())
-  } else if reservation.is_some() {
+  if reservation.is_some() {
     Err("Another capture is already starting".to_owned())
   } else {
     *reservation = Some(EditorKind::Recording);

@@ -112,7 +112,7 @@ impl TrackSelection {
   /// The selected audio's expected encoded size.
   ///
   /// Recorded AAC is copied, so its configured bitrate is the useful estimate.
-  /// A recovered track has no kind metadata; treating it like the larger
+  /// A track found by inspection has no kind metadata; treating it like the larger
   /// system-audio stream is safer than promising a file that is too small.
   pub fn estimated_audio_bytes(
     &self,

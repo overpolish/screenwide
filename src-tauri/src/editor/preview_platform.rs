@@ -90,6 +90,8 @@ mod surface_windows;
 #[cfg(target_os = "windows")]
 use self::surface_windows as surface;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) use audio_ribbon::{ribbon_still, BAR_PITCH_POINTS as RIBBON_BAR_PITCH_POINTS};
 #[cfg(target_os = "windows")]
 pub(crate) use compositor::ComposedFrame;
 #[cfg(target_os = "windows")]

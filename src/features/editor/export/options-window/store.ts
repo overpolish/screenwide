@@ -24,6 +24,8 @@ export type ExportOptionsSnapshot = {
   canExport: boolean;
   collapseAudio: boolean;
   compression: number;
+  /** Moves a recording's project to the Trash once it is exported. */
+  deleteProjectAfterExport: boolean;
   directory: string | null;
   enabledAudioTrackCount: number;
   estimatedSizeBytes: number | null;
@@ -54,6 +56,7 @@ export type ExportOptionsPatch = Partial<
     | "cameraResolutionScalePercent"
     | "collapseAudio"
     | "compression"
+    | "deleteProjectAfterExport"
     | "fileStem"
     | "resolutionScalePercent"
   >
@@ -79,6 +82,7 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsSnapshot = {
   canExport: false,
   collapseAudio: false,
   compression: 0,
+  deleteProjectAfterExport: false,
   directory: null,
   enabledAudioTrackCount: 0,
   estimatedSizeBytes: null,

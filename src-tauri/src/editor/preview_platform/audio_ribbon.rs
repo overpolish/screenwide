@@ -20,7 +20,7 @@ use crate::gpu::Gpu;
 
 /// Two points of bar with a three-point gap.
 const BAR_WIDTH_POINTS: f32 = 2.0;
-const BAR_PITCH_POINTS: f32 = 5.0;
+pub(crate) const BAR_PITCH_POINTS: f32 = 5.0;
 /// A bar reaches this share of the viewport's height at most, half of it
 /// either side of the centre line.
 const HEIGHT_SHARE: f32 = 0.30;
@@ -136,6 +136,66 @@ impl AudioRibbonRenderer {
     self.last_constants = Some(constants);
     Ok(true)
   }
+}
+
+/// The ribbon drawn once offscreen at `size` drawable pixels and `scale`,
+/// with the playhead at the centre of `envelopes`, as tightly packed RGBA:
+/// `color` premultiplied by each pixel's coverage. A project card's still.
+pub(crate) fn ribbon_still(
+  envelopes: &AudioRibbonEnvelopes,
+  size: (u32, u32),
+  scale: f32,
+  color: [f32; 4],
+) -> Result<Vec<u8>, String> {
+  let samples = bucket_levels(envelopes);
+  if samples.is_empty() {
+    return Err("There is no audio to draw".to_owned());
+  }
+  let gpu = crate::gpu::shared()?;
+  let painter = Painter::new(&gpu.device);
+  let levels = painter.bindings(&gpu.device, &levels_view(gpu, &samples));
+  let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+    label: Some("Screenwide audio ribbon still"),
+    size: wgpu::Extent3d {
+      width: size.0,
+      height: size.1,
+      depth_or_array_layers: 1,
+    },
+    mip_level_count: 1,
+    sample_count: 1,
+    dimension: wgpu::TextureDimension::D2,
+    format: crate::gpu::surface::FORMAT,
+    usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+    view_formats: &[],
+  });
+  let constants = Constants {
+    color,
+    flat: color,
+    geometry: [
+      size.0 as f32,
+      size.1 as f32,
+      BAR_PITCH_POINTS * scale,
+      BAR_WIDTH_POINTS * scale,
+    ],
+    style: [
+      size.1 as f32 * HEIGHT_SHARE,
+      scale,
+      0.5,
+      envelopes.points as f32,
+    ],
+  };
+  painter.encode(
+    gpu,
+    &levels,
+    constants,
+    &texture.create_view(&Default::default()),
+  );
+  let mut pixels = gpu.read_texture(&texture)?;
+  // The surface format is BGRA; a PNG wants RGBA.
+  for pixel in pixels.as_chunks_mut::<4>().0 {
+    pixel.swap(0, 2);
+  }
+  Ok(pixels)
 }
 
 /// One R32Float texel per bucket.

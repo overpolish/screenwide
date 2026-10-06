@@ -114,18 +114,6 @@ pub(crate) fn snapshot(app: &AppHandle, reason: &str) {
   );
 }
 
-/// Diagnostics probe (duplicate-delivery investigation): the one session that
-/// handled a press twice was a crash-recovery session, so the binding state
-/// after recovery is worth comparing with the state at startup. Recovery runs
-/// from `editor::initialize`, which the setup order puts *before*
-/// `shortcuts::initialize`, so this snapshot precedes the
-/// `startup_registration_complete` one and reads the pre-registration state.
-/// Remove with the rest of the probe.
-pub(crate) fn recovery_offered(app: &AppHandle) {
-  record("recovery_offered", json!({}));
-  snapshot(app, "recovery_offered");
-}
-
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FrontendPhase {

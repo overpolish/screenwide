@@ -8,8 +8,8 @@ import { cn } from "../../../lib/styling";
 import { IconButton } from "../../base/button/icon-button";
 import { ScrollArea } from "../../base/scroll-area/scroll-area";
 import { Text } from "../../base/text/text";
+import { EditableTitle } from "../editable-title/editable-title";
 
-import { EditableWindowTitle } from "./editable-window-title";
 import {
   useWindowHeaderCenterWidth,
   WindowHeaderCenterWidthContext,
@@ -112,7 +112,11 @@ export function WindowHeader({
           variant="title"
         >
           {onTitleChange ? (
-            <EditableWindowTitle onChange={onTitleChange} title={title} />
+            <EditableTitle
+              label="Document name"
+              onChange={onTitleChange}
+              title={title}
+            />
           ) : (
             title
           )}

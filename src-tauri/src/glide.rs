@@ -36,6 +36,7 @@ mod icon;
 mod fit;
 
 const GLIDABLE_WINDOW_LABELS: &[WindowLabel] = &[
+  WindowLabel::Projects,
   WindowLabel::Settings,
   WindowLabel::RecordingBar,
   WindowLabel::RecordingDock,

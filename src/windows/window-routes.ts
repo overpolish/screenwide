@@ -24,10 +24,6 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     import("../features/annotate/annotate-toolbar-window").then(
       (module) => module.AnnotateToolbarWindow,
     ),
-  "/confirm-sheet": () =>
-    import("../features/confirm-sheet/confirm-sheet-window").then(
-      (module) => module.ConfirmSheetWindow,
-    ),
   "/editor": () =>
     import("./editor-entry").then((module) => module.EditorEntry),
   "/export-options": () =>
@@ -44,6 +40,10 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     ),
   "/permissions": () =>
     import("./permissions-entry").then((module) => module.PermissionsEntry),
+  "/projects": () =>
+    import("./project-browser-entry").then(
+      (module) => module.ProjectBrowserEntry,
+    ),
   "/qr-details": () =>
     import("../features/text-recognition/qr-details-window").then(
       (module) => module.QrDetailsWindow,

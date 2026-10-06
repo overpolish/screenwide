@@ -146,6 +146,7 @@ export function ExportOptionsWindow() {
         canExport: options.canExport,
         collapseAudio: options.collapseAudio,
         compression: options.compression,
+        deleteProjectAfterExport: options.deleteProjectAfterExport,
         directory: options.directory,
         enabledAudioTrackCount: options.enabledAudioTrackCount,
         estimatedSizeBytes: options.estimatedSizeBytes,
@@ -169,6 +170,9 @@ export function ExportOptionsWindow() {
         },
         onCompressionChange: (compression) => {
           patch({ compression });
+        },
+        onDeleteProjectAfterExportChange: (deleteProjectAfterExport) => {
+          patch({ deleteProjectAfterExport });
         },
         onExport: () => {
           // The window stays: it is where the save reports from, and the

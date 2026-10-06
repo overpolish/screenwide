@@ -132,12 +132,3 @@ impl RecordingSidecars {
     }
   }
 }
-
-pub(super) fn remove_stopped(sidecars: &StoppedSidecars) {
-  if let Ok(Some(path)) = &sidecars.cursor {
-    let _ = std::fs::remove_file(path);
-  }
-  if let Ok(Some(path)) = &sidecars.keyboard {
-    let _ = std::fs::remove_file(path);
-  }
-}

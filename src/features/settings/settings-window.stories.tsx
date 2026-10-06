@@ -28,6 +28,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     backgroundPresets: [],
     launchAtLogin: false,
     openLocationAfterExport: true,
+    projectDirectory: null,
     recordScreenwideWindows: true,
     recordingCountdownSeconds: 3,
     recordingDirectory: null,
@@ -126,7 +127,11 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     beginShortcutCapture: () => Promise.resolve(null),
     browseDefaultLocation: (kind) =>
       Promise.resolve(
-        `/Users/demo/${kind === "recording" ? "Recordings" : "Screenshots"}`,
+        {
+          project: "/Users/demo/Movies/Screenwide",
+          recording: "/Users/demo/Recordings",
+          screenshot: "/Users/demo/Screenshots",
+        }[kind],
       ),
     endShortcutCapture: () => Promise.resolve(null),
     getAnnotateSettings: () => Promise.resolve(annotate),

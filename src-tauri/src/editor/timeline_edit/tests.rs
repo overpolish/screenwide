@@ -101,27 +101,28 @@ fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
 }
 
 #[test]
-fn restores_the_newest_valid_slot_and_rebinds_the_artifact() {
-  let directory =
-    std::env::temp_dir().join(format!("screenwide-timeline-edit-{}", std::process::id()));
-  let _ = std::fs::remove_dir_all(&directory);
-  std::fs::create_dir_all(&directory).unwrap();
-  let recording = directory.join("recording-test.mov");
-  std::fs::write(&recording, []).unwrap();
+fn keeps_the_newest_save_and_rebinds_the_artifact() {
+  let project = crate::project::scratch_project("timeline-newest");
 
-  persist(&recording, 7, 1, edit(7, 0.25)).unwrap();
-  persist(&recording, 7, 2, edit(7, 0.75)).unwrap();
-  persist(&recording, 7, 1, edit(7, 0.5)).unwrap();
-  let (revision, restored) = for_recording(&recording, 99).unwrap();
+  persist(&project, 7, 1, edit(7, 0.25)).unwrap();
+  persist(&project, 7, 2, edit(7, 0.75)).unwrap();
+  // A save that arrives late must not undo the one after it.
+  persist(&project, 7, 1, edit(7, 0.5)).unwrap();
+  let (revision, restored) = for_project(&project, 99).unwrap();
+
   assert_eq!(revision, 2);
   assert_eq!(restored.artifact_id, 99);
   assert_eq!(restored.segments[0].source_end, 0.75);
-
-  std::fs::write(sidecar_path(&recording, 'a').unwrap(), b"truncated").unwrap();
-  let (revision, restored) = for_recording(&recording, 99).unwrap();
-  assert_eq!(revision, 1);
-  assert_eq!(restored.segments[0].source_end, 0.25);
-  let _ = std::fs::remove_dir_all(directory);
+  // Saving the edit leaves what was recorded alone.
+  assert_eq!(
+    crate::project::read(&project)
+      .unwrap()
+      .recorded()
+      .unwrap()
+      .media
+      .primary,
+    "media/recording.mov"
+  );
 }
 
 #[test]
@@ -130,14 +131,7 @@ fn live_annotation_clips_become_the_recordings_first_edit() {
   use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
   use crate::editor::annotations::AnnotationPoint;
 
-  let directory = std::env::temp_dir().join(format!(
-    "screenwide-timeline-initial-{}",
-    std::process::id()
-  ));
-  let _ = std::fs::remove_dir_all(&directory);
-  std::fs::create_dir_all(&directory).unwrap();
-  let recording = directory.join("recording-live.mov");
-  std::fs::write(&recording, []).unwrap();
+  let project = crate::project::scratch_project("timeline-initial");
   let clip = RecordingAnnotationClip {
     path_ms: None,
     pin: None,
@@ -152,70 +146,17 @@ fn live_annotation_clips_become_the_recordings_first_edit() {
     end_ms: 8_000,
   };
 
-  persist_initial_edit(&recording, 7, vec![clip.clone()], Vec::new()).unwrap();
-  let (revision, restored) = for_recording(&recording, 7).unwrap();
+  persist_initial_edit(&project, 7, vec![clip.clone()], Vec::new()).unwrap();
+  let (revision, restored) = for_project(&project, 7).unwrap();
 
   assert_eq!(revision, 0);
   assert_eq!(restored.annotation_clips, vec![clip]);
   // The editor's own first save lands on top instead of being refused.
-  persist(&recording, 7, 1, edit(7, 0.5)).unwrap();
-  assert_eq!(for_recording(&recording, 7).unwrap().0, 1);
-  let _ = std::fs::remove_dir_all(directory);
-}
-
-/// An edit saved before the order was the stacking drew highlights, then the
-/// spotlights' shade, under everything else; it is read back in that order.
-#[test]
-fn a_version_one_edit_is_restacked_the_way_it_was_drawn() {
-  use crate::editor::annotations::arrow::new_arrow;
-  use crate::editor::annotations::highlight::model::new_highlight;
-  use crate::editor::annotations::spotlight::model::new_spotlight;
-  use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
-  use crate::editor::annotations::{Annotation, AnnotationPoint};
-
-  let directory = std::env::temp_dir().join(format!(
-    "screenwide-timeline-restack-{}",
-    std::process::id()
-  ));
-  let _ = std::fs::remove_dir_all(&directory);
-  std::fs::create_dir_all(&directory).unwrap();
-  let recording = directory.join("recording-restack.mov");
-  std::fs::write(&recording, []).unwrap();
-  let at = |x: f64| AnnotationPoint { x, y: x };
-  let clip = |annotation: Annotation| RecordingAnnotationClip {
-    path_ms: None,
-    pin: None,
-    annotation,
-    track_id: AnnotationTrack::Primary,
-    start_ms: 0,
-    end_ms: 8_000,
-  };
-  let mut saved = edit(7, 0.5);
-  saved.annotation_clips = vec![
-    clip(new_arrow("first".to_owned(), at(0.0), at(10.0), None)),
-    clip(new_spotlight("light".to_owned(), [at(0.0), at(10.0)], None)),
-    clip(new_highlight("marker".to_owned(), at(0.0), None, 1.0)),
-    clip(new_arrow("second".to_owned(), at(0.0), at(10.0), None)),
-  ];
-  std::fs::write(
-    sidecar_path(&recording, 'a').unwrap(),
-    serde_json::to_vec(&serde_json::json!({
-      "edit": saved,
-      "revision": 3,
-      "version": 1,
-    }))
-    .unwrap(),
-  )
-  .unwrap();
-
-  let (_, restored) = for_recording(&recording, 7).unwrap();
-  let ids: Vec<_> = restored
-    .annotation_clips
-    .iter()
-    .map(|clip| clip.annotation.id.as_str())
-    .collect();
-  assert_eq!(ids, ["marker", "light", "first", "second"]);
-  let _ = std::fs::remove_dir_all(directory);
+  persist(&project, 7, 1, edit(7, 0.5)).unwrap();
+  assert_eq!(for_project(&project, 7).unwrap().0, 1);
+  // Reopening the project does not put the first edit back over it.
+  persist_initial_edit(&project, 8, Vec::new(), Vec::new()).unwrap();
+  assert_eq!(for_project(&project, 8).unwrap().1.segments.len(), 2);
 }
 
 #[test]

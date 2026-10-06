@@ -11,9 +11,10 @@ use super::{
   sources::{headless_sources, sources_with_surface},
 };
 use crate::editor::{
-  cursor_effects::CursorEffectSettings, keyboard_effects::KeyboardEffectSettings,
-  CameraOverlaySettings, RecordingOutputSettings,
+  annotations::timing::RecordingAnnotationClip, cursor_effects::CursorEffectSettings,
+  keyboard_effects::KeyboardEffectSettings, CameraOverlaySettings, RecordingOutputSettings,
 };
+use crate::screenshots::CapturedImage;
 pub(super) const HEADER_MARKER: u32 = u32::from_le_bytes(*b"OCTH");
 const HEADER_VERSION: u32 = 1;
 const MAX_THUMBNAILS: u32 = 32;
@@ -40,30 +41,59 @@ pub(super) fn target_width(source_width: u32, source_height: u32) -> u32 {
     .max(1.0)) as u32
 }
 
-/// Copies the composed primary frame at the playhead. Decoding and bitmap
-/// composition happen only for this explicit action; live preview stays on
-/// the native GPU surface and does not cross IPC.
-#[tauri::command]
-#[allow(clippy::too_many_arguments)]
-pub async fn copy_recording_preview_frame_to_clipboard(
-  app: AppHandle,
-  artifact_id: u64,
+/// One composed frame of the open recording: the preview's settings at
+/// `position_ms` in the source.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct PreviewFrameRequest {
+  pub(crate) artifact_id: u64,
   position_ms: u64,
   bake_camera: bool,
   camera_overlay: CameraOverlaySettings,
   cursor_effects: CursorEffectSettings,
   keyboard_effects: KeyboardEffectSettings,
-  mut recording_output: RecordingOutputSettings,
-  annotation_clips: Option<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>,
+  recording_output: RecordingOutputSettings,
+  annotation_clips: Option<Vec<RecordingAnnotationClip>>,
+}
+
+/// Copies the composed primary frame at the playhead. Decoding and bitmap
+/// composition happen only for this explicit action; live preview stays on
+/// the native GPU surface and does not cross IPC.
+#[tauri::command]
+pub async fn copy_recording_preview_frame_to_clipboard(
+  app: AppHandle,
+  frame: PreviewFrameRequest,
 ) -> Result<(), String> {
+  let composed = compose_preview_frame(&app, frame).await?;
+  app
+    .clipboard()
+    .write_image(&Image::new(&composed.rgba, composed.width, composed.height))
+    .map_err(|error| error.to_string())
+}
+
+/// Composes `frame` through the same still compositor as the live preview.
+pub(crate) async fn compose_preview_frame(
+  app: &AppHandle,
+  frame: PreviewFrameRequest,
+) -> Result<CapturedImage, String> {
+  let PreviewFrameRequest {
+    artifact_id,
+    position_ms,
+    bake_camera,
+    camera_overlay,
+    cursor_effects,
+    keyboard_effects,
+    mut recording_output,
+    annotation_clips,
+  } = frame;
   // Windows composes the frame through the editor window's compositor, which
   // every session shares; macOS composes it without one.
-  let sources = sources_with_surface(&app, artifact_id, None, cfg!(target_os = "windows"))?;
+  let sources = sources_with_surface(app, artifact_id, None, cfg!(target_os = "windows"))?;
   recording_output.stamp_captures(sources.captures);
   if let Some(clips) = &annotation_clips {
     crate::editor::annotations::timing::validate_clips(clips)?;
   }
-  let composed = tauri::async_runtime::spawn_blocking(move || {
+  tauri::async_runtime::spawn_blocking(move || {
     if let Some(mut clips) = annotation_clips {
       use crate::editor::annotations::timing::{revealed_annotations, AnnotationTrack};
       // The preview has normally tracked every pin already; one it has not
@@ -112,11 +142,7 @@ pub async fn copy_recording_preview_frame_to_clipboard(
     )
   })
   .await
-  .map_err(|error| error.to_string())??;
-  app
-    .clipboard()
-    .write_image(&Image::new(&composed.rgba, composed.width, composed.height))
-    .map_err(|error| error.to_string())
+  .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

@@ -16,8 +16,6 @@ pub enum WindowLabel {
   /// editor cannot take the other's panel away.
   ToolPanelRecording,
   ToolPanelScreenshot,
-  /// The shared confirmation sheet, a child of whichever window asked.
-  ConfirmSheet,
   /// The shared alert that reports a failure, nobody's child.
   Alert,
   /// The shared tooltip, a floating panel that describes whatever is hovered.
@@ -33,6 +31,8 @@ pub enum WindowLabel {
   RecordingDock,
   Ruler,
   QrDetails,
+  /// The project browser: recent projects and the folders that hold them.
+  Projects,
   Settings,
   RegionSelector,
   RecordingSourceSelector,
@@ -49,7 +49,6 @@ impl WindowLabel {
     Self::ExportScreenshot,
     Self::ToolPanelRecording,
     Self::ToolPanelScreenshot,
-    Self::ConfirmSheet,
     Self::Alert,
     Self::Tooltip,
     #[cfg(target_os = "macos")]
@@ -61,6 +60,7 @@ impl WindowLabel {
     Self::RecordingDock,
     Self::Ruler,
     Self::QrDetails,
+    Self::Projects,
     Self::Settings,
     Self::RegionSelector,
     Self::RecordingSourceSelector,
@@ -77,7 +77,6 @@ impl WindowLabel {
       Self::ExportScreenshot => "export-screenshot",
       Self::ToolPanelRecording => "tool-panel-recording",
       Self::ToolPanelScreenshot => "tool-panel-screenshot",
-      Self::ConfirmSheet => "confirm-sheet",
       Self::Alert => "alert",
       Self::Tooltip => "tooltip",
       #[cfg(target_os = "macos")]
@@ -89,6 +88,7 @@ impl WindowLabel {
       Self::RecordingDock => "recording-dock",
       Self::Ruler => "ruler",
       Self::QrDetails => "qr-details",
+      Self::Projects => "projects",
       Self::Settings => "settings",
       Self::RegionSelector => "region-selector",
       Self::RecordingSourceSelector => "recording-source-selector",

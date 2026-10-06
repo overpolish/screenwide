@@ -12,14 +12,11 @@ mod stacking;
 pub(crate) use time_mapping::source_after_output_duration_us;
 pub(crate) use time_mapping::source_before_output_duration_us;
 
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-/// Version 2 draws annotations in document order; version 1 files are read
-/// by putting their clips in the order that draws them as they were drawn.
+/// Annotations are drawn in document order.
 const FORMAT_VERSION: u16 = 2;
 const MAX_SEGMENTS: usize = 100_000;
 
@@ -188,50 +185,57 @@ impl TimelinePlan {
   }
 }
 
+/// The edit as a project keeps it. The revision orders saves that can arrive
+/// out of turn, so a slow older save never lands over a newer one.
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PersistedTimelineEdit {
+pub(crate) struct PersistedTimelineEdit {
   edit: RecordingTimelineEdit,
   revision: u64,
   version: u16,
 }
 
-fn sidecar_path(recording: &Path, slot: char) -> Option<PathBuf> {
-  let stem = recording.file_stem()?.to_str()?;
-  Some(recording.with_file_name(format!("{stem}.timeline-edit-{slot}.json")))
-}
-
-fn read_slot(recording: &Path, slot: char) -> Option<PersistedTimelineEdit> {
-  let bytes = std::fs::read(sidecar_path(recording, slot)?).ok()?;
-  let mut persisted: PersistedTimelineEdit = serde_json::from_slice(&bytes).ok()?;
-  match persisted.version {
-    FORMAT_VERSION => {}
-    1 => stacking::stack_by_kind(&mut persisted.edit.annotation_clips),
-    _ => return None,
+/// The project's edit and its revision, bound to `artifact_id`. An edit this
+/// version cannot read, or one that fails validation, is treated as absent.
+pub fn for_project(project: &Path, artifact_id: u64) -> Option<(u64, RecordingTimelineEdit)> {
+  let PersistedTimelineEdit {
+    mut edit,
+    revision,
+    version,
+  } = crate::project::read(project).ok()?.timeline?;
+  if version != FORMAT_VERSION || validate(&edit).is_err() {
+    return None;
   }
-  validate(&persisted.edit).is_ok().then_some(persisted)
-}
-
-pub fn for_recording(recording: &Path, artifact_id: u64) -> Option<(u64, RecordingTimelineEdit)> {
-  let mut persisted = ['a', 'b']
-    .into_iter()
-    .filter_map(|slot| read_slot(recording, slot))
-    .max_by_key(|candidate| candidate.revision)?;
-  persisted.edit.artifact_id = artifact_id;
-  Some((persisted.revision, persisted.edit))
+  edit.artifact_id = artifact_id;
+  Some((revision, edit))
 }
 
 pub fn snapshot_fields(
-  recording: &Path,
+  project: &Path,
   artifact_id: u64,
 ) -> (Option<u64>, Option<RecordingTimelineEdit>) {
-  for_recording(recording, artifact_id).map_or((None, None), |(revision, edit)| {
+  for_project(project, artifact_id).map_or((None, None), |(revision, edit)| {
     (Some(revision), Some(edit))
   })
 }
 
+/// The plan an export or its estimate follows: the edit the window sent, if
+/// it is this recording's, otherwise the one saved in the project.
+pub fn export_plan(
+  sent: Option<&RecordingTimelineEdit>,
+  project: &Path,
+  artifact_id: u64,
+  duration_ms: u64,
+) -> Option<TimelinePlan> {
+  match sent.filter(|edit| edit.artifact_id == artifact_id) {
+    Some(edit) => TimelinePlan::from_edit(edit, duration_ms),
+    None => for_project(project, artifact_id)
+      .and_then(|(_, edit)| TimelinePlan::from_edit(&edit, duration_ms)),
+  }
+}
+
 pub fn persist(
-  recording: &Path,
+  project: &Path,
   artifact_id: u64,
   revision: u64,
   edit: RecordingTimelineEdit,
@@ -240,57 +244,21 @@ pub fn persist(
     return Err("That timeline belongs to another recording".to_owned());
   }
   validate(&edit)?;
-  if for_recording(recording, artifact_id).is_some_and(|(current, _)| current >= revision) {
-    return Ok(());
-  }
-
-  let slot = if revision.is_multiple_of(2) { 'a' } else { 'b' };
-  let target = sidecar_path(recording, slot)
-    .ok_or_else(|| "The recording has no valid timeline sidecar name".to_owned())?;
-  let temporary = target.with_extension("json.tmp");
-  let bytes = serde_json::to_vec(&PersistedTimelineEdit {
-    edit,
-    revision,
-    version: FORMAT_VERSION,
+  crate::project::update(project, |manifest| {
+    if manifest
+      .timeline
+      .as_ref()
+      .is_some_and(|current| current.revision >= revision)
+    {
+      return false;
+    }
+    manifest.timeline = Some(PersistedTimelineEdit {
+      edit,
+      revision,
+      version: FORMAT_VERSION,
+    });
+    true
   })
-  .map_err(|error| error.to_string())?;
-  let mut file = File::create(&temporary).map_err(|error| error.to_string())?;
-  file.write_all(&bytes).map_err(|error| error.to_string())?;
-  file.sync_all().map_err(|error| error.to_string())?;
-  drop(file);
-  if target.exists() {
-    std::fs::remove_file(&target).map_err(|error| error.to_string())?;
-  }
-  std::fs::rename(&temporary, target).map_err(|error| error.to_string())
-}
-
-pub fn remove_for_recording(recording: &Path) {
-  for slot in ['a', 'b'] {
-    if let Some(path) = sidecar_path(recording, slot) {
-      let _ = std::fs::remove_file(&path);
-      let _ = std::fs::remove_file(path.with_extension("json.tmp"));
-    }
-  }
-}
-
-pub fn sweep_unclaimed(directory: &Path, keep: Option<&Path>) {
-  let keep_stem = keep
-    .and_then(Path::file_stem)
-    .and_then(|stem| stem.to_str());
-  let Ok(entries) = std::fs::read_dir(directory) else {
-    return;
-  };
-  for entry in entries.flatten() {
-    let path = entry.path();
-    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
-      continue;
-    };
-    let is_timeline =
-      name.contains(".timeline-edit-") && (name.ends_with(".json") || name.ends_with(".json.tmp"));
-    if is_timeline && !keep_stem.is_some_and(|stem| name.starts_with(&format!("{stem}."))) {
-      let _ = std::fs::remove_file(path);
-    }
-  }
 }
 
 #[cfg(test)]

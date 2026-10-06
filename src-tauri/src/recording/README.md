@@ -37,8 +37,16 @@ There is one recording flow for both platforms. It handles:
 - modes and selected sources
 - start, pause, resume, stop and cancel
 - recording state
-- working files and cleanup
+- the project each recording is written into
 - timing and export info
+
+### Projects
+
+Every recording is a project: a folder in the projects folder (Settings, or `Movies/Screenwide` on macOS and `Videos\Screenwide` on Windows) named after the moment it started. Capture writes the movie, camera, cursor and keyboard tracks straight into its `media/` folder, and `session/begin.rs` writes the `<title>.screenwide` manifest as soon as the capture runs, so a project survives the app dying mid-recording and opens like any other. Stopping rewrites the manifest with the tracks that were actually written; the editor then saves its edit and its look (canvas, cursor, keyboard overlay, camera bubble, tracks and volumes) into the same manifest as they change, so a project reopens exactly as it was left (`src-tauri/src/project.rs`, `editor/project_look.rs`). A background picture the look shows and the pictures its images show are copied into `media/pictures/`, and opening or closing the project removes the ones it no longer uses (`project_look/cleanup.rs`). The editor also keeps `preview.png` beside the manifest, the edited frame the project browser shows. Exporting copies out of the project and leaves it as it was, unless the export window's "Delete project after saving" is ticked: then the project goes to the Trash once the files are written. A new recording can start while another is open, since the open one is already saved. Discarding a recording marks its folder cancelled before teardown and deletes it after; a launch finishes any deletion the previous run did not.
+
+Screenshots are projects too (`editor/screenshot_project.rs`): the first capture makes one, each capture taken while the screenshot editor is open is added to it as another layer, and closing the editor keeps it. Captures copied to the clipboard alone make none.
+
+The app owns the `.screenwide` type (`bundle.fileAssociations`, and `scripts/macos-dev-info.plist` for the dev bundle), so double-clicking a manifest opens its project in the editor for its kind, in place of whatever that editor had open. macOS delivers the file as an open event (`startup::open_files`); Windows passes it as a launch argument, and the single-instance plugin hands a second launch's arguments to the running app. Open Project in the tray picks one by hand.
 
 The platform part only needs to provide:
 
@@ -103,7 +111,7 @@ The replay buffer keeps the last 30 seconds of whatever the recording bar was se
 - Both platforms cut clips with the same rules (`recording/replay/ring.rs`).
 - A save holds what happened since the previous save, capped at 30 seconds. The save encodes the last frame again as a keyframe at the moment of the save, which ends that clip and is exactly where the next one starts. A camera beside the screen forces its keyframes right after the screen's so both start together. Turning the buffer off forgets where the last save ended.
 - Cursor and keyboard keep their recent records in memory (`sidecar_output.rs`) and live annotations keep their recent visible spans; a clip restates the cursor, held buttons and keys, and annotations already on screen at its first frame.
-- A saved clip is written as an ordinary working recording and opened in the editor, so it cannot be saved while the editor holds an unsaved recording.
+- A saved clip is written as a project of its own, named for the moment it was saved, given the same first edit a recording gets (live annotations and auto zooms), and added to the recent projects. Nothing opens: the tray shows a tick in place of its icon for a moment (`tray/replay_saved.rs`), and the clip is in the project browser.
 - Sleep turns the buffer off and a wake turns it back on; see Sleep above.
 
 ## Windows

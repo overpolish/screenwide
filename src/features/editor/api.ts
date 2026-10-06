@@ -426,6 +426,8 @@ export const estimateRecordingExport = ({
     },
   });
 type SaveExportOptions = RecordingProcessingOptions & {
+  /** Moves the recording's project to the Trash once the export is saved. */
+  deleteProjectAfterExport: boolean;
   fileStem: string;
 };
 
@@ -438,6 +440,7 @@ export const saveExport = ({
   collapseAudio,
   compression,
   cursorEffects,
+  deleteProjectAfterExport,
   enabledStreamIndices,
   fileStem,
   includeCamera,
@@ -459,6 +462,7 @@ export const saveExport = ({
       collapseAudio,
       compression,
       cursorEffects,
+      deleteProjectAfterExport,
       enabledStreamIndices,
       includeCamera,
       includePrimaryVideo,
@@ -478,7 +482,6 @@ export {
   browseExportDirectory,
   cancelExportJob,
   copyEditorToClipboard,
-  focusEditorWindow,
   setExportDirectory,
   setScreenshotBackgroundRadius,
   setScreenshotRadius,

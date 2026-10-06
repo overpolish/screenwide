@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Media metadata used by macOS export recovery without FFprobe.
+//! Media metadata for opening a project, read without FFprobe.
 
 use std::path::Path;
 
@@ -26,7 +26,7 @@ fn recording_info_result(path: &Path) -> Result<RecordingInfo, String> {
     .ok_or_else(|| "The recording path is not valid UTF-8".to_owned())?;
   let url = ns::Url::with_fs_path_str(path, false);
   let asset = av::UrlAsset::with_url(&url, None)
-    .ok_or_else(|| "AVFoundation could not open the recovered recording".to_owned())?;
+    .ok_or_else(|| "AVFoundation could not open the recording".to_owned())?;
   let seconds = asset.duration().as_secs();
   if !seconds.is_finite() || seconds <= 0.0 {
     return Err("AVFoundation returned empty recording metadata".to_owned());

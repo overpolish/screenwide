@@ -41,6 +41,7 @@ pub(super) fn save_recording_artifact(
     id,
     path: working,
     primary_kind,
+    project,
     source_scale_percent,
     width,
     ..
@@ -82,18 +83,7 @@ pub(super) fn save_recording_artifact(
     .map(|keyboard| keyboard.path.as_path());
   let primary_output = &recording_output.primary;
   let camera_output = &recording_output.camera;
-  let persisted_timeline;
-  let timeline_edit = if let Some(edit) = timeline_model
-    .as_ref()
-    .filter(|edit| edit.artifact_id == *id)
-  {
-    Some(edit)
-  } else {
-    persisted_timeline = timeline_edit::for_recording(working, *id).map(|(_, edit)| edit);
-    persisted_timeline.as_ref()
-  };
-  let timeline =
-    timeline_edit.and_then(|edit| timeline_edit::TimelinePlan::from_edit(edit, *duration_ms));
+  let timeline = timeline_edit::export_plan(timeline_model.as_ref(), project, *id, *duration_ms);
   let export_duration_ms = timeline
     .as_ref()
     .map_or(*duration_ms, timeline_edit::TimelinePlan::duration_ms);
@@ -123,7 +113,7 @@ pub(super) fn save_recording_artifact(
       let camera = camera
         .as_ref()
         .ok_or_else(|| "There is no camera track to export".to_owned())?;
-      let saved = camera_save::save_camera_as_primary(
+      return camera_save::save_camera_as_primary(
         working,
         camera,
         writing,
@@ -137,16 +127,10 @@ pub(super) fn save_recording_artifact(
         camera_resolution_scale_percent,
         camera_output,
         timeline.as_ref(),
-      )?;
-      if saved.is_some() {
-        let _ = std::fs::remove_file(working);
-        let _ = std::fs::remove_file(&camera.path);
-        recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
-      }
-      return Ok(saved);
+      );
     }
 
-    let saved = audio_save::save_audio(audio_save::AudioSaveRequest {
+    return audio_save::save_audio(audio_save::AudioSaveRequest {
       app: progress_app,
       cancelled: job_cancellation,
       directory: writing,
@@ -158,14 +142,7 @@ pub(super) fn save_recording_artifact(
       stem,
       timeline: timeline.as_ref(),
       working,
-    })?;
-    if saved.is_some() {
-      if let Some(camera) = camera {
-        let _ = std::fs::remove_file(&camera.path);
-      }
-      recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
-    }
-    return Ok(saved);
+    });
   }
 
   if bake_camera {
@@ -175,7 +152,7 @@ pub(super) fn save_recording_artifact(
     let camera = camera
       .as_ref()
       .ok_or_else(|| "There is no camera recording to bake in".to_owned())?;
-    let saved = camera_save::save_baked_recording(
+    return camera_save::save_baked_recording(
       working,
       camera,
       writing,
@@ -195,13 +172,7 @@ pub(super) fn save_recording_artifact(
       progress_app,
       job_cancellation,
       timeline.as_ref(),
-    )?;
-    if saved.is_some() {
-      let _ = std::fs::remove_file(working);
-      let _ = std::fs::remove_file(&camera.path);
-      recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
-    }
-    return Ok(saved);
+    );
   }
 
   let screen_progress_share = if include_camera && camera.is_some() {
@@ -285,14 +256,6 @@ pub(super) fn save_recording_artifact(
       progress_percent: 99.0,
     },
   );
-  publish::finish(
-    &saved,
-    saved_camera,
-    working,
-    camera.as_ref(),
-    include_camera,
-    cursor.as_ref(),
-    keyboard.as_ref(),
-  )?;
+  publish::finish(&saved, saved_camera)?;
   Ok(Some(saved))
 }

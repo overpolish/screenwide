@@ -49,6 +49,13 @@ pub(super) fn remember(name: &str, picture: StoredImage) {
   }
 }
 
+/// Lets `name` be looked for again, once a picture has arrived for it.
+pub(super) fn forget_failure(name: &str) {
+  if let Ok(mut cache) = cache().lock() {
+    cache.failed.retain(|failed| failed != name);
+  }
+}
+
 /// The picture stored under `name`, read from whichever of the kept formats
 /// it was kept in: frames for one that moves, else the still, premultiplied.
 fn read(name: &str) -> Option<StoredImage> {

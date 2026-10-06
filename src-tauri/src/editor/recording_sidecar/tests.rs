@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::path::Path;
+
 use super::*;
 
 fn directory(name: &str) -> PathBuf {
@@ -10,7 +12,7 @@ fn directory(name: &str) -> PathBuf {
   directory
 }
 
-fn valid_cursor(path: &Path) {
+fn write_cursor(path: &Path) {
   let header = crate::recording::cursor::CursorRecord::Header {
     coordinate_space: "global-logical-points".to_owned(),
     platform: "test".to_owned(),
@@ -34,7 +36,7 @@ fn valid_cursor(path: &Path) {
   .unwrap();
 }
 
-fn valid_keyboard(path: &Path) {
+fn write_keyboard(path: &Path) {
   let header = crate::recording::keyboard::KeyboardRecord::Header {
     platform: "test".to_owned(),
     timebase: "recording-microseconds".to_owned(),
@@ -48,56 +50,20 @@ fn valid_keyboard(path: &Path) {
 }
 
 #[test]
-fn pairs_only_valid_sidecars_with_their_recording() {
-  let directory = directory("recording-sidecar-pair");
-  let recording = directory.join("recording-20260809-060151.000.mov");
-  let cursor = directory.join("recording-20260809-060151.000.cursor.jsonl");
-  let keyboard = directory.join("recording-20260809-060151.000.keyboard.jsonl");
-  std::fs::write(&recording, b"screen").unwrap();
-  valid_cursor(&cursor);
-  valid_keyboard(&keyboard);
+fn opens_a_project_with_only_the_tracks_it_can_read() {
+  let directory = directory("recording-sidecar-valid");
+  let cursor = directory.join("cursor.jsonl");
+  let keyboard = directory.join("keyboard.jsonl");
+  write_cursor(&cursor);
+  write_keyboard(&keyboard);
 
-  assert_eq!(
-    cursor_for_recording(&recording).as_deref(),
-    Some(cursor.as_path())
-  );
-  assert_eq!(
-    keyboard_for_recording(&recording).as_deref(),
-    Some(keyboard.as_path())
-  );
+  assert_eq!(valid_cursor(cursor.clone()), Some(cursor.clone()));
+  assert_eq!(valid_keyboard(keyboard.clone()), Some(keyboard.clone()));
 
+  // What a crash mid-write leaves behind.
   std::fs::write(&cursor, b"invalid").unwrap();
   std::fs::write(&keyboard, b"invalid").unwrap();
-  assert_eq!(cursor_for_recording(&recording), None);
-  assert_eq!(keyboard_for_recording(&recording), None);
-  std::fs::remove_dir_all(directory).unwrap();
-}
-
-#[test]
-fn sweeps_only_unclaimed_sidecars_of_each_kind() {
-  let directory = directory("recording-sidecar-sweep");
-  let kept_cursor = directory.join("recording-kept.cursor.jsonl");
-  let abandoned_cursor = directory.join("recording-abandoned.cursor.jsonl");
-  let kept_keyboard = directory.join("recording-kept.keyboard.jsonl");
-  let abandoned_keyboard = directory.join("recording-abandoned.keyboard.jsonl");
-  let unrelated = directory.join("notes.jsonl");
-  for path in [
-    &kept_cursor,
-    &abandoned_cursor,
-    &kept_keyboard,
-    &abandoned_keyboard,
-    &unrelated,
-  ] {
-    std::fs::write(path, b"data").unwrap();
-  }
-
-  sweep_unclaimed_cursors(&directory, Some(&kept_cursor));
-  sweep_unclaimed_keyboards(&directory, Some(&kept_keyboard));
-
-  assert!(kept_cursor.exists());
-  assert!(!abandoned_cursor.exists());
-  assert!(kept_keyboard.exists());
-  assert!(!abandoned_keyboard.exists());
-  assert!(unrelated.exists());
+  assert_eq!(valid_cursor(cursor), None);
+  assert_eq!(valid_keyboard(keyboard), None);
   std::fs::remove_dir_all(directory).unwrap();
 }

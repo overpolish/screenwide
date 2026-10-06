@@ -76,3 +76,30 @@ export const seedScreenshotWorkspace = ({
     })),
   };
 };
+
+/**
+ * A screenshot project's own saved workspace, as it was left: the canvas and
+ * each saved layer stand. A layer taken since the last save has none, and is
+ * placed as a layer added to an open editor is, at its real size.
+ */
+export const reopenedScreenshotWorkspace = (
+  artifact: Extract<EditorArtifact, { kind: "screenshot" }>,
+  saved: ScreenshotWorkspaceOutputSettings,
+): ScreenshotWorkspaceOutputSettings => {
+  const { items: savedItems, ...canvas } = saved;
+  const workspace = {
+    ...defaultScreenshotOutput(artifact.width, artifact.height),
+    ...canvas,
+    recenterInsetColor: null,
+  };
+  return {
+    ...workspace,
+    items: artifact.items.map(
+      (item) =>
+        savedItems.find((savedItem) => savedItem.id === item.id) ?? {
+          id: item.id,
+          output: seedScreenshotItemOutput(workspace, item, { fit: false }),
+        },
+    ),
+  };
+};

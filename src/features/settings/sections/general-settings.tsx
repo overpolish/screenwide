@@ -48,6 +48,28 @@ const startupToggles: ToggleItem[] = [
   },
 ];
 
+/** The folders Settings names: where projects live, and where exports go. */
+const folders = [
+  {
+    description: "New recordings and their edits are kept here.",
+    key: "projectDirectory",
+    kind: "project",
+    title: "Projects folder",
+  },
+  {
+    description: "You can choose a different folder when saving.",
+    key: "recordingDirectory",
+    kind: "recording",
+    title: "Recording folder",
+  },
+  {
+    description: "You can choose a different folder when saving.",
+    key: "screenshotDirectory",
+    kind: "screenshot",
+    title: "Screenshot folder",
+  },
+] as const;
+
 export function GeneralSettingsPanel({
   isSaving,
   onChange,
@@ -115,46 +137,36 @@ export function GeneralSettingsPanel({
         </ControlRow>
       </GroupBox>
       <GroupBox title="Saving">
-        {(["recording", "screenshot"] as const).map((kind) => {
-          const key =
-            kind === "recording" ? "recordingDirectory" : "screenshotDirectory";
-          const title =
-            kind === "recording" ? "Recording folder" : "Screenshot folder";
-          return (
-            <ControlRow
-              description="You can choose a different folder when saving."
-              key={kind}
-              title={title}
-            >
-              {(controlProps) => (
-                <div {...controlProps} role="group">
-                  <PathField
-                    aria-label={title}
-                    emptyLabel="Default folder"
-                    isDisabled={isSaving}
-                    onBrowse={() => {
-                      void browseDefaultLocation(kind)
-                        .then((directory) => {
-                          if (directory) update({ [key]: directory });
-                        })
-                        .catch((reason: unknown) => {
-                          onError(String(reason));
-                        });
-                    }}
-                    secondaryAction={{
-                      label: `Use the default ${kind} folder`,
-                      onPress: () => {
-                        update({ [key]: null });
-                      },
-                      type: "reset",
-                    }}
-                    value={settings[key]}
-                  />
-                </div>
-              )}
-            </ControlRow>
-          );
-        })}
+        {folders.map(({ description, key, kind, title }) => (
+          <ControlRow description={description} key={kind} title={title}>
+            {(controlProps) => (
+              <div {...controlProps} role="group">
+                <PathField
+                  aria-label={title}
+                  emptyLabel="Default folder"
+                  isDisabled={isSaving}
+                  onBrowse={() => {
+                    void browseDefaultLocation(kind)
+                      .then((directory) => {
+                        if (directory) update({ [key]: directory });
+                      })
+                      .catch((reason: unknown) => {
+                        onError(String(reason));
+                      });
+                  }}
+                  secondaryAction={{
+                    label: `Use the default ${kind} folder`,
+                    onPress: () => {
+                      update({ [key]: null });
+                    },
+                    type: "reset",
+                  }}
+                  value={settings[key]}
+                />
+              </div>
+            )}
+          </ControlRow>
+        ))}
       </GroupBox>
       <GroupBox title="Recording">
         {toggle(recordingToggle)}

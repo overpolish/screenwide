@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use chrono::NaiveDate;
-
 use super::*;
 
 const MS: i64 = 1_000_000;
@@ -194,33 +192,4 @@ fn scales_the_bitrate_with_the_pixel_rate() {
 #[test]
 fn keeps_a_tiny_capture_watchable() {
   assert_eq!(bitrate_bps(320, 200, 30), MIN_BITRATE_BPS as i32);
-}
-
-#[test]
-fn names_the_working_file_so_it_sorts_by_time() {
-  let started_at = NaiveDate::from_ymd_opt(2026, 8, 8)
-    .unwrap()
-    .and_hms_milli_opt(14, 32, 5, 250)
-    .unwrap();
-  assert_eq!(
-    temp_file_name(started_at),
-    if cfg!(target_os = "windows") {
-      "recording-20260808-143205.250.mp4"
-    } else {
-      "recording-20260808-143205.250.mov"
-    }
-  );
-}
-
-#[test]
-fn names_audio_working_files_separately_from_movies() {
-  let started = chrono::NaiveDate::from_ymd_opt(2026, 8, 10)
-    .unwrap()
-    .and_hms_milli_opt(12, 34, 56, 789)
-    .unwrap();
-
-  assert_eq!(
-    audio_temp_file_name(started),
-    "audio-20260810-123456.789.mov"
-  );
 }

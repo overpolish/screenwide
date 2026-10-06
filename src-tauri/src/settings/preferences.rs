@@ -27,6 +27,9 @@ pub struct GeneralSettings {
   /// they were saved. The built-in ones are not kept here: they ship with
   /// the app and would only go stale on disk.
   pub background_presets: Vec<BackgroundPreset>,
+  /// Where new projects are made. None is the default, a Screenwide folder in
+  /// the platform's Movies or Videos folder.
+  pub project_directory: Option<PathBuf>,
   pub recording_directory: Option<PathBuf>,
   pub screenshot_directory: Option<PathBuf>,
   pub open_location_after_export: bool,
@@ -51,6 +54,7 @@ impl Default for GeneralSettings {
       accent: AccentPreference::System,
       annotation_colors: Vec::new(),
       background_presets: Vec::new(),
+      project_directory: None,
       recording_directory: None,
       screenshot_directory: None,
       open_location_after_export: true,
@@ -106,6 +110,7 @@ fn validate(settings: &GeneralSettings) -> Result<(), String> {
     return Err("The screenshot delay must be 3, 5 or 10 seconds".to_owned());
   }
   for directory in [
+    settings.project_directory.as_ref(),
     settings.recording_directory.as_ref(),
     settings.screenshot_directory.as_ref(),
   ]
@@ -200,6 +205,9 @@ pub async fn browse_default_location(
 ) -> Result<Option<PathBuf>, String> {
   let settings = current(&app);
   let start = match kind.as_str() {
+    "project" => settings
+      .project_directory
+      .or_else(|| crate::project::projects_directory(&app).ok()),
     "recording" => settings.recording_directory,
     "screenshot" => settings.screenshot_directory,
     _ => return Err("Unknown default location".to_owned()),

@@ -18,6 +18,9 @@ struct EditorPreferences {
   screenshot_background_radius_percent: f64,
   screenshot_output: Option<ScreenshotOutputSettings>,
   screenshot_radius_percent: f64,
+  /// Whether a screenshot's project goes to the Trash once it is exported or
+  /// copied, kept apart from a recording's: unset until the first is chosen.
+  screenshot_delete_project_after_export: Option<bool>,
 }
 
 impl Default for EditorPreferences {
@@ -30,8 +33,29 @@ impl Default for EditorPreferences {
       screenshot_background_radius_percent: 0.0,
       screenshot_output: None,
       screenshot_radius_percent: 0.0,
+      screenshot_delete_project_after_export: None,
     }
   }
+}
+
+pub(super) fn load_screenshot_delete_project_after_export(app: &AppHandle) -> Option<bool> {
+  load_preferences(app).and_then(|preferences| preferences.screenshot_delete_project_after_export)
+}
+
+/// Remembers whether the last screenshot exported or copied was deleted
+/// after, as the next one's starting choice.
+pub(super) fn remember_screenshot_delete_project_after_export(
+  app: &AppHandle,
+  delete: bool,
+) -> Result<(), String> {
+  *app
+    .state::<EditorState>()
+    .screenshot_delete_project_after_export
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(delete);
+  let mut preferences = load_preferences(app).unwrap_or_default();
+  preferences.screenshot_delete_project_after_export = Some(delete);
+  store_preferences(app, &preferences)
 }
 
 /// Remembered output settings are discarded rather than converted when they
@@ -168,7 +192,8 @@ pub(super) fn remember_screenshot_output(
 ) -> Result<(), String> {
   let radius = validate_screenshot_radius(output.radius_percent)?;
   let background_radius = validate_screenshot_radius(output.background_radius_percent)?;
-  let output = screenshot_output_template(output);
+  let mut output = screenshot_output_template(output);
+  super::project_look::keep_in_app_data(&mut output);
   *app
     .state::<EditorState>()
     .screenshot_radius_percent
@@ -222,6 +247,8 @@ pub(super) fn remember_recording_output(
 ) -> Result<(), String> {
   output.primary.background_radius_percent = 0.0;
   output.camera.background_radius_percent = 0.0;
+  super::project_look::keep_in_app_data(&mut output.primary);
+  super::project_look::keep_in_app_data(&mut output.camera);
   *app
     .state::<EditorState>()
     .recording_output

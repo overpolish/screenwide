@@ -32,6 +32,7 @@ mod tools;
 #[cfg(target_os = "windows")]
 mod windows;
 
+pub(in crate::editor) use audio::peaks;
 pub use audio::prepare;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(in crate::editor) use bake::bake_geometry;
@@ -76,18 +77,9 @@ pub(in crate::editor) struct RecordingInfo {
   pub height: u32,
   pub width: u32,
 }
-/// Every file this module writes starts with it. Nothing else in the
-/// recordings directory does, which is what lets both the cleanup paths and
-/// the startup sweep tell a derivative from a recording by its name alone.
+/// Every scratch file this module and the exporters write starts with it, so
+/// one left in the temporary folder says where it came from.
 pub const PREVIEW_PREFIX: &str = "preview-";
-
-/// Whether a path is one of this module's derivatives rather than a recording.
-pub fn is_preview_file(path: &Path) -> bool {
-  path
-    .file_name()
-    .and_then(|name| name.to_str())
-    .is_some_and(|name| name.starts_with(PREVIEW_PREFIX))
-}
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

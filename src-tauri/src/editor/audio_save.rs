@@ -53,10 +53,7 @@ pub(super) fn save_audio(request: AudioSaveRequest<'_>) -> Result<Option<PathBuf
     },
   };
   match exporter(working, &path, selection, layout, run)? {
-    media_preview::ExportRunResult::Completed if path.is_file() => {
-      let _ = std::fs::remove_file(working);
-      Ok(Some(path))
-    }
+    media_preview::ExportRunResult::Completed if path.is_file() => Ok(Some(path)),
     media_preview::ExportRunResult::Completed => {
       Err("The exported audio did not finish publishing".to_owned())
     }

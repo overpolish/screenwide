@@ -144,13 +144,7 @@ fn records_into_a_quicktime_movie_that_flushes_a_fragment_every_two_seconds() {
 /// not - so nothing but this holds them together.
 #[test]
 fn names_the_working_file_after_the_container_it_is() {
-  let name = crate::recording::encoding::temp_file_name(
-    chrono::NaiveDate::from_ymd_opt(2026, 8, 8)
-      .unwrap()
-      .and_hms_milli_opt(14, 32, 5, 250)
-      .unwrap(),
-  );
-  assert!(name.ends_with(&format!(
+  assert!(crate::recording::encoding::PRIMARY_FILE.ends_with(&format!(
     ".{}",
     Container::quicktime_fragmented().format.extension()
   )));

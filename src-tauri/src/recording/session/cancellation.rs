@@ -3,27 +3,19 @@
 
 //! Intentional-cancellation markers and destructive capture teardown.
 
-use std::path::{Path, PathBuf};
-
 use super::CaptureHandles;
 
-/// Marks a working movie as deliberately discarded before native capture
-/// teardown begins. Recovery checks this sibling first, so a process exit
-/// while an encoder is still joining cannot resurrect the partial movie.
+/// Marks the project as deliberately discarded before native capture
+/// teardown begins, so a process exit while an encoder is still joining
+/// leaves a project the next launch deletes rather than one that opens.
 pub(in crate::recording) fn mark_capture_cancelled(handles: &CaptureHandles) -> Result<(), String> {
-  std::fs::write(cancelled_marker(&handles.output_path), []).map_err(|error| error.to_string())
-}
-
-pub(crate) fn cancelled_marker(path: &Path) -> PathBuf {
-  let mut name = path.as_os_str().to_owned();
-  name.push(".cancelled");
-  PathBuf::from(name)
+  handles.project.mark_cancelled()
 }
 
 pub(in crate::recording) fn discard_capture(handles: Option<CaptureHandles>) {
   let Some(CaptureHandles {
     sidecars,
-    output_path,
+    project,
     session,
     ..
   }) = handles
@@ -31,16 +23,11 @@ pub(in crate::recording) fn discard_capture(handles: Option<CaptureHandles>) {
     return;
   };
 
-  // Callers normally create this synchronously before detaching teardown.
-  // Keep the blocking-only paths safe as well (late startup cancellation and
-  // failure cleanup).
-  let marker = cancelled_marker(&output_path);
-  let _ = std::fs::write(&marker, []);
+  // Callers normally mark the project before detaching teardown. Keep the
+  // blocking-only paths safe as well (late startup cancellation and failure
+  // cleanup).
+  let _ = project.mark_cancelled();
   session.cancel();
   sidecars.cancel();
-  crate::recording::meta_sidecar::remove(&output_path);
-  let removed = std::fs::remove_file(output_path).is_ok();
-  if removed {
-    let _ = std::fs::remove_file(marker);
-  }
+  project.remove();
 }

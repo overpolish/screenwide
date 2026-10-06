@@ -60,13 +60,28 @@ export const formatEta = (seconds: number) => {
   return `About ${parts.join(" ")} remaining`;
 };
 
-export const formatBytes = (bytes: number) => {
+const SIZE_UNITS = ["bytes", "KB", "MB", "GB", "TB"];
+/** Finder's file style: whole kilobytes, then up to one more decimal per
+ * unit, without trailing zeros, in the reader's own number format. */
+const SIZE_DECIMALS = [0, 0, 1, 2, 2];
+
+/** How many bytes make the next unit up: Finder counts in thousands, as macOS
+ * has since 10.6, and Explorer in 1024s, so a size reads as each shows it. */
+const sizeBase = () =>
+  document.documentElement.dataset.platform === "windows" ? 1024 : 1000;
+
+export const formatBytes = (bytes: number, base = sizeBase()) => {
   if (bytes <= 0) return "Unknown size";
-  const units = ["B", "KB", "MB", "GB"];
-  const order = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1,
+  let order = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(base)),
+    SIZE_UNITS.length - 1,
   );
-  const value = bytes / 1024 ** order;
-  return `${value.toFixed(value >= 10 || order === 0 ? 0 : 1)} ${units[order]}`;
+  // A size just short of the next unit can round up to it, as 999,999 bytes
+  // does to 1,000 KB; it reads as the next unit instead.
+  const rounded = (unit: number) =>
+    Number((bytes / base ** unit).toFixed(SIZE_DECIMALS[unit]));
+  if (rounded(order) >= base && order < SIZE_UNITS.length - 1) order += 1;
+  return `${new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: SIZE_DECIMALS[order],
+  }).format(rounded(order))} ${SIZE_UNITS[order]}`;
 };

@@ -227,8 +227,8 @@ fn turn_off(app: &AppHandle, resume_on_wake: bool) {
   let _ = (app, resume_on_wake);
 }
 
-/// Saves what is new since the last save, up to [`REPLAY_LENGTH`], and opens
-/// it in the editor.
+/// Saves what is new since the last save, up to [`REPLAY_LENGTH`], as a
+/// project of its own.
 pub fn save(app: &AppHandle) -> Result<(), String> {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   {

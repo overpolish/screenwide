@@ -35,6 +35,7 @@ export type EditorPanelProps = {
   collapseAudio?: boolean;
   compression?: number;
   cursorEffects?: CursorEffectSettings;
+  deleteProjectAfterExport?: boolean;
   enabledAudioTrackCount?: number;
   enabledStreamIndices?: number[];
   enabledVideoTracks?: RecordingVideoTrackId[];
@@ -59,6 +60,7 @@ export type EditorPanelProps = {
   onCompressionChange?: (compression: number) => void;
   onCopy?: () => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  onDeleteProjectAfterExportChange?: (remove: boolean) => void;
   onEnabledTracksChange?: (streamIndices: number[]) => void;
   onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;
   onFileStemChange?: (fileStem: string) => void;

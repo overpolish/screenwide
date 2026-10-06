@@ -138,6 +138,8 @@ export type GeneralSettings = {
   backgroundPresets: BackgroundPreset[];
   launchAtLogin: boolean;
   openLocationAfterExport: boolean;
+  /** Where new projects are made; null is the default folder. */
+  projectDirectory: string | null;
   recordScreenwideWindows: boolean;
   recordingCountdownSeconds: 0 | 3 | 5;
   recordingDirectory: string | null;

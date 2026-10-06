@@ -14,6 +14,7 @@ mod assets {
   pub const OPEN: &[u8] = include_bytes!("../../icons/menu/windows/open.png");
   pub const PAUSE: &[u8] = include_bytes!("../../icons/menu/windows/pause.png");
   pub const QUIT: &[u8] = include_bytes!("../../icons/menu/windows/quit.png");
+  pub const PROJECT: &[u8] = include_bytes!("../../icons/menu/windows/project.png");
   pub const REPLAY: &[u8] = include_bytes!("../../icons/menu/windows/replay.png");
   pub const RESUME: &[u8] = include_bytes!("../../icons/menu/windows/resume.png");
   pub const RULER: &[u8] = include_bytes!("../../icons/menu/windows/ruler.png");
@@ -32,6 +33,7 @@ mod assets {
   pub const OPEN: &[u8] = include_bytes!("../../icons/menu/open.png");
   pub const PAUSE: &[u8] = include_bytes!("../../icons/menu/pause.png");
   pub const QUIT: &[u8] = include_bytes!("../../icons/menu/quit.png");
+  pub const PROJECT: &[u8] = include_bytes!("../../icons/menu/project.png");
   pub const REPLAY: &[u8] = include_bytes!("../../icons/menu/replay.png");
   pub const RESUME: &[u8] = include_bytes!("../../icons/menu/resume.png");
   pub const RULER: &[u8] = include_bytes!("../../icons/menu/ruler.png");

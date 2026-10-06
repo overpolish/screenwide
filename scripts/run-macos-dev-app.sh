@@ -12,6 +12,14 @@ case "$binary" in
   *) binary="$(pwd)/$binary" ;;
 esac
 
+# Only the app gets a bundle. Cargo runs test binaries through this runner
+# too, and a bundle around one would register a second app with this
+# identifier, which Launch Services may then hand the files the app opens.
+case "$(basename -- "$binary")" in
+  screenwide) ;;
+  *) exec "$binary" "$@" ;;
+esac
+
 script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 workspace_directory=$(dirname -- "$script_directory")
 app_directory="$(dirname -- "$binary")/Screenwide.app"

@@ -74,5 +74,6 @@ export const getOcrSettings = () => invoke<OcrSettings>("get_ocr_settings");
 export const setOcrSettings = (settings: OcrSettings) =>
   invoke<OcrSettings>("set_ocr_settings", { settings });
 
-export const browseDefaultLocation = (kind: "recording" | "screenshot") =>
-  invoke<string | null>("browse_default_location", { kind });
+export const browseDefaultLocation = (
+  kind: "project" | "recording" | "screenshot",
+) => invoke<string | null>("browse_default_location", { kind });

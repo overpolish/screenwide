@@ -6,48 +6,6 @@ use tauri_plugin_window_state::{StateFlags, WindowExt};
 
 use super::{geometry::keep_window_on_a_monitor, platform, WindowLabel};
 
-/// Asks before an editor throws away work that exists nowhere else.
-///
-/// An empty workspace has nothing to lose and closes straight away. When a
-/// capture is waiting, the confirmation sheet takes the question and the
-/// discard happens only on the user's say-so. Nothing here waits on the
-/// answer: a close request arrives on the main thread, and blocking there
-/// would freeze every window.
-fn confirm_editor_close(app: &AppHandle, window: &WebviewWindow, kind: crate::editor::EditorKind) {
-  if !crate::editor::has_pending_workspace_kind(app, kind) {
-    crate::editor::discard(app, kind);
-    return;
-  }
-
-  let (title, message) = match kind {
-    crate::editor::EditorKind::Recording => (
-      "Delete this recording?",
-      "Closing the editor deletes the unsaved recording. This cannot be undone.",
-    ),
-    crate::editor::EditorKind::Screenshot => (
-      "Delete this screenshot?",
-      "Closing the editor deletes the unsaved screenshot. This cannot be undone.",
-    ),
-  };
-  // A second close request while the sheet is up is the same question, and
-  // `ask` drops it rather than stacking another sheet on top.
-  crate::confirm_sheet::ask(
-    app,
-    window,
-    crate::confirm_sheet::ConfirmCopy {
-      cancel_label: "Cancel".to_owned(),
-      confirm_label: "Delete".to_owned(),
-      message: message.to_owned(),
-      title: title.to_owned(),
-    },
-    move |app, confirmed| {
-      if confirmed {
-        crate::editor::discard(app, kind);
-      }
-    },
-  );
-}
-
 pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
   if let Some(window) = app.get_webview_window(label.as_str()) {
     let app = app.clone();
@@ -56,12 +14,13 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
       if let WindowEvent::CloseRequested { api, .. } = event {
         api.prevent_close();
         match label {
-          // Closing an editor window cancels only its own pending capture.
+          // Closing an editor window closes only what it holds, which stays
+          // in its project to be opened again.
           WindowLabel::EditorRecording => {
-            confirm_editor_close(&app, &window_to_hide, crate::editor::EditorKind::Recording);
+            crate::editor::close(&app, crate::editor::EditorKind::Recording);
           }
           WindowLabel::EditorScreenshot => {
-            confirm_editor_close(&app, &window_to_hide, crate::editor::EditorKind::Screenshot);
+            crate::editor::close(&app, crate::editor::EditorKind::Screenshot);
           }
           // Closing an export options window returns to its editor.
           WindowLabel::ExportRecording => {

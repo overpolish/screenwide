@@ -29,6 +29,9 @@ pub enum EditorArtifactSnapshot {
   Screenshot {
     id: u64,
     items: Vec<ScreenshotItemSnapshot>,
+    /// The canvas and layers saved in the project, which the window shows in
+    /// place of the remembered look.
+    project_workspace: Option<serde_json::Value>,
     suggested_file_stem: String,
     extension: String,
     width: u32,
@@ -54,6 +57,9 @@ pub enum EditorArtifactSnapshot {
     /// Scoped to the recordings directory in `tauri.conf.json`, which is the
     /// only place this path can ever point.
     path: PathBuf,
+    /// The look saved in the project, which the window shows in place of the
+    /// remembered one.
+    project_look: Option<super::project_look::ProjectLook>,
     primary_kind: PrimaryRecordingKind,
     source_scale_percent: u16,
     timeline_edit: Option<timeline_edit::RecordingTimelineEdit>,
@@ -73,6 +79,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
       EditorArtifact::Screenshot {
         id,
         items,
+        project,
         suggested_file_stem,
       } => EditorArtifactSnapshot::Screenshot {
         id: *id,
@@ -85,6 +92,10 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
             width: item.image.width,
           })
           .collect(),
+        project_workspace: super::screenshot_project::restored_workspace(
+          project,
+          &items.iter().map(|item| item.id).collect::<Vec<_>>(),
+        ),
         suggested_file_stem: suggested_file_stem.clone(),
         extension: SCREENSHOT_EXTENSION.to_owned(),
         width: items.first().map_or(0, |item| item.image.width),
@@ -100,11 +111,12 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
         id,
         path,
         primary_kind,
+        project,
         source_scale_percent,
         suggested_file_stem,
         width,
       } => {
-        let (timeline_edit_revision, timeline_edit) = timeline_edit::snapshot_fields(path, *id);
+        let (timeline_edit_revision, timeline_edit) = timeline_edit::snapshot_fields(project, *id);
         EditorArtifactSnapshot::Recording {
           audio_tracks: audio_tracks.clone(),
           camera: camera.clone(),
@@ -135,6 +147,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
             + recording_sidecar::total_size(cursor.as_ref(), keyboard.as_ref()),
           path: path.clone(),
           primary_kind: *primary_kind,
+          project_look: super::project_look::for_project(project),
           source_scale_percent: *source_scale_percent,
           timeline_edit,
           timeline_edit_revision,
@@ -172,6 +185,10 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner())
     .clone();
+  let screenshot_delete_project_after_export = *state
+    .screenshot_delete_project_after_export
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
   EditorSnapshot {
     artifact,
     cursor_effects,
@@ -182,6 +199,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
     screenshot_radius_percent,
     screenshot_background_radius_percent,
     screenshot_output,
+    screenshot_delete_project_after_export,
     workspace: kind,
   }
 }

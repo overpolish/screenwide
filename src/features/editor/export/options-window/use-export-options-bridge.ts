@@ -32,6 +32,7 @@ export type ExportOptionsHandlers = {
   onCancelSave?: () => void;
   onCollapseAudioChange?: (collapse: boolean) => void;
   onCompressionChange?: (compression: number) => void;
+  onDeleteProjectAfterExportChange?: (remove: boolean) => void;
   onExport?: () => void;
   onFileStemChange?: (fileStem: string) => void;
   onResolutionScaleChange?: (scale: number) => void;
@@ -60,6 +61,9 @@ const applyPatch = (values: ExportOptionsPatch, on: ExportOptionsHandlers) => {
   }
   if (values.collapseAudio !== undefined) {
     on.onCollapseAudioChange?.(values.collapseAudio);
+  }
+  if (values.deleteProjectAfterExport !== undefined) {
+    on.onDeleteProjectAfterExportChange?.(values.deleteProjectAfterExport);
   }
 };
 

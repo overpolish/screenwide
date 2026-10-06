@@ -133,10 +133,7 @@ pub(super) fn save_camera_copy(
       width: camera.width,
     })?;
     return match result {
-      media_preview::ExportRunResult::Completed => {
-        let _ = std::fs::remove_file(&camera.path);
-        Ok(Some(path))
-      }
+      media_preview::ExportRunResult::Completed => Ok(Some(path)),
       media_preview::ExportRunResult::Cancelled => Ok(None),
     };
   }
@@ -145,7 +142,7 @@ pub(super) fn save_camera_copy(
   {
     return Err("FFmpeg is required to compress the camera recording".to_owned());
   };
-  let saved = if let Some(exporter) = exporter {
+  if let Some(exporter) = exporter {
     save_selected_recording_copy(
       &camera.path,
       directory,
@@ -163,19 +160,10 @@ pub(super) fn save_camera_copy(
         },
       },
       Some(exporter),
-    )?
+    )
   } else {
-    Some(save_recording_copy(
-      &camera.path,
-      directory,
-      &camera_stem,
-      None,
-    )?)
-  };
-  if saved.is_some() {
-    let _ = std::fs::remove_file(&camera.path);
+    save_recording_copy(&camera.path, directory, &camera_stem, None).map(Some)
   }
-  Ok(saved)
 }
 
 #[allow(clippy::too_many_arguments)]

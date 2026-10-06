@@ -5,6 +5,7 @@ import { Annotation } from "./annotations/annotations";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
+  ScreenshotWorkspaceOutputSettings,
 } from "./screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "./timeline/editing/recording-timeline-edit";
 
@@ -152,8 +153,25 @@ export type RecordingExportChoices = {
   cameraResolutionScalePercent: number | null;
   collapseAudio: boolean | null;
   compression: number | null;
+  deleteProjectAfterExport: boolean | null;
   /** The output scale as a share of the "Original" scale. */
   resolutionScaleRatio: number | null;
+};
+
+/**
+ * How a recording's project looks and which of its tracks it uses, as the
+ * project keeps it. Each track field is null where the recording's own
+ * default stands: every track on, at full volume.
+ */
+export type RecordingProjectLook = {
+  audioTrackVolumes: AudioTrackVolume[] | null;
+  bakeCamera: boolean;
+  cameraOverlay: CameraOverlaySettings;
+  cursorEffects: CursorEffectSettings;
+  enabledStreamIndices: number[] | null;
+  enabledVideoTracks: RecordingVideoTrackId[] | null;
+  keyboardEffects: KeyboardEffectSettings;
+  recordingOutput: RecordingOutputSettings;
 };
 
 /**
@@ -182,6 +200,9 @@ export type EditorArtifact =
       /** Captured pixels per logical display point, multiplied by 100. */
       sourceScalePercent: number;
       keyboardMaximumWidthUnits?: number | null;
+      /** The look saved in the project, shown in place of the remembered one.
+       * Absent for a project the editor has not saved a look in. */
+      projectLook?: RecordingProjectLook | null;
       timelineEdit?: RecordingTimelineEdit | null;
       timelineEditRevision?: number | null;
     })
@@ -195,6 +216,9 @@ export type EditorArtifact =
         width: number;
       }[];
       kind: "screenshot";
+      /** The canvas and layers saved in the project, shown in place of the
+       * remembered look. Absent until the editor has saved them. */
+      projectWorkspace?: ScreenshotWorkspaceOutputSettings | null;
     });
 
 /**
@@ -211,6 +235,9 @@ export type EditorSnapshot = {
   recordingExportChoices: RecordingExportChoices;
   recordingOutput: RecordingOutputSettings | null;
   screenshotBackgroundRadiusPercent: number;
+  /** Whether a screenshot's project goes to the Trash once it is exported or
+   * copied; null until one has been. */
+  screenshotDeleteProjectAfterExport: boolean | null;
   screenshotOutput: ScreenshotOutputSettings | null;
   screenshotRadiusPercent: number;
   /** The workspace this describes: the change event is app-wide. */
@@ -245,10 +272,12 @@ export const initialEditorSnapshot = (
     cameraResolutionScalePercent: null,
     collapseAudio: null,
     compression: null,
+    deleteProjectAfterExport: null,
     resolutionScaleRatio: null,
   },
   recordingOutput: null,
   screenshotBackgroundRadiusPercent: 0,
+  screenshotDeleteProjectAfterExport: null,
   screenshotOutput: null,
   screenshotRadiusPercent: 0,
   workspace,

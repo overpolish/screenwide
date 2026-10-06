@@ -49,14 +49,3 @@ export const selectArtifact = (kind: EditorKind) => (state: EditorStore) =>
 
 export const selectDirectory = (kind: EditorKind) => (state: EditorStore) =>
   state.snapshots[kind].directory;
-
-/**
- * What the recording bar needs. Two booleans rather than one object: a
- * selector that built an object would hand back a fresh identity on every
- * store read and re-render the bar continuously.
- */
-export const selectHasPendingRecording = (state: EditorStore) =>
-  state.snapshots.recording.artifact !== null;
-
-export const selectHasPendingScreenshot = (state: EditorStore) =>
-  state.snapshots.screenshot.artifact !== null;

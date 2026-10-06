@@ -10,6 +10,17 @@ use tauri::{Builder, Wry};
 /// deliberately narrow: only the recording bar's position is remembered, and
 /// not on the run that first places it.
 pub(crate) fn with_plugins(builder: Builder<Wry>) -> Builder<Wry> {
+  // First, so a second launch hands over before any other plugin starts: a
+  // double-clicked project reaches the running app instead of a new one.
+  #[cfg(target_os = "windows")]
+  let builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+    match crate::editor::project_argument(args, std::path::Path::new(&cwd)) {
+      Some(file) => crate::editor::open_project_detached(app, file),
+      None => {
+        let _ = crate::app_windows::show_recording_ui(app);
+      }
+    }
+  }));
   let builder = builder
     .plugin(tauri_plugin_autostart::init(
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,

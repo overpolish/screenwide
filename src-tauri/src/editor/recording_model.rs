@@ -55,6 +55,9 @@ pub struct RecordingExportOptions {
   pub camera_resolution_scale_percent: u16,
   pub collapse_audio: bool,
   pub compression: u8,
+  /// Moves the project to the Trash once the export has been published.
+  #[serde(default)]
+  pub delete_project_after_export: bool,
   pub cursor_effects: cursor_effects::CursorEffectSettings,
   pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
   pub enabled_stream_indices: Vec<usize>,
@@ -119,7 +122,7 @@ impl EditorArtifact {
   }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioTrackVolume {
   pub decibels: i16,

@@ -115,22 +115,6 @@ export const ScreenshotFailed: Story = {
   args: { screenshotState: "failed" },
 };
 
-/**
- * An open screenshot workspace has a window of its own and blocks nothing:
- * both capture buttons stay live.
- */
-export const ScreenshotWorkspaceOpen: Story = {
-  args: { pendingEditors: { recording: false, screenshot: true } },
-};
-
-/**
- * A recording waiting for export: the record button stays pressable and shows
- * that window instead, while screenshots go on being taken beside it.
- */
-export const RecordingWorkspaceOpen: Story = {
-  args: { pendingEditors: { recording: true, screenshot: false } },
-};
-
 export const OptionalPermissionsLocked: Story = {
   args: { isCameraLocked: true, isMicrophoneLocked: true },
 };

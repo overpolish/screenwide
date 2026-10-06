@@ -16,28 +16,10 @@ pub(super) fn emit_snapshot(app: &AppHandle, kind: EditorKind) {
   let _ = app.emit(EDITOR_CHANGED_EVENT, snapshot(app, kind));
 }
 
-pub(super) fn delete_working_file(artifact: &EditorArtifact) {
-  if let EditorArtifact::Recording {
-    camera,
-    cursor,
-    keyboard,
-    path,
-    ..
-  } = artifact
-  {
-    let _ = std::fs::remove_file(path);
-    if let Some(camera) = camera {
-      let _ = std::fs::remove_file(&camera.path);
-    }
-    recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
-    timeline_edit::remove_for_recording(path);
-  }
-}
-
 /// Removes everything built for the artifact that is going away.
 ///
-/// Every path that lets go of a recording - discarding it, replacing it with a
-/// new capture, saving it - comes through here, so no derivative outlives the
+/// Every path that lets go of a recording - closing it, replacing it with
+/// another, exporting it - comes through here, so no derivative outlives the
 /// artifact it was made from.
 pub(super) fn clear_recording_preview(app: &AppHandle) {
   super::recording_preview_player::stop_all(app);
@@ -64,6 +46,9 @@ pub(super) fn next_id(app: &AppHandle) -> u64 {
     .wrapping_add(1)
 }
 
+/// Lets go of `kind`'s artifact. Every way a project leaves the editor -
+/// closed, exported, copied, or put away for another - comes through here or
+/// through its replacement, which is where its project is tidied.
 pub(super) fn take_artifact(app: &AppHandle, kind: EditorKind) -> Option<EditorArtifact> {
   let state = app.state::<EditorState>();
   let artifact = state
@@ -72,19 +57,19 @@ pub(super) fn take_artifact(app: &AppHandle, kind: EditorKind) -> Option<EditorA
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner())
     .take();
-
+  if let Some(project) = artifact.as_ref().and_then(EditorArtifact::project) {
+    super::project_look::clean_pictures(project);
+  }
   artifact
 }
 
-/// Drops one workspace's pending artifact and puts its window away. Cancelling
-/// and closing that window are the same act; the other workspace is untouched.
-pub fn discard(app: &AppHandle, kind: EditorKind) {
+/// Closes one workspace and puts its window away. What it held stays in its
+/// project, to be opened again. The other workspace is untouched.
+pub fn close(app: &AppHandle, kind: EditorKind) {
   if kind == EditorKind::Recording {
     clear_recording_preview(app);
   }
-  if let Some(artifact) = take_artifact(app, kind) {
-    delete_working_file(&artifact);
-  }
+  drop(take_artifact(app, kind));
   let _ = window::hide(app, kind);
   emit_snapshot(app, kind);
 }

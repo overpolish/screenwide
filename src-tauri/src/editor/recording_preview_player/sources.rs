@@ -104,6 +104,7 @@ pub(super) fn sources_with_surface(
     height,
     path,
     primary_kind,
+    project,
     width,
   ) = {
     let artifact = state
@@ -122,6 +123,7 @@ pub(super) fn sources_with_surface(
         id,
         path,
         primary_kind,
+        project,
         width,
         ..
       },
@@ -142,6 +144,7 @@ pub(super) fn sources_with_surface(
       *height,
       path.clone(),
       *primary_kind,
+      project.clone(),
       *width,
     )
   };
@@ -159,9 +162,9 @@ pub(super) fn sources_with_surface(
   // Creating the native surface synchronously asks the main thread for the
   // editor window's NSView/HWND. Never do that while holding the artifact
   // mutex: the main thread may simultaneously be serving a snapshot request
-  // that needs the same mutex, which deadlocks crash recovery on startup.
+  // that needs the same mutex, and the two would wait on each other forever.
   let persisted_edit =
-    crate::editor::timeline_edit::for_recording(&path, artifact_id).map(|(_, edit)| edit);
+    crate::editor::timeline_edit::for_project(&project, artifact_id).map(|(_, edit)| edit);
   let persisted = persisted_edit
     .as_ref()
     .and_then(|edit| crate::editor::timeline_edit::TimelinePlan::from_edit(edit, duration_ms));

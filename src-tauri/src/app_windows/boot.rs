@@ -12,7 +12,7 @@ use super::{hide_instead_of_close, initialize_editor, initialize_normal_window, 
 
 /// Ordinary app windows: created hidden, and closing one hides it rather than
 /// destroying a window that has to be reopenable by label.
-const NORMAL: &[WindowLabel] = &[WindowLabel::Settings];
+const NORMAL: &[WindowLabel] = &[WindowLabel::Projects, WindowLabel::Settings];
 
 /// Windows that come up hidden but are dismissed by their own feature code.
 const HIDDEN_ON_LAUNCH: &[WindowLabel] = &[WindowLabel::Update];
@@ -39,6 +39,7 @@ const TITLE_BAR_IN_PAGE: &[WindowLabel] = &[
   WindowLabel::EditorScreenshot,
   WindowLabel::ExportRecording,
   WindowLabel::ExportScreenshot,
+  WindowLabel::Projects,
   WindowLabel::Settings,
   WindowLabel::Update,
 ];

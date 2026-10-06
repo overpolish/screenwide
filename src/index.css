@@ -557,6 +557,58 @@
     --color-focus-ring: white;
     --color-focus-ring-inner: rgb(0 0 0 / 70%);
   }
+
+  /* One appearance for a subtree whatever the window's own, such as badges
+     over a picture that is light or dark in itself. Only the label and fill
+     colours, which is all such a subtree draws; the values repeat the
+     appearance blocks above and must stay in step with them. */
+  .appearance-light {
+    --color-content-fg: rgb(0 0 0 / 85%);
+    --color-content-fg-secondary: rgb(0 0 0 / 50%);
+    --color-content-fg-tertiary: rgb(0 0 0 / 25%);
+    --color-content-fg-quaternary: rgb(0 0 0 / 10%);
+    --alpha-content-fg: 0.85;
+    --alpha-content-fg-secondary: 0.5;
+    --alpha-content-fg-tertiary: 0.25;
+    --alpha-content-fg-quaternary: 0.1;
+    --color-fill: rgb(0 0 0 / 10%);
+    --color-fill-secondary: rgb(0 0 0 / 8%);
+    --color-fill-tertiary: rgb(0 0 0 / 5%);
+    --color-fill-quaternary: rgb(0 0 0 / 3%);
+  }
+
+  [data-platform="windows"] .appearance-light {
+    --color-content-fg: rgb(0 0 0 / 89.6%);
+    --color-content-fg-secondary: rgb(0 0 0 / 62%);
+    --color-content-fg-tertiary: rgb(0 0 0 / 44.7%);
+    --alpha-content-fg: 0.896;
+    --alpha-content-fg-secondary: 0.62;
+    --alpha-content-fg-tertiary: 0.447;
+  }
+
+  .appearance-dark {
+    --color-content-fg: rgb(255 255 255 / 85%);
+    --color-content-fg-secondary: rgb(255 255 255 / 55%);
+    --color-content-fg-tertiary: rgb(255 255 255 / 25%);
+    --color-content-fg-quaternary: rgb(255 255 255 / 10%);
+    --alpha-content-fg: 0.85;
+    --alpha-content-fg-secondary: 0.55;
+    --alpha-content-fg-tertiary: 0.25;
+    --alpha-content-fg-quaternary: 0.1;
+    --color-fill: rgb(255 255 255 / 10%);
+    --color-fill-secondary: rgb(255 255 255 / 8%);
+    --color-fill-tertiary: rgb(255 255 255 / 5%);
+    --color-fill-quaternary: rgb(255 255 255 / 3%);
+  }
+
+  [data-platform="windows"] .appearance-dark {
+    --color-content-fg: rgb(255 255 255);
+    --color-content-fg-secondary: rgb(255 255 255 / 77.2%);
+    --color-content-fg-tertiary: rgb(255 255 255 / 53%);
+    --alpha-content-fg: 1;
+    --alpha-content-fg-secondary: 0.772;
+    --alpha-content-fg-tertiary: 0.53;
+  }
 }
 
 @keyframes ocr-shine {

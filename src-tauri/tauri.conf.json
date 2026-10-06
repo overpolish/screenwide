@@ -114,6 +114,31 @@
         "visible": false
       },
       {
+        "label": "projects",
+        "title": "Screenwide Projects",
+        "url": "/projects",
+        "width": 880,
+        "height": 560,
+        "minWidth": 600,
+        "minHeight": 400,
+        "acceptFirstMouse": true,
+        "alwaysOnTop": false,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 14, "y": 27 },
+        "resizable": true,
+        "shadow": true,
+        "skipTaskbar": false,
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["underWindowBackground", "mica"],
+          "radius": 10,
+          "state": "active"
+        },
+        "visible": false
+      },
+      {
         "label": "settings",
         "title": "Screenwide Settings",
         "url": "/settings",
@@ -334,7 +359,6 @@
         "enable": true,
         "scope": [
           "$APPCACHE/background-thumbnails/*",
-          "$APPDATA/Recordings/*",
           "$TEMP/Screenwide/application-sources/**",
           "$TEMP/Screenwide/monitor-selector/**",
           "$TEMP/Screenwide/window-selector/**"
@@ -347,6 +371,19 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "externalBin": ["binaries/ffmpeg"],
+    "fileAssociations": [
+      {
+        "description": "Screenwide Project",
+        "exportedType": {
+          "conformsTo": ["public.data", "public.content"],
+          "identifier": "co.overpolish.screenwide.project"
+        },
+        "ext": ["screenwide"],
+        "name": "Screenwide Project",
+        "rank": "Owner",
+        "role": "Editor"
+      }
+    ],
     "resources": {
       "../FFMPEG.md": "licenses/FFMPEG.md",
       "../LICENSE": "licenses/GPL-3.0.txt",

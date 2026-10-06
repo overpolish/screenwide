@@ -40,6 +40,17 @@ impl EditorKind {
   }
 }
 
+impl EditorArtifact {
+  /// The project the artifact is kept in.
+  pub(crate) fn project(&self) -> Option<&Path> {
+    match self {
+      EditorArtifact::Recording { project, .. } | EditorArtifact::Screenshot { project, .. } => {
+        Some(project)
+      }
+    }
+  }
+}
+
 /// The workspace a command is addressed to, read off the window it came from.
 ///
 /// Tauri injects the calling window, so the webview never has to name its own

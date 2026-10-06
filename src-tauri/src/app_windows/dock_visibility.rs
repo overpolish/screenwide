@@ -13,6 +13,7 @@ fn has_visible_workspace(app: &AppHandle) -> bool {
     WindowLabel::EditorScreenshot,
     WindowLabel::ExportRecording,
     WindowLabel::ExportScreenshot,
+    WindowLabel::Projects,
     WindowLabel::Settings,
     WindowLabel::Update,
   ]

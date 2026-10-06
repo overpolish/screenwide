@@ -9,12 +9,15 @@ import {
   normalizedScreenshotWorkspaceOutput,
   ScreenshotWorkspaceOutputSettings,
 } from "./screenshot/screenshot-output";
-import { EditorKind } from "./types";
 
+/** Copies the screenshot and closes the editor; its project goes to the Trash
+ * after when `deleteProjectAfterExport` says so. */
 export const copyEditorToClipboard = async (
   screenshotOutput: ScreenshotWorkspaceOutputSettings,
+  deleteProjectAfterExport: boolean,
 ) => {
   await invoke<null>("copy_editor_to_clipboard", {
+    deleteProjectAfterExport,
     screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
   });
 };
@@ -28,11 +31,6 @@ export const setScreenshotBackgroundRadius = async (radiusPercent: number) => {
 };
 
 export const cancelExportJob = () => invoke<boolean>("cancel_export_job");
-
-/** Named explicitly: the recording bar asks on another window's behalf. */
-export const focusEditorWindow = async (kind: EditorKind) => {
-  await invoke<null>("focus_editor_window", { kind });
-};
 
 export const browseExportDirectory = () =>
   invoke<string | null>("browse_export_directory");

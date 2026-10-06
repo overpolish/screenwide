@@ -32,6 +32,7 @@ pub struct RecordingExportChoices {
   pub camera_resolution_scale_percent: Option<u16>,
   pub collapse_audio: Option<bool>,
   pub compression: Option<u8>,
+  pub delete_project_after_export: Option<bool>,
   /// The output scale as a share of the "Original" scale, which is how the
   /// choice is labelled. A raw percentage would pick a different size on a
   /// display with another scale factor.
@@ -79,6 +80,7 @@ impl RecordingExportChoices {
         .then_some(options.camera_resolution_scale_percent),
       collapse_audio: (options.enabled_stream_indices.len() > 1).then_some(options.collapse_audio),
       compression: can_compress.then_some(options.compression),
+      delete_project_after_export: Some(options.delete_project_after_export),
       resolution_scale_ratio: has_picture
         .then(|| f64::from(options.resolution_scale_percent) / f64::from(original_scale)),
     }
@@ -94,6 +96,9 @@ impl RecordingExportChoices {
         .or(self.camera_resolution_scale_percent),
       collapse_audio: newer.collapse_audio.or(self.collapse_audio),
       compression: newer.compression.or(self.compression),
+      delete_project_after_export: newer
+        .delete_project_after_export
+        .or(self.delete_project_after_export),
       resolution_scale_ratio: newer.resolution_scale_ratio.or(self.resolution_scale_ratio),
     }
   }

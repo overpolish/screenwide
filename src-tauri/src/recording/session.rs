@@ -4,50 +4,44 @@
 mod begin;
 pub(super) use begin::begin_capture;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(super) use begin::{capture_sources, CaptureSources};
+pub(super) use begin::{capture_sources, primary_kind, CaptureSources};
 
 use std::{
-  path::PathBuf,
+  path::{Path, PathBuf},
   sync::{mpsc::Receiver, Arc},
   time::{Duration, Instant},
 };
 
-use chrono::{Local, NaiveDateTime};
+use chrono::Local;
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 
 use super::{
-  capture, encoding, meta_sidecar, snapshot, state, CameraCaptureMode, CaptureStartupConfig,
-  FinalizeInfo, PrimaryCaptureSource, RecordingMode, RecordingStatus, StartRecordingOptions,
-  SystemAudioSelection,
+  capture, encoding, snapshot, state, CameraCaptureMode, CaptureStartupConfig, FinalizeInfo,
+  PrimaryCaptureSource, PrimaryRecordingKind, RecordingMode, RecordingStatus,
+  StartRecordingOptions, SystemAudioSelection,
 };
 
 mod cancellation;
 mod inputs;
 mod sidecars;
 
-pub(crate) use cancellation::cancelled_marker;
 pub(super) use cancellation::{discard_capture, mark_capture_cancelled};
 pub(super) use inputs::check_inputs;
 use sidecars::{RecordingSidecars, SidecarPlan};
 const RECORDING_ERROR_EVENT: &str = "recording://error";
-/// The folder working files are written to, under the app's data directory.
-const RECORDINGS_DIRECTORY: &str = "Recordings";
 /// How long a start may go without producing a frame before it is called a
 /// failure. Permission prompts and display wake-ups are the slow cases and
 /// both resolve well inside this.
 pub(super) const FIRST_FRAME_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Everything a running recording is, from the state machine's side: a live
-/// capture session and the file it is filling.
+/// capture session and the project it is filling.
 pub(super) struct CaptureHandles {
   sidecars: RecordingSidecars,
-  output_path: PathBuf,
+  project: crate::project::NewProject,
   session: capture::CaptureSession,
   source_scale_factor: f32,
-  /// Stamped when capture begins, so the suggested file name reads as the
-  /// moment the user started rather than the moment they stopped.
-  started_at: NaiveDateTime,
 }
 
 #[derive(Clone, Serialize)]
@@ -117,16 +111,6 @@ pub(super) fn store_handles(app: &AppHandle, handles: CaptureHandles) {
 // Capture. Every entry point here is called from a blocking task, never from
 // the thread that services the UI, and never with a recording lock held.
 // ---------------------------------------------------------------------------
-
-/// Where working files live: inside the app's own data directory, so a
-/// recording that is never saved leaves nothing in a folder the user looks at.
-pub fn recordings_directory(app: &AppHandle) -> Result<PathBuf, String> {
-  app
-    .path()
-    .app_data_dir()
-    .map(|directory| directory.join(RECORDINGS_DIRECTORY))
-    .map_err(|error| error.to_string())
-}
 
 pub(super) fn records_cursor(mode: RecordingMode) -> bool {
   cfg!(any(target_os = "macos", target_os = "windows"))
@@ -199,68 +183,65 @@ pub(super) fn resume_capture(handles: &CaptureHandles) -> Result<(), String> {
   Ok(())
 }
 
+/// Finishes the capture. A stop that produced nothing playable takes its
+/// project with it; otherwise the project's manifest is brought up to date
+/// with the tracks that were actually written, and returned.
 pub(super) fn finalize_capture(
   handles: CaptureHandles,
   stopped_at: Instant,
-) -> Result<(FinalizeInfo, String), String> {
-  // Whatever this stop turns out to be, the metadata sidecar has done its job:
-  // either the values reach the editor through `FinalizeInfo` below, or there
-  // is no longer a recording for them to describe.
-  let meta_path = handles.output_path.clone();
-  let finalized = finalize_stopped_capture(handles, stopped_at);
-  meta_sidecar::remove(&meta_path);
-  finalized
-}
-
-fn finalize_stopped_capture(
-  handles: CaptureHandles,
-  stopped_at: Instant,
-) -> Result<(FinalizeInfo, String), String> {
+) -> Result<(FinalizeInfo, PathBuf), String> {
   let CaptureHandles {
     sidecars,
-    output_path,
+    project,
     session,
     source_scale_factor,
-    started_at,
   } = handles;
 
   let stopped_sidecars = sidecars.stop(stopped_at);
-  let mut info = match session.stop_at(stopped_at) {
-    Ok(info) => info,
-    Err(error) => {
-      // Nothing playable came out, so nothing is left lying around either.
-      let _ = std::fs::remove_file(&output_path);
-      sidecars::remove_stopped(&stopped_sidecars);
-      return Err(error);
-    }
-  };
-  info.cursor_path = match stopped_sidecars.cursor {
-    Ok(path) => path,
-    Err(error) => {
-      let _ = std::fs::remove_file(&info.path);
-      if let Some(camera) = &info.camera {
-        let _ = std::fs::remove_file(&camera.path);
-      }
-      if let Ok(Some(path)) = &stopped_sidecars.keyboard {
-        let _ = std::fs::remove_file(path);
-      }
-      return Err(error);
-    }
-  };
-  info.keyboard_path = match stopped_sidecars.keyboard {
-    Ok(path) => path,
-    Err(error) => {
-      let _ = std::fs::remove_file(&info.path);
-      if let Some(camera) = &info.camera {
-        let _ = std::fs::remove_file(&camera.path);
-      }
-      if let Some(path) = &info.cursor_path {
-        let _ = std::fs::remove_file(path);
-      }
-      return Err(error);
-    }
-  };
-  info.annotation_clips = stopped_sidecars.annotation_clips;
-  info.source_scale_factor = source_scale_factor;
-  Ok((info, crate::screenshots::capture_file_stem(started_at)))
+  let finished = session.stop_at(stopped_at).and_then(|mut info| {
+    info.cursor_path = stopped_sidecars.cursor?;
+    info.keyboard_path = stopped_sidecars.keyboard?;
+    info.annotation_clips = stopped_sidecars.annotation_clips;
+    info.source_scale_factor = source_scale_factor;
+    Ok(info)
+  });
+  let info = finished.inspect_err(|_| project.remove())?;
+  // The manifest written at the start already opens this project, so a
+  // failure here costs only the tracks it would have dropped.
+  if let Err(error) = write_manifest(
+    &project.file,
+    &info,
+    crate::project::RecordingOrigin::Capture,
+  ) {
+    eprintln!("Could not update the project's manifest: {error}");
+  }
+  Ok((info, project.file))
+}
+
+/// Describes the finished recording `info`, made as `origin` says, in the
+/// manifest at `file`.
+pub(super) fn write_manifest(
+  file: &Path,
+  info: &FinalizeInfo,
+  origin: crate::project::RecordingOrigin,
+) -> Result<(), String> {
+  let media = crate::project::RecordingMedia::relative_to(
+    file,
+    &info.path,
+    info.camera.as_ref().map(|camera| camera.path.as_path()),
+    info.cursor_path.as_deref(),
+    info.keyboard_path.as_deref(),
+  )?;
+  crate::project::write(
+    file,
+    &crate::project::Manifest::recording(crate::project::RecordingManifest {
+      duration_ms: Some(info.duration_ms),
+      has_microphone: info.has_microphone,
+      has_system_audio: info.has_system_audio,
+      media,
+      primary_kind: info.primary_kind,
+      source_scale_factor: info.source_scale_factor,
+      origin,
+    }),
+  )
 }

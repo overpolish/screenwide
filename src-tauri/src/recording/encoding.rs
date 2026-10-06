@@ -10,7 +10,6 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 /// Told once, from the writer thread, when a recording stops being able to
@@ -80,50 +79,28 @@ pub fn bitrate_bps(width: u32, height: u32, fps: u32) -> i32 {
   bitrate.clamp(MIN_BITRATE_BPS, MAX_BITRATE_BPS) as i32
 }
 
-/// The name of the working file a recording is written to while it runs. Sorts
-/// chronologically, and carries milliseconds so two recordings started in the
-/// same second cannot collide.
+/// The names a capture's tracks take inside its project's media folder. Each
+/// project holds one recording, so the names never need to tell two apart.
 ///
-/// A QuickTime movie, not an .mp4, because only QuickTime survives being
-/// written in fragments and only a fragmented file is worth anything if the
-/// app dies mid-recording. The saved file is still an .mp4 - the working movie
-/// is stream-copied into one when the user keeps it. See
-/// `platform::Container::quicktime_fragmented` and `editor::save_recording`.
-pub fn temp_file_name(started_at: NaiveDateTime) -> String {
-  started_at
-    .format(if cfg!(target_os = "windows") {
-      "recording-%Y%m%d-%H%M%S%.3f.mp4"
-    } else {
-      "recording-%Y%m%d-%H%M%S%.3f.mov"
-    })
-    .to_string()
-}
-
-pub fn camera_temp_file_name(started_at: NaiveDateTime) -> String {
-  started_at
-    .format(if cfg!(target_os = "windows") {
-      "camera-%Y%m%d-%H%M%S%.3f.mp4"
-    } else {
-      "camera-%Y%m%d-%H%M%S%.3f.mov"
-    })
-    .to_string()
-}
-
-pub fn cursor_temp_file_name(started_at: NaiveDateTime) -> String {
-  started_at
-    .format("recording-%Y%m%d-%H%M%S%.3f.cursor.jsonl")
-    .to_string()
-}
-
-pub fn keyboard_temp_file_name(started_at: NaiveDateTime) -> String {
-  started_at
-    .format("recording-%Y%m%d-%H%M%S%.3f.keyboard.jsonl")
-    .to_string()
-}
-
-pub fn audio_temp_file_name(started_at: NaiveDateTime) -> String {
-  started_at.format("audio-%Y%m%d-%H%M%S%.3f.mov").to_string()
-}
+/// The movie is a QuickTime movie on macOS, not an .mp4, because only
+/// QuickTime survives being written in fragments and only a fragmented file
+/// is worth anything if the app dies mid-recording. An export is still an
+/// .mp4 - the movie is stream-copied into one. See
+/// `platform::Container::quicktime_fragmented` and
+/// `editor::save::save_recording_copy`.
+pub const PRIMARY_FILE: &str = if cfg!(target_os = "windows") {
+  "recording.mp4"
+} else {
+  "recording.mov"
+};
+pub const AUDIO_FILE: &str = "audio.mov";
+pub const CAMERA_FILE: &str = if cfg!(target_os = "windows") {
+  "camera.mp4"
+} else {
+  "camera.mov"
+};
+pub const CURSOR_FILE: &str = "cursor.jsonl";
+pub const KEYBOARD_FILE: &str = "keyboard.jsonl";
 
 #[derive(Clone, Copy, Debug)]
 struct Origin {

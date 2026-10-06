@@ -8,7 +8,6 @@ pub(crate) mod cursor;
 mod desktop_canvas;
 mod encoding;
 pub(crate) mod keyboard;
-pub(crate) mod meta_sidecar;
 mod microphone;
 mod monitor;
 #[cfg(target_os = "macos")]
@@ -42,14 +41,12 @@ use platform_windows as capture;
 
 pub use encoding::{CameraFinalizeInfo, FinalizeInfo, PrimaryRecordingKind};
 pub use replay::{ReplaySnapshot, ReplayState};
-pub use session::recordings_directory;
 pub use state::{is_idle, snapshot, RecordingState};
 pub use types::{
   RecordingMode, RecordingSnapshot, RecordingStatus, Region, StartRecordingOptions,
   SystemAudioSelection,
 };
 
-pub(crate) use session::cancelled_marker;
 use session::{
   begin_capture, check_inputs, discard_capture, emit_error, finalize_capture,
   mark_capture_cancelled, pause_capture, report_failure, require_status, resume_capture,
@@ -150,8 +147,8 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
     }
 
     match finalized {
-      Some(Ok((info, suggested_file_stem))) => {
-        if let Err(error) = crate::editor::present_recording(&app, info, suggested_file_stem) {
+      Some(Ok((info, project))) => {
+        if let Err(error) = crate::editor::present_recording(&app, project, info) {
           crate::editor::release_recording_workspace(&app);
           report_failure(&app, "stop", &error);
           show_recording_ui(&app);

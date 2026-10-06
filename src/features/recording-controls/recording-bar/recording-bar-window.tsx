@@ -5,12 +5,6 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
 import { useFitWindowWidth } from "../../../lib/use-fit-window-height";
-import { focusEditorWindow } from "../../editor/api";
-import {
-  selectHasPendingRecording,
-  selectHasPendingScreenshot,
-  useEditorStore,
-} from "../../editor/store";
 import {
   openPermissionsWindow,
   openPermissionSettings,
@@ -186,8 +180,6 @@ export function RecordingBarWindow() {
   // The bar is as wide as its controls: a label that changes with state
   // moves the trailing edge rather than leaving slack in the bar.
   useFitWindowWidth(barRef);
-  const hasPendingRecording = useEditorStore(selectHasPendingRecording);
-  const hasPendingScreenshot = useEditorStore(selectHasPendingScreenshot);
   const canRecordCamera = usePermissionStore(selectCanRecordCamera);
   const canRecordMicrophone = usePermissionStore(selectCanRecordMicrophone);
   const canRecordScreen = usePermissionStore(selectCanRecordScreen);
@@ -479,13 +471,6 @@ export function RecordingBarWindow() {
         );
       }}
       onDelayedScreenshot={takeDelayedScreenshot}
-      onFocusPendingEditor={() => {
-        // Only a pending recording routes here now; a screenshot workspace
-        // never blocks a capture.
-        focusEditorWindow("recording").catch((error: unknown) => {
-          console.error("Could not focus the editor window", error);
-        });
-      }}
       onInputChange={setInput}
       onInteract={() => {
         void collapseRecordingSourceSelector();
@@ -526,10 +511,6 @@ export function RecordingBarWindow() {
           return;
         }
         takeScrollingScreenshot();
-      }}
-      pendingEditors={{
-        recording: hasPendingRecording,
-        screenshot: hasPendingScreenshot,
       }}
       ref={barRef}
       replay={replay}

@@ -64,7 +64,7 @@ pub fn is_recording_ui_visible() -> bool {
 #[tauri::command]
 pub fn toggle_recording_ui(app: AppHandle) -> tauri::Result<()> {
   crate::capture_overlays::dismiss_all(&app);
-  if !crate::recording::is_idle(&app) || crate::editor::focus_pending_workspace(&app) {
+  if !crate::recording::is_idle(&app) {
     return Ok(());
   }
 

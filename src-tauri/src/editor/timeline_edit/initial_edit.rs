@@ -9,18 +9,18 @@ use super::*;
 /// that were drawn live while it was being captured and the auto zooms made
 /// from it. The editor loads this as the recording's own timeline, so both
 /// arrive already editable, the annotations stacked the way the live overlay
-/// drew them.
+/// drew them. A project that already has an edit keeps it.
 ///
 /// The timeline itself is the untouched whole: one segment at full rate.
 pub(in crate::editor) fn persist_initial_edit(
-  recording: &Path,
+  project: &Path,
   artifact_id: u64,
   mut annotation_clips: Vec<crate::editor::annotations::timing::RecordingAnnotationClip>,
   scene_clips: Vec<crate::editor::scenes::RecordingSceneClip>,
 ) -> Result<(), String> {
   super::stacking::stack_by_kind(&mut annotation_clips);
   persist(
-    recording,
+    project,
     artifact_id,
     0,
     RecordingTimelineEdit {

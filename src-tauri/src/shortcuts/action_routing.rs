@@ -152,13 +152,7 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
       }
     }
     ShortcutAction::StartStopRecording => match crate::recording::snapshot(app).status {
-      crate::recording::RecordingStatus::Idle => {
-        if crate::editor::focus_pending_workspace(app) {
-          record_native_result(action, "focused_pending_workspace", None);
-        } else {
-          notify_frontend(app, action);
-        }
-      }
+      crate::recording::RecordingStatus::Idle => notify_frontend(app, action),
       crate::recording::RecordingStatus::Recording | crate::recording::RecordingStatus::Paused => {
         let result = crate::recording::stop(app);
         record_native_result(action, "stopped", result.err());

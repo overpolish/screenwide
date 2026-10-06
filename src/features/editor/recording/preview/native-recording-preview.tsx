@@ -19,6 +19,7 @@ import { useCanvasTool } from "../../tool-panels/use-canvas-tool";
 import { RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCopyRecordingFrame } from "../use-copy-recording-frame";
+import { useProjectStill } from "../use-project-still";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { resolveScrubPreviewProps } from "./recording-preview-props";
@@ -251,6 +252,10 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     getPositionMs: player.getPositionMs,
     keyboardEffects,
     recordingOutput: effectiveRecordingOutput,
+  });
+  useProjectStill(props, {
+    annotationClips: annotations.clips,
+    hasPicture: composedVideoTracks.has("primary"),
   });
 
   return (

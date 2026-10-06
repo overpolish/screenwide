@@ -23,23 +23,34 @@ mod preferences;
 pub(crate) mod preview;
 pub(crate) mod preview_platform;
 mod preview_workspace_model;
+mod project_open;
 pub(crate) mod recording_preview;
 pub(crate) mod recording_preview_player;
 mod recording_sidecar;
-mod recovery;
 pub(crate) mod save;
 pub(crate) mod scenes;
 pub(crate) mod screenshot_preview;
+mod startup;
 pub(crate) mod surface_colour;
 mod timeline_edit;
+pub(crate) use timeline_edit::PersistedTimelineEdit;
 mod track_selection;
 mod validation;
 mod workspace;
 
-pub use artifact::discard;
-pub use artifact_present::{present_recording, present_screenshot};
+pub use artifact::close;
+pub use artifact_present::{keep_recording, present_recording};
+pub use project_open::{
+  choose_and_open_project, is_project_file, is_project_open, open_kind, open_project,
+  open_project_detached, project_argument,
+};
+pub use screenshot_project::present_screenshot;
+pub(crate) mod project_look;
+pub(crate) mod project_thumbnail;
+pub use project_thumbnail::project_thumbnail;
 mod recording_model;
 mod screenshot_composition;
+pub(crate) mod screenshot_project;
 pub use recording_model::{
   AudioTrackKind, AudioTrackVolume, CameraOverlaySettings, RecordingAudioTrack, RecordingCamera,
   RecordingExportOptions, RecordingOutputSettings,
@@ -56,7 +67,6 @@ use screenshot_composition::compose_screenshot_workspace;
 
 use annotations::Annotation;
 use artifact::{emit_snapshot, snapshots, take_artifact};
-use artifact_present::present_recovered_recording;
 use artifact_snapshot::snapshot;
 pub use artifact_snapshot::EditorArtifactSnapshot;
 use camera_save::validate_camera_overlay;
@@ -65,24 +75,23 @@ use directory::current_directory;
 pub use export_window::hide as hide_export_options_for;
 #[cfg(target_os = "windows")]
 pub(crate) use media_preview::ffmpeg_command;
-use naming::sanitize_file_stem;
+pub(crate) use naming::sanitize_file_stem;
 use preferences::{
   load_cursor_effects, load_keyboard_effects, load_recording_choices, load_recording_output,
-  load_screenshot_background_radius, load_screenshot_output, load_screenshot_radius,
-  remember_completed_export, remember_screenshot_background_radius, remember_screenshot_output,
-  remember_screenshot_radius, CompletedRecordingExport, RecordingExportChoices,
+  load_screenshot_background_radius, load_screenshot_delete_project_after_export,
+  load_screenshot_output, load_screenshot_radius, remember_completed_export,
+  remember_screenshot_background_radius, remember_screenshot_delete_project_after_export,
+  remember_screenshot_output, remember_screenshot_radius, CompletedRecordingExport,
+  RecordingExportChoices,
 };
 use recording_sidecar::{RecordingCursor, RecordingKeyboard};
-pub use recovery::initialize;
-#[cfg(test)]
-use recovery::orphan_plan;
 use save::{delivered_extension, scale_percent};
+pub use startup::initialize;
 use validation::{validate_camera_resolution_scale, validate_primary_resolution_scale};
 pub use workspace::has_pending_kind as has_pending_workspace_kind;
 pub use workspace::{
-  focus_if_pending as focus_pending_workspace,
   focus_if_screenshot_blocked as focus_if_screenshot_workspace_blocked,
-  has_pending as has_pending_workspace, release_recording as release_recording_workspace,
+  release_recording as release_recording_workspace,
   release_screenshot as release_screenshot_workspace,
   reserve_recording as reserve_recording_workspace,
   reserve_screenshot as reserve_screenshot_workspace,
@@ -93,7 +102,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime};
 
 use serde::{Deserialize, Serialize};
 use tauri::{image::Image, AppHandle, Emitter, Manager};
@@ -116,24 +124,17 @@ const EXPORT_PROGRESS_EVENT: &str = "export://progress";
 const EDITOR_PREFERENCES_FILE: &str = "editor-preferences.json";
 const SCREENSHOT_EXTENSION: &str = "png";
 /// What a saved recording is delivered as when it can be, which is whenever
-/// FFmpeg is on the machine. See [`save_recording`] for the other case.
+/// FFmpeg is on the machine. See [`save::save_recording_copy`] for the other
+/// case.
 const RECORDING_EXTENSION: &str = "mp4";
 const AUDIO_EXTENSION: &str = "m4a";
 /// The container a recording is written to while it runs. macOS writes a
 /// fragmented QuickTime movie; Windows writes fragmented MP4. Both retain
 /// completed fragments if the app dies mid-recording.
 const WORKING_RECORDING_EXTENSION: &str = if cfg!(windows) { "mp4" } else { "mov" };
-/// Every extension a working recording can be found under in the recordings
-/// directory. `.mp4` is there for the files an earlier version of the app left
-/// behind: an upgrade must not walk past someone's unsaved recording.
-const WORKING_RECORDING_EXTENSIONS: &[&str] = &["mov", "mp4"];
-/// How long an unclaimed recording is kept before it is swept away. Long
-/// enough that a crash is recoverable, short enough that a forgotten one does
-/// not sit in the app's data directory forever.
-const ORPHAN_MAX_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 const MAX_FILE_STEM: usize = 200;
 
-/// A capture waiting to be saved.
+/// What an editor workspace has open.
 ///
 /// The window renders itself by artifact kind rather than assuming a
 /// screenshot, because a recording is a file on disk rather than pixels in
@@ -147,6 +148,8 @@ pub enum EditorArtifact {
     /// Ordered back-to-front. The first slice keeps the existing single-item
     /// compositor contract while the native scene renderer is introduced.
     items: Vec<ScreenshotItem>,
+    /// The project's manifest, which each picture is kept in as it arrives.
+    project: PathBuf,
     suggested_file_stem: String,
   },
   Recording {
@@ -157,10 +160,12 @@ pub enum EditorArtifact {
     id: u64,
     duration_ms: u64,
     height: u32,
-    /// The working file. Saving moves it or derives the requested compressed
-    /// copy; discarding deletes it.
+    /// The recording's movie, inside its project. Exporting reads it and
+    /// leaves it where it is.
     path: PathBuf,
     primary_kind: PrimaryRecordingKind,
+    /// The project's manifest, where the edit is saved.
+    project: PathBuf,
     source_scale_percent: u16,
     suggested_file_stem: String,
     width: u32,
@@ -201,6 +206,8 @@ pub struct EditorSnapshot {
   pub screenshot_radius_percent: f64,
   pub screenshot_background_radius_percent: f64,
   pub screenshot_output: Option<ScreenshotOutputSettings>,
+  /// Unset until a screenshot has been exported or copied once.
+  pub screenshot_delete_project_after_export: Option<bool>,
   /// Which workspace this describes. The change event is app-wide because the
   /// recording bar listens to it too, so every receiver needs to know which of
   /// its snapshots the payload replaces.
@@ -255,6 +262,7 @@ pub struct EditorState {
   screenshot_radius_percent: Mutex<f64>,
   screenshot_background_radius_percent: Mutex<f64>,
   screenshot_output: Mutex<Option<ScreenshotOutputSettings>>,
+  screenshot_delete_project_after_export: Mutex<Option<bool>>,
   recording_preview: Mutex<Option<media_preview::RecordingPreview>>,
   recording_preview_preparation: Mutex<()>,
   /// Cached by artifact, stream kind (screen/camera/baked), quality and scale.
