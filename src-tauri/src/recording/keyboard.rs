@@ -217,12 +217,12 @@ impl KeyboardRecorder {
 
 /// Keyboard shortcuts over the last stretch of time, for the replay buffer to
 /// cut clips from. It owns no file until a clip is written.
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 pub struct RollingKeyboardRecorder {
   tap: Tap,
 }
 
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 impl RollingKeyboardRecorder {
   pub fn start(origin: Arc<OnceLock<Instant>>, horizon: Duration) -> Result<Self, String> {
     let horizon_us = u64::try_from(horizon.as_micros()).unwrap_or(u64::MAX);

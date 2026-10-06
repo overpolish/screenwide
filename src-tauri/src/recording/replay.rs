@@ -15,12 +15,19 @@
 //! seconds, not the whole buffer again. Turning the buffer off forgets where
 //! the last save ended.
 
-// Only macOS has a replay buffer so far; elsewhere the state stays off and the
-// lifecycle below is never reached.
-#![cfg_attr(not(target_os = "macos"), allow(dead_code, unused_imports))]
+// Linux has no replay buffer; there the state stays off and the lifecycle
+// below is never reached.
+#![cfg_attr(
+  not(any(target_os = "macos", target_os = "windows")),
+  allow(dead_code, unused_imports)
+)]
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod capture;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(in crate::recording) mod ring;
+mod sleep;
+pub(super) use sleep::{did_wake, will_sleep};
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -70,8 +77,13 @@ struct Inner {
   /// Bumped by every start and stop, so a start that finishes after the user
   /// has already turned the buffer off is discarded.
   generation: u64,
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   running: Option<Arc<capture::RunningReplay>>,
+  /// What the buffer was turned on with, while it is on or starting.
+  options: Option<StartRecordingOptions>,
+  /// What to turn the buffer back on with once the computer wakes, if it was
+  /// on when the computer went to sleep.
+  resume_on_wake: Option<StartRecordingOptions>,
   saving: bool,
   status: ReplayStatus,
 }
@@ -79,7 +91,7 @@ struct Inner {
 impl Inner {
   fn snapshot(&self) -> ReplaySnapshot {
     ReplaySnapshot {
-      available: cfg!(target_os = "macos"),
+      available: cfg!(any(target_os = "macos", target_os = "windows")),
       length_seconds: REPLAY_LENGTH.as_secs(),
       saving: self.saving,
       status: self.status,
@@ -138,7 +150,7 @@ fn report(app: &AppHandle, message: &str) {
 /// now. Returns once the start is under way; the state event says when it is
 /// running or that it could not start.
 pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), String> {
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
     super::session::validate_options(&options)?;
     let generation = update(app, |inner| {
@@ -147,6 +159,8 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
       }
       inner.status = ReplayStatus::Starting;
       inner.generation += 1;
+      inner.options = Some(options.clone());
+      inner.resume_on_wake = None;
       Ok(inner.generation)
     })?;
     let app = app.clone();
@@ -165,6 +179,7 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
           }
           Err(error) => {
             inner.status = ReplayStatus::Off;
+            inner.options = None;
             report(&app, &error);
             None
           }
@@ -174,7 +189,7 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
     });
     Ok(())
   }
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
     let _ = (app, options);
     Err("The replay buffer is not available on this platform yet".to_owned())
@@ -183,11 +198,19 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
 
 /// Turns the buffer off and lets go of everything it held.
 pub fn stop(app: &AppHandle) {
-  #[cfg(target_os = "macos")]
+  turn_off(app, false);
+}
+
+/// Turns the buffer off, keeping what it was turned on with when
+/// `resume_on_wake`, so the computer waking can turn it back on.
+fn turn_off(app: &AppHandle, resume_on_wake: bool) {
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
     let running = update(app, |inner| {
       inner.generation += 1;
       inner.status = ReplayStatus::Off;
+      let options = inner.options.take();
+      inner.resume_on_wake = options.filter(|_| resume_on_wake);
       inner.running.take()
     });
     // Stopping the streams and joining the writers waits on the capture
@@ -196,14 +219,14 @@ pub fn stop(app: &AppHandle) {
       tauri::async_runtime::spawn_blocking(move || drop(running));
     }
   }
-  #[cfg(not(target_os = "macos"))]
-  let _ = app;
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let _ = (app, resume_on_wake);
 }
 
 /// Saves what is new since the last save, up to [`REPLAY_LENGTH`], and opens
 /// it in the editor.
 pub fn save(app: &AppHandle) -> Result<(), String> {
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
     // The clip ends when the user asked, not when a worker got round to it.
     let at = std::time::Instant::now();
@@ -227,7 +250,7 @@ pub fn save(app: &AppHandle) -> Result<(), String> {
     });
     Ok(())
   }
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
     let _ = app;
     Err("The replay buffer is not available on this platform yet".to_owned())

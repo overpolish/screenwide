@@ -7,14 +7,15 @@ mod sink;
 mod timeline;
 use frames::crop_frame;
 pub(super) use frames::snapshot_frame;
-use media_types::{attributes, encoder_config, video_type};
+pub(super) use media_types::attributes;
+use media_types::{encoder_config, video_type};
 
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc, OnceLock};
 use std::time::{Duration, Instant};
 
 use windows::core::{Interface, PCWSTR};
-use windows::Win32::Foundation::PROPERTYKEY;
+use windows::Win32::Foundation::{PROPERTYKEY, RPC_E_CHANGED_MODE};
 use windows::Win32::Graphics::Direct3D11::{
   ID3D11Device, ID3D11Resource, ID3D11Texture2D, D3D11_BIND_RENDER_TARGET,
   D3D11_BIND_SHADER_RESOURCE, D3D11_BOX, D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT,
@@ -29,13 +30,13 @@ use crate::capture_geometry::CaptureRect;
 use crate::recording::encoding::{bitrate_bps, FailureReport, FinalizeInfo, Timeline};
 use crate::recording::PrimaryRecordingKind;
 
-const NANOS_PER_100NS: i64 = 100;
+pub(super) const NANOS_PER_100NS: i64 = 100;
 
 fn frame_cadence(fps: u32) -> Duration {
   Duration::from_nanos(1_000_000_000_u64 / u64::from(fps.max(1)))
 }
 
-fn win<T>(result: windows::core::Result<T>) -> Result<T, String> {
+pub(super) fn win<T>(result: windows::core::Result<T>) -> Result<T, String> {
   result.map_err(|error| error.to_string())
 }
 
@@ -50,6 +51,8 @@ pub(super) enum Command {
   Frame(Frame),
   Pause(Instant),
   Resume(Instant),
+  /// What a replay buffer's writer holds for a clip being saved.
+  Replay(super::replay::ClipRequest),
   Stop {
     at: Instant,
     reply: mpsc::Sender<Result<FinalizeInfo, String>>,
@@ -72,25 +75,36 @@ pub(super) struct WriterConfig {
   pub(super) width: u32,
 }
 
-struct MediaFoundation;
+/// Media Foundation and COM, started for as long as this lives. A thread
+/// already in a single-threaded apartment, as one that opened a microphone
+/// is, stays in it: Media Foundation works from either kind.
+pub(super) struct MediaFoundation {
+  uninitialize_com: bool,
+}
 
 impl MediaFoundation {
-  fn start() -> Result<Self, String> {
-    unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }
-      .ok()
-      .map_err(|error| error.to_string())?;
+  pub(super) fn start() -> Result<Self, String> {
+    let initialized = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
+    let uninitialize_com = initialized != RPC_E_CHANGED_MODE;
+    if uninitialize_com {
+      initialized.ok().map_err(|error| error.to_string())?;
+    }
     if let Err(error) = unsafe { MFStartup(MF_VERSION, MFSTARTUP_FULL) } {
-      unsafe { CoUninitialize() };
+      if uninitialize_com {
+        unsafe { CoUninitialize() };
+      }
       return Err(error.to_string());
     }
-    Ok(Self)
+    Ok(Self { uninitialize_com })
   }
 }
 
 impl Drop for MediaFoundation {
   fn drop(&mut self) {
     let _ = unsafe { MFShutdown() };
-    unsafe { CoUninitialize() };
+    if self.uninitialize_com {
+      unsafe { CoUninitialize() };
+    }
   }
 }
 
@@ -225,6 +239,7 @@ pub(super) fn run(
           next_tick = Some(at + cadence);
         }
       }
+      Command::Replay(request) => request.refuse(),
       Command::Stop { at, reply } => {
         let _ = reply.send(writer.finish(at));
         return;

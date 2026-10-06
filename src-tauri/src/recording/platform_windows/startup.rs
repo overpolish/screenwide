@@ -4,6 +4,15 @@
 use super::*;
 
 pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, String> {
+  begin(config, None)
+}
+
+/// Opens the capture `config` describes: into a recording, or into a replay
+/// buffer holding `replay` of it when that is set.
+pub(super) fn begin(
+  config: CaptureStartupConfig,
+  replay: Option<Duration>,
+) -> Result<CaptureStart, String> {
   let CaptureStartupConfig {
     camera,
     camera_path,
@@ -16,6 +25,16 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
     system_audio,
     system_audio_skipped: _,
   } = config;
+  let replay_horizon_ns = replay.map(replay::horizon_ns);
+  let keyframes = replay::KeyframeLink::new();
+  let writer_kind = |leads: bool| match replay {
+    Some(length) => WriterKind::Replay {
+      keyframes: keyframes.clone(),
+      leads,
+      length,
+    },
+    None => WriterKind::Recording,
+  };
   let primary = match primary {
     PrimaryCaptureSource::Audio => {
       return begin_audio_only(
@@ -24,6 +43,7 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
         recording_monitor,
         on_failure,
         path,
+        replay_horizon_ns,
       );
     }
     primary => primary,
@@ -54,7 +74,7 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
     Arc::clone(&timeline_origin),
     Arc::clone(&recording_monitor),
     Arc::clone(&on_failure),
-    &path,
+    audio_destination(&path, replay_horizon_ns),
   )?;
   let device = capture::create_device()?;
   let stopped_at = Arc::new(OnceLock::new());
@@ -74,6 +94,7 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
       wall_timestamped_frames,
       width,
     },
+    writer_kind(true),
   )?;
   let mut session = CaptureSession {
     audio: Some(audio),
@@ -89,7 +110,11 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
   let mut camera_first_frame = None;
   if !camera_primary {
     if let Some(spec) = camera_spec.take() {
-      let camera_path = camera_path.ok_or_else(|| "The camera has nowhere to record".to_owned())?;
+      // A replay writes its camera wherever a saved clip is put.
+      let camera_path = match (replay, camera_path) {
+        (Some(_), _) => std::path::PathBuf::new(),
+        (None, path) => path.ok_or_else(|| "The camera has nowhere to record".to_owned())?,
+      };
       let (camera_commands, camera_ready, camera_worker) = spawn_writer(
         "screenwide-windows-camera-writer",
         WriterConfig {
@@ -106,6 +131,7 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
           wall_timestamped_frames: false,
           width: spec.width,
         },
+        writer_kind(false),
       )?;
       let stream = camera::start(
         spec,

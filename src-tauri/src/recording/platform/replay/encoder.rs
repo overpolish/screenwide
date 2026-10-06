@@ -18,9 +18,9 @@ use std::sync::{Arc, Mutex};
 use cidre::{arc, cf, cm, cv, os, vt};
 
 use super::super::media::{nanos, time_to_ns, VideoEncoder};
-use super::ring::{EncodedFrame, VideoRing};
 use super::SharedSample;
 use crate::recording::encoding::bitrate_bps;
+use crate::recording::replay::ring::{EncodedFrame, VideoRing};
 
 /// What the session's callback writes into. Boxed and owned by the encoder
 /// so its address stays put for as long as the session can call back.

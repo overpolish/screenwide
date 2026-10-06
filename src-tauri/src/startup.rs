@@ -64,6 +64,7 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   let has_pending_export = editor::has_pending_workspace(app.handle());
   crate::shortcuts::initialize(app.handle());
   crate::system_accent::initialize(app.handle());
+  crate::recording::sleep::initialize(app.handle());
   app_windows::manage_transient_popover_dismissal(app.handle());
 
   #[cfg(target_os = "macos")]

@@ -17,7 +17,6 @@
 
 mod encoder;
 mod mux;
-mod ring;
 mod session;
 mod writer;
 
@@ -33,20 +32,8 @@ pub use session::{begin_blocking, ReplayCapture, ReplaySession};
 pub(super) use writer::{KeyframeLink, ReplayWriter, ReplayWriterConfig};
 
 use crate::recording::microphone::Format as MicrophoneFormat;
-use ring::{AudioChunk, EncodedFrame};
-
-/// Where a writer's clip begins.
-#[derive(Clone, Copy, Debug)]
-pub(super) enum ClipFrom {
-  /// The primary writer chooses: at most `length_ns` back from the save, and
-  /// never before `since_ns`, the end of the previous save.
-  Latest {
-    length_ns: i64,
-    since_ns: Option<i64>,
-  },
-  /// A secondary writer follows the start the primary chose.
-  Follow { start_ns: i64 },
-}
+pub(super) use crate::recording::replay::ring::ClipFrom;
+use crate::recording::replay::ring::{AudioChunk, EncodedFrame};
 
 /// What a writer holds for one clip, in replay time.
 pub(super) struct ClipTake {

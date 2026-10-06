@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The replay buffer's writer thread: the recording writer's timing, with the
-//! movie replaced by the rings in [`super::ring`].
+//! movie replaced by the rings in [`crate::recording::replay::ring`].
 //!
 //! The timeline rules are the recording writer's, so a clip lines up with its
 //! cursor, keyboard and annotations exactly as a recording does: the primary
@@ -30,10 +30,10 @@ use super::super::{
   SYSTEM_AUDIO_SAMPLE_RATE,
 };
 use super::encoder::Encoder;
-use super::ring::{AudioChunk, AudioRing, VideoRing};
 use super::SharedSample;
 use crate::recording::encoding::{FailureReport, Timeline};
 use crate::recording::microphone::{Buffer as MicrophoneBuffer, Format as MicrophoneFormat};
+use crate::recording::replay::ring::{AudioChunk, AudioRing, VideoRing};
 
 /// How long a screen may sit unchanged before its last frame is encoded
 /// again as a keyframe. A screen that does not change sends no frames, and a

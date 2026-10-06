@@ -3,7 +3,7 @@
 
 mod begin;
 pub(super) use begin::begin_capture;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) use begin::{capture_sources, CaptureSources};
 
 use std::{

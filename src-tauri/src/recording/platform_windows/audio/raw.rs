@@ -1,24 +1,37 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::ring::{fill_ring, Keep};
 use super::*;
 
 impl RawSink {
   pub(super) fn start(
-    path: PathBuf,
+    keep: Keep,
     sample_rate: u32,
     channels: u16,
     origin: Arc<OnceLock<Instant>>,
   ) -> Result<Self, String> {
     let (sender, packets) = mpsc::sync_channel(128);
-    let worker_path = path.clone();
+    let (path, ring) = match &keep {
+      Keep::File(path) => (Some(path.clone()), None),
+      Keep::Ring(ring) => (None, Some(Arc::clone(ring))),
+    };
     let worker = thread::Builder::new()
       .name("screenwide-windows-audio-writer".to_owned())
-      .spawn(move || write_raw(worker_path, sample_rate, channels, origin, packets))
+      .spawn(move || match keep {
+        Keep::File(path) => write_raw(path, sample_rate, channels, &origin, packets).map(Some),
+        Keep::Ring(ring) => {
+          fill_ring(&ring, sample_rate, channels, &origin, packets);
+          Ok(None)
+        }
+      })
       .map_err(|error| error.to_string())?;
     Ok(Self {
+      channels,
       cleanup_on_drop: true,
       path,
+      ring,
+      sample_rate,
       sender: Some(sender),
       worker: Some(worker),
     })
@@ -41,7 +54,7 @@ impl RawSink {
       .join()
       .map_err(|_| "The audio writer stopped unexpectedly".to_owned())?;
     self.cleanup_on_drop = false;
-    result
+    result?.ok_or_else(|| "Replay audio is not written to a file".to_owned())
   }
 }
 
@@ -51,50 +64,59 @@ impl Drop for RawSink {
     if let Some(worker) = self.worker.take() {
       let _ = worker.join();
     }
-    if self.cleanup_on_drop {
-      let _ = fs::remove_file(&self.path);
+    if let Some(path) = self.path.as_ref().filter(|_| self.cleanup_on_drop) {
+      let _ = fs::remove_file(path);
     }
   }
+}
+
+/// Drops whatever of `packet` was captured before the timeline's origin,
+/// returning the origin if anything is left.
+pub(super) fn on_timeline(
+  packet: &mut Packet,
+  origin: &OnceLock<Instant>,
+  sample_rate: u32,
+  channels: u16,
+) -> Option<Instant> {
+  let origin = origin.get().copied()?;
+  let channels = usize::from(channels.max(1));
+  let frames = packet.samples.len() / channels;
+  if frames == 0 {
+    return None;
+  }
+  let packet_duration = Duration::from_secs_f64(frames as f64 / f64::from(sample_rate));
+  let packet_end = packet
+    .captured_at
+    .checked_add(packet_duration)
+    .unwrap_or(packet.captured_at);
+  if packet_end <= origin {
+    return None;
+  }
+  if packet.captured_at < origin {
+    let skip_frames = (origin.duration_since(packet.captured_at).as_secs_f64()
+      * f64::from(sample_rate))
+    .ceil() as usize;
+    let skip = skip_frames
+      .saturating_mul(channels)
+      .min(packet.samples.len());
+    packet.samples.drain(..skip);
+    packet.captured_at = origin;
+  }
+  (!packet.samples.is_empty()).then_some(origin)
 }
 
 fn write_raw(
   path: PathBuf,
   sample_rate: u32,
   channels: u16,
-  origin: Arc<OnceLock<Instant>>,
+  origin: &OnceLock<Instant>,
   packets: mpsc::Receiver<Packet>,
 ) -> Result<RawSource, String> {
   let file = File::create(&path).map_err(|error| error.to_string())?;
   let mut file = BufWriter::new(file);
-  let channels_usize = usize::from(channels.max(1));
   let mut first_at = None;
   for mut packet in packets {
-    let Some(origin) = origin.get().copied() else {
-      continue;
-    };
-    let frames = packet.samples.len() / channels_usize;
-    if frames == 0 {
-      continue;
-    }
-    let packet_duration = Duration::from_secs_f64(frames as f64 / f64::from(sample_rate));
-    let packet_end = packet
-      .captured_at
-      .checked_add(packet_duration)
-      .unwrap_or(packet.captured_at);
-    if packet_end <= origin {
-      continue;
-    }
-    if packet.captured_at < origin {
-      let skip_frames = (origin.duration_since(packet.captured_at).as_secs_f64()
-        * f64::from(sample_rate))
-      .ceil() as usize;
-      let skip = skip_frames
-        .saturating_mul(channels_usize)
-        .min(packet.samples.len());
-      packet.samples.drain(..skip);
-      packet.captured_at = origin;
-    }
-    if packet.samples.is_empty() {
+    if on_timeline(&mut packet, origin, sample_rate, channels).is_none() {
       continue;
     }
     first_at.get_or_insert(packet.captured_at);

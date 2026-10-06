@@ -45,9 +45,7 @@ unsafe extern "system" fn subclass_proc(
   if message == WM_SETTINGCHANGE || message == WM_THEMECHANGED {
     let app = &*(ref_data as *const AppHandle);
     if let Some(tray) = app.tray_by_id(super::TRAY_ID) {
-      if let Ok(icon) = super::status_icon(crate::recording::snapshot(app).status) {
-        let _ = tray.set_icon(Some(icon));
-      }
+      super::status::apply(&tray, crate::recording::snapshot(app).status);
     }
   }
   if message == windows::Win32::UI::WindowsAndMessaging::WM_INITMENUPOPUP {

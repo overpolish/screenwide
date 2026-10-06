@@ -20,6 +20,7 @@ mod platform_windows;
 pub(crate) mod replay;
 mod session;
 pub(crate) mod sidecar_output;
+pub(crate) mod sleep;
 mod state;
 mod types;
 mod ui;

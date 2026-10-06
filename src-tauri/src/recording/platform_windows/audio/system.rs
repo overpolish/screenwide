@@ -5,13 +5,13 @@ use super::*;
 
 pub(super) fn start_system(
   process_id: Option<u32>,
-  path: PathBuf,
+  keep: ring::Keep,
   origin: Arc<OnceLock<Instant>>,
   paused: Arc<AtomicBool>,
   monitor: Arc<RecordingMonitor>,
   on_failure: FailureReport,
 ) -> Result<SystemCapture, String> {
-  let sink = RawSink::start(path, SYSTEM_SAMPLE_RATE, SYSTEM_CHANNELS, origin)?;
+  let sink = RawSink::start(keep, SYSTEM_SAMPLE_RATE, SYSTEM_CHANNELS, origin)?;
   let sender = sink.sender()?;
   let stop = Arc::new(AtomicBool::new(false));
   let thread_stop = Arc::clone(&stop);

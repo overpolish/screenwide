@@ -19,9 +19,9 @@ use super::super::media::{
   system_audio_settings,
 };
 use super::super::{NANOS_PER_MS, SYSTEM_AUDIO_CHANNELS, SYSTEM_AUDIO_SAMPLE_RATE};
-use super::ring::AudioChunk;
 use super::ClipTake;
 use crate::recording::microphone::{Buffer as MicrophoneBuffer, Format as MicrophoneFormat};
+use crate::recording::replay::ring::AudioChunk;
 
 /// How long a clip may take to write before it is given up on. Thirty
 /// seconds of passthrough video and AAC encoding takes well under one.

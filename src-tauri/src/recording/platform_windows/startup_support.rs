@@ -3,13 +3,44 @@
 
 use super::*;
 
-pub(super) fn spawn_writer(name: &str, config: WriterConfig) -> Result<WriterSpawn, String> {
+/// Which writer a capture's frames go to.
+pub(super) enum WriterKind {
+  Recording,
+  Replay {
+    keyframes: replay::KeyframeLink,
+    leads: bool,
+    length: Duration,
+  },
+}
+
+pub(super) fn spawn_writer(
+  name: &str,
+  config: WriterConfig,
+  kind: WriterKind,
+) -> Result<WriterSpawn, String> {
   let (commands, command_rx) = mpsc::sync_channel(8);
   let (initialized_tx, initialized) = mpsc::channel();
   let (first_frame_tx, first_frame) = mpsc::channel();
   let worker = std::thread::Builder::new()
     .name(name.to_owned())
-    .spawn(move || writer::run(config, command_rx, initialized_tx, first_frame_tx))
+    .spawn(move || match kind {
+      WriterKind::Recording => writer::run(config, command_rx, initialized_tx, first_frame_tx),
+      WriterKind::Replay {
+        keyframes,
+        leads,
+        length,
+      } => replay::run(
+        replay::ReplayWriterConfig {
+          keyframes,
+          leads,
+          length,
+          writer: config,
+        },
+        command_rx,
+        initialized_tx,
+        first_frame_tx,
+      ),
+    })
     .map_err(|error| error.to_string())?;
   initialized
     .recv()
@@ -43,6 +74,7 @@ pub(super) fn begin_audio_only(
   monitor: Arc<crate::recording::monitor::RecordingMonitor>,
   on_failure: crate::recording::encoding::FailureReport,
   path: std::path::PathBuf,
+  replay_horizon_ns: Option<i64>,
 ) -> Result<CaptureStart, String> {
   if microphone_id.is_none() && !system_audio.enabled {
     return Err("Select a microphone or system audio source".to_owned());
@@ -56,7 +88,7 @@ pub(super) fn begin_audio_only(
     Arc::clone(&timeline_origin),
     monitor,
     on_failure,
-    &path,
+    audio_destination(&path, replay_horizon_ns),
   )?;
   let (ready, first_frame) = mpsc::channel();
   let _ = ready.send(Ok(()));
@@ -77,4 +109,16 @@ pub(super) fn begin_audio_only(
     source_scale_factor: 1.0,
     timeline_origin,
   })
+}
+
+/// Where a capture's audio goes: a recording's sidecars beside `path`, or
+/// a replay buffer's memory reaching `replay_horizon_ns` back.
+pub(super) fn audio_destination(
+  path: &std::path::Path,
+  replay_horizon_ns: Option<i64>,
+) -> audio::AudioDestination<'_> {
+  match replay_horizon_ns {
+    Some(horizon_ns) => audio::AudioDestination::Rings { horizon_ns },
+    None => audio::AudioDestination::Sidecars(path),
+  }
 }

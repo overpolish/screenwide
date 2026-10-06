@@ -7,11 +7,15 @@
 //! system audio are therefore captured as timestamped float PCM sidecars and
 //! muxed into independent AAC streams after the video sink is finalized. The
 //! H.264 video is stream-copied, so this adds no video decode or CPU render.
+//! The replay buffer keeps the same PCM in memory instead, and writes the
+//! sidecars only for a clip being saved.
 
 mod mux;
 mod raw;
+mod ring;
 mod system;
 use mux::mux_file;
+pub(super) use ring::AudioDestination;
 use system::start_system;
 
 use std::{
@@ -54,10 +58,15 @@ struct RawSource {
 }
 
 struct RawSink {
+  channels: u16,
   cleanup_on_drop: bool,
-  path: PathBuf,
+  /// The sidecar a recording's audio is written to.
+  path: Option<PathBuf>,
+  /// The memory a replay's audio is kept in.
+  ring: Option<Arc<std::sync::Mutex<crate::recording::replay::ring::AudioRing>>>,
+  sample_rate: u32,
   sender: Option<mpsc::SyncSender<Packet>>,
-  worker: Option<JoinHandle<Result<RawSource, String>>>,
+  worker: Option<JoinHandle<Result<Option<RawSource>, String>>>,
 }
 
 struct MicrophoneCapture {
@@ -84,6 +93,19 @@ pub(super) struct AudioFiles {
   system: Vec<RawSource>,
 }
 
+impl AudioFiles {
+  /// The sidecars these files are, for a caller that has to clean up after
+  /// a mux that failed.
+  pub(super) fn paths(&self) -> Vec<PathBuf> {
+    self
+      .microphone
+      .iter()
+      .chain(&self.system)
+      .map(|source| source.path.clone())
+      .collect()
+  }
+}
+
 impl AudioCaptures {
   pub(super) fn start(
     microphone_id: Option<&str>,
@@ -91,14 +113,14 @@ impl AudioCaptures {
     origin: Arc<OnceLock<Instant>>,
     monitor: Arc<RecordingMonitor>,
     on_failure: FailureReport,
-    video_path: &Path,
+    destination: AudioDestination<'_>,
   ) -> Result<Self, String> {
     let paused = Arc::new(AtomicBool::new(false));
     let microphone = microphone_id
       .map(|device_id| {
         start_microphone(
           device_id,
-          sidecar_path(video_path, "microphone", 0),
+          destination,
           Arc::clone(&origin),
           Arc::clone(&paused),
           Arc::clone(&monitor),
@@ -120,7 +142,7 @@ impl AudioCaptures {
       for (index, process_id) in process_ids.into_iter().enumerate() {
         captures.push(start_system(
           process_id,
-          sidecar_path(video_path, "system", index),
+          destination.keep("system", index, SYSTEM_CHANNELS, SYSTEM_SAMPLE_RATE),
           Arc::clone(&origin),
           Arc::clone(&paused),
           Arc::clone(&monitor),
@@ -152,10 +174,7 @@ impl AudioCaptures {
     };
     let mut system = Vec::with_capacity(self.system.len());
     for mut capture in self.system.drain(..) {
-      capture.stop.store(true, Ordering::Release);
-      if let Some(thread) = capture.thread.take() {
-        let _ = thread.join();
-      }
+      capture.stop_thread();
       system.push(capture.sink.finish()?);
     }
     Ok(AudioFiles {
@@ -164,6 +183,30 @@ impl AudioCaptures {
       microphone,
       system,
     })
+  }
+}
+
+impl Drop for AudioCaptures {
+  /// A sink waits for every sender to its writer to go, and the capture
+  /// callbacks hold senders, so each capture stops before its sink drops.
+  fn drop(&mut self) {
+    if let Some(capture) = self.microphone.take() {
+      drop(capture.stream);
+      drop(capture.sink);
+    }
+    for mut capture in self.system.drain(..) {
+      capture.stop_thread();
+      drop(capture.sink);
+    }
+  }
+}
+
+impl SystemCapture {
+  fn stop_thread(&mut self) {
+    self.stop.store(true, Ordering::Release);
+    if let Some(thread) = self.thread.take() {
+      let _ = thread.join();
+    }
   }
 }
 
@@ -177,7 +220,7 @@ fn sidecar_path(video: &Path, kind: &str, index: usize) -> PathBuf {
 
 fn start_microphone(
   device_id: &str,
-  path: PathBuf,
+  destination: AudioDestination<'_>,
   origin: Arc<OnceLock<Instant>>,
   paused: Arc<AtomicBool>,
   monitor: Arc<RecordingMonitor>,
@@ -185,7 +228,8 @@ fn start_microphone(
 ) -> Result<MicrophoneCapture, String> {
   let source = microphone::Source::resolve(device_id)?;
   let format = source.format();
-  let sink = RawSink::start(path, format.sample_rate, format.channels, origin)?;
+  let keep = destination.keep("microphone", 0, format.channels, format.sample_rate);
+  let sink = RawSink::start(keep, format.sample_rate, format.channels, origin)?;
   let sender = sink.sender()?;
   let callback_monitor = Arc::clone(&monitor);
   let stream = source.start(

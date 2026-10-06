@@ -8,8 +8,8 @@
 //! each annotation was on screen for as long as a clip could still reach it,
 //! and cuts the clips only when one is saved.
 
-// Only the macOS replay buffer drives this so far.
-#![cfg_attr(not(target_os = "macos"), allow(dead_code))]
+// Linux has no replay buffer to drive this.
+#![cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 
 use std::time::Duration;
 
