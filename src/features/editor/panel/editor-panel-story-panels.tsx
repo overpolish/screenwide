@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ComponentProps, useState } from "react";
+import { ComponentProps, useMemo, useState } from "react";
 
 import {
+  EditorArtifact,
   recordingAudioStreamIndex,
   recordingAudioTrackId,
   RecordingTrackId,
@@ -11,14 +12,27 @@ import {
 
 import { EditorPanel } from "./editor-panel";
 
+/** Renames only the story's own copy of the project. */
+function useStoryRename(artifact: EditorArtifact | null) {
+  const [title, setTitle] = useState(artifact?.suggestedFileStem ?? "");
+  const renamed = useMemo(
+    () => (artifact ? { ...artifact, suggestedFileStem: title } : null),
+    [artifact, title],
+  );
+  return { artifact: renamed, onRenameProject: setTitle };
+}
+
 export function ScreenshotStoryPanel(args: ComponentProps<typeof EditorPanel>) {
   const [fileStem, setFileStem] = useState(args.fileStem);
+  const project = useStoryRename(args.artifact);
   return (
     <EditorPanel
       {...args}
+      artifact={project.artifact}
       fileStem={fileStem}
       onCopy={() => undefined}
       onFileStemChange={setFileStem}
+      onRenameProject={project.onRenameProject}
       onSave={() => undefined}
     />
   );
@@ -29,6 +43,7 @@ export function AudioRecordingStoryPanel(
 ) {
   const [enabledTracks, setEnabledTracks] = useState([0, 1]);
   const [fileStem, setFileStem] = useState(args.fileStem);
+  const project = useStoryRename(args.artifact);
   const [selectedTrack, setSelectedTrack] = useState<RecordingTrackId | null>(
     () => recordingAudioTrackId(0),
   );
@@ -36,6 +51,7 @@ export function AudioRecordingStoryPanel(
   return (
     <EditorPanel
       {...args}
+      artifact={project.artifact}
       audioTrackVolumes={Object.entries(volumes).map(
         ([streamIndex, decibels]) => ({
           decibels,
@@ -47,6 +63,7 @@ export function AudioRecordingStoryPanel(
       fileStem={fileStem}
       onEnabledTracksChange={setEnabledTracks}
       onFileStemChange={setFileStem}
+      onRenameProject={project.onRenameProject}
       onSelectedTrackChange={setSelectedTrack}
       onSelectedTrackVolumeChange={(decibels) => {
         const streamIndex = recordingAudioStreamIndex(selectedTrack);
@@ -61,6 +78,7 @@ export function AudioRecordingStoryPanel(
 export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
   const recording = args.artifact?.kind === "recording" ? args.artifact : null;
   const [fileStem, setFileStem] = useState(args.fileStem);
+  const project = useStoryRename(args.artifact);
   const [bakeCamera, setBakeCamera] = useState(args.bakeCamera ?? false);
   const [cameraCompression, setCameraCompression] = useState(
     args.cameraCompression ?? 0,
@@ -98,6 +116,7 @@ export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
   return (
     <EditorPanel
       {...args}
+      artifact={project.artifact}
       bakeCamera={bakeCamera}
       cameraCompression={cameraCompression}
       cameraOverlay={cameraOverlay}
@@ -117,6 +136,7 @@ export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
       onEnabledTracksChange={setEnabledAudio}
       onEnabledVideoTracksChange={setEnabledVideo}
       onFileStemChange={setFileStem}
+      onRenameProject={project.onRenameProject}
       onResolutionScaleChange={setResolution}
       onSelectedTrackChange={setSelectedTrack}
       resolutionScalePercent={resolution}

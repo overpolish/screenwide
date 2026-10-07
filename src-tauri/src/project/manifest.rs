@@ -7,7 +7,7 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +19,14 @@ const FORMAT_VERSION: u16 = 1;
 /// Every manifest write is a read, a change and a replace. Autosaves and the
 /// end of a capture can land together, so they take turns.
 static WRITES: Mutex<()> = Mutex::new(());
+
+/// Holds the manifests' write turn, for a change that must not land in the
+/// middle of one, such as moving the folder a manifest is being written in.
+pub(super) fn hold_writes() -> MutexGuard<'static, ()> {
+  WRITES
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]

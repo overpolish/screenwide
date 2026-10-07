@@ -5,6 +5,14 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 
+/** Every name edited here becomes a file name, so the characters Windows
+ * forbids are refused as typed, matching what `sanitize_file_stem` strips in
+ * Rust. Shown otherwise, the name would not match the file it is saved as. */
+const FORBIDDEN_CHARACTERS = /[<>:"/\\|?*]/g;
+
+const withoutForbidden = (text: string) =>
+  text.replace(FORBIDDEN_CHARACTERS, "");
+
 /**
  * A name edited where it is shown: click and type, Enter or a click away
  * keeps it, Escape puts it back. Nothing moves when editing starts, and an
@@ -48,6 +56,22 @@ export function EditableTitle({
       window.removeEventListener("blur", blurEditable);
     };
   }, []);
+  useEffect(() => {
+    const titleElement = titleRef.current;
+    if (!titleElement) return;
+    // The native event carries the text a key, dead key or AltGr chord
+    // actually inserts. A composition cannot be cancelled, and a drop carries
+    // no text here; leaving the field strips those.
+    const refuseForbidden = (event: InputEvent) => {
+      if (event.data && withoutForbidden(event.data) !== event.data) {
+        event.preventDefault();
+      }
+    };
+    titleElement.addEventListener("beforeinput", refuseForbidden);
+    return () => {
+      titleElement.removeEventListener("beforeinput", refuseForbidden);
+    };
+  }, []);
   useLayoutEffect(() => {
     if (titleRef.current && document.activeElement !== titleRef.current) {
       titleRef.current.textContent = title;
@@ -72,7 +96,9 @@ export function EditableTitle({
       // keeps it rather than leaving the document nameless.
       onBlur={(event) => {
         const next =
-          event.currentTarget.textContent.replace(/\s+/g, " ").trim() || title;
+          withoutForbidden(event.currentTarget.textContent)
+            .replace(/\s+/g, " ")
+            .trim() || title;
         event.currentTarget.textContent = next;
         if (next !== title) onChange(next);
       }}
@@ -93,7 +119,10 @@ export function EditableTitle({
         if (!event.currentTarget.contains(range.commonAncestorContainer))
           return;
         const text = document.createTextNode(
-          event.clipboardData.getData("text/plain").replace(/\s+/g, " "),
+          withoutForbidden(event.clipboardData.getData("text/plain")).replace(
+            /\s+/g,
+            " ",
+          ),
         );
         range.deleteContents();
         range.insertNode(text);

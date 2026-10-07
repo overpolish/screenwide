@@ -34,10 +34,16 @@ pub fn reveal_project(file: PathBuf) -> Result<(), String> {
     .arg("-R")
     .arg(root)
     .spawn();
+  // Explorer parses its own command line: Rust would quote the whole
+  // "/select,<path>" argument when the path has a space, which Explorer
+  // rejects by opening its default folder. Only the path may be quoted.
   #[cfg(target_os = "windows")]
-  let shown = std::process::Command::new("explorer")
-    .arg(format!("/select,{}", root.display()))
-    .spawn();
+  let shown = {
+    use std::os::windows::process::CommandExt;
+    std::process::Command::new("explorer")
+      .raw_arg(format!("/select,\"{}\"", root.display()))
+      .spawn()
+  };
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let shown = std::process::Command::new("xdg-open")
     .arg(root.parent().unwrap_or(root))

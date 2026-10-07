@@ -138,6 +138,6 @@ export const Empty: Story = {
 
 export const ActionFailed: Story = {
   args: {
-    error: "Close this project in the editor before renaming it",
+    error: "That name cannot be used",
   },
 };

@@ -117,7 +117,8 @@ pub(crate) fn rename(file: &Path, title: &str) -> Result<PathBuf, String> {
   if new_root.exists() && !same_folder {
     return Err(format!("There is already a project called {title} there"));
   }
-  std::fs::rename(root, &new_root)
+  let _turn = super::manifest::hold_writes();
+  rename_settling(root, &new_root)
     .map_err(|error| format!("The project could not be renamed: {error}"))?;
   let moved = new_root.join(
     file
@@ -126,13 +127,41 @@ pub(crate) fn rename(file: &Path, title: &str) -> Result<PathBuf, String> {
   );
   let renamed = new_root.join(format!("{title}.{EXTENSION}"));
   if moved != renamed {
-    if let Err(error) = std::fs::rename(&moved, &renamed) {
+    if let Err(error) = rename_settling(&moved, &renamed) {
       // Put the folder back rather than leave a project named two ways.
-      let _ = std::fs::rename(&new_root, root);
+      let _ = rename_settling(&new_root, root);
       return Err(format!("The project could not be renamed: {error}"));
     }
   }
   Ok(renamed)
+}
+
+/// Windows refuses to rename a folder while anything inside it is open, and a
+/// reader can outlast the editor letting go of a project by a moment: a
+/// decoder winding down, or a virus scanner looking at what just changed.
+/// Those let go on their own, so the rename is tried again for a little while.
+fn rename_settling(from: &Path, to: &Path) -> std::io::Result<()> {
+  #[cfg(target_os = "windows")]
+  {
+    const ATTEMPTS: u32 = 40;
+    const ERROR_SHARING_VIOLATION: i32 = 32;
+    let mut attempt = 1;
+    loop {
+      match std::fs::rename(from, to) {
+        Err(error)
+          if attempt < ATTEMPTS
+            && (error.kind() == ErrorKind::PermissionDenied
+              || error.raw_os_error() == Some(ERROR_SHARING_VIOLATION)) =>
+        {
+          std::thread::sleep(std::time::Duration::from_millis(50));
+          attempt += 1;
+        }
+        result => return result,
+      }
+    }
+  }
+  #[cfg(not(target_os = "windows"))]
+  std::fs::rename(from, to)
 }
 
 /// Moves the whole project whose manifest is `file` to the Trash, or the

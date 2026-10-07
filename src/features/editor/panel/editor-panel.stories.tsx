@@ -172,14 +172,6 @@ export const Saving: Story = {
   render: (args) => <RecordingStoryPanel {...args} />,
 };
 
-export const EmptyName: Story = {
-  args: {
-    ...Recording.args,
-    fileStem: "",
-  },
-  render: (args) => <RecordingStoryPanel {...args} />,
-};
-
 export const WithError: Story = {
   args: {
     ...Recording.args,
@@ -188,13 +180,16 @@ export const WithError: Story = {
   render: (args) => <RecordingStoryPanel {...args} />,
 };
 
-export const LongFileName: Story = {
+export const LongProjectName: Story = {
   args: {
     ...Recording.args,
-    fileStem:
-      "Screenwide recording with a deliberately long editable filename 2026-08-08",
+    artifact: {
+      ...recording,
+      suggestedFileStem:
+        "Screenwide recording with a deliberately long editable project name 2026-08-08",
+    },
   },
-  name: "Long File Name",
+  name: "Long Project Name",
   render: (args) => <RecordingStoryPanel {...args} />,
 };
 
