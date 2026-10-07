@@ -39,6 +39,7 @@
     "knip": "knip",
     "license:check": "node scripts/check-spdx.mjs",
     "tray-icons:prepare": "node scripts/prepare-tray-menu-icons.mjs",
+    "tray-countdown-icons:prepare": "node scripts/prepare-tray-countdown-icons.mjs",
     "macos-icon:prepare": "node scripts/prepare-macos-icon.mjs",
     "preview": "vite preview",
     "release:check-version": "node scripts/check-release-version.mjs",

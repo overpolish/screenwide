@@ -34,11 +34,11 @@ use tauri::ipc::Channel;
 
 use self::gpu_decoder::GpuFrame;
 pub(crate) use self::gpu_decoder::GpuVideoReader;
+use self::present_frames::present_native_frames;
 use super::super::{
   video::{presentation_elapsed_ms, source_position_ms, VideoFrame},
   PlayerSources,
 };
-use self::present_frames::present_native_frames;
 
 pub(crate) const NATIVE_STILLS: bool = true;
 pub(crate) type StillDecoder = still::NativeStillDecoder;
