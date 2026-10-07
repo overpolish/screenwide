@@ -146,6 +146,10 @@ pub async fn save_export(
         eprintln!("Could not delete the exported project: {error}");
       }
     }
+  } else if let Some(project) = artifact.project() {
+    // Unless the project was opened again while it exported, its folder
+    // takes any name it was given in the editor.
+    super::super::project_name::settle_name(&app, project);
   }
   if crate::settings::current(&app).open_location_after_export {
     if let Err(error) = location::open_containing_folder(&path) {

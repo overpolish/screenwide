@@ -68,6 +68,8 @@ export type EditorPanelProps = {
   onMinimize?: () => void;
   onRecordingOutputChange?: RecordingOutputChange;
   onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
+  /** Renames the project, which the window's title names. */
+  onRenameProject?: (title: string) => void;
   onResolutionScaleChange?: (scale: number) => void;
   onSave?: () => void;
   onScreenshotBackgroundRadiusChange?: (radiusPercent: number) => void;

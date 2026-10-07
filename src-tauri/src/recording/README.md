@@ -46,6 +46,8 @@ Every recording is a project: a folder in the projects folder (Settings, or `Mov
 
 Screenshots are projects too (`editor/screenshot_project.rs`): the first capture makes one, each capture taken while the screenshot editor is open is added to it as another layer, and closing the editor keeps it. Captures copied to the clipboard alone make none.
 
+A project's name is its folder's and its manifest's. Renaming one that no editor has open renames both at once. One open in an editor cannot be renamed under it, since the editor holds its files and Windows will not rename a folder holding an open file: the new name is kept in the manifest's `title` and shown everywhere at once, and the folder and manifest take it when the editor lets the project go (closing, a finished export or copy, or another project opened in its place), or when it is next opened if the app stopped first (`editor/project_name.rs`).
+
 The app owns the `.screenwide` type (`bundle.fileAssociations`, and `scripts/macos-dev-info.plist` for the dev bundle), so double-clicking a manifest opens its project in the editor for its kind, in place of whatever that editor had open. macOS delivers the file as an open event (`startup::open_files`); Windows passes it as a launch argument, and the single-instance plugin hands a second launch's arguments to the running app. Open Project in the tray picks one by hand.
 
 The platform part only needs to provide:

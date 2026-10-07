@@ -72,6 +72,7 @@ export function EditorPanel({
   onMinimize,
   onRecordingOutputChange,
   onRecordingTimelineEditChange,
+  onRenameProject,
   onResolutionScaleChange,
   onSave,
   onScreenshotBackgroundRadiusChange,
@@ -196,14 +197,13 @@ export function EditorPanel({
             <EditorTitlebar
               artifact={artifact}
               canExport={canExport}
-              fileStem={fileStem}
               isSaving={isSaving}
               isToolbarDisabled={isLocked}
               onClose={onCancel}
               onCopy={onCopy}
               onExport={openExportOptions}
-              onFileStemChange={onFileStemChange}
               onMinimize={onMinimize}
+              onRename={onRenameProject}
               onToggleMaximize={onToggleMaximize}
             />
           }

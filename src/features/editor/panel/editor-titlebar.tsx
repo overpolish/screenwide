@@ -16,20 +16,18 @@ import { useEditorToolbarTools } from "./editor-toolbar-context";
 export function EditorTitlebar({
   artifact,
   canExport,
-  fileStem,
   isSaving,
   isToolbarDisabled = false,
   onClose,
   onCopy,
   onExport,
-  onFileStemChange,
   onMinimize,
+  onRename,
   onToggleMaximize,
   tools,
 }: {
   artifact: EditorArtifact | null;
   canExport: boolean;
-  fileStem: string;
   isSaving?: boolean;
   /** Takes the tools out of reach while leaving them in view, as under a
    * sheet. */
@@ -37,8 +35,9 @@ export function EditorTitlebar({
   onClose?: () => void;
   onCopy?: () => void;
   onExport?: () => void;
-  onFileStemChange?: (fileStem: string) => void;
   onMinimize?: () => void;
+  /** Renames the project, which the title names. */
+  onRename?: (title: string) => void;
   onToggleMaximize?: () => void;
   /** The workspace's tools, carried in the bar. Defaults to what the visible
    * section is offering through `EditorToolbarContext`. */
@@ -106,9 +105,9 @@ export function EditorTitlebar({
       }
       onClose={onClose}
       onMinimize={onMinimize}
-      onTitleChange={artifact && !isSaving ? onFileStemChange : undefined}
+      onTitleChange={artifact && !isSaving ? onRename : undefined}
       onToggleMaximize={onToggleMaximize}
-      title={fileStem}
+      title={artifact?.suggestedFileStem ?? ""}
     />
   );
 }

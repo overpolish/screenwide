@@ -116,9 +116,33 @@ pub fn copy_editor_to_clipboard(
     if let Err(error) = crate::project::library::trash(&app, &project) {
       eprintln!("Could not delete the copied project: {error}");
     }
+  } else {
+    super::project_name::settle_name(&app, &project);
   }
 
   Ok(())
+}
+
+/// Renames the project open in the asking window's editor. Its folder takes
+/// the name once the editor lets it go.
+#[tauri::command]
+pub fn rename_open_project(
+  app: AppHandle,
+  window: tauri::WebviewWindow,
+  title: String,
+) -> Result<(), String> {
+  let kind = kind_of_window(&window)?;
+  let project = app
+    .state::<EditorState>()
+    .slot(kind)
+    .artifact
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .as_ref()
+    .and_then(EditorArtifact::project)
+    .map(Path::to_path_buf)
+    .ok_or_else(|| "There is no project to rename".to_owned())?;
+  super::rename_project(&app, &project, &title).map(|_| ())
 }
 
 #[tauri::command]

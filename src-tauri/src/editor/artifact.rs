@@ -69,7 +69,14 @@ pub fn close(app: &AppHandle, kind: EditorKind) {
   if kind == EditorKind::Recording {
     clear_recording_preview(app);
   }
-  drop(take_artifact(app, kind));
+  // Taken before its name is settled, so the folder is no longer the
+  // editor's when it is renamed.
+  if let Some(project) = take_artifact(app, kind)
+    .as_ref()
+    .and_then(EditorArtifact::project)
+  {
+    super::project_name::settle_name(app, project);
+  }
   let _ = window::hide(app, kind);
   emit_snapshot(app, kind);
 }

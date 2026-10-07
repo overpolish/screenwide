@@ -84,6 +84,7 @@ pub fn run() {
       editor::commands::browse_export_directory,
       editor::commands::cancel_export_job,
       editor::commands::copy_editor_to_clipboard,
+      editor::commands::rename_open_project,
       editor::export_window::hide_export_options,
       editor::export_window::resize_export_options,
       editor::export_window::show_export_options,

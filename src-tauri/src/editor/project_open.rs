@@ -76,6 +76,10 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
     workspace::focus_pending(app, kind);
     return Ok(());
   }
+  // A name given while it was last open, which the app stopped before
+  // giving its folder, is given now.
+  let settled = super::project_name::settle_name(app, file);
+  let file = settled.as_path();
   let manifest = crate::project::read(file)?;
   if manifest.kind == crate::project::ProjectKind::Screenshot {
     return super::screenshot_project::open(app, file);
@@ -178,10 +182,6 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
     },
     Origin::Project,
   )
-}
-
-pub fn is_project_open(app: &AppHandle, file: &Path) -> bool {
-  open_kind(app, file).is_some()
 }
 
 /// The editor that has the project whose manifest is `file` open, if one does.

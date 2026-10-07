@@ -64,18 +64,11 @@ pub fn open_project_location(path: PathBuf) -> Result<(), String> {
     .map_err(|error| error.to_string())
 }
 
-/// Renames a project and returns its new manifest. An open project is not
-/// renamed under the editor, whose tracks are named by where they were.
+/// Renames a project and returns its new manifest. One open in an editor is
+/// opened again there under its new name.
 #[tauri::command]
 pub fn rename_project(app: AppHandle, file: PathBuf, title: String) -> Result<PathBuf, String> {
-  let title = crate::editor::sanitize_file_stem(&title)
-    .ok_or_else(|| "That name cannot be used".to_owned())?;
-  if crate::editor::is_project_open(&app, &file) {
-    return Err("Close this project in the editor before renaming it".to_owned());
-  }
-  let renamed = crate::project::rename(&file, &title)?;
-  library::moved(&app, &file, &renamed)?;
-  Ok(renamed)
+  crate::editor::rename_project(&app, &file, &title)
 }
 
 /// Moves a project's whole folder to the Trash, closing it first if it is

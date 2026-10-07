@@ -8,6 +8,7 @@ import {
   browseExportDirectory,
   cancelExportJob,
   copyEditorToClipboard,
+  renameOpenProject,
   saveExport,
   setExportDirectory,
   setScreenshotBackgroundRadius,
@@ -604,6 +605,11 @@ export function EditorWindow() {
           setError(null);
         }}
         onRecordingTimelineEditChange={setRecordingTimelineEdit}
+        onRenameProject={(title) => {
+          renameOpenProject(title).catch((cause: unknown) => {
+            setError(cause instanceof Error ? cause.message : String(cause));
+          });
+        }}
         onResolutionScaleChange={(scale) => {
           setResolutionScalePercent(scale);
           if (scale < originalResolutionScale && compression === 0) {

@@ -22,6 +22,12 @@ export const copyEditorToClipboard = async (
   });
 };
 
+/** Renames the project open in this window's editor, which then opens it
+ * again under its new name. */
+export const renameOpenProject = async (title: string) => {
+  await invoke<null>("rename_open_project", { title });
+};
+
 export const setScreenshotRadius = async (radiusPercent: number) => {
   await invoke<null>("set_screenshot_radius", { radiusPercent });
 };

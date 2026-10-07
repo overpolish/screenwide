@@ -49,6 +49,11 @@ pub(crate) struct Manifest {
   /// with the default look.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub look: Option<serde_json::Value>,
+  /// The name the project was given while an editor had it open. Its folder
+  /// and manifest take it once the editor lets the project go, since the
+  /// editor's files cannot move under it; until then this is its name.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub title: Option<String>,
 }
 
 impl Manifest {
@@ -60,6 +65,7 @@ impl Manifest {
       screenshot: None,
       timeline: None,
       look: None,
+      title: None,
     }
   }
 
@@ -71,6 +77,7 @@ impl Manifest {
       screenshot: Some(screenshot),
       timeline: None,
       look: None,
+      title: None,
     }
   }
 

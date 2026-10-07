@@ -78,7 +78,8 @@ pub(crate) fn summarize(file: &Path) -> ProjectSummary {
         modified_ms,
         size_bytes: file.parent().map(folder_size),
         replay: recording.is_some_and(|recording| recording.origin == RecordingOrigin::Replay),
-        title,
+        // A name given while it is open stands until its folder takes it.
+        title: manifest.title.clone().unwrap_or(title),
       }
     }
     Err(_) => ProjectSummary {

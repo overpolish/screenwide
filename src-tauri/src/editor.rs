@@ -40,12 +40,14 @@ mod workspace;
 
 pub use artifact::close;
 pub use artifact_present::{keep_recording, present_recording};
+pub use project_name::rename_project;
 pub use project_open::{
-  choose_and_open_project, is_project_file, is_project_open, open_kind, open_project,
-  open_project_detached, project_argument,
+  choose_and_open_project, is_project_file, open_kind, open_project, open_project_detached,
+  project_argument,
 };
 pub use screenshot_project::present_screenshot;
 pub(crate) mod project_look;
+mod project_name;
 pub(crate) mod project_thumbnail;
 pub use project_thumbnail::project_thumbnail;
 mod recording_model;
