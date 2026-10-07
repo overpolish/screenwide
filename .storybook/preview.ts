@@ -102,6 +102,20 @@ const previewHot = (
 ).hot;
 previewHot?.dispose(disposeKeyboardNavigation);
 
+// Storybook holds each render open until running animations finish, capped at
+// 5 s, and runs decorator effects such as the theme class only afterwards.
+// OverlayScrollbars moves its handles with scroll-driven animations, which run
+// for as long as they exist and never finish, so every story with a
+// `ScrollArea` stalled for the full cap. Only clock-driven animations can
+// finish, so the preview reports only those.
+const nativeGetAnimations = document.getAnimations.bind(document);
+document.getAnimations = () =>
+  nativeGetAnimations().filter(
+    (animation) => animation.timeline instanceof DocumentTimeline,
+  );
+// Removing the own property restores the prototype's method.
+previewHot?.dispose(() => Reflect.deleteProperty(document, "getAnimations"));
+
 const preview: Preview = {
   globalTypes: isNativePreview
     ? {}
