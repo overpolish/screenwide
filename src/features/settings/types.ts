@@ -42,6 +42,11 @@ export type MomentKind = {
 
 export type MomentSettings = {
   kinds: MomentKind[];
+  /** The microphone notes are taken from, by device id; null is the
+   * recording's own, or the system default when it has none. */
+  noteMicrophone: string | null;
+  /** Whether holding a kind's shortcut records a voice note with it. */
+  voiceNotes: boolean;
 };
 
 export type RulerAction =

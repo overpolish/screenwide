@@ -158,6 +158,7 @@ export function TimelineHeader({
           viewport={viewport}
         />
         <TimelineMomentPins
+          artifactId={blade.edit.artifactId}
           durationMs={durationMs}
           moments={moments}
           onSeek={onSeek}

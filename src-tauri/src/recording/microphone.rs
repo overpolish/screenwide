@@ -33,8 +33,12 @@ pub struct Source {
 
 impl Source {
   pub fn resolve(device_id: &str) -> Result<Self, String> {
-    let (device, config, sample_format) =
-      crate::recording_inputs::resolve_microphone(Some(device_id))?;
+    Self::resolve_or_default(Some(device_id))
+  }
+
+  /// The microphone `device_id` names, or the system's default without one.
+  pub fn resolve_or_default(device_id: Option<&str>) -> Result<Self, String> {
+    let (device, config, sample_format) = crate::recording_inputs::resolve_microphone(device_id)?;
     Ok(Self {
       config,
       device,

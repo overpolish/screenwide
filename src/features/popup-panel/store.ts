@@ -79,7 +79,23 @@ export type PopupPanelToolContent = {
   workspace: EditorKind;
 };
 
-export type PopupPanelContent = PopupPanelListContent | PopupPanelToolContent;
+/** A moment's voice note, to play, drawn from what the editor read of it.
+ * The panel fetches the sound itself. */
+export type PopupPanelNoteContent = {
+  artifactId: number;
+  /** `#rrggbb`, the moment's kind's. */
+  color: string;
+  durationMs: number;
+  kind: "note";
+  /** Which moment it is, counting from zero in the order they were placed. */
+  moment: number;
+  name: string;
+  /** Peak levels from 0 to 1. */
+  waveform: number[];
+};
+
+export type PopupPanelContent =
+  PopupPanelListContent | PopupPanelNoteContent | PopupPanelToolContent;
 
 /** The one panel window every pop-up button borrows. A caller that names no
  * panel means this one. */

@@ -99,41 +99,70 @@ fn moments_before_a_line_cut_short_by_a_crash_are_kept() {
   assert_eq!(moments[0].timestamp_us, 2_000_000);
 }
 
+fn settings(kinds: Vec<MomentKind>) -> MomentSettings {
+  MomentSettings {
+    kinds,
+    ..MomentSettings::default()
+  }
+}
+
+#[test]
+fn a_note_is_listed_with_the_moment_it_was_recorded_with() {
+  let (recorder, origin, path) = recorder("note");
+  let funny = kind("funny", None);
+  assert!(recorder.record_for_test(&funny, origin + Duration::from_secs(3)));
+  assert!(recorder.record_for_test(&funny, origin + Duration::from_secs(6)));
+  assert!(recorder.record_note(1, 2_500));
+  let kept = recorder.finish_for_test().unwrap();
+  let moments = super::read(&kept).unwrap();
+  let _ = std::fs::remove_file(path);
+  assert_eq!(moments[0].note_duration_ms, None);
+  assert_eq!(moments[1].note_duration_ms, Some(2_500));
+}
+
+#[test]
+fn a_note_reads_back_as_its_levels() {
+  let path = scratch("note-wav").with_extension("wav");
+  let samples: Vec<i16> = (0..4_800)
+    .map(|index| if index < 2_400 { 0 } else { i16::MAX })
+    .collect();
+  super::note_audio::write_wav(&path, 48_000, &samples).unwrap();
+  let levels = super::note_audio::waveform(&path, 2).unwrap();
+  let _ = std::fs::remove_file(path);
+  assert_eq!(levels, vec![0.0, 1.0]);
+}
+
 #[test]
 fn kinds_may_not_share_a_shortcut() {
-  let settings = MomentSettings {
-    kinds: vec![
-      kind("funny", Some("CommandOrControl+Shift+Digit1")),
-      kind("notable", Some("CommandOrControl+Shift+Digit1")),
-    ],
-  };
-  assert!(validate(settings).is_err());
+  assert!(validate(settings(vec![
+    kind("funny", Some("CommandOrControl+Shift+Digit1")),
+    kind("notable", Some("CommandOrControl+Shift+Digit1")),
+  ]))
+  .is_err());
 }
 
 #[test]
 fn a_kind_needs_a_name_and_an_id_of_its_own() {
   let mut unnamed = kind("funny", None);
   unnamed.name = "   ".to_owned();
-  assert!(validate(MomentSettings {
-    kinds: vec![unnamed]
-  })
-  .is_err());
-  assert!(validate(MomentSettings {
-    kinds: vec![kind("funny", None), kind("funny", None)]
-  })
-  .is_err());
+  assert!(validate(settings(vec![unnamed])).is_err());
+  assert!(validate(settings(vec![kind("funny", None), kind("funny", None)])).is_err());
 }
 
 #[test]
 fn a_blank_shortcut_is_kept_as_none() {
-  let settings = validate(MomentSettings {
-    kinds: vec![kind("funny", Some(" "))],
-  })
-  .unwrap();
+  let settings = validate(settings(vec![kind("funny", Some(" "))])).unwrap();
   assert_eq!(settings.kinds[0].shortcut, None);
 }
 
 #[test]
 fn the_default_kinds_are_valid() {
   assert!(validate(MomentSettings::default()).is_ok());
+}
+
+#[test]
+fn voice_notes_are_on_for_settings_saved_before_they_existed() {
+  let saved: MomentSettings = serde_json::from_str(r#"{"kinds":[]}"#).unwrap();
+  assert!(saved.voice_notes);
+  assert_eq!(saved.note_microphone, None);
 }

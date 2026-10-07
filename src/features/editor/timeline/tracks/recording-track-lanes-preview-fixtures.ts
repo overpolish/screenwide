@@ -104,8 +104,36 @@ export const STORY_THUMBNAILS: RecordingTimelineThumbnails = {
   })),
 };
 
+/** A moment alone, one with a voice note, and another alone. */
 export const STORY_MOMENTS: RecordingMoment[] = [
-  { color: "#ffcc00", kindId: "funny", name: "Funny", sourceMs: 18_000 },
-  { color: "#0088ff", kindId: "notable", name: "Notable", sourceMs: 47_500 },
-  { color: "#ffcc00", kindId: "funny", name: "Funny", sourceMs: 91_000 },
+  {
+    color: "#ffcc00",
+    index: 0,
+    kindId: "funny",
+    name: "Funny",
+    note: null,
+    sourceMs: 18_000,
+  },
+  {
+    color: "#0088ff",
+    index: 1,
+    kindId: "notable",
+    name: "Notable",
+    note: {
+      durationMs: 4_200,
+      waveform: Array.from(
+        { length: 160 },
+        (_, point) => Math.abs(Math.sin(point / 7)) * 0.8,
+      ),
+    },
+    sourceMs: 47_500,
+  },
+  {
+    color: "#ffcc00",
+    index: 2,
+    kindId: "funny",
+    name: "Funny",
+    note: null,
+    sourceMs: 91_000,
+  },
 ];

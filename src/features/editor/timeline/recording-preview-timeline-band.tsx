@@ -14,6 +14,7 @@ import {
   RecordingVideoTrackId,
 } from "../types";
 
+import { usePauseForMomentNotes } from "./moments/moment-note-popover";
 import { useRecordingMoments } from "./moments/use-recording-moments";
 import { RecordingPlaybackControls } from "./recording-playback-controls";
 import { ResizableRecordingTimelineArea } from "./resizable-recording-timeline-area";
@@ -83,6 +84,7 @@ export function RecordingPreviewTimelineBand({
     zoomControl: ReactNode;
   }) {
   const moments = useRecordingMoments(artifactId);
+  usePauseForMomentNotes(player.pause);
   // The Scene panel follows the scene tool, so the lane takes the tool up and
   // the panel comes with it, the only tool in hand.
   const openScenePanel = () => {

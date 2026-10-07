@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { PopupPanelSync } from "../features/popup-panel/popup-panel-sync";
 import { RecordingInputSync } from "../features/recording-inputs/recording-input-sync";
 import { SettingsWindow } from "../features/settings/settings-window";
 
@@ -8,6 +9,7 @@ import { SettingsWindow } from "../features/settings/settings-window";
 export function SettingsEntry() {
   return (
     <>
+      <PopupPanelSync />
       <RecordingInputSync />
       <SettingsWindow />
     </>

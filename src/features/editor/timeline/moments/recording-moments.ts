@@ -12,10 +12,20 @@ import {
 export type RecordingMoment = {
   /** `#rrggbb`. */
   color: string;
+  /** Which moment it is, counting from zero in the order they were placed. */
+  index: number;
   kindId: string;
   name: string;
+  /** The voice note recorded with it, if the key was held for one. */
+  note: RecordingMomentNote | null;
   /** On the recording's own timeline, before any edit. */
   sourceMs: number;
+};
+
+type RecordingMomentNote = {
+  durationMs: number;
+  /** Peak levels from 0 to 1. */
+  waveform: number[];
 };
 
 /** A moment the edit keeps, and where it lands on the cut timeline. */
@@ -29,6 +39,10 @@ export type VisibleRecordingMoment = {
 
 export const getRecordingMoments = (artifactId: number) =>
   invoke<RecordingMoment[]>("get_recording_moments", { artifactId });
+
+/** The voice note of the `moment`th moment, as WAV bytes. */
+export const getRecordingMomentNote = (artifactId: number, moment: number) =>
+  invoke<ArrayBuffer>("get_recording_moment_note", { artifactId, moment });
 
 /**
  * The moments whose part of the recording the edit keeps, in timeline order.

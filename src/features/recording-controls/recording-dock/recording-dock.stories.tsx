@@ -84,7 +84,44 @@ export const RecordingForHours: Story = {
 export const MomentPlaced: Story = {
   args: {
     elapsedMs: 42_000,
-    moment: { color: "#ffcc00", key: 1, name: "Funny" },
+    moment: {
+      color: "#ffcc00",
+      key: 1,
+      name: "Funny",
+      noMicrophone: false,
+      noteMs: null,
+    },
+    status: "recording",
+  },
+};
+
+/** The key still held past a tap: the note's own timer runs. */
+export const RecordingVoiceNote: Story = {
+  args: {
+    elapsedMs: 42_000,
+    moment: {
+      color: "#ffcc00",
+      key: 1,
+      name: "Funny",
+      noMicrophone: false,
+      noteMs: 4_200,
+    },
+    status: "recording",
+  },
+};
+
+/** Held for a note with no microphone to record it: the moment is still
+ * placed. */
+export const VoiceNoteWithoutMicrophone: Story = {
+  args: {
+    elapsedMs: 42_000,
+    moment: {
+      color: "#ffcc00",
+      key: 1,
+      name: "Funny",
+      noMicrophone: true,
+      noteMs: null,
+    },
     status: "recording",
   },
 };

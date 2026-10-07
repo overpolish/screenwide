@@ -10,6 +10,7 @@ import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 
 import { MomentColorGrid } from "./moment-color-grid";
+import { VoiceNoteSettings } from "./voice-note-settings";
 
 import type { MomentSettingsState } from "./use-moment-settings";
 import type { MomentKind } from "../types";
@@ -57,6 +58,7 @@ export function MomentsSettingsPanel({
   if (!settings) return null;
   const { kinds } = settings;
   const withChange = (id: string, changes: Partial<MomentKind>) => ({
+    ...settings,
     kinds: kinds.map((kind) =>
       kind.id === id ? { ...kind, ...changes } : kind,
     ),
@@ -66,6 +68,13 @@ export function MomentsSettingsPanel({
   };
   return (
     <div className="gap-layout flex flex-col">
+      <VoiceNoteSettings
+        isSaving={isSaving}
+        onChange={(next) => {
+          void save(next);
+        }}
+        settings={settings}
+      />
       {kinds.map((kind) => (
         <GroupBox key={kind.id} title={kind.name}>
           <ControlRow title="Name">
@@ -114,6 +123,7 @@ export function MomentsSettingsPanel({
               isDisabled={isSaving}
               onPress={() => {
                 void save({
+                  ...settings,
                   kinds: kinds.filter((other) => other.id !== kind.id),
                 });
               }}

@@ -8,8 +8,9 @@ pub(crate) mod cursor;
 mod desktop_canvas;
 mod encoding;
 pub(crate) mod keyboard;
-mod microphone;
+pub(crate) mod microphone;
 mod monitor;
+pub(crate) mod note_gate;
 #[cfg(target_os = "macos")]
 mod platform;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]

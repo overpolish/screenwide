@@ -4,6 +4,7 @@
 #[cfg(test)]
 mod tests;
 
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 use cpal::{
@@ -32,10 +33,13 @@ pub enum AudioPreviewEvent {
   Error { message: String },
 }
 
+/// The previews running, by the window each was started for. The recording
+/// bar and Settings can each show the same microphone's level at once, so
+/// one window starting or stopping its preview leaves the other's alone.
 #[derive(Default)]
 struct AudioPreviewManager {
-  microphone: Option<Stream>,
-  system: Option<SystemAudioPreview>,
+  microphone: HashMap<String, Stream>,
+  system: HashMap<String, SystemAudioPreview>,
 }
 
 enum SystemAudioPreview {
@@ -53,21 +57,21 @@ enum SystemAudioPreview {
 }
 
 impl AudioPreviewManager {
-  fn replace_microphone(&mut self, stream: Stream) {
-    self.microphone = Some(stream);
+  fn replace_microphone(&mut self, window: String, stream: Stream) {
+    self.microphone.insert(window, stream);
   }
 
-  fn replace_system(&mut self, stream: SystemAudioPreview) {
-    self.system = Some(stream);
+  fn replace_system(&mut self, window: String, stream: SystemAudioPreview) {
+    self.system.insert(window, stream);
   }
 
-  fn stop(&mut self, kind: AudioPreviewKind) {
+  fn stop(&mut self, window: &str, kind: AudioPreviewKind) {
     match kind {
       AudioPreviewKind::Microphone => {
-        self.microphone.take();
+        self.microphone.remove(window);
       }
       AudioPreviewKind::System => {
-        self.system.take();
+        self.system.remove(window);
       }
     }
   }
@@ -183,6 +187,7 @@ fn build_stream(
 
 #[tauri::command]
 pub async fn start_audio_preview(
+  window: tauri::WebviewWindow,
   state: tauri::State<'_, AudioPreviewState>,
   kind: AudioPreviewKind,
   device_id: Option<String>,
@@ -190,6 +195,7 @@ pub async fn start_audio_preview(
   process_ids: Option<Vec<u32>>,
   channel: Channel<AudioPreviewEvent>,
 ) -> Result<(), String> {
+  let owner = window.label().to_owned();
   // Process loopback is a WASAPI concept, so no other platform reads these.
   #[cfg(not(target_os = "windows"))]
   let _ = &process_ids;
@@ -203,7 +209,7 @@ pub async fn start_audio_preview(
         .0
         .lock()
         .map_err(|_| "Audio preview state is unavailable".to_owned())?
-        .replace_microphone(stream);
+        .replace_microphone(owner, stream);
     }
     AudioPreviewKind::System => {
       let application_ids = application_ids.unwrap_or_default();
@@ -246,7 +252,7 @@ pub async fn start_audio_preview(
         .0
         .lock()
         .map_err(|_| "Audio preview state is unavailable".to_owned())?
-        .replace_system(stream);
+        .replace_system(owner, stream);
     }
   }
   Ok(())
@@ -254,6 +260,7 @@ pub async fn start_audio_preview(
 
 #[tauri::command]
 pub fn stop_audio_preview(
+  window: tauri::WebviewWindow,
   state: tauri::State<'_, AudioPreviewState>,
   kind: AudioPreviewKind,
 ) -> Result<(), String> {
@@ -261,6 +268,6 @@ pub fn stop_audio_preview(
     .0
     .lock()
     .map_err(|_| "Audio preview state is unavailable".to_owned())?
-    .stop(kind);
+    .stop(window.label(), kind);
   Ok(())
 }

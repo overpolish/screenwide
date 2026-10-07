@@ -228,19 +228,31 @@ fn start_microphone(
 ) -> Result<MicrophoneCapture, String> {
   let source = microphone::Source::resolve(device_id)?;
   let format = source.format();
+  // A recording holds voice notes out of its microphone; the replay
+  // buffer's microphone is left as it is.
+  let holds_notes = matches!(destination, AudioDestination::Sidecars(_));
   let keep = destination.keep("microphone", 0, format.channels, format.sample_rate);
   let sink = RawSink::start(keep, format.sample_rate, format.channels, origin)?;
   let sender = sink.sender()?;
-  let callback_monitor = Arc::clone(&monitor);
-  let stream = source.start(
-    Arc::new(move |buffer| {
-      callback_monitor.send_microphone(&buffer.samples);
+  let write: Arc<dyn Fn(microphone::Buffer) + Send + Sync> =
+    Arc::new(move |buffer: microphone::Buffer| {
       if !paused.load(Ordering::Acquire) {
         let _ = sender.try_send(Packet {
           captured_at: buffer.captured_at,
           samples: buffer.samples,
         });
       }
+    });
+  let write = if holds_notes {
+    crate::recording::note_gate::gated(format.channels, format.sample_rate, write)
+  } else {
+    write
+  };
+  let callback_monitor = Arc::clone(&monitor);
+  let stream = source.start(
+    Arc::new(move |buffer| {
+      callback_monitor.send_microphone(&buffer.samples);
+      write(buffer);
     }),
     on_failure,
   )?;

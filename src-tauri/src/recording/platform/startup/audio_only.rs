@@ -27,6 +27,7 @@ pub(super) async fn begin(
   let microphone_format = microphone_source.as_ref().map(MicrophoneSource::format);
   let stats = Arc::new(CaptureStats::default());
   let timeline_origin = Arc::new(OnceLock::new());
+  let holds_notes = matches!(sink, Sink::Movie);
   let (commands, first_framed, worker) = match sink {
     Sink::Movie => {
       let (commands, inbox) = mpsc::sync_channel(FRAME_QUEUE_DEPTH);
@@ -96,7 +97,8 @@ pub(super) async fn begin(
     &watch,
     false,
   )?;
-  let microphone = microphone_stream::start(microphone_source, &commands, &monitor, &stats)?;
+  let microphone =
+    microphone_stream::start(microphone_source, holds_notes, &commands, &monitor, &stats)?;
   system_audio_streams.start().await?;
   let begin_at = Instant::now();
   let _ = timeline_origin.set(begin_at);

@@ -5,6 +5,13 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 import {
+  getPermissionSnapshot,
+  openPermissionSettings,
+  requestPermission,
+} from "../permissions/api";
+import { listMicrophones } from "../recording-inputs/devices-api";
+
+import {
   AnnotateSettings,
   GeneralSettings,
   GlideSettings,
@@ -80,6 +87,17 @@ export const getMomentSettings = () =>
 
 export const setMomentSettings = (settings: MomentSettings) =>
   invoke<MomentSettings>("set_moment_settings", { settings });
+
+/** Whether the app may use a microphone, as voice notes need. */
+export const getMicrophoneAccess = () =>
+  getPermissionSnapshot().then((snapshot) => snapshot.microphone);
+
+export const requestMicrophoneAccess = () => requestPermission("microphone");
+
+export const openMicrophoneSettings = () =>
+  openPermissionSettings("microphone");
+
+export { listMicrophones };
 
 export const browseDefaultLocation = (
   kind: "project" | "recording" | "screenshot",

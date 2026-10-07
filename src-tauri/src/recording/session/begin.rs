@@ -81,6 +81,7 @@ pub(in crate::recording) fn begin_capture(
       cursor_source,
       keyboard_path: keyboard_path.clone(),
       moments_path: moments_path.clone(),
+      microphone_id: options.microphone_id.clone(),
       include_own_windows,
       records_annotations: records_cursor(options.mode),
     },

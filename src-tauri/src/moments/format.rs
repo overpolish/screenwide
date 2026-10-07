@@ -34,6 +34,19 @@ pub(super) enum MomentRecord {
     name: String,
     timestamp_us: u64,
   },
+  /// The voice note recorded with the `moment`th moment, counting from
+  /// zero, at `notes/<moment>.wav` beside this file. Written once the note
+  /// is, so a record always has its file.
+  Note {
+    duration_ms: u64,
+    moment: usize,
+  },
+}
+
+/// Where the voice note of the `moment`th moment is, beside the moments file
+/// in `folder`.
+pub(crate) fn note_path(folder: &Path, moment: usize) -> std::path::PathBuf {
+  folder.join("notes").join(format!("{moment}.wav"))
 }
 
 pub(super) fn header() -> MomentRecord {
@@ -55,6 +68,8 @@ pub(crate) struct RecordedMoment {
   pub kind_id: String,
   pub name: String,
   pub timestamp_us: u64,
+  /// How long the moment's voice note is, if it has one.
+  pub note_duration_ms: Option<u64>,
 }
 
 /// Every complete moment in the sidecar at `path`, in the order they were
@@ -84,19 +99,28 @@ pub(crate) fn read(path: &Path) -> Result<Vec<RecordedMoment>, String> {
     let Ok(record) = serde_json::from_str::<MomentRecord>(&line) else {
       break;
     };
-    if let MomentRecord::Moment {
-      color,
-      kind_id,
-      name,
-      timestamp_us,
-    } = record
-    {
-      moments.push(RecordedMoment {
+    match record {
+      MomentRecord::Moment {
         color,
         kind_id,
         name,
         timestamp_us,
-      });
+      } => moments.push(RecordedMoment {
+        color,
+        kind_id,
+        name,
+        note_duration_ms: None,
+        timestamp_us,
+      }),
+      MomentRecord::Note {
+        duration_ms,
+        moment,
+      } => {
+        if let Some(recorded) = moments.get_mut(moment) {
+          recorded.note_duration_ms = Some(duration_ms);
+        }
+      }
+      MomentRecord::Header { .. } => {}
     }
   }
   Ok(moments)

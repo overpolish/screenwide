@@ -94,6 +94,7 @@ pub fn run() {
       editor::preview::estimate_recording_export,
       editor::preview::get_editor_snapshot,
       editor::recording_moments::get_recording_moments,
+      editor::recording_moments::get_recording_moment_note,
       editor::recording_preview::get_recording_preview,
       editor::recording_preview::get_recording_keyboard_timeline,
       editor::recording_preview_player::commands::pause_recording_preview,

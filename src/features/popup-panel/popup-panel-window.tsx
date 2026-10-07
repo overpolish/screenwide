@@ -3,6 +3,8 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { MomentNotePanel } from "../editor/timeline/moments/moment-note-panel";
+
 import { PopupPanelList } from "./popup-panel-list";
 import { PopupPanelTool } from "./popup-panel-tool";
 import {
@@ -45,6 +47,10 @@ export function PopupPanelWindow() {
 
   if (active.content.kind === "tool") {
     return <PopupPanelTool content={active.content} />;
+  }
+
+  if (active.content.kind === "note") {
+    return <MomentNotePanel content={active.content} />;
   }
 
   return (

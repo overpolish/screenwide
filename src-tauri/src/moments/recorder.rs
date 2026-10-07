@@ -3,11 +3,11 @@
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
-use super::format::{header, placed_at_us, MomentRecord};
+use super::format::{header, note_path, placed_at_us, MomentRecord};
 use super::settings::MomentKind;
 use crate::recording::clock::SidecarClock;
 
@@ -22,8 +22,15 @@ fn active() -> MutexGuard<'static, Option<Arc<MomentRecorder>>> {
     .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
+/// The recorder kind shortcuts write to now, if a recording is running.
+pub(super) fn current() -> Option<Arc<MomentRecorder>> {
+  active().clone()
+}
+
 pub(crate) struct MomentRecorder {
   path: PathBuf,
+  /// The recording's own microphone, which a voice note may share.
+  microphone_id: Option<String>,
   stream: Mutex<Stream>,
 }
 
@@ -31,29 +38,39 @@ struct Stream {
   clock: SidecarClock,
   count: usize,
   failure: Option<String>,
-  writer: BufWriter<File>,
+  writer: Option<BufWriter<File>>,
 }
 
 impl MomentRecorder {
   /// Opens the sidecar at `path` on the recording clock `origin`, and makes
-  /// it the one kind shortcuts write to.
-  pub(crate) fn start(path: PathBuf, origin: Arc<OnceLock<Instant>>) -> Result<Arc<Self>, String> {
-    let recorder = Arc::new(Self::open(path, origin)?);
+  /// it the one kind shortcuts write to. `microphone_id` is the recording's
+  /// microphone, if it has one.
+  pub(crate) fn start(
+    path: PathBuf,
+    origin: Arc<OnceLock<Instant>>,
+    microphone_id: Option<String>,
+  ) -> Result<Arc<Self>, String> {
+    let recorder = Arc::new(Self::open(path, origin, microphone_id)?);
     *active() = Some(Arc::clone(&recorder));
     Ok(recorder)
   }
 
-  fn open(path: PathBuf, origin: Arc<OnceLock<Instant>>) -> Result<Self, String> {
+  fn open(
+    path: PathBuf,
+    origin: Arc<OnceLock<Instant>>,
+    microphone_id: Option<String>,
+  ) -> Result<Self, String> {
     let file = File::create(&path).map_err(|error| error.to_string())?;
     let mut writer = BufWriter::new(file);
     write_line(&mut writer, &header())?;
     Ok(Self {
+      microphone_id,
       path,
       stream: Mutex::new(Stream {
         clock: SidecarClock::new(origin),
         count: 0,
         failure: None,
-        writer,
+        writer: Some(writer),
       }),
     })
   }
@@ -65,6 +82,15 @@ impl MomentRecorder {
       .unwrap_or_else(|poisoned| poisoned.into_inner())
   }
 
+  pub(super) fn microphone_id(&self) -> Option<&str> {
+    self.microphone_id.as_deref()
+  }
+
+  /// Where the voice note of the `moment`th moment goes.
+  pub(super) fn note_path(&self, moment: usize) -> PathBuf {
+    note_path(self.path.parent().unwrap_or(Path::new("")), moment)
+  }
+
   pub(crate) fn pause(&self, at: Instant) {
     self.stream().clock.pause(at);
   }
@@ -73,36 +99,31 @@ impl MomentRecorder {
     self.stream().clock.resume(at);
   }
 
-  /// Writes a moment of `kind` for a press at `at`. Nothing is written
-  /// before the first frame or while paused, since neither has a place on
-  /// the recording's timeline.
-  fn record(&self, kind: &MomentKind, at: Instant) -> bool {
+  /// Writes a moment of `kind` for a press at `at`, and says which moment it
+  /// is, counting from zero. Nothing is written before the first frame or
+  /// while paused, since neither has a place on the recording's timeline.
+  pub(super) fn record(&self, kind: &MomentKind, at: Instant) -> Option<usize> {
     let mut stream = self.stream();
-    if stream.failure.is_some() {
-      return false;
-    }
-    let Some(pressed_us) = stream.clock.timestamp_us(at) else {
-      return false;
-    };
+    let pressed_us = stream.clock.timestamp_us(at)?;
     let record = MomentRecord::Moment {
       color: kind.color.clone(),
       kind_id: kind.id.clone(),
       name: kind.name.clone(),
       timestamp_us: placed_at_us(pressed_us),
     };
-    // Flushed with every moment: there are few, and each has to survive the
-    // app dying before the recording stops.
-    match write_line(&mut stream.writer, &record) {
-      Ok(()) => {
-        stream.count += 1;
-        true
-      }
-      Err(error) => {
-        eprintln!("Moments stopped writing: {error}");
-        stream.failure = Some(error);
-        false
-      }
-    }
+    stream.write(&record).then(|| {
+      stream.count += 1;
+      stream.count - 1
+    })
+  }
+
+  /// Notes that the `moment`th moment's voice note is written, at
+  /// `duration_ms` long. Too late once the recording has stopped.
+  pub(super) fn record_note(&self, moment: usize, duration_ms: u64) -> bool {
+    self.stream().write(&MomentRecord::Note {
+      duration_ms,
+      moment,
+    })
   }
 
   /// Closes the sidecar and returns it, or nothing if no moment was kept: a
@@ -111,7 +132,10 @@ impl MomentRecorder {
     self.retire();
     let mut stream = self.stream();
     stream.clock.stop();
-    let flushed = stream.writer.flush();
+    let flushed = stream
+      .writer
+      .take()
+      .map_or(Ok(()), |mut writer| writer.flush());
     if stream.count == 0 {
       let _ = std::fs::remove_file(&self.path);
       return None;
@@ -124,7 +148,9 @@ impl MomentRecorder {
 
   pub(crate) fn cancel(self: Arc<Self>) {
     self.retire();
-    self.stream().clock.stop();
+    let mut stream = self.stream();
+    stream.clock.stop();
+    stream.writer = None;
     let _ = std::fs::remove_file(&self.path);
   }
 
@@ -140,11 +166,25 @@ impl MomentRecorder {
   }
 }
 
-/// Writes a moment of `kind` into the running recording, if there is one
-/// that can place it. Whether one was written.
-pub(super) fn record(kind: &MomentKind, at: Instant) -> bool {
-  let recorder = active().clone();
-  recorder.is_some_and(|recorder| recorder.record(kind, at))
+impl Stream {
+  /// Writes `record` at once: there are few, and each has to survive the app
+  /// dying before the recording stops. Whether it was written.
+  fn write(&mut self, record: &MomentRecord) -> bool {
+    if self.failure.is_some() {
+      return false;
+    }
+    let Some(writer) = self.writer.as_mut() else {
+      return false;
+    };
+    match write_line(writer, record) {
+      Ok(()) => true,
+      Err(error) => {
+        eprintln!("Moments stopped writing: {error}");
+        self.failure = Some(error);
+        false
+      }
+    }
+  }
 }
 
 fn write_line(writer: &mut BufWriter<File>, record: &MomentRecord) -> Result<(), String> {
@@ -157,11 +197,11 @@ fn write_line(writer: &mut BufWriter<File>, record: &MomentRecord) -> Result<(),
 impl MomentRecorder {
   /// A recorder that is not published to the kind shortcuts.
   pub(super) fn detached(path: PathBuf, origin: Arc<OnceLock<Instant>>) -> Self {
-    Self::open(path, origin).expect("open moments sidecar")
+    Self::open(path, origin, None).expect("open moments sidecar")
   }
 
   pub(super) fn record_for_test(&self, kind: &MomentKind, at: Instant) -> bool {
-    self.record(kind, at)
+    self.record(kind, at).is_some()
   }
 
   pub(super) fn finish_for_test(self) -> Option<PathBuf> {

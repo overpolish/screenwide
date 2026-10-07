@@ -13,8 +13,10 @@ import {
 
 const moment = (sourceMs: number): RecordingMoment => ({
   color: "#ffcc00",
+  index: 0,
   kindId: "funny",
   name: "Funny",
+  note: null,
   sourceMs,
 });
 

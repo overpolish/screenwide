@@ -4,7 +4,7 @@
 //! The kinds' shortcuts, claimed only while a recording runs so their keys
 //! belong to other apps the rest of the time.
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 use std::time::Instant;
 
@@ -13,21 +13,24 @@ use tauri::{AppHandle, Emitter};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 use super::settings;
+use super::voice::{self, Voice};
 
 const PLACED_EVENT: &str = "moments://placed";
+const RELEASED_EVENT: &str = "moments://released";
 
 /// The shortcuts claimed for kinds now, so they can be given back.
 static REGISTERED: Mutex<Vec<Shortcut>> = Mutex::new(Vec::new());
 
-/// Kinds whose shortcut is held down. A held key may repeat its press, and
-/// one hold is one moment.
-static HELD: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
+/// Kinds whose shortcut is held down, and whether the hold is listening for
+/// a note. A held key may repeat its press, and one hold is one moment.
+static HELD: LazyLock<Mutex<HashMap<String, bool>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PlacedPayload {
   color: String,
   name: String,
+  voice: Voice,
 }
 
 /// Claims the kinds' shortcuts while a recording runs and gives them back
@@ -51,10 +54,15 @@ fn reconcile(app: &AppHandle) {
   for shortcut in registered.drain(..) {
     let _ = app.global_shortcut().unregister(shortcut);
   }
-  HELD
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-    .clear();
+  // A key held through this change will never report its release, so its
+  // hold ends here, and the note it was listening for with it.
+  let held = std::mem::take(&mut *HELD.lock().unwrap_or_else(|poisoned| poisoned.into_inner()));
+  if held.values().any(|listening| *listening) {
+    voice::end(Instant::now());
+  }
+  if !held.is_empty() {
+    let _ = app.emit(RELEASED_EVENT, ());
+  }
   let hidden = if crate::recording::is_recording(app) && !crate::shortcuts::is_capturing() {
     register_kinds(app, &mut registered)
   } else {
@@ -100,23 +108,36 @@ fn on_shortcut(app: &AppHandle, kind_id: &str, state: ShortcutState) {
   let at = Instant::now();
   let mut held = HELD.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
   if state == ShortcutState::Released {
-    held.remove(kind_id);
+    if let Some(listening) = held.remove(kind_id) {
+      drop(held);
+      if listening {
+        voice::end(at);
+      }
+      let _ = app.emit(RELEASED_EVENT, ());
+    }
     return;
   }
-  if !held.insert(kind_id.to_owned()) {
+  if held.contains_key(kind_id) {
     return;
   }
-  drop(held);
   let Some(kind) = settings::kind(kind_id) else {
     return;
   };
-  if super::recorder::record(&kind, at) {
-    let _ = app.emit(
-      PLACED_EVENT,
-      PlacedPayload {
-        color: kind.color,
-        name: kind.name,
-      },
-    );
-  }
+  let Some(recorder) = super::recorder::current() else {
+    return;
+  };
+  let Some(moment) = recorder.record(&kind, at) else {
+    return;
+  };
+  let voice = voice::begin(app, recorder, moment, at);
+  held.insert(kind_id.to_owned(), matches!(voice, Voice::Recording));
+  drop(held);
+  let _ = app.emit(
+    PLACED_EVENT,
+    PlacedPayload {
+      color: kind.color,
+      name: kind.name,
+      voice,
+    },
+  );
 }

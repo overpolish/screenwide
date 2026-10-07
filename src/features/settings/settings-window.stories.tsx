@@ -6,6 +6,7 @@ import { type ContextType, useState } from "react";
 import { FeatureStoryStage } from "../../storybook/feature-story-stage";
 
 import { SettingsApiContext } from "./settings-api-context";
+import { momentsPreviewApi } from "./settings-moments-preview";
 import { SoftwareUpdateSetting } from "./settings-update-actions";
 import { SettingsWindow } from "./settings-window";
 
@@ -13,7 +14,6 @@ import type {
   AnnotateSettings,
   GeneralSettings,
   GlideSettings,
-  MomentSettings,
   RulerSettings,
   OcrSettings,
   ShortcutDefaults,
@@ -124,26 +124,8 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
       bindings: shortcuts.bindings.map((binding) => ({ ...binding })),
     },
   };
-  let moments: MomentSettings = {
-    kinds: [
-      {
-        color: "#ffcc00",
-        customColor: null,
-        id: "funny",
-        name: "Funny",
-        shortcut: "CommandOrControl+Shift+Digit1",
-      },
-      {
-        color: "#0088ff",
-        // Chosen once, then left for a palette colour: the square keeps it.
-        customColor: "#2ec4b6",
-        id: "notable",
-        name: "Notable",
-        shortcut: "CommandOrControl+Shift+Digit2",
-      },
-    ],
-  };
   return {
+    ...momentsPreviewApi(),
     beginShortcutCapture: () => Promise.resolve(null),
     browseDefaultLocation: (kind) =>
       Promise.resolve(
@@ -157,7 +139,6 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     getAnnotateSettings: () => Promise.resolve(annotate),
     getGeneralSettings: () => Promise.resolve(general),
     getGlideSettings: () => Promise.resolve(glide),
-    getMomentSettings: () => Promise.resolve(moments),
     getOcrSettings: () => Promise.resolve(ocr),
     getRulerSettings: () => Promise.resolve(ruler),
     getShortcutDefaults: () => Promise.resolve(defaults),
@@ -175,10 +156,6 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     },
     setGlideSettings: (next) => {
       glide = next;
-      return Promise.resolve(next);
-    },
-    setMomentSettings: (next) => {
-      moments = next;
       return Promise.resolve(next);
     },
     setOcrSettings: (next) => {

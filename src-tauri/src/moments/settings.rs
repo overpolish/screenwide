@@ -30,6 +30,17 @@ pub struct MomentKind {
 #[serde(rename_all = "camelCase")]
 pub struct MomentSettings {
   pub kinds: Vec<MomentKind>,
+  /// Whether holding a kind's shortcut records a voice note with it.
+  #[serde(default = "voice_notes_default")]
+  pub voice_notes: bool,
+  /// The microphone notes are recorded from, by device id. Nothing means
+  /// the recording's own, or the system's default when it has none.
+  #[serde(default)]
+  pub note_microphone: Option<String>,
+}
+
+const fn voice_notes_default() -> bool {
+  true
 }
 
 impl Default for MomentSettings {
@@ -46,6 +57,8 @@ impl Default for MomentSettings {
         kind("funny", "Funny", "#ffcc00", 1),
         kind("notable", "Notable", "#0088ff", 2),
       ],
+      note_microphone: None,
+      voice_notes: true,
     }
   }
 }

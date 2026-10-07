@@ -59,6 +59,7 @@ export function useMomentSettings(onError: (error: string | null) => void) {
   const addKind = useCallback(() => {
     if (!settings) return;
     void save({
+      ...settings,
       kinds: [
         ...settings.kinds,
         {

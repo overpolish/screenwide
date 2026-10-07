@@ -25,6 +25,8 @@ pub(super) struct SidecarPlan {
   pub keyboard_path: Option<PathBuf>,
   /// Every recording can hold moments, so this is never left out.
   pub moments_path: PathBuf,
+  /// The recording's microphone, which a voice note may be taken from.
+  pub microphone_id: Option<String>,
   /// Whether the recording shows Screenwide's own windows, so that presses
   /// on them belong in the cursor sidecar.
   pub include_own_windows: bool,
@@ -55,6 +57,7 @@ impl RecordingSidecars {
       cursor_source,
       keyboard_path,
       moments_path,
+      microphone_id,
       include_own_windows,
       records_annotations,
     } = plan;
@@ -83,7 +86,7 @@ impl RecordingSidecars {
       },
       None => None,
     };
-    let moments = match MomentRecorder::start(moments_path, origin.clone()) {
+    let moments = match MomentRecorder::start(moments_path, origin.clone(), microphone_id) {
       Ok(moments) => moments,
       Err(error) => {
         if let Some(cursor) = cursor {

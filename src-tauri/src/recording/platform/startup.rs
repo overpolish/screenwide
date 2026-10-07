@@ -102,6 +102,7 @@ pub(super) async fn begin(
   };
   // The primary's keyframes, for a camera writer beside it to follow.
   let keyframes = super::replay::KeyframeLink::new();
+  let holds_notes = matches!(sink, Sink::Movie);
   let WriterThread {
     commands,
     first_frame,
@@ -221,7 +222,8 @@ pub(super) async fn begin(
     _ => None,
   };
 
-  let microphone = microphone_stream::start(microphone_source, &commands, &monitor, &stats)?;
+  let microphone =
+    microphone_stream::start(microphone_source, holds_notes, &commands, &monitor, &stats)?;
 
   system_audio_streams.start().await?;
   if let Some(video) = &video_stream {
