@@ -36,7 +36,16 @@ if (!target) {
 }
 
 const crate = resolve("src-tauri", "transcriber");
-const targetDirectory = resolve("src-tauri", "target", "transcriber");
+// whisper.cpp builds through MSBuild on Windows, which fails once its
+// try-compile paths pass MAX_PATH. A short directory, and no triple directory
+// when building for the host, keeps those paths well inside the limit.
+const targetDirectory = resolve("src-tauri", "target", "stt");
+// Node's own architecture can differ from Rust's host under emulation, so
+// ask rustc.
+const rustHost = execFileSync("rustc", ["-vV"], { encoding: "utf8" }).match(
+  /^host: (\S+)$/m,
+)?.[1];
+const crossCompiling = target !== rustHost;
 execFileSync(
   "cargo",
   [
@@ -44,8 +53,7 @@ execFileSync(
     "--release",
     "--features",
     "engine",
-    "--target",
-    target,
+    ...(crossCompiling ? ["--target", target] : []),
     "--target-dir",
     targetDirectory,
   ],
@@ -55,7 +63,7 @@ execFileSync(
 const extension = requestedPlatform === "win32" ? ".exe" : "";
 const built = resolve(
   targetDirectory,
-  target,
+  ...(crossCompiling ? [target] : []),
   "release",
   `screenwide-transcriber${extension}`,
 );
