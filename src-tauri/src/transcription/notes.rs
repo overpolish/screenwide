@@ -10,6 +10,7 @@ use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
+use screenwide_transcriber::SAMPLE_RATE;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
@@ -200,6 +201,12 @@ fn transcribe(
   }
   let folder = job.moments.parent().unwrap_or(Path::new(""));
   let samples = decode(&crate::moments::note_path(folder, job.moment))?;
+  // Whisper fills silence with stock phrases such as "Thank you.", so a note
+  // with no sound in it gets an empty transcript, which reads as no speech,
+  // without starting the transcriber.
+  if crate::silence::is_silent(&samples.read()?, SAMPLE_RATE) {
+    return crate::moments::add_transcript(&job.moments, job.moment, "");
+  }
   let running = match transcriber {
     Some(running) => running,
     None => transcriber.insert(Transcriber::start()?),

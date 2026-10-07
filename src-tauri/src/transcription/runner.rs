@@ -91,6 +91,22 @@ impl Drop for Samples {
   }
 }
 
+impl Samples {
+  /// The samples themselves, to look at before they are transcribed.
+  pub(super) fn read(&self) -> Result<Vec<f32>, String> {
+    let bytes = std::fs::read(&self.0)
+      .map_err(|error| format!("Could not read the audio to transcribe: {error}"))?;
+    Ok(
+      bytes
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|bytes| f32::from_le_bytes(*bytes))
+        .collect(),
+    )
+  }
+}
+
 /// `source` converted by FFmpeg into what the transcriber reads: mono 32-bit
 /// float samples at its rate, in little-endian order, which is the native
 /// one on every computer Screenwide runs on.

@@ -39,6 +39,7 @@ mod ruler;
 mod screenshots;
 mod settings;
 mod shortcuts;
+mod silence;
 mod startup;
 #[cfg(debug_assertions)]
 mod storybook_native;

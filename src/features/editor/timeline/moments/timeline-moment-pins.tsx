@@ -19,8 +19,10 @@ const TOOLTIP_TRANSCRIPT_CHARS = 60;
  * once that is known. */
 const pinLabel = (moment: RecordingMoment, at: string) => {
   const transcript = moment.note?.transcript;
-  if (transcript?.status === "ready") {
-    const text = transcript.text.trim();
+  // An empty transcript is a note with no speech, which the tooltip
+  // describes as it does an untranscribed one.
+  const text = transcript?.status === "ready" ? transcript.text.trim() : "";
+  if (text) {
     const shown =
       text.length > TOOLTIP_TRANSCRIPT_CHARS
         ? `${text.slice(0, TOOLTIP_TRANSCRIPT_CHARS).trimEnd()}…`
