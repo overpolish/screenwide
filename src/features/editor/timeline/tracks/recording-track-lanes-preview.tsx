@@ -32,6 +32,7 @@ import {
   STORY_FRAMES_PER_SECOND,
   STORY_KEYBOARD_ITEMS,
   STORY_LAYOUT,
+  STORY_MOMENTS,
   STORY_SCENE_CLIPS,
   STORY_THUMBNAILS,
 } from "./recording-track-lanes-preview-fixtures";
@@ -266,6 +267,7 @@ export function RecordingTrackLanesPreview({
           },
         }}
         layout={STORY_LAYOUT}
+        moments={STORY_MOMENTS}
         onAnnotationsChange={setAnnotationClips}
         onAnnotationsClear={annotationSelection.onClearSelection}
         onAnnotationSelect={annotationSelection.onSelect}

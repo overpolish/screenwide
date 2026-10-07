@@ -115,8 +115,9 @@ export function timelineSnapRangeShift(
 /**
  * Every source position a drag may snap to: the edges of the other
  * annotations, of the shortcut badges the lane shows, of the retained
- * segments, and the playhead. Positions in cut-away source still count: an
- * annotation there maps onto the cut it sits in, and a trim may reach it.
+ * segments, the moments the edit keeps, and the playhead. Positions in
+ * cut-away source still count: an annotation there maps onto the cut it sits
+ * in, and a trim may reach it.
  */
 export function timelineSnapTargets({
   annotationClips,
@@ -125,6 +126,7 @@ export function timelineSnapTargets({
   hiddenKeyboardFragmentIds,
   hiddenKeyboardItemIds,
   keyboardItems,
+  momentSources = [],
   playheadOutput,
   sourceDurationMs,
 }: {
@@ -136,6 +138,8 @@ export function timelineSnapTargets({
   playheadOutput: number;
   sourceDurationMs: number;
   excludeAnnotationIds?: ReadonlySet<string>;
+  /** Where the visible moments are, 0 to 1 along the recording. */
+  momentSources?: readonly number[];
 }): number[] {
   if (sourceDurationMs <= 0) return [];
   const targets: number[] = [];
@@ -162,6 +166,7 @@ export function timelineSnapTargets({
         recordingTimelineOutputToSource(edit, fragment.outputStart),
         recordingTimelineOutputToSource(edit, fragment.outputEnd),
       );
+  targets.push(...momentSources);
   targets.push(recordingTimelineOutputToSource(edit, playheadOutput));
   return targets;
 }

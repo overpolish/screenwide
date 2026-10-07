@@ -197,7 +197,8 @@ pub(super) fn finalize_capture(
     source_scale_factor,
   } = handles;
 
-  let stopped_sidecars = sidecars.stop(stopped_at);
+  let mut stopped_sidecars = sidecars.stop(stopped_at);
+  let moments = stopped_sidecars.moments.take();
   let finished = session.stop_at(stopped_at).and_then(|mut info| {
     info.cursor_path = stopped_sidecars.cursor?;
     info.keyboard_path = stopped_sidecars.keyboard?;
@@ -211,6 +212,7 @@ pub(super) fn finalize_capture(
   if let Err(error) = write_manifest(
     &project.file,
     &info,
+    moments.as_deref(),
     crate::project::RecordingOrigin::Capture,
   ) {
     eprintln!("Could not update the project's manifest: {error}");
@@ -218,11 +220,12 @@ pub(super) fn finalize_capture(
   Ok((info, project.file))
 }
 
-/// Describes the finished recording `info`, made as `origin` says, in the
-/// manifest at `file`.
+/// Describes the finished recording `info`, with the moments placed in it and
+/// made as `origin` says, in the manifest at `file`.
 pub(super) fn write_manifest(
   file: &Path,
   info: &FinalizeInfo,
+  moments: Option<&Path>,
   origin: crate::project::RecordingOrigin,
 ) -> Result<(), String> {
   let media = crate::project::RecordingMedia::relative_to(
@@ -231,6 +234,7 @@ pub(super) fn write_manifest(
     info.camera.as_ref().map(|camera| camera.path.as_path()),
     info.cursor_path.as_deref(),
     info.keyboard_path.as_deref(),
+    moments,
   )?;
   crate::project::write(
     file,

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Lifecycle coordination for the optional cursor, keyboard and live
-//! annotation sidecars.
+//! Lifecycle coordination for the cursor, keyboard and live annotation
+//! sidecars, which a recording may go without, and its moments.
 
 use std::{
   path::PathBuf,
@@ -16,12 +16,15 @@ use super::super::{
 };
 use crate::annotate::live_clips::AnnotationRecorder;
 use crate::editor::annotations::timing::RecordingAnnotationClip;
+use crate::moments::MomentRecorder;
 
 /// Which sidecars a starting recording asks for.
 pub(super) struct SidecarPlan {
   pub cursor_path: Option<PathBuf>,
   pub cursor_source: Option<CursorSource>,
   pub keyboard_path: Option<PathBuf>,
+  /// Every recording can hold moments, so this is never left out.
+  pub moments_path: PathBuf,
   /// Whether the recording shows Screenwide's own windows, so that presses
   /// on them belong in the cursor sidecar.
   pub include_own_windows: bool,
@@ -34,12 +37,15 @@ pub(super) struct RecordingSidecars {
   pub annotations: Option<AnnotationRecorder>,
   pub cursor: Option<CursorRecorder>,
   pub keyboard: Option<KeyboardRecorder>,
+  pub moments: Arc<MomentRecorder>,
 }
 
 pub(super) struct StoppedSidecars {
   pub annotation_clips: Vec<RecordingAnnotationClip>,
   pub cursor: Result<Option<PathBuf>, String>,
   pub keyboard: Result<Option<PathBuf>, String>,
+  /// Nothing when no moment was placed.
+  pub moments: Option<PathBuf>,
 }
 
 impl RecordingSidecars {
@@ -48,6 +54,7 @@ impl RecordingSidecars {
       cursor_path,
       cursor_source,
       keyboard_path,
+      moments_path,
       include_own_windows,
       records_annotations,
     } = plan;
@@ -76,12 +83,25 @@ impl RecordingSidecars {
       },
       None => None,
     };
+    let moments = match MomentRecorder::start(moments_path, origin.clone()) {
+      Ok(moments) => moments,
+      Err(error) => {
+        if let Some(cursor) = cursor {
+          cursor.cancel();
+        }
+        if let Some(keyboard) = keyboard {
+          keyboard.cancel();
+        }
+        return Err(error);
+      }
+    };
     // Last, because it cannot fail and so needs no unwinding of its own.
     let annotations = annotation_source.map(|source| AnnotationRecorder::start(origin, source));
     Ok(Self {
       annotations,
       cursor,
       keyboard,
+      moments,
     })
   }
 
@@ -95,6 +115,7 @@ impl RecordingSidecars {
     if let Some(keyboard) = &self.keyboard {
       keyboard.pause(at);
     }
+    self.moments.pause(at);
   }
 
   pub(super) fn resume(&self, at: Instant) {
@@ -107,6 +128,7 @@ impl RecordingSidecars {
     if let Some(keyboard) = &self.keyboard {
       keyboard.resume(at);
     }
+    self.moments.resume(at);
   }
 
   pub(super) fn stop(self, stopped_at: Instant) -> StoppedSidecars {
@@ -117,6 +139,7 @@ impl RecordingSidecars {
         .unwrap_or_default(),
       cursor: self.cursor.map(CursorRecorder::stop).transpose(),
       keyboard: self.keyboard.map(KeyboardRecorder::stop).transpose(),
+      moments: self.moments.stop(),
     }
   }
 
@@ -130,5 +153,6 @@ impl RecordingSidecars {
     if let Some(keyboard) = self.keyboard {
       keyboard.cancel();
     }
+    self.moments.cancel();
   }
 }

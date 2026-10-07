@@ -18,6 +18,7 @@ import { useElapsedTime } from "../use-elapsed-time";
 import { useRecordingMonitor } from "../use-recording-monitor";
 
 import { RecordingDock } from "./recording-dock";
+import { usePlacedMoment } from "./use-placed-moment";
 
 const report = (action: string) => (error: unknown) => {
   console.error(`Could not ${action} the recording`, error);
@@ -30,6 +31,7 @@ export function RecordingDockWindow() {
   const snapshot = useRecordingStore(selectSnapshot);
   const elapsedMs = useElapsedTime(snapshot);
   const monitor = useRecordingMonitor(showConfidenceChecks);
+  const moment = usePlacedMoment();
 
   // The pill's first show stays transparent until this page has drawn. The
   // second animation frame after becoming visible runs once the first has
@@ -66,6 +68,7 @@ export function RecordingDockWindow() {
     <RecordingDock
       countdownSeconds={snapshot.countdownSecondsRemaining}
       elapsedMs={elapsedMs}
+      moment={moment}
       monitor={showConfidenceChecks ? monitor : undefined}
       onDiscard={() => {
         cancelRecording().catch(report("discard"));

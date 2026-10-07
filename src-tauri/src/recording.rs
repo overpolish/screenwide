@@ -41,7 +41,7 @@ use platform_windows as capture;
 
 pub use encoding::{CameraFinalizeInfo, FinalizeInfo, PrimaryRecordingKind};
 pub use replay::{ReplaySnapshot, ReplayState};
-pub use state::{is_idle, snapshot, RecordingState};
+pub use state::{is_idle, is_recording, snapshot, RecordingState};
 pub use types::{
   RecordingMode, RecordingSnapshot, RecordingStatus, Region, StartRecordingOptions,
   SystemAudioSelection,

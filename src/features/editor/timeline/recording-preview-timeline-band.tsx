@@ -14,6 +14,7 @@ import {
   RecordingVideoTrackId,
 } from "../types";
 
+import { useRecordingMoments } from "./moments/use-recording-moments";
 import { RecordingPlaybackControls } from "./recording-playback-controls";
 import { ResizableRecordingTimelineArea } from "./resizable-recording-timeline-area";
 import { Playhead } from "./scrub-playhead";
@@ -81,6 +82,7 @@ export function RecordingPreviewTimelineBand({
     playhead: Playhead;
     zoomControl: ReactNode;
   }) {
+  const moments = useRecordingMoments(artifactId);
   // The Scene panel follows the scene tool, so the lane takes the tool up and
   // the panel comes with it, the only tool in hand.
   const openScenePanel = () => {
@@ -141,6 +143,7 @@ export function RecordingPreviewTimelineBand({
           keyboardItems={keyboardEffects.bake ? keyboardTimeline.items : []}
           keyboardSelection={keyboardTimeline.selection}
           layout={layout}
+          moments={moments}
           onAnnotationsChange={annotations.onClipsChange}
           onAnnotationsClear={annotations.clearSelection}
           // Choosing an annotation from its lane picks the Select tool up, the

@@ -97,6 +97,8 @@ pub fn end_shortcut_capture(app: AppHandle) -> Result<(), String> {
         }
       }
     }
+    // Capture released every shortcut, a running recording's moments too.
+    crate::moments::shortcuts::sync(&app);
     Ok(())
   })();
   diagnostics::record(

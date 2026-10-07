@@ -23,12 +23,12 @@ mod platform_unsupported;
 use self::platform_unsupported as platform;
 
 mod format;
+mod hidden;
 mod rolling;
 #[cfg(test)]
 mod tests;
 mod writer;
 
-use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -36,6 +36,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 pub(crate) use format::{read, typing_times_us, KeyboardModifier, KeyboardRecord, FORMAT_VERSION};
+pub(crate) use hidden::set_hidden_shortcuts;
 #[cfg(test)]
 use writer::modifier_transition_is_down;
 use writer::StreamWriter;
@@ -114,13 +115,10 @@ impl Tap {
     output: SidecarOutput<KeyboardRecord, KeyboardBaseline>,
     origin: Arc<OnceLock<Instant>>,
   ) -> Result<Self, String> {
-    let state = Arc::new(Mutex::new(StreamWriter {
-      active_keys: HashSet::new(),
-      clock: SidecarClock::new(origin),
-      failure: None,
+    let state = Arc::new(Mutex::new(StreamWriter::new(
+      SidecarClock::new(origin),
       output,
-      last_typing_us: None,
-    }));
+    )));
     let sink_state = Arc::clone(&state);
     let sink: EventSink = Arc::new(move |event| {
       let mut state = sink_state
@@ -163,6 +161,7 @@ impl Tap {
         .map_err(|_| "The keyboard shortcut recorder stopped unexpectedly".to_owned())?;
     }
     let mut state = self.state();
+    state.write_pending()?;
     state.output.flush()?;
     state.failure.take().map_or(Ok(()), Err)
   }
@@ -194,6 +193,11 @@ impl KeyboardRecorder {
     // set at the boundary so that release cannot leave a stale accepted key
     // suppressing the first press after resume.
     state.active_keys.clear();
+    // Modifiers held into the pause were pressed; only the key they might
+    // have gone with is unknown, and it would land after the pause.
+    if let Err(error) = state.write_pending() {
+      state.failure = Some(error);
+    }
     state.clock.pause(at);
   }
 

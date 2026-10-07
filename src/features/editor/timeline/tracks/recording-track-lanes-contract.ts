@@ -18,6 +18,7 @@ import {
 import type { TimelineItemSelection } from "./timeline-item-selection";
 import type { AudioTrackVolumes } from "../audio/audio-level";
 import type { TimelineBladeController } from "../editing/timeline-blade";
+import type { RecordingMoment } from "../moments/recording-moments";
 import type { Playhead } from "../scrub-playhead";
 import type { SeekHandler } from "../timeline-seek";
 
@@ -54,6 +55,8 @@ export type RecordingTrackLanesProps = {
   /** Whether the camera is saved as a file of its own rather than drawn into
    * the screen's video, which its row says beside its name. */
   isCameraSeparate?: boolean;
+  /** The moments placed while recording, pinned over the ruler. */
+  moments?: readonly RecordingMoment[];
   /** Choose an annotation alone, or with `toggle`, add or take it away. */
   onAnnotationSelect?: (id: string, toggle: boolean) => void;
   onAnnotationsChange?: (clips: RecordingAnnotationClip[]) => void;

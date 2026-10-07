@@ -8,6 +8,7 @@ import {
   RecordingPreviewLayout,
   RecordingTimelineThumbnails,
 } from "../../types";
+import { RecordingMoment } from "../moments/recording-moments";
 
 /** What the timeline preview stories lay onto their lanes. */
 export const STORY_DURATION_MS = 120_000;
@@ -102,3 +103,9 @@ export const STORY_THUMBNAILS: RecordingTimelineThumbnails = {
     url: null,
   })),
 };
+
+export const STORY_MOMENTS: RecordingMoment[] = [
+  { color: "#ffcc00", kindId: "funny", name: "Funny", sourceMs: 18_000 },
+  { color: "#0088ff", kindId: "notable", name: "Notable", sourceMs: 47_500 },
+  { color: "#ffcc00", kindId: "funny", name: "Funny", sourceMs: 91_000 },
+];

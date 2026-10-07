@@ -137,13 +137,10 @@ fn accepted_key_down_and_matching_key_up_have_distinct_timestamps() {
     std::process::id()
   ));
   let file = std::fs::File::create(&path).unwrap();
-  let mut writer = StreamWriter {
-    active_keys: std::collections::HashSet::new(),
-    clock: SidecarClock::new(shared_origin),
-    failure: None,
-    output: SidecarOutput::File(std::io::BufWriter::new(file)),
-    last_typing_us: None,
-  };
+  let mut writer = StreamWriter::new(
+    SidecarClock::new(shared_origin),
+    SidecarOutput::File(std::io::BufWriter::new(file)),
+  );
   let mut down = event(FocusContext::NonText, true, vec![]);
   down.at = origin + Duration::from_millis(10);
   let mut up = key_up(down.key_code);
@@ -169,15 +166,74 @@ fn key_up_without_accepted_key_down_is_discarded() {
     std::process::id()
   ));
   let file = std::fs::File::create(&path).unwrap();
-  let mut writer = StreamWriter {
-    active_keys: std::collections::HashSet::new(),
-    clock: SidecarClock::new(shared_origin),
-    failure: None,
-    output: SidecarOutput::File(std::io::BufWriter::new(file)),
-    last_typing_us: None,
-  };
+  let mut writer = StreamWriter::new(
+    SidecarClock::new(shared_origin),
+    SidecarOutput::File(std::io::BufWriter::new(file)),
+  );
   assert!(!writer.record(key_up(99)).unwrap());
   let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn a_hidden_shortcut_leaves_no_keys_not_even_its_modifiers() {
+  let origin = Instant::now();
+  let shared_origin = Arc::new(OnceLock::new());
+  shared_origin.set(origin).unwrap();
+  let path = std::env::temp_dir().join(format!(
+    "screenwide-keyboard-hidden-{}.jsonl",
+    std::process::id()
+  ));
+  let file = std::fs::File::create(&path).unwrap();
+  let mut writer = StreamWriter::new(
+    SidecarClock::new(shared_origin),
+    SidecarOutput::File(std::io::BufWriter::new(file)),
+  );
+  // Super+Control+Digit7, which no other test presses.
+  set_hidden_shortcuts(&["Super+Control+Digit7".to_owned()]);
+  let flags = |key_code: u16, modifier: KeyboardModifier, is_down: bool| RawKeyboardEvent {
+    at: Instant::now(),
+    focus: FocusContext::NonText,
+    kind: RawKeyboardEventKind::FlagsChanged { is_down, modifier },
+    key_code,
+    modifiers: vec![],
+  };
+  let press = |key_code: u16, modifiers: Vec<KeyboardModifier>| {
+    let mut down = event(FocusContext::NonText, false, modifiers);
+    down.key_code = key_code;
+    down
+  };
+  let chord = vec![KeyboardModifier::Command, KeyboardModifier::Control];
+  writer
+    .record(flags(0x3b, KeyboardModifier::Control, true))
+    .unwrap();
+  writer
+    .record(flags(0x37, KeyboardModifier::Command, true))
+    .unwrap();
+  writer.record(press(0x1a, chord)).unwrap();
+  writer.record(key_up(0x1a)).unwrap();
+  writer
+    .record(flags(0x37, KeyboardModifier::Command, false))
+    .unwrap();
+  writer
+    .record(flags(0x3b, KeyboardModifier::Control, false))
+    .unwrap();
+  writer.output.flush().unwrap();
+  let hidden = std::fs::read_to_string(&path).unwrap();
+  // The same keys as an ordinary shortcut are kept, modifier and all.
+  writer
+    .record(flags(0x37, KeyboardModifier::Command, true))
+    .unwrap();
+  writer
+    .record(press(0x1a, vec![KeyboardModifier::Command]))
+    .unwrap();
+  writer.output.flush().unwrap();
+  let kept = std::fs::read_to_string(&path).unwrap();
+  set_hidden_shortcuts(&[]);
+  let _ = std::fs::remove_file(path);
+  assert_eq!(hidden, "");
+  assert_eq!(kept.lines().count(), 2);
+  assert!(kept.contains("\"keyCode\":55"));
+  assert!(kept.contains("\"keyCode\":26"));
 }
 
 #[test]
@@ -190,13 +246,10 @@ fn typing_in_a_field_is_marked_by_time_alone_and_never_in_a_password() {
     std::process::id()
   ));
   let file = std::fs::File::create(&path).unwrap();
-  let mut writer = StreamWriter {
-    active_keys: std::collections::HashSet::new(),
-    clock: SidecarClock::new(shared_origin),
-    failure: None,
-    output: SidecarOutput::File(std::io::BufWriter::new(file)),
-    last_typing_us: None,
-  };
+  let mut writer = StreamWriter::new(
+    SidecarClock::new(shared_origin),
+    SidecarOutput::File(std::io::BufWriter::new(file)),
+  );
   let at = |focus, ms| {
     let mut key = event(focus, true, vec![]);
     key.at = origin + Duration::from_millis(ms);

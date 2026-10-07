@@ -24,6 +24,9 @@ pub(super) struct StreamWriter {
   pub(super) output: SidecarOutput<KeyboardRecord, KeyboardBaseline>,
   /// When the last typing mark was written.
   pub(super) last_typing_us: Option<u64>,
+  /// Modifier presses not written yet. Until the key they go with arrives
+  /// they may belong to a hidden shortcut, which takes them away with it.
+  pending_modifiers: Vec<KeyboardRecord>,
 }
 
 pub(super) fn modifier_transition_is_down(was_active: bool, aggregate_flag: bool) -> bool {
@@ -31,6 +34,28 @@ pub(super) fn modifier_transition_is_down(was_active: bool, aggregate_flag: bool
 }
 
 impl StreamWriter {
+  pub(super) fn new(
+    clock: SidecarClock,
+    output: SidecarOutput<KeyboardRecord, KeyboardBaseline>,
+  ) -> Self {
+    Self {
+      active_keys: HashSet::new(),
+      clock,
+      failure: None,
+      output,
+      last_typing_us: None,
+      pending_modifiers: Vec::new(),
+    }
+  }
+
+  /// Writes the modifier presses held back so far, in the order they came.
+  pub(super) fn write_pending(&mut self) -> Result<(), String> {
+    for record in std::mem::take(&mut self.pending_modifiers) {
+      self.output.write(&record)?;
+    }
+    Ok(())
+  }
+
   pub(super) fn accepts(event: &RawKeyboardEvent) -> bool {
     let RawKeyboardEventKind::KeyDown {
       is_printable,
@@ -76,6 +101,19 @@ impl StreamWriter {
     let Some(timestamp_us) = self.clock.timestamp_us(event.at) else {
       return Ok(false);
     };
+    // A hidden shortcut leaves no trace: its key down is never taken in, so
+    // its key up finds no accepted key, and the modifiers held back for it
+    // are dropped and forgotten, so their releases are dropped too.
+    if matches!(event.kind, RawKeyboardEventKind::KeyDown { .. })
+      && super::hidden::is_hidden(event.key_code, &event.modifiers)
+    {
+      for record in std::mem::take(&mut self.pending_modifiers) {
+        if let KeyboardRecord::KeyDown { key_code, .. } = record {
+          self.active_keys.remove(&key_code);
+        }
+      }
+      return Ok(false);
+    }
     let record = match event.kind {
       RawKeyboardEventKind::KeyDown { .. } if Self::types(&event) => {
         if self
@@ -117,11 +155,12 @@ impl StreamWriter {
           if !self.active_keys.insert(event.key_code) {
             return Ok(false);
           }
-          KeyboardRecord::KeyDown {
+          self.pending_modifiers.push(KeyboardRecord::KeyDown {
             key_code: event.key_code,
             modifiers: vec![modifier],
             timestamp_us,
-          }
+          });
+          return Ok(true);
         } else {
           if !self.active_keys.remove(&event.key_code) {
             return Ok(false);
@@ -134,6 +173,7 @@ impl StreamWriter {
         }
       }
     };
+    self.write_pending()?;
     self.output.write(&record)?;
     self.output.flush()?;
     Ok(true)

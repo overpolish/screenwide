@@ -7,6 +7,7 @@ import { RecordingAnnotationClip } from "../recording/annotations/recording-anno
 import { RecordingKeyboardTimelineItem } from "../types";
 
 import { TimelineBladeController } from "./editing/timeline-blade";
+import { VisibleRecordingMoment } from "./moments/recording-moments";
 import { Playhead } from "./scrub-playhead";
 import { TimelineSnap, timelineSnapTargets } from "./timeline-snap";
 
@@ -22,6 +23,7 @@ export function useTimelineSnapValue({
   hiddenKeyboardFragmentIds,
   hiddenKeyboardItemIds,
   keyboardItems,
+  moments,
   playhead,
   sourceDurationMs,
 }: {
@@ -30,6 +32,7 @@ export function useTimelineSnapValue({
   hiddenKeyboardFragmentIds: ReadonlySet<string>;
   hiddenKeyboardItemIds: ReadonlySet<number>;
   keyboardItems: RecordingKeyboardTimelineItem[];
+  moments: readonly VisibleRecordingMoment[];
   playhead: Playhead;
   sourceDurationMs: number;
 }): TimelineSnap {
@@ -64,6 +67,7 @@ export function useTimelineSnapValue({
         hiddenKeyboardFragmentIds,
         hiddenKeyboardItemIds,
         keyboardItems,
+        momentSources: moments.map(({ source }) => source),
         playheadOutput: playhead.ratio(),
         sourceDurationMs,
       }),
@@ -73,6 +77,7 @@ export function useTimelineSnapValue({
       hiddenKeyboardFragmentIds,
       hiddenKeyboardItemIds,
       keyboardItems,
+      moments,
       playhead,
       sourceDurationMs,
     ],

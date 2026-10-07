@@ -145,6 +145,20 @@ pub(crate) fn is_capturing() -> bool {
   CAPTURING.load(Ordering::Acquire)
 }
 
+/// Whether an action is bound to the shortcut with `id`.
+pub(crate) fn assigned_to_action(app: &AppHandle, id: u32) -> bool {
+  app
+    .state::<ShortcutSettingsState>()
+    .0
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .bindings
+    .iter()
+    .filter_map(|binding| binding.shortcut.as_deref())
+    .filter_map(|value| value.parse::<Shortcut>().ok())
+    .any(|shortcut| shortcut.id() == id)
+}
+
 #[tauri::command]
 pub fn get_shortcut_settings(state: tauri::State<'_, ShortcutSettingsState>) -> ShortcutSettings {
   state
@@ -192,6 +206,9 @@ pub fn set_shortcut_binding(
     .any(|value| Some(value.id()) == requested_id)
   {
     return Err("That shortcut is already assigned to another action".to_owned());
+  }
+  if requested_id.is_some_and(crate::moments::settings::uses_shortcut) {
+    return Err("That shortcut already places a moment".to_owned());
   }
 
   if let Some(existing) = existing.as_deref() {

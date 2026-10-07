@@ -103,6 +103,10 @@ flowchart LR
 
 `recording/sleep.rs` decides what capture does when the computer sleeps, on every platform; `sleep/platform_*.rs` only report the moment (NSWorkspace notifications on macOS, the power manager's suspend and resume callback on Windows). A running recording is paused as if the user had pressed Pause and stays paused after the wake; a recording still counting down is discarded. The replay buffer turns off and, once the computer wakes, back on with the settings it had (`replay/sleep.rs`). Locking without sleeping changes nothing.
 
+## Moments
+
+A moment flags a point in a recording for whoever edits it. Each kind (Funny and Notable to begin with, edited in Settings) has a shortcut, and `src-tauri/src/moments/shortcuts.rs` claims those shortcuts only while a recording runs or is paused, so other apps keep the keys otherwise; the claim moves on a later turn because recording transitions arrive inside native shortcut callbacks. A press is placed 2 s before it, on the same pause-removed clock as the other sidecars, and written at once to `media/moments.jsonl` with the kind's name and colour as they were (`src-tauri/src/moments/recorder.rs`). Presses during the countdown or while paused place nothing, and a recording with no moments keeps no file. The keyboard sidecar leaves the kinds' shortcuts out, so they never show as keystrokes. The dock shows the kind in place of the timer for a moment; there is no sound, since system audio would record it. The editor reads the moments through `get_recording_moments` and pins the ones the edit keeps over the ruler; they cannot be moved.
+
 ## Replay buffer
 
 The replay buffer keeps the last 30 seconds of whatever the recording bar was set to when it was turned on: screen, region, window, camera or audio, with system audio, microphone and camera as selected. It runs beside recordings, not as one: the bar, dock and recording state never see it, and a recording can start and stop while it runs. Changing the bar afterwards sets up the next recording, not the buffer.

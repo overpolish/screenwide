@@ -16,6 +16,8 @@ import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
 import { TimelineBladeController } from "./editing/timeline-blade";
+import { VisibleRecordingMoment } from "./moments/recording-moments";
+import { TimelineMomentPins } from "./moments/timeline-moment-pins";
 import { Playhead } from "./scrub-playhead";
 import { TimelineRuler } from "./timeline-ruler";
 import { SeekHandler } from "./timeline-seek";
@@ -115,6 +117,7 @@ export function TimelineHeader({
   areaRef,
   blade,
   durationMs,
+  moments,
   onFit,
   onSeek,
   onZoom,
@@ -124,6 +127,8 @@ export function TimelineHeader({
   areaRef: RefObject<HTMLDivElement | null>;
   blade: TimelineBladeController;
   durationMs: number;
+  /** The moments the edit keeps, pinned over the ruler. */
+  moments: readonly VisibleRecordingMoment[];
   onFit: () => void;
   onSeek: SeekHandler;
   onZoom: (factor: number) => void;
@@ -143,13 +148,19 @@ export function TimelineHeader({
         onZoom={onZoom}
         viewport={viewport}
       />
-      <div className="min-w-0 grow" ref={areaRef}>
+      <div className="relative min-w-0 grow" ref={areaRef}>
         <TimelineRuler
           durationMs={durationMs}
           edit={blade.edit}
           onSeek={onSeek}
           playhead={playhead}
           snapPosition={blade.snapPosition}
+          viewport={viewport}
+        />
+        <TimelineMomentPins
+          durationMs={durationMs}
+          moments={moments}
+          onSeek={onSeek}
           viewport={viewport}
         />
       </div>

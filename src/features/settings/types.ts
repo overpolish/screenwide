@@ -29,6 +29,21 @@ export type ShortcutSettings = {
   bindings: ShortcutBinding[];
 };
 
+/** A kind of moment, placed by its shortcut while recording. */
+export type MomentKind = {
+  /** `#rrggbb`. */
+  color: string;
+  /** The colour last chosen outside the palette, or null if none ever was. */
+  customColor: string | null;
+  id: string;
+  name: string;
+  shortcut: string | null;
+};
+
+export type MomentSettings = {
+  kinds: MomentKind[];
+};
+
 export type RulerAction =
   | "toggleCrosshair"
   | "copyColour"

@@ -30,6 +30,7 @@ fn project(directory: &Path) -> PathBuf {
         camera: None,
         cursor: None,
         keyboard: None,
+        moments: None,
       },
       primary_kind: PrimaryRecordingKind::Screen,
       source_scale_factor: 2.0,

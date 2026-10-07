@@ -25,6 +25,7 @@ fn recording(primary: &str) -> RecordingManifest {
       camera: None,
       cursor: None,
       keyboard: None,
+      moments: None,
     },
     primary_kind: PrimaryRecordingKind::Screen,
     source_scale_factor: 2.0,
@@ -56,7 +57,7 @@ fn media_named_in_a_project_still_resolves_after_the_folder_moves() {
   let project = create_in(&directory, "Demo").unwrap();
   let movie = project.media.join("recording.mov");
   std::fs::write(&movie, b"movie").unwrap();
-  let media = RecordingMedia::relative_to(&project.file, &movie, None, None, None).unwrap();
+  let media = RecordingMedia::relative_to(&project.file, &movie, None, None, None, None).unwrap();
   write(
     &project.file,
     &Manifest::recording(RecordingManifest {

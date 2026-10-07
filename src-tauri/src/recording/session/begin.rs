@@ -36,6 +36,7 @@ pub(in crate::recording) fn begin_capture(
   let cursor_path = records_cursor(options.mode).then(|| project.media.join(encoding::CURSOR_FILE));
   let keyboard_path = records_keyboard(options.mode, options.capture_keyboard_shortcuts)
     .then(|| project.media.join(encoding::KEYBOARD_FILE));
+  let moments_path = project.media.join(encoding::MOMENTS_FILE);
   let include_own_windows = crate::settings::current(app).record_screenwide_windows;
 
   // Reported at most once per recording, from the writer thread, however many
@@ -79,6 +80,7 @@ pub(in crate::recording) fn begin_capture(
       cursor_path: cursor_path.clone(),
       cursor_source,
       keyboard_path: keyboard_path.clone(),
+      moments_path: moments_path.clone(),
       include_own_windows,
       records_annotations: records_cursor(options.mode),
     },
@@ -100,6 +102,7 @@ pub(in crate::recording) fn begin_capture(
     camera_path.as_deref(),
     cursor_path.as_deref(),
     keyboard_path.as_deref(),
+    Some(&moments_path),
   )
   .and_then(|media| {
     crate::project::write(

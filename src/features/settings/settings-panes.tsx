@@ -7,9 +7,11 @@ import { AnnotateSettingsPanel } from "./sections/annotate-settings";
 import { GeneralSettingsPanel } from "./sections/general-settings";
 import { GlideSettingsPanel } from "./sections/glide-settings";
 import { HotkeySettingsPanel } from "./sections/hotkey-settings";
+import { MomentsSettingsPanel } from "./sections/moments-settings";
 import { OcrSettingsPanel } from "./sections/ocr-settings";
 import { RulerSettingsPanel } from "./sections/ruler-settings";
 
+import type { MomentSettingsState } from "./sections/use-moment-settings";
 import type { SettingsSection } from "./settings-sections";
 import type {
   AnnotateSettings,
@@ -26,6 +28,7 @@ export type SettingsPanesProps = {
   annotate: AnnotateSettings | null;
   general: GeneralSettings | null;
   glide: GlideSettings | null;
+  moments: MomentSettingsState;
   ocr: OcrSettings | null;
   onCaptureChange: (capturing: boolean) => Promise<void>;
   onChangeAnnotate: (settings: AnnotateSettings) => void;
@@ -60,6 +63,7 @@ export function SettingsPanes({
   defaults,
   general,
   glide,
+  moments,
   ocr,
   onCaptureChange,
   onChangeAnnotate,
@@ -150,6 +154,13 @@ export function SettingsPanes({
         settings={ocr}
       />
     ) : null;
+  if (section === "moments")
+    return (
+      <MomentsSettingsPanel
+        moments={moments}
+        onCaptureChange={onCaptureChange}
+      />
+    );
   return (
     <HotkeySettingsPanel
       defaults={defaults?.shortcuts}

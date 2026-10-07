@@ -1,18 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Keyboard,
-  LayoutGrid,
-  PenTool,
-  Ruler,
-  ScanText,
-  Settings,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
 import { Alert } from "../../components/base/alert/alert";
+import { Button } from "../../components/base/button/button";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { SidebarNav } from "../../components/base/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
@@ -20,11 +14,13 @@ import { WindowShell } from "../../components/shared/window-shell/window-shell";
 
 import { useAnnotateSettingsSave } from "./sections/use-annotate-settings-save";
 import { useGlideSettingsSave } from "./sections/use-glide-settings-save";
+import { useMomentSettings } from "./sections/use-moment-settings";
 import { useOcrSettingsSave } from "./sections/use-ocr-settings-save";
 import { useRulerSettingsSave } from "./sections/use-ruler-settings-save";
 import { useSettingsApi } from "./settings-api-context";
 import { SettingsPanes } from "./settings-panes";
 import { sectionTitles, type SettingsSection } from "./settings-sections";
+import { settingsSidebarItems } from "./settings-sidebar-items";
 import {
   AnnotateSettings,
   GeneralSettings,
@@ -99,6 +95,7 @@ export function SettingsWindow({
       setError,
       setSettings: setAnnotate,
     });
+  const moments = useMomentSettings(setError);
 
   useEffect(() => {
     Promise.all([
@@ -201,6 +198,18 @@ export function SettingsWindow({
     <WindowShell
       header={
         <WindowHeader
+          actions={
+            section === "moments" ? (
+              <Button
+                isDisabled={!moments.settings || moments.isSaving}
+                onPress={moments.addKind}
+                variant="ghost"
+              >
+                <Plus />
+                Add Kind
+              </Button>
+            ) : undefined
+          }
           leadingSection={
             <img
               alt="Screenwide"
@@ -224,14 +233,7 @@ export function SettingsWindow({
           className="pb-window-inset"
           isExpandable={false}
           isExpanded
-          items={[
-            { icon: <Settings />, id: "general", label: "General" },
-            { icon: <LayoutGrid />, id: "glide", label: "Glide" },
-            { icon: <Ruler />, id: "ruler", label: "Ruler" },
-            { icon: <PenTool />, id: "annotate", label: "Annotate" },
-            { icon: <ScanText />, id: "ocr", label: "OCR" },
-            { icon: <Keyboard />, id: "hotkeys", label: "Shortcuts" },
-          ]}
+          items={settingsSidebarItems}
           onSelectionChange={(id) => {
             setSection(id as SettingsSection);
           }}
@@ -252,6 +254,7 @@ export function SettingsWindow({
                 defaults={defaults}
                 general={general}
                 glide={glide}
+                moments={moments}
                 ocr={ocr}
                 onCaptureChange={onCaptureChange}
                 onChangeAnnotate={changeAnnotate}

@@ -8,6 +8,7 @@ import {
   AnnotateSettings,
   GeneralSettings,
   GlideSettings,
+  MomentSettings,
   OcrSettings,
   RulerSettings,
   ShortcutAction,
@@ -73,6 +74,12 @@ export const getOcrSettings = () => invoke<OcrSettings>("get_ocr_settings");
 
 export const setOcrSettings = (settings: OcrSettings) =>
   invoke<OcrSettings>("set_ocr_settings", { settings });
+
+export const getMomentSettings = () =>
+  invoke<MomentSettings>("get_moment_settings");
+
+export const setMomentSettings = (settings: MomentSettings) =>
+  invoke<MomentSettings>("set_moment_settings", { settings });
 
 export const browseDefaultLocation = (
   kind: "project" | "recording" | "screenshot",

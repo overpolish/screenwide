@@ -101,6 +101,7 @@ pub const CAMERA_FILE: &str = if cfg!(target_os = "windows") {
 };
 pub const CURSOR_FILE: &str = "cursor.jsonl";
 pub const KEYBOARD_FILE: &str = "keyboard.jsonl";
+pub const MOMENTS_FILE: &str = "moments.jsonl";
 
 #[derive(Clone, Copy, Debug)]
 struct Origin {

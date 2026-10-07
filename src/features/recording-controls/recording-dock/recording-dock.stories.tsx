@@ -80,6 +80,15 @@ export const RecordingForHours: Story = {
   args: { elapsedMs: 4_215_000, status: "recording" },
 };
 
+/** A Funny moment just placed: its kind holds the timer's place briefly. */
+export const MomentPlaced: Story = {
+  args: {
+    elapsedMs: 42_000,
+    moment: { color: "#ffcc00", key: 1, name: "Funny" },
+    status: "recording",
+  },
+};
+
 /* ---------------------------- Digit boundaries ---------------------------- */
 
 /** 00:00:59, the tick before the minute rolls over. */

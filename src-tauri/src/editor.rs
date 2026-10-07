@@ -24,6 +24,7 @@ pub(crate) mod preview;
 pub(crate) mod preview_platform;
 mod preview_workspace_model;
 mod project_open;
+pub(crate) mod recording_moments;
 pub(crate) mod recording_preview;
 pub(crate) mod recording_preview_player;
 mod recording_sidecar;

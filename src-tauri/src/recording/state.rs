@@ -75,6 +75,16 @@ pub fn is_idle(app: &AppHandle) -> bool {
   snapshot(app).status == RecordingStatus::Idle
 }
 
+/// Whether a recording is under way, paused or not: the span its moment
+/// shortcuts are claimed for.
+pub fn is_recording(app: &AppHandle) -> bool {
+  is_under_way(snapshot(app).status)
+}
+
+const fn is_under_way(status: RecordingStatus) -> bool {
+  matches!(status, RecordingStatus::Recording | RecordingStatus::Paused)
+}
+
 /// The span of the current recording run, i.e. time since the last resume.
 fn open_span_ms(snapshot: &RecordingSnapshot, now: u64) -> u64 {
   match snapshot.started_at_ms {
@@ -149,7 +159,7 @@ pub(super) fn transition(
   to: RecordingStatus,
   mode: Option<RecordingMode>,
 ) -> Result<RecordingSnapshot, String> {
-  let (changed, snapshot) = {
+  let (changed, previous, snapshot) = {
     let state = state(app);
     let mut current = state
       .snapshot
@@ -157,7 +167,7 @@ pub(super) fn transition(
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     let previous = *current;
     apply_transition(&mut current, to, mode, now_ms())?;
-    (previous != *current, *current)
+    (previous != *current, previous, *current)
   };
 
   if changed {
@@ -165,6 +175,10 @@ pub(super) fn transition(
 
     #[cfg(desktop)]
     crate::tray::apply_recording_status(app, snapshot.status);
+
+    if is_under_way(previous.status) != is_under_way(snapshot.status) {
+      crate::moments::shortcuts::sync(app);
+    }
   }
 
   Ok(snapshot)

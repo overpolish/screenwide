@@ -18,6 +18,10 @@ import { formatElapsedTime } from "../elapsed-time";
 import { RecordingStatus } from "../types";
 import { RecordingMonitorSnapshot } from "../use-recording-monitor";
 
+import { RecordingDockElapsed } from "./recording-dock-elapsed";
+
+import type { PlacedMoment } from "./use-placed-moment";
+
 /**
  * "00:00:08" in 13px SF Pro tabular figures measures about 58px, so 64px holds
  * the longest timer with a little slack and the pill never breathes as the
@@ -33,23 +37,6 @@ const TIME_SLOT_CLASS = "w-16";
  * spilling out of the pill.
  */
 const BUSY_SLOT_CLASS = "min-w-16";
-
-/**
- * Rotates each digit on its own, so a tick only animates what actually
- * changed: 58 to 59 moves the units alone, while 59 to 00 moves both. Rotating
- * the pair as one unit would swing the tens digit on every single second.
- */
-function RotatingDigits({ value }: { value: string }) {
-  const leading = value.slice(0, -1);
-  const last = value.slice(-1);
-
-  return (
-    <>
-      <ContentRotate contentKey={leading}>{leading}</ContentRotate>
-      <ContentRotate contentKey={last}>{last}</ContentRotate>
-    </>
-  );
-}
 
 type DiscardButtonProps = {
   onDiscard?: () => void;
@@ -76,6 +63,8 @@ function DiscardButton({ onDiscard }: DiscardButtonProps) {
 type RecordingDockProps = {
   countdownSeconds?: number;
   elapsedMs?: number;
+  /** The moment just placed, shown in place of the timer. */
+  moment?: PlacedMoment | null;
   monitor?: RecordingMonitorSnapshot;
   onDiscard?: () => void;
   onPauseChange?: (isPaused: boolean) => void;
@@ -88,6 +77,7 @@ type RecordingDockProps = {
 export function RecordingDock({
   countdownSeconds = 0,
   elapsedMs = 0,
+  moment = null,
   monitor,
   onDiscard,
   onPauseChange,
@@ -243,16 +233,13 @@ export function RecordingDock({
               TIME_SLOT_CLASS,
             )}
           >
-            <div
-              className={cn(
-                "flex transition-colors",
-                isPaused && "text-content-fg-secondary",
-              )}
-            >
-              <RotatingDigits value={hours} />:
-              <RotatingDigits value={minutes} />:
-              <RotatingDigits value={seconds} />
-            </div>
+            <RecordingDockElapsed
+              hours={hours}
+              isPaused={isPaused}
+              minutes={minutes}
+              moment={moment}
+              seconds={seconds}
+            />
           </div>
 
           <div className="flex items-center gap-control">

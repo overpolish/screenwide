@@ -161,6 +161,8 @@ pub(crate) struct RecordingMedia {
   pub cursor: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub keyboard: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub moments: Option<String>,
 }
 
 impl RecordingMedia {
@@ -171,6 +173,7 @@ impl RecordingMedia {
     camera: Option<&Path>,
     cursor: Option<&Path>,
     keyboard: Option<&Path>,
+    moments: Option<&Path>,
   ) -> Result<Self, String> {
     let root = file
       .parent()
@@ -181,6 +184,7 @@ impl RecordingMedia {
       camera: camera.map(name).transpose()?,
       cursor: cursor.map(name).transpose()?,
       keyboard: keyboard.map(name).transpose()?,
+      moments: moments.map(name).transpose()?,
     })
   }
 }

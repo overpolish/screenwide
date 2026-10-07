@@ -156,6 +156,7 @@ fn write_clip(
     write_manifest(
       &project.file,
       &info,
+      None,
       crate::project::RecordingOrigin::Replay,
     )?;
     Ok((info, end_ns))

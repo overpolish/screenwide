@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Keyboard } from "lucide-react";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 
 import { RecordingAnnotationLane } from "../../recording/annotations/recording-annotation-lane";
 import { RecordingSceneLane } from "../../recording/scenes/recording-scene-lane";
@@ -10,6 +10,11 @@ import { RecordingSceneClip } from "../../recording/scenes/recording-scenes";
 import { recordingAudioStreamIndex, recordingAudioTrackId } from "../../types";
 import { ScrubAudioTracks } from "../audio/scrub-audio-tracks";
 import { TimelineAudioMeter } from "../audio/timeline-audio-meter";
+import {
+  RecordingMoment,
+  visibleRecordingMoments,
+} from "../moments/recording-moments";
+import { useMomentNavigation } from "../moments/use-moment-navigation";
 import { timelineMeterHeight } from "../timeline-band-metrics";
 import { TimelineLanesFrame } from "../timeline-lanes-frame";
 import { TimelineScrubberOverlay } from "../timeline-scrubber";
@@ -28,6 +33,7 @@ import { TimelineItemLane } from "./timeline-item-lane";
 const KEYBOARD_MINIMUM_ITEM_WIDTH_PX = 48;
 const NO_IDS: ReadonlySet<string> = new Set();
 const NO_SCENES: RecordingSceneClip[] = [];
+const NO_MOMENTS: readonly RecordingMoment[] = [];
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
@@ -47,6 +53,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   keyboardItems,
   keyboardSelection,
   layout,
+  moments = NO_MOMENTS,
   onAnnotationSelect,
   onAnnotationsChange,
   onAnnotationsClear,
@@ -82,12 +89,18 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
     minimumItemWidthPx: KEYBOARD_MINIMUM_ITEM_WIDTH_PX,
     zoom: timeline.viewport.zoom,
   });
+  const visibleMoments = useMemo(
+    () => visibleRecordingMoments(blade.edit, moments, sourceDurationMs),
+    [blade.edit, moments, sourceDurationMs],
+  );
+  useMomentNavigation({ moments: visibleMoments, onSeek, playhead });
   const snap = useTimelineSnapValue({
     annotationClips,
     blade,
     hiddenKeyboardFragmentIds,
     hiddenKeyboardItemIds,
     keyboardItems,
+    moments: visibleMoments,
     playhead,
     sourceDurationMs,
   });
@@ -124,6 +137,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               areaRef={timeline.areaRef}
               blade={blade}
               durationMs={durationMs}
+              moments={visibleMoments}
               onFit={timeline.fit}
               onSeek={onSeek}
               onZoom={timeline.zoom}

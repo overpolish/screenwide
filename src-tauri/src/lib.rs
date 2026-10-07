@@ -24,6 +24,7 @@ mod fault;
 mod glide;
 mod gpu;
 mod image_analysis;
+mod moments;
 mod monitor_topology;
 mod osc;
 mod permissions;
@@ -92,6 +93,7 @@ pub fn run() {
       editor::recording_preview_player::recenter::get_recording_content_bounds,
       editor::preview::estimate_recording_export,
       editor::preview::get_editor_snapshot,
+      editor::recording_moments::get_recording_moments,
       editor::recording_preview::get_recording_preview,
       editor::recording_preview::get_recording_keyboard_timeline,
       editor::recording_preview_player::commands::pause_recording_preview,
@@ -155,6 +157,8 @@ pub fn run() {
       permissions::require_permissions,
       permissions::dismiss_permissions_window,
       permissions::restart_app,
+      moments::settings::get_moment_settings,
+      moments::settings::set_moment_settings,
       recording::commands::cancel_recording,
       recording::commands::get_recording_snapshot,
       recording::commands::get_replay_snapshot,
