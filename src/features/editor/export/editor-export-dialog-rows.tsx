@@ -4,7 +4,6 @@
 import { ReactNode, useId } from "react";
 
 import { Text } from "../../../components/base/text/text";
-import { cn } from "../../../lib/styling";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
 import type { ControlRowControlProps } from "../../../components/shared/control-row/control-row";
@@ -22,21 +21,34 @@ const compressionOptions = [
  * A row of a save sheet: the label right-aligned in the first column and the
  * control in the second. Rows share the sheet's subgrid so every label ends
  * and every control begins on the same line.
+ *
+ * The trailing layout is for a checkbox: it sits at the row's end with its
+ * description just before it on the same line.
  */
 export function ExportRow({
   children,
-  controlClassName,
   description,
+  layout = "field",
   title,
 }: {
   children: (controlProps: ControlRowControlProps) => ReactNode;
   title: string;
-  controlClassName?: string;
   description?: string;
+  layout?: "field" | "trailing";
 }) {
   const id = useId();
   const titleId = `${id}-title`;
   const descriptionId = description ? `${id}-description` : undefined;
+
+  const control = children({
+    "aria-describedby": descriptionId,
+    "aria-labelledby": titleId,
+  });
+  const descriptionText = description ? (
+    <Text id={descriptionId} variant="subheadline">
+      {description}
+    </Text>
+  ) : null;
 
   return (
     <div className="col-span-2 grid grid-cols-subgrid">
@@ -49,21 +61,17 @@ export function ExportRow({
       >
         {title}
       </Text>
-      <div className={cn("flex min-w-0 flex-col gap-tight", controlClassName)}>
-        {children({
-          "aria-describedby": descriptionId,
-          "aria-labelledby": titleId,
-        })}
-        {description ? (
-          <Text
-            className="text-content-fg-secondary"
-            id={descriptionId}
-            variant="subheadline"
-          >
-            {description}
-          </Text>
-        ) : null}
-      </div>
+      {layout === "trailing" ? (
+        <div className="flex min-h-control-height min-w-0 items-center justify-end gap-control-inset text-right">
+          {descriptionText}
+          <div className="flex shrink-0 items-center">{control}</div>
+        </div>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-tight">
+          {control}
+          {descriptionText}
+        </div>
+      )}
     </div>
   );
 }

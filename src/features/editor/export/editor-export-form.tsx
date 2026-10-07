@@ -229,8 +229,8 @@ export function EditorExportForm({
         ) : null}
         {recording && recording.audioTracks.length > 1 ? (
           <ExportRow
-            controlClassName="items-start py-1"
             description="Mix the selected tracks into one."
+            layout="trailing"
             title="Collapse audio tracks"
           >
             {(props) => (
@@ -243,10 +243,7 @@ export function EditorExportForm({
             )}
           </ExportRow>
         ) : null}
-        <ExportRow
-          controlClassName="items-start py-1"
-          title="Open folder after saving"
-        >
+        <ExportRow layout="trailing" title="Open folder after saving">
           {(props) => (
             <Checkbox
               {...props}
@@ -257,15 +254,11 @@ export function EditorExportForm({
           )}
         </ExportRow>
         <ExportRow
-          controlClassName="items-start py-1"
-          description={`Moves it to the ${isWindows() ? "Recycle Bin" : "Trash"}, where it can be restored.`}
           // A screenshot is also copied from the editor, which the choice
           // covers as well.
-          title={
-            recording
-              ? "Delete project after saving"
-              : "Delete project after saving or copying"
-          }
+          description={`${recording ? "After saving" : "After saving or copying"}, moves it to the ${isWindows() ? "Recycle Bin" : "Trash"}.`}
+          layout="trailing"
+          title="Delete project"
         >
           {(props) => (
             <Checkbox
