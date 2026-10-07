@@ -149,6 +149,8 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
 
     match finalized {
       Some(Ok((info, project))) => {
+        // Notes are transcribed whether or not the Editor opens.
+        crate::transcription::notes::queue_project(&app, &project);
         if let Err(error) = crate::editor::present_recording(&app, project, info) {
           crate::editor::release_recording_workspace(&app);
           report_failure(&app, "stop", &error);

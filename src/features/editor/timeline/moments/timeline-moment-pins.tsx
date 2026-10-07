@@ -10,7 +10,27 @@ import { SeekHandler } from "../timeline-seek";
 import { TimelineViewportState } from "../timeline-viewport";
 
 import { toggleMomentNote } from "./moment-note-popover";
-import { VisibleRecordingMoment } from "./recording-moments";
+import { RecordingMoment, VisibleRecordingMoment } from "./recording-moments";
+
+/** How much of a transcript a tooltip shows before it trails off. */
+const TOOLTIP_TRANSCRIPT_CHARS = 60;
+
+/** A pin's tooltip: its kind and time, and the start of what its note says
+ * once that is known. */
+const pinLabel = (moment: RecordingMoment, at: string) => {
+  const transcript = moment.note?.transcript;
+  if (transcript?.status === "ready") {
+    const text = transcript.text.trim();
+    const shown =
+      text.length > TOOLTIP_TRANSCRIPT_CHARS
+        ? `${text.slice(0, TOOLTIP_TRANSCRIPT_CHARS).trimEnd()}…`
+        : text;
+    return `${moment.name}, ${at}: ${shown}`;
+  }
+  return moment.note
+    ? `${moment.name}, ${at}, with a voice note`
+    : `${moment.name}, ${at}`;
+};
 
 /**
  * The moments over the ruler, each a pin in its kind's colour that takes the
@@ -42,9 +62,7 @@ export function TimelineMomentPins({
         const left = (output - viewport.panOffset) * viewport.zoom;
         if (left < 0 || left > 1) return null;
         const at = formatDuration(output * durationMs);
-        const label = moment.note
-          ? `${moment.name}, ${at}, with a voice note`
-          : `${moment.name}, ${at}`;
+        const label = pinLabel(moment, at);
         return (
           // The tooltip anchors to the box its trigger wraps the pin in, so
           // the pin's place is set out here, around that box, where the

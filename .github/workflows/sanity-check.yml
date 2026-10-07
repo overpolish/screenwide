@@ -42,6 +42,16 @@ jobs:
         with:
           components: clippy, rustfmt
 
+      # The transcriber's engine draws on the GPU through Vulkan on Windows,
+      # and builds its shaders with the SDK's compiler.
+      - name: Install Vulkan SDK
+        if: runner.os == 'Windows'
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          cache: true
+          install_runtime: false
+          vulkan_version: latest
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

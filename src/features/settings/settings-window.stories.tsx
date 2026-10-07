@@ -7,6 +7,7 @@ import { FeatureStoryStage } from "../../storybook/feature-story-stage";
 
 import { SettingsApiContext } from "./settings-api-context";
 import { momentsPreviewApi } from "./settings-moments-preview";
+import { transcriptionPreviewApi } from "./settings-transcription-preview";
 import { SoftwareUpdateSetting } from "./settings-update-actions";
 import { SettingsWindow } from "./settings-window";
 
@@ -126,6 +127,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   };
   return {
     ...momentsPreviewApi(),
+    ...transcriptionPreviewApi(),
     beginShortcutCapture: () => Promise.resolve(null),
     browseDefaultLocation: (kind) =>
       Promise.resolve(
@@ -228,6 +230,9 @@ export const Ruler: Story = { args: { initialSection: "ruler" } };
 export const Annotate: Story = { args: { initialSection: "annotate" } };
 export const Ocr: Story = { args: { initialSection: "ocr" } };
 export const Moments: Story = { args: { initialSection: "moments" } };
+export const Transcription: Story = {
+  args: { initialSection: "transcription" },
+};
 export const Shortcuts: Story = { args: { initialSection: "hotkeys" } };
 
 export const UpdateAvailable: Story = {

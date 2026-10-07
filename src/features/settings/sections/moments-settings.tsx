@@ -1,18 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Check, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "../../../components/base/button/button";
 import { GroupBox } from "../../../components/base/group-box/group-box";
 import { TextField } from "../../../components/base/input-fields/text-field";
-import { ControlRow } from "../../../components/shared/control-row/control-row";
+import { Text } from "../../../components/base/text/text";
+import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 
-import { MomentColorGrid } from "./moment-color-grid";
+import { KindColorPicker } from "./kind-color-picker";
 import { VoiceNoteSettings } from "./voice-note-settings";
 
 import type { MomentSettingsState } from "./use-moment-settings";
+import type { TranscriptionControls } from "./use-transcription";
 import type { MomentKind } from "../types";
 
 /** A kind's name as it is typed, kept to the field until it is left or
@@ -36,6 +38,7 @@ function KindNameField({
   return (
     <TextField
       aria-label={`${kind.name} name`}
+      className="min-w-0 grow"
       isDisabled={isDisabled}
       onBlur={commit}
       onChange={setDraft}
@@ -50,9 +53,11 @@ function KindNameField({
 export function MomentsSettingsPanel({
   moments,
   onCaptureChange,
+  transcription,
 }: {
   moments: MomentSettingsState;
   onCaptureChange: (capturing: boolean) => Promise<void>;
+  transcription: TranscriptionControls;
 }) {
   const { isSaving, preview, save, settings } = moments;
   if (!settings) return null;
@@ -68,71 +73,67 @@ export function MomentsSettingsPanel({
   };
   return (
     <div className="gap-layout flex flex-col">
+      {/* One line per moment: everything one is, editable at a glance. */}
+      <GroupBox title="Moments">
+        {kinds.map((kind) => (
+          <div className="gap-control flex items-center" key={kind.id}>
+            <KindColorPicker
+              color={kind.color}
+              customColor={kind.customColor}
+              isDisabled={isSaving}
+              name={kind.name}
+              onChange={(change) => {
+                update(kind.id, change);
+              }}
+              onPreview={(change) => {
+                preview(withChange(kind.id, change));
+              }}
+            />
+            <KindNameField
+              isDisabled={isSaving}
+              key={kind.name}
+              kind={kind}
+              onCommit={(name) => {
+                update(kind.id, { name });
+              }}
+            />
+            <HotkeyField
+              aria-label={`${kind.name} shortcut`}
+              isDisabled={isSaving}
+              onCaptureChange={onCaptureChange}
+              onChange={(shortcut) => {
+                update(kind.id, { shortcut });
+              }}
+              value={kind.shortcut}
+            />
+            <ConfirmActionButton
+              armedIcon={<Check />}
+              armedLabel={`Confirm removing ${kind.name}`}
+              idleIcon={<Trash2 />}
+              idleLabel={`Remove ${kind.name}`}
+              isDisabled={isSaving}
+              onConfirm={() => {
+                void save({
+                  ...settings,
+                  kinds: kinds.filter((other) => other.id !== kind.id),
+                });
+              }}
+              variant="icon"
+            />
+          </div>
+        ))}
+        <Text variant="footnote">
+          Press a moment's shortcut while recording to place it.
+        </Text>
+      </GroupBox>
       <VoiceNoteSettings
         isSaving={isSaving}
         onChange={(next) => {
           void save(next);
         }}
         settings={settings}
+        transcription={transcription}
       />
-      {kinds.map((kind) => (
-        <GroupBox key={kind.id} title={kind.name}>
-          <ControlRow title="Name">
-            {() => (
-              <KindNameField
-                isDisabled={isSaving}
-                key={kind.name}
-                kind={kind}
-                onCommit={(name) => {
-                  update(kind.id, { name });
-                }}
-              />
-            )}
-          </ControlRow>
-          <ControlRow description="Works while recording." title="Shortcut">
-            {(controlProps) => (
-              <HotkeyField
-                aria-describedby={controlProps["aria-describedby"]}
-                aria-label={`${kind.name} shortcut`}
-                isDisabled={isSaving}
-                onCaptureChange={onCaptureChange}
-                onChange={(shortcut) => {
-                  update(kind.id, { shortcut });
-                }}
-                value={kind.shortcut}
-              />
-            )}
-          </ControlRow>
-          <ControlRow title="Colour">
-            {() => (
-              <MomentColorGrid
-                color={kind.color}
-                customColor={kind.customColor}
-                isDisabled={isSaving}
-                onChange={(change) => {
-                  update(kind.id, change);
-                }}
-                onPreview={(change) => {
-                  preview(withChange(kind.id, change));
-                }}
-              />
-            )}
-          </ControlRow>
-          <div className="gap-control flex justify-end">
-            <Button
-              isDisabled={isSaving}
-              onPress={() => {
-                void save({
-                  ...settings,
-                  kinds: kinds.filter((other) => other.id !== kind.id),
-                });
-              }}
-            >
-              Remove
-            </Button>
-          </div>
-        </GroupBox>
-      ))}
     </div>
   );
 }

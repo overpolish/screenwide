@@ -9,9 +9,17 @@ import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { AudioMeter } from "../../audio-inputs/audio-meter";
+import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
 import { useSettingsApi } from "../settings-api-context";
+
+import { TranscriptionModelActions } from "./transcription-model-actions";
+import {
+  canTranscribe,
+  modelFor,
+  type TranscriptionControls,
+} from "./use-transcription";
 
 import type { PermissionStatus } from "../../permissions/types";
 import type { InputDevice } from "../../recording-inputs/types";
@@ -37,11 +45,15 @@ export function VoiceNoteSettings({
   isSaving,
   onChange,
   settings,
+  transcription,
 }: {
   isSaving: boolean;
   onChange: (settings: MomentSettings) => void;
   settings: MomentSettings;
+  transcription: TranscriptionControls;
 }) {
+  const momentsModel = modelFor(transcription.state, "moments");
+  const isTranscribed = canTranscribe(transcription.state, "moments");
   const {
     getMicrophoneAccess,
     listMicrophones,
@@ -115,7 +127,7 @@ export function VoiceNoteSettings({
         title="Microphone"
       >
         {(controlProps) => (
-          <div className="flex w-48 flex-col gap-tight">
+          <div className="flex w-48 flex-col gap-control-inset">
             <PopupSelect
               {...controlProps}
               id="moments-note-microphone"
@@ -141,6 +153,37 @@ export function VoiceNoteSettings({
               peak={level.peak}
               radius={1.5}
               width="100%"
+            />
+          </div>
+        )}
+      </ControlRow>
+      <ControlRow
+        // The switch says on or off by itself; only a missing model needs
+        // a word, to say what the Download beside it fetches.
+        description={
+          settings.transcribeNotes && !isTranscribed && momentsModel
+            ? `Needs the Moments model (${formatBytes(momentsModel.sizeBytes)}).`
+            : undefined
+        }
+        title="Transcription"
+      >
+        {(controlProps) => (
+          <div className="gap-control flex items-center">
+            {/* The model is fetched into the one list Settings ›
+                Transcription keeps; the switch never fetches or removes it. */}
+            {settings.transcribeNotes && !isTranscribed && momentsModel ? (
+              <TranscriptionModelActions
+                controls={transcription}
+                model={momentsModel}
+              />
+            ) : null}
+            <Switch
+              {...controlProps}
+              isDisabled={isSaving || !settings.voiceNotes}
+              isSelected={settings.transcribeNotes}
+              onChange={(transcribeNotes) => {
+                onChange({ ...settings, transcribeNotes });
+              }}
             />
           </div>
         )}

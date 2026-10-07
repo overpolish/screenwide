@@ -31,15 +31,19 @@ pub struct MomentKind {
 pub struct MomentSettings {
   pub kinds: Vec<MomentKind>,
   /// Whether holding a kind's shortcut records a voice note with it.
-  #[serde(default = "voice_notes_default")]
+  #[serde(default = "on_by_default")]
   pub voice_notes: bool,
+  /// Whether voice notes are transcribed. A preference alone: it never
+  /// downloads or removes a model, which Settings › Transcription owns.
+  #[serde(default = "on_by_default")]
+  pub transcribe_notes: bool,
   /// The microphone notes are recorded from, by device id. Nothing means
   /// the recording's own, or the system's default when it has none.
   #[serde(default)]
   pub note_microphone: Option<String>,
 }
 
-const fn voice_notes_default() -> bool {
+const fn on_by_default() -> bool {
   true
 }
 
@@ -58,6 +62,7 @@ impl Default for MomentSettings {
         kind("notable", "Notable", "#0088ff", 2),
       ],
       note_microphone: None,
+      transcribe_notes: true,
       voice_notes: true,
     }
   }
@@ -186,10 +191,18 @@ pub fn set_moment_settings(
   }
   let bytes = serde_json::to_vec_pretty(&settings).map_err(|error| error.to_string())?;
   std::fs::write(path, bytes).map_err(|error| error.to_string())?;
-  *SETTINGS
-    .write()
-    .unwrap_or_else(|poisoned| poisoned.into_inner()) = settings.clone();
+  let transcribing = std::mem::replace(
+    &mut *SETTINGS
+      .write()
+      .unwrap_or_else(|poisoned| poisoned.into_inner()),
+    settings.clone(),
+  )
+  .transcribe_notes;
   // A recording under way picks up the new shortcuts at once.
   super::shortcuts::sync(&app);
+  // Notes show their transcripts, or stop offering them, at once.
+  if transcribing != settings.transcribe_notes {
+    crate::transcription::notes::changed(&app);
+  }
   Ok(settings)
 }

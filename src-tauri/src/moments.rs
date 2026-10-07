@@ -11,7 +11,8 @@
 //! were, so later changes in Settings never rewrite a past recording.
 //! Held long enough, a press also records a voice note (`voice`,
 //! `note_audio`), kept out of the recording's own microphone by
-//! `recording::note_gate`.
+//! `recording::note_gate`. Once a recording stops, each note's transcript
+//! is added to the same file (`transcripts`).
 
 mod format;
 pub(crate) mod note_audio;
@@ -20,7 +21,9 @@ pub(crate) mod settings;
 pub(crate) mod shortcuts;
 #[cfg(test)]
 mod tests;
+mod transcripts;
 mod voice;
 
-pub(crate) use format::{note_path, read};
+pub(crate) use format::{for_project, note_path, read};
 pub(crate) use recorder::MomentRecorder;
+pub(crate) use transcripts::add_transcript;

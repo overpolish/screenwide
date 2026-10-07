@@ -121,6 +121,10 @@ export const STORY_MOMENTS: RecordingMoment[] = [
     name: "Notable",
     note: {
       durationMs: 4_200,
+      transcript: {
+        status: "ready",
+        text: "Cut the intro here, the demo really starts once the settings window opens.",
+      },
       waveform: Array.from(
         { length: 160 },
         (_, point) => Math.abs(Math.sin(point / 7)) * 0.8,

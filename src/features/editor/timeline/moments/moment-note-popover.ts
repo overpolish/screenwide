@@ -50,6 +50,7 @@ export async function toggleMomentNote(
       kind: "note",
       moment: moment.index,
       name: moment.name,
+      transcript: moment.note.transcript,
       waveform: moment.note.waveform,
     },
     focusContents: false,

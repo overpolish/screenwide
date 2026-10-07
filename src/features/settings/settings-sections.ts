@@ -3,7 +3,14 @@
 
 /** The panes the sidebar lists, and the title the window wears for each. */
 export type SettingsSection =
-  "general" | "glide" | "ruler" | "annotate" | "ocr" | "moments" | "hotkeys";
+  | "general"
+  | "glide"
+  | "ruler"
+  | "annotate"
+  | "ocr"
+  | "moments"
+  | "transcription"
+  | "hotkeys";
 
 export const sectionTitles: Record<SettingsSection, string> = {
   annotate: "Annotate",
@@ -13,4 +20,5 @@ export const sectionTitles: Record<SettingsSection, string> = {
   moments: "Moments",
   ocr: "OCR",
   ruler: "Ruler",
+  transcription: "Transcription",
 };

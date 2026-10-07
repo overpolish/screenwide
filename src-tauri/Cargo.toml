@@ -64,6 +64,14 @@ tauri-plugin-opener = "2"
 url = "2"
 keyboard-types = "0.7"
 trash = "5"
+# Transcription model downloads. The same reqwest and rustls the updater
+# brings, with its TLS provider: nothing new is compiled for them.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+sha2 = "0.10"
+sys-locale = "0.3"
+# The transcriber's protocol only; the engine builds into its own program.
+screenwide-transcriber = { path = "transcriber" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winvd = "0.0.49"

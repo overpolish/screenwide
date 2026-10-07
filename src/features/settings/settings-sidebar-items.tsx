@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  AudioLines,
   Flag,
   Keyboard,
   LayoutGrid,
@@ -21,6 +22,7 @@ const icons: [SettingsSection, ReactNode][] = [
   ["annotate", <PenTool key="annotate" />],
   ["ocr", <ScanText key="ocr" />],
   ["moments", <Flag key="moments" />],
+  ["transcription", <AudioLines key="transcription" />],
   ["hotkeys", <Keyboard key="hotkeys" />],
 ];
 

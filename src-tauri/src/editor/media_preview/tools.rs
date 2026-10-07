@@ -67,6 +67,12 @@ pub(super) fn ffprobe_command() -> Command {
   without_console(ffprobe_path())
 }
 
+/// Screenwide's speech-to-text helper, bundled beside the app as FFmpeg is
+/// and started as it is.
+pub(crate) fn transcriber_command() -> Command {
+  without_console(tool_path("screenwide-transcriber"))
+}
+
 fn without_console(program: PathBuf) -> Command {
   #[cfg_attr(not(windows), allow(unused_mut))]
   let mut command = Command::new(program);

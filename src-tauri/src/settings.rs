@@ -15,6 +15,7 @@ pub fn initialize(app: &tauri::AppHandle) {
   crate::ruler::settings::initialize(app);
   crate::moments::settings::initialize(app);
   crate::text_recognition::settings::initialize(app);
+  crate::transcription::language::initialize(app);
 }
 
 use tauri::{AppHandle, Manager};

@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Screenwide's speech-to-text helper: a program of its own rather than part of
+# the app, so a GPU runtime the computer lacks keeps only this from starting,
+# a crash in the engine takes no recording with it, and its memory is all
+# given back when it exits.
+#
+# The library half is the protocol alone and builds without the engine, so
+# the app can share the types without compiling whisper.cpp.
+
+[package]
+name = "screenwide-transcriber"
+version = "0.1.0"
+description = "Speech-to-text helper for Screenwide"
+authors = ["overpolish"]
+license = "GPL-3.0-or-later"
+edition = "2021"
+publish = false
+
+[lib]
+name = "screenwide_transcriber"
+path = "src/lib.rs"
+
+[[bin]]
+name = "screenwide-transcriber"
+path = "src/main.rs"
+required-features = ["engine"]
+
+[features]
+engine = ["dep:whisper-rs"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+whisper-rs = { version = "0.14.4", optional = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+whisper-rs = { version = "0.14.4", optional = true, features = ["metal"] }
+
+[target.'cfg(windows)'.dependencies]
+whisper-rs = { version = "0.14.4", optional = true, features = ["vulkan"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

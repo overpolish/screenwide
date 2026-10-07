@@ -45,5 +45,13 @@ else
   echo "Could not prepare the macOS 26 app icon; using icon.icns" >&2
 fi
 ln -sfn "$binary" "$app_executable"
+# The app looks for the programs it bundles beside its own executable, which
+# here is the link inside the bundle. A release puts them in Contents/MacOS,
+# so the prepared copies beside the build are linked there too.
+for tool in ffmpeg screenwide-transcriber; do
+  if [ -e "$(dirname -- "$binary")/$tool" ]; then
+    ln -sfn "$(dirname -- "$binary")/$tool" "$app_directory/Contents/MacOS/$tool"
+  fi
+done
 
 exec "$app_executable" "$@"

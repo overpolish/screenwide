@@ -7,6 +7,7 @@ use serde::Serialize;
 use tauri::{ipc::Response, AppHandle, Manager};
 
 use super::{EditorArtifact, EditorState};
+use crate::transcription::notes::{self, NoteTranscript};
 
 /// How many levels a note's waveform is drawn from.
 const NOTE_WAVEFORM_POINTS: usize = 160;
@@ -30,6 +31,9 @@ pub struct RecordingMoment {
 #[serde(rename_all = "camelCase")]
 pub struct RecordingMomentNote {
   pub duration_ms: u64,
+  /// What it says, or how far transcribing it has got. Nothing when notes
+  /// are not transcribed and this one never was.
+  pub transcript: Option<NoteTranscript>,
   /// Peak levels from 0 to 1, for drawing.
   pub waveform: Vec<f32>,
 }
@@ -51,16 +55,7 @@ fn moments_path(app: &AppHandle, artifact_id: u64) -> Result<Option<PathBuf>, St
     }
     recording.project().map(Path::to_path_buf)
   };
-  Ok(project.and_then(|project| {
-    let name = crate::project::read(&project)
-      .ok()?
-      .recorded()
-      .ok()?
-      .media
-      .moments
-      .clone()?;
-    crate::project::resolve(&project, &name).ok()
-  }))
+  Ok(project.and_then(|project| crate::moments::for_project(&project)))
 }
 
 /// The moments placed in the recording open in the editor, in the order
@@ -72,12 +67,16 @@ pub async fn get_recording_moments(
   artifact_id: u64,
 ) -> Result<Vec<RecordingMoment>, String> {
   let path = moments_path(&app, artifact_id)?;
-  tauri::async_runtime::spawn_blocking(move || Ok(path.map(|path| read(&path)).unwrap_or_default()))
-    .await
-    .map_err(|error| error.to_string())?
+  tauri::async_runtime::spawn_blocking(move || {
+    Ok(path.map(|path| read(&app, &path)).unwrap_or_default())
+  })
+  .await
+  .map_err(|error| error.to_string())?
 }
 
-fn read(path: &Path) -> Vec<RecordingMoment> {
+/// Reading a recording's moments also queues any note not yet transcribed,
+/// so opening it in the Editor is enough to have its notes transcribed.
+fn read(app: &AppHandle, path: &Path) -> Vec<RecordingMoment> {
   let folder = path.parent().unwrap_or(Path::new(""));
   crate::moments::read(path)
     .inspect_err(|error| eprintln!("Could not read this recording's moments: {error}"))
@@ -97,6 +96,7 @@ fn read(path: &Path) -> Vec<RecordingMoment> {
         .ok()?;
         Some(RecordingMomentNote {
           duration_ms,
+          transcript: notes::status(app, path, index, moment.transcript.as_deref()),
           waveform,
         })
       }),

@@ -99,6 +99,15 @@ export const openMicrophoneSettings = () =>
 
 export { listMicrophones };
 
+export {
+  cancelTranscriptionDownload,
+  downloadTranscriptionModel,
+  getTranscriptionState,
+  listenToTranscription,
+  removeTranscriptionModel,
+  setTranscriptionLanguage,
+} from "../transcription/api";
+
 export const browseDefaultLocation = (
   kind: "project" | "recording" | "screenshot",
 ) => invoke<string | null>("browse_default_location", { kind });

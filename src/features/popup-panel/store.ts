@@ -7,6 +7,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { EditorKind } from "../editor/types";
 
 import type { AnnotationKind } from "../../components/shared/annotation-style/types";
+import type { NoteTranscript } from "../editor/timeline/moments/recording-moments";
 
 /** `tool-` names an annotation tool's own glyph, kept apart from `image`, the
  * export-an-image glyph. */
@@ -90,6 +91,9 @@ export type PopupPanelNoteContent = {
   /** Which moment it is, counting from zero in the order they were placed. */
   moment: number;
   name: string;
+  /** What was said, as far as transcription has got; null before anything
+   * is known of it. */
+  transcript: NoteTranscript | null;
   /** Peak levels from 0 to 1. */
   waveform: number[];
 };

@@ -164,7 +164,7 @@ export function HotkeyField({
         commit(next);
       }}
     >
-      <div className="gap-control-inset inline-flex items-center">
+      <div className="gap-control inline-flex items-center">
         <Button
           aria-describedby={describedBy}
           aria-description={instructions}

@@ -370,7 +370,7 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "externalBin": ["binaries/ffmpeg"],
+    "externalBin": ["binaries/ffmpeg", "binaries/screenwide-transcriber"],
     "fileAssociations": [
       {
         "description": "Screenwide Project",
@@ -390,7 +390,8 @@
       "assets/Inter-OFL-1.1.txt": "licenses/Inter-OFL-1.1.txt",
       "assets/Inter-VariableFont_opsz,wght.ttf": "fonts/Inter-VariableFont_opsz,wght.ttf",
       "assets/RobotoMono-OFL-1.1.txt": "licenses/RobotoMono-OFL-1.1.txt",
-      "assets/RobotoMono-VariableFont_wght.ttf": "fonts/RobotoMono-VariableFont_wght.ttf"
+      "assets/RobotoMono-VariableFont_wght.ttf": "fonts/RobotoMono-VariableFont_wght.ttf",
+      "assets/whisper.cpp-MIT.txt": "licenses/whisper.cpp-MIT.txt"
     },
     "macOS": {
       "minimumSystemVersion": "14.2"

@@ -26,6 +26,7 @@ export function momentsPreviewApi() {
       },
     ],
     noteMicrophone: null,
+    transcribeNotes: true,
     voiceNotes: true,
   };
   return {

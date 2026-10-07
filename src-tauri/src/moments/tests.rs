@@ -99,6 +99,26 @@ fn moments_before_a_line_cut_short_by_a_crash_are_kept() {
   assert_eq!(moments[0].timestamp_us, 2_000_000);
 }
 
+#[test]
+fn a_transcript_added_after_a_line_cut_short_is_read_and_the_last_one_counts() {
+  let (recorder, origin, path) = recorder("transcript");
+  assert!(recorder.record_for_test(&kind("funny", None), origin + Duration::from_secs(4)));
+  let kept = recorder.finish_for_test().unwrap();
+  let mut file = std::fs::OpenOptions::new()
+    .append(true)
+    .open(&kept)
+    .unwrap();
+  file.write_all(b"{\"type\":\"moment\",\"col").unwrap();
+  super::add_transcript(&kept, 0, "First take").unwrap();
+  super::add_transcript(&kept, 0, "Cut the intro here").unwrap();
+  let missing = super::add_transcript(&kept, 1, "Nobody placed this");
+  let moments = super::read(&kept).unwrap();
+  let _ = std::fs::remove_file(path);
+  assert!(missing.is_err());
+  assert_eq!(moments.len(), 1);
+  assert_eq!(moments[0].transcript.as_deref(), Some("Cut the intro here"));
+}
+
 fn settings(kinds: Vec<MomentKind>) -> MomentSettings {
   MomentSettings {
     kinds,
@@ -161,8 +181,9 @@ fn the_default_kinds_are_valid() {
 }
 
 #[test]
-fn voice_notes_are_on_for_settings_saved_before_they_existed() {
+fn voice_notes_and_their_transcription_are_on_for_older_settings() {
   let saved: MomentSettings = serde_json::from_str(r#"{"kinds":[]}"#).unwrap();
   assert!(saved.voice_notes);
+  assert!(saved.transcribe_notes);
   assert_eq!(saved.note_microphone, None);
 }

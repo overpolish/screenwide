@@ -66,7 +66,7 @@ export function useMomentSettings(onError: (error: string | null) => void) {
           color: unusedColor(settings.kinds),
           customColor: null,
           id: crypto.randomUUID(),
-          name: "New Kind",
+          name: "New Moment",
           shortcut: null,
         },
       ],

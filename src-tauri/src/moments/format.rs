@@ -3,7 +3,7 @@
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -41,12 +41,35 @@ pub(super) enum MomentRecord {
     duration_ms: u64,
     moment: usize,
   },
+  /// What was said in the `moment`th moment's voice note, added once it is
+  /// transcribed, after the recording has stopped. The moment's name and
+  /// time are repeated so the line reads on its own. A note transcribed
+  /// again gets another line, and the last one counts. Only the text is
+  /// kept: a note is read, never edited word by word.
+  Transcript {
+    moment: usize,
+    name: String,
+    timestamp_us: u64,
+    text: String,
+  },
 }
 
 /// Where the voice note of the `moment`th moment is, beside the moments file
 /// in `folder`.
-pub(crate) fn note_path(folder: &Path, moment: usize) -> std::path::PathBuf {
+pub(crate) fn note_path(folder: &Path, moment: usize) -> PathBuf {
   folder.join("notes").join(format!("{moment}.wav"))
+}
+
+/// The moments file of the recording project at `project`, if it has one.
+pub(crate) fn for_project(project: &Path) -> Option<PathBuf> {
+  let name = crate::project::read(project)
+    .ok()?
+    .recorded()
+    .ok()?
+    .media
+    .moments
+    .clone()?;
+  crate::project::resolve(project, &name).ok()
 }
 
 pub(super) fn header() -> MomentRecord {
@@ -70,11 +93,13 @@ pub(crate) struct RecordedMoment {
   pub timestamp_us: u64,
   /// How long the moment's voice note is, if it has one.
   pub note_duration_ms: Option<u64>,
+  /// What its voice note says, once transcribed.
+  pub transcript: Option<String>,
 }
 
 /// Every complete moment in the sidecar at `path`, in the order they were
-/// pressed. A crash can cut only the last line short; the moments before it
-/// are kept.
+/// pressed. A crash can cut a line short, and transcripts may be added after
+/// it, so an unreadable line is passed over rather than ending the file.
 pub(crate) fn read(path: &Path) -> Result<Vec<RecordedMoment>, String> {
   let reader = BufReader::new(File::open(path).map_err(|error| error.to_string())?);
   let mut lines = reader.lines();
@@ -97,7 +122,7 @@ pub(crate) fn read(path: &Path) -> Result<Vec<RecordedMoment>, String> {
       continue;
     }
     let Ok(record) = serde_json::from_str::<MomentRecord>(&line) else {
-      break;
+      continue;
     };
     match record {
       MomentRecord::Moment {
@@ -111,6 +136,7 @@ pub(crate) fn read(path: &Path) -> Result<Vec<RecordedMoment>, String> {
         name,
         note_duration_ms: None,
         timestamp_us,
+        transcript: None,
       }),
       MomentRecord::Note {
         duration_ms,
@@ -118,6 +144,11 @@ pub(crate) fn read(path: &Path) -> Result<Vec<RecordedMoment>, String> {
       } => {
         if let Some(recorded) = moments.get_mut(moment) {
           recorded.note_duration_ms = Some(duration_ms);
+        }
+      }
+      MomentRecord::Transcript { moment, text, .. } => {
+        if let Some(recorded) = moments.get_mut(moment) {
+          recorded.transcript = Some(text);
         }
       }
       MomentRecord::Header { .. } => {}

@@ -10,7 +10,9 @@ import { useFittedPanel } from "../../../popup-panel/use-fitted-panel";
 import { formatDuration } from "../../duration";
 import { timelineWaveformPath } from "../audio/timeline-waveform-path";
 
+import { MomentNoteTranscript } from "./moment-note-transcript";
 import { useNotePlayback } from "./use-note-playback";
+import { useNoteTranscript } from "./use-note-transcript";
 
 import type { PopupPanelNoteContent } from "../../../popup-panel/store";
 
@@ -38,49 +40,57 @@ export function MomentNotePanel({
     () => timelineWaveformPath(content.waveform, 0),
     [content.waveform],
   );
+  const transcript = useNoteTranscript(
+    content.artifactId,
+    content.moment,
+    content.transcript,
+  );
 
   return (
     <div
-      className="flex w-full items-center gap-control p-control-inset"
+      className="gap-control-inset p-control-inset flex w-full flex-col"
       ref={contentRef}
     >
-      <IconButton
-        aria-label={playing ? "Pause voice note" : "Play voice note"}
-        onPress={() => {
-          void toggle();
-        }}
-      >
-        {playing ? <Pause /> : <Play />}
-      </IconButton>
-      <svg
-        aria-label={`${content.name} voice note`}
-        className="h-control-height min-w-0 grow text-content-fg-tertiary"
-        preserveAspectRatio="none"
-        role="img"
-        viewBox="0 0 1000 40"
-      >
-        <clipPath id={clipId}>
-          <rect height="40" width={progress * 1000} x="0" y="0" />
-        </clipPath>
-        <path
-          className="stroke-current"
-          d={path}
-          fill="none"
-          strokeWidth="2"
-          vectorEffect="non-scaling-stroke"
-        />
-        <path
-          clipPath={`url(#${clipId})`}
-          d={path}
-          fill="none"
-          stroke={content.color}
-          strokeWidth="2"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <Text className="shrink-0 tabular-nums" variant="footnote">
-        {formatDuration(content.durationMs)}
-      </Text>
+      <div className="gap-control flex items-center">
+        <IconButton
+          aria-label={playing ? "Pause voice note" : "Play voice note"}
+          onPress={() => {
+            void toggle();
+          }}
+        >
+          {playing ? <Pause /> : <Play />}
+        </IconButton>
+        <svg
+          aria-label={`${content.name} voice note`}
+          className="h-control-height min-w-0 grow text-content-fg-tertiary"
+          preserveAspectRatio="none"
+          role="img"
+          viewBox="0 0 1000 40"
+        >
+          <clipPath id={clipId}>
+            <rect height="40" width={progress * 1000} x="0" y="0" />
+          </clipPath>
+          <path
+            className="stroke-current"
+            d={path}
+            fill="none"
+            strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+          />
+          <path
+            clipPath={`url(#${clipId})`}
+            d={path}
+            fill="none"
+            stroke={content.color}
+            strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        <Text className="shrink-0 tabular-nums" variant="footnote">
+          {formatDuration(content.durationMs)}
+        </Text>
+      </div>
+      {transcript ? <MomentNoteTranscript transcript={transcript} /> : null}
     </div>
   );
 }

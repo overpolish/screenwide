@@ -5341,10 +5341,15 @@ dependencies = [
  "rapidfuzz",
  "rayon",
  "rdev",
+ "reqwest",
  "rqrr",
+ "rustls",
  "rxing",
+ "screenwide-transcriber",
  "serde",
  "serde_json",
+ "sha2",
+ "sys-locale",
  "tauri",
  "tauri-build",
  "tauri-nspanel",
@@ -5371,6 +5376,14 @@ dependencies = [
  "winvd",
  "xcap",
  "yuv",
+]
+
+[[package]]
+name = "screenwide-transcriber"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -5859,6 +5872,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "sys-locale"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8eab9a99a024a169fe8a903cf9d4a3b3601109bcc13bd9e3c6fff259138626c4"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

@@ -10,8 +10,10 @@ import { HotkeySettingsPanel } from "./sections/hotkey-settings";
 import { MomentsSettingsPanel } from "./sections/moments-settings";
 import { OcrSettingsPanel } from "./sections/ocr-settings";
 import { RulerSettingsPanel } from "./sections/ruler-settings";
+import { TranscriptionSettingsPanel } from "./sections/transcription-settings";
 
 import type { MomentSettingsState } from "./sections/use-moment-settings";
+import type { TranscriptionControls } from "./sections/use-transcription";
 import type { SettingsSection } from "./settings-sections";
 import type {
   AnnotateSettings,
@@ -47,6 +49,7 @@ export type SettingsPanesProps = {
   savingShortcut: ShortcutAction | null;
   section: SettingsSection;
   shortcuts: ShortcutSettings | null;
+  transcription: TranscriptionControls;
   defaults?: ShortcutDefaults | null;
   updateSetting?: ReactNode;
 };
@@ -82,6 +85,7 @@ export function SettingsPanes({
   savingShortcut,
   section,
   shortcuts,
+  transcription,
   updateSetting,
 }: SettingsPanesProps) {
   if (section === "general")
@@ -159,8 +163,11 @@ export function SettingsPanes({
       <MomentsSettingsPanel
         moments={moments}
         onCaptureChange={onCaptureChange}
+        transcription={transcription}
       />
     );
+  if (section === "transcription")
+    return <TranscriptionSettingsPanel controls={transcription} />;
   return (
     <HotkeySettingsPanel
       defaults={defaults?.shortcuts}

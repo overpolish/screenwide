@@ -17,6 +17,7 @@ import { useGlideSettingsSave } from "./sections/use-glide-settings-save";
 import { useMomentSettings } from "./sections/use-moment-settings";
 import { useOcrSettingsSave } from "./sections/use-ocr-settings-save";
 import { useRulerSettingsSave } from "./sections/use-ruler-settings-save";
+import { useTranscription } from "./sections/use-transcription";
 import { useSettingsApi } from "./settings-api-context";
 import { SettingsPanes } from "./settings-panes";
 import { sectionTitles, type SettingsSection } from "./settings-sections";
@@ -96,6 +97,7 @@ export function SettingsWindow({
       setSettings: setAnnotate,
     });
   const moments = useMomentSettings(setError);
+  const transcription = useTranscription(setError);
 
   useEffect(() => {
     Promise.all([
@@ -206,7 +208,7 @@ export function SettingsWindow({
                 variant="ghost"
               >
                 <Plus />
-                Add Kind
+                Add Moment
               </Button>
             ) : undefined
           }
@@ -275,6 +277,7 @@ export function SettingsWindow({
                 savingShortcut={saving}
                 section={section}
                 shortcuts={settings}
+                transcription={transcription}
                 updateSetting={updateSetting}
               />
             </section>

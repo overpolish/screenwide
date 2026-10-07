@@ -3,12 +3,17 @@
 
 import { useEffect, useState } from "react";
 
-import { getRecordingMoments, RecordingMoment } from "./recording-moments";
+import {
+  getRecordingMoments,
+  listenToNoteTranscripts,
+  RecordingMoment,
+} from "./recording-moments";
 
 const NO_MOMENTS: RecordingMoment[] = [];
 
-/** The moments placed in the recording open as `artifactId`. They never
- * change once recorded, so they are read once per recording. */
+/** The moments placed in the recording open as `artifactId`. The moments
+ * themselves never change once recorded; they are read again only as their
+ * notes' transcripts move on. */
 export function useRecordingMoments(artifactId: number) {
   const [moments, setMoments] = useState<{
     artifactId: number;
@@ -17,15 +22,26 @@ export function useRecordingMoments(artifactId: number) {
 
   useEffect(() => {
     let current = true;
-    getRecordingMoments(artifactId)
-      .then((loaded) => {
-        if (current) setMoments({ artifactId, moments: loaded });
+    let stop: (() => void) | undefined;
+    const load = () => {
+      getRecordingMoments(artifactId)
+        .then((loaded) => {
+          if (current) setMoments({ artifactId, moments: loaded });
+        })
+        .catch((error: unknown) => {
+          console.error("Could not read the recording's moments", error);
+        });
+    };
+    load();
+    void listenToNoteTranscripts(load)
+      .then((unlisten) => {
+        if (current) stop = unlisten;
+        else unlisten();
       })
-      .catch((error: unknown) => {
-        console.error("Could not read the recording's moments", error);
-      });
+      .catch(() => undefined);
     return () => {
       current = false;
+      stop?.();
     };
   }, [artifactId]);
 
