@@ -9,7 +9,7 @@ mod desktop_canvas;
 mod encoding;
 pub(crate) mod keyboard;
 pub(crate) mod microphone;
-mod monitor;
+pub(crate) mod monitor;
 pub(crate) mod note_gate;
 #[cfg(target_os = "macos")]
 mod platform;
@@ -42,6 +42,7 @@ use platform_windows as capture;
 
 pub use encoding::{CameraFinalizeInfo, FinalizeInfo, PrimaryRecordingKind};
 pub use replay::{ReplaySnapshot, ReplayState};
+pub(crate) use state::confidence_monitor;
 pub use state::{is_idle, is_recording, snapshot, RecordingState};
 pub use types::{
   RecordingMode, RecordingSnapshot, RecordingStatus, Region, StartRecordingOptions,

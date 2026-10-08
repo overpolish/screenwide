@@ -21,6 +21,7 @@ use super::note_audio::{write_wav, NoteAudio};
 use super::recorder::MomentRecorder;
 use super::settings;
 use crate::recording::microphone::Source;
+use crate::recording::monitor::RecordingMonitor;
 use crate::recording::note_gate::{self, NoteTee, NOTE_THRESHOLD};
 
 /// How long after the key comes up the microphone is still read: its last
@@ -86,9 +87,13 @@ pub(super) fn begin(
     Some(id) => recording_microphone.as_deref() == Some(id),
   };
   let note = Arc::new(Mutex::new(NoteAudio::default()));
+  let monitor = crate::recording::confidence_monitor(app);
+  monitor.start_note();
   let microphone = if shares {
     let heard = Arc::clone(&note);
+    let level = Arc::clone(&monitor);
     let tee: NoteTee = Arc::new(move |samples, channels, sample_rate, captured_at| {
+      level.send_note(samples);
       audio(&heard).take(samples, channels, sample_rate, captured_at);
     });
     note_gate::press(at, Some(tee));
@@ -106,6 +111,7 @@ pub(super) fn begin(
     Some(OwnMicrophone::start(
       settings.note_microphone,
       Arc::clone(&note),
+      Arc::clone(&monitor),
       gated,
     ))
   };
@@ -172,7 +178,12 @@ struct OwnMicrophone {
 }
 
 impl OwnMicrophone {
-  fn start(device_id: Option<String>, note: Arc<Mutex<NoteAudio>>, gated: bool) -> Self {
+  fn start(
+    device_id: Option<String>,
+    note: Arc<Mutex<NoteAudio>>,
+    monitor: Arc<RecordingMonitor>,
+    gated: bool,
+  ) -> Self {
     let (stop, stopped) = mpsc::channel::<()>();
     let thread = std::thread::spawn(move || {
       let fail = |error: String| {
@@ -191,6 +202,7 @@ impl OwnMicrophone {
       let heard = Arc::clone(&note);
       let stream = source.start(
         Arc::new(move |buffer| {
+          monitor.send_note(&buffer.samples);
           audio(&heard).take(
             &buffer.samples,
             format.channels,

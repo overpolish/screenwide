@@ -95,6 +95,11 @@ export function RecordingDock({
   const isRecording = status === "recording";
   const { hours, minutes, seconds } = formatElapsedTime(elapsedMs);
   const confidenceDisabled = !isRecording;
+  // While a note records, its own meter sits beside its timer and the
+  // recording's microphone is held out of the recording, so the recording's
+  // meter is hidden rather than showing a second bar. It keeps its space, so
+  // the pill neither shrinks nor moves.
+  const isRecordingNote = moment?.noteMs != null;
   const hasConfidenceChecks =
     monitor?.hasCamera === true ||
     monitor?.hasSystemAudio === true ||
@@ -211,16 +216,18 @@ export function RecordingDock({
                     />
                   )}
                   {monitor.hasMicrophone && (
-                    <AudioMeter
-                      decibels={monitor.microphoneDecibels}
-                      disabled={confidenceDisabled}
-                      height={16}
-                      hidePeakTick
-                      hideTicks
-                      orientation="vertical"
-                      radius={1}
-                      width={2}
-                    />
+                    <div className={cn("flex", isRecordingNote && "invisible")}>
+                      <AudioMeter
+                        decibels={monitor.microphoneDecibels}
+                        disabled={confidenceDisabled}
+                        height={16}
+                        hidePeakTick
+                        hideTicks
+                        orientation="vertical"
+                        radius={1}
+                        width={2}
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -238,6 +245,7 @@ export function RecordingDock({
               isPaused={isPaused}
               minutes={minutes}
               moment={moment}
+              noteDecibels={monitor?.noteDecibels}
               seconds={seconds}
             />
           </div>

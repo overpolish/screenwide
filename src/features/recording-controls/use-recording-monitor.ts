@@ -12,6 +12,7 @@ const SOURCES_EVENT = 0;
 const SYSTEM_AUDIO_EVENT = 1;
 const MICROPHONE_EVENT = 2;
 const CAMERA_EVENT = 3;
+const NOTE_EVENT = 4;
 const SYSTEM_AUDIO_FLAG = 1;
 const MICROPHONE_FLAG = 2;
 const CAMERA_FLAG = 4;
@@ -27,6 +28,9 @@ export type RecordingMonitorSnapshot = {
   hasMicrophone: boolean;
   hasSystemAudio: boolean;
   microphoneDecibels: number;
+  /** What the voice note being recorded hears, which may be a microphone of
+   * its own rather than the recording's. */
+  noteDecibels: number;
   systemAudioDecibels: number;
 };
 
@@ -41,6 +45,7 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
   const [hasSystemAudio, setHasSystemAudio] = useState(false);
   const [microphoneDecibels, setMicrophoneDecibels] =
     useState(SILENCE_DECIBELS);
+  const [noteDecibels, setNoteDecibels] = useState(SILENCE_DECIBELS);
   const [systemAudioDecibels, setSystemAudioDecibels] =
     useState(SILENCE_DECIBELS);
 
@@ -78,10 +83,15 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
         setCameraFrameSize(null);
         latestCameraFrameRef.current = null;
         setMicrophoneDecibels(SILENCE_DECIBELS);
+        setNoteDecibels(SILENCE_DECIBELS);
         setSystemAudioDecibels(SILENCE_DECIBELS);
         return;
       }
-      if (event === SYSTEM_AUDIO_EVENT || event === MICROPHONE_EVENT) {
+      if (
+        event === SYSTEM_AUDIO_EVENT ||
+        event === MICROPHONE_EVENT ||
+        event === NOTE_EVENT
+      ) {
         if (bytes.byteLength < 5) return;
         const decibels = new DataView(
           payload,
@@ -89,7 +99,8 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
           4,
         ).getFloat32(0, true);
         if (event === SYSTEM_AUDIO_EVENT) setSystemAudioDecibels(decibels);
-        else setMicrophoneDecibels(decibels);
+        else if (event === MICROPHONE_EVENT) setMicrophoneDecibels(decibels);
+        else setNoteDecibels(decibels);
         return;
       }
       if (event === CAMERA_EVENT && bytes.byteLength >= 5) {
@@ -128,6 +139,7 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
     hasMicrophone,
     hasSystemAudio,
     microphoneDecibels,
+    noteDecibels,
     systemAudioDecibels,
   };
 }

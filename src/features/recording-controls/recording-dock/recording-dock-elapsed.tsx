@@ -5,6 +5,7 @@ import { Mic, MicOff } from "lucide-react";
 
 import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
 import { cn } from "../../../lib/styling";
+import { AudioMeter } from "../../audio-inputs/audio-meter";
 
 import type { PlacedMoment } from "./use-placed-moment";
 
@@ -15,8 +16,15 @@ const noteTime = (ms: number) => {
 };
 
 /** What a placed moment shows: its kind, then, held long enough, the note it
- * is recording, or that there is no microphone to record one. */
-function MomentShown({ moment }: { moment: PlacedMoment }) {
+ * is recording, or that there is no microphone to record one. A note's level
+ * shows beside it when the dock's confidence checks are on. */
+function MomentShown({
+  moment,
+  noteDecibels,
+}: {
+  moment: PlacedMoment;
+  noteDecibels: number | undefined;
+}) {
   if (moment.noteMs !== null)
     return (
       <div
@@ -24,6 +32,17 @@ function MomentShown({ moment }: { moment: PlacedMoment }) {
         className="flex min-w-0 items-center justify-center gap-control"
         role="status"
       >
+        {noteDecibels !== undefined && (
+          <AudioMeter
+            decibels={noteDecibels}
+            height={16}
+            hidePeakTick
+            hideTicks
+            orientation="vertical"
+            radius={1}
+            width={2}
+          />
+        )}
         <Mic
           aria-hidden="true"
           className="size-icon-small shrink-0"
@@ -82,12 +101,15 @@ export function RecordingDockElapsed({
   isPaused,
   minutes,
   moment,
+  noteDecibels,
   seconds,
 }: {
   hours: string;
   isPaused: boolean;
   minutes: string;
   moment: PlacedMoment | null;
+  /** The note's level, or undefined when confidence checks are off. */
+  noteDecibels: number | undefined;
   seconds: string;
 }) {
   return (
@@ -100,7 +122,7 @@ export function RecordingDockElapsed({
       }
     >
       {moment ? (
-        <MomentShown moment={moment} />
+        <MomentShown moment={moment} noteDecibels={noteDecibels} />
       ) : (
         <div
           className={cn(

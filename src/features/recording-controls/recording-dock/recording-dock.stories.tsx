@@ -70,6 +70,7 @@ export const RecordingWithConfidenceChecks: Story = {
       hasMicrophone: true,
       hasSystemAudio: true,
       microphoneDecibels: -14,
+      noteDecibels: -60,
       systemAudioDecibels: -24,
     },
     status: "recording",
@@ -95,7 +96,8 @@ export const MomentPlaced: Story = {
   },
 };
 
-/** The key still held past a tap: the note's own timer runs. */
+/** The key still held past a tap: the note's own timer runs, with the level
+ * of what it hears. */
 export const RecordingVoiceNote: Story = {
   args: {
     elapsedMs: 42_000,
@@ -105,6 +107,17 @@ export const RecordingVoiceNote: Story = {
       name: "Funny",
       noMicrophone: false,
       noteMs: 4_200,
+    },
+    monitor: {
+      cameraCanvasRef: { current: null },
+      cameraFrameSize: null,
+      hasCamera: false,
+      hasCameraFrame: false,
+      hasMicrophone: true,
+      hasSystemAudio: false,
+      microphoneDecibels: -14,
+      noteDecibels: -14,
+      systemAudioDecibels: -60,
     },
     status: "recording",
   },
