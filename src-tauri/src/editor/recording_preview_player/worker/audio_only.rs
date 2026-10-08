@@ -122,10 +122,20 @@ pub(super) fn run(context: RunContext) {
     Ok(audio) => audio,
     Err(error) => return send_error(&event_channel, error),
   };
-  if cancelled.load(Ordering::Acquire) {
+  let started = if cancelled.load(Ordering::Acquire) {
+    Ok(false)
+  } else {
+    audio.play().map(|()| true)
+  };
+  if !matches!(started, Ok(true)) {
+    // The audio thread waits on a full queue until playback is cancelled.
+    cancelled.store(true, Ordering::Release);
     stop_child(&audio_child);
     drop(audio.stream);
     let _ = audio.thread.join();
+    if let Err(error) = started {
+      send_error(&event_channel, error);
+    }
     return;
   }
   let display_clock = super::super::audio_visualizer_clock::install(

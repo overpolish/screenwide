@@ -1,21 +1,24 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod video;
+
 use std::{
   process::Child,
   sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
-    mpsc::{self, Receiver},
-    Arc, Mutex, RwLock,
+    mpsc, Arc, Mutex, RwLock,
   },
   time::{Duration, Instant},
 };
 
 use tauri::ipc::Channel;
 
+use self::video::{PreparedVideo, VideoPlayback, VideoSource};
 use super::{audio, platform, send_error, stop_child};
+use crate::editor::recording_preview_player::audio::AudioPlayback;
 use crate::editor::recording_preview_player::audio_visualizer::present_audio_position;
-use crate::editor::recording_preview_player::video::{LateFrames, VideoFrame};
+use crate::editor::recording_preview_player::video::LateFrames;
 use crate::editor::recording_preview_player::{
   AudioTrackVolume, PlayerSources, RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
 };
@@ -34,39 +37,6 @@ pub(super) struct RunContext {
   pub sources: PlayerSources,
   pub start_ms: u64,
   pub video_child: Arc<Mutex<Option<Child>>>,
-}
-
-struct VideoPlayback {
-  cancelled: Arc<AtomicBool>,
-  frames: Receiver<VideoFrame>,
-  thread: std::thread::JoinHandle<()>,
-}
-
-impl VideoPlayback {
-  fn spawn(context: &RunContext, range: RecordingPreviewPlaybackRange) -> Result<Self, String> {
-    let cancelled = Arc::new(AtomicBool::new(false));
-    let (sender, frames) = mpsc::sync_channel(3);
-    let thread = platform::spawn_video(
-      &context.sources,
-      &context.playback_factors,
-      range.source_start_ms,
-      effective_rate(range, context.playback_rate),
-      false,
-      Arc::clone(&cancelled),
-      Arc::clone(&context.video_child),
-      sender,
-    )?;
-    Ok(Self {
-      cancelled,
-      frames,
-      thread,
-    })
-  }
-
-  fn stop(self) {
-    self.cancelled.store(true, Ordering::Release);
-    let _ = self.thread.join();
-  }
 }
 
 fn output_duration_ms(source_duration_ms: u64, playback_rate: f64) -> u64 {
@@ -103,30 +73,74 @@ fn ranges(context: &RunContext) -> Vec<RecordingPreviewPlaybackRange> {
   }
 }
 
-pub(super) fn run(context: RunContext) {
-  let ranges = ranges(&context);
-  let mut current_video = match VideoPlayback::spawn(&context, ranges[0]) {
-    Ok(playback) => playback,
-    Err(error) => return send_error(&context.event_channel, error),
-  };
+/// Opens the first range's decoder while audio starts and prebuffers, then
+/// starts the audio clock once both are ready. `None` means playback never
+/// began: it failed, which is reported, or was cancelled meanwhile.
+fn start(
+  context: &RunContext,
+  video: &Arc<VideoSource>,
+  ranges: &[RecordingPreviewPlaybackRange],
+) -> Option<(VideoPlayback, Option<AudioPlayback>)> {
+  let first_video = video.prepare(ranges[0]);
   let audio = if context.sources.audio_tracks.is_empty() {
-    None
+    Ok(None)
   } else {
-    match audio::spawn(
+    audio::spawn(
       &context.sources,
       Arc::clone(&context.selected_audio),
       Arc::clone(&context.audio_volumes),
-      &ranges,
+      ranges,
       context.playback_rate,
       Arc::clone(&context.cancelled),
       Arc::clone(&context.audio_child),
-    ) {
-      Ok(playback) => Some(playback),
-      Err(error) => {
-        current_video.stop();
-        return send_error(&context.event_channel, error);
+    )
+    .map(Some)
+  };
+  let (video, audio) = match (first_video.ready(), audio) {
+    (Ok(video), Ok(audio)) => (video, audio),
+    (video, audio) => {
+      let error = video.as_ref().err().or(audio.as_ref().err()).cloned();
+      abandon_start(context, video.ok(), audio.ok().flatten());
+      if let Some(error) = error {
+        send_error(&context.event_channel, error);
       }
+      return None;
     }
+  };
+  if context.cancelled.load(Ordering::Acquire) {
+    abandon_start(context, Some(video), audio);
+    return None;
+  }
+  if let Some(Err(error)) = audio.as_ref().map(AudioPlayback::play) {
+    abandon_start(context, Some(video), audio);
+    send_error(&context.event_channel, error);
+    return None;
+  }
+  Some((video, audio))
+}
+
+fn abandon_start(context: &RunContext, video: Option<VideoPlayback>, audio: Option<AudioPlayback>) {
+  if let Some(video) = video {
+    let _ = video.cancel().join();
+  }
+  if let Some(audio) = audio {
+    stop_audio(context, audio);
+  }
+}
+
+fn stop_audio(context: &RunContext, audio: AudioPlayback) {
+  // The audio thread waits on a full queue until playback is cancelled.
+  context.cancelled.store(true, Ordering::Release);
+  stop_child(&context.audio_child);
+  drop(audio.stream);
+  let _ = audio.thread.join();
+}
+
+pub(super) fn run(context: RunContext) {
+  let ranges = ranges(&context);
+  let video = VideoSource::new(&context);
+  let Some((mut current_video, audio)) = start(&context, &video, &ranges) else {
+    return;
   };
   let display_clock = audio.as_ref().and_then(|audio| {
     super::super::audio_visualizer_clock::install(
@@ -151,9 +165,8 @@ pub(super) fn run(context: RunContext) {
       |playback| (playback.clock.seconds() * 1_000.0) as u64,
     )
   };
-  let mut next_video = ranges
-    .get(1)
-    .map(|range| VideoPlayback::spawn(&context, *range));
+  let mut next_video = ranges.get(1).map(|range| video.prepare(*range));
+  let mut finished_videos = Vec::with_capacity(ranges.len());
   let mut output_offset_ms = 0;
   let mut failed = false;
   let mut late_frames = LateFrames::default();
@@ -212,12 +225,12 @@ pub(super) fn run(context: RunContext) {
       failed,
       range.source_end_ms,
     );
-    current_video.stop();
+    finished_videos.push(current_video.cancel());
     output_offset_ms = output_end_ms;
     if failed || context.cancelled.load(Ordering::Acquire) || range_index + 1 == ranges.len() {
       break;
     }
-    current_video = match next_video.take() {
+    current_video = match next_video.take().map(PreparedVideo::ready) {
       Some(Ok(playback)) => playback,
       Some(Err(error)) => {
         send_error(&context.event_channel, error);
@@ -226,21 +239,20 @@ pub(super) fn run(context: RunContext) {
       }
       None => break,
     };
-    next_video = ranges
-      .get(range_index + 2)
-      .map(|next| VideoPlayback::spawn(&context, *next));
+    next_video = ranges.get(range_index + 2).map(|next| video.prepare(*next));
   }
 
-  if let Some(Ok(playback)) = next_video {
-    playback.stop();
+  if let Some(Ok(playback)) = next_video.map(PreparedVideo::ready) {
+    finished_videos.push(playback.cancel());
+  }
+  for thread in finished_videos {
+    let _ = thread.join();
   }
   let was_cancelled = context.cancelled.load(Ordering::Acquire);
   context.cancelled.store(true, Ordering::Release);
   stop_child(&context.video_child);
-  stop_child(&context.audio_child);
   if let Some(audio) = audio {
-    drop(audio.stream);
-    let _ = audio.thread.join();
+    stop_audio(&context, audio);
   }
   if was_cancelled || failed {
     return;

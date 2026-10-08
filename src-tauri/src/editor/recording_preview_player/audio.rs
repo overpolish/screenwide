@@ -70,6 +70,15 @@ pub(super) struct AudioPlayback {
   pub thread: std::thread::JoinHandle<()>,
 }
 
+impl AudioPlayback {
+  /// Starts the output stream, and with it the clock playback paces against.
+  pub(super) fn play(&self) -> Result<(), String> {
+    self.stream.play().map_err(|error| error.to_string())
+  }
+}
+
+/// Starts decoding the ranges' audio and waits until enough is queued to
+/// play; the output stays silent and the clock still until [`AudioPlayback::play`].
 pub(super) fn spawn(
   sources: &PlayerSources,
   selected_audio: Arc<RwLock<Vec<usize>>>,
@@ -149,7 +158,6 @@ pub(super) fn spawn(
   {
     std::thread::sleep(Duration::from_millis(5));
   }
-  stream.play().map_err(|error| error.to_string())?;
   Ok(AudioPlayback {
     clock,
     stream,

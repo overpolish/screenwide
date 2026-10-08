@@ -69,12 +69,13 @@ impl GpuVideoReader {
     start_ms: u64,
     surface: Arc<RecordingPreviewSurface>,
   ) -> Result<Self, String> {
-    Self::open_with_device(path, start_ms, surface.device())
+    Self::open_with_device(path, start_ms, false, surface.device())
   }
 
   fn open_with_device(
     path: &Path,
     start_ms: u64,
+    rough: bool,
     device: windows::Win32::Graphics::Direct3D11::ID3D11Device,
   ) -> Result<Self, String> {
     let runtime = MediaFoundation::start()?;
@@ -138,7 +139,7 @@ impl GpuVideoReader {
       _device_manager: device_manager,
       _runtime: runtime,
     };
-    value.seek(start_ms, false)?;
+    value.seek(start_ms, rough)?;
     Ok(value)
   }
 
@@ -288,5 +289,6 @@ fn sample_texture(sample: &IMFSample, _width: u32, _height: u32) -> Result<GpuFr
   })
 }
 
+mod playback_start;
 #[cfg(test)]
 mod tests;

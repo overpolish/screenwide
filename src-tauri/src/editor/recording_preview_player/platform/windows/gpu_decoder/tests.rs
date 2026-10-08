@@ -21,7 +21,7 @@ fn decoded_preview_frame_stays_on_the_gpu() {
     .device
     .clone();
   let context = unsafe { device.GetImmediateContext() }.expect("D3D11 returned no test context");
-  let mut reader = GpuVideoReader::open_with_device(&path, 0, device.clone()).unwrap();
+  let mut reader = GpuVideoReader::open_with_device(&path, 0, false, device.clone()).unwrap();
   reader.seek(4_000, false).unwrap();
   let frame = reader.frame_at(4_000).unwrap().unwrap();
   let mut description = D3D11_TEXTURE2D_DESC::default();

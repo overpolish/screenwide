@@ -34,34 +34,38 @@ pub(crate) fn spawn_video(
   let thread = std::thread::Builder::new()
     .name("recording-preview-video-windows".to_owned())
     .spawn(move || {
-      let mut streams = Vec::with_capacity(paths.len());
+      let mut panes = Vec::with_capacity(paths.len());
       for (index, path, duration_ms) in paths {
-        let mut reader = match GpuVideoReader::open(&path, start_ms, surface.clone()) {
-          Ok(reader) => reader,
-          Err(error) => {
-            let _ = startup_tx.send(Err(error));
-            return;
-          }
-        };
-        match reader.frame_at(start_ms) {
-          Ok(_) => {}
+        match PaneDecoder::spawn(path, start_ms, surface.clone()) {
+          Ok(pane) => panes.push((index, duration_ms, pane)),
           Err(error) => {
             let _ = startup_tx.send(Err(error));
             return;
           }
         }
-        streams.push((index, duration_ms, reader));
+      }
+      for (_, _, pane) in &panes {
+        if let Err(error) = pane.opened() {
+          let _ = startup_tx.send(Err(error));
+          return;
+        }
       }
       let _ = startup_tx.send(Ok(()));
       let mut output_frame = 0_u64;
       while !cancelled.load(Ordering::Acquire) {
         let target_ms = source_position_ms(start_ms, output_frame, playback_rate);
+        // Every pane is asked before any is waited on, so they decode at once.
+        for (_, duration_ms, pane) in &panes {
+          if target_ms < *duration_ms && !pane.request(target_ms) {
+            return;
+          }
+        }
         let mut frames = [None, None];
-        for (index, duration_ms, reader) in &mut streams {
+        for (index, duration_ms, pane) in &panes {
           if target_ms >= *duration_ms {
             continue;
           }
-          let mut frame = match reader.frame_at(target_ms) {
+          let mut frame = match pane.frame() {
             Ok(Some(frame)) => frame,
             Ok(None) => continue,
             Err(_) => return,
@@ -82,8 +86,8 @@ pub(crate) fn spawn_video(
           break;
         }
         // Each decoder's sample owns a pooled DXGI surface. Keep them retained
-        // until this output tick has submitted the textures; repeated slow-
-        // motion ticks safely reuse the retained samples before decoding on.
+        // until this output tick has submitted the textures: no pane is asked
+        // for its next frame before then.
         let (presented_tx, presented_rx) = mpsc::sync_channel(0);
         let mut frame = VideoFrame {
           presentation_elapsed_ms: presentation_elapsed_ms(output_frame),

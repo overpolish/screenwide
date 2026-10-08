@@ -8,6 +8,7 @@
 mod composed_frame;
 mod decoder;
 mod gpu_decoder;
+mod pane_decoder;
 mod present_frames;
 mod still;
 mod thumbnails;
@@ -34,6 +35,7 @@ use tauri::ipc::Channel;
 
 use self::gpu_decoder::GpuFrame;
 pub(crate) use self::gpu_decoder::GpuVideoReader;
+use self::pane_decoder::PaneDecoder;
 use self::present_frames::present_native_frames;
 use super::super::{
   video::{presentation_elapsed_ms, source_position_ms, VideoFrame},
