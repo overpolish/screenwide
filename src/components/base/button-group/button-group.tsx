@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { CSSProperties, KeyboardEvent } from "react";
+import { useLocale } from "react-aria";
 import {
   Toolbar as AriaToolbar,
   ToolbarProps as AriaToolbarProps,
@@ -62,12 +63,18 @@ export function ButtonGrid({
   style,
   ...props
 }: ButtonGridProps) {
+  const { direction: writing } = useLocale();
   const handleKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
     onKeyDownCapture?.(event);
     if (event.defaultPrevented) return;
 
-    const direction = gridDirections[event.key];
+    let direction = gridDirections[event.key];
     if (!direction) return;
+    // The grid's columns run from the side text starts on, so the keys that
+    // move along a row swap with them.
+    if (writing === "rtl" && (direction === "left" || direction === "right")) {
+      direction = direction === "left" ? "right" : "left";
+    }
 
     const target = event.target;
     if (!(target instanceof Element)) return;

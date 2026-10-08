@@ -84,12 +84,14 @@ export function EditableTitle({
       aria-multiline={false}
       autoCorrect="off"
       className={cn(
-        "pointer-events-auto block cursor-text select-text whitespace-nowrap text-left outline-none caret-content-fg focus:selection:bg-content-fg/25",
+        "pointer-events-auto block cursor-text select-text whitespace-nowrap text-start outline-none caret-content-fg focus:selection:bg-content-fg/25",
         focusStyles,
         elementFocusVisible,
         className,
       )}
       contentEditable="plaintext-only"
+      // A name runs in whichever direction it is written, not the window's.
+      dir="auto"
       // Nothing is committed until the edit ends, so `title` is the name as
       // it stood before this edit - or as it arrived during it, where the
       // field took focus before the document had a name. An emptied name

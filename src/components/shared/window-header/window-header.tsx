@@ -96,6 +96,8 @@ export function WindowHeader({
       ) : null}
       <ScrollArea
         className="flex w-max items-center"
+        // A document's name runs in whichever direction it is written.
+        dir="auto"
         edgeClassName="rounded-control"
         edgeEffect="shadow"
         orientation="horizontal"
@@ -193,12 +195,12 @@ export function WindowHeader({
         // The title bar is the window inset around 24px controls on every
         // side, so the content below needs no top padding of its own.
         "shrink-0 items-center gap-section p-window-inset text-content-fg",
-        isWindows && "h-10 p-0 pl-window-inset",
+        isWindows && "h-10 p-0 ps-window-inset",
         // With tools in the bar the three columns are measured from the
         // window, not from the title: the centre stays put while the title
         // clips. Without them the bar is the flex row it has always been.
         center ? "grid grid-cols-[1fr_auto_1fr]" : "flex",
-        !isWindows && "pl-traffic-lights",
+        !isWindows && "ps-traffic-lights",
         className,
       )}
       data-tauri-drag-region={isDraggable ? "deep" : undefined}

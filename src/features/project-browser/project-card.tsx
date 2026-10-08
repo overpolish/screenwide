@@ -121,7 +121,9 @@ export function ProjectCard({
                 title={project.title}
               />
             ) : (
-              <span className="block truncate">{project.title}</span>
+              <span className="block truncate" dir="auto">
+                {project.title}
+              </span>
             )}
           </Text>
           <Text className="truncate" variant="footnote">

@@ -45,7 +45,7 @@ export function ControlRow({
     // trailing.
     <div className={cn("flex items-center gap-layout", className)}>
       {leading ? (
-        <div className="-mr-section flex shrink-0 items-center">{leading}</div>
+        <div className="-me-section flex shrink-0 items-center">{leading}</div>
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col gap-tight">
         <div className="flex items-center gap-control">

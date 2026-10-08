@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { FluentBundle, FluentResource } from "@fluent/bundle";
 
-import { languages, PSEUDO, SOURCE } from "./i18n-catalog.mjs";
+import { languages, PSEUDO_LOCALES, SOURCE } from "./i18n-catalog.mjs";
 
 /** Copied into the bundle's `Contents/Resources` by `tauri.conf.json`. */
 export const MACOS_DIR = "src-tauri/macos-localizations";
@@ -70,7 +70,7 @@ export function macosFiles() {
   const source = bundleOf(SOURCE);
   const files = new Map();
   for (const language of languages()) {
-    if (language === PSEUDO) continue;
+    if (PSEUDO_LOCALES.includes(language)) continue;
     const bundle = bundleOf(language);
     const lines = Object.entries(PLIST_MESSAGES).map(([key, id]) => {
       const text = textOf(bundle, id) ?? textOf(source, id) ?? "";

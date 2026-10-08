@@ -137,7 +137,7 @@ export function SidebarNav({
                 // Settings draws it. A translucent tint washes out to a pale
                 // row the white label can barely be read on.
                 className={cn(
-                  "group relative flex h-8 w-full cursor-default items-center gap-control-inset overflow-hidden rounded-control px-control-inset text-left text-body text-content-fg outline-none transition-colors",
+                  "group relative flex h-8 w-full cursor-default items-center gap-control-inset overflow-hidden rounded-control px-control-inset text-start text-body text-content-fg outline-none transition-colors",
                   "data-[pressed]:bg-fill-secondary data-[selected]:bg-primary-surface data-[selected]:text-primary-fg",
                   "data-[disabled]:text-control-fg-disabled data-[disabled]:data-[selected]:bg-fill-quaternary",
                   // A Fluent navigation item takes the subtle fill on hover
@@ -170,7 +170,7 @@ export function SidebarNav({
                     the leading edge. Only the Windows skin shows it. */}
                 <span
                   aria-hidden
-                  className="absolute top-1/2 left-0 hidden h-4 w-[3px] -translate-y-1/2 rounded-full bg-primary-surface windows:group-data-[selected]:block"
+                  className="absolute top-1/2 start-0 hidden h-4 w-[3px] -translate-y-1/2 rounded-full bg-primary-surface windows:group-data-[selected]:block"
                 />
                 <span
                   aria-hidden
@@ -188,7 +188,7 @@ export function SidebarNav({
                   <span className="truncate">{item.label}</span>
                 </motion.span>
               </ToggleButton>
-              <Tooltip placement="right">{item.label}</Tooltip>
+              <Tooltip placement="end">{item.label}</Tooltip>
             </TooltipTrigger>
           ))}
         </ToggleButtonGroup>
@@ -211,10 +211,10 @@ export function SidebarNav({
               initial={false}
               transition={transition}
             >
-              <ChevronRight className="transform-gpu" />
+              <ChevronRight className="transform-gpu rtl:-scale-x-100" />
             </motion.span>
           </IconButton>
-          <Tooltip placement="right">{toggleLabel}</Tooltip>
+          <Tooltip placement="end">{toggleLabel}</Tooltip>
         </TooltipTrigger>
       )}
     </motion.nav>

@@ -557,6 +557,7 @@ export type Messages = {
     title: string | number;
   };
   "project-browser-moving-elsewhere": { count: number; title: string | number };
+  "project-browser-name-unusable": null;
   "project-browser-no-results": { query: string | number };
   "project-browser-no-results-title": null;
   "project-browser-open-file": null;
@@ -790,6 +791,8 @@ export type Messages = {
   "settings-transcription-language-description": null;
   "settings-transcription-local": null;
   "settings-transcription-models": null;
+  "settings-transcription-moments": null;
+  "settings-transcription-moments-description": null;
   "settings-transcription-remove": { model: string | number };
   "settings-transcription-system-language": { language: string | number };
   "settings-update-to": { version: string | number };

@@ -12,7 +12,17 @@ import sortDestructureKeys from "eslint-plugin-sort-destructure-keys";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+import { logicalDirection } from "./scripts/eslint/logical-direction.js";
 import { noLiteralCopy } from "./scripts/eslint/no-literal-copy.js";
+
+// One object for every block that uses the house rules: ESLint refuses a
+// plugin name defined twice by different objects.
+const screenwide = {
+  rules: {
+    "logical-direction": logicalDirection,
+    "no-literal-copy": noLiteralCopy,
+  },
+};
 
 const frontendFiles = [
   ".storybook/**/*.{ts,tsx}",
@@ -163,11 +173,37 @@ export default defineConfig([
       // Sample tracks for the timeline stories.
       "src/features/editor/timeline/tracks/recording-track-lanes-preview.tsx",
     ],
-    plugins: {
-      screenwide: { rules: { "no-literal-copy": noLiteralCopy } },
-    },
+    plugins: { screenwide },
     rules: {
       "screenwide/no-literal-copy": "error",
+    },
+  },
+  {
+    // Layouts mirror in right-to-left languages, so sides are start and end.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      "**/*.test.{ts,tsx}",
+      // Left to right in every language, so physical sides are right there.
+      // Each part's root carries `dir="ltr"`. The timeline and its lanes,
+      // where time runs left to right:
+      "src/features/editor/timeline/**",
+      "src/features/editor/recording/annotations/recording-annotation-clip-body.tsx",
+      "src/features/editor/recording/annotations/recording-annotation-clip-edges.tsx",
+      "src/features/editor/recording/annotations/recording-annotation-lane.tsx",
+      "src/features/editor/recording/annotations/recording-annotation-pin-overlay.tsx",
+      "src/features/editor/recording/scenes/recording-scene-lane.tsx",
+      // The picture being edited:
+      "src/features/editor/preview/**",
+      "src/features/editor/recording/preview/**",
+      // Screen geometry and angles:
+      "src/features/glide/glide-preview.tsx",
+      "src/features/recording-sources/monitor-selector.tsx",
+      "src/features/editor/tool-panels/scene/scene-preset-tile.tsx",
+      "src/components/base/angle-dial/**",
+    ],
+    plugins: { screenwide },
+    rules: {
+      "screenwide/logical-direction": "error",
     },
   },
   eslintConfigPrettier,

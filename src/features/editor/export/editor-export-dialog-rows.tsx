@@ -55,15 +55,11 @@ export function ExportRow({
     <div className="col-span-2 grid grid-cols-subgrid">
       {/* The label sits with the first line of its control: 16px of text
           padded to the 24px a control is tall, so the two share a centre. */}
-      <Text
-        as="label"
-        className="py-1 text-right whitespace-nowrap"
-        id={titleId}
-      >
+      <Text as="label" className="py-1 text-end whitespace-nowrap" id={titleId}>
         {title}
       </Text>
       {layout === "trailing" ? (
-        <div className="flex min-h-control-height min-w-0 items-center justify-end gap-control-inset text-right">
+        <div className="flex min-h-control-height min-w-0 items-center justify-end gap-control-inset text-end">
           {descriptionText}
           <div className="flex shrink-0 items-center">{control}</div>
         </div>

@@ -70,7 +70,7 @@ export function ProjectListToolbar({
   return (
     // Wraps in a narrow window rather than running off it; the counts keep
     // to the trailing edge on whichever line they land.
-    <div className="gap-section pr-window-inset flex min-h-control-height flex-wrap items-center">
+    <div className="gap-section pe-window-inset flex min-h-control-height flex-wrap items-center">
       <Checkbox
         aria-label={
           allSelected
@@ -103,7 +103,7 @@ export function ProjectListToolbar({
           selected={kind}
         />
       )}
-      <div className="gap-section ml-auto flex shrink-0 items-center">
+      <div className="gap-section ms-auto flex shrink-0 items-center">
         <div className="gap-control flex items-center">
           <Badge>
             {selected.length > 0

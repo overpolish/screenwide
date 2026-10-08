@@ -52,7 +52,7 @@ export function ProgressBar({
           // The segment crosses the track and re-enters from the left; with
           // reduced motion it rests at the start and breathes in place.
           prefersReducedMotion ? (
-            <span className="absolute inset-y-0 left-0 w-1/3 animate-pulse rounded-full bg-primary-surface" />
+            <span className="absolute inset-y-0 start-0 w-1/3 animate-pulse rounded-full bg-primary-surface" />
           ) : (
             <motion.span
               animate={{ left: ["-33%", "100%"] }}
@@ -67,7 +67,7 @@ export function ProgressBar({
         ) : (
           <motion.span
             animate={{ width: `${String(percentage ?? 0)}%` }}
-            className="absolute inset-y-0 left-0 rounded-full bg-primary-surface"
+            className="absolute inset-y-0 start-0 rounded-full bg-primary-surface"
             initial={false}
             transition={transition}
           />

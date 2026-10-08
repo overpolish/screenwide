@@ -34,6 +34,19 @@ type ShowPopupPanelOptions = {
   sticky?: boolean;
 };
 
+/**
+ * Where a panel `width` wide starts so it hangs from the anchor's starting
+ * edge, as a native menu does: the anchor's left in a left-to-right window,
+ * its right in a right-to-left one.
+ */
+export const panelStartX = (
+  anchor: { width: number; x: number },
+  width: number,
+) =>
+  document.documentElement.dir === "rtl"
+    ? anchor.x + anchor.width - width
+    : anchor.x;
+
 export const showPopupPanel = ({
   anchor,
   fitted = false,

@@ -107,6 +107,7 @@ export function NativeRecordingWorkspaceViewport({
           : undefined
       }
       data-recording-preview-viewport
+      dir="ltr"
       ref={viewportRef}
       role="img"
     >

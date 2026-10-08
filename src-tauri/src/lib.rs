@@ -53,6 +53,8 @@ mod tray;
 mod updates;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  #[cfg(target_os = "macos")]
+  i18n::apply_layout_direction();
   let builder = plugins::with_plugins(tauri::Builder::default());
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let builder = builder.manage(glide::settings::GlideSettingsState::default());

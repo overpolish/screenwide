@@ -22,9 +22,9 @@ enum Status {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ModelState {
-  description: &'static str,
+  description: String,
   id: &'static str,
-  name: &'static str,
+  name: String,
   /// 0 to 1 while downloading.
   progress: Option<f32>,
   purpose: Purpose,
@@ -87,9 +87,9 @@ pub(crate) fn state(app: &AppHandle) -> TranscriptionState {
         Status::Available
       };
       ModelState {
-        description: model.description,
+        description: model.purpose.description(),
         id: model.id,
-        name: model.name,
+        name: model.purpose.name(),
         progress,
         purpose: model.purpose,
         size_bytes: model.size_bytes,

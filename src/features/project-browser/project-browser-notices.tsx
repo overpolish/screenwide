@@ -51,7 +51,7 @@ export function ProjectBrowserNotices({
   if (!copying && !deleted && !error) return null;
   const copyText = copying ? copyLabel(copying) : "";
   return (
-    <div className="gap-control mr-window-inset mb-window-inset flex flex-col">
+    <div className="gap-control me-window-inset mb-window-inset flex flex-col">
       {copying ? (
         <Alert
           icon={copying.kind === "move" ? <FolderInput /> : <Copy />}

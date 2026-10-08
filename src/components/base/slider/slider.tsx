@@ -43,9 +43,9 @@ function SliderTickMarks({
     index === activeIndex ? null : (
       <span
         aria-hidden
-        className="absolute top-[calc(50%+6px)] size-0.5 -translate-x-1/2 rounded-full bg-content-fg-tertiary"
+        className="absolute top-[calc(50%+6px)] size-0.5 -translate-x-1/2 rounded-full bg-content-fg-tertiary rtl:translate-x-1/2"
         key={index}
-        style={{ left: `${String((index / count) * 100)}%` }}
+        style={{ insetInlineStart: `${String((index / count) * 100)}%` }}
       />
     ),
   );
@@ -89,7 +89,7 @@ export function Slider({ className, showTicks, ...props }: SliderProps) {
           style={{ transitionDuration }}
         />
         <SliderFill
-          className="absolute top-1/2 -ml-2.5 box-content h-1.5! -translate-y-1/2 rounded-full bg-primary-surface pl-2.5 transition-colors group-data-[disabled]:bg-primary-surface-disabled windows:h-1! windows:group-data-[hovered]:bg-primary-surface-hover windows:group-data-[dragging]:bg-primary-surface-pressed"
+          className="absolute top-1/2 -ms-2.5 box-content h-1.5! -translate-y-1/2 rounded-full bg-primary-surface ps-2.5 transition-colors group-data-[disabled]:bg-primary-surface-disabled windows:h-1! windows:group-data-[hovered]:bg-primary-surface-hover windows:group-data-[dragging]:bg-primary-surface-pressed"
           style={{ transitionDuration }}
         />
         <SliderThumb

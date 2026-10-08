@@ -201,6 +201,7 @@ export function GlidePreview({
       <div
         aria-label={t("glide-locked")}
         className="window-surface rounded-panel relative h-full w-full overflow-hidden"
+        dir="ltr"
         role="img"
       >
         <Lock className="pointer-events-none absolute inset-0 m-auto size-icon text-muted" />
@@ -212,6 +213,7 @@ export function GlidePreview({
     <div
       aria-label={describeDestination(region, pending)}
       className="window-surface rounded-panel relative h-full w-full overflow-hidden"
+      dir="ltr"
       role="img"
     >
       {neutralFill ? <div className="absolute inset-0 bg-fill" /> : null}

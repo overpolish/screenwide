@@ -23,7 +23,11 @@ import {
 } from "../../../components/base/button/icon-button";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
-import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
+import {
+  hidePopupPanel,
+  panelStartX,
+  showPopupPanel,
+} from "../../popup-panel/api";
 import { initialPopupPanelHeight } from "../../popup-panel/layout";
 import {
   activePopupPanel,
@@ -165,6 +169,7 @@ export function RecordingBarCaptureActions({
       id: SCREENSHOT_MENU_ID,
       label: t("recording-controls-screenshot-options"),
     });
+    const width = Math.max(anchor.width, SCREENSHOT_MENU_MIN_WIDTH);
     await showPopupPanel({
       anchor: {
         height: anchor.height,
@@ -173,12 +178,12 @@ export function RecordingBarCaptureActions({
         y: anchor.top,
       },
       focusContents,
-      offset: new LogicalPosition(anchor.left, anchor.bottom + 4),
-      parentWindowLabel: getCurrentWindow().label,
-      size: new LogicalSize(
-        Math.max(anchor.width, SCREENSHOT_MENU_MIN_WIDTH),
-        initialPopupPanelHeight(items.length),
+      offset: new LogicalPosition(
+        panelStartX({ width: anchor.width, x: anchor.left }, width),
+        anchor.bottom + 4,
       ),
+      parentWindowLabel: getCurrentWindow().label,
+      size: new LogicalSize(width, initialPopupPanelHeight(items.length)),
       triggerId: SCREENSHOT_MENU_ID,
     });
   };

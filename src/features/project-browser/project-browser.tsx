@@ -98,7 +98,7 @@ function EmptyState({
   selected: string;
 }) {
   return (
-    <div className="gap-control pr-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
+    <div className="gap-control pe-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
       <Text variant="headline">
         {selected === DELETED
           ? t("project-browser-empty-deleted-title")
@@ -192,7 +192,7 @@ export function ProjectBrowser({
         />
       }
     >
-      <div className="gap-layout pl-window-inset flex min-h-0 grow">
+      <div className="gap-layout ps-window-inset flex min-h-0 grow">
         <div className="gap-section pb-window-inset flex shrink-0 flex-col">
           <SidebarNav
             aria-label={t("project-browser-locations")}

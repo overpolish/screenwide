@@ -276,7 +276,7 @@ export function EditorExportForm({
       <div className="flex items-center justify-end gap-control-inset">
         {recording ? (
           <Text
-            className="mr-auto tabular-nums text-content-fg-secondary"
+            className="me-auto tabular-nums text-content-fg-secondary"
             variant="subheadline"
           >
             {t("editor-export-estimated-size", { size: estimate })}

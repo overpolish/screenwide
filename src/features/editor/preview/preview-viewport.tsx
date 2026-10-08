@@ -498,6 +498,7 @@ export function PreviewViewport({
       aria-label={alt}
       className={`relative flex min-h-0 grow overflow-hidden ${isDrawingArrows ? "cursor-crosshair" : isSelecting ? "cursor-move" : "cursor-grab"}`}
       data-recording-preview-viewport
+      dir="ltr"
       ref={nativeFrameRef}
       role="img"
     >

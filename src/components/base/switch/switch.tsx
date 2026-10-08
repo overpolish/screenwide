@@ -50,6 +50,7 @@ const knobStyles = cn(
   // track's, which shows as a jagged rim on the knob and the track.
   "transform-gpu backface-hidden will-change-transform rounded-full bg-white shadow-sm [--knob-width:21px] [--knob-height:12px] [--knob-margin:0px] w-(--knob-width) h-(--knob-height) m-(--knob-margin) transition-[translate,width,height,margin,background-color] ease-out",
   "group-data-[selected]:translate-x-[calc(var(--spacing-switch-travel)-var(--knob-width)-2*var(--knob-margin))]",
+  "rtl:group-data-[selected]:-translate-x-[calc(var(--spacing-switch-travel)-var(--knob-width)-2*var(--knob-margin))]",
   "windows:[--knob-width:12px] windows:bg-content-fg-secondary windows:shadow-none",
   "windows:group-data-[hovered]:[--knob-width:14px] windows:group-data-[hovered]:[--knob-height:14px] windows:group-data-[hovered]:[--knob-margin:-1px]",
   "windows:group-data-[pressed]:[--knob-width:17px] windows:group-data-[pressed]:[--knob-height:14px] windows:group-data-[pressed]:[--knob-margin:-1px]",

@@ -8,11 +8,15 @@ import { I18nProvider } from "react-aria-components";
 import { themes } from "storybook/theming";
 
 import {
+  appDirection,
+  applyDirection,
   appLocale,
   LANGUAGES,
+  layoutLocale,
   loadAppLocale,
   loadLocale,
   PSEUDO,
+  PSEUDO_BIDI,
 } from "../src/i18n/i18n";
 import { installKeyboardNavigationModality } from "../src/lib/keyboard-navigation-modality";
 import { synchronizeSystemAccent } from "../src/lib/system-accent";
@@ -131,9 +135,23 @@ const preview: Preview = {
   globalTypes: isNativePreview
     ? {}
     : {
-        // Every translation in `locales/`, and the pseudo-locale, which
-        // shows text that skips translation and layouts that break under
-        // longer words.
+        // Lays any language out right to left, to check mirroring with text
+        // that still reads.
+        direction: {
+          description: "Layout direction",
+          toolbar: {
+            dynamicTitle: true,
+            icon: "transfer",
+            items: [
+              { title: "Language's direction", value: "auto" },
+              { title: "Right to left", value: "rtl" },
+            ],
+            title: "Direction",
+          },
+        },
+        // Every translation in `locales/`, and the pseudo-locales: one shows
+        // text that skips translation and layouts that break under longer
+        // words, the other the same in a right-to-left layout.
         locale: {
           description: "Language",
           toolbar: {
@@ -145,6 +163,7 @@ const preview: Preview = {
                 value: language,
               })),
               { title: "Pseudo-locale", value: PSEUDO },
+              { title: "Pseudo-locale (right to left)", value: PSEUDO_BIDI },
             ],
             title: "Language",
           },
@@ -164,7 +183,7 @@ const preview: Preview = {
       },
   initialGlobals: isNativePreview
     ? {}
-    : { locale: LANGUAGES[0], platform: hostPlatform },
+    : { direction: "auto", locale: LANGUAGES[0], platform: hostPlatform },
   parameters: {
     controls: {
       matchers: {
@@ -199,16 +218,21 @@ const loadStoryLocale: Loader = async ({ globals }) => {
   const language =
     typeof globals.locale === "string" ? globals.locale : LANGUAGES[0];
   await loadLocale({ formatLocale: language, language });
+  applyDirection(storyDirection(globals));
   return {};
 };
 
-// Keyed by language so a switch remounts the story and nothing keeps text
-// from the previous one.
-const withLocale: Decorator = (Story) => {
-  const { formatLocale, language } = appLocale();
+const storyDirection = (globals: Record<string, unknown>) =>
+  globals.direction === "rtl" ? "rtl" : appDirection();
+
+// Keyed by language and direction so a switch remounts the story and nothing
+// keeps text or layout from the previous one.
+const withLocale: Decorator = (Story, { globals }) => {
+  const { language } = appLocale();
+  const direction = storyDirection(globals);
   return createElement(
     I18nProvider,
-    { key: language, locale: formatLocale },
+    { key: `${language}-${direction}`, locale: layoutLocale(direction) },
     Story(),
   );
 };

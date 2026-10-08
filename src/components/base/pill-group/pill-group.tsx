@@ -69,7 +69,7 @@ const windowsSelectorItem =
 // accent pill centred under it instead, and that is what slides between
 // items.
 const knobBase =
-  "absolute inset-0 transform-gpu rounded-[inherit] backface-hidden will-change-transform windows:top-auto windows:right-auto windows:left-1/2 windows:h-[3px] windows:w-4 windows:-translate-x-1/2 windows:rounded-full windows:bg-primary-surface windows:group-data-[disabled]:bg-primary-surface-disabled";
+  "absolute inset-0 transform-gpu rounded-[inherit] backface-hidden will-change-transform windows:top-auto windows:end-auto windows:start-1/2 windows:h-[3px] windows:w-4 windows:-translate-x-1/2 windows:rtl:translate-x-1/2 windows:rounded-full windows:bg-primary-surface windows:group-data-[disabled]:bg-primary-surface-disabled";
 // Filled is the native segmented control: accent knob under white content.
 // Ghost is the capture-toolbar form QuickTime uses: no track, and the
 // selected segment sits on a neutral fill in the label colour.

@@ -3,13 +3,14 @@
 
 type PictureTone = "dark" | "light";
 
-/** The parts of a card's picture something is drawn over, as shares of it:
- * the selection box top-left, the tracks badge top-right, and the length and
- * size badges bottom-right. */
+/** The parts of a card's picture something is drawn over, as shares of it
+ * measured from the side text starts on: the selection box at the top start,
+ * the tracks badge at the top end, and the length and size badges at the
+ * bottom end. */
 const CORNERS = {
-  bottomRight: { height: 0.22, width: 0.45, x: 0.55, y: 0.78 },
-  topLeft: { height: 0.22, width: 0.2, x: 0, y: 0 },
-  topRight: { height: 0.22, width: 0.45, x: 0.55, y: 0 },
+  bottomEnd: { height: 0.22, width: 0.45, x: 0.55, y: 0.78 },
+  topEnd: { height: 0.22, width: 0.45, x: 0.55, y: 0 },
+  topStart: { height: 0.22, width: 0.2, x: 0, y: 0 },
 };
 
 export type PictureCorner = keyof typeof CORNERS;
@@ -20,10 +21,14 @@ const SAMPLE = { height: 18, width: 32 };
 
 /**
  * Whether each corner of a loaded picture is light or dark, so what is drawn
- * over it can take the matching appearance. Null when the picture cannot be
+ * over it can take the matching appearance. The corners turn with the writing
+ * `direction`, as the badges over them do. Null when the picture cannot be
  * read, such as one served without leave to read its pixels.
  */
-export function pictureTones(image: HTMLImageElement): PictureTones | null {
+export function pictureTones(
+  image: HTMLImageElement,
+  direction: "ltr" | "rtl",
+): PictureTones | null {
   const canvas = document.createElement("canvas");
   canvas.width = SAMPLE.width;
   canvas.height = SAMPLE.height;
@@ -38,6 +43,7 @@ export function pictureTones(image: HTMLImageElement): PictureTones | null {
   }
 
   const toneOf = ({ height, width, x, y }: (typeof CORNERS)[PictureCorner]) => {
+    if (direction === "rtl") x = 1 - x - width;
     const left = Math.floor(SAMPLE.width * x);
     const top = Math.floor(SAMPLE.height * y);
     const right = Math.ceil(SAMPLE.width * (x + width));
@@ -62,8 +68,8 @@ export function pictureTones(image: HTMLImageElement): PictureTones | null {
   };
 
   return {
-    bottomRight: toneOf(CORNERS.bottomRight),
-    topLeft: toneOf(CORNERS.topLeft),
-    topRight: toneOf(CORNERS.topRight),
+    bottomEnd: toneOf(CORNERS.bottomEnd),
+    topEnd: toneOf(CORNERS.topEnd),
+    topStart: toneOf(CORNERS.topStart),
   };
 }

@@ -99,7 +99,7 @@ export function ColorPaletteGenerator({
           ))}
         </div>
         {endContent ?? (
-          <span className="text-right text-footnote text-content-fg-secondary">
+          <span className="text-end text-footnote text-content-fg-secondary">
             {t("controls-palette-lock-hint")}
           </span>
         )}

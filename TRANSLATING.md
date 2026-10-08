@@ -17,7 +17,7 @@ Everything a person reads in the interface: labels, buttons, menus, tooltips, ac
 - Log output and developer errors.
 - Names of keys baked into exported videos by the keyboard overlay, and audio track names written into exported files.
 
-Right-to-left languages are not supported yet. The text can be translated, but the layout does not mirror.
+Right-to-left languages such as Arabic, Hebrew, Persian and Urdu mirror the interface: sidebars, rows and buttons swap sides. A few parts stay left to right in every language, as in other video and image editors: the timeline and its playback controls, because time runs left to right; the picture being edited; and anything that maps the screen itself, such as the display arrangement and Glide's grid. Numbers, shortcuts and file paths keep their own order inside right-to-left text.
 
 ## Add a language
 
@@ -77,6 +77,8 @@ SCREENWIDE_LOCALE=de pnpm tauri dev
 To look through windows without running the app, start Storybook with `pnpm storybook` and pick your language from the Language menu in the toolbar.
 
 The `en-XA` pseudo-locale shows English with every letter accented and every vowel doubled, so Settings reads `Şḗḗŧŧīīƞɠş`. It shows text that misses translation, because that text stays plain, and layouts that break when text runs about a third longer. Use it with `SCREENWIDE_LOCALE=en-XA` or the Storybook Language menu.
+
+The `en-XB` pseudo-locale lays the interface out right to left and shows English backwards, as a right-to-left translation would run. Text that still reads forwards missed translation, and a part that does not mirror shows up at once. On macOS it mirrors the window buttons and menus too. Use it with `SCREENWIDE_LOCALE=en-XB`, or pick "Pseudo-locale (right to left)" in Storybook. To check mirroring with readable text, keep a language and set Storybook's Direction menu to Right to left.
 
 ## For developers
 

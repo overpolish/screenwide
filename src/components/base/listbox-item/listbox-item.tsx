@@ -34,7 +34,7 @@ const listBoxItemVariants = tv({
 // Fluent's selection indicator: a 3 by 16 accent pill on the item's leading
 // edge. Only the Windows skin shows it; macOS shows the check.
 const selectionPillClassName =
-  "hidden windows:block absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-primary-surface";
+  "hidden windows:block absolute top-1/2 start-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-primary-surface";
 
 type ListBoxItemProps = AriaListBoxItemProps & {
   children?: React.ReactNode;

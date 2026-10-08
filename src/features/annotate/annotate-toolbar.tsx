@@ -158,7 +158,7 @@ export function AnnotateToolbar({
             }}
           >
             <IconButton aria-label={t("annotate-undo-label")} onPress={onUndo}>
-              <Undo2 />
+              <Undo2 className="rtl:-scale-x-100" />
             </IconButton>
           </NativeTooltipTrigger>
           <NativeTooltipTrigger

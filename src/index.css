@@ -18,6 +18,11 @@
    Storybook toolbar toggles it. Token values swap in `@layer themes`; this
    variant is for the few places a component is shaped differently. */
 @custom-variant windows (&:is([data-platform="windows"] *));
+/* The writing direction at the element, from the nearest `dir`. Tailwind's own
+   variants also match below any `[dir="rtl"]`, which reaches into the parts
+   pinned `dir="ltr"` in a right-to-left window: the timeline and the picture. */
+@custom-variant rtl (&:where(:dir(rtl)));
+@custom-variant ltr (&:where(:dir(ltr)));
 
 /* The label tiers also carry their alpha for icons, which apply it to the
    whole glyph rather than per stroke (see the `.lucide` rule). Opaque colours

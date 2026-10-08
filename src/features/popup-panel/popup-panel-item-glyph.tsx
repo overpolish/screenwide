@@ -60,7 +60,14 @@ const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
   trash: Trash2,
 };
 
+/** Glyphs that point the way text runs, and turn with it. */
+const directionalGlyphs = new Set<PopupPanelIcon>(["restore"]);
+
 export function PopupPanelItemGlyph({ icon }: { icon: PopupPanelIcon }) {
   const Glyph = itemGlyphs[icon];
-  return <Glyph />;
+  return (
+    <Glyph
+      className={directionalGlyphs.has(icon) ? "rtl:-scale-x-100" : undefined}
+    />
+  );
 }

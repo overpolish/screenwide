@@ -16,7 +16,7 @@ import process from "node:process";
 
 import {
   languages,
-  PSEUDO,
+  PSEUDO_LOCALES,
   readLanguage,
   SOURCE,
   TYPES_FILE,
@@ -79,10 +79,8 @@ checkShape(SOURCE, source.entries);
 const untranslated = [];
 for (const language of languages()) {
   if (language === SOURCE) continue;
-  if (language === PSEUDO) {
-    errors.push(
-      `${language} is the generated pseudo-locale; remove its folder`,
-    );
+  if (PSEUDO_LOCALES.includes(language)) {
+    errors.push(`${language} is a generated pseudo-locale; remove its folder`);
     continue;
   }
   let canonical = null;

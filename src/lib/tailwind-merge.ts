@@ -46,8 +46,24 @@ const spacing = [
  */
 const radii = ["window", "panel", "control"];
 
+/**
+ * An axis class covers both logical sides, as it covers both physical ones:
+ * `px-4` passed to a component overrides its own `ps-2`. tailwind-merge only
+ * knows the physical pairs.
+ */
+const conflictingClassGroups = {
+  "inset-x": ["start", "end"],
+  mx: ["ms", "me"],
+  px: ["ps", "pe"],
+  "scroll-mx": ["scroll-ms", "scroll-me"],
+  "scroll-px": ["scroll-ps", "scroll-pe"],
+} as const;
+
 export const twMergeConfig = {
-  extend: { theme: { radius: radii, spacing, text: fontSizes } },
+  extend: {
+    conflictingClassGroups,
+    theme: { radius: radii, spacing, text: fontSizes },
+  },
 };
 
 export const twMerge = extendTailwindMerge(twMergeConfig);

@@ -137,7 +137,7 @@ export function UpdatePrompt({
 
         <div className="flex shrink-0 items-center gap-control-inset">
           <Button
-            className="mr-auto"
+            className="me-auto"
             isDisabled={busy}
             onPress={onSkipVersion}
             variant="ghost"

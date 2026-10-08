@@ -47,7 +47,9 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - Call `t` while rendering, not at module scope. Format dates, numbers and lists with React Aria's `useDateFormatter`, `useNumberFormatter` and `useListFormatter`, or with `appLocale().formatLocale` outside components; never `Intl.*(undefined)`.
 - After adding a language, or adding, renaming or removing an `en-US` message, or changing its placeholders, run `pnpm i18n:generate`. It writes `src/i18n/messages.ts` and the macOS bundle strings in `src-tauri/macos-localizations`. Tests compare text in `en-US` with Fluent's direction isolates (U+2068, U+2069) removed.
 - `screenwide/no-literal-copy` flags literal copy anywhere in `src`; stories, tests, fixtures and dev previews are exempt in `eslint.config.js`.
-- Try a language with `SCREENWIDE_LOCALE=<tag>` for the app, or Storybook's Language toolbar. `en-XA` is the pseudo-locale: accented, longer English that shows text skipping translation and layouts that break.
+- Try a language with `SCREENWIDE_LOCALE=<tag>` for the app, or Storybook's Language toolbar. `en-XA` is the pseudo-locale: accented, longer English that shows text skipping translation and layouts that break. `en-XB` is its right-to-left twin, and Storybook's Direction toolbar mirrors any language.
+- Layouts mirror in right-to-left languages. Name sides by start and end: `ms-`/`me-`, `ps-`/`pe-`, `start-`/`end-`, `text-start`, `rounded-s`, `border-e`, and `insetInlineStart`-style keys in `style`. `screenwide/logical-direction` flags left and right. Where something must sit on a physical side, say so with an `rtl:` or `ltr:` variant; a sideways `translate-x` needs its `rtl:` twin by hand. Directional icons (arrows, chevrons) flip with `rtl:-scale-x-100`. The timeline, the picture and screen geometry stay left to right: their roots carry `dir="ltr"`, and their files are exempt from the rule in `eslint.config.js`.
+- Names that come from the system or the user (devices, windows, projects, files, moments) take `dir="auto"`, so an English name in a right-to-left window keeps its own order and is cut short at its own end.
 
 ## Stories and verification
 

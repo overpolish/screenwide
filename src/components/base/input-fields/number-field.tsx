@@ -24,7 +24,7 @@ import { useNumberFieldScrub } from "./use-number-field-scrub";
 const numberFieldVariants = tv({
   extend: fieldVariants,
   slots: {
-    input: "text-right tabular-nums",
+    input: "text-end tabular-nums",
     stepper: [
       "flex h-full shrink-0 cursor-default items-center px-control text-content-fg-secondary outline-none transition-colors",
       "data-[hovered]:bg-control-subtle-hover data-[hovered]:text-content-fg",
@@ -203,7 +203,7 @@ export const NumberField = ({
         {showSteppers && (
           <Button
             aria-label={t("controls-decrement")}
-            className={stepper({ className: "rounded-l-[inherit]" })}
+            className={stepper({ className: "rounded-s-[inherit]" })}
             slot="decrement"
           >
             <Minus />
@@ -254,7 +254,7 @@ export const NumberField = ({
         {showSteppers && (
           <Button
             aria-label={t("controls-increment")}
-            className={stepper({ className: "rounded-r-[inherit]" })}
+            className={stepper({ className: "rounded-e-[inherit]" })}
             slot="increment"
           >
             <Plus />

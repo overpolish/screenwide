@@ -161,6 +161,9 @@ settings-voice-notes-microphone-denied = { -app-name } needs microphone access f
 ## Transcription. $model is a transcription model's name.
 
 settings-transcription-local = Transcription runs on this computer. Audio is never uploaded.
+# The model voice notes are transcribed with, named for what it does.
+settings-transcription-moments = Moments
+settings-transcription-moments-description = Turns your moments' voice notes into text.
 settings-transcription-models = Models
 settings-transcription-language = Language
 settings-transcription-language-description = The language your recordings are spoken in.

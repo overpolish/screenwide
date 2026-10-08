@@ -45,7 +45,7 @@ const selectVariants = tv({
       "has-[[data-select-trigger][data-hovered]]:bg-control-fill-hover",
       "has-[[data-select-trigger][data-pressed]]:bg-control-fill-pressed has-[[data-select-trigger][data-pressed]]:text-control-fg-pressed",
       "has-[[data-select-trigger][data-disabled]]:bg-control-fill-disabled has-[[data-select-trigger][data-disabled]]:text-control-fg-disabled",
-      "has-[[data-select-clear]]:[&>[data-select-trigger]]:pr-0",
+      "has-[[data-select-clear]]:[&>[data-select-trigger]]:pe-0",
       focusStyles,
     ],
     label: "text-body text-content-fg",

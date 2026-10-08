@@ -141,7 +141,7 @@ export function ProjectListPane({
         }
       />
       {listed.length === 0 ? (
-        <div className="gap-control pr-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
+        <div className="gap-control pe-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
           <Text variant="headline">
             {t("project-browser-no-results-title")}
           </Text>
@@ -151,7 +151,7 @@ export function ProjectListPane({
         </div>
       ) : (
         <ScrollArea edgeEffect="shadow" rootClassName="min-h-0 min-w-0 grow">
-          <div className="gap-layout pr-window-inset pb-window-inset flex flex-col">
+          <div className="gap-layout pe-window-inset pb-window-inset flex flex-col">
             {groups.map((group) => (
               <section
                 aria-label={group.label ?? t("project-browser-search-results")}

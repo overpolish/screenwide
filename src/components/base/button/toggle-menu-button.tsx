@@ -120,15 +120,15 @@ export function ToggleMenuButton({
   const hasBezel = variant === "filled";
   const glyphInset =
     size === "capture"
-      ? "left-control-inset right-control"
-      : "left-control right-tight";
+      ? "start-control-inset end-control"
+      : "start-control end-tight";
 
   const toggle = (
     <AriaToggleButton
       aria-label={ariaLabel}
       className={cn(
         partBase,
-        "rounded-l-[inherit]",
+        "rounded-s-[inherit]",
         "text-content-fg-secondary data-[selected]:text-content-fg",
         "[&_svg.lucide]:size-icon",
         // The glyph keeps its regular size at either height. The part is the
@@ -194,7 +194,7 @@ export function ToggleMenuButton({
       )}
       data-toggle-menu-button=""
     >
-      <div className="relative flex rounded-l-[inherit]">
+      <div className="relative flex rounded-s-[inherit]">
         {renderToggle ? (
           renderToggle(toggle)
         ) : tooltip ? (
@@ -206,7 +206,7 @@ export function ToggleMenuButton({
           toggle
         )}
         {badge ? (
-          <span className="pointer-events-none absolute top-0 right-0 z-20 flex [&_svg]:shrink-0 [&_svg.lucide]:size-icon-mini">
+          <span className="pointer-events-none absolute top-0 end-0 z-20 flex [&_svg]:shrink-0 [&_svg.lucide]:size-icon-mini">
             {badge}
           </span>
         ) : null}
@@ -219,12 +219,12 @@ export function ToggleMenuButton({
           // The label takes the other half of the icon-to-label gap on its
           // inside and the control's side inset on the outside: 2 and 4 at
           // regular, 4 and 8 at capture, matching a button of that height.
-          "rounded-r-[inherit]",
+          "rounded-e-[inherit]",
           // A toolbar names its items at the small system size, the way
           // Control Center modules do; a form control keeps body text.
           size === "capture"
-            ? "h-10 pr-control-inset pl-control text-subheadline"
-            : "h-control-height pr-control pl-tight text-body",
+            ? "h-10 pe-control-inset ps-control text-subheadline"
+            : "h-control-height pe-control ps-tight text-body",
           // An input that is off reads quiet, name and all, while staying
           // pressable.
           isSelected ? undefined : "text-content-fg-secondary",
@@ -246,7 +246,10 @@ export function ToggleMenuButton({
             control, a long one is truncated, and the bar carrying it fits
             whichever it is. The detail stretches to the name's width. */}
         <span className="flex max-w-24 flex-col items-stretch gap-tight">
-          <span className="truncate text-left">{label}</span>
+          {/* A device's own name, in whichever direction it is written. */}
+          <span className="truncate text-start" dir="auto">
+            {label}
+          </span>
           {detail}
         </span>
       </AriaButton>

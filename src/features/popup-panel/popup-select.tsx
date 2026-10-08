@@ -12,7 +12,7 @@ import { Badge } from "../../components/base/badge/badge";
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { Select } from "../../components/base/select/select";
 
-import { hidePopupPanel, showPopupPanel } from "./api";
+import { hidePopupPanel, panelStartX, showPopupPanel } from "./api";
 import { initialPopupPanelHeight } from "./layout";
 import {
   activePopupPanel,
@@ -105,6 +105,7 @@ export function PopupSelect({
       id,
       label,
     });
+    const width = Math.max(bounds.width, minimumListWidth);
     await showPopupPanel({
       anchor: {
         height: bounds.height,
@@ -113,9 +114,12 @@ export function PopupSelect({
         y: bounds.top,
       },
       focusContents,
-      offset: new LogicalPosition(bounds.left, bounds.bottom + 4),
+      offset: new LogicalPosition(
+        panelStartX({ width: bounds.width, x: bounds.left }, width),
+        bounds.bottom + 4,
+      ),
       parentWindowLabel: getCurrentWindow().label,
-      size: new LogicalSize(Math.max(bounds.width, minimumListWidth), height),
+      size: new LogicalSize(width, height),
       triggerId: id,
     });
   };
@@ -161,7 +165,9 @@ export function PopupSelect({
         renderValue={(item) =>
           item ? (
             <span className="flex w-full items-center justify-between gap-control">
-              <span className="truncate">{item.label}</span>
+              <span className="truncate" dir="auto">
+                {item.label}
+              </span>
               {item.detail ? <Badge>{item.detail}</Badge> : null}
             </span>
           ) : null

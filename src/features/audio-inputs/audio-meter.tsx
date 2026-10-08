@@ -39,12 +39,12 @@ const Tick = ({ orientation = "horizontal", tick }: TickProps) => {
       className={`pointer-events-none absolute bg-content-fg-quaternary select-none ${
         vertical
           ? "h-px w-control translate-y-1/2"
-          : "h-control w-px -translate-x-1/2"
+          : "h-control w-px -translate-x-1/2 rtl:translate-x-1/2"
       }`}
       style={
         vertical
           ? { bottom: `${percentage.toString()}%` }
-          : { left: `${percentage.toString()}%` }
+          : { insetInlineStart: `${percentage.toString()}%` }
       }
     />
   );
@@ -124,6 +124,9 @@ export const AudioMeter = ({
       {/* Using SVG due to layering divs with border-radius and linear gradient
        * causing bleeding */}
       <svg
+        // Drawn filling to the right, so a horizontal meter turns to fill
+        // from the start in a right-to-left language.
+        className={vertical ? undefined : "rtl:-scale-x-100"}
         height={meterHeight}
         preserveAspectRatio="none"
         ref={svgRef}
@@ -210,13 +213,13 @@ export const AudioMeter = ({
               as="span"
               className={`pointer-events-none absolute tabular-nums select-none ${
                 vertical
-                  ? `translate-y-1/2 ${hideTicks ? "" : "ml-control"}`
-                  : `-translate-x-1/2 ${hideTicks ? "" : "mt-control"}`
+                  ? `translate-y-1/2 ${hideTicks ? "" : "ms-control"}`
+                  : `-translate-x-1/2 rtl:translate-x-1/2 ${hideTicks ? "" : "mt-control"}`
               }`}
               style={
                 vertical
                   ? { bottom: `${peakPercentage.toString()}%` }
-                  : { left: `${peakPercentage.toString()}%` }
+                  : { insetInlineStart: `${peakPercentage.toString()}%` }
               }
               variant="footnote"
             >

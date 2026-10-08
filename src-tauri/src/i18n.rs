@@ -16,7 +16,12 @@ use serde::Serialize;
 use ts_rs::TS;
 use unic_langid::LanguageIdentifier;
 
+#[cfg(target_os = "macos")]
+mod macos;
 mod pseudo;
+
+#[cfg(target_os = "macos")]
+pub(crate) use macos::apply_layout_direction;
 
 // `LOCALES`: every folder in `locales/` with its files' text, embedded by
 // `build/locales.rs`.
@@ -28,6 +33,10 @@ const SOURCE: &str = "en-US";
 /// Accented, lengthened English, for spotting text that bypasses translation
 /// and layouts that break under longer words. Only chosen by the override.
 const PSEUDO: &str = "en-XA";
+/// English read backwards and laid out right to left, for spotting text that
+/// bypasses translation and layouts that do not mirror. Only chosen by the
+/// override.
+const PSEUDO_BIDI: &str = "en-XB";
 /// Chooses the language in place of the computer's preferences, to try a
 /// translation or the pseudo-locale without changing system settings.
 const OVERRIDE_VARIABLE: &str = "SCREENWIDE_LOCALE";
@@ -56,15 +65,19 @@ struct Catalog {
 static CATALOG: LazyLock<Catalog> = LazyLock::new(|| {
   let available: Vec<&str> = LOCALES.iter().map(|(name, _)| *name).collect();
   let locale = resolve(&requested(), &available);
-  let active = if locale.language == PSEUDO {
-    let mut accented = bundle(SOURCE, SOURCE);
-    accented.set_transform(Some(pseudo::transform));
-    accented
+  let pseudo: Option<fn(&str) -> std::borrow::Cow<'_, str>> = match locale.language.as_str() {
+    PSEUDO => Some(pseudo::accented),
+    PSEUDO_BIDI => Some(pseudo::bidi),
+    _ => None,
+  };
+  let active = if let Some(transform) = pseudo {
+    let mut spelled = bundle(SOURCE, SOURCE);
+    spelled.set_transform(Some(transform));
+    spelled
   } else {
     bundle(&locale.language, &locale.format_locale)
   };
-  let source =
-    (locale.language != SOURCE && locale.language != PSEUDO).then(|| bundle(SOURCE, SOURCE));
+  let source = (locale.language != SOURCE && pseudo.is_none()).then(|| bundle(SOURCE, SOURCE));
   Catalog {
     locale,
     bundle: active,
@@ -82,10 +95,13 @@ fn requested() -> Vec<String> {
 }
 
 fn resolve(requested: &[String], available: &[&str]) -> AppLocale {
-  if requested.first().is_some_and(|language| language == PSEUDO) {
+  if let Some(pseudo) = requested
+    .first()
+    .filter(|language| [PSEUDO, PSEUDO_BIDI].contains(&language.as_str()))
+  {
     return AppLocale {
-      language: PSEUDO.to_owned(),
-      format_locale: PSEUDO.to_owned(),
+      language: pseudo.clone(),
+      format_locale: pseudo.clone(),
     };
   }
   let parse = |language: &str| language.parse::<LanguageIdentifier>().ok();
@@ -178,37 +194,6 @@ macro_rules! t {
 }
 pub(crate) use t;
 
-/// The message `id` for the Objective-C overlays, which read it through
-/// `screenwide_osc_localized`. The caller hands the string back to
-/// `screenwide_i18n_free`.
-///
-/// # Safety
-/// `id` must point to a NUL-terminated string.
-#[cfg(target_os = "macos")]
-#[no_mangle]
-pub unsafe extern "C" fn screenwide_i18n_text(
-  id: *const std::ffi::c_char,
-) -> *mut std::ffi::c_char {
-  let id = unsafe { std::ffi::CStr::from_ptr(id) }.to_string_lossy();
-  // A message holds no NUL, so the conversion only fails on a broken file.
-  std::ffi::CString::new(format(&id, None))
-    .unwrap_or_default()
-    .into_raw()
-}
-
-/// Frees a string `screenwide_i18n_text` returned.
-///
-/// # Safety
-/// `text` must be null or a pointer `screenwide_i18n_text` returned, freed
-/// once.
-#[cfg(target_os = "macos")]
-#[no_mangle]
-pub unsafe extern "C" fn screenwide_i18n_free(text: *mut std::ffi::c_char) {
-  if !text.is_null() {
-    drop(unsafe { std::ffi::CString::from_raw(text) });
-  }
-}
-
 /// The language the app is in, for a webview to read before its first render.
 #[tauri::command]
 pub fn get_app_locale() -> AppLocale {
@@ -253,11 +238,13 @@ mod tests {
   }
 
   #[test]
-  fn the_pseudo_locale_is_taken_as_asked() {
-    assert_eq!(
-      resolved(&["en-XA"], &["en-US"]),
-      ("en-XA".into(), "en-XA".into())
-    );
+  fn the_pseudo_locales_are_taken_as_asked() {
+    for pseudo in [PSEUDO, PSEUDO_BIDI] {
+      assert_eq!(
+        resolved(&[pseudo], &["en-US"]),
+        (pseudo.into(), pseudo.into())
+      );
+    }
   }
 
   #[test]

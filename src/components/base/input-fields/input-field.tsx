@@ -46,6 +46,6 @@ export const fieldVariants = tv({
   },
   variants: {
     centered: { true: { input: "text-center" } },
-    rightAligned: { true: { input: "text-right" } },
+    rightAligned: { true: { input: "text-end" } },
   },
 });

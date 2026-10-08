@@ -229,7 +229,7 @@ export function SettingsWindow({
       {/* Only the sidebar keeps the window inset; the content column runs to
           the window's right and bottom edges so its scroll shadow lands there,
           and carries the inset on the scrolled content instead. */}
-      <div className="gap-layout pl-window-inset flex min-h-0 grow">
+      <div className="gap-layout ps-window-inset flex min-h-0 grow">
         <SidebarNav
           aria-label={t("settings-sections")}
           className="pb-window-inset"
@@ -249,7 +249,7 @@ export function SettingsWindow({
           >
             <section
               aria-label={sectionTitle(section)}
-              className="pr-window-inset pb-window-inset flex flex-col"
+              className="pe-window-inset pb-window-inset flex flex-col"
             >
               <SettingsPanes
                 annotate={annotate}
@@ -284,7 +284,7 @@ export function SettingsWindow({
           </ScrollArea>
           {error ? (
             <Alert
-              className="mr-window-inset mb-window-inset"
+              className="me-window-inset mb-window-inset"
               color="error"
               role="alert"
             >

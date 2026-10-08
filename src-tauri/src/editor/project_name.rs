@@ -20,7 +20,8 @@ fn stem(file: &Path) -> Option<&str> {
 /// manifest as it is now: the same one while an editor has it open, which
 /// takes the name once the editor lets it go, or the renamed one.
 pub fn rename_project(app: &AppHandle, file: &Path, title: &str) -> Result<PathBuf, String> {
-  let title = sanitize_file_stem(title).ok_or_else(|| "That name cannot be used".to_owned())?;
+  let title =
+    sanitize_file_stem(title).ok_or_else(|| crate::i18n::t!("project-browser-name-unusable"))?;
   let Some(kind) = open_kind(app, file) else {
     return rename_now(app, file, &title);
   };

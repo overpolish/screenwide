@@ -117,6 +117,7 @@ export function MonitorSelector({
     // as the displays sit, with the chosen one on the accent.
     <div
       className="flex h-full w-full items-center justify-center overflow-hidden rounded-panel p-control-inset"
+      dir="ltr"
       ref={containerRef}
     >
       <ButtonGroup

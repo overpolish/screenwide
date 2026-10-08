@@ -12,14 +12,27 @@ pub(crate) enum Purpose {
   Moments,
 }
 
+impl Purpose {
+  /// What Settings calls the model for this use.
+  pub(crate) fn name(self) -> String {
+    match self {
+      Self::Moments => crate::i18n::t!("settings-transcription-moments"),
+    }
+  }
+
+  /// What downloading the model for this use gets you.
+  pub(crate) fn description(self) -> String {
+    match self {
+      Self::Moments => crate::i18n::t!("settings-transcription-moments-description"),
+    }
+  }
+}
+
 #[derive(Debug)]
 pub(crate) struct Model {
   /// The model's own name, as transcripts record it.
   pub id: &'static str,
-  /// What it is for, as Settings names it.
-  pub name: &'static str,
-  /// What downloading it gets you.
-  pub description: &'static str,
+  /// What it is for, which also names it in Settings.
   pub purpose: Purpose,
   pub file: &'static str,
   pub size_bytes: u64,
@@ -33,10 +46,8 @@ const REPOSITORY: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve";
 const REVISION: &str = "5359861c739e955e79d9a303bcbc70fb988958b1";
 
 pub(crate) const MODELS: &[Model] = &[Model {
-  description: "Turns your moments' voice notes into text.",
   file: "ggml-base.bin",
   id: "base",
-  name: "Moments",
   purpose: Purpose::Moments,
   sha256: "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
   size_bytes: 147_951_465,

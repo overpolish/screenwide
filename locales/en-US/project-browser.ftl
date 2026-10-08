@@ -76,6 +76,8 @@ project-browser-open-project = Open { $title }
 project-browser-select-project = Select { $title }
 project-browser-more-actions = More actions for { $title }
 project-browser-project-name = Project name
+# A rename to a name no file can have, such as one made only of dots.
+project-browser-name-unusable = That name cannot be used
 project-browser-unavailable = Not available
 project-browser-badge-screenshot = Screenshot
 project-browser-badge-replay = Replay

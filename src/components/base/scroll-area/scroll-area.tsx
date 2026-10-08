@@ -17,6 +17,9 @@ type ScrollAreaProps = {
   children?: ReactNode;
   className?: string;
   constrainHeight?: boolean;
+  /** The edge a horizontal scroll starts from follows this direction. `auto`
+   * takes it from the content's own letters, for a strip that holds a name. */
+  dir?: "auto" | "ltr" | "rtl";
   /** Classes for the edge overlays only, e.g. a radius the content must not get. */
   edgeClassName?: string;
   edgeEffect?: "shadow" | "none";
@@ -31,6 +34,7 @@ export function ScrollArea({
   children,
   className,
   constrainHeight,
+  dir,
   edgeClassName,
   edgeEffect = "shadow",
   orientation = "vertical",
@@ -55,15 +59,8 @@ export function ScrollArea({
       const opacity = getEdgeOpacities(rtl ? -position : position, maximum, {
         effect: edgeEffect,
       });
-      // Start/end overlays are positioned at physical left/right edges.
-      startRef.current.style.setProperty(
-        "opacity",
-        String(rtl ? opacity.end : opacity.start),
-      );
-      endRef.current.style.setProperty(
-        "opacity",
-        String(rtl ? opacity.start : opacity.end),
-      );
+      startRef.current.style.setProperty("opacity", String(opacity.start));
+      endRef.current.style.setProperty("opacity", String(opacity.end));
     },
     [edgeEffect, horizontal],
   );
@@ -85,17 +82,19 @@ export function ScrollArea({
           horizontal ? "inset-y-0" : "inset-x-0",
           horizontal
             ? start
-              ? "left-0"
-              : "right-0"
+              ? "start-0"
+              : "end-0"
             : start
               ? "top-0"
               : "bottom-0",
           "from-shadow to-transparent opacity-0",
           horizontal ? "w-control-inset" : "h-control-inset",
+          // Gradients have no start and end, so a horizontal edge turns with
+          // the writing direction.
           horizontal
             ? start
-              ? "bg-gradient-to-r"
-              : "bg-gradient-to-l"
+              ? "bg-gradient-to-r rtl:bg-gradient-to-l"
+              : "bg-gradient-to-l rtl:bg-gradient-to-r"
             : start
               ? "bg-gradient-to-b"
               : "bg-gradient-to-t",
@@ -108,6 +107,7 @@ export function ScrollArea({
   return (
     <div
       className={cn("relative h-full w-full overflow-hidden", rootClassName)}
+      dir={dir}
     >
       <OverlayScrollbarsComponent
         className={cn("h-full w-full", constrainHeight && "max-h-[inherit]")}

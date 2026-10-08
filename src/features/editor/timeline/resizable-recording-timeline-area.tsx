@@ -177,6 +177,7 @@ function TimelineArea({
   return (
     <div
       className="relative flex shrink-0 flex-col bg-fill-quaternary"
+      dir="ltr"
       ref={rootRef}
       style={{ height: visibleHeight }}
     >

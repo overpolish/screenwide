@@ -139,6 +139,9 @@ export const Shortcut = ({
 
   return (
     <span
+      // Keys are named in the order they are pressed, left to right, in
+      // every language, as menus show them.
+      dir="ltr"
       {...rest}
       className={clsx("gap-control inline-flex items-center", className)}
       ref={ref}

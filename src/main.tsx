@@ -5,7 +5,7 @@ import { StrictMode } from "react";
 import { I18nProvider } from "react-aria-components";
 import { createRoot } from "react-dom/client";
 
-import { appLocale, loadAppLocale } from "./i18n/i18n";
+import { layoutLocale, loadAppLocale } from "./i18n/i18n";
 import "./index.css";
 import { installInactiveWindowHoverBridge } from "./lib/inactive-window-hover";
 import { installPointerModalityGuard } from "./lib/pointer-modality";
@@ -38,7 +38,7 @@ void loadAppLocale()
     if (!Window) return;
     createRoot(document.getElementById("root") as HTMLElement).render(
       <StrictMode>
-        <I18nProvider locale={appLocale().formatLocale}>
+        <I18nProvider locale={layoutLocale()}>
           <Window />
         </I18nProvider>
       </StrictMode>,

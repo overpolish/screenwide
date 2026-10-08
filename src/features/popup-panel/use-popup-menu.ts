@@ -6,7 +6,7 @@ import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
-import { hidePopupPanel, showPopupPanel } from "./api";
+import { hidePopupPanel, panelStartX, showPopupPanel } from "./api";
 import { initialPopupPanelHeight } from "./layout";
 import {
   activePopupPanel,
@@ -168,7 +168,7 @@ export function usePopupMenu({
       anchor,
       focusContents: false,
       offset: new LogicalPosition(
-        anchor.x,
+        panelStartX(anchor, width),
         anchor.y + anchor.height + ANCHOR_GAP,
       ),
       parentWindowLabel: getCurrentWindow().label,

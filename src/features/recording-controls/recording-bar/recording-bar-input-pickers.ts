@@ -8,7 +8,11 @@ import {
 } from "@tauri-apps/api/window";
 
 import { t } from "../../../i18n/i18n";
-import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
+import {
+  hidePopupPanel,
+  panelStartX,
+  showPopupPanel,
+} from "../../popup-panel/api";
 import { initialPopupPanelHeight } from "../../popup-panel/layout";
 import {
   activePopupPanel,
@@ -79,6 +83,7 @@ const openPanel = async ({
     id,
     label,
   });
+  const width = Math.max(anchor.width, PANEL_MIN_WIDTH);
   await showPopupPanel({
     anchor: {
       height: anchor.height,
@@ -87,10 +92,13 @@ const openPanel = async ({
       y: anchor.top,
     },
     focusContents,
-    offset: new LogicalPosition(anchor.left, anchor.bottom + 4),
+    offset: new LogicalPosition(
+      panelStartX({ width: anchor.width, x: anchor.left }, width),
+      anchor.bottom + 4,
+    ),
     parentWindowLabel: getCurrentWindow().label,
     size: new LogicalSize(
-      Math.max(anchor.width, PANEL_MIN_WIDTH),
+      width,
       initialPopupPanelHeight(
         items.length,
         new Set(

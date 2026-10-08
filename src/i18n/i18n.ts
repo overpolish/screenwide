@@ -3,10 +3,11 @@
 
 import { FluentBundle, FluentResource } from "@fluent/bundle";
 import { invoke } from "@tauri-apps/api/core";
+import { isRTL } from "react-aria";
 
 import { isWindows } from "../lib/platform";
 
-import { pseudo } from "./pseudo";
+import { accented, bidi } from "./pseudo";
 
 import type { Messages } from "./messages";
 import type { AppLocale } from "../bindings/AppLocale";
@@ -17,6 +18,19 @@ const SOURCE = "en-US";
 /** Accented, lengthened English for spotting text that bypasses translation
  * and layouts that break under longer words. */
 export const PSEUDO = "en-XA";
+/** English read backwards and laid out right to left, for spotting text that
+ * bypasses translation and layouts that do not mirror. */
+export const PSEUDO_BIDI = "en-XB";
+
+export type Direction = "ltr" | "rtl";
+
+const directionOf = (language: string): Direction =>
+  language === PSEUDO_BIDI || isRTL(language) ? "rtl" : "ltr";
+
+/** React Aria reads the writing direction from its locale alone. Where the
+ * direction is right to left but the format locale reads left to right, it
+ * is handed Arabic with Latin digits instead. */
+const RIGHT_TO_LEFT_STAND_IN = "ar-u-nu-latn";
 
 // The source is in every window's bundle, since every translation falls back
 // to it; the rest load only in a window that uses them.
@@ -84,9 +98,13 @@ export async function loadLocale(locale: AppLocale) {
   const loaders = Object.entries(translationFiles)
     .filter(([path]) => languageOf(path) === language)
     .map(([, load]) => load());
-  if (language === PSEUDO) {
+  if (language === PSEUDO || language === PSEUDO_BIDI) {
     active = {
-      bundle: createBundle(SOURCE, sourceFiles, pseudo),
+      bundle: createBundle(
+        SOURCE,
+        sourceFiles,
+        language === PSEUDO ? accented : bidi,
+      ),
       fallback: null,
       locale,
     };
@@ -107,7 +125,29 @@ export async function loadLocale(locale: AppLocale) {
     };
   }
   document.documentElement.lang = active.locale.language;
+  applyDirection(appDirection());
 }
+
+/** The way the app's language is written. */
+export const appDirection = () => directionOf(active.locale.language);
+
+/** Lays the page out in `direction`: popovers and tooltips, rendered at the
+ * end of the body, follow it too. */
+export const applyDirection = (direction: Direction) => {
+  document.documentElement.dir = direction;
+};
+
+/**
+ * The locale for React Aria's `I18nProvider`, which lays out and formats by
+ * it: the format locale, unless it reads the wrong way for `direction`, as
+ * under the bidi pseudo-locale or Storybook's direction override.
+ */
+export const layoutLocale = (direction: Direction = appDirection()) => {
+  const { formatLocale } = active.locale;
+  return direction === "rtl" && !isRTL(formatLocale)
+    ? RIGHT_TO_LEFT_STAND_IN
+    : formatLocale;
+};
 
 /**
  * Loads the language Rust chose for the app, so web and native text agree.

@@ -174,6 +174,8 @@ export function AngleDial({
       data-dragging={isDragging || undefined}
       data-focus-visible={isFocusVisible || undefined}
       data-hovered={isHovered || undefined}
+      // A clock face: clockwise from twelve in every language.
+      dir="ltr"
       onKeyDown={handleKeyDown}
       onPointerCancel={endDrag}
       onPointerDown={beginDrag}

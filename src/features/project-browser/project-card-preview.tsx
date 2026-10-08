@@ -11,7 +11,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { useState } from "react";
-import { useListFormatter } from "react-aria";
+import { useListFormatter, useLocale } from "react-aria";
 import { Button as AriaButton, type PressEvent } from "react-aria-components";
 
 import { Badge } from "../../components/base/badge/badge";
@@ -110,6 +110,7 @@ export function ProjectCardPreview({
   // window's own appearance.
   const [tones, setTones] = useState<PictureTones | null>(null);
   const list = useListFormatter({ style: "short", type: "unit" });
+  const { direction } = useLocale();
   // Where the pointer is across the picture, from 0 to 1, while it scrubs.
   const [scrub, setScrub] = useState<number | null>(null);
   const canScrub =
@@ -192,7 +193,7 @@ export function ProjectCardPreview({
             crossOrigin="anonymous"
             draggable={false}
             onLoad={({ currentTarget }) => {
-              setTones(pictureTones(currentTarget));
+              setTones(pictureTones(currentTarget, direction));
             }}
             src={thumbnail}
           />
@@ -211,13 +212,15 @@ export function ProjectCardPreview({
                   ? "w-full"
                   : "h-full",
               )}
+              // The strip is one picture with its frames left to right.
+              dir="ltr"
               style={{
                 aspectRatio: `${String(strip.frameWidth)} / ${String(strip.frameHeight)}`,
               }}
             >
               <img
                 alt=""
-                className="absolute top-0 left-0 h-full max-w-none"
+                className="absolute top-0 start-0 h-full max-w-none"
                 draggable={false}
                 src={strip.src}
                 style={{
@@ -228,13 +231,13 @@ export function ProjectCardPreview({
             </span>
           </span>
         ) : null}
-        {/* Top-right, what the recording holds, so a take with no
+        {/* Top end, what the recording holds, so a take with no
             microphone or a missing camera shows before it is opened. */}
         {captured.length > 0 ? (
           <Badge
             className={cn(
-              "right-control top-control absolute backdrop-blur-sm",
-              appearanceOver("topRight"),
+              "end-control top-control absolute backdrop-blur-sm",
+              appearanceOver("topEnd"),
             )}
           >
             {/* A line tall, so the badge stands as high as the text ones
@@ -246,14 +249,14 @@ export function ProjectCardPreview({
             </span>
           </Badge>
         ) : null}
-        {/* Bottom-right, where file browsers and video players put a
+        {/* Bottom end, where file browsers and video players put a
             clip's length, in the appearance of the picture beneath them so
             they read on it. */}
         {badges.length > 0 ? (
           <span
             className={cn(
-              "gap-control right-control bottom-control absolute flex",
-              appearanceOver("bottomRight"),
+              "gap-control end-control bottom-control absolute flex",
+              appearanceOver("bottomEnd"),
             )}
           >
             {badges.map((badge) => (
@@ -271,11 +274,11 @@ export function ProjectCardPreview({
         // unless something is already chosen: then every card shows one.
         <div
           className={cn(
-            "top-control left-control absolute flex",
+            "top-control start-control absolute flex",
             !isSelected &&
               !isSelectionMode &&
               "opacity-0 group-hover/card:opacity-100 has-[[data-focus-visible]]:opacity-100",
-            appearanceOver("topLeft"),
+            appearanceOver("topStart"),
           )}
         >
           <Checkbox

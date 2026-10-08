@@ -260,7 +260,7 @@ export function HotkeyField({
       </div>
       {captureError ? (
         <Text
-          className="max-w-64 text-right text-error"
+          className="max-w-64 text-end text-error"
           role="alert"
           variant="subheadline"
         >

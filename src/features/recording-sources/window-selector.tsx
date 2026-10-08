@@ -114,9 +114,9 @@ export function WindowSelector({
                   </span>
                 )}
               </span>
-              <span className="flex w-full min-w-0 items-center gap-control text-left">
+              <span className="flex w-full min-w-0 items-center gap-control text-start">
                 <AppIcon path={window.appIconPath} />
-                <span className="min-w-0 truncate text-subheadline">
+                <span className="min-w-0 truncate text-subheadline" dir="auto">
                   {window.title}
                 </span>
               </span>

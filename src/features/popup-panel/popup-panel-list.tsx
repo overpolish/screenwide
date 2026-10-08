@@ -208,10 +208,14 @@ export function PopupPanelList({
         ) : content.selectionMode === "multiple" ? (
           <AppWindowMac />
         ) : null}
-        <span className="truncate">{item.label}</span>
-        {item.detail ? <Badge className="ml-auto">{item.detail}</Badge> : null}
+        {/* Often a device's or a folder's own name, in whichever direction
+            it is written. */}
+        <span className="truncate" dir="auto">
+          {item.label}
+        </span>
+        {item.detail ? <Badge className="ms-auto">{item.detail}</Badge> : null}
         {item.shortcut ? (
-          <Shortcut className="ml-auto">
+          <Shortcut className="ms-auto">
             {hotkeyKeys(item.shortcut).map((key, index) => (
               <Keyboard key={`${key}-${index.toString()}`}>{key}</Keyboard>
             ))}

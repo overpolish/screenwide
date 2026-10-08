@@ -13,7 +13,8 @@ import { format, resolveConfig } from "prettier";
 
 const LOCALES_DIR = "locales";
 export const SOURCE = "en-US";
-export const PSEUDO = "en-XA";
+/** Generated from the source, never folders of their own. */
+export const PSEUDO_LOCALES = ["en-XA", "en-XB"];
 export const TYPES_FILE = "src/i18n/messages.ts";
 
 const PLURAL_CATEGORIES = new Set(["few", "many", "one", "two", "zero"]);

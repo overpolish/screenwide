@@ -79,7 +79,9 @@ function MomentShown({
         className="size-control-inset shrink-0 rounded-full"
         style={{ backgroundColor: moment.color }}
       />
-      <span className="truncate">{moment.name}</span>
+      <span className="truncate" dir="auto">
+        {moment.name}
+      </span>
     </div>
   );
 }
@@ -136,6 +138,9 @@ export function RecordingDockElapsed({
             "flex justify-center transition-colors",
             isPaused && "text-content-fg-secondary",
           )}
+          // A clock reads left to right in every language; its digits are
+          // laid out one by one, so they would otherwise run backwards.
+          dir="ltr"
         >
           <RotatingDigits value={hours} />:
           <RotatingDigits value={minutes} />:

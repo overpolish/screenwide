@@ -55,7 +55,9 @@ export function PathField({
           onPress={onBrowse}
         >
           {kind === "folder" ? <Folder /> : <File />}
-          <span className="whitespace-nowrap">{display}</span>
+          <span className="whitespace-nowrap" dir="auto">
+            {display}
+          </span>
         </Button>
         <Tooltip className="max-w-80 break-words">{value}</Tooltip>
       </TooltipTrigger>
