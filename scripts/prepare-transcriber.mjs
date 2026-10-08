@@ -45,10 +45,62 @@ if (!target) {
 }
 
 const crate = resolve("src-tauri", "transcriber");
-// whisper.cpp builds through MSBuild on Windows, which fails once its
-// try-compile paths pass MAX_PATH. A short directory, and no triple directory
-// when building for the host, keeps those paths well inside the limit.
+// whisper.cpp's Vulkan backend configures its shader generator as a nested
+// CMake project deep inside the build directory, and neither MSBuild nor the
+// MSVC compiler can reach files past MAX_PATH. A short target directory with
+// no triple directory when building for the host, Ninja in place of MSBuild's
+// deeper project layout, and CMake's hashed SHORT intermediate directories
+// together keep the deepest paths under the limit.
 const targetDirectory = resolve("src-tauri", "target", "stt");
+const buildEnv = { ...env };
+if (hostPlatform === "win32") {
+  const cmakeVersion = execFileSync("cmake", ["--version"], {
+    encoding: "utf8",
+  }).match(/version (\d+)\.(\d+)/);
+  if (
+    !cmakeVersion ||
+    Number(cmakeVersion[1]) * 100 + Number(cmakeVersion[2]) < 402
+  ) {
+    throw new Error("Building the transcriber needs CMake 4.2 or later");
+  }
+  buildEnv.CMAKE_GENERATOR = "Ninja";
+  buildEnv.CMAKE_INTERMEDIATE_DIR_STRATEGY = "SHORT";
+  try {
+    execFileSync("ninja", ["--version"], { stdio: "ignore" });
+  } catch {
+    // The Build Tools' C++ CMake tools component ships Ninja without putting
+    // it on PATH.
+    const vswhere = resolve(
+      env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
+      "Microsoft Visual Studio",
+      "Installer",
+      "vswhere.exe",
+    );
+    const ninja = execFileSync(
+      vswhere,
+      [
+        "-latest",
+        "-products",
+        "*",
+        "-find",
+        "Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\Ninja\\ninja.exe",
+      ],
+      { encoding: "utf8" },
+    )
+      .split(/\r?\n/)
+      .find(Boolean);
+    if (!ninja) {
+      throw new Error(
+        "Building the transcriber needs Ninja: install the C++ CMake tools for Windows component of the Visual Studio Build Tools, or put ninja on PATH",
+      );
+    }
+    // Windows names the variable Path, and a second PATH key would shadow it.
+    const pathKey =
+      Object.keys(buildEnv).find((key) => key.toUpperCase() === "PATH") ??
+      "PATH";
+    buildEnv[pathKey] = `${dirname(ninja)};${buildEnv[pathKey] ?? ""}`;
+  }
+}
 // Node's own architecture can differ from Rust's host under emulation, so
 // ask rustc.
 const rustHost = execFileSync("rustc", ["-vV"], { encoding: "utf8" }).match(
@@ -66,7 +118,7 @@ execFileSync(
     "--target-dir",
     targetDirectory,
   ],
-  { cwd: crate, stdio: "inherit" },
+  { cwd: crate, env: buildEnv, stdio: "inherit" },
 );
 
 const extension = requestedPlatform === "win32" ? ".exe" : "";
