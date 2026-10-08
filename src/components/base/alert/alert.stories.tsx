@@ -3,6 +3,8 @@
 
 import { ComponentProps } from "react";
 
+import { Button } from "../button/button";
+
 import { Alert } from "./alert";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -23,7 +25,7 @@ const meta = {
   },
   component: Alert,
   parameters: {
-    controls: { exclude: ["children", "className", "icon"] },
+    controls: { exclude: ["action", "children", "className", "icon"] },
     layout: "centered",
   },
   title: "Primitives/Alert",
@@ -50,6 +52,21 @@ export const Paragraph: Story = {
   decorators: [
     (Story) => (
       <div className="w-80">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+/** A notice the user can answer, such as undoing what it reports. */
+export const WithAction: Story = {
+  args: {
+    action: <Button variant="ghost">Undo</Button>,
+    children: "Moved 3 projects to the Trash.",
+  },
+  decorators: [
+    (Story) => (
+      <div className="w-96">
         <Story />
       </div>
     ),

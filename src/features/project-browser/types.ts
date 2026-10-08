@@ -1,40 +1,40 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-export type ProjectKind = "audio" | "camera" | "screen" | "screenshot";
+import type { ProjectKind } from "../../bindings/ProjectKind";
+import type { ProjectLocation } from "../../bindings/ProjectLocation";
+import type { ProjectSource } from "../../bindings/ProjectSource";
+import type { ProjectSummary } from "../../bindings/ProjectSummary";
+import type { ProjectTracks } from "../../bindings/ProjectTracks";
+import type { ScrubStripFile } from "../../bindings/ScrubStripFile";
 
-/** A project as the browser lists it, read from its manifest alone. */
-export type ProjectSummary = {
-  /** False for a project that is not there, such as one on a drive that is
-   * not connected. It is listed but cannot be opened. */
-  available: boolean;
-  durationMs: number | null;
-  /** The project's `.screenwide` manifest, which also names it. */
-  file: string;
-  kind: ProjectKind | null;
-  /** When the project was last edited. */
-  modifiedMs: number | null;
-  /** Kept from the replay buffer rather than recorded start to stop. */
-  replay: boolean;
-  /** Everything in the project's folder, in bytes: what keeping it costs. */
-  sizeBytes: number | null;
-  title: string;
+export type {
+  ProjectKind,
+  ProjectLocation,
+  ProjectSource,
+  ProjectSummary,
+  ProjectTracks,
+  ScrubStripFile,
 };
 
-/** A folder the browser lists projects from. */
-export type ProjectLocation = {
-  available: boolean;
-  /** The projects folder new recordings go into. */
-  isDefault: boolean;
-  name: string;
-  path: string;
-};
+/** A recording's scrub strip as a card shows it: the strip file's frames,
+ * with the file as an address the webview can load. */
+export type ScrubStrip = Omit<ScrubStripFile, "path"> & { src: string };
 
-export type ProjectSource =
-  { kind: "recent" } | { kind: "folder"; path: string };
+/** How a location is drawn, in the sidebar and in Move To: the projects
+ * folder as the root it is, a folder on another drive as that drive, and
+ * any other folder as a folder. */
+export const locationGlyph = ({ isDefault, onOtherDrive }: ProjectLocation) =>
+  isDefault ? "folder-root" : onOtherDrive ? "hard-drive" : "folder";
 
-/** The sidebar's selection: the recent projects, or a location's path. */
+/** The sidebar's selection: the recent projects, Recently Deleted, or a
+ * location's path. */
 export const RECENT = "recent";
+export const DELETED = "deleted";
 
 export const sourceFor = (selected: string): ProjectSource =>
-  selected === RECENT ? { kind: "recent" } : { kind: "folder", path: selected };
+  selected === RECENT
+    ? { kind: "recent" }
+    : selected === DELETED
+      ? { kind: "deleted" }
+      : { kind: "folder", path: selected };

@@ -4,11 +4,17 @@
 import {
   ArrowBigDownDash,
   ClipboardCopy,
+  Copy,
+  Folder,
   FolderOpen,
+  FolderRoot,
+  FolderSearch,
+  HardDrive,
   ImageDown,
   LucideIcon,
   Timer,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 
@@ -30,9 +36,15 @@ import { PopupPanelIcon } from "./store";
 // Items cross a window boundary as data, so a glyph travels by name.
 const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
   clipboard: ClipboardCopy,
-  folder: FolderOpen,
+  copy: Copy,
+  folder: Folder,
+  "folder-open": FolderOpen,
+  "folder-root": FolderRoot,
+  "folder-search": FolderSearch,
+  "hard-drive": HardDrive,
   image: ImageDown,
   remove: X,
+  restore: Undo2,
   scrolling: ArrowBigDownDash,
   timer: Timer,
   "tool-arrow": ArrowToolIcon,

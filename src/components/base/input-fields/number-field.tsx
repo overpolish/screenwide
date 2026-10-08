@@ -24,9 +24,6 @@ const numberFieldVariants = tv({
   extend: fieldVariants,
   slots: {
     input: "text-right tabular-nums",
-    // Units and glyphs read as part of the value, so they share its size.
-    section:
-      "shrink-0 text-content-fg-secondary [&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
     stepper: [
       "flex h-full shrink-0 cursor-default items-center px-control text-content-fg-secondary outline-none transition-colors",
       "data-[hovered]:bg-control-subtle-hover data-[hovered]:text-content-fg",

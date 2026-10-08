@@ -8,17 +8,23 @@ import { recordingTimelineOutputToSource } from "../timeline/editing/recording-t
 import { ResolvedScrubPreviewProps } from "./preview/recording-preview-props";
 import {
   RecordingFrameRequest,
-  saveRecordingProjectStill,
+  requestRecordingProjectPictures,
 } from "./recording-frame-api";
 
-/** Long enough that a drag or a run of nudges composes one still, not many. */
-const SETTLE_MS = 1_000;
+/** Long enough that a drag or a run of nudges sends one edit, not dozens.
+ * The app waits a little more for the edit to rest before composing. */
+const REPORT_MS = 250;
+/** Enough to follow a take across a card in the browser. */
+const STRIP_FRAMES = 12;
 
 /**
- * Keeps the project browser's still of this recording in step with its edit:
- * composed once the editor opens it and again once each change settles, at
- * the middle of the edited timeline. It follows the committed canvas, not a
- * resize in progress.
+ * Keeps the project browser's pictures of this recording in step with its
+ * edit: the still, at the middle of the edited timeline, and the scrub
+ * strip, at the middle of each twelfth of it. The edit is handed to the app
+ * when the editor opens the recording and again after each change, and the
+ * app composes both in one pass once it rests, or before letting the
+ * recording go if the window closes first. They follow the committed
+ * canvas, not a resize in progress.
  */
 export function useProjectStill(
   {
@@ -41,24 +47,33 @@ export function useProjectStill(
 ) {
   useEffect(() => {
     if (!hasPicture || !recordingOutput || durationMs <= 0) return;
-    const middle =
-      edit?.artifactId === artifactId
-        ? recordingTimelineOutputToSource(edit, 0.5)
-        : 0.5;
+    // A point along the edited timeline, from 0 to 1, as a source position.
+    const sourceMs = (output: number) =>
+      (edit?.artifactId === artifactId
+        ? recordingTimelineOutputToSource(edit, output)
+        : output) * durationMs;
+    const request: RecordingFrameRequest = {
+      annotationClips,
+      artifactId,
+      bakeCamera,
+      cameraOverlay,
+      cursorEffects,
+      keyboardEffects,
+      positionMs: 0,
+      recordingOutput,
+    };
     const timer = window.setTimeout(() => {
-      // A still is a convenience: one that cannot be made now is made at the
-      // next change, and the browser shows a movie frame meanwhile.
-      saveRecordingProjectStill({
-        annotationClips,
-        artifactId,
-        bakeCamera,
-        cameraOverlay,
-        cursorEffects,
-        keyboardEffects,
-        positionMs: middle * durationMs,
-        recordingOutput,
+      // A convenience: pictures that cannot be made now are made at the next
+      // change, and the browser shows a movie frame, and no scrubbing,
+      // meanwhile.
+      requestRecordingProjectPictures({
+        request,
+        stillPositionMs: sourceMs(0.5),
+        stripPositionsMs: Array.from({ length: STRIP_FRAMES }, (_, index) =>
+          sourceMs((index + 0.5) / STRIP_FRAMES),
+        ),
       }).catch(() => undefined);
-    }, SETTLE_MS);
+    }, REPORT_MS);
     return () => {
       window.clearTimeout(timer);
     };

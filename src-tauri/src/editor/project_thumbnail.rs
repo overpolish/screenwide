@@ -11,6 +11,8 @@
 //! the movie; an audio recording shows its ribbon.
 
 pub(crate) mod edited;
+pub(crate) mod owed;
+pub(crate) mod strip;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod waveform;
 

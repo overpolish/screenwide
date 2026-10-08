@@ -63,6 +63,24 @@ export const copyRecordingPreviewFrameToClipboard = (
     frame: frame(request),
   });
 
-/** Keeps the frame, smaller, as the project browser's still for it. */
-export const saveRecordingProjectStill = (request: RecordingFrameRequest) =>
-  invoke<null>("save_recording_project_still", { frame: frame(request) });
+/** Hands the app the edit the project browser's pictures of this recording
+ * owe: the still at `stillPositionMs`, and the scrub strip at each of
+ * `stripPositionsMs`, in order along the edit. The app makes them once the
+ * edit rests, or before letting the recording go if the window closes
+ * first. */
+export const requestRecordingProjectPictures = ({
+  request,
+  stillPositionMs,
+  stripPositionsMs,
+}: {
+  request: RecordingFrameRequest;
+  stillPositionMs: number;
+  stripPositionsMs: number[];
+}) =>
+  invoke<null>("request_recording_project_pictures", {
+    frame: frame(request),
+    stillPositionMs: Math.max(0, Math.round(stillPositionMs)),
+    stripPositionsMs: stripPositionsMs.map((position) =>
+      Math.max(0, Math.round(position)),
+    ),
+  });

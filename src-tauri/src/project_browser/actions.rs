@@ -77,14 +77,18 @@ pub fn rename_project(app: AppHandle, file: PathBuf, title: String) -> Result<Pa
   crate::editor::rename_project(&app, &file, &title)
 }
 
-/// Moves a project's whole folder to the Trash, closing it first if it is
-/// open: it is saved, so closing loses nothing.
+/// Deletes a project: sets it aside in Recently Deleted, to come back from
+/// there or go on to the Trash, and returns its manifest there for Undo to
+/// restore. An open one is closed first, as closing its window would, so a
+/// name given while open settles and the folder set aside is the one it
+/// ends up as.
 #[tauri::command]
-pub fn trash_project(app: AppHandle, file: PathBuf) -> Result<(), String> {
-  if let Some(kind) = crate::editor::open_kind(&app, &file) {
-    crate::editor::close(&app, kind);
-  }
-  library::trash(&app, &file)
+pub fn delete_project(app: AppHandle, file: PathBuf) -> Result<PathBuf, String> {
+  let file = match crate::editor::open_kind(&app, &file) {
+    Some(kind) => crate::editor::close(&app, kind).unwrap_or(file),
+    None => file,
+  };
+  crate::project::delete(&app, &file)
 }
 
 /// Takes a project off the recent list without touching it, for one that is

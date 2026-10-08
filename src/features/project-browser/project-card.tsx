@@ -1,159 +1,113 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  AudioLines,
-  Check,
-  FolderSearch,
-  ImageIcon,
-  Monitor,
-  Trash2,
-  Video,
-  X,
-} from "lucide-react";
+import { Ellipsis } from "lucide-react";
 import { useState } from "react";
-import { Button as AriaButton } from "react-aria-components";
 
-import { Badge } from "../../components/base/badge/badge";
 import { IconButton } from "../../components/base/button/icon-button";
 import { Text } from "../../components/base/text/text";
-import { ConfirmActionButton } from "../../components/shared/confirm-action-button/confirm-action-button";
 import { EditableTitle } from "../../components/shared/editable-title/editable-title";
-import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
-import { formatBytes, formatDuration } from "../editor/duration";
+import { cn } from "../../lib/styling";
+import {
+  boundsAnchor,
+  PopupMenuAnchor,
+  pointerAnchor,
+} from "../popup-panel/use-popup-menu";
 
-import { pictureCornerTone, type PictureTone } from "./picture-tone";
+import { ProjectCardPreview } from "./project-card-preview";
 
-import type { ProjectKind, ProjectSummary } from "./types";
-
-const isWindows = () => document.documentElement.dataset.platform === "windows";
-const binName = () => (isWindows() ? "Recycle Bin" : "Trash");
+import type { ProjectSummary, ScrubStrip } from "./types";
 
 const editedAt = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
   timeStyle: "short",
 });
 
-const kindIcons: Record<ProjectKind, typeof Monitor> = {
-  audio: AudioLines,
-  camera: Video,
-  screen: Monitor,
-  screenshot: ImageIcon,
-};
-
-/** What kind of capture it is, where that is not an ordinary recording, then
- * how long it is and how much disk it takes, as far as each is known. */
-function badgesFor(project: ProjectSummary) {
-  return [
-    project.kind === "screenshot" ? "Screenshot" : null,
-    project.replay ? "Replay" : null,
-    project.durationMs === null ? null : formatDuration(project.durationMs),
-    project.sizeBytes === null ? null : formatBytes(project.sizeBytes),
-  ].filter((badge) => badge !== null);
-}
-
 export type ProjectCardProps = {
-  onOpen: () => void;
-  /** Resolves once the project is renamed, and rejects when it is not. */
-  onRename: (title: string) => Promise<void>;
-  onReveal: () => void;
-  onTrash: () => void;
+  isSelected: boolean;
+  /** Something is chosen, so every card shows its selection box. */
+  isSelectionMode: boolean;
+  /** Adds the projects between the last one chosen and this one. */
+  onExtendSelection: () => void;
+  /** Opens the project's actions, hung off what asked for them. */
+  onMenu: (anchor: PopupMenuAnchor) => void;
+  /** Asks for the strip to scrub through, which arrives as `scrubStrip`. */
+  onScrubRequest: () => void;
+  onToggleSelection: () => void;
   project: ProjectSummary;
-  /** A still from the project, or null while there is none to show. */
   thumbnail: string | null;
-  /** Takes the project off Recent; offered there for one that is missing. */
-  onForget?: () => void;
+  /** In place of when it was last edited, such as how long a deleted
+   * project has before it goes to the Trash. */
+  footnote?: string;
+  /** Absent where a project cannot be opened; a plain press then chooses
+   * it. */
+  onOpen?: () => void;
+  /** Resolves once the project is renamed, and rejects when it is not.
+   * Absent where a project cannot be renamed. */
+  onRename?: (title: string) => Promise<void>;
+  /** Undefined until asked for; null for a recording without one. */
+  scrubStrip?: ScrubStrip | null;
 };
 
+/**
+ * One project: its picture, its name, and when it was last edited. Its
+ * actions are in a menu, opened from the More button or a right click, the
+ * way Finder offers them.
+ */
 export function ProjectCard({
-  onForget,
+  footnote,
+  isSelected,
+  isSelectionMode,
+  onExtendSelection,
+  onMenu,
   onOpen,
   onRename,
-  onReveal,
-  onTrash,
+  onScrubRequest,
+  onToggleSelection,
   project,
+  scrubStrip,
   thumbnail,
 }: ProjectCardProps) {
-  const KindIcon = kindIcons[project.kind ?? "screen"];
   // A refused rename leaves the field showing what was typed; remounting it
   // puts the project's own name back.
   const [refusals, setRefusals] = useState(0);
-  const isPicture = thumbnail !== null && project.kind !== "audio";
-  // How light the picture is under the badges, once it has loaded; until
-  // then, or with no picture, they take the window's own appearance.
-  const [tone, setTone] = useState<PictureTone | null>(null);
   return (
     <article
       aria-label={project.title}
       className={cn(
-        "gap-control rounded-panel bg-layer p-control inset-ring-layer-stroke flex min-w-0 flex-col inset-ring",
+        "group/card gap-control rounded-panel bg-layer p-control flex min-w-0 flex-col inset-ring",
+        isSelected
+          ? "inset-ring-2 inset-ring-primary"
+          : "inset-ring-layer-stroke",
         !project.available && "opacity-60",
       )}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onMenu(pointerAnchor(event.clientX, event.clientY));
+      }}
     >
-      <AriaButton
-        aria-label={`Open ${project.title}`}
-        className={cn(
-          "rounded-control text-content-fg-tertiary relative flex aspect-video cursor-default items-center justify-center",
-          // A still is drawn as it is, square corners and all: rounding it
-          // would show something the recording does not hold.
-          !isPicture && "bg-fill overflow-hidden",
-          focusStyles,
-          elementFocusVisible,
-        )}
-        isDisabled={!project.available}
-        onPress={onOpen}
-      >
-        {thumbnail && project.kind === "audio" ? (
-          // The ribbon is drawn white; the mask takes its shape and the
-          // label colour paints it, so it follows the appearance.
-          <span
-            className="text-content-fg-secondary size-full bg-current mask-contain mask-center mask-no-repeat"
-            style={{ maskImage: `url("${thumbnail}")` }}
-          />
-        ) : isPicture ? (
-          // Contained by the browser rather than sized from the loaded
-          // still, so a card drawn before its still loads is already the
-          // right shape: no stretched frame snapping to size.
-          <img
-            alt=""
-            className="absolute inset-0 size-full object-contain"
-            // Lets the corner's pixels be read; the asset protocol allows it
-            // for the window's own origin.
-            crossOrigin="anonymous"
-            draggable={false}
-            onLoad={({ currentTarget }) => {
-              setTone(pictureCornerTone(currentTarget));
-            }}
-            src={thumbnail}
-          />
-        ) : (
-          <KindIcon className="size-icon-large" />
-        )}
-        {/* Bottom-right, where file browsers and video players put a
-            clip's length, in the appearance of the picture beneath them so
-            they read on it. */}
-        {project.available && badgesFor(project).length > 0 ? (
-          <span
-            className={cn(
-              "gap-control right-control bottom-control absolute flex",
-              isPicture && tone === "light" && "appearance-light",
-              isPicture && tone === "dark" && "appearance-dark",
-            )}
-          >
-            {badgesFor(project).map((badge) => (
-              // A slight blur keeps fine detail, such as text in a
-              // recording, from showing through the faint fill.
-              <Badge className="backdrop-blur-sm" key={badge}>
-                {badge}
-              </Badge>
-            ))}
-          </span>
-        ) : null}
-      </AriaButton>
+      <ProjectCardPreview
+        isSelected={isSelected}
+        isSelectionMode={isSelectionMode}
+        onPress={(event) => {
+          // Finder's modifiers: Shift takes a range, Command (Control on
+          // Windows) one more. A plain press opens and leaves the choice as
+          // it was, or chooses where there is nothing to open.
+          if (event.shiftKey) onExtendSelection();
+          else if (event.metaKey || event.ctrlKey || !onOpen)
+            onToggleSelection();
+          else onOpen();
+        }}
+        onScrubRequest={onScrubRequest}
+        onSelectedChange={onToggleSelection}
+        project={project}
+        scrubStrip={scrubStrip}
+        thumbnail={thumbnail}
+      />
       <div className="gap-control flex items-center">
         <div className="px-control flex min-w-0 grow flex-col">
           <Text as="h3" title={project.title}>
-            {project.available ? (
+            {project.available && onRename ? (
               <EditableTitle
                 className="truncate focus:text-clip"
                 key={refusals}
@@ -170,38 +124,23 @@ export function ProjectCard({
             )}
           </Text>
           <Text className="truncate" variant="footnote">
-            {!project.available
-              ? "Not available"
-              : project.modifiedMs === null
-                ? null
-                : editedAt.format(project.modifiedMs)}
+            {footnote ??
+              (!project.available
+                ? "Not available"
+                : project.modifiedMs === null
+                  ? null
+                  : editedAt.format(project.modifiedMs))}
           </Text>
         </div>
-        <div className="gap-control flex shrink-0">
-          <IconButton
-            aria-label={isWindows() ? "Show in Explorer" : "Show in Finder"}
-            isDisabled={!project.available}
-            onPress={onReveal}
-          >
-            <FolderSearch />
-          </IconButton>
-          {!project.available && onForget ? (
-            // Nothing is deleted, only the entry, so it needs no confirming.
-            <IconButton aria-label="Remove from Recents" onPress={onForget}>
-              <X />
-            </IconButton>
-          ) : (
-            <ConfirmActionButton
-              armedIcon={<Check />}
-              armedLabel={`Confirm moving to ${binName()}`}
-              idleIcon={<Trash2 />}
-              idleLabel={`Move to ${binName()}`}
-              isDisabled={!project.available}
-              onConfirm={onTrash}
-              variant="icon"
-            />
-          )}
-        </div>
+        <IconButton
+          aria-label={`More actions for ${project.title}`}
+          className="shrink-0"
+          onPress={(event) => {
+            onMenu(boundsAnchor(event.target.getBoundingClientRect()));
+          }}
+        >
+          <Ellipsis />
+        </IconButton>
       </div>
     </article>
   );

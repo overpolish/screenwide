@@ -15,10 +15,14 @@ const alertVariants = tv({
     color: "neutral",
   },
   slots: {
+    // A Fluent info bar's action sits at its trailing edge, centred on the
+    // first line the way the icon is: the slot is a line tall and the
+    // control overhangs it evenly into the padding.
+    action: "flex h-[1lh] shrink-0 items-center",
     // On the layer tokens: the faintest fill on macOS, a Fluent info bar's
     // card fill and hairline stroke on Windows.
     base: "flex items-start gap-control-inset rounded-control bg-layer inset-ring inset-ring-layer-stroke p-section text-body text-content-fg",
-    content: "min-w-0",
+    content: "min-w-0 grow",
     icon: "flex h-[1lh] w-icon shrink-0 items-center justify-center [&>svg]:size-icon [&>svg]:transform-gpu",
   },
   variants: {
@@ -40,17 +44,20 @@ const defaultIcons = {
 
 type AlertProps = Omit<ComponentProps<"div">, "color"> &
   VariantProps<typeof alertVariants> & {
+    /** A control that answers the notice, such as Undo. */
+    action?: ReactNode;
     icon?: ReactNode | false;
   };
 
 export function Alert({
+  action: actionContent,
   children,
   className,
   color = "neutral",
   icon: customIcon,
   ...props
 }: AlertProps) {
-  const { base, content, icon } = alertVariants({
+  const { action, base, content, icon } = alertVariants({
     className,
     color,
   });
@@ -64,6 +71,7 @@ export function Alert({
         </span>
       )}
       <div className={content()}>{children}</div>
+      {actionContent ? <div className={action()}>{actionContent}</div> : null}
     </div>
   );
 }

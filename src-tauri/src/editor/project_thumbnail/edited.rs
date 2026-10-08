@@ -1,39 +1,28 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The preview the editor composes for its open recording, edit and all.
+//! The preview the editor composes for its open recording, edit and all,
+//! kept in the project for the browser's card.
 
 use image::imageops::FilterType;
 use tauri::Emitter;
 
 use super::*;
-use crate::editor::recording_preview_player::timeline_thumbnails::{
-  compose_preview_frame, PreviewFrameRequest,
-};
 
-/// Composes the open recording's frame the window asks for and keeps it,
-/// smaller, as its project's preview.
-#[tauri::command]
-pub async fn save_recording_project_still(
-  app: AppHandle,
-  frame: PreviewFrameRequest,
-) -> Result<(), String> {
-  let project = {
-    let state = app.state::<EditorState>();
-    let artifact = state
-      .recording
-      .artifact
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    match artifact.as_ref() {
-      Some(EditorArtifact::Recording { id, project, .. }) if *id == frame.artifact_id => {
-        project.clone()
-      }
-      _ => return Err("That recording is no longer open in the editor".to_owned()),
+/// The project of the recording open as `artifact_id`, while it still is.
+pub(super) fn open_project(app: &AppHandle, artifact_id: u64) -> Result<PathBuf, String> {
+  let state = app.state::<EditorState>();
+  let artifact = state
+    .recording
+    .artifact
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  match artifact.as_ref() {
+    Some(EditorArtifact::Recording { id, project, .. }) if *id == artifact_id => {
+      Ok(project.clone())
     }
-  };
-  let composed = compose_preview_frame(&app, frame).await?;
-  keep_composed_preview(&app, project, composed).await
+    _ => Err("That recording is no longer open in the editor".to_owned()),
+  }
 }
 
 /// Keeps `composed`, smaller, as the preview of the project whose manifest

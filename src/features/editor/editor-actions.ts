@@ -28,6 +28,12 @@ export const renameOpenProject = async (title: string) => {
   await invoke<null>("rename_open_project", { title });
 };
 
+/** Closes this window's editor and sets its project aside in Recently
+ * Deleted. */
+export const deleteOpenProject = async () => {
+  await invoke<null>("delete_open_project");
+};
+
 export const setScreenshotRadius = async (radiusPercent: number) => {
   await invoke<null>("set_screenshot_radius", { radiusPercent });
 };

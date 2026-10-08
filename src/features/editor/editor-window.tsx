@@ -8,7 +8,6 @@ import {
   browseExportDirectory,
   cancelExportJob,
   copyEditorToClipboard,
-  renameOpenProject,
   saveExport,
   setExportDirectory,
   setScreenshotBackgroundRadius,
@@ -29,6 +28,7 @@ import {
 } from "./export/recording-export-settings";
 import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingExportEstimate } from "./export/use-recording-export-estimate";
+import { openProjectActions } from "./open-project-actions";
 import { EditorPanel } from "./panel/editor-panel";
 import { recordingOutputForEdit } from "./recording/recording-output-edit";
 import {
@@ -158,6 +158,7 @@ export function EditorWindow() {
   const screenshotBackgroundRadiusRef = useRef(0);
   const seenScreenshotItemIdsRef = useRef<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const openProject = openProjectActions(setError);
 
   // Keyed on the capture rather than the object, so a replacement always
   // refetches - including the full-resolution copy, whose cached URL belongs to
@@ -579,6 +580,7 @@ export function EditorWindow() {
           ).catch(report("copy"));
         }}
         onCursorEffectsChange={setCursorEffects}
+        onDeleteProject={openProject.onDeleteProject}
         onDeleteProjectAfterExportChange={setDeleteProjectAfterExport}
         onEnabledTracksChange={onEnabledTracksChange}
         onEnabledVideoTracksChange={(tracks) => {
@@ -605,11 +607,7 @@ export function EditorWindow() {
           setError(null);
         }}
         onRecordingTimelineEditChange={setRecordingTimelineEdit}
-        onRenameProject={(title) => {
-          renameOpenProject(title).catch((cause: unknown) => {
-            setError(cause instanceof Error ? cause.message : String(cause));
-          });
-        }}
+        onRenameProject={openProject.onRenameProject}
         onResolutionScaleChange={(scale) => {
           setResolutionScalePercent(scale);
           if (scale < originalResolutionScale && compression === 0) {

@@ -23,6 +23,8 @@ static CHANGES: Mutex<()> = Mutex::new(());
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub(crate) struct Library {
+  /// Projects in Recently Deleted, oldest first.
+  pub deleted: Vec<DeletedProject>,
   /// Folders the user added, in the order they were added.
   pub locations: Vec<PathBuf>,
   /// Project manifests, most recent first. A project on a drive that is not
@@ -30,8 +32,20 @@ pub(crate) struct Library {
   pub recents: Vec<PathBuf>,
 }
 
+/// A project set aside in Recently Deleted.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct DeletedProject {
+  /// When it was deleted, in milliseconds since the epoch.
+  pub deleted_ms: u64,
+  /// Its manifest where it waits, in the deleted folder beside where it was.
+  pub file: PathBuf,
+  /// The manifest it had, to put it back where it was.
+  pub original: PathBuf,
+}
+
 impl Library {
-  fn remember(&mut self, file: &Path) {
+  pub(super) fn remember(&mut self, file: &Path) {
     self.recents.retain(|recent| recent != file);
     self.recents.insert(0, file.to_path_buf());
     self.recents.truncate(MAX_RECENTS);
@@ -64,7 +78,7 @@ pub(crate) fn load(app: &AppHandle) -> Library {
     .unwrap_or_default()
 }
 
-fn change(app: &AppHandle, edit: impl FnOnce(&mut Library)) -> Result<(), String> {
+pub(super) fn change(app: &AppHandle, edit: impl FnOnce(&mut Library)) -> Result<(), String> {
   let _turn = CHANGES
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -99,11 +113,14 @@ pub(crate) fn forget(app: &AppHandle, file: &Path) -> Result<(), String> {
   })
 }
 
-/// Moves the project whose manifest is `file` to the Trash and takes it off
-/// the recent list.
+/// Moves the project whose manifest is `file` to the system Trash, from
+/// wherever it is, and takes it off Recent and Recently Deleted.
 pub(crate) fn trash(app: &AppHandle, file: &Path) -> Result<(), String> {
   super::move_to_trash(file)?;
-  forget(app, file)
+  change(app, |library| {
+    library.recents.retain(|recent| recent != file);
+    library.deleted.retain(|deleted| deleted.file != file);
+  })
 }
 
 /// Follows a project that was renamed.

@@ -64,6 +64,7 @@ export function EditorPanel({
   onCompressionChange,
   onCopy,
   onCursorEffectsChange,
+  onDeleteProject,
   onDeleteProjectAfterExportChange,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
@@ -201,6 +202,7 @@ export function EditorPanel({
               isToolbarDisabled={isLocked}
               onClose={onCancel}
               onCopy={onCopy}
+              onDelete={onDeleteProject}
               onExport={openExportOptions}
               onMinimize={onMinimize}
               onRename={onRenameProject}

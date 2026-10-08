@@ -60,6 +60,8 @@ export type EditorPanelProps = {
   onCompressionChange?: (compression: number) => void;
   onCopy?: () => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  /** Closes the editor and sets its project aside in Recently Deleted. */
+  onDeleteProject?: () => void;
   onDeleteProjectAfterExportChange?: (remove: boolean) => void;
   onEnabledTracksChange?: (streamIndices: number[]) => void;
   onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;

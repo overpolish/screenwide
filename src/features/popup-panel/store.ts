@@ -13,9 +13,15 @@ import type { NoteTranscript } from "../editor/timeline/moments/recording-moment
  * export-an-image glyph. */
 export type PopupPanelIcon =
   | "clipboard"
+  | "copy"
   | "folder"
+  | "folder-open"
+  | "folder-root"
+  | "folder-search"
+  | "hard-drive"
   | "image"
   | "remove"
+  | "restore"
   | "scrolling"
   | "timer"
   | "trash"

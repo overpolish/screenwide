@@ -113,7 +113,7 @@ pub fn copy_editor_to_clipboard(
   emit_snapshot(&app, kind);
   // Only once the picture is on the clipboard and the editor has let go of it.
   if delete_project_after_export {
-    if let Err(error) = crate::project::library::trash(&app, &project) {
+    if let Err(error) = crate::project::delete(&app, &project) {
       eprintln!("Could not delete the copied project: {error}");
     }
   } else {
@@ -143,6 +143,17 @@ pub fn rename_open_project(
     .map(Path::to_path_buf)
     .ok_or_else(|| "There is no project to rename".to_owned())?;
   super::rename_project(&app, &project, &title).map(|_| ())
+}
+
+/// Closes the asking window's editor, as closing its window would, and
+/// deletes its project to Recently Deleted, for a take found wanting before
+/// it was ever exported.
+#[tauri::command]
+pub fn delete_open_project(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
+  let kind = kind_of_window(&window)?;
+  let project =
+    super::close(&app, kind).ok_or_else(|| "There is no project to delete".to_owned())?;
+  crate::project::delete(&app, &project).map(|_| ())
 }
 
 #[tauri::command]

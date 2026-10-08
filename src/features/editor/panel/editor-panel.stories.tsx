@@ -105,6 +105,7 @@ const meta = {
     directory: "/Users/dom/Desktop",
     fileStem: screenshot.suggestedFileStem,
     onCancel: () => undefined,
+    onDeleteProject: () => undefined,
     onMinimize: () => undefined,
     onToggleMaximize: () => undefined,
     screenshotOutput: { ...screenshotOutput, items: [] },

@@ -19,8 +19,6 @@ import {
 } from "./export-resolution-items";
 import { ExportResolutionSelect } from "./export-resolution-select";
 
-const isWindows = () => document.documentElement.dataset.platform === "windows";
-
 export type EditorExportFormProps = {
   artifact: EditorArtifact | null;
   directory: string | null;
@@ -256,7 +254,7 @@ export function EditorExportForm({
         <ExportRow
           // A screenshot is also copied from the editor, which the choice
           // covers as well.
-          description={`${recording ? "After saving" : "After saving or copying"}, moves it to the ${isWindows() ? "Recycle Bin" : "Trash"}.`}
+          description={`${recording ? "After saving" : "After saving or copying"}, moves it to Recently Deleted.`}
           layout="trailing"
           title="Delete project"
         >

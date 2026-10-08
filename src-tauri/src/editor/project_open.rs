@@ -73,6 +73,11 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
     return Err("This recording was discarded".to_owned());
   }
   if let Some(kind) = open_kind(app, file) {
+    // Opened again while its close waits on the browser's pictures: it
+    // stays open.
+    if kind == EditorKind::Recording {
+      super::keep_recording_editor_open();
+    }
     workspace::focus_pending(app, kind);
     return Ok(());
   }

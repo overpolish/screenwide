@@ -559,9 +559,12 @@
   }
 
   /* One appearance for a subtree whatever the window's own, such as badges
-     over a picture that is light or dark in itself. Only the label and fill
-     colours, which is all such a subtree draws; the values repeat the
-     appearance blocks above and must stay in step with them. */
+     and checkboxes over a picture that is light or dark in itself. Only the
+     label, fill and inset-control colours, which is all such a subtree
+     draws; the values repeat the appearance blocks above and must stay in
+     step with them. The inset-control fills are restated rather than
+     inherited: a custom property resolves `var()` where it is declared, so
+     the root's would keep the window's own fill. */
   .appearance-light {
     --color-content-fg: rgb(0 0 0 / 85%);
     --color-content-fg-secondary: rgb(0 0 0 / 50%);
@@ -575,6 +578,9 @@
     --color-fill-secondary: rgb(0 0 0 / 8%);
     --color-fill-tertiary: rgb(0 0 0 / 5%);
     --color-fill-quaternary: rgb(0 0 0 / 3%);
+    --color-control-alt-fill: var(--color-fill);
+    --color-control-alt-fill-hover: var(--color-fill);
+    --color-control-alt-fill-pressed: rgb(0 0 0 / 17.2%);
   }
 
   [data-platform="windows"] .appearance-light {
@@ -584,6 +590,11 @@
     --alpha-content-fg: 0.896;
     --alpha-content-fg-secondary: 0.62;
     --alpha-content-fg-tertiary: 0.447;
+    --color-control-alt-fill: rgb(0 0 0 / 2.4%);
+    --color-control-alt-fill-hover: rgb(0 0 0 / 5.9%);
+    --color-control-alt-fill-pressed: rgb(0 0 0 / 9.4%);
+    --color-control-alt-stroke: rgb(0 0 0 / 44.7%);
+    --color-control-alt-stroke-pressed: rgb(0 0 0 / 21.6%);
   }
 
   .appearance-dark {
@@ -599,6 +610,9 @@
     --color-fill-secondary: rgb(255 255 255 / 8%);
     --color-fill-tertiary: rgb(255 255 255 / 5%);
     --color-fill-quaternary: rgb(255 255 255 / 3%);
+    --color-control-alt-fill: var(--color-fill);
+    --color-control-alt-fill-hover: var(--color-fill);
+    --color-control-alt-fill-pressed: rgb(255 255 255 / 17.2%);
   }
 
   [data-platform="windows"] .appearance-dark {
@@ -608,6 +622,11 @@
     --alpha-content-fg: 1;
     --alpha-content-fg-secondary: 0.772;
     --alpha-content-fg-tertiary: 0.53;
+    --color-control-alt-fill: rgb(0 0 0 / 10%);
+    --color-control-alt-fill-hover: rgb(255 255 255 / 4.2%);
+    --color-control-alt-fill-pressed: rgb(255 255 255 / 7%);
+    --color-control-alt-stroke: rgb(255 255 255 / 54.4%);
+    --color-control-alt-stroke-pressed: rgb(255 255 255 / 15.8%);
   }
 }
 

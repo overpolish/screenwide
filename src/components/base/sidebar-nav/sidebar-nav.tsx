@@ -26,6 +26,10 @@ type SidebarNavItem = {
   id: string;
   label: string;
   isDisabled?: boolean;
+  /** Sits at the foot of the list, apart from the rows above it, the way a
+   * source list keeps its Trash at the bottom. Still one of the same rows
+   * for selection and the arrow keys. */
+  isPinned?: boolean;
 };
 
 export type SidebarNavProps = {
@@ -82,11 +86,24 @@ export function SidebarNav({
       transition={transition}
     >
       <div
+        className="flex min-h-0 flex-1 flex-col"
         id={groupId}
         onContextMenu={(event) => {
-          const row = (event.target as Element).closest<HTMLElement>(
-            "[data-item-id]",
-          );
+          // A disabled row can hand the click to its group rather than
+          // taking it itself, so the row under the pointer is looked for
+          // too: its menu is how an unavailable row is taken away.
+          const row =
+            (event.target as Element).closest<HTMLElement>("[data-item-id]") ??
+            Array.from(
+              event.currentTarget.querySelectorAll<HTMLElement>(
+                "[data-item-id]",
+              ),
+            ).find((candidate) => {
+              const bounds = candidate.getBoundingClientRect();
+              return (
+                event.clientY >= bounds.top && event.clientY <= bounds.bottom
+              );
+            });
           const id = row?.dataset.itemId;
           if (!onItemContextMenu || !id) return;
           event.preventDefault();
@@ -95,7 +112,7 @@ export function SidebarNav({
       >
         <ToggleButtonGroup
           aria-label={label}
-          className="flex flex-col gap-tight"
+          className="flex flex-1 flex-col gap-tight"
           disallowEmptySelection
           isDisabled={isDisabled}
           onSelectionChange={(keys) => {
@@ -133,6 +150,7 @@ export function SidebarNav({
                   // ring, restated here as this rule ties with it.
                   "data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content",
                   "windows:data-[selected]:data-[focus-visible]:ring-offset-1 windows:data-[selected]:data-[focus-visible]:ring-offset-focus-ring-inner",
+                  item.isPinned && "mt-auto",
                 )}
                 // React Aria takes `id` as the row's key and does not put it
                 // on the button, so the context menu reads it from here.

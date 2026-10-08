@@ -142,7 +142,7 @@ pub async fn save_export(
   }
   if delete_project_after_export {
     if let Some(project) = artifact.project() {
-      if let Err(error) = crate::project::library::trash(&app, project) {
+      if let Err(error) = crate::project::delete(&app, project) {
         eprintln!("Could not delete the exported project: {error}");
       }
     }

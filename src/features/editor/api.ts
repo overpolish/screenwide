@@ -482,7 +482,6 @@ export {
   browseExportDirectory,
   cancelExportJob,
   copyEditorToClipboard,
-  renameOpenProject,
   setExportDirectory,
   setScreenshotBackgroundRadius,
   setScreenshotRadius,

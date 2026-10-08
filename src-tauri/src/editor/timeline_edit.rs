@@ -244,6 +244,13 @@ pub fn export_plan(
   }
 }
 
+/// How long the project whose manifest is `project` plays once edited: its
+/// recording's `duration_ms` with its cuts and speed changes applied. The
+/// recording's own length while it has no edit.
+pub fn edited_duration_ms(project: &Path, duration_ms: u64) -> u64 {
+  export_plan(None, project, 0, duration_ms).map_or(duration_ms, |plan| plan.duration_ms())
+}
+
 pub fn persist(
   project: &Path,
   artifact_id: u64,

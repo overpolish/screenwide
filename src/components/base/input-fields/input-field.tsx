@@ -40,6 +40,9 @@ export const fieldVariants = tv({
     inputWrapper:
       "flex min-w-0 flex-1 flex-row items-center justify-between gap-control-inset px-control-inset outline-none windows:px-2.5",
     label: "text-body text-content-fg",
+    // Units and glyphs read as part of the value, so they share its size.
+    section:
+      "shrink-0 text-content-fg-secondary [&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
   },
   variants: {
     centered: { true: { input: "text-center" } },

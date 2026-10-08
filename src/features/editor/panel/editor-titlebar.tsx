@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ClipboardCopy, Upload } from "lucide-react";
+import { Check, ClipboardCopy, Trash2, Upload } from "lucide-react";
 import { ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { Button } from "../../../components/base/button/button";
+import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { ToolToggleDisabledContext } from "../../../components/shared/tool-toggle/tool-toggle-disabled";
 import { WindowHeader } from "../../../components/shared/window-header/window-header";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
@@ -20,6 +21,7 @@ export function EditorTitlebar({
   isToolbarDisabled = false,
   onClose,
   onCopy,
+  onDelete,
   onExport,
   onMinimize,
   onRename,
@@ -34,6 +36,9 @@ export function EditorTitlebar({
   isToolbarDisabled?: boolean;
   onClose?: () => void;
   onCopy?: () => void;
+  /** Closes the editor and sets the project aside in Recently Deleted, for
+   * a take that is not worth exporting. */
+  onDelete?: () => void;
   onExport?: () => void;
   onMinimize?: () => void;
   /** Renames the project, which the title names. */
@@ -76,6 +81,18 @@ export function EditorTitlebar({
     <WindowHeader
       actions={
         <div className="gap-control flex shrink-0 items-center">
+          {onDelete ? (
+            // Two presses: it sits beside Export, and the editor closes
+            // behind it.
+            <ConfirmActionButton
+              armedIcon={<Check />}
+              armedLabel="Confirm deleting"
+              idleIcon={<Trash2 />}
+              idleLabel="Delete"
+              isDisabled={!artifact || isSaving}
+              onConfirm={onDelete}
+            />
+          ) : null}
           {artifact?.kind === "screenshot" ? (
             <Button isDisabled={isSaving} onPress={onCopy} variant="ghost">
               <ClipboardCopy />

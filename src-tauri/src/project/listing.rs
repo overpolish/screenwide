@@ -7,13 +7,15 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use serde::Serialize;
+use ts_rs::TS;
 
-use super::{is_cancelled, read, ProjectKind, RecordingOrigin, EXTENSION};
+use super::{is_cancelled, read, ProjectKind, RecordingManifest, RecordingOrigin, EXTENSION};
 use crate::recording::PrimaryRecordingKind;
 
 /// What a project holds, as the browser draws it.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export, rename = "ProjectKind")]
 pub(crate) enum SummaryKind {
   Audio,
   Camera,
@@ -31,12 +33,42 @@ impl From<PrimaryRecordingKind> for SummaryKind {
   }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+/// What a recording captured, for its card to show at a glance.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub(crate) struct ProjectTracks {
+  pub camera: bool,
+  pub microphone: bool,
+  pub screen: bool,
+  pub system_audio: bool,
+}
+
+impl From<&RecordingManifest> for ProjectTracks {
+  fn from(recording: &RecordingManifest) -> Self {
+    Self {
+      // A camera recording's camera is its primary movie; a screen
+      // recording's is the second one it names.
+      camera: recording.primary_kind == PrimaryRecordingKind::Camera
+        || recording.media.camera.is_some(),
+      microphone: recording.has_microphone,
+      screen: recording.primary_kind == PrimaryRecordingKind::Screen,
+      system_audio: recording.has_system_audio,
+    }
+  }
+}
+
+/// A project as the browser lists it, read from its manifest alone.
+#[derive(Clone, Debug, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub(crate) struct ProjectSummary {
   /// Whether the manifest could be read. A project on a drive that is not
   /// connected, or one that was moved away, is listed but cannot be opened.
   pub available: bool,
+  /// When it goes on to the system Trash, for a project in Recently
+  /// Deleted; None elsewhere.
+  pub expires_ms: Option<u64>,
   pub duration_ms: Option<u64>,
   pub file: PathBuf,
   pub kind: Option<SummaryKind>,
@@ -48,6 +80,8 @@ pub(crate) struct ProjectSummary {
   /// Kept from the replay buffer rather than recorded start to stop.
   pub replay: bool,
   pub title: String,
+  /// None for a screenshot, and for a project that could not be read.
+  pub tracks: Option<ProjectTracks>,
 }
 
 pub(crate) fn summarize(file: &Path) -> ProjectSummary {
@@ -69,6 +103,7 @@ pub(crate) fn summarize(file: &Path) -> ProjectSummary {
         .filter(|_| manifest.kind == ProjectKind::Recording);
       ProjectSummary {
         available: true,
+        expires_ms: None,
         duration_ms: recording.and_then(|recording| recording.duration_ms),
         file: file.to_path_buf(),
         kind: match manifest.kind {
@@ -80,10 +115,12 @@ pub(crate) fn summarize(file: &Path) -> ProjectSummary {
         replay: recording.is_some_and(|recording| recording.origin == RecordingOrigin::Replay),
         // A name given while it is open stands until its folder takes it.
         title: manifest.title.clone().unwrap_or(title),
+        tracks: recording.map(ProjectTracks::from),
       }
     }
     Err(_) => ProjectSummary {
       available: false,
+      expires_ms: None,
       duration_ms: None,
       file: file.to_path_buf(),
       kind: None,
@@ -91,13 +128,14 @@ pub(crate) fn summarize(file: &Path) -> ProjectSummary {
       size_bytes: None,
       replay: false,
       title,
+      tracks: None,
     },
   }
 }
 
 /// The bytes of every file under `root`. Links are not followed, so a link
 /// to something outside the project neither counts nor loops.
-fn folder_size(root: &Path) -> u64 {
+pub(crate) fn folder_size(root: &Path) -> u64 {
   let mut total = 0;
   let mut folders = vec![root.to_path_buf()];
   while let Some(folder) = folders.pop() {
@@ -126,7 +164,13 @@ pub(crate) fn in_folder(folder: &Path) -> Vec<ProjectSummary> {
   let mut projects: Vec<_> = entries
     .flatten()
     .map(|entry| entry.path())
-    .filter(|path| path.is_dir())
+    // Hidden folders, Recently Deleted's among them, hold no project here.
+    .filter(|path| {
+      path.is_dir()
+        && !path
+          .file_name()
+          .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+    })
     .filter_map(|root| manifest_in(&root))
     .filter(|file| !is_cancelled(file))
     .map(|file| summarize(&file))

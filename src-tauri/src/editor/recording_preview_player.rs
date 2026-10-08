@@ -23,6 +23,7 @@ mod audio;
 pub(crate) mod audio_visualizer;
 mod audio_visualizer_clock;
 pub(crate) mod commands;
+pub(crate) mod composed_frames;
 pub(crate) mod editor_suspend;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod held_fills;
