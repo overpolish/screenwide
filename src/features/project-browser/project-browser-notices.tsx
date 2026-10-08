@@ -6,6 +6,7 @@ import { Copy, FolderInput, Trash2 } from "lucide-react";
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
 import { ProgressBar } from "../../components/base/progress-bar/progress-bar";
+import { t } from "../../i18n/i18n";
 
 /** The last delete, named for the notice that offers to undo it. */
 export type DeletedProjects = { count: number; title: string };
@@ -22,9 +23,14 @@ export type CopyingProjects = {
   title: string;
 };
 
-/** "“Product demo”" for one project, "3 projects" for several. */
-const named = (count: number, title: string) =>
-  count === 1 ? `“${title}”` : `${String(count)} projects`;
+const copyLabel = ({ count, destination, kind, title }: CopyingProjects) => {
+  if (kind === "duplicate") {
+    return t("project-browser-duplicating", { count, title });
+  }
+  return destination === null
+    ? t("project-browser-moving-elsewhere", { count, title })
+    : t("project-browser-moving", { count, destination, title });
+};
 
 /**
  * Below the projects: a copy under way, a delete that can still be undone,
@@ -43,11 +49,7 @@ export function ProjectBrowserNotices({
   onUndoDelete: (() => void) | undefined;
 }) {
   if (!copying && !deleted && !error) return null;
-  const copyLabel = copying
-    ? copying.kind === "move"
-      ? `Moving ${named(copying.count, copying.title)} to ${copying.destination ?? "another location"}`
-      : `Duplicating ${named(copying.count, copying.title)}`
-    : "";
+  const copyText = copying ? copyLabel(copying) : "";
   return (
     <div className="gap-control mr-window-inset mb-window-inset flex flex-col">
       {copying ? (
@@ -56,11 +58,8 @@ export function ProjectBrowserNotices({
           role="status"
         >
           <div className="gap-control flex flex-col">
-            {copyLabel}
-            <ProgressBar
-              aria-label={copyLabel}
-              value={copying.fraction * 100}
-            />
+            {copyText}
+            <ProgressBar aria-label={copyText} value={copying.fraction * 100} />
           </div>
         </Alert>
       ) : null}
@@ -69,14 +68,17 @@ export function ProjectBrowserNotices({
           action={
             onUndoDelete ? (
               <Button onPress={onUndoDelete} variant="ghost">
-                Undo
+                {t("project-browser-undo")}
               </Button>
             ) : null
           }
           icon={<Trash2 />}
           role="status"
         >
-          Moved {named(deleted.count, deleted.title)} to Recently Deleted.
+          {t("project-browser-deleted", {
+            count: deleted.count,
+            title: deleted.title,
+          })}
         </Alert>
       ) : null}
       {error ? (

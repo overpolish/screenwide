@@ -6,30 +6,68 @@ import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
+import { t } from "../../../i18n/i18n";
 
 import type { GlideSettings } from "../../../bindings/GlideSettings";
 
 const isMac =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
-const toggles = [
-  {
-    key: "cursorFollows",
-    macOnly: false,
-    title: "Move pointer with window",
-  },
-  {
-    description: "Feel a tap when the next move is ready.",
-    key: "haptics",
-    macOnly: true,
-    title: "Trackpad feedback",
-  },
-  {
-    description: "Two fingers, or hold mouse control while double-clicking.",
-    key: "doubleTapCenter",
-    macOnly: false,
-    title: "Double-tap or double-click to center",
-  },
+const platform = isMac ? "macos" : "windows";
+const toggles = () =>
+  [
+    {
+      key: "cursorFollows",
+      macOnly: false,
+      title: t("settings-glide-cursor-follows"),
+    },
+    {
+      description: t("settings-glide-haptics-description"),
+      key: "haptics",
+      macOnly: true,
+      title: t("settings-glide-haptics"),
+    },
+    {
+      description: t("settings-glide-double-tap-description"),
+      key: "doubleTapCenter",
+      macOnly: false,
+      title: t("settings-glide-double-tap"),
+    },
+  ] as const;
+
+const modifierTitle = (key: ModifierKey) => {
+  switch (key) {
+    case "mouseModifier":
+      return t("settings-glide-mouse-modifier");
+    case "thirdsModifier":
+      return t("settings-glide-thirds-modifier");
+    case "spacesModifier":
+      return t("settings-glide-spaces-modifier", { platform });
+    case "monitorsModifier":
+      return t("settings-glide-monitors-modifier");
+  }
+};
+
+const modifierDescription = (key: ModifierKey) => {
+  switch (key) {
+    case "mouseModifier":
+      return t("settings-glide-mouse-modifier-description");
+    case "thirdsModifier":
+      return t("settings-glide-thirds-modifier-description");
+    case "spacesModifier":
+      return t("settings-glide-spaces-modifier-description", { platform });
+    case "monitorsModifier":
+      return t("settings-glide-monitors-modifier-description");
+  }
+};
+
+const modifierKeys = [
+  "mouseModifier",
+  "thirdsModifier",
+  "spacesModifier",
+  "monitorsModifier",
 ] as const;
+
+type ModifierKey = (typeof modifierKeys)[number];
 
 export function GlideSettingsPanel({
   defaults,
@@ -50,10 +88,10 @@ export function GlideSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title="Glide">
+      <GroupBox title={t("settings-section-glide")}>
         <ControlRow
-          description="Move and resize windows to fit your screen."
-          title="Use Glide"
+          description={t("settings-glide-enabled-description")}
+          title={t("settings-glide-enabled")}
         >
           {(controlProps) => (
             <Switch
@@ -67,46 +105,15 @@ export function GlideSettingsPanel({
           )}
         </ControlRow>
       </GroupBox>
-      <GroupBox title="Controls">
-        {(
-          [
-            "mouseModifier",
-            "thirdsModifier",
-            "spacesModifier",
-            "monitorsModifier",
-          ] as const
-        ).map((key) => {
-          const otherKeys = (
-            [
-              "mouseModifier",
-              "thirdsModifier",
-              "spacesModifier",
-              "monitorsModifier",
-            ] as const
-          ).filter((candidate) => candidate !== key);
-          const title =
-            key === "mouseModifier"
-              ? "Glide control for mouse"
-              : key === "thirdsModifier"
-                ? "Control for screen thirds"
-                : key === "spacesModifier"
-                  ? isMac
-                    ? "Modifier for Spaces"
-                    : "Modifier for virtual desktops"
-                  : "Modifier for Monitors";
+      <GroupBox title={t("settings-glide-controls")}>
+        {modifierKeys.map((key) => {
+          const otherKeys = modifierKeys.filter(
+            (candidate) => candidate !== key,
+          );
+          const title = modifierTitle(key);
           return (
             <ControlRow
-              description={
-                key === "mouseModifier"
-                  ? "Hold while moving from a window's top bar."
-                  : key === "thirdsModifier"
-                    ? "Hold during Glide to use thirds instead of halves."
-                    : key === "spacesModifier"
-                      ? isMac
-                        ? "Hold while moving between Spaces."
-                        : "Hold while moving between virtual desktops."
-                      : "Hold while moving between monitors."
-              }
+              description={modifierDescription(key)}
               key={key}
               title={title}
             >
@@ -138,12 +145,12 @@ export function GlideSettingsPanel({
           );
         })}
       </GroupBox>
-      <GroupBox title="Behavior">
-        <ControlRow title="Space around windows">
+      <GroupBox title={t("settings-glide-behavior")}>
+        <ControlRow title={t("settings-glide-window-gap")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <SliderNumberField
-                aria-label="Space around windows"
+                aria-label={t("settings-glide-window-gap")}
                 className="w-56"
                 isDisabled={!settings.enabled}
                 maxValue={32}
@@ -157,7 +164,7 @@ export function GlideSettingsPanel({
             </div>
           )}
         </ControlRow>
-        {toggles
+        {toggles()
           .filter(({ macOnly }) => !macOnly || isMac)
           .map((toggle) => (
             <ControlRow

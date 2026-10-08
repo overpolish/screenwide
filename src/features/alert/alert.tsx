@@ -6,6 +6,7 @@ import { Ref } from "react";
 import { Button } from "../../components/base/button/button";
 import { Text } from "../../components/base/text/text";
 import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { t } from "../../i18n/i18n";
 
 export type AlertProps = {
   message: string;
@@ -31,7 +32,7 @@ export function Alert({ contentRef, message, onDismiss, title }: AlertProps) {
         <Text className="select-text">{message}</Text>
         <div className="flex justify-end">
           <Button color="primary" onPress={onDismiss}>
-            OK
+            {t("alert-dismiss")}
           </Button>
         </div>
       </div>

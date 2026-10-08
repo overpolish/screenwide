@@ -185,14 +185,14 @@ fn recording_audio_tracks(
   if has_system_audio {
     tracks.push(RecordingAudioTrack {
       kind: AudioTrackKind::SystemAudio,
-      label: "System audio".to_owned(),
+      label: AudioTrackKind::SystemAudio.label(tracks.len()),
       stream_index: tracks.len(),
     });
   }
   if has_microphone {
     tracks.push(RecordingAudioTrack {
       kind: AudioTrackKind::Microphone,
-      label: "Microphone".to_owned(),
+      label: AudioTrackKind::Microphone.label(tracks.len()),
       stream_index: tracks.len(),
     });
   }

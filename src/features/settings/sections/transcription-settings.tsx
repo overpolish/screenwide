@@ -5,12 +5,13 @@ import { Badge } from "../../../components/base/badge/badge";
 import { GroupBox } from "../../../components/base/group-box/group-box";
 import { Text } from "../../../components/base/text/text";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
+import { t } from "../../../i18n/i18n";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
 import {
-  TRANSCRIPTION_LANGUAGES,
   transcriptionLanguageName,
+  transcriptionLanguages,
 } from "./transcription-languages";
 import { TranscriptionModelActions } from "./transcription-model-actions";
 
@@ -31,10 +32,12 @@ export function TranscriptionSettingsPanel({
   const languages = [
     {
       id: "system",
-      label: `System (${transcriptionLanguageName(state.systemLanguage)})`,
+      label: t("settings-transcription-system-language", {
+        language: transcriptionLanguageName(state.systemLanguage),
+      }),
     },
-    { id: "auto", label: "Detect Automatically" },
-    ...TRANSCRIPTION_LANGUAGES.map((language) => ({
+    { id: "auto", label: t("settings-transcription-detect") },
+    ...transcriptionLanguages().map((language) => ({
       id: language.code,
       label: language.name,
     })),
@@ -43,9 +46,9 @@ export function TranscriptionSettingsPanel({
     <div className="gap-layout flex flex-col">
       {/* First, so it is read before anything is downloaded. */}
       <Text className="px-section" variant="subheadline">
-        Transcription runs on this computer. Audio is never uploaded.
+        {t("settings-transcription-local")}
       </Text>
-      <GroupBox title="Models">
+      <GroupBox title={t("settings-transcription-models")}>
         {state.models.map((model) => (
           <ControlRow
             description={model.description}
@@ -63,10 +66,10 @@ export function TranscriptionSettingsPanel({
           </ControlRow>
         ))}
       </GroupBox>
-      <GroupBox title="Language">
+      <GroupBox title={t("settings-transcription-language")}>
         <ControlRow
-          description="The language your recordings are spoken in."
-          title="Language"
+          description={t("settings-transcription-language-description")}
+          title={t("settings-transcription-language")}
         >
           {(controlProps) => (
             <div className="w-48">
@@ -74,11 +77,11 @@ export function TranscriptionSettingsPanel({
                 {...controlProps}
                 id="transcription-language"
                 items={languages}
-                label="Language"
+                label={t("settings-transcription-language")}
                 onSelectionChange={(item) => {
                   controls.setLanguage(item.id);
                 }}
-                placeholder="Language"
+                placeholder={t("settings-transcription-language")}
                 selectedId={state.language}
               />
             </div>

@@ -7,6 +7,7 @@ import { BackgroundPicker } from "../../../../components/shared/background-picke
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { Dimensions } from "../../../../components/shared/dimensions/dimensions";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { t } from "../../../../i18n/i18n";
 import { browseBackgroundImage } from "../../api";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -48,7 +49,7 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
       <Dimensions
         height={frame.height}
         initialLinked
-        label="Size"
+        label={t("editor-panels-size")}
         layout="stacked"
         onReset={() => {
           change({ resetFrame: true });
@@ -65,11 +66,11 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
         width={frame.width}
       />
 
-      <ControlRow title="Radius">
+      <ControlRow title={t("annotation-radius")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <SliderNumberField
-              aria-label="Radius"
+              aria-label={t("annotation-radius")}
               className="w-48"
               formatOptions={{
                 maximumFractionDigits: 1,
@@ -91,7 +92,7 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
 
       <div className="flex flex-col gap-control">
         <Text as="h2" variant="section">
-          Background
+          {t("background-label")}
         </Text>
         <BackgroundPicker
           isDisabled={isLocked}

@@ -7,6 +7,7 @@ import { Text } from "../../components/base/text/text";
 import { CopyableText } from "../../components/shared/copyable-text/copyable-text";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { t } from "../../i18n/i18n";
 
 import type { QrPayload } from "./qr-code-payload";
 
@@ -21,10 +22,10 @@ export type QrDetailsProps = {
 
 const description = (payload: QrPayload) => {
   if (payload.kind === "action")
-    return "This QR code contains an action you can open or copy.";
+    return t("text-recognition-qr-action-description");
   if (payload.kind === "unsupported")
-    return "Screenwide cannot perform this QR code’s action.";
-  return "This QR code contains information you can copy.";
+    return t("text-recognition-qr-unsupported-description");
+  return t("text-recognition-qr-information-description");
 };
 
 export function QrDetails({
@@ -52,7 +53,8 @@ export function QrDetails({
 
         <CopyableText
           className="grow"
-          label="Detected content"
+          copyLabel={t("text-recognition-qr-copy-content")}
+          label={t("text-recognition-qr-content")}
           onCopy={onCopy}
           value={content}
         />

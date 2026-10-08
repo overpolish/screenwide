@@ -9,6 +9,7 @@ import { AnnotationHeadGroup } from "../../components/shared/annotation-style/an
 import { AnnotationInkGroup } from "../../components/shared/annotation-style/annotation-ink-group";
 import { AnnotationRadiusField } from "../../components/shared/annotation-style/annotation-radius-field";
 import { AnnotationStrokeGroup } from "../../components/shared/annotation-style/annotation-stroke-group";
+import { annotationSizeLabel } from "../../components/shared/annotation-style/annotation-text";
 import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
 import { annotationSizes } from "../../components/shared/annotation-style/widths";
 
@@ -30,7 +31,9 @@ export function AnnotateToolControls({
 }) {
   const width = (
     <AnnotationWidthSlider
-      label={settings.defaultShape === "counter" ? "Size" : "Width"}
+      label={annotationSizeLabel(
+        settings.defaultShape === "counter" ? "size" : "width",
+      )}
       onChange={(size) => {
         onChange(
           settings.defaultShape === "counter"

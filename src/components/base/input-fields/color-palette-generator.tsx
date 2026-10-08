@@ -5,6 +5,7 @@ import { CircleDashed, Cloud, Dices, Sun } from "lucide-react";
 import { ReactNode } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
+import { t } from "../../../i18n/i18n";
 import {
   generatePaletteFromLocked,
   PaletteMode,
@@ -14,15 +15,15 @@ import { Tooltip } from "../tooltip/tooltip";
 
 import { ColorSwatch } from "./color-swatch";
 
-const paletteActions: Array<{
+const paletteActions = (): Array<{
   icon: typeof Sun;
   label: string;
   mode: PaletteMode;
-}> = [
-  { icon: Sun, label: "Bright palette", mode: "bright" },
-  { icon: Cloud, label: "Dull palette", mode: "dull" },
-  { icon: CircleDashed, label: "Shades palette", mode: "shades" },
-  { icon: Dices, label: "Chaotic palette", mode: "chaotic" },
+}> => [
+  { icon: Sun, label: t("controls-palette-bright"), mode: "bright" },
+  { icon: Cloud, label: t("controls-palette-dull"), mode: "dull" },
+  { icon: CircleDashed, label: t("controls-palette-shades"), mode: "shades" },
+  { icon: Dices, label: t("controls-palette-chaotic"), mode: "chaotic" },
 ];
 
 const swatchKeys = ["one", "two", "three", "four", "five"];
@@ -45,11 +46,13 @@ export function ColorPaletteGenerator({
   return (
     <div className="flex flex-col gap-control-inset">
       <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Colours</span>
+        <span className="text-body text-content-fg">
+          {t("controls-palette-colors")}
+        </span>
         <div className="flex gap-control">
           {colors.slice(0, swatchKeys.length).map((color, index) => (
             <ColorSwatch
-              ariaLabel={`Palette colour ${(index + 1).toString()}`}
+              ariaLabel={t("controls-palette-color", { index: index + 1 })}
               isDisabled={isDisabled}
               isLocked={locked[index]}
               key={swatchKeys[index]}
@@ -78,7 +81,7 @@ export function ColorPaletteGenerator({
       </div>
       <div className="flex items-center justify-between gap-section">
         <div className="flex items-center gap-control">
-          {paletteActions.map(({ icon: Icon, label, mode }) => (
+          {paletteActions().map(({ icon: Icon, label, mode }) => (
             <TooltipTrigger delay={400} key={mode}>
               <IconButton
                 aria-label={label}
@@ -97,7 +100,7 @@ export function ColorPaletteGenerator({
         </div>
         {endContent ?? (
           <span className="text-right text-footnote text-content-fg-secondary">
-            Right-click a colour to lock it
+            {t("controls-palette-lock-hint")}
           </span>
         )}
       </div>

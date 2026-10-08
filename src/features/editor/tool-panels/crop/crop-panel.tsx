@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Dimensions } from "../../../../components/shared/dimensions/dimensions";
+import { t } from "../../../../i18n/i18n";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
@@ -33,7 +34,7 @@ export function CropPanel({ workspace }: { workspace: EditorKind }) {
       <Dimensions
         height={crop.height}
         initialLinked
-        label="Crop"
+        label={t("editor-panels-crop")}
         layout="stacked"
         onReset={() => {
           change({ resetCrop: true });

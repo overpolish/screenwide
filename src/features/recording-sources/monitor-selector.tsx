@@ -6,6 +6,7 @@ import { RefObject, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/base/button/button";
 import { ButtonGroup } from "../../components/base/button-group/button-group";
 import { Text } from "../../components/base/text/text";
+import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 
 import { orderMonitorsForNavigation } from "./monitor-selection";
@@ -98,7 +99,7 @@ export function MonitorSelector({
   if (monitors.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-panel p-control-inset">
-        <Text variant="subheadline">No Displays</Text>
+        <Text variant="subheadline">{t("recording-sources-no-displays")}</Text>
       </div>
     );
   }
@@ -119,7 +120,7 @@ export function MonitorSelector({
       ref={containerRef}
     >
       <ButtonGroup
-        aria-label="Displays"
+        aria-label={t("recording-sources-displays")}
         className="relative"
         orientation={orientation}
         style={fitted}
@@ -129,7 +130,9 @@ export function MonitorSelector({
 
           return (
             <Button
-              aria-label={`Select ${monitor.name}`}
+              aria-label={t("recording-sources-select-display", {
+                display: monitor.name,
+              })}
               className={cn(
                 "absolute h-auto min-h-8 min-w-12 transform-gpu justify-center overflow-hidden px-control",
                 focusContents && monitor.id === focusTargetId && "focus:ring-3",

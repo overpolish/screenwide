@@ -15,6 +15,7 @@ import {
   PillGroup,
   type PillGroupItem,
 } from "../../../components/base/pill-group/pill-group";
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import {
   MonitorDetails,
@@ -50,7 +51,7 @@ export function RecordingTypePicker({
     : false;
   const items: PillGroupItem[] = [
     {
-      ariaLabel: "Screen",
+      ariaLabel: t("recording-controls-mode-screen"),
       // The chosen display shows what is actually on it, kept inside the
       // glyph box either way round, and falls back to the generic glyph until
       // the still has been captured.
@@ -72,26 +73,38 @@ export function RecordingTypePicker({
         <Monitor />
       ),
       id: "screen",
-      label: "Screen",
+      label: t("recording-controls-mode-screen"),
       onPress: onChooseMonitor,
     },
     {
-      ariaLabel: "Window",
+      ariaLabel: t("recording-controls-mode-window"),
       icon: <WindowAppIcon window={selectedWindow} />,
       id: "window",
-      label: "Window",
+      label: t("recording-controls-mode-window"),
       onPress: onChooseWindow,
     },
-    { icon: <SquareDashed />, id: "region", label: "Region" },
+    {
+      icon: <SquareDashed />,
+      id: "region",
+      label: t("recording-controls-mode-region"),
+    },
     // The camcorder, not the still camera: the still camera is the input
     // toggle beside this control, and one glyph must not mean two things.
-    { icon: <Video />, id: "camera", label: "Camera" },
-    { icon: <AudioLines />, id: "audio", label: "Audio" },
+    {
+      icon: <Video />,
+      id: "camera",
+      label: t("recording-controls-mode-camera"),
+    },
+    {
+      icon: <AudioLines />,
+      id: "audio",
+      label: t("recording-controls-mode-audio"),
+    },
   ];
 
   return (
     <PillGroup
-      aria-label="Recording type"
+      aria-label={t("recording-controls-mode")}
       display="icon"
       isDisabled={isDisabled}
       items={items}

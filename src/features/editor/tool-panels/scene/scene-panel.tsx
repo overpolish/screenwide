@@ -7,10 +7,11 @@ import { Button } from "../../../../components/base/button/button";
 import { Switch } from "../../../../components/base/switch/switch";
 import { Text } from "../../../../components/base/text/text";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
 import {
-  RECORDING_SCENE_CUSTOM_LABEL,
-  RECORDING_SCENE_LABELS,
   RECORDING_SCENE_PRESETS,
+  sceneCustomLabel,
+  scenePresetLabel,
 } from "../../recording/scenes/recording-scene-labels";
 import { chosenSceneTemplate } from "../../recording/scenes/recording-scene-template";
 import {
@@ -56,7 +57,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
 
   if (!scene) {
     return (
-      <Text variant="footnote">Scenes need a recording with a screen.</Text>
+      <Text variant="footnote">{t("editor-panels-scene-needs-screen")}</Text>
     );
   }
   // The output is read from the panel's own answer, which flips at once; the
@@ -65,7 +66,10 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
   const canPlaceCamera = scene.hasCamera && isCombined;
   const framing = scene.framing;
   const radius = scene.radius;
-  const paneName = scene.framingPane === "camera" ? "Camera" : "Screen";
+  const paneName =
+    scene.framingPane === "camera"
+      ? t("editor-panels-camera")
+      : t("editor-panels-screen");
   const isIdle =
     (scene.boxes
       ? scene.boxes.camera !== null
@@ -86,9 +90,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
   if (isIdle)
     return (
       outputRow ?? (
-        <Text variant="footnote">
-          This scene is paused while the camera is left out.
-        </Text>
+        <Text variant="footnote">{t("editor-panels-scene-paused")}</Text>
       )
     );
   const schematicOf = (preset: RecordingScenePreset) =>
@@ -122,7 +124,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
       {outputRow}
 
       <ToggleButtonGroup
-        aria-label="Scene"
+        aria-label={t("editor-panels-scene")}
         className="grid justify-between gap-y-control"
         isDisabled={isLocked}
         selectedKeys={new Set([selected])}
@@ -145,7 +147,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
           id="custom"
           isDisabled={isLocked}
           isSelected={selected === "custom"}
-          label={RECORDING_SCENE_CUSTOM_LABEL}
+          label={sceneCustomLabel()}
           onPress={() => {
             change({ customizeScene: true });
           }}
@@ -158,7 +160,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
             isDisabled={isLocked}
             isSelected={selected === preset}
             key={preset}
-            label={RECORDING_SCENE_LABELS[preset]}
+            label={scenePresetLabel(preset)}
             onPress={() => {
               change({ scenePreset: preset });
             }}
@@ -193,7 +195,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
       {/* A custom scene's Swap trades its panes' boxes and their order, so
           it reads on wherever the camera sits behind the screen. */}
       {scene.hasSceneAtPlayhead && scene.boxes?.camera ? (
-        <ControlRow title="Swap">
+        <ControlRow title={t("editor-panels-swap")}>
           {(controlProps) => (
             <Switch
               {...controlProps}
@@ -226,7 +228,10 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
           to make. Clear all stays in place while there is nothing to clear,
           so the row never shifts as zooms come and go. */}
       {hasCursorData ? (
-        <ControlRow controlClassName="gap-control" title="Auto zoom">
+        <ControlRow
+          controlClassName="gap-control"
+          title={t("editor-panels-auto-zoom")}
+        >
           {(controlProps) => (
             <>
               <Button
@@ -236,16 +241,16 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
                   change({ autoZoomScenes: true });
                 }}
               >
-                Regenerate
+                {t("editor-panels-regenerate")}
               </Button>
               <Button
-                aria-label="Clear all auto zooms"
+                aria-label={t("editor-panels-clear-auto-zooms")}
                 isDisabled={isLocked || !scene.hasAutoZooms}
                 onPress={() => {
                   change({ clearAutoZooms: true });
                 }}
               >
-                Clear all
+                {t("editor-panels-clear-all")}
               </Button>
             </>
           )}
@@ -261,7 +266,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
                 change({ saveSceneTemplate: true });
               }}
             >
-              Save template
+              {t("editor-panels-save-template")}
             </Button>
           ) : null}
           <Button
@@ -270,7 +275,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
               change({ resetSceneFraming: true });
             }}
           >
-            Reset
+            {t("editor-panels-reset")}
           </Button>
           <Button
             isDisabled={isLocked}
@@ -278,7 +283,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
               change({ deleteScene: true });
             }}
           >
-            Delete
+            {t("editor-panels-delete")}
           </Button>
         </div>
       ) : null}

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { appLocale, t } from "../../../../i18n/i18n";
 import { PopupPanelItem } from "../../../popup-panel/store";
 import {
   pointerAnchor,
@@ -12,12 +13,15 @@ const TIMELINE_PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 /** Every row is a rate and its tick, so the list stays narrow. */
 const SPEED_MENU_WIDTH = 120;
 
-const items: PopupPanelItem[] = TIMELINE_PLAYBACK_RATES.map((rate) => ({
-  id: rate.toString(),
-  label: `${rate.toString()}×`,
-  // The rates head a section of their own, so the menu says what they are.
-  section: "Speed",
-}));
+const items = (): PopupPanelItem[] => {
+  const rate = new Intl.NumberFormat(appLocale().formatLocale);
+  return TIMELINE_PLAYBACK_RATES.map((value) => ({
+    id: value.toString(),
+    label: t("editor-timeline-rate", { rate: rate.format(value) }),
+    // The rates head a section of their own, so the menu says what they are.
+    section: t("editor-timeline-speed"),
+  }));
+};
 
 /**
  * The playback-speed menu a right click opens on a timeline segment or on a
@@ -35,7 +39,10 @@ export function useTimelineSpeedMenu(
 ) {
   const openMenu = usePopupMenu({
     idPrefix: `timeline-speed:${scope}:`,
-    label: `${scope === "range" ? "Range" : "Segment"} playback speed`,
+    label:
+      scope === "range"
+        ? t("editor-timeline-range-speed")
+        : t("editor-timeline-segment-speed"),
     mode: "select",
     onSelect: (itemId, context) => {
       onChange(Number(itemId), context);
@@ -51,7 +58,7 @@ export function useTimelineSpeedMenu(
     openMenu({
       anchor: pointerAnchor(point.x, point.y),
       context,
-      items,
+      items: items(),
       selectedIds: playbackRate === undefined ? [] : [playbackRate.toString()],
     });
 }

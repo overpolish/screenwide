@@ -4,6 +4,8 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { t } from "../../i18n/i18n";
+
 import {
   CameraDevice,
   CameraResolution,
@@ -19,11 +21,17 @@ const STORE_NAME = "screenwide-recording-inputs";
 /** Smooth by default; halving it is an explicit choice to make a smaller file. */
 const DEFAULT_FPS: RecordingFps = 60;
 
+/** Every app's sound. Its name is the app's language, read through
+ * `systemAudioLabel` when shown, so it is not stored with the selection. */
 export const ALL_SYSTEM_AUDIO: SystemAudioSource = {
   id: "all",
   kind: "all",
-  label: "All audio",
+  label: "",
 };
+
+/** The name a system audio source is shown under. */
+export const systemAudioLabel = (source: SystemAudioSource) =>
+  source.kind === "all" ? t("recording-inputs-all-audio") : source.label;
 
 /** Older builds persisted inputs that are no longer offered, such as the
  * cursor and keyboard overlays that are now always recorded. Only the inputs

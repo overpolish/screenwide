@@ -8,6 +8,7 @@ import {
   ListBoxProps as AriaListBoxProps,
 } from "react-aria-components";
 
+import { t } from "../../../i18n/i18n";
 import { tv } from "../../../lib/variants";
 
 const listBoxVariants = tv({
@@ -41,7 +42,7 @@ export const ListBox = <T extends object>({
       renderEmptyState={() => (
         <>
           <SearchSlash className="size-icon-small" />
-          No items found.
+          {t("controls-no-items")}
         </>
       )}
       {...props}

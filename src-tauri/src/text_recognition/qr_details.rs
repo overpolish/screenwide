@@ -78,7 +78,7 @@ pub fn show(
     #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
     let mut builder =
       crate::app_windows::webview_window(app, label, WebviewUrl::App("/qr-details".into()))
-        .title("QR Details")
+        .title(crate::app_windows::WindowLabel::QrDetails.title())
         .inner_size(480.0, 360.0)
         .center()
         .always_on_top(true)

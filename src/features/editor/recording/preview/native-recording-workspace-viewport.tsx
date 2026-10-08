@@ -4,6 +4,7 @@
 import { RefObject, useEffect, useRef, useState } from "react";
 
 import { CircularProgress } from "../../../../components/base/circular-progress/circular-progress";
+import { t } from "../../../../i18n/i18n";
 
 /** A pane's geometry is expressed in the unscaled workspace coordinate space. */
 type NativeRecordingWorkspacePane = {
@@ -142,7 +143,7 @@ export function NativeRecordingWorkspaceViewport({
       {isBusy ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <CircularProgress
-            aria-label="Preparing the preview"
+            aria-label={t("editor-recording-preparing-preview")}
             isIndeterminate
           />
         </div>

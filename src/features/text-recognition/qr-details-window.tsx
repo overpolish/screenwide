@@ -5,6 +5,8 @@ import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { t } from "../../i18n/i18n";
+
 import {
   cancelTextRecognition,
   closeQrDetails,
@@ -66,7 +68,11 @@ export function QrDetailsWindow() {
                   void cancelTextRecognition();
                 },
                 () => {
-                  setError(`Could not ${payload.label.toLowerCase()}.`);
+                  setError(
+                    t("text-recognition-qr-action-failed", {
+                      action: payload.action,
+                    }),
+                  );
                 },
               );
             }
@@ -77,7 +83,7 @@ export function QrDetailsWindow() {
         setError(undefined);
         return copyRecognitionContent(code.content).catch(
           (copyError: unknown) => {
-            setError("Could not copy QR content.");
+            setError(t("text-recognition-qr-copy-failed"));
             throw copyError;
           },
         );

@@ -37,7 +37,7 @@ impl Ruler {
       .then(|| {
         self.text.ink_label(
           device,
-          tolerance_text(self.tolerance_mode),
+          &tolerance_text(self.tolerance_mode),
           scale,
           light_mode,
           value.font_size,

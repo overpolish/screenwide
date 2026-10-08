@@ -4,6 +4,7 @@
 import { Button } from "react-aria-components";
 
 import { NativeTooltipTrigger } from "../../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { formatDuration } from "../../duration";
 import { SeekHandler } from "../timeline-seek";
@@ -27,11 +28,15 @@ const pinLabel = (moment: RecordingMoment, at: string) => {
       text.length > TOOLTIP_TRANSCRIPT_CHARS
         ? `${text.slice(0, TOOLTIP_TRANSCRIPT_CHARS).trimEnd()}…`
         : text;
-    return `${moment.name}, ${at}: ${shown}`;
+    return t("editor-timeline-pin-transcript", {
+      moment: moment.name,
+      text: shown,
+      time: at,
+    });
   }
   return moment.note
-    ? `${moment.name}, ${at}, with a voice note`
-    : `${moment.name}, ${at}`;
+    ? t("editor-timeline-pin-note", { moment: moment.name, time: at })
+    : t("editor-timeline-pin", { moment: moment.name, time: at });
 };
 
 /**
@@ -78,8 +83,14 @@ export function TimelineMomentPins({
               <Button
                 aria-label={
                   moment.note
-                    ? `Go to ${moment.name} moment at ${at} and open its voice note`
-                    : `Go to ${moment.name} moment at ${at}`
+                    ? t("editor-timeline-go-to-note", {
+                        moment: moment.name,
+                        time: at,
+                      })
+                    : t("editor-timeline-go-to", {
+                        moment: moment.name,
+                        time: at,
+                      })
                 }
                 className={cn(
                   "pointer-events-auto relative flex w-section cursor-default justify-center rounded-control outline-none",

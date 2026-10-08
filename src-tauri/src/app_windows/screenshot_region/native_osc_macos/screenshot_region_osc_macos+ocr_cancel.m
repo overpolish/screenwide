@@ -22,7 +22,8 @@ static void update_label(ScreenwideRegionOSC *surface) {
     return;
   ScreenwideOscControlMetrics value = metrics();
   surface.ocrCancelLabel = screenwide_osc_text_texture(
-      surface.device, @"Cancel", scale, light, value.font_size,
+      surface.device, screenwide_osc_localized(@"overlay-ocr-cancel"), scale,
+      light, value.font_size,
       value.line_height);
   surface.ocrCancelLabelScale = scale;
   surface.ocrCancelLabelLightMode = light;
@@ -176,7 +177,8 @@ void screenwide_region_osc_ocr_cancel_attach(ScreenwideRegionOSC *surface) {
   surface.ocrCancelSurface = screenwide_osc_material_surface(surface.device);
   surface.ocrCancelSurface.accessibilityElement = YES;
   surface.ocrCancelSurface.accessibilityRole = NSAccessibilityButtonRole;
-  surface.ocrCancelSurface.accessibilityLabel = @"Cancel text recognition";
+  surface.ocrCancelSurface.accessibilityLabel =
+      screenwide_osc_localized(@"overlay-ocr-cancel-label");
   [surface.host addSubview:surface.ocrCancelSurface
                 positioned:NSWindowAbove relativeTo:nil];
 }

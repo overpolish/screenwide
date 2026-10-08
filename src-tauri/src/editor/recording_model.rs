@@ -14,6 +14,19 @@ pub enum AudioTrackKind {
   Unknown,
 }
 
+impl AudioTrackKind {
+  /// The track's name in the editor, in the app's language. Built when a
+  /// recording is presented, never stored, so a language change applies to
+  /// every recording the next time it opens.
+  pub fn label(self, stream_index: usize) -> String {
+    match self {
+      Self::SystemAudio => crate::i18n::t!("editor-timeline-system-audio"),
+      Self::Microphone => crate::i18n::t!("editor-timeline-microphone"),
+      Self::Unknown => crate::i18n::t!("editor-timeline-audio-track", number = stream_index + 1),
+    }
+  }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

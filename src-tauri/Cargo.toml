@@ -73,6 +73,11 @@ sha2 = "0.10"
 sys-locale = "0.3"
 # The transcriber's protocol only; the engine builds into its own program.
 screenwide-transcriber = { path = "transcriber" }
+# Translations: the same Fluent files the webviews read. fluent-langneg stays
+# on the release fluent-bundle builds against, so one unic-langid is compiled.
+fluent-bundle = "0.16"
+fluent-langneg = "0.13"
+unic-langid = "0.9"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winvd = "0.0.49"

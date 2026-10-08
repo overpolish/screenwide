@@ -205,7 +205,10 @@ pub async fn browse_export_directory(
   let picked = tauri::async_runtime::spawn_blocking(move || {
     use tauri_plugin_dialog::DialogExt;
 
-    let mut dialog = app.dialog().file().set_title("Choose a folder");
+    let mut dialog = app
+      .dialog()
+      .file()
+      .set_title(crate::i18n::t!("dialog-choose-folder"));
     if let Some(start) = start {
       dialog = dialog.set_directory(start);
     }
@@ -235,9 +238,9 @@ pub async fn browse_background_image(
     let mut dialog = app
       .dialog()
       .file()
-      .set_title("Choose a background picture")
+      .set_title(crate::i18n::t!("dialog-choose-background"))
       .add_filter(
-        "Pictures",
+        crate::i18n::t!("dialog-pictures-filter"),
         &[
           "png", "jpg", "jpeg", "heic", "heif", "webp", "tiff", "bmp", "gif",
         ],

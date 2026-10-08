@@ -36,7 +36,8 @@ const columnLabel = ({ colSpan, colStart, gridCols }: GlideRegion) => {
   return colStart === 1 ? "middle third" : `${side} third`;
 };
 
-/** Human-readable region name, for aria labels and debug readouts. */
+/** The region's name in English, for debug readouts and tests. The preview
+ * names it in the app's language through `regionLabel`. */
 export const describeRegion = (region: GlideRegion) => {
   const columns = columnLabel(region);
   const wide = columns === "full width";

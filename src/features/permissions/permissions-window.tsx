@@ -10,6 +10,7 @@ import { Button } from "../../components/base/button/button";
 import { GroupBox } from "../../components/base/group-box/group-box";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { t } from "../../i18n/i18n";
 import { useFitWindowHeight } from "../../lib/use-fit-window-height";
 
 import {
@@ -81,7 +82,7 @@ export function PermissionsWindow({
                   initial={{ opacity: 0, scale: 0 }}
                 >
                   <Button color="primary" onPress={onRestart}>
-                    Restart Screenwide
+                    {t("permissions-restart")}
                   </Button>
                 </motion.div>
               ) : null}
@@ -89,14 +90,14 @@ export function PermissionsWindow({
           }
           leadingSection={
             <img
-              alt="Screenwide"
+              alt={t("permissions-logo")}
               className="brightness-0 dark:invert"
               draggable={false}
               src={logoUrl}
             />
           }
           onClose={onClose}
-          title="Permissions"
+          title={t("permissions-title")}
         />
       }
       height="content"
@@ -106,41 +107,41 @@ export function PermissionsWindow({
         <GroupBox>
           <PermissionRow
             color={gradients.blue}
-            description="Cursor and keyboard events in recordings."
+            description={t("permissions-accessibility-description")}
             icon={<PersonStanding />}
             onGrant={onGrant}
             permission="accessibility"
             status={permissions.accessibility}
-            title="Accessibility"
+            title={t("permissions-accessibility")}
           />
           <PermissionRow
             color={gradients.red}
-            description="Screen and system audio in recordings."
+            description={t("permissions-screen-recording-description")}
             icon={<Disc />}
             onGrant={onGrant}
             permission="screenRecording"
             status={permissions.screenRecording}
-            title="Screen Recording"
+            title={t("permissions-screen-recording")}
           />
           <PermissionRow
             color={gradients.gray}
-            description="Camera overlay in recordings."
+            description={t("permissions-camera-description")}
             icon={<Video />}
             isOptional
             onGrant={onGrant}
             permission="camera"
             status={permissions.camera}
-            title="Camera"
+            title={t("permissions-camera")}
           />
           <PermissionRow
             color={gradients.gray}
-            description="Voice in recordings."
+            description={t("permissions-microphone-description")}
             icon={<Mic />}
             isOptional
             onGrant={onGrant}
             permission="microphone"
             status={permissions.microphone}
-            title="Microphone"
+            title={t("permissions-microphone")}
           />
         </GroupBox>
       </div>

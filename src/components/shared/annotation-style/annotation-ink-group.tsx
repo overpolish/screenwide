@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { PillGroup } from "../../base/pill-group/pill-group";
 
-const items: { id: "recolor" | "tint"; label: string }[] = [
-  { id: "recolor", label: "Recolor" },
-  { id: "tint", label: "Tint" },
+const items = (): { id: "recolor" | "tint"; label: string }[] => [
+  { id: "recolor", label: t("annotation-ink-recolor") },
+  { id: "tint", label: t("annotation-ink-tint") },
 ];
 
 /** Whether a highlight recolours the page it reads, turning the page into its
@@ -22,10 +23,10 @@ export function AnnotationInkGroup({
 }) {
   return (
     <PillGroup
-      aria-label="Ink"
+      aria-label={t("annotation-ink")}
       display="label"
       isDisabled={isDisabled}
-      items={items}
+      items={items()}
       onSelectionChange={(id) => {
         onChange(id === "tint");
       }}

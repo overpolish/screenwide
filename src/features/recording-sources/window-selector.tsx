@@ -9,6 +9,7 @@ import { ButtonGrid } from "../../components/base/button-group/button-group";
 import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { Text } from "../../components/base/text/text";
+import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 
 import { WindowDetails } from "./types";
@@ -31,7 +32,10 @@ export function WindowSelector({
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <CircularProgress aria-label="Loading windows" isIndeterminate />
+        <CircularProgress
+          aria-label={t("recording-sources-loading-windows")}
+          isIndeterminate
+        />
       </div>
     );
   }
@@ -49,7 +53,7 @@ export function WindowSelector({
   if (windows.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Text variant="subheadline">No Windows</Text>
+        <Text variant="subheadline">{t("recording-sources-no-windows")}</Text>
       </div>
     );
   }
@@ -68,14 +72,17 @@ export function WindowSelector({
       className="p-control-inset"
       rootClassName="rounded-window [--scrollbar-inset:var(--radius-window)]"
     >
-      <ButtonGrid aria-label="Windows" columns={3}>
+      <ButtonGrid aria-label={t("recording-sources-windows")} columns={3}>
         {orderedWindows.map((window) => {
           const isSelected = selectedWindow?.id === window.id;
 
           return (
             // A thumbnail on no bezel; the chosen one wears an accent ring.
             <Button
-              aria-label={`Select ${window.appName}: ${window.title}`}
+              aria-label={t("recording-sources-select-window", {
+                app: window.appName,
+                title: window.title,
+              })}
               className="h-auto min-w-0 flex-col items-stretch justify-start gap-control px-control py-control"
               data-source-selector-focus-target={
                 window.id === focusTargetId ? "true" : undefined

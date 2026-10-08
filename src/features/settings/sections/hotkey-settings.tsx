@@ -4,6 +4,7 @@
 import { GroupBox } from "../../../components/base/group-box/group-box";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
+import { t } from "../../../i18n/i18n";
 
 import type { ShortcutAction } from "../../../bindings/ShortcutAction";
 import type { ShortcutSettings } from "../../../bindings/ShortcutSettings";
@@ -14,43 +15,45 @@ type ShortcutRow = {
   description?: string;
 };
 
-const groups: { rows: ShortcutRow[]; title: string }[] = [
+const groups = (): { id: string; rows: ShortcutRow[]; title: string }[] => [
   {
+    id: "recording",
     rows: [
       {
         action: "toggleRecordingBar",
-        label: "Show or hide recording controls",
+        label: t("settings-shortcut-toggle-bar"),
       },
       {
         action: "startStopRecording",
-        label: "Start or stop recording",
+        label: t("settings-shortcut-start-stop"),
       },
       {
         action: "pauseResumeRecording",
-        label: "Pause or resume recording",
+        label: t("settings-shortcut-pause-resume"),
       },
       {
         action: "saveReplay",
-        description: "Works while the replay buffer is on.",
-        label: "Save replay",
+        description: t("settings-shortcut-save-replay-description"),
+        label: t("settings-shortcut-save-replay"),
       },
     ],
-    title: "Recording",
+    title: t("settings-recording"),
   },
   {
+    id: "screenshots",
     rows: [
       {
         action: "takeScreenshot",
-        description: "Choose an area of your screen to capture.",
-        label: "Take a screenshot",
+        description: t("settings-shortcut-screenshot-description"),
+        label: t("settings-shortcut-screenshot"),
       },
       {
         action: "takeScreenshotToClipboard",
-        description: "Choose an area to copy, ready to paste elsewhere.",
-        label: "Copy a screenshot",
+        description: t("settings-shortcut-copy-screenshot-description"),
+        label: t("settings-shortcut-copy-screenshot"),
       },
     ],
-    title: "Screenshots",
+    title: t("settings-screenshots"),
   },
 ];
 
@@ -69,8 +72,8 @@ export function HotkeySettingsPanel({
 }) {
   return (
     <div className="gap-layout flex flex-col">
-      {groups.map((group) => (
-        <GroupBox key={group.title} title={group.title}>
+      {groups().map((group) => (
+        <GroupBox key={group.id} title={group.title}>
           {group.rows.map(({ action, description, label }) => (
             <ControlRow description={description} key={action} title={label}>
               {(controlProps) => (

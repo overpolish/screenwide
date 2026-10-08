@@ -167,29 +167,15 @@ fn icon_for(item: &MenuItemKind<Wry>) -> Option<&'static [u8]> {
   } else if id == super::QUIT_MENU_ID {
     super::icons::QUIT
   } else if id == super::PAUSE_MENU_ID {
-    if item
-      .as_icon_menuitem()
-      .and_then(|item| item.text().ok())
-      .as_deref()
-      == Some("Resume Recording")
-    {
-      super::icons::RESUME
-    } else {
-      super::icons::PAUSE
-    }
+    super::icons::PAUSE
+  } else if id == super::RESUME_MENU_ID {
+    super::icons::RESUME
   } else if id == super::STOP_MENU_ID {
     super::icons::STOP
   } else if id == super::DISCARD_MENU_ID {
-    if item
-      .as_icon_menuitem()
-      .and_then(|item| item.text().ok())
-      .as_deref()
-      == Some("Cancel Recording")
-    {
-      super::icons::CANCEL
-    } else {
-      super::icons::DISCARD
-    }
+    super::icons::DISCARD
+  } else if id == super::CANCEL_RECORDING_MENU_ID {
+    super::icons::CANCEL
   } else {
     return None;
   })

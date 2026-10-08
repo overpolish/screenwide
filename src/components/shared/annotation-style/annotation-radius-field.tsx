@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { SliderNumberField } from "../slider-number-field/slider-number-field";
 
 /** How round a redaction's, a shape's or a spotlight's corners are, as a
@@ -16,7 +17,7 @@ export function AnnotationRadiusField({
 }) {
   return (
     <SliderNumberField
-      aria-label="Radius"
+      aria-label={t("annotation-radius")}
       className="w-48"
       formatOptions={{
         maximumFractionDigits: 1,

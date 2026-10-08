@@ -6,6 +6,7 @@ import { MotionProps } from "motion/react";
 import { use } from "react";
 import { SelectStateContext } from "react-aria-components";
 
+import { t } from "../../../i18n/i18n";
 import { IconButton } from "../button/icon-button";
 
 type ClearButtonProps = MotionProps & {
@@ -26,7 +27,7 @@ export const ClearButton = ({
     <div className="flex shrink-0 items-center" data-select-clear>
       <IconButton
         {...props}
-        aria-label="Clear selection"
+        aria-label={t("controls-clear-selection")}
         isDisabled={isDisabled}
         onPress={() => {
           state.setValue(null);

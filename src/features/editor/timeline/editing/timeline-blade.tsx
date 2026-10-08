@@ -3,6 +3,7 @@
 
 import { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import { clamp } from "../scrub-playhead";
 import {
   timelineXToFraction,
@@ -141,7 +142,7 @@ export function TimelineSegments({
     const isSelected = segment.id === selectedSegmentId;
     return (
       <div
-        aria-label={`Timeline segment ${(index + 1).toString()}`}
+        aria-label={t("editor-timeline-segment", { number: index + 1 })}
         aria-pressed={isSelected}
         className={`absolute inset-y-0 overflow-hidden rounded-control bg-fill-tertiary ${isBladeActive ? "pointer-events-none" : "pointer-events-auto"}`}
         data-timeline-segment-id={segment.id}

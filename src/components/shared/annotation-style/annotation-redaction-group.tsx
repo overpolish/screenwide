@@ -3,6 +3,7 @@
 
 import { Droplet, Eraser, Grid2x2, PaintBucket } from "lucide-react";
 
+import { t } from "../../../i18n/i18n";
 import { PillGroup } from "../../base/pill-group/pill-group";
 
 import { AnnotationRedaction } from "./types";
@@ -25,14 +26,18 @@ export function AnnotationRedactionGroup({
 }) {
   return (
     <PillGroup
-      aria-label="Redaction"
+      aria-label={t("annotation-redaction")}
       isDisabled={isDisabled}
       items={[
-        { icon: <Eraser aria-hidden="true" />, id: "erase", label: "Erase" },
+        {
+          icon: <Eraser aria-hidden="true" />,
+          id: "erase",
+          label: t("annotation-redaction-erase"),
+        },
         {
           icon: <PaintBucket aria-hidden="true" />,
           id: "color",
-          label: "Colour",
+          label: t("annotation-redaction-color"),
         },
         {
           // The press lands after the selection has moved, but `value` is the
@@ -40,18 +45,21 @@ export function AnnotationRedactionGroup({
           // chosen shuffles.
           ariaLabel:
             value === "pixelate" && onShuffle
-              ? "Shuffle pixelation"
-              : "Pixelate",
+              ? t("annotation-redaction-shuffle-pixelation")
+              : t("annotation-redaction-pixelate"),
           icon: <Grid2x2 aria-hidden="true" />,
           id: "pixelate",
-          label: "Pixelate",
+          label: t("annotation-redaction-pixelate"),
           onPress: value === "pixelate" ? onShuffle : undefined,
         },
         {
-          ariaLabel: value === "blur" && onShuffle ? "Shuffle blur" : "Blur",
+          ariaLabel:
+            value === "blur" && onShuffle
+              ? t("annotation-redaction-shuffle-blur")
+              : t("annotation-redaction-blur"),
           icon: <Droplet aria-hidden="true" />,
           id: "blur",
-          label: "Blur",
+          label: t("annotation-redaction-blur"),
           onPress: value === "blur" ? onShuffle : undefined,
         },
       ]}

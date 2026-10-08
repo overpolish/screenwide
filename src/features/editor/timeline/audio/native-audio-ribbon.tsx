@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import { NativeRecordingWorkspaceViewport } from "../../recording/preview/native-recording-workspace-viewport";
 import { PreparedAudioTrack } from "../../types";
 
@@ -70,7 +71,7 @@ export function NativeAudioRibbon({
 
   return (
     <NativeRecordingWorkspaceViewport
-      ariaLabel="Audio visualizer"
+      ariaLabel={t("editor-timeline-audio-visualizer")}
       audioOnly
       isBusy={false}
       panes={[]}

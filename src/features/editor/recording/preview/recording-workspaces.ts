@@ -3,6 +3,7 @@
 
 import { RefObject } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -34,12 +35,12 @@ export function bakedCameraWorkspace(
 ): NativeRecordingWorkspace {
   const output = screenshotOutputDimensions(outputSettings);
   return {
-    ariaLabel: "Native baked recording workspace preview",
+    ariaLabel: t("editor-recording-preview"),
     panes: [
       {
         height: output.height,
         index: 0,
-        label: "Composed recording preview",
+        label: t("editor-recording-composed-preview"),
         ref: screenCanvasRef,
         width: output.width,
         x: 0,
@@ -74,7 +75,10 @@ export function recordingOutputWorkspace(
     const pane = {
       height: size.height,
       index: entry.trackId === "primary" ? 0 : 1,
-      label: `${entry.pane.kind === "camera" ? "Camera" : "Screen"} composed preview`,
+      label:
+        entry.pane.kind === "camera"
+          ? t("editor-recording-camera-preview")
+          : t("editor-recording-screen-preview"),
       ref: entry.canvasRef,
       width: size.width,
       x,
@@ -84,7 +88,7 @@ export function recordingOutputWorkspace(
     return pane;
   });
   return {
-    ariaLabel: "Native recording workspace preview",
+    ariaLabel: t("editor-recording-preview"),
     panes,
     workspaceHeight: height,
     workspaceWidth: width,
@@ -97,11 +101,14 @@ export function recordingLayoutWorkspace(
   canvasRefs: RefObject<HTMLCanvasElement | null>[],
 ): NativeRecordingWorkspace {
   return {
-    ariaLabel: "Native recording workspace preview",
+    ariaLabel: t("editor-recording-preview"),
     panes: layout.panes.map((pane, index) => ({
       height: pane.height,
       index,
-      label: `${pane.kind === "camera" ? "Camera" : "Screen"} preview`,
+      label:
+        pane.kind === "camera"
+          ? t("editor-recording-camera-preview")
+          : t("editor-recording-screen-preview"),
       ref: canvasRefs[index],
       width: pane.width,
       x: pane.x,

@@ -10,6 +10,7 @@ import {
 } from "../../../components/base/button/icon-button";
 import { CheckOnClick } from "../../../components/shared/check-on-click/check-on-click";
 import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { appLocale, t } from "../../../i18n/i18n";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { formatDuration } from "../duration";
 
@@ -31,11 +32,16 @@ type RecordingPlaybackControlsProps = {
   zoomControl?: ReactNode;
 };
 
-const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => ({
-  id: rate.toString(),
-  label: `${rate.toString()}×`,
-  rate,
-}));
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+const playbackRateItems = () => {
+  const format = new Intl.NumberFormat(appLocale().formatLocale);
+  return PLAYBACK_RATES.map((rate) => ({
+    id: rate.toString(),
+    label: t("editor-timeline-rate", { rate: format.format(rate) }),
+    rate,
+  }));
+};
 
 /**
  * Memoized: the playhead publishes its own time through a subscription, so
@@ -73,19 +79,25 @@ export const RecordingPlaybackControls = memo(
         <PopupSelect
           className="w-20"
           id="preview-speed"
-          items={PLAYBACK_RATES}
-          label="Preview speed"
+          items={playbackRateItems()}
+          label={t("editor-timeline-preview-speed")}
           minimumListWidth={120}
           onSelectionChange={(item) => {
-            const selected = PLAYBACK_RATES.find((rate) => rate.id === item.id);
-            if (selected) onPlaybackRateChange(selected.rate);
+            const selected = PLAYBACK_RATES.find(
+              (rate) => rate.toString() === item.id,
+            );
+            if (selected !== undefined) onPlaybackRateChange(selected);
           }}
-          placeholder="Speed"
+          placeholder={t("editor-timeline-speed")}
           selectedId={playbackRate.toString()}
         />
         <IconToggleButton
           aria-keyshortcuts="P"
-          aria-label={isPlaying ? "Pause preview" : "Play preview"}
+          aria-label={
+            isPlaying
+              ? t("editor-timeline-pause-preview")
+              : t("editor-timeline-play-preview")
+          }
           className="shrink-0"
           isSelected={isPlaying}
           off={<Play className="fill-current" />}
@@ -105,9 +117,9 @@ export const RecordingPlaybackControls = memo(
         </span>
         {onCopyCurrentFrame ? (
           <div className="absolute right-window-inset flex items-center gap-section">
-            <NativeTooltipTrigger tooltip="Copy Frame">
+            <NativeTooltipTrigger tooltip={t("editor-timeline-copy-frame")}>
               <CheckOnClick onPress={() => onCopyCurrentFrame()}>
-                <IconButton aria-label="Copy current frame">
+                <IconButton aria-label={t("editor-timeline-copy-frame-label")}>
                   <Images />
                 </IconButton>
               </CheckOnClick>

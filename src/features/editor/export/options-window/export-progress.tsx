@@ -5,6 +5,7 @@ import { Check, X } from "lucide-react";
 
 import { ConfirmActionButton } from "../../../../components/shared/confirm-action-button/confirm-action-button";
 import { ProgressPanel } from "../../../../components/shared/progress-panel/progress-panel";
+import { t } from "../../../../i18n/i18n";
 import { formatEta } from "../../duration";
 import { ExportPhase } from "../use-export-progress";
 
@@ -26,11 +27,11 @@ const saveLabel = ({
   isRecording,
   phase,
 }: Pick<ExportProgressProps, "isAudioOnly" | "isRecording" | "phase">) => {
-  if (isAudioOnly) return "Saving audio";
-  if (!isRecording) return "Saving screenshot";
-  if (phase === "camera") return "Saving camera";
-  if (phase === "finalizing") return "Finalizing recording";
-  return "Saving recording";
+  if (isAudioOnly) return t("editor-export-saving-audio");
+  if (!isRecording) return t("editor-export-saving-screenshot");
+  if (phase === "camera") return t("editor-export-saving-camera");
+  if (phase === "finalizing") return t("editor-export-finalizing");
+  return t("editor-export-saving-recording");
 };
 
 /**
@@ -55,9 +56,13 @@ export function ExportProgress({
         cancellable ? (
           <ConfirmActionButton
             armedIcon={<Check />}
-            armedLabel="Confirm cancel"
+            armedLabel={t("editor-export-confirm-cancel")}
             idleIcon={<X />}
-            idleLabel={isCancelingSave ? "Canceling" : "Cancel"}
+            idleLabel={
+              isCancelingSave
+                ? t("editor-export-canceling")
+                : t("editor-export-cancel")
+            }
             isDisabled={isCancelingSave}
             onConfirm={onCancel}
             variant="text"
@@ -66,7 +71,7 @@ export function ExportProgress({
       }
       label={saveLabel({ isAudioOnly, isRecording, phase })}
       progress={progress}
-      progressLabel="Save progress"
+      progressLabel={t("editor-export-progress")}
       secondary={etaSeconds === null ? undefined : formatEta(etaSeconds)}
     />
   );

@@ -3,6 +3,7 @@
 
 import { Dispatch, RefObject, SetStateAction, useMemo } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import { useRecordingKeyboardPreviewEditing } from "../../keyboard-effect/use-recording-keyboard-canvas-editing";
 import {
   RecordingOutputSettings,
@@ -207,7 +208,7 @@ export function useRecordingPreviewSelection(
     hasKeyboardSelection && keyboardGeometry
       ? {
           kind: "shortcut",
-          label: "Shortcut",
+          label: t("editor-recording-shortcut"),
           maximumSizePercent: keyboardGeometry.maximumSizePercent,
           minimumSizePercent: keyboardGeometry.minimumSizePercent,
           positionXPercent: roundedPercent(keyboardGeometry.center.x),

@@ -5,6 +5,8 @@ import { Image as ImageGlyph, Plus } from "lucide-react";
 import { useState } from "react";
 import { ToggleButtonGroup } from "react-aria-components";
 
+import { t } from "../../../i18n/i18n";
+
 import { Background, BackgroundPreset, sameBackground } from "./background";
 import { BackgroundEditor } from "./background-editor";
 import { randomMeshForGenerator } from "./background-random";
@@ -133,7 +135,7 @@ export function BackgroundPicker({
   return (
     <div className="flex flex-col gap-control-inset">
       <ToggleButtonGroup
-        aria-label="Background"
+        aria-label={t("background-label")}
         // Centred rows: the tiles keep their size and gap, and whatever the
         // row cannot fill is split evenly between the two edges.
         className="flex flex-wrap justify-center gap-control"
@@ -148,7 +150,7 @@ export function BackgroundPicker({
             becomes a preset with a tile of its own, so this one is always the
             glyph and never the chosen background. */}
         <BackgroundTile
-          ariaLabel="Image"
+          ariaLabel={t("background-image")}
           id="image"
           isDisabled={isDisabled}
           isSelected={false}
@@ -166,7 +168,7 @@ export function BackgroundPicker({
           <ImageGlyph aria-hidden="true" />
         </BackgroundTile>
         <BackgroundTile
-          ariaLabel="Custom"
+          ariaLabel={t("background-custom")}
           id="custom"
           isDisabled={isDisabled}
           isSelected={selectedId === "custom"}

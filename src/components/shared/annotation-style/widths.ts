@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import type { AnnotationSizeMeasure } from "./annotation-text";
 import type { AnnotationKind, AnnotationRedaction } from "./types";
 
 /**
@@ -92,68 +93,68 @@ export const SOFT_SPOTLIGHT_EDGE = 10;
 
 /**
  * How big each kind is drawn: the sizes its control offers, the one a fresh
- * annotation takes, and what the control is called. One row per kind, shared
+ * annotation takes, and what the control measures. One row per kind, shared
  * because the editor's panel and the live overlay's toolbar offer the same
  * choice.
  */
 export const ANNOTATION_SIZES: Record<
   AnnotationKind,
-  { defaultSize: number; sizeLabel: string; sizes: number[] }
+  { defaultSize: number; sizeMeasure: AnnotationSizeMeasure; sizes: number[] }
 > = {
   arrow: {
     defaultSize: DEFAULT_ANNOTATION_WIDTH,
-    sizeLabel: "Width",
+    sizeMeasure: "width",
     sizes: ANNOTATION_WIDTHS,
   },
   counter: {
     defaultSize: DEFAULT_ANNOTATION_COUNTER_SIZE,
-    sizeLabel: "Size",
+    sizeMeasure: "size",
     sizes: ANNOTATION_COUNTER_SIZES,
   },
   draw: {
     defaultSize: DEFAULT_ANNOTATION_WIDTH,
-    sizeLabel: "Width",
+    sizeMeasure: "width",
     sizes: ANNOTATION_WIDTHS,
   },
   highlight: {
     defaultSize: DEFAULT_ANNOTATION_HIGHLIGHT_SIZE,
-    sizeLabel: "Height",
+    sizeMeasure: "height",
     sizes: [DEFAULT_ANNOTATION_HIGHLIGHT_SIZE],
   },
   // An image is sized by its grips and draws no stroke: it carries the
   // least width every clip must, the twin of `default_image_style`'s.
   image: {
     defaultSize: 1,
-    sizeLabel: "Size",
+    sizeMeasure: "size",
     sizes: [1],
   },
   // A loupe's rim is always an arrow's pen, the twin of `NEW_MAGNIFY_WIDTH`,
   // and offers no size to choose.
   magnify: {
     defaultSize: DEFAULT_ANNOTATION_WIDTH,
-    sizeLabel: "Width",
+    sizeMeasure: "width",
     sizes: [DEFAULT_ANNOTATION_WIDTH],
   },
   redact: {
     defaultSize: DEFAULT_ANNOTATION_REDACT_SIZE,
-    sizeLabel: "Block size",
+    sizeMeasure: "blockSize",
     sizes: ANNOTATION_REDACT_SIZES,
   },
   shape: {
     defaultSize: DEFAULT_ANNOTATION_WIDTH,
-    sizeLabel: "Width",
+    sizeMeasure: "width",
     sizes: ANNOTATION_WIDTHS,
   },
   // A spotlight draws no stroke: it carries the least width every clip must,
   // the twin of `default_spotlight_style`'s, and offers no size to choose.
   spotlight: {
     defaultSize: 1,
-    sizeLabel: "Width",
+    sizeMeasure: "width",
     sizes: [1],
   },
   text: {
     defaultSize: DEFAULT_ANNOTATION_TEXT_SIZE,
-    sizeLabel: "Size",
+    sizeMeasure: "size",
     sizes: ANNOTATION_TEXT_SIZES,
   },
 };

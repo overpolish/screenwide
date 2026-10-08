@@ -4,6 +4,7 @@
 import { Copy, Minus, Square, X } from "lucide-react";
 import { ReactNode } from "react";
 
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { IconButton } from "../../base/button/icon-button";
 import { ScrollArea } from "../../base/scroll-area/scroll-area";
@@ -113,7 +114,7 @@ export function WindowHeader({
         >
           {onTitleChange ? (
             <EditableTitle
-              label="Document name"
+              label={t("controls-document-name")}
               onChange={onTitleChange}
               title={title}
             />
@@ -151,7 +152,7 @@ export function WindowHeader({
         >
           {isWindows && onMinimize ? (
             <IconButton
-              aria-label="Minimize"
+              aria-label={t("controls-window-minimize")}
               className="h-full w-[46px] rounded-none p-0"
               onPress={onMinimize}
             >
@@ -160,7 +161,11 @@ export function WindowHeader({
           ) : null}
           {isWindows && onToggleMaximize ? (
             <IconButton
-              aria-label={isMaximized ? "Restore" : "Maximize"}
+              aria-label={
+                isMaximized
+                  ? t("controls-window-restore")
+                  : t("controls-window-maximize")
+              }
               className="h-full w-[46px] rounded-none p-0"
               onPress={onToggleMaximize}
             >
@@ -170,7 +175,7 @@ export function WindowHeader({
           {closeAction ??
             (isWindows && onClose ? (
               <IconButton
-                aria-label="Close"
+                aria-label={t("controls-window-close")}
                 className="h-full w-[46px] shrink-0 rounded-none p-0 data-[hovered]:bg-error data-[hovered]:text-primary-fg data-[pressed]:bg-error data-[pressed]:text-primary-fg"
                 onPress={onClose}
               >

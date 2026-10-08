@@ -6,6 +6,7 @@ import { Ref } from "react";
 import logoUrl from "../../../../assets/screenwide-mark.svg";
 import { WindowHeader } from "../../../../components/shared/window-header/window-header";
 import { WindowShell } from "../../../../components/shared/window-shell/window-shell";
+import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
 import { EditorExportForm, EditorExportFormProps } from "../editor-export-form";
 
@@ -44,7 +45,7 @@ export function ExportOptionsWindowView({
           isDraggable={false}
           leadingSection={
             <img
-              alt="Screenwide"
+              alt={t("editor-logo")}
               className="brightness-0 dark:invert"
               draggable={false}
               src={logoUrl}
@@ -52,7 +53,7 @@ export function ExportOptionsWindowView({
           }
           // The save is watched from here, so there is no way out until it ends.
           onClose={isSaving ? undefined : onClose}
-          title="Export"
+          title={t("editor-export")}
         />
       }
       height="content"

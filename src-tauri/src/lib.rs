@@ -23,6 +23,7 @@ mod fault;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod glide;
 mod gpu;
+mod i18n;
 mod image_analysis;
 mod invoke_handler;
 mod moments;

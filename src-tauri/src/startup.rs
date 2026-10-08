@@ -30,6 +30,13 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     crate::storybook_native::show(app.handle(), &preview_url.to_string_lossy())?;
     return Ok(());
   }
+  // The windows in `tauri.conf.json` carry English titles; the app's own
+  // language replaces them before any is shown.
+  for label in app_windows::WindowLabel::ALL {
+    if let Some(window) = tauri::Manager::get_webview_window(app.handle(), label.as_str()) {
+      let _ = window.set_title(&label.title());
+    }
+  }
 
   #[cfg(target_os = "macos")]
   {

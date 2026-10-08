@@ -5,20 +5,25 @@ import { GroupBox } from "../../../components/base/group-box/group-box";
 import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
+import { t } from "../../../i18n/i18n";
 
 import type { OcrAction } from "../../../bindings/OcrAction";
 import type { OcrSettings } from "../../../bindings/OcrSettings";
 
-const actions: { action: OcrAction; description: string; label: string }[] = [
+const actions = (): {
+  action: OcrAction;
+  description: string;
+  label: string;
+}[] => [
   {
     action: "selectAll",
-    description: "Select all recognized text.",
-    label: "Select all text",
+    description: t("settings-ocr-select-all-description"),
+    label: t("settings-ocr-select-all"),
   },
   {
     action: "copyText",
-    description: "Copy selected text, or everything when nothing is selected.",
-    label: "Copy text",
+    description: t("settings-ocr-copy-description"),
+    label: t("settings-ocr-copy"),
   },
 ];
 
@@ -47,10 +52,10 @@ export function OcrSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title="OCR">
+      <GroupBox title={t("settings-section-ocr")}>
         <ControlRow
-          description="Select text or a QR code on your screen."
-          title="Use OCR"
+          description={t("settings-ocr-enabled-description")}
+          title={t("settings-ocr-enabled")}
         >
           {(controlProps) => (
             <Switch
@@ -63,11 +68,11 @@ export function OcrSettingsPanel({
             />
           )}
         </ControlRow>
-        <ControlRow title="Read text or a QR code">
+        <ControlRow title={t("settings-ocr-activate")}>
           {(controlProps) => (
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
-              aria-label="Read text or a QR code"
+              aria-label={t("settings-ocr-activate")}
               defaultValue={activationDefault}
               isDisabled={isOff}
               onCaptureChange={onCaptureChange}
@@ -77,8 +82,8 @@ export function OcrSettingsPanel({
           )}
         </ControlRow>
       </GroupBox>
-      <GroupBox title="Shortcuts">
-        {actions.map(({ action, description, label }) => (
+      <GroupBox title={t("settings-shortcuts")}>
+        {actions().map(({ action, description, label }) => (
           <ControlRow description={description} key={action} title={label}>
             {(controlProps) => (
               <HotkeyField

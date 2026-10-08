@@ -3,6 +3,7 @@
 
 import { Camera, FileVideoCamera, Monitor } from "lucide-react";
 
+import { t } from "../../../../i18n/i18n";
 import { RECORDING_VIDEO_TRACK_ORDER } from "../../screenshot/screenshot-output";
 import { RecordingVideoTrackId } from "../../types";
 import { TimelineViewportState } from "../timeline-viewport";
@@ -51,7 +52,10 @@ export function RecordingVideoTrackRows({
     <>
       {videoRows.map(({ pane, trackId }) => {
         const Icon = pane.kind === "camera" ? Camera : Monitor;
-        const label = pane.kind === "camera" ? "Camera" : "Screen";
+        const label =
+          pane.kind === "camera"
+            ? t("editor-panels-camera")
+            : t("editor-panels-screen");
         const enabled = enabledVideoTracks.has(trackId);
         const mustRemainEnabled =
           enabled && enabledVideoTracks.size === 1 && enabledTracks.size === 0;
@@ -79,7 +83,7 @@ export function RecordingVideoTrackRows({
                 trackId === "camera" && isCameraSeparate
                   ? {
                       icon: <FileVideoCamera />,
-                      label: "Saved as its own file",
+                      label: t("editor-timeline-camera-separate"),
                     }
                   : undefined
               }

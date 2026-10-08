@@ -34,11 +34,13 @@ static void update_labels(ScreenwideRegionOSC *surface) {
     return;
   ScreenwideOscControlMetrics metrics = button_metrics();
   surface.ocrToolbarLabels = @[
-    screenwide_osc_text_texture(surface.device, @"Copy all", scale, light,
-                                metrics.font_size, metrics.line_height),
-    screenwide_osc_text_texture(surface.device, @"Copy as paragraph", scale,
-                                light, metrics.font_size,
+    screenwide_osc_text_texture(surface.device,
+                                screenwide_osc_localized(@"overlay-ocr-copy-all"),
+                                scale, light, metrics.font_size,
                                 metrics.line_height),
+    screenwide_osc_text_texture(
+        surface.device, screenwide_osc_localized(@"overlay-ocr-copy-paragraph"),
+        scale, light, metrics.font_size, metrics.line_height),
   ];
   surface.ocrToolbarLabelScale = scale;
   surface.ocrToolbarLabelLightMode = light;
@@ -163,8 +165,9 @@ void screenwide_region_osc_ocr_toolbar_apply_confirm_update(
     ScreenwideRegionOSC *surface, ScreenwideOscConfirmUpdate update) {
   surface.ocrToolbarCloseArmed = update.armed != 0;
   surface.ocrToolbarSurfaces[3].accessibilityLabel =
-      surface.ocrToolbarCloseArmed ? @"Confirm closing text recognition"
-                                   : @"Close text recognition";
+      surface.ocrToolbarCloseArmed
+          ? screenwide_osc_localized(@"overlay-ocr-confirm-close")
+          : screenwide_osc_localized(@"overlay-ocr-close");
   if (!update.changed)
     return;
   screenwide_region_osc_ocr_toolbar_render(surface);
@@ -237,8 +240,9 @@ void screenwide_region_osc_ocr_toolbar_layout(ScreenwideRegionOSC *surface,
     control.contentView.frame = control.bounds;
   }
   surface.ocrToolbarSurfaces[3].accessibilityLabel =
-      surface.ocrToolbarCloseArmed ? @"Confirm closing text recognition"
-                                   : @"Close text recognition";
+      surface.ocrToolbarCloseArmed
+          ? screenwide_osc_localized(@"overlay-ocr-confirm-close")
+          : screenwide_osc_localized(@"overlay-ocr-close");
   [CATransaction commit];
   screenwide_region_osc_ocr_toolbar_render(surface);
 }
@@ -249,8 +253,10 @@ void screenwide_region_osc_ocr_toolbar_attach(ScreenwideRegionOSC *surface) {
       (ScreenwideOscConfirmSpec){1, 5, 0, 2, 2000});
   surface.ocrToolbarSurfaces = [NSMutableArray arrayWithCapacity:4];
   for (NSString *label in @[
-         @"Copy all", @"Copy as paragraph", @"Recognize another area",
-         @"Close text recognition"
+         screenwide_osc_localized(@"overlay-ocr-copy-all"),
+         screenwide_osc_localized(@"overlay-ocr-copy-paragraph"),
+         screenwide_osc_localized(@"overlay-ocr-recognize-again"),
+         screenwide_osc_localized(@"overlay-ocr-close")
        ]) {
     ScreenwideOscMaterialSurfaceView *control =
         screenwide_osc_material_surface(surface.device);

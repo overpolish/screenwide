@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "react-aria-components";
 
+import { t } from "../../../i18n/i18n";
 import {
   motionDurationCss,
   motionDurations,
@@ -72,7 +73,9 @@ export function SidebarNav({
     duration: reducedMotion ? 0 : motionDurations.travel,
     ease: motionEasings.out,
   };
-  const toggleLabel = expanded ? "Collapse sidebar" : "Expand sidebar";
+  const toggleLabel = expanded
+    ? t("controls-sidebar-collapse")
+    : t("controls-sidebar-expand");
 
   return (
     <motion.nav

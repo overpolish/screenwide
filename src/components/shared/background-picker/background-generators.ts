@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
+
 /**
  * One way a mesh background is painted.
  *
@@ -15,7 +17,8 @@ export type BackgroundGenerator = {
   colorCount: number;
   defaultColors: string[];
   id: string;
-  name: string;
+  /** The generator's name in the app's language. */
+  name: () => string;
 };
 
 /** The generator every mesh falls back to: the composition one. */
@@ -27,55 +30,55 @@ export const BACKGROUND_GENERATORS: BackgroundGenerator[] = [
     colorCount: 4,
     defaultColors: ["#1B1F3B", "#4F46E5", "#9333EA", "#38BDF8"],
     id: "mesh",
-    name: "Mesh",
+    name: () => t("background-generator-mesh"),
   },
   {
     colorCount: 4,
     defaultColors: ["#05040A", "#46266E", "#C053A6", "#FFD0A8"],
     id: "silk",
-    name: "Silk",
+    name: () => t("background-generator-silk"),
   },
   {
     colorCount: 3,
     defaultColors: ["#8FE3FF", "#FF9BE3", "#C9B8FF"],
     id: "aurora",
-    name: "Aurora",
+    name: () => t("background-generator-aurora"),
   },
   {
     colorCount: 4,
     defaultColors: ["#0A0E2A", "#1E4F9C", "#3FC7E8", "#E8FBFF"],
     id: "fluid",
-    name: "Fluid",
+    name: () => t("background-generator-fluid"),
   },
   {
     colorCount: 3,
     defaultColors: ["#8C00FF", "#FF0080", "#00FFFF"],
     id: "gentle",
-    name: "Gentle Gradient",
+    name: () => t("background-generator-gentle"),
   },
   {
     colorCount: 4,
     defaultColors: ["#0A2A5E", "#1E7FA8", "#6FD0C8", "#B8A0E8"],
     id: "currents",
-    name: "Currents",
+    name: () => t("background-generator-currents"),
   },
   {
     colorCount: 4,
     defaultColors: ["#FF5FA2", "#FFD166", "#4CC9F0", "#43E197"],
     id: "paint",
-    name: "Paint Mixer",
+    name: () => t("background-generator-paint"),
   },
   {
     colorCount: 4,
     defaultColors: ["#2A1B4A", "#7A3FA0", "#F26D9C", "#FFD166"],
     id: "ribbons",
-    name: "Ribbons",
+    name: () => t("background-generator-ribbons"),
   },
   {
     colorCount: 4,
     defaultColors: ["#3B2A1F", "#6B4A2F", "#A9744F", "#D8B08C"],
     id: "strata",
-    name: "Strata",
+    name: () => t("background-generator-strata"),
   },
 ];
 

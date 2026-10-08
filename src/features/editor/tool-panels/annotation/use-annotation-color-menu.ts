@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../../i18n/i18n";
 import { PopupPanelItem } from "../../../popup-panel/store";
 import {
   boundsAnchor,
@@ -13,8 +14,8 @@ const MENU_PREFIX = "annotation-color:";
 /** The one action reads wider than the swatch it hangs off. */
 const MENU_WIDTH = 180;
 
-const items: PopupPanelItem[] = [
-  { icon: "trash", id: "remove", label: "Remove Colour" },
+const items = (): PopupPanelItem[] => [
+  { icon: "trash", id: "remove", label: t("editor-panels-remove-color") },
 ];
 
 /**
@@ -27,7 +28,7 @@ const items: PopupPanelItem[] = [
 export function useAnnotationColorMenu(onRemove: (color: string) => void) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: "Colour actions",
+    label: t("editor-panels-color-actions"),
     mode: "menu",
     onSelect: (itemId, color) => {
       if (itemId === "remove") onRemove(color);
@@ -36,5 +37,5 @@ export function useAnnotationColorMenu(onRemove: (color: string) => void) {
   });
 
   return (color: string, anchor: DOMRect) =>
-    openMenu({ anchor: boundsAnchor(anchor), context: color, items });
+    openMenu({ anchor: boundsAnchor(anchor), context: color, items: items() });
 }

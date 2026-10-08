@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../../i18n/i18n";
 import { PopupPanelItem } from "../../../popup-panel/store";
 import {
   boundsAnchor,
@@ -13,8 +14,8 @@ const MENU_PREFIX = "background-preset:";
 /** The one action reads wider than the swatch it hangs off. */
 const MENU_WIDTH = 180;
 
-const items: PopupPanelItem[] = [
-  { icon: "trash", id: "remove", label: "Remove Preset" },
+const items = (): PopupPanelItem[] => [
+  { icon: "trash", id: "remove", label: t("editor-panels-remove-preset") },
 ];
 
 /**
@@ -27,7 +28,7 @@ const items: PopupPanelItem[] = [
 export function useBackgroundPresetMenu(onRemove: (presetId: string) => void) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: "Background actions",
+    label: t("editor-panels-background-actions"),
     mode: "menu",
     onSelect: (itemId, presetId) => {
       if (itemId === "remove") onRemove(presetId);
@@ -36,5 +37,9 @@ export function useBackgroundPresetMenu(onRemove: (presetId: string) => void) {
   });
 
   return (presetId: string, anchor: DOMRect) =>
-    openMenu({ anchor: boundsAnchor(anchor), context: presetId, items });
+    openMenu({
+      anchor: boundsAnchor(anchor),
+      context: presetId,
+      items: items(),
+    });
 }

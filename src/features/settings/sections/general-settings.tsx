@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { type ReactNode } from "react";
+import { useNumberFormatter } from "react-aria";
 
 import { GroupBox } from "../../../components/base/group-box/group-box";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { PathField } from "../../../components/shared/path-field/path-field";
+import { t } from "../../../i18n/i18n";
 import { useRecordingInputStore } from "../../recording-inputs/store";
 import { RecordingFps } from "../../recording-inputs/types";
 import { useSettingsApi } from "../settings-api-context";
@@ -22,53 +24,57 @@ type ToggleKey = {
 
 type ToggleItem = { key: ToggleKey; title: string; description?: string };
 
-const recordingToggle = {
-  description: "Check your camera, microphone and computer sound are working.",
+const recordingToggle = (): ToggleItem => ({
+  description: t("settings-confidence-checks-description"),
   key: "showRecordingConfidenceChecks",
-  title: "Show camera and sound while recording",
-} satisfies ToggleItem;
+  title: t("settings-confidence-checks"),
+});
 
-const autoZoomToggle = {
-  description: "Zoom in where you click and type.",
+const autoZoomToggle = (): ToggleItem => ({
+  description: t("settings-auto-zoom-description"),
   key: "autoZoom",
-  title: "Zoom in automatically",
-} satisfies ToggleItem;
+  title: t("settings-auto-zoom"),
+});
 
-const captureToggle = {
-  description: "Show Screenwide's own windows in recordings and screenshots.",
+const captureToggle = (): ToggleItem => ({
+  description: t("settings-include-app-description"),
   key: "recordScreenwideWindows",
-  title: "Include Screenwide in captures",
-} satisfies ToggleItem;
+  title: t("settings-include-app"),
+});
 
-const startupToggles: ToggleItem[] = [
-  { key: "launchAtLogin", title: "Start when you sign in" },
+const startupToggles = (): ToggleItem[] => [
+  { key: "launchAtLogin", title: t("settings-launch-at-login") },
   {
     key: "showRecordingBarOnLaunch",
-    title: "Show recording controls on startup",
+    title: t("settings-show-bar-on-launch"),
   },
 ];
 
 /** The folders Settings names: where projects live, and where exports go. */
-const folders = [
-  {
-    description: "New recordings and their edits are kept here.",
-    key: "projectDirectory",
-    kind: "project",
-    title: "Projects folder",
-  },
-  {
-    description: "You can choose a different folder when saving.",
-    key: "recordingDirectory",
-    kind: "recording",
-    title: "Recording folder",
-  },
-  {
-    description: "You can choose a different folder when saving.",
-    key: "screenshotDirectory",
-    kind: "screenshot",
-    title: "Screenshot folder",
-  },
-] as const;
+const folders = () =>
+  [
+    {
+      description: t("settings-projects-folder-description"),
+      key: "projectDirectory",
+      kind: "project",
+      reset: t("settings-projects-folder-reset"),
+      title: t("settings-projects-folder"),
+    },
+    {
+      description: t("settings-export-folder-description"),
+      key: "recordingDirectory",
+      kind: "recording",
+      reset: t("settings-recording-folder-reset"),
+      title: t("settings-recording-folder"),
+    },
+    {
+      description: t("settings-export-folder-description"),
+      key: "screenshotDirectory",
+      kind: "screenshot",
+      reset: t("settings-screenshot-folder-reset"),
+      title: t("settings-screenshot-folder"),
+    },
+  ] as const;
 
 export function GeneralSettingsPanel({
   isSaving,
@@ -84,6 +90,11 @@ export function GeneralSettingsPanel({
   updateSetting?: ReactNode;
 }) {
   const { browseDefaultLocation } = useSettingsApi();
+  const seconds = useNumberFormatter({
+    style: "unit",
+    unit: "second",
+    unitDisplay: "narrow",
+  });
   // The frame rate lives with the recording inputs the bar records with, not
   // in the stored preferences; settings only offers the choice.
   const fps = useRecordingInputStore((state) => state.fps);
@@ -109,23 +120,27 @@ export function GeneralSettingsPanel({
       )}
     </ControlRow>
   );
+  const secondsItem = (value: number) => ({
+    id: String(value),
+    label: seconds.format(value),
+  });
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title="Software Update">{updateSetting}</GroupBox>
-      <GroupBox title="Appearance">
+      <GroupBox title={t("settings-software-update")}>{updateSetting}</GroupBox>
+      <GroupBox title={t("settings-appearance")}>
         <ControlRow
-          description="Controls and highlights use the system accent colour, or Screenwide's own."
-          title="Accent colour"
+          description={t("settings-accent-description")}
+          title={t("settings-accent")}
         >
           {(controlProps) => (
             <div {...controlProps} role="group">
               <PillGroup
-                aria-label="Accent colour"
+                aria-label={t("settings-accent")}
                 display="label"
                 isDisabled={isSaving}
                 items={[
-                  { id: "system", label: "System" },
-                  { id: "screenwide", label: "Screenwide" },
+                  { id: "system", label: t("settings-accent-system") },
+                  { id: "screenwide", label: t("settings-accent-app") },
                 ]}
                 onSelectionChange={(accent) => {
                   update({ accent: accent as GeneralSettings["accent"] });
@@ -136,14 +151,14 @@ export function GeneralSettingsPanel({
           )}
         </ControlRow>
       </GroupBox>
-      <GroupBox title="Saving">
-        {folders.map(({ description, key, kind, title }) => (
+      <GroupBox title={t("settings-saving")}>
+        {folders().map(({ description, key, kind, reset, title }) => (
           <ControlRow description={description} key={kind} title={title}>
             {(controlProps) => (
               <div {...controlProps} role="group">
                 <PathField
                   aria-label={title}
-                  emptyLabel="Default folder"
+                  emptyLabel={t("settings-default-folder")}
                   isDisabled={isSaving}
                   onBrowse={() => {
                     void browseDefaultLocation(kind)
@@ -155,7 +170,7 @@ export function GeneralSettingsPanel({
                       });
                   }}
                   secondaryAction={{
-                    label: `Use the default ${kind} folder`,
+                    label: reset,
                     onPress: () => {
                       update({ [key]: null });
                     },
@@ -168,24 +183,24 @@ export function GeneralSettingsPanel({
           </ControlRow>
         ))}
       </GroupBox>
-      <GroupBox title="Recording">
-        {toggle(recordingToggle)}
-        {toggle(autoZoomToggle)}
-        <ControlRow title="Recording countdown">
+      <GroupBox title={t("settings-recording")}>
+        {toggle(recordingToggle())}
+        {toggle(autoZoomToggle())}
+        <ControlRow title={t("settings-countdown")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <PillGroup
-                aria-label="Recording countdown"
+                aria-label={t("settings-countdown")}
                 display="label"
                 isDisabled={isSaving}
                 items={[
-                  { id: "0", label: "Off" },
-                  { id: "3", label: "3s" },
-                  { id: "5", label: "5s" },
+                  { id: "0", label: t("settings-countdown-off") },
+                  secondsItem(3),
+                  secondsItem(5),
                 ]}
-                onSelectionChange={(seconds) => {
+                onSelectionChange={(next) => {
                   update({
-                    recordingCountdownSeconds: Number(seconds),
+                    recordingCountdownSeconds: Number(next),
                   });
                 }}
                 selected={String(settings.recordingCountdownSeconds)}
@@ -194,17 +209,17 @@ export function GeneralSettingsPanel({
           )}
         </ControlRow>
         <ControlRow
-          description="More frames look smoother and make a larger file."
-          title="Frame rate"
+          description={t("settings-frame-rate-description")}
+          title={t("settings-frame-rate")}
         >
           {(controlProps) => (
             <div {...controlProps} role="group">
               <PillGroup
-                aria-label="Frame rate"
+                aria-label={t("settings-frame-rate")}
                 display="label"
                 items={[
-                  { id: "30", label: "30 fps" },
-                  { id: "60", label: "60 fps" },
+                  { id: "30", label: t("settings-fps", { fps: 30 }) },
+                  { id: "60", label: t("settings-fps", { fps: 60 }) },
                 ]}
                 onSelectionChange={(selected) => {
                   setFps(Number(selected) as RecordingFps);
@@ -215,23 +230,19 @@ export function GeneralSettingsPanel({
           )}
         </ControlRow>
       </GroupBox>
-      <GroupBox title="Capture">
-        {toggle(captureToggle)}
-        <ControlRow title="Delayed Screenshot">
+      <GroupBox title={t("settings-capture")}>
+        {toggle(captureToggle())}
+        <ControlRow title={t("settings-screenshot-delay")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <PillGroup
-                aria-label="Delayed Screenshot"
+                aria-label={t("settings-screenshot-delay")}
                 display="label"
                 isDisabled={isSaving}
-                items={[
-                  { id: "3", label: "3s" },
-                  { id: "5", label: "5s" },
-                  { id: "10", label: "10s" },
-                ]}
-                onSelectionChange={(seconds) => {
+                items={[secondsItem(3), secondsItem(5), secondsItem(10)]}
+                onSelectionChange={(next) => {
                   update({
-                    screenshotDelaySeconds: Number(seconds),
+                    screenshotDelaySeconds: Number(next),
                   });
                 }}
                 selected={String(settings.screenshotDelaySeconds)}
@@ -240,8 +251,8 @@ export function GeneralSettingsPanel({
           )}
         </ControlRow>
       </GroupBox>
-      <GroupBox title="Startup">
-        {startupToggles.map((item) => toggle(item))}
+      <GroupBox title={t("settings-startup")}>
+        {startupToggles().map((item) => toggle(item))}
       </GroupBox>
     </div>
   );

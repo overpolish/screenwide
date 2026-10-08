@@ -4,6 +4,7 @@
 import { PencilLine } from "lucide-react";
 import { MouseEvent, PointerEvent } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import {
   boundsAnchor,
   pointerAnchor,
@@ -140,7 +141,7 @@ export function RecordingAnnotationLane({
       <TimelineTrackHeader
         icon={<PencilLine />}
         isSelected={selectedIds.size > 0}
-        label="Annotations"
+        label={t("editor-timeline-annotations")}
       />
       <div
         className="relative min-w-0 grow overflow-hidden rounded-control bg-fill-tertiary"

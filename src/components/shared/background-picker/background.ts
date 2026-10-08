@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
+
 /** One blob of a mesh gradient, in shares of the canvas. */
 export type BackgroundMeshPoint = {
   radiusX: number;
@@ -70,6 +72,6 @@ export const sameBackground = (a: Background, b: Background): boolean => {
 export const presetName = (background: Background): string => {
   if (background.kind === "solid") return background.color.toUpperCase();
   if (background.kind === "mesh") return background.generator;
-  const file = background.path.split(/[\\/]/).pop() ?? "Image";
+  const file = background.path.split(/[\\/]/).pop() ?? t("background-image");
   return file.replace(/\.[^.]+$/, "");
 };

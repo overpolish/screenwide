@@ -5,66 +5,66 @@ import { GroupBox } from "../../../components/base/group-box/group-box";
 import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
+import { t } from "../../../i18n/i18n";
 
 import type { RulerAction } from "../../../bindings/RulerAction";
 import type { RulerSettings } from "../../../bindings/RulerSettings";
 import type { ShortcutSettings } from "../../../bindings/ShortcutSettings";
 
-const actions: {
+const actions = (): {
   action: RulerAction;
   label: string;
   description?: string;
-}[] = [
-  { action: "toggleCrosshair", label: "Toggle crosshair" },
+}[] => [
+  { action: "toggleCrosshair", label: t("settings-ruler-crosshair") },
   {
     action: "copyColour",
-    description: "Copies the colour under the pointer as a hex code.",
-    label: "Copy colour",
+    description: t("settings-ruler-copy-colour-description"),
+    label: t("settings-ruler-copy-colour"),
   },
   {
     action: "deleteMeasurement",
-    description:
-      "Hover a label or line; otherwise deletes the latest measurement.",
-    label: "Delete measurement",
+    description: t("settings-ruler-delete-description"),
+    label: t("settings-ruler-delete"),
   },
   {
     action: "copyMeasurement",
-    description: "Copies the latest measurement, regardless of what you hover.",
-    label: "Copy measurement",
+    description: t("settings-ruler-copy-description"),
+    label: t("settings-ruler-copy"),
   },
-  { action: "undo", label: "Undo" },
-  { action: "redo", label: "Redo" },
+  { action: "undo", label: t("settings-ruler-undo") },
+  { action: "redo", label: t("settings-ruler-redo") },
   {
     action: "stampHorizontal",
-    description: "Press to stamp; or hold, move, and release.",
-    label: "Horizontal stamp",
+    description: t("settings-ruler-stamp-description"),
+    label: t("settings-ruler-stamp-horizontal"),
   },
   {
     action: "stampVertical",
-    description: "Press to stamp; or hold, move, and release.",
-    label: "Vertical stamp",
+    description: t("settings-ruler-stamp-description"),
+    label: t("settings-ruler-stamp-vertical"),
   },
   {
     action: "guideVertical",
-    description: "Hold and click to place vertical guides.",
-    label: "Vertical guide",
+    description: t("settings-ruler-guide-vertical-description"),
+    label: t("settings-ruler-guide-vertical"),
   },
   {
     action: "guideHorizontal",
-    description: "Hold and click to place horizontal guides.",
-    label: "Horizontal guide",
+    description: t("settings-ruler-guide-horizontal-description"),
+    label: t("settings-ruler-guide-horizontal"),
   },
   {
     action: "cycleTolerance",
-    description: "Switch between clear, balanced, and subtle edge detection.",
-    label: "Cycle tolerance",
+    description: t("settings-ruler-tolerance-description"),
+    label: t("settings-ruler-tolerance"),
   },
   {
     action: "measureRadius",
-    description: "Hold over a corner to measure its radius.",
-    label: "Measure radius",
+    description: t("settings-ruler-radius-description"),
+    label: t("settings-ruler-radius"),
   },
-  { action: "toggleCenterlines", label: "Toggle centerlines" },
+  { action: "toggleCenterlines", label: t("settings-ruler-centerlines") },
 ];
 
 export function RulerSettingsPanel({
@@ -94,10 +94,10 @@ export function RulerSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title="Ruler">
+      <GroupBox title={t("settings-section-ruler")}>
         <ControlRow
-          description="Measure sizes and distances on your screen."
-          title="Use Ruler"
+          description={t("settings-ruler-enabled-description")}
+          title={t("settings-ruler-enabled")}
         >
           {(controlProps) => (
             <Switch
@@ -110,11 +110,11 @@ export function RulerSettingsPanel({
             />
           )}
         </ControlRow>
-        <ControlRow title="Show ruler">
+        <ControlRow title={t("settings-ruler-show")}>
           {(controlProps) => (
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
-              aria-label="Show ruler"
+              aria-label={t("settings-ruler-show")}
               defaultValue={activationDefault}
               isDisabled={isOff || savingShortcut || !shortcuts}
               onCaptureChange={onCaptureChange}
@@ -128,8 +128,8 @@ export function RulerSettingsPanel({
           )}
         </ControlRow>
       </GroupBox>
-      <GroupBox title="Shortcuts">
-        {actions.map(({ action, description, label }) => (
+      <GroupBox title={t("settings-shortcuts")}>
+        {actions().map(({ action, description, label }) => (
           <ControlRow description={description} key={action} title={label}>
             {(controlProps) => (
               <HotkeyField

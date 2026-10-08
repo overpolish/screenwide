@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { appLocale, t } from "../../i18n/i18n";
+
 /**
  * One frame of the recording preview. The native player renders at
  * `PREVIEW_FPS` (src-tauri/src/editor/recording_preview_player/video.rs), which
@@ -22,16 +24,15 @@ export const formatDuration = (durationMs: number) => {
 
 /**
  * A deliberately coarse remaining-time phrase for a running export, e.g.
- * `About 2 min remaining`, `About 40 sec remaining`, or
- * `Less than 10 sec remaining`. Rounds hard so the estimate never implies
- * precision it does not have.
+ * `About 2 min remaining` or `Less than a minute remaining`. Rounds hard so
+ * the estimate never implies precision it does not have.
  */
 export const formatEta = (seconds: number) => {
   let total = Math.max(0, Math.round(seconds));
   // Below a minute the estimate is too jittery to put a number on, and the
   // remaining wait is short enough that a single steady phrase reads better
   // than a second-by-second countdown.
-  if (total < 60) return "Less than a minute remaining";
+  if (total < 60) return t("editor-eta-under-minute");
 
   const days = Math.floor(total / 86_400);
   total -= days * 86_400;
@@ -51,16 +52,26 @@ export const formatEta = (seconds: number) => {
   }
 
   const parts: string[] = [];
-  if (allDays > 0)
-    parts.push(`${String(allDays)} day${allDays === 1 ? "" : "s"}`);
-  if (hours > 0) parts.push(`${String(hours)} hr`);
+  if (allDays > 0) parts.push(t("editor-eta-days", { count: allDays }));
+  if (hours > 0) parts.push(t("editor-eta-hours", { count: hours }));
   // Always show minutes unless a larger unit already carries the estimate on
   // its own (e.g. exactly "1 hr remaining").
-  if (minutes > 0 || parts.length === 0) parts.push(`${String(minutes)} min`);
-  return `About ${parts.join(" ")} remaining`;
+  if (minutes > 0 || parts.length === 0)
+    parts.push(t("editor-eta-minutes", { count: minutes }));
+  const duration = new Intl.ListFormat(appLocale().formatLocale, {
+    style: "narrow",
+    type: "unit",
+  }).format(parts);
+  return t("editor-eta", { duration });
 };
 
-const SIZE_UNITS = ["bytes", "KB", "MB", "GB", "TB"];
+const SIZE_UNITS = [
+  "byte",
+  "kilobyte",
+  "megabyte",
+  "gigabyte",
+  "terabyte",
+] as const;
 /** Finder's file style: whole kilobytes, then up to one more decimal per
  * unit, without trailing zeros, in the reader's own number format. */
 const SIZE_DECIMALS = [0, 0, 1, 2, 2];
@@ -71,7 +82,7 @@ const sizeBase = () =>
   document.documentElement.dataset.platform === "windows" ? 1024 : 1000;
 
 export const formatBytes = (bytes: number, base = sizeBase()) => {
-  if (bytes <= 0) return "Unknown size";
+  if (bytes <= 0) return t("format-size-unknown");
   let order = Math.min(
     Math.floor(Math.log(bytes) / Math.log(base)),
     SIZE_UNITS.length - 1,
@@ -81,7 +92,8 @@ export const formatBytes = (bytes: number, base = sizeBase()) => {
   const rounded = (unit: number) =>
     Number((bytes / base ** unit).toFixed(SIZE_DECIMALS[unit]));
   if (rounded(order) >= base && order < SIZE_UNITS.length - 1) order += 1;
-  return `${new Intl.NumberFormat(undefined, {
+  const size = new Intl.NumberFormat(appLocale().formatLocale, {
     maximumFractionDigits: SIZE_DECIMALS[order],
-  }).format(rounded(order))} ${SIZE_UNITS[order]}`;
+  }).format(rounded(order));
+  return t("format-size", { size, unit: SIZE_UNITS[order] });
 };

@@ -13,6 +13,7 @@ import {
   redactionSizePresets,
 } from "../../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
 
 import type { ToolPanelPatch } from "../tool-panel-patch";
 
@@ -44,7 +45,7 @@ export function AnnotationRedactionRows({
 }) {
   return (
     <>
-      <ControlRow title="Redaction">
+      <ControlRow title={t("annotation-redaction")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <AnnotationRedactionGroup
@@ -66,7 +67,7 @@ export function AnnotationRedactionRows({
       </ControlRow>
 
       {pixelation ? (
-        <ControlRow title="Style">
+        <ControlRow title={t("editor-panels-redaction-style")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationPixelationGroup
@@ -106,12 +107,12 @@ export function AnnotationBlurStrengthRow({
   strength: number;
 }) {
   return (
-    <ControlRow title="Strength">
+    <ControlRow title={t("editor-panels-strength")}>
       {(controlProps) => (
         <div {...controlProps} role="group">
           <AnnotationWidthSlider
             isDisabled={isLocked}
-            label="Strength"
+            label={t("editor-panels-strength")}
             onChange={(next) => {
               change({ annotationStyle: { strength: next } });
             }}
@@ -142,7 +143,5 @@ export function AnnotationRedactionNote({
   const isStylistic =
     redaction === "pixelateClassic" || redaction === "blur" || animated;
   if (!isStylistic) return null;
-  return (
-    <Text variant="footnote">Use Erase or Colour for sensitive content.</Text>
-  );
+  return <Text variant="footnote">{t("editor-panels-redaction-note")}</Text>;
 }

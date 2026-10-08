@@ -5,6 +5,7 @@ import { CameraOff, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useMemo } from "react";
 
 import { ToggleMenuButton } from "../../../components/base/button/toggle-menu-button";
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { useRecordingInputStore } from "../../recording-inputs/store";
@@ -138,7 +139,7 @@ export function RecordingBarInputs({
     <div className={cn("flex items-center gap-control-inset", className)}>
       <div className="flex" data-popup-panel-trigger={CAMERA_PANEL_ID}>
         <ToggleMenuButton
-          aria-label="Camera"
+          aria-label={t("recording-controls-camera")}
           badge={inputBadge(
             isCameraOn ? cameraWarning : undefined,
             isCameraLocked,
@@ -147,7 +148,7 @@ export function RecordingBarInputs({
           isSelected={isCameraOn}
           isToggleDisabled={isDisabled || isAudioOnly}
           label={cameraName(selectedCamera)}
-          menuLabel="Choose camera"
+          menuLabel={t("recording-controls-choose-camera")}
           off={<CameraOff />}
           onChange={(selected) => {
             void closeIfOpen(CAMERA_PANEL_ID);
@@ -200,7 +201,7 @@ export function RecordingBarInputs({
 
       <div className="flex" data-popup-panel-trigger={MICROPHONE_PANEL_ID}>
         <ToggleMenuButton
-          aria-label="Microphone"
+          aria-label={t("recording-controls-microphone")}
           badge={inputBadge(
             inputs.microphone ? microphoneWarning : undefined,
             isMicrophoneLocked,
@@ -214,7 +215,7 @@ export function RecordingBarInputs({
           isSelected={inputs.microphone}
           isToggleDisabled={isDisabled}
           label={microphoneName(selectedMicrophone)}
-          menuLabel="Choose microphone"
+          menuLabel={t("recording-controls-choose-microphone")}
           off={<MicOff />}
           onChange={(selected) => {
             void closeIfOpen(MICROPHONE_PANEL_ID);
@@ -242,7 +243,7 @@ export function RecordingBarInputs({
 
       <div className="flex" data-popup-panel-trigger={SYSTEM_AUDIO_PANEL_ID}>
         <ToggleMenuButton
-          aria-label="System audio"
+          aria-label={t("recording-controls-system-audio-picker")}
           badge={inputBadge(
             inputs.systemAudio ? systemAudioWarning : undefined,
             false,
@@ -256,7 +257,7 @@ export function RecordingBarInputs({
           isSelected={inputs.systemAudio}
           isToggleDisabled={isDisabled}
           label={systemAudioName(selectedSystemAudio)}
-          menuLabel="Choose system audio"
+          menuLabel={t("recording-controls-choose-system-audio")}
           off={<VolumeX />}
           onChange={(selected) => {
             void closeIfOpen(SYSTEM_AUDIO_PANEL_ID);

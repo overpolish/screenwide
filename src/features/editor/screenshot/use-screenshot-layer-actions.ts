@@ -4,6 +4,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
 
+import { t } from "../../../i18n/i18n";
 import { pointerAnchor, usePopupMenu } from "../../popup-panel/use-popup-menu";
 import {
   annotationArrangeItems,
@@ -70,7 +71,7 @@ export function useScreenshotLayerActions({
   };
   const openMenu = usePopupMenu({
     idPrefix: "screenshot-layer:",
-    label: "Layer actions",
+    label: t("editor-layer-actions"),
     mode: "menu",
     onSelect: (itemId, layerId) => {
       const id = Number(layerId);
@@ -94,7 +95,13 @@ export function useScreenshotLayerActions({
     const moves = [
       ...annotationArrangeItems(availableArrangements(items, paneIndex, meet)),
       ...(items.length > 1
-        ? [{ id: DELETE_ITEM, label: "Delete", shortcut: "Backspace" }]
+        ? [
+            {
+              id: DELETE_ITEM,
+              label: t("editor-delete"),
+              shortcut: "Backspace",
+            },
+          ]
         : []),
     ];
     if (moves.length === 0) return;

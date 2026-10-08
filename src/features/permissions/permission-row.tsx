@@ -9,6 +9,7 @@ import { Badge } from "../../components/base/badge/badge";
 import { Button } from "../../components/base/button/button";
 import { Tooltip } from "../../components/base/tooltip/tooltip";
 import { ControlRow } from "../../components/shared/control-row/control-row";
+import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 
 import { PermissionKind, PermissionStatus } from "./types";
@@ -52,7 +53,9 @@ export function PermissionRow({
         </div>
       }
       title={title}
-      titleAccessory={isOptional ? <Badge>Optional</Badge> : undefined}
+      titleAccessory={
+        isOptional ? <Badge>{t("permissions-optional")}</Badge> : undefined
+      }
     >
       {(controlProps) =>
         status.granted ? (
@@ -62,9 +65,11 @@ export function PermissionRow({
         ) : (
           <TooltipTrigger isDisabled={status.canRequest}>
             <Button {...controlProps} onPress={grant}>
-              {status.canRequest ? "Grant" : "Open System Settings"}
+              {status.canRequest
+                ? t("permissions-grant")
+                : t("permissions-open-settings")}
             </Button>
-            <Tooltip>Enable manually</Tooltip>
+            <Tooltip>{t("permissions-enable-manually")}</Tooltip>
           </TooltipTrigger>
         )
       }

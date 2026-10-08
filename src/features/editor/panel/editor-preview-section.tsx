@@ -3,6 +3,7 @@
 
 import { useRef } from "react";
 
+import { t } from "../../../i18n/i18n";
 import { useAnnotationDraft } from "../annotations/annotation-draft";
 import { useToolFollowsAnnotation } from "../annotations/use-tool-follows-annotation";
 import { placeScreenshotImage } from "../images/image-api";
@@ -254,7 +255,7 @@ export function ScreenshotSection({
   return (
     <div className="flex min-h-0 min-w-0 grow flex-col">
       <PreviewViewport
-        alt="Screenshot preview"
+        alt={t("editor-screenshot-preview")}
         annotationTool={annotationTool}
         artifactId={artifact.id}
         isEditing={tool === "crop"}

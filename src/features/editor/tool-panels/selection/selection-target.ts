@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../../i18n/i18n";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -79,7 +80,10 @@ const recordingSelectionTarget = (
       inputs.onRecordingOutputChange?.(track, next);
     },
     kind: track,
-    label: track === "primary" ? "Screen" : "Camera",
+    label:
+      track === "primary"
+        ? t("editor-panels-screen")
+        : t("editor-panels-camera"),
     settings: output[track],
     source,
     // Only the screen track carries a pad, so only it has a colour to fill
@@ -106,7 +110,9 @@ const screenshotSelectionTarget = (
     },
     kind: "layer",
     label:
-      artifact.items.length > 1 ? `Layer ${String(index + 1)}` : "Screenshot",
+      artifact.items.length > 1
+        ? t("editor-panels-layer", { number: index + 1 })
+        : t("editor-panels-screenshot"),
     settings: screenshotWorkspaceItemOutput(output, item.id),
     source: { height: item.height, width: item.width },
     workspace: "screenshot",
@@ -165,7 +171,7 @@ export const editorAudioSelectionTarget = ({
         audioTrackVolumes.find((volume) => volume.streamIndex === streamIndex)
           ?.decibels ?? 0,
       kind: "audio",
-      label: track.label || "Audio",
+      label: track.label || t("editor-panels-audio"),
     },
   };
 };

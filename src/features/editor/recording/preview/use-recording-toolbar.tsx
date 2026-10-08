@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 
 import { ButtonGroup } from "../../../../components/base/button-group/button-group";
+import { t } from "../../../../i18n/i18n";
 import { useProvideEditorToolbarTools } from "../../panel/editor-toolbar-context";
 import { CursorToolToggle } from "../../tool-panels/cursor/cursor-tool-toggle";
 import { KeyboardToolToggle } from "../../tool-panels/keyboard/keyboard-tool-toggle";
@@ -72,7 +73,10 @@ export function useRecordingToolbar({
       hasVisiblePanes ? (
         <>
           {hasCursorData || hasKeyboardData ? (
-            <ButtonGroup aria-label="Effects" className="gap-control">
+            <ButtonGroup
+              aria-label={t("editor-recording-effects")}
+              className="gap-control"
+            >
               {hasCursorData ? (
                 <CursorToolToggle onDismiss={dismissToolPanel} />
               ) : null}

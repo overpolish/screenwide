@@ -7,6 +7,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import { hidePopupPanel, showPopupPanel } from "../../../popup-panel/api";
 import {
   activePopupPanel,
@@ -55,7 +56,7 @@ export async function toggleMomentNote(
     },
     focusContents: false,
     id,
-    label: `${moment.name} voice note`,
+    label: t("editor-timeline-note", { moment: moment.name }),
   });
   await showPopupPanel({
     anchor: boundsAnchor(pin),

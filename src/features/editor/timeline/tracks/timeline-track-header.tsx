@@ -6,6 +6,7 @@ import { Button } from "react-aria-components";
 
 import { Switch } from "../../../../components/base/switch/switch";
 import { NativeTooltipTrigger } from "../../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 
 /** Whether a track is carried into the export, and whether that can change. */
@@ -18,12 +19,6 @@ export type TimelineTrackInclusion = {
   isRequired: boolean;
   onChange: (isIncluded: boolean) => void;
 };
-
-/**
- * Said on the row rather than on the switch: a disabled control receives no
- * pointer events, so a tooltip hung on it would never open.
- */
-const REQUIRED_TOOLTIP = "The export has to keep at least one track";
 
 /**
  * The label column of one timeline row: what the row is, and whether it is
@@ -53,7 +48,11 @@ export function TimelineTrackHeader({
 }) {
   const selectButton = (
     <Button
-      aria-label={note ? `${label}, ${note.label}` : label}
+      aria-label={
+        note
+          ? t("editor-timeline-track-note", { note: note.label, track: label })
+          : label
+      }
       className={cn(
         "flex h-full min-w-0 grow cursor-[inherit] items-center gap-control-inset",
         "rounded-control px-control-inset text-left select-none",
@@ -111,8 +110,10 @@ export function TimelineTrackHeader({
           <Switch
             aria-label={
               inclusion.isRequired
-                ? `${label} must remain included`
-                : `${inclusion.isIncluded ? "Exclude" : "Include"} ${label}`
+                ? t("editor-timeline-track-required", { track: label })
+                : inclusion.isIncluded
+                  ? t("editor-timeline-track-exclude", { track: label })
+                  : t("editor-timeline-track-include", { track: label })
             }
             isDisabled={inclusion.isRequired}
             isSelected={inclusion.isIncluded}
@@ -124,8 +125,12 @@ export function TimelineTrackHeader({
   );
 
   // The tooltip hangs on the whole row, whose button is what React Aria
-  // attaches the trigger to.
-  const tooltip = inclusion?.isRequired ? REQUIRED_TOOLTIP : note?.label;
+  // attaches the trigger to. The last track says why it cannot be switched
+  // off here rather than on the switch: a disabled control receives no
+  // pointer events, so a tooltip hung on it would never open.
+  const tooltip = inclusion?.isRequired
+    ? t("editor-timeline-track-required-tooltip")
+    : note?.label;
   return tooltip ? (
     <NativeTooltipTrigger tooltip={tooltip}>{row}</NativeTooltipTrigger>
   ) : (

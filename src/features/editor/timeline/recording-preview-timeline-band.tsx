@@ -4,6 +4,7 @@
 import { ReactNode } from "react";
 
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
+import { t } from "../../../i18n/i18n";
 import { RecordingCanvasTool } from "../recording/preview/recording-crop-toggle";
 import { useRecordingPreviewSelection } from "../recording/preview/use-recording-preview-selection";
 import { useRecordingPreviewTransport } from "../recording/preview/use-recording-preview-transport";
@@ -119,11 +120,11 @@ export function RecordingPreviewTimelineBand({
       {isPreparingAudio ? (
         <div className="flex shrink-0 items-center justify-center gap-control-inset py-layout text-body text-content-fg-secondary">
           <CircularProgress
-            aria-label="Preparing audio preview"
+            aria-label={t("editor-timeline-preparing-audio-label")}
             isIndeterminate
             size="small"
           />
-          Preparing audio tracks
+          {t("editor-timeline-preparing-audio")}
         </div>
       ) : (
         <RecordingTrackLanes

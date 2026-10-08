@@ -39,7 +39,7 @@ pub(super) fn handle(app: &AppHandle, id: &str) {
         eprintln!("Could not start a delayed screenshot from the tray: {error}");
       }
     }
-    DISCARD_MENU_ID => report("discard", crate::recording::cancel(app)),
+    DISCARD_MENU_ID | CANCEL_RECORDING_MENU_ID => report("discard", crate::recording::cancel(app)),
     OPEN_CLIPBOARD_SCREENSHOT_MENU_ID => {
       crate::screenshots::open_clipboard_in_export(app);
     }
@@ -49,7 +49,7 @@ pub(super) fn handle(app: &AppHandle, id: &str) {
         eprintln!("Could not open the projects window from the tray: {error}");
       }
     }
-    PAUSE_MENU_ID => report("pause", crate::recording::toggle_pause(app)),
+    PAUSE_MENU_ID | RESUME_MENU_ID => report("pause", crate::recording::toggle_pause(app)),
     QUIT_MENU_ID => app.exit(0),
     RECOGNIZE_TEXT_MENU_ID => {
       crate::text_recognition::start_detached(app);

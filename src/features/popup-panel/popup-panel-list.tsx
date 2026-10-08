@@ -17,6 +17,7 @@ import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { Text } from "../../components/base/text/text";
 import { hotkeyKeys } from "../../components/shared/hotkey-field/hotkey";
+import { t } from "../../i18n/i18n";
 
 import { hidePopupPanel } from "./api";
 import { emptyPopupPanelHeight, popupPanelMaxHeight } from "./layout";
@@ -123,7 +124,7 @@ export function PopupPanelList({
         className="window-surface rounded-window px-section flex h-full min-h-16 w-full items-center justify-center overflow-hidden text-center text-xs text-muted"
         ref={listboxRef}
       >
-        No options available
+        {t("popup-panel-empty")}
       </div>
     );
   }

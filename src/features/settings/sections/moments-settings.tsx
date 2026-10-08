@@ -9,6 +9,7 @@ import { TextField } from "../../../components/base/input-fields/text-field";
 import { Text } from "../../../components/base/text/text";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
+import { t } from "../../../i18n/i18n";
 
 import { KindColorPicker } from "./kind-color-picker";
 import { VoiceNoteSettings } from "./voice-note-settings";
@@ -37,7 +38,7 @@ function KindNameField({
   };
   return (
     <TextField
-      aria-label={`${kind.name} name`}
+      aria-label={t("settings-moment-name", { moment: kind.name })}
       className="min-w-0 grow"
       isDisabled={isDisabled}
       onBlur={commit}
@@ -74,7 +75,7 @@ export function MomentsSettingsPanel({
   return (
     <div className="gap-layout flex flex-col">
       {/* One line per moment: everything one is, editable at a glance. */}
-      <GroupBox title="Moments">
+      <GroupBox title={t("settings-section-moments")}>
         {kinds.map((kind) => (
           <div className="gap-control flex items-center" key={kind.id}>
             <KindColorPicker
@@ -98,7 +99,7 @@ export function MomentsSettingsPanel({
               }}
             />
             <HotkeyField
-              aria-label={`${kind.name} shortcut`}
+              aria-label={t("settings-moment-shortcut", { moment: kind.name })}
               isDisabled={isSaving}
               onCaptureChange={onCaptureChange}
               onChange={(shortcut) => {
@@ -108,9 +109,11 @@ export function MomentsSettingsPanel({
             />
             <ConfirmActionButton
               armedIcon={<Check />}
-              armedLabel={`Confirm removing ${kind.name}`}
+              armedLabel={t("settings-moment-confirm-remove", {
+                moment: kind.name,
+              })}
               idleIcon={<Trash2 />}
-              idleLabel={`Remove ${kind.name}`}
+              idleLabel={t("settings-moment-remove", { moment: kind.name })}
               isDisabled={isSaving}
               onConfirm={() => {
                 void save({
@@ -122,9 +125,7 @@ export function MomentsSettingsPanel({
             />
           </div>
         ))}
-        <Text variant="footnote">
-          Press a moment's shortcut while recording to place it.
-        </Text>
+        <Text variant="footnote">{t("settings-moments-footnote")}</Text>
       </GroupBox>
       <VoiceNoteSettings
         isSaving={isSaving}

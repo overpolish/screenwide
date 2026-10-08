@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../i18n/i18n";
+
 type ActionPayload = {
   action: "email" | "link" | "phone" | "sms";
   kind: "action";
@@ -15,7 +17,7 @@ type InformationPayload = {
 
 type UnsupportedPayload = {
   kind: "unsupported";
-  label: "Unsupported QR";
+  label: string;
   reason: string;
 };
 
@@ -23,25 +25,30 @@ export type QrPayload = ActionPayload | InformationPayload | UnsupportedPayload;
 
 const unsupported = (reason: string): UnsupportedPayload => ({
   kind: "unsupported",
-  label: "Unsupported QR",
+  label: t("text-recognition-qr-unsupported"),
   reason,
+});
+
+const information = (label: string): InformationPayload => ({
+  kind: "information",
+  label,
 });
 
 const structuredPayload = (content: string): QrPayload | undefined => {
   if (/^WIFI:/iu.test(content)) {
     const ssid = /(?:^|;)S:((?:\\.|[^;])*)/iu.exec(content.slice(5))?.[1];
     return ssid
-      ? { kind: "information", label: "Wi-Fi network" }
-      : unsupported("Wi-Fi QR is missing a network name.");
+      ? information(t("text-recognition-qr-wifi"))
+      : unsupported(t("text-recognition-qr-wifi-incomplete"));
   }
   if (/^BEGIN:VCARD\b/iu.test(content))
     return /END:VCARD\s*$/iu.test(content)
-      ? { kind: "information", label: "Contact card" }
-      : unsupported("Contact QR is incomplete.");
+      ? information(t("text-recognition-qr-contact"))
+      : unsupported(t("text-recognition-qr-contact-incomplete"));
   if (/^BEGIN:(?:VCALENDAR|VEVENT)\b/iu.test(content))
     return /END:(?:VCALENDAR|VEVENT)\s*$/iu.test(content)
-      ? { kind: "information", label: "Calendar event" }
-      : unsupported("Calendar QR is incomplete.");
+      ? information(t("text-recognition-qr-calendar"))
+      : unsupported(t("text-recognition-qr-calendar-incomplete"));
 };
 
 export const classifyQrPayload = (
@@ -50,17 +57,17 @@ export const classifyQrPayload = (
 ): QrPayload => {
   if (decodeError) return unsupported(decodeError);
   const content = rawContent.trim();
-  if (!content) return unsupported("QR code has no content.");
+  if (!content) return unsupported(t("text-recognition-qr-no-content"));
   const structured = structuredPayload(content);
   if (structured) return structured;
   if (!/^[a-z][a-z\d+.-]*:/iu.test(content))
-    return { kind: "information", label: "Text" };
+    return information(t("text-recognition-qr-text"));
 
   let url: URL;
   try {
     url = new URL(content);
   } catch {
-    return unsupported("QR code contains a malformed action.");
+    return unsupported(t("text-recognition-qr-malformed"));
   }
 
   switch (url.protocol) {
@@ -70,40 +77,42 @@ export const classifyQrPayload = (
         ? {
             action: "link",
             kind: "action",
-            label: "Open link",
+            label: t("text-recognition-qr-open-link"),
             url: url.toString(),
           }
-        : unsupported("Web QR is missing a destination.");
+        : unsupported(t("text-recognition-qr-link-incomplete"));
     case "tel:":
       return url.pathname
         ? {
             action: "phone",
             kind: "action",
-            label: "Call number",
+            label: t("text-recognition-qr-call"),
             url: url.toString(),
           }
-        : unsupported("Phone QR is missing a number.");
+        : unsupported(t("text-recognition-qr-phone-incomplete"));
     case "mailto:":
       return url.pathname
         ? {
             action: "email",
             kind: "action",
-            label: "Compose email",
+            label: t("text-recognition-qr-email"),
             url: url.toString(),
           }
-        : unsupported("Email QR is missing a recipient.");
+        : unsupported(t("text-recognition-qr-email-incomplete"));
     case "sms:":
       return url.pathname
         ? {
             action: "sms",
             kind: "action",
-            label: "Compose message",
+            label: t("text-recognition-qr-message"),
             url: url.toString(),
           }
-        : unsupported("Message QR is missing a recipient.");
+        : unsupported(t("text-recognition-qr-message-incomplete"));
     default:
       return unsupported(
-        `The ${url.protocol.slice(0, -1)} action is not supported.`,
+        t("text-recognition-qr-unsupported-action", {
+          scheme: url.protocol.slice(0, -1),
+        }),
       );
   }
 };

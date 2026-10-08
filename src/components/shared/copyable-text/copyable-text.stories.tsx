@@ -7,6 +7,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   args: {
+    copyLabel: "Copy detected content",
     label: "Detected content",
     onCopy: () => undefined,
     value: "https://screenwide.app",

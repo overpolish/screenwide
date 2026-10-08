@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useDateFormatter, useNumberFormatter } from "react-aria";
+
 import logoUrl from "../../assets/screenwide-mark.svg";
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
@@ -10,6 +12,7 @@ import { Text } from "../../components/base/text/text";
 import { ProgressPanel } from "../../components/shared/progress-panel/progress-panel";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { t } from "../../i18n/i18n";
 
 import { ReleaseNotes } from "./release-notes";
 
@@ -28,22 +31,24 @@ export type UpdatePromptProps = {
   updateVersion: string | null;
 };
 
-const displayDate = (date: string | null) => {
+const parseDate = (date: string | null) => {
   if (!date) return null;
   const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    parsed,
-  );
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
 const availabilityLine = (
   currentVersion: string | null,
   updateVersion: string | null,
 ) => {
-  if (!updateVersion) return "A new version of Screenwide is available.";
-  if (!currentVersion) return `Screenwide ${updateVersion} is available.`;
-  return `Screenwide ${updateVersion} is available. You have ${currentVersion}.`;
+  if (!updateVersion) return t("updates-available");
+  if (!currentVersion) {
+    return t("updates-available-version", { version: updateVersion });
+  }
+  return t("updates-available-versions", {
+    current: currentVersion,
+    version: updateVersion,
+  });
 };
 
 export function UpdatePrompt({
@@ -58,8 +63,10 @@ export function UpdatePrompt({
   status,
   updateVersion,
 }: UpdatePromptProps) {
+  const dateFormatter = useDateFormatter({ dateStyle: "medium" });
+  const percentFormatter = useNumberFormatter({ style: "percent" });
   const busy = status === "downloading";
-  const released = displayDate(releaseDate);
+  const released = parseDate(releaseDate);
   const percent =
     downloadProgress === null ? null : Math.round(downloadProgress * 100);
 
@@ -69,31 +76,37 @@ export function UpdatePrompt({
         <WindowHeader
           leadingSection={
             <img
-              alt="Screenwide"
+              alt={t("updates-logo")}
               className="brightness-0 dark:invert"
               draggable={false}
               src={logoUrl}
             />
           }
           onClose={busy ? undefined : onRemindLater}
-          title="Update Available"
+          title={t("updates-title")}
         />
       }
     >
       <div className="flex min-h-0 grow flex-col gap-section px-window-inset pb-window-inset">
         {busy ? (
           <ProgressPanel
-            label="Downloading and installing"
+            label={t("updates-downloading")}
             progress={percent}
-            progressLabel="Update download progress"
-            secondary={percent === null ? undefined : `${String(percent)}%`}
+            progressLabel={t("updates-download-progress")}
+            secondary={
+              percent === null
+                ? undefined
+                : percentFormatter.format(percent / 100)
+            }
           />
         ) : (
           <div className="flex flex-col gap-tight">
             <Text>{availabilityLine(currentVersion, updateVersion)}</Text>
             {released ? (
               <Text className="text-content-fg-secondary" variant="subheadline">
-                Released {released}
+                {t("updates-released", {
+                  date: dateFormatter.format(released),
+                })}
               </Text>
             ) : null}
           </div>
@@ -103,7 +116,7 @@ export function UpdatePrompt({
             edge and the scrollbar rides there rather than floating inside. */}
         <GroupBox
           className="flex min-h-0 grow flex-col [&>div]:min-h-0 [&>div]:grow [&>div>*]:px-0 [&>div>*]:py-0"
-          title="Release Notes"
+          title={t("updates-release-notes")}
         >
           <ScrollArea
             className="px-section"
@@ -113,15 +126,13 @@ export function UpdatePrompt({
             {releaseNotes ? (
               <ReleaseNotes html={releaseNotes} />
             ) : (
-              <Text>Improvements and fixes for Screenwide.</Text>
+              <Text>{t("updates-release-notes-fallback")}</Text>
             )}
           </ScrollArea>
         </GroupBox>
 
         {status === "error" && error ? (
-          <Alert color="error">
-            The update could not be installed. {error}
-          </Alert>
+          <Alert color="error">{t("updates-failed", { error })}</Alert>
         ) : null}
 
         <div className="flex shrink-0 items-center gap-control-inset">
@@ -131,13 +142,13 @@ export function UpdatePrompt({
             onPress={onSkipVersion}
             variant="ghost"
           >
-            Skip This Version
+            {t("updates-skip")}
           </Button>
           <Button isDisabled={busy} onPress={onRemindLater}>
-            Remind Me Later
+            {t("updates-remind-later")}
           </Button>
           <Button color="primary" isDisabled={busy} onPress={onInstall}>
-            {busy ? "Installing" : "Install Update"}
+            {busy ? t("updates-installing") : t("updates-install")}
           </Button>
         </div>
       </div>

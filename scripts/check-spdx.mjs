@@ -11,6 +11,7 @@ const LICENSE = "SPDX-License-Identifier: GPL-3.0-or-later";
 const CHECKED_EXTENSIONS = new Set([
   ".css",
   ".html",
+  ".ftl",
   ".js",
   ".md",
   ".mjs",

@@ -8,6 +8,7 @@ import { AnnotationInkGroup } from "../../../../components/shared/annotation-sty
 import { AnnotationShuffleSwitch } from "../../../../components/shared/annotation-style/annotation-shuffle-switch";
 import { SOFT_SPOTLIGHT_EDGE } from "../../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
 
 import type { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import type { AnnotationStyle } from "../../annotations/annotations";
@@ -46,7 +47,7 @@ export function AnnotationOptionRows({
   return (
     <>
       {kind.hasHead ? (
-        <ControlRow title="Head">
+        <ControlRow title={t("annotation-head")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationHeadGroup
@@ -62,7 +63,7 @@ export function AnnotationOptionRows({
       ) : null}
 
       {kind.hasAlign ? (
-        <ControlRow title="Alignment">
+        <ControlRow title={t("annotation-alignment")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationAlignGroup
@@ -78,7 +79,7 @@ export function AnnotationOptionRows({
       ) : null}
 
       {kind.hasInk ? (
-        <ControlRow title="Ink">
+        <ControlRow title={t("annotation-ink")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationInkGroup
@@ -94,13 +95,13 @@ export function AnnotationOptionRows({
       ) : null}
 
       {kind.hasHandDrawn ? (
-        <ControlRow title="Hand-drawn">
+        <ControlRow title={t("annotation-stroke-hand-drawn")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationShuffleSwitch
                 isDisabled={isLocked}
                 isSelected={style.handDrawn}
-                label="Hand-drawn"
+                label={t("annotation-stroke-hand-drawn")}
                 onChange={(next) => {
                   change({ annotationStyle: { handDrawn: next } });
                 }}
@@ -118,7 +119,7 @@ export function AnnotationOptionRows({
       ) : null}
 
       {kind.hasSoftness ? (
-        <ControlRow title="Soft edge">
+        <ControlRow title={t("editor-panels-soft-edge")}>
           {(controlProps) => (
             <Switch
               {...controlProps}
@@ -135,7 +136,7 @@ export function AnnotationOptionRows({
       ) : null}
 
       {kind.hasBlur ? (
-        <ControlRow title="Blur">
+        <ControlRow title={t("annotation-outside-blur")}>
           {(controlProps) => (
             <Switch
               {...controlProps}
@@ -150,7 +151,7 @@ export function AnnotationOptionRows({
       ) : null}
 
       {kind.hasShadow ? (
-        <ControlRow title="Drop shadow">
+        <ControlRow title={t("editor-panels-drop-shadow")}>
           {(controlProps) => (
             <Switch
               {...controlProps}

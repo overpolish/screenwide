@@ -106,7 +106,10 @@ pub async fn add_project_location(app: AppHandle) -> Result<Option<PathBuf>, Str
   let picker = app.clone();
   let chosen = tauri::async_runtime::spawn_blocking(move || {
     use tauri_plugin_dialog::DialogExt;
-    let mut dialog = picker.dialog().file().set_title("Add Location");
+    let mut dialog = picker
+      .dialog()
+      .file()
+      .set_title(crate::i18n::t!("project-browser-add-location-dialog"));
     if let Some(parent) = parent {
       dialog = dialog.set_parent(&parent);
     }

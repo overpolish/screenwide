@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { type ReactNode } from "react";
 
-import { sectionTitles, type SettingsSection } from "./settings-sections";
+import { sectionTitle, type SettingsSection } from "./settings-sections";
 
 const icons: [SettingsSection, ReactNode][] = [
   ["general", <Settings key="general" />],
@@ -27,8 +27,9 @@ const icons: [SettingsSection, ReactNode][] = [
 ];
 
 /** The sections the sidebar lists, in its order, each under its title. */
-export const settingsSidebarItems = icons.map(([id, icon]) => ({
-  icon,
-  id,
-  label: sectionTitles[id],
-}));
+export const settingsSidebarItems = () =>
+  icons.map(([id, icon]) => ({
+    icon,
+    id,
+    label: sectionTitle(id),
+  }));

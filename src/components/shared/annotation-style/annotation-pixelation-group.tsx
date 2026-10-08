@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { PillGroup } from "../../base/pill-group/pill-group";
 
 /** Which pixelation a pixelated redaction draws: secure blocks laid out by
@@ -16,12 +17,12 @@ export function AnnotationPixelationGroup({
 }) {
   return (
     <PillGroup
-      aria-label="Pixelation"
+      aria-label={t("annotation-pixelation")}
       display="label"
       isDisabled={isDisabled}
       items={[
-        { id: "pixelate", label: "Secure" },
-        { id: "pixelateClassic", label: "Classic" },
+        { id: "pixelate", label: t("annotation-pixelation-secure") },
+        { id: "pixelateClassic", label: t("annotation-pixelation-classic") },
       ]}
       onSelectionChange={(id) => {
         onChange(id as "pixelate" | "pixelateClassic");

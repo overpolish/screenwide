@@ -5,12 +5,10 @@ import { Lock } from "lucide-react";
 import { motion, useAnimate } from "motion/react";
 import { useEffect } from "react";
 
+import { t } from "../../i18n/i18n";
+
 import { type GlideAction } from "./detection/glide-detection";
-import {
-  describeRegion,
-  glideGridRows,
-  type GlideRegion,
-} from "./detection/glide-regions";
+import { glideGridRows, type GlideRegion } from "./detection/glide-regions";
 
 const percent = (value: number, of: number) =>
   `${((value / of) * 100).toFixed(4)}%`;
@@ -100,6 +98,34 @@ const rectCornerClasses = (rect: GlideRect) => {
     .join(" ");
 };
 
+const columnLabel = ({ colSpan, colStart, gridCols }: GlideRegion) => {
+  if (colSpan === gridCols) return null;
+  const left = colStart === 0;
+  if (gridCols === 2) {
+    return left ? t("glide-region-left-half") : t("glide-region-right-half");
+  }
+  if (colSpan === 2) {
+    return left
+      ? t("glide-region-left-two-thirds")
+      : t("glide-region-right-two-thirds");
+  }
+  if (colStart === 1) return t("glide-region-middle-third");
+  return left ? t("glide-region-left-third") : t("glide-region-right-third");
+};
+
+/** The region `describeRegion` names for debugging, in the app's language. */
+const regionLabel = (region: GlideRegion) => {
+  const columns = columnLabel(region);
+  if (region.rowSpan === glideGridRows) {
+    return columns ?? t("glide-region-full-screen");
+  }
+  const rows =
+    region.rowStart === 0
+      ? t("glide-region-top-half")
+      : t("glide-region-bottom-half");
+  return columns === null ? rows : t("glide-region-part", { columns, rows });
+};
+
 /** Names what the preview is showing, for the aria label. */
 const describeDestination = (
   region: GlideRegion | null,
@@ -107,10 +133,10 @@ const describeDestination = (
 ) => {
   // An armed minimize wins: the region underneath is what an up step returns
   // to, not where the lift would place the window.
-  if (pending === "minimize") return "Minimize";
+  if (pending === "minimize") return t("glide-minimize");
   return region
-    ? `Glide destination: ${describeRegion(region)}`
-    : "No Glide destination";
+    ? t("glide-destination", { region: regionLabel(region) })
+    : t("glide-no-destination");
 };
 
 export function GlidePreview({
@@ -173,7 +199,7 @@ export function GlidePreview({
   if (locked) {
     return (
       <div
-        aria-label="This window cannot be moved"
+        aria-label={t("glide-locked")}
         className="window-surface rounded-panel relative h-full w-full overflow-hidden"
         role="img"
       >

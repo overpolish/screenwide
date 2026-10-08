@@ -5,6 +5,7 @@ import { RefObject } from "react";
 
 import { CircularProgress } from "../../../../components/base/circular-progress/circular-progress";
 import { Text } from "../../../../components/base/text/text";
+import { t } from "../../../../i18n/i18n";
 import {
   RecordingOutputSettings,
   defaultScreenshotOutput,
@@ -133,10 +134,10 @@ export function RecordingPreviewStage({
         {!layout ? (
           <div className="flex grow items-center justify-center gap-3 text-xs text-muted">
             <CircularProgress
-              aria-label="Preparing recording preview"
+              aria-label={t("editor-recording-preparing-recording")}
               isIndeterminate
             />
-            Preparing recording preview
+            {t("editor-recording-preparing-recording")}
           </div>
         ) : workspace ? (
           <div className="flex min-h-0 min-w-0 grow flex-col">

@@ -10,6 +10,19 @@
 #import "../../../osc/gpu/macos/osc_text_texture_macos.h"
 #import "screenshot_region_osc_macos_types.h"
 
+// Messages from `locales/`, read through `src-tauri/src/i18n.rs`.
+extern char *screenwide_i18n_text(const char *identifier);
+extern void screenwide_i18n_free(char *text);
+
+/// The message `identifier` in the app's language. The id is a literal so
+/// `pnpm i18n:check` can find every one in use.
+static inline NSString *screenwide_osc_localized(NSString *identifier) {
+  char *text = screenwide_i18n_text(identifier.UTF8String);
+  NSString *result = [NSString stringWithUTF8String:text] ?: identifier;
+  screenwide_i18n_free(text);
+  return result;
+}
+
 @interface ScreenwideRegionOSC : NSObject
 @property(nonatomic, weak) NSView *host;
 @property(nonatomic, strong) CAMetalLayer *layer;

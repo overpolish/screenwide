@@ -5,11 +5,13 @@ import { RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { VisuallyHidden } from "react-aria";
 
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { useInteractionFocus } from "../../../lib/use-interaction-focus";
 import { Button } from "../../base/button/button";
 import { IconButton } from "../../base/button/icon-button";
 import { CircularProgress } from "../../base/circular-progress/circular-progress";
+import { keyLabel } from "../../base/keyboard/key-label";
 import { Keyboard, Shortcut } from "../../base/keyboard/keyboard";
 import { Text } from "../../base/text/text";
 
@@ -59,10 +61,12 @@ export function HotkeyField({
   const isMac =
     typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
   const instructions = single
-    ? "Press a key or hold and release an auxiliary mouse button. Escape cancels; Tab leaves."
+    ? t("hotkey-field-instructions-single")
     : local
-      ? "Press a key or use a modifier and a key. Escape cancels."
-      : `Use a modifier and a key. Escape cancels; Tab leaves.${isClearable ? " Delete clears." : ""}`;
+      ? t("hotkey-field-instructions-local")
+      : isClearable
+        ? t("hotkey-field-instructions-clearable")
+        : t("hotkey-field-instructions");
   // Reset during render so re-enabling cannot resume an old capture session.
   if (isDisabled && listening) setListening(false);
   const keys = hotkeyKeys(value, isMac);
@@ -70,13 +74,13 @@ export function HotkeyField({
     setListening(false);
     setReady(false);
     onChange(next);
-    setFeedback("Shortcut updated.");
+    setFeedback(t("hotkey-field-updated"));
   };
   const mouseProgress = useMouseControlCapture(
     capturing && ready && single,
     commit,
     () => {
-      setCaptureError("Hold the button for half a second, then release.");
+      setCaptureError(t("hotkey-field-hold-error"));
     },
   );
 
@@ -91,13 +95,15 @@ export function HotkeyField({
       .catch((reason: unknown) => {
         if (!disposed) {
           setListening(false);
-          setCaptureError(`Could not start capture: ${String(reason)}`);
+          setCaptureError(
+            t("hotkey-field-capture-failed", { error: String(reason) }),
+          );
         }
       });
     const cancel = () => {
       setListening(false);
       setReady(false);
-      setFeedback("Shortcut capture cancelled.");
+      setFeedback(t("hotkey-field-cancelled"));
     };
     window.addEventListener("blur", cancel);
     return () => {
@@ -143,7 +149,7 @@ export function HotkeyField({
         if (event.key === "Escape") {
           setListening(false);
           setReady(false);
-          setFeedback("Shortcut capture cancelled.");
+          setFeedback(t("hotkey-field-cancelled"));
           return;
         }
         if (!ready) return;
@@ -156,7 +162,7 @@ export function HotkeyField({
           setListening(false);
           setReady(false);
           onChange(null);
-          setFeedback("Shortcut cleared.");
+          setFeedback(t("hotkey-field-cleared"));
           return;
         }
         const next = hotkeyFromEvent(event.nativeEvent, captureMode);
@@ -168,7 +174,10 @@ export function HotkeyField({
         <Button
           aria-describedby={describedBy}
           aria-description={instructions}
-          aria-label={`${label}: ${keys.join(" + ") || "Not set"}`}
+          aria-label={t("hotkey-field-value", {
+            keys: keys.map(keyLabel).join(" + ") || t("hotkey-field-not-set"),
+            label,
+          })}
           aria-pressed={capturing}
           className={interactionFocus.className}
           isDisabled={isDisabled}
@@ -176,7 +185,7 @@ export function HotkeyField({
             interactionFocus.onBlur();
             setListening(false);
             setReady(false);
-            if (capturing) setFeedback("Shortcut capture cancelled.");
+            if (capturing) setFeedback(t("hotkey-field-cancelled"));
           }}
           onPress={(event) => {
             interactionFocus.onPress(event);
@@ -184,28 +193,26 @@ export function HotkeyField({
             setReady(false);
             setCaptureError(null);
             setListening(!capturing);
-            setFeedback(
-              capturing ? "Shortcut capture cancelled." : instructions,
-            );
+            setFeedback(capturing ? t("hotkey-field-cancelled") : instructions);
           }}
           ref={buttonRef}
         >
           {capturing ? (
             !ready ? (
-              "Preparing"
+              t("hotkey-field-preparing")
             ) : mouseProgress !== null ? (
               <>
                 <CircularProgress
-                  aria-label="Testing button hold"
+                  aria-label={t("hotkey-field-testing-hold")}
                   size="small"
                   value={mouseProgress}
                 />
-                Keep holding
+                {t("hotkey-field-keep-holding")}
               </>
             ) : single ? (
-              "Press key or hold button"
+              t("hotkey-field-press-key-or-button")
             ) : (
-              "Press shortcut"
+              t("hotkey-field-press-shortcut")
             )
           ) : keys.length ? (
             <Shortcut>
@@ -216,18 +223,18 @@ export function HotkeyField({
               ))}
             </Shortcut>
           ) : (
-            "Set shortcut"
+            t("hotkey-field-set")
           )}
         </Button>
         {isClearable ? (
           <IconButton
-            aria-label={`Clear ${label}`}
+            aria-label={t("hotkey-field-clear", { label })}
             isDisabled={isDisabled || value === null}
             onPress={() => {
               setListening(false);
               setReady(false);
               onChange(null);
-              setFeedback("Shortcut cleared.");
+              setFeedback(t("hotkey-field-cleared"));
               buttonRef.current?.focus();
             }}
           >
@@ -237,13 +244,13 @@ export function HotkeyField({
         {defaultValue !== undefined &&
         !hotkeysEqual(value, defaultValue, isMac) ? (
           <IconButton
-            aria-label={`Reset ${label}`}
+            aria-label={t("hotkey-field-reset", { label })}
             isDisabled={isDisabled}
             onPress={() => {
               setListening(false);
               setReady(false);
               onChange(defaultValue);
-              setFeedback("Shortcut reset.");
+              setFeedback(t("hotkey-field-reset-done"));
               buttonRef.current?.focus();
             }}
           >

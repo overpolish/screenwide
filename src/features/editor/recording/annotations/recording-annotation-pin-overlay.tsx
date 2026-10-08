@@ -6,6 +6,7 @@ import { MouseEvent, PointerEvent } from "react";
 import { Focusable } from "react-aria-components";
 
 import { NativeTooltipTrigger } from "../../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { t } from "../../../../i18n/i18n";
 import {
   RecordingTimelineEdit,
   recordingTimelineSourceToOutput,
@@ -19,12 +20,6 @@ import {
   RecordingPinStatus,
   RecordingPinStretch,
 } from "./use-recording-pin-status";
-
-const KEYFRAME_NAMES: Record<PinKeyframeKind, string> = {
-  correction: "Correction",
-  outOfView: "Out of view",
-  pinned: "Pinned frame",
-};
 
 /*
  * What a pinned clip shows of its pin inside its own block on the lane, in
@@ -99,22 +94,22 @@ function RecordingAnnotationPinStretches({
   const kinds = [
     {
       className: "bg-content/60",
-      label: "Off the frame",
+      label: t("editor-pin-off-frame"),
       ranges: status?.hidden ?? [],
     },
     {
       className: "bg-content/60",
-      label: "Under a cover",
+      label: t("editor-pin-under-cover"),
       ranges: status?.under ?? [],
     },
     {
       className: "bg-content/40",
-      label: "Out of view",
+      label: t("editor-pin-out-of-view-stretch"),
       ranges: outOfViewStretches(pin, clipEndMs),
     },
     {
       className: "bg-warning/35",
-      label: "Lost here, check",
+      label: t("editor-pin-lost"),
       ranges: status?.weak ?? [],
     },
   ];
@@ -186,7 +181,7 @@ function RecordingAnnotationPinKeyframes({
       // The hit area is wider than the diamond it holds, so a keyframe can be
       // taken hold of without aiming at eight pixels.
       <button
-        aria-label={`${KEYFRAME_NAMES[kind]} of ${label}`}
+        aria-label={t("editor-pin-keyframe", { clip: label, kind })}
         className="group absolute inset-y-0 w-4 -translate-x-1/2 focus-visible:outline-none"
         key={keyframe.ms}
         onClick={(event) => {
@@ -283,7 +278,7 @@ export function RecordingAnnotationPinBadge({
       />
       {progress !== null ? (
         <div
-          aria-label={`Tracking ${label}`}
+          aria-label={t("editor-pin-tracking", { clip: label })}
           aria-valuemax={100}
           aria-valuemin={0}
           aria-valuenow={Math.round(progress * 100)}

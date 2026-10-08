@@ -5,7 +5,7 @@ import { Check, Trash2 } from "lucide-react";
 
 import { Button } from "../../components/base/button/button";
 import { ConfirmActionButton } from "../../components/shared/confirm-action-button/confirm-action-button";
-import { trashName } from "../../lib/platform";
+import { platformArg, t } from "../../i18n/i18n";
 import { boundsAnchor, PopupMenuAnchor } from "../popup-panel/use-popup-menu";
 
 import type { ProjectActions } from "./use-project-menu";
@@ -30,14 +30,14 @@ export function SelectionActions({
             actions.onRestore(files);
           }}
         >
-          Restore
+          {t("project-browser-restore")}
         </Button>
         <Button
           onPress={() => {
             actions.onTrash(files);
           }}
         >
-          Move to {trashName()}
+          {t("project-browser-move-to-trash", { platform: platformArg() })}
         </Button>
       </>
     );
@@ -49,7 +49,7 @@ export function SelectionActions({
             onMoveMenu(boundsAnchor(event.target.getBoundingClientRect()));
           }}
         >
-          Move To
+          {t("project-browser-move-to")}
         </Button>
       ) : null}
       <Button
@@ -57,7 +57,7 @@ export function SelectionActions({
           actions.onDelete(files);
         }}
       >
-        Delete
+        {t("project-browser-delete")}
       </Button>
     </>
   );
@@ -76,9 +76,9 @@ export function ListActions({
   return (
     <ConfirmActionButton
       armedIcon={<Check />}
-      armedLabel="Confirm emptying Recently Deleted"
+      armedLabel={t("project-browser-empty-recently-deleted-confirm")}
       idleIcon={<Trash2 />}
-      idleLabel="Empty"
+      idleLabel={t("project-browser-empty-recently-deleted")}
       isDisabled={isEmpty}
       onConfirm={actions.onEmpty}
       variant="text"

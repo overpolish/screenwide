@@ -3,6 +3,7 @@
 
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { WindowShell } from "../../../components/shared/window-shell/window-shell";
+import { t } from "../../../i18n/i18n";
 import { cameraOutputChoice } from "../export/camera-output";
 import { useExportOptionsBridge } from "../export/options-window/use-export-options-bridge";
 import {
@@ -280,7 +281,7 @@ export function EditorPanel({
               // no capture here means its snapshot has not arrived yet.
               <div className="flex min-h-0 grow items-center justify-center">
                 <CircularProgress
-                  aria-label="Opening the editor"
+                  aria-label={t("editor-opening")}
                   isIndeterminate
                 />
               </div>

@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { withoutIsolates } from "../../../i18n/testing";
+
 import { renumberedCounterLists } from "./annotation-counters";
 import { validAnnotations } from "./annotation-documents";
 import { annotationLaneLabel } from "./annotation-kind-lookup";
@@ -261,6 +263,8 @@ describe("annotationLaneLabel", () => {
     expect(annotationLaneLabel(box("Save here\nthen quit"), 2)).toBe(
       "Save here",
     );
-    expect(annotationLaneLabel(box("\nsecond"), 2)).toBe("Text 3");
+    expect(withoutIsolates(annotationLaneLabel(box("\nsecond"), 2))).toBe(
+      "Text 3",
+    );
   });
 });

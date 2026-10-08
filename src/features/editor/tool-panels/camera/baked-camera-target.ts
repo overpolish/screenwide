@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../../i18n/i18n";
 import { defaultCameraOverlay } from "../../export/recording-export-settings";
 import { withCameraOverlaySize } from "../../preview/camera-overlay-placement";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
@@ -69,7 +70,7 @@ export const bakedCameraSelectionTarget = ({
       inset: 0,
       insetMaximum: 0,
       kind: "camera",
-      label: "Camera",
+      label: t("editor-panels-camera"),
       radius: cameraOverlay.radiusPercent,
       sourceHeight: camera.height,
       sourceWidth: camera.width,

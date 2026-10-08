@@ -4,6 +4,7 @@
 import { Switch } from "../../../../components/base/switch/switch";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { t } from "../../../../i18n/i18n";
 import { CursorEffectSettings } from "../../types";
 
 type CursorToggleKey = {
@@ -43,11 +44,11 @@ export function CursorEffectControls({
   );
   return (
     <div className="flex flex-col gap-section">
-      <ControlRow title="Size">
+      <ControlRow title={t("editor-panels-size")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <SliderNumberField
-              aria-label="Cursor size"
+              aria-label={t("editor-panels-cursor-size")}
               className="w-48"
               isDisabled={isDisabled}
               maxValue={500}
@@ -62,10 +63,10 @@ export function CursorEffectControls({
           </div>
         )}
       </ControlRow>
-      {toggle("clipAtVideoEdge", "Keep cursor inside the recording")}
-      {toggle("smoothMovement", "Smooth movement")}
-      {toggle("motionBlur", "Motion blur")}
-      {toggle("clickAnimation", "Click animation")}
+      {toggle("clipAtVideoEdge", t("editor-panels-cursor-clip"))}
+      {toggle("smoothMovement", t("editor-panels-cursor-smooth"))}
+      {toggle("motionBlur", t("editor-panels-cursor-motion-blur"))}
+      {toggle("clickAnimation", t("editor-panels-cursor-click-animation"))}
     </div>
   );
 }

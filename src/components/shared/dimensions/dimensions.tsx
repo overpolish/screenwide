@@ -4,6 +4,7 @@
 import { Link, RotateCcw, Unlink } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { IconButton, IconToggleButton } from "../../base/button/icon-button";
 import { NumberField } from "../../base/input-fields/number-field";
@@ -44,7 +45,7 @@ export const Dimensions = ({
   defaultWidth = 1920,
   height,
   initialLinked = false,
-  label = "Dimensions",
+  label = t("controls-dimensions"),
   layout = "inline",
   onRatioChange,
   onReset,
@@ -227,19 +228,26 @@ export const Dimensions = ({
   const dimensionFields = (
     <div className="flex flex-row items-center gap-control">
       {onReset ? (
-        <IconButton aria-label="Reset dimensions" onPress={onReset}>
+        <IconButton
+          aria-label={t("controls-dimensions-reset")}
+          onPress={onReset}
+        >
           <RotateCcw />
         </IconButton>
       ) : null}
       <NumberField
         {...numberFieldStyles}
-        aria-label="Aspect Ratio Width"
+        aria-label={t("controls-dimensions-width")}
         onChange={onChangeWidth}
         value={widthValue}
       />
 
       <IconToggleButton
-        aria-label={linked ? "Unlink dimensions" : "Link dimensions"}
+        aria-label={
+          linked
+            ? t("controls-dimensions-unlink")
+            : t("controls-dimensions-link")
+        }
         isSelected={linked}
         off={<Unlink />}
         onChange={(isSelected) => {
@@ -251,7 +259,7 @@ export const Dimensions = ({
 
       <NumberField
         {...numberFieldStyles}
-        aria-label="Aspect Ratio Height"
+        aria-label={t("controls-dimensions-height")}
         onChange={onChangeHeight}
         value={heightValue}
       />

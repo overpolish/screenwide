@@ -6,17 +6,18 @@ import { ReactNode } from "react";
 import { Badge } from "../../components/base/badge/badge";
 import { Checkbox } from "../../components/base/checkbox/checkbox";
 import { PillGroup } from "../../components/base/pill-group/pill-group";
+import { t } from "../../i18n/i18n";
 import { formatBytes } from "../editor/duration";
 
 import type { KindFilter } from "./project-list";
 import type { ProjectKind, ProjectSummary } from "./types";
 
-const kindItems: { id: KindFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "screen", label: "Screen" },
-  { id: "camera", label: "Camera" },
-  { id: "audio", label: "Audio" },
-  { id: "screenshot", label: "Screenshots" },
+const kindItems = (): { id: KindFilter; label: string }[] => [
+  { id: "all", label: t("project-browser-kind-all") },
+  { id: "screen", label: t("project-browser-kind-screen") },
+  { id: "camera", label: t("project-browser-kind-camera") },
+  { id: "audio", label: t("project-browser-kind-audio") },
+  { id: "screenshot", label: t("project-browser-kind-screenshot") },
 ];
 
 export type ProjectListToolbarProps = {
@@ -64,13 +65,18 @@ export function ProjectListToolbar({
   );
   const allSelected =
     selectableCount > 0 && selected.length === selectableCount;
+  const kinds = kindItems();
 
   return (
     // Wraps in a narrow window rather than running off it; the counts keep
     // to the trailing edge on whichever line they land.
     <div className="gap-section pr-window-inset flex min-h-control-height flex-wrap items-center">
       <Checkbox
-        aria-label={allSelected ? "Deselect all" : "Select all"}
+        aria-label={
+          allSelected
+            ? t("project-browser-deselect-all")
+            : t("project-browser-select-all")
+        }
         isDisabled={selectableCount === 0}
         isIndeterminate={selected.length > 0 && !allSelected}
         isSelected={allSelected}
@@ -85,12 +91,12 @@ export function ProjectListToolbar({
         <div className="gap-control flex items-center">{selectionActions}</div>
       ) : (
         <PillGroup
-          aria-label="Kind"
-          disabledIds={kindItems
+          aria-label={t("project-browser-kind")}
+          disabledIds={kinds
             .filter(({ id }) => id !== "all" && !kindsPresent.has(id))
             .map(({ id }) => id)}
           display="label"
-          items={kindItems}
+          items={kinds}
           onSelectionChange={(id) => {
             onKindChange(id as KindFilter);
           }}
@@ -101,8 +107,8 @@ export function ProjectListToolbar({
         <div className="gap-control flex items-center">
           <Badge>
             {selected.length > 0
-              ? `${String(selected.length)} selected`
-              : `${String(listed.length)} ${listed.length === 1 ? "project" : "projects"}`}
+              ? t("project-browser-selected-count", { count: selected.length })
+              : t("project-browser-project-count", { count: listed.length })}
           </Badge>
           {bytes > 0 ? <Badge>{formatBytes(bytes)}</Badge> : null}
         </div>

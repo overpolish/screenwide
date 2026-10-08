@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { t } from "../../../i18n/i18n";
 import { PREVIEW_FRAME_MS, formatDuration } from "../duration";
 
 import { RecordingTimelineEdit } from "./editing/recording-timeline-edit";
@@ -131,7 +132,7 @@ export function TimelineRuler({
 
   return (
     <div
-      aria-label="Recording position"
+      aria-label={t("editor-timeline-position")}
       aria-valuemax={100}
       aria-valuemin={0}
       aria-valuenow={0}

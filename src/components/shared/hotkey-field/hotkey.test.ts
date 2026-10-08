@@ -59,7 +59,7 @@ describe("hotkey capture", () => {
     expect(hotkeyKeys("MetaLeft", false)).toEqual(["Win"]);
     expect(hotkeyKeys("AltLeft", true)).toEqual(["Option"]);
     expect(hotkeyKeys("ShiftRight", true)).toEqual(["Shift"]);
-    expect(hotkeyKeys("MouseBack", false)).toEqual(["Mouse Back"]);
+    expect(hotkeyKeys("MouseBack", false)).toEqual(["MouseBack"]);
   });
   it("requires a modifier and uses physical key codes", () => {
     expect(hotkeyFromEvent(key)).toBeNull();

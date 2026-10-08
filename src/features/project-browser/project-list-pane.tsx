@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { Text } from "../../components/base/text/text";
+import { t } from "../../i18n/i18n";
 import { isWindows } from "../../lib/platform";
 import { ownsTextEditingKeys } from "../editor/shortcuts/keyboard-target";
 
@@ -141,9 +142,11 @@ export function ProjectListPane({
       />
       {listed.length === 0 ? (
         <div className="gap-control pr-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
-          <Text variant="headline">No results</Text>
+          <Text variant="headline">
+            {t("project-browser-no-results-title")}
+          </Text>
           <Text variant="subheadline">
-            No project names contain “{query.trim()}”.
+            {t("project-browser-no-results", { query: query.trim() })}
           </Text>
         </div>
       ) : (
@@ -151,7 +154,7 @@ export function ProjectListPane({
           <div className="gap-layout pr-window-inset pb-window-inset flex flex-col">
             {groups.map((group) => (
               <section
-                aria-label={group.label ?? "Search results"}
+                aria-label={group.label ?? t("project-browser-search-results")}
                 className="gap-control flex flex-col"
                 key={group.label ?? "results"}
               >

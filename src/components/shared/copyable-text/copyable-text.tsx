@@ -4,6 +4,7 @@
 import { Copy } from "lucide-react";
 import { ComponentProps, useId } from "react";
 
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { IconButton } from "../../base/button/icon-button";
 import { ScrollArea } from "../../base/scroll-area/scroll-area";
@@ -11,6 +12,8 @@ import { Text } from "../../base/text/text";
 import { CheckOnClick } from "../check-on-click/check-on-click";
 
 type CopyableTextProps = Omit<ComponentProps<"section">, "children"> & {
+  /** Names the copy button, such as "Copy detected content". */
+  copyLabel: string;
   label: string;
   onCopy: () => unknown;
   value: string;
@@ -19,7 +22,8 @@ type CopyableTextProps = Omit<ComponentProps<"section">, "children"> & {
 
 export function CopyableText({
   className,
-  emptyText = "No Content",
+  copyLabel,
+  emptyText = t("controls-no-content"),
   label,
   onCopy,
   value,
@@ -41,10 +45,7 @@ export function CopyableText({
           {label}
         </Text>
         <CheckOnClick onPress={onCopy}>
-          <IconButton
-            aria-label={`Copy ${label.toLocaleLowerCase()}`}
-            isDisabled={!value}
-          >
+          <IconButton aria-label={copyLabel} isDisabled={!value}>
             <Copy aria-hidden />
           </IconButton>
         </CheckOnClick>

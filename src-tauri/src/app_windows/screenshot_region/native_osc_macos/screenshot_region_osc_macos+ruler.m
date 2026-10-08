@@ -692,7 +692,7 @@ static void render(ScreenwideRegionOSC *surface) {
   NSString *colour = hex_text(surface);
   control.accessibilityElement = YES;
   control.accessibilityRole = NSAccessibilityStaticTextRole;
-  control.accessibilityLabel = @"Ruler readout";
+  control.accessibilityLabel = screenwide_osc_localized(@"overlay-ruler-readout");
   control.accessibilityValue = dimensions
       ? [NSString stringWithFormat:@"%@, %@", dimensions, colour]
       : colour;
@@ -823,9 +823,9 @@ static void render(ScreenwideRegionOSC *surface) {
 }
 
 static NSString *tolerance_text(uint8_t mode) {
-  if (mode == 1) return @"Clear edges";
-  if (mode == 3) return @"Subtle edges";
-  return @"Balanced";
+  if (mode == 1) return screenwide_osc_localized(@"overlay-ruler-clear-edges");
+  if (mode == 3) return screenwide_osc_localized(@"overlay-ruler-subtle-edges");
+  return screenwide_osc_localized(@"overlay-ruler-balanced");
 }
 
 static void schedule_settle_frame(ScreenwideRegionOSC *root) {
@@ -1108,7 +1108,7 @@ void screenwide_region_osc_ruler_attach(ScreenwideRegionOSC *surface) {
   surface.rulerSurface = screenwide_osc_material_surface(surface.device);
   surface.rulerSurface.accessibilityElement = YES;
   surface.rulerSurface.accessibilityRole = NSAccessibilityStaticTextRole;
-  surface.rulerSurface.accessibilityLabel = @"Ruler readout";
+  surface.rulerSurface.accessibilityLabel = screenwide_osc_localized(@"overlay-ruler-readout");
   [surface.host addSubview:surface.rulerSurface
                 positioned:NSWindowAbove relativeTo:nil];
 }
@@ -1283,7 +1283,7 @@ static void render_measurement_label(ScreenwideRegionOSC *surface,
   NSString *text = measurement_text(global);
   control.accessibilityElement = YES;
   control.accessibilityRole = NSAccessibilityStaticTextRole;
-  control.accessibilityLabel = @"Measurement";
+  control.accessibilityLabel = screenwide_osc_localized(@"overlay-ruler-measurement");
   control.accessibilityValue = [text stringByTrimmingCharactersInSet:
       NSCharacterSet.whitespaceCharacterSet];
   ScreenwideOscControlMetrics value = metrics();
@@ -1406,7 +1406,7 @@ static void render_measurement_labels(ScreenwideRegionOSC *surface) {
         screenwide_osc_material_surface(surface.device);
     control.accessibilityElement = YES;
     control.accessibilityRole = NSAccessibilityStaticTextRole;
-    control.accessibilityLabel = @"Measurement";
+    control.accessibilityLabel = screenwide_osc_localized(@"overlay-ruler-measurement");
     [surface.host addSubview:control
                   positioned:NSWindowBelow relativeTo:surface.rulerSurface];
     [surface.rulerMeasurementLabelSurfaces addObject:control];
@@ -1460,15 +1460,15 @@ static void render_probe_label(ScreenwideRegionOSC *surface,
   renderState.probe = probe;
   CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
   update_label(surface, scale);
-  if (!surface.rulerLabel)
-    return;
+  if (!surface.rulerLabel) return;
   NSString *text = labelKind == 4 ? radius_text(renderState.radius)
                                   : stamped_probe_text(probe);
   control.accessibilityElement = YES;
   control.accessibilityRole = NSAccessibilityStaticTextRole;
-  control.accessibilityLabel = labelKind == 4
-      ? @"Corner radius"
-      : labelKind == 3 ? @"Guide spacing" : @"Distance";
+  control.accessibilityLabel =
+      labelKind == 4   ? screenwide_osc_localized(@"overlay-ruler-corner-radius")
+      : labelKind == 3 ? screenwide_osc_localized(@"overlay-ruler-guide-spacing")
+                       : screenwide_osc_localized(@"overlay-ruler-distance");
   control.accessibilityValue = text;
   ScreenwideOscControlMetrics value = metrics();
   ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
@@ -1597,7 +1597,7 @@ static void render_probe_labels(ScreenwideRegionOSC *surface) {
         screenwide_osc_material_surface(surface.device);
     control.accessibilityElement = YES;
     control.accessibilityRole = NSAccessibilityStaticTextRole;
-    control.accessibilityLabel = @"Distance";
+    control.accessibilityLabel = screenwide_osc_localized(@"overlay-ruler-distance");
     [surface.host addSubview:control
                   positioned:NSWindowBelow relativeTo:surface.rulerSurface];
     [surface.rulerProbeLabelSurfaces addObject:control];
@@ -1648,7 +1648,7 @@ static void render_guide_gap_labels(ScreenwideRegionOSC *surface) {
         screenwide_osc_material_surface(surface.device);
     control.accessibilityElement = YES;
     control.accessibilityRole = NSAccessibilityStaticTextRole;
-    control.accessibilityLabel = @"Guide spacing";
+    control.accessibilityLabel = screenwide_osc_localized(@"overlay-ruler-guide-spacing");
     [surface.host addSubview:control
                   positioned:NSWindowBelow relativeTo:surface.rulerSurface];
     [surface.rulerGuideGapLabelSurfaces addObject:control];
@@ -1718,7 +1718,7 @@ static void render_radius_labels(ScreenwideRegionOSC *surface) {
         screenwide_osc_material_surface(surface.device);
     control.accessibilityElement = YES;
     control.accessibilityRole = NSAccessibilityStaticTextRole;
-    control.accessibilityLabel = @"Corner radius";
+    control.accessibilityLabel = screenwide_osc_localized(@"overlay-ruler-corner-radius");
     [surface.host addSubview:control
                   positioned:NSWindowBelow relativeTo:surface.rulerSurface];
     [surface.rulerRadiusLabelSurfaces addObject:control];

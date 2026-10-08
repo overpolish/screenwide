@@ -12,11 +12,11 @@ pub(crate) fn hex_text(color: u32) -> String {
   )
 }
 
-pub(crate) fn tolerance_text(mode: u8) -> &'static str {
+pub(crate) fn tolerance_text(mode: u8) -> String {
   match mode {
-    1 => "Clear edges",
-    3 => "Subtle edges",
-    _ => "Balanced",
+    1 => crate::i18n::t!("overlay-ruler-clear-edges"),
+    3 => crate::i18n::t!("overlay-ruler-subtle-edges"),
+    _ => crate::i18n::t!("overlay-ruler-balanced"),
   }
 }
 

@@ -174,6 +174,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     shortcuts::end_shortcut_capture,
     shortcuts::set_shortcut_binding,
     system_accent::get_system_accent,
+    i18n::get_app_locale,
     app_windows::color_panel::close_color_panel,
     app_windows::color_panel::show_color_panel,
     app_windows::source_selector::collapse_recording_source_selector,

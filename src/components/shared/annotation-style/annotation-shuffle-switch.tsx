@@ -3,6 +3,7 @@
 
 import { Dices } from "lucide-react";
 
+import { t } from "../../../i18n/i18n";
 import { IconButton } from "../../base/button/icon-button";
 import { Switch } from "../../base/switch/switch";
 import { NativeTooltipTrigger } from "../native-tooltip/native-tooltip-trigger";
@@ -29,9 +30,9 @@ export function AnnotationShuffleSwitch({
   return (
     <div className="flex items-center gap-control">
       {isSelected && onRandomise ? (
-        <NativeTooltipTrigger tooltip={{ label: "Randomise" }}>
+        <NativeTooltipTrigger tooltip={{ label: t("annotation-randomise") }}>
           <IconButton
-            aria-label="Randomise"
+            aria-label={t("annotation-randomise")}
             isDisabled={isDisabled}
             onPress={onRandomise}
           >

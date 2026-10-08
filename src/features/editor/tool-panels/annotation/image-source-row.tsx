@@ -3,6 +3,7 @@
 
 import { Button } from "../../../../components/base/button/button";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
 import { browseAnnotationImage } from "../../images/image-api";
 
 import type { ToolPanelPatch } from "../tool-panel-patch";
@@ -24,11 +25,18 @@ export function ImageSourceRow({
   isPlaced: boolean;
 }) {
   return (
-    <ControlRow description="Paste or drag images in" title="Image">
+    <ControlRow
+      description={t("editor-panels-image-description")}
+      title={t("annotation-tool-image")}
+    >
       {(controlProps) => (
         <div {...controlProps} className="flex gap-control" role="group">
           <Button
-            aria-label={isPlaced ? "Replace the image" : "Choose an image"}
+            aria-label={
+              isPlaced
+                ? t("editor-panels-replace-image")
+                : t("editor-panels-choose-image")
+            }
             isDisabled={isLocked}
             onPress={() => {
               browseAnnotationImage()
@@ -40,17 +48,17 @@ export function ImageSourceRow({
                 });
             }}
           >
-            {isPlaced ? "Replace" : "Choose"}
+            {isPlaced ? t("editor-panels-replace") : t("editor-panels-choose")}
           </Button>
           {isPlaced ? (
             <Button
-              aria-label="Mirror the image"
+              aria-label={t("editor-panels-mirror-image")}
               isDisabled={isLocked}
               onPress={() => {
                 change({ reverseAnnotation: true });
               }}
             >
-              Flip
+              {t("editor-panels-flip")}
             </Button>
           ) : null}
         </div>

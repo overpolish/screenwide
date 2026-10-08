@@ -6,6 +6,7 @@ import { Check, Trash2 } from "lucide-react";
 import { Button } from "../../../components/base/button/button";
 import { ProgressBar } from "../../../components/base/progress-bar/progress-bar";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
+import { t } from "../../../i18n/i18n";
 
 import type { TranscriptionControls } from "./use-transcription";
 import type { TranscriptionModel } from "../../transcription/types";
@@ -31,14 +32,16 @@ export function TranscriptionModelActions({
           controls.download(model.id);
         }}
       >
-        Download
+        {t("settings-transcription-download")}
       </Button>
     );
   if (model.status === "downloading")
     return (
       <div className="gap-control flex items-center">
         <ProgressBar
-          aria-label={`Downloading the ${model.name} model`}
+          aria-label={t("settings-transcription-downloading", {
+            model: model.name,
+          })}
           className="w-24"
           value={(model.progress ?? 0) * 100}
         />
@@ -47,7 +50,7 @@ export function TranscriptionModelActions({
             controls.cancel(model.id);
           }}
         >
-          Cancel
+          {t("settings-transcription-cancel")}
         </Button>
       </div>
     );
@@ -55,9 +58,11 @@ export function TranscriptionModelActions({
   return (
     <ConfirmActionButton
       armedIcon={<Check />}
-      armedLabel={`Confirm removing the ${model.name} model`}
+      armedLabel={t("settings-transcription-confirm-remove", {
+        model: model.name,
+      })}
       idleIcon={<Trash2 />}
-      idleLabel={`Remove the ${model.name} model`}
+      idleLabel={t("settings-transcription-remove", { model: model.name })}
       onConfirm={() => {
         controls.remove(model.id);
       }}

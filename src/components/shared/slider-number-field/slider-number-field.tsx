@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { NumberField } from "../../base/input-fields/number-field";
 import { Slider } from "../../base/slider/slider";
@@ -73,7 +74,7 @@ export function SliderNumberField({
       role="group"
     >
       <Slider
-        aria-label={`${label} slider`}
+        aria-label={t("controls-slider", { label })}
         className="min-w-0 flex-1"
         formatOptions={formatOptions}
         isDisabled={isDisabled}
@@ -84,7 +85,7 @@ export function SliderNumberField({
         value={Math.min(sliderMaxValue, Math.max(sliderMinValue, value))}
       />
       <NumberField
-        aria-label={`${label} value`}
+        aria-label={t("controls-slider-value", { label })}
         className={cn("w-24 shrink-0", numberFieldClassName)}
         formatOptions={formatOptions}
         isDisabled={isDisabled}

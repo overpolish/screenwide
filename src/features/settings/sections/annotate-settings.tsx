@@ -5,6 +5,7 @@ import { GroupBox } from "../../../components/base/group-box/group-box";
 import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
+import { t } from "../../../i18n/i18n";
 
 import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 
@@ -37,10 +38,10 @@ export function AnnotateSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title="Annotate">
+      <GroupBox title={t("settings-section-annotate")}>
         <ControlRow
-          description="Draw on your screen, and keep the annotations in a recording."
-          title="Use Annotate"
+          description={t("settings-annotate-enabled-description")}
+          title={t("settings-annotate-enabled")}
         >
           {(controlProps) => (
             <Switch
@@ -53,11 +54,11 @@ export function AnnotateSettingsPanel({
             />
           )}
         </ControlRow>
-        <ControlRow title="Draw on the screen">
+        <ControlRow title={t("settings-annotate-draw")}>
           {(controlProps) => (
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
-              aria-label="Draw on the screen"
+              aria-label={t("settings-annotate-draw")}
               defaultValue={activationDefault}
               isDisabled={isOff}
               onCaptureChange={onCaptureChange}
@@ -67,8 +68,8 @@ export function AnnotateSettingsPanel({
           )}
         </ControlRow>
         <ControlRow
-          description="They stay on screen until you clear them."
-          title="Keep annotations after exiting"
+          description={t("settings-annotate-keep-description")}
+          title={t("settings-annotate-keep")}
         >
           {(controlProps) => (
             <Switch
@@ -81,11 +82,11 @@ export function AnnotateSettingsPanel({
             />
           )}
         </ControlRow>
-        <ControlRow title="Clear annotations">
+        <ControlRow title={t("settings-annotate-clear")}>
           {(controlProps) => (
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
-              aria-label="Clear annotations"
+              aria-label={t("settings-annotate-clear")}
               defaultValue={clearDefault}
               isDisabled={isOff}
               onCaptureChange={onCaptureChange}

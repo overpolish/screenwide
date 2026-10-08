@@ -5,6 +5,7 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
+import { t } from "../../i18n/i18n";
 
 import {
   collapseRecordingSourceSelector,
@@ -85,7 +86,9 @@ export function RecordingSourceSelectorWindow() {
       }
     } catch (error) {
       setWindowsError(
-        error instanceof Error ? error.message : "Could not list windows",
+        error instanceof Error
+          ? error.message
+          : t("recording-sources-windows-failed"),
       );
     } finally {
       setWindowsLoading(false);
@@ -256,7 +259,10 @@ export function RecordingSourceSelectorWindow() {
         </div>
       ) : (
         <div className="flex grow items-center justify-center">
-          <CircularProgress aria-label="Loading" isIndeterminate />
+          <CircularProgress
+            aria-label={t("recording-sources-loading")}
+            isIndeterminate
+          />
         </div>
       )}
     </main>

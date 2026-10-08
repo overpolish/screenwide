@@ -95,14 +95,9 @@ fn ensure(app: &AppHandle, index: usize) -> tauri::Result<tauri::WebviewWindow> 
   if let Some(w) = app.get_webview_window(&name) {
     return Ok(w);
   }
-  let mut config = app
-    .config()
-    .app
-    .windows
-    .iter()
-    .find(|c| c.label == "glide")
-    .ok_or(tauri::Error::WindowNotFound)?
-    .clone();
+  let mut config = crate::app_windows::WindowLabel::Glide
+    .config(app)
+    .ok_or(tauri::Error::WindowNotFound)?;
   config.label = name;
   config.url = WebviewUrl::App("/glide-space".into());
   config.visible = false;

@@ -3,12 +3,13 @@
 
 import { PillGroup } from "../../../../components/base/pill-group/pill-group";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
 import { CameraOutput } from "../../export/camera-output";
 
-const outputOptions = [
-  { id: "combined", label: "One video" },
-  { id: "separate", label: "Separate files" },
-] satisfies { id: CameraOutput; label: string }[];
+const outputOptions = (): { id: CameraOutput; label: string }[] => [
+  { id: "combined", label: t("editor-panels-output-combined") },
+  { id: "separate", label: t("editor-panels-output-separate") },
+];
 
 /**
  * Whether the camera is drawn into the screen's video or saved beside it as a
@@ -27,14 +28,14 @@ export function SceneOutputRow({
   onChange: (output: CameraOutput) => void;
 }) {
   return (
-    <ControlRow title="Output">
+    <ControlRow title={t("editor-panels-output")}>
       {(controlProps) => (
         <div {...controlProps} role="group">
           <PillGroup
-            aria-label="Output"
+            aria-label={t("editor-panels-output")}
             display="label"
             isDisabled={isDisabled}
-            items={outputOptions}
+            items={outputOptions()}
             onSelectionChange={(output) => {
               onChange(output as CameraOutput);
             }}

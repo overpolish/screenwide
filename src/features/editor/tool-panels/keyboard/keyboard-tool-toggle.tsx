@@ -5,6 +5,7 @@ import { Keyboard } from "lucide-react";
 import { useRef } from "react";
 
 import { ToolToggle } from "../../../../components/shared/tool-toggle/tool-toggle";
+import { t } from "../../../../i18n/i18n";
 import { useToolPanel } from "../use-tool-panel";
 
 /**
@@ -24,8 +25,8 @@ export function KeyboardToolToggle({ onDismiss }: { onDismiss: () => void }) {
     <span className="inline-flex" data-editor-tool="keyboard" ref={triggerRef}>
       <ToolToggle
         isSelected={openTool === "keyboard"}
-        label="Keyboard"
-        name="Keyboard shortcuts"
+        label={t("editor-panels-keyboard")}
+        name={t("editor-panels-keyboard-name")}
         onSelectedChange={(selected) => {
           if (!selected) {
             onDismiss();

@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { annotationToolLabel } from "../../../components/shared/annotation-style/annotation-text";
+import { t } from "../../../i18n/i18n";
 import {
   boundsAnchor,
   closePopupMenu,
@@ -26,7 +28,7 @@ export function useAnnotationToolMenu(
 ) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: "More annotation tools",
+    label: t("editor-toolbar-more-annotation-tools"),
     mode: "menu",
     onSelect: (itemId) => {
       const tool = ANNOTATION_TOOLS.find((item) => item.id === itemId);
@@ -39,10 +41,10 @@ export function useAnnotationToolMenu(
   return (tools: readonly AnnotationTool[], anchor: DOMRect) =>
     openMenu({
       anchor: boundsAnchor(anchor),
-      items: tools.map(({ id, label, shortcut }) => ({
+      items: tools.map(({ id, shortcut }) => ({
         icon: `tool-${id}` as const,
         id,
-        label,
+        label: annotationToolLabel(id),
         shortcut,
       })),
     });

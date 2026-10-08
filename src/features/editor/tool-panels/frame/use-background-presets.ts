@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import {
   backgroundPresetsWithWallpapers,
-  BUILT_IN_BACKGROUND_PRESETS,
+  builtInBackgroundPresets,
   SystemWallpaper,
 } from "../../../../components/shared/background-picker/background-presets";
 
@@ -20,7 +20,7 @@ import {
  * nothing to ask, the picker shows the palettes and the flat tones alone.
  */
 export function useBuiltInBackgroundPresets() {
-  const [presets, setPresets] = useState(BUILT_IN_BACKGROUND_PRESETS);
+  const [presets, setPresets] = useState(builtInBackgroundPresets);
 
   useEffect(() => {
     if (!isTauri()) return;

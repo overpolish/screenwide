@@ -1,8 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { PopupPanelItem } from "../../popup-panel/store";
-import { useRecordingInputStore } from "../../recording-inputs/store";
+import {
+  systemAudioLabel,
+  useRecordingInputStore,
+} from "../../recording-inputs/store";
 import {
   CameraDevice,
   CameraResolution,
@@ -19,32 +23,35 @@ export const PANEL_MIN_WIDTH = 220;
 /** The camera picker offers the cameras and, under them, the resolutions of
  * whichever one is chosen; a resolution's id is prefixed so the two runs stay
  * apart in the one flat list the panel carries. */
-export const CAMERA_SECTION = "Camera";
-export const RESOLUTION_SECTION = "Resolution";
+export const cameraSection = () => t("recording-controls-camera");
+export const resolutionSection = () => t("recording-controls-resolution");
 export const MODE_ID_PREFIX = "mode:";
-/** The camera's own settings, which are remembered per camera rather than
- * chosen: pressing one ticks or unticks it. */
-const OPTIONS_SECTION = "Options";
 export const OPTION_ID_PREFIX = "option:";
 export const FLIP_OPTION_ID = `${OPTION_ID_PREFIX}flip`;
 export const PAL_OPTION_ID = `${OPTION_ID_PREFIX}pal`;
-export const CAMERA_OPTION_ITEMS: PopupPanelItem[] = [
+/** The camera's own settings, which are remembered per camera rather than
+ * chosen: pressing one ticks or unticks it. */
+export const cameraOptionItems = (): PopupPanelItem[] => [
   {
     id: FLIP_OPTION_ID,
-    label: "Flip Horizontally",
-    section: OPTIONS_SECTION,
+    label: t("recording-controls-flip"),
+    section: t("recording-controls-options"),
     togglesInPlace: true,
   },
   {
     id: PAL_OPTION_ID,
-    label: "Anti-Flicker 50 Hz",
-    section: OPTIONS_SECTION,
+    label: t("recording-controls-anti-flicker"),
+    section: t("recording-controls-options"),
     togglesInPlace: true,
   },
 ];
 
 /** Turning the input off is the first choice in a device list. */
-export const OFF_ITEM: PopupPanelItem = { id: "off", label: "Off" };
+export const OFF_ITEM_ID = "off";
+export const offItem = (): PopupPanelItem => ({
+  id: OFF_ITEM_ID,
+  label: t("recording-controls-off"),
+});
 
 /** e.g. "1920 × 1080", the size a camera would record at. The frame rate is
  * named only where it tells two modes of the same size apart. */
@@ -59,7 +66,12 @@ export const cameraModeLabel = (
       other.width === mode.width &&
       other.height === mode.height,
   );
-  return isSizeShared ? `${size} · ${mode.fps.toString()} fps` : size;
+  return isSizeShared
+    ? t("recording-controls-camera-mode", {
+        fps: mode.fps.toString(),
+        size,
+      })
+    : size;
 };
 
 /** Whether one of a camera's own remembered settings is on, which nothing
@@ -105,15 +117,15 @@ export const modeForCamera = (
 /** Each control is named by the device it would record, the same name its
  * picker shows as chosen. Nothing chosen names the absence instead. */
 export const cameraName = (camera: CameraDevice | null) =>
-  camera?.label ?? "No Camera";
+  camera?.label ?? t("recording-controls-no-camera");
 
 export const microphoneName = (microphone: InputDevice | null) =>
-  microphone?.label ?? "No Microphone";
+  microphone?.label ?? t("recording-controls-no-microphone");
 
 /** The whole system is one source, so it names itself; a run of applications
  * is counted rather than listed, which no bezel is wide enough for. */
 export const systemAudioName = (sources: SystemAudioSource[]) => {
-  if (sources.length === 0) return "System Audio";
-  if (sources.length === 1) return sources[0].label;
-  return `${sources.length.toString()} Sources`;
+  if (sources.length === 0) return t("recording-controls-system-audio");
+  if (sources.length === 1) return systemAudioLabel(sources[0]);
+  return t("recording-controls-sources", { count: sources.length });
 };

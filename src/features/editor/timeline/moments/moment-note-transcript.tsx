@@ -8,6 +8,7 @@ import { CircularProgress } from "../../../../components/base/circular-progress/
 import { ProgressBar } from "../../../../components/base/progress-bar/progress-bar";
 import { ScrollArea } from "../../../../components/base/scroll-area/scroll-area";
 import { Text } from "../../../../components/base/text/text";
+import { t } from "../../../../i18n/i18n";
 import {
   downloadTranscriptionModel,
   listenToTranscription,
@@ -44,17 +45,17 @@ function NoModel({ model }: { model: string }) {
     return (
       <div className="gap-control flex items-center">
         <Text className="shrink-0" variant="footnote">
-          Downloading model
+          {t("editor-timeline-downloading-model")}
         </Text>
         <ProgressBar
-          aria-label="Downloading the Moments model"
+          aria-label={t("editor-timeline-downloading-model-label")}
           value={(download.progress ?? 0) * 100}
         />
       </div>
     );
   return (
     <div className="gap-control flex items-center justify-between">
-      <Text variant="footnote">No model downloaded</Text>
+      <Text variant="footnote">{t("editor-timeline-no-model")}</Text>
       <Button
         onPress={() => {
           void downloadTranscriptionModel(model).catch((error: unknown) => {
@@ -62,7 +63,7 @@ function NoModel({ model }: { model: string }) {
           });
         }}
       >
-        Download
+        {t("editor-timeline-download")}
       </Button>
     </div>
   );
@@ -78,7 +79,7 @@ export function MomentNoteTranscript({
   transcript: NoteTranscript;
 }) {
   if (transcript.status === "ready" && !transcript.text.trim())
-    return <Text variant="footnote">No speech in this note</Text>;
+    return <Text variant="footnote">{t("editor-timeline-no-speech")}</Text>;
   if (transcript.status === "ready")
     return (
       <ScrollArea
@@ -92,20 +93,22 @@ export function MomentNoteTranscript({
       </ScrollArea>
     );
   if (transcript.status === "failed")
-    return <Text variant="footnote">Could not transcribe this note</Text>;
+    return (
+      <Text variant="footnote">{t("editor-timeline-transcribe-failed")}</Text>
+    );
   if (transcript.status === "noModel")
     return <NoModel model={transcript.model} />;
   return (
     <div className="gap-control flex items-center justify-center">
       <CircularProgress
-        aria-label="Transcribing"
+        aria-label={t("editor-timeline-transcribing")}
         isIndeterminate
         size="small"
       />
       <Text variant="footnote">
         {transcript.status === "transcribing"
-          ? "Transcribing"
-          : "Waiting to transcribe"}
+          ? t("editor-timeline-transcribing")
+          : t("editor-timeline-transcribe-waiting")}
       </Text>
     </div>
   );

@@ -3,12 +3,21 @@
 
 import { withThemeByClassName } from "@storybook/addon-themes";
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
+import { createElement } from "react";
+import { I18nProvider } from "react-aria-components";
 import { themes } from "storybook/theming";
 
+import {
+  appLocale,
+  LANGUAGES,
+  loadAppLocale,
+  loadLocale,
+  PSEUDO,
+} from "../src/i18n/i18n";
 import { installKeyboardNavigationModality } from "../src/lib/keyboard-navigation-modality";
 import { synchronizeSystemAccent } from "../src/lib/system-accent";
 
-import type { Decorator, Preview } from "@storybook/react-vite";
+import type { Decorator, Loader, Preview } from "@storybook/react-vite";
 
 import "../src/index.css";
 import "./styles.css";
@@ -116,10 +125,30 @@ document.getAnimations = () =>
 // Removing the own property restores the prototype's method.
 previewHot?.dispose(() => Reflect.deleteProperty(document, "getAnimations"));
 
+const languageNames = new Intl.DisplayNames(["en"], { type: "language" });
+
 const preview: Preview = {
   globalTypes: isNativePreview
     ? {}
     : {
+        // Every translation in `locales/`, and the pseudo-locale, which
+        // shows text that skips translation and layouts that break under
+        // longer words.
+        locale: {
+          description: "Language",
+          toolbar: {
+            dynamicTitle: true,
+            icon: "globe",
+            items: [
+              ...LANGUAGES.map((language) => ({
+                title: languageNames.of(language) ?? language,
+                value: language,
+              })),
+              { title: "Pseudo-locale", value: PSEUDO },
+            ],
+            title: "Language",
+          },
+        },
         platform: {
           description: "Platform skin",
           toolbar: {
@@ -133,7 +162,9 @@ const preview: Preview = {
           },
         },
       },
-  initialGlobals: isNativePreview ? {} : { platform: hostPlatform },
+  initialGlobals: isNativePreview
+    ? {}
+    : { locale: LANGUAGES[0], platform: hostPlatform },
   parameters: {
     controls: {
       matchers: {
@@ -158,10 +189,37 @@ const withPlatform: Decorator = (Story, { globals }) => {
   return Story();
 };
 
+// Loaded before each render, so a story's first frame is in the language.
+// The native preview runs in the app shell, so it takes the app's language.
+const loadStoryLocale: Loader = async ({ globals }) => {
+  if (isNativePreview) {
+    await loadAppLocale();
+    return {};
+  }
+  const language =
+    typeof globals.locale === "string" ? globals.locale : LANGUAGES[0];
+  await loadLocale({ formatLocale: language, language });
+  return {};
+};
+
+// Keyed by language so a switch remounts the story and nothing keeps text
+// from the previous one.
+const withLocale: Decorator = (Story) => {
+  const { formatLocale, language } = appLocale();
+  return createElement(
+    I18nProvider,
+    { key: language, locale: formatLocale },
+    Story(),
+  );
+};
+
+export const loaders = [loadStoryLocale];
+
 export const decorators = (
   isNativePreview
-    ? []
+    ? [withLocale]
     : [
+        withLocale,
         withPlatform,
         withThemeByClassName({
           defaultTheme: "dark",

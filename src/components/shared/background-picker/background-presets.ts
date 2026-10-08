@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
+
 import {
   Background,
   BackgroundMeshPoint,
@@ -82,26 +84,49 @@ const representative = (
 const solid = (color: string): Background => ({ color, kind: "solid" });
 
 /** One tile per generator: the painter under the colours it ships with. */
-const meshPresets: BackgroundPreset[] = BACKGROUND_GENERATORS.map(
-  (generator) => {
+const meshPresets = (): BackgroundPreset[] =>
+  BACKGROUND_GENERATORS.map((generator) => {
     const id = `mesh-${generator.id}`;
     return {
       background: representative(generator, id),
       id,
-      name: generator.name,
+      name: generator.name(),
     };
-  },
-);
+  });
 
-const solidPresets: BackgroundPreset[] = [
+const solidPresets = (): BackgroundPreset[] => [
   // A small starting set, two of each: pastels, brights, and darks for
   // dark-mode captures. Users save their own beyond these.
-  { background: solid("#CFE3D3"), id: "solid-sage", name: "Sage" },
-  { background: solid("#F6D6C2"), id: "solid-peach", name: "Peach" },
-  { background: solid("#2563EB"), id: "solid-blue", name: "Blue" },
-  { background: solid("#FACC15"), id: "solid-yellow", name: "Yellow" },
-  { background: solid("#171717"), id: "solid-graphite", name: "Graphite" },
-  { background: solid("#1E293B"), id: "solid-midnight", name: "Midnight" },
+  {
+    background: solid("#CFE3D3"),
+    id: "solid-sage",
+    name: t("background-solid-sage"),
+  },
+  {
+    background: solid("#F6D6C2"),
+    id: "solid-peach",
+    name: t("background-solid-peach"),
+  },
+  {
+    background: solid("#2563EB"),
+    id: "solid-blue",
+    name: t("background-solid-blue"),
+  },
+  {
+    background: solid("#FACC15"),
+    id: "solid-yellow",
+    name: t("background-solid-yellow"),
+  },
+  {
+    background: solid("#171717"),
+    id: "solid-graphite",
+    name: t("background-solid-graphite"),
+  },
+  {
+    background: solid("#1E293B"),
+    id: "solid-midnight",
+    name: t("background-solid-midnight"),
+  },
 ];
 
 /** A picture on the desktop right now, as the native side describes it. */
@@ -111,7 +136,7 @@ export type SystemWallpaper = {
 };
 
 /**
- * The backgrounds every install starts with.
+ * The backgrounds every install starts with, named in the app's language.
  *
  * The generators first, since a gradient is what a canvas is usually given,
  * then the flat tones a screenshot is trimmed to for a document or a slide.
@@ -119,9 +144,9 @@ export type SystemWallpaper = {
  * native side has read them, so a caller without them simply has no wallpaper
  * tiles.
  */
-export const BUILT_IN_BACKGROUND_PRESETS: BackgroundPreset[] = [
-  ...meshPresets,
-  ...solidPresets,
+export const builtInBackgroundPresets = (): BackgroundPreset[] => [
+  ...meshPresets(),
+  ...solidPresets(),
 ];
 
 /**
@@ -133,11 +158,11 @@ export const BUILT_IN_BACKGROUND_PRESETS: BackgroundPreset[] = [
 export const backgroundPresetsWithWallpapers = (
   wallpapers: SystemWallpaper[],
 ): BackgroundPreset[] => [
-  ...meshPresets,
+  ...meshPresets(),
   ...wallpapers.map(({ name, path }) => ({
     background: { kind: "image" as const, path },
     id: `system-wallpaper:${name}`,
     name,
   })),
-  ...solidPresets,
+  ...solidPresets(),
 ];

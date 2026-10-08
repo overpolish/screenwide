@@ -11,10 +11,12 @@ import {
   Volume2,
 } from "lucide-react";
 import { useState } from "react";
+import { useListFormatter } from "react-aria";
 import { Button as AriaButton, type PressEvent } from "react-aria-components";
 
 import { Badge } from "../../components/base/badge/badge";
 import { Checkbox } from "../../components/base/checkbox/checkbox";
+import { t } from "../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
 import { formatBytes, formatDuration } from "../editor/duration";
 
@@ -40,24 +42,29 @@ const kindIcons: Record<ProjectKind, typeof Monitor> = {
 
 /** In capture order, with the icons the editor's timeline and the recording
  * bar give the same sources. */
-const trackIcons: {
-  icon: typeof Monitor;
-  label: string;
-  track: keyof ProjectTracks;
-}[] = [
-  { icon: Monitor, label: "screen", track: "screen" },
-  { icon: Camera, label: "camera", track: "camera" },
-  { icon: Volume2, label: "system audio", track: "systemAudio" },
-  { icon: Mic, label: "microphone", track: "microphone" },
+const trackIcons: { icon: typeof Monitor; track: keyof ProjectTracks }[] = [
+  { icon: Monitor, track: "screen" },
+  { icon: Camera, track: "camera" },
+  { icon: Volume2, track: "systemAudio" },
+  { icon: Mic, track: "microphone" },
 ];
+
+const trackLabels = {
+  camera: () => t("project-browser-track-camera"),
+  microphone: () => t("project-browser-track-microphone"),
+  screen: () => t("project-browser-track-screen"),
+  systemAudio: () => t("project-browser-track-system-audio"),
+} satisfies Record<keyof ProjectTracks, () => string>;
 
 /** What kind of capture it is, where that is not an ordinary recording, then
  * how long it is and how much disk it takes, as far as each is known. The
  * length stays while scrubbing, so the whole take's is always in view. */
 function badgesFor(project: ProjectSummary) {
   return [
-    project.kind === "screenshot" ? "Screenshot" : null,
-    project.replay ? "Replay" : null,
+    project.kind === "screenshot"
+      ? t("project-browser-badge-screenshot")
+      : null,
+    project.replay ? t("project-browser-badge-replay") : null,
     project.durationMs === null ? null : formatDuration(project.durationMs),
     project.sizeBytes === null ? null : formatBytes(project.sizeBytes),
   ].filter((badge) => badge !== null);
@@ -102,6 +109,7 @@ export function ProjectCardPreview({
   // once it has loaded; until then, or with no picture, they take the
   // window's own appearance.
   const [tones, setTones] = useState<PictureTones | null>(null);
+  const list = useListFormatter({ style: "short", type: "unit" });
   // Where the pointer is across the picture, from 0 to 1, while it scrubs.
   const [scrub, setScrub] = useState<number | null>(null);
   const canScrub =
@@ -145,10 +153,10 @@ export function ProjectCardPreview({
       }}
     >
       <AriaButton
-        aria-label={[
-          `Open ${project.title}`,
-          ...captured.map(({ label }) => label),
-        ].join(", ")}
+        aria-label={list.format([
+          t("project-browser-open-project", { title: project.title }),
+          ...captured.map(({ track }) => trackLabels[track]()),
+        ])}
         className={cn(
           "rounded-control text-content-fg-tertiary absolute inset-0 flex cursor-default items-center justify-center",
           // A still is drawn as it is, square corners and all: rounding it
@@ -271,7 +279,9 @@ export function ProjectCardPreview({
           )}
         >
           <Checkbox
-            aria-label={`Select ${project.title}`}
+            aria-label={t("project-browser-select-project", {
+              title: project.title,
+            })}
             isSelected={isSelected}
             onChange={onSelectedChange}
           />

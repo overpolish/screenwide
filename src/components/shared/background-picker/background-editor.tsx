@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 
+import { t } from "../../../i18n/i18n";
 import { Button } from "../../base/button/button";
 import { ColorPaletteGenerator } from "../../base/input-fields/color-palette-generator";
 import { ColorSwatch } from "../../base/input-fields/color-swatch";
@@ -19,9 +20,9 @@ import {
   randomizeMeshBackground,
 } from "./background-random";
 
-const backgroundKinds = [
-  { id: "solid", label: "Solid" },
-  { id: "mesh", label: "Mesh" },
+const backgroundKinds = () => [
+  { id: "solid", label: t("background-kind-solid") },
+  { id: "mesh", label: t("background-kind-mesh") },
 ];
 
 const DEFAULT_SOLID = "#171717";
@@ -82,14 +83,14 @@ export function BackgroundEditor({
 
   return (
     <div className="flex flex-col gap-control-inset">
-      <ControlRow title="Type">
+      <ControlRow title={t("background-type")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <PillGroup
-              aria-label="Background type"
+              aria-label={t("background-type-label")}
               display="label"
               isDisabled={isDisabled}
-              items={backgroundKinds.map((item) =>
+              items={backgroundKinds().map((item) =>
                 item.id === "mesh"
                   ? {
                       ...item,
@@ -117,11 +118,11 @@ export function BackgroundEditor({
       </ControlRow>
 
       {kind === "solid" || !mesh ? (
-        <ControlRow title="Colour">
+        <ControlRow title={t("background-color")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <ColorSwatch
-                ariaLabel="Background colour"
+                ariaLabel={t("background-color-label")}
                 isDisabled={isDisabled}
                 onChange={(color) => {
                   onChange({ color, kind: "solid" });
@@ -153,7 +154,7 @@ export function BackgroundEditor({
             onSavePreset(value);
           }}
         >
-          Save Preset
+          {t("background-save-preset")}
         </Button>
       </div>
     </div>

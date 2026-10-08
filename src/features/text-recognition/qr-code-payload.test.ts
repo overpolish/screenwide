@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { withoutIsolates as plain } from "../../i18n/testing";
+
 import { classifyQrPayload } from "./qr-code-payload";
 
 describe("classifyQrPayload", () => {
@@ -37,7 +39,11 @@ describe("classifyQrPayload", () => {
     ["javascript:alert(1)", "The javascript action is not supported."],
     ["", "QR code has no content."],
   ])("rejects malformed or unsupported content", (content, reason) => {
-    expect(classifyQrPayload(content)).toEqual({
+    const payload = classifyQrPayload(content);
+    expect({
+      ...payload,
+      reason: "reason" in payload && plain(payload.reason),
+    }).toEqual({
       kind: "unsupported",
       label: "Unsupported QR",
       reason,

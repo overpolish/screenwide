@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { withoutIsolates as plain } from "../../i18n/testing";
+
 import { filterProjects, groupByDate, timeLeft } from "./project-list";
 
 import type { ProjectSummary } from "./types";
@@ -30,6 +32,7 @@ const at = (...parts: [number, number, number, number?, number?]) =>
 // Wednesday 8 October 2026, mid-afternoon local time.
 const now = new Date(2026, 9, 8, 15, 30);
 
+// Tests run in the source language, en-US.
 const labels = (projects: ProjectSummary[]) =>
   groupByDate(projects, now).map(({ label, projects: members }) => [
     label,
@@ -61,7 +64,7 @@ describe("groupByDate", () => {
       ["Previous 7 Days", ["7 days"]],
       ["Previous 30 Days", ["8 days", "30 days"]],
       [
-        new Intl.DateTimeFormat(undefined, { month: "long" }).format(
+        new Intl.DateTimeFormat("en-US", { month: "long" }).format(
           new Date(2026, 8, 7),
         ),
         ["31 days"],
@@ -74,7 +77,7 @@ describe("groupByDate", () => {
       project("last year", { modifiedMs: at(2025, 11, 31) }),
     ]);
     expect(label[0]).toBe(
-      new Intl.DateTimeFormat(undefined, {
+      new Intl.DateTimeFormat("en-US", {
         month: "long",
         year: "numeric",
       }).format(new Date(2025, 11, 31)),
@@ -127,9 +130,9 @@ describe("filterProjects", () => {
 describe("timeLeft", () => {
   const day = 24 * 60 * 60 * 1_000;
   it("rounds part of a day up, so the last day reads as one left", () => {
-    expect(timeLeft(30 * day, 0)).toBe("30 days left");
-    expect(timeLeft(29 * day + 1, 0)).toBe("30 days left");
-    expect(timeLeft(day, 0)).toBe("1 day left");
-    expect(timeLeft(60 * 60 * 1_000, 0)).toBe("1 day left");
+    expect(plain(timeLeft(30 * day, 0))).toBe("30 days left");
+    expect(plain(timeLeft(29 * day + 1, 0))).toBe("30 days left");
+    expect(plain(timeLeft(day, 0))).toBe("1 day left");
+    expect(plain(timeLeft(60 * 60 * 1_000, 0))).toBe("1 day left");
   });
 });

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { fileManagerName } from "../../lib/platform";
+import { platformArg, t } from "../../i18n/i18n";
 import { PopupPanelItem } from "../popup-panel/store";
 import { pointerAnchor, usePopupMenu } from "../popup-panel/use-popup-menu";
 
@@ -25,7 +25,7 @@ export function useLocationMenu({
 }) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: "Location actions",
+    label: t("project-browser-location-actions"),
     mode: "menu",
     onSelect: (itemId, path) => {
       if (itemId === "open") onOpen(path);
@@ -39,11 +39,17 @@ export function useLocationMenu({
       {
         icon: "folder-open",
         id: "open",
-        label: `Open in ${fileManagerName()}`,
+        label: t("project-browser-open-in-file-manager", {
+          platform: platformArg(),
+        }),
       },
     ];
     if (!location.isDefault) {
-      items.push({ icon: "remove", id: "remove", label: "Remove Location" });
+      items.push({
+        icon: "remove",
+        id: "remove",
+        label: t("project-browser-remove-location"),
+      });
     }
     return openMenu({
       anchor: pointerAnchor(point.x, point.y),

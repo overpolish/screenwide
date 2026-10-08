@@ -97,4 +97,47 @@ impl WindowLabel {
       Self::Update => "update",
     }
   }
+
+  /// The title the operating system shows for the window, in the app's
+  /// language: in the Window menu, the task switcher and to assistive
+  /// technology. The page draws its own title, so this is never on screen in
+  /// the window itself.
+  pub fn title(self) -> String {
+    use crate::i18n::t;
+    match self {
+      Self::EditorRecording | Self::EditorScreenshot => t!("window-titles-editor"),
+      Self::ExportRecording => t!("window-titles-export-recording"),
+      Self::ExportScreenshot => t!("window-titles-export-screenshot"),
+      Self::ToolPanelRecording => t!("window-titles-tool-panel-recording"),
+      Self::ToolPanelScreenshot => t!("window-titles-tool-panel-screenshot"),
+      #[cfg(target_os = "macos")]
+      Self::Permissions => t!("window-titles-permissions"),
+      Self::AnnotateToolbar => t!("window-titles-annotate-toolbar"),
+      Self::Glide => t!("window-titles-glide"),
+      Self::RecordingBar => t!("window-titles-recording-bar"),
+      Self::RecordingDock => t!("window-titles-recording-dock"),
+      Self::QrDetails => t!("window-titles-qr-details"),
+      Self::Projects => t!("window-titles-projects"),
+      Self::Settings => t!("window-titles-settings"),
+      Self::RegionSelector => t!("window-titles-region-selector"),
+      Self::RecordingSourceSelector => t!("window-titles-source-selector"),
+      Self::StandaloneListbox => t!("window-titles-listbox"),
+      Self::Update => t!("window-titles-update"),
+      Self::Alert | Self::Tooltip | Self::Annotate | Self::Ruler | Self::TextRecognition => {
+        t!("window-titles-app")
+      }
+    }
+  }
+
+  /// The window's entry in `tauri.conf.json`, titled in the app's language,
+  /// for windows built as copies of it.
+  pub fn config(self, app: &tauri::AppHandle) -> Option<tauri::utils::config::WindowConfig> {
+    let windows = &tauri::Manager::config(app).app.windows;
+    let mut config = windows
+      .iter()
+      .find(|config| config.label == self.as_str())?
+      .clone();
+    config.title = self.title();
+    Some(config)
+  }
 }

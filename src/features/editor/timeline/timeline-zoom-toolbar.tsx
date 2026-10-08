@@ -14,6 +14,7 @@ import { RefObject } from "react";
 import { IconButton } from "../../../components/base/button/icon-button";
 import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
+import { t } from "../../../i18n/i18n";
 
 import { TimelineBladeController } from "./editing/timeline-blade";
 import { VisibleRecordingMoment } from "./moments/recording-moments";
@@ -48,8 +49,8 @@ export function TimelineZoomToolbar({
     <div className="flex h-control-height w-timeline-gutter shrink-0 items-center gap-control">
       <ToolToggle
         isSelected={isBladeActive}
-        label="Blade"
-        name="Blade tool"
+        label={t("editor-timeline-blade")}
+        name={t("editor-timeline-blade-name")}
         onSelectedChange={onBladeActiveChange}
         shortcut="B"
       >
@@ -57,8 +58,8 @@ export function TimelineZoomToolbar({
       </ToolToggle>
       <ToolToggle
         isSelected={isRangeActive}
-        label="Range"
-        name="Range tool"
+        label={t("editor-timeline-range")}
+        name={t("editor-timeline-range-name")}
         onSelectedChange={onRangeActiveChange}
         shortcut="Shift+R"
       >
@@ -66,17 +67,17 @@ export function TimelineZoomToolbar({
       </ToolToggle>
       <ToolToggle
         isSelected={isSnapActive}
-        label="Snap"
-        name="Snap to edges"
+        label={t("editor-timeline-snap")}
+        name={t("editor-timeline-snap-name")}
         onSelectedChange={onSnapActiveChange}
         shortcut="Shift+S"
       >
         <Magnet />
       </ToolToggle>
       <div className="ml-auto flex items-center gap-control">
-        <NativeTooltipTrigger tooltip="Zoom out">
+        <NativeTooltipTrigger tooltip={t("editor-timeline-zoom-out")}>
           <IconButton
-            aria-label="Zoom timeline out"
+            aria-label={t("editor-timeline-zoom-out-label")}
             isDisabled={viewport.zoom <= 1}
             onPress={() => {
               onZoom(0.8);
@@ -86,20 +87,20 @@ export function TimelineZoomToolbar({
           </IconButton>
         </NativeTooltipTrigger>
         <NativeTooltipTrigger
-          tooltip={{ label: "Fit timeline", shortcut: "Shift+KeyZ" }}
+          tooltip={{ label: t("editor-timeline-fit"), shortcut: "Shift+KeyZ" }}
         >
           <IconButton
             aria-keyshortcuts="Shift+Z"
-            aria-label="Fit timeline"
+            aria-label={t("editor-timeline-fit")}
             isDisabled={viewport.zoom === 1 && viewport.panOffset === 0}
             onPress={onFit}
           >
             <Maximize2 />
           </IconButton>
         </NativeTooltipTrigger>
-        <NativeTooltipTrigger tooltip="Zoom in">
+        <NativeTooltipTrigger tooltip={t("editor-timeline-zoom-in")}>
           <IconButton
-            aria-label="Zoom timeline in"
+            aria-label={t("editor-timeline-zoom-in-label")}
             isDisabled={viewport.zoom >= TIMELINE_MAX_ZOOM}
             onPress={() => {
               onZoom(1.25);

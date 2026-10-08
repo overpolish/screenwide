@@ -6,7 +6,7 @@ import { fn } from "storybook/test";
 
 import { Background, BackgroundPreset, presetName } from "./background";
 import { BackgroundPicker } from "./background-picker";
-import { BUILT_IN_BACKGROUND_PRESETS } from "./background-presets";
+import { builtInBackgroundPresets } from "./background-presets";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
@@ -65,7 +65,7 @@ function PickerHarness({ initial }: { initial: Background }) {
             { background, id: `saved-${String(current.length)}`, name },
           ]);
         }}
-        presets={BUILT_IN_BACKGROUND_PRESETS}
+        presets={builtInBackgroundPresets()}
         savedPresets={saved}
         value={value}
       />
@@ -87,7 +87,7 @@ type Story = StoryObj<typeof meta>;
 /** One of the backgrounds the app ships with, chosen. The first nine tiles
  * are the nine mesh generators, each under the palette it ships with. */
 export const Default: Story = {
-  args: { initial: BUILT_IN_BACKGROUND_PRESETS[0].background },
+  args: { initial: builtInBackgroundPresets()[0].background },
 };
 
 /** A generator that is not the composition one: its tile is selected, and
@@ -95,8 +95,8 @@ export const Default: Story = {
 export const ProceduralGenerator: Story = {
   args: {
     initial:
-      BUILT_IN_BACKGROUND_PRESETS.find((preset) => preset.id === "mesh-aurora")
-        ?.background ?? BUILT_IN_BACKGROUND_PRESETS[0].background,
+      builtInBackgroundPresets().find((preset) => preset.id === "mesh-aurora")
+        ?.background ?? builtInBackgroundPresets()[0].background,
   },
 };
 

@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { appLocale, t } from "../../i18n/i18n";
+
 import type { ProjectKind, ProjectSummary } from "./types";
 
 export type KindFilter = "all" | ProjectKind;
@@ -30,14 +32,8 @@ const DAY_MS = 24 * 60 * 60 * 1_000;
  * still has a day. */
 export function timeLeft(expiresMs: number, nowMs: number) {
   const days = Math.max(1, Math.ceil((expiresMs - nowMs) / DAY_MS));
-  return days === 1 ? "1 day left" : `${String(days)} days left`;
+  return t("project-browser-days-left", { days });
 }
-
-const monthName = new Intl.DateTimeFormat(undefined, { month: "long" });
-const monthAndYear = new Intl.DateTimeFormat(undefined, {
-  month: "long",
-  year: "numeric",
-});
 
 /**
  * Newest first, in the groups Finder sorts by date into: Today, Yesterday,
@@ -50,6 +46,12 @@ export function groupByDate(
   projects: readonly ProjectSummary[],
   now: Date,
 ): ProjectGroup[] {
+  const { formatLocale } = appLocale();
+  const monthName = new Intl.DateTimeFormat(formatLocale, { month: "long" });
+  const monthAndYear = new Intl.DateTimeFormat(formatLocale, {
+    month: "long",
+    year: "numeric",
+  });
   // Built from the calendar date rather than by subtracting days in
   // milliseconds, so a daylight-saving change does not move midnight.
   const midnight = (daysAgo: number) =>
@@ -59,11 +61,13 @@ export function groupByDate(
       now.getDate() - daysAgo,
     ).getTime();
   const labelFor = (modifiedMs: number | null) => {
-    if (modifiedMs === null) return "Unknown Date";
-    if (modifiedMs >= midnight(0)) return "Today";
-    if (modifiedMs >= midnight(1)) return "Yesterday";
-    if (modifiedMs >= midnight(7)) return "Previous 7 Days";
-    if (modifiedMs >= midnight(30)) return "Previous 30 Days";
+    if (modifiedMs === null) return t("project-browser-group-unknown");
+    if (modifiedMs >= midnight(0)) return t("project-browser-group-today");
+    if (modifiedMs >= midnight(1)) return t("project-browser-group-yesterday");
+    if (modifiedMs >= midnight(7))
+      return t("project-browser-group-previous-week");
+    if (modifiedMs >= midnight(30))
+      return t("project-browser-group-previous-month");
     const date = new Date(modifiedMs);
     return date.getFullYear() === now.getFullYear()
       ? monthName.format(date)

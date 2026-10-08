@@ -74,7 +74,7 @@ pub(super) fn start(
       // The buffer's own: the dock shows a recording's levels, not these.
       monitor: Arc::new(RecordingMonitor::default()),
       on_failure: Arc::new(move |reason: String| {
-        super::report(&reporter, "Replay buffer stopped", &reason);
+        super::report(&reporter, &crate::i18n::t!("alert-replay-stopped"), &reason);
         let app = reporter.clone();
         // The writer that failed is the one reporting; stopping joins it, so
         // that happens on a thread of its own.

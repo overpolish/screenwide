@@ -5,6 +5,7 @@ import { MousePointer } from "lucide-react";
 import { useRef } from "react";
 
 import { ToolToggle } from "../../../../components/shared/tool-toggle/tool-toggle";
+import { t } from "../../../../i18n/i18n";
 import { useToolPanel } from "../use-tool-panel";
 
 /**
@@ -23,8 +24,8 @@ export function CursorToolToggle({ onDismiss }: { onDismiss: () => void }) {
     <span className="inline-flex" data-editor-tool="cursor" ref={triggerRef}>
       <ToolToggle
         isSelected={openTool === "cursor"}
-        label="Cursor"
-        name="Cursor effects"
+        label={t("editor-panels-cursor")}
+        name={t("editor-panels-cursor-name")}
         onSelectedChange={(selected) => {
           if (!selected) {
             onDismiss();

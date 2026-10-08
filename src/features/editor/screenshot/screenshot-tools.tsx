@@ -11,6 +11,7 @@ import { ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
+import { t } from "../../../i18n/i18n";
 import { AnnotationToolStrip } from "../toolbar/annotation-tool-strip";
 
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
@@ -89,14 +90,17 @@ export function useScreenshotTools({
   return useMemo(
     () => (
       <>
-        <ButtonGroup aria-label="Pointer tools" className="gap-control">
+        <ButtonGroup
+          aria-label={t("editor-pointer-tools")}
+          className="gap-control"
+        >
           {/* The marker is the anchor Select's panel hangs from: taking the
               tool up opens it, however the tool was taken up. */}
           <span className="inline-flex" data-editor-tool="select">
             <ToolToggle
               isSelected={tool === "select"}
-              label="Select"
-              name="Select screenshot"
+              label={t("editor-tool-select")}
+              name={t("editor-tool-select-name")}
               onSelectedChange={chooseSelectTool}
               shortcut="V"
             >
@@ -105,19 +109,22 @@ export function useScreenshotTools({
           </span>
           <ToolToggle
             isSelected={tool === "marquee"}
-            label="Marquee"
-            name="Choose annotations with a marquee"
+            label={t("editor-tool-marquee")}
+            name={t("editor-tool-marquee-name")}
             onSelectedChange={chooseMarqueeTool}
             shortcut="G"
           >
             <SquareDashedMousePointer />
           </ToolToggle>
         </ButtonGroup>
-        <ButtonGroup aria-label="Canvas tools" className="gap-control">
+        <ButtonGroup
+          aria-label={t("editor-canvas-tools")}
+          className="gap-control"
+        >
           <ToolToggle
             isSelected={tool === "canvas"}
-            label="Resize canvas"
-            name="Resize canvas"
+            label={t("editor-tool-canvas")}
+            name={t("editor-tool-canvas")}
             onSelectedChange={chooseCanvasTool}
             shortcut="F"
           >
@@ -125,8 +132,8 @@ export function useScreenshotTools({
           </ToolToggle>
           <ToolToggle
             isSelected={tool === "crop"}
-            label="Crop"
-            name="Crop screenshot"
+            label={t("editor-tool-crop")}
+            name={t("editor-tool-crop-name")}
             onSelectedChange={chooseCropTool}
             shortcut="C"
           >

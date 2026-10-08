@@ -29,7 +29,7 @@ import {
   MICROPHONE_PANEL_ID,
   MODE_ID_PREFIX,
   modeForCamera,
-  OFF_ITEM,
+  OFF_ITEM_ID,
   OPTION_ID_PREFIX,
   PAL_OPTION_ID,
   SYSTEM_AUDIO_PANEL_ID,
@@ -169,7 +169,7 @@ export function useRecordingBarInputDevices({
         toggleCameraOption(selectedId);
         return;
       }
-      if (selectedId === OFF_ITEM.id) {
+      if (selectedId === OFF_ITEM_ID) {
         onInputChange("camera", false);
         return;
       }
@@ -194,7 +194,7 @@ export function useRecordingBarInputDevices({
     }
 
     if (lastSelection.id === MICROPHONE_PANEL_ID) {
-      if (selectedId === OFF_ITEM.id) {
+      if (selectedId === OFF_ITEM_ID) {
         onInputChange("microphone", false);
         return;
       }

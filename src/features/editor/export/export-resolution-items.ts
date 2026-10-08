@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { appLocale, t } from "../../../i18n/i18n";
 import {
   cameraResolutionScales,
   resolutionScales,
@@ -13,11 +14,6 @@ import type { ExportResolutionItem } from "./export-resolution-select";
 
 type RecordingArtifact = Extract<EditorArtifact, { kind: "recording" }>;
 
-const formatRatio = (ratio: number) =>
-  Number.isInteger(ratio)
-    ? ratio.toString()
-    : ratio.toFixed(2).replace(/0$/, "");
-
 /** Labels are ratios of the first (source) scale, matching the old inspector. */
 const scaleItem = (
   { height, width }: { height: number; width: number },
@@ -27,7 +23,13 @@ const scaleItem = (
   height,
   id: scale.toString(),
   label:
-    scale === sourceScale ? "Original" : `${formatRatio(scale / sourceScale)}×`,
+    scale === sourceScale
+      ? t("editor-export-scale-original")
+      : t("editor-export-scale", {
+          ratio: new Intl.NumberFormat(appLocale().formatLocale, {
+            maximumFractionDigits: 2,
+          }).format(scale / sourceScale),
+        }),
   width,
 });
 

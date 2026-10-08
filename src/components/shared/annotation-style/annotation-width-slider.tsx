@@ -3,6 +3,7 @@
 
 import { Slider } from "../../base/slider/slider";
 
+import { annotationSizeLabel } from "./annotation-text";
 import {
   ANNOTATION_WIDTHS,
   annotationWidthAt,
@@ -18,7 +19,7 @@ import {
  */
 export function AnnotationWidthSlider({
   isDisabled,
-  label = "Width",
+  label = annotationSizeLabel("width"),
   onChange,
   presets = ANNOTATION_WIDTHS,
   value,

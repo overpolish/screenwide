@@ -7,9 +7,14 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { IconButton } from "../../components/base/button/icon-button";
 import { ButtonGroup } from "../../components/base/button-group/button-group";
 import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
+import {
+  annotationToolLabel,
+  annotationToolName,
+} from "../../components/shared/annotation-style/annotation-text";
 import { BackgroundTile } from "../../components/shared/background-picker/background-tile";
 import { NativeTooltipTrigger } from "../../components/shared/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../components/shared/tool-toggle/tool-toggle";
+import { t } from "../../i18n/i18n";
 
 import { AnnotateToolControls } from "./annotate-tool-controls";
 import { ANNOTATE_TOOLS } from "./annotate-tools";
@@ -111,13 +116,13 @@ export function AnnotateToolbar({
 
         {/* The tools, as the Editor's own toolbars show them: one cluster of
             toggles, each naming itself in a tooltip. */}
-        <ButtonGroup aria-label="Annotation tools" className="gap-control">
+        <ButtonGroup aria-label={t("annotate-tools")} className="gap-control">
           {ANNOTATE_TOOLS.map((tool) => (
             <ToolToggle
               isSelected={tool.id === settings.defaultShape}
               key={tool.id}
-              label={tool.label}
-              name={tool.name}
+              label={annotationToolLabel(tool.id)}
+              name={annotationToolName(tool.id)}
               onSelectedChange={(selected) => {
                 // The overlay always has a tool in hand, so pressing the one
                 // already chosen leaves it chosen.
@@ -133,7 +138,7 @@ export function AnnotateToolbar({
         <div className="flex items-center gap-control-inset">
           {hasColor ? (
             <BackgroundTile
-              ariaLabel="Colour"
+              ariaLabel={t("annotation-color")}
               background={{ color: settings.defaultColor, kind: "solid" }}
               id="color"
               isSelected={showColors}
@@ -147,24 +152,29 @@ export function AnnotateToolbar({
 
         <div className="flex items-center gap-control">
           <NativeTooltipTrigger
-            tooltip={{ label: "Undo", shortcut: "CommandOrControl+KeyZ" }}
+            tooltip={{
+              label: t("annotate-undo"),
+              shortcut: "CommandOrControl+KeyZ",
+            }}
           >
-            <IconButton aria-label="Undo the last annotation" onPress={onUndo}>
+            <IconButton aria-label={t("annotate-undo-label")} onPress={onUndo}>
               <Undo2 />
             </IconButton>
           </NativeTooltipTrigger>
           <NativeTooltipTrigger
-            tooltip={{ label: "Clear", shortcut: "Backspace" }}
+            tooltip={{ label: t("annotate-clear"), shortcut: "Backspace" }}
           >
-            <IconButton aria-label="Clear annotations" onPress={onClear}>
+            <IconButton
+              aria-label={t("annotate-clear-label")}
+              onPress={onClear}
+            >
               <Eraser />
             </IconButton>
           </NativeTooltipTrigger>
-          <NativeTooltipTrigger tooltip={{ label: "Close", shortcut: "Esc" }}>
-            <IconButton
-              aria-label="Close the annotate overlay"
-              onPress={onDone}
-            >
+          <NativeTooltipTrigger
+            tooltip={{ label: t("annotate-close"), shortcut: "Esc" }}
+          >
+            <IconButton aria-label={t("annotate-close-label")} onPress={onDone}>
               <X />
             </IconButton>
           </NativeTooltipTrigger>

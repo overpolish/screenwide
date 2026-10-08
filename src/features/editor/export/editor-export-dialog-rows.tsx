@@ -4,17 +4,18 @@
 import { ReactNode, useId } from "react";
 
 import { Text } from "../../../components/base/text/text";
+import { t } from "../../../i18n/i18n";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
 import type { ControlRowControlProps } from "../../../components/shared/control-row/control-row";
 
 /** Compression levels are the numbers the export backend takes, 0 through 4. */
-const compressionOptions = [
-  { id: "original", label: "Original" },
-  { id: "high", label: "High quality" },
-  { id: "balanced", label: "Balanced" },
-  { id: "smaller", label: "Smaller file" },
-  { id: "smallest", label: "Smallest file" },
+const compressionOptions = () => [
+  { id: "original", label: t("editor-export-quality-original") },
+  { id: "high", label: t("editor-export-quality-high") },
+  { id: "balanced", label: t("editor-export-quality-balanced") },
+  { id: "smaller", label: t("editor-export-quality-smaller") },
+  { id: "smallest", label: t("editor-export-quality-smallest") },
 ];
 
 /**
@@ -90,21 +91,20 @@ export function CompressionSelect({
   isDisabled?: boolean;
   onChange?: (compression: number) => void;
 }) {
+  const options = compressionOptions();
   return (
     <PopupSelect
       {...props}
       id={id}
       isDisabled={isDisabled}
-      items={compressionOptions}
-      label="Quality"
+      items={options}
+      label={t("editor-export-quality")}
       onSelectionChange={(item) => {
-        const index = compressionOptions.findIndex(
-          (option) => option.id === item.id,
-        );
+        const index = options.findIndex((option) => option.id === item.id);
         if (index >= 0) onChange?.(index);
       }}
-      placeholder="Quality"
-      selectedId={compressionOptions[value]?.id ?? compressionOptions[0].id}
+      placeholder={t("editor-export-quality")}
+      selectedId={options[value]?.id ?? options[0].id}
     />
   );
 }

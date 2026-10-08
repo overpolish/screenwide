@@ -1,0 +1,8 @@
+/* SPDX-FileCopyrightText: 2026 overpolish */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Generated from locales/en-US/macos.ftl by `pnpm i18n:generate`. Do not edit. */
+
+"NSAudioCaptureUsageDescription" = "Screenwide records system and app audio when you include it in a recording.";
+"NSCameraUsageDescription" = "Screenwide uses your camera when you include it in a recording.";
+"NSMicrophoneUsageDescription" = "Screenwide uses your microphone when you record audio.";

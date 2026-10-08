@@ -22,10 +22,13 @@ impl Chrome {
     let button = button_metrics();
     let icon = icon_metrics();
     let mut labels = Vec::with_capacity(2);
-    for text in ["Copy all", "Copy as paragraph"] {
+    for text in [
+      crate::i18n::t!("overlay-ocr-copy-all"),
+      crate::i18n::t!("overlay-ocr-copy-paragraph"),
+    ] {
       let Some(label) = self.text.label(
         device,
-        text,
+        &text,
         scale,
         light_mode,
         button.font_size,

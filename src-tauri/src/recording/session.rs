@@ -68,12 +68,12 @@ pub(super) fn emit_error(app: &AppHandle, phase: &'static str, message: &str) {
 pub(super) fn report_failure(app: &AppHandle, phase: &'static str, message: &str) {
   emit_error(app, phase, message);
   let title = match phase {
-    "start" => "Recording could not start",
-    "capture" => "Recording ran into a problem",
-    "resume" => "Recording could not resume",
-    _ => "Recording could not finish",
+    "start" => crate::i18n::t!("alert-recording-start-failed"),
+    "capture" => crate::i18n::t!("alert-recording-capture-failed"),
+    "resume" => crate::i18n::t!("alert-recording-resume-failed"),
+    _ => crate::i18n::t!("alert-recording-finish-failed"),
   };
-  crate::alert::show(app, title, message);
+  crate::alert::show(app, &title, message);
 }
 
 pub(super) fn require_status(

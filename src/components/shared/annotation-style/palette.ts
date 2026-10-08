@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
+
 /**
  * The colours an arrow is offered.
  *
@@ -15,7 +17,8 @@
 export type AnnotationSwatch = {
   /** `#rrggbb`, as the document stores it. */
   color: string;
-  name: string;
+  /** The colour's name in the app's language. */
+  name: () => string;
 };
 
 /** What a fresh arrow is drawn in before anything has been chosen: yellow reads
@@ -27,14 +30,14 @@ export type AnnotationSwatch = {
 const DEFAULT_ANNOTATION_COLOR = "#ffcc00";
 
 export const ANNOTATION_SWATCHES: AnnotationSwatch[] = [
-  { color: "#ff383c", name: "Red" },
-  { color: "#ff8d28", name: "Orange" },
-  { color: DEFAULT_ANNOTATION_COLOR, name: "Yellow" },
-  { color: "#34c759", name: "Green" },
-  { color: "#0088ff", name: "Blue" },
-  { color: "#cb30e0", name: "Purple" },
-  { color: "#ffffff", name: "White" },
-  { color: "#000000", name: "Black" },
+  { color: "#ff383c", name: () => t("annotation-color-red") },
+  { color: "#ff8d28", name: () => t("annotation-color-orange") },
+  { color: DEFAULT_ANNOTATION_COLOR, name: () => t("annotation-color-yellow") },
+  { color: "#34c759", name: () => t("annotation-color-green") },
+  { color: "#0088ff", name: () => t("annotation-color-blue") },
+  { color: "#cb30e0", name: () => t("annotation-color-purple") },
+  { color: "#ffffff", name: () => t("annotation-color-white") },
+  { color: "#000000", name: () => t("annotation-color-black") },
 ];
 
 /** Whether `color` is one of the offered swatches, ignoring the case the

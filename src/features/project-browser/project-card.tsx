@@ -3,10 +3,12 @@
 
 import { Ellipsis } from "lucide-react";
 import { useState } from "react";
+import { useDateFormatter } from "react-aria";
 
 import { IconButton } from "../../components/base/button/icon-button";
 import { Text } from "../../components/base/text/text";
 import { EditableTitle } from "../../components/shared/editable-title/editable-title";
+import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 import {
   boundsAnchor,
@@ -17,11 +19,6 @@ import {
 import { ProjectCardPreview } from "./project-card-preview";
 
 import type { ProjectSummary, ScrubStrip } from "./types";
-
-const editedAt = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 export type ProjectCardProps = {
   isSelected: boolean;
@@ -71,6 +68,10 @@ export function ProjectCard({
   // A refused rename leaves the field showing what was typed; remounting it
   // puts the project's own name back.
   const [refusals, setRefusals] = useState(0);
+  const editedAt = useDateFormatter({
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
   return (
     <article
       aria-label={project.title}
@@ -111,7 +112,7 @@ export function ProjectCard({
               <EditableTitle
                 className="truncate focus:text-clip"
                 key={refusals}
-                label="Project name"
+                label={t("project-browser-project-name")}
                 onChange={(title) => {
                   onRename(title).catch(() => {
                     setRefusals((count) => count + 1);
@@ -126,14 +127,16 @@ export function ProjectCard({
           <Text className="truncate" variant="footnote">
             {footnote ??
               (!project.available
-                ? "Not available"
+                ? t("project-browser-unavailable")
                 : project.modifiedMs === null
                   ? null
-                  : editedAt.format(project.modifiedMs))}
+                  : editedAt.format(new Date(project.modifiedMs)))}
           </Text>
         </div>
         <IconButton
-          aria-label={`More actions for ${project.title}`}
+          aria-label={t("project-browser-more-actions", {
+            title: project.title,
+          })}
           className="shrink-0"
           onPress={(event) => {
             onMenu(boundsAnchor(event.target.getBoundingClientRect()));

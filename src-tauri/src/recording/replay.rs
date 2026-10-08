@@ -187,7 +187,7 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
           Err(error) => {
             inner.status = ReplayStatus::Off;
             inner.options = None;
-            report(&app, "Replay buffer could not turn on", &error);
+            report(&app, &crate::i18n::t!("alert-replay-start-failed"), &error);
             None
           }
         }
@@ -251,7 +251,7 @@ pub fn save(app: &AppHandle) -> Result<(), String> {
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
       if let Err(error) = capture::save(&app, &running, at) {
-        report(&app, "Replay could not be saved", &error);
+        report(&app, &crate::i18n::t!("alert-replay-save-failed"), &error);
       }
       update(&app, |inner| inner.saving = false);
     });

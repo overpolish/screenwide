@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { AngleDial } from "../../base/angle-dial/angle-dial";
 import { signedAngle, wrapAngle } from "../../base/angle-dial/angle-geometry";
 import { NumberField } from "../../base/input-fields/number-field";
@@ -59,12 +60,12 @@ export function AnnotationAngleDial({
 
   return (
     <div
-      aria-label="Angle"
+      aria-label={t("annotation-angle")}
       className="flex shrink-0 items-center gap-control-inset"
       role="group"
     >
       <AngleDial
-        aria-label="Angle"
+        aria-label={t("annotation-angle")}
         isDisabled={isDisabled}
         onChange={(next) => {
           change(next, false);
@@ -72,7 +73,7 @@ export function AnnotationAngleDial({
         value={degrees}
       />
       <NumberField
-        aria-label="Angle value"
+        aria-label={t("annotation-angle-value")}
         className="w-16 shrink-0"
         isDisabled={isDisabled}
         onChange={(next) => {

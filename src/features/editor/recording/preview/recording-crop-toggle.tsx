@@ -10,6 +10,7 @@ import {
 
 import { ButtonGroup } from "../../../../components/base/button-group/button-group";
 import { ToolToggle } from "../../../../components/shared/tool-toggle/tool-toggle";
+import { t } from "../../../../i18n/i18n";
 import { SceneToolToggle } from "../../tool-panels/scene/scene-tool-toggle";
 import { AnnotationToolStrip } from "../../toolbar/annotation-tool-strip";
 
@@ -39,15 +40,18 @@ export function RecordingCanvasTools({
 }) {
   return (
     <>
-      <ButtonGroup aria-label="Pointer tools" className="gap-control">
+      <ButtonGroup
+        aria-label={t("editor-pointer-tools")}
+        className="gap-control"
+      >
         {/* The marker is the anchor Select's panel hangs from: taking the tool
             up opens it, however the tool was taken up. */}
         <span className="inline-flex" data-editor-tool="select">
           <ToolToggle
             isDisabled={!isSelectEnabled}
             isSelected={tool === "select" && isSelectEnabled}
-            label="Select"
-            name="Select recording clip"
+            label={t("editor-tool-select")}
+            name={t("editor-tool-select-clip-name")}
             onSelectedChange={(selected) => {
               onToolChange(selected ? "select" : null);
             }}
@@ -59,8 +63,8 @@ export function RecordingCanvasTools({
         <ToolToggle
           isDisabled={!isArrowEnabled}
           isSelected={tool === "marquee" && isArrowEnabled}
-          label="Marquee"
-          name="Choose annotations with a marquee"
+          label={t("editor-tool-marquee")}
+          name={t("editor-tool-marquee-name")}
           onSelectedChange={(selected) => {
             onToolChange(selected ? "marquee" : null);
           }}
@@ -69,12 +73,15 @@ export function RecordingCanvasTools({
           <SquareDashedMousePointer />
         </ToolToggle>
       </ButtonGroup>
-      <ButtonGroup aria-label="Canvas tools" className="gap-control">
+      <ButtonGroup
+        aria-label={t("editor-canvas-tools")}
+        className="gap-control"
+      >
         <ToolToggle
           isDisabled={!isFrameEnabled}
           isSelected={tool === "canvas" && isFrameEnabled}
-          label="Frame"
-          name="Resize recording frame"
+          label={t("editor-tool-frame")}
+          name={t("editor-tool-frame-name")}
           onSelectedChange={(selected) => {
             onToolChange(selected ? "canvas" : null);
           }}
@@ -93,8 +100,8 @@ export function RecordingCanvasTools({
         <ToolToggle
           isDisabled={!isEnabled}
           isSelected={tool === "crop" && isEnabled}
-          label="Crop"
-          name="Crop recording clip"
+          label={t("editor-tool-crop")}
+          name={t("editor-tool-crop-clip-name")}
           onSelectedChange={(selected) => {
             onToolChange(selected ? "crop" : null);
           }}

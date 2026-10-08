@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
 use crate::editor::scenes::SceneTemplate;
+use crate::i18n::t;
 use crate::settings::background_preset::BackgroundPreset;
 use crate::system_accent::AccentPreference;
 
@@ -216,7 +217,7 @@ pub async fn browse_default_location(
   let parent = app.get_webview_window(crate::app_windows::WindowLabel::Settings.as_str());
   tauri::async_runtime::spawn_blocking(move || {
     use tauri_plugin_dialog::DialogExt;
-    let mut dialog = app.dialog().file().set_title("Choose a folder");
+    let mut dialog = app.dialog().file().set_title(t!("dialog-choose-folder"));
     if let Some(start) = start {
       dialog = dialog.set_directory(start);
     }

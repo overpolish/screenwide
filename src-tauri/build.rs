@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[path = "build/locales.rs"]
+mod locales;
 #[path = "build/precompiled_shaders.rs"]
 mod precompiled_shaders;
 #[path = "build/wgsl.rs"]
@@ -9,10 +11,11 @@ mod wgsl;
 mod windows_manifest;
 
 fn main() {
+  let out_dir =
+    std::path::PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR"));
   wgsl::assemble();
-  precompiled_shaders::precompile(std::path::Path::new(
-    &std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR"),
-  ));
+  precompiled_shaders::precompile(&out_dir);
+  locales::embed(&out_dir);
   // Build scripts are compiled for the host, so `cfg!(target_os)` here answers
   // "what am I running on", not "what am I building for". Cross-compiling from
   // macOS to Windows must not hand the Objective-C sources to the MSVC target.

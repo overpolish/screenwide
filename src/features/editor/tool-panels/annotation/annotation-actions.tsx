@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Button } from "../../../../components/base/button/button";
+import { t } from "../../../../i18n/i18n";
 
 import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
 import type { ToolPanelPatch } from "../tool-panel-patch";
@@ -33,13 +34,13 @@ export function AnnotationActions({
     return (
       <div className="flex justify-end">
         <Button
-          aria-label="Reverse the arrow"
+          aria-label={t("editor-panels-reverse-arrow")}
           isDisabled={isLocked}
           onPress={() => {
             change({ reverseAnnotation: true });
           }}
         >
-          Reverse
+          {t("editor-panels-reverse")}
         </Button>
       </div>
     );
@@ -47,13 +48,13 @@ export function AnnotationActions({
   return (
     <div className="flex justify-end">
       <Button
-        aria-label="Clear all drawings"
+        aria-label={t("editor-panels-clear-drawings")}
         isDisabled={isLocked || !canClearDrawings}
         onPress={() => {
           change({ clearDrawings: true });
         }}
       >
-        Clear all
+        {t("editor-panels-clear-all")}
       </Button>
     </div>
   );

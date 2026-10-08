@@ -5,8 +5,6 @@
 //! seconds left before a Delayed Screenshot, that the replay buffer is on, or
 //! that it just saved a clip.
 
-use std::borrow::Cow;
-
 use tauri::image::Image;
 
 #[cfg(target_os = "windows")]
@@ -91,12 +89,12 @@ pub(super) fn icon(shown: Shown) -> tauri::Result<Image<'static>> {
   }
 }
 
-pub(super) fn tooltip(shown: Shown) -> Cow<'static, str> {
+pub(super) fn tooltip(shown: Shown) -> String {
   match shown {
-    Shown::Countdown(seconds) => Cow::Owned(format!("Screenwide - Screenshot in {seconds}s")),
-    Shown::Replay => Cow::Borrowed("Screenwide - Replay buffer on"),
-    Shown::ReplaySaved => Cow::Borrowed("Screenwide - Replay saved"),
-    Shown::Status(status) => Cow::Borrowed(status_tooltip(status)),
+    Shown::Countdown(seconds) => crate::i18n::t!("tray-tooltip-countdown", seconds = seconds),
+    Shown::Replay => crate::i18n::t!("tray-tooltip-replay"),
+    Shown::ReplaySaved => crate::i18n::t!("tray-tooltip-replay-saved"),
+    Shown::Status(status) => status_tooltip(status),
   }
 }
 
@@ -139,13 +137,13 @@ fn status_icon(status: RecordingStatus) -> tauri::Result<Image<'static>> {
   })
 }
 
-const fn status_tooltip(status: RecordingStatus) -> &'static str {
+fn status_tooltip(status: RecordingStatus) -> String {
   match status {
-    RecordingStatus::Idle => "Screenwide",
-    RecordingStatus::Starting => "Screenwide - Starting a recording",
-    RecordingStatus::Recording => "Screenwide - Recording",
-    RecordingStatus::Paused => "Screenwide - Recording paused",
-    RecordingStatus::Stopping => "Screenwide - Finishing the recording",
+    RecordingStatus::Idle => crate::i18n::t!("tray-tooltip"),
+    RecordingStatus::Starting => crate::i18n::t!("tray-tooltip-starting"),
+    RecordingStatus::Recording => crate::i18n::t!("tray-tooltip-recording"),
+    RecordingStatus::Paused => crate::i18n::t!("tray-tooltip-paused"),
+    RecordingStatus::Stopping => crate::i18n::t!("tray-tooltip-stopping"),
   }
 }
 

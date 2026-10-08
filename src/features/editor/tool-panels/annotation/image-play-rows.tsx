@@ -6,6 +6,7 @@ import { ArrowRightToLine, Repeat } from "lucide-react";
 import { PillGroup } from "../../../../components/base/pill-group/pill-group";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { t } from "../../../../i18n/i18n";
 
 import type { ImagePlay } from "../../annotations/annotations";
 import type { EditorKind } from "../../types";
@@ -27,7 +28,10 @@ export function ImageFrameRow({
   play: ImagePlay;
   workspace: EditorKind;
 }) {
-  const title = workspace === "recording" ? "Start frame" : "Frame";
+  const title =
+    workspace === "recording"
+      ? t("editor-panels-start-frame")
+      : t("editor-panels-frame");
   return (
     <ControlRow title={title}>
       {(controlProps) => (
@@ -51,9 +55,17 @@ export function ImageFrameRow({
   );
 }
 
-const PLAYBACK_ITEMS = [
-  { icon: <Repeat aria-hidden="true" />, id: "loop", label: "Loop" },
-  { icon: <ArrowRightToLine aria-hidden="true" />, id: "once", label: "Once" },
+const playbackItems = () => [
+  {
+    icon: <Repeat aria-hidden="true" />,
+    id: "loop",
+    label: t("editor-panels-playback-loop"),
+  },
+  {
+    icon: <ArrowRightToLine aria-hidden="true" />,
+    id: "once",
+    label: t("editor-panels-playback-once"),
+  },
 ];
 
 /**
@@ -71,14 +83,14 @@ export function ImagePlaybackRow({
   play: ImagePlay;
 }) {
   return (
-    <ControlRow title="Playback">
+    <ControlRow title={t("editor-panels-playback")}>
       {(controlProps) => (
         <div {...controlProps} role="group">
           <PillGroup
-            aria-label="Playback"
+            aria-label={t("editor-panels-playback")}
             display="icon-label"
             isDisabled={isLocked}
-            items={PLAYBACK_ITEMS}
+            items={playbackItems()}
             onSelectionChange={(id) => {
               change({ annotationImagePlay: { once: id === "once" } });
             }}

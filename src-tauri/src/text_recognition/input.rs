@@ -99,7 +99,7 @@ pub(crate) fn selection_finished(
 ) {
   super::adapter::render_window(
     &window,
-    super::visual::RenderPacket::loading("Finding text and QR codes"),
+    super::visual::RenderPacket::loading(crate::i18n::t!("overlay-ocr-finding")),
   );
   let app = window.app_handle().clone();
   tauri::async_runtime::spawn(async move {

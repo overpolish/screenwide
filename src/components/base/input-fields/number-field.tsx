@@ -14,6 +14,7 @@ import {
 } from "react-aria-components";
 import { VariantProps } from "tailwind-variants";
 
+import { t } from "../../../i18n/i18n";
 import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
@@ -201,7 +202,7 @@ export const NumberField = ({
       >
         {showSteppers && (
           <Button
-            aria-label="Decrement"
+            aria-label={t("controls-decrement")}
             className={stepper({ className: "rounded-l-[inherit]" })}
             slot="decrement"
           >
@@ -252,7 +253,7 @@ export const NumberField = ({
 
         {showSteppers && (
           <Button
-            aria-label="Increment"
+            aria-label={t("controls-increment")}
             className={stepper({ className: "rounded-r-[inherit]" })}
             slot="increment"
           >

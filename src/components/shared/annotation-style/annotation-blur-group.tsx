@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { PillGroup } from "../../base/pill-group/pill-group";
 
-const items: { id: "sharp" | "blur"; label: string }[] = [
-  { id: "sharp", label: "Sharp" },
-  { id: "blur", label: "Blur" },
+const items = (): { id: "sharp" | "blur"; label: string }[] => [
+  { id: "sharp", label: t("annotation-outside-sharp") },
+  { id: "blur", label: t("annotation-outside-blur") },
 ];
 
 /** Whether what lies outside a spotlight is left sharp or blurred, labelled
@@ -21,10 +22,10 @@ export function AnnotationBlurGroup({
 }) {
   return (
     <PillGroup
-      aria-label="Outside"
+      aria-label={t("annotation-outside")}
       display="label"
       isDisabled={isDisabled}
-      items={items}
+      items={items()}
       onSelectionChange={(id) => {
         onChange(id === "blur");
       }}

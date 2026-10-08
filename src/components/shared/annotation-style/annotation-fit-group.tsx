@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { PillGroup } from "../../base/pill-group/pill-group";
 
-const items: { id: "auto" | "manual"; label: string }[] = [
-  { id: "auto", label: "Auto" },
-  { id: "manual", label: "Manual" },
+const items = (): { id: "auto" | "manual"; label: string }[] => [
+  { id: "auto", label: t("annotation-fit-auto") },
+  { id: "manual", label: t("annotation-fit-manual") },
 ];
 
 /** Whether a highlight fits itself to the text under it or is laid by hand
@@ -21,10 +22,10 @@ export function AnnotationFitGroup({
 }) {
   return (
     <PillGroup
-      aria-label="Fit"
+      aria-label={t("annotation-fit")}
       display="label"
       isDisabled={isDisabled}
-      items={items}
+      items={items()}
       onSelectionChange={(id) => {
         onChange(id === "manual");
       }}

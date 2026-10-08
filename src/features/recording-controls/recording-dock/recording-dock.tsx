@@ -11,6 +11,7 @@ import {
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { AudioMeter } from "../../audio-inputs/audio-meter";
 import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
@@ -51,9 +52,9 @@ function DiscardButton({ onDiscard }: DiscardButtonProps) {
   return (
     <ConfirmActionButton
       armedIcon={<Check />}
-      armedLabel="Confirm discarding"
+      armedLabel={t("recording-controls-confirm-discard")}
       idleIcon={<Trash2 />}
-      idleLabel="Discard recording"
+      idleLabel={t("recording-controls-discard")}
       onConfirm={onDiscard}
       variant="icon"
     />
@@ -136,8 +137,8 @@ export function RecordingDock({
           <div
             aria-label={
               status === "starting"
-                ? "Starting recording"
-                : "Finishing recording"
+                ? t("recording-controls-starting-label")
+                : t("recording-controls-finishing-label")
             }
             className={cn("flex items-center justify-center", BUSY_SLOT_CLASS)}
             role="status"
@@ -163,7 +164,9 @@ export function RecordingDock({
                  * per engine.
                  */}
                 <span className="w-14 text-center">
-                  {status === "starting" ? "Starting" : "Finishing"}
+                  {status === "starting"
+                    ? t("recording-controls-starting")
+                    : t("recording-controls-finishing")}
                 </span>
               </div>
             )}
@@ -172,10 +175,10 @@ export function RecordingDock({
           <IconButton
             aria-label={
               status === "starting" && countdownSeconds > 0
-                ? "Cancel recording countdown"
+                ? t("recording-controls-cancel-countdown")
                 : status === "starting"
-                  ? "Cancel starting recording"
-                  : "Cancel finishing recording"
+                  ? t("recording-controls-cancel-starting")
+                  : t("recording-controls-cancel-finishing")
             }
             onPress={onDiscard}
           >
@@ -189,7 +192,7 @@ export function RecordingDock({
               {monitor.hasCamera && (
                 <div className="flex h-control-height items-center">
                   <CameraThumbnail
-                    aria-label="Camera confidence preview"
+                    aria-label={t("recording-controls-camera-preview")}
                     canvasRef={monitor.cameraCanvasRef}
                     // A portrait camera is held to the row's height; a
                     // landscape one takes a 40px width, which 16:9 leaves
@@ -252,7 +255,11 @@ export function RecordingDock({
 
           <div className="flex items-center gap-control">
             <IconToggleButton
-              aria-label={isPaused ? "Resume recording" : "Pause recording"}
+              aria-label={
+                isPaused
+                  ? t("recording-controls-resume")
+                  : t("recording-controls-pause")
+              }
               isSelected={isPaused}
               off={<Pause />}
               onChange={(selected) => {
@@ -263,7 +270,7 @@ export function RecordingDock({
             </IconToggleButton>
 
             <IconButton
-              aria-label="Stop recording"
+              aria-label={t("recording-controls-stop")}
               color="primary"
               onPress={onStop}
             >

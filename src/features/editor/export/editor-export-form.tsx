@@ -7,6 +7,7 @@ import { TextField } from "../../../components/base/input-fields/text-field";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { Text } from "../../../components/base/text/text";
 import { PathField } from "../../../components/shared/path-field/path-field";
+import { t } from "../../../i18n/i18n";
 import { formatBytes } from "../duration";
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import { EditorArtifact } from "../types";
@@ -113,15 +114,15 @@ export function EditorExportForm({
     recording !== null && recording.primaryKind !== "audio";
   const compressionDisabled = Boolean(isSaving) || !recording?.canCompress;
   const estimate = isEstimatingSize
-    ? "Estimating"
+    ? t("editor-export-estimating")
     : typeof estimatedSizeBytes === "number"
       ? formatBytes(estimatedSizeBytes)
-      : "Unavailable";
+      : t("editor-export-unavailable");
 
   return (
     <div className="flex flex-col gap-layout outline-none">
       <div className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-section gap-y-section">
-        <ExportRow title="File name">
+        <ExportRow title={t("editor-export-file-name")}>
           {(props) => (
             <TextField
               {...props}
@@ -133,10 +134,10 @@ export function EditorExportForm({
             />
           )}
         </ExportRow>
-        <ExportRow title="Save to">
+        <ExportRow title={t("editor-export-save-to")}>
           {() => (
             <PathField
-              aria-label="Save to"
+              aria-label={t("editor-export-save-to")}
               className="w-full"
               fullWidth
               isDisabled={isSaving}
@@ -146,10 +147,10 @@ export function EditorExportForm({
           )}
         </ExportRow>
         {/* One format for now: choosing another is a backend follow-up. */}
-        <ExportRow title="Format">
+        <ExportRow title={t("editor-export-format")}>
           {() => (
             <PillGroup
-              aria-label="Format"
+              aria-label={t("editor-export-format")}
               display="label"
               isDisabled
               items={[{ id: extension, label: extension.toUpperCase() }]}
@@ -159,7 +160,7 @@ export function EditorExportForm({
           )}
         </ExportRow>
         {showResolution ? (
-          <ExportRow title="Output size">
+          <ExportRow title={t("editor-export-output-size")}>
             {(props) => (
               <ExportResolutionSelect
                 {...props}
@@ -177,7 +178,7 @@ export function EditorExportForm({
           </ExportRow>
         ) : null}
         {camera ? (
-          <ExportRow title="Camera output size">
+          <ExportRow title={t("editor-export-camera-output-size")}>
             {(props) => (
               <ExportResolutionSelect
                 {...props}
@@ -200,7 +201,7 @@ export function EditorExportForm({
           </ExportRow>
         ) : null}
         {showCompression ? (
-          <ExportRow title="Compression">
+          <ExportRow title={t("editor-export-compression")}>
             {(props) => (
               <CompressionSelect
                 {...props}
@@ -213,7 +214,7 @@ export function EditorExportForm({
           </ExportRow>
         ) : null}
         {camera ? (
-          <ExportRow title="Camera compression">
+          <ExportRow title={t("editor-export-camera-compression")}>
             {(props) => (
               <CompressionSelect
                 {...props}
@@ -227,9 +228,9 @@ export function EditorExportForm({
         ) : null}
         {recording && recording.audioTracks.length > 1 ? (
           <ExportRow
-            description="Mix the selected tracks into one."
+            description={t("editor-export-collapse-audio-description")}
             layout="trailing"
-            title="Collapse audio tracks"
+            title={t("editor-export-collapse-audio")}
           >
             {(props) => (
               <Checkbox
@@ -241,7 +242,7 @@ export function EditorExportForm({
             )}
           </ExportRow>
         ) : null}
-        <ExportRow layout="trailing" title="Open folder after saving">
+        <ExportRow layout="trailing" title={t("editor-export-open-folder")}>
           {(props) => (
             <Checkbox
               {...props}
@@ -254,9 +255,13 @@ export function EditorExportForm({
         <ExportRow
           // A screenshot is also copied from the editor, which the choice
           // covers as well.
-          description={`${recording ? "After saving" : "After saving or copying"}, moves it to Recently Deleted.`}
+          description={
+            recording
+              ? t("editor-export-delete-project-description")
+              : t("editor-export-delete-project-copy-description")
+          }
           layout="trailing"
-          title="Delete project"
+          title={t("editor-export-delete-project")}
         >
           {(props) => (
             <Checkbox
@@ -274,12 +279,12 @@ export function EditorExportForm({
             className="mr-auto tabular-nums text-content-fg-secondary"
             variant="subheadline"
           >
-            Estimated size {estimate}
+            {t("editor-export-estimated-size", { size: estimate })}
           </Text>
         ) : null}
-        <Button onPress={onCancel}>Cancel</Button>
+        <Button onPress={onCancel}>{t("editor-export-cancel")}</Button>
         <Button color="primary" isDisabled={!canExport} onPress={onExport}>
-          Export
+          {t("editor-export")}
         </Button>
       </div>
     </div>

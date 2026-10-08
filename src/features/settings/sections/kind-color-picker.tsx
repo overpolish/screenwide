@@ -20,6 +20,7 @@ import {
   sameAnnotationColor,
 } from "../../../components/shared/annotation-style/palette";
 import { BackgroundTile } from "../../../components/shared/background-picker/background-tile";
+import { t } from "../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 
 /** The colour as a kind keeps it: `#rrggbb` in lower case, whatever the
@@ -92,7 +93,7 @@ export function KindColorPicker({
   return (
     <DialogTrigger isOpen={open} onOpenChange={setOpen}>
       <Button
-        aria-label={`${name} colour`}
+        aria-label={t("settings-moment-color", { moment: name })}
         className={cn(
           "size-control-height shrink-0 cursor-default rounded-control inset-ring-1 inset-ring-content-fg-quaternary",
           focusStyles,
@@ -104,9 +105,12 @@ export function KindColorPicker({
       />
       {/* Hung from the swatch's leading edge, so the palette opens over its
           own row rather than out past the group. */}
-      <Popover aria-label={`${name} colour`} placement="bottom start">
+      <Popover
+        aria-label={t("settings-moment-color", { moment: name })}
+        placement="bottom start"
+      >
         <ToggleButtonGroup
-          aria-label="Colour"
+          aria-label={t("annotation-color")}
           className="flex gap-control"
           disallowEmptySelection
           selectedKeys={new Set([isCustom ? "custom" : color.toLowerCase()])}
@@ -114,7 +118,7 @@ export function KindColorPicker({
         >
           {ANNOTATION_SWATCHES.map((swatch) => (
             <BackgroundTile
-              ariaLabel={swatch.name}
+              ariaLabel={swatch.name()}
               background={{ color: swatch.color, kind: "solid" }}
               id={swatch.color}
               isSelected={!isCustom && sameAnnotationColor(swatch.color, color)}
@@ -126,7 +130,7 @@ export function KindColorPicker({
           ))}
           <span className="relative inline-flex">
             <BackgroundTile
-              ariaLabel="Custom colour"
+              ariaLabel={t("annotation-custom-color")}
               background={
                 customColor ? { color: customColor, kind: "solid" } : undefined
               }
@@ -159,7 +163,7 @@ export function KindColorPicker({
                 blur. */}
             {systemPanel ? null : (
               <input
-                aria-label="Custom colour"
+                aria-label={t("annotation-custom-color")}
                 className="absolute inset-0 size-full cursor-default opacity-0 outline-none"
                 onBlur={(event) => {
                   if (!pickedRef.current) return;

@@ -18,6 +18,7 @@ import { SidebarNav } from "../../components/base/sidebar-nav/sidebar-nav";
 import { Text } from "../../components/base/text/text";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { t } from "../../i18n/i18n";
 
 import {
   ProjectBrowserNotices,
@@ -99,14 +100,16 @@ function EmptyState({
   return (
     <div className="gap-control pr-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
       <Text variant="headline">
-        {selected === DELETED ? "No deleted projects" : "No projects"}
+        {selected === DELETED
+          ? t("project-browser-empty-deleted-title")
+          : t("project-browser-empty-title")}
       </Text>
       <Text variant="subheadline">
         {selected === DELETED
-          ? "Projects you delete wait here for 30 days."
+          ? t("project-browser-empty-deleted")
           : location
-            ? "Projects saved in this folder appear here."
-            : "Recordings and screenshots you make or open appear here."}
+            ? t("project-browser-empty-location")
+            : t("project-browser-empty-recent")}
       </Text>
     </div>
   );
@@ -163,21 +166,21 @@ export function ProjectBrowser({
           actions={
             <div className="gap-control flex items-center">
               <SearchField
-                aria-label="Search projects"
+                aria-label={t("project-browser-search-label")}
                 className="w-48"
                 onChange={setQuery}
-                placeholder="Search"
+                placeholder={t("project-browser-search-placeholder")}
                 value={query}
               />
               <Button onPress={onOpenFile} variant="ghost">
                 <FolderOpen />
-                Open File
+                {t("project-browser-open-file")}
               </Button>
             </div>
           }
           leadingSection={
             <img
-              alt="Screenwide"
+              alt={t("project-browser-logo")}
               className="brightness-0 dark:invert"
               draggable={false}
               src={logoUrl}
@@ -185,19 +188,23 @@ export function ProjectBrowser({
           }
           onClose={onClose}
           onMinimize={onMinimize}
-          title="Projects"
+          title={t("project-browser-title")}
         />
       }
     >
       <div className="gap-layout pl-window-inset flex min-h-0 grow">
         <div className="gap-section pb-window-inset flex shrink-0 flex-col">
           <SidebarNav
-            aria-label="Project locations"
+            aria-label={t("project-browser-locations")}
             className="grow"
             isExpandable={false}
             isExpanded
             items={[
-              { icon: <Clock />, id: RECENT, label: "Recent" },
+              {
+                icon: <Clock />,
+                id: RECENT,
+                label: t("project-browser-recent"),
+              },
               // A folder that is not there, such as one on a drive that is
               // not connected, is shown but cannot be chosen; its menu can
               // still take it off the sidebar.
@@ -214,7 +221,7 @@ export function ProjectBrowser({
                 icon: <Trash2 />,
                 id: DELETED,
                 isPinned: true,
-                label: "Recently Deleted",
+                label: t("project-browser-recently-deleted"),
               },
             ]}
             onItemContextMenu={(id, point) => {
@@ -229,7 +236,7 @@ export function ProjectBrowser({
             onPress={onAddLocation}
             variant="ghost"
           >
-            Add Location
+            {t("project-browser-add-location")}
           </Button>
         </div>
         <div className="gap-section flex min-h-0 min-w-0 grow flex-col">

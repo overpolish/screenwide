@@ -80,6 +80,8 @@ export function hotkeyFromEvent(
   return [...modifiers, event.code].join("+");
 }
 
+/** The keys of a shortcut, each as a name `Keyboard` and `keyLabel` know:
+ * the platform's modifiers, the key a code stands for, or a mouse control. */
 export function hotkeyKeys(
   value: string | null,
   isMac = typeof navigator !== "undefined" &&
@@ -87,9 +89,6 @@ export function hotkeyKeys(
 ): string[] {
   return value
     ? value.split("+").map((key) => {
-        if (key === "MouseMiddle") return "Middle click";
-        if (key === "MouseBack") return "Mouse Back";
-        if (key === "MouseForward") return "Mouse Forward";
         key = key.replace(/^(Meta|Control|Alt|Shift)(Left|Right)$/, "$1");
         if (key === "CommandOrControl") return isMac ? "Command" : "Control";
         if (key === "Super" || key === "Meta" || key === "Command")

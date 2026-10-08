@@ -6,10 +6,15 @@ import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { IconButton } from "../../../components/base/button/icon-button";
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
+import {
+  annotationToolLabel,
+  annotationToolName,
+} from "../../../components/shared/annotation-style/annotation-text";
 import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 import { ToolToggleDisabledContext } from "../../../components/shared/tool-toggle/tool-toggle-disabled";
 import { WindowHeaderCenterWidthContext } from "../../../components/shared/window-header/window-header-center-width";
+import { t } from "../../../i18n/i18n";
 import { ANNOTATION_TOOLS, AnnotationTool } from "../tool-panels/tool-registry";
 
 import { annotationToolLayout } from "./annotation-tool-layout";
@@ -96,16 +101,16 @@ export function AnnotationToolStrip({
 
   return (
     <div className="flex" ref={stripRef}>
-      <ButtonGroup aria-label="Annotation tools" className="gap-control">
+      <ButtonGroup aria-label={t("annotate-tools")} className="gap-control">
         {/* No `data-editor-tool` marker: the annotation panel hangs from the
             picture, never from a toolbar button. */}
-        {shown.map(({ icon: Icon, id, label, name, shortcut }) => (
+        {shown.map(({ icon: Icon, id, shortcut }) => (
           <ToolToggle
             isDisabled={isDisabled}
             isSelected={tool === id && !isDisabled}
             key={id}
-            label={label}
-            name={name}
+            label={annotationToolLabel(id)}
+            name={annotationToolName(id)}
             onSelectedChange={(selected) => {
               onChoose(id, selected);
             }}
@@ -115,9 +120,9 @@ export function AnnotationToolStrip({
           </ToolToggle>
         ))}
         {layout.hidden.length > 0 ? (
-          <NativeTooltipTrigger tooltip="More tools">
+          <NativeTooltipTrigger tooltip={t("editor-toolbar-more-tools")}>
             <IconButton
-              aria-label="More annotation tools"
+              aria-label={t("editor-toolbar-more-annotation-tools")}
               className="text-content-fg-secondary"
               isDisabled={isDisabled || isBarDisabled}
               onPress={() => {

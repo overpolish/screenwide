@@ -97,8 +97,11 @@ pub async fn browse_annotation_image(
     let picked: Option<PathBuf> = app
       .dialog()
       .file()
-      .set_title("Choose an image")
-      .add_filter("Pictures", PICTURE_EXTENSIONS)
+      .set_title(crate::i18n::t!("dialog-choose-image"))
+      .add_filter(
+        crate::i18n::t!("dialog-pictures-filter"),
+        PICTURE_EXTENSIONS,
+      )
       .set_parent(&window)
       .blocking_pick_file()
       .and_then(|path| path.into_path().ok());

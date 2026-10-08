@@ -4,6 +4,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
 
+import { t } from "../../../i18n/i18n";
 import { pointerAnchor, usePopupMenu } from "../../popup-panel/use-popup-menu";
 import {
   annotationArrangeItems,
@@ -45,7 +46,7 @@ export function useScreenshotAnnotationMenu({
   const layerRef = useRef<number | null>(null);
   const openMenu = usePopupMenu({
     idPrefix: "screenshot-annotation:",
-    label: "Annotation actions",
+    label: t("editor-annotation-actions"),
     mode: "menu",
     onSelect: (itemId, annotationId) => {
       const arrangement = annotationArrangementPicked(itemId);

@@ -9,6 +9,9 @@ const DEFAULT_LIMIT = 300;
 const TEST_LIMIT = 650;
 const roots = ["src", "src-tauri/src", "scripts"];
 const extensions = new Set([".h", ".m", ".mjs", ".rs", ".ts", ".tsx"]);
+// Generated from other sources, so they grow with what they list and there
+// is nothing to split by hand.
+const generated = new Set(["src/i18n/messages.ts"]);
 
 // Oversized legacy files are frozen at their surveyed size. Refactors remove
 // entries rather than raising ceilings, so new code and completed splits use
@@ -39,6 +42,7 @@ for (const file of files.sort()) {
   const lines = source.length === 0 ? 0 : source.split(/\r?\n/u).length;
   const normalized = file.split(path.sep).join("/");
   visited.add(normalized);
+  if (generated.has(normalized)) continue;
   // Rust test modules live in `tests.rs`, `*_tests.rs`, or folders of the same
   // names once a test module has submodules of its own.
   const isTest =

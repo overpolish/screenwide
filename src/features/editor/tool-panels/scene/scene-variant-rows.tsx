@@ -12,6 +12,7 @@ import { ReactNode } from "react";
 import { PillGroup } from "../../../../components/base/pill-group/pill-group";
 import { Switch } from "../../../../components/base/switch/switch";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
 import {
   DEFAULT_BUBBLE_SIZE,
   DEFAULT_CAMERA_SIZE,
@@ -23,22 +24,42 @@ import {
 } from "../../recording/scenes/recording-scene-variant";
 import { RecordingScenePreset } from "../../recording/scenes/recording-scenes";
 
-const cameraSizes = [
-  { ariaLabel: "One third", id: "third", label: "⅓" },
-  { ariaLabel: "Two thirds", id: "two-thirds", label: "⅔" },
-] satisfies { ariaLabel: string; id: SceneCameraSize; label: string }[];
+const cameraSizes = (): {
+  ariaLabel: string;
+  id: SceneCameraSize;
+  label: string;
+}[] => [
+  { ariaLabel: t("editor-panels-one-third"), id: "third", label: "⅓" },
+  { ariaLabel: t("editor-panels-two-thirds"), id: "two-thirds", label: "⅔" },
+];
 
-const corners = [
-  { icon: <ArrowUpLeft />, id: "top-left", label: "Top left" },
-  { icon: <ArrowUpRight />, id: "top-right", label: "Top right" },
-  { icon: <ArrowDownLeft />, id: "bottom-left", label: "Bottom left" },
-  { icon: <ArrowDownRight />, id: "bottom-right", label: "Bottom right" },
-] satisfies { icon: ReactNode; id: SceneCorner; label: string }[];
+const corners = (): { icon: ReactNode; id: SceneCorner; label: string }[] => [
+  {
+    icon: <ArrowUpLeft />,
+    id: "top-left",
+    label: t("editor-panels-corner-top-left"),
+  },
+  {
+    icon: <ArrowUpRight />,
+    id: "top-right",
+    label: t("editor-panels-corner-top-right"),
+  },
+  {
+    icon: <ArrowDownLeft />,
+    id: "bottom-left",
+    label: t("editor-panels-corner-bottom-left"),
+  },
+  {
+    icon: <ArrowDownRight />,
+    id: "bottom-right",
+    label: t("editor-panels-corner-bottom-right"),
+  },
+];
 
-const bubbleSizes = [
-  { id: "small", label: "Small" },
-  { id: "large", label: "Large" },
-] satisfies { id: SceneBubbleSize; label: string }[];
+const bubbleSizes = (): { id: SceneBubbleSize; label: string }[] => [
+  { id: "small", label: t("editor-panels-size-small") },
+  { id: "large", label: t("editor-panels-size-large") },
+];
 
 /**
  * The options of the preset under the playhead, under the tiles: which side
@@ -60,7 +81,7 @@ export function SceneVariantRows({
   if (preset === "split-two-thirds" || preset === "stacked")
     return (
       <>
-        <ControlRow title="Swap">
+        <ControlRow title={t("editor-panels-swap")}>
           {(controlProps) => (
             <Switch
               {...controlProps}
@@ -72,14 +93,14 @@ export function SceneVariantRows({
             />
           )}
         </ControlRow>
-        <ControlRow title="Camera size">
+        <ControlRow title={t("editor-panels-camera-size")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <PillGroup
-                aria-label="Camera size"
+                aria-label={t("editor-panels-camera-size")}
                 display="label"
                 isDisabled={isDisabled}
-                items={cameraSizes}
+                items={cameraSizes()}
                 onSelectionChange={(size) => {
                   onChange({ cameraSize: size as SceneCameraSize });
                 }}
@@ -93,13 +114,13 @@ export function SceneVariantRows({
   if (preset === "picture-in-picture")
     return (
       <>
-        <ControlRow title="Corner">
+        <ControlRow title={t("editor-panels-corner")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <PillGroup
-                aria-label="Corner"
+                aria-label={t("editor-panels-corner")}
                 isDisabled={isDisabled}
-                items={corners}
+                items={corners()}
                 onSelectionChange={(corner) => {
                   onChange({ corner: corner as SceneCorner });
                 }}
@@ -108,14 +129,14 @@ export function SceneVariantRows({
             </div>
           )}
         </ControlRow>
-        <ControlRow title="Size">
+        <ControlRow title={t("editor-panels-size")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <PillGroup
-                aria-label="Camera size"
+                aria-label={t("editor-panels-camera-size")}
                 display="label"
                 isDisabled={isDisabled}
-                items={bubbleSizes}
+                items={bubbleSizes()}
                 onSelectionChange={(size) => {
                   onChange({ size: size as SceneBubbleSize });
                 }}

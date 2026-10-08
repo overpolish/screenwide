@@ -11,6 +11,7 @@ import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { SidebarNav } from "../../components/base/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { t } from "../../i18n/i18n";
 
 import { useAnnotateSettingsSave } from "./sections/use-annotate-settings-save";
 import { useGlideSettingsSave } from "./sections/use-glide-settings-save";
@@ -20,7 +21,7 @@ import { useRulerSettingsSave } from "./sections/use-ruler-settings-save";
 import { useTranscription } from "./sections/use-transcription";
 import { useSettingsApi } from "./settings-api-context";
 import { SettingsPanes } from "./settings-panes";
-import { sectionTitles, type SettingsSection } from "./settings-sections";
+import { sectionTitle, type SettingsSection } from "./settings-sections";
 import { settingsSidebarItems } from "./settings-sidebar-items";
 import { useShortcutCapture } from "./use-shortcut-capture";
 
@@ -207,13 +208,13 @@ export function SettingsWindow({
                 variant="ghost"
               >
                 <Plus />
-                Add Moment
+                {t("settings-add-moment")}
               </Button>
             ) : undefined
           }
           leadingSection={
             <img
-              alt="Screenwide"
+              alt={t("settings-logo")}
               className="brightness-0 dark:invert"
               draggable={false}
               src={logoUrl}
@@ -221,7 +222,7 @@ export function SettingsWindow({
           }
           onClose={() => void hideSettings()}
           onMinimize={() => void minimize()}
-          title={sectionTitles[section]}
+          title={sectionTitle(section)}
         />
       }
     >
@@ -230,11 +231,11 @@ export function SettingsWindow({
           and carries the inset on the scrolled content instead. */}
       <div className="gap-layout pl-window-inset flex min-h-0 grow">
         <SidebarNav
-          aria-label="Settings sections"
+          aria-label={t("settings-sections")}
           className="pb-window-inset"
           isExpandable={false}
           isExpanded
-          items={settingsSidebarItems}
+          items={settingsSidebarItems()}
           onSelectionChange={(id) => {
             setSection(id as SettingsSection);
           }}
@@ -247,7 +248,7 @@ export function SettingsWindow({
             rootClassName="min-h-0 min-w-0 grow"
           >
             <section
-              aria-label={sectionTitles[section]}
+              aria-label={sectionTitle(section)}
               className="pr-window-inset pb-window-inset flex flex-col"
             >
               <SettingsPanes

@@ -4,6 +4,7 @@
 import { Mic, MicOff } from "lucide-react";
 
 import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { AudioMeter } from "../../audio-inputs/audio-meter";
 
@@ -28,7 +29,9 @@ function MomentShown({
   if (moment.noteMs !== null)
     return (
       <div
-        aria-label={`Recording a ${moment.name} voice note`}
+        aria-label={t("recording-controls-recording-note", {
+          moment: moment.name,
+        })}
         className="flex min-w-0 items-center justify-center gap-control"
         role="status"
       >
@@ -54,17 +57,21 @@ function MomentShown({
   if (moment.noMicrophone)
     return (
       <div
-        aria-label="No microphone for a voice note"
+        aria-label={t("recording-controls-note-no-microphone")}
         className="flex min-w-0 items-center justify-center gap-control"
         role="status"
       >
         <MicOff aria-hidden="true" className="size-icon-small shrink-0" />
-        <span className="truncate">No mic</span>
+        <span className="truncate">
+          {t("recording-controls-note-no-microphone-short")}
+        </span>
       </div>
     );
   return (
     <div
-      aria-label={`${moment.name} moment placed`}
+      aria-label={t("recording-controls-moment-placed", {
+        moment: moment.name,
+      })}
       className="flex min-w-0 items-center justify-center gap-control"
       role="status"
     >

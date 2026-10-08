@@ -7,6 +7,7 @@ import { memo, type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Checkbox } from "../../components/base/checkbox/checkbox";
+import { t } from "../../i18n/i18n";
 
 type ReleaseNotesProps = {
   html: string;
@@ -78,7 +79,7 @@ export function ReleaseNotes({ html }: ReleaseNotesProps) {
         label:
           input.getAttribute("aria-label") ??
           input.parentElement?.textContent.trim() ??
-          "Task",
+          t("updates-task"),
         selected: input.checked,
         target,
       };

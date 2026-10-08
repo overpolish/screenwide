@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { fileManagerName, trashName } from "../../lib/platform";
+import { platformArg, t } from "../../i18n/i18n";
 import { PopupPanelItem } from "../popup-panel/store";
 import { PopupMenuAnchor, usePopupMenu } from "../popup-panel/use-popup-menu";
 
@@ -52,7 +52,7 @@ export function useProjectMenu(
 ) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: "Project actions",
+    label: t("project-browser-project-actions"),
     mode: "menu",
     onSelect: (itemId, context) => {
       const files = JSON.parse(context) as string[];
@@ -84,31 +84,51 @@ export function useProjectMenu(
             icon: locationGlyph(location),
             id: `${MOVE_PREFIX}${location.path}`,
             label: location.name,
-            section: "Move To",
+            section: t("project-browser-move-to"),
           }))
       : [];
 
   const itemsFor = (file: string, isAvailable: boolean): PopupPanelItem[] => {
     if ("onRestore" in actions)
       return [
-        { icon: "restore", id: "restore", label: "Restore" },
-        { icon: "trash", id: "trash", label: `Move to ${trashName()}` },
+        { icon: "restore", id: "restore", label: t("project-browser-restore") },
+        {
+          icon: "trash",
+          id: "trash",
+          label: t("project-browser-move-to-trash", {
+            platform: platformArg(),
+          }),
+        },
       ];
     if (!isAvailable)
       return actions.onForget
-        ? [{ icon: "remove", id: "forget", label: "Remove from Recent" }]
+        ? [
+            {
+              icon: "remove",
+              id: "forget",
+              label: t("project-browser-remove-from-recent"),
+            },
+          ]
         : [];
     return [
       {
         icon: "folder-search",
         id: "reveal",
-        label: `Show in ${fileManagerName()}`,
+        label: t("project-browser-show-in-file-manager", {
+          platform: platformArg(),
+        }),
       },
       ...(actions.onDuplicate
-        ? [{ icon: "copy" as const, id: "duplicate", label: "Duplicate" }]
+        ? [
+            {
+              icon: "copy" as const,
+              id: "duplicate",
+              label: t("project-browser-duplicate"),
+            },
+          ]
         : []),
       ...moveItems([file]),
-      { icon: "trash", id: "delete", label: "Delete" },
+      { icon: "trash", id: "delete", label: t("project-browser-delete") },
     ];
   };
 

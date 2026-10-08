@@ -23,7 +23,6 @@ pub(super) fn build(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     WindowLabel::Tooltip.as_str(),
     WebviewUrl::App("/tooltip".into()),
   )
-  .title("Screenwide")
   .inner_size(MAX_WIDTH, INITIAL_HEIGHT)
   .always_on_top(true)
   .decorations(false)

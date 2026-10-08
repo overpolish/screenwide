@@ -122,7 +122,6 @@ fn get_or_create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     Effect::UnderWindowBackground
   };
   let window = app_windows::webview_window(app, label, WebviewUrl::App("/alert".into()))
-    .title("Screenwide")
     .inner_size(WIDTH, INITIAL_HEIGHT)
     .always_on_top(true)
     // OK is the only way out, so there is nothing for a title bar to offer.

@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { t } from "../../../i18n/i18n";
+
 import {
   ReportBlockHeight,
   ReportBlockHeightContext,
@@ -179,7 +181,7 @@ function TimelineArea({
       style={{ height: visibleHeight }}
     >
       <div
-        aria-label="Resize timeline"
+        aria-label={t("editor-timeline-resize")}
         aria-orientation="horizontal"
         aria-valuemax={maximum}
         aria-valuemin={TIMELINE_MIN_HEIGHT_PX}

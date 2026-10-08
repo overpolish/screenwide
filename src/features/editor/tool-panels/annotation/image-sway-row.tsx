@@ -3,6 +3,7 @@
 
 import { AnnotationShuffleSwitch } from "../../../../components/shared/annotation-style/annotation-shuffle-switch";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
 
 import type { EditorKind } from "../../types";
 import type { ToolPanelPatch } from "../tool-panel-patch";
@@ -33,13 +34,13 @@ export function ImageSwayRow({
   )
     return null;
   return (
-    <ControlRow title="Sway">
+    <ControlRow title={t("editor-panels-sway")}>
       {(controlProps) => (
         <div {...controlProps} role="group">
           <AnnotationShuffleSwitch
             isDisabled={isLocked}
             isSelected={annotation.sway === true}
-            label="Sway"
+            label={t("editor-panels-sway")}
             onChange={(next) => {
               change({ annotationImageSway: next });
             }}

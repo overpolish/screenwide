@@ -45,13 +45,10 @@ type ViewTool = {
 
 /** A tool that draws on a layer: it takes the newest layer in hand when
  * nothing is selected, and both editor toolbars build their toggle for it
- * out of this row. */
+ * out of this row, with the wording from `annotation-text`. */
 type DrawingTool = {
   drawsOnLayer: true;
   icon: LucideIcon;
-  label: string;
-  /** Accessible name, which says what the tool acts on. */
-  name: string;
   shortcut: string;
   panel?: ToolPanelKind;
   resetsView?: boolean;
@@ -76,16 +73,12 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   arrow: {
     drawsOnLayer: true,
     icon: ArrowToolIcon,
-    label: "Arrow",
-    name: "Draw an arrow",
     panel: "annotation",
     shortcut: "A",
   },
   counter: {
     drawsOnLayer: true,
     icon: CounterToolIcon,
-    label: "Counter",
-    name: "Drop a counter",
     panel: "annotation",
     shortcut: "N",
   },
@@ -94,8 +87,6 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   draw: {
     drawsOnLayer: true,
     icon: DrawToolIcon,
-    label: "Draw",
-    name: "Draw freehand",
     panel: "annotation",
     shortcut: "D",
   },
@@ -103,16 +94,12 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   highlight: {
     drawsOnLayer: true,
     icon: HighlightToolIcon,
-    label: "Highlight",
-    name: "Highlight text",
     panel: "annotation",
     shortcut: "H",
   },
   image: {
     drawsOnLayer: true,
     icon: ImageToolIcon,
-    label: "Image",
-    name: "Place an image",
     panel: "annotation",
     shortcut: "I",
   },
@@ -120,8 +107,6 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   magnify: {
     drawsOnLayer: true,
     icon: MagnifyToolIcon,
-    label: "Magnifier",
-    name: "Magnify a detail",
     panel: "annotation",
     shortcut: "M",
   },
@@ -131,8 +116,6 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   redact: {
     drawsOnLayer: true,
     icon: RedactToolIcon,
-    label: "Redact",
-    name: "Redact a region",
     panel: "annotation",
     shortcut: "R",
   },
@@ -141,24 +124,18 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   shape: {
     drawsOnLayer: true,
     icon: ShapeToolIcon,
-    label: "Shape",
-    name: "Draw a shape",
     panel: "annotation",
     shortcut: "O",
   },
   spotlight: {
     drawsOnLayer: true,
     icon: SpotlightToolIcon,
-    label: "Spotlight",
-    name: "Spotlight a region",
     panel: "annotation",
     shortcut: "S",
   },
   text: {
     drawsOnLayer: true,
     icon: TextToolIcon,
-    label: "Text",
-    name: "Add text",
     panel: "annotation",
     shortcut: "T",
   },

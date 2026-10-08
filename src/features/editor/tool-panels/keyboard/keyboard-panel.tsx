@@ -11,6 +11,7 @@ import { Switch } from "../../../../components/base/switch/switch";
 import { Text } from "../../../../components/base/text/text";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { t } from "../../../../i18n/i18n";
 import { keyboardDefaultCenter } from "../../keyboard-effect/keyboard-effect-geometry";
 import {
   EditorKind,
@@ -19,16 +20,22 @@ import {
 } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
-const animationOptions = [
-  { id: "pop", label: "Pop" },
-  { id: "fade", label: "Fade" },
-  { id: "none", label: "None" },
-] satisfies { id: KeyboardEffectAnimation; label: string }[];
+const animationOptions = (): {
+  id: KeyboardEffectAnimation;
+  label: string;
+}[] => [
+  { id: "pop", label: t("editor-panels-keyboard-pop") },
+  { id: "fade", label: t("editor-panels-keyboard-fade") },
+  { id: "none", label: t("editor-panels-keyboard-none") },
+];
 
-const appearanceOptions = [
-  { id: "dark", label: "Dark" },
-  { id: "light", label: "Light" },
-] satisfies { id: KeyboardEffectAppearance; label: string }[];
+const appearanceOptions = (): {
+  id: KeyboardEffectAppearance;
+  label: string;
+}[] => [
+  { id: "dark", label: t("editor-panels-keyboard-dark") },
+  { id: "light", label: t("editor-panels-keyboard-light") },
+];
 
 /**
  * The Keyboard tool's own controls: how every captured shortcut is drawn.
@@ -50,9 +57,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
   } = snapshot;
 
   if (!hasKeyboardData) {
-    return (
-      <Text variant="footnote">This recording has no keyboard shortcuts.</Text>
-    );
+    return <Text variant="footnote">{t("editor-panels-keyboard-empty")}</Text>;
   }
 
   const isDisabled = isLocked || !keyboardEffects.bake;
@@ -73,7 +78,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
 
   return (
     <div className="flex flex-col gap-section">
-      <ControlRow title="Show shortcuts">
+      <ControlRow title={t("editor-panels-keyboard-show")}>
         {(controlProps) => (
           <Switch
             {...controlProps}
@@ -86,11 +91,11 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
         )}
       </ControlRow>
 
-      <ControlRow title="Size">
+      <ControlRow title={t("editor-panels-size")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <SliderNumberField
-              aria-label="Size"
+              aria-label={t("editor-panels-size")}
               className="w-48"
               isDisabled={isDisabled}
               maxValue={maximum}
@@ -106,11 +111,11 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
         )}
       </ControlRow>
 
-      <ControlRow title="Position">
+      <ControlRow title={t("editor-panels-position")}>
         {(controlProps) => (
           <div {...controlProps} className="flex gap-control" role="group">
             <IconButton
-              aria-label="Reset position"
+              aria-label={t("editor-panels-reset-position")}
               isDisabled={
                 isDisabled ||
                 (keyboardEffects.positionXPercent === undefined &&
@@ -123,7 +128,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
               <RotateCcw />
             </IconButton>
             <NumberField
-              aria-label="Shortcut X position"
+              aria-label={t("editor-panels-shortcut-x")}
               className="w-20"
               isDisabled={isDisabled}
               leftSection="X"
@@ -138,7 +143,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
               value={position.x * 100}
             />
             <NumberField
-              aria-label="Shortcut Y position"
+              aria-label={t("editor-panels-shortcut-y")}
               className="w-20"
               isDisabled={isDisabled}
               leftSection="Y"
@@ -156,14 +161,14 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
         )}
       </ControlRow>
 
-      <ControlRow title="Animation">
+      <ControlRow title={t("editor-panels-keyboard-animation")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <PillGroup
-              aria-label="Animation"
+              aria-label={t("editor-panels-keyboard-animation")}
               display="label"
               isDisabled={isDisabled}
-              items={animationOptions}
+              items={animationOptions()}
               onSelectionChange={(animation) => {
                 change({
                   keyboardEffects: {
@@ -177,14 +182,14 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
         )}
       </ControlRow>
 
-      <ControlRow title="Appearance">
+      <ControlRow title={t("editor-panels-keyboard-appearance")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <PillGroup
-              aria-label="Appearance"
+              aria-label={t("editor-panels-keyboard-appearance")}
               display="label"
               isDisabled={isDisabled}
-              items={appearanceOptions}
+              items={appearanceOptions()}
               onSelectionChange={(appearance) => {
                 change({
                   keyboardEffects: {
@@ -205,7 +210,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
             change({ restoreShortcuts: true });
           }}
         >
-          Restore all shortcuts
+          {t("editor-panels-keyboard-restore")}
         </Button>
         <Button
           isDisabled={isDisabled}
@@ -213,7 +218,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
             change({ resetAllShortcuts: true });
           }}
         >
-          Reset all
+          {t("editor-panels-reset-all")}
         </Button>
       </div>
     </div>

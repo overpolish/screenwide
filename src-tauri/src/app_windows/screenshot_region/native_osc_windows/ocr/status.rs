@@ -86,7 +86,7 @@ impl Chrome {
     let metrics = cancel_metrics();
     let Some(label) = self.text.label(
       device,
-      "Cancel",
+      &crate::i18n::t!("overlay-ocr-cancel"),
       scale,
       light_mode,
       metrics.font_size,

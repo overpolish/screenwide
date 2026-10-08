@@ -8,6 +8,7 @@ import { GroupBox } from "../../../components/base/group-box/group-box";
 import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
+import { t } from "../../../i18n/i18n";
 import { AudioMeter } from "../../audio-inputs/audio-meter";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
@@ -97,7 +98,7 @@ export function VoiceNoteSettings({
   };
 
   const items = [
-    { id: SAME_AS_RECORDING, label: "Same as Recording" },
+    { id: SAME_AS_RECORDING, label: t("settings-voice-notes-same-microphone") },
     ...microphones.map((microphone) => ({
       id: microphone.id,
       label: microphone.label,
@@ -106,10 +107,10 @@ export function VoiceNoteSettings({
   const isDenied = settings.voiceNotes && access?.granted === false;
 
   return (
-    <GroupBox title="Voice Notes">
+    <GroupBox title={t("settings-voice-notes")}>
       <ControlRow
-        description="Hold a moment's shortcut to record a note."
-        title="Voice notes"
+        description={t("settings-voice-notes-enabled-description")}
+        title={t("settings-voice-notes-enabled")}
       >
         {(controlProps) => (
           <Switch
@@ -123,8 +124,8 @@ export function VoiceNoteSettings({
         )}
       </ControlRow>
       <ControlRow
-        description="Same as Recording falls back to the system default."
-        title="Microphone"
+        description={t("settings-voice-notes-microphone-description")}
+        title={t("settings-voice-notes-microphone")}
       >
         {(controlProps) => (
           <div className="flex w-48 flex-col gap-control-inset">
@@ -133,7 +134,7 @@ export function VoiceNoteSettings({
               id="moments-note-microphone"
               isDisabled={isSaving || !settings.voiceNotes}
               items={items}
-              label="Microphone"
+              label={t("settings-voice-notes-microphone")}
               onSelectionChange={(item) => {
                 onChange({
                   ...settings,
@@ -141,7 +142,7 @@ export function VoiceNoteSettings({
                     item.id === SAME_AS_RECORDING ? null : item.id,
                 });
               }}
-              placeholder="Microphone"
+              placeholder={t("settings-voice-notes-microphone")}
               selectedId={settings.noteMicrophone ?? SAME_AS_RECORDING}
             />
             <AudioMeter
@@ -162,10 +163,13 @@ export function VoiceNoteSettings({
         // a word, to say what the Download beside it fetches.
         description={
           settings.transcribeNotes && !isTranscribed && momentsModel
-            ? `Needs the Moments model (${formatBytes(momentsModel.sizeBytes)}).`
+            ? t("settings-voice-notes-needs-model", {
+                model: momentsModel.name,
+                size: formatBytes(momentsModel.sizeBytes),
+              })
             : undefined
         }
-        title="Transcription"
+        title={t("settings-voice-notes-transcription")}
       >
         {(controlProps) => (
           <div className="gap-control flex items-center">
@@ -191,7 +195,7 @@ export function VoiceNoteSettings({
       {isDenied ? (
         <>
           <Text variant="footnote">
-            Screenwide needs microphone access for voice notes.
+            {t("settings-voice-notes-microphone-denied")}
           </Text>
           <div className="gap-control flex justify-end">
             <Button
@@ -199,7 +203,7 @@ export function VoiceNoteSettings({
                 void openMicrophoneSettings();
               }}
             >
-              Open System Settings
+              {t("permissions-open-settings")}
             </Button>
           </div>
         </>

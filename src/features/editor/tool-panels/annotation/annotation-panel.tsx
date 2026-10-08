@@ -1,16 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
 import { Switch } from "../../../../components/base/switch/switch";
 import { Text } from "../../../../components/base/text/text";
 import { AnnotationAngleDial } from "../../../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationFitGroup } from "../../../../components/shared/annotation-style/annotation-fit-group";
 import { AnnotationRadiusField } from "../../../../components/shared/annotation-style/annotation-radius-field";
+import { annotationSizeLabel } from "../../../../components/shared/annotation-style/annotation-text";
 import { AnnotationWidthSlider } from "../../../../components/shared/annotation-style/annotation-width-slider";
 import { redactionSizePresets } from "../../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
 import { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -22,6 +23,7 @@ import {
   AnnotationRedactionNote,
   AnnotationRedactionRows,
 } from "./annotation-redaction-rows";
+import { AnnotationSelectionSummary } from "./annotation-selection-summary";
 import { ImageFrameRow, ImagePlaybackRow } from "./image-play-rows";
 import { ImageSourceRow } from "./image-source-row";
 import { ImageSwayRow } from "./image-sway-row";
@@ -68,26 +70,18 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   const showColorMenu = useAnnotationColorMenu((color) => {
     change({ removeAnnotationColor: color });
   });
-  // Several annotations share no one dress to show, so only what acts on
-  // them all is offered.
   if (annotationCount > 1)
     return (
-      <div className="flex flex-col gap-section">
-        <Text variant="body">{`${String(annotationCount)} annotations selected`}</Text>
-        <div className="flex justify-end">
-          <Button
-            aria-label="Delete the selected annotations"
-            isDisabled={isLocked}
-            onPress={() => {
-              change({ deleteAnnotations: true });
-            }}
-          >
-            Delete
-          </Button>
-        </div>
-      </div>
+      <AnnotationSelectionSummary
+        count={annotationCount}
+        isLocked={isLocked}
+        onDelete={() => {
+          change({ deleteAnnotations: true });
+        }}
+      />
     );
-  if (!annotation) return <Text variant="body">Nothing selected</Text>;
+  if (!annotation)
+    return <Text variant="body">{t("editor-panels-nothing-selected")}</Text>;
 
   const { color, manual, radius, redaction, strength, width } =
     annotation.style;
@@ -151,7 +145,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {kind.hasFit ? (
-        <ControlRow title="Fit">
+        <ControlRow title={t("annotation-fit")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationFitGroup
@@ -167,12 +161,12 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {showsSize ? (
-        <ControlRow title={kind.sizeLabel}>
+        <ControlRow title={annotationSizeLabel(kind.sizeMeasure)}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationWidthSlider
                 isDisabled={isLocked}
-                label={kind.sizeLabel}
+                label={annotationSizeLabel(kind.sizeMeasure)}
                 onChange={(next) => {
                   change({ annotationStyle: { width: next } });
                 }}
@@ -193,7 +187,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {kind.hasRadius ? (
-        <ControlRow title="Radius">
+        <ControlRow title={t("annotation-radius")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationRadiusField
@@ -214,7 +208,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           picture snaps to. A fresh image always stands upright, so there is
           no turn to choose before one is placed. */}
       {kind.hasAngle && !(isDraft && annotation.kind === "image") ? (
-        <ControlRow title="Angle">
+        <ControlRow title={t("annotation-angle")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <AnnotationAngleDial
@@ -247,7 +241,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           one: a screenshot is one instant, so the row is not offered there at
           all. It follows every other setting, so its absence moves none. */}
       {animates ? (
-        <ControlRow title="Animate">
+        <ControlRow title={t("editor-panels-animate")}>
           {(controlProps) => (
             <Switch
               {...controlProps}

@@ -1,15 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { keyLabel } from "../../components/base/keyboard/key-label";
 import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
 import { ProgressPanel } from "../../components/shared/progress-panel/progress-panel";
+import { t } from "../../i18n/i18n";
 
 import { ScrollingCapturePhase } from "./scrolling-capture-events";
 
-const phaseLabels: Record<ScrollingCapturePhase, string> = {
-  capturing: "Capturing",
-  stitching: "Stitching",
-  working: "Working",
+const phaseLabel = (phase: ScrollingCapturePhase | undefined) => {
+  if (phase === "capturing") return t("screenshots-scrolling-capturing");
+  if (phase === "stitching") return t("screenshots-scrolling-stitching");
+  return t("screenshots-scrolling-working");
 };
 
 type ScrollingCaptureOverlayProps = {
@@ -28,7 +30,9 @@ export function ScrollingCaptureOverlay({
   finished = false,
   phase,
 }: ScrollingCaptureOverlayProps) {
-  const label = finished ? "Finishing" : phase ? phaseLabels[phase] : "Working";
+  const label = finished
+    ? t("screenshots-scrolling-finishing")
+    : phaseLabel(phase);
 
   return (
     // The Finder copy-dialog column: phrase, bar, and the way out beneath.
@@ -36,14 +40,14 @@ export function ScrollingCaptureOverlay({
       <ProgressPanel
         label={label}
         progress={null}
-        progressLabel="Scrolling capture progress"
+        progressLabel={t("screenshots-scrolling-progress")}
         secondary={
           cancellable && !finished ? (
             <span className="flex items-center gap-control whitespace-nowrap">
               <Shortcut>
-                <Keyboard>Esc</Keyboard>
+                <Keyboard>{keyLabel("escape")}</Keyboard>
               </Shortcut>
-              <span>to cancel</span>
+              <span>{t("screenshots-scrolling-cancel-hint")}</span>
             </span>
           ) : undefined
         }

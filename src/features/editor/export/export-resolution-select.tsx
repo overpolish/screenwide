@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
 import type { ControlRowControlProps } from "../../../components/shared/control-row/control-row";
@@ -45,11 +46,11 @@ export function ExportResolutionSelect({
         id: item.id,
         label: dimensions(item),
       }))}
-      label="Size"
+      label={t("editor-export-size")}
       onSelectionChange={(item) => {
         onChange?.(item.id);
       }}
-      placeholder="Size"
+      placeholder={t("editor-export-size")}
       selectedId={value}
     />
   );

@@ -9,6 +9,8 @@ import {
   useRef,
 } from "react";
 
+import { t } from "../../../i18n/i18n";
+
 import { recordingTimelineRangePlaybackRate } from "./editing/recording-timeline-speed";
 import {
   TimelineBladeController,
@@ -172,7 +174,7 @@ function TimelineRangeOverlay({
         </div>
       ) : null}
       <div
-        aria-label="Select timeline range"
+        aria-label={t("editor-timeline-select-range")}
         className={`absolute right-0 bottom-0 top-control-height ${TIMELINE_LANE_LEFT_CLASS} z-10 cursor-crosshair touch-none`}
         onContextMenu={(event) => {
           const selection = blade.rangeSelection;

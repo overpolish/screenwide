@@ -7,6 +7,7 @@ import {
   LogicalSize,
 } from "@tauri-apps/api/window";
 
+import { t } from "../../../i18n/i18n";
 import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
 import { initialPopupPanelHeight } from "../../popup-panel/layout";
 import {
@@ -15,7 +16,10 @@ import {
   SHARED_POPUP_PANEL,
   usePopupPanelStore,
 } from "../../popup-panel/store";
-import { ALL_SYSTEM_AUDIO } from "../../recording-inputs/store";
+import {
+  ALL_SYSTEM_AUDIO,
+  systemAudioLabel,
+} from "../../recording-inputs/store";
 import {
   CameraDevice,
   CameraResolution,
@@ -24,17 +28,18 @@ import {
 } from "../../recording-inputs/types";
 
 import {
-  CAMERA_OPTION_ITEMS,
-  CAMERA_PANEL_ID,
-  CAMERA_SECTION,
   cameraModeLabel,
+  cameraOptionItems,
+  cameraSection,
+  CAMERA_PANEL_ID,
   FLIP_OPTION_ID,
   MICROPHONE_PANEL_ID,
   MODE_ID_PREFIX,
-  OFF_ITEM,
+  OFF_ITEM_ID,
+  offItem,
   PAL_OPTION_ID,
   PANEL_MIN_WIDTH,
-  RESOLUTION_SECTION,
+  resolutionSection,
   SYSTEM_AUDIO_PANEL_ID,
   toItems,
 } from "./recording-bar-input-state";
@@ -146,28 +151,28 @@ export const showCameraPicker = async ({
   const modeItems: PopupPanelItem[] = modes.map((mode) => ({
     id: `${MODE_ID_PREFIX}${mode.id}`,
     label: cameraModeLabel(mode, modes),
-    section: RESOLUTION_SECTION,
+    section: resolutionSection(),
   }));
   // Both settings belong to the camera they are remembered for, so they are
   // offered only once one is chosen.
-  const optionItems = camera ? CAMERA_OPTION_ITEMS : [];
+  const optionItems = camera ? cameraOptionItems() : [];
   await openPanel({
     anchor,
     focusContents,
     id: CAMERA_PANEL_ID,
     items: [
-      ...[OFF_ITEM, ...toItems(devices)].map((item) => ({
+      ...[offItem(), ...toItems(devices)].map((item) => ({
         ...item,
-        section: CAMERA_SECTION,
+        section: cameraSection(),
       })),
       ...optionItems,
       ...modeItems,
     ],
-    label: "Camera",
+    label: t("recording-controls-camera"),
     // A select list always shows its state: the camera in use, or Off, with
     // the chosen shape and whichever of the camera's settings are on.
     selectedIds: [
-      isCameraOn && selectedCamera ? selectedCamera.id : OFF_ITEM.id,
+      isCameraOn && selectedCamera ? selectedCamera.id : OFF_ITEM_ID,
       ...(selectedCameraMode && modeItems.length > 0
         ? [`${MODE_ID_PREFIX}${selectedCameraMode.id}`]
         : []),
@@ -198,12 +203,12 @@ export const showMicrophonePicker = async ({
     anchor,
     focusContents,
     id: MICROPHONE_PANEL_ID,
-    items: [OFF_ITEM, ...toItems(devices)],
-    label: "Microphone",
+    items: [offItem(), ...toItems(devices)],
+    label: t("recording-controls-microphone"),
     selectedIds: [
       isMicrophoneOn && selectedMicrophone
         ? selectedMicrophone.id
-        : OFF_ITEM.id,
+        : OFF_ITEM_ID,
     ],
   });
 };
@@ -231,9 +236,9 @@ export const showSystemAudioPicker = async ({
     items: sources.map((source) => ({
       iconPath: source.iconPath,
       id: source.id,
-      label: source.label,
+      label: systemAudioLabel(source),
     })),
-    label: "System audio",
+    label: t("recording-controls-system-audio-picker"),
     selectedIds: selectedSystemAudio.map((source) => source.id),
     selectionMode: "multiple",
   });

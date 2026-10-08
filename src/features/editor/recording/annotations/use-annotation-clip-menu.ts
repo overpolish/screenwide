@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../../i18n/i18n";
 import { PopupPanelItem } from "../../../popup-panel/store";
 import {
   PopupMenuAnchor,
@@ -39,10 +40,6 @@ export type AnnotationClipPinning = {
   onShowHere: (annotationId: string) => void;
 };
 
-/** The heading the pin's actions sit under, the way the speed menu heads its
- * rates. */
-const SECTION = "Tracking";
-
 /**
  * A right click on an annotation, on its clip or on the picture, or its clip's
  * menu key, answered with the app's own menu. Under an Arrange heading it
@@ -80,7 +77,7 @@ export function useAnnotationClipMenu({
 }) {
   const openMenu = usePopupMenu({
     idPrefix,
-    label: "Annotation actions",
+    label: t("editor-annotation-actions"),
     mode: "menu",
     onSelect: (itemId, annotationId) => {
       const arrangement = annotationArrangementPicked(itemId);
@@ -110,17 +107,17 @@ export function useAnnotationClipMenu({
         ? clip.pin
           ? [
               ...(pinning.canHideHere(id)
-                ? [{ id: "hide", label: "Content Out of View" }]
+                ? [{ id: "hide", label: t("editor-pin-hide") }]
                 : []),
               ...(pinning.canShowHere(id)
-                ? [{ id: "show", label: "Content Back in View" }]
+                ? [{ id: "show", label: t("editor-pin-show") }]
                 : []),
               ...(pinCorrections(clip.pin) > 0
-                ? [{ id: "clear", label: "Clear Corrections" }]
+                ? [{ id: "clear", label: t("editor-pin-clear-corrections") }]
                 : []),
-              { id: "unpin", label: "Unpin" },
+              { id: "unpin", label: t("editor-pin-unpin") },
             ]
-          : [{ id: "pin", label: "Pin to Content" }]
+          : [{ id: "pin", label: t("editor-pin-pin") }]
         : [];
     const items = [
       ...annotationArrangeItems(
@@ -130,7 +127,12 @@ export function useAnnotationClipMenu({
           cameraPlacement,
         ),
       ),
-      ...tracking.map((item) => ({ ...item, section: SECTION })),
+      // The pin's actions head a section of their own, the way the speed
+      // menu heads its rates.
+      ...tracking.map((item) => ({
+        ...item,
+        section: t("editor-pin-tracking-section"),
+      })),
     ];
     if (items.length === 0) return;
     return openMenu({ anchor, context: id, items });

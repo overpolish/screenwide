@@ -5,6 +5,7 @@ import { Button } from "../../../../components/base/button/button";
 import { NumberField } from "../../../../components/base/input-fields/number-field";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { t } from "../../../../i18n/i18n";
 import { ToolPanelPatch } from "../tool-panel-patch";
 import { ToolPanelShortcutSelection } from "../tool-panel-store";
 
@@ -32,11 +33,11 @@ export function ShortcutSelectionRows({
   const minimum = Math.min(selection.minimumSizePercent, maximum - 5);
   return (
     <div className="flex flex-col gap-section">
-      <ControlRow title="Size">
+      <ControlRow title={t("editor-panels-size")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <SliderNumberField
-              aria-label="Size"
+              aria-label={t("editor-panels-size")}
               className="w-48"
               isDisabled={isLocked}
               maxValue={maximum}
@@ -55,11 +56,11 @@ export function ShortcutSelectionRows({
         )}
       </ControlRow>
 
-      <ControlRow title="Position">
+      <ControlRow title={t("editor-panels-position")}>
         {(controlProps) => (
           <div {...controlProps} className="flex gap-control" role="group">
             <NumberField
-              aria-label="Shortcut X position"
+              aria-label={t("editor-panels-shortcut-x")}
               className="w-20"
               isDisabled={isLocked}
               leftSection="X"
@@ -74,7 +75,7 @@ export function ShortcutSelectionRows({
               value={selection.positionXPercent}
             />
             <NumberField
-              aria-label="Shortcut Y position"
+              aria-label={t("editor-panels-shortcut-y")}
               className="w-20"
               isDisabled={isLocked}
               leftSection="Y"
@@ -99,7 +100,7 @@ export function ShortcutSelectionRows({
             change({ resetShortcut: true });
           }}
         >
-          Reset
+          {t("editor-panels-reset")}
         </Button>
         <Button
           isDisabled={isLocked}
@@ -107,7 +108,7 @@ export function ShortcutSelectionRows({
             change({ applyShortcutToAll: true });
           }}
         >
-          Apply to all
+          {t("editor-panels-apply-to-all")}
         </Button>
       </div>
     </div>

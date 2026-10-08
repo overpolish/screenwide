@@ -6,6 +6,7 @@ import { useId, useMemo, useRef } from "react";
 
 import { IconButton } from "../../../../components/base/button/icon-button";
 import { Text } from "../../../../components/base/text/text";
+import { t } from "../../../../i18n/i18n";
 import { useFittedPanel } from "../../../popup-panel/use-fitted-panel";
 import { formatDuration } from "../../duration";
 import { timelineWaveformPath } from "../audio/timeline-waveform-path";
@@ -53,7 +54,11 @@ export function MomentNotePanel({
     >
       <div className="gap-control flex items-center">
         <IconButton
-          aria-label={playing ? "Pause voice note" : "Play voice note"}
+          aria-label={
+            playing
+              ? t("editor-timeline-pause-note")
+              : t("editor-timeline-play-note")
+          }
           onPress={() => {
             void toggle();
           }}
@@ -61,7 +66,7 @@ export function MomentNotePanel({
           {playing ? <Pause /> : <Play />}
         </IconButton>
         <svg
-          aria-label={`${content.name} voice note`}
+          aria-label={t("editor-timeline-note", { moment: content.name })}
           className="h-control-height min-w-0 grow text-content-fg-tertiary"
           preserveAspectRatio="none"
           role="img"

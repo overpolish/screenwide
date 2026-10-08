@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
 import { PopupPanelItem } from "../../popup-panel/store";
 
 import { Arrangement } from "./annotation-order";
 
-/** The heading the moves through the drawing order sit under. */
-const SECTION = "Arrange";
 const PREFIX = "arrange:";
 
 /**
@@ -30,18 +29,42 @@ export const annotationArrangeItems = ({
 }): PopupPanelItem[] =>
   [
     ...(canBringForward
-      ? [{ id: `${PREFIX}forward`, label: "Move Forward", shortcut: "]" }]
+      ? [
+          {
+            id: `${PREFIX}forward`,
+            label: t("editor-arrange-forward"),
+            shortcut: "]",
+          },
+        ]
       : []),
     ...((canMoveToFront ?? canBringForward)
-      ? [{ id: `${PREFIX}front`, label: "Move to Front", shortcut: "Shift+]" }]
+      ? [
+          {
+            id: `${PREFIX}front`,
+            label: t("editor-arrange-front"),
+            shortcut: "Shift+]",
+          },
+        ]
       : []),
     ...(canSendBackward
-      ? [{ id: `${PREFIX}backward`, label: "Move Backward", shortcut: "[" }]
+      ? [
+          {
+            id: `${PREFIX}backward`,
+            label: t("editor-arrange-backward"),
+            shortcut: "[",
+          },
+        ]
       : []),
     ...((canMoveToBack ?? canSendBackward)
-      ? [{ id: `${PREFIX}back`, label: "Move to Back", shortcut: "Shift+[" }]
+      ? [
+          {
+            id: `${PREFIX}back`,
+            label: t("editor-arrange-back"),
+            shortcut: "Shift+[",
+          },
+        ]
       : []),
-  ].map((item) => ({ ...item, section: SECTION }));
+  ].map((item) => ({ ...item, section: t("editor-arrange") }));
 
 /** The move a picked row names, or null for a row that is not one. */
 export const annotationArrangementPicked = (

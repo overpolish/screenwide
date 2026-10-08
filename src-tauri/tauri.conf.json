@@ -394,6 +394,9 @@
       "assets/whisper.cpp-MIT.txt": "licenses/whisper.cpp-MIT.txt"
     },
     "macOS": {
+      "files": {
+        "Resources": "macos-localizations"
+      },
       "minimumSystemVersion": "14.2"
     },
     "targets": "all",

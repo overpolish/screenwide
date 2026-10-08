@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../../i18n/i18n";
 import { PopupPanelItem } from "../../../popup-panel/store";
 import {
   pointerAnchor,
@@ -14,10 +15,15 @@ const MENU_WIDTH = 200;
  * correction made by hand, or where its content was said to go out of view. */
 export type PinKeyframeKind = "correction" | "outOfView" | "pinned";
 
-const DELETE_LABELS: Record<PinKeyframeKind, string> = {
-  correction: "Delete Correction",
-  outOfView: "Delete Out of View",
-  pinned: "Delete Pinned Frame",
+const deleteLabel = (kind: PinKeyframeKind) => {
+  switch (kind) {
+    case "correction":
+      return t("editor-pin-delete-correction");
+    case "outOfView":
+      return t("editor-pin-delete-out-of-view");
+    case "pinned":
+      return t("editor-pin-delete-pinned-frame");
+  }
 };
 
 /**
@@ -30,7 +36,7 @@ export function usePinKeyframeMenu(
 ) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: "Keyframe actions",
+    label: t("editor-pin-keyframe-actions"),
     mode: "menu",
     onSelect: (itemId, context) => {
       if (itemId !== "delete") return;
@@ -54,7 +60,7 @@ export function usePinKeyframeMenu(
     point: { x: number; y: number };
   }) => {
     const items: PopupPanelItem[] = [
-      { icon: "trash", id: "delete", label: DELETE_LABELS[kind] },
+      { icon: "trash", id: "delete", label: deleteLabel(kind) },
     ];
     return openMenu({
       anchor: pointerAnchor(point.x, point.y),

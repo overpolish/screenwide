@@ -3,6 +3,7 @@
 
 import { PointerEvent } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import {
   RecordingTimelineEdit,
   recordingTimelineRetainedDuration,
@@ -64,7 +65,11 @@ export function RecordingAnnotationClipEdges({
       return null;
     return (
       <button
-        aria-label={`${edge === "startMs" ? "Start" : "End"} of ${label}`}
+        aria-label={
+          edge === "startMs"
+            ? t("editor-clip-start", { clip: label })
+            : t("editor-clip-end", { clip: label })
+        }
         className={`absolute inset-y-0 w-control-inset cursor-ew-resize focus-visible:bg-primary focus-visible:outline-none ${edge === "startMs" ? "left-0" : "right-0"}`}
         key={edge}
         onClick={(event) => {

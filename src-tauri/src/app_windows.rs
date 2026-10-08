@@ -147,13 +147,16 @@ pub(crate) fn conceal_disposable_overlay(window: &WebviewWindow) -> tauri::Resul
 /// The builder for a window created after launch. The windows in
 /// `tauri.conf.json` load hidden at startup and have the accent long before
 /// they are shown; one built on demand is shown while its page still loads,
-/// so it is handed the accent before its first paint.
+/// so it is handed the accent before its first paint. Its title is the app's
+/// name until the caller names it, so no window reads as Tauri's default to
+/// assistive technology.
 pub(crate) fn webview_window<'a, R: Runtime, M: Manager<R>>(
   manager: &'a M,
   label: impl Into<String>,
   url: WebviewUrl,
 ) -> WebviewWindowBuilder<'a, R, M> {
   WebviewWindowBuilder::new(manager, label, url)
+    .title(crate::i18n::t!("window-titles-app"))
     .initialization_script(crate::system_accent::initialization_script())
 }
 

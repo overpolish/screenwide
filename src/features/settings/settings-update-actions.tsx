@@ -4,6 +4,7 @@
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
 import { ControlRow } from "../../components/shared/control-row/control-row";
+import { t } from "../../i18n/i18n";
 
 import { useSettingsUpdate } from "./use-settings-update";
 
@@ -25,8 +26,12 @@ export function SoftwareUpdateSetting({
     <>
       <ControlRow
         className="tabular-nums"
-        description={currentVersion ? `Version ${currentVersion}` : undefined}
-        title="Screenwide"
+        description={
+          currentVersion
+            ? t("settings-version", { version: currentVersion })
+            : undefined
+        }
+        title={t("settings-app-name")}
       >
         {(controlProps) =>
           available ? (
@@ -35,7 +40,7 @@ export function SoftwareUpdateSetting({
               color="primary"
               onPress={onPress}
             >
-              Update to v{updateVersion}
+              {t("settings-update-to", { version: updateVersion })}
             </Button>
           ) : (
             <Button
@@ -43,7 +48,7 @@ export function SoftwareUpdateSetting({
               isDisabled={!error && status === "checking"}
               onPress={onPress}
             >
-              Check for Updates
+              {t("settings-check-updates")}
             </Button>
           )
         }

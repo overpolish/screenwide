@@ -4,6 +4,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import {
   pointerAnchor,
   usePopupMenu,
@@ -72,7 +73,7 @@ export function useRecordingCanvasContextMenu(
   sceneRef.current = scene;
   const openPaneMenu = usePopupMenu({
     idPrefix: "scene-pane:",
-    label: "Layer actions",
+    label: t("editor-layer-actions"),
     mode: "menu",
     onSelect: (itemId, pane) => {
       const move = annotationArrangementPicked(itemId);

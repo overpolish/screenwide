@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Ref, useState } from "react";
 
 import { IconButton } from "../../../components/base/button/icon-button";
+import { t } from "../../../i18n/i18n";
 import { RecordingInputs } from "../../recording-inputs/types";
 import {
   MonitorDetails,
@@ -191,7 +192,11 @@ export function RecordingBar(props: RecordingBarProps) {
       }}
       ref={ref}
     >
-      <IconButton aria-label="Cancel" onPress={onCancel} size="capture">
+      <IconButton
+        aria-label={t("recording-controls-cancel")}
+        onPress={onCancel}
+        size="capture"
+      >
         <X />
       </IconButton>
 

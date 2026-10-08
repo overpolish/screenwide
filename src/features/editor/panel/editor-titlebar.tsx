@@ -9,6 +9,7 @@ import { Button } from "../../../components/base/button/button";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { ToolToggleDisabledContext } from "../../../components/shared/tool-toggle/tool-toggle-disabled";
 import { WindowHeader } from "../../../components/shared/window-header/window-header";
+import { t } from "../../../i18n/i18n";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorArtifact } from "../types";
 
@@ -86,9 +87,9 @@ export function EditorTitlebar({
             // behind it.
             <ConfirmActionButton
               armedIcon={<Check />}
-              armedLabel="Confirm deleting"
+              armedLabel={t("editor-confirm-delete")}
               idleIcon={<Trash2 />}
-              idleLabel="Delete"
+              idleLabel={t("editor-delete")}
               isDisabled={!artifact || isSaving}
               onConfirm={onDelete}
             />
@@ -96,12 +97,12 @@ export function EditorTitlebar({
           {artifact?.kind === "screenshot" ? (
             <Button isDisabled={isSaving} onPress={onCopy} variant="ghost">
               <ClipboardCopy />
-              Copy
+              {t("editor-copy")}
             </Button>
           ) : null}
           <Button color="primary" isDisabled={!canExport} onPress={onExport}>
             <Upload />
-            Export
+            {t("editor-export")}
           </Button>
         </div>
       }
@@ -114,7 +115,7 @@ export function EditorTitlebar({
       }
       leadingSection={
         <img
-          alt="Screenwide"
+          alt={t("editor-logo")}
           className="brightness-0 dark:invert"
           draggable={false}
           src={logoUrl}

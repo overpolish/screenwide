@@ -15,8 +15,11 @@ pub fn choose_and_open_project(app: &AppHandle) {
     let mut dialog = app
       .dialog()
       .file()
-      .set_title("Open Project")
-      .add_filter("Screenwide Project", &[crate::project::EXTENSION]);
+      .set_title(crate::i18n::t!("dialog-open-project"))
+      .add_filter(
+        crate::i18n::t!("dialog-project-filter"),
+        &[crate::project::EXTENSION],
+      );
     if let Ok(directory) = crate::project::projects_directory(&app) {
       dialog = dialog.set_directory(directory);
     }
@@ -62,7 +65,7 @@ pub fn is_project_file(path: &Path) -> bool {
 /// is on screen to say it.
 fn open_and_report(app: &AppHandle, file: &Path) {
   if let Err(error) = open_project(app, file) {
-    crate::alert::show(app, "Project could not open", &error);
+    crate::alert::show(app, &crate::i18n::t!("alert-project-open-failed"), &error);
   }
 }
 

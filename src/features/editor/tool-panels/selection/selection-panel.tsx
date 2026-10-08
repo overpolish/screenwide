@@ -10,6 +10,7 @@ import { Text } from "../../../../components/base/text/text";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { Dimensions } from "../../../../components/shared/dimensions/dimensions";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { t } from "../../../../i18n/i18n";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
@@ -41,7 +42,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
   const { isLocked, selection } = snapshot;
 
   if (!selection) {
-    return <Text variant="body">Nothing selected</Text>;
+    return <Text variant="body">{t("editor-panels-nothing-selected")}</Text>;
   }
 
   if (selection.kind === "shortcut") {
@@ -58,7 +59,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
   // the reset is out of reach exactly while it is already there.
   if (selection.kind === "audio") {
     return (
-      <ControlRow title="Volume">
+      <ControlRow title={t("editor-panels-volume")}>
         {(controlProps) => (
           <div
             {...controlProps}
@@ -66,7 +67,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
             role="group"
           >
             <IconButton
-              aria-label="Reset volume"
+              aria-label={t("editor-panels-reset-volume")}
               isDisabled={isLocked || selection.decibels === 0}
               onPress={() => {
                 change({ audioVolume: 0 });
@@ -75,7 +76,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
               <RotateCcw />
             </IconButton>
             <SliderNumberField
-              aria-label="Volume"
+              aria-label={t("editor-panels-volume")}
               className="w-48"
               isDisabled={isLocked}
               maxValue={12}
@@ -105,7 +106,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         <Dimensions
           height={selection.height}
           initialLinked
-          label="Size"
+          label={t("editor-panels-size")}
           layout="stacked"
           onReset={() => {
             change({ resetSelection: true });
@@ -123,11 +124,11 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         />
       </div>
 
-      <ControlRow title="Radius">
+      <ControlRow title={t("annotation-radius")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <SliderNumberField
-              aria-label="Radius"
+              aria-label={t("annotation-radius")}
               className="w-48"
               formatOptions={{
                 maximumFractionDigits: 1,
@@ -150,14 +151,14 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
       {/* A camera track is placed in the screen's picture rather than padded
           against a colour of its own, so it is offered no padding. */}
       {selection.kind === "camera" ? null : (
-        <ControlRow title="Inset">
+        <ControlRow title={t("editor-panels-inset")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               {/* The bridge carries one kind of request, so every value the
                   knob passes is committed as it is reached; the draft holds
                   the one just sent until the editor answers with it. */}
               <SliderNumberField
-                aria-label="Inset"
+                aria-label={t("editor-panels-inset")}
                 className="w-48"
                 isDisabled={isLocked}
                 maxValue={Number.MAX_SAFE_INTEGER}
@@ -174,7 +175,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         </ControlRow>
       )}
 
-      <ControlRow title="Drop shadow">
+      <ControlRow title={t("editor-panels-drop-shadow")}>
         {(controlProps) => (
           <Switch
             {...controlProps}
@@ -195,7 +196,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
               change({ recenterSelection: true });
             }}
           >
-            Recenter
+            {t("editor-panels-recenter")}
           </Button>
         </div>
       )}

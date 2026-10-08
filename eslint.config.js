@@ -12,6 +12,8 @@ import sortDestructureKeys from "eslint-plugin-sort-destructure-keys";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+import { noLiteralCopy } from "./scripts/eslint/no-literal-copy.js";
+
 const frontendFiles = [
   ".storybook/**/*.{ts,tsx}",
   "src/**/*.{ts,tsx}",
@@ -146,6 +148,26 @@ export default defineConfig([
     files: ["src/**/*.stories.{ts,tsx}"],
     rules: {
       "no-restricted-exports": "off",
+    },
+  },
+  {
+    // User-visible text belongs in `locales/`. Stories, tests and the
+    // fixtures behind development previews hold sample data, not copy.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      "**/*.stories.tsx",
+      "**/*.test.{ts,tsx}",
+      "**/*-fixtures.ts",
+      "**/*-preview.ts",
+      "src/storybook/**",
+      // Sample tracks for the timeline stories.
+      "src/features/editor/timeline/tracks/recording-track-lanes-preview.tsx",
+    ],
+    plugins: {
+      screenwide: { rules: { "no-literal-copy": noLiteralCopy } },
+    },
+    rules: {
+      "screenwide/no-literal-copy": "error",
     },
   },
   eslintConfigPrettier,

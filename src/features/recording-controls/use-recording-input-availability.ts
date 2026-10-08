@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { t } from "../../i18n/i18n";
 import {
   CameraModeStatus,
   getCameraModeStatus,
@@ -48,9 +49,12 @@ const cameraWarning = (
   status: CameraModeStatus | undefined,
   mode: CameraResolution | null,
 ) => {
-  if (status === "missing") return "This camera is no longer connected";
+  if (status === "missing") return t("recording-controls-camera-missing");
   if (status === "modeUnavailable" && mode) {
-    return `This camera no longer offers ${String(mode.width)} × ${String(mode.height)} at ${String(mode.fps)} fps`;
+    return t("recording-controls-camera-mode-missing", {
+      fps: String(mode.fps),
+      size: `${String(mode.width)} × ${String(mode.height)}`,
+    });
   }
   return undefined;
 };
@@ -194,12 +198,12 @@ export function useRecordingInputAvailability({
     cameraWarning: cameraWarning(camera, selectedCameraMode),
     microphoneWarning:
       detected.microphone?.key === microphoneKey && !detected.microphone.value
-        ? "This microphone is no longer connected"
+        ? t("recording-controls-microphone-missing")
         : undefined,
     systemAudioWarning:
       detected.systemAudio?.key === systemAudioKey &&
       !detected.systemAudio.value
-        ? "A selected app is no longer running"
+        ? t("recording-controls-app-missing")
         : undefined,
   };
 }

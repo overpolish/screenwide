@@ -98,7 +98,7 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
     WindowLabel::AnnotateToolbar.as_str(),
     WebviewUrl::App("/annotate-toolbar".into()),
   )
-  .title("Screenwide Annotate Toolbar")
+  .title(WindowLabel::AnnotateToolbar.title())
   .accept_first_mouse(true)
   .always_on_top(true)
   .decorations(false)

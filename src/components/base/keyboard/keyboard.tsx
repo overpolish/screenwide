@@ -11,6 +11,8 @@ import {
   type Ref,
 } from "react";
 
+import { isMacOS, keyLabel } from "./key-label";
+
 // A minimal keycap: a small rounded fill with the key in the label colour,
 // as Mac apps draw shortcut hints. No border, bottom edge or shadow; native
 // shortcut text is flat, and the fill alone sets the key apart from prose.
@@ -43,47 +45,39 @@ const keyGlyphClassName = "stroke-1 windows:stroke-[1.5px]";
 const descendingKeys = new Set(["[", "]", "(", ")", "{", "}"]);
 const descendingKeyClassName = "-translate-y-[0.1em] windows:translate-y-0";
 
-const isMacOS =
-  typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
-
 const mappedKey = (children: ReactNode) => {
   if (typeof children !== "string") return { children };
 
   const key = children.trim().toLowerCase();
   if (key === "shift" || key === "⇧") {
     return {
-      accessibleName: "Shift",
+      accessibleName: keyLabel(key),
       children: <ArrowBigUp aria-hidden className={keyGlyphClassName} />,
     };
   }
-  if (key === "command" || key === "cmd" || key === "⌘") {
+  const command =
+    key === "command" ||
+    key === "cmd" ||
+    key === "⌘" ||
+    (isMacOS && (key === "meta" || key === "super" || key === "win"));
+  if (command) {
     return {
-      accessibleName: "Command",
+      accessibleName: keyLabel("command"),
       children: <Command aria-hidden className={keyGlyphClassName} />,
     };
   }
-  if (key === "meta" || key === "super") {
-    return isMacOS
-      ? {
-          accessibleName: "Command",
-          children: <Command aria-hidden className={keyGlyphClassName} />,
-        }
-      : { children: "Win" };
-  }
-  if (key === "control" || key === "ctrl" || key === "⌃") {
-    return isMacOS
-      ? {
-          accessibleName: "Control",
-          children: <ChevronUp aria-hidden className={keyGlyphClassName} />,
-        }
-      : { children: "Ctrl" };
+  if (isMacOS && (key === "control" || key === "ctrl" || key === "⌃")) {
+    return {
+      accessibleName: keyLabel(key),
+      children: <ChevronUp aria-hidden className={keyGlyphClassName} />,
+    };
   }
   if (descendingKeys.has(key)) {
     return {
       children: <span className={descendingKeyClassName}>{children}</span>,
     };
   }
-  return { children };
+  return { children: keyLabel(children) };
 };
 
 export type KeyboardProps = HTMLAttributes<HTMLElement> & {

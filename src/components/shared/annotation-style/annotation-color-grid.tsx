@@ -4,6 +4,7 @@
 import { Plus } from "lucide-react";
 import { ToggleButtonGroup } from "react-aria-components";
 
+import { t } from "../../../i18n/i18n";
 import {
   useColorPanel,
   usesSystemColorPanel,
@@ -66,7 +67,7 @@ export function AnnotationColorGrid({
 
   return (
     <ToggleButtonGroup
-      aria-label="Colour"
+      aria-label={t("annotation-color")}
       className="flex flex-wrap justify-center gap-control"
       disallowEmptySelection
       isDisabled={isDisabled}
@@ -75,7 +76,7 @@ export function AnnotationColorGrid({
     >
       {ANNOTATION_SWATCHES.map((swatch) => (
         <BackgroundTile
-          ariaLabel={swatch.name}
+          ariaLabel={swatch.name()}
           background={{ color: swatch.color, kind: "solid" }}
           id={swatch.color}
           isDisabled={isDisabled}
@@ -116,7 +117,7 @@ export function AnnotationColorGrid({
       {onSettled ? (
         <span className="relative inline-flex">
           <BackgroundTile
-            ariaLabel="Custom colour"
+            ariaLabel={t("annotation-custom-color")}
             id="custom"
             isDisabled={isDisabled}
             isSelected={chosen === "custom"}
@@ -128,7 +129,7 @@ export function AnnotationColorGrid({
           </BackgroundTile>
           {systemPanel ? null : (
             <input
-              aria-label="Custom colour"
+              aria-label={t("annotation-custom-color")}
               className="absolute inset-0 size-full cursor-default opacity-0 outline-none"
               disabled={isDisabled}
               onBlur={() => {

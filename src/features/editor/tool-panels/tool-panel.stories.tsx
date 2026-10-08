@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { BUILT_IN_BACKGROUND_PRESETS } from "../../../components/shared/background-picker/background-presets";
+import { builtInBackgroundPresets } from "../../../components/shared/background-picker/background-presets";
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../popup-panel/layout";
 import {
@@ -99,7 +99,7 @@ export const Frame: Story = {
   args: { tool: "frame", workspace: "recording" },
   beforeEach: () => {
     seed({
-      background: BUILT_IN_BACKGROUND_PRESETS[0].background,
+      background: builtInBackgroundPresets()[0].background,
       backgroundPresets: [
         {
           background: { color: "#0B3D2E", kind: "solid" },

@@ -4,6 +4,7 @@
 import { NumberField } from "../../../../components/base/input-fields/number-field";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { t } from "../../../../i18n/i18n";
 import {
   MAX_SCENE_ZOOM,
   SceneFraming,
@@ -36,11 +37,11 @@ export function SceneFramingRows({
 }) {
   return (
     <>
-      <ControlRow title="Zoom">
+      <ControlRow title={t("editor-panels-zoom")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
             <SliderNumberField
-              aria-label={`${paneName} zoom`}
+              aria-label={t("editor-panels-pane-zoom", { pane: paneName })}
               className="w-48"
               isDisabled={isDisabled}
               maxValue={MAX_SCENE_ZOOM * 100}
@@ -56,11 +57,11 @@ export function SceneFramingRows({
         )}
       </ControlRow>
       {radius === null ? null : (
-        <ControlRow title="Radius">
+        <ControlRow title={t("annotation-radius")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
               <SliderNumberField
-                aria-label={`${paneName} radius`}
+                aria-label={t("editor-panels-pane-radius", { pane: paneName })}
                 className="w-48"
                 formatOptions={{
                   maximumFractionDigits: 1,
@@ -79,11 +80,11 @@ export function SceneFramingRows({
         </ControlRow>
       )}
 
-      <ControlRow title="Position">
+      <ControlRow title={t("editor-panels-position")}>
         {(controlProps) => (
           <div {...controlProps} className="flex gap-control" role="group">
             <NumberField
-              aria-label={`${paneName} X position`}
+              aria-label={t("editor-panels-pane-x", { pane: paneName })}
               className="w-20"
               isDisabled={isDisabled}
               leftSection="X"
@@ -98,7 +99,7 @@ export function SceneFramingRows({
               value={percent(framing.focusX)}
             />
             <NumberField
-              aria-label={`${paneName} Y position`}
+              aria-label={t("editor-panels-pane-y", { pane: paneName })}
               className="w-20"
               isDisabled={isDisabled}
               leftSection="Y"

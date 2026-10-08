@@ -39,6 +39,16 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - Preserve keyboard navigation, accessible names, focus behaviour, and disabled states. Reuse the existing Escape-cancellation handling where applicable.
 - Settings uses icon-only `SidebarNav` with tooltips.
 
+## Translation
+
+- User-visible text lives in `locales/en-US/*.ftl` (Fluent). The webviews read it with `t` from `src/i18n/i18n.ts`, Rust with `crate::i18n::t!`, and the macOS Objective-C overlays with `screenwide_osc_localized`. Do not write copy into components or native code. Rust error details, logs and text written into exported files stay English; titles and messages a person reads are translated. `TRANSLATING.md` is the contributor guide.
+- A message id starts with its file's name (`project-browser-…`) and holds one string: no attributes. Pass ids to `t` and `t!` as literals so `pnpm i18n:check` can find them. The Annotation wording rule applies to ids as well as text.
+- Write whole sentences in the message, with placeholders and variants for counts (`$count`) and platforms (`$platform`, from `platformArg()`). Never join fragments or choose plurals in code.
+- Call `t` while rendering, not at module scope. Format dates, numbers and lists with React Aria's `useDateFormatter`, `useNumberFormatter` and `useListFormatter`, or with `appLocale().formatLocale` outside components; never `Intl.*(undefined)`.
+- After adding a language, or adding, renaming or removing an `en-US` message, or changing its placeholders, run `pnpm i18n:generate`. It writes `src/i18n/messages.ts` and the macOS bundle strings in `src-tauri/macos-localizations`. Tests compare text in `en-US` with Fluent's direction isolates (U+2068, U+2069) removed.
+- `screenwide/no-literal-copy` flags literal copy anywhere in `src`; stories, tests, fixtures and dev previews are exempt in `eslint.config.js`.
+- Try a language with `SCREENWIDE_LOCALE=<tag>` for the app, or Storybook's Language toolbar. `en-XA` is the pseudo-locale: accented, longer English that shows text skipping translation and layouts that break.
+
 ## Stories and verification
 
 - Feature windows built on the current primitives live under `Features` and use `FeatureStoryStage`. Unfinished or older windows stay under `Legacy`.

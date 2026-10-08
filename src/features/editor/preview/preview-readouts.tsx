@@ -4,6 +4,7 @@
 import { ZoomIn } from "lucide-react";
 
 import { NumberField } from "../../../components/base/input-fields/number-field";
+import { t } from "../../../i18n/i18n";
 
 /**
  * The zoom field, at the left of a workspace's closing row. The native surface
@@ -19,7 +20,7 @@ export function PreviewZoomField({
 }) {
   return (
     <NumberField
-      aria-label="Zoom"
+      aria-label={t("editor-zoom")}
       className="w-24"
       leftSection={<ZoomIn />}
       maxValue={800}

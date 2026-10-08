@@ -21,6 +21,7 @@ import {
   IconButton,
   IconToggleButton,
 } from "../../../components/base/button/icon-button";
+import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
 import { initialPopupPanelHeight } from "../../popup-panel/layout";
@@ -82,15 +83,27 @@ export function RecordingBarCaptureActions({
 
   const items = useMemo<PopupPanelItem[]>(
     () => [
-      { icon: "image", id: "save", label: "Save Screenshot" },
-      { icon: "clipboard", id: "clipboard", label: "Copy to Clipboard" },
-      { icon: "timer", id: "delayed", label: "Delayed Screenshot" },
+      {
+        icon: "image",
+        id: "save",
+        label: t("recording-controls-save-screenshot"),
+      },
+      {
+        icon: "clipboard",
+        id: "clipboard",
+        label: t("recording-controls-copy-screenshot"),
+      },
+      {
+        icon: "timer",
+        id: "delayed",
+        label: t("recording-controls-delayed-screenshot"),
+      },
       ...(canScrollingScreenshot
         ? [
             {
               icon: "scrolling" as const,
               id: "scrolling",
-              label: "Capture Scrolling Region",
+              label: t("recording-controls-scrolling-screenshot"),
             },
           ]
         : []),
@@ -150,7 +163,7 @@ export function RecordingBarCaptureActions({
       },
       focusContents,
       id: SCREENSHOT_MENU_ID,
-      label: "Screenshot options",
+      label: t("recording-controls-screenshot-options"),
     });
     await showPopupPanel({
       anchor: {
@@ -178,7 +191,7 @@ export function RecordingBarCaptureActions({
           focus to the button rather than to the window. */}
       <div data-popup-panel-trigger={SCREENSHOT_MENU_ID}>
         <IconButton
-          aria-label="Screenshot"
+          aria-label={t("recording-controls-screenshot")}
           isDisabled={isScreenshotDisabled}
           onPress={(event) => {
             void showMenu(
@@ -204,7 +217,11 @@ export function RecordingBarCaptureActions({
       </div>
 
       <Button
-        aria-label={isLocked ? "Open permissions" : "Record"}
+        aria-label={
+          isLocked
+            ? t("recording-controls-open-permissions")
+            : t("recording-controls-record")
+        }
         color="primary"
         isDisabled={!canRecord && !isLocked}
         onPress={isLocked ? onRequiredPermissionsPress : onRecord}
@@ -215,7 +232,9 @@ export function RecordingBarCaptureActions({
 
       {replay?.available ? (
         <IconToggleButton
-          aria-label={`Replay buffer, keeps the last ${String(replay.lengthSeconds)} seconds`}
+          aria-label={t("recording-controls-replay", {
+            seconds: replay.lengthSeconds,
+          })}
           // Starting needs settings the bar could record with; turning it off
           // is always allowed, whatever the bar is set to now.
           isDisabled={

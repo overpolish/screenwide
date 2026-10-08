@@ -4,6 +4,7 @@
 import { Keyboard } from "lucide-react";
 import { memo, useMemo } from "react";
 
+import { t } from "../../../../i18n/i18n";
 import { RecordingAnnotationLane } from "../../recording/annotations/recording-annotation-lane";
 import { RecordingSceneLane } from "../../recording/scenes/recording-scene-lane";
 import { RecordingSceneClip } from "../../recording/scenes/recording-scenes";
@@ -106,7 +107,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   });
   return (
     <section
-      aria-label="Recording timeline"
+      aria-label={t("editor-timeline-label")}
       className="flex h-full min-h-0 flex-col"
       {...timeline.interactionProps}
     >
@@ -175,7 +176,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               hiddenItemIds={hiddenKeyboardItemIds}
               icon={<Keyboard />}
               items={keyboardItems}
-              label="Shortcuts"
+              label={t("editor-timeline-shortcuts")}
               minimumItemWidthPx={KEYBOARD_MINIMUM_ITEM_WIDTH_PX}
               minimumSpan={keyboardMinimumSpan}
               onClearSelection={keyboardSelection.onClear}

@@ -3,6 +3,7 @@
 
 import { Button } from "../../../../components/base/button/button";
 import { Text } from "../../../../components/base/text/text";
+import { t } from "../../../../i18n/i18n";
 import { DEFAULT_CURSOR_EFFECTS } from "../../export/recording-export-settings";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -14,9 +15,7 @@ export function CursorPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
 
   if (!snapshot.hasCursorData) {
-    return (
-      <Text variant="footnote">This recording has no cursor movement.</Text>
-    );
+    return <Text variant="footnote">{t("editor-panels-cursor-none")}</Text>;
   }
 
   return (
@@ -37,7 +36,7 @@ export function CursorPanel({ workspace }: { workspace: EditorKind }) {
             change({ cursorEffects: DEFAULT_CURSOR_EFFECTS });
           }}
         >
-          Reset
+          {t("editor-panels-reset")}
         </Button>
       </div>
     </>

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../../i18n/i18n";
 import { PopupPanelItem } from "../../../popup-panel/store";
 import {
   boundsAnchor,
@@ -13,8 +14,8 @@ const MENU_PREFIX = "scene-template:";
 /** The one action reads wider than the tile's corner it hangs off. */
 const MENU_WIDTH = 180;
 
-const items: PopupPanelItem[] = [
-  { icon: "trash", id: "remove", label: "Remove Template" },
+const items = (): PopupPanelItem[] => [
+  { icon: "trash", id: "remove", label: t("editor-panels-remove-template") },
 ];
 
 /**
@@ -25,7 +26,7 @@ const items: PopupPanelItem[] = [
 export function useSceneTemplateMenu(onRemove: (templateId: string) => void) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: "Template actions",
+    label: t("editor-panels-template-actions"),
     mode: "menu",
     onSelect: (itemId, templateId) => {
       if (itemId === "remove") onRemove(templateId);
@@ -34,5 +35,9 @@ export function useSceneTemplateMenu(onRemove: (templateId: string) => void) {
   });
 
   return (templateId: string, anchor: DOMRect) =>
-    openMenu({ anchor: boundsAnchor(anchor), context: templateId, items });
+    openMenu({
+      anchor: boundsAnchor(anchor),
+      context: templateId,
+      items: items(),
+    });
 }

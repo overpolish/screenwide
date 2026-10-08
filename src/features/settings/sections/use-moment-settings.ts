@@ -7,6 +7,7 @@ import {
   ANNOTATION_SWATCHES,
   sameAnnotationColor,
 } from "../../../components/shared/annotation-style/palette";
+import { t } from "../../../i18n/i18n";
 import { useSettingsApi } from "../settings-api-context";
 
 import type { MomentKind } from "../../../bindings/MomentKind";
@@ -67,7 +68,7 @@ export function useMomentSettings(onError: (error: string | null) => void) {
           color: unusedColor(settings.kinds),
           customColor: null,
           id: crypto.randomUUID(),
-          name: "New Moment",
+          name: t("settings-new-moment"),
           shortcut: null,
         },
       ],

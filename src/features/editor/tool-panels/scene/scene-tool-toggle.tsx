@@ -4,6 +4,7 @@
 import { Clapperboard } from "lucide-react";
 
 import { ToolToggle } from "../../../../components/shared/tool-toggle/tool-toggle";
+import { t } from "../../../../i18n/i18n";
 
 /**
  * The editor toolbar's scene tool. Like the select tool it picks, moves and
@@ -22,8 +23,8 @@ export function SceneToolToggle({
     <span className="inline-flex" data-editor-tool="scene">
       <ToolToggle
         isSelected={isSelected}
-        label="Scene"
-        name="Scene"
+        label={t("editor-panels-scene")}
+        name={t("editor-panels-scene")}
         onSelectedChange={onSelectedChange}
         shortcut="L"
       >

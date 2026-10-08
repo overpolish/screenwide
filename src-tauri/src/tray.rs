@@ -6,6 +6,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{App, AppHandle, Wry};
 
 use crate::app_windows;
+use crate::i18n::t;
 use crate::recording::RecordingStatus;
 
 mod actions;
@@ -21,12 +22,18 @@ mod windows_theme;
 
 const ANNOTATE_MENU_ID: &str = "annotate";
 const ANNOTATE_CLEAR_MENU_ID: &str = "annotate-clear";
+/// Discards a recording that is still starting. Its own id rather than
+/// Discard's, so the Windows menu picks its icon without reading its text.
+const CANCEL_RECORDING_MENU_ID: &str = "cancel-recording";
 const DELAYED_SCREENSHOT_MENU_ID: &str = "delayed-screenshot";
 const DISCARD_MENU_ID: &str = "discard-recording";
 const OPEN_CLIPBOARD_SCREENSHOT_MENU_ID: &str = "open-clipboard-screenshot";
 const OPEN_MENU_ID: &str = "open-screenwide";
 const OPEN_PROJECT_MENU_ID: &str = "open-project";
 const PAUSE_MENU_ID: &str = "pause-recording";
+/// Pause's counterpart while paused, with an id of its own for the same
+/// reason as Cancel.
+const RESUME_MENU_ID: &str = "resume-recording";
 const QUIT_MENU_ID: &str = "quit-screenwide";
 const RECOGNIZE_TEXT_MENU_ID: &str = "recognize-text";
 const RULER_OVERLAY_MENU_ID: &str = "ruler-overlay";
@@ -39,55 +46,61 @@ const TRAY_ID: &str = "screenwide";
 fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wry>> {
   // While a countdown runs, the item that started it is the way to stop it.
   let delayed_screenshot = if crate::screenshots::delayed::remaining().is_some() {
-    IconMenuItemBuilder::with_id(DELAYED_SCREENSHOT_MENU_ID, "Cancel Delayed Screenshot")
-      .icon(icons::load(icons::CANCEL)?)
+    IconMenuItemBuilder::with_id(
+      DELAYED_SCREENSHOT_MENU_ID,
+      t!("tray-cancel-delayed-screenshot"),
+    )
+    .icon(icons::load(icons::CANCEL)?)
   } else {
-    IconMenuItemBuilder::with_id(DELAYED_SCREENSHOT_MENU_ID, "Delayed Screenshot")
+    IconMenuItemBuilder::with_id(DELAYED_SCREENSHOT_MENU_ID, t!("tray-delayed-screenshot"))
       .icon(icons::load(icons::TIMER)?)
       .enabled(status == RecordingStatus::Idle)
   }
   .build(app)?;
   let mut builder = MenuBuilder::new(app)
-    .icon(OPEN_MENU_ID, "Open Screenwide", icons::load(icons::OPEN)?)
+    .icon(OPEN_MENU_ID, t!("tray-open"), icons::load(icons::OPEN)?)
     .icon(
       OPEN_PROJECT_MENU_ID,
-      "Projects",
+      t!("tray-projects"),
       icons::load(icons::PROJECT)?,
     )
     .icon(
       OPEN_CLIPBOARD_SCREENSHOT_MENU_ID,
-      "Open Screenshot from Clipboard",
+      t!("tray-open-clipboard-screenshot"),
       icons::load(icons::CLIPBOARD)?,
     )
     .item(&delayed_screenshot);
 
   if matches!(status, RecordingStatus::Recording | RecordingStatus::Paused) {
-    let pause_label = if status == RecordingStatus::Paused {
-      "Resume Recording"
+    builder = builder.separator();
+    builder = if status == RecordingStatus::Paused {
+      builder.icon(
+        RESUME_MENU_ID,
+        t!("tray-resume-recording"),
+        icons::load(icons::RESUME)?,
+      )
     } else {
-      "Pause Recording"
+      builder.icon(
+        PAUSE_MENU_ID,
+        t!("tray-pause-recording"),
+        icons::load(icons::PAUSE)?,
+      )
     };
     builder = builder
-      .separator()
       .icon(
-        PAUSE_MENU_ID,
-        pause_label,
-        icons::load(if status == RecordingStatus::Paused {
-          icons::RESUME
-        } else {
-          icons::PAUSE
-        })?,
+        STOP_MENU_ID,
+        t!("tray-stop-recording"),
+        icons::load(icons::STOP)?,
       )
-      .icon(STOP_MENU_ID, "Stop Recording", icons::load(icons::STOP)?)
       .icon(
         DISCARD_MENU_ID,
-        "Discard Recording",
+        t!("tray-discard-recording"),
         icons::load(icons::DISCARD)?,
       );
   } else if status == RecordingStatus::Starting {
     builder = builder.separator().icon(
-      DISCARD_MENU_ID,
-      "Cancel Recording",
+      CANCEL_RECORDING_MENU_ID,
+      t!("tray-cancel-recording"),
       icons::load(icons::CANCEL)?,
     );
   }
@@ -95,7 +108,7 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   builder = replay::append(app, builder)?;
 
   let mut recognize_text =
-    IconMenuItemBuilder::with_id(RECOGNIZE_TEXT_MENU_ID, "Recognize Text/QR")
+    IconMenuItemBuilder::with_id(RECOGNIZE_TEXT_MENU_ID, t!("tray-recognize-text"))
       .icon(icons::load(icons::TEXT)?)
       .enabled(crate::text_recognition::settings::enabled());
   if let Some(shortcut) =
@@ -105,7 +118,7 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   }
   let recognize_text = recognize_text.build(app)?;
 
-  let mut ruler_overlay = IconMenuItemBuilder::with_id(RULER_OVERLAY_MENU_ID, "Ruler Overlay")
+  let mut ruler_overlay = IconMenuItemBuilder::with_id(RULER_OVERLAY_MENU_ID, t!("tray-ruler"))
     .icon(icons::load(icons::RULER)?)
     .enabled(crate::ruler::settings::enabled());
   if let Some(shortcut) =
@@ -115,7 +128,7 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   }
   let ruler_overlay = ruler_overlay.build(app)?;
 
-  let mut annotate = IconMenuItemBuilder::with_id(ANNOTATE_MENU_ID, "Annotate")
+  let mut annotate = IconMenuItemBuilder::with_id(ANNOTATE_MENU_ID, t!("tray-annotate"))
     .icon(icons::load(icons::ANNOTATE)?)
     .enabled(crate::annotate::settings::enabled());
   if let Some(shortcut) =
@@ -129,7 +142,7 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   // the overlay lets go of the screen - which is the only time this menu can
   // be reached, since the overlay covers the menu bar while it draws.
   let mut clear_annotations =
-    IconMenuItemBuilder::with_id(ANNOTATE_CLEAR_MENU_ID, "Clear Annotations")
+    IconMenuItemBuilder::with_id(ANNOTATE_CLEAR_MENU_ID, t!("tray-clear-annotations"))
       .icon(icons::load(icons::CANCEL)?)
       .enabled(crate::annotate::has_annotations());
   if let Some(shortcut) =
@@ -145,9 +158,13 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
     .item(&ruler_overlay)
     .item(&annotate)
     .item(&clear_annotations)
-    .icon(SETTINGS_MENU_ID, "Settings", icons::load(icons::SETTINGS)?)
+    .icon(
+      SETTINGS_MENU_ID,
+      t!("tray-settings"),
+      icons::load(icons::SETTINGS)?,
+    )
     .separator()
-    .icon(QUIT_MENU_ID, "Quit Screenwide", icons::load(icons::QUIT)?)
+    .icon(QUIT_MENU_ID, t!("tray-quit"), icons::load(icons::QUIT)?)
     .build()?;
   #[cfg(target_os = "windows")]
   icons::apply_menu_style(&menu);
