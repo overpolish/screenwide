@@ -11,16 +11,19 @@ use super::pin::AnnotationPin;
 use super::Annotation;
 use crate::editor::timeline_edit::{output_at_us, rate_at, TimelineRange};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum AnnotationTrack {
   Primary,
   Camera,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingAnnotationClip {
   pub annotation: Annotation,
   pub track_id: AnnotationTrack,
@@ -30,6 +33,7 @@ pub struct RecordingAnnotationClip {
   /// does. Only the screen's clips are pinned: the camera is a face, not a
   /// page.
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub pin: Option<AnnotationPin>,
   /// How long what the annotation draws along a path takes to draw in - the
   /// whole of an arrow, a highlight or a shape, a text box's pointer - paced
@@ -37,6 +41,7 @@ pub struct RecordingAnnotationClip {
   /// that. Absent from a clip the editor has not paced, which takes its kind's
   /// own time, and from every counter and redaction, which grow into place.
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub path_ms: Option<f32>,
 }
 

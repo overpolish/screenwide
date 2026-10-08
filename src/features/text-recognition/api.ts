@@ -3,11 +3,8 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-export type RecognizedQrCode = {
-  bounds: { height: number; width: number; x: number; y: number };
-  content: string;
-  decodeError?: string;
-};
+import type { RecognizedQrCode } from "../../bindings/RecognizedQrCode";
+export type { RecognizedQrCode };
 
 export const cancelTextRecognition = () =>
   invoke<null>("cancel_text_recognition");

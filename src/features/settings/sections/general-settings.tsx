@@ -13,7 +13,7 @@ import { RecordingFps } from "../../recording-inputs/types";
 import { useSettingsApi } from "../settings-api-context";
 import { LiveSoftwareUpdateSetting } from "../settings-update-actions";
 
-import type { GeneralSettings } from "../types";
+import type { GeneralSettings } from "../../../bindings/GeneralSettings";
 
 /** The preferences a Switch row can drive. */
 type ToggleKey = {
@@ -185,7 +185,7 @@ export function GeneralSettingsPanel({
                 ]}
                 onSelectionChange={(seconds) => {
                   update({
-                    recordingCountdownSeconds: Number(seconds) as 0 | 3 | 5,
+                    recordingCountdownSeconds: Number(seconds),
                   });
                 }}
                 selected={String(settings.recordingCountdownSeconds)}
@@ -231,7 +231,7 @@ export function GeneralSettingsPanel({
                 ]}
                 onSelectionChange={(seconds) => {
                   update({
-                    screenshotDelaySeconds: Number(seconds) as 3 | 5 | 10,
+                    screenshotDelaySeconds: Number(seconds),
                   });
                 }}
                 selected={String(settings.screenshotDelaySeconds)}

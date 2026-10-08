@@ -9,12 +9,14 @@ use super::{
   travel::TurnPointTracker,
 };
 use serde::Serialize;
+use ts_rs::TS;
 
 mod lifecycle;
 
 /// The detector's complete observable state after one input or timer event.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct GlideDetection {
   /// A rest completed and this result still accepts the next step.
   pub became_ready: bool,

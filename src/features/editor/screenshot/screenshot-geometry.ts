@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-declare const rectSpace: unique symbol;
-
-type Rect<Space extends "canvas" | "source"> = {
+/** A rectangle in a named space. The space is a comment for readers rather
+ * than a type-level brand: the Rust models do not distinguish source and
+ * canvas rects, so ts-rs cannot reproduce the distinction. */
+type Rect<_Space extends "canvas" | "source"> = {
   height: number;
-  readonly [rectSpace]: Space;
   width: number;
   x: number;
   y: number;
@@ -38,18 +38,14 @@ const assertFiniteRect = (value: {
     throw new Error("Rectangle coordinates must be finite");
 };
 
-export const canvasRect = (
-  value: Omit<CanvasRect, typeof rectSpace>,
-): CanvasRect => {
+export const canvasRect = (value: CanvasRect): CanvasRect => {
   assertFiniteRect(value);
   if (value.width <= 0 || value.height <= 0)
     throw new Error("Canvas rectangles must have positive dimensions");
-  return { ...value } as CanvasRect;
+  return { ...value };
 };
 
-export const sourceRect = (
-  value: Omit<SourceRect, typeof rectSpace>,
-): SourceRect => {
+export const sourceRect = (value: SourceRect): SourceRect => {
   assertFiniteRect(value);
   const firstX = clamp(Math.min(value.x, value.x + value.width), 0, 1);
   const firstY = clamp(Math.min(value.y, value.y + value.height), 0, 1);
@@ -62,7 +58,7 @@ export const sourceRect = (
     width: secondX - firstX,
     x: firstX,
     y: firstY,
-  } as SourceRect;
+  };
 };
 
 export const fullSourceRect = () =>

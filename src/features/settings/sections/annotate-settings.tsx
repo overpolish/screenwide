@@ -6,7 +6,7 @@ import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 
-import type { AnnotateSettings } from "../types";
+import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 
 export function AnnotateSettingsPanel({
   activation,

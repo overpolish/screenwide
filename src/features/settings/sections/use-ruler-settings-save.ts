@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 
 import { useSettingsApi } from "../settings-api-context";
 
-import type { RulerSettings } from "../types";
+import type { RulerSettings } from "../../../bindings/RulerSettings";
 
 export function useRulerSettingsSave(
   setRuler: (settings: RulerSettings) => void,

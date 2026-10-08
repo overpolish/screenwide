@@ -15,16 +15,14 @@ import { TranscriptionSettingsPanel } from "./sections/transcription-settings";
 import type { MomentSettingsState } from "./sections/use-moment-settings";
 import type { TranscriptionControls } from "./sections/use-transcription";
 import type { SettingsSection } from "./settings-sections";
-import type {
-  AnnotateSettings,
-  GeneralSettings,
-  GlideSettings,
-  OcrSettings,
-  RulerSettings,
-  ShortcutAction,
-  ShortcutDefaults,
-  ShortcutSettings,
-} from "./types";
+import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
+import type { GeneralSettings } from "../../bindings/GeneralSettings";
+import type { GlideSettings } from "../../bindings/GlideSettings";
+import type { OcrSettings } from "../../bindings/OcrSettings";
+import type { RulerSettings } from "../../bindings/RulerSettings";
+import type { ShortcutAction } from "../../bindings/ShortcutAction";
+import type { ShortcutDefaults } from "../../bindings/ShortcutDefaults";
+import type { ShortcutSettings } from "../../bindings/ShortcutSettings";
 
 export type SettingsPanesProps = {
   annotate: AnnotateSettings | null;

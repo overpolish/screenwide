@@ -9,11 +9,12 @@ import {
   trackShortcutListener,
 } from "../../lib/shortcut-diagnostics";
 import { hideRecordingUi, toggleRecordingUi } from "../recording-sources/api";
-import { ShortcutAction } from "../settings/types";
 import { startTextRecognition } from "../text-recognition/api";
 
 import { startRecording } from "./api";
 import { startRecordingOptions } from "./recording-request";
+
+import type { ShortcutAction } from "../../bindings/ShortcutAction";
 
 const SHORTCUT_ACTION_EVENT = "global-shortcut://action";
 

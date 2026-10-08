@@ -11,17 +11,15 @@ import {
 } from "../permissions/api";
 import { listMicrophones } from "../recording-inputs/devices-api";
 
-import {
-  AnnotateSettings,
-  GeneralSettings,
-  GlideSettings,
-  MomentSettings,
-  OcrSettings,
-  RulerSettings,
-  ShortcutAction,
-  ShortcutSettings,
-  ShortcutDefaults,
-} from "./types";
+import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
+import type { GeneralSettings } from "../../bindings/GeneralSettings";
+import type { GlideSettings } from "../../bindings/GlideSettings";
+import type { MomentSettings } from "../../bindings/MomentSettings";
+import type { OcrSettings } from "../../bindings/OcrSettings";
+import type { RulerSettings } from "../../bindings/RulerSettings";
+import type { ShortcutAction } from "../../bindings/ShortcutAction";
+import type { ShortcutDefaults } from "../../bindings/ShortcutDefaults";
+import type { ShortcutSettings } from "../../bindings/ShortcutSettings";
 
 export const getShortcutDefaults = () =>
   invoke<ShortcutDefaults>("get_shortcut_defaults");

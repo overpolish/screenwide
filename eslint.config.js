@@ -24,6 +24,7 @@ export default defineConfig([
     "node_modules/**",
     "src-tauri/**",
     "storybook-static/**",
+    "src/bindings/**",
   ]),
   {
     extends: [eslint.configs.recommended],

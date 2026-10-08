@@ -4,8 +4,9 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useState } from "react";
 
+import { GeneralSettings } from "../../bindings/GeneralSettings";
+
 import { getGeneralSettings, setGeneralSettings } from "./api";
-import { GeneralSettings } from "./types";
 
 const SETTINGS_CHANGED_EVENT = "settings://changed";
 

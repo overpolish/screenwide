@@ -11,6 +11,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// Told once, from the writer thread, when a recording stops being able to
 /// accept frames. The user sees one message however many frames follow.
@@ -38,8 +39,9 @@ pub struct FinalizeInfo {
   pub width: u32,
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export)]
 pub enum PrimaryRecordingKind {
   #[default]
   Screen,

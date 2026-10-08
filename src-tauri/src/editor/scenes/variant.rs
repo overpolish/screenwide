@@ -7,10 +7,12 @@
 //! `src/features/editor/recording/scenes/recording-scenes.ts`.
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// How much of a side by side or stacked pair the camera takes.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export)]
 pub enum SceneCameraSize {
   #[default]
   Third,
@@ -18,8 +20,9 @@ pub enum SceneCameraSize {
 }
 
 /// The corner of the screen a picture in picture's camera sits over.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export)]
 pub enum SceneCorner {
   TopLeft,
   TopRight,
@@ -29,8 +32,9 @@ pub enum SceneCorner {
 }
 
 /// How big a picture in picture's camera is beside the screen.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export)]
 pub enum SceneBubbleSize {
   Small,
   #[default]
@@ -38,16 +42,20 @@ pub enum SceneBubbleSize {
 }
 
 /// A preset's options, each its default where unset.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct SceneVariant {
   /// The camera before the screen: on the left beside it, or above it.
   #[serde(default, skip_serializing_if = "std::ops::Not::not")]
   pub swap: bool,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub camera_size: Option<SceneCameraSize>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub corner: Option<SceneCorner>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub size: Option<SceneBubbleSize>,
 }

@@ -8,7 +8,6 @@ import {
   listenToAnnotateSettings,
   setAnnotateSettings,
 } from "../settings/api";
-import { AnnotateSettings } from "../settings/types";
 import { useGeneralSettings } from "../settings/use-general-settings";
 
 import { AnnotateToolbar } from "./annotate-toolbar";
@@ -20,6 +19,8 @@ import {
   undoAnnotation,
 } from "./api";
 import { useToolbarTyping } from "./use-toolbar-typing";
+
+import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
 
 /** How long a dragged edit has to stand still before it is written. A slider
  * reports every step of a drag, and each step would otherwise be a

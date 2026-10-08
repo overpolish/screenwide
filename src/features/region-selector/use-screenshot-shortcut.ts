@@ -9,13 +9,14 @@ import {
   trackShortcutListener,
 } from "../../lib/shortcut-diagnostics";
 import { useRecordingSourceStore } from "../recording-sources/store";
-import { ShortcutAction } from "../settings/types";
 
 import {
   handleScreenshotShortcut,
   handoffScreenshotShortcut,
   isScreenshotShortcut,
 } from "./screenshot-session";
+
+import type { ShortcutAction } from "../../bindings/ShortcutAction";
 
 const SHORTCUT_ACTION_EVENT = "global-shortcut://action";
 const SCREENSHOT_SHORTCUT_REQUESTED_EVENT =

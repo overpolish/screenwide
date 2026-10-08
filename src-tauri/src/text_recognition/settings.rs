@@ -8,16 +8,19 @@ use std::{
   sync::{LazyLock, RwLock},
 };
 use tauri::{AppHandle, Emitter, Manager};
+use ts_rs::TS;
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum OcrAction {
   SelectAll,
   CopyText,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, TS)]
 #[serde(default, rename_all = "camelCase")]
+#[ts(export)]
 pub struct OcrSettings {
   pub enabled: bool,
   pub bindings: BTreeMap<OcrAction, Option<String>>,

@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// A crop rectangle expressed as fractions of the captured source image.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct NormalizedSourceRect {
   pub height: f64,
   pub width: f64,

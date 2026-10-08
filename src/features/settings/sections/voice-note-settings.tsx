@@ -21,9 +21,9 @@ import {
   type TranscriptionControls,
 } from "./use-transcription";
 
+import type { MomentSettings } from "../../../bindings/MomentSettings";
 import type { PermissionStatus } from "../../permissions/types";
 import type { InputDevice } from "../../recording-inputs/types";
-import type { MomentSettings } from "../types";
 
 const SAME_AS_RECORDING = "same-as-recording";
 

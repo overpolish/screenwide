@@ -3,23 +3,11 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
+import type { ImageDrop } from "../../../bindings/ImageDrop";
+import type { ImagePoint } from "../../../bindings/ImagePoint";
 import type { ImageArt } from "../annotations/annotations";
-import type { EditorKind } from "../types";
 
-/** Where a dropped picture landed: the layer it joins and the point in that
- * layer's image, from 0 to 1 across it and beyond for a drop on the frame
- * around it. The twin of `ImagePoint` in
- * `src-tauri/src/editor/images/dropped.rs`. */
-export type ImagePoint = { layer: number; x: number; y: number };
-
-/** A picture dropped on a workspace, kept: which editor it was dropped on,
- * what the image shows, and where it landed, or null with no picture laid
- * out. */
-export type ImageDrop = {
-  art: ImageArt;
-  at: ImagePoint | null;
-  workspace: EditorKind;
-};
+export type { ImageDrop, ImagePoint };
 
 export const IMAGE_DROP_EVENT = "editor://image-drop";
 

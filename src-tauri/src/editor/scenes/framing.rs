@@ -8,6 +8,7 @@
 //! held where it still fills it. The twin of `recording-scene-framing.ts`.
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::geometry::Rect;
 use crate::editor::CameraOverlaySettings;
@@ -15,8 +16,9 @@ use crate::editor::CameraOverlaySettings;
 /// The furthest a scene zooms into a picture.
 pub(crate) const MAX_ZOOM: f64 = 8.0;
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct SceneFraming {
   /// The point of the picture in the middle of its box, as shares of the
   /// picture's width and height.

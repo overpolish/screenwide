@@ -13,6 +13,7 @@ use crate::editor::annotations::{
   Annotation, AnnotationAlign, AnnotationHead, AnnotationShape, AnnotationStyle,
 };
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// A text box's pointer, held against its box rather than in the picture, so
 /// it keeps its place on the box however the box is moved, retyped or resized.
@@ -23,8 +24,9 @@ use serde::{Deserialize, Serialize};
 /// axis, in ems of the box's type, and is zero in an axis the tip is inside
 /// the box in. A pointer that reaches nowhere is not drawn, but keeps its
 /// place, so its grip is where it was left.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct TextPointer {
   pub along: AnnotationPoint,
   pub reach: AnnotationPoint,

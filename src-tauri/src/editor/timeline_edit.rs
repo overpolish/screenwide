@@ -15,6 +15,7 @@ pub(crate) use time_mapping::source_before_output_duration_us;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// Annotations are drawn in document order.
 const FORMAT_VERSION: u16 = 2;
@@ -23,13 +24,15 @@ const MAX_SEGMENTS: usize = 100_000;
 mod keyboard;
 pub use keyboard::{KeyboardShortcutPositionRange, RecordingTimelineKeyboardDeletions};
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingTimelineSegment {
   pub id: u64,
   pub source_end: f64,
   pub source_start: f64,
   #[serde(default = "default_playback_rate")]
+  #[ts(as = "Option<f64>", optional)]
   pub playback_rate: f64,
 }
 
@@ -37,26 +40,33 @@ const fn default_playback_rate() -> f64 {
   1.0
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DeletedKeyboardShortcutFragment {
   pub segment_id: u64,
   pub shortcut_id: u64,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DeletedKeyboardShortcutRange {
   pub end_ms: u64,
   pub shortcut_id: u64,
   pub start_ms: u64,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingTimelineEdit {
   pub artifact_id: u64,
   #[serde(default)]
+  #[ts(
+    as = "Option<Vec<super::annotations::timing::RecordingAnnotationClip>>",
+    optional
+  )]
   pub annotation_clips: Vec<super::annotations::timing::RecordingAnnotationClip>,
   #[serde(flatten)]
   pub keyboard_deletions: Box<RecordingTimelineKeyboardDeletions>,

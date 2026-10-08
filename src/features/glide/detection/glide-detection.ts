@@ -20,19 +20,12 @@ import {
   sameRegion,
   stepColumns,
 } from "./glide-regions";
-import { type GlidePhase, RestGate } from "./glide-settling";
+import { RestGate } from "./glide-settling";
 import { TurnPointTracker } from "./glide-travel";
 
+import type { GlideDetection } from "../../../bindings/GlideDetection";
 export type { GlideAction, GlideDetectorOptions };
-
-export type GlideDetection = {
-  /** A rest completed and the detector still accepts the next step. */
-  becameReady: boolean;
-  changed: boolean;
-  pending: GlideAction | null;
-  phase: GlidePhase;
-  region: GlideRegion | null;
-};
+export type { GlideDetection };
 
 type GlideSample = {
   deltaX: number;

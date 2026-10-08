@@ -7,7 +7,7 @@ import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
 
-import type { GlideSettings } from "../types";
+import type { GlideSettings } from "../../../bindings/GlideSettings";
 
 const isMac =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");

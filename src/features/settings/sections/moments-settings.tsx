@@ -15,7 +15,7 @@ import { VoiceNoteSettings } from "./voice-note-settings";
 
 import type { MomentSettingsState } from "./use-moment-settings";
 import type { TranscriptionControls } from "./use-transcription";
-import type { MomentKind } from "../types";
+import type { MomentKind } from "../../../bindings/MomentKind";
 
 /** A kind's name as it is typed, kept to the field until it is left or
  * Return is pressed, so the settings file is not written per keystroke. A

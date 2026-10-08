@@ -6,19 +6,22 @@ use super::{
   TimelinePlan,
 };
 
-#[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, serde::Serialize)]
+#[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, serde::Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, rename = "KeyboardShortcutPosition")]
 pub struct KeyboardShortcutPositionFragment {
   pub center_x: f64,
   pub center_y: f64,
   pub segment_id: u64,
   pub shortcut_id: u64,
   #[serde(default)]
+  #[ts(as = "Option<f64>", optional)]
   pub size_percent: Option<f64>,
 }
 
-#[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, serde::Serialize)]
+#[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, serde::Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct KeyboardShortcutPositionRange {
   pub center_x: f64,
   pub center_y: f64,
@@ -26,16 +29,20 @@ pub struct KeyboardShortcutPositionRange {
   pub shortcut_id: u64,
   pub start_ms: u64,
   #[serde(default)]
+  #[ts(as = "Option<f64>", optional)]
   pub size_percent: Option<f64>,
 }
 
-#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, serde::Serialize)]
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, serde::Serialize, ts_rs::TS)]
 pub struct RecordingTimelineKeyboardDeletions {
   #[serde(default, rename = "deletedKeyboardShortcutFragments")]
+  #[ts(as = "Option<Vec<DeletedKeyboardShortcutFragment>>", optional)]
   pub fragments: Vec<DeletedKeyboardShortcutFragment>,
   #[serde(default, rename = "deletedKeyboardShortcutIds")]
+  #[ts(as = "Option<Vec<u64>>", optional)]
   pub shortcut_ids: Vec<u64>,
   #[serde(default, rename = "keyboardShortcutPositions")]
+  #[ts(as = "Option<Vec<KeyboardShortcutPositionFragment>>", optional)]
   pub positions: Vec<KeyboardShortcutPositionFragment>,
 }
 

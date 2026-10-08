@@ -1,66 +1,42 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Annotation } from "./annotations/annotations";
-import {
-  RecordingOutputSettings,
-  ScreenshotOutputSettings,
-  ScreenshotWorkspaceOutputSettings,
-} from "./screenshot/screenshot-output";
-import { RecordingTimelineEdit } from "./timeline/editing/recording-timeline-edit";
+import type { AudioTrackVolume } from "../../bindings/AudioTrackVolume";
+import type { CameraOverlaySettings } from "../../bindings/CameraOverlaySettings";
+import type { CursorEffectSettings } from "../../bindings/CursorEffectSettings";
+import type { EditorArtifact } from "../../bindings/EditorArtifact";
+import type { EditorKind } from "../../bindings/EditorKind";
+import type { EditorSnapshot } from "../../bindings/EditorSnapshot";
+import type { EditorSnapshots } from "../../bindings/EditorSnapshots";
+import type { KeyboardEffectAnimation } from "../../bindings/KeyboardEffectAnimation";
+import type { KeyboardEffectAppearance } from "../../bindings/KeyboardEffectAppearance";
+import type { KeyboardEffectSettings } from "../../bindings/KeyboardEffectSettings";
+import type { PreparedAudioTrack } from "../../bindings/PreparedAudioTrack";
+import type { RecordingExportChoices } from "../../bindings/RecordingExportChoices";
+import type { RecordingPreview } from "../../bindings/RecordingPreview";
+import type { RecordingPreviewLayout } from "../../bindings/RecordingPreviewLayout";
+import type { RecordingPreviewPane } from "../../bindings/RecordingPreviewPane";
+import type { RecordingProjectLook } from "../../bindings/RecordingProjectLook";
+import type { RememberedCameraOverlay } from "../../bindings/RememberedCameraOverlay";
 
-type EditorArtifactBase = {
-  extension: string;
-  height: number;
-  /** Unique per capture, so a replacement is never mistaken for the same one.
-   */
-  id: number;
-  suggestedFileStem: string;
-  width: number;
-};
-
-type AudioTrackKind = "microphone" | "system-audio" | "unknown";
-
-type RecordingAudioTrack = {
-  kind: AudioTrackKind;
-  label: string;
-  streamIndex: number;
-};
-
-export type AudioTrackVolume = {
-  decibels: number;
-  streamIndex: number;
-};
-
-export type PreparedAudioTrack = {
-  kind: AudioTrackKind;
-  label: string;
-  /**
-   * Which recorded track this came from and what identifies its row on screen.
-   */
-  streamIndex: number;
-  waveform: number[];
-};
-
-export type RecordingPreview = {
-  artifactId: number;
-  tracks: PreparedAudioTrack[];
-};
-
-export type RecordingPreviewPane = {
-  height: number;
-  kind: "camera" | "screen";
-  sourceHeight: number;
-  sourceWidth: number;
-  width: number;
-  x: number;
-  y: number;
-};
-
-export type RecordingPreviewLayout = {
-  height: number;
-  panes: RecordingPreviewPane[];
-  width: number;
+export type {
+  AudioTrackVolume,
+  CameraOverlaySettings,
+  CursorEffectSettings,
+  EditorArtifact,
+  EditorKind,
+  EditorSnapshot,
+  EditorSnapshots,
+  KeyboardEffectAnimation,
+  KeyboardEffectAppearance,
+  KeyboardEffectSettings,
+  PreparedAudioTrack,
+  RecordingExportChoices,
+  RecordingPreview,
+  RecordingPreviewLayout,
+  RecordingPreviewPane,
+  RecordingProjectLook,
+  RememberedCameraOverlay,
 };
 
 export type RecordingVideoTrackId = "camera" | "primary";
@@ -73,27 +49,6 @@ export type RecordingTimelineThumbnails = Record<
   RecordingVideoTrackId,
   RecordingTimelineThumbnail[]
 >;
-
-export type CursorEffectSettings = {
-  bake: boolean;
-  clickAnimation: boolean;
-  clipAtVideoEdge: boolean;
-  motionBlur: boolean;
-  sizePercent: number;
-  smoothMovement: boolean;
-};
-
-export type KeyboardEffectAnimation = "fade" | "none" | "pop";
-export type KeyboardEffectAppearance = "dark" | "light";
-
-export type KeyboardEffectSettings = {
-  animation: KeyboardEffectAnimation;
-  appearance: KeyboardEffectAppearance;
-  bake: boolean;
-  sizePercent: number;
-  positionXPercent?: number;
-  positionYPercent?: number;
-};
 
 export type RecordingKeyboardTimelineItem = {
   endMs: number;
@@ -110,141 +65,6 @@ export const recordingAudioStreamIndex = (trackId: RecordingTrackId | null) => {
   const streamIndex = Number(trackId.slice("audio:".length));
   return Number.isInteger(streamIndex) ? streamIndex : null;
 };
-
-type RecordingCamera = {
-  durationMs: number;
-  height: number;
-  originalSizeBytes: number;
-  path: string;
-  width: number;
-};
-
-export type CameraOverlaySettings = {
-  /** Camera image centre, in the screen output's own pixels. */
-  cameraWidth: number;
-  cameraX: number;
-  cameraY: number;
-  /** Crop-window rectangle, in the screen output's own pixels. */
-  frameHeight: number;
-  frameWidth: number;
-  frameX: number;
-  frameY: number;
-  /** Corner radius as a percentage of the camera frame's shorter edge. */
-  radiusPercent: number;
-};
-
-/** A baked camera's placement with the geometry it was measured against. */
-export type RememberedCameraOverlay = {
-  cameraHeight: number;
-  cameraWidth: number;
-  overlay: CameraOverlaySettings;
-  screenHeight: number;
-  screenWidth: number;
-};
-
-/**
- * The last recording export's choices. `null` means no exported recording has
- * offered that choice yet, so the editor keeps its default.
- */
-export type RecordingExportChoices = {
-  bakeCamera: boolean | null;
-  cameraCompression: number | null;
-  cameraOverlay: RememberedCameraOverlay | null;
-  cameraResolutionScalePercent: number | null;
-  collapseAudio: boolean | null;
-  compression: number | null;
-  deleteProjectAfterExport: boolean | null;
-  /** The output scale as a share of the "Original" scale. */
-  resolutionScaleRatio: number | null;
-};
-
-/**
- * How a recording's project looks and which of its tracks it uses, as the
- * project keeps it. Each track field is null where the recording's own
- * default stands: every track on, at full volume.
- */
-export type RecordingProjectLook = {
-  audioTrackVolumes: AudioTrackVolume[] | null;
-  bakeCamera: boolean;
-  cameraOverlay: CameraOverlaySettings;
-  cursorEffects: CursorEffectSettings;
-  enabledStreamIndices: number[] | null;
-  enabledVideoTracks: RecordingVideoTrackId[] | null;
-  keyboardEffects: KeyboardEffectSettings;
-  recordingOutput: RecordingOutputSettings;
-};
-
-/**
- * A capture waiting to be exported. The window switches on `kind` rather than
- * assuming a screenshot: a recording is a file that gets moved, not pixels
- * that get encoded, and almost nothing about handling the two is the same.
- */
-export type EditorArtifact =
-  | (EditorArtifactBase & {
-      audioTracks: RecordingAudioTrack[];
-      camera: RecordingCamera | null;
-      canCompress: boolean;
-      cursorDataVersion: number | null;
-      /** Zero for a recording recovered from an earlier run, whose length is
-       * unknown. */
-      durationMs: number;
-      hasCursorData: boolean;
-      hasKeyboardData: boolean;
-      keyboardDataVersion: number | null;
-      kind: "recording";
-      originalSizeBytes: number;
-      /** The working recording consumed by the native preview and export paths.
-       */
-      path: string;
-      primaryKind: "audio" | "camera" | "screen";
-      /** Captured pixels per logical display point, multiplied by 100. */
-      sourceScalePercent: number;
-      keyboardMaximumWidthUnits?: number | null;
-      /** The look saved in the project, shown in place of the remembered one.
-       * Absent for a project the editor has not saved a look in. */
-      projectLook?: RecordingProjectLook | null;
-      timelineEdit?: RecordingTimelineEdit | null;
-      timelineEditRevision?: number | null;
-    })
-  | (EditorArtifactBase & {
-      items: {
-        /** The annotations the item starts with, in its own pixels: what the
-         * live overlay had drawn over the shot when it was taken. */
-        annotations: Annotation[];
-        height: number;
-        id: number;
-        width: number;
-      }[];
-      kind: "screenshot";
-      /** The canvas and layers saved in the project, shown in place of the
-       * remembered look. Absent until the editor has saved them. */
-      projectWorkspace?: ScreenshotWorkspaceOutputSettings | null;
-    });
-
-/**
- * Which editor workspace something belongs to. Each has a window of its own, so
- * a recording can wait for a decision while a screenshot is being edited.
- */
-export type EditorKind = "recording" | "screenshot";
-
-export type EditorSnapshot = {
-  artifact: EditorArtifact | null;
-  cursorEffects: CursorEffectSettings;
-  directory: string | null;
-  keyboardEffects: KeyboardEffectSettings;
-  recordingExportChoices: RecordingExportChoices;
-  recordingOutput: RecordingOutputSettings | null;
-  screenshotBackgroundRadiusPercent: number;
-  /** Whether a screenshot's project goes to the Trash once it is exported or
-   * copied; null until one has been. */
-  screenshotDeleteProjectAfterExport: boolean | null;
-  screenshotOutput: ScreenshotOutputSettings | null;
-  screenshotRadiusPercent: number;
-  /** The workspace this describes: the change event is app-wide. */
-  workspace: EditorKind;
-};
-
-export type EditorSnapshots = Record<EditorKind, EditorSnapshot>;
 
 export const initialEditorSnapshot = (
   workspace: EditorKind,

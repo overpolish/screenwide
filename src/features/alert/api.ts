@@ -4,13 +4,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 
+import type { AlertCopy } from "../../bindings/AlertCopy";
+export type { AlertCopy };
+
 /** Sent when the alert window, already loaded, is to say something else. */
 const ALERT_SHOWN_EVENT = "alert://shown";
-
-export type AlertCopy = {
-  message: string;
-  title: string;
-};
 
 /** The alert in front right now, if there is one. */
 export const getAlert = async () => invoke<AlertCopy | null>("get_alert");

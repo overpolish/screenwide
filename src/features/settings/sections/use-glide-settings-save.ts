@@ -3,7 +3,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import type { GlideSettings } from "../types";
+import type { GlideSettings } from "../../../bindings/GlideSettings";
 
 export function useGlideSettingsSave({
   reloadSettings,

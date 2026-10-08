@@ -5,6 +5,7 @@ use std::sync::RwLock;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
+use ts_rs::TS;
 
 #[cfg(target_os = "macos")]
 mod platform_macos;
@@ -30,8 +31,9 @@ const BRAND_ACCENT: [u8; 3] = [0xd8, 0x1b, 0x60];
 /// Whether the app follows the operating system accent or paints with its own
 /// brand colour. Stored with the general settings and mirrored here so native
 /// code can read it without touching the settings state.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum AccentPreference {
   #[default]
   System,

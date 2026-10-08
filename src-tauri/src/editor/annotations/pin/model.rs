@@ -13,6 +13,7 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::resolve::PinnedPath;
 
@@ -29,13 +30,15 @@ pub(crate) const KEYFRAME_SLACK_MS: u64 = 8;
 /// An out-of-view keyframe says instead that the content cannot be seen from
 /// `ms`: the annotation is hidden until the next keyframe, and nothing is
 /// followed in between. Its movement means nothing.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct PinKeyframe {
   pub ms: u64,
   pub dx: f64,
   pub dy: f64,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub edges: Option<[f64; 4]>,
   #[serde(default, skip_serializing_if = "is_false")]
   pub out_of_view: bool,
@@ -45,8 +48,9 @@ fn is_false(value: &bool) -> bool {
   !*value
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct AnnotationPin {
   pub pinned_ms: u64,
   pub keyframes: Vec<PinKeyframe>,

@@ -10,12 +10,14 @@
 //! which case the clip lasts exactly one run.
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// How an image's animation plays. Absent from an image whose picture does
 /// not move. The twin of `ImagePlay` in
 /// `src/features/editor/annotations/annotations.ts`.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ImagePlay {
   /// How long one run of the animation lasts, in milliseconds.
   pub cycle_ms: f64,

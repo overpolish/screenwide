@@ -3,6 +3,7 @@
 
 use serde::Serialize;
 use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager};
+use ts_rs::TS;
 
 use super::WindowLabel;
 
@@ -13,8 +14,9 @@ const SELECTOR_WIDTH: f64 = 400.0;
 const WINDOW_SELECTOR_EXPANDED_HEIGHT: f64 = 400.0;
 const WINDOW_SELECTOR_EXPANDED_WIDTH: f64 = 600.0;
 
-#[derive(Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Serialize, TS)]
 #[serde(rename_all = "lowercase")]
+#[ts(export)]
 pub(super) enum SelectorPlacement {
   Above,
   Below,

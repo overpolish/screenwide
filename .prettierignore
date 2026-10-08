@@ -5,3 +5,4 @@ pnpm-lock.yaml
 src-tauri/gen
 src-tauri/target
 src-tauri/vendor
+src/bindings

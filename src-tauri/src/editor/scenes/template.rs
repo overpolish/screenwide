@@ -7,14 +7,16 @@
 //! fits it to the canvas it is chosen on; this side only keeps it sound.
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::model::{SceneBoxes, SceneRadius};
 
 /// Where a layout puts the panes and how round it makes them. How far a
 /// scene zooms is the scene's own, so a template never holds a zoom; one
 /// saved with a zoom before is read without it.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct SceneTemplate {
   pub id: String,
   pub name: String,
@@ -23,6 +25,7 @@ pub struct SceneTemplate {
   pub canvas_aspect: f64,
   pub boxes: SceneBoxes,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub radius: Option<SceneRadius>,
 }
 

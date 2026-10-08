@@ -11,9 +11,11 @@ use std::{
   sync::{LazyLock, RwLock},
 };
 use tauri::{AppHandle, Emitter, Manager};
+use ts_rs::TS;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, TS)]
 #[serde(default, rename_all = "camelCase")]
+#[ts(export)]
 pub struct RulerSettings {
   pub enabled: bool,
   pub bindings: BTreeMap<RulerAction, Option<String>>,

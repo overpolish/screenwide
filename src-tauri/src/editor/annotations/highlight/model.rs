@@ -12,10 +12,12 @@ use crate::editor::annotations::AnnotationPoint;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 use crate::editor::annotations::{Annotation, AnnotationHead, AnnotationShape, AnnotationStyle};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// One line's band, in source pixels. `left` is never past `right` nor `top`
 /// past `bottom`: every edit writes a band back that way round.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
+#[ts(export)]
 pub struct HighlightBand {
   pub left: f64,
   pub top: f64,
@@ -60,7 +62,8 @@ impl HighlightBand {
 /// luminance. The recolouring maps the surface to the highlight's colour and
 /// the ink to a colour that reads on it, so light text on a dark page and dark
 /// text on a light one come out the same way.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
+#[ts(export)]
 pub struct HighlightTone {
   pub surface: f64,
   pub ink: f64,

@@ -14,6 +14,11 @@ import {
 } from "./screenshot-output-settings";
 import { withScreenshotSpotlightBlurShared } from "./screenshot-spotlight-blur";
 
+import type { RecordingOutputSettings } from "../../../bindings/RecordingOutputSettings";
+import type { ScreenshotWorkspaceOutputSettings } from "../../../bindings/ScreenshotWorkspaceOutputSettings";
+
+export type { RecordingOutputSettings, ScreenshotWorkspaceOutputSettings };
+
 export { screenshotLayout } from "./screenshot-layout";
 export type { ScreenshotLayout } from "./screenshot-layout";
 export {
@@ -22,15 +27,6 @@ export {
   screenshotOutputTemplate,
 };
 export type { ScreenshotOutputSettings };
-
-type ScreenshotWorkspaceItemOutput = {
-  id: number;
-  output: ScreenshotOutputSettings;
-};
-
-export type ScreenshotWorkspaceOutputSettings = ScreenshotOutputSettings & {
-  items: ScreenshotWorkspaceItemOutput[];
-};
 
 export const normalizedScreenshotWorkspaceOutput = (
   settings: ScreenshotWorkspaceOutputSettings,
@@ -92,11 +88,6 @@ export const screenshotWorkspaceItemOutput = (
     width: settings.width,
   };
 };
-
-export type RecordingOutputSettings = Record<
-  "camera" | "primary",
-  ScreenshotOutputSettings
->;
 
 /** The two video layers front to back: the camera is always drawn over the
  * screen. */

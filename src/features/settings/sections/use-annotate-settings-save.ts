@@ -3,7 +3,7 @@
 
 import { useCallback, useState } from "react";
 
-import type { AnnotateSettings } from "../types";
+import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 
 export function useAnnotateSettingsSave({
   getSettings,

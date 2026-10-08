@@ -14,6 +14,7 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
+use ts_rs::TS;
 
 use super::store::import_file;
 use crate::editor::annotations::image::ImageArt;
@@ -36,16 +37,19 @@ pub(crate) enum DroppedPicture {
 /// Where a drop landed: the layer under it, and the point in that layer's
 /// image-normalised space. The twin of `ImagePoint` in
 /// `src/features/editor/images/image-api.ts`.
-#[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct ImagePoint {
   pub(crate) layer: u32,
   pub(crate) x: f64,
   pub(crate) y: f64,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, rename = "ImageDrop")]
 struct ImageDropEvent {
+  #[ts(as = "crate::editor::EditorKind")]
   workspace: &'static str,
   art: ImageArt,
   at: Option<ImagePoint>,

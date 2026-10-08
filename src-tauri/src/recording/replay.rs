@@ -34,6 +34,7 @@ use std::time::Duration;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
+use ts_rs::TS;
 
 use super::StartRecordingOptions;
 
@@ -43,8 +44,9 @@ pub const REPLAY_LENGTH: Duration = Duration::from_secs(30);
 const REPLAY_STATE_EVENT: &str = "replay://state";
 const REPLAY_ERROR_EVENT: &str = "replay://error";
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum ReplayStatus {
   #[default]
   Off,
@@ -52,8 +54,9 @@ pub enum ReplayStatus {
   On,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ReplaySnapshot {
   /// Whether this platform has a replay buffer at all.
   pub available: bool,

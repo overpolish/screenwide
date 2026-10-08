@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
+use ts_rs::TS;
 
 use super::{
   platform,
@@ -20,8 +21,9 @@ static POPOVER: TransientPopover = TransientPopover::new();
 static VISIBLE: AtomicBool = AtomicBool::new(true);
 static WINDOW_SELECTOR_ACTIVE: AtomicBool = AtomicBool::new(false);
 
-#[derive(Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct SelectorState {
   expanded: bool,
   focus_contents: bool,

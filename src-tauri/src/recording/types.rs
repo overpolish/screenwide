@@ -7,14 +7,16 @@ use std::{path::PathBuf, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use tauri::{LogicalPosition, LogicalSize};
+use ts_rs::TS;
 
 use super::encoding::FailureReport;
 
 /// Frame rates the bar offers.
 pub(super) const DEFAULT_FPS: u32 = 60;
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum RecordingStatus {
   #[default]
   Idle,
@@ -36,8 +38,9 @@ impl RecordingStatus {
   }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum RecordingMode {
   Screen,
   Region,
@@ -46,15 +49,19 @@ pub enum RecordingMode {
   Audio,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, TS)]
+#[ts(export)]
 pub struct Region {
+  #[ts(as = "crate::recording_sources::Position")]
   pub position: LogicalPosition<f64>,
+  #[ts(as = "crate::recording_sources::Size")]
   pub size: LogicalSize<f64>,
 }
 
 /// Options assembled by the recording bar from the source and input stores.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct StartRecordingOptions {
   pub mode: RecordingMode,
   #[serde(default)]
@@ -164,8 +171,9 @@ const fn default_fps() -> u32 {
 
 /// Epoch-millisecond timestamps are stamped by Rust so every window - including
 /// ones that reload or join late - derives the same elapsed time.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingSnapshot {
   pub status: RecordingStatus,
   pub mode: Option<RecordingMode>,

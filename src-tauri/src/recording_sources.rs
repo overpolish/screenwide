@@ -21,6 +21,7 @@ use image::{DynamicImage, RgbaImage};
 use rayon::prelude::*;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
+use ts_rs::TS;
 
 mod platform;
 
@@ -28,8 +29,9 @@ mod platform;
 /// the very same extraction, rather than growing a second copy of it.
 pub(crate) use platform::app_icon;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct MonitorDetails {
   id: u32,
   name: String,
@@ -44,27 +46,31 @@ pub struct MonitorDetails {
   is_builtin: bool,
 }
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, TS)]
+#[ts(export)]
 pub struct Position {
   x: i32,
   y: i32,
 }
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, TS)]
+#[ts(export)]
 pub struct Size {
   width: u32,
   height: u32,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct MonitorThumbnail {
   id: u32,
   path: PathBuf,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct WindowDetails {
   id: u32,
   pid: u32,

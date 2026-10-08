@@ -19,6 +19,7 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use serde::Serialize;
+use ts_rs::TS;
 
 use super::track_selection::{AudioLayout, TrackSelection};
 mod audio;
@@ -81,8 +82,9 @@ pub(in crate::editor) struct RecordingInfo {
 /// one left in the temporary folder says where it came from.
 pub const PREVIEW_PREFIX: &str = "preview-";
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct PreparedAudioTrack {
   pub kind: AudioTrackKind,
   pub label: String,
@@ -92,8 +94,9 @@ pub struct PreparedAudioTrack {
   pub waveform: Vec<f32>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingPreview {
   pub artifact_id: u64,
   pub tracks: Vec<PreparedAudioTrack>,

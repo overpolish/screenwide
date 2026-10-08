@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use ts_rs::TS;
 
 /// Which editor workspace something belongs to.
 ///
@@ -9,8 +10,9 @@ use super::*;
 /// its own window, so one can sit waiting for a decision while the other is
 /// being made. The enum is what keys them; growing past two is a matter of
 /// widening it and the slot lookup, not of unpicking the callers.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export)]
 pub enum EditorKind {
   Recording,
   Screenshot,

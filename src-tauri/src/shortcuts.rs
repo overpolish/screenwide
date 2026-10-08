@@ -20,6 +20,7 @@ use std::{
 };
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use ts_rs::TS;
 
 use crate::app_windows::WindowLabel;
 pub(crate) mod diagnostics;
@@ -70,8 +71,9 @@ pub(crate) fn in_native_callback() -> bool {
   IN_NATIVE_CALLBACK.get()
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum ShortcutAction {
   ToggleRecordingBar,
   StartStopRecording,
@@ -85,15 +87,17 @@ pub enum ShortcutAction {
   RulerOverlay,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ShortcutBinding {
   pub action: ShortcutAction,
   pub shortcut: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ShortcutSettings {
   pub bindings: Vec<ShortcutBinding>,
 }

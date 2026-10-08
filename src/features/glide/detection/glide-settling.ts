@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/** Whether the detector acts on travel, or is waiting for the hand to rest. */
-export type GlidePhase = "ready" | "settling";
+import type { GlidePhase } from "../../../bindings/GlidePhase";
+export type { GlidePhase };
 
 export type GlideRestOptions = {
   /** Combined absolute axis movement per sample that resets the rest timer. */

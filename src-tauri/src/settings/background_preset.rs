@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::screenshots::default_mesh_generator as default_generator;
 
 /// One blob of a mesh gradient, in shares of the canvas.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct BackgroundMeshPoint {
   pub radius_x: f64,
   pub radius_y: f64,
@@ -22,8 +24,9 @@ pub struct BackgroundMeshPoint {
 /// of them, or a picture of your own. The editor spreads the same values
 /// across the flat fields of an output canvas; a preset keeps them together,
 /// since a preset is one background rather than part of one.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
 pub enum Background {
   #[serde(rename_all = "camelCase")]
   Solid { color: String },
@@ -40,14 +43,18 @@ pub enum Background {
     generator: String,
     #[serde(default)]
     locked_colors: Vec<bool>,
+    /// Present only for the classic mesh generator, which is the only one
+    /// that reads blobs; the others draw from their colours and seed alone.
     #[serde(default)]
+    #[ts(as = "Option<Vec<BackgroundMeshPoint>>", optional)]
     points: Vec<BackgroundMeshPoint>,
   },
 }
 
 /// A background under a name, as the background picker offers it.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct BackgroundPreset {
   pub background: Background,
   pub id: String,

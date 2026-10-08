@@ -2,16 +2,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::Serialize;
+use ts_rs::TS;
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export)]
 pub enum PreviewPaneKind {
   Camera,
   Screen,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, rename = "RecordingPreviewPane")]
 pub struct PreviewPane {
   pub height: u32,
   pub kind: PreviewPaneKind,
@@ -22,8 +25,9 @@ pub struct PreviewPane {
   pub y: u32,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingPreviewLayout {
   pub height: u32,
   pub panes: Vec<PreviewPane>,

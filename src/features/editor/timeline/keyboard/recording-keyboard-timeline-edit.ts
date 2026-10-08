@@ -3,38 +3,12 @@
 
 import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 
-type DeletedKeyboardShortcutFragment = {
-  segmentId: number;
-  shortcutId: number;
-};
+import type { DeletedKeyboardShortcutFragment } from "../../../../bindings/DeletedKeyboardShortcutFragment";
+import type { DeletedKeyboardShortcutRange } from "../../../../bindings/DeletedKeyboardShortcutRange";
+import type { KeyboardShortcutPosition } from "../../../../bindings/KeyboardShortcutPosition";
+import type { KeyboardShortcutPositionRange } from "../../../../bindings/KeyboardShortcutPositionRange";
 
-export type DeletedKeyboardShortcutRange = {
-  endMs: number;
-  shortcutId: number;
-  startMs: number;
-};
-
-type KeyboardShortcutPosition = {
-  centerX: number;
-  centerY: number;
-  segmentId: number;
-  shortcutId: number;
-  sizePercent?: number;
-};
-
-export type KeyboardShortcutPositionRange = Omit<
-  KeyboardShortcutPosition,
-  "segmentId"
-> & {
-  endMs: number;
-  startMs: number;
-};
-
-type RecordingKeyboardTimelineEdit = RecordingTimelineEdit & {
-  deletedKeyboardShortcutFragments?: DeletedKeyboardShortcutFragment[];
-  deletedKeyboardShortcutIds?: number[];
-  keyboardShortcutPositions?: KeyboardShortcutPosition[];
-};
+export type { DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange };
 
 const EMPTY_DELETED_SHORTCUT_FRAGMENTS: DeletedKeyboardShortcutFragment[] = [];
 const EMPTY_DELETED_SHORTCUT_IDS: number[] = [];
@@ -42,7 +16,7 @@ const EMPTY_SHORTCUT_POSITIONS: KeyboardShortcutPosition[] = [];
 
 const keyboardEdit = (
   edit: RecordingTimelineEdit | null | undefined,
-): RecordingKeyboardTimelineEdit | null | undefined => edit;
+): RecordingTimelineEdit | null | undefined => edit;
 
 export const deletedRecordingKeyboardShortcutIds = (
   edit: RecordingTimelineEdit | null | undefined,
@@ -140,7 +114,7 @@ export function deleteRecordingKeyboardShortcutFragments(
     if (fragment) fragments.set(fragmentId, fragment);
   }
   if (fragments.size === previousSize) return edit;
-  const next: RecordingKeyboardTimelineEdit = {
+  const next: RecordingTimelineEdit = {
     ...edit,
     deletedKeyboardShortcutFragments: [...fragments.values()].sort(
       (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
@@ -189,7 +163,7 @@ export function moveRecordingKeyboardShortcutFragments({
     changed = true;
   }
   if (!changed) return edit;
-  const next: RecordingKeyboardTimelineEdit = {
+  const next: RecordingTimelineEdit = {
     ...edit,
     keyboardShortcutPositions: [...positions.values()].sort(
       (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
@@ -241,13 +215,13 @@ export function resizeRecordingKeyboardShortcutFragments({
     keyboardShortcutPositions: [...positions.values()].sort(
       (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
     ),
-  } as RecordingKeyboardTimelineEdit;
+  };
 }
 
 export function resetAllRecordingKeyboardShortcutPositions(
   edit: RecordingTimelineEdit,
 ): RecordingTimelineEdit {
-  const keyboard = edit as RecordingKeyboardTimelineEdit;
+  const keyboard = edit;
   if (!keyboard.keyboardShortcutPositions?.length) return edit;
   const { keyboardShortcutPositions: _positions, ...rest } = keyboard;
   return rest;
@@ -266,9 +240,9 @@ export function resetRecordingKeyboardShortcutPositions(
   );
   if (positions.length === recordingKeyboardShortcutPositions(edit).length)
     return edit;
-  const keyboard = edit as RecordingKeyboardTimelineEdit;
+  const keyboard = edit;
   if (positions.length > 0) {
-    const next: RecordingKeyboardTimelineEdit = {
+    const next: RecordingTimelineEdit = {
       ...keyboard,
       keyboardShortcutPositions: positions,
     };
@@ -281,7 +255,7 @@ export function resetRecordingKeyboardShortcutPositions(
 export function restoreRecordingKeyboardShortcuts(
   edit: RecordingTimelineEdit,
 ): RecordingTimelineEdit {
-  const keyboard = edit as RecordingKeyboardTimelineEdit;
+  const keyboard = edit;
   if (
     !keyboard.deletedKeyboardShortcutIds?.length &&
     !keyboard.deletedKeyboardShortcutFragments?.length

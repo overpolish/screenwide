@@ -11,7 +11,8 @@ import { AnnotationRadiusField } from "../../components/shared/annotation-style/
 import { AnnotationStrokeGroup } from "../../components/shared/annotation-style/annotation-stroke-group";
 import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
 import { annotationSizes } from "../../components/shared/annotation-style/widths";
-import { AnnotateSettings } from "../settings/types";
+
+import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
 
 /**
  * What the tool in hand is drawn with, beside the colour: each tool carries

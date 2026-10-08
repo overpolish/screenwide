@@ -11,18 +11,21 @@
 use super::reveal::AnnotationReveal;
 use super::shape::AnnotationShape;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// A point in the screenshot source's pixel space.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct AnnotationPoint {
   pub x: f64,
   pub y: f64,
 }
 
 /// Which ends of an arrow carry a head.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum AnnotationHead {
   None,
   #[default]
@@ -33,8 +36,9 @@ pub enum AnnotationHead {
 /// How a text box lines up its lines against each other. Only a text box
 /// reads it; the other kinds carry the default the way a counter carries a
 /// head it never draws.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum AnnotationAlign {
   #[default]
   Left,
@@ -61,8 +65,9 @@ impl AnnotationAlign {
 /// Pixelate keeps each zone's colours and nothing of their layout. Classic
 /// pixelation and blur keep more by design, which the editor says where
 /// either is chosen.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum AnnotationRedaction {
   /// A flat fill in the colour of the surface around the box.
   #[default]
@@ -87,8 +92,9 @@ pub enum AnnotationRedaction {
 /// at its scale straight into output pixels, so an annotation keeps its weight
 /// on the canvas rather than growing with the picture, and weighs the same on
 /// a 2x capture as on a 1x one.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct AnnotationStyle {
   #[serde(default)]
   pub align: AnnotationAlign,
@@ -138,8 +144,9 @@ pub struct AnnotationStyle {
 }
 
 /// One drawn annotation, independent of its workspace and timing.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Annotation {
   /// Drawn over a baked camera rather than under it. A document never carries
   /// it: an annotation is drawn with its own layer, and only a camera's

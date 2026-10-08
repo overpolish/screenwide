@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::framing::SceneFraming;
 use super::geometry::Rect;
@@ -9,8 +10,9 @@ use super::variant::SceneVariant;
 
 /// The twin of `RecordingScenePreset` in
 /// `src/features/editor/recording/scenes/recording-scenes.ts`.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export)]
 pub enum RecordingScenePreset {
   /// The screen and the camera where the recording's own composition puts
   /// them: a scene that only reframes, such as a zoom into the screen.
@@ -40,7 +42,8 @@ impl RecordingScenePreset {
 
 /// One pane's box in a custom scene, as shares of the canvas's width and
 /// height.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
+#[ts(export)]
 pub struct SceneBox {
   pub x: f64,
   pub y: f64,
@@ -98,13 +101,16 @@ impl SceneBox {
 /// which of them is drawn in front. The camera keeps the recording's own box
 /// where it has none, and is drawn in front unless `camera_behind` says
 /// otherwise.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct SceneBoxes {
   pub screen: SceneBox,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub camera: Option<SceneBox>,
   #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  #[ts(type = "true")]
   pub camera_behind: bool,
 }
 
@@ -121,11 +127,14 @@ impl SceneBoxes {
 /// The corner radius a scene gives each pane, as a share of the pane's
 /// shorter side in percent, like the recording's own. A pane without one
 /// keeps the recording's radius.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
+#[ts(export)]
 pub struct SceneRadius {
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub screen: Option<f64>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub camera: Option<f64>,
 }
 
@@ -138,8 +147,9 @@ impl SceneRadius {
   }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingSceneClip {
   pub id: String,
   pub start_ms: u64,
@@ -147,24 +157,30 @@ pub struct RecordingSceneClip {
   pub preset: RecordingScenePreset,
   /// What part of the screen fills its box; the whole of it where unset.
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub screen: Option<SceneFraming>,
   /// What part of the camera fills its box. Unset, a full scene keeps the
   /// recording's own camera crop and an arrangement shows the whole camera.
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub camera: Option<SceneFraming>,
   /// Set, a custom scene: the panes sit in these boxes instead of the
   /// preset's, which a reset returns them to.
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub boxes: Option<SceneBoxes>,
   /// The panes' corner radii in this scene, which a reset takes away.
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub radius: Option<SceneRadius>,
   /// How the preset is laid out, each option its default where unset.
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub variant: Option<SceneVariant>,
   /// Set on a zoom the auto zoom made that nobody has edited since. Making
   /// the auto zooms again replaces these and leaves every other scene alone.
   #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  #[ts(type = "true")]
   pub auto: bool,
 }
 

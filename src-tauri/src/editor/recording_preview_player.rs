@@ -14,6 +14,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use tauri::{ipc::Channel, AppHandle, Manager};
+use ts_rs::TS;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod annotation_bridge;
@@ -125,8 +126,9 @@ struct RecordingWorkspaceTopology {
   pane_indices: Vec<u32>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub(crate) struct RecordingPreviewPlayerInfo {
   pub duration_ms: u64,
   pub frames_per_second: Option<f64>,

@@ -22,17 +22,16 @@ import { useSettingsApi } from "./settings-api-context";
 import { SettingsPanes } from "./settings-panes";
 import { sectionTitles, type SettingsSection } from "./settings-sections";
 import { settingsSidebarItems } from "./settings-sidebar-items";
-import {
-  AnnotateSettings,
-  GeneralSettings,
-  GlideSettings,
-  RulerSettings,
-  OcrSettings,
-  ShortcutDefaults,
-  ShortcutAction,
-  ShortcutSettings,
-} from "./types";
 import { useShortcutCapture } from "./use-shortcut-capture";
+
+import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
+import type { GeneralSettings } from "../../bindings/GeneralSettings";
+import type { GlideSettings } from "../../bindings/GlideSettings";
+import type { OcrSettings } from "../../bindings/OcrSettings";
+import type { RulerSettings } from "../../bindings/RulerSettings";
+import type { ShortcutAction } from "../../bindings/ShortcutAction";
+import type { ShortcutDefaults } from "../../bindings/ShortcutDefaults";
+import type { ShortcutSettings } from "../../bindings/ShortcutSettings";
 
 export function SettingsWindow({
   initialSection = "general",

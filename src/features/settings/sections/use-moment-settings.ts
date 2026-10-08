@@ -9,7 +9,8 @@ import {
 } from "../../../components/shared/annotation-style/palette";
 import { useSettingsApi } from "../settings-api-context";
 
-import type { MomentKind, MomentSettings } from "../types";
+import type { MomentKind } from "../../../bindings/MomentKind";
+import type { MomentSettings } from "../../../bindings/MomentSettings";
 
 /** The first palette colour no kind has yet, so a new kind stands apart. */
 const unusedColor = (kinds: MomentKind[]) =>

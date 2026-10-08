@@ -5,7 +5,8 @@ import { GroupBox } from "../../../components/base/group-box/group-box";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 
-import type { ShortcutAction, ShortcutSettings } from "../types";
+import type { ShortcutAction } from "../../../bindings/ShortcutAction";
+import type { ShortcutSettings } from "../../../bindings/ShortcutSettings";
 
 type ShortcutRow = {
   action: ShortcutAction;

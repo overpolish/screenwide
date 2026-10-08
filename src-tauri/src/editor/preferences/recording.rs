@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use ts_rs::TS;
 
 /// A baked camera's placement with the screen canvas and camera size it was
 /// measured against. Placement is in screen pixels, so another recording can
 /// only reuse it once it is scaled onto that recording's own geometry, which
 /// the editor does when it seeds the next capture.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RememberedCameraOverlay {
   pub camera_height: u32,
   pub camera_width: u32,
@@ -23,8 +25,9 @@ pub struct RememberedCameraOverlay {
 /// so the editor keeps its own default. An export only overwrites the choices
 /// it offered: exporting a recording without a camera must not forget whether
 /// the camera was baked last time there was one.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
 #[serde(default, rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingExportChoices {
   pub bake_camera: Option<bool>,
   pub camera_compression: Option<u8>,

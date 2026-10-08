@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { MomentSettings } from "./types";
+import type { MomentSettings } from "../../bindings/MomentSettings";
 
 /** The Moments pane's side of the Settings stories' API: kinds kept in
  * memory, microphone access granted, and two microphones to choose from.

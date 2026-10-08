@@ -64,7 +64,7 @@ pub(super) struct ScreenshotPreviewTransformEvent {
   pub(super) zoom_percent: f64,
 }
 
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, serde::Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct ScreenshotSelectionGestureEvent {
   pub(super) delta_x: f64,
@@ -82,7 +82,7 @@ pub(super) struct ScreenshotSelectionGestureEvent {
 /// `text_edit` is where in the typing the commit falls; React groups a
 /// typing's commits into one edit.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, serde::Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct ScreenshotAnnotationChangeEvent {
   pub(super) annotations: Vec<crate::editor::annotations::Annotation>,

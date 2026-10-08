@@ -11,8 +11,9 @@ const GRID_ROWS: u32 = 2;
 
 /// A committed destination, as a span of grid cells. `grid_cols` is however many
 /// columns the detector was showing when the fingers lifted.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, rename = "GlideRegion")]
 pub struct PlacedRegion {
   pub col_start: u32,
   pub col_span: u32,

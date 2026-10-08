@@ -3,70 +3,13 @@
 
 import { DEFAULT_GENERATOR_ID } from "../../../components/shared/background-picker/background-generators";
 import { validAnnotations } from "../annotations/annotation-documents";
-import { Annotation } from "../annotations/annotations";
 
-import {
-  MeshGradientPoint,
-  randomMeshComposition,
-} from "./screenshot-background";
+import { randomMeshComposition } from "./screenshot-background";
 import { fullSourceRect, sourceRect, SourceRect } from "./screenshot-geometry";
 
-type ScreenshotBackgroundType = "image" | "mesh" | "solid";
+import type { ScreenshotOutputSettings } from "../../../bindings/ScreenshotOutputSettings";
 
-/**
- * One layer's canvas and its placement in it.
- *
- * Placement is in output pixels, not in shares of the canvas, so the canvas
- * can be resized without moving or rescaling anything placed in it: the crop
- * is the visible rectangle, and the image behind it is given by its top left
- * corner and its width, its height following the source's aspect.
- */
-/** The crop tool's live result rectangle, in output pixels. */
-type CropPreviewRect = {
-  height: number;
-  width: number;
-  x: number;
-  y: number;
-};
-
-export type ScreenshotOutputSettings = {
-  /** Annotations drawn over this layer, in the source's own pixel space. */
-  annotations: Annotation[];
-  backgroundColor: string;
-  /** A picture of your own behind the layers, or null for a painted one. */
-  backgroundImagePath: string | null;
-  backgroundRadiusPercent: number;
-  backgroundType: ScreenshotBackgroundType;
-  cropHeight: number;
-  cropWidth: number;
-  cropX: number;
-  cropY: number;
-  dropShadow: boolean;
-  height: number;
-  imageWidth: number;
-  imageX: number;
-  imageY: number;
-  meshColors: string[];
-  /** Which painter draws the mesh, by the name in the picker's generator
-   * table. The classic "mesh" is the only one that reads the points and the
-   * warp below. */
-  meshGenerator: string;
-  meshLockedColors: boolean[];
-  meshPoints: MeshGradientPoint[];
-  meshSeed: number;
-  meshWarpPercent: number;
-  radiusPercent: number;
-  recenterInsetColor: string | null;
-  sourceCrop: SourceRect;
-  width: number;
-  /**
-   * Where the cropped layer lands while the crop tool previews the whole
-   * uncropped source, so the compositor can draw it over that ghost with its
-   * real corner radius and drop shadow. Only the crop-mode preview payload
-   * carries one; it is never persisted.
-   */
-  cropPreview?: CropPreviewRect;
-};
+export type { ScreenshotOutputSettings };
 
 export const defaultScreenshotOutput = (
   width: number,

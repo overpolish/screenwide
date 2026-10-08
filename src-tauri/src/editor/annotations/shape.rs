@@ -10,11 +10,13 @@
 
 use super::{AnnotationKind, AnnotationPoint};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// What an annotation is. The tag leaves room for the shapes later tools add
 /// without reshaping stored documents.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
 pub enum AnnotationShape {
   /// A quadratic Bézier from `start` to `end`, bent by `control`.
   Arrow {
@@ -114,8 +116,10 @@ pub enum AnnotationShape {
     flip: bool,
     asset: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     play: Option<super::image::ImagePlay>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     sway: Option<u32>,
     /// How far into its clip the frame being drawn is, in milliseconds,
     /// where it plays or sways; absent on a screenshot and outside a clip.

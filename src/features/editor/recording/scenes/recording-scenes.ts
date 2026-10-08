@@ -7,30 +7,22 @@ import {
   recordingTimelineSourceToOutput,
 } from "../../timeline/editing/recording-timeline-edit";
 
-import type { SceneVariant } from "./recording-scene-variant";
+import type { RecordingSceneClip } from "../../../../bindings/RecordingSceneClip";
+import type { RecordingScenePreset } from "../../../../bindings/RecordingScenePreset";
+import type { SceneBox } from "../../../../bindings/SceneBox";
+import type { SceneBoxes } from "../../../../bindings/SceneBoxes";
+import type { SceneFraming } from "../../../../bindings/SceneFraming";
 
-/** The twin of `RecordingScenePreset` in `src-tauri/src/editor/scenes/model.rs`.
- * `full` keeps the screen and the camera where the recording's own
- * composition puts them. It is never offered: it is what a custom scene made
- * from the recording's own composition starts from and resets to. */
-export type RecordingScenePreset =
-  | "camera-only"
-  | "full"
-  | "picture-in-picture"
-  | "screen-only"
-  | "split-two-thirds"
-  | "stacked";
+export type {
+  RecordingSceneClip,
+  RecordingScenePreset,
+  SceneBox,
+  SceneBoxes,
+  SceneFraming,
+};
 
 /** The presets the Scene panel offers beside Custom. */
 export type ArrangedScenePreset = Exclude<RecordingScenePreset, "full">;
-
-/**
- * What part of a picture fills its box: the point of the picture, as shares
- * of its width and height, that sits in the box's middle, and how far it is
- * zoomed past only just covering the box. The twin of `SceneFraming` in
- * `src-tauri/src/editor/scenes/framing.rs`.
- */
-export type SceneFraming = { focusX: number; focusY: number; zoom: number };
 
 /** The whole picture, centred: what a scene shows until it is reframed. */
 export const WHOLE_FRAMING: SceneFraming = {
@@ -41,56 +33,6 @@ export const WHOLE_FRAMING: SceneFraming = {
 
 /** The furthest a scene zooms into a picture. */
 export const MAX_SCENE_ZOOM = 8;
-
-/**
- * One scene over a stretch of the recording, in source time like an
- * annotation clip: an arrangement of the screen and the camera, and what part
- * of each fills its box. A recording's clips are kept sorted by start and
- * never overlap: only one scene can be on screen at a time. Bounds are half
- * open, so one may end where the next begins.
- */
-export type RecordingSceneClip = {
-  endMs: number;
-  id: string;
-  preset: RecordingScenePreset;
-  startMs: number;
-  /** Set on a zoom the auto zoom made that nobody has edited since. Making
-   * the auto zooms again replaces these and leaves every other scene alone.
-   * The twin of `auto` on `RecordingSceneClip` in `model.rs`. */
-  auto?: true;
-  /** Set, a custom scene: the panes sit in these boxes instead of the
-   * preset's, which a reset returns them to. */
-  boxes?: SceneBoxes;
-  /** Unset, a full scene keeps the recording's own camera crop and an
-   * arrangement shows the whole camera. */
-  camera?: SceneFraming;
-  /** The panes' corner radii in this scene, which a reset takes away. */
-  radius?: SceneRadius;
-  /** Unset, the whole screen. */
-  screen?: SceneFraming;
-  /** How the preset is laid out, each option its default where unset. */
-  variant?: SceneVariant;
-};
-
-/** One pane's box in a custom scene, as shares of the canvas's width and
- * height. */
-export type SceneBox = { height: number; width: number; x: number; y: number };
-
-/** Where a custom scene puts its panes, and which of them is drawn in front.
- * The camera keeps the recording's own box where it has none, and is drawn
- * in front unless `cameraBehind` is set. The twin of `SceneBoxes` in
- * `src-tauri/src/editor/scenes/model.rs`. */
-export type SceneBoxes = {
-  screen: SceneBox;
-  camera?: SceneBox;
-  cameraBehind?: true;
-};
-
-/** The corner radius a scene gives each pane, as a share of the pane's
- * shorter side in percent, like the recording's own. A pane without one
- * keeps the recording's radius. The twin of `SceneRadius` in
- * `src-tauri/src/editor/scenes/model.rs`. */
-export type SceneRadius = { camera?: number; screen?: number };
 
 /** Whether a scene places a camera, which it can only do where the camera is
  * drawn into the picture. A custom scene places one where it has a box for

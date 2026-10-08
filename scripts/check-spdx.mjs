@@ -24,7 +24,8 @@ const CHECKED_EXTENSIONS = new Set([
   ".yml",
 ]);
 const EXCLUDED_FILES = new Set(["pnpm-lock.yaml"]);
-const EXCLUDED_DIRECTORIES = ["src-tauri/vendor/"];
+// ts-rs writes a fixed generated-file note as the first line of each binding.
+const EXCLUDED_DIRECTORIES = ["src-tauri/vendor/", "src/bindings/"];
 
 const trackedFiles = execFileSync(
   "git",

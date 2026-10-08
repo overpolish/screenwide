@@ -10,8 +10,8 @@ import {
 } from "./glide-regions";
 import { axisStep } from "./glide-travel";
 
-/** A window action the gesture arms and the lift commits, instead of a move. */
-export type GlideAction = "minimize";
+import type { GlideAction } from "../../../bindings/GlideAction";
+export type { GlideAction };
 
 export type GlideFoldOptions = {
   /**

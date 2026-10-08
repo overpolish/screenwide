@@ -11,54 +11,25 @@
  * twin of `src-tauri/src/editor/annotations/model.rs`.
  */
 
-import type {
-  AnnotationAlign,
-  AnnotationHead,
-  AnnotationRedaction,
-} from "../../../components/shared/annotation-style/types";
+import type { Annotation } from "../../../bindings/Annotation";
+import type { AnnotationPoint } from "../../../bindings/AnnotationPoint";
+import type { AnnotationShape } from "../../../bindings/AnnotationShape";
+import type { AnnotationStyle } from "../../../bindings/AnnotationStyle";
+import type { HighlightBand } from "../../../bindings/HighlightBand";
+import type { ImageArt } from "../../../bindings/ImageArt";
+import type { ImagePlay } from "../../../bindings/ImagePlay";
+import type { TextEditPhase } from "../../../bindings/TextEditPhase";
+import type { TextPointer } from "../../../bindings/TextPointer";
 
-/** A point in the layer source's pixel space. */
-export type AnnotationPoint = { x: number; y: number };
-
-export type AnnotationStyle = {
-  /** How a text box lines up its lines; the other kinds carry the default. */
-  align: AnnotationAlign;
-  /** Whether a spotlight also blurs what lies outside it; the other kinds
-   * carry `false`. */
-  blur: boolean;
-  /** `#rrggbb` or `#rrggbbaa`, straight alpha. */
-  color: string;
-  /** Whether a highlight is drawn as a marker stroke by hand rather than as a
-   * clean band, or a shape's outline as a pen stroke that misses its own
-   * start; the other kinds carry `false`. */
-  handDrawn: boolean;
-  head: AnnotationHead;
-  /** Whether a highlight is laid by hand over the box its drag spans, in
-   * strokes `width` tall, rather than fitted to the text under it; the other
-   * kinds carry `false`. */
-  manual: boolean;
-  /** A redaction's, a shape's, a spotlight's, a magnifier's or an image's
-   * corner radius, as a percentage of its box's shorter side from 0 to 50;
-   * the other kinds carry zero. */
-  radius: number;
-  /** How a redaction covers what is under it; the other kinds carry the
-   * default. */
-  redaction: AnnotationRedaction;
-  /** Whether a magnifier's loupe or an image casts a shadow onto the
-   * picture; the other kinds carry `false`. */
-  shadow: boolean;
-  /** How far a spotlight's edge fades from lit to dim, as a percentage of its
-   * box's shorter side from 0 to 50; the other kinds carry zero. */
-  softness: number;
-  /** A blurred redaction's strength, a step from 1 to 5; the other kinds
-   * carry zero. */
-  strength: number;
-  /** Whether a highlight tints what it covers rather than recolouring the
-   * page it read; the other kinds carry `false`. */
-  tint: boolean;
-  /** Stroke width, disc diameter, type size, pixelation block, a shape's pen
-   * or a highlight's marker, in points of the capture. */
-  width: number;
+export type {
+  Annotation,
+  AnnotationPoint,
+  AnnotationShape,
+  AnnotationStyle,
+  HighlightBand,
+  ImageArt,
+  ImagePlay,
+  TextPointer,
 };
 
 /** A quadratic Bézier from `start` to `end`, bent by `control`. */
@@ -94,135 +65,7 @@ export type AnnotationText = {
   text: string;
 };
 
-/**
- * A box that hides what is under it. `start` is its top-left corner and `end`
- * its bottom-right, in source pixels; `seed` generates a pixelated box's
- * blocks.
- */
-type AnnotationRedact = {
-  end: AnnotationPoint;
-  kind: "redact";
-  seed: number;
-  start: AnnotationPoint;
-};
-
-/**
- * An outline round a box, drawn with a round pen. `start` is its top-left
- * corner and `end` its bottom-right, in source pixels; the style's radius
- * rounds its corners, so a square rounded all the way is a circle. `seed` is
- * its hand-drawn stroke's wobble. The twin of `AnnotationShape::Shape` in
- * `src-tauri/src/editor/annotations/shape.rs`.
- */
-type AnnotationOutline = {
-  end: AnnotationPoint;
-  kind: "shape";
-  seed: number;
-  start: AnnotationPoint;
-};
-
-/**
- * A box left bright while everything around it dims. `start` is its top-left
- * corner and `end` its bottom-right, in source pixels; the style rounds its
- * corners, fades its edge and says whether what is outside it is blurred
- * too. The twin of `AnnotationShape::Spotlight` in
- * `src-tauri/src/editor/annotations/shape.rs`.
- */
-type AnnotationSpotlight = {
-  end: AnnotationPoint;
-  kind: "spotlight";
-  start: AnnotationPoint;
-};
-
-/**
- * A line drawn freehand: the points the hand passed through, in source
- * pixels, thinned as it was drawn. `smooth` fits the line loosely enough that
- * a wobbly curve comes out clean. The twin of `AnnotationShape::Draw` in
- * `src-tauri/src/editor/annotations/shape.rs`.
- */
-type AnnotationDraw = {
-  kind: "draw";
-  points: AnnotationPoint[];
-  smooth: boolean;
-};
-
-/**
- * A loupe showing a zoom area enlarged. `start` is the zoom area's top-left
- * corner and `end` its bottom-right, in source pixels; `loupe` is the loupe's
- * centre and `size` its longer side, the zoom area's shape scaled up to that.
- * The twin of `AnnotationShape::Magnify` in
- * `src-tauri/src/editor/annotations/shape.rs`.
- */
-type AnnotationMagnify = {
-  end: AnnotationPoint;
-  kind: "magnify";
-  loupe: AnnotationPoint;
-  size: number;
-  start: AnnotationPoint;
-};
-
-/**
- * How an image showing a moving picture - a GIF, an animated PNG or WebP -
- * plays: how long one run lasts and how many frames it has, the frame a
- * still shows and playback starts on, and whether a recording plays it
- * through once, its clip then lasting exactly one run, rather than looping.
- * The twin of `ImagePlay` in
- * `src-tauri/src/editor/annotations/image/play.rs`.
- */
-export type ImagePlay = {
-  cycleMs: number;
-  frame: number;
-  frames: number;
-  once: boolean;
-};
-
-/**
- * What an image shows: its picture by library id, that picture's width
- * over its height, and how it plays where it moves. As the picture the next
- * image is made with, it also carries how many pixels long the picture is
- * on its longer side, which a fresh image takes as its size. The twin of
- * `ImageArt` in `src-tauri/src/editor/annotations/image/model.rs`.
- */
-export type ImageArt = {
-  aspect: number;
-  asset: string;
-  pixels?: number;
-  play?: ImagePlay;
-};
-
-/**
- * A picture laid over the source. `center` is its middle and `size` its
- * longer side, in source pixels; `aspect` is the picture's width over its
- * height, `angle` how far it is turned clockwise, in radians, and `flip`
- * whether it is mirrored across its upright axis. `asset` names the picture
- * in the image library, `play` how it plays where the picture moves, and
- * `sway` the seed of the slight turn and drift a recording gives it, absent
- * where it stands still. The twin of `AnnotationShape::Image` in
- * `src-tauri/src/editor/annotations/shape.rs`.
- */
-type AnnotationImage = Omit<ImageArt, "pixels"> & {
-  angle: number;
-  center: AnnotationPoint;
-  flip: boolean;
-  kind: "image";
-  size: number;
-  sway?: number;
-};
-
 /** One line a highlight covers, in source pixels. */
-export type HighlightBand = {
-  bottom: number;
-  left: number;
-  right: number;
-  top: number;
-};
-
-/**
- * A marker over lines of text. `start` and `end` are where the selection was
- * pressed and let go, in source pixels; `bands` what it covers, one per line in
- * reading order; `tone` how bright the page it was read from is, and its ink,
- * 0 to 1; `seed` its hand-drawn stroke's wobble. The twin of
- * `AnnotationShape::Highlight` in `src-tauri/src/editor/annotations/shape.rs`.
- */
 export type AnnotationHighlight = {
   bands: HighlightBand[];
   end: AnnotationPoint;
@@ -233,53 +76,11 @@ export type AnnotationHighlight = {
 };
 
 /**
- * A text box's pointer, held against its box so it keeps its place however
- * the box is moved, retyped or resized. `along` is where the tip sits in each
- * axis as a share of the box's half size from its centre, -1 to 1; `reach` is
- * how far past that edge it goes, in ems of the box's type. One that reaches
- * nowhere is tucked in and not drawn. The twin of `TextPointer` in
- * `src-tauri/src/editor/annotations/text/model.rs`.
- */
-export type TextPointer = {
-  along: AnnotationPoint;
-  reach: AnnotationPoint;
-};
-
-export type AnnotationShape =
-  | AnnotationArrow
-  | AnnotationCounter
-  | AnnotationDraw
-  | AnnotationHighlight
-  | AnnotationMagnify
-  | AnnotationOutline
-  | AnnotationRedact
-  | AnnotationSpotlight
-  | AnnotationImage
-  | AnnotationText;
-
-export type Annotation = {
-  /**
-   * Whether a timed annotation draws itself in at the start of its clip and
-   * undraws at the end. Stills have no clip to animate over and draw whole.
-   */
-  animated: boolean;
-  id: string;
-  shape: AnnotationShape;
-  style: AnnotationStyle;
-  /**
-   * Set where the draw tool made the annotation: a stroke, or what a held
-   * stroke was taken for. Clear all takes these and leaves the rest.
-   */
-  pen?: true;
-};
-
-/**
  * Where a native commit falls in a text box's typing: the typing began, the
  * text changed, or the typing ended. The document groups the commits of one
- * typing into a single edit. The twin of `TextEditPhase` in
- * `src-tauri/src/editor/annotations/text/edit.rs`.
+ * typing into a single edit.
  */
-export type AnnotationTextEdit = "begin" | "update" | "end";
+export type AnnotationTextEdit = TextEditPhase;
 
 export const annotationTextEdit = (
   value: unknown,

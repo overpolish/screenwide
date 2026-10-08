@@ -5,9 +5,11 @@ use super::{
   travel::axis_step,
 };
 use serde::Serialize;
+use ts_rs::TS;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum GlideAction {
   Minimize,
 }

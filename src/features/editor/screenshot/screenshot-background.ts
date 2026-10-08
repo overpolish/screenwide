@@ -3,14 +3,6 @@
 
 import { randomMeshBackground } from "../../../components/shared/background-picker/background-random";
 
-export type MeshGradientPoint = {
-  radiusX: number;
-  radiusY: number;
-  rotation: number;
-  x: number;
-  y: number;
-};
-
 /** A fresh mesh in the flat fields the output settings carry it in. */
 export const randomMeshComposition = (colorCount?: number) => {
   const mesh = randomMeshBackground(colorCount);

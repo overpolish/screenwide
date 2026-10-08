@@ -6,7 +6,9 @@ import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 
-import type { RulerAction, RulerSettings, ShortcutSettings } from "../types";
+import type { RulerAction } from "../../../bindings/RulerAction";
+import type { RulerSettings } from "../../../bindings/RulerSettings";
+import type { ShortcutSettings } from "../../../bindings/ShortcutSettings";
 
 const actions: {
   action: RulerAction;
@@ -142,7 +144,7 @@ export function RulerSettingsPanel({
                     bindings: { ...settings.bindings, [action]: shortcut },
                   });
                 }}
-                value={settings.bindings[action]}
+                value={settings.bindings[action] ?? null}
               />
             )}
           </ControlRow>

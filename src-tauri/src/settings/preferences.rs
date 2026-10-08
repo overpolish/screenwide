@@ -14,8 +14,9 @@ use crate::system_accent::AccentPreference;
 const SETTINGS_FILE: &str = "settings.json";
 const SETTINGS_CHANGED_EVENT: &str = "settings://changed";
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, ts_rs::TS)]
 #[serde(default, rename_all = "camelCase")]
+#[ts(export)]
 pub struct GeneralSettings {
   pub accent: AccentPreference,
   /// Colours the annotation tools were given that none of their presets

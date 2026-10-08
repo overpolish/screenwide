@@ -8,6 +8,7 @@ use std::sync::{LazyLock, RwLock};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
+use ts_rs::TS;
 
 use crate::editor::annotations::{AnnotationHead, AnnotationKind};
 
@@ -31,16 +32,18 @@ const DEFAULT_COLOR: &str = "#ffcc00";
 /// the display it was dropped on. Held per display so the toolbar comes back
 /// where it was left on that screen, and falls back to top-centre on a
 /// display it has never been dragged on.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ToolbarPosition {
   pub display_id: u32,
   pub x: f64,
   pub y: f64,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, TS)]
 #[serde(default, rename_all = "camelCase")]
+#[ts(export)]
 pub struct AnnotateSettings {
   pub enabled: bool,
   /// Whether annotations survive the overlay closing. Off by default: the

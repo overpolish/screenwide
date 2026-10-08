@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::mesh_generator::{mesh_generator, MAXIMUM_GENERATOR_COLORS};
 use super::parse_hex_colour;
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub(crate) struct MeshGradientPoint {
   pub radius_x: f64,
   pub radius_y: f64,

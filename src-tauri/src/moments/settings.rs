@@ -7,11 +7,13 @@ use std::sync::{LazyLock, RwLock};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_global_shortcut::Shortcut;
+use ts_rs::TS;
 
 const SETTINGS_FILE: &str = "moments-settings.json";
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct MomentKind {
   /// Stable across renames, so a recording's moments keep their kind.
   pub id: String,
@@ -26,8 +28,9 @@ pub struct MomentKind {
   pub shortcut: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct MomentSettings {
   pub kinds: Vec<MomentKind>,
   /// Whether holding a kind's shortcut records a voice note with it.

@@ -11,15 +11,13 @@ import { transcriptionPreviewApi } from "./settings-transcription-preview";
 import { SoftwareUpdateSetting } from "./settings-update-actions";
 import { SettingsWindow } from "./settings-window";
 
-import type {
-  AnnotateSettings,
-  GeneralSettings,
-  GlideSettings,
-  RulerSettings,
-  OcrSettings,
-  ShortcutDefaults,
-  ShortcutSettings,
-} from "./types";
+import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
+import type { GeneralSettings } from "../../bindings/GeneralSettings";
+import type { GlideSettings } from "../../bindings/GlideSettings";
+import type { OcrSettings } from "../../bindings/OcrSettings";
+import type { RulerSettings } from "../../bindings/RulerSettings";
+import type { ShortcutDefaults } from "../../bindings/ShortcutDefaults";
+import type { ShortcutSettings } from "../../bindings/ShortcutSettings";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 function createPreviewApi(): ContextType<typeof SettingsApiContext> {

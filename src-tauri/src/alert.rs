@@ -20,6 +20,7 @@ use tauri::window::{Effect, EffectState};
 use tauri::{
   AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewUrl, WebviewWindow, WindowEvent,
 };
+use ts_rs::TS;
 
 use crate::app_windows::{self, WindowLabel};
 use crate::editor::export_window::presentation;
@@ -35,8 +36,9 @@ const WIDTH: f64 = 420.0;
 /// concealed until it has been fitted.
 const INITIAL_HEIGHT: f64 = 148.0;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct AlertCopy {
   pub message: String,
   pub title: String,

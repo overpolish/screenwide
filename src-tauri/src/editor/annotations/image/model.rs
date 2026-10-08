@@ -11,20 +11,24 @@ use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// What an image shows: its picture by library id, and that picture's width
 /// over its height. What the editor hands over as the picture the next
 /// image is made with, along with how many pixels long the picture is on
 /// its longer side, and how it plays where it moves. The twin of
 /// `ImageArt` in `src/features/editor/annotations/annotations.ts`.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ImageArt {
   pub asset: String,
   pub aspect: f64,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub pixels: Option<f64>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub play: Option<super::ImagePlay>,
 }
 

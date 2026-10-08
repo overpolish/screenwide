@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::screenshots::Capture;
+use ts_rs::TS;
 
 /// One independently editable image in a screenshot workspace.
 /// Pixels remain owned by Rust and are uploaded to the native renderer once;
@@ -36,15 +37,17 @@ impl ScreenshotItem {
   }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ScreenshotWorkspaceItemOutput {
   pub id: u64,
   pub output: ScreenshotOutputSettings,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ScreenshotWorkspaceOutputSettings {
   #[serde(flatten)]
   pub canvas: ScreenshotOutputSettings,

@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RecordingPreviewLayout } from "../types";
+import type { RecordingPreviewPlayerInfo } from "../../../bindings/RecordingPreviewPlayerInfo";
+
+export type { RecordingPreviewPlayerInfo };
 
 export type RecordingPreviewPlayerEvent =
   | { event: "ended" }
@@ -12,9 +14,3 @@ export type RecordingPreviewPlayerEvent =
       event: "paused" | "playing" | "position";
     }
   | { data: { positionMs: number; requestId: number }; event: "ready" };
-
-export type RecordingPreviewPlayerInfo = {
-  durationMs: number;
-  framesPerSecond: number | null;
-  layout: RecordingPreviewLayout;
-};

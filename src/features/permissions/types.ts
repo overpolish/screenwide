@@ -1,15 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-export type PermissionKind =
-  "accessibility" | "camera" | "microphone" | "screenRecording";
-
-export type PermissionStatus = {
-  canRequest: boolean;
-  granted: boolean;
-};
-
-export type PermissionSnapshot = Record<PermissionKind, PermissionStatus>;
+import type { PermissionKind } from "../../bindings/PermissionKind";
+import type { PermissionSnapshot } from "../../bindings/PermissionSnapshot";
+import type { PermissionStatus } from "../../bindings/PermissionStatus";
+export type { PermissionKind, PermissionSnapshot, PermissionStatus };
 
 export const initialPermissionSnapshot: PermissionSnapshot = {
   accessibility: { canRequest: true, granted: false },

@@ -3,25 +3,29 @@
 
 use super::*;
 use crate::screenshots::Capture;
+use ts_rs::TS;
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export)]
 pub enum AudioTrackKind {
   SystemAudio,
   Microphone,
   Unknown,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingAudioTrack {
   pub kind: AudioTrackKind,
   pub label: String,
   pub stream_index: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingCamera {
   pub duration_ms: u64,
   pub height: u32,
@@ -32,8 +36,9 @@ pub struct RecordingCamera {
 
 /// A baked camera's placement, in the screen output's own pixels: the camera
 /// image by its centre and width, and the crop window that frames it.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct CameraOverlaySettings {
   pub camera_x: f64,
   pub camera_y: f64,
@@ -74,8 +79,9 @@ pub struct RecordingExportOptions {
 /// part of a composition's layout, not a setting a recording carries.
 pub(crate) const CAMERA_IN_FRONT: bool = true;
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingOutputSettings {
   pub camera: ScreenshotOutputSettings,
   pub primary: ScreenshotOutputSettings,
@@ -122,8 +128,9 @@ impl EditorArtifact {
   }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct AudioTrackVolume {
   pub decibels: i16,
   pub stream_index: usize,

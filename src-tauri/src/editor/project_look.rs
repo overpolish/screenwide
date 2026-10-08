@@ -18,22 +18,25 @@ mod pictures;
 use super::*;
 pub(crate) use cleanup::clean_pictures;
 pub(crate) use pictures::{adopt_pictures, carry_pictures, keep_in_app_data};
+use ts_rs::TS;
 
 /// Bumped when the look's shape changes in a way older saves cannot be read
 /// as; a look of another version is ignored rather than guessed at.
 const FORMAT_VERSION: u16 = 1;
 
 /// One of a recording's video tracks, as the window names it.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum VideoTrack {
   Camera,
   Primary,
 }
 
 /// `RecordingProjectLook` in `src/features/editor/types.ts`.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, rename = "RecordingProjectLook")]
 pub struct ProjectLook {
   pub bake_camera: bool,
   pub camera_overlay: CameraOverlaySettings,

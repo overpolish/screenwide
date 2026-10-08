@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use ts_rs::TS;
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ScreenshotItemSnapshot {
   /// The annotations the item starts with, in its own pixels.
   pub annotations: Vec<Annotation>,
@@ -15,12 +17,13 @@ pub struct ScreenshotItemSnapshot {
 
 /// What the window is told about the pending artifact. Deliberately without
 /// pixels: the preview travels separately, as bytes.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, TS)]
 #[serde(
   rename_all = "camelCase",
   rename_all_fields = "camelCase",
   tag = "kind"
 )]
+#[ts(export, rename = "EditorArtifact")]
 // Built once per artifact and serialised straight away, so the variant's size
 // never matters; it only crosses clippy's line on Windows, where `PathBuf` is
 // wider.
@@ -31,6 +34,7 @@ pub enum EditorArtifactSnapshot {
     items: Vec<ScreenshotItemSnapshot>,
     /// The canvas and layers saved in the project, which the window shows in
     /// place of the remembered look.
+    #[ts(as = "Option<crate::editor::ScreenshotWorkspaceOutputSettings>", optional = nullable)]
     project_workspace: Option<serde_json::Value>,
     suggested_file_stem: String,
     extension: String,
@@ -44,6 +48,7 @@ pub enum EditorArtifactSnapshot {
     cursor_data_version: Option<u16>,
     has_cursor_data: bool,
     keyboard_data_version: Option<u16>,
+    #[ts(optional = nullable)]
     keyboard_maximum_width_units: Option<u16>,
     has_keyboard_data: bool,
     id: u64,
@@ -59,10 +64,13 @@ pub enum EditorArtifactSnapshot {
     path: PathBuf,
     /// The look saved in the project, which the window shows in place of the
     /// remembered one.
+    #[ts(optional = nullable)]
     project_look: Option<super::project_look::ProjectLook>,
     primary_kind: PrimaryRecordingKind,
     source_scale_percent: u16,
+    #[ts(optional = nullable)]
     timeline_edit: Option<timeline_edit::RecordingTimelineEdit>,
+    #[ts(optional = nullable)]
     timeline_edit_revision: Option<u64>,
   },
 }

@@ -6,6 +6,7 @@
 use serde::Serialize;
 use tauri::{AppHandle, Manager, WebviewUrl};
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use ts_rs::TS;
 
 use crate::{app_windows::WindowLabel, capture_overlays, screenshots};
 mod adapter;
@@ -33,8 +34,9 @@ mod recognition_worker;
 pub(crate) mod settings;
 use recognition_worker::recognize;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct TextRect {
   pub x: f64,
   pub y: f64,
@@ -59,12 +61,14 @@ pub struct RecognizedLine {
   pub characters: Vec<RecognizedCharacter>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecognizedQrCode {
   pub bounds: TextRect,
   pub content: String,
   #[serde(skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub decode_error: Option<String>,
 }
 

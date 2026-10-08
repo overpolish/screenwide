@@ -1,20 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import type { GlideRegion } from "../../../bindings/GlideRegion";
+export type { GlideRegion };
+
 /** Rows in the fixed vertical grid every region is expressed on. */
 export const glideGridRows = 2;
-
-/**
- * A rectangle of grid cells with 0-based starts, on a grid of `gridCols`
- * columns (2 = halves, 3 = thirds) by `glideGridRows` rows.
- */
-export type GlideRegion = {
-  colSpan: number;
-  colStart: number;
-  gridCols: 2 | 3;
-  rowSpan: number;
-  rowStart: number;
-};
 
 export const fullHeight = { rowSpan: glideGridRows, rowStart: 0 };
 

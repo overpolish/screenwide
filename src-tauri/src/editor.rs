@@ -109,6 +109,7 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use tauri::{image::Image, AppHandle, Emitter, Manager};
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use ts_rs::TS;
 
 use crate::recording::{FinalizeInfo, PrimaryRecordingKind};
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -197,8 +198,9 @@ fn recording_audio_tracks(
   tracks
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EditorSnapshot {
   pub artifact: Option<EditorArtifactSnapshot>,
   pub cursor_effects: cursor_effects::CursorEffectSettings,
@@ -219,8 +221,9 @@ pub struct EditorSnapshot {
 
 /// Every workspace at once, for a webview that has just come up and has no
 /// event history to reconstruct them from.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EditorSnapshots {
   pub recording: EditorSnapshot,
   pub screenshot: EditorSnapshot,

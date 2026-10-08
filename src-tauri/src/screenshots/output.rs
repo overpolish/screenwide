@@ -29,7 +29,7 @@ const MAX_OUTPUT_PIXELS: u64 = 120_000_000;
 /// canvas can be resized without moving or rescaling anything placed in it.
 /// The crop is the visible rectangle; the image behind it is given by its top
 /// left corner and its width, its height following the source's aspect.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotOutputSettings {
   /// Annotations drawn over this layer, in the source's own pixel space.

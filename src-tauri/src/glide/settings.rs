@@ -17,7 +17,8 @@ const SETTINGS_CHANGED_EVENT: &str = "glide-settings://changed";
 /// and start reading as floating windows.
 const MAXIMUM_WINDOW_GAP: u32 = 32;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ts_rs::TS)]
+#[ts(type = "string")]
 pub enum GlideControl {
   Key(keyboard_types::Code),
   MouseMiddle,
@@ -65,7 +66,7 @@ impl<'de> Deserialize<'de> for GlideControl {
   }
 }
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, ts_rs::TS)]
 #[serde(default, rename_all = "camelCase")]
 pub struct GlideSettings {
   pub enabled: bool,

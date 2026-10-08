@@ -6,7 +6,8 @@ import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 
-import type { OcrAction, OcrSettings } from "../types";
+import type { OcrAction } from "../../../bindings/OcrAction";
+import type { OcrSettings } from "../../../bindings/OcrSettings";
 
 const actions: { action: OcrAction; description: string; label: string }[] = [
   {
@@ -92,7 +93,7 @@ export function OcrSettingsPanel({
                     bindings: { ...settings.bindings, [action]: shortcut },
                   });
                 }}
-                value={settings.bindings[action]}
+                value={settings.bindings[action] ?? null}
               />
             )}
           </ControlRow>

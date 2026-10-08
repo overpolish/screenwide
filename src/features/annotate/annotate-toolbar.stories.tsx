@@ -4,10 +4,10 @@
 import { useState } from "react";
 
 import { FeatureStoryStage } from "../../storybook/feature-story-stage";
-import { AnnotateSettings } from "../settings/types";
 
 import { AnnotateToolbar, AnnotateToolbarProps } from "./annotate-toolbar";
 
+import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const settings: AnnotateSettings = {

@@ -13,11 +13,13 @@
 use super::model::{has_content, normalised_text};
 use crate::editor::annotations::{Annotation, AnnotationShape};
 use serde::Serialize;
+use ts_rs::TS;
 
 /// Where a commit falls in the typing, which is what tells React to open and
 /// close the edit gesture it groups the typing into.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub(crate) enum TextEditPhase {
   Begin,
   Update,

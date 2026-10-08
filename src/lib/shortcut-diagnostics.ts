@@ -3,7 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-import { ShortcutAction } from "../features/settings/types";
+import type { ShortcutAction } from "../bindings/ShortcutAction";
 
 type Phase =
   | "listenerReady"

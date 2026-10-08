@@ -10,10 +10,11 @@ import { AnnotationColorGrid } from "../../components/shared/annotation-style/an
 import { BackgroundTile } from "../../components/shared/background-picker/background-tile";
 import { NativeTooltipTrigger } from "../../components/shared/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../components/shared/tool-toggle/tool-toggle";
-import { AnnotateSettings } from "../settings/types";
 
 import { AnnotateToolControls } from "./annotate-tool-controls";
 import { ANNOTATE_TOOLS } from "./annotate-tools";
+
+import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
 
 export type AnnotateToolbarProps = {
   /** Every change is a settings edit: the toolbar and the Settings page are

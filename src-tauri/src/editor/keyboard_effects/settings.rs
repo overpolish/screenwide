@@ -2,24 +2,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export, rename = "KeyboardEffectAnimation")]
 pub(crate) enum KeyboardAnimation {
   Pop,
   Fade,
   None,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
+#[ts(export, rename = "KeyboardEffectAppearance")]
 pub(crate) enum KeyboardAppearance {
   Dark,
   Light,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub(crate) struct KeyboardEffectSettings {
   pub bake: bool,
   pub animation: KeyboardAnimation,
@@ -28,8 +32,10 @@ pub(crate) struct KeyboardEffectSettings {
   // Omitted rather than null when unset: the editor treats a present value,
   // null included, as a chosen position.
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub position_x_percent: Option<f64>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
   pub position_y_percent: Option<f64>,
 }
 

@@ -3,7 +3,7 @@
 
 import { useCallback, useState } from "react";
 
-import type { OcrSettings } from "../types";
+import type { OcrSettings } from "../../../bindings/OcrSettings";
 
 export function useOcrSettingsSave({
   getSettings,

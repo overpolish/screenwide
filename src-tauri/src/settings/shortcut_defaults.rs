@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::Serialize;
+use ts_rs::TS;
 
 /// Return the same defaults used when native settings are first initialized.
 /// The UI never has to maintain a second set of platform-specific bindings.
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, TS)]
+#[ts(export)]
 pub struct ShortcutDefaults {
   pub shortcuts: crate::shortcuts::ShortcutSettings,
   pub glide: crate::glide::settings::GlideSettings,

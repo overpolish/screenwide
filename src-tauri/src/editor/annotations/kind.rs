@@ -4,6 +4,7 @@
 //! Which shape an annotation is, as one value every layer of the stack shares.
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// The kinds the compositor draws. The numbers are ABI: they are the C
 /// `ScreenwideAnnotationKind` the macOS chrome reads, and the `kind == 1u`
@@ -13,8 +14,9 @@ use serde::{Deserialize, Serialize};
 /// `AnnotationShape` and what the live overlay's settings store, so a kind
 /// is one word in a document, in settings, and over the native boundary.
 #[repr(u32)]
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum AnnotationKind {
   #[default]
   Arrow = 0,

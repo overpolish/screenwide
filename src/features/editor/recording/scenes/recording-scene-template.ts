@@ -1,29 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  RecordingSceneClip,
-  SceneBox,
-  SceneBoxes,
-  SceneRadius,
-} from "./recording-scenes";
+import { RecordingSceneClip, SceneBox, SceneBoxes } from "./recording-scenes";
 
-/**
- * A custom scene's layout kept under a name for any recording: its boxes as
- * shares of the canvas it was made on, that canvas's shape, and how round it
- * makes each pane. How far a scene zooms, and where, is the scene's own, so
- * a template keeps neither. The twin of `SceneTemplate` in
- * `src-tauri/src/editor/scenes/template.rs`, which keeps it sound in the
- * settings.
- */
-export type SceneTemplate = {
-  boxes: SceneBoxes;
-  /** The width over the height of the canvas the layout was made on. */
-  canvasAspect: number;
-  id: string;
-  name: string;
-  radius?: SceneRadius;
-};
+import type { SceneTemplate } from "../../../../bindings/SceneTemplate";
+
+export type { SceneTemplate };
 
 /** What a template keeps of a scene, before it has a name. */
 export type SceneTemplateLayout = Omit<SceneTemplate, "id" | "name">;
