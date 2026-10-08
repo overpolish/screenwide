@@ -15,12 +15,9 @@ use crate::editor::{
 use crate::screenshots::CapturedImage;
 
 /// macOS composes this many frames at once: each decodes on its own and the
-/// GPU device takes work from any thread. Windows composes through the
-/// editor window's one shared surface, so it takes them one at a time.
+/// GPU device takes work from any thread.
 #[cfg(target_os = "macos")]
 const WORKERS: usize = 4;
-#[cfg(not(target_os = "macos"))]
-const WORKERS: usize = 1;
 
 /// One composed frame of the open recording: the preview's settings at
 /// `position_ms` in the source.
@@ -177,7 +174,9 @@ fn compose_spread(
     .collect()
 }
 
-/// Runs `compose_at` over `positions_ms` one at a time, in order.
+/// Runs `compose_at` over `positions_ms` one at a time, in order. Windows
+/// composes through the editor window's one shared surface, so frames cannot
+/// be composed in parallel.
 #[cfg(not(target_os = "macos"))]
 fn compose_spread(
   positions_ms: &[u64],
