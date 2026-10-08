@@ -101,32 +101,30 @@ fn write_atomically(
   placed.map_err(|error| error.to_string())
 }
 
-/// The movie's frame at its middle.
+/// The movie's frame at its middle. FFmpeg hands the frame over as a BMP and
+/// the PNG is written here, as every other preview is: the bundled FFmpeg is
+/// built without zlib, so it has no PNG encoder.
 fn movie_frame(movie: &Path, duration_ms: Option<u64>, target: &Path) -> Result<(), String> {
   let at_seconds = duration_ms.map_or(1.0, |ms| ms as f64 / 2_000.0);
+  let output = media_preview::ffmpeg_command()
+    .args(["-hide_banner", "-loglevel", "error", "-nostdin", "-ss"])
+    .arg(format!("{at_seconds:.3}"))
+    .arg("-i")
+    .arg(movie)
+    .args(["-frames:v", "1", "-vf"])
+    .arg(format!("scale={PREVIEW_WIDTH}:-2"))
+    .args(["-f", "image2pipe", "-c:v", "bmp", "-"])
+    .output()
+    .map_err(|error| format!("FFmpeg could not be started: {error}"))?;
+  if !output.status.success() || output.stdout.is_empty() {
+    return Err(String::from_utf8_lossy(&output.stderr).trim().to_owned());
+  }
+  let frame = image::load_from_memory_with_format(&output.stdout, image::ImageFormat::Bmp)
+    .map_err(|error| error.to_string())?;
   write_atomically(target, false, |partial| {
-    let output = media_preview::ffmpeg_command()
-      .args([
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-nostdin",
-        "-y",
-        "-ss",
-      ])
-      .arg(format!("{at_seconds:.3}"))
-      .arg("-i")
-      .arg(movie)
-      .args(["-frames:v", "1", "-vf"])
-      .arg(format!("scale={PREVIEW_WIDTH}:-2"))
-      .arg(partial)
-      .output()
-      .map_err(|error| format!("FFmpeg could not be started: {error}"))?;
-    if output.status.success() && partial.is_file() {
-      Ok(())
-    } else {
-      Err(String::from_utf8_lossy(&output.stderr).trim().to_owned())
-    }
+    frame
+      .save_with_format(partial, image::ImageFormat::Png)
+      .map_err(|error| error.to_string())
   })
 }
 
