@@ -17,6 +17,7 @@ import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 import { t } from "../../../i18n/i18n";
 
 import { TimelineBladeController } from "./editing/timeline-blade";
+import { TimelineCutMarkers } from "./editing/timeline-cut-markers";
 import { VisibleRecordingMoment } from "./moments/recording-moments";
 import { TimelineMomentPins } from "./moments/timeline-moment-pins";
 import { Playhead } from "./scrub-playhead";
@@ -158,9 +159,14 @@ export function TimelineHeader({
           snapPosition={blade.snapPosition}
           viewport={viewport}
         />
-        <TimelineMomentPins
-          artifactId={blade.edit.artifactId}
+        <TimelineCutMarkers
+          blade={blade}
           durationMs={durationMs}
+          viewport={viewport}
+        />
+        <TimelineMomentPins
+          durationMs={durationMs}
+          edit={blade.edit}
           moments={moments}
           onSeek={onSeek}
           viewport={viewport}

@@ -96,9 +96,11 @@ export function resolveToolPanelSnapshot(
     frameSize,
     keyboardEffects,
     recenterSelection: _recenterSelection,
+    reduceNoise,
     removeAnnotationColor: _removeAnnotationColor,
     removePreset: _removePreset,
     removeSceneTemplate: _removeSceneTemplate,
+    removeSilences: _removeSilences,
     resetAllShortcuts: _resetAllShortcuts,
     resetCrop: _resetCrop,
     resetFrame: _resetFrame,
@@ -107,6 +109,7 @@ export function resolveToolPanelSnapshot(
     resetSelection: _resetSelection,
     resetShortcut: _resetShortcut,
     restoreShortcuts: _restoreShortcuts,
+    restoreSilences: _restoreSilences,
     saveAnnotationColor: _saveAnnotationColor,
     savePreset: _savePreset,
     saveSceneTemplate: _saveSceneTemplate,
@@ -151,10 +154,29 @@ export function resolveToolPanelSnapshot(
       ? { ...rounded, dropShadow: selectionDropShadow }
       : rounded;
   // A dragged volume is held the same way: the knob stays where it was let go
-  // of until the editor answers with the level it committed.
+  // of until the editor answers with the level it committed. The noise switch
+  // flips at once too; turned on, it reads as cleaning until the editor says
+  // the cleaned track is ready.
+  const audio =
+    resolved.selection?.kind === "audio" ? resolved.selection : null;
+  const microphone =
+    audio?.microphone && reduceNoise !== undefined
+      ? {
+          ...audio.microphone,
+          noise: reduceNoise
+            ? audio.microphone.noise === "on"
+              ? ("on" as const)
+              : ("cleaning" as const)
+            : ("off" as const),
+        }
+      : audio?.microphone;
   const heard =
-    resolved.selection?.kind === "audio" && audioVolume !== undefined
-      ? { ...resolved.selection, decibels: audioVolume }
+    audio && (audioVolume !== undefined || reduceNoise !== undefined)
+      ? {
+          ...audio,
+          decibels: audioVolume ?? audio.decibels,
+          microphone,
+        }
       : null;
   const selection = layer ?? heard ?? resolved.selection;
   // The output choice flips at once, and the placement the editor carries

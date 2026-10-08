@@ -7,6 +7,10 @@ import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { cutKeyboardTimeline } from "../keyboard/recording-keyboard-timeline-cut";
 
 import {
+  RecordingTimelineCut,
+  restoreRecordingTimelineCut,
+} from "./recording-timeline-cuts";
+import {
   deleteRecordingTimelineRange,
   deleteRecordingTimelineSegment,
   RecordingTimelineEdit,
@@ -17,9 +21,10 @@ import { setRecordingTimelineRangePlaybackRate } from "./recording-timeline-spee
 import { TimelineRangeSelection } from "./timeline-blade";
 
 /**
- * The edits the blade band commits: a cut, a deletion, and a playback rate,
- * each one history step of its own. Every command drops the selection it
- * consumed, since the segment ids it named no longer describe the timeline.
+ * The edits the blade band commits: a cut, a deletion, a playback rate, and a
+ * cut put back, each one history step of its own. Every command drops the
+ * selection it consumed, since the segment ids it named no longer describe
+ * the timeline.
  */
 export function useTimelineBladeCommands({
   clearRangeSelection,
@@ -132,6 +137,19 @@ export function useTimelineBladeCommands({
       selectSegment,
     ],
   );
+  const restoreCut = useCallback(
+    (cut: RecordingTimelineCut) => {
+      if (!onChange) return;
+      const next = restoreRecordingTimelineCut(edit, cut);
+      if (next === edit) return;
+      clearRangeSelection();
+      selectSegment(null);
+      editGesture.beginGesture();
+      onChange(next);
+      editGesture.endGesture();
+    },
+    [clearRangeSelection, edit, editGesture, onChange, selectSegment],
+  );
 
   return {
     changeRangePlaybackRate,
@@ -139,5 +157,6 @@ export function useTimelineBladeCommands({
     cutAt,
     cutAtPlayhead,
     deleteSelected,
+    restoreCut,
   };
 }

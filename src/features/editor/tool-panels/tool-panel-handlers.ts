@@ -80,6 +80,9 @@ export type ToolPanelHandlers = {
   onKeyboardShortcutsResetAll?: () => void;
   /** Bring back every shortcut deleted from the timeline. */
   onKeyboardShortcutsRestore?: () => void;
+  /** Take the room's steady noise out of the selected microphone, or put it
+   * back. */
+  onReduceNoiseChange?: (reduce: boolean) => void;
   /** Make the auto zooms again, the scenes of your own left as they are. */
   onSceneAutoZoom?: () => void;
   /** Take every auto zoom off the timeline, the scenes of your own left as
@@ -130,4 +133,9 @@ export type ToolPanelHandlers = {
   ) => void;
   /** Put the selected shortcut back where the recording drew it. */
   onShortcutReset?: () => void;
+  /** Cut the long pauses out of the selected microphone's recording where
+   * nothing happens on screen. */
+  onSilencesRemove?: () => void;
+  /** Bring back every pause Remove cut that is still cut. */
+  onSilencesRestore?: () => void;
 };

@@ -3,6 +3,7 @@
 /target/
 /binaries/ffmpeg-*
 /binaries/screenwide-transcriber-*
+/binaries/silero-vad.bin
 /binaries/dxcompiler.dll
 /binaries/dxc.exe
 /binaries/DXC-LICENSE-*.txt

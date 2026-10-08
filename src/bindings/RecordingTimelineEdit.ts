@@ -3,10 +3,16 @@ import type { DeletedKeyboardShortcutFragment } from "./DeletedKeyboardShortcutF
 import type { KeyboardShortcutPosition } from "./KeyboardShortcutPosition";
 import type { RecordingAnnotationClip } from "./RecordingAnnotationClip";
 import type { RecordingSceneClip } from "./RecordingSceneClip";
+import type { RecordingSilenceCut } from "./RecordingSilenceCut";
 import type { RecordingTimelineSegment } from "./RecordingTimelineSegment";
 
 export type RecordingTimelineEdit = { artifactId: number, annotationClips?: Array<RecordingAnnotationClip>, 
 /**
  * Sorted by start, never overlapping; see [`super::scenes`].
  */
-sceneClips?: Array<RecordingSceneClip>, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, keyboardShortcutPositions?: Array<KeyboardShortcutPosition>, };
+sceneClips?: Array<RecordingSceneClip>, 
+/**
+ * What Remove silences cut, for Restore all to bring back; see
+ * [`silences`].
+ */
+silenceCuts?: Array<RecordingSilenceCut>, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, keyboardShortcutPositions?: Array<KeyboardShortcutPosition>, };

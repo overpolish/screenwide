@@ -31,6 +31,7 @@ mod recording_sidecar;
 pub(crate) mod save;
 pub(crate) mod scenes;
 pub(crate) mod screenshot_preview;
+pub(crate) mod speech;
 mod startup;
 pub(crate) mod surface_colour;
 mod timeline_edit;

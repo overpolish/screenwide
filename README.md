@@ -91,7 +91,7 @@
 
 # Building on Windows
 
-Besides Rust, Node.js, pnpm and the Visual Studio C++ Build Tools, the speech-to-text helper (`pnpm transcriber:prepare`, run by `pnpm dev` and `pnpm build`) compiles whisper.cpp, which needs LLVM for its bindings, CMake, and the Vulkan SDK for its GPU shaders. Tauri checks that the helper exists before compiling the app, so even `cargo check` fails until it has been prepared once. Use LLVM 20: with LLVM 23 the bindgen version that whisper-rs uses leaves `whisper_full_params` opaque, and the build fails a layout check.
+Besides Rust, Node.js, pnpm and the Visual Studio C++ Build Tools, the speech-to-text helper (`pnpm transcriber:prepare`, run by `pnpm dev` and `pnpm build`) compiles whisper.cpp, which needs LLVM for its bindings, CMake, and the Vulkan SDK for its GPU shaders. The same step downloads the voice activity model the microphone tools use, once, and checks it against a pinned digest. Tauri checks that the helper and the model exist before compiling the app, so even `cargo check` fails until they have been prepared once. Use LLVM 20: with LLVM 23 the bindgen version that whisper-rs uses leaves `whisper_full_params` opaque, and the build fails a layout check.
 
 ```powershell
 winget install --id LLVM.LLVM -e --version 20.1.8

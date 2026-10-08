@@ -28,18 +28,36 @@ path = "src/main.rs"
 required-features = ["engine"]
 
 [features]
-engine = ["dep:whisper-rs"]
+engine = [
+  "dep:whisper-rs",
+  "dep:deep_filter",
+  "dep:ndarray",
+  "dep:tract-core",
+  "dep:tract-hir",
+  "dep:tract-onnx",
+  "dep:tract-pulse",
+]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-whisper-rs = { version = "0.14.4", optional = true }
+whisper-rs = { version = "0.16.0", optional = true }
+# DeepFilterNet 3 for Reduce noise, with its model built in. Only on GitHub:
+# the crates.io release predates the inference this needs.
+deep_filter = { git = "https://github.com/Rikorose/DeepFilterNet", rev = "d375b2d8309e0935d165700c91da9de862a99c31", default-features = false, features = ["tract", "default-model"], optional = true }
+ndarray = { version = "0.15", optional = true }
+# Held at the tract release libDF was last built with: later ones moved to
+# ndarray 0.16 and changed the graph API it reads.
+tract-core = { version = "=0.21.4", optional = true }
+tract-hir = { version = "=0.21.4", optional = true }
+tract-onnx = { version = "=0.21.4", optional = true }
+tract-pulse = { version = "=0.21.4", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-whisper-rs = { version = "0.14.4", optional = true, features = ["metal"] }
+whisper-rs = { version = "0.16.0", optional = true, features = ["metal"] }
 
 [target.'cfg(windows)'.dependencies]
-whisper-rs = { version = "0.14.4", optional = true, features = ["vulkan"] }
+whisper-rs = { version = "0.16.0", optional = true, features = ["vulkan"] }
 
 [profile.release]
 lto = "thin"

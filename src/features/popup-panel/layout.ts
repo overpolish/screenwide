@@ -30,9 +30,11 @@ export const initialPopupPanelHeight = (
   return showsAllItems ? height : Math.min(height, popupPanelMaxHeight);
 };
 
-/** Tool panels are one fixed width, wide enough for a labelled slider row and
- * narrow enough to sit over a preview without covering it. */
-export const toolPanelWidth = 344;
+/** Tool panels are one fixed width, wide enough for a labelled slider row,
+ * and for a microphone's longest silence summary beside its two buttons in
+ * Fluent's larger type, and narrow enough to sit over a preview without
+ * covering it. */
+export const toolPanelWidth = 368;
 
 /** `--spacing-section` in logical px. A panel is placed and clamped in window
  * and screen coordinates, where the CSS token cannot be read. */

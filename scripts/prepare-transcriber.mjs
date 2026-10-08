@@ -3,12 +3,21 @@
 
 // Builds the speech-to-text helper and puts it where Tauri's externalBin
 // expects it. Cargo decides what needs rebuilding, so an unchanged helper
-// costs about a second.
+// costs about a second. The voice activity model the helper runs for the
+// microphone tools is fetched once, pinned to a revision and checked against
+// its digest, and bundled as a resource.
 
 import { execFileSync } from "node:child_process";
-import { chmod, copyFile, mkdir } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { chmod, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { arch as hostArch, env, platform as hostPlatform } from "node:process";
 import { dirname, resolve } from "node:path";
+
+// Silero VAD v6.2.0, converted for whisper.cpp by the ggml authors (MIT).
+const vadModelUrl =
+  "https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v6.2.0.bin";
+const vadModelSha256 =
+  "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987";
 
 const triples = {
   "darwin-arm64": "aarch64-apple-darwin",
@@ -83,6 +92,33 @@ await place(
 // for FFmpeg.
 await place(
   resolve("src-tauri", "target", "debug", `screenwide-transcriber${extension}`),
+);
+
+const sha256 = async (path) =>
+  createHash("sha256")
+    .update(await readFile(path))
+    .digest("hex");
+const vadModel = resolve("src-tauri", "binaries", "silero-vad.bin");
+if ((await sha256(vadModel).catch(() => null)) !== vadModelSha256) {
+  const response = await fetch(vadModelUrl);
+  if (!response.ok) {
+    throw new Error(
+      `The voice activity model download failed with HTTP ${response.status}`,
+    );
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (createHash("sha256").update(bytes).digest("hex") !== vadModelSha256) {
+    throw new Error(
+      "The downloaded voice activity model failed SHA-256 verification",
+    );
+  }
+  await mkdir(dirname(vadModel), { recursive: true });
+  await writeFile(vadModel, bytes);
+}
+// Beside the development build, where the app looks when it runs unbundled.
+await copyFile(
+  vadModel,
+  resolve("src-tauri", "target", "debug", "silero-vad.bin"),
 );
 
 console.log(`Prepared the transcriber for ${target}`);

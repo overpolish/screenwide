@@ -7,11 +7,13 @@ import { NativeTooltipTrigger } from "../../../../components/shared/native-toolt
 import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { formatDuration } from "../../duration";
+import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import { SeekHandler } from "../timeline-seek";
 import { TimelineViewportState } from "../timeline-viewport";
 
 import { toggleMomentNote } from "./moment-note-popover";
 import { RecordingMoment, VisibleRecordingMoment } from "./recording-moments";
+import { useRulerCrowding } from "./use-ruler-crowding";
 
 /** How much of a transcript a tooltip shows before it trails off. */
 const TOOLTIP_TRANSCRIPT_CHARS = 60;
@@ -44,27 +46,42 @@ const pinLabel = (moment: RecordingMoment, at: string) => {
  * playhead to it. Read-only: a moment says where something happened, so it
  * is not dragged or cut, and goes with the part of the recording it is in. A
  * pin with a voice note wears a head, and opens the note as it is pressed.
+ * A pin that would run into a retime strip or a cut marker keeps to the
+ * ruler's upper half, beside the ticks, so neither covers the other.
  */
 export function TimelineMomentPins({
-  artifactId,
   durationMs,
+  edit,
   moments,
   onSeek,
   viewport,
 }: {
-  artifactId: number;
   /** The cut timeline's length, which the tooltips give times on. */
   durationMs: number;
+  /** The cut timeline, for what the ruler draws under its ticks. */
+  edit: RecordingTimelineEdit;
   moments: readonly VisibleRecordingMoment[];
   onSeek: SeekHandler;
   viewport: TimelineViewportState;
 }) {
+  const { isCrowded, probeRef, rootRef } = useRulerCrowding(
+    edit,
+    viewport,
+    moments.length > 0,
+  );
   if (moments.length === 0) return null;
   return (
     // Not clipped: a pin at either end of the timeline overhangs it by half
     // its width rather than losing half its head. Pins scrolled out of view
     // are left out below instead.
-    <div className="pointer-events-none absolute inset-0">
+    <div className="pointer-events-none absolute inset-0" ref={rootRef}>
+      {/* Half a pin and half a cut marker together: centres closer than
+          this meet. */}
+      <span
+        aria-hidden
+        className="invisible absolute w-[calc((var(--spacing-section)_+_var(--spacing-control-compact))/2)]"
+        ref={probeRef}
+      />
       {moments.map(({ moment, output }) => {
         const left = (output - viewport.panOffset) * viewport.zoom;
         if (left < 0 || left > 1) return null;
@@ -75,7 +92,7 @@ export function TimelineMomentPins({
           // the pin's place is set out here, around that box, where the
           // box can stretch to the pin's full height.
           <div
-            className="absolute inset-y-0 flex -translate-x-1/2"
+            className={`absolute flex -translate-x-1/2 ${isCrowded(output) ? "top-0 h-1/2" : "inset-y-0"}`}
             key={moment.index}
             style={{ left: `${(left * 100).toString()}%` }}
           >
@@ -101,7 +118,7 @@ export function TimelineMomentPins({
                   onSeek(output, "start");
                   onSeek(output, "end");
                   void toggleMomentNote(
-                    artifactId,
+                    edit.artifactId,
                     moment,
                     event.target.getBoundingClientRect(),
                   );

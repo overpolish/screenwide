@@ -42,6 +42,10 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAnnotationColorRemove?.(values.removeAnnotationColor);
   if (values.audioVolume !== undefined)
     on.onAudioVolumeChange?.(values.audioVolume);
+  if (values.reduceNoise !== undefined)
+    on.onReduceNoiseChange?.(values.reduceNoise);
+  if (values.removeSilences) on.onSilencesRemove?.();
+  if (values.restoreSilences) on.onSilencesRestore?.();
   if (values.bakeCamera !== undefined)
     on.onBakeCameraChange?.(values.bakeCamera);
   if (values.background !== undefined)

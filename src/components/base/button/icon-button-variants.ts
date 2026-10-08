@@ -55,9 +55,13 @@ export const iconButtonVariants = tv({
     },
     // Capture is the recording bar's control: a 48 by 40 landscape box under
     // a 28px glyph, on the panel radius a standalone control of that height
-    // takes.
+    // takes. Compact is half a regular control's height under a mini glyph,
+    // for a control sharing a row with others, as a mark under the timeline
+    // ruler's ticks does.
     size: {
       capture: "h-10 w-12 rounded-capture [&_svg.lucide]:size-icon-xl",
+      compact:
+        "h-control-compact w-control-compact p-0 [&_svg.lucide]:size-icon-mini",
       regular: "",
     },
   },

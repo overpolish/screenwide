@@ -115,22 +115,24 @@ fn append_audio_filters(
 ) {
   let ranges = timeline.ranges();
   let mut outputs = Vec::new();
+  let opened = selection.cleaned_sources();
+  if !opened.is_empty() {
+    filters.push(opened.trim_end_matches(';').to_owned());
+  }
   for (track, stream) in selection.stream_indices().iter().enumerate() {
+    let label = selection.source(audio_input, *stream);
     if ranges.len() > 1 {
       let splits: String = (0..ranges.len())
         .map(|index| format!("[as{track}_{index}]"))
         .collect();
-      filters.push(format!(
-        "[{audio_input}:a:{stream}]asplit={}{splits}",
-        ranges.len()
-      ));
+      filters.push(format!("{label}asplit={}{splits}", ranges.len()));
     }
     let mut parts = String::new();
     for (index, range) in ranges.iter().enumerate() {
       let source = if ranges.len() > 1 {
         format!("[as{track}_{index}]")
       } else {
-        format!("[{audio_input}:a:{stream}]")
+        label.clone()
       };
       let fades = cut_fades(*range, index, ranges.len());
       let tempo = atempo(range.playback_rate);

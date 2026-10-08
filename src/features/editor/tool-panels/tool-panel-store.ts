@@ -38,6 +38,7 @@ export type { ToolPanelFrame } from "./tool-panel-frame";
 export type {
   ToolPanelAudioSelection,
   ToolPanelLayerSelection,
+  ToolPanelMicrophone,
   ToolPanelShortcutSelection,
 } from "./tool-panel-selection";
 

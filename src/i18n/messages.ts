@@ -281,6 +281,7 @@ export type Messages = {
   "editor-panels-keyboard-show": null;
   "editor-panels-layer": { number: string | number };
   "editor-panels-mirror-image": null;
+  "editor-panels-noise-cleaning": null;
   "editor-panels-nothing-selected": null;
   "editor-panels-one-third": null;
   "editor-panels-output": null;
@@ -297,7 +298,9 @@ export type Messages = {
   "editor-panels-recenter": null;
   "editor-panels-redaction-note": null;
   "editor-panels-redaction-style": null;
+  "editor-panels-reduce-noise": null;
   "editor-panels-regenerate": null;
+  "editor-panels-remove": null;
   "editor-panels-remove-color": null;
   "editor-panels-remove-preset": null;
   "editor-panels-remove-template": null;
@@ -307,6 +310,8 @@ export type Messages = {
   "editor-panels-reset-all": null;
   "editor-panels-reset-position": null;
   "editor-panels-reset-volume": null;
+  "editor-panels-restore-all": null;
+  "editor-panels-restore-silences": null;
   "editor-panels-reverse": null;
   "editor-panels-reverse-arrow": null;
   "editor-panels-save-template": null;
@@ -317,6 +322,13 @@ export type Messages = {
   "editor-panels-screenshot": null;
   "editor-panels-shortcut-x": null;
   "editor-panels-shortcut-y": null;
+  "editor-panels-silences": null;
+  "editor-panels-silences-finding": null;
+  "editor-panels-silences-none": null;
+  "editor-panels-silences-removed": {
+    count: number;
+    duration: string | number;
+  };
   "editor-panels-size": null;
   "editor-panels-size-large": null;
   "editor-panels-size-small": null;
@@ -407,6 +419,11 @@ export type Messages = {
   "editor-timeline-range-speed": null;
   "editor-timeline-rate": { rate: string | number };
   "editor-timeline-resize": null;
+  "editor-timeline-restore-cut": { duration: string | number };
+  "editor-timeline-restore-cut-at": {
+    duration: string | number;
+    time: string | number;
+  };
   "editor-timeline-scenes": null;
   "editor-timeline-segment": { number: string | number };
   "editor-timeline-segment-speed": null;

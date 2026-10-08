@@ -11,11 +11,13 @@ import {
   EditorEditGestureContext,
   useEditorEditHistory,
 } from "../../use-editor-edit-history";
+import { restoreRecordingTimelineCut } from "../editing/recording-timeline-cuts";
 import {
   createRecordingTimelineEdit,
   cutRecordingTimeline,
   deleteRecordingTimelineRange,
   deleteRecordingTimelineSegment,
+  RecordingTimelineEdit,
   recordingTimelineOutputToSource,
   recordingTimelineRetainedDuration,
   recordingTimelineSourceToOutput,
@@ -35,6 +37,7 @@ import {
   STORY_MOMENTS,
   STORY_SCENE_CLIPS,
   STORY_THUMBNAILS,
+  storyAudioTracks,
 } from "./recording-track-lanes-preview-fixtures";
 import { selectTimelineItem } from "./timeline-item-selection";
 
@@ -46,21 +49,13 @@ import { selectTimelineItem } from "./timeline-item-selection";
  */
 export function RecordingTrackLanesPreview({
   audioTrackCount = 1,
+  initialEdit = createRecordingTimelineEdit(1),
 }: {
   audioTrackCount?: number;
+  initialEdit?: RecordingTimelineEdit;
 }) {
   const audioTracks = useMemo(
-    () =>
-      Array.from({ length: audioTrackCount }, (_, track) => ({
-        kind: "system-audio" as const,
-        label: track === 0 ? "System audio" : `Audio ${(track + 1).toString()}`,
-        streamIndex: track,
-        waveform: Array.from(
-          { length: 240 },
-          (_, index) =>
-            0.15 + Math.abs(Math.sin(index * 0.19 + track * 0.7)) * 0.75,
-        ),
-      })),
+    () => storyAudioTracks(audioTrackCount),
     [audioTrackCount],
   );
 
@@ -101,9 +96,7 @@ export function RecordingTrackLanesPreview({
   const [selectedTrack, setSelectedTrack] = useState<RecordingTrackId | null>(
     "primary",
   );
-  const [timelineEdit, setTimelineEdit] = useState(() =>
-    createRecordingTimelineEdit(1),
-  );
+  const [timelineEdit, setTimelineEdit] = useState(initialEdit);
   const playheadRatioRef = useRef(0);
   const editGesture = useEditorEditHistory({
     apply: setTimelineEdit,
@@ -203,6 +196,11 @@ export function RecordingTrackLanesPreview({
           },
           previewPosition,
           rangeSelection,
+          restoreCut: (cut) => {
+            setTimelineEdit((current) =>
+              restoreRecordingTimelineCut(current, cut),
+            );
+          },
           selectSegment: setSelectedSegmentId,
           selectedSegmentId,
           setActive: (active) => {

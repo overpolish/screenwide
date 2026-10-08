@@ -12,6 +12,10 @@ import {
 import { t } from "../../../i18n/i18n";
 import { PREVIEW_FRAME_MS, formatDuration } from "../duration";
 
+import {
+  RecordingTimelineCut,
+  recordingTimelineCuts,
+} from "./editing/recording-timeline-cuts";
 import { RecordingTimelineEdit } from "./editing/recording-timeline-edit";
 import { speedMarkedSegments } from "./editing/timeline-speed-markers";
 import { clamp, Playhead } from "./scrub-playhead";
@@ -32,6 +36,30 @@ const MINIMUM_TICK_SPACING = 70;
 const TICK_LABEL_GLYPH_WIDTH_PX = 6;
 /** Clearance kept after a label so the next tick does not touch it. */
 const TICK_LABEL_CLEARANCE_PX = 4;
+
+/** Where a retime strip's end meets a cut marker: none, a join the marker is
+ * centred on, or an end of the timeline it lies wholly inside. */
+type CutPlace = "edge" | "join" | "none";
+const cutPlace = (
+  cuts: RecordingTimelineCut[],
+  meets: (cut: RecordingTimelineCut) => boolean,
+): CutPlace => {
+  const cut = cuts.find(meets);
+  if (!cut) return "none";
+  return cut.segmentId === null || cut.followingSegmentId === null
+    ? "edge"
+    : "join";
+};
+const CUT_INSET_START: Record<CutPlace, string> = {
+  edge: "pl-[calc(var(--spacing-control-compact)_+_var(--spacing-control))]",
+  join: "pl-[calc(var(--spacing-control-compact)/2_+_var(--spacing-control))]",
+  none: "pl-control",
+};
+const CUT_INSET_END: Record<CutPlace, string> = {
+  edge: "pr-[calc(var(--spacing-control-compact)_+_var(--spacing-control))]",
+  join: "pr-[calc(var(--spacing-control-compact)/2_+_var(--spacing-control))]",
+  none: "",
+};
 
 export function TimelineRuler({
   durationMs,
@@ -68,8 +96,11 @@ export function TimelineRuler({
       (_, index) => index * interval,
     );
   }, [durationSeconds, interval]);
+  const cuts = useMemo(() => (edit ? recordingTimelineCuts(edit) : []), [edit]);
   // A retime strip sits on the ruler's last line: the rate, then a line to
-  // the clip's end, closed by a short upright.
+  // the clip's end, closed by a short upright. A rate changes where clips
+  // meet, which is where any cut is marked too, so an end that meets a cut
+  // keeps clear of its marker.
   const retimeStrips = useMemo(
     () =>
       edit
@@ -82,14 +113,19 @@ export function TimelineRuler({
             const right =
               (segment.outputEnd - viewport.panOffset) * viewport.zoom * width;
             return {
+              endCut: cutPlace(cuts, (cut) => cut.segmentId === segment.id),
               id: segment.id,
               label,
               left,
+              startCut: cutPlace(
+                cuts,
+                (cut) => cut.followingSegmentId === segment.id,
+              ),
               width: Math.max(0, right - left),
             };
           })
         : [],
-    [edit, viewport.panOffset, viewport.zoom, width],
+    [cuts, edit, viewport.panOffset, viewport.zoom, width],
   );
 
   useEffect(() => {
@@ -185,8 +221,8 @@ export function TimelineRuler({
         const label = formatDuration(seconds * 1_000);
         const fraction = snapPosition(seconds / Math.max(1, durationSeconds));
         const x = (fraction - viewport.panOffset) * viewport.zoom * width;
-        // The ticks keep the ruler's centre line until a retime strip needs
-        // the lower half, when they move up to make room for it.
+        // The ticks keep the ruler's centre line until a retime strip or a
+        // cut marker needs the lower half, when they move up to make room.
         // Match the native timeline: labels always sit after their tick and
         // disappear when they would not fit, rather than flipping to the
         // other side at the trailing edge.
@@ -197,7 +233,7 @@ export function TimelineRuler({
         return (
           <div
             className={`pointer-events-none absolute flex gap-control ${
-              retimeStrips.length > 0
+              retimeStrips.length > 0 || cuts.length > 0
                 ? "top-0 items-start"
                 : "inset-y-0 items-center"
             }`}
@@ -227,9 +263,16 @@ export function TimelineRuler({
           {/* The rate leads, the line runs from it to the clip's end, and a
               short upright at the end says where the rate stops. The line
               is laid out after the label rather than drawn under it, so no
-              mask is needed to keep it out of the text. */}
-          <span className="absolute inset-x-0 bottom-0 flex items-center gap-control">
-            <span className="shrink-0 pl-control text-footnote leading-none whitespace-nowrap text-content-fg-secondary tabular-nums">
+              mask is needed to keep it out of the text. A cut marker is a
+              compact control centred on a join, or lying wholly inside the
+              timeline at either end, so an end meeting one clears the part of
+              it over the clip and a control's gap after it. */}
+          <span
+            className={`absolute inset-x-0 bottom-0 flex items-center gap-control ${CUT_INSET_END[strip.endCut]}`}
+          >
+            <span
+              className={`shrink-0 text-footnote leading-none whitespace-nowrap text-content-fg-secondary tabular-nums ${CUT_INSET_START[strip.startCut]}`}
+            >
               {strip.label}
             </span>
             <span className="flex min-w-0 grow items-center">

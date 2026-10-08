@@ -153,6 +153,9 @@
   --spacing-window-inset: 0.875rem;
   /* Regular control height, measured from an AppKit push button on macOS 26. */
   --spacing-control-height: 1.5rem;
+  /* A compact control fills half a regular control's height, as the marks
+     under the timeline ruler's ticks do. */
+  --spacing-control-compact: 0.75rem;
   /* The timeline's label column: track names on the left, clips to the right
      of it. Every lane, the scrubber and its overlays measure from this. */
   --spacing-timeline-gutter: 12rem;
@@ -404,6 +407,7 @@
 
     /* A WinUI button is 32 tall on a 4px corner; overlays sit on 8px. */
     --spacing-control-height: 2rem;
+    --spacing-control-compact: 1rem;
     /* Room for the timeline toolbar's six 32px controls, with the same slack
        the 24px macOS controls leave in 12rem. */
     --spacing-timeline-gutter: 15rem;

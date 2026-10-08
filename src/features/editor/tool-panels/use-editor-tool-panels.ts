@@ -41,10 +41,10 @@ import { editorFrameTarget, framePanelHandlers } from "./frame/frame-target";
 import { scenePanelHandlers } from "./scene/scene-panel-handlers";
 import {
   audioPanelHandlers,
-  editorAudioSelectionTarget,
   editorSelectionTarget,
   selectionPanelHandlers,
 } from "./selection/selection-target";
+import { useAudioSelectionTarget } from "./selection/use-audio-selection-target";
 import { useToolPanelBridge } from "./tool-panel-bridge";
 import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
 
@@ -142,11 +142,13 @@ export function useEditorToolPanels({
     selectedScreenshotItemId,
     selectedTrack,
   });
-  // An audio track is heard rather than placed, so it is its own selection:
-  // the level the editor holds for it, and the editor's own way of setting it.
-  const audioTarget = editorAudioSelectionTarget({
+  // An audio track is heard rather than placed, so it is its own selection,
+  // with the speech tools where it is the microphone.
+  const audioTarget = useAudioSelectionTarget({
     artifact,
     audioTrackVolumes,
+    edit: recordingTimelineEdit,
+    onEditChange: onRecordingTimelineEditChange,
     onSelectedTrackVolumeChange,
     selectedTrack,
   });

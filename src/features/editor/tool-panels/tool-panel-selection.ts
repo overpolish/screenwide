@@ -54,9 +54,9 @@ export type ToolPanelShortcutSelection = {
 /**
  * What the selection panel shows for a recorded audio track.
  *
- * An audio track is neither placed nor drawn: it is heard, so the only thing
- * there is to set for it is how loud it is played back, in decibels against
- * the level it was recorded at.
+ * An audio track is neither placed nor drawn: it is heard, so what there is
+ * to set for it is how loud it is played back, in decibels against the level
+ * it was recorded at, and for a microphone how clean the speech in it is.
  */
 export type ToolPanelAudioSelection = {
   /** How much the track is lifted or lowered, 0 being the recorded level. */
@@ -65,6 +65,34 @@ export type ToolPanelAudioSelection = {
   /** The track's own name: "Microphone", "System audio", or "Audio" where the
    * recording did not say. */
   label: string;
+  /** The speech tools, offered only for a microphone: other tracks have no
+   * speech to find pauses in or noise to take out from under. */
+  microphone?: ToolPanelMicrophone;
+};
+
+/**
+ * Where the microphone's speech tools stand. Both work from the same listen
+ * through the track for speech, which runs once, the first time either asks.
+ */
+export type ToolPanelMicrophone = {
+  /** Everything but the voice taken out of the track: `cleaning` while the
+   * track is cleaned, which happens once and can take a while. */
+  noise: "cleaning" | "off" | "on";
+  /** How far cleaning has got, 0 to 1, while `noise` is `cleaning`. */
+  noiseProgress: number;
+  silences: {
+    /** How many pauses Remove cut that are still cut. */
+    count: number;
+    /** How much shorter those cuts make the recording. */
+    durationMs: number;
+    /** How far listening has got, 0 to 1, while `status` is `finding`;
+     * `null` while it is not known to need listening, as when the track
+     * was listened through before and finding takes no time. */
+    progress: number | null;
+    /** `finding` while the track is listened through, and `none-found` after
+     * a Remove that found no pause long enough to cut. */
+    status: "finding" | "idle" | "none-found";
+  };
 };
 
 export type ToolPanelSelection =

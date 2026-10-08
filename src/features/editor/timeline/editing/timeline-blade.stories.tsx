@@ -7,6 +7,7 @@ import { RecordingTimelineThumbnail } from "../../types";
 import { fitTimelineViewport } from "../timeline-viewport";
 import { TimelineVideoClip } from "../tracks/timeline-video-clip";
 
+import { restoreRecordingTimelineCut } from "./recording-timeline-cuts";
 import {
   createRecordingTimelineEdit,
   cutRecordingTimeline,
@@ -62,6 +63,9 @@ function BladePreview({
     previewAt: setPreview,
     previewPosition: preview,
     rangeSelection: null,
+    restoreCut: (cut) => {
+      setEdit((current) => restoreRecordingTimelineCut(current, cut));
+    },
     selectSegment: setSelected,
     selectedSegmentId: selected,
     setActive: () => undefined,

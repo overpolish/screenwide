@@ -1,10 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RotateCcw } from "lucide-react";
-
 import { Button } from "../../../../components/base/button/button";
-import { IconButton } from "../../../../components/base/button/icon-button";
 import { Switch } from "../../../../components/base/switch/switch";
 import { Text } from "../../../../components/base/text/text";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
@@ -14,6 +11,7 @@ import { t } from "../../../../i18n/i18n";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
+import { AudioSelectionRows } from "./audio-selection-rows";
 import { ShortcutSelectionRows } from "./shortcut-selection-rows";
 
 /**
@@ -31,7 +29,8 @@ import { ShortcutSelectionRows } from "./shortcut-selection-rows";
  * and the content inside it put back in the middle.
  *
  * An audio track is heard rather than seen: there is nothing to place, so the
- * panel offers only how loud it is played back.
+ * panel offers how loud it is played back, and for a microphone the speech
+ * tools.
  *
  * A keyboard shortcut is drawn rather than placed: it has no source pixels to
  * be sized against, no corners and no pad, so it is shown as the share of the
@@ -55,42 +54,13 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
     );
   }
 
-  // The track is played at the level it was recorded at until it is moved, so
-  // the reset is out of reach exactly while it is already there.
   if (selection.kind === "audio") {
     return (
-      <ControlRow title={t("editor-panels-volume")}>
-        {(controlProps) => (
-          <div
-            {...controlProps}
-            className="flex items-center gap-control"
-            role="group"
-          >
-            <IconButton
-              aria-label={t("editor-panels-reset-volume")}
-              isDisabled={isLocked || selection.decibels === 0}
-              onPress={() => {
-                change({ audioVolume: 0 });
-              }}
-            >
-              <RotateCcw />
-            </IconButton>
-            <SliderNumberField
-              aria-label={t("editor-panels-volume")}
-              className="w-48"
-              isDisabled={isLocked}
-              maxValue={12}
-              minValue={-60}
-              onChange={(decibels) => {
-                change({ audioVolume: decibels });
-              }}
-              rightSection="dB"
-              step={1}
-              value={selection.decibels}
-            />
-          </div>
-        )}
-      </ControlRow>
+      <AudioSelectionRows
+        change={change}
+        isLocked={isLocked}
+        selection={selection}
+      />
     );
   }
 

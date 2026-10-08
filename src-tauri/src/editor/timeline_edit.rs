@@ -7,7 +7,9 @@ mod validation;
 use validation::validate;
 mod initial_edit;
 pub(in crate::editor) use initial_edit::persist_initial_edit;
+mod silences;
 mod stacking;
+pub use silences::RecordingSilenceCut;
 
 pub(crate) use time_mapping::source_after_output_duration_us;
 pub(crate) use time_mapping::source_before_output_duration_us;
@@ -73,6 +75,10 @@ pub struct RecordingTimelineEdit {
   /// Sorted by start, never overlapping; see [`super::scenes`].
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub scene_clips: Vec<super::scenes::RecordingSceneClip>,
+  /// What Remove silences cut, for Restore all to bring back; see
+  /// [`silences`].
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub silence_cuts: Vec<RecordingSilenceCut>,
   pub next_segment_id: u64,
   pub segments: Vec<RecordingTimelineSegment>,
 }

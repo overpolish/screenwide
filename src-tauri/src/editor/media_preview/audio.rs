@@ -3,14 +3,18 @@
 
 use super::*;
 
-pub(super) fn waveform(
+/// The track's waveform as it is heard: from the file it was cleaned into
+/// when `cleaned` is `Some`, otherwise from the recording.
+pub fn waveform(
   source: &Path,
   track: &RecordingAudioTrack,
   duration_ms: u64,
+  cleaned: Option<&Path>,
 ) -> Result<Vec<f32>, String> {
+  let (source, stream_index) = cleaned.map_or((source, track.stream_index), |file| (file, 0));
   peaks(
     source,
-    track.stream_index,
+    stream_index,
     &track.label,
     (0, duration_ms),
     WAVEFORM_POINTS,
@@ -104,21 +108,29 @@ pub(in crate::editor) fn peaks(
   Ok(peaks)
 }
 
+/// The recording's tracks with their waveforms. `cleaned` lists the tracks
+/// heard cleaned, with the files they are cleaned into, so the waveforms and
+/// the meter show what is heard.
 pub fn prepare(
   artifact_id: u64,
   source: &Path,
   duration_ms: u64,
   tracks: &[RecordingAudioTrack],
+  cleaned: &[(usize, PathBuf)],
 ) -> Result<RecordingPreview, String> {
   let mut prepared = Vec::with_capacity(tracks.len());
   for track in tracks {
+    let file = cleaned
+      .iter()
+      .find(|(stream, _)| *stream == track.stream_index)
+      .map(|(_, file)| file.as_path());
     // Nothing is written, so a failure part-way through leaves nothing behind
     // to tidy up - only a preview the window will not show.
     prepared.push(PreparedAudioTrack {
       kind: track.kind,
       label: track.label.clone(),
       stream_index: track.stream_index,
-      waveform: waveform(source, track, duration_ms)?,
+      waveform: waveform(source, track, duration_ms, file)?,
     });
   }
 

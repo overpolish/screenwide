@@ -16,6 +16,7 @@ fn decodes_tracks_into_independent_pcm_channels() {
   };
   let rendered = args(
     &sources,
+    &channels(&sources),
     &[RecordingPreviewPlaybackRange {
       source_start_ms: 250,
       source_end_ms: 1_000,
@@ -44,6 +45,7 @@ fn concatenates_retained_ranges_before_opening_the_output_stream() {
   };
   let rendered = args(
     &sources,
+    &channels(&sources),
     &[
       RecordingPreviewPlaybackRange {
         source_start_ms: 250,
@@ -80,6 +82,7 @@ fn applies_atempo_and_scales_audio_duration() {
   };
   let rendered = args(
     &sources,
+    &channels(&sources),
     &[RecordingPreviewPlaybackRange {
       source_start_ms: 0,
       source_end_ms: 1_000,
@@ -115,10 +118,57 @@ fn scales_cut_fades_by_the_effective_playback_rate() {
       playback_rate: 1.0,
     },
   ];
-  let rendered = args(&sources, &ranges, &config, 2.0).join(" ");
+  let rendered = args(&sources, &channels(&sources), &ranges, &config, 2.0).join(" ");
 
   assert!(rendered.contains("afade=t=out:st=0.122:d=0.003"));
   assert!(rendered.contains("apad=whole_dur=0.375"));
+}
+
+#[test]
+fn plays_a_cleaned_track_from_its_own_file_at_the_same_place() {
+  let sources = test_sources();
+  *sources.noise.write().unwrap() = crate::editor::recording_preview_player::PreviewNoise {
+    cleaned: vec![(1, "/tmp/noise-1.flac".into())],
+    enabled: vec![1],
+  };
+  let config = StreamConfig {
+    channels: 2,
+    sample_rate: 48_000,
+    buffer_size: cpal::BufferSize::Default,
+  };
+  let channels = channels(&sources);
+  let rendered = args(
+    &sources,
+    &channels,
+    &[RecordingPreviewPlaybackRange {
+      source_start_ms: 250,
+      source_end_ms: 1_000,
+      playback_rate: 1.0,
+    }],
+    &config,
+    1.0,
+  )
+  .join(" ");
+
+  assert!(rendered.contains("-ss 0.250 -i /tmp/noise-1.flac"));
+  assert!(rendered.contains("[1:a:0]atrim"));
+  assert!(rendered.contains("amerge=inputs=3[tracks]"));
+  // Both the microphone and its cleaned file are decoded; the switch picks
+  // which is heard.
+  let mix = Mix {
+    audio_volumes: Default::default(),
+    channels: channels.clone(),
+    noise: Arc::clone(&sources.noise),
+    selected_audio: Arc::new(RwLock::new(vec![0, 1])),
+  };
+  let heard = |enabled: &[usize]| {
+    channels
+      .iter()
+      .map(|channel| mix.hears(channel, &[0, 1], enabled))
+      .collect::<Vec<_>>()
+  };
+  assert_eq!(heard(&[1]), [true, false, true]);
+  assert_eq!(heard(&[]), [true, true, false]);
 }
 
 fn test_sources() -> PlayerSources {
@@ -161,6 +211,7 @@ fn test_sources() -> PlayerSources {
     preview_surface: None,
     primary_kind: PrimaryRecordingKind::Screen,
     screen_path: "/tmp/recording.mov".into(),
+    noise: Default::default(),
     video_muted: Default::default(),
   }
 }

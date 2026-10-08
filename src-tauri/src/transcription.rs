@@ -17,6 +17,6 @@ mod download;
 pub(crate) mod language;
 mod models;
 pub(crate) mod notes;
-mod runner;
+pub(crate) mod runner;
 #[cfg(test)]
 mod tests;

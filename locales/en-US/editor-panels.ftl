@@ -130,3 +130,17 @@ editor-panels-size-large = Large
 
 editor-panels-volume = Volume
 editor-panels-reset-volume = Reset volume
+editor-panels-reduce-noise = Reduce noise
+editor-panels-noise-cleaning = Removing noise
+editor-panels-silences = Silences
+editor-panels-remove = Remove
+editor-panels-restore-all = Restore all
+editor-panels-restore-silences = Restore all silences
+editor-panels-silences-finding = Finding pauses
+editor-panels-silences-none = No long pauses found
+# $duration is how much shorter the cuts make the recording, such as 00:48.
+editor-panels-silences-removed =
+    { $count ->
+        [one] One cut, { $duration } shorter
+       *[other] { $count } cut, { $duration } shorter
+    }

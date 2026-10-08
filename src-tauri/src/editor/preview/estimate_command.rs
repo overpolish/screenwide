@@ -118,7 +118,11 @@ pub async fn estimate_recording_export(
       &tracks,
       &enabled_stream_indices,
       &audio_track_volumes,
-    )?;
+    )?
+    .with_cleaned(crate::editor::speech::noise::cleaned_tracks(
+      project.parent().unwrap_or(std::path::Path::new(".")),
+      &enabled_stream_indices,
+    ));
     let layout = if collapse_audio {
       track_selection::AudioLayout::Mixdown
     } else {

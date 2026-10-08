@@ -78,12 +78,18 @@ export type ToolPanelPatch = Partial<
   keyboardEffects?: Partial<KeyboardEffectSettings>;
   /** Put the selected layer's content in the middle of its padded frame. */
   recenterSelection?: true;
+  /** Take the room's steady noise out of the selected microphone, or put it
+   * back. */
+  reduceNoise?: boolean;
   /** Forget a colour of your own, by the colour itself. */
   removeAnnotationColor?: string;
   /** Forget a saved background, by its id. */
   removePreset?: string;
   /** Forget a scene template, by its id. */
   removeSceneTemplate?: string;
+  /** Cut the long pauses out of the selected microphone's recording where
+   * nothing happens on screen. */
+  removeSilences?: true;
   /** Put every shortcut's own placement away, the global one left as it is. */
   resetAllShortcuts?: true;
   /** Show the whole source again, the committed crop taken away. */
@@ -100,6 +106,8 @@ export type ToolPanelPatch = Partial<
   resetShortcut?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
+  /** Bring back every pause Remove cut that is still cut. */
+  restoreSilences?: true;
   /** Turn the chosen annotation round, so its head points the other way, or
    * mirror the chosen image. */
   reverseAnnotation?: true;

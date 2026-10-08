@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
+import { MicrophoneTools } from "../../recording/microphone/use-microphone-tools";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -129,6 +130,8 @@ const screenshotSelectionTarget = (
 export type EditorAudioSelectionTarget = {
   /** Play the track this much louder or quieter than it was recorded. */
   applyVolume: (decibels: number) => void;
+  /** The speech tools, where the track is the microphone. */
+  microphone: MicrophoneTools | null;
   selection: ToolPanelAudioSelection;
 };
 
@@ -136,6 +139,7 @@ type AudioSelectionTargetInputs = {
   artifact: EditorArtifact | null;
   audioTrackVolumes: AudioTrackVolume[];
   selectedTrack: string | null;
+  microphone?: MicrophoneTools | null;
   onSelectedTrackVolumeChange?: (decibels: number) => void;
 };
 
@@ -148,6 +152,7 @@ type AudioSelectionTargetInputs = {
 export const editorAudioSelectionTarget = ({
   artifact,
   audioTrackVolumes,
+  microphone,
   onSelectedTrackVolumeChange,
   selectedTrack,
 }: AudioSelectionTargetInputs): EditorAudioSelectionTarget | null => {
@@ -162,16 +167,19 @@ export const editorAudioSelectionTarget = ({
     (audio) => audio.streamIndex === streamIndex,
   );
   if (!track) return null;
+  const tools = track.kind === "microphone" ? (microphone ?? null) : null;
   return {
     applyVolume: (decibels) => {
       onSelectedTrackVolumeChange?.(decibels);
     },
+    microphone: tools,
     selection: {
       decibels:
         audioTrackVolumes.find((volume) => volume.streamIndex === streamIndex)
           ?.decibels ?? 0,
       kind: "audio",
       label: track.label || t("editor-panels-audio"),
+      ...(tools ? { microphone: tools.microphone } : {}),
     },
   };
 };
@@ -226,12 +234,27 @@ export const selectionPanelHandlers = (
   },
 });
 
-/** The volume the audio selection offers, answered against the selected
- * track. */
+/** The volume and speech tools the audio selection offers, answered against
+ * the selected track. */
 export const audioPanelHandlers = (
   target: EditorAudioSelectionTarget | null,
-): Pick<ToolPanelHandlers, "onAudioVolumeChange"> => ({
+): Pick<
+  ToolPanelHandlers,
+  | "onAudioVolumeChange"
+  | "onReduceNoiseChange"
+  | "onSilencesRemove"
+  | "onSilencesRestore"
+> => ({
   onAudioVolumeChange: (decibels) => {
     target?.applyVolume(decibels);
+  },
+  onReduceNoiseChange: (enabled) => {
+    target?.microphone?.reduceNoise(enabled);
+  },
+  onSilencesRemove: () => {
+    target?.microphone?.removeSilences();
+  },
+  onSilencesRestore: () => {
+    target?.microphone?.restoreSilences();
   },
 });

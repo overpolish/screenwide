@@ -60,6 +60,35 @@ fn volume_changes_require_processing_and_filter_the_selected_track() {
 }
 
 #[test]
+fn plays_a_cleaned_track_from_its_file_instead_of_copying_it() {
+  let selection = TrackSelection::new(&tracks(2), &[0, 1])
+    .with_cleaned(vec![(1, PathBuf::from("/tmp/noise-1.flac"))]);
+  assert!(selection.needs_processing(&tracks(2), AudioLayout::SeparateTracks));
+  let args = selection.audio_args(AudioLayout::SeparateTracks).join(" ");
+  assert!(args.contains("amovie=/tmp/noise-1.flac[clean1];"));
+  assert!(args.contains("[0:a:0]volume=0dB[track0]"));
+  assert!(args.contains("[clean1]volume=0dB[track1]"));
+}
+
+#[test]
+fn ignores_a_cleaned_file_for_a_track_left_out() {
+  let selection = TrackSelection::new(&tracks(2), &[0])
+    .with_cleaned(vec![(1, PathBuf::from("/tmp/noise-1.flac"))]);
+  assert_eq!(
+    selection.audio_args(AudioLayout::SeparateTracks),
+    ["-map", "0:a:0", "-c:a", "copy"]
+  );
+}
+
+#[test]
+fn escapes_a_path_for_both_readings_of_a_filter_graph() {
+  assert_eq!(
+    arguments::filter_path(std::path::Path::new("/a b/it's, [x];y:z.flac")),
+    r"/a b/it\\\'s\, \[x\]\;y\\:z.flac"
+  );
+}
+
+#[test]
 fn rejects_volume_outside_the_inspector_range() {
   assert_eq!(
     TrackSelection::with_volumes(

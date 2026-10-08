@@ -4,10 +4,8 @@
 import { PointerEvent as ReactPointerEvent, useRef } from "react";
 
 import { RecordingTimelineThumbnail, RecordingVideoTrackId } from "../../types";
-import {
-  TimelineBladeController,
-  TimelineSegments,
-} from "../editing/timeline-blade";
+import { TimelineBladeController } from "../editing/timeline-blade";
+import { TimelineSegments } from "../editing/timeline-segments";
 import {
   timelineXToFraction,
   TimelineViewportState,

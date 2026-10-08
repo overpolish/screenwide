@@ -81,6 +81,7 @@ fn exported(source: &Path, destination: &Path, clips: &[RecordingAnnotationClip]
       artifact_id: 1,
       next_segment_id: 1,
       keyboard_deletions: Box::default(),
+      silence_cuts: Vec::new(),
       scene_clips: Vec::new(),
       annotation_clips: clips.to_vec(),
       segments: vec![RecordingTimelineSegment {

@@ -14,6 +14,7 @@ fn speed_plan(rate: f64) -> TimelinePlan {
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::<RecordingTimelineKeyboardDeletions>::default(),
+      silence_cuts: Vec::new(),
       scene_clips: Vec::new(),
       next_segment_id: 2,
       segments: vec![RecordingTimelineSegment {

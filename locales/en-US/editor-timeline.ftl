@@ -39,6 +39,10 @@ editor-timeline-zoom-out-label = Zoom timeline out
 editor-timeline-zoom-in = Zoom in
 editor-timeline-zoom-in-label = Zoom timeline in
 editor-timeline-fit = Fit timeline
+# A part of the recording that was cut out, put back by pressing its marker
+# over the ruler. $duration is its length, such as 2.4 sec.
+editor-timeline-restore-cut = Restore { $duration } cut
+editor-timeline-restore-cut-at = Restore the { $duration } cut at { $time }
 
 ## Tracks. $track names a track.
 

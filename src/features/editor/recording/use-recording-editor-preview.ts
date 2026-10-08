@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
 import { getRecordingPreview } from "../api";
@@ -39,8 +40,24 @@ export function useRecordingEditorPreview({
         });
       });
 
+    // Reduce noise changes what a track sounds like, and with it the
+    // waveform: the app hands the waveforms over again when it does.
+    let stop: (() => void) | undefined;
+    listen<RecordingPreview>("editor://recording-preview", (event) => {
+      if (event.payload.artifactId !== artifactId) return;
+      setState({ artifactId, error: null, preview: event.payload });
+    })
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else stop = unlisten;
+      })
+      .catch((cause: unknown) => {
+        console.error("Could not follow the recording's waveforms", cause);
+      });
+
     return () => {
       disposed = true;
+      stop?.();
     };
   }, [artifactId, shouldPrepare]);
 

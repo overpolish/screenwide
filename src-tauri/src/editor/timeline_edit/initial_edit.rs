@@ -27,6 +27,7 @@ pub(in crate::editor) fn persist_initial_edit(
       annotation_clips,
       artifact_id,
       keyboard_deletions: Box::default(),
+      silence_cuts: Vec::new(),
       scene_clips,
       next_segment_id: 1,
       segments: vec![RecordingTimelineSegment {

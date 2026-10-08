@@ -34,6 +34,8 @@ mod held_timelines;
 pub(crate) mod keyboard_command;
 mod layout;
 mod lifecycle;
+mod noise;
+pub(crate) use noise::{refresh as refresh_noise, PreviewNoise};
 mod output_gesture;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod pin_cache;

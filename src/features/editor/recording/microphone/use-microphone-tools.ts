@@ -1,0 +1,206 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { useEffect, useRef, useState } from "react";
+
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import {
+  recordingTimelineSilenceSummary,
+  removeRecordingTimelineSilences,
+  restoreRecordingTimelineSilences,
+} from "../../timeline/editing/recording-timeline-silences";
+import { ToolPanelMicrophone } from "../../tool-panels/tool-panel-store";
+import { EditorArtifact } from "../../types";
+import { useEditorEditGesture } from "../../use-editor-edit-history";
+
+import {
+  getRecordingNoiseReduction,
+  listenToMicrophoneProgress,
+  NoiseReduction,
+  planRecordingSilences,
+  setRecordingNoiseReduction,
+} from "./microphone-api";
+
+export type MicrophoneTools = {
+  microphone: ToolPanelMicrophone;
+  /** Take the room's steady noise out of the microphone, or put it back. */
+  reduceNoise: (enabled: boolean) => void;
+  /** Cut the long pauses out, as one step of the edit history. */
+  removeSilences: () => void;
+  /** Bring back every pause Remove cut, as one step of the edit history. */
+  restoreSilences: () => void;
+};
+
+type Noise = {
+  artifactId: number;
+  /** Whether the app is still carrying out the last turn of the switch. */
+  isPending: boolean;
+  state: NoiseReduction;
+};
+/** How far each tool has got, 0 to 1, for the recording it is working on;
+ * `null` until the app says the tool has work to do, which it does not when
+ * what it makes is kept from before. */
+type Progress = {
+  artifactId: number;
+  noise: number | null;
+  silences: number | null;
+};
+const noProgress = (artifactId: number): Progress => ({
+  artifactId,
+  noise: null,
+  silences: null,
+});
+type Silences =
+  | { artifactId: number; status: "finding" }
+  | { artifactId: number; edit: RecordingTimelineEdit; status: "none-found" };
+
+/**
+ * The microphone's speech tools for the recording open, where it has a
+ * microphone. Removing silences listens in the background and cuts from the
+ * edit as it stands when the listen ends, so editing meanwhile is kept.
+ */
+export function useMicrophoneTools({
+  artifact,
+  edit,
+  onEditChange,
+}: {
+  artifact: EditorArtifact | null;
+  edit: RecordingTimelineEdit | null | undefined;
+  onEditChange?: (edit: RecordingTimelineEdit) => void;
+}): MicrophoneTools | null {
+  const editGesture = useEditorEditGesture();
+  const recording = artifact?.kind === "recording" ? artifact : null;
+  const artifactId =
+    recording?.audioTracks.some((track) => track.kind === "microphone") === true
+      ? recording.id
+      : null;
+  const [noise, setNoise] = useState<Noise | null>(null);
+  const [silences, setSilences] = useState<Silences | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const editRef = useRef(edit);
+  editRef.current = edit;
+
+  useEffect(() => {
+    if (artifactId === null) return;
+    let current = true;
+    getRecordingNoiseReduction(artifactId)
+      .then((state) => {
+        if (current) setNoise({ artifactId, isPending: false, state });
+      })
+      .catch((cause: unknown) => {
+        console.error("Could not read the microphone's noise choice", cause);
+      });
+    return () => {
+      current = false;
+    };
+  }, [artifactId]);
+
+  useEffect(() => {
+    if (artifactId === null) return;
+    let stop: (() => void) | undefined;
+    let current = true;
+    listenToMicrophoneProgress(({ artifactId: id, fraction, tool }) => {
+      if (id !== artifactId) return;
+      setProgress((previous) => ({
+        ...(previous?.artifactId === artifactId
+          ? previous
+          : noProgress(artifactId)),
+        [tool]: fraction,
+      }));
+    })
+      .then((unlisten) => {
+        if (current) stop = unlisten;
+        else unlisten();
+      })
+      .catch((cause: unknown) => {
+        console.error("Could not follow the microphone tools", cause);
+      });
+    return () => {
+      current = false;
+      stop?.();
+    };
+  }, [artifactId]);
+
+  if (artifactId === null || !recording || !edit) return null;
+
+  const commit = (next: RecordingTimelineEdit) => {
+    editGesture.beginGesture();
+    onEditChange?.(next);
+    editGesture.endGesture();
+  };
+  const noiseState = noise?.artifactId === artifactId ? noise.state : "off";
+  const progressNow: Progress =
+    progress?.artifactId === artifactId ? progress : noProgress(artifactId);
+  const status =
+    silences?.artifactId !== artifactId
+      ? "idle"
+      : silences.status === "finding"
+        ? "finding"
+        : silences.edit === edit
+          ? "none-found"
+          : "idle";
+
+  return {
+    microphone: {
+      noise:
+        noise?.artifactId === artifactId &&
+        noise.isPending &&
+        progressNow.noise !== null
+          ? "cleaning"
+          : noiseState,
+      noiseProgress: progressNow.noise ?? 0,
+      silences: {
+        ...recordingTimelineSilenceSummary(edit, recording.durationMs),
+        progress: progressNow.silences,
+        status,
+      },
+    },
+    reduceNoise: (enabled) => {
+      // The switch turns at once; the bar waits until the app says there is
+      // cleaning to do, so turning on a track cleaned before never shows it.
+      setNoise({
+        artifactId,
+        isPending: enabled,
+        state: enabled ? "on" : "off",
+      });
+      setProgress({ ...progressNow, noise: null });
+      setRecordingNoiseReduction(artifactId, enabled)
+        .then((state: NoiseReduction) => {
+          setNoise({ artifactId, isPending: false, state });
+        })
+        .catch((cause: unknown) => {
+          console.error("Could not change the microphone's noise", cause);
+          setNoise({ artifactId, isPending: false, state: noiseState });
+        });
+    },
+    removeSilences: () => {
+      if (!onEditChange) return;
+      setSilences({ artifactId, status: "finding" });
+      setProgress({ ...progressNow, silences: null });
+      planRecordingSilences(artifactId)
+        .then((cuts) => {
+          const latest = editRef.current;
+          if (latest?.artifactId !== artifactId) return;
+          const next = removeRecordingTimelineSilences(
+            latest,
+            cuts,
+            recording.durationMs,
+          );
+          if (next === latest) {
+            setSilences({ artifactId, edit: latest, status: "none-found" });
+            return;
+          }
+          setSilences(null);
+          commit(next);
+        })
+        .catch((cause: unknown) => {
+          console.error("Could not find the pauses to cut", cause);
+          setSilences(null);
+        });
+    },
+    restoreSilences: () => {
+      const next = restoreRecordingTimelineSilences(edit);
+      if (next !== edit) commit(next);
+    },
+  };
+}

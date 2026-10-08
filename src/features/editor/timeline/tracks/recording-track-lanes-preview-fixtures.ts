@@ -8,6 +8,7 @@ import {
   RecordingPreviewLayout,
   RecordingTimelineThumbnails,
 } from "../../types";
+import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import { RecordingMoment } from "../moments/recording-moments";
 
 /** What the timeline preview stories lay onto their lanes. */
@@ -141,3 +142,30 @@ export const STORY_MOMENTS: RecordingMoment[] = [
     sourceMs: 91_000,
   },
 ];
+
+/** `count` audio tracks with waveforms of their own, the first named as the
+ * system audio a recording carries. */
+export const storyAudioTracks = (count: number) =>
+  Array.from({ length: count }, (_, track) => ({
+    kind: "system-audio" as const,
+    label: track === 0 ? "System audio" : `Audio ${(track + 1).toString()}`,
+    streamIndex: track,
+    waveform: Array.from(
+      { length: 240 },
+      (_, index) =>
+        0.15 + Math.abs(Math.sin(index * 0.19 + track * 0.7)) * 0.75,
+    ),
+  }));
+
+/** Three pauses cut out of the recording, as removing silences leaves it:
+ * 2.4 s, 3.6 s and 1.2 s. */
+export const STORY_CUT_EDIT: RecordingTimelineEdit = {
+  artifactId: 1,
+  nextSegmentId: 4,
+  segments: [
+    { id: 0, sourceEnd: 0.1, sourceStart: 0 },
+    { id: 1, sourceEnd: 0.3, sourceStart: 0.12 },
+    { id: 2, sourceEnd: 0.55, sourceStart: 0.33 },
+    { id: 3, sourceEnd: 1, sourceStart: 0.56 },
+  ],
+};

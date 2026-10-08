@@ -4,10 +4,8 @@
 import { PointerEvent as ReactPointerEvent, useMemo, useRef } from "react";
 
 import { PreparedAudioTrack } from "../../types";
-import {
-  TimelineBladeController,
-  TimelineSegments,
-} from "../editing/timeline-blade";
+import { TimelineBladeController } from "../editing/timeline-blade";
+import { TimelineSegments } from "../editing/timeline-segments";
 import {
   timelineXToFraction,
   TimelineViewportState,

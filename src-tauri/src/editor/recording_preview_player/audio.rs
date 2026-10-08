@@ -5,7 +5,7 @@ pub(super) mod clock;
 mod filter;
 
 mod output;
-use output::output_stream;
+use output::{output_stream, Mix};
 
 use std::{
   collections::VecDeque,
@@ -27,6 +27,40 @@ use self::{clock::AudioClock, filter::args};
 use super::{PlayerSources, RecordingPreviewPlaybackRange};
 use crate::editor::{media_preview, AudioTrackVolume};
 
+/// One channel of what FFmpeg decodes for the preview: a recorded track, or
+/// that track's cleaned file, decoded beside it so the noise switch can
+/// change which is heard while it plays.
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct Channel {
+  pub stream_index: usize,
+  pub cleaned: Option<std::path::PathBuf>,
+}
+
+fn channels(sources: &PlayerSources) -> Vec<Channel> {
+  let noise = sources
+    .noise
+    .read()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  let tracks = sources.audio_tracks.iter().map(|track| Channel {
+    cleaned: None,
+    stream_index: track.stream_index,
+  });
+  let cleaned = noise
+    .cleaned
+    .iter()
+    .filter(|(stream, _)| {
+      sources
+        .audio_tracks
+        .iter()
+        .any(|track| track.stream_index == *stream)
+    })
+    .map(|(stream, path)| Channel {
+      cleaned: Some(path.clone()),
+      stream_index: *stream,
+    });
+  tracks.chain(cleaned).collect()
+}
+
 const MAX_QUEUED_SECONDS: usize = 2;
 const PREBUFFER_MILLISECONDS: usize = 120;
 
@@ -46,21 +80,20 @@ pub(super) fn spawn(
   child: Arc<Mutex<Option<Child>>>,
 ) -> Result<AudioPlayback, String> {
   let queue = Arc::new(Mutex::new(VecDeque::new()));
-  let stream_indices = sources
-    .audio_tracks
-    .iter()
-    .map(|track| track.stream_index)
-    .collect::<Vec<_>>();
-  let track_count = stream_indices.len();
+  let channels = channels(sources);
+  let track_count = channels.len();
   let (stream, clock, config) = output_stream(
     Arc::clone(&queue),
-    Arc::clone(&selected_audio),
-    Arc::clone(&audio_volumes),
-    stream_indices,
+    Mix {
+      audio_volumes: Arc::clone(&audio_volumes),
+      channels: channels.clone(),
+      noise: Arc::clone(&sources.noise),
+      selected_audio: Arc::clone(&selected_audio),
+    },
   )?;
   let mut process = media_preview::ffmpeg_command();
   process
-    .args(args(sources, ranges, &config, playback_rate))
+    .args(args(sources, &channels, ranges, &config, playback_rate))
     .stdout(Stdio::piped())
     .stderr(Stdio::null());
   let mut process = process

@@ -6,6 +6,7 @@ use super::*;
 struct RecordingPreviewSources {
   duration_ms: u64,
   path: PathBuf,
+  project_folder: PathBuf,
   tracks: Vec<RecordingAudioTrack>,
 }
 
@@ -84,11 +85,17 @@ pub async fn get_recording_preview(
     }
 
     let sources = recording_sources(&state, artifact_id)?;
+    let streams: Vec<usize> = sources
+      .tracks
+      .iter()
+      .map(|track| track.stream_index)
+      .collect();
     let preview = media_preview::prepare(
       artifact_id,
       &sources.path,
       sources.duration_ms,
       &sources.tracks,
+      &crate::editor::speech::noise::cleaned_tracks(&sources.project_folder, &streams),
     )?;
     ensure_current(&state, artifact_id)?;
     state
@@ -100,6 +107,70 @@ pub async fn get_recording_preview(
   })
   .await
   .map_err(|error| error.to_string())?
+}
+
+/// The event that hands the editor the recording's waveforms again after one
+/// of them changed.
+const PREVIEW_EVENT: &str = "editor://recording-preview";
+
+/// Reads the `stream`th track's waveform again as it is now heard, cleaned
+/// or not, once the waveforms have been prepared, and hands the editor the
+/// result, so its waveform and meter follow Reduce noise.
+pub(crate) fn refresh_waveform(
+  app: &AppHandle,
+  artifact_id: u64,
+  stream: usize,
+) -> Result<(), String> {
+  let state = app.state::<EditorState>();
+  let _preparing = state
+    .recording_preview_preparation
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  let is_prepared = state
+    .recording_preview
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .as_ref()
+    .is_some_and(|preview| preview.artifact_id == artifact_id);
+  if !is_prepared {
+    // The first preparation reads the waveforms as heard, whenever it runs.
+    return Ok(());
+  }
+  let sources = recording_sources(&state, artifact_id)?;
+  let Some(track) = sources
+    .tracks
+    .iter()
+    .find(|track| track.stream_index == stream)
+  else {
+    return Ok(());
+  };
+  let cleaned = crate::editor::speech::noise::cleaned_tracks(&sources.project_folder, &[stream]);
+  let waveform = media_preview::waveform(
+    &sources.path,
+    track,
+    sources.duration_ms,
+    cleaned.first().map(|(_, file)| file.as_path()),
+  )?;
+  ensure_current(&state, artifact_id)?;
+  let mut cached = state
+    .recording_preview
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  let Some(preview) = cached
+    .as_mut()
+    .filter(|preview| preview.artifact_id == artifact_id)
+  else {
+    return Ok(());
+  };
+  if let Some(prepared) = preview
+    .tracks
+    .iter_mut()
+    .find(|track| track.stream_index == stream)
+  {
+    prepared.waveform = waveform;
+  }
+  let _ = app.emit(PREVIEW_EVENT, preview.clone());
+  Ok(())
 }
 
 fn recording_sources(
@@ -116,6 +187,7 @@ fn recording_sources(
     duration_ms,
     id,
     path,
+    project,
     ..
   }) = artifact.as_ref()
   else {
@@ -127,6 +199,9 @@ fn recording_sources(
   Ok(RecordingPreviewSources {
     duration_ms: *duration_ms,
     path: path.clone(),
+    project_folder: project
+      .parent()
+      .map_or_else(|| PathBuf::from("."), Path::to_path_buf),
     tracks: audio_tracks.clone(),
   })
 }

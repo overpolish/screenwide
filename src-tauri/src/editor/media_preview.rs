@@ -34,7 +34,7 @@ mod tools;
 mod windows;
 
 pub(in crate::editor) use audio::peaks;
-pub use audio::prepare;
+pub use audio::{prepare, waveform};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(in crate::editor) use bake::bake_geometry;
 #[cfg(any(target_os = "macos", target_os = "windows"))]

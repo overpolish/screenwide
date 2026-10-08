@@ -4,6 +4,7 @@
 use cpal::StreamConfig;
 
 use super::super::{PlayerSources, RecordingPreviewPlaybackRange};
+use super::Channel;
 
 const CUT_FADE_MS: u64 = 3;
 
@@ -53,25 +54,41 @@ fn cut_fades(
 
 pub(super) fn args(
   sources: &PlayerSources,
+  channels: &[Channel],
   ranges: &[RecordingPreviewPlaybackRange],
   config: &StreamConfig,
   playback_rate: f64,
 ) -> Vec<String> {
-  let stream_indices = sources
-    .audio_tracks
-    .iter()
-    .map(|track| track.stream_index)
-    .collect::<Vec<_>>();
+  let start = seconds(ranges[0].source_start_ms);
   let mut args = vec![
     "-hide_banner".to_owned(),
     "-loglevel".to_owned(),
     "error".to_owned(),
     "-nostdin".to_owned(),
     "-ss".to_owned(),
-    seconds(ranges[0].source_start_ms),
+    start.clone(),
     "-i".to_owned(),
     sources.screen_path.to_string_lossy().into_owned(),
   ];
+  // A cleaned track is a file of its own, sought to the same place: each is
+  // an input after the recording, in channel order.
+  let mut next_input = 1;
+  let labels: Vec<String> = channels
+    .iter()
+    .map(|channel| match &channel.cleaned {
+      None => format!("[0:a:{}]", channel.stream_index),
+      Some(path) => {
+        args.extend([
+          "-ss".to_owned(),
+          start.clone(),
+          "-i".to_owned(),
+          path.to_string_lossy().into_owned(),
+        ]);
+        next_input += 1;
+        format!("[{}:a:0]", next_input - 1)
+      }
+    })
+    .collect();
   let first_start_ms = ranges[0].source_start_ms;
   let retained = seconds(
     ranges
@@ -83,22 +100,19 @@ pub(super) fn args(
   );
   let mut filter = String::new();
   let mut merged_inputs = String::new();
-  for (track_position, stream_index) in stream_indices.iter().enumerate() {
+  for (track_position, label) in labels.iter().enumerate() {
     if ranges.len() > 1 {
       let split_inputs = (0..ranges.len())
         .map(|range_index| format!("[track{track_position}source{range_index}]"))
         .collect::<String>();
-      filter.push_str(&format!(
-        "[0:a:{stream_index}]asplit={}{split_inputs};",
-        ranges.len()
-      ));
+      filter.push_str(&format!("{label}asplit={}{split_inputs};", ranges.len()));
     }
     let mut range_inputs = String::new();
     for (range_index, range) in ranges.iter().enumerate() {
       let relative_start = range.source_start_ms.saturating_sub(first_start_ms);
       let relative_end = range.source_end_ms.saturating_sub(first_start_ms);
       let source = if ranges.len() == 1 {
-        format!("[0:a:{stream_index}]")
+        label.clone()
       } else {
         format!("[track{track_position}source{range_index}]")
       };
@@ -122,13 +136,13 @@ pub(super) fn args(
     ));
     merged_inputs.push_str(&format!("[track{track_position}]"));
   }
-  let output = if stream_indices.len() == 1 {
+  let output = if labels.len() == 1 {
     filter.pop();
     "[track0]".to_owned()
   } else {
     filter.push_str(&format!(
       "{merged_inputs}amerge=inputs={}[tracks]",
-      stream_indices.len()
+      labels.len()
     ));
     "[tracks]".to_owned()
   };
@@ -139,7 +153,7 @@ pub(super) fn args(
     output,
     "-vn".to_owned(),
     "-ac".to_owned(),
-    stream_indices.len().to_string(),
+    labels.len().to_string(),
     "-ar".to_owned(),
     config.sample_rate.to_string(),
     "-t".to_owned(),

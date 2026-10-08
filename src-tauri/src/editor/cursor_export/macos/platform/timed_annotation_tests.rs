@@ -94,6 +94,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
       artifact_id: 1,
       next_segment_id: 2,
       keyboard_deletions: Box::default(),
+      silence_cuts: Vec::new(),
       scene_clips: Vec::new(),
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,

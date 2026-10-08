@@ -38,6 +38,7 @@ fn manager() -> PreviewPlayerManager {
     playing: Default::default(),
     video_muted: Default::default(),
     preview_surface: None,
+    noise: Default::default(),
     primary_kind: PrimaryRecordingKind::Screen,
     screen_path: "/tmp/annotation-test.mov".into(),
   };
