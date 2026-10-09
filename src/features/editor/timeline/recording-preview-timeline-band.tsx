@@ -39,6 +39,7 @@ export function RecordingPreviewTimelineBand({
   copyCurrentFrame,
   durationMs,
   enabledTracks,
+  hasAnnotations,
   isCameraSeparate,
   isPreparingAudio,
   keyboardEffects,
@@ -57,6 +58,7 @@ export function RecordingPreviewTimelineBand({
   | "artifactId"
   | "audioTracks"
   | "durationMs"
+  | "hasAnnotations"
   | "isPreparingAudio"
   | "keyboardEffects"
   | "selectedTrack"
@@ -147,7 +149,9 @@ export function RecordingPreviewTimelineBand({
           keyboardSelection={keyboardTimeline.selection}
           layout={layout}
           moments={moments}
-          onAnnotationsChange={annotations.onClipsChange}
+          onAnnotationsChange={
+            hasAnnotations ? annotations.onClipsChange : undefined
+          }
           onAnnotationsClear={annotations.clearSelection}
           // Choosing an annotation from its lane picks the Select tool up, the
           // way choosing a camera or screen clip does, so the annotation is in

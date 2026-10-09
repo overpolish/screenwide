@@ -21,6 +21,7 @@ export type RecordingCanvasTool =
 
 /** The recording's pointer, canvas and annotation groups. */
 export function RecordingCanvasTools({
+  hasAnnotations,
   hasScenes,
   isEnabled,
   isArrowEnabled = isEnabled,
@@ -29,6 +30,8 @@ export function RecordingCanvasTools({
   onToolChange,
   tool,
 }: {
+  /** Whether annotations can be drawn, which the annotation tools are for. */
+  hasAnnotations: boolean;
   /** Whether the recording has a screen and a camera to arrange. */
   hasScenes: boolean;
   isEnabled: boolean;
@@ -110,13 +113,15 @@ export function RecordingCanvasTools({
           <Crop />
         </ToolToggle>
       </ButtonGroup>
-      <AnnotationToolStrip
-        isDisabled={!isArrowEnabled}
-        onChoose={(id, selected) => {
-          onToolChange(selected ? id : null);
-        }}
-        tool={tool}
-      />
+      {hasAnnotations ? (
+        <AnnotationToolStrip
+          isDisabled={!isArrowEnabled}
+          onChoose={(id, selected) => {
+            onToolChange(selected ? id : null);
+          }}
+          tool={tool}
+        />
+      ) : null}
     </>
   );
 }

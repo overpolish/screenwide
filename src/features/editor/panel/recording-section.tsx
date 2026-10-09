@@ -84,6 +84,7 @@ export function RecordingSection({
         durationMs={artifact.durationMs}
         enabledStreamIndices={enabledStreamIndices}
         enabledVideoTracks={enabledVideoTracks}
+        hasAnnotations={artifact.primaryKind !== "audio"}
         hasCursorData={hasCursorData}
         hasKeyboardData={hasKeyboardData}
         isPreparingAudio={isPreparingRecordingAudio}
@@ -105,8 +106,11 @@ export function RecordingSection({
           primary: primaryOutputDimensions,
           ...(cameraOutputDimensions ? { camera: cameraOutputDimensions } : {}),
         }}
+        // An audio recording has no picture, so nothing to arrange in scenes.
         previewSourceDimensions={{
-          primary: { height: artifact.height, width: artifact.width },
+          ...(artifact.primaryKind === "audio"
+            ? {}
+            : { primary: { height: artifact.height, width: artifact.width } }),
           ...(artifact.camera
             ? {
                 camera: {

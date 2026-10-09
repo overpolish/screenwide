@@ -25,6 +25,7 @@ export function useRecordingPreviewShortcuts({
   canResizeActiveTrack,
   canvasTool,
   changeCanvasTool,
+  hasAnnotations,
   hasCursorData,
   hasKeyboardData,
   hasSceneSelection,
@@ -50,6 +51,9 @@ export function useRecordingPreviewShortcuts({
   changeCanvasTool: ReturnType<
     typeof useRecordingPreviewCanvasTool
   >["changeCanvasTool"];
+  /** Whether annotations can be drawn, which the annotation tools and an
+   * incoming image are for. */
+  hasAnnotations: boolean;
   hasCursorData: boolean;
   hasKeyboardData: boolean;
   /** Scenes chosen in their lane own Delete, so nothing under the pointer
@@ -107,16 +111,17 @@ export function useRecordingPreviewShortcuts({
     onToggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
     onToggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
-    onTool: hasVisiblePanes
-      ? (tool) => {
-          toggleTool[tool]();
-        }
-      : undefined,
+    onTool:
+      hasVisiblePanes && hasAnnotations
+        ? (tool) => {
+            toggleTool[tool]();
+          }
+        : undefined,
     ownsEscape: isCropping || annotations.hasSelection,
   });
   useIncomingImages(
     "recording",
-    hasVisiblePanes ? placeRecordingImage : undefined,
+    hasVisiblePanes && hasAnnotations ? placeRecordingImage : undefined,
     {
       // The image placed is chosen; a tool that shows it is put in hand,
       // unless the select tool or the image tool already is.

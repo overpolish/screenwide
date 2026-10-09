@@ -18,6 +18,7 @@ export function useRecordingToolbar({
   canResizeActiveTrack,
   canvasTool,
   changeCanvasTool,
+  hasAnnotations,
   hasCursorData,
   hasKeyboardData,
   hasScenes,
@@ -27,6 +28,8 @@ export function useRecordingToolbar({
   canResizeActiveTrack: boolean;
   canvasTool: RecordingCanvasTool;
   changeCanvasTool: (tool: RecordingCanvasTool) => void;
+  /** Whether annotations can be drawn, which the annotation tools are for. */
+  hasAnnotations: boolean;
   hasCursorData: boolean;
   hasKeyboardData: boolean;
   /** Whether the recording has a screen and a camera to arrange. */
@@ -86,6 +89,7 @@ export function useRecordingToolbar({
             </ButtonGroup>
           ) : null}
           <RecordingCanvasTools
+            hasAnnotations={hasAnnotations}
             hasScenes={hasScenes}
             isArrowEnabled={hasVisiblePanes}
             isEnabled={canEditActiveTrack}
@@ -103,6 +107,7 @@ export function useRecordingToolbar({
       canvasTool,
       changeCanvasTool,
       dismissToolPanel,
+      hasAnnotations,
       hasCursorData,
       hasKeyboardData,
       hasScenes,

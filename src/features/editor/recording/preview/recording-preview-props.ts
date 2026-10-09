@@ -22,6 +22,7 @@ export type ResolvedScrubPreviewProps = ScrubPreviewProps &
       | "cameraOverlay"
       | "cursorEffects"
       | "enabledVideoTracks"
+      | "hasAnnotations"
       | "hasCursorData"
       | "hasKeyboardData"
       | "isPreparingAudio"
@@ -52,6 +53,7 @@ export function resolveScrubPreviewProps(
       smoothMovement: true,
     },
     enabledVideoTracks = [],
+    hasAnnotations = true,
     hasCursorData = false,
     hasKeyboardData = false,
     isPreparingAudio = false,
@@ -69,6 +71,7 @@ export function resolveScrubPreviewProps(
     cameraOverlay,
     cursorEffects,
     enabledVideoTracks,
+    hasAnnotations,
     hasCursorData,
     hasKeyboardData,
     isPreparingAudio,

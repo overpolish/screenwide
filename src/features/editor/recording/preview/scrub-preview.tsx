@@ -30,6 +30,9 @@ export type ScrubPreviewProps = {
   cursorEffects?: CursorEffectSettings;
   enabledStreamIndices?: number[];
   enabledVideoTracks?: RecordingVideoTrackId[];
+  /** Whether annotations can be drawn, which takes a picture to draw them
+   * on. */
+  hasAnnotations?: boolean;
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
   isPreparingAudio?: boolean;
