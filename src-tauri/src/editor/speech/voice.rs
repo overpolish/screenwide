@@ -36,7 +36,7 @@ use super::{choice_file, noise};
 use crate::transcription::runner::decode_audio_stream;
 
 /// Bumped when a cleaned file of an older make should be made again.
-const FORMAT_VERSION: u16 = 7;
+const FORMAT_VERSION: u16 = 8;
 
 /// Whether the microphone's voice is cleaned up.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]

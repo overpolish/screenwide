@@ -134,6 +134,19 @@ fn leaves_a_consonant_release_alone() {
   assert_eq!(softened, sound);
 }
 
+/// The crack of a "k" out of its closure rings past a click, loud against
+/// the vowel after it; it is softened by 12 dB rather than taken out, so the
+/// consonant is still heard.
+#[test]
+fn softens_a_consonants_crack_without_taking_it_out() {
+  let sound = word_with_release(0.8, 10);
+  let mut softened = sound.clone();
+  Ticks::new(RATE).apply(&mut softened);
+  let crack = 20_000..20_480;
+  let cut = 20.0 * (peak(&sound[crack.clone()]) / peak(&softened[crack])).log10();
+  assert!((cut - 12.0).abs() < 1.5, "{cut} dB");
+}
+
 /// Reduce noise leaves a pause all but silent; what it leaves there is
 /// nothing to hear, however it stands out from the rest.
 #[test]

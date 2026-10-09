@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The ticks found turned down, each to the level around it.
+//! The ticks found turned down, each to the level around it, a crack no
+//! further than its floor.
 
 use super::{Ticks, BLOCK, EASE_BLOCKS, LEAVE};
 
@@ -17,9 +18,11 @@ impl Ticks {
         continue;
       }
       let (start, end) = self.ticks[index];
+      let floor = self.floors[index];
       for block in start..end {
         let target = self.middle(&peaks, block) * LEAVE;
-        self.gain[block] = self.gain[block].min(target / peaks[block].max(f32::MIN_POSITIVE));
+        let gain = (target / peaks[block].max(f32::MIN_POSITIVE)).max(floor);
+        self.gain[block] = self.gain[block].min(gain);
       }
       for step in 1..=EASE_BLOCKS {
         let eased = step as f32 / (EASE_BLOCKS + 1) as f32;

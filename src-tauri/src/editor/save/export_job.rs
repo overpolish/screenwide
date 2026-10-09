@@ -56,13 +56,17 @@ pub(super) fn save_recording_artifact(
     *primary_kind,
   )?;
   validate_camera_resolution_scale(camera_resolution_scale_percent)?;
-  validate_camera_overlay(
-    camera_overlay,
-    (
-      recording_output.primary.width,
-      recording_output.primary.height,
-    ),
-  )?;
+  // The overlay places a baked-in camera on the screen canvas, which an audio
+  // recording has only as a 1 by 1 stand-in, so it is checked only when used.
+  if bake_camera {
+    validate_camera_overlay(
+      camera_overlay,
+      (
+        recording_output.primary.width,
+        recording_output.primary.height,
+      ),
+    )?;
+  }
   // A microphone with its noise taken out or its voice cleaned up is
   // exported from the file made of it, leveled by Auto volume, and the
   // system audio making way for it, as the preview plays them.

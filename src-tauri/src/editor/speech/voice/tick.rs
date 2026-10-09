@@ -49,15 +49,23 @@ const HOLDS_DB: f32 = 6.0;
 /// a pulse of the voice does not: the next is as loud, give or take the
 /// rise and fall of a syllable.
 const STANDS_DB: f32 = 4.0;
-/// The longest a tick lasts; a burst longer is a consonant.
-const LONGEST_MS: usize = 8;
+/// The longest a click rings...
+const CLICK_MS: usize = 8;
+/// ... and the longest a burst is judged here. One that rings past a click
+/// but stops by this is a hard consonant's crack, a "k" or a "t" out of a
+/// closure, which stands out as a click does; it is turned down by at most
+/// [`CRACK_FLOOR`], so the consonant is still heard. A burst longer is a
+/// consonant's breath, and is left alone.
+const LONGEST_MS: usize = 12;
+/// The most a crack is turned down: 12 dB.
+const CRACK_FLOOR: f32 = 0.25;
 /// Ticks this close together are judged as one...
 const MERGE_MS: usize = 8;
 /// ... while they do not go on longer than a wet click does.
 const CLUSTER_MS: usize = 25;
 /// Below this peak, -66 dB, a burst is in the noise and left alone.
 const QUIETEST: f32 = 0.0005;
-/// A tick is turned down to the level around it.
+/// A click is turned down to the level around it.
 const LEAVE: f32 = 1.0;
 /// Blocks on either side the turn-down eases over, so it is no click itself.
 const EASE_BLOCKS: usize = 2;
@@ -90,6 +98,9 @@ pub(super) struct Ticks {
   clusters: Vec<Cluster>,
   order: Vec<usize>,
   taken: Vec<bool>,
+  /// For each tick, the least gain it may be turned down to: none for a
+  /// click, [`CRACK_FLOOR`] for a tick of a cluster holding a crack.
+  floors: Vec<f32>,
 }
 
 impl Ticks {
@@ -108,6 +119,7 @@ impl Ticks {
       clusters: Vec::new(),
       order: Vec::new(),
       taken: Vec::new(),
+      floors: Vec::new(),
     }
   }
 
@@ -229,10 +241,14 @@ impl Ticks {
 
   /// Marks the ticks of each cluster standing `STANDS_DB` over the loudest
   /// moment around it as taken, loudest cluster first, each taken one
-  /// brought down to the level around it before the next is judged.
+  /// brought down to the level around it before the next is judged. A
+  /// cluster holding a crack is kept from going further down than
+  /// `CRACK_FLOOR`.
   fn judge(&mut self, high_peaks: &[f32]) {
     self.taken.clear();
     self.taken.resize(self.ticks.len(), false);
+    self.floors.clear();
+    self.floors.resize(self.ticks.len(), 0.0);
     self.judged.clear();
     self.judged.extend_from_slice(high_peaks);
     self.order.clear();
@@ -241,6 +257,7 @@ impl Ticks {
     self
       .order
       .sort_unstable_by(|&a, &b| clusters[b].peak.total_cmp(&clusters[a].peak));
+    let click = self.blocks(CLICK_MS);
     for &index in &self.order {
       let cluster = &clusters[index];
       let [before, after] = self.around(cluster.start, cluster.end);
@@ -251,8 +268,13 @@ impl Ticks {
       if cluster.peak - loudest <= STANDS_DB {
         continue;
       }
+      let cracks = cluster.ticks.clone().any(|tick| {
+        let (start, end) = self.ticks[tick];
+        end - start > click
+      });
       for tick in cluster.ticks.clone() {
         self.taken[tick] = true;
+        self.floors[tick] = if cracks { CRACK_FLOOR } else { 0.0 };
         let (start, end) = self.ticks[tick];
         for ((judged, &peak), &rise) in self.judged[start..end]
           .iter_mut()
