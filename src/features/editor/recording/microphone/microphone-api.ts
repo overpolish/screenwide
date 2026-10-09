@@ -8,9 +8,10 @@ import type { AutoVolume } from "../../../../bindings/AutoVolume";
 import type { MicrophoneProgress } from "../../../../bindings/MicrophoneProgress";
 import type { NoiseReduction } from "../../../../bindings/NoiseReduction";
 import type { SilenceCut } from "../../../../bindings/SilenceCut";
+import type { StudioSound } from "../../../../bindings/StudioSound";
 import type { VocalCleanup } from "../../../../bindings/VocalCleanup";
 
-export type { MicrophoneProgress, NoiseReduction, VocalCleanup };
+export type { MicrophoneProgress, NoiseReduction, StudioSound, VocalCleanup };
 
 /** How far a microphone tool has got, as the editor is told while it works;
  * `src-tauri/src/editor/speech/commands.rs`. */
@@ -61,3 +62,12 @@ export const getRecordingAutoVolume = (artifactId: number) =>
  * makes the system audio's file. */
 export const setRecordingAutoVolume = (artifactId: number, enabled: boolean) =>
   invoke<AutoVolume>("set_recording_auto_volume", { artifactId, enabled });
+
+export const getRecordingStudioSound = (artifactId: number) =>
+  invoke<StudioSound>("get_recording_studio_sound", { artifactId });
+
+/** Rebuilds the microphone as a studio recording, or brings back how Reduce
+ * noise and Vocal cleanup have it, answering with what the project says
+ * now. Turning it on the first time takes a while, and needs the model. */
+export const setRecordingStudioSound = (artifactId: number, enabled: boolean) =>
+  invoke<StudioSound>("set_recording_studio_sound", { artifactId, enabled });

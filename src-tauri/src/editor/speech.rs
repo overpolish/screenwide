@@ -4,11 +4,12 @@
 //! The microphone's speech tools. Remove silences (`silences`) cuts the long
 //! pauses from one listen through the microphone track for speech
 //! (`analysis`), kept beside the project so it runs once per recording.
-//! Reduce noise (`noise`) cleans the track with a speech enhancer, Vocal
-//! cleanup (`voice`) polishes the voice, and `heard` picks which of their
-//! files the track is heard from. Auto volume (`auto_volume`) levels whatever
-//! is heard to a steady loudness, and makes the system audio make way for
-//! the voice while it speaks (`duck`).
+//! Studio sound (`studio`) rebuilds the voice as a studio recording; where
+//! it is off, Reduce noise (`noise`) cleans the track with a speech enhancer
+//! and Vocal cleanup (`voice`) polishes the voice. `heard` picks which of
+//! their files the track is heard from. Auto volume (`auto_volume`) levels
+//! whatever is heard to a steady loudness, and makes the system audio make
+//! way for the voice while it speaks (`duck`).
 
 mod analysis;
 pub(crate) mod auto_volume;
@@ -20,6 +21,7 @@ pub(crate) mod heard;
 mod noise;
 mod pause_gate;
 mod silences;
+mod studio;
 #[cfg(test)]
 mod tests;
 mod voice;
@@ -137,12 +139,53 @@ fn ready_auto_volume(
   Ok(())
 }
 
+/// Where the work [`ready_voice`] does is told: Studio sound's, Reduce
+/// noise's and Vocal cleanup's.
+pub(super) struct VoiceProgress<'a> {
+  pub studio: &'a mut dyn FnMut(f32),
+  pub noise: &'a mut dyn FnMut(f32),
+  pub voice: &'a mut dyn FnMut(f32),
+}
+
+/// Makes the files the `microphone`th track of `movie` is heard from where
+/// its switches are on and the file is not made yet. Studio sound, on and
+/// with its model downloaded, stands in for the other two; otherwise the
+/// noise is taken out, with the voice activity model at `vad`, and the voice
+/// cleaned up from what that leaves.
+pub(super) fn ready_voice(
+  app: &AppHandle,
+  project_folder: &Path,
+  (movie, microphone): (&Path, usize),
+  vad: Option<PathBuf>,
+  progress: VoiceProgress<'_>,
+) -> Result<(), String> {
+  if studio::choice(project_folder, microphone) == studio::StudioSound::On {
+    if let Some(model) = studio::model(app) {
+      return studio::prepare(
+        movie,
+        microphone,
+        project_folder,
+        (model, vad),
+        progress.studio,
+      );
+    }
+  }
+  let noise_on = noise::choice(project_folder, microphone) == noise::NoiseReduction::On;
+  if let Some(vad) = vad.filter(|_| noise_on) {
+    noise::prepare(movie, microphone, project_folder, vad, progress.noise)?;
+  }
+  if voice::choice(project_folder, microphone) == voice::VocalCleanup::On {
+    let denoised = noise_on && noise::is_made(project_folder, microphone);
+    voice::prepare(movie, microphone, project_folder, denoised, progress.voice)?;
+  }
+  Ok(())
+}
+
 /// Readies the microphone's switches for an export of the tracks `on` of a
-/// recording, where they are on: the noise taken out, the voice cleaned up,
-/// then Auto volume's measure and the system audio making way. An export
-/// started while the editor is still readying them comes out as the preview
-/// will sound; it waits for work already under way rather than doing it
-/// again.
+/// recording, where they are on: its voice as [`ready_voice`] makes it, then
+/// Auto volume's measure and the system audio making way. An export started
+/// while the editor is still readying them comes out as the preview will
+/// sound; it waits for work already under way rather than doing it again.
 pub(crate) fn ready_for_export(
   app: &AppHandle,
   project_folder: &Path,
@@ -159,20 +202,17 @@ pub(crate) fn ready_for_export(
     return Ok(());
   };
   let model = vad_model(app).ok();
-  let noise_on = noise::choice(project_folder, microphone) == noise::NoiseReduction::On;
-  if let Some(model) = model.clone().filter(|_| noise_on) {
-    noise::prepare(recording.0, microphone, project_folder, model, &mut |_| {})?;
-  }
-  if voice::choice(project_folder, microphone) == voice::VocalCleanup::On {
-    let denoised = noise_on && noise::is_made(project_folder, microphone);
-    voice::prepare(
-      recording.0,
-      microphone,
-      project_folder,
-      denoised,
-      &mut |_| {},
-    )?;
-  }
+  ready_voice(
+    app,
+    project_folder,
+    (recording.0, microphone),
+    model.clone(),
+    VoiceProgress {
+      studio: &mut |_| {},
+      noise: &mut |_| {},
+      voice: &mut |_| {},
+    },
+  )?;
   let system = first_of(&on, AudioTrackKind::SystemAudio);
   ready_auto_volume(
     project_folder,

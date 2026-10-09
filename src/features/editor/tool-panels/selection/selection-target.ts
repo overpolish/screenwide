@@ -245,6 +245,8 @@ export const audioPanelHandlers = (
   | "onReduceNoiseChange"
   | "onSilencesRemove"
   | "onSilencesRestore"
+  | "onStudioSoundChange"
+  | "onStudioSoundDownload"
   | "onVocalCleanupChange"
 > => ({
   onAudioVolumeChange: (decibels) => {
@@ -261,6 +263,12 @@ export const audioPanelHandlers = (
   },
   onSilencesRestore: () => {
     target?.microphone?.restoreSilences();
+  },
+  onStudioSoundChange: (enabled) => {
+    target?.microphone?.changeStudioSound(enabled);
+  },
+  onStudioSoundDownload: () => {
+    target?.microphone?.downloadStudioSound();
   },
   onVocalCleanupChange: (enabled) => {
     target?.microphone?.cleanUpVoice(enabled);

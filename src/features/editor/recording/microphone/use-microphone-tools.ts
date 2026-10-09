@@ -16,21 +16,29 @@ import { useEditorEditGesture } from "../../use-editor-edit-history";
 import {
   getRecordingAutoVolume,
   getRecordingNoiseReduction,
+  getRecordingStudioSound,
   getRecordingVocalCleanup,
   listenToMicrophoneProgress,
   planRecordingSilences,
   setRecordingAutoVolume,
   setRecordingNoiseReduction,
+  setRecordingStudioSound,
   setRecordingVocalCleanup,
 } from "./microphone-api";
 import { useMicrophoneSwitch } from "./use-microphone-switch";
+import { useStudioSoundModel } from "./use-studio-sound-model";
 
 export type MicrophoneTools = {
   /** Bring the microphone to a steady loudness with the system audio making
    * way for it, or play both as recorded. */
   changeAutoVolume: (enabled: boolean) => void;
+  /** Rebuild the microphone as a studio recording, or bring back Reduce
+   * noise and Vocal cleanup. */
+  changeStudioSound: (enabled: boolean) => void;
   /** Clean up the microphone's voice, or put it back as it was. */
   cleanUpVoice: (enabled: boolean) => void;
+  /** Download the model Studio sound needs. */
+  downloadStudioSound: () => void;
   microphone: ToolPanelMicrophone;
   /** Take the room's steady noise out of the microphone, or put it back. */
   reduceNoise: (enabled: boolean) => void;
@@ -48,6 +56,7 @@ type Progress = {
   autoVolume: number | null;
   noise: number | null;
   silences: number | null;
+  studioSound: number | null;
   voice: number | null;
 };
 const noProgress = (artifactId: number): Progress => ({
@@ -55,6 +64,7 @@ const noProgress = (artifactId: number): Progress => ({
   autoVolume: null,
   noise: null,
   silences: null,
+  studioSound: null,
   voice: null,
 });
 /** A switch as the panel shows it: `cleaning` while the app works on a turn
@@ -111,6 +121,14 @@ export function useMicrophoneTools({
     read: getRecordingAutoVolume,
     write: setRecordingAutoVolume,
   });
+  const studio = useMicrophoneSwitch({
+    artifactId,
+    name: "studio sound",
+    read: getRecordingStudioSound,
+    write: setRecordingStudioSound,
+  });
+  const studioModel = useStudioSoundModel();
+  const isModelDownloaded = studioModel.model?.status === "downloaded";
   const [silences, setSilences] = useState<Silences | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const editRef = useRef(edit);
@@ -141,6 +159,14 @@ export function useMicrophoneTools({
       stop?.();
     };
   }, [artifactId]);
+  // A model that arrives while the recording is open is put to work: asking
+  // for the switch again starts what the recording still needs.
+  useEffect(() => {
+    if (artifactId === null || !isModelDownloaded) return;
+    getRecordingStudioSound(artifactId).catch((cause: unknown) => {
+      console.error("Could not ready Studio sound", cause);
+    });
+  }, [artifactId, isModelDownloaded]);
 
   if (artifactId === null || !recording || !edit) return null;
 
@@ -165,11 +191,16 @@ export function useMicrophoneTools({
       setProgress({ ...progressNow, autoVolume: null });
       autoVolume.turn(enabled);
     },
+    changeStudioSound: (enabled) => {
+      setProgress({ ...progressNow, studioSound: null });
+      studio.turn(enabled);
+    },
     cleanUpVoice: (enabled) => {
       // As with Reduce noise, the bar waits until the app says there is work.
       setProgress({ ...progressNow, voice: null });
       voice.turn(enabled);
     },
+    downloadStudioSound: studioModel.download,
     microphone: {
       autoVolume: shown(autoVolume, progressNow.autoVolume),
       autoVolumeProgress: progressNow.autoVolume ?? 0,
@@ -180,6 +211,13 @@ export function useMicrophoneTools({
         progress: progressNow.silences,
         status,
       },
+      studio: shown(studio, progressNow.studioSound),
+      studioModel: studioModel.model && {
+        progress: studioModel.model.progress ?? 0,
+        sizeBytes: studioModel.model.sizeBytes,
+        status: studioModel.model.status,
+      },
+      studioProgress: progressNow.studioSound ?? 0,
       voice: shown(voice, progressNow.voice),
       voiceProgress: progressNow.voice ?? 0,
     },

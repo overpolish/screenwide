@@ -211,8 +211,12 @@ fn transcribe(
     Some(running) => running,
     None => transcriber.insert(Transcriber::start()?),
   };
+  let model_file = models::paths(app, model)?
+    .into_iter()
+    .next()
+    .ok_or_else(|| "The transcription model has no file".to_owned())?;
   let transcript = running.transcribe(
-    models::path(app, model)?,
+    model_file,
     model.id,
     &samples,
     language::resolved(&language::current()),

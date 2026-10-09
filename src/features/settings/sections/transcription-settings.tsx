@@ -18,9 +18,9 @@ import { TranscriptionModelActions } from "./transcription-model-actions";
 import type { TranscriptionControls } from "./use-transcription";
 
 /**
- * The speech-to-text models, downloaded to and run on this computer, each
- * named for what it transcribes so nobody has to choose between them, and
- * the language they listen for.
+ * The speech models, downloaded to and run on this computer, each named for
+ * what it does so nobody has to choose between them, and the language
+ * transcription listens for.
  */
 export function TranscriptionSettingsPanel({
   controls,

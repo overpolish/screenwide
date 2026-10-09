@@ -7,6 +7,7 @@
 
 mod clean;
 mod engine;
+mod restore;
 
 use std::io::{BufRead, Write};
 
@@ -41,6 +42,16 @@ fn main() {
             .map(|speech| Reply::Speech { id, speech }),
           Job::CleanSpeech { audio, output } => clean::clean_speech(audio, output, &mut progress)
             .map(|gain| Reply::Cleaned { id, gain }),
+          Job::RestoreSpeech {
+            features,
+            decoder,
+            audio,
+            output,
+            stretches,
+          } => {
+            restore::restore_speech((features, decoder), audio, stretches, output, &mut progress)
+              .map(|()| Reply::Restored { id })
+          }
         };
         result.unwrap_or_else(|message| Reply::Failed { id, message })
       }

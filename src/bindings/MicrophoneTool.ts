@@ -3,4 +3,4 @@
 /**
  * Which microphone tool is working.
  */
-export type MicrophoneTool = "autoVolume" | "noise" | "silences" | "voice";
+export type MicrophoneTool = "autoVolume" | "noise" | "silences" | "studioSound" | "voice";

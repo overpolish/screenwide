@@ -48,6 +48,9 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onVocalCleanupChange?.(values.vocalCleanup);
   if (values.autoVolume !== undefined)
     on.onAutoVolumeChange?.(values.autoVolume);
+  if (values.studioSound !== undefined)
+    on.onStudioSoundChange?.(values.studioSound);
+  if (values.downloadStudioSound) on.onStudioSoundDownload?.();
   if (values.removeSilences) on.onSilencesRemove?.();
   if (values.restoreSilences) on.onSilencesRestore?.();
   if (values.bakeCamera !== undefined)

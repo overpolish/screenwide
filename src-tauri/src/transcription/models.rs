@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
-use super::catalogue::{Model, Purpose, MODELS};
+use super::catalogue::{Model, ModelFile, Purpose, MODELS};
 use super::{download, language};
 
 const CHANGED_EVENT: &str = "transcription://changed";
@@ -51,26 +51,42 @@ pub(super) fn directory(app: &AppHandle) -> Result<PathBuf, String> {
     .map_err(|error| error.to_string())
 }
 
-pub(super) fn path(app: &AppHandle, model: &Model) -> Result<PathBuf, String> {
-  directory(app).map(|directory| directory.join(model.file))
+pub(super) fn file_path(app: &AppHandle, file: &ModelFile) -> Result<PathBuf, String> {
+  directory(app).map(|directory| directory.join(file.name))
 }
 
-/// Whether `model` is on this computer. Its checksum was checked as it
-/// arrived and a download only takes the final name once it passes, so the
-/// size alone tells a whole file from anything else.
-pub(super) fn is_downloaded(app: &AppHandle, model: &Model) -> bool {
-  path(app, model)
-    .and_then(|path| std::fs::metadata(path).map_err(|error| error.to_string()))
-    .is_ok_and(|metadata| metadata.len() == model.size_bytes)
+/// Where each of `model`'s files is kept, in the catalogue's order.
+pub(crate) fn paths(app: &AppHandle, model: &Model) -> Result<Vec<PathBuf>, String> {
+  model
+    .files
+    .iter()
+    .map(|file| file_path(app, file))
+    .collect()
 }
 
-/// The model `purpose` transcribes with: its own, or failing that any other
-/// on this computer, more slowly perhaps but never not at all.
-pub(super) fn usable(app: &AppHandle, purpose: Purpose) -> Option<&'static Model> {
+/// Whether every file of `model` is on this computer. Each checksum was
+/// checked as the file arrived and a download only takes the final name
+/// once it passes, so the size alone tells a whole file from anything else.
+pub(crate) fn is_downloaded(app: &AppHandle, model: &Model) -> bool {
+  model.files.iter().all(|file| {
+    file_path(app, file)
+      .and_then(|path| std::fs::metadata(path).map_err(|error| error.to_string()))
+      .is_ok_and(|metadata| metadata.len() == file.size_bytes)
+  })
+}
+
+/// The model `purpose` runs with: its own, or for transcribing, failing that
+/// any other transcribing model on this computer, more slowly perhaps but
+/// never not at all.
+pub(crate) fn usable(app: &AppHandle, purpose: Purpose) -> Option<&'static Model> {
   let (own, others): (Vec<_>, Vec<_>) = MODELS.iter().partition(|model| model.purpose == purpose);
   own
     .into_iter()
-    .chain(others)
+    .chain(
+      others
+        .into_iter()
+        .filter(|model| purpose.transcribes() && model.purpose.transcribes()),
+    )
     .find(|model| is_downloaded(app, model))
 }
 
@@ -92,7 +108,7 @@ pub(crate) fn state(app: &AppHandle) -> TranscriptionState {
         name: model.purpose.name(),
         progress,
         purpose: model.purpose,
-        size_bytes: model.size_bytes,
+        size_bytes: model.size_bytes(),
         status,
       }
     })
@@ -110,9 +126,12 @@ pub(super) fn changed(app: &AppHandle) {
 }
 
 pub(super) fn remove(app: &AppHandle, model: &Model) -> Result<(), String> {
-  match std::fs::remove_file(path(app, model)?) {
-    Ok(()) => Ok(()),
-    Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-    Err(error) => Err(format!("Could not remove the model: {error}")),
+  for path in paths(app, model)? {
+    match std::fs::remove_file(path) {
+      Ok(()) => {}
+      Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+      Err(error) => return Err(format!("Could not remove the model: {error}")),
+    }
   }
+  Ok(())
 }

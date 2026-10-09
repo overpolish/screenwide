@@ -14,9 +14,9 @@ fn a_checksum_is_compared_as_the_catalogue_writes_it() {
     hex(&Sha256::digest(b"abc")),
     "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
   );
-  for model in MODELS {
-    assert_eq!(model.sha256.len(), 64, "{}", model.id);
-    assert_eq!(model.sha256, model.sha256.to_lowercase(), "{}", model.id);
+  for file in MODELS.iter().flat_map(|model| model.files) {
+    assert_eq!(file.sha256.len(), 64, "{}", file.name);
+    assert_eq!(file.sha256, file.sha256.to_lowercase(), "{}", file.name);
   }
 }
 

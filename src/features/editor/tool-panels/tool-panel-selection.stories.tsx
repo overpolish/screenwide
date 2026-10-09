@@ -9,7 +9,6 @@ import {
 } from "../export/recording-export-settings";
 
 import { ToolPanel } from "./tool-panel";
-import { ToolPanelMicrophone } from "./tool-panel-store";
 import { seedToolPanel } from "./tool-panel-story-seed";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -130,85 +129,6 @@ export const SelectionAudio: Story = {
       isLocked: false,
       selection: { decibels: 6, kind: "audio", label: "System audio" },
     });
-  },
-};
-
-const microphone = (
-  {
-    autoVolume,
-    noise,
-    voice,
-  }: Pick<ToolPanelMicrophone, "autoVolume" | "noise" | "voice">,
-  silences: Omit<ToolPanelMicrophone["silences"], "progress">,
-  progress = { autoVolume: 0, noise: 0, silences: 0, voice: 0 },
-) => {
-  seed({
-    cursorEffects: DEFAULT_CURSOR_EFFECTS,
-    frame: null,
-    hasCursorData: true,
-    isLocked: false,
-    selection: {
-      decibels: 0,
-      kind: "audio",
-      label: "Microphone",
-      microphone: {
-        autoVolume,
-        autoVolumeProgress: progress.autoVolume,
-        noise,
-        noiseProgress: progress.noise,
-        silences: { ...silences, progress: progress.silences },
-        voice,
-        voiceProgress: progress.voice,
-      },
-    },
-  });
-};
-
-/** A microphone before any speech tool has run. */
-export const SelectionMicrophone: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    microphone(
-      { autoVolume: "off", noise: "off", voice: "off" },
-      { count: 0, durationMs: 0, status: "idle" },
-    );
-  },
-};
-
-/** The track being cleaned, its voice cleaned up, its volume measured and
- * the pauses being found, each with a bar for how far it has got. */
-export const SelectionMicrophoneListening: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    microphone(
-      { autoVolume: "cleaning", noise: "cleaning", voice: "cleaning" },
-      { count: 0, durationMs: 0, status: "finding" },
-      { autoVolume: 0.6, noise: 0.45, silences: 0.8, voice: 0.2 },
-    );
-  },
-};
-
-/** Every tool on and the pauses cut, which Restore all brings back. The
- * summary at its longest, a three-figure count and over an hour cut, still
- * fits the panel on one line. */
-export const SelectionMicrophoneCleaned: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    microphone(
-      { autoVolume: "on", noise: "on", voice: "on" },
-      { count: 128, durationMs: 3_735_000, status: "idle" },
-    );
-  },
-};
-
-/** Speech with hardly a pause: Remove found nothing long enough to cut. */
-export const SelectionMicrophoneNoPauses: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    microphone(
-      { autoVolume: "off", noise: "off", voice: "off" },
-      { count: 0, durationMs: 0, status: "none-found" },
-    );
   },
 };
 

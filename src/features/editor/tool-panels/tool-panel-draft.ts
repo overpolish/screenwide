@@ -104,6 +104,7 @@ export function resolveToolPanelSnapshot(
     customizeScene: _customizeScene,
     deleteAnnotations: _deleteAnnotations,
     deleteScene: _deleteScene,
+    downloadStudioSound: _downloadStudioSound,
     frameRadius,
     frameSize,
     keyboardEffects,
@@ -134,6 +135,7 @@ export function resolveToolPanelSnapshot(
     selectionOutput,
     selectionRadius,
     shortcutPlacement,
+    studioSound,
     swapScenePanes: _swapScenePanes,
     vocalCleanup,
     ...values
@@ -174,13 +176,15 @@ export function resolveToolPanelSnapshot(
   const flipping =
     reduceNoise !== undefined ||
     vocalCleanup !== undefined ||
-    autoVolume !== undefined;
+    autoVolume !== undefined ||
+    studioSound !== undefined;
   const microphone =
     audio?.microphone && flipping
       ? {
           ...audio.microphone,
           autoVolume: flippedSwitch(audio.microphone.autoVolume, autoVolume),
           noise: flippedSwitch(audio.microphone.noise, reduceNoise),
+          studio: flippedSwitch(audio.microphone.studio, studioSound),
           voice: flippedSwitch(audio.microphone.voice, vocalCleanup),
         }
       : audio?.microphone;

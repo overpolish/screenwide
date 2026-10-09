@@ -4,6 +4,8 @@
 /binaries/ffmpeg-*
 /binaries/screenwide-transcriber-*
 /binaries/silero-vad.bin
+/binaries/libwebgpu_dawn.dylib
+/binaries/DirectML.dll
 /binaries/dxcompiler.dll
 /binaries/dxc.exe
 /binaries/DXC-LICENSE-*.txt

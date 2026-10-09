@@ -103,6 +103,33 @@ impl Transcriber {
     }
   }
 
+  /// The `stretches` of `audio` rebuilt as a studio recording by the
+  /// restoration model whose encoder is at `features` and vocoder at
+  /// `decoder`, written to `output` at the protocol's cleaning rate with
+  /// silence between them, telling `progress` how far it has got.
+  pub(crate) fn restore_speech(
+    &mut self,
+    (features, decoder): (PathBuf, PathBuf),
+    audio: &Samples,
+    stretches: Vec<[u64; 2]>,
+    output: &Samples,
+    progress: &mut dyn FnMut(f32),
+  ) -> Result<(), String> {
+    match self.ask(
+      Job::RestoreSpeech {
+        audio: audio.0.clone(),
+        decoder,
+        features,
+        output: output.0.clone(),
+        stretches,
+      },
+      progress,
+    )? {
+      Reply::Restored { .. } => Ok(()),
+      _ => Err("The transcriber answered with something else".to_owned()),
+    }
+  }
+
   /// Sends `job` and waits for the reply that ends it, handing any progress
   /// on the way to `progress`.
   fn ask(&mut self, job: Job, progress: &mut dyn FnMut(f32)) -> Result<Reply, String> {
@@ -129,6 +156,7 @@ impl Transcriber {
       let (Reply::Done { id, .. }
       | Reply::Speech { id, .. }
       | Reply::Cleaned { id, .. }
+      | Reply::Restored { id }
       | Reply::Progress { id, .. }
       | Reply::Failed { id, .. }) = &answer;
       if *id != request.id {

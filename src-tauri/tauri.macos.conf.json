@@ -1,0 +1,10 @@
+{
+  "bundle": {
+    "macOS": {
+      "frameworks": ["binaries/libwebgpu_dawn.dylib"]
+    },
+    "resources": {
+      "assets/Dawn-BSD-3-Clause.txt": "licenses/Dawn-BSD-3-Clause.txt"
+    }
+  }
+}

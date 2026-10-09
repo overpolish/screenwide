@@ -145,6 +145,24 @@ await place(
 await place(
   resolve("src-tauri", "target", "debug", `screenwide-transcriber${extension}`),
 );
+// The GPU library Studio sound runs through, which ONNX Runtime's build keeps
+// out of the helper: beside the development helper, and in binaries, from
+// where tauri.macos.conf.json and tauri.windows.conf.json bundle it where the
+// installed helper looks.
+const gpuLibrary = { darwin: "libwebgpu_dawn.dylib", win32: "DirectML.dll" }[
+  requestedPlatform
+];
+if (gpuLibrary) {
+  for (const directory of [
+    resolve("src-tauri", "binaries"),
+    resolve("src-tauri", "target", "debug"),
+  ]) {
+    await copyFile(
+      resolve(dirname(built), gpuLibrary),
+      resolve(directory, gpuLibrary),
+    );
+  }
+}
 
 const sha256 = async (path) =>
   createHash("sha256")

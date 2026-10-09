@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/** What a model transcribes. Each use has its own, so nobody has to choose
- * one: moments take the quick model, recordings the accurate one. */
-export type TranscriptionPurpose = "moments" | "recordings";
+/** What a model is for. Each use has its own, so nobody has to choose one:
+ * moments take the quick transcription model, Studio sound its restoration
+ * model. */
+export type TranscriptionPurpose = "moments" | "studioSound";
 
-/** A speech-to-text model, and how far it is on this computer. */
+/** A speech model, and how far it is on this computer. */
 export type TranscriptionModel = {
   /** What downloading it gets you, in a few words: why it is worth having,
    * never which model it is. */

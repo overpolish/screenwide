@@ -20,6 +20,7 @@ use super::{reporter, MicrophoneTool};
 use crate::editor::recording_preview_player::{refresh_processing, PreviewProcessing};
 
 mod opening;
+pub(crate) mod studio_switch;
 
 /// A tool's progress bar. Once anything has been told, the bar is told it is
 /// full when this goes, whether the work finished or failed, so it never

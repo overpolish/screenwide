@@ -77,10 +77,14 @@ export const modelFor = (
   state?.models.find((model) => model.purpose === purpose);
 
 /** Whether `purpose` can be transcribed now: with its own model, or with any
- * other that is downloaded, more slowly perhaps but never not at all. */
+ * other transcription model that is downloaded, more slowly perhaps but
+ * never not at all. Studio sound's model turns no speech into text. */
 export const canTranscribe = (
   state: TranscriptionState | null,
   purpose: TranscriptionPurpose,
 ) =>
   modelFor(state, purpose)?.status === "downloaded" ||
-  (state?.models.some((model) => model.status === "downloaded") ?? false);
+  (state?.models.some(
+    (model) => model.purpose !== "studioSound" && model.status === "downloaded",
+  ) ??
+    false);

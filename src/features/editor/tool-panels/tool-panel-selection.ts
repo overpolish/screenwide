@@ -73,7 +73,8 @@ export type ToolPanelAudioSelection = {
 /**
  * Where the microphone's speech tools stand. Reduce noise and Remove
  * silences work from the same listen through the track for speech, which
- * runs once, the first time either asks.
+ * runs once, the first time either asks. Studio sound stands in for Reduce
+ * noise and Vocal cleanup while it is on and its model is downloaded.
  */
 export type ToolPanelMicrophone = {
   /** The voice brought to a steady, standard loudness, and the system audio
@@ -100,6 +101,20 @@ export type ToolPanelMicrophone = {
      * a Remove that found no pause long enough to cut. */
     status: "finding" | "idle" | "none-found";
   };
+  /** The voice rebuilt as a studio recording by a downloaded model, in place
+   * of Reduce noise and Vocal cleanup: `cleaning` while the track is
+   * rebuilt, which happens once and can take a while. */
+  studio: "cleaning" | "off" | "on";
+  /** The model Studio sound needs, and how far it is on this computer;
+   * `null` until the app has said. `progress` runs 0 to 1 while it
+   * downloads. */
+  studioModel: {
+    progress: number;
+    sizeBytes: number;
+    status: "available" | "downloaded" | "downloading";
+  } | null;
+  /** How far rebuilding has got, 0 to 1, while `studio` is `cleaning`. */
+  studioProgress: number;
   /** The voice cleaned up: mouth clicks and harsh "s" sounds softened, its
    * tone eased and its level evened out. `cleaning` while that is done to
    * the track as it is heard, once each way Reduce noise is set. */

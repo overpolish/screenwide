@@ -32,6 +32,8 @@ engine = [
   "dep:whisper-rs",
   "dep:deep_filter",
   "dep:ndarray",
+  "dep:ort",
+  "dep:realfft",
   "dep:tract-core",
   "dep:tract-hir",
   "dep:tract-onnx",
@@ -52,12 +54,27 @@ tract-core = { version = "=0.21.4", optional = true }
 tract-hir = { version = "=0.21.4", optional = true }
 tract-onnx = { version = "=0.21.4", optional = true }
 tract-pulse = { version = "=0.21.4", optional = true }
+# ONNX Runtime for Studio sound, whose speech restoration model is too large
+# for tract to run at a usable speed. Linked in statically from pyke's builds;
+# each platform adds its GPU backend below.
+ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = ["std", "download-binaries", "tls-native", "api-24"] }
+# The restoration model's input features are computed here rather than by a
+# Python library: the same FFT the app uses.
+realfft = { version = "3.5.0", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["metal"] }
+# Studio sound on the GPU through WebGPU, which Dawn runs over Metal. Dawn
+# stays a library of its own beside the helper; copy-dylibs puts it beside
+# each build and test, and build.rs tells the helper where to find it.
+ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = ["webgpu", "copy-dylibs"] }
 
 [target.'cfg(windows)'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["vulkan"] }
+# Studio sound on the GPU through DirectML, on x64 and ARM64 alike. pyke's
+# WebGPU build brings a DXC of its own that would clash with the app's.
+# DirectML.dll ships beside the helper, which Windows looks in first.
+ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = ["directml", "copy-dylibs"] }
 
 [profile.release]
 lto = "thin"

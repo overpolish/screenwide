@@ -72,6 +72,8 @@ export type ToolPanelPatch = Partial<
   deleteAnnotations?: true;
   /** Delete the scene under the playhead. */
   deleteScene?: true;
+  /** Download the model Studio sound rebuilds the microphone with. */
+  downloadStudioSound?: true;
   /** Round the output canvas corners by this share of its shorter side. */
   frameRadius?: number;
   /** Size the output canvas, leaving what is in it where it sits. */
@@ -148,6 +150,9 @@ export type ToolPanelPatch = Partial<
   /** Lay the chosen redaction's blocks out again, or draw the chosen
    * hand-drawn highlight's stroke again, from a fresh seed. */
   shuffleAnnotation?: true;
+  /** Rebuild the selected microphone as a studio recording, in place of
+   * Reduce noise and Vocal cleanup, or bring them back. */
+  studioSound?: boolean;
   /** Trade the panes of the custom scene under the playhead: each takes the
    * other's box and place in the order. */
   swapScenePanes?: true;

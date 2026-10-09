@@ -64,6 +64,22 @@ pub enum Job {
     /// samples in and as long.
     output: PathBuf,
   },
+  /// The voice in the audio rebuilt as a studio recording, answered with
+  /// [`Reply::Restored`] once it is written.
+  RestoreSpeech {
+    /// The speech encoder of the restoration model.
+    features: PathBuf,
+    /// Its vocoder.
+    decoder: PathBuf,
+    /// The samples, as [`SAMPLE_RATE`] describes.
+    audio: PathBuf,
+    /// Where the restored samples go, in the same form but at
+    /// [`CLEAN_SAMPLE_RATE`], lined up with the samples in.
+    output: PathBuf,
+    /// The stretches to restore, as `[start, end)` in samples at
+    /// [`SAMPLE_RATE`], sorted and apart. Everything else comes out silent.
+    stretches: Vec<[u64; 2]>,
+  },
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -85,6 +101,10 @@ pub enum Reply {
   Cleaned {
     id: u64,
     gain: f32,
+  },
+  /// The restored voice is written.
+  Restored {
+    id: u64,
   },
   /// How far a long job has got, 0 to 1. Sent any number of times before the
   /// reply that ends the job, which every other kind is.

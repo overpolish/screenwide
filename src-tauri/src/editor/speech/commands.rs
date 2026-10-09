@@ -20,6 +20,7 @@ pub enum MicrophoneTool {
   AutoVolume,
   Noise,
   Silences,
+  StudioSound,
   Voice,
 }
 

@@ -337,6 +337,11 @@ export type Messages = {
   "editor-panels-soft-edge": null;
   "editor-panels-start-frame": null;
   "editor-panels-strength": null;
+  "editor-panels-studio-sound": null;
+  "editor-panels-studio-sound-description": null;
+  "editor-panels-studio-sound-download": null;
+  "editor-panels-studio-sound-downloading": null;
+  "editor-panels-studio-sound-working": null;
   "editor-panels-swap": null;
   "editor-panels-sway": null;
   "editor-panels-template-actions": null;
@@ -815,6 +820,8 @@ export type Messages = {
   "settings-transcription-moments": null;
   "settings-transcription-moments-description": null;
   "settings-transcription-remove": { model: string | number };
+  "settings-transcription-studio-sound": null;
+  "settings-transcription-studio-sound-description": null;
   "settings-transcription-system-language": { language: string | number };
   "settings-update-to": { version: string | number };
   "settings-version": { version: string | number };

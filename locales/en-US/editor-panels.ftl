@@ -130,6 +130,11 @@ editor-panels-size-large = Large
 
 editor-panels-volume = Volume
 editor-panels-reset-volume = Reset volume
+editor-panels-studio-sound = Studio sound
+editor-panels-studio-sound-working = Rebuilding voice
+editor-panels-studio-sound-description = Makes your microphone sound like a studio recording.
+editor-panels-studio-sound-download = Download
+editor-panels-studio-sound-downloading = Downloading model
 editor-panels-reduce-noise = Reduce noise
 editor-panels-noise-cleaning = Removing noise
 editor-panels-vocal-cleanup = Vocal cleanup

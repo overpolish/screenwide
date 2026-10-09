@@ -40,10 +40,12 @@ const MOST_MAKEUP_DB: f32 = 12.0;
 /// is made up for, so the voice stays lined up with the picture.
 const LIMITER: &str = "alimiter=limit=-1dB:attack=5:release=50:level=0:latency=1";
 
-/// Cleans the samples in `input` into a FLAC file at `output`.
+/// Cleans the samples in `input` into a FLAC file at `output`, softening
+/// plosives too when `plosives` says so.
 pub(super) fn encode(
   input: &Samples,
   output: &Path,
+  plosives: bool,
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
   let mut reader = Reader::open(input.path())?;
@@ -57,7 +59,7 @@ pub(super) fn encode(
     let after = level::speech_energy(&measured.shaped_heard, speaking);
     (10.0 * (before / after.max(f32::MIN_POSITIVE)).log10()).clamp(0.0, MOST_MAKEUP_DB)
   });
-  reader.clean(speech, makeup_db, output, &mut |fraction| {
+  reader.clean((speech, plosives), makeup_db, output, &mut |fraction| {
     progress(MEASURE_SHARE + fraction * (1.0 - MEASURE_SHARE));
   })
 }
@@ -131,19 +133,19 @@ impl Reader {
   }
 
   /// Cleans the track into `output` through FFmpeg, for a voice whose speech
-  /// has an average energy of `speech`, giving back `makeup_db` after its
-  /// tone is set. A silent track has its ticks and clicks taken out and is
-  /// shaped, with nothing to de-ess.
+  /// has an average energy of `speech`, softening plosives if `plosives`,
+  /// giving back `makeup_db` after its tone is set. A silent track has its
+  /// ticks and clicks taken out and is shaped, with nothing to de-ess.
   fn clean(
     &mut self,
-    speech: Option<f32>,
+    (speech, plosives): (Option<f32>, bool),
     makeup_db: f32,
     output: &Path,
     progress: &mut dyn FnMut(f32),
   ) -> Result<(), String> {
     let mut ticks = Ticks::new(RATE);
     let mut declicker = Declicker::new(RATE);
-    let mut deplosive = Deplosive::new(RATE);
+    let mut deplosive = plosives.then(|| Deplosive::new(RATE));
     let mut deesser = speech.map(|speech| Deesser::new(RATE, speech));
     let mut tone = Tone::new(RATE);
     let (chunk, context) = (CHUNK, CONTEXT);
@@ -173,7 +175,9 @@ impl Reader {
       self.read(from, (end + context).min(self.length))?;
       ticks.apply(&mut self.samples);
       declicker.apply(&mut self.samples);
-      deplosive.apply(&mut self.samples);
+      if let Some(deplosive) = &mut deplosive {
+        deplosive.apply(&mut self.samples);
+      }
       if let Some(deesser) = &mut deesser {
         deesser.apply(&mut self.samples);
       }

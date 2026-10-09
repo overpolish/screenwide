@@ -392,6 +392,8 @@
       "assets/Inter-VariableFont_opsz,wght.ttf": "fonts/Inter-VariableFont_opsz,wght.ttf",
       "assets/RobotoMono-OFL-1.1.txt": "licenses/RobotoMono-OFL-1.1.txt",
       "assets/RobotoMono-VariableFont_wght.ttf": "fonts/RobotoMono-VariableFont_wght.ttf",
+      "assets/onnxruntime-MIT.txt": "licenses/onnxruntime-MIT.txt",
+      "assets/Sidon-MIT.txt": "licenses/Sidon-MIT.txt",
       "assets/silero-vad-MIT.txt": "licenses/silero-vad-MIT.txt",
       "assets/whisper.cpp-MIT.txt": "licenses/whisper.cpp-MIT.txt",
       "binaries/silero-vad.bin": "models/silero-vad.bin"

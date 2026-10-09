@@ -89,6 +89,8 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     editor::speech::commands::switches::set_recording_vocal_cleanup,
     editor::speech::commands::switches::get_recording_auto_volume,
     editor::speech::commands::switches::set_recording_auto_volume,
+    editor::speech::commands::switches::studio_switch::get_recording_studio_sound,
+    editor::speech::commands::switches::studio_switch::set_recording_studio_sound,
     editor::commands::set_export_directory,
     editor::commands::set_recording_timeline_edit,
     editor::commands::set_screenshot_background_radius,

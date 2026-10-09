@@ -141,6 +141,11 @@ export type ToolPanelHandlers = {
   onSilencesRemove?: () => void;
   /** Bring back every pause Remove cut that is still cut. */
   onSilencesRestore?: () => void;
+  /** Rebuild the selected microphone as a studio recording, or bring back
+   * Reduce noise and Vocal cleanup. */
+  onStudioSoundChange?: (enabled: boolean) => void;
+  /** Download the model Studio sound rebuilds the microphone with. */
+  onStudioSoundDownload?: () => void;
   /** Clean up the selected microphone's voice, or put it back as it was. */
   onVocalCleanupChange?: (enabled: boolean) => void;
 };

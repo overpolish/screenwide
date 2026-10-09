@@ -18,6 +18,17 @@ const MOMENTS_MODEL: TranscriptionModel = {
   status: "available",
 };
 
+/** The Studio sound model, at its real download size, both files together. */
+const STUDIO_SOUND_MODEL: TranscriptionModel = {
+  description: "Makes your microphone sound like a studio recording.",
+  id: "sidon-v0.1",
+  name: "Studio sound",
+  progress: null,
+  purpose: "studioSound",
+  sizeBytes: 1_005_394_589,
+  status: "available",
+};
+
 export type TranscriptionPreviewSeed = Pick<
   TranscriptionModel,
   "progress" | "status"
@@ -28,16 +39,17 @@ const DOWNLOAD_MS = 4_000;
 const TICK_MS = 100;
 
 /**
- * The transcription side of the Settings stories' API: the Moments model
- * kept in memory, with a download that fills over a few seconds. Nothing
- * reaches the app or the network.
+ * The transcription side of the Settings stories' API: the models kept in
+ * memory, Moments as `seed` says and Studio sound not yet downloaded, with
+ * downloads that fill over a few seconds. Nothing reaches the app or the
+ * network.
  */
 export function transcriptionPreviewApi(
   seed: TranscriptionPreviewSeed = { progress: null, status: "downloaded" },
 ) {
   let state: TranscriptionState = {
     language: "system",
-    models: [{ ...MOMENTS_MODEL, ...seed }],
+    models: [{ ...MOMENTS_MODEL, ...seed }, STUDIO_SOUND_MODEL],
     systemLanguage: "en",
   };
   const listeners = new Set<(next: TranscriptionState) => void>();

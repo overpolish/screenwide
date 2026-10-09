@@ -12,7 +12,7 @@ use std::time::Duration;
 use sha2::{Digest, Sha256};
 use tauri::AppHandle;
 
-use super::catalogue::Model;
+use super::catalogue::{Model, ModelFile};
 use super::models;
 
 struct Download {
@@ -73,37 +73,63 @@ pub(super) async fn run(app: &AppHandle, model: &'static Model) -> Result<(), St
   result
 }
 
-/// Downloads beside the model's place and moves it in only once its size
-/// and checksum match, so a model under its own name is always whole.
+/// Downloads each file beside its place and moves it in only once its size
+/// and checksum match, so a file under its own name is always whole. Files
+/// already in place are kept.
 async fn fetch(app: &AppHandle, model: &Model, cancelled: &AtomicBool) -> Result<(), String> {
-  let destination = models::path(app, model)?;
-  let partial = destination.with_extension("part");
-  if let Some(parent) = destination.parent() {
-    std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+  let total = model.size_bytes();
+  let mut before: u64 = 0;
+  for file in model.files {
+    let destination = models::file_path(app, file)?;
+    let whole =
+      std::fs::metadata(&destination).is_ok_and(|metadata| metadata.len() == file.size_bytes);
+    if !whole {
+      let partial = destination.with_extension("part");
+      if let Some(parent) = destination.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+      }
+      let progress = Progress {
+        app,
+        id: model.id,
+        before,
+        total,
+      };
+      let result = receive(&progress, file, cancelled, &partial)
+        .await
+        .and_then(|()| std::fs::rename(&partial, &destination).map_err(|error| error.to_string()));
+      if result.is_err() {
+        let _ = std::fs::remove_file(&partial);
+        return result;
+      }
+    }
+    before += file.size_bytes;
   }
-  let result = receive(app, model, cancelled, &partial)
-    .await
-    .and_then(|()| std::fs::rename(&partial, &destination).map_err(|error| error.to_string()));
-  if result.is_err() {
-    let _ = std::fs::remove_file(&partial);
-  }
-  result
+  Ok(())
+}
+
+/// Where a model's download stands across all its files.
+struct Progress<'a> {
+  app: &'a AppHandle,
+  id: &'static str,
+  /// Bytes of the files before this one.
+  before: u64,
+  total: u64,
 }
 
 async fn receive(
-  app: &AppHandle,
-  model: &Model,
+  progress: &Progress<'_>,
+  file: &ModelFile,
   cancelled: &AtomicBool,
   partial: &Path,
 ) -> Result<(), String> {
   let failed = |error: reqwest::Error| format!("Could not download the model: {error}");
   let mut response = client()?
-    .get(model.url())
+    .get(file.url)
     .send()
     .await
     .and_then(reqwest::Response::error_for_status)
     .map_err(failed)?;
-  let mut file = File::create(partial).map_err(|error| error.to_string())?;
+  let mut output = File::create(partial).map_err(|error| error.to_string())?;
   let mut hasher = Sha256::new();
   let mut received: u64 = 0;
   let mut shown = 0;
@@ -111,27 +137,27 @@ async fn receive(
     if cancelled.load(Ordering::Relaxed) {
       return Err("Cancelled".to_owned());
     }
-    file
+    output
       .write_all(&chunk)
       .map_err(|error| format!("Could not save the model: {error}"))?;
     hasher.update(&chunk);
     received += chunk.len() as u64;
     // Every half percent: smooth enough to watch, few enough events.
-    let per_mille = (received * 1000 / model.size_bytes).min(1000);
+    let per_mille = ((progress.before + received) * 1000 / progress.total.max(1)).min(1000);
     if per_mille >= shown + 5 {
       shown = per_mille;
-      if let Some(download) = downloads().get_mut(model.id) {
+      if let Some(download) = downloads().get_mut(progress.id) {
         #[expect(clippy::cast_precision_loss, reason = "at most 1000")]
-        let progress = per_mille as f32 / 1000.0;
-        download.progress = progress;
+        let fraction = per_mille as f32 / 1000.0;
+        download.progress = fraction;
       }
-      models::changed(app);
+      models::changed(progress.app);
     }
   }
-  file
+  output
     .sync_all()
     .map_err(|error| format!("Could not save the model: {error}"))?;
-  if received != model.size_bytes || hex(&hasher.finalize()) != model.sha256 {
+  if received != file.size_bytes || hex(&hasher.finalize()) != file.sha256 {
     return Err("The model arrived damaged. Try downloading it again.".to_owned());
   }
   Ok(())
