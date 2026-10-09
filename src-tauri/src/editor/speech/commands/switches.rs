@@ -15,9 +15,11 @@ use tauri::AppHandle;
 use super::super::auto_volume::{self, AutoVolume};
 use super::super::noise::{self, NoiseReduction};
 use super::super::voice::{self, VocalCleanup};
-use super::super::{duck, ready_auto_volume, vad_model, SpeechSource};
+use super::super::{ready_auto_volume, vad_model, SpeechSource};
 use super::{reporter, MicrophoneTool};
 use crate::editor::recording_preview_player::{refresh_processing, PreviewProcessing};
+
+mod opening;
 
 /// A tool's progress bar. Once anything has been told, the bar is told it is
 /// full when this goes, whether the work finished or failed, so it never
@@ -74,14 +76,17 @@ fn ready(
 }
 
 /// Whether the microphone of the recording open in the editor has its noise
-/// taken out, as its project says.
+/// taken out, as its project says. A recording starts with it on, so the
+/// first time one opens its switches' work is started in the background.
 #[tauri::command]
 pub fn get_recording_noise_reduction(
   app: AppHandle,
   artifact_id: u64,
 ) -> Result<NoiseReduction, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
-  Ok(noise::choice(&source.project_folder, source.microphone))
+  let choice = noise::choice(&source.project_folder, source.microphone);
+  opening::ready(&app, artifact_id, source);
+  Ok(choice)
 }
 
 /// Takes the microphone's noise out, or puts it back. Answers with what the
@@ -129,14 +134,17 @@ pub async fn set_recording_noise_reduction(
 }
 
 /// Whether the microphone of the recording open in the editor has its voice
-/// cleaned up, as its project says.
+/// cleaned up, as its project says. A recording starts with it on, so the
+/// first time one opens its switches' work is started in the background.
 #[tauri::command]
 pub fn get_recording_vocal_cleanup(
   app: AppHandle,
   artifact_id: u64,
 ) -> Result<VocalCleanup, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
-  Ok(voice::choice(&source.project_folder, source.microphone))
+  let choice = voice::choice(&source.project_folder, source.microphone);
+  opening::ready(&app, artifact_id, source);
+  Ok(choice)
 }
 
 /// Cleans up the microphone's voice as it is heard now, with or without its
@@ -183,22 +191,8 @@ pub async fn set_recording_vocal_cleanup(
 #[tauri::command]
 pub fn get_recording_auto_volume(app: AppHandle, artifact_id: u64) -> Result<AutoVolume, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
-  let (folder, stream) = (&source.project_folder, source.microphone);
-  let choice = auto_volume::choice(folder, stream);
-  let unducked = source
-    .system
-    .is_some_and(|system| !duck::is_made_for(folder, system, stream));
-  if choice == AutoVolume::On && (auto_volume::is_unmeasured(folder, stream) || unducked) {
-    let app = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-      let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
-      level_heard(&source, vad_model(&app).ok(), &mut |fraction| {
-        level_bar.tell(fraction);
-      });
-      drop(level_bar);
-      heard_changed(&app, artifact_id, &source);
-    });
-  }
+  let choice = auto_volume::choice(&source.project_folder, source.microphone);
+  opening::ready(&app, artifact_id, source);
   Ok(choice)
 }
 

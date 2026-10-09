@@ -27,6 +27,7 @@ mod tests;
 mod tick;
 
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use screenwide_transcriber::CLEAN_SAMPLE_RATE;
 use serde::{Deserialize, Serialize};
@@ -59,10 +60,11 @@ pub(super) fn cleaned_path(project_folder: &Path, stream: usize, denoised: bool)
   project_folder.join(format!("{name}-{stream}.flac"))
 }
 
-/// What the project says about the `stream`th track's vocal cleanup.
+/// What the project says about the `stream`th track's vocal cleanup. A
+/// recording starts with Vocal cleanup on, until someone turns it off.
 pub(super) fn choice(project_folder: &Path, stream: usize) -> VocalCleanup {
   choice_file::read(&choice_path(project_folder, stream), FORMAT_VERSION)
-    .unwrap_or(VocalCleanup::Off)
+    .unwrap_or(VocalCleanup::On)
 }
 
 pub(super) fn keep(
@@ -83,8 +85,9 @@ pub(super) fn is_made(project_folder: &Path, stream: usize, denoised: bool) -> b
 }
 
 /// Removes files made by an older cleanup, then marks the choice as kept by
-/// this one, so a file is only ever there when it is current. The choice
-/// itself starts again from off, as it does after any change of make.
+/// this one, so a file is only ever there when it is current. What was
+/// chosen for the older make goes with it, and the switch starts again from
+/// on, as a new recording does.
 fn forget_older(project_folder: &Path, stream: usize) -> Result<(), String> {
   let path = choice_path(project_folder, stream);
   if choice_file::read::<VocalCleanup>(&path, FORMAT_VERSION).is_some() {
@@ -93,9 +96,13 @@ fn forget_older(project_folder: &Path, stream: usize) -> Result<(), String> {
   for denoised in [false, true] {
     let _ = std::fs::remove_file(cleaned_path(project_folder, stream, denoised));
   }
-  choice_file::write(&path, FORMAT_VERSION, VocalCleanup::Off)
+  choice_file::write(&path, FORMAT_VERSION, VocalCleanup::On)
     .map_err(|error| format!("Could not keep the vocal cleanup choice: {error}"))
 }
+
+/// One cleanup at a time, so a switch turned while a recording is readied on
+/// opening waits for the file rather than writing it a second time.
+static MAKING: Mutex<()> = Mutex::new(());
 
 /// Cleans up the `stream`th track of `movie` into the project, from the
 /// track as recorded or, with `denoised`, from the file Reduce noise made of
@@ -108,6 +115,9 @@ pub(super) fn prepare(
   denoised: bool,
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
+  let _making = MAKING
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
   forget_older(project_folder, stream)?;
   let destination = cleaned_path(project_folder, stream, denoised);
   if destination.is_file() {

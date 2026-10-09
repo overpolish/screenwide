@@ -137,10 +137,12 @@ fn ready_auto_volume(
   Ok(())
 }
 
-/// Readies Auto volume for an export of the tracks `on` of a recording, so
-/// an export started while the editor is still measuring is leveled and
-/// makes way all the same; it waits for work already under way rather than
-/// doing it again.
+/// Readies the microphone's switches for an export of the tracks `on` of a
+/// recording, where they are on: the noise taken out, the voice cleaned up,
+/// then Auto volume's measure and the system audio making way. An export
+/// started while the editor is still readying them comes out as the preview
+/// will sound; it waits for work already under way rather than doing it
+/// again.
 pub(crate) fn ready_for_export(
   app: &AppHandle,
   project_folder: &Path,
@@ -156,12 +158,27 @@ pub(crate) fn ready_for_export(
   let Some(microphone) = first_of(&on, AudioTrackKind::Microphone) else {
     return Ok(());
   };
+  let model = vad_model(app).ok();
+  let noise_on = noise::choice(project_folder, microphone) == noise::NoiseReduction::On;
+  if let Some(model) = model.clone().filter(|_| noise_on) {
+    noise::prepare(recording.0, microphone, project_folder, model, &mut |_| {})?;
+  }
+  if voice::choice(project_folder, microphone) == voice::VocalCleanup::On {
+    let denoised = noise_on && noise::is_made(project_folder, microphone);
+    voice::prepare(
+      recording.0,
+      microphone,
+      project_folder,
+      denoised,
+      &mut |_| {},
+    )?;
+  }
   let system = first_of(&on, AudioTrackKind::SystemAudio);
   ready_auto_volume(
     project_folder,
     (microphone, system),
     recording,
-    vad_model(app).ok(),
+    model,
     &mut |_| {},
   )
 }

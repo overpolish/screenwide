@@ -60,8 +60,8 @@ const noProgress = (artifactId: number): Progress => ({
 /** A switch as the panel shows it: `cleaning` while the app works on a turn
  * it has said has work in it, and while the switch is on and the app works
  * for it on its own: rebuilding Vocal cleanup when Reduce noise turns, or
- * measuring for Auto volume when a recording first opens, until it says the
- * work is done. */
+ * readying all three switches, which start on, when a recording first
+ * opens, until it says the work is done. */
 const shown = (
   { isPending, state }: { isPending: boolean; state: "off" | "on" },
   progress: number | null,

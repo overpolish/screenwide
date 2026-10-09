@@ -97,17 +97,18 @@ fn system_audio_makes_way_only_while_auto_volume_and_its_microphone_are_on() {
 }
 
 #[test]
-fn files_from_an_older_cleanup_are_cleared_and_the_switch_starts_off() {
+fn files_from_an_older_cleanup_are_cleared_and_the_switch_starts_on() {
   let folder = project("older");
   make(voice::cleaned_path(&folder, 1, false));
   make(voice::cleaned_path(&folder, 1, true));
+  // Turned off under the older make, which no longer counts.
   std::fs::write(
     folder.join("voice-1.json"),
-    br#"{"version":0,"choice":"on"}"#,
+    br#"{"version":0,"choice":"off"}"#,
   )
   .unwrap();
-  assert_eq!(voice::choice(&folder, 1), VocalCleanup::Off);
-  voice::keep(&folder, 1, VocalCleanup::Off).unwrap();
+  assert_eq!(voice::choice(&folder, 1), VocalCleanup::On);
+  voice::keep(&folder, 1, VocalCleanup::On).unwrap();
   assert!(!voice::cleaned_path(&folder, 1, false).exists());
   assert!(!voice::cleaned_path(&folder, 1, true).exists());
   let _ = std::fs::remove_dir_all(&folder);

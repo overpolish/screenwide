@@ -18,6 +18,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::Mutex;
 
 use screenwide_transcriber::CLEAN_SAMPLE_RATE;
 use serde::{Deserialize, Serialize};
@@ -51,10 +52,11 @@ pub(super) fn cleaned_path(project_folder: &Path, stream: usize) -> PathBuf {
   project_folder.join(format!("noise-{stream}.flac"))
 }
 
-/// What the project says about the `stream`th track's noise.
+/// What the project says about the `stream`th track's noise. A recording
+/// starts with Reduce noise on, until someone turns it off.
 pub(super) fn choice(project_folder: &Path, stream: usize) -> NoiseReduction {
   choice_file::read(&choice_path(project_folder, stream), FORMAT_VERSION)
-    .unwrap_or(NoiseReduction::Off)
+    .unwrap_or(NoiseReduction::On)
 }
 
 pub(super) fn keep(
@@ -69,8 +71,8 @@ pub(super) fn keep(
 
 /// Removes a file made by an older cleaning, with the cleaned-up voice made
 /// from it, then marks the choice as kept by this one, so a file is only
-/// ever there when it is current. The choice starts again from off, as it
-/// does after any change of make.
+/// ever there when it is current. What was chosen for the older make goes
+/// with it, and the switch starts again from on, as a new recording does.
 fn forget_older(project_folder: &Path, stream: usize) -> Result<(), String> {
   let path = choice_path(project_folder, stream);
   if choice_file::read::<NoiseReduction>(&path, FORMAT_VERSION).is_some() {
@@ -78,7 +80,7 @@ fn forget_older(project_folder: &Path, stream: usize) -> Result<(), String> {
   }
   let _ = std::fs::remove_file(cleaned_path(project_folder, stream));
   let _ = std::fs::remove_file(super::voice::cleaned_path(project_folder, stream, true));
-  choice_file::write(&path, FORMAT_VERSION, NoiseReduction::Off)
+  choice_file::write(&path, FORMAT_VERSION, NoiseReduction::On)
     .map_err(|error| format!("Could not keep the noise choice: {error}"))
 }
 
@@ -95,6 +97,10 @@ const LISTEN_SHARE: f32 = 0.1;
 /// Samples read and written at a time while the cleaned track is encoded.
 const ENCODE_CHUNK: usize = 1 << 16;
 
+/// One cleaning at a time, so a switch turned while a recording is readied
+/// on opening waits for the file rather than writing it a second time.
+static MAKING: Mutex<()> = Mutex::new(());
+
 /// Cleans the `stream`th track of `movie` into the project, unless a file of
 /// this make is there already, telling `progress` how far it has got. The
 /// track's pauses are turned down by what the speech model at `model`
@@ -106,6 +112,9 @@ pub(super) fn prepare(
   model: PathBuf,
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
+  let _making = MAKING
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
   forget_older(project_folder, stream)?;
   if is_made(project_folder, stream) {
     return Ok(());
