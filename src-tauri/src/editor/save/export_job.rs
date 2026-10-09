@@ -63,17 +63,18 @@ pub(super) fn save_recording_artifact(
       recording_output.primary.height,
     ),
   )?;
-  // A microphone with its noise taken out is exported from its cleaned file,
-  // as the preview plays it.
-  let selection = track_selection::TrackSelection::with_volumes(
-    audio_tracks,
-    &enabled_stream_indices,
-    &audio_track_volumes,
-  )?
-  .with_cleaned(crate::editor::speech::noise::cleaned_tracks(
+  // A microphone with its noise taken out or its voice cleaned up is
+  // exported from the file made of it, and leveled by Auto volume, as the
+  // preview plays it.
+  let selection = crate::editor::speech::as_heard(
+    track_selection::TrackSelection::with_volumes(
+      audio_tracks,
+      &enabled_stream_indices,
+      &audio_track_volumes,
+    )?,
     project.parent().unwrap_or(Path::new(".")),
     &enabled_stream_indices,
-  ));
+  );
   let layout = if collapse_audio {
     track_selection::AudioLayout::Mixdown
   } else {

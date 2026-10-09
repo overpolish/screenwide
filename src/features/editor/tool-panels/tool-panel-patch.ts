@@ -48,6 +48,9 @@ export type ToolPanelPatch = Partial<
   /** Play the selected audio track this much louder or quieter than it was
    * recorded, in decibels. */
   audioVolume?: number;
+  /** Bring the selected microphone to a steady loudness, or play it as
+   * recorded. */
+  autoVolume?: boolean;
   /** Make the auto zooms again, the scenes of your own left as they are. */
   autoZoomScenes?: true;
   /** Draw the camera into the screen's video, or save it as a file of its
@@ -148,4 +151,6 @@ export type ToolPanelPatch = Partial<
   /** Trade the panes of the custom scene under the playhead: each takes the
    * other's box and place in the order. */
   swapScenePanes?: true;
+  /** Clean up the selected microphone's voice, or put it back as it was. */
+  vocalCleanup?: boolean;
 };

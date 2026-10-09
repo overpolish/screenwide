@@ -5,7 +5,7 @@ import { EditorKind } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
 import { ToolPanelPatch } from "./tool-panel-patch";
-import { ToolPanelSnapshot } from "./tool-panel-store";
+import { ToolPanelMicrophone, ToolPanelSnapshot } from "./tool-panel-store";
 
 export type ToolPanelDraft = {
   seq: number;
@@ -27,6 +27,17 @@ const placedSelection = (
     if (value !== undefined) next[key] = value;
   }
   return next;
+};
+
+/** A microphone switch as the panel shows it once flipped to `enabled`:
+ * turned on, it reads as cleaning until the editor says its track is ready. */
+const flippedSwitch = (
+  state: ToolPanelMicrophone["noise"],
+  enabled: boolean | undefined,
+): ToolPanelMicrophone["noise"] => {
+  if (enabled === undefined) return state;
+  if (!enabled) return "off";
+  return state === "on" ? "on" : "cleaning";
 };
 
 /** The same rule for the shortcut: a size being typed leaves the position the
@@ -83,6 +94,7 @@ export function resolveToolPanelSnapshot(
     annotationStyle,
     applyShortcutToAll: _applyShortcutToAll,
     audioVolume,
+    autoVolume,
     autoZoomScenes: _autoZoomScenes,
     bakeCamera,
     chooseSceneTemplate: _chooseSceneTemplate,
@@ -123,6 +135,7 @@ export function resolveToolPanelSnapshot(
     selectionRadius,
     shortcutPlacement,
     swapScenePanes: _swapScenePanes,
+    vocalCleanup,
     ...values
   } = draft.values;
   const resolved = {
@@ -154,24 +167,25 @@ export function resolveToolPanelSnapshot(
       ? { ...rounded, dropShadow: selectionDropShadow }
       : rounded;
   // A dragged volume is held the same way: the knob stays where it was let go
-  // of until the editor answers with the level it committed. The noise switch
-  // flips at once too; turned on, it reads as cleaning until the editor says
-  // the cleaned track is ready.
+  // of until the editor answers with the level it committed. The microphone
+  // switches flip at once too.
   const audio =
     resolved.selection?.kind === "audio" ? resolved.selection : null;
+  const flipping =
+    reduceNoise !== undefined ||
+    vocalCleanup !== undefined ||
+    autoVolume !== undefined;
   const microphone =
-    audio?.microphone && reduceNoise !== undefined
+    audio?.microphone && flipping
       ? {
           ...audio.microphone,
-          noise: reduceNoise
-            ? audio.microphone.noise === "on"
-              ? ("on" as const)
-              : ("cleaning" as const)
-            : ("off" as const),
+          autoVolume: flippedSwitch(audio.microphone.autoVolume, autoVolume),
+          noise: flippedSwitch(audio.microphone.noise, reduceNoise),
+          voice: flippedSwitch(audio.microphone.voice, vocalCleanup),
         }
       : audio?.microphone;
   const heard =
-    audio && (audioVolume !== undefined || reduceNoise !== undefined)
+    audio && (audioVolume !== undefined || flipping)
       ? {
           ...audio,
           decibels: audioVolume ?? audio.decibels,

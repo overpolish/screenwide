@@ -90,12 +90,14 @@ pub async fn get_recording_preview(
       .iter()
       .map(|track| track.stream_index)
       .collect();
+    let folder = &sources.project_folder;
     let preview = media_preview::prepare(
       artifact_id,
       &sources.path,
       sources.duration_ms,
       &sources.tracks,
-      &crate::editor::speech::noise::cleaned_tracks(&sources.project_folder, &streams),
+      &crate::editor::speech::heard::heard_files(folder, &streams),
+      &crate::editor::speech::auto_volume::heard_filters(folder, &streams),
     )?;
     ensure_current(&state, artifact_id)?;
     state
@@ -113,9 +115,10 @@ pub async fn get_recording_preview(
 /// of them changed.
 const PREVIEW_EVENT: &str = "editor://recording-preview";
 
-/// Reads the `stream`th track's waveform again as it is now heard, cleaned
-/// or not, once the waveforms have been prepared, and hands the editor the
-/// result, so its waveform and meter follow Reduce noise.
+/// Reads the `stream`th track's waveform again as it is now heard, from the
+/// recording or a file made of it and through Auto volume, once the
+/// waveforms have been prepared, and hands the editor the result, so its
+/// waveform and meter follow the microphone's switches.
 pub(crate) fn refresh_waveform(
   app: &AppHandle,
   artifact_id: u64,
@@ -144,12 +147,17 @@ pub(crate) fn refresh_waveform(
   else {
     return Ok(());
   };
-  let cleaned = crate::editor::speech::noise::cleaned_tracks(&sources.project_folder, &[stream]);
+  let folder = &sources.project_folder;
+  let cleaned = crate::editor::speech::heard::heard_files(folder, &[stream]);
+  let filters = crate::editor::speech::auto_volume::heard_filters(folder, &[stream]);
   let waveform = media_preview::waveform(
     &sources.path,
     track,
     sources.duration_ms,
-    cleaned.first().map(|(_, file)| file.as_path()),
+    media_preview::HeardAs {
+      cleaned: cleaned.first().map(|(_, file)| file.as_path()),
+      filters: filters.first().map(|(_, filters)| filters.as_str()),
+    },
   )?;
   ensure_current(&state, artifact_id)?;
   let mut cached = state

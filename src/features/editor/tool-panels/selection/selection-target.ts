@@ -241,12 +241,17 @@ export const audioPanelHandlers = (
 ): Pick<
   ToolPanelHandlers,
   | "onAudioVolumeChange"
+  | "onAutoVolumeChange"
   | "onReduceNoiseChange"
   | "onSilencesRemove"
   | "onSilencesRestore"
+  | "onVocalCleanupChange"
 > => ({
   onAudioVolumeChange: (decibels) => {
     target?.applyVolume(decibels);
+  },
+  onAutoVolumeChange: (enabled) => {
+    target?.microphone?.changeAutoVolume(enabled);
   },
   onReduceNoiseChange: (enabled) => {
     target?.microphone?.reduceNoise(enabled);
@@ -256,5 +261,8 @@ export const audioPanelHandlers = (
   },
   onSilencesRestore: () => {
     target?.microphone?.restoreSilences();
+  },
+  onVocalCleanupChange: (enabled) => {
+    target?.microphone?.cleanUpVoice(enabled);
   },
 });

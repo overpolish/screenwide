@@ -114,15 +114,15 @@ pub async fn estimate_recording_export(
     )?;
     validate_camera_resolution_scale(camera_resolution_scale_percent)?;
 
-    let selection = track_selection::TrackSelection::with_volumes(
-      &tracks,
-      &enabled_stream_indices,
-      &audio_track_volumes,
-    )?
-    .with_cleaned(crate::editor::speech::noise::cleaned_tracks(
+    let selection = crate::editor::speech::as_heard(
+      track_selection::TrackSelection::with_volumes(
+        &tracks,
+        &enabled_stream_indices,
+        &audio_track_volumes,
+      )?,
       project.parent().unwrap_or(std::path::Path::new(".")),
       &enabled_stream_indices,
-    ));
+    );
     let layout = if collapse_audio {
       track_selection::AudioLayout::Mixdown
     } else {

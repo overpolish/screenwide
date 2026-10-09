@@ -6,9 +6,8 @@
 //! is on. The cleaning is DeepFilterNet's, run in the transcriber program: a
 //! speech enhancer that keeps the voice and takes out what is not, steady
 //! hiss and passing clicks alike. What it lets through between words is
-//! turned down after (`pause_gate`). The choice is kept beside the file, so
-//! it holds when the project opens again and the export reads the same
-//! answer as the preview.
+//! turned down after (`pause_gate`). Vocal cleanup can be made from the
+//! cleaned file in turn (`heard`).
 
 use std::fs::File;
 use std::io::{Read, Write};
@@ -20,11 +19,12 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use super::analysis::{self, SpeechMap};
+use super::choice_file;
 use super::pause_gate::PauseGate;
 use crate::transcription::runner::{decode_audio_stream, Samples, Transcriber};
 
 /// Bumped when a cleaned file of an older make should be made again.
-const FORMAT_VERSION: u16 = 3;
+const FORMAT_VERSION: u16 = 4;
 
 /// Whether the microphone's noise is taken out.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
@@ -36,13 +36,6 @@ pub enum NoiseReduction {
   On,
 }
 
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Kept {
-  version: u16,
-  choice: NoiseReduction,
-}
-
 fn choice_path(project_folder: &Path, stream: usize) -> PathBuf {
   project_folder.join(format!("noise-{stream}.json"))
 }
@@ -52,17 +45,10 @@ pub(super) fn cleaned_path(project_folder: &Path, stream: usize) -> PathBuf {
   project_folder.join(format!("noise-{stream}.flac"))
 }
 
-fn kept(project_folder: &Path, stream: usize) -> Option<Kept> {
-  std::fs::read(choice_path(project_folder, stream))
-    .ok()
-    .and_then(|bytes| serde_json::from_slice::<Kept>(&bytes).ok())
-}
-
 /// What the project says about the `stream`th track's noise.
 pub(super) fn choice(project_folder: &Path, stream: usize) -> NoiseReduction {
-  kept(project_folder, stream)
-    .filter(|kept| kept.version == FORMAT_VERSION)
-    .map_or(NoiseReduction::Off, |kept| kept.choice)
+  choice_file::read(&choice_path(project_folder, stream), FORMAT_VERSION)
+    .unwrap_or(NoiseReduction::Off)
 }
 
 pub(super) fn keep(
@@ -70,38 +56,31 @@ pub(super) fn keep(
   stream: usize,
   choice: NoiseReduction,
 ) -> Result<(), String> {
-  let kept = Kept {
-    choice,
-    version: FORMAT_VERSION,
-  };
-  std::fs::write(
-    choice_path(project_folder, stream),
-    serde_json::to_vec(&kept).map_err(|error| error.to_string())?,
-  )
-  .map_err(|error| format!("Could not keep the noise choice: {error}"))
+  forget_older(project_folder, stream)?;
+  choice_file::write(&choice_path(project_folder, stream), FORMAT_VERSION, choice)
+    .map_err(|error| format!("Could not keep the noise choice: {error}"))
 }
 
-/// The tracks of the project in `project_folder` to play cleaned, with the
-/// files they are cleaned into: those with the switch on whose file is there.
-pub(crate) fn cleaned_tracks(project_folder: &Path, streams: &[usize]) -> Vec<(usize, PathBuf)> {
-  cleaned_files(project_folder, streams)
-    .into_iter()
-    .filter(|(stream, _)| choice(project_folder, *stream) == NoiseReduction::On)
-    .collect()
+/// Removes a file made by an older cleaning, with the cleaned-up voice made
+/// from it, then marks the choice as kept by this one, so a file is only
+/// ever there when it is current. The choice starts again from off, as it
+/// does after any change of make.
+fn forget_older(project_folder: &Path, stream: usize) -> Result<(), String> {
+  let path = choice_path(project_folder, stream);
+  if choice_file::read::<NoiseReduction>(&path, FORMAT_VERSION).is_some() {
+    return Ok(());
+  }
+  let _ = std::fs::remove_file(cleaned_path(project_folder, stream));
+  let _ = std::fs::remove_file(super::voice::cleaned_path(project_folder, stream, true));
+  choice_file::write(&path, FORMAT_VERSION, NoiseReduction::Off)
+    .map_err(|error| format!("Could not keep the noise choice: {error}"))
 }
 
-/// The tracks of the project in `project_folder` that have been cleaned,
-/// whether or not they are heard so, with their files. A file made before the
-/// current cleaning is not one of them.
-pub(crate) fn cleaned_files(project_folder: &Path, streams: &[usize]) -> Vec<(usize, PathBuf)> {
-  streams
-    .iter()
-    .filter(|&&stream| {
-      kept(project_folder, stream).is_some_and(|kept| kept.version == FORMAT_VERSION)
-    })
-    .map(|&stream| (stream, cleaned_path(project_folder, stream)))
-    .filter(|(_, path)| path.is_file())
-    .collect()
+/// Whether the `stream`th track has been cleaned, by the current cleaning.
+pub(super) fn is_made(project_folder: &Path, stream: usize) -> bool {
+  choice_file::read::<NoiseReduction>(&choice_path(project_folder, stream), FORMAT_VERSION)
+    .is_some()
+    && cleaned_path(project_folder, stream).is_file()
 }
 
 /// How much of the progress bar listening for speech takes, before cleaning;
@@ -121,12 +100,11 @@ pub(super) fn prepare(
   model: PathBuf,
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
-  let destination = cleaned_path(project_folder, stream);
-  if destination.is_file()
-    && kept(project_folder, stream).is_some_and(|kept| kept.version == FORMAT_VERSION)
-  {
+  forget_older(project_folder, stream)?;
+  if is_made(project_folder, stream) {
     return Ok(());
   }
+  let destination = cleaned_path(project_folder, stream);
   // Said before the track is read, so the editor shows its bar only when
   // there is cleaning to wait for, and shows it from the start.
   progress(0.0);
@@ -148,7 +126,10 @@ pub(super) fn prepare(
     return Err(error);
   }
   std::fs::rename(&partial, &destination)
-    .map_err(|error| format!("Could not keep the cleaned microphone: {error}"))
+    .map_err(|error| format!("Could not keep the cleaned microphone: {error}"))?;
+  // Vocal cleanup made from the file this replaces would no longer match it.
+  let _ = std::fs::remove_file(super::voice::cleaned_path(project_folder, stream, true));
+  Ok(())
 }
 
 /// Writes the cleaned samples in `clean` to `output` with their pauses

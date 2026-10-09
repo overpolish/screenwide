@@ -50,6 +50,9 @@ rxing = { version = "0.9.2", default-features = false, features = ["decoders", "
 rapidfuzz = "0.5.0"
 rayon = "1.12.0"
 cpal = "0.18.1"
+# The spectrum Vocal cleanup finds mouth clicks and plosives in. The same
+# release the speech enhancer in the transcriber uses.
+realfft = "3.5.0"
 yuv = "0.8.16"
 quantette = "0.6.0"
 png = "0.18.1"

@@ -4,15 +4,22 @@
 //! The microphone's speech tools. Remove silences (`silences`) cuts the long
 //! pauses from one listen through the microphone track for speech
 //! (`analysis`), kept beside the project so it runs once per recording.
-//! Reduce noise (`noise`) cleans the track with a speech enhancer.
+//! Reduce noise (`noise`) cleans the track with a speech enhancer, Vocal
+//! cleanup (`voice`) polishes the voice, and `heard` picks which of their
+//! files the track is heard from. Auto volume (`auto_volume`) levels whatever
+//! is heard to a steady loudness.
 
 mod analysis;
+pub(crate) mod auto_volume;
+mod choice_file;
 pub(crate) mod commands;
-pub(crate) mod noise;
+pub(crate) mod heard;
+mod noise;
 mod pause_gate;
 mod silences;
 #[cfg(test)]
 mod tests;
+mod voice;
 
 use std::path::{Path, PathBuf};
 
@@ -85,4 +92,17 @@ fn vad_model(app: &AppHandle) -> Result<PathBuf, String> {
     .chain(beside)
     .find(|path| path.is_file())
     .ok_or_else(|| "The voice activity model is missing from this installation".to_owned())
+}
+
+/// `selection` with each of the `streams` it carries read as it is heard:
+/// from the file Reduce noise or Vocal cleanup made of it, and through Auto
+/// volume's filters.
+pub(crate) fn as_heard(
+  selection: super::track_selection::TrackSelection,
+  project_folder: &Path,
+  streams: &[usize],
+) -> super::track_selection::TrackSelection {
+  selection
+    .with_cleaned(heard::heard_files(project_folder, streams))
+    .with_filters(auto_volume::heard_filters(project_folder, streams))
 }

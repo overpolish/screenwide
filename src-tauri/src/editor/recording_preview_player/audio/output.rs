@@ -2,30 +2,48 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::editor::recording_preview_player::PreviewNoise;
+use crate::editor::recording_preview_player::PreviewProcessing;
 
 /// What the output mixes FFmpeg's channels by: which tracks are on, how loud
-/// each is, and which are heard cleaned of their noise. All three change
+/// each is, and which of each track's files is heard. All three change
 /// while the preview plays.
 #[derive(Clone)]
 pub(super) struct Mix {
   pub audio_volumes: Arc<RwLock<Vec<AudioTrackVolume>>>,
   pub channels: Vec<Channel>,
-  pub noise: Arc<RwLock<PreviewNoise>>,
+  pub processing: Arc<RwLock<PreviewProcessing>>,
   pub selected_audio: Arc<RwLock<Vec<usize>>>,
 }
 
 impl Mix {
-  /// Whether `channel` is heard: its track is on, and it is the track's
-  /// cleaned channel exactly when the track is heard cleaned and has one.
-  pub(super) fn hears(&self, channel: &Channel, selected: &[usize], cleaned: &[usize]) -> bool {
-    selected.contains(&channel.stream_index)
-      && channel.cleaned.is_some()
-        == (cleaned.contains(&channel.stream_index)
-          && self
-            .channels
-            .iter()
-            .any(|other| other.stream_index == channel.stream_index && other.cleaned.is_some()))
+  /// Whether `channel` is heard: its track is on, and it is the channel the
+  /// track is heard from, as `heard` and `leveled` say, falling back to the
+  /// recorded track, and to the unleveled one, where the preview has no
+  /// channel for that.
+  pub(super) fn hears(
+    &self,
+    channel: &Channel,
+    selected: &[usize],
+    (heard, leveled): (&[(usize, Processing)], &[usize]),
+  ) -> bool {
+    let stream = channel.stream_index;
+    let has = |processing: Processing, leveling: bool| {
+      self.channels.iter().any(|other| {
+        other.stream_index == stream
+          && other.processing() == processing
+          && other.leveling.is_some() == leveling
+      })
+    };
+    let wanted = heard
+      .iter()
+      .find(|(heard, _)| *heard == stream)
+      .map(|(_, processing)| *processing)
+      .filter(|processing| has(*processing, false))
+      .unwrap_or_default();
+    let wanted_leveling = leveled.contains(&stream) && has(wanted, true);
+    selected.contains(&stream)
+      && channel.processing() == wanted
+      && channel.leveling.is_some() == wanted_leveling
   }
 }
 
@@ -56,10 +74,14 @@ where
           .audio_volumes
           .read()
           .unwrap_or_else(|value| value.into_inner());
-        let noise = mix.noise.read().unwrap_or_else(|value| value.into_inner());
+        let processing = mix
+          .processing
+          .read()
+          .unwrap_or_else(|value| value.into_inner());
         gains.clear();
         gains.extend(mix.channels.iter().map(|channel| {
-          mix.hears(channel, &selected, &noise.enabled).then(|| {
+          let heard = (processing.heard.as_slice(), processing.leveled.as_slice());
+          mix.hears(channel, &selected, heard).then(|| {
             let decibels = volumes
               .iter()
               .find_map(|volume| {
@@ -69,7 +91,7 @@ where
             10_f32.powf(f32::from(decibels) / 20.0)
           })
         }));
-        drop(noise);
+        drop(processing);
         for frame in output.chunks_mut(output_channels) {
           let mut mixed = 0.0_f32;
           for gain in &gains {

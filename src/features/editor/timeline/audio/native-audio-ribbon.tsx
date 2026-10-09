@@ -10,6 +10,19 @@ import { PreparedAudioTrack } from "../../types";
 import { AudioTrackVolumes } from "./audio-level";
 import { setRecordingAudioVisualizer } from "./recording-audio-visualizer-api";
 
+/** A number for each envelope the editor has been handed, so a new envelope
+ * for the same track, as a microphone switch brings, is uploaded again. */
+const envelopeIds = new WeakMap<number[], number>();
+let nextEnvelopeId = 0;
+const envelopeId = (waveform: number[]) => {
+  let id = envelopeIds.get(waveform);
+  if (id === undefined) {
+    id = nextEnvelopeId++;
+    envelopeIds.set(waveform, id);
+  }
+  return id;
+};
+
 /**
  * The audio-only preview.
  *
@@ -50,12 +63,12 @@ export function NativeAudioRibbon({
         })),
     [audioTracks, enabledTracks, volumes],
   );
-  // The envelopes themselves never change; only which tracks are enabled and
-  // how loud they are. Uploading on that alone keeps a re-render free.
+  // Uploaded when which tracks are enabled, how loud they are, or their
+  // envelopes change, and not on every re-render.
   const tracksKey = tracks
     .map(
       ({ gainDecibels, streamIndex, waveform }) =>
-        `${streamIndex.toString()}:${gainDecibels.toString()}:${waveform.length.toString()}`,
+        `${streamIndex.toString()}:${gainDecibels.toString()}:${envelopeId(waveform).toString()}`,
     )
     .join("|");
   const tracksRef = useRef(tracks);

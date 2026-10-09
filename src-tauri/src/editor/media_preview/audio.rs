@@ -3,21 +3,31 @@
 
 use super::*;
 
-/// The track's waveform as it is heard: from the file it was cleaned into
-/// when `cleaned` is `Some`, otherwise from the recording.
+/// What a track is heard as: the file it was cleaned into, if any, played
+/// through the filters Auto volume levels it with, if any.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct HeardAs<'a> {
+  pub cleaned: Option<&'a Path>,
+  pub filters: Option<&'a str>,
+}
+
+/// The track's waveform as it is heard.
 pub fn waveform(
   source: &Path,
   track: &RecordingAudioTrack,
   duration_ms: u64,
-  cleaned: Option<&Path>,
+  heard: HeardAs<'_>,
 ) -> Result<Vec<f32>, String> {
-  let (source, stream_index) = cleaned.map_or((source, track.stream_index), |file| (file, 0));
-  peaks(
+  let (source, stream_index) = heard
+    .cleaned
+    .map_or((source, track.stream_index), |file| (file, 0));
+  read_peaks(
     source,
     stream_index,
     &track.label,
     (0, duration_ms),
     WAVEFORM_POINTS,
+    heard.filters,
   )
 }
 
@@ -29,8 +39,19 @@ pub(in crate::editor) fn peaks(
   source: &Path,
   stream_index: usize,
   label: &str,
+  window: (u64, u64),
+  points: usize,
+) -> Result<Vec<f32>, String> {
+  read_peaks(source, stream_index, label, window, points, None)
+}
+
+fn read_peaks(
+  source: &Path,
+  stream_index: usize,
+  label: &str,
   (start_ms, length_ms): (u64, u64),
   points: usize,
+  filters: Option<&str>,
 ) -> Result<Vec<f32>, String> {
   let mut command = ffmpeg_command();
   command.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
@@ -41,13 +62,15 @@ pub(in crate::editor) fn peaks(
       .arg("-t")
       .arg(format!("{:.3}", length_ms as f64 / 1_000.0));
   }
-  let mut child = command
+  command
     .arg("-i")
     .arg(source)
+    .args(["-map", &format!("0:a:{stream_index}"), "-vn"]);
+  if let Some(filters) = filters {
+    command.args(["-af", filters]);
+  }
+  let mut child = command
     .args([
-      "-map",
-      &format!("0:a:{stream_index}"),
-      "-vn",
       "-ac",
       "1",
       "-ar",
@@ -109,28 +132,36 @@ pub(in crate::editor) fn peaks(
 }
 
 /// The recording's tracks with their waveforms. `cleaned` lists the tracks
-/// heard cleaned, with the files they are cleaned into, so the waveforms and
-/// the meter show what is heard.
+/// heard cleaned, with the files they are cleaned into, and `filters` the
+/// tracks Auto volume levels, with its filters, so the waveforms and the
+/// meter show what is heard.
 pub fn prepare(
   artifact_id: u64,
   source: &Path,
   duration_ms: u64,
   tracks: &[RecordingAudioTrack],
   cleaned: &[(usize, PathBuf)],
+  filters: &[(usize, String)],
 ) -> Result<RecordingPreview, String> {
   let mut prepared = Vec::with_capacity(tracks.len());
   for track in tracks {
-    let file = cleaned
-      .iter()
-      .find(|(stream, _)| *stream == track.stream_index)
-      .map(|(_, file)| file.as_path());
+    let heard = HeardAs {
+      cleaned: cleaned
+        .iter()
+        .find(|(stream, _)| *stream == track.stream_index)
+        .map(|(_, file)| file.as_path()),
+      filters: filters
+        .iter()
+        .find(|(stream, _)| *stream == track.stream_index)
+        .map(|(_, filters)| filters.as_str()),
+    };
     // Nothing is written, so a failure part-way through leaves nothing behind
     // to tidy up - only a preview the window will not show.
     prepared.push(PreparedAudioTrack {
       kind: track.kind,
       label: track.label.clone(),
       stream_index: track.stream_index,
-      waveform: waveform(source, track, duration_ms, file)?,
+      waveform: waveform(source, track, duration_ms, heard)?,
     });
   }
 

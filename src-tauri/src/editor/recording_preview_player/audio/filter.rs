@@ -70,22 +70,33 @@ pub(super) fn args(
     "-i".to_owned(),
     sources.screen_path.to_string_lossy().into_owned(),
   ];
-  // A cleaned track is a file of its own, sought to the same place: each is
-  // an input after the recording, in channel order.
+  // A processed track is a file of its own, sought to the same place: each
+  // is an input after the recording, in channel order.
   let mut next_input = 1;
+  let mut filter = String::new();
   let labels: Vec<String> = channels
     .iter()
-    .map(|channel| match &channel.cleaned {
-      None => format!("[0:a:{}]", channel.stream_index),
-      Some(path) => {
-        args.extend([
-          "-ss".to_owned(),
-          start.clone(),
-          "-i".to_owned(),
-          path.to_string_lossy().into_owned(),
-        ]);
-        next_input += 1;
-        format!("[{}:a:0]", next_input - 1)
+    .enumerate()
+    .map(|(position, channel)| {
+      let label = match &channel.processed {
+        None => format!("[0:a:{}]", channel.stream_index),
+        Some((_, path)) => {
+          args.extend([
+            "-ss".to_owned(),
+            start.clone(),
+            "-i".to_owned(),
+            path.to_string_lossy().into_owned(),
+          ]);
+          next_input += 1;
+          format!("[{}:a:0]", next_input - 1)
+        }
+      };
+      match &channel.leveling {
+        None => label,
+        Some(leveling) => {
+          filter.push_str(&format!("{label}{}[level{position}];", leveling.filters()));
+          format!("[level{position}]")
+        }
       }
     })
     .collect();
@@ -98,7 +109,6 @@ pub(super) fn args(
       })
       .sum(),
   );
-  let mut filter = String::new();
   let mut merged_inputs = String::new();
   for (track_position, label) in labels.iter().enumerate() {
     if ranges.len() > 1 {

@@ -115,7 +115,7 @@ fn append_audio_filters(
 ) {
   let ranges = timeline.ranges();
   let mut outputs = Vec::new();
-  let opened = selection.cleaned_sources();
+  let opened = selection.opened_sources(audio_input);
   if !opened.is_empty() {
     filters.push(opened.trim_end_matches(';').to_owned());
   }

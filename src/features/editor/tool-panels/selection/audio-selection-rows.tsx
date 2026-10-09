@@ -25,7 +25,9 @@ type RowsProps = {
 
 /**
  * The Select tool's controls for an audio track: how loud it is played back,
- * and for a microphone, the room's noise taken out and the long pauses cut.
+ * and for a microphone, the room's noise taken out, the voice cleaned up,
+ * its loudness evened out and the long pauses cut. The volume works on top
+ * of Auto volume, so at 0 dB a leveled voice sits at its standard loudness.
  * The track is played at the level it was recorded at until the volume is
  * moved, so its reset is out of reach exactly while it is already there.
  */
@@ -94,39 +96,51 @@ const silencesDescription = ({
 };
 
 /**
- * Both tools wait on one listen through the track for speech. Restore all
- * stays in place while there is nothing to restore, as auto zoom's Clear all
- * does, so the row never shifts as cuts come and go. While a tool works on
- * the track for a while, a bar under its row shows how far it has got.
+ * Reduce noise and Remove silences wait on one listen through the track for
+ * speech. Restore all stays in place while there is nothing to restore, as
+ * auto zoom's Clear all does, so the row never shifts as cuts come and go.
+ * While a tool works on the track for a while, a bar under its row shows how
+ * far it has got.
  */
 function MicrophoneRows({
   change,
   isLocked,
   microphone,
 }: RowsProps & { microphone: ToolPanelMicrophone }) {
-  const { noise, noiseProgress, silences } = microphone;
+  const { silences } = microphone;
   const isFinding = silences.status === "finding";
   return (
     <>
-      <div>
-        <ControlRow title={t("editor-panels-reduce-noise")}>
-          {(controlProps) => (
-            <Switch
-              {...controlProps}
-              isDisabled={isLocked}
-              isSelected={noise === "on" || noise === "cleaning"}
-              onChange={(reduceNoise) => {
-                change({ reduceNoise });
-              }}
-            />
-          )}
-        </ControlRow>
-        <ToolProgress
-          isWorking={noise === "cleaning"}
-          label={t("editor-panels-noise-cleaning")}
-          value={noiseProgress}
-        />
-      </div>
+      <WorkingSwitchRow
+        isLocked={isLocked}
+        onChange={(reduceNoise) => {
+          change({ reduceNoise });
+        }}
+        progress={microphone.noiseProgress}
+        state={microphone.noise}
+        title={t("editor-panels-reduce-noise")}
+        working={t("editor-panels-noise-cleaning")}
+      />
+      <WorkingSwitchRow
+        isLocked={isLocked}
+        onChange={(vocalCleanup) => {
+          change({ vocalCleanup });
+        }}
+        progress={microphone.voiceProgress}
+        state={microphone.voice}
+        title={t("editor-panels-vocal-cleanup")}
+        working={t("editor-panels-voice-cleaning")}
+      />
+      <WorkingSwitchRow
+        isLocked={isLocked}
+        onChange={(autoVolume) => {
+          change({ autoVolume });
+        }}
+        progress={microphone.autoVolumeProgress}
+        state={microphone.autoVolume}
+        title={t("editor-panels-auto-volume")}
+        working={t("editor-panels-auto-volume-measuring")}
+      />
       <div>
         <ControlRow
           controlClassName="gap-control"
@@ -163,5 +177,43 @@ function MicrophoneRows({
         />
       </div>
     </>
+  );
+}
+
+/** A microphone switch whose first turn can take a while, with a bar under
+ * it while it works. */
+function WorkingSwitchRow({
+  isLocked,
+  onChange,
+  progress,
+  state,
+  title,
+  working,
+}: {
+  isLocked: boolean;
+  onChange: (enabled: boolean) => void;
+  progress: number;
+  state: ToolPanelMicrophone["noise"];
+  title: string;
+  working: string;
+}) {
+  return (
+    <div>
+      <ControlRow title={title}>
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isLocked}
+            isSelected={state !== "off"}
+            onChange={onChange}
+          />
+        )}
+      </ControlRow>
+      <ToolProgress
+        isWorking={state === "cleaning"}
+        label={working}
+        value={progress}
+      />
+    </div>
   );
 }

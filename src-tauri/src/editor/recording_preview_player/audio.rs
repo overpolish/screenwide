@@ -25,40 +25,71 @@ use cpal::{
 
 use self::{clock::AudioClock, filter::args};
 use super::{PlayerSources, RecordingPreviewPlaybackRange};
+use crate::editor::speech::auto_volume::Leveling;
+use crate::editor::speech::heard::Processing;
 use crate::editor::{media_preview, AudioTrackVolume};
 
 /// One channel of what FFmpeg decodes for the preview: a recorded track, or
-/// that track's cleaned file, decoded beside it so the noise switch can
-/// change which is heard while it plays.
+/// a file made of it by Reduce noise or Vocal cleanup, each also decoded
+/// leveled by Auto volume once it is measured. All are decoded side by side
+/// so any switch can change which is heard while it plays.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct Channel {
   pub stream_index: usize,
-  pub cleaned: Option<std::path::PathBuf>,
+  pub processed: Option<(Processing, std::path::PathBuf)>,
+  pub leveling: Option<Leveling>,
+}
+
+impl Channel {
+  pub(super) fn processing(&self) -> Processing {
+    self
+      .processed
+      .as_ref()
+      .map_or_else(Processing::default, |(processing, _)| *processing)
+  }
 }
 
 fn channels(sources: &PlayerSources) -> Vec<Channel> {
-  let noise = sources
-    .noise
+  let processing = sources
+    .processing
     .read()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
   let tracks = sources.audio_tracks.iter().map(|track| Channel {
-    cleaned: None,
+    leveling: None,
+    processed: None,
     stream_index: track.stream_index,
   });
-  let cleaned = noise
-    .cleaned
+  let processed = processing
+    .files
     .iter()
-    .filter(|(stream, _)| {
+    .filter(|(stream, _, _)| {
       sources
         .audio_tracks
         .iter()
         .any(|track| track.stream_index == *stream)
     })
-    .map(|(stream, path)| Channel {
-      cleaned: Some(path.clone()),
+    .map(|(stream, processing, path)| Channel {
+      leveling: None,
+      processed: Some((*processing, path.clone())),
       stream_index: *stream,
     });
-  tracks.chain(cleaned).collect()
+  let plain: Vec<Channel> = tracks.chain(processed).collect();
+  let leveled: Vec<Channel> = plain
+    .iter()
+    .filter_map(|channel| {
+      processing
+        .levelings
+        .iter()
+        .find(|(stream, processing, _)| {
+          *stream == channel.stream_index && *processing == channel.processing()
+        })
+        .map(|(_, _, leveling)| Channel {
+          leveling: Some(*leveling),
+          ..channel.clone()
+        })
+    })
+    .collect();
+  plain.into_iter().chain(leveled).collect()
 }
 
 const MAX_QUEUED_SECONDS: usize = 2;
@@ -96,7 +127,7 @@ pub(super) fn spawn(
     Mix {
       audio_volumes: Arc::clone(&audio_volumes),
       channels: channels.clone(),
-      noise: Arc::clone(&sources.noise),
+      processing: Arc::clone(&sources.processing),
       selected_audio: Arc::clone(&selected_audio),
     },
   )?;

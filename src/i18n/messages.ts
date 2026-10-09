@@ -236,6 +236,8 @@ export type Messages = {
   "editor-panels-annotations-selected": { count: number };
   "editor-panels-apply-to-all": null;
   "editor-panels-audio": null;
+  "editor-panels-auto-volume": null;
+  "editor-panels-auto-volume-measuring": null;
   "editor-panels-auto-zoom": null;
   "editor-panels-background-actions": null;
   "editor-panels-camera": null;
@@ -339,6 +341,8 @@ export type Messages = {
   "editor-panels-sway": null;
   "editor-panels-template-actions": null;
   "editor-panels-two-thirds": null;
+  "editor-panels-vocal-cleanup": null;
+  "editor-panels-voice-cleaning": null;
   "editor-panels-volume": null;
   "editor-panels-zoom": null;
   "editor-pin-clear-corrections": null;

@@ -53,6 +53,9 @@ export type ToolPanelHandlers = {
   /** Play the selected audio track this much louder or quieter than it was
    * recorded, in decibels. */
   onAudioVolumeChange?: (decibels: number) => void;
+  /** Bring the selected microphone to a steady loudness, or play it as
+   * recorded. */
+  onAutoVolumeChange?: (enabled: boolean) => void;
   /** Fill the workspace's canvas with this background. */
   onBackgroundChange?: (background: Background) => void;
   onBackgroundPresetRemove?: (id: string) => void;
@@ -138,4 +141,6 @@ export type ToolPanelHandlers = {
   onSilencesRemove?: () => void;
   /** Bring back every pause Remove cut that is still cut. */
   onSilencesRestore?: () => void;
+  /** Clean up the selected microphone's voice, or put it back as it was. */
+  onVocalCleanupChange?: (enabled: boolean) => void;
 };

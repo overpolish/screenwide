@@ -43,6 +43,17 @@ const MOST_GAIN: f32 = 8.0;
 const HEADROOM: f32 = 0.98;
 /// How often progress is told, at most.
 const PROGRESS_EVERY: Duration = Duration::from_millis(100);
+/// The local signal-to-noise ratio, in dB, above which the enhancer leaves a
+/// frame as it is, and below which it runs both its stages. By default it
+/// runs only its first, coarser stage between 20 dB and 30 dB, and on a
+/// voice that stage takes 10 dB to 12 dB off every vowel, so a word sounded
+/// full at its start and was cut short as it went on. With the second stage
+/// always run beside it the voice keeps its level, and noise between words
+/// is taken out as much as before.
+const UNTOUCHED_ABOVE_DB: f32 = 30.0;
+/// Below this ratio, in dB, a frame holds no speech and is silenced: the
+/// enhancer's own default.
+const SILENT_BELOW_DB: f32 = -10.0;
 
 /// The voice's loudness before and after, over the blocks that hold voice.
 #[derive(Default)]
@@ -143,7 +154,12 @@ pub fn clean_speech(
         scope.spawn(|| {
           // One model a worker, carried from part to part: what it heard of
           // the last part is long gone by the end of the next one's lead-in.
-          let mut model = DfTract::new(params.clone(), &RuntimeParams::default_with_ch(1))
+          let runtime = RuntimeParams::default_with_ch(1).with_thresholds(
+            SILENT_BELOW_DB,
+            UNTOUCHED_ABOVE_DB,
+            UNTOUCHED_ABOVE_DB,
+          );
+          let mut model = DfTract::new(params.clone(), &runtime)
             .map_err(|error| format!("Could not load the speech enhancer: {error}"));
           loop {
             let index = next.fetch_add(1, Ordering::Relaxed);

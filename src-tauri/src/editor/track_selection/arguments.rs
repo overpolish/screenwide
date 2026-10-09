@@ -24,7 +24,7 @@ impl TrackSelection {
     }
 
     let processes = self.processes();
-    let opened = self.cleaned_sources();
+    let opened = self.opened_sources(input);
     match layout {
       // One track needs no summing, so it crosses untouched rather than being
       // decoded and re-encoded for the sake of passing through a filter.

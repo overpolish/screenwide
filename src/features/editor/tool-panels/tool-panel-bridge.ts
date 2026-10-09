@@ -44,6 +44,10 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAudioVolumeChange?.(values.audioVolume);
   if (values.reduceNoise !== undefined)
     on.onReduceNoiseChange?.(values.reduceNoise);
+  if (values.vocalCleanup !== undefined)
+    on.onVocalCleanupChange?.(values.vocalCleanup);
+  if (values.autoVolume !== undefined)
+    on.onAutoVolumeChange?.(values.autoVolume);
   if (values.removeSilences) on.onSilencesRemove?.();
   if (values.restoreSilences) on.onSilencesRestore?.();
   if (values.bakeCamera !== undefined)

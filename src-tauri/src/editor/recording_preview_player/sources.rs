@@ -45,8 +45,8 @@ pub(super) struct PlayerSources {
   /// presenting it anyway paints over the ribbon.
   pub(super) video_muted: Arc<AtomicBool>,
   pub(super) preview_surface: Option<Arc<RecordingPreviewSurface>>,
-  /// The microphone tracks cleaned of their noise, and which are heard so.
-  pub(super) noise: Arc<RwLock<super::PreviewNoise>>,
+  /// The files made of the microphone tracks, and which of them is heard.
+  pub(super) processing: Arc<RwLock<super::PreviewProcessing>>,
   pub(super) primary_kind: PrimaryRecordingKind,
   pub(super) screen_path: PathBuf,
 }
@@ -214,7 +214,7 @@ pub(super) fn sources_with_surface(
   let cursor_artworks = cursor
     .as_ref()
     .map(|_| Arc::new(crate::editor::cursor_effects::gpu_artworks()));
-  let noise = super::PreviewNoise::for_project(
+  let processing = super::PreviewProcessing::for_project(
     project.parent().unwrap_or(std::path::Path::new(".")),
     &audio_tracks
       .iter()
@@ -289,7 +289,7 @@ pub(super) fn sources_with_surface(
     playing: Arc::new(AtomicBool::new(false)),
     video_muted: Arc::new(AtomicBool::new(false)),
     preview_surface,
-    noise: Arc::new(RwLock::new(noise)),
+    processing: Arc::new(RwLock::new(processing)),
     primary_kind,
     screen_path: path,
   })

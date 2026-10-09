@@ -71,10 +71,17 @@ export type ToolPanelAudioSelection = {
 };
 
 /**
- * Where the microphone's speech tools stand. Both work from the same listen
- * through the track for speech, which runs once, the first time either asks.
+ * Where the microphone's speech tools stand. Reduce noise and Remove
+ * silences work from the same listen through the track for speech, which
+ * runs once, the first time either asks.
  */
 export type ToolPanelMicrophone = {
+  /** The voice brought to a steady, standard loudness: `cleaning` while the
+   * track as heard is measured, which happens once for each way it can be
+   * heard. */
+  autoVolume: "cleaning" | "off" | "on";
+  /** How far measuring has got, 0 to 1, while `autoVolume` is `cleaning`. */
+  autoVolumeProgress: number;
   /** Everything but the voice taken out of the track: `cleaning` while the
    * track is cleaned, which happens once and can take a while. */
   noise: "cleaning" | "off" | "on";
@@ -93,6 +100,12 @@ export type ToolPanelMicrophone = {
      * a Remove that found no pause long enough to cut. */
     status: "finding" | "idle" | "none-found";
   };
+  /** The voice cleaned up: mouth clicks and harsh "s" sounds softened, its
+   * tone eased and its level evened out. `cleaning` while that is done to
+   * the track as it is heard, once each way Reduce noise is set. */
+  voice: "cleaning" | "off" | "on";
+  /** How far cleaning up has got, 0 to 1, while `voice` is `cleaning`. */
+  voiceProgress: number;
 };
 
 export type ToolPanelSelection =

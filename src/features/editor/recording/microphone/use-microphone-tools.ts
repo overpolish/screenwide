@@ -14,14 +14,22 @@ import { EditorArtifact } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 
 import {
+  getRecordingAutoVolume,
   getRecordingNoiseReduction,
+  getRecordingVocalCleanup,
   listenToMicrophoneProgress,
-  NoiseReduction,
   planRecordingSilences,
+  setRecordingAutoVolume,
   setRecordingNoiseReduction,
+  setRecordingVocalCleanup,
 } from "./microphone-api";
+import { useMicrophoneSwitch } from "./use-microphone-switch";
 
 export type MicrophoneTools = {
+  /** Bring the microphone to a steady loudness, or play it as recorded. */
+  changeAutoVolume: (enabled: boolean) => void;
+  /** Clean up the microphone's voice, or put it back as it was. */
+  cleanUpVoice: (enabled: boolean) => void;
   microphone: ToolPanelMicrophone;
   /** Take the room's steady noise out of the microphone, or put it back. */
   reduceNoise: (enabled: boolean) => void;
@@ -31,25 +39,39 @@ export type MicrophoneTools = {
   restoreSilences: () => void;
 };
 
-type Noise = {
-  artifactId: number;
-  /** Whether the app is still carrying out the last turn of the switch. */
-  isPending: boolean;
-  state: NoiseReduction;
-};
 /** How far each tool has got, 0 to 1, for the recording it is working on;
  * `null` until the app says the tool has work to do, which it does not when
  * what it makes is kept from before. */
 type Progress = {
   artifactId: number;
+  autoVolume: number | null;
   noise: number | null;
   silences: number | null;
+  voice: number | null;
 };
 const noProgress = (artifactId: number): Progress => ({
   artifactId,
+  autoVolume: null,
   noise: null,
   silences: null,
+  voice: null,
 });
+/** A switch as the panel shows it: `cleaning` while the app works on a turn
+ * it has said has work in it. */
+const shown = (
+  { isPending, state }: { isPending: boolean; state: "off" | "on" },
+  progress: number | null,
+) => (isPending && progress !== null ? ("cleaning" as const) : state);
+/** Auto volume as the panel shows it: also `cleaning` while the app measures
+ * on its own, as it does when a recording first opens, until it says the
+ * measure is done. */
+const shownAutoVolume = (
+  autoVolume: { isPending: boolean; state: "off" | "on" },
+  progress: number | null,
+) =>
+  autoVolume.state === "on" && progress !== null && progress < 1
+    ? ("cleaning" as const)
+    : shown(autoVolume, progress);
 type Silences =
   | { artifactId: number; status: "finding" }
   | { artifactId: number; edit: RecordingTimelineEdit; status: "none-found" };
@@ -74,26 +96,28 @@ export function useMicrophoneTools({
     recording?.audioTracks.some((track) => track.kind === "microphone") === true
       ? recording.id
       : null;
-  const [noise, setNoise] = useState<Noise | null>(null);
+  const noise = useMicrophoneSwitch({
+    artifactId,
+    name: "noise",
+    read: getRecordingNoiseReduction,
+    write: setRecordingNoiseReduction,
+  });
+  const voice = useMicrophoneSwitch({
+    artifactId,
+    name: "vocal cleanup",
+    read: getRecordingVocalCleanup,
+    write: setRecordingVocalCleanup,
+  });
+  const autoVolume = useMicrophoneSwitch({
+    artifactId,
+    name: "auto volume",
+    read: getRecordingAutoVolume,
+    write: setRecordingAutoVolume,
+  });
   const [silences, setSilences] = useState<Silences | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const editRef = useRef(edit);
   editRef.current = edit;
-
-  useEffect(() => {
-    if (artifactId === null) return;
-    let current = true;
-    getRecordingNoiseReduction(artifactId)
-      .then((state) => {
-        if (current) setNoise({ artifactId, isPending: false, state });
-      })
-      .catch((cause: unknown) => {
-        console.error("Could not read the microphone's noise choice", cause);
-      });
-    return () => {
-      current = false;
-    };
-  }, [artifactId]);
 
   useEffect(() => {
     if (artifactId === null) return;
@@ -128,7 +152,6 @@ export function useMicrophoneTools({
     onEditChange?.(next);
     editGesture.endGesture();
   };
-  const noiseState = noise?.artifactId === artifactId ? noise.state : "off";
   const progressNow: Progress =
     progress?.artifactId === artifactId ? progress : noProgress(artifactId);
   const status =
@@ -141,37 +164,33 @@ export function useMicrophoneTools({
           : "idle";
 
   return {
+    changeAutoVolume: (enabled) => {
+      setProgress({ ...progressNow, autoVolume: null });
+      autoVolume.turn(enabled);
+    },
+    cleanUpVoice: (enabled) => {
+      // As with Reduce noise, the bar waits until the app says there is work.
+      setProgress({ ...progressNow, voice: null });
+      voice.turn(enabled);
+    },
     microphone: {
-      noise:
-        noise?.artifactId === artifactId &&
-        noise.isPending &&
-        progressNow.noise !== null
-          ? "cleaning"
-          : noiseState,
+      autoVolume: shownAutoVolume(autoVolume, progressNow.autoVolume),
+      autoVolumeProgress: progressNow.autoVolume ?? 0,
+      noise: shown(noise, progressNow.noise),
       noiseProgress: progressNow.noise ?? 0,
       silences: {
         ...recordingTimelineSilenceSummary(edit, recording.durationMs),
         progress: progressNow.silences,
         status,
       },
+      voice: shown(voice, progressNow.voice),
+      voiceProgress: progressNow.voice ?? 0,
     },
     reduceNoise: (enabled) => {
       // The switch turns at once; the bar waits until the app says there is
       // cleaning to do, so turning on a track cleaned before never shows it.
-      setNoise({
-        artifactId,
-        isPending: enabled,
-        state: enabled ? "on" : "off",
-      });
       setProgress({ ...progressNow, noise: null });
-      setRecordingNoiseReduction(artifactId, enabled)
-        .then((state: NoiseReduction) => {
-          setNoise({ artifactId, isPending: false, state });
-        })
-        .catch((cause: unknown) => {
-          console.error("Could not change the microphone's noise", cause);
-          setNoise({ artifactId, isPending: false, state: noiseState });
-        });
+      noise.turn(enabled);
     },
     removeSilences: () => {
       if (!onEditChange) return;

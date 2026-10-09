@@ -71,6 +71,30 @@ fn plays_a_cleaned_track_from_its_file_instead_of_copying_it() {
 }
 
 #[test]
+fn levels_a_track_after_its_cleaned_file_and_before_its_volume() {
+  let selection = TrackSelection::with_volumes(
+    &tracks(2),
+    &[0, 1],
+    &[AudioTrackVolume {
+      stream_index: 1,
+      decibels: -6,
+    }],
+  )
+  .unwrap()
+  .with_cleaned(vec![(1, PathBuf::from("/tmp/noise-1.flac"))])
+  .with_filters(vec![(1, "acompressor,alimiter".to_owned())]);
+  let args = selection.audio_args(AudioLayout::Mixdown).join(" ");
+  assert!(args.contains("amovie=/tmp/noise-1.flac[clean1];[clean1]acompressor,alimiter[heard1];"));
+  assert!(args.contains("[heard1]volume=-6dB[track1]"));
+  // A track only leveled is read from the recording.
+  let selection = TrackSelection::new(&tracks(2), &[0, 1])
+    .with_filters(vec![(1, "acompressor,alimiter".to_owned())]);
+  assert!(selection.needs_processing(&tracks(2), AudioLayout::SeparateTracks));
+  let args = selection.audio_args(AudioLayout::SeparateTracks).join(" ");
+  assert!(args.contains("[0:a:1]acompressor,alimiter[heard1];[0:a:0]volume=0dB[track0]"));
+}
+
+#[test]
 fn ignores_a_cleaned_file_for_a_track_left_out() {
   let selection = TrackSelection::new(&tracks(2), &[0])
     .with_cleaned(vec![(1, PathBuf::from("/tmp/noise-1.flac"))]);

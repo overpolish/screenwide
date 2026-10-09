@@ -4,11 +4,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
+import type { AutoVolume } from "../../../../bindings/AutoVolume";
 import type { MicrophoneProgress } from "../../../../bindings/MicrophoneProgress";
 import type { NoiseReduction } from "../../../../bindings/NoiseReduction";
 import type { SilenceCut } from "../../../../bindings/SilenceCut";
+import type { VocalCleanup } from "../../../../bindings/VocalCleanup";
 
-export type { MicrophoneProgress, NoiseReduction };
+export type { MicrophoneProgress, NoiseReduction, VocalCleanup };
 
 /** How far a microphone tool has got, as the editor is told while it works;
  * `src-tauri/src/editor/speech/commands.rs`. */
@@ -37,3 +39,24 @@ export const setRecordingNoiseReduction = (
     artifactId,
     enabled,
   });
+
+export const getRecordingVocalCleanup = (artifactId: number) =>
+  invoke<VocalCleanup>("get_recording_vocal_cleanup", { artifactId });
+
+/** Cleans up the microphone's voice, or puts it back as it was, answering
+ * with what the project says now. Turning it on the first time takes a few
+ * seconds. */
+export const setRecordingVocalCleanup = (
+  artifactId: number,
+  enabled: boolean,
+) =>
+  invoke<VocalCleanup>("set_recording_vocal_cleanup", { artifactId, enabled });
+
+export const getRecordingAutoVolume = (artifactId: number) =>
+  invoke<AutoVolume>("get_recording_auto_volume", { artifactId });
+
+/** Brings the microphone to a steady loudness, or plays it as recorded,
+ * answering with what the project says now. Turning it on the first time
+ * measures the track. */
+export const setRecordingAutoVolume = (artifactId: number, enabled: boolean) =>
+  invoke<AutoVolume>("set_recording_auto_volume", { artifactId, enabled });

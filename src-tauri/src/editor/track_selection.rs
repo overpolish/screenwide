@@ -43,6 +43,9 @@ pub struct TrackSelection {
   volumes: Vec<(usize, i16)>,
   /// Tracks played from their cleaned file in place of the recording's.
   cleaned: Vec<(usize, PathBuf)>,
+  /// Filters each listed track is played through before its volume, as Auto
+  /// volume levels it.
+  filters: Vec<(usize, String)>,
 }
 
 impl TrackSelection {
@@ -88,6 +91,7 @@ impl TrackSelection {
         .collect(),
       stream_indices,
       cleaned: Vec::new(),
+      filters: Vec::new(),
     })
   }
 
@@ -101,14 +105,32 @@ impl TrackSelection {
     self
   }
 
+  /// This selection with each of `filters`' tracks it carries played through
+  /// its filters, after any cleaned file and before its volume.
+  pub fn with_filters(mut self, filters: Vec<(usize, String)>) -> Self {
+    self.filters = filters
+      .into_iter()
+      .filter(|(stream, _)| self.stream_indices.contains(stream))
+      .collect();
+    self
+  }
+
   /// Whether a track has to be decoded and encoded again rather than copied.
   fn processes(&self) -> bool {
-    !self.volumes.is_empty() || !self.cleaned.is_empty()
+    !self.volumes.is_empty() || !self.cleaned.is_empty() || !self.filters.is_empty()
   }
 
   /// The filter label the `index`th track is read from, out of the `input`th
   /// input.
   pub(crate) fn source(&self, input: usize, index: usize) -> String {
+    if self.filters.iter().any(|(stream, _)| *stream == index) {
+      format!("[heard{index}]")
+    } else {
+      self.unfiltered(input, index)
+    }
+  }
+
+  fn unfiltered(&self, input: usize, index: usize) -> String {
     if self.cleaned.iter().any(|(stream, _)| *stream == index) {
       format!("[clean{index}]")
     } else {
@@ -116,14 +138,21 @@ impl TrackSelection {
     }
   }
 
-  /// The filters that open each cleaned file under the label [`Self::source`]
-  /// gives it, each ending in `;`.
-  pub(crate) fn cleaned_sources(&self) -> String {
-    self
+  /// The filters that open each cleaned file and run each filtered track,
+  /// out of the `input`th input, under the label [`Self::source`] gives it,
+  /// each ending in `;`.
+  pub(crate) fn opened_sources(&self, input: usize) -> String {
+    let opened = self
       .cleaned
       .iter()
-      .map(|(stream, path)| format!("amovie={}[clean{stream}];", filter_path(path)))
-      .collect()
+      .map(|(stream, path)| format!("amovie={}[clean{stream}];", filter_path(path)));
+    let filtered = self.filters.iter().map(|(stream, filters)| {
+      format!(
+        "{}{filters}[heard{stream}];",
+        self.unfiltered(input, *stream)
+      )
+    });
+    opened.chain(filtered).collect()
   }
 
   fn volume(&self, stream_index: usize) -> i16 {
