@@ -228,7 +228,7 @@ export const Ruler: Story = { args: { initialSection: "ruler" } };
 export const Annotate: Story = { args: { initialSection: "annotate" } };
 export const Ocr: Story = { args: { initialSection: "ocr" } };
 export const Moments: Story = { args: { initialSection: "moments" } };
-export const Transcription: Story = {
+export const Models: Story = {
   args: { initialSection: "transcription" },
 };
 export const Shortcuts: Story = { args: { initialSection: "hotkeys" } };

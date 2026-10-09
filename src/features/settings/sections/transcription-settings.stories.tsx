@@ -49,7 +49,7 @@ const meta = {
     ),
   ],
   parameters: { controls: { disable: true }, layout: "fullscreen" },
-  title: "Features/Settings/Transcription",
+  title: "Features/Settings/Models",
 } satisfies Meta<typeof TranscriptionPreview>;
 
 export default meta;

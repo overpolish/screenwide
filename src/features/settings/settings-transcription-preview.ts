@@ -20,7 +20,7 @@ const MOMENTS_MODEL: TranscriptionModel = {
 
 /** The Studio sound model, at its real download size, both files together. */
 const STUDIO_SOUND_MODEL: TranscriptionModel = {
-  description: "Makes your microphone sound like a studio recording.",
+  description: "Enhances your voice.",
   id: "sidon-v0.1",
   name: "Studio sound",
   progress: null,
@@ -31,8 +31,7 @@ const STUDIO_SOUND_MODEL: TranscriptionModel = {
 
 /** The Studio ducking model, at its real download size. */
 const STUDIO_DUCKING_MODEL: TranscriptionModel = {
-  description:
-    "Moves singing in your system audio out of the way while you talk.",
+  description: "Keeps your voice clear over other audio.",
   id: "htdemucs-v4",
   name: "Studio ducking",
   progress: null,

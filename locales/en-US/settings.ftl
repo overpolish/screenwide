@@ -166,10 +166,10 @@ settings-transcription-moments = Moments
 settings-transcription-moments-description = Turns your moments' voice notes into text.
 # The model the microphone's Studio sound switch uses, named for what it does.
 settings-transcription-studio-sound = Studio sound
-settings-transcription-studio-sound-description = Makes your microphone sound like a studio recording.
+settings-transcription-studio-sound-description = Enhances your voice.
 # The model the microphone's Studio ducking switch uses, named for what it does.
 settings-transcription-studio-ducking = Studio ducking
-settings-transcription-studio-ducking-description = Moves singing in your system audio out of the way while you talk.
+settings-transcription-studio-ducking-description = Keeps your voice clear over other audio.
 settings-transcription-models = Models
 settings-transcription-language = Language
 settings-transcription-language-description = The language your recordings are spoken in.

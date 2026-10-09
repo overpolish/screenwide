@@ -132,7 +132,7 @@ editor-panels-volume = Volume
 editor-panels-reset-volume = Reset volume
 editor-panels-studio-sound = Studio sound
 editor-panels-studio-sound-working = Rebuilding voice
-editor-panels-studio-sound-description = Makes your microphone sound like a studio recording.
+editor-panels-studio-sound-description = Enhances your voice.
 editor-panels-model-download = Download
 editor-panels-model-downloading = Downloading model
 editor-panels-reduce-noise = Reduce noise
@@ -141,10 +141,10 @@ editor-panels-vocal-cleanup = Vocal cleanup
 editor-panels-voice-cleaning = Cleaning up voice
 editor-panels-auto-volume = Auto volume
 editor-panels-auto-volume-measuring = Measuring volume
-# A microphone switch that moves singing in the system audio out of the way while the person talks.
+# A microphone switch that lowers background audio, singers and speakers most, so the person talking stays clear.
 editor-panels-studio-ducking = Studio ducking
-editor-panels-studio-ducking-working = Finding singing
-editor-panels-studio-ducking-description = Moves singing out of the way while you talk.
+editor-panels-studio-ducking-working = Finding vocals
+editor-panels-studio-ducking-description = Keeps your voice clear over other audio.
 editor-panels-silences = Silences
 editor-panels-remove = Remove
 editor-panels-restore-all = Restore all
