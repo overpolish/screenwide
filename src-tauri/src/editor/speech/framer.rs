@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A track's short-time spectrum taken as it streams past, frame after
-//! frame, and, where frames are changed, put back together into sound. The
-//! microphone and the system audio are cut into the same frames, so frame
-//! `n` of one lies over frame `n` of the other.
+//! frame, and, where frames are changed, put back together into sound. Every
+//! track is cut into the same frames, so frame `n` of the microphone lies
+//! over frame `n` of the system audio. The system audio making way for the
+//! voice works in these frames, and so does Reduce noise's noise profile.
 
 use std::sync::Arc;
 

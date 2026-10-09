@@ -10,7 +10,7 @@
 
 use realfft::num_complex::Complex32;
 
-use super::framer::SIZE;
+use super::super::framer::SIZE;
 
 /// All of the system audio comes down this far while the voice speaks.
 const WHOLE_DB: f32 = 6.0;

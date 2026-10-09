@@ -15,6 +15,7 @@ pub(crate) mod auto_volume;
 mod choice_file;
 pub(crate) mod commands;
 pub(crate) mod duck;
+mod framer;
 pub(crate) mod heard;
 mod noise;
 mod pause_gate;

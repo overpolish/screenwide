@@ -4,15 +4,14 @@
 //! The system audio making way for the voice, as part of Auto volume. While
 //! the voice speaks (`gate`), all of the system audio comes down a little,
 //! and the bands the voice is using at that moment come down further
-//! (`plan`), worked out in the short-time spectrum of both tracks
-//! (`framer`). Where the voice is quiet the system audio is as recorded.
+//! (`plan`), worked out in the short-time spectrum of both tracks. Where the
+//! voice is quiet the system audio is as recorded.
 //!
 //! It depends only on the recording, the microphone as recorded and the
 //! speech heard in it, so it is made once into a file of its own in the
 //! project, which preview and export play in place of the system audio
 //! while Auto volume is on for the microphone it was made against.
 
-mod framer;
 mod gate;
 mod pipe;
 mod plan;
@@ -25,9 +24,9 @@ use std::sync::Mutex;
 use screenwide_transcriber::CLEAN_SAMPLE_RATE as RATE;
 use serde::{Deserialize, Serialize};
 
-use self::framer::{Framer, HOP, SIZE};
 use self::plan::{Plan, VoiceBands};
 use super::auto_volume::{self, AutoVolume};
+use super::framer::{Framer, HOP, SIZE};
 use super::{analysis, choice_file};
 
 /// Bumped when a file of an older make should be made again.

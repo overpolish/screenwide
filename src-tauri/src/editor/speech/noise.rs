@@ -6,8 +6,13 @@
 //! is on. The cleaning is DeepFilterNet's, run in the transcriber program: a
 //! speech enhancer that keeps the voice and takes out what is not, steady
 //! hiss and passing clicks alike. What it lets through between words is
-//! turned down after (`pause_gate`). Vocal cleanup can be made from the
-//! cleaned file in turn (`heard`).
+//! turned down after (`pause_gate`), and the noise it leaves under the voice
+//! is measured in the pauses and turned down band by band (`profile`).
+//! Vocal cleanup can be made from the cleaned file in turn (`heard`).
+
+mod profile;
+#[cfg(test)]
+mod tests;
 
 use std::fs::File;
 use std::io::{Read, Write};
@@ -18,13 +23,14 @@ use screenwide_transcriber::CLEAN_SAMPLE_RATE;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use self::profile::{Denoiser, Profile};
 use super::analysis::{self, SpeechMap};
 use super::choice_file;
 use super::pause_gate::PauseGate;
 use crate::transcription::runner::{decode_audio_stream, Samples, Transcriber};
 
 /// Bumped when a cleaned file of an older make should be made again.
-const FORMAT_VERSION: u16 = 4;
+const FORMAT_VERSION: u16 = 5;
 
 /// Whether the microphone's noise is taken out.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
@@ -112,6 +118,7 @@ pub(super) fn prepare(
     progress(fraction * LISTEN_SHARE);
   })?;
   let noisy = decode_audio_stream(movie, stream, CLEAN_SAMPLE_RATE)?;
+  let profile = measure(&noisy, &speech)?;
   let clean = Samples::scratch();
   let gain = Transcriber::start()?.clean_speech(&noisy, &clean, &mut |fraction| {
     progress(LISTEN_SHARE + fraction * (1.0 - LISTEN_SHARE));
@@ -121,7 +128,7 @@ pub(super) fn prepare(
   // Written beside the destination and moved over it whole, so a cleaning cut
   // short never leaves a file that looks finished.
   let partial = destination.with_extension("partial.flac");
-  if let Err(error) = encode(&clean, gain, &speech, &partial) {
+  if let Err(error) = encode(&clean, gain, &speech, profile, &partial) {
     let _ = std::fs::remove_file(&partial);
     return Err(error);
   }
@@ -132,10 +139,28 @@ pub(super) fn prepare(
   Ok(())
 }
 
-/// Writes the cleaned samples in `clean` to `output` with their pauses
-/// turned down and `gain` applied, streamed through FFmpeg so an hour of
-/// audio is never held in memory at once.
-fn encode(clean: &Samples, gain: f32, speech: &SpeechMap, output: &Path) -> Result<(), String> {
+/// The noise in the pauses of the microphone as recorded.
+fn measure(noisy: &Samples, speech: &SpeechMap) -> Result<Option<Profile>, String> {
+  let mut reader =
+    File::open(noisy.path()).map_err(|error| format!("Could not read the microphone: {error}"))?;
+  let length = reader
+    .metadata()
+    .map_err(|error| format!("Could not read the microphone: {error}"))?
+    .len()
+    / 4;
+  Profile::measure(&mut reader, length, speech, CLEAN_SAMPLE_RATE)
+}
+
+/// Writes the cleaned samples in `clean` to `output` with the noise `profile`
+/// measured turned down, the pauses turned down and `gain` applied, streamed
+/// through FFmpeg so an hour of audio is never held in memory at once.
+fn encode(
+  clean: &Samples,
+  gain: f32,
+  speech: &SpeechMap,
+  profile: Option<Profile>,
+  output: &Path,
+) -> Result<(), String> {
   let length = std::fs::metadata(clean.path())
     .map_err(|error| format!("Could not read the cleaned microphone: {error}"))?
     .len()
@@ -163,10 +188,22 @@ fn encode(clean: &Samples, gain: f32, speech: &SpeechMap, output: &Path) -> Resu
     .map_err(|error| format!("Could not read the cleaned microphone: {error}"))?;
   let mut bytes = vec![0_u8; ENCODE_CHUNK * 4];
   let mut samples = Vec::with_capacity(ENCODE_CHUNK);
+  let mut denoised = Vec::with_capacity(ENCODE_CHUNK);
+  let mut denoiser = profile.map(Denoiser::new);
   let mut offset = 0_u64;
+  let mut send = |samples: &mut Vec<f32>, bytes: &mut Vec<u8>| {
+    gate.apply(offset, samples);
+    offset += samples.len() as u64;
+    bytes.clear();
+    for sample in samples.iter() {
+      bytes.extend_from_slice(&sample.to_le_bytes());
+    }
+    input.write_all(bytes)
+  };
   // A write that fails means FFmpeg stopped, and what it says about why is
   // read below, so the error here adds nothing.
   let mut written = Ok(());
+  let mut sending = Vec::with_capacity(ENCODE_CHUNK * 4);
   loop {
     let read = fill(&mut reader, &mut bytes)?;
     if read < 4 {
@@ -180,15 +217,21 @@ fn encode(clean: &Samples, gain: f32, speech: &SpeechMap, output: &Path) -> Resu
         .iter()
         .map(|sample| f32::from_le_bytes(*sample)),
     );
-    gate.apply(offset, &mut samples);
-    offset += samples.len() as u64;
-    for (sample, out) in samples.iter().zip(bytes.as_chunks_mut::<4>().0) {
-      *out = sample.to_le_bytes();
-    }
-    written = input.write_all(&bytes[..samples.len() * 4]);
+    let ready = match &mut denoiser {
+      Some(denoiser) => {
+        denoiser.feed(&samples, &mut denoised);
+        &mut denoised
+      }
+      None => &mut samples,
+    };
+    written = send(ready, &mut sending);
     if written.is_err() {
       break;
     }
+  }
+  if let (Ok(()), Some(denoiser)) = (&written, &mut denoiser) {
+    denoiser.finish(&mut denoised);
+    written = send(&mut denoised, &mut sending);
   }
   drop(input);
   let finished = child
@@ -205,14 +248,14 @@ fn encode(clean: &Samples, gain: f32, speech: &SpeechMap, output: &Path) -> Resu
 
 /// Reads from `reader` until `buffer` is full or the file ends, returning how
 /// many bytes it holds.
-fn fill(reader: &mut File, buffer: &mut [u8]) -> Result<usize, String> {
+fn fill(reader: &mut impl Read, buffer: &mut [u8]) -> Result<usize, String> {
   let mut filled = 0;
   while filled < buffer.len() {
     match reader.read(&mut buffer[filled..]) {
       Ok(0) => break,
       Ok(read) => filled += read,
       Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
-      Err(error) => return Err(format!("Could not read the cleaned microphone: {error}")),
+      Err(error) => return Err(format!("Could not read the microphone: {error}")),
     }
   }
   Ok(filled)

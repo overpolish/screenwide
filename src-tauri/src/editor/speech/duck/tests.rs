@@ -6,7 +6,7 @@ use std::f32::consts::TAU;
 use realfft::num_complex::Complex32;
 
 use super::super::analysis::SpeechMap;
-use super::framer::{Framer, HOP, SIZE};
+use super::super::framer::{Framer, HOP, SIZE};
 use super::gate::gate;
 use super::plan::{Plan, VoiceBands};
 

@@ -11,7 +11,7 @@ use std::process::{Child, ChildStdout, Command, Stdio};
 
 use screenwide_transcriber::CLEAN_SAMPLE_RATE as RATE;
 
-use super::framer::{Framer, SIZE};
+use super::super::framer::{Framer, HOP, SIZE};
 use super::plan::Plan;
 
 /// Samples read at a time, across all channels.
@@ -167,7 +167,7 @@ impl Sides {
   /// Writes what has come out of both sides since last time, leaving out
   /// what lies before the start and after the end.
   fn write(&mut self, input: &mut impl Write) -> Result<(), String> {
-    let latency = SIZE - super::framer::HOP;
+    let latency = SIZE - HOP;
     let length = self.out[0].len().min(self.out[1].len());
     self.bytes.clear();
     for at in 0..length {
