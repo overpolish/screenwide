@@ -64,22 +64,15 @@ pub(super) fn save_recording_artifact(
     ),
   )?;
   // A microphone with its noise taken out or its voice cleaned up is
-  // exported from the file made of it, and leveled by Auto volume, as the
-  // preview plays it.
+  // exported from the file made of it, leveled by Auto volume, and the
+  // system audio making way for it, as the preview plays them.
   let project_folder = project.parent().unwrap_or(Path::new("."));
-  let microphones: Vec<usize> = audio_tracks
-    .iter()
-    .filter(|track| {
-      track.kind == crate::editor::AudioTrackKind::Microphone
-        && enabled_stream_indices.contains(&track.stream_index)
-    })
-    .map(|track| track.stream_index)
-    .collect();
-  crate::editor::speech::auto_volume::measure_unmeasured(
+  crate::editor::speech::ready_for_export(
+    progress_app,
     project_folder,
-    &microphones,
-    working,
-    *duration_ms,
+    audio_tracks,
+    &enabled_stream_indices,
+    (working, *duration_ms),
   )?;
   let selection = crate::editor::speech::as_heard(
     track_selection::TrackSelection::with_volumes(

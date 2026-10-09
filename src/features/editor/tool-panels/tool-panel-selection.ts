@@ -76,9 +76,9 @@ export type ToolPanelAudioSelection = {
  * runs once, the first time either asks.
  */
 export type ToolPanelMicrophone = {
-  /** The voice brought to a steady, standard loudness: `cleaning` while the
-   * track as heard is measured, which happens once for each way it can be
-   * heard. */
+  /** The voice brought to a steady, standard loudness, and the system audio
+   * made to make way for it while it speaks: `cleaning` while that work is
+   * done for the track as it is heard, once for each way it can be heard. */
   autoVolume: "cleaning" | "off" | "on";
   /** How far measuring has got, 0 to 1, while `autoVolume` is `cleaning`. */
   autoVolumeProgress: number;

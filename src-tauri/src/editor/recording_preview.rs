@@ -147,15 +147,25 @@ pub(crate) fn refresh_waveform(
   else {
     return Ok(());
   };
+  // Heard among every track, as a system audio's way-making is heard only
+  // beside its microphone.
   let folder = &sources.project_folder;
-  let cleaned = crate::editor::speech::heard::heard_files(folder, &[stream]);
+  let streams: Vec<usize> = sources
+    .tracks
+    .iter()
+    .map(|track| track.stream_index)
+    .collect();
+  let cleaned = crate::editor::speech::heard::heard_files(folder, &streams);
   let filters = crate::editor::speech::auto_volume::heard_filters(folder, &[stream]);
   let waveform = media_preview::waveform(
     &sources.path,
     track,
     sources.duration_ms,
     media_preview::HeardAs {
-      cleaned: cleaned.first().map(|(_, file)| file.as_path()),
+      cleaned: cleaned
+        .iter()
+        .find(|(heard, _)| *heard == stream)
+        .map(|(_, file)| file.as_path()),
       filters: filters.first().map(|(_, filters)| filters.as_str()),
     },
   )?;

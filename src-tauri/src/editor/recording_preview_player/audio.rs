@@ -197,4 +197,6 @@ pub(super) fn spawn(
 }
 
 #[cfg(test)]
+mod processing_tests;
+#[cfg(test)]
 mod tests;

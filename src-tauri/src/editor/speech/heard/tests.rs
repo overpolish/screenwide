@@ -3,6 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
+use super::super::auto_volume::{self, AutoVolume};
 use super::super::noise::{self, NoiseReduction};
 use super::super::voice::{self, VocalCleanup};
 use super::{files, heard_files, Processing};
@@ -65,8 +66,8 @@ fn a_switch_whose_file_is_not_made_is_heard_as_off() {
   // The cleaned-up voice is still being made from the noise-reduced track.
   assert_eq!(heard_files(&folder, &[1]), [(1, noise_file.clone())]);
   let voice_only = Processing {
-    noise: false,
     voice: true,
+    ..Processing::default()
   };
   make(voice::cleaned_path(&folder, 1, false));
   // A voice file made from the track as recorded does not stand in for one
@@ -75,6 +76,23 @@ fn a_switch_whose_file_is_not_made_is_heard_as_off() {
     .iter()
     .any(|(_, processing, _)| *processing == voice_only));
   assert_eq!(heard_files(&folder, &[1]), [(1, noise_file)]);
+  let _ = std::fs::remove_dir_all(&folder);
+}
+
+#[test]
+fn system_audio_makes_way_only_while_auto_volume_and_its_microphone_are_on() {
+  let folder = project("duck");
+  let ducked = make(super::super::duck::path(&folder, 0));
+  std::fs::write(
+    folder.join("duck-0.json"),
+    br#"{"version":1,"choice":{"microphone":1}}"#,
+  )
+  .unwrap();
+  // A recording starts with Auto volume on.
+  assert_eq!(heard_files(&folder, &[0, 1]), [(0, ducked)]);
+  assert_eq!(heard_files(&folder, &[0]), []);
+  auto_volume::keep(&folder, 1, AutoVolume::Off).unwrap();
+  assert_eq!(heard_files(&folder, &[0, 1]), []);
   let _ = std::fs::remove_dir_all(&folder);
 }
 

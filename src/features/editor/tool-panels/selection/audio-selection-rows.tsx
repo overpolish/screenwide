@@ -26,8 +26,9 @@ type RowsProps = {
 /**
  * The Select tool's controls for an audio track: how loud it is played back,
  * and for a microphone, the room's noise taken out, the voice cleaned up,
- * its loudness evened out and the long pauses cut. The volume works on top
- * of Auto volume, so at 0 dB a leveled voice sits at its standard loudness.
+ * its loudness evened out with the system audio making way for it, and the
+ * long pauses cut. The volume works on top of Auto volume, so at 0 dB a
+ * leveled voice sits at its standard loudness.
  * The track is played at the level it was recorded at until the volume is
  * moved, so its reset is out of reach exactly while it is already there.
  */

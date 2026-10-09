@@ -8,12 +8,14 @@
 //! leaves, and Auto volume measures whatever is heard. Each kind of work
 //! fills its own switch's bar, whichever switch called for it.
 
+use std::path::PathBuf;
+
 use tauri::AppHandle;
 
 use super::super::auto_volume::{self, AutoVolume};
 use super::super::noise::{self, NoiseReduction};
 use super::super::voice::{self, VocalCleanup};
-use super::super::{vad_model, SpeechSource};
+use super::super::{duck, ready_auto_volume, vad_model, SpeechSource};
 use super::{reporter, MicrophoneTool};
 use crate::editor::recording_preview_player::{refresh_processing, PreviewProcessing};
 
@@ -47,22 +49,28 @@ fn bar(app: &AppHandle, artifact_id: u64, tool: MicrophoneTool) -> Bar<impl FnMu
   }
 }
 
-/// Measures the track as it is heard now for Auto volume, where it is on. A
-/// measure that fails leaves the track heard unleveled rather than undoing
-/// the switch that called for it.
-fn level_heard(source: &SpeechSource, progress: &mut dyn FnMut(f32)) {
-  if auto_volume::choice(&source.project_folder, source.microphone) != AutoVolume::On {
-    return;
+/// Readies Auto volume for the track as it is heard now, where it is on:
+/// measures it, and makes the system audio make way for it with the voice
+/// activity model at `model`. Work that fails leaves the track heard
+/// unleveled rather than undoing the switch that called for it.
+fn level_heard(source: &SpeechSource, model: Option<PathBuf>, progress: &mut dyn FnMut(f32)) {
+  if let Err(error) = ready(source, model, progress) {
+    eprintln!("Could not ready the microphone's volume: {error}");
   }
-  if let Err(error) = auto_volume::measure(
+}
+
+fn ready(
+  source: &SpeechSource,
+  model: Option<PathBuf>,
+  progress: &mut dyn FnMut(f32),
+) -> Result<(), String> {
+  ready_auto_volume(
     &source.project_folder,
-    source.microphone,
-    &source.movie,
-    source.duration_ms,
+    (source.microphone, source.system),
+    (&source.movie, source.duration_ms),
+    model,
     progress,
-  ) {
-    eprintln!("Could not measure the microphone's volume: {error}");
-  }
+  )
 }
 
 /// Whether the microphone of the recording open in the editor has its noise
@@ -87,6 +95,7 @@ pub async fn set_recording_noise_reduction(
   let source = SpeechSource::open(&app, artifact_id)?;
   // Cleaning listens for speech too, but turning it off needs no model.
   let model = enabled.then(|| vad_model(&app)).transpose()?;
+  let level_model = vad_model(&app).ok();
   let mut noise_bar = bar(&app, artifact_id, MicrophoneTool::Noise);
   let mut voice_bar = bar(&app, artifact_id, MicrophoneTool::Voice);
   let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
@@ -108,7 +117,9 @@ pub async fn set_recording_noise_reduction(
       NoiseReduction::Off
     };
     noise::keep(folder, stream, choice)?;
-    level_heard(&source, &mut |fraction| level_bar.tell(fraction));
+    level_heard(&source, level_model, &mut |fraction| {
+      level_bar.tell(fraction)
+    });
     Ok::<_, String>((choice, source))
   })
   .await
@@ -137,6 +148,7 @@ pub async fn set_recording_vocal_cleanup(
   enabled: bool,
 ) -> Result<VocalCleanup, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
+  let level_model = vad_model(&app).ok();
   let mut voice_bar = bar(&app, artifact_id, MicrophoneTool::Voice);
   let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
   let choice = tauri::async_runtime::spawn_blocking(move || {
@@ -152,7 +164,9 @@ pub async fn set_recording_vocal_cleanup(
       VocalCleanup::Off
     };
     voice::keep(folder, stream, choice)?;
-    level_heard(&source, &mut |fraction| level_bar.tell(fraction));
+    level_heard(&source, level_model, &mut |fraction| {
+      level_bar.tell(fraction)
+    });
     Ok::<_, String>((choice, source))
   })
   .await
@@ -164,17 +178,23 @@ pub async fn set_recording_vocal_cleanup(
 /// Whether the microphone of the recording open in the editor is brought to
 /// a steady loudness, as its project says. A recording starts with it on, so
 /// the first time one opens, or whenever what is heard has not been
-/// measured, the measure is taken in the background, with its progress told.
+/// measured or the system audio not made to make way, that work is done in
+/// the background, with its progress told.
 #[tauri::command]
 pub fn get_recording_auto_volume(app: AppHandle, artifact_id: u64) -> Result<AutoVolume, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
   let (folder, stream) = (&source.project_folder, source.microphone);
   let choice = auto_volume::choice(folder, stream);
-  if choice == AutoVolume::On && auto_volume::is_unmeasured(folder, stream) {
+  let unducked = source
+    .system
+    .is_some_and(|system| !duck::is_made_for(folder, system, stream));
+  if choice == AutoVolume::On && (auto_volume::is_unmeasured(folder, stream) || unducked) {
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
       let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
-      level_heard(&source, &mut |fraction| level_bar.tell(fraction));
+      level_heard(&source, vad_model(&app).ok(), &mut |fraction| {
+        level_bar.tell(fraction);
+      });
       drop(level_bar);
       heard_changed(&app, artifact_id, &source);
     });
@@ -182,9 +202,10 @@ pub fn get_recording_auto_volume(app: AppHandle, artifact_id: u64) -> Result<Aut
   Ok(choice)
 }
 
-/// Brings the microphone to a steady loudness, or plays it as it is. Turning
-/// it on the first time for what is heard measures it. Answers with what the
-/// project now says.
+/// Brings the microphone to a steady loudness and makes the system audio
+/// make way for it, or plays both as they are. Turning it on the first time
+/// measures the voice and makes the system audio's file. Answers with what
+/// the project now says.
 #[tauri::command]
 pub async fn set_recording_auto_volume(
   app: AppHandle,
@@ -192,22 +213,22 @@ pub async fn set_recording_auto_volume(
   enabled: bool,
 ) -> Result<AutoVolume, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
+  let model = vad_model(&app).ok();
   let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
   let choice = tauri::async_runtime::spawn_blocking(move || {
     let (folder, stream) = (&source.project_folder, source.microphone);
     let choice = if enabled {
-      auto_volume::measure(
-        folder,
-        stream,
-        &source.movie,
-        source.duration_ms,
-        &mut |fraction| level_bar.tell(fraction),
-      )?;
       AutoVolume::On
     } else {
       AutoVolume::Off
     };
     auto_volume::keep(folder, stream, choice)?;
+    if enabled {
+      if let Err(error) = ready(&source, model, &mut |fraction| level_bar.tell(fraction)) {
+        auto_volume::keep(folder, stream, AutoVolume::Off)?;
+        return Err(error);
+      }
+    }
     Ok::<_, String>((choice, source))
   })
   .await
@@ -216,22 +237,26 @@ pub async fn set_recording_auto_volume(
   Ok(choice.0)
 }
 
-/// Tells the preview how the microphone is heard now, and reads its
-/// waveform again.
+/// Tells the preview how the recording's tracks are heard now, and reads the
+/// waveforms of those Auto volume and the microphone's switches change again.
 fn heard_changed(app: &AppHandle, artifact_id: u64, source: &SpeechSource) {
-  let stream = source.microphone;
   refresh_processing(
     app,
-    PreviewProcessing::for_project(&source.project_folder, &[stream]),
+    PreviewProcessing::for_project(&source.project_folder, &source.streams),
   );
-  // Read after the answer, since reading the track as recorded again can take
+  // Read after the answer, since reading a track as recorded again can take
   // a few seconds on a long recording and the switch should not wait on it.
   let refreshing = app.clone();
+  let streams: Vec<usize> = std::iter::once(source.microphone)
+    .chain(source.system)
+    .collect();
   tauri::async_runtime::spawn_blocking(move || {
-    if let Err(error) =
-      crate::editor::recording_preview::refresh_waveform(&refreshing, artifact_id, stream)
-    {
-      eprintln!("Could not read the microphone's waveform again: {error}");
+    for stream in streams {
+      if let Err(error) =
+        crate::editor::recording_preview::refresh_waveform(&refreshing, artifact_id, stream)
+      {
+        eprintln!("Could not read a track's waveform again: {error}");
+      }
     }
   });
 }

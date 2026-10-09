@@ -174,12 +174,11 @@ export function useRecordingPreviewPlayer({
     timingRef,
     wantsPlaybackRef,
   });
+  // The same snapshot a session starts from: the refs hold this render's
+  // props by now.
   useRecordingPreviewSettings({
-    audioTrackVolumes,
-    cursorEffects,
+    ...sessionSettings(),
     isEnabled,
-    keyboardDeletions: keyboardDeletions(),
-    keyboardEffects,
     sessionIdRef,
     setError,
     startedRef,

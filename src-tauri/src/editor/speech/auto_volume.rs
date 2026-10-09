@@ -100,23 +100,6 @@ pub(super) fn is_unmeasured(project_folder: &Path, stream: usize) -> bool {
   measured(project_folder, stream, heard.as_deref()).is_none()
 }
 
-/// Measures each of the microphone `streams` of `movie` with Auto volume on
-/// that is not yet measured as it is heard, waiting for any measure under
-/// way, so an export started while the editor measures is still leveled.
-pub(crate) fn measure_unmeasured(
-  project_folder: &Path,
-  streams: &[usize],
-  movie: &Path,
-  duration_ms: u64,
-) -> Result<(), String> {
-  for &stream in streams {
-    if choice(project_folder, stream) == AutoVolume::On {
-      measure(project_folder, stream, movie, duration_ms, &mut |_| {})?;
-    }
-  }
-  Ok(())
-}
-
 /// One measure at a time, so two switches turned together neither measure
 /// the same file twice nor write over each other's measures.
 static MEASURING: Mutex<()> = Mutex::new(());

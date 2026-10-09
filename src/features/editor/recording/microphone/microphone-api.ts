@@ -55,8 +55,9 @@ export const setRecordingVocalCleanup = (
 export const getRecordingAutoVolume = (artifactId: number) =>
   invoke<AutoVolume>("get_recording_auto_volume", { artifactId });
 
-/** Brings the microphone to a steady loudness, or plays it as recorded,
- * answering with what the project says now. Turning it on the first time
- * measures the track. */
+/** Brings the microphone to a steady loudness and makes the system audio
+ * make way for it, or plays both as recorded, answering with what the
+ * project says now. Turning it on the first time measures the voice and
+ * makes the system audio's file. */
 export const setRecordingAutoVolume = (artifactId: number, enabled: boolean) =>
   invoke<AutoVolume>("set_recording_auto_volume", { artifactId, enabled });

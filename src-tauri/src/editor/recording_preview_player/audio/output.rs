@@ -17,14 +17,14 @@ pub(super) struct Mix {
 
 impl Mix {
   /// Whether `channel` is heard: its track is on, and it is the channel the
-  /// track is heard from, as `heard` and `leveled` say, falling back to the
-  /// recorded track, and to the unleveled one, where the preview has no
-  /// channel for that.
+  /// track is heard from, as `processing` says, falling back to the recorded
+  /// track, and to the unleveled one, where the preview has no channel for
+  /// that. System audio makes way for a microphone only while it is on.
   pub(super) fn hears(
     &self,
     channel: &Channel,
     selected: &[usize],
-    (heard, leveled): (&[(usize, Processing)], &[usize]),
+    processing: &PreviewProcessing,
   ) -> bool {
     let stream = channel.stream_index;
     let has = |processing: Processing, leveling: bool| {
@@ -34,13 +34,23 @@ impl Mix {
           && other.leveling.is_some() == leveling
       })
     };
-    let wanted = heard
+    let microphone_off = |&(_, microphone): &(usize, usize)| !selected.contains(&microphone);
+    let wanted = processing
+      .heard
       .iter()
       .find(|(heard, _)| *heard == stream)
       .map(|(_, processing)| *processing)
+      .filter(|wanted| {
+        !(wanted.duck
+          && processing
+            .ducked_by
+            .iter()
+            .find(|(ducked, _)| *ducked == stream)
+            .is_some_and(microphone_off))
+      })
       .filter(|processing| has(*processing, false))
       .unwrap_or_default();
-    let wanted_leveling = leveled.contains(&stream) && has(wanted, true);
+    let wanted_leveling = processing.leveled.contains(&stream) && has(wanted, true);
     selected.contains(&stream)
       && channel.processing() == wanted
       && channel.leveling.is_some() == wanted_leveling
@@ -80,8 +90,7 @@ where
           .unwrap_or_else(|value| value.into_inner());
         gains.clear();
         gains.extend(mix.channels.iter().map(|channel| {
-          let heard = (processing.heard.as_slice(), processing.leveled.as_slice());
-          mix.hears(channel, &selected, heard).then(|| {
+          mix.hears(channel, &selected, &processing).then(|| {
             let decibels = volumes
               .iter()
               .find_map(|volume| {

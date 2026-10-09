@@ -11,6 +11,7 @@ use tauri::{AppHandle, Manager};
 
 use super::RecordingPreviewPlayerState;
 use crate::editor::speech::auto_volume::{self, Leveling};
+use crate::editor::speech::duck;
 use crate::editor::speech::heard::{self, Processing};
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -25,6 +26,9 @@ pub(crate) struct PreviewProcessing {
   pub levelings: Vec<(usize, Processing, Leveling)>,
   /// The tracks heard leveled.
   pub leveled: Vec<usize>,
+  /// Each track made to make way for a voice, with that voice's microphone,
+  /// which has to be on for it to be heard so.
+  pub ducked_by: Vec<(usize, usize)>,
 }
 
 impl PreviewProcessing {
@@ -45,6 +49,7 @@ impl PreviewProcessing {
         .into_iter()
         .map(|(stream, _)| stream)
         .collect(),
+      ducked_by: duck::ducked_by(project_folder, streams),
     }
   }
 }

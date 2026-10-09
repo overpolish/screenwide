@@ -4,6 +4,7 @@
 import { Dispatch, RefObject, SetStateAction, useEffect } from "react";
 
 import {
+  selectRecordingPreviewAudio,
   setRecordingPreviewAudioVolumes,
   setRecordingPreviewCursorEffects,
   setRecordingPreviewKeyboardEffects,
@@ -24,12 +25,12 @@ import {
  * The composition (camera overlay, recording output, bake) is not among them:
  * the native surface receives it inside every layout invoke, atomically with
  * the pane rects it belongs to and ordered by requestId. Sending it here as
- * well would create a second, unordered channel. Audio selection is likewise
- * installed with the session and then owned by the native player.
+ * well would create a second, unordered channel.
  */
 export function useRecordingPreviewSettings({
   audioTrackVolumes,
   cursorEffects,
+  enabledStreamIndices,
   isEnabled,
   keyboardDeletions,
   keyboardEffects,
@@ -39,6 +40,8 @@ export function useRecordingPreviewSettings({
 }: {
   audioTrackVolumes: AudioTrackVolume[];
   cursorEffects: CursorEffectSettings;
+  /** The audio tracks turned on, which the player mixes as it plays. */
+  enabledStreamIndices: number[];
   isEnabled: boolean;
   keyboardDeletions: RecordingPreviewKeyboardDeletions;
   keyboardEffects: KeyboardEffectSettings;
@@ -46,6 +49,7 @@ export function useRecordingPreviewSettings({
   setError: Dispatch<SetStateAction<string | null>>;
   startedRef: RefObject<boolean>;
 }) {
+  const enabledAudio = enabledStreamIndices.join("-");
   const volumes = audioTrackVolumes
     .map(
       ({ decibels, streamIndex }) =>
@@ -63,6 +67,14 @@ export function useRecordingPreviewSettings({
     ).catch(setError);
     // eslint-disable-next-line @eslint-react/exhaustive-deps
   }, [isEnabled, volumes]);
+  useEffect(() => {
+    if (!isEnabled || !startedRef.current) return;
+    void selectRecordingPreviewAudio(
+      enabledStreamIndices,
+      sessionIdRef.current,
+    ).catch(setError);
+    // eslint-disable-next-line @eslint-react/exhaustive-deps
+  }, [enabledAudio, isEnabled]);
   useEffect(() => {
     if (!isEnabled || !startedRef.current) return;
     void setRecordingPreviewCursorEffects(

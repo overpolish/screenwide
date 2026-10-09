@@ -7,12 +7,14 @@
 //! Reduce noise (`noise`) cleans the track with a speech enhancer, Vocal
 //! cleanup (`voice`) polishes the voice, and `heard` picks which of their
 //! files the track is heard from. Auto volume (`auto_volume`) levels whatever
-//! is heard to a steady loudness.
+//! is heard to a steady loudness, and makes the system audio make way for
+//! the voice while it speaks (`duck`).
 
 mod analysis;
 pub(crate) mod auto_volume;
 mod choice_file;
 pub(crate) mod commands;
+pub(crate) mod duck;
 pub(crate) mod heard;
 mod noise;
 mod pause_gate;
@@ -25,12 +27,16 @@ use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Manager};
 
-use super::{AudioTrackKind, EditorArtifact, EditorState};
+use super::{AudioTrackKind, EditorArtifact, EditorState, RecordingAudioTrack};
 
 /// What the speech tools read of the recording open in the editor.
 struct SpeechSource {
   duration_ms: u64,
   microphone: usize,
+  /// The system audio, which Auto volume makes make way for the voice.
+  system: Option<usize>,
+  /// Every audio track of the recording.
+  streams: Vec<usize>,
   movie: PathBuf,
   /// The folder the project keeps its files in, where the listen is kept.
   project_folder: PathBuf,
@@ -62,17 +68,101 @@ impl SpeechSource {
     }
     Ok(Self {
       duration_ms: *duration_ms,
-      microphone: audio_tracks
-        .iter()
-        .find(|track| track.kind == AudioTrackKind::Microphone)
-        .map(|track| track.stream_index)
+      microphone: first_of(audio_tracks, AudioTrackKind::Microphone)
         .ok_or_else(|| "This recording has no microphone".to_owned())?,
+      system: first_of(audio_tracks, AudioTrackKind::SystemAudio),
+      streams: audio_tracks
+        .iter()
+        .map(|track| track.stream_index)
+        .collect(),
       movie: path.clone(),
       project_folder: project
         .parent()
         .map_or_else(|| PathBuf::from("."), Path::to_path_buf),
     })
   }
+}
+
+/// The stream of the first of `tracks` of `kind`.
+fn first_of(tracks: &[RecordingAudioTrack], kind: AudioTrackKind) -> Option<usize> {
+  tracks
+    .iter()
+    .find(|track| track.kind == kind)
+    .map(|track| track.stream_index)
+}
+
+/// How much of Auto volume's bar measuring the voice takes, when the system
+/// audio is made to make way for it after.
+const MEASURE_SHARE: f32 = 0.4;
+
+/// Readies Auto volume for the `microphone`th track of `movie`, where it is
+/// on: measures the voice as it is heard, and, with `system` and the voice
+/// activity model at `model`, makes the system audio make way for it.
+fn ready_auto_volume(
+  project_folder: &Path,
+  (microphone, system): (usize, Option<usize>),
+  (movie, duration_ms): (&Path, u64),
+  model: Option<PathBuf>,
+  progress: &mut dyn FnMut(f32),
+) -> Result<(), String> {
+  if auto_volume::choice(project_folder, microphone) != auto_volume::AutoVolume::On {
+    return Ok(());
+  }
+  let ducking = system.zip(model);
+  let share = if ducking.is_some() {
+    MEASURE_SHARE
+  } else {
+    1.0
+  };
+  auto_volume::measure(
+    project_folder,
+    microphone,
+    movie,
+    duration_ms,
+    &mut |fraction| {
+      progress(fraction * share);
+    },
+  )?;
+  if let Some((system, model)) = ducking {
+    duck::prepare(
+      movie,
+      (system, microphone),
+      project_folder,
+      model,
+      duration_ms,
+      &mut |fraction| progress(share + fraction * (1.0 - share)),
+    )?;
+  }
+  Ok(())
+}
+
+/// Readies Auto volume for an export of the tracks `on` of a recording, so
+/// an export started while the editor is still measuring is leveled and
+/// makes way all the same; it waits for work already under way rather than
+/// doing it again.
+pub(crate) fn ready_for_export(
+  app: &AppHandle,
+  project_folder: &Path,
+  tracks: &[RecordingAudioTrack],
+  on: &[usize],
+  recording: (&Path, u64),
+) -> Result<(), String> {
+  let on: Vec<RecordingAudioTrack> = tracks
+    .iter()
+    .filter(|track| on.contains(&track.stream_index))
+    .cloned()
+    .collect();
+  let Some(microphone) = first_of(&on, AudioTrackKind::Microphone) else {
+    return Ok(());
+  };
+  let system = first_of(&on, AudioTrackKind::SystemAudio);
+  ready_auto_volume(
+    project_folder,
+    (microphone, system),
+    recording,
+    vad_model(app).ok(),
+    &mut |_| {},
+  )
 }
 
 /// The voice activity model, bundled as a resource, or beside the program

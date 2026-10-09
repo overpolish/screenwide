@@ -3,8 +3,6 @@
 
 use super::*;
 use crate::editor::recording_preview_player::layout::PreviewPaneKind;
-use crate::editor::recording_preview_player::PreviewProcessing;
-use crate::editor::speech::auto_volume::Leveling;
 use crate::editor::{AudioTrackKind, RecordingAudioTrack};
 use crate::recording::PrimaryRecordingKind;
 
@@ -126,87 +124,7 @@ fn scales_cut_fades_by_the_effective_playback_rate() {
   assert!(rendered.contains("apad=whole_dur=0.375"));
 }
 
-#[test]
-fn plays_a_processed_track_from_its_own_file_at_the_same_place() {
-  let sources = test_sources();
-  let noise = Processing {
-    noise: true,
-    voice: false,
-  };
-  let both = Processing {
-    noise: true,
-    voice: true,
-  };
-  let leveling = Leveling {
-    threshold_db: -30.0,
-    makeup_db: 12.0,
-  };
-  *sources.processing.write().unwrap() = PreviewProcessing {
-    files: vec![
-      (1, noise, "/tmp/noise-1.flac".into()),
-      (1, both, "/tmp/noise-voice-1.flac".into()),
-    ],
-    heard: vec![(1, noise)],
-    levelings: vec![(1, noise, leveling)],
-    leveled: Vec::new(),
-  };
-  let config = StreamConfig {
-    channels: 2,
-    sample_rate: 48_000,
-    buffer_size: cpal::BufferSize::Default,
-  };
-  let channels = channels(&sources);
-  let rendered = args(
-    &sources,
-    &channels,
-    &[RecordingPreviewPlaybackRange {
-      source_start_ms: 250,
-      source_end_ms: 1_000,
-      playback_rate: 1.0,
-    }],
-    &config,
-    1.0,
-  )
-  .join(" ");
-
-  assert!(rendered.contains("-ss 0.250 -i /tmp/noise-1.flac"));
-  assert!(rendered.contains("-ss 0.250 -i /tmp/noise-voice-1.flac"));
-  assert!(rendered.contains("[1:a:0]atrim"));
-  assert!(rendered.contains("[2:a:0]atrim"));
-  // The noise-reduced file is decoded a second time, leveled.
-  assert!(rendered.contains(&format!("[3:a:0]{}[level4];", leveling.filters())));
-  assert!(rendered.contains("[level4]atrim"));
-  assert!(rendered.contains("amerge=inputs=5[tracks]"));
-  // The microphone and all its files are decoded; the switches pick which
-  // is heard, and a channel the preview lacks falls back to the recording,
-  // or to the unleveled file.
-  let mix = Mix {
-    audio_volumes: Default::default(),
-    channels: channels.clone(),
-    processing: Arc::clone(&sources.processing),
-    selected_audio: Arc::new(RwLock::new(vec![0, 1])),
-  };
-  let heard = |heard: &[(usize, Processing)], leveled: &[usize]| {
-    channels
-      .iter()
-      .map(|channel| mix.hears(channel, &[0, 1], (heard, leveled)))
-      .collect::<Vec<_>>()
-  };
-  assert_eq!(heard(&[(1, noise)], &[]), [true, false, true, false, false]);
-  assert_eq!(
-    heard(&[(1, noise)], &[1]),
-    [true, false, false, false, true]
-  );
-  assert_eq!(heard(&[(1, both)], &[1]), [true, false, false, true, false]);
-  assert_eq!(heard(&[], &[]), [true, true, false, false, false]);
-  let voice = Processing {
-    noise: false,
-    voice: true,
-  };
-  assert_eq!(heard(&[(1, voice)], &[]), [true, true, false, false, false]);
-}
-
-fn test_sources() -> PlayerSources {
+pub(super) fn test_sources() -> PlayerSources {
   let layout =
     super::super::preview_layout(Some((1_920, 1_080, PreviewPaneKind::Screen)), None, 720);
   PlayerSources {

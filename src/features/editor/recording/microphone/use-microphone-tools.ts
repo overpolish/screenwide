@@ -26,7 +26,8 @@ import {
 import { useMicrophoneSwitch } from "./use-microphone-switch";
 
 export type MicrophoneTools = {
-  /** Bring the microphone to a steady loudness, or play it as recorded. */
+  /** Bring the microphone to a steady loudness with the system audio making
+   * way for it, or play both as recorded. */
   changeAutoVolume: (enabled: boolean) => void;
   /** Clean up the microphone's voice, or put it back as it was. */
   cleanUpVoice: (enabled: boolean) => void;
