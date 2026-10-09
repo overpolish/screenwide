@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use super::{choice_file, noise};
-use crate::transcription::runner::{decode_audio_stream, Samples};
+use crate::transcription::runner::samples::{decode_audio_stream, Samples};
 
 /// Bumped when a cleaned file of an older make should be made again.
 const FORMAT_VERSION: u16 = 8;

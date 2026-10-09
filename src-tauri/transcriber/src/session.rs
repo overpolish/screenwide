@@ -1,33 +1,34 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where Studio sound runs: on the GPU when ONNX Runtime can reach it, about
-//! three times faster than the CPU and giving the same voice, and on the CPU
-//! when the GPU cannot take the model.
+//! Where a model runs: on the GPU when ONNX Runtime can reach it, several
+//! times faster than the CPU and giving the same result, and on the CPU when
+//! the GPU cannot take the model.
 
 use std::path::Path;
 
 use ort::ep::ExecutionProviderDispatch;
 use ort::session::Session;
 
-/// Loads the model at `path`, on the GPU if it can be.
-pub(super) fn session(path: &Path) -> Result<Session, String> {
+/// Loads the model at `path` for the feature named `what`, on the GPU if it
+/// can be.
+pub(crate) fn session(path: &Path, what: &str) -> Result<Session, String> {
   let name = path
     .file_name()
     .map_or_else(Default::default, |name| name.to_string_lossy());
   match gpu().map(|backend| on_gpu(path, backend)) {
     Some(Ok(session)) => {
-      eprintln!("Studio sound runs {name} on the GPU through {BACKEND}");
+      eprintln!("{what} runs {name} on the GPU through {BACKEND}");
       return Ok(session);
     }
     Some(Err(error)) => {
-      eprintln!("Studio sound runs {name} on the CPU: {BACKEND} could not take it: {error}");
+      eprintln!("{what} runs {name} on the CPU: {BACKEND} could not take it: {error}");
     }
     None => {}
   }
   Session::builder()
     .and_then(|mut builder| builder.commit_from_file(path))
-    .map_err(|error| format!("Could not load the Studio sound model: {error}"))
+    .map_err(|error| format!("Could not load the {what} model: {error}"))
 }
 
 fn on_gpu(path: &Path, backend: ExecutionProviderDispatch) -> ort::Result<Session> {

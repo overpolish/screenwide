@@ -245,6 +245,8 @@ export const audioPanelHandlers = (
   | "onReduceNoiseChange"
   | "onSilencesRemove"
   | "onSilencesRestore"
+  | "onStudioDuckingChange"
+  | "onStudioDuckingDownload"
   | "onStudioSoundChange"
   | "onStudioSoundDownload"
   | "onVocalCleanupChange"
@@ -263,6 +265,12 @@ export const audioPanelHandlers = (
   },
   onSilencesRestore: () => {
     target?.microphone?.restoreSilences();
+  },
+  onStudioDuckingChange: (enabled) => {
+    target?.microphone?.changeStudioDucking(enabled);
+  },
+  onStudioDuckingDownload: () => {
+    target?.microphone?.downloadStudioDucking();
   },
   onStudioSoundChange: (enabled) => {
     target?.microphone?.changeStudioSound(enabled);

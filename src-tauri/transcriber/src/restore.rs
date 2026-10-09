@@ -15,7 +15,6 @@
 mod fbank;
 mod high_pass;
 mod output;
-mod session;
 mod splice;
 
 use std::fs::File;
@@ -29,8 +28,8 @@ use screenwide_transcriber::{CLEAN_SAMPLE_RATE, SAMPLE_RATE};
 use self::fbank::{Fbank, WIDTH};
 use self::high_pass::HighPass;
 use self::output::{Output, Stretch};
-use self::session::session;
 use self::splice::splice;
+use crate::session::session;
 
 /// Seconds heard at once, and how many of them overlap the chunk before: the
 /// run-up a chunk hears before it is listened to, and the stretch the cut
@@ -50,6 +49,8 @@ const HIGH_PASS_HZ: f64 = 50.0;
 /// The loudest input sample is brought here, as the demo does.
 const PEAK: f32 = 0.9;
 const HIDDEN: usize = 1_024;
+/// The feature's name in what the helper reports.
+const WHAT: &str = "Studio sound";
 
 struct Models {
   fbank: Fbank,
@@ -91,8 +92,8 @@ pub fn restore_speech(
     let gain = if peak > 0.0 { PEAK / peak } else { 1.0 };
     let mut models = Models {
       fbank: Fbank::new(SAMPLE_RATE),
-      encoder: session(features)?,
-      vocoder: session(decoder)?,
+      encoder: session(features, WHAT)?,
+      vocoder: session(decoder, WHAT)?,
     };
     let mut reader = BufReader::new(File::open(audio).map_err(unreadable)?);
     let mut done = 0;
@@ -179,7 +180,7 @@ fn restore_stretch(
 
 /// The voice the model makes of one padded chunk.
 fn restore_chunk(models: &mut Models, samples: &[f32]) -> Result<Vec<f32>, String> {
-  let failed = |error: ort::Error| format!("Studio sound could not run: {error}");
+  let failed = |error: ort::Error| format!("{WHAT} could not run: {error}");
   let (features, rows) = models.fbank.features(samples);
   if rows == 0 {
     return Ok(Vec::new());

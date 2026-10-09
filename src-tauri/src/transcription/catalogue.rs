@@ -12,6 +12,9 @@ pub(crate) enum Purpose {
   Moments,
   /// Studio sound: the microphone rebuilt as a studio recording.
   StudioSound,
+  /// Studio ducking: the singing in the system audio moved out of the
+  /// voice's way.
+  StudioDucking,
 }
 
 impl Purpose {
@@ -20,6 +23,7 @@ impl Purpose {
     match self {
       Self::Moments => crate::i18n::t!("settings-transcription-moments"),
       Self::StudioSound => crate::i18n::t!("settings-transcription-studio-sound"),
+      Self::StudioDucking => crate::i18n::t!("settings-transcription-studio-ducking"),
     }
   }
 
@@ -28,6 +32,7 @@ impl Purpose {
     match self {
       Self::Moments => crate::i18n::t!("settings-transcription-moments-description"),
       Self::StudioSound => crate::i18n::t!("settings-transcription-studio-sound-description"),
+      Self::StudioDucking => crate::i18n::t!("settings-transcription-studio-ducking-description"),
     }
   }
 
@@ -36,7 +41,7 @@ impl Purpose {
   pub(crate) fn transcribes(self) -> bool {
     match self {
       Self::Moments => true,
-      Self::StudioSound => false,
+      Self::StudioSound | Self::StudioDucking => false,
     }
   }
 }
@@ -99,6 +104,20 @@ pub(crate) const MODELS: &[Model] = &[
     ],
     id: "sidon-v0.1",
     purpose: Purpose::StudioSound,
+  },
+  // HT Demucs v4 from Meta (MIT), the single model rather than the
+  // fine-tuned four, exported to ONNX with its weights stored at half
+  // precision, at a fixed revision. It separates music into drums, bass,
+  // other instruments and vocals.
+  Model {
+    files: &[ModelFile {
+      name: "htdemucs.onnx",
+      sha256: "d05c269d0178d2a72ad484b10b11dd370193fc923201c3b27a99f848745db70a",
+      size_bytes: 165_612_636,
+      url: "https://huggingface.co/adowu/htdemucs-onnx/resolve/e6b688a9a9f977e2efaba79d0f18b9b0cfc606ea/htdemucs_fp16weights.onnx",
+    }],
+    id: "htdemucs-v4",
+    purpose: Purpose::StudioDucking,
   },
 ];
 

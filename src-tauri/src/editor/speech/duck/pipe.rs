@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Child, ChildStdout, Command, Stdio};
 
-use screenwide_transcriber::CLEAN_SAMPLE_RATE as RATE;
+use screenwide_transcriber::{CLEAN_SAMPLE_RATE as RATE, SEPARATE_SAMPLE_RATE};
 
 use super::super::framer::{Framer, HOP, SIZE};
 use super::plan::Plan;
@@ -31,6 +31,34 @@ fn reader(movie: &Path, stream: usize, channels: usize) -> Command {
     .args(["-af", "aresample=async=1:first_pts=0"])
     .args(["-ac", &channels.to_string(), "-ar", &RATE.to_string()])
     .args(["-f", "f32le", "pipe:1"])
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped());
+  command
+}
+
+/// FFmpeg reading the `stream`th audio track of `movie` as [`reader`] reads
+/// it, in two parts of two sides each, interleaved: the music, which is the
+/// track less the `singing` in it, and the singing. The singing is a file of
+/// both sides at the separation rate, lined up with the track; the two
+/// parts add up to the track exactly.
+fn parts_reader(movie: &Path, stream: usize, singing: &Path) -> Command {
+  let stereo = format!("aresample={RATE},aformat=sample_fmts=flt:channel_layouts=stereo");
+  let mut command = crate::editor::ffmpeg_command();
+  command
+    .args(["-nostdin", "-loglevel", "error", "-i"])
+    .arg(movie)
+    .args(["-f", "f32le", "-ar", &SEPARATE_SAMPLE_RATE.to_string()])
+    .args(["-ac", &SIDES.to_string(), "-i"])
+    .arg(singing)
+    .args([
+      "-filter_complex",
+      &format!(
+        "[0:a:{stream}]aresample=async=1:first_pts=0,{stereo}[mix];\
+         [1:a]{stereo},apad[singing];\
+         [mix][singing]amerge=inputs=2,pan=4.0|c0=c0-c2|c1=c1-c3|c2=c2|c3=c3[parts]"
+      ),
+    ])
+    .args(["-map", "[parts]", "-f", "f32le", "pipe:1"])
     .stdout(Stdio::piped())
     .stderr(Stdio::piped());
   command
@@ -61,16 +89,25 @@ pub(super) fn decode(
 }
 
 /// Writes the `stream`th track of `movie` to `output` with each frame turned
-/// down as `plan` says, telling `on_read` how many samples of each side it
-/// has read.
+/// down as `plans` say, telling `on_read` how many samples of each side it
+/// has read. With `singing`, the singing in the track at the separation
+/// rate, the track is made way in two parts, the music and then the
+/// singing, each by its own plan, and put back together; without, it is one
+/// part with one plan.
 pub(super) fn make_way(
   movie: &Path,
   stream: usize,
+  singing: Option<&Path>,
   output: &Path,
-  plan: &mut Plan,
+  plans: &mut [Plan],
   on_read: &mut dyn FnMut(usize),
 ) -> Result<(), String> {
-  let mut decoding = reader(movie, stream, SIDES)
+  let channels = SIDES * plans.len();
+  let mut reading = match singing {
+    Some(singing) => parts_reader(movie, stream, singing),
+    None => reader(movie, stream, SIDES),
+  };
+  let mut decoding = reading
     .spawn()
     .map_err(|error| format!("Could not start FFmpeg: {error}"))?;
   let mut stdout = take_stdout(&mut decoding)?;
@@ -89,18 +126,18 @@ pub(super) fn make_way(
     .stdin
     .take()
     .ok_or_else(|| "FFmpeg did not take the system audio".to_owned())?;
-  let mut sides = [Framer::new(), Framer::new()];
-  let mut sent = Sides::default();
+  let mut framers: Vec<Framer> = (0..channels).map(|_| Framer::new()).collect();
+  let mut sent = Sides::new(channels);
   let mut bytes = vec![0_u8; CHUNK * 4];
   let mut samples = Vec::with_capacity(CHUNK);
   let mut written = Ok(());
   loop {
     let read = fill(&mut stdout, &mut bytes)?;
-    if read < 4 * SIDES {
+    if read < 4 * channels {
       break;
     }
-    to_samples(&bytes[..read - read % (4 * SIDES)], &mut samples);
-    sent.feed(&samples, &mut sides, plan, true);
+    to_samples(&bytes[..read - read % (4 * channels)], &mut samples);
+    sent.feed(&samples, &mut framers, plans, true);
     on_read(sent.read);
     written = sent.write(&mut input);
     if written.is_err() {
@@ -109,8 +146,8 @@ pub(super) fn make_way(
   }
   if written.is_ok() {
     // Silence after the end lets the last frames finish.
-    let tail = vec![0.0; SIZE * SIDES];
-    sent.feed(&tail, &mut sides, plan, false);
+    let tail = vec![0.0; SIZE * channels];
+    sent.feed(&tail, &mut framers, plans, false);
     written = sent.write(&mut input);
   }
   drop(input);
@@ -127,56 +164,78 @@ pub(super) fn make_way(
   Ok(())
 }
 
-/// The two sides on their way through their framers.
-#[derive(Default)]
+/// The channels of every part on their way through their framers, one
+/// framer to each, a part's two sides together.
 struct Sides {
   /// Samples of each side read from the track, which is how many go out.
   read: usize,
   /// Samples of each side that came out of the framers, the first
   /// `SIZE - HOP` of which lie before the start.
   made: usize,
-  split: [Vec<f32>; SIDES],
-  out: [Vec<f32>; SIDES],
+  split: Vec<Vec<f32>>,
+  out: Vec<Vec<f32>>,
   bytes: Vec<u8>,
 }
 
 impl Sides {
-  /// Feeds interleaved `samples` through `sides`, turned down as `plan`
-  /// says, counting them as read from the track when `from_track`.
+  fn new(channels: usize) -> Self {
+    Self {
+      read: 0,
+      made: 0,
+      split: vec![Vec::new(); channels],
+      out: vec![Vec::new(); channels],
+      bytes: Vec::new(),
+    }
+  }
+
+  /// Feeds interleaved `samples` through `framers`, each part's turned down
+  /// as its plan in `plans` says, counting them as read from the track when
+  /// `from_track`.
   fn feed(
     &mut self,
     samples: &[f32],
-    sides: &mut [Framer; SIDES],
-    plan: &mut Plan,
+    framers: &mut [Framer],
+    plans: &mut [Plan],
     from_track: bool,
   ) {
-    for (side, split) in self.split.iter_mut().enumerate() {
+    let channels = self.split.len();
+    for (channel, split) in self.split.iter_mut().enumerate() {
       split.clear();
-      split.extend(samples.iter().skip(side).step_by(SIDES));
+      split.extend(samples.iter().skip(channel).step_by(channels));
     }
     if from_track {
       self.read += self.split[0].len();
     }
-    for ((framer, split), out) in sides.iter_mut().zip(&self.split).zip(&mut self.out) {
+    let parts = framers.iter_mut().zip(&self.split).zip(&mut self.out);
+    for (channel, ((framer, split), out)) in parts.enumerate() {
+      let plan = &mut plans[channel / SIDES];
       framer.feed(split, Some(out), &mut |frame, spectrum| {
         plan.apply(frame, spectrum)
       });
     }
   }
 
-  /// Writes what has come out of both sides since last time, leaving out
-  /// what lies before the start and after the end.
+  /// Writes what has come out of every channel since last time, each side
+  /// the sum of the parts', leaving out what lies before the start and after
+  /// the end.
   fn write(&mut self, input: &mut impl Write) -> Result<(), String> {
     let latency = SIZE - HOP;
-    let length = self.out[0].len().min(self.out[1].len());
+    let length = self.out.iter().map(Vec::len).min().unwrap_or(0);
     self.bytes.clear();
     for at in 0..length {
       let made = self.made + at;
       if made < latency || made - latency >= self.read {
         continue;
       }
-      for out in &self.out {
-        self.bytes.extend_from_slice(&out[at].to_le_bytes());
+      for side in 0..SIDES {
+        let sum: f32 = self
+          .out
+          .iter()
+          .skip(side)
+          .step_by(SIDES)
+          .map(|out| out[at])
+          .sum();
+        self.bytes.extend_from_slice(&sum.to_le_bytes());
       }
     }
     self.made += length;

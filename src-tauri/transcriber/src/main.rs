@@ -8,6 +8,8 @@
 mod clean;
 mod engine;
 mod restore;
+mod separate;
+mod session;
 
 use std::io::{BufRead, Write};
 
@@ -52,6 +54,12 @@ fn main() {
             restore::restore_speech((features, decoder), audio, stretches, output, &mut progress)
               .map(|()| Reply::Restored { id })
           }
+          Job::SeparateVocals {
+            model,
+            audio,
+            output,
+          } => separate::separate_vocals(model, audio, output, &mut progress)
+            .map(|()| Reply::Separated { id }),
         };
         result.unwrap_or_else(|message| Reply::Failed { id, message })
       }

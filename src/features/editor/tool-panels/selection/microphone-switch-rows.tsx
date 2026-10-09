@@ -1,0 +1,95 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { Badge } from "../../../../components/base/badge/badge";
+import { Button } from "../../../../components/base/button/button";
+import { Switch } from "../../../../components/base/switch/switch";
+import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { t } from "../../../../i18n/i18n";
+import { formatBytes } from "../../duration";
+import { ToolPanelMicrophone, ToolPanelModel } from "../tool-panel-store";
+
+import { ToolProgress } from "./tool-progress";
+
+type SwitchProps = {
+  isLocked: boolean;
+  onChange: (enabled: boolean) => void;
+  progress: number;
+  state: ToolPanelMicrophone["noise"];
+  title: string;
+  working: string;
+};
+
+/** A microphone switch whose first turn can take a while, with a bar under
+ * it while it works. */
+export function WorkingSwitchRow({
+  isLocked,
+  onChange,
+  progress,
+  state,
+  title,
+  working,
+}: SwitchProps) {
+  return (
+    <div>
+      <ControlRow title={title}>
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isLocked}
+            isSelected={state !== "off"}
+            onChange={onChange}
+          />
+        )}
+      </ControlRow>
+      <ToolProgress
+        isWorking={state === "cleaning"}
+        label={working}
+        value={progress}
+      />
+    </div>
+  );
+}
+
+/** A microphone switch that needs a downloaded model: the switch once the
+ * model is here, and before, a download in its place, with the bar under it
+ * while the model comes down. Nothing until the app has said. */
+export function ModelSwitchRow({
+  description,
+  model,
+  onDownload,
+  ...switchProps
+}: SwitchProps & {
+  description: string;
+  model: ToolPanelModel | null;
+  onDownload: () => void;
+}) {
+  if (!model) return null;
+  if (model.status === "downloaded")
+    return <WorkingSwitchRow {...switchProps} />;
+  const isDownloading = model.status === "downloading";
+  return (
+    <div>
+      <ControlRow
+        description={description}
+        title={switchProps.title}
+        titleAccessory={<Badge>{formatBytes(model.sizeBytes)}</Badge>}
+      >
+        {(controlProps) => (
+          <Button
+            {...controlProps}
+            isDisabled={switchProps.isLocked || isDownloading}
+            onPress={onDownload}
+          >
+            {t("editor-panels-model-download")}
+          </Button>
+        )}
+      </ControlRow>
+      <ToolProgress
+        isWorking={isDownloading}
+        label={t("editor-panels-model-downloading")}
+        value={model.progress}
+      />
+    </div>
+  );
+}

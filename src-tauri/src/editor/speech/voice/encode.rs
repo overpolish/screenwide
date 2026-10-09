@@ -21,7 +21,7 @@ use super::deess::Deesser;
 use super::deplosive::Deplosive;
 use super::level::{self, Frames};
 use super::tick::Ticks;
-use crate::transcription::runner::Samples;
+use crate::transcription::runner::samples::Samples;
 
 /// Samples cleaned at a time: about five seconds. Like the context, a
 /// multiple of every spectral stage's frame, so each frame falls in the same

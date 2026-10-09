@@ -158,7 +158,7 @@ settings-voice-notes-transcription = Transcription
 settings-voice-notes-needs-model = Needs the { $model } model ({ $size }).
 settings-voice-notes-microphone-denied = { -app-name } needs microphone access for voice notes.
 
-## Models: transcription and Studio sound. $model is a model's name.
+## Models: transcription, Studio sound and Studio ducking. $model is a model's name.
 
 settings-transcription-local = Models run on this computer. Audio is never uploaded.
 # The model voice notes are transcribed with, named for what it does.
@@ -167,6 +167,9 @@ settings-transcription-moments-description = Turns your moments' voice notes int
 # The model the microphone's Studio sound switch uses, named for what it does.
 settings-transcription-studio-sound = Studio sound
 settings-transcription-studio-sound-description = Makes your microphone sound like a studio recording.
+# The model the microphone's Studio ducking switch uses, named for what it does.
+settings-transcription-studio-ducking = Studio ducking
+settings-transcription-studio-ducking-description = Moves singing in your system audio out of the way while you talk.
 settings-transcription-models = Models
 settings-transcription-language = Language
 settings-transcription-language-description = The language your recordings are spoken in.

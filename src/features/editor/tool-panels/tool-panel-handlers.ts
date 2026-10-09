@@ -141,6 +141,11 @@ export type ToolPanelHandlers = {
   onSilencesRemove?: () => void;
   /** Bring back every pause Remove cut that is still cut. */
   onSilencesRestore?: () => void;
+  /** Move the singing in the system audio out of the selected microphone's
+   * way while it speaks, or let the system audio make way as a whole. */
+  onStudioDuckingChange?: (enabled: boolean) => void;
+  /** Download the model Studio ducking separates the singing with. */
+  onStudioDuckingDownload?: () => void;
   /** Rebuild the selected microphone as a studio recording, or bring back
    * Reduce noise and Vocal cleanup. */
   onStudioSoundChange?: (enabled: boolean) => void;

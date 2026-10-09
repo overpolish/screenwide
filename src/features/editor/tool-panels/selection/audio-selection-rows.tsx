@@ -3,20 +3,19 @@
 
 import { RotateCcw } from "lucide-react";
 
-import { Badge } from "../../../../components/base/badge/badge";
 import { Button } from "../../../../components/base/button/button";
 import { IconButton } from "../../../../components/base/button/icon-button";
-import { Switch } from "../../../../components/base/switch/switch";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
-import { formatBytes, formatDuration } from "../../duration";
+import { formatDuration } from "../../duration";
 import { ToolPanelPatch } from "../tool-panel-patch";
 import {
   ToolPanelAudioSelection,
   ToolPanelMicrophone,
 } from "../tool-panel-store";
 
+import { ModelSwitchRow, WorkingSwitchRow } from "./microphone-switch-rows";
 import { ToolProgress } from "./tool-progress";
 
 type RowsProps = {
@@ -109,33 +108,30 @@ function MicrophoneRows({
   isLocked,
   microphone,
 }: RowsProps & { microphone: ToolPanelMicrophone }) {
-  const { silences } = microphone;
+  const { ducking, silences } = microphone;
   const isFinding = silences.status === "finding";
-  const model = microphone.studioModel;
   // Studio sound does Reduce noise's and Vocal cleanup's work while it is on
   // and its model is here, so those two step aside.
   const isStudio =
-    model?.status === "downloaded" && microphone.studio !== "off";
+    microphone.studioModel?.status === "downloaded" &&
+    microphone.studio !== "off";
   return (
     <>
-      {model?.status === "downloaded" ? (
-        <WorkingSwitchRow
-          isLocked={isLocked}
-          onChange={(studioSound) => {
-            change({ studioSound });
-          }}
-          progress={microphone.studioProgress}
-          state={microphone.studio}
-          title={t("editor-panels-studio-sound")}
-          working={t("editor-panels-studio-sound-working")}
-        />
-      ) : model ? (
-        <StudioSoundDownloadRow
-          change={change}
-          isLocked={isLocked}
-          model={model}
-        />
-      ) : null}
+      <ModelSwitchRow
+        description={t("editor-panels-studio-sound-description")}
+        isLocked={isLocked}
+        model={microphone.studioModel}
+        onChange={(studioSound) => {
+          change({ studioSound });
+        }}
+        onDownload={() => {
+          change({ downloadStudioSound: true });
+        }}
+        progress={microphone.studioProgress}
+        state={microphone.studio}
+        title={t("editor-panels-studio-sound")}
+        working={t("editor-panels-studio-sound-working")}
+      />
       {isStudio ? null : (
         <>
           <WorkingSwitchRow
@@ -170,6 +166,25 @@ function MicrophoneRows({
         title={t("editor-panels-auto-volume")}
         working={t("editor-panels-auto-volume-measuring")}
       />
+      {/* Studio ducking changes how the system audio makes way, which it
+          does only while Auto volume is on. */}
+      {ducking && microphone.autoVolume !== "off" ? (
+        <ModelSwitchRow
+          description={t("editor-panels-studio-ducking-description")}
+          isLocked={isLocked}
+          model={ducking.model}
+          onChange={(studioDucking) => {
+            change({ studioDucking });
+          }}
+          onDownload={() => {
+            change({ downloadStudioDucking: true });
+          }}
+          progress={ducking.progress}
+          state={ducking.state}
+          title={t("editor-panels-studio-ducking")}
+          working={t("editor-panels-studio-ducking-working")}
+        />
+      ) : null}
       <div>
         <ControlRow
           controlClassName="gap-control"
@@ -206,81 +221,5 @@ function MicrophoneRows({
         />
       </div>
     </>
-  );
-}
-
-/** Studio sound before its model is here: a download in place of the
- * switch, with the bar under it while the model comes down. */
-function StudioSoundDownloadRow({
-  change,
-  isLocked,
-  model,
-}: Pick<RowsProps, "change" | "isLocked"> & {
-  model: NonNullable<ToolPanelMicrophone["studioModel"]>;
-}) {
-  const isDownloading = model.status === "downloading";
-  return (
-    <div>
-      <ControlRow
-        description={t("editor-panels-studio-sound-description")}
-        title={t("editor-panels-studio-sound")}
-        titleAccessory={<Badge>{formatBytes(model.sizeBytes)}</Badge>}
-      >
-        {(controlProps) => (
-          <Button
-            {...controlProps}
-            isDisabled={isLocked || isDownloading}
-            onPress={() => {
-              change({ downloadStudioSound: true });
-            }}
-          >
-            {t("editor-panels-studio-sound-download")}
-          </Button>
-        )}
-      </ControlRow>
-      <ToolProgress
-        isWorking={isDownloading}
-        label={t("editor-panels-studio-sound-downloading")}
-        value={model.progress}
-      />
-    </div>
-  );
-}
-
-/** A microphone switch whose first turn can take a while, with a bar under
- * it while it works. */
-function WorkingSwitchRow({
-  isLocked,
-  onChange,
-  progress,
-  state,
-  title,
-  working,
-}: {
-  isLocked: boolean;
-  onChange: (enabled: boolean) => void;
-  progress: number;
-  state: ToolPanelMicrophone["noise"];
-  title: string;
-  working: string;
-}) {
-  return (
-    <div>
-      <ControlRow title={title}>
-        {(controlProps) => (
-          <Switch
-            {...controlProps}
-            isDisabled={isLocked}
-            isSelected={state !== "off"}
-            onChange={onChange}
-          />
-        )}
-      </ControlRow>
-      <ToolProgress
-        isWorking={state === "cleaning"}
-        label={working}
-        value={progress}
-      />
-    </div>
   );
 }

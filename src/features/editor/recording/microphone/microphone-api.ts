@@ -8,10 +8,17 @@ import type { AutoVolume } from "../../../../bindings/AutoVolume";
 import type { MicrophoneProgress } from "../../../../bindings/MicrophoneProgress";
 import type { NoiseReduction } from "../../../../bindings/NoiseReduction";
 import type { SilenceCut } from "../../../../bindings/SilenceCut";
+import type { StudioDucking } from "../../../../bindings/StudioDucking";
 import type { StudioSound } from "../../../../bindings/StudioSound";
 import type { VocalCleanup } from "../../../../bindings/VocalCleanup";
 
-export type { MicrophoneProgress, NoiseReduction, StudioSound, VocalCleanup };
+export type {
+  MicrophoneProgress,
+  NoiseReduction,
+  StudioDucking,
+  StudioSound,
+  VocalCleanup,
+};
 
 /** How far a microphone tool has got, as the editor is told while it works;
  * `src-tauri/src/editor/speech/commands.rs`. */
@@ -71,3 +78,19 @@ export const getRecordingStudioSound = (artifactId: number) =>
  * now. Turning it on the first time takes a while, and needs the model. */
 export const setRecordingStudioSound = (artifactId: number, enabled: boolean) =>
   invoke<StudioSound>("set_recording_studio_sound", { artifactId, enabled });
+
+export const getRecordingStudioDucking = (artifactId: number) =>
+  invoke<StudioDucking>("get_recording_studio_ducking", { artifactId });
+
+/** Moves the singing in the system audio out of the voice's way while it
+ * speaks, or lets the system audio make way as a whole, answering with what
+ * the project says now. Turning it on the first time takes a while, and
+ * needs the model. */
+export const setRecordingStudioDucking = (
+  artifactId: number,
+  enabled: boolean,
+) =>
+  invoke<StudioDucking>("set_recording_studio_ducking", {
+    artifactId,
+    enabled,
+  });

@@ -39,6 +39,7 @@ export type {
   ToolPanelAudioSelection,
   ToolPanelLayerSelection,
   ToolPanelMicrophone,
+  ToolPanelModel,
   ToolPanelShortcutSelection,
 } from "./tool-panel-selection";
 

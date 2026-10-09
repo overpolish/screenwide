@@ -32,10 +32,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const STUDIO_MODEL_BYTES = 1_005_394_589;
+const DUCKING_MODEL_BYTES = 165_612_636;
 
 const microphone = (
   {
     autoVolume,
+    ducking = null,
     noise,
     studio = "on",
     studioModel = {
@@ -45,7 +47,7 @@ const microphone = (
     },
     voice,
   }: Pick<ToolPanelMicrophone, "autoVolume" | "noise" | "voice"> &
-    Partial<Pick<ToolPanelMicrophone, "studio" | "studioModel">>,
+    Partial<Pick<ToolPanelMicrophone, "ducking" | "studio" | "studioModel">>,
   silences: Omit<ToolPanelMicrophone["silences"], "progress">,
   progress = { autoVolume: 0, noise: 0, silences: 0, studio: 0, voice: 0 },
 ) => {
@@ -61,6 +63,7 @@ const microphone = (
       microphone: {
         autoVolume,
         autoVolumeProgress: progress.autoVolume,
+        ducking,
         noise,
         noiseProgress: progress.noise,
         silences: { ...silences, progress: progress.silences },
@@ -162,6 +165,55 @@ export const SelectionMicrophoneStudioSound: Story = {
       },
       { count: 0, durationMs: 0, status: "idle" },
       { autoVolume: 0, noise: 0, silences: 0, studio: 0.4, voice: 0 },
+    );
+  },
+};
+
+/** A recording with system audio, before the Studio ducking model is here:
+ * a download under Auto volume, whose ducking it changes. */
+export const SelectionMicrophoneStudioDuckingDownload: Story = {
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    microphone(
+      {
+        autoVolume: "on",
+        ducking: {
+          model: {
+            progress: 0,
+            sizeBytes: DUCKING_MODEL_BYTES,
+            status: "available",
+          },
+          progress: 0,
+          state: "on",
+        },
+        noise: "on",
+        voice: "on",
+      },
+      { count: 0, durationMs: 0, status: "idle" },
+    );
+  },
+};
+
+/** Studio ducking finding the singing in the system audio, with its bar. */
+export const SelectionMicrophoneStudioDucking: Story = {
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    microphone(
+      {
+        autoVolume: "on",
+        ducking: {
+          model: {
+            progress: 0,
+            sizeBytes: DUCKING_MODEL_BYTES,
+            status: "downloaded",
+          },
+          progress: 0.55,
+          state: "cleaning",
+        },
+        noise: "on",
+        voice: "on",
+      },
+      { count: 0, durationMs: 0, status: "idle" },
     );
   },
 };

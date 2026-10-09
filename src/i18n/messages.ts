@@ -283,6 +283,8 @@ export type Messages = {
   "editor-panels-keyboard-show": null;
   "editor-panels-layer": { number: string | number };
   "editor-panels-mirror-image": null;
+  "editor-panels-model-download": null;
+  "editor-panels-model-downloading": null;
   "editor-panels-noise-cleaning": null;
   "editor-panels-nothing-selected": null;
   "editor-panels-one-third": null;
@@ -337,10 +339,11 @@ export type Messages = {
   "editor-panels-soft-edge": null;
   "editor-panels-start-frame": null;
   "editor-panels-strength": null;
+  "editor-panels-studio-ducking": null;
+  "editor-panels-studio-ducking-description": null;
+  "editor-panels-studio-ducking-working": null;
   "editor-panels-studio-sound": null;
   "editor-panels-studio-sound-description": null;
-  "editor-panels-studio-sound-download": null;
-  "editor-panels-studio-sound-downloading": null;
   "editor-panels-studio-sound-working": null;
   "editor-panels-swap": null;
   "editor-panels-sway": null;
@@ -820,6 +823,8 @@ export type Messages = {
   "settings-transcription-moments": null;
   "settings-transcription-moments-description": null;
   "settings-transcription-remove": { model: string | number };
+  "settings-transcription-studio-ducking": null;
+  "settings-transcription-studio-ducking-description": null;
   "settings-transcription-studio-sound": null;
   "settings-transcription-studio-sound-description": null;
   "settings-transcription-system-language": { language: string | number };

@@ -29,6 +29,18 @@ const STUDIO_SOUND_MODEL: TranscriptionModel = {
   status: "available",
 };
 
+/** The Studio ducking model, at its real download size. */
+const STUDIO_DUCKING_MODEL: TranscriptionModel = {
+  description:
+    "Moves singing in your system audio out of the way while you talk.",
+  id: "htdemucs-v4",
+  name: "Studio ducking",
+  progress: null,
+  purpose: "studioDucking",
+  sizeBytes: 165_612_636,
+  status: "available",
+};
+
 export type TranscriptionPreviewSeed = Pick<
   TranscriptionModel,
   "progress" | "status"
@@ -40,7 +52,7 @@ const TICK_MS = 100;
 
 /**
  * The transcription side of the Settings stories' API: the models kept in
- * memory, Moments as `seed` says and Studio sound not yet downloaded, with
+ * memory, Moments as `seed` says and the others not yet downloaded, with
  * downloads that fill over a few seconds. Nothing reaches the app or the
  * network.
  */
@@ -49,7 +61,11 @@ export function transcriptionPreviewApi(
 ) {
   let state: TranscriptionState = {
     language: "system",
-    models: [{ ...MOMENTS_MODEL, ...seed }, STUDIO_SOUND_MODEL],
+    models: [
+      { ...MOMENTS_MODEL, ...seed },
+      STUDIO_SOUND_MODEL,
+      STUDIO_DUCKING_MODEL,
+    ],
     systemLanguage: "en",
   };
   const listeners = new Set<(next: TranscriptionState) => void>();

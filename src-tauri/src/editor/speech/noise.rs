@@ -28,7 +28,8 @@ use self::profile::{Denoiser, Profile};
 use super::analysis::{self, SpeechMap};
 use super::choice_file;
 use super::pause_gate::PauseGate;
-use crate::transcription::runner::{decode_audio_stream, Samples, Transcriber};
+use crate::transcription::runner::samples::{decode_audio_stream, Samples};
+use crate::transcription::runner::Transcriber;
 
 /// Bumped when a cleaned file of an older make should be made again.
 const FORMAT_VERSION: u16 = 5;

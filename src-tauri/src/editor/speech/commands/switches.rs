@@ -14,11 +14,13 @@ use tauri::AppHandle;
 
 use super::super::auto_volume::{self, AutoVolume};
 use super::super::noise::{self, NoiseReduction};
+use super::super::studio_ducking;
 use super::super::voice::{self, VocalCleanup};
 use super::super::{ready_auto_volume, vad_model, SpeechSource};
 use super::{reporter, MicrophoneTool};
 use crate::editor::recording_preview_player::{refresh_processing, PreviewProcessing};
 
+pub(crate) mod ducking_switch;
 mod opening;
 pub(crate) mod studio_switch;
 
@@ -52,12 +54,33 @@ fn bar(app: &AppHandle, artifact_id: u64, tool: MicrophoneTool) -> Bar<impl FnMu
   }
 }
 
+/// Studio ducking's part in readying Auto volume for the recording `source`
+/// reads: its separation model, where the switch is on and the model is
+/// downloaded, and its own bar for separating the singing.
+struct Singing<F: FnMut(f32)> {
+  model: Option<PathBuf>,
+  bar: Bar<F>,
+}
+
+fn singing(app: &AppHandle, artifact_id: u64, source: &SpeechSource) -> Singing<impl FnMut(f32)> {
+  Singing {
+    model: studio_ducking::wanted(app, &source.project_folder, source.microphone),
+    bar: bar(app, artifact_id, MicrophoneTool::StudioDucking),
+  }
+}
+
 /// Readies Auto volume for the track as it is heard now, where it is on:
 /// measures it, and makes the system audio make way for it with the voice
-/// activity model at `model`. Work that fails leaves the track heard
-/// unleveled rather than undoing the switch that called for it.
-fn level_heard(source: &SpeechSource, model: Option<PathBuf>, progress: &mut dyn FnMut(f32)) {
-  if let Err(error) = ready(source, model, progress) {
+/// activity model at `model`, with `singing` as Studio ducking has it. Work
+/// that fails leaves the track heard unleveled rather than undoing the
+/// switch that called for it.
+fn level_heard(
+  source: &SpeechSource,
+  model: Option<PathBuf>,
+  singing: &mut Singing<impl FnMut(f32)>,
+  progress: &mut dyn FnMut(f32),
+) {
+  if let Err(error) = ready(source, model, singing, progress) {
     eprintln!("Could not ready the microphone's volume: {error}");
   }
 }
@@ -65,13 +88,17 @@ fn level_heard(source: &SpeechSource, model: Option<PathBuf>, progress: &mut dyn
 fn ready(
   source: &SpeechSource,
   model: Option<PathBuf>,
+  singing: &mut Singing<impl FnMut(f32)>,
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
+  let bar = &mut singing.bar;
+  let tell: &mut dyn FnMut(f32) = &mut |fraction| bar.tell(fraction);
   ready_auto_volume(
     &source.project_folder,
     (source.microphone, source.system),
     (&source.movie, source.duration_ms),
     model,
+    singing.model.clone().map(|separation| (separation, tell)),
     progress,
   )
 }
@@ -105,6 +132,7 @@ pub async fn set_recording_noise_reduction(
   let mut noise_bar = bar(&app, artifact_id, MicrophoneTool::Noise);
   let mut voice_bar = bar(&app, artifact_id, MicrophoneTool::Voice);
   let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
+  let mut singing = singing(&app, artifact_id, &source);
   let choice = tauri::async_runtime::spawn_blocking(move || {
     let (folder, stream) = (&source.project_folder, source.microphone);
     if let Some(model) = model {
@@ -123,7 +151,7 @@ pub async fn set_recording_noise_reduction(
       NoiseReduction::Off
     };
     noise::keep(folder, stream, choice)?;
-    level_heard(&source, level_model, &mut |fraction| {
+    level_heard(&source, level_model, &mut singing, &mut |fraction| {
       level_bar.tell(fraction)
     });
     Ok::<_, String>((choice, source))
@@ -160,6 +188,7 @@ pub async fn set_recording_vocal_cleanup(
   let level_model = vad_model(&app).ok();
   let mut voice_bar = bar(&app, artifact_id, MicrophoneTool::Voice);
   let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
+  let mut singing = singing(&app, artifact_id, &source);
   let choice = tauri::async_runtime::spawn_blocking(move || {
     let (folder, stream) = (&source.project_folder, source.microphone);
     let choice = if enabled {
@@ -173,7 +202,7 @@ pub async fn set_recording_vocal_cleanup(
       VocalCleanup::Off
     };
     voice::keep(folder, stream, choice)?;
-    level_heard(&source, level_model, &mut |fraction| {
+    level_heard(&source, level_model, &mut singing, &mut |fraction| {
       level_bar.tell(fraction)
     });
     Ok::<_, String>((choice, source))
@@ -210,6 +239,7 @@ pub async fn set_recording_auto_volume(
   let source = SpeechSource::open(&app, artifact_id)?;
   let model = vad_model(&app).ok();
   let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
+  let mut singing = singing(&app, artifact_id, &source);
   let choice = tauri::async_runtime::spawn_blocking(move || {
     let (folder, stream) = (&source.project_folder, source.microphone);
     let choice = if enabled {
@@ -219,7 +249,8 @@ pub async fn set_recording_auto_volume(
     };
     auto_volume::keep(folder, stream, choice)?;
     if enabled {
-      if let Err(error) = ready(&source, model, &mut |fraction| level_bar.tell(fraction)) {
+      let level = &mut |fraction| level_bar.tell(fraction);
+      if let Err(error) = ready(&source, model, &mut singing, level) {
         auto_volume::keep(folder, stream, AutoVolume::Off)?;
         return Err(error);
       }

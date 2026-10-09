@@ -72,6 +72,8 @@ export type ToolPanelPatch = Partial<
   deleteAnnotations?: true;
   /** Delete the scene under the playhead. */
   deleteScene?: true;
+  /** Download the model Studio ducking separates the singing with. */
+  downloadStudioDucking?: true;
   /** Download the model Studio sound rebuilds the microphone with. */
   downloadStudioSound?: true;
   /** Round the output canvas corners by this share of its shorter side. */
@@ -150,6 +152,9 @@ export type ToolPanelPatch = Partial<
   /** Lay the chosen redaction's blocks out again, or draw the chosen
    * hand-drawn highlight's stroke again, from a fresh seed. */
   shuffleAnnotation?: true;
+  /** Move the singing in the selected microphone's system audio out of its
+   * way while it speaks, or let the system audio make way as a whole. */
+  studioDucking?: boolean;
   /** Rebuild the selected microphone as a studio recording, in place of
    * Reduce noise and Vocal cleanup, or bring them back. */
   studioSound?: boolean;

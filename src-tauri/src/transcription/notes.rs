@@ -15,7 +15,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 use super::catalogue::{self, Purpose};
-use super::runner::{decode, Transcriber};
+use super::runner::samples::decode;
+use super::runner::Transcriber;
 use super::{language, models};
 
 /// Any note's transcript has moved on: queued, started, finished, or failed.

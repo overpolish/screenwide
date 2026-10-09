@@ -387,6 +387,7 @@
     "resources": {
       "../FFMPEG.md": "licenses/FFMPEG.md",
       "assets/DeepFilterNet-MIT.txt": "licenses/DeepFilterNet-MIT.txt",
+      "assets/Demucs-MIT.txt": "licenses/Demucs-MIT.txt",
       "../LICENSE": "licenses/GPL-3.0.txt",
       "assets/Inter-OFL-1.1.txt": "licenses/Inter-OFL-1.1.txt",
       "assets/Inter-VariableFont_opsz,wght.ttf": "fonts/Inter-VariableFont_opsz,wght.ttf",

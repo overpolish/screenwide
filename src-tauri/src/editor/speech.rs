@@ -9,7 +9,8 @@
 //! and Vocal cleanup (`voice`) polishes the voice. `heard` picks which of
 //! their files the track is heard from. Auto volume (`auto_volume`) levels
 //! whatever is heard to a steady loudness, and makes the system audio make
-//! way for the voice while it speaks (`duck`).
+//! way for the voice while it speaks (`duck`), the singing in it out of the
+//! way entirely with Studio ducking (`studio_ducking`).
 
 mod analysis;
 pub(crate) mod auto_volume;
@@ -22,6 +23,7 @@ mod noise;
 mod pause_gate;
 mod silences;
 mod studio;
+mod studio_ducking;
 #[cfg(test)]
 mod tests;
 mod voice;
@@ -100,12 +102,15 @@ const MEASURE_SHARE: f32 = 0.4;
 
 /// Readies Auto volume for the `microphone`th track of `movie`, where it is
 /// on: measures the voice as it is heard, and, with `system` and the voice
-/// activity model at `model`, makes the system audio make way for it.
+/// activity model at `model`, makes the system audio make way for it. With
+/// `singing`, Studio ducking's separation model and where its own work is
+/// told, the singing in the system audio gets out of the way entirely.
 fn ready_auto_volume(
   project_folder: &Path,
   (microphone, system): (usize, Option<usize>),
   (movie, duration_ms): (&Path, u64),
   model: Option<PathBuf>,
+  singing: Option<(PathBuf, &mut dyn FnMut(f32))>,
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
   if auto_volume::choice(project_folder, microphone) != auto_volume::AutoVolume::On {
@@ -133,6 +138,7 @@ fn ready_auto_volume(
       project_folder,
       model,
       duration_ms,
+      singing,
       &mut |fraction| progress(share + fraction * (1.0 - share)),
     )?;
   }
@@ -202,6 +208,7 @@ pub(crate) fn ready_for_export(
     return Ok(());
   };
   let model = vad_model(app).ok();
+  let singing = studio_ducking::wanted(app, project_folder, microphone);
   ready_voice(
     app,
     project_folder,
@@ -214,11 +221,13 @@ pub(crate) fn ready_for_export(
     },
   )?;
   let system = first_of(&on, AudioTrackKind::SystemAudio);
+  let quiet: &mut dyn FnMut(f32) = &mut |_| {};
   ready_auto_volume(
     project_folder,
     (microphone, system),
     recording,
     model,
+    singing.map(|singing| (singing, quiet)),
     &mut |_| {},
   )
 }

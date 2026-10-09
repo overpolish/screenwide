@@ -10,7 +10,7 @@ use tauri::AppHandle;
 use super::super::super::studio::{self, StudioSound};
 use super::super::super::{ready_voice, vad_model, SpeechSource, VoiceProgress};
 use super::super::MicrophoneTool;
-use super::{bar, heard_changed, level_heard, opening};
+use super::{bar, heard_changed, level_heard, opening, singing};
 
 /// Whether the microphone of the recording open in the editor is rebuilt as
 /// a studio recording, as its project says. A recording starts with it on,
@@ -41,6 +41,7 @@ pub async fn set_recording_studio_sound(
   let mut noise_bar = bar(&app, artifact_id, MicrophoneTool::Noise);
   let mut voice_bar = bar(&app, artifact_id, MicrophoneTool::Voice);
   let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
+  let mut singing = singing(&app, artifact_id, &source);
   let worker = app.clone();
   let choice = tauri::async_runtime::spawn_blocking(move || {
     let (folder, stream) = (&source.project_folder, source.microphone);
@@ -66,7 +67,9 @@ pub async fn set_recording_studio_sound(
         let _ = studio::keep(folder, stream, StudioSound::Off);
       }
     })?;
-    level_heard(&source, vad, &mut |fraction| level_bar.tell(fraction));
+    level_heard(&source, vad, &mut singing, &mut |fraction| {
+      level_bar.tell(fraction)
+    });
     Ok::<_, String>((choice, source))
   })
   .await

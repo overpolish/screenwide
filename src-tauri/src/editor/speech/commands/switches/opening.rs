@@ -6,7 +6,9 @@
 //! work is done in the background in the order each needs the last: Studio
 //! sound's rebuilt voice where its model is downloaded, or else the noise
 //! taken out and the voice cleaned up from what that leaves, then the voice
-//! as heard measured. Each fills its own bar.
+//! as heard measured and the system audio made to make way, its singing
+//! separated where Studio ducking's model is downloaded. Each fills its own
+//! bar.
 
 use std::sync::Mutex;
 
@@ -15,10 +17,11 @@ use tauri::AppHandle;
 use super::super::super::auto_volume::{self, AutoVolume};
 use super::super::super::noise::{self, NoiseReduction};
 use super::super::super::studio::{self, StudioSound};
+use super::super::super::studio_ducking;
 use super::super::super::voice::{self, VocalCleanup};
 use super::super::super::{duck, ready_voice, vad_model, SpeechSource, VoiceProgress};
 use super::super::MicrophoneTool;
-use super::{bar, heard_changed, level_heard};
+use super::{bar, heard_changed, level_heard, singing};
 
 /// One recording readied at a time; asked again while it runs, the work
 /// under way is left to finish.
@@ -55,8 +58,11 @@ pub(super) fn ready(app: &AppHandle, artifact_id: u64, source: SpeechSource) {
     }
     drop((studio_bar, noise_bar, voice_bar));
     let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
-    level_heard(&source, vad, &mut |fraction| level_bar.tell(fraction));
-    drop(level_bar);
+    let mut singing = singing(&app, artifact_id, &source);
+    level_heard(&source, vad, &mut singing, &mut |fraction| {
+      level_bar.tell(fraction)
+    });
+    drop((level_bar, singing));
     heard_changed(&app, artifact_id, &source);
   });
 }
@@ -80,9 +86,10 @@ fn has_work(app: &AppHandle, source: &SpeechSource) -> bool {
       return true;
     }
   }
+  let separated = studio_ducking::wanted(app, folder, stream).is_some();
   let unducked = source
     .system
-    .is_some_and(|system| !duck::is_made_for(folder, system, stream));
+    .is_some_and(|system| !duck::is_made_for(folder, system, stream, separated));
   auto_volume::choice(folder, stream) == AutoVolume::On
     && (auto_volume::is_unmeasured(folder, stream) || unducked)
 }

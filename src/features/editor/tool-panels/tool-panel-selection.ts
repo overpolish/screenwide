@@ -83,6 +83,16 @@ export type ToolPanelMicrophone = {
   autoVolume: "cleaning" | "off" | "on";
   /** How far measuring has got, 0 to 1, while `autoVolume` is `cleaning`. */
   autoVolumeProgress: number;
+  /** Studio ducking, for a recording with system audio, `null` without: the
+   * singing in the system audio moved out of the voice's way while it
+   * speaks, by a downloaded model, where the rest only makes way. `cleaning`
+   * while the singing is found, which happens once and can take a while. */
+  ducking: {
+    model: ToolPanelModel | null;
+    /** How far finding the singing has got, 0 to 1, while `cleaning`. */
+    progress: number;
+    state: "cleaning" | "off" | "on";
+  } | null;
   /** Everything but the voice taken out of the track: `cleaning` while the
    * track is cleaned, which happens once and can take a while. */
   noise: "cleaning" | "off" | "on";
@@ -106,13 +116,8 @@ export type ToolPanelMicrophone = {
    * rebuilt, which happens once and can take a while. */
   studio: "cleaning" | "off" | "on";
   /** The model Studio sound needs, and how far it is on this computer;
-   * `null` until the app has said. `progress` runs 0 to 1 while it
-   * downloads. */
-  studioModel: {
-    progress: number;
-    sizeBytes: number;
-    status: "available" | "downloaded" | "downloading";
-  } | null;
+   * `null` until the app has said. */
+  studioModel: ToolPanelModel | null;
   /** How far rebuilding has got, 0 to 1, while `studio` is `cleaning`. */
   studioProgress: number;
   /** The voice cleaned up: mouth clicks and harsh "s" sounds softened, its
@@ -121,6 +126,14 @@ export type ToolPanelMicrophone = {
   voice: "cleaning" | "off" | "on";
   /** How far cleaning up has got, 0 to 1, while `voice` is `cleaning`. */
   voiceProgress: number;
+};
+
+/** A model a microphone switch needs, and how far it is on this computer.
+ * `progress` runs 0 to 1 while it downloads. */
+export type ToolPanelModel = {
+  progress: number;
+  sizeBytes: number;
+  status: "available" | "downloaded" | "downloading";
 };
 
 export type ToolPanelSelection =

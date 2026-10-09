@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Child, ChildStdin, ChildStdout, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
 
-use screenwide_transcriber::{Job, Reply, Request, Speech, Transcript, SAMPLE_RATE};
+use screenwide_transcriber::{Job, Reply, Request, Speech, Transcript};
+
+use self::samples::Samples;
+
+pub(crate) mod samples;
 
 /// The transcriber program, started for a run of jobs and kept for the rest
 /// of them, since each start loads the model again. Dropping it closes its
@@ -130,6 +133,29 @@ impl Transcriber {
     }
   }
 
+  /// The singing in the stereo `audio`, at the protocol's separation rate,
+  /// written to `output` in the same form by the separation model at
+  /// `model`, telling `progress` how far it has got.
+  pub(crate) fn separate_vocals(
+    &mut self,
+    model: PathBuf,
+    audio: &Samples,
+    output: &Samples,
+    progress: &mut dyn FnMut(f32),
+  ) -> Result<(), String> {
+    match self.ask(
+      Job::SeparateVocals {
+        audio: audio.0.clone(),
+        model,
+        output: output.0.clone(),
+      },
+      progress,
+    )? {
+      Reply::Separated { .. } => Ok(()),
+      _ => Err("The transcriber answered with something else".to_owned()),
+    }
+  }
+
   /// Sends `job` and waits for the reply that ends it, handing any progress
   /// on the way to `progress`.
   fn ask(&mut self, job: Job, progress: &mut dyn FnMut(f32)) -> Result<Reply, String> {
@@ -157,6 +183,7 @@ impl Transcriber {
       | Reply::Speech { id, .. }
       | Reply::Cleaned { id, .. }
       | Reply::Restored { id }
+      | Reply::Separated { id }
       | Reply::Progress { id, .. }
       | Reply::Failed { id, .. }) = &answer;
       if *id != request.id {
@@ -176,89 +203,4 @@ impl Drop for Transcriber {
     self.input = None;
     let _ = self.child.wait();
   }
-}
-
-/// Audio as the transcriber takes it, in a scratch file removed with this.
-pub(crate) struct Samples(PathBuf);
-
-impl Drop for Samples {
-  fn drop(&mut self) {
-    let _ = std::fs::remove_file(&self.0);
-  }
-}
-
-impl Samples {
-  /// A scratch file for the transcriber to write into.
-  pub(crate) fn scratch() -> Self {
-    static NEXT: AtomicU64 = AtomicU64::new(0);
-    Self(std::env::temp_dir().join(format!(
-      "screenwide-transcription-{}-{}.f32",
-      std::process::id(),
-      NEXT.fetch_add(1, Ordering::Relaxed)
-    )))
-  }
-
-  pub(crate) fn path(&self) -> &Path {
-    &self.0
-  }
-
-  /// The samples themselves, to look at before they are transcribed.
-  pub(crate) fn read(&self) -> Result<Vec<f32>, String> {
-    let bytes = std::fs::read(&self.0)
-      .map_err(|error| format!("Could not read the audio to transcribe: {error}"))?;
-    Ok(
-      bytes
-        .as_chunks::<4>()
-        .0
-        .iter()
-        .map(|bytes| f32::from_le_bytes(*bytes))
-        .collect(),
-    )
-  }
-}
-
-/// `source` converted by FFmpeg into what the transcriber reads: mono 32-bit
-/// float samples at its rate, in little-endian order, which is the native
-/// one on every computer Screenwide runs on.
-pub(super) fn decode(source: &Path) -> Result<Samples, String> {
-  decode_with(source, &[], SAMPLE_RATE)
-}
-
-/// The `stream`th audio track of `source`, converted as [`decode`] converts
-/// a voice note but at `rate`, and padded or trimmed to start where the
-/// recording starts so a moment in it is the same moment in the picture.
-pub(crate) fn decode_audio_stream(
-  source: &Path,
-  stream: usize,
-  rate: u32,
-) -> Result<Samples, String> {
-  decode_with(
-    source,
-    &[
-      "-map",
-      &format!("0:a:{stream}"),
-      "-af",
-      "aresample=async=1:first_pts=0",
-    ],
-    rate,
-  )
-}
-
-fn decode_with(source: &Path, map: &[&str], rate: u32) -> Result<Samples, String> {
-  let samples = Samples::scratch();
-  let output = crate::editor::ffmpeg_command()
-    .args(["-nostdin", "-loglevel", "error", "-y", "-i"])
-    .arg(source)
-    .args(map)
-    .args(["-ac", "1", "-ar", &rate.to_string(), "-f", "f32le"])
-    .arg(&samples.0)
-    .output()
-    .map_err(|error| format!("Could not start FFmpeg: {error}"))?;
-  if !output.status.success() {
-    return Err(format!(
-      "Could not read the audio to transcribe: {}",
-      String::from_utf8_lossy(&output.stderr).trim()
-    ));
-  }
-  Ok(samples)
 }

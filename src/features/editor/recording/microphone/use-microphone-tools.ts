@@ -16,27 +16,34 @@ import { useEditorEditGesture } from "../../use-editor-edit-history";
 import {
   getRecordingAutoVolume,
   getRecordingNoiseReduction,
+  getRecordingStudioDucking,
   getRecordingStudioSound,
   getRecordingVocalCleanup,
   listenToMicrophoneProgress,
   planRecordingSilences,
   setRecordingAutoVolume,
   setRecordingNoiseReduction,
+  setRecordingStudioDucking,
   setRecordingStudioSound,
   setRecordingVocalCleanup,
 } from "./microphone-api";
 import { useMicrophoneSwitch } from "./use-microphone-switch";
-import { useStudioSoundModel } from "./use-studio-sound-model";
+import { useModel } from "./use-model";
 
 export type MicrophoneTools = {
   /** Bring the microphone to a steady loudness with the system audio making
    * way for it, or play both as recorded. */
   changeAutoVolume: (enabled: boolean) => void;
+  /** Move the singing in the system audio out of the voice's way while it
+   * speaks, or let the system audio make way as a whole. */
+  changeStudioDucking: (enabled: boolean) => void;
   /** Rebuild the microphone as a studio recording, or bring back Reduce
    * noise and Vocal cleanup. */
   changeStudioSound: (enabled: boolean) => void;
   /** Clean up the microphone's voice, or put it back as it was. */
   cleanUpVoice: (enabled: boolean) => void;
+  /** Download the model Studio ducking needs. */
+  downloadStudioDucking: () => void;
   /** Download the model Studio sound needs. */
   downloadStudioSound: () => void;
   microphone: ToolPanelMicrophone;
@@ -56,6 +63,7 @@ type Progress = {
   autoVolume: number | null;
   noise: number | null;
   silences: number | null;
+  studioDucking: number | null;
   studioSound: number | null;
   voice: number | null;
 };
@@ -64,6 +72,7 @@ const noProgress = (artifactId: number): Progress => ({
   autoVolume: null,
   noise: null,
   silences: null,
+  studioDucking: null,
   studioSound: null,
   voice: null,
 });
@@ -103,6 +112,9 @@ export function useMicrophoneTools({
     recording?.audioTracks.some((track) => track.kind === "microphone") === true
       ? recording.id
       : null;
+  const hasSystemAudio =
+    recording?.audioTracks.some((track) => track.kind === "system-audio") ===
+    true;
   const noise = useMicrophoneSwitch({
     artifactId,
     name: "noise",
@@ -127,8 +139,17 @@ export function useMicrophoneTools({
     read: getRecordingStudioSound,
     write: setRecordingStudioSound,
   });
-  const studioModel = useStudioSoundModel();
-  const isModelDownloaded = studioModel.model?.status === "downloaded";
+  const ducking = useMicrophoneSwitch({
+    artifactId: hasSystemAudio ? artifactId : null,
+    name: "studio ducking",
+    read: getRecordingStudioDucking,
+    write: setRecordingStudioDucking,
+  });
+  const studioModel = useModel("studioSound");
+  const duckingModel = useModel("studioDucking");
+  const downloadedModels = [studioModel.shown, duckingModel.shown].filter(
+    (model) => model?.status === "downloaded",
+  ).length;
   const [silences, setSilences] = useState<Silences | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const editRef = useRef(edit);
@@ -159,14 +180,16 @@ export function useMicrophoneTools({
       stop?.();
     };
   }, [artifactId]);
-  // A model that arrives while the recording is open is put to work: asking
-  // for the switch again starts what the recording still needs.
+  // Each model that arrives while the recording is open is put to work:
+  // asking for a switch again starts everything the recording still needs.
+  // Counted, not just whether any is here, so the second model to arrive
+  // starts its work too.
   useEffect(() => {
-    if (artifactId === null || !isModelDownloaded) return;
+    if (artifactId === null || downloadedModels === 0) return;
     getRecordingStudioSound(artifactId).catch((cause: unknown) => {
-      console.error("Could not ready Studio sound", cause);
+      console.error("Could not ready the microphone's models", cause);
     });
-  }, [artifactId, isModelDownloaded]);
+  }, [artifactId, downloadedModels]);
 
   if (artifactId === null || !recording || !edit) return null;
 
@@ -191,6 +214,10 @@ export function useMicrophoneTools({
       setProgress({ ...progressNow, autoVolume: null });
       autoVolume.turn(enabled);
     },
+    changeStudioDucking: (enabled) => {
+      setProgress({ ...progressNow, studioDucking: null });
+      ducking.turn(enabled);
+    },
     changeStudioSound: (enabled) => {
       setProgress({ ...progressNow, studioSound: null });
       studio.turn(enabled);
@@ -200,10 +227,18 @@ export function useMicrophoneTools({
       setProgress({ ...progressNow, voice: null });
       voice.turn(enabled);
     },
+    downloadStudioDucking: duckingModel.download,
     downloadStudioSound: studioModel.download,
     microphone: {
       autoVolume: shown(autoVolume, progressNow.autoVolume),
       autoVolumeProgress: progressNow.autoVolume ?? 0,
+      ducking: hasSystemAudio
+        ? {
+            model: duckingModel.shown,
+            progress: progressNow.studioDucking ?? 0,
+            state: shown(ducking, progressNow.studioDucking),
+          }
+        : null,
       noise: shown(noise, progressNow.noise),
       noiseProgress: progressNow.noise ?? 0,
       silences: {
@@ -212,11 +247,7 @@ export function useMicrophoneTools({
         status,
       },
       studio: shown(studio, progressNow.studioSound),
-      studioModel: studioModel.model && {
-        progress: studioModel.model.progress ?? 0,
-        sizeBytes: studioModel.model.sizeBytes,
-        status: studioModel.model.status,
-      },
+      studioModel: studioModel.shown,
       studioProgress: progressNow.studioSound ?? 0,
       voice: shown(voice, progressNow.voice),
       voiceProgress: progressNow.voice ?? 0,

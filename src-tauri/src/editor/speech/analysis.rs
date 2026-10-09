@@ -11,7 +11,8 @@ use std::sync::Mutex;
 use screenwide_transcriber::SAMPLE_RATE;
 use serde::{Deserialize, Serialize};
 
-use crate::transcription::runner::{decode_audio_stream, Transcriber};
+use crate::transcription::runner::samples::decode_audio_stream;
+use crate::transcription::runner::Transcriber;
 
 /// Bumped when what is kept stops matching what a listen gives, so an old
 /// file is listened again rather than read wrongly.

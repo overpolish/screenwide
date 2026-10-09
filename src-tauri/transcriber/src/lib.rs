@@ -19,6 +19,10 @@ pub const SAMPLE_RATE: u32 = 16_000;
 /// full range a microphone records.
 pub const CLEAN_SAMPLE_RATE: u32 = 48_000;
 
+/// The rate music is separated at: the separation model's own. Audio for it
+/// is stereo, the two sides interleaved, unlike every other job's.
+pub const SEPARATE_SAMPLE_RATE: u32 = 44_100;
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Request {
@@ -80,6 +84,17 @@ pub enum Job {
     /// [`SAMPLE_RATE`], sorted and apart. Everything else comes out silent.
     stretches: Vec<[u64; 2]>,
   },
+  /// The singing in the audio, apart from the music, answered with
+  /// [`Reply::Separated`] once it is written.
+  SeparateVocals {
+    /// The separation model file.
+    model: PathBuf,
+    /// The samples, as [`SEPARATE_SAMPLE_RATE`] describes.
+    audio: PathBuf,
+    /// Where the singing goes, in the same form, lined up with the samples
+    /// in and as long.
+    output: PathBuf,
+  },
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -104,6 +119,10 @@ pub enum Reply {
   },
   /// The restored voice is written.
   Restored {
+    id: u64,
+  },
+  /// The singing is written.
+  Separated {
     id: u64,
   },
   /// How far a long job has got, 0 to 1. Sent any number of times before the

@@ -29,7 +29,8 @@ use super::pause_gate::PauseGate;
 use super::{choice_file, voice};
 use crate::transcription::catalogue::{self, Purpose};
 use crate::transcription::models;
-use crate::transcription::runner::{decode_audio_stream, Samples, Transcriber};
+use crate::transcription::runner::samples::{decode_audio_stream, Samples};
+use crate::transcription::runner::Transcriber;
 
 /// Bumped when a file of an older make should be made again.
 const FORMAT_VERSION: u16 = 4;

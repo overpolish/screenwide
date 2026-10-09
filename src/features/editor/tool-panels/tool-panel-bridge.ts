@@ -51,6 +51,9 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.studioSound !== undefined)
     on.onStudioSoundChange?.(values.studioSound);
   if (values.downloadStudioSound) on.onStudioSoundDownload?.();
+  if (values.studioDucking !== undefined)
+    on.onStudioDuckingChange?.(values.studioDucking);
+  if (values.downloadStudioDucking) on.onStudioDuckingDownload?.();
   if (values.removeSilences) on.onSilencesRemove?.();
   if (values.restoreSilences) on.onSilencesRestore?.();
   if (values.bakeCamera !== undefined)
