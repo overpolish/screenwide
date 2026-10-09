@@ -57,21 +57,17 @@ const noProgress = (artifactId: number): Progress => ({
   voice: null,
 });
 /** A switch as the panel shows it: `cleaning` while the app works on a turn
- * it has said has work in it. */
+ * it has said has work in it, and while the switch is on and the app works
+ * for it on its own: rebuilding Vocal cleanup when Reduce noise turns, or
+ * measuring for Auto volume when a recording first opens, until it says the
+ * work is done. */
 const shown = (
   { isPending, state }: { isPending: boolean; state: "off" | "on" },
   progress: number | null,
-) => (isPending && progress !== null ? ("cleaning" as const) : state);
-/** Auto volume as the panel shows it: also `cleaning` while the app measures
- * on its own, as it does when a recording first opens, until it says the
- * measure is done. */
-const shownAutoVolume = (
-  autoVolume: { isPending: boolean; state: "off" | "on" },
-  progress: number | null,
 ) =>
-  autoVolume.state === "on" && progress !== null && progress < 1
+  progress !== null && (isPending || (state === "on" && progress < 1))
     ? ("cleaning" as const)
-    : shown(autoVolume, progress);
+    : state;
 type Silences =
   | { artifactId: number; status: "finding" }
   | { artifactId: number; edit: RecordingTimelineEdit; status: "none-found" };
@@ -174,7 +170,7 @@ export function useMicrophoneTools({
       voice.turn(enabled);
     },
     microphone: {
-      autoVolume: shownAutoVolume(autoVolume, progressNow.autoVolume),
+      autoVolume: shown(autoVolume, progressNow.autoVolume),
       autoVolumeProgress: progressNow.autoVolume ?? 0,
       noise: shown(noise, progressNow.noise),
       noiseProgress: progressNow.noise ?? 0,

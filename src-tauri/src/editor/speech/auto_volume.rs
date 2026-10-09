@@ -12,21 +12,20 @@
 //! kept beside the project.
 
 mod loudness;
+mod measures;
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::time::UNIX_EPOCH;
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use self::measures::measured;
 use super::choice_file;
 use super::heard::{self, Processing};
 
 /// The make of the choice file.
 const FORMAT_VERSION: u16 = 1;
-/// Bumped when a measure of an older make should be taken again.
-const MEASURE_VERSION: u16 = 2;
 /// The loudness the voice is brought to, in LUFS.
 const TARGET_LUFS: f64 = -16.0;
 /// How far above the voice's loudness leveling starts, in dB. Against the
@@ -95,85 +94,27 @@ pub(super) fn keep(project_folder: &Path, stream: usize, choice: AutoVolume) -> 
     .map_err(|error| format!("Could not keep the auto volume choice: {error}"))
 }
 
-/// One file's measure, and what the file was when it was taken.
-#[derive(Clone, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Measure {
-  /// The file's name in the project, or nothing for the recording, which
-  /// never changes once made.
-  file: Option<String>,
-  length: u64,
-  modified_ms: u64,
-  /// Nothing for a file with no voice in it.
-  leveling: Option<Leveling>,
-}
-
-fn measures_path(project_folder: &Path, stream: usize) -> PathBuf {
-  project_folder.join(format!("levels-{stream}.json"))
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct KeptMeasures {
-  version: u16,
-  measures: Vec<Measure>,
-}
-
-fn measures(project_folder: &Path, stream: usize) -> Vec<Measure> {
-  std::fs::read(measures_path(project_folder, stream))
-    .ok()
-    .and_then(|bytes| serde_json::from_slice::<KeptMeasures>(&bytes).ok())
-    .filter(|kept| kept.version == MEASURE_VERSION)
-    .map(|kept| kept.measures)
-    .unwrap_or_default()
-}
-
-/// The file `heard` as its measure names it: the recording when nothing.
-fn identity(heard: Option<&Path>) -> Measure {
-  let Some(path) = heard else {
-    return Measure {
-      file: None,
-      length: 0,
-      modified_ms: 0,
-      leveling: None,
-    };
-  };
-  let metadata = std::fs::metadata(path).ok();
-  Measure {
-    file: path
-      .file_name()
-      .map(|name| name.to_string_lossy().into_owned()),
-    length: metadata.as_ref().map_or(0, std::fs::Metadata::len),
-    modified_ms: metadata
-      .and_then(|metadata| metadata.modified().ok())
-      .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
-      .map_or(0, |since| since.as_millis() as u64),
-    leveling: None,
-  }
-}
-
-/// The leveling of the `stream`th track heard from `heard`, or from the
-/// recording when nothing, if it has been measured as it is now. The inner
-/// nothing is a file with no voice to level.
-fn measured(
-  project_folder: &Path,
-  stream: usize,
-  heard: Option<&Path>,
-) -> Option<Option<Leveling>> {
-  let wanted = identity(heard);
-  measures(project_folder, stream)
-    .into_iter()
-    .find(|measure| {
-      (&measure.file, measure.length, measure.modified_ms)
-        == (&wanted.file, wanted.length, wanted.modified_ms)
-    })
-    .map(|measure| measure.leveling)
-}
-
 /// Whether the `stream`th track as it is heard now still has to be measured.
 pub(super) fn is_unmeasured(project_folder: &Path, stream: usize) -> bool {
   let heard = heard::heard_file(project_folder, stream);
   measured(project_folder, stream, heard.as_deref()).is_none()
+}
+
+/// Measures each of the microphone `streams` of `movie` with Auto volume on
+/// that is not yet measured as it is heard, waiting for any measure under
+/// way, so an export started while the editor measures is still leveled.
+pub(crate) fn measure_unmeasured(
+  project_folder: &Path,
+  streams: &[usize],
+  movie: &Path,
+  duration_ms: u64,
+) -> Result<(), String> {
+  for &stream in streams {
+    if choice(project_folder, stream) == AutoVolume::On {
+      measure(project_folder, stream, movie, duration_ms, &mut |_| {})?;
+    }
+  }
+  Ok(())
 }
 
 /// One measure at a time, so two switches turned together neither measure
@@ -232,20 +173,7 @@ pub(super) fn measure(
   } else {
     None
   };
-  let taken = Measure {
-    leveling,
-    ..identity(heard.as_deref())
-  };
-  let mut kept = measures(project_folder, stream);
-  kept.retain(|measure| measure.file != taken.file);
-  kept.push(taken);
-  let kept = KeptMeasures {
-    version: MEASURE_VERSION,
-    measures: kept,
-  };
-  let bytes = serde_json::to_vec(&kept).map_err(|error| error.to_string())?;
-  std::fs::write(measures_path(project_folder, stream), bytes)
-    .map_err(|error| format!("Could not keep the microphone's volume: {error}"))?;
+  measures::keep(project_folder, stream, heard.as_deref(), leveling)?;
   progress(1.0);
   Ok(())
 }

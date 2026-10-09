@@ -5,7 +5,8 @@
 //! Each does its work the first time it is turned a way, which can take a
 //! while on a long recording, and is instant after. Turning one can call for
 //! another's work too: Vocal cleanup is made again from what Reduce noise
-//! leaves, and Auto volume measures whatever is heard.
+//! leaves, and Auto volume measures whatever is heard. Each kind of work
+//! fills its own switch's bar, whichever switch called for it.
 
 use tauri::AppHandle;
 
@@ -16,35 +17,33 @@ use super::super::{vad_model, SpeechSource};
 use super::{reporter, MicrophoneTool};
 use crate::editor::recording_preview_player::{refresh_processing, PreviewProcessing};
 
-/// How much of a switch's progress bar each kind of work takes, by roughly
-/// how long each runs against the others.
-const CLEANING_WEIGHT: f32 = 8.0;
-const CLEANUP_WEIGHT: f32 = 1.5;
-const MEASURE_WEIGHT: f32 = 1.0;
-
-/// One progress bar shared by the kinds of work a switch calls for, each
-/// filling its part in turn.
-struct Stages<'a> {
-  report: &'a mut dyn FnMut(f32),
-  done: f32,
-  total: f32,
+/// A tool's progress bar. Once anything has been told, the bar is told it is
+/// full when this goes, whether the work finished or failed, so it never
+/// hangs part-way.
+struct Bar<F: FnMut(f32)> {
+  report: F,
+  told: bool,
 }
 
-impl<'a> Stages<'a> {
-  fn new(report: &'a mut dyn FnMut(f32), weights: &[f32]) -> Self {
-    Self {
-      report,
-      done: 0.0,
-      total: weights.iter().sum::<f32>().max(f32::EPSILON),
+impl<F: FnMut(f32)> Bar<F> {
+  fn tell(&mut self, fraction: f32) {
+    self.told = true;
+    (self.report)(fraction);
+  }
+}
+
+impl<F: FnMut(f32)> Drop for Bar<F> {
+  fn drop(&mut self) {
+    if self.told {
+      (self.report)(1.0);
     }
   }
+}
 
-  /// The progress of the next work, which weighs `weight`.
-  fn next(&mut self, weight: f32) -> impl FnMut(f32) + use<'_, 'a> {
-    let (start, share) = (self.done / self.total, weight / self.total);
-    self.done += weight;
-    let report = &mut *self.report;
-    move |fraction| report(start + fraction * share)
+fn bar(app: &AppHandle, artifact_id: u64, tool: MicrophoneTool) -> Bar<impl FnMut(f32)> {
+  Bar {
+    report: reporter(app, artifact_id, tool),
+    told: false,
   }
 }
 
@@ -88,42 +87,28 @@ pub async fn set_recording_noise_reduction(
   let source = SpeechSource::open(&app, artifact_id)?;
   // Cleaning listens for speech too, but turning it off needs no model.
   let model = enabled.then(|| vad_model(&app)).transpose()?;
-  let mut progress = reporter(&app, artifact_id, MicrophoneTool::Noise);
-  let (folder, stream) = (source.project_folder.clone(), source.microphone);
+  let mut noise_bar = bar(&app, artifact_id, MicrophoneTool::Noise);
+  let mut voice_bar = bar(&app, artifact_id, MicrophoneTool::Voice);
+  let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
   let choice = tauri::async_runtime::spawn_blocking(move || {
-    let cleaned_up = voice::choice(&folder, stream) == VocalCleanup::On;
-    let leveled = auto_volume::choice(&folder, stream) == AutoVolume::On;
-    let weights = [
-      if enabled { CLEANING_WEIGHT } else { 0.0 },
-      if cleaned_up { CLEANUP_WEIGHT } else { 0.0 },
-      if leveled { MEASURE_WEIGHT } else { 0.0 },
-    ];
-    let mut stages = Stages::new(&mut progress, &weights);
+    let (folder, stream) = (&source.project_folder, source.microphone);
     if let Some(model) = model {
-      noise::prepare(
-        &source.movie,
-        stream,
-        &folder,
-        model,
-        &mut stages.next(CLEANING_WEIGHT),
-      )?;
+      noise::prepare(&source.movie, stream, folder, model, &mut |fraction| {
+        noise_bar.tell(fraction);
+      })?;
     }
-    if cleaned_up {
-      voice::prepare(
-        &source.movie,
-        stream,
-        &folder,
-        enabled,
-        &mut stages.next(CLEANUP_WEIGHT),
-      )?;
+    if voice::choice(folder, stream) == VocalCleanup::On {
+      voice::prepare(&source.movie, stream, folder, enabled, &mut |fraction| {
+        voice_bar.tell(fraction);
+      })?;
     }
     let choice = if enabled {
       NoiseReduction::On
     } else {
       NoiseReduction::Off
     };
-    noise::keep(&folder, stream, choice)?;
-    level_heard(&source, &mut stages.next(MEASURE_WEIGHT));
+    noise::keep(folder, stream, choice)?;
+    level_heard(&source, &mut |fraction| level_bar.tell(fraction));
     Ok::<_, String>((choice, source))
   })
   .await
@@ -152,31 +137,22 @@ pub async fn set_recording_vocal_cleanup(
   enabled: bool,
 ) -> Result<VocalCleanup, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
-  let mut progress = reporter(&app, artifact_id, MicrophoneTool::Voice);
-  let (folder, stream) = (source.project_folder.clone(), source.microphone);
+  let mut voice_bar = bar(&app, artifact_id, MicrophoneTool::Voice);
+  let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
   let choice = tauri::async_runtime::spawn_blocking(move || {
-    let leveled = auto_volume::choice(&folder, stream) == AutoVolume::On;
-    let weights = [
-      if enabled { CLEANUP_WEIGHT } else { 0.0 },
-      if leveled { MEASURE_WEIGHT } else { 0.0 },
-    ];
-    let mut stages = Stages::new(&mut progress, &weights);
+    let (folder, stream) = (&source.project_folder, source.microphone);
     let choice = if enabled {
       let denoised =
-        noise::choice(&folder, stream) == NoiseReduction::On && noise::is_made(&folder, stream);
-      voice::prepare(
-        &source.movie,
-        stream,
-        &folder,
-        denoised,
-        &mut stages.next(CLEANUP_WEIGHT),
-      )?;
+        noise::choice(folder, stream) == NoiseReduction::On && noise::is_made(folder, stream);
+      voice::prepare(&source.movie, stream, folder, denoised, &mut |fraction| {
+        voice_bar.tell(fraction);
+      })?;
       VocalCleanup::On
     } else {
       VocalCleanup::Off
     };
-    voice::keep(&folder, stream, choice)?;
-    level_heard(&source, &mut stages.next(MEASURE_WEIGHT));
+    voice::keep(folder, stream, choice)?;
+    level_heard(&source, &mut |fraction| level_bar.tell(fraction));
     Ok::<_, String>((choice, source))
   })
   .await
@@ -197,10 +173,9 @@ pub fn get_recording_auto_volume(app: AppHandle, artifact_id: u64) -> Result<Aut
   if choice == AutoVolume::On && auto_volume::is_unmeasured(folder, stream) {
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
-      let mut progress = reporter(&app, artifact_id, MicrophoneTool::AutoVolume);
-      level_heard(&source, &mut progress);
-      // Said even when the measure failed, so the panel's bar ends.
-      progress(1.0);
+      let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
+      level_heard(&source, &mut |fraction| level_bar.tell(fraction));
+      drop(level_bar);
       heard_changed(&app, artifact_id, &source);
     });
   }
@@ -217,7 +192,7 @@ pub async fn set_recording_auto_volume(
   enabled: bool,
 ) -> Result<AutoVolume, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
-  let mut progress = reporter(&app, artifact_id, MicrophoneTool::AutoVolume);
+  let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
   let choice = tauri::async_runtime::spawn_blocking(move || {
     let (folder, stream) = (&source.project_folder, source.microphone);
     let choice = if enabled {
@@ -226,7 +201,7 @@ pub async fn set_recording_auto_volume(
         stream,
         &source.movie,
         source.duration_ms,
-        &mut progress,
+        &mut |fraction| level_bar.tell(fraction),
       )?;
       AutoVolume::On
     } else {
