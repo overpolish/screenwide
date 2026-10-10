@@ -5,6 +5,7 @@ import {
   prepareRecenterInset,
   recenterWorkspaceContent,
 } from "../../recenter-inset-channel";
+import { CameraEffectsTool } from "../../recording/camera/use-camera-effects";
 import {
   resetScreenshotTransform,
   ScreenshotOutputSettings,
@@ -45,6 +46,8 @@ export type EditorSelectionTarget = {
   /** Put the layer back to the framing its source arrived in. */
   reset: () => void;
   selection: ToolPanelLayerSelection;
+  /** The camera's effects, where the layer is the camera. */
+  cameraEffects?: CameraEffectsTool;
 };
 
 /**

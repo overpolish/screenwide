@@ -8,14 +8,15 @@ use super::*;
 pub(crate) type DecodedTexture<'a> = (&'a ID3D11Texture2D, u32, (u32, u32));
 
 impl RecordingPreviewSurface {
+  /// Presents the decoded frame `decoded` in pane `index`. `is_camera` says
+  /// whether it is the camera, which the camera's effects draw on.
   pub(crate) fn present_composed_texture(
     &self,
     index: u32,
-    texture: &ID3D11Texture2D,
-    subresource: u32,
-    size: (u32, u32),
+    (texture, subresource, size): DecodedTexture<'_>,
     settings: &ScreenshotOutputSettings,
     composition: ComposedFrame,
+    is_camera: bool,
   ) -> Result<bool, String> {
     let Ok(mut state) = self.inner.state.lock() else {
       return Ok(false);
@@ -27,6 +28,7 @@ impl RecordingPreviewSurface {
       return Ok(false);
     };
     pane.annotation_halo = halo;
+    pane.source_is_camera = is_camera;
     if pane
       .source
       .as_ref()

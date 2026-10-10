@@ -37,6 +37,8 @@ mod lifecycle;
 mod output_gesture;
 mod processing;
 pub(crate) use processing::{refresh as refresh_processing, PreviewProcessing};
+mod camera_effects;
+mod camera_picking;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod pin_cache;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -51,6 +53,12 @@ pub(crate) mod scene_reframe;
 mod selection_gesture;
 mod selection_preview;
 mod sources;
+pub(crate) use camera_effects::{position_ms, set_camera_effects};
+pub(crate) use camera_picking::{
+  choose_camera_object, set_camera_picking, CameraPicking, PickedSpan,
+};
+/// Brightness frames of a video, which the camera's matte is read as.
+pub(crate) use platform::LumaReader;
 mod surface_selection;
 #[cfg(target_os = "windows")]
 pub(crate) use platform::GpuVideoReader;

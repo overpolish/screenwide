@@ -46,4 +46,7 @@ pub(crate) struct RecordingWorkspaceLayer<'a> {
   pub camera_settings: Option<(&'a ScreenshotOutputSettings, (u32, u32))>,
   pub clip_cursor_at_video_edge: bool,
   pub foreground_only: bool,
+  /// Whether the layer's own picture is the camera, which the camera's
+  /// effects draw on.
+  pub source_is_camera: bool,
 }

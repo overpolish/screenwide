@@ -97,6 +97,8 @@ export function resolveToolPanelSnapshot(
     autoVolume,
     autoZoomScenes: _autoZoomScenes,
     bakeCamera,
+    cameraEffects,
+    chooseCameraBackground: _chooseCameraBackground,
     chooseSceneTemplate: _chooseSceneTemplate,
     clearAutoZooms: _clearAutoZooms,
     clearDrawings: _clearDrawings,
@@ -104,14 +106,18 @@ export function resolveToolPanelSnapshot(
     customizeScene: _customizeScene,
     deleteAnnotations: _deleteAnnotations,
     deleteScene: _deleteScene,
+    downloadCameraBackground: _downloadCameraBackground,
+    downloadCameraObjects: _downloadCameraObjects,
     downloadStudioDucking: _downloadStudioDucking,
     downloadStudioSound: _downloadStudioSound,
     frameRadius,
     frameSize,
     keyboardEffects,
+    pickCameraObjects: _pickCameraObjects,
     recenterSelection: _recenterSelection,
     reduceNoise,
     removeAnnotationColor: _removeAnnotationColor,
+    removeCameraObject: _removeCameraObject,
     removePreset: _removePreset,
     removeSceneTemplate: _removeSceneTemplate,
     removeSilences: _removeSilences,
@@ -136,6 +142,7 @@ export function resolveToolPanelSnapshot(
     selectionOutput,
     selectionRadius,
     shortcutPlacement,
+    showCameraObject: _showCameraObject,
     studioDucking,
     studioSound,
     swapScenePanes: _swapScenePanes,
@@ -166,10 +173,19 @@ export function resolveToolPanelSnapshot(
     held && selectionRadius !== undefined
       ? { ...held, radius: selectionRadius }
       : held;
-  const layer =
+  const shadowed =
     rounded && selectionDropShadow !== undefined
       ? { ...rounded, dropShadow: selectionDropShadow }
       : rounded;
+  // The camera's effects change at once, as the microphone's switches do;
+  // the bars arrive with the editor's answer.
+  const layer =
+    shadowed?.cameraEffects && cameraEffects
+      ? {
+          ...shadowed,
+          cameraEffects: { ...shadowed.cameraEffects, ...cameraEffects },
+        }
+      : shadowed;
   // A dragged volume is held the same way: the knob stays where it was let go
   // of until the editor answers with the level it committed. The microphone
   // switches flip at once too.

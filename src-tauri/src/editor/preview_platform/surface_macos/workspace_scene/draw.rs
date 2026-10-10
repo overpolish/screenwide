@@ -59,18 +59,27 @@ impl WorkspaceScene {
         })
         .map(|(camera, picture, geometry)| {
           Ok::<_, String>((
-            camera.drawn(&state.compositor, picture, index)?,
+            camera.drawn(&state.compositor, picture, (&state.effects, index))?,
             geometry,
             camera.drop_shadow,
             camera.on_top,
           ))
         })
         .transpose()?;
+      // A camera pane is drawn with the camera's effects.
+      let effected = if layer.source_is_camera {
+        let matte = layer.source_matte.as_deref();
+        state
+          .effects
+          .drawn(&state.compositor, &layer.source.texture, matte, index * 2)?
+      } else {
+        None
+      };
       // The bottom layer is drawn whole even when it is only a foreground:
       // there is nothing under it to lay it over.
       let picture = state.compositor.draw_layer(
         &view,
-        &layer.source.texture,
+        effected.as_ref().unwrap_or(&layer.source.texture),
         &layer.settings,
         geometry,
         ComposedFrame {
@@ -97,8 +106,9 @@ impl WorkspaceScene {
           clear: false,
           redaction_slot: index,
           // The scene holds every picture it draws, so nothing writes into one
-          // while it is drawn from.
-          retained_source: true,
+          // while it is drawn from; the effects' picture is drawn again each
+          // time.
+          retained_source: effected.is_none(),
         },
       )?;
       let magnified = magnifier.filter(|magnifier| {

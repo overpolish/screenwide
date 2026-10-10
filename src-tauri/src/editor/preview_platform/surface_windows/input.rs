@@ -34,11 +34,17 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
   match input {
     editor::Input::ContextMenu { x, y } => context_menu::open(inner, logical(x, y)),
     editor::Input::Down {
-      centered: _,
+      centered,
       x,
       y,
       snapping: _,
     } => {
+      // While objects are picked in the camera every press is theirs, Alt
+      // removing what it picks.
+      if object_picking::down(inner, logical(x, y), centered) {
+        refresh_cursor_for(inner);
+        return;
+      }
       // A box being typed into sees the press first: in the box it places the
       // caret, anywhere else it ends the typing and may carry on below.
       if annotation::typing_press(inner, logical(x, y), false) {
@@ -66,7 +72,10 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       pressed,
       snapping,
     } => {
-      if pressed && annotation::typing_move(inner, logical(x, y)) {
+      if pressed
+        && (object_picking::pointer_move(inner, logical(x, y))
+          || annotation::typing_move(inner, logical(x, y)))
+      {
         return;
       }
       annotation::update_hover(inner, logical(x, y), pressed);
@@ -104,6 +113,10 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       }
     }
     editor::Input::Up { x, y } => {
+      if object_picking::up(inner, logical(x, y)) {
+        refresh_cursor_for(inner);
+        return;
+      }
       if annotation::typing_up(inner) || annotation::up(inner, logical(x, y)) {
         if let Ok(mut state) = inner.state.lock() {
           state.last_pointer = logical(x, y);
@@ -148,7 +161,8 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       // Windows reports a double-click in place of its second press. Over a
       // text box it opens the box for typing, and in a box being typed into
       // it selects a word; only elsewhere does it fit the view.
-      if annotation::typing_press(inner, logical(x, y), true)
+      if object_picking::double_click(inner, logical(x, y))
+        || annotation::typing_press(inner, logical(x, y), true)
         || annotation::open_text(inner, logical(x, y))
       {
         refresh_cursor_for(inner);

@@ -106,6 +106,10 @@ pub(super) fn save_recording_artifact(
   let export_duration_ms = timeline
     .as_ref()
     .map_or(*duration_ms, timeline_edit::TimelinePlan::duration_ms);
+  // The camera is exported with its effects as the preview draws them.
+  let camera_effects = crate::editor::camera_effects::CameraRecording::of(artifact)
+    .and_then(|camera| crate::editor::camera_effects::live::load(&camera));
+  let camera_is_primary = *primary_kind == PrimaryRecordingKind::Camera;
   if !include_primary_video && !include_camera && enabled_stream_indices.is_empty() {
     return Err("Select at least one track to export".to_owned());
   }
@@ -146,6 +150,7 @@ pub(super) fn save_recording_artifact(
         camera_resolution_scale_percent,
         camera_output,
         timeline.as_ref(),
+        camera_effects,
       );
     }
 
@@ -191,6 +196,7 @@ pub(super) fn save_recording_artifact(
       progress_app,
       job_cancellation,
       timeline.as_ref(),
+      camera_effects,
     );
   }
 
@@ -205,6 +211,7 @@ pub(super) fn save_recording_artifact(
     audio_tracks,
     cancelled: job_cancellation,
     compression,
+    camera_effects: camera_effects.clone().filter(|_| camera_is_primary),
     cursor: baked_cursor,
     cursor_effects,
     keyboard: baked_keyboard,
@@ -257,6 +264,7 @@ pub(super) fn save_recording_artifact(
       camera_resolution_scale_percent,
       camera_output,
       timeline.as_ref(),
+      camera_effects,
     )
     .inspect_err(|_| {
       let _ = std::fs::remove_file(&saved);

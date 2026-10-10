@@ -11,6 +11,7 @@
 mod annotation;
 mod batch;
 mod callbacks;
+mod camera_effects;
 mod creation;
 mod editor_controls;
 mod export;
@@ -19,6 +20,7 @@ mod gpu;
 mod input;
 mod layout;
 mod magnifier;
+mod object_picking;
 mod pane;
 mod present_cached;
 mod present_texture;

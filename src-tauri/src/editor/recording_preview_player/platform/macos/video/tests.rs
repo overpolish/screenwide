@@ -75,3 +75,37 @@ fn cached_native_sample_preserves_repeats_seek_and_end_of_stream() {
   drop(native);
   std::fs::remove_dir_all(directory).unwrap();
 }
+
+/// Remove background's cutout is HEVC with alpha, encoded as the helper
+/// encodes it. Playback decodes it scaled to the pane, and the transparency
+/// has to survive that for the preview to draw the person alone.
+#[test]
+fn a_cutout_keeps_its_transparency_when_decoded_smaller() {
+  let directory =
+    std::env::temp_dir().join(format!("screenwide-cutout-alpha-{}", std::process::id()));
+  std::fs::create_dir_all(&directory).unwrap();
+  let path = directory.join("cutout.mov");
+  let status = std::process::Command::new(crate::editor::media_preview::ffmpeg_path())
+    .args(["-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i"])
+    .arg("color=c=red:size=128x64:rate=10:duration=1,format=rgba,geq=r=255:g=0:b=0:a='if(lt(X,64),255,0)'")
+    .args(["-c:v", "hevc_videotoolbox", "-q:v", "75", "-alpha_quality", "0.9"])
+    .args(["-tag:v", "hvc1", "-pix_fmt", "bgra"])
+    .arg(&path)
+    .status()
+    .unwrap();
+  assert!(status.success());
+  let asset = open_asset(&path).unwrap();
+  let mut reader = NativeVideoReader::open(&asset, 64, 32, 0, 1000).unwrap();
+  let frame = reader.frame_at(500).unwrap().unwrap();
+  assert_eq!((frame.width, frame.height), (64, 32));
+  let alpha = |x: usize, y: usize| frame.rgba[(y * 64 + x) * 4 + 3];
+  assert!(
+    alpha(8, 16) > 240,
+    "the person stays solid: {}",
+    alpha(8, 16)
+  );
+  assert!(alpha(56, 16) < 16, "the room goes: {}", alpha(56, 16));
+  drop(reader);
+  drop(asset);
+  std::fs::remove_dir_all(directory).unwrap();
+}

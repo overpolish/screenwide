@@ -33,8 +33,7 @@
   if (self.surface.webview != nil)
     [self.window makeFirstResponder:self.surface.webview];
   self.dragOrigin = [self convertPoint:event.locationInWindow fromView:nil];
-  self.dragPan = NSMakePoint(self.surface.editorPanX,
-                             self.surface.editorPanY);
+  self.dragPan = NSMakePoint(self.surface.editorPanX, self.surface.editorPanY);
   NSPoint point = self.dragOrigin;
   // AppKit delivers Control-click as a left press, so the second way to the
   // layer menu is answered here rather than in `rightMouseDown:`.
@@ -51,6 +50,7 @@
                     self.surface.selectionGestureCallback != NULL &&
                     self.surface.hasSelection &&
                     self.surface.selection.pane_index < self.surface.editorBaseRects.count;
+  if (object_picking_mouse_down(self, event, point)) return;
   if (event.clickCount == 2) {
     // Back to the current fit basis: the space beside an open tool panel while
     // one is up, the whole viewport otherwise.

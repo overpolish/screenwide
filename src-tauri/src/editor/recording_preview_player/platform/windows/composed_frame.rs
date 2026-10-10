@@ -6,7 +6,13 @@
 
 use super::super::super::PlayerSources;
 use super::GpuVideoReader;
+use crate::editor::camera_effects::matte_frames::MatteFrames;
+use crate::editor::camera_effects::preview::StillCameraEffects;
 use crate::editor::preview_platform::ComposedFrame;
+
+/// The longest side a composed still reads the camera's matte at: stills
+/// are copied or shown small, and the edge it draws is soft.
+const STILL_MATTE_SIDE: u32 = 1_920;
 
 pub(crate) fn composed_frame_image(
   sources: &PlayerSources,
@@ -80,10 +86,21 @@ pub(crate) fn composed_frame_image(
       recording_output.primary.height,
     ),
   );
+  // The camera is shown with its effects, the matte read for this moment.
+  let live = sources.camera_effects_now();
+  let on_screen = sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera;
+  let matte = live
+    .as_deref()
+    .filter(|_| on_screen || camera_frame.is_some())
+    .and_then(|live| live.matte.as_ref())
+    .and_then(|file| MatteFrames::open(file, STILL_MATTE_SIDE).ok())
+    .and_then(|mut frames| frames.at(position_ms).ok().flatten());
   surface.compose_texture_to_image(
-    &frame.texture,
-    frame.subresource,
-    (frame.width, frame.height),
+    (
+      &frame.texture,
+      frame.subresource,
+      (frame.width, frame.height),
+    ),
     &recording_output.primary,
     ComposedFrame {
       cursor,
@@ -104,5 +121,10 @@ pub(crate) fn composed_frame_image(
           crate::editor::recording_model::CAMERA_IN_FRONT,
         )
       }),
+    live.as_deref().map(|live| StillCameraEffects {
+      live,
+      matte: matte.as_deref(),
+      on_screen,
+    }),
   )
 }

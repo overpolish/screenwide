@@ -58,14 +58,15 @@ impl RecordingPreviewSurface {
     read_rgba(gpu.shared, &target)
   }
 
+  /// The decoded frame `decoded` composed as the preview draws it, with
+  /// the camera's effects `effects`, read back.
   pub(in crate::editor) fn compose_texture_to_image(
     &self,
-    texture: &ID3D11Texture2D,
-    subresource: u32,
-    source_size: (u32, u32),
+    (texture, subresource, source_size): DecodedTexture<'_>,
     settings: &ScreenshotOutputSettings,
     composition: ComposedFrame,
     camera: Option<ClipboardCamera<'_>>,
+    effects: Option<crate::editor::camera_effects::preview::StillCameraEffects<'_>>,
   ) -> Result<CapturedImage, String> {
     let _state = self
       .inner
@@ -88,6 +89,34 @@ impl RecordingPreviewSurface {
         .compositor
         .copy_source(gpu.d3d11, camera_source, texture, subresource)?;
     }
+    // The still draws into slots of its own, beside the preview's frames.
+    let (source, camera_source) = match effects {
+      Some(effects) => {
+        let mut pass = self
+          .inner
+          .camera_effects
+          .lock()
+          .map_err(|_| "The camera's effects are poisoned".to_owned())?;
+        let mut draw = |picture: &compositor::SourceTexture, slot| {
+          pass.drawn_once(
+            &gpu.compositor,
+            (effects.live, effects.matte),
+            picture,
+            slot,
+          )
+        };
+        if effects.on_screen {
+          (draw(&source, 2)?, camera_source)
+        } else {
+          let camera = camera_source
+            .as_ref()
+            .map(|camera| draw(camera, 3))
+            .transpose()?;
+          (source, camera)
+        }
+      }
+      None => (source, camera_source),
+    };
     let target = readback_target(gpu.shared, output_size);
     let prepared = crate::editor::preview_platform::annotation_gpu::prepared_arrows(
       &settings.annotations,

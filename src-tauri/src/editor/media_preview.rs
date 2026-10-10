@@ -58,10 +58,8 @@ pub(in crate::editor) use windows::recording_info;
 pub(in crate::editor) use estimate::export_crf;
 use estimate::resolution_filter;
 use output::{holds_bytes, plays_from_start_to_end, EXPORT_MP4_OUTPUT, OUTPUT_ERROR_DETAIL};
-#[cfg(test)]
-pub(crate) use tools::ffmpeg_path;
 use tools::ffprobe_command;
-pub(crate) use tools::{ffmpeg_command, transcriber_command};
+pub(crate) use tools::{ffmpeg_command, ffmpeg_path, transcriber_command};
 
 use super::{AudioTrackKind, RecordingAudioTrack};
 

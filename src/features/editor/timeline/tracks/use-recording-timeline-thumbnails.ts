@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Channel } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { streamRecordingTimelineThumbnails } from "../../api";
+import { useCameraEffectsRevision } from "../../recording/camera/use-camera-effects-revision";
 import {
   RecordingTimelineThumbnails,
   RecordingVideoTrackId,
@@ -14,6 +15,7 @@ const HEADER_LENGTH = 20;
 const HEADER_MARKER = 0x4854434f;
 const HEADER_VERSION = 1;
 const THUMBNAIL_COUNT = 24;
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47];
 
 const emptyThumbnails = (): RecordingTimelineThumbnails => ({
   camera: [],
@@ -56,20 +58,41 @@ export function useRecordingTimelineThumbnails({
 }) {
   const [thumbnails, setThumbnails] =
     useState<RecordingTimelineThumbnails>(emptyThumbnails);
+  // The camera's thumbnails show its effects, so they are made again when
+  // those change.
+  const effectsRevision = useCameraEffectsRevision(artifactId);
+  // Every URL made and not yet let go. A thumbnail made again replaces the
+  // one shown only once it arrives, so the strip never blanks between.
+  const urlsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    const made = urlsRef.current;
+    return () => {
+      for (const url of made) URL.revokeObjectURL(url);
+      made.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (!isEnabled) return;
     let disposed = false;
-    const urls = new Set<string>();
+    const made = urlsRef.current;
     const channel = new Channel<ArrayBuffer>();
     channel.onmessage = (payload) => {
       if (disposed) return;
       const thumbnail = decodeThumbnail(payload);
       if (!thumbnail) return;
-      const url = URL.createObjectURL(
-        new Blob([thumbnail.bytes], { type: "image/jpeg" }),
+      // A see-through camera arrives as a PNG, every other thumbnail as a
+      // JPEG.
+      const isPng = new Uint8Array(thumbnail.bytes, 0, 4).every(
+        (byte, index) => byte === PNG_SIGNATURE[index],
       );
-      urls.add(url);
+      const url = URL.createObjectURL(
+        new Blob([thumbnail.bytes], {
+          type: isPng ? "image/png" : "image/jpeg",
+        }),
+      );
+      made.add(url);
       setThumbnails((current) => {
         const track = Array.from(
           { length: thumbnail.count },
@@ -82,7 +105,7 @@ export function useRecordingTimelineThumbnails({
         const previous = track[thumbnail.index].url;
         if (previous) {
           URL.revokeObjectURL(previous);
-          urls.delete(previous);
+          made.delete(previous);
         }
         track[thumbnail.index] = { ...track[thumbnail.index], url };
         return { ...current, [thumbnail.track]: track };
@@ -98,10 +121,8 @@ export function useRecordingTimelineThumbnails({
     });
     return () => {
       disposed = true;
-      for (const url of urls) URL.revokeObjectURL(url);
-      urls.clear();
     };
-  }, [artifactId, isEnabled]);
+  }, [artifactId, effectsRevision, isEnabled]);
 
   return thumbnails;
 }

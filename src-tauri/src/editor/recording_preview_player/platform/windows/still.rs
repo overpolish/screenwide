@@ -194,6 +194,10 @@ fn run(
       presented &= present_native_frames(&sources, screen.as_ref(), camera.as_ref(), 0.0);
     }
     if presented {
+      let camera_ms =
+        crate::editor::recording_preview_player::camera_picking::camera_ms(&sources, position_ms);
+      sources.let_go_elsewhere(camera_ms);
+      sources.show_picked(Some(camera_ms));
       let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
         position_ms,
         request_id,

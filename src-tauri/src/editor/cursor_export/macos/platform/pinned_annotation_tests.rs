@@ -143,6 +143,7 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
       annotation_track: AnnotationTrack::Primary,
       audio_layout: AudioLayout::SeparateTracks,
       audio_source: None,
+      camera_effects: None,
       camera: None,
       camera_on_top: true,
       cancelled: &cancelled,

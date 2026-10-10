@@ -11,7 +11,7 @@ use tauri::ipc::Channel;
 
 use super::image::frame_position;
 use crate::editor::recording_preview_player::{
-  timeline_thumbnails::{payload, target_width, THUMBNAIL_HEIGHT},
+  timeline_thumbnails::{encoded_png, payload, target_width, THUMBNAIL_HEIGHT},
   PlayerSources,
 };
 
@@ -94,6 +94,13 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
       height: f64::from(THUMBNAIL_HEIGHT),
     });
   }
+  // The camera's thumbnails show its effects, see-through where it has no
+  // background, which only a PNG carries.
+  let mut effects = crate::editor::camera_effects::cpu::StillEffects::new(
+    sources.camera_effects_now(),
+    THUMBNAIL_HEIGHT * 4,
+  );
+  let camera_only = sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera;
 
   for index in 0..count {
     let denominator = u64::from(count.saturating_sub(1).max(1));
@@ -105,7 +112,7 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
     let camera_position_ms = sources
       .camera_duration_ms
       .map(|duration| frame_position(position_ms, duration));
-    let Ok((primary_image, camera_image)) = images_at(
+    let Ok((mut primary_image, mut camera_image)) = images_at(
       &primary,
       camera.as_deref(),
       frame_position(position_ms, sources.duration_ms),
@@ -113,7 +120,17 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
     ) else {
       continue;
     };
-    let Ok(primary_jpeg) = super::composition::encoded_jpeg(&primary_image) else {
+    if let Some(effects) = effects.as_mut() {
+      match (camera_only, camera_image.as_mut(), camera_position_ms) {
+        (true, _, _) => effects.apply(&mut primary_image, position_ms),
+        (false, Some(image), Some(at)) => effects.apply(image, at),
+        _ => {}
+      }
+    }
+    let see_through = effects
+      .as_ref()
+      .is_some_and(|effects| effects.is_transparent());
+    let Ok(primary_jpeg) = encoded(&primary_image, camera_only && see_through) else {
       continue;
     };
     if channel
@@ -128,7 +145,7 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
       return;
     }
     if let Some(camera_image) = camera_image {
-      let Ok(camera_jpeg) = super::composition::encoded_jpeg(&camera_image) else {
+      let Ok(camera_jpeg) = encoded(&camera_image, see_through) else {
         continue;
       };
       if channel
@@ -143,6 +160,19 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
         return;
       }
     }
+  }
+}
+
+/// A thumbnail as the timeline takes it: a PNG where it is see-through, and
+/// otherwise a JPEG, which is smaller.
+fn encoded(
+  image: &crate::screenshots::CapturedImage,
+  see_through: bool,
+) -> Result<Vec<u8>, String> {
+  if see_through {
+    encoded_png(image)
+  } else {
+    super::composition::encoded_jpeg(image)
   }
 }
 

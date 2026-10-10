@@ -33,6 +33,12 @@ impl PreviewPlayerManager {
     sources
       .playing
       .store(matches!(mode, PlaybackMode::Playing), Ordering::Release);
+    // Objects are marked on the frame they were picked in, which playback
+    // runs past; the still shown once it stops marks them again.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    if matches!(mode, PlaybackMode::Playing) {
+      sources.show_picked(None);
+    }
     if matches!(mode, PlaybackMode::Still) {
       if let Some(surface) = &sources.preview_surface {
         surface.hide();

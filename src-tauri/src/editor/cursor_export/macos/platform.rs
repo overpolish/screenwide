@@ -21,6 +21,7 @@ use frames::FrameComposer;
 mod frame_camera;
 mod frame_grid;
 mod frame_placement;
+mod frame_source;
 mod mux;
 
 static GPU_EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
@@ -160,6 +161,8 @@ pub(in super::super) fn export(
 
 #[cfg(test)]
 mod annotation_tests;
+#[cfg(test)]
+mod camera_background_video_tests;
 #[cfg(test)]
 mod camera_effect_video_tests;
 #[cfg(test)]

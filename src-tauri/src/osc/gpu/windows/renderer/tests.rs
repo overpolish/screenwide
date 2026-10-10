@@ -16,7 +16,7 @@ fn quad_kinds(vertices: &[Vertex]) -> Vec<u32> {
 #[test]
 fn constants_match_the_shader_register_packing() {
   use std::mem::offset_of;
-  assert_eq!(size_of::<RenderConstants>(), 432);
+  assert_eq!(size_of::<RenderConstants>(), 992);
   assert_eq!(offset_of!(RenderConstants, light_mode), 0);
   assert_eq!(offset_of!(RenderConstants, magnifier_box), 16);
   assert_eq!(offset_of!(RenderConstants, action_fills), 32);
@@ -35,6 +35,9 @@ fn constants_match_the_shader_register_packing() {
   assert_eq!(offset_of!(RenderConstants, chrome_outline), 384);
   assert_eq!(offset_of!(RenderConstants, chrome_backdrop), 400);
   assert_eq!(offset_of!(RenderConstants, chrome_source), 416);
+  assert_eq!(offset_of!(RenderConstants, picked_colors), 432);
+  assert_eq!(offset_of!(RenderConstants, picked_halo), 464);
+  assert_eq!(offset_of!(RenderConstants, picked_points), 480);
 }
 
 #[test]

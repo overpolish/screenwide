@@ -7,6 +7,7 @@ mod artifact_present;
 mod artifact_snapshot;
 mod audio_save;
 pub(crate) mod auto_zoom;
+pub(crate) mod camera_effects;
 mod camera_save;
 pub(crate) mod commands;
 pub(crate) mod cursor_effects;

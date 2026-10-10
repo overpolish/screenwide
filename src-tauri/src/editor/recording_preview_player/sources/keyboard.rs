@@ -36,3 +36,25 @@ pub(super) fn keyboard_compositor(
   compositor.set_shortcut_positions(positions);
   Ok(Arc::new(compositor))
 }
+
+impl PlayerSources {
+  /// The shortcut strip at `position_ms`, fitted to `dimensions`.
+  pub(in crate::editor::recording_preview_player) fn keyboard_overlay(
+    &self,
+    position_ms: u64,
+    settings: KeyboardEffectSettings,
+    dimensions: (u32, u32),
+  ) -> Option<crate::editor::keyboard_effects::KeyboardOverlay> {
+    let keyboard = self.keyboard.as_deref()?;
+    let ranges = self
+      .animation_ranges
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    keyboard.evaluate_fitted_with_ranges(
+      position_ms,
+      settings,
+      dimensions,
+      (!ranges.is_empty()).then_some(ranges.as_slice()),
+    )
+  }
+}

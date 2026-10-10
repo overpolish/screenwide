@@ -5,6 +5,7 @@ import { useEffect } from "react";
 
 import { recordingTimelineOutputToSource } from "../timeline/editing/recording-timeline-edit";
 
+import { useCameraEffectsRevision } from "./camera/use-camera-effects-revision";
 import { ResolvedScrubPreviewProps } from "./preview/recording-preview-props";
 import {
   RecordingFrameRequest,
@@ -45,6 +46,9 @@ export function useProjectStill(
     hasPicture: boolean;
   },
 ) {
+  // The pictures show the camera's effects, so they are made again when
+  // those change.
+  const effectsRevision = useCameraEffectsRevision(artifactId);
   useEffect(() => {
     if (!hasPicture || !recordingOutput || durationMs <= 0) return;
     // A point along the edited timeline, from 0 to 1, as a source position.
@@ -85,6 +89,7 @@ export function useProjectStill(
     cursorEffects,
     durationMs,
     edit,
+    effectsRevision,
     hasPicture,
     keyboardEffects,
     recordingOutput,

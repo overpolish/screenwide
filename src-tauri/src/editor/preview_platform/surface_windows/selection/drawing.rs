@@ -38,6 +38,9 @@ impl SelectionOverlay {
     // the marquee band being drawn, all in device pixels.
     annotation_group: &[[f32; 4]],
     annotation_marquee: Option<[f32; 4]>,
+    // The objects picked in the camera while they are, drawn in place of
+    // every other chrome.
+    objects: Option<&super::super::object_picking::ObjectChrome>,
     scale: f64,
     light: bool,
   ) -> Result<(), String> {
@@ -59,7 +62,15 @@ impl SelectionOverlay {
     let mut vertices = Vec::with_capacity(96);
     // The arrow chrome draws only its own grips: the layer's selection and
     // crop chrome stand down for as long as it has the pointer.
-    if let Some(annotation_handles) = annotation_handles {
+    if let Some(objects) = objects {
+      super::super::object_picking::add_objects(
+        &mut vertices,
+        &mut constants,
+        view,
+        objects,
+        scale,
+      );
+    } else if let Some(annotation_handles) = annotation_handles {
       // The element first: it is the context for the anchor that landed on
       // it, so the disc sits over its outline rather than under it. The
       // object colour is the one the guides use too.
@@ -157,7 +168,7 @@ impl SelectionOverlay {
         );
       }
     }
-    if let Some((x, y, x_object, y_object)) = guides {
+    if let Some((x, y, x_object, y_object)) = guides.filter(|_| objects.is_none()) {
       let half = 0.5 / scale;
       if let Some(x) = x {
         let x = f64::from(x) / scale;

@@ -4,6 +4,7 @@
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { ImagePlayChange } from "../annotations/annotation-channel";
 import { AnnotationStyle, ImageArt } from "../annotations/annotations";
+import { CameraEffectsChange } from "../recording/camera/use-camera-effects";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -56,6 +57,11 @@ export type ToolPanelPatch = Partial<
   /** Draw the camera into the screen's video, or save it as a file of its
    * own. */
   bakeCamera?: boolean;
+  /** Change the camera's effects, a field at a time: what is behind the
+   * person, and colour correction. */
+  cameraEffects?: CameraEffectsChange;
+  /** Ask for a picture to put behind the person on camera. */
+  chooseCameraBackground?: true;
   /** Lay the scene under the playhead out as this template. */
   chooseSceneTemplate?: SceneTemplate;
   /** Take every auto zoom off the timeline, the scenes of your own left as
@@ -72,6 +78,10 @@ export type ToolPanelPatch = Partial<
   deleteAnnotations?: true;
   /** Delete the scene under the playhead. */
   deleteScene?: true;
+  /** Download the model taking the camera's background away needs. */
+  downloadCameraBackground?: true;
+  /** Download the model following the camera's objects needs. */
+  downloadCameraObjects?: true;
   /** Download the model Studio ducking separates the singing with. */
   downloadStudioDucking?: true;
   /** Download the model Studio sound rebuilds the microphone with. */
@@ -83,6 +93,8 @@ export type ToolPanelPatch = Partial<
   /** The shortcut settings every shortcut is drawn with, changed a field at a
    * time so a panel never has to send the whole group back. */
   keyboardEffects?: Partial<KeyboardEffectSettings>;
+  /** Start picking objects in the camera on the preview, or stop. */
+  pickCameraObjects?: boolean;
   /** Put the selected layer's content in the middle of its padded frame. */
   recenterSelection?: true;
   /** Take the room's steady noise out of the selected microphone, or put it
@@ -90,6 +102,8 @@ export type ToolPanelPatch = Partial<
   reduceNoise?: boolean;
   /** Forget a colour of your own, by the colour itself. */
   removeAnnotationColor?: string;
+  /** Take the object picked with this id out of the camera's picks. */
+  removeCameraObject?: number;
   /** Forget a saved background, by its id. */
   removePreset?: string;
   /** Forget a scene template, by its id. */
@@ -149,6 +163,9 @@ export type ToolPanelPatch = Partial<
     positionYPercent?: number;
     sizePercent?: number;
   };
+  /** Go to the frame the object with this id was picked in, and pick there
+   * with it chosen. */
+  showCameraObject?: number;
   /** Lay the chosen redaction's blocks out again, or draw the chosen
    * hand-drawn highlight's stroke again, from a fresh seed. */
   shuffleAnnotation?: true;

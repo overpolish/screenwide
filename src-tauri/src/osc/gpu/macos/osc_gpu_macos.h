@@ -53,6 +53,11 @@ typedef struct {
   float ruler_colors[8];
   float ruler_sample[4];
   float ruler_animation[4];
+  /// The halo round a line painted over the chosen object picked in the
+  /// camera: how far it reaches and how many of `picked_points` it runs
+  /// through, then the points, x and y in turn, in the target's pixels.
+  float picked_halo[4];
+  float picked_points[128];
 } ScreenwideRegionOscRenderState;
 
 typedef struct {

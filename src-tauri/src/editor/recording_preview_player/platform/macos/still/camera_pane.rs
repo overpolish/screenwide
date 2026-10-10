@@ -56,5 +56,6 @@ pub(super) fn camera_pane_layer<'a>(
     camera_settings: None,
     clip_cursor_at_video_edge: false,
     foreground_only: false,
+    source_is_camera: true,
   })
 }

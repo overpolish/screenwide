@@ -31,20 +31,23 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     return;
   }
   // The arrow chrome draws only its own grips: the layer's selection and crop
-  // chrome stand down for as long as it has the pointer.
+  // chrome stand down for as long as it has the pointer. Picking objects in
+  // the camera, only the objects picked are drawn, chosen layer or none.
   BOOL annotationMode = annotation_owns_chrome(surface);
+  BOOL picking = object_picking_active(surface);
   BOOL selectedPaneActive = surface.workspaceMode
       ? [surface.workspaceActivePaneIndices
             containsObject:@(surface.selection.pane_index)]
       : surface.selection.pane_index < surface.views.count &&
             surface.views[surface.selection.pane_index].active;
+  BOOL hasLayer = surface.hasSelection &&
+                  surface.selection.pane_index < surface.editorBaseRects.count &&
+                  selectedPaneActive;
   // Chrome is off while suspended: this branch hides the OSC layer, which is
   // the whole visible editor overlay.
-  if (!surface.hasSelection || !surface.selectionVisible ||
+  if ((!hasLayer && !picking) || !surface.selectionVisible ||
       !surface.editorEnabled || surface.editorSuspended ||
-      surface.selectionLayer == nil ||
-      surface.selection.pane_index >= surface.editorBaseRects.count ||
-      !selectedPaneActive) {
+      surface.selectionLayer == nil) {
     surface.selectionDrawPending = NO;
     surface.selectionLayer.hidden = YES;
     return;
@@ -63,15 +66,18 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     surface.selectionDrawPending = NO;
   }
   NSSize size = surface.interaction.bounds.size;
-  NSRect pane = surface.editorBaseRects[surface.selection.pane_index].rectValue;
-  NSRect base = NSMakeRect(pane.origin.x + pane.size.width * surface.selection.x,
-                           pane.origin.y + pane.size.height * surface.selection.y,
-                           pane.size.width * surface.selection.width,
-                           pane.size.height * surface.selection.height);
-  NSRect transformed = editor_frame(surface, base);
-  NSRect frame = NSMakeRect(transformed.origin.x,
-                            size.height - transformed.origin.y - transformed.size.height,
-                            transformed.size.width, transformed.size.height);
+  NSRect frame = NSZeroRect;
+  if (hasLayer) {
+    NSRect pane = surface.editorBaseRects[surface.selection.pane_index].rectValue;
+    NSRect base = NSMakeRect(pane.origin.x + pane.size.width * surface.selection.x,
+                             pane.origin.y + pane.size.height * surface.selection.y,
+                             pane.size.width * surface.selection.width,
+                             pane.size.height * surface.selection.height);
+    NSRect transformed = editor_frame(surface, base);
+    frame = NSMakeRect(transformed.origin.x,
+                       size.height - transformed.origin.y - transformed.size.height,
+                       transformed.size.width, transformed.size.height);
+  }
   CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
   // Resolved once here because both encode paths below reuse it for the
   // render state's palette.
@@ -79,14 +85,17 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua,
                                           NSAppearanceNameDarkAqua]];
   uint32_t lightMode = [appearance isEqualToString:NSAppearanceNameAqua] ? 1 : 0;
+  ScreenwideRegionOscRenderState state = screenwide_region_osc_render_state(lightMode);
   // Room for a selection frame round every annotation of a large group as
-  // well as the layer and snap chrome.
-  ScreenwideRegionOscVertex vertices[2048];
+  // well as the layer and snap chrome, or for the lines painted over the
+  // objects picked in the camera.
+  ScreenwideRegionOscVertex vertices[4096];
   NSUInteger count = 0;
   // Match Keyframeless's contrast-safe OSC construction: hard-edged quads
   // snapped to drawable-pixel centres, with a 3px dark halo underneath a 1px
   // white core. Handles keep their 8pt fill and gain a 1-device-pixel ring.
-  if (annotationMode) {
+  if (object_picking_add_osc(vertices, &count, &state, surface, size, scale)) {
+  } else if (annotationMode) {
     annotation_add_osc(vertices, &count, size, surface, scale);
     annotation_add_snap_osc(vertices, &count, size, surface, scale);
   } else if (surface.selection.crop_mode != 0)
@@ -129,8 +138,6 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         NSMakeRect(0.0, y - half, size.width, half * 2.0),
         surface.selectionSnapGuideYIsObject ? 5 : 4);
   }
-  ScreenwideRegionOscRenderState state =
-      screenwide_region_osc_render_state(lightMode);
   if (workspaceEncoding) {
     // The loupe was drawn with the workspace; the chrome keeps clear of it.
     ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;

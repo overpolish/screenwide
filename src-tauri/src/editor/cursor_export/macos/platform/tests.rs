@@ -155,6 +155,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
   let cancelled = AtomicBool::new(false);
   let mut progress = Vec::new();
   let result = export(CursorExportRequest {
+    camera_effects: None,
     annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
@@ -294,6 +295,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
   )
   .unwrap();
   let result = export(CursorExportRequest {
+    camera_effects: None,
     annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
@@ -405,6 +407,7 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
 
   let cancelled = AtomicBool::new(false);
   let result = export(CursorExportRequest {
+    camera_effects: None,
     annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
@@ -551,6 +554,7 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
       "screen-on-top.mp4"
     });
     let result = export(CursorExportRequest {
+      camera_effects: None,
       annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
       audio_layout: AudioLayout::SeparateTracks,
       audio_source: None,

@@ -14,7 +14,7 @@
 
 mod analysis;
 pub(crate) mod auto_volume;
-mod choice_file;
+pub(in crate::editor) mod choice_file;
 pub(crate) mod commands;
 pub(crate) mod duck;
 mod framer;

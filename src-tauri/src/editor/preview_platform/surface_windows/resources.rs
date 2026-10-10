@@ -73,6 +73,8 @@ pub(super) struct Pane {
   pub(super) scale_transform: IDCompositionScaleTransform,
   pub(super) seen: bool,
   pub(super) source: Option<compositor::SourceTexture>,
+  /// Whether `source` is the camera, which the camera's effects draw on.
+  pub(super) source_is_camera: bool,
   pub(super) source_token: Option<u64>,
   pub(super) surface: Surface,
   pub(super) visual: IDCompositionVisual,

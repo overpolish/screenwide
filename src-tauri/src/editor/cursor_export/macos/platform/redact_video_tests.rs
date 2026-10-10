@@ -94,6 +94,7 @@ fn exported(source: &Path, destination: &Path, clip: Option<RecordingAnnotationC
   output.image_y = 0.0;
   let cancelled = AtomicBool::new(false);
   let result = export(CursorExportRequest {
+    camera_effects: None,
     annotation_track: AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,

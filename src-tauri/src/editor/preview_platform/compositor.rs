@@ -29,6 +29,7 @@ mod submit;
 mod tiles;
 #[cfg(target_os = "macos")]
 pub(crate) mod video_planes;
+mod whole_blur;
 
 pub(crate) use camera::CameraComposition;
 pub(crate) use canvas_variants::KindMask;

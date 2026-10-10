@@ -20,6 +20,8 @@ use super::{
 use crate::screenshots::ScreenshotOutputSettings;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(super) mod camera_effects;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod frame_annotations;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod frame_scene;
@@ -44,6 +46,7 @@ pub(super) struct CursorExportRequest<'a> {
   pub audio_layout: AudioLayout,
   pub audio_source: Option<&'a Path>,
   pub camera: Option<(&'a Path, BakedVideoExportOptions)>,
+  pub camera_effects: Option<ExportCameraEffects>,
   pub camera_on_top: bool,
   pub cancelled: &'a AtomicBool,
   pub cursor: Option<&'a Path>,
@@ -60,6 +63,14 @@ pub(super) struct CursorExportRequest<'a> {
   pub output: &'a ScreenshotOutputSettings,
   pub video: VideoExportOptions,
   pub width: u32,
+}
+
+/// The camera's effects as an export draws them, and on which picture: the
+/// baked-in camera, or the screen where the screen is the camera.
+#[derive(Clone)]
+pub(super) struct ExportCameraEffects {
+  pub live: std::sync::Arc<super::camera_effects::live::LiveCameraEffects>,
+  pub on_screen: bool,
 }
 
 fn output_dimensions(width: u32, height: u32, video: VideoExportOptions) -> (u32, u32) {

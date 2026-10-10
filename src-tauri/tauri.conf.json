@@ -360,6 +360,7 @@
         "scope": [
           "$APPCACHE/background-thumbnails/*",
           "$TEMP/Screenwide/application-sources/**",
+          "$TEMP/Screenwide/camera-objects/*",
           "$TEMP/Screenwide/monitor-selector/**",
           "$TEMP/Screenwide/window-selector/**"
         ]

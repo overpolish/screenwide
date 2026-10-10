@@ -91,6 +91,37 @@ impl RecordingPreviewSurface {
     } else {
       1.0
     };
+    // The camera's effects are drawn on the camera before anything else, so
+    // its annotations sit over them. The frames they draw are made again at
+    // each present, from the decoded frame the pane keeps.
+    let mut effects = self
+      .inner
+      .camera_effects
+      .lock()
+      .map_err(|_| "The camera's effects are poisoned".to_owned())?;
+    let effected_source = if pane.source_is_camera {
+      let matte = effects.matte_at(composition.seconds);
+      effects.drawn(&self.inner.gpu.compositor, source, matte.as_deref(), 0)?
+    } else {
+      None
+    };
+    let source = effected_source.as_ref().unwrap_or(source);
+    let effected_camera = match camera {
+      Some((raw, ..)) => {
+        let matte = effects.matte_at(composition.seconds);
+        effects.drawn(&self.inner.gpu.compositor, raw, matte.as_deref(), 1)?
+      }
+      None => None,
+    };
+    drop(effects);
+    let camera = camera.map(|(raw, geometry, drop_shadow, camera_on_top)| {
+      (
+        effected_camera.as_ref().unwrap_or(raw),
+        geometry,
+        drop_shadow,
+        camera_on_top,
+      )
+    });
     // A baked camera's redactions and highlights change its own pixels, so
     // they are composed into its frame before the canvas draws it. The
     // frame is overwritten by the next decode, so nothing is kept.

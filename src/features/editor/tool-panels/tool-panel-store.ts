@@ -37,6 +37,8 @@ export type { ToolPanelFrame } from "./tool-panel-frame";
 /** What the selection panel places. */
 export type {
   ToolPanelAudioSelection,
+  ToolPanelCameraEffects,
+  ToolPanelCameraObjects,
   ToolPanelLayerSelection,
   ToolPanelMicrophone,
   ToolPanelModel,

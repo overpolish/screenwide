@@ -47,8 +47,14 @@ impl WindowsExportCompositor {
     self.inner.gpu.compositor.prepare_annotation_kinds(sets);
   }
 
+  /// The GPU the export draws on, which the camera's effects draw on too.
+  pub(in crate::editor) fn gpu(&self) -> &'static crate::gpu::Gpu {
+    self.inner.gpu.shared
+  }
+
   /// `camera_composition` is what the baked camera has composed into its
-  /// frame before the canvas draws it.
+  /// frame before the canvas draws it. `effects` are the camera's, drawn on
+  /// the baked camera or on the screen where the screen is the camera.
   #[allow(clippy::too_many_arguments)]
   pub(in crate::editor) fn compose_with_camera(
     &self,
@@ -61,6 +67,7 @@ impl WindowsExportCompositor {
     // What this frame draws. A timed annotation has already had its reveal
     // resolved for this frame by the caller, which owns the timeline.
     annotations: &[crate::editor::annotations::Annotation],
+    mut effects: Option<&mut crate::editor::cursor_export::camera_effects::FrameEffects>,
   ) -> Result<ID3D11Texture2D, String> {
     let _state = self
       .inner
@@ -71,6 +78,11 @@ impl WindowsExportCompositor {
     gpu
       .compositor
       .copy_source(gpu.d3d11, &self.source, texture, subresource)?;
+    let ms = (composition.seconds * 1_000.0).round().max(0.0) as u64;
+    let source = match effects.as_deref_mut().filter(|effects| effects.on_screen()) {
+      Some(effects) => effects.drawn(&gpu.compositor, &self.source, ms)?,
+      None => self.source.clone(),
+    };
     let mut drawn_camera = None;
     if let (Some(camera_source), Some((camera_texture, camera_subresource, _, _, _))) =
       (&self.camera, camera)
@@ -78,14 +90,19 @@ impl WindowsExportCompositor {
       gpu
         .compositor
         .copy_source(gpu.d3d11, camera_source, camera_texture, camera_subresource)?;
+      let camera_source = match effects.filter(|effects| !effects.on_screen()) {
+        Some(effects) => effects.drawn(&gpu.compositor, camera_source, ms)?,
+        None => camera_source.clone(),
+      };
       // The preview composes its camera in slot 0; the export keeps its own.
-      drawn_camera = camera_composition
-        .map(|composed| {
+      drawn_camera = Some(match camera_composition {
+        Some(composed) => {
           gpu
             .compositor
-            .composed_camera(camera_source, composed, None, 1, false)
-        })
-        .transpose()?;
+            .composed_camera(&camera_source, composed, None, 1, false)?
+        }
+        None => camera_source,
+      });
     }
     // Sink Writer retains DXGI surfaces and feeds the hardware encoder
     // asynchronously. A single repainted render target therefore lets a later
@@ -126,13 +143,12 @@ impl WindowsExportCompositor {
     )?;
     gpu.compositor.draw_with_camera(
       &self.target.view,
-      &self.source,
+      &source,
       settings,
       composition,
       camera.and_then(|(_, _, geometry, drop_shadow, camera_on_top)| {
         drawn_camera
           .as_ref()
-          .or(self.camera.as_ref())
           .map(|source| (source, geometry, drop_shadow, camera_on_top))
       }),
       None,

@@ -31,11 +31,15 @@ use tauri::ipc::Channel;
 use super::super::{video::VideoFrame, PlayerSources};
 use crate::{
   editor::{
-    cursor_effects::CursorEffectSettings, keyboard_effects::KeyboardOverlay, CameraOverlaySettings,
-    RecordingOutputSettings,
+    camera_effects::cpu::StillEffects, cursor_effects::CursorEffectSettings,
+    keyboard_effects::KeyboardOverlay, CameraOverlaySettings, RecordingOutputSettings,
   },
   screenshots::{compose_output_layers, CapturedImage},
 };
+
+/// The longest side a composed still reads the camera's matte at: stills
+/// are copied or shown small, and the edge it draws is soft.
+const STILL_MATTE_SIDE: u32 = 1_920;
 
 /// macOS decodes paused frames through [`StillDecoder`] rather than through
 /// [`spawn_video`].
@@ -103,6 +107,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
             .map(|settings| (settings, sources.annotation_pictures()[1])),
           clip_cursor_at_video_edge,
           foreground_only: false,
+          source_is_camera: sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera,
         }];
         if let Some(camera_output) = pane_settings {
           if let Some(camera) = camera.as_ref() {
@@ -122,6 +127,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
               camera_settings: None,
               clip_cursor_at_video_edge: false,
               foreground_only: false,
+              source_is_camera: true,
             });
           }
         }
@@ -214,23 +220,30 @@ pub(crate) fn composed_frame_image(
   recording_output: &RecordingOutputSettings,
 ) -> Result<CapturedImage, String> {
   let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
-  let screen = composition::decoded_rgba(&source_frame_jpeg(
+  let mut screen = composition::decoded_rgba(&source_frame_jpeg(
     &sources.screen_path,
     position_ms,
     sources.duration_ms,
   )?)?;
-  let camera = if bake_camera {
+  let camera_duration_ms = sources.camera_duration_ms.unwrap_or(sources.duration_ms);
+  let mut camera = if bake_camera {
     sources
       .camera_path
       .as_ref()
       .map(|path| {
-        let duration_ms = sources.camera_duration_ms.unwrap_or(sources.duration_ms);
-        composition::decoded_rgba(&source_frame_jpeg(path, position_ms, duration_ms)?)
+        composition::decoded_rgba(&source_frame_jpeg(path, position_ms, camera_duration_ms)?)
       })
       .transpose()?
   } else {
     None
   };
+  if let Some(mut effects) = StillEffects::new(sources.camera_effects_now(), STILL_MATTE_SIDE) {
+    if sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera {
+      effects.apply(&mut screen, position_ms);
+    } else if let Some(camera) = camera.as_mut() {
+      effects.apply(camera, position_ms.min(camera_duration_ms));
+    }
+  }
   let cursor = cursor::gpu_cursor_preview(
     sources.cursor.as_deref(),
     position_ms,

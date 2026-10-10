@@ -153,6 +153,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
         height * scale as f32,
       ]
     });
+  let objects = object_picking::chrome(state);
   if let Ok(mut overlay) = inner.gpu.selection.lock() {
     let _ = overlay.draw(
       (
@@ -172,6 +173,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       &snap.gaps,
       &group,
       marquee,
+      objects.as_ref(),
       scale,
       luminance > 0.5,
     );

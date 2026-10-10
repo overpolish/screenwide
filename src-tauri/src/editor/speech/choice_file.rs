@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A microphone switch's choice, kept beside the project with the make of
-//! the files the switch plays, so it holds when the project opens again
-//! and the export reads the same answer as the preview.
+//! A switch's choice, kept beside the project with the make of the files the
+//! switch plays, so it holds when the project opens again and the export
+//! reads the same answer as the preview. The microphone's switches keep
+//! theirs here, and the camera's Remove background.
 
 use std::path::Path;
 
@@ -18,7 +19,7 @@ struct Kept<T> {
 }
 
 /// The choice kept at `path`, if it was kept for files of make `version`.
-pub(super) fn read<T: DeserializeOwned>(path: &Path, version: u16) -> Option<T> {
+pub(in crate::editor) fn read<T: DeserializeOwned>(path: &Path, version: u16) -> Option<T> {
   std::fs::read(path)
     .ok()
     .and_then(|bytes| serde_json::from_slice::<Kept<T>>(&bytes).ok())
@@ -26,7 +27,11 @@ pub(super) fn read<T: DeserializeOwned>(path: &Path, version: u16) -> Option<T> 
     .map(|kept| kept.choice)
 }
 
-pub(super) fn write<T: Serialize>(path: &Path, version: u16, choice: T) -> Result<(), String> {
+pub(in crate::editor) fn write<T: Serialize>(
+  path: &Path,
+  version: u16,
+  choice: T,
+) -> Result<(), String> {
   let bytes = serde_json::to_vec(&Kept { version, choice }).map_err(|error| error.to_string())?;
   std::fs::write(path, bytes).map_err(|error| error.to_string())
 }

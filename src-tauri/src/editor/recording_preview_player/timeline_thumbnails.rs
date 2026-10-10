@@ -37,6 +37,17 @@ pub(super) fn target_width(source_width: u32, source_height: u32) -> u32 {
     .max(1.0)) as u32
 }
 
+/// A see-through thumbnail, as a PNG: a JPEG has no transparency.
+pub(super) fn encoded_png(image: &crate::screenshots::CapturedImage) -> Result<Vec<u8>, String> {
+  let rgba = ::image::RgbaImage::from_raw(image.width, image.height, image.rgba.clone())
+    .ok_or_else(|| "The thumbnail is not the size it says".to_owned())?;
+  let mut bytes = std::io::Cursor::new(Vec::new());
+  rgba
+    .write_to(&mut bytes, ::image::ImageFormat::Png)
+    .map_err(|error| error.to_string())?;
+  Ok(bytes.into_inner())
+}
+
 /// Copies the composed primary frame at the playhead. Decoding and bitmap
 /// composition happen only for this explicit action; live preview stays on
 /// the native GPU surface and does not cross IPC.

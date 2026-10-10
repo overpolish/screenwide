@@ -24,6 +24,7 @@ pub(in crate::editor) fn save_baked_recording(
   progress_app: &AppHandle,
   cancelled: &AtomicBool,
   timeline: Option<&timeline_edit::TimelinePlan>,
+  camera_effects: Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
 ) -> Result<Option<PathBuf>, String> {
   let progress_duration_ms = timeline.map_or(duration_ms, timeline_edit::TimelinePlan::duration_ms);
   let mut on_progress = |processed_ms| {
@@ -68,6 +69,10 @@ pub(in crate::editor) fn save_baked_recording(
     audio_layout: layout,
     audio_source: None,
     camera: Some((&camera.path, baked)),
+    camera_effects: camera_effects.map(|live| cursor_export::ExportCameraEffects {
+      live,
+      on_screen: false,
+    }),
     camera_on_top,
     cancelled,
     cursor: cursor_path,

@@ -58,6 +58,17 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.restoreSilences) on.onSilencesRestore?.();
   if (values.bakeCamera !== undefined)
     on.onBakeCameraChange?.(values.bakeCamera);
+  if (values.cameraEffects !== undefined)
+    on.onCameraEffectsChange?.(values.cameraEffects);
+  if (values.chooseCameraBackground) on.onCameraBackgroundChoose?.();
+  if (values.downloadCameraBackground) on.onCameraBackgroundDownload?.();
+  if (values.downloadCameraObjects) on.onCameraObjectsDownload?.();
+  if (values.pickCameraObjects !== undefined)
+    on.onCameraObjectsPick?.(values.pickCameraObjects);
+  if (values.removeCameraObject !== undefined)
+    on.onCameraObjectRemove?.(values.removeCameraObject);
+  if (values.showCameraObject !== undefined)
+    on.onCameraObjectShow?.(values.showCameraObject);
   if (values.background !== undefined)
     on.onBackgroundChange?.(values.background);
   if (values.savePreset !== undefined) {

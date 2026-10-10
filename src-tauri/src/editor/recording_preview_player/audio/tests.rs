@@ -162,6 +162,8 @@ pub(super) fn test_sources() -> PlayerSources {
     pins: None,
     playing: Default::default(),
     preview_surface: None,
+    camera_effects: Default::default(),
+    camera_picking: Default::default(),
     primary_kind: PrimaryRecordingKind::Screen,
     screen_path: "/tmp/recording.mov".into(),
     processing: Default::default(),

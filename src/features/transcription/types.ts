@@ -3,8 +3,14 @@
 
 /** What a model is for. Each use has its own, so nobody has to choose one:
  * moments take the quick transcription model, Studio sound its restoration
- * model, Studio ducking its music separation model. */
-export type TranscriptionPurpose = "moments" | "studioDucking" | "studioSound";
+ * model, Studio ducking its music separation model, Remove background its
+ * video matting model, and the camera's objects their tracking model. */
+export type TranscriptionPurpose =
+  | "cameraBackground"
+  | "cameraObjects"
+  | "moments"
+  | "studioDucking"
+  | "studioSound";
 
 /** A speech model, and how far it is on this computer. */
 export type TranscriptionModel = {

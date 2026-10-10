@@ -83,6 +83,7 @@ pub(super) fn save_camera_copy(
   resolution_scale_percent: u16,
   output: &ScreenshotOutputSettings,
   timeline: Option<&timeline_edit::TimelinePlan>,
+  camera_effects: Option<std::sync::Arc<super::camera_effects::live::LiveCameraEffects>>,
 ) -> Result<Option<PathBuf>, String> {
   let progress_duration_ms =
     timeline.map_or(camera.duration_ms, timeline_edit::TimelinePlan::duration_ms);
@@ -102,6 +103,7 @@ pub(super) fn save_camera_copy(
 
   if cursor_export::needs_composition(output, camera.width, camera.height)
     || timeline.is_some_and(|plan| !plan.annotation_clips().is_empty())
+    || camera_effects.is_some()
   {
     let path = unique_path(directory, &camera_stem, RECORDING_EXTENSION, &|candidate| {
       candidate.exists()
@@ -111,6 +113,10 @@ pub(super) fn save_camera_copy(
       audio_layout: track_selection::AudioLayout::SeparateTracks,
       audio_source: None,
       camera: None,
+      camera_effects: camera_effects.map(|live| cursor_export::ExportCameraEffects {
+        live,
+        on_screen: true,
+      }),
       camera_on_top: true,
       cancelled,
       cursor: None,
@@ -181,11 +187,13 @@ pub(super) fn save_camera_as_primary(
   resolution_scale_percent: u16,
   output: &ScreenshotOutputSettings,
   timeline: Option<&timeline_edit::TimelinePlan>,
+  camera_effects: Option<std::sync::Arc<super::camera_effects::live::LiveCameraEffects>>,
 ) -> Result<Option<PathBuf>, String> {
   let progress_duration_ms =
     timeline.map_or(camera.duration_ms, timeline_edit::TimelinePlan::duration_ms);
   if cursor_export::needs_composition(output, camera.width, camera.height)
     || timeline.is_some_and(|plan| !plan.annotation_clips().is_empty())
+    || camera_effects.is_some()
   {
     let path = unique_path(directory, stem, RECORDING_EXTENSION, &|candidate| {
       candidate.exists()
@@ -206,6 +214,10 @@ pub(super) fn save_camera_as_primary(
       audio_layout: layout,
       audio_source: Some(audio_source),
       camera: None,
+      camera_effects: camera_effects.map(|live| cursor_export::ExportCameraEffects {
+        live,
+        on_screen: true,
+      }),
       camera_on_top: true,
       cancelled,
       cursor: None,

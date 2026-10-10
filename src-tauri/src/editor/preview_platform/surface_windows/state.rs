@@ -24,6 +24,8 @@ pub(super) struct SurfaceState {
   /// backend's `selectionMoveTargetsStart` / `selectionMoveAutoFitActive`).
   /// `None` once the move ends or an Alt release commits the grown canvas.
   pub(super) move_auto_fit: Option<MoveAutoFit>,
+  /// Objects picked in the camera, while they are.
+  pub(super) object_picking: object_picking::ObjectPicking,
   pub(super) panes: Vec<Option<Pane>>,
   /// The width the double-click reset fits into: the space beside an open tool
   /// panel while one holds the basis, 0 for the whole viewport. Only the fit
@@ -122,6 +124,8 @@ pub(super) struct EditorCallbacks {
   pub(super) pointer_down: Option<PointerDownCallback>,
   pub(super) selection: Option<SelectionCallback>,
   pub(super) image_drop: Option<ImageDropCallback>,
+  pub(super) object_pick:
+    Option<crate::editor::preview_platform::object_picking::ObjectPickCallback>,
   pub(super) transform: Option<TransformCallback>,
 }
 
@@ -141,5 +145,8 @@ pub(super) struct SurfaceInner {
   pub(super) callbacks: Mutex<EditorCallbacks>,
   pub(super) editor: editor::EditorWindow,
   pub(super) gpu: Gpu,
+  /// The camera's effects, drawn on every camera frame presented. Locked
+  /// after `state` where both are held.
+  pub(super) camera_effects: Mutex<crate::editor::camera_effects::preview::PreviewEffects>,
   pub(super) state: Mutex<SurfaceState>,
 }

@@ -9,6 +9,9 @@ pub(in crate::editor) struct PrimaryRecordingSaveRequest<'a> {
   pub audio_tracks: &'a [RecordingAudioTrack],
   pub cancelled: &'a AtomicBool,
   pub compression: u8,
+  /// The camera's effects, where the recording is of the camera alone.
+  pub camera_effects:
+    Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
   pub cursor: Option<&'a Path>,
   pub cursor_effects: cursor_effects::CursorEffectSettings,
   pub keyboard: Option<&'a Path>,
@@ -44,6 +47,7 @@ pub(in crate::editor) fn save_primary_recording(
     return cursor::save_baked(cursor::CursorSaveRequest {
       app: request.app,
       artifact_id: request.artifact_id,
+      camera_effects: request.camera_effects,
       cancelled: request.cancelled,
       cursor: request.cursor,
       cursor_effects: request.cursor_effects,
@@ -67,6 +71,7 @@ pub(in crate::editor) fn save_primary_recording(
     || request
       .timeline
       .is_some_and(|plan| !plan.annotation_clips().is_empty())
+    || request.camera_effects.is_some()
   {
     let path = unique_path(
       request.directory,
@@ -90,6 +95,12 @@ pub(in crate::editor) fn save_primary_recording(
       audio_layout: request.layout,
       audio_source: None,
       camera: None,
+      camera_effects: request
+        .camera_effects
+        .map(|live| cursor_export::ExportCameraEffects {
+          live,
+          on_screen: true,
+        }),
       camera_on_top: true,
       cancelled: request.cancelled,
       cursor: None,

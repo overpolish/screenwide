@@ -4,6 +4,8 @@
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, ChildStdout, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use screenwide_transcriber::{Job, Reply, Request, Speech, Transcript};
 
@@ -19,6 +21,8 @@ pub(crate) struct Transcriber {
   input: Option<ChildStdin>,
   output: BufReader<ChildStdout>,
   next_id: u64,
+  /// Set to stop the job under way, which ends the program.
+  stop: Option<Arc<AtomicBool>>,
 }
 
 impl Transcriber {
@@ -40,7 +44,15 @@ impl Transcriber {
       input,
       next_id: 0,
       output,
+      stop: None,
     })
+  }
+
+  /// Ends the program, and with it the job under way, once `stop` is set.
+  /// It is looked at as each reply arrives.
+  pub(crate) fn stopped_by(mut self, stop: Arc<AtomicBool>) -> Self {
+    self.stop = Some(stop);
+    self
   }
 
   pub(super) fn transcribe(
@@ -156,9 +168,53 @@ impl Transcriber {
     }
   }
 
+  /// Runs `job`, a [`Job::MatteCamera`], which writes the camera's matte and
+  /// cutout into files of their own, telling `progress` how far it has got.
+  pub(crate) fn matte_camera(
+    &mut self,
+    job: Job,
+    progress: &mut dyn FnMut(f32),
+  ) -> Result<(), String> {
+    if !matches!(job, Job::MatteCamera { .. }) {
+      return Err("Only a camera can be matted".to_owned());
+    }
+    match self.ask(job, progress)? {
+      Reply::Matted { .. } => Ok(()),
+      _ => Err("The transcriber answered with something else".to_owned()),
+    }
+  }
+
+  /// Runs `job`, a [`Job::FollowObjects`] or a [`Job::ComposeMatte`], which
+  /// writes its files, telling `progress` how far it has got and, following
+  /// objects, `halfway` once the masks after the click are written.
+  pub(crate) fn camera_objects(
+    &mut self,
+    job: Job,
+    progress: &mut dyn FnMut(f32),
+    halfway: &mut dyn FnMut(),
+  ) -> Result<(), String> {
+    if !matches!(job, Job::FollowObjects { .. } | Job::ComposeMatte { .. }) {
+      return Err("Only a camera's objects are asked for here".to_owned());
+    }
+    match self.ask_telling(job, progress, halfway)? {
+      Reply::Tracked { .. } | Reply::Composed { .. } => Ok(()),
+      _ => Err("The transcriber answered with something else".to_owned()),
+    }
+  }
+
   /// Sends `job` and waits for the reply that ends it, handing any progress
   /// on the way to `progress`.
   fn ask(&mut self, job: Job, progress: &mut dyn FnMut(f32)) -> Result<Reply, String> {
+    self.ask_telling(job, progress, &mut || {})
+  }
+
+  /// [`Self::ask`], also calling `halfway` where the job says it is.
+  fn ask_telling(
+    &mut self,
+    job: Job,
+    progress: &mut dyn FnMut(f32),
+    halfway: &mut dyn FnMut(),
+  ) -> Result<Reply, String> {
     self.next_id += 1;
     let request = Request {
       id: self.next_id,
@@ -178,12 +234,24 @@ impl Transcriber {
       if self.output.read_line(&mut reply).map_err(|_| stopped())? == 0 {
         return Err(stopped());
       }
+      if self
+        .stop
+        .as_ref()
+        .is_some_and(|stop| stop.load(Ordering::Acquire))
+      {
+        let _ = self.child.kill();
+        return Err("The work was stopped".to_owned());
+      }
       let answer = serde_json::from_str::<Reply>(&reply).map_err(|error| error.to_string())?;
       let (Reply::Done { id, .. }
       | Reply::Speech { id, .. }
       | Reply::Cleaned { id, .. }
       | Reply::Restored { id }
       | Reply::Separated { id }
+      | Reply::Matted { id }
+      | Reply::Tracked { id }
+      | Reply::Composed { id }
+      | Reply::Halfway { id }
       | Reply::Progress { id, .. }
       | Reply::Failed { id, .. }) = &answer;
       if *id != request.id {
@@ -191,6 +259,7 @@ impl Transcriber {
       }
       match answer {
         Reply::Progress { fraction, .. } => progress(fraction),
+        Reply::Halfway { .. } => halfway(),
         Reply::Failed { message, .. } => return Err(message),
         answer => return Ok(answer),
       }

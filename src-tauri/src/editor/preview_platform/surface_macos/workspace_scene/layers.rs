@@ -7,6 +7,8 @@ use std::sync::Arc;
 
 use cidre::{arc, cv};
 
+use crate::editor::annotations::pin::LumaFrame;
+use crate::editor::camera_effects::preview::PreviewEffects;
 use crate::editor::cursor_effects::GpuCursor;
 use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::editor::media_preview::BakeGeometry;
@@ -47,6 +49,8 @@ pub(crate) struct StagedLayer<'a> {
   /// frame, and the camera's source size, which they are placed in.
   pub(crate) camera_settings: Option<(&'a ScreenshotOutputSettings, (u32, u32))>,
   pub(crate) foreground_only: bool,
+  /// Whether `source` is the camera, which the camera's effects draw on.
+  pub(crate) source_is_camera: bool,
   pub(crate) hover: Option<(usize, f32)>,
 }
 
@@ -113,6 +117,9 @@ pub(super) struct LayerCamera {
   /// The halo on one of the composed annotations, its width in canvas
   /// pixels.
   pub(super) hover: Option<(usize, f32)>,
+  /// The matte of the frame, where the camera's effects take its background
+  /// away.
+  pub(super) matte: Option<Arc<LumaFrame>>,
 }
 
 impl LayerCamera {
@@ -136,19 +143,28 @@ impl LayerCamera {
       on_top: overlay.camera_on_top != 0,
       composition: None,
       hover: None,
+      matte: None,
     }
   }
 
-  /// The frame the canvas draws: the camera's own, with the composed
-  /// annotations drawn into it first where it has any. `slot` is the layer's.
+  /// The frame the canvas draws: the camera's own, drawn with its effects,
+  /// with the composed annotations drawn into it after where it has any.
+  /// `slot` is the layer's.
   pub(super) fn drawn(
     &self,
     compositor: &Compositor,
     picture: &ScenePicture,
-    slot: usize,
+    (effects, slot): (&PreviewEffects, usize),
   ) -> Result<SourceTexture, String> {
+    let effected = effects.drawn(
+      compositor,
+      &picture.texture,
+      self.matte.as_deref(),
+      slot * 2 + 1,
+    )?;
+    let frame = effected.as_ref().unwrap_or(&picture.texture);
     let Some(composition) = &self.composition else {
-      return Ok(picture.texture.clone());
+      return Ok(frame.clone());
     };
     // The halo's width arrives in canvas pixels; the frame is drawn into the
     // canvas at the crop's size over the frame's.
@@ -156,7 +172,8 @@ impl LayerCamera {
       let frame_pixels = self.geometry.crop_width as f32 / self.geometry.frame_width.max(1) as f32;
       (index, width * frame_pixels)
     });
-    compositor.composed_camera(&picture.texture, composition, hover, slot, true)
+    // The effects' picture is drawn again each time, so it is not retained.
+    compositor.composed_camera(frame, composition, hover, slot, effected.is_none())
   }
 }
 
@@ -177,6 +194,10 @@ pub(super) struct SceneLayer {
   pub(super) camera: Option<LayerCamera>,
   pub(super) foreground_only: bool,
   pub(super) hover: Option<(usize, f32)>,
+  /// Whether the layer's own picture is the camera, which the camera's
+  /// effects are drawn on, and the matte of its frame where they read one.
+  pub(super) source_is_camera: bool,
+  pub(super) source_matte: Option<Arc<LumaFrame>>,
 }
 
 impl SceneLayer {

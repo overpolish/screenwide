@@ -79,6 +79,10 @@ const MODULES: &[(&str, &[&str])] = &[
     ],
   ),
   (
+    "camera_effects",
+    &["src/editor/preview_platform/shaders/camera_effects.wgsl"],
+  ),
+  (
     "redact_cells",
     &[
       "src/editor/preview_platform/shaders/redact.wgsl",

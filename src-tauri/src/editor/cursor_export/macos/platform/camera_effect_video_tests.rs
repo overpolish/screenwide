@@ -119,6 +119,7 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
   };
   let cancelled = AtomicBool::new(false);
   let result = export(CursorExportRequest {
+    camera_effects: None,
     annotation_track: AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,

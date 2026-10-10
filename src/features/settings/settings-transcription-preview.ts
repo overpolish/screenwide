@@ -40,6 +40,28 @@ const STUDIO_DUCKING_MODEL: TranscriptionModel = {
   status: "available",
 };
 
+/** The background removal model, at its real download size. */
+const CAMERA_BACKGROUND_MODEL: TranscriptionModel = {
+  description: "Removes the background behind you on camera.",
+  id: "rvm-mobilenetv3",
+  name: "Background removal",
+  progress: null,
+  purpose: "cameraBackground",
+  sizeBytes: 14_975_696,
+  status: "available",
+};
+
+/** The object tracking model, at its real download size. */
+const CAMERA_OBJECTS_MODEL: TranscriptionModel = {
+  description: "Keeps or removes objects on camera.",
+  id: "sam2.1-hiera-tiny",
+  name: "Camera objects",
+  progress: null,
+  purpose: "cameraObjects",
+  sizeBytes: 190_082_794,
+  status: "available",
+};
+
 export type TranscriptionPreviewSeed = Pick<
   TranscriptionModel,
   "progress" | "status"
@@ -64,6 +86,8 @@ export function transcriptionPreviewApi(
       { ...MOMENTS_MODEL, ...seed },
       STUDIO_SOUND_MODEL,
       STUDIO_DUCKING_MODEL,
+      CAMERA_BACKGROUND_MODEL,
+      CAMERA_OBJECTS_MODEL,
     ],
     systemLanguage: "en",
   };

@@ -32,6 +32,9 @@ struct OscGpu {
   chrome_outline: vec4<f32>, // plate outline; alpha 0 means no outline
   chrome_backdrop: vec4<f32>, // viewport width/height, source texel width/height
   chrome_source: vec4<f32>, // snapshot UV x/y/width/height after pan/zoom
+  picked_colors: array<vec4<f32>, 2>, // an object kept, one removed
+  picked_halo: vec4<f32>, // .x reach px, .y points of `picked_points`
+  picked_points: array<vec4<f32>, 32>, // two points to a row, in pixels
 }
 
 @group(0) @binding(0) var<uniform> osc: OscGpu;
@@ -354,12 +357,98 @@ fn soft_line(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   return color;
 }
 
+// How strongly the halo round a chosen object picked in the camera shows:
+// as the halo round an annotation does (`annotation_hover_alpha`).
+const PICKED_HALO_ALPHA: f32 = 0.24;
+
+// An object picked in the camera: 52 one kept, 53 one removed, a disc in its
+// colour inside a one-pixel ring in the controls' outline, which keeps it
+// apart from whatever the camera shows behind it. 54 a kept one's halo and
+// 58 a removed one's: a soft disc of its colour round the chosen one, as an
+// annotation is haloed.
+fn picked(kind: u32, uv: vec2<f32>) -> vec4<f32> {
+  let dimensions = quad_pixels(uv);
+  let distance = length((uv - 0.5) * dimensions);
+  let radius = min(dimensions.x, dimensions.y) * 0.5;
+  let aa = max(fwidth(distance), 0.0001);
+  let edge = distance - radius;
+  let coverage = clamp(0.5 - edge / aa, 0.0, 1.0);
+  if (coverage <= 0.0) {
+    discard;
+  }
+  if (kind == 54u || kind == 58u) {
+    var halo = osc.picked_colors[select(0u, 1u, kind == 58u)];
+    halo.a *= PICKED_HALO_ALPHA * coverage;
+    return halo;
+  }
+  let outline_mix = clamp(0.5 + (edge + 1.0) / aa, 0.0, 1.0);
+  var color = mix(osc.picked_colors[kind - 52u], osc.control_colors[1], outline_mix);
+  color.a *= coverage;
+  return color;
+}
+
+// A line painted over an object picked in the camera, padded a pixel either
+// side for its edges to be anti-aliased across, as `soft_line`: 55 in a kept
+// object's colour, 56 in a removed one's.
+fn picked_line(kind: u32, uv: vec2<f32>) -> vec4<f32> {
+  let dimensions = quad_pixels(uv);
+  let across = abs(uv.y - 0.5) * dimensions.y;
+  let half = dimensions.y * 0.5 - 1.0;
+  let coverage = clamp(half - across + 0.5, 0.0, 1.0);
+  if (coverage <= 0.0) {
+    discard;
+  }
+  var color = osc.picked_colors[kind - 55u];
+  color.a *= coverage;
+  return color;
+}
+
+fn picked_point(index: u32) -> vec2<f32> {
+  let pair = osc.picked_points[index / 2u];
+  return select(pair.xy, pair.zw, index % 2u == 1u);
+}
+
+// The halo round the line painted over the chosen object picked in the
+// camera, 57 a kept one's and 59 a removed one's: every pixel within reach
+// of the line, measured to the nearest point of it, as an annotation's halo
+// is, so it is one smooth band with round ends rather than pieces laid over
+// one another. Its quad covers the line and the reach round it.
+fn picked_line_halo(kind: u32, at: vec2<f32>) -> vec4<f32> {
+  let count = u32(osc.picked_halo.y);
+  var nearest = 1e20;
+  if (count > 0u) {
+    nearest = length(at - picked_point(0u));
+  }
+  for (var index = 1u; index < count; index++) {
+    let start = picked_point(index - 1u);
+    let along = picked_point(index) - start;
+    let share = clamp(dot(at - start, along) / max(dot(along, along), 1e-6), 0.0, 1.0);
+    nearest = min(nearest, length(at - (start + along * share)));
+  }
+  let coverage = clamp(osc.picked_halo.x - nearest + 0.5, 0.0, 1.0);
+  if (coverage <= 0.0) {
+    discard;
+  }
+  var halo = osc.picked_colors[select(0u, 1u, kind == 59u)];
+  halo.a *= PICKED_HALO_ALPHA * coverage;
+  return halo;
+}
+
 @fragment
 fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   let kind = input.kind;
   let uv = input.uv;
   if (kind == LENS_KIND) {
     return lens(input.position.xy);
+  }
+  if (kind == 52u || kind == 53u || kind == 54u || kind == 58u) {
+    return picked(kind, uv);
+  }
+  if (kind == 55u || kind == 56u) {
+    return picked_line(kind, uv);
+  }
+  if (kind == 57u || kind == 59u) {
+    return picked_line_halo(kind, input.position.xy);
   }
   if (kind == 33u) {
     // A frozen desktop is an opaque backing plane. Capture APIs may leave

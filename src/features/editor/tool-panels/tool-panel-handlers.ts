@@ -7,6 +7,7 @@ import {
 } from "../../../components/shared/background-picker/background";
 import { ImagePlayChange } from "../annotations/annotation-channel";
 import { AnnotationStyle, ImageArt } from "../annotations/annotations";
+import { CameraEffectsChange } from "../recording/camera/use-camera-effects";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -63,6 +64,20 @@ export type ToolPanelHandlers = {
   /** Draw the camera into the screen's picture, or carry it as a track of its
    * own. The placement of each is carried across the change. */
   onBakeCameraChange?: (bake: boolean) => void;
+  /** Ask for a picture to put behind the person on camera. */
+  onCameraBackgroundChoose?: () => void;
+  /** Download the model taking the camera's background away needs. */
+  onCameraBackgroundDownload?: () => void;
+  /** Change the camera's effects, the rest kept as they are. */
+  onCameraEffectsChange?: (change: CameraEffectsChange) => void;
+  /** Take the object picked with this id out of the camera's picks. */
+  onCameraObjectRemove?: (id: number) => void;
+  /** Go to the frame the object with this id was picked in, and pick there. */
+  onCameraObjectShow?: (id: number) => void;
+  /** Download the model following the camera's objects needs. */
+  onCameraObjectsDownload?: () => void;
+  /** Start picking objects in the camera frame the preview shows, or stop. */
+  onCameraObjectsPick?: (isPicking: boolean) => void;
   /** Show the whole source again, the committed crop taken away. */
   onCropReset?: () => void;
   /** Cut a crop of the size a field asked for, in source pixels. */

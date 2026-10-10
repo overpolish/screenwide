@@ -14,7 +14,7 @@ import {
 } from "../../../transcription/types";
 
 /**
- * The model a microphone switch works with, chosen by what it is for, as
+ * The model a switch works with, chosen by what it is for, as
  * Settings and every other window see it, kept current as it downloads;
  * `null` until the app has said. Downloading it is offered from the editor
  * as well as Settings.

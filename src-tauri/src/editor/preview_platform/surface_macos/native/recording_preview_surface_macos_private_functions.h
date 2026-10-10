@@ -127,6 +127,17 @@ BOOL framed_selection_mouse_up(ScreenwidePreviewInteractionView *view,
 void annotation_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
                         NSSize size, ScreenwidePreviewSurface *surface,
                         CGFloat scale);
+/// Whether objects are being picked in the camera.
+BOOL object_picking_active(ScreenwidePreviewSurface *surface);
+/// While objects are picked in the camera, a press is theirs: a click picks
+/// the object under it, a drag pans, and a double-click fits the view.
+BOOL object_picking_mouse_down(ScreenwidePreviewInteractionView *view, NSEvent *event,
+                               NSPoint point);
+/// The objects picked in the frame shown, while objects are picked, the halo
+/// round a chosen painted line handed to the shader in `state`.
+BOOL object_picking_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
+                            ScreenwideRegionOscRenderState *state,
+                            ScreenwidePreviewSurface *surface, NSSize size, CGFloat scale);
 /// The snap chrome for the sample on screen: the axis guides a counter
 /// landed on, the equal gaps it lined up with, and the element an arrow's
 /// tip took. Nothing at all when the last sample snapped to nothing.

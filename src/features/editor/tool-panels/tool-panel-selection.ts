@@ -30,6 +30,8 @@ export type ToolPanelLayerSelection = {
   width: number;
   x: number;
   y: number;
+  /** The camera's effects, offered for the camera. */
+  cameraEffects?: ToolPanelCameraEffects;
 };
 
 /**
@@ -68,6 +70,55 @@ export type ToolPanelAudioSelection = {
   /** The speech tools, offered only for a microphone: other tracks have no
    * speech to find pauses in or noise to take out from under. */
   microphone?: ToolPanelMicrophone;
+};
+
+/**
+ * The camera's effects: its background taken away, blurred or replaced by a
+ * picture, and its colour corrected. They are drawn live; what each needs
+ * made first, the matte or the colour's measure, is made once, and a tool is
+ * `working` while it is, which can take a while the first time.
+ */
+export type ToolPanelCameraEffects = {
+  background: "blurred" | "image" | "kept" | "transparent";
+  colour: boolean;
+  /** Whether a picture has been chosen for the background. */
+  hasImage: boolean;
+  /** The model taking the background away needs, and how far it is on this
+   * computer; `null` until the app has said. */
+  model: ToolPanelModel | null;
+  /** Objects picked to fix the matte, once the background is taken away;
+   * `null` before. */
+  objects: ToolPanelCameraObjects | null;
+  /** How far each tool's work has got, 0 to 1, while it is working. */
+  progress: Record<"background" | "colour", number>;
+  working: Record<"background" | "colour", boolean>;
+};
+
+/**
+ * Objects picked in the camera where the matte has them wrong, each kept
+ * with the person or removed with the room. Each is picked in one frame and
+ * followed through the recording, which takes a while, then laid into the
+ * matte: `working`, at `progress`, while that is.
+ */
+export type ToolPanelCameraObjects = {
+  /** The object chosen while picking, which the bin takes away. */
+  chosen: number | null;
+  /** Whether objects are being picked on the preview. */
+  isPicking: boolean;
+  /** The model following them needs, and how far it is on this computer. */
+  model: ToolPanelModel | null;
+  /** Each object picked: followed through the recording, being followed
+   * and how far, 0 to 1, or waiting its turn; `painted` where a line was
+   * painted over it rather than a click. */
+  picks: {
+    followed: boolean;
+    following: number | null;
+    id: number;
+    keep: boolean;
+    painted: boolean;
+  }[];
+  progress: number;
+  working: boolean;
 };
 
 /**

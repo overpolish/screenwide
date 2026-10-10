@@ -14,8 +14,8 @@ import {
 import { withScreenshotSourceCrop } from "../../screenshot/screenshot-output-settings";
 import { EditorArtifact } from "../../types";
 
+import { audioPanelHandlers } from "./selection-panel-handlers";
 import {
-  audioPanelHandlers,
   editorAudioSelectionTarget,
   editorSelectionTarget,
 } from "./selection-target";

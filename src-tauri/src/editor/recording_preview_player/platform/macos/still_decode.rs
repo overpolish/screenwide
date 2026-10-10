@@ -116,18 +116,25 @@ impl PaneDecoder {
     })
   }
 
+  /// The frame at `position_ms`, `width` by `height`. An `exact` one comes
+  /// from the reader playback uses rather than the player output scrubbing
+  /// normally takes: that output can hand over a neighbouring frame while
+  /// reporting the time asked for, which a matte made for each frame shows
+  /// as a rim where the person was a frame before.
   pub(super) fn frame_at(
     &mut self,
     position_ms: u64,
     width: u32,
     height: u32,
     rough: bool,
+    exact: bool,
   ) -> Result<Option<DecodedFrame>, String> {
     let target_ms = frame_position(position_ms, self.duration_ms);
-    let scrubber_matches = self
-      .scrubber
-      .as_ref()
-      .is_some_and(|scrubber| scrubber.width == width && scrubber.height == height);
+    let scrubber_matches = exact
+      || self
+        .scrubber
+        .as_ref()
+        .is_some_and(|scrubber| scrubber.width == width && scrubber.height == height);
     if !scrubber_matches {
       // A pane changing on-screen size (zoom, bake toggle relayout) keeps its
       // warm player and only swaps the video output for the new dimensions.
@@ -149,14 +156,14 @@ impl PaneDecoder {
           });
       }
     }
-    if let Some(scrubber) = self.scrubber.as_ref() {
+    if let Some(scrubber) = self.scrubber.as_ref().filter(|_| !exact) {
       if let Ok(frame) = scrubber.scrubber.frame_at(target_ms, rough) {
         return Ok(Some(DecodedFrame::Pixels(frame)));
       }
       self.scrubber = None;
     }
-    // Keep the reader path as a defensive fallback for codecs that a player
-    // output cannot vend. It is not the normal interactive scrub path.
+    // Besides exact frames, the reader is a fallback for codecs that a player
+    // output cannot vend.
     if !self.reusable_forward(target_ms, width, height) {
       let start_ms = target_ms.saturating_sub(BACKWARD_TOLERANCE_MS);
       let reset = match self.reader.as_mut() {
@@ -183,6 +190,12 @@ impl PaneDecoder {
       .as_mut()
       .expect("a scrub reader exists after opening");
     reader.last_target_ms = target_ms;
+    if exact {
+      return reader
+        .reader
+        .pixel_frame_at(target_ms)
+        .map(|frame| frame.map(DecodedFrame::Pixels));
+    }
     reader
       .reader
       .frame_at(target_ms)

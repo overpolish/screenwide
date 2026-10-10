@@ -10,6 +10,7 @@
 //! and to read where the shortcut strip is.
 
 mod draw;
+mod effects;
 mod exports;
 mod gestures;
 mod layers;
@@ -35,6 +36,8 @@ struct SceneState {
   /// rewritten the scene since.
   resize: Option<(Vec<SceneLayer>, bool)>,
   sources: HashMap<u64, Arc<ScenePicture>>,
+  /// The camera's effects, drawn on every camera frame the scene holds.
+  effects: crate::editor::camera_effects::preview::PreviewEffects,
 }
 
 pub(crate) struct WorkspaceScene {
@@ -55,6 +58,7 @@ impl WorkspaceScene {
         layers: Vec::new(),
         resize: None,
         sources: HashMap::new(),
+        effects: Default::default(),
       }),
     })
   }
@@ -112,9 +116,14 @@ impl WorkspaceScene {
             .flatten();
           let mut camera = LayerCamera::new(overlay, Some(Arc::new(picture)));
           camera.composition = composition.map(Arc::new);
+          camera.matte = state.effects.matte_at(layer.seconds);
           Ok::<_, String>(camera)
         })
         .transpose()?;
+      let source_matte = layer
+        .source_is_camera
+        .then(|| state.effects.matte_at(layer.seconds))
+        .flatten();
       staged.push(SceneLayer {
         pane_index: layer.pane_index,
         layer_id: layer.layer_id,
@@ -133,6 +142,8 @@ impl WorkspaceScene {
         keyboard: layer.keyboard,
         camera,
         foreground_only: layer.foreground_only,
+        source_is_camera: layer.source_is_camera,
+        source_matte,
         hover: layer.hover,
       });
     }
@@ -211,6 +222,7 @@ impl WorkspaceScene {
     *camera = LayerCamera {
       composition: camera.composition.take(),
       hover: camera.hover,
+      matte: camera.matte.take(),
       ..composed
     };
     true

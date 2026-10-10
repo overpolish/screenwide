@@ -16,6 +16,7 @@ use super::frame_grid::{grid_frame, grid_index};
 use super::frame_placement::{carried_cursor, on_canvas};
 use super::*;
 use crate::editor::cursor_effects::GpuCursor;
+use crate::editor::cursor_export::camera_effects::FrameEffects;
 use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::editor::media_preview::BakeGeometry;
 use crate::editor::preview_platform::annotation_gpu::prepared_arrows;
@@ -40,6 +41,9 @@ pub(super) struct FrameComposer<'a> {
   camera: Option<(BakeGeometry, bool, bool)>,
   /// The scenes that move the screen and the camera frame by frame.
   scenes: ExportScenes,
+  /// The camera's effects, on the baked-in camera or on the screen where the
+  /// screen is the camera.
+  effects: Option<FrameEffects>,
   /// The screen's decoded size, which places the cursors the scenes move.
   source_size: (u32, u32),
   /// The screen frame as the canvas samples it, made from its planes.
@@ -97,6 +101,7 @@ impl<'a> FrameComposer<'a> {
     let annotations = ExportAnnotations::for_request(request);
     compositor.prepare_annotation_kinds(&annotations.kind_sets());
     let scenes = ExportScenes::for_request(request);
+    let effects = FrameEffects::new(request.camera_effects.as_ref(), gpu)?;
     Ok(Self {
       gpu,
       planes: VideoPlanes::new(gpu),
@@ -107,6 +112,7 @@ impl<'a> FrameComposer<'a> {
       keyboards: keyboard_timeline.map_or(&[][..], |timeline| timeline.frames.as_slice()),
       camera,
       scenes,
+      effects,
       source_size: (request.width, request.height),
       source: None,
       canvas,
@@ -144,6 +150,10 @@ impl<'a> FrameComposer<'a> {
       .decode(gpu, &mut encoder, &view(luma), &view(chroma), &source.view);
     gpu.queue.submit([encoder.finish()]);
     let source_ms = (frame.source_us + 500) / 1_000;
+    let source = match self.effects.as_mut().filter(|effects| effects.on_screen()) {
+      Some(effects) => effects.drawn(&self.compositor, &source, source_ms)?,
+      None => source,
+    };
     // A frame inside a scene is drawn on its own arrangement; every other
     // frame keeps the request's composition and the camera placed once.
     let arranged = self.scenes.at(self.settings, source_ms, frame.frame_ms);
@@ -164,10 +174,16 @@ impl<'a> FrameComposer<'a> {
       settings,
       arranged.as_ref().and_then(|(_, options)| *options),
     );
+    let camera_effects = self.effects.as_mut().filter(|effects| !effects.on_screen());
     let camera = unsafe { pixel_buffer(frame.camera) }
       .zip(placement)
       .map(|(pixels, placement)| {
-        let drawn = drawn_camera(&self.compositor, pixels, annotations.camera.as_ref())?;
+        let drawn = drawn_camera(
+          &self.compositor,
+          pixels,
+          annotations.camera.as_ref(),
+          (camera_effects, source_ms),
+        )?;
         Ok::<_, String>((drawn, placement))
       })
       .transpose()?;
@@ -244,29 +260,7 @@ impl<'a> FrameComposer<'a> {
     if let Some(source) = self.source.as_ref().filter(|source| source.size == size) {
       return source.clone();
     }
-    let texture = self.gpu.device.create_texture(&wgpu::TextureDescriptor {
-      label: Some("Screenwide export source"),
-      size: wgpu::Extent3d {
-        width: size.0,
-        height: size.1,
-        depth_or_array_layers: 1,
-      },
-      mip_level_count: 1,
-      sample_count: 1,
-      dimension: wgpu::TextureDimension::D2,
-      format: FORMAT,
-      // Redactions copy it before they draw over the copy.
-      usage: wgpu::TextureUsages::TEXTURE_BINDING
-        | wgpu::TextureUsages::RENDER_ATTACHMENT
-        | wgpu::TextureUsages::COPY_SRC,
-      view_formats: &[],
-    });
-    let source = SourceTexture {
-      size,
-      view: texture.create_view(&Default::default()),
-      texture,
-      picture: None,
-    };
+    let source = super::frame_source::canvas_source(self.gpu, size);
     self.source = Some(source.clone());
     source
   }

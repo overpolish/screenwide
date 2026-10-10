@@ -110,6 +110,7 @@ impl Gpu {
       selection_stale: false,
       seen: true,
       source: None,
+      source_is_camera: false,
       source_token: None,
       surface,
       visual,

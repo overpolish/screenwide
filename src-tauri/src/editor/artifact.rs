@@ -76,7 +76,12 @@ pub fn close(app: &AppHandle, kind: EditorKind) -> Option<PathBuf> {
   let project = take_artifact(app, kind)
     .as_ref()
     .and_then(EditorArtifact::project)
-    .map(|project| super::project_name::settle_name(app, project));
+    .map(|project| {
+      if kind == EditorKind::Recording {
+        super::camera_effects::tidy::on_close(project);
+      }
+      super::project_name::settle_name(app, project)
+    });
   let _ = window::hide(app, kind);
   emit_snapshot(app, kind);
   project

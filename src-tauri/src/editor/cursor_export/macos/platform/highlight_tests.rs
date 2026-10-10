@@ -439,6 +439,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
   output.image_y = 0.0;
   let cancelled = AtomicBool::new(false);
   let result = export(CursorExportRequest {
+    camera_effects: None,
     annotation_track: AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,

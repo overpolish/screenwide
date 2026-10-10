@@ -14,6 +14,12 @@ pub async fn start_recording_preview_player(
 ) -> Result<RecordingPreviewPlayerInfo, String> {
   let mut sources = sources(&app, artifact_id, Some(&settings))?;
   let info = RecordingPreviewPlayerInfo::from(&sources);
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if let Some(surface) = sources.preview_surface.as_ref() {
+    if let Err(error) = surface.set_camera_effects(sources.camera_effects_now()) {
+      eprintln!("Could not draw the camera's effects: {error}");
+    }
+  }
   let mut manager = state
     .0
     .lock()
@@ -35,6 +41,25 @@ pub async fn start_recording_preview_player(
     let surface = Arc::get_mut(surface)
       .ok_or_else(|| "The recording preview surface is already in use".to_owned())?;
     super::super::annotation_bridge::install(surface, app.clone(), annotation_clips);
+    {
+      let pick_app = app.clone();
+      surface.set_object_pick_callback(Box::new(move |press| {
+        let app = pick_app.clone();
+        // Picking reads and writes the project's picks, off the main thread.
+        tauri::async_runtime::spawn_blocking(move || {
+          let picked = crate::editor::camera_effects::picks::commands::add_pick(
+            &app,
+            artifact_id,
+            &press.points,
+            press.keep,
+          );
+          match picked {
+            Ok(id) => super::super::choose_camera_object(&app, artifact_id, id),
+            Err(error) => eprintln!("Could not pick the camera's object: {error}"),
+          }
+        });
+      }));
+    }
     let event_app = app.clone();
     surface.enable_editor(Box::new(move |zoom_percent| {
       let _ = event_app.emit(

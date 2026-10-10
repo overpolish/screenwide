@@ -125,6 +125,42 @@ editor-panels-corner-bottom-left = Bottom left
 editor-panels-corner-bottom-right = Bottom right
 editor-panels-size-small = Small
 editor-panels-size-large = Large
+# A camera switch that cuts the person out of the room behind them, by a downloaded model.
+editor-panels-remove-background = Remove background
+editor-panels-remove-background-working = Removing background
+editor-panels-remove-background-description = Removes the background behind you.
+# What is behind the person once the room is removed: nothing, the room blurred, or a picture.
+editor-panels-camera-background = Background
+editor-panels-camera-background-none = None
+editor-panels-camera-background-blur = Blur
+editor-panels-camera-background-picture = Picture
+# The picture shown behind the person on camera.
+editor-panels-camera-picture = Picture
+editor-panels-replace-camera-picture = Replace the background picture
+# Objects on camera, picked to keep with the person or to remove with the room.
+editor-panels-camera-objects = Objects
+editor-panels-camera-objects-description = Keep or remove objects on camera.
+editor-panels-camera-objects-pick = Pick
+editor-panels-camera-objects-done = Done
+# Laying the objects followed into the cutout of the person.
+editor-panels-camera-objects-working = Applying objects
+# Shown while picking objects on the preview, where a drag paints a line over an object. $platform is windows or macos: the remove modifier is Alt or Option.
+editor-panels-camera-objects-hint =
+    { $platform ->
+        [windows] Click or paint to keep. Hold Alt to remove.
+       *[other] Click or paint to keep. Hold Option to remove.
+    }
+# A dot standing for one object picked; pressing it goes to where it was picked.
+editor-panels-camera-object-kept = Kept object
+editor-panels-camera-object-removed = Removed object
+# The ring round a dot while its object is followed through the recording.
+editor-panels-camera-object-following = Following through the recording
+# The bin beside the dots, for the object chosen among them.
+editor-panels-camera-object-remove = Remove the chosen object
+editor-panels-camera-object-confirm-remove = Confirm removing the object
+# A camera switch that corrects its colour: towards the picture behind the person, or balanced on its own.
+editor-panels-colour-correction = Colour correction
+editor-panels-colour-correction-working = Measuring colour
 
 ## Audio
 

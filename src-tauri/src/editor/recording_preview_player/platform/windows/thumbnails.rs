@@ -7,7 +7,7 @@ use tauri::ipc::{Channel, InvokeResponseBody};
 
 use super::decoder::{encoded_jpeg, NativeVideoReader};
 use crate::editor::recording_preview_player::{
-  timeline_thumbnails::{payload, target_width, THUMBNAIL_HEIGHT},
+  timeline_thumbnails::{encoded_png, payload, target_width, THUMBNAIL_HEIGHT},
   PlayerSources,
 };
 
@@ -20,6 +20,13 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
       sources.camera_duration_ms.unwrap_or(sources.duration_ms),
     ));
   }
+  // The camera's thumbnails show its effects, see-through where it has no
+  // background, which only a PNG carries.
+  let camera_track = if sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera {
+    0
+  } else {
+    1
+  };
   for (track, path, duration_ms) in tracks {
     let Some(pane) = sources.playback_layout.panes.get(track as usize) else {
       continue;
@@ -29,6 +36,14 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
       Ok(reader) => reader,
       Err(_) => continue,
     };
+    let mut effects = (track == camera_track)
+      .then(|| {
+        crate::editor::camera_effects::cpu::StillEffects::new(
+          sources.camera_effects_now(),
+          THUMBNAIL_HEIGHT * 4,
+        )
+      })
+      .flatten();
     let mut last_thumbnail = None;
     for index in 0..count {
       let position_ms = timeline_position(duration_ms, index, count);
@@ -37,7 +52,17 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
         .and_then(|()| reader.frame_at(position_ms))
         .ok()
         .flatten()
-        .and_then(|frame| encoded_jpeg(&frame, 80).ok());
+        .and_then(|mut frame| match effects.as_mut() {
+          Some(effects) => {
+            effects.apply(&mut frame, position_ms);
+            if effects.is_transparent() {
+              encoded_png(&frame).ok()
+            } else {
+              encoded_jpeg(&frame, 80).ok()
+            }
+          }
+          None => encoded_jpeg(&frame, 80).ok(),
+        });
       // Sidecars can end a fraction before the shared recording timeline.
       // Keep the strip complete with the most recent real camera frame rather
       // than exposing the frontend's grey missing-thumbnail placeholder.

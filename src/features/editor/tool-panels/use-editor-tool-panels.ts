@@ -41,10 +41,10 @@ import { editorFrameTarget, framePanelHandlers } from "./frame/frame-target";
 import { scenePanelHandlers } from "./scene/scene-panel-handlers";
 import {
   audioPanelHandlers,
-  editorSelectionTarget,
   selectionPanelHandlers,
-} from "./selection/selection-target";
+} from "./selection/selection-panel-handlers";
 import { useAudioSelectionTarget } from "./selection/use-audio-selection-target";
+import { useLayerSelectionTarget } from "./selection/use-layer-selection-target";
 import { useToolPanelBridge } from "./tool-panel-bridge";
 import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
 
@@ -129,7 +129,7 @@ export function useEditorToolPanels({
   // Which layer the selection panel is placing, and the handler that commits
   // a new placement for it. Both workspaces already own one; this only says
   // which of them the current selection means.
-  const selectionTarget = editorSelectionTarget({
+  const selectionTarget = useLayerSelectionTarget({
     artifact,
     bakeCamera,
     cameraOverlay,

@@ -138,6 +138,23 @@ pub extern "C" fn screenwide_osc_ocr_palette(light_mode: u32) -> OcrPalette {
   ocr_palette(light_mode != 0)
 }
 
+/// An object picked in the camera, kept with the person in
+/// `--color-success` and removed with the room in `--color-error`, per
+/// appearance.
+pub fn picked_palette(light_appearance: bool) -> [[f32; 4]; 2] {
+  if light_appearance {
+    [
+      [52.0 / 255.0, 199.0 / 255.0, 89.0 / 255.0, 1.0],
+      [1.0, 56.0 / 255.0, 60.0 / 255.0, 1.0],
+    ]
+  } else {
+    [
+      [48.0 / 255.0, 209.0 / 255.0, 88.0 / 255.0, 1.0],
+      [1.0, 66.0 / 255.0, 69.0 / 255.0, 1.0],
+    ]
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

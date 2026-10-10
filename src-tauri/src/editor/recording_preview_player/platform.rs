@@ -44,7 +44,7 @@ use windows as backend;
 pub(super) use backend::composed_frame_image;
 #[cfg(target_os = "windows")]
 pub(crate) use backend::GpuVideoReader;
-pub(super) use backend::LumaReader;
+pub(crate) use backend::LumaReader;
 pub(super) use backend::{
   each_source_frame, generate_thumbnails, playback_factors, send_frame, source_frame_image,
   spawn_video, StillDecoder, VideoFramePayload, NATIVE_STILLS,

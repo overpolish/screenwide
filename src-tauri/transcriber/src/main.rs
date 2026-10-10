@@ -7,6 +7,7 @@
 
 mod clean;
 mod engine;
+mod matte;
 mod restore;
 mod separate;
 mod session;
@@ -27,8 +28,14 @@ fn main() {
     }
     let reply = match serde_json::from_str::<Request>(&line) {
       Ok(Request { id, job }) => {
+        // Progress and, for following objects, word that half is done, are
+        // both sent while the job runs.
+        let out = std::cell::RefCell::new(&mut stdout);
         let mut progress = |fraction: f32| {
-          send(&mut stdout, &Reply::Progress { id, fraction });
+          send(&mut out.borrow_mut(), &Reply::Progress { id, fraction });
+        };
+        let mut halfway = || {
+          send(&mut out.borrow_mut(), &Reply::Halfway { id });
         };
         let result = match &job {
           Job::Transcribe {
@@ -60,6 +67,76 @@ fn main() {
             output,
           } => separate::separate_vocals(model, audio, output, &mut progress)
             .map(|()| Reply::Separated { id }),
+          Job::MatteCamera {
+            model,
+            ffmpeg,
+            camera,
+            width,
+            height,
+            duration_ms,
+            frames,
+            frames_per_second,
+            matte,
+            timings,
+          } => matte::matte_camera(
+            (model, ffmpeg),
+            camera,
+            (*width, *height),
+            (*duration_ms, *frames),
+            *frames_per_second,
+            (matte, timings),
+            &mut progress,
+          )
+          .map(|()| Reply::Matted { id }),
+          Job::FollowObjects {
+            model,
+            ffmpeg,
+            camera,
+            timings,
+            frame,
+            objects,
+          } => {
+            let clicked = objects
+              .iter()
+              .map(|object| matte::Clicked {
+                points: &object.points,
+                after: &object.after,
+                before: &object.before,
+              })
+              .collect::<Vec<_>>();
+            matte::follow_objects(
+              &matte::Follow {
+                model,
+                ffmpeg,
+                camera,
+                timings,
+                frame: *frame,
+                objects: &clicked,
+              },
+              &mut progress,
+              &mut halfway,
+            )
+            .map(|()| Reply::Tracked { id })
+          }
+          Job::ComposeMatte {
+            ffmpeg,
+            camera,
+            matte,
+            width,
+            height,
+            frames,
+            frames_per_second,
+            picks,
+            output,
+          } => matte::compose_matte(
+            (ffmpeg, camera),
+            matte,
+            ((*width, *height), *frames, *frames_per_second),
+            picks,
+            output,
+            &mut progress,
+          )
+          .map(|()| Reply::Composed { id }),
         };
         result.unwrap_or_else(|message| Reply::Failed { id, message })
       }

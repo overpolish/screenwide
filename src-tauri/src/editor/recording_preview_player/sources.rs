@@ -13,6 +13,8 @@ pub(super) struct PlayerSources {
   pub(super) audio_tracks: Vec<RecordingAudioTrack>,
   pub(super) camera_duration_ms: Option<u64>,
   pub(super) camera_path: Option<PathBuf>,
+  pub(super) camera_effects: super::camera_effects::SharedEffects,
+  pub(super) camera_picking: super::camera_picking::SharedPicking,
   /// What each pane was captured at, primary then camera, from
   /// `EditorArtifact::captures`, for the compositions this player stores.
   pub(super) captures: [crate::screenshots::Capture; 2],
@@ -55,25 +57,6 @@ impl PlayerSources {
   /// Whether a decoded frame has a pane to land in.
   pub(super) fn presents_video(&self) -> bool {
     !self.video_muted.load(Ordering::Acquire)
-  }
-
-  pub(super) fn keyboard_overlay(
-    &self,
-    position_ms: u64,
-    settings: KeyboardEffectSettings,
-    dimensions: (u32, u32),
-  ) -> Option<crate::editor::keyboard_effects::KeyboardOverlay> {
-    let keyboard = self.keyboard.as_deref()?;
-    let ranges = self
-      .animation_ranges
-      .read()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    keyboard.evaluate_fitted_with_ranges(
-      position_ms,
-      settings,
-      dimensions,
-      (!ranges.is_empty()).then_some(ranges.as_slice()),
-    )
   }
 }
 
@@ -227,6 +210,8 @@ pub(super) fn sources_with_surface(
     audio_tracks,
     camera_duration_ms: camera.as_ref().map(|value| value.duration_ms),
     camera_path: camera.as_ref().map(|value| value.path.clone()),
+    camera_effects: super::camera_effects::shared(app, artifact_id),
+    camera_picking: Default::default(),
     cursor,
     #[cfg(target_os = "macos")]
     cursor_artworks,

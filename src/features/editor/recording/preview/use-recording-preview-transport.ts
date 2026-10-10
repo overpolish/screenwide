@@ -241,11 +241,7 @@ export function useRecordingPreviewTransport(
   useAnnotationDraft("recording", recordingToolId(canvasTool));
   useRegisterPreviewFit(player);
   previewPlayingRef.current = player.isPlaying;
-  usePausedPreviewPosition({
-    getPositionMs: player.getPositionMs,
-    isPlaying: player.isPlaying,
-    setPreviewPositionMs,
-  });
+  usePausedPreviewPosition(player, previewPositionMs, setPreviewPositionMs);
   recenterRefreshRef.current = useRecordingRecenter({
     artifactId,
     getPositionMs: player.getPositionMs,

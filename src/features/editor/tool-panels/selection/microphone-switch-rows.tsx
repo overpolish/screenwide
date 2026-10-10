@@ -20,8 +20,8 @@ type SwitchProps = {
   working: string;
 };
 
-/** A microphone switch whose first turn can take a while, with a bar under
- * it while it works. */
+/** A switch whose first turn can take a while, as the microphone's do, with
+ * a bar under it while it works. */
 export function WorkingSwitchRow({
   isLocked,
   onChange,
@@ -51,9 +51,10 @@ export function WorkingSwitchRow({
   );
 }
 
-/** A microphone switch that needs a downloaded model: the switch once the
- * model is here, and before, a download in its place, with the bar under it
- * while the model comes down. Nothing until the app has said. */
+/** A switch that needs a downloaded model, as Studio sound and Remove
+ * background do: the switch once the model is here, and before, a download
+ * in its place, with the bar under it while the model comes down. Nothing
+ * until the app has said. */
 export function ModelSwitchRow({
   description,
   model,

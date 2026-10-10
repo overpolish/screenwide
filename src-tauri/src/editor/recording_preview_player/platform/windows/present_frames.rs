@@ -85,14 +85,21 @@ pub(in crate::editor::recording_preview_player::platform) fn present_native_fram
   } else {
     // Two panes of their own still reach the compositor in one pass.
     let _batch = (screen.is_some() && camera.is_some()).then(|| surface.present_batch());
-    let present = |index: u32, frame: &GpuFrame, output, composition| {
-      let (texture, subresource, size) = decoded(frame);
+    let present = |index: u32, frame: &GpuFrame, output, composition, is_camera| {
       surface
-        .present_composed_texture(index, texture, subresource, size, output, composition)
+        .present_composed_texture(index, decoded(frame), output, composition, is_camera)
         .unwrap_or(false)
     };
+    // A recording of the camera alone is the camera in its first pane.
+    let screen_is_camera = sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera;
     let screen_drawn = screen.zip(composed).is_none_or(|(frame, composition)| {
-      present(0, frame, &settings.recording_output.primary, composition)
+      present(
+        0,
+        frame,
+        &settings.recording_output.primary,
+        composition,
+        screen_is_camera,
+      )
     });
     let camera_drawn = camera.is_none_or(|frame| {
       present(
@@ -105,6 +112,7 @@ pub(in crate::editor::recording_preview_player::platform) fn present_native_fram
           foreground_only: false,
           seconds: frame.timestamp_ms as f64 / 1_000.0,
         },
+        true,
       )
     });
     screen_drawn && camera_drawn

@@ -48,6 +48,7 @@ impl RecordingPreviewSurface {
           overlay: layer.overlay,
           camera_settings: layer.camera_settings,
           foreground_only: layer.foreground_only,
+          source_is_camera: layer.source_is_camera,
           // The halo is set on the scene by `redraw_annotation_hover`.
           hover: None,
         })
@@ -148,5 +149,16 @@ impl RecordingPreviewSurface {
   /// Presents the retained recording sources after a uniform-only edit.
   pub(crate) fn redraw_recording_workspace(&self) -> bool {
     unsafe { screenwide_preview_surface_redraw_workspace(self.handle) != 0 }
+  }
+
+  /// Draws the camera with `live` from now on, and draws the scene again
+  /// over the frames it holds.
+  pub(crate) fn set_camera_effects(
+    &self,
+    live: Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
+  ) -> Result<(), String> {
+    self.scene.set_camera_effects(live)?;
+    self.redraw_recording_workspace();
+    Ok(())
   }
 }

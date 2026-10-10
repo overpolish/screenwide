@@ -43,6 +43,7 @@ impl RecordingPreviewSurface {
           callbacks: Mutex::new(EditorCallbacks::default()),
           editor,
           gpu,
+          camera_effects: Mutex::new(Default::default()),
           state: Mutex::new(SurfaceState {
             annotation: Default::default(),
             backdrop: [0.09, 0.09, 0.10, 1.0],
@@ -52,6 +53,7 @@ impl RecordingPreviewSurface {
             frame_resize: None,
             frame_resize_committed: false,
             move_auto_fit: None,
+            object_picking: Default::default(),
             gesture: None,
             last_pointer: (0.0, 0.0),
             panes: Vec::new(),

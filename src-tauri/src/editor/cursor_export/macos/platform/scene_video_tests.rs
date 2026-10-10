@@ -119,6 +119,7 @@ pub(super) fn exported(
     source_scale_percent: 100,
   };
   let result = export(CursorExportRequest {
+    camera_effects: None,
     annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,

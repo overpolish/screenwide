@@ -18,6 +18,8 @@ mod image_drop;
 pub(crate) mod keyboard_raster;
 mod layout;
 mod native_types;
+mod object_picking;
+use crate::editor::preview_platform::object_picking::ObjectPickCallback;
 mod recording_workspace;
 mod screenshot_workspace;
 /// Inter SemiBold set by Core Text, which measures and draws the annotation
@@ -64,6 +66,7 @@ pub(crate) struct RecordingPreviewSurface {
   pub(super) transform_callback: Option<Box<TransformCallback>>,
   pub(super) selection_gesture_callback: Option<Box<SelectionGestureCallback>>,
   pub(super) image_drop_callback: Option<Box<ImageDropCallback>>,
+  pub(super) object_pick_callback: Option<Box<ObjectPickCallback>>,
 }
 
 unsafe impl Send for RecordingPreviewSurface {}
@@ -94,6 +97,7 @@ impl RecordingPreviewSurface {
       transform_callback: None,
       selection_gesture_callback: None,
       image_drop_callback: None,
+      object_pick_callback: None,
     })
   }
   pub(crate) fn present(&self, index: u32, image: &CapturedImage) -> bool {
@@ -151,6 +155,11 @@ impl Drop for RecordingPreviewSurface {
         None,
         std::ptr::null_mut(),
       );
+      object_picking::screenwide_preview_surface_set_object_pick_callback(
+        self.handle,
+        None,
+        std::ptr::null_mut(),
+      );
       screenwide_preview_surface_destroy(self.handle);
     }
     release_callback_on_main(self.transform_callback.take());
@@ -162,6 +171,7 @@ impl Drop for RecordingPreviewSurface {
     release_callback_on_main(self.annotation_hover_callback.take());
     release_callback_on_main(self.annotation_text_callback.take());
     release_callback_on_main(self.image_drop_callback.take());
+    release_callback_on_main(self.object_pick_callback.take());
   }
 }
 

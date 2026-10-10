@@ -10,7 +10,7 @@ mod renderer;
 
 use std::ffi::c_void;
 
-use super::pipeline::{RenderConstants, Vertex};
+use super::pipeline::{RenderConstants, Vertex, PICKED_POINT_PAIRS};
 use crate::gpu::macos::{bgra_render_target, sampled_texture};
 use crate::gpu::Gpu;
 use renderer::RENDERER;
@@ -48,6 +48,8 @@ pub(crate) struct NativeRenderState {
   ruler_colors: [[f32; 4]; 2],
   ruler_sample: [f32; 4],
   ruler_animation: [f32; 4],
+  picked_halo: [f32; 4],
+  picked_points: [[f32; 4]; PICKED_POINT_PAIRS],
 }
 
 /// What a draw does with its magnifier: 0 nothing, 1 keep the lens's box
@@ -70,6 +72,8 @@ impl NativeRenderState {
       ruler_colors: self.ruler_colors,
       ruler_sample: self.ruler_sample,
       ruler_animation: self.ruler_animation,
+      picked_halo: self.picked_halo,
+      picked_points: self.picked_points,
       ..RenderConstants::new(self.light_mode != 0)
     }
   }

@@ -9,6 +9,10 @@ import {
 } from "../export/recording-export-settings";
 
 import { ToolPanel } from "./tool-panel";
+import {
+  ToolPanelCameraEffects,
+  ToolPanelCameraObjects,
+} from "./tool-panel-store";
 import { seedToolPanel } from "./tool-panel-story-seed";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -115,6 +119,126 @@ export const SelectionBakedCamera: Story = {
     });
   },
 };
+
+const BAKED_CAMERA = {
+  dropShadow: false,
+  height: 506,
+  inset: 0,
+  insetMaximum: 0,
+  kind: "camera",
+  label: "Camera",
+  radius: 8,
+  sourceHeight: 720,
+  sourceWidth: 1280,
+  width: 900,
+  x: 2592,
+  y: 73,
+} as const;
+
+const MODEL_BYTES = 14_975_696;
+
+const cameraEffects = (
+  effects: Partial<ToolPanelCameraEffects>,
+): ToolPanelCameraEffects => ({
+  background: "kept",
+  colour: false,
+  hasImage: false,
+  model: { progress: 0, sizeBytes: MODEL_BYTES, status: "downloaded" },
+  objects: null,
+  progress: { background: 0, colour: 0 },
+  working: { background: false, colour: false },
+  ...effects,
+});
+
+const cameraStory = (effects: Partial<ToolPanelCameraEffects>): Story => ({
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      isLocked: false,
+      selection: { ...BAKED_CAMERA, cameraEffects: cameraEffects(effects) },
+    });
+  },
+});
+
+/** A camera before the background removal model is here: a download in the
+ * switch's place. */
+export const SelectionCameraDownload = cameraStory({
+  model: { progress: 0, sizeBytes: MODEL_BYTES, status: "available" },
+});
+
+/** The person being cut out of the room, with its bar. */
+export const SelectionCameraRemovingBackground = cameraStory({
+  background: "transparent",
+  progress: { background: 0.4, colour: 0 },
+  working: { background: true, colour: false },
+});
+
+/** The person in front of a picture, their colour being measured to
+ * correct it towards the picture. */
+export const SelectionCameraPicture = cameraStory({
+  background: "image",
+  colour: true,
+  hasImage: true,
+  progress: { background: 0, colour: 0.7 },
+  working: { background: false, colour: true },
+});
+
+/** The room behind the person blurred. */
+export const SelectionCameraBlurred = cameraStory({
+  background: "blurred",
+});
+
+const OBJECTS_MODEL_BYTES = 190_082_794;
+
+const cameraObjects = (
+  objects: Partial<ToolPanelCameraObjects>,
+): ToolPanelCameraObjects => ({
+  chosen: null,
+  isPicking: false,
+  model: { progress: 0, sizeBytes: OBJECTS_MODEL_BYTES, status: "downloaded" },
+  picks: [],
+  progress: 0,
+  working: false,
+  ...objects,
+});
+
+/** A matted camera before the object model is here: a download for it. */
+export const SelectionCameraObjectsDownload = cameraStory({
+  background: "transparent",
+  objects: cameraObjects({
+    model: { progress: 0, sizeBytes: OBJECTS_MODEL_BYTES, status: "available" },
+  }),
+});
+
+/** More objects than the row holds, scrolled to the one chosen. */
+export const SelectionCameraObjects = cameraStory({
+  background: "transparent",
+  objects: cameraObjects({
+    chosen: 7,
+    isPicking: true,
+    picks: Array.from({ length: 8 }, (_, id) => ({
+      followed: true,
+      following: null,
+      id,
+      keep: id % 3 !== 0,
+      painted: id % 4 === 1,
+    })),
+  }),
+});
+
+/** Picking: a painted kept object chosen and followed, one waiting. */
+export const SelectionCameraPickingObjects = cameraStory({
+  background: "transparent",
+  objects: cameraObjects({
+    chosen: 1,
+    isPicking: true,
+    picks: [
+      { followed: true, following: null, id: 0, keep: false, painted: false },
+      { followed: false, following: 0.35, id: 1, keep: true, painted: true },
+      { followed: false, following: null, id: 2, keep: false, painted: false },
+    ],
+  }),
+});
 
 /** A system audio track picked out with the Select tool: nothing of it is
  * placed, and it carries no speech, so the panel offers only how loud it is

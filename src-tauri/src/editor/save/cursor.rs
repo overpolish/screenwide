@@ -6,6 +6,8 @@ use super::*;
 pub(super) struct CursorSaveRequest<'a> {
   pub app: &'a AppHandle,
   pub artifact_id: u64,
+  pub camera_effects:
+    Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
   pub cancelled: &'a AtomicBool,
   pub cursor: Option<&'a Path>,
   pub cursor_effects: cursor_effects::CursorEffectSettings,
@@ -52,6 +54,12 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
     audio_layout: request.layout,
     audio_source: None,
     camera: None,
+    camera_effects: request
+      .camera_effects
+      .map(|live| cursor_export::ExportCameraEffects {
+        live,
+        on_screen: true,
+      }),
     camera_on_top: true,
     cancelled: request.cancelled,
     cursor: request.cursor,

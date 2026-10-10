@@ -75,26 +75,37 @@ pub(super) fn run(
       )
     });
     let sizes_key = (screen_size.0, screen_size.1, camera_size);
+    // A matte is made for each camera frame, so the frame under it has to be
+    // the very one at this moment.
+    let exact = sources
+      .camera_effects_now()
+      .is_some_and(|live| live.matte.is_some());
     let cache_matches = image_cache.as_ref().is_some_and(|cache| {
       cache.screen_ms == screen_position_ms
         && cache.camera_ms == camera_position_ms
         && cache.sizes == sizes_key
+        && cache.exact == exact
     });
     if !cache_matches {
-      let screen_image =
-        match screen.frame_at(screen_position_ms, screen_size.0, screen_size.1, rough) {
-          Ok(Some(image)) => image,
-          Ok(None) => {
-            continue;
-          }
-          Err(message) => {
-            let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
-            continue;
-          }
-        };
+      let screen_image = match screen.frame_at(
+        screen_position_ms,
+        screen_size.0,
+        screen_size.1,
+        rough,
+        exact,
+      ) {
+        Ok(Some(image)) => image,
+        Ok(None) => {
+          continue;
+        }
+        Err(message) => {
+          let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
+          continue;
+        }
+      };
       let camera_image = match (camera.as_mut(), camera_size, camera_position_ms) {
         (Some(camera), Some((width, height)), Some(camera_ms)) => {
-          match camera.frame_at(camera_ms, width, height, rough) {
+          match camera.frame_at(camera_ms, width, height, rough, exact) {
             Ok(image) => image,
             Err(message) => {
               let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
@@ -107,6 +118,7 @@ pub(super) fn run(
       image_cache = Some(CachedImages {
         camera: camera_image,
         camera_ms: camera_position_ms,
+        exact,
         screen: screen_image,
         screen_ms: screen_position_ms,
         sizes: sizes_key,
@@ -231,6 +243,7 @@ pub(super) fn run(
         }),
         clip_cursor_at_video_edge: cursor_settings.clip_at_video_edge,
         foreground_only: false,
+        source_is_camera: sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera,
       }];
       if let Some(camera) = cache.camera.as_ref().filter(|_| !composition.bake_camera) {
         layers.extend(super::camera_pane::camera_pane_layer(
@@ -254,6 +267,9 @@ pub(super) fn run(
         .is_some_and(|image| surface.present(0, image))
     };
     if presented {
+      let camera_ms = camera_position_ms.unwrap_or(screen_position_ms);
+      sources.let_go_elsewhere(camera_ms);
+      sources.show_picked(Some(camera_ms));
       let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
         position_ms,
         request_id,

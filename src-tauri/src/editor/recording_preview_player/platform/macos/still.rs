@@ -40,6 +40,8 @@ pub(crate) struct NativeStillDecoder {
 struct CachedImages {
   camera: Option<DecodedFrame>,
   camera_ms: Option<u64>,
+  /// Whether the frames were decoded exactly, for a matte drawn over them.
+  exact: bool,
   screen: DecodedFrame,
   screen_ms: u64,
   sizes: (u32, u32, Option<(u32, u32)>),

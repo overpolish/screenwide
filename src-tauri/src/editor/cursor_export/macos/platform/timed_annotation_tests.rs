@@ -151,6 +151,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
           annotation_track: AnnotationTrack::Primary,
           audio_layout: AudioLayout::SeparateTracks,
           audio_source: None,
+          camera_effects: None,
           camera: baked.then_some((
             &camera,
             BakedVideoExportOptions {

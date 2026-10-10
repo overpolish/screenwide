@@ -58,6 +58,10 @@ pub(super) fn render_video(
     .camera
     .map(|(_, options)| media_preview::bake_geometry(options))
     .transpose()?;
+  let mut camera_effects = crate::editor::cursor_export::camera_effects::FrameEffects::new(
+    request.camera_effects.as_ref(),
+    compositor.gpu(),
+  )?;
   let sink = VideoSink::new(
     path,
     &surface.device(),
@@ -180,6 +184,7 @@ pub(super) fn render_video(
       camera_frame,
       camera_composition.as_ref(),
       &annotations.screen,
+      camera_effects.as_mut(),
     )?;
     sink.write(
       &texture,

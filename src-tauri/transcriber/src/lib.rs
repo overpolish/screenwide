@@ -95,6 +95,109 @@ pub enum Job {
     /// in and as long.
     output: PathBuf,
   },
+  /// The person in a camera recording told apart from the room behind them,
+  /// answered with [`Reply::Matted`] once the matte is written. The helper
+  /// decodes and encodes the video with the app's FFmpeg, so no frame passes
+  /// through the protocol.
+  MatteCamera {
+    /// The video matting model file.
+    model: PathBuf,
+    /// The FFmpeg program to decode and encode with.
+    ffmpeg: PathBuf,
+    /// The camera recording.
+    camera: PathBuf,
+    /// The matte's size in pixels: the camera's, or smaller, as the app
+    /// asks; the matte is stretched over the camera when drawn.
+    width: u32,
+    height: u32,
+    /// How long the camera is, in milliseconds, which it is split by to be
+    /// matted in parts side by side.
+    duration_ms: u64,
+    /// About how many frames the camera has, for the progress told.
+    frames: u64,
+    /// The steady rate the matte's frames are written at, one for each frame
+    /// of the camera in turn, whatever the camera's own timing.
+    frames_per_second: u32,
+    /// Where the matte goes: how much of each pixel is the person, as the
+    /// brightness of an H.264 video, which every platform decodes.
+    matte: PathBuf,
+    /// Where the [`MatteTimings`] go, which line the matte's frames up with
+    /// the camera's.
+    timings: PathBuf,
+  },
+  /// Objects clicked in one frame of the camera followed through the whole
+  /// recording: forwards to the end, told with [`Reply::Halfway`] once
+  /// those masks are written, then backwards to the start, answered with
+  /// [`Reply::Tracked`].
+  FollowObjects {
+    /// The object following model's files, in the catalogue's order.
+    model: Vec<PathBuf>,
+    ffmpeg: PathBuf,
+    camera: PathBuf,
+    /// The camera's [`MatteTimings`], which number its frames.
+    timings: PathBuf,
+    /// The frame clicked, by its place in the timings.
+    frame: u64,
+    objects: Vec<ClickedObject>,
+  },
+  /// The matte with objects added to the person or taken away, answered
+  /// with [`Reply::Composed`] once it is written.
+  ComposeMatte {
+    ffmpeg: PathBuf,
+    /// The camera recording, whose frames guide the objects' edges.
+    camera: PathBuf,
+    /// The matte as made, and its size and length in frames.
+    matte: PathBuf,
+    width: u32,
+    height: u32,
+    frames: u64,
+    frames_per_second: u32,
+    picks: Vec<PickedMask>,
+    /// Where the matte with the objects in goes, in the matte's form.
+    output: PathBuf,
+  },
+}
+
+/// When each camera frame the matte was made from shows: frame `n` of the
+/// matte, at `n / frames_per_second` in its own file, is the matte of the
+/// camera frame showing from `frames_ms[n]`.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatteTimings {
+  pub format: u32,
+  pub frames_per_second: u32,
+  pub frames_ms: Vec<f64>,
+}
+
+impl MatteTimings {
+  /// Changes whenever a matte made before would be read wrongly now.
+  pub const FORMAT: u32 = 4;
+}
+
+/// An object clicked, and where its masks go, each a grey H.264 video with a frame for each camera frame it
+/// covers, in turn: from the clicked frame to the end, and from the start
+/// to the clicked frame.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClickedObject {
+  /// Where it was clicked, 0 to 1 across and down the frame: one point, or
+  /// several along a line painted over it.
+  pub points: Vec<[f32; 2]>,
+  pub after: PathBuf,
+  pub before: PathBuf,
+}
+
+/// An object's masks as [`Job::FollowObjects`] wrote them: frame `n` is the
+/// mask of camera frame `first + n`.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickedMask {
+  pub path: PathBuf,
+  /// Whether the object is added to the person, or taken away.
+  pub keep: bool,
+  pub first: u64,
+  /// The frame the object was clicked in, where its mask is surest.
+  pub clicked: u64,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -123,6 +226,23 @@ pub enum Reply {
   },
   /// The singing is written.
   Separated {
+    id: u64,
+  },
+  /// The camera's matte is written.
+  Matted {
+    id: u64,
+  },
+  /// The objects' masks after the clicked frame are written, those before
+  /// it to come. Sent before the reply that ends the job.
+  Halfway {
+    id: u64,
+  },
+  /// An object's masks are written.
+  Tracked {
+    id: u64,
+  },
+  /// The matte with the objects in is written.
+  Composed {
     id: u64,
   },
   /// How far a long job has got, 0 to 1. Sent any number of times before the

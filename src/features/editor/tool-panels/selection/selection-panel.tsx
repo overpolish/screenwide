@@ -12,6 +12,8 @@ import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { AudioSelectionRows } from "./audio-selection-rows";
+import { CameraBackgroundRows, CameraOptionRows } from "./camera-effects-rows";
+import { CameraObjectRows } from "./camera-object-rows";
 import { ShortcutSelectionRows } from "./shortcut-selection-rows";
 
 /**
@@ -28,9 +30,10 @@ import { ShortcutSelectionRows } from "./shortcut-selection-rows";
  * be grown past the picture in it, filled with the colour behind that picture,
  * and the content inside it put back in the middle.
  *
- * An audio track is heard rather than seen: there is nothing to place, so the
+ * An audio track is heard rather than placed: there is nothing to place, so the
  * panel offers how loud it is played back, and for a microphone the speech
- * tools.
+ * tools. A camera can have the room behind the person taken away, blurred
+ * or replaced, and its colour corrected.
  *
  * A keyboard shortcut is drawn rather than placed: it has no source pixels to
  * be sized against, no corners and no pad, so it is shown as the share of the
@@ -70,6 +73,20 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
 
   return (
     <div className="flex flex-col gap-section">
+      {selection.cameraEffects ? (
+        <CameraBackgroundRows
+          change={change}
+          effects={selection.cameraEffects}
+          isLocked={isLocked}
+        />
+      ) : null}
+      {selection.cameraEffects?.objects ? (
+        <CameraObjectRows
+          change={change}
+          isLocked={isLocked}
+          objects={selection.cameraEffects.objects}
+        />
+      ) : null}
       {/* `Dimensions` has no disabled state of its own: a save takes the whole
           group out of reach the way the output controls do. */}
       <div className={isLocked ? "pointer-events-none opacity-50" : ""}>
@@ -157,6 +174,14 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           />
         )}
       </ControlRow>
+
+      {selection.cameraEffects ? (
+        <CameraOptionRows
+          change={change}
+          effects={selection.cameraEffects}
+          isLocked={isLocked}
+        />
+      ) : null}
 
       {selection.kind === "camera" ? null : (
         <div className="flex justify-end">

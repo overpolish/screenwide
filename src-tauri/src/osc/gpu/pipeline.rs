@@ -6,7 +6,9 @@
 //! chrome, and the editor's selection.
 
 use crate::gpu::surface::FORMAT;
-use crate::osc::style::{control_palette, ocr_palette, overlay_palette, ruler_palette};
+use crate::osc::style::{
+  control_palette, ocr_palette, overlay_palette, picked_palette, ruler_palette,
+};
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/osc.wgsl"));
 
@@ -51,7 +53,17 @@ pub(crate) struct RenderConstants {
   pub chrome_backdrop: [f32; 4],
   /// The snapshot UV window after Ruler pan/zoom.
   pub chrome_source: [f32; 4],
+  /// An object picked in the camera: one kept, one removed.
+  pub picked_colors: [[f32; 4]; 2],
+  /// The halo round the line painted over the chosen object picked in the
+  /// camera: `.x` how far it reaches and `.y` how many points it runs
+  /// through, in the target's pixels, two to a row of `picked_points`.
+  pub picked_halo: [f32; 4],
+  pub picked_points: [[f32; 4]; PICKED_POINT_PAIRS],
 }
+
+/// How many rows of two points a painted line's halo carries: up to 64.
+pub(crate) const PICKED_POINT_PAIRS: usize = 32;
 
 const _: () = assert!(std::mem::size_of::<RenderConstants>().is_multiple_of(16));
 
@@ -89,6 +101,9 @@ impl RenderConstants {
       chrome_outline: [0.0; 4],
       chrome_backdrop: [0.0; 4],
       chrome_source: [0.0, 0.0, 1.0, 1.0],
+      picked_colors: picked_palette(light_mode),
+      picked_halo: [0.0; 4],
+      picked_points: [[0.0; 4]; PICKED_POINT_PAIRS],
     }
   }
 }
