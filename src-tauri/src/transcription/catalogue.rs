@@ -149,8 +149,9 @@ pub(crate) const MODELS: &[Model] = &[
   // encoder and mask decoder, which turn a click into an object's mask; and
   // Cutie-small (Cheng et al., MIT), its weights trained without the
   // non-commercial MOSE set, exported to ONNX in three graphs of fixed size,
-  // which follows the object from frame to frame. Cutie's graphs have no
-  // download address yet, so this model only arrives copied in by hand.
+  // which follows the object from frame to frame. The read graph reads all of
+  // its memory rather than Cutie's top 30 matches for each pixel: DirectML's
+  // TopK took two thirds of every read, and the masks barely differ.
   Model {
     files: &[
       ModelFile {
@@ -173,8 +174,8 @@ pub(crate) const MODELS: &[Model] = &[
       },
       ModelFile {
         name: "cutie-small-read.onnx",
-        sha256: "4dddb39b9a4d6d8331dfcc03ba348a3758a60603e12335f57f37cf0c0498983d",
-        size_bytes: 67_372_954,
+        sha256: "f2bab53fa0e7451cab0f2b0c4893d82a671e0d6977340b5074323f76ca7127b3",
+        size_bytes: 67_371_722,
         url: "https://github.com/overpolish/screenwide/releases/download/v0.1.0-alpha/cutie-small-read.onnx",
       },
       ModelFile {

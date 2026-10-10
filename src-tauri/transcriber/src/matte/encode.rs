@@ -4,7 +4,9 @@
 //! An FFmpeg taking the matte's raw frames on its input and writing them as
 //! H.264, the one codec every platform decodes; at this quality the edge
 //! keeps its soft steps. A keyframe each second lets a preview moved to any
-//! point decode at most a second of it to get there.
+//! point decode at most a second of it to get there. There are no B-frames:
+//! with them the file starts through an edit list, which Media Foundation
+//! ignores, so Windows would read every matte frame two frames late.
 
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -28,7 +30,7 @@ impl Encoder {
       .args(["-f", "rawvideo", "-pix_fmt", "gray"])
       .args(["-s", &format!("{width}x{height}"), "-r", &rate, "-i", "-"])
       .args(["-c:v", "libx264", "-preset", "veryfast", "-crf", "12"])
-      .args(["-g", &rate])
+      .args(["-g", &rate, "-bf", "0"])
       .args(["-pix_fmt", "yuv420p", "-movflags", "+faststart", "-y"])
       .arg(output)
       .stdin(Stdio::piped())

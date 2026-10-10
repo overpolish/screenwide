@@ -171,7 +171,7 @@ pub struct MatteTimings {
 
 impl MatteTimings {
   /// Changes whenever a matte made before would be read wrongly now.
-  pub const FORMAT: u32 = 4;
+  pub const FORMAT: u32 = 5;
 }
 
 /// An object clicked, and where its masks go, each a grey H.264 video with a frame for each camera frame it
