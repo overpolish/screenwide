@@ -89,6 +89,7 @@ fn camera_with_matte(directory: &Path, background: CameraBackground) -> ExportCa
       background,
       grade: None,
       picture: Some(Arc::new(blue)),
+      enhance: false,
       matte: Some(MatteFile {
         path: matte,
         timings: Arc::new(MatteTimings {

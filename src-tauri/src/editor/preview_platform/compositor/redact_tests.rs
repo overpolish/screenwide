@@ -140,6 +140,7 @@ fn source(colour: impl Fn(u32, u32) -> [u8; 4]) -> SourceTexture {
     texture,
     shared: None,
     picture: None,
+    enhanced: false,
   }
 }
 

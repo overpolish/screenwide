@@ -81,6 +81,9 @@ export type ToolPanelAudioSelection = {
 export type ToolPanelCameraEffects = {
   background: "blurred" | "image" | "kept" | "transparent";
   colour: boolean;
+  /** The camera sharpened, and enlarged along its edges where drawn larger;
+   * drawn at once, with nothing to make first. */
+  enhance: boolean;
   /** Whether a picture has been chosen for the background. */
   hasImage: boolean;
   /** The model taking the background away needs, and how far it is on this

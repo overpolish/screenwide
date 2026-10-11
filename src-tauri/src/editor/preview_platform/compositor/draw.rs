@@ -262,6 +262,12 @@ impl Compositor {
         let [screen, camera] = settings.scene_opacity.unwrap_or([1.0, 1.0]);
         [screen, camera, 0.0, 0.0]
       },
+      enlarge: [
+        f32::from(u8::from(source.enhanced)),
+        f32::from(u8::from(camera.is_some_and(|(camera, ..)| camera.enhanced))),
+        0.0,
+        0.0,
+      ],
     };
     self.submit(
       target,

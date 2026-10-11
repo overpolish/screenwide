@@ -85,6 +85,9 @@ struct Canvas {
   // How opaque the screen and the camera are drawn, which a scene fades as it
   // hides or shows them.
   scene_opacity: vec4<f32>,
+  // Whether the screen and the camera are enlarged along their edges where
+  // drawn larger than they are (Enhance), one each.
+  enlarge: vec4<f32>,
 }
 
 // How many placements a frame averages while a scene moves its panes; one
@@ -626,6 +629,14 @@ fn vs_main(@builtin(vertex_index) id: u32) -> @builtin(position) vec4<f32> {
   return vec4<f32>(position * vec2<f32>(2.0, -2.0) + vec2<f32>(-1.0, 1.0), 0.0, 1.0);
 }
 
+// Whether a picture `texels` in size, drawn over `drawn` canvas pixels, has
+// more target pixels than texels, which Enhance enlarges along its edges
+// rather than stretching. Drawn smaller, the plain sample is already right.
+fn is_enlarged(drawn: vec2<f32>, texels: vec2<f32>) -> bool {
+  let scale = drawn / max(texels, vec2<f32>(1.0)) / max(canvas.placement.zw, vec2<f32>(1e-6));
+  return min(scale.x, scale.y) > 1.01;
+}
+
 // The camera drawn in `frame`, in canvas pixels, showing `crop` of its
 // picture, in shares of it.
 fn camera_layer_at(result_in: vec4<f32>, pixel: vec2<f32>, frame: vec4<f32>,
@@ -644,7 +655,11 @@ fn camera_layer_at(result_in: vec4<f32>, pixel: vec2<f32>, frame: vec4<f32>,
       all(camera_local <= vec2<f32>(1.0))) {
     let camera_uv = crop.xy + camera_local * crop.zw;
     // Sampled inside the motion's loop as well, so from the one level there is.
-    let camera = textureSampleLevel(camera_image, linear_sampler, camera_uv, 0.0);
+    var camera = textureSampleLevel(camera_image, linear_sampler, camera_uv, 0.0);
+    let texels = crop.zw * vec2<f32>(textureDimensions(camera_image));
+    if (canvas.enlarge.y > 0.5 && is_enlarged(frame.zw, texels)) {
+      camera = vec4<f32>(fsr_easu(camera_image, camera_uv), camera.a);
+    }
     let alpha = camera.a * camera_alpha;
     result = vec4<f32>(mix(result.rgb, camera.rgb, alpha), alpha + result.a * (1.0 - alpha));
   }
@@ -703,7 +718,10 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
   let uv = (image_pixel - canvas.image_rect.xy) / canvas.image_rect.zw;
   if (image_alpha > 0.0) {
     // Sampled inside the motion's loop as well, so from the one level there is.
-    let video = textureSampleLevel(source_image, linear_sampler, uv, 0.0);
+    var video = textureSampleLevel(source_image, linear_sampler, uv, 0.0);
+    if (canvas.enlarge.x > 0.5 && is_enlarged(canvas.image_rect.zw, canvas.output_source.zw)) {
+      video = vec4<f32>(fsr_easu(source_image, uv), video.a);
+    }
     result = mix(result, vec4<f32>(video.rgb, 1.0), video.a * image_alpha);
   }
   return result;

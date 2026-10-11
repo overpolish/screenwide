@@ -27,6 +27,7 @@ mod matte;
 pub(crate) mod matte_frames;
 pub(crate) mod picks;
 pub(crate) mod preview;
+mod sharpen;
 mod stop;
 #[cfg(test)]
 mod tests;
@@ -72,6 +73,10 @@ pub struct CameraEffects {
   /// The camera's colour corrected: towards the picture behind it, or where
   /// there is none, balanced on its own.
   pub colour: bool,
+  /// The camera sharpened, and enlarged along its edges wherever it is drawn
+  /// larger than it was recorded. Projects from before it read as off.
+  #[serde(default)]
+  pub enhance: bool,
 }
 
 impl CameraEffects {

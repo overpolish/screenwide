@@ -24,6 +24,7 @@ impl Compositor {
       view: shared.view.clone(),
       shared: Some(std::sync::Arc::new(shared)),
       picture: None,
+      enhanced: false,
     })
   }
 

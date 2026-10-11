@@ -98,9 +98,15 @@ pub(crate) fn apply(
   // The frame as recorded, which soft edge pixels take the person's colour
   // from, as the GPU's effects do.
   let recorded = (background != CameraBackground::Kept).then(|| frame.rgba.clone());
+  // Sharpened before the rest, as `camera_effects.wgsl` does.
+  let sharp = effects
+    .enhance
+    .then(|| super::sharpen::sharpened(&frame.rgba, (width, height)));
   for (index, pixel) in frame.rgba.as_chunks_mut::<4>().0.iter_mut().enumerate() {
     let (x, y) = (index as u32 % width, index as u32 / width);
-    let mut person = [pixel[0], pixel[1], pixel[2]];
+    let mut person = sharp
+      .as_ref()
+      .map_or([pixel[0], pixel[1], pixel[2]], |sharp| sharp[index]);
     if let (Some(recorded), Some(matte)) = (recorded.as_deref(), matte) {
       let alpha = f32::from(sample(matte, (x, y), (width, height))) / 255.0;
       if alpha > 0.0 && alpha < 0.97 {

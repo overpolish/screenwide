@@ -74,6 +74,7 @@ fn closing_keeps_only_the_files_the_effects_as_they_stand_read() {
       background: CameraBackground::Blurred,
       has_image: true,
       colour: false,
+      enhance: false,
     },
   )
   .unwrap();
@@ -121,6 +122,7 @@ fn effects(background: CameraBackground, picture: Option<::image::RgbaImage>) ->
     grade: None,
     picture: picture.map(Arc::new),
     matte: None,
+    enhance: false,
     generation: 0,
   }
 }

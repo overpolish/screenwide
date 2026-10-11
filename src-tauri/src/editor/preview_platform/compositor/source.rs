@@ -28,6 +28,7 @@ impl Compositor {
       #[cfg(target_os = "windows")]
       shared: None,
       picture: None,
+      enhanced: false,
     })
   }
 }

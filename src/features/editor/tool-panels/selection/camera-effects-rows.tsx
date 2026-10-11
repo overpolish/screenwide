@@ -3,6 +3,7 @@
 
 import { Button } from "../../../../components/base/button/button";
 import { PillGroup } from "../../../../components/base/pill-group/pill-group";
+import { Switch } from "../../../../components/base/switch/switch";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { ToolPanelPatch } from "../tool-panel-patch";
@@ -111,18 +112,35 @@ export function CameraBackgroundRows({ change, effects, isLocked }: RowsProps) {
   );
 }
 
-/** Colour correction, which sits with the panel's other switches. */
+/**
+ * Enhance and colour correction, which sit with the panel's other switches.
+ * Enhance needs nothing made first, so it takes effect at once.
+ */
 export function CameraOptionRows({ change, effects, isLocked }: RowsProps) {
   return (
-    <WorkingSwitchRow
-      isLocked={isLocked}
-      onChange={(enabled) => {
-        change({ cameraEffects: { colour: enabled } });
-      }}
-      progress={effects.progress.colour}
-      state={switchState(effects, "colour")}
-      title={t("editor-panels-colour-correction")}
-      working={t("editor-panels-colour-correction-working")}
-    />
+    <>
+      <ControlRow title={t("editor-panels-enhance")}>
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isLocked}
+            isSelected={effects.enhance}
+            onChange={(enabled) => {
+              change({ cameraEffects: { enhance: enabled } });
+            }}
+          />
+        )}
+      </ControlRow>
+      <WorkingSwitchRow
+        isLocked={isLocked}
+        onChange={(enabled) => {
+          change({ cameraEffects: { colour: enabled } });
+        }}
+        progress={effects.progress.colour}
+        state={switchState(effects, "colour")}
+        title={t("editor-panels-colour-correction")}
+        working={t("editor-panels-colour-correction-working")}
+      />
+    </>
   );
 }

@@ -27,6 +27,7 @@ pub(super) fn drawn_camera(
     view: texture.create_view(&Default::default()),
     texture,
     picture: None,
+    enhanced: false,
   };
   let raw = match effects {
     Some(effects) => effects.drawn(compositor, &raw, ms)?,

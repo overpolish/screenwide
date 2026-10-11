@@ -31,6 +31,7 @@ impl Slot {
         #[cfg(target_os = "windows")]
         shared: None,
         picture: None,
+        enhanced: false,
       },
       matte: None,
     }

@@ -76,11 +76,15 @@ const MODULES: &[(&str, &[&str])] = &[
       "src/editor/preview_platform/shaders/annotation_image.wgsl",
       "src/editor/preview_platform/shaders/annotation_layers.wgsl",
       "src/editor/preview_platform/shaders/annotation_tiles.wgsl",
+      "src/editor/preview_platform/shaders/fsr1.wgsl",
     ],
   ),
   (
     "camera_effects",
-    &["src/editor/preview_platform/shaders/camera_effects.wgsl"],
+    &[
+      "src/editor/preview_platform/shaders/camera_effects.wgsl",
+      "src/editor/preview_platform/shaders/fsr1.wgsl",
+    ],
   ),
   (
     "redact_cells",

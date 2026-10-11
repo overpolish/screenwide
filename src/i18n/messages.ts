@@ -283,6 +283,7 @@ export type Messages = {
   "editor-panels-delete": null;
   "editor-panels-delete-annotations": null;
   "editor-panels-drop-shadow": null;
+  "editor-panels-enhance": null;
   "editor-panels-flip": null;
   "editor-panels-frame": null;
   "editor-panels-image-description": null;

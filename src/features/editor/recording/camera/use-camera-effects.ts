@@ -21,7 +21,7 @@ import type { CameraTool } from "../../../../bindings/CameraTool";
 type Tool = keyof ToolPanelCameraEffects["progress"];
 /** A change to some of the camera's effects, the rest kept as they are. */
 export type CameraEffectsChange = Partial<
-  Pick<CameraEffects, "background" | "colour">
+  Pick<CameraEffects, "background" | "colour" | "enhance">
 >;
 type Change = CameraEffectsChange;
 
@@ -191,6 +191,7 @@ export function useCameraEffects(
     shown: {
       background: effects.background,
       colour: effects.colour,
+      enhance: effects.enhance,
       hasImage: effects.hasImage,
       model: model.shown,
       objects: objects?.shown ?? null,

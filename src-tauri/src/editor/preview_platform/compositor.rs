@@ -12,6 +12,7 @@ mod canvas_modules;
 mod canvas_pipelines;
 mod canvas_precompiled;
 mod canvas_variants;
+mod constants;
 mod cursor_artwork;
 mod draw;
 mod layer;
@@ -34,6 +35,8 @@ mod whole_blur;
 pub(crate) use camera::CameraComposition;
 pub(crate) use canvas_variants::KindMask;
 pub(crate) use layer::{CanvasGeometry, LayerDraw, LayerPlacement};
+
+use self::constants::Constants;
 
 use super::background_image::BackgroundImageCache;
 use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
@@ -123,77 +126,6 @@ struct ArtworkStyle {
   supersample: bool,
 }
 
-/// The twin of `Canvas` in `preview.wgsl`; every member is a 16-byte row.
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct Constants {
-  output_source: [f32; 4],
-  image_rect: [f32; 4],
-  crop_rect: [f32; 4],
-  source_crop_rect: [f32; 4],
-  /// The crop tool's result layer: its output-pixel rectangle, then its
-  /// radius, an enabled flag, the shadow sigma and one spare word.
-  crop_preview_rect: [f32; 4],
-  crop_preview_effects: [f32; 4],
-  solid_color: [f32; 4],
-  base_color: [f32; 4],
-  recenter_inset_color: [f32; 4],
-  mesh_points: [[f32; 4]; 8],
-  mesh_colors: [[f32; 4]; 4],
-  effects: [f32; 4],
-  /// Timeline seconds, the generator speed the ported generators scale them
-  /// by, how many canvas pixels one drawn pixel covers, and how many atlas
-  /// pixels the annotations' type holds per canvas pixel.
-  motion: [f32; 4],
-  cursor_geometry: [f32; 4],
-  cursor_effects: [f32; 4],
-  cursor_blur: [f32; 4],
-  camera_frame: [f32; 4],
-  camera_crop: [f32; 4],
-  camera_effects: [f32; 4],
-  magnifier: [f32; 4],
-  magnifier_options: [f32; 4],
-  magnifier_bounds: [f32; 4],
-  native_cursor_hotspots: [[f32; 4]; 8],
-  options: [u32; 4],
-  cursor_options: [u32; 4],
-  background_options: [u32; 4],
-  /// Annotations below the camera are sorted ahead of those above it, so the
-  /// first word is both the below-camera count and where the above-camera run
-  /// starts; the second is the total. The rest are spare.
-  annotation_options: [u32; 4],
-  /// The handed artwork's bitmap and design size, the hotspot in the
-  /// recorded cursor box and the design's origin, and the artwork flags.
-  cursor_artwork: [f32; 4],
-  cursor_frame: [f32; 4],
-  cursor_model: [u32; 4],
-  /// The annotation tiles: side, grid width and height, and words a tile's
-  /// set takes.
-  annotation_tiles: [u32; 4],
-  /// Where the canvas is drawn in its target: the corner, and the canvas
-  /// pixels one target pixel covers. A canvas drawn at its own size from the
-  /// target's corner carries the identity.
-  placement: [f32; 4],
-  /// The spotlights' blur of the annotations under their shade: the layer's
-  /// texels per canvas pixel, whether this pass draws that layer (1) or reads
-  /// it (2), and the index of the spotlight whose shade it lies under.
-  annotation_blur: [f32; 4],
-  /// How a scene moved the screen's box while the shutter was open: the scale
-  /// and the shift, in canvas pixels, that carry the box as drawn onto where it
-  /// was, then how many steps the frame averages. One step draws it sharp.
-  scene_motion: [f32; 4],
-  /// The same scale and shift for the screen's image, which a zoom carries
-  /// further than its box.
-  scene_image_motion: [f32; 4],
-  /// The camera's frame when the shutter opened, in canvas pixels, and the
-  /// part of its picture that frame showed, in shares of the picture.
-  camera_motion_frame: [f32; 4],
-  camera_motion_crop: [f32; 4],
-  /// How opaque the screen and the camera are drawn, which a scene fades as
-  /// it hides or shows them; the other two are unused.
-  scene_opacity: [f32; 4],
-}
-
 pub(crate) struct Compositor {
   gpu: &'static Gpu,
   background_cache: BackgroundImageCache,
@@ -244,6 +176,10 @@ pub(crate) struct SourceTexture {
   /// A screenshot's own pixels, which its redactions read their fills from.
   /// A video frame has none: its fills are read from its clip's frames.
   pub(crate) picture: Option<std::sync::Arc<crate::screenshots::CapturedImage>>,
+  /// A camera with Enhance on, which the canvas enlarges along its edges
+  /// (FSR 1's EASU) wherever it draws it larger than it is, rather than
+  /// stretching it.
+  pub(crate) enhanced: bool,
 }
 
 impl Compositor {

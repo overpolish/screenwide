@@ -53,6 +53,8 @@ pub(crate) struct LiveCameraEffects {
   pub(crate) grade: Option<Grade>,
   pub(crate) picture: Option<Arc<::image::RgbaImage>>,
   pub(crate) matte: Option<MatteFile>,
+  /// Sharpened, and enlarged along its edges where drawn larger.
+  pub(crate) enhance: bool,
   /// Different for every load, so what is cached from one set of effects,
   /// such as the picture on the GPU, is not drawn with the next.
   pub(crate) generation: u64,
@@ -102,13 +104,14 @@ pub(crate) fn load(camera: &CameraRecording) -> Option<Arc<LiveCameraEffects>> {
         None => grade::balanced(&measured.frame, &subject),
       }
     });
-  if background == CameraBackground::Kept && grade.is_none() {
+  if background == CameraBackground::Kept && grade.is_none() && !effects.enhance {
     return None;
   }
   Some(Arc::new(LiveCameraEffects {
     background,
     grade,
     picture,
+    enhance: effects.enhance,
     matte,
     generation: GENERATION.fetch_add(1, Ordering::Relaxed),
   }))

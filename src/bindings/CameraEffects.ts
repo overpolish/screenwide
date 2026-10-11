@@ -15,4 +15,9 @@ hasImage: boolean,
  * The camera's colour corrected: towards the picture behind it, or where
  * there is none, balanced on its own.
  */
-colour: boolean, };
+colour: boolean, 
+/**
+ * The camera sharpened, and enlarged along its edges wherever it is drawn
+ * larger than it was recorded. Projects from before it read as off.
+ */
+enhance: boolean, };

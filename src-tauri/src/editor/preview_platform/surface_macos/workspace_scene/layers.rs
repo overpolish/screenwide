@@ -84,6 +84,7 @@ impl ScenePicture {
             view: texture.create_view(&Default::default()),
             texture,
             picture: None,
+            enhanced: false,
           },
           _pixels: Some(pixels.retained()),
         })

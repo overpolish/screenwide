@@ -139,7 +139,12 @@ impl Compositor {
         retained_source: retained,
       },
     )?;
-    Ok(canvas)
+    // The camera's pixels drawn as they were, so it is enlarged as they would
+    // have been.
+    Ok(SourceTexture {
+      enhanced: camera.enhanced,
+      ..canvas
+    })
   }
 
   /// `slot`'s camera picture, made again only when the frame's size changes.
@@ -174,6 +179,7 @@ impl Compositor {
       #[cfg(target_os = "windows")]
       shared: None,
       picture: None,
+      enhanced: false,
     };
     canvases.insert(slot, canvas.clone());
     Ok(canvas)

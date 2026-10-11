@@ -142,6 +142,7 @@ const cameraEffects = (
 ): ToolPanelCameraEffects => ({
   background: "kept",
   colour: false,
+  enhance: false,
   hasImage: false,
   model: { progress: 0, sizeBytes: MODEL_BYTES, status: "downloaded" },
   objects: null,

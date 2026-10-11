@@ -158,6 +158,8 @@ editor-panels-camera-object-following = Following through the recording
 # The bin beside the dots, for the object chosen among them.
 editor-panels-camera-object-remove = Remove the chosen object
 editor-panels-camera-object-confirm-remove = Confirm removing the object
+# A camera switch that sharpens the camera, and enlarges it along its edges where it is drawn larger than it was recorded.
+editor-panels-enhance = Enhance
 # A camera switch that corrects its colour: towards the picture behind the person, or balanced on its own.
 editor-panels-colour-correction = Colour correction
 editor-panels-colour-correction-working = Measuring colour

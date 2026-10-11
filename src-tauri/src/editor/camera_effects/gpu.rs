@@ -147,7 +147,12 @@ impl EffectsPass {
     };
     let grade = effects.grade;
     let uniform = |target: (u32, u32), picture: [f32; 4]| Uniform {
-      mode: [background, u32::from(grade.is_some()), 0, 0],
+      mode: [
+        background,
+        u32::from(grade.is_some()),
+        u32::from(effects.enhance),
+        0,
+      ],
       gain: grade.map_or([1.0; 4], |grade| {
         let [r, g, b] = grade.gain.map(|gain| gain as f32);
         [r, g, b, 1.0]
@@ -185,7 +190,12 @@ impl EffectsPass {
     let inputs = (&camera.view, &matte_view, &backdrop);
     self.pass(&mut encoder, &self.effects, inputs, &main, &slot.out.view);
     self.gpu.queue.submit([encoder.finish()]);
-    Ok(slot.out.clone())
+    // Marked so the canvas enlarges it along its edges where it draws it
+    // larger, rather than stretching it.
+    Ok(SourceTexture {
+      enhanced: effects.enhance,
+      ..slot.out.clone()
+    })
   }
 
   /// The picture on the GPU, uploaded once for each set of effects.

@@ -31,5 +31,6 @@ pub(super) fn canvas_source(gpu: &Gpu, size: (u32, u32)) -> SourceTexture {
     view: texture.create_view(&Default::default()),
     texture,
     picture: None,
+    enhanced: false,
   }
 }

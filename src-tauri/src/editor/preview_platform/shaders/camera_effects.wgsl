@@ -5,13 +5,15 @@
 // before the canvas samples it. The matte says how much of each pixel is the
 // person; what shows where they are not is nothing, the room blurred, or a
 // picture. The colour correction is one gain and offset for each channel.
+// Enhance sharpens the recorded camera with FSR 1's RCAS (`fsr1.wgsl`)
+// before the rest, so the room behind and a picture are left as they are.
 //
 // The blurred room arrives blurred whole by the Gaussian a blur redaction
 // draws, so the two look alike.
 
 struct Effects {
   // x: the background, 0 kept, 1 nothing, 2 blurred, 3 a picture.
-  // y: 1 where the colour is corrected.
+  // y: 1 where the colour is corrected. z: 1 where the camera is sharpened.
   mode: vec4<u32>,
   gain: vec4<f32>,
   offset: vec4<f32>,
@@ -71,12 +73,21 @@ fn inner_colour(uv: vec2<f32>) -> vec4<f32> {
   return vec4<f32>(sum / weights, 1.0);
 }
 
+// The recorded camera at `position`, sharpened where Enhance is on. The
+// target is the frame's own size, so each fragment is one of its texels.
+fn recorded(position: vec4<f32>, uv: vec2<f32>) -> vec3<f32> {
+  if (effects.mode.z == 0u) {
+    return textureSampleLevel(source, linear_sampler, uv, 0.0).rgb;
+  }
+  return fsr_rcas(source, vec2<i32>(position.xy));
+}
+
 // The person over their background. Where there is none the picture keeps
 // its alpha straight, as the canvas reads a camera's.
 @fragment
 fn fs_effects(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let uv = uv_of(position);
-  var person = textureSampleLevel(source, linear_sampler, uv, 0.0).rgb;
+  var person = recorded(position, uv);
   let background = effects.mode.x;
   if (background == 0u) {
     return vec4<f32>(corrected(person), 1.0);
