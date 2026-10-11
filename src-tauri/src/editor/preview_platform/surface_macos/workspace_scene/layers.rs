@@ -85,6 +85,7 @@ impl ScenePicture {
             texture,
             picture: None,
             enhanced: false,
+            cut_out: false,
           },
           _pixels: Some(pixels.retained()),
         })

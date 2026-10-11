@@ -17,6 +17,7 @@ mod cursor_artwork;
 mod draw;
 mod layer;
 mod mark_blur;
+pub(crate) mod mips;
 mod pipeline;
 mod preview_bindings;
 mod redact;
@@ -159,6 +160,7 @@ pub(crate) struct Compositor {
   /// The pictures baked cameras are composed into, one for each slot.
   camera_canvases: std::sync::Mutex<std::collections::HashMap<usize, SourceTexture>>,
   mark_blur: mark_blur::MarkBlur,
+  mips: mips::Mips,
   sampler: wgpu::Sampler,
   point_sampler: wgpu::Sampler,
 }
@@ -180,6 +182,9 @@ pub(crate) struct SourceTexture {
   /// (FSR 1's EASU) wherever it draws it larger than it is, rather than
   /// stretching it.
   pub(crate) enhanced: bool,
+  /// A camera whose background is taken away to nothing, whose drop shadow
+  /// the canvas casts from the person's outline rather than its frame.
+  pub(crate) cut_out: bool,
 }
 
 impl Compositor {
@@ -223,6 +228,8 @@ type ArtworkConstants = ([f32; 4], [f32; 4], [u32; 4]);
 
 #[cfg(all(test, target_os = "windows"))]
 mod crop_preview_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod cut_out_shadow_tests;
 #[cfg(all(test, target_os = "windows", target_arch = "x86_64"))]
 mod fpu_tests;
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]

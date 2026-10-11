@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Manager};
 
-use super::grade::{self, Grade};
+use super::grade::Grade;
 use super::{choice, image, make, matte, picks, CameraBackground, CameraRecording};
 use crate::editor::EditorState;
 
@@ -94,16 +94,10 @@ pub(crate) fn load(camera: &CameraRecording) -> Option<Arc<LiveCameraEffects>> {
     background
   };
   let grade = effects
-    .colour
+    .enhance
     .then(|| make::measured(&folder))
     .flatten()
-    .map(|measured| {
-      let subject = measured.person.unwrap_or(measured.frame);
-      match picture.as_deref().and_then(grade::measure_picture) {
-        Some(picture) => grade::towards(&subject, &picture),
-        None => grade::balanced(&measured.frame, &subject),
-      }
-    });
+    .map(|measured| Grade::new(measured.gains));
   if background == CameraBackground::Kept && grade.is_none() && !effects.enhance {
     return None;
   }

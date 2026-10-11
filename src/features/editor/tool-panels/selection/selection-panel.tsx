@@ -12,7 +12,7 @@ import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { AudioSelectionRows } from "./audio-selection-rows";
-import { CameraBackgroundRows, CameraOptionRows } from "./camera-effects-rows";
+import { CameraBackgroundRows, CameraEnhanceRow } from "./camera-effects-rows";
 import { CameraObjectRows } from "./camera-object-rows";
 import { ShortcutSelectionRows } from "./shortcut-selection-rows";
 
@@ -73,6 +73,13 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
 
   return (
     <div className="flex flex-col gap-section">
+      {selection.cameraEffects ? (
+        <CameraEnhanceRow
+          change={change}
+          effects={selection.cameraEffects}
+          isLocked={isLocked}
+        />
+      ) : null}
       {selection.cameraEffects ? (
         <CameraBackgroundRows
           change={change}
@@ -174,14 +181,6 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           />
         )}
       </ControlRow>
-
-      {selection.cameraEffects ? (
-        <CameraOptionRows
-          change={change}
-          effects={selection.cameraEffects}
-          isLocked={isLocked}
-        />
-      ) : null}
 
       {selection.kind === "camera" ? null : (
         <div className="flex justify-end">

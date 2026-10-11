@@ -3,7 +3,6 @@
 
 import { Button } from "../../../../components/base/button/button";
 import { PillGroup } from "../../../../components/base/pill-group/pill-group";
-import { Switch } from "../../../../components/base/switch/switch";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { ToolPanelPatch } from "../tool-panel-patch";
@@ -21,15 +20,16 @@ type Tool = keyof ToolPanelCameraEffects["working"];
 
 const switchState = (effects: ToolPanelCameraEffects, tool: Tool) => {
   const isOn =
-    tool === "background" ? effects.background !== "kept" : effects[tool];
+    tool === "background" ? effects.background !== "kept" : effects.enhance;
   if (effects.working[tool]) return "cleaning" as const;
   return isOn ? ("on" as const) : ("off" as const);
 };
 
 /**
  * What is behind the person on camera: the room, nothing, the room blurred,
- * or a picture. These rows change which rows follow, so they lead the panel.
- * Choosing a picture background before any picture is chosen asks for one.
+ * or a picture. These rows change which rows follow, so they come straight
+ * after Enhance. Choosing a picture background before any picture is chosen
+ * asks for one.
  */
 export function CameraBackgroundRows({ change, effects, isLocked }: RowsProps) {
   const isRemoved = effects.background !== "kept";
@@ -113,34 +113,21 @@ export function CameraBackgroundRows({ change, effects, isLocked }: RowsProps) {
 }
 
 /**
- * Enhance and colour correction, which sit with the panel's other switches.
- * Enhance needs nothing made first, so it takes effect at once.
+ * Enhance, which leads the camera's rows: the camera sharpened at once, and
+ * its colour corrected once the recording is measured, while the switch
+ * shows the measuring.
  */
-export function CameraOptionRows({ change, effects, isLocked }: RowsProps) {
+export function CameraEnhanceRow({ change, effects, isLocked }: RowsProps) {
   return (
-    <>
-      <ControlRow title={t("editor-panels-enhance")}>
-        {(controlProps) => (
-          <Switch
-            {...controlProps}
-            isDisabled={isLocked}
-            isSelected={effects.enhance}
-            onChange={(enabled) => {
-              change({ cameraEffects: { enhance: enabled } });
-            }}
-          />
-        )}
-      </ControlRow>
-      <WorkingSwitchRow
-        isLocked={isLocked}
-        onChange={(enabled) => {
-          change({ cameraEffects: { colour: enabled } });
-        }}
-        progress={effects.progress.colour}
-        state={switchState(effects, "colour")}
-        title={t("editor-panels-colour-correction")}
-        working={t("editor-panels-colour-correction-working")}
-      />
-    </>
+    <WorkingSwitchRow
+      isLocked={isLocked}
+      onChange={(enabled) => {
+        change({ cameraEffects: { enhance: enabled } });
+      }}
+      progress={effects.progress.colour}
+      state={switchState(effects, "colour")}
+      title={t("editor-panels-enhance")}
+      working={t("editor-panels-enhance-working")}
+    />
   );
 }

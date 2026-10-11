@@ -85,9 +85,11 @@ struct Canvas {
   // How opaque the screen and the camera are drawn, which a scene fades as it
   // hides or shows them.
   scene_opacity: vec4<f32>,
-  // Whether the screen and the camera are enlarged along their edges where
-  // drawn larger than they are (Enhance), one each.
-  enlarge: vec4<f32>,
+  // What the screen's and the camera's pictures say of themselves: whether
+  // each is enlarged along its edges where drawn larger than it is
+  // (Enhance), then whether each is a person cut out, whose shadow follows
+  // their outline.
+  source_flags: vec4<f32>,
 }
 
 // How many placements a frame averages while a scene moves its panes; one
@@ -201,6 +203,43 @@ fn visible_shadow(box_pixel: vec2<f32>, image_pixel: vec2<f32>, sigma: f32) -> f
   let distance = max(select(max(crop_distance, image_distance), crop_distance,
                             canvas.recenter_inset_color.a > 0.0), 0.0);
   return drop_shadow(distance, sigma);
+}
+
+// The shadow a person cut out of their background casts at `pixel`: how
+// much of the picture covers the point `sigma * 0.35` above it, blurred by a
+// Gaussian, so the shadow takes the person's outline rather than their
+// frame's. The blur is half again as wide as `sigma`, so that past the
+// outline it falls away about as a frame's shadow does past its edge. It
+// reads the picture's mip level whose texels average about half a
+// deviation, so a few samples are smooth. `rect` is where the picture's
+// `crop` is drawn; a sample counts only where it also falls inside `clip`,
+// read `clip_offset` away, as the crop window clips the picture.
+fn cut_out_shadow(picture: texture_2d<f32>, pixel: vec2<f32>, rect: vec4<f32>, crop: vec4<f32>,
+                  clip: vec4<f32>, clip_offset: vec2<f32>, sigma: f32) -> f32 {
+  let spread = sigma * 1.5;
+  let texels = crop.z * f32(textureDimensions(picture).x) / max(rect.z, 1.0);
+  let level = log2(max(spread * texels * 0.5, 1.0));
+  let centre = pixel - vec2<f32>(0.0, sigma * 0.35);
+  var covered = 0.0;
+  var weights = 0.0;
+  // A spiral of samples spread evenly over a disc of 2.5 deviations.
+  for (var index = 0u; index < 24u; index++) {
+    let radius = sqrt((f32(index) + 0.5) / 24.0) * 2.5 * spread;
+    let angle = f32(index) * 2.3999632;
+    let at = centre + vec2<f32>(cos(angle), sin(angle)) * radius;
+    let weight = exp(-0.5 * radius * radius / (spread * spread));
+    let local = (at - rect.xy) / rect.zw;
+    let clipped = at + clip_offset - clip.xy;
+    if (all(local >= vec2<f32>(0.0)) && all(local <= vec2<f32>(1.0)) &&
+        all(clipped >= vec2<f32>(0.0)) && all(clipped <= clip.zw)) {
+      let uv = crop.xy + local * crop.zw;
+      covered += textureSampleLevel(picture, linear_sampler, uv, level).a * weight;
+    }
+    weights += weight;
+  }
+  // Doubled, so the shadow along the outline is as dark as a frame's shadow
+  // along its edge.
+  return (36.0 / 255.0) * min(2.0 * covered / weights, 1.0);
 }
 
 /// The crop tool's result layer, drawn over the uncropped ghost.
@@ -645,10 +684,19 @@ fn camera_layer_at(result_in: vec4<f32>, pixel: vec2<f32>, frame: vec4<f32>,
   let camera_alpha = rounded_coverage(pixel, frame, canvas.camera_effects.x);
   let sigma = canvas.camera_effects.z;
   if (sigma > 1.0) {
-    let shadow_pixel = pixel - vec2<f32>(0.0, sigma * 0.35);
-    let distance = max(rounded_distance(shadow_pixel, frame, canvas.camera_effects.x), 0.0);
-    let shadow = drop_shadow(distance, sigma);
-    result = vec4<f32>(result.rgb * (1.0 - shadow * (1.0 - camera_alpha)), result.a);
+    if (canvas.source_flags.w > 0.5) {
+      // The person casts it, and covers it where they are; their outline
+      // lies inside the frame, so nothing farther out is reached.
+      if (rounded_distance(pixel, frame, 0.0) < 4.5 * sigma) {
+        let shadow = cut_out_shadow(camera_image, pixel, frame, crop, frame, vec2<f32>(0.0), sigma);
+        result = vec4<f32>(result.rgb * (1.0 - shadow), result.a);
+      }
+    } else {
+      let shadow_pixel = pixel - vec2<f32>(0.0, sigma * 0.35);
+      let distance = max(rounded_distance(shadow_pixel, frame, canvas.camera_effects.x), 0.0);
+      let shadow = drop_shadow(distance, sigma);
+      result = vec4<f32>(result.rgb * (1.0 - shadow * (1.0 - camera_alpha)), result.a);
+    }
   }
   let camera_local = (pixel - frame.xy) / frame.zw;
   if (camera_alpha > 0.0 && all(camera_local >= vec2<f32>(0.0)) &&
@@ -657,7 +705,7 @@ fn camera_layer_at(result_in: vec4<f32>, pixel: vec2<f32>, frame: vec4<f32>,
     // Sampled inside the motion's loop as well, so from the one level there is.
     var camera = textureSampleLevel(camera_image, linear_sampler, camera_uv, 0.0);
     let texels = crop.zw * vec2<f32>(textureDimensions(camera_image));
-    if (canvas.enlarge.y > 0.5 && is_enlarged(frame.zw, texels)) {
+    if (canvas.source_flags.y > 0.5 && is_enlarged(frame.zw, texels)) {
       camera = vec4<f32>(fsr_easu(camera_image, camera_uv), camera.a);
     }
     let alpha = camera.a * camera_alpha;
@@ -705,11 +753,25 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
   let inset = canvas.recenter_inset_color;
   let frame_alpha = select(image_alpha, crop_alpha, inset.a > 0.0);
   if (canvas.options.w != 0u && canvas.effects.w > 1.0) {
-    let shadow = visible_shadow(box_pixel, image_pixel, canvas.effects.w);
-    if (foreground_only) {
-      result.a = shadow * (1.0 - frame_alpha);
+    let sigma = canvas.effects.w;
+    var shadow = 0.0;
+    var under = 1.0 - frame_alpha;
+    if (canvas.source_flags.z > 0.5) {
+      // A person cut out casts it from their outline, and covers it where
+      // they are, so it falls under the whole picture.
+      if (rounded_distance(image_pixel, canvas.image_rect, 0.0) < 4.5 * sigma) {
+        shadow = cut_out_shadow(source_image, image_pixel, canvas.image_rect,
+                                vec4<f32>(0.0, 0.0, 1.0, 1.0), canvas.crop_rect,
+                                box_pixel - image_pixel, sigma);
+      }
+      under = 1.0;
     } else {
-      result = vec4<f32>(result.rgb * (1.0 - shadow * (1.0 - frame_alpha)), result.a);
+      shadow = visible_shadow(box_pixel, image_pixel, sigma);
+    }
+    if (foreground_only) {
+      result.a = shadow * under;
+    } else {
+      result = vec4<f32>(result.rgb * (1.0 - shadow * under), result.a);
     }
   }
   if (inset.a > 0.0) {
@@ -719,7 +781,7 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
   if (image_alpha > 0.0) {
     // Sampled inside the motion's loop as well, so from the one level there is.
     var video = textureSampleLevel(source_image, linear_sampler, uv, 0.0);
-    if (canvas.enlarge.x > 0.5 && is_enlarged(canvas.image_rect.zw, canvas.output_source.zw)) {
+    if (canvas.source_flags.x > 0.5 && is_enlarged(canvas.image_rect.zw, canvas.output_source.zw)) {
       video = vec4<f32>(fsr_easu(source_image, uv), video.a);
     }
     result = mix(result, vec4<f32>(video.rgb, 1.0), video.a * image_alpha);

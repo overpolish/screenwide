@@ -4,8 +4,9 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use super::grade::{self, balanced, towards};
+use super::balance;
 use super::live::{LiveCameraEffects, MatteFile};
+use super::look::{self, to_display};
 use super::{cpu, image, keep, make, matte, tidy, CameraBackground, CameraEffects};
 use crate::editor::annotations::pin::LumaFrame;
 use crate::screenshots::CapturedImage;
@@ -73,7 +74,6 @@ fn closing_keeps_only_the_files_the_effects_as_they_stand_read() {
     &CameraEffects {
       background: CameraBackground::Blurred,
       has_image: true,
-      colour: false,
       enhance: false,
     },
   )
@@ -158,40 +158,81 @@ fn the_background_is_taken_from_where_the_matte_finds_no_person() {
   assert_eq!(frame.rgba, [200, 0, 0, 255, 200, 0, 0, 255]);
 }
 
+/// `frames` frames of a 64 by 36 checkerboard of two greys, `dark` and
+/// `light` in linear light, lit by `cast`, as the camera's bytes.
+fn checkerboard(frames: usize, (dark, light): (f32, f32), cast: [f32; 3]) -> Vec<u8> {
+  let mut bytes = Vec::new();
+  for _ in 0..frames {
+    for y in 0..36 {
+      for x in 0..64 {
+        let grey = if (x / 4 + y / 4) % 2 == 0 {
+          dark
+        } else {
+          light
+        };
+        bytes.extend(cast.map(|cast| (to_display(grey * cast) * 255.0).round() as u8));
+      }
+    }
+  }
+  bytes
+}
+
 #[test]
-fn a_balanced_grade_takes_out_the_rooms_cast_and_lifts_a_dark_subject() {
-  // A dim camera in a blue-lit room.
-  let frame = grade::stats([0.30, 0.32, 0.45], 0.15);
-  let subject = grade::stats([0.28, 0.25, 0.30], 0.12);
-  let grade = balanced(&frame, &subject);
-  assert!(
-    grade.gain[2] < grade.gain[0],
-    "blue is held back against red: {grade:?}"
+fn enhance_takes_a_cast_out_of_a_grey_room() {
+  let gains = balance::correction(
+    &checkerboard(3, (0.2, 0.5), [0.8, 1.0, 1.25]),
+    None,
+    (64, 36),
   );
-  let lifted = |channel: usize| subject.mean[channel] * grade.gain[channel] + grade.offset[channel];
-  let luma = [0.2126, 0.7152, 0.0722]
-    .iter()
-    .enumerate()
-    .map(|(channel, weight)| lifted(channel) * weight)
-    .sum::<f64>();
   assert!(
-    luma > subject.luma_mean && luma < 0.48,
-    "lifted part of the way: {luma}"
+    gains[0] > gains[1] && gains[1] > gains[2],
+    "red is lifted against blue: {gains:?}"
   );
-  // No channel is pushed past the bounds, however far off the camera is.
-  let black = grade::stats([0.0, 0.0, 0.0], 0.0);
-  for gain in balanced(&black, &black).gain {
-    assert!((0.7..=1.9).contains(&gain), "{gain}");
+  // With no skin to judge by, half the way: a cast of 1.56 between red and
+  // blue is brought to about 1.25.
+  let left = 1.5625 * gains[2] / gains[0];
+  assert!((1.1..1.4).contains(&left), "part of the way: {left}");
+}
+
+#[test]
+fn enhances_exposure_lifts_a_dark_camera_by_at_most_a_third_and_never_darkens() {
+  let dark = balance::correction(&checkerboard(2, (0.05, 0.2), [1.0; 3]), None, (64, 36));
+  assert!((dark[1] - 1.33).abs() < 1e-9);
+  let bright = balance::correction(&checkerboard(2, (0.3, 1.0), [1.0; 3]), None, (64, 36));
+  assert!((bright[1] - 1.0).abs() < 1e-9);
+}
+
+#[test]
+fn enhances_look_keeps_greys_neutral_and_skin_its_hue() {
+  let hue = |rgb: [f32; 3]| {
+    let [cb, cr] = look::cbcr(rgb);
+    cr.atan2(cb).to_degrees()
+  };
+  let grey = look::corrected([0.5; 3], [1.0; 3]);
+  assert!(
+    (grey[0] - grey[2]).abs() < 1e-4 && (grey[1] - grey[2]).abs() < 1e-4,
+    "{grey:?}"
+  );
+  // A light and a dark skin tone each keep their hue to within a degree.
+  for skin in [[0.80, 0.60, 0.50], [0.45, 0.30, 0.22]] {
+    let looked = look::corrected(skin, [1.0; 3]);
+    assert!((hue(looked) - hue(skin)).abs() < 1.0, "{skin:?} {looked:?}");
   }
 }
 
 #[test]
-fn a_grade_towards_a_picture_goes_only_part_of_the_way() {
-  let subject = grade::stats([0.5, 0.45, 0.4], 0.2);
-  let sunset = grade::stats([0.8, 0.5, 0.3], 0.2);
-  let grade = towards(&subject, &sunset);
-  let red = subject.mean[0] * grade.gain[0] + grade.offset[0];
-  let blue = subject.mean[2] * grade.gain[2] + grade.offset[2];
-  assert!(red > subject.mean[0] && red < sunset.mean[0], "{red}");
-  assert!(blue < subject.mean[2] && blue > sunset.mean[2], "{blue}");
+fn a_project_kept_with_the_old_colour_switch_on_reads_as_enhanced() {
+  let read = |kept: &str| serde_json::from_str::<CameraEffects>(kept).unwrap().enhance;
+  assert!(read(
+    r#"{"background":"kept","hasImage":false,"colour":true,"enhance":false}"#
+  ));
+  assert!(read(
+    r#"{"background":"kept","hasImage":false,"colour":false,"enhance":true}"#
+  ));
+  assert!(!read(
+    r#"{"background":"kept","hasImage":false,"colour":false}"#
+  ));
+  assert!(read(
+    r#"{"background":"kept","hasImage":false,"enhance":true}"#
+  ));
 }

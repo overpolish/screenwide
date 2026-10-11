@@ -29,6 +29,7 @@ impl Compositor {
       shared: None,
       picture: None,
       enhanced: false,
+      cut_out: false,
     })
   }
 }

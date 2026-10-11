@@ -53,7 +53,7 @@ pub(crate) fn on_close(project: &Path) {
     remove(&matte::timings_path(&folder));
     picks::remove_composed(&folder, None);
   }
-  if !effects.colour {
+  if !effects.enhance {
     remove(&make::measured_path(&folder));
   }
   if effects.background != CameraBackground::Image {

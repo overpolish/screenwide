@@ -28,6 +28,7 @@ pub(super) fn drawn_camera(
     texture,
     picture: None,
     enhanced: false,
+    cut_out: false,
   };
   let raw = match effects {
     Some(effects) => effects.drawn(compositor, &raw, ms)?,

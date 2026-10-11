@@ -73,8 +73,9 @@ pub(super) struct Constants {
   /// How opaque the screen and the camera are drawn, which a scene fades as
   /// it hides or shows them; the other two are unused.
   pub(super) scene_opacity: [f32; 4],
-  /// Whether the screen and the camera are enlarged along their edges
-  /// (FSR 1's EASU) where drawn larger than they are, one each, as the
-  /// pictures they are drawn from say; the other two are unused.
-  pub(super) enlarge: [f32; 4],
+  /// What the pictures the screen and the camera are drawn from say of
+  /// themselves: whether each is enlarged along its edges (FSR 1's EASU)
+  /// where drawn larger than it is, then whether each is a person cut out,
+  /// whose shadow follows their outline.
+  pub(super) source_flags: [f32; 4],
 }

@@ -78,9 +78,15 @@ impl Compositor {
       .min(width - visible_right)
       .min(height - visible_bottom)
       .max(0.0);
-    let shadow_sigma = (visible_width.min(visible_height) * 0.055)
-      .clamp(10.0, 110.0)
-      .min(shadow_margin * 0.45);
+    // A frame's shadow falls outside it, so it narrows to fit the canvas
+    // around the frame; a person cut out casts theirs inside the frame, with
+    // room around them however little canvas is left.
+    let shadow_sigma = (visible_width.min(visible_height) * 0.055).clamp(10.0, 110.0);
+    let shadow_sigma = if source.cut_out {
+      shadow_sigma
+    } else {
+      shadow_sigma.min(shadow_margin * 0.45)
+    };
     // While the crop tool is open the ghost is the whole uncropped source, so
     // the rounding and the shadow move to the cropped layer drawn over it.
     let crop_preview = crop_preview_rect(settings).map(|rect| rect.map(|value| value as f32));
@@ -262,12 +268,17 @@ impl Compositor {
         let [screen, camera] = settings.scene_opacity.unwrap_or([1.0, 1.0]);
         [screen, camera, 0.0, 0.0]
       },
-      enlarge: [
-        f32::from(u8::from(source.enhanced)),
-        f32::from(u8::from(camera.is_some_and(|(camera, ..)| camera.enhanced))),
-        0.0,
-        0.0,
-      ],
+      source_flags: {
+        let flag = |on: bool| f32::from(u8::from(on));
+        let camera =
+          |test: fn(&SourceTexture) -> bool| camera.is_some_and(|(camera, ..)| test(camera));
+        [
+          flag(source.enhanced),
+          flag(camera(|camera| camera.enhanced)),
+          flag(source.cut_out),
+          flag(camera(|camera| camera.cut_out)),
+        ]
+      },
     };
     self.submit(
       target,

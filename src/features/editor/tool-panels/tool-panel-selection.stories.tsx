@@ -141,7 +141,6 @@ const cameraEffects = (
   effects: Partial<ToolPanelCameraEffects>,
 ): ToolPanelCameraEffects => ({
   background: "kept",
-  colour: false,
   enhance: false,
   hasImage: false,
   model: { progress: 0, sizeBytes: MODEL_BYTES, status: "downloaded" },
@@ -174,11 +173,10 @@ export const SelectionCameraRemovingBackground = cameraStory({
   working: { background: true, colour: false },
 });
 
-/** The person in front of a picture, their colour being measured to
- * correct it towards the picture. */
+/** The person in front of a picture, Enhance measuring their colour. */
 export const SelectionCameraPicture = cameraStory({
   background: "image",
-  colour: true,
+  enhance: true,
   hasImage: true,
   progress: { background: 0, colour: 0.7 },
   working: { background: false, colour: true },

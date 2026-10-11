@@ -25,6 +25,7 @@ impl Compositor {
       shared: Some(std::sync::Arc::new(shared)),
       picture: None,
       enhanced: false,
+      cut_out: false,
     })
   }
 

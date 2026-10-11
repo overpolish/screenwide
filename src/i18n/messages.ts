@@ -264,8 +264,6 @@ export type Messages = {
   "editor-panels-clear-auto-zooms": null;
   "editor-panels-clear-drawings": null;
   "editor-panels-color-actions": null;
-  "editor-panels-colour-correction": null;
-  "editor-panels-colour-correction-working": null;
   "editor-panels-corner": null;
   "editor-panels-corner-bottom-left": null;
   "editor-panels-corner-bottom-right": null;
@@ -284,6 +282,7 @@ export type Messages = {
   "editor-panels-delete-annotations": null;
   "editor-panels-drop-shadow": null;
   "editor-panels-enhance": null;
+  "editor-panels-enhance-working": null;
   "editor-panels-flip": null;
   "editor-panels-frame": null;
   "editor-panels-image-description": null;

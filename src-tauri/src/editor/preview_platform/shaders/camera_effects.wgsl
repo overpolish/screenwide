@@ -4,19 +4,21 @@
 // The camera's effects, drawn into a picture the size of the camera frame
 // before the canvas samples it. The matte says how much of each pixel is the
 // person; what shows where they are not is nothing, the room blurred, or a
-// picture. The colour correction is one gain and offset for each channel.
-// Enhance sharpens the recorded camera with FSR 1's RCAS (`fsr1.wgsl`)
-// before the rest, so the room behind and a picture are left as they are.
+// picture. Enhance sharpens the recorded camera with FSR 1's RCAS
+// (`fsr1.wgsl`) before the rest, so the room behind and a picture are left
+// as they are, and corrects the colour of the person and the room blurred
+// behind them (`colour_correction.wgsl`).
 //
 // The blurred room arrives blurred whole by the Gaussian a blur redaction
 // draws, so the two look alike.
 
 struct Effects {
   // x: the background, 0 kept, 1 nothing, 2 blurred, 3 a picture.
-  // y: 1 where the colour is corrected. z: 1 where the camera is sharpened.
+  // y: 1 where the colour is corrected, which waits for its measure. z: 1
+  // where the camera is sharpened.
   mode: vec4<u32>,
+  // The colour correction's gains, in linear light.
   gain: vec4<f32>,
-  offset: vec4<f32>,
   // The picture's part of its texture the frame covers: scale, then offset.
   picture: vec4<f32>,
   // The size of the target drawn into, in pixels.
@@ -43,7 +45,7 @@ fn corrected(rgb: vec3<f32>) -> vec3<f32> {
   if (effects.mode.y == 0u) {
     return rgb;
   }
-  return saturate(rgb * effects.gain.rgb + effects.offset.rgb);
+  return colour_correction(rgb, effects.gain.rgb);
 }
 
 // The colour of the person around `uv`, from the pixels the matte holds

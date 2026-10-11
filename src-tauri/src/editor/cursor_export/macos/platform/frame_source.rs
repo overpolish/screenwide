@@ -32,5 +32,6 @@ pub(super) fn canvas_source(gpu: &Gpu, size: (u32, u32)) -> SourceTexture {
     texture,
     picture: None,
     enhanced: false,
+    cut_out: false,
   }
 }

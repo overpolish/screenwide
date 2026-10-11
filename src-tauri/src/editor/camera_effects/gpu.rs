@@ -154,12 +154,8 @@ impl EffectsPass {
         0,
       ],
       gain: grade.map_or([1.0; 4], |grade| {
-        let [r, g, b] = grade.gain.map(|gain| gain as f32);
+        let [r, g, b] = grade.gains;
         [r, g, b, 1.0]
-      }),
-      offset: grade.map_or([0.0; 4], |grade| {
-        let [r, g, b] = grade.offset.map(|offset| offset as f32);
-        [r, g, b, 0.0]
       }),
       picture,
       target_size: [target.0 as f32, target.1 as f32, 0.0, 0.0],
@@ -188,12 +184,18 @@ impl EffectsPass {
     };
     let main = uniform(camera.size, picture);
     let inputs = (&camera.view, &matte_view, &backdrop);
-    self.pass(&mut encoder, &self.effects, inputs, &main, &slot.out.view);
+    self.pass(&mut encoder, &self.effects, inputs, &main, &slot.drawn);
     self.gpu.queue.submit([encoder.finish()]);
+    let cut_out = background == 1;
+    if cut_out {
+      compositor.fill_mips(&slot.out.texture);
+    }
     // Marked so the canvas enlarges it along its edges where it draws it
-    // larger, rather than stretching it.
+    // larger, rather than stretching it, and casts its shadow from the
+    // person where nothing is behind them.
     Ok(SourceTexture {
       enhanced: effects.enhance,
+      cut_out,
       ..slot.out.clone()
     })
   }

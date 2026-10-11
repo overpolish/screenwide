@@ -12,12 +12,8 @@ export type CameraEffects = { background: CameraBackground,
  */
 hasImage: boolean, 
 /**
- * The camera's colour corrected: towards the picture behind it, or where
- * there is none, balanced on its own.
- */
-colour: boolean, 
-/**
- * The camera sharpened, and enlarged along its edges wherever it is drawn
- * larger than it was recorded. Projects from before it read as off.
+ * The camera at its best: sharpened, enlarged along its edges wherever it
+ * is drawn larger than it was recorded, and its white balance and
+ * exposure corrected with a natural look.
  */
 enhance: boolean, };

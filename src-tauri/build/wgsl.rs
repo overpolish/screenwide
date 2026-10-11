@@ -50,6 +50,10 @@ const MODULES: &[(&str, &[&str])] = &[
     ],
   ),
   (
+    "mips",
+    &["src/editor/preview_platform/shaders/mips.wgsl"],
+  ),
+  (
     "osc",
     &[
       // First: it carries the module's directive.
@@ -83,6 +87,7 @@ const MODULES: &[(&str, &[&str])] = &[
     "camera_effects",
     &[
       "src/editor/preview_platform/shaders/camera_effects.wgsl",
+      "src/editor/preview_platform/shaders/colour_correction.wgsl",
       "src/editor/preview_platform/shaders/fsr1.wgsl",
     ],
   ),

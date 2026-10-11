@@ -5,6 +5,7 @@
 //! slot it draws, the matte uploaded beside the frame, and the picture.
 
 use crate::editor::annotations::pin::LumaFrame;
+use crate::editor::preview_platform::compositor::mips::{first_level, levels};
 use crate::editor::preview_platform::compositor::{SourceTexture, FORMAT};
 use crate::gpu::Gpu;
 
@@ -15,7 +16,11 @@ type Uploaded = (u64, u64);
 /// changes, and the matte last uploaded for it.
 pub(super) struct Slot {
   pub(super) size: (u32, u32),
+  /// The camera with its effects, with mip levels the canvas blurs a cut-out
+  /// person's shadow from.
   pub(super) out: SourceTexture,
+  /// `out`'s first level, which the pass draws into.
+  pub(super) drawn: wgpu::TextureView,
   matte: Option<(wgpu::Texture, (u32, u32), Uploaded)>,
 }
 
@@ -24,6 +29,7 @@ impl Slot {
     let texture = target(gpu, size, "Screenwide camera with effects");
     Self {
       size,
+      drawn: first_level(&texture),
       out: SourceTexture {
         size,
         view: texture.create_view(&Default::default()),
@@ -32,6 +38,7 @@ impl Slot {
         shared: None,
         picture: None,
         enhanced: false,
+        cut_out: false,
       },
       matte: None,
     }
@@ -81,7 +88,7 @@ fn target(gpu: &Gpu, size: (u32, u32), label: &str) -> wgpu::Texture {
       height: size.1,
       depth_or_array_layers: 1,
     },
-    mip_level_count: 1,
+    mip_level_count: levels(size),
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
     format: FORMAT,
@@ -98,7 +105,6 @@ fn target(gpu: &Gpu, size: (u32, u32), label: &str) -> wgpu::Texture {
 pub(super) struct Uniform {
   pub(super) mode: [u32; 4],
   pub(super) gain: [f32; 4],
-  pub(super) offset: [f32; 4],
   pub(super) picture: [f32; 4],
   pub(super) target_size: [f32; 4],
 }

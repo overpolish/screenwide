@@ -74,15 +74,15 @@ export type ToolPanelAudioSelection = {
 
 /**
  * The camera's effects: its background taken away, blurred or replaced by a
- * picture, and its colour corrected. They are drawn live; what each needs
- * made first, the matte or the colour's measure, is made once, and a tool is
- * `working` while it is, which can take a while the first time.
+ * picture, and Enhance. They are drawn live; what each needs made first, the
+ * matte or the measure Enhance corrects the colour by, is made once, and a
+ * tool is `working` while it is, which can take a while the first time.
  */
 export type ToolPanelCameraEffects = {
   background: "blurred" | "image" | "kept" | "transparent";
-  colour: boolean;
-  /** The camera sharpened, and enlarged along its edges where drawn larger;
-   * drawn at once, with nothing to make first. */
+  /** The camera sharpened, enlarged along its edges where drawn larger, and
+   * its white balance and exposure corrected with a natural look. The
+   * colour waits for the recording's measure, its `colour` work. */
   enhance: boolean;
   /** Whether a picture has been chosen for the background. */
   hasImage: boolean;

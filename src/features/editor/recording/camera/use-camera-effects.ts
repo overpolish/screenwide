@@ -21,7 +21,7 @@ import type { CameraTool } from "../../../../bindings/CameraTool";
 type Tool = keyof ToolPanelCameraEffects["progress"];
 /** A change to some of the camera's effects, the rest kept as they are. */
 export type CameraEffectsChange = Partial<
-  Pick<CameraEffects, "background" | "colour" | "enhance">
+  Pick<CameraEffects, "background" | "enhance">
 >;
 type Change = CameraEffectsChange;
 
@@ -46,15 +46,17 @@ type Held = {
 
 const TOOLS: Tool[] = ["background", "colour"];
 
+/** Whether the switch `tool`'s work is for is on: the colour's measure is
+ * Enhance's. */
 const isOn = (effects: CameraEffects, tool: Tool) =>
-  tool === "background" ? effects.background !== "kept" : effects[tool];
+  tool === "background" ? effects.background !== "kept" : effects.enhance;
 
 /** The tools `change` turns on, whose files may need making. */
 const turnedOn = (change: Change): Tool[] =>
   TOOLS.filter((tool) =>
     tool === "background"
       ? change.background !== undefined && change.background !== "kept"
-      : change[tool] === true,
+      : change.enhance === true,
   );
 
 /**
@@ -190,7 +192,6 @@ export function useCameraEffects(
     objects,
     shown: {
       background: effects.background,
-      colour: effects.colour,
       enhance: effects.enhance,
       hasImage: effects.hasImage,
       model: model.shown,

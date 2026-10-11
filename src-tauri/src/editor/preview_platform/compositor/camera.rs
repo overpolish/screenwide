@@ -119,7 +119,7 @@ impl Compositor {
       .annotations
       .placed(composition.geometry.placement, hover, None);
     self.draw_layer(
-      &canvas.view,
+      &super::mips::first_level(&canvas.texture),
       camera,
       &composition.settings,
       &composition.geometry,
@@ -139,15 +139,20 @@ impl Compositor {
         retained_source: retained,
       },
     )?;
+    if camera.cut_out {
+      self.fill_mips(&canvas.texture);
+    }
     // The camera's pixels drawn as they were, so it is enlarged as they would
-    // have been.
+    // have been, and casts its shadow as they would have.
     Ok(SourceTexture {
       enhanced: camera.enhanced,
+      cut_out: camera.cut_out,
       ..canvas
     })
   }
 
-  /// `slot`'s camera picture, made again only when the frame's size changes.
+  /// `slot`'s camera picture, with mip levels for a cut-out person's shadow,
+  /// made again only when the frame's size changes.
   fn camera_canvas(&self, slot: usize, size: (u32, u32)) -> Result<SourceTexture, String> {
     let mut canvases = self
       .camera_canvases
@@ -163,7 +168,7 @@ impl Compositor {
         height: size.1,
         depth_or_array_layers: 1,
       },
-      mip_level_count: 1,
+      mip_level_count: super::mips::levels(size),
       sample_count: 1,
       dimension: wgpu::TextureDimension::D2,
       format: FORMAT,
@@ -180,6 +185,7 @@ impl Compositor {
       shared: None,
       picture: None,
       enhanced: false,
+      cut_out: false,
     };
     canvases.insert(slot, canvas.clone());
     Ok(canvas)

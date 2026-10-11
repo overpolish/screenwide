@@ -2,26 +2,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The camera's effects: its background taken away, blurred or replaced by a
-//! picture, and its colour corrected, drawn live wherever the camera is
-//! drawn, so turning one on or off shows at once.
+//! picture, and Enhance, drawn live wherever the camera is drawn, so turning
+//! one on or off shows at once.
 //!
 //! What is made ahead is only what cannot be worked out per frame: the matte
 //! (`matte`), how much of each pixel of the camera is the person, found once
-//! by a video matting model in the transcriber program, and the colour
-//! correction's measure of the recording (`grade`). The preview and the
-//! export read the matte beside the camera (`live`), and the effects pass
-//! (`gpu`, and `cpu` for thumbnails and stills) draws the person over what
-//! the background is from the two.
+//! by a video matting model in the transcriber program, and the measure of
+//! the recording Enhance corrects its colour by (`grade`). The preview and
+//! the export read the matte beside the camera (`live`), and the effects
+//! pass (`gpu`, and `cpu` for thumbnails and stills) draws the person over
+//! what the background is from the two.
 //!
 //! The camera is the recording's camera track, or for a recording of the
 //! camera alone, the recording itself.
 
+mod balance;
 pub(crate) mod commands;
 pub(crate) mod cpu;
 pub(crate) mod gpu;
 mod grade;
 mod image;
 pub(crate) mod live;
+mod look;
 mod make;
 mod matte;
 pub(crate) mod matte_frames;
@@ -35,7 +37,7 @@ pub(crate) mod tidy;
 
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
 
 use super::speech::choice_file;
@@ -61,7 +63,7 @@ pub enum CameraBackground {
 }
 
 /// The camera's effects, as the project keeps them.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct CameraEffects {
@@ -70,13 +72,35 @@ pub struct CameraEffects {
   /// kept in the project, so choosing another background keeps it for next
   /// time.
   pub has_image: bool,
-  /// The camera's colour corrected: towards the picture behind it, or where
-  /// there is none, balanced on its own.
-  pub colour: bool,
-  /// The camera sharpened, and enlarged along its edges wherever it is drawn
-  /// larger than it was recorded. Projects from before it read as off.
-  #[serde(default)]
+  /// The camera at its best: sharpened, enlarged along its edges wherever it
+  /// is drawn larger than it was recorded, and its white balance and
+  /// exposure corrected with a natural look.
   pub enhance: bool,
+}
+
+/// The effects as a project may have kept them. Enhance once only
+/// sharpened, beside a separate colour switch; a project with either on
+/// reads as enhanced.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Kept {
+  background: CameraBackground,
+  has_image: bool,
+  #[serde(default)]
+  colour: bool,
+  #[serde(default)]
+  enhance: bool,
+}
+
+impl<'de> Deserialize<'de> for CameraEffects {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    let kept = Kept::deserialize(deserializer)?;
+    Ok(Self {
+      background: kept.background,
+      has_image: kept.has_image,
+      enhance: kept.enhance || kept.colour,
+    })
+  }
 }
 
 impl CameraEffects {
