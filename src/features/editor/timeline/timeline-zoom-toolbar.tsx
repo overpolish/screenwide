@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  Check,
+  LayoutArrowRight,
   Magnet,
   Maximize2,
   Scissors,
@@ -12,10 +14,12 @@ import {
 import { RefObject } from "react";
 
 import { IconButton } from "../../../components/base/button/icon-button";
+import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 import { t } from "../../../i18n/i18n";
 
+import { isRecordingTimelineReordered } from "./editing/recording-timeline-move";
 import { TimelineBladeController } from "./editing/timeline-blade";
 import { TimelineCutMarkers } from "./editing/timeline-cut-markers";
 import { VisibleRecordingMoment } from "./moments/recording-moments";
@@ -28,20 +32,26 @@ import { TIMELINE_MAX_ZOOM, TimelineViewportState } from "./timeline-viewport";
 export function TimelineZoomToolbar({
   isBladeActive,
   isRangeActive,
+  isReordered,
   isSnapActive,
   onBladeActiveChange,
   onFit,
   onRangeActiveChange,
+  onRestoreOrder,
   onSnapActiveChange,
   onZoom,
   viewport,
 }: {
   isBladeActive: boolean;
   isRangeActive: boolean;
+  /** Whether any clip plays out of the order it was recorded in. */
+  isReordered: boolean;
   isSnapActive: boolean;
   onBladeActiveChange: (active: boolean) => void;
   onFit: () => void;
   onRangeActiveChange: (active: boolean) => void;
+  /** Put every clip back in the order it was recorded. */
+  onRestoreOrder: () => void;
   onSnapActiveChange: (active: boolean) => void;
   onZoom: (factor: number) => void;
   viewport: TimelineViewportState;
@@ -75,6 +85,18 @@ export function TimelineZoomToolbar({
       >
         <Magnet />
       </ToolToggle>
+      {/* The arrow keeps pointing right in every language: the timeline runs
+          left to right in all of them. */}
+      <NativeTooltipTrigger tooltip={t("editor-timeline-restore-order")}>
+        <ConfirmActionButton
+          armedIcon={<Check />}
+          armedLabel={t("editor-timeline-restore-order-confirm")}
+          idleIcon={<LayoutArrowRight />}
+          idleLabel={t("editor-timeline-restore-order")}
+          isDisabled={!isReordered}
+          onConfirm={onRestoreOrder}
+        />
+      </NativeTooltipTrigger>
       <div className="ml-auto flex items-center gap-control">
         <NativeTooltipTrigger tooltip={t("editor-timeline-zoom-out")}>
           <IconButton
@@ -142,10 +164,12 @@ export function TimelineHeader({
       <TimelineZoomToolbar
         isBladeActive={blade.isActive}
         isRangeActive={blade.isRangeActive}
+        isReordered={isRecordingTimelineReordered(blade.edit)}
         isSnapActive={blade.isSnapActive}
         onBladeActiveChange={blade.setActive}
         onFit={onFit}
         onRangeActiveChange={blade.setRangeActive}
+        onRestoreOrder={blade.restoreOrder}
         onSnapActiveChange={blade.setSnapActive}
         onZoom={onZoom}
         viewport={viewport}

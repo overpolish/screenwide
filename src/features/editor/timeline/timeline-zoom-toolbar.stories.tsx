@@ -9,9 +9,16 @@ import { TimelineZoomToolbar } from "./timeline-zoom-toolbar";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 /** The toolbar in the gutter it sits in, driving a viewport of its own. */
-function ZoomToolbar({ viewport }: { viewport?: TimelineViewportState }) {
+function ZoomToolbar({
+  isReordered: initiallyReordered = false,
+  viewport,
+}: {
+  isReordered?: boolean;
+  viewport?: TimelineViewportState;
+}) {
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [isRangeActive, setIsRangeActive] = useState(false);
+  const [isReordered, setIsReordered] = useState(initiallyReordered);
   const [isSnapActive, setIsSnapActive] = useState(true);
   const [state, setState] = useState<TimelineViewportState>(
     viewport ?? { panOffset: 0, zoom: 1 },
@@ -22,6 +29,7 @@ function ZoomToolbar({ viewport }: { viewport?: TimelineViewportState }) {
       <TimelineZoomToolbar
         isBladeActive={isBladeActive}
         isRangeActive={isRangeActive}
+        isReordered={isReordered}
         isSnapActive={isSnapActive}
         onBladeActiveChange={(active) => {
           setIsBladeActive(active);
@@ -33,6 +41,9 @@ function ZoomToolbar({ viewport }: { viewport?: TimelineViewportState }) {
         onRangeActiveChange={(active) => {
           setIsRangeActive(active);
           if (active) setIsBladeActive(false);
+        }}
+        onRestoreOrder={() => {
+          setIsReordered(false);
         }}
         onSnapActiveChange={setIsSnapActive}
         onZoom={(factor) => {
@@ -65,4 +76,10 @@ export const Default: Story = {};
 /** Zoomed in, so every control is live. */
 export const Zoomed: Story = {
   args: { viewport: { panOffset: 0.2, zoom: 4 } },
+};
+
+/** Clips moved out of the order they were recorded in: Restore original
+ * order is live, and asks to be pressed again before it acts. */
+export const Reordered: Story = {
+  args: { isReordered: true },
 };

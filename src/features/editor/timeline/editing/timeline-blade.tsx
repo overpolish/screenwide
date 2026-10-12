@@ -51,6 +51,8 @@ export type TimelineBladeController = {
   rangeSelection: TimelineRangeSelection | null;
   /** Put back what `cut` left out. */
   restoreCut: (cut: RecordingTimelineCut) => void;
+  /** Put every segment back in the order it was recorded. */
+  restoreOrder: () => void;
   selectSegment: (segmentId: number | null) => void;
   selectedSegmentId: number | null;
   setActive: (active: boolean) => void;

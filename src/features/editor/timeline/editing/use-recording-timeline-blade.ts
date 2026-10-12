@@ -262,6 +262,7 @@ export function useRecordingTimelineBlade({
       previewPosition: selection.previewPosition,
       rangeSelection: selection.rangeSelection,
       restoreCut: commands.restoreCut,
+      restoreOrder: commands.restoreOrder,
       selectSegment: selection.selectSegment,
       selectedSegmentId: selection.selectedSegmentId,
       setActive: selection.setActive,

@@ -24,6 +24,7 @@ import {
   setRecordingTimelineSegmentPlaybackRate,
   snapRecordingTimelinePosition,
 } from "../editing/recording-timeline-edit";
+import { restoreRecordingTimelineOrder } from "../editing/recording-timeline-move";
 import { setRecordingTimelineRangePlaybackRate } from "../editing/recording-timeline-speed";
 import { createPlayhead } from "../scrub-playhead";
 
@@ -117,25 +118,24 @@ export function RecordingTrackLanesPreview({
       ),
     [timelineEdit],
   );
-  const cutAt = useCallback(
-    (outputPosition: number) => {
-      const next = cutRecordingTimeline(
-        timelineEdit,
-        snapRecordingTimelinePosition(
-          recordingTimelineOutputToSource(timelineEdit, outputPosition),
-          STORY_DURATION_MS,
-          STORY_FRAMES_PER_SECOND,
-        ),
-      );
-      if (next === timelineEdit) return;
+  /** One edit as one undo step; false where it changes nothing. */
+  const commitEdit = (next: RecordingTimelineEdit) => {
+    if (next === timelineEdit) return false;
+    editGesture.beginGesture();
+    setTimelineEdit(next);
+    editGesture.endGesture();
+    return true;
+  };
+  const cutAt = (outputPosition: number) => {
+    const sourcePosition = snapRecordingTimelinePosition(
+      recordingTimelineOutputToSource(timelineEdit, outputPosition),
+      STORY_DURATION_MS,
+      STORY_FRAMES_PER_SECOND,
+    );
+    if (commitEdit(cutRecordingTimeline(timelineEdit, sourcePosition)))
       setSelectedSegmentId(null);
-      editGesture.beginGesture();
-      setTimelineEdit(next);
-      editGesture.endGesture();
-    },
-    [editGesture, timelineEdit],
-  );
-  const deleteSelected = useCallback(() => {
+  };
+  const deleteSelected = () => {
     const next = rangeSelection
       ? deleteRecordingTimelineRange(
           timelineEdit,
@@ -145,13 +145,10 @@ export function RecordingTrackLanesPreview({
       : selectedSegmentId === null
         ? timelineEdit
         : deleteRecordingTimelineSegment(timelineEdit, selectedSegmentId);
-    if (next === timelineEdit) return;
+    if (!commitEdit(next)) return;
     setRangeSelection(null);
     setSelectedSegmentId(null);
-    editGesture.beginGesture();
-    setTimelineEdit(next);
-    editGesture.endGesture();
-  }, [editGesture, rangeSelection, selectedSegmentId, timelineEdit]);
+  };
   useEditorWindowShortcuts({
     onCutTimeline: () => {
       cutAt(playheadRatioRef.current);
@@ -202,6 +199,9 @@ export function RecordingTrackLanesPreview({
             setTimelineEdit((current) =>
               restoreRecordingTimelineCut(current, cut),
             );
+          },
+          restoreOrder: () => {
+            commitEdit(restoreRecordingTimelineOrder(timelineEdit));
           },
           selectSegment: setSelectedSegmentId,
           selectedSegmentId,

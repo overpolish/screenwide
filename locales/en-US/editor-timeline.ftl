@@ -34,6 +34,9 @@ editor-timeline-range = Range
 editor-timeline-range-name = Range tool
 editor-timeline-snap = Snap
 editor-timeline-snap-name = Snap to edges
+# Puts every clip back in the order it was recorded, after clips were moved.
+editor-timeline-restore-order = Restore original order
+editor-timeline-restore-order-confirm = Confirm restoring the order
 editor-timeline-zoom-out = Zoom out
 editor-timeline-zoom-out-label = Zoom timeline out
 editor-timeline-zoom-in = Zoom in

@@ -14,7 +14,10 @@ import {
   RecordingTimelineEdit,
   setRecordingTimelineSegmentPlaybackRate,
 } from "./recording-timeline-edit";
-import { moveRecordingTimelineSegment } from "./recording-timeline-move";
+import {
+  moveRecordingTimelineSegment,
+  restoreRecordingTimelineOrder,
+} from "./recording-timeline-move";
 import { TimelineBladeController } from "./timeline-blade";
 import { useTimelineSegmentMove } from "./use-timeline-segment-move";
 
@@ -87,6 +90,9 @@ function BladePreview({
     rangeSelection: null,
     restoreCut: (cut) => {
       setEdit((current) => restoreRecordingTimelineCut(current, cut));
+    },
+    restoreOrder: () => {
+      setEdit(restoreRecordingTimelineOrder);
     },
     selectSegment: setSelected,
     selectedSegmentId: selected,

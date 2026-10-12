@@ -17,7 +17,10 @@ import {
   recordingTimelineOutputToSource,
   setRecordingTimelineSegmentPlaybackRate,
 } from "./recording-timeline-edit";
-import { moveRecordingTimelineSegment } from "./recording-timeline-move";
+import {
+  moveRecordingTimelineSegment,
+  restoreRecordingTimelineOrder,
+} from "./recording-timeline-move";
 import { setRecordingTimelineRangePlaybackRate } from "./recording-timeline-speed";
 import { TimelineRangeSelection } from "./timeline-blade";
 
@@ -164,6 +167,15 @@ export function useTimelineBladeCommands({
     },
     [clearRangeSelection, edit, editGesture, onChange, selectSegment],
   );
+  const restoreOrder = useCallback(() => {
+    if (!onChange) return;
+    const next = restoreRecordingTimelineOrder(edit);
+    if (next === edit) return;
+    clearRangeSelection();
+    editGesture.beginGesture();
+    onChange(next);
+    editGesture.endGesture();
+  }, [clearRangeSelection, edit, editGesture, onChange]);
 
   return {
     changeRangePlaybackRate,
@@ -173,5 +185,6 @@ export function useTimelineBladeCommands({
     deleteSelected,
     moveSegment,
     restoreCut,
+    restoreOrder,
   };
 }

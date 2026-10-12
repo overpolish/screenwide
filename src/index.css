@@ -161,8 +161,9 @@
      under the timeline ruler's ticks do. */
   --spacing-control-compact: 0.75rem;
   /* The timeline's label column: track names on the left, clips to the right
-     of it. Every lane, the scrubber and its overlays measure from this. */
-  --spacing-timeline-gutter: 12rem;
+     of it. Every lane, the scrubber and its overlays measure from this. Wide
+     enough for the toolbar's seven controls, with 28px between its groups. */
+  --spacing-timeline-gutter: 13.75rem;
   /* Leading inset that clears the three traffic lights, which sit at x 14,
      plus the window inset before the first toolbar item. Tuned live. */
   --spacing-traffic-lights: 5.5rem;
@@ -412,9 +413,9 @@
     /* A WinUI button is 32 tall on a 4px corner; overlays sit on 8px. */
     --spacing-control-height: 2rem;
     --spacing-control-compact: 1rem;
-    /* Room for the timeline toolbar's six 32px controls, with the same slack
-       the 24px macOS controls leave in 12rem. */
-    --spacing-timeline-gutter: 15rem;
+    /* Room for the timeline toolbar's seven 32px controls, with the same slack
+       the 24px macOS controls leave. */
+    --spacing-timeline-gutter: 17.25rem;
     --radius-control: 4px;
     --radius-capture: var(--radius-control);
     --radius-panel: 8px;

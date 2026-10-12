@@ -5,6 +5,7 @@ import {
   RecordingTimelineEdit,
   setRecordingTimelineSegmentPlaybackRate,
 } from "../editing/recording-timeline-edit";
+import { moveRecordingTimelineSegment } from "../editing/recording-timeline-move";
 
 import { RecordingTrackLanesPreview } from "./recording-track-lanes-preview";
 import { STORY_CUT_EDIT } from "./recording-track-lanes-preview-fixtures";
@@ -51,6 +52,18 @@ export const CutsWithSpeed: Story = {
       3,
       1.5,
     ),
+  },
+};
+
+/** The last clip moved to the start, so the clips no longer play in the
+ * order they were recorded. Restore original order, beside Snap, puts them
+ * back once pressed twice; undo moves them out again. */
+export const Reordered: Story = {
+  args: {
+    initialEdit: moveRecordingTimelineSegment(STORY_CUT_EDIT, {
+      boundary: 0,
+      segmentId: STORY_CUT_EDIT.segments[STORY_CUT_EDIT.segments.length - 1].id,
+    }),
   },
 };
 

@@ -15,7 +15,10 @@ import {
   recordingTimelineSourceEndToOutput,
   recordingTimelineSourceToOutput,
 } from "./recording-timeline-edit";
-import { moveRecordingTimelineSegment } from "./recording-timeline-move";
+import {
+  moveRecordingTimelineSegment,
+  restoreRecordingTimelineOrder,
+} from "./recording-timeline-move";
 import { recordingTimelineOutputToSourceStart } from "./recording-timeline-source-order";
 
 const DURATION_MS = 10_000;
@@ -53,6 +56,28 @@ describe("moveRecordingTimelineSegment", () => {
     const before = edit();
     expect(move(before, 1, 1)).toBe(before);
     expect(move(before, 1, 2)).toBe(before);
+  });
+});
+
+describe("restoreRecordingTimelineOrder", () => {
+  it("puts the segments back in recorded order, keeping cuts and speeds", () => {
+    const reordered = edit({
+      segments: [
+        { id: 2, playbackRate: 2, sourceEnd: 1, sourceStart: 0.8 },
+        { id: 0, sourceEnd: 0.4, sourceStart: 0 },
+        { id: 1, sourceEnd: 0.7, sourceStart: 0.5 },
+      ],
+    });
+    expect(restoreRecordingTimelineOrder(reordered).segments).toEqual([
+      { id: 0, sourceEnd: 0.4, sourceStart: 0 },
+      { id: 1, sourceEnd: 0.7, sourceStart: 0.5 },
+      { id: 2, playbackRate: 2, sourceEnd: 1, sourceStart: 0.8 },
+    ]);
+  });
+
+  it("returns the edit itself where it is already in recorded order", () => {
+    const before = edit();
+    expect(restoreRecordingTimelineOrder(before)).toBe(before);
   });
 });
 

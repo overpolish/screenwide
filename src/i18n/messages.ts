@@ -483,6 +483,8 @@ export type Messages = {
     duration: string | number;
     time: string | number;
   };
+  "editor-timeline-restore-order": null;
+  "editor-timeline-restore-order-confirm": null;
   "editor-timeline-scenes": null;
   "editor-timeline-segment": { number: string | number };
   "editor-timeline-segment-speed": null;
