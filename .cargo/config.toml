@@ -1,16 +1,17 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-[build]
-# rustc 1.96/LLVM 22 can leave macOS incremental objects referring to private
-# anonymous rav1e symbols that are absent at the final Tauri link. A clean
-# non-incremental build is reliable; make that the project default so normal
-# development commands cannot recreate the corrupt cache state.
-incremental = false
-
 # ts-rs writes one file per exported type under src/bindings. Large integers
 # (u64, i64, i128, u128) cross IPC as JSON numbers, so bind them to `number`,
 # not ts-rs's default `bigint`.
 [env]
 TS_RS_EXPORT_DIR = { value = "src/bindings", relative = true }
 TS_RS_LARGE_INT = "number"
+
+# MSVC's link.exe is slow to link a crate this size; LLVM's linker, shipped
+# with Rust, links the same objects much faster.
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
+
+[target.aarch64-pc-windows-msvc]
+linker = "rust-lld.exe"

@@ -119,24 +119,30 @@ fn classic_pixelation_gives_a_pin_away() {
   for text in TEXTS {
     for block in [16, 24] {
       let blocks = Blocks::new(text, block);
+      // Every PIN's block counts, worked out once for all the secrets.
+      let candidates: Vec<_> = (0..10_000)
+        .map(|pin| blocks.counts(&text.ink(pin)))
+        .collect();
       for secret in SECRETS {
         let observed = shown(
           text,
           &composed(text, secret, AnnotationRedaction::PixelateClassic, block),
           &blocks,
         );
-        let fits = |pin: u32| {
-          let (pixels, inked) = blocks.counts(&text.ink(pin));
+        let fits = |(pixels, inked): &(Vec<u32>, Vec<u32>)| {
           observed
             .iter()
             .enumerate()
             .all(|(index, green)| (expected(inked[index], pixels[index]) - green).abs() <= 1.5)
         };
         assert!(
-          fits(secret),
+          fits(&candidates[secret as usize]),
           "{text:?} block {block}: {secret:04} does not fit itself"
         );
-        let left = (0..10_000).filter(|pin| fits(*pin)).count();
+        let left = candidates
+          .iter()
+          .filter(|candidate| fits(candidate))
+          .count();
         // Blocks of 16 give the PIN itself; blocks of 24 over small thin type
         // leave a couple of hundred at worst, from ten thousand.
         assert!(

@@ -17,11 +17,19 @@ wry = { path = "vendor/wry-0.55.1" }
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+# Desktop only: the staticlib and cdylib types Tauri's template adds serve its
+# mobile targets and would make every build link two more copies of the app.
 name = "screenwide_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
+# There are no doctests, and running them would make `cargo test` compile the
+# whole library a second time alongside the test build.
+doctest = false
+
+[[bin]]
+name = "screenwide"
+path = "src/main.rs"
+# `main.rs` holds no tests; testing it would also need that second build.
+test = false
 
 [build-dependencies]
 cc = "1"
@@ -43,7 +51,9 @@ tauri-plugin-clipboard-manager = "2.3.2"
 # The clipboard-manager plugin's own clipboard crate, used directly for what
 # the plugin does not expose: the files a copy in Finder or Explorer holds.
 arboard = "3.6.1"
-image = "0.25.10"
+# Every format except AVIF, which the image crate can only encode and nothing
+# here encodes; it is the costliest dependency to compile.
+image = { version = "0.25.10", default-features = false, features = ["rayon", "bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "tga", "tiff", "webp"] }
 getrandom = "0.3"
 rqrr = { version = "0.10.1", default-features = false, features = ["img"] }
 rxing = { version = "0.9.2", default-features = false, features = ["decoders", "encoding_rs", "multi_barcode_readers", "qrcode"] }
@@ -172,13 +182,9 @@ qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
 
 # Screenshot encoding is tight numeric work: colour quantization and deflate.
 # Unoptimized, a Retina capture takes over eleven seconds to save in a dev
-# build instead of under half a second, so `tauri dev` optimizes dependencies
-# and this crate's own pixel loops. Release builds are unaffected.
-#
-# Measured on a 3456x2234 capture: 11.8s -> 1.2s with dependencies optimized,
-# -> 0.45s with this crate at opt-level 1, which costs ~0.3s per rebuild.
+# build instead of about a second, so dependencies are optimized in dev builds.
+# This crate stays unoptimized: optimizing it costs far more on every rebuild
+# than the fraction of a second it saves a dev screenshot. Release builds are
+# unaffected.
 [profile.dev.package."*"]
 opt-level = 3
-
-[profile.dev.package.screenwide]
-opt-level = 1

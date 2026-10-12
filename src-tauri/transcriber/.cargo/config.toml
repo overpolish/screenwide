@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# The transcriber links a prebuilt ONNX Runtime and is built rarely, in
+# release, so it keeps MSVC's own linker instead of the repository's rust-lld.
+[target.x86_64-pc-windows-msvc]
+linker = "link.exe"
+
+[target.aarch64-pc-windows-msvc]
+linker = "link.exe"

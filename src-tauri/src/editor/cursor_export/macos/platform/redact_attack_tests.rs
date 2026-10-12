@@ -164,6 +164,15 @@ impl Text {
     counts
   }
 
+  /// Every candidate PIN's `cells` at `size`, indexed by PIN. The attack
+  /// matches each secret against the same ten thousand, so they are worked
+  /// out once rather than once per secret.
+  fn candidates(self, size: u32) -> Vec<Vec<u32>> {
+    (0..10_000)
+      .map(|pin| self.cells(&self.ink(pin), size))
+      .collect()
+  }
+
   /// A zone's side in source pixels for blocks `block` pixels square: at
   /// least the box's height and two blocks, the palette's own rule.
   fn zone(self, block: u32) -> u32 {
@@ -188,11 +197,10 @@ impl Text {
 fn ordinary_pixelation_gives_a_pin_away() {
   for text in TEXTS {
     for block in [8, 12, 16] {
+      let candidates = text.candidates(block);
       for secret in SECRETS {
-        let shown = text.cells(&text.ink(secret), block);
-        let left = (0..10_000)
-          .filter(|pin| text.cells(&text.ink(*pin), block) == shown)
-          .count();
+        let shown = &candidates[secret as usize];
+        let left = candidates.iter().filter(|cells| *cells == shown).count();
         assert!(
           left <= 10,
           "{text:?} block {block}: {left} candidates left for {secret:04}"
@@ -272,12 +280,18 @@ fn redacted_zones(text: Text, secret: u32, block: u32) -> Vec<bool> {
 /// though an inked zone can come out plain when its blocks are left blank or
 /// blended too lightly to show, so each such zone a candidate needs inked
 /// makes it less likely rather than impossible.
-fn guesses(text: Text, zone: u32, observed: &[bool], secret: u32) -> usize {
+fn guesses(
+  text: Text,
+  zone: u32,
+  candidates: &[Vec<u32>],
+  observed: &[bool],
+  secret: u32,
+) -> usize {
   // Zones the candidate inks that showed plain, or `None` where it cannot
   // have been the secret at all.
-  let misses = |pin: u32| {
+  let misses = |cells: &[u32]| {
     let mut misses = 0;
-    for (cell, count) in text.cells(&text.ink(pin), zone).into_iter().enumerate() {
+    for (cell, &count) in cells.iter().enumerate() {
       match (text.inked(zone, cell, count), observed[cell]) {
         (false, true) => return None,
         (true, false) => misses += 1,
@@ -286,9 +300,11 @@ fn guesses(text: Text, zone: u32, observed: &[bool], secret: u32) -> usize {
     }
     Some(misses)
   };
-  let truth = misses(secret).expect("the secret contradicts its own redaction");
-  (0..10_000)
-    .filter(|pin| misses(*pin).is_some_and(|misses| misses <= truth))
+  let truth =
+    misses(&candidates[secret as usize]).expect("the secret contradicts its own redaction");
+  candidates
+    .iter()
+    .filter(|cells| misses(cells).is_some_and(|misses| misses <= truth))
     .count()
 }
 
@@ -302,9 +318,11 @@ fn guesses(text: Text, zone: u32, observed: &[bool], secret: u32) -> usize {
 fn pixelate_leaves_the_attack_nothing_to_narrow() {
   for text in TEXTS {
     for block in [8, 12, 16] {
+      let zone = text.zone(block);
+      let candidates = text.candidates(zone);
       for secret in SECRETS {
         let observed = redacted_zones(text, secret, block);
-        let needed = guesses(text, text.zone(block), &observed, secret);
+        let needed = guesses(text, zone, &candidates, &observed, secret);
         assert_eq!(
           needed, 10_000,
           "{text:?} block {block}: {secret:04} found within {needed} guesses"

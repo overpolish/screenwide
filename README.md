@@ -100,3 +100,5 @@ setx LIBCLANG_PATH "C:\Program Files\LLVM\bin"
 ```
 
 Then fully restart the terminal app (Windows Terminal, VS Code, and so on) so `VULKAN_SDK`, `LIBCLANG_PATH` and the CMake path are picked up. A new tab or pane inherits the environment the app started with. Then run `pnpm transcriber:prepare`.
+
+Windows Defender scans every file a build writes, which can make Rust builds several times slower. Build from a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/), whose performance mode defers those scans, or exclude the repository's `src-tauri\target`, `%USERPROFILE%\.cargo` and `%USERPROFILE%\.rustup` folders from real-time protection.
