@@ -48,7 +48,7 @@ export const sceneNeedsCamera = ({
 /** How long a scene added at the playhead lasts, where there is room. */
 const RECORDING_SCENE_DEFAULT_MS = 5000;
 /** Shorter than this, a scene would spend its whole life arriving. */
-const RECORDING_SCENE_MINIMUM_MS = 500;
+export const RECORDING_SCENE_MINIMUM_MS = 500;
 
 /** The clip playing `timelineMs` into the edited video, or null between
  * clips. */

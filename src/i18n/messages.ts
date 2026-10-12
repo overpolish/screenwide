@@ -372,7 +372,9 @@ export type Messages = {
   "editor-panels-template-actions": null;
   "editor-panels-transcript": null;
   "editor-panels-transcript-actions": null;
+  "editor-panels-transcript-add-scene": null;
   "editor-panels-transcript-cancel": null;
+  "editor-panels-transcript-change-scene": null;
   "editor-panels-transcript-description": null;
   "editor-panels-transcript-edit": null;
   "editor-panels-transcript-editing": null;

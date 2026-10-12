@@ -11,6 +11,8 @@ import { EditorArtifact, EditorKind } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { MicrophoneTools } from "../microphone/use-microphone-tools";
 import { useModel } from "../microphone/use-model";
+import { recordingSceneControls } from "../scenes/recording-scene-channel";
+import { sceneNeedsCamera } from "../scenes/recording-scenes";
 
 import {
   recordingTranscriptAllowedWords,
@@ -94,6 +96,17 @@ export function useTranscriptTools({
   const played = useMemo(
     () => (edit ? playedRecordingStretches(edit, sourceDurationMs) : []),
     [edit, sourceDurationMs],
+  );
+  const sceneClips = edit?.sceneClips;
+  const scenes = useMemo(
+    () =>
+      (sceneClips ?? []).map((clip) => ({
+        endMs: clip.endMs,
+        id: clip.id,
+        needsCamera: sceneNeedsCamera(clip),
+        startMs: clip.startMs,
+      })),
+    [sceneClips],
   );
 
   // The transcript already made, if any, read once the recording opens. The
@@ -234,6 +247,12 @@ export function useTranscriptTools({
       case "highlight":
         preview?.highlight(request.range);
         break;
+      case "scene":
+        recordingSceneControls(workspace)?.chooseForSpan(
+          request.target,
+          request.choice,
+        );
+        break;
     }
   };
 
@@ -257,6 +276,7 @@ export function useTranscriptTools({
       progress,
       removed,
       revision,
+      scenes,
       silences: microphone?.microphone.silences ?? null,
       status,
     },

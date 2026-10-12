@@ -5,6 +5,11 @@ import { Button } from "../../../../components/base/button/button";
 import { Text } from "../../../../components/base/text/text";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import {
+  SceneChoice,
+  SceneSpanTarget,
+} from "../../recording/scenes/recording-scene-span";
+import { SceneOffer } from "../scene/scene-offer";
 import { ModelDownloadRow } from "../selection/microphone-switch-rows";
 import { ToolProgress } from "../selection/tool-progress";
 import {
@@ -44,6 +49,9 @@ export type TranscriptPanelViewProps = {
   /** Bring back everything the panel cut, and every silence Remove
    * silences cut. */
   onRestoreAll: () => void;
+  /** Add the scene `target` names, or lay out the one it names as `choice`
+   * and move it to the words: a pick in the words' menu. */
+  onScene: (target: SceneSpanTarget, choice: SceneChoice) => void;
   onSeek: (ms: number) => void;
   onTogglePlayback: () => void;
   onTranscribe: () => void;
@@ -52,6 +60,10 @@ export type TranscriptPanelViewProps = {
    * pauses it acts on. */
   plannedSilences: readonly TranscriptRange[];
   playheadMs: number;
+  /** What a scene for the words can be laid out as; null where the
+   * recording has no screen to arrange, or the editor is locked, and the
+   * words' menu offers no scenes. */
+  sceneOffer: SceneOffer | null;
   /** Null until the editor has published one. */
   transcript: ToolPanelTranscript | null;
   /** Null until the transcript has been read. */

@@ -7,6 +7,7 @@ import { ToolPanelScene } from "../../tool-panels/tool-panel-scene";
 import { EditorKind } from "../../types";
 
 import { ScenePane } from "./recording-scene-order";
+import { SceneChoice, SceneSpanTarget } from "./recording-scene-span";
 import { SceneTemplate, SceneTemplateLayout } from "./recording-scene-template";
 import { SceneVariant } from "./recording-scene-variant";
 import { RecordingScenePreset, SceneFraming } from "./recording-scenes";
@@ -28,6 +29,9 @@ export type RecordingSceneControls = {
   /** Make the auto zooms again from the recording's cursor and keys, in
    * place of the ones made before; your own scenes stay as they are. */
   autoZoom: () => void;
+  /** Add the scene `target` names, or lay out and move the one it names, as
+   * `choice`: what the Transcript panel's menu asks for the words chosen. */
+  chooseForSpan: (target: SceneSpanTarget, choice: SceneChoice) => void;
   choosePreset: (preset: RecordingScenePreset) => void;
   /** Lay the scene out as `template`, fitted to this canvas. */
   chooseTemplate: (template: SceneTemplate) => void;
@@ -93,6 +97,9 @@ export function usePublishRecordingScene(
         },
         autoZoom: () => {
           controlsRef.current.autoZoom();
+        },
+        chooseForSpan: (target, choice) => {
+          controlsRef.current.chooseForSpan(target, choice);
         },
         choosePreset: (next) => {
           controlsRef.current.choosePreset(next);

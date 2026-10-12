@@ -16,6 +16,11 @@ import {
   transcriptInPlaybackOrder,
 } from "./transcript-playback-order";
 import { TranscriptReplaceRow } from "./transcript-replace-row";
+import {
+  transcriptSceneChoice,
+  transcriptSceneMenu,
+  transcriptSceneTarget,
+} from "./transcript-scenes";
 import { TranscriptText } from "./transcript-text";
 import {
   normalizeText,
@@ -43,6 +48,8 @@ export function TranscriptEditor({
   onCut,
   onRestore,
   onRestoreAll,
+  onScene,
+  sceneOffer,
   transcript,
   words,
   ...props
@@ -85,7 +92,28 @@ export function TranscriptEditor({
     pendingAdd: pending.add,
     setEditing,
   });
-  const openMenu = useTranscriptMenu({ ...actions, ...cleanup.menuActions });
+  // What a scene picked for the words acts on is worked out again at the
+  // pick, so it lands on the timeline as it stands then.
+  const sceneTarget = (span: WordSelection) =>
+    sceneOffer
+      ? transcriptSceneTarget({
+          offer: sceneOffer,
+          played: transcript.played,
+          scenes: transcript.scenes,
+          span,
+          units,
+        })
+      : null;
+  const openMenu = useTranscriptMenu(
+    { ...actions, ...cleanup.menuActions },
+    (span, optionId) => {
+      const target = sceneTarget(span);
+      const choice = sceneOffer
+        ? transcriptSceneChoice(sceneOffer, optionId)
+        : null;
+      if (target && choice) onScene(target, choice);
+    },
+  );
   const chosen = editing ?? (selection ? spanOf(selection) : null);
   // Only words read as they were heard are one stretch to show.
   useTranscriptHighlight(
@@ -147,9 +175,14 @@ export function TranscriptEditor({
           }}
           onEditStart={actions.edit}
           onMenu={(span, point) => {
+            const target = sceneTarget(span);
             void openMenu({
               marked: cleanup.menuMark(span),
               point,
+              scenes:
+                target && sceneOffer
+                  ? transcriptSceneMenu(sceneOffer, target)
+                  : null,
               span,
               units,
             });

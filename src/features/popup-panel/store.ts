@@ -24,6 +24,7 @@ export type PopupPanelIcon =
   | "image"
   | "remove"
   | "restore"
+  | "scene"
   | "scrolling"
   | "spelling"
   | "timer"

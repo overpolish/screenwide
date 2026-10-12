@@ -11,6 +11,7 @@ import {
   TranscriptPlayhead,
 } from "../../recording/transcript/transcript-api";
 import { EditorKind } from "../../types";
+import { sceneOffer } from "../scene/scene-offer";
 import { TranscriptRequest } from "../tool-panel-transcript";
 import { forwardToolPanelShortcut } from "../use-panel-shortcuts";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -145,6 +146,9 @@ export function TranscriptPanel({ workspace }: { workspace: EditorKind }) {
       onRestoreAll={() => {
         ask({ type: "restore-all" });
       }}
+      onScene={(target, choice) => {
+        ask({ choice, target, type: "scene" });
+      }}
       onSeek={(ms) => {
         ask({ ms, type: "seek" });
       }}
@@ -162,6 +166,11 @@ export function TranscriptPanel({ workspace }: { workspace: EditorKind }) {
       }}
       plannedSilences={plannedSilences}
       playheadMs={playheadMs}
+      sceneOffer={
+        snapshot.scene && !snapshot.isLocked
+          ? sceneOffer(snapshot.scene, snapshot)
+          : null
+      }
       transcript={transcript}
       words={words}
     />

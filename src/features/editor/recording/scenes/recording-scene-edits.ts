@@ -9,22 +9,24 @@ import { framingWithin } from "./recording-scene-framing";
 import { arrangedScenePane, swappedScenePanes } from "./recording-scene-order";
 import { ScenePaneFraming } from "./recording-scene-pane-framing";
 import { SceneCamera } from "./recording-scene-placement";
+import { SceneChoice } from "./recording-scene-span";
 import {
   clipFromTemplate,
   sceneTemplateLayout,
 } from "./recording-scene-template";
 import {
   insertRecordingSceneClip,
+  RECORDING_SCENE_MINIMUM_MS,
   RecordingSceneClip,
   recordingSceneClipAt,
-  RecordingScenePreset,
 } from "./recording-scenes";
 
 /**
  * What the Scene panel's asks do to `clips`: each changes the scene under
  * the playhead, read when it is asked, or adds one there, and hands the
- * clips that result to `commit`. The clips and the playhead are both on the
- * edited video, `lengthMs` long.
+ * clips that result to `commit`. A choice for a stretch of words in the
+ * Transcript panel acts on the scene it names instead. The clips and the
+ * playhead are both on the edited video, `lengthMs` long.
  */
 export function recordingSceneEdits({
   camera,
@@ -54,48 +56,101 @@ export function recordingSceneEdits({
         clips.map((clip) => (clip.id === target.id ? reframe(clip) : clip)),
       );
   };
-  const inserted = (preset: RecordingScenePreset, atMs: number) =>
-    insertRecordingSceneClip({
-      atMs,
-      clips,
-      id: crypto.randomUUID(),
-      lengthMs,
-      preset,
-    })?.clips;
   const canvasAspect = output.width / Math.max(1, output.height);
+  // A preset chosen for a custom scene puts its panes back in the preset's
+  // boxes. The variant stays, so a swapped pair stays swapped. Custom keeps
+  // the panes where the scene puts them now.
+  const arranged = (
+    clip: RecordingSceneClip,
+    choice: SceneChoice,
+  ): RecordingSceneClip => {
+    switch (choice.type) {
+      case "custom":
+        return customRecordingSceneClip({ camera, clip, output });
+      case "preset": {
+        const { boxes: _boxes, ...rest } = clip;
+        return { ...rest, preset: choice.preset };
+      }
+      case "template":
+        return clipFromTemplate(clip, {
+          canvasAspect,
+          template: choice.template,
+        });
+    }
+  };
   // Changes the scene under the playhead, or where there is none adds a full
   // one there and changes that at once.
-  const remakeAt = (
-    remake: (clip: RecordingSceneClip) => RecordingSceneClip,
-  ) => {
+  const chooseAtPlayhead = (choice: SceneChoice) => {
     const atMs = getTimelineMs();
     const next = recordingSceneClipAt(clips, atMs)
       ? clips
-      : inserted("full", atMs);
+      : insertRecordingSceneClip({
+          atMs,
+          clips,
+          id: crypto.randomUUID(),
+          lengthMs,
+          preset: "full",
+        })?.clips;
     const target = next ? recordingSceneClipAt(next, atMs) : null;
     if (!next || !target) return;
-    commit(next.map((clip) => (clip.id === target.id ? remake(clip) : clip)));
+    commit(
+      next.map((clip) =>
+        clip.id === target.id ? arranged(clip, choice) : clip,
+      ),
+    );
   };
   return {
     arrangePane: (pane, move) => {
       reframeCurrent((clip) => arrangedScenePane(clip, pane, move));
     },
-    // A preset chosen for a custom scene puts its panes back in the preset's
-    // boxes. The variant stays, so a swapped pair stays swapped.
-    choosePreset: (preset) => {
-      const atMs = getTimelineMs();
-      if (recordingSceneClipAt(clips, atMs)) {
-        reframeCurrent(({ boxes: _boxes, ...clip }) => ({ ...clip, preset }));
+    // The scene named is laid out anew and moved to the span while it is
+    // still there, or a new one is added over it. Either lands only where the
+    // span still fits between the other scenes, in whole milliseconds, and
+    // is at least the shortest scene, unless a short scene keeps its place.
+    chooseForSpan: (target, choice) => {
+      const { endMs, startMs } = target;
+      const changed =
+        target.type === "change"
+          ? clips.find((clip) => clip.id === target.id)
+          : undefined;
+      if (target.type === "change" && !changed) return;
+      const keepsTiming =
+        changed?.startMs === startMs && changed.endMs === endMs;
+      if (
+        !Number.isInteger(startMs) ||
+        !Number.isInteger(endMs) ||
+        startMs < 0 ||
+        endMs > lengthMs ||
+        (endMs - startMs < RECORDING_SCENE_MINIMUM_MS && !keepsTiming) ||
+        clips.some(
+          (clip) =>
+            clip !== changed && clip.startMs < endMs && startMs < clip.endMs,
+        )
+      )
         return;
-      }
-      const next = inserted(preset, atMs);
-      if (next) commit(next);
+      const next = changed
+        ? clips.map((clip) =>
+            clip === changed
+              ? arranged({ ...clip, endMs, startMs }, choice)
+              : clip,
+          )
+        : [
+            ...clips,
+            arranged(
+              { endMs, id: crypto.randomUUID(), preset: "full", startMs },
+              choice,
+            ),
+          ];
+      commit(next.sort((a, b) => a.startMs - b.startMs));
+    },
+    choosePreset: (preset) => {
+      chooseAtPlayhead({ preset, type: "preset" });
     },
     chooseTemplate: (template) => {
-      remakeAt((clip) => clipFromTemplate(clip, { canvasAspect, template }));
+      chooseAtPlayhead({ template, type: "template" });
     },
     customize: () => {
-      remakeAt((clip) => customRecordingSceneClip({ camera, clip, output }));
+      chooseAtPlayhead({ type: "custom" });
     },
     remove: () => {
       const target = recordingSceneClipAt(clips, getTimelineMs());

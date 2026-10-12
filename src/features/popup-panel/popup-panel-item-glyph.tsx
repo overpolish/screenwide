@@ -3,6 +3,7 @@
 
 import {
   ArrowBigDownDash,
+  Clapperboard,
   ClipboardCopy,
   Copy,
   Folder,
@@ -50,6 +51,7 @@ const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
   image: ImageDown,
   remove: X,
   restore: Undo2,
+  scene: Clapperboard,
   scrolling: ArrowBigDownDash,
   spelling: SpellCheck,
   timer: Timer,

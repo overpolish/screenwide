@@ -9,11 +9,13 @@ import {
 } from "../../../popup-panel/use-popup-menu";
 
 import { ClientPoint } from "./transcript-edit-span";
+import { TranscriptSceneMenu } from "./transcript-scenes";
 import { TranscriptUnit, WordSelection } from "./transcript-units";
 
 import type { TranscriptMark } from "./use-transcript-marks";
 
 const MENU_PREFIX = "transcript-words:";
+const SCENE_PREFIX = "scene:";
 const MENU_WIDTH = 200;
 
 export type TranscriptMenuAction =
@@ -114,13 +116,30 @@ const items = (
   ...markItems(marked),
 ];
 
+/** The scenes the words can be given, under a heading of their own, as the
+ * mark's items are: each layout by its name. */
+const sceneItems = (scenes: TranscriptSceneMenu | null): PopupPanelItem[] => {
+  if (!scenes) return [];
+  const section =
+    scenes.type === "add"
+      ? t("editor-panels-transcript-add-scene")
+      : t("editor-panels-transcript-change-scene");
+  return scenes.options.map((option) => ({
+    icon: "scene",
+    id: `${SCENE_PREFIX}${option.id}`,
+    label: option.label,
+    section,
+  }));
+};
+
 /**
  * A right click on the transcript's words, answered with the app's own menu.
  * The words it acts on travel with it, so a pick reaches the ones it was
- * opened on.
+ * opened on; a scene picked reaches `onScene` with the option's id.
  */
 export function useTranscriptMenu(
   on: Record<TranscriptMenuAction, (span: WordSelection) => void>,
+  onScene: (span: WordSelection, optionId: string) => void,
 ) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
@@ -128,7 +147,10 @@ export function useTranscriptMenu(
     mode: "menu",
     onSelect: (itemId, context) => {
       const [first, last] = context.split("-").map(Number);
-      if (itemId in on) on[itemId as TranscriptMenuAction]({ first, last });
+      if (itemId.startsWith(SCENE_PREFIX))
+        onScene({ first, last }, itemId.slice(SCENE_PREFIX.length));
+      else if (itemId in on)
+        on[itemId as TranscriptMenuAction]({ first, last });
     },
     showsAllItems: true,
     width: MENU_WIDTH,
@@ -137,17 +159,22 @@ export function useTranscriptMenu(
   return ({
     marked,
     point,
+    scenes,
     span,
     units,
   }: {
     marked: TranscriptMenuMark | null;
     point: ClientPoint;
+    scenes: TranscriptSceneMenu | null;
     span: WordSelection;
     units: readonly TranscriptUnit[];
   }) =>
     openMenu({
       anchor: pointerAnchor(point.x, point.y),
       context: `${span.first.toString()}-${span.last.toString()}`,
-      items: items(units.slice(span.first, span.last + 1), marked),
+      items: [
+        ...items(units.slice(span.first, span.last + 1), marked),
+        ...sceneItems(scenes),
+      ],
     });
 }

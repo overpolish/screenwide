@@ -14,6 +14,7 @@ import { ToolPanelSurface } from "../tool-panel";
 import {
   TranscriptCorrection,
   TranscriptRange,
+  TranscriptScene,
 } from "../tool-panel-transcript";
 
 import {
@@ -30,7 +31,9 @@ import {
   before,
   idleSilences,
   ignore,
+  scenesAfterPick,
   still,
+  storySceneOffer,
 } from "./transcript-panel-story-states";
 import { TranscriptPanelView } from "./transcript-panel-view";
 import { correctionsWith } from "./transcript-units";
@@ -58,6 +61,7 @@ type Edit = {
   allowed: string[];
   corrections: TranscriptCorrection[];
   removed: TranscriptRange[];
+  scenes: TranscriptScene[];
   /** The order the recording plays in, which moving words changes. */
   timeline: RecordingTimelineEdit;
 };
@@ -77,12 +81,13 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
       allowed: [],
       corrections: [{ ...sampleWordRange("recordings"), text: "Recordings" }],
       removed: [sampleWordRange("um,")],
+      scenes: [],
       timeline: createRecordingTimelineEdit(1),
     },
   }));
   const [playheadMs, setPlayheadMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const { allowed, corrections, removed, timeline } = history.present;
+  const { allowed, corrections, removed, scenes, timeline } = history.present;
   const words = sampleTranscriptWords;
   const played = useMemo(
     () =>
@@ -170,6 +175,9 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
       onRestoreAll={() => {
         commit({ removed: [] });
       }}
+      onScene={(target) => {
+        commit({ scenes: scenesAfterPick(scenes, target) });
+      }}
       onSeek={setPlayheadMs}
       onTogglePlayback={() => {
         setIsPlaying((playing) => !playing);
@@ -190,6 +198,7 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
       }}
       plannedSilences={sampleTranscriptSilences}
       playheadMs={playheadMs}
+      sceneOffer={isLocked ? null : storySceneOffer}
       transcript={{
         allowedWords: allowed,
         artifactId: 1,
@@ -202,6 +211,7 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
         progress: 1,
         removed,
         revision: 0,
+        scenes,
         silences: idleSilences,
         status: "ready",
       }}

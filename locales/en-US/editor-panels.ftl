@@ -134,6 +134,10 @@ editor-panels-transcript-remove-fillers = Remove all filler words
 editor-panels-transcript-remove-profanity = Remove all profanity
 # Menu item on a word marked as profanity: stop marking it anywhere in this recording.
 editor-panels-transcript-not-profanity = Not profanity
+# Heading over the scene layouts in the words' menu, where the chosen words sit outside every scene: picking one adds a scene over them.
+editor-panels-transcript-add-scene = Add scene
+# Heading over the scene layouts in the words' menu, where the chosen words sit in a scene: picking one changes that scene's layout and fits its timing to the words.
+editor-panels-transcript-change-scene = Change scene
 # The chevron that expands the Replace all row under the search field.
 editor-panels-transcript-replace-toggle = Replace
 # The text field for what every match is replaced with.

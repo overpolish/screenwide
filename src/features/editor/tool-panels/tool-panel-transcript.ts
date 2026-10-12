@@ -2,9 +2,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { ToolPanelModel, ToolPanelSilences } from "./tool-panel-selection";
+import type {
+  SceneChoice,
+  SceneSpanTarget,
+} from "../recording/scenes/recording-scene-span";
 
 /** A stretch of the recording, in milliseconds from the start of the source. */
 export type TranscriptRange = { endMs: number; startMs: number };
+
+/** A stretch the timeline plays, at `rate` times its speed, 1 where unset. */
+export type TranscriptPlayed = TranscriptRange & { rate?: number };
+
+/** A scene on the edited video, timed in milliseconds from its start, and
+ * whether it places the camera, which it can only do while the camera is
+ * drawn into the picture. */
+export type TranscriptScene = {
+  endMs: number;
+  id: string;
+  needsCamera: boolean;
+  startMs: number;
+};
 
 /** Text of your own for the words a stretch covers: always whole words, from
  * the first one's start to the last one's end. The recording is unchanged. */
@@ -47,7 +64,7 @@ export type ToolPanelTranscript = {
   model: ToolPanelModel | null;
   /** The stretches of the recording the timeline plays, in the order it
    * plays them: the words show in that order. */
-  played: TranscriptRange[];
+  played: TranscriptPlayed[];
   /** How far transcribing has got, 0 to 1, while `transcribing`. */
   progress: number;
   /** What the edit leaves out of the source, by any cut, sorted by start and
@@ -56,6 +73,9 @@ export type ToolPanelTranscript = {
   /** Bumps each time the transcript's words change, so the panel refetches
    * them from the backend. */
   revision: number;
+  /** The scenes on the timeline, so the words' menu knows whether the words
+   * chosen add a scene or change the one they sit in. */
+  scenes: TranscriptScene[];
   /** Remove silences, the microphone's own and the same state its Select
    * panel shows; `null` until the microphone's tools are ready. */
   silences: ToolPanelSilences | null;
@@ -70,13 +90,16 @@ export type ToolPanelTranscript = {
  * all. `restore-all` brings back the panel's cuts and Remove silences' in
  * one undo step. `not-profanity` stops `text`, folded, being marked as
  * profanity anywhere in the recording, as a step of the edit history.
- * `move` moves footage as one step of the edit history. */
+ * `move` moves footage as one step of the edit history. `scene` adds or
+ * changes a scene on the edited video, timed there rather than in the
+ * source, as the scenes are. */
 export type TranscriptRequest =
   | { correction: TranscriptCorrection; type: "correct" }
   | { corrections: TranscriptCorrection[]; type: "correct-many" }
   | { ranges: TranscriptRange[]; type: "cut" | "restore" }
   | { move: TranscriptMove; type: "move" }
   | { ms: number; type: "seek" }
+  | { choice: SceneChoice; target: SceneSpanTarget; type: "scene" }
   | { range: TranscriptRange | null; type: "highlight" }
   | { text: string; type: "not-profanity" }
   | {

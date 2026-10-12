@@ -9,7 +9,6 @@ import { Text } from "../../../../components/base/text/text";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import {
-  RECORDING_SCENE_PRESETS,
   sceneCustomLabel,
   scenePresetLabel,
 } from "../../recording/scenes/recording-scene-labels";
@@ -22,6 +21,7 @@ import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { SceneFramingRows } from "./scene-framing-rows";
+import { sceneOffer } from "./scene-offer";
 import { SceneOutputRow } from "./scene-output-row";
 import { ScenePresetTile } from "./scene-preset-tile";
 import { sceneSchematic } from "./scene-schematic";
@@ -52,18 +52,14 @@ import { SceneVariantRows } from "./scene-variant-rows";
  */
 export function ScenePanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { cameraOutput, hasCursorData, isLocked, scene, sceneTemplates } =
-    snapshot;
+  const { cameraOutput, hasCursorData, isLocked, scene } = snapshot;
 
   if (!scene) {
     return (
       <Text variant="footnote">{t("editor-panels-scene-needs-screen")}</Text>
     );
   }
-  // The output is read from the panel's own answer, which flips at once; the
-  // scene's own flag follows only once the preview has rebuilt.
-  const isCombined = cameraOutput ? cameraOutput === "combined" : scene.isBaked;
-  const canPlaceCamera = scene.hasCamera && isCombined;
+  const { isCombined, presets, templates } = sceneOffer(scene, snapshot);
   const framing = scene.framing;
   const radius = scene.radius;
   const paneName =
@@ -107,18 +103,12 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
   // every edit changes; a scene kept in those boxes is custom too.
   const isCustom =
     scene.boxes !== null || scene.preset === null || scene.preset === "full";
-  // A template that places a camera is hidden while none is drawn into the
-  // video, like the presets.
-  const templates = sceneTemplates.filter(
-    (template) => canPlaceCamera || !template.boxes.camera,
-  );
   // A custom scene laid out as a template chooses that template's tile.
   const templateId = scene.hasSceneAtPlayhead
     ? chosenSceneTemplate(templates, scene)
     : null;
   const preset = isCustom ? null : scene.preset;
   const selected = templateId ?? preset ?? "custom";
-  const presets = canPlaceCamera ? RECORDING_SCENE_PRESETS : [];
   return (
     <div className="flex flex-col gap-section">
       {outputRow}

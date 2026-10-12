@@ -15,7 +15,7 @@ import {
 } from "./recording-timeline-transcript";
 
 import type {
-  TranscriptRange,
+  TranscriptPlayed,
   TranscriptRequest,
 } from "../../tool-panels/tool-panel-transcript";
 import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
@@ -95,12 +95,13 @@ export function editForTranscriptRequest(
 }
 
 /** The stretches of a recording `sourceDurationMs` long `edit` plays, in
- * the order it plays them, in milliseconds. */
+ * the order it plays them, in milliseconds, each at its own speed. */
 export const playedRecordingStretches = (
   edit: RecordingTimelineEdit,
   sourceDurationMs: number,
-): TranscriptRange[] =>
+): TranscriptPlayed[] =>
   edit.segments.map((segment) => ({
     endMs: segment.sourceEnd * sourceDurationMs,
+    rate: segment.playbackRate ?? 1,
     startMs: segment.sourceStart * sourceDurationMs,
   }));
