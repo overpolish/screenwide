@@ -10,6 +10,7 @@ import { ToolProgress } from "../selection/tool-progress";
 import {
   ToolPanelTranscript,
   TranscriptCorrection,
+  TranscriptMove,
   TranscriptRange,
 } from "../tool-panel-transcript";
 
@@ -31,6 +32,8 @@ export type TranscriptPanelViewProps = {
   /** Show this stretch on the editor's timeline as the words chosen, or
    * none with null. */
   onHighlight: (range: TranscriptRange | null) => void;
+  /** Move the footage the dragged words chose, in one undo step. */
+  onMove: (move: TranscriptMove) => void;
   /** Stop marking `text`, folded, as profanity anywhere in the recording. */
   onNotProfanity: (text: string) => void;
   onRedo: () => void;

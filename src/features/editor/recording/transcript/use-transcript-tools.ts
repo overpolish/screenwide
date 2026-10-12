@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
-import { restoreRecordingTimelineSilences } from "../../timeline/editing/recording-timeline-silences";
 import { toolPanelLabel } from "../../tool-panels/tool-panel-window";
 import { EditorArtifact, EditorKind } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
@@ -14,16 +13,10 @@ import { MicrophoneTools } from "../microphone/use-microphone-tools";
 import { useModel } from "../microphone/use-model";
 
 import {
-  allowRecordingTranscriptWord,
-  applyRecordingTranscriptCorrection,
-  applyRecordingTranscriptCorrections,
-  cutRecordingTranscriptRanges,
   recordingTranscriptAllowedWords,
   recordingTranscriptCanRestore,
   recordingTranscriptCorrectionsMs,
   recordingTranscriptRemovedMs,
-  restoreAllRecordingTranscript,
-  restoreRecordingTranscriptRanges,
 } from "./recording-timeline-transcript";
 import { useRecordingTranscriptPreviewControls } from "./recording-transcript-channel";
 import {
@@ -33,6 +26,11 @@ import {
   TRANSCRIPT_PLAYHEAD_EVENT,
   transcribeRecording,
 } from "./transcript-api";
+import {
+  editForTranscriptRequest,
+  isTranscriptEditRequest,
+  playedRecordingStretches,
+} from "./transcript-edit-requests";
 
 import type {
   ToolPanelTranscript,
@@ -91,6 +89,10 @@ export function useTranscriptTools({
   const corrections = useMemo(
     () =>
       edit ? recordingTranscriptCorrectionsMs(edit, sourceDurationMs) : [],
+    [edit, sourceDurationMs],
+  );
+  const played = useMemo(
+    () => (edit ? playedRecordingStretches(edit, sourceDurationMs) : []),
     [edit, sourceDurationMs],
   );
 
@@ -186,6 +188,15 @@ export function useTranscriptTools({
 
   const handle = (request: TranscriptRequest) => {
     if (artifactId === null) return;
+    if (isTranscriptEditRequest(request)) {
+      commit((current) =>
+        editForTranscriptRequest(current, request, {
+          sourceDurationMs,
+          words: wordsRef.current,
+        }),
+      );
+      return;
+    }
     switch (request.type) {
       case "download":
         model.download();
@@ -214,54 +225,8 @@ export function useTranscriptTools({
         setStatus(wordsRef.current.length > 0 ? "ready" : "none");
         void cancelRecordingTranscription(artifactId).catch(() => undefined);
         break;
-      case "cut":
-        commit((current) =>
-          cutRecordingTranscriptRanges(
-            current,
-            request.ranges,
-            sourceDurationMs,
-          ),
-        );
-        break;
-      case "restore":
-        commit((current) =>
-          restoreRecordingTranscriptRanges(
-            current,
-            request.ranges,
-            sourceDurationMs,
-          ),
-        );
-        break;
-      case "restore-all":
-        commit((current) =>
-          restoreRecordingTimelineSilences(
-            restoreAllRecordingTranscript(current),
-          ),
-        );
-        break;
       case "remove-silences":
         microphone?.removeSilences();
-        break;
-      case "not-profanity":
-        commit((current) =>
-          allowRecordingTranscriptWord(current, request.text),
-        );
-        break;
-      case "correct":
-        commit((current) =>
-          applyRecordingTranscriptCorrection(current, request.correction, {
-            sourceDurationMs,
-            words: wordsRef.current,
-          }),
-        );
-        break;
-      case "correct-many":
-        commit((current) =>
-          applyRecordingTranscriptCorrections(current, request.corrections, {
-            sourceDurationMs,
-            words: wordsRef.current,
-          }),
-        );
         break;
       case "seek":
         preview?.seek(request.ms);
@@ -288,6 +253,7 @@ export function useTranscriptTools({
       durationMs: sourceDurationMs,
       error,
       model: model.shown,
+      played,
       progress,
       removed,
       revision,

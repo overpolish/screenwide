@@ -12,6 +12,7 @@ import {
 import { nextCutRun, nextUnsureWord } from "./transcript-cuts";
 import { ClientPoint, EditStart } from "./transcript-edit-span";
 import {
+  isWithin,
   spanOf,
   TranscriptUnit,
   WordRange,
@@ -45,6 +46,14 @@ type Options = {
   playingIndex: number;
   selection: WordRange | null;
   units: readonly TranscriptUnit[];
+  /** Carry the chosen `span` from a press at `start`, or, where the press
+   * does not travel, `click` on release. Without it, a press inside the
+   * choice chooses again, as one anywhere else does. */
+  onCarry?: (
+    start: ClientPoint,
+    span: WordSelection,
+    click: () => void,
+  ) => void;
 };
 
 /** The unit an event reached, leaving out the one being edited, whose own
@@ -102,7 +111,8 @@ function follow(onReach: (index: number) => void, onEnd: () => void) {
 /**
  * Choosing words the way text is chosen, a whole word at a time: a click
  * picks one and moves the playhead to it, Shift-click and dragging reach
- * further, and the arrow keys do the same from the keyboard.
+ * further, and the arrow keys do the same from the keyboard. A press inside
+ * what is chosen carries it instead, to be dropped elsewhere.
  * What is chosen is cut with Delete, edited with Enter or a double-click,
  * copied, and offered in a menu on a right click. Command-click cuts or
  * restores a word, and Command-drag does the same to every word it reaches,
@@ -150,6 +160,13 @@ export function useWordChoosing(options: Options) {
     }
     if (event.shiftKey && selection) {
       choose(index, true);
+      return;
+    }
+    if (span && isWithin(span, index) && options.onCarry) {
+      options.onCarry({ x: event.clientX, y: event.clientY }, span, () => {
+        choose(index, false);
+        latestRef.current.onSeek(units[index].startMs);
+      });
       return;
     }
     choose(index, false);

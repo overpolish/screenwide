@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   isWordRemoved,
   nearestKeptWord,
+  pauseEndsParagraph,
   transcriptParagraphs,
   TranscriptWord,
   wordAt,
@@ -33,47 +34,34 @@ const words = [
   word("six", 8_000, 8_400),
 ];
 
-// Paragraphs take the units the panel shows: words, with a pause unit
-// wherever the transcript put one - the two short, sub-second gaps in
-// `words` never get one.
-const paragraphWord = (w: TranscriptWord) => ({
-  ...w,
-  heard: w.text,
-  kind: "word" as const,
-});
-const pause = (startMs: number, endMs: number) => ({
-  endMs,
-  heard: "",
-  kind: "pause" as const,
-  startMs,
+describe("pauseEndsParagraph", () => {
+  it("ends a paragraph after the end of a sentence, or after any long pause", () => {
+    expect(pauseEndsParagraph(1_600, "three.")).toBe(true);
+    expect(pauseEndsParagraph(1_600, "three")).toBe(false);
+    expect(pauseEndsParagraph(1_400, "three.")).toBe(false);
+    expect(pauseEndsParagraph(4_100, "five")).toBe(true);
+  });
 });
 
 describe("transcriptParagraphs", () => {
-  it("breaks after a pause that ends a sentence, or after any long pause", () => {
+  it("breaks right after each pause that ends a paragraph", () => {
     const items = [
-      paragraphWord(words[0]),
-      paragraphWord(words[1]),
-      paragraphWord(words[2]),
-      pause(1_400, 3_000),
-      paragraphWord(words[3]),
-      paragraphWord(words[4]),
-      pause(3_900, 8_000),
-      paragraphWord(words[5]),
+      {},
+      { endsParagraph: true },
+      {},
+      {},
+      { endsParagraph: true },
+      {},
     ];
     expect(transcriptParagraphs(items)).toEqual([
-      { end: 4, start: 0 },
-      { end: 7, start: 4 },
-      { end: 8, start: 7 },
+      { end: 2, start: 0 },
+      { end: 5, start: 2 },
+      { end: 6, start: 5 },
     ]);
   });
 
-  it("keeps a sentence together where no pause unit sits between the words", () => {
-    expect(
-      transcriptParagraphs([
-        paragraphWord(word("Wait.", 0, 400)),
-        paragraphWord(word("Then", 1_000, 1_400)),
-      ]),
-    ).toEqual([{ end: 2, start: 0 }]);
+  it("keeps everything together where nothing ends a paragraph", () => {
+    expect(transcriptParagraphs([{}, {}])).toEqual([{ end: 2, start: 0 }]);
   });
 });
 

@@ -10,6 +10,11 @@ import { ToolPanelTranscript } from "../tool-panel-transcript";
 import { TranscriptHint } from "./transcript-hint";
 import { TranscriptMarksRow } from "./transcript-marks-row";
 import { TranscriptActionsRow } from "./transcript-options-rows";
+import {
+  heardSpanOf,
+  isHeardInOrder,
+  transcriptInPlaybackOrder,
+} from "./transcript-playback-order";
 import { TranscriptReplaceRow } from "./transcript-replace-row";
 import { TranscriptText } from "./transcript-text";
 import {
@@ -19,12 +24,13 @@ import {
   WordRange,
   WordSelection,
 } from "./transcript-units";
-import { TranscriptWord } from "./transcript-words";
+import { TranscriptWord, wordAt } from "./transcript-words";
 import { usePendingCorrections } from "./use-pending-corrections";
 import { useTranscriptCleanup } from "./use-transcript-cleanup";
 import { useTranscriptEditorActions } from "./use-transcript-editor-actions";
 import { useTranscriptHighlight } from "./use-transcript-highlight";
 import { useTranscriptMenu } from "./use-transcript-menu";
+import { useTranscriptMove } from "./use-transcript-move";
 import { useTranscriptSearch } from "./use-transcript-search";
 
 import type { TranscriptPanelViewProps } from "./transcript-panel-view";
@@ -47,7 +53,7 @@ export function TranscriptEditor({
   const [selection, setSelection] = useState<WordRange | null>(null);
   const [editing, setEditing] = useState<WordSelection | null>(null);
   const pending = usePendingCorrections(words, transcript.corrections);
-  const units = useMemo(
+  const heard = useMemo(
     () =>
       transcriptUnits(words, pending.corrections, {
         durationMs: transcript.durationMs,
@@ -55,28 +61,36 @@ export function TranscriptEditor({
       }),
     [pending.corrections, transcript.durationMs, transcript.removed, words],
   );
+  // The words read in the order the timeline plays them.
+  const order = useMemo(
+    () => transcriptInPlaybackOrder(heard, transcript.played),
+    [heard, transcript.played],
+  );
+  const { units } = order;
   const cleanup = useTranscriptCleanup({
     allowedWords: transcript.allowedWords,
     durationMs: transcript.durationMs,
     language: props.language,
     onCut,
     onNotProfanity: props.onNotProfanity,
+    order,
     plannedSilences: props.plannedSilences,
-    units,
   });
   const { actions, correct } = useTranscriptEditorActions({
     durationMs: transcript.durationMs,
     onCorrect,
     onCut,
     onRestore,
+    order,
     pendingAdd: pending.add,
     setEditing,
-    units,
   });
   const openMenu = useTranscriptMenu({ ...actions, ...cleanup.menuActions });
+  const chosen = editing ?? (selection ? spanOf(selection) : null);
+  // Only words read as they were heard are one stretch to show.
   useTranscriptHighlight(
-    units,
-    editing ?? (selection ? spanOf(selection) : null),
+    heard,
+    chosen && isHeardInOrder(order, chosen) ? heardSpanOf(order, chosen) : null,
     props.onHighlight,
   );
   const wordsRef = useRef<HTMLDivElement>(null);
@@ -84,12 +98,20 @@ export function TranscriptEditor({
     setSelection({ anchor: match.first, focus: match.last });
     props.onSeek(units[match.first].startMs);
   });
+  const moves = useTranscriptMove({
+    onMove: props.onMove,
+    onRedo: props.onRedo,
+    onUndo: props.onUndo,
+    order,
+    selection,
+    setSelection,
+  });
 
   return (
     <div className="flex flex-col gap-section" ref={wordsRef}>
       <TranscriptReplaceRow
         isDisabled={isLocked}
-        matches={search.matches}
+        matches={search.matches.filter((match) => isHeardInOrder(order, match))}
         onCorrectMany={props.onCorrectMany}
         onLeave={() => {
           wordsRef.current
@@ -132,16 +154,17 @@ export function TranscriptEditor({
               units,
             });
           }}
+          onMove={moves.move}
           onPaint={(span, cut) => {
             (cut ? actions.delete : actions.restore)(span);
           }}
-          onRedo={props.onRedo}
+          onRedo={moves.redo}
           onRestore={actions.restore}
           onSeek={props.onSeek}
           onSelectionChange={setSelection}
           onTogglePlayback={props.onTogglePlayback}
-          onUndo={props.onUndo}
-          playheadMs={props.playheadMs}
+          onUndo={moves.undo}
+          playingIndex={order.shownIndex[wordAt(heard, props.playheadMs)] ?? -1}
           preview={cleanup.preview}
           selection={selection}
           units={units}

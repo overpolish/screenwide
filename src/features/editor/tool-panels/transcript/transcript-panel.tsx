@@ -123,6 +123,9 @@ export function TranscriptPanel({ workspace }: { workspace: EditorKind }) {
       onHighlight={(range) => {
         ask({ range, type: "highlight" });
       }}
+      onMove={(move) => {
+        ask({ move, type: "move" });
+      }}
       onNotProfanity={(text) => {
         ask({ text, type: "not-profanity" });
       }}

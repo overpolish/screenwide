@@ -5,10 +5,15 @@ import { useCallback, useMemo, useState } from "react";
 
 import { joinedCutRanges } from "./transcript-cut-join";
 import { pausesCutBy } from "./transcript-pauses";
-import { TranscriptMarked, useTranscriptMarks } from "./use-transcript-marks";
+import { shownIndices, TranscriptOrder } from "./transcript-playback-order";
+import {
+  TranscriptMark,
+  TranscriptMarked,
+  useTranscriptMarks,
+} from "./use-transcript-marks";
 
 import type { TranscriptRange } from "../tool-panel-transcript";
-import type { TranscriptUnit, WordSelection } from "./transcript-units";
+import type { WordSelection } from "./transcript-units";
 import type { TranscriptMenuMark } from "./use-transcript-menu";
 
 type Removal = "fillers" | "profanity" | "silences";
@@ -20,7 +25,9 @@ const NOTHING: ReadonlySet<number> = new Set();
  * marked, what Remove silences, Remove fillers and Remove profanity would
  * cut while one is hovered, and the cuts and "Not profanity" the rows and
  * the menu ask for. Every cut keeps one pause at its join
- * (`joinedCutRange`).
+ * (`joinedCutRange`). Marks are found among the units as they were heard,
+ * where a filler or a phrase is said, and reported at the places the units
+ * show.
  */
 export function useTranscriptCleanup({
   allowedWords,
@@ -28,33 +35,44 @@ export function useTranscriptCleanup({
   language,
   onCut,
   onNotProfanity,
+  order,
   plannedSilences,
-  units,
 }: {
   allowedWords: readonly string[];
   durationMs: number;
   language: string | null;
   onCut: (ranges: TranscriptRange[]) => void;
   onNotProfanity: (text: string) => void;
+  order: TranscriptOrder;
   plannedSilences: readonly TranscriptRange[];
-  units: readonly TranscriptUnit[];
 }) {
+  const units = order.heard;
   const { fillers, marks, profanity } = useTranscriptMarks(
     units,
     language,
     allowedWords,
   );
+  const shownMarks = useMemo(
+    () =>
+      new Map<number, TranscriptMark>(
+        [...marks].map(([index, mark]) => [order.shownIndex[index], mark]),
+      ),
+    [marks, order],
+  );
   const [previewing, setPreviewing] = useState<Removal | null>(null);
   const preview = useMemo(() => {
     if (!previewing) return { isActive: false, units: NOTHING };
     if (previewing === "silences")
-      return { isActive: true, units: pausesCutBy(units, plannedSilences) };
+      return {
+        isActive: true,
+        units: shownIndices(order, pausesCutBy(units, plannedSilences)),
+      };
     const reached = new Set<number>();
     for (const { span } of previewing === "fillers" ? fillers : profanity)
       for (let index = span.first; index <= span.last; index++)
         reached.add(index);
-    return { isActive: true, units: reached };
-  }, [fillers, plannedSilences, previewing, profanity, units]);
+    return { isActive: true, units: shownIndices(order, reached) };
+  }, [fillers, order, plannedSilences, previewing, profanity, units]);
   const previewer = useCallback(
     (removal: Removal) => (isPreviewing: boolean) => {
       setPreviewing((current) =>
@@ -82,20 +100,21 @@ export function useTranscriptCleanup({
         ),
       );
   };
-  /** The marked run the unit at `index` belongs to, and its kind. */
+  /** The marked run the unit shown at `index` belongs to, and its kind. */
   const markedAt = (index: number) => {
-    const mark = marks.get(index);
+    const heardAt = order.heardIndex[index];
+    const mark = marks.get(heardAt);
     if (!mark) return null;
     const runs = mark === "filler" ? fillers : profanity;
     const run = runs.find(
-      ({ span }) => span.first <= index && index <= span.last,
+      ({ span }) => span.first <= heardAt && heardAt <= span.last,
     );
     return run ? { mark, run, runs } : null;
   };
 
   return {
     fillers,
-    marks,
+    marks: shownMarks,
     menuActions: {
       "not-profanity": (span: WordSelection) => {
         const marked = markedAt(span.first);

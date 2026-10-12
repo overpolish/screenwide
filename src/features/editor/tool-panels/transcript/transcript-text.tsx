@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
-  Fragment,
   useCallback,
   useEffect,
   useId,
@@ -14,28 +13,22 @@ import {
 
 import { ScrollArea } from "../../../../components/base/scroll-area/scroll-area";
 import { t } from "../../../../i18n/i18n";
-import { cn } from "../../../../lib/styling";
 
-import {
-  ClientPoint,
-  EditStart,
-  TranscriptEditSpan,
-} from "./transcript-edit-span";
-import { foundRanges, foundText } from "./transcript-found-text";
+import { TranscriptDropCaret } from "./transcript-drop-caret";
+import { ClientPoint, EditStart } from "./transcript-edit-span";
 import { nearestVerticalUnit, UnitRect } from "./transcript-line-geometry";
-import { TranscriptPauseChip } from "./transcript-pause-chip";
+import { transcriptParagraphElements } from "./transcript-paragraphs";
 import { TranscriptMatch } from "./transcript-search";
-import { pauseClass, unitClass } from "./transcript-unit-styles";
 import {
-  isWithin,
   spanOf,
   TranscriptUnit,
   WordRange,
   WordSelection,
 } from "./transcript-units";
-import { transcriptParagraphs, wordAt } from "./transcript-words";
+import { transcriptParagraphs } from "./transcript-words";
 import { usePlayingWord } from "./use-playing-word";
 import { useWordChoosing } from "./use-word-choosing";
+import { useWordDragging } from "./use-word-dragging";
 
 import type { TranscriptMark } from "./use-transcript-marks";
 
@@ -63,11 +56,15 @@ export type TranscriptTextProps = {
   onSelectionChange: (selection: WordRange | null) => void;
   onTogglePlayback: () => void;
   onUndo: () => void;
-  playheadMs: number;
+  /** The unit being said, or -1 between units. */
+  playingIndex: number;
   /** A Remove hovered or focused, and the units it would cut. */
   preview: { isActive: boolean; units: ReadonlySet<number> };
   selection: WordRange | null;
   units: readonly TranscriptUnit[];
+  /** Move the units in `span` to stand before unit `before`, the unit count
+   * for after the last. Without it, chosen words are not dragged. */
+  onMove?: (span: WordSelection, before: number) => void;
 };
 
 /**
@@ -82,7 +79,7 @@ export function TranscriptText(props: TranscriptTextProps) {
     isDisabled,
     marks,
     matches,
-    playheadMs,
+    playingIndex: current,
     preview,
     selection,
     units,
@@ -105,7 +102,13 @@ export function TranscriptText(props: TranscriptTextProps) {
   const paintFirst = painted?.first ?? -1;
   const paintLast = painted?.last ?? -1;
   const paintCut = paint?.cut ?? false;
-  const current = wordAt(units, playheadMs);
+  const dragging = useWordDragging({
+    onMove: (moved, before) => props.onMove?.(moved, before),
+    rootRef,
+    spansRef,
+  });
+  const carriedFirst = dragging.drag?.span.first ?? -1;
+  const carriedLast = dragging.drag?.span.last ?? -1;
   const unitId = useCallback(
     (index: number) => `${id}-${index.toString()}`,
     [id],
@@ -119,107 +122,46 @@ export function TranscriptText(props: TranscriptTextProps) {
     if (edited) onEditEnd(edited, text);
     rootRef.current?.focus({ preventScroll: true });
   }, []);
-  const content = useMemo(() => {
-    const chosen =
-      chosenFirst < 0 ? null : { first: chosenFirst, last: chosenLast };
-    const reached =
-      paintFirst < 0 ? null : { first: paintFirst, last: paintLast };
-    const found = foundRanges(units, matches);
-    return paragraphs.map(({ end, start }) => (
-      // Cut words stay where they were, struck through, to be read in place
-      // and restored.
-      <p
-        className="m-0"
-        dir="auto"
-        key={units[start].startMs}
-        role="presentation"
-      >
-        {units.slice(start, end).map((unit, offset) => {
-          const index = start + offset;
-          const isEdited = isWithin(editing, index);
-          if (isEdited && index !== editing?.first) return null;
-          const isChosen = !isEdited && isWithin(chosen, index);
-          const isFound = found.owners[index] >= 0;
-          const shown = isWithin(reached, index)
-            ? { ...unit, removed: paintCut }
-            : unit;
-          return (
-            <Fragment key={unit.startMs}>
-              {offset > 0 ? (
-                <span
-                  className={cn(
-                    isFound &&
-                      found.owners[index - 1] === found.owners[index] &&
-                      "bg-warning/35",
-                    isChosen &&
-                      isWithin(chosen, index - 1) &&
-                      "bg-primary-tint",
-                  )}
-                >
-                  {" "}
-                </span>
-              ) : null}
-              {isEdited && editing ? (
-                <TranscriptEditSpan
-                  className="outline-none select-text"
-                  id={unitId(index)}
-                  index={index}
-                  onFinish={finishEdit}
-                  start={editStart}
-                  text={units
-                    .slice(editing.first, editing.last + 1)
-                    .map((each) => each.text)
-                    .join(" ")}
-                />
-              ) : (
-                <span
-                  aria-selected={isChosen}
-                  className={cn(
-                    shown.kind === "pause"
-                      ? pauseClass(shown, isChosen, preview.units.has(index))
-                      : unitClass(shown, isChosen, {
-                          isPreviewed: preview.units.has(index),
-                          isPreviewing: preview.isActive,
-                          mark: marks.get(index),
-                        }),
-                  )}
-                  data-unit={index}
-                  id={unitId(index)}
-                  role="option"
-                >
-                  {unit.kind === "pause" ? (
-                    <TranscriptPauseChip
-                      durationMs={unit.endMs - unit.startMs}
-                    />
-                  ) : (
-                    foundText(
-                      unit.text,
-                      isChosen ? undefined : found.ranges.get(index),
-                    )
-                  )}
-                </span>
-              )}
-            </Fragment>
-          );
-        })}
-      </p>
-    ));
-  }, [
-    chosenFirst,
-    chosenLast,
-    editStart,
-    editing,
-    finishEdit,
-    paragraphs,
-    marks,
-    preview,
-    unitId,
-    units,
-    matches,
-    paintCut,
-    paintFirst,
-    paintLast,
-  ]);
+  const content = useMemo(
+    () =>
+      transcriptParagraphElements({
+        carried:
+          carriedFirst < 0 ? null : { first: carriedFirst, last: carriedLast },
+        chosen:
+          chosenFirst < 0 ? null : { first: chosenFirst, last: chosenLast },
+        editStart,
+        editing,
+        finishEdit,
+        marks,
+        matches,
+        painted:
+          paintFirst < 0
+            ? null
+            : { cut: paintCut, first: paintFirst, last: paintLast },
+        paragraphs,
+        preview,
+        unitId,
+        units,
+      }),
+    [
+      carriedFirst,
+      carriedLast,
+      chosenFirst,
+      chosenLast,
+      editStart,
+      editing,
+      finishEdit,
+      paragraphs,
+      marks,
+      preview,
+      unitId,
+      units,
+      matches,
+      paintCut,
+      paintFirst,
+      paintLast,
+    ],
+  );
 
   useLayoutEffect(() => {
     const spans: HTMLElement[] = [];
@@ -251,6 +193,7 @@ export function TranscriptText(props: TranscriptTextProps) {
       props.onEditStart(chosen);
     },
     onPaintChange: setPaint,
+    ...(props.onMove ? { onCarry: dragging.begin } : {}),
     onVerticalMove: (from, direction) => {
       const rects: (UnitRect | undefined)[] = spansRef.current.map((element) =>
         element.getBoundingClientRect(),
@@ -274,7 +217,7 @@ export function TranscriptText(props: TranscriptTextProps) {
         aria-disabled={isDisabled || undefined}
         aria-label={t("editor-panels-transcript")}
         aria-multiselectable
-        className="flex cursor-default flex-col gap-section text-body text-content-fg outline-none select-none"
+        className="relative flex cursor-default flex-col gap-section text-body text-content-fg outline-none select-none"
         data-owns-text-keys
         onTouchMove={markScrolled}
         onWheel={markScrolled}
@@ -283,6 +226,13 @@ export function TranscriptText(props: TranscriptTextProps) {
         tabIndex={0}
       >
         {content}
+        {dragging.drag?.boundary ? (
+          <TranscriptDropCaret
+            boundary={dragging.drag.boundary}
+            rootRef={rootRef}
+            spansRef={spansRef}
+          />
+        ) : null}
       </div>
     </ScrollArea>
   );

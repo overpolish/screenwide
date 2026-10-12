@@ -16,6 +16,7 @@ import { transcriptPauses } from "./transcript-pauses";
 import {
   isWordRemoved,
   middleOf,
+  pauseEndsParagraph,
   TranscriptWord,
   UNSURE_BELOW,
 } from "./transcript-words";
@@ -34,6 +35,9 @@ export type TranscriptUnit = TranscriptRange & {
   text: string;
   /** Heard with little confidence, and not corrected since. */
   unsure: boolean;
+  /** For a pause, whether it ends a paragraph, as decided where it was
+   * heard: it keeps the break wherever it is moved. */
+  endsParagraph?: boolean;
 };
 
 /** The first and last unit chosen, by index. */
@@ -120,7 +124,17 @@ export function transcriptUnits(
   }));
   // A pause sits exactly in the gap it was found in, so it always sorts
   // between the word before it and the word after.
-  return [...units, ...pauses].sort((a, b) => a.startMs - b.startMs);
+  const heard = [...units, ...pauses].sort((a, b) => a.startMs - b.startMs);
+  let heardBefore = "";
+  return heard.map((unit) => {
+    if (unit.kind === "word") {
+      heardBefore = unit.heard;
+      return unit;
+    }
+    return pauseEndsParagraph(unit.endMs - unit.startMs, heardBefore)
+      ? { ...unit, endsParagraph: true }
+      : unit;
+  });
 }
 
 /**

@@ -10,6 +10,16 @@ export type TranscriptRange = { endMs: number; startMs: number };
  * the first one's start to the last one's end. The recording is unchanged. */
 export type TranscriptCorrection = TranscriptRange & { text: string };
 
+/** Footage moved by dragging words: what plays from the moment `startMs`
+ * into the recording to the moment `endMs`, which on a reordered timeline
+ * can come earlier in the recording, to play just before the moment
+ * `beforeMs`, or at the end for null. */
+export type TranscriptMove = {
+  beforeMs: number | null;
+  endMs: number;
+  startMs: number;
+};
+
 /**
  * What the Transcript panel shows of the recording's transcript. The words
  * themselves travel apart, through `transcript-channel`: a long recording has
@@ -35,6 +45,9 @@ export type ToolPanelTranscript = {
   /** The Transcripts model and how far it is on this computer; `null` until
    * the app has said. */
   model: ToolPanelModel | null;
+  /** The stretches of the recording the timeline plays, in the order it
+   * plays them: the words show in that order. */
+  played: TranscriptRange[];
   /** How far transcribing has got, 0 to 1, while `transcribing`. */
   progress: number;
   /** What the edit leaves out of the source, by any cut, sorted by start and
@@ -56,11 +69,13 @@ export type ToolPanelTranscript = {
  * `correct-many` applies several corrections as one undo step, for Replace
  * all. `restore-all` brings back the panel's cuts and Remove silences' in
  * one undo step. `not-profanity` stops `text`, folded, being marked as
- * profanity anywhere in the recording, as a step of the edit history. */
+ * profanity anywhere in the recording, as a step of the edit history.
+ * `move` moves footage as one step of the edit history. */
 export type TranscriptRequest =
   | { correction: TranscriptCorrection; type: "correct" }
   | { corrections: TranscriptCorrection[]; type: "correct-many" }
   | { ranges: TranscriptRange[]; type: "cut" | "restore" }
+  | { move: TranscriptMove; type: "move" }
   | { ms: number; type: "seek" }
   | { range: TranscriptRange | null; type: "highlight" }
   | { text: string; type: "not-profanity" }

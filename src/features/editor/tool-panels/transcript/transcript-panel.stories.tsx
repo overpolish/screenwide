@@ -1,10 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../../popup-panel/layout";
+import {
+  createRecordingTimelineEdit,
+  RecordingTimelineEdit,
+} from "../../timeline/editing/recording-timeline-edit";
+import { moveRecordingTimelineFootage } from "../../timeline/editing/recording-timeline-footage-move";
 import { ToolPanelSurface } from "../tool-panel";
 import {
   TranscriptCorrection,
@@ -13,12 +18,12 @@ import {
 
 import {
   addRanges,
+  playedOnward,
   sampleTranscriptDurationMs,
   sampleTranscriptSilences,
   sampleTranscriptsModel,
   sampleTranscriptWords,
   sampleWordRange,
-  skipRemoved,
   subtractRanges,
 } from "./transcript-panel-fixtures";
 import {
@@ -53,13 +58,15 @@ type Edit = {
   allowed: string[];
   corrections: TranscriptCorrection[];
   removed: TranscriptRange[];
+  /** The order the recording plays in, which moving words changes. */
+  timeline: RecordingTimelineEdit;
 };
 type History = { future: Edit[]; past: Edit[]; present: Edit };
 
 /**
- * Stands in for the editor: cuts, restores and corrections change the words,
- * with undo and redo, and Space plays through what is kept, jumping the cuts
- * as the recording would.
+ * Stands in for the editor: cuts, restores, corrections and moves change the
+ * words, with undo and redo, and Space plays through what is kept, in the
+ * order the moves leave, jumping the cuts as the recording would.
  */
 function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
   const [history, setHistory] = useState<History>(() => ({
@@ -70,11 +77,21 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
       allowed: [],
       corrections: [{ ...sampleWordRange("recordings"), text: "Recordings" }],
       removed: [sampleWordRange("um,")],
+      timeline: createRecordingTimelineEdit(1),
     },
   }));
   const [playheadMs, setPlayheadMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const { allowed, corrections, removed } = history.present;
+  const { allowed, corrections, removed, timeline } = history.present;
+  const words = sampleTranscriptWords;
+  const played = useMemo(
+    () =>
+      timeline.segments.map((segment) => ({
+        endMs: segment.sourceEnd * sampleTranscriptDurationMs,
+        startMs: segment.sourceStart * sampleTranscriptDurationMs,
+      })),
+    [timeline],
+  );
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -83,18 +100,13 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
       // Read before the update runs: React calls it later, after `last` moves.
       const elapsed = Math.max(now - last, 0);
       last = now;
-      setPlayheadMs((ms) =>
-        Math.min(
-          skipRemoved(ms + elapsed, removed),
-          sampleTranscriptDurationMs,
-        ),
-      );
+      setPlayheadMs((ms) => playedOnward(ms, elapsed, { played, removed }));
       frame = requestAnimationFrame(tick);
     });
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [isPlaying, removed]);
+  }, [isPlaying, played, removed]);
 
   const commit = (change: Partial<Edit>) => {
     setHistory(({ past, present }) => ({
@@ -111,18 +123,13 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
       onCancel={ignore}
       onCorrect={(correction) => {
         commit({
-          corrections: correctionsWith(
-            sampleTranscriptWords,
-            corrections,
-            correction,
-          ),
+          corrections: correctionsWith(words, corrections, correction),
         });
       }}
       onCorrectMany={(many) => {
         commit({
           corrections: many.reduce(
-            (acc, correction) =>
-              correctionsWith(sampleTranscriptWords, acc, correction),
+            (acc, correction) => correctionsWith(words, acc, correction),
             corrections,
           ),
         });
@@ -132,6 +139,15 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
       }}
       onDownload={ignore}
       onHighlight={ignore}
+      onMove={(move) => {
+        commit({
+          timeline: moveRecordingTimelineFootage(
+            timeline,
+            move,
+            sampleTranscriptDurationMs,
+          ),
+        });
+      }}
       onNotProfanity={(text) => {
         commit({ allowed: [...allowed, text] });
       }}
@@ -182,13 +198,14 @@ function LiveTranscript({ isLocked = false }: { isLocked?: boolean }) {
         durationMs: sampleTranscriptDurationMs,
         error: null,
         model: sampleTranscriptsModel("downloaded"),
+        played,
         progress: 1,
         removed,
         revision: 0,
         silences: idleSilences,
         status: "ready",
       }}
-      words={sampleTranscriptWords}
+      words={words}
     />
   );
 }
@@ -243,10 +260,11 @@ export const TranscribeFailed: Story = {
   ),
 };
 
-/** The words to edit. Click, Shift-click or drag to choose words, Delete to
- * cut them, double-click or Enter to correct them, Command-click to cut or
- * restore one, Space to play. The right-click menu is a window of its own,
- * so it opens only in the native Storybook. */
+/** The words to edit. Click, Shift-click or drag to choose words, drag the
+ * chosen words to move them, Delete to cut them, double-click or Enter to
+ * correct them, Command-click to cut or restore one, Space to play. The
+ * right-click menu is a window of its own, so it opens only in the native
+ * Storybook. */
 export const Transcript: Story = {
   render: () => <LiveTranscript />,
 };

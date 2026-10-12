@@ -38,34 +38,27 @@ export function firstIndex(count: number, test: (index: number) => boolean) {
 export const middleOf = ({ endMs, startMs }: TranscriptRange) =>
   (startMs + endMs) / 2;
 
-/** The items of each paragraph, as `[start, end)` indices. A pause's own
- * duration decides the break, since it always sits in the gap it covers;
- * two plain words are never apart long enough to need one, so a break only
- * ever falls right after a pause, keeping it with the paragraph it ends. */
+/** Whether a pause `pauseMs` long ends a paragraph, as it was heard after
+ * the words `heardBefore`: one long enough always does, and a shorter one
+ * after the end of a sentence. */
+export const pauseEndsParagraph = (pauseMs: number, heardBefore: string) =>
+  pauseMs >= LONG_PAUSE_MS ||
+  (pauseMs >= PARAGRAPH_PAUSE_MS && SENTENCE_END.test(heardBefore));
+
+/** The items of each paragraph, as `[start, end)` indices: a break falls
+ * right after each pause that ends one, keeping it with the paragraph it
+ * ends. Whether a pause does is decided where it was heard
+ * (`pauseEndsParagraph`), so a pause moved elsewhere keeps its break. */
 export function transcriptParagraphs(
-  items: readonly (TranscriptRange & {
-    heard: string;
-    kind: "pause" | "word";
-  })[],
+  items: readonly { endsParagraph?: boolean }[],
 ) {
   const paragraphs: { end: number; start: number }[] = [];
   let start = 0;
-  let lastWordHeard = "";
-  for (let index = 0; index < items.length; index++) {
-    const item = items[index];
-    if (item.kind !== "pause") {
-      lastWordHeard = item.heard;
-      continue;
-    }
-    const pause = item.endMs - item.startMs;
-    if (
-      pause >= LONG_PAUSE_MS ||
-      (pause >= PARAGRAPH_PAUSE_MS && SENTENCE_END.test(lastWordHeard))
-    ) {
-      paragraphs.push({ end: index + 1, start });
-      start = index + 1;
-    }
-  }
+  items.forEach((item, index) => {
+    if (!item.endsParagraph) return;
+    paragraphs.push({ end: index + 1, start });
+    start = index + 1;
+  });
   if (items.length > start) paragraphs.push({ end: items.length, start });
   return paragraphs;
 }

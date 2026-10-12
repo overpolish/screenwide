@@ -116,8 +116,35 @@ export function subtractRanges(
 }
 
 /** Where playback at `ms` really is, once it has jumped every cut. */
-export function skipRemoved(ms: number, removed: readonly TranscriptRange[]) {
+function skipRemoved(ms: number, removed: readonly TranscriptRange[]) {
   const after = firstIndex(removed.length, (i) => removed[i].startMs > ms);
   const within = after > 0 ? removed[after - 1] : undefined;
   return within && ms < within.endMs ? within.endMs : ms;
+}
+
+/** Where playback at `ms` is `elapsedMs` later, playing the stretches
+ * `played` in their order and jumping every cut; at the end of the last
+ * stretch, it stays there. */
+export function playedOnward(
+  ms: number,
+  elapsedMs: number,
+  {
+    played,
+    removed,
+  }: {
+    played: readonly TranscriptRange[];
+    removed: readonly TranscriptRange[];
+  },
+) {
+  let at = played.findIndex(
+    (stretch) => stretch.startMs <= ms && ms < stretch.endMs,
+  );
+  if (at < 0) return skipRemoved(ms + elapsedMs, removed);
+  let next = ms + elapsedMs;
+  while (next >= played[at].endMs) {
+    if (at + 1 >= played.length) return played[at].endMs;
+    next = played[at + 1].startMs + next - played[at].endMs;
+    at++;
+  }
+  return skipRemoved(next, removed);
 }
