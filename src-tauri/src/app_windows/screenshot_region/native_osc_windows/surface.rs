@@ -20,8 +20,8 @@ mod textures;
 mod window;
 pub(crate) use crate::app_windows::overlay_surface::set_capture_affinity;
 use crate::app_windows::overlay_surface::{self, disable_transitions, GpuSurface};
-use crate::gpu::surface::Frame;
-use crate::osc::gpu::windows::{bind_group_layout, pipeline, sampler, shader_module};
+use screenwide_gpu::surface::Frame;
+use screenwide_osc::gpu::windows::{bind_group_layout, pipeline, sampler, shader_module};
 use textures::upload_icons;
 pub(super) use textures::upload_rgba;
 use window::light_mode;
@@ -57,7 +57,7 @@ use super::input;
 use super::ocr::{self, Segment};
 use super::renderer::{self, RenderConstants, Vertex};
 use super::ruler;
-use crate::osc::geometry::{Point, Rect, Size};
+use screenwide_osc::geometry::{Point, Rect, Size};
 
 /// Windows reports DPI relative to this baseline.
 const BASE_DPI: f64 = 96.0;
@@ -81,7 +81,7 @@ struct Texture {
 /// Everything shared by the anchor surface and its peers, so a peer costs one
 /// window plus one swap chain. macOS shared the `MTLDevice` the same way.
 pub(crate) struct Gpu {
-  shared: &'static crate::gpu::Gpu,
+  shared: &'static screenwide_gpu::Gpu,
   layout: wgpu::BindGroupLayout,
   pipeline: wgpu::RenderPipeline,
   linear_sampler: wgpu::Sampler,
@@ -94,7 +94,7 @@ pub(crate) struct Gpu {
 }
 
 impl Gpu {
-  pub(super) fn device(&self) -> &'static crate::gpu::Gpu {
+  pub(super) fn device(&self) -> &'static screenwide_gpu::Gpu {
     self.shared
   }
 }

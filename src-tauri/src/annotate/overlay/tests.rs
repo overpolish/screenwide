@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::editor::annotations::arrow::new_arrow;
-use crate::editor::annotations::counter::new_counter;
-use crate::editor::annotations::{AnnotationHead, AnnotationPoint, AnnotationStyle};
+use screenwide_annotations::arrow::new_arrow;
+use screenwide_annotations::counter::new_counter;
+use screenwide_annotations::{AnnotationHead, AnnotationPoint, AnnotationStyle};
 
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 120;
@@ -29,7 +29,7 @@ fn style(width: f64) -> AnnotationStyle {
 
 /// `annotations` drawn by the overlay's renderer over a cleared target, as
 /// premultiplied BGRA rows.
-fn drawn(annotations: &[crate::editor::annotations::Annotation]) -> Vec<u8> {
+fn drawn(annotations: &[screenwide_annotations::Annotation]) -> Vec<u8> {
   let renderer = Renderer::new().expect("the overlay renderer");
   let gpu = renderer.gpu();
   let target = gpu.device.create_texture(&wgpu::TextureDescriptor {
@@ -42,7 +42,7 @@ fn drawn(annotations: &[crate::editor::annotations::Annotation]) -> Vec<u8> {
     mip_level_count: 1,
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
-    format: crate::gpu::surface::FORMAT,
+    format: screenwide_gpu::surface::FORMAT,
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
     view_formats: &[],
   });

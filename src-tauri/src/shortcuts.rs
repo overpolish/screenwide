@@ -211,7 +211,7 @@ pub fn set_shortcut_binding(
   {
     return Err("That shortcut is already assigned to another action".to_owned());
   }
-  if requested_id.is_some_and(crate::moments::settings::uses_shortcut) {
+  if requested_id.is_some_and(screenwide_moments::settings::uses_shortcut) {
     return Err("That shortcut already places a moment".to_owned());
   }
 

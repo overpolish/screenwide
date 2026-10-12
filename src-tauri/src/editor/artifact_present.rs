@@ -6,6 +6,7 @@
 
 use super::artifact::{clear_recording_preview, next_id};
 use super::*;
+use screenwide_export::media_preview;
 
 /// Where an artifact comes from, which decides whether it ends a capture's
 /// reservation.
@@ -135,7 +136,7 @@ pub fn keep_recording(app: &AppHandle, project: &Path, info: FinalizeInfo) {
     &info.path,
     info.duration_ms,
   );
-  crate::project::library::remember(app, project);
+  screenwide_project::library::remember(app, project);
 }
 
 /// Writes a new recording's first edit, carrying the annotations drawn live
@@ -147,7 +148,7 @@ fn seed_initial_edit(
   app: &AppHandle,
   project: &Path,
   id: u64,
-  annotation_clips: Vec<annotations::timing::RecordingAnnotationClip>,
+  annotation_clips: Vec<screenwide_annotations::timing::RecordingAnnotationClip>,
   cursor_path: Option<&Path>,
   keyboard_path: Option<&Path>,
   movie: &Path,
@@ -249,6 +250,6 @@ pub(super) fn present_recording_from(
     },
     origin,
   )?;
-  crate::project::library::remember(app, &remembered);
+  screenwide_project::library::remember(app, &remembered);
   Ok(())
 }

@@ -3,11 +3,91 @@
 
 [package]
 name = "screenwide"
-version = "0.1.0"
 description = "Reliable screen and audio recording for macOS and Windows"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+# The app crate sits on top; the crates under `crates/` are what it is built
+# from, each a layer the ones above it depend on and never the reverse.
+[workspace]
+members = ["crates/*"]
+# The transcriber builds into its own program with its own profile, and the
+# vendored crates are only patches.
+exclude = ["transcriber", "vendor"]
+
+[workspace.package]
+version = "0.1.0"
 authors = ["overpolish"]
 license = "GPL-3.0-or-later"
 edition = "2021"
+
+[workspace.dependencies]
+screenwide-accent = { path = "crates/accent" }
+screenwide-annotations = { path = "crates/annotations" }
+screenwide-capture = { path = "crates/capture" }
+screenwide-compositor = { path = "crates/compositor" }
+screenwide-cursor-effects = { path = "crates/cursor_effects" }
+screenwide-export = { path = "crates/export" }
+screenwide-gpu = { path = "crates/gpu" }
+screenwide-i18n = { path = "crates/i18n" }
+screenwide-images = { path = "crates/images" }
+screenwide-imaging = { path = "crates/imaging" }
+screenwide-keyboard-effects = { path = "crates/keyboard_effects" }
+screenwide-moments = { path = "crates/moments" }
+screenwide-osc = { path = "crates/osc" }
+screenwide-output = { path = "crates/output" }
+screenwide-project = { path = "crates/project" }
+screenwide-records = { path = "crates/records" }
+screenwide-scenes = { path = "crates/scenes" }
+screenwide-sidecar = { path = "crates/sidecar" }
+screenwide-speech = { path = "crates/speech" }
+screenwide-timeline = { path = "crates/timeline" }
+screenwide-timeline-edit = { path = "crates/timeline_edit" }
+# The transcriber's protocol only; the engine builds into its own program.
+screenwide-transcriber = { path = "transcriber" }
+screenwide-wgsl = { path = "crates/wgsl" }
+block2 = "0.6.2"
+bytemuck = { version = "1.25.2", features = ["derive"] }
+cc = "1"
+cidre = { version = "0.19.0", default-features = false, features = ["async", "ax", "cg", "core_audio", "iio", "io_surface", "macos_14_2", "ns", "sc", "vn", "vt"] }
+core-foundation = "0.10.1"
+core-graphics = { version = "0.25.0", features = ["highsierra"] }
+cpal = "0.18.1"
+dispatch2 = "0.3.1"
+fluent-bundle = "0.16"
+fluent-langneg = "0.13"
+getrandom = "0.3"
+# Every format except AVIF, which the image crate can only encode and nothing
+# here encodes; it is the costliest dependency to compile.
+image = { version = "0.25.10", default-features = false, features = ["rayon", "bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "tga", "tiff", "webp"] }
+naga = "30"
+nokhwa = { version = "0.10.11", default-features = false, features = ["decoding", "output-threaded"] }
+objc2 = "0.6.4"
+objc2-app-kit = "0.3.2"
+objc2-foundation = "0.3.2"
+png = "0.18.1"
+pollster = "1.0.1"
+quantette = "0.6.0"
+rayon = "1.12.0"
+realfft = "3.5.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sys-locale = "0.3"
+tauri-plugin-global-shortcut = "2.3.2"
+# Crates below the app use Tauri plainly; the app's own entry carries the
+# features `tauri.conf.json` needs, which the Tauri CLI keeps in step.
+tauri = "2"
+tokio = { version = "1", features = ["macros", "rt", "time"] }
+trash = "5"
+ts-rs = "=12.0.1"
+unic-langid = "0.9"
+wasapi = "0.23.0"
+wgpu = "30.0.0"
+windows = "0.62.2"
+windows-numerics = "0.3.1"
+xcap = "0.9.8"
 
 [patch.crates-io]
 block = { path = "vendor/block-0.1.6" }
@@ -32,75 +112,81 @@ path = "src/main.rs"
 test = false
 
 [build-dependencies]
-cc = "1"
-# The same naga wgpu compiles WGSL with, so a shader that builds also loads,
-# and the canvas shader precompiled here is the text wgpu would write.
-naga = { version = "30", features = ["wgsl-in", "hlsl-out", "msl-out"] }
+cc.workspace = true
+screenwide-wgsl.workspace = true
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["image-ico", "image-png", "macos-private-api", "protocol-asset", "tray-icon"] }
 tauri-plugin-window-state = "2.4.1"
-tokio = { version = "1", features = ["macros", "rt", "time"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-ts-rs = "=12.0.1"
-xcap = "0.9.8"
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+xcap.workspace = true
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 tauri-plugin-clipboard-manager = "2.3.2"
 # The clipboard-manager plugin's own clipboard crate, used directly for what
 # the plugin does not expose: the files a copy in Finder or Explorer holds.
 arboard = "3.6.1"
-# Every format except AVIF, which the image crate can only encode and nothing
-# here encodes; it is the costliest dependency to compile.
-image = { version = "0.25.10", default-features = false, features = ["rayon", "bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "tga", "tiff", "webp"] }
-getrandom = "0.3"
+image.workspace = true
 rqrr = { version = "0.10.1", default-features = false, features = ["img"] }
 rxing = { version = "0.9.2", default-features = false, features = ["decoders", "encoding_rs", "multi_barcode_readers", "qrcode"] }
 rapidfuzz = "0.5.0"
-rayon = "1.12.0"
-cpal = "0.18.1"
-# The spectrum Vocal cleanup finds mouth clicks and plosives in. The same
-# release the speech enhancer in the transcriber uses.
-realfft = "3.5.0"
+rayon.workspace = true
+cpal.workspace = true
 yuv = "0.8.16"
-quantette = "0.6.0"
-png = "0.18.1"
+quantette.workspace = true
+png.workspace = true
 tauri-plugin-dialog = "2.7.2"
-tauri-plugin-global-shortcut = "2.3.2"
+tauri-plugin-global-shortcut.workspace = true
 tauri-plugin-autostart = "2.5.1"
-wgpu = "30.0.0"
-pollster = "1.0.1"
-bytemuck = { version = "1.25.2", features = ["derive"] }
+wgpu.workspace = true
+pollster.workspace = true
+bytemuck.workspace = true
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-opener = "2"
 url = "2"
 keyboard-types = "0.7"
-trash = "5"
 # Transcription model downloads. The same reqwest and rustls the updater
 # brings, with its TLS provider: nothing new is compiled for them.
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 sha2 = "0.10"
-sys-locale = "0.3"
-# The transcriber's protocol only; the engine builds into its own program.
-screenwide-transcriber = { path = "transcriber" }
-# Translations: the same Fluent files the webviews read. fluent-langneg stays
-# on the release fluent-bundle builds against, so one unic-langid is compiled.
-fluent-bundle = "0.16"
-fluent-langneg = "0.13"
-unic-langid = "0.9"
+sys-locale.workspace = true
+screenwide-accent.workspace = true
+screenwide-annotations.workspace = true
+screenwide-capture.workspace = true
+screenwide-compositor.workspace = true
+screenwide-cursor-effects.workspace = true
+screenwide-export.workspace = true
+screenwide-gpu.workspace = true
+screenwide-i18n.workspace = true
+screenwide-images.workspace = true
+screenwide-imaging.workspace = true
+screenwide-keyboard-effects.workspace = true
+screenwide-moments.workspace = true
+screenwide-osc.workspace = true
+screenwide-output.workspace = true
+screenwide-project.workspace = true
+screenwide-records.workspace = true
+screenwide-scenes.workspace = true
+screenwide-sidecar.workspace = true
+screenwide-speech.workspace = true
+screenwide-transcriber.workspace = true
+screenwide-timeline.workspace = true
+screenwide-timeline-edit.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winvd = "0.0.49"
 windows058 = { package = "windows", version = "0.58.0", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
 winreg = "0.55.0"
 tauri-plugin-single-instance = "2"
-xcap = { version = "0.9.8", features = ["wgc"] }
-nokhwa = { version = "0.10.11", default-features = false, features = ["decoding", "input-msmf", "output-threaded"] }
+xcap = { workspace = true, features = ["wgc"] }
+nokhwa = { workspace = true, features = ["input-msmf"] }
 rdev = { git = "https://github.com/Narsil/rdev", rev = "c77b4e5456301cfa7f2226020f2a58f2f8d77c5d", features = ["serialize"] }
-windows = { version = "0.62.2", features = [
+windows = { workspace = true, features = [
   "Foundation",
   "Graphics_Imaging",
   "Graphics_Capture",
@@ -153,31 +239,31 @@ windows = { version = "0.62.2", features = [
   "Win32_UI_Shell_PropertiesSystem",
   "Win32_UI_WindowsAndMessaging",
 ] }
-windows-numerics = "0.3.1"
 # What `windows::core::implement` expands to names this crate, so the drop
 # target's COM object needs it in scope: the version `windows` itself uses.
 windows-core = "0.62.2"
-wasapi = "0.23.0"
+wasapi.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
-block2 = "0.6.2"
-core-foundation = "0.10.1"
-core-graphics = { version = "0.25.0", features = ["highsierra"] }
-nokhwa = { version = "0.10.11", default-features = false, features = ["decoding", "input-avfoundation", "output-threaded"] }
+block2.workspace = true
+core-foundation.workspace = true
+core-graphics.workspace = true
+nokhwa = { workspace = true, features = ["input-avfoundation"] }
 tauri-plugin-macos-permissions = "2.3.0"
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2.1" }
-cidre = { version = "0.19.0", default-features = false, features = ["async", "ax", "cg", "core_audio", "iio", "io_surface", "macos_14_2", "ns", "sc", "vn", "vt"] }
-dispatch2 = "0.3.1"
-objc2 = "0.6.4"
-objc2-app-kit = "0.3.2"
-objc2-foundation = "0.3.2"
-# Wraps IOSurface-backed CoreVideo buffers as wgpu textures; the same crate
-# wgpu's Metal backend is built on.
-objc2-io-surface = { version = "0.3.2", default-features = false, features = ["std", "objc2", "IOSurfaceRef"] }
-objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLAllocation", "MTLDevice", "MTLPixelFormat", "MTLResource", "MTLTexture", "MTLTypes", "objc2-io-surface"] }
+cidre.workspace = true
+dispatch2.workspace = true
+objc2.workspace = true
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
 plist = "1"
 
 [dev-dependencies]
+screenwide-annotations = { workspace = true, features = ["test-support"] }
+screenwide-images = { workspace = true, features = ["test-support"] }
+screenwide-osc = { workspace = true, features = ["test-support"] }
+screenwide-output = { workspace = true, features = ["test-support"] }
+screenwide-project = { workspace = true, features = ["test-support"] }
 qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
 
 # Screenshot encoding is tight numeric work: colour quantization and deflate.

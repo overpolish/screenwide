@@ -7,7 +7,7 @@
 //! implementations own native window handles, compositor surfaces and GPU
 //! submission, but never Region interaction or lifecycle policy.
 
-use crate::osc::{
+use screenwide_osc::{
   desktop::DesktopBinding,
   geometry::Rect,
   scene::RegionScene,
@@ -101,7 +101,7 @@ pub(super) fn resolve_region_scene(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::osc::geometry::{Point, Size};
+  use screenwide_osc::geometry::{Point, Size};
 
   #[test]
   fn region_adapter_request_preserves_cross_display_geometry_and_policy() {
@@ -133,7 +133,7 @@ mod tests {
 
   #[test]
   fn shared_resolution_projects_scene_and_layout_to_the_new_owner() {
-    use crate::osc::desktop::DesktopDisplay;
+    use screenwide_osc::desktop::DesktopDisplay;
 
     let binding = DesktopBinding {
       displays: vec![

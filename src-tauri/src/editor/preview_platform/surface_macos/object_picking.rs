@@ -8,7 +8,7 @@
 
 use super::callbacks::release_callback_on_main;
 use super::RecordingPreviewSurface;
-use crate::editor::preview_platform::object_picking::{
+use screenwide_compositor::object_picking::{
   ObjectPickCallback, ObjectPress, ObjectsShown, PickedObjectDot,
 };
 

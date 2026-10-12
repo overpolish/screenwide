@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-timeline"
+description = "Time on an edited recording's timeline and the curves effects move along"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false

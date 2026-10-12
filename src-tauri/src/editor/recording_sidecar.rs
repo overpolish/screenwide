@@ -21,7 +21,7 @@ pub(crate) struct RecordingCursor {
 impl RecordingCursor {
   pub(super) fn new(path: PathBuf) -> Self {
     Self {
-      format_version: crate::recording::cursor::FORMAT_VERSION,
+      format_version: screenwide_records::cursor::FORMAT_VERSION,
       path,
     }
   }
@@ -29,9 +29,9 @@ impl RecordingCursor {
 
 impl RecordingKeyboard {
   pub(super) fn new(path: PathBuf) -> Self {
-    let compositor = super::keyboard_effects::KeyboardCompositor::open(&path).ok();
+    let compositor = screenwide_keyboard_effects::KeyboardCompositor::open(&path).ok();
     Self {
-      format_version: crate::recording::keyboard::FORMAT_VERSION,
+      format_version: screenwide_records::keyboard::FORMAT_VERSION,
       has_shortcuts: compositor
         .as_ref()
         .is_some_and(|keyboard| keyboard.shortcut_count() > 0),
@@ -58,14 +58,14 @@ pub(super) fn total_size(
 
 /// `path`, if it holds cursor data this version can read.
 pub(super) fn valid_cursor(path: PathBuf) -> Option<PathBuf> {
-  crate::recording::cursor::read(&path)
+  screenwide_records::cursor::read(&path)
     .is_ok()
     .then_some(path)
 }
 
 /// `path`, if it holds keyboard data this version can read.
 pub(super) fn valid_keyboard(path: PathBuf) -> Option<PathBuf> {
-  crate::recording::keyboard::read(&path)
+  screenwide_records::keyboard::read(&path)
     .is_ok()
     .then_some(path)
 }

@@ -4,9 +4,9 @@
 //! The recording's audio ribbon, drawn on its own composition visual.
 
 use super::super::audio_ribbon::{AudioRibbonRenderer, RibbonLook};
-use super::super::PreviewSurfaceRect;
 use crate::editor::recording_preview_player::audio_visualizer::AudioRibbonEnvelopes;
-use crate::gpu::surface::Surface;
+use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_gpu::surface::Surface;
 use windows::Win32::Graphics::DirectComposition::{IDCompositionDevice, IDCompositionVisual};
 
 pub(super) struct AudioRibbon {
@@ -23,7 +23,7 @@ impl AudioRibbon {
   /// The ribbon's visual under `root`, hidden until it has levels. The
   /// caller commits the tree.
   pub(super) fn new(
-    shared: &'static crate::gpu::Gpu,
+    shared: &'static screenwide_gpu::Gpu,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
   ) -> Result<Self, String> {
@@ -84,7 +84,7 @@ impl AudioRibbon {
   }
 
   fn draw(&mut self) -> Result<(), String> {
-    let [red, green, blue] = crate::system_accent::accent_rgb();
+    let [red, green, blue] = screenwide_accent::accent_rgb();
     self
       .renderer
       .draw(RibbonLook {

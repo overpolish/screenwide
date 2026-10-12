@@ -3,7 +3,7 @@
 
 use super::*;
 
-pub(super) fn upload_icons(gpu: &crate::gpu::Gpu) -> Result<wgpu::TextureView, String> {
+pub(super) fn upload_icons(gpu: &screenwide_gpu::Gpu) -> Result<wgpu::TextureView, String> {
   let atlas = unsafe { screenwide_osc_icon_atlas() };
   let expected = atlas.width as usize * atlas.height as usize;
   if atlas.pixels.is_null() || atlas.length < expected || expected == 0 {
@@ -21,7 +21,7 @@ pub(super) fn upload_icons(gpu: &crate::gpu::Gpu) -> Result<wgpu::TextureView, S
 }
 
 pub(in crate::app_windows::screenshot_region::native_osc_windows) fn upload_rgba(
-  gpu: &crate::gpu::Gpu,
+  gpu: &screenwide_gpu::Gpu,
   rgba: &[u8],
   width: u32,
   height: u32,
@@ -30,7 +30,7 @@ pub(in crate::app_windows::screenshot_region::native_osc_windows) fn upload_rgba
 }
 
 fn upload_texture(
-  gpu: &crate::gpu::Gpu,
+  gpu: &screenwide_gpu::Gpu,
   pixels: &[u8],
   width: u32,
   height: u32,

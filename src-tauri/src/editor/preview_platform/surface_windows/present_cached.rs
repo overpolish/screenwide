@@ -20,7 +20,7 @@ impl RecordingPreviewSurface {
     composition: ComposedFrame,
     camera: Option<(&compositor::SourceTexture, BakeGeometry, bool, bool)>,
   ) -> Result<bool, String> {
-    crate::screenshots::output_dimensions(settings)?;
+    screenwide_output::output_dimensions(settings)?;
     // Keep one stable output surface for the current preview resolution. The
     // source texture is cached separately and edits only redraw this target.
     // The surface is only reallocated when the output outgrows it (with
@@ -73,7 +73,7 @@ impl RecordingPreviewSurface {
     if composition.foreground_only {
       pane::clear(gpu, &frame.texture, wgpu::Color::TRANSPARENT);
     }
-    let mut prepared = crate::editor::preview_platform::annotation_gpu::prepared_arrows(
+    let mut prepared = screenwide_compositor::annotation_gpu::prepared_arrows(
       &settings.annotations,
       source.size,
       settings,

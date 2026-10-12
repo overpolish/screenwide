@@ -7,7 +7,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use ts_rs::TS;
 
-use super::{analysis, silences, vad_model, SpeechSource};
+use super::{vad_model, SpeechSource};
+use screenwide_speech::{analysis, silences};
 
 /// The event that tells the editor how far a microphone tool has got.
 const PROGRESS_EVENT: &str = "editor://microphone-progress";

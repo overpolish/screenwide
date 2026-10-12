@@ -11,8 +11,8 @@ pub(super) use recording::{
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 struct EditorPreferences {
-  cursor_effects: cursor_effects::CursorEffectSettings,
-  keyboard_effects: keyboard_effects::KeyboardEffectSettings,
+  cursor_effects: screenwide_cursor_effects::CursorEffectSettings,
+  keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
   recording_choices: RecordingExportChoices,
   recording_output: Option<RecordingOutputSettings>,
   screenshot_background_radius_percent: f64,
@@ -26,8 +26,8 @@ struct EditorPreferences {
 impl Default for EditorPreferences {
   fn default() -> Self {
     Self {
-      cursor_effects: cursor_effects::CursorEffectSettings::default(),
-      keyboard_effects: keyboard_effects::KeyboardEffectSettings::default(),
+      cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),
+      keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings::default(),
       recording_choices: RecordingExportChoices::default(),
       recording_output: None,
       screenshot_background_radius_percent: 0.0,
@@ -111,7 +111,9 @@ pub(super) fn load_screenshot_output(app: &AppHandle) -> Option<ScreenshotOutput
     .map(screenshot_output_template)
 }
 
-pub(super) fn load_cursor_effects(app: &AppHandle) -> cursor_effects::CursorEffectSettings {
+pub(super) fn load_cursor_effects(
+  app: &AppHandle,
+) -> screenwide_cursor_effects::CursorEffectSettings {
   load_preferences(app)
     .and_then(|preferences| validate_cursor_effects(preferences.cursor_effects).ok())
     .unwrap_or_default()
@@ -218,8 +220,8 @@ pub(super) fn remember_screenshot_output(
 }
 
 fn validate_cursor_effects(
-  effects: cursor_effects::CursorEffectSettings,
-) -> Result<cursor_effects::CursorEffectSettings, String> {
+  effects: screenwide_cursor_effects::CursorEffectSettings,
+) -> Result<screenwide_cursor_effects::CursorEffectSettings, String> {
   if !effects.size_percent.is_finite() || !(50.0..=500.0).contains(&effects.size_percent) {
     return Err("The cursor size is not valid".to_owned());
   }
@@ -228,7 +230,7 @@ fn validate_cursor_effects(
 
 pub(super) fn remember_cursor_effects(
   app: &AppHandle,
-  effects: cursor_effects::CursorEffectSettings,
+  effects: screenwide_cursor_effects::CursorEffectSettings,
 ) -> Result<(), String> {
   let effects = validate_cursor_effects(effects)?;
   *app
@@ -261,7 +263,7 @@ pub(super) fn remember_recording_output(
 
 pub(super) fn remember_completed_export(
   app: &AppHandle,
-  cursor: cursor_effects::CursorEffectSettings,
+  cursor: screenwide_cursor_effects::CursorEffectSettings,
   recording: Option<CompletedRecordingExport>,
   screenshot: Option<ScreenshotOutputSettings>,
 ) {

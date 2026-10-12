@@ -25,7 +25,6 @@
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod capture;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(in crate::recording) mod ring;
 mod sleep;
 pub(super) use sleep::{did_wake, will_sleep};
 
@@ -36,7 +35,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use ts_rs::TS;
 
-use super::StartRecordingOptions;
+use screenwide_capture::StartRecordingOptions;
 
 /// How far back a clip reaches.
 pub const REPLAY_LENGTH: Duration = Duration::from_secs(30);
@@ -187,7 +186,11 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
           Err(error) => {
             inner.status = ReplayStatus::Off;
             inner.options = None;
-            report(&app, &crate::i18n::t!("alert-replay-start-failed"), &error);
+            report(
+              &app,
+              &screenwide_i18n::t!("alert-replay-start-failed"),
+              &error,
+            );
             None
           }
         }
@@ -251,7 +254,11 @@ pub fn save(app: &AppHandle) -> Result<(), String> {
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
       if let Err(error) = capture::save(&app, &running, at) {
-        report(&app, &crate::i18n::t!("alert-replay-save-failed"), &error);
+        report(
+          &app,
+          &screenwide_i18n::t!("alert-replay-save-failed"),
+          &error,
+        );
       }
       update(&app, |inner| inner.saving = false);
     });

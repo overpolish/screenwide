@@ -2,27 +2,30 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_export::cursor_export;
+use screenwide_export::media_preview;
+use screenwide_export::track_selection;
 
 pub(super) struct CursorSaveRequest<'a> {
   pub app: &'a AppHandle,
   pub artifact_id: u64,
   pub camera_effects:
-    Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
+    Option<std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>>,
   pub cancelled: &'a AtomicBool,
   pub cursor: Option<&'a Path>,
-  pub cursor_effects: cursor_effects::CursorEffectSettings,
+  pub cursor_effects: screenwide_cursor_effects::CursorEffectSettings,
   pub directory: &'a Path,
   pub duration_ms: u64,
   pub height: u32,
   pub keyboard: Option<&'a Path>,
-  pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
+  pub keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
   pub layout: track_selection::AudioLayout,
   pub output: &'a ScreenshotOutputSettings,
   pub progress_share: f64,
   pub screen: &'a Path,
   pub selection: &'a track_selection::TrackSelection,
   pub stem: &'a str,
-  pub timeline: Option<&'a timeline_edit::TimelinePlan>,
+  pub timeline: Option<&'a screenwide_timeline_edit::TimelinePlan>,
   pub video: media_preview::VideoExportOptions,
   pub width: u32,
 }
@@ -30,7 +33,7 @@ pub(super) struct CursorSaveRequest<'a> {
 pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBuf>, String> {
   let progress_duration_ms = request.timeline.map_or(
     request.duration_ms,
-    timeline_edit::TimelinePlan::duration_ms,
+    screenwide_timeline_edit::TimelinePlan::duration_ms,
   );
   let path = unique_path(
     request.directory,
@@ -50,7 +53,7 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
     );
   };
   match cursor_export::export(cursor_export::CursorExportRequest {
-    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
+    annotation_track: screenwide_annotations::timing::AnnotationTrack::Primary,
     audio_layout: request.layout,
     audio_source: None,
     camera: None,
@@ -72,6 +75,8 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
     on_progress: &mut on_progress,
     screen: request.screen,
     selection: request.selection,
+    #[cfg(target_os = "windows")]
+    surface: crate::editor::preview_platform::recording_export_surface,
     timeline: request.timeline,
     output: request.output,
     video: request.video,

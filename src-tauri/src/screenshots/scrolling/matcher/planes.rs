@@ -4,7 +4,7 @@
 use rayon::prelude::*;
 
 use super::super::{Axis, Direction};
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 const ALIGNMENT_BANDS: usize = 8;
 const ALIGNMENT_SEGMENTS: usize = 4;

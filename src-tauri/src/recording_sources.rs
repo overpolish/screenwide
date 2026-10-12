@@ -6,6 +6,7 @@ mod monitor_thumbnails;
 mod window_enumeration;
 use application_metadata::application_details;
 pub(crate) use application_metadata::application_icon_cache_dir;
+use screenwide_capture::types::{Position, Size};
 
 use monitor_thumbnails::capture_monitor_thumbnails;
 
@@ -44,20 +45,6 @@ pub struct MonitorDetails {
   scale_factor: f32,
   is_primary: bool,
   is_builtin: bool,
-}
-
-#[derive(Clone, Copy, Debug, Serialize, TS)]
-#[ts(export)]
-pub struct Position {
-  x: i32,
-  y: i32,
-}
-
-#[derive(Clone, Copy, Debug, Serialize, TS)]
-#[ts(export)]
-pub struct Size {
-  width: u32,
-  height: u32,
 }
 
 #[derive(Clone, Debug, Serialize, TS)]

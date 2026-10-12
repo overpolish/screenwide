@@ -6,9 +6,10 @@
 //! own would compose that canvas twice and throw the first drawing away.
 
 use super::super::super::{annotation_preview, PlayerSources};
-use super::gpu_decoder::GpuFrame;
-use crate::editor::preview_platform::{ComposedFrame, DecodedTexture};
-use crate::screenshots::ScreenshotOutputSettings;
+use crate::editor::preview_platform::DecodedTexture;
+use screenwide_compositor::compositor::ComposedFrame;
+use screenwide_export::decode::windows::gpu_decoder::GpuFrame;
+use screenwide_output::ScreenshotOutputSettings;
 
 /// Presents `screen` and `camera`, the frames one moment decoded to; a pane
 /// without a frame keeps the picture it holds. `frame_ms` is how much source
@@ -73,7 +74,7 @@ pub(in crate::editor::recording_preview_player::platform) fn present_native_fram
         ),
         settings.camera_overlay,
         settings.recording_output.camera.drop_shadow,
-        crate::editor::recording_model::CAMERA_IN_FRONT,
+        screenwide_export::recording_model::CAMERA_IN_FRONT,
         composed.unwrap_or(ComposedFrame {
           cursor: None,
           keyboard: None,
@@ -91,7 +92,7 @@ pub(in crate::editor::recording_preview_player::platform) fn present_native_fram
         .unwrap_or(false)
     };
     // A recording of the camera alone is the camera in its first pane.
-    let screen_is_camera = sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera;
+    let screen_is_camera = sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera;
     let screen_drawn = screen.zip(composed).is_none_or(|(frame, composition)| {
       present(
         0,

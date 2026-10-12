@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-i18n"
+description = "The app's own text, from the same Fluent files the webviews read"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+# fluent-langneg stays on the release fluent-bundle builds against, so one
+# unic-langid is compiled.
+fluent-bundle.workspace = true
+fluent-langneg.workspace = true
+serde.workspace = true
+sys-locale.workspace = true
+ts-rs.workspace = true
+unic-langid.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-foundation.workspace = true

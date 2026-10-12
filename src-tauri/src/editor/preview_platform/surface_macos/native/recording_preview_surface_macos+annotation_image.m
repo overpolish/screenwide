@@ -8,7 +8,7 @@
 
 #import "recording_preview_surface_macos_private.h"
 #include <math.h>
-#include "../../../annotations/geometry.h"
+#include "../../../../../crates/annotations/src/geometry.h"
 
 /// The chosen image's frame in display points. The middle rides in `middle`,
 /// the turn in `start_head`, the half width and half height in `end_head`

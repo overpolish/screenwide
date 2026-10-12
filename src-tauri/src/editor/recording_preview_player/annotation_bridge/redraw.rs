@@ -45,7 +45,7 @@ impl PreviewPlayerManager {
       .unwrap_or_else(|poisoned| poisoned.into_inner())
       .clone();
     let resolve = |track, picture| {
-      crate::editor::annotations::timing::revealed_annotations(
+      screenwide_annotations::timing::revealed_annotations(
         &clips,
         track,
         &ranges,

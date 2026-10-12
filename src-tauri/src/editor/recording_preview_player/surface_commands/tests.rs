@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{clear_inactive_pane_targets, workspace_topology, PreviewSurfacePane};
-use crate::editor::preview_platform::PreviewSurfaceRect;
+use screenwide_compositor::PreviewSurfaceRect;
 
 #[test]
 fn reenabled_panes_require_a_fresh_present() {

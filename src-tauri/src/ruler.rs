@@ -6,7 +6,6 @@ use tauri::{AppHandle, Manager, WebviewUrl};
 use crate::{app_windows::WindowLabel, capture_overlays, screenshots};
 
 mod adapter;
-pub(crate) mod analysis;
 pub(crate) mod centerlines;
 pub(crate) mod input;
 #[cfg(target_os = "windows")]
@@ -43,7 +42,7 @@ pub fn dismiss(app: &AppHandle) {
   let had_windows = !ruler_windows(app).is_empty();
   close_ruler_windows(app);
   #[cfg(target_os = "macos")]
-  if let Err(error) = crate::osc::cursor::macos::release_ruler(app) {
+  if let Err(error) = crate::osc::cursor_macos::release_ruler(app) {
     eprintln!("Could not release Ruler cursor ownership: {error}");
   }
   let had_capture = app.state::<RulerState>().cancel();
@@ -92,7 +91,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   let generation = app.state::<RulerState>().begin();
   crate::glide::suspend_for_capture(app);
   #[cfg(target_os = "macos")]
-  if let Err(error) = crate::osc::cursor::macos::acquire_ruler(app) {
+  if let Err(error) = crate::osc::cursor_macos::acquire_ruler(app) {
     dismiss(app);
     return Err(error);
   }

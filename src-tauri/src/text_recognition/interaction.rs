@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::osc::geometry::Point;
+use screenwide_osc::geometry::Point;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 

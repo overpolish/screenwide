@@ -4,9 +4,9 @@
 //! Current-frame keyboard bounds used for body hit-testing.
 
 use super::{
-  display_selection, PreviewSelection, PreviewSurfaceRect, RecordingPreviewSurface, SurfaceInner,
-  SurfaceState,
+  display_selection, PreviewSelection, RecordingPreviewSurface, SurfaceInner, SurfaceState,
 };
+use screenwide_compositor::PreviewSurfaceRect;
 
 pub(super) fn frame(
   inner: &SurfaceInner,
@@ -39,7 +39,7 @@ pub(super) fn clamp_move(
   if selection.layer_id != u32::MAX - 1 {
     return;
   }
-  use super::super::workspace_editor::keyboard_bounds::screenwide_keyboard_clamp_origin;
+  use screenwide_compositor::workspace_editor::keyboard_bounds::screenwide_keyboard_clamp_origin;
   let x = screenwide_keyboard_clamp_origin(selection.x, selection.width);
   let y = screenwide_keyboard_clamp_origin(selection.y, selection.height);
   if x != selection.x || y != selection.y {
@@ -55,12 +55,12 @@ pub(super) fn clamp_move(
 
 pub(super) fn resize_limit(
   start: PreviewSelection,
-  resize: &mut super::super::workspace_editor::SelectionResize,
+  resize: &mut screenwide_compositor::workspace_editor::SelectionResize,
 ) {
   if start.layer_id != u32::MAX - 1 {
     return;
   }
-  use super::super::workspace_editor::keyboard_bounds::screenwide_keyboard_resize_limit;
+  use screenwide_compositor::workspace_editor::keyboard_bounds::screenwide_keyboard_resize_limit;
   resize.maximum_scale = resize.maximum_scale.min(screenwide_keyboard_resize_limit(
     start.x,
     start.y,
@@ -78,7 +78,7 @@ pub(super) fn resize_limit(
 pub(super) fn redraw_keyboard_transform(
   inner: &std::sync::Arc<SurfaceInner>,
   state: &mut SurfaceState,
-  start: Option<crate::editor::keyboard_effects::KeyboardOverlay>,
+  start: Option<screenwide_keyboard_effects::KeyboardOverlay>,
   selection: PreviewSelection,
   scale: f64,
 ) {
@@ -122,7 +122,7 @@ pub(super) fn redraw_keyboard_transform(
 pub(super) fn keyboard_transform_start(
   state: &SurfaceState,
   selection: PreviewSelection,
-) -> Option<crate::editor::keyboard_effects::KeyboardOverlay> {
+) -> Option<screenwide_keyboard_effects::KeyboardOverlay> {
   (selection.layer_id == u32::MAX - 1)
     .then(|| {
       state

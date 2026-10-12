@@ -40,12 +40,12 @@ pub fn initialize(app: &AppHandle) {
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) =
     load_screenshot_delete_project_after_export(app);
-  crate::project::sweep_cancelled(app);
+  crate::projects_folder::sweep_cancelled(app);
   // Off the launch path: what has waited 30 days in Recently Deleted goes to
   // the Trash, which can take a moment for a large project.
   let expiring = app.clone();
-  tauri::async_runtime::spawn_blocking(move || crate::project::expire(&expiring));
+  tauri::async_runtime::spawn_blocking(move || screenwide_project::expire(&expiring));
   if let Ok(data) = app.path().app_data_dir() {
-    super::images::store::initialize(&data);
+    screenwide_images::store::initialize(&data);
   }
 }

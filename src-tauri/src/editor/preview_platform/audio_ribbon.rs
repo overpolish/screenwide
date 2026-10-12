@@ -15,8 +15,8 @@ use pipeline::Painter;
 use crate::editor::recording_preview_player::audio_visualizer::{
   bucket_levels, AudioRibbonEnvelopes,
 };
-use crate::gpu::surface::{Frame, Surface};
-use crate::gpu::Gpu;
+use screenwide_gpu::surface::{Frame, Surface};
+use screenwide_gpu::Gpu;
 
 /// Two points of bar with a three-point gap.
 const BAR_WIDTH_POINTS: f32 = 2.0;
@@ -151,7 +151,7 @@ pub(crate) fn ribbon_still(
   if samples.is_empty() {
     return Err("There is no audio to draw".to_owned());
   }
-  let gpu = crate::gpu::shared()?;
+  let gpu = screenwide_gpu::shared()?;
   let painter = Painter::new(&gpu.device);
   let levels = painter.bindings(&gpu.device, &levels_view(gpu, &samples));
   let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
@@ -164,7 +164,7 @@ pub(crate) fn ribbon_still(
     mip_level_count: 1,
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
-    format: crate::gpu::surface::FORMAT,
+    format: screenwide_gpu::surface::FORMAT,
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
     view_formats: &[],
   });

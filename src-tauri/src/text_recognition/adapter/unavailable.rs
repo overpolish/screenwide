@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 pub(crate) fn install(
   _window: &tauri::WebviewWindow,

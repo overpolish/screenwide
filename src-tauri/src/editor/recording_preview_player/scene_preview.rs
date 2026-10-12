@@ -7,7 +7,8 @@
 use super::scene_reframe::SceneReframe;
 use super::*;
 use crate::editor::preview_platform::SelectionGestureOperation;
-use crate::editor::scenes::{arrange, camera_target, validate_clips, RecordingSceneClip};
+use screenwide_export::scenes::{arrange, camera_target};
+use screenwide_scenes::{validate_clips, RecordingSceneClip};
 
 /// The scenes the preview draws: the recording's clips, and the pane of the
 /// one under the playhead the crop tool is reframing, which is drawn unzoomed

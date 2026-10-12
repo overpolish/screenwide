@@ -5,7 +5,7 @@
 //! source: what was cut is never drawn, and the bars run on through a cut as
 //! the sound does instead of jumping ahead over what was taken out.
 
-use crate::editor::timeline_edit::{output_at_us, TimelineRange};
+use screenwide_timeline::{output_at_us, TimelineRange};
 
 /// How long the edited timeline lasts, in microseconds: the kept ranges laid
 /// end to end at their own rates. `None` where nothing was cut.

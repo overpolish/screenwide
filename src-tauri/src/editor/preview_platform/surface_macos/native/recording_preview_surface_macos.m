@@ -8,9 +8,9 @@
 #import <WebKit/WebKit.h>
 #include <math.h>
 
-#import "../../../../osc/gpu/macos/osc_controls.h"
+#import "../../../../../crates/osc/src/gpu/macos/osc_controls.h"
 #import "recording_preview_surface_macos_private.h"
-#import "../../../../osc/gpu/macos/osc_gpu_macos.h"
+#import "../../../../../crates/osc/src/gpu/macos/osc_gpu_macos.h"
 
 
 typedef struct {

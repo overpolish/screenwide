@@ -10,7 +10,7 @@ fn adjacent_guides_create_a_movable_gap_with_single_step_history() {
   let display = DesktopDisplay {
     id: 1,
     origin: Point { x: 0.0, y: 0.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: 100.0,
       height: 100.0,
     },
@@ -140,7 +140,7 @@ fn option_clips_transient_probes_to_guides_and_measurement_boxes() {
   let display = DesktopDisplay {
     id: 1,
     origin: Point { x: 0.0, y: 0.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: 100.0,
       height: 100.0,
     },
@@ -214,7 +214,7 @@ fn tolerance_changes_every_live_edge_detector_and_preserves_stamped_artifacts() 
   let display = DesktopDisplay {
     id: 1,
     origin: Point { x: 0.0, y: 0.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: 100.0,
       height: 100.0,
     },
@@ -323,7 +323,7 @@ fn guide_snapping_uses_the_same_tolerance_as_other_live_edges() {
   let display = DesktopDisplay {
     id: 1,
     origin: Point { x: 0.0, y: 0.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: 100.0,
       height: 100.0,
     },

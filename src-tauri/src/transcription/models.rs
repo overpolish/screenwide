@@ -6,8 +6,8 @@ use std::path::PathBuf;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
-use super::catalogue::{Model, ModelFile, Purpose, MODELS};
 use super::{download, language};
+use screenwide_speech::catalogue::{Model, ModelFile, Purpose, MODELS};
 
 const CHANGED_EVENT: &str = "transcription://changed";
 

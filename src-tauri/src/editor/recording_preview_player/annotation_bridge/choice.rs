@@ -8,8 +8,8 @@
 
 use super::gesture::Commit;
 use super::*;
-use crate::editor::annotations::marquee::{chosen_after_band, swept_annotations};
-use crate::editor::annotations::AnnotationPoint;
+use screenwide_annotations::marquee::{chosen_after_band, swept_annotations};
+use screenwide_annotations::AnnotationPoint;
 
 /// A marquee band under way: the pane it was pressed on, the corner it was
 /// pressed at, in that pane's source pixels, and whether it adds to the

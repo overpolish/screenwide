@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::osc::geometry::Rect;
+use screenwide_osc::geometry::Rect;
 
 const CONTAINMENT_SLACK: f64 = 12.0;
 const MINIMUM_IOU: f64 = 0.25;

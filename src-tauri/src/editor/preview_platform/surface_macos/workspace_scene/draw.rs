@@ -5,8 +5,8 @@
 
 use super::loupe::NativeMagnifier;
 use super::WorkspaceScene;
-use crate::editor::preview_platform::compositor::{ComposedFrame, LayerDraw, LayerPlacement};
 use crate::editor::preview_platform::surface_macos::NativeWorkspacePlacement;
+use screenwide_compositor::compositor::{ComposedFrame, LayerDraw, LayerPlacement};
 
 impl WorkspaceScene {
   /// Whether the scene holds `count` layers, one for each placement a redraw
@@ -144,7 +144,7 @@ impl WorkspaceScene {
 
 /// Clears `view` to transparent: the layers are drawn over it, and where none
 /// reaches the webview's backdrop shows through.
-fn clear(gpu: &crate::gpu::Gpu, view: &wgpu::TextureView) {
+fn clear(gpu: &screenwide_gpu::Gpu, view: &wgpu::TextureView) {
   let mut encoder = gpu
     .device
     .create_command_encoder(&wgpu::CommandEncoderDescriptor {

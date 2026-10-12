@@ -11,8 +11,8 @@ use nokhwa::{
 };
 use serde::Serialize;
 
-use super::camera_id;
 use crate::fault::{self, Fault};
+use screenwide_capture::devices::camera_id;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,14 +47,16 @@ pub(crate) fn camera_mode_status(
 
 #[cfg(target_os = "macos")]
 fn mode_opens(camera: &CameraInfo, width: u32, height: u32, fps: u32) -> bool {
-  crate::camera_frame_rate::resolve_device(&camera_id(camera), &camera.human_name()).is_ok_and(
-    |device| crate::camera_frame_rate::find_format(&device, width, height, fps).is_some(),
-  )
+  screenwide_capture::camera_frame_rate::resolve_device(&camera_id(camera), &camera.human_name())
+    .is_ok_and(|device| {
+      screenwide_capture::camera_frame_rate::find_format(&device, width, height, fps).is_some()
+    })
 }
 
 #[cfg(not(target_os = "macos"))]
 fn mode_opens(camera: &CameraInfo, width: u32, height: u32, fps: u32) -> bool {
-  crate::camera_format::resolve_exact_camera_format(camera.index(), width, height, fps).is_ok()
+  screenwide_capture::camera_format::resolve_exact_camera_format(camera.index(), width, height, fps)
+    .is_ok()
 }
 
 /// The start's view of the same answer: what to tell the user when it is not

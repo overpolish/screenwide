@@ -27,7 +27,8 @@ pub(super) use platform::{
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{osc::desktop::DesktopBinding, screenshots::CapturedImage};
+  use screenwide_imaging::CapturedImage;
+  use screenwide_osc::desktop::DesktopBinding;
 
   type Install =
     fn(&tauri::WebviewWindow, u32, &[(u32, CapturedImage)]) -> Result<DesktopBinding, String>;

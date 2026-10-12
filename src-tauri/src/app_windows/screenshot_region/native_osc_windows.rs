@@ -15,19 +15,19 @@ mod text;
 
 // Region supplies scene state; primitive construction and shader ownership
 // live in the shared OSC layer used by Export as well.
-pub(crate) use crate::osc::gpu::windows as renderer;
+pub(crate) use screenwide_osc::gpu::windows as renderer;
 
 // Re-exported with the macOS facade's shape. The Region adapter is the only
 // stage-1 consumer; the OCR and ruler overlays pick up the rest in stages 3-4.
 #[allow(unused_imports)]
-pub use crate::osc::{
+pub use screenwide_osc::{
   desktop::DesktopBinding,
   protocol::{OscResult as NativeOscResult, Purpose, ResultStatus},
 };
 
-pub const NATIVE_OSC_EVENT: &str = crate::osc::semantic::REGION_EVENT;
+pub const NATIVE_OSC_EVENT: &str = screenwide_osc::semantic::REGION_EVENT;
 #[allow(dead_code)]
-pub const NATIVE_OSC_LAYOUT_EVENT: &str = crate::osc::semantic::DESKTOP_LAYOUT_EVENT;
+pub const NATIVE_OSC_LAYOUT_EVENT: &str = screenwide_osc::semantic::DESKTOP_LAYOUT_EVENT;
 
 #[allow(unused_imports)]
 pub(crate) use state::{

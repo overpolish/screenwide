@@ -34,10 +34,10 @@ use geometry_helpers::{
 use super::surface_selection::RecordingPreviewSelection;
 use super::*;
 
-use crate::editor::preview_platform::workspace_editor::WorldRect;
-use crate::editor::preview_platform::PreviewSurfaceRect;
 use crate::editor::preview_workspace_model::WorkspacePane;
-use crate::editor::CameraOverlaySettings;
+use screenwide_compositor::workspace_editor::WorldRect;
+use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_scenes::CameraOverlaySettings;
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]

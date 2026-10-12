@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::screenshots::Capture;
+use screenwide_output::Capture;
 use ts_rs::TS;
 
 /// One independently editable image in a screenshot workspace.

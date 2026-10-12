@@ -8,7 +8,7 @@ mod keyboard;
 #[derive(Clone)]
 pub(super) struct PlayerSources {
   pub(super) annotation_clips:
-    Arc<RwLock<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>>,
+    Arc<RwLock<Vec<screenwide_annotations::timing::RecordingAnnotationClip>>>,
   pub(super) scenes: super::scene_preview::PreviewScenes,
   pub(super) audio_tracks: Vec<RecordingAudioTrack>,
   pub(super) camera_duration_ms: Option<u64>,
@@ -17,7 +17,7 @@ pub(super) struct PlayerSources {
   pub(super) camera_picking: super::camera_picking::SharedPicking,
   /// What each pane was captured at, primary then camera, from
   /// `EditorArtifact::captures`, for the compositions this player stores.
-  pub(super) captures: [crate::screenshots::Capture; 2],
+  pub(super) captures: [screenwide_output::Capture; 2],
   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
   pub(super) cursor: Option<Arc<CursorCompositor>>,
   #[cfg(target_os = "macos")]
@@ -135,7 +135,7 @@ pub(super) fn sources_with_surface(
   };
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let frames_per_second =
-    super::super::media_preview::recording_info(&path).and_then(|info| info.frames_per_second);
+    screenwide_export::media_preview::recording_info(&path).and_then(|info| info.frames_per_second);
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let frames_per_second = None;
   let camera_size = camera.as_ref().map(|value| (value.width, value.height));
@@ -152,7 +152,7 @@ pub(super) fn sources_with_surface(
     crate::editor::timeline_edit::for_project(&project, artifact_id).map(|(_, edit)| edit);
   let persisted = persisted_edit
     .as_ref()
-    .and_then(|edit| crate::editor::timeline_edit::TimelinePlan::from_edit(edit, duration_ms));
+    .and_then(|edit| screenwide_timeline_edit::TimelinePlan::from_edit(edit, duration_ms));
   let (annotation_clips, scene_clips) = persisted_edit
     .map(|edit| (edit.annotation_clips, edit.scene_clips))
     .unwrap_or_default();
@@ -196,7 +196,7 @@ pub(super) fn sources_with_surface(
   #[cfg(target_os = "macos")]
   let cursor_artworks = cursor
     .as_ref()
-    .map(|_| Arc::new(crate::editor::cursor_effects::gpu_artworks()));
+    .map(|_| Arc::new(screenwide_cursor_effects::gpu_artworks()));
   let processing = super::PreviewProcessing::for_project(
     project.parent().unwrap_or(std::path::Path::new(".")),
     &audio_tracks

@@ -13,7 +13,7 @@ use screenwide_transcriber::{Job, PickedMask};
 use super::super::stop::{self, Work};
 use super::super::{matte, CameraRecording};
 use super::{change, mask_path, read, COMPOSED_MAKE, COMPOSED_PREFIX};
-use crate::transcription::runner::Transcriber;
+use screenwide_speech::runner::Transcriber;
 
 /// One matte composed at a time.
 static COMPOSING: Mutex<()> = Mutex::new(());
@@ -68,7 +68,7 @@ pub(in crate::editor::camera_effects) fn compose(
         .stopped_by(running.stop())
         .camera_objects(
           Job::ComposeMatte {
-            ffmpeg: crate::editor::media_preview::ffmpeg_path(),
+            ffmpeg: screenwide_sidecar::ffmpeg_path(),
             camera: camera.path.clone(),
             matte: matte::path(&folder),
             width,

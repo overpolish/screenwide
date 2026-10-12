@@ -1,15 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The recording's microphone written out as text, word by word, to edit and
-//! caption by. The stretches of speech are planned from the listen Remove
-//! silences already made (`plan`), transcribed one at a time so the work can
-//! be cancelled between them, and the words are kept beside the project.
-
-mod plan;
-mod word_edges;
-mod word_ends;
-mod word_starts;
+//! Transcribing the recording's microphone, to edit and caption by: the
+//! stretches of speech transcribed one at a time so the work can be cancelled
+//! between them, and the words kept beside the project. The words and how
+//! they are planned and settled are `screenwide_speech::transcript`.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -21,11 +16,15 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use ts_rs::TS;
 
-use super::{analysis, vad_model, SpeechSource};
-use crate::transcription::catalogue::Purpose;
-use crate::transcription::runner::samples::decode_audio_stream;
-use crate::transcription::runner::Transcriber;
+use super::{vad_model, SpeechSource};
 use crate::transcription::{language, models};
+use screenwide_speech::catalogue::Purpose;
+use screenwide_speech::runner::samples::decode_audio_stream;
+use screenwide_speech::runner::Transcriber;
+use screenwide_speech::transcript::{
+  plan, word_edges, word_ends, word_starts, RecordingTranscript, RecordingTranscriptWord,
+};
+use screenwide_speech::{analysis, silences};
 
 /// The event that tells the editor how far transcribing a recording has got.
 const PROGRESS_EVENT: &str = "editor://transcript-progress";
@@ -46,29 +45,6 @@ struct Kept {
   model: String,
   language: String,
   words: Vec<RecordingTranscriptWord>,
-}
-
-/// A word said in the recording, with when it was said.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct RecordingTranscriptWord {
-  pub start_ms: u64,
-  pub end_ms: u64,
-  pub text: String,
-  /// How sure the engine was of it, 0 to 1: low ones are worth a second look
-  /// when the text is edited.
-  pub probability: f32,
-}
-
-/// The recording's microphone as text, in the order it was said.
-#[derive(Clone, Debug, PartialEq, Serialize, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct RecordingTranscript {
-  pub language: String,
-  pub model: String,
-  pub words: Vec<RecordingTranscriptWord>,
 }
 
 /// How far transcribing a recording has got, 0 to 1.
@@ -215,7 +191,7 @@ fn transcribe(
       &mut |fraction| progress(LISTEN_SHARE + fraction * (1.0 - LISTEN_SHARE)),
     )?;
     let mut transcript = flatten(&done);
-    let speech = super::silences::speech_ranges(&speech, source.duration_ms as f64);
+    let speech = silences::speech_ranges(&speech, source.duration_ms as f64);
     word_starts::settle_word_starts(&mut transcript.words, &speech);
     word_ends::settle_word_ends(&mut transcript.words, &speech);
     word_edges::settle_word_edges_from(&mut transcript.words, samples.path())?;

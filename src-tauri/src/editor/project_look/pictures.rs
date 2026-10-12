@@ -12,13 +12,13 @@ use std::time::SystemTime;
 
 use serde_json::{Map, Value};
 
-use crate::editor::images::store;
-use crate::screenshots::ScreenshotOutputSettings;
+use screenwide_images::store;
+use screenwide_output::ScreenshotOutputSettings;
 
 pub(super) const PICTURES_FOLDER: &str = "media/pictures";
 
 pub(super) fn folder(project: &Path) -> Result<PathBuf, String> {
-  crate::project::resolve(project, PICTURES_FOLDER)
+  screenwide_project::resolve(project, PICTURES_FOLDER)
 }
 
 /// The content name of `path` as it is now. The look is saved after every
@@ -159,7 +159,7 @@ pub(crate) fn resolve_backgrounds(project: &Path, look: &mut Value) {
     if Path::new(name).is_absolute() {
       return;
     }
-    let resolved = crate::project::resolve(project, name).map_or(Value::Null, |path| {
+    let resolved = screenwide_project::resolve(project, name).map_or(Value::Null, |path| {
       Value::String(path.to_string_lossy().into_owned())
     });
     fields.insert("backgroundImagePath".to_owned(), resolved);

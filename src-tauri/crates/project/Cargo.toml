@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-project"
+description = "A Screenwide project: its folder, manifest, library and trash"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[features]
+# The throwaway projects the app's own tests save into.
+test-support = []
+
+[dependencies]
+screenwide-timeline-edit.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri.workspace = true
+trash.workspace = true
+ts-rs.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = ["Win32_Storage_FileSystem"] }

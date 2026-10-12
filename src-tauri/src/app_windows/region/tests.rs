@@ -7,7 +7,7 @@ use super::{
   region_selector_may_show, region_selector_restores_opacity, screenshot_region_may_restore,
   RegionSelectorCaptureAffinity,
 };
-use crate::osc::scene::RegionSceneOwner;
+use screenwide_osc::scene::RegionSceneOwner;
 
 #[test]
 fn a_region_gesture_does_not_raise_the_source_selector() {

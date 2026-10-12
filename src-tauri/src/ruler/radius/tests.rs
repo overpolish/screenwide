@@ -103,7 +103,7 @@ fn rounded_card(radius: f64, softness: f64, foreground: u8) -> GradientMaps {
       rgba[index..index + 3].fill(value);
     }
   }
-  crate::ruler::analysis::compute_gradients(&rgba, size, size)
+  screenwide_imaging::analysis::compute_gradients(&rgba, size, size)
 }
 
 #[test]
@@ -112,7 +112,7 @@ fn detects_soft_low_contrast_corners_from_image_pixels() {
     for foreground in [0x30, 0xE5] {
       for softness in [1.0, 3.0, 5.0] {
         let field = rounded_card(f64::from(radius), softness, foreground);
-        let boxes = crate::ruler::analysis::detect_boxes(&field, 24);
+        let boxes = screenwide_imaging::analysis::detect_boxes(&field, 24);
         for (corner, x, y) in [
           (Corner::TopLeft, 24.0, 29.0),
           (Corner::TopRight, 96.0, 29.0),
@@ -137,7 +137,7 @@ fn detects_soft_low_contrast_corners_from_image_pixels() {
 fn square_cards_do_not_create_radius_candidates() {
   for softness in [1.0, 3.0, 5.0] {
     let field = rounded_card(0.0, softness, 0xE5);
-    let boxes = crate::ruler::analysis::detect_boxes(&field, 24);
+    let boxes = screenwide_imaging::analysis::detect_boxes(&field, 24);
     assert!(
       corner_radius_at(&boxes, Point { x: 22.0, y: 27.0 }, &field, 24, 1.0, 1.0).is_none(),
       "softness {softness}"

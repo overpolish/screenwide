@@ -11,7 +11,7 @@ impl RecordingPreviewSurface {
   /// from the frame it holds.
   pub(crate) fn set_camera_effects(
     &self,
-    live: Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
+    live: Option<std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>>,
   ) -> Result<(), String> {
     self
       .inner

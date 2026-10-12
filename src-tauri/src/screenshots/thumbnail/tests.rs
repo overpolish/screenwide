@@ -11,7 +11,7 @@ fn mesh() -> Background {
       "#9333EA".to_owned(),
       "#38BDF8".to_owned(),
     ],
-    generator: crate::screenshots::default_mesh_generator(),
+    generator: screenwide_output::default_mesh_generator(),
     locked_colors: vec![false; 4],
     points: vec![
       BackgroundMeshPoint {

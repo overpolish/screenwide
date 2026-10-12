@@ -137,7 +137,8 @@ const typescript = filesIn("src", new Set([".ts", ".tsx"]))
   .join("\n");
 // Rust and the Objective-C overlays. Comments are left out: they may show
 // the macro without using a message.
-const native = filesIn("src-tauri/src", new Set([".rs", ".m", ".h"]))
+const native = ["src-tauri/src", "src-tauri/crates"]
+  .flatMap((root) => filesIn(root, new Set([".rs", ".m", ".h"])))
   .flatMap((file) => readFileSync(file, "utf8").split("\n"))
   .filter((line) => !line.trimStart().startsWith("//"))
   .join("\n");

@@ -44,7 +44,7 @@ fn radius_candidates_are_cached_for_each_tolerance() {
   let display = DesktopDisplay {
     id: 1,
     origin: Point { x: 0.0, y: 0.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: f64::from(width),
       height: f64::from(height),
     },
@@ -81,7 +81,7 @@ fn samples_each_display_in_its_own_pixel_density() {
     DesktopDisplay {
       id: 1,
       origin: Point { x: 0.0, y: 0.0 },
-      size: crate::osc::geometry::Size {
+      size: screenwide_osc::geometry::Size {
         width: 2.0,
         height: 1.0,
       },
@@ -90,7 +90,7 @@ fn samples_each_display_in_its_own_pixel_density() {
     DesktopDisplay {
       id: 2,
       origin: Point { x: 2.0, y: 1.0 },
-      size: crate::osc::geometry::Size {
+      size: screenwide_osc::geometry::Size {
         width: 1.0,
         height: 1.0,
       },
@@ -141,7 +141,7 @@ fn viewport_actions_change_only_the_target_display() {
     DesktopDisplay {
       id: 1,
       origin: Point { x: 0.0, y: 0.0 },
-      size: crate::osc::geometry::Size {
+      size: screenwide_osc::geometry::Size {
         width: 100.0,
         height: 80.0,
       },
@@ -150,7 +150,7 @@ fn viewport_actions_change_only_the_target_display() {
     DesktopDisplay {
       id: 2,
       origin: Point { x: 100.0, y: 0.0 },
-      size: crate::osc::geometry::Size {
+      size: screenwide_osc::geometry::Size {
         width: 100.0,
         height: 80.0,
       },
@@ -199,7 +199,7 @@ fn live_probes_use_frozen_source_edges_and_hide_during_pointer_gestures() {
   let display = DesktopDisplay {
     id: 7,
     origin: Point { x: 100.0, y: 50.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: 10.0,
       height: 5.0,
     },
@@ -249,7 +249,7 @@ fn held_range_stamps_a_probe_and_joins_history_copy_and_deletion() {
   let display = DesktopDisplay {
     id: 1,
     origin: Point { x: 0.0, y: 0.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: 10.0,
       height: 5.0,
     },
@@ -317,7 +317,7 @@ fn held_guides_snap_with_hysteresis_stamp_and_join_history() {
   let display = DesktopDisplay {
     id: 7,
     origin: Point { x: 100.0, y: 50.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: 100.0,
       height: 80.0,
     },

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::PreviewSurfaceRect;
 use super::ffi::{
   screenwide_preview_surface_begin_layout,
   screenwide_preview_surface_clear_workspace_transform_history,
@@ -11,6 +10,7 @@ use super::ffi::{
 };
 use super::native_types::NativeWorkspacePaneRect;
 use super::RecordingPreviewSurface;
+use screenwide_compositor::PreviewSurfaceRect;
 
 impl RecordingPreviewSurface {
   pub(crate) fn set_viewport(&self, rect: PreviewSurfaceRect, backdrop: [f64; 4]) {

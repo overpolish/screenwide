@@ -10,12 +10,13 @@ pub(super) use scenes::{recording_scene, screenshot_scene};
 
 use resize_helpers::{origin_shift, shift_output};
 
-use super::preview_platform::workspace_editor::{
+use super::{RecordingOutputSettings, ScreenshotWorkspaceOutputSettings};
+use screenwide_compositor::workspace_editor::{
   FrameId, LayerGeometry, LayerId, NormalizedRect, WorkspaceFrame, WorkspaceLayer, WorkspaceScene,
   WorldRect,
 };
-use super::{CameraOverlaySettings, RecordingOutputSettings, ScreenshotWorkspaceOutputSettings};
-use crate::screenshots::ScreenshotOutputSettings;
+use screenwide_output::ScreenshotOutputSettings;
+use screenwide_scenes::CameraOverlaySettings;
 
 #[derive(Clone, Copy)]
 pub(crate) struct WorkspacePane {
@@ -212,7 +213,7 @@ mod frame_shift_tests {
       height: 4894.0,
     };
     let shift = origin_shift(old, new);
-    let mut output = crate::screenshots::test_output_settings(3600, 2338);
+    let mut output = screenwide_output::fixtures::test_output_settings(3600, 2338);
     output.crop_x = 0.0;
     output.crop_y = 0.0;
     output.image_x = 0.0;
@@ -240,7 +241,7 @@ mod frame_shift_tests {
       width: 150.0,
       height: 100.0,
     };
-    let mut output = crate::screenshots::test_output_settings(100, 100);
+    let mut output = screenwide_output::fixtures::test_output_settings(100, 100);
     output.crop_x = 10.0;
     output.image_x = 5.0;
     shift_output(&mut output, origin_shift(old, new));

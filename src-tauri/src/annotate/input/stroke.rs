@@ -5,14 +5,14 @@
 
 use std::time::Instant;
 
-use crate::editor::annotations::arrow::new_arrow;
-use crate::editor::annotations::counter::new_counter;
-use crate::editor::annotations::freehand::gesture::extend;
-use crate::editor::annotations::freehand::hold::StrokeHold;
-use crate::editor::annotations::freehand::model::{default_draw_style, new_draw};
-use crate::editor::annotations::outline::model::new_shape;
-use crate::editor::annotations::spotlight::model::{default_spotlight_style, new_spotlight};
-use crate::editor::annotations::{
+use screenwide_annotations::arrow::new_arrow;
+use screenwide_annotations::counter::new_counter;
+use screenwide_annotations::freehand::gesture::extend;
+use screenwide_annotations::freehand::hold::StrokeHold;
+use screenwide_annotations::freehand::model::{default_draw_style, new_draw};
+use screenwide_annotations::outline::model::new_shape;
+use screenwide_annotations::spotlight::model::{default_spotlight_style, new_spotlight};
+use screenwide_annotations::{
   Annotation, AnnotationKind, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
 
@@ -106,9 +106,7 @@ impl Stroke {
         | AnnotationKind::Magnify
         | AnnotationKind::Image => settings.default_width,
         AnnotationKind::Counter => settings.default_counter_size,
-        AnnotationKind::Highlight => {
-          crate::editor::annotations::highlight::model::NEW_HIGHLIGHT_WIDTH
-        }
+        AnnotationKind::Highlight => screenwide_annotations::highlight::model::NEW_HIGHLIGHT_WIDTH,
       },
     }
   }

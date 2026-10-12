@@ -31,22 +31,22 @@ pub(super) async fn keep_strip(
   project: PathBuf,
   frames: Vec<CapturedImage>,
 ) -> Result<(), String> {
-  let target = crate::project::scrub_strip_path(&project);
+  let target = screenwide_project::scrub_strip_path(&project);
   tauri::async_runtime::spawn_blocking(move || write_strip(frames, &target))
     .await
     .map_err(|error| error.to_string())??;
-  let _ = app.emit(crate::project::library::STILL_EVENT, &project);
+  let _ = app.emit(screenwide_project::library::STILL_EVENT, &project);
   Ok(())
 }
 
-/// Lays `frames` side by side, each [`crate::project::SCRUB_FRAME_WIDTH`]
+/// Lays `frames` side by side, each [`screenwide_project::SCRUB_FRAME_WIDTH`]
 /// wide, and writes them as one JPEG. A frame is laid over black where it is
 /// see-through, as an exported movie, which has no transparency, shows it.
 fn write_strip(frames: Vec<CapturedImage>, target: &Path) -> Result<(), String> {
   let first = frames
     .first()
     .ok_or_else(|| "There are no frames to keep".to_owned())?;
-  let width = crate::project::SCRUB_FRAME_WIDTH;
+  let width = screenwide_project::SCRUB_FRAME_WIDTH;
   let height =
     (u64::from(first.height) * u64::from(width) / u64::from(first.width.max(1))).max(1) as u32;
   let count = u32::try_from(frames.len()).map_err(|error| error.to_string())?;

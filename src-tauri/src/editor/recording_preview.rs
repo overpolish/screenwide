@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_export::media_preview;
 
 struct RecordingPreviewSources {
   duration_ms: u64,
@@ -21,9 +22,9 @@ pub async fn get_recording_keyboard_timeline(
   artifact_id: u64,
   playback_ranges: Option<Vec<recording_preview_player::RecordingPreviewPlaybackRange>>,
   shortcut_ids: Option<Vec<u64>>,
-  shortcut_ranges: Option<Vec<crate::editor::timeline_edit::DeletedKeyboardShortcutRange>>,
-  shortcut_positions: Option<Vec<crate::editor::timeline_edit::KeyboardShortcutPositionRange>>,
-) -> Result<Vec<crate::editor::keyboard_effects::KeyboardTimelineItem>, String> {
+  shortcut_ranges: Option<Vec<screenwide_timeline_edit::DeletedKeyboardShortcutRange>>,
+  shortcut_positions: Option<Vec<screenwide_timeline_edit::KeyboardShortcutPositionRange>>,
+) -> Result<Vec<screenwide_keyboard_effects::KeyboardTimelineItem>, String> {
   let path = {
     let state = app.state::<EditorState>();
     let artifact = state
@@ -47,7 +48,7 @@ pub async fn get_recording_keyboard_timeline(
     path.map_or_else(
       || Ok(Vec::new()),
       |path| {
-        let keyboard = crate::editor::keyboard_effects::KeyboardCompositor::open(&path)?;
+        let keyboard = screenwide_keyboard_effects::KeyboardCompositor::open(&path)?;
         keyboard.set_deleted_shortcuts(
           &shortcut_ids.unwrap_or_default(),
           &shortcut_ranges.unwrap_or_default(),
@@ -96,8 +97,8 @@ pub async fn get_recording_preview(
       &sources.path,
       sources.duration_ms,
       &sources.tracks,
-      &crate::editor::speech::heard::heard_files(folder, &streams),
-      &crate::editor::speech::auto_volume::heard_filters(folder, &streams),
+      &screenwide_speech::heard::heard_files(folder, &streams),
+      &screenwide_speech::auto_volume::heard_filters(folder, &streams),
     )?;
     ensure_current(&state, artifact_id)?;
     state
@@ -155,8 +156,8 @@ pub(crate) fn refresh_waveform(
     .iter()
     .map(|track| track.stream_index)
     .collect();
-  let cleaned = crate::editor::speech::heard::heard_files(folder, &streams);
-  let filters = crate::editor::speech::auto_volume::heard_filters(folder, &[stream]);
+  let cleaned = screenwide_speech::heard::heard_files(folder, &streams);
+  let filters = screenwide_speech::auto_volume::heard_filters(folder, &[stream]);
   let waveform = media_preview::waveform(
     &sources.path,
     track,

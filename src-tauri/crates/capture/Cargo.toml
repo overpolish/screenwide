@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-capture"
+description = "Capturing a recording: screen, camera, microphone and system audio, with its cursor and keyboard tracks"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+bytemuck.workspace = true
+cpal.workspace = true
+image.workspace = true
+rayon.workspace = true
+screenwide-annotations.workspace = true
+screenwide-gpu.workspace = true
+screenwide-osc.workspace = true
+screenwide-project.workspace = true
+screenwide-records.workspace = true
+screenwide-sidecar.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri.workspace = true
+tokio.workspace = true
+ts-rs.workspace = true
+wgpu.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cidre.workspace = true
+core-foundation.workspace = true
+core-graphics.workspace = true
+dispatch2.workspace = true
+nokhwa = { workspace = true, features = ["input-avfoundation"] }
+objc2.workspace = true
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
+xcap.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+nokhwa = { workspace = true, features = ["input-msmf"] }
+wasapi.workspace = true
+windows = { workspace = true, features = [
+  "Foundation",
+  "Graphics_Imaging",
+  "Graphics_Capture",
+  "Graphics_DirectX",
+  "Graphics_DirectX_Direct3D11",
+  "Media_Ocr",
+  "Storage_Streams",
+  "UI_ViewManagement",
+  "Win32_Foundation",
+  "Win32_Devices_HumanInterfaceDevice",
+  "Win32_Graphics_Direct2D",
+  "Win32_Graphics_Direct2D_Common",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D10",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Direct3D11on12",
+  "Win32_Graphics_Direct3D12",
+  "Win32_Graphics_DirectComposition",
+  "Win32_Graphics_DirectWrite",
+  "Win32_Graphics_Dwm",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_Graphics_Gdi",
+  "Win32_Media_DirectShow",
+  "Win32_Media_MediaFoundation",
+  "Win32_Security",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_DataExchange",
+  "Win32_System_Environment",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_Power",
+  "Win32_System_ProcessStatus",
+  "Win32_System_Registry",
+  "Win32_System_SystemServices",
+  "Win32_System_Threading",
+  "Win32_System_Variant",
+  "Win32_System_WinRT",
+  "Win32_System_WinRT_Direct3D11",
+  "Win32_System_WinRT_Graphics_Capture",
+  "Win32_UI_Accessibility",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Input",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Input_Pointer",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_PropertiesSystem",
+  "Win32_UI_WindowsAndMessaging",
+] }
+xcap = { workspace = true, features = ["wgc"] }
+
+[build-dependencies]
+screenwide-wgsl.workspace = true

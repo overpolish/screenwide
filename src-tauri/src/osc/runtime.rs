@@ -15,7 +15,7 @@ use std::sync::{
 use tauri::{Emitter, EventTarget, Manager, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-use super::{
+use screenwide_osc::{
   controller::{ControllerEvent, RegionController},
   desktop::DesktopBinding,
   geometry::{Monitor, Point, Size},

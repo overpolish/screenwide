@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::cursor::GpuCursorPreview;
-use crate::{
-  editor::{cursor_effects::GpuCursor, media_preview, CameraOverlaySettings},
-  screenshots::{self, CapturedImage, ScreenshotOutputSettings, StillOverlay},
-};
+use screenwide_compositor::compositor::still_overlay::StillOverlay;
+use screenwide_cursor_effects::GpuCursor;
+use screenwide_export::media_preview;
+use screenwide_imaging::CapturedImage;
+use screenwide_output::ScreenshotOutputSettings;
+use screenwide_scenes::CameraOverlaySettings;
 
 pub(super) fn gpu_still_overlay(
   screen: &CapturedImage,
@@ -16,7 +18,7 @@ pub(super) fn gpu_still_overlay(
   camera_drop_shadow: bool,
   camera_on_top: bool,
 ) -> Result<(Option<GpuCursor>, Option<StillOverlay>), String> {
-  let placement = screenshots::output_placement(screen.width, screen.height, output)?;
+  let placement = screenwide_output::output_placement(screen.width, screen.height, output)?;
   let cursor = cursor.map(|preview| {
     let scale_x = f64::from(placement.image_width) / f64::from(preview.canvas_width.max(1));
     let scale_y = f64::from(placement.image_height) / f64::from(preview.canvas_height.max(1));

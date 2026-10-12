@@ -12,8 +12,8 @@ use std::time::Duration;
 use sha2::{Digest, Sha256};
 use tauri::AppHandle;
 
-use super::catalogue::{Model, ModelFile};
 use super::models;
+use screenwide_speech::catalogue::{Model, ModelFile};
 
 struct Download {
   progress: f32,

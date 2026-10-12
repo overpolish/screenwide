@@ -4,7 +4,7 @@
 //! The select gestures that edit the scene under the playhead pane by pane:
 //! a custom scene's boxes moved and resized, and any scene's corner radii.
 
-use crate::editor::scenes::{RecordingSceneClip, SceneRadius};
+use screenwide_scenes::{RecordingSceneClip, SceneRadius};
 
 /// The index of the clip `source_ms` falls in.
 fn clip_at(clips: &[RecordingSceneClip], source_ms: u64) -> Option<usize> {

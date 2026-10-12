@@ -21,7 +21,7 @@ use tauri::{AppHandle, Manager};
 use ts_rs::TS;
 
 use crate::app_windows::{self, WindowLabel};
-use crate::project::ProjectSummary;
+use screenwide_project::ProjectSummary;
 
 /// A folder the browser lists projects from.
 #[derive(Clone, Debug, Serialize, TS)]
@@ -125,17 +125,17 @@ pub fn hide_project_browser(app: AppHandle) -> tauri::Result<()> {
 /// is not there is still listed, unavailable, so the browser can say so.
 #[tauri::command]
 pub fn get_project_locations(app: AppHandle) -> Vec<ProjectLocation> {
-  crate::project::ensure_default_directory(&app);
+  crate::projects_folder::ensure_default_directory(&app);
   let home_drive = app.path().home_dir().ok().and_then(|home| drive_of(&home));
   let home_drive = home_drive.as_deref();
   let default = crate::settings::current(&app)
     .project_directory
-    .or_else(|| crate::project::projects_directory(&app).ok());
+    .or_else(|| crate::projects_folder::projects_directory(&app).ok());
   default
     .map(|path| location(path, true, home_drive))
     .into_iter()
     .chain(
-      crate::project::library::load(&app)
+      screenwide_project::library::load(&app)
         .locations
         .into_iter()
         .map(|path| location(path, false, home_drive)),
@@ -152,21 +152,25 @@ pub async fn list_projects(
 ) -> Result<Vec<ProjectSummary>, String> {
   tauri::async_runtime::spawn_blocking(move || {
     let mut projects: Vec<ProjectSummary> = match source {
-      ProjectSource::Recent => crate::project::library::load(&app)
+      ProjectSource::Recent => screenwide_project::library::load(&app)
         .recents
         .iter()
-        .map(|file| crate::project::summarize(file))
+        .map(|file| screenwide_project::summarize(file))
         .collect(),
-      ProjectSource::Folder { path } => crate::project::in_folder(&path),
+      ProjectSource::Folder { path } => screenwide_project::in_folder(&path),
       ProjectSource::Deleted => {
         // What has waited long enough goes to the Trash before the rest are
         // listed, so the list never shows a project past its time.
-        crate::project::expire(&app);
-        crate::project::recently_deleted(&app)
+        screenwide_project::expire(&app);
+        screenwide_project::recently_deleted(&app)
           .into_iter()
           .map(|deleted| ProjectSummary {
-            expires_ms: Some(deleted.deleted_ms.saturating_add(crate::project::KEEP_MS)),
-            ..crate::project::summarize(&deleted.file)
+            expires_ms: Some(
+              deleted
+                .deleted_ms
+                .saturating_add(screenwide_project::KEEP_MS),
+            ),
+            ..screenwide_project::summarize(&deleted.file)
           })
           .collect()
       }

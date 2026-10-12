@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_export::media_preview;
+use screenwide_export::track_selection;
 
 pub(super) struct AudioSaveRequest<'a> {
   pub(super) app: &'a AppHandle,
@@ -13,7 +15,7 @@ pub(super) struct AudioSaveRequest<'a> {
   pub(super) selected_any: bool,
   pub(super) selection: &'a track_selection::TrackSelection,
   pub(super) stem: &'a str,
-  pub(super) timeline: Option<&'a timeline_edit::TimelinePlan>,
+  pub(super) timeline: Option<&'a screenwide_timeline_edit::TimelinePlan>,
   pub(super) working: &'a Path,
 }
 

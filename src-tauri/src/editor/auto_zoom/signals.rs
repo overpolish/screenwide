@@ -6,8 +6,8 @@
 //! the recording.
 
 use super::{Area, VisibleArea};
-use crate::recording::cursor::{ButtonState, CursorButton, CursorRecord};
-use crate::recording::keyboard::KeyboardRecord;
+use screenwide_records::cursor::{ButtonState, CursorButton, CursorRecord};
+use screenwide_records::keyboard::KeyboardRecord;
 
 /// How far a press must travel before it is a drag rather than a click, as a
 /// share of the visible picture.
@@ -160,7 +160,7 @@ impl Signals {
       })
       .collect();
     signals.keys.sort_unstable();
-    signals.typing = crate::recording::keyboard::typing_times_us(keyboard)
+    signals.typing = screenwide_records::keyboard::typing_times_us(keyboard)
       .into_iter()
       .map(|timestamp_us| timestamp_us / 1_000)
       .collect();

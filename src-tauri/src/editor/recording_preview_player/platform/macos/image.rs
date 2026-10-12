@@ -5,7 +5,7 @@ use std::ffi::c_void;
 
 use cidre::{cg, cm};
 
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 pub(super) fn captured_image(image: &cg::Image) -> Result<CapturedImage, String> {
   let width = image.width();

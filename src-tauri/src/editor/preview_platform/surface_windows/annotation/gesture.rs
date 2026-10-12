@@ -16,7 +16,7 @@
 //! reports them, exactly as the selection path in `input/down.rs` does.
 
 use super::*;
-use crate::editor::annotations::handles::HANDLE_FLAG_GROUPED;
+use screenwide_annotations::handles::HANDLE_FLAG_GROUPED;
 
 /// Resolving pointer samples and reporting them to the manager.
 mod sample;

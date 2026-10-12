@@ -10,13 +10,12 @@ use std::{
   time::Instant,
 };
 
-use super::super::{
-  cursor::{CursorRecorder, CursorSource},
-  keyboard::KeyboardRecorder,
-};
 use crate::annotate::live_clips::AnnotationRecorder;
-use crate::editor::annotations::timing::RecordingAnnotationClip;
-use crate::moments::MomentRecorder;
+use screenwide_annotations::timing::RecordingAnnotationClip;
+use screenwide_capture::cursor::CursorRecorder;
+use screenwide_capture::keyboard::KeyboardRecorder;
+use screenwide_moments::MomentRecorder;
+use screenwide_records::cursor::CursorSource;
 
 /// Which sidecars a starting recording asks for.
 pub(super) struct SidecarPlan {

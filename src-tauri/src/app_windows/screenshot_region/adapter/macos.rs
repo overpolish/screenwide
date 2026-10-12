@@ -7,11 +7,11 @@ use super::{resolve_region_scene, RegionSceneRequest};
 use crate::app_windows::screenshot_region::native_osc_macos as native;
 
 pub(crate) fn acquire_quick_screenshot_cursor(app: &AppHandle) -> Result<(), String> {
-  crate::osc::cursor::macos::acquire_quick_screenshot(app)
+  crate::osc::cursor_macos::acquire_quick_screenshot(app)
 }
 
 pub(crate) fn release_quick_screenshot_cursor(app: &AppHandle) -> Result<(), String> {
-  crate::osc::cursor::macos::release_quick_screenshot(app)
+  crate::osc::cursor_macos::release_quick_screenshot(app)
 }
 
 pub(crate) fn apply_region_scene(
@@ -63,7 +63,7 @@ pub(crate) fn apply_region_scene(
           if should_claim {
             let _ = native::claim_pointer_surface(view.cast());
           }
-          if presented && owner == crate::osc::scene::RegionSceneOwner::RestoringNormal {
+          if presented && owner == screenwide_osc::scene::RegionSceneOwner::RestoringNormal {
             crate::app_windows::region::finish_screenshot_region_restore();
           }
           if presented {
@@ -92,8 +92,8 @@ pub(crate) fn set_desktop_presented(
   app.run_on_main_thread(move || {
     if let Ok(view) = window.ns_view() {
       let owner = crate::app_windows::region::screenshot_region_scene_owner(window.app_handle());
-      let screenshot_session = owner == crate::osc::scene::RegionSceneOwner::Screenshot;
-      if presented && owner == crate::osc::scene::RegionSceneOwner::Normal {
+      let screenshot_session = owner == screenwide_osc::scene::RegionSceneOwner::Screenshot;
+      if presented && owner == screenwide_osc::scene::RegionSceneOwner::Normal {
         let _ = native::restore_normal_region_scene(view.cast());
       }
       let scene = native::region_scene(view.cast());
@@ -178,7 +178,7 @@ pub(crate) fn set_frame_visible(
 pub(crate) fn set_magnifier_source(
   window: &tauri::WebviewWindow,
   display_id: u32,
-  image: crate::screenshots::CapturedImage,
+  image: screenwide_imaging::CapturedImage,
 ) -> Result<bool, String> {
   let window = window.clone();
   let app = window.app_handle().clone();

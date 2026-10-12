@@ -1,48 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::editor::preview_platform::compositor::still::{compose_still, StillCamera, StillInputs};
-use crate::editor::preview_platform::compositor::CursorArtwork;
-mod composition;
-pub(crate) use composition::alpha_composite;
-pub(crate) use composition::compose_output_layers;
-
 use cidre::{cg, cv, sc};
 
 mod desktop_capture;
 mod monitor_thumbnail;
 pub(crate) use monitor_thumbnail::capture_monitor_thumbnail;
 
-use crate::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
-use crate::editor::cursor_effects::{GpuArtwork, GpuCursor};
-use crate::editor::keyboard_effects::KeyboardOverlay;
-use crate::screenshots::{
-  physical_capture_rect, CapturedImage, ScreenshotOutputSettings, ScreenshotTarget,
-};
-
-#[repr(C)]
-#[derive(Default)]
-pub(crate) struct StillOverlay {
-  pub cursor_x: i32,
-  pub cursor_y: i32,
-  pub cursor_width: u32,
-  pub cursor_height: u32,
-  pub cursor_source_width: u32,
-  pub cursor_source_height: u32,
-  pub camera_crop_x: u32,
-  pub camera_crop_y: u32,
-  pub camera_crop_width: u32,
-  pub camera_crop_height: u32,
-  pub camera_frame_x: i32,
-  pub camera_frame_y: i32,
-  pub camera_frame_width: u32,
-  pub camera_frame_height: u32,
-  pub camera_radius: u32,
-  pub camera_source_width: u32,
-  pub camera_source_height: u32,
-  pub camera_drop_shadow: u32,
-  pub camera_on_top: u32,
-}
+use crate::screenshots::{CapturedImage, ScreenshotTarget};
+use screenwide_capture::capture_geometry::physical_capture_rect;
+use screenwide_capture::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
 
 async fn capture_filtered(
   filter: &sc::ContentFilter,

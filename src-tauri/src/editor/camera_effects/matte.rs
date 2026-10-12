@@ -14,9 +14,9 @@ use screenwide_transcriber::{Job, MatteTimings};
 use tauri::AppHandle;
 
 use super::CameraRecording;
-use crate::transcription::catalogue::{self, Purpose};
 use crate::transcription::models;
-use crate::transcription::runner::Transcriber;
+use screenwide_speech::catalogue::{self, Purpose};
+use screenwide_speech::runner::Transcriber;
 
 /// The rate a camera is taken to run at when it does not say its own.
 const FALLBACK_FRAMES_PER_SECOND: f64 = 30.0;
@@ -63,7 +63,7 @@ pub(crate) fn model(app: &AppHandle) -> Option<PathBuf> {
 /// The camera's size and the rate it says it was recorded at.
 pub(crate) fn shape(camera: &Path) -> ((u32, u32), f64) {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  let info = crate::editor::media_preview::recording_info(camera);
+  let info = screenwide_export::media_preview::recording_info(camera);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let (size, rate) = (
     info.map_or((0, 0), |info| (info.width, info.height)),
@@ -114,7 +114,7 @@ pub(super) fn prepare(
     .matte_camera(
       Job::MatteCamera {
         model,
-        ffmpeg: crate::editor::media_preview::ffmpeg_path(),
+        ffmpeg: screenwide_sidecar::ffmpeg_path(),
         camera: camera.path.clone(),
         width,
         height,

@@ -13,8 +13,8 @@ mod resolve;
 
 use super::beats::Beat;
 use super::signals::Signals;
-use crate::editor::scenes::SceneFraming;
 use candidate::{candidate, lateness, link, Candidate, MIN_OVERVIEW_MS};
+use screenwide_scenes::SceneFraming;
 
 /// How many beats one shot may take in.
 const MAX_BEATS_PER_SHOT: usize = 12;

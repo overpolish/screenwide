@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#import "../../../../osc/gpu/macos/osc_gpu_macos.h"
-#import "../../../../osc/gpu/macos/osc_controls.h"
+#import "../../../../../crates/osc/src/gpu/macos/osc_gpu_macos.h"
+#import "../../../../../crates/osc/src/gpu/macos/osc_controls.h"
 #import "recording_preview_surface_macos_private.h"
 
 

@@ -18,7 +18,7 @@ use serde_json::Value;
 use super::pictures::{
   backgrounds as each_background, copy_into, folder, stored_names, PICTURES_FOLDER,
 };
-use crate::editor::images::store;
+use screenwide_images::store;
 
 /// Cleans the project whose manifest is `project`, reporting rather than
 /// failing: a picture left behind costs only disk space.
@@ -54,7 +54,7 @@ pub(super) fn clean(project: &Path, backgrounds: Option<&Path>) -> Result<(), St
   let root = project.parent().ok_or("The project has no folder")?;
   let mut kept = BTreeSet::new();
   let mut stored = BTreeSet::new();
-  crate::project::update(project, |manifest| {
+  screenwide_project::update(project, |manifest| {
     if let Ok(timeline) = serde_json::to_value(&manifest.timeline) {
       stored_names(&timeline, &mut stored);
     }

@@ -10,12 +10,12 @@
 //! `recording_preview_annotation_geometry_macos.h`.
 
 use super::*;
-use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::gesture::{BOX_HANDLES, RADIUS_HANDLE};
-use crate::editor::annotations::image::frame::{cursor_sides, ImageFrame};
-use crate::editor::annotations::image::geometry::{image_distance, prepare_image};
-use crate::editor::annotations::reveal::AnnotationReveal;
-use crate::editor::annotations::AnnotationPoint;
+use screenwide_annotations::geometry::ArrowGeometry;
+use screenwide_annotations::gesture::{BOX_HANDLES, RADIUS_HANDLE};
+use screenwide_annotations::image::frame::{cursor_sides, ImageFrame};
+use screenwide_annotations::image::geometry::{image_distance, prepare_image};
+use screenwide_annotations::reveal::AnnotationReveal;
+use screenwide_annotations::AnnotationPoint;
 
 /// An image prepared in display points, from the grips it was published
 /// with: its middle in `middle`, its turn in `start_head`, and its half width

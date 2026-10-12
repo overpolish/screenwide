@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use screenwide_imaging::CapturedImage;
 use tauri::Manager;
 
-use crate::{
-  app_windows::screenshot_region::native_osc_macos as native_region, osc::geometry::Rect,
-  screenshots::CapturedImage,
-};
+use crate::app_windows::screenshot_region::native_osc_macos as native_region;
+use screenwide_osc::geometry::Rect;
 
 pub(super) fn install(
   window: &tauri::WebviewWindow,
@@ -79,7 +78,7 @@ pub(super) fn show_interactive(window: &tauri::WebviewWindow) -> Result<(), Stri
   app
     .run_on_main_thread(move || {
       let result =
-        crate::osc::cursor::macos::present_window(&window).map_err(|error| error.to_string());
+        crate::osc::cursor_macos::present_window(&window).map_err(|error| error.to_string());
       let _ = sender.send(result);
     })
     .map_err(|error| error.to_string())?;
@@ -153,7 +152,7 @@ pub(super) fn set_screenshot_mode(
 
 fn close_windows(windows: Vec<tauri::WebviewWindow>) {
   for window in windows {
-    crate::osc::cursor::macos::prepare_window_close(&window);
+    crate::osc::cursor_macos::prepare_window_close(&window);
     if let Ok(view) = window.ns_view() {
       native_region::detach(view.cast());
     }

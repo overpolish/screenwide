@@ -9,12 +9,12 @@
 use super::super::preview_platform::SelectionGesturePhase;
 use super::annotation_gesture::AnnotationCommit;
 use super::state::PreviewManager;
-use crate::editor::annotations::group::{group_bounds, GroupMember, GroupMove};
-use crate::editor::annotations::handles::source_point;
-use crate::editor::annotations::snap::{
+use screenwide_annotations::group::{group_bounds, GroupMember, GroupMove};
+use screenwide_annotations::handles::source_point;
+use screenwide_annotations::snap::{
   source_per_size, threshold_source_px, SnapField, SnapModifiers, SnapRequest, SnapResult,
 };
-use crate::editor::annotations::Annotation;
+use screenwide_annotations::Annotation;
 
 pub(crate) struct GroupDrag {
   pane_index: u32,

@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use ts_rs::TS;
 
-use super::grade;
 use super::{matte, picks, CameraEffects, CameraRecording};
+use screenwide_export::camera_effects::grade;
 
 /// Which camera effect is working, each with a bar of its own.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, TS)]

@@ -5,8 +5,9 @@
 
 use super::{
   draw_selection, rebase_display_fit_mode, set_pane_geometry, DisplayRect, FrameResizeStart,
-  PreviewSurfaceRect, SurfaceInner, SurfaceState,
+  SurfaceInner, SurfaceState,
 };
+use screenwide_compositor::PreviewSurfaceRect;
 
 pub(super) fn union_rect(
   left: PreviewSurfaceRect,

@@ -103,7 +103,7 @@ impl WindowLabel {
   /// technology. The page draws its own title, so this is never on screen in
   /// the window itself.
   pub fn title(self) -> String {
-    use crate::i18n::t;
+    use screenwide_i18n::t;
     match self {
       Self::EditorRecording | Self::EditorScreenshot => t!("window-titles-editor"),
       Self::ExportRecording => t!("window-titles-export-recording"),

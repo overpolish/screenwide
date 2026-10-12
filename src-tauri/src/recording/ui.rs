@@ -3,8 +3,8 @@
 
 use tauri::AppHandle;
 
-use super::{RecordingMode, StartRecordingOptions};
 use crate::app_windows;
+use screenwide_capture::{RecordingMode, StartRecordingOptions};
 
 // ---------------------------------------------------------------------------
 // Window choreography. Every call here composes existing window commands and

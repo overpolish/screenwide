@@ -3,8 +3,8 @@
 
 use crate::image_analysis::ImageRegion;
 
-use crate::ruler::analysis::{compute_gradients, detect_boxes, ComponentBox};
-use crate::screenshots::NormalizedSourceRect;
+use screenwide_imaging::analysis::{compute_gradients, detect_boxes, ComponentBox};
+use screenwide_output::NormalizedSourceRect;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -77,7 +77,7 @@ fn analyse_cropped(
       height: bottom.saturating_sub(top),
     }
   });
-  let colour = crate::editor::surface_colour::inset_colour(rgba, width, height)?;
+  let colour = screenwide_imaging::surface_colour::inset_colour(rgba, width, height)?;
   Some(RecenterAnalysis {
     background_color: format!("#{:02x}{:02x}{:02x}", colour[0], colour[1], colour[2]),
     bounds,

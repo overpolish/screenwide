@@ -203,10 +203,10 @@ fn final_frame_drawing_uses_a_visible_source_instant() {
 #[test]
 fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
   let mut manager = manager();
-  let annotation = crate::editor::annotations::arrow::new_arrow(
+  let annotation = screenwide_annotations::arrow::new_arrow(
     "screen-arrow".into(),
-    crate::editor::annotations::AnnotationPoint { x: 100.0, y: 100.0 },
-    crate::editor::annotations::AnnotationPoint { x: 500.0, y: 100.0 },
+    screenwide_annotations::AnnotationPoint { x: 100.0, y: 100.0 },
+    screenwide_annotations::AnnotationPoint { x: 500.0, y: 100.0 },
     None,
   );
   manager
@@ -290,9 +290,9 @@ fn a_fresh_arrow_takes_the_remembered_animate_setting() {
 /// playing recording.
 #[test]
 fn a_pasted_or_dropped_picture_lands_chosen_whatever_tool_is_in_hand() {
-  use crate::editor::annotations::image::ImageArt;
-  use crate::editor::annotations::AnnotationShape;
   use crate::editor::images::dropped::ImagePoint;
+  use screenwide_annotations::image::ImageArt;
+  use screenwide_annotations::AnnotationShape;
 
   let art = ImageArt {
     asset: "image:0123456789abcdef0123456789abcdef".to_owned(),
@@ -342,10 +342,10 @@ fn screen_arrow(id: &str, x: f64, start_ms: u64, end_ms: u64) -> RecordingAnnota
   RecordingAnnotationClip {
     path_ms: None,
     pin: None,
-    annotation: crate::editor::annotations::arrow::new_arrow(
+    annotation: screenwide_annotations::arrow::new_arrow(
       id.into(),
-      crate::editor::annotations::AnnotationPoint { x, y: 100.0 },
-      crate::editor::annotations::AnnotationPoint {
+      screenwide_annotations::AnnotationPoint { x, y: 100.0 },
+      screenwide_annotations::AnnotationPoint {
         x: x + 200.0,
         y: 100.0,
       },
@@ -378,7 +378,7 @@ fn grouped() -> PreviewPlayerManager {
 
 fn start_x(annotation: &Annotation) -> f64 {
   match &annotation.shape {
-    crate::editor::annotations::AnnotationShape::Arrow { start, .. } => start.x,
+    screenwide_annotations::AnnotationShape::Arrow { start, .. } => start.x,
     _ => unreachable!(),
   }
 }

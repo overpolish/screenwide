@@ -12,10 +12,10 @@ mod chrome;
 use std::time::{Duration, Instant};
 
 use super::*;
-use crate::editor::preview_platform::object_picking::{
+pub(super) use chrome::{add_objects, ObjectChrome};
+use screenwide_compositor::object_picking::{
   ObjectPickCallback, ObjectPress, ObjectsShown, PickedObjectDot,
 };
-pub(super) use chrome::{add_objects, ObjectChrome};
 
 /// How far a press must travel, in points, before it paints a line.
 const PAINT_SLOP: f64 = 3.0;
@@ -202,7 +202,7 @@ pub(super) fn chrome(state: &SurfaceState) -> Option<ObjectChrome> {
     return None;
   }
   let image = camera_image(state)?;
-  let at = |point: [f32; 2]| crate::osc::geometry::Point {
+  let at = |point: [f32; 2]| screenwide_osc::geometry::Point {
     x: image.x + f64::from(point[0]) * image.width,
     y: image.y + f64::from(point[1]) * image.height,
   };

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_export::track_selection;
 
 mod publish;
 
@@ -103,9 +104,10 @@ pub(super) fn save_recording_artifact(
   let primary_output = &recording_output.primary;
   let camera_output = &recording_output.camera;
   let timeline = timeline_edit::export_plan(timeline_model.as_ref(), project, *id, *duration_ms);
-  let export_duration_ms = timeline
-    .as_ref()
-    .map_or(*duration_ms, timeline_edit::TimelinePlan::duration_ms);
+  let export_duration_ms = timeline.as_ref().map_or(
+    *duration_ms,
+    screenwide_timeline_edit::TimelinePlan::duration_ms,
+  );
   // The camera is exported with its effects as the preview draws them.
   let camera_effects = crate::editor::camera_effects::CameraRecording::of(artifact)
     .and_then(|camera| crate::editor::camera_effects::live::load(&camera));
@@ -188,7 +190,7 @@ pub(super) fn save_recording_artifact(
       (*width, *height),
       camera_overlay,
       camera_output.drop_shadow,
-      crate::editor::recording_model::CAMERA_IN_FRONT,
+      screenwide_export::recording_model::CAMERA_IN_FRONT,
       (compression, resolution_scale_percent, *source_scale_percent),
       baked_cursor.map(|cursor| (cursor, cursor_effects)),
       baked_keyboard.map(|keyboard| (keyboard, keyboard_effects)),

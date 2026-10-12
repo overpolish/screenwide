@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::preview_platform::workspace_editor::{
-  apply_layer_gesture, GestureOperation as WorkspaceGestureOperation, WorldRect,
-};
 use super::super::preview_platform::{SelectionGestureOperation, SelectionGesturePhase};
 use super::super::preview_workspace_model::{apply_output_geometry, output_geometry};
 use super::super::ScreenshotWorkspaceOutputSettings;
 use super::geometry::fit_workspace_to_items;
 use super::state::PreviewManager;
+use screenwide_compositor::workspace_editor::{
+  apply_layer_gesture, GestureOperation as WorkspaceGestureOperation, WorldRect,
+};
 
 const AUTO_FIT_MOVE_EDGE: u32 = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE: u32 = 1 << 18;

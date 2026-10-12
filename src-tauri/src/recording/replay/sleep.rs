@@ -46,7 +46,7 @@ pub(in crate::recording) fn did_wake(app: &AppHandle) {
     if let Err(error) = super::start(&app, options) {
       report(
         &app,
-        &crate::i18n::t!("alert-replay-restart-failed"),
+        &screenwide_i18n::t!("alert-replay-restart-failed"),
         &error,
       );
     }

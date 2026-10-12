@@ -9,27 +9,27 @@ mod magnifier;
 mod ocr;
 mod state;
 
-#[cfg(test)]
-use crate::osc::protocol::InputPhase;
-#[cfg(test)]
-use crate::osc::protocol::RESULT_GESTURE_DRAWING;
 use crate::osc::runtime::OscRuntime as Context;
 #[cfg(test)]
-use crate::osc::semantic::SemanticStatus;
+use screenwide_osc::protocol::InputPhase;
 #[cfg(test)]
-use crate::osc::semantic::{event_payload as payload_for, semantic_handle as native_handle};
+use screenwide_osc::protocol::RESULT_GESTURE_DRAWING;
 #[cfg(test)]
-use crate::osc::session::{apply_phase_cursor, event_kind, result_for};
+use screenwide_osc::semantic::SemanticStatus;
+#[cfg(test)]
+use screenwide_osc::semantic::{event_payload as payload_for, semantic_handle as native_handle};
+#[cfg(test)]
+use screenwide_osc::session::{apply_phase_cursor, event_kind, result_for};
 
-pub use crate::osc::{
+pub use desktop::configure_window as configure_desktop_window;
+pub use magnifier::set_source as set_magnifier_source;
+pub use screenwide_osc::{
   desktop::DesktopBinding,
   protocol::{OscResult as NativeOscResult, Purpose, ResultStatus},
 };
-pub use desktop::configure_window as configure_desktop_window;
-pub use magnifier::set_source as set_magnifier_source;
 
-pub const NATIVE_OSC_EVENT: &str = crate::osc::semantic::REGION_EVENT;
-pub const NATIVE_OSC_LAYOUT_EVENT: &str = crate::osc::semantic::DESKTOP_LAYOUT_EVENT;
+pub const NATIVE_OSC_EVENT: &str = screenwide_osc::semantic::REGION_EVENT;
+pub const NATIVE_OSC_LAYOUT_EVENT: &str = screenwide_osc::semantic::DESKTOP_LAYOUT_EVENT;
 
 pub use ocr::{reset_input as reset_text_recognition_input, set_ocr};
 #[cfg(test)]

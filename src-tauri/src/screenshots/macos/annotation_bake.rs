@@ -8,12 +8,10 @@
 //! over an identity canvas: the image at its own size, no padding, no
 //! background, no rounding.
 
-use crate::editor::annotations::Annotation;
+use screenwide_annotations::Annotation;
 
-use super::super::{
-  mesh::MeshGradientPoint, source_crop::NormalizedSourceRect, CapturedImage,
-  ScreenshotOutputSettings,
-};
+use super::super::CapturedImage;
+use screenwide_output::{MeshGradientPoint, NormalizedSourceRect, ScreenshotOutputSettings};
 
 fn identity_settings(
   image: &CapturedImage,
@@ -48,7 +46,7 @@ fn identity_settings(
     // Never painted on a solid canvas, but the compositor's colour table is
     // filled from these whatever the background is.
     mesh_colors: vec!["#000000".to_owned(); 5],
-    mesh_generator: super::super::default_mesh_generator(),
+    mesh_generator: screenwide_output::default_mesh_generator(),
     mesh_locked_colors: vec![false; 5],
     mesh_points: Vec::<MeshGradientPoint>::new(),
     mesh_seed: 0,
@@ -78,10 +76,10 @@ pub(crate) fn bake_annotations(
     return Ok(image.clone());
   }
   let settings = identity_settings(image, annotations, scale);
-  if super::super::output::output_dimensions(&settings).is_err() {
+  if screenwide_output::output_dimensions(&settings).is_err() {
     return Ok(image.clone());
   }
-  super::platform::compose_output_layers(
+  screenwide_compositor::compositor::still_overlay::compose_output_layers(
     image, &settings, 0.0, true, None, None, None, None, false, false,
   )
 }
@@ -89,9 +87,7 @@ pub(crate) fn bake_annotations(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::editor::annotations::{
-    AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
-  };
+  use screenwide_annotations::{AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle};
 
   fn arrow(width: f64) -> Annotation {
     Annotation {

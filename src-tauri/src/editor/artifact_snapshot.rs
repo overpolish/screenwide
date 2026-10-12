@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_export::media_preview;
 use ts_rs::TS;
 
 #[derive(Clone, Debug, PartialEq, Serialize, TS)]
@@ -69,7 +70,7 @@ pub enum EditorArtifactSnapshot {
     primary_kind: PrimaryRecordingKind,
     source_scale_percent: u16,
     #[ts(optional = nullable)]
-    timeline_edit: Option<timeline_edit::RecordingTimelineEdit>,
+    timeline_edit: Option<screenwide_timeline_edit::RecordingTimelineEdit>,
     #[ts(optional = nullable)]
     timeline_edit_revision: Option<u64>,
   },

@@ -38,7 +38,7 @@ pub(super) fn target_width(source_width: u32, source_height: u32) -> u32 {
 }
 
 /// A see-through thumbnail, as a PNG: a JPEG has no transparency.
-pub(super) fn encoded_png(image: &crate::screenshots::CapturedImage) -> Result<Vec<u8>, String> {
+pub(super) fn encoded_png(image: &screenwide_imaging::CapturedImage) -> Result<Vec<u8>, String> {
   let rgba = ::image::RgbaImage::from_raw(image.width, image.height, image.rgba.clone())
     .ok_or_else(|| "The thumbnail is not the size it says".to_owned())?;
   let mut bytes = std::io::Cursor::new(Vec::new());

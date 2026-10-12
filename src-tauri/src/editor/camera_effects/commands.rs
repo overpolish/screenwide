@@ -179,9 +179,9 @@ pub async fn choose_recording_camera_background(
     let picked: Option<PathBuf> = picker
       .dialog()
       .file()
-      .set_title(crate::i18n::t!("dialog-choose-image"))
+      .set_title(screenwide_i18n::t!("dialog-choose-image"))
       .add_filter(
-        crate::i18n::t!("dialog-pictures-filter"),
+        screenwide_i18n::t!("dialog-pictures-filter"),
         crate::editor::images::import::PICTURE_EXTENSIONS,
       )
       .set_parent(&window)

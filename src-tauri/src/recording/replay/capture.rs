@@ -13,15 +13,16 @@ use tauri::AppHandle;
 
 use super::REPLAY_LENGTH;
 use crate::annotate::live_clips::ReplayAnnotationRecorder;
-use crate::recording::cursor::RollingCursorRecorder;
-use crate::recording::keyboard::RollingKeyboardRecorder;
-use crate::recording::monitor::RecordingMonitor;
+use crate::recording::capture;
 use crate::recording::session::{
   capture_sources, check_inputs, primary_kind, records_cursor, records_keyboard, write_manifest,
   CaptureSources, FIRST_FRAME_TIMEOUT,
 };
-use crate::recording::{
-  capture, encoding, CameraFinalizeInfo, CaptureStartupConfig, FinalizeInfo, RecordingMode,
+use screenwide_capture::cursor::RollingCursorRecorder;
+use screenwide_capture::keyboard::RollingKeyboardRecorder;
+use screenwide_capture::monitor::RecordingMonitor;
+use screenwide_capture::{
+  encoding, CameraFinalizeInfo, CaptureStartupConfig, FinalizeInfo, RecordingMode,
   StartRecordingOptions,
 };
 
@@ -74,7 +75,11 @@ pub(super) fn start(
       // The buffer's own: the dock shows a recording's levels, not these.
       monitor: Arc::new(RecordingMonitor::default()),
       on_failure: Arc::new(move |reason: String| {
-        super::report(&reporter, &crate::i18n::t!("alert-replay-stopped"), &reason);
+        super::report(
+          &reporter,
+          &screenwide_i18n::t!("alert-replay-stopped"),
+          &reason,
+        );
         let app = reporter.clone();
         // The writer that failed is the one reporting; stopping joins it, so
         // that happens on a thread of its own.
@@ -151,13 +156,13 @@ fn write_clip(
   // Named for the moment of the save: how far back the clip reaches is
   // known only once it is written.
   let title = crate::screenshots::capture_file_stem(Local::now().naive_local());
-  let project = crate::project::create(app, &title)?;
+  let project = crate::projects_folder::create(app, &title)?;
   let written = write_media(running, at, since_ns, &project.media).and_then(|(info, end_ns)| {
     write_manifest(
       &project.file,
       &info,
       None,
-      crate::project::RecordingOrigin::Replay,
+      screenwide_project::RecordingOrigin::Replay,
     )?;
     Ok((info, end_ns))
   });

@@ -1,118 +1,50 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-mod background_image;
-mod capture;
 mod clipboard;
 pub(crate) mod delayed;
 pub(crate) mod desktop;
-pub(crate) mod encoding;
-mod hex_colour;
 #[cfg(target_os = "macos")]
 pub(crate) mod macos;
-#[cfg_attr(target_os = "macos", allow(dead_code))]
-mod mesh;
-mod mesh_generator;
-#[cfg_attr(target_os = "macos", allow(dead_code))]
-mod mesh_gpu;
 mod naming;
-mod output;
-#[cfg(test)]
-pub(crate) use output::tests::settings as test_output_settings;
-mod placement;
 #[cfg(target_os = "macos")]
 use self::macos::platform;
 #[cfg(target_os = "macos")]
 pub(crate) use self::macos::platform::capture_monitor_thumbnail;
+#[cfg(test)]
+mod output_tests;
 #[cfg(target_os = "windows")]
 mod platform_windows;
-mod recenter;
+#[cfg(test)]
+mod recenter_tests;
 pub(crate) mod scrolling;
-mod source_crop;
 pub(crate) mod still_command;
 #[cfg(test)]
 mod tests;
 pub(crate) mod thumbnail;
 
+/// A still composed on the macOS compositor as a screenshot is, for tests.
+/// Elsewhere `screenwide_output::compose_screenshot` composes on the CPU.
+#[cfg(all(target_os = "macos", test))]
+fn compose_screenshot(
+  image: &CapturedImage,
+  settings: &screenwide_output::ScreenshotOutputSettings,
+) -> Result<CapturedImage, String> {
+  screenwide_compositor::compositor::still_overlay::compose_output_layers(
+    image, settings, 0.0, true, None, None, None, None, false, false,
+  )
+}
+#[cfg(all(not(target_os = "macos"), test))]
+use screenwide_output::compose_screenshot;
+
 use serde::Deserialize;
 use tauri::AppHandle;
 
-use crate::recording::Region;
+use screenwide_capture::Region;
 
-pub(crate) use crate::capture_geometry::physical_capture_rect;
-#[cfg(test)]
-pub(crate) use crate::capture_geometry::CaptureRect;
-pub(crate) use background_image::{
-  background_image_canvas, background_image_swatch, load as load_background_image,
-};
-pub(crate) use capture::Capture;
 pub(crate) use clipboard::open_in_export as open_clipboard_in_export;
-pub use encoding::encode_png;
-pub use encoding::rounded_corners;
-pub(crate) use hex_colour::parse_hex_colour;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) use mesh::validate_mesh;
-#[cfg(test)]
-pub(crate) use mesh::MeshGradientPoint;
-pub(crate) use mesh_generator::default_generator as default_mesh_generator;
-#[cfg(target_os = "windows")]
-pub(crate) use mesh_generator::generator_seed_shift;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) use mesh_generator::{generator_palette, mesh_generator};
 pub use naming::{capture_file_stem, screenshot_directory, unique_path};
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub use output::compose_screenshot;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) use output::output_dimensions;
-#[cfg(all(target_os = "windows", test))]
-pub(crate) use output::CropPreviewRect;
-pub use output::ScreenshotOutputSettings;
-pub(crate) use placement::{output_placement, OutputPlacement};
-#[cfg(target_os = "macos")]
-pub(crate) use platform::{alpha_composite, compose_output_layers, StillOverlay};
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) use recenter::{colour_f32, foreground_bounds_f32, optional_colour_f32};
-pub(crate) use source_crop::NormalizedSourceRect;
-/// A captured still: straight (non-premultiplied) RGBA8, packed rows, top down.
-/// That is what both the clipboard and the PNG encoder want.
-#[derive(Clone)]
-pub struct CapturedImage {
-  pub rgba: Vec<u8>,
-  pub width: u32,
-  pub height: u32,
-}
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) fn validate_output_settings(
-  source_width: u32,
-  source_height: u32,
-  settings: &ScreenshotOutputSettings,
-) -> Result<(), String> {
-  output_placement(source_width, source_height, settings)?;
-  parse_hex_colour(&settings.background_color)?;
-  if let Some(colour) = settings.recenter_inset_color.as_deref() {
-    parse_hex_colour(colour)?;
-  }
-  if !settings.radius_percent.is_finite()
-    || !(0.0..=50.0).contains(&settings.radius_percent)
-    || !settings.background_radius_percent.is_finite()
-    || !(0.0..=50.0).contains(&settings.background_radius_percent)
-  {
-    return Err("The output corner radius is not valid".to_owned());
-  }
-  match settings.background_type.as_str() {
-    // A picture that cannot be loaded falls back to the solid colour at
-    // render time, so a missing file is not a settings error.
-    "image" | "solid" => Ok(()),
-    "mesh" => mesh::validate_mesh(
-      &settings.mesh_generator,
-      &settings.mesh_colors,
-      &settings.mesh_points,
-      settings.mesh_warp_percent,
-    ),
-    _ => Err("The output background type is not valid".to_owned()),
-  }
-}
+use screenwide_imaging::CapturedImage;
 
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(

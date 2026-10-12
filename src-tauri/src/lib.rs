@@ -2,28 +2,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 mod alert;
 mod annotate;
+mod app_accent;
+mod app_locale;
 mod app_windows;
 mod audio_preview;
-mod camera_format;
-#[cfg(target_os = "macos")]
-mod camera_frame_rate;
 mod camera_frames;
-#[cfg(target_os = "windows")]
-mod camera_power_line;
 mod camera_preview;
-mod capture_geometry;
-#[cfg(target_os = "macos")]
-mod capture_kit;
 mod capture_overlays;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod cursor_scrub;
-mod desktop_capture;
 mod editor;
 mod fault;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod glide;
-mod gpu;
-mod i18n;
 mod image_analysis;
 mod invoke_handler;
 mod moments;
@@ -31,8 +22,8 @@ mod monitor_topology;
 mod osc;
 mod permissions;
 mod plugins;
-mod project;
 mod project_browser;
+mod projects_folder;
 mod recording;
 mod recording_inputs;
 mod recording_sources;
@@ -44,7 +35,6 @@ mod silence;
 mod startup;
 #[cfg(debug_assertions)]
 mod storybook_native;
-mod system_accent;
 mod text_recognition;
 mod tooltip_window;
 mod transcription;
@@ -54,7 +44,7 @@ mod updates;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   #[cfg(target_os = "macos")]
-  i18n::apply_layout_direction();
+  screenwide_i18n::apply_layout_direction();
   let builder = plugins::with_plugins(tauri::Builder::default());
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let builder = builder.manage(glide::settings::GlideSettingsState::default());

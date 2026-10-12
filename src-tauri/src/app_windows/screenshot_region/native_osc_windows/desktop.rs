@@ -11,7 +11,7 @@ mod tests;
 
 use tauri::{Manager, WebviewWindow};
 
-use crate::osc::{
+use screenwide_osc::{
   desktop::{DesktopBinding, DesktopDisplay},
   geometry::{Point, Rect, Size},
 };

@@ -14,9 +14,9 @@ pub(crate) fn hex_text(color: u32) -> String {
 
 pub(crate) fn tolerance_text(mode: u8) -> String {
   match mode {
-    1 => crate::i18n::t!("overlay-ruler-clear-edges"),
-    3 => crate::i18n::t!("overlay-ruler-subtle-edges"),
-    _ => crate::i18n::t!("overlay-ruler-balanced"),
+    1 => screenwide_i18n::t!("overlay-ruler-clear-edges"),
+    3 => screenwide_i18n::t!("overlay-ruler-subtle-edges"),
+    _ => screenwide_i18n::t!("overlay-ruler-balanced"),
   }
 }
 

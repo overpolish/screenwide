@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::project::{Manifest, RecordingManifest, RecordingMedia, RecordingOrigin};
-use crate::screenshots::test_output_settings;
+use screenwide_output::fixtures::test_output_settings;
+use screenwide_project::{Manifest, RecordingManifest, RecordingMedia, RecordingOrigin};
+use screenwide_scenes::CameraOverlaySettings;
 
 fn scratch(name: &str) -> PathBuf {
   let directory = std::env::temp_dir()
@@ -19,7 +20,7 @@ fn project(directory: &Path) -> PathBuf {
   let root = directory.join("Demo");
   std::fs::create_dir_all(root.join("media")).unwrap();
   let file = root.join("Demo.screenwide");
-  crate::project::write(
+  screenwide_project::write(
     &file,
     &Manifest::recording(RecordingManifest {
       duration_ms: Some(4_000),
@@ -60,8 +61,8 @@ fn look(background: Option<&Path>) -> ProjectLook {
       frame_y: 660.0,
       radius_percent: 50.0,
     },
-    cursor_effects: cursor_effects::CursorEffectSettings::default(),
-    keyboard_effects: keyboard_effects::KeyboardEffectSettings::default(),
+    cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),
+    keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings::default(),
     recording_output: RecordingOutputSettings {
       camera: test_output_settings(320, 320),
       primary,
@@ -137,7 +138,7 @@ fn a_background_named_outside_the_project_is_dropped() {
   let directory = scratch("outside");
   let file = project(&directory);
   persist(&file, 1, look(None)).unwrap();
-  crate::project::update(&file, |manifest| {
+  screenwide_project::update(&file, |manifest| {
     manifest.look.as_mut().unwrap()["look"]["recordingOutput"]["primary"]["backgroundImagePath"] =
       "../../secret.png".into();
     true
@@ -152,13 +153,13 @@ fn a_background_named_outside_the_project_is_dropped() {
 fn a_look_this_version_cannot_read_leaves_the_project_opening() {
   let directory = scratch("unreadable");
   let file = project(&directory);
-  crate::project::update(&file, |manifest| {
+  screenwide_project::update(&file, |manifest| {
     manifest.look = Some(serde_json::json!({ "version": 99, "anything": true }));
     true
   })
   .unwrap();
 
-  assert!(crate::project::read(&file).is_ok());
+  assert!(screenwide_project::read(&file).is_ok());
   assert_eq!(for_project(&file), None);
 }
 

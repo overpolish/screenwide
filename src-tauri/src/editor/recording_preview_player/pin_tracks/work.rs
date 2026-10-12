@@ -5,11 +5,11 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use super::super::held_timelines::ready;
-use super::super::pin_paths::{work_out, PinStatus, Work};
-use super::super::platform::LumaReader;
 use super::{Job, PinTracks, PROGRESS_STEP};
-use crate::editor::annotations::pin::partial::patched;
-use crate::editor::annotations::pin::{PinnedPath, TRACKING_SIDE};
+use screenwide_annotations::pin::partial::patched;
+use screenwide_annotations::pin::{PinnedPath, TRACKING_SIDE};
+use screenwide_export::decode::LumaReader;
+use screenwide_export::pin_paths::{work_out, PinStatus, Work};
 
 impl PinTracks {
   pub(super) fn work(&self, first: (Job, Arc<AtomicBool>)) {

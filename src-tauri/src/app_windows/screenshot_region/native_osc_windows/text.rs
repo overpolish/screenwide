@@ -44,8 +44,8 @@ use windows::{
 mod atlas;
 use atlas::build_atlas;
 
-use crate::gpu::Gpu;
-use crate::osc::geometry::{Rect, Size};
+use screenwide_gpu::Gpu;
+use screenwide_osc::geometry::{Rect, Size};
 
 /// The cells every ruler readout is assembled from. The texture stores them
 /// on one uniform pitch, but each carries its own on-screen advance.

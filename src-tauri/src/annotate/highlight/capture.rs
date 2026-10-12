@@ -7,9 +7,9 @@
 use std::sync::Arc;
 
 use super::{state, underlay, Capture, Kept, Pending, State, Underlay, LANDED};
-use crate::editor::annotations::highlight::model::{fresh_seed, HighlightBand};
-use crate::editor::annotations::highlight::picture::HighlightPicture;
-use crate::editor::annotations::AnnotationPoint;
+use screenwide_annotations::highlight::model::{fresh_seed, HighlightBand};
+use screenwide_annotations::highlight::picture::HighlightPicture;
+use screenwide_annotations::AnnotationPoint;
 
 /// A highlight stroke pressed at `point`: captures the display under it. A
 /// capture that fails - Screen Recording not allowed, the display gone - leaves

@@ -9,7 +9,7 @@ use cidre::{
 };
 use tauri::ipc::Channel;
 
-use crate::capture_kit::application_audio_filter;
+use screenwide_capture::capture_kit::application_audio_filter;
 
 use super::{AudioPreviewEvent, LevelAccumulator};
 

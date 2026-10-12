@@ -120,7 +120,7 @@ pub fn dismiss(app: &AppHandle) {
   let had_windows = !recognition_windows(app).is_empty();
   close_recognition_windows(app, None);
   #[cfg(target_os = "macos")]
-  if let Err(error) = crate::osc::cursor::macos::release_text_recognition(app) {
+  if let Err(error) = crate::osc::cursor_macos::release_text_recognition(app) {
     eprintln!("Could not release text-recognition cursor ownership: {error}");
   }
   let had_capture = app.state::<TextRecognitionState>().cancel();
@@ -139,7 +139,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   let generation = app.state::<TextRecognitionState>().begin();
   crate::glide::suspend_for_capture(app);
   #[cfg(target_os = "macos")]
-  if let Err(error) = crate::osc::cursor::macos::acquire_text_recognition(app) {
+  if let Err(error) = crate::osc::cursor_macos::acquire_text_recognition(app) {
     dismiss(app);
     return Err(error);
   }

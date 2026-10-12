@@ -3,9 +3,9 @@
 
 use tauri::AppHandle;
 
-use super::{platform, sources::headless_sources};
-use crate::recording::PrimaryRecordingKind;
-use crate::screenshots::NormalizedSourceRect;
+use super::sources::headless_sources;
+use screenwide_output::NormalizedSourceRect;
+use screenwide_project::PrimaryRecordingKind;
 
 #[tauri::command]
 pub async fn get_recording_content_bounds(
@@ -21,8 +21,11 @@ pub async fn get_recording_content_bounds(
   }
   tauri::async_runtime::spawn_blocking(move || {
     let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
-    let frame =
-      platform::source_frame_image(&sources.screen_path, position_ms, sources.duration_ms)?;
+    let frame = screenwide_export::decode::source_frame_image(
+      &sources.screen_path,
+      position_ms,
+      sources.duration_ms,
+    )?;
     Ok(crate::editor::commands::recenter::analyse(
       &frame.rgba,
       frame.width,

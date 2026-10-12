@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::osc::geometry::{Point, Rect};
+use screenwide_osc::geometry::{Point, Rect};
 
 const SELF_SLACK: f64 = 3.0;
 const MINIMUM_OBJECT_SIZE: f64 = 3.0;

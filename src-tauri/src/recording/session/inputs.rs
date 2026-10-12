@@ -9,12 +9,12 @@
 //! and the user turns it off or chooses again.
 
 use crate::fault::{self, Fault};
-use crate::recording::StartRecordingOptions;
+use screenwide_capture::StartRecordingOptions;
 
 pub(in crate::recording) fn check_inputs(options: &StartRecordingOptions) -> Result<(), String> {
   if let Some(microphone_id) = &options.microphone_id {
     if fault::active(Fault::Microphone)
-      || crate::recording_inputs::resolve_microphone(Some(microphone_id)).is_err()
+      || screenwide_capture::devices::resolve_microphone(Some(microphone_id)).is_err()
     {
       return Err(
         "The selected microphone is no longer connected. Choose another microphone in the recording bar, or turn the microphone off."

@@ -17,7 +17,7 @@ use objc2_app_kit::NSWindow;
 use tauri::{AppHandle, WebviewWindow};
 
 use crate::annotate::overlay::{Renderer, Underlays};
-use crate::gpu::surface::{Frame, Surface};
+use screenwide_gpu::surface::{Frame, Surface};
 
 /// One display the overlay covers: the capture display it is, where it
 /// starts and how far it reaches in desktop points, and how many pixels one

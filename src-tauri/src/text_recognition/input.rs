@@ -3,7 +3,7 @@
 
 //! Platform-neutral OCR routing for normalized OSC input.
 
-use crate::osc::{
+use screenwide_osc::{
   desktop::DesktopBinding,
   geometry::{Point, Rect},
   protocol::{CursorIcon, InputModifiers, InputPhase, OscResult},
@@ -99,7 +99,7 @@ pub(crate) fn selection_finished(
 ) {
   super::adapter::render_window(
     &window,
-    super::visual::RenderPacket::loading(crate::i18n::t!("overlay-ocr-finding")),
+    super::visual::RenderPacket::loading(screenwide_i18n::t!("overlay-ocr-finding")),
   );
   let app = window.app_handle().clone();
   tauri::async_runtime::spawn(async move {

@@ -11,8 +11,8 @@
 //! changed.
 
 use super::*;
-use crate::editor::scenes::RecordingSceneClip;
-use crate::screenshots::ScreenshotOutputSettings;
+use screenwide_output::ScreenshotOutputSettings;
+use screenwide_scenes::RecordingSceneClip;
 
 #[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -190,9 +190,9 @@ mod tests {
       ),
       None
     );
-    let base = crate::screenshots::test_output_settings(1_600, 900);
+    let base = screenwide_output::fixtures::test_output_settings(1_600, 900);
     let mut output = base.clone();
-    assert!(crate::editor::scenes::arrange(
+    assert!(screenwide_export::scenes::arrange(
       &[clip],
       &[],
       5_000,

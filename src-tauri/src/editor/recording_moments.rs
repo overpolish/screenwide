@@ -55,7 +55,7 @@ fn moments_path(app: &AppHandle, artifact_id: u64) -> Result<Option<PathBuf>, St
     }
     recording.project().map(Path::to_path_buf)
   };
-  Ok(project.and_then(|project| crate::moments::for_project(&project)))
+  Ok(project.and_then(|project| screenwide_moments::for_project(&project)))
 }
 
 /// The moments placed in the recording open in the editor, in the order
@@ -78,7 +78,7 @@ pub async fn get_recording_moments(
 /// so opening it in the Editor is enough to have its notes transcribed.
 fn read(app: &AppHandle, path: &Path) -> Vec<RecordingMoment> {
   let folder = path.parent().unwrap_or(Path::new(""));
-  crate::moments::read(path)
+  screenwide_moments::read(path)
     .inspect_err(|error| eprintln!("Could not read this recording's moments: {error}"))
     .unwrap_or_default()
     .into_iter()
@@ -89,8 +89,8 @@ fn read(app: &AppHandle, path: &Path) -> Vec<RecordingMoment> {
       kind_id: moment.kind_id,
       name: moment.name,
       note: moment.note_duration_ms.and_then(|duration_ms| {
-        let waveform = crate::moments::note_audio::waveform(
-          &crate::moments::note_path(folder, index),
+        let waveform = screenwide_moments::note_audio::waveform(
+          &screenwide_moments::note_path(folder, index),
           NOTE_WAVEFORM_POINTS,
         )
         .ok()?;
@@ -116,14 +116,14 @@ pub async fn get_recording_moment_note(
   let path =
     moments_path(&app, artifact_id)?.ok_or_else(|| "This recording has no moments".to_owned())?;
   tauri::async_runtime::spawn_blocking(move || {
-    let listed = crate::moments::read(&path)?
+    let listed = screenwide_moments::read(&path)?
       .get(moment)
       .is_some_and(|recorded| recorded.note_duration_ms.is_some());
     if !listed {
       return Err("That moment has no voice note".to_owned());
     }
     let folder = path.parent().unwrap_or(Path::new(""));
-    std::fs::read(crate::moments::note_path(folder, moment))
+    std::fs::read(screenwide_moments::note_path(folder, moment))
       .map(Response::new)
       .map_err(|error| error.to_string())
   })

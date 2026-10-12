@@ -28,11 +28,13 @@ use drawing::{add_control, push_segment, visual_fills, ControlRender};
 
 use std::time::Instant;
 
-use crate::gpu::Gpu;
+use screenwide_gpu::Gpu;
 
 use super::renderer::{self, Vertex};
 use super::text::TextCache;
-use crate::osc::{
+use crate::text_recognition::toolbar::{self, CONTROL_COUNT};
+use crate::text_recognition::visual::OcrRectPacket;
+use screenwide_osc::{
   controls::{
     control_metrics, control_spacing, control_stroke, Appearance, ConfirmAction, ConfirmActionSpec,
     ControlColor, ControlGroup, ControlIcon, ControlKind, ControlMetrics, ControlSize, ControlSpec,
@@ -41,8 +43,6 @@ use crate::osc::{
   geometry::{Point, Rect, Size},
   style::ocr_palette,
 };
-use crate::text_recognition::toolbar::{self, CONTROL_COUNT};
-use crate::text_recognition::visual::OcrRectPacket;
 
 /// Pointer phases, mirroring `InputPhase`.
 const PHASE_HOVER: u32 = 1;

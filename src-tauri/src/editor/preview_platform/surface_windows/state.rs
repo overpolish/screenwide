@@ -61,7 +61,7 @@ pub(super) struct EditorGesture {
   pub(super) pane_start: PreviewSurfaceRect,
   pub(super) pointer_start: (f64, f64),
   pub(super) selection_start: PreviewSelection,
-  pub(super) keyboard_start: Option<crate::editor::keyboard_effects::KeyboardOverlay>,
+  pub(super) keyboard_start: Option<screenwide_keyboard_effects::KeyboardOverlay>,
 }
 
 /// Everything a Frame resize needs to stay reversible and drift-free: the
@@ -124,8 +124,7 @@ pub(super) struct EditorCallbacks {
   pub(super) pointer_down: Option<PointerDownCallback>,
   pub(super) selection: Option<SelectionCallback>,
   pub(super) image_drop: Option<ImageDropCallback>,
-  pub(super) object_pick:
-    Option<crate::editor::preview_platform::object_picking::ObjectPickCallback>,
+  pub(super) object_pick: Option<screenwide_compositor::object_picking::ObjectPickCallback>,
   pub(super) transform: Option<TransformCallback>,
 }
 
@@ -147,6 +146,6 @@ pub(super) struct SurfaceInner {
   pub(super) gpu: Gpu,
   /// The camera's effects, drawn on every camera frame presented. Locked
   /// after `state` where both are held.
-  pub(super) camera_effects: Mutex<crate::editor::camera_effects::preview::PreviewEffects>,
+  pub(super) camera_effects: Mutex<screenwide_export::camera_effects::preview::PreviewEffects>,
   pub(super) state: Mutex<SurfaceState>,
 }

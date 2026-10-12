@@ -8,7 +8,8 @@
 use tauri::AppHandle;
 
 use super::models::TranscriptionState;
-use super::{catalogue, download, language, models, notes};
+use super::{download, language, models, notes};
+use screenwide_speech::catalogue;
 
 #[tauri::command]
 pub fn get_transcription_state(app: AppHandle) -> TranscriptionState {

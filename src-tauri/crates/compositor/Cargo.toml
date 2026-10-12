@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-compositor"
+description = "The shared GPU compositor the preview and the export draw frames with"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+bytemuck.workspace = true
+screenwide-annotations.workspace = true
+screenwide-cursor-effects.workspace = true
+screenwide-gpu.workspace = true
+screenwide-images.workspace = true
+screenwide-imaging.workspace = true
+screenwide-keyboard-effects.workspace = true
+screenwide-output.workspace = true
+screenwide-scenes.workspace = true
+serde.workspace = true
+wgpu.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Gdi",
+] }
+
+[dev-dependencies]
+screenwide-output = { workspace = true, features = ["test-support"] }
+
+[build-dependencies]
+cc.workspace = true
+# The same naga wgpu compiles WGSL with, so a shader that builds also loads,
+# and the canvas shader precompiled here is the text wgpu would write.
+naga = { workspace = true, features = ["wgsl-in", "hlsl-out", "msl-out"] }
+screenwide-wgsl.workspace = true

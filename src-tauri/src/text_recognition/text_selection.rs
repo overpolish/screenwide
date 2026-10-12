@@ -4,7 +4,7 @@
 //! Portable recognized-text selection. Platform adapters provide normalized
 //! pointer positions and render the returned normalized rectangles.
 
-use crate::osc::geometry::Point;
+use screenwide_osc::geometry::Point;
 
 use super::{TextRecognitionResult, TextRect};
 use extraction::{line_length, selected_text, selection_rects};

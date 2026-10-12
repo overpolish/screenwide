@@ -53,8 +53,8 @@ pub unsafe extern "C" fn screenwide_workspace_scene_draw(
   }
   let placements = unsafe { std::slice::from_raw_parts(placements, count as usize) };
   let magnifier = unsafe { magnifier.as_ref() };
-  let drawn = crate::gpu::shared()
-    .and_then(|gpu| unsafe { crate::gpu::macos::bgra_render_target(gpu, texture) })
+  let drawn = screenwide_gpu::shared()
+    .and_then(|gpu| unsafe { screenwide_gpu::macos::bgra_render_target(gpu, texture) })
     .and_then(|target| scene.draw(&target, placements, magnifier));
   match drawn {
     Ok(()) => 1,
@@ -222,8 +222,8 @@ pub unsafe extern "C" fn screenwide_preview_upload_rgba(
   }
   let length = width as usize * height as usize * 4;
   let rgba = unsafe { std::slice::from_raw_parts(rgba, length) };
-  let uploaded = crate::gpu::shared().and_then(|gpu| {
-    let target = unsafe { crate::gpu::macos::bgra_render_target(gpu, texture) }?;
+  let uploaded = screenwide_gpu::shared().and_then(|gpu| {
+    let target = unsafe { screenwide_gpu::macos::bgra_render_target(gpu, texture) }?;
     if (target.width(), target.height()) != (width, height) {
       return Err("The drawable is not the frame's size".to_owned());
     }

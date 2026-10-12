@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::recording::PrimaryRecordingKind;
+use screenwide_project::PrimaryRecordingKind;
 
 pub(super) fn validate_resolution_scale(selected: u16, source: u16) -> Result<(), String> {
   if selected < 100 || selected > source {

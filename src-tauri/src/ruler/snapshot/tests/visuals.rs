@@ -176,7 +176,7 @@ fn label_drag_and_visibility_share_document_history() {
   let display = DesktopDisplay {
     id: 1,
     origin: Point { x: 0.0, y: 0.0 },
-    size: crate::osc::geometry::Size {
+    size: screenwide_osc::geometry::Size {
       width: 100.0,
       height: 100.0,
     },

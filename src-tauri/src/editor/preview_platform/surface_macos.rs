@@ -14,17 +14,12 @@ mod callbacks;
 mod editor;
 mod ffi;
 mod image_drop;
-/// Core Graphics' keyboard-shortcut strip, for the shared compositor.
-pub(crate) mod keyboard_raster;
 mod layout;
 mod native_types;
 mod object_picking;
-use crate::editor::preview_platform::object_picking::ObjectPickCallback;
+use screenwide_compositor::object_picking::ObjectPickCallback;
 mod recording_workspace;
 mod screenshot_workspace;
-/// Inter SemiBold set by Core Text, which measures and draws the annotation
-/// atlas's type.
-pub(crate) mod type_device;
 mod workspace_scene;
 
 use std::sync::Arc;
@@ -52,7 +47,7 @@ use super::{
   ImageDropCallback, PointerDownCallback, SelectionCallback, SelectionGestureCallback,
   TransformCallback,
 };
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 pub(crate) struct RecordingPreviewSurface {
   pub(super) handle: *mut std::ffi::c_void,
@@ -76,7 +71,7 @@ impl RecordingPreviewSurface {
   pub(crate) fn from_window(window: &WebviewWindow) -> Result<Self, String> {
     let host_view = window.ns_view().map_err(|error| error.to_string())?;
     let scene = Arc::new(WorkspaceScene::new()?);
-    let (device, queue) = crate::gpu::macos::metal_device_and_queue(crate::gpu::shared()?)?;
+    let (device, queue) = screenwide_gpu::macos::metal_device_and_queue(screenwide_gpu::shared()?)?;
     // The surface holds its own reference, released when it is deallocated:
     // main-thread blocks it queued may still draw after this side is dropped.
     let retained = Arc::into_raw(Arc::clone(&scene)).cast::<std::ffi::c_void>();

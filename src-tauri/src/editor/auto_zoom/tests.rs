@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{clips, Signals, VisibleArea};
-use crate::editor::scenes::{validate_clips, RecordingSceneClip, RecordingScenePreset};
-use crate::recording::cursor::{
+use screenwide_records::cursor::{
   ButtonState, CursorButton, CursorRecord, CursorSource, CursorSourceKind,
 };
-use crate::recording::keyboard::KeyboardRecord;
+use screenwide_records::keyboard::KeyboardRecord;
+use screenwide_scenes::{validate_clips, RecordingSceneClip, RecordingScenePreset};
 
 const DURATION_MS: u64 = 120_000;
 

@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::screenshots::default_mesh_generator as default_generator;
+use screenwide_output::default_mesh_generator as default_generator;
 
 /// One blob of a mesh gradient, in shares of the canvas.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]

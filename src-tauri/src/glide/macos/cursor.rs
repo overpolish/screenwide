@@ -21,7 +21,7 @@ pub(super) fn pin_cursor(anchor: CGPoint) -> Result<(), String> {
 
 pub(super) fn hide_cursor() -> Result<(), String> {
   crate::cursor_scrub::hide_cursor()?;
-  crate::recording::cursor::set_cursor_visibility(false, None);
+  screenwide_capture::cursor::set_cursor_visibility(false, None);
   Ok(())
 }
 
@@ -54,7 +54,7 @@ pub(super) fn release_cursor(anchor: CGPoint, revealed: bool) {
   PINNED.store(false, std::sync::atomic::Ordering::Release);
   if revealed {
     crate::cursor_scrub::show_cursor();
-    crate::recording::cursor::set_cursor_visibility(true, Some((anchor.x, anchor.y)));
+    screenwide_capture::cursor::set_cursor_visibility(true, Some((anchor.x, anchor.y)));
   }
 }
 
@@ -64,7 +64,7 @@ pub(super) fn release_cursor(anchor: CGPoint, revealed: bool) {
 /// the pointer went, since a warp emits no mouse event of its own.
 pub(super) fn carry_cursor(landing: CGPoint) {
   crate::cursor_scrub::restore_cursor_at(landing);
-  crate::recording::cursor::set_cursor_visibility(true, Some((landing.x, landing.y)));
+  screenwide_capture::cursor::set_cursor_visibility(true, Some((landing.x, landing.y)));
 }
 
 #[cfg(test)]

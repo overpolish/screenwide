@@ -12,9 +12,9 @@
 use super::super::ScreenshotWorkspaceOutputSettings;
 use super::annotation_gesture::AnnotationCommit;
 use super::state::PreviewManager;
-use crate::editor::annotations::text::edit::{AnnotationTextEdit, TextEditPhase};
-use crate::editor::annotations::AnnotationShape;
 use crate::editor::preview_platform::AnnotationTextPhase;
+use screenwide_annotations::text::edit::{AnnotationTextEdit, TextEditPhase};
+use screenwide_annotations::AnnotationShape;
 
 pub(super) struct TextSession {
   pane_index: u32,
@@ -58,7 +58,7 @@ impl PreviewManager {
       surface.begin_annotation_text(
         index,
         text,
-        crate::editor::annotations::text::model::dark_ink(&annotation.style),
+        screenwide_annotations::text::model::dark_ink(&annotation.style),
       );
     }
     let mut commit = self.commit_for(pane_index, chosen)?;

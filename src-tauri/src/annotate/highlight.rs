@@ -19,12 +19,12 @@
 use std::sync::{Arc, Condvar, LazyLock, Mutex, MutexGuard};
 use std::time::Duration;
 
-use crate::editor::annotations::highlight::detect::{box_tone, select, Selection};
-use crate::editor::annotations::highlight::manual::strokes;
-use crate::editor::annotations::highlight::model::{new_highlight, HighlightTone};
-use crate::editor::annotations::highlight::picture::HighlightPicture;
-use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
-use crate::screenshots::CapturedImage;
+use screenwide_annotations::highlight::detect::{box_tone, select, Selection};
+use screenwide_annotations::highlight::manual::strokes;
+use screenwide_annotations::highlight::model::{new_highlight, HighlightTone};
+use screenwide_annotations::highlight::picture::HighlightPicture;
+use screenwide_annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
+use screenwide_imaging::CapturedImage;
 
 mod capture;
 mod underlay;

@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 use super::RecordingPreviewPlayerState;
-use crate::editor::speech::auto_volume::{self, Leveling};
-use crate::editor::speech::duck;
-use crate::editor::speech::heard::{self, Processing};
+use screenwide_speech::auto_volume::{self, Leveling};
+use screenwide_speech::duck;
+use screenwide_speech::heard::{self, Processing};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct PreviewProcessing {

@@ -3,7 +3,7 @@
 
 use std::ffi::c_void;
 
-use crate::osc::{
+use screenwide_osc::{
   desktop::{DesktopBinding, DesktopDisplay},
   geometry::{Point, Rect, Size},
 };

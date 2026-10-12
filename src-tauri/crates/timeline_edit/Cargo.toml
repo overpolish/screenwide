@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-timeline-edit"
+description = "A recording's edit: its kept segments, clips and cuts, and the plan made from it"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+screenwide-annotations.workspace = true
+screenwide-scenes.workspace = true
+screenwide-timeline.workspace = true
+serde.workspace = true
+ts-rs.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

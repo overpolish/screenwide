@@ -31,13 +31,14 @@ pub(super) fn append<'m>(
   if replay.status == ReplayStatus::Off {
     return Ok(builder.separator().icon(
       START_MENU_ID,
-      crate::i18n::t!("tray-replay-on"),
+      screenwide_i18n::t!("tray-replay-on"),
       icons::load(icons::REPLAY)?,
     ));
   }
-  let mut save = IconMenuItemBuilder::with_id(SAVE_MENU_ID, crate::i18n::t!("tray-replay-save"))
-    .icon(icons::load(icons::REPLAY)?)
-    .enabled(replay.status == ReplayStatus::On && !replay.saving);
+  let mut save =
+    IconMenuItemBuilder::with_id(SAVE_MENU_ID, screenwide_i18n::t!("tray-replay-save"))
+      .icon(icons::load(icons::REPLAY)?)
+      .enabled(replay.status == ReplayStatus::On && !replay.saving);
   if let Some(shortcut) =
     crate::shortcuts::shortcut_for(app, crate::shortcuts::ShortcutAction::SaveReplay)
   {
@@ -46,7 +47,7 @@ pub(super) fn append<'m>(
   let save = save.build(app)?;
   Ok(builder.separator().item(&save).icon(
     STOP_MENU_ID,
-    crate::i18n::t!("tray-replay-off"),
+    screenwide_i18n::t!("tray-replay-off"),
     icons::load(icons::STOP)?,
   ))
 }

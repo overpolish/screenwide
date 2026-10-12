@@ -66,7 +66,7 @@ impl PreviewPlayerManager {
     let path = sources.screen_path.clone();
     let duration_ms = sources.duration_ms;
     request_anchors(&self.annotation.anchors, key, move || {
-      match platform::source_frame_image(&path, position_ms, duration_ms) {
+      match screenwide_export::decode::source_frame_image(&path, position_ms, duration_ms) {
         Ok(frame) => detect_anchors(&frame.rgba, frame.width, frame.height),
         // A frame that cannot be decoded has no elements, which is cached like
         // any other answer so the decode is not attempted again per sample.
@@ -87,8 +87,8 @@ impl PreviewPlayerManager {
     position_ms: u64,
     source: (u32, u32),
     wait: bool,
-  ) -> Option<Arc<crate::editor::annotations::highlight::picture::HighlightPicture>> {
-    use crate::editor::annotations::highlight::picture::{request_picture, HighlightPicture};
+  ) -> Option<Arc<screenwide_annotations::highlight::picture::HighlightPicture>> {
+    use screenwide_annotations::highlight::picture::{request_picture, HighlightPicture};
     let sources = self.sources.as_ref()?;
     let (path, duration_ms) = match pane {
       0 => (sources.screen_path.clone(), sources.duration_ms),
@@ -104,7 +104,8 @@ impl PreviewPlayerManager {
       return Some(picture);
     }
     request_picture(cache, key, move || {
-      let frame = platform::source_frame_image(&path, position_ms, duration_ms).ok()?;
+      let frame =
+        screenwide_export::decode::source_frame_image(&path, position_ms, duration_ms).ok()?;
       HighlightPicture::new(Arc::new(frame), source)
     });
     wait

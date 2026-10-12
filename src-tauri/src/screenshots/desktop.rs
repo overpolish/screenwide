@@ -3,7 +3,7 @@
 
 use image::{imageops::FilterType, RgbaImage};
 
-use crate::desktop_capture::{CapturePiece, CapturePlan};
+use screenwide_capture::desktop_capture::{CapturePiece, CapturePlan};
 
 use super::CapturedImage;
 
@@ -46,7 +46,7 @@ mod tests {
   #[test]
   fn leaves_desktop_gaps_transparent() {
     let displays = [
-      crate::desktop_capture::DesktopDisplay {
+      screenwide_capture::desktop_capture::DesktopDisplay {
         id: 1,
         x: 0.0,
         y: 0.0,
@@ -54,7 +54,7 @@ mod tests {
         height: 1169.0,
         scale: 2.0,
       },
-      crate::desktop_capture::DesktopDisplay {
+      screenwide_capture::desktop_capture::DesktopDisplay {
         id: 2,
         x: 1800.0,
         y: 89.0,
@@ -63,14 +63,14 @@ mod tests {
         scale: 1.0,
       },
     ];
-    let plan = crate::desktop_capture::plan(
+    let plan = screenwide_capture::desktop_capture::plan(
       &displays,
       1,
-      crate::recording::Region {
+      screenwide_capture::Region {
         position: tauri::LogicalPosition::new(1700.0, 0.0),
         size: tauri::LogicalSize::new(300.0, 100.0),
       },
-      crate::desktop_capture::OutputLimits::UNBOUNDED,
+      screenwide_capture::desktop_capture::OutputLimits::UNBOUNDED,
     )
     .unwrap();
     let piece = plan.pieces[0];

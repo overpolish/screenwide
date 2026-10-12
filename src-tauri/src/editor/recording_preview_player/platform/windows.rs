@@ -6,16 +6,12 @@
 //! system memory or cross the Tauri IPC boundary.
 
 mod composed_frame;
-mod decoder;
-mod gpu_decoder;
 mod pane_decoder;
 mod present_frames;
 mod still;
 mod thumbnails;
 
 pub(crate) use composed_frame::composed_frame_image;
-pub(crate) use decoder::LumaReader;
-pub(crate) use thumbnails::{each_source_frame, source_frame_image};
 
 mod video_playback;
 pub(crate) use video_playback::playback_factors;
@@ -33,14 +29,13 @@ use std::{
 
 use tauri::ipc::Channel;
 
-use self::gpu_decoder::GpuFrame;
-pub(crate) use self::gpu_decoder::GpuVideoReader;
 use self::pane_decoder::PaneDecoder;
 use self::present_frames::present_native_frames;
 use super::super::{
   video::{presentation_elapsed_ms, source_position_ms, VideoFrame},
   PlayerSources,
 };
+use screenwide_export::decode::windows::gpu_decoder::{GpuFrame, GpuVideoReader};
 
 pub(crate) const NATIVE_STILLS: bool = true;
 pub(crate) type StillDecoder = still::NativeStillDecoder;

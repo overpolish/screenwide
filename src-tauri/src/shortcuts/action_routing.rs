@@ -143,7 +143,8 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     ShortcutAction::PauseResumeRecording => {
       if matches!(
         crate::recording::snapshot(app).status,
-        crate::recording::RecordingStatus::Recording | crate::recording::RecordingStatus::Paused
+        screenwide_capture::RecordingStatus::Recording
+          | screenwide_capture::RecordingStatus::Paused
       ) {
         let result = crate::recording::toggle_pause(app);
         record_native_result(action, "pause_toggled", result.err());
@@ -152,16 +153,17 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
       }
     }
     ShortcutAction::StartStopRecording => match crate::recording::snapshot(app).status {
-      crate::recording::RecordingStatus::Idle => notify_frontend(app, action),
-      crate::recording::RecordingStatus::Recording | crate::recording::RecordingStatus::Paused => {
+      screenwide_capture::RecordingStatus::Idle => notify_frontend(app, action),
+      screenwide_capture::RecordingStatus::Recording
+      | screenwide_capture::RecordingStatus::Paused => {
         let result = crate::recording::stop(app);
         record_native_result(action, "stopped", result.err());
       }
-      crate::recording::RecordingStatus::Starting => {
+      screenwide_capture::RecordingStatus::Starting => {
         let result = crate::recording::cancel(app);
         record_native_result(action, "cancelled", result.err());
       }
-      crate::recording::RecordingStatus::Stopping => {
+      screenwide_capture::RecordingStatus::Stopping => {
         record_native_result(action, "skipped_stopping", None);
       }
     },

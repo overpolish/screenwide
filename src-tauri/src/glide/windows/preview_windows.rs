@@ -103,7 +103,7 @@ fn ensure(app: &AppHandle, index: usize) -> tauri::Result<tauri::WebviewWindow> 
   config.visible = false;
   config.focus = false;
   let w = WebviewWindowBuilder::from_config(app, &config)?
-    .initialization_script(crate::system_accent::initialization_script())
+    .initialization_script(screenwide_accent::initialization_script())
     .build()?;
   crate::app_windows::platform::initialize_glide_preview(&w)?;
   Ok(w)

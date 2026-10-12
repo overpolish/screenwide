@@ -4,7 +4,7 @@
 //! Time evaluation shared by playing and paused native compositions.
 
 use super::*;
-use crate::editor::annotations::timing::{
+use screenwide_annotations::timing::{
   revealed_annotations, AnnotationTrack, RecordingAnnotationClip,
 };
 
@@ -63,7 +63,7 @@ pub(super) fn carry_camera_annotations(
     return;
   }
   let primary = &composition.recording_output.primary;
-  let split = crate::editor::annotations::camera_baked::baked_camera_annotations(
+  let split = screenwide_export::camera_baked::baked_camera_annotations(
     &composition.recording_output.camera.annotations,
     pictures[1],
     composition.camera_overlay,
@@ -90,7 +90,7 @@ impl PlayerSources {
   /// layout change attaches them again.
   pub(super) fn attach_pins(
     &self,
-    clips: &mut [crate::editor::annotations::timing::RecordingAnnotationClip],
+    clips: &mut [screenwide_annotations::timing::RecordingAnnotationClip],
     position_ms: u64,
   ) {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -168,12 +168,12 @@ impl PlayerSources {
 /// Annotations are authored in full-resolution source pixels; decoder proxies
 /// have their own source grid while stroke width follows the output resolution.
 pub(crate) fn remap_source(
-  settings: &mut crate::screenshots::ScreenshotOutputSettings,
+  settings: &mut screenwide_output::ScreenshotOutputSettings,
   source: (u32, u32),
   decoded: (u32, u32),
   output_width: u32,
 ) {
-  use crate::editor::annotations::AnnotationPoint;
+  use screenwide_annotations::AnnotationPoint;
   let sx = f64::from(decoded.0) / f64::from(source.0.max(1));
   let sy = f64::from(decoded.1) / f64::from(source.1.max(1));
   let stroke = f64::from(settings.width) / f64::from(output_width.max(1));
@@ -189,10 +189,10 @@ pub(crate) fn remap_source(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::editor::annotations::{arrow::new_arrow, AnnotationPoint, AnnotationShape};
+  use screenwide_annotations::{arrow::new_arrow, AnnotationPoint, AnnotationShape};
   #[test]
   fn proxy_decode_preserves_normalized_arrow_position_and_stroke() {
-    let mut output = crate::screenshots::test_output_settings(960, 540);
+    let mut output = screenwide_output::fixtures::test_output_settings(960, 540);
     output.annotations = vec![new_arrow(
       "a".into(),
       AnnotationPoint { x: 480.0, y: 270.0 },

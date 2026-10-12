@@ -6,7 +6,7 @@
 
 use super::gesture::Commit;
 use super::*;
-use crate::editor::annotations::pin::{fold, AnnotationPin};
+use screenwide_annotations::pin::{fold, AnnotationPin};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,7 +26,7 @@ impl PreviewPlayerManager {
     position: u64,
     shown: Vec<Annotation>,
     selected_annotation_ids: Vec<String>,
-    text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
+    text_edit: Option<screenwide_annotations::text::edit::TextEditPhase>,
   ) -> Option<Commit> {
     let session_id = self.session_id?;
     let clips = self

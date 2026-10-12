@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use super::*;
-use crate::editor::annotations::AnnotationShape;
+use screenwide_annotations::AnnotationShape;
 
 const PHASE_UP: u32 = 2;
 
@@ -73,7 +73,7 @@ fn a_pen_click_leaves_no_dot() {
 
 #[test]
 fn a_pen_stroke_held_still_is_let_go_as_what_it_was_taken_for() {
-  use crate::editor::annotations::freehand::hold::HOLD;
+  use screenwide_annotations::freehand::hold::HOLD;
   let tool = pen_tool();
   let started = Instant::now();
   let mut drawing = None;

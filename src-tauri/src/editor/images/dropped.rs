@@ -16,9 +16,9 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use ts_rs::TS;
 
-use super::store::import_file;
-use crate::editor::annotations::image::ImageArt;
-use crate::editor::annotations::Annotation;
+use screenwide_annotations::image::ImageArt;
+use screenwide_annotations::Annotation;
+use screenwide_images::store::import_file;
 
 /// What a drag carried, as the platform hands it over.
 pub(crate) enum DroppedPicture {
@@ -87,7 +87,7 @@ fn keep(picture: DroppedPicture) -> Result<ImageArt, String> {
       }
       kept
     }
-    DroppedPicture::Data(bytes) => super::store::import_bytes(&bytes),
+    DroppedPicture::Data(bytes) => screenwide_images::store::import_bytes(&bytes),
   }
 }
 

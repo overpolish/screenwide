@@ -69,7 +69,7 @@ impl RecordingPreviewSurface {
     camera: Option<DecodedTexture<'_>>,
     settings: &ScreenshotOutputSettings,
     camera_settings: (&ScreenshotOutputSettings, (u32, u32)),
-    overlay: crate::editor::CameraOverlaySettings,
+    overlay: screenwide_scenes::CameraOverlaySettings,
     drop_shadow: bool,
     camera_on_top: bool,
     composition: ComposedFrame,
@@ -131,7 +131,7 @@ impl RecordingPreviewSurface {
       redraw_stale_selection(&self.inner, &mut state);
       return Ok(staged);
     };
-    let geometry = crate::editor::media_preview::bake_geometry(BakedVideoExportOptions {
+    let geometry = screenwide_export::media_preview::bake_geometry(BakedVideoExportOptions {
       camera_drop_shadow: drop_shadow,
       camera_height: camera.size.1,
       camera_width: camera.size.0,
@@ -182,7 +182,7 @@ impl RecordingPreviewSurface {
   pub(crate) fn redraw_recording_annotations(
     &self,
     index: u32,
-    annotations: &[crate::editor::annotations::Annotation],
+    annotations: &[screenwide_annotations::Annotation],
     source: (u32, u32),
     camera: Option<(&ScreenshotOutputSettings, (u32, u32))>,
   ) -> bool {

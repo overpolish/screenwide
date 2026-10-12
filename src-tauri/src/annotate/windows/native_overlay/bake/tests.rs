@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::editor::annotations::arrow::new_arrow;
-use crate::editor::annotations::{AnnotationHead, AnnotationPoint, AnnotationStyle};
+use screenwide_annotations::arrow::new_arrow;
+use screenwide_annotations::{AnnotationHead, AnnotationPoint, AnnotationStyle};
 
 const SIDE: u32 = 128;
 

@@ -30,7 +30,7 @@ pub fn show_interactive_overlay(window: &WebviewWindow, opacity: f64) -> tauri::
     let _ = show_webview(&window);
     panel.set_style_mask(StyleMask::empty().into());
     panel.set_alpha_value(opacity);
-    if let Err(error) = crate::osc::cursor::macos::present_window(&window) {
+    if let Err(error) = crate::osc::cursor_macos::present_window(&window) {
       eprintln!("Could not present interactive overlay: {error}");
     }
   })

@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-images"
+description = "The pictures images show: their store, decoding and rasterising"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[features]
+# The test pictures the app's own tests draw.
+test-support = []
+
+[dependencies]
+image.workspace = true
+screenwide-annotations.workspace = true

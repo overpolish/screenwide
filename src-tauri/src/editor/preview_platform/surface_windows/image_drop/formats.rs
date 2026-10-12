@@ -22,9 +22,9 @@ use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
 use windows::Win32::System::Ole::{ReleaseStgMedium, CF_DIB, CF_DIBV5, CF_HDROP};
 use windows::Win32::UI::Shell::{DragQueryFileW, FILEDESCRIPTORW, FILEGROUPDESCRIPTORW, HDROP};
 
-use crate::editor::images::dib::bmp_from_dib;
 use crate::editor::images::dropped::DroppedPicture;
 use crate::editor::images::import::PICTURE_EXTENSIONS;
+use screenwide_images::dib::bmp_from_dib;
 
 /// The most a dropped picture's data is read to, so a stream that never
 /// ends cannot take the memory with it.

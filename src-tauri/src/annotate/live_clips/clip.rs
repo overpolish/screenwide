@@ -5,11 +5,11 @@
 //! recording and the replay buffer.
 
 use super::super::geometry::source_annotation;
-use crate::editor::annotations::pace::path_ms;
-use crate::editor::annotations::reveal::clip_ms_for_visible;
-use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
-use crate::editor::annotations::Annotation;
-use crate::recording::cursor::CursorSource;
+use screenwide_annotations::pace::path_ms;
+use screenwide_annotations::reveal::clip_ms_for_visible;
+use screenwide_annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
+use screenwide_annotations::Annotation;
+use screenwide_records::cursor::CursorSource;
 
 /// One annotation's clip for a recording that showed it from `start_ms` until
 /// it went at `gone_ms`, paced by its path on the recording's own frame, as

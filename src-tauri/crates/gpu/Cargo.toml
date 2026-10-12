@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-gpu"
+description = "The wgpu device every renderer shares, and its platform texture bridges"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+pollster.workspace = true
+wgpu.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cidre.workspace = true
+objc2.workspace = true
+# Wraps IOSurface-backed CoreVideo buffers as wgpu textures; the same crate
+# wgpu's Metal backend is built on.
+objc2-io-surface = { version = "0.3.2", default-features = false, features = ["std", "objc2", "IOSurfaceRef"] }
+objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLAllocation", "MTLDevice", "MTLPixelFormat", "MTLResource", "MTLTexture", "MTLTypes", "objc2-io-surface"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D10",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Direct3D11on12",
+  "Win32_Graphics_Direct3D12",
+  "Win32_Graphics_DirectComposition",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
+] }

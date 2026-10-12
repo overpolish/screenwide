@@ -62,16 +62,14 @@ use super::desktop::{global_committed, peer_plan, MonitorProbe, PeerPlan};
 use super::input;
 use super::ruler::{self, RulerData};
 use super::surface::{self, Gpu, Surface};
-use crate::osc::{
-  controller::RegionController,
-  desktop::{DesktopBinding, DesktopDisplay},
-  geometry::{Monitor, Point, Rect, Size},
-  protocol::{OscResult, Purpose},
-  runtime::OscRuntime,
-  scene::{RegionScene, RegionSceneOwner},
-  style::overlay_palette,
-};
+use crate::osc::runtime::OscRuntime;
 use crate::text_recognition::visual::OcrRectPacket;
+use screenwide_osc::controller::RegionController;
+use screenwide_osc::desktop::{DesktopBinding, DesktopDisplay};
+use screenwide_osc::geometry::{Monitor, Point, Rect, Size};
+use screenwide_osc::protocol::{OscResult, Purpose};
+use screenwide_osc::scene::{RegionScene, RegionSceneOwner};
+use screenwide_osc::style::overlay_palette;
 
 /// `WM_DISPLAYCHANGE` reaches every top-level window, so a topology change
 /// arrives once per peer. Only the first of each burst is acted on.

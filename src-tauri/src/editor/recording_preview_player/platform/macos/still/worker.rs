@@ -199,7 +199,7 @@ pub(super) fn run(
           .bake_camera
           .then_some(composition.camera_overlay),
         composition.recording_output.camera.drop_shadow,
-        crate::editor::recording_model::CAMERA_IN_FRONT,
+        screenwide_export::recording_model::CAMERA_IN_FRONT,
       ) {
         Ok(value) => value,
         Err(message) => {
@@ -243,7 +243,7 @@ pub(super) fn run(
         }),
         clip_cursor_at_video_edge: cursor_settings.clip_at_video_edge,
         foreground_only: false,
-        source_is_camera: sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera,
+        source_is_camera: sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera,
       }];
       if let Some(camera) = cache.camera.as_ref().filter(|_| !composition.bake_camera) {
         layers.extend(super::camera_pane::camera_pane_layer(

@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::editor::preview_platform::workspace_editor::{
+use crate::editor::preview_workspace_model::{apply_output_geometry, output_geometry};
+use screenwide_compositor::workspace_editor::{
   apply_layer_gesture, fit_canvas_to_layers, GestureOperation,
 };
-use crate::editor::preview_workspace_model::{apply_output_geometry, output_geometry};
-use crate::screenshots::ScreenshotOutputSettings;
+use screenwide_output::ScreenshotOutputSettings;
 
 pub(super) fn apply(
   start: &ScreenshotOutputSettings,

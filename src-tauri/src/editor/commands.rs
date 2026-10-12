@@ -10,7 +10,7 @@ pub async fn get_screenshot_content_bounds(
   app: AppHandle,
   artifact_id: u64,
   item_id: u64,
-  source_crop: crate::screenshots::NormalizedSourceRect,
+  source_crop: screenwide_output::NormalizedSourceRect,
 ) -> Result<Option<recenter::RecenterAnalysis>, String> {
   source_crop.validate()?;
   let image = {
@@ -113,7 +113,7 @@ pub fn copy_editor_to_clipboard(
   emit_snapshot(&app, kind);
   // Only once the picture is on the clipboard and the editor has let go of it.
   if delete_project_after_export {
-    if let Err(error) = crate::project::delete(&app, &project) {
+    if let Err(error) = screenwide_project::delete(&app, &project) {
       eprintln!("Could not delete the copied project: {error}");
     }
   } else {
@@ -153,7 +153,7 @@ pub fn delete_open_project(app: AppHandle, window: tauri::WebviewWindow) -> Resu
   let kind = kind_of_window(&window)?;
   let project =
     super::close(&app, kind).ok_or_else(|| "There is no project to delete".to_owned())?;
-  crate::project::delete(&app, &project).map(|_| ())
+  screenwide_project::delete(&app, &project).map(|_| ())
 }
 
 #[tauri::command]
@@ -171,7 +171,7 @@ pub fn set_recording_timeline_edit(
   app: AppHandle,
   artifact_id: u64,
   revision: u64,
-  edit: timeline_edit::RecordingTimelineEdit,
+  edit: screenwide_timeline_edit::RecordingTimelineEdit,
 ) -> Result<(), String> {
   let state = app.state::<EditorState>();
   let artifact = state
@@ -208,7 +208,7 @@ pub async fn browse_export_directory(
     let mut dialog = app
       .dialog()
       .file()
-      .set_title(crate::i18n::t!("dialog-choose-folder"));
+      .set_title(screenwide_i18n::t!("dialog-choose-folder"));
     if let Some(start) = start {
       dialog = dialog.set_directory(start);
     }
@@ -238,9 +238,9 @@ pub async fn browse_background_image(
     let mut dialog = app
       .dialog()
       .file()
-      .set_title(crate::i18n::t!("dialog-choose-background"))
+      .set_title(screenwide_i18n::t!("dialog-choose-background"))
       .add_filter(
-        crate::i18n::t!("dialog-pictures-filter"),
+        screenwide_i18n::t!("dialog-pictures-filter"),
         &[
           "png", "jpg", "jpeg", "heic", "heif", "webp", "tiff", "bmp", "gif",
         ],

@@ -3,13 +3,13 @@
 
 use tauri::AppHandle;
 
-use super::super::preview_platform::workspace_editor::WorldRect;
-use super::super::preview_platform::PreviewSurfaceRect;
 #[cfg(target_os = "macos")]
 use super::super::preview_platform::SelectionGestureOperation;
 use super::super::ScreenshotWorkspaceOutputSettings;
 use super::payloads::{ScreenshotSelectionOverlay, ScreenshotSurfacePane};
 use super::state::{PreviewManager, ScreenshotPreviewState};
+use screenwide_compositor::workspace_editor::WorldRect;
+use screenwide_compositor::PreviewSurfaceRect;
 
 // Async so Tauri dispatches it off the main thread: this command blocks on a
 // DirectComposition commit, and the main thread pumps the Win32 messages that
@@ -21,13 +21,13 @@ pub async fn layout_screenshot_preview_surface(
   state: tauri::State<'_, ScreenshotPreviewState>,
   // The style the next fresh arrow is drawn in: whatever the editor's last
   // annotation edit settled on. Absent until it has settled on anything.
-  annotation_defaults: Option<crate::editor::annotations::AnnotationStyle>,
+  annotation_defaults: Option<screenwide_annotations::AnnotationStyle>,
   // Where the next fresh counter's tail points, in radians clockwise from
   // east: whatever the last counter was turned to. Absent until one has been.
   annotation_counter_angle: Option<f64>,
   // The picture the next fresh image shows: whatever the last image was
   // given. Absent until one has been.
-  annotation_image: Option<crate::editor::annotations::image::ImageArt>,
+  annotation_image: Option<screenwide_annotations::image::ImageArt>,
   // `annotation_tool` is the tool in hand, when one is. "select" hit-tests
   // the arrows already on the layer and lets every other press fall through
   // to it; "arrow" also draws a new one on empty picture.
@@ -135,7 +135,7 @@ pub async fn layout_screenshot_preview_surface(
     let (annotation_layout, hover_cleared) = super::annotation::apply_annotation_layout(
       &mut manager,
       annotation_defaults,
-      crate::editor::annotations::edit::FreshAnnotation {
+      screenwide_annotations::edit::FreshAnnotation {
         angle: annotation_counter_angle,
         image: annotation_image,
       },
@@ -190,8 +190,8 @@ pub async fn layout_screenshot_preview_surface(
   // Under a drawing tool the targets only say which picture a fresh
   // annotation is drawn on: a press there never picks up or moves a layer.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  let picks_layers = crate::editor::annotations::gesture::drawing_kind(
-    crate::editor::annotations::gesture::annotation_mode(annotation_tool.as_deref()),
+  let picks_layers = screenwide_annotations::gesture::drawing_kind(
+    screenwide_annotations::gesture::annotation_mode(annotation_tool.as_deref()),
   )
   .is_none();
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]

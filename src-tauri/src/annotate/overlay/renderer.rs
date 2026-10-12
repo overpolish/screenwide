@@ -4,10 +4,10 @@
 //! The overlay's pipeline: one shader on the shared device, one buffer per
 //! list.
 
-use crate::editor::preview_platform::annotation_gpu::{
+use screenwide_compositor::annotation_gpu::{
   numbered_arrows, CounterAtlas, GpuBuffer, PreparedArrows,
 };
-use crate::gpu::Gpu;
+use screenwide_gpu::Gpu;
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/annotate_overlay.wgsl"));
 
@@ -55,7 +55,7 @@ pub(in crate::annotate) struct Renderer {
 
 impl Renderer {
   pub(in crate::annotate) fn new() -> Result<Self, String> {
-    let gpu = crate::gpu::shared()?;
+    let gpu = screenwide_gpu::shared()?;
     let device = &gpu.device;
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
       label: Some("Screenwide annotate overlay shader"),
@@ -83,7 +83,7 @@ impl Renderer {
         entry_point: Some("fs_main"),
         compilation_options: Default::default(),
         targets: &[Some(wgpu::ColorTargetState {
-          format: crate::gpu::surface::FORMAT,
+          format: screenwide_gpu::surface::FORMAT,
           blend: None,
           write_mask: wgpu::ColorWrites::ALL,
         })],

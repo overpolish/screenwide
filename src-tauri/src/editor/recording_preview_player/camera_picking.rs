@@ -63,7 +63,7 @@ impl PlayerSources {
   /// where it is of the camera alone, its own layer otherwise.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   fn camera_layer(&self) -> u32 {
-    u32::from(self.primary_kind != crate::recording::PrimaryRecordingKind::Camera)
+    u32::from(self.primary_kind != screenwide_project::PrimaryRecordingKind::Camera)
   }
 
   /// Marks the objects picked in the camera frame showing at camera time
@@ -128,7 +128,7 @@ impl CameraPicking {
     &self,
     ms: u64,
   ) -> (
-    Vec<crate::editor::preview_platform::object_picking::PickedObjectDot>,
+    Vec<screenwide_compositor::object_picking::PickedObjectDot>,
     Vec<[f32; 2]>,
   ) {
     let mut lines = Vec::new();
@@ -139,7 +139,7 @@ impl CameraPicking {
       .map(|pick| {
         let first = lines.len() as u32;
         lines.extend_from_slice(&pick.line);
-        crate::editor::preview_platform::object_picking::PickedObjectDot {
+        screenwide_compositor::object_picking::PickedObjectDot {
           x: pick.x,
           y: pick.y,
           id: pick.id,

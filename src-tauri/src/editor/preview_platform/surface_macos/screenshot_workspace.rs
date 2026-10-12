@@ -10,7 +10,8 @@
 use super::ffi::screenwide_preview_surface_present_screenshot_workspace;
 use super::workspace_scene::{LayerPicture, StagedLayer};
 use super::RecordingPreviewSurface;
-use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
+use screenwide_imaging::CapturedImage;
+use screenwide_output::ScreenshotOutputSettings;
 
 impl RecordingPreviewSurface {
   /// Composes every screenshot item into one workspace drawable. The scene

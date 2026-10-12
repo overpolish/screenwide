@@ -15,9 +15,9 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use ts_rs::TS;
 
-use super::choice_file;
-use crate::transcription::catalogue::{self, Purpose};
 use crate::transcription::models;
+use screenwide_speech::catalogue::{self, Purpose};
+use screenwide_speech::choice_file;
 
 /// The make of the choice file.
 const FORMAT_VERSION: u16 = 1;

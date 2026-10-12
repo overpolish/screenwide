@@ -5,7 +5,7 @@
 //! a press lands on the group. Rust decides which annotations are chosen and
 //! where their boxes fall; this side only draws the boxes and hit-tests them.
 
-#import "../../../../osc/gpu/macos/osc_gpu_macos.h"
+#import "../../../../../crates/osc/src/gpu/macos/osc_gpu_macos.h"
 #import "recording_preview_surface_macos_private.h"
 #include "recording_preview_annotation_layers_macos.h"
 

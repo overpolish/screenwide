@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod snapping;
+use screenwide_imaging::analysis::{
+  compute_gradients, detect_boxes, ComponentBox, GradientMaps, Tolerance,
+};
+use screenwide_imaging::CapturedImage;
 use snapping::snap_bounds;
 mod helpers;
 use helpers::*;
@@ -10,7 +14,7 @@ use model::*;
 pub(crate) use model::{
   GuideAxis, LabelKind, RangeAxis, RulerCenterlineVisual, RulerGuideGapVisual, RulerGuideVisual,
   RulerInnerObjectVisual, RulerMeasurementVisual, RulerProbeVisual, RulerRadiusVisual,
-  RulerViewportVisual, RulerVisual, Tolerance, ViewportAction,
+  RulerViewportVisual, RulerVisual, ViewportAction,
 };
 
 use std::{
@@ -18,20 +22,12 @@ use std::{
   time::{Duration, Instant},
 };
 
-use crate::{
-  osc::{
-    desktop::DesktopDisplay,
-    geometry::{Point, Rect},
-  },
-  ruler::viewport::Viewport,
-  ruler::{
-    analysis::{compute_gradients, detect_boxes, ComponentBox, GradientMaps},
-    centerlines,
-    probe::{probes_at_threshold, ProbeAxis},
-    radius::{corner_radius_at, Corner},
-  },
-  screenshots::CapturedImage,
-};
+use crate::ruler::centerlines;
+use crate::ruler::probe::{probes_at_threshold, ProbeAxis};
+use crate::ruler::radius::{corner_radius_at, Corner};
+use crate::ruler::viewport::Viewport;
+use screenwide_osc::desktop::DesktopDisplay;
+use screenwide_osc::geometry::{Point, Rect};
 
 #[derive(Default)]
 struct Drag {

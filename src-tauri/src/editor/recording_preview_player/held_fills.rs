@@ -13,14 +13,14 @@
 //! until its timeline lands it holds the first frame's surface. A paused
 //! preview is drawn again the moment either does.
 
-use super::held_surfaces::{first_box, reads_picture};
 use super::held_timelines::{ready, HeldTimelines, ReadySlot};
-use crate::editor::annotations::redact::held::HeldFill;
-use crate::editor::annotations::redact::native::{held_fill, RedactPicture};
-use crate::editor::annotations::redact::surface_timeline::surface_at;
-use crate::editor::annotations::timing::RecordingAnnotationClip;
-use crate::editor::annotations::Annotation;
-use crate::screenshots::CapturedImage;
+use screenwide_annotations::redact::held::HeldFill;
+use screenwide_annotations::redact::native::{held_fill, RedactPicture};
+use screenwide_annotations::redact::surface_timeline::surface_at;
+use screenwide_annotations::timing::RecordingAnnotationClip;
+use screenwide_annotations::Annotation;
+use screenwide_export::held_surfaces::{first_box, reads_picture};
+use screenwide_imaging::CapturedImage;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -169,7 +169,8 @@ impl HeldFills {
     let spawned = std::thread::Builder::new()
       .name("recording-preview-held-frame".to_owned())
       .spawn(move || {
-        let frame = super::platform::source_frame_image(&fills.path, start_ms, fills.duration_ms);
+        let frame =
+          screenwide_export::decode::source_frame_image(&fills.path, start_ms, fills.duration_ms);
         if let Ok(mut state) = fills.state.lock() {
           state.decoding.remove(&start_ms);
           if let Ok(frame) = frame {

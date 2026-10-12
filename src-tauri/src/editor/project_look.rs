@@ -18,6 +18,7 @@ mod pictures;
 use super::*;
 pub(crate) use cleanup::clean_pictures;
 pub(crate) use pictures::{adopt_pictures, carry_pictures, keep_in_app_data};
+use screenwide_scenes::CameraOverlaySettings;
 use ts_rs::TS;
 
 /// Bumped when the look's shape changes in a way older saves cannot be read
@@ -40,13 +41,13 @@ pub enum VideoTrack {
 pub struct ProjectLook {
   pub bake_camera: bool,
   pub camera_overlay: CameraOverlaySettings,
-  pub cursor_effects: cursor_effects::CursorEffectSettings,
-  pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
+  pub cursor_effects: screenwide_cursor_effects::CursorEffectSettings,
+  pub keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
   pub recording_output: RecordingOutputSettings,
   /// None for each where the recording's own default stands: every track
   /// on, at full volume.
   #[serde(default)]
-  pub audio_track_volumes: Option<Vec<AudioTrackVolume>>,
+  pub audio_track_volumes: Option<Vec<screenwide_export::recording_model::AudioTrackVolume>>,
   #[serde(default)]
   pub enabled_stream_indices: Option<Vec<usize>>,
   #[serde(default)]
@@ -69,7 +70,7 @@ struct PersistedLook {
 /// version reads.
 pub(crate) fn saved_look(project: &Path) -> Option<serde_json::Value> {
   let persisted: PersistedLook =
-    serde_json::from_value(crate::project::read(project).ok()?.look?).ok()?;
+    serde_json::from_value(screenwide_project::read(project).ok()?.look?).ok()?;
   if persisted.version != FORMAT_VERSION {
     return None;
   }
@@ -140,7 +141,7 @@ pub(crate) fn save_look(
     version: FORMAT_VERSION,
   })
   .map_err(|error| error.to_string())?;
-  crate::project::update(project, |manifest| {
+  screenwide_project::update(project, |manifest| {
     let saved = manifest
       .look
       .as_ref()

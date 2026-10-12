@@ -10,8 +10,9 @@ use std::{
 
 use tauri::ipc::Channel;
 
-use super::{gpu_decoder::GpuVideoReader, present_native_frames};
+use super::present_native_frames;
 use crate::editor::recording_preview_player::{PlayerSources, RecordingPreviewPlayerEvent};
+use screenwide_export::decode::windows::gpu_decoder::GpuVideoReader;
 
 enum DecoderCommand {
   Seek {
@@ -113,7 +114,7 @@ fn run(
       // reader. Rough seeks keep their warm reader unless it demonstrably
       // falls behind, preserving fast drag feedback.
       if reader.is_none() || !rough {
-        match GpuVideoReader::open(path, position_ms, surface.clone()) {
+        match GpuVideoReader::open(path, position_ms, surface.device()) {
           Ok(opened) => *reader = Some(opened),
           Err(message) => {
             let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
@@ -163,7 +164,7 @@ fn run(
         };
         recovered
       } else if needs_reopen {
-        match GpuVideoReader::open(path, position_ms, surface.clone()).and_then(|mut opened| {
+        match GpuVideoReader::open(path, position_ms, surface.device()).and_then(|mut opened| {
           let frame = opened.frame_at(position_ms)?;
           *reader = Some(opened);
           frame.ok_or_else(|| "Media Foundation returned no frame after reopening".to_owned())
@@ -227,7 +228,8 @@ fn should_seek(current_ms: u64, position_ms: u64, rough: bool) -> bool {
 
 #[cfg(test)]
 mod tests {
-  use super::{super::gpu_decoder::seek_preroll_ms, frame_is_stale, should_seek};
+  use super::{frame_is_stale, should_seek};
+  use screenwide_export::decode::windows::gpu_decoder::seek_preroll_ms;
 
   #[test]
   fn rough_scrubs_only_decode_short_forward_steps_sequentially() {

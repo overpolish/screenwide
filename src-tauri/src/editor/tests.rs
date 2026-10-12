@@ -5,6 +5,9 @@ use super::{
   save::{save_recording_copy, save_selected_recording_copy},
   *,
 };
+use screenwide_export::media_preview;
+use screenwide_export::track_selection;
+use screenwide_scenes::CameraOverlaySettings;
 
 #[test]
 fn keeps_a_reasonable_name_untouched() {

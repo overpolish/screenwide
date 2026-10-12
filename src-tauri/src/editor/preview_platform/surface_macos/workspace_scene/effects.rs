@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use super::WorkspaceScene;
-use crate::editor::camera_effects::live::LiveCameraEffects;
+use screenwide_export::camera_effects::live::LiveCameraEffects;
 
 impl WorkspaceScene {
   /// Draws the camera with `live` from now on, the matte of every camera

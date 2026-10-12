@@ -58,8 +58,8 @@ fn desktop_selection_composes_across_the_monitor_boundary() {
   let displays = [
     OscDesktopDisplay {
       id: 1,
-      origin: crate::osc::geometry::Point { x: 0.0, y: 0.0 },
-      size: crate::osc::geometry::Size {
+      origin: screenwide_osc::geometry::Point { x: 0.0, y: 0.0 },
+      size: screenwide_osc::geometry::Size {
         width: 2.0,
         height: 1.0,
       },
@@ -67,8 +67,8 @@ fn desktop_selection_composes_across_the_monitor_boundary() {
     },
     OscDesktopDisplay {
       id: 2,
-      origin: crate::osc::geometry::Point { x: 2.0, y: 0.0 },
-      size: crate::osc::geometry::Size {
+      origin: screenwide_osc::geometry::Point { x: 2.0, y: 0.0 },
+      size: screenwide_osc::geometry::Size {
         width: 2.0,
         height: 1.0,
       },

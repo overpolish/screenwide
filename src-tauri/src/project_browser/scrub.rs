@@ -27,9 +27,9 @@ pub struct ScrubStripFile {
 /// none. Only the picture's header is read, to know its size.
 #[tauri::command]
 pub fn get_scrub_strip(app: AppHandle, file: PathBuf) -> Option<ScrubStripFile> {
-  let path = crate::project::scrub_strip_path(&file);
+  let path = screenwide_project::scrub_strip_path(&file);
   let (width, height) = image::image_dimensions(&path).ok()?;
-  let frame_width = crate::project::SCRUB_FRAME_WIDTH;
+  let frame_width = screenwide_project::SCRUB_FRAME_WIDTH;
   let frames = width / frame_width;
   if frames == 0 || height == 0 {
     return None;

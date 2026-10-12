@@ -8,10 +8,11 @@
 //! themselves, moved into its own pixel space with the same transform a
 //! recording uses: the shot is one more source rectangle on the desktop.
 
-use crate::editor::annotations::Annotation;
-use crate::recording::cursor::{CursorSource, CursorSourceKind};
-use crate::recording::Region;
-use crate::screenshots::{CapturedImage, ScreenshotTarget};
+use crate::screenshots::ScreenshotTarget;
+use screenwide_annotations::Annotation;
+use screenwide_capture::Region;
+use screenwide_imaging::CapturedImage;
+use screenwide_records::cursor::{CursorSource, CursorSourceKind};
 
 /// Where the shot came from, in global logical points, or nothing for a
 /// target whose desktop placement the still does not carry: a window shot is

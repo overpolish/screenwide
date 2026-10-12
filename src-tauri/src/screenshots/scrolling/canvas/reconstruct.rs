@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 /// Per-channel distance at which two tiles are read as showing the same
 /// document pixel: wide enough to absorb capture noise and the compression a

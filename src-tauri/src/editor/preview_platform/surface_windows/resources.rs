@@ -12,7 +12,7 @@ pub(super) struct Gpu {
   pub(super) composition: IDCompositionDevice,
   pub(super) root: IDCompositionVisual,
   pub(super) selection: Mutex<selection::SelectionOverlay>,
-  pub(super) shared: &'static crate::gpu::Gpu,
+  pub(super) shared: &'static screenwide_gpu::Gpu,
   pub(super) _editor_target: IDCompositionTarget,
   pub(super) _target: IDCompositionTarget,
 }
@@ -37,8 +37,7 @@ pub(super) struct Pane {
   /// The box being typed into, if it belongs to this pane's layer: its place
   /// in that layer's list and the caret and selection drawn into its type.
   /// Kept across presents, so every redraw the typing causes carries it.
-  pub(super) annotation_typing:
-    Option<(usize, crate::editor::annotations::text::typing::TypingMarks)>,
+  pub(super) annotation_typing: Option<(usize, screenwide_annotations::text::typing::TypingMarks)>,
   /// Stable viewport-local geometry before the shared workspace transform.
   pub(super) base_rect: PreviewSurfaceRect,
   pub(super) clip: IDCompositionRectangleClip,

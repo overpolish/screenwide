@@ -32,7 +32,7 @@ pub(crate) async fn keep_composed_preview(
   project: PathBuf,
   composed: CapturedImage,
 ) -> Result<(), String> {
-  let preview = crate::project::preview_path(&project);
+  let preview = screenwide_project::preview_path(&project);
   tauri::async_runtime::spawn_blocking(move || {
     let image = image::RgbaImage::from_raw(composed.width, composed.height, composed.rgba)
       .ok_or_else(|| "The composed frame is not the size it says".to_owned())?;
@@ -48,6 +48,6 @@ pub(crate) async fn keep_composed_preview(
   })
   .await
   .map_err(|error| error.to_string())??;
-  let _ = app.emit(crate::project::library::STILL_EVENT, &project);
+  let _ = app.emit(screenwide_project::library::STILL_EVENT, &project);
   Ok(())
 }

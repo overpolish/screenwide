@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{
-  editor::{cursor_effects::GpuCursor, keyboard_effects::KeyboardOverlay},
-  screenshots::{CapturedImage, ScreenshotOutputSettings, StillOverlay},
-};
+use screenwide_compositor::compositor::still_overlay::StillOverlay;
+use screenwide_cursor_effects::GpuCursor;
+use screenwide_imaging::CapturedImage;
+use screenwide_keyboard_effects::KeyboardOverlay;
+use screenwide_output::ScreenshotOutputSettings;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]

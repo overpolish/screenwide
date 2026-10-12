@@ -1,24 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pub(crate) mod annotations;
 mod artifact;
 mod artifact_present;
 mod artifact_snapshot;
 mod audio_save;
 pub(crate) mod auto_zoom;
+/// A camera's annotations drawn inside the screen's composition, as One
+/// video draws the camera.
 pub(crate) mod camera_effects;
 mod camera_save;
 pub(crate) mod commands;
-pub(crate) mod cursor_effects;
-mod cursor_export;
 mod directory;
-pub(crate) mod effect_animation;
 pub(crate) mod export_window;
 /// The pictures images show.
 pub(crate) mod images;
-pub(crate) mod keyboard_effects;
-mod media_preview;
 mod naming;
 mod preferences;
 pub(crate) mod preview;
@@ -30,14 +26,12 @@ pub(crate) mod recording_preview;
 pub(crate) mod recording_preview_player;
 mod recording_sidecar;
 pub(crate) mod save;
-pub(crate) mod scenes;
 pub(crate) mod screenshot_preview;
 pub(crate) mod speech;
 mod startup;
-pub(crate) mod surface_colour;
 mod timeline_edit;
-pub(crate) use timeline_edit::{edited_duration_ms, PersistedTimelineEdit};
-mod track_selection;
+use screenwide_imaging::CapturedImage;
+pub(crate) use timeline_edit::edited_duration_ms;
 mod validation;
 mod workspace;
 
@@ -58,9 +52,9 @@ pub use project_thumbnail::project_thumbnail;
 mod recording_model;
 mod screenshot_composition;
 pub(crate) mod screenshot_project;
-pub use recording_model::{
-  AudioTrackKind, AudioTrackVolume, CameraOverlaySettings, RecordingAudioTrack, RecordingCamera,
-  RecordingExportOptions, RecordingOutputSettings,
+pub use recording_model::RecordingExportOptions;
+use screenwide_export::recording_model::{
+  AudioTrackKind, RecordingAudioTrack, RecordingCamera, RecordingOutputSettings,
 };
 
 mod screenshot_model;
@@ -72,7 +66,6 @@ pub use workspace_kind::EditorKind;
 
 use screenshot_composition::compose_screenshot_workspace;
 
-use annotations::Annotation;
 use artifact::{emit_snapshot, snapshots, take_artifact};
 use artifact_snapshot::snapshot;
 pub use artifact_snapshot::EditorArtifactSnapshot;
@@ -80,7 +73,6 @@ use camera_save::validate_camera_overlay;
 use commands::store_export_directory;
 use directory::current_directory;
 pub use export_window::hide as hide_export_options_for;
-pub(crate) use media_preview::{ffmpeg_command, transcriber_command};
 pub(crate) use naming::sanitize_file_stem;
 use preferences::{
   load_cursor_effects, load_keyboard_effects, load_recording_choices, load_recording_output,
@@ -92,6 +84,7 @@ use preferences::{
 };
 use recording_sidecar::{RecordingCursor, RecordingKeyboard};
 use save::{delivered_extension, scale_percent};
+use screenwide_annotations::Annotation;
 pub use startup::initialize;
 use validation::{validate_camera_resolution_scale, validate_primary_resolution_scale};
 pub use workspace::has_pending_kind as has_pending_workspace_kind;
@@ -114,16 +107,16 @@ use tauri::{image::Image, AppHandle, Emitter, Manager};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use ts_rs::TS;
 
-use crate::recording::{FinalizeInfo, PrimaryRecordingKind};
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use crate::screenshots::compose_screenshot;
-use crate::screenshots::{
-  encode_png, screenshot_directory, unique_path, CapturedImage, ScreenshotOutputSettings,
-};
+use crate::screenshots::{screenshot_directory, unique_path};
+use screenwide_capture::FinalizeInfo;
+use screenwide_output::{encode_png, ScreenshotOutputSettings};
+use screenwide_project::PrimaryRecordingKind;
 
 #[cfg(target_os = "macos")]
 pub(crate) fn initialize_cursor_artwork() {
-  cursor_effects::initialize_artwork();
+  screenwide_cursor_effects::initialize_artwork();
 }
 
 const EDITOR_CHANGED_EVENT: &str = "editor://artifact";
@@ -206,9 +199,9 @@ fn recording_audio_tracks(
 #[ts(export)]
 pub struct EditorSnapshot {
   pub artifact: Option<EditorArtifactSnapshot>,
-  pub cursor_effects: cursor_effects::CursorEffectSettings,
+  pub cursor_effects: screenwide_cursor_effects::CursorEffectSettings,
   pub directory: Option<PathBuf>,
-  pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
+  pub keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
   pub recording_export_choices: RecordingExportChoices,
   pub recording_output: Option<RecordingOutputSettings>,
   pub screenshot_radius_percent: f64,
@@ -264,15 +257,15 @@ pub struct EditorState {
   /// kind, because the machine can only point its camera at one thing at once.
   capture_reservation: Mutex<Option<EditorKind>>,
   generation: AtomicU64,
-  cursor_effects: Mutex<cursor_effects::CursorEffectSettings>,
-  keyboard_effects: Mutex<keyboard_effects::KeyboardEffectSettings>,
+  cursor_effects: Mutex<screenwide_cursor_effects::CursorEffectSettings>,
+  keyboard_effects: Mutex<screenwide_keyboard_effects::KeyboardEffectSettings>,
   recording_choices: Mutex<RecordingExportChoices>,
   recording_output: Mutex<Option<RecordingOutputSettings>>,
   screenshot_radius_percent: Mutex<f64>,
   screenshot_background_radius_percent: Mutex<f64>,
   screenshot_output: Mutex<Option<ScreenshotOutputSettings>>,
   screenshot_delete_project_after_export: Mutex<Option<bool>>,
-  recording_preview: Mutex<Option<media_preview::RecordingPreview>>,
+  recording_preview: Mutex<Option<screenwide_export::media_preview::RecordingPreview>>,
   recording_preview_preparation: Mutex<()>,
   /// Cached by artifact, stream kind (screen/camera/baked), quality and scale.
   compression_estimates: Mutex<HashMap<(u64, u8, u8, u16), u64>>,

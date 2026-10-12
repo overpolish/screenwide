@@ -28,7 +28,7 @@ fn draw(renderer: &Renderer, surface: &mut Surface) -> Result<(), String> {
   if size.0 == 0 || size.1 == 0 {
     return Ok(());
   }
-  let crate::gpu::surface::Frame::Ready(frame) = surface.chain.acquire(renderer.gpu())? else {
+  let screenwide_gpu::surface::Frame::Ready(frame) = surface.chain.acquire(renderer.gpu())? else {
     return Ok(());
   };
   renderer.draw_display(

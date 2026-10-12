@@ -6,6 +6,7 @@
 use super::artifact_present::{present_recording_from, Origin};
 use super::recording_sidecar::{valid_cursor, valid_keyboard};
 use super::*;
+use screenwide_export::media_preview;
 
 /// Asks for a project and opens it.
 pub fn choose_and_open_project(app: &AppHandle) {
@@ -15,12 +16,12 @@ pub fn choose_and_open_project(app: &AppHandle) {
     let mut dialog = app
       .dialog()
       .file()
-      .set_title(crate::i18n::t!("dialog-open-project"))
+      .set_title(screenwide_i18n::t!("dialog-open-project"))
       .add_filter(
-        crate::i18n::t!("dialog-project-filter"),
-        &[crate::project::EXTENSION],
+        screenwide_i18n::t!("dialog-project-filter"),
+        &[screenwide_project::EXTENSION],
       );
-    if let Ok(directory) = crate::project::projects_directory(&app) {
+    if let Ok(directory) = crate::projects_folder::projects_directory(&app) {
       dialog = dialog.set_directory(directory);
     }
     let Some(file) = dialog
@@ -58,21 +59,25 @@ pub fn project_argument<S: AsRef<std::ffi::OsStr>>(
 pub fn is_project_file(path: &Path) -> bool {
   path
     .extension()
-    .is_some_and(|extension| extension.eq_ignore_ascii_case(crate::project::EXTENSION))
+    .is_some_and(|extension| extension.eq_ignore_ascii_case(screenwide_project::EXTENSION))
 }
 
 /// A project that cannot be opened says why in an alert, since nothing else
 /// is on screen to say it.
 fn open_and_report(app: &AppHandle, file: &Path) {
   if let Err(error) = open_project(app, file) {
-    crate::alert::show(app, &crate::i18n::t!("alert-project-open-failed"), &error);
+    crate::alert::show(
+      app,
+      &screenwide_i18n::t!("alert-project-open-failed"),
+      &error,
+    );
   }
 }
 
 /// Opens the project whose manifest is `file` in the editor its kind uses, in
 /// place of whatever that editor had open.
 pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
-  if crate::project::is_cancelled(file) {
+  if screenwide_project::is_cancelled(file) {
     return Err("This recording was discarded".to_owned());
   }
   if let Some(kind) = open_kind(app, file) {
@@ -88,11 +93,11 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
   // giving its folder, is given now.
   let settled = super::project_name::settle_name(app, file);
   let file = settled.as_path();
-  let manifest = crate::project::read(file)?;
-  if manifest.kind == crate::project::ProjectKind::Screenshot {
+  let manifest = screenwide_project::read(file)?;
+  if manifest.kind == screenwide_project::ProjectKind::Screenshot {
     return super::screenshot_project::open(app, file);
   }
-  let crate::project::RecordingManifest {
+  let screenwide_project::RecordingManifest {
     duration_ms: _,
     has_microphone,
     has_system_audio,
@@ -101,7 +106,7 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
     source_scale_factor,
     origin: _,
   } = manifest.recorded()?.clone();
-  let primary = crate::project::resolve(file, &media.primary)?;
+  let primary = screenwide_project::resolve(file, &media.primary)?;
   if !primary.is_file() {
     return Err(format!(
       "The recording is missing from this project. Expected it at {}",
@@ -118,7 +123,7 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
   let optional = |name: Option<String>| -> Result<Option<PathBuf>, String> {
     Ok(
       name
-        .map(|name| crate::project::resolve(file, &name))
+        .map(|name| screenwide_project::resolve(file, &name))
         .transpose()?
         .filter(|path| path.is_file()),
     )
@@ -146,7 +151,7 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let camera = camera_path.map(|path| {
     let info = media_preview::recording_info(&path);
-    crate::recording::CameraFinalizeInfo {
+    screenwide_capture::CameraFinalizeInfo {
       duration_ms: info.map_or(0, |value| value.duration_ms),
       height: info.map_or(0, |value| value.height),
       path,
@@ -156,7 +161,7 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let (duration_ms, width, height) = (0, 0, 0);
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  let camera = camera_path.map(|path| crate::recording::CameraFinalizeInfo {
+  let camera = camera_path.map(|path| screenwide_capture::CameraFinalizeInfo {
     duration_ms: 0,
     height: 0,
     path,

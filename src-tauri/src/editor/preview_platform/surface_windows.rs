@@ -15,6 +15,7 @@ mod camera_effects;
 mod creation;
 mod editor_controls;
 mod export;
+pub(crate) use export::recording_export_surface;
 mod geometry;
 mod gpu;
 mod input;
@@ -36,9 +37,6 @@ mod tests;
 mod thread_dispatch;
 mod workspace;
 
-/// Inter SemiBold set by DirectWrite, which measures a text box as well as
-/// drawing its type.
-pub(crate) mod type_device;
 use annotation::handle_typing_input;
 use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for};
 use geometry::{
@@ -48,6 +46,10 @@ use geometry::{
 use input::handle_editor_input;
 use magnifier::{redraw_composed_panes, redraw_magnifier, update_magnifier};
 use resources::{Backdrop, Gpu, Pane};
+/// Inter SemiBold set by DirectWrite, which measures a text box as well as
+/// drawing its type: the annotations' face, which the macOS surface has a
+/// Core Text twin of.
+pub(crate) use screenwide_annotations::text::type_device;
 use selection_draw::{draw_selection, redraw_stale_selection};
 use selection_hit::{
   clear_selection_snap_guides, crop_press_draws, cursor_for_state, radius_point,
@@ -71,37 +73,25 @@ use std::{
 };
 
 use tauri::WebviewWindow;
-use windows::{
-  core::Interface,
-  Win32::{
-    Foundation::HWND,
-    Graphics::{
-      Direct3D11::{
-        ID3D11Device, ID3D11Resource, ID3D11Texture2D, D3D11_BIND_RENDER_TARGET,
-        D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT,
-      },
-      DirectComposition::{
-        DCompositionCreateDevice, IDCompositionDevice, IDCompositionRectangleClip,
-        IDCompositionScaleTransform, IDCompositionTarget, IDCompositionVisual,
-        DCOMPOSITION_BITMAP_INTERPOLATION_MODE_LINEAR,
-      },
-      Dxgi::{
-        Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
-        IDXGIDevice,
-      },
+use windows::Win32::{
+  Foundation::HWND,
+  Graphics::{
+    Direct3D11::{ID3D11Device, ID3D11Texture2D},
+    DirectComposition::{
+      DCompositionCreateDevice, IDCompositionDevice, IDCompositionRectangleClip,
+      IDCompositionScaleTransform, IDCompositionTarget, IDCompositionVisual,
+      DCOMPOSITION_BITMAP_INTERPOLATION_MODE_LINEAR,
     },
-    System::Threading::GetCurrentThreadId,
-    UI::WindowsAndMessaging::GetWindowThreadProcessId,
+    Dxgi::IDXGIDevice,
   },
+  System::Threading::GetCurrentThreadId,
+  UI::WindowsAndMessaging::GetWindowThreadProcessId,
 };
 
 mod audio_ribbon;
-mod compositor_source;
 mod cursor_artwork;
 mod editor;
-mod font;
 mod keyboard_hit;
-pub(crate) mod keyboard_raster;
 use keyboard_hit::{keyboard_transform_start, redraw_keyboard_transform};
 mod image_drop;
 mod recenter;
@@ -111,23 +101,24 @@ mod view_fit;
 mod window;
 mod workspace_layout;
 
-use super::compositor::{self, ComposedFrame, CropMagnifier};
 use super::{
-  workspace_editor::{
-    apply_crop_draw, apply_crop_move, apply_crop_resize, apply_framed_crop_resize,
-    crop_magnifier_anchor, hit_test_display, rebase_display_fit_mode, DisplayRect, DisplayTarget,
-    NormalizedRect,
-  },
-  workspace_transform::WorkspaceTransform,
   AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, AnnotationTextPhase,
-  ContextMenuCallback, ImageDropCallback, PointerDownCallback, PreviewSelection,
-  PreviewSurfaceRect, SelectionCallback, SelectionGestureCallback, SelectionGestureOperation,
-  SelectionGesturePhase, TransformCallback,
+  ContextMenuCallback, ImageDropCallback, PointerDownCallback, PreviewSelection, SelectionCallback,
+  SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
 };
-use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
-use crate::gpu::surface::{Frame, Surface};
-use crate::gpu::D3d11Layer;
-use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
+use screenwide_compositor::compositor::{self, ComposedFrame, CropMagnifier};
+use screenwide_compositor::workspace_editor::{
+  apply_crop_draw, apply_crop_move, apply_crop_resize, apply_framed_crop_resize,
+  crop_magnifier_anchor, hit_test_display, rebase_display_fit_mode, DisplayRect, DisplayTarget,
+  NormalizedRect,
+};
+use screenwide_compositor::workspace_transform::WorkspaceTransform;
+use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_export::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
+use screenwide_gpu::surface::{Frame, Surface};
+use screenwide_gpu::D3d11Layer;
+use screenwide_imaging::CapturedImage;
+use screenwide_output::ScreenshotOutputSettings;
 use view_fit::fit_basis_transform;
 use workspace_layout::{
   apply_workspace_transform, aspect_fit_rect, rebase_workspace_fit, reflow_workspace_panes,
@@ -196,17 +187,6 @@ const NATIVE_PIXEL_ZOOM_HEADROOM: f64 = 4.0;
 
 pub(crate) struct RecordingPreviewSurface {
   inner: std::sync::Arc<SurfaceInner>,
-}
-
-/// An offscreen instance of the live preview compositor. Its source and target
-/// textures are allocated once and reused for every exported frame.
-pub(crate) struct WindowsExportCompositor {
-  camera: Option<compositor::SourceTexture>,
-  inner: std::sync::Arc<SurfaceInner>,
-  output_size: (u32, u32),
-  source: compositor::SourceTexture,
-  /// What each frame is drawn into, which Direct3D 11 copies out of.
-  target: crate::gpu::SharedTexture,
 }
 
 unsafe impl Send for RecordingPreviewSurface {}

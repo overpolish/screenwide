@@ -12,13 +12,13 @@ use std::path::PathBuf;
 
 use tauri::AppHandle;
 
-use super::super::auto_volume::{self, AutoVolume};
-use super::super::noise::{self, NoiseReduction};
 use super::super::studio_ducking;
-use super::super::voice::{self, VocalCleanup};
 use super::super::{ready_auto_volume, vad_model, SpeechSource};
 use super::{reporter, MicrophoneTool};
 use crate::editor::recording_preview_player::{refresh_processing, PreviewProcessing};
+use screenwide_speech::auto_volume::{self, AutoVolume};
+use screenwide_speech::noise::{self, NoiseReduction};
+use screenwide_speech::voice::{self, VocalCleanup};
 
 pub(crate) mod ducking_switch;
 mod opening;

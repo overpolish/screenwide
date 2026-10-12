@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 use super::super::macos::native_overlay as native;
 

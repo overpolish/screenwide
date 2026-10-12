@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{PlaybackMode, RecordingPreviewPlayerState};
-use crate::editor::keyboard_effects::KeyboardEffectSettings;
-use crate::editor::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+use screenwide_keyboard_effects::KeyboardEffectSettings;
+use screenwide_timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
 use tauri::State;
 
 #[tauri::command]

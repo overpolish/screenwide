@@ -21,12 +21,13 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use self::layers::{LayerCamera, SceneLayer, ScenePicture};
 pub(crate) use self::layers::{LayerPicture, StagedLayer};
-use crate::editor::cursor_effects::GpuArtwork;
-use crate::editor::preview_platform::annotation_gpu::SourceAnnotations;
-use crate::editor::preview_platform::compositor::{
+use screenwide_compositor::annotation_gpu::SourceAnnotations;
+use screenwide_compositor::compositor::still_overlay::StillOverlay;
+use screenwide_compositor::compositor::{
   CameraComposition, CanvasGeometry, Compositor, CursorArtwork, NativeCursors,
 };
-use crate::screenshots::{ScreenshotOutputSettings, StillOverlay};
+use screenwide_cursor_effects::GpuArtwork;
+use screenwide_output::ScreenshotOutputSettings;
 
 struct SceneState {
   compositor: Compositor,
@@ -37,7 +38,7 @@ struct SceneState {
   resize: Option<(Vec<SceneLayer>, bool)>,
   sources: HashMap<u64, Arc<ScenePicture>>,
   /// The camera's effects, drawn on every camera frame the scene holds.
-  effects: crate::editor::camera_effects::preview::PreviewEffects,
+  effects: screenwide_export::camera_effects::preview::PreviewEffects,
 }
 
 pub(crate) struct WorkspaceScene {
@@ -46,7 +47,7 @@ pub(crate) struct WorkspaceScene {
 
 impl WorkspaceScene {
   pub(super) fn new() -> Result<Self, String> {
-    let gpu = crate::gpu::shared()?;
+    let gpu = screenwide_gpu::shared()?;
     let compositor = Compositor::new(gpu, NativeCursors::none())?;
     // Drawn as it is edited: a set of kinds new to it is compiled on another
     // thread while the frames go on with a variant that holds it.

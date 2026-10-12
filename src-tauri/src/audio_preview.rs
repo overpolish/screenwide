@@ -203,7 +203,7 @@ pub async fn start_audio_preview(
   match kind {
     AudioPreviewKind::Microphone => {
       let (device, config, sample_format) =
-        crate::recording_inputs::resolve_microphone(device_id.as_deref())?;
+        screenwide_capture::devices::resolve_microphone(device_id.as_deref())?;
       let stream = build_stream(&device, &config, sample_format, channel)?;
       state
         .0

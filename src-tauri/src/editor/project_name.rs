@@ -20,12 +20,12 @@ fn stem(file: &Path) -> Option<&str> {
 /// manifest as it is now: the same one while an editor has it open, which
 /// takes the name once the editor lets it go, or the renamed one.
 pub fn rename_project(app: &AppHandle, file: &Path, title: &str) -> Result<PathBuf, String> {
-  let title =
-    sanitize_file_stem(title).ok_or_else(|| crate::i18n::t!("project-browser-name-unusable"))?;
+  let title = sanitize_file_stem(title)
+    .ok_or_else(|| screenwide_i18n::t!("project-browser-name-unusable"))?;
   let Some(kind) = open_kind(app, file) else {
     return rename_now(app, file, &title);
   };
-  crate::project::update(file, |manifest| {
+  screenwide_project::update(file, |manifest| {
     let pending = (stem(file) != Some(title.as_str())).then(|| title.clone());
     let changed = manifest.title != pending;
     manifest.title = pending;
@@ -53,7 +53,7 @@ pub fn rename_project(app: &AppHandle, file: &Path, title: &str) -> Result<PathB
     }
   }
   emit_snapshot(app, kind);
-  crate::project::library::notify(app);
+  screenwide_project::library::notify(app);
   Ok(file.to_path_buf())
 }
 
@@ -62,13 +62,15 @@ fn rename_now(app: &AppHandle, file: &Path, title: &str) -> Result<PathBuf, Stri
   let renamed = if stem(file) == Some(title) {
     file.to_path_buf()
   } else {
-    let renamed = crate::project::rename(file, title)?;
-    if let Err(error) = crate::project::library::moved(app, file, &renamed) {
+    let renamed = screenwide_project::rename(file, title)?;
+    if let Err(error) = screenwide_project::library::moved(app, file, &renamed) {
       eprintln!("Could not follow the renamed project in the recent list: {error}");
     }
     renamed
   };
-  if let Err(error) = crate::project::update(&renamed, |manifest| manifest.title.take().is_some()) {
+  if let Err(error) =
+    screenwide_project::update(&renamed, |manifest| manifest.title.take().is_some())
+  {
     eprintln!("Could not settle the project's name: {error}");
   }
   Ok(renamed)
@@ -82,7 +84,7 @@ pub(crate) fn settle_name(app: &AppHandle, file: &Path) -> PathBuf {
   if open_kind(app, file).is_some() {
     return file.to_path_buf();
   }
-  let Some(title) = crate::project::read(file)
+  let Some(title) = screenwide_project::read(file)
     .ok()
     .and_then(|manifest| manifest.title)
   else {

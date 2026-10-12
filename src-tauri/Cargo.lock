@@ -5408,18 +5408,12 @@ dependencies = [
  "core-graphics 0.25.0",
  "cpal",
  "dispatch2",
- "fluent-bundle",
- "fluent-langneg",
- "getrandom 0.3.4",
  "image",
  "keyboard-types",
- "naga",
  "nokhwa",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
- "objc2-io-surface",
- "objc2-metal",
  "plist",
  "png 0.18.1",
  "pollster",
@@ -5428,12 +5422,33 @@ dependencies = [
  "rapidfuzz",
  "rayon",
  "rdev",
- "realfft",
  "reqwest",
  "rqrr",
  "rustls",
  "rxing",
+ "screenwide-accent",
+ "screenwide-annotations",
+ "screenwide-capture",
+ "screenwide-compositor",
+ "screenwide-cursor-effects",
+ "screenwide-export",
+ "screenwide-gpu",
+ "screenwide-i18n",
+ "screenwide-images",
+ "screenwide-imaging",
+ "screenwide-keyboard-effects",
+ "screenwide-moments",
+ "screenwide-osc",
+ "screenwide-output",
+ "screenwide-project",
+ "screenwide-records",
+ "screenwide-scenes",
+ "screenwide-sidecar",
+ "screenwide-speech",
+ "screenwide-timeline",
+ "screenwide-timeline-edit",
  "screenwide-transcriber",
+ "screenwide-wgsl",
  "serde",
  "serde_json",
  "sha2",
@@ -5452,20 +5467,309 @@ dependencies = [
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
  "tokio",
- "trash",
  "ts-rs",
- "unic-langid",
  "url",
  "wasapi",
  "wgpu",
  "windows 0.58.0",
  "windows 0.62.2",
  "windows-core 0.62.2",
- "windows-numerics 0.3.1",
  "winreg 0.55.0",
  "winvd",
  "xcap",
  "yuv",
+]
+
+[[package]]
+name = "screenwide-accent"
+version = "0.1.0"
+dependencies = [
+ "block2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "serde",
+ "serde_json",
+ "tauri",
+ "ts-rs",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "screenwide-annotations"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cc",
+ "getrandom 0.3.4",
+ "screenwide-imaging",
+ "screenwide-timeline",
+ "serde",
+ "serde_json",
+ "ts-rs",
+ "windows 0.62.2",
+ "windows-numerics 0.3.1",
+]
+
+[[package]]
+name = "screenwide-capture"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cidre",
+ "core-foundation 0.10.1",
+ "core-graphics 0.25.0",
+ "cpal",
+ "dispatch2",
+ "image",
+ "nokhwa",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "rayon",
+ "screenwide-annotations",
+ "screenwide-gpu",
+ "screenwide-osc",
+ "screenwide-project",
+ "screenwide-records",
+ "screenwide-sidecar",
+ "screenwide-wgsl",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tokio",
+ "ts-rs",
+ "wasapi",
+ "wgpu",
+ "windows 0.62.2",
+ "xcap",
+]
+
+[[package]]
+name = "screenwide-compositor"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cc",
+ "naga",
+ "screenwide-annotations",
+ "screenwide-cursor-effects",
+ "screenwide-gpu",
+ "screenwide-images",
+ "screenwide-imaging",
+ "screenwide-keyboard-effects",
+ "screenwide-output",
+ "screenwide-scenes",
+ "screenwide-wgsl",
+ "serde",
+ "wgpu",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "screenwide-cursor-effects"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "screenwide-records",
+ "serde",
+ "ts-rs",
+]
+
+[[package]]
+name = "screenwide-export"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cc",
+ "cidre",
+ "image",
+ "screenwide-annotations",
+ "screenwide-compositor",
+ "screenwide-cursor-effects",
+ "screenwide-gpu",
+ "screenwide-i18n",
+ "screenwide-images",
+ "screenwide-imaging",
+ "screenwide-keyboard-effects",
+ "screenwide-output",
+ "screenwide-records",
+ "screenwide-scenes",
+ "screenwide-sidecar",
+ "screenwide-timeline",
+ "screenwide-timeline-edit",
+ "screenwide-transcriber",
+ "screenwide-wgsl",
+ "serde",
+ "serde_json",
+ "tauri",
+ "ts-rs",
+ "wgpu",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "screenwide-gpu"
+version = "0.1.0"
+dependencies = [
+ "cidre",
+ "objc2",
+ "objc2-io-surface",
+ "objc2-metal",
+ "pollster",
+ "wgpu",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "screenwide-i18n"
+version = "0.1.0"
+dependencies = [
+ "fluent-bundle",
+ "fluent-langneg",
+ "objc2-foundation",
+ "serde",
+ "sys-locale",
+ "ts-rs",
+ "unic-langid",
+]
+
+[[package]]
+name = "screenwide-images"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "screenwide-annotations",
+]
+
+[[package]]
+name = "screenwide-imaging"
+version = "0.1.0"
+dependencies = [
+ "rayon",
+ "serde",
+]
+
+[[package]]
+name = "screenwide-keyboard-effects"
+version = "0.1.0"
+dependencies = [
+ "screenwide-timeline",
+ "screenwide-timeline-edit",
+ "serde",
+ "serde_json",
+ "ts-rs",
+]
+
+[[package]]
+name = "screenwide-moments"
+version = "0.1.0"
+dependencies = [
+ "screenwide-capture",
+ "screenwide-project",
+ "serde",
+ "serde_json",
+ "tauri-plugin-global-shortcut",
+ "ts-rs",
+]
+
+[[package]]
+name = "screenwide-osc"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cc",
+ "image",
+ "screenwide-accent",
+ "screenwide-gpu",
+ "screenwide-wgsl",
+ "serde",
+ "wgpu",
+]
+
+[[package]]
+name = "screenwide-output"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cc",
+ "image",
+ "png 0.18.1",
+ "quantette",
+ "screenwide-annotations",
+ "screenwide-gpu",
+ "screenwide-imaging",
+ "screenwide-scenes",
+ "screenwide-wgsl",
+ "serde",
+ "serde_json",
+ "ts-rs",
+ "wgpu",
+]
+
+[[package]]
+name = "screenwide-project"
+version = "0.1.0"
+dependencies = [
+ "screenwide-timeline-edit",
+ "serde",
+ "serde_json",
+ "tauri",
+ "trash",
+ "ts-rs",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "screenwide-records"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "screenwide-scenes"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "ts-rs",
+]
+
+[[package]]
+name = "screenwide-sidecar"
+version = "0.1.0"
+
+[[package]]
+name = "screenwide-speech"
+version = "0.1.0"
+dependencies = [
+ "realfft",
+ "screenwide-i18n",
+ "screenwide-sidecar",
+ "screenwide-transcriber",
+ "serde",
+ "serde_json",
+ "ts-rs",
+]
+
+[[package]]
+name = "screenwide-timeline"
+version = "0.1.0"
+
+[[package]]
+name = "screenwide-timeline-edit"
+version = "0.1.0"
+dependencies = [
+ "screenwide-annotations",
+ "screenwide-scenes",
+ "screenwide-timeline",
+ "serde",
+ "serde_json",
+ "ts-rs",
 ]
 
 [[package]]
@@ -5474,6 +5778,13 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "screenwide-wgsl"
+version = "0.1.0"
+dependencies = [
+ "naga",
 ]
 
 [[package]]

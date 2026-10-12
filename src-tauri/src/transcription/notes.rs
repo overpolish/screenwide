@@ -14,10 +14,10 @@ use screenwide_transcriber::SAMPLE_RATE;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
-use super::catalogue::{self, Purpose};
-use super::runner::samples::decode;
-use super::runner::Transcriber;
 use super::{language, models};
+use screenwide_speech::catalogue::{self, Purpose};
+use screenwide_speech::runner::samples::decode;
+use screenwide_speech::runner::Transcriber;
 
 /// Any note's transcript has moved on: queued, started, finished, or failed.
 /// Whoever shows notes reads them again.
@@ -85,7 +85,7 @@ pub(crate) fn status(
       text: text.to_owned(),
     });
   }
-  if !crate::moments::settings::current().transcribe_notes {
+  if !screenwide_moments::settings::current().transcribe_notes {
     return None;
   }
   let job = Job {
@@ -114,10 +114,10 @@ pub(crate) fn status(
 
 /// Queues every untranscribed note of the recording project at `project`.
 pub(crate) fn queue_project(app: &AppHandle, project: &Path) {
-  let Some(moments) = crate::moments::for_project(project) else {
+  let Some(moments) = screenwide_moments::for_project(project) else {
     return;
   };
-  let Ok(recorded) = crate::moments::read(&moments) else {
+  let Ok(recorded) = screenwide_moments::read(&moments) else {
     return;
   };
   for (moment, recorded) in recorded.iter().enumerate() {
@@ -188,10 +188,10 @@ fn transcribe(
   job: &Job,
   transcriber: &mut Option<Transcriber>,
 ) -> Result<(), String> {
-  if !crate::moments::settings::current().transcribe_notes {
+  if !screenwide_moments::settings::current().transcribe_notes {
     return Ok(());
   }
-  let needed = crate::moments::read(&job.moments)?
+  let needed = screenwide_moments::read(&job.moments)?
     .get(job.moment)
     .is_some_and(|recorded| recorded.note_duration_ms.is_some() && recorded.transcript.is_none());
   let Some(model) = models::usable(app, Purpose::Moments) else {
@@ -201,12 +201,12 @@ fn transcribe(
     return Ok(());
   }
   let folder = job.moments.parent().unwrap_or(Path::new(""));
-  let samples = decode(&crate::moments::note_path(folder, job.moment))?;
+  let samples = decode(&screenwide_moments::note_path(folder, job.moment))?;
   // Whisper fills silence with stock phrases such as "Thank you.", so a note
   // with no sound in it gets an empty transcript, which reads as no speech,
   // without starting the transcriber.
   if crate::silence::is_silent(&samples.read()?, SAMPLE_RATE) {
-    return crate::moments::add_transcript(&job.moments, job.moment, "");
+    return screenwide_moments::add_transcript(&job.moments, job.moment, "");
   }
   let running = match transcriber {
     Some(running) => running,
@@ -224,5 +224,5 @@ fn transcribe(
     Vec::new(),
     &mut |_| {},
   )?;
-  crate::moments::add_transcript(&job.moments, job.moment, &transcript.text)
+  screenwide_moments::add_transcript(&job.moments, job.moment, &transcript.text)
 }

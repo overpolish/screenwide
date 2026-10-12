@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::{workspace_editor, PreviewSelection};
+use super::super::PreviewSelection;
+use screenwide_compositor::workspace_editor;
 
 pub(super) fn magnifier_bounds(selection: PreviewSelection) -> [f32; 4] {
   if selection.recenter_width <= 0.0 || selection.recenter_height <= 0.0 {

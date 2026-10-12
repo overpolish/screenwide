@@ -43,7 +43,7 @@ pub(crate) fn is_screenshot_region_session() -> bool {
 
 pub(crate) fn screenshot_region_scene_owner(
   app: &AppHandle,
-) -> crate::osc::scene::RegionSceneOwner {
+) -> screenwide_osc::scene::RegionSceneOwner {
   region_scene_owner(
     SCREENSHOT_REGION_SESSION.load(Ordering::Acquire),
     SCREENSHOT_REGION_RESTORING.load(Ordering::Acquire),
@@ -57,15 +57,15 @@ const fn region_scene_owner(
   restoring: bool,
   controls_visible: bool,
   recording_is_idle: bool,
-) -> crate::osc::scene::RegionSceneOwner {
+) -> screenwide_osc::scene::RegionSceneOwner {
   if screenshot_session {
-    crate::osc::scene::RegionSceneOwner::Screenshot
+    screenwide_osc::scene::RegionSceneOwner::Screenshot
   } else if restoring {
-    crate::osc::scene::RegionSceneOwner::RestoringNormal
+    screenwide_osc::scene::RegionSceneOwner::RestoringNormal
   } else if !controls_visible && recording_is_idle {
-    crate::osc::scene::RegionSceneOwner::DormantNormal
+    screenwide_osc::scene::RegionSceneOwner::DormantNormal
   } else {
-    crate::osc::scene::RegionSceneOwner::Normal
+    screenwide_osc::scene::RegionSceneOwner::Normal
   }
 }
 

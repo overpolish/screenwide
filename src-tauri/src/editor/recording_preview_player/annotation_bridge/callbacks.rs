@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::editor::annotations::camera_baked::{baked_places, BakedPlace};
+use screenwide_export::camera_baked::{baked_places, BakedPlace};
 
 pub(crate) fn install(
   surface: &mut RecordingPreviewSurface,

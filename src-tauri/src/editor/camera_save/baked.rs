@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_export::cursor_export;
+use screenwide_export::media_preview;
+use screenwide_export::track_selection;
+use screenwide_scenes::CameraOverlaySettings;
 
 #[allow(clippy::too_many_arguments)]
 pub(in crate::editor) fn save_baked_recording(
@@ -18,15 +22,20 @@ pub(in crate::editor) fn save_baked_recording(
   camera_drop_shadow: bool,
   camera_on_top: bool,
   video_settings: (u8, u16, u16),
-  cursor: Option<(&Path, cursor_effects::CursorEffectSettings)>,
-  keyboard: Option<(&Path, keyboard_effects::KeyboardEffectSettings)>,
+  cursor: Option<(&Path, screenwide_cursor_effects::CursorEffectSettings)>,
+  keyboard: Option<(&Path, screenwide_keyboard_effects::KeyboardEffectSettings)>,
   output: &ScreenshotOutputSettings,
   progress_app: &AppHandle,
   cancelled: &AtomicBool,
-  timeline: Option<&timeline_edit::TimelinePlan>,
-  camera_effects: Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
+  timeline: Option<&screenwide_timeline_edit::TimelinePlan>,
+  camera_effects: Option<
+    std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>,
+  >,
 ) -> Result<Option<PathBuf>, String> {
-  let progress_duration_ms = timeline.map_or(duration_ms, timeline_edit::TimelinePlan::duration_ms);
+  let progress_duration_ms = timeline.map_or(
+    duration_ms,
+    screenwide_timeline_edit::TimelinePlan::duration_ms,
+  );
   let mut on_progress = |processed_ms| {
     emit_progress(
       progress_app,
@@ -57,15 +66,21 @@ pub(in crate::editor) fn save_baked_recording(
     },
   };
   let (cursor_path, cursor_effects) = cursor.map_or(
-    (None, cursor_effects::CursorEffectSettings::default()),
+    (
+      None,
+      screenwide_cursor_effects::CursorEffectSettings::default(),
+    ),
     |(path, settings)| (Some(path), settings),
   );
   let (keyboard_path, keyboard_effects) = keyboard.map_or(
-    (None, keyboard_effects::KeyboardEffectSettings::default()),
+    (
+      None,
+      screenwide_keyboard_effects::KeyboardEffectSettings::default(),
+    ),
     |(path, settings)| (Some(path), settings),
   );
   let result = cursor_export::export(cursor_export::CursorExportRequest {
-    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
+    annotation_track: screenwide_annotations::timing::AnnotationTrack::Primary,
     audio_layout: layout,
     audio_source: None,
     camera: Some((&camera.path, baked)),
@@ -86,6 +101,8 @@ pub(in crate::editor) fn save_baked_recording(
     output,
     screen,
     selection,
+    #[cfg(target_os = "windows")]
+    surface: crate::editor::preview_platform::recording_export_surface,
     timeline,
     video: media_preview::VideoExportOptions {
       compression: video_settings.0,

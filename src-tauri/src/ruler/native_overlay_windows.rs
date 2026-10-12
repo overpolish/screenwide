@@ -8,10 +8,9 @@
 
 use tauri::Manager;
 
-use crate::{
-  app_windows::screenshot_region::native_osc_windows as native_region, osc::geometry::Rect,
-  screenshots::CapturedImage,
-};
+use crate::app_windows::screenshot_region::native_osc_windows as native_region;
+use screenwide_imaging::CapturedImage;
+use screenwide_osc::geometry::Rect;
 
 pub(super) fn install(
   window: &tauri::WebviewWindow,

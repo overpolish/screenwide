@@ -15,7 +15,7 @@ pub(crate) mod workspace;
 use super::artifact::next_id;
 use super::artifact_present::{present_new, Origin};
 use super::*;
-use crate::project::{ScreenshotLayer, ScreenshotManifest};
+use screenwide_project::{ScreenshotLayer, ScreenshotManifest};
 
 pub(crate) use workspace::restored_workspace;
 
@@ -96,7 +96,7 @@ pub fn present_screenshot(
 /// Writes `bytes` as `name` in the project, through a neighbouring file so a
 /// reader never sees half a picture.
 fn write_picture(project: &Path, name: &str, bytes: &[u8]) -> Result<(), String> {
-  let target = crate::project::resolve(project, name)?;
+  let target = screenwide_project::resolve(project, name)?;
   let partial = target.with_extension("png.part");
   std::fs::write(&partial, bytes)
     .and_then(|()| std::fs::rename(&partial, &target))
@@ -126,10 +126,10 @@ pub(super) fn keep_layer(
   title: &str,
   item: &ScreenshotItem,
 ) -> Result<PathBuf, String> {
-  let png = crate::screenshots::encoding::encode_truecolor_png(&item.image)?;
+  let png = screenwide_output::encoding::encode_truecolor_png(&item.image)?;
   if let Some(file) = project {
     let mut written = Ok(());
-    crate::project::update(file, |manifest| {
+    screenwide_project::update(file, |manifest| {
       let Some(screenshot) = manifest.screenshot.as_mut() else {
         written = Err("This project is not a screenshot".to_owned());
         return false;
@@ -143,12 +143,12 @@ pub(super) fn keep_layer(
     })?;
     return written.map(|()| file.to_path_buf());
   }
-  let created = crate::project::create(app, title)?;
+  let created = crate::projects_folder::create(app, title)?;
   let name = "media/layer-1.png".to_owned();
   let kept = write_picture(&created.file, &name, &png).and_then(|()| {
-    crate::project::write(
+    screenwide_project::write(
       &created.file,
-      &crate::project::Manifest::screenshot(ScreenshotManifest {
+      &screenwide_project::Manifest::screenshot(ScreenshotManifest {
         layers: vec![layer(item, name)],
       }),
     )
@@ -157,7 +157,7 @@ pub(super) fn keep_layer(
     created.remove();
     return Err(error);
   }
-  crate::project::library::remember(app, &created.file);
+  screenwide_project::library::remember(app, &created.file);
   Ok(created.file)
 }
 
@@ -181,7 +181,7 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), String> {
   }
   super::project_look::adopt_pictures(file);
   super::project_look::clean_pictures(file);
-  let manifest = crate::project::read(file)?;
+  let manifest = screenwide_project::read(file)?;
   let screenshot = manifest
     .screenshot
     .ok_or_else(|| "This project is not a screenshot".to_owned())?;
@@ -192,7 +192,7 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), String> {
     .layers
     .iter()
     .map(|layer| {
-      let image = image::open(crate::project::resolve(file, &layer.image)?)
+      let image = image::open(screenwide_project::resolve(file, &layer.image)?)
         .map_err(|error| format!("A picture in this project could not be read: {error}"))?
         .into_rgba8();
       Ok(ScreenshotItem {
@@ -218,7 +218,7 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), String> {
   if items.is_empty() {
     return Err("This screenshot project has no pictures".to_owned());
   }
-  crate::project::library::remember(app, file);
+  screenwide_project::library::remember(app, file);
   present_new(
     app,
     EditorArtifact::Screenshot {

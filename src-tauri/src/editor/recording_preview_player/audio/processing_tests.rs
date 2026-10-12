@@ -7,7 +7,7 @@
 use super::tests::test_sources;
 use super::*;
 use crate::editor::recording_preview_player::PreviewProcessing;
-use crate::editor::speech::auto_volume::Leveling;
+use screenwide_speech::auto_volume::Leveling;
 
 #[test]
 fn plays_a_processed_track_from_its_own_file_at_the_same_place() {

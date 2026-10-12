@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_scenes::CameraOverlaySettings;
 use ts_rs::TS;
 
 /// A baked camera's placement with the screen canvas and camera size it was
@@ -58,7 +59,7 @@ impl RecordingExportChoices {
       return Self::default();
     };
     let has_picture = *primary_kind != PrimaryRecordingKind::Audio;
-    let can_compress = has_picture && media_preview::supports_compression();
+    let can_compress = has_picture && screenwide_export::media_preview::supports_compression();
     let camera = camera.as_ref();
     // Matches the first entry of the editor's resolution choices.
     let original_scale = match primary_kind {
@@ -136,13 +137,13 @@ impl RecordingExportChoices {
 /// What a finished recording export leaves behind for the next recording.
 pub(in crate::editor) struct CompletedRecordingExport {
   pub choices: RecordingExportChoices,
-  pub keyboard: keyboard_effects::KeyboardEffectSettings,
+  pub keyboard: screenwide_keyboard_effects::KeyboardEffectSettings,
   pub output: RecordingOutputSettings,
 }
 
 pub(in crate::editor) fn load_keyboard_effects(
   app: &AppHandle,
-) -> keyboard_effects::KeyboardEffectSettings {
+) -> screenwide_keyboard_effects::KeyboardEffectSettings {
   load_preferences(app)
     .map(|preferences| preferences.keyboard_effects.normalized())
     .unwrap_or_default()
@@ -156,7 +157,7 @@ pub(in crate::editor) fn load_recording_choices(app: &AppHandle) -> RecordingExp
 
 pub(super) fn remember_keyboard_effects(
   app: &AppHandle,
-  effects: keyboard_effects::KeyboardEffectSettings,
+  effects: screenwide_keyboard_effects::KeyboardEffectSettings,
 ) -> Result<(), String> {
   let effects = effects.normalized();
   *app

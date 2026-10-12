@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::AppHandle;
 
-use crate::project::library;
+use screenwide_project::library;
 
 /// Runs `each` over `files`, trying every one, and reports the failures
 /// together.
@@ -32,7 +32,7 @@ fn each(
 #[tauri::command]
 pub fn restore_projects(app: AppHandle, files: Vec<PathBuf>) -> Result<(), String> {
   each(&app, &files, |app, file| {
-    crate::project::restore(app, file).map(|_| ())
+    screenwide_project::restore(app, file).map(|_| ())
   })
 }
 
@@ -45,7 +45,7 @@ pub fn trash_projects(app: AppHandle, files: Vec<PathBuf>) -> Result<(), String>
 /// Sends everything in Recently Deleted on to the system Trash.
 #[tauri::command]
 pub fn empty_recently_deleted(app: AppHandle) -> Result<(), String> {
-  let files: Vec<PathBuf> = crate::project::recently_deleted(&app)
+  let files: Vec<PathBuf> = screenwide_project::recently_deleted(&app)
     .into_iter()
     .map(|deleted| deleted.file)
     .collect();

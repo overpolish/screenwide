@@ -10,10 +10,10 @@
 use super::super::preview_platform::SelectionGesturePhase;
 use super::annotation_gesture::AnnotationCommit;
 use super::state::PreviewManager;
-use crate::editor::annotations::handles::source_point;
-use crate::editor::annotations::marquee::{chosen_after_band, swept_annotations};
-use crate::editor::annotations::snap::{source_per_size, SnapModifiers};
-use crate::editor::annotations::AnnotationPoint;
+use screenwide_annotations::handles::source_point;
+use screenwide_annotations::marquee::{chosen_after_band, swept_annotations};
+use screenwide_annotations::snap::{source_per_size, SnapModifiers};
+use screenwide_annotations::AnnotationPoint;
 
 /// A marquee band under way: the layer it was pressed on, the corner it was
 /// pressed at, in that layer's source pixels, and whether it adds to the

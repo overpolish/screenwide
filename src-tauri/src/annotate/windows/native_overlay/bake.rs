@@ -11,8 +11,8 @@
 
 use super::*;
 
-use crate::editor::annotations::Annotation;
-use crate::screenshots::CapturedImage;
+use screenwide_annotations::Annotation;
+use screenwide_imaging::CapturedImage;
 
 /// The still with `annotations` drawn over it, in the still's own pixels.
 ///
@@ -39,7 +39,7 @@ pub(crate) fn bake(
     mip_level_count: 1,
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
-    format: crate::gpu::surface::FORMAT,
+    format: screenwide_gpu::surface::FORMAT,
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
     view_formats: &[],
   });
@@ -50,13 +50,13 @@ pub(crate) fn bake(
     annotation.style.blur
       && matches!(
         annotation.shape,
-        crate::editor::annotations::AnnotationShape::Spotlight { .. }
+        screenwide_annotations::AnnotationShape::Spotlight { .. }
       )
   });
   let softened = if blurs {
     Some(crate::annotate::overlay::upload_underlay(
       gpu,
-      &crate::editor::annotations::spotlight::soften::soften(image),
+      &screenwide_annotations::spotlight::soften::soften(image),
     )?)
   } else {
     None
@@ -64,7 +64,7 @@ pub(crate) fn bake(
   renderer.draw_arrows(
     &target.create_view(&Default::default()),
     (image.width, image.height),
-    &crate::editor::preview_platform::annotation_gpu::placed_arrows(
+    &screenwide_compositor::annotation_gpu::placed_arrows(
       annotations,
       (0.0, 0.0),
       (1.0, 1.0),

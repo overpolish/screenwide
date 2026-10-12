@@ -3,13 +3,10 @@
 
 use std::process::Command;
 
-use super::platform;
-use crate::editor::{
-  cursor_effects::CursorEffectSettings,
-  cursor_export::{export, CursorExportRequest},
-  media_preview::{self, ExportRunResult, VideoExportOptions},
-  track_selection::{AudioLayout, TrackSelection},
-};
+use screenwide_cursor_effects::CursorEffectSettings;
+use screenwide_export::cursor_export::{export, CursorExportRequest};
+use screenwide_export::media_preview::{ExportRunResult, VideoExportOptions};
+use screenwide_export::track_selection::{AudioLayout, TrackSelection};
 use std::sync::atomic::AtomicBool;
 
 #[test]
@@ -22,7 +19,7 @@ fn recenter_detected_dark_background_matches_native_composition() {
   std::fs::create_dir_all(&directory).unwrap();
   let source = directory.join("source.mov");
   let destination = directory.join("output.mp4");
-  let status = Command::new(media_preview::ffmpeg_path())
+  let status = Command::new(screenwide_sidecar::ffmpeg_path())
     .args([
       "-hide_banner",
       "-loglevel",
@@ -42,15 +39,15 @@ fn recenter_detected_dark_background_matches_native_composition() {
     .unwrap();
   assert!(status.success());
 
-  let mut settings = crate::screenshots::test_output_settings(320, 180);
+  let mut settings = screenwide_output::fixtures::test_output_settings(320, 180);
   settings.background_color = "#000000".to_owned();
   settings.drop_shadow = false;
-  let decoded = platform::source_frame_image(&source, 500, 1000).unwrap();
+  let decoded = screenwide_export::decode::source_frame_image(&source, 500, 1000).unwrap();
   let analysis = crate::editor::commands::recenter::analyse(
     &decoded.rgba,
     decoded.width,
     decoded.height,
-    crate::screenshots::NormalizedSourceRect {
+    screenwide_output::NormalizedSourceRect {
       x: 0.0,
       y: 0.0,
       width: 1.0,
@@ -68,7 +65,7 @@ fn recenter_detected_dark_background_matches_native_composition() {
   settings.image_width = 320.0;
   settings.image_x = 0.0;
   settings.image_y = 0.0;
-  settings.source_crop = crate::screenshots::NormalizedSourceRect {
+  settings.source_crop = screenwide_output::NormalizedSourceRect {
     height: 0.5,
     width: 0.5,
     x: 0.25,
@@ -77,7 +74,7 @@ fn recenter_detected_dark_background_matches_native_composition() {
   let cancelled = AtomicBool::new(false);
   let result = export(CursorExportRequest {
     camera_effects: None,
-    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
+    annotation_track: screenwide_annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
     camera: None,
@@ -86,7 +83,7 @@ fn recenter_detected_dark_background_matches_native_composition() {
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,
-    keyboard_effects: crate::editor::keyboard_effects::KeyboardEffectSettings::default(),
+    keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings::default(),
     destination: &destination,
     duration_ms: 1_000,
     height: 180,
@@ -94,6 +91,8 @@ fn recenter_detected_dark_background_matches_native_composition() {
     output: &settings,
     screen: &source,
     selection: &TrackSelection::default(),
+    #[cfg(target_os = "windows")]
+    surface: crate::editor::preview_platform::recording_export_surface,
     timeline: None,
     video: VideoExportOptions {
       compression: 1,
@@ -105,7 +104,7 @@ fn recenter_detected_dark_background_matches_native_composition() {
   .unwrap();
   assert_eq!(result, ExportRunResult::Completed);
 
-  let frame = Command::new(media_preview::ffmpeg_path())
+  let frame = Command::new(screenwide_sidecar::ffmpeg_path())
     .args(["-hide_banner", "-loglevel", "error", "-ss", "0.5", "-i"])
     .arg(&destination)
     .args([

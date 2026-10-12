@@ -17,40 +17,6 @@ pub(in crate::ruler::snapshot) const GUIDE_SNAP_RADIUS: f64 = 10.0;
 pub(in crate::ruler::snapshot) const GUIDE_RELEASE_RADIUS: f64 = 16.0;
 pub(in crate::ruler::snapshot) const HOVER_EXIT_DURATION: Duration = Duration::from_millis(160);
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) enum Tolerance {
-  ClearEdges,
-  #[default]
-  Balanced,
-  SubtleEdges,
-}
-
-impl Tolerance {
-  pub(crate) const fn threshold(self) -> u8 {
-    match self {
-      Self::ClearEdges => 40,
-      Self::Balanced => 24,
-      Self::SubtleEdges => 5,
-    }
-  }
-
-  pub(crate) const fn next(self) -> Self {
-    match self {
-      Self::ClearEdges => Self::Balanced,
-      Self::Balanced => Self::SubtleEdges,
-      Self::SubtleEdges => Self::ClearEdges,
-    }
-  }
-
-  pub(crate) const fn index(self) -> usize {
-    match self {
-      Self::ClearEdges => 0,
-      Self::Balanced => 1,
-      Self::SubtleEdges => 2,
-    }
-  }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RulerMeasurementVisual {
   pub id: u64,

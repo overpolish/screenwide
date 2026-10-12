@@ -12,10 +12,10 @@
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
-use crate::editor::annotations::timing::RecordingAnnotationClip;
-use crate::editor::annotations::Annotation;
-use crate::recording::clock::SidecarClock;
-use crate::recording::cursor::CursorSource;
+use screenwide_annotations::timing::RecordingAnnotationClip;
+use screenwide_annotations::Annotation;
+use screenwide_capture::clock::SidecarClock;
+use screenwide_records::cursor::CursorSource;
 
 mod clip;
 mod replay;
@@ -249,7 +249,7 @@ pub(crate) fn annotations() -> Vec<Annotation> {
 /// ever takes the newest annotation, so what is on screen is always 1..n.
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 pub(crate) fn next_counter_value() -> u32 {
-  crate::editor::annotations::counter::next_counter_value(
+  screenwide_annotations::counter::next_counter_value(
     live().annotations.iter().map(|live| &live.annotation),
   )
 }

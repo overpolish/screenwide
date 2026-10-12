@@ -3,14 +3,12 @@
 
 use super::{PlaybackMode, PreviewPlayerManager, RecordingSelectionGesture};
 use super::{AUTO_FIT_COMMIT_EDGE, AUTO_FIT_MOVE_EDGE};
-use crate::editor::preview_platform::{
-  workspace_editor::{
-    apply_layer_gesture, fit_canvas_to_layers, GestureOperation as WorkspaceGestureOperation,
-  },
-  SelectionGestureOperation, SelectionGesturePhase,
-};
+use crate::editor::preview_platform::{SelectionGestureOperation, SelectionGesturePhase};
 use crate::editor::preview_workspace_model::{
   apply_camera_geometry, apply_output_geometry, camera_geometry, output_canvas, output_geometry,
+};
+use screenwide_compositor::workspace_editor::{
+  apply_layer_gesture, fit_canvas_to_layers, GestureOperation as WorkspaceGestureOperation,
 };
 impl PreviewPlayerManager {
   #[cfg(any(target_os = "macos", target_os = "windows"))]

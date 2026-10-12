@@ -120,7 +120,7 @@ fn present_on_main_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<()
   // The anchor takes the foreground through the cursor lease, which is what
   // gives the overlay the key window and puts the user's application back
   // when it is released. The peers must not take it off the anchor again.
-  crate::osc::cursor::macos::present_window(anchor).map_err(|error| error.to_string())?;
+  crate::osc::cursor_macos::present_window(anchor).map_err(|error| error.to_string())?;
   for peer in peers {
     super::native_overlay::order_front(peer);
   }
@@ -166,7 +166,7 @@ fn resume_on_main_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<(),
     super::native_overlay::set_click_through(host, false);
     super::cursor::claim(host);
   }
-  crate::osc::cursor::macos::present_window(anchor).map_err(|error| error.to_string())?;
+  crate::osc::cursor_macos::present_window(anchor).map_err(|error| error.to_string())?;
   for peer in peers {
     super::native_overlay::order_front(peer);
   }
@@ -221,7 +221,7 @@ fn close_on_main_thread(hosts: &[WebviewWindow]) -> bool {
   for host in hosts {
     super::native_overlay::detach(host);
     super::cursor::release(host);
-    crate::osc::cursor::macos::prepare_window_close(host);
+    crate::osc::cursor_macos::prepare_window_close(host);
     closed |= host.close().is_ok();
   }
   closed
@@ -276,7 +276,7 @@ fn show_only_on_main_thread(hosts: &[WebviewWindow]) -> bool {
     // The crosshair and the key window belong to the user's application again;
     // only the pixels stay ours.
     super::cursor::release(host);
-    crate::osc::cursor::macos::prepare_window_close(host);
+    crate::osc::cursor_macos::prepare_window_close(host);
     super::native_overlay::set_click_through(host, true);
   }
   super::native_overlay::redraw();

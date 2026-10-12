@@ -4,7 +4,7 @@
 use super::super::beats::Beat;
 use super::candidate::{butts, handover, Candidate, MIN_OVERVIEW_MS};
 use super::{From, Shot, ShotState};
-use crate::editor::scenes::SceneFraming;
+use screenwide_scenes::SceneFraming;
 
 /// The shots `plan` makes, each timed against its neighbours: a handover
 /// shared with a shot it butts, or the whole screen shown for long enough

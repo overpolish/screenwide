@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::ScreenshotWorkspaceOutputSettings;
-use crate::screenshots::ScreenshotOutputSettings;
+use screenwide_output::ScreenshotOutputSettings;
 
 const MINIMUM_CANVAS_SIZE: f64 = 64.0;
 

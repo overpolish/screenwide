@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-#import "../../../../osc/gpu/macos/osc_gpu_macos.h"
+#import "../../../../../crates/osc/src/gpu/macos/osc_gpu_macos.h"
 
 // The workspace's retained scene lives in Rust (`workspace_scene`), which
 // draws it with the shared wgpu compositor. The surface keeps the layer, the

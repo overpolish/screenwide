@@ -1,0 +1,246 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! One live annotation edit. Workspaces own presentation and history; this
+//! transaction owns only the annotations changed by a pointer gesture.
+
+use std::time::Instant;
+
+use super::freehand::hold::StrokeHold;
+use super::gesture::{next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget};
+use super::snap::{SnapModifiers, SnapRequest, SnapResult};
+use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle};
+
+/// What a fresh annotation is made with beyond its dress: what the editor
+/// last settled on for the annotation's own properties, which are not part
+/// of a style. `angle` is where a counter's tail points and `image` the
+/// picture an image shows; absent until one has been chosen.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct FreshAnnotation {
+  pub angle: Option<f64>,
+  pub image: Option<super::image::ImageArt>,
+}
+
+impl FreshAnnotation {
+  /// What a fresh annotation on a picture `source` pixels across is made
+  /// with: an image's picture of its own is held inside it.
+  pub fn within(&self, source: (u32, u32)) -> Self {
+    Self {
+      angle: self.angle,
+      image: self.image.as_ref().map(|art| art.fitted(source)),
+    }
+  }
+}
+
+pub struct AnnotationEdit {
+  before: Vec<Annotation>,
+  index: usize,
+  id: String,
+  origin: AnnotationDragOrigin,
+  target: AnnotationGestureTarget,
+  /// A stroke fresh from the pen: its rest at the end, and what it was taken
+  /// for. Such a stroke is never left chosen.
+  stroke: Option<StrokeHold>,
+  /// Whether the annotation is let go once the gesture ends: a fresh stroke,
+  /// and a fresh image, so the panel goes on offering the next one's
+  /// picture rather than the placed one's.
+  lets_go: bool,
+}
+
+impl AnnotationEdit {
+  /// Selection-only presses are handled by the workspace, without opening an
+  /// edit. `kind` is the shape the tool in hand draws - absent where the tool
+  /// draws nothing, which declines a press that would have made one - and
+  /// `fresh` what it is made with beyond its dress. Only a
+  /// [`AnnotationGestureTarget::New`] press reads either.
+  ///
+  /// `source_per_size` is source pixels per point of a style's size for this
+  /// gesture's pane, zero where it is unknown. A fresh text box needs it to
+  /// centre itself on the press, and a text box's pointer to tell when its
+  /// tip is inside the box.
+  pub fn begin(
+    annotations: &mut Vec<Annotation>,
+    target: AnnotationGestureTarget,
+    point: AnnotationPoint,
+    defaults: Option<&AnnotationStyle>,
+    kind: Option<AnnotationKind>,
+    fresh: &FreshAnnotation,
+    source_per_size: f64,
+  ) -> Option<Self> {
+    let index = match target {
+      AnnotationGestureTarget::New => fresh_annotation_index(annotations, kind?),
+      AnnotationGestureTarget::Existing { index, .. } if index < annotations.len() => index,
+      _ => return None,
+    };
+    let before = annotations.clone();
+    if target == AnnotationGestureTarget::New {
+      let id = next_annotation_id();
+      let fresh = kind?.new_annotation(id, point, defaults, fresh, &before, source_per_size)?;
+      annotations.insert(index, fresh);
+    }
+    let annotation = &annotations[index];
+    let mut origin = AnnotationDragOrigin::new(point, &annotation.shape);
+    origin.source_per_size = source_per_size;
+    Some(Self {
+      before,
+      index,
+      id: annotation.id.clone(),
+      origin,
+      target,
+      stroke: (target == AnnotationGestureTarget::New
+        && annotation.shape.kind() == AnnotationKind::Draw)
+        .then(|| StrokeHold::new(point, Instant::now())),
+      lets_go: target == AnnotationGestureTarget::New
+        && matches!(
+          annotation.shape.kind(),
+          AnnotationKind::Draw | AnnotationKind::Image
+        ),
+    })
+  }
+
+  pub fn selected_id(&self) -> &str {
+    &self.id
+  }
+
+  /// The annotation this gesture leaves chosen. A stroke fresh from the pen is
+  /// let go, so the next press draws another rather than picking it up and no
+  /// box stands over the drawing, and so is an image just placed, so the
+  /// next one's picture can be chosen; every other annotation stays in hand
+  /// for its panel to dress.
+  pub fn chosen_id(&self) -> Option<&str> {
+    (!self.lets_go).then_some(self.id.as_str())
+  }
+
+  /// Whether this gesture is drawing a fresh stroke, which a clock outside
+  /// it asks [`Self::hold`] about until it ends.
+  pub fn holds_stroke(&self) -> bool {
+    self.stroke.is_some()
+  }
+
+  /// Source pixels per screen point for the sample about to be applied. Read
+  /// each sample, since a pinch may zoom part way through a drag.
+  pub fn set_source_per_point(&mut self, source_per_point: Option<f64>) {
+    self.origin.source_per_point = source_per_point.unwrap_or(0.0);
+  }
+
+  /// The picture's size in source pixels, which a fresh magnifier sets its
+  /// loupe inside.
+  pub fn set_source_size(&mut self, source_size: (u32, u32)) {
+    self.origin.source_size = source_size;
+  }
+
+  /// The pixels a highlight selects from, for the samples still to come.
+  /// Set as soon as the workspace has them, which for a recording may be
+  /// part way through the drag; a picture once given is kept.
+  pub fn set_picture(
+    &mut self,
+    picture: Option<std::sync::Arc<super::highlight::picture::HighlightPicture>>,
+  ) {
+    if picture.is_some() {
+      self.origin.picture = picture;
+    }
+  }
+
+  /// Whether the annotation this gesture holds reads a picture: only a
+  /// highlight does, so no other gesture has one decoded for it.
+  pub fn wants_picture(&self, annotations: &[Annotation]) -> bool {
+    annotations
+      .get(self.index)
+      .filter(|annotation| annotation.id == self.id)
+      .is_some_and(|annotation| annotation.shape.kind() == AnnotationKind::Highlight)
+  }
+
+  /// Whether this gesture made a fresh annotation rather than moving one.
+  pub fn is_new(&self) -> bool {
+    self.target == AnnotationGestureTarget::New
+  }
+
+  /// Samples are applied against the original shape, so returning the pointer
+  /// to its starting point also returns the annotation there without drift.
+  ///
+  /// `modifiers` is what was held for this sample and `field` the candidates
+  /// the gesture began with. This is the one place that decides whether a
+  /// sample snaps at all: with the positional modifier let go, or with no
+  /// usable reach to convert, the candidates are simply not offered.
+  pub fn update(
+    &mut self,
+    annotations: &mut [Annotation],
+    point: AnnotationPoint,
+    modifiers: SnapModifiers,
+    field: Option<SnapRequest<'_>>,
+  ) -> SnapResult {
+    let Some(annotation) = annotations
+      .get_mut(self.index)
+      .filter(|item| item.id == self.id)
+    else {
+      return SnapResult::default();
+    };
+    let snap = field.filter(|request| {
+      modifiers.position && request.threshold.is_finite() && request.threshold > 0.0
+    });
+    match self.target {
+      // A fresh arrow is drawn out from where the press landed; a fresh
+      // counter or text box was dropped whole there, so the same drag
+      // carries it. Each snaps the way the same grip does on an annotation
+      // already placed.
+      AnnotationGestureTarget::New => {
+        // A stroke still resting where it was taken for something cleaner
+        // keeps that; moving on gives the stroke back to carry on.
+        let unit = self.origin.source_per_point;
+        if let Some(stroke) = &mut self.stroke {
+          if !stroke.sample(annotation, point, unit, Instant::now()) {
+            return SnapResult::default();
+          }
+        }
+        annotation.drag_new(point, &self.origin, modifiers.shift, snap)
+      }
+      AnnotationGestureTarget::Existing { handle, .. } => {
+        annotation.drag_grip(handle, point, &self.origin, modifiers.shift, snap)
+      }
+      _ => SnapResult::default(),
+    }
+  }
+
+  /// Reads a fresh stroke the hand has rested on long enough, and puts what
+  /// it was taken for in its place. Answers whether the annotation changed,
+  /// and so wants presenting.
+  pub fn hold(&mut self, annotations: &mut [Annotation], now: Instant) -> bool {
+    let unit = self.origin.source_per_point;
+    let (Some(stroke), Some(annotation)) = (
+      &mut self.stroke,
+      annotations
+        .get_mut(self.index)
+        .filter(|item| item.id == self.id),
+    ) else {
+      return false;
+    };
+    stroke.hold(annotation, unit, now)
+  }
+
+  /// Drop an edit to accept the working list, or restore it on Escape.
+  pub fn cancel(self, annotations: &mut Vec<Annotation>) {
+    *annotations = self.before;
+  }
+}
+
+/// Where a fresh annotation of `kind` goes in a document kept bottom first. A
+/// redaction changes the picture itself, so it goes under everything but the
+/// redactions, which a document keeps at its bottom. A highlight recolours
+/// the page, so it goes under every spotlight and every annotation drawn over
+/// the page; a spotlight goes over the highlights and under the rest, so
+/// what is drawn next stays lit. Everything else goes on top. The twin of
+/// `freshAnnotationIndex` in
+/// `src/features/editor/annotations/annotation-order.ts`.
+fn fresh_annotation_index(annotations: &[Annotation], kind: AnnotationKind) -> usize {
+  use AnnotationKind::{Highlight, Redact, Spotlight};
+  let beneath = |other: AnnotationKind| match kind {
+    Redact => other == Redact,
+    Highlight => matches!(other, Highlight | Redact),
+    Spotlight => matches!(other, Highlight | Spotlight | Redact),
+    _ => true,
+  };
+  annotations
+    .iter()
+    .position(|annotation| !beneath(annotation.shape.kind()))
+    .unwrap_or(annotations.len())
+}

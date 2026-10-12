@@ -16,9 +16,9 @@
 use std::sync::Arc;
 
 use super::*;
-use crate::editor::annotations::text::geometry::text_distance;
-use crate::editor::annotations::text::typing::{TextTyping, TypingLayout};
 use crate::editor::preview_platform::surface::type_device::line_width;
+use screenwide_annotations::text::geometry::text_distance;
+use screenwide_annotations::text::typing::{TextTyping, TypingLayout};
 
 mod keys;
 mod presses;

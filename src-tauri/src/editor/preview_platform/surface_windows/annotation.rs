@@ -14,12 +14,12 @@ use super::*;
 /// and which shape a drawing mode makes. Both are declared once beside the
 /// gesture model, so Windows and the macOS interaction view read the same
 /// numbers.
-use crate::editor::annotations::gesture::{drawing_kind, hovers_nothing, MODE_NONE};
-use crate::editor::annotations::handles::{
+use screenwide_annotations::gesture::{drawing_kind, hovers_nothing, MODE_NONE};
+use screenwide_annotations::handles::{
   NativeAnnotationHandles, NativeAnnotationSnap, NativeGapSpan, SNAP_FLAG_ANCHOR, SNAP_FLAG_GAP_X,
   SNAP_FLAG_GAP_Y, SNAP_FLAG_GUIDE_X, SNAP_FLAG_GUIDE_Y,
 };
-use crate::editor::annotations::AnnotationKind;
+use screenwide_annotations::AnnotationKind;
 
 /// The grip's hit box, matching the selection handles'.
 const HANDLE_HIT: f64 = 8.0;
@@ -68,7 +68,7 @@ pub(super) struct AnnotationState {
   /// whenever a sample snaps to nothing, and when the gesture ends.
   pub(super) snap: NativeAnnotationSnap,
   /// The boxes round the annotations chosen together, as Rust published them.
-  pub(super) group: Vec<crate::editor::annotations::group::NativeAnnotationGroupBox>,
+  pub(super) group: Vec<screenwide_annotations::group::NativeAnnotationGroupBox>,
   /// The marquee band being drawn, in display points.
   pub(super) marquee: Option<PreviewSurfaceRect>,
   drag: Option<Drag>,

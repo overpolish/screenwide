@@ -8,11 +8,11 @@
 //! `recording_preview_annotation_geometry_macos.h`.
 
 use super::*;
-use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::magnify::geometry::{
+use screenwide_annotations::geometry::ArrowGeometry;
+use screenwide_annotations::magnify::geometry::{
   magnify_distance, magnify_part, prepare_magnify, MagnifyPart,
 };
-use crate::editor::annotations::reveal::AnnotationReveal;
+use screenwide_annotations::reveal::AnnotationReveal;
 
 /// A magnifier prepared in display points, from the grips it was published
 /// with: its zoom area's box in `start` and `end`, its loupe's centre in

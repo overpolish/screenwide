@@ -3,9 +3,9 @@
 
 use sha2::{Digest, Sha256};
 
-use super::catalogue::MODELS;
 use super::download::hex;
 use super::language::is_valid;
+use screenwide_speech::catalogue::MODELS;
 
 #[test]
 fn a_checksum_is_compared_as_the_catalogue_writes_it() {

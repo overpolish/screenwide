@@ -19,7 +19,8 @@ pub(in crate::recording) fn begin_capture(
     system_audio,
   } = capture_sources(options);
   let started_at = Local::now().naive_local();
-  let project = crate::project::create(app, &crate::screenshots::capture_file_stem(started_at))?;
+  let project =
+    crate::projects_folder::create(app, &crate::screenshots::capture_file_stem(started_at))?;
   let output_path = project.media.join(if options.mode == RecordingMode::Audio {
     encoding::AUDIO_FILE
   } else {
@@ -97,7 +98,7 @@ pub(in crate::recording) fn begin_capture(
 
   // Written as soon as the capture runs, so the project opens even if the app
   // dies before it stops. The scale factor is known only here.
-  let manifest = crate::project::RecordingMedia::relative_to(
+  let manifest = screenwide_project::RecordingMedia::relative_to(
     &project.file,
     &output_path,
     camera_path.as_deref(),
@@ -106,9 +107,9 @@ pub(in crate::recording) fn begin_capture(
     Some(&moments_path),
   )
   .and_then(|media| {
-    crate::project::write(
+    screenwide_project::write(
       &project.file,
-      &crate::project::Manifest::recording(crate::project::RecordingManifest {
+      &screenwide_project::Manifest::recording(screenwide_project::RecordingManifest {
         // Unknown until the capture stops.
         duration_ms: None,
         has_microphone: options.microphone_id.is_some(),
@@ -116,7 +117,7 @@ pub(in crate::recording) fn begin_capture(
         media,
         primary_kind: primary_kind(options.mode),
         source_scale_factor,
-        origin: crate::project::RecordingOrigin::Capture,
+        origin: screenwide_project::RecordingOrigin::Capture,
       }),
     )
   });

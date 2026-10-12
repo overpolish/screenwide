@@ -6,8 +6,8 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{App, AppHandle, Wry};
 
 use crate::app_windows;
-use crate::i18n::t;
-use crate::recording::RecordingStatus;
+use screenwide_capture::RecordingStatus;
+use screenwide_i18n::t;
 
 mod actions;
 mod icons;

@@ -157,9 +157,9 @@ pub(super) fn land_cursor(point: POINT, busy: BusyLease) {
     })
   });
   if !deferred {
-    crate::recording::cursor::set_cursor_visibility(false, None);
+    screenwide_capture::cursor::set_cursor_visibility(false, None);
     let _ = unsafe { SetCursorPos(point.x, point.y) };
-    crate::recording::cursor::set_cursor_visibility(
+    screenwide_capture::cursor::set_cursor_visibility(
       true,
       Some((f64::from(point.x), f64::from(point.y))),
     );
@@ -222,9 +222,9 @@ fn step() {
       })
       .and_then(|active| active.landing);
     if let Some((point, busy)) = landing {
-      crate::recording::cursor::set_cursor_visibility(false, None);
+      screenwide_capture::cursor::set_cursor_visibility(false, None);
       let _ = unsafe { SetCursorPos(point.x, point.y) };
-      crate::recording::cursor::set_cursor_visibility(
+      screenwide_capture::cursor::set_cursor_visibility(
         true,
         Some((f64::from(point.x), f64::from(point.y))),
       );

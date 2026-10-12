@@ -3,7 +3,7 @@
 
 //! Platform-neutral routing for normalized Ruler input.
 
-use crate::osc::{
+use screenwide_osc::{
   geometry::Point,
   protocol::{CursorIcon, InputModifiers, InputPhase, OscResult, ResultStatus},
 };
@@ -28,9 +28,9 @@ pub(crate) fn visual_result(
 ) -> OscResult {
   let tolerance = state.tolerance_notice();
   let tolerance_mode = tolerance.map_or(0, |value| match value {
-    super::snapshot::Tolerance::ClearEdges => 1,
-    super::snapshot::Tolerance::Balanced => 2,
-    super::snapshot::Tolerance::SubtleEdges => 3,
+    screenwide_imaging::analysis::Tolerance::ClearEdges => 1,
+    screenwide_imaging::analysis::Tolerance::Balanced => 2,
+    screenwide_imaging::analysis::Tolerance::SubtleEdges => 3,
   });
   OscResult {
     status: ResultStatus::Changed as u8,

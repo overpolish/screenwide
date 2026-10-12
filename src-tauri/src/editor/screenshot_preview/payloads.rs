@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::preview_platform::{PreviewSelection, PreviewSurfaceRect};
+use super::super::preview_platform::PreviewSelection;
+use screenwide_compositor::PreviewSurfaceRect;
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -85,11 +86,11 @@ pub(super) struct ScreenshotSelectionGestureEvent {
 #[derive(Clone, serde::Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct ScreenshotAnnotationChangeEvent {
-  pub(super) annotations: Vec<crate::editor::annotations::Annotation>,
+  pub(super) annotations: Vec<screenwide_annotations::Annotation>,
   pub(super) pane_index: u32,
   pub(super) selected_annotation_ids: Vec<String>,
   pub(super) session_id: u64,
-  pub(super) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
+  pub(super) text_edit: Option<screenwide_annotations::text::edit::TextEditPhase>,
 }
 
 /// Which annotation the pointer is resting on, so the keyboard - which belongs

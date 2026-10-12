@@ -6,7 +6,7 @@
 //! anywhere else that ends the typing and usually carries on.
 
 use super::*;
-use crate::editor::annotations::text::model::has_content;
+use screenwide_annotations::text::model::has_content;
 
 /// A double-click on a text box with the annotation tools in hand opens it
 /// for typing, with the caret where it landed. Answers whether it did.

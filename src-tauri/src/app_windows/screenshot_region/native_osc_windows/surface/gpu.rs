@@ -5,7 +5,7 @@ use super::*;
 
 impl Gpu {
   pub(crate) fn new() -> Result<Arc<Self>, String> {
-    let shared = crate::gpu::shared()?;
+    let shared = screenwide_gpu::shared()?;
     let device = &shared.device;
     let module = shader_module(device);
     let layout = bind_group_layout(device);

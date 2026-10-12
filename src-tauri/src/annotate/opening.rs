@@ -46,7 +46,7 @@ fn open(app: &AppHandle, rebuild: bool) -> Result<(), String> {
   // user was working in, which is what it puts back on release, and it is what
   // makes the pointer a crosshair over the overlay.
   #[cfg(target_os = "macos")]
-  if let Err(error) = crate::osc::cursor::macos::acquire_annotate(app, super::text_cursor()) {
+  if let Err(error) = crate::osc::cursor_macos::acquire_annotate(app, super::text_cursor()) {
     abandon(app);
     return Err(error);
   }
@@ -117,7 +117,7 @@ fn hosts_presented(app: &AppHandle) {
   // should follow, so a running recording's cursor layer leaves it out for as
   // long as the overlay is up. A recording that starts later picks the same
   // state up from its first frame.
-  crate::recording::cursor::set_cursor_visibility(false, None);
+  screenwide_capture::cursor::set_cursor_visibility(false, None);
   capture_overlays::emit_lifecycle(app, true);
   crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
 }

@@ -5,8 +5,8 @@ use super::{
   atlas_uv, glyph_count, glyph_index, premultiply, upload, AtlasMetrics, Context, TextTexture,
   ATLAS_CELLS, GUTTER, HEX_GLYPHS, LABEL_ALPHA, LIGHT_INK, SUPERSAMPLE,
 };
-use crate::gpu::Gpu;
-use crate::osc::geometry::Size;
+use screenwide_gpu::Gpu;
+use screenwide_osc::geometry::Size;
 
 pub(super) fn build_atlas(
   device: &Gpu,

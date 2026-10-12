@@ -20,15 +20,15 @@ impl RecordingPreviewSurface {
       .lock()
       .map_err(|_| "The Windows preview surface is unavailable".to_owned())?;
     let gpu = &self.inner.gpu;
-    let output_size = crate::screenshots::output_dimensions(first_settings)?;
+    let output_size = screenwide_output::output_dimensions(first_settings)?;
     let target = readback_target(gpu.shared, output_size);
     let view = target.create_view(&Default::default());
     for (index, (image, settings)) in layers.iter().enumerate() {
-      if crate::screenshots::output_dimensions(settings)? != output_size {
+      if screenwide_output::output_dimensions(settings)? != output_size {
         return Err("The screenshot layers do not share a canvas size".to_owned());
       }
       let source = gpu.compositor.screenshot_source(image)?;
-      let prepared = crate::editor::preview_platform::annotation_gpu::prepared_arrows(
+      let prepared = screenwide_compositor::annotation_gpu::prepared_arrows(
         &settings.annotations,
         (image.width, image.height),
         settings,
@@ -66,7 +66,7 @@ impl RecordingPreviewSurface {
     settings: &ScreenshotOutputSettings,
     composition: ComposedFrame,
     camera: Option<ClipboardCamera<'_>>,
-    effects: Option<crate::editor::camera_effects::preview::StillCameraEffects<'_>>,
+    effects: Option<screenwide_export::camera_effects::preview::StillCameraEffects<'_>>,
   ) -> Result<CapturedImage, String> {
     let _state = self
       .inner
@@ -74,7 +74,7 @@ impl RecordingPreviewSurface {
       .lock()
       .map_err(|_| "The Windows preview surface is unavailable".to_owned())?;
     let gpu = &self.inner.gpu;
-    let output_size = crate::screenshots::output_dimensions(settings)?;
+    let output_size = screenwide_output::output_dimensions(settings)?;
     let source = gpu.compositor.source(gpu.d3d11, source_size)?;
     gpu
       .compositor
@@ -118,7 +118,7 @@ impl RecordingPreviewSurface {
       None => (source, camera_source),
     };
     let target = readback_target(gpu.shared, output_size);
-    let prepared = crate::editor::preview_platform::annotation_gpu::prepared_arrows(
+    let prepared = screenwide_compositor::annotation_gpu::prepared_arrows(
       &settings.annotations,
       source_size,
       settings,
@@ -143,7 +143,7 @@ impl RecordingPreviewSurface {
   }
 }
 
-fn readback_target(gpu: &crate::gpu::Gpu, size: (u32, u32)) -> wgpu::Texture {
+fn readback_target(gpu: &screenwide_gpu::Gpu, size: (u32, u32)) -> wgpu::Texture {
   gpu.device.create_texture(&wgpu::TextureDescriptor {
     label: Some("Screenwide clipboard frame"),
     size: wgpu::Extent3d {
@@ -161,7 +161,7 @@ fn readback_target(gpu: &crate::gpu::Gpu, size: (u32, u32)) -> wgpu::Texture {
 }
 
 /// The BGRA frame drawn into `target`, as RGBA.
-fn read_rgba(gpu: &crate::gpu::Gpu, target: &wgpu::Texture) -> Result<CapturedImage, String> {
+fn read_rgba(gpu: &screenwide_gpu::Gpu, target: &wgpu::Texture) -> Result<CapturedImage, String> {
   let mut rgba = gpu.read_texture(target)?;
   for pixel in rgba.chunks_exact_mut(4) {
     pixel.swap(0, 2);

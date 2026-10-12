@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::annotation::*;
-use crate::editor::annotations::arrow::bend::{control_through_midpoint, curve_midpoint};
-use crate::editor::annotations::arrow::model::{new_arrow, NEW_ARROW_WIDTH};
-use crate::editor::annotations::handles::*;
-use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
+use screenwide_annotations::arrow::bend::{control_through_midpoint, curve_midpoint};
+use screenwide_annotations::arrow::model::{new_arrow, NEW_ARROW_WIDTH};
+use screenwide_annotations::handles::*;
+use screenwide_annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
 
 const A: AnnotationPoint = AnnotationPoint { x: 10.0, y: 20.0 };
 const C: AnnotationPoint = AnnotationPoint { x: 110.0, y: 60.0 };
@@ -35,7 +35,7 @@ fn a_straight_arrow_puts_its_middle_handle_on_the_midpoint() {
   assert_eq!(arrow.style.width, NEW_ARROW_WIDTH);
   assert_eq!(
     arrow.style.head,
-    crate::editor::annotations::AnnotationHead::End
+    screenwide_annotations::AnnotationHead::End
   );
 }
 
@@ -83,7 +83,7 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
   let both = Annotation {
     style: AnnotationStyle {
       align: Default::default(),
-      head: crate::editor::annotations::AnnotationHead::Both,
+      head: screenwide_annotations::AnnotationHead::Both,
       hand_drawn: false,
       manual: false,
       ..arrow.style.clone()
@@ -95,7 +95,7 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
   let none = Annotation {
     style: AnnotationStyle {
       align: Default::default(),
-      head: crate::editor::annotations::AnnotationHead::None,
+      head: screenwide_annotations::AnnotationHead::None,
       hand_drawn: false,
       manual: false,
       ..arrow.style.clone()
@@ -125,7 +125,7 @@ fn a_fresh_arrow_with_nothing_settled_on_wears_the_default() {
   assert_eq!(arrow.style.width, NEW_ARROW_WIDTH);
   assert_eq!(
     arrow.style.head,
-    crate::editor::annotations::AnnotationHead::End
+    screenwide_annotations::AnnotationHead::End
   );
 }
 
@@ -135,7 +135,7 @@ fn a_fresh_arrow_wears_the_style_it_is_given() {
     align: Default::default(),
     blur: false,
     color: "#ff9500".to_owned(),
-    head: crate::editor::annotations::AnnotationHead::Both,
+    head: screenwide_annotations::AnnotationHead::Both,
     hand_drawn: false,
     manual: false,
     tint: false,

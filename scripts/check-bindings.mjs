@@ -17,6 +17,7 @@ execFileSync("cargo", [
   "test",
   "--manifest-path",
   "src-tauri/Cargo.toml",
+  "--workspace",
   "export_bindings",
 ]);
 

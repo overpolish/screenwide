@@ -65,7 +65,7 @@ pub(crate) fn apply_region_scene(
         if should_claim {
           let _ = native::claim_pointer_surface(&target);
         }
-        if presented && owner == crate::osc::scene::RegionSceneOwner::RestoringNormal {
+        if presented && owner == screenwide_osc::scene::RegionSceneOwner::RestoringNormal {
           crate::app_windows::region::finish_screenshot_region_restore();
         }
         if presented {
@@ -93,8 +93,8 @@ pub(crate) fn set_desktop_presented(
   let app = window.app_handle().clone();
   app.run_on_main_thread(move || {
     let owner = crate::app_windows::region::screenshot_region_scene_owner(window.app_handle());
-    let screenshot_session = owner == crate::osc::scene::RegionSceneOwner::Screenshot;
-    if presented && owner == crate::osc::scene::RegionSceneOwner::Normal {
+    let screenshot_session = owner == screenwide_osc::scene::RegionSceneOwner::Screenshot;
+    if presented && owner == screenwide_osc::scene::RegionSceneOwner::Normal {
       let _ = native::restore_normal_region_scene(&window);
     }
     let scene = native::region_scene(&window);
@@ -180,7 +180,7 @@ pub(crate) fn set_frame_visible(
 pub(crate) fn set_magnifier_source(
   window: &tauri::WebviewWindow,
   display_id: u32,
-  image: crate::screenshots::CapturedImage,
+  image: screenwide_imaging::CapturedImage,
 ) -> Result<bool, String> {
   let window = window.clone();
   let app = window.app_handle().clone();

@@ -4,15 +4,14 @@
 #[cfg(test)]
 mod tests;
 
+use screenwide_imaging::CapturedImage;
 use std::{collections::HashMap, sync::Mutex};
 
-use crate::{
-  desktop_capture::{self, OutputLimits, PixelRect},
-  osc::desktop::DesktopDisplay as OscDesktopDisplay,
-  osc::geometry::Rect,
-  recording::Region,
-  screenshots::{self, CapturedImage},
-};
+use crate::screenshots;
+use screenwide_capture::desktop_capture::{self, OutputLimits, PixelRect};
+use screenwide_capture::Region;
+use screenwide_osc::desktop::DesktopDisplay as OscDesktopDisplay;
+use screenwide_osc::geometry::Rect;
 
 struct MonitorSnapshot {
   image: CapturedImage,

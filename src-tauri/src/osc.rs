@@ -1,23 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Platform-neutral state for on-screen controls (OSC). Rendering backends can
-//! consume this model without duplicating geometry or pointer semantics.
-pub mod controller;
-pub mod controls;
-pub mod cursor;
-pub mod desktop;
-pub mod geometry;
-pub mod gesture;
-pub(crate) mod gpu;
+//! The app's hosts for on-screen controls: the runtime that binds a window to
+//! a controller and routes its input to the Region, Text Recognition and
+//! Ruler features, the Windows keyboard hook that feeds them, and the macOS
+//! cursor they share. The controls themselves are `screenwide_osc`.
+
+#[cfg(target_os = "macos")]
+pub(crate) mod cursor_macos;
 #[cfg(target_os = "windows")]
 pub(crate) mod keyboard_windows;
-pub mod protocol;
-mod resize;
 pub mod runtime;
-pub mod scene;
-pub mod semantic;
-pub mod session;
-pub mod style;
-
-pub(crate) mod shortcut;

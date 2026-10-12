@@ -5,14 +5,15 @@
 //! read back into memory: the clipboard's frame, the project's preview, and
 //! its scrub strip.
 
+use screenwide_annotations::timing::RecordingAnnotationClip;
 use tauri::AppHandle;
 
 use super::{platform, sources::sources_with_surface};
-use crate::editor::{
-  annotations::timing::RecordingAnnotationClip, cursor_effects::CursorEffectSettings,
-  keyboard_effects::KeyboardEffectSettings, CameraOverlaySettings, RecordingOutputSettings,
-};
-use crate::screenshots::CapturedImage;
+use screenwide_cursor_effects::CursorEffectSettings;
+use screenwide_export::recording_model::RecordingOutputSettings;
+use screenwide_imaging::CapturedImage;
+use screenwide_keyboard_effects::KeyboardEffectSettings;
+use screenwide_scenes::CameraOverlaySettings;
 
 /// macOS composes this many frames at once: each decodes on its own and the
 /// GPU device takes work from any thread.
@@ -69,14 +70,14 @@ pub(crate) async fn compose_preview_frames(
   let sources = sources_with_surface(app, artifact_id, None, cfg!(target_os = "windows"))?;
   recording_output.stamp_captures(sources.captures);
   if let Some(clips) = &annotation_clips {
-    crate::editor::annotations::timing::validate_clips(clips)?;
+    screenwide_annotations::timing::validate_clips(clips)?;
   }
   tauri::async_runtime::spawn_blocking(move || {
     let clips = annotation_clips.map(|mut clips| {
       // The preview has normally tracked every pin already; one it has not
       // is tracked here, off the async runtime, once for every frame.
       #[cfg(any(target_os = "macos", target_os = "windows"))]
-      super::pin_paths::attach_for_export(
+      screenwide_export::pin_paths::attach_for_export(
         &sources.screen_path,
         sources.duration_ms,
         &mut clips,
@@ -89,7 +90,7 @@ pub(crate) async fn compose_preview_frames(
       let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
       let mut output = recording_output.clone();
       if let Some(clips) = &clips {
-        use crate::editor::annotations::timing::{revealed_annotations, AnnotationTrack};
+        use screenwide_annotations::timing::{revealed_annotations, AnnotationTrack};
         let ranges = sources
           .animation_ranges
           .read()

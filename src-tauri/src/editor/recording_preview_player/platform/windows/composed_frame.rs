@@ -6,9 +6,10 @@
 
 use super::super::super::PlayerSources;
 use super::GpuVideoReader;
-use crate::editor::camera_effects::matte_frames::MatteFrames;
-use crate::editor::camera_effects::preview::StillCameraEffects;
-use crate::editor::preview_platform::ComposedFrame;
+use screenwide_compositor::compositor::ComposedFrame;
+use screenwide_export::camera_effects::matte_frames::MatteFrames;
+use screenwide_export::camera_effects::preview::StillCameraEffects;
+use screenwide_export::media_preview;
 
 /// The longest side a composed still reads the camera's matte at: stills
 /// are copied or shown small, and the edge it draws is soft.
@@ -18,17 +19,17 @@ pub(crate) fn composed_frame_image(
   sources: &PlayerSources,
   position_ms: u64,
   bake_camera: bool,
-  camera_overlay: crate::editor::CameraOverlaySettings,
-  cursor_effects: crate::editor::cursor_effects::CursorEffectSettings,
-  keyboard_effects: crate::editor::keyboard_effects::KeyboardEffectSettings,
-  recording_output: &crate::editor::RecordingOutputSettings,
-) -> Result<crate::screenshots::CapturedImage, String> {
+  camera_overlay: screenwide_scenes::CameraOverlaySettings,
+  cursor_effects: screenwide_cursor_effects::CursorEffectSettings,
+  keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
+  recording_output: &screenwide_export::recording_model::RecordingOutputSettings,
+) -> Result<screenwide_imaging::CapturedImage, String> {
   let surface = sources
     .preview_surface
     .clone()
     .ok_or_else(|| "Windows GPU preview has no native presentation surface".to_owned())?;
   let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
-  let mut reader = GpuVideoReader::open(&sources.screen_path, position_ms, surface.clone())?;
+  let mut reader = GpuVideoReader::open(&sources.screen_path, position_ms, surface.device())?;
   let frame = reader
     .frame_at(position_ms)?
     .ok_or_else(|| "Media Foundation returned no source frame".to_owned())?;
@@ -36,7 +37,7 @@ pub(crate) fn composed_frame_image(
     sources
       .camera_path
       .as_ref()
-      .map(|path| GpuVideoReader::open(path, position_ms, surface.clone()))
+      .map(|path| GpuVideoReader::open(path, position_ms, surface.device()))
       .transpose()?
   } else {
     None
@@ -50,21 +51,19 @@ pub(crate) fn composed_frame_image(
   let camera_geometry = camera_frame
     .as_ref()
     .map(|camera| {
-      crate::editor::media_preview::bake_geometry(
-        crate::editor::media_preview::BakedVideoExportOptions {
-          camera_drop_shadow: recording_output.camera.drop_shadow,
-          camera_height: camera.height,
-          camera_width: camera.width,
-          overlay: camera_overlay,
-          screen_height: recording_output.primary.height,
-          screen_width: recording_output.primary.width,
-          video: crate::editor::media_preview::VideoExportOptions {
-            compression: 0,
-            resolution_scale_percent: 100,
-            source_scale_percent: 100,
-          },
+      media_preview::bake_geometry(media_preview::BakedVideoExportOptions {
+        camera_drop_shadow: recording_output.camera.drop_shadow,
+        camera_height: camera.height,
+        camera_width: camera.width,
+        overlay: camera_overlay,
+        screen_height: recording_output.primary.height,
+        screen_width: recording_output.primary.width,
+        video: media_preview::VideoExportOptions {
+          compression: 0,
+          resolution_scale_percent: 100,
+          source_scale_percent: 100,
         },
-      )
+      })
     })
     .transpose()?;
   let cursor = sources
@@ -88,7 +87,7 @@ pub(crate) fn composed_frame_image(
   );
   // The camera is shown with its effects, the matte read for this moment.
   let live = sources.camera_effects_now();
-  let on_screen = sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera;
+  let on_screen = sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera;
   let matte = live
     .as_deref()
     .filter(|_| on_screen || camera_frame.is_some())
@@ -118,7 +117,7 @@ pub(crate) fn composed_frame_image(
           (camera.width, camera.height),
           geometry,
           recording_output.camera.drop_shadow,
-          crate::editor::recording_model::CAMERA_IN_FRONT,
+          screenwide_export::recording_model::CAMERA_IN_FRONT,
         )
       }),
     live.as_deref().map(|live| StillCameraEffects {

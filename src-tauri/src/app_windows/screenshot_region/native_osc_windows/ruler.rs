@@ -28,21 +28,21 @@ use animation::{ease, Animation};
 
 use std::time::{Duration, Instant};
 
-use crate::gpu::Gpu;
+use screenwide_gpu::Gpu;
 
 use super::ocr::Segment;
 use super::renderer::{self, Vertex};
 use super::text::{AtlasMetrics, TextCache};
-use crate::osc::{
+use crate::ruler::render::{
+  CenterlinePacket, GuideGapPacket, GuidePacket, InnerObjectPacket, MeasurementPacket, ProbePacket,
+  RadiusPacket, ViewportPacket,
+};
+use screenwide_osc::{
   controls::{
     control_metrics, control_stroke, control_visual, Appearance, ControlColor, ControlKind,
     ControlMetrics, ControlSize, ControlStyle, Interaction,
   },
   geometry::{Point, Rect, Size},
-};
-use crate::ruler::render::{
-  CenterlinePacket, GuideGapPacket, GuidePacket, InnerObjectPacket, MeasurementPacket, ProbePacket,
-  RadiusPacket, ViewportPacket,
 };
 
 /// Every ruler transition - the copied checkmark, the hover pulse and the

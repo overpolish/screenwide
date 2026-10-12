@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
-use crate::editor::scenes::SceneTemplate;
-use crate::i18n::t;
 use crate::settings::background_preset::BackgroundPreset;
-use crate::system_accent::AccentPreference;
+use screenwide_accent::AccentPreference;
+use screenwide_i18n::t;
+use screenwide_scenes::SceneTemplate;
 
 const SETTINGS_FILE: &str = "settings.json";
 const SETTINGS_CHANGED_EVENT: &str = "settings://changed";
@@ -132,7 +132,7 @@ fn validate(settings: &GeneralSettings) -> Result<(), String> {
 pub fn initialize(app: &AppHandle) {
   let mut settings = read(app);
   settings.launch_at_login = app.autolaunch().is_enabled().unwrap_or(false);
-  crate::system_accent::set_preference(settings.accent);
+  screenwide_accent::set_preference(settings.accent);
   *app
     .state::<GeneralSettingsState>()
     .0
@@ -194,7 +194,7 @@ pub fn set_general_settings(
     .write()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = settings.clone();
   if settings.accent != current_settings.accent {
-    crate::system_accent::preference_changed(&app, settings.accent);
+    screenwide_accent::preference_changed(&app, settings.accent);
   }
   let _ = app.emit(SETTINGS_CHANGED_EVENT, &settings);
   Ok(settings)
@@ -209,7 +209,7 @@ pub async fn browse_default_location(
   let start = match kind.as_str() {
     "project" => settings
       .project_directory
-      .or_else(|| crate::project::projects_directory(&app).ok()),
+      .or_else(|| crate::projects_folder::projects_directory(&app).ok()),
     "recording" => settings.recording_directory,
     "screenshot" => settings.screenshot_directory,
     _ => return Err("Unknown default location".to_owned()),

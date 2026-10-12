@@ -11,15 +11,12 @@
 mod composition;
 mod cursor;
 mod image;
-mod scrubber;
-mod source_frame;
+mod playback;
 mod still;
 mod still_decode;
 mod thumbnails;
-mod video;
 
-pub(crate) use source_frame::{each_source_frame, source_frame_image};
-pub(crate) use video::LumaReader;
+use screenwide_imaging::CapturedImage;
 
 use std::{
   process::Child,
@@ -29,13 +26,12 @@ use std::{
 use tauri::ipc::Channel;
 
 use super::super::{video::VideoFrame, PlayerSources};
-use crate::{
-  editor::{
-    camera_effects::cpu::StillEffects, cursor_effects::CursorEffectSettings,
-    keyboard_effects::KeyboardOverlay, CameraOverlaySettings, RecordingOutputSettings,
-  },
-  screenshots::{compose_output_layers, CapturedImage},
-};
+use screenwide_compositor::compositor::still_overlay::compose_output_layers;
+use screenwide_cursor_effects::CursorEffectSettings;
+use screenwide_export::camera_effects::cpu::StillEffects;
+use screenwide_export::recording_model::RecordingOutputSettings;
+use screenwide_keyboard_effects::KeyboardOverlay;
+use screenwide_scenes::CameraOverlaySettings;
 
 /// The longest side a composed still reads the camera's matte at: stills
 /// are copied or shown small, and the edge it draws is soft.
@@ -49,13 +45,13 @@ pub(crate) type StillDecoder = still::NativeStillDecoder;
 
 pub(crate) enum VideoFramePayload {
   Native {
-    screen: scrubber::NativePixelFrame,
-    camera: Option<scrubber::NativePixelFrame>,
-    screen_output: crate::screenshots::ScreenshotOutputSettings,
-    camera_output: crate::screenshots::ScreenshotOutputSettings,
-    cursor: Option<crate::editor::cursor_effects::GpuCursor>,
+    screen: screenwide_export::decode::macos::scrubber::NativePixelFrame,
+    camera: Option<screenwide_export::decode::macos::scrubber::NativePixelFrame>,
+    screen_output: screenwide_output::ScreenshotOutputSettings,
+    camera_output: screenwide_output::ScreenshotOutputSettings,
+    cursor: Option<screenwide_cursor_effects::GpuCursor>,
     keyboard: Option<KeyboardOverlay>,
-    overlay: Option<crate::screenshots::StillOverlay>,
+    overlay: Option<screenwide_compositor::compositor::still_overlay::StillOverlay>,
     bake_camera: bool,
     seconds: f64,
     clip_cursor_at_video_edge: bool,
@@ -107,7 +103,8 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
             .map(|settings| (settings, sources.annotation_pictures()[1])),
           clip_cursor_at_video_edge,
           foreground_only: false,
-          source_is_camera: sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera,
+          source_is_camera: sources.primary_kind
+            == screenwide_project::PrimaryRecordingKind::Camera,
         }];
         if let Some(camera_output) = pane_settings {
           if let Some(camera) = camera.as_ref() {
@@ -156,7 +153,7 @@ pub(crate) fn spawn_video(
   _child: Arc<Mutex<Option<Child>>>,
   sender: SyncSender<VideoFrame>,
 ) -> Result<std::thread::JoinHandle<()>, String> {
-  video::spawn(
+  playback::spawn(
     sources,
     playback_factors,
     start_ms,
@@ -216,7 +213,7 @@ pub(crate) fn composed_frame_image(
   bake_camera: bool,
   camera_overlay: CameraOverlaySettings,
   cursor_effects: CursorEffectSettings,
-  keyboard_effects: crate::editor::keyboard_effects::KeyboardEffectSettings,
+  keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
   recording_output: &RecordingOutputSettings,
 ) -> Result<CapturedImage, String> {
   let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
@@ -238,7 +235,7 @@ pub(crate) fn composed_frame_image(
     None
   };
   if let Some(mut effects) = StillEffects::new(sources.camera_effects_now(), STILL_MATTE_SIDE) {
-    if sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera {
+    if sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera {
       effects.apply(&mut screen, position_ms);
     } else if let Some(camera) = camera.as_mut() {
       effects.apply(camera, position_ms.min(camera_duration_ms));
@@ -265,7 +262,7 @@ pub(crate) fn composed_frame_image(
     camera.as_ref(),
     camera.as_ref().map(|_| camera_overlay),
     recording_output.camera.drop_shadow,
-    crate::editor::recording_model::CAMERA_IN_FRONT,
+    screenwide_export::recording_model::CAMERA_IN_FRONT,
   )?;
   compose_output_layers(
     &screen,

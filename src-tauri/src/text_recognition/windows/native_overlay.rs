@@ -8,14 +8,14 @@
 
 use tauri::Manager;
 
-use crate::{app_windows::screenshot_region::native_osc_windows as native_region, screenshots};
+use crate::app_windows::screenshot_region::native_osc_windows as native_region;
 
 use super::super::visual::{RenderPacket, VisualPhase};
 
 pub(in super::super) fn install(
   window: &tauri::WebviewWindow,
   anchor_id: u32,
-  snapshots: &[(u32, screenshots::CapturedImage)],
+  snapshots: &[(u32, screenwide_imaging::CapturedImage)],
 ) -> Result<(), String> {
   let window = window.clone();
   let snapshots = snapshots.to_vec();

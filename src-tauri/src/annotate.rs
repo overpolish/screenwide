@@ -60,7 +60,7 @@ pub fn is_active(app: &AppHandle) -> bool {
 /// text it covers, where the other tools draw with the crosshair.
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 fn text_cursor() -> bool {
-  settings::current().default_shape == crate::editor::annotations::AnnotationKind::Highlight
+  settings::current().default_shape == screenwide_annotations::AnnotationKind::Highlight
 }
 
 /// The pointer following a tool picked up while drawing. The Windows overlay
@@ -68,7 +68,7 @@ fn text_cursor() -> bool {
 pub(crate) fn follow_tool(app: &AppHandle) {
   #[cfg(target_os = "macos")]
   if is_active(app) {
-    if let Err(error) = crate::osc::cursor::macos::acquire_annotate(app, text_cursor()) {
+    if let Err(error) = crate::osc::cursor_macos::acquire_annotate(app, text_cursor()) {
       eprintln!("Could not change the Annotate pointer: {error}");
     }
     let _ = app.run_on_main_thread(cursor::follow_tool);
@@ -83,13 +83,13 @@ fn release_input_ownership(app: &AppHandle) {
   // Releasing the lease is what hands the foreground back to the application
   // the user was in when the overlay opened.
   #[cfg(target_os = "macos")]
-  if let Err(error) = crate::osc::cursor::macos::release_annotate(app) {
+  if let Err(error) = crate::osc::cursor_macos::release_annotate(app) {
     eprintln!("Could not release the Annotate cursor ownership: {error}");
   }
   // The pointer belongs to the user again. Restored on every path out,
   // including a failed start: a recording must never be left with a cursor
   // layer that is hidden for good.
-  crate::recording::cursor::set_cursor_visibility(true, None);
+  screenwide_capture::cursor::set_cursor_visibility(true, None);
   // Escape is released here even though every way out of the overlay runs
   // inside a native shortcut callback: `escape::sync` is what knows to wait
   // for a later turn before touching the shortcut registry.
@@ -171,8 +171,8 @@ pub(crate) fn set_screenshot_mode(app: &AppHandle, active: bool) {
 /// capture, so they arrive as an editable layer instead.
 pub(crate) fn screenshot_annotations(
   target: crate::screenshots::ScreenshotTarget,
-  image: &crate::screenshots::CapturedImage,
-) -> Vec<crate::editor::annotations::Annotation> {
+  image: &screenwide_imaging::CapturedImage,
+) -> Vec<screenwide_annotations::Annotation> {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
     screenshot::annotations_for(target, image)
@@ -189,10 +189,10 @@ pub(crate) fn screenshot_annotations(
 /// rather than opened carries them there instead of alongside.
 #[cfg(target_os = "windows")]
 pub(crate) fn bake_annotations(
-  image: &crate::screenshots::CapturedImage,
-  annotations: &[crate::editor::annotations::Annotation],
+  image: &screenwide_imaging::CapturedImage,
+  annotations: &[screenwide_annotations::Annotation],
   scale: f64,
-) -> Result<crate::screenshots::CapturedImage, String> {
+) -> Result<screenwide_imaging::CapturedImage, String> {
   native_overlay::bake(image, annotations, scale)
 }
 

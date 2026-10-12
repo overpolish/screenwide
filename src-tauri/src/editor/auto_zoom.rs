@@ -19,8 +19,8 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use tauri::{AppHandle, Manager};
 
-use super::scenes::{RecordingSceneClip, RecordingScenePreset};
 use super::{EditorArtifact, EditorState};
+use screenwide_scenes::{RecordingSceneClip, RecordingScenePreset};
 use signals::Signals;
 
 /// The part of the screen's picture the composition shows, as shares of the
@@ -102,9 +102,9 @@ pub(in crate::editor) fn plan(
   duration_ms: u64,
   visible: VisibleArea,
 ) -> Result<Vec<RecordingSceneClip>, String> {
-  let cursor = crate::recording::cursor::read(cursor_path)?;
+  let cursor = screenwide_records::cursor::read(cursor_path)?;
   let keyboard = keyboard_path
-    .and_then(|path| crate::recording::keyboard::read(path).ok())
+    .and_then(|path| screenwide_records::keyboard::read(path).ok())
     .unwrap_or_default();
   Ok(clips(
     &Signals::read(&cursor, &keyboard, visible),

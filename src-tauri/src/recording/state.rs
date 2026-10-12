@@ -11,10 +11,9 @@ use std::{
 
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use super::{
-  monitor::RecordingMonitor, session::CaptureHandles, RecordingMode, RecordingSnapshot,
-  RecordingStatus,
-};
+use super::session::CaptureHandles;
+use screenwide_capture::monitor::RecordingMonitor;
+use screenwide_capture::{RecordingMode, RecordingSnapshot, RecordingStatus};
 
 const RECORDING_STATE_EVENT: &str = "recording://state";
 

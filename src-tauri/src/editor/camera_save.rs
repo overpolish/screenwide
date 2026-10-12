@@ -3,6 +3,10 @@
 
 use super::save::{save_recording_copy, save_selected_recording_copy};
 use super::*;
+use screenwide_export::cursor_export;
+use screenwide_export::media_preview;
+use screenwide_export::track_selection;
+use screenwide_scenes::CameraOverlaySettings;
 
 mod baked;
 pub(in crate::editor) use baked::save_baked_recording;
@@ -82,11 +86,15 @@ pub(super) fn save_camera_copy(
   compression: u8,
   resolution_scale_percent: u16,
   output: &ScreenshotOutputSettings,
-  timeline: Option<&timeline_edit::TimelinePlan>,
-  camera_effects: Option<std::sync::Arc<super::camera_effects::live::LiveCameraEffects>>,
+  timeline: Option<&screenwide_timeline_edit::TimelinePlan>,
+  camera_effects: Option<
+    std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>,
+  >,
 ) -> Result<Option<PathBuf>, String> {
-  let progress_duration_ms =
-    timeline.map_or(camera.duration_ms, timeline_edit::TimelinePlan::duration_ms);
+  let progress_duration_ms = timeline.map_or(
+    camera.duration_ms,
+    screenwide_timeline_edit::TimelinePlan::duration_ms,
+  );
   let camera_stem = format!("{stem} Camera");
   let empty_selection = track_selection::TrackSelection::default();
   let mut on_progress = |processed_ms| {
@@ -109,7 +117,7 @@ pub(super) fn save_camera_copy(
       candidate.exists()
     });
     let result = cursor_export::export(cursor_export::CursorExportRequest {
-      annotation_track: crate::editor::annotations::timing::AnnotationTrack::Camera,
+      annotation_track: screenwide_annotations::timing::AnnotationTrack::Camera,
       audio_layout: track_selection::AudioLayout::SeparateTracks,
       audio_source: None,
       camera: None,
@@ -120,9 +128,9 @@ pub(super) fn save_camera_copy(
       camera_on_top: true,
       cancelled,
       cursor: None,
-      cursor_effects: cursor_effects::CursorEffectSettings::default(),
+      cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),
       keyboard: None,
-      keyboard_effects: keyboard_effects::KeyboardEffectSettings::default(),
+      keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings::default(),
       destination: &path,
       duration_ms: camera.duration_ms,
       height: camera.height,
@@ -130,6 +138,8 @@ pub(super) fn save_camera_copy(
       output,
       screen: &camera.path,
       selection: &empty_selection,
+      #[cfg(target_os = "windows")]
+      surface: crate::editor::preview_platform::recording_export_surface,
       timeline,
       video: media_preview::VideoExportOptions {
         compression,
@@ -186,11 +196,15 @@ pub(super) fn save_camera_as_primary(
   compression: u8,
   resolution_scale_percent: u16,
   output: &ScreenshotOutputSettings,
-  timeline: Option<&timeline_edit::TimelinePlan>,
-  camera_effects: Option<std::sync::Arc<super::camera_effects::live::LiveCameraEffects>>,
+  timeline: Option<&screenwide_timeline_edit::TimelinePlan>,
+  camera_effects: Option<
+    std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>,
+  >,
 ) -> Result<Option<PathBuf>, String> {
-  let progress_duration_ms =
-    timeline.map_or(camera.duration_ms, timeline_edit::TimelinePlan::duration_ms);
+  let progress_duration_ms = timeline.map_or(
+    camera.duration_ms,
+    screenwide_timeline_edit::TimelinePlan::duration_ms,
+  );
   if cursor_export::needs_composition(output, camera.width, camera.height)
     || timeline.is_some_and(|plan| !plan.annotation_clips().is_empty())
     || camera_effects.is_some()
@@ -210,7 +224,7 @@ pub(super) fn save_camera_as_primary(
       );
     };
     return match cursor_export::export(cursor_export::CursorExportRequest {
-      annotation_track: crate::editor::annotations::timing::AnnotationTrack::Camera,
+      annotation_track: screenwide_annotations::timing::AnnotationTrack::Camera,
       audio_layout: layout,
       audio_source: Some(audio_source),
       camera: None,
@@ -221,9 +235,9 @@ pub(super) fn save_camera_as_primary(
       camera_on_top: true,
       cancelled,
       cursor: None,
-      cursor_effects: cursor_effects::CursorEffectSettings::default(),
+      cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),
       keyboard: None,
-      keyboard_effects: keyboard_effects::KeyboardEffectSettings::default(),
+      keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings::default(),
       destination: &path,
       duration_ms: camera.duration_ms,
       height: camera.height,
@@ -231,6 +245,8 @@ pub(super) fn save_camera_as_primary(
       output,
       screen: &camera.path,
       selection,
+      #[cfg(target_os = "windows")]
+      surface: crate::editor::preview_platform::recording_export_surface,
       timeline,
       video: media_preview::VideoExportOptions {
         compression,

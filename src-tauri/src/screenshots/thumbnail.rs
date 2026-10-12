@@ -19,9 +19,11 @@ use tauri::{AppHandle, Manager};
 
 use crate::settings::background_preset::{Background, BackgroundMeshPoint};
 
-use super::mesh::{mesh_canvas, MeshGradientPoint};
-use super::mesh_generator::DEFAULT_GENERATOR;
-use super::{background_image_swatch, encode_png, parse_hex_colour, CapturedImage};
+use super::CapturedImage;
+use screenwide_output::mesh::mesh_canvas;
+use screenwide_output::mesh_generator::DEFAULT_GENERATOR;
+use screenwide_output::MeshGradientPoint;
+use screenwide_output::{background_image_swatch, encode_png, parse_hex_colour};
 
 /// The sizes a tile is ever asked for, held to something a swatch can use: a
 /// thumbnail is a picture of a background, not a second export path.

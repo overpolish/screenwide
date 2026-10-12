@@ -6,6 +6,7 @@ mod tests;
 
 pub(crate) mod camera_mode;
 pub(crate) use camera_mode::require_camera_mode;
+use screenwide_capture::devices::camera_id;
 mod mode_preferences;
 #[cfg(any(test, target_os = "macos"))]
 use mode_preferences::choose_fps;
@@ -13,7 +14,7 @@ use mode_preferences::{preferred_mode, sort_camera_modes};
 
 use cpal::{
   traits::{DeviceTrait, HostTrait},
-  Device, DeviceDescription, InterfaceType, SampleFormat, StreamConfig,
+  DeviceDescription, InterfaceType,
 };
 use nokhwa::{
   query,
@@ -21,7 +22,7 @@ use nokhwa::{
 };
 use serde::Serialize;
 
-use crate::camera_format::leading_fps;
+use screenwide_capture::camera_format::leading_fps;
 
 #[cfg(target_os = "macos")]
 use cidre::{av, ns};
@@ -90,31 +91,6 @@ fn enumerate_microphones() -> Result<Vec<InputDeviceDetails>, String> {
 
 fn is_user_selectable_microphone(description: &DeviceDescription) -> bool {
   description.interface_type() != InterfaceType::Aggregate
-}
-
-pub(crate) fn resolve_microphone(
-  device_id: Option<&str>,
-) -> Result<(Device, StreamConfig, SampleFormat), String> {
-  let host = cpal::default_host();
-  let device = match device_id {
-    Some(device_id) => host
-      .input_devices()
-      .map_err(|error| error.to_string())?
-      .find(|device| {
-        device
-          .id()
-          .is_ok_and(|candidate| candidate.to_string() == device_id)
-      })
-      .ok_or_else(|| "The selected microphone is no longer available".to_owned())?,
-    None => host
-      .default_input_device()
-      .ok_or_else(|| "No default microphone is available".to_owned())?,
-  };
-  let config = device
-    .default_input_config()
-    .map_err(|error| error.to_string())?;
-  let sample_format = config.sample_format();
-  Ok((device, config.into(), sample_format))
 }
 
 /// `preferred_fps` is an ordered wish list, best first: a PAL request for 50 has
@@ -206,7 +182,7 @@ fn camera_modes(camera: &CameraInfo, preferred_fps: &[u32]) -> Vec<(u32, u32, u3
     (
       *width,
       *height,
-      crate::camera_format::preference_rank(preferred_fps, *fps),
+      screenwide_capture::camera_format::preference_rank(preferred_fps, *fps),
       fps.abs_diff(requested_fps),
     )
   });
@@ -218,28 +194,20 @@ fn camera_modes(camera: &CameraInfo, preferred_fps: &[u32]) -> Vec<(u32, u32, u3
 #[cfg(not(target_os = "macos"))]
 fn camera_modes(camera: &CameraInfo, preferred_fps: &[u32]) -> Vec<(u32, u32, u32)> {
   let requested_fps = leading_fps(preferred_fps);
-  let mut modes = crate::camera_format::available_camera_formats(camera.index(), preferred_fps)
-    .map_or_else(
-      |_| Vec::new(),
-      |formats| {
-        formats
-          .into_iter()
-          .map(|format| {
-            let resolution = format.resolution();
-            (resolution.width(), resolution.height(), format.frame_rate())
-          })
-          .collect()
-      },
-    );
+  let mut modes =
+    screenwide_capture::camera_format::available_camera_formats(camera.index(), preferred_fps)
+      .map_or_else(
+        |_| Vec::new(),
+        |formats| {
+          formats
+            .into_iter()
+            .map(|format| {
+              let resolution = format.resolution();
+              (resolution.width(), resolution.height(), format.frame_rate())
+            })
+            .collect()
+        },
+      );
   sort_camera_modes(&mut modes, requested_fps);
   modes
-}
-
-pub(crate) fn camera_id(camera: &CameraInfo) -> String {
-  let backend_id = camera.misc();
-  if backend_id.trim().is_empty() {
-    camera.index().as_string()
-  } else {
-    backend_id
-  }
 }

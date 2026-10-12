@@ -4,8 +4,8 @@
 //! The crop tool's loupe, drawn into the workspace drawable over every layer
 //! from the picture the layer it magnifies was drawn from.
 
-use crate::gpu::Gpu;
-pub(super) use crate::osc::gpu::macos::NativeMagnifier;
+use screenwide_gpu::Gpu;
+pub(super) use screenwide_osc::gpu::macos::NativeMagnifier;
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/workspace_magnifier.wgsl"));
 
@@ -85,7 +85,7 @@ impl Loupe {
         compilation_options: Default::default(),
         // The lens replaces what the layers drew under it.
         targets: &[Some(wgpu::ColorTargetState {
-          format: crate::gpu::surface::FORMAT,
+          format: screenwide_gpu::surface::FORMAT,
           blend: None,
           write_mask: wgpu::ColorWrites::ALL,
         })],

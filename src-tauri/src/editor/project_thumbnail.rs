@@ -24,22 +24,22 @@ const PREVIEW_WIDTH: u32 = 640;
 /// The preview of the project whose manifest is `file`, made on first ask
 /// for a project that has none. None when there is nothing to show.
 pub fn project_thumbnail(file: &Path) -> Result<Option<PathBuf>, String> {
-  let preview = crate::project::preview_path(file);
+  let preview = screenwide_project::preview_path(file);
   if preview.is_file() {
     return Ok(Some(preview));
   }
-  let manifest = crate::project::read(file)?;
-  if manifest.kind == crate::project::ProjectKind::Screenshot {
+  let manifest = screenwide_project::read(file)?;
+  if manifest.kind == screenwide_project::ProjectKind::Screenshot {
     return bottom_layer(file, &manifest, &preview);
   }
   let recording = manifest.recorded()?;
-  let movie = crate::project::resolve(file, &recording.media.primary)?;
+  let movie = screenwide_project::resolve(file, &recording.media.primary)?;
   // The middle stands for the recording better than its start, which is
   // often the recording bar going away. A project from before its length was
   // kept is measured.
   let duration_ms = recording
     .duration_ms
-    .or_else(|| media_preview::duration_ms(&movie));
+    .or_else(|| screenwide_export::media_preview::duration_ms(&movie));
   if recording.primary_kind == PrimaryRecordingKind::Audio {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     return waveform::write(&movie, duration_ms, &preview).map(|()| Some(preview));
@@ -54,7 +54,7 @@ pub fn project_thumbnail(file: &Path) -> Result<Option<PathBuf>, String> {
 /// picture, as it was taken.
 fn bottom_layer(
   file: &Path,
-  manifest: &crate::project::Manifest,
+  manifest: &screenwide_project::Manifest,
   preview: &Path,
 ) -> Result<Option<PathBuf>, String> {
   let Some(layer) = manifest
@@ -64,8 +64,8 @@ fn bottom_layer(
   else {
     return Ok(None);
   };
-  let picture =
-    image::open(crate::project::resolve(file, &layer.image)?).map_err(|error| error.to_string())?;
+  let picture = image::open(screenwide_project::resolve(file, &layer.image)?)
+    .map_err(|error| error.to_string())?;
   let smaller = picture.thumbnail(PREVIEW_WIDTH, u32::MAX);
   write_atomically(preview, false, |partial| {
     smaller
@@ -108,7 +108,7 @@ fn write_atomically(
 /// built without zlib, so it has no PNG encoder.
 fn movie_frame(movie: &Path, duration_ms: Option<u64>, target: &Path) -> Result<(), String> {
   let at_seconds = duration_ms.map_or(1.0, |ms| ms as f64 / 2_000.0);
-  let output = media_preview::ffmpeg_command()
+  let output = screenwide_sidecar::ffmpeg_command()
     .args(["-hide_banner", "-loglevel", "error", "-nostdin", "-ss"])
     .arg(format!("{at_seconds:.3}"))
     .arg("-i")

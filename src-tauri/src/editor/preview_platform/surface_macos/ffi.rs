@@ -3,8 +3,8 @@
 
 use super::super::PreviewSelection;
 use super::native_types::{NativeWorkspacePaneRect, NativeWorkspacePlacement};
-use crate::editor::annotations::group::NativeAnnotationGroupBox;
-use crate::editor::annotations::handles::{NativeAnnotationHandles, NativeAnnotationSnap};
+use screenwide_annotations::group::NativeAnnotationGroupBox;
+use screenwide_annotations::handles::{NativeAnnotationHandles, NativeAnnotationSnap};
 
 unsafe extern "C" {
   /// `device` and `queue` are the shared wgpu device's Metal objects, and

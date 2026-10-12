@@ -49,7 +49,7 @@ fn draw(gpu: &Gpu, kind: u32, constants: &RenderConstants) -> [u8; 4] {
     mip_level_count: 1,
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
-    format: crate::gpu::surface::FORMAT,
+    format: screenwide_gpu::surface::FORMAT,
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
     view_formats: &[],
   });

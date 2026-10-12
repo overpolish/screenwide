@@ -34,7 +34,7 @@ pub(super) fn watch(app: &AppHandle) {
           let now = availability(&app);
           if now != seen {
             seen = now;
-            crate::project::library::notify(&app);
+            screenwide_project::library::notify(&app);
           }
         }
       });
@@ -48,9 +48,9 @@ pub(super) fn watch(app: &AppHandle) {
 fn availability(app: &AppHandle) -> Vec<(PathBuf, bool)> {
   crate::settings::current(app)
     .project_directory
-    .or_else(|| crate::project::projects_directory(app).ok())
+    .or_else(|| crate::projects_folder::projects_directory(app).ok())
     .into_iter()
-    .chain(crate::project::library::load(app).locations)
+    .chain(screenwide_project::library::load(app).locations)
     .map(|path| {
       let available = path.is_dir();
       (path, available)

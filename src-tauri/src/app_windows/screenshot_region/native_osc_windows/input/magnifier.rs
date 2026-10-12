@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::magnifier_for;
-use crate::osc::{
+use screenwide_osc::{
   geometry::{Point, Rect, Size},
   protocol::OscResult,
 };

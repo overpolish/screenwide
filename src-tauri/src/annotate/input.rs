@@ -14,8 +14,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
-use crate::editor::annotations::AnnotationKind;
-use crate::editor::annotations::{Annotation, AnnotationPoint};
+use screenwide_annotations::AnnotationKind;
+use screenwide_annotations::{Annotation, AnnotationPoint};
 
 mod keys;
 mod stroke;
@@ -89,7 +89,7 @@ fn step(
         value: tool.value,
         angle: tool.angle,
         manual: tool.shape == AnnotationKind::Highlight && tool.manual,
-        seed: crate::editor::annotations::highlight::model::fresh_seed(),
+        seed: screenwide_annotations::highlight::model::fresh_seed(),
         line,
         hold,
       });
@@ -130,7 +130,7 @@ pub(super) fn spotlight_blurs() -> bool {
     annotation.style.blur
       && matches!(
         annotation.shape,
-        crate::editor::annotations::AnnotationShape::Spotlight { .. }
+        screenwide_annotations::AnnotationShape::Spotlight { .. }
       )
   };
   super::live_clips::annotations().iter().any(blurs) || in_progress().is_some_and(|a| blurs(&a))

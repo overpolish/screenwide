@@ -1,39 +1,22 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The microphone's speech tools. Remove silences (`silences`) cuts the long
-//! pauses from one listen through the microphone track for speech
-//! (`analysis`), kept beside the project so it runs once per recording.
-//! Studio sound (`studio`) rebuilds the voice as a studio recording; where
-//! it is off, Reduce noise (`noise`) cleans the track with a speech enhancer
-//! and Vocal cleanup (`voice`) polishes the voice. `heard` picks which of
-//! their files the track is heard from. Auto volume (`auto_volume`) levels
-//! whatever is heard to a steady loudness, and makes the system audio make
-//! way for the voice while it speaks (`duck`), the singing in it out of the
-//! way entirely with Studio ducking (`studio_ducking`).
+//! The microphone's speech tools as the editor runs them: what they read of
+//! the recording open, where their models are, and readying the files the
+//! microphone is heard from. The tools themselves are `screenwide_speech`.
 
-mod analysis;
-pub(crate) mod auto_volume;
-pub(in crate::editor) mod choice_file;
 pub(crate) mod commands;
-pub(crate) mod duck;
-mod framer;
-pub(crate) mod heard;
-mod noise;
-mod pause_gate;
-mod silences;
-mod studio;
 mod studio_ducking;
-#[cfg(test)]
-mod tests;
 pub(crate) mod transcript;
-mod voice;
 
+use screenwide_export::track_selection;
+use screenwide_speech::{auto_volume, duck, heard, noise, studio, voice};
 use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Manager};
 
-use super::{AudioTrackKind, EditorArtifact, EditorState, RecordingAudioTrack};
+use super::{EditorArtifact, EditorState};
+use screenwide_export::recording_model::{AudioTrackKind, RecordingAudioTrack};
 
 /// What the speech tools read of the recording open in the editor.
 struct SpeechSource {
@@ -167,7 +150,7 @@ pub(super) fn ready_voice(
   progress: VoiceProgress<'_>,
 ) -> Result<(), String> {
   if studio::choice(project_folder, microphone) == studio::StudioSound::On {
-    if let Some(model) = studio::model(app) {
+    if let Some(model) = studio_model(app) {
       return studio::prepare(
         movie,
         microphone,
@@ -233,6 +216,19 @@ pub(crate) fn ready_for_export(
   )
 }
 
+/// Studio sound's model: its encoder and vocoder, where it is downloaded.
+fn studio_model(app: &AppHandle) -> Option<(PathBuf, PathBuf)> {
+  let model =
+    screenwide_speech::catalogue::for_purpose(screenwide_speech::catalogue::Purpose::StudioSound)?;
+  if !crate::transcription::models::is_downloaded(app, model) {
+    return None;
+  }
+  let mut paths = crate::transcription::models::paths(app, model)
+    .ok()?
+    .into_iter();
+  Some((paths.next()?, paths.next()?))
+}
+
 /// The voice activity model, bundled as a resource, or beside the program
 /// when it runs unbundled during development.
 fn vad_model(app: &AppHandle) -> Result<PathBuf, String> {
@@ -256,10 +252,10 @@ fn vad_model(app: &AppHandle) -> Result<PathBuf, String> {
 /// from the file Reduce noise or Vocal cleanup made of it, and through Auto
 /// volume's filters.
 pub(crate) fn as_heard(
-  selection: super::track_selection::TrackSelection,
+  selection: track_selection::TrackSelection,
   project_folder: &Path,
   streams: &[usize],
-) -> super::track_selection::TrackSelection {
+) -> track_selection::TrackSelection {
   selection
     .with_cleaned(heard::heard_files(project_folder, streams))
     .with_filters(auto_volume::heard_filters(project_folder, streams))

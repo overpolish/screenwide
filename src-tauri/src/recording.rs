@@ -1,53 +1,30 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pub(crate) mod clock;
 pub(crate) mod commands;
-pub(crate) mod cursor;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-mod desktop_canvas;
-mod encoding;
-pub(crate) mod keyboard;
-pub(crate) mod microphone;
-pub(crate) mod monitor;
-pub(crate) mod note_gate;
-#[cfg(target_os = "macos")]
-mod platform;
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-mod platform_unsupported;
-#[cfg(target_os = "windows")]
-mod platform_windows;
 pub(crate) mod replay;
 mod session;
-pub(crate) mod sidecar_output;
 pub(crate) mod sleep;
 mod state;
-mod types;
 mod ui;
 
 mod start_capture;
+#[cfg(test)]
+use screenwide_capture::types::DEFAULT_FPS;
+#[cfg(test)]
+use screenwide_capture::{RecordingMode, RecordingSnapshot};
+use screenwide_capture::{RecordingStatus, StartRecordingOptions};
 pub use start_capture::start;
 
 use std::time::Instant;
 use tauri::AppHandle;
 
 use crate::app_windows;
+use screenwide_capture::capture;
 
-#[cfg(target_os = "macos")]
-use platform as capture;
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-use platform_unsupported as capture;
-#[cfg(target_os = "windows")]
-use platform_windows as capture;
-
-pub use encoding::{CameraFinalizeInfo, FinalizeInfo, PrimaryRecordingKind};
 pub use replay::{ReplaySnapshot, ReplayState};
 pub(crate) use state::confidence_monitor;
 pub use state::{is_idle, is_recording, snapshot, RecordingState};
-pub use types::{
-  RecordingMode, RecordingSnapshot, RecordingStatus, Region, StartRecordingOptions,
-  SystemAudioSelection,
-};
 
 use session::{
   begin_capture, check_inputs, discard_capture, emit_error, finalize_capture,
@@ -57,10 +34,6 @@ use session::{
 #[cfg(test)]
 use state::apply_transition;
 use state::{set_countdown, state, transition};
-pub(crate) use types::CameraCaptureMode;
-#[cfg(test)]
-use types::DEFAULT_FPS;
-pub(crate) use types::{CaptureStartupConfig, PrimaryCaptureSource};
 use ui::{prepare_windows, restore_windows, show_recording_ui};
 
 // ---------------------------------------------------------------------------

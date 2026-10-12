@@ -4,15 +4,15 @@
 //! Random-access frame decoding for paused frames and scrubbing, built on the
 //! same `AVAssetReader` pipeline that playback uses.
 
+use screenwide_imaging::CapturedImage;
 use std::path::{Path, PathBuf};
 
 use cidre::{arc, av};
 
 use super::image::frame_position;
-use super::scrubber::NativeFrameScrubber;
-use super::scrubber::NativePixelFrame;
-use super::video::{open_asset, NativeVideoReader};
-use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
+use screenwide_export::decode::macos::scrubber::{NativeFrameScrubber, NativePixelFrame};
+use screenwide_export::decode::macos::video::{open_asset, NativeVideoReader};
+use screenwide_output::ScreenshotOutputSettings;
 
 /// How far an exact seek rewinds before the target so the frame straddling a
 /// seek position is still delivered.

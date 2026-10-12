@@ -3,20 +3,22 @@
 
 //! What the scene holds a layer as, and the pictures it is drawn from.
 
+use screenwide_imaging::CapturedImage;
 use std::sync::Arc;
 
 use cidre::{arc, cv};
 
-use crate::editor::annotations::pin::LumaFrame;
-use crate::editor::camera_effects::preview::PreviewEffects;
-use crate::editor::cursor_effects::GpuCursor;
-use crate::editor::keyboard_effects::KeyboardOverlay;
-use crate::editor::media_preview::BakeGeometry;
-use crate::editor::preview_platform::annotation_gpu::SourceAnnotations;
-use crate::editor::preview_platform::compositor::{
+use screenwide_annotations::pin::LumaFrame;
+use screenwide_compositor::annotation_gpu::SourceAnnotations;
+use screenwide_compositor::compositor::still_overlay::StillOverlay;
+use screenwide_compositor::compositor::BakeGeometry;
+use screenwide_compositor::compositor::{
   CameraComposition, CanvasGeometry, Compositor, SourceTexture,
 };
-use crate::screenshots::{CapturedImage, ScreenshotOutputSettings, StillOverlay};
+use screenwide_cursor_effects::GpuCursor;
+use screenwide_export::camera_effects::preview::PreviewEffects;
+use screenwide_keyboard_effects::KeyboardOverlay;
+use screenwide_output::ScreenshotOutputSettings;
 
 /// A picture a layer is drawn from: a decoded image, or a CoreVideo buffer a
 /// decoder vends, which is drawn from without a copy.
@@ -77,7 +79,7 @@ impl ScenePicture {
         let pixels = unsafe { pointer.cast::<cv::PixelBuf>().as_ref() }
           .ok_or_else(|| "The workspace frame is missing".to_owned())?;
         let texture =
-          crate::gpu::macos::bgra_buffer_texture(compositor.gpu(), pixels, "workspace frame")?;
+          screenwide_gpu::macos::bgra_buffer_texture(compositor.gpu(), pixels, "workspace frame")?;
         Ok(Self {
           texture: SourceTexture {
             size: (texture.width(), texture.height()),

@@ -3,16 +3,14 @@
 
 use cidre::{cg, cv, sc};
 
-use crate::{
-  capture_kit::{desktop_layout, windows_to_exclude},
-  desktop_capture::{self, OutputLimits},
-  screenshots::{desktop as still_composition, CapturedImage},
-};
+use crate::screenshots::{desktop as still_composition, CapturedImage};
+use screenwide_capture::capture_kit::{desktop_layout, windows_to_exclude};
+use screenwide_capture::desktop_capture::{self, OutputLimits};
 
 pub(super) async fn capture(
   content: &sc::ShareableContent,
   anchor_id: u32,
-  region: crate::recording::Region,
+  region: screenwide_capture::Region,
   include_own_windows: bool,
   show_cursor: bool,
 ) -> Result<CapturedImage, String> {

@@ -47,7 +47,7 @@ use windows::{
 use super::ocr;
 use super::ruler;
 use super::state::{self, Context};
-use crate::osc::{
+use screenwide_osc::{
   geometry::{Point, Rect},
   protocol::OscResult,
 };

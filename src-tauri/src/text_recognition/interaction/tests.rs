@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::{
-  osc::geometry::Rect,
-  text_recognition::{RecognizedLine, RecognizedQrCode, TextRect},
-};
+use crate::text_recognition::{RecognizedLine, RecognizedQrCode, TextRect};
+use screenwide_osc::geometry::Rect;
 
 fn state_with_qr() -> TextRecognitionState {
   let state = TextRecognitionState::default();

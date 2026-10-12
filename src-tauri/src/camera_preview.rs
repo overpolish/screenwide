@@ -35,13 +35,13 @@ use tauri::{
   AppHandle, Manager,
 };
 
-use crate::recording_inputs::camera_id;
+use screenwide_capture::devices::camera_id;
 
 #[cfg(target_os = "macos")]
-use crate::camera_frame_rate;
+use screenwide_capture::camera_frame_rate;
 
 #[cfg(not(target_os = "macos"))]
-use crate::camera_format::resolve_exact_camera_format;
+use screenwide_capture::camera_format::resolve_exact_camera_format;
 
 /// The session most recently taken down, kept so the next start can tell
 /// whether it follows hot on the heels of one on the same device.

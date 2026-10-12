@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use super::{super::fixed_regions, reconstruct};
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 const MAX_OUTPUT_PIXELS: u64 = 64_000_000;
 

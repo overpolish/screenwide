@@ -16,20 +16,12 @@
 //! The camera is the recording's camera track, or for a recording of the
 //! camera alone, the recording itself.
 
-mod balance;
 pub(crate) mod commands;
-pub(crate) mod cpu;
-pub(crate) mod gpu;
-mod grade;
 mod image;
 pub(crate) mod live;
-mod look;
 mod make;
 mod matte;
-pub(crate) mod matte_frames;
 pub(crate) mod picks;
-pub(crate) mod preview;
-mod sharpen;
 mod stop;
 #[cfg(test)]
 mod tests;
@@ -40,27 +32,12 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
 
-use super::speech::choice_file;
 use super::{EditorArtifact, PrimaryRecordingKind};
+use screenwide_export::camera_effects::CameraBackground;
+use screenwide_speech::choice_file;
 
 /// The make of the choice file.
 const FORMAT_VERSION: u16 = 1;
-
-/// What is behind the person on camera.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
-#[serde(rename_all = "kebab-case")]
-#[ts(export)]
-pub enum CameraBackground {
-  /// The room, as recorded.
-  #[default]
-  Kept,
-  /// Nothing: whatever the camera is drawn over shows through.
-  Transparent,
-  /// The room, blurred.
-  Blurred,
-  /// The picture chosen for it.
-  Image,
-}
 
 /// The camera's effects, as the project keeps them.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, TS)]

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{osc::desktop::DesktopBinding, screenshots::CapturedImage};
+use screenwide_imaging::CapturedImage;
+use screenwide_osc::desktop::DesktopBinding;
 
 use super::super::native_overlay_macos as native;
 

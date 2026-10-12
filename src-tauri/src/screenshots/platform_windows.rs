@@ -1,12 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{
-  desktop_capture::{self, DesktopDisplay, OutputLimits},
-  screenshots::{
-    desktop as still_composition, physical_capture_rect, CapturedImage, ScreenshotTarget,
-  },
-};
+use crate::screenshots::{desktop as still_composition, CapturedImage, ScreenshotTarget};
+use screenwide_capture::capture_geometry::physical_capture_rect;
+use screenwide_capture::desktop_capture::{self, DesktopDisplay, OutputLimits};
 
 fn monitor(monitor_id: u32) -> Result<xcap::Monitor, String> {
   xcap::Monitor::all()
@@ -67,7 +64,7 @@ fn desktop_layout(monitors: &[xcap::Monitor]) -> Result<Vec<DesktopDisplay>, Str
 
 fn capture_desktop_region(
   anchor_id: u32,
-  region: crate::recording::Region,
+  region: screenwide_capture::Region,
 ) -> Result<CapturedImage, String> {
   let monitors = xcap::Monitor::all().map_err(|error| error.to_string())?;
   let displays = desktop_layout(&monitors)?;

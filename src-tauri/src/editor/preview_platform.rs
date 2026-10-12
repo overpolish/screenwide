@@ -60,7 +60,7 @@
 //!
 //! # Platform GPU backends
 //!
-//! Shaders are WGSL on the shared wgpu device ([`crate::gpu`]), drawn by the
+//! Shaders are WGSL on the shared wgpu device ([`screenwide_gpu`]), drawn by the
 //! shared [`compositor`]. Windows presents through DirectComposition and
 //! macOS through Core Animation layers. On macOS the audio ribbon, still
 //! composition and video export run on wgpu; the live preview still drives
@@ -69,19 +69,7 @@
 //! window-surface details into shared preview code.
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) mod annotation_gpu;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod audio_ribbon;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-mod background_image;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) mod compositor;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-mod keyboard_artwork;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) mod object_picking;
-pub(crate) mod workspace_editor;
-mod workspace_transform;
 
 #[cfg(target_os = "macos")]
 mod surface_macos;
@@ -94,13 +82,9 @@ use self::surface_windows as surface;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use audio_ribbon::{ribbon_still, BAR_PITCH_POINTS as RIBBON_BAR_PITCH_POINTS};
-#[cfg(target_os = "windows")]
-pub(crate) use compositor::ComposedFrame;
-#[cfg(target_os = "windows")]
-pub(crate) use surface::type_device;
-#[cfg(target_os = "windows")]
-pub(crate) use surface::DecodedTexture;
 pub(crate) use surface::RecordingPreviewSurface;
+#[cfg(target_os = "windows")]
+pub(crate) use surface::{recording_export_surface, DecodedTexture};
 #[cfg(target_os = "macos")]
 pub(crate) use surface::{run_on_main_queue, NativeWorkspacePlacement, RecordingWorkspaceLayer};
 
@@ -221,9 +205,12 @@ pub(crate) fn prewarm(window: tauri::WebviewWindow) {
 #[cfg(target_os = "macos")]
 pub(crate) fn prewarm(_window: tauri::WebviewWindow) {
   tauri::async_runtime::spawn_blocking(|| {
-    match crate::gpu::shared()
-      .and_then(|gpu| compositor::Compositor::new(gpu, compositor::NativeCursors::none()))
-    {
+    match screenwide_gpu::shared().and_then(|gpu| {
+      screenwide_compositor::compositor::Compositor::new(
+        gpu,
+        screenwide_compositor::compositor::NativeCursors::none(),
+      )
+    }) {
       Ok(compositor) => compositor.compile_annotation_kinds_in_background(),
       Err(error) => eprintln!("Could not prewarm the macOS canvas shaders: {error}"),
     }
@@ -232,20 +219,6 @@ pub(crate) fn prewarm(_window: tauri::WebviewWindow) {
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(crate) fn prewarm(_window: tauri::WebviewWindow) {}
-
-/// A pane or viewport rectangle in webview points, relative to the window.
-///
-/// Shared rather than per-backend: the webview reports the same geometry
-/// whatever composites it.
-#[derive(Clone, Copy, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-pub(crate) struct PreviewSurfaceRect {
-  pub height: f64,
-  pub width: f64,
-  pub x: f64,
-  pub y: f64,
-}
 
 /// [`PreviewSelection::framed`] for a rectangle a scene fixes: a move pans
 /// the picture inside it, a resize zooms it, and the outline stays put. The

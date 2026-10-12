@@ -10,7 +10,7 @@
 
 use super::gesture::{provisional_clips, track, Commit};
 use super::*;
-use crate::editor::annotations::group::{group_bounds, GroupMember, GroupMove};
+use screenwide_annotations::group::{group_bounds, GroupMember, GroupMove};
 
 pub(super) struct GroupDrag {
   pane: u32,
@@ -194,7 +194,7 @@ impl PreviewPlayerManager {
     shown: &[Annotation],
     source: (u32, u32),
     size_width: f64,
-  ) -> Vec<crate::editor::annotations::group::NativeAnnotationGroupBox> {
+  ) -> Vec<screenwide_annotations::group::NativeAnnotationGroupBox> {
     let group = self.annotation_group();
     let Some(Ok(clips)) = self
       .sources
@@ -209,7 +209,7 @@ impl PreviewPlayerManager {
       .map(|clip| &clip.annotation)
       .filter(|annotation| group.contains(&annotation.id))
       .collect();
-    crate::editor::annotations::group::group_boxes(
+    screenwide_annotations::group::group_boxes(
       &members,
       |id| shown.iter().any(|annotation| annotation.id == id),
       source,

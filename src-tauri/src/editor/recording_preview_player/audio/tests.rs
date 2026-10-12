@@ -4,7 +4,7 @@
 use super::*;
 use crate::editor::recording_preview_player::layout::PreviewPaneKind;
 use crate::editor::{AudioTrackKind, RecordingAudioTrack};
-use crate::recording::PrimaryRecordingKind;
+use screenwide_project::PrimaryRecordingKind;
 
 #[test]
 fn decodes_tracks_into_independent_pcm_channels() {

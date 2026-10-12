@@ -41,7 +41,7 @@ pub(super) fn show_error(app: &tauri::AppHandle, message: &str) {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::screenshots::CapturedImage;
+  use screenwide_imaging::CapturedImage;
 
   type Install = fn(&tauri::WebviewWindow, u32, &[(u32, CapturedImage)]) -> Result<bool, String>;
 

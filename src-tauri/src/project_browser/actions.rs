@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use tauri::AppHandle;
 
 use crate::app_windows::WindowLabel;
-use crate::project::library;
+use screenwide_project::library;
 
 /// Opens a project in the recording editor. Unlike a double-click, a failure
 /// is the browser's to show, beside the project it was opened from.
@@ -88,7 +88,7 @@ pub fn delete_project(app: AppHandle, file: PathBuf) -> Result<PathBuf, String> 
     Some(kind) => crate::editor::close(&app, kind).unwrap_or(file),
     None => file,
   };
-  crate::project::delete(&app, &file)
+  screenwide_project::delete(&app, &file)
 }
 
 /// Takes a project off the recent list without touching it, for one that is
@@ -109,7 +109,7 @@ pub async fn add_project_location(app: AppHandle) -> Result<Option<PathBuf>, Str
     let mut dialog = picker
       .dialog()
       .file()
-      .set_title(crate::i18n::t!("project-browser-add-location-dialog"));
+      .set_title(screenwide_i18n::t!("project-browser-add-location-dialog"));
     if let Some(parent) = parent {
       dialog = dialog.set_parent(&parent);
     }

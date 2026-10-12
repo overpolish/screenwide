@@ -20,7 +20,7 @@ use super::payloads::{
   ScreenshotSelectionChangeEvent, ScreenshotSelectionGestureEvent,
 };
 use super::state::ScreenshotPreviewState;
-use crate::editor::annotations::gesture::AnnotationGestureTarget;
+use screenwide_annotations::gesture::AnnotationGestureTarget;
 
 /// Hands a finished arrow gesture to React. Only the end of a gesture reports
 /// one: everything in between is drawn natively from the manager's own

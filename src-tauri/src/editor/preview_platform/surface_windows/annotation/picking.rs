@@ -10,12 +10,12 @@
 
 use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
-use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::gesture::{drawing_layer, MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
-use crate::editor::annotations::highlight::geometry::HighlightFlow;
-use crate::editor::annotations::reveal::AnnotationReveal;
-use crate::editor::annotations::text::geometry::prepare_text;
-use crate::editor::annotations::AnnotationPoint;
+use screenwide_annotations::geometry::ArrowGeometry;
+use screenwide_annotations::gesture::{drawing_layer, MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
+use screenwide_annotations::highlight::geometry::HighlightFlow;
+use screenwide_annotations::reveal::AnnotationReveal;
+use screenwide_annotations::text::geometry::prepare_text;
+use screenwide_annotations::AnnotationPoint;
 
 /// An annotation belongs to its image, independently of the selected layer. The
 /// twin of `annotation_layer_selection`.
@@ -165,7 +165,7 @@ pub(super) fn highlight_flow(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
 ) -> HighlightFlow {
-  crate::editor::annotations::highlight::handles::flow(item, |x, y| {
+  screenwide_annotations::highlight::handles::flow(item, |x, y| {
     let (x, y) = display_point(image, x, y);
     [x as f32, y as f32]
   })
@@ -188,7 +188,7 @@ pub(super) fn item_grips(
   match item.shape_kind() {
     AnnotationKind::Counter => {
       let radius = item.width * image.width / 2.0;
-      let tip = crate::editor::annotations::counter::silhouette::counter_tail_tip(
+      let tip = screenwide_annotations::counter::silhouette::counter_tail_tip(
         AnnotationPoint {
           x: centre.0,
           y: centre.1,

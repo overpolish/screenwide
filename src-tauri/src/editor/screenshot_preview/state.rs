@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use screenwide_imaging::CapturedImage;
 use std::sync::{Arc, Mutex};
 
-use super::super::preview_platform::{workspace_editor::WorkspaceScene, RecordingPreviewSurface};
+use super::super::preview_platform::RecordingPreviewSurface;
 use super::super::ScreenshotWorkspaceOutputSettings;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::annotation::AnnotationHover;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::annotation_gesture::AnnotationGestureOverride;
 use super::gesture::SelectionGestureOverride;
-use crate::screenshots::{Capture, CapturedImage};
+use screenwide_compositor::workspace_editor::WorkspaceScene;
+use screenwide_output::Capture;
 
 /// One captured image the preview draws, with what its layer settings need
 /// of the item it came from.
@@ -46,17 +48,17 @@ pub(super) struct PreviewManager {
   /// Behind its own lock because the detection that fills it runs on a
   /// blocking thread and must never wait for the manager.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  pub(super) annotation_anchor_cache: Arc<crate::editor::annotations::snap::AnchorCache>,
+  pub(super) annotation_anchor_cache: Arc<screenwide_annotations::snap::AnchorCache>,
   /// The style the next fresh arrow is drawn in: whatever the editor's last
   /// annotation edit settled on. `None` until it has settled on anything, in
   /// which case the arrow tool's own first dress stands.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  pub(super) annotation_defaults: Option<crate::editor::annotations::AnnotationStyle>,
+  pub(super) annotation_defaults: Option<screenwide_annotations::AnnotationStyle>,
   /// What a fresh annotation is made with beyond its dress: where a fresh
   /// counter's tail points, whatever the last counter was turned to, so a
   /// row of them is dropped aiming the same way, and the picture the last
   /// image was given. Each absent until it has been settled.
-  pub(super) annotation_fresh: crate::editor::annotations::edit::FreshAnnotation,
+  pub(super) annotation_fresh: screenwide_annotations::edit::FreshAnnotation,
   /// The arrow the pointer rests on, and how wide its halo has grown.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_hover: Option<AnnotationHover>,

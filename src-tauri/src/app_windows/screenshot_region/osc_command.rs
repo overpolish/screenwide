@@ -5,7 +5,7 @@ use serde::Deserialize;
 use tauri::{AppHandle, Manager};
 
 use super::adapter::{self, RegionSceneRequest};
-use crate::osc::geometry::{Point, Rect, Size};
+use screenwide_osc::geometry::{Point, Rect, Size};
 
 #[derive(Clone, Copy, Debug, Deserialize)]
 pub struct ExclusionRect {

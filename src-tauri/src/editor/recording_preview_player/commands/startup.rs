@@ -225,7 +225,7 @@ pub async fn start_recording_preview_player(
     pins.set_on_status(Arc::new(move |status| {
       let _ = status_app.emit(
         "editor://recording-pin-status",
-        super::super::pin_paths::PinStatusEvent { session_id, status },
+        screenwide_export::pin_paths::PinStatusEvent { session_id, status },
       );
     }));
   }

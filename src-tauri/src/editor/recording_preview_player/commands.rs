@@ -18,7 +18,7 @@ pub use startup::{
   __cmd__start_recording_preview_player, __tauri_command_name_start_recording_preview_player,
 };
 
-use crate::editor::CameraOverlaySettings;
+use screenwide_scenes::CameraOverlaySettings;
 use tauri::{ipc::Channel, AppHandle, Emitter, Manager};
 
 use super::*;
@@ -132,7 +132,7 @@ mod tests {
 
 #[tauri::command]
 pub async fn seek_recording_preview(
-  annotation_clips: Option<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>,
+  annotation_clips: Option<Vec<screenwide_annotations::timing::RecordingAnnotationClip>>,
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   position_ms: u64,
   request_id: u64,
@@ -163,7 +163,7 @@ pub async fn seek_recording_preview(
       }
     }
     if let Some(mut clips) = annotation_clips {
-      crate::editor::annotations::timing::validate_clips(&clips)?;
+      screenwide_annotations::timing::validate_clips(&clips)?;
       if let Some(sources) = &manager.sources {
         sources.attach_pins(&mut clips, position_ms);
         *sources

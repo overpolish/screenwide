@@ -1,0 +1,285 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! Final-video composition.
+//!
+//! Each frame is drawn on the shared GPU device by the same compositor the
+//! preview and stills use. On macOS, AVFoundation decodes the screen into
+//! Core Video buffers the compositor reads in place and writes the encoder's
+//! buffers in place; on Windows, Media Foundation does the same through
+//! Direct3D 11. Selected audio is stream-copied or mixed afterwards without
+//! decoding the finished video.
+
+use std::{path::Path, sync::atomic::AtomicBool};
+
+use super::media_preview::{self, BakedVideoExportOptions, ExportRunResult, VideoExportOptions};
+use super::track_selection::{AudioLayout, TrackSelection};
+use screenwide_cursor_effects::CursorEffectSettings;
+use screenwide_output::ScreenshotOutputSettings;
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(super) mod camera_effects;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod frame_annotations;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod frame_scene;
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod progress_pace;
+#[cfg(target_os = "windows")]
+pub mod windows;
+#[cfg(target_os = "macos")]
+use self::macos::platform;
+#[cfg(target_os = "windows")]
+use self::windows::platform;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+mod platform_unsupported;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+use self::platform_unsupported as platform;
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub struct CursorExportRequest<'a> {
+  pub annotation_track: screenwide_annotations::timing::AnnotationTrack,
+  pub audio_layout: AudioLayout,
+  pub audio_source: Option<&'a Path>,
+  pub camera: Option<(&'a Path, BakedVideoExportOptions)>,
+  pub camera_effects: Option<ExportCameraEffects>,
+  pub camera_on_top: bool,
+  pub cancelled: &'a AtomicBool,
+  pub cursor: Option<&'a Path>,
+  pub cursor_effects: CursorEffectSettings,
+  pub keyboard: Option<&'a Path>,
+  pub keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
+  pub destination: &'a Path,
+  pub duration_ms: u64,
+  pub height: u32,
+  pub on_progress: &'a mut dyn FnMut(u64),
+  pub screen: &'a Path,
+  pub selection: &'a TrackSelection,
+  /// The preview surface a Windows export composites on, looked up when
+  /// the export starts drawing.
+  #[cfg(target_os = "windows")]
+  pub surface: fn() -> Result<std::sync::Arc<dyn windows::export_surface::ExportSurface>, String>,
+  pub timeline: Option<&'a screenwide_timeline_edit::TimelinePlan>,
+  pub output: &'a ScreenshotOutputSettings,
+  pub video: VideoExportOptions,
+  pub width: u32,
+}
+
+/// The camera's effects as an export draws them, and on which picture: the
+/// baked-in camera, or the screen where the screen is the camera.
+#[derive(Clone)]
+pub struct ExportCameraEffects {
+  pub live: std::sync::Arc<super::camera_effects::live::LiveCameraEffects>,
+  pub on_screen: bool,
+}
+
+fn output_dimensions(width: u32, height: u32, video: VideoExportOptions) -> (u32, u32) {
+  let scale = u64::from(video.resolution_scale_percent);
+  let source_scale = u64::from(video.source_scale_percent.max(1));
+  let scaled = |value: u32| ((u64::from(value) * scale / source_scale) as u32 & !1).max(2);
+  (scaled(width), scaled(height))
+}
+
+fn video_bitrate(width: u32, height: u32, compression: u8) -> u64 {
+  // Bits per pixel per frame. Mesh gradient backgrounds are the hardest
+  // content H.264 sees here: starving them visibly bands and blocks, so the
+  // ladder is sized for smooth gradients over text rather than flat UI.
+  let quality = [0.1, 0.065, 0.036, 0.02, 0.011]
+    .get(compression as usize)
+    .copied()
+    .unwrap_or(0.011);
+  // Perceptual quality does not scale linearly with resolution: a downscaled
+  // export needs more bits per pixel than a native-resolution one to look
+  // equally clean, so smaller outputs get a gentle density boost relative to
+  // a 4K reference.
+  let pixels = f64::from(width) * f64::from(height);
+  let density_boost = (8_294_400.0 / pixels.max(1.0)).powf(0.25).clamp(1.0, 1.8);
+  let pixels_per_second = pixels * 60.0;
+  (pixels_per_second * quality * density_boost)
+    .round()
+    .max(2_000_000.0) as u64
+}
+
+pub fn estimated_video_bytes(
+  width: u32,
+  height: u32,
+  duration_ms: u64,
+  video: VideoExportOptions,
+  source_video_bytes: u64,
+  source_size: (u32, u32),
+) -> u64 {
+  let (width, height) = output_dimensions(width, height, video);
+  let bitrate_ceiling =
+    video_bitrate(width, height, video.compression).saturating_mul(duration_ms) / 8_000;
+  let output_pixels = f64::from(width) * f64::from(height);
+  let source_pixels = f64::from(source_size.0.max(1)) * f64::from(source_size.1.max(1));
+  let resolution_factor = (output_pixels / source_pixels).powf(0.72);
+  let quality_factor = [0.95, 0.76, 0.56, 0.39, 0.27]
+    .get(video.compression as usize)
+    .copied()
+    .unwrap_or(0.27);
+  let complexity_estimate =
+    (source_video_bytes as f64 * resolution_factor * quality_factor).round() as u64;
+  complexity_estimate.min(bitrate_ceiling)
+}
+
+pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
+  if request.cursor.is_some() && !request.cursor_effects.bake {
+    return Err("Cursor baking was not enabled".to_owned());
+  }
+  if request.keyboard.is_some() && !request.keyboard_effects.bake {
+    return Err("Keyboard baking was not enabled".to_owned());
+  }
+  if !request.cursor_effects.size_percent.is_finite()
+    || !(50.0..=500.0).contains(&request.cursor_effects.size_percent)
+  {
+    return Err("The cursor size is not valid".to_owned());
+  }
+  if !media_preview::supports_compression() {
+    return Err("This FFmpeg build cannot finish the recording export".to_owned());
+  }
+  platform::export(request)
+}
+
+pub fn needs_composition(
+  settings: &ScreenshotOutputSettings,
+  source_width: u32,
+  source_height: u32,
+) -> bool {
+  settings.width != source_width
+    || settings.height != source_height
+    || settings.background_radius_percent > 0.0
+    || settings.radius_percent > 0.0
+    || (settings.crop_height - f64::from(settings.height)).abs() > 0.000_001
+    || (settings.crop_width - f64::from(settings.width)).abs() > 0.000_001
+    || settings.crop_x.abs() > 0.000_001
+    || settings.crop_y.abs() > 0.000_001
+    || (settings.image_width - f64::from(settings.width)).abs() > 0.000_001
+    || settings.image_x.abs() > 0.000_001
+    || settings.image_y.abs() > 0.000_001
+    || settings.recenter_inset_color.is_some()
+    || settings.source_crop.x.abs() > 0.000_001
+    || settings.source_crop.y.abs() > 0.000_001
+    || (settings.source_crop.width - 1.0).abs() > 0.000_001
+    || (settings.source_crop.height - 1.0).abs() > 0.000_001
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use screenwide_output::{MeshGradientPoint, NormalizedSourceRect};
+
+  fn output_settings(width: u32, height: u32) -> ScreenshotOutputSettings {
+    ScreenshotOutputSettings {
+      annotations: Vec::new(),
+      background_color: "#000000".to_owned(),
+      background_image_path: None,
+      background_type: "color".to_owned(),
+      background_radius_percent: 0.0,
+      capture_width_points: 0.0,
+      capture_scale: 0.0,
+      crop_height: f64::from(height),
+      crop_width: f64::from(width),
+      crop_preview: None,
+      crop_x: 0.0,
+      crop_y: 0.0,
+      drop_shadow: false,
+      height,
+      image_width: f64::from(width),
+      image_x: 0.0,
+      image_y: 0.0,
+      legacy_mode: None,
+      scene_motion: None,
+      scene_opacity: None,
+      scene_camera_front: None,
+      mesh_colors: Vec::new(),
+      mesh_generator: String::new(),
+      mesh_locked_colors: Vec::new(),
+      mesh_points: Vec::<MeshGradientPoint>::new(),
+      mesh_seed: 0,
+      mesh_warp_percent: 0.0,
+      radius_percent: 0.0,
+      recenter_inset_color: None,
+      source_crop: NormalizedSourceRect {
+        height: 1.0,
+        width: 1.0,
+        x: 0.0,
+        y: 0.0,
+      },
+      width,
+    }
+  }
+
+  #[test]
+  fn recenter_inset_routes_video_through_composition() {
+    let mut settings = output_settings(1_920, 1_080);
+    assert!(!needs_composition(&settings, 1_920, 1_080));
+
+    settings.recenter_inset_color = Some("#445566".to_owned());
+    assert!(needs_composition(&settings, 1_920, 1_080));
+  }
+
+  #[test]
+  fn source_crop_routes_video_through_composition() {
+    let mut settings = output_settings(1_920, 1_080);
+    settings.source_crop = NormalizedSourceRect {
+      height: 0.8,
+      width: 0.75,
+      x: 0.1,
+      y: 0.1,
+    };
+
+    assert!(needs_composition(&settings, 1_920, 1_080));
+  }
+
+  #[test]
+  fn composed_estimate_uses_the_source_as_its_complexity_baseline() {
+    let source = 5_422_083;
+    let estimate = estimated_video_bytes(
+      1_920,
+      1_080,
+      8_380,
+      VideoExportOptions {
+        compression: 0,
+        resolution_scale_percent: 100,
+        source_scale_percent: 100,
+      },
+      source,
+      (1_920, 1_080),
+    );
+    assert!(estimate < source);
+    assert!(estimate > source * 9 / 10);
+  }
+
+  #[test]
+  fn composed_estimate_falls_with_resolution_and_compression() {
+    let source = 8_000_000;
+    let original = estimated_video_bytes(
+      1_920,
+      1_080,
+      10_000,
+      VideoExportOptions {
+        compression: 0,
+        resolution_scale_percent: 100,
+        source_scale_percent: 100,
+      },
+      source,
+      (1_920, 1_080),
+    );
+    let smaller = estimated_video_bytes(
+      960,
+      540,
+      10_000,
+      VideoExportOptions {
+        compression: 2,
+        resolution_scale_percent: 100,
+        source_scale_percent: 100,
+      },
+      source,
+      (1_920, 1_080),
+    );
+    assert!(smaller < original);
+  }
+}

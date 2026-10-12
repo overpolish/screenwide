@@ -28,8 +28,6 @@ pub(crate) mod editor_suspend;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod held_fills;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) mod held_surfaces;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod held_timelines;
 pub(crate) mod keyboard_command;
 mod layout;
@@ -39,10 +37,6 @@ mod processing;
 pub(crate) use processing::{refresh as refresh_processing, PreviewProcessing};
 mod camera_effects;
 mod camera_picking;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-mod pin_cache;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) mod pin_paths;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod pin_tracks;
 mod platform;
@@ -57,12 +51,8 @@ pub(crate) use camera_effects::{position_ms, set_camera_effects};
 pub(crate) use camera_picking::{
   choose_camera_object, set_camera_picking, CameraPicking, PickedSpan,
 };
-/// Brightness frames of a video, which the camera's matte is read as.
-pub(crate) use platform::LumaReader;
-mod surface_selection;
-#[cfg(target_os = "windows")]
-pub(crate) use platform::GpuVideoReader;
 pub(crate) mod surface_commands;
+mod surface_selection;
 pub(crate) mod timeline_thumbnails;
 mod video;
 mod worker;
@@ -70,20 +60,21 @@ mod worker;
 use self::layout::{preview_layout, RecordingPreviewLayout};
 use self::sources::{sources, PlayerSources};
 use self::worker::{PlaybackMode, PreviewPlayerWorker};
-#[cfg(target_os = "macos")]
-use super::cursor_effects::GpuArtwork;
-use super::keyboard_effects::{KeyboardCompositor, KeyboardEffectSettings};
-use super::preview_platform::workspace_editor::WorkspaceScene;
 use super::preview_platform::RecordingPreviewSurface;
-use super::{
-  cursor_effects::{CursorCompositor, CursorEffectSettings},
-  AudioTrackVolume, CameraOverlaySettings, EditorArtifact, EditorKind, EditorState,
-  RecordingAudioTrack, RecordingOutputSettings,
-};
-use crate::editor::timeline_edit::TimelineRange;
-use crate::editor::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
-use crate::recording::PrimaryRecordingKind;
+use super::{EditorArtifact, EditorKind, EditorState};
 pub use commands::stop_all;
+use screenwide_compositor::workspace_editor::WorkspaceScene;
+#[cfg(target_os = "macos")]
+use screenwide_cursor_effects::GpuArtwork;
+use screenwide_cursor_effects::{CursorCompositor, CursorEffectSettings};
+use screenwide_export::recording_model::{
+  AudioTrackVolume, RecordingAudioTrack, RecordingOutputSettings,
+};
+use screenwide_keyboard_effects::{KeyboardCompositor, KeyboardEffectSettings};
+use screenwide_project::PrimaryRecordingKind;
+use screenwide_scenes::CameraOverlaySettings;
+use screenwide_timeline::TimelineRange;
+use screenwide_timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
 
 pub(super) const AUTO_FIT_MOVE_EDGE: u32 = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE: u32 = 1 << 18;
@@ -128,7 +119,7 @@ struct RecordingSelectionGesture {
   snapshot: PreviewCompositionSettings,
   /// The scenes as the gesture found them, which a reframe of the camera
   /// inside one is measured from and a cancel puts back.
-  scene_clips: Vec<crate::editor::scenes::RecordingSceneClip>,
+  scene_clips: Vec<screenwide_scenes::RecordingSceneClip>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

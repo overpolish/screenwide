@@ -10,7 +10,8 @@ use std::sync::{Arc, RwLock};
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{PlayerSources, RecordingPreviewPlayerState};
-use crate::editor::camera_effects::live::{self, LiveCameraEffects};
+use crate::editor::camera_effects::live;
+use screenwide_export::camera_effects::live::LiveCameraEffects;
 
 /// Sent with the recording's id when its camera is drawn differently.
 const CHANGED_EVENT: &str = "editor://camera-effects-changed";

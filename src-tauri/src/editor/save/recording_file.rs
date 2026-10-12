@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_export::cursor_export;
+use screenwide_export::media_preview;
+use screenwide_export::track_selection;
 
 pub(in crate::editor) struct PrimaryRecordingSaveRequest<'a> {
   pub app: &'a AppHandle,
@@ -11,11 +14,11 @@ pub(in crate::editor) struct PrimaryRecordingSaveRequest<'a> {
   pub compression: u8,
   /// The camera's effects, where the recording is of the camera alone.
   pub camera_effects:
-    Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
+    Option<std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>>,
   pub cursor: Option<&'a Path>,
-  pub cursor_effects: cursor_effects::CursorEffectSettings,
+  pub cursor_effects: screenwide_cursor_effects::CursorEffectSettings,
   pub keyboard: Option<&'a Path>,
-  pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
+  pub keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
   pub directory: &'a Path,
   pub duration_ms: u64,
   pub height: u32,
@@ -27,7 +30,7 @@ pub(in crate::editor) struct PrimaryRecordingSaveRequest<'a> {
   pub selection: &'a track_selection::TrackSelection,
   pub source_scale_percent: u16,
   pub stem: &'a str,
-  pub timeline: Option<&'a timeline_edit::TimelinePlan>,
+  pub timeline: Option<&'a screenwide_timeline_edit::TimelinePlan>,
   pub width: u32,
 }
 
@@ -36,7 +39,7 @@ pub(in crate::editor) fn save_primary_recording(
 ) -> Result<Option<PathBuf>, String> {
   let progress_duration_ms = request.timeline.map_or(
     request.duration_ms,
-    timeline_edit::TimelinePlan::duration_ms,
+    screenwide_timeline_edit::TimelinePlan::duration_ms,
   );
   let video = media_preview::VideoExportOptions {
     compression: request.compression,
@@ -91,7 +94,7 @@ pub(in crate::editor) fn save_primary_recording(
       );
     };
     return match cursor_export::export(cursor_export::CursorExportRequest {
-      annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
+      annotation_track: screenwide_annotations::timing::AnnotationTrack::Primary,
       audio_layout: request.layout,
       audio_source: None,
       camera: None,
@@ -114,6 +117,8 @@ pub(in crate::editor) fn save_primary_recording(
       output: request.output,
       screen: request.screen,
       selection: request.selection,
+      #[cfg(target_os = "windows")]
+      surface: crate::editor::preview_platform::recording_export_surface,
       timeline: request.timeline,
       video,
       width: request.width,

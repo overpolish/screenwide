@@ -5,10 +5,8 @@
 
 use tauri::{AppHandle, State};
 
-use super::{
-  cancel, pause, replay, resume, start, stop, RecordingSnapshot, RecordingState, ReplaySnapshot,
-  StartRecordingOptions,
-};
+use super::{cancel, pause, replay, resume, start, stop, RecordingState, ReplaySnapshot};
+use screenwide_capture::{RecordingSnapshot, StartRecordingOptions};
 
 #[tauri::command]
 pub fn start_recording_monitor(

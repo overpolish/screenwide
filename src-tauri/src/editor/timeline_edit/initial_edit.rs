@@ -4,6 +4,7 @@
 //! The first edit a freshly captured recording is handed.
 
 use super::*;
+use screenwide_timeline_edit::RecordingTimelineSegment;
 
 /// Writes the first edit a recording has ever had, carrying the annotations
 /// that were drawn live while it was being captured and the auto zooms made
@@ -15,10 +16,10 @@ use super::*;
 pub(in crate::editor) fn persist_initial_edit(
   project: &Path,
   artifact_id: u64,
-  mut annotation_clips: Vec<crate::editor::annotations::timing::RecordingAnnotationClip>,
-  scene_clips: Vec<crate::editor::scenes::RecordingSceneClip>,
+  mut annotation_clips: Vec<screenwide_annotations::timing::RecordingAnnotationClip>,
+  scene_clips: Vec<screenwide_scenes::RecordingSceneClip>,
 ) -> Result<(), String> {
-  super::stacking::stack_by_kind(&mut annotation_clips);
+  screenwide_timeline_edit::stacking::stack_by_kind(&mut annotation_clips);
   persist(
     project,
     artifact_id,

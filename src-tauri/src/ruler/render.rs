@@ -16,7 +16,7 @@ const fn hover_alpha_byte(alpha: f32) -> u8 {
   (alpha.clamp(0.0, 1.0) * 255.0).round() as u8
 }
 
-const fn label_anchor(anchor: Option<crate::osc::geometry::Point>) -> (f64, f64) {
+const fn label_anchor(anchor: Option<screenwide_osc::geometry::Point>) -> (f64, f64) {
   match anchor {
     Some(point) => (point.x, point.y),
     None => (f64::NAN, f64::NAN),

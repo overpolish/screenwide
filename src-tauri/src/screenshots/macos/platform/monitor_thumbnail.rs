@@ -3,7 +3,7 @@
 
 use cidre::{cg, cv, objc, sc};
 
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 /// Ask ScreenCaptureKit to scale before copying pixels into Rust memory.
 pub(crate) fn capture_monitor_thumbnail(
@@ -30,7 +30,7 @@ pub(crate) fn capture_monitor_thumbnail(
           .ok_or_else(|| "The selected monitor is no longer available".to_owned())?;
         let filter = sc::ContentFilter::with_display_excluding_windows(
           display,
-          &crate::capture_kit::windows_to_exclude(&content, true),
+          &screenwide_capture::capture_kit::windows_to_exclude(&content, true),
         );
         let mut cfg = sc::StreamCfg::new();
         cfg.set_width(width as usize);

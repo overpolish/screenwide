@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::osc::{
+use screenwide_osc::{
   controller::ControllerEvent,
   desktop::{local_projection, DesktopBinding},
 };
@@ -36,7 +36,7 @@ pub fn project_desktop_event(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::osc::{
+  use screenwide_osc::{
     desktop::DesktopDisplay,
     geometry::{Point, Rect, Size},
     gesture::GestureKind,

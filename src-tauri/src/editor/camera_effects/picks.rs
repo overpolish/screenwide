@@ -27,10 +27,10 @@ use tauri::AppHandle;
 use ts_rs::TS;
 
 use super::{matte, CameraRecording};
-use crate::editor::speech::choice_file;
-use crate::transcription::catalogue::{self, Purpose};
 use crate::transcription::models;
-use crate::transcription::runner::Transcriber;
+use screenwide_speech::catalogue::{self, Purpose};
+use screenwide_speech::choice_file;
+use screenwide_speech::runner::Transcriber;
 
 /// The make of the picks file. Picks of the first make were followed in a
 /// form the matte no longer reads.
@@ -203,7 +203,7 @@ pub(super) fn follow(
   let made = Transcriber::start()?.stopped_by(stop).camera_objects(
     Job::FollowObjects {
       model: files,
-      ffmpeg: crate::editor::media_preview::ffmpeg_path(),
+      ffmpeg: screenwide_sidecar::ffmpeg_path(),
       camera: camera.path.clone(),
       timings: matte::timings_path(&folder),
       frame,

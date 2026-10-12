@@ -13,12 +13,12 @@ fn directory(name: &str) -> PathBuf {
 }
 
 fn write_cursor(path: &Path) {
-  let header = crate::recording::cursor::CursorRecord::Header {
+  let header = screenwide_records::cursor::CursorRecord::Header {
     coordinate_space: "global-logical-points".to_owned(),
     platform: "test".to_owned(),
-    source: crate::recording::cursor::CursorSource {
+    source: screenwide_records::cursor::CursorSource {
       height: 100.0,
-      kind: crate::recording::cursor::CursorSourceKind::Screen,
+      kind: screenwide_records::cursor::CursorSourceKind::Screen,
       platform_id: "1".to_owned(),
       video_height: 200,
       video_width: 200,
@@ -27,7 +27,7 @@ fn write_cursor(path: &Path) {
       y: 0.0,
     },
     timebase: "recording-microseconds".to_owned(),
-    version: crate::recording::cursor::FORMAT_VERSION,
+    version: screenwide_records::cursor::FORMAT_VERSION,
   };
   std::fs::write(
     path,
@@ -37,10 +37,10 @@ fn write_cursor(path: &Path) {
 }
 
 fn write_keyboard(path: &Path) {
-  let header = crate::recording::keyboard::KeyboardRecord::Header {
+  let header = screenwide_records::keyboard::KeyboardRecord::Header {
     platform: "test".to_owned(),
     timebase: "recording-microseconds".to_owned(),
-    version: crate::recording::keyboard::FORMAT_VERSION,
+    version: screenwide_records::keyboard::FORMAT_VERSION,
   };
   std::fs::write(
     path,

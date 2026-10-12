@@ -3,8 +3,8 @@
 
 mod bindings;
 
-use crate::osc::shortcut::{self, Binding};
 use bindings::RulerAction;
+use screenwide_osc::shortcut::{self, Binding};
 use serde::{Deserialize, Serialize};
 use std::{
   collections::BTreeMap,

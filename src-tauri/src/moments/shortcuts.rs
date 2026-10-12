@@ -12,8 +12,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-use super::settings;
-use super::voice::{self, Voice};
+use screenwide_moments::settings;
+use screenwide_moments::voice::{self, Voice};
 
 const PLACED_EVENT: &str = "moments://placed";
 const RELEASED_EVENT: &str = "moments://released";
@@ -68,7 +68,7 @@ fn reconcile(app: &AppHandle) {
   } else {
     Vec::new()
   };
-  crate::recording::keyboard::set_hidden_shortcuts(&hidden);
+  screenwide_capture::keyboard::set_hidden_shortcuts(&hidden);
 }
 
 /// Claims every kind's shortcut that is free, into `registered`, and returns
@@ -123,13 +123,19 @@ fn on_shortcut(app: &AppHandle, kind_id: &str, state: ShortcutState) {
   let Some(kind) = settings::kind(kind_id) else {
     return;
   };
-  let Some(recorder) = super::recorder::current() else {
+  let Some(recorder) = screenwide_moments::recorder::current() else {
     return;
   };
   let Some(moment) = recorder.record(&kind, at) else {
     return;
   };
-  let voice = voice::begin(app, recorder, moment, at);
+  let voice = voice::begin(
+    recorder,
+    moment,
+    at,
+    crate::recording::confidence_monitor(app),
+    crate::permissions::cached_snapshot(app).microphone.granted,
+  );
   held.insert(kind_id.to_owned(), matches!(voice, Voice::Recording));
   drop(held);
   let _ = app.emit(

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tauri::async_runtime::JoinHandle;
 
 use super::{fixed_regions, matcher, Axis, Direction};
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 mod compose;
 mod reconstruct;

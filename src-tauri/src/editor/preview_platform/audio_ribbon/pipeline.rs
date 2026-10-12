@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::Constants;
-use crate::gpu::Gpu;
+use screenwide_gpu::Gpu;
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/audio_ribbon.wgsl"));
 
@@ -64,7 +64,7 @@ impl Painter {
         entry_point: Some("fs_main"),
         compilation_options: Default::default(),
         targets: &[Some(wgpu::ColorTargetState {
-          format: crate::gpu::surface::FORMAT,
+          format: screenwide_gpu::surface::FORMAT,
           blend: None,
           write_mask: wgpu::ColorWrites::ALL,
         })],

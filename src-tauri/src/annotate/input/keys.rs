@@ -3,7 +3,7 @@
 
 //! The keys the overlay answers to, by the codes each platform reports.
 
-use crate::editor::annotations::AnnotationKind;
+use screenwide_annotations::AnnotationKind;
 
 /// Virtual key codes, which AppKit reports by physical position.
 #[cfg(target_os = "macos")]

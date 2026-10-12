@@ -4,7 +4,7 @@
 //! The shortcut strip's compositor for a preview session.
 
 use super::*;
-use crate::editor::timeline_edit::TimelinePlan;
+use screenwide_timeline_edit::TimelinePlan;
 
 /// The shortcut strip recorded at `path`, with the shortcuts deleted and
 /// placed as the session's `settings` say, or as the saved edit `persisted`
@@ -44,7 +44,7 @@ impl PlayerSources {
     position_ms: u64,
     settings: KeyboardEffectSettings,
     dimensions: (u32, u32),
-  ) -> Option<crate::editor::keyboard_effects::KeyboardOverlay> {
+  ) -> Option<screenwide_keyboard_effects::KeyboardOverlay> {
     let keyboard = self.keyboard.as_deref()?;
     let ranges = self
       .animation_ranges

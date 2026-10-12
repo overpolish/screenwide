@@ -4,13 +4,13 @@
 #import <QuartzCore/CAMetalLayer.h>
 #import <QuartzCore/CAShapeLayer.h>
 #include <stddef.h>
-#import "../../../osc/gpu/macos/osc_controls.h"
-#import "../../../osc/gpu/macos/osc_gpu_macos.h"
-#import "../../../osc/gpu/macos/osc_material_surface_macos.h"
-#import "../../../osc/gpu/macos/osc_text_texture_macos.h"
+#import "../../../../crates/osc/src/gpu/macos/osc_controls.h"
+#import "../../../../crates/osc/src/gpu/macos/osc_gpu_macos.h"
+#import "../../../../crates/osc/src/gpu/macos/osc_material_surface_macos.h"
+#import "../../../../crates/osc/src/gpu/macos/osc_text_texture_macos.h"
 #import "screenshot_region_osc_macos_types.h"
 
-// Messages from `locales/`, read through `src-tauri/src/i18n.rs`.
+// Messages from `locales/`, read through the `screenwide-i18n` crate.
 extern char *screenwide_i18n_text(const char *identifier);
 extern void screenwide_i18n_free(char *text);
 

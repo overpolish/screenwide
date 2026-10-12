@@ -3,9 +3,8 @@
 
 //! Converts the webview's recording selection into the shared native OSC model.
 
-use crate::editor::preview_platform::{
-  PreviewSelection, PreviewSurfaceRect, FRAMED_FIXED, FRAMED_FREE,
-};
+use crate::editor::preview_platform::{PreviewSelection, FRAMED_FIXED, FRAMED_FREE};
+use screenwide_compositor::PreviewSurfaceRect;
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -28,7 +28,7 @@ use self::platform_other as platform;
 
 use tauri::AppHandle;
 
-use super::RecordingStatus;
+use screenwide_capture::RecordingStatus;
 
 /// Installs the platform's sleep and wake observer once, at startup.
 pub(crate) fn initialize(app: &AppHandle) {

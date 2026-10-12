@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use ts_rs::TS;
 
-use crate::editor::annotations::{AnnotationHead, AnnotationKind};
+use screenwide_annotations::{AnnotationHead, AnnotationKind};
 
 /// The stroke presets the editor's arrow panel offers, in points, which is
 /// what keeps a live annotation and an editor annotation the same weight. The
@@ -21,7 +21,7 @@ const MAX_WIDTH: f64 = 24.0;
 /// The smallest and largest disc diameters the counter control offers, in
 /// points. The twins of the ends of `ANNOTATION_COUNTER_SIZES` in the same
 /// module, and of `COUNTER_SIZES` in
-/// `src-tauri/src/editor/annotations/counter/model.rs`.
+/// `src-tauri/crates/annotations/src/counter/model.rs`.
 const MIN_COUNTER_SIZE: f64 = 28.0;
 const MAX_COUNTER_SIZE: f64 = 80.0;
 /// The palette's yellow, as in
@@ -111,8 +111,8 @@ impl Default for AnnotateSettings {
       shape_hand_drawn: false,
       shape_radius: 0.0,
       spotlight_blur: false,
-      spotlight_radius: crate::editor::annotations::spotlight::model::NEW_SPOTLIGHT_RADIUS,
-      spotlight_softness: crate::editor::annotations::spotlight::model::NEW_SPOTLIGHT_SOFTNESS,
+      spotlight_radius: screenwide_annotations::spotlight::model::NEW_SPOTLIGHT_RADIUS,
+      spotlight_softness: screenwide_annotations::spotlight::model::NEW_SPOTLIGHT_SOFTNESS,
       toolbar_position: None,
     }
   }

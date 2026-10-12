@@ -19,7 +19,7 @@ fn prepare_windows(app: &AppHandle, restore_affinity: bool) -> tauri::Result<()>
 pub(crate) async fn capture_monitor_screenshot(
   app: AppHandle,
   monitor_id: u32,
-) -> Result<crate::screenshots::CapturedImage, String> {
+) -> Result<screenwide_imaging::CapturedImage, String> {
   // Monitor changes and adjacent magnifier requests may overlap. Capture
   // affinity is process-wide, so one capture must finish restoring it before
   // another begins its transaction.
@@ -54,7 +54,7 @@ pub(crate) async fn capture_monitor_screenshot(
         .ok_or_else(|| "The selected monitor is no longer available".to_owned())?;
       monitor
         .capture_image()
-        .map(|image| crate::screenshots::CapturedImage {
+        .map(|image| screenwide_imaging::CapturedImage {
           width: image.width(),
           height: image.height(),
           rgba: image.into_raw(),

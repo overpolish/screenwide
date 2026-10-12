@@ -5,7 +5,7 @@ use super::*;
 
 impl Backdrop {
   pub(super) fn new(
-    gpu: &crate::gpu::Gpu,
+    gpu: &screenwide_gpu::Gpu,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
   ) -> Result<Self, String> {
@@ -35,7 +35,7 @@ impl Backdrop {
     })
   }
 
-  pub(super) fn paint(&self, gpu: &crate::gpu::Gpu, colour: [f64; 4]) -> Result<(), String> {
+  pub(super) fn paint(&self, gpu: &screenwide_gpu::Gpu, colour: [f64; 4]) -> Result<(), String> {
     let Frame::Ready(frame) = self.surface.acquire(gpu)? else {
       return Err("The Windows preview backstop has no frame to paint".to_owned());
     };
@@ -87,7 +87,7 @@ impl Backdrop {
 impl Pane {
   /// Gives the surface's memory back while the pane is hidden. A parked
   /// frame is dropped unshown first: no frame may be held across a resize.
-  pub(super) fn release_drawables(&mut self, gpu: &crate::gpu::Gpu) {
+  pub(super) fn release_drawables(&mut self, gpu: &screenwide_gpu::Gpu) {
     self.parked = None;
     self.surface.resize(gpu, (2, 2));
   }
@@ -127,7 +127,7 @@ impl Pane {
 }
 
 /// Fills `texture` with `colour` and submits the clear.
-pub(super) fn clear(gpu: &crate::gpu::Gpu, texture: &wgpu::Texture, colour: wgpu::Color) {
+pub(super) fn clear(gpu: &screenwide_gpu::Gpu, texture: &wgpu::Texture, colour: wgpu::Color) {
   let view = texture.create_view(&Default::default());
   let mut encoder = gpu
     .device

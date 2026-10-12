@@ -25,9 +25,9 @@ use cpal::{
 
 use self::{clock::AudioClock, filter::args};
 use super::{PlayerSources, RecordingPreviewPlaybackRange};
-use crate::editor::speech::auto_volume::Leveling;
-use crate::editor::speech::heard::Processing;
-use crate::editor::{media_preview, AudioTrackVolume};
+use screenwide_export::recording_model::AudioTrackVolume;
+use screenwide_speech::auto_volume::Leveling;
+use screenwide_speech::heard::Processing;
 
 /// One channel of what FFmpeg decodes for the preview: a recorded track, or
 /// a file made of it by Reduce noise or Vocal cleanup, each also decoded
@@ -131,7 +131,7 @@ pub(super) fn spawn(
       selected_audio: Arc::clone(&selected_audio),
     },
   )?;
-  let mut process = media_preview::ffmpeg_command();
+  let mut process = screenwide_sidecar::ffmpeg_command();
   process
     .args(args(sources, &channels, ranges, &config, playback_rate))
     .stdout(Stdio::piped())

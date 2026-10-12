@@ -44,7 +44,9 @@ pub(super) fn build_camera_preview(
   // is the camera's own power line frequency control instead. Applied before
   // the device opens; a camera without the control still previews.
   #[cfg(target_os = "windows")]
-  if let Err(error) = crate::camera_power_line::apply_power_line_frequency(device_id, pal) {
+  if let Err(error) =
+    screenwide_capture::camera_power_line::apply_power_line_frequency(device_id, pal)
+  {
     eprintln!("The camera's power line frequency was not set: {error}");
   }
   let worker_device_id = device_id.to_owned();

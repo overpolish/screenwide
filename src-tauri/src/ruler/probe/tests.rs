@@ -63,7 +63,7 @@ fn a_bright_one_pixel_stroke_still_has_detectable_endpoints() {
     let offset = (13 * width + x) * 4;
     rgba[offset..offset + 4].copy_from_slice(&[value, value, value, 255]);
   }
-  let maps = super::super::analysis::compute_gradients(
+  let maps = screenwide_imaging::analysis::compute_gradients(
     &rgba,
     width.try_into().unwrap(),
     height.try_into().unwrap(),
@@ -126,7 +126,7 @@ fn probes_find_the_peak_of_a_settled_soft_transition_on_both_axes() {
       rgba[index..index + 3].fill(level);
     }
   }
-  let maps = super::super::analysis::compute_gradients(&rgba, width as u32, width as u32);
+  let maps = screenwide_imaging::analysis::compute_gradients(&rgba, width as u32, width as u32);
   let probes = probes_at_threshold(&maps, 25, 25, 24);
   assert_eq!(probes[0].start, 16);
   assert_eq!(probes[1].start, 16);

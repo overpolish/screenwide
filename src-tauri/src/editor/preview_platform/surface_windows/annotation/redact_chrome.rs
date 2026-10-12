@@ -8,10 +8,10 @@
 //! `image_chrome`. The twin of `recording_preview_surface_macos+annotation_redact.m`.
 
 use super::*;
-use crate::editor::annotations::gesture::{BOX_HANDLES, MODE_MARQUEE, MODE_SELECT, RADIUS_HANDLE};
-use crate::editor::annotations::outline::geometry::{prepare_shape, shape_distance};
-use crate::editor::annotations::redact::geometry::{prepare_redact, redact_distance};
-use crate::editor::annotations::reveal::AnnotationReveal;
+use screenwide_annotations::gesture::{BOX_HANDLES, MODE_MARQUEE, MODE_SELECT, RADIUS_HANDLE};
+use screenwide_annotations::outline::geometry::{prepare_shape, shape_distance};
+use screenwide_annotations::redact::geometry::{prepare_redact, redact_distance};
+use screenwide_annotations::reveal::AnnotationReveal;
 
 /// Whether `kind` is held by an upright box and its eight grips.
 pub(super) fn is_box(kind: AnnotationKind) -> bool {
@@ -120,7 +120,7 @@ pub(super) fn distance(
 fn shape_geometry(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
-) -> crate::editor::annotations::geometry::ArrowGeometry {
+) -> screenwide_annotations::geometry::ArrowGeometry {
   let frame = frame(image, item);
   prepare_shape(
     [frame.x as f32, frame.y as f32],
@@ -155,7 +155,7 @@ pub(super) fn shape_body_distance(
   item: &NativeAnnotationHandles,
   point: (f64, f64),
 ) -> f32 {
-  crate::editor::annotations::outline::geometry::shape_body_distance(
+  screenwide_annotations::outline::geometry::shape_body_distance(
     [point.0 as f32, point.1 as f32],
     &shape_geometry(image, item),
   )

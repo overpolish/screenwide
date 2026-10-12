@@ -7,10 +7,10 @@
 
 use tauri::AppHandle;
 
-use super::super::super::studio::{self, StudioSound};
 use super::super::super::{ready_voice, vad_model, SpeechSource, VoiceProgress};
 use super::super::MicrophoneTool;
 use super::{bar, heard_changed, level_heard, opening, singing};
+use screenwide_speech::studio::{self, StudioSound};
 
 /// Whether the microphone of the recording open in the editor is rebuilt as
 /// a studio recording, as its project says. A recording starts with it on,
@@ -33,7 +33,7 @@ pub async fn set_recording_studio_sound(
   enabled: bool,
 ) -> Result<StudioSound, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
-  if enabled && studio::model(&app).is_none() {
+  if enabled && crate::editor::speech::studio_model(&app).is_none() {
     return Err("Download the Studio sound model first".to_owned());
   }
   let vad = vad_model(&app).ok();

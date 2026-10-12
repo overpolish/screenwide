@@ -8,9 +8,11 @@ use super::ffi::{
 use super::native_types::RecordingWorkspaceLayer;
 use super::workspace_scene::{LayerPicture, StagedLayer};
 use super::RecordingPreviewSurface;
-use crate::editor::cursor_effects::{GpuArtwork, GpuCursor};
-use crate::editor::{media_preview, CameraOverlaySettings};
-use crate::screenshots::{ScreenshotOutputSettings, StillOverlay};
+use screenwide_compositor::compositor::still_overlay::StillOverlay;
+use screenwide_cursor_effects::{GpuArtwork, GpuCursor};
+use screenwide_export::media_preview;
+use screenwide_output::ScreenshotOutputSettings;
+use screenwide_scenes::CameraOverlaySettings;
 
 impl RecordingPreviewSurface {
   /// Presents a retained recording scene with explicit per-layer placements.
@@ -155,7 +157,7 @@ impl RecordingPreviewSurface {
   /// over the frames it holds.
   pub(crate) fn set_camera_effects(
     &self,
-    live: Option<std::sync::Arc<crate::editor::camera_effects::live::LiveCameraEffects>>,
+    live: Option<std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>>,
   ) -> Result<(), String> {
     self.scene.set_camera_effects(live)?;
     self.redraw_recording_workspace();

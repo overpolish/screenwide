@@ -5,21 +5,21 @@
 //! state as the native surface needs it.
 
 use super::*;
-use crate::editor::annotations::edit::AnnotationEdit;
-use crate::editor::annotations::gesture::{annotation_mode, drawing_kind, AnnotationGestureTarget};
-use crate::editor::annotations::handles::{
+use crate::editor::preview_platform::SelectionGesturePhase;
+use gesture::Gesture;
+use screenwide_annotations::edit::AnnotationEdit;
+use screenwide_annotations::gesture::{annotation_mode, drawing_kind, AnnotationGestureTarget};
+use screenwide_annotations::handles::{
   annotation_handles, annotation_snap, source_point, HANDLE_FLAG_GROUPED,
 };
-use crate::editor::annotations::snap::{
+use screenwide_annotations::snap::{
   detect_anchors, request_anchors, source_per_point, source_per_size, threshold_source_px,
   AnchorBoxes, AnchorCache, SnapField, SnapModifiers, SnapRequest, SnapResult,
 };
-use crate::editor::annotations::timing::{
+use screenwide_annotations::timing::{
   active_annotations, validate_clips, AnnotationTrack, RecordingAnnotationClip,
 };
-use crate::editor::annotations::{Annotation, AnnotationStyle};
-use crate::editor::preview_platform::SelectionGesturePhase;
-use gesture::Gesture;
+use screenwide_annotations::{Annotation, AnnotationStyle};
 use tauri::Emitter;
 
 #[derive(Default)]
@@ -34,7 +34,7 @@ pub(super) struct AnnotationState {
   /// with beyond its dress. Both are the annotation's own rather than part
   /// of its dress, so they travel beside the style defaults.
   animated: Option<bool>,
-  fresh: crate::editor::annotations::edit::FreshAnnotation,
+  fresh: screenwide_annotations::edit::FreshAnnotation,
   gesture: Option<Gesture>,
   /// The chosen group being carried by a press on the picture.
   group: Option<group::GroupDrag>,
@@ -49,7 +49,7 @@ pub(super) struct AnnotationState {
   anchors: Arc<AnchorCache>,
   /// The frame under the pointer, for a highlight to select from. Decoded on
   /// a blocking thread for the same reason.
-  pictures: Arc<crate::editor::annotations::highlight::picture::PictureCache>,
+  pictures: Arc<screenwide_annotations::highlight::picture::PictureCache>,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -71,7 +71,7 @@ pub async fn set_recording_preview_annotations(
   defaults: Option<AnnotationStyle>,
   animated: Option<bool>,
   counter_angle: Option<f64>,
-  image: Option<crate::editor::annotations::image::ImageArt>,
+  image: Option<screenwide_annotations::image::ImageArt>,
 ) -> Result<(), String> {
   let mut clips = clips;
   validate_clips(&clips)?;
@@ -105,7 +105,7 @@ pub async fn set_recording_preview_annotations(
   manager.annotation.selected = selected_ids;
   manager.annotation.defaults = defaults;
   manager.annotation.animated = animated;
-  manager.annotation.fresh = crate::editor::annotations::edit::FreshAnnotation {
+  manager.annotation.fresh = screenwide_annotations::edit::FreshAnnotation {
     angle: counter_angle,
     image,
   };
@@ -147,7 +147,7 @@ pub async fn set_recording_preview_annotations(
 pub async fn recording_preview_pin_statuses(
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   session_id: u64,
-) -> Result<Vec<super::pin_paths::PinStatus>, String> {
+) -> Result<Vec<screenwide_export::pin_paths::PinStatus>, String> {
   let manager = state
     .0
     .lock()

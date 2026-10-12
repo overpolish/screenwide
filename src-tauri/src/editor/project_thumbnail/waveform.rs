@@ -9,6 +9,7 @@ use crate::editor::preview_platform::{ribbon_still, RIBBON_BAR_PITCH_POINTS};
 use crate::editor::recording_preview_player::audio_visualizer::{
   AudioRibbonEnvelopes, MAX_RIBBON_TRACKS,
 };
+use screenwide_export::media_preview;
 
 const SPAN_MS: u64 = 10_000;
 /// The preview's width at 16:9, drawn at the ribbon's Retina scale.

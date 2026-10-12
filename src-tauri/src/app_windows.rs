@@ -156,8 +156,8 @@ pub(crate) fn webview_window<'a, R: Runtime, M: Manager<R>>(
   url: WebviewUrl,
 ) -> WebviewWindowBuilder<'a, R, M> {
   WebviewWindowBuilder::new(manager, label, url)
-    .title(crate::i18n::t!("window-titles-app"))
-    .initialization_script(crate::system_accent::initialization_script())
+    .title(screenwide_i18n::t!("window-titles-app"))
+    .initialization_script(screenwide_accent::initialization_script())
 }
 
 pub fn initialize_topology_management(app: &AppHandle) {

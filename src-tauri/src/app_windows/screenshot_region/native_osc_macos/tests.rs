@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::osc::{
+use screenwide_osc::{
   controller::RegionController,
   geometry::{Handle, Monitor, Point, Rect, Size},
   gesture::GestureKind,

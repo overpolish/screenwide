@@ -14,9 +14,9 @@
 //! softness are shares of its box, so only its corners have to move from one
 //! layer's source pixels into another's.
 
-use super::annotations::{Annotation, AnnotationPoint, AnnotationShape};
 use super::ScreenshotWorkspaceOutputSettings;
-use crate::screenshots::ScreenshotOutputSettings;
+use screenwide_annotations::{Annotation, AnnotationPoint, AnnotationShape};
+use screenwide_output::ScreenshotOutputSettings;
 
 /// Where a layer's source pixels fall on the canvas: the source's top-left
 /// corner and how many canvas pixels one source pixel spans. `None` for a
@@ -133,9 +133,9 @@ impl ScreenshotWorkspaceOutputSettings {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::editor::annotations::spotlight::model::new_spotlight;
   use crate::editor::screenshot_model::ScreenshotWorkspaceItemOutput;
-  use crate::screenshots::test_output_settings;
+  use screenwide_annotations::spotlight::model::new_spotlight;
+  use screenwide_output::fixtures::test_output_settings;
 
   fn point(x: f64, y: f64) -> AnnotationPoint {
     AnnotationPoint { x, y }
@@ -198,7 +198,7 @@ mod tests {
   fn the_shade_darkens_the_layers_under_the_topmost_spotlight_only() {
     let spotlight =
       |id: &str| new_spotlight(id.to_owned(), [point(0.0, 0.0), point(10.0, 10.0)], None);
-    let arrow = crate::editor::annotations::arrow::model::new_arrow(
+    let arrow = screenwide_annotations::arrow::model::new_arrow(
       "arrow".to_owned(),
       point(0.0, 0.0),
       point(10.0, 10.0),

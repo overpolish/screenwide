@@ -86,7 +86,7 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_choose(ScreenwidePreviewSurface *surf
                           point);
 }
 
-// The rule `drawing_layer` keeps in `src-tauri/src/editor/annotations/gesture.rs`:
+// The rule `drawing_layer` keeps in `src-tauri/crates/annotations/src/gesture.rs`:
 // the topmost picture under `point`, or off every picture the nearest one,
 // the topmost of any equally near; the canvas frame and the keyboard overlay
 // are none. `NO` only with no picture laid out.

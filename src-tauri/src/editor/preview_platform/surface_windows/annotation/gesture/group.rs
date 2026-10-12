@@ -11,8 +11,8 @@
 use super::drag::Press;
 use super::sample::{press_toggles, resolve, resolve_layer, Sample};
 use super::*;
-use crate::editor::annotations::gesture::MODE_MARQUEE;
-use crate::editor::annotations::handles::HANDLE_FLAG_GROUPED;
+use screenwide_annotations::gesture::MODE_MARQUEE;
+use screenwide_annotations::handles::HANDLE_FLAG_GROUPED;
 
 /// Arms a press on empty picture that the choice owns: a marquee band under
 /// the marquee, or a carry of the group inside its box under the select tool.

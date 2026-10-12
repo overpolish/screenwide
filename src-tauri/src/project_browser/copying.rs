@@ -12,7 +12,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use ts_rs::TS;
 
-use crate::project::library;
+use screenwide_project::library;
 
 /// Sent while projects are copied, so the browser can show how far along.
 pub(crate) const COPY_PROGRESS_EVENT: &str = "projects://copy-progress";
@@ -39,7 +39,7 @@ async fn copy_each(
   let failures = tauri::async_runtime::spawn_blocking(move || {
     let sizes: Vec<u64> = files
       .iter()
-      .map(|file| file.parent().map_or(0, crate::project::folder_size))
+      .map(|file| file.parent().map_or(0, screenwide_project::folder_size))
       .collect();
     let total_bytes = sizes.iter().sum();
     let mut copied_bytes = 0_u64;
@@ -92,7 +92,7 @@ pub async fn move_projects(
   files: Vec<PathBuf>,
   location: PathBuf,
 ) -> Result<(), String> {
-  crate::project::ensure_default_directory(&app);
+  crate::projects_folder::ensure_default_directory(&app);
   if !location.is_dir() {
     return Err(format!("{} is not available", location.display()));
   }
@@ -104,7 +104,7 @@ pub async fn move_projects(
     })
     .collect();
   copy_each(app, files, move |app, file, size, on_copied| {
-    let moved = crate::project::move_into(file, &location, size, on_copied)?;
+    let moved = screenwide_project::move_into(file, &location, size, on_copied)?;
     if moved != *file {
       library::moved(app, file, &moved)?;
     }
@@ -117,8 +117,8 @@ pub async fn move_projects(
 #[tauri::command]
 pub async fn duplicate_projects(app: AppHandle, files: Vec<PathBuf>) -> Result<(), String> {
   copy_each(app, files, |_, file, _, on_copied| {
-    let title = crate::project::summarize(file).title;
-    crate::project::duplicate(file, &title, on_copied).map(|_| ())
+    let title = screenwide_project::summarize(file).title;
+    screenwide_project::duplicate(file, &title, on_copied).map(|_| ())
   })
   .await
 }

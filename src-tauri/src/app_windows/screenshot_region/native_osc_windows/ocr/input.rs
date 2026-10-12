@@ -86,7 +86,7 @@ fn dispatch_phase(
   group: &mut ControlGroup,
   point: Point,
   phase: u32,
-) -> crate::osc::controls::ControlUpdate {
+) -> screenwide_osc::controls::ControlUpdate {
   match phase {
     PHASE_HOVER | PHASE_DRAG => group.move_to((point.x, point.y)),
     PHASE_DOWN => group.down((point.x, point.y)),

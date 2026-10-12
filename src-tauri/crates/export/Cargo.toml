@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-export"
+description = "Rendering a recording into a finished video, and the frame decoders the preview shares"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+bytemuck.workspace = true
+image.workspace = true
+screenwide-annotations.workspace = true
+screenwide-compositor.workspace = true
+screenwide-cursor-effects.workspace = true
+screenwide-gpu.workspace = true
+screenwide-i18n.workspace = true
+screenwide-imaging.workspace = true
+screenwide-keyboard-effects.workspace = true
+screenwide-output.workspace = true
+screenwide-records.workspace = true
+screenwide-scenes.workspace = true
+screenwide-sidecar.workspace = true
+screenwide-timeline.workspace = true
+screenwide-timeline-edit.workspace = true
+screenwide-transcriber.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri.workspace = true
+ts-rs.workspace = true
+wgpu.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cidre.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = [
+  "Foundation",
+  "Graphics_Imaging",
+  "Graphics_Capture",
+  "Graphics_DirectX",
+  "Graphics_DirectX_Direct3D11",
+  "Media_Ocr",
+  "Storage_Streams",
+  "UI_ViewManagement",
+  "Win32_Foundation",
+  "Win32_Devices_HumanInterfaceDevice",
+  "Win32_Graphics_Direct2D",
+  "Win32_Graphics_Direct2D_Common",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D10",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Direct3D11on12",
+  "Win32_Graphics_Direct3D12",
+  "Win32_Graphics_DirectComposition",
+  "Win32_Graphics_DirectWrite",
+  "Win32_Graphics_Dwm",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_Graphics_Gdi",
+  "Win32_Media_DirectShow",
+  "Win32_Media_MediaFoundation",
+  "Win32_Security",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_DataExchange",
+  "Win32_System_Environment",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_Power",
+  "Win32_System_ProcessStatus",
+  "Win32_System_Registry",
+  "Win32_System_SystemServices",
+  "Win32_System_Threading",
+  "Win32_System_Variant",
+  "Win32_System_WinRT",
+  "Win32_System_WinRT_Direct3D11",
+  "Win32_System_WinRT_Graphics_Capture",
+  "Win32_UI_Accessibility",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Input",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Input_Pointer",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_PropertiesSystem",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+[dev-dependencies]
+screenwide-annotations = { workspace = true, features = ["test-support"] }
+screenwide-images = { workspace = true, features = ["test-support"] }
+screenwide-output = { workspace = true, features = ["test-support"] }
+
+[build-dependencies]
+cc.workspace = true
+screenwide-wgsl.workspace = true

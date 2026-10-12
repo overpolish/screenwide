@@ -24,9 +24,9 @@ use windows::Win32::System::SystemServices::MODIFIERKEYS_FLAGS;
 
 use super::annotation::{layer_image_rect, take_drawing_layer};
 use super::*;
-use crate::editor::annotations::gesture::drawing_layer;
 use crate::editor::images::dropped::ImagePoint;
 use crate::editor::preview_platform::ImageDropCallback;
+use screenwide_annotations::gesture::drawing_layer;
 
 #[implement(IDropTarget)]
 struct ImageDropTarget {

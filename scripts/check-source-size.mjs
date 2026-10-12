@@ -7,7 +7,7 @@ import process from "node:process";
 
 const DEFAULT_LIMIT = 300;
 const TEST_LIMIT = 650;
-const roots = ["src", "src-tauri/src", "scripts"];
+const roots = ["src", "src-tauri/src", "src-tauri/crates", "scripts"];
 const extensions = new Set([".h", ".m", ".mjs", ".rs", ".ts", ".tsx"]);
 // Generated from other sources, so they grow with what they list and there
 // is nothing to split by hand.

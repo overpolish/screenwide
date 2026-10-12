@@ -4,10 +4,10 @@
 use std::time::Duration;
 
 use super::*;
-use crate::editor::annotations::arrow::new_arrow;
-use crate::editor::annotations::timing::{validate_clips, AnnotationTrack};
-use crate::editor::annotations::{AnnotationPoint, AnnotationShape};
-use crate::recording::cursor::CursorSourceKind;
+use screenwide_annotations::arrow::new_arrow;
+use screenwide_annotations::timing::{validate_clips, AnnotationTrack};
+use screenwide_annotations::{AnnotationPoint, AnnotationShape};
+use screenwide_records::cursor::CursorSourceKind;
 
 /// A 1000x500 point display, at the desktop origin, recorded at 2x.
 pub(super) fn source() -> CursorSource {
@@ -46,7 +46,7 @@ fn started(live: &mut LiveAnnotations, origin: Instant) {
 /// How long a clip's closing phase runs: its own pace's draw-out share.
 fn closing_ms(clip: &RecordingAnnotationClip) -> u64 {
   let path_ms = clip.path_ms.expect("a live arrow is paced");
-  (path_ms * crate::editor::annotations::reveal::REVEAL_OUT_SHARE).round() as u64
+  (path_ms * screenwide_annotations::reveal::REVEAL_OUT_SHARE).round() as u64
 }
 
 #[test]

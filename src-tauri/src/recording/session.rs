@@ -16,11 +16,12 @@ use chrono::Local;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
-use super::{
-  capture, encoding, snapshot, state, CameraCaptureMode, CaptureStartupConfig, FinalizeInfo,
-  PrimaryCaptureSource, PrimaryRecordingKind, RecordingMode, RecordingStatus,
-  StartRecordingOptions, SystemAudioSelection,
+use super::{capture, snapshot, state};
+use screenwide_capture::{
+  encoding, CameraCaptureMode, CaptureStartupConfig, FinalizeInfo, PrimaryCaptureSource,
+  RecordingMode, RecordingStatus, StartRecordingOptions, SystemAudioSelection,
 };
+use screenwide_project::PrimaryRecordingKind;
 
 mod cancellation;
 mod inputs;
@@ -39,7 +40,7 @@ pub(super) const FIRST_FRAME_TIMEOUT: Duration = Duration::from_secs(5);
 /// capture session and the project it is filling.
 pub(super) struct CaptureHandles {
   sidecars: RecordingSidecars,
-  project: crate::project::NewProject,
+  project: screenwide_project::NewProject,
   session: capture::CaptureSession,
   source_scale_factor: f32,
 }
@@ -68,10 +69,10 @@ pub(super) fn emit_error(app: &AppHandle, phase: &'static str, message: &str) {
 pub(super) fn report_failure(app: &AppHandle, phase: &'static str, message: &str) {
   emit_error(app, phase, message);
   let title = match phase {
-    "start" => crate::i18n::t!("alert-recording-start-failed"),
-    "capture" => crate::i18n::t!("alert-recording-capture-failed"),
-    "resume" => crate::i18n::t!("alert-recording-resume-failed"),
-    _ => crate::i18n::t!("alert-recording-finish-failed"),
+    "start" => screenwide_i18n::t!("alert-recording-start-failed"),
+    "capture" => screenwide_i18n::t!("alert-recording-capture-failed"),
+    "resume" => screenwide_i18n::t!("alert-recording-resume-failed"),
+    _ => screenwide_i18n::t!("alert-recording-finish-failed"),
   };
   crate::alert::show(app, &title, message);
 }
@@ -213,7 +214,7 @@ pub(super) fn finalize_capture(
     &project.file,
     &info,
     moments.as_deref(),
-    crate::project::RecordingOrigin::Capture,
+    screenwide_project::RecordingOrigin::Capture,
   ) {
     eprintln!("Could not update the project's manifest: {error}");
   }
@@ -226,9 +227,9 @@ pub(super) fn write_manifest(
   file: &Path,
   info: &FinalizeInfo,
   moments: Option<&Path>,
-  origin: crate::project::RecordingOrigin,
+  origin: screenwide_project::RecordingOrigin,
 ) -> Result<(), String> {
-  let media = crate::project::RecordingMedia::relative_to(
+  let media = screenwide_project::RecordingMedia::relative_to(
     file,
     &info.path,
     info.camera.as_ref().map(|camera| camera.path.as_path()),
@@ -236,9 +237,9 @@ pub(super) fn write_manifest(
     info.keyboard_path.as_deref(),
     moments,
   )?;
-  crate::project::write(
+  screenwide_project::write(
     file,
-    &crate::project::Manifest::recording(crate::project::RecordingManifest {
+    &screenwide_project::Manifest::recording(screenwide_project::RecordingManifest {
       duration_ms: Some(info.duration_ms),
       has_microphone: info.has_microphone,
       has_system_audio: info.has_system_audio,

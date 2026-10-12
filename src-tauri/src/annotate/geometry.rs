@@ -8,8 +8,8 @@
 //! pixels, and the overlay itself wants it in one display's layer pixels;
 //! both are the same kind of offset-and-scale applied to the geometry.
 
-use crate::editor::annotations::{Annotation, AnnotationPoint};
-use crate::recording::cursor::CursorSource;
+use screenwide_annotations::{Annotation, AnnotationPoint};
+use screenwide_records::cursor::CursorSource;
 
 /// Whether the bounding box of `points` reaches the recorded rectangle.
 fn overlaps(points: &[AnnotationPoint; 3], source: &CursorSource) -> bool {

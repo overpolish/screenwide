@@ -11,9 +11,9 @@
 
 use super::gesture::Commit;
 use super::*;
-use crate::editor::annotations::text::edit::{AnnotationTextEdit, TextEditPhase};
-use crate::editor::annotations::AnnotationShape;
 use crate::editor::preview_platform::AnnotationTextPhase;
+use screenwide_annotations::text::edit::{AnnotationTextEdit, TextEditPhase};
+use screenwide_annotations::AnnotationShape;
 
 pub(super) struct TextSession {
   pane: u32,
@@ -38,7 +38,7 @@ impl PreviewPlayerManager {
     };
     let (text, dark_ink) = (
       text.clone(),
-      crate::editor::annotations::text::model::dark_ink(&annotation.style),
+      screenwide_annotations::text::model::dark_ink(&annotation.style),
     );
     self.annotation.text = Some(TextSession {
       pane,

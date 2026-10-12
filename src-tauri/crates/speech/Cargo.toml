@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-speech"
+description = "The microphone's speech tools: listening, cleaning, levelling and transcribing"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+# The spectrum Vocal cleanup finds mouth clicks and plosives in. The same
+# release the speech enhancer in the transcriber uses.
+realfft.workspace = true
+screenwide-i18n.workspace = true
+screenwide-sidecar.workspace = true
+screenwide-transcriber.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true

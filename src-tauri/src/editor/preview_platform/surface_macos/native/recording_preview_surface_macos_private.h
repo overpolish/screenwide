@@ -9,7 +9,7 @@
 #import <QuartzCore/CAMetalLayer.h>
 #include <stdint.h>
 
-#import "../../../../osc/gpu/macos/osc_gpu_macos.h"
+#import "../../../../../crates/osc/src/gpu/macos/osc_gpu_macos.h"
 #import "recording_preview_workspace_scene_macos.h"
 #import "recording_preview_annotation_macos.h"
 #import "recording_preview_audio_ribbon_macos.h"

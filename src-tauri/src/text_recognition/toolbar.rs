@@ -5,8 +5,8 @@
 //! host the material surfaces, while placement remains shared for the later
 //! Windows adapter. Reusable confirmation behavior lives in `osc::controls`.
 
-use crate::osc::controls::control_spacing;
-use crate::osc::geometry::{Rect, Size};
+use screenwide_osc::controls::control_spacing;
+use screenwide_osc::geometry::{Rect, Size};
 
 pub const CONTROL_COUNT: usize = 4;
 /// `--spacing-control`, the gap between neighbouring controls in a row.

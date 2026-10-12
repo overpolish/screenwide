@@ -14,8 +14,8 @@ use std::path::PathBuf;
 
 use tauri::{AppHandle, WebviewWindow};
 
-use super::store::import_file;
-use crate::editor::annotations::image::ImageArt;
+use screenwide_annotations::image::ImageArt;
+use screenwide_images::store::import_file;
 
 /// The picture formats an image can be made from: what the `image` crate
 /// reads. HEIC is not among them; Photos copies one as a TIFF or PNG.
@@ -54,7 +54,7 @@ fn clipboard_picture(_: &mut arboard::Clipboard) -> Result<Option<ImageArt>, Str
   let pasteboard = NSPasteboard::generalPasteboard();
   for kind in TYPES {
     if let Some(data) = pasteboard.dataForType(&NSString::from_str(kind)) {
-      return super::store::import_bytes(&data.to_vec()).map(Some);
+      return screenwide_images::store::import_bytes(&data.to_vec()).map(Some);
     }
   }
   Ok(None)
@@ -70,7 +70,7 @@ fn clipboard_picture(clipboard: &mut arboard::Clipboard) -> Result<Option<ImageA
   let (width, height) = (picture.width as u32, picture.height as u32);
   let pixels = image::RgbaImage::from_raw(width, height, picture.bytes.into_owned())
     .ok_or("The clipboard's picture could not be read")?;
-  super::store::import(image::DynamicImage::ImageRgba8(pixels)).map(Some)
+  screenwide_images::store::import(image::DynamicImage::ImageRgba8(pixels)).map(Some)
 }
 
 /// The picture on the clipboard, kept for an image, or nothing when the
@@ -97,9 +97,9 @@ pub async fn browse_annotation_image(
     let picked: Option<PathBuf> = app
       .dialog()
       .file()
-      .set_title(crate::i18n::t!("dialog-choose-image"))
+      .set_title(screenwide_i18n::t!("dialog-choose-image"))
       .add_filter(
-        crate::i18n::t!("dialog-pictures-filter"),
+        screenwide_i18n::t!("dialog-pictures-filter"),
         PICTURE_EXTENSIONS,
       )
       .set_parent(&window)

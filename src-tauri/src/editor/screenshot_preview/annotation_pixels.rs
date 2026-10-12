@@ -6,9 +6,9 @@
 //! chrome that shows what a sample landed on.
 
 use super::state::PreviewManager;
-use crate::editor::annotations::handles::annotation_snap;
-use crate::editor::annotations::highlight::picture::HighlightPicture;
-use crate::editor::annotations::snap::{detect_anchors, request_anchors, AnchorBoxes, SnapResult};
+use screenwide_annotations::handles::annotation_snap;
+use screenwide_annotations::highlight::picture::HighlightPicture;
+use screenwide_annotations::snap::{detect_anchors, request_anchors, AnchorBoxes, SnapResult};
 use std::sync::Arc;
 
 impl PreviewManager {

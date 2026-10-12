@@ -9,7 +9,7 @@ use tauri::image::Image;
 
 #[cfg(target_os = "windows")]
 use super::icons;
-use crate::recording::RecordingStatus;
+use screenwide_capture::RecordingStatus;
 
 /// One icon per second left, from one up to the longest delay Settings
 /// offers. Drawn by `scripts/prepare-tray-countdown-icons.mjs`.
@@ -91,9 +91,9 @@ pub(super) fn icon(shown: Shown) -> tauri::Result<Image<'static>> {
 
 pub(super) fn tooltip(shown: Shown) -> String {
   match shown {
-    Shown::Countdown(seconds) => crate::i18n::t!("tray-tooltip-countdown", seconds = seconds),
-    Shown::Replay => crate::i18n::t!("tray-tooltip-replay"),
-    Shown::ReplaySaved => crate::i18n::t!("tray-tooltip-replay-saved"),
+    Shown::Countdown(seconds) => screenwide_i18n::t!("tray-tooltip-countdown", seconds = seconds),
+    Shown::Replay => screenwide_i18n::t!("tray-tooltip-replay"),
+    Shown::ReplaySaved => screenwide_i18n::t!("tray-tooltip-replay-saved"),
     Shown::Status(status) => status_tooltip(status),
   }
 }
@@ -139,11 +139,11 @@ fn status_icon(status: RecordingStatus) -> tauri::Result<Image<'static>> {
 
 fn status_tooltip(status: RecordingStatus) -> String {
   match status {
-    RecordingStatus::Idle => crate::i18n::t!("tray-tooltip"),
-    RecordingStatus::Starting => crate::i18n::t!("tray-tooltip-starting"),
-    RecordingStatus::Recording => crate::i18n::t!("tray-tooltip-recording"),
-    RecordingStatus::Paused => crate::i18n::t!("tray-tooltip-paused"),
-    RecordingStatus::Stopping => crate::i18n::t!("tray-tooltip-stopping"),
+    RecordingStatus::Idle => screenwide_i18n::t!("tray-tooltip"),
+    RecordingStatus::Starting => screenwide_i18n::t!("tray-tooltip-starting"),
+    RecordingStatus::Recording => screenwide_i18n::t!("tray-tooltip-recording"),
+    RecordingStatus::Paused => screenwide_i18n::t!("tray-tooltip-paused"),
+    RecordingStatus::Stopping => screenwide_i18n::t!("tray-tooltip-stopping"),
   }
 }
 

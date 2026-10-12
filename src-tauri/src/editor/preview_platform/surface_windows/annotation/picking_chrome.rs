@@ -7,7 +7,7 @@
 
 use super::picking::item_grips;
 use super::*;
-use crate::editor::annotations::gesture::{MODE_HIGHLIGHT, MODE_MARQUEE, MODE_TEXT};
+use screenwide_annotations::gesture::{MODE_HIGHLIGHT, MODE_MARQUEE, MODE_TEXT};
 
 /// The chosen arrow's three grips, in device pixels, for the chrome to draw.
 /// Empty when no arrow is chosen or the arrow tool has no say, which is what

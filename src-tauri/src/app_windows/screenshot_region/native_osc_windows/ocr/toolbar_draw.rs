@@ -23,8 +23,8 @@ impl Chrome {
     let icon = icon_metrics();
     let mut labels = Vec::with_capacity(2);
     for text in [
-      crate::i18n::t!("overlay-ocr-copy-all"),
-      crate::i18n::t!("overlay-ocr-copy-paragraph"),
+      screenwide_i18n::t!("overlay-ocr-copy-all"),
+      screenwide_i18n::t!("overlay-ocr-copy-paragraph"),
     ] {
       let Some(label) = self.text.label(
         device,

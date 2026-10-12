@@ -17,7 +17,7 @@ impl RecordingPreviewSurface {
     bake_camera: bool,
     primary: &ScreenshotOutputSettings,
     camera_settings: &ScreenshotOutputSettings,
-    overlay: crate::editor::CameraOverlaySettings,
+    overlay: screenwide_scenes::CameraOverlaySettings,
     drop_shadow: bool,
     camera_on_top: bool,
   ) -> Result<bool, String> {
@@ -48,19 +48,20 @@ impl RecordingPreviewSurface {
           return Ok(false);
         };
         {
-          let geometry = crate::editor::media_preview::bake_geometry(BakedVideoExportOptions {
-            camera_drop_shadow: drop_shadow,
-            camera_height: camera.size.1,
-            camera_width: camera.size.0,
-            overlay,
-            screen_height: primary.height,
-            screen_width: primary.width,
-            video: VideoExportOptions {
-              compression: 0,
-              resolution_scale_percent: 100,
-              source_scale_percent: 100,
-            },
-          })?;
+          let geometry =
+            screenwide_export::media_preview::bake_geometry(BakedVideoExportOptions {
+              camera_drop_shadow: drop_shadow,
+              camera_height: camera.size.1,
+              camera_width: camera.size.0,
+              overlay,
+              screen_height: primary.height,
+              screen_width: primary.width,
+              video: VideoExportOptions {
+                compression: 0,
+                resolution_scale_percent: 100,
+                source_scale_percent: 100,
+              },
+            })?;
           self.present_cached_source_with_camera(
             pane,
             primary,

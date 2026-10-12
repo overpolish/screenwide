@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Native Media Foundation timeline thumbnails and source-frame extraction.
+//! Native Media Foundation timeline thumbnails.
 
 use tauri::ipc::{Channel, InvokeResponseBody};
 
-use super::decoder::{encoded_jpeg, NativeVideoReader};
 use crate::editor::recording_preview_player::{
   timeline_thumbnails::{encoded_png, payload, target_width, THUMBNAIL_HEIGHT},
   PlayerSources,
 };
+use screenwide_export::decode::windows::decoder::{encoded_jpeg, NativeVideoReader};
 
 pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
   let mut tracks = vec![(0_u32, &sources.screen_path, sources.duration_ms)];
@@ -22,7 +22,7 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
   }
   // The camera's thumbnails show its effects, see-through where it has no
   // background, which only a PNG carries.
-  let camera_track = if sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera {
+  let camera_track = if sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera {
     0
   } else {
     1
@@ -38,7 +38,7 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
     };
     let mut effects = (track == camera_track)
       .then(|| {
-        crate::editor::camera_effects::cpu::StillEffects::new(
+        screenwide_export::camera_effects::cpu::StillEffects::new(
           sources.camera_effects_now(),
           THUMBNAIL_HEIGHT * 4,
         )
@@ -91,43 +91,6 @@ fn thumbnail_or_previous(decoded: Option<Vec<u8>>, previous: &Option<Vec<u8>>) -
 // for the container endpoint, where no decodable frame has to exist.
 fn timeline_position(duration_ms: u64, index: u32, count: u32) -> u64 {
   duration_ms.saturating_mul(u64::from(index)) / u64::from(count.max(1))
-}
-
-pub(crate) fn source_frame_image(
-  path: &std::path::Path,
-  position_ms: u64,
-  duration_ms: u64,
-) -> Result<crate::screenshots::CapturedImage, String> {
-  let position_ms = position_ms.min(duration_ms.saturating_sub(1));
-  let mut reader = NativeVideoReader::open(path, 0, 0, position_ms)?;
-  let frame = reader
-    .frame_at(position_ms)?
-    .ok_or_else(|| "Media Foundation returned no source frame".to_owned())?;
-  Ok(frame)
-}
-
-/// The recording's frames at each of `times_ms`, in rising order, decoded in
-/// one pass and handed to `each` as they come; the pass ends early once
-/// `each` returns false.
-pub(crate) fn each_source_frame(
-  path: &std::path::Path,
-  times_ms: &[u64],
-  duration_ms: u64,
-  mut each: impl FnMut(u64, &crate::screenshots::CapturedImage) -> bool,
-) -> Result<(), String> {
-  let Some(&first) = times_ms.first() else {
-    return Ok(());
-  };
-  let last = duration_ms.saturating_sub(1);
-  let mut reader = NativeVideoReader::open(path, 0, 0, first.min(last))?;
-  for &time in times_ms {
-    if let Some(frame) = reader.frame_at(time.min(last))? {
-      if !each(time, &frame) {
-        break;
-      }
-    }
-  }
-  Ok(())
 }
 
 #[cfg(test)]

@@ -14,7 +14,8 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - `src/components/base`: single-purpose primitives built on React Aria. They import nothing from `shared` or `features`. Story group: `Primitives`.
 - `src/components/shared`: compositions of primitives reused by more than one feature. They import nothing from `features`. Story group: `Components`.
 - `src/features`: UI and behaviour owned by one feature. May import from `base` and `shared`. Story group: `Features`, or `Legacy` for windows not yet built on the current primitives.
-- `src/features/editor` and `src-tauri/src/editor`: the Editor feature.
+- `src/features/editor`, `src-tauri/src/editor`, and the `annotations`, `compositor`, `cursor_effects`, `export`, `images`, `keyboard_effects`, `scenes` and `timeline_edit` crates in `src-tauri/crates`: the Editor feature.
+- `src-tauri/crates`: the Rust workspace's crates, each a layer the app crate (`src-tauri/src`) and the crates above it depend on, never the reverse. New Rust subsystems start as their own crate there, not as a module of the app crate, which wires the crates together: Tauri setup, commands and windows. Test a crate on its own with `cargo test -p <crate>`.
 - `src/index.css`: shared theme tokens and global styles.
 - `src/lib/motion.ts`: shared motion timings and easing.
 - `src/storybook/feature-story-stage.tsx`: standard feature-window story frame.
@@ -42,7 +43,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 
 ## Translation
 
-- User-visible text lives in `locales/en-US/*.ftl` (Fluent). The webviews read it with `t` from `src/i18n/i18n.ts`, Rust with `crate::i18n::t!`, and the macOS Objective-C overlays with `screenwide_osc_localized`. Do not write copy into components or native code. Rust error details, logs and text written into exported files stay English; titles and messages a person reads are translated. `TRANSLATING.md` is the contributor guide.
+- User-visible text lives in `locales/en-US/*.ftl` (Fluent). The webviews read it with `t` from `src/i18n/i18n.ts`, Rust with `screenwide_i18n::t!`, and the macOS Objective-C overlays with `screenwide_osc_localized`. Do not write copy into components or native code. Rust error details, logs and text written into exported files stay English; titles and messages a person reads are translated. `TRANSLATING.md` is the contributor guide.
 - A message id starts with its file's name (`project-browser-…`) and holds one string: no attributes. Pass ids to `t` and `t!` as literals so `pnpm i18n:check` can find them. The Annotation wording rule applies to ids as well as text.
 - Write whole sentences in the message, with placeholders and variants for counts (`$count`) and platforms (`$platform`, from `platformArg()`). Never join fragments or choose plurals in code.
 - Call `t` while rendering, not at module scope. Format dates, numbers and lists with React Aria's `useDateFormatter`, `useNumberFormatter` and `useListFormatter`, or with `appLocale().formatLocale` outside components; never `Intl.*(undefined)`.

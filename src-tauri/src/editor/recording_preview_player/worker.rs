@@ -15,9 +15,10 @@ use std::{
 use tauri::ipc::Channel;
 
 use super::{
-  audio, platform, AudioTrackVolume, PlayerSources, PreviewAudioSettings,
-  RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
+  audio, platform, PlayerSources, PreviewAudioSettings, RecordingPreviewPlaybackRange,
+  RecordingPreviewPlayerEvent,
 };
+use screenwide_export::recording_model::AudioTrackVolume;
 
 #[derive(Clone, Copy)]
 pub(super) enum PlaybackMode {

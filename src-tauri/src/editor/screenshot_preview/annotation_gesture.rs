@@ -15,14 +15,14 @@
 
 use super::super::preview_platform::SelectionGesturePhase;
 use super::state::PreviewManager;
-use crate::editor::annotations::edit::AnnotationEdit;
-use crate::editor::annotations::gesture::{drawing_kind, AnnotationGestureTarget};
-use crate::editor::annotations::handles::source_point;
-use crate::editor::annotations::snap::{
+use screenwide_annotations::edit::AnnotationEdit;
+use screenwide_annotations::gesture::{drawing_kind, AnnotationGestureTarget};
+use screenwide_annotations::handles::source_point;
+use screenwide_annotations::snap::{
   source_per_point, source_per_size, threshold_source_px, SnapField, SnapModifiers, SnapRequest,
   SnapResult,
 };
-use crate::editor::annotations::Annotation;
+use screenwide_annotations::Annotation;
 
 /// The list React is asked to commit when a gesture ends, or as a text box is
 /// typed into: `text_edit` says where in the typing it falls.
@@ -32,7 +32,7 @@ pub(crate) struct AnnotationCommit {
   pub(crate) pane_index: u32,
   /// Every annotation chosen once the commit lands.
   pub(crate) selected_annotation_ids: Vec<String>,
-  pub(crate) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
+  pub(crate) text_edit: Option<screenwide_annotations::text::edit::TextEditPhase>,
   /// Whether the choice landed on a layer other than the selected one, which
   /// then becomes the selected layer: an annotation is chosen with its layer.
   pub(crate) selects_layer: bool,

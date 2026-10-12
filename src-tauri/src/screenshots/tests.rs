@@ -8,6 +8,7 @@ use chrono::NaiveDate;
 use tauri::{LogicalPosition, LogicalSize};
 
 use super::*;
+use screenwide_capture::capture_geometry::{physical_capture_rect, CaptureRect};
 
 fn region(x: f64, y: f64, width: f64, height: f64) -> Region {
   Region {
@@ -217,8 +218,11 @@ fn the_editor_canvas_paints_the_same_generators_as_the_background_renderer() {
     width: 2,
     height: 1,
   };
-  for generator in mesh_generator::every_generator().iter().skip(1) {
-    let mut settings = crate::screenshots::test_output_settings(EDGE, EDGE);
+  for generator in screenwide_output::mesh_generator::every_generator()
+    .iter()
+    .skip(1)
+  {
+    let mut settings = screenwide_output::fixtures::test_output_settings(EDGE, EDGE);
     settings.background_type = "mesh".to_owned();
     settings.mesh_generator = generator.name.to_owned();
     settings.mesh_colors = colors.to_vec();
@@ -232,11 +236,11 @@ fn the_editor_canvas_paints_the_same_generators_as_the_background_renderer() {
     settings.image_width = 2.0;
     settings.image_x = 0.0;
     settings.image_y = 0.0;
-    let native = platform::compose_output_layers(
+    let native = screenwide_compositor::compositor::still_overlay::compose_output_layers(
       &source, &settings, SECONDS, true, None, None, None, None, false, false,
     )
     .unwrap();
-    let shared = mesh::mesh_canvas(
+    let shared = screenwide_output::mesh::mesh_canvas(
       EDGE,
       EDGE,
       generator.name,

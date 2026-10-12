@@ -5,9 +5,9 @@
 //! picture.
 
 use super::*;
-use crate::editor::annotations::gesture::MODE_IMAGE;
-use crate::editor::annotations::image::ImageArt;
 use crate::editor::images::dropped::{annotation_ids, fresh_id, ImagePoint};
+use screenwide_annotations::gesture::MODE_IMAGE;
+use screenwide_annotations::image::ImageArt;
 
 impl PreviewPlayerManager {
   /// Places an image showing `art` `at` a point on a pane, or in the middle

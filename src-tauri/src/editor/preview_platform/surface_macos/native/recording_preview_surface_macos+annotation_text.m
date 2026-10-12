@@ -12,7 +12,7 @@
 //! on screen is always the compositor's text, so nothing shifts on commit.
 
 #import "recording_preview_surface_macos_private.h"
-#import "../../../cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_text_box.h"
+#import "../../../../../crates/annotations/src/text/macos/annotation_text_box.h"
 #include <math.h>
 
 #include "recording_preview_annotation_layers_macos.h"

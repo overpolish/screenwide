@@ -9,9 +9,9 @@
 //! reading: an older one still queued is dropped and one under way is
 //! stopped, so however often a box changes, one decoder runs.
 
-use super::held_surfaces::clip_surfaces;
-use crate::editor::annotations::timing::RecordingAnnotationClip;
-use crate::editor::annotations::AnnotationShape;
+use screenwide_annotations::timing::RecordingAnnotationClip;
+use screenwide_annotations::AnnotationShape;
+use screenwide_export::held_surfaces::clip_surfaces;
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};

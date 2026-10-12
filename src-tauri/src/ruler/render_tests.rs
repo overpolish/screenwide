@@ -6,7 +6,7 @@ use super::{
   render::{MeasurementPacket, ProbePacket},
   snapshot::{RulerMeasurementVisual, RulerProbeVisual},
 };
-use crate::osc::geometry::{Point, Rect};
+use screenwide_osc::geometry::{Point, Rect};
 
 #[test]
 fn measurement_packet_preserves_geometry_flags_hover_and_label() {

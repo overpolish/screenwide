@@ -30,7 +30,7 @@ pub(super) struct Surface {
 }
 
 impl Surface {
-  pub(super) fn new(gpu: &crate::gpu::Gpu, host: HWND, display: u32) -> Result<Self, String> {
+  pub(super) fn new(gpu: &screenwide_gpu::Gpu, host: HWND, display: u32) -> Result<Self, String> {
     let atom = *CLASS.get_or_init(|| {
       overlay_surface::register_class(
         w!("ScreenwideAnnotate"),
@@ -59,7 +59,7 @@ impl Surface {
   /// Matches the child and its surface to the host's client area, and reports
   /// the physical size a frame draws at. Zero means there is nothing to draw:
   /// the host has no client area yet.
-  pub(super) fn fit(&mut self, gpu: &crate::gpu::Gpu) -> Result<(u32, u32), String> {
+  pub(super) fn fit(&mut self, gpu: &screenwide_gpu::Gpu) -> Result<(u32, u32), String> {
     let mut client = RECT::default();
     if unsafe { GetClientRect(self.host, &mut client) }.is_err() {
       return Ok((0, 0));

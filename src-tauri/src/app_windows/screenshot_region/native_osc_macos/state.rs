@@ -18,15 +18,15 @@ pub use scene::{
 
 use std::{ffi::c_void, panic::catch_unwind};
 
-use crate::osc::{
+use crate::ruler::render::{
+  CenterlinePacket, GuideGapPacket, GuidePacket, InnerObjectPacket, MeasurementPacket, ProbePacket,
+  RadiusPacket, ViewportPacket,
+};
+use screenwide_osc::{
   controller::RegionController,
   geometry::{Monitor, Point, Rect, Size},
   scene::{RegionScene, RegionSceneOwner},
   style::overlay_palette,
-};
-use crate::ruler::render::{
-  CenterlinePacket, GuideGapPacket, GuidePacket, InnerObjectPacket, MeasurementPacket, ProbePacket,
-  RadiusPacket, ViewportPacket,
 };
 use tauri::{Emitter, Manager, WebviewWindow};
 

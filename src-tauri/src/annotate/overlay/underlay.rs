@@ -5,8 +5,8 @@
 //! reads: a display's underlay, or the still a highlight is baked into; and
 //! the same softened for a spotlight's blur.
 
-use crate::gpu::Gpu;
-use crate::screenshots::CapturedImage;
+use screenwide_gpu::Gpu;
+use screenwide_imaging::CapturedImage;
 
 /// An uploaded picture and which of Rust's revisions it is.
 struct Held {

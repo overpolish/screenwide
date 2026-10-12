@@ -15,8 +15,9 @@ use std::{
   thread::JoinHandle,
 };
 
-use super::gpu_decoder::{GpuFrame, GpuVideoReader};
 use crate::editor::preview_platform::RecordingPreviewSurface;
+use screenwide_export::decode::windows::gpu_decoder::GpuFrame;
+use screenwide_export::decode::windows::gpu_decoder::GpuVideoReader;
 
 pub(super) struct PaneDecoder {
   opened: Receiver<Result<(), String>>,
@@ -39,7 +40,8 @@ impl PaneDecoder {
     let thread = std::thread::Builder::new()
       .name("recording-preview-pane-decoder".to_owned())
       .spawn(move || {
-        let mut reader = match GpuVideoReader::open_for_playback(&path, start_ms, surface) {
+        let mut reader = match GpuVideoReader::open_for_playback(&path, start_ms, surface.device())
+        {
           Ok(reader) => reader,
           Err(error) => {
             let _ = opened_tx.send(Err(error));

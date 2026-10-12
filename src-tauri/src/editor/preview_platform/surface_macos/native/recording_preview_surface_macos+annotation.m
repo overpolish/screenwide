@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#import "../../../../osc/gpu/macos/osc_gpu_macos.h"
+#import "../../../../../crates/osc/src/gpu/macos/osc_gpu_macos.h"
 #import "recording_preview_surface_macos_private.h"
 #include <math.h>
 #include "recording_preview_annotation_layers_macos.h"

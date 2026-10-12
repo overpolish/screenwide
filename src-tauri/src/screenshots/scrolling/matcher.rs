@@ -6,7 +6,7 @@ use std::sync::Arc;
 use rayon::prelude::*;
 
 use super::{Axis, Direction};
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 mod planes;
 

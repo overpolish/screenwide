@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::osc::shortcut::{self, Binding};
+use screenwide_osc::shortcut::{self, Binding};
 use serde::{Deserialize, Serialize};
 use std::{
   collections::BTreeMap,

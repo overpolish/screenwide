@@ -4,7 +4,7 @@
 //! Portable OCR draw data. macOS and Windows adapters consume these desktop-
 //! space rectangles without owning recognition or projection policy.
 
-use crate::osc::geometry::Rect;
+use screenwide_osc::geometry::Rect;
 
 use super::{TextRecognitionResult, TextRect};
 

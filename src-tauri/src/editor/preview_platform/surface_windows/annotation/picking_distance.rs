@@ -6,14 +6,14 @@
 
 use super::picking::{display_point, highlight_flow, text_geometry};
 use super::*;
-use crate::editor::annotations::arrow::distance::prepared_arrow_distance;
-use crate::editor::annotations::arrow::geometry::prepare_arrow;
-use crate::editor::annotations::counter::silhouette::counter_distance;
-use crate::editor::annotations::freehand::geometry::{freehand_body_distance, freehand_distance};
-use crate::editor::annotations::highlight::geometry::flow_distance;
-use crate::editor::annotations::reveal::AnnotationReveal;
-use crate::editor::annotations::text::geometry::text_distance;
-use crate::editor::annotations::AnnotationPoint;
+use screenwide_annotations::arrow::distance::prepared_arrow_distance;
+use screenwide_annotations::arrow::geometry::prepare_arrow;
+use screenwide_annotations::counter::silhouette::counter_distance;
+use screenwide_annotations::freehand::geometry::{freehand_body_distance, freehand_distance};
+use screenwide_annotations::highlight::geometry::flow_distance;
+use screenwide_annotations::reveal::AnnotationReveal;
+use screenwide_annotations::text::geometry::text_distance;
+use screenwide_annotations::AnnotationPoint;
 
 /// How far a point is from one arrow's drawn shape, in display points: its
 /// shaft, and the heads on it. Zero anywhere the arrow is actually painted,

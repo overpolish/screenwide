@@ -19,7 +19,7 @@ pub(super) use renderer::Renderer;
 pub(super) use underlay::upload as upload_underlay;
 pub(super) use underlay::Underlays;
 
-use crate::editor::preview_platform::annotation_gpu::{placed_arrows, PreparedArrows};
+use screenwide_compositor::annotation_gpu::{placed_arrows, PreparedArrows};
 
 /// Everything on screen plus the stroke in hand, prepared in one display's
 /// layer pixels: `origin` is where the display starts in desktop points and

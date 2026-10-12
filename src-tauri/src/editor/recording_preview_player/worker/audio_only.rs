@@ -17,7 +17,7 @@ use crate::editor::recording_preview_player::audio_visualizer::present_audio_pos
 use crate::editor::recording_preview_player::{
   PlayerSources, RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
 };
-use crate::editor::AudioTrackVolume;
+use screenwide_export::recording_model::AudioTrackVolume;
 
 pub(super) struct RunContext {
   pub(super) audio_child: Arc<Mutex<Option<Child>>>,

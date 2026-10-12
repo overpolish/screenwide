@@ -6,9 +6,9 @@
 //! draws them on macOS: a dot for each click and the line for each painting,
 //! each haloed in its own colour where it is chosen.
 
-use crate::osc::geometry::{Point, Rect, Size};
-use crate::osc::gpu::pipeline::PICKED_POINT_PAIRS;
-use crate::osc::gpu::windows::{add_line, add_texture_quad, RenderConstants, Vertex};
+use screenwide_osc::geometry::{Point, Rect, Size};
+use screenwide_osc::gpu::pipeline::PICKED_POINT_PAIRS;
+use screenwide_osc::gpu::windows::{add_line, add_texture_quad, RenderConstants, Vertex};
 
 /// How far the halo round the chosen object reaches past it, in points: as
 /// far as an annotation's hover halo grows.

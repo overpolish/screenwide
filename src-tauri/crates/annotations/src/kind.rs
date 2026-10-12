@@ -1,0 +1,88 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! Which shape an annotation is, as one value every layer of the stack shares.
+
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
+/// The kinds the compositor draws. The numbers are ABI: they are the C
+/// `ScreenwideAnnotationKind` the macOS chrome reads, and the `kind == 1u`
+/// tests in the WGSL annotation shaders. They travel inside the native
+/// records as they are, so a value may never be renumbered. The serde names
+/// are the `kind` tag of
+/// `AnnotationShape` and what the live overlay's settings store, so a kind
+/// is one word in a document, in settings, and over the native boundary.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum AnnotationKind {
+  #[default]
+  Arrow = 0,
+  Counter = 1,
+  Text = 2,
+  Redact = 3,
+  Highlight = 4,
+  Shape = 5,
+  Spotlight = 6,
+  Draw = 7,
+  Magnify = 8,
+  Image = 9,
+}
+
+impl AnnotationKind {
+  /// The kind a native record carries, or `None` for a number no kind owns.
+  #[cfg(any(target_os = "macos", target_os = "windows", test))]
+  pub fn from_raw(kind: u32) -> Option<Self> {
+    match kind {
+      0 => Some(Self::Arrow),
+      1 => Some(Self::Counter),
+      2 => Some(Self::Text),
+      3 => Some(Self::Redact),
+      4 => Some(Self::Highlight),
+      5 => Some(Self::Shape),
+      6 => Some(Self::Spotlight),
+      7 => Some(Self::Draw),
+      8 => Some(Self::Magnify),
+      9 => Some(Self::Image),
+      _ => None,
+    }
+  }
+
+  /// The number the native records and the shaders read.
+  #[cfg(any(target_os = "macos", target_os = "windows", test))]
+  pub fn raw(self) -> u32 {
+    self as u32
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn kinds_read_back_from_their_native_numbers() {
+    assert_eq!(AnnotationKind::from_raw(0), Some(AnnotationKind::Arrow));
+    assert_eq!(AnnotationKind::from_raw(1), Some(AnnotationKind::Counter));
+    assert_eq!(AnnotationKind::from_raw(2), Some(AnnotationKind::Text));
+    assert_eq!(AnnotationKind::Arrow.raw(), 0);
+    assert_eq!(AnnotationKind::Counter.raw(), 1);
+    assert_eq!(AnnotationKind::Text.raw(), 2);
+    assert_eq!(AnnotationKind::from_raw(3), Some(AnnotationKind::Redact));
+    assert_eq!(AnnotationKind::Redact.raw(), 3);
+    assert_eq!(AnnotationKind::from_raw(4), Some(AnnotationKind::Highlight));
+    assert_eq!(AnnotationKind::Highlight.raw(), 4);
+    assert_eq!(AnnotationKind::from_raw(5), Some(AnnotationKind::Shape));
+    assert_eq!(AnnotationKind::Shape.raw(), 5);
+    assert_eq!(AnnotationKind::from_raw(6), Some(AnnotationKind::Spotlight));
+    assert_eq!(AnnotationKind::Spotlight.raw(), 6);
+    assert_eq!(AnnotationKind::from_raw(7), Some(AnnotationKind::Draw));
+    assert_eq!(AnnotationKind::Draw.raw(), 7);
+    assert_eq!(AnnotationKind::from_raw(8), Some(AnnotationKind::Magnify));
+    assert_eq!(AnnotationKind::Magnify.raw(), 8);
+    assert_eq!(AnnotationKind::from_raw(9), Some(AnnotationKind::Image));
+    assert_eq!(AnnotationKind::Image.raw(), 9);
+    assert_eq!(AnnotationKind::from_raw(10), None);
+  }
+}

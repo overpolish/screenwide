@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::osc::geometry::{Point, Size};
+use screenwide_osc::geometry::{Point, Size};
 
 pub const MINIMUM_ZOOM: f64 = 1.0;
 pub const MAXIMUM_ZOOM: f64 = 16.0;

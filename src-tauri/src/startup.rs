@@ -76,7 +76,7 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   app_windows::manage_recording_dock_movement(app.handle());
   editor::initialize(app.handle());
   crate::shortcuts::initialize(app.handle());
-  crate::system_accent::initialize(app.handle());
+  screenwide_accent::initialize(app.handle());
   crate::recording::sleep::initialize(app.handle());
   app_windows::manage_transient_popover_dismissal(app.handle());
 

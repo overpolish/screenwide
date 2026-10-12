@@ -16,8 +16,8 @@ use windows::Win32::{
   },
 };
 
-use crate::gpu::surface::{Frame, Surface};
-use crate::gpu::Gpu;
+use screenwide_gpu::surface::{Frame, Surface};
+use screenwide_gpu::Gpu;
 
 /// One overlay child drawn by wgpu. The composition tree is ours, so its
 /// target stays topmost above a WebView2 sibling.

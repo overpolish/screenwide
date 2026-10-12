@@ -7,7 +7,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::OnceLock;
 
-use crate::screenshots::CapturedImage;
+use screenwide_imaging::CapturedImage;
 
 static REVISION: AtomicU64 = AtomicU64::new(1);
 
@@ -40,7 +40,7 @@ impl Underlay {
   pub(crate) fn softened(&self) -> &CapturedImage {
     self
       .softened
-      .get_or_init(|| crate::editor::annotations::spotlight::soften::soften(&self.image))
+      .get_or_init(|| screenwide_annotations::spotlight::soften::soften(&self.image))
   }
 }
 

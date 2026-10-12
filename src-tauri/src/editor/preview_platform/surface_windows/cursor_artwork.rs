@@ -23,7 +23,7 @@ use windows::{
   },
 };
 
-use super::super::compositor::NativeCursors;
+use screenwide_compositor::compositor::NativeCursors;
 
 /// The standard cursors, in the order of the recorded cursor styles.
 pub(super) fn native_cursors() -> Result<NativeCursors, String> {

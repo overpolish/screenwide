@@ -8,8 +8,8 @@ mod drawing;
 
 use windows::Win32::Graphics::DirectComposition::{IDCompositionDevice, IDCompositionVisual};
 
-use crate::gpu::surface::{Frame, Surface};
-use crate::osc::{
+use screenwide_gpu::surface::{Frame, Surface};
+use screenwide_osc::{
   geometry::{Point, Rect, Size},
   gpu::windows::{self as osc_gpu, RenderConstants, Vertex},
 };
@@ -24,7 +24,7 @@ fn logical_rect(rect: [f32; 4], scale: f64) -> Rect {
 }
 
 pub(super) struct SelectionOverlay {
-  shared: &'static crate::gpu::Gpu,
+  shared: &'static screenwide_gpu::Gpu,
   surface: Surface,
   pipeline: wgpu::RenderPipeline,
   /// The constants block, and transparent texels for every texture the
@@ -46,7 +46,7 @@ impl SelectionOverlay {
 
   /// The overlay's visual under `root`. The caller commits the tree.
   pub(super) fn new(
-    shared: &'static crate::gpu::Gpu,
+    shared: &'static screenwide_gpu::Gpu,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
   ) -> Result<Self, String> {
@@ -119,7 +119,7 @@ impl SelectionOverlay {
   }
 }
 
-fn vertex_buffer(gpu: &crate::gpu::Gpu, capacity: usize) -> wgpu::Buffer {
+fn vertex_buffer(gpu: &screenwide_gpu::Gpu, capacity: usize) -> wgpu::Buffer {
   gpu.device.create_buffer(&wgpu::BufferDescriptor {
     label: Some("Screenwide selection vertices"),
     size: (capacity * size_of::<Vertex>()) as u64,

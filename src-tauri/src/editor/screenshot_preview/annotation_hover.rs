@@ -75,7 +75,7 @@ impl PreviewManager {
     // With no tool in hand, or the pen, there is no halo, whatever a pulse
     // report already on its way says: one landing after the tool changed would
     // bring back the halo that changing it retired.
-    if crate::editor::annotations::gesture::hovers_nothing(self.annotation_mode) {
+    if screenwide_annotations::gesture::hovers_nothing(self.annotation_mode) {
       return None;
     }
     let index = usize::try_from(index).ok()?;

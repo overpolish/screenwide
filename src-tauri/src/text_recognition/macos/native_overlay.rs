@@ -5,14 +5,14 @@ use std::ffi::CString;
 
 use tauri::Manager;
 
-use crate::{app_windows::screenshot_region::native_osc_macos as native_region, screenshots};
+use crate::app_windows::screenshot_region::native_osc_macos as native_region;
 
 use super::super::visual::RenderPacket;
 
 pub(in super::super) fn install(
   window: &tauri::WebviewWindow,
   anchor_id: u32,
-  snapshots: &[(u32, screenshots::CapturedImage)],
+  snapshots: &[(u32, screenwide_imaging::CapturedImage)],
 ) -> Result<(), String> {
   let window = window.clone();
   let snapshots = snapshots.to_vec();
@@ -87,7 +87,7 @@ pub(in super::super) fn show_interactive(window: &tauri::WebviewWindow) -> Resul
   app
     .run_on_main_thread(move || {
       let result =
-        crate::osc::cursor::macos::present_window(&window).map_err(|error| error.to_string());
+        crate::osc::cursor_macos::present_window(&window).map_err(|error| error.to_string());
       let _ = sender.send(result);
     })
     .map_err(|error| error.to_string())?;
@@ -96,7 +96,7 @@ pub(in super::super) fn show_interactive(window: &tauri::WebviewWindow) -> Resul
 
 fn close_windows(windows: Vec<tauri::WebviewWindow>) {
   for window in windows {
-    crate::osc::cursor::macos::prepare_window_close(&window);
+    crate::osc::cursor_macos::prepare_window_close(&window);
     if let Ok(view) = window.ns_view() {
       native_region::detach(view.cast());
     }

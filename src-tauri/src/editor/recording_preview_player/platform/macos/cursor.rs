@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::editor::cursor_effects::{CursorCompositor, CursorEffectSettings, GpuCursor};
+use screenwide_cursor_effects::{CursorCompositor, CursorEffectSettings, GpuCursor};
 
 #[derive(Clone, Copy)]
 pub(super) struct GpuCursorPreview {

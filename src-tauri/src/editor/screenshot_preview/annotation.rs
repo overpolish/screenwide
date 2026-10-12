@@ -4,15 +4,15 @@
 //! Screenshot-specific annotation layout and hover state. Shared handles and
 //! editing live in the editor's annotation module.
 
-use crate::editor::annotations::group::{group_boxes, NativeAnnotationGroupBox};
-use crate::editor::annotations::handles::{
+use screenwide_annotations::group::{group_boxes, NativeAnnotationGroupBox};
+use screenwide_annotations::handles::{
   annotation_handles, NativeAnnotationHandles, HANDLE_FLAG_GROUPED,
 };
-use crate::editor::annotations::{Annotation, AnnotationShape, AnnotationStyle};
+use screenwide_annotations::{Annotation, AnnotationShape, AnnotationStyle};
 
 /// The tool modes and their mapping live with the gesture model, so the two
 /// workspaces take the tool in hand the same way.
-use crate::editor::annotations::gesture::{annotation_mode, hovers_nothing};
+use screenwide_annotations::gesture::{annotation_mode, hovers_nothing};
 
 /// Where the hover halo is, and how wide. The width is already in the layer's
 /// canvas pixels: the native side reports how big the picture is drawn, and
@@ -59,7 +59,7 @@ pub(super) struct AnnotationLayout {
 pub(super) fn apply_annotation_layout(
   manager: &mut super::state::PreviewManager,
   defaults: Option<AnnotationStyle>,
-  fresh: crate::editor::annotations::edit::FreshAnnotation,
+  fresh: screenwide_annotations::edit::FreshAnnotation,
   tool: Option<&str>,
   pane_index: Option<u32>,
   selected: &[String],
@@ -136,7 +136,7 @@ pub(super) fn annotation_layout(
       &members,
       |_| true,
       source,
-      crate::editor::annotations::snap::source_per_size(source, image_width),
+      screenwide_annotations::snap::source_per_size(source, image_width),
       layer,
     ));
   }

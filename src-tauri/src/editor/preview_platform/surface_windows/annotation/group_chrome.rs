@@ -8,8 +8,8 @@
 
 use super::picking::layer_image_rect;
 use super::*;
-use crate::editor::annotations::gesture::MODE_SELECT;
-use crate::editor::annotations::group::{NativeAnnotationGroupBox, GROUP_BOX_GROUP};
+use screenwide_annotations::gesture::MODE_SELECT;
+use screenwide_annotations::group::{NativeAnnotationGroupBox, GROUP_BOX_GROUP};
 
 impl RecordingPreviewSurface {
   /// Publishes the boxes drawn round the annotations chosen together: round

@@ -5,8 +5,8 @@
 //! showing, and the provisional clips a drag writes through until it commits.
 
 use super::*;
-use crate::editor::annotations::pin::fold;
-use crate::editor::annotations::{AnnotationKind, AnnotationShape};
+use screenwide_annotations::pin::fold;
+use screenwide_annotations::{AnnotationKind, AnnotationShape};
 
 pub(super) struct Gesture {
   pub(super) pane: u32,
@@ -31,7 +31,7 @@ pub(super) struct Commit {
   pub(super) selected_annotation_ids: Vec<String>,
   /// Where in a text box's typing this commit falls; React groups a typing's
   /// commits into one edit.
-  pub(super) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
+  pub(super) text_edit: Option<screenwide_annotations::text::edit::TextEditPhase>,
   /// The pins of the pinned annotations among `annotations`, which an edit
   /// on the picture may have given a keyframe.
   pub(super) pins: Vec<super::commit::CommitPin>,
@@ -269,8 +269,7 @@ pub(super) fn provisional_clips(
         pin: None,
         annotation: annotation.clone(),
         track_id: track(pane),
-        start_ms: position
-          .saturating_sub(crate::editor::annotations::reveal::REVEAL_DRAW_IN_MS as u64),
+        start_ms: position.saturating_sub(screenwide_annotations::reveal::REVEAL_DRAW_IN_MS as u64),
         end_ms: position.saturating_add(3000),
       });
     }

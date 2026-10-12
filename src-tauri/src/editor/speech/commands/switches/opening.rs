@@ -14,14 +14,15 @@ use std::sync::Mutex;
 
 use tauri::AppHandle;
 
-use super::super::super::auto_volume::{self, AutoVolume};
-use super::super::super::noise::{self, NoiseReduction};
-use super::super::super::studio::{self, StudioSound};
 use super::super::super::studio_ducking;
-use super::super::super::voice::{self, VocalCleanup};
-use super::super::super::{duck, ready_voice, vad_model, SpeechSource, VoiceProgress};
+use super::super::super::{ready_voice, vad_model, SpeechSource, VoiceProgress};
 use super::super::MicrophoneTool;
 use super::{bar, heard_changed, level_heard, singing};
+use screenwide_speech::auto_volume::{self, AutoVolume};
+use screenwide_speech::duck;
+use screenwide_speech::noise::{self, NoiseReduction};
+use screenwide_speech::studio::{self, StudioSound};
+use screenwide_speech::voice::{self, VocalCleanup};
 
 /// One recording readied at a time; asked again while it runs, the work
 /// under way is left to finish.
@@ -70,7 +71,7 @@ pub(super) fn ready(app: &AppHandle, artifact_id: u64, source: SpeechSource) {
 fn has_work(app: &AppHandle, source: &SpeechSource) -> bool {
   let (folder, stream) = (&source.project_folder, source.microphone);
   let studio_on = studio::choice(folder, stream) == StudioSound::On;
-  if studio_on && studio::model(app).is_some() {
+  if studio_on && crate::editor::speech::studio_model(app).is_some() {
     if !studio::is_made(folder, stream) {
       return true;
     }

@@ -5,8 +5,8 @@ use super::*;
 
 impl Gpu {
   pub(super) fn new(host: HWND, editor: HWND) -> Result<Self, String> {
-    let shared = crate::gpu::shared()?;
-    let d3d11 = crate::gpu::d3d11()?;
+    let shared = screenwide_gpu::shared()?;
+    let d3d11 = screenwide_gpu::d3d11()?;
     // Every visual's content is a swap chain, so the composition device needs
     // no Direct3D device of its own.
     let composition: IDCompositionDevice =

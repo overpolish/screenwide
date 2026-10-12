@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 use super::super::super::audio_ribbon::{AudioRibbonRenderer, RibbonLook};
 use crate::editor::recording_preview_player::audio_visualizer::AudioRibbonEnvelopes;
-use crate::gpu::surface::Surface;
-use crate::gpu::Gpu;
+use screenwide_gpu::surface::Surface;
+use screenwide_gpu::Gpu;
 
 pub struct NativeAudioRibbon {
   gpu: &'static Gpu,
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn screenwide_audio_ribbon_renderer_create(
   let Some(layer) = NonNull::new(layer) else {
     return null_mut();
   };
-  let created = crate::gpu::shared().and_then(|gpu| {
+  let created = screenwide_gpu::shared().and_then(|gpu| {
     let surface = unsafe { Surface::on_metal_layer(gpu, layer) }?;
     Ok(NativeAudioRibbon {
       gpu,

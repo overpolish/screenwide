@@ -40,8 +40,8 @@ fn images_at(
   camera_position_ms: Option<u64>,
 ) -> Result<
   (
-    crate::screenshots::CapturedImage,
-    Option<crate::screenshots::CapturedImage>,
+    screenwide_imaging::CapturedImage,
+    Option<screenwide_imaging::CapturedImage>,
   ),
   String,
 > {
@@ -96,11 +96,11 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
   }
   // The camera's thumbnails show its effects, see-through where it has no
   // background, which only a PNG carries.
-  let mut effects = crate::editor::camera_effects::cpu::StillEffects::new(
+  let mut effects = screenwide_export::camera_effects::cpu::StillEffects::new(
     sources.camera_effects_now(),
     THUMBNAIL_HEIGHT * 4,
   );
-  let camera_only = sources.primary_kind == crate::recording::PrimaryRecordingKind::Camera;
+  let camera_only = sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera;
 
   for index in 0..count {
     let denominator = u64::from(count.saturating_sub(1).max(1));
@@ -166,7 +166,7 @@ pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
 /// A thumbnail as the timeline takes it: a PNG where it is see-through, and
 /// otherwise a JPEG, which is smaller.
 fn encoded(
-  image: &crate::screenshots::CapturedImage,
+  image: &screenwide_imaging::CapturedImage,
   see_through: bool,
 ) -> Result<Vec<u8>, String> {
   if see_through {

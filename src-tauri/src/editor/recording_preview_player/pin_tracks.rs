@@ -17,13 +17,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::held_timelines::ReadySlot;
-use super::pin_cache::cached_path;
-use super::pin_paths::PinStatus;
-use super::platform::LumaReader;
-use crate::editor::annotations::pin::find::find_again;
-use crate::editor::annotations::pin::{PinRequest, PinnedPath, TRACKING_SIDE};
-use crate::editor::annotations::snap::source_per_size;
-use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
+use screenwide_annotations::pin::find::find_again;
+use screenwide_annotations::pin::{PinRequest, PinnedPath, TRACKING_SIDE};
+use screenwide_annotations::snap::source_per_size;
+use screenwide_annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
+use screenwide_export::decode::LumaReader;
+use screenwide_export::pin_cache::cached_path;
+use screenwide_export::pin_paths::PinStatus;
 
 /// Working through the queue on the tracking thread.
 mod work;

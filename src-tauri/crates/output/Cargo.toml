@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-output"
+description = "What a still or a frame is composed into: canvas, background, placement and annotations"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[features]
+# The output settings and pictures the app's own tests compose.
+test-support = []
+
+[dependencies]
+bytemuck.workspace = true
+image.workspace = true
+png.workspace = true
+quantette.workspace = true
+screenwide-annotations.workspace = true
+screenwide-gpu.workspace = true
+screenwide-imaging.workspace = true
+screenwide-scenes.workspace = true
+serde.workspace = true
+ts-rs.workspace = true
+wgpu.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[build-dependencies]
+cc.workspace = true
+screenwide-wgsl.workspace = true

@@ -20,8 +20,9 @@ use crate::editor::recording_preview_player::audio::AudioPlayback;
 use crate::editor::recording_preview_player::audio_visualizer::present_audio_position;
 use crate::editor::recording_preview_player::video::LateFrames;
 use crate::editor::recording_preview_player::{
-  AudioTrackVolume, PlayerSources, RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
+  PlayerSources, RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
 };
+use screenwide_export::recording_model::AudioTrackVolume;
 
 pub(super) struct RunContext {
   pub audio_child: Arc<Mutex<Option<Child>>>,

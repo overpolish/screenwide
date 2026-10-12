@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-osc"
+description = "On-screen controls: their state, geometry and GPU renderer"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[features]
+# Inspecting a controller's gesture from the app's own tests.
+test-support = []
+
+[dependencies]
+bytemuck.workspace = true
+image.workspace = true
+screenwide-accent.workspace = true
+screenwide-gpu.workspace = true
+serde.workspace = true
+wgpu.workspace = true
+
+[build-dependencies]
+cc.workspace = true
+screenwide-wgsl.workspace = true

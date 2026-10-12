@@ -20,7 +20,7 @@ use windows::Win32::{
 };
 
 use super::*;
-use crate::editor::annotations::text::typing::Motion;
+use screenwide_annotations::text::typing::Motion;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Outcome {

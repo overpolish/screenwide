@@ -11,7 +11,7 @@ pub(super) fn background_image_layer(canvas: &ScreenshotOutputSettings) -> Optio
   if canvas.background_type != "image" {
     return None;
   }
-  let picture = crate::screenshots::background_image_canvas(
+  let picture = screenwide_output::background_image_canvas(
     canvas.background_image_path.as_deref()?,
     canvas.width,
     canvas.height,
@@ -50,7 +50,7 @@ pub(super) fn compose_screenshot_workspace(
     // carries it as its own alpha, and the canvas corners are rounded last,
     // exactly where the shader would have rounded them.
     let picture = background_image_layer(&output.canvas);
-    let mut composed = crate::screenshots::compose_output_layers(
+    let mut composed = screenwide_compositor::compositor::still_overlay::compose_output_layers(
       &first.image,
       &output.output_for(first, items),
       0.0,
@@ -63,7 +63,7 @@ pub(super) fn compose_screenshot_workspace(
       picture.is_some(),
     )?;
     for item in &ordered_items[1..] {
-      let layer = crate::screenshots::compose_output_layers(
+      let layer = screenwide_compositor::compositor::still_overlay::compose_output_layers(
         &item.image,
         &output.output_for(item, items),
         0.0,
@@ -75,13 +75,13 @@ pub(super) fn compose_screenshot_workspace(
         false,
         true,
       )?;
-      composed = crate::screenshots::alpha_composite(&composed, &layer)?;
+      composed = screenwide_compositor::compositor::still::alpha_composite(&composed, &layer)?;
     }
     let Some(picture) = picture else {
       return Ok(composed);
     };
-    Ok(crate::screenshots::rounded_corners(
-      &crate::screenshots::alpha_composite(&picture, &composed)?,
+    Ok(screenwide_output::rounded_corners(
+      &screenwide_compositor::compositor::still::alpha_composite(&picture, &composed)?,
       output.canvas.background_radius_percent,
     ))
   }

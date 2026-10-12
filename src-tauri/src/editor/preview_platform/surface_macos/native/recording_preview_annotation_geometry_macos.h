@@ -4,7 +4,7 @@
 #pragma once
 
 #include <math.h>
-#include "../../../annotations/geometry.h"
+#include "../../../../../crates/annotations/src/geometry.h"
 
 /// One annotation prepared in display points, from the normalised record the
 /// chrome was given. The shape is Rust's, so the grips and the halo cannot

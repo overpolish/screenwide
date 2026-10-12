@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{
-  osc::geometry::Point,
-  ruler::analysis::{ComponentBox, GradientMaps},
-};
+use screenwide_imaging::analysis::{ComponentBox, GradientMaps};
+use screenwide_osc::geometry::Point;
 
 mod sampling;
 use sampling::curve_points;
