@@ -130,6 +130,7 @@ export function useTranscriptMenu(
       const [first, last] = context.split("-").map(Number);
       if (itemId in on) on[itemId as TranscriptMenuAction]({ first, last });
     },
+    showsAllItems: true,
     width: MENU_WIDTH,
   });
 

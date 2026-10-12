@@ -394,7 +394,6 @@ export type Messages = {
   "editor-panels-transcript-search": null;
   "editor-panels-transcript-transcribe": null;
   "editor-panels-transcript-transcribe-again": null;
-  "editor-panels-transcript-transcribe-description": null;
   "editor-panels-transcript-working": null;
   "editor-panels-two-thirds": null;
   "editor-panels-vocal-cleanup": null;

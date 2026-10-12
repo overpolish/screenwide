@@ -89,10 +89,7 @@ export function TranscriptPanelView(props: TranscriptPanelViewProps) {
   const isTranscribing = transcript.status === "transcribing";
   return (
     <div>
-      <ControlRow
-        description={t("editor-panels-transcript-transcribe-description")}
-        title={t("editor-panels-transcript")}
-      >
+      <ControlRow title={t("editor-panels-transcript")}>
         {(controlProps) =>
           isTranscribing ? (
             <Button {...controlProps} onPress={props.onCancel}>

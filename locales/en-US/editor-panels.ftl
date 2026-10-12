@@ -96,8 +96,7 @@ editor-panels-transcript = Transcript
 # The toolbar button's accessible name.
 editor-panels-transcript-name = Transcript editing
 # Shown beside the download of the model the tool needs.
-editor-panels-transcript-description = Edit the recording by editing its words.
-editor-panels-transcript-transcribe-description = Transcribes your microphone on this computer.
+editor-panels-transcript-description = Text-driven editing.
 editor-panels-transcript-transcribe = Transcribe
 editor-panels-transcript-cancel = Cancel
 editor-panels-transcript-working = Transcribing

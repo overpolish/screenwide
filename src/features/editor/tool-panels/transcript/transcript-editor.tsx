@@ -101,46 +101,53 @@ export function TranscriptEditor({
         query={search.query}
         units={units}
       />
-      <TranscriptText
-        editing={editing}
-        isDisabled={isLocked}
-        marks={cleanup.marks}
-        matches={search.matches}
-        onCut={actions.delete}
-        onEditEnd={(span, text) => {
-          setEditing(null);
-          setSelection({ anchor: span.first, focus: span.first });
-          if (text === null) return;
-          const typed = normalizeText(text);
-          const shown = units
-            .slice(span.first, span.last + 1)
-            .map((unit) => unit.text)
-            .join(" ");
-          // Nothing left is the words deleted: cut as they were heard.
-          if (typed === "") {
-            actions.spelling(span);
-            actions.delete(span);
-          } else if (typed !== normalizeText(shown)) correct(span, typed);
-        }}
-        onEditStart={actions.edit}
-        onMenu={(span, point) => {
-          void openMenu({ marked: cleanup.menuMark(span), point, span, units });
-        }}
-        onPaint={(span, cut) => {
-          (cut ? actions.delete : actions.restore)(span);
-        }}
-        onRedo={props.onRedo}
-        onRestore={actions.restore}
-        onSeek={props.onSeek}
-        onSelectionChange={setSelection}
-        onTogglePlayback={props.onTogglePlayback}
-        onUndo={props.onUndo}
-        playheadMs={props.playheadMs}
-        preview={cleanup.preview}
-        selection={selection}
-        units={units}
-      />
-      <TranscriptHint />
+      <div className="flex flex-col gap-control">
+        <TranscriptText
+          editing={editing}
+          isDisabled={isLocked}
+          marks={cleanup.marks}
+          matches={search.matches}
+          onCut={actions.delete}
+          onEditEnd={(span, text) => {
+            setEditing(null);
+            setSelection({ anchor: span.first, focus: span.first });
+            if (text === null) return;
+            const typed = normalizeText(text);
+            const shown = units
+              .slice(span.first, span.last + 1)
+              .map((unit) => unit.text)
+              .join(" ");
+            // Nothing left is the words deleted: cut as they were heard.
+            if (typed === "") {
+              actions.spelling(span);
+              actions.delete(span);
+            } else if (typed !== normalizeText(shown)) correct(span, typed);
+          }}
+          onEditStart={actions.edit}
+          onMenu={(span, point) => {
+            void openMenu({
+              marked: cleanup.menuMark(span),
+              point,
+              span,
+              units,
+            });
+          }}
+          onPaint={(span, cut) => {
+            (cut ? actions.delete : actions.restore)(span);
+          }}
+          onRedo={props.onRedo}
+          onRestore={actions.restore}
+          onSeek={props.onSeek}
+          onSelectionChange={setSelection}
+          onTogglePlayback={props.onTogglePlayback}
+          onUndo={props.onUndo}
+          playheadMs={props.playheadMs}
+          preview={cleanup.preview}
+          selection={selection}
+          units={units}
+        />
+        <TranscriptHint />
+      </div>
       {transcript.silences ? (
         <SilencesRow
           isLocked={isLocked}

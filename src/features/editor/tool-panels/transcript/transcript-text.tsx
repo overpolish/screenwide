@@ -264,7 +264,7 @@ export function TranscriptText(props: TranscriptTextProps) {
     <ScrollArea
       className="pe-control-inset"
       constrainHeight
-      rootClassName="max-h-64 min-h-24"
+      rootClassName="max-h-64"
     >
       <div
         {...handlers}
