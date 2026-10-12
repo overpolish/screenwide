@@ -13,6 +13,7 @@ import { FramePanel } from "./frame/frame-panel";
 import { KeyboardPanel } from "./keyboard/keyboard-panel";
 import { ScenePanel } from "./scene/scene-panel";
 import { SelectionPanel } from "./selection/selection-panel";
+import { TranscriptPanel } from "./transcript/transcript-panel";
 import { usePanelShortcuts } from "./use-panel-shortcuts";
 
 const toolPanels: Record<
@@ -26,7 +27,19 @@ const toolPanels: Record<
   keyboard: KeyboardPanel,
   scene: ScenePanel,
   selection: SelectionPanel,
+  transcript: TranscriptPanel,
 };
+
+/** The panel window's surface and inset, which every tool's controls sit
+ * in. A story showing a panel's controls without the editor behind them uses
+ * it too. */
+export function ToolPanelSurface({ children }: { children: ReactNode }) {
+  return (
+    <section className="window-surface flex w-full flex-col gap-section overflow-hidden rounded-window p-window-inset text-content-fg windows:inset-ring windows:inset-ring-popover-stroke">
+      {children}
+    </section>
+  );
+}
 
 /**
  * One editor tool's controls, as they appear in the panel window.
@@ -46,8 +59,8 @@ export function ToolPanel({
   const Panel = toolPanels[tool];
 
   return (
-    <section className="window-surface flex w-full flex-col gap-section overflow-hidden rounded-window p-window-inset text-content-fg windows:inset-ring windows:inset-ring-popover-stroke">
+    <ToolPanelSurface>
       <Panel workspace={workspace} />
-    </section>
+    </ToolPanelSurface>
   );
 }

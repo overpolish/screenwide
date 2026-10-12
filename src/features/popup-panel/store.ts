@@ -12,8 +12,10 @@ import type { NoteTranscript } from "../editor/timeline/moments/recording-moment
 /** `tool-` names an annotation tool's own glyph, kept apart from `image`, the
  * export-an-image glyph. */
 export type PopupPanelIcon =
+  | "allow"
   | "clipboard"
   | "copy"
+  | "edit"
   | "folder"
   | "folder-open"
   | "folder-root"
@@ -23,6 +25,7 @@ export type PopupPanelIcon =
   | "remove"
   | "restore"
   | "scrolling"
+  | "spelling"
   | "timer"
   | "trash"
   | `tool-${AnnotationKind}`;
@@ -61,7 +64,8 @@ export type ToolPanelKind =
   | "frame"
   | "keyboard"
   | "scene"
-  | "selection";
+  | "selection"
+  | "transcript";
 
 /** A list of choices: the panel as it has always been. */
 export type PopupPanelListContent = {

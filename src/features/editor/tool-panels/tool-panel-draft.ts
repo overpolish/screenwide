@@ -146,6 +146,7 @@ export function resolveToolPanelSnapshot(
     studioDucking,
     studioSound,
     swapScenePanes: _swapScenePanes,
+    transcriptRequest: _transcriptRequest,
     vocalCleanup,
     ...values
   } = draft.values;

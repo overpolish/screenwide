@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Polish, with the
+# forms speech uses most. One expression per line, lowercase; a line of
+# several words matches only as a whole.
+chuj
+chuja
+chujowy
+cholera
+dupa
+dupek
+jebać
+jebany
+jebana
+kurwa
+kurwy
+kurde
+pieprzony
+pierdolić
+pierdolony
+pizda
+skurwiel
+skurwysyn
+spierdalaj
+zajebisty

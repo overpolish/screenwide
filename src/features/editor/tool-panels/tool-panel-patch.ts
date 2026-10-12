@@ -14,6 +14,7 @@ import {
 import { KeyboardEffectSettings } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
+import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelSnapshot } from "./tool-panel-store";
 
@@ -178,6 +179,8 @@ export type ToolPanelPatch = Partial<
   /** Trade the panes of the custom scene under the playhead: each takes the
    * other's box and place in the order. */
   swapScenePanes?: true;
+  /** Something the Transcript panel asks for: never a setting it holds. */
+  transcriptRequest?: TranscriptRequest;
   /** Clean up the selected microphone's voice, or put it back as it was. */
   vocalCleanup?: boolean;
 };

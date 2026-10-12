@@ -175,6 +175,9 @@ settings-transcription-camera-background = Background removal
 settings-transcription-camera-background-description = Removes the background behind you on camera.
 settings-transcription-camera-objects = Camera objects
 settings-transcription-camera-objects-description = Keeps or removes objects on camera.
+# The model the recording's transcript is made with, named for what it does.
+settings-transcription-transcripts = Transcripts
+settings-transcription-transcripts-description = Lets you edit and caption recordings by their words.
 settings-transcription-models = Models
 settings-transcription-language = Language
 settings-transcription-language-description = The language your recordings are spoken in.

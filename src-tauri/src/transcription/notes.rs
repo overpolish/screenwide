@@ -221,6 +221,8 @@ fn transcribe(
     model.id,
     &samples,
     language::resolved(&language::current()),
+    Vec::new(),
+    &mut |_| {},
   )?;
   crate::moments::add_transcript(&job.moments, job.moment, &transcript.text)
 }

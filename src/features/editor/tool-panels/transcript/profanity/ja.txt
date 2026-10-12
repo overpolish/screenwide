@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Japanese. One
+# expression per line. Japanese is written without spaces, so each is found
+# wherever it occurs in the words run together.
+アホ
+カス
+キチガイ
+クソ
+くそ
+クソったれ
+くたばれ
+死ね
+ちくしょう
+畜生
+ばかやろう
+馬鹿野郎
+ブス
+ボケ
+まんこ
+ちんこ
+やりまん

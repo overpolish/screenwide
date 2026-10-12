@@ -89,6 +89,61 @@ editor-panels-keyboard-dark = Dark
 editor-panels-keyboard-light = Light
 editor-panels-keyboard-restore = Restore all shortcuts
 
+## Transcript: the recording's microphone as words, chosen and cut, or corrected in place
+
+# The tool's tooltip and the transcript's accessible name.
+editor-panels-transcript = Transcript
+# The toolbar button's accessible name.
+editor-panels-transcript-name = Transcript editing
+# Shown beside the download of the model the tool needs.
+editor-panels-transcript-description = Edit the recording by editing its words.
+editor-panels-transcript-transcribe-description = Transcribes your microphone on this computer.
+editor-panels-transcript-transcribe = Transcribe
+editor-panels-transcript-cancel = Cancel
+editor-panels-transcript-working = Transcribing
+# Shown under Transcribe when transcribing the recording failed.
+editor-panels-transcript-failed = Could not transcribe the recording. Try again.
+# $key is drawn as a keycap: Command on macOS, Ctrl on Windows.
+editor-panels-transcript-hint = { $key } click/drag to cut or restore words. Double-click to edit.
+# The accessible name of the word or words being edited in place.
+editor-panels-transcript-editing = Word being edited
+# The accessible name of the menu a right click on the transcript's words opens.
+editor-panels-transcript-actions = Word actions
+# Menu item: edit the chosen words in place.
+editor-panels-transcript-edit = Edit
+# Menu item: bring back the struck-through words chosen.
+editor-panels-transcript-restore = Restore
+# Menu item: put the chosen words back to the text that was heard.
+editor-panels-transcript-restore-spelling = Restore spelling
+# The search field over the transcript's words: its placeholder and accessible name.
+editor-panels-transcript-search = Search transcript
+# The row that removes every filler word: its title.
+editor-panels-transcript-fillers = Filler words
+# The row that removes every word marked as profanity: its title.
+editor-panels-transcript-profanity = Profanity
+# Under the filler words and profanity rows, while the transcript has any: how many.
+editor-panels-transcript-found =
+    { $count ->
+        [one] { $count } found
+       *[other] { $count } found
+    }
+# Menu item on a filler or profane word: cut every word written the same way. $text is the word as the transcript shows it.
+editor-panels-transcript-remove-same = Remove every “{ $text }”
+# Menu item on a filler: cut every filler word in the transcript.
+editor-panels-transcript-remove-fillers = Remove all filler words
+# Menu item on a profane word: cut every word marked as profanity.
+editor-panels-transcript-remove-profanity = Remove all profanity
+# Menu item on a word marked as profanity: stop marking it anywhere in this recording.
+editor-panels-transcript-not-profanity = Not profanity
+# The chevron that expands the Replace all row under the search field.
+editor-panels-transcript-replace-toggle = Replace
+# The text field for what every match is replaced with.
+editor-panels-transcript-replace-with = Replace with
+# Button that replaces every match found, as one undo step.
+editor-panels-transcript-replace-all = Replace all
+# Button that transcribes the recording again, once it already has a transcript.
+editor-panels-transcript-transcribe-again = Transcribe again
+
 ## Frame and background
 
 editor-panels-remove-preset = Remove Preset
@@ -191,6 +246,6 @@ editor-panels-silences-none = No long pauses found
 # $duration is how much shorter the cuts make the recording, such as 00:48.
 editor-panels-silences-removed =
     { $count ->
-        [one] One cut, { $duration } shorter
+        [one] { $count } cut, { $duration } shorter
        *[other] { $count } cut, { $duration } shorter
     }

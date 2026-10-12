@@ -3,12 +3,11 @@
 
 import { RotateCcw } from "lucide-react";
 
-import { Button } from "../../../../components/base/button/button";
 import { IconButton } from "../../../../components/base/button/icon-button";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
-import { formatDuration } from "../../duration";
+import { SilencesRow } from "../silences-row";
 import { ToolPanelPatch } from "../tool-panel-patch";
 import {
   ToolPanelAudioSelection,
@@ -16,7 +15,6 @@ import {
 } from "../tool-panel-store";
 
 import { ModelSwitchRow, WorkingSwitchRow } from "./microphone-switch-rows";
-import { ToolProgress } from "./tool-progress";
 
 type RowsProps = {
   change: (values: ToolPanelPatch) => void;
@@ -82,26 +80,10 @@ export function AudioSelectionRows({
   );
 }
 
-const silencesDescription = ({
-  count,
-  durationMs,
-  status,
-}: ToolPanelMicrophone["silences"]) => {
-  if (status === "none-found") return t("editor-panels-silences-none");
-  return status === "idle" && count > 0
-    ? t("editor-panels-silences-removed", {
-        count,
-        duration: formatDuration(durationMs),
-      })
-    : undefined;
-};
-
 /**
  * Reduce noise and Remove silences wait on one listen through the track for
- * speech. Restore all stays in place while there is nothing to restore, as
- * auto zoom's Clear all does, so the row never shifts as cuts come and go.
- * While a tool works on the track for a while, a bar under its row shows how
- * far it has got.
+ * speech. While a tool works on the track for a while, a bar under its row
+ * shows how far it has got.
  */
 function MicrophoneRows({
   change,
@@ -109,7 +91,6 @@ function MicrophoneRows({
   microphone,
 }: RowsProps & { microphone: ToolPanelMicrophone }) {
   const { ducking, silences } = microphone;
-  const isFinding = silences.status === "finding";
   // Studio sound does Reduce noise's and Vocal cleanup's work while it is on
   // and its model is here, so those two step aside.
   const isStudio =
@@ -185,41 +166,16 @@ function MicrophoneRows({
           working={t("editor-panels-studio-ducking-working")}
         />
       ) : null}
-      <div>
-        <ControlRow
-          controlClassName="gap-control"
-          description={silencesDescription(silences)}
-          title={t("editor-panels-silences")}
-        >
-          {(controlProps) => (
-            <>
-              <Button
-                {...controlProps}
-                isDisabled={isLocked || isFinding}
-                onPress={() => {
-                  change({ removeSilences: true });
-                }}
-              >
-                {t("editor-panels-remove")}
-              </Button>
-              <Button
-                aria-label={t("editor-panels-restore-silences")}
-                isDisabled={isLocked || isFinding || silences.count === 0}
-                onPress={() => {
-                  change({ restoreSilences: true });
-                }}
-              >
-                {t("editor-panels-restore-all")}
-              </Button>
-            </>
-          )}
-        </ControlRow>
-        <ToolProgress
-          isWorking={isFinding && silences.progress !== null}
-          label={t("editor-panels-silences-finding")}
-          value={silences.progress ?? 0}
-        />
-      </div>
+      <SilencesRow
+        isLocked={isLocked}
+        onRemove={() => {
+          change({ removeSilences: true });
+        }}
+        onRestore={() => {
+          change({ restoreSilences: true });
+        }}
+        silences={silences}
+      />
     </>
   );
 }

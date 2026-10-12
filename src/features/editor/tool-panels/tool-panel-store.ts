@@ -27,6 +27,7 @@ import {
   ToolPanelAnnotation,
   ToolPanelSelection,
 } from "./tool-panel-selection";
+import { ToolPanelTranscript } from "./tool-panel-transcript";
 
 /**
  * What the frame panel shows: the output canvas the workspace renders into,
@@ -106,6 +107,9 @@ export type ToolPanelSnapshot = {
   selection: ToolPanelSelection | null;
   /** Latest panel request committed with this snapshot. */
   acknowledgedSeq?: number;
+  /** The recording's transcript, where it has a microphone to transcribe;
+   * absent or null otherwise. */
+  transcript?: ToolPanelTranscript | null;
 };
 
 export type ToolPanelRequest =
@@ -139,6 +143,7 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   scene: null,
   sceneTemplates: [],
   selection: null,
+  transcript: null,
 };
 
 const STORE_NAME = "screenwide-tool-panels";

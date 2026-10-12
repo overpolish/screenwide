@@ -11,10 +11,15 @@ const textInputTypes = new Set([
   "url",
 ]);
 
+/** Text fields, and widgets that work on text their own way and answer the
+ * same keys, marked `data-owns-text-keys`: the transcript, whose words are
+ * chosen, cut and copied there. */
 export const ownsTextEditingKeys = (target: EventTarget | null) =>
   (target instanceof HTMLInputElement && textInputTypes.has(target.type)) ||
   target instanceof HTMLTextAreaElement ||
-  (target instanceof HTMLElement && target.isContentEditable);
+  (target instanceof HTMLElement &&
+    (target.isContentEditable ||
+      target.closest("[data-owns-text-keys]") !== null));
 
 // Widgets whose own arrow-key behaviour is the point of them: react-aria
 // sliders, number fields, listboxes, menus and tab lists all move a value or a

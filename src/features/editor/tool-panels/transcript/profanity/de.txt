@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in German. One
+# expression per line, lowercase; a line of several words matches only as a
+# whole.
+arsch
+arschgeige
+arschloch
+arschlöcher
+bastard
+depp
+dreck
+drecksau
+dreckskerl
+fick
+ficken
+fick dich
+ficker
+fotze
+hackfresse
+hurensohn
+hure
+idiot
+kacke
+kanake
+mist
+missgeburt
+neger
+nutte
+pisser
+scheiß
+scheiße
+scheisse
+scheißegal
+schlampe
+schwanz
+schwuchtel
+spast
+verdammt
+verdammte
+verdammter
+verfickt
+verfickte
+vollidiot
+wichser
+wixer

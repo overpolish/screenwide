@@ -10,7 +10,8 @@ export type TranscriptionPurpose =
   | "cameraObjects"
   | "moments"
   | "studioDucking"
-  | "studioSound";
+  | "studioSound"
+  | "transcripts";
 
 /** A speech model, and how far it is on this computer. */
 export type TranscriptionModel = {

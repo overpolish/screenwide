@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{envelopes, source_ratio, AudioVisualizerTrack, MAX_RIBBON_POINTS, MAX_RIBBON_TRACKS};
+use super::{envelopes, AudioVisualizerTrack, MAX_RIBBON_POINTS, MAX_RIBBON_TRACKS};
 
 fn track(gain_decibels: f64, waveform: Vec<f32>) -> AudioVisualizerTrack {
   AudioVisualizerTrack {
@@ -74,11 +74,4 @@ fn a_track_named_twice_takes_one_row() {
 fn keeps_every_sample_inside_the_unit_range() {
   let uploaded = envelopes(&[track(0.0, vec![f32::NAN, -3.0, 4.0, 0.5])]);
   assert_eq!(uploaded.samples, vec![0.0, 0.0, 1.0, 0.5]);
-}
-
-#[test]
-fn ribbon_uses_source_time_after_a_cut_instead_of_compressed_timeline_time() {
-  assert_eq!(source_ratio(7_018, 8_125), 0.8637538461538462);
-  assert_eq!(source_ratio(9_000, 8_125), 1.0);
-  assert_eq!(source_ratio(7_018, 0), 0.0);
 }

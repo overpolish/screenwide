@@ -5,6 +5,8 @@ import type { RecordingAnnotationClip } from "./RecordingAnnotationClip";
 import type { RecordingSceneClip } from "./RecordingSceneClip";
 import type { RecordingSilenceCut } from "./RecordingSilenceCut";
 import type { RecordingTimelineSegment } from "./RecordingTimelineSegment";
+import type { RecordingTranscriptCorrection } from "./RecordingTranscriptCorrection";
+import type { RecordingTranscriptCut } from "./RecordingTranscriptCut";
 
 export type RecordingTimelineEdit = { artifactId: number, annotationClips?: Array<RecordingAnnotationClip>, 
 /**
@@ -15,4 +17,18 @@ sceneClips?: Array<RecordingSceneClip>,
  * What Remove silences cut, for Restore all to bring back; see
  * [`silences`].
  */
-silenceCuts?: Array<RecordingSilenceCut>, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, keyboardShortcutPositions?: Array<KeyboardShortcutPosition>, };
+silenceCuts?: Array<RecordingSilenceCut>, 
+/**
+ * What the Transcript panel cut, for Restore all to bring back; see
+ * [`transcript`].
+ */
+transcriptCuts?: Array<RecordingTranscriptCut>, 
+/**
+ * Words the Transcript panel corrected, which change nothing that plays
+ * or exports; see [`transcript`].
+ */
+transcriptCorrections?: Array<RecordingTranscriptCorrection>, 
+/**
+ * Folded text the Transcript panel was told is not profanity; marks only.
+ */
+transcriptAllowedWords?: Array<string>, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, keyboardShortcutPositions?: Array<KeyboardShortcutPosition>, };

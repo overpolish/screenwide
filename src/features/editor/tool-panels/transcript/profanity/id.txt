@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Indonesian, and in
+# Malay, which shares most of them. One expression per line, lowercase; a line
+# of several words matches only as a whole.
+anjing
+bajingan
+bangsat
+babi
+brengsek
+kampret
+kontol
+memek
+ngentot
+pelacur
+sialan
+tai

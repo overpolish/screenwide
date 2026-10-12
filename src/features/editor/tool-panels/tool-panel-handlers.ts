@@ -18,6 +18,7 @@ import { CursorEffectSettings, KeyboardEffectSettings } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
 import { ToolPanelPatch } from "./tool-panel-patch";
+import { TranscriptRequest } from "./tool-panel-transcript";
 
 /**
  * What a tool panel can ask for. Each one is an editor handler that already
@@ -166,6 +167,8 @@ export type ToolPanelHandlers = {
   onStudioSoundChange?: (enabled: boolean) => void;
   /** Download the model Studio sound rebuilds the microphone with. */
   onStudioSoundDownload?: () => void;
+  /** Do what the Transcript panel asks. */
+  onTranscriptRequest?: (request: TranscriptRequest) => void;
   /** Clean up the selected microphone's voice, or put it back as it was. */
   onVocalCleanupChange?: (enabled: boolean) => void;
 };

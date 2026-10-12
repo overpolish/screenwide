@@ -3,13 +3,14 @@
 
 import { motion, MotionProps } from "motion/react";
 import { Ref } from "react";
-import { AriaButtonProps } from "react-aria";
+import { AriaButtonProps, HoverEvents } from "react-aria";
 import { Button as AriaButton } from "react-aria-components";
 import { VariantProps } from "tailwind-variants";
 
 import { buttonVariants } from "./button-variants";
 
 type ButtonProps = AriaButtonProps &
+  HoverEvents &
   VariantProps<typeof buttonVariants> &
   MotionProps & {
     className?: string;

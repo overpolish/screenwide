@@ -41,7 +41,7 @@ pub(crate) fn system() -> String {
 }
 
 /// What to ask the transcriber for: a code, or nothing to detect it.
-pub(super) fn resolved(setting: &str) -> Option<String> {
+pub(crate) fn resolved(setting: &str) -> Option<String> {
   match setting {
     AUTO => None,
     SYSTEM => Some(system()),

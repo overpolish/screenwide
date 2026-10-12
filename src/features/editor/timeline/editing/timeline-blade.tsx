@@ -51,6 +51,9 @@ export type TimelineBladeController = {
   /** Where a snapped drag is held, in output time, for the guide line. */
   snapGuidePosition: number | null;
   snapPosition: (sourcePosition: number) => number;
+  /** The words chosen in the Transcript panel, in output time, shown the way
+   * a range is but owned by the panel: nothing on the timeline acts on it. */
+  transcriptHighlight: TimelineRangeSelection | null;
   /** Returns the clamped output position when the drag overshot the trim. */
   updateTrim: (outputPosition: number) => number | null;
 };

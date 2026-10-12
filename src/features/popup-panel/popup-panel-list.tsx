@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { AppWindowMac, Volume2 } from "lucide-react";
-import { ReactNode, useLayoutEffect, useRef } from "react";
+import { ReactNode, useRef } from "react";
 import {
   Header,
   ListBoxSection as AriaListBoxSection,
@@ -20,13 +19,16 @@ import { hotkeyKeys } from "../../components/shared/hotkey-field/hotkey";
 import { t } from "../../i18n/i18n";
 
 import { hidePopupPanel } from "./api";
-import { emptyPopupPanelHeight, popupPanelMaxHeight } from "./layout";
 import { PopupPanelItemGlyph } from "./popup-panel-item-glyph";
 import {
   PopupPanelItem,
   PopupPanelListContent,
   usePopupPanelStore,
 } from "./store";
+import {
+  POPUP_LABEL_ATTRIBUTE,
+  useFittedListWindow,
+} from "./use-fitted-list-window";
 
 type PopupPanelGroup = {
   id: string;
@@ -54,8 +56,7 @@ const groupItemsBySection = (items: PopupPanelItem[]): PopupPanelGroup[] => {
 };
 
 /** The panel as a list of choices: a menu, a pop-up button's list, or a
- * checklist. It fits the window to its items, up to the list ceiling unless
- * the list asks to be shown whole. */
+ * checklist. It fits the window to its items (`useFittedListWindow`). */
 export function PopupPanelList({
   content,
   focusContents,
@@ -78,41 +79,11 @@ export function PopupPanelList({
   const activeItemCount = content.items.length;
   const showsAllItems = content.showsAllItems === true;
 
-  useLayoutEffect(() => {
-    if (!listboxRef.current) return;
-
-    const window = getCurrentWindow();
-    const listbox = listboxRef.current;
-    const scrollContent = listbox.parentElement;
-    let cancelled = false;
-
-    const resize = async () => {
-      const scaleFactor = await window.scaleFactor();
-      const currentSize = (await window.innerSize()).toLogical(scaleFactor);
-      if (cancelled) return;
-
-      const contentHeight = scrollContent?.scrollHeight ?? listbox.scrollHeight;
-      const height =
-        activeItemCount === 0
-          ? emptyPopupPanelHeight
-          : showsAllItems
-            ? contentHeight
-            : Math.min(contentHeight, popupPanelMaxHeight);
-      await window.setSize(new LogicalSize(currentSize.width, height));
-    };
-
-    void resize();
-
-    const observer = new ResizeObserver(() => {
-      void resize();
-    });
-    observer.observe(scrollContent ?? listbox);
-
-    return () => {
-      cancelled = true;
-      observer.disconnect();
-    };
-  }, [activeId, activeItemCount, showsAllItems]);
+  useFittedListWindow(listboxRef, {
+    content: activeId,
+    itemCount: activeItemCount,
+    showsAllItems,
+  });
 
   // A menu runs actions rather than holding a pick, so nothing is ever drawn
   // as selected and the gutter that would carry the checkmark is dropped.
@@ -210,7 +181,11 @@ export function PopupPanelList({
         ) : null}
         {/* Often a device's or a folder's own name, in whichever direction
             it is written. */}
-        <span className="truncate" dir="auto">
+        <span
+          className="truncate"
+          dir="auto"
+          {...{ [POPUP_LABEL_ATTRIBUTE]: "" }}
+        >
           {item.label}
         </span>
         {item.detail ? <Badge className="ms-auto">{item.detail}</Badge> : null}

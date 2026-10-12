@@ -39,7 +39,8 @@ pub(super) fn install(
     let ranges = ranges.to_vec();
     let cancelled = Arc::clone(cancelled);
     let position_ms = Arc::clone(position_ms);
-    let duration = sources.duration_ms as f64;
+    let edit = Arc::clone(&sources.animation_ranges);
+    let duration_ms = sources.duration_ms;
     let started = Instant::now();
     let last_refresh_ms = Arc::new(AtomicU64::new(0));
     let refreshed = Arc::clone(&last_refresh_ms);
@@ -54,11 +55,9 @@ pub(super) fn install(
         position_ms.store(source.round() as u64, Ordering::Release);
         source
       };
-      if duration > 0.0 {
-        (source / duration).clamp(0.0, 1.0)
-      } else {
-        0.0
-      }
+      edit.read().map_or(0.0, |edit| {
+        super::audio_visualizer::edited_ratio(&edit, source, duration_ms)
+      })
     });
     return Some(DisplayClock {
       started,

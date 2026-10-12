@@ -35,6 +35,8 @@ export type ScrubPreviewProps = {
   hasAnnotations?: boolean;
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
+  /** Whether the recording has a microphone track to transcribe. */
+  hasMicrophone?: boolean;
   isPreparingAudio?: boolean;
   isPreparingPreview?: boolean;
   isSaving?: boolean;

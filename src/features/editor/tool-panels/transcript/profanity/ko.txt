@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Korean. One
+# expression per line; a line of several words matches only as a whole.
+개새끼
+개새끼야
+닥쳐
+병신
+븅신
+씨발
+씨발놈
+씨팔
+시발
+엿먹어
+젠장
+좆
+좆같아
+지랄
+미친놈
+미친년

@@ -79,6 +79,9 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
       next_segment_id: 1,
       keyboard_deletions: Box::default(),
       silence_cuts: Vec::new(),
+      transcript_cuts: Vec::new(),
+      transcript_corrections: Vec::new(),
+      transcript_allowed_words: Vec::new(),
       scene_clips: Vec::new(),
       annotation_clips: camera
         .into_iter()

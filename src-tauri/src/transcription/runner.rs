@@ -55,12 +55,14 @@ impl Transcriber {
     self
   }
 
-  pub(super) fn transcribe(
+  pub(crate) fn transcribe(
     &mut self,
     model: PathBuf,
     model_id: &str,
     audio: &Samples,
     language: Option<String>,
+    stretches: Vec<[u64; 2]>,
+    progress: &mut dyn FnMut(f32),
   ) -> Result<Transcript, String> {
     match self.ask(
       Job::Transcribe {
@@ -68,8 +70,9 @@ impl Transcriber {
         language,
         model,
         model_id: model_id.to_owned(),
+        stretches,
       },
-      &mut |_| {},
+      progress,
     )? {
       Reply::Done { transcript, .. } => Ok(transcript),
       _ => Err("The transcriber answered with something else".to_owned()),

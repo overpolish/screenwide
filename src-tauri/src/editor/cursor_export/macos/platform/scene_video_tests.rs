@@ -91,6 +91,9 @@ pub(super) fn timeline(scene: serde_json::Value) -> TimelinePlan {
       artifact_id: 1,
       keyboard_deletions: Box::default(),
       silence_cuts: Vec::new(),
+      transcript_cuts: Vec::new(),
+      transcript_corrections: Vec::new(),
+      transcript_allowed_words: Vec::new(),
       scene_clips: vec![scene],
       next_segment_id: 1,
       segments: vec![RecordingTimelineSegment {

@@ -10,19 +10,16 @@ import {
 } from "../annotations/annotation-channel";
 import { CameraOutput, composedVideoTracks } from "../export/camera-output";
 import { keyboardMaximumSizePercent } from "../keyboard-effect/keyboard-effect-geometry";
+import { useMicrophoneTools } from "../recording/microphone/use-microphone-tools";
 import { useRecordingSceneSelection } from "../recording/scenes/recording-scene-channel";
+import { useTranscriptTools } from "../recording/transcript/use-transcript-tools";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
 } from "../screenshot/screenshot-output";
-import {
-  applyKeyboardShortcutToAll,
-  placeKeyboardShortcut,
-  resetKeyboardShortcut,
-  useKeyboardShortcutSelection,
-} from "../shortcuts/keyboard-shortcut-channel";
+import { useKeyboardShortcutSelection } from "../shortcuts/keyboard-shortcut-channel";
 import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
 import { useRestoreRecordingKeyboardShortcuts } from "../timeline/keyboard/use-restore-recording-keyboard-shortcuts";
 import {
@@ -35,15 +32,10 @@ import {
   RecordingVideoTrackId,
 } from "../types";
 
-import { annotationPanelHandlers } from "./annotation/annotation-handlers";
-import { cropPanelHandlers, editorCropTarget } from "./crop/crop-target";
-import { editorFrameTarget, framePanelHandlers } from "./frame/frame-target";
-import { scenePanelHandlers } from "./scene/scene-panel-handlers";
-import {
-  audioPanelHandlers,
-  selectionPanelHandlers,
-} from "./selection/selection-panel-handlers";
-import { useAudioSelectionTarget } from "./selection/use-audio-selection-target";
+import { editorCropTarget } from "./crop/crop-target";
+import { editorToolPanelHandlers } from "./editor-tool-panel-handlers";
+import { editorFrameTarget } from "./frame/frame-target";
+import { editorAudioSelectionTarget } from "./selection/selection-target";
 import { useLayerSelectionTarget } from "./selection/use-layer-selection-target";
 import { useToolPanelBridge } from "./tool-panel-bridge";
 import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
@@ -142,13 +134,20 @@ export function useEditorToolPanels({
     selectedScreenshotItemId,
     selectedTrack,
   });
-  // An audio track is heard rather than placed, so it is its own selection,
-  // with the speech tools where it is the microphone.
-  const audioTarget = useAudioSelectionTarget({
+  // The microphone's speech tools, made once: Remove silences shows both in
+  // the microphone's Select panel and in the Transcript panel, and the two
+  // must share one state and one listen.
+  const microphone = useMicrophoneTools({
     artifact,
-    audioTrackVolumes,
     edit: recordingTimelineEdit,
     onEditChange: onRecordingTimelineEditChange,
+  });
+  // An audio track is heard rather than placed, so it is its own selection,
+  // with the speech tools where it is the microphone.
+  const audioTarget = editorAudioSelectionTarget({
+    artifact,
+    audioTrackVolumes,
+    microphone,
     onSelectedTrackVolumeChange,
     selectedTrack,
   });
@@ -201,6 +200,16 @@ export function useEditorToolPanels({
     recordingTimelineEdit,
     onRecordingTimelineEditChange,
   );
+  // The transcript's place and its asks, where the recording has a microphone
+  // to transcribe. The panel's words and playhead travel apart, through their
+  // own channel, so they never ride this snapshot.
+  const transcript = useTranscriptTools({
+    artifact,
+    edit: recordingTimelineEdit,
+    microphone,
+    onEditChange: onRecordingTimelineEditChange,
+    workspace,
+  });
   const keyboardOutput = recordingOutput
     ? screenshotOutputDimensions(recordingOutput.primary)
     : null;
@@ -240,60 +249,31 @@ export function useEditorToolPanels({
         audioTarget?.selection ??
         selectionTarget?.selection ??
         null,
+      transcript: transcript.snapshot,
     },
-    {
-      ...annotationPanelHandlers(workspace, annotationColors, (colors) => {
-        applyGeneralSettings({ annotationColors: colors });
-      }),
-      onBackgroundPresetRemove: (id) => {
-        setBackgroundPresets(
-          backgroundPresets.filter((preset) => preset.id !== id),
-        );
-      },
-      onBackgroundPresetSave: (preset) => {
-        setBackgroundPresets([
-          ...backgroundPresets.filter(
-            (saved) => saved.id !== preset.id && saved.name !== preset.name,
-          ),
-          preset,
-        ]);
-      },
+    editorToolPanelHandlers({
+      annotationColors,
+      audioTarget,
+      backgroundPresets,
+      cropTarget,
+      frameTarget,
+      keyboardEffects,
       onBakeCameraChange,
       onCursorEffectsChange,
-      onKeyboardEffectsChange: (settings) => {
-        onKeyboardEffectsChange?.({ ...keyboardEffects, ...settings });
+      onKeyboardEffectsChange,
+      onTranscriptRequest: transcript.handle,
+      resetShortcuts: shortcuts.reset,
+      restoreShortcuts: shortcuts.restore,
+      saveSceneTemplates: (templates) => {
+        applyGeneralSettings({ sceneTemplates: templates });
       },
-      // The default place is the absence of a position: the bridge is JSON,
-      // which cannot carry an undefined, so the reset is its own request.
-      onKeyboardPositionReset: () => {
-        const {
-          positionXPercent: _x,
-          positionYPercent: _y,
-          ...rest
-        } = keyboardEffects;
-        onKeyboardEffectsChange?.(rest);
+      sceneTemplates,
+      selectionTarget,
+      setAnnotationColors: (colors) => {
+        applyGeneralSettings({ annotationColors: colors });
       },
-      onKeyboardShortcutsResetAll: shortcuts.reset,
-      onKeyboardShortcutsRestore: shortcuts.restore,
-      onShortcutApplyToAll: () => {
-        applyKeyboardShortcutToAll(workspace);
-      },
-      onShortcutPlacementChange: (placement) => {
-        placeKeyboardShortcut(workspace, placement);
-      },
-      onShortcutReset: () => {
-        resetKeyboardShortcut(workspace);
-      },
-      ...audioPanelHandlers(audioTarget),
-      ...cropPanelHandlers(cropTarget),
-      ...framePanelHandlers(frameTarget),
-      ...selectionPanelHandlers(selectionTarget),
-      ...scenePanelHandlers(workspace, {
-        saveTemplates: (templates) => {
-          applyGeneralSettings({ sceneTemplates: templates });
-        },
-        sceneTemplates,
-      }),
-    },
+      setBackgroundPresets,
+      workspace,
+    }),
   );
 }

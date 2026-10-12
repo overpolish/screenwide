@@ -10,9 +10,9 @@ pub(in crate::editor) use initial_edit::persist_initial_edit;
 mod silences;
 mod stacking;
 pub use silences::RecordingSilenceCut;
-
-pub(crate) use time_mapping::source_after_output_duration_us;
-pub(crate) use time_mapping::source_before_output_duration_us;
+mod transcript;
+pub(crate) use time_mapping::{source_after_output_duration_us, source_before_output_duration_us};
+pub use transcript::{RecordingTranscriptCorrection, RecordingTranscriptCut};
 
 use std::path::Path;
 
@@ -79,6 +79,17 @@ pub struct RecordingTimelineEdit {
   /// [`silences`].
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub silence_cuts: Vec<RecordingSilenceCut>,
+  /// What the Transcript panel cut, for Restore all to bring back; see
+  /// [`transcript`].
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub transcript_cuts: Vec<RecordingTranscriptCut>,
+  /// Words the Transcript panel corrected, which change nothing that plays
+  /// or exports; see [`transcript`].
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub transcript_corrections: Vec<RecordingTranscriptCorrection>,
+  /// Folded text the Transcript panel was told is not profanity; marks only.
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub transcript_allowed_words: Vec<String>,
   pub next_segment_id: u64,
   pub segments: Vec<RecordingTimelineSegment>,
 }

@@ -7,6 +7,7 @@ import { t } from "../../../../i18n/i18n";
 import { useProvideEditorToolbarTools } from "../../panel/editor-toolbar-context";
 import { CursorToolToggle } from "../../tool-panels/cursor/cursor-tool-toggle";
 import { KeyboardToolToggle } from "../../tool-panels/keyboard/keyboard-tool-toggle";
+import { TranscriptToolToggle } from "../../tool-panels/transcript/transcript-tool-toggle";
 import { useToolPanel } from "../../tool-panels/use-tool-panel";
 
 import {
@@ -21,6 +22,7 @@ export function useRecordingToolbar({
   hasAnnotations,
   hasCursorData,
   hasKeyboardData,
+  hasMicrophone,
   hasScenes,
   hasVisiblePanes,
 }: {
@@ -32,6 +34,9 @@ export function useRecordingToolbar({
   hasAnnotations: boolean;
   hasCursorData: boolean;
   hasKeyboardData: boolean;
+  /** Whether the recording has a microphone track, which the Transcript
+   * tool transcribes. */
+  hasMicrophone: boolean;
   /** Whether the recording has a screen and a camera to arrange. */
   hasScenes: boolean;
   hasVisiblePanes: boolean;
@@ -41,16 +46,16 @@ export function useRecordingToolbar({
     openTool: openToolPanel,
     toggle: toggleToolPanel,
   } = useToolPanel("recording");
-  // Cursor and Keyboard are panels without a canvas tool behind them, so
-  // putting one away closes the panel and leaves no tool in hand, the way
-  // pressing an active canvas tool does.
+  // Cursor, Keyboard and Transcript are panels without a canvas tool behind
+  // them, so putting one away closes the panel and leaves no tool in hand,
+  // the way pressing an active canvas tool does.
   const dismissToolPanel = useCallback(() => {
     void closeToolPanel();
   }, [closeToolPanel]);
   // The shortcut opens the panel from the toolbar button's own bounds, the
   // same anchor a press would give it.
   const togglePanel = useCallback(
-    (panel: "cursor" | "keyboard") => {
+    (panel: "cursor" | "keyboard" | "transcript") => {
       if (openToolPanel === panel) {
         dismissToolPanel();
         return;
@@ -58,15 +63,24 @@ export function useRecordingToolbar({
       const bounds = document
         .querySelector(`[data-editor-tool=${panel}]`)
         ?.getBoundingClientRect();
-      if (bounds) void toggleToolPanel(panel, bounds);
+      // With no picture there is nothing for the window to grow for.
+      if (bounds)
+        void toggleToolPanel(
+          panel,
+          bounds,
+          hasVisiblePanes ? undefined : false,
+        );
     },
-    [dismissToolPanel, openToolPanel, toggleToolPanel],
+    [dismissToolPanel, hasVisiblePanes, openToolPanel, toggleToolPanel],
   );
   const toggleCursorPanel = useCallback(() => {
     togglePanel("cursor");
   }, [togglePanel]);
   const toggleKeyboardPanel = useCallback(() => {
     togglePanel("keyboard");
+  }, [togglePanel]);
+  const toggleTranscriptPanel = useCallback(() => {
+    togglePanel("transcript");
   }, [togglePanel]);
   // The tools read the committed `recordingOutput`, never the resize draft, so
   // holding the element keeps the title bar's tools stable mid-gesture. Held as
@@ -75,7 +89,7 @@ export function useRecordingToolbar({
     () =>
       hasVisiblePanes ? (
         <>
-          {hasCursorData || hasKeyboardData ? (
+          {hasCursorData || hasKeyboardData || hasMicrophone ? (
             <ButtonGroup
               aria-label={t("editor-recording-effects")}
               className="gap-control"
@@ -85,6 +99,9 @@ export function useRecordingToolbar({
               ) : null}
               {hasKeyboardData ? (
                 <KeyboardToolToggle onDismiss={dismissToolPanel} />
+              ) : null}
+              {hasMicrophone ? (
+                <TranscriptToolToggle onDismiss={dismissToolPanel} />
               ) : null}
             </ButtonGroup>
           ) : null}
@@ -99,6 +116,19 @@ export function useRecordingToolbar({
             tool={canvasTool}
           />
         </>
+      ) : hasMicrophone ? (
+        // The transcript is the voice's, not the picture's, so it is offered
+        // with no picture to point the other tools at: an audio recording,
+        // or one whose video tracks are all turned off.
+        <ButtonGroup
+          aria-label={t("editor-recording-effects")}
+          className="gap-control"
+        >
+          <TranscriptToolToggle
+            onDismiss={dismissToolPanel}
+            resetsView={false}
+          />
+        </ButtonGroup>
       ) : undefined,
     [
       canEditActiveTrack,
@@ -110,11 +140,18 @@ export function useRecordingToolbar({
       hasAnnotations,
       hasCursorData,
       hasKeyboardData,
+      hasMicrophone,
       hasScenes,
     ],
   );
   // The tools belong to the title bar above, the way a unified toolbar carries
-  // them. They are offered only while there is a picture to point them at.
-  useProvideEditorToolbarTools(hasVisiblePanes ? cropToggle : null);
-  return { toggleCursorPanel, toggleKeyboardPanel };
+  // them. The picture's tools are offered only while there is a picture to
+  // point them at; the Transcript tool wherever there is a microphone.
+  useProvideEditorToolbarTools(cropToggle ?? null);
+  // A panel's shortcut does nothing where the recording has nothing for it.
+  return {
+    toggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
+    toggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
+    toggleTranscriptPanel: hasMicrophone ? toggleTranscriptPanel : undefined,
+  };
 }

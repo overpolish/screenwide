@@ -85,6 +85,7 @@ function BladePreview({
     setSnapGuidePosition: () => undefined,
     snapGuidePosition: null,
     snapPosition: (sourcePosition) => sourcePosition,
+    transcriptHighlight: null,
     updateTrim: () => null,
   };
 

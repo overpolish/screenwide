@@ -109,6 +109,10 @@
   color: white;
   --icon-alpha: 1;
 }
+@utility text-accent-heading {
+  color: var(--color-accent-heading);
+  --icon-alpha: 1;
+}
 
 @theme {
   /* The system font, so text matches the OS around the window: SF Pro on

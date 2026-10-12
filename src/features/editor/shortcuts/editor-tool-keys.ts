@@ -44,6 +44,8 @@ export type EditorToolKeys = {
   onToggleRangeTool?: () => void;
   /** Shift+S: timeline snapping, on or off. */
   onToggleSnap?: () => void;
+  /** Shift+T: the Transcript panel, on or away. */
+  onToggleTranscriptPanel?: () => void;
   /** A drawing tool's letter, taking the tool up: A for the arrow, N for the
    * counter. One callback for every drawing tool, because taking one up is
    * the same act whichever shape it draws. */
@@ -71,6 +73,7 @@ const toolKeyAction = (id: EditorToolId, keys: EditorToolKeys) => {
     marquee: keys.onMarqueeTool,
     scene: keys.onSceneTool,
     select: keys.onSelectTool,
+    transcript: undefined,
   }[id];
 };
 
@@ -104,6 +107,7 @@ export const editorToolKeyAction = (
         KeyC: keys.onToggleCursorPanel,
         KeyR: keys.onToggleRangeTool,
         KeyS: keys.onToggleSnap,
+        KeyT: keys.onToggleTranscriptPanel,
       }[code] ?? null
     );
   const tool = code.startsWith("Key")

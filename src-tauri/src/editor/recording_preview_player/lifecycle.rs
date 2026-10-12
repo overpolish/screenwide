@@ -131,6 +131,7 @@ impl PreviewPlayerManager {
 
   pub(super) fn stop(&mut self) {
     self.cancel_worker();
+    self.audio_visualizer_tracks.clear();
     if let Some(sources) = self.sources.as_ref() {
       sources.playing.store(false, Ordering::Release);
       sources.video_muted.store(false, Ordering::Release);

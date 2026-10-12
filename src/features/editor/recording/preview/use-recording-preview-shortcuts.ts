@@ -26,8 +26,6 @@ export function useRecordingPreviewShortcuts({
   canvasTool,
   changeCanvasTool,
   hasAnnotations,
-  hasCursorData,
-  hasKeyboardData,
   hasSceneSelection,
   hasScenes,
   hasVisiblePanes,
@@ -40,6 +38,7 @@ export function useRecordingPreviewShortcuts({
   toggleCursorPanel,
   toggleKeyboardPanel,
   toggleTool,
+  toggleTranscriptPanel,
 }: {
   annotations: ReturnType<typeof useRecordingAnnotations>;
   /** Move the selected pane through the order of the custom scene under the
@@ -54,8 +53,6 @@ export function useRecordingPreviewShortcuts({
   /** Whether annotations can be drawn, which the annotation tools and an
    * incoming image are for. */
   hasAnnotations: boolean;
-  hasCursorData: boolean;
-  hasKeyboardData: boolean;
   /** Scenes chosen in their lane own Delete, so nothing under the pointer
    * goes with them. */
   hasSceneSelection: boolean;
@@ -69,9 +66,11 @@ export function useRecordingPreviewShortcuts({
   >["nudgeActiveTrack"];
   player: ReturnType<typeof useRecordingPreviewPlayer>;
   step: ReturnType<typeof useRecordingTimelineBlade>["step"];
-  toggleCursorPanel: () => void;
-  toggleKeyboardPanel: () => void;
+  /** Each panel's toggle, unset where the recording has nothing for it. */
+  toggleCursorPanel: (() => void) | undefined;
+  toggleKeyboardPanel: (() => void) | undefined;
   toggleTool: ReturnType<typeof useRecordingPreviewCanvasTool>["toggleTool"];
+  toggleTranscriptPanel: (() => void) | undefined;
 }) {
   const isPlaying = player.isPlaying;
   const pause = player.pause;
@@ -108,9 +107,10 @@ export function useRecordingPreviewShortcuts({
     onSelectTool: hasVisiblePanes ? toggleTool.select : undefined,
     onStep: !canNudgeActiveTrack && layout ? step : undefined,
     onToggleCrop: hasVisiblePanes ? toggleTool.crop : undefined,
-    onToggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
-    onToggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
+    onToggleCursorPanel: toggleCursorPanel,
+    onToggleKeyboardPanel: toggleKeyboardPanel,
     onTogglePlayback: layout ? togglePlayback : undefined,
+    onToggleTranscriptPanel: toggleTranscriptPanel,
     onTool:
       hasVisiblePanes && hasAnnotations
         ? (tool) => {

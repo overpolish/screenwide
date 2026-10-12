@@ -14,6 +14,8 @@ use super::*;
 mod buckets;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use buckets::bucket_levels;
+mod edited;
+pub(super) use edited::edited_ratio;
 
 /// One row per track, one column per envelope point. Both are clamped here so
 /// the native texture is bounded whatever the recording holds.
@@ -104,26 +106,51 @@ pub async fn set_recording_audio_visualizer(
   artifact_id: u64,
   tracks: Vec<AudioVisualizerTrack>,
 ) -> Result<(), String> {
-  let manager = state
+  let mut manager = state
     .0
     .lock()
     .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  let uploaded = envelopes(&tracks);
   if manager.artifact_id != Some(artifact_id) {
     return Ok(());
   }
-  let Some(surface) = manager
-    .sources
-    .as_ref()
-    .and_then(|sources| sources.preview_surface.as_ref())
-  else {
-    return Ok(());
+  manager.audio_visualizer_tracks = tracks;
+  upload(&manager);
+  Ok(())
+}
+
+/// Redraws the bars for the edit as it now stands, after a cut or a restore,
+/// when the audio-only preview is showing.
+pub(super) fn refresh_audio_ribbon(manager: &PreviewPlayerManager) {
+  if !manager.audio_visualizer_tracks.is_empty() {
+    upload(manager);
+  }
+}
+
+fn upload(manager: &PreviewPlayerManager) {
+  let Some(sources) = manager.sources.as_ref() else {
+    return;
   };
+  let Some(surface) = sources.preview_surface.as_ref() else {
+    return;
+  };
+  let ranges = sources
+    .animation_ranges
+    .read()
+    .map(|ranges| ranges.clone())
+    .unwrap_or_default();
+  let tracks = manager
+    .audio_visualizer_tracks
+    .iter()
+    .map(|track| AudioVisualizerTrack {
+      waveform: edited::edited_waveform(&track.waveform, &ranges, sources.duration_ms),
+      ..track.clone()
+    })
+    .collect::<Vec<_>>();
+  let uploaded = envelopes(&tracks);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_audio_ribbon(&uploaded);
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = (surface, uploaded);
-  Ok(())
 }
 
 /// Native playback presents this source position using the same sample clock
@@ -131,20 +158,17 @@ pub async fn set_recording_audio_visualizer(
 pub(super) fn present_audio_position(sources: &PlayerSources, position_ms: u64) {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   if let Some(surface) = &sources.preview_surface {
-    let ratio = source_ratio(position_ms, sources.duration_ms);
-    surface.set_audio_ribbon_playhead(ratio);
+    surface.set_audio_ribbon_playhead(playhead_ratio(sources, position_ms as f64));
   }
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = (sources, position_ms);
 }
 
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-fn source_ratio(position_ms: u64, duration_ms: u64) -> f64 {
-  if duration_ms == 0 {
-    0.0
-  } else {
-    position_ms.min(duration_ms) as f64 / duration_ms as f64
-  }
+/// Where `source_ms` stands along the bars, which follow the edited recording.
+fn playhead_ratio(sources: &PlayerSources, source_ms: f64) -> f64 {
+  sources.animation_ranges.read().map_or(0.0, |ranges| {
+    edited_ratio(&ranges, source_ms, sources.duration_ms)
+  })
 }
 
 #[cfg(test)]

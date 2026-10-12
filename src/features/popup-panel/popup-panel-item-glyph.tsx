@@ -12,6 +12,9 @@ import {
   HardDrive,
   ImageDown,
   LucideIcon,
+  PenLine,
+  ShieldCheck,
+  SpellCheck,
   Timer,
   Trash2,
   Undo2,
@@ -35,8 +38,10 @@ import { PopupPanelIcon } from "./store";
 
 // Items cross a window boundary as data, so a glyph travels by name.
 const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
+  allow: ShieldCheck,
   clipboard: ClipboardCopy,
   copy: Copy,
+  edit: PenLine,
   folder: Folder,
   "folder-open": FolderOpen,
   "folder-root": FolderRoot,
@@ -46,6 +51,7 @@ const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
   remove: X,
   restore: Undo2,
   scrolling: ArrowBigDownDash,
+  spelling: SpellCheck,
   timer: Timer,
   "tool-arrow": ArrowToolIcon,
   "tool-counter": CounterToolIcon,

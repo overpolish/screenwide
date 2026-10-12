@@ -30,7 +30,8 @@ export type EditorToolId =
   | "keyboard"
   | "marquee"
   | "scene"
-  | "select";
+  | "select"
+  | "transcript";
 
 type ViewTool = {
   drawsOnLayer?: false;
@@ -139,6 +140,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     panel: "annotation",
     shortcut: "T",
   },
+  transcript: { panel: "transcript", resetsView: true },
 };
 
 const editorToolIds = () => Object.keys(EDITOR_TOOLS) as EditorToolId[];

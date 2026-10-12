@@ -25,6 +25,7 @@ export type ResolvedScrubPreviewProps = ScrubPreviewProps &
       | "hasAnnotations"
       | "hasCursorData"
       | "hasKeyboardData"
+      | "hasMicrophone"
       | "isPreparingAudio"
       | "isPreparingPreview"
       | "isSaving"
@@ -56,6 +57,7 @@ export function resolveScrubPreviewProps(
     hasAnnotations = true,
     hasCursorData = false,
     hasKeyboardData = false,
+    hasMicrophone = false,
     isPreparingAudio = false,
     isPreparingPreview = false,
     isSaving = false,
@@ -74,6 +76,7 @@ export function resolveScrubPreviewProps(
     hasAnnotations,
     hasCursorData,
     hasKeyboardData,
+    hasMicrophone,
     isPreparingAudio,
     isPreparingPreview,
     isSaving,

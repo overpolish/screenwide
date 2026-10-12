@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Danish. One
+# expression per line, lowercase; a line of several words matches only as a
+# whole.
+fanden
+fandens
+fisse
+for helvede
+helvede
+kraftedeme
+kælling
+lort
+luder
+pik
+pis
+røvhul
+satan
+skide

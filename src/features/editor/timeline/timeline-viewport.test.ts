@@ -10,6 +10,7 @@ import {
   normalizeTimelineViewport,
   panTimelineViewportByPixels,
   timelineFractionToX,
+  revealTimelinePosition,
   timelineXToFraction,
   zoomTimelineViewportAt,
 } from "./timeline-viewport";
@@ -31,6 +32,14 @@ describe("timeline viewport", () => {
     });
     expect(clampTimelinePan(-1, 4)).toBe(0);
     expect(clampTimelinePan(1, 4)).toBe(0.75);
+  });
+
+  it("pans a position into view only when it is out of view", () => {
+    const view = { panOffset: 0.5, zoom: 4 };
+    expect(revealTimelinePosition(view, 0.6)).toBe(view);
+    close(revealTimelinePosition(view, 0.2).panOffset, 0.2 - 0.025);
+    close(revealTimelinePosition(view, 0.9).panOffset, 0.75);
+    expect(revealTimelinePosition(view, 0.01).panOffset).toBe(0);
   });
 
   it("round-trips fractions and viewport x coordinates", () => {

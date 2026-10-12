@@ -61,6 +61,7 @@ pub(crate) fn set_recording_preview_deleted_keyboard_shortcuts(
     keyboard.set_deleted_shortcuts(&shortcut_ids, &shortcut_ranges);
     keyboard.set_shortcut_positions(&shortcut_positions);
   }
+  super::audio_visualizer::refresh_audio_ribbon(&manager);
   if !manager.is_playing {
     manager.restart(PlaybackMode::InteractiveStill)?;
   }

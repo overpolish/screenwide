@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Keyboard } from "lucide-react";
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { RecordingAnnotationLane } from "../../recording/annotations/recording-annotation-lane";
@@ -83,6 +83,13 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   volumes,
 }: RecordingTrackLanesProps) {
   const timeline = useTimelineNavigation(blade.edit.artifactId);
+  // Words chosen in the Transcript panel may lie outside a zoomed view; their
+  // start is brought into it, as the playhead seeking there is.
+  const highlightStart = blade.transcriptHighlight?.start;
+  const reveal = timeline.reveal;
+  useEffect(() => {
+    if (highlightStart !== undefined) reveal(highlightStart);
+  }, [highlightStart, reveal]);
   // Overlapping shortcut badges stack into sublanes, so the lane is told the
   // span a badge needs; derived from the same shared stacking it renders from.
   const keyboardMinimumSpan = timedLaneMinimumSpan({

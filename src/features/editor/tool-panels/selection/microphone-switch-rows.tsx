@@ -51,10 +51,51 @@ export function WorkingSwitchRow({
   );
 }
 
+/** A tool's row before its model is on this computer: the model's size and
+ * a download, with the bar under it while the model comes down. */
+export function ModelDownloadRow({
+  description,
+  isLocked,
+  model,
+  onDownload,
+  title,
+}: {
+  description: string;
+  isLocked: boolean;
+  model: ToolPanelModel;
+  onDownload: () => void;
+  title: string;
+}) {
+  const isDownloading = model.status === "downloading";
+  return (
+    <div>
+      <ControlRow
+        description={description}
+        title={title}
+        titleAccessory={<Badge>{formatBytes(model.sizeBytes)}</Badge>}
+      >
+        {(controlProps) => (
+          <Button
+            {...controlProps}
+            isDisabled={isLocked || isDownloading}
+            onPress={onDownload}
+          >
+            {t("editor-panels-model-download")}
+          </Button>
+        )}
+      </ControlRow>
+      <ToolProgress
+        isWorking={isDownloading}
+        label={t("editor-panels-model-downloading")}
+        value={model.progress}
+      />
+    </div>
+  );
+}
+
 /** A switch that needs a downloaded model, as Studio sound and Remove
  * background do: the switch once the model is here, and before, a download
- * in its place, with the bar under it while the model comes down. Nothing
- * until the app has said. */
+ * in its place. Nothing until the app has said. */
 export function ModelSwitchRow({
   description,
   model,
@@ -68,29 +109,13 @@ export function ModelSwitchRow({
   if (!model) return null;
   if (model.status === "downloaded")
     return <WorkingSwitchRow {...switchProps} />;
-  const isDownloading = model.status === "downloading";
   return (
-    <div>
-      <ControlRow
-        description={description}
-        title={switchProps.title}
-        titleAccessory={<Badge>{formatBytes(model.sizeBytes)}</Badge>}
-      >
-        {(controlProps) => (
-          <Button
-            {...controlProps}
-            isDisabled={switchProps.isLocked || isDownloading}
-            onPress={onDownload}
-          >
-            {t("editor-panels-model-download")}
-          </Button>
-        )}
-      </ControlRow>
-      <ToolProgress
-        isWorking={isDownloading}
-        label={t("editor-panels-model-downloading")}
-        value={model.progress}
-      />
-    </div>
+    <ModelDownloadRow
+      description={description}
+      isLocked={switchProps.isLocked}
+      model={model}
+      onDownload={onDownload}
+      title={switchProps.title}
+    />
   );
 }

@@ -96,6 +96,9 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
       next_segment_id: 1,
       keyboard_deletions: Box::default(),
       silence_cuts: Vec::new(),
+      transcript_cuts: Vec::new(),
+      transcript_corrections: Vec::new(),
+      transcript_allowed_words: Vec::new(),
       scene_clips: Vec::new(),
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,

@@ -229,6 +229,9 @@ struct PreviewPlayerManager {
   annotation: annotation_bridge::AnnotationState,
   artifact_id: Option<u64>,
   audio_indices: Vec<usize>,
+  /// The audio-only preview's tracks as the webview last sent them, kept so a
+  /// change to the edit can redraw the bars without a fresh upload.
+  audio_visualizer_tracks: Vec<audio_visualizer::AudioVisualizerTrack>,
   audio_volumes: Vec<AudioTrackVolume>,
   event_channel: Option<Channel<RecordingPreviewPlayerEvent>>,
   is_playing: bool,

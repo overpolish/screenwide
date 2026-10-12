@@ -169,9 +169,15 @@ export function useToolPanel(workspace: EditorKind) {
    * A press on the button of a tool that owns a panel. A second press on the
    * same button puts the panel away; a press on another tool's swaps the
    * contents in place, applying only the destination tool's fit policy.
+   * `resetsView` overrides that policy where the workspace has nothing for
+   * a fit to make room for, such as a recording with no picture.
    */
   const toggle = useCallback(
-    async (tool: EditorToolId, anchor: DOMRect) => {
+    async (
+      tool: EditorToolId,
+      anchor: DOMRect,
+      resetsView: boolean = toolResetsView(tool),
+    ) => {
       const kind = toolPanel(tool);
       const current = activePopupPanel(usePopupPanelStore.getState(), panel);
       const openContent =
@@ -181,9 +187,9 @@ export function useToolPanel(workspace: EditorKind) {
       if (kind === undefined || (isOpen && (await isShowing()))) {
         await close();
       } else {
-        await openPanel(kind, anchor, toolResetsView(tool));
+        await openPanel(kind, anchor, resetsView);
       }
-      if (!isOpen && kind === undefined && toolResetsView(tool)) fitPreview();
+      if (!isOpen && kind === undefined && resetsView) fitPreview();
     },
     [close, fitPreview, isShowing, openPanel, panel],
   );

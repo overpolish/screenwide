@@ -43,8 +43,16 @@ fn main() {
             model_id,
             audio,
             language,
+            stretches,
           } => engine
-            .transcribe(model, model_id, audio, language.as_deref())
+            .transcribe(
+              model,
+              model_id,
+              audio,
+              language.as_deref(),
+              stretches,
+              &mut progress,
+            )
             .map(|transcript| Reply::Done { id, transcript }),
           Job::DetectSpeech { model, audio } => engine
             .detect_speech(model, audio, &mut progress)

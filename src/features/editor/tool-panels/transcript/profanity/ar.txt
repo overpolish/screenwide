@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Arabic, across
+# its common spoken forms. One expression per line; a line of several words
+# matches only as a whole.
+ابن الكلب
+ابن الشرموطة
+حمار
+خرا
+زب
+شرموطة
+طيز
+عاهرة
+قحبة
+كس
+كس امك
+لعنة
+منيوك

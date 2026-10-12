@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Hungarian. One
+# expression per line, lowercase; a line of several words matches only as a
+# whole.
+basszus
+baszd meg
+baszki
+bazdmeg
+buzi
+fasz
+faszfej
+geci
+kurva
+picsa
+szar
+szarság

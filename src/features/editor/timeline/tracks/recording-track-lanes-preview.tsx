@@ -245,6 +245,7 @@ export function RecordingTrackLanesPreview({
           setSnapGuidePosition,
           snapGuidePosition,
           snapPosition: snapOutput,
+          transcriptHighlight: null,
           updateTrim: () => null,
         }}
         durationMs={timelineDurationMs}

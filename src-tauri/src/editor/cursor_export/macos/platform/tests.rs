@@ -274,6 +274,9 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       artifact_id: 1,
       keyboard_deletions: Box::default(),
       silence_cuts: Vec::new(),
+      transcript_cuts: Vec::new(),
+      transcript_corrections: Vec::new(),
+      transcript_allowed_words: Vec::new(),
       scene_clips: Vec::new(),
       next_segment_id: 2,
       segments: vec![

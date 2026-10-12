@@ -15,6 +15,7 @@ import { ownsTextEditingKeys } from "../shortcuts/keyboard-target";
 import {
   fitTimelineViewport,
   panTimelineViewportByPixels,
+  revealTimelinePosition,
   zoomTimelineViewportAt,
 } from "./timeline-viewport";
 
@@ -62,6 +63,11 @@ export function useTimelineNavigation(resetKey: unknown) {
 
   const fit = useCallback(() => {
     setViewport(fitTimelineViewport());
+  }, []);
+
+  /** Pan `fraction` into view where it is out of it. */
+  const reveal = useCallback((fraction: number) => {
+    setViewport((current) => revealTimelinePosition(current, fraction));
   }, []);
 
   useEffect(() => {
@@ -155,6 +161,7 @@ export function useTimelineNavigation(resetKey: unknown) {
       onPointerUp: onPointerEnd,
       onWheel,
     },
+    reveal,
     viewport,
     zoom,
   };

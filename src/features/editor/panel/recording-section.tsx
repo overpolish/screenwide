@@ -87,6 +87,9 @@ export function RecordingSection({
         hasAnnotations={artifact.primaryKind !== "audio"}
         hasCursorData={hasCursorData}
         hasKeyboardData={hasKeyboardData}
+        hasMicrophone={artifact.audioTracks.some(
+          (track) => track.kind === "microphone",
+        )}
         isPreparingAudio={isPreparingRecordingAudio}
         isPreparingPreview={isPreparingRecordingPreview}
         isSaving={isSaving}

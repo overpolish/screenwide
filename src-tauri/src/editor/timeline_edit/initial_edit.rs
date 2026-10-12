@@ -28,6 +28,9 @@ pub(in crate::editor) fn persist_initial_edit(
       artifact_id,
       keyboard_deletions: Box::default(),
       silence_cuts: Vec::new(),
+      transcript_cuts: Vec::new(),
+      transcript_corrections: Vec::new(),
+      transcript_allowed_words: Vec::new(),
       scene_clips,
       next_segment_id: 1,
       segments: vec![RecordingTimelineSegment {

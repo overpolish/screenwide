@@ -26,6 +26,7 @@ mod studio;
 mod studio_ducking;
 #[cfg(test)]
 mod tests;
+pub(crate) mod transcript;
 mod voice;
 
 use std::path::{Path, PathBuf};

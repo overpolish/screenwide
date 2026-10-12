@@ -3,6 +3,9 @@
 
 export const popupPanelMaxHeight = 150;
 export const emptyPopupPanelHeight = 64;
+/** The widest a list grows to fit a row it would otherwise cut short; past
+ * this a row's label is truncated, as a native menu's is. */
+export const popupPanelMaxWidth = 360;
 
 const compactItemHeight = 24;
 /** Items touch, as a native menu's do; only headers stand off their items. */

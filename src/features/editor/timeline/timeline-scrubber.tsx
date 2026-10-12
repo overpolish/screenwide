@@ -15,6 +15,7 @@ import { recordingTimelineRangePlaybackRate } from "./editing/recording-timeline
 import {
   TimelineBladeController,
   TimelineBladeOverlay,
+  TimelineRangeSelection,
 } from "./editing/timeline-blade";
 import { useTimelineSpeedMenu } from "./editing/use-timeline-speed-menu";
 import { clamp, Playhead } from "./scrub-playhead";
@@ -86,6 +87,12 @@ export function TimelineScrubberOverlay(
       >
         <TimelineScrubber {...scrubber} />
       </div>
+      {blade.transcriptHighlight && !blade.rangeSelection ? (
+        <TimelineRangeBox
+          range={blade.transcriptHighlight}
+          viewport={props.viewport}
+        />
+      ) : null}
       <TimelineRangeOverlay blade={blade} viewport={props.viewport} />
       <TimelineSnapGuide blade={blade} viewport={props.viewport} />
       {/* One layer for the blade too, over the same rectangle: a cut acts on
@@ -119,6 +126,36 @@ function TimelineSnapGuide({
       />
     </div>
   ) : null;
+}
+
+/** A stretch of the timeline drawn through every lane: the range tool's
+ * selection, or the words chosen in the Transcript panel. */
+function TimelineRangeBox({
+  range,
+  viewport,
+}: {
+  range: TimelineRangeSelection;
+  viewport: TimelineViewportState;
+}) {
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute inset-y-0 right-0 ${TIMELINE_LANE_LEFT_CLASS} z-10 overflow-hidden`}
+    >
+      <div
+        className="absolute inset-y-0 bg-primary/15"
+        style={{
+          left: `${((range.start - viewport.panOffset) * viewport.zoom * 100).toString()}%`,
+          width: `${((range.end - range.start) * viewport.zoom * 100).toString()}%`,
+        }}
+      >
+        {/* The range's own edges, drawn as filled lines rather than a
+            border so they read as part of the selection, not a rule. */}
+        <span className="absolute inset-y-0 left-0 w-px bg-primary" />
+        <span className="absolute inset-y-0 right-0 w-px bg-primary" />
+      </div>
+    </div>
+  );
 }
 
 function TimelineRangeOverlay({
@@ -155,23 +192,7 @@ function TimelineRangeOverlay({
   return (
     <>
       {blade.rangeSelection ? (
-        <div
-          aria-hidden
-          className={`pointer-events-none absolute inset-y-0 right-0 ${TIMELINE_LANE_LEFT_CLASS} z-10 overflow-hidden`}
-        >
-          <div
-            className="absolute inset-y-0 bg-primary/15"
-            style={{
-              left: `${((blade.rangeSelection.start - viewport.panOffset) * viewport.zoom * 100).toString()}%`,
-              width: `${((blade.rangeSelection.end - blade.rangeSelection.start) * viewport.zoom * 100).toString()}%`,
-            }}
-          >
-            {/* The range's own edges, drawn as filled lines rather than a
-                border so they read as part of the selection, not a rule. */}
-            <span className="absolute inset-y-0 left-0 w-px bg-primary" />
-            <span className="absolute inset-y-0 right-0 w-px bg-primary" />
-          </div>
-        </div>
+        <TimelineRangeBox range={blade.rangeSelection} viewport={viewport} />
       ) : null}
       <div
         aria-label={t("editor-timeline-select-range")}

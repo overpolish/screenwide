@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { PREVIEW_FRAME_MS } from "../../duration";
+import { useRecordingTranscriptPreview } from "../../recording/transcript/use-recording-transcript-preview";
 import { useEditorWindowShortcuts } from "../../shortcuts/use-editor-window-shortcuts";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { clamp, Playhead } from "../scrub-playhead";
@@ -151,6 +152,15 @@ export function useRecordingTimelineBlade({
     playhead,
   });
 
+  // The Transcript panel's seek, playhead and chosen words live with the
+  // preview, which owns them; the editor reaches them through a channel.
+  const transcriptHighlight = useRecordingTranscriptPreview({
+    edit: effectiveEdit,
+    playhead,
+    seek,
+    sourceDurationMs: totalDurationMs,
+  });
+
   useEffect(() => {
     const previous = previousEditRef.current;
     previousEditRef.current = effectiveEdit;
@@ -248,6 +258,7 @@ export function useRecordingTimelineBlade({
       setSnapGuidePosition: selection.setSnapGuidePosition,
       snapGuidePosition: selection.snapGuidePosition,
       snapPosition: snapOutput,
+      transcriptHighlight,
       updateTrim: trim.update,
     },
     seek,

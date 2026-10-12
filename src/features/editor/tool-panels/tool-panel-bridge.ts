@@ -129,6 +129,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.clearAutoZooms) on.onSceneAutoZoomsClear?.();
   if (values.deleteScene) on.onSceneDelete?.();
   if (values.swapScenePanes) on.onScenePanesSwap?.();
+  if (values.transcriptRequest)
+    on.onTranscriptRequest?.(values.transcriptRequest);
 };
 
 /**

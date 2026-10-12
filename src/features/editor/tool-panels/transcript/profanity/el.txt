@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Greek. One
+# expression per line, lowercase; a line of several words matches only as a
+# whole.
+γαμώ
+γαμώτο
+γαμημένο
+καριόλη
+μαλάκα
+μαλάκας
+μαλακία
+μουνί
+πούστη
+πουτάνα
+σκατά

@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Spanish, across
+# Spain and Latin America. One expression per line, lowercase; a line of
+# several words matches only as a whole.
+cabrón
+cabron
+cabrona
+carajo
+chingada
+chingado
+chingar
+chinga tu madre
+cojones
+coño
+culero
+culo
+gilipollas
+hijo de puta
+hijoputa
+hostia
+joder
+jodido
+jodida
+malparido
+marica
+maricón
+mierda
+pendejo
+pendeja
+pinche
+polla
+puta
+putas
+puto
+verga

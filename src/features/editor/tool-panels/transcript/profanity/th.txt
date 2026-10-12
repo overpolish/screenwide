@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Thai. One
+# expression per line. Thai is written without spaces, so each is found
+# wherever it occurs in the words run together.
+ไอ้สัตว์
+ไอ้เหี้ย
+เหี้ย
+สัส
+สัด
+ควย
+หี
+เย็ดแม่
+ชิบหาย
+อีดอก

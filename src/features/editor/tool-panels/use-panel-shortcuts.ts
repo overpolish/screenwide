@@ -7,13 +7,22 @@ import { EditorKind } from "../types";
 import { sendToolPanelRequest } from "./tool-panel-store";
 import { drawingToolShortcut } from "./tool-registry";
 
+/** Sends a key to the editor that owns `workspace`, as if pressed there. */
+export const forwardToolPanelShortcut = (
+  workspace: EditorKind,
+  code: string,
+  modifiers: KeyboardEventInit = {},
+) => {
+  sendToolPanelRequest(workspace, {
+    event: { code, ...modifiers },
+    type: "shortcut",
+  });
+};
+
 /** Apply the editor's input ownership rules before crossing window boundaries. */
 export function usePanelShortcuts(workspace: EditorKind) {
-  const forward = (code: string, modifiers: KeyboardEventInit = {}) => {
-    sendToolPanelRequest(workspace, {
-      event: { code, ...modifiers },
-      type: "shortcut",
-    });
+  const forward = (code: string, modifiers?: KeyboardEventInit) => {
+    forwardToolPanelShortcut(workspace, code, modifiers);
   };
   useEditorWindowShortcuts({
     onArrange: (move) => {

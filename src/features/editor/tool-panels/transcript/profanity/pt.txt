@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Portuguese, for
+# Portugal and Brazil. One expression per line, lowercase; a line of several
+# words matches only as a whole.
+babaca
+bosta
+buceta
+cacete
+caralho
+corno
+cu
+cuzão
+desgraçado
+filho da puta
+foda
+foda-se
+foder
+fodido
+merda
+piranha
+porra
+puta
+puto
+vadia
+viado

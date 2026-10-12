@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Russian, with the
+# forms speech uses most. One expression per line, lowercase; a line of
+# several words matches only as a whole.
+бля
+блять
+блядь
+говно
+ёб твою мать
+ебать
+ебаный
+ёбаный
+ебал
+заебал
+мудак
+мудаки
+нахер
+нахуй
+педик
+пидор
+пидорас
+пиздец
+пизда
+сволочь
+сука
+суки
+хер
+хрен
+хуй
+хуйня
+шлюха

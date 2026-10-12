@@ -20,6 +20,9 @@ pub(crate) enum Purpose {
   /// Objects picked in the camera, followed through the recording, to keep
   /// with the person or take away with the room.
   CameraObjects,
+  /// The recording's microphone written out as text, word by word, to edit
+  /// and caption by, so the accurate model.
+  Transcripts,
 }
 
 impl Purpose {
@@ -31,6 +34,7 @@ impl Purpose {
       Self::StudioDucking => crate::i18n::t!("settings-transcription-studio-ducking"),
       Self::CameraBackground => crate::i18n::t!("settings-transcription-camera-background"),
       Self::CameraObjects => crate::i18n::t!("settings-transcription-camera-objects"),
+      Self::Transcripts => crate::i18n::t!("settings-transcription-transcripts"),
     }
   }
 
@@ -44,6 +48,7 @@ impl Purpose {
         crate::i18n::t!("settings-transcription-camera-background-description")
       }
       Self::CameraObjects => crate::i18n::t!("settings-transcription-camera-objects-description"),
+      Self::Transcripts => crate::i18n::t!("settings-transcription-transcripts-description"),
     }
   }
 
@@ -51,7 +56,7 @@ impl Purpose {
   /// stand in for another.
   pub(crate) fn transcribes(self) -> bool {
     match self {
-      Self::Moments => true,
+      Self::Moments | Self::Transcripts => true,
       Self::StudioSound | Self::StudioDucking | Self::CameraBackground | Self::CameraObjects => {
         false
       }
@@ -96,6 +101,18 @@ pub(crate) const MODELS: &[Model] = &[
     }],
     id: "base",
     purpose: Purpose::Moments,
+  },
+  // Whisper large-v3-turbo, quantised to 8 bits by the whisper.cpp project,
+  // at a fixed revision: accurate enough to edit by, and quick for its size.
+  Model {
+    files: &[ModelFile {
+      name: "ggml-large-v3-turbo-q8_0.bin",
+      sha256: "317eb69c11673c9de1e1f0d459b253999804ec71ac4c23c17ecf5fbe24e259a1",
+      size_bytes: 874_188_075,
+      url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q8_0.bin",
+    }],
+    id: "large-v3-turbo-q8_0",
+    purpose: Purpose::Transcripts,
   },
   // Sidon v0.1 from the University of Tokyo (MIT), its released TorchScript
   // converted to ONNX: a speech encoder and the vocoder that speaks again

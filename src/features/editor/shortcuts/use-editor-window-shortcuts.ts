@@ -55,6 +55,7 @@ export function useEditorWindowShortcuts({
   onTogglePlayback,
   onToggleRangeTool,
   onToggleSnap,
+  onToggleTranscriptPanel,
   onTool,
   onUndo,
   ownsEscape = false,
@@ -98,6 +99,22 @@ export function useEditorWindowShortcuts({
     };
     const onPointerDown = () => {
       focusIntentRef.current = "pointer";
+    };
+    const toolKeys: EditorToolKeys = {
+      onArrange,
+      onMarqueeTool,
+      onResizeCanvas,
+      onSceneTool,
+      onSelectTool,
+      onToggleBladeTool,
+      onToggleCrop,
+      onToggleCursorPanel,
+      onToggleKeyboardPanel,
+      onTogglePlayback,
+      onToggleRangeTool,
+      onToggleSnap,
+      onToggleTranscriptPanel,
+      onTool,
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (sheetOwnsKey(event, consume)) return;
@@ -194,11 +211,7 @@ export function useEditorWindowShortcuts({
       }
 
       if (event.shiftKey && !commandKey) {
-        const shiftedKey = editorToolKeyAction(
-          event.code,
-          { onArrange, onToggleCursorPanel, onToggleRangeTool, onToggleSnap },
-          true,
-        );
+        const shiftedKey = editorToolKeyAction(event.code, toolKeys, true);
         if (shiftedKey && !ownsTextEditingKeys(event.target)) {
           consume(event);
           shiftedKey();
@@ -235,21 +248,7 @@ export function useEditorWindowShortcuts({
         return;
       }
 
-      const toolKey = editorToolKeyAction(event.code, {
-        onArrange,
-        onMarqueeTool,
-        onResizeCanvas,
-        onSceneTool,
-        onSelectTool,
-        onToggleBladeTool,
-        onToggleCrop,
-        onToggleCursorPanel,
-        onToggleKeyboardPanel,
-        onTogglePlayback,
-        onToggleRangeTool,
-        onToggleSnap,
-        onTool,
-      });
+      const toolKey = editorToolKeyAction(event.code, toolKeys);
       if (toolKey && !ownsTextEditingKeys(event.target)) {
         consume(event);
         toolKey();
@@ -287,6 +286,7 @@ export function useEditorWindowShortcuts({
     onTogglePlayback,
     onToggleRangeTool,
     onToggleSnap,
+    onToggleTranscriptPanel,
     onTool,
     onUndo,
     ownsEscape,

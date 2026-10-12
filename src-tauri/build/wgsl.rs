@@ -49,10 +49,7 @@ const MODULES: &[(&str, &[&str])] = &[
       "src/screenshots/mesh.wgsl",
     ],
   ),
-  (
-    "mips",
-    &["src/editor/preview_platform/shaders/mips.wgsl"],
-  ),
+  ("mips", &["src/editor/preview_platform/shaders/mips.wgsl"]),
   (
     "osc",
     &[

@@ -49,6 +49,10 @@ pub enum Job {
     audio: PathBuf,
     /// A language code such as `en`, or nothing to detect it.
     language: Option<String>,
+    /// The stretches of `audio` to transcribe, as `[start, end)` in samples
+    /// at [`SAMPLE_RATE`], sorted and apart. Empty means all of it.
+    #[serde(default)]
+    stretches: Vec<[u64; 2]>,
   },
   /// How likely each moment of the audio is to be speech, answered with
   /// [`Reply::Speech`].

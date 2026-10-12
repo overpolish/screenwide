@@ -126,3 +126,29 @@ export const panTimelineViewportByPixels = (
     zoom: current.zoom,
   };
 };
+
+/** How far into the view a revealed position lands, as a share of it, so
+ * whatever leads up to it stays in sight. */
+const REVEAL_LEAD = 0.1;
+
+/**
+ * Pans so `fraction` is in view, a little in from the view's start, and
+ * leaves the view alone where it already is, so moving between positions on
+ * screen never shifts the timeline under the pointer.
+ */
+export const revealTimelinePosition = (
+  state: TimelineViewportState,
+  fraction: number,
+): TimelineViewportState => {
+  const current = normalizeTimelineViewport(state);
+  const width = 1 / current.zoom;
+  if (
+    !Number.isFinite(fraction) ||
+    (fraction >= current.panOffset && fraction <= current.panOffset + width)
+  )
+    return state;
+  return {
+    panOffset: clampTimelinePan(fraction - width * REVEAL_LEAD, current.zoom),
+    zoom: current.zoom,
+  };
+};

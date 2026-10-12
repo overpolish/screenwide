@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Swearing, insults and slurs the Transcript panel marks in Hebrew. One
+# expression per line; a line of several words matches only as a whole.
+בן זונה
+זונה
+זין
+חרא
+כוס
+כוס אמק
+לעזאזל
+מניאק
+שרמוטה

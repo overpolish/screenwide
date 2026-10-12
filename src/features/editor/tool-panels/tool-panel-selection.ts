@@ -124,6 +124,22 @@ export type ToolPanelCameraObjects = {
   working: boolean;
 };
 
+/** Where Remove silences stands for the recording's microphone. One state,
+ * shown both in the microphone's Select panel and in the Transcript panel. */
+export type ToolPanelSilences = {
+  /** How many pauses Remove cut that are still cut. */
+  count: number;
+  /** How much shorter those cuts make the recording. */
+  durationMs: number;
+  /** How far listening has got, 0 to 1, while `status` is `finding`;
+   * `null` while it is not known to need listening, as when the track
+   * was listened through before and finding takes no time. */
+  progress: number | null;
+  /** `finding` while the track is listened through, and `none-found` after
+   * a Remove that found no pause long enough to cut. */
+  status: "finding" | "idle" | "none-found";
+};
+
 /**
  * Where the microphone's speech tools stand. Reduce noise and Remove
  * silences work from the same listen through the track for speech, which
@@ -152,19 +168,7 @@ export type ToolPanelMicrophone = {
   noise: "cleaning" | "off" | "on";
   /** How far cleaning has got, 0 to 1, while `noise` is `cleaning`. */
   noiseProgress: number;
-  silences: {
-    /** How many pauses Remove cut that are still cut. */
-    count: number;
-    /** How much shorter those cuts make the recording. */
-    durationMs: number;
-    /** How far listening has got, 0 to 1, while `status` is `finding`;
-     * `null` while it is not known to need listening, as when the track
-     * was listened through before and finding takes no time. */
-    progress: number | null;
-    /** `finding` while the track is listened through, and `none-found` after
-     * a Remove that found no pause long enough to cut. */
-    status: "finding" | "idle" | "none-found";
-  };
+  silences: ToolPanelSilences;
   /** The voice rebuilt as a studio recording by a downloaded model, in place
    * of Reduce noise and Vocal cleanup: `cleaning` while the track is
    * rebuilt, which happens once and can take a while. */
