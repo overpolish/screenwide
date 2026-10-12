@@ -16,11 +16,7 @@ import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
 import { useSettingsApi } from "../settings-api-context";
 
 import { TranscriptionModelActions } from "./transcription-model-actions";
-import {
-  canTranscribe,
-  modelFor,
-  type TranscriptionControls,
-} from "./use-transcription";
+import { modelFor, type TranscriptionControls } from "./use-transcription";
 
 import type { MomentSettings } from "../../../bindings/MomentSettings";
 import type { PermissionStatus } from "../../permissions/types";
@@ -53,8 +49,13 @@ export function VoiceNoteSettings({
   settings: MomentSettings;
   transcription: TranscriptionControls;
 }) {
-  const momentsModel = modelFor(transcription.state, "moments");
-  const isTranscribed = canTranscribe(transcription.state, "moments");
+  // Notes are transcribed with the Transcripts model, the one model that
+  // turns speech into text.
+  const transcriptsModel = modelFor(transcription.state, "transcripts");
+  const needsModel =
+    settings.transcribeNotes &&
+    transcriptsModel !== undefined &&
+    transcriptsModel.status !== "downloaded";
   const {
     getMicrophoneAccess,
     listMicrophones,
@@ -162,10 +163,10 @@ export function VoiceNoteSettings({
         // The switch says on or off by itself; only a missing model needs
         // a word, to say what the Download beside it fetches.
         description={
-          settings.transcribeNotes && !isTranscribed && momentsModel
+          needsModel
             ? t("settings-voice-notes-needs-model", {
-                model: momentsModel.name,
-                size: formatBytes(momentsModel.sizeBytes),
+                model: transcriptsModel.name,
+                size: formatBytes(transcriptsModel.sizeBytes),
               })
             : undefined
         }
@@ -175,10 +176,10 @@ export function VoiceNoteSettings({
           <div className="gap-control flex items-center">
             {/* The model is fetched into the one list Settings ›
                 Transcription keeps; the switch never fetches or removes it. */}
-            {settings.transcribeNotes && !isTranscribed && momentsModel ? (
+            {needsModel ? (
               <TranscriptionModelActions
                 controls={transcription}
-                model={momentsModel}
+                model={transcriptsModel}
               />
             ) : null}
             <Switch

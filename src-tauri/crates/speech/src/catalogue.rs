@@ -7,9 +7,6 @@ use serde::Serialize;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Purpose {
-  /// Voice notes: a few seconds each, wanted soon after a recording stops,
-  /// so the quick model.
-  Moments,
   /// Studio sound: the microphone rebuilt as a studio recording.
   StudioSound,
   /// Studio ducking: the singing in the system audio moved out of the
@@ -20,8 +17,9 @@ pub enum Purpose {
   /// Objects picked in the camera, followed through the recording, to keep
   /// with the person or take away with the room.
   CameraObjects,
-  /// The recording's microphone written out as text, word by word, to edit
-  /// and caption by, so the accurate model.
+  /// Speech written out as text: the recording's microphone word by word, to
+  /// edit and caption by, and moments' voice notes. Both take the accurate
+  /// model, so a note reads as well as the transcript.
   Transcripts,
 }
 
@@ -29,7 +27,6 @@ impl Purpose {
   /// What Settings calls the model for this use.
   pub fn name(self) -> String {
     match self {
-      Self::Moments => screenwide_i18n::t!("settings-transcription-moments"),
       Self::StudioSound => screenwide_i18n::t!("settings-transcription-studio-sound"),
       Self::StudioDucking => screenwide_i18n::t!("settings-transcription-studio-ducking"),
       Self::CameraBackground => screenwide_i18n::t!("settings-transcription-camera-background"),
@@ -41,7 +38,6 @@ impl Purpose {
   /// What downloading the model for this use gets you.
   pub fn description(self) -> String {
     match self {
-      Self::Moments => screenwide_i18n::t!("settings-transcription-moments-description"),
       Self::StudioSound => screenwide_i18n::t!("settings-transcription-studio-sound-description"),
       Self::StudioDucking => {
         screenwide_i18n::t!("settings-transcription-studio-ducking-description")
@@ -53,17 +49,6 @@ impl Purpose {
         screenwide_i18n::t!("settings-transcription-camera-objects-description")
       }
       Self::Transcripts => screenwide_i18n::t!("settings-transcription-transcripts-description"),
-    }
-  }
-
-  /// Whether the model turns speech into text, so one transcribing model can
-  /// stand in for another.
-  pub fn transcribes(self) -> bool {
-    match self {
-      Self::Moments | Self::Transcripts => true,
-      Self::StudioSound | Self::StudioDucking | Self::CameraBackground | Self::CameraObjects => {
-        false
-      }
     }
   }
 }
@@ -94,18 +79,6 @@ impl Model {
 }
 
 pub const MODELS: &[Model] = &[
-  // The whisper.cpp project's own conversion of OpenAI's Whisper base model,
-  // at a fixed revision.
-  Model {
-    files: &[ModelFile {
-      name: "ggml-base.bin",
-      sha256: "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
-      size_bytes: 147_951_465,
-      url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.bin",
-    }],
-    id: "base",
-    purpose: Purpose::Moments,
-  },
   // Whisper large-v3-turbo, quantised to 8 bits by the whisper.cpp project,
   // at a fixed revision: accurate enough to edit by, and quick for its size.
   Model {

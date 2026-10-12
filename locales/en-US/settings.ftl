@@ -161,9 +161,6 @@ settings-voice-notes-microphone-denied = { -app-name } needs microphone access f
 ## Models: transcription, Studio sound, Studio ducking and background removal. $model is a model's name.
 
 settings-transcription-local = Models run on this computer. Recordings are never uploaded.
-# The model voice notes are transcribed with, named for what it does.
-settings-transcription-moments = Moments
-settings-transcription-moments-description = Turns your moments' voice notes into text.
 # The model the microphone's Studio sound switch uses, named for what it does.
 settings-transcription-studio-sound = Studio sound
 settings-transcription-studio-sound-description = Enhances your voice.
@@ -175,9 +172,9 @@ settings-transcription-camera-background = Background removal
 settings-transcription-camera-background-description = Removes the background behind you on camera.
 settings-transcription-camera-objects = Camera objects
 settings-transcription-camera-objects-description = Keeps or removes objects on camera.
-# The model the recording's transcript is made with, named for what it does.
+# The model the recording's transcript and voice notes are made with, named for what it does.
 settings-transcription-transcripts = Transcripts
-settings-transcription-transcripts-description = Lets you edit and caption recordings by their words.
+settings-transcription-transcripts-description = Turns your recordings and voice notes into text.
 settings-transcription-models = Models
 settings-transcription-language = Language
 settings-transcription-language-description = The language your recordings are spoken in.

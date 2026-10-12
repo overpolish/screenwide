@@ -200,7 +200,6 @@ fn context_params(model_id: &str, use_gpu: bool) -> WhisperContextParameters<'st
 /// without a known preset keeps the plain timestamps.
 fn dtw(model_id: &str) -> DtwParameters<'static> {
   let preset = match model_id {
-    "base" => DtwModelPreset::Base,
     "large-v3-turbo-q8_0" => DtwModelPreset::LargeV3Turbo,
     _ => return DtwParameters::default(),
   };

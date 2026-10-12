@@ -6,15 +6,15 @@ import type {
   TranscriptionState,
 } from "../transcription/types";
 
-/** The Moments model, at its real download size. The recordings model joins
- * it once something transcribes recordings. */
-const MOMENTS_MODEL: TranscriptionModel = {
-  description: "Turns your moments' voice notes into text.",
-  id: "base",
-  name: "Moments",
+/** The Transcripts model, at its real download size, which also transcribes
+ * voice notes. */
+const TRANSCRIPTS_MODEL: TranscriptionModel = {
+  description: "Turns your recordings and voice notes into text.",
+  id: "large-v3-turbo-q8_0",
+  name: "Transcripts",
   progress: null,
-  purpose: "moments",
-  sizeBytes: 147_951_465,
+  purpose: "transcripts",
+  sizeBytes: 874_188_075,
   status: "available",
 };
 
@@ -73,7 +73,7 @@ const TICK_MS = 100;
 
 /**
  * The transcription side of the Settings stories' API: the models kept in
- * memory, Moments as `seed` says and the others not yet downloaded, with
+ * memory, Transcripts as `seed` says and the others not yet downloaded, with
  * downloads that fill over a few seconds. Nothing reaches the app or the
  * network.
  */
@@ -83,7 +83,7 @@ export function transcriptionPreviewApi(
   let state: TranscriptionState = {
     language: "system",
     models: [
-      { ...MOMENTS_MODEL, ...seed },
+      { ...TRANSCRIPTS_MODEL, ...seed },
       STUDIO_SOUND_MODEL,
       STUDIO_DUCKING_MODEL,
       CAMERA_BACKGROUND_MODEL,

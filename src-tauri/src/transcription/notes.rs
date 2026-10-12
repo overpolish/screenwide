@@ -104,8 +104,8 @@ pub(crate) fn status(
       return Some(NoteTranscript::Failed);
     }
   }
-  if models::usable(app, Purpose::Moments).is_none() {
-    return catalogue::for_purpose(Purpose::Moments)
+  if models::usable(app, Purpose::Transcripts).is_none() {
+    return catalogue::for_purpose(Purpose::Transcripts)
       .map(|model| NoteTranscript::NoModel { model: model.id });
   }
   enqueue(app, job);
@@ -194,7 +194,7 @@ fn transcribe(
   let needed = screenwide_moments::read(&job.moments)?
     .get(job.moment)
     .is_some_and(|recorded| recorded.note_duration_ms.is_some() && recorded.transcript.is_none());
-  let Some(model) = models::usable(app, Purpose::Moments) else {
+  let Some(model) = models::usable(app, Purpose::Transcripts) else {
     return Ok(());
   };
   if !needed {

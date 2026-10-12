@@ -75,18 +75,3 @@ export const modelFor = (
   purpose: TranscriptionPurpose,
 ): TranscriptionModel | undefined =>
   state?.models.find((model) => model.purpose === purpose);
-
-/** Whether `purpose` can be transcribed now: with its own model, or with any
- * other transcription model that is downloaded, more slowly perhaps but
- * never not at all. Moments and Transcripts both turn speech into text. */
-export const canTranscribe = (
-  state: TranscriptionState | null,
-  purpose: TranscriptionPurpose,
-) =>
-  modelFor(state, purpose)?.status === "downloaded" ||
-  (state?.models.some(
-    (model) =>
-      (model.purpose === "moments" || model.purpose === "transcripts") &&
-      model.status === "downloaded",
-  ) ??
-    false);

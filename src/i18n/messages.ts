@@ -871,8 +871,6 @@ export type Messages = {
   "settings-transcription-language-description": null;
   "settings-transcription-local": null;
   "settings-transcription-models": null;
-  "settings-transcription-moments": null;
-  "settings-transcription-moments-description": null;
   "settings-transcription-remove": { model: string | number };
   "settings-transcription-studio-ducking": null;
   "settings-transcription-studio-ducking-description": null;

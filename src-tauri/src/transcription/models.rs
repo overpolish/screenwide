@@ -7,7 +7,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{download, language};
-use screenwide_speech::catalogue::{Model, ModelFile, Purpose, MODELS};
+use screenwide_speech::catalogue::{self, Model, ModelFile, Purpose, MODELS};
 
 const CHANGED_EVENT: &str = "transcription://changed";
 
@@ -75,19 +75,9 @@ pub(crate) fn is_downloaded(app: &AppHandle, model: &Model) -> bool {
   })
 }
 
-/// The model `purpose` runs with: its own, or for transcribing, failing that
-/// any other transcribing model on this computer, more slowly perhaps but
-/// never not at all.
+/// The model `purpose` runs with, once it is on this computer.
 pub(crate) fn usable(app: &AppHandle, purpose: Purpose) -> Option<&'static Model> {
-  let (own, others): (Vec<_>, Vec<_>) = MODELS.iter().partition(|model| model.purpose == purpose);
-  own
-    .into_iter()
-    .chain(
-      others
-        .into_iter()
-        .filter(|model| purpose.transcribes() && model.purpose.transcribes()),
-    )
-    .find(|model| is_downloaded(app, model))
+  catalogue::for_purpose(purpose).filter(|model| is_downloaded(app, model))
 }
 
 pub(crate) fn state(app: &AppHandle) -> TranscriptionState {

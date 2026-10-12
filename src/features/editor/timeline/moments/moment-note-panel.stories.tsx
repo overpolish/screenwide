@@ -74,7 +74,10 @@ export const Waiting: Story = {
  * it needs. */
 export const NoModel: Story = {
   args: {
-    content: { ...note, transcript: { model: "base", status: "noModel" } },
+    content: {
+      ...note,
+      transcript: { model: "large-v3-turbo-q8_0", status: "noModel" },
+    },
   },
 };
 

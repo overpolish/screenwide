@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /** What a model is for. Each use has its own, so nobody has to choose one:
- * moments take the quick transcription model, Studio sound its restoration
- * model, Studio ducking its music separation model, Remove background its
- * video matting model, and the camera's objects their tracking model. */
+ * transcripts and voice notes take the transcription model, Studio sound its
+ * restoration model, Studio ducking its music separation model, Remove
+ * background its video matting model, and the camera's objects their
+ * tracking model. */
 export type TranscriptionPurpose =
   | "cameraBackground"
   | "cameraObjects"
-  | "moments"
   | "studioDucking"
   | "studioSound"
   | "transcripts";
@@ -19,7 +19,7 @@ export type TranscriptionModel = {
    * never which model it is. */
   description: string;
   id: string;
-  /** What it is for, as Settings names it: "Moments". */
+  /** What it is for, as Settings names it: "Transcripts". */
   name: string;
   /** 0 to 1 while downloading; null otherwise. */
   progress: number | null;
