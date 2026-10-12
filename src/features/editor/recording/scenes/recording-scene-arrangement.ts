@@ -47,32 +47,47 @@ export type RecordingSceneArrangement = {
 const easeInOutCubic = (value: number) =>
   value < 0.5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
 
-/** Where `sourceMs` lands on the output timeline, a moment cut away landing on
- * the join the cut left. The twin of `output_at_us`. */
+/** Where `sourceMs` lands on the output timeline: within the range holding
+ * it, or, cut away, where its source predecessor ends, or at the start of the
+ * range earliest in the source. The twin of `output_at_us`. */
 const outputAt = (
   ranges: RecordingTimelinePlaybackRange[],
   sourceMs: number,
 ) => {
+  const length = (range: RecordingTimelinePlaybackRange) =>
+    (range.sourceEndMs - range.sourceStartMs) / range.playbackRate;
+  const starts: number[] = [];
   let outputStartMs = 0;
   for (const range of ranges) {
-    if (sourceMs < range.sourceStartMs) return outputStartMs;
-    if (sourceMs < range.sourceEndMs)
+    if (range.sourceStartMs <= sourceMs && sourceMs < range.sourceEndMs)
       return (
         outputStartMs + (sourceMs - range.sourceStartMs) / range.playbackRate
       );
-    outputStartMs +=
-      (range.sourceEndMs - range.sourceStartMs) / range.playbackRate;
+    starts.push(outputStartMs);
+    outputStartMs += length(range);
   }
-  return ranges.length > 0 ? outputStartMs : sourceMs;
+  let predecessor = -1;
+  let earliest = 0;
+  ranges.forEach((range, index) => {
+    if (
+      range.sourceEndMs <= sourceMs &&
+      (predecessor < 0 || range.sourceEndMs > ranges[predecessor].sourceEndMs)
+    )
+      predecessor = index;
+    if (range.sourceStartMs < ranges[earliest].sourceStartMs) earliest = index;
+  });
+  return predecessor >= 0
+    ? starts[predecessor] + length(ranges[predecessor])
+    : starts[earliest];
 };
 
 /**
  * Arranges the screen's `output`, and the camera's overlay where `camera`
- * gives one drawn into the picture, as `clips` have them `sourceMs` into the
- * recording, timed on `ranges`; null outside every clip and in a scene that
- * stands idle, where they are left as they are. The twin of `arrange` in
- * `src-tauri/src/editor/scenes/arrange.rs`, which draws the frames this
- * places the selection over.
+ * gives one drawn into the picture, as `clips`, timed on the timeline
+ * `ranges` lay out, have them `sourceMs` into the recording; null outside
+ * every clip and in a scene that stands idle, where they are left as they
+ * are. The twin of `arrange` in `src-tauri/crates/export/src/scenes/arrange.rs`,
+ * which draws the frames this places the selection over.
  */
 export function arrangedRecordingScene({
   camera,
@@ -90,16 +105,30 @@ export function arrangedRecordingScene({
   if (output.cropWidth <= 0 || output.cropHeight <= 0 || output.imageWidth <= 0)
     return null;
   const sceneCamera = camera && camera.aspect > 0 ? camera : null;
-  const videoEndMs =
-    ranges.length > 0 ? ranges[ranges.length - 1].sourceEndMs : null;
-  // The kept ranges bound the video, to within a millisecond of rounding. A
-  // clip that reaches its end holds to it, so the last frame never falls just
-  // past the clip.
-  const reachesEnd = (clip: RecordingSceneClip) =>
-    videoEndMs !== null && clip.endMs + 1 >= videoEndMs;
+  const timelineMs =
+    ranges.length > 0 ? Math.floor(outputAt(ranges, sourceMs)) : sourceMs;
+  const videoMs =
+    ranges.length > 0
+      ? Math.round(
+          ranges.reduce(
+            (total, range) =>
+              total +
+              (range.sourceEndMs - range.sourceStartMs) / range.playbackRate,
+            0,
+          ),
+        )
+      : null;
+  // A clip at either end of the video, to within a millisecond of rounding,
+  // has nothing before it to arrive from or after it to leave for. One that
+  // reaches the end holds to it, so the last frame never falls just past it.
+  const startsVideo = (clip: RecordingSceneClip) =>
+    videoMs !== null && clip.startMs <= 1;
+  const endsVideo = (clip: RecordingSceneClip) =>
+    videoMs !== null && clip.endMs + 1 >= videoMs;
   const index = clips.findIndex(
     (clip) =>
-      clip.startMs <= sourceMs && (sourceMs < clip.endMs || reachesEnd(clip)),
+      clip.startMs <= timelineMs &&
+      (timelineMs < clip.endMs || endsVideo(clip)),
   );
   if (index < 0) return null;
   const clip = clips[index];
@@ -111,33 +140,33 @@ export function arrangedRecordingScene({
   });
   const target = targetOf(clip);
   if (!target) return null;
-  const from = outputAt(ranges, clip.startMs);
-  const length = outputAt(ranges, clip.endMs) - from;
+  const length = clip.endMs - clip.startMs;
   if (!(length > 0)) return null;
-  const elapsed = Math.max(0, outputAt(ranges, sourceMs) - from);
-  // A scene at either end of the video holds there: there is nothing before
-  // it to arrive from, or after it to leave for. Its other transition may then
-  // take the whole clip.
-  const startsVideo =
-    ranges.length > 0 && clip.startMs <= ranges[0].sourceStartMs + 1;
-  const endsVideo = reachesEnd(clip);
+  const elapsed = Math.max(0, timelineMs - clip.startMs);
   const window = Math.min(
     TRANSITION_MS,
-    startsVideo || endsVideo ? length : length / 2,
+    startsVideo(clip) || endsVideo(clip) ? length : length / 2,
   );
   const eased = (share: number) =>
     easeInOutCubic(Math.min(1, Math.max(0, share)));
-  const previous = index > 0 ? clips[index - 1] : undefined;
-  const next = index + 1 < clips.length ? clips[index + 1] : undefined;
+  // A scene hands on to the one butted up against it.
+  const previous =
+    index > 0 && clips[index - 1].endMs === clip.startMs
+      ? clips[index - 1]
+      : undefined;
+  const next =
+    index + 1 < clips.length && clips[index + 1].startMs === clip.endMs
+      ? clips[index + 1]
+      : undefined;
   const placed =
-    !startsVideo && elapsed < window
+    !startsVideo(clip) && elapsed < window
       ? towardPlacement(
-          (previous?.endMs === clip.startMs && targetOf(previous)) || base,
+          (previous && targetOf(previous)) || base,
           target,
           eased(elapsed / window),
         )
-      : !endsVideo &&
-          !(next?.startMs === clip.endMs && targetOf(next)) &&
+      : !endsVideo(clip) &&
+          !(next && targetOf(next)) &&
           length - elapsed < window
         ? towardPlacement(base, target, eased((length - elapsed) / window))
         : target;

@@ -50,7 +50,8 @@ fn is_spotlight(clip: &RecordingAnnotationClip) -> bool {
 /// The spotlight as it is last drawn in `clip`, which the next one glides
 /// from.
 fn last_drawn(clip: &RecordingAnnotationClip) -> Option<Annotation> {
-  placed_annotation(clip, clip.end_ms.saturating_sub(1)).map(|(annotation, _)| annotation)
+  placed_annotation(clip, clip.recording_span()[1].saturating_sub(1))
+    .map(|(annotation, _)| annotation)
 }
 
 fn centre(annotation: &Annotation) -> Option<[f64; 2]> {
@@ -86,7 +87,7 @@ pub fn spotlight_links(clips: &[RecordingAnnotationClip]) -> Vec<SpotlightLinks>
       if !joins {
         continue;
       }
-      let Some(to) = placed_annotation(second, second.start_ms)
+      let Some(to) = placed_annotation(second, second.recording_span()[0])
         .as_ref()
         .and_then(|(annotation, _)| centre(annotation))
       else {
@@ -105,7 +106,7 @@ pub fn spotlight_links(clips: &[RecordingAnnotationClip]) -> Vec<SpotlightLinks>
   links
 }
 
-/// Where clip `index` stops being drawn, in source time: its end, or where
+/// Where clip `index` stops being drawn on the timeline: its end, or where
 /// the clip it hands on to starts, so a frame's gap between them never
 /// shows the picture without its shade.
 pub fn drawn_until(
@@ -173,7 +174,7 @@ fn glide(
 ) -> Option<(Annotation, f32)> {
   let from = last_drawn(&clips[links[index].from?])?;
   let clip = &clips[index];
-  let (to, _) = placed_annotation(clip, clip.start_ms)?;
+  let (to, _) = placed_annotation(clip, clip.recording_span()[0])?;
   let ms = travel_ms(travel(&from, &to), frame).min(duration_ms * REVEAL_PHASE_SHARE);
   (ms > 0.0).then_some((from, ms))
 }

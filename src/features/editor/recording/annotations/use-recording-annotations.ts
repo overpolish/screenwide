@@ -11,6 +11,7 @@ import { Annotation, AnnotationTextEdit } from "../../annotations/annotations";
 import { useAnnotations } from "../../annotations/use-annotations";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 
@@ -118,7 +119,10 @@ export function useRecordingAnnotations({
       withRecordingSpotlightBlurShared(unnumbered, clips),
       clips,
     ).map((clip) =>
-      pacedClip(heldLengthClip(clip, sourceDurationMs), frames[clip.trackId]),
+      pacedClip(
+        heldLengthClip(clip, recordingTimelineLengthMs(edit, sourceDurationMs)),
+        frames[clip.trackId],
+      ),
     );
     if (JSON.stringify(next) !== JSON.stringify(clips))
       onEdit({ ...edit, annotationClips: next });
@@ -218,16 +222,20 @@ export function useRecordingAnnotations({
   }, [sessionId]);
   useRecordingAnnotationSync({
     clips: nativeClips,
+    edit,
     selectedIds: selection.selectedIds,
     sessionId,
+    sourceDurationMs,
     tool,
     trackId,
   });
   const pinning = recordingAnnotationPinning({
     clips,
+    edit,
     getPositionMs,
     pinStatus,
     sessionId,
+    sourceDurationMs,
     withClip,
   });
   return {

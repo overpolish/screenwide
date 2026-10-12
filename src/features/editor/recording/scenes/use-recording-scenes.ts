@@ -4,9 +4,17 @@
 import { useEffect, useReducer, useRef } from "react";
 
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
-import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import {
+  createRecordingTimelineEdit,
+  RecordingTimelineEdit,
+} from "../../timeline/editing/recording-timeline-edit";
+import {
+  recordingTimelineLengthMs,
+  recordingTimelineMsAt,
+} from "../../timeline/editing/recording-timeline-time";
 import { Playhead } from "../../timeline/scrub-playhead";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
+import { retimedSceneClips } from "../recording-overlay-retime";
 
 import {
   ownEditedAutoZooms,
@@ -132,6 +140,10 @@ export function useRecordingScenes({
   const commit = (next: RecordingSceneClip[]) => {
     commitClips(ownEditedAutoZooms(clips, next));
   };
+  // Scenes are timed on the edited video; the playhead is read in the
+  // recording.
+  const timelineMsAt = (sourceMs: number) =>
+    recordingTimelineMsAt(edit, sourceDurationMs, sourceMs);
   // The panel follows the scene under the playhead. While the recording plays
   // the settled position stands still, so the playhead itself is read, and
   // its ticks only redraw the panel as it crosses a clip's edge; reading it
@@ -142,20 +154,29 @@ export function useRecordingScenes({
   useEffect(() => {
     if (!isPlaying) return;
     return playhead.subscribe(() => {
-      const id = recordingSceneClipAt(clips, getPositionMs())?.id ?? null;
+      const id =
+        recordingSceneClipAt(
+          clips,
+          recordingTimelineMsAt(edit, sourceDurationMs, getPositionMs()),
+        )?.id ?? null;
       if (id === playingClipRef.current) return;
       playingClipRef.current = id;
       redraw();
     });
-  }, [clips, getPositionMs, isPlaying, playhead]);
+  }, [clips, edit, getPositionMs, isPlaying, playhead, sourceDurationMs]);
   const current = recordingSceneClipAt(
     clips,
-    isPlaying ? getPositionMs() : positionMs,
+    timelineMsAt(isPlaying ? getPositionMs() : positionMs),
   );
   const paneOf = (clip: RecordingSceneClip) =>
     selectedPaneFraming({ camera: sceneCamera, clip, output, selectsCamera });
   const currentPane = current ? paneOf(current) : null;
-  const showDraft = useScenePreviewSync({ clips, sessionId });
+  const showDraft = useScenePreviewSync({
+    clips,
+    edit,
+    sessionId,
+    sourceDurationMs,
+  });
   const selection = useRecordingSceneSelection({
     clips,
     commit,
@@ -184,10 +205,10 @@ export function useRecordingScenes({
       camera: sceneCamera,
       clips,
       commit,
-      getPositionMs,
+      getTimelineMs: () => timelineMsAt(getPositionMs()),
+      lengthMs: recordingTimelineLengthMs(edit, sourceDurationMs),
       output,
       paneOf,
-      sourceDurationMs,
     }),
     autoZoom: () => {
       planRecordingAutoZoom(
@@ -195,8 +216,19 @@ export function useRecordingScenes({
         visibleScreenArea(output, frames.primary),
       )
         .then((planned) => {
+          // The plan is timed on the whole recording; it lands on the
+          // timeline as it now stands.
+          const latest = editRef.current;
           commitClips(
-            withAutoZooms(editRef.current.sceneClips ?? EMPTY_CLIPS, planned),
+            withAutoZooms(
+              latest.sceneClips ?? EMPTY_CLIPS,
+              retimedSceneClips(planned, {
+                next: latest.segments,
+                previous: createRecordingTimelineEdit(latest.artifactId)
+                  .segments,
+                sourceDurationMs,
+              }),
+            ),
           );
         })
         .catch((cause: unknown) => {

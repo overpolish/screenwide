@@ -140,6 +140,40 @@ fn export_plan_ignores_cut_only_timelines() {
 }
 
 #[test]
+fn reordered_segments_are_valid_while_no_source_plays_twice() {
+  let mut reordered = edit(1, 0.5);
+  reordered.segments.swap(0, 1);
+  assert!(validate(&reordered).is_ok());
+  reordered.segments[1].source_end = 0.6;
+  assert!(validate(&reordered).is_err());
+}
+
+#[test]
+fn export_plan_plays_reordered_segments_in_list_order() {
+  let mut reordered = edit(1, 0.25);
+  reordered.segments.swap(0, 1);
+  let plan = TimelinePlan::from_edit(&reordered, 8_000).unwrap();
+  assert_eq!(plan.duration_ms(), 8_000);
+  assert_eq!(plan.ranges().len(), 2);
+  assert_eq!(plan.ranges()[0].source_start_us, 2_000_000);
+  assert_eq!(plan.source_to_output_us(1_000_000), Some(7_000_000));
+  assert_eq!(plan.source_to_output_us(2_000_000), Some(0));
+}
+
+#[test]
+fn edits_this_build_cannot_read_are_absent() {
+  let persisted = |version| PersistedTimelineEdit {
+    edit: edit(1, 0.5),
+    revision: 1,
+    version,
+  };
+  assert!(persisted(2).into_current(8_000).is_some());
+  assert!(persisted(FORMAT_VERSION).into_current(8_000).is_some());
+  assert!(persisted(1).into_current(8_000).is_none());
+  assert!(persisted(FORMAT_VERSION + 1).into_current(8_000).is_none());
+}
+
+#[test]
 fn export_plan_scales_ranges_by_playback_rate_without_coalescing_different_rates() {
   let mut timeline = edit(1, 0.5);
   timeline.segments[0].playback_rate = 2.0;

@@ -126,6 +126,18 @@ impl PreviewPlayerManager {
   }
 }
 impl PreviewPlayerManager {
+  /// Where the frame `source_ms` into the recording plays on the timeline
+  /// the annotation clips are timed on.
+  pub(super) fn annotation_timeline_ms(&self, source_ms: u64) -> u64 {
+    self.sources.as_ref().map_or(source_ms, |sources| {
+      let ranges = sources
+        .annotation_ranges
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+      screenwide_annotations::timing::FrameTime::on(&ranges, source_ms).timeline_ms
+    })
+  }
+
   /// What `pane` draws at the playhead: a gesture's working list while one
   /// holds that pane, and otherwise the clips live there.
   pub(in crate::editor::recording_preview_player) fn pane_annotations(
@@ -140,6 +152,10 @@ impl PreviewPlayerManager {
     let Some(sources) = self.sources.as_ref() else {
       return Vec::new();
     };
+    let ranges = sources
+      .annotation_ranges
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
     sources
       .annotation_clips
       .read()
@@ -147,6 +163,7 @@ impl PreviewPlayerManager {
         active_annotations(
           &clips,
           super::gesture::track(pane),
+          &ranges,
           self.position_ms.min(sources.duration_ms.saturating_sub(1)),
         )
       })

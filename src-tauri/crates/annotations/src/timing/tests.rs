@@ -44,6 +44,7 @@ fn clip(
     start_ms,
     end_ms,
     pin: None,
+    recording_span: None,
   }
 }
 
@@ -54,19 +55,19 @@ fn active_annotations_respects_intervals_and_tracks() {
     clip("b", AnnotationTrack::Camera, 1_000, 2_000),
   ];
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Primary, 999).len(),
+    active_annotations(&clips, AnnotationTrack::Primary, &[], 999).len(),
     0
   );
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Primary, 1_000)[0].id,
+    active_annotations(&clips, AnnotationTrack::Primary, &[], 1_000)[0].id,
     "a"
   );
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Primary, 2_000).len(),
+    active_annotations(&clips, AnnotationTrack::Primary, &[], 2_000).len(),
     0
   );
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Camera, 1_500)[0].id,
+    active_annotations(&clips, AnnotationTrack::Camera, &[], 1_500)[0].id,
     "b"
   );
 }
@@ -77,7 +78,7 @@ fn active_annotations_no_longer_truncates_at_thirty_two() {
     .map(|index| clip(&index.to_string(), AnnotationTrack::Primary, 0, 1_000))
     .collect();
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Primary, 500).len(),
+    active_annotations(&clips, AnnotationTrack::Primary, &[], 500).len(),
     40
   );
 }
@@ -113,15 +114,41 @@ fn kept(source_start_ms: u64, source_end_ms: u64, playback_rate: f64) -> Timelin
   }
 }
 
-fn reveal_at(ranges: &[TimelineRange], at: u64) -> crate::reveal::AnnotationReveal {
-  let clip = clip("a", AnnotationTrack::Primary, 1_000, 10_000);
-  revealed_annotations(&[clip], AnnotationTrack::Primary, ranges, at, 0.0, (0, 0))[0].reveal
+/// 5-10 s of the recording plays first, then 0-5 s.
+fn reordered() -> [TimelineRange; 2] {
+  [
+    kept(5_000, 10_000, 1.0),
+    TimelineRange {
+      output_start_us: 5_000_000,
+      ..kept(0, 5_000, 1.0)
+    },
+  ]
 }
 
-/// A clip whose start a cut took arrives from the first frame it is seen,
-/// rather than already part way in.
+/// The reveal of a clip `[start_ms, end_ms)` on the timeline, drawn on the
+/// frame `source_ms` into the recording.
+fn reveal(
+  ranges: &[TimelineRange],
+  [start_ms, end_ms]: [u64; 2],
+  source_ms: u64,
+) -> Option<crate::reveal::AnnotationReveal> {
+  let clip = clip("a", AnnotationTrack::Primary, start_ms, end_ms);
+  revealed_annotations(
+    &[clip],
+    AnnotationTrack::Primary,
+    ranges,
+    source_ms,
+    0.0,
+    (0, 0),
+  )
+  .first()
+  .map(|annotation| annotation.reveal)
+}
+
+/// A frame is timed where it plays: 3 s into the recording is half a second
+/// into a timeline that keeps 0-0.5 s and 3-20 s.
 #[test]
-fn a_cut_start_arrives_where_the_clip_is_first_seen() {
+fn a_frame_is_timed_where_it_plays_on_the_timeline() {
   let ranges = [
     kept(0, 500, 1.0),
     TimelineRange {
@@ -129,80 +156,66 @@ fn a_cut_start_arrives_where_the_clip_is_first_seen() {
       ..kept(3_000, 20_000, 1.0)
     },
   ];
-  assert_eq!(reveal_at(&ranges, 3_000).high, 0.0);
-  assert!(reveal_at(&ranges, 3_500).high < 1.0);
-  assert_eq!(reveal_at(&ranges, 4_000).high, 1.0);
-}
-
-/// A clip whose end a cut took has left by the last frame that is kept,
-/// rather than being cut off whole.
-#[test]
-fn a_cut_end_leaves_before_the_cut() {
-  let ranges = [
-    kept(0, 6_000, 1.0),
-    TimelineRange {
-      output_start_us: 6_000_000,
-      ..kept(12_000, 20_000, 1.0)
-    },
-  ];
-  assert!(reveal_at(&ranges, 5_999).low > 0.99);
-  assert!(reveal_at(&[], 5_999).is_whole());
+  assert_eq!(reveal(&ranges, [500, 9_500], 3_000).unwrap().high, 0.0);
+  assert!(reveal(&ranges, [500, 9_500], 3_500).unwrap().high < 1.0);
+  assert_eq!(reveal(&ranges, [500, 9_500], 4_000).unwrap().high, 1.0);
+  assert!(reveal(&ranges, [500, 9_500], 400).is_none());
 }
 
 /// A clip at either end of the video is whole there, with nothing before
 /// it to arrive from or after it to leave for, and still animates at its
-/// other end. Trimming the video down to the clip counts as reaching it.
+/// other end; one a millisecond short of an end still reaches it.
 #[test]
 fn a_clip_at_an_end_of_the_video_holds_there() {
-  for ranges in [[kept(1_000, 20_000, 1.0)], [kept(3_000, 20_000, 1.0)]] {
-    let first = ranges[0].source_start_us / 1_000;
-    assert!(reveal_at(&ranges, first).is_whole());
-    assert!(reveal_at(&ranges, 9_999).low > 0.99);
-  }
-  for ranges in [[kept(0, 10_000, 1.0)], [kept(0, 6_000, 1.0)]] {
-    let last = ranges[0].source_end_us / 1_000 - 1;
-    assert!(reveal_at(&ranges, last).is_whole());
-    assert_eq!(reveal_at(&ranges, 1_000).high, 0.0);
-  }
-  for at in [1_000, 1_100, 9_900, 9_999] {
-    assert!(reveal_at(&[kept(1_000, 10_000, 1.0)], at).is_whole());
-  }
+  let ranges = [kept(0, 10_000, 1.0)];
+  assert!(reveal(&ranges, [0, 5_000], 0).unwrap().is_whole());
+  assert!(reveal(&ranges, [0, 5_000], 4_999).unwrap().low > 0.99);
+  assert!(reveal(&ranges, [5_000, 10_000], 9_999).unwrap().is_whole());
+  assert_eq!(reveal(&ranges, [5_000, 10_000], 5_000).unwrap().high, 0.0);
+  assert_eq!(reaches_video_ends(Some(10_000), [1, 9_999]), (true, true));
+  assert_eq!(reaches_video_ends(Some(10_000), [2, 9_998]), (false, false));
+  assert_eq!(reaches_video_ends(None, [0, 10_000]), (false, false));
 }
 
-/// A clip that rounding left a millisecond short of either end still
-/// reaches it, and is drawn on the last frame; two milliseconds is a real gap.
-#[test]
-fn a_clip_a_millisecond_short_of_an_end_still_reaches_it() {
-  let ranges = [kept(1_000, 10_000, 1.0)];
-  assert_eq!(reaches_video_ends(&ranges, [1_001, 9_999]), (true, true));
-  assert_eq!(reaches_video_ends(&ranges, [1_002, 9_998]), (false, false));
-  let clips = [clip("a", AnnotationTrack::Primary, 1_000, 10_000)];
-  let drawn = |end_ms: u64| {
-    let ranges = [kept(0, end_ms, 1.0)];
-    revealed_annotations(
-      &clips,
-      AnnotationTrack::Primary,
-      &ranges,
-      10_000,
-      0.0,
-      (0, 0),
-    )
-  };
-  assert!(drawn(10_001)[0].reveal.is_whole());
-  assert!(drawn(10_002).is_empty());
-}
-
-/// Arriving takes the same output time at any speed.
+/// Arriving takes the same time on the timeline at any speed: on a timeline
+/// playing twice as fast, it takes twice as much of the recording.
 #[test]
 fn a_faster_timeline_does_not_hurry_the_arrival() {
   let ranges = [kept(0, 20_000, 2.0)];
-  assert!(reveal_at(&ranges, 2_000).high < 1.0);
-  assert_eq!(reveal_at(&ranges, 3_000).high, 1.0);
+  assert!(reveal(&ranges, [1_000, 9_000], 3_000).unwrap().high < 1.0);
+  assert_eq!(reveal(&ranges, [1_000, 9_000], 4_000).unwrap().high, 1.0);
 }
 
-/// A moving or swaying image is timed from the start of its clip in
-/// recording time, whatever the timeline does to the reveal around it, and
-/// an image that neither plays nor sways carries no clock.
+/// A clip placed across a jump plays straight on across it: it holds both
+/// sides, and its timing counts on from where it started.
+#[test]
+fn a_clip_plays_on_across_a_jump_in_the_recording() {
+  let ranges = reordered();
+  // 4-6 s on the timeline: 9-10 s of the recording, then 0-1 s.
+  assert!(reveal(&ranges, [4_000, 6_000], 9_500).is_some());
+  assert!(reveal(&ranges, [4_000, 6_000], 500).is_some());
+  assert!(reveal(&ranges, [4_000, 6_000], 7_000).is_none());
+  assert!(reveal(&ranges, [4_000, 6_000], 2_000).is_none());
+  assert_eq!(progress([4_000, 6_000], 5_500), Some((1_500.0, 2_000.0)));
+}
+
+/// What follows the picture is read across the stretch of the recording a
+/// clip plays, wherever the timeline has put it.
+#[test]
+fn a_clip_reads_the_recording_its_timeline_stretch_plays() {
+  let mut clips = [
+    clip("a", AnnotationTrack::Primary, 0, 1_000),
+    clip("b", AnnotationTrack::Primary, 5_000, 7_000),
+  ];
+  lay_on_recording(&mut clips, &reordered());
+  assert_eq!(clips[0].recording_span(), [5_000, 6_000]);
+  assert_eq!(clips[1].recording_span(), [0, 2_000]);
+  lay_on_recording(&mut clips, &[]);
+  assert_eq!(clips[1].recording_span(), [5_000, 7_000]);
+}
+
+/// A moving or swaying image is timed from the start of its clip on the
+/// timeline, and an image that neither plays nor sways carries no clock.
 #[test]
 fn a_moving_or_swaying_image_is_timed_from_the_start_of_its_clip() {
   use crate::image::{model::new_image, ImageArt, ImagePlay};

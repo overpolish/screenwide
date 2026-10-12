@@ -4,7 +4,9 @@
 //! A recording's edit: the segments its timeline keeps and their speeds, the
 //! annotation and scene clips laid over it, and what Remove silences, the
 //! Transcript panel and keyboard deletions cut. A project file keeps it; the
-//! plan an export or the preview follows is made from it.
+//! plan an export or the preview follows is made from it. Annotation and
+//! scene clips are timed on the timeline; the edits that change the segments
+//! re-time them as they are made.
 
 use screenwide_timeline::{source_to_output_us, TimelineRange};
 mod validation;
@@ -18,8 +20,19 @@ pub use transcript::{RecordingTranscriptCorrection, RecordingTranscriptCut};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-/// Annotations are drawn in document order.
-pub const FORMAT_VERSION: u16 = 2;
+/// Annotations are drawn in document order, segments play in list order,
+/// which need not be source order, and annotation and scene clips are times
+/// on the timeline.
+pub const FORMAT_VERSION: u16 = 4;
+/// Version 2 edits always kept segments in source order, which later
+/// versions still read the same way.
+const OLDEST_READABLE_VERSION: u16 = 2;
+/// The version from which annotation and scene clips are timeline times
+/// rather than recording times.
+const TIMELINE_CLIPS_VERSION: u16 = 4;
+
+mod timeline_time;
+
 const MAX_SEGMENTS: usize = 100_000;
 
 mod keyboard;
@@ -210,6 +223,24 @@ pub struct PersistedTimelineEdit {
   pub edit: RecordingTimelineEdit,
   pub revision: u64,
   pub version: u16,
+}
+
+impl PersistedTimelineEdit {
+  /// The edit as this build works on it, for a recording `duration_ms`
+  /// long: an older one's clips carried from recording time onto the
+  /// timeline. `None` for a version this build cannot read, or an edit that
+  /// fails validation.
+  pub fn into_current(self, duration_ms: u64) -> Option<RecordingTimelineEdit> {
+    if !(OLDEST_READABLE_VERSION..=FORMAT_VERSION).contains(&self.version) {
+      return None;
+    }
+    let mut edit = self.edit;
+    if self.version < TIMELINE_CLIPS_VERSION {
+      timeline_time::carry_clips_onto_timeline(&mut edit, duration_ms);
+    }
+    validate(&edit).ok()?;
+    Some(edit)
+  }
 }
 
 #[cfg(test)]

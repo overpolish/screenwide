@@ -1,15 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What the scenes make of one frame. A clip arrives over its first
-//! transition window and leaves over its last, both measured in output time
-//! over what the timeline keeps, so a speed change never hurries a transition.
-//! Two clips that butt hand over directly, morphing from one to the other
-//! without passing back through the composition the recording has outside
-//! them, a clip that starts the video is in place from its first frame, and
-//! one that runs on to the end of the video never leaves.
+//! What the scenes make of one frame, placed on the timeline the clips are
+//! timed on. A clip arrives over its first transition window and leaves over
+//! its last, so a speed change never hurries a transition. Two clips that
+//! butt hand over directly, without passing back through the composition
+//! outside them; a clip that starts the video is in place from its first
+//! frame, and one that runs on to the end never leaves.
 
-use screenwide_annotations::timing::{covers, output_progress, reaches_video_ends};
+use screenwide_annotations::timing::{covers, progress, reaches_video_ends, video_ms, FrameTime};
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::framing::{drawn_frame, SceneFraming};
 use screenwide_scenes::geometry::{preset_panes, Rect};
@@ -18,7 +17,7 @@ use screenwide_scenes::motion::SceneMotion;
 use screenwide_scenes::placement::Placement;
 use screenwide_scenes::CameraOverlaySettings;
 use screenwide_timeline::easing::ease_in_out_cubic;
-use screenwide_timeline::TimelineRange;
+use screenwide_timeline::{rate_at, TimelineRange};
 
 /// How long a scene takes to arrive or leave, in output milliseconds. A clip
 /// too short for two of them gives each half of its length.
@@ -152,25 +151,23 @@ impl Base {
   }
 }
 
-/// The placement the scenes give the frame `source_ms` into the recording,
-/// or `None` outside every clip, in a stretch the timeline cut away, and in a
-/// scene that stands idle.
+/// The placement the scenes give the frame `timeline_ms` into a video
+/// `video_ms` long; `None` outside every clip and in a scene that stands idle.
 fn placement_at(
   clips: &[RecordingSceneClip],
-  ranges: &[TimelineRange],
-  source_ms: u64,
+  (timeline_ms, video_ms): (u64, Option<u64>),
   base: &Base,
 ) -> Option<Placement> {
   let index = clips
     .iter()
-    .position(|clip| covers(ranges, [clip.start_ms, clip.end_ms], source_ms))?;
+    .position(|clip| covers(video_ms, [clip.start_ms, clip.end_ms], timeline_ms))?;
   let clip = &clips[index];
   let target = base.target(clip)?;
-  let (elapsed, length) = output_progress(ranges, [clip.start_ms, clip.end_ms], source_ms)?;
+  let (elapsed, length) = progress([clip.start_ms, clip.end_ms], timeline_ms)?;
   // A scene at either end of the video holds there: there is nothing before
   // it to arrive from, or after it to leave for. Its other transition may then
   // take the whole clip.
-  let (starts_video, ends_video) = reaches_video_ends(ranges, [clip.start_ms, clip.end_ms]);
+  let (starts_video, ends_video) = reaches_video_ends(video_ms, [clip.start_ms, clip.end_ms]);
   let window = TRANSITION_MS.min(if starts_video || ends_video {
     length
   } else {
@@ -201,11 +198,12 @@ fn placement_at(
 
 /// Arranges the screen's `output`, in the canvas's output pixels, and the
 /// camera's overlay on the same canvas where `camera` gives one with the
-/// camera's source size, as `clips` have them `source_ms` into the recording,
-/// timed on `ranges`. Both are left as they are outside every clip, which the
-/// answer says: `true` where a scene placed them. `frame_ms` is how much
-/// source time the frame covers: where the panes moved over it, `output`
-/// carries that motion for the compositor to blur; a still passes zero.
+/// camera's source size, as `clips` have them on the frame `source_ms` into
+/// the recording, which `ranges` place on the timeline. Both are left as
+/// they are outside every clip, which the answer says: `true` where a scene
+/// placed them. `frame_ms` is how much recording time the frame covers:
+/// where the panes moved over it, `output` carries that motion for the
+/// compositor to blur; a still passes zero.
 pub fn arrange(
   clips: &[RecordingSceneClip],
   ranges: &[TimelineRange],
@@ -224,13 +222,16 @@ pub fn arrange(
       .as_ref()
       .map(|(overlay, (width, height))| (&**overlay, f64::from(*width) / f64::from(*height))),
   );
-  let Some(placed) = placement_at(clips, ranges, source_ms, &base) else {
+  let timeline_ms = FrameTime::on(ranges, source_ms).timeline_ms;
+  let video_ms = video_ms(ranges);
+  let Some(placed) = placement_at(clips, (timeline_ms, video_ms), &base) else {
     return false;
   };
   if frame_ms > 0.0 {
-    // Before its first clip the frame was in the composition outside them.
-    let opened_ms = source_ms.saturating_sub(frame_ms.round() as u64);
-    let opened = placement_at(clips, ranges, opened_ms, &base).unwrap_or(base.placement);
+    // Opened a frame's length earlier on the timeline; before the first clip, outside them.
+    let frame_on_timeline = frame_ms / rate_at(ranges, source_ms as f64 * 1_000.0) as f32;
+    let opened_ms = timeline_ms.saturating_sub(frame_on_timeline.round() as u64);
+    let opened = placement_at(clips, (opened_ms, video_ms), &base).unwrap_or(base.placement);
     output.scene_motion = SceneMotion::between(
       &opened,
       &placed,
@@ -262,13 +263,13 @@ pub fn arrange(
   true
 }
 
-/// What a drag on the camera reframes `source_ms` into the recording: the
-/// index of the clip it falls in, the box that clip settles the camera in,
-/// and the framing it shows there. `None` outside every clip, in a scene
+/// What a drag on the camera reframes `timeline_ms` into the edited video:
+/// the index of the clip it falls in, the box that clip settles the camera
+/// in, and the framing it shows there. `None` outside every clip, in a scene
 /// that stands idle, and in one that hides the camera.
 pub fn camera_target(
   clips: &[RecordingSceneClip],
-  source_ms: u64,
+  timeline_ms: u64,
   output: &ScreenshotOutputSettings,
   overlay: &CameraOverlaySettings,
   camera: (u32, u32),
@@ -280,7 +281,7 @@ pub fn camera_target(
   let base = Base::of(output, Some((overlay, aspect)));
   let index = clips
     .iter()
-    .position(|clip| clip.start_ms <= source_ms && source_ms < clip.end_ms)?;
+    .position(|clip| covers(None, [clip.start_ms, clip.end_ms], timeline_ms))?;
   let clip = &clips[index];
   let target = base.target(clip)?;
   if target.opacity.1 == 0.0 {

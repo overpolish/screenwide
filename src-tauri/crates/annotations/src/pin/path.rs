@@ -42,9 +42,10 @@ impl PinRequest {
     source: (u32, u32),
     source_per_size: f64,
   ) -> Self {
+    let [start_ms, end_ms] = clip.recording_span();
     Self {
-      start_ms: clip.start_ms,
-      end_ms: clip.end_ms,
+      start_ms,
+      end_ms,
       keyframes: pin.sorted(),
       target: PinTarget::of(&clip.annotation, source, source_per_size),
     }

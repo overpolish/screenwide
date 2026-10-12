@@ -10,19 +10,23 @@ import {
   layoutRecordingTimelineSegments,
   RecordingTimelineEdit,
 } from "./recording-timeline-edit";
+import { freeSourceBounds } from "./recording-timeline-source-order";
 
 const CUT_EPSILON = 1e-9;
 
 /**
- * A stretch of the recording left out: between two neighbouring segments,
- * or before the first or after the last.
+ * A stretch of the recording left out, shown where restoring it would put
+ * it back: after the segment that ends where it starts in the source, or at
+ * the start of the segment earliest in the source when none does.
  */
 export type RecordingTimelineCut = {
-  /** The segment the cut comes before, or none at the end. */
+  /** The segment that starts where the cut ends in the source, or none at
+   * the end of the recording. */
   followingSegmentId: number | null;
-  /** Where it is, in normalized output time: the join, or an end. */
+  /** Where it is, in normalized output time: the end of the segment it
+   * follows, or the start of the one it comes before. */
   outputPosition: number;
-  /** The segment the cut follows, or none at the start. */
+  /** The segment the cut follows in the source, or none at the start. */
   segmentId: number | null;
   /** What was left out, in normalized source time. */
   sourceEnd: number;
@@ -30,56 +34,39 @@ export type RecordingTimelineCut = {
 };
 
 /**
- * Every place source was left out, in output order: the start of the
- * recording, each join, and the end. A blade split with nothing removed is a
- * join too, but there is nothing to bring back at it.
+ * Every stretch of source left out, in output order. A blade split with
+ * nothing removed, or a jump a reordered timeline makes, leaves nothing to
+ * bring back and is no cut.
  */
 export const recordingTimelineCuts = (
   edit: RecordingTimelineEdit,
 ): RecordingTimelineCut[] => {
   const layout = layoutRecordingTimelineSegments(edit);
   if (layout.length === 0) return [];
-  const first = layout[0];
-  const last = layout[layout.length - 1];
-  const joins = layout.flatMap((segment, index) => {
-    const next = index + 1 < layout.length ? layout[index + 1] : null;
-    return next && next.sourceStart - segment.sourceEnd > CUT_EPSILON
-      ? [
-          {
-            followingSegmentId: next.id,
-            outputPosition: segment.outputEnd,
-            segmentId: segment.id,
-            sourceEnd: next.sourceStart,
-            sourceStart: segment.sourceEnd,
-          },
-        ]
-      : [];
+  const bySource = [...layout].sort((a, b) => a.sourceStart - b.sourceStart);
+  const cuts: RecordingTimelineCut[] = [];
+  bySource.forEach((segment, index) => {
+    const previous = index > 0 ? bySource[index - 1] : null;
+    const gapStart = previous?.sourceEnd ?? 0;
+    if (segment.sourceStart - gapStart > CUT_EPSILON)
+      cuts.push({
+        followingSegmentId: segment.id,
+        outputPosition: previous?.outputEnd ?? segment.outputStart,
+        segmentId: previous?.id ?? null,
+        sourceEnd: segment.sourceStart,
+        sourceStart: gapStart,
+      });
   });
-  return [
-    ...(first.sourceStart > CUT_EPSILON
-      ? [
-          {
-            followingSegmentId: first.id,
-            outputPosition: 0,
-            segmentId: null,
-            sourceEnd: first.sourceStart,
-            sourceStart: 0,
-          },
-        ]
-      : []),
-    ...joins,
-    ...(1 - last.sourceEnd > CUT_EPSILON
-      ? [
-          {
-            followingSegmentId: null,
-            outputPosition: 1,
-            segmentId: last.id,
-            sourceEnd: 1,
-            sourceStart: last.sourceEnd,
-          },
-        ]
-      : []),
-  ];
+  const last = bySource[bySource.length - 1];
+  if (1 - last.sourceEnd > CUT_EPSILON)
+    cuts.push({
+      followingSegmentId: null,
+      outputPosition: last.outputEnd,
+      segmentId: last.id,
+      sourceEnd: 1,
+      sourceStart: last.sourceEnd,
+    });
+  return cuts.sort((a, b) => a.outputPosition - b.outputPosition);
 };
 
 /** Shortcut moves and deletions are kept per segment, so a segment carrying
@@ -96,12 +83,13 @@ export const hasKeyboardSegmentEdits = (
   );
 
 /**
- * Puts back `cut`, as dragging the neighbouring edge out over it would. At a
- * join, where the two segments play at the same rate and neither carries a
- * shortcut edit, they become one segment again, so the join goes along with
- * the gap; otherwise the restored stretch plays at the rate of the segment
- * before it. At the start or end of the recording the segment beside it
- * reaches back to that end. A cut that is no longer there returns the edit
+ * Puts back `cut`, as dragging the edge of the segment before it in the
+ * source out over it would. Where the segment after it in the source plays
+ * straight after, at the same rate, and neither carries a shortcut edit,
+ * the two become one segment again; otherwise the restored stretch plays at
+ * the rate of the segment before it. At the start of the recording the
+ * segment earliest in the source reaches back to it, and at the end the
+ * last one reaches on. A cut that is no longer there returns the edit
  * unchanged, which keeps it out of undo history.
  */
 export function restoreRecordingTimelineCut(
@@ -114,25 +102,28 @@ export function restoreRecordingTimelineCut(
   const after = index(cut.followingSegmentId);
   const segments = [...edit.segments];
   if (cut.segmentId === null) {
-    if (after !== 0 || segments[0].sourceStart <= CUT_EPSILON) return edit;
-    segments[0] = { ...segments[0], sourceStart: 0 };
+    if (after < 0 || segments[after].sourceStart <= CUT_EPSILON) return edit;
+    const earlier = segments.some(
+      (segment) => segment.sourceStart < segments[after].sourceStart,
+    );
+    if (earlier) return edit;
+    segments[after] = { ...segments[after], sourceStart: 0 };
     return { ...edit, segments };
   }
-  if (cut.followingSegmentId === null) {
-    const lastIndex = segments.length - 1;
-    if (
-      before !== lastIndex ||
-      1 - segments[lastIndex].sourceEnd <= CUT_EPSILON
-    )
-      return edit;
-    segments[lastIndex] = { ...segments[lastIndex], sourceEnd: 1 };
-    return { ...edit, segments };
-  }
-  if (before < 0 || after !== before + 1) return edit;
+  if (before < 0) return edit;
   const segment = segments[before];
+  const upper = freeSourceBounds(segments, before).upper;
+  if (upper - segment.sourceEnd <= CUT_EPSILON) return edit;
+  if (cut.followingSegmentId === null) {
+    if (upper < 1) return edit;
+    segments[before] = { ...segment, sourceEnd: 1 };
+    return { ...edit, segments };
+  }
+  if (after < 0 || Math.abs(segments[after].sourceStart - upper) > CUT_EPSILON)
+    return edit;
   const next = segments[after];
-  if (next.sourceStart - segment.sourceEnd <= CUT_EPSILON) return edit;
   const rejoins =
+    after === before + 1 &&
     (segment.playbackRate ?? 1) === (next.playbackRate ?? 1) &&
     !hasKeyboardSegmentEdits(edit, segment.id) &&
     !hasKeyboardSegmentEdits(edit, next.id);

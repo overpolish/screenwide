@@ -9,6 +9,9 @@ mod keyboard;
 pub(super) struct PlayerSources {
   pub(super) annotation_clips:
     Arc<RwLock<Vec<screenwide_annotations::timing::RecordingAnnotationClip>>>,
+  /// The timeline `annotation_clips` are timed on, sent with them, so a
+  /// frame never times new clips on an old timeline or the other way round.
+  pub(super) annotation_ranges: Arc<RwLock<Vec<TimelineRange>>>,
   pub(super) scenes: super::scene_preview::PreviewScenes,
   pub(super) audio_tracks: Vec<RecordingAudioTrack>,
   pub(super) camera_duration_ms: Option<u64>,
@@ -24,7 +27,7 @@ pub(super) struct PlayerSources {
   pub(super) cursor_artworks: Option<Arc<Vec<GpuArtwork>>>,
   pub(super) cursor_settings: Arc<RwLock<CursorEffectSettings>>,
   pub(super) keyboard: Option<Arc<KeyboardCompositor>>,
-  /// The kept source ranges keyboard badges and annotations animate on.
+  /// The kept source ranges keyboard badges animate on.
   pub(super) animation_ranges: Arc<RwLock<Vec<TimelineRange>>>,
   pub(super) keyboard_settings: Arc<RwLock<KeyboardEffectSettings>>,
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
@@ -149,13 +152,20 @@ pub(super) fn sources_with_surface(
   // mutex: the main thread may simultaneously be serving a snapshot request
   // that needs the same mutex, and the two would wait on each other forever.
   let persisted_edit =
-    crate::editor::timeline_edit::for_project(&project, artifact_id).map(|(_, edit)| edit);
+    crate::editor::timeline_edit::for_project(&project, artifact_id, duration_ms)
+      .map(|(_, edit)| edit);
   let persisted = persisted_edit
     .as_ref()
     .and_then(|edit| screenwide_timeline_edit::TimelinePlan::from_edit(edit, duration_ms));
-  let (annotation_clips, scene_clips) = persisted_edit
+  let (mut annotation_clips, scene_clips) = persisted_edit
     .map(|edit| (edit.annotation_clips, edit.scene_clips))
     .unwrap_or_default();
+  // Until the session sends its own, the clips are timed on the saved edit,
+  // which is the edit they were saved with.
+  let overlay_ranges = persisted
+    .as_ref()
+    .map_or_else(Vec::new, |plan| plan.ranges().to_vec());
+  screenwide_annotations::timing::lay_on_recording(&mut annotation_clips, &overlay_ranges);
   // The surface carries no callbacks yet: they name the session that adopts
   // these sources, and on Windows one compositor is shared by every session
   // the editor window ever opens, so a superseded start must not install
@@ -206,7 +216,8 @@ pub(super) fn sources_with_surface(
   );
   Ok(PlayerSources {
     annotation_clips: Arc::new(RwLock::new(annotation_clips)),
-    scenes: super::scene_preview::PreviewScenes::new(scene_clips),
+    annotation_ranges: Arc::new(RwLock::new(overlay_ranges.clone())),
+    scenes: super::scene_preview::PreviewScenes::new(scene_clips, overlay_ranges),
     audio_tracks,
     camera_duration_ms: camera.as_ref().map(|value| value.duration_ms),
     camera_path: camera.as_ref().map(|value| value.path.clone()),

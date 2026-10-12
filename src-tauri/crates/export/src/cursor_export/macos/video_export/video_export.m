@@ -39,6 +39,41 @@ static void advance(AVAssetReaderTrackOutput *output, CMSampleBufferRef *current
   }
 }
 
+/// How far before a stretch a restarted reader begins, so the frame showing
+/// at its first moment is read too rather than the one after it.
+#define SCREENWIDE_REWIND_PREROLL_SECONDS 0.5
+
+/// Drops `samples` and reads the first two of `output` in their place.
+static void reread(AVAssetReaderTrackOutput *output, CMSampleBufferRef *current,
+                   CMSampleBufferRef *next) {
+  if (*current != NULL) CFRelease(*current);
+  if (*next != NULL) CFRelease(*next);
+  *current = output == nil ? NULL : [output copyNextSampleBuffer];
+  *next = output == nil ? NULL : [output copyNextSampleBuffer];
+}
+
+/// Starts the readers again a little before `pts` where the frame wanted
+/// lies behind the one in hand: a reordered timeline plays an earlier
+/// stretch of the source after a later one. A frame less than one frame
+/// ahead is close enough, so the first frames of a file never restart it.
+/// False, with `error` set, when the readers could not be started again.
+static BOOL rewind_if_behind(ScreenwideVideoExport *session, CMTime pts,
+                             CMSampleBufferRef *screen_sample, CMSampleBufferRef *next_screen_sample,
+                             CMSampleBufferRef *camera_sample, CMSampleBufferRef *next_camera_sample,
+                             NSError **error) {
+  CMTime slack = CMTimeMakeWithSeconds(1.0 / session->source_frame_rate, pts.timescale);
+  CMTime held = CMSampleBufferGetPresentationTimeStamp(*screen_sample);
+  if (CMTimeCompare(CMTimeAdd(pts, slack), held) >= 0) return YES;
+  CMTime preroll = CMTimeMakeWithSeconds(SCREENWIDE_REWIND_PREROLL_SECONDS, pts.timescale);
+  CMTime start = CMTimeMaximum(kCMTimeZero, CMTimeSubtract(pts, preroll));
+  if (![session restartReadersAt:start error:error]) return NO;
+  reread(session->screen_output, screen_sample, next_screen_sample);
+  reread(session->camera_output, camera_sample, next_camera_sample);
+  if (*screen_sample != NULL) return YES;
+  *error = loop_error(4, @"The recording could not be read again from an earlier point");
+  return NO;
+}
+
 int screenwide_video_export(const char *screen_path, const char *camera_path,
                             const char *output_path, const ScreenwideTimelineRange *timeline_ranges,
                             uint32_t timeline_range_count, uint32_t output_width,
@@ -94,6 +129,9 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
         }
         CMTime pts = export_source_time(output_pts, timeline_ranges, timeline_range_count);
         if (!CMTIME_IS_VALID(pts)) continue;
+        if (!rewind_if_behind(session, pts, &screen_sample, &next_screen_sample, &camera_sample,
+                              &next_camera_sample, &error))
+          break;
         advance(session->screen_output, &screen_sample, &next_screen_sample, pts);
         advance(session->camera_output, &camera_sample, &next_camera_sample, pts);
         CVPixelBufferRef destination = NULL;

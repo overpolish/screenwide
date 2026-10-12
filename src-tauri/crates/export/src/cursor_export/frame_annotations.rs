@@ -10,7 +10,7 @@ use crate::media_preview::BakedVideoExportOptions;
 use crate::{held_surfaces, pin_paths};
 use screenwide_annotations::spotlight::handoff::{drawn_until, spotlight_links};
 use screenwide_annotations::timing::{
-  revealed_annotations, AnnotationTrack, RecordingAnnotationClip,
+  lay_on_recording, revealed_annotations, AnnotationTrack, RecordingAnnotationClip,
 };
 use screenwide_annotations::{Annotation, AnnotationKind};
 use screenwide_compositor::compositor::KindMask;
@@ -35,6 +35,14 @@ impl ExportAnnotations {
       .timeline
       .map_or(&[][..], |timeline| timeline.annotation_clips())
       .to_vec();
+    // What follows the picture under a clip is read across the stretch of
+    // the recording it plays.
+    lay_on_recording(
+      &mut clips,
+      request
+        .timeline
+        .map_or(&[][..], |timeline| timeline.ranges()),
+    );
     // Pinned annotations take their paths, which the preview has normally
     // worked out already. The redactions then take the fills read from their
     // clips' frames: a secure pixelation's zones from its first, and the

@@ -198,6 +198,8 @@ mod redact_tests;
 #[cfg(test)]
 mod redact_video_tests;
 #[cfg(test)]
+mod reordered_video_tests;
+#[cfg(test)]
 mod scene_custom_video_tests;
 #[cfg(test)]
 mod scene_layout_video_tests;

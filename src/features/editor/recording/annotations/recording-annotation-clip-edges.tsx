@@ -4,11 +4,8 @@
 import { PointerEvent } from "react";
 
 import { t } from "../../../../i18n/i18n";
-import {
-  RecordingTimelineEdit,
-  recordingTimelineRetainedDuration,
-  recordingTimelineSourceToOutput,
-} from "../../timeline/editing/recording-timeline-edit";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
 import { SeekHandler } from "../../timeline/timeline-seek";
 
 import { heldLengthMs } from "./image-once";
@@ -24,16 +21,12 @@ type Edge = "startMs" | "endMs";
  * under a trim handle is the one frame the annotation is barely there, which
  * is no use for deciding where the handle belongs. The arrow keys step the
  * edge a tenth of a second, a whole second with Shift, trimming every clip in
- * `ids` with it. A fragment that continues into its neighbour across a cut
- * has no handle on that side: the clip does not end there. A clip held to a
- * length of its own - a moving image played once - has none at all; it
- * still moves whole.
+ * `ids` with it. A clip held to a length of its own - a moving image played
+ * once - has none at all; it still moves whole.
  */
 export function RecordingAnnotationClipEdges({
   clip,
   clips,
-  continuedByNext,
-  continuesPrevious,
   edit,
   ids,
   label,
@@ -44,8 +37,6 @@ export function RecordingAnnotationClipEdges({
 }: {
   clip: RecordingAnnotationClip;
   clips: RecordingAnnotationClip[];
-  continuedByNext: boolean;
-  continuesPrevious: boolean;
   edit: RecordingTimelineEdit;
   /** The clips a trim of this one trims together: it, or the choice it is
    * one of. */
@@ -57,12 +48,9 @@ export function RecordingAnnotationClipEdges({
   onSeek?: SeekHandler;
 }) {
   if (heldLengthMs(clip) !== null) return null;
+  const lengthMs = recordingTimelineLengthMs(edit, sourceDurationMs);
+  if (lengthMs <= 0) return null;
   return (["startMs", "endMs"] as const).map((edge) => {
-    if (
-      (edge === "startMs" && continuesPrevious) ||
-      (edge === "endMs" && continuedByNext)
-    )
-      return null;
     return (
       <button
         aria-label={
@@ -79,13 +67,8 @@ export function RecordingAnnotationClipEdges({
           if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
           event.preventDefault();
           event.stopPropagation();
-          const output = recordingTimelineSourceToOutput(
-            edit,
-            clip[edge] / sourceDurationMs,
-          );
-          const step =
-            (event.shiftKey ? 1000 : 100) /
-            (sourceDurationMs * recordingTimelineRetainedDuration(edit));
+          const output = clip[edge] / lengthMs;
+          const step = (event.shiftKey ? 1000 : 100) / lengthMs;
           onChange(
             trimRecordingAnnotationClips({
               clips,
@@ -103,11 +86,7 @@ export function RecordingAnnotationClipEdges({
           event.stopPropagation();
           onPress(edge, event);
           onSeek?.(
-            recordingTimelineSourceToOutput(
-              edit,
-              (edge === "endMs" ? clip.endMs - 1 : clip.startMs) /
-                sourceDurationMs,
-            ),
+            (edge === "endMs" ? clip.endMs - 1 : clip.startMs) / lengthMs,
             "start",
             previewedWhole(clips, clip.annotation.id),
           );

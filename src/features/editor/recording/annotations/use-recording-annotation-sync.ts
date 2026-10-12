@@ -11,14 +11,18 @@ import {
   useAnnotationDefaults,
   useAnnotationImageDefault,
 } from "../../annotations/annotation-defaults";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelinePlaybackRanges } from "../../timeline/recording-timeline-playback";
 import { drawingToolKind } from "../../tool-panels/tool-registry";
 import { RecordingVideoTrackId } from "../../types";
 
 import { RecordingAnnotationClip } from "./recording-annotations";
 
 /**
- * Tell the native preview the clips it draws, what is chosen, and what the
- * tool in hand makes next.
+ * Tell the native preview the clips it draws, the timeline they are timed
+ * on, what is chosen, and what the tool in hand makes next. The clips and
+ * their timeline travel together, so no frame draws clips on a timeline
+ * they were not timed for.
  *
  * A fresh annotation's dress and whether it animates both travel with the
  * clips the native tool draws from; animation is the annotation's own
@@ -30,14 +34,18 @@ import { RecordingAnnotationClip } from "./recording-annotations";
  */
 export function useRecordingAnnotationSync({
   clips,
+  edit,
   selectedIds,
   sessionId,
+  sourceDurationMs,
   tool,
   trackId,
 }: {
   clips: RecordingAnnotationClip[];
+  edit: RecordingTimelineEdit;
   selectedIds: ReadonlySet<string>;
   sessionId: number | null;
+  sourceDurationMs: number;
   tool: AnnotationTool | null;
   trackId: RecordingVideoTrackId | null;
 }) {
@@ -54,6 +62,7 @@ export function useRecordingAnnotationSync({
       defaults,
       image,
       paneIndex: trackId === null ? null : trackId === "primary" ? 0 : 1,
+      playbackRanges: recordingTimelinePlaybackRanges(edit, sourceDurationMs),
       selectedIds: [...selectedIds],
       sessionId,
     }).catch((cause: unknown) => {
@@ -64,9 +73,11 @@ export function useRecordingAnnotationSync({
     clips,
     counterAngle,
     defaults,
+    edit,
     image,
     selectedIds,
     sessionId,
+    sourceDurationMs,
     trackId,
   ]);
 }

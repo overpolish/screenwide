@@ -3,7 +3,7 @@
 
 //! Maps recorded source time onto the edited output clock used by animations.
 
-use screenwide_timeline::{source_to_output_us, TimelineRange};
+use screenwide_timeline::{plays_through, source_to_output_us, TimelineRange};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct AnimationClock<'a> {
@@ -36,6 +36,11 @@ impl<'a> AnimationClock<'a> {
       // the cut must already be settled at the next retained frame.
       return u64::MAX;
     };
+    // Likewise when a reordered timeline plays the start elsewhere: this
+    // frame does not carry on from it.
+    if !plays_through(ranges, start_us, now_us) {
+      return u64::MAX;
+    }
     now_output_us.saturating_sub(start_output_us)
   }
 }
@@ -75,5 +80,17 @@ mod tests {
       AnimationClock::edited(&ranges).elapsed_us(500_000, 1_000_000),
       u64::MAX
     );
+  }
+
+  #[test]
+  fn an_anchor_played_elsewhere_is_already_settled() {
+    // 1-2 s plays first, then 0-1 s.
+    let ranges = [
+      range(0, 1_000_000, 2_000_000, 1.0),
+      range(1_000_000, 0, 1_000_000, 1.0),
+    ];
+    let clock = AnimationClock::edited(&ranges);
+    assert_eq!(clock.elapsed_us(500_000, 1_200_000), u64::MAX);
+    assert_eq!(clock.elapsed_us(1_200_000, 1_500_000), 300_000);
   }
 }

@@ -10,21 +10,33 @@ use crate::editor::preview_platform::SelectionGestureOperation;
 use screenwide_export::scenes::{arrange, camera_target};
 use screenwide_scenes::{validate_clips, RecordingSceneClip};
 
-/// The scenes the preview draws: the recording's clips, and the pane of the
-/// one under the playhead the crop tool is reframing, which is drawn unzoomed
-/// so the crop window shows what it picks from.
+/// The scenes the preview draws: the recording's clips, the timeline they
+/// are timed on, and the pane of the one under the playhead the crop tool is
+/// reframing, drawn unzoomed so the crop window shows what it picks from.
 #[derive(Clone, Default)]
 pub(super) struct PreviewScenes {
   pub(super) clips: Arc<RwLock<Vec<RecordingSceneClip>>>,
+  pub(super) ranges: Arc<RwLock<Vec<TimelineRange>>>,
   pub(super) reframe: Arc<RwLock<Option<SceneReframe>>>,
 }
 
 impl PreviewScenes {
-  pub(super) fn new(clips: Vec<RecordingSceneClip>) -> Self {
+  pub(super) fn new(clips: Vec<RecordingSceneClip>, ranges: Vec<TimelineRange>) -> Self {
     Self {
       clips: Arc::new(RwLock::new(clips)),
+      ranges: Arc::new(RwLock::new(ranges)),
       reframe: Arc::default(),
     }
+  }
+
+  /// Where the frame `source_ms` into the recording plays on the timeline
+  /// the clips are timed on.
+  pub(super) fn timeline_ms(&self, source_ms: u64) -> u64 {
+    let ranges = self
+      .ranges
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    screenwide_annotations::timing::FrameTime::on(&ranges, source_ms).timeline_ms
   }
 }
 
@@ -77,11 +89,13 @@ impl PlayerSources {
       return false;
     };
     let ranges = self
-      .animation_ranges
+      .scenes
+      .ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let timeline_ms = screenwide_annotations::timing::FrameTime::on(&ranges, source_ms).timeline_ms;
     let reframe = self.scenes.reframe.read().ok().and_then(|reframe| *reframe);
-    let reframed = super::scene_reframe::reframed_clips(&clips, reframe, source_ms);
+    let reframed = super::scene_reframe::reframed_clips(&clips, reframe, timeline_ms);
     let camera = self.camera_source_size();
     let base = composition.recording_output.primary.clone();
     let placed = arrange_composition(
@@ -96,7 +110,7 @@ impl PlayerSources {
     };
     let in_place = clips
       .iter()
-      .find(|clip| clip.start_ms <= source_ms && source_ms < clip.end_ms)
+      .find(|clip| clip.start_ms <= timeline_ms && timeline_ms < clip.end_ms)
       .is_some_and(|clip| super::scene_reframe::crops_in_place(clip, reframe));
     match (reframe, camera.filter(|_| composition.bake_camera)) {
       (SceneReframe::Screen, _) if in_place => {
@@ -164,11 +178,12 @@ impl PreviewPlayerManager {
     if !sources.arrange_scene(&mut arranged, self.position_ms, 0.0) {
       return None;
     }
+    let timeline_ms = sources.scenes.timeline_ms(self.position_ms);
     // A radius gesture reports the radius it reaches as its scale.
     if operation == SelectionGestureOperation::Radius {
       return super::scene_pane_gesture::radius_gesture(
         clips,
-        self.position_ms,
+        timeline_ms,
         snapshot.bake_camera,
         layer_id,
         scale,
@@ -177,7 +192,7 @@ impl PreviewPlayerManager {
     }
     if let Some(next) = super::scene_pane_gesture::custom_box_gesture(
       clips,
-      self.position_ms,
+      timeline_ms,
       snapshot.bake_camera,
       layer_id,
       (delta, scale),
@@ -195,13 +210,9 @@ impl PreviewPlayerManager {
       _ => return Some(None),
     };
     let output = &snapshot.recording_output.primary;
-    let Some((index, frame, framing)) = camera_target(
-      clips,
-      self.position_ms,
-      output,
-      &snapshot.camera_overlay,
-      camera,
-    ) else {
+    let Some((index, frame, framing)) =
+      camera_target(clips, timeline_ms, output, &snapshot.camera_overlay, camera)
+    else {
       return Some(None);
     };
     // The gesture's deltas are shares of the canvas it was made on.
@@ -240,18 +251,21 @@ impl PreviewPlayerManager {
   }
 }
 
-/// Hands the preview the recording's scene clips, redrawing a paused frame
-/// that they change. A scene only moves pictures that are already decoded,
-/// so the paused frame is recomposed from the cached sources; a decoder
-/// restart would land the picture well after the selection the webview moves
-/// with the same edit.
+/// Hands the preview the recording's scene clips and the timeline they are
+/// timed on, as `playback_ranges` lay it out, redrawing a paused frame that
+/// they change. A scene only moves pictures that are already decoded, so the
+/// paused frame is recomposed from the cached sources; a decoder restart
+/// would land the picture well after the selection the webview moves with
+/// the same edit.
 #[tauri::command]
 pub async fn set_recording_preview_scenes(
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   session_id: u64,
   clips: Vec<RecordingSceneClip>,
+  playback_ranges: Vec<RecordingPreviewPlaybackRange>,
 ) -> Result<(), String> {
   validate_clips(&clips)?;
+  let ranges = super::animation_timeline_ranges(&playback_ranges);
   let mut manager = state
     .0
     .lock()
@@ -266,11 +280,18 @@ pub async fn set_recording_preview_scenes(
     .clips
     .write()
     .map_err(|_| "The scenes are unavailable".to_owned())?;
-  if *current == clips {
+  let mut current_ranges = sources
+    .scenes
+    .ranges
+    .write()
+    .map_err(|_| "The scenes are unavailable".to_owned())?;
+  if *current == clips && *current_ranges == ranges {
     return Ok(());
   }
   *current = clips;
+  *current_ranges = ranges;
   drop(current);
+  drop(current_ranges);
   if !manager.is_playing && !manager.recompose_paused_still() {
     manager.restart(PlaybackMode::InteractiveStill)?;
   }

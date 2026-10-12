@@ -11,12 +11,11 @@ import {
   annotationPathMs,
 } from "../../annotations/annotation-pace";
 import { Annotation } from "../../annotations/annotations";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import {
-  recordingTimelineOutputToSource,
-  recordingTimelineRetainedDuration,
-  recordingTimelineSourceToOutput,
-  RecordingTimelineEdit,
-} from "../../timeline/editing/recording-timeline-edit";
+  recordingTimelineLengthMs,
+  recordingTimelineMsAt,
+} from "../../timeline/editing/recording-timeline-time";
 import { RecordingVideoTrackId } from "../../types";
 
 /** Where a pinned annotation is put at one moment, as a movement in source
@@ -43,9 +42,10 @@ export type RecordingAnnotationPin = {
   pinnedMs: number;
 };
 
-/** An annotation in source time, attached to one of the recording's two panes.
- * `pathMs` is how long what it draws along a path takes to draw in, paced by
- * the path's length; see `annotation-pace.ts`. */
+/** An annotation timed on the edited video, attached to one of the
+ * recording's two panes. A pin, like the content it follows, is in recording
+ * time. `pathMs` is how long what it draws along a path takes to draw in,
+ * paced by the path's length; see `annotation-pace.ts`. */
 export type RecordingAnnotationClip = {
   annotation: Annotation;
   endMs: number;
@@ -198,14 +198,16 @@ export const mergeRecordingAnnotationClips = ({
 };
 
 /**
- * Creates the initial three output seconds of an annotation clip, reaching the
- * annotation's own arrival back before the playhead so an animated annotation
- * is whole where it was placed - its path's paced time for an arrow drawing
- * itself on `frame`, a fifth of a second for a counter growing into place.
- * Near the start of the recording it takes whatever room there is and the
- * annotation is caught part drawn, which is the only way an annotation can be
- * placed there at all. The clip's end is measured from the playhead as
- * before, so the reach back lengthens the clip rather than sliding it.
+ * Creates the initial three seconds of an annotation clip at the playhead,
+ * `sourcePositionMs` into the recording, reaching the annotation's own
+ * arrival back before the playhead so an animated annotation is whole where
+ * it was placed - its path's paced time for an arrow drawing itself on
+ * `frame`, a fifth of a second for a counter growing into place. Near the
+ * start of the video it takes whatever room there is and the annotation is
+ * caught part drawn, which is the only way an annotation can be placed there
+ * at all. The clip's end is measured from the playhead as before, so the
+ * reach back lengthens the clip rather than sliding it. The clip is timed on
+ * the timeline `edit` lays out, or on the whole recording without one.
  */
 export const recordingAnnotationClipAt = ({
   annotation,
@@ -222,47 +224,32 @@ export const recordingAnnotationClipAt = ({
   frame?: AnnotationFrame;
   trackId?: RecordingAnnotationClip["trackId"];
 }): RecordingAnnotationClip => {
-  const duration = Math.max(1, Math.round(sourceDurationMs));
+  const lengthMs = Math.max(
+    1,
+    Math.round(
+      edit
+        ? recordingTimelineLengthMs(edit, sourceDurationMs)
+        : sourceDurationMs,
+    ),
+  );
   const positionMs = Math.max(
     0,
-    Math.min(duration - 1, Math.round(sourcePositionMs)),
+    Math.min(
+      lengthMs - 1,
+      Math.round(
+        edit
+          ? recordingTimelineMsAt(edit, sourceDurationMs, sourcePositionMs)
+          : sourcePositionMs,
+      ),
+    ),
   );
-  const outputDurationMs = edit
-    ? recordingTimelineRetainedDuration(edit) * duration
-    : duration;
-  const outputStartMs = edit
-    ? recordingTimelineSourceToOutput(
-        edit,
-        duration > 0 ? positionMs / duration : 0,
-      ) * outputDurationMs
-    : positionMs;
-  const outputEndMs = Math.min(outputDurationMs, outputStartMs + 3_000);
-  const endMs = edit
-    ? Math.max(
-        positionMs + (positionMs < duration ? 1 : 0),
-        recordingTimelineOutputToSource(
-          edit,
-          outputDurationMs > 0 ? outputEndMs / outputDurationMs : 1,
-        ) * duration,
-      )
-    : Math.min(duration, positionMs + 3_000);
   const pathMs = annotationPathMs(annotation, frame);
   const drawInMs = annotationDrawInMs(annotation, pathMs);
-  // The reveal plays in output time, so the reach back is measured there and
-  // taken back into source time: a cut or a speed change behind the playhead
-  // still leaves the annotation whole where it was placed.
-  const startMs =
-    edit && outputDurationMs > 0
-      ? recordingTimelineOutputToSource(
-          edit,
-          Math.max(0, outputStartMs - drawInMs) / outputDurationMs,
-        ) * duration
-      : positionMs - drawInMs;
   return {
     annotation,
-    endMs: Math.round(Math.min(duration, endMs)),
+    endMs: Math.min(lengthMs, positionMs + 3_000),
     ...(pathMs === undefined ? {} : { pathMs }),
-    startMs: Math.max(0, Math.round(startMs)),
+    startMs: Math.max(0, Math.round(positionMs - drawInMs)),
     trackId,
   };
 };

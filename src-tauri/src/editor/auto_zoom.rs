@@ -151,7 +151,8 @@ fn clips(signals: &Signals, duration_ms: u64) -> Vec<RecordingSceneClip> {
 }
 
 /// The auto zooms for the recording open in the editor, for the Scene panel
-/// to put in place of the ones it has.
+/// to put in place of the ones it has. They are timed on the whole
+/// recording; the panel carries them onto the timeline it edits.
 #[tauri::command]
 pub async fn plan_recording_auto_zoom(
   app: AppHandle,

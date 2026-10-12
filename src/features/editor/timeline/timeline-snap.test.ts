@@ -6,8 +6,9 @@ import { describe, expect, it } from "vitest";
 import { RecordingAnnotationClip } from "../recording/annotations/recording-annotations";
 
 import {
-  cutRecordingTimeline,
   createRecordingTimelineEdit,
+  cutRecordingTimeline,
+  deleteRecordingTimelineRange,
 } from "./editing/recording-timeline-edit";
 import {
   nearestTimelineSnapTarget,
@@ -88,11 +89,13 @@ describe("timelineSnapTargets", () => {
     sourceDurationMs: 10_000,
   };
 
+  const outputs = (
+    overrides: Partial<Parameters<typeof timelineSnapTargets>[0]> = {},
+  ) =>
+    timelineSnapTargets({ ...base, ...overrides }).map(({ output }) => output);
+
   it("gathers segment edges, other annotations, badges and the playhead", () => {
-    const targets = timelineSnapTargets({
-      ...base,
-      excludeAnnotationIds: new Set(["a"]),
-    });
+    const targets = outputs({ excludeAnnotationIds: new Set(["a"]) });
     expect(targets).toEqual(
       expect.arrayContaining([0, 0.5, 1, 0.6, 0.7, 0.3, 0.4, 0.25]),
     );
@@ -101,14 +104,30 @@ describe("timelineSnapTargets", () => {
   });
 
   it("leaves out badges the lane hides", () => {
+    expect(outputs({ hiddenKeyboardItemIds: new Set([7]) })).not.toContain(0.3);
     expect(
-      timelineSnapTargets({ ...base, hiddenKeyboardItemIds: new Set([7]) }),
-    ).not.toContain(0.3);
-    expect(
-      timelineSnapTargets({
-        ...base,
-        hiddenKeyboardFragmentIds: new Set(["7:0"]),
-      }),
+      outputs({ hiddenKeyboardFragmentIds: new Set(["7:0"]) }),
     ).not.toContain(0.4);
+  });
+
+  it("places an annotation's edges where they play, with the moment there", () => {
+    // The first half cut away: the 5 s video plays the recording's 5-10 s.
+    const cut = deleteRecordingTimelineRange(
+      createRecordingTimelineEdit(1),
+      0,
+      0.5,
+    );
+    const targets = timelineSnapTargets({
+      ...base,
+      annotationClips: [clip("a", 1_000, 2_000)],
+      edit: cut,
+      keyboardItems: [],
+    });
+    expect(targets).toEqual(
+      expect.arrayContaining([
+        { output: 0.2, source: 0.6 },
+        { output: 0.4, source: 0.7 },
+      ]),
+    );
   });
 });

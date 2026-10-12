@@ -176,16 +176,17 @@ fn butted_scenes_hand_over_without_returning_to_the_composition() {
 
 #[test]
 fn a_faster_stretch_keeps_the_transition_its_length_on_screen() {
-  // Played at twice the speed, 600ms of output is 1200ms of source.
+  // Played at twice the speed, the recording's 2.6 s plays 1.3 s into the
+  // video, 300 ms into a scene timed from 1 s on the timeline.
   let ranges = [TimelineRange {
     output_start_us: 0,
     source_end_us: 20_000_000,
     source_start_us: 0,
     playback_rate: 2.0,
   }];
-  let clips = [split("a", 1_000, 10_000)];
-  let (settled, _) = arranged(&clips, &ranges, 5_000);
-  let (halfway, _) = arranged(&clips, &ranges, 1_600);
+  let clips = [split("a", 1_000, 5_000)];
+  let (settled, _) = arranged(&clips, &ranges, 6_000);
+  let (halfway, _) = arranged(&clips, &ranges, 2_600);
   let (start, _) = base();
   assert!((halfway.crop_x - (start.crop_x + settled.crop_x) / 2.0).abs() < 1e-6);
 }

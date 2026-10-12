@@ -7,13 +7,20 @@ import { RecordingAnnotationClip } from "../recording/annotations/recording-anno
 import { RecordingKeyboardTimelineItem } from "../types";
 
 import {
+  layoutRecordingTimelineSegments,
   RecordingTimelineEdit,
   recordingTimelineOutputToSource,
+  recordingTimelineSourceToOutput,
 } from "./editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "./editing/recording-timeline-time";
 import { layoutTimedLaneItems } from "./tracks/timed-lane-layout";
 
 /** How close, on screen, a dragged edge has to come to a target to take it. */
 export const TIMELINE_SNAP_THRESHOLD_PX = 8;
+
+/** A place a drag may land on, both where it plays, from 0 to 1 along the
+ * output timeline, and where it is in the recording, from 0 to 1 along it. */
+export type TimelineSnapTarget = { output: number; source: number };
 
 /**
  * The snap mode as the lanes see it. A drag asks whether to snap when it
@@ -22,9 +29,9 @@ export const TIMELINE_SNAP_THRESHOLD_PX = 8;
  * off a target part way through the gesture.
  */
 export type TimelineSnap = {
-  /** Source positions a drag may land on, gathered as the drag begins. The
+  /** The places a drag may land on, gathered as the drag begins. The
    * annotations being dragged are not targets for themselves. */
-  gather: (excludeAnnotationIds?: ReadonlySet<string>) => number[];
+  gather: (excludeAnnotationIds?: ReadonlySet<string>) => TimelineSnapTarget[];
   isActive: boolean;
   isSnapping: () => boolean;
   /** Where the held drag is snapped to, in output time; null once it is not. */
@@ -42,8 +49,8 @@ export const useTimelineSnap = () => use(TimelineSnapContext);
 
 /**
  * What one drag holds on to. The targets and the threshold are in whichever
- * time the drag itself works in - output for an annotation, source for a
- * trim - so `mapTarget` converts them when the drag begins.
+ * time the drag itself works in, `space`: output for a clip on the
+ * timeline, source for a trim of the footage.
  */
 export type TimelineSnapGesture = Pick<
   TimelineSnap,
@@ -57,17 +64,17 @@ export const beginTimelineSnapGesture = (
   snap: TimelineSnap,
   {
     excludeAnnotationIds,
-    mapTarget = (source) => source,
+    space,
     threshold,
   }: {
+    space: keyof TimelineSnapTarget;
     threshold: number;
     excludeAnnotationIds?: ReadonlySet<string>;
-    mapTarget?: (source: number) => number;
   },
 ): TimelineSnapGesture => ({
   isSnapping: snap.isSnapping,
   showGuide: snap.showGuide,
-  targets: snap.gather(excludeAnnotationIds).map(mapTarget),
+  targets: snap.gather(excludeAnnotationIds).map((target) => target[space]),
   threshold,
 });
 
@@ -113,11 +120,10 @@ export function timelineSnapRangeShift(
 }
 
 /**
- * Every source position a drag may snap to: the edges of the other
- * annotations, of the shortcut badges the lane shows, of the retained
- * segments, the moments the edit keeps, and the playhead. Positions in
- * cut-away source still count: an annotation there maps onto the cut it sits
- * in, and a trim may reach it.
+ * Every place a drag may snap to: the edges of the other annotations, of
+ * the shortcut badges the lane shows, of the retained segments, the moments
+ * the edit keeps, and the playhead. Moments in cut-away source still count:
+ * one there maps onto the cut it sits in, and a trim may reach it.
  */
 export function timelineSnapTargets({
   annotationClips,
@@ -140,16 +146,24 @@ export function timelineSnapTargets({
   excludeAnnotationIds?: ReadonlySet<string>;
   /** Where the visible moments are, 0 to 1 along the recording. */
   momentSources?: readonly number[];
-}): number[] {
-  if (sourceDurationMs <= 0) return [];
-  const targets: number[] = [];
-  for (const segment of edit.segments)
-    targets.push(segment.sourceStart, segment.sourceEnd);
+}): TimelineSnapTarget[] {
+  const lengthMs = recordingTimelineLengthMs(edit, sourceDurationMs);
+  if (lengthMs <= 0) return [];
+  const atOutput = (output: number) => ({
+    output,
+    source: recordingTimelineOutputToSource(edit, output),
+  });
+  const targets: TimelineSnapTarget[] = [];
+  for (const segment of layoutRecordingTimelineSegments(edit))
+    targets.push(
+      { output: segment.outputStart, source: segment.sourceStart },
+      { output: segment.outputEnd, source: segment.sourceEnd },
+    );
   for (const clip of annotationClips)
     if (!excludeAnnotationIds?.has(clip.annotation.id))
       targets.push(
-        clip.startMs / sourceDurationMs,
-        clip.endMs / sourceDurationMs,
+        atOutput(clip.startMs / lengthMs),
+        atOutput(clip.endMs / lengthMs),
       );
   // Laid out the way the lane draws them, so a badge hidden from the lane is
   // not a target either.
@@ -163,10 +177,14 @@ export function timelineSnapTargets({
       !hiddenKeyboardItemIds.has(fragment.item.id)
     )
       targets.push(
-        recordingTimelineOutputToSource(edit, fragment.outputStart),
-        recordingTimelineOutputToSource(edit, fragment.outputEnd),
+        atOutput(fragment.outputStart),
+        atOutput(fragment.outputEnd),
       );
-  targets.push(...momentSources);
-  targets.push(recordingTimelineOutputToSource(edit, playheadOutput));
+  for (const source of momentSources)
+    targets.push({
+      output: recordingTimelineSourceToOutput(edit, source),
+      source,
+    });
+  targets.push(atOutput(playheadOutput));
   return targets;
 }

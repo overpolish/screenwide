@@ -72,6 +72,43 @@ fn concatenates_retained_ranges_before_opening_the_output_stream() {
   assert!(rendered.contains("-t 0.500"));
 }
 
+/// Played 750-1000 ms, then 250-500 ms: the decode starts at 250 ms, the
+/// earlier of the two, so the first range played is trimmed from later on.
+#[test]
+fn trims_reordered_ranges_from_the_earliest_source_start() {
+  let mut sources = test_sources();
+  sources.audio_tracks.truncate(1);
+  let config = StreamConfig {
+    channels: 2,
+    sample_rate: 48_000,
+    buffer_size: cpal::BufferSize::Default,
+  };
+  let rendered = args(
+    &sources,
+    &channels(&sources),
+    &[
+      RecordingPreviewPlaybackRange {
+        source_start_ms: 750,
+        source_end_ms: 1_000,
+        playback_rate: 1.0,
+      },
+      RecordingPreviewPlaybackRange {
+        source_start_ms: 250,
+        source_end_ms: 500,
+        playback_rate: 1.0,
+      },
+    ],
+    &config,
+    1.0,
+  )
+  .join(" ");
+
+  assert!(rendered.contains("-ss 0.250"));
+  assert!(rendered.contains("atrim=start=0.500:end=0.750"));
+  assert!(rendered.contains("atrim=start=0.000:end=0.250"));
+  assert!(rendered.find("start=0.500").unwrap() < rendered.find("start=0.000").unwrap());
+}
+
 #[test]
 fn applies_atempo_and_scales_audio_duration() {
   let sources = test_sources();
@@ -129,6 +166,7 @@ pub(super) fn test_sources() -> PlayerSources {
     super::super::preview_layout(Some((1_920, 1_080, PreviewPaneKind::Screen)), None, 720);
   PlayerSources {
     annotation_clips: Arc::new(RwLock::new(Vec::new())),
+    annotation_ranges: Default::default(),
     scenes: Default::default(),
     audio_tracks: vec![
       RecordingAudioTrack {

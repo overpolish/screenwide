@@ -47,6 +47,7 @@ fn recording(directory: &Path) -> PathBuf {
 fn clip(annotation: Annotation) -> RecordingAnnotationClip {
   RecordingAnnotationClip {
     path_ms: None,
+    recording_span: None,
     pin: None,
     annotation,
     track_id: AnnotationTrack::Primary,

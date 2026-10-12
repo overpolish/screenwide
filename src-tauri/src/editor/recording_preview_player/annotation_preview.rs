@@ -146,7 +146,7 @@ impl PlayerSources {
   ) -> Option<PreviewCompositionSettings> {
     let mut composition = self.composition_settings.as_ref()?.read().ok()?.clone();
     let ranges = self
-      .animation_ranges
+      .annotation_ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     apply_clips(

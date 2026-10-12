@@ -165,6 +165,13 @@ pub async fn seek_recording_preview(
     if let Some(mut clips) = annotation_clips {
       screenwide_annotations::timing::validate_clips(&clips)?;
       if let Some(sources) = &manager.sources {
+        screenwide_annotations::timing::lay_on_recording(
+          &mut clips,
+          &sources
+            .annotation_ranges
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()),
+        );
         sources.attach_pins(&mut clips, position_ms);
         *sources
           .annotation_clips

@@ -178,6 +178,7 @@ export function RecordingTrackLanesPreview({
         annotationClips={annotationClips}
         audioTracks={audioTracks}
         blade={{
+          beginSegmentMove: () => undefined,
           beginTrim: () => undefined,
           clearPreview: () => {
             setPreviewPosition(null);
@@ -191,6 +192,7 @@ export function RecordingTrackLanesPreview({
           isActive: isBladeActive,
           isRangeActive,
           isSnapActive,
+          movingSegmentId: null,
           previewAt: (position) => {
             setPreviewPosition(snapOutput(position));
           },

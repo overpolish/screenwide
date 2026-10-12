@@ -42,5 +42,7 @@ pub(super) fn annotation_clip(
     // An annotation drawn and cleared inside one millisecond is still a clip
     // the editor has to be able to see and grab.
     end_ms: (start_ms + length_ms).max(start_ms + 1),
+    // Drawn while recording, before any cut: the timeline is the recording.
+    recording_span: None,
   })
 }

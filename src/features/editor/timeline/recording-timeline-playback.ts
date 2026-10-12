@@ -56,16 +56,35 @@ export function recordingTimelinePlaybackRangeAt(
   );
 }
 
+/**
+ * The range playback from `sourcePositionMs` starts in: the one holding it,
+ * or, for a moment cut away, the one played after its source predecessor,
+ * where the cut leaves the playhead. Past the last range it starts over.
+ */
 export function recordingTimelinePlaybackRangeFrom(
   ranges: RecordingTimelinePlaybackRange[],
   sourcePositionMs: number,
 ) {
   const containing = recordingTimelinePlaybackRangeAt(ranges, sourcePositionMs);
   if (containing >= 0) return { index: containing, ranges };
-  const next = ranges.findIndex(
-    (range) => range.sourceStartMs >= sourcePositionMs,
-  );
-  return { index: next >= 0 ? next : 0, ranges };
+  let predecessor = -1;
+  let earliest = -1;
+  ranges.forEach((range, index) => {
+    if (
+      range.sourceEndMs <= sourcePositionMs &&
+      (predecessor < 0 || range.sourceEndMs > ranges[predecessor].sourceEndMs)
+    )
+      predecessor = index;
+    if (earliest < 0 || range.sourceStartMs < ranges[earliest].sourceStartMs)
+      earliest = index;
+  });
+  const index =
+    predecessor < 0
+      ? earliest
+      : predecessor + 1 < ranges.length
+        ? predecessor + 1
+        : 0;
+  return { index: Math.max(0, index), ranges };
 }
 
 export function recordingTimelinePlaybackRangesFrom(

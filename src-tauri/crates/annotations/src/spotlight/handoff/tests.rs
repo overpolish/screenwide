@@ -19,6 +19,7 @@ fn spotlight(
     end_ms,
     pin: None,
     path_ms: None,
+    recording_span: None,
   }
 }
 

@@ -5,16 +5,13 @@ import { Clapperboard } from "lucide-react";
 import { KeyboardEvent, PointerEvent } from "react";
 
 import { t } from "../../../../i18n/i18n";
-import {
-  RecordingTimelineEdit,
-  recordingTimelineRetainedDuration,
-  recordingTimelineSourceToOutput,
-} from "../../timeline/editing/recording-timeline-edit";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
 import { SeekHandler } from "../../timeline/timeline-seek";
 import { TimelineViewportState } from "../../timeline/timeline-viewport";
 import { TimelineViewportContent } from "../../timeline/timeline-viewport-content";
 import {
-  layoutTimedLaneItems,
+  layoutTimelineLaneItems,
   TIMED_LANE_ROW_HEIGHT_PX,
   timedLaneFragmentBox,
 } from "../../timeline/tracks/timed-lane-layout";
@@ -47,10 +44,9 @@ const SCENE_CLIP_MINIMUM_WIDTH_PX = 12;
  * choice or takes it away, and a band drawn from empty lane chooses every
  * scene it touches. Its body slides it in time, past its neighbours into
  * whichever gap it is dropped in, and its edges trim it; the arrow keys step
- * a focused edge a tenth of a second, a whole second with Shift. A clip that
- * crosses a cut is drawn in pieces, with handles only on its true ends. The
- * header opens the Scene panel, where scenes are added. A scene that places
- * the camera is dimmed while the camera is not baked in: it is kept and can
+ * a focused edge a tenth of a second, a whole second with Shift. The header
+ * opens the Scene panel, where scenes are added. A scene that places the
+ * camera is dimmed while the camera is not baked in: it is kept and can
  * still be moved, but nothing draws it until one is chosen in the panel
  * again.
  */
@@ -101,11 +97,8 @@ export function RecordingSceneLane({
     sourceDurationMs,
     viewport,
   });
-  const fragments = layoutTimedLaneItems({
-    edit,
-    items: draft ?? clips,
-    sourceDurationMs,
-  });
+  const lengthMs = recordingTimelineLengthMs(edit, sourceDurationMs);
+  const fragments = layoutTimelineLaneItems(draft ?? clips, lengthMs);
   const { band, pressLane } = useTimelineLaneBand({
     laneRef,
     onClear: onClearSelection,
@@ -130,20 +123,9 @@ export function RecordingSceneLane({
       if (edge === "body" && togglesChoice(event)) return;
       beginDrag({ clientX: event.clientX, edge, id });
     };
-  // The middle of what the timeline keeps of the clip, so a clip that loses
-  // its own middle to a cut still parks the playhead inside it.
   const activate = (clip: RecordingSceneClip) => {
-    if (sourceDurationMs > 0) {
-      const start = recordingTimelineSourceToOutput(
-        edit,
-        clip.startMs / sourceDurationMs,
-      );
-      const end = recordingTimelineSourceToOutput(
-        edit,
-        clip.endMs / sourceDurationMs,
-      );
-      onSeek?.((start + end) / 2, "end");
-    }
+    if (lengthMs > 0)
+      onSeek?.((clip.startMs + clip.endMs) / 2 / lengthMs, "end");
     onActivate();
   };
   const nudge =
@@ -152,20 +134,16 @@ export function RecordingSceneLane({
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
       event.stopPropagation();
-      const step =
-        (event.shiftKey ? 1000 : 100) /
-        (sourceDurationMs * recordingTimelineRetainedDuration(edit));
-      const output = recordingTimelineSourceToOutput(
-        edit,
-        clip[edge] / sourceDurationMs,
-      );
+      if (lengthMs <= 0) return;
+      const step = (event.shiftKey ? 1000 : 100) / lengthMs;
       onChange(
         resizeRecordingSceneClip({
           clips,
           edge,
           edit,
           id: clip.id,
-          output: output + (event.key === "ArrowLeft" ? -step : step),
+          output:
+            clip[edge] / lengthMs + (event.key === "ArrowLeft" ? -step : step),
           sourceDurationMs,
         }),
       );
@@ -185,16 +163,14 @@ export function RecordingSceneLane({
         style={{ height: TIMED_LANE_ROW_HEIGHT_PX }}
       >
         <TimelineViewportContent viewport={viewport}>
-          {fragments.map((fragment, index) => {
+          {fragments.map((fragment) => {
             const clip = fragment.item;
             const label = recordingSceneLabel(clip);
             const isIdle = isPaused && sceneNeedsCamera(clip);
             const selected = isSelected(clip.id);
-            const continuesPrevious = fragments[index - 1]?.item.id === clip.id;
-            const continuedByNext = fragments[index + 1]?.item.id === clip.id;
             return (
               <div
-                className={`absolute overflow-hidden rounded-control text-footnote transition-opacity ${selected ? "bg-primary-surface text-primary-fg" : "bg-fill-secondary text-content-fg"} ${isIdle ? "opacity-50" : ""} ${continuesPrevious ? "rounded-l-none" : ""} ${continuedByNext ? "rounded-r-none" : ""}`}
+                className={`absolute overflow-hidden rounded-control text-footnote transition-opacity ${selected ? "bg-primary-surface text-primary-fg" : "bg-fill-secondary text-content-fg"} ${isIdle ? "opacity-50" : ""}`}
                 key={fragment.fragmentId}
                 style={{
                   ...timedLaneFragmentBox(0),
@@ -222,26 +198,23 @@ export function RecordingSceneLane({
                 >
                   {label}
                 </button>
-                {(["startMs", "endMs"] as const).map((edge) =>
-                  (edge === "startMs" && continuesPrevious) ||
-                  (edge === "endMs" && continuedByNext) ? null : (
-                    <button
-                      aria-label={
-                        edge === "startMs"
-                          ? t("editor-clip-start", { clip: label })
-                          : t("editor-clip-end", { clip: label })
-                      }
-                      className={`absolute inset-y-0 w-control-inset cursor-ew-resize focus-visible:bg-primary focus-visible:outline-none ${edge === "startMs" ? "left-0" : "right-0"}`}
-                      key={edge}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                      }}
-                      onKeyDown={nudge(clip, edge)}
-                      onPointerDown={press(clip.id, edge)}
-                      type="button"
-                    />
-                  ),
-                )}
+                {(["startMs", "endMs"] as const).map((edge) => (
+                  <button
+                    aria-label={
+                      edge === "startMs"
+                        ? t("editor-clip-start", { clip: label })
+                        : t("editor-clip-end", { clip: label })
+                    }
+                    className={`absolute inset-y-0 w-control-inset cursor-ew-resize focus-visible:bg-primary focus-visible:outline-none ${edge === "startMs" ? "left-0" : "right-0"}`}
+                    key={edge}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                    onKeyDown={nudge(clip, edge)}
+                    onPointerDown={press(clip.id, edge)}
+                    type="button"
+                  />
+                ))}
               </div>
             );
           })}

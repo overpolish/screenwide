@@ -15,6 +15,7 @@ fn manager() -> PreviewPlayerManager {
   );
   let sources = PlayerSources {
     annotation_clips: Default::default(),
+    annotation_ranges: Default::default(),
     scenes: Default::default(),
     audio_tracks: vec![],
     camera_duration_ms: None,
@@ -219,6 +220,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
     .push(RecordingAnnotationClip {
       path_ms: None,
       pin: None,
+      recording_span: None,
       annotation,
       track_id: AnnotationTrack::Primary,
       start_ms: 0,
@@ -342,6 +344,7 @@ fn screen_arrow(id: &str, x: f64, start_ms: u64, end_ms: u64) -> RecordingAnnota
   RecordingAnnotationClip {
     path_ms: None,
     pin: None,
+    recording_span: None,
     annotation: screenwide_annotations::arrow::new_arrow(
       id.into(),
       screenwide_annotations::AnnotationPoint { x, y: 100.0 },

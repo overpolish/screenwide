@@ -6,6 +6,7 @@ import { useMemo, useRef, useState } from "react";
 import {
   RecordingTimelineEdit,
   recordingTimelineOutputToSource,
+  recordingTimelineSourceEndToOutput,
   recordingTimelineSourceToOutput,
 } from "../../timeline/editing/recording-timeline-edit";
 import { TimelineRangeSelection } from "../../timeline/editing/timeline-blade";
@@ -14,17 +15,29 @@ import { SeekHandler } from "../../timeline/timeline-seek";
 
 import { usePublishRecordingTranscriptPreview } from "./recording-transcript-channel";
 
+const shareOf = (sourceMs: number, sourceDurationMs: number) =>
+  sourceDurationMs > 0
+    ? Math.max(0, Math.min(1, sourceMs / sourceDurationMs))
+    : 0;
+
 /** Where `sourceMs` lands on the timeline the edit plays, from 0 to 1. */
 const outputAt = (
   edit: RecordingTimelineEdit | null | undefined,
   sourceMs: number,
   sourceDurationMs: number,
 ) => {
-  const source =
-    sourceDurationMs > 0
-      ? Math.max(0, Math.min(1, sourceMs / sourceDurationMs))
-      : 0;
+  const source = shareOf(sourceMs, sourceDurationMs);
   return edit ? recordingTimelineSourceToOutput(edit, source) : source;
+};
+
+/** Where a stretch ending at `sourceMs` stops on the timeline, from 0 to 1. */
+const outputEndAt = (
+  edit: RecordingTimelineEdit | null | undefined,
+  sourceMs: number,
+  sourceDurationMs: number,
+) => {
+  const source = shareOf(sourceMs, sourceDurationMs);
+  return edit ? recordingTimelineSourceEndToOutput(edit, source) : source;
 };
 
 /**
@@ -76,7 +89,7 @@ export function useRecordingTranscriptPreview({
   return useMemo(() => {
     if (!highlight) return null;
     const start = outputAt(edit, highlight.startMs, sourceDurationMs);
-    const end = outputAt(edit, highlight.endMs, sourceDurationMs);
+    const end = outputEndAt(edit, highlight.endMs, sourceDurationMs);
     return end > start ? { end, start } : null;
   }, [edit, highlight, sourceDurationMs]);
 }

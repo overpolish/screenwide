@@ -77,6 +77,12 @@ __attribute__((visibility("hidden"))) ScreenwideDrainResult screenwide_export_dr
   AVAssetReader *camera_reader;
   AVAssetReaderTrackOutput *screen_output;
   AVAssetReaderTrackOutput *camera_output;
+  AVAssetTrack *screen_track;
+  AVAssetTrack *camera_track;
+  /// Readers a reordered timeline left behind going back in the source,
+  /// cancelled but held until the export ends: frames still in flight hold
+  /// their buffers.
+  NSMutableArray<AVAssetReader *> *retired_readers;
   AVAssetWriter *writer;
   AVAssetWriterInput *writer_input;
   AVAssetWriterInputPixelBufferAdaptor *adaptor;
@@ -95,4 +101,8 @@ __attribute__((visibility("hidden"))) ScreenwideDrainResult screenwide_export_dr
              bitrate:(uint64_t)bitrate
            errorText:(char *)error_text
        errorCapacity:(size_t)error_capacity;
+/// Starts reading both tracks again from `time`, for a timeline that plays
+/// an earlier stretch of the source after a later one: a reader only moves
+/// forward.
+- (BOOL)restartReadersAt:(CMTime)time error:(NSError **)error;
 @end

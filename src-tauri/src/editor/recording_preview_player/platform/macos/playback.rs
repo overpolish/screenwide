@@ -60,6 +60,8 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
   let cursor_settings = Arc::clone(&sources.cursor_settings);
   let keyboard = sources.keyboard.clone();
   let sources_animation_ranges = Arc::clone(&sources.animation_ranges);
+  let annotation_ranges = Arc::clone(&sources.annotation_ranges);
+  let scene_ranges = Arc::clone(&sources.scenes.ranges);
   let keyboard_settings = Arc::clone(&sources.keyboard_settings);
   let composition_settings = sources.composition_settings.clone();
   let annotation_clips = Arc::clone(&sources.annotation_clips);
@@ -99,7 +101,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           .map(|settings| settings.clone())
           .unwrap_or_else(|poisoned| poisoned.into_inner().clone());
         if let Ok(clips) = annotation_clips.read() {
-          let ranges = sources_animation_ranges
+          let ranges = annotation_ranges
             .read()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
           crate::editor::recording_preview_player::annotation_preview::apply_clips(
@@ -113,7 +115,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           );
         }
         if let Ok(clips) = scene_clips.read() {
-          let ranges = sources_animation_ranges
+          let ranges = scene_ranges
             .read()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
           crate::editor::recording_preview_player::scene_preview::arrange_composition(

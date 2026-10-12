@@ -5,6 +5,7 @@ import { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { useFocusRing } from "react-aria";
 
 import { t } from "../../../../i18n/i18n";
+import { isWindows } from "../../../../lib/platform";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 
 import {
@@ -52,9 +53,13 @@ export function TimelineSegments({
       {layoutRecordingTimelineSegments(edit).map((segment, index) => (
         <TimelineSegment
           isBladeActive={isBladeActive}
+          isMoving={segment.id === blade.movingSegmentId}
           isSelected={segment.id === selectedSegmentId}
           key={segment.id}
           number={index + 1}
+          onBeginMove={(event) => {
+            blade.beginSegmentMove(segment.id, event, outputPositionAt);
+          }}
           onBeginTrim={(edge, event) => {
             beginTrim(segment.id, edge, event);
           }}
@@ -81,11 +86,14 @@ export function TimelineSegments({
  * end. A press focuses it, so the keyboard carries on from there, but only
  * keyboard focus draws a ring: the engine's own ring would otherwise linger
  * on a pressed segment, and on a narrow one reads as a ring on its handles.
+ * Dragging its body moves it, with every linked lane, to another place.
  */
 function TimelineSegment({
   isBladeActive,
+  isMoving,
   isSelected,
   number,
+  onBeginMove,
   onBeginTrim,
   onOpenSpeedMenu,
   onSelect,
@@ -93,8 +101,10 @@ function TimelineSegment({
   segment,
 }: {
   isBladeActive: boolean;
+  isMoving: boolean;
   isSelected: boolean;
   number: number;
+  onBeginMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onBeginTrim: (
     edge: RecordingTimelineTrimEdge,
     event: ReactPointerEvent<HTMLSpanElement>,
@@ -112,11 +122,19 @@ function TimelineSegment({
   return (
     <div
       {...focusProps}
+      // Option Command (Ctrl Alt on Windows) with an arrow swaps the chosen
+      // segment with its neighbour; see `useTimelineSegmentMove`.
+      aria-keyshortcuts={
+        isWindows()
+          ? "Control+Alt+ArrowLeft Control+Alt+ArrowRight"
+          : "Alt+Meta+ArrowLeft Alt+Meta+ArrowRight"
+      }
       aria-label={t("editor-timeline-segment", { number })}
       aria-pressed={isSelected}
       className={cn(
-        "absolute inset-y-0 overflow-hidden rounded-control bg-fill-tertiary",
+        "absolute inset-y-0 overflow-hidden rounded-control bg-fill-tertiary transition-opacity",
         isBladeActive ? "pointer-events-none" : "pointer-events-auto",
+        isMoving && "opacity-50",
         focusStyles,
         elementFocusVisible,
       )}
@@ -137,6 +155,15 @@ function TimelineSegment({
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
         onSelect();
+      }}
+      onPointerDown={(event) => {
+        // A trim handle's press is a trim, not a move.
+        if (
+          event.target instanceof Element &&
+          event.target.closest("[data-trim-handle]")
+        )
+          return;
+        onBeginMove(event);
       }}
       role="button"
       style={segmentStyle(segment.outputStart, segment.outputEnd)}
@@ -161,6 +188,7 @@ function TimelineSegment({
       ) : null}
       <span
         className={`absolute inset-y-0 left-0 z-10 w-control-inset bg-primary/25 ${handleEvents}`}
+        data-trim-handle
         onPointerDown={(event) => {
           onBeginTrim("start", event);
         }}
@@ -168,6 +196,7 @@ function TimelineSegment({
       />
       <span
         className={`absolute inset-y-0 right-0 z-10 w-control-inset bg-primary/25 ${handleEvents}`}
+        data-trim-handle
         onPointerDown={(event) => {
           onBeginTrim("end", event);
         }}

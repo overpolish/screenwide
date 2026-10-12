@@ -62,6 +62,7 @@ fn spotlight(
   annotation.style.blur = blur;
   RecordingAnnotationClip {
     path_ms: None,
+    recording_span: None,
     pin: None,
     annotation,
     track_id: AnnotationTrack::Primary,

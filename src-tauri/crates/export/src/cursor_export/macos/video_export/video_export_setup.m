@@ -57,11 +57,10 @@ static AVAssetReaderTrackOutput *reader_output(AVAssetReader *reader, AVAssetTra
       camera_path == NULL
           ? nil
           : [AVURLAsset URLAssetWithURL:[NSURL fileURLWithPath:@(camera_path)] options:nil];
-  AVAssetTrack *screen_track = video_tracks(screen_asset, &error).firstObject;
+  screen_track = video_tracks(screen_asset, &error).firstObject;
   if (screen_track == nil && error != nil)
     return fail(error_text, error_capacity, error.localizedDescription);
-  AVAssetTrack *camera_track =
-      camera_asset == nil ? nil : video_tracks(camera_asset, &error).firstObject;
+  camera_track = camera_asset == nil ? nil : video_tracks(camera_asset, &error).firstObject;
   if (screen_track == nil)
     return fail(error_text, error_capacity, @"The video export could not find the recording track");
   if (camera_asset != nil && camera_track == nil)
@@ -123,5 +122,40 @@ static AVAssetReaderTrackOutput *reader_output(AVAssetReader *reader, AVAssetTra
     return fail(error_text, error_capacity, @"AVFoundation rejected the video writer");
   [writer addInput:writer_input];
   return 1;
+}
+
+- (BOOL)restartReadersAt:(CMTime)time error:(NSError **)error {
+  CMTimeRange range = CMTimeRangeMake(time, kCMTimePositiveInfinity);
+  AVAssetReader *screen = [[AVAssetReader alloc] initWithAsset:screen_track.asset error:error];
+  if (screen == nil) return NO;
+  screen.timeRange = range;
+  AVAssetReaderTrackOutput *screen_out =
+      reader_output(screen, screen_track, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange, error);
+  if (screen_out == nil) return NO;
+  AVAssetReader *camera = nil;
+  AVAssetReaderTrackOutput *camera_out = nil;
+  if (camera_track != nil) {
+    camera = [[AVAssetReader alloc] initWithAsset:camera_track.asset error:error];
+    if (camera == nil) return NO;
+    camera.timeRange = range;
+    camera_out = reader_output(camera, camera_track, kCVPixelFormatType_32BGRA, error);
+    if (camera_out == nil) return NO;
+  }
+  if (![screen startReading] || (camera != nil && ![camera startReading])) {
+    if (error != NULL) *error = screen.error ?: camera.error;
+    return NO;
+  }
+  if (retired_readers == nil) retired_readers = [NSMutableArray array];
+  [screen_reader cancelReading];
+  [retired_readers addObject:screen_reader];
+  if (camera_reader != nil) {
+    [camera_reader cancelReading];
+    [retired_readers addObject:camera_reader];
+  }
+  screen_reader = screen;
+  screen_output = screen_out;
+  camera_reader = camera;
+  camera_output = camera_out;
+  return YES;
 }
 @end

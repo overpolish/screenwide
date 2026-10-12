@@ -3,10 +3,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import {
-  RecordingTimelineEdit,
-  recordingTimelineSourceToOutput,
-} from "../../timeline/editing/recording-timeline-edit";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
 import { SeekHandler } from "../../timeline/timeline-seek";
 import {
   beginTimelineSnapGesture,
@@ -75,6 +73,7 @@ export function useRecordingSceneDrag({
   const movedRef = useRef(false);
   const laneRef = useRef<HTMLDivElement>(null);
   const snap = useTimelineSnap();
+  const lengthMs = recordingTimelineLengthMs(edit, sourceDurationMs);
   const detachRef = useRef<() => void>(() => undefined);
   const seekEdge = (
     next: RecordingSceneClip[],
@@ -82,12 +81,9 @@ export function useRecordingSceneDrag({
     phase: "end" | "move",
   ) => {
     const clip = next.find((item) => item.id === drag.id);
-    if (!clip || drag.edge === "body" || sourceDurationMs <= 0) return;
+    if (!clip || drag.edge === "body" || lengthMs <= 0) return;
     const edgeMs = drag.edge === "endMs" ? clip.endMs - 1 : clip.startMs;
-    onSeek?.(
-      recordingTimelineSourceToOutput(edit, edgeMs / sourceDurationMs),
-      phase,
-    );
+    onSeek?.(edgeMs / lengthMs, phase);
   };
   const reset = () => {
     dragRef.current?.snap.showGuide(null);
@@ -98,7 +94,7 @@ export function useRecordingSceneDrag({
   const update = (clientX: number) => {
     const drag = dragRef.current;
     const bounds = laneRef.current?.getBoundingClientRect();
-    if (!drag || !bounds || sourceDurationMs <= 0) return;
+    if (!drag || !bounds || lengthMs <= 0) return;
     if (!drag.moved && Math.abs(clientX - drag.startX) < DRAG_SLOP_PX) return;
     drag.moved = true;
     movedRef.current = true;
@@ -110,18 +106,10 @@ export function useRecordingSceneDrag({
       const clip = drag.original.find((item) => item.id === drag.id);
       if (!clip) return;
       const shift = (clientX - drag.startX) / outputWidthPx;
-      const start = recordingTimelineSourceToOutput(
-        edit,
-        clip.startMs / sourceDurationMs,
-      );
-      const end = recordingTimelineSourceToOutput(
-        edit,
-        clip.endMs / sourceDurationMs,
-      );
       const snapped = timelineSnapRangeShift(
         drag.snap,
-        start + shift,
-        end + shift,
+        clip.startMs / lengthMs + shift,
+        clip.endMs / lengthMs + shift,
       );
       drag.snap.showGuide(snapped?.target ?? null);
       next = moveRecordingSceneClip({
@@ -189,7 +177,7 @@ export function useRecordingSceneDrag({
       moved: false,
       original: clips,
       snap: beginTimelineSnapGesture(snap, {
-        mapTarget: (source) => recordingTimelineSourceToOutput(edit, source),
+        space: "output",
         threshold: 0,
       }),
       startX: clientX,

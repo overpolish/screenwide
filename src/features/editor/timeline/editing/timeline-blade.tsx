@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { MouseEvent as ReactMouseEvent } from "react";
+import {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 
 import { clamp } from "../scrub-playhead";
 import {
@@ -20,6 +23,13 @@ import type { RecordingTimelineCut } from "./recording-timeline-cuts";
 import type { TimelineSnapGesture } from "../timeline-snap";
 
 export type TimelineBladeController = {
+  /** Starts what may become a drag of the segment to another place: a press
+   * that never travels is left to pick it. */
+  beginSegmentMove: (
+    segmentId: number,
+    event: ReactPointerEvent<HTMLElement>,
+    outputPositionAt: (clientX: number) => number,
+  ) => void;
   beginTrim: (gesture: {
     edge: RecordingTimelineTrimEdge;
     outputPosition: number;
@@ -34,6 +44,8 @@ export type TimelineBladeController = {
   isActive: boolean;
   isRangeActive: boolean;
   isSnapActive: boolean;
+  /** The segment a drag is moving, drawn faded in every lane. */
+  movingSegmentId: number | null;
   previewAt: (outputPosition: number) => void;
   previewPosition: number | null;
   rangeSelection: TimelineRangeSelection | null;

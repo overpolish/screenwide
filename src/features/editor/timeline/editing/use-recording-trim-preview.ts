@@ -6,10 +6,8 @@ import { RefObject, useCallback, useEffect, useRef } from "react";
 import { recordingTimelinePlaybackDurationMs } from "../recording-timeline-playback";
 import { Playhead } from "../scrub-playhead";
 
-import {
-  recordingTimelineSourceToOutput,
-  RecordingTimelineEdit,
-} from "./recording-timeline-edit";
+import { RecordingTimelineEdit } from "./recording-timeline-edit";
+import { recordingTimelineSourceToOutputNear } from "./recording-timeline-source-order";
 
 export function useRecordingTrimPreview({
   edit,
@@ -46,9 +44,15 @@ export function useRecordingTrimPreview({
         clear();
       }
       const total = totalDurationRef.current;
+      // A reordered timeline can start one segment where another ends in
+      // the source; the playhead stays on the side it is moving on from.
       const outputRatio =
         edit && total > 0
-          ? recordingTimelineSourceToOutput(edit, positionMs / total)
+          ? recordingTimelineSourceToOutputNear(
+              edit.segments,
+              positionMs / total,
+              playhead.ratio(),
+            )
           : total > 0
             ? positionMs / total
             : 0;

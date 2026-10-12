@@ -123,6 +123,7 @@ export function useTimelineNativeTrim({
       outputPosition,
       segmentId,
       snap: beginTimelineSnapGesture(snap, {
+        space: "source",
         threshold:
           TIMELINE_SNAP_THRESHOLD_PX *
           (outputPositionAt(event.clientX + 1) - outputPosition),

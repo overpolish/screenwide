@@ -51,10 +51,11 @@ impl TimelineKey {
     if clip.pin.as_ref().is_some_and(|pin| pin.path.is_none()) {
       return None;
     }
+    let [start_ms, end_ms] = clip.recording_span();
     Some(Self {
       id: clip.annotation.id.clone(),
-      start_ms: clip.start_ms,
-      end_ms: clip.end_ms,
+      start_ms,
+      end_ms,
       corners: [start.x, start.y, end.x, end.y].map(f64::to_bits),
       pin: clip
         .pin

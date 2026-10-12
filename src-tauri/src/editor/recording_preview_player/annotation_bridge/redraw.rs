@@ -40,7 +40,7 @@ impl PreviewPlayerManager {
       .map(|clips| clips.clone())
       .unwrap_or_default();
     let ranges = sources
-      .animation_ranges
+      .annotation_ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
       .clone();

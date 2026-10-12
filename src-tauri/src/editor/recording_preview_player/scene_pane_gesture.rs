@@ -6,25 +6,26 @@
 
 use screenwide_scenes::{RecordingSceneClip, SceneRadius};
 
-/// The index of the clip `source_ms` falls in.
-fn clip_at(clips: &[RecordingSceneClip], source_ms: u64) -> Option<usize> {
+/// The index of the clip `timeline_ms` falls in.
+fn clip_at(clips: &[RecordingSceneClip], timeline_ms: u64) -> Option<usize> {
   clips
     .iter()
-    .position(|clip| clip.start_ms <= source_ms && source_ms < clip.end_ms)
+    .position(|clip| clip.start_ms <= timeline_ms && timeline_ms < clip.end_ms)
 }
 
-/// A select gesture on a pane of a custom scene at `source_ms`: the clips with
-/// that pane's box moved or resized. `None` where the clip there is no custom
-/// scene; `Some(None)` for a pane its boxes do not place, whose gestures stay
-/// the recording's own. `delta` is in shares of the canvas, as the boxes are.
+/// A select gesture on a pane of a custom scene `timeline_ms` into the
+/// edited video: the clips with that pane's box moved or resized. `None`
+/// where the clip there is no custom scene; `Some(None)` for a pane its boxes
+/// do not place, whose gestures stay the recording's own. `delta` is in
+/// shares of the canvas, as the boxes are.
 pub(super) fn custom_box_gesture(
   clips: &[RecordingSceneClip],
-  source_ms: u64,
+  timeline_ms: u64,
   bake_camera: bool,
   layer_id: u32,
   (delta, scale): ((f64, f64), f64),
 ) -> Option<Option<Vec<RecordingSceneClip>>> {
-  let index = clip_at(clips, source_ms)?;
+  let index = clip_at(clips, timeline_ms)?;
   let boxes = clips[index].boxes?;
   let mut next = clips.to_vec();
   let target = next[index].boxes.as_mut()?;
@@ -36,18 +37,19 @@ pub(super) fn custom_box_gesture(
   Some(Some(next))
 }
 
-/// A corner radius dragged on a pane of the scene at `source_ms`: the clips
-/// with that scene's radius for the pane set to `radius` percent, held to
-/// what a radius can be. `None` for a pane no scene places, the camera as a
-/// pane of its own, whose radius stays the recording's.
+/// A corner radius dragged on a pane of the scene `timeline_ms` into the
+/// edited video: the clips with that scene's radius for the pane set to
+/// `radius` percent, held to what a radius can be. `None` for a pane no scene
+/// places, the camera as a pane of its own, whose radius stays the
+/// recording's.
 pub(super) fn radius_gesture(
   clips: &[RecordingSceneClip],
-  source_ms: u64,
+  timeline_ms: u64,
   bake_camera: bool,
   layer_id: u32,
   radius: f64,
 ) -> Option<Vec<RecordingSceneClip>> {
-  let index = clip_at(clips, source_ms)?;
+  let index = clip_at(clips, timeline_ms)?;
   let mut next = clips.to_vec();
   let held = Some(radius.clamp(0.0, 50.0));
   let scene = next[index].radius.get_or_insert_with(SceneRadius::default);

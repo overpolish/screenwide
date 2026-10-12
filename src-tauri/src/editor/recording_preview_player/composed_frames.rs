@@ -33,6 +33,9 @@ pub(crate) struct PreviewFrameRequest {
   keyboard_effects: KeyboardEffectSettings,
   recording_output: RecordingOutputSettings,
   annotation_clips: Option<Vec<RecordingAnnotationClip>>,
+  /// The timeline `annotation_clips` are timed on; the saved edit's when
+  /// absent.
+  playback_ranges: Option<Vec<super::RecordingPreviewPlaybackRange>>,
 }
 
 /// Composes `frame` at its own position.
@@ -64,6 +67,7 @@ pub(crate) async fn compose_preview_frames(
     keyboard_effects,
     mut recording_output,
     annotation_clips,
+    playback_ranges,
   } = frame;
   // Windows composes the frame through the editor window's compositor, which
   // every session shares; macOS composes it without one.
@@ -72,8 +76,21 @@ pub(crate) async fn compose_preview_frames(
   if let Some(clips) = &annotation_clips {
     screenwide_annotations::timing::validate_clips(clips)?;
   }
+  let ranges = playback_ranges.map_or_else(
+    || {
+      sources
+        .annotation_ranges
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone()
+    },
+    |ranges| super::animation_timeline_ranges(&ranges),
+  );
   tauri::async_runtime::spawn_blocking(move || {
     let clips = annotation_clips.map(|mut clips| {
+      // What follows the picture under a clip is read across the stretch of
+      // the recording it plays.
+      screenwide_annotations::timing::lay_on_recording(&mut clips, &ranges);
       // The preview has normally tracked every pin already; one it has not
       // is tracked here, off the async runtime, once for every frame.
       #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -91,10 +108,6 @@ pub(crate) async fn compose_preview_frames(
       let mut output = recording_output.clone();
       if let Some(clips) = &clips {
         use screenwide_annotations::timing::{revealed_annotations, AnnotationTrack};
-        let ranges = sources
-          .animation_ranges
-          .read()
-          .unwrap_or_else(|poisoned| poisoned.into_inner());
         // A frame standing still shows the reveal this instant holds, with
         // nothing moving for the blur to fade.
         let [primary, camera] = sources.annotation_pictures();

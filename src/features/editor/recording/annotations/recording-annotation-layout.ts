@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { RECORDING_VIDEO_TRACK_ORDER } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
 import { TimelineViewportState } from "../../timeline/timeline-viewport";
 import {
-  layoutTimedLaneItems,
+  LaneFragment,
+  layoutTimelineLaneItems,
   StackedLaneFragment,
 } from "../../timeline/tracks/timed-lane-layout";
 import {
@@ -15,6 +17,10 @@ import {
 import { RecordingAnnotationClip } from "./recording-annotations";
 
 type LaneClip = RecordingAnnotationClip & { id: string };
+type AnnotationLaneFragment = StackedLaneFragment<
+  LaneClip,
+  LaneFragment<LaneClip>
+>;
 
 /** The narrowest a clip is drawn, in CSS pixels, so a short one can still be
  * taken hold of. */
@@ -33,27 +39,17 @@ export const recordingAnnotationRows = (
   clips: RecordingAnnotationClip[],
   edit: RecordingTimelineEdit,
   sourceDurationMs: number,
-): { fragments: StackedLaneFragment<LaneClip>[]; rowCount: number } => {
-  const fragments = layoutTimedLaneItems({
-    edit,
-    items: clips.map((clip) => ({ ...clip, id: clip.annotation.id })),
-    sourceDurationMs,
-  });
-  // Cuts remove time from a clip, not its identity. Stack the whole retained
-  // run so an overlapping arrow cannot jump rows at a cut or gain inner grips.
-  const runs = new Map<string, (typeof fragments)[number]>();
-  for (const fragment of fragments) {
-    const previous = runs.get(fragment.item.id);
-    if (previous) previous.outputEnd = fragment.outputEnd;
-    else
-      runs.set(fragment.item.id, { ...fragment, fragmentId: fragment.item.id });
-  }
+): { fragments: AnnotationLaneFragment[]; rowCount: number } => {
+  const runs = layoutTimelineLaneItems(
+    clips.map((clip) => ({ ...clip, id: clip.annotation.id })),
+    recordingTimelineLengthMs(edit, sourceDurationMs),
+  );
   // The runs come in drawing order, bottom first: the picture behind's, then
   // the picture in front's, each in its own order. Each rests on the highest
   // run beneath it that it overlaps; its level counts up from the bottom row.
-  const depth = (run: (typeof fragments)[number]) =>
+  const depth = (run: (typeof runs)[number]) =>
     -RECORDING_VIDEO_TRACK_ORDER.indexOf(run.item.trackId);
-  const stacked = [...runs.values()].sort((a, b) => depth(a) - depth(b));
+  const stacked = [...runs].sort((a, b) => depth(a) - depth(b));
   const levels: number[] = [];
   for (const [index, run] of stacked.entries())
     levels.push(
@@ -87,7 +83,7 @@ export const recordingAnnotationRows = (
  * follows its content on its own, so it is never chosen with others.
  */
 export const sweptAnnotationClips = (
-  fragments: StackedLaneFragment<LaneClip>[],
+  fragments: AnnotationLaneFragment[],
   box: LaneBox,
   {
     laneWidthPx,

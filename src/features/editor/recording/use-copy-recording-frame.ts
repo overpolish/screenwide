@@ -3,47 +3,55 @@
 import { useCallback, useRef, useState } from "react";
 
 import { copyRecordingPreviewFrameToClipboard } from "../api";
+import { recordingTimelinePlaybackRanges } from "../timeline/recording-timeline-playback";
+
+import { ResolvedScrubPreviewProps } from "./preview/recording-preview-props";
+
 type Payload = Parameters<typeof copyRecordingPreviewFrameToClipboard>[0];
-export function useCopyRecordingFrame({
-  annotationClips,
-  artifactId,
-  bakeCamera,
-  cameraOverlay,
-  cursorEffects,
-  getPositionMs,
-  keyboardEffects,
-  recordingOutput: effectiveRecordingOutput,
-}: Omit<Payload, "positionMs"> & { getPositionMs: () => number }) {
+
+/** Copies the frame under the playhead, composed as the preview draws it,
+ * with the annotations timed on the timeline the edit lays out. */
+export function useCopyRecordingFrame(
+  {
+    artifactId,
+    bakeCamera,
+    cameraOverlay,
+    cursorEffects,
+    durationMs,
+    keyboardEffects,
+    recordingTimelineEdit,
+  }: ResolvedScrubPreviewProps,
+  {
+    annotationClips,
+    getPositionMs,
+    recordingOutput,
+  }: Pick<Payload, "annotationClips" | "recordingOutput"> & {
+    getPositionMs: () => number;
+  },
+) {
   const [copyError, setCopyError] = useState<string | null>(null);
   // The copied frame must use the output on screen, which during a resize is
   // the draft; a ref keeps the handler stable without staling the payload.
-  const copyPayloadRef = useRef({
+  const payload = {
     annotationClips,
     bakeCamera,
     cameraOverlay,
     cursorEffects,
     keyboardEffects,
-    recordingOutput: effectiveRecordingOutput,
-  });
-  copyPayloadRef.current = {
-    annotationClips,
-    bakeCamera,
-    cameraOverlay,
-    cursorEffects,
-    keyboardEffects,
-    recordingOutput: effectiveRecordingOutput,
+    playbackRanges: recordingTimelinePlaybackRanges(
+      recordingTimelineEdit,
+      durationMs,
+    ),
+    recordingOutput,
   };
+  const copyPayloadRef = useRef(payload);
+  copyPayloadRef.current = payload;
   const copyCurrentFrame = useCallback(() => {
     setCopyError(null);
     return copyRecordingPreviewFrameToClipboard({
-      annotationClips: copyPayloadRef.current.annotationClips,
+      ...copyPayloadRef.current,
       artifactId,
-      bakeCamera: copyPayloadRef.current.bakeCamera,
-      cameraOverlay: copyPayloadRef.current.cameraOverlay,
-      cursorEffects: copyPayloadRef.current.cursorEffects,
-      keyboardEffects: copyPayloadRef.current.keyboardEffects,
       positionMs: getPositionMs(),
-      recordingOutput: copyPayloadRef.current.recordingOutput,
     }).catch((cause: unknown) => {
       setCopyError(cause instanceof Error ? cause.message : String(cause));
       // Rethrown so the copy button knows the press failed and skips its check.

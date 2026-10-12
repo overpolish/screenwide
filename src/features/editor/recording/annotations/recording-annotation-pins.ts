@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { annotationDrawInMs } from "../../annotations/annotation-pace";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import {
+  recordingMsAt,
+  recordingTimelineMsAt,
+} from "../../timeline/editing/recording-timeline-time";
 
 import {
   RecordingAnnotationClip,
@@ -18,20 +23,32 @@ export const isPinnable = (clip: RecordingAnnotationClip) =>
   clip.trackId === "primary";
 
 /**
- * `clip` pinned at `positionMs`: the frame under the playhead when it falls in
- * the clip, and otherwise the moment the annotation was placed, once it has
- * drawn in.
+ * `clip` pinned at `positionMs` into the recording: the frame under the
+ * playhead when it falls in the clip, and otherwise the moment the
+ * annotation was placed, once it has drawn in. The clip is timed on the
+ * timeline `edit` lays out; the pin, like the content it follows, is in
+ * recording time.
  */
 export const pinnedClip = (
   clip: RecordingAnnotationClip,
   positionMs: number,
+  {
+    edit,
+    sourceDurationMs,
+  }: { edit: RecordingTimelineEdit; sourceDurationMs: number },
 ): RecordingAnnotationClip => {
   const placed = Math.min(
     clip.endMs - 1,
     clip.startMs + annotationDrawInMs(clip.annotation, clip.pathMs),
   );
-  const inside = positionMs >= clip.startMs && positionMs < clip.endMs;
-  const pinnedMs = Math.max(0, Math.round(inside ? positionMs : placed));
+  const at = recordingTimelineMsAt(edit, sourceDurationMs, positionMs);
+  const inside = at >= clip.startMs && at < clip.endMs;
+  const pinnedMs = Math.max(
+    0,
+    Math.round(
+      inside ? positionMs : recordingMsAt(edit, sourceDurationMs, placed),
+    ),
+  );
   return {
     ...clip,
     pin: { keyframes: [{ dx: 0, dy: 0, ms: pinnedMs }], pinnedMs },

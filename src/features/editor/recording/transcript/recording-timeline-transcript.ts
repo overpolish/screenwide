@@ -12,6 +12,10 @@ import {
   RecordingTimelineEdit,
   RecordingTimelineSegment,
 } from "../../timeline/editing/recording-timeline-edit";
+import {
+  earliestSourceIndex,
+  sourcePredecessorIndex,
+} from "../../timeline/editing/recording-timeline-source-order";
 import { inheritRecordingKeyboardSegmentEdits } from "../../timeline/keyboard/recording-keyboard-timeline-edit";
 
 import { correctionsWith } from "./transcript-corrections";
@@ -94,12 +98,13 @@ export function restoreRecordingTranscriptRanges(
       (cut) => cut.sourceStart < gap.end && gap.start < cut.sourceEnd,
     );
     if (corrected) return corrected.playbackRate;
-    for (let index = edit.segments.length - 1; index >= 0; index--) {
-      if (edit.segments[index].sourceEnd <= gap.start) {
-        return edit.segments[index].playbackRate ?? 1;
-      }
-    }
-    return edit.segments[0]?.playbackRate ?? 1;
+    // An edit always keeps a segment, so one of these is always found.
+    const predecessor = sourcePredecessorIndex(edit.segments, gap.start);
+    const beside =
+      edit.segments[
+        predecessor >= 0 ? predecessor : earliestSourceIndex(edit.segments)
+      ];
+    return beside.playbackRate ?? 1;
   };
   const gaps: SourceCut[] = [];
   for (const range of shares) {

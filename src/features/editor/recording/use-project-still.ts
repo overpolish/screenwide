@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 
 import { recordingTimelineOutputToSource } from "../timeline/editing/recording-timeline-edit";
+import { recordingTimelinePlaybackRanges } from "../timeline/recording-timeline-playback";
 
 import { useCameraEffectsRevision } from "./camera/use-camera-effects-revision";
 import { ResolvedScrubPreviewProps } from "./preview/recording-preview-props";
@@ -51,11 +52,11 @@ export function useProjectStill(
   const effectsRevision = useCameraEffectsRevision(artifactId);
   useEffect(() => {
     if (!hasPicture || !recordingOutput || durationMs <= 0) return;
+    const ownEdit = edit?.artifactId === artifactId ? edit : null;
     // A point along the edited timeline, from 0 to 1, as a source position.
     const sourceMs = (output: number) =>
-      (edit?.artifactId === artifactId
-        ? recordingTimelineOutputToSource(edit, output)
-        : output) * durationMs;
+      (ownEdit ? recordingTimelineOutputToSource(ownEdit, output) : output) *
+      durationMs;
     const request: RecordingFrameRequest = {
       annotationClips,
       artifactId,
@@ -63,6 +64,7 @@ export function useProjectStill(
       cameraOverlay,
       cursorEffects,
       keyboardEffects,
+      playbackRanges: recordingTimelinePlaybackRanges(ownEdit, durationMs),
       positionMs: 0,
       recordingOutput,
     };

@@ -14,7 +14,9 @@ import {
   RecordingTimelineEdit,
   setRecordingTimelineSegmentPlaybackRate,
 } from "./recording-timeline-edit";
+import { moveRecordingTimelineSegment } from "./recording-timeline-move";
 import { TimelineBladeController } from "./timeline-blade";
+import { useTimelineSegmentMove } from "./use-timeline-segment-move";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
@@ -23,6 +25,11 @@ const CUT_EDIT = cutRecordingTimeline(
   0.7,
 );
 const SPED_UP_EDIT = setRecordingTimelineSegmentPlaybackRate(CUT_EDIT, 1, 2);
+// The last third played first: the segments are no longer in source order.
+const REORDERED_EDIT = moveRecordingTimelineSegment(CUT_EDIT, {
+  boundary: 0,
+  segmentId: 2,
+});
 
 const thumbnails: RecordingTimelineThumbnail[] = Array.from(
   { length: 24 },
@@ -34,7 +41,8 @@ const thumbnails: RecordingTimelineThumbnail[] = Array.from(
  * by a controller held in story state. The blade tool itself is one layer
  * over the whole lanes column rather than a part of a lane, so it belongs to
  * the timeline story; trim and speed edits that need the native cursor or a
- * menu are inert here.
+ * menu are inert here. Dragging a segment moves it; the drop guide is drawn
+ * by that timeline-wide layer too, so only the faded segment shows here.
  */
 function BladePreview({
   initialEdit = CUT_EDIT,
@@ -46,7 +54,20 @@ function BladePreview({
   const [edit, setEdit] = useState(initialEdit);
   const [selected, setSelected] = useState(selectedSegmentId);
   const [preview, setPreview] = useState<number | null>(null);
+  const move = useTimelineSegmentMove({
+    edit,
+    keysEnabled: true,
+    onMove: (segmentId, boundary) => {
+      setEdit((current) =>
+        moveRecordingTimelineSegment(current, { boundary, segmentId }),
+      );
+      setSelected(segmentId);
+    },
+    selectedSegmentId: selected,
+    setGuidePosition: () => undefined,
+  });
   const blade: TimelineBladeController = {
+    beginSegmentMove: move.begin,
     beginTrim: () => undefined,
     clearPreview: () => {
       setPreview(null);
@@ -60,6 +81,7 @@ function BladePreview({
     isActive: false,
     isRangeActive: false,
     isSnapActive: false,
+    movingSegmentId: move.movingSegmentId,
     previewAt: setPreview,
     previewPosition: preview,
     rangeSelection: null,
@@ -129,4 +151,10 @@ export const SelectedSegment: Story = {
 /** A segment playing back at a different rate carries its speed badge. */
 export const SegmentSpeed: Story = {
   args: { initialEdit: SPED_UP_EDIT },
+};
+
+/** Segments moved out of source order: the last third plays first, each
+ * still showing its own footage. Drag one to move it again. */
+export const Reordered: Story = {
+  args: { initialEdit: REORDERED_EDIT },
 };

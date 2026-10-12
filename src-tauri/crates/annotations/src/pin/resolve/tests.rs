@@ -14,6 +14,7 @@ fn point(x: f64, y: f64) -> AnnotationPoint {
 fn clip(shape: AnnotationShape, keyframes: &[(u64, f64, f64)]) -> RecordingAnnotationClip {
   RecordingAnnotationClip {
     path_ms: None,
+    recording_span: None,
     annotation: Annotation {
       above_camera: false,
       animated: false,
@@ -166,7 +167,7 @@ fn a_pinned_annotation_is_hidden_while_its_content_is_off_the_frame() {
   // Back on the frame, it arrives again over the rest of its clip.
   assert_eq!(
     placed_annotation(&pinned, 2_500).map(|(_, span)| span),
-    Some([2_000, 5_000])
+    Some(Some([2_000, 5_000]))
   );
 }
 

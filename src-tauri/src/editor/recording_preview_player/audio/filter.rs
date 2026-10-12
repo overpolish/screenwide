@@ -59,7 +59,15 @@ pub(super) fn args(
   config: &StreamConfig,
   playback_rate: f64,
 ) -> Vec<String> {
-  let start = seconds(ranges[0].source_start_ms);
+  // Every range is trimmed from one decode of the source, which therefore
+  // starts at the range earliest in it: on a reordered timeline that need
+  // not be the first one played.
+  let first_start_ms = ranges
+    .iter()
+    .map(|range| range.source_start_ms)
+    .min()
+    .unwrap_or(0);
+  let start = seconds(first_start_ms);
   let mut args = vec![
     "-hide_banner".to_owned(),
     "-loglevel".to_owned(),
@@ -100,7 +108,6 @@ pub(super) fn args(
       }
     })
     .collect();
-  let first_start_ms = ranges[0].source_start_ms;
   let retained = seconds(
     ranges
       .iter()

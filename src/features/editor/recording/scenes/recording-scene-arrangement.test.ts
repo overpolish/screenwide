@@ -139,8 +139,9 @@ describe("arrangedRecordingScene", () => {
     const doubled = [
       { playbackRate: 2, sourceEndMs: 20_000, sourceStartMs: 0 },
     ];
-    // 600 ms of a doubled stretch plays in 300 ms: halfway through arriving.
-    expect(arranged(1_600, { ranges: doubled })?.output.cropX).toBeCloseTo(
+    // The recording's 2.6 s plays 1.3 s into the video: halfway through
+    // arriving.
+    expect(arranged(2_600, { ranges: doubled })?.output.cropX).toBeCloseTo(
       arranged(1_300)?.output.cropX ?? 0,
     );
   });
@@ -185,6 +186,21 @@ describe("arrangedRecordingScene", () => {
     const scene = arranged(5_000, { clip: zoom, hasCamera: false });
     expect(scene?.output.imageWidth).toBeCloseTo(output.imageWidth * 2);
     expect(scene?.cameraOverlay).toBeNull();
+  });
+
+  it("holds a scene ending a reordered video to its last frame", () => {
+    // 15-20 s plays first, then 0-15 s; the split ends the video, a
+    // millisecond short of it.
+    const reordered = [
+      { playbackRate: 1, sourceEndMs: 20_000, sourceStartMs: 15_000 },
+      { playbackRate: 1, sourceEndMs: 15_000, sourceStartMs: 0 },
+    ];
+    const ending = { ...split, endMs: 19_999, startMs: 10_000 };
+    expect(
+      arranged(14_999, { clip: ending, ranges: reordered }),
+    ).not.toBeNull();
+    // The recording's 16 s plays a second into the video, before the scene.
+    expect(arranged(16_000, { clip: ending, ranges: reordered })).toBeNull();
   });
 });
 

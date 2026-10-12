@@ -31,12 +31,12 @@ pub(super) fn crops_in_place(clip: &RecordingSceneClip, reframe: SceneReframe) -
 }
 
 /// `clips` as the preview draws them while `reframe` is in hand: the screen's
-/// framing of the clip at `source_ms` taken away, so the screen shows whole,
-/// unless that screen is cropped in place.
+/// framing of the clip `timeline_ms` into the edited video taken away, so
+/// the screen shows whole, unless that screen is cropped in place.
 pub(super) fn reframed_clips(
   clips: &[RecordingSceneClip],
   reframe: Option<SceneReframe>,
-  source_ms: u64,
+  timeline_ms: u64,
 ) -> Option<Vec<RecordingSceneClip>> {
   if reframe != Some(SceneReframe::Screen) {
     return None;
@@ -44,7 +44,7 @@ pub(super) fn reframed_clips(
   let mut clips = clips.to_vec();
   let clip = clips
     .iter_mut()
-    .find(|clip| clip.start_ms <= source_ms && source_ms < clip.end_ms)?;
+    .find(|clip| clip.start_ms <= timeline_ms && timeline_ms < clip.end_ms)?;
   if crops_in_place(clip, SceneReframe::Screen) {
     return None;
   }

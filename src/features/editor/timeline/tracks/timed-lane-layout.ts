@@ -12,20 +12,41 @@ export type TimedLaneItem = {
   startMs: number;
 };
 
-export type TimedLaneFragment<Item extends TimedLaneItem> = {
+/** Where one item sits on a lane, from 0 to 1 across the output timeline. */
+export type LaneFragment<Item extends TimedLaneItem> = {
   fragmentId: string;
   item: Item;
   outputEnd: number;
   outputStart: number;
-  segmentId: number;
 };
+
+/** The part of a recording-time item one segment plays. */
+export type TimedLaneFragment<Item extends TimedLaneItem> =
+  LaneFragment<Item> & { segmentId: number };
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
 /**
+ * Lays items timed on the edited video, `lengthMs` long, onto a lane: one
+ * fragment each, as the timeline plays them.
+ */
+export const layoutTimelineLaneItems = <Item extends TimedLaneItem>(
+  items: Item[],
+  lengthMs: number,
+): LaneFragment<Item>[] =>
+  lengthMs > 0
+    ? items.map((item) => ({
+        fragmentId: String(item.id),
+        item,
+        outputEnd: clamp(Math.max(item.startMs, item.endMs) / lengthMs),
+        outputStart: clamp(item.startMs / lengthMs),
+      }))
+    : [];
+
+/**
  * Lays source-time items onto the magnetic output timeline. A ranged item that
  * crosses a segment boundary becomes multiple independently addressable visual
- * fragments, which is also suitable for future captions and annotations.
+ * fragments.
  */
 export function layoutTimedLaneItems<Item extends TimedLaneItem>({
   edit,
@@ -83,22 +104,26 @@ export function layoutTimedLaneItems<Item extends TimedLaneItem>({
   });
 }
 
-export type StackedLaneFragment<Item extends TimedLaneItem> =
-  TimedLaneFragment<Item> & {
-    continuedByNext: boolean;
-    /**
-     * The same item continuing seamlessly from the previous fragment on this
-     * row - a segment split, not a separate occurrence - so the lane renders
-     * the pair joined and carries the label only once.
-     */
-    continuesPrevious: boolean;
-    row: number;
-    /**
-     * Carries the item's label: the widest fragment of its seam run, so a
-     * sliver at a segment boundary never swallows the whole run's label.
-     */
-    showLabel: boolean;
-  };
+type LaneStacking = {
+  continuedByNext: boolean;
+  /**
+   * The same item continuing seamlessly from the previous fragment on this
+   * row - a segment split, not a separate occurrence - so the lane renders
+   * the pair joined and carries the label only once.
+   */
+  continuesPrevious: boolean;
+  row: number;
+  /**
+   * Carries the item's label: the widest fragment of its seam run, so a
+   * sliver at a segment boundary never swallows the whole run's label.
+   */
+  showLabel: boolean;
+};
+
+export type StackedLaneFragment<
+  Item extends TimedLaneItem,
+  Fragment extends LaneFragment<Item> = TimedLaneFragment<Item>,
+> = Fragment & LaneStacking;
 
 /**
  * One sublane row's height in CSS pixels. Mirrors the `--spacing-control-height`

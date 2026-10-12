@@ -40,7 +40,7 @@ fn keeps_the_newest_save_and_rebinds_the_artifact() {
   persist(&project, 7, 2, edit(7, 0.75)).unwrap();
   // A save that arrives late must not undo the one after it.
   persist(&project, 7, 1, edit(7, 0.5)).unwrap();
-  let (revision, restored) = for_project(&project, 99).unwrap();
+  let (revision, restored) = for_project(&project, 99, 8_000).unwrap();
 
   assert_eq!(revision, 2);
   assert_eq!(restored.artifact_id, 99);
@@ -67,6 +67,7 @@ fn live_annotation_clips_become_the_recordings_first_edit() {
   let clip = RecordingAnnotationClip {
     path_ms: None,
     pin: None,
+    recording_span: None,
     annotation: new_arrow(
       "annotation".to_owned(),
       AnnotationPoint { x: 10.0, y: 20.0 },
@@ -79,14 +80,14 @@ fn live_annotation_clips_become_the_recordings_first_edit() {
   };
 
   persist_initial_edit(&project, 7, vec![clip.clone()], Vec::new()).unwrap();
-  let (revision, restored) = for_project(&project, 7).unwrap();
+  let (revision, restored) = for_project(&project, 7, 8_000).unwrap();
 
   assert_eq!(revision, 0);
   assert_eq!(restored.annotation_clips, vec![clip]);
   // The editor's own first save lands on top instead of being refused.
   persist(&project, 7, 1, edit(7, 0.5)).unwrap();
-  assert_eq!(for_project(&project, 7).unwrap().0, 1);
+  assert_eq!(for_project(&project, 7, 8_000).unwrap().0, 1);
   // Reopening the project does not put the first edit back over it.
   persist_initial_edit(&project, 8, Vec::new(), Vec::new()).unwrap();
-  assert_eq!(for_project(&project, 8).unwrap().1.segments.len(), 2);
+  assert_eq!(for_project(&project, 8, 8_000).unwrap().1.segments.len(), 2);
 }

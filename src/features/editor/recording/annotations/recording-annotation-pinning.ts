@@ -3,6 +3,12 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import {
+  recordingSpanMs,
+  recordingTimelineMsAt,
+} from "../../timeline/editing/recording-timeline-time";
+
 import {
   clearedPinCorrections,
   isPinnable,
@@ -20,19 +26,24 @@ import { RecordingPinStatus } from "./use-recording-pin-status";
  * What a recording annotation's menu does to its pin, against the clips as
  * they stand. `withClip` writes one clip's change back as an edit; the
  * playhead, in source time, is where a pin, a correction or an out-of-view
- * stretch is made.
+ * stretch is made. The clips are timed on the timeline `edit` lays out; a
+ * pin, like the content it follows, is in recording time.
  */
 export function recordingAnnotationPinning({
   clips,
+  edit,
   getPositionMs,
   pinStatus,
   sessionId,
+  sourceDurationMs,
   withClip,
 }: {
   clips: RecordingAnnotationClip[];
+  edit: RecordingTimelineEdit;
   getPositionMs: () => number;
   pinStatus: ReadonlyMap<string, RecordingPinStatus>;
   sessionId: number | null;
+  sourceDurationMs: number;
   withClip: (
     id: string,
     change: (clip: RecordingAnnotationClip) => RecordingAnnotationClip,
@@ -43,7 +54,12 @@ export function recordingAnnotationPinning({
     const clip = clips.find((item) => item.annotation.id === id);
     const stretches = [
       ...(pinStatus.get(id)?.covered ?? []),
-      ...(clip?.pin ? outOfViewStretches(clip.pin, clip.endMs) : []),
+      ...(clip?.pin
+        ? outOfViewStretches(
+            clip.pin,
+            recordingSpanMs(edit, sourceDurationMs, clip)[1],
+          )
+        : []),
     ];
     return stretches.some(
       ([start, end]) => position >= start && position < end,
@@ -55,10 +71,11 @@ export function recordingAnnotationPinning({
     canHideHere: (id) => {
       const clip = clips.find((item) => item.annotation.id === id);
       const position = getPositionMs();
+      const at = recordingTimelineMsAt(edit, sourceDurationMs, position);
       return (
         clip?.pin !== undefined &&
-        position >= clip.startMs &&
-        position < clip.endMs &&
+        at >= clip.startMs &&
+        at < clip.endMs &&
         !onPinnedFrame(clip.pin, position) &&
         !hiddenAt(id, position)
       );
@@ -90,7 +107,7 @@ export function recordingAnnotationPinning({
         pinned
           ? clip.pin || !isPinnable(clip)
             ? clip
-            : pinnedClip(clip, getPositionMs())
+            : pinnedClip(clip, getPositionMs(), { edit, sourceDurationMs })
           : unpinnedClip(clip),
       );
     },

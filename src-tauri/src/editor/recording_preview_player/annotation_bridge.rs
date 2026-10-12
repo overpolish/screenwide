@@ -58,14 +58,16 @@ struct Hover {
   annotation_id: Option<String>,
 }
 
-// The command's arguments are its wire format: the chrome sends the clips and
-// the next annotation's dress as one flat payload.
+// The command's arguments are its wire format: the chrome sends the clips,
+// the timeline they are timed on and the next annotation's dress as one flat
+// payload.
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn set_recording_preview_annotations(
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   session_id: u64,
   clips: Vec<RecordingAnnotationClip>,
+  playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pane_index: Option<u32>,
   selected_ids: Vec<String>,
   defaults: Option<AnnotationStyle>,
@@ -75,6 +77,8 @@ pub async fn set_recording_preview_annotations(
 ) -> Result<(), String> {
   let mut clips = clips;
   validate_clips(&clips)?;
+  let ranges = super::animation_timeline_ranges(&playback_ranges);
+  screenwide_annotations::timing::lay_on_recording(&mut clips, &ranges);
   let mut manager = state
     .0
     .lock()
@@ -91,16 +95,22 @@ pub async fn set_recording_preview_annotations(
     .annotation_clips
     .write()
     .map_err(|_| "The annotations are unavailable")?;
+  let mut current_ranges = sources
+    .annotation_ranges
+    .write()
+    .map_err(|_| "The annotations are unavailable")?;
   // A text box being typed into takes React's clips - the panel may be
   // dressing it - with the text typed so far laid over them.
   manager.merge_text_session(&mut clips, &current);
   sources.attach_pins(&mut clips, manager.position_ms);
-  let changed = *current != clips;
+  let changed = *current != clips || *current_ranges != ranges;
   // A list that grew or shrank has moved what the halo's index names, so the
   // halo goes rather than pass to whatever took its place.
   let recounted = current.len() != clips.len();
   *current = clips;
+  *current_ranges = ranges;
   drop(current);
+  drop(current_ranges);
   manager.annotation.pane = pane_index.filter(|pane| *pane <= 1);
   manager.annotation.selected = selected_ids;
   manager.annotation.defaults = defaults;

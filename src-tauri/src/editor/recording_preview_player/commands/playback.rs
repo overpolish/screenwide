@@ -58,19 +58,23 @@ pub(super) fn validate_playback_rate(rate: f64) -> Result<f64, String> {
     .ok_or_else(|| "The preview playback rate must be between 0.25x and 4x".to_owned())
 }
 
+/// Ranges play in the order given, which a reordered timeline leaves out of
+/// source order; no two may play the same source.
 fn validate_playback_ranges(
   ranges: &[RecordingPreviewPlaybackRange],
   duration_ms: u64,
 ) -> Result<(), String> {
-  let valid = ranges.iter().enumerate().all(|(index, range)| {
+  let mut spans: Vec<(u64, u64)> = ranges
+    .iter()
+    .map(|range| (range.source_start_ms, range.source_end_ms))
+    .collect();
+  spans.sort_unstable();
+  let valid = ranges.iter().all(|range| {
     range.source_start_ms < range.source_end_ms
       && range.source_end_ms <= duration_ms
       && range.playback_rate.is_finite()
       && (0.25..=4.0).contains(&range.playback_rate)
-      && index
-        .checked_sub(1)
-        .is_none_or(|previous| ranges[previous].source_end_ms <= range.source_start_ms)
-  });
+  }) && spans.windows(2).all(|pair| pair[0].1 <= pair[1].0);
   valid
     .then_some(())
     .ok_or_else(|| "The recording preview playback ranges are invalid".to_owned())
@@ -81,7 +85,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn playback_ranges_must_be_ordered_non_empty_source_intervals() {
+  fn playback_ranges_must_be_non_empty_non_overlapping_source_intervals() {
     let valid = [
       RecordingPreviewPlaybackRange {
         source_start_ms: 0,
@@ -105,6 +109,17 @@ mod tests {
       4_000
     )
     .is_err());
+    let reordered = [valid[1], valid[0]];
+    assert!(validate_playback_ranges(&reordered, 4_000).is_ok());
+    let overlapping = [
+      valid[0],
+      RecordingPreviewPlaybackRange {
+        source_start_ms: 1_000,
+        source_end_ms: 3_000,
+        playback_rate: 1.0,
+      },
+    ];
+    assert!(validate_playback_ranges(&overlapping, 4_000).is_err());
   }
 
   #[test]

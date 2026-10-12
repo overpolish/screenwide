@@ -23,31 +23,32 @@ import {
 /**
  * What the Scene panel's asks do to `clips`: each changes the scene under
  * the playhead, read when it is asked, or adds one there, and hands the
- * clips that result to `commit`.
+ * clips that result to `commit`. The clips and the playhead are both on the
+ * edited video, `lengthMs` long.
  */
 export function recordingSceneEdits({
   camera,
   clips,
   commit,
-  getPositionMs,
+  getTimelineMs,
+  lengthMs,
   output,
   paneOf,
-  sourceDurationMs,
 }: {
   /** The camera a scene can place: one drawn into the picture. */
   camera: SceneCamera | null;
   clips: RecordingSceneClip[];
   commit: (clips: RecordingSceneClip[]) => void;
-  getPositionMs: () => number;
+  getTimelineMs: () => number;
+  lengthMs: number;
   output: ScreenshotOutputSettings;
   /** The pane of a clip the panel's zoom, position and radius reach. */
   paneOf: (clip: RecordingSceneClip) => ScenePaneFraming | null;
-  sourceDurationMs: number;
 }): Omit<RecordingSceneControls, "autoZoom" | "clearAutoZooms"> {
   const reframeCurrent = (
     reframe: (clip: RecordingSceneClip) => RecordingSceneClip,
   ) => {
-    const target = recordingSceneClipAt(clips, getPositionMs());
+    const target = recordingSceneClipAt(clips, getTimelineMs());
     if (target)
       commit(
         clips.map((clip) => (clip.id === target.id ? reframe(clip) : clip)),
@@ -58,8 +59,8 @@ export function recordingSceneEdits({
       atMs,
       clips,
       id: crypto.randomUUID(),
+      lengthMs,
       preset,
-      sourceDurationMs,
     })?.clips;
   const canvasAspect = output.width / Math.max(1, output.height);
   // Changes the scene under the playhead, or where there is none adds a full
@@ -67,7 +68,7 @@ export function recordingSceneEdits({
   const remakeAt = (
     remake: (clip: RecordingSceneClip) => RecordingSceneClip,
   ) => {
-    const atMs = getPositionMs();
+    const atMs = getTimelineMs();
     const next = recordingSceneClipAt(clips, atMs)
       ? clips
       : inserted("full", atMs);
@@ -82,7 +83,7 @@ export function recordingSceneEdits({
     // A preset chosen for a custom scene puts its panes back in the preset's
     // boxes. The variant stays, so a swapped pair stays swapped.
     choosePreset: (preset) => {
-      const atMs = getPositionMs();
+      const atMs = getTimelineMs();
       if (recordingSceneClipAt(clips, atMs)) {
         reframeCurrent(({ boxes: _boxes, ...clip }) => ({ ...clip, preset }));
         return;
@@ -97,7 +98,7 @@ export function recordingSceneEdits({
       remakeAt((clip) => customRecordingSceneClip({ camera, clip, output }));
     },
     remove: () => {
-      const target = recordingSceneClipAt(clips, getPositionMs());
+      const target = recordingSceneClipAt(clips, getTimelineMs());
       if (target) commit(clips.filter((clip) => clip.id !== target.id));
     },
     // A custom scene goes back to its preset's boxes as well, and every pane
@@ -153,7 +154,7 @@ export function recordingSceneEdits({
       reframeCurrent(swappedScenePanes);
     },
     templateLayout: () => {
-      const current = recordingSceneClipAt(clips, getPositionMs());
+      const current = recordingSceneClipAt(clips, getTimelineMs());
       return current ? sceneTemplateLayout(current, canvasAspect) : null;
     },
   };

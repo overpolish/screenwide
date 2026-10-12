@@ -92,6 +92,7 @@ fn spotlight() -> RecordingAnnotationClip {
   annotation.style.radius = 0.0;
   RecordingAnnotationClip {
     path_ms: None,
+    recording_span: None,
     pin: None,
     annotation,
     track_id: AnnotationTrack::Primary,

@@ -37,7 +37,7 @@ pub(in crate::editor::recording_preview_player::platform) fn present_native_fram
   };
   if let Ok(clips) = sources.annotation_clips.read() {
     let ranges = sources
-      .animation_ranges
+      .annotation_ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     annotation_preview::apply_clips(

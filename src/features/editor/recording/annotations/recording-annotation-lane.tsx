@@ -11,6 +11,7 @@ import {
 } from "../../../popup-panel/use-popup-menu";
 import { annotationLaneLabel } from "../../annotations/annotation-kind-lookup";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingSpanMs } from "../../timeline/editing/recording-timeline-time";
 import { SeekHandler } from "../../timeline/timeline-seek";
 import { TimelineViewportState } from "../../timeline/timeline-viewport";
 import { TimelineViewportContent } from "../../timeline/timeline-viewport-content";
@@ -190,7 +191,7 @@ export function RecordingAnnotationLane({
             };
             return (
               <div
-                className={`absolute overflow-hidden rounded-control text-footnote ${fragment.continuesPrevious ? "rounded-l-none" : ""} ${fragment.continuedByNext ? "rounded-r-none" : ""} ${selected ? "bg-primary-surface text-primary-fg" : "bg-fill-secondary text-content-fg"}`}
+                className={`absolute overflow-hidden rounded-control text-footnote ${selected ? "bg-primary-surface text-primary-fg" : "bg-fill-secondary text-content-fg"}`}
                 key={fragment.fragmentId}
                 onContextMenu={(event) => {
                   event.preventDefault();
@@ -221,7 +222,7 @@ export function RecordingAnnotationLane({
                 {clip.pin ? (
                   <RecordingAnnotationPinOverlay
                     {...block}
-                    clipEndMs={clip.endMs}
+                    clipEndMs={recordingSpanMs(edit, sourceDurationMs, clip)[1]}
                     label={label}
                     onBodyClick={clickBody}
                     onBodyPointerDown={pressBody}
@@ -244,8 +245,6 @@ export function RecordingAnnotationLane({
                 <RecordingAnnotationClipEdges
                   clip={clip}
                   clips={clips}
-                  continuedByNext={fragment.continuedByNext}
-                  continuesPrevious={fragment.continuesPrevious}
                   edit={edit}
                   ids={ids}
                   label={label}

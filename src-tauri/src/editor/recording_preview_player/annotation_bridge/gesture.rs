@@ -205,11 +205,12 @@ impl PreviewPlayerManager {
       self.publish_annotation_snap(source_size, &shown);
     }
     let gesture = self.annotation.gesture.as_ref()?;
+    let timeline_ms = self.annotation_timeline_ms(gesture.position);
     *clips.write().ok()? = provisional_clips(
       &gesture.before,
       &gesture.working,
       gesture.pane,
-      gesture.position,
+      (gesture.position, timeline_ms),
     );
     let ended = matches!(phase, SelectionGesturePhase::End);
     if ended {
@@ -251,13 +252,16 @@ impl PreviewPlayerManager {
 /// The clips a gesture or a typing session draws through: the clips it began
 /// on, with every annotation it holds written into its own clip. One with no
 /// clip yet gets a provisional, unpaced one reaching back a draw-in, so it is
-/// finished drawing at the playhead, under the hand, until the editor paces it.
+/// finished drawing at the playhead, under the hand, until the editor paces
+/// it. `position` is the playhead in the recording and `timeline_ms` where it
+/// plays on the timeline.
 pub(super) fn provisional_clips(
   before: &[RecordingAnnotationClip],
   working: &[Annotation],
   pane: u32,
-  position: u64,
+  (position, timeline_ms): (u64, u64),
 ) -> Vec<RecordingAnnotationClip> {
+  let reach_back = screenwide_annotations::reveal::REVEAL_DRAW_IN_MS as u64;
   let mut next = before.to_vec();
   for annotation in working {
     if let Some(clip) = next.iter_mut().find(|c| c.annotation.id == annotation.id) {
@@ -269,8 +273,12 @@ pub(super) fn provisional_clips(
         pin: None,
         annotation: annotation.clone(),
         track_id: track(pane),
-        start_ms: position.saturating_sub(screenwide_annotations::reveal::REVEAL_DRAW_IN_MS as u64),
-        end_ms: position.saturating_add(3000),
+        start_ms: timeline_ms.saturating_sub(reach_back),
+        end_ms: timeline_ms.saturating_add(3000),
+        recording_span: Some([
+          position.saturating_sub(reach_back),
+          position.saturating_add(3000),
+        ]),
       });
     }
   }

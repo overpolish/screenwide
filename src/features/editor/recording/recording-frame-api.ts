@@ -12,13 +12,17 @@ import {
   normalizedScreenshotOutput,
   RecordingOutputSettings,
 } from "../screenshot/screenshot-output";
+import { RecordingTimelinePlaybackRange } from "../timeline/recording-timeline-playback";
 import {
   CameraOverlaySettings,
   CursorEffectSettings,
   KeyboardEffectSettings,
 } from "../types";
 
-/** One composed frame of the open recording, at a source position. */
+import type { RecordingAnnotationClip } from "./annotations/recording-annotations";
+
+/** One composed frame of the open recording, at a source position.
+ * `playbackRanges` is the timeline `annotationClips` are timed on. */
 export type RecordingFrameRequest = {
   artifactId: number;
   bakeCamera: boolean;
@@ -27,7 +31,8 @@ export type RecordingFrameRequest = {
   keyboardEffects: KeyboardEffectSettings;
   positionMs: number;
   recordingOutput: RecordingOutputSettings;
-  annotationClips?: import("./annotations/recording-annotations").RecordingAnnotationClip[];
+  annotationClips?: RecordingAnnotationClip[];
+  playbackRanges?: RecordingTimelinePlaybackRange[];
 };
 
 const frame = ({
@@ -37,6 +42,7 @@ const frame = ({
   cameraOverlay,
   cursorEffects,
   keyboardEffects,
+  playbackRanges,
   positionMs,
   recordingOutput,
 }: RecordingFrameRequest) => ({
@@ -49,6 +55,7 @@ const frame = ({
   ),
   cursorEffects: normalizedCursorEffects(cursorEffects),
   keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
+  playbackRanges,
   positionMs: Math.max(0, Math.round(positionMs)),
   recordingOutput: {
     camera: normalizedScreenshotOutput(recordingOutput.camera),

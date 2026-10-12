@@ -125,7 +125,8 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
         suggested_file_stem,
         width,
       } => {
-        let (timeline_edit_revision, timeline_edit) = timeline_edit::snapshot_fields(project, *id);
+        let (timeline_edit_revision, timeline_edit) =
+          timeline_edit::snapshot_fields(project, *id, *duration_ms);
         EditorArtifactSnapshot::Recording {
           audio_tracks: audio_tracks.clone(),
           camera: camera.clone(),

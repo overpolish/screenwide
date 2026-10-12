@@ -24,8 +24,8 @@ const insert = (clips: RecordingSceneClip[], atMs: number) =>
     atMs,
     clips,
     id: "new",
+    lengthMs: DURATION,
     preset: "split-two-thirds",
-    sourceDurationMs: DURATION,
   });
 
 describe("insertRecordingSceneClip", () => {
@@ -104,8 +104,8 @@ describe("moveRecordingSceneClip", () => {
     });
   });
 
-  it("keeps how long it plays for across a cut", () => {
-    // Cut 20s-30s out: the clip at 15s-20s slid 5s later plays across the cut.
+  it("stops at the end of the edited video, not of the recording", () => {
+    // Cut 20s-30s out: the video is 50s long.
     const cut = cutRecordingTimeline(
       cutRecordingTimeline(edit, 20_000 / DURATION),
       30_000 / DURATION,
@@ -113,12 +113,12 @@ describe("moveRecordingSceneClip", () => {
     const removed = deleteRecordingTimelineSegment(cut, cut.segments[1].id);
     const moved = moveRecordingSceneClip({
       clips: [clip("a", 15_000, 20_000)],
-      deltaOutput: 2_500 / 50_000,
+      deltaOutput: 1,
       edit: removed,
       id: "a",
       sourceDurationMs: DURATION,
     });
-    expect(moved[0]).toMatchObject({ endMs: 32_500, startMs: 17_500 });
+    expect(moved[0]).toMatchObject({ endMs: 50_000, startMs: 45_000 });
   });
 });
 

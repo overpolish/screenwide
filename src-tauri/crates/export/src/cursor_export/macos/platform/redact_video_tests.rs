@@ -167,6 +167,7 @@ fn redaction(mode: AnnotationRedaction) -> RecordingAnnotationClip {
   annotation.style.color = "#123456".to_owned();
   RecordingAnnotationClip {
     path_ms: None,
+    recording_span: None,
     pin: None,
     annotation,
     track_id: AnnotationTrack::Primary,

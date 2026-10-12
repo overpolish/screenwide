@@ -3,10 +3,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import {
-  RecordingTimelineEdit,
-  recordingTimelineSourceToOutput,
-} from "../../timeline/editing/recording-timeline-edit";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
 import { SeekHandler } from "../../timeline/timeline-seek";
 import {
   beginTimelineSnapGesture,
@@ -95,13 +93,10 @@ export function useRecordingAnnotationDrag({
     if (drag?.edge !== "body") {
       const clips = commit ? draftRef.current : drag?.original;
       const clip = clips?.find((item) => item.annotation.id === drag?.id);
-      if (clip && drag && sourceDurationMs > 0)
+      const lengthMs = recordingTimelineLengthMs(edit, sourceDurationMs);
+      if (clip && drag && lengthMs > 0)
         onSeek?.(
-          recordingTimelineSourceToOutput(
-            edit,
-            (drag.edge === "endMs" ? clip.endMs - 1 : clip.startMs) /
-              sourceDurationMs,
-          ),
+          (drag.edge === "endMs" ? clip.endMs - 1 : clip.startMs) / lengthMs,
           "end",
           // The gesture is over, so the seek that settles it shows the
           // annotation at the reveal its own bounds put it at once more.
@@ -173,7 +168,7 @@ export function useRecordingAnnotationDrag({
       original: clips,
       snap: beginTimelineSnapGesture(snap, {
         excludeAnnotationIds: ids,
-        mapTarget: (source) => recordingTimelineSourceToOutput(edit, source),
+        space: "output",
         threshold: 0,
       }),
       startX: clientX,
@@ -270,13 +265,11 @@ export function useRecordingAnnotationDrag({
     draftRef.current = next;
     setDraft(next);
     const edgeClip = next.find((item) => item.annotation.id === drag.id);
-    if (edgeClip && sourceDurationMs > 0)
+    const lengthMs = recordingTimelineLengthMs(edit, sourceDurationMs);
+    if (edgeClip && lengthMs > 0)
       onSeek?.(
-        recordingTimelineSourceToOutput(
-          edit,
-          (drag.edge === "endMs" ? edgeClip.endMs - 1 : edgeClip.startMs) /
-            sourceDurationMs,
-        ),
+        (drag.edge === "endMs" ? edgeClip.endMs - 1 : edgeClip.startMs) /
+          lengthMs,
         "move",
         previewedWhole(next, drag.id),
       );

@@ -4,10 +4,8 @@
 // What the annotation lane and the preview show while a clip is dragged.
 
 import { arrangedGroup } from "../../annotations/annotation-order";
-import {
-  RecordingTimelineEdit,
-  recordingTimelineSourceToOutput,
-} from "../../timeline/editing/recording-timeline-edit";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
 import {
   TimelineSnapGesture,
   timelineSnapRangeShift,
@@ -76,18 +74,13 @@ const carriedSpan = (
     sourceDurationMs,
   }: { edit: RecordingTimelineEdit; sourceDurationMs: number },
 ) => {
-  if (sourceDurationMs <= 0) return null;
+  const lengthMs = recordingTimelineLengthMs(edit, sourceDurationMs);
+  if (lengthMs <= 0) return null;
   let span: { end: number; start: number } | null = null;
   for (const clip of clips) {
     if (!ids.has(clip.annotation.id)) continue;
-    const start = recordingTimelineSourceToOutput(
-      edit,
-      clip.startMs / sourceDurationMs,
-    );
-    const end = recordingTimelineSourceToOutput(
-      edit,
-      clip.endMs / sourceDurationMs,
-    );
+    const start = clip.startMs / lengthMs;
+    const end = clip.endMs / lengthMs;
     span = span
       ? { end: Math.max(span.end, end), start: Math.min(span.start, start) }
       : { end, start };

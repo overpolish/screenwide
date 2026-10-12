@@ -11,12 +11,10 @@ pub fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
   if edit.segments.is_empty() || edit.segments.len() > MAX_SEGMENTS {
     return Err("The timeline must contain a reasonable number of segments".to_owned());
   }
-  let mut previous_end = 0.0;
   let mut ids = std::collections::HashSet::with_capacity(edit.segments.len());
   for segment in &edit.segments {
     if !segment.source_start.is_finite()
       || !segment.source_end.is_finite()
-      || segment.source_start < previous_end
       || segment.source_start < 0.0
       || segment.source_end <= segment.source_start
       || segment.source_end > 1.0
@@ -26,7 +24,17 @@ pub fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
     {
       return Err("The timeline contains an invalid segment".to_owned());
     }
-    previous_end = segment.source_end;
+  }
+  // Segments play in list order, which a reordered timeline leaves out of
+  // source order; each moment of the recording still plays at most once.
+  let mut spans: Vec<(f64, f64)> = edit
+    .segments
+    .iter()
+    .map(|segment| (segment.source_start, segment.source_end))
+    .collect();
+  spans.sort_by(|a, b| a.0.total_cmp(&b.0));
+  if spans.windows(2).any(|pair| pair[1].0 < pair[0].1) {
+    return Err("The timeline plays part of the recording twice".to_owned());
   }
   if edit.next_segment_id
     <= edit

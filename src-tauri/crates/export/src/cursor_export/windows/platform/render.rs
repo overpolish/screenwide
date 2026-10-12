@@ -77,6 +77,14 @@ pub(super) fn render_video(
   compositor.prepare_annotation_kinds(&clips.kind_sets());
   let scenes = super::super::super::frame_scene::ExportScenes::for_request(request);
   let mut progress_pace = super::super::super::progress_pace::ProgressPace::default();
+  // A reordered timeline plays an earlier stretch of the source after a
+  // later one. The readers only move forward, so they are taken back to the
+  // start of each such piece in turn.
+  let pieces = request.timeline.map_or_else(Vec::new, |timeline| {
+    screenwide_timeline::ascending_source_pieces(timeline.ranges())
+  });
+  let origin_ms = u64::try_from(timeline_origin.max(0) / 10_000).unwrap_or_default();
+  let mut piece = 0;
   loop {
     if request.cancelled.load(Ordering::Acquire) {
       let _ = std::fs::remove_file(path);
@@ -89,6 +97,35 @@ pub(super) fn render_video(
     });
     let position_ms = u64::try_from(pts_100ns.max(0) / 10_000).unwrap_or_default();
     let source_us = u64::try_from(pts_100ns.max(0) / 10).unwrap_or_default();
+    if let Some(&[start_us, end_us]) = pieces.get(piece) {
+      if source_us >= end_us {
+        piece += 1;
+        let Some(&[next_start_us, _]) = pieces.get(piece) else {
+          break;
+        };
+        let seek_ms = origin_ms.saturating_add(next_start_us / 1_000);
+        reader.seek(seek_ms, false)?;
+        let Some(first) = reader.next_frame()? else {
+          break;
+        };
+        current = first;
+        if let Some(camera) = camera_reader.as_mut() {
+          camera.seek(seek_ms, false)?;
+          camera_current = None;
+          camera_next = camera.next_frame()?;
+        }
+        continue;
+      }
+      // Read on to where this piece starts: anything before it plays
+      // elsewhere on the timeline, or not at all.
+      if source_us < start_us {
+        let Some(next) = next else {
+          break;
+        };
+        current = next;
+        continue;
+      }
+    }
     let output_us = request.timeline.map_or(Some(source_us), |timeline| {
       timeline.source_to_output_us(source_us)
     });

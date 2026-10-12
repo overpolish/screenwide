@@ -8,6 +8,7 @@ fn queued_seek_keeps_its_annotation_timing_snapshot() {
   let clip = RecordingAnnotationClip {
     path_ms: None,
     pin: None,
+    recording_span: None,
     annotation: new_arrow(
       "arrow".into(),
       AnnotationPoint { x: 0.0, y: 0.0 },

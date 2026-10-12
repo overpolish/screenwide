@@ -17,14 +17,15 @@ import {
   recordingTimelineOutputToSource,
   setRecordingTimelineSegmentPlaybackRate,
 } from "./recording-timeline-edit";
+import { moveRecordingTimelineSegment } from "./recording-timeline-move";
 import { setRecordingTimelineRangePlaybackRate } from "./recording-timeline-speed";
 import { TimelineRangeSelection } from "./timeline-blade";
 
 /**
- * The edits the blade band commits: a cut, a deletion, a playback rate, and a
- * cut put back, each one history step of its own. Every command drops the
- * selection it consumed, since the segment ids it named no longer describe
- * the timeline.
+ * The edits the blade band commits: a cut, a deletion, a playback rate, a
+ * cut put back and a segment moved, each one history step of its own. Every
+ * command drops the selection it consumed, since the segment ids it named no
+ * longer describe the timeline; a move keeps the moved segment chosen.
  */
 export function useTimelineBladeCommands({
   clearRangeSelection,
@@ -150,6 +151,19 @@ export function useTimelineBladeCommands({
     },
     [clearRangeSelection, edit, editGesture, onChange, selectSegment],
   );
+  const moveSegment = useCallback(
+    (segmentId: number, boundary: number) => {
+      if (!onChange) return;
+      const next = moveRecordingTimelineSegment(edit, { boundary, segmentId });
+      if (next === edit) return;
+      clearRangeSelection();
+      selectSegment(segmentId);
+      editGesture.beginGesture();
+      onChange(next);
+      editGesture.endGesture();
+    },
+    [clearRangeSelection, edit, editGesture, onChange, selectSegment],
+  );
 
   return {
     changeRangePlaybackRate,
@@ -157,6 +171,7 @@ export function useTimelineBladeCommands({
     cutAt,
     cutAtPlayhead,
     deleteSelected,
+    moveSegment,
     restoreCut,
   };
 }

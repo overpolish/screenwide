@@ -6,6 +6,10 @@ import {
   RecordingTimelineEdit,
   RecordingTimelineSegment,
 } from "./recording-timeline-edit";
+import {
+  earliestSourceIndex,
+  sourcePredecessorIndex,
+} from "./recording-timeline-source-order";
 
 /** A cut recorded in the edit, in shares of the whole recording, with the
  * rate it played at before it was cut. Remove silences and the Transcript
@@ -29,7 +33,10 @@ export const removedParts = (
 ): Range[] => {
   const parts: Range[] = [];
   let from = range.start;
-  for (const segment of segments) {
+  const inSourceOrder = [...segments].sort(
+    (a, b) => a.sourceStart - b.sourceStart,
+  );
+  for (const segment of inSourceOrder) {
     if (segment.sourceEnd <= from) continue;
     if (segment.sourceStart >= range.end) break;
     if (segment.sourceStart - from > CUT_EPSILON)
@@ -137,17 +144,25 @@ export const sharesOf = (
 /**
  * Lays `added` segments back into the edit's segments and folds each one
  * into a neighbour it meets at the same rate, the way restoring a cut joins
- * the two halves it split apart. A segment carrying a shortcut edit never
- * folds, so its edits keep their own stretch.
+ * the two halves it split apart. Each goes after the segment that ends where
+ * it starts in the source, wherever that plays, or before the segment
+ * earliest in the source when none does. A segment carrying a shortcut edit
+ * never folds, so its edits keep their own stretch.
  */
 export const mergeAddedSegments = (
   edit: RecordingTimelineEdit,
   added: readonly RecordingTimelineSegment[],
 ): RecordingTimelineSegment[] => {
   const restored = new Set(added.map((segment) => segment.id));
-  const inserted = [...edit.segments, ...added].sort(
+  const inserted = [...edit.segments];
+  for (const segment of [...added].sort(
     (a, b) => a.sourceStart - b.sourceStart,
-  );
+  )) {
+    const predecessor = sourcePredecessorIndex(inserted, segment.sourceStart);
+    const at =
+      predecessor >= 0 ? predecessor + 1 : earliestSourceIndex(inserted);
+    inserted.splice(Math.max(0, at), 0, segment);
+  }
   const joined = new Set<number>();
   const segments: RecordingTimelineSegment[] = [];
   for (const segment of inserted) {

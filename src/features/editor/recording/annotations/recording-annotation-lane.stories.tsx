@@ -80,9 +80,14 @@ const pinning = (
     ),
     onHideHere: () => undefined,
     onPinnedChange: (id, pinned) => {
-      withClip((clip) => (pinned ? pinnedClip(clip, -1) : unpinnedClip(clip)))(
-        id,
-      );
+      withClip((clip) =>
+        pinned
+          ? pinnedClip(clip, -1, {
+              edit: createRecordingTimelineEdit(1),
+              sourceDurationMs: 66_000,
+            })
+          : unpinnedClip(clip),
+      )(id);
     },
     onShowHere: () => undefined,
   };

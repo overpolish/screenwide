@@ -129,7 +129,7 @@ pub(crate) const NO_COVER: [f64; 4] = [
 /// nearest keyframe. Where the hand said its content is out of view, it is
 /// hidden, path or not.
 pub fn placement(clip: &RecordingAnnotationClip, pin: &AnnotationPin, ms: u64) -> Placement {
-  let whole = [clip.start_ms, clip.end_ms];
+  let whole = clip.recording_span();
   let out_of_view = pin
     .keyframe_at(ms)
     .map_or_else(|| pin.out_of_view_at(ms), |keyframe| keyframe.out_of_view);
@@ -154,7 +154,7 @@ pub fn placement(clip: &RecordingAnnotationClip, pin: &AnnotationPin, ms: u64) -
     path
       .shown
       .iter()
-      .map(|span| [span[0].max(clip.start_ms), span[1].min(clip.end_ms)])
+      .map(|span| [span[0].max(whole[0]), span[1].min(whole[1])])
       .find(|span| span[0] <= ms + 2 && ms < span[1])
       .filter(|span| room_to_arrive(clip, span[0]))
   };
@@ -203,11 +203,12 @@ pub fn placement(clip: &RecordingAnnotationClip, pin: &AnnotationPin, ms: u64) -
 /// for the annotation to arrive and leave again. The clip's own start always
 /// does: that is the arrival the clip was made for.
 fn room_to_arrive(clip: &RecordingAnnotationClip, from: u64) -> bool {
-  if from <= clip.start_ms || !clip.annotation.animated {
+  let [start, end] = clip.recording_span();
+  if from <= start || !clip.annotation.animated {
     return true;
   }
   let span = clip.annotation.shape.kind().reveal_span_ms(clip.path_ms);
-  clip.end_ms.saturating_sub(from) as f32 >= span
+  end.saturating_sub(from) as f32 >= span
 }
 
 /// `annotation` where `placement` puts it. A redaction's box also grows and

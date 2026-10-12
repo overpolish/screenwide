@@ -7,7 +7,7 @@
 use super::CursorExportRequest;
 use crate::media_preview::{BakedVideoExportOptions, VideoExportOptions};
 use crate::scenes;
-use screenwide_annotations::timing::covers;
+use screenwide_annotations::timing::{covers, video_ms, FrameTime};
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::RecordingSceneClip;
 use screenwide_timeline::TimelineRange;
@@ -46,10 +46,12 @@ impl ExportScenes {
     source_ms: u64,
     frame_ms: f32,
   ) -> Option<(ScreenshotOutputSettings, Option<BakedVideoExportOptions>)> {
+    let timeline_ms = FrameTime::on(&self.ranges, source_ms).timeline_ms;
+    let video_ms = video_ms(&self.ranges);
     if !self
       .clips
       .iter()
-      .any(|clip| covers(&self.ranges, [clip.start_ms, clip.end_ms], source_ms))
+      .any(|clip| covers(video_ms, [clip.start_ms, clip.end_ms], timeline_ms))
     {
       return None;
     }

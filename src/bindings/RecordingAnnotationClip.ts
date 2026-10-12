@@ -3,11 +3,16 @@ import type { Annotation } from "./Annotation";
 import type { AnnotationPin } from "./AnnotationPin";
 import type { AnnotationTrack } from "./AnnotationTrack";
 
-export type RecordingAnnotationClip = { annotation: Annotation, trackId: AnnotationTrack, startMs: number, endMs: number, 
+export type RecordingAnnotationClip = { annotation: Annotation, trackId: AnnotationTrack, 
+/**
+ * Where the clip starts and ends on the timeline, in milliseconds of the
+ * edited video.
+ */
+startMs: number, endMs: number, 
 /**
  * Where the annotation follows the content it was placed on, when it
  * does. Only the screen's clips are pinned: the camera is a face, not a
- * page.
+ * page. Its keyframes are times in the recording, where the content is.
  */
 pin?: AnnotationPin, 
 /**

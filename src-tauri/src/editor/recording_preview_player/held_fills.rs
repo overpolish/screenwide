@@ -111,7 +111,7 @@ impl HeldFills {
       let Some(fill) = self.fill(clip, capture_width_points) else {
         continue;
       };
-      let elapsed = source_ms.saturating_sub(clip.start_ms) as f32;
+      let elapsed = source_ms.saturating_sub(clip.recording_span()[0]) as f32;
       let surface = self
         .timelines
         .get(clip)
@@ -132,8 +132,9 @@ impl HeldFills {
     capture_width_points: f64,
   ) -> Option<Arc<HeldFill>> {
     let style = &clip.annotation.style;
+    let start_ms = clip.recording_span()[0];
     let key = FillKey {
-      start_ms: clip.start_ms,
+      start_ms,
       corners: corners(clip)?,
       redaction: style.redaction as u8,
       width: style.width.to_bits(),
@@ -146,11 +147,11 @@ impl HeldFills {
     let Some(frame) = state
       .frames
       .iter()
-      .find(|(start_ms, _)| *start_ms == clip.start_ms)
+      .find(|(frame_ms, _)| *frame_ms == start_ms)
       .map(|(_, frame)| Arc::clone(frame))
     else {
-      if state.decoding.insert(clip.start_ms) {
-        self.decode(clip.start_ms);
+      if state.decoding.insert(start_ms) {
+        self.decode(start_ms);
       }
       return None;
     };

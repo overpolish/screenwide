@@ -102,10 +102,13 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,
         pin: None,
+        recording_span: None,
         annotation: arrow,
         track_id: AnnotationTrack::Primary,
+        // On the timeline: the recording's 550 ms to 2.5 s, with 1-1.5 s cut
+        // away and the rest played twice as fast.
         start_ms: 550,
-        end_ms: 2500,
+        end_ms: 1500,
       }],
       segments: vec![
         RecordingTimelineSegment {
@@ -226,8 +229,9 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
         105 * width as usize * height as usize * 3
       );
       // The clip runs from source 550ms to 2500ms: output 0.55s to 1.5s, the
-      // speed change halving the part after the cut. Output 0.95s and 1.1s
-      // hold the arrow whole, and 1.65s is past its clip.
+      // speed change halving the part after the cut, which is where it sits
+      // on the timeline. Output 0.95s and 1.1s hold the arrow whole, and
+      // 1.65s is past its clip.
       for (time, visible) in [
         ("0.2", false),
         ("0.95", true),

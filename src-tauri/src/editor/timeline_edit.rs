@@ -13,17 +13,18 @@ use screenwide_timeline_edit::{
 mod initial_edit;
 pub(in crate::editor) use initial_edit::persist_initial_edit;
 
-/// The project's edit and its revision, bound to `artifact_id`. An edit this
-/// version cannot read, or one that fails validation, is treated as absent.
-pub fn for_project(project: &Path, artifact_id: u64) -> Option<(u64, RecordingTimelineEdit)> {
-  let PersistedTimelineEdit {
-    mut edit,
-    revision,
-    version,
-  } = screenwide_project::read(project).ok()?.timeline?;
-  if version != FORMAT_VERSION || validate(&edit).is_err() {
-    return None;
-  }
+/// The project's edit and its revision, bound to `artifact_id`, for a
+/// recording `duration_ms` long. An older edit's clips are carried onto the
+/// timeline; an edit this version cannot read, or one that fails
+/// validation, is treated as absent.
+pub fn for_project(
+  project: &Path,
+  artifact_id: u64,
+  duration_ms: u64,
+) -> Option<(u64, RecordingTimelineEdit)> {
+  let persisted = screenwide_project::read(project).ok()?.timeline?;
+  let revision = persisted.revision;
+  let mut edit = persisted.into_current(duration_ms)?;
   edit.artifact_id = artifact_id;
   Some((revision, edit))
 }
@@ -31,8 +32,9 @@ pub fn for_project(project: &Path, artifact_id: u64) -> Option<(u64, RecordingTi
 pub fn snapshot_fields(
   project: &Path,
   artifact_id: u64,
+  duration_ms: u64,
 ) -> (Option<u64>, Option<RecordingTimelineEdit>) {
-  for_project(project, artifact_id).map_or((None, None), |(revision, edit)| {
+  for_project(project, artifact_id, duration_ms).map_or((None, None), |(revision, edit)| {
     (Some(revision), Some(edit))
   })
 }
@@ -47,7 +49,7 @@ pub fn export_plan(
 ) -> Option<TimelinePlan> {
   match sent.filter(|edit| edit.artifact_id == artifact_id) {
     Some(edit) => TimelinePlan::from_edit(edit, duration_ms),
-    None => for_project(project, artifact_id)
+    None => for_project(project, artifact_id, duration_ms)
       .and_then(|(_, edit)| TimelinePlan::from_edit(&edit, duration_ms)),
   }
 }

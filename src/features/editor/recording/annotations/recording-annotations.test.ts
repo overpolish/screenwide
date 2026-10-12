@@ -71,11 +71,12 @@ describe("recording annotation clips", () => {
     expect(4_000 - clip.startMs).toBeGreaterThanOrEqual(phaseMs);
   });
 
-  it("maps three output seconds and the arrival through a two times source segment", () => {
+  it("times the clip on the edited video, under a two times source segment", () => {
     const edit = {
       ...createRecordingTimelineEdit(1),
       segments: [{ id: 0, playbackRate: 2, sourceEnd: 1, sourceStart: 0 }],
     };
+    // The recording's 4 s plays 2 s into the video.
     expect(
       recordingAnnotationClipAt({
         annotation,
@@ -84,8 +85,8 @@ describe("recording annotation clips", () => {
         sourcePositionMs: 4_000,
       }),
     ).toMatchObject({
-      endMs: 10_000,
-      startMs: 4_000 - 2 * ANNOTATION_DRAW_IN_MS,
+      endMs: 5_000,
+      startMs: 2_000 - ANNOTATION_DRAW_IN_MS,
     });
   });
 
@@ -236,23 +237,23 @@ it("stacks every camera clip over the screen clips it overlaps, whatever the lis
   ]);
 });
 
-it("moves a clip by output time while preserving duration through a speed change", () => {
+it("moves a clip no further than the end of the edited video", () => {
+  // Played twice as fast, the 20 s recording is a 10 s video.
   const edit = {
     ...createRecordingTimelineEdit(1),
     segments: [{ id: 0, playbackRate: 2, sourceEnd: 1, sourceStart: 0 }],
   };
   const clip = {
     annotation,
-    endMs: 10_000,
+    endMs: 7_000,
     startMs: 4_000,
     trackId: "primary" as const,
   };
   const moved = moveRecordingAnnotationClip({
     clip,
-    deltaOutput: 0.1,
+    deltaOutput: 0.5,
     edit,
     sourceDurationMs: 20_000,
   });
-  expect(moved.endMs - moved.startMs).toBe(6_000);
-  expect(moved.startMs).toBe(6_000);
+  expect([moved.startMs, moved.endMs]).toEqual([7_000, 10_000]);
 });

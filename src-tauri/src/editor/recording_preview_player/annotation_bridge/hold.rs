@@ -39,7 +39,16 @@ impl PreviewPlayerManager {
       return true;
     }
     let (pane, position) = (gesture.pane, gesture.position);
-    let clips = gesture::provisional_clips(&gesture.before, &gesture.working, pane, position);
+    let timeline_ms = self.annotation_timeline_ms(position);
+    let Some(gesture) = self.annotation.gesture.as_ref() else {
+      return false;
+    };
+    let clips = gesture::provisional_clips(
+      &gesture.before,
+      &gesture.working,
+      pane,
+      (position, timeline_ms),
+    );
     if let Some(Ok(mut shown)) = self
       .sources
       .as_ref()

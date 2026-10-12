@@ -41,14 +41,11 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   const {
     artifactId,
     bakeCamera,
-    cameraOverlay,
-    cursorEffects,
     hasAnnotations,
     hasCursorData,
     hasKeyboardData,
     hasMicrophone,
     isSheetOpen,
-    keyboardEffects,
     onEnabledTracksChange,
     onEnabledVideoTracksChange,
     onSelectedTrackChange,
@@ -246,14 +243,9 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     onSelectedTrackChange,
     setTool: changeCanvasTool,
   });
-  const { copyCurrentFrame, copyError } = useCopyRecordingFrame({
+  const { copyCurrentFrame, copyError } = useCopyRecordingFrame(props, {
     annotationClips: annotations.clips,
-    artifactId,
-    bakeCamera,
-    cameraOverlay,
-    cursorEffects,
     getPositionMs: player.getPositionMs,
-    keyboardEffects,
     recordingOutput: effectiveRecordingOutput,
   });
   useProjectStill(props, {

@@ -7,6 +7,12 @@ import {
   RecordingTimelineLayoutSegment,
   RecordingTimelineTrimEdge,
 } from "../recording-timeline-types";
+
+import {
+  freeSourceBounds,
+  retainedOutputAt,
+} from "./recording-timeline-source-order";
+
 export type {
   RecordingTimelineEdit,
   RecordingTimelineSegment,
@@ -71,26 +77,27 @@ export function recordingTimelineOutputToSource(
   return edit.segments[edit.segments.length - 1]?.sourceEnd ?? 0;
 }
 
+/** Where a moment of the source plays, as the start of whatever begins there. */
 export function recordingTimelineSourceToOutput(
   edit: RecordingTimelineEdit,
   sourcePosition: number,
 ): number {
-  const retainedDuration = recordingTimelineRetainedDuration(edit);
-  let retainedStart = 0;
-  for (const segment of edit.segments) {
-    if (sourcePosition <= segment.sourceStart)
-      return retainedStart / retainedDuration;
-    if (sourcePosition <= segment.sourceEnd)
-      return (
-        (retainedStart +
-          (sourcePosition - segment.sourceStart) /
-            (segment.playbackRate ?? 1)) /
-        retainedDuration
-      );
-    retainedStart +=
-      (segment.sourceEnd - segment.sourceStart) / (segment.playbackRate ?? 1);
-  }
-  return 1;
+  return (
+    retainedOutputAt(edit.segments, sourcePosition, "start") /
+    recordingTimelineRetainedDuration(edit)
+  );
+}
+
+/** Where a stretch of the source ending at `sourcePosition` stops playing:
+ * with the segment that ends there, wherever the one starting there plays. */
+export function recordingTimelineSourceEndToOutput(
+  edit: RecordingTimelineEdit,
+  sourcePosition: number,
+): number {
+  return (
+    retainedOutputAt(edit.segments, sourcePosition, "end") /
+    recordingTimelineRetainedDuration(edit)
+  );
 }
 
 /** Keeps absolute magnetic time stable while changing the retained ranges. */
@@ -213,14 +220,13 @@ export function clampRecordingTimelineTrimPosition(
   if (index === -1) return sourcePosition;
   const segment = edit.segments[index];
   const minimum = Math.max(0, minimumDuration);
+  const { lower, upper } = freeSourceBounds(edit.segments, index);
   if (edge === "start") {
-    const lower = edit.segments[index - 1]?.sourceEnd ?? 0;
     return Math.max(
       lower,
       Math.min(segment.sourceEnd - minimum, sourcePosition),
     );
   }
-  const upper = edit.segments[index + 1]?.sourceStart ?? 1;
   return Math.min(
     upper,
     Math.max(segment.sourceStart + minimum, sourcePosition),
@@ -228,9 +234,9 @@ export function clampRecordingTimelineTrimPosition(
 }
 
 /**
- * Moves one retained edge without overlapping the neighbouring source range.
- * Source omitted between neighbours remains available, so dragging the edge
- * back out can restore a trim or a previously deleted segment.
+ * Moves one retained edge without taking source another segment plays.
+ * Source no segment plays remains available, so dragging the edge back out
+ * can restore a trim or a previously deleted segment.
  */
 export function trimRecordingTimelineSegment(
   edit: RecordingTimelineEdit,

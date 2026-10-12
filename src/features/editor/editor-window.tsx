@@ -119,7 +119,7 @@ export function EditorWindow() {
     useState<RecordingOutputSettings>(() =>
       defaultRecordingOutput({ primary: { height: 1, width: 1 } }),
     );
-  const [recordingTimelineEdit, setRecordingTimelineEdit] =
+  const [recordingTimelineEdit, setTimelineEdit, commitTimelineEdit] =
     useRecordingTimelineEditState(artifact);
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelingSave, setIsCancelingSave] = useState(false);
@@ -302,7 +302,7 @@ export function EditorWindow() {
       setCompression(next.compression);
       setCursorEffects(next.cursorEffects);
       setKeyboardEffects(next.keyboardEffects);
-      setRecordingTimelineEdit(next.recordingTimelineEdit);
+      setTimelineEdit(next.recordingTimelineEdit);
       setResolutionScalePercent(next.resolutionScalePercent);
       setRecordingOutput(recordingOutputForEdit(next.recordingOutput));
       screenshotRadiusRef.current = next.screenshotOutput.radiusPercent;
@@ -313,7 +313,7 @@ export function EditorWindow() {
       setVideoTrackSelection(next.videoTrackSelection);
       setError(null);
     },
-    [setRecordingTimelineEdit],
+    [setTimelineEdit],
   );
   // The history starts over when the seeded settings for an artifact land,
   // not when the artifact arrives: the seeding is a separate commit, and a
@@ -606,7 +606,7 @@ export function EditorWindow() {
           }));
           setError(null);
         }}
-        onRecordingTimelineEditChange={setRecordingTimelineEdit}
+        onRecordingTimelineEditChange={commitTimelineEdit}
         onRenameProject={openProject.onRenameProject}
         onResolutionScaleChange={(scale) => {
           setResolutionScalePercent(scale);

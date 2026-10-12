@@ -45,15 +45,16 @@ pub(crate) fn box_at(
 /// The box a redaction's fill is read from: where it is on its clip's first
 /// frame.
 pub fn first_box(clip: &RecordingAnnotationClip) -> Option<(AnnotationPoint, AnnotationPoint)> {
-  box_at(clip, clip.start_ms).or(match clip.annotation.shape {
+  box_at(clip, clip.recording_span()[0]).or(match clip.annotation.shape {
     AnnotationShape::Redact { start, end, .. } => Some((start, end)),
     _ => None,
   })
 }
 
-/// The surface timeline of `clip`'s box across the clip, from one decode
-/// pass over the recording at `path`. Empty where it could not be read; cut
-/// short, and to be thrown away, once `stop` is raised.
+/// The surface timeline of `clip`'s box across the stretch of the recording
+/// it plays, from one decode pass over the recording at `path`. Empty where
+/// it could not be read; cut short, and to be thrown away, once `stop` is
+/// raised.
 pub fn clip_surfaces(
   path: &std::path::Path,
   duration_ms: u64,
@@ -63,9 +64,8 @@ pub fn clip_surfaces(
   if !matches!(clip.annotation.shape, AnnotationShape::Redact { .. }) {
     return Vec::new();
   }
-  let times: Vec<u64> = (clip.start_ms..clip.end_ms)
-    .step_by(SAMPLE_MS as usize)
-    .collect();
+  let [start_ms, end_ms] = clip.recording_span();
+  let times: Vec<u64> = (start_ms..end_ms).step_by(SAMPLE_MS as usize).collect();
   let mut samples = Vec::with_capacity(times.len());
   let read = crate::decode::each_source_frame(path, &times, duration_ms, |time, frame| {
     // A pinned box's ring is read where the box is at that moment.
@@ -73,7 +73,7 @@ pub fn clip_surfaces(
       let bounds = painted_bounds(draw_points(start, end), frame.width, frame.height);
       surrounding_colour(&frame.rgba, frame.width, frame.height, bounds)
     });
-    samples.push((time - clip.start_ms, colour));
+    samples.push((time - start_ms, colour));
     !stop.load(Ordering::Relaxed)
   });
   if read.is_err() {
@@ -102,9 +102,10 @@ pub(crate) fn attach_for_export(
     if !reads_picture(clip.annotation.style.redaction) {
       continue;
     }
+    let start_ms = clip.recording_span()[0];
     let frame = frames
-      .entry(clip.start_ms)
-      .or_insert_with(|| crate::decode::source_frame_image(path, clip.start_ms, duration_ms).ok());
+      .entry(start_ms)
+      .or_insert_with(|| crate::decode::source_frame_image(path, start_ms, duration_ms).ok());
     // A frame that cannot be decoded leaves the box flat in its own colour,
     // which hides as much.
     let Some(frame) = frame else {
@@ -142,7 +143,7 @@ pub(crate) fn resolve_surfaces(
     else {
       continue;
     };
-    let elapsed = source_ms.saturating_sub(clip.start_ms) as f32;
+    let elapsed = source_ms.saturating_sub(clip.recording_span()[0]) as f32;
     let surface = surface_at(&held.surfaces, elapsed)
       .map(|surface| surface.map(|channel| (channel * 255.0).round() as u8));
     annotation.held = Some(Arc::new(HeldFill {

@@ -5,7 +5,11 @@ import { describe, expect, it } from "vitest";
 
 import { ANNOTATION_DRAW_IN_MS } from "../../annotations/annotation-kinds";
 import { Annotation } from "../../annotations/annotations";
-import { createRecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import {
+  createRecordingTimelineEdit,
+  deleteRecordingTimelineRange,
+  RecordingTimelineEdit,
+} from "../../timeline/editing/recording-timeline-edit";
 
 import { moveRecordingAnnotationClip } from "./recording-annotation-geometry";
 import {
@@ -46,25 +50,40 @@ const annotation: Annotation = {
 };
 
 describe("pinned recording annotations", () => {
+  const whole = createRecordingTimelineEdit(1);
   const clip: RecordingAnnotationClip = {
     annotation,
     endMs: 7_000,
     startMs: 3_000,
     trackId: "primary",
   };
+  const on = (edit: RecordingTimelineEdit) => ({
+    edit,
+    sourceDurationMs: 20_000,
+  });
 
   it("pins at the playhead inside the clip, and where it was placed outside it", () => {
-    expect(pinnedClip(clip, 5_000).pin).toEqual({
+    expect(pinnedClip(clip, 5_000, on(whole)).pin).toEqual({
       keyframes: [{ dx: 0, dy: 0, ms: 5_000 }],
       pinnedMs: 5_000,
     });
-    expect(pinnedClip(clip, 9_000).pin?.pinnedMs).toBe(
+    expect(pinnedClip(clip, 9_000, on(whole)).pin?.pinnedMs).toBe(
       3_000 + ANNOTATION_DRAW_IN_MS,
     );
   });
 
+  it("pins in recording time a clip timed on a cut timeline", () => {
+    // The recording's 5 s to 10 s cut away: the timeline's 6 s is its 11 s.
+    const cut = on(deleteRecordingTimelineRange(whole, 0.25, 0.5));
+    const late = { ...clip, endMs: 9_000, startMs: 6_000 };
+    expect(pinnedClip(late, 12_000, cut).pin?.pinnedMs).toBe(12_000);
+    expect(pinnedClip(late, 2_000, cut).pin?.pinnedMs).toBe(
+      11_000 + ANNOTATION_DRAW_IN_MS,
+    );
+  });
+
   it("takes the keyframe a native drag left without moving what was drawn", () => {
-    const pinned = pinnedClip(clip, 5_000);
+    const pinned = pinnedClip(clip, 5_000, on(whole));
     const pin = {
       keyframes: [
         ...(pinned.pin?.keyframes ?? []),
@@ -75,7 +94,7 @@ describe("pinned recording annotations", () => {
     const merged = mergeRecordingAnnotationClips({
       annotations: [annotation],
       clips: [pinned],
-      edit: createRecordingTimelineEdit(1),
+      edit: whole,
       pins: [{ annotationId: annotation.id, pin }],
       positionMs: 6_000,
       sourceDurationMs: 20_000,
@@ -86,9 +105,9 @@ describe("pinned recording annotations", () => {
 
   it("moves its keyframes with a moved clip", () => {
     const moved = moveRecordingAnnotationClip({
-      clip: pinnedClip(clip, 5_000),
+      clip: pinnedClip(clip, 5_000, on(whole)),
       deltaOutput: 0.05,
-      edit: createRecordingTimelineEdit(1),
+      edit: whole,
       sourceDurationMs: 20_000,
     });
     expect(moved.pin).toEqual({

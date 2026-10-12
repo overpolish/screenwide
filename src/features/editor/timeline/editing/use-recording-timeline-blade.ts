@@ -16,13 +16,14 @@ import {
   RecordingTimelineEdit,
   recordingTimelineOutputToSource,
   recordingTimelineRetainedDuration,
-  recordingTimelineSourceToOutput,
   remapRecordingTimelinePosition,
   snapRecordingTimelinePosition,
 } from "./recording-timeline-edit";
+import { recordingTimelineSourceToOutputNear } from "./recording-timeline-source-order";
 import { useRecordingTimelineTrim } from "./use-recording-timeline-trim";
 import { useTimelineBladeCommands } from "./use-timeline-blade-commands";
 import { useTimelineBladeSelection } from "./use-timeline-blade-selection";
+import { useTimelineSegmentMove } from "./use-timeline-segment-move";
 
 export function useRecordingTimelineBlade({
   artifactId,
@@ -80,11 +81,14 @@ export function useRecordingTimelineBlade({
       ),
     [framesPerSecond, totalDurationMs],
   );
+  // A reordered timeline can start one segment where another ends in the
+  // source, so a snapped moment goes back to the side it was taken from.
   const snapOutput = useCallback(
     (outputPosition: number) =>
-      recordingTimelineSourceToOutput(
-        effectiveEdit,
+      recordingTimelineSourceToOutputNear(
+        effectiveEdit.segments,
         snap(recordingTimelineOutputToSource(effectiveEdit, outputPosition)),
+        outputPosition,
       ),
     [effectiveEdit, snap],
   );
@@ -105,6 +109,13 @@ export function useRecordingTimelineBlade({
     snap,
     totalDurationMs,
   });
+  const segmentMove = useTimelineSegmentMove({
+    edit: effectiveEdit,
+    keysEnabled: shortcutsEnabled,
+    onMove: commands.moveSegment,
+    selectedSegmentId: selection.selectedSegmentId,
+    setGuidePosition: selection.setSnapGuidePosition,
+  });
 
   const previewTrimFrame = useCallback(
     (sourcePosition: number, phase: "end" | "move" | "start") => {
@@ -112,15 +123,16 @@ export function useRecordingTimelineBlade({
         const parkedSource =
           totalDurationMs > 0 ? positionRef.current() / totalDurationMs : 0;
         parkedTrimSourceRef.current = parkedSource;
-        parkedTrimOutputRef.current = recordingTimelineSourceToOutput(
-          effectiveEdit,
+        parkedTrimOutputRef.current = recordingTimelineSourceToOutputNear(
+          effectiveEdit.segments,
           parkedSource,
+          playhead.ratio(),
         );
         onTrimPreviewStart?.();
       }
       seekPlayerRef.current(sourcePosition * totalDurationMs, phase);
     },
-    [effectiveEdit, onTrimPreviewStart, totalDurationMs],
+    [effectiveEdit, onTrimPreviewStart, playhead, totalDurationMs],
   );
   const restoreTrimPreview = useCallback(() => {
     const sourcePosition = parkedTrimSourceRef.current;
@@ -199,9 +211,10 @@ export function useRecordingTimelineBlade({
   const step = useCallback(
     (direction: -1 | 1, coarse: boolean) => {
       if (totalDurationMs <= 0) return;
-      const outputPosition = recordingTimelineSourceToOutput(
-        effectiveEdit,
+      const outputPosition = recordingTimelineSourceToOutputNear(
+        effectiveEdit.segments,
         positionRef.current() / totalDurationMs,
+        playhead.ratio(),
       );
       const ratio =
         clamp(
@@ -213,7 +226,7 @@ export function useRecordingTimelineBlade({
       seek(ratio, "start");
       seek(ratio, "end");
     },
-    [effectiveEdit, seek, timelineDurationMs, totalDurationMs],
+    [effectiveEdit, playhead, seek, timelineDurationMs, totalDurationMs],
   );
 
   useEditorWindowShortcuts({
@@ -234,6 +247,7 @@ export function useRecordingTimelineBlade({
 
   return {
     blade: {
+      beginSegmentMove: segmentMove.begin,
       beginTrim: trim.begin,
       clearPreview: selection.clearPreview,
       clearRangeSelection: selection.clearRangeSelection,
@@ -243,6 +257,7 @@ export function useRecordingTimelineBlade({
       isActive: selection.isActive,
       isRangeActive: selection.isRangeActive,
       isSnapActive: selection.isSnapActive,
+      movingSegmentId: segmentMove.movingSegmentId,
       previewAt: selection.previewAt,
       previewPosition: selection.previewPosition,
       rangeSelection: selection.rangeSelection,
