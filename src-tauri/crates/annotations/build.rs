@@ -11,6 +11,7 @@ fn main() {
     cc::Build::new()
       .file("src/text/macos/annotation_font.m")
       .file("src/text/macos/annotation_text_box.m")
+      .file("src/text/macos/installed_fonts.m")
       .flag("-fobjc-arc")
       .compile("screenwide_annotation_text");
     for framework in ["AppKit", "CoreText"] {

@@ -418,6 +418,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       annotation_clips: vec![clip],
       segments: vec![RecordingTimelineSegment {
@@ -450,6 +451,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,

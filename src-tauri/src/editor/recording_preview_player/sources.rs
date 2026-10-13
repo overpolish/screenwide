@@ -3,6 +3,7 @@
 
 use super::*;
 
+pub(super) mod captions;
 mod keyboard;
 
 #[derive(Clone)]
@@ -30,6 +31,8 @@ pub(super) struct PlayerSources {
   /// The kept source ranges keyboard badges animate on.
   pub(super) animation_ranges: Arc<RwLock<Vec<TimelineRange>>>,
   pub(super) keyboard_settings: Arc<RwLock<KeyboardEffectSettings>>,
+  /// The captions drawn over the picture.
+  pub(super) captions: captions::SharedCaptions,
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
   pub(super) duration_ms: u64,
   pub(super) frames_per_second: Option<f64>,
@@ -157,6 +160,12 @@ pub(super) fn sources_with_surface(
   let persisted = persisted_edit
     .as_ref()
     .and_then(|edit| screenwide_timeline_edit::TimelinePlan::from_edit(edit, duration_ms));
+  let saved_captions = captions::saved_captions(
+    (&project, &audio_tracks, duration_ms),
+    persisted_edit.as_ref(),
+    settings,
+    (width, height),
+  );
   let (mut annotation_clips, scene_clips) = persisted_edit
     .map(|edit| (edit.annotation_clips, edit.scene_clips))
     .unwrap_or_default();
@@ -180,21 +189,7 @@ pub(super) fn sources_with_surface(
     None
   };
   let layout = preview_layout(primary_pane, camera_size, height);
-  // Native playback decodes every source at its own stored resolution. The
-  // presentation surface handles its visual size, so a portrait camera is not
-  // needlessly enlarged to the screen track's height before composition.
-  let mut playback_layout = layout.clone();
-  for pane in &mut playback_layout.panes {
-    pane.width = pane.source_width;
-    pane.height = pane.source_height;
-  }
-  playback_layout.width = playback_layout.panes.iter().map(|pane| pane.width).sum();
-  playback_layout.height = playback_layout
-    .panes
-    .iter()
-    .map(|pane| pane.height)
-    .max()
-    .unwrap_or(0);
+  let playback_layout = layout::playback_layout(&layout);
   let cursor = cursor_path
     .as_ref()
     .map(|path| CursorCompositor::open(path, keyboard_path.as_deref()).map(Arc::new))
@@ -252,6 +247,7 @@ pub(super) fn sources_with_surface(
         settings.keyboard_effects.normalized()
       }),
     )),
+    captions: saved_captions,
     duration_ms,
     frames_per_second,
     #[cfg(any(target_os = "macos", target_os = "windows"))]

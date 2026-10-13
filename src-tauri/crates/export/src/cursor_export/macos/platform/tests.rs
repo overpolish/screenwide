@@ -162,6 +162,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: Some(&cursor_path),
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,
@@ -268,6 +269,12 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     );
   }
   let timeline_destination = directory.join("timeline-output.mp4");
+  let segment = |id, source_start, source_end| screenwide_timeline_edit::RecordingTimelineSegment {
+    id,
+    source_end,
+    source_start,
+    playback_rate: 1.0,
+  };
   let timeline = screenwide_timeline_edit::TimelinePlan::from_edit(
     &screenwide_timeline_edit::RecordingTimelineEdit {
       annotation_clips: Vec::new(),
@@ -277,22 +284,10 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       next_segment_id: 2,
-      segments: vec![
-        screenwide_timeline_edit::RecordingTimelineSegment {
-          id: 0,
-          source_end: 0.2,
-          source_start: 0.0,
-          playback_rate: 1.0,
-        },
-        screenwide_timeline_edit::RecordingTimelineSegment {
-          id: 1,
-          source_end: 1.0,
-          source_start: 0.8,
-          playback_rate: 1.0,
-        },
-      ],
+      segments: vec![segment(0, 0.0, 0.2), segment(1, 0.8, 1.0)],
     },
     1_000,
   )
@@ -305,6 +300,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: Some(&cursor_path),
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,
@@ -417,6 +413,7 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: Some(&cursor_path),
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,
@@ -588,6 +585,7 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
       )),
       camera_on_top,
       cancelled: &cancelled,
+      captions: None,
       cursor: Some(&cursor_path),
       cursor_effects: CursorEffectSettings::default(),
       keyboard: None,

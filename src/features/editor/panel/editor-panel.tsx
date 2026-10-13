@@ -84,6 +84,7 @@ export function EditorPanel({
   onSelectedScreenshotItemChange,
   onSelectedTrackChange,
   onSelectedTrackVolumeChange,
+  onSubtitlesChange,
   onToggleMaximize,
   recordingOutput,
   recordingPreviewError,
@@ -94,6 +95,7 @@ export function EditorPanel({
   screenshotOutput,
   selectedScreenshotItemId = null,
   selectedTrack = null,
+  subtitles = "none",
 }: EditorPanelProps) {
   const isRecording = artifact?.kind === "recording";
   const enabledVideoTrackCount = enabledVideoTracks.length;
@@ -124,45 +126,9 @@ export function EditorPanel({
     bakeCamera,
     enabledVideoTracks,
   });
-  useExportOptionsBridge(
-    workspace,
-    {
-      cameraCompression,
-      cameraOutput,
-      cameraResolutionScalePercent,
-      canExport,
-      collapseAudio,
-      compression,
-      deleteProjectAfterExport,
-      directory,
-      enabledAudioTrackCount: enabledAudioTrackCount ?? 0,
-      estimatedSizeBytes: estimatedSizeBytes ?? null,
-      extension: isAudioOnly ? "m4a" : (artifact?.extension ?? ""),
-      fileStem,
-      includeCamera: enabledVideoTracks.includes("camera"),
-      isAudioOnly,
-      isCancelingSave,
-      isEstimatingSize: Boolean(isEstimatingSize),
-      isSaving: Boolean(isSaving),
-      recordingOutput: recordingOutput ?? null,
-      resolutionScalePercent: resolutionScalePercent ?? 100,
-    },
-    {
-      onBrowse,
-      onCameraCompressionChange,
-      onCameraResolutionScaleChange,
-      onCancelSave,
-      onCollapseAudioChange,
-      onCompressionChange,
-      onDeleteProjectAfterExportChange,
-      onExport: onSave,
-      onFileStemChange,
-      onResolutionScaleChange,
-    },
-  );
-  // The tool panels are the same arrangement one step further out: settings
-  // the editor owns, shown in a window of their own and changed from there.
-  useEditorToolPanels({
+  // The tool panels work as the options window does: settings the editor
+  // owns, shown in a window of their own and changed from there.
+  const { hasTranscript } = useEditorToolPanels({
     artifact,
     audioTrackVolumes,
     bakeCamera,
@@ -188,6 +154,45 @@ export function EditorPanel({
     selectedTrack,
     workspace,
   });
+  useExportOptionsBridge(
+    workspace,
+    {
+      cameraCompression,
+      cameraOutput,
+      cameraResolutionScalePercent,
+      canExport,
+      collapseAudio,
+      compression,
+      deleteProjectAfterExport,
+      directory,
+      enabledAudioTrackCount: enabledAudioTrackCount ?? 0,
+      estimatedSizeBytes: estimatedSizeBytes ?? null,
+      extension: isAudioOnly ? "m4a" : (artifact?.extension ?? ""),
+      fileStem,
+      hasTranscript,
+      includeCamera: enabledVideoTracks.includes("camera"),
+      isAudioOnly,
+      isCancelingSave,
+      isEstimatingSize: Boolean(isEstimatingSize),
+      isSaving: Boolean(isSaving),
+      recordingOutput: recordingOutput ?? null,
+      resolutionScalePercent: resolutionScalePercent ?? 100,
+      subtitles,
+    },
+    {
+      onBrowse,
+      onCameraCompressionChange,
+      onCameraResolutionScaleChange,
+      onCancelSave,
+      onCollapseAudioChange,
+      onCompressionChange,
+      onDeleteProjectAfterExportChange,
+      onExport: onSave,
+      onFileStemChange,
+      onResolutionScaleChange,
+      onSubtitlesChange,
+    },
+  );
   return (
     // The title bar carries the visible workspace's tools, so the provider has
     // to stand around the shell rather than inside its content.

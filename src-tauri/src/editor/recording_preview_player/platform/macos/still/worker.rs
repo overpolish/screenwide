@@ -231,6 +231,7 @@ pub(super) fn run(
         seconds: screen_position_ms as f64 / 1_000.0,
         cursor,
         keyboard,
+        captions: sources.captions_at(screen_position_ms),
         camera: baked_camera.and_then(|camera| camera.rgba()),
         camera_pixels: baked_camera
           .and_then(|camera| camera.pixels().map(|pixels| (pixels, camera.dimensions()))),

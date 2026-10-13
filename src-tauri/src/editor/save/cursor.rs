@@ -12,6 +12,7 @@ pub(super) struct CursorSaveRequest<'a> {
   pub camera_effects:
     Option<std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>>,
   pub cancelled: &'a AtomicBool,
+  pub captions: Option<&'a screenwide_captions::CaptionTrack>,
   pub cursor: Option<&'a Path>,
   pub cursor_effects: screenwide_cursor_effects::CursorEffectSettings,
   pub directory: &'a Path,
@@ -65,6 +66,7 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
       }),
     camera_on_top: true,
     cancelled: request.cancelled,
+    captions: request.captions,
     cursor: request.cursor,
     cursor_effects: request.cursor_effects,
     keyboard: request.keyboard,

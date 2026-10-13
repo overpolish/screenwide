@@ -29,17 +29,7 @@ import { setRecordingTimelineRangePlaybackRate } from "../editing/recording-time
 import { createPlayhead } from "../scrub-playhead";
 
 import { RecordingTrackLanes } from "./recording-track-lanes";
-import {
-  STORY_ANNOTATION_CLIPS,
-  STORY_DURATION_MS,
-  STORY_FRAMES_PER_SECOND,
-  STORY_KEYBOARD_ITEMS,
-  STORY_LAYOUT,
-  STORY_MOMENTS,
-  STORY_SCENE_CLIPS,
-  STORY_THUMBNAILS,
-  storyAudioTracks,
-} from "./recording-track-lanes-preview-fixtures";
+import * as story from "./recording-track-lanes-preview-fixtures";
 import { selectTimelineItem } from "./timeline-item-selection";
 
 /**
@@ -56,7 +46,7 @@ export function RecordingTrackLanesPreview({
   initialEdit?: RecordingTimelineEdit;
 }) {
   const audioTracks = useMemo(
-    () => storyAudioTracks(audioTrackCount),
+    () => story.storyAudioTracks(audioTrackCount),
     [audioTrackCount],
   );
 
@@ -66,10 +56,10 @@ export function RecordingTrackLanesPreview({
     () => new Set(["primary"]),
   );
   const [annotationClips, setAnnotationClips] = useState(
-    STORY_ANNOTATION_CLIPS,
+    story.STORY_ANNOTATION_CLIPS,
   );
   const annotationSelection = useLaneAnnotationSelection(annotationClips);
-  const [sceneClips, setSceneClips] = useState(STORY_SCENE_CLIPS);
+  const [sceneClips, setSceneClips] = useState(story.STORY_SCENE_CLIPS);
   // The story's playhead only moves the drawn playhead, so the choice stays
   // where it is made rather than following it.
   const sceneSelection = useRecordingSceneSelection({
@@ -105,15 +95,15 @@ export function RecordingTrackLanesPreview({
     state: timelineEdit,
   });
   const timelineDurationMs =
-    STORY_DURATION_MS * recordingTimelineRetainedDuration(timelineEdit);
+    story.STORY_DURATION_MS * recordingTimelineRetainedDuration(timelineEdit);
   const snapOutput = useCallback(
     (outputPosition: number) =>
       recordingTimelineSourceToOutput(
         timelineEdit,
         snapRecordingTimelinePosition(
           recordingTimelineOutputToSource(timelineEdit, outputPosition),
-          STORY_DURATION_MS,
-          STORY_FRAMES_PER_SECOND,
+          story.STORY_DURATION_MS,
+          story.STORY_FRAMES_PER_SECOND,
         ),
       ),
     [timelineEdit],
@@ -129,8 +119,8 @@ export function RecordingTrackLanesPreview({
   const cutAt = (outputPosition: number) => {
     const sourcePosition = snapRecordingTimelinePosition(
       recordingTimelineOutputToSource(timelineEdit, outputPosition),
-      STORY_DURATION_MS,
-      STORY_FRAMES_PER_SECOND,
+      story.STORY_DURATION_MS,
+      story.STORY_FRAMES_PER_SECOND,
     );
     if (commitEdit(cutRecordingTimeline(timelineEdit, sourcePosition)))
       setSelectedSegmentId(null);
@@ -250,12 +240,13 @@ export function RecordingTrackLanesPreview({
           transcriptHighlight: null,
           updateTrim: () => null,
         }}
+        captions={story.STORY_CAPTIONS}
         durationMs={timelineDurationMs}
         enabledTracks={enabledAudio}
         enabledVideoTracks={enabledVideo}
         hiddenKeyboardFragmentIds={new Set()}
         hiddenKeyboardItemIds={new Set()}
-        keyboardItems={STORY_KEYBOARD_ITEMS}
+        keyboardItems={story.STORY_KEYBOARD_ITEMS}
         keyboardSelection={{
           ids: selectedKeyboardItems,
           onClear: () => {
@@ -267,8 +258,8 @@ export function RecordingTrackLanesPreview({
             );
           },
         }}
-        layout={STORY_LAYOUT}
-        moments={STORY_MOMENTS}
+        layout={story.STORY_LAYOUT}
+        moments={story.STORY_MOMENTS}
         onAnnotationsChange={setAnnotationClips}
         onAnnotationsClear={annotationSelection.onClearSelection}
         onAnnotationSelect={annotationSelection.onSelect}
@@ -290,8 +281,8 @@ export function RecordingTrackLanesPreview({
         selectedAnnotationIds={annotationSelection.selectedIds}
         selectedSceneIds={sceneSelection.ids}
         selectedTrack={selectedTrack}
-        sourceDurationMs={STORY_DURATION_MS}
-        thumbnails={STORY_THUMBNAILS}
+        sourceDurationMs={story.STORY_DURATION_MS}
+        thumbnails={story.STORY_THUMBNAILS}
         volumes={new Map()}
       />
     </EditorEditGestureContext>

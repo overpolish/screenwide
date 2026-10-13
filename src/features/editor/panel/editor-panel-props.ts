@@ -23,6 +23,8 @@ import {
   ScreenshotOutputChange,
 } from "./editor-content";
 
+import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
+
 export type EditorPanelProps = {
   artifact: EditorArtifact | null;
   directory: string | null;
@@ -81,6 +83,7 @@ export type EditorPanelProps = {
   onSelectedScreenshotItemChange?: (itemId: number | null) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
   onSelectedTrackVolumeChange?: (decibels: number) => void;
+  onSubtitlesChange?: (subtitles: ExportSubtitles) => void;
   onToggleMaximize?: () => void;
   recordingOutput?: RecordingOutputSettings;
   recordingPreviewError?: string | null;
@@ -91,4 +94,6 @@ export type EditorPanelProps = {
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
   selectedScreenshotItemId?: number | null;
   selectedTrack?: RecordingTrackId | null;
+  /** The subtitle file an export writes beside a recording's video. */
+  subtitles?: ExportSubtitles;
 };

@@ -80,6 +80,26 @@ pub(super) fn preview_layout(
   }
 }
 
+/// `layout` as native playback decodes it: every source at its own stored
+/// resolution. The presentation surface handles its visual size, so a
+/// portrait camera is not needlessly enlarged to the screen track's height
+/// before composition.
+pub(super) fn playback_layout(layout: &RecordingPreviewLayout) -> RecordingPreviewLayout {
+  let mut playback = layout.clone();
+  for pane in &mut playback.panes {
+    pane.width = pane.source_width;
+    pane.height = pane.source_height;
+  }
+  playback.width = playback.panes.iter().map(|pane| pane.width).sum();
+  playback.height = playback
+    .panes
+    .iter()
+    .map(|pane| pane.height)
+    .max()
+    .unwrap_or(0);
+  playback
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

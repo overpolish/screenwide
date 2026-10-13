@@ -75,6 +75,9 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   app_windows::manage_recording_bar_movement(app.handle());
   app_windows::manage_recording_dock_movement(app.handle());
   editor::initialize(app.handle());
+  // The Captions panel's fonts and template previews take a moment to
+  // ready; done in the background now, the panel has them when it opens.
+  editor::caption_styles::warm(app.handle());
   crate::shortcuts::initialize(app.handle());
   screenwide_accent::initialize(app.handle());
   crate::recording::sleep::initialize(app.handle());

@@ -3,10 +3,13 @@
 
 import { ReactNode, useId } from "react";
 
+import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { Text } from "../../../components/base/text/text";
 import { t } from "../../../i18n/i18n";
+import { cn } from "../../../lib/styling";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
+import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
 import type { ControlRowControlProps } from "../../../components/shared/control-row/control-row";
 
 /** Compression levels are the numbers the export backend takes, 0 through 4. */
@@ -18,13 +21,21 @@ const compressionOptions = () => [
   { id: "smallest", label: t("editor-export-quality-smallest") },
 ];
 
+const subtitleOptions = (): { id: ExportSubtitles; label: string }[] => [
+  { id: "none", label: t("editor-export-subtitles-none") },
+  { id: "srt", label: t("editor-export-subtitles-srt") },
+  { id: "vtt", label: t("editor-export-subtitles-vtt") },
+];
+
 /**
  * A row of a save sheet: the label right-aligned in the first column and the
  * control in the second. Rows share the sheet's subgrid so every label ends
  * and every control begins on the same line.
  *
  * The trailing layout is for a checkbox: it sits at the row's end with its
- * description just before it on the same line.
+ * description just before it on the same line. The end layout is for a
+ * control at its own width, such as a pill picker: it sits at the row's end,
+ * its description under it and ending with it.
  */
 export function ExportRow({
   children,
@@ -35,7 +46,7 @@ export function ExportRow({
   children: (controlProps: ControlRowControlProps) => ReactNode;
   title: string;
   description?: string;
-  layout?: "field" | "trailing";
+  layout?: "end" | "field" | "trailing";
 }) {
   const id = useId();
   const titleId = `${id}-title`;
@@ -64,7 +75,12 @@ export function ExportRow({
           <div className="flex shrink-0 items-center">{control}</div>
         </div>
       ) : (
-        <div className="flex min-w-0 flex-col gap-tight">
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-tight",
+            layout === "end" && "items-end text-end",
+          )}
+        >
           {control}
           {descriptionText}
         </div>
@@ -102,5 +118,46 @@ export function CompressionSelect({
       placeholder={t("editor-export-quality")}
       selectedId={options[value]?.id ?? options[0].id}
     />
+  );
+}
+
+/** The subtitle file written beside a recording's video. It is made of the
+ * transcript, so without one the row shows the None the export will act on. */
+export function SubtitlesRow({
+  hasTranscript,
+  isDisabled,
+  onChange,
+  value,
+}: {
+  hasTranscript: boolean;
+  value: ExportSubtitles;
+  isDisabled?: boolean;
+  onChange?: (subtitles: ExportSubtitles) => void;
+}) {
+  const options = subtitleOptions();
+  return (
+    <ExportRow
+      description={
+        hasTranscript
+          ? t("editor-export-subtitles-description")
+          : t("editor-export-subtitles-needs-transcript")
+      }
+      layout="end"
+      title={t("editor-export-subtitles")}
+    >
+      {() => (
+        <PillGroup
+          aria-label={t("editor-export-subtitles")}
+          display="label"
+          isDisabled={isDisabled || !hasTranscript}
+          items={options}
+          onSelectionChange={(id) => {
+            const chosen = options.find((option) => option.id === id);
+            if (chosen) onChange?.(chosen.id);
+          }}
+          selected={hasTranscript ? value : "none"}
+        />
+      )}
+    </ExportRow>
   );
 }

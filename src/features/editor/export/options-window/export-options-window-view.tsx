@@ -8,7 +8,8 @@ import { WindowHeader } from "../../../../components/shared/window-header/window
 import { WindowShell } from "../../../../components/shared/window-shell/window-shell";
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
-import { EditorExportForm, EditorExportFormProps } from "../editor-export-form";
+import { EditorExportForm } from "../editor-export-form";
+import { EditorExportFormProps } from "../editor-export-form-props";
 
 import { ExportProgress, ExportProgressProps } from "./export-progress";
 

@@ -23,6 +23,9 @@ type ScrollAreaProps = {
   /** Classes for the edge overlays only, e.g. a radius the content must not get. */
   edgeClassName?: string;
   edgeEffect?: "shadow" | "none";
+  /** Called once the viewport is set up and scrolls, which happens a moment
+   * after mounting: what is to be scrolled into view first waits for it. */
+  onInitialized?: (viewport: HTMLElement) => void;
   orientation?: "horizontal" | "vertical";
   rootClassName?: string;
   scrollbarAutoHide?: "scroll" | "never";
@@ -37,6 +40,7 @@ export function ScrollArea({
   dir,
   edgeClassName,
   edgeEffect = "shadow",
+  onInitialized,
   orientation = "vertical",
   rootClassName,
   scrollbarAutoHide = "scroll",
@@ -113,7 +117,10 @@ export function ScrollArea({
         className={cn("h-full w-full", constrainHeight && "max-h-[inherit]")}
         defer
         events={{
-          initialized: updateEdges,
+          initialized: (instance) => {
+            updateEdges(instance);
+            onInitialized?.(instance.elements().viewport);
+          },
           scroll: updateEdges,
           updated: updateEdges,
         }}

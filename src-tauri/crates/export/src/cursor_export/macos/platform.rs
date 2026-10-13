@@ -19,6 +19,7 @@ mod frames;
 use frames::FrameComposer;
 
 mod frame_camera;
+mod frame_captions;
 mod frame_grid;
 mod frame_placement;
 mod frame_source;
@@ -165,6 +166,8 @@ mod annotation_tests;
 mod camera_background_video_tests;
 #[cfg(test)]
 mod camera_effect_video_tests;
+#[cfg(test)]
+mod caption_video_tests;
 #[cfg(test)]
 mod counter_tests;
 #[cfg(test)]

@@ -13,6 +13,9 @@
 /// One box being typed into, from the press that opens it to the commit.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub mod edit;
+/// Which face type is set in: Inter for annotations, any family for
+/// captions.
+pub mod face;
 /// Draw-ready geometry and the distance that picks it: the compositor calls
 /// this directly, the macOS chrome through `geometry.h`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
@@ -23,6 +26,8 @@ pub(crate) mod gesture;
 /// The grips the native chrome draws.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod handles;
+/// The font families installed on the system.
+pub mod installed;
 /// How much room a block of text takes, asked of the platform's text engine.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub mod metrics;

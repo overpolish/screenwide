@@ -99,6 +99,7 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,
@@ -151,6 +152,7 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
       camera: None,
       camera_on_top: true,
       cancelled: &cancelled,
+      captions: None,
       cursor: None,
       cursor_effects: CursorEffectSettings::default(),
       keyboard: None,

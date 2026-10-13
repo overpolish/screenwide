@@ -191,6 +191,7 @@ pub(super) fn test_sources() -> PlayerSources {
     keyboard: None,
     animation_ranges: Default::default(),
     keyboard_settings: Default::default(),
+    captions: Default::default(),
     duration_ms: 1_000,
     frames_per_second: Some(60.0),
     held_fills: [None, None],

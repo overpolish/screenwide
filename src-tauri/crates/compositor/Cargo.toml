@@ -15,6 +15,7 @@ doctest = false
 [dependencies]
 bytemuck.workspace = true
 screenwide-annotations.workspace = true
+screenwide-captions.workspace = true
 screenwide-cursor-effects.workspace = true
 screenwide-gpu.workspace = true
 screenwide-images.workspace = true

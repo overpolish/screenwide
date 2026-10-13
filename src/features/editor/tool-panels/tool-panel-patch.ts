@@ -5,6 +5,8 @@ import { BackgroundPreset } from "../../../components/shared/background-picker/b
 import { ImagePlayChange } from "../annotations/annotation-channel";
 import { AnnotationStyle, ImageArt } from "../annotations/annotations";
 import { CameraEffectsChange } from "../recording/camera/use-camera-effects";
+import { CaptionsPatch } from "../recording/captions/recording-captions";
+import { CaptionDefaultsPatch } from "../recording/captions/use-caption-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -61,6 +63,12 @@ export type ToolPanelPatch = Partial<
   /** Change the camera's effects, a field at a time: what is behind the
    * person, and colour correction. */
   cameraEffects?: CameraEffectsChange;
+  /** Change what new captions start as: a template and its look, the
+   * layout options set by hand, the rules for what they say, or a template
+   * put back to how it ships. */
+  captionDefaults?: CaptionDefaultsPatch;
+  /** Show the captions or set them otherwise. */
+  captions?: CaptionsPatch;
   /** Ask for a picture to put behind the person on camera. */
   chooseCameraBackground?: true;
   /** Lay the scene under the playhead out as this template. */

@@ -33,6 +33,7 @@ import {
   isTranscriptEditRequest,
   playedRecordingStretches,
 } from "./transcript-edit-requests";
+import { useTranscriptRevision } from "./transcript-revision";
 
 import type {
   ToolPanelTranscript,
@@ -185,6 +186,12 @@ export function useTranscriptTools({
       if (frame !== null) cancelAnimationFrame(frame);
     };
   }, [preview, workspace]);
+
+  // What is made of the words elsewhere in the window follows them.
+  const isReady = status === "ready";
+  useEffect(() => {
+    useTranscriptRevision.setState({ artifactId, isReady, revision });
+  }, [artifactId, isReady, revision]);
 
   /** One edit to the timeline, committed as one step of the edit history. */
   const commit = (

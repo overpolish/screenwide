@@ -43,6 +43,9 @@ pub(crate) struct StagedLayer<'a> {
   pub(crate) seconds: f64,
   pub(crate) cursor: Option<GpuCursor>,
   pub(crate) keyboard: Option<KeyboardOverlay>,
+  /// The captions drawn over the canvas, and the moment of the edited video
+  /// they are drawn at.
+  pub(crate) captions: Option<(Arc<screenwide_captions::CaptionTrack>, f64)>,
   /// The camera frame composed into the layer, and where its overlay puts
   /// it; without an overlay the frame is held but not drawn.
   pub(crate) camera: Option<LayerPicture<'a>>,
@@ -195,6 +198,7 @@ pub(super) struct SceneLayer {
   pub(super) seconds: f64,
   pub(super) cursor: Option<GpuCursor>,
   pub(super) keyboard: Option<KeyboardOverlay>,
+  pub(super) captions: Option<(Arc<screenwide_captions::CaptionTrack>, f64)>,
   pub(super) camera: Option<LayerCamera>,
   pub(super) foreground_only: bool,
   pub(super) hover: Option<(usize, f32)>,

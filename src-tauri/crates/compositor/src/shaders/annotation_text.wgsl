@@ -86,24 +86,30 @@ fn annotation_text_distance(probe: vec2<f32>, box: PreviewTextBox) -> f32 {
   return min(body, pointer) - mix_amount * mix_amount * box.blend * 0.25;
 }
 
-/// How much of the type covers this pixel, from the atlas it was rasterised
-/// into at `atlas.scale` pixels to the canvas pixel, centred on the text
-/// block. `feather` is half a drawn pixel, in canvas pixels, which is how far
-/// the atlas read spreads.
-fn annotation_text_coverage(probe: vec2<f32>, box: PreviewTextBox, atlas: AnnotationTextAtlas,
-                            feather: f32) -> f32 {
+/// The atlas over this pixel, rasterised at `atlas.scale` pixels to the
+/// canvas pixel and centred on the text block: the type's coverage in alpha,
+/// and a caption word's outline in red. `feather` is half a drawn pixel, in
+/// canvas pixels, which is how far the atlas read spreads.
+fn annotation_text_texel(probe: vec2<f32>, box: PreviewTextBox, atlas: AnnotationTextAtlas,
+                         feather: f32) -> vec4<f32> {
   if (atlas.size.x == 0u || atlas.size.y == 0u || atlas.scale <= 0.0 ||
       box.text_size.x <= 0.0 || box.text_size.y <= 0.0) {
-    return 0.0;
+    return vec4<f32>(0.0);
   }
   let drawn = box.text_size / atlas.scale;
   let local = probe - box.text_centre + drawn * 0.5;
   if (any(local < vec2<f32>(0.0)) || any(local > drawn)) {
-    return 0.0;
+    return vec4<f32>(0.0);
   }
-  return annotation_atlas_coverage(atlas, box.text_origin, box.text_size,
-                                   box.text_origin + local * atlas.scale,
-                                   2.0 * feather * atlas.scale);
+  return annotation_atlas_footprint(atlas, box.text_origin, box.text_size,
+                                    box.text_origin + local * atlas.scale,
+                                    2.0 * feather * atlas.scale);
+}
+
+/// How much of the type covers this pixel; see [`annotation_text_texel`].
+fn annotation_text_coverage(probe: vec2<f32>, box: PreviewTextBox, atlas: AnnotationTextAtlas,
+                            feather: f32) -> f32 {
+  return annotation_text_texel(probe, box, atlas, feather).a;
 }
 
 /// A text box averaged over its exposure samples, as a counter is while it
@@ -148,9 +154,31 @@ fn annotation_text_reach(annotation: PreviewArrow, halo: f32, feather: f32) -> v
   return bounds;
 }
 
+/// The flags a text box reads; the twins of `flags.rs`.
+const annotation_text_outlined: u32 = 1u << 7u;
+const annotation_text_caption: u32 = 1u << 10u;
+const annotation_text_bare: u32 = 1u << 11u;
+
+/// A caption's word: its type alone in the annotation's colour, over a dark
+/// outline where it is outlined, with no box drawn. The outline is set in
+/// the atlas beside the type and read with it, so both share one smooth
+/// edge. `solid` is how much of the box it is set in covers this pixel,
+/// which carries its fade and the blur of its growing.
+fn annotation_caption_word(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
+                           canvas_point: vec2<f32>, box: PreviewTextBox, solid: f32,
+                           feather: f32, atlas: AnnotationTextAtlas) -> vec4<f32> {
+  var rgba = rgba_in;
+  let texel = annotation_text_texel(canvas_point, box, atlas, feather);
+  if ((annotation.flags & annotation_text_outlined) != 0u) {
+    rgba = annotation_over(rgba, vec3<f32>(0.0), texel.r * solid * 0.85);
+  }
+  return annotation_over(rgba, color.rgb, texel.a * solid);
+}
+
 /// One text box: its box and pointer in the annotation's own colour, and its
 /// type in whichever of black or white reads on that colour, clipped to the
-/// box's own coverage so the two share one antialiased edge.
+/// box's own coverage so the two share one antialiased edge. A caption's
+/// word draws its type alone, and a caption's backdrop its box alone.
 fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
                          canvas_point: vec2<f32>, feather: f32, halo: f32,
                          atlas: AnnotationTextAtlas) -> vec4<f32> {
@@ -170,7 +198,14 @@ fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: ve
     return rgba;
   }
   let alpha = coverage * color.a;
+  if ((annotation.flags & annotation_text_caption) != 0u) {
+    return annotation_caption_word(rgba, annotation, color, canvas_point, box, alpha, feather,
+                                   atlas);
+  }
   rgba = annotation_over(rgba, color.rgb, alpha);
+  if ((annotation.flags & annotation_text_bare) != 0u) {
+    return rgba;
+  }
   let ink = annotation_text_coverage(canvas_point, box, atlas, feather) * alpha;
   if (ink <= 0.0) {
     return rgba;

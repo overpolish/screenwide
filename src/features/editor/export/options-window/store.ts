@@ -9,6 +9,8 @@ import { createWorkspaceMirror } from "../../workspace-mirror";
 import { CameraOutput } from "../camera-output";
 import { ExportPhase } from "../use-export-progress";
 
+import type { ExportSubtitles } from "../../../../bindings/ExportSubtitles";
+
 /**
  * Everything the export form needs that the editor window owns.
  *
@@ -34,6 +36,8 @@ export type ExportOptionsSnapshot = {
   /** What saving delivers, which is not always the artifact's extension. */
   extension: string;
   fileStem: string;
+  /** Whether the recording has a transcript to make subtitles from. */
+  hasTranscript: boolean;
   includeCamera: boolean;
   /** No video is being written, so the save is described as audio. */
   isAudioOnly: boolean;
@@ -46,6 +50,8 @@ export type ExportOptionsSnapshot = {
   savePhase: ExportPhase;
   /** Percent complete, or `null` while the save cannot report a figure. */
   saveProgress: number | null;
+  /** The subtitle file an export writes beside a recording's video. */
+  subtitles: ExportSubtitles;
 };
 
 /** The settings the options window may ask the editor to change. */
@@ -59,6 +65,7 @@ export type ExportOptionsPatch = Partial<
     | "deleteProjectAfterExport"
     | "fileStem"
     | "resolutionScalePercent"
+    | "subtitles"
   >
 >;
 
@@ -89,6 +96,7 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsSnapshot = {
   etaSeconds: null,
   extension: "",
   fileStem: "",
+  hasTranscript: false,
   includeCamera: false,
   isAudioOnly: false,
   isCancelingSave: false,
@@ -98,6 +106,7 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsSnapshot = {
   resolutionScalePercent: 100,
   savePhase: "recording",
   saveProgress: null,
+  subtitles: "none",
 };
 
 const STORE_NAME = "screenwide-export-options";

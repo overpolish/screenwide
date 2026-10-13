@@ -2,6 +2,7 @@
 import type { DeletedKeyboardShortcutFragment } from "./DeletedKeyboardShortcutFragment";
 import type { KeyboardShortcutPosition } from "./KeyboardShortcutPosition";
 import type { RecordingAnnotationClip } from "./RecordingAnnotationClip";
+import type { RecordingCaptions } from "./RecordingCaptions";
 import type { RecordingSceneClip } from "./RecordingSceneClip";
 import type { RecordingSilenceCut } from "./RecordingSilenceCut";
 import type { RecordingTimelineSegment } from "./RecordingTimelineSegment";
@@ -31,4 +32,9 @@ transcriptCorrections?: Array<RecordingTranscriptCorrection>,
 /**
  * Folded text the Transcript panel was told is not profanity; marks only.
  */
-transcriptAllowedWords?: Array<string>, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, keyboardShortcutPositions?: Array<KeyboardShortcutPosition>, };
+transcriptAllowedWords?: Array<string>, 
+/**
+ * The captions made from the transcript, once any were asked for; see
+ * [`screenwide_captions`].
+ */
+captions?: RecordingCaptions, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, keyboardShortcutPositions?: Array<KeyboardShortcutPosition>, };

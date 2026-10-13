@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/// Inter SemiBold set by Core Text, for the annotation atlas Rust lays out:
-/// the face's metrics at a size, how far a line advances, and lines drawn as
-/// coverage. The twin of DirectWrite's `type_device` on Windows.
+/// Type set by Core Text, for the annotation atlas Rust lays out: a face's
+/// metrics at a size, how far a line advances, and lines drawn as coverage.
+/// Annotations are Inter SemiBold; captions name a family and a weight. The
+/// twin of DirectWrite's `type_device` on Windows.
 
 #import <AppKit/AppKit.h>
 #import <CoreText/CoreText.h>
@@ -17,6 +18,20 @@ typedef struct {
   const uint8_t *text;
   uint32_t length;
 } ScreenwideTypeLine;
+
+/// The face a device asks for: Inter with tabular figures for a counter's
+/// number, or the family and weight named.
+typedef struct {
+  const uint8_t *family;
+  uint32_t family_length;
+  uint32_t weight;
+  uint32_t tabular;
+} ScreenwideTypeFace;
+
+static NSFont *face_font(const ScreenwideTypeFace *face, double size) {
+  if (face->tabular != 0) return screenwide_annotation_font(size, YES);
+  return screenwide_face_font_bytes(face->family, face->family_length, face->weight, size);
+}
 
 /// One line in the face, coloured by whatever fill the context has.
 static CTLineRef type_line(const uint8_t *text, uint32_t length, NSFont *font) {
@@ -33,19 +48,20 @@ static CTLineRef type_line(const uint8_t *text, uint32_t length, NSFont *font) {
   return CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)attributed);
 }
 
-void screenwide_type_metrics(double size, uint32_t tabular, double *ascent, double *descent) {
+void screenwide_type_metrics(const ScreenwideTypeFace *face, double size, double *ascent,
+                             double *descent) {
   @autoreleasepool {
-    NSFont *font = screenwide_annotation_font(size, tabular != 0);
+    NSFont *font = face_font(face, size);
     *ascent = font.ascender;
     *descent = -font.descender;
   }
 }
 
-double screenwide_type_advance(const uint8_t *text, uint32_t length, double size,
-                               uint32_t tabular) {
+double screenwide_type_advance(const ScreenwideTypeFace *face, const uint8_t *text,
+                               uint32_t length, double size) {
   if (text == NULL || length == 0 || !(size > 0.0)) return 0.0;
   @autoreleasepool {
-    CTLineRef line = type_line(text, length, screenwide_annotation_font(size, tabular != 0));
+    CTLineRef line = type_line(text, length, face_font(face, size));
     if (line == NULL) return 0.0;
     double width = CTLineGetTypographicBounds(line, NULL, NULL, NULL);
     CFRelease(line);
@@ -56,8 +72,8 @@ double screenwide_type_advance(const uint8_t *text, uint32_t length, double size
 /// `lines`, each with its top-left at the point given and its baseline the
 /// ascent below that, drawn white over black into `coverage`: `width` by
 /// `height` bytes, top row first. Returns 0 when no context could be made.
-uint32_t screenwide_type_draw(double size, uint32_t tabular, uint32_t width, uint32_t height,
-                              const ScreenwideTypeLine *lines, uint32_t count,
+uint32_t screenwide_type_draw(const ScreenwideTypeFace *face, double size, uint32_t width,
+                              uint32_t height, const ScreenwideTypeLine *lines, uint32_t count,
                               uint8_t *coverage) {
   if (coverage == NULL || width == 0 || height == 0) return 0;
   memset(coverage, 0, (size_t)width * height);
@@ -77,7 +93,7 @@ uint32_t screenwide_type_draw(double size, uint32_t tabular, uint32_t width, uin
     CGContextSetShouldSubpixelPositionFonts(context, true);
     CGContextSetAllowsFontSubpixelQuantization(context, false);
     CGContextSetShouldSubpixelQuantizeFonts(context, false);
-    NSFont *font = screenwide_annotation_font(size, tabular != 0);
+    NSFont *font = face_font(face, size);
     double ascent = font.ascender;
     for (uint32_t index = 0; index < count && lines != NULL; index++) {
       if (lines[index].text == NULL || lines[index].length == 0) continue;

@@ -31,6 +31,7 @@ pub(in crate::editor) fn save_baked_recording(
   camera_effects: Option<
     std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>,
   >,
+  captions: Option<&screenwide_captions::CaptionTrack>,
 ) -> Result<Option<PathBuf>, String> {
   let progress_duration_ms = timeline.map_or(
     duration_ms,
@@ -90,6 +91,7 @@ pub(in crate::editor) fn save_baked_recording(
     }),
     camera_on_top,
     cancelled,
+    captions,
     cursor: cursor_path,
     cursor_effects,
     keyboard: keyboard_path,

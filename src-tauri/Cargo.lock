@@ -2682,6 +2682,9 @@ dependencies = [
  "icu_properties",
  "icu_provider",
  "smallvec",
+ "utf16_iter",
+ "utf8_iter",
+ "write16",
  "zerovec",
 ]
 
@@ -5428,6 +5431,7 @@ dependencies = [
  "rxing",
  "screenwide-accent",
  "screenwide-annotations",
+ "screenwide-captions",
  "screenwide-capture",
  "screenwide-compositor",
  "screenwide-cursor-effects",
@@ -5437,6 +5441,7 @@ dependencies = [
  "screenwide-images",
  "screenwide-imaging",
  "screenwide-keyboard-effects",
+ "screenwide-lexicon",
  "screenwide-moments",
  "screenwide-osc",
  "screenwide-output",
@@ -5511,6 +5516,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "screenwide-captions"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "screenwide-lexicon",
+ "screenwide-timeline",
+ "serde",
+ "serde_json",
+ "ts-rs",
+]
+
+[[package]]
 name = "screenwide-capture"
 version = "0.1.0"
 dependencies = [
@@ -5552,6 +5569,7 @@ dependencies = [
  "cc",
  "naga",
  "screenwide-annotations",
+ "screenwide-captions",
  "screenwide-cursor-effects",
  "screenwide-gpu",
  "screenwide-images",
@@ -5587,6 +5605,7 @@ dependencies = [
  "cidre",
  "image",
  "screenwide-annotations",
+ "screenwide-captions",
  "screenwide-compositor",
  "screenwide-cursor-effects",
  "screenwide-gpu",
@@ -5661,6 +5680,14 @@ dependencies = [
  "serde",
  "serde_json",
  "ts-rs",
+]
+
+[[package]]
+name = "screenwide-lexicon"
+version = "0.1.0"
+dependencies = [
+ "icu_normalizer",
+ "regex",
 ]
 
 [[package]]
@@ -5765,6 +5792,7 @@ name = "screenwide-timeline-edit"
 version = "0.1.0"
 dependencies = [
  "screenwide-annotations",
+ "screenwide-captions",
  "screenwide-scenes",
  "screenwide-timeline",
  "serde",
@@ -7464,6 +7492,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "utf16_iter"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8232dd3cdaed5356e0f716d285e4b40b932ac434100fe9b7e0e8e935b9e6246"
+
+[[package]]
 name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8662,6 +8696,12 @@ dependencies = [
  "wayland-protocols",
  "wayland-protocols-wlr",
 ]
+
+[[package]]
+name = "write16"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1890f4022759daae28ed4fe62859b1236caebfc61ede2f63ed4e695f3f6d936"
 
 [[package]]
 name = "writeable"

@@ -165,6 +165,20 @@ impl RecordingPreviewSurface {
     redraw_stale_selection(&self.inner, &mut state);
     Ok(staged)
   }
+
+  /// Draws `captions` over pane `index`'s canvas, from its next present on.
+  pub(crate) fn set_captions(
+    &self,
+    index: u32,
+    captions: Option<(std::sync::Arc<screenwide_captions::CaptionTrack>, f64)>,
+  ) {
+    let Ok(mut state) = self.inner.state.lock() else {
+      return;
+    };
+    if let Some(pane) = state.panes.get_mut(index as usize).and_then(Option::as_mut) {
+      pane.captions = captions;
+    }
+  }
 }
 
 impl RecordingPreviewSurface {

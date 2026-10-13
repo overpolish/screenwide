@@ -20,11 +20,20 @@ static const CGFloat SCREENWIDE_TEXT_BOX_LINE_HEIGHT = 1.25;
 /// `tabular` sets its figures to one width.
 NSFont *screenwide_annotation_font(CGFloat size, BOOL tabular);
 
+/// `family` at `weight` on the CSS scale, at `size`: a family installed on
+/// the system, or the app's Inter for none or for one no longer installed.
+NSFont *screenwide_face_font(NSString *family, uint32_t weight, CGFloat size);
+
+/// [`screenwide_face_font`] with the family as UTF-8 bytes, none for empty.
+NSFont *screenwide_face_font_bytes(const uint8_t *family, uint32_t length, uint32_t weight,
+                                   CGFloat size);
+
 /// The paragraph a text box's lines are set in: `alignment` is the box's own
 /// (0 left, 1 centre, 2 right) and every line is exactly the fixed line
 /// height at `size`.
 NSParagraphStyle *screenwide_text_box_paragraph(CGFloat size, uint32_t alignment);
 
-/// One line's typographic width at `font`, for the Rust side to size a box
-/// from. Called from any thread.
-double screenwide_text_box_line_width(const uint8_t *text, uint32_t length, double font);
+/// One line's typographic width in a face at `font`, for the Rust side to
+/// size a box from. Called from any thread.
+double screenwide_face_line_width(const uint8_t *text, uint32_t length, double font,
+                                  const uint8_t *family, uint32_t family_length, uint32_t weight);

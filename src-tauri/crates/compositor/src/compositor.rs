@@ -12,6 +12,8 @@ mod canvas_modules;
 mod canvas_pipelines;
 mod canvas_precompiled;
 mod canvas_variants;
+/// A caption style's preview, drawn as the export draws it.
+pub mod caption_preview;
 mod constants;
 mod cursor_artwork;
 /// Sources fed from Direct3D 11 textures: capture, the camera and Media
@@ -231,6 +233,8 @@ fn generator_shift(seed: u32) -> [f32; 4] {
 /// and `cursor_model`.
 type ArtworkConstants = ([f32; 4], [f32; 4], [u32; 4]);
 
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod caption_render_tests;
 #[cfg(all(test, target_os = "windows"))]
 mod crop_preview_tests;
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]

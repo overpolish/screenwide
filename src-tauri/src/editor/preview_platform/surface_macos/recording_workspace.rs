@@ -46,6 +46,7 @@ impl RecordingPreviewSurface {
             ..cursor
           }),
           keyboard: layer.keyboard,
+          captions: layer.captions.clone(),
           camera: picture(layer.camera, layer.camera_pixels),
           overlay: layer.overlay,
           camera_settings: layer.camera_settings,

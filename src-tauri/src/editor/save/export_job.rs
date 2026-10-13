@@ -5,8 +5,12 @@ use super::*;
 use screenwide_export::track_selection;
 
 mod publish;
+mod subtitled;
+pub(super) use subtitled::save_recording_artifact;
 
-pub(super) fn save_recording_artifact(
+/// Exports the recording's media: its video, camera and audio as `options`
+/// ask; [`save_recording_artifact`] adds its subtitles.
+fn save_recording_media(
   artifact: &EditorArtifact,
   writing: &Path,
   stem: &str,
@@ -20,6 +24,7 @@ pub(super) fn save_recording_artifact(
     camera_compression,
     camera_overlay,
     camera_resolution_scale_percent,
+    captions,
     collapse_audio,
     compression,
     cursor_effects,
@@ -199,6 +204,7 @@ pub(super) fn save_recording_artifact(
       job_cancellation,
       timeline.as_ref(),
       camera_effects,
+      captions.as_ref(),
     );
   }
 
@@ -212,6 +218,7 @@ pub(super) fn save_recording_artifact(
     artifact_id: *id,
     audio_tracks,
     cancelled: job_cancellation,
+    captions: captions.as_ref(),
     compression,
     camera_effects: camera_effects.clone().filter(|_| camera_is_primary),
     cursor: baked_cursor,

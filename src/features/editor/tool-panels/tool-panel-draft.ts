@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { patchCaptions } from "../recording/captions/recording-captions";
 import { EditorKind } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
@@ -98,6 +99,8 @@ export function resolveToolPanelSnapshot(
     autoZoomScenes: _autoZoomScenes,
     bakeCamera,
     cameraEffects,
+    captionDefaults: _captionDefaults,
+    captions,
     chooseCameraBackground: _chooseCameraBackground,
     chooseSceneTemplate: _chooseSceneTemplate,
     clearAutoZooms: _clearAutoZooms,
@@ -158,6 +161,9 @@ export function resolveToolPanelSnapshot(
     ...(keyboardEffects
       ? { keyboardEffects: { ...snapshot.keyboardEffects, ...keyboardEffects } }
       : {}),
+    // So are the captions' settings, and the switch shows at once.
+    captions:
+      snapshot.captions && patchCaptions(snapshot.captions, captions ?? {}),
   };
   // A dragged inset holds its own value until the editor acknowledges it, so
   // the knob stays under the pointer rather than snapping back a frame.

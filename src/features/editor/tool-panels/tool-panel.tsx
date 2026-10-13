@@ -7,6 +7,7 @@ import { ToolPanelKind } from "../../popup-panel/store";
 import { EditorKind } from "../types";
 
 import { AnnotationPanel } from "./annotation/annotation-panel";
+import { CaptionsPanel } from "./captions/captions-panel";
 import { CropPanel } from "./crop/crop-panel";
 import { CursorPanel } from "./cursor/cursor-panel";
 import { FramePanel } from "./frame/frame-panel";
@@ -21,6 +22,7 @@ const toolPanels: Record<
   (props: { workspace: EditorKind }) => ReactNode
 > = {
   annotation: AnnotationPanel,
+  captions: CaptionsPanel,
   crop: CropPanel,
   cursor: CursorPanel,
   frame: FramePanel,

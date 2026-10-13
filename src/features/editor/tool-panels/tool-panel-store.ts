@@ -12,6 +12,7 @@ import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
 } from "../export/recording-export-settings";
+import { CaptionTemplates } from "../recording/captions/use-caption-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import {
   CursorEffectSettings,
@@ -28,6 +29,8 @@ import {
   ToolPanelSelection,
 } from "./tool-panel-selection";
 import { ToolPanelTranscript } from "./tool-panel-transcript";
+
+import type { RecordingCaptions } from "../../../bindings/RecordingCaptions";
 
 /**
  * What the frame panel shows: the output canvas the workspace renders into,
@@ -107,6 +110,12 @@ export type ToolPanelSnapshot = {
   selection: ToolPanelSelection | null;
   /** Latest panel request committed with this snapshot. */
   acknowledgedSeq?: number;
+  /** The caption templates, each with the default saved for it, and which
+   * new captions start from; absent or null until they are known. */
+  captionTemplates?: CaptionTemplates | null;
+  /** The recording's captions, with the defaults for whatever is unset,
+   * where it has a microphone to caption; absent or null otherwise. */
+  captions?: RecordingCaptions | null;
   /** The recording's transcript, where it has a microphone to transcribe;
    * absent or null otherwise. */
   transcript?: ToolPanelTranscript | null;
@@ -132,6 +141,7 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   cameraOutput: null,
   canClearDrawings: false,
   canRestoreShortcuts: false,
+  captions: null,
   crop: null,
   cursorEffects: DEFAULT_CURSOR_EFFECTS,
   frame: null,

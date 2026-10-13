@@ -131,6 +131,9 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.swapScenePanes) on.onScenePanesSwap?.();
   if (values.transcriptRequest)
     on.onTranscriptRequest?.(values.transcriptRequest);
+  if (values.captions) on.onCaptionsChange?.(values.captions);
+  if (values.captionDefaults)
+    on.onCaptionDefaultsChange?.(values.captionDefaults);
 };
 
 /**

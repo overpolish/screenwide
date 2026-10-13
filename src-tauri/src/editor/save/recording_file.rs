@@ -11,6 +11,8 @@ pub(in crate::editor) struct PrimaryRecordingSaveRequest<'a> {
   pub artifact_id: u64,
   pub audio_tracks: &'a [RecordingAudioTrack],
   pub cancelled: &'a AtomicBool,
+  /// The captions drawn into the picture.
+  pub captions: Option<&'a screenwide_captions::CaptionTrack>,
   pub compression: u8,
   /// The camera's effects, where the recording is of the camera alone.
   pub camera_effects:
@@ -52,6 +54,7 @@ pub(in crate::editor) fn save_primary_recording(
       artifact_id: request.artifact_id,
       camera_effects: request.camera_effects,
       cancelled: request.cancelled,
+      captions: request.captions,
       cursor: request.cursor,
       cursor_effects: request.cursor_effects,
       directory: request.directory,
@@ -75,6 +78,7 @@ pub(in crate::editor) fn save_primary_recording(
       .timeline
       .is_some_and(|plan| !plan.annotation_clips().is_empty())
     || request.camera_effects.is_some()
+    || request.captions.is_some()
   {
     let path = unique_path(
       request.directory,
@@ -106,6 +110,7 @@ pub(in crate::editor) fn save_primary_recording(
         }),
       camera_on_top: true,
       cancelled: request.cancelled,
+      captions: request.captions,
       cursor: None,
       cursor_effects: request.cursor_effects,
       keyboard: None,

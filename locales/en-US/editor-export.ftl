@@ -22,6 +22,14 @@ editor-export-quality-smaller = Smaller file
 editor-export-quality-smallest = Smallest file
 editor-export-collapse-audio = Collapse audio tracks
 editor-export-collapse-audio-description = Mix the selected tracks into one.
+# A subtitle file made from the transcript, written beside the exported video.
+editor-export-subtitles = Subtitles
+editor-export-subtitles-description = Saved beside the video, with the same name.
+# Shown in place of the description while the recording has no transcript.
+editor-export-subtitles-needs-transcript = Transcribe the recording to add subtitles.
+editor-export-subtitles-none = None
+editor-export-subtitles-srt = SRT
+editor-export-subtitles-vtt = WebVTT
 editor-export-open-folder = Open folder after saving
 editor-export-delete-project = Delete project
 editor-export-delete-project-description = After saving, moves it to Recently Deleted.

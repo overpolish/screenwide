@@ -127,18 +127,29 @@ impl CounterAtlas {
   }
 }
 
+/// A caption word's outline, set beside its type.
+mod outline;
 /// The DirectWrite rasterisation the atlas is drawn by: a counter's number,
 /// and a text box's lines.
 mod rasterize;
 mod text_box;
 use super::gpu_atlas::GpuAtlas;
+use screenwide_annotations::text::face::TypeFace;
 
-/// What the atlas keys a piece of type by: its text, and for a box being
-/// typed into its caret, its selection and the caret's width in atlas pixels
-/// too, so each change of them draws afresh. `0xFF` never appears in UTF-8,
-/// so no text can collide with that tail.
+/// What the atlas keys a piece of type by: its text, for a caption its face
+/// and outline too, and for a box being typed into its caret, its selection
+/// and the caret's width in atlas pixels too, so each change of them draws
+/// afresh. `0xFF` and `0xFE` never appear in UTF-8, so no text can collide
+/// with those tails.
 fn cell_key(entry: &PreparedType, drawn: f64) -> Vec<u8> {
   let mut key = entry.text.as_bytes().to_vec();
+  if entry.face != TypeFace::ANNOTATION || entry.outline > 0.0 {
+    key.push(0xFE);
+    key.extend_from_slice(entry.face.family_bytes());
+    key.push(0xFE);
+    key.extend_from_slice(&entry.face.weight.to_le_bytes());
+    key.extend_from_slice(&entry.outline.to_bits().to_le_bytes());
+  }
   if let Some(marks) = entry.marks {
     key.push(0xFF);
     key.extend_from_slice(&(marks.start as u32).to_le_bytes());
@@ -149,13 +160,26 @@ fn cell_key(entry: &PreparedType, drawn: f64) -> Vec<u8> {
   key
 }
 
+/// How `entry`'s type is set at `size` atlas pixels: its face, and its
+/// outline grown from canvas pixels to atlas ones as the type is.
+fn look(entry: &PreparedType, size: f32) -> text_box::Look<'_> {
+  text_box::Look {
+    face: &entry.face,
+    outline: if entry.size > 0.0 {
+      f64::from(entry.outline * size / entry.size)
+    } else {
+      0.0
+    },
+  }
+}
+
 /// `size` is in atlas pixels, and `drawn` is how many of them one drawn pixel
 /// spans, which a text box's caret is as wide as.
 fn measure_cell(entry: &PreparedType, size: f32, drawn: f64) -> Option<(u32, u32)> {
   if entry.style == 0 {
     return rasterize::measure(&entry.text, size).ok();
   }
-  text_box::measure(&entry.text, size, drawn, entry.marks)
+  text_box::measure(look(entry, size), &entry.text, size, drawn, entry.marks)
     .ok()
     .flatten()
 }
@@ -169,7 +193,15 @@ fn draw_cell(
   if entry.style == 0 {
     return rasterize::draw(&entry.text, size, cell);
   }
-  text_box::draw(&entry.text, size, drawn, entry.style - 1, entry.marks, cell)
+  text_box::draw(
+    look(entry, size),
+    &entry.text,
+    size,
+    drawn,
+    entry.style - 1,
+    entry.marks,
+    cell,
+  )
 }
 
 /// The atlas one composition samples, if any type is drawn, and its

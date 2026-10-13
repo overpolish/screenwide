@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import { ButtonGroup } from "../../../../components/base/button-group/button-group";
 import { t } from "../../../../i18n/i18n";
 import { useProvideEditorToolbarTools } from "../../panel/editor-toolbar-context";
+import { CaptionsToolToggle } from "../../tool-panels/captions/captions-tool-toggle";
 import { CursorToolToggle } from "../../tool-panels/cursor/cursor-tool-toggle";
 import { KeyboardToolToggle } from "../../tool-panels/keyboard/keyboard-tool-toggle";
 import { TranscriptToolToggle } from "../../tool-panels/transcript/transcript-tool-toggle";
@@ -35,7 +36,7 @@ export function useRecordingToolbar({
   hasCursorData: boolean;
   hasKeyboardData: boolean;
   /** Whether the recording has a microphone track, which the Transcript
-   * tool transcribes. */
+   * tool transcribes and the Captions tool captions. */
   hasMicrophone: boolean;
   /** Whether the recording has a screen and a camera to arrange. */
   hasScenes: boolean;
@@ -101,7 +102,10 @@ export function useRecordingToolbar({
                 <KeyboardToolToggle onDismiss={dismissToolPanel} />
               ) : null}
               {hasMicrophone ? (
-                <TranscriptToolToggle onDismiss={dismissToolPanel} />
+                <>
+                  <TranscriptToolToggle onDismiss={dismissToolPanel} />
+                  <CaptionsToolToggle onDismiss={dismissToolPanel} />
+                </>
               ) : null}
             </ButtonGroup>
           ) : null}
@@ -117,9 +121,9 @@ export function useRecordingToolbar({
           />
         </>
       ) : hasMicrophone ? (
-        // The transcript is the voice's, not the picture's, so it is offered
-        // with no picture to point the other tools at: an audio recording,
-        // or one whose video tracks are all turned off.
+        // The transcript and its captions are the voice's, not the picture's,
+        // so they are offered with no picture to point the other tools at: an
+        // audio recording, or one whose video tracks are all turned off.
         <ButtonGroup
           aria-label={t("editor-recording-effects")}
           className="gap-control"
@@ -128,6 +132,7 @@ export function useRecordingToolbar({
             onDismiss={dismissToolPanel}
             resetsView={false}
           />
+          <CaptionsToolToggle onDismiss={dismissToolPanel} resetsView={false} />
         </ButtonGroup>
       ) : undefined,
     [

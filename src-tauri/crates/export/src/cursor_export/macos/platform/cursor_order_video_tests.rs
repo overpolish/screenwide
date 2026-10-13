@@ -119,6 +119,7 @@ fn brightest_cursor(
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       annotation_clips: clips.to_vec(),
       segments: vec![RecordingTimelineSegment {
@@ -151,6 +152,7 @@ fn brightest_cursor(
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: Some(cursor),
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,

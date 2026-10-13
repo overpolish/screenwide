@@ -24,6 +24,7 @@ import type { AnnotationKind } from "../../../components/shared/annotation-style
  * are one word. */
 export type EditorToolId =
   | AnnotationKind
+  | "captions"
   | "crop"
   | "cursor"
   | "frame"
@@ -77,6 +78,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     panel: "annotation",
     shortcut: "A",
   },
+  captions: { panel: "captions", resetsView: true },
   counter: {
     drawsOnLayer: true,
     icon: CounterToolIcon,

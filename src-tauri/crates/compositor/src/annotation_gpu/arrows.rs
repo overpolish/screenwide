@@ -141,6 +141,12 @@ pub struct PreparedType {
   pub(crate) style: u32,
   /// The caret and the selection of a box being typed into.
   pub(crate) marks: Option<screenwide_annotations::text::typing::TypingMarks>,
+  /// The face the type is set in: Inter for annotations, the caption
+  /// style's for captions.
+  pub(crate) face: screenwide_annotations::text::face::TypeFace,
+  /// How wide an outline is drawn round the type, in canvas pixels, which
+  /// the atlas sets beside it; zero for none.
+  pub(crate) outline: f32,
 }
 
 /// One image a composition draws: its place in the list, its picture's

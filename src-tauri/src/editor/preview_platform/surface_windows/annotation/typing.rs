@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 use super::*;
 use crate::editor::preview_platform::surface::type_device::line_width;
+use screenwide_annotations::text::face::TypeFace;
 use screenwide_annotations::text::geometry::text_distance;
 use screenwide_annotations::text::typing::{TextTyping, TypingLayout};
 
@@ -52,7 +53,7 @@ struct Place {
 
 impl Place {
   fn layout<R>(&self, work: impl FnOnce(&TypingLayout<'_>) -> R) -> R {
-    let width = |line: &str| line_width(line, self.font);
+    let width = |line: &str| line_width(&TypeFace::ANNOTATION, line, self.font);
     work(&TypingLayout {
       width: &width,
       block_width: self.width,

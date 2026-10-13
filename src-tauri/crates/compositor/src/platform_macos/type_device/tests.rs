@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::TypeDevice;
+use screenwide_annotations::text::face::TypeFace;
 
 /// Type comes out with partial coverage along its edges, inside the width it
 /// was measured at, and standing on its baseline the ascent below the line's
 /// top: the atlas lays a line out from those three numbers.
 #[test]
 fn type_is_antialiased_inside_its_measured_box_and_sits_on_its_baseline() {
-  let device = TypeDevice::new(120.0).unwrap();
+  let device = TypeDevice::in_face(TypeFace::ANNOTATION, 120.0).unwrap();
   let width = device.advance("World");
   let (ascent, descent) = device.vertical_metrics();
   assert!(width > 0.0 && ascent > 0.0 && descent > 0.0);

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Keyboard } from "lucide-react";
+import { Captions, Keyboard } from "lucide-react";
 import { memo, useEffect, useMemo } from "react";
 
 import { t } from "../../../../i18n/i18n";
@@ -29,11 +29,18 @@ import { RecordingVideoTrackRows } from "./recording-video-track-rows";
 import { timedLaneMinimumSpan } from "./timed-lane-layout";
 import { TimelineItemLane } from "./timeline-item-lane";
 
+import type { Caption } from "../../../../bindings/Caption";
+
 /** The narrowest a shortcut badge is drawn, in pixels; kept here beside the
  * lane that carries it so the lane and the meter agree on one number. */
 const KEYBOARD_MINIMUM_ITEM_WIDTH_PX = 48;
+/** The narrowest a caption is drawn, in pixels. Captions follow one another
+ * and never overlap, so they keep one row and their true width; this only
+ * keeps a one-word caption from vanishing zoomed out. */
+const CAPTION_MINIMUM_ITEM_WIDTH_PX = 2;
 const NO_IDS: ReadonlySet<string> = new Set();
 const NO_SCENES: RecordingSceneClip[] = [];
+const NO_CAPTIONS: readonly Caption[] = [];
 const NO_MOMENTS: readonly RecordingMoment[] = [];
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
@@ -45,6 +52,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   annotationPinning,
   audioTracks,
   blade,
+  captions = NO_CAPTIONS,
   durationMs,
   enabledTracks,
   enabledVideoTracks,
@@ -70,6 +78,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onScenesDraftChange,
   onScenesSweep,
   onSeek,
+  onSelectCaption,
   onSelectKeyboardShortcut,
   onSelectedTrackChange,
   playhead,
@@ -97,6 +106,16 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
     minimumItemWidthPx: KEYBOARD_MINIMUM_ITEM_WIDTH_PX,
     zoom: timeline.viewport.zoom,
   });
+  const captionItems = useMemo(
+    () =>
+      captions.map((caption) => ({
+        endMs: caption.endMs,
+        id: caption.id,
+        label: caption.text.replace(/\n/gu, " "),
+        startMs: caption.startMs,
+      })),
+    [captions],
+  );
   const visibleMoments = useMemo(
     () => visibleRecordingMoments(blade.edit, moments, sourceDurationMs),
     [blade.edit, moments, sourceDurationMs],
@@ -198,6 +217,23 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               sourceDurationMs={sourceDurationMs}
               viewport={timeline.viewport}
               warningFragmentIds={adjustedKeyboardFragmentIds}
+            />
+          ) : null}
+          {captionItems.length > 0 ? (
+            <TimelineItemLane
+              edit={blade.edit}
+              icon={<Captions />}
+              items={captionItems}
+              label={t("editor-timeline-captions")}
+              minimumItemWidthPx={CAPTION_MINIMUM_ITEM_WIDTH_PX}
+              onSelect={(fragment) => {
+                blade.clearRangeSelection();
+                onSelectCaption?.();
+                onSeek(fragment.outputStart, "end");
+              }}
+              outputLengthMs={durationMs}
+              sourceDurationMs={sourceDurationMs}
+              viewport={timeline.viewport}
             />
           ) : null}
           <RecordingVideoTrackRows

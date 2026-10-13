@@ -10,6 +10,11 @@ pub(crate) mod auto_zoom;
 /// video draws the camera.
 pub(crate) mod camera_effects;
 mod camera_save;
+/// The templates and fonts the Captions panel styles captions with.
+pub(crate) mod caption_styles;
+/// Captions made from the transcript, for the lane and an export's
+/// subtitle file.
+pub(crate) mod captions;
 pub(crate) mod commands;
 mod directory;
 pub(crate) mod export_window;
@@ -52,7 +57,7 @@ pub use project_thumbnail::project_thumbnail;
 mod recording_model;
 mod screenshot_composition;
 pub(crate) mod screenshot_project;
-pub use recording_model::RecordingExportOptions;
+pub use recording_model::{ExportSubtitles, RecordingExportOptions};
 use screenwide_export::recording_model::{
   AudioTrackKind, RecordingAudioTrack, RecordingCamera, RecordingOutputSettings,
 };

@@ -47,6 +47,7 @@ fn edit(segments: Vec<RecordingTimelineSegment>) -> RecordingTimelineEdit {
     transcript_cuts: Vec::new(),
     transcript_corrections: Vec::new(),
     transcript_allowed_words: Vec::new(),
+    captions: None,
     scene_clips: vec![scene("s", 3_000, 7_000)],
     next_segment_id: 3,
     segments,

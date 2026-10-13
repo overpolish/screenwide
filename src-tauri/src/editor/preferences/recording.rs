@@ -41,6 +41,7 @@ pub struct RecordingExportChoices {
   /// choice is labelled. A raw percentage would pick a different size on a
   /// display with another scale factor.
   pub resolution_scale_ratio: Option<f64>,
+  pub subtitles: Option<ExportSubtitles>,
 }
 
 impl RecordingExportChoices {
@@ -87,6 +88,7 @@ impl RecordingExportChoices {
       delete_project_after_export: Some(options.delete_project_after_export),
       resolution_scale_ratio: has_picture
         .then(|| f64::from(options.resolution_scale_percent) / f64::from(original_scale)),
+      subtitles: Some(options.subtitles),
     }
   }
 
@@ -104,6 +106,7 @@ impl RecordingExportChoices {
         .delete_project_after_export
         .or(self.delete_project_after_export),
       resolution_scale_ratio: newer.resolution_scale_ratio.or(self.resolution_scale_ratio),
+      subtitles: newer.subtitles.or(self.subtitles),
     }
   }
 

@@ -152,6 +152,7 @@ export function ExportOptionsWindow() {
         estimatedSizeBytes: options.estimatedSizeBytes,
         extension: options.extension || (artifact?.extension ?? ""),
         fileStem,
+        hasTranscript: options.hasTranscript,
         includeCamera: options.includeCamera,
         isEstimatingSize: options.isEstimatingSize,
         isSaving: options.isSaving,
@@ -186,9 +187,13 @@ export function ExportOptionsWindow() {
         onResolutionScaleChange: (resolutionScalePercent) => {
           patch({ resolutionScalePercent });
         },
+        onSubtitlesChange: (subtitles) => {
+          patch({ subtitles });
+        },
         openLocationAfterExport: general?.openLocationAfterExport ?? false,
         recordingOutput: options.recordingOutput,
         resolutionScalePercent: options.resolutionScalePercent,
+        subtitles: options.subtitles,
       }}
       isSaving={isSaving}
       onClose={close}

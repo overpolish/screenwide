@@ -30,6 +30,8 @@ import {
   KeyboardEffectSettings,
 } from "./types";
 
+import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
+
 type PreviewSelectionLayout = {
   paneIndex: number;
   radiusPercent: number;
@@ -429,6 +431,8 @@ type SaveExportOptions = RecordingProcessingOptions & {
   /** Moves the recording's project to the Trash once the export is saved. */
   deleteProjectAfterExport: boolean;
   fileStem: string;
+  /** The subtitle file written beside a recording's video. */
+  subtitles: ExportSubtitles;
 };
 
 export const saveExport = ({
@@ -449,6 +453,7 @@ export const saveExport = ({
   recordingOutput,
   resolutionScalePercent,
   screenshotOutput,
+  subtitles,
   timelineEdit,
 }: SaveExportOptions) =>
   invoke<string | null>("save_export", {
@@ -473,6 +478,7 @@ export const saveExport = ({
       },
       resolutionScalePercent,
       screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
+      subtitles,
       timelineEdit,
     },
   });

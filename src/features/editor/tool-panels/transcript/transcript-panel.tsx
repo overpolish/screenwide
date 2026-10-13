@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 
 import { planRecordingSilences } from "../../recording/microphone/microphone-api";
-import {
-  getRecordingTranscript,
-  TRANSCRIPT_PLAYHEAD_EVENT,
-  TranscriptPlayhead,
-} from "../../recording/transcript/transcript-api";
 import { EditorKind } from "../../types";
 import { sceneOffer } from "../scene/scene-offer";
 import { TranscriptRequest } from "../tool-panel-transcript";
@@ -18,6 +12,10 @@ import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { useTranscriptChannel } from "./transcript-channel";
 import { TranscriptPanelView } from "./transcript-panel-view";
+import {
+  useTranscriptPlayheadFeed,
+  useTranscriptWordsFeed,
+} from "./use-transcript-feed";
 
 /** The Transcript panel in its window: the editor's snapshot says where the
  * transcript is, the channel carries its words and the playhead, and every
@@ -35,61 +33,17 @@ export function TranscriptPanel({ workspace }: { workspace: EditorKind }) {
     change({ transcriptRequest });
   };
 
-  // The playhead travels from the editor window on its own, so it never
-  // rides the settings snapshot.
-  useEffect(() => {
-    let disposed = false;
-    let stop: (() => void) | undefined;
-    listen<TranscriptPlayhead>(TRANSCRIPT_PLAYHEAD_EVENT, (event) => {
-      if (!disposed)
-        useTranscriptChannel.setState({ playheadMs: event.payload.playheadMs });
-    })
-      .then((unlisten) => {
-        if (disposed) unlisten();
-        else stop = unlisten;
-      })
-      .catch((cause: unknown) => {
-        console.error("Could not follow the transcript's playhead", cause);
-      });
-    return () => {
-      disposed = true;
-      stop?.();
-    };
-  }, []);
+  useTranscriptPlayheadFeed();
+  useTranscriptWordsFeed(transcript);
 
-  // The words, fetched here rather than in the snapshot so a long recording's
-  // thousands never ride every change of a setting. They are refetched when
-  // the transcript is re-made, and cleared when the recording changes. What
-  // Remove silences would cut is read with them: transcribing has already
-  // listened through the track, so the plan comes back at once.
+  // What Remove silences would cut, read up front so hovering Remove can
+  // show it: transcribing has already listened through the track, so the
+  // plan comes back at once.
   useEffect(() => {
+    useTranscriptChannel.setState({ plannedSilences: [] });
     const artifactId = transcript?.artifactId;
-    if (transcript?.status !== "ready" || artifactId === undefined) {
-      useTranscriptChannel.setState({
-        language: null,
-        plannedSilences: [],
-        words: null,
-      });
-      return;
-    }
+    if (transcript?.status !== "ready" || artifactId === undefined) return;
     let current = true;
-    useTranscriptChannel.setState({
-      language: null,
-      plannedSilences: [],
-      words: null,
-    });
-    getRecordingTranscript(artifactId)
-      .then((result) => {
-        if (current)
-          useTranscriptChannel.setState({
-            language: result?.language ?? null,
-            words: result?.words ?? null,
-          });
-      })
-      .catch((cause: unknown) => {
-        console.error("Could not read the transcript's words", cause);
-        if (current) useTranscriptChannel.setState({ words: null });
-      });
     planRecordingSilences(artifactId)
       .then((cuts) => {
         if (current) useTranscriptChannel.setState({ plannedSilences: cuts });

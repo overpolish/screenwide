@@ -12,6 +12,10 @@ import { installPointerModalityGuard } from "./lib/pointer-modality";
 import { synchronizeSystemAccent } from "./lib/system-accent";
 import { synchronizeSystemTheme } from "./lib/theme";
 import { installWindowInteractionTransitions } from "./lib/window-interaction-transitions";
+import {
+  forgetFailedLoads,
+  recoverFromFailedLoad,
+} from "./windows/window-load-recovery";
 import { loadWindow } from "./windows/window-routes";
 
 synchronizeSystemTheme();
@@ -20,11 +24,13 @@ installInactiveWindowHoverBridge();
 installPointerModalityGuard();
 installWindowInteractionTransitions();
 
-// Screenwide provides its own right-click interactions where needed. Never
-// expose the browser context menu from an app webview.
-window.addEventListener("contextmenu", (event) => {
-  event.preventDefault();
-});
+// Screenwide provides its own right-click interactions where needed, so the
+// web view's own menu never shows in the app. A development build keeps it,
+// as the way into the inspector.
+if (!import.meta.env.DEV)
+  window.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+  });
 
 if (navigator.userAgent.includes("Windows")) {
   document.documentElement.dataset.platform = "windows";
@@ -35,6 +41,7 @@ if (navigator.userAgent.includes("Windows")) {
 void loadAppLocale()
   .then(() => loadWindow(window.location.pathname))
   .then((Window) => {
+    forgetFailedLoads();
     if (!Window) return;
     createRoot(document.getElementById("root") as HTMLElement).render(
       <StrictMode>
@@ -43,4 +50,5 @@ void loadAppLocale()
         </I18nProvider>
       </StrictMode>,
     );
-  });
+  })
+  .catch(recoverFromFailedLoad);

@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-lexicon"
+description = "What a transcript's words are: profanity and hesitation sounds, by language"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+icu_normalizer.workspace = true
+regex.workspace = true

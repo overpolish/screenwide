@@ -10,6 +10,7 @@ import {
 } from "../annotations/annotation-channel";
 import { CameraOutput, composedVideoTracks } from "../export/camera-output";
 import { keyboardMaximumSizePercent } from "../keyboard-effect/keyboard-effect-geometry";
+import { useCaptionTools } from "../recording/captions/use-caption-tools";
 import { useMicrophoneTools } from "../recording/microphone/use-microphone-tools";
 import { useRecordingSceneSelection } from "../recording/scenes/recording-scene-channel";
 import { useTranscriptTools } from "../recording/transcript/use-transcript-tools";
@@ -210,6 +211,13 @@ export function useEditorToolPanels({
     onEditChange: onRecordingTimelineEditChange,
     workspace,
   });
+  const captions = useCaptionTools({
+    artifact,
+    edit: recordingTimelineEdit,
+    general,
+    onEditChange: onRecordingTimelineEditChange,
+    onGeneralChange: applyGeneralSettings,
+  });
   const keyboardOutput = recordingOutput
     ? screenshotOutputDimensions(recordingOutput.primary)
     : null;
@@ -225,6 +233,8 @@ export function useEditorToolPanels({
       cameraOutput,
       canClearDrawings,
       canRestoreShortcuts: shortcuts.canRestore,
+      captionTemplates: captions.templates,
+      captions: captions.snapshot,
       crop: cropTarget?.snapshot ?? null,
       cursorEffects,
       frame: frameTarget?.snapshot ?? null,
@@ -259,6 +269,8 @@ export function useEditorToolPanels({
       frameTarget,
       keyboardEffects,
       onBakeCameraChange,
+      onCaptionDefaultsChange: captions.changeDefaults,
+      onCaptionsChange: captions.change,
       onCursorEffectsChange,
       onKeyboardEffectsChange,
       onTranscriptRequest: transcript.handle,
@@ -276,4 +288,7 @@ export function useEditorToolPanels({
       workspace,
     }),
   );
+  // Subtitles are made of the transcript, so the export offers them once
+  // there is one.
+  return { hasTranscript: transcript.snapshot?.status === "ready" };
 }

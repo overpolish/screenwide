@@ -6,14 +6,18 @@ import {
   Clapperboard,
   ClipboardCopy,
   Copy,
+  Eye,
+  EyeOff,
   Folder,
   FolderOpen,
   FolderRoot,
   FolderSearch,
   HardDrive,
   ImageDown,
+  Link2,
   LucideIcon,
   PenLine,
+  SeparatorVertical,
   ShieldCheck,
   SpellCheck,
   Timer,
@@ -35,11 +39,15 @@ import {
   TextToolIcon,
 } from "../../components/shared/annotation-style/annotation-tool-icons";
 
-import { PopupPanelIcon } from "./store";
+import type { AnnotationKind } from "../../components/shared/annotation-style/types";
 
-// Items cross a window boundary as data, so a glyph travels by name.
-const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
+// Items cross a window boundary as data, so a glyph travels by name. Every
+// annotation tool has one, under `tool-` so it stays apart from `image`, the
+// export-an-image glyph.
+const itemGlyphs = {
   allow: ShieldCheck,
+  "caption-join": Link2,
+  "caption-split": SeparatorVertical,
   clipboard: ClipboardCopy,
   copy: Copy,
   edit: PenLine,
@@ -48,11 +56,13 @@ const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
   "folder-root": FolderRoot,
   "folder-search": FolderSearch,
   "hard-drive": HardDrive,
+  hide: EyeOff,
   image: ImageDown,
   remove: X,
   restore: Undo2,
   scene: Clapperboard,
   scrolling: ArrowBigDownDash,
+  show: Eye,
   spelling: SpellCheck,
   timer: Timer,
   "tool-arrow": ArrowToolIcon,
@@ -66,7 +76,11 @@ const itemGlyphs: Record<PopupPanelIcon, LucideIcon> = {
   "tool-spotlight": SpotlightToolIcon,
   "tool-text": TextToolIcon,
   trash: Trash2,
-};
+} satisfies Record<`tool-${AnnotationKind}`, LucideIcon> &
+  Record<string, LucideIcon>;
+
+/** A glyph a pop-up item can carry, by its name in the registry. */
+export type PopupPanelIcon = keyof typeof itemGlyphs;
 
 /** Glyphs that point the way text runs, and turn with it. */
 const directionalGlyphs = new Set<PopupPanelIcon>(["restore"]);

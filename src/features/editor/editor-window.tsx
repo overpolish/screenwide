@@ -14,6 +14,11 @@ import {
   setScreenshotRadius,
 } from "./api";
 import {
+  closeEditorWindow,
+  minimizeEditorWindow,
+  toggleEditorWindowMaximized,
+} from "./editor-actions";
+import {
   cameraOutputChoice,
   exportedRecordingEdits,
 } from "./export/camera-output";
@@ -73,6 +78,8 @@ import {
 } from "./use-editor-edit-history";
 import { currentEditorKind } from "./window-kind";
 
+import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
+
 const EMPTY_AUDIO_TRACK_VOLUMES: AudioTrackVolume[] = [];
 
 export function EditorWindow() {
@@ -95,6 +102,7 @@ export function EditorWindow() {
   const [collapseAudio, setCollapseAudio] = useState(false);
   const [deleteProjectAfterExport, setDeleteProjectAfterExport] =
     useState(false);
+  const [subtitles, setSubtitles] = useState<ExportSubtitles>("none");
   const [compression, setCompression] = useState(DEFAULT_COMPRESSION);
   const [cameraCompression, setCameraCompression] =
     useState(DEFAULT_COMPRESSION);
@@ -395,6 +403,7 @@ export function EditorWindow() {
         : seeded.deleteProjectAfterExport,
     );
     setCompression(seeded.compression);
+    setSubtitles(seeded.subtitles);
     setCameraCompression(seeded.cameraCompression);
     setCameraResolutionScalePercent(seeded.cameraResolutionScalePercent);
     setResolutionScalePercent(seeded.resolutionScalePercent);
@@ -544,15 +553,7 @@ export function EditorWindow() {
           }
           setError(null);
         }}
-        onCancel={() => {
-          // Asking to close the window rather than discarding outright: Rust
-          // owns the close request, and that is where the confirmation is.
-          getCurrentWindow()
-            .close()
-            .catch((cause: unknown) => {
-              console.error("Could not close the editor window", cause);
-            });
-        }}
+        onCancel={closeEditorWindow}
         onCancelSave={() => {
           setIsCancelingSave(true);
           cancelExportJob()
@@ -592,13 +593,7 @@ export function EditorWindow() {
           setError(null);
         }}
         onKeyboardEffectsChange={setKeyboardEffects}
-        onMinimize={() => {
-          getCurrentWindow()
-            .minimize()
-            .catch((cause: unknown) => {
-              console.error("Could not minimize the editor window", cause);
-            });
-        }}
+        onMinimize={minimizeEditorWindow}
         onRecordingOutputChange={(trackId, settings) => {
           setRecordingOutput((current) => ({
             ...current,
@@ -642,6 +637,7 @@ export function EditorWindow() {
             deleteProjectAfterExport,
             fileStem,
             screenshotOutput,
+            subtitles,
             timelineEdit: exportEdits.timelineEdit,
           })
             .then((path) => {
@@ -706,16 +702,8 @@ export function EditorWindow() {
           }
           setAudioTrackVolumes({ artifactId, values: next });
         }}
-        onToggleMaximize={() => {
-          getCurrentWindow()
-            .toggleMaximize()
-            .catch((cause: unknown) => {
-              console.error(
-                "Could not maximize or restore the editor window",
-                cause,
-              );
-            });
-        }}
+        onSubtitlesChange={setSubtitles}
+        onToggleMaximize={toggleEditorWindowMaximized}
         recordingOutput={recordingOutput}
         recordingPreviewError={recordingPreviewError}
         recordingPreviewTracks={recordingPreviewTracks}
@@ -724,6 +712,7 @@ export function EditorWindow() {
         screenshotOutput={screenshotOutput}
         selectedScreenshotItemId={selectedScreenshotItemId}
         selectedTrack={selectedTrackId}
+        subtitles={subtitles}
       />
     </EditorEditGestureContext>
   );

@@ -8,6 +8,8 @@
 //! a type atlas of its own; only the editor draws images.
 
 mod arrows;
+/// The captions showing in a frame, drawn as text boxes.
+mod captions;
 mod counter_artwork;
 /// An atlas's texture.
 mod gpu_atlas;
@@ -18,6 +20,7 @@ pub use arrows::{
   GpuBuffer, PreparedArrows, PreparedImage, PreparedType, PreviewArrow, PreviewSample,
   MAX_EXPOSURE_SAMPLES,
 };
+pub use captions::{caption_arrows, caption_face, caption_measure, caption_overlay};
 /// A counter's number and a text box's lines are type, so they are
 /// rasterised rather than drawn by the shader.
 pub use counter_artwork::{numbered_arrows, CounterAtlas};

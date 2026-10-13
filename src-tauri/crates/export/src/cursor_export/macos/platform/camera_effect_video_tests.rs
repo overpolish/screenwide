@@ -80,6 +80,7 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       annotation_clips: camera
         .into_iter()
@@ -148,6 +149,7 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
     )),
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,

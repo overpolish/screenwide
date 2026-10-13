@@ -26,6 +26,7 @@ edition = "2021"
 [workspace.dependencies]
 screenwide-accent = { path = "crates/accent" }
 screenwide-annotations = { path = "crates/annotations" }
+screenwide-captions = { path = "crates/captions" }
 screenwide-capture = { path = "crates/capture" }
 screenwide-compositor = { path = "crates/compositor" }
 screenwide-cursor-effects = { path = "crates/cursor_effects" }
@@ -35,6 +36,7 @@ screenwide-i18n = { path = "crates/i18n" }
 screenwide-images = { path = "crates/images" }
 screenwide-imaging = { path = "crates/imaging" }
 screenwide-keyboard-effects = { path = "crates/keyboard_effects" }
+screenwide-lexicon = { path = "crates/lexicon" }
 screenwide-moments = { path = "crates/moments" }
 screenwide-osc = { path = "crates/osc" }
 screenwide-output = { path = "crates/output" }
@@ -59,6 +61,9 @@ dispatch2 = "0.3.1"
 fluent-bundle = "0.16"
 fluent-langneg = "0.13"
 getrandom = "0.3"
+# Folding text for matching words: already built for URL handling, so
+# nothing new is compiled for it.
+icu_normalizer = "2.2"
 # Every format except AVIF, which the image crate can only encode and nothing
 # here encodes; it is the costliest dependency to compile.
 image = { version = "0.25.10", default-features = false, features = ["rayon", "bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "tga", "tiff", "webp"] }
@@ -72,6 +77,7 @@ pollster = "1.0.1"
 quantette = "0.6.0"
 rayon = "1.12.0"
 realfft = "3.5.0"
+regex = "1.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sys-locale = "0.3"
@@ -158,6 +164,7 @@ sys-locale.workspace = true
 screenwide-accent.workspace = true
 screenwide-annotations.workspace = true
 screenwide-capture.workspace = true
+screenwide-captions.workspace = true
 screenwide-compositor.workspace = true
 screenwide-cursor-effects.workspace = true
 screenwide-export.workspace = true
@@ -166,6 +173,7 @@ screenwide-i18n.workspace = true
 screenwide-images.workspace = true
 screenwide-imaging.workspace = true
 screenwide-keyboard-effects.workspace = true
+screenwide-lexicon.workspace = true
 screenwide-moments.workspace = true
 screenwide-osc.workspace = true
 screenwide-output.workspace = true

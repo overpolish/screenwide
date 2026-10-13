@@ -141,6 +141,7 @@ impl WorkspaceScene {
         seconds: layer.seconds,
         cursor: layer.cursor,
         keyboard: layer.keyboard,
+        captions: layer.captions.clone(),
         camera,
         foreground_only: layer.foreground_only,
         source_is_camera: layer.source_is_camera,

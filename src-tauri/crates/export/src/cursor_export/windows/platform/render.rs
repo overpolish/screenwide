@@ -218,6 +218,9 @@ pub(super) fn render_video(
       camera_frame,
       camera_composition.as_ref(),
       &annotations.screen,
+      request
+        .captions
+        .map(|track| (track, output_us as f64 / 1_000.0)),
       camera_effects.as_mut(),
     )?;
     sink.write(

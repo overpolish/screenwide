@@ -5,10 +5,12 @@ import { ReactNode } from "react";
 
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { t } from "../../../i18n/i18n";
+import { useRecordingCaptions } from "../recording/captions/use-recording-captions";
 import { RecordingCanvasTool } from "../recording/preview/recording-crop-toggle";
 import { useRecordingPreviewSelection } from "../recording/preview/use-recording-preview-selection";
 import { useRecordingPreviewTransport } from "../recording/preview/use-recording-preview-transport";
 import { useCopyRecordingFrame } from "../recording/use-copy-recording-frame";
+import { useToolPanel } from "../tool-panels/use-tool-panel";
 import {
   RecordingPreviewLayout,
   RecordingTrackId,
@@ -40,6 +42,7 @@ export function RecordingPreviewTimelineBand({
   durationMs,
   enabledTracks,
   hasAnnotations,
+  hasVisiblePanes,
   isCameraSeparate,
   isPreparingAudio,
   keyboardEffects,
@@ -47,6 +50,7 @@ export function RecordingPreviewTimelineBand({
   layout,
   player,
   playhead,
+  recordingOutput,
   scenes,
   selectedTrack,
   selectedVideoTracks,
@@ -61,6 +65,7 @@ export function RecordingPreviewTimelineBand({
   | "hasAnnotations"
   | "isPreparingAudio"
   | "keyboardEffects"
+  | "recordingOutput"
   | "selectedTrack"
 > &
   Pick<
@@ -82,16 +87,38 @@ export function RecordingPreviewTimelineBand({
     copyCurrentFrame: ReturnType<
       typeof useCopyRecordingFrame
     >["copyCurrentFrame"];
+    hasVisiblePanes: boolean;
     layout: RecordingPreviewLayout;
     playhead: Playhead;
     zoomControl: ReactNode;
   }) {
   const moments = useRecordingMoments(artifactId);
+  const captions = useRecordingCaptions({
+    artifactId,
+    edit: timelineBlade.blade.edit,
+    output: recordingOutput?.primary,
+  });
   usePauseForMomentNotes(player.pause);
   // The Scene panel follows the scene tool, so the lane takes the tool up and
   // the panel comes with it, the only tool in hand.
   const openScenePanel = () => {
     changeCanvasTool("scene");
+  };
+  // A caption's look is set in the Captions panel, so picking one opens it
+  // from its toolbar button, as the button itself would. With no picture
+  // there is nothing for the window to grow for.
+  const { openTool, toggle: toggleToolPanel } = useToolPanel("recording");
+  const openCaptionsPanel = () => {
+    if (openTool === "captions") return;
+    const bounds = document
+      .querySelector('[data-editor-tool="captions"]')
+      ?.getBoundingClientRect();
+    if (bounds)
+      void toggleToolPanel(
+        "captions",
+        bounds,
+        hasVisiblePanes ? undefined : false,
+      );
   };
   // Choosing scenes lets go of whatever else was chosen, so Delete only ever
   // takes away one kind of thing.
@@ -137,6 +164,7 @@ export function RecordingPreviewTimelineBand({
           annotationPinStatus={annotations.pinStatus}
           audioTracks={audioTracks}
           blade={timelineBlade.blade}
+          captions={captions}
           durationMs={timelineBlade.timelineDurationMs}
           enabledTracks={enabledTracks}
           enabledVideoTracks={selectedVideoTracks}
@@ -186,6 +214,7 @@ export function RecordingPreviewTimelineBand({
             scenes.selection.onSelectSwept(ids, additive);
           }}
           onSeek={timelineBlade.seek}
+          onSelectCaption={openCaptionsPanel}
           onSelectedTrackChange={changeSelectedTrack}
           onSelectKeyboardShortcut={() => {
             // Picking a shortcut badge puts it in hand, the way picking an

@@ -113,9 +113,7 @@ pub(super) fn save_camera_copy(
     || timeline.is_some_and(|plan| !plan.annotation_clips().is_empty())
     || camera_effects.is_some()
   {
-    let path = unique_path(directory, &camera_stem, RECORDING_EXTENSION, &|candidate| {
-      candidate.exists()
-    });
+    let path = unique_path(directory, &camera_stem, RECORDING_EXTENSION, &Path::exists);
     let result = cursor_export::export(cursor_export::CursorExportRequest {
       annotation_track: screenwide_annotations::timing::AnnotationTrack::Camera,
       audio_layout: track_selection::AudioLayout::SeparateTracks,
@@ -127,6 +125,7 @@ pub(super) fn save_camera_copy(
       }),
       camera_on_top: true,
       cancelled,
+      captions: None,
       cursor: None,
       cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),
       keyboard: None,
@@ -234,6 +233,7 @@ pub(super) fn save_camera_as_primary(
       }),
       camera_on_top: true,
       cancelled,
+      captions: None,
       cursor: None,
       cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),
       keyboard: None,

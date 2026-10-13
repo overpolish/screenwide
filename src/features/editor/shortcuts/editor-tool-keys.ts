@@ -66,6 +66,7 @@ const toolKeyAction = (id: EditorToolId, keys: EditorToolKeys) => {
     );
   }
   return {
+    captions: undefined,
     crop: keys.onToggleCrop,
     cursor: undefined,
     frame: keys.onResizeCanvas,

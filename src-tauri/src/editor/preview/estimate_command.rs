@@ -30,7 +30,9 @@ pub async fn estimate_recording_export(
     resolution_scale_percent,
     recording_output,
     screenshot_output: _,
+    subtitles: _,
     timeline_edit: timeline_model,
+    captions: _,
   } = options;
   if compression > 4 || camera_compression > 4 {
     return Err("Compression must be between 0 and 4".to_owned());
@@ -150,8 +152,13 @@ pub async fn estimate_recording_export(
       .compression_estimate_preparation
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
+    // Captions drawn into the picture need it composed, as an annotation does.
+    let shows_captions = timeline_model
+      .as_ref()
+      .and_then(|edit| edit.captions.as_ref())
+      .is_some_and(|captions| captions.enabled);
     let primary_composition =
-      cursor_export::needs_composition(&recording_output.primary, width, height);
+      shows_captions || cursor_export::needs_composition(&recording_output.primary, width, height);
     let camera_composition = camera.as_ref().is_some_and(|camera| {
       cursor_export::needs_composition(&recording_output.camera, camera.width, camera.height)
     });
@@ -170,16 +177,9 @@ pub async fn estimate_recording_export(
       estimate_compression,
       resolution_scale_percent,
     );
-    let cached = if primary_composition {
-      None
-    } else {
-      state
-        .compression_estimates
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .get(&key)
-        .copied()
-    };
+    let cached = (!primary_composition)
+      .then(|| estimate_helpers::kept_estimate(&state, &key))
+      .flatten();
     let screen_video = match cached {
       _ if !include_primary_video => 0,
       Some(bytes) => bytes,
@@ -215,12 +215,7 @@ pub async fn estimate_recording_export(
           source_scale_percent,
           resolution_scale_percent,
         )?;
-        state
-          .compression_estimates
-          .lock()
-          .unwrap_or_else(|poisoned| poisoned.into_inner())
-          .insert(key, bytes);
-        bytes
+        estimate_helpers::keep_estimate(&state, key, bytes)
       }
     };
 
@@ -238,16 +233,9 @@ pub async fn estimate_recording_export(
         camera_compression,
         camera_resolution_scale_percent,
       );
-      let cached = if camera_composition {
-        None
-      } else {
-        state
-          .compression_estimates
-          .lock()
-          .unwrap_or_else(|poisoned| poisoned.into_inner())
-          .get(&key)
-          .copied()
-      };
+      let cached = (!camera_composition)
+        .then(|| estimate_helpers::kept_estimate(&state, &key))
+        .flatten();
       match cached {
         Some(bytes) => bytes,
         None if camera_composition => cursor_export::estimated_video_bytes(
@@ -273,12 +261,7 @@ pub async fn estimate_recording_export(
             100,
             camera_resolution_scale_percent,
           )?;
-          state
-            .compression_estimates
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .insert(key, bytes);
-          bytes
+          estimate_helpers::keep_estimate(&state, key, bytes)
         }
       }
     } else {

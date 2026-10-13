@@ -51,6 +51,7 @@ pub(crate) use camera_effects::{position_ms, set_camera_effects};
 pub(crate) use camera_picking::{
   choose_camera_object, set_camera_picking, CameraPicking, PickedSpan,
 };
+pub(crate) use sources::captions::show_captions;
 pub(crate) mod surface_commands;
 mod surface_selection;
 pub(crate) mod timeline_thumbnails;

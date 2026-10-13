@@ -334,6 +334,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       next_segment_id: 2,
       segments: vec![
@@ -385,6 +386,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       next_segment_id: 1,
       segments: vec![screenwide_timeline_edit::RecordingTimelineSegment {

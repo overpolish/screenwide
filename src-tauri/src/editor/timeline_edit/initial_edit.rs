@@ -32,6 +32,7 @@ pub(in crate::editor) fn persist_initial_edit(
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips,
       next_segment_id: 1,
       segments: vec![RecordingTimelineSegment {

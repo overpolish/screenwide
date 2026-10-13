@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::TypeDevice;
+use crate::text::face::TypeFace;
 
 /// GDI drew this face with hard, one-bit edges above about 116 pixels to the
 /// em; type that size must still come out with partial coverage along its
 /// edges, and inside the width it was measured at.
 #[test]
 fn large_type_is_antialiased_within_its_measured_width() {
-  let device = TypeDevice::new(240.0).unwrap();
+  let device = TypeDevice::in_face(TypeFace::ANNOTATION, 240.0).unwrap();
   let width = device.advance("World");
   let (ascent, descent) = device.vertical_metrics();
   let cell = (

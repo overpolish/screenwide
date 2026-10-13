@@ -5,6 +5,27 @@ use super::*;
 use screenwide_output::Capture;
 use screenwide_scenes::CameraOverlaySettings;
 
+/// The subtitle file an export writes beside its video, named as it is.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "kebab-case")]
+#[ts(export)]
+pub enum ExportSubtitles {
+  #[default]
+  None,
+  Srt,
+  Vtt,
+}
+
+impl ExportSubtitles {
+  pub fn file(self) -> Option<screenwide_captions::SubtitleFile> {
+    match self {
+      Self::None => None,
+      Self::Srt => Some(screenwide_captions::SubtitleFile::Srt),
+      Self::Vtt => Some(screenwide_captions::SubtitleFile::Vtt),
+    }
+  }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingExportOptions {
@@ -27,7 +48,13 @@ pub struct RecordingExportOptions {
   pub recording_output: RecordingOutputSettings,
   pub screenshot_output: ScreenshotWorkspaceOutputSettings,
   #[serde(default)]
+  pub subtitles: ExportSubtitles,
+  #[serde(default)]
   pub timeline_edit: Option<screenwide_timeline_edit::RecordingTimelineEdit>,
+  /// The captions drawn into the picture, made from `timeline_edit` and the
+  /// transcript as the export starts; never sent by the editor.
+  #[serde(skip)]
+  pub captions: Option<screenwide_captions::CaptionTrack>,
 }
 
 impl EditorArtifact {

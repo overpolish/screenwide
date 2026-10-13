@@ -104,6 +104,8 @@ impl WindowsExportCompositor {
     // What this frame draws. A timed annotation has already had its reveal
     // resolved for this frame by the caller, which owns the timeline.
     annotations: &[screenwide_annotations::Annotation],
+    // The captions over the frame, and the moment of the edited video it is.
+    captions: Option<(&screenwide_captions::CaptionTrack, f64)>,
     mut effects: Option<&mut FrameEffects>,
   ) -> Result<ID3D11Texture2D, String> {
     let _held = self.surface.hold()?;
@@ -158,7 +160,7 @@ impl WindowsExportCompositor {
     }
     .map_err(|error| format!("The Windows export target could not be created: {error}"))?;
     let copy = copy.ok_or_else(|| "D3D11 created no Windows export target".to_owned())?;
-    let prepared = screenwide_compositor::annotation_gpu::prepared_arrows(
+    let mut prepared = screenwide_compositor::annotation_gpu::prepared_arrows(
       annotations,
       self.source.size,
       settings,
@@ -166,6 +168,13 @@ impl WindowsExportCompositor {
       None,
       None,
     )?;
+    if let Some((track, output_ms)) = captions {
+      prepared.draw_above(screenwide_compositor::annotation_gpu::caption_overlay(
+        track,
+        output_ms,
+        self.output_size,
+      ));
+    }
     compositor.draw_with_camera(
       &self.target.view,
       &source,

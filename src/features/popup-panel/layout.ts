@@ -3,6 +3,10 @@
 
 export const popupPanelMaxHeight = 150;
 export const emptyPopupPanelHeight = 64;
+/** A list found by typing opens at one height whatever it holds, so the
+ * window keeps still as typing narrows the rows: about a dozen of them under
+ * the search field. */
+export const searchablePopupPanelHeight = 340;
 /** The widest a list grows to fit a row it would otherwise cut short; past
  * this a row's label is truncated, as a native menu's is. */
 export const popupPanelMaxWidth = 360;

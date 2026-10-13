@@ -1,6 +1,32 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use crate::editor::EditorState;
+
+/// What one estimate is kept under: the recording, which of its baked
+/// layers and which file it is, its compression and its scale.
+pub(super) type EstimateKey = (u64, u8, u8, u16);
+
+/// The estimate kept under `key`, if one was made.
+pub(super) fn kept_estimate(state: &EditorState, key: &EstimateKey) -> Option<u64> {
+  state
+    .compression_estimates
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .get(key)
+    .copied()
+}
+
+/// Keeps `bytes` as the estimate under `key`, answering it.
+pub(super) fn keep_estimate(state: &EditorState, key: EstimateKey, bytes: u64) -> u64 {
+  state
+    .compression_estimates
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .insert(key, bytes);
+  bytes
+}
+
 pub(super) fn finish_estimate(
   screen_video: u64,
   camera_video: u64,

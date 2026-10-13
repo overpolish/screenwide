@@ -13,6 +13,8 @@ import {
   useExportOptionsStore,
 } from "./store";
 
+import type { ExportSubtitles } from "../../../../bindings/ExportSubtitles";
+
 /** What the editor's own props carry: the snapshot less the running save's
  * progress, which the bridge reads from its store instead. */
 export type ExportOptionsSettings = Omit<
@@ -36,6 +38,7 @@ export type ExportOptionsHandlers = {
   onExport?: () => void;
   onFileStemChange?: (fileStem: string) => void;
   onResolutionScaleChange?: (scale: number) => void;
+  onSubtitlesChange?: (subtitles: ExportSubtitles) => void;
 };
 
 /**
@@ -65,6 +68,7 @@ const applyPatch = (values: ExportOptionsPatch, on: ExportOptionsHandlers) => {
   if (values.deleteProjectAfterExport !== undefined) {
     on.onDeleteProjectAfterExportChange?.(values.deleteProjectAfterExport);
   }
+  if (values.subtitles !== undefined) on.onSubtitlesChange?.(values.subtitles);
 };
 
 /**

@@ -98,6 +98,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,
@@ -185,6 +186,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
           )),
           camera_on_top: true,
           cancelled: &cancelled,
+          captions: None,
           cursor: None,
           cursor_effects: CursorEffectSettings::default(),
           keyboard: None,

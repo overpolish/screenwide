@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A recording's edit: the segments its timeline keeps and their speeds, the
-//! annotation and scene clips laid over it, and what Remove silences, the
-//! Transcript panel and keyboard deletions cut. A project file keeps it; the
-//! plan an export or the preview follows is made from it. Annotation and
-//! scene clips are timed on the timeline; the edits that change the segments
-//! re-time them as they are made.
+//! annotation and scene clips laid over it, the captions asked of its
+//! transcript, and what Remove silences, the Transcript panel and keyboard
+//! deletions cut. A project file keeps it; the plan an export or the preview
+//! follows is made from it. Annotation and scene clips are timed on the
+//! timeline; the edits that change the segments re-time them as they are
+//! made.
 
 use screenwide_timeline::{source_to_output_us, TimelineRange};
 mod validation;
@@ -102,6 +103,11 @@ pub struct RecordingTimelineEdit {
   /// Folded text the Transcript panel was told is not profanity; marks only.
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub transcript_allowed_words: Vec<String>,
+  /// The captions made from the transcript, once any were asked for; see
+  /// [`screenwide_captions`].
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub captions: Option<screenwide_captions::RecordingCaptions>,
   pub next_segment_id: u64,
   pub segments: Vec<RecordingTimelineSegment>,
 }

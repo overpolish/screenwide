@@ -15,6 +15,8 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+use super::face::TypeFace;
+
 /// A line's height, in ems. The twin of `SCREENWIDE_TEXT_BOX_LINE_HEIGHT` in
 /// `macos/annotation_text_box.h`; the shared annotation atlas
 /// reads it here.
@@ -24,29 +26,38 @@ pub const LINE_HEIGHT: f64 = 1.25;
 /// the line height, in the pixels `font_px` is in. An empty text is one empty
 /// line, which is where the caret stands in a fresh box.
 pub fn text_block(text: &str, font_px: f64) -> [f64; 2] {
+  face_text_block(&TypeFace::ANNOTATION, text, font_px)
+}
+
+/// [`text_block`] set in `face` rather than the annotations' Inter.
+pub fn face_text_block(face: &TypeFace, text: &str, font_px: f64) -> [f64; 2] {
   if !font_px.is_finite() || font_px <= 0.0 {
     return [0.0; 2];
   }
   let lines = text.split('\n').count() as f64;
-  [widest_line(text, font_px), lines * LINE_HEIGHT * font_px]
+  [
+    widest_line(face, text, font_px),
+    lines * LINE_HEIGHT * font_px,
+  ]
 }
 
-/// The widest line's width, measured once per text and size. A frame asks for
-/// every box it draws, the chrome for every box it picks and the snap engine
-/// for every box it lines up against, so the answers are kept; the cache is
-/// dropped whole once it grows, which a document never approaches.
-fn widest_line(text: &str, font_px: f64) -> f64 {
+/// The widest line's width, measured once per face, text and size. A frame
+/// asks for every box it draws, the chrome for every box it picks and the
+/// snap engine for every box it lines up against, so the answers are kept;
+/// the cache is dropped whole once it grows, which a document never
+/// approaches.
+fn widest_line(face: &TypeFace, text: &str, font_px: f64) -> f64 {
   const LIMIT: usize = 512;
   thread_local! {
-    static WIDTHS: RefCell<HashMap<(String, u64), f64>> = RefCell::new(HashMap::new());
+    static WIDTHS: RefCell<HashMap<(TypeFace, String, u64), f64>> = RefCell::new(HashMap::new());
   }
-  let key = (text.to_owned(), font_px.to_bits());
+  let key = (face.clone(), text.to_owned(), font_px.to_bits());
   if let Some(width) = WIDTHS.with(|widths| widths.borrow().get(&key).copied()) {
     return width;
   }
   let width = text
     .split('\n')
-    .map(|line| platform::line_width(line, font_px))
+    .map(|line| platform::line_width(face, line, font_px))
     .fold(0.0, f64::max);
   WIDTHS.with(|widths| {
     let mut widths = widths.borrow_mut();
@@ -60,26 +71,49 @@ fn widest_line(text: &str, font_px: f64) -> f64 {
 
 #[cfg(target_os = "macos")]
 mod platform {
+  use super::TypeFace;
+
   extern "C" {
-    /// Core Text's typographic width of one line of Inter SemiBold, in
+    /// Core Text's typographic width of one line in a face, in
     /// `macos/annotation_text_box.m`.
-    fn screenwide_text_box_line_width(text: *const u8, length: u32, font: f64) -> f64;
+    fn screenwide_face_line_width(
+      text: *const u8,
+      length: u32,
+      font: f64,
+      family: *const u8,
+      family_length: u32,
+      weight: u32,
+    ) -> f64;
   }
 
-  pub(super) fn line_width(line: &str, font_px: f64) -> f64 {
+  pub(super) fn line_width(face: &TypeFace, line: &str, font_px: f64) -> f64 {
     if line.is_empty() {
       return 0.0;
     }
     let length = u32::try_from(line.len()).unwrap_or(u32::MAX);
-    // Safety: the pointer and length describe `line`, which outlives the call.
-    unsafe { screenwide_text_box_line_width(line.as_ptr(), length, font_px) }.max(0.0)
+    let family = face.family_bytes();
+    // Safety: each pointer and length describe a string that outlives the
+    // call.
+    unsafe {
+      screenwide_face_line_width(
+        line.as_ptr(),
+        length,
+        font_px,
+        family.as_ptr(),
+        family.len() as u32,
+        u32::from(face.weight),
+      )
+    }
+    .max(0.0)
   }
 }
 
 #[cfg(target_os = "windows")]
 mod platform {
-  pub(super) fn line_width(line: &str, font_px: f64) -> f64 {
-    crate::text::type_device::line_width(line, font_px)
+  use super::TypeFace;
+
+  pub(super) fn line_width(face: &TypeFace, line: &str, font_px: f64) -> f64 {
+    crate::text::type_device::line_width(face, line, font_px)
   }
 }
 
@@ -87,7 +121,9 @@ mod platform {
 /// sized from its character count at Inter's average advance.
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod platform {
-  pub(super) fn line_width(line: &str, font_px: f64) -> f64 {
+  use super::TypeFace;
+
+  pub(super) fn line_width(_face: &TypeFace, line: &str, font_px: f64) -> f64 {
     line.chars().count() as f64 * font_px * 0.56
   }
 }

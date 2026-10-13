@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
+import { CaptionsPatch } from "../recording/captions/recording-captions";
+import { CaptionDefaultsPatch } from "../recording/captions/use-caption-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import {
   applyKeyboardShortcutToAll,
@@ -47,6 +49,8 @@ export type EditorToolPanelHandlerInputs = {
   setBackgroundPresets: (presets: BackgroundPreset[]) => void;
   workspace: EditorKind;
   onBakeCameraChange?: (bake: boolean) => void;
+  onCaptionDefaultsChange?: (patch: CaptionDefaultsPatch) => void;
+  onCaptionsChange?: (patch: CaptionsPatch) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
   onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onTranscriptRequest?: (request: TranscriptRequest) => void;
@@ -62,6 +66,8 @@ export function editorToolPanelHandlers({
   frameTarget,
   keyboardEffects,
   onBakeCameraChange,
+  onCaptionDefaultsChange,
+  onCaptionsChange,
   onCursorEffectsChange,
   onKeyboardEffectsChange,
   onTranscriptRequest,
@@ -92,6 +98,8 @@ export function editorToolPanelHandlers({
       ]);
     },
     onBakeCameraChange,
+    onCaptionDefaultsChange,
+    onCaptionsChange,
     onCursorEffectsChange,
     onKeyboardEffectsChange: (settings) => {
       onKeyboardEffectsChange?.({ ...keyboardEffects, ...settings });

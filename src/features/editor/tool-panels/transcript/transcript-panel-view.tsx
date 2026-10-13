@@ -1,17 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
-import { Text } from "../../../../components/base/text/text";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import {
   SceneChoice,
   SceneSpanTarget,
 } from "../../recording/scenes/recording-scene-span";
 import { SceneOffer } from "../scene/scene-offer";
-import { ModelDownloadRow } from "../selection/microphone-switch-rows";
-import { ToolProgress } from "../selection/tool-progress";
 import {
   ToolPanelTranscript,
   TranscriptCorrection,
@@ -20,6 +15,7 @@ import {
 } from "../tool-panel-transcript";
 
 import { TranscriptEditor } from "./transcript-editor";
+import { TranscriptSetup } from "./transcript-setup";
 import { TranscriptWord } from "./transcript-words";
 
 export type TranscriptPanelViewProps = {
@@ -78,21 +74,9 @@ export type TranscriptPanelViewProps = {
  */
 export function TranscriptPanelView(props: TranscriptPanelViewProps) {
   const { isLocked, transcript } = props;
-  const model = transcript?.model ?? null;
-  if (!transcript || !model) return null;
+  if (!transcript?.model) return null;
 
-  if (model.status !== "downloaded")
-    return (
-      <ModelDownloadRow
-        description={t("editor-panels-transcript-description")}
-        isLocked={isLocked}
-        model={model}
-        onDownload={props.onDownload}
-        title={t("editor-panels-transcript")}
-      />
-    );
-
-  if (transcript.status === "ready")
+  if (transcript.model.status === "downloaded" && transcript.status === "ready")
     return props.words ? (
       <TranscriptEditor
         {...props}
@@ -101,36 +85,14 @@ export function TranscriptPanelView(props: TranscriptPanelViewProps) {
       />
     ) : null;
 
-  const isTranscribing = transcript.status === "transcribing";
   return (
-    <div>
-      <ControlRow title={t("editor-panels-transcript")}>
-        {(controlProps) =>
-          isTranscribing ? (
-            <Button {...controlProps} onPress={props.onCancel}>
-              {t("editor-panels-transcript-cancel")}
-            </Button>
-          ) : (
-            <Button
-              {...controlProps}
-              isDisabled={isLocked}
-              onPress={props.onTranscribe}
-            >
-              {t("editor-panels-transcript-transcribe")}
-            </Button>
-          )
-        }
-      </ControlRow>
-      <ToolProgress
-        isWorking={isTranscribing}
-        label={t("editor-panels-transcript-working")}
-        value={transcript.progress}
-      />
-      {transcript.error ? (
-        <Text className="mt-control text-error" variant="footnote">
-          {transcript.error}
-        </Text>
-      ) : null}
-    </div>
+    <TranscriptSetup
+      description={t("editor-panels-transcript-description")}
+      isLocked={isLocked}
+      onCancel={props.onCancel}
+      onDownload={props.onDownload}
+      onTranscribe={props.onTranscribe}
+      transcript={transcript}
+    />
   );
 }

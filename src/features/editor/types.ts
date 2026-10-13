@@ -94,6 +94,7 @@ export const initialEditorSnapshot = (
     compression: null,
     deleteProjectAfterExport: null,
     resolutionScaleRatio: null,
+    subtitles: null,
   },
   recordingOutput: null,
   screenshotBackgroundRadiusPercent: 0,

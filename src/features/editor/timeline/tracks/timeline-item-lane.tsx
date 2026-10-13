@@ -8,9 +8,9 @@ import { TimelineViewportState } from "../timeline-viewport";
 import { TimelineViewportContent } from "../timeline-viewport-content";
 
 import {
+  LaneFragment,
   TIMED_LANE_ROW_HEIGHT_PX,
   timedLaneFragmentBox,
-  TimedLaneFragment,
   TimedLaneItem,
 } from "./timed-lane-layout";
 import { TimelineTrackHeader } from "./timeline-track-header";
@@ -35,6 +35,7 @@ export function TimelineItemLane<
   minimumSpan = 0,
   onClearSelection,
   onSelect,
+  outputLengthMs,
   selectedFragmentIds,
   sourceDurationMs,
   viewport,
@@ -53,10 +54,13 @@ export function TimelineItemLane<
   minimumSpan?: number;
   onClearSelection?: () => void;
   onSelect?: (
-    fragment: TimedLaneFragment<Item>,
+    fragment: LaneFragment<Item>,
     outputPosition: number,
     toggle: boolean,
   ) => void;
+  /** Set where the items are timed on the edited video, this long, rather
+   * than in the source. */
+  outputLengthMs?: number;
   selectedFragmentIds?: ReadonlySet<string>;
   warningFragmentIds?: ReadonlySet<string>;
 }) {
@@ -68,6 +72,7 @@ export function TimelineItemLane<
     hiddenItemIds,
     items,
     minimumSpan,
+    outputLengthMs,
     sourceDurationMs,
   });
 
@@ -98,9 +103,7 @@ export function TimelineItemLane<
               fragment.continuesPrevious || fragment.continuedByNext;
             const seam = `${
               fragment.continuesPrevious ? "rounded-l-none " : ""
-            }${fragment.continuedByNext ? "rounded-r-none " : ""}${
-              fragment.showLabel ? "px-control-inset" : ""
-            }`;
+            }${fragment.continuedByNext ? "rounded-r-none" : ""}`;
             return (
               <button
                 aria-label={item.label}
@@ -110,7 +113,11 @@ export function TimelineItemLane<
                 // warning fill whether or not it is selected, since text on
                 // the solid yellow cannot be read; its selection is a warning
                 // ring instead. Any other selected one takes the accent.
-                className={`absolute flex items-center rounded-control text-left text-footnote transition-[color,background-color] duration-200 ${seam} ${
+                // The badge clips rather than grows: a badge narrower than
+                // its label's padding stays as wide as its time, instead of
+                // swelling over the badges beside it. Measured as a container
+                // so its label can leave once no letter of it would show.
+                className={`@container absolute flex items-center overflow-hidden rounded-control text-left text-footnote transition-[color,background-color] duration-200 ${seam} ${
                   warning
                     ? selected
                       ? "bg-warning/35 text-content-fg inset-ring-2 inset-ring-warning"
@@ -143,11 +150,11 @@ export function TimelineItemLane<
                 type="button"
               >
                 {fragment.showLabel ? (
-                  // Truncation lives on its own element so the clip happens at
-                  // the content box, leaving the badge's horizontal padding
-                  // intact, instead of the overflow running through the padding
-                  // to the border as it does when the clip is on the button.
-                  <span className="min-w-0 truncate">{item.label}</span>
+                  // The label carries the padding and the truncation, so the
+                  // text is cut at its content box with the padding intact.
+                  <span className="min-w-0 truncate px-control-inset @max-[2rem]:hidden">
+                    {item.label}
+                  </span>
                 ) : null}
               </button>
             );

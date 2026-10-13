@@ -82,6 +82,7 @@ fn exported(source: &Path, destination: &Path, clips: &[RecordingAnnotationClip]
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       annotation_clips: clips.to_vec(),
       segments: vec![RecordingTimelineSegment {
@@ -114,6 +115,7 @@ fn exported(source: &Path, destination: &Path, clips: &[RecordingAnnotationClip]
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,

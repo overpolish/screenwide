@@ -1,0 +1,120 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! Where a caption sits, and the layout options set by hand. A template
+//! brings its own type size, case, words and lines per caption, and place;
+//! one set here stays as set whichever template is chosen after, and one
+//! left unset follows the template.
+
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
+use crate::style::{CaptionLines, CaptionStyle};
+
+/// One of nine places on the picture a caption sits at: along the top,
+/// through the middle or along the bottom, at the left, the centre or the
+/// right. The picture's own sides, whatever the language's direction.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "kebab-case")]
+#[ts(export)]
+pub enum CaptionPosition {
+  TopLeft,
+  Top,
+  TopRight,
+  Left,
+  Center,
+  Right,
+  BottomLeft,
+  #[default]
+  Bottom,
+  BottomRight,
+}
+
+impl CaptionPosition {
+  /// How far across and down the picture the caption is held, each from 0
+  /// at the left or top margin to 1 at the right or bottom one. Across, it
+  /// is also how its lines line up: from their left, about their middle, or
+  /// from their right.
+  pub(crate) fn shares(self) -> [f64; 2] {
+    match self {
+      Self::TopLeft => [0.0, 0.0],
+      Self::Top => [0.5, 0.0],
+      Self::TopRight => [1.0, 0.0],
+      Self::Left => [0.0, 0.5],
+      Self::Center => [0.5, 0.5],
+      Self::Right => [1.0, 0.5],
+      Self::BottomLeft => [0.0, 1.0],
+      Self::Bottom => [0.5, 1.0],
+      Self::BottomRight => [1.0, 1.0],
+    }
+  }
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct CaptionLayout {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub size_percent: Option<f64>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub all_caps: Option<bool>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub max_words: Option<u32>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub lines: Option<CaptionLines>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub position: Option<CaptionPosition>,
+}
+
+impl CaptionLayout {
+  pub fn is_empty(&self) -> bool {
+    *self == Self::default()
+  }
+
+  /// Every layout option `style` holds, as though each were set.
+  pub fn of(style: &CaptionStyle) -> Self {
+    Self {
+      size_percent: Some(style.size_percent),
+      all_caps: Some(style.all_caps),
+      max_words: Some(style.max_words),
+      lines: Some(style.lines),
+      position: Some(style.position),
+    }
+  }
+
+  /// `style` with the options set here in place of its own.
+  pub fn applied_to(&self, style: CaptionStyle) -> CaptionStyle {
+    CaptionStyle {
+      size_percent: self.size_percent.unwrap_or(style.size_percent),
+      all_caps: self.all_caps.unwrap_or(style.all_caps),
+      max_words: self.max_words.unwrap_or(style.max_words),
+      lines: self.lines.unwrap_or(style.lines),
+      position: self.position.unwrap_or(style.position),
+      ..style
+    }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::CaptionLayout;
+  use crate::style::{CaptionLines, CaptionTemplate};
+
+  #[test]
+  fn options_set_by_hand_outlast_the_template_and_the_rest_follow_it() {
+    let layout = CaptionLayout {
+      max_words: Some(5),
+      ..CaptionLayout::default()
+    };
+    let pop = layout.applied_to(CaptionTemplate::Pop.style());
+    assert_eq!(pop.max_words, 5);
+    assert_eq!(pop.lines, CaptionLines::One);
+    assert!(pop.all_caps);
+    assert_eq!(pop.size_percent, 140.0);
+  }
+}

@@ -37,13 +37,14 @@ static double line_width(NSString *line, NSFont *font) {
   return width;
 }
 
-double screenwide_text_box_line_width(const uint8_t *text, uint32_t length, double font) {
+double screenwide_face_line_width(const uint8_t *text, uint32_t length, double font,
+                                  const uint8_t *family, uint32_t family_length, uint32_t weight) {
   if (text == NULL || length == 0 || !(font > 0.0)) return 0.0;
   @autoreleasepool {
     NSString *line = [[NSString alloc] initWithBytes:text
                                               length:length
                                             encoding:NSUTF8StringEncoding];
     if (line == nil) return 0.0;
-    return line_width(line, screenwide_annotation_font(font, NO));
+    return line_width(line, screenwide_face_font_bytes(family, family_length, weight, font));
   }
 }

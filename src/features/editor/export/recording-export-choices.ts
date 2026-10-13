@@ -18,6 +18,8 @@ import {
   defaultCameraOverlay,
 } from "./recording-export-settings";
 
+import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
+
 type Size = { height: number; width: number };
 type RecordingArtifact = Extract<EditorArtifact, { kind: "recording" }>;
 
@@ -30,6 +32,7 @@ export type SeededExportChoices = {
   compression: number;
   deleteProjectAfterExport: boolean;
   resolutionScalePercent: number;
+  subtitles: ExportSubtitles;
 };
 
 const MAX_COMPRESSION = 4;
@@ -179,5 +182,6 @@ export const seededExportChoices = ({
     resolutionScalePercent: recording
       ? restoredResolutionScale(recording, choices.resolutionScaleRatio)
       : 100,
+    subtitles: choices.subtitles ?? "none",
   };
 };

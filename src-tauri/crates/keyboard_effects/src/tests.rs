@@ -18,6 +18,7 @@ fn speed_plan(rate: f64) -> TimelinePlan {
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: Vec::new(),
       next_segment_id: 2,
       segments: vec![RecordingTimelineSegment {

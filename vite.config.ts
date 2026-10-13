@@ -3,13 +3,32 @@
 
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 
 const host = process.env.TAURI_DEV_HOST;
 
+/**
+ * Tailwind's plugins, with the hook that refreshes its CSS when an asset
+ * changes skipped where Vite runs it without a dev server, as bundled dev
+ * mode does: the hook reaches for the server and throws. Bundled mode
+ * rebuilds the stylesheet from the files Tailwind scanned all the same.
+ */
+const tailwind = (): Plugin[] =>
+  tailwindcss().map((plugin) => {
+    const hotUpdate = plugin.hotUpdate;
+    if (typeof hotUpdate !== "function") return plugin;
+    return {
+      ...plugin,
+      hotUpdate(context) {
+        const server = context.server as ViteDevServer | undefined;
+        return server ? hotUpdate.call(this, context) : undefined;
+      },
+    };
+  });
+
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwind()],
 
   // Every window is served from the same local WebView bundle. The desktop app
   // does not pay a network-transfer penalty for keeping that shared startup
@@ -21,6 +40,15 @@ export default defineConfig(() => ({
   //
   // 1. prevent Vite from obscuring rust errors
   clearScreen: false,
+  // Every window loads at launch, all at once and from one dev server. Served
+  // a module at a time, they queue thousands of requests on the few
+  // connections the WebView keeps to it and take seconds to come up; served
+  // bundled, as a packaged app's are, they load as quickly as in release.
+  // Only for the app, which the Tauri CLI marks: Storybook shares this config
+  // and gains nothing from an experimental mode.
+  experimental: {
+    bundledDev: process.env.TAURI_ENV_PLATFORM !== undefined,
+  },
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     hmr: host

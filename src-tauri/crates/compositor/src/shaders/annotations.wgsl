@@ -260,40 +260,48 @@ struct AnnotationTextAtlas {
   scale: f32,
 }
 
-/// The atlas's coverage at `texel`, bilinearly filtered and held to the cell
-/// from `low` to `high`, so a tap at the cell's edge reads its own
-/// transparent margin rather than the next cell over.
-fn annotation_atlas_bilinear(texel: vec2<f32>, low: vec2<f32>, high: vec2<f32>) -> f32 {
+/// The atlas at `texel`, every channel bilinearly filtered and held to the
+/// cell from `low` to `high`, so a tap at the cell's edge reads its own
+/// transparent margin rather than the next cell over. The type's coverage is
+/// in alpha, and a caption word's outline in red.
+fn annotation_atlas_texel(texel: vec2<f32>, low: vec2<f32>, high: vec2<f32>) -> vec4<f32> {
   let base = texel - 0.5;
   let first = floor(base);
   let blend = base - first;
   let low_texel = vec2<i32>(clamp(first, low, high));
   let high_texel = vec2<i32>(clamp(first + 1.0, low, high));
-  let top = mix(textureLoad(annotation_numbers, vec2<i32>(low_texel.x, low_texel.y), 0).a,
-                textureLoad(annotation_numbers, vec2<i32>(high_texel.x, low_texel.y), 0).a, blend.x);
-  let bottom = mix(textureLoad(annotation_numbers, vec2<i32>(low_texel.x, high_texel.y), 0).a,
-                   textureLoad(annotation_numbers, vec2<i32>(high_texel.x, high_texel.y), 0).a,
+  let top = mix(textureLoad(annotation_numbers, vec2<i32>(low_texel.x, low_texel.y), 0),
+                textureLoad(annotation_numbers, vec2<i32>(high_texel.x, low_texel.y), 0), blend.x);
+  let bottom = mix(textureLoad(annotation_numbers, vec2<i32>(low_texel.x, high_texel.y), 0),
+                   textureLoad(annotation_numbers, vec2<i32>(high_texel.x, high_texel.y), 0),
                    blend.x);
   return mix(top, bottom, blend.y);
 }
 
-/// How much of the type in the atlas cell at `origin`, `size` atlas pixels
-/// across, covers one drawn pixel centred on `texel` and spanning `footprint`
-/// atlas pixels: four filtered taps spread over that span. The atlas holds
-/// two to four atlas pixels per drawn pixel, so the taps take in the whole
-/// pixel whether the canvas is drawn larger or smaller than its resolution.
-fn annotation_atlas_coverage(atlas: AnnotationTextAtlas, origin: vec2<f32>, size: vec2<f32>,
-                             texel: vec2<f32>, footprint: f32) -> f32 {
+/// The atlas cell at `origin`, `size` atlas pixels across, over one drawn
+/// pixel centred on `texel` and spanning `footprint` atlas pixels: four
+/// filtered taps spread over that span, every channel. The atlas holds two
+/// to four atlas pixels per drawn pixel, so the taps take in the whole pixel
+/// whether the canvas is drawn larger or smaller than its resolution.
+fn annotation_atlas_footprint(atlas: AnnotationTextAtlas, origin: vec2<f32>, size: vec2<f32>,
+                              texel: vec2<f32>, footprint: f32) -> vec4<f32> {
   let low = origin;
   let high = min(origin + size, vec2<f32>(atlas.size)) - 1.0;
   let spread = footprint * 0.25;
-  var total = 0.0;
+  var total = vec4<f32>(0.0);
   for (var tap = 0u; tap < 4u; tap++) {
     let offset = vec2<f32>(select(-spread, spread, (tap & 1u) != 0u),
                            select(-spread, spread, (tap >> 1u) != 0u));
-    total += annotation_atlas_bilinear(texel + offset, low, high);
+    total += annotation_atlas_texel(texel + offset, low, high);
   }
   return total * 0.25;
+}
+
+/// How much of the type in the atlas cell covers one drawn pixel; see
+/// [`annotation_atlas_footprint`].
+fn annotation_atlas_coverage(atlas: AnnotationTextAtlas, origin: vec2<f32>, size: vec2<f32>,
+                             texel: vec2<f32>, footprint: f32) -> f32 {
+  return annotation_atlas_footprint(atlas, origin, size, texel, footprint).a;
 }
 
 /// Coverage of one prepared arrow, feathered over `feather` canvas pixels.

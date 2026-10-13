@@ -89,7 +89,7 @@ const items = (
         {
           icon: "trash" as const,
           id: "delete",
-          label: t("editor-panels-delete"),
+          label: t("editor-panels-transcript-remove"),
           shortcut: "Backspace",
         },
       ]

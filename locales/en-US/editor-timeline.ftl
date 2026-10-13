@@ -50,6 +50,7 @@ editor-timeline-restore-cut-at = Restore the { $duration } cut at { $time }
 ## Tracks. $track names a track.
 
 editor-timeline-shortcuts = Shortcuts
+editor-timeline-captions = Captions
 editor-timeline-annotations = Annotations
 editor-timeline-scenes = Scenes
 editor-timeline-camera-separate = Saved as its own file

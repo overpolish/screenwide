@@ -4,6 +4,7 @@
 // One-shot editor window and export-destination commands.
 
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow, Window } from "@tauri-apps/api/window";
 
 import {
   normalizedScreenshotWorkspaceOutput,
@@ -54,3 +55,26 @@ export const browseBackgroundImage = () =>
 export const setExportDirectory = async (directory: string) => {
   await invoke<null>("set_export_directory", { directory });
 };
+
+/** `act` on this editor's window, reporting what it could not do. */
+const windowAction =
+  (act: (window: Window) => Promise<void>, what: string) => () => {
+    act(getCurrentWindow()).catch((cause: unknown) => {
+      console.error(`Could not ${what} the editor window`, cause);
+    });
+  };
+
+/** Asks to close the window rather than closing it outright: Rust owns the
+ * close request, and that is where the confirmation is. */
+export const closeEditorWindow = windowAction(
+  (window) => window.close(),
+  "close",
+);
+export const minimizeEditorWindow = windowAction(
+  (window) => window.minimize(),
+  "minimize",
+);
+export const toggleEditorWindowMaximized = windowAction(
+  (window) => window.toggleMaximize(),
+  "maximize or restore",
+);

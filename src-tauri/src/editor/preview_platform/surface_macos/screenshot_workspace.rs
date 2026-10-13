@@ -42,6 +42,7 @@ impl RecordingPreviewSurface {
         seconds: 0.0,
         cursor: None,
         keyboard: None,
+        captions: None,
         camera: None,
         overlay: None,
         camera_settings: None,

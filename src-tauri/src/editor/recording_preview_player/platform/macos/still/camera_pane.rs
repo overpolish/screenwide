@@ -50,6 +50,7 @@ pub(super) fn camera_pane_layer<'a>(
     seconds: screen_ms as f64 / 1_000.0,
     cursor: None,
     keyboard: None,
+    captions: None,
     camera: None,
     camera_pixels: None,
     overlay: None,

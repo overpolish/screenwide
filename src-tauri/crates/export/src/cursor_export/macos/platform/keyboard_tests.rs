@@ -133,6 +133,7 @@ fn exports_keyboard_shortcuts_into_a_real_movie() {
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
     destination: &destination,

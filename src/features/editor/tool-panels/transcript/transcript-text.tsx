@@ -173,11 +173,13 @@ export function TranscriptText(props: TranscriptTextProps) {
     spansRef.current = spans;
   }, [content]);
 
-  const markScrolled = usePlayingWord(spansRef, {
-    content,
-    current,
-    isChoosing: selection !== null,
-  });
+  const markScrolled = usePlayingWord(
+    (index) => {
+      const span = spansRef.current[index] as HTMLElement | undefined;
+      return span ? [span] : [];
+    },
+    { content, current, isChoosing: selection !== null },
+  );
 
   // The word the keys moved to is kept in view.
   const focus = selection?.focus;
@@ -205,9 +207,8 @@ export function TranscriptText(props: TranscriptTextProps) {
 
   return (
     <ScrollArea
-      className="pe-control-inset"
       constrainHeight
-      rootClassName="max-h-64"
+      rootClassName="max-h-64 rounded-control bg-fill-tertiary"
     >
       <div
         {...handlers}
@@ -217,7 +218,7 @@ export function TranscriptText(props: TranscriptTextProps) {
         aria-disabled={isDisabled || undefined}
         aria-label={t("editor-panels-transcript")}
         aria-multiselectable
-        className="relative flex cursor-default flex-col gap-section text-body text-content-fg outline-none select-none"
+        className="relative flex cursor-default flex-col gap-section p-control-inset text-body text-content-fg outline-none select-none"
         data-owns-text-keys
         onTouchMove={markScrolled}
         onWheel={markScrolled}

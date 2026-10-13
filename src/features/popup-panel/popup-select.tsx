@@ -13,7 +13,8 @@ import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { Select } from "../../components/base/select/select";
 
 import { hidePopupPanel, panelStartX, showPopupPanel } from "./api";
-import { initialPopupPanelHeight } from "./layout";
+import { initialPopupPanelHeight, searchablePopupPanelHeight } from "./layout";
+import { itemFontStyle } from "./popup-panel-list-item";
 import {
   activePopupPanel,
   PopupPanelItem,
@@ -41,6 +42,9 @@ type PopupSelectProps = {
    * and the longest label. */
   minimumListWidth?: number;
   onOpen?: () => Promise<PopupPanelItem[]>;
+  /** Makes the list one found by typing, its search field named this. The
+   * field takes the keys as soon as the list opens. */
+  searchLabel?: string;
 };
 
 export function PopupSelect({
@@ -56,6 +60,7 @@ export function PopupSelect({
   onOpen,
   onSelectionChange,
   placeholder,
+  searchLabel,
   selectedId,
 }: PopupSelectProps) {
   const active = usePopupPanelStore((state) =>
@@ -91,13 +96,16 @@ export function PopupSelect({
 
     const bounds = trigger.getBoundingClientRect();
     const currentItems = onOpen ? await onOpen() : items;
-    const height = initialPopupPanelHeight(currentItems.length);
+    const height = searchLabel
+      ? searchablePopupPanelHeight
+      : initialPopupPanelHeight(currentItems.length);
 
     open(SHARED_POPUP_PANEL, {
       content: {
         items: currentItems,
         kind: "list",
         mode: "select",
+        searchLabel,
         selectedIds: selectedId ? [selectedId] : [],
         selectionMode: "single",
       },
@@ -157,15 +165,21 @@ export function PopupSelect({
         items={selectedItem ? [selectedItem] : []}
         leftSection={leftSection}
         onPress={(event) => {
+          // A list found by typing takes the keys however it was opened.
           void toggleListbox(
-            ["keyboard", "virtual"].includes(event.pointerType),
+            searchLabel !== undefined ||
+              ["keyboard", "virtual"].includes(event.pointerType),
           );
         }}
         placeholder={placeholder}
         renderValue={(item) =>
           item ? (
             <span className="flex w-full items-center justify-between gap-control">
-              <span className="truncate" dir="auto">
+              <span
+                className="truncate"
+                dir="auto"
+                style={itemFontStyle(item.font)}
+              >
                 {item.label}
               </span>
               {item.detail ? <Badge>{item.detail}</Badge> : null}

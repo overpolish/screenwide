@@ -12,6 +12,7 @@ use cidre::cv;
 use super::super::super::frame_annotations::ExportAnnotations;
 use super::super::super::frame_scene::ExportScenes;
 use super::frame_camera::drawn_camera;
+use super::frame_captions::FrameCaptions;
 use super::frame_grid::{grid_frame, grid_index};
 use super::frame_placement::{carried_cursor, on_canvas};
 use super::*;
@@ -36,6 +37,8 @@ pub(super) struct FrameComposer<'a> {
   annotations: ExportAnnotations,
   cursors: &'a [Option<GpuCursor>],
   keyboards: &'a [KeyboardOverlay],
+  /// The captions drawn over each frame.
+  captions: Option<FrameCaptions<'a>>,
   /// Where the camera sits, whether it casts a shadow, and whether it is
   /// drawn over the screen's annotations.
   camera: Option<(BakeGeometry, bool, bool)>,
@@ -110,6 +113,7 @@ impl<'a> FrameComposer<'a> {
       annotations,
       cursors: timeline.map_or(&[][..], |timeline| timeline.frames.as_slice()),
       keyboards: keyboard_timeline.map_or(&[][..], |timeline| timeline.frames.as_slice()),
+      captions: FrameCaptions::for_request(request, (width, height)),
       camera,
       scenes,
       effects,
@@ -187,7 +191,11 @@ impl<'a> FrameComposer<'a> {
         Ok::<_, String>((drawn, placement))
       })
       .transpose()?;
-    let prepared = prepared_arrows(&annotations.screen, source.size, settings, None, None, None)?;
+    let mut prepared =
+      prepared_arrows(&annotations.screen, source.size, settings, None, None, None)?;
+    if let Some(captions) = &self.captions {
+      captions.draw_over(&mut prepared, frame.source_us);
+    }
     let grid = grid_index(frame.source_us);
     self.compositor.draw_with_camera(
       &self.canvas,

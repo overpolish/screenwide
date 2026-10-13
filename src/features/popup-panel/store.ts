@@ -2,34 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
 
 import { EditorKind } from "../editor/types";
 
-import type { AnnotationKind } from "../../components/shared/annotation-style/types";
+import type { PopupPanelIcon } from "./popup-panel-item-glyph";
 import type { NoteTranscript } from "../editor/timeline/moments/recording-moments";
-
-/** `tool-` names an annotation tool's own glyph, kept apart from `image`, the
- * export-an-image glyph. */
-export type PopupPanelIcon =
-  | "allow"
-  | "clipboard"
-  | "copy"
-  | "edit"
-  | "folder"
-  | "folder-open"
-  | "folder-root"
-  | "folder-search"
-  | "hard-drive"
-  | "image"
-  | "remove"
-  | "restore"
-  | "scene"
-  | "scrolling"
-  | "spelling"
-  | "timer"
-  | "trash"
-  | `tool-${AnnotationKind}`;
 
 type PopupPanelMode = "menu" | "select";
 
@@ -39,6 +16,9 @@ export type PopupPanelItem = {
   /** A short note after the label, drawn as a badge at the trailing edge:
    * a scale beside a size, say. */
   detail?: string;
+  /** The typeface the label is set in, for a list of fonts or weights that
+   * shows each as it looks: a CSS family name and, if given, a weight. */
+  font?: { family: string; weight?: number };
   /** A glyph from the popup panel window's registry, for items without artwork.
    */
   icon?: PopupPanelIcon;
@@ -60,6 +40,7 @@ export type PopupPanelItem = {
  * selected rather than to a tool: it dresses the arrow or counter in hand. */
 export type ToolPanelKind =
   | "annotation"
+  | "captions"
   | "crop"
   | "cursor"
   | "frame"
@@ -78,6 +59,9 @@ export type PopupPanelListContent = {
   selectedIds: string[];
   selectionMode: "multiple" | "single";
   exclusiveId?: string;
+  /** A long list found by typing: the search field's name, which heads the
+   * list and takes the keys while it is open. */
+  searchLabel?: string;
   /** Shown whole rather than scrolled past the list ceiling: a short menu
    * whose every entry should be in view at once. */
   showsAllItems?: boolean;
@@ -166,120 +150,122 @@ export const activePopupPanel = (
   panel: string,
 ) => state.active[panel] ?? null;
 
-const STORE_NAME = "screenwide-standalone-listbox";
-const SELECTION_STORE_NAME = `${STORE_NAME}-selection`;
+/** Each panel window's entry is stored under a key of its own, so a window
+ * only ever writes the panel it changes. Every window runs in a process of
+ * its own and reads the others' writes a moment late; writing the whole map
+ * from such a copy put back stale entries for the panels it did not touch,
+ * which emptied a tool panel, or swapped it, at a pick in a pop-up. */
+const PANEL_KEY_PREFIX = "screenwide-popup-panel:";
+const SELECTION_KEY = "screenwide-popup-panel-selection";
+/** Where every panel was once kept together, cleared away on load. */
+const OLD_PANELS_KEY = "screenwide-standalone-listbox";
 
-/**
- * The open panels as every window last agreed on them.
- *
- * Each window holds a copy of the map and writes the whole of it back on any
- * change, so a window whose copy fell behind - a panel window that opened
- * before another panel did - would write the newer panels out of existence.
- * A change is therefore built on what is in storage now, and the window's
- * own copy is only the fallback when storage cannot be read.
- */
-const storedActive = (
-  current: PopupPanelStore["active"],
-): PopupPanelStore["active"] => {
+const panelKey = (panel: string) => `${PANEL_KEY_PREFIX}${panel}`;
+
+/** A stored entry, or nothing where there is none or it cannot be read. */
+const parsedPanel = (raw: string | null): OpenPopupPanel | null => {
+  if (!raw) return null;
   try {
-    const raw = localStorage.getItem(STORE_NAME);
-    if (!raw) return current;
-    const parsed = JSON.parse(raw) as {
-      state?: { active?: PopupPanelStore["active"] };
-    };
-    const stored = parsed.state?.active;
-    if (!stored) return current;
-    // An entry this window already holds unchanged keeps its identity, so
-    // what subscribes to it is not re-rendered for a change elsewhere.
-    return Object.fromEntries(
-      Object.keys(stored).map((panel) => [
-        panel,
-        JSON.stringify(current[panel] ?? null) ===
-        JSON.stringify(stored[panel] ?? null)
-          ? (current[panel] ?? null)
-          : (stored[panel] ?? null),
-      ]),
-    );
+    return JSON.parse(raw) as OpenPopupPanel;
   } catch {
-    return current;
+    return null;
   }
 };
 
-export const usePopupPanelStore = create<PopupPanelStore>()(
-  persist(
-    (set) => ({
-      active: {},
-      close: (panel) => {
-        set((state) => ({
-          active: { ...storedActive(state.active), [panel]: null },
-        }));
-      },
-      closeAll: () => {
-        set({ active: {} });
-      },
-      /** Drops every entry but the panels named, which are the ones still on
-       * screen: the rest are left over from a run that ended. */
-      keepOnly: (panels) => {
-        set((state) => ({
-          active: Object.fromEntries(
-            Object.entries(storedActive(state.active)).filter(([panel]) =>
-              panels.includes(panel),
-            ),
-          ),
-        }));
-      },
-      lastSelection: null,
-      open: (panel, active) => {
-        set((state) => ({
-          active: { ...storedActive(state.active), [panel]: active },
-        }));
-      },
-      select: ({ id, panel, pressedId, selectedIds }) => {
-        const lastSelection = {
-          eventId: crypto.randomUUID(),
-          id,
-          pressedId,
-          selectedIds,
-        };
-        set((state) => {
-          const active = storedActive(state.active);
-          const open = active[panel] ?? null;
-          return {
-            active:
-              open?.id === id && open.content.kind === "list"
-                ? {
-                    ...active,
-                    [panel]: {
-                      ...open,
-                      content: { ...open.content, selectedIds },
-                    },
-                  }
-                : active,
-            lastSelection,
-          };
-        });
-        localStorage.setItem(
-          SELECTION_STORE_NAME,
-          JSON.stringify(lastSelection),
-        );
-      },
-    }),
-    {
-      // The open panel is presentation state, never worth carrying across a
-      // shape change: an upgrade drops whatever the last run left behind.
-      migrate: () => ({ active: {} }),
-      name: STORE_NAME,
-      partialize: (state) => ({ active: state.active }),
-      storage: createJSONStorage(() => localStorage),
-      version: 2,
-    },
-  ),
-);
+/** Keeps `panel`'s entry, or takes it away for null. Storage that cannot be
+ * written leaves the other windows as they were, and this one still right. */
+const storePanel = (panel: string, entry: OpenPopupPanel | null) => {
+  try {
+    if (entry) localStorage.setItem(panelKey(panel), JSON.stringify(entry));
+    else localStorage.removeItem(panelKey(panel));
+  } catch {
+    // Nothing to do: the next change writes it again.
+  }
+};
 
-export const synchronizePopupPanelStore = (event: StorageEvent) => {
-  if (event.key === STORE_NAME) {
-    void usePopupPanelStore.persist.rehydrate();
-  } else if (event.key === SELECTION_STORE_NAME && event.newValue) {
+/** Every panel's stored entry, by window label. */
+const storedPanels = () => {
+  const active: Record<string, OpenPopupPanel | null> = {};
+  try {
+    localStorage.removeItem(OLD_PANELS_KEY);
+    localStorage.removeItem(`${OLD_PANELS_KEY}-selection`);
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(PANEL_KEY_PREFIX))
+        active[key.slice(PANEL_KEY_PREFIX.length)] = parsedPanel(
+          localStorage.getItem(key),
+        );
+    }
+  } catch {
+    // Without storage, each window starts with nothing open.
+  }
+  return active;
+};
+
+export const usePopupPanelStore = create<PopupPanelStore>()((set, get) => {
+  const put = (panel: string, entry: OpenPopupPanel | null) => {
+    storePanel(panel, entry);
+    set((state) => ({ active: { ...state.active, [panel]: entry } }));
+  };
+  return {
+    active: storedPanels(),
+    close: (panel) => {
+      put(panel, null);
+    },
+    closeAll: () => {
+      for (const panel of Object.keys(storedPanels())) storePanel(panel, null);
+      set({ active: {} });
+    },
+    /** Drops every entry but the panels named, which are the ones still on
+     * screen: the rest are left over from a run that ended. */
+    keepOnly: (panels) => {
+      for (const panel of Object.keys(storedPanels()))
+        if (!panels.includes(panel)) storePanel(panel, null);
+      set((state) => ({
+        active: Object.fromEntries(
+          Object.entries(state.active).filter(([panel]) =>
+            panels.includes(panel),
+          ),
+        ),
+      }));
+    },
+    lastSelection: null,
+    open: put,
+    select: ({ id, panel, pressedId, selectedIds }) => {
+      const lastSelection = {
+        eventId: crypto.randomUUID(),
+        id,
+        pressedId,
+        selectedIds,
+      };
+      // The list keeps what it now has chosen, where it is still the one
+      // the pick was made in.
+      const open = get().active[panel] ?? null;
+      if (open?.id === id && open.content.kind === "list")
+        put(panel, { ...open, content: { ...open.content, selectedIds } });
+      set({ lastSelection });
+      try {
+        localStorage.setItem(SELECTION_KEY, JSON.stringify(lastSelection));
+      } catch {
+        // The pick still reaches this window's own listeners.
+      }
+    },
+  };
+});
+
+/** Takes in another window's change: the one panel entry it wrote, or the
+ * pick it reported. */
+export const synchronizePopupPanelStore = (
+  event: Pick<StorageEvent, "key" | "newValue">,
+) => {
+  const { key } = event;
+  if (key?.startsWith(PANEL_KEY_PREFIX)) {
+    const panel = key.slice(PANEL_KEY_PREFIX.length);
+    const entry = parsedPanel(event.newValue);
+    usePopupPanelStore.setState((state) => ({
+      active: { ...state.active, [panel]: entry },
+    }));
+  } else if (key === SELECTION_KEY && event.newValue) {
     try {
       const lastSelection = JSON.parse(event.newValue) as PopupPanelSelection;
       usePopupPanelStore.setState({ lastSelection });

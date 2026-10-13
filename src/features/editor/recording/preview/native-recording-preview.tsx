@@ -278,6 +278,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
           changeSelectedTrack={changeSelectedTrack}
           copyCurrentFrame={copyCurrentFrame}
           enabledTracks={enabledTracks}
+          hasVisiblePanes={hasVisiblePanes}
           isCameraSeparate={isCameraSeparate}
           keyboardTimeline={selection.keyboardTimeline}
           layout={layout}

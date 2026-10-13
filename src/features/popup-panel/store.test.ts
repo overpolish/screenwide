@@ -3,12 +3,16 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Hoisted above the store import: the module persists itself on creation, so
+// Hoisted above the store import: the module reads storage on creation, so
 // the stand-in has to be in place before it is loaded.
 const store = vi.hoisted(() => {
   const entries = new Map<string, string>();
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => entries.get(key) ?? null,
+    key: (index: number) => [...entries.keys()][index] ?? null,
+    get length() {
+      return entries.size;
+    },
     removeItem: (key: string) => {
       entries.delete(key);
     },
@@ -23,6 +27,7 @@ import {
   activePopupPanel,
   OpenPopupPanel,
   SHARED_POPUP_PANEL,
+  synchronizePopupPanelStore,
   usePopupPanelStore,
 } from "./store";
 
@@ -158,5 +163,29 @@ describe("usePopupPanelStore", () => {
     usePopupPanelStore.getState().closeAll();
 
     expect(usePopupPanelStore.getState().active).toEqual({});
+  });
+
+  it("never writes a panel from a stale copy while changing another", () => {
+    // This window last saw the recording panel showing Cursor; another
+    // window has since swapped it to Selection, which has not arrived here.
+    open(RECORDING_PANEL, toolPanel("cursor", "recording"));
+    const swapped = toolPanel("selection", "recording");
+    store.set(
+      "screenwide-popup-panel:tool-panel-recording",
+      JSON.stringify(swapped),
+    );
+
+    open(SHARED_POPUP_PANEL, list("camera", []));
+    usePopupPanelStore.getState().close(SHARED_POPUP_PANEL);
+    // What the other window wrote stands, and arrives here as written.
+    const written = store.get("screenwide-popup-panel:tool-panel-recording");
+    expect(written).toBe(JSON.stringify(swapped));
+    synchronizePopupPanelStore({
+      key: "screenwide-popup-panel:tool-panel-recording",
+      newValue: written ?? null,
+    });
+    expect(
+      activePopupPanel(usePopupPanelStore.getState(), RECORDING_PANEL)?.id,
+    ).toBe("tool:selection");
   });
 });

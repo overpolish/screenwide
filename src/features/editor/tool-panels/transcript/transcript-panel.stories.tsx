@@ -271,8 +271,8 @@ export const TranscribeFailed: Story = {
 };
 
 /** The words to edit. Click, Shift-click or drag to choose words, drag the
- * chosen words to move them, Delete to cut them, double-click or Enter to
- * correct them, Command-click to cut or restore one, Space to play. The
+ * chosen words to move them, Delete to remove them, double-click or Enter
+ * to correct them, Command-click to remove or restore one, Space to play. The
  * right-click menu is a window of its own, so it opens only in the native
  * Storybook. */
 export const Transcript: Story = {

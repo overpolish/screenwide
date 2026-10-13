@@ -61,6 +61,7 @@ fn exports_recenter_inset_pixels_outside_the_source_crop() {
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,

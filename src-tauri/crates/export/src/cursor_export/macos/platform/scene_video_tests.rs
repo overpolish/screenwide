@@ -94,6 +94,7 @@ pub(super) fn timeline(scene: serde_json::Value) -> TimelinePlan {
       transcript_cuts: Vec::new(),
       transcript_corrections: Vec::new(),
       transcript_allowed_words: Vec::new(),
+      captions: None,
       scene_clips: vec![scene],
       next_segment_id: 1,
       segments: vec![RecordingTimelineSegment {
@@ -129,6 +130,7 @@ pub(super) fn exported(
     camera,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,

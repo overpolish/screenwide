@@ -39,19 +39,29 @@ pub fn snapshot_fields(
   })
 }
 
-/// The plan an export or its estimate follows: the edit the window sent, if
+/// The edit an export or its estimate follows: the one the window sent, if
 /// it is this recording's, otherwise the one saved in the project.
+pub fn export_edit(
+  sent: Option<&RecordingTimelineEdit>,
+  project: &Path,
+  artifact_id: u64,
+  duration_ms: u64,
+) -> Option<RecordingTimelineEdit> {
+  match sent.filter(|edit| edit.artifact_id == artifact_id) {
+    Some(edit) => Some(edit.clone()),
+    None => for_project(project, artifact_id, duration_ms).map(|(_, edit)| edit),
+  }
+}
+
+/// The plan an export or its estimate follows, made of [`export_edit`].
 pub fn export_plan(
   sent: Option<&RecordingTimelineEdit>,
   project: &Path,
   artifact_id: u64,
   duration_ms: u64,
 ) -> Option<TimelinePlan> {
-  match sent.filter(|edit| edit.artifact_id == artifact_id) {
-    Some(edit) => TimelinePlan::from_edit(edit, duration_ms),
-    None => for_project(project, artifact_id, duration_ms)
-      .and_then(|(_, edit)| TimelinePlan::from_edit(&edit, duration_ms)),
-  }
+  export_edit(sent, project, artifact_id, duration_ms)
+    .and_then(|edit| TimelinePlan::from_edit(&edit, duration_ms))
 }
 
 /// How long the project whose manifest is `project` plays once edited: its

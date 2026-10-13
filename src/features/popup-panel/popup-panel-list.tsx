@@ -1,34 +1,26 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { AppWindowMac, Volume2 } from "lucide-react";
-import { ReactNode, useRef } from "react";
+import { useRef } from "react";
 import {
   Header,
   ListBoxSection as AriaListBoxSection,
 } from "react-aria-components";
 
-import { Badge } from "../../components/base/badge/badge";
-import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
 import { ListBox } from "../../components/base/listbox/listbox";
-import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { Text } from "../../components/base/text/text";
-import { hotkeyKeys } from "../../components/shared/hotkey-field/hotkey";
 import { t } from "../../i18n/i18n";
 
 import { hidePopupPanel } from "./api";
-import { PopupPanelItemGlyph } from "./popup-panel-item-glyph";
+import { renderPopupPanelItem } from "./popup-panel-list-item";
+import { PopupPanelSearchList } from "./popup-panel-search-list";
 import {
   PopupPanelItem,
   PopupPanelListContent,
   usePopupPanelStore,
 } from "./store";
-import {
-  POPUP_LABEL_ATTRIBUTE,
-  useFittedListWindow,
-} from "./use-fitted-list-window";
+import { useFittedListWindow } from "./use-fitted-list-window";
 
 type PopupPanelGroup = {
   id: string;
@@ -155,50 +147,23 @@ export function PopupPanelList({
     });
   };
 
-  const renderItem = (item: PopupPanelItem): ReactNode => (
-    <ListBoxItem
-      id={item.id}
-      key={item.id}
-      onPress={() => {
-        if (content.selectionMode === "single") selectItem(item);
-      }}
-      showsSelection={showsSelection}
-      textValue={item.label}
-    >
-      <span className="flex w-full min-w-0 items-center gap-control-inset [&_svg]:size-icon [&_svg]:shrink-0">
-        {item.iconPath ? (
-          <img
-            alt=""
-            className="size-icon shrink-0 object-contain"
-            src={convertFileSrc(item.iconPath)}
-          />
-        ) : item.icon ? (
-          <PopupPanelItemGlyph icon={item.icon} />
-        ) : item.id === content.exclusiveId ? (
-          <Volume2 />
-        ) : content.selectionMode === "multiple" ? (
-          <AppWindowMac />
-        ) : null}
-        {/* Often a device's or a folder's own name, in whichever direction
-            it is written. */}
-        <span
-          className="truncate"
-          dir="auto"
-          {...{ [POPUP_LABEL_ATTRIBUTE]: "" }}
-        >
-          {item.label}
-        </span>
-        {item.detail ? <Badge className="ms-auto">{item.detail}</Badge> : null}
-        {item.shortcut ? (
-          <Shortcut className="ms-auto">
-            {hotkeyKeys(item.shortcut).map((key, index) => (
-              <Keyboard key={`${key}-${index.toString()}`}>{key}</Keyboard>
-            ))}
-          </Shortcut>
-        ) : null}
-      </span>
-    </ListBoxItem>
-  );
+  const renderItem = (item: PopupPanelItem) =>
+    renderPopupPanelItem(item, {
+      content,
+      onPress: selectItem,
+      showsSelection,
+    });
+
+  if (content.searchLabel)
+    return (
+      <PopupPanelSearchList
+        content={content}
+        label={label}
+        onChoose={selectItem}
+        renderItem={renderItem}
+        searchLabel={content.searchLabel}
+      />
+    );
 
   const hasSections = content.items.some((item) => item.section !== undefined);
 

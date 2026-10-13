@@ -8,6 +8,9 @@ pub fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
   screenwide_scenes::validate_clips(&edit.scene_clips)?;
   silences::validate(&edit.silence_cuts)?;
   transcript::validate(&edit.transcript_cuts, &edit.transcript_corrections)?;
+  if let Some(captions) = &edit.captions {
+    captions.validate()?;
+  }
   if edit.segments.is_empty() || edit.segments.len() > MAX_SEGMENTS {
     return Err("The timeline must contain a reasonable number of segments".to_owned());
   }

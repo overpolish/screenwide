@@ -8,11 +8,14 @@
 //! under the loader lock, and releasing DirectWrite there deadlocks the exit.
 
 mod draw;
+mod faces;
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, PoisonError};
 
 use windows::{
-  core::{w, IUnknown},
+  core::{w, IUnknown, HSTRING, PCWSTR},
   Win32::Graphics::{
     Direct2D::{
       Common::{D2D1_ALPHA_MODE_IGNORE, D2D1_COLOR_F, D2D1_PIXEL_FORMAT},
@@ -26,8 +29,9 @@ use windows::{
       DWRITE_FACTORY_TYPE_ISOLATED, DWRITE_FONT_AXIS_TAG_WEIGHT, DWRITE_FONT_AXIS_VALUE,
       DWRITE_FONT_FAMILY_MODEL_TYPOGRAPHIC, DWRITE_FONT_FEATURE,
       DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES, DWRITE_FONT_LINE_GAP_USAGE_DEFAULT,
-      DWRITE_FONT_METRICS1, DWRITE_GRID_FIT_MODE_DISABLED, DWRITE_LINE_SPACING,
-      DWRITE_LINE_SPACING_METHOD_UNIFORM, DWRITE_PIXEL_GEOMETRY_FLAT,
+      DWRITE_FONT_METRICS, DWRITE_FONT_METRICS1, DWRITE_FONT_STRETCH_NORMAL,
+      DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_GRID_FIT_MODE_DISABLED,
+      DWRITE_LINE_SPACING, DWRITE_LINE_SPACING_METHOD_UNIFORM, DWRITE_PIXEL_GEOMETRY_FLAT,
       DWRITE_RENDERING_MODE1_DEFAULT, DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
       DWRITE_WORD_WRAPPING_NO_WRAP,
     },
@@ -37,29 +41,41 @@ use windows::{
 };
 
 use super::INTER;
-
-/// The weight the annotations' type is set at, on Inter's weight axis. The
-/// twin of `kScreenwideAnnotationWeight`.
-const WEIGHT: f32 = 600.0;
+use crate::text::face::TypeFace;
 
 /// The size lines are measured at before scaling to the size asked for.
 /// DirectWrite's widths scale evenly with size, so one format serves every
 /// size without creating another per measurement.
 pub(super) const REFERENCE_SIZE: f64 = 256.0;
 
+/// One face as the engine sets it: its format at [`REFERENCE_SIZE`], and
+/// its ascent and descent in ems.
+#[derive(Clone)]
+pub(super) struct Face {
+  pub(super) reference: IDWriteTextFormat3,
+  pub(super) ascent: f64,
+  pub(super) descent: f64,
+  /// Where the family is found: the app's own Inter, or the system's.
+  system: bool,
+  family: HSTRING,
+  weight: f32,
+}
+
 pub(super) struct Engine {
   factory: IDWriteFactory6,
+  /// The app's own Inter.
   collection: IDWriteFontCollection2,
+  /// Every family installed on the system, for captions.
+  system: IDWriteFontCollection2,
   tabular: IDWriteTypography,
   params: IDWriteRenderingParams3,
   dc: HDC,
   target: ID2D1DCRenderTarget,
   ink: ID2D1SolidColorBrush,
-  /// The face at [`REFERENCE_SIZE`].
-  pub(super) reference: IDWriteTextFormat3,
-  /// The face's ascent and descent, in ems.
-  pub(super) ascent: f64,
-  pub(super) descent: f64,
+  /// Inter's ascent and descent, in ems.
+  inter_metrics: (f64, f64),
+  /// Every face asked for so far.
+  faces: RefCell<HashMap<TypeFace, Face>>,
 }
 
 // Made on one thread and used from others. DirectWrite's objects are
@@ -117,13 +133,7 @@ impl Engine {
         f64::from(metrics.Base.ascent) / em,
         f64::from(metrics.Base.descent) / em,
       );
-      let reference = text_format(
-        &factory,
-        &collection,
-        REFERENCE_SIZE,
-        ascent * REFERENCE_SIZE,
-        descent * REFERENCE_SIZE,
-      )?;
+      let system = factory.GetSystemFontCollection(false, DWRITE_FONT_FAMILY_MODEL_TYPOGRAPHIC)?;
       let tabular = factory.CreateTypography()?;
       tabular.AddFontFeature(DWRITE_FONT_FEATURE {
         nameTag: DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES,
@@ -170,28 +180,16 @@ impl Engine {
       Ok(Self {
         factory,
         collection,
+        system,
         tabular,
         params,
         dc,
         target,
         ink,
-        reference,
-        ascent,
-        descent,
+        inter_metrics: (ascent, descent),
+        faces: RefCell::new(HashMap::new()),
       })
     }
-  }
-
-  /// The face at `size` pixels to the em, placed as [`text_format`] places
-  /// it.
-  pub(super) fn format(
-    &self,
-    size: f64,
-    ascent: f64,
-    descent: f64,
-  ) -> Result<IDWriteTextFormat3, String> {
-    text_format(&self.factory, &self.collection, size, ascent, descent)
-      .map_err(|error| format!("Windows could not create the annotation font: {error}"))
   }
 
   /// One line set in `format`, with tabular figures when `tabular`.
@@ -218,34 +216,5 @@ impl Engine {
       }
     };
     layout().map_err(|error| format!("Windows could not lay out annotation type: {error}"))
-  }
-}
-
-/// The face at `size` pixels to the em, each line's baseline `ascent` below
-/// its top and the next line `ascent + descent` below that: the spacing GDI's
-/// text cell set, which the layouts here are placed by.
-fn text_format(
-  factory: &IDWriteFactory6,
-  collection: &IDWriteFontCollection2,
-  size: f64,
-  ascent: f64,
-  descent: f64,
-) -> windows::core::Result<IDWriteTextFormat3> {
-  let weight = [DWRITE_FONT_AXIS_VALUE {
-    axisTag: DWRITE_FONT_AXIS_TAG_WEIGHT,
-    value: WEIGHT,
-  }];
-  unsafe {
-    let format =
-      factory.CreateTextFormat(w!("Inter"), collection, &weight, size as f32, w!("en-us"))?;
-    format.SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP)?;
-    format.SetLineSpacing(&DWRITE_LINE_SPACING {
-      method: DWRITE_LINE_SPACING_METHOD_UNIFORM,
-      height: (ascent + descent) as f32,
-      baseline: ascent as f32,
-      leadingBefore: 0.0,
-      fontLineGapUsage: DWRITE_FONT_LINE_GAP_USAGE_DEFAULT,
-    })?;
-    Ok(format)
   }
 }

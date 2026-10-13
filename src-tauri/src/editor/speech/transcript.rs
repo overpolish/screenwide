@@ -231,7 +231,9 @@ fn transcript_path(project_folder: &Path, stream: usize) -> PathBuf {
   project_folder.join(format!("transcript-{stream}.json"))
 }
 
-fn read_cache(project_folder: &Path, stream: usize) -> Option<RecordingTranscript> {
+/// The transcript kept for the `stream`th track in `project_folder`, if one
+/// was made and still reads as transcription now writes it.
+pub(crate) fn read_cache(project_folder: &Path, stream: usize) -> Option<RecordingTranscript> {
   let kept: Kept =
     serde_json::from_slice(&std::fs::read(transcript_path(project_folder, stream)).ok()?).ok()?;
   (kept.version == FORMAT_VERSION).then_some(RecordingTranscript {

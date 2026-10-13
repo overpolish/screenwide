@@ -80,6 +80,7 @@ fn recenter_detected_dark_background_matches_native_composition() {
     camera: None,
     camera_on_top: true,
     cancelled: &cancelled,
+    captions: None,
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
     keyboard: None,

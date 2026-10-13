@@ -12,9 +12,13 @@
 // `p1` points at a surface timeline in the side buffer. `HAND_DRAWN` marks a
 // highlight drawn as a marker stroke rather than a clean band, and
 // `LAID_BY_HAND` one laid over a box, whose bands are strokes rather than
-// lines of text. `SHADOW` marks a magnifier whose loupe casts a shadow, and a
-// image that casts one. `ONCE` marks an image whose animation plays
-// through once rather than looping, which only the image atlas reads.
+// lines of text. `SHADOW` marks a magnifier whose loupe casts a shadow, an
+// image that casts one, and a caption's word outlined in dark. `ONCE` marks
+// an image whose animation plays through once rather than looping, which
+// only the image atlas reads. `CAPTION` marks a text box drawn as a
+// caption's word: its type alone, in the annotation's own colour, and no
+// box. `BARE` marks a text box drawn as its box alone, which a caption's
+// lines sit on.
 #![allow(dead_code)]
 
 pub(crate) const FILL: u32 = 1 << 0;
@@ -27,3 +31,5 @@ pub(crate) const HAND_DRAWN: u32 = 1 << 6;
 pub const SHADOW: u32 = 1 << 7;
 pub(crate) const LAID_BY_HAND: u32 = 1 << 8;
 pub const ONCE: u32 = 1 << 9;
+pub const CAPTION: u32 = 1 << 10;
+pub const BARE: u32 = 1 << 11;

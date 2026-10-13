@@ -9,58 +9,18 @@ import { Text } from "../../../components/base/text/text";
 import { PathField } from "../../../components/shared/path-field/path-field";
 import { t } from "../../../i18n/i18n";
 import { formatBytes } from "../duration";
-import { RecordingOutputSettings } from "../screenshot/screenshot-output";
-import { EditorArtifact } from "../types";
 
-import { CameraOutput } from "./camera-output";
-import { CompressionSelect, ExportRow } from "./editor-export-dialog-rows";
+import {
+  CompressionSelect,
+  ExportRow,
+  SubtitlesRow,
+} from "./editor-export-dialog-rows";
+import { EditorExportFormProps } from "./editor-export-form-props";
 import {
   cameraResolutionItems,
   outputResolutionItems,
 } from "./export-resolution-items";
 import { ExportResolutionSelect } from "./export-resolution-select";
-
-export type EditorExportFormProps = {
-  artifact: EditorArtifact | null;
-  directory: string | null;
-  /** What saving delivers, which is not always `artifact.extension`. */
-  extension: string;
-  fileStem: string;
-  onBrowse: () => void;
-  /** Dismisses without saving. The host owns what that means for its shell. */
-  onCancel: () => void;
-  onExport: () => void;
-  onFileStemChange: (fileStem: string) => void;
-  cameraCompression?: number;
-  /** One video or separate files, null where there is no choice to make. */
-  cameraOutput?: CameraOutput | null;
-  cameraResolutionScalePercent?: number;
-  canExport?: boolean;
-  collapseAudio?: boolean;
-  compression?: number;
-  /** Moves the recording's project to the Trash once it has been saved. */
-  deleteProjectAfterExport?: boolean;
-  enabledAudioTrackCount?: number;
-  estimatedSizeBytes?: number | null;
-  /** Whether the camera is one of the enabled video tracks. */
-  includeCamera?: boolean;
-  isEstimatingSize?: boolean;
-  isSaving?: boolean;
-  onCameraCompressionChange?: (compression: number) => void;
-  onCameraResolutionScaleChange?: (scale: number) => void;
-  onCollapseAudioChange?: (collapse: boolean) => void;
-  onCompressionChange?: (compression: number) => void;
-  onDeleteProjectAfterExportChange?: (remove: boolean) => void;
-  onOpenLocationAfterExportChange?: (open: boolean) => void;
-  onResolutionScaleChange?: (scale: number) => void;
-  /** Reveals the saved file once it has been written. A stored preference. */
-  openLocationAfterExport?: boolean;
-  /** The canvases the editor's Dimensions setting gives the video and the
-   * camera, which is what the size choices scale; absent, the source sizes
-   * stand in. */
-  recordingOutput?: RecordingOutputSettings | null;
-  resolutionScalePercent?: number;
-};
 
 /** The host owns the settings; this only presents and reports them. */
 export function EditorExportForm({
@@ -77,6 +37,7 @@ export function EditorExportForm({
   estimatedSizeBytes,
   extension,
   fileStem,
+  hasTranscript = false,
   includeCamera = false,
   isEstimatingSize,
   isSaving,
@@ -91,9 +52,11 @@ export function EditorExportForm({
   onFileStemChange,
   onOpenLocationAfterExportChange,
   onResolutionScaleChange,
+  onSubtitlesChange,
   openLocationAfterExport = false,
   recordingOutput,
   resolutionScalePercent,
+  subtitles = "none",
 }: EditorExportFormProps) {
   if (!artifact) return null;
   const recording = artifact.kind === "recording" ? artifact : null;
@@ -147,7 +110,7 @@ export function EditorExportForm({
           )}
         </ExportRow>
         {/* One format for now: choosing another is a backend follow-up. */}
-        <ExportRow title={t("editor-export-format")}>
+        <ExportRow layout="end" title={t("editor-export-format")}>
           {() => (
             <PillGroup
               aria-label={t("editor-export-format")}
@@ -241,6 +204,14 @@ export function EditorExportForm({
               />
             )}
           </ExportRow>
+        ) : null}
+        {recording ? (
+          <SubtitlesRow
+            hasTranscript={hasTranscript}
+            isDisabled={isSaving}
+            onChange={onSubtitlesChange}
+            value={subtitles}
+          />
         ) : null}
         <ExportRow layout="trailing" title={t("editor-export-open-folder")}>
           {(props) => (

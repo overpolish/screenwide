@@ -197,10 +197,13 @@ export const timedLaneMinimumSpan = ({
  * occupies on screen rather than by its timing alone, so two brief items too
  * close together to be drawn side by side stack instead of overprinting.
  */
-export function stackTimedLaneFragments<Item extends TimedLaneItem>(
-  fragments: TimedLaneFragment<Item>[],
+export function stackTimedLaneFragments<
+  Item extends TimedLaneItem,
+  Fragment extends LaneFragment<Item> = TimedLaneFragment<Item>,
+>(
+  fragments: Fragment[],
   { minimumSpan = 0 }: { minimumSpan?: number } = {},
-): { fragments: StackedLaneFragment<Item>[]; rowCount: number } {
+): { fragments: StackedLaneFragment<Item, Fragment>[]; rowCount: number } {
   const ordered = [...fragments].sort(
     (left, right) =>
       left.outputStart - right.outputStart || left.outputEnd - right.outputEnd,
@@ -219,7 +222,7 @@ export function stackTimedLaneFragments<Item extends TimedLaneItem>(
     }
   }
   /** What the fragment covers once drawn, which is what a row is claimed by. */
-  const painted = (fragment: TimedLaneFragment<Item>) => {
+  const painted = (fragment: Fragment) => {
     if (minimumSpan <= 0 || runItemIds.has(fragment.item.id)) {
       return { end: fragment.outputEnd, start: fragment.outputStart };
     }
@@ -236,8 +239,8 @@ export function stackTimedLaneFragments<Item extends TimedLaneItem>(
     };
   };
   const rowEnds: number[] = [];
-  const rowLast: (StackedLaneFragment<Item> | undefined)[] = [];
-  const runs: StackedLaneFragment<Item>[][] = [];
+  const rowLast: (StackedLaneFragment<Item, Fragment> | undefined)[] = [];
+  const runs: StackedLaneFragment<Item, Fragment>[][] = [];
   const rowRun: number[] = [];
   const stacked = ordered.map((fragment) => {
     const box = painted(fragment);
@@ -259,7 +262,7 @@ export function stackTimedLaneFragments<Item extends TimedLaneItem>(
       previous !== undefined &&
       previous.item.id === fragment.item.id &&
       Math.abs(previous.outputEnd - fragment.outputStart) < SEAM_EPSILON;
-    const placed = {
+    const placed: StackedLaneFragment<Item, Fragment> = {
       ...fragment,
       continuedByNext: false,
       continuesPrevious,
@@ -277,7 +280,7 @@ export function stackTimedLaneFragments<Item extends TimedLaneItem>(
     return placed;
   });
   for (const run of runs) {
-    let widest: StackedLaneFragment<Item> | undefined;
+    let widest: StackedLaneFragment<Item, Fragment> | undefined;
     for (const member of run) {
       if (
         !widest ||

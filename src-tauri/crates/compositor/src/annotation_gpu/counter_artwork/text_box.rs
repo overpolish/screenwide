@@ -9,8 +9,10 @@
 //! visual that way, so here the caret and the selection are drawn into the
 //! box's own cell, as coverage the shader inks like the text.
 
+use super::outline::outlined;
 use super::rasterize::tinted;
 use crate::platform::type_device::TypeDevice;
+use screenwide_annotations::text::face::TypeFace;
 use screenwide_annotations::text::metrics::LINE_HEIGHT;
 use screenwide_annotations::text::typing::TypingMarks;
 
@@ -32,9 +34,9 @@ struct Block<'a> {
   line: f64,
 }
 
-fn block(text: &str, size: f32) -> Result<Block<'_>, String> {
+fn block<'a>(face: &TypeFace, text: &'a str, size: f32) -> Result<Block<'a>, String> {
   let font = f64::from(size);
-  let device = TypeDevice::new(font)?;
+  let device = TypeDevice::in_face(face.clone(), font)?;
   let mut offset = 0;
   let lines: Vec<(usize, &str)> = text
     .split('\n')
@@ -55,11 +57,42 @@ fn block(text: &str, size: f32) -> Result<Block<'_>, String> {
   })
 }
 
+/// Room around a caption's type, in ems: a face chosen from the system may
+/// draw past its advance and its line, as a wide T's bar or a tall accent
+/// does, and the cell would cut what reaches out. Inter stays inside both.
+const FACE_ROOM: f64 = 0.25;
+
+/// How a box's type is set beyond its text: its face, and the outline drawn
+/// around it, as wide as `outline` atlas pixels, or none.
+#[derive(Clone, Copy)]
+pub(super) struct Look<'a> {
+  pub(super) face: &'a TypeFace,
+  pub(super) outline: f64,
+}
+
+/// The room `look` is given on every side at `size`, in atlas pixels: its
+/// outline's width and a pixel for its edge, and more for a face of the
+/// system's.
+fn room(look: Look, size: f32) -> f64 {
+  let face = if *look.face == TypeFace::ANNOTATION {
+    0.0
+  } else {
+    f64::from(size) * FACE_ROOM
+  };
+  let outline = if look.outline > 0.0 {
+    look.outline + 1.0
+  } else {
+    0.0
+  };
+  face.max(outline)
+}
+
 /// The cell a box's text needs at `size`, or none for a box with nothing to
 /// show: an empty box shows its caret while it is typed into, and nothing
 /// once it is not. `size` and the caret's width `caret`, one drawn pixel,
 /// are in atlas pixels.
 pub(super) fn measure(
+  look: Look,
   text: &str,
   size: f32,
   caret: f64,
@@ -68,13 +101,14 @@ pub(super) fn measure(
   if size <= 1.0 {
     return Ok(None);
   }
-  let block = block(text, size)?;
+  let block = block(look.face, text, size)?;
   if block.width <= 0.0 && marks.is_none() {
     return Ok(None);
   }
+  let room = room(look, size);
   Ok(Some((
-    (block.width + 2.0 * (MARGIN + caret)).ceil() as u32,
-    (block.line * block.lines.len() as f64).ceil() as u32 + 2,
+    (block.width + 2.0 * (MARGIN + caret + room)).ceil() as u32,
+    (block.line * block.lines.len() as f64 + 2.0 * room).ceil() as u32 + 2,
   )))
 }
 
@@ -108,8 +142,9 @@ fn shade(
 
 /// `text` drawn at `size` into a cell of `cell` pixels, each line placed by
 /// `alignment`, with the caret, `caret` atlas pixels wide, and the selection
-/// of a box being typed into.
+/// of a box being typed into; with its outline, where `look` has one.
 pub(super) fn draw(
+  look: Look,
   text: &str,
   size: f32,
   caret: f64,
@@ -117,16 +152,18 @@ pub(super) fn draw(
   marks: Option<TypingMarks>,
   cell: (u32, u32),
 ) -> Result<Vec<u8>, String> {
-  let block = block(text, size)?;
+  let block = block(look.face, text, size)?;
   let (ascent, descent) = block.device.vertical_metrics();
   let share = match alignment {
     1 => 0.5,
     2 => 1.0,
     _ => 0.0,
   };
-  let left = |index: usize| MARGIN + caret + (block.width - block.widths[index]) * share;
+  let room = room(look, size);
+  let left = |index: usize| MARGIN + caret + room + (block.width - block.widths[index]) * share;
   // Each line sits centred in its own fixed-height band, as on macOS.
-  let top = |index: usize| 1.0 + block.line * index as f64 + (block.line - ascent - descent) * 0.5;
+  let top =
+    |index: usize| 1.0 + room + block.line * index as f64 + (block.line - ascent - descent) * 0.5;
   let x_at = |index: usize, offset: usize| {
     let (start, line) = block.lines[index];
     let within = clamped(line, offset.saturating_sub(start));
@@ -179,5 +216,9 @@ pub(super) fn draw(
       |_| 255,
     );
   }
-  Ok(tinted(&coverage))
+  Ok(if look.outline > 0.0 {
+    outlined(&coverage, cell, look.outline)
+  } else {
+    tinted(&coverage)
+  })
 }

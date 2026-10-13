@@ -15,6 +15,7 @@ import { CameraOutput } from "../camera-output";
 import { ExportOptionsWindowView } from "./export-options-window-view";
 import { ExportProgressProps } from "./export-progress";
 
+import type { ExportSubtitles } from "../../../../bindings/ExportSubtitles";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const cameraRecording: EditorArtifact = {
@@ -45,6 +46,7 @@ function EditorExportPreview({
   enabledAudioTrackCount = 2,
   estimatedSizeBytes = 74_200_000,
   extension,
+  hasTranscript = true,
   includeCamera = false,
   progress,
   recordingOutput,
@@ -54,6 +56,7 @@ function EditorExportPreview({
   enabledAudioTrackCount?: number;
   estimatedSizeBytes?: number | null;
   extension?: string;
+  hasTranscript?: boolean;
   includeCamera?: boolean;
   /** When given, the window shows the running save instead of the form. */
   progress?: ExportProgressProps;
@@ -70,6 +73,7 @@ function EditorExportPreview({
   const [deleteProject, setDeleteProject] = useState(false);
   const [openLocation, setOpenLocation] = useState(true);
   const [resolution, setResolution] = useState(200);
+  const [subtitles, setSubtitles] = useState<ExportSubtitles>("srt");
 
   return (
     <ExportOptionsWindowView
@@ -86,6 +90,7 @@ function EditorExportPreview({
         estimatedSizeBytes,
         extension: extension ?? artifact.extension,
         fileStem,
+        hasTranscript,
         includeCamera,
         onBrowse: () => {
           setDirectory((current) =>
@@ -102,9 +107,11 @@ function EditorExportPreview({
         onFileStemChange: setFileStem,
         onOpenLocationAfterExportChange: setOpenLocation,
         onResolutionScaleChange: setResolution,
+        onSubtitlesChange: setSubtitles,
         openLocationAfterExport: openLocation,
         recordingOutput,
         resolutionScalePercent: resolution,
+        subtitles,
       }}
       isSaving={Boolean(progress)}
       onClose={() => undefined}
@@ -135,6 +142,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Video: Story = {};
+
+/** No transcript yet, so there is nothing to make subtitles from. */
+export const Untranscribed: Story = {
+  args: { hasTranscript: false },
+};
 
 export const Screenshot: Story = {
   args: { artifact: screenshot, estimatedSizeBytes: null },

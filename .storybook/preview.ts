@@ -7,6 +7,8 @@ import { createElement } from "react";
 import { I18nProvider } from "react-aria-components";
 import { themes } from "storybook/theming";
 
+import { sampleCaptions } from "../src/features/editor/tool-panels/captions/caption-text-fixtures";
+import { sampleTranscriptWords } from "../src/features/editor/tool-panels/transcript/transcript-panel-fixtures";
 import {
   appDirection,
   applyDirection,
@@ -102,6 +104,36 @@ const silentWav = () => {
   return view.buffer;
 };
 
+/** The text of each word `find_transcript_marks` was asked about. */
+const askedWords = (payload: unknown): string[] =>
+  payload &&
+  typeof payload === "object" &&
+  "words" in payload &&
+  Array.isArray(payload.words)
+    ? payload.words.map((word: unknown) =>
+        word &&
+        typeof word === "object" &&
+        "text" in word &&
+        typeof word.text === "string"
+          ? word.text
+          : "",
+      )
+    : [];
+
+/** The fillers and profanity among the words asked about, by the sample
+ * transcript's own few, found by their words alone as the lists would. */
+const storyTranscriptMarks = (payload: unknown) => {
+  const words = askedWords(payload);
+  const found = (list: readonly string[]) =>
+    words.flatMap((text, index) => {
+      const folded = text.toLowerCase().replace(/[^\p{L}']/gu, "");
+      return list.includes(folded)
+        ? [{ first: index, folded, last: index }]
+        : [];
+    });
+  return { fillers: found(["uh", "um"]), profanity: found(["damn"]) };
+};
+
 // Stub the Tauri runtime so stories mounting Tauri-touching components render
 // outside the desktop app. This installs `window.__TAURI_INTERNALS__` with
 // `invoke`, `transformCallback`, `unregisterCallback`, `runCallback`, and the
@@ -112,12 +144,34 @@ const silentWav = () => {
 // to `null`; these stories render layout rather than live pixels.
 if (!isNativePreview) {
   mockIPC(
-    (command) => {
+    (command, payload) => {
       switch (command) {
+        // Caption previews are drawn by the native compositor, which a
+        // browser story cannot reach; tiles show their names alone.
         case "get_recording_keyboard_timeline":
         case "get_recording_moments":
+        case "make_recording_captions":
         case "open_standalone_listboxes":
+        case "render_caption_previews":
           return [];
+        case "installed_font_families":
+          return [
+            { name: "Georgia", weights: [400, 700] },
+            { name: "Helvetica Neue", weights: [100, 300, 400, 500, 700] },
+            { name: "Times New Roman", weights: [400, 700] },
+          ];
+        case "find_transcript_marks":
+          return storyTranscriptMarks(payload);
+        // The sample transcript and the captions made of it, for panels
+        // that read them from the editor rather than their snapshot.
+        case "get_recording_transcript":
+          return {
+            language: "en",
+            model: "story",
+            words: sampleTranscriptWords,
+          };
+        case "recording_captions":
+          return sampleCaptions;
         case "get_recording_moment_note":
           return silentWav();
         default:

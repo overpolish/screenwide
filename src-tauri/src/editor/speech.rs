@@ -6,6 +6,7 @@
 //! microphone is heard from. The tools themselves are `screenwide_speech`.
 
 pub(crate) mod commands;
+pub(crate) mod marks;
 mod studio_ducking;
 pub(crate) mod transcript;
 
@@ -73,7 +74,7 @@ impl SpeechSource {
 }
 
 /// The stream of the first of `tracks` of `kind`.
-fn first_of(tracks: &[RecordingAudioTrack], kind: AudioTrackKind) -> Option<usize> {
+pub(super) fn first_of(tracks: &[RecordingAudioTrack], kind: AudioTrackKind) -> Option<usize> {
   tracks
     .iter()
     .find(|track| track.kind == kind)

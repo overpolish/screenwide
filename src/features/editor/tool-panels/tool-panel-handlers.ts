@@ -8,6 +8,8 @@ import {
 import { ImagePlayChange } from "../annotations/annotation-channel";
 import { AnnotationStyle, ImageArt } from "../annotations/annotations";
 import { CameraEffectsChange } from "../recording/camera/use-camera-effects";
+import { CaptionsPatch } from "../recording/captions/recording-captions";
+import { CaptionDefaultsPatch } from "../recording/captions/use-caption-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -79,6 +81,11 @@ export type ToolPanelHandlers = {
   onCameraObjectsDownload?: () => void;
   /** Start picking objects in the camera frame the preview shows, or stop. */
   onCameraObjectsPick?: (isPicking: boolean) => void;
+  /** Save a caption template's style as its default, or choose the template
+   * new captions start from. */
+  onCaptionDefaultsChange?: (patch: CaptionDefaultsPatch) => void;
+  /** Show the captions or set them otherwise, as one edit. */
+  onCaptionsChange?: (patch: CaptionsPatch) => void;
   /** Show the whole source again, the committed crop taken away. */
   onCropReset?: () => void;
   /** Cut a crop of the size a field asked for, in source pixels. */

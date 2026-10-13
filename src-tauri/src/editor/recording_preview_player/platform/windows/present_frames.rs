@@ -62,6 +62,9 @@ pub(in crate::editor::recording_preview_player::platform) fn present_native_fram
     remap(sources, 1, &mut settings.recording_output.camera, frame);
   }
   let composed = screen_composition(sources, &settings.recording_output.primary, screen);
+  if let Some(frame) = screen {
+    surface.set_captions(0, sources.captions_at(frame.timestamp_ms));
+  }
   if settings.bake_camera && sources.camera_path.is_some() {
     surface
       .present_baked_camera_textures(

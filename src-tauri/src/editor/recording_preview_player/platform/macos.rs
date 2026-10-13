@@ -92,6 +92,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
           seconds,
           cursor,
           keyboard,
+          captions: sources.captions_at(source_token),
           camera: None,
           camera_pixels: bake_camera
             .then_some(camera.as_ref())
@@ -118,6 +119,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
               seconds,
               cursor: None,
               keyboard: None,
+              captions: None,
               camera: None,
               camera_pixels: None,
               overlay: None,

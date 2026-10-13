@@ -206,6 +206,7 @@ fn placed_native(
           size: arrow.geometry.rounding,
           style: 0,
           marks: None,
+          ..Default::default()
         },
         AnnotationKind::Text => PreparedType {
           text: text(),
@@ -214,6 +215,7 @@ fn placed_native(
           marks: typing
             .filter(|(typed, _)| *typed == index)
             .map(|(_, marks)| marks),
+          ..Default::default()
         },
         // Only a counter and a text box carry type.
         _ => PreparedType::default(),

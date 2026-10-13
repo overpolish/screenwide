@@ -11,6 +11,8 @@ import {
 import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import { RecordingMoment } from "../moments/recording-moments";
 
+import type { Caption } from "../../../../bindings/Caption";
+
 /** What the timeline preview stories lay onto their lanes. */
 export const STORY_DURATION_MS = 120_000;
 export const STORY_FRAMES_PER_SECOND = 60_000 / 1_001;
@@ -19,6 +21,28 @@ export const STORY_KEYBOARD_ITEMS: RecordingKeyboardTimelineItem[] = [
   { endMs: 11_800, id: 0, label: "⌘ C", startMs: 10_000 },
   { endMs: 29_600, id: 1, label: "⌘ V", startMs: 28_000 },
   { endMs: 74_900, id: 2, label: "⇧ ⌘ 4", startMs: 72_000 },
+];
+
+/** A caption as the editor gets it back, timed on the edited video. The
+ * lane draws only its text, so it carries no words. */
+const caption = (startMs: number, endMs: number, text: string): Caption => ({
+  endMs,
+  id: startMs,
+  lines: [],
+  spaced: true,
+  startMs,
+  text,
+});
+
+export const STORY_CAPTIONS: Caption[] = [
+  caption(2_000, 4_600, "So this is a quick test"),
+  caption(4_600, 7_200, "of the new export settings."),
+  caption(8_100, 11_400, "Open the editor and pick the recording"),
+  caption(11_400, 13_000, "you want to share."),
+  // A run of one-word captions, narrower than their labels zoomed out.
+  caption(13_000, 13_300, "Ready."),
+  caption(13_300, 13_600, "Set."),
+  caption(13_600, 13_900, "Go."),
 ];
 
 const counter = (

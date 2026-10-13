@@ -103,11 +103,13 @@ editor-panels-transcript-working = Transcribing
 # Shown under Transcribe when transcribing the recording failed.
 editor-panels-transcript-failed = Could not transcribe the recording. Try again.
 # $key is drawn as a keycap: Command on macOS, Ctrl on Windows.
-editor-panels-transcript-hint = { $key } click/drag to cut or restore words. Double-click to edit.
+editor-panels-transcript-hint = { $key } click/drag to remove or restore words. Double-click to edit.
 # The accessible name of the word or words being edited in place.
 editor-panels-transcript-editing = Word being edited
 # The accessible name of the menu a right click on the transcript's words opens.
 editor-panels-transcript-actions = Word actions
+# Menu item: remove the chosen words from the video.
+editor-panels-transcript-remove = Remove
 # Menu item: edit the chosen words in place.
 editor-panels-transcript-edit = Edit
 # Menu item: bring back the struck-through words chosen.
@@ -146,6 +148,104 @@ editor-panels-transcript-replace-with = Replace with
 editor-panels-transcript-replace-all = Replace all
 # Button that transcribes the recording again, once it already has a transcript.
 editor-panels-transcript-transcribe-again = Transcribe again
+
+## Captions: the transcript's words shown a few at a time, timed to the voice
+
+# The tool's tooltip.
+editor-panels-captions = Captions
+# The toolbar button's accessible name.
+editor-panels-captions-name = Captions from the transcript
+# Shown beside the transcript's model download and Transcribe, while there is no transcript to caption.
+editor-panels-captions-description = Captions are made from the transcript.
+# The accessible name of the spinner the Captions panel shows while it comes up.
+editor-panels-captions-loading = Loading captions
+editor-panels-captions-show = Show captions
+# The accessible name of the transcript as the captions break it, under Show captions.
+editor-panels-captions-text = Caption text
+# Under the caption text: take away every break, join and hidden or shown word placed by hand. Spelling fixes stay.
+editor-panels-captions-reset-text = Reset breaks and hidden words
+# The menu a right click on a word of the caption text opens: its accessible name, then each item. A break starts a new caption between two words; a join keeps them in one caption.
+editor-panels-captions-actions = Caption actions
+editor-panels-captions-split = Start a new caption here
+editor-panels-captions-join = Join with the previous caption
+editor-panels-captions-clear-split = Clear this break
+editor-panels-captions-remove-join = Allow a break here
+editor-panels-captions-hide-word = Hide from captions
+editor-panels-captions-show-word = Show in captions
+# The Captions panel's three tabs: the group's accessible name, then each tab. Words holds what captions say and how long they stay up; Style holds the template and how it looks; Layout holds the type's size and case, and how many words and lines a caption holds.
+editor-panels-captions-tabs = Caption settings
+editor-panels-captions-tab-words = Words
+editor-panels-captions-tab-style = Style
+editor-panels-captions-tab-layout = Layout
+# The caption templates: the group's accessible name, and each one's name under its moving preview.
+editor-panels-captions-template = Caption style
+editor-panels-captions-template-box = Box
+editor-panels-captions-template-clean = Clean
+editor-panels-captions-template-pop = Pop
+editor-panels-captions-template-highlight = Highlight
+editor-panels-captions-template-reveal = Reveal
+# The few words each template's preview shows, said a couple at a time; short, so they fit a small tile.
+editor-panels-captions-sample = Captions that move with every word
+# A template's name under its tile, where it is the one new captions start from.
+editor-panels-captions-template-default = { $name } (default)
+# The face caption type is set in, chosen from a list of the fonts installed on the computer.
+editor-panels-captions-font = Font
+# The placeholder and accessible name of the field heading the font list, which finds a font by name.
+editor-panels-captions-font-search = Find a font
+# The app's own font in the font list, ahead of the ones installed on the computer.
+editor-panels-captions-font-built-in = Inter (built in)
+# How heavy the caption type is, from the weights its font has, lightest first, by the names type designers give them.
+editor-panels-captions-weight = Weight
+editor-panels-captions-weight-thin = Thin
+editor-panels-captions-weight-extra-light = Extra light
+editor-panels-captions-weight-light = Light
+editor-panels-captions-weight-regular = Regular
+editor-panels-captions-weight-medium = Medium
+editor-panels-captions-weight-semibold = Semibold
+editor-panels-captions-weight-bold = Bold
+editor-panels-captions-weight-extra-bold = Extra bold
+editor-panels-captions-weight-black = Black
+# Which colour of the caption the colour grid changes, and each choice: the type, the word being said, and the box behind the lines.
+editor-panels-captions-color = Colour
+editor-panels-captions-color-text = Text
+editor-panels-captions-color-highlight = Highlight
+editor-panels-captions-color-background = Box
+# In each Captions tab: start new captions as these are now. On the Style tab, this template with this look; on the Words tab, these rules.
+editor-panels-captions-set-default = Set as default
+# In a caption template's menu: put the template back to how it ships, dropping any look set as its default.
+editor-panels-captions-reset-original = Reset to original
+# Colour the word being said in a caption.
+editor-panels-captions-highlight-word = Highlight spoken word
+# The most words one caption shows at once, across its lines.
+editor-panels-captions-max-words = Max words
+editor-panels-captions-lines = Lines
+editor-panels-captions-one-line = One
+editor-panels-captions-two-lines = Two
+# The nine places on the picture a caption can sit, each the accessible name of its cell in the Position grid.
+editor-panels-captions-position-top-left = Top left
+editor-panels-captions-position-top = Top
+editor-panels-captions-position-top-right = Top right
+editor-panels-captions-position-left = Left
+editor-panels-captions-position-center = Centre
+editor-panels-captions-position-right = Right
+editor-panels-captions-position-bottom-left = Bottom left
+editor-panels-captions-position-bottom = Bottom
+editor-panels-captions-position-bottom-right = Bottom right
+# Keep each caption on screen through a silence until the next one starts.
+editor-panels-captions-hold-until-next = Hold until next caption
+editor-panels-captions-all-caps = All caps
+editor-panels-captions-hide-punctuation = Hide punctuation
+editor-panels-captions-hide-fillers = Hide filler words
+# How a word marked as profanity shows: the row's title, then each choice.
+editor-panels-captions-profanity-style = Profanity
+# Profanity shown as it was said.
+editor-panels-captions-profanity-said = As said
+# Profanity shown with its first letter and the rest starred out.
+editor-panels-captions-profanity-partly = Partly
+# Profanity shown with every letter starred out.
+editor-panels-captions-profanity-fully = Fully
+# Profanity left out of the caption.
+editor-panels-captions-profanity-hidden = Hidden
 
 ## Frame and background
 
@@ -244,8 +344,8 @@ editor-panels-silences = Silences
 editor-panels-remove = Remove
 editor-panels-restore-all = Restore all
 editor-panels-restore-silences = Restore all silences
-editor-panels-silences-finding = Finding pauses
-editor-panels-silences-none = No long pauses found
+editor-panels-silences-finding = Finding silences
+editor-panels-silences-none = No long silences found
 # $duration is how much shorter the cuts make the recording, such as 00:48.
 editor-panels-silences-removed =
     { $count ->

@@ -13,7 +13,8 @@ const textInputTypes = new Set([
 
 /** Text fields, and widgets that work on text their own way and answer the
  * same keys, marked `data-owns-text-keys`: the transcript, whose words are
- * chosen, cut and copied there. */
+ * chosen, cut and copied there, and the caption text, whose words are
+ * edited and hidden there. */
 export const ownsTextEditingKeys = (target: EventTarget | null) =>
   (target instanceof HTMLInputElement && textInputTypes.has(target.type)) ||
   target instanceof HTMLTextAreaElement ||

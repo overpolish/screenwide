@@ -16,6 +16,7 @@ import {
 } from "../../types";
 
 import type { TimelineItemSelection } from "./timeline-item-selection";
+import type { Caption } from "../../../../bindings/Caption";
 import type { AudioTrackVolumes } from "../audio/audio-level";
 import type { TimelineBladeController } from "../editing/timeline-blade";
 import type { RecordingMoment } from "../moments/recording-moments";
@@ -52,6 +53,9 @@ export type RecordingTrackLanesProps = {
   /** What an annotation clip's menu does to its pin. Without it, the lane
    * offers no pinning. */
   annotationPinning?: AnnotationClipPinning;
+  /** The captions the edit asks of the transcript, timed on the edited
+   * video; none hides the lane. */
+  captions?: readonly Caption[];
   /** Whether the camera is saved as a file of its own rather than drawn into
    * the screen's video, which its row says beside its name. */
   isCameraSeparate?: boolean;
@@ -82,6 +86,8 @@ export type RecordingTrackLanesProps = {
   onScenesDraftChange?: (clips: RecordingSceneClip[] | null) => void;
   /** Choose what a band over the scene lane swept, alone or added. */
   onScenesSweep?: (ids: string[], additive: boolean) => void;
+  /** Picking a caption opens the Captions panel, where its look is set. */
+  onSelectCaption?: () => void;
   /** Picking a keyboard shortcut puts it in hand: the caller clears the
    * annotation selection and takes up the Select tool, mirroring what the
    * annotation lane's select does. */
