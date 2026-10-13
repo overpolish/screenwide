@@ -161,6 +161,27 @@ fn draws_a_caption_word_in_its_own_colour_with_a_dark_outline_and_no_box() {
 }
 
 #[test]
+fn draws_the_outline_in_the_colour_picked_and_none_when_off() {
+  let first_word = |style: CaptionStyle| {
+    let set = pieces(style);
+    let canvas = drawn(&set);
+    let first = &set.0[0];
+    around(&canvas, first.centre, [first.size, first.size * 0.4])
+  };
+  let blue = first_word(CaptionStyle {
+    outline_color: "#1040ff".to_owned(),
+    ..styled(CaptionTemplate::Clean)
+  });
+  assert!(blue.iter().any(|[r, g, b]| *b > 160 && *r < 80 && *g < 110));
+  let bare = first_word(CaptionStyle {
+    outline: false,
+    ..styled(CaptionTemplate::Clean)
+  });
+  assert!(bare.iter().any(|pixel| is_white(*pixel)));
+  assert!(!bare.iter().any(|pixel| is_dark(*pixel)));
+}
+
+#[test]
 fn draws_the_box_template_on_a_dark_backdrop_and_the_highlight_on_a_pill() {
   let boxed = pieces(styled(CaptionTemplate::Box));
   let canvas = drawn(&boxed);
@@ -190,6 +211,18 @@ fn white_count(set: &(Vec<CaptionPiece>, TypeFace)) -> usize {
     .flat_map(|piece| around(&canvas, piece.centre, [piece.size * 2.0, piece.size * 0.6]))
     .filter(|pixel| is_white(*pixel))
     .count()
+}
+
+#[test]
+fn draws_a_word_growing_in_at_its_size_then() {
+  let settled = pieces(styled(CaptionTemplate::Clean));
+  let mut growing = settled.clone();
+  for piece in &mut growing.0 {
+    piece.scale = [0.75; 2];
+  }
+  // At three quarters across and down, the type covers about 56% as much.
+  let share = white_count(&growing) as f64 / white_count(&settled) as f64;
+  assert!((0.4..0.75).contains(&share), "{share}");
 }
 
 #[test]

@@ -27,7 +27,7 @@ const PREVIEW: CaptionPreview = CaptionPreview {
 };
 /// Changed whenever the preview is drawn differently, so no older strip is
 /// shown in its place.
-const PREVIEW_VERSION: u32 = 6;
+const PREVIEW_VERSION: u32 = 7;
 
 /// A style's preview: a strip of frames one above another in one picture,
 /// which the tile steps through.

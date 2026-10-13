@@ -11,6 +11,8 @@
 use crate::style::{rgba, CaptionBackground, CaptionEntrance};
 use crate::{type_size_px, Caption, CaptionFrame, RecordingCaptions};
 
+mod upcoming;
+
 /// A line's height, in ems: the twin of `LINE_HEIGHT` in the annotations'
 /// text metrics, which the compositor sets the type at.
 const LINE_HEIGHT: f64 = 1.25;
@@ -20,8 +22,8 @@ const LINE_HEIGHT: f64 = 1.25;
 const EDGE_SHARE: f64 = 0.1;
 /// A frame at 60 frames a second, which a moving piece blurs across.
 const FRAME_MS: f64 = 1_000.0 / 60.0;
-/// How long a popping caption takes to grow in, from three quarters of its
-/// size past its own and back.
+/// How long a popping caption's words take to grow in, each from three
+/// quarters of its size past its own and back.
 const POP_MS: f64 = 220.0;
 const POP_FROM: f64 = 0.75;
 /// How far past its size a popping caption grows: the back ease's
@@ -39,8 +41,12 @@ pub enum CaptionPieceKind {
   /// The box behind the lines, the size the caption's text sets it at, with
   /// no type of its own.
   Backdrop { color: String },
-  /// One word's type in `ink`, with a dark outline where `outlined`.
-  Word { ink: String, outlined: bool },
+  /// One word's type in `ink`, with an outline in `outline` where it has
+  /// one.
+  Word {
+    ink: String,
+    outline: Option<String>,
+  },
   /// A pill behind the word being said, a little wider than the word, with
   /// no type of its own.
   Pill { color: String },
@@ -155,24 +161,19 @@ pub fn caption_pieces(
   let top = edge + (room[1] - block[1]) * down;
   let centre = [left + block[0] / 2.0, top + block[1] / 2.0];
   let elapsed = at_ms - caption.start_ms;
+  // A popping caption's words each grow about their own middle, staying
+  // where they settle; the size a frame ago is the size now, so the growth
+  // is drawn sharp rather than blurred as an annotation's is.
   let (scale, opacity) = if style.entrance == CaptionEntrance::Pop {
-    let (now, then) = (pop(elapsed), pop((elapsed - FRAME_MS).max(0.0)));
-    ([now.0, then.0], [now.1, then.1])
+    let (size, solidity) = pop(elapsed);
+    ([size; 2], [solidity; 2])
   } else {
     ([1.0; 2], [1.0; 2])
-  };
-  // Pieces move away from the caption's centre as it grows, so it grows as
-  // one block rather than each word about its own middle.
-  let placed = |at: [f64; 2]| {
-    [
-      centre[0] + (at[0] - centre[0]) * scale[0],
-      centre[1] + (at[1] - centre[1]) * scale[0],
-    ]
   };
   let piece = |kind, text: &str, at: [f64; 2], opacity: [f64; 2]| CaptionPiece {
     kind,
     text: text.to_owned(),
-    centre: placed(at),
+    centre: at,
     size,
     scale,
     opacity,
@@ -201,6 +202,7 @@ pub fn caption_pieces(
   }
   let highlight = full_hex(&style.highlight_color);
   let text_ink = full_hex(&style.text_color);
+  let outline = style.outline.then(|| full_hex(&style.outline_color));
   let mut pill = None;
   let mut words_drawn = Vec::new();
   let mut index = 0;
@@ -236,7 +238,7 @@ pub fn caption_pieces(
         // The pill sets the word apart, so it needs no outline to read.
         CaptionPieceKind::Word {
           ink: ink_on(&highlight),
-          outlined: false,
+          outline: None,
         }
       } else {
         CaptionPieceKind::Word {
@@ -245,7 +247,7 @@ pub fn caption_pieces(
           } else {
             text_ink.clone()
           },
-          outlined: style.outline,
+          outline: outline.clone(),
         }
       };
       words_drawn.push(piece(kind, &word.text, at, opacity));

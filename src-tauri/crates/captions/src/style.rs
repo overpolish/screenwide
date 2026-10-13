@@ -22,9 +22,9 @@ pub enum CaptionTemplate {
   Box,
   /// Outlined type and no box, keeping the picture clear.
   Clean,
-  /// Big type a few words at a time, each caption popping in from three
-  /// quarters of its size past its own and settling, and swapped out at
-  /// once for the next.
+  /// Big type a few words at a time, each caption's words popping in where
+  /// they sit, from three quarters of their size past it and settling, and
+  /// swapped out at once for the next.
   Pop,
   /// The word being said on a bright pill of its own.
   Highlight,
@@ -64,7 +64,7 @@ pub enum CaptionEntrance {
   /// All at once.
   #[default]
   None,
-  /// Growing in past its size and settling.
+  /// Every word growing in place past its size and settling.
   Pop,
   /// A word at a time, as each is said.
   Words,
@@ -115,8 +115,11 @@ pub struct CaptionStyle {
   pub background_color: String,
   /// Colour the word being said, where no pill marks it already.
   pub highlight_words: bool,
-  /// A soft dark outline around the type, so it reads without a box.
+  /// A soft outline around the type, so it reads without a box.
   pub outline: bool,
+  /// The outline's colour, as `#rrggbb`; it is always drawn a little
+  /// see-through, so it softens the type's edge rather than ringing it.
+  pub outline_color: String,
   pub background: CaptionBackground,
   pub entrance: CaptionEntrance,
 }
@@ -133,6 +136,8 @@ const WHITE: &str = "#ffffff";
 const YELLOW: &str = "#ffd60a";
 /// Black, a little see-through.
 const SHADE: &str = "#0000009e";
+/// Black: the outline is drawn see-through already.
+const BLACK: &str = "#000000";
 
 impl Default for CaptionStyle {
   fn default() -> Self {
@@ -164,6 +169,7 @@ impl CaptionTemplate {
       background_color: SHADE.to_owned(),
       highlight_words: false,
       outline: true,
+      outline_color: BLACK.to_owned(),
       background: CaptionBackground::None,
       entrance: CaptionEntrance::None,
     };
@@ -250,6 +256,7 @@ impl CaptionStyle {
       text_color: color(&self.text_color, WHITE),
       highlight_color: color(&self.highlight_color, YELLOW),
       background_color: color(&self.background_color, SHADE),
+      outline_color: color(&self.outline_color, BLACK),
       ..self.clone()
     }
   }

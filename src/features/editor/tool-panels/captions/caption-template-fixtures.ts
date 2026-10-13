@@ -19,6 +19,7 @@ const plain: CaptionStyle = {
   lines: "two",
   maxWords: 8,
   outline: true,
+  outlineColor: "#000000",
   position: "bottom",
   sizePercent: 100,
   template: "clean",

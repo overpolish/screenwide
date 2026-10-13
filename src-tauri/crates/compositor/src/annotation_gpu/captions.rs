@@ -20,7 +20,7 @@ use screenwide_annotations::{
   AnnotationShape, AnnotationStyle,
 };
 use screenwide_captions::{
-  CaptionFont, CaptionFrame, CaptionPiece, CaptionPieceKind, CaptionTrack,
+  rgba, CaptionFont, CaptionFrame, CaptionPiece, CaptionPieceKind, CaptionTrack,
 };
 
 /// The face a caption font names, as the text engines take it.
@@ -165,16 +165,25 @@ pub fn caption_arrows(pieces: &[CaptionPiece], face: &TypeFace) -> PreparedArrow
     .zip(pieces);
   for ((arrow, entry), piece) in pieces_in_place {
     entry.face = face.clone();
-    match piece.kind {
+    match &piece.kind {
       // A box or a pill draws no type, so the atlas sets none for it.
       CaptionPieceKind::Backdrop { .. } | CaptionPieceKind::Pill { .. } => {
         arrow.flags |= BARE;
         entry.text.clear();
       }
-      CaptionPieceKind::Word { outlined, .. } => {
+      CaptionPieceKind::Word { outline, .. } => {
         arrow.flags |= CAPTION;
-        if outlined {
+        // Set at the size it settles at, so a word growing in is the same
+        // type every frame and the atlas rasterises it once; the shader
+        // reads that size from `cx`, which a text box leaves unused, and
+        // draws the type grown from it.
+        entry.size = piece.size as f32;
+        arrow.geometry.cx = entry.size;
+        // A text box keeps nothing in its parameters either, so a caption
+        // word carries its outline's colour there for the shader.
+        if let Some([red, green, blue, _]) = outline.as_deref().and_then(rgba) {
           arrow.flags |= SHADOW;
+          arrow.params = [red, green, blue];
           entry.outline = OUTLINE * entry.size;
         }
       }
@@ -197,14 +206,16 @@ pub fn caption_arrows(pieces: &[CaptionPiece], face: &TypeFace) -> PreparedArrow
 }
 
 /// What `track` draws `output_ms` into the edited video on a canvas `canvas`
-/// in size, ready to draw over a frame's own annotations.
+/// in size, ready to draw over a frame's own annotations, with the next
+/// caption's words asked for unseen so their type is ready when it comes on.
 pub fn caption_overlay(track: &CaptionTrack, output_ms: f64, canvas: (u32, u32)) -> PreparedArrows {
   let frame = CaptionFrame {
     width: canvas.0,
     height: canvas.1,
   };
   let face = caption_face(&track.recording.style.normalized().font);
-  let pieces = track.pieces_at(frame, output_ms, &mut caption_measure(&face));
+  let mut pieces = track.pieces_at(frame, output_ms, &mut caption_measure(&face));
+  pieces.extend(track.upcoming_pieces(frame, output_ms));
   caption_arrows(&pieces, &face)
 }
 

@@ -205,10 +205,11 @@ editor-panels-captions-weight-semibold = Semibold
 editor-panels-captions-weight-bold = Bold
 editor-panels-captions-weight-extra-bold = Extra bold
 editor-panels-captions-weight-black = Black
-# Which colour of the caption the colour grid changes, and each choice: the type, the word being said, and the box behind the lines.
+# Which colour of the caption the colour grid changes, and each choice: the type, the word being said, the outline around the type, and the box behind the lines.
 editor-panels-captions-color = Colour
 editor-panels-captions-color-text = Text
 editor-panels-captions-color-highlight = Highlight
+editor-panels-captions-color-outline = Outline
 editor-panels-captions-color-background = Box
 # In each Captions tab: start new captions as these are now. On the Style tab, this template with this look; on the Words tab, these rules.
 editor-panels-captions-set-default = Set as default
@@ -216,6 +217,8 @@ editor-panels-captions-set-default = Set as default
 editor-panels-captions-reset-original = Reset to original
 # Colour the word being said in a caption.
 editor-panels-captions-highlight-word = Highlight spoken word
+# A soft outline around the caption's type, so it reads over any picture.
+editor-panels-captions-outline = Outline
 # The most words one caption shows at once, across its lines.
 editor-panels-captions-max-words = Max words
 editor-panels-captions-lines = Lines

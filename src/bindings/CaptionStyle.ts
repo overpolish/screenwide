@@ -41,6 +41,11 @@ backgroundColor: string,
  */
 highlightWords: boolean, 
 /**
- * A soft dark outline around the type, so it reads without a box.
+ * A soft outline around the type, so it reads without a box.
  */
-outline: boolean, background: CaptionBackground, entrance: CaptionEntrance, };
+outline: boolean, 
+/**
+ * The outline's colour, as `#rrggbb`; it is always drawn a little
+ * see-through, so it softens the type's edge rather than ringing it.
+ */
+outlineColor: string, background: CaptionBackground, entrance: CaptionEntrance, };

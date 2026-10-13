@@ -87,29 +87,30 @@ fn annotation_text_distance(probe: vec2<f32>, box: PreviewTextBox) -> f32 {
 }
 
 /// The atlas over this pixel, rasterised at `atlas.scale` pixels to the
-/// canvas pixel and centred on the text block: the type's coverage in alpha,
-/// and a caption word's outline in red. `feather` is half a drawn pixel, in
-/// canvas pixels, which is how far the atlas read spreads.
+/// canvas pixel and centred on the text block, drawn `growth` times the size
+/// it was rasterised at: the type's coverage in alpha, and a caption word's
+/// outline in red. `feather` is half a drawn pixel, in canvas pixels, which
+/// is how far the atlas read spreads.
 fn annotation_text_texel(probe: vec2<f32>, box: PreviewTextBox, atlas: AnnotationTextAtlas,
-                         feather: f32) -> vec4<f32> {
+                         feather: f32, growth: f32) -> vec4<f32> {
   if (atlas.size.x == 0u || atlas.size.y == 0u || atlas.scale <= 0.0 ||
-      box.text_size.x <= 0.0 || box.text_size.y <= 0.0) {
+      box.text_size.x <= 0.0 || box.text_size.y <= 0.0 || growth <= 0.0) {
     return vec4<f32>(0.0);
   }
   let drawn = box.text_size / atlas.scale;
-  let local = probe - box.text_centre + drawn * 0.5;
+  let local = (probe - box.text_centre) / growth + drawn * 0.5;
   if (any(local < vec2<f32>(0.0)) || any(local > drawn)) {
     return vec4<f32>(0.0);
   }
   return annotation_atlas_footprint(atlas, box.text_origin, box.text_size,
                                     box.text_origin + local * atlas.scale,
-                                    2.0 * feather * atlas.scale);
+                                    2.0 * feather * atlas.scale / growth);
 }
 
 /// How much of the type covers this pixel; see [`annotation_text_texel`].
 fn annotation_text_coverage(probe: vec2<f32>, box: PreviewTextBox, atlas: AnnotationTextAtlas,
                             feather: f32) -> f32 {
-  return annotation_text_texel(probe, box, atlas, feather).a;
+  return annotation_text_texel(probe, box, atlas, feather, 1.0).a;
 }
 
 /// A text box averaged over its exposure samples, as a counter is while it
@@ -159,18 +160,26 @@ const annotation_text_outlined: u32 = 1u << 7u;
 const annotation_text_caption: u32 = 1u << 10u;
 const annotation_text_bare: u32 = 1u << 11u;
 
-/// A caption's word: its type alone in the annotation's colour, over a dark
-/// outline where it is outlined, with no box drawn. The outline is set in
-/// the atlas beside the type and read with it, so both share one smooth
-/// edge. `solid` is how much of the box it is set in covers this pixel,
-/// which carries its fade and the blur of its growing.
+/// A caption's word: its type alone in the annotation's colour, over an
+/// outline where it is outlined, in the colour its parameters carry, with no
+/// box drawn. The outline is set in the atlas beside the type and read with
+/// it, so both share one smooth edge. `solid` is how much of the box it is
+/// set in covers this pixel, which carries its fade and the blur of its
+/// growing.
+///
+/// A word's type is rasterised once, at the size it settles at, which its
+/// geometry keeps in `cx`; a word growing in is that type drawn larger or
+/// smaller, so growing never rasterises it again.
 fn annotation_caption_word(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
                            canvas_point: vec2<f32>, box: PreviewTextBox, solid: f32,
                            feather: f32, atlas: AnnotationTextAtlas) -> vec4<f32> {
   var rgba = rgba_in;
-  let texel = annotation_text_texel(canvas_point, box, atlas, feather);
+  let settled = annotation.geometry.cx;
+  let growth = select(1.0, annotation.geometry.width / settled, settled > 0.0);
+  let texel = annotation_text_texel(canvas_point, box, atlas, feather, growth);
   if ((annotation.flags & annotation_text_outlined) != 0u) {
-    rgba = annotation_over(rgba, vec3<f32>(0.0), texel.r * solid * 0.85);
+    let outline = vec3<f32>(annotation.params[0], annotation.params[1], annotation.params[2]);
+    rgba = annotation_over(rgba, outline, texel.r * solid * 0.85);
   }
   return annotation_over(rgba, color.rgb, texel.a * solid);
 }

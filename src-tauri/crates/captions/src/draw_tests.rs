@@ -59,10 +59,12 @@ fn kinds(pieces: &[CaptionPiece]) -> Vec<(&str, CaptionPieceKind)> {
     .collect()
 }
 
+/// A word in `ink`, outlined in the dark the templates ship with where
+/// `outlined`.
 fn word_in(ink: &str, outlined: bool) -> CaptionPieceKind {
   CaptionPieceKind::Word {
     ink: ink.to_owned(),
-    outlined,
+    outline: outlined.then(|| "#000000ff".to_owned()),
   }
 }
 
@@ -145,6 +147,19 @@ fn draws_in_the_colours_the_style_picks() {
 }
 
 #[test]
+fn outlines_words_in_the_colour_picked_or_not_at_all() {
+  let mut recording = styled(CaptionTemplate::Clean, false);
+  recording.style.outline_color = "#3050ff".to_owned();
+  let outlined = |recording: &RecordingCaptions| match &pieces(recording, 1_500.0)[0].kind {
+    CaptionPieceKind::Word { outline, .. } => outline.clone(),
+    other => panic!("{other:?}"),
+  };
+  assert_eq!(outlined(&recording).as_deref(), Some("#3050ffff"));
+  recording.style.outline = false;
+  assert_eq!(outlined(&recording), None);
+}
+
+#[test]
 fn puts_the_box_behind_the_lines_and_the_pill_under_the_word_said() {
   let boxed = pieces(&styled(CaptionTemplate::Box, false), 1_500.0);
   assert_eq!(
@@ -190,6 +205,59 @@ fn pops_in_past_its_size_and_settles() {
     .fold(0.0, f64::max);
   assert!((1.03..1.06).contains(&peak), "{peak}");
   assert_eq!((at(400.0).scale[0], at(400.0).opacity[0]), (1.0, 1.0));
-  // It grows as one block: a word left of the middle moves further left.
-  assert!(at(0.0).centre[0] > at(400.0).centre[0]);
+  // Each word grows where it sits, sharp: it never moves, and its size a
+  // frame ago is its size now.
+  assert_eq!(at(0.0).centre, at(400.0).centre);
+  assert_eq!(at(100.0).scale[0], at(100.0).scale[1]);
+}
+
+#[test]
+fn readies_the_next_captions_words_unseen_and_set_as_they_will_be() {
+  let track = CaptionTrack {
+    captions: captions(),
+    recording: styled(CaptionTemplate::Clean, false),
+  };
+  let upcoming = track.upcoming_pieces(FRAME, 500.0);
+  let shown = pieces(&track.recording, 2_000.0);
+  let texts: Vec<&str> = upcoming.iter().map(|piece| piece.text.as_str()).collect();
+  assert_eq!(texts, ["one", "two", "three"]);
+  for (ready, drawn) in upcoming.iter().zip(&shown) {
+    assert_eq!(ready.opacity, [0.0; 2]);
+    assert_eq!(ready.size, drawn.size);
+    let outline = |kind: &CaptionPieceKind| match kind {
+      CaptionPieceKind::Word { outline, .. } => outline.clone(),
+      other => panic!("{other:?}"),
+    };
+    assert_eq!(outline(&ready.kind), outline(&drawn.kind));
+  }
+  // Nothing comes after the last caption.
+  assert!(track.upcoming_pieces(FRAME, 1_500.0).is_empty());
+}
+
+#[test]
+fn readies_the_next_caption_only_once_the_one_showing_has_come_on() {
+  let mut following = captions();
+  following.push(Caption {
+    id: 3_000,
+    start_ms: 3_000.0,
+    end_ms: 4_000.0,
+    text: "four".to_owned(),
+    lines: vec![vec![word("four", 3_000.0)]],
+    spaced: true,
+  });
+  let track = CaptionTrack {
+    captions: following,
+    recording: styled(CaptionTemplate::Pop, false),
+  };
+  let texts = |at_ms| {
+    track
+      .upcoming_pieces(FRAME, at_ms)
+      .into_iter()
+      .map(|piece| piece.text)
+      .collect::<Vec<_>>()
+  };
+  // While "one two three" pops in, readying "four" would take frames from
+  // it; once it has settled, "four" is readied.
+  assert!(texts(1_100.0).is_empty());
+  assert_eq!(texts(1_500.0), ["four"]);
 }

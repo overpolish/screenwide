@@ -7,14 +7,15 @@ import { t } from "../../../../i18n/i18n";
 
 import { CaptionColorRows } from "./caption-color-rows";
 import { CaptionFontRow } from "./caption-font-row";
-import { offersWordHighlight } from "./caption-templates";
+import { offersOutline, offersWordHighlight } from "./caption-templates";
 
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 
 /**
  * A caption template's look, which it sets and saves as its default: the
- * face, whether the word being said stands out, and the colours. How large
- * and how many words at a time are the Layout tab's.
+ * face, whether the word being said stands out, the outline, and the
+ * colours. How large, where and how many words at a time are the Layout
+ * tab's.
  */
 export function CaptionStyleRows({
   isDisabled,
@@ -46,6 +47,21 @@ export function CaptionStyleRows({
               isSelected={style.highlightWords}
               onChange={(highlightWords) => {
                 onChange({ highlightWords });
+              }}
+            />
+          )}
+        </ControlRow>
+      ) : null}
+
+      {offersOutline(style) ? (
+        <ControlRow title={t("editor-panels-captions-outline")}>
+          {(controlProps) => (
+            <Switch
+              {...controlProps}
+              isDisabled={isDisabled}
+              isSelected={style.outline}
+              onChange={(outline) => {
+                onChange({ outline });
               }}
             />
           )}

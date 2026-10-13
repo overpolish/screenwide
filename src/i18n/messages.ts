@@ -271,6 +271,7 @@ export type Messages = {
   "editor-panels-captions-color": null;
   "editor-panels-captions-color-background": null;
   "editor-panels-captions-color-highlight": null;
+  "editor-panels-captions-color-outline": null;
   "editor-panels-captions-color-text": null;
   "editor-panels-captions-description": null;
   "editor-panels-captions-font": null;
@@ -287,6 +288,7 @@ export type Messages = {
   "editor-panels-captions-max-words": null;
   "editor-panels-captions-name": null;
   "editor-panels-captions-one-line": null;
+  "editor-panels-captions-outline": null;
   "editor-panels-captions-position-bottom": null;
   "editor-panels-captions-position-bottom-left": null;
   "editor-panels-captions-position-bottom-right": null;
