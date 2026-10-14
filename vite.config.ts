@@ -26,25 +26,54 @@ const tailwind = (): Plugin[] =>
     };
   });
 
+/** The private side of Vite's bundled dev mode that `awaitCurrentBundle` waits on. */
+type BundledDev = {
+  devEngine: {
+    ensureLatestBuildOutput(): Promise<void>;
+    getBundleState(): Promise<{
+      hasStaleOutput: boolean;
+      lastBuildErrored: boolean;
+    }>;
+  };
+  waitForInitialBuildFinish(): Promise<void>;
+};
+
 /**
- * Holds requests until bundled dev mode's first bundle is ready. Vite answers
- * a page requested before then with a placeholder that leaves only on one
- * reload broadcast, sent when the bundle finishes, so a window whose socket
- * connects after that broadcast keeps the placeholder for good. WebView2
- * brings the app's many windows up one after another, slowly enough that
- * several land in that gap on Windows; waiting here serves them the app.
- * `waitForInitialBuildFinish` is private, but it is the one wait that also
- * settles when the first build fails, so Vite's error overlay still shows.
+ * Holds requests until bundled dev mode has a current bundle to serve. Vite
+ * answers a page requested while the bundle is missing, before the first one,
+ * or stale, after an edit it applied as a hot update, with a placeholder that
+ * leaves only on one reload broadcast, sent when the bundle is ready, so a
+ * window whose socket connects after that broadcast keeps the placeholder for
+ * good. WebView2 brings the app's many windows up one after another, slowly
+ * enough that several land in that gap on Windows, at launch and again when
+ * a Rust change relaunches the app against the running server; waiting here
+ * serves them the app. Both waits settle when a build fails, so Vite's error
+ * overlay still shows.
  */
-const awaitFirstBundle = (): Plugin => ({
+const awaitCurrentBundle = (): Plugin => ({
   configureServer(server) {
     const bundledDev = server.environments.client.bundledDev as unknown as
-      { waitForInitialBuildFinish(): Promise<void> } | undefined;
+      BundledDev | undefined;
     if (!bundledDev) return;
     let firstBundle: Promise<void> | undefined;
-    server.middlewares.use((_req, _res, next) => {
+    let latestBundle: Promise<void> | undefined;
+    const currentBundle = async (isPage: boolean) => {
       firstBundle ??= bundledDev.waitForInitialBuildFinish();
-      firstBundle.then(
+      await firstBundle;
+      // Only a page load is answered with the placeholder; a script or asset
+      // asked for by a page already running takes what the bundle holds.
+      if (!isPage) return;
+      const state = await bundledDev.devEngine.getBundleState();
+      if (!state.hasStaleOutput || state.lastBuildErrored) return;
+      latestBundle ??= bundledDev.devEngine
+        .ensureLatestBuildOutput()
+        .finally(() => {
+          latestBundle = undefined;
+        });
+      await latestBundle;
+    };
+    server.middlewares.use((req, _res, next) => {
+      currentBundle(req.headers["sec-fetch-dest"] === "document").then(
         () => {
           next();
         },
@@ -54,12 +83,12 @@ const awaitFirstBundle = (): Plugin => ({
       );
     });
   },
-  name: "screenwide:await-first-bundle",
+  name: "screenwide:await-current-bundle",
 });
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  plugins: [react(), tailwind(), awaitFirstBundle()],
+  plugins: [react(), tailwind(), awaitCurrentBundle()],
 
   // Stamps what the windows keep in storage with this build, so a window
   // launched with it never takes up what an earlier build left there.
