@@ -10,9 +10,12 @@ use std::{
 
 use tauri::ipc::Channel;
 
+use self::seeking::{frame_is_stale, reuses_settled, should_seek};
 use super::present_native_frames;
 use crate::editor::recording_preview_player::{PlayerSources, RecordingPreviewPlayerEvent};
-use screenwide_export::decode::windows::gpu_decoder::GpuVideoReader;
+use screenwide_export::decode::windows::gpu_decoder::{GpuFrame, GpuVideoReader};
+
+mod seeking;
 
 enum DecoderCommand {
   Seek {
@@ -93,6 +96,14 @@ fn run(
   }
   let mut readers = (0..paths.len()).map(|_| None).collect::<Vec<_>>();
   let mut pending = None;
+  // The frames the last settled seek presented, and the position they were
+  // decoded for. A settled seek reopens every reader, which costs a Media
+  // Foundation open and a decode from the keyframe; a caption, cursor or
+  // annotation change asks for the same position again, so it presents these
+  // with the current settings instead. Each reader still holds the sample
+  // behind its frame, since nothing reads from it until a seek elsewhere,
+  // which drops these first.
+  let mut settled: Option<(u64, [Option<GpuFrame>; 2])> = None;
   while let Ok(mut command) = pending.take().map_or_else(|| receiver.recv(), Ok) {
     while let Ok(next) = receiver.try_recv() {
       command = next;
@@ -105,16 +116,31 @@ fn run(
     else {
       break;
     };
+    if let Some((_, [screen, camera])) = settled
+      .as_ref()
+      .filter(|(settled_ms, _)| reuses_settled(Some(*settled_ms), position_ms, rough))
+    {
+      if sources.playing.load(Ordering::Acquire) {
+        continue;
+      }
+      let presented = present_native_frames(&sources, screen.as_ref(), camera.as_ref(), 0.0);
+      if presented {
+        announce_ready(&sources, &event_channel, position_ms, request_id);
+        continue;
+      }
+    }
+    settled = None;
     let mut presented = true;
     let mut frames = [None, None];
     for (index, (path, reader)) in paths.iter().zip(readers.iter_mut()).enumerate() {
       // Repeated SetCurrentPosition calls can leave Media Foundation's D3D
       // source reader at a premature EOF even though later samples exist.
       // A settled seek must be authoritative, so give it a fresh native GPU
-      // reader. Rough seeks keep their warm reader unless it demonstrably
-      // falls behind, preserving fast drag feedback.
+      // reader, which rewinds only when a seek without one misses. Rough
+      // seeks keep their warm reader unless it demonstrably falls behind,
+      // preserving fast drag feedback.
       if reader.is_none() || !rough {
-        match GpuVideoReader::open(path, position_ms, surface.device()) {
+        match GpuVideoReader::open_at(path, position_ms, surface.device()) {
           Ok(opened) => *reader = Some(opened),
           Err(message) => {
             let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
@@ -195,65 +221,28 @@ fn run(
       presented &= present_native_frames(&sources, screen.as_ref(), camera.as_ref(), 0.0);
     }
     if presented {
-      let camera_ms =
-        crate::editor::recording_preview_player::camera_picking::camera_ms(&sources, position_ms);
-      sources.let_go_elsewhere(camera_ms);
-      sources.show_picked(Some(camera_ms));
-      let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
-        position_ms,
-        request_id,
-      });
+      announce_ready(&sources, &event_channel, position_ms, request_id);
+      if !rough {
+        settled = Some((position_ms, frames));
+      }
     }
   }
 }
 
-// Small forward moves are cheaper to satisfy from the decoder's current GPU
-// stream. Larger jumps seek directly so rapid timeline scrubs cannot leave a
-// growing queue of intermediate frames to decode. The break-even point is one
-// group of pictures: our writer keys every half second, so anything inside
-// 500 ms costs less decoded forward than a seek's own preroll would. The final
-// (non-rough) seek always resets to the exact requested position.
-const MAX_SEQUENTIAL_SCRUB_MS: u64 = 500;
-const MAX_STILL_LAG_MS: u64 = 100;
-
-fn frame_is_stale(frame_ms: u64, position_ms: u64) -> bool {
-  frame_ms.saturating_add(MAX_STILL_LAG_MS) < position_ms
-}
-
-fn should_seek(current_ms: u64, position_ms: u64, rough: bool) -> bool {
-  !rough
-    || position_ms < current_ms
-    || position_ms.saturating_sub(current_ms) > MAX_SEQUENTIAL_SCRUB_MS
-}
-
-#[cfg(test)]
-mod tests {
-  use super::{frame_is_stale, should_seek};
-  use screenwide_export::decode::windows::gpu_decoder::seek_preroll_ms;
-
-  #[test]
-  fn rough_scrubs_only_decode_short_forward_steps_sequentially() {
-    assert!(!should_seek(4_000, 4_200, true));
-    assert!(!should_seek(4_000, 4_500, true));
-    assert!(should_seek(4_000, 4_501, true));
-    assert!(should_seek(4_000, 3_999, true));
-  }
-
-  #[test]
-  fn rough_seeks_do_not_preroll() {
-    assert_eq!(seek_preroll_ms(true), 0);
-    assert_eq!(seek_preroll_ms(false), 1_500);
-  }
-
-  #[test]
-  fn settled_scrubs_always_seek_exactly() {
-    assert!(should_seek(4_000, 4_001, false));
-    assert!(should_seek(4_000, 4_000, false));
-  }
-
-  #[test]
-  fn a_gpu_reader_that_hits_early_eof_is_reopened() {
-    assert!(frame_is_stale(17_891, 19_480));
-    assert!(!frame_is_stale(19_430, 19_480));
-  }
+/// Marks the objects picked at `position_ms` and tells the editor the still
+/// for `request_id` is on screen.
+fn announce_ready(
+  sources: &PlayerSources,
+  event_channel: &Channel<RecordingPreviewPlayerEvent>,
+  position_ms: u64,
+  request_id: u64,
+) {
+  let camera_ms =
+    crate::editor::recording_preview_player::camera_picking::camera_ms(sources, position_ms);
+  sources.let_go_elsewhere(camera_ms);
+  sources.show_picked(Some(camera_ms));
+  let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
+    position_ms,
+    request_id,
+  });
 }

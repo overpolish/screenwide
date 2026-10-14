@@ -288,6 +288,6 @@ fn sample_texture(sample: &IMFSample, _width: u32, _height: u32) -> Result<GpuFr
   })
 }
 
-mod playback_start;
+mod open_at;
 #[cfg(test)]
 mod tests;

@@ -1,13 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Opening a reader where playback starts. A settled seek rewinds
+//! Opening a reader with the frame at a position already decoded, where
+//! playback starts and where a paused still settles. A settled seek rewinds
 //! [`super::SETTLED_SEEK_PREROLL_MS`] and decodes forward, which costs several
 //! times what a seek with no rewind does, all of it before the first frame.
 //! Media Foundation normally lands on the keyframe at or before the request,
-//! so playback starts from a seek with no rewind and pays for the settled one
-//! only when that seek demonstrably missed: it landed past the start, or the
-//! stream ended before reaching it.
+//! so the reader opens with no rewind and pays for the settled one only when
+//! that seek demonstrably missed: it landed past the position, or the stream
+//! ended before reaching it.
 
 use std::path::Path;
 
@@ -17,11 +18,7 @@ use super::GpuVideoReader;
 
 impl GpuVideoReader {
   /// A reader at `start_ms` with the frame there already decoded.
-  pub fn open_for_playback(
-    path: &Path,
-    start_ms: u64,
-    device: ID3D11Device,
-  ) -> Result<Self, String> {
+  pub fn open_at(path: &Path, start_ms: u64, device: ID3D11Device) -> Result<Self, String> {
     let mut reader = Self::open_with_device(path, start_ms, true, device.clone())?;
     if reader.decode_from_seek_to(start_ms)? {
       return Ok(reader);
