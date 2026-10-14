@@ -74,7 +74,6 @@ export function CaptionEditor({
   const breaks = captions.breaks ?? [];
   const choices = captions.wordChoices ?? [];
   const emphasis = captions.emphasisChoices ?? [];
-  const allCaps = captions.style.allCaps;
   const keyWords = captions.style.accent === "word";
   const text = useMemo(
     () =>
@@ -83,7 +82,6 @@ export function CaptionEditor({
             words,
             { corrections, durationMs, played, removed },
             {
-              allCaps,
               breaks: captions.breaks ?? [],
               captions: made,
               keyWords,
@@ -91,7 +89,6 @@ export function CaptionEditor({
           )
         : null,
     [
-      allCaps,
       captions.breaks,
       corrections,
       durationMs,

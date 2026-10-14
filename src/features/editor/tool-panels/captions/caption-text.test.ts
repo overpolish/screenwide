@@ -79,9 +79,7 @@ describe("captionText", () => {
       caption(words.slice(6)),
     ];
     expect(
-      shown(
-        captionText(words, untouched, { allCaps: false, breaks: [], captions }),
-      ),
+      shown(captionText(words, untouched, { breaks: [], captions })),
     ).toEqual(["So [um] this | is a test.", "| Next part."]);
   });
 
@@ -94,7 +92,6 @@ describe("captionText", () => {
         removed: [{ endMs: 1_750, startMs: 1_350 }],
       },
       {
-        allCaps: false,
         breaks: [],
         captions: [caption([words[0]]), caption(words.slice(2, 8))],
       },
@@ -111,7 +108,6 @@ describe("captionText", () => {
     let breaks = withBreak([], gap(4), "split");
     breaks = withBreak(breaks, gap(6), "join");
     const text = captionText(words, untouched, {
-      allCaps: false,
       breaks,
       captions: [caption(words)],
     });
@@ -122,7 +118,6 @@ describe("captionText", () => {
 
   it("marks nothing until the captions are made", () => {
     const text = captionText(words, untouched, {
-      allCaps: false,
       breaks: [],
       captions: [],
     });
@@ -132,7 +127,6 @@ describe("captionText", () => {
 
   it("finds the caption being said", () => {
     const { captions } = captionText(words, untouched, {
-      allCaps: false,
       breaks: [],
       captions: [caption(words.slice(0, 3)), caption(words.slice(3, 6))],
     });
@@ -144,7 +138,6 @@ describe("captionText", () => {
   it("seeks to the middle of a pressed caption unless the playhead is in it", () => {
     // "um" is left out of the first caption, so it is in none.
     const text = captionText(words, untouched, {
-      allCaps: false,
       breaks: [],
       captions: [caption([words[0], words[2]]), caption(words.slice(3, 6))],
     });
@@ -162,7 +155,6 @@ describe("captionText", () => {
     set.lines[0][1].text = "D***";
     set.lines[0][2].text = "BOB";
     const text = captionText(said, untouched, {
-      allCaps: true,
       breaks: [],
       captions: [set],
     });
@@ -181,7 +173,7 @@ describe("captionText", () => {
         ...untouched,
         corrections: [{ endMs: 1_300, startMs: 1_000, text: "going to" }],
       },
-      { allCaps: false, breaks: [], captions: [caption(said)] },
+      { breaks: [], captions: [caption(said)] },
     );
     expect(text.words[0]).toMatchObject({
       captionText: null,
@@ -195,7 +187,6 @@ describe("captionText", () => {
     set.lines[0][3].emphasis = true;
     const keyWords = (asked: boolean) =>
       captionText(words, untouched, {
-        allCaps: false,
         breaks: [],
         captions: [set],
         keyWords: asked,

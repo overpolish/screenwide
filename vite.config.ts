@@ -26,9 +26,40 @@ const tailwind = (): Plugin[] =>
     };
   });
 
+/**
+ * Holds requests until bundled dev mode's first bundle is ready. Vite answers
+ * a page requested before then with a placeholder that leaves only on one
+ * reload broadcast, sent when the bundle finishes, so a window whose socket
+ * connects after that broadcast keeps the placeholder for good. WebView2
+ * brings the app's many windows up one after another, slowly enough that
+ * several land in that gap on Windows; waiting here serves them the app.
+ * `waitForInitialBuildFinish` is private, but it is the one wait that also
+ * settles when the first build fails, so Vite's error overlay still shows.
+ */
+const awaitFirstBundle = (): Plugin => ({
+  configureServer(server) {
+    const bundledDev = server.environments.client.bundledDev as unknown as
+      { waitForInitialBuildFinish(): Promise<void> } | undefined;
+    if (!bundledDev) return;
+    let firstBundle: Promise<void> | undefined;
+    server.middlewares.use((_req, _res, next) => {
+      firstBundle ??= bundledDev.waitForInitialBuildFinish();
+      firstBundle.then(
+        () => {
+          next();
+        },
+        () => {
+          next();
+        },
+      );
+    });
+  },
+  name: "screenwide:await-first-bundle",
+});
+
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  plugins: [react(), tailwind()],
+  plugins: [react(), tailwind(), awaitFirstBundle()],
 
   // Stamps what the windows keep in storage with this build, so a window
   // launched with it never takes up what an earlier build left there.

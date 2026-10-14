@@ -75,12 +75,14 @@ const charactersOf = (text: string) => Array.from(text);
 /**
  * `shown`, a caption's text, where it was made of `said`: it lines up with
  * `said` letter for letter, a star standing for one letter and punctuation
- * left out. Set in capitals, it takes each letter back in the case `said`
- * has it. Null where they do not line up: the captions were made before a
- * correction the transcript has since taken, and `said` is the truer text
+ * left out. Each letter takes the case `said` has it in, whatever case the
+ * captions set it in: the captions change case only for All caps, and the
+ * captions last made can still be in capitals for a moment after it is
+ * turned off. Null where they do not line up: the captions were made before
+ * a correction the transcript has since taken, and `said` is the truer text
  * until they are made again.
  */
-function asSaid(shown: string, said: string, allCaps: boolean) {
+function asSaid(shown: string, said: string) {
   const letters = charactersOf(said);
   let at = 0;
   let cased = "";
@@ -93,7 +95,7 @@ function asSaid(shown: string, said: string, allCaps: boolean) {
     )
       at++;
     if (at === letters.length) return null;
-    cased += character === "*" || !allCaps ? character : letters[at];
+    cased += character === "*" ? character : letters[at];
     at++;
   }
   return cased;
@@ -116,13 +118,10 @@ export function captionText(
     removed: readonly TranscriptRange[];
   },
   {
-    allCaps,
     breaks,
     captions,
     keyWords = false,
   }: {
-    /** Whether the captions are set in capitals, which the text undoes. */
-    allCaps: boolean;
     breaks: readonly CaptionBreak[];
     captions: readonly Caption[];
     /** Whether the captions set a key word of each apart; none do unless
@@ -180,7 +179,7 @@ export function captionText(
       laid.push({
         ...unit,
         caption,
-        captionText: set === null ? null : asSaid(set, unit.text, allCaps),
+        captionText: set === null ? null : asSaid(set, unit.text),
         gap: placedBreak
           ? placedBreak.kind
           : caption !== null && shownBefore !== null && shownBefore !== caption
