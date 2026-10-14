@@ -1,0 +1,8 @@
+{
+  "formatVersion": 2,
+  "id": "box",
+  "style": {
+    "background": "box",
+    "outline": false
+  }
+}

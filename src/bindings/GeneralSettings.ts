@@ -4,7 +4,7 @@ import type { BackgroundPreset } from "./BackgroundPreset";
 import type { CaptionLayout } from "./CaptionLayout";
 import type { CaptionSettings } from "./CaptionSettings";
 import type { CaptionStyle } from "./CaptionStyle";
-import type { CaptionTemplate } from "./CaptionTemplate";
+import type { CaptionTemplateId } from "./CaptionTemplateId";
 import type { SceneTemplate } from "./SceneTemplate";
 
 export type GeneralSettings = { accent: AccentPreference, 
@@ -44,7 +44,7 @@ captionStyles: Array<CaptionStyle>,
 /**
  * The template a recording's captions start from.
  */
-captionTemplate: CaptionTemplate, 
+captionTemplate: CaptionTemplateId, 
 /**
  * What a recording's captions start out saying, as last set as default.
  */

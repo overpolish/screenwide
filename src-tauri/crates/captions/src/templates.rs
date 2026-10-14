@@ -1,204 +1,142 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The caption templates the app ships: each a style under a name. Those
-//! set in a family other than Inter use one the app carries, so they look
-//! the same on every system. Whether the word being said is highlighted or
-//! the words are revealed as they are said is every template's to change;
-//! each starts with what suits it.
+//! The caption templates: each a style under an id, read from a manifest.
+//! The app's own are bundled from `templates/` in this crate, a folder each,
+//! and listed in order by its `index.json`; a manifest gives only the
+//! options it sets apart from [`CaptionStyle::default`], which `base.json`
+//! spells out. A template from anywhere else would be read by the same
+//! [`parse_manifest`], so it is one more entry, not a new kind of thing.
 
-use serde::{Deserialize, Serialize};
+mod bundled;
+mod manifest;
+
+use std::fmt;
+use std::sync::LazyLock;
+
+use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
 
-use crate::layout::CaptionPosition;
-use crate::size::CaptionSize;
-use crate::style::{
-  CaptionAccent, CaptionArrangement, CaptionBackground, CaptionEntrance, CaptionFont, CaptionLines,
-  CaptionStyle, BLACK, SHADE, WHITE, YELLOW,
-};
+use crate::style::CaptionStyle;
 
-/// A caption template.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize, TS)]
-#[serde(rename_all = "kebab-case")]
+pub use manifest::{parse_manifest, ManifestError, FORMAT_VERSION};
+
+/// Which template a style was taken from. Any id is kept as it was saved,
+/// so a template the app no longer has does not lose a style that names it;
+/// an id a template has since been renamed from reads as its new one.
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, TS)]
 #[ts(export)]
-pub enum CaptionTemplate {
-  /// Type on a dark rounded box: plain subtitles that read over anything.
-  #[default]
-  Box,
-  /// Outlined type and no box, keeping the picture clear. Also what the
-  /// templates no longer shipped are read as: a style travels whole beside
-  /// its template, so only which tile shows chosen changes.
-  #[serde(alias = "reveal", alias = "subtitle", alias = "duet")]
-  Clean,
-  /// Big type a few words at a time, each caption popping in where it sits,
-  /// from three quarters of its size past it and settling, and swapped out
-  /// at once for the next.
-  Pop,
-  /// The word being said on a bright pill of its own.
-  Highlight,
-  /// Heavy capitals, the word being said lit up in its colour.
-  Karaoke,
-  /// A condensed display face a word or two at a time, popping in, the
-  /// word being said in yellow.
-  Punch,
-  /// A quiet sans with one word of each caption set in a serif italic.
-  Editorial,
-  /// Heavy capitals with one word of each caption set far larger.
-  Supersize,
-  /// A word or two a line, one beneath another as they are said, the key
-  /// word set large on a line of its own.
-  Stack,
-  /// Lines that each start a step further along, building as they are said.
-  Staircase,
-}
+pub struct CaptionTemplateId(String);
 
-/// The serif italic accents are set in, which reads small beside a sans.
-fn serif_italic() -> CaptionFont {
-  CaptionFont {
-    family: Some("Instrument Serif".to_owned()),
-    weight: 400,
-    italic: true,
+impl CaptionTemplateId {
+  pub fn as_str(&self) -> &str {
+    &self.0
+  }
+
+  /// The style the template ships with, or the default template's where
+  /// there is no such template.
+  pub fn shipped_style(&self) -> CaptionStyle {
+    let templates = &*TEMPLATES;
+    templates
+      .iter()
+      .find(|template| template.id == *self)
+      .or_else(|| {
+        templates
+          .iter()
+          .find(|template| template.id == CaptionTemplateId::default())
+      })
+      .map(|template| template.style.clone())
+      .unwrap_or_default()
   }
 }
 
-impl CaptionTemplate {
-  pub const ALL: [Self; 10] = [
-    Self::Box,
-    Self::Clean,
-    Self::Pop,
-    Self::Highlight,
-    Self::Karaoke,
-    Self::Punch,
-    Self::Editorial,
-    Self::Supersize,
-    Self::Stack,
-    Self::Staircase,
-  ];
-
-  /// The style the template ships with.
-  pub fn style(self) -> CaptionStyle {
-    let plain = CaptionStyle {
-      template: self,
-      font: CaptionFont::default(),
-      size_percent: 100.0,
-      size: CaptionSize::Medium,
-      all_caps: false,
-      max_words: 8,
-      lines: CaptionLines::Two,
-      arrangement: CaptionArrangement::Lines,
-      position: CaptionPosition::Bottom,
-      text_color: WHITE.to_owned(),
-      highlight_color: YELLOW.to_owned(),
-      background_color: SHADE.to_owned(),
-      highlight_words: false,
-      reveal_words: false,
-      outline: true,
-      outline_color: BLACK.to_owned(),
-      background: CaptionBackground::None,
-      entrance: CaptionEntrance::None,
-      accent: CaptionAccent::None,
-      accent_font: serif_italic(),
-      accent_size_percent: 120.0,
-      accent_size: CaptionSize::Medium,
-      accent_color: YELLOW.to_owned(),
-    };
-    match self {
-      Self::Box => CaptionStyle {
-        outline: false,
-        background: CaptionBackground::Box,
-        ..plain
-      },
-      Self::Clean => plain,
-      Self::Pop => CaptionStyle {
-        font: CaptionFont {
-          weight: 800,
-          ..CaptionFont::default()
-        },
-        size_percent: 140.0,
-        all_caps: true,
-        max_words: 3,
-        lines: CaptionLines::One,
-        entrance: CaptionEntrance::Pop,
-        ..plain
-      },
-      Self::Highlight => CaptionStyle {
-        font: CaptionFont {
-          weight: 800,
-          ..CaptionFont::default()
-        },
-        size_percent: 120.0,
-        all_caps: true,
-        max_words: 4,
-        lines: CaptionLines::One,
-        background: CaptionBackground::Word,
-        highlight_words: true,
-        ..plain
-      },
-      Self::Karaoke => CaptionStyle {
-        font: CaptionFont::upright("Montserrat", 800),
-        size_percent: 110.0,
-        all_caps: true,
-        max_words: 6,
-        highlight_color: "#4ade80".to_owned(),
-        highlight_words: true,
-        ..plain
-      },
-      Self::Punch => CaptionStyle {
-        font: CaptionFont::upright("Anton", 400),
-        size_percent: 170.0,
-        all_caps: true,
-        max_words: 2,
-        lines: CaptionLines::One,
-        position: CaptionPosition::Center,
-        highlight_words: true,
-        entrance: CaptionEntrance::Pop,
-        ..plain
-      },
-      Self::Editorial => CaptionStyle {
-        font: CaptionFont::upright("DM Sans", 600),
-        size_percent: 110.0,
-        max_words: 6,
-        accent: CaptionAccent::Word,
-        accent_size_percent: 130.0,
-        accent_color: WHITE.to_owned(),
-        ..plain
-      },
-      Self::Supersize => CaptionStyle {
-        font: CaptionFont::upright("Montserrat", 900),
-        size_percent: 110.0,
-        all_caps: true,
-        max_words: 5,
-        entrance: CaptionEntrance::Pop,
-        accent: CaptionAccent::Word,
-        accent_font: CaptionFont::upright("Montserrat", 900),
-        accent_size_percent: 170.0,
-        ..plain
-      },
-      Self::Stack => CaptionStyle {
-        font: CaptionFont::upright("Montserrat", 800),
-        size_percent: 110.0,
-        all_caps: true,
-        max_words: 6,
-        arrangement: CaptionArrangement::Stack,
-        position: CaptionPosition::Center,
-        reveal_words: true,
-        accent: CaptionAccent::Word,
-        accent_font: CaptionFont::upright("Anton", 400),
-        accent_size_percent: 200.0,
-        ..plain
-      },
-      Self::Staircase => CaptionStyle {
-        font: CaptionFont::upright("DM Sans", 700),
-        size_percent: 115.0,
-        max_words: 6,
-        arrangement: CaptionArrangement::Staircase,
-        position: CaptionPosition::Center,
-        reveal_words: true,
-        accent: CaptionAccent::Word,
-        accent_size_percent: 135.0,
-        accent_color: WHITE.to_owned(),
-        ..plain
-      },
-    }
+impl From<&str> for CaptionTemplateId {
+  /// `id` as a template's, or the template it was renamed to.
+  fn from(id: &str) -> Self {
+    Self(
+      IDENTITIES
+        .renamed
+        .iter()
+        .find(|(old, _)| old == id)
+        .map_or(id, |(_, new)| new.as_str())
+        .to_owned(),
+    )
   }
 }
+
+impl Default for CaptionTemplateId {
+  fn default() -> Self {
+    Self(IDENTITIES.default.clone())
+  }
+}
+
+impl fmt::Display for CaptionTemplateId {
+  fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    formatter.write_str(&self.0)
+  }
+}
+
+impl<'de> Deserialize<'de> for CaptionTemplateId {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    String::deserialize(deserializer).map(|id| Self::from(id.as_str()))
+  }
+}
+
+/// A template: its id and the style it ships with.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CaptionTemplate {
+  pub id: CaptionTemplateId,
+  pub style: CaptionStyle,
+}
+
+/// The app's own templates, in the order the panel offers them.
+pub fn bundled_templates() -> &'static [CaptionTemplate] {
+  &TEMPLATES
+}
+
+/// The bundled templates' ids and the ones they were renamed from, read
+/// apart from their styles: reading a style reads its template's id, so
+/// these must be known before any style is.
+struct Identities {
+  default: String,
+  /// Each id a template was known by, and its id now.
+  renamed: Vec<(String, String)>,
+}
+
+static IDENTITIES: LazyLock<Identities> = LazyLock::new(|| {
+  let index = bundled::index().expect("the bundled template index is valid");
+  let renamed = bundled::MANIFESTS
+    .iter()
+    .flat_map(|json| {
+      let (id, aliases) =
+        manifest::identity(json).expect("every bundled template manifest is valid");
+      aliases.into_iter().map(move |alias| (alias, id.clone()))
+    })
+    .collect();
+  Identities {
+    default: index.default,
+    renamed,
+  }
+});
+
+static TEMPLATES: LazyLock<Vec<CaptionTemplate>> = LazyLock::new(|| {
+  let index = bundled::index().expect("the bundled template index is valid");
+  let parsed: Vec<CaptionTemplate> = bundled::MANIFESTS
+    .iter()
+    .map(|json| parse_manifest(json).expect("every bundled template manifest is valid"))
+    .collect();
+  index
+    .templates
+    .iter()
+    .map(|id| {
+      parsed
+        .iter()
+        .find(|template| template.id.as_str() == id)
+        .cloned()
+        .expect("every template the index lists is bundled")
+    })
+    .collect()
+});
+
+#[cfg(test)]
+mod tests;

@@ -4,11 +4,13 @@
 import { t } from "../../../../i18n/i18n";
 
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
-import type { CaptionTemplate } from "../../../../bindings/CaptionTemplate";
+import type { CaptionTemplateId } from "../../../../bindings/CaptionTemplateId";
 
-/** A caption template's name. */
-export const captionTemplateLabel = (template: CaptionTemplate) =>
-  ({
+/** A caption template's name: a bundled template's from the app's own
+ * translations, keyed by its id; any other's is its id, until templates from
+ * elsewhere bring names of their own. */
+export const captionTemplateLabel = (template: CaptionTemplateId) => {
+  const bundled: Partial<Record<CaptionTemplateId, string>> = {
     box: t("editor-panels-captions-template-box"),
     clean: t("editor-panels-captions-template-clean"),
     editorial: t("editor-panels-captions-template-editorial"),
@@ -19,7 +21,9 @@ export const captionTemplateLabel = (template: CaptionTemplate) =>
     stack: t("editor-panels-captions-template-stack"),
     staircase: t("editor-panels-captions-template-staircase"),
     supersize: t("editor-panels-captions-template-supersize"),
-  })[template];
+  };
+  return bundled[template] ?? template;
+};
 
 /** Whether `style` can outline its type: one set on a box reads without,
  * and an outline over the box only thickens the type. */

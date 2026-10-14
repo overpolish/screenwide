@@ -9,7 +9,7 @@ use tauri_plugin_autostart::ManagerExt;
 
 use crate::settings::background_preset::BackgroundPreset;
 use screenwide_accent::AccentPreference;
-use screenwide_captions::{CaptionLayout, CaptionSettings, CaptionStyle, CaptionTemplate};
+use screenwide_captions::{CaptionLayout, CaptionSettings, CaptionStyle, CaptionTemplateId};
 use screenwide_i18n::t;
 use screenwide_scenes::SceneTemplate;
 
@@ -48,7 +48,7 @@ pub struct GeneralSettings {
   /// style each ships with; one never saved is not kept.
   pub caption_styles: Vec<CaptionStyle>,
   /// The template a recording's captions start from.
-  pub caption_template: CaptionTemplate,
+  pub caption_template: CaptionTemplateId,
   /// What a recording's captions start out saying, as last set as default.
   pub caption_settings: CaptionSettings,
   /// The layout options set by hand and kept for new captions, over any
@@ -76,7 +76,7 @@ impl Default for GeneralSettings {
       auto_zoom: true,
       scene_templates: Vec::new(),
       caption_styles: Vec::new(),
-      caption_template: CaptionTemplate::default(),
+      caption_template: CaptionTemplateId::default(),
       caption_settings: CaptionSettings::default(),
       caption_layout: CaptionLayout::default(),
       launch_at_login: false,

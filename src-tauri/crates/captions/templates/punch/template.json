@@ -1,0 +1,18 @@
+{
+  "formatVersion": 2,
+  "id": "punch",
+  "style": {
+    "font": {
+      "family": "Anton",
+      "weight": 400,
+      "italic": false
+    },
+    "sizePercent": 170,
+    "allCaps": true,
+    "maxWords": 2,
+    "lines": "one",
+    "position": "center",
+    "highlightWords": true,
+    "motion": "pop"
+  }
+}

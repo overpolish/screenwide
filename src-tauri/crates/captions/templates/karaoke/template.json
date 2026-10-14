@@ -1,0 +1,16 @@
+{
+  "formatVersion": 2,
+  "id": "karaoke",
+  "style": {
+    "font": {
+      "family": "Montserrat",
+      "weight": 800,
+      "italic": false
+    },
+    "sizePercent": 110,
+    "allCaps": true,
+    "maxWords": 6,
+    "highlightColor": "#4ade80",
+    "highlightWords": true
+  }
+}

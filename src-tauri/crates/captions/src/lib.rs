@@ -7,9 +7,11 @@
 //! video word by word. The editor's lane, the subtitle files an export
 //! writes and the captions drawn into the picture all come from here.
 
+mod baseline;
 mod draw;
 mod lay_out;
 mod layout;
+mod motion;
 mod segment;
 mod settings;
 mod size;
@@ -31,18 +33,25 @@ use ts_rs::TS;
 pub use draw::{caption_fit, caption_pieces, CaptionPiece, CaptionPieceKind, CaptionTrack};
 pub use lay_out::sample_caption;
 pub use layout::{CaptionLayout, CaptionPosition};
+pub use motion::{
+  CaptionEasing, CaptionKeyframe, CaptionMotion, CaptionMotionTrack, CaptionProperty,
+  MAX_KEYFRAMES, MAX_MOTION_MS,
+};
 pub use settings::{
   CaptionBreak, CaptionBreakKind, CaptionEmphasisChoice, CaptionEmphasisKind, CaptionProfanity,
   CaptionSettings, CaptionWordChoice, CaptionWordKind, RecordingCaptions,
 };
 pub use size::CaptionSize;
 pub use style::{
-  rgba, CaptionAccent, CaptionArrangement, CaptionBackground, CaptionEntrance, CaptionFace,
-  CaptionFont, CaptionLines, CaptionStyle, MAX_ACCENT_SIZE_PERCENT, MAX_SIZE_PERCENT, MAX_WEIGHT,
-  MAX_WORDS, MIN_ACCENT_SIZE_PERCENT, MIN_SIZE_PERCENT, MIN_WEIGHT, MIN_WORDS,
+  rgba, CaptionAccent, CaptionArrangement, CaptionBackground, CaptionFace, CaptionFont,
+  CaptionLines, CaptionStyle, MAX_ACCENT_SIZE_PERCENT, MAX_SIZE_PERCENT, MAX_WEIGHT, MAX_WORDS,
+  MIN_ACCENT_SIZE_PERCENT, MIN_SIZE_PERCENT, MIN_WEIGHT, MIN_WORDS,
 };
 pub use subtitles::{srt, subtitles, vtt, SubtitleFile};
-pub use templates::CaptionTemplate;
+pub use templates::{
+  bundled_templates, parse_manifest, CaptionTemplate, CaptionTemplateId, ManifestError,
+  FORMAT_VERSION,
+};
 pub use words::{Correction, HeardWord};
 
 use segment::Shown;

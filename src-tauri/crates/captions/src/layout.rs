@@ -111,7 +111,7 @@ impl CaptionLayout {
 mod tests {
   use super::CaptionLayout;
   use crate::style::CaptionLines;
-  use crate::templates::CaptionTemplate;
+  use crate::templates::CaptionTemplateId;
 
   #[test]
   fn options_set_by_hand_outlast_the_template_and_the_rest_follow_it() {
@@ -119,7 +119,7 @@ mod tests {
       max_words: Some(5),
       ..CaptionLayout::default()
     };
-    let pop = layout.applied_to(CaptionTemplate::Pop.style());
+    let pop = layout.applied_to(CaptionTemplateId::from("pop").shipped_style());
     assert_eq!(pop.max_words, 5);
     assert_eq!(pop.lines, CaptionLines::One);
     assert!(pop.all_caps);

@@ -20,7 +20,7 @@ import { useCaptionTemplateMenu } from "./use-caption-template-menu";
 
 import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
-import type { CaptionTemplate } from "../../../../bindings/CaptionTemplate";
+import type { CaptionTemplateId } from "../../../../bindings/CaptionTemplateId";
 import type { CaptionTemplates } from "../../recording/captions/use-caption-templates";
 
 const PICKER_ID = "caption-templates";
@@ -47,7 +47,7 @@ export function CaptionTemplateRow({
   isDisabled: boolean;
   layout: CaptionLayout;
   onChoose: (style: CaptionStyle) => void;
-  onResetToOriginal: (template: CaptionTemplate) => void;
+  onResetToOriginal: (template: CaptionTemplateId) => void;
   style: CaptionStyle;
   templates: CaptionTemplates;
 }) {

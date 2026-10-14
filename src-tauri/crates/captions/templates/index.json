@@ -1,0 +1,16 @@
+{
+  "formatVersion": 2,
+  "default": "box",
+  "templates": [
+    "box",
+    "clean",
+    "pop",
+    "highlight",
+    "karaoke",
+    "punch",
+    "editorial",
+    "supersize",
+    "stack",
+    "staircase"
+  ]
+}

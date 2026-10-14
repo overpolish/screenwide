@@ -8,7 +8,8 @@
 //! the pieces as text boxes of its own; everything about where they sit and
 //! how they move is decided here, so preview and export agree.
 
-use crate::style::{rgba, CaptionBackground, CaptionEntrance, CaptionFace, CaptionStyle};
+use crate::motion::{pose, CaptionMotionTrack, CaptionProperty};
+use crate::style::{rgba, CaptionBackground, CaptionFace, CaptionStyle};
 use crate::{Caption, CaptionFrame, Measure, RecordingCaptions};
 
 mod place;
@@ -19,18 +20,6 @@ mod upcoming;
 const LINE_HEIGHT: f64 = 1.25;
 /// A frame at 60 frames a second, which a moving piece blurs across.
 const FRAME_MS: f64 = 1_000.0 / 60.0;
-/// How long a popping caption's words take to grow in, each from three
-/// quarters of its size past its own and back.
-const POP_MS: f64 = 220.0;
-const POP_FROM: f64 = 0.75;
-/// How far past its size a popping caption grows: the back ease's
-/// overshoot, about 5% at the top.
-const POP_OVERSHOOT: f64 = 2.5;
-/// How long a popping caption takes to become solid, at the start of its
-/// growth.
-const POP_FADE_MS: f64 = 50.0;
-/// How long a word coming on as it is said takes to fade in.
-const WORD_FADE_MS: f64 = 90.0;
 
 /// What a piece of a caption is. Colours are written `#rrggbbaa`.
 #[derive(Clone, Debug, PartialEq)]
@@ -95,18 +84,42 @@ impl CaptionTrack {
   }
 }
 
-/// The back ease: past 1 and back to it, `overshoot` setting how far.
-fn ease_out_back(progress: f64, overshoot: f64) -> f64 {
-  let from_end = progress - 1.0;
-  1.0 + (overshoot + 1.0) * from_end.powi(3) + overshoot * from_end.powi(2)
+/// How a piece is drawn at one moment of its motion: how large about its
+/// centre and how solid, now and a frame ago, which the compositor blurs
+/// between, and how far it is moved, in ems of its type.
+#[derive(Clone, Copy)]
+struct Shown {
+  scale: [f64; 2],
+  opacity: [f64; 2],
+  offset: [f64; 2],
 }
 
-/// A Pop caption's size and solidity `elapsed_ms` after it starts.
-fn pop(elapsed_ms: f64) -> (f64, f64) {
-  let progress = (elapsed_ms / POP_MS).clamp(0.0, 1.0);
-  let scale = POP_FROM + (1.0 - POP_FROM) * ease_out_back(progress, POP_OVERSHOOT);
-  (scale, (elapsed_ms / POP_FADE_MS).clamp(0.0, 1.0))
+/// A piece `elapsed_ms` into `tracks`. A growing piece stays where it
+/// settles, and the size a frame ago is the size now, so growth is drawn
+/// sharp rather than blurred as an annotation's is; how solid it is blurs
+/// across the frame.
+fn shown(tracks: &[CaptionMotionTrack], elapsed_ms: f64) -> Shown {
+  let now = pose(tracks, elapsed_ms);
+  let before = pose(tracks, elapsed_ms - FRAME_MS);
+  Shown {
+    scale: [now.get(CaptionProperty::Scale); 2],
+    opacity: [
+      now.get(CaptionProperty::Opacity),
+      before.get(CaptionProperty::Opacity),
+    ],
+    offset: [
+      now.get(CaptionProperty::OffsetX),
+      now.get(CaptionProperty::OffsetY),
+    ],
+  }
 }
+
+/// A piece at rest.
+const STILL: Shown = Shown {
+  scale: [1.0; 2],
+  opacity: [1.0; 2],
+  offset: [0.0; 2],
+};
 
 /// The caption showing at `at_ms`, if any. `captions` are in order and
 /// never overlap.
@@ -149,33 +162,22 @@ pub fn caption_pieces(
   };
   let style = recording.style.normalized();
   let placement = place::place(caption, &style, frame, measure);
-  let popping = style.entrance == CaptionEntrance::Pop;
-  // How large and how solid a piece is `elapsed_ms` after it comes on, now
-  // and a frame ago. A popping piece grows about its own middle, staying
-  // where it settles; the size a frame ago is the size now, so the growth
-  // is drawn sharp rather than blurred as an annotation's is. A word
-  // revealed without popping fades in.
-  let entering = |elapsed_ms: f64, fades: bool| {
-    if popping {
-      let (size, solidity) = pop(elapsed_ms);
-      ([size; 2], [solidity; 2])
-    } else if fades {
-      let fade = |ms: f64| (ms / WORD_FADE_MS).clamp(0.0, 1.0);
-      ([1.0; 2], [fade(elapsed_ms), fade(elapsed_ms - FRAME_MS)])
-    } else {
-      ([1.0; 2], [1.0; 2])
-    }
-  };
   // The caption comes on whole, unless its words come on one by one.
-  let whole = entering(at_ms - caption.start_ms, false);
-  let piece = |kind, text: &str, at: [f64; 2], (size, face), (scale, opacity)| CaptionPiece {
-    kind,
-    text: text.to_owned(),
-    face,
-    centre: at,
-    size,
-    scale,
-    opacity,
+  let whole = shown(&style.motion.caption, at_ms - caption.start_ms);
+  let piece = |kind, text: &str, at: [f64; 2], (size, face): (f64, CaptionFace), shown: Shown| {
+    CaptionPiece {
+      kind,
+      text: text.to_owned(),
+      face,
+      // Moved by its motion, in ems of its own type.
+      centre: [
+        at[0] + shown.offset[0] * size,
+        at[1] + shown.offset[1] * size,
+      ],
+      size,
+      scale: shown.scale,
+      opacity: shown.opacity,
+    }
   };
   // The word being said: the last that has started, held through the pause
   // after it until the next one starts.
@@ -202,7 +204,7 @@ pub fn caption_pieces(
         .filter(|(word, _)| word.start_ms <= at_ms)
         .map(|(_, placed)| placed),
     )
-    .map(|(centre, block)| (centre, block, ([1.0; 2], [1.0; 2]))),
+    .map(|(centre, block)| (centre, block, STILL)),
     _ => None,
   };
   if let Some((centre, block, shown)) = backdrop {
@@ -235,7 +237,7 @@ pub fn caption_pieces(
     } else if word.start_ms > at_ms {
       continue;
     } else {
-      entering(at_ms - word.start_ms, true)
+      shown(&style.motion.word, at_ms - word.start_ms)
     };
     let is_marked = said == Some(index) && style.highlight_words;
     let set = (placed.size, placed.face);

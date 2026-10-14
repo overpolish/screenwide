@@ -2,18 +2,18 @@
 import type { CaptionAccent } from "./CaptionAccent";
 import type { CaptionArrangement } from "./CaptionArrangement";
 import type { CaptionBackground } from "./CaptionBackground";
-import type { CaptionEntrance } from "./CaptionEntrance";
 import type { CaptionFont } from "./CaptionFont";
 import type { CaptionLines } from "./CaptionLines";
+import type { CaptionMotion } from "./CaptionMotion";
 import type { CaptionPosition } from "./CaptionPosition";
 import type { CaptionSize } from "./CaptionSize";
-import type { CaptionTemplate } from "./CaptionTemplate";
+import type { CaptionTemplateId } from "./CaptionTemplateId";
 
 export type CaptionStyle = { 
 /**
  * The template the style was taken from, which its tile shows chosen.
  */
-template: CaptionTemplate, font: CaptionFont, 
+template: CaptionTemplateId, font: CaptionFont, 
 /**
  * Type size, in percent of the size a caption is set at by default: the
  * template's, which `size` steps from.
@@ -61,7 +61,12 @@ outline: boolean,
  * The outline's colour, as `#rrggbb`; it is always drawn a little
  * see-through, so it softens the type's edge rather than ringing it.
  */
-outlineColor: string, background: CaptionBackground, entrance: CaptionEntrance, 
+outlineColor: string, background: CaptionBackground, 
+/**
+ * How it comes on: the caption whole, and each word as it is said. An
+ * older style's `entrance`, a preset's name, reads as the same motion.
+ */
+motion: CaptionMotion, 
 /**
  * Which words are set apart in the accent.
  */

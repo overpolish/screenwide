@@ -9,7 +9,7 @@ import { captionTemplateStyles } from "./captions-api";
 import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionSettings } from "../../../../bindings/CaptionSettings";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
-import type { CaptionTemplate } from "../../../../bindings/CaptionTemplate";
+import type { CaptionTemplateId } from "../../../../bindings/CaptionTemplateId";
 
 /** The caption templates as the panel offers them, and what new captions
  * start as: the template, its look, the layout options set by hand, and the
@@ -19,7 +19,7 @@ export type CaptionTemplates = {
   defaultLayout: CaptionLayout;
   /** What new captions start out saying. */
   defaultSettings: CaptionSettings;
-  defaultTemplate: CaptionTemplate;
+  defaultTemplate: CaptionTemplateId;
   /** Each template as it ships, in the order the panel offers them. */
   shipped: CaptionStyle[];
   /** Each template's look as it was last set as default, or as it ships,
@@ -34,7 +34,7 @@ export type CaptionTemplates = {
  * back to how it ships. */
 export type CaptionDefaultsPatch = {
   layout?: CaptionLayout;
-  original?: CaptionTemplate;
+  original?: CaptionTemplateId;
   settings?: CaptionSettings;
   style?: CaptionStyle;
 };
@@ -52,7 +52,7 @@ export function useCaptionTemplates(
   }: {
     layout: CaptionLayout;
     settings: CaptionSettings;
-    template: CaptionTemplate;
+    template: CaptionTemplateId;
   },
 ): CaptionTemplates | null {
   const [shipped, setShipped] = useState<CaptionStyle[] | null>(null);
@@ -106,10 +106,10 @@ export const captionDefaultsSettings = (
   captionLayout?: CaptionLayout;
   captionSettings?: CaptionSettings;
   captionStyles?: CaptionStyle[];
-  captionTemplate?: CaptionTemplate;
+  captionTemplate?: CaptionTemplateId;
 } => {
   const { layout, original, settings, style } = patch;
-  const others = (template: CaptionTemplate) =>
+  const others = (template: CaptionTemplateId) =>
     saved.filter((kept) => kept.template !== template);
   return {
     ...(layout ? { captionLayout: layout } : {}),

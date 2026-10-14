@@ -1,0 +1,22 @@
+{
+  "formatVersion": 2,
+  "id": "supersize",
+  "style": {
+    "font": {
+      "family": "Montserrat",
+      "weight": 900,
+      "italic": false
+    },
+    "sizePercent": 110,
+    "allCaps": true,
+    "maxWords": 5,
+    "accent": "word",
+    "accentFont": {
+      "family": "Montserrat",
+      "weight": 900,
+      "italic": false
+    },
+    "accentSizePercent": 170,
+    "motion": "pop"
+  }
+}

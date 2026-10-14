@@ -7,7 +7,7 @@ import { EditorKind } from "../editor/types";
 
 import type { PopupPanelIcon } from "./popup-panel-item-glyph";
 import type { CaptionStyle } from "../../bindings/CaptionStyle";
-import type { CaptionTemplate } from "../../bindings/CaptionTemplate";
+import type { CaptionTemplateId } from "../../bindings/CaptionTemplateId";
 import type { NoteTranscript } from "../editor/timeline/moments/recording-moments";
 
 type PopupPanelMode = "menu" | "select";
@@ -100,7 +100,7 @@ export type PopupPanelNoteContent = {
  * `styles` are each as choosing it would set the captions. */
 export type PopupPanelCaptionTemplatesContent = {
   kind: "caption-templates";
-  selected: CaptionTemplate;
+  selected: CaptionTemplateId;
   styles: CaptionStyle[];
 };
 

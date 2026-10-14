@@ -38,12 +38,12 @@ fn captions() -> Vec<Caption> {
   }]
 }
 
-fn styled(template: CaptionTemplate, highlight_words: bool) -> RecordingCaptions {
+fn styled(template: &str, highlight_words: bool) -> RecordingCaptions {
   RecordingCaptions {
     enabled: true,
     style: CaptionStyle {
       highlight_words,
-      ..template.style()
+      ..CaptionTemplateId::from(template).shipped_style()
     },
     ..Default::default()
   }
@@ -75,16 +75,16 @@ fn white_word() -> CaptionPieceKind {
 
 #[test]
 fn draws_nothing_off_or_between_captions() {
-  assert!(pieces(&styled(CaptionTemplate::Clean, false), 500.0).is_empty());
-  assert!(pieces(&styled(CaptionTemplate::Clean, false), 3_000.0).is_empty());
-  let mut off = styled(CaptionTemplate::Clean, false);
+  assert!(pieces(&styled("clean", false), 500.0).is_empty());
+  assert!(pieces(&styled("clean", false), 3_000.0).is_empty());
+  let mut off = styled("clean", false);
   off.enabled = false;
   assert!(pieces(&off, 1_500.0).is_empty());
 }
 
 #[test]
 fn sets_each_line_centred_with_the_last_ending_low_in_the_picture() {
-  let drawn = pieces(&styled(CaptionTemplate::Clean, false), 1_500.0);
+  let drawn = pieces(&styled("clean", false), 1_500.0);
   let centres: Vec<[f64; 2]> = drawn.iter().map(|piece| piece.centre).collect();
   // 50 px type on 62.5 px lines, the last ending at 900 px; "one two" is
   // 70 px wide with its 10 px space, centred on 500 px.
@@ -94,7 +94,7 @@ fn sets_each_line_centred_with_the_last_ending_low_in_the_picture() {
 #[test]
 fn holds_a_caption_in_its_corner_with_its_lines_lined_up_to_that_side() {
   let placed = |position| {
-    let mut recording = styled(CaptionTemplate::Clean, false);
+    let mut recording = styled("clean", false);
     recording.style.position = position;
     let drawn = pieces(&recording, 1_500.0);
     drawn.iter().map(|piece| piece.centre).collect::<Vec<_>>()
@@ -118,7 +118,7 @@ fn near(a: [f64; 2], b: [f64; 2]) -> bool {
 
 #[test]
 fn sets_a_word_apart_in_the_accent_standing_on_its_lines_baseline() {
-  let mut recording = styled(CaptionTemplate::Clean, false);
+  let mut recording = styled("clean", false);
   recording.style.accent = CaptionAccent::Word;
   recording.style.accent_size_percent = 200.0;
   recording.style.accent_color = "#ff0000".to_owned();
@@ -142,7 +142,7 @@ fn sets_a_word_apart_in_the_accent_standing_on_its_lines_baseline() {
 
 #[test]
 fn steps_each_line_of_a_staircase_further_along() {
-  let mut recording = styled(CaptionTemplate::Clean, false);
+  let mut recording = styled("clean", false);
   recording.style.arrangement = CaptionArrangement::Staircase;
   let lefts: Vec<f64> = pieces(&recording, 1_500.0)
     .iter()
@@ -155,7 +155,7 @@ fn steps_each_line_of_a_staircase_further_along() {
 
 #[test]
 fn colours_the_word_being_said_where_asked() {
-  let drawn = pieces(&styled(CaptionTemplate::Clean, true), 1_500.0);
+  let drawn = pieces(&styled("clean", true), 1_500.0);
   assert_eq!(
     kinds(&drawn),
     [
@@ -168,7 +168,7 @@ fn colours_the_word_being_said_where_asked() {
 
 #[test]
 fn draws_in_the_colours_the_style_picks() {
-  let mut recording = styled(CaptionTemplate::Highlight, true);
+  let mut recording = styled("highlight", true);
   recording.style.text_color = "#ff0000".to_owned();
   // A dark pill takes light type on it.
   recording.style.highlight_color = "#202080".to_owned();
@@ -191,7 +191,7 @@ fn draws_in_the_colours_the_style_picks() {
 
 #[test]
 fn outlines_words_in_the_colour_picked_or_not_at_all() {
-  let mut recording = styled(CaptionTemplate::Clean, false);
+  let mut recording = styled("clean", false);
   recording.style.outline_color = "#3050ff".to_owned();
   let outlined = |recording: &RecordingCaptions| match &pieces(recording, 1_500.0)[0].kind {
     CaptionPieceKind::Word { outline, .. } => outline.clone(),
@@ -204,7 +204,7 @@ fn outlines_words_in_the_colour_picked_or_not_at_all() {
 
 #[test]
 fn puts_the_box_behind_the_lines_and_the_pill_under_the_word_said() {
-  let boxed = pieces(&styled(CaptionTemplate::Box, false), 1_500.0);
+  let boxed = pieces(&styled("box", false), 1_500.0);
   assert_eq!(
     boxed[0].kind,
     CaptionPieceKind::Backdrop {
@@ -214,7 +214,7 @@ fn puts_the_box_behind_the_lines_and_the_pill_under_the_word_said() {
     }
   );
   assert_eq!(boxed[0].text, "one two\nthree");
-  let pill = pieces(&styled(CaptionTemplate::Highlight, true), 1_900.0);
+  let pill = pieces(&styled("highlight", true), 1_900.0);
   assert_eq!(
     kinds(&pill),
     [
@@ -230,7 +230,7 @@ fn puts_the_box_behind_the_lines_and_the_pill_under_the_word_said() {
     ]
   );
   // Not highlighting the word being said takes its pill away too.
-  let unmarked = pieces(&styled(CaptionTemplate::Highlight, false), 1_900.0);
+  let unmarked = pieces(&styled("highlight", false), 1_900.0);
   assert_eq!(
     kinds(&unmarked),
     [
@@ -243,10 +243,10 @@ fn puts_the_box_behind_the_lines_and_the_pill_under_the_word_said() {
 
 /// Clean, with its words revealed as they are said, popping where asked.
 fn revealed(popping: bool) -> RecordingCaptions {
-  let mut recording = styled(CaptionTemplate::Clean, false);
+  let mut recording = styled("clean", false);
   recording.style.reveal_words = true;
   if popping {
-    recording.style.entrance = CaptionEntrance::Pop;
+    recording.style.motion = CaptionTemplateId::from("pop").shipped_style().motion;
   }
   recording
 }
@@ -268,7 +268,7 @@ fn reveals_each_word_as_it_is_said() {
 
 #[test]
 fn grows_the_box_over_the_words_revealed_so_far() {
-  let mut recording = styled(CaptionTemplate::Box, false);
+  let mut recording = styled("box", false);
   recording.style.reveal_words = true;
   let block = |at_ms| match pieces(&recording, at_ms)[0].kind.clone() {
     CaptionPieceKind::Backdrop { block, .. } => block,
@@ -283,7 +283,7 @@ fn grows_the_box_over_the_words_revealed_so_far() {
 
 #[test]
 fn pops_in_past_its_size_and_settles() {
-  let at = |ms: f64| pieces(&styled(CaptionTemplate::Pop, false), 1_000.0 + ms)[0].clone();
+  let at = |ms: f64| pieces(&styled("pop", false), 1_000.0 + ms)[0].clone();
   assert_eq!((at(0.0).scale[0], at(0.0).opacity[0]), (0.75, 0.0));
   let peak = (0..22)
     .map(|step| at(f64::from(step) * 10.0).scale[0])
@@ -297,10 +297,28 @@ fn pops_in_past_its_size_and_settles() {
 }
 
 #[test]
+fn moves_each_piece_by_its_motions_offset_in_ems_of_its_type() {
+  let mut recording = styled("clean", false);
+  recording.style.motion = serde_json::from_value::<CaptionStyle>(serde_json::json!({
+    "motion": { "caption": [{ "property": "offsetY", "keyframes": [
+      { "atMs": 0, "value": 0.5 },
+      { "atMs": 200, "value": 0 }
+    ] }] }
+  }))
+  .unwrap()
+  .motion;
+  let at = |ms: f64| pieces(&recording, 1_000.0 + ms)[0].clone();
+  let settled = at(400.0);
+  let moving = at(0.0);
+  assert_eq!(moving.centre[0], settled.centre[0]);
+  assert_eq!(moving.centre[1] - settled.centre[1], 0.5 * settled.size);
+}
+
+#[test]
 fn readies_the_next_captions_words_unseen_and_set_as_they_will_be() {
   let track = CaptionTrack {
     captions: captions(),
-    recording: styled(CaptionTemplate::Clean, false),
+    recording: styled("clean", false),
   };
   let upcoming = track.upcoming_pieces(FRAME, 500.0);
   let shown = pieces(&track.recording, 2_000.0);
@@ -332,7 +350,7 @@ fn readies_the_next_caption_only_once_the_one_showing_has_come_on() {
   });
   let track = CaptionTrack {
     captions: following,
-    recording: styled(CaptionTemplate::Pop, false),
+    recording: styled("pop", false),
   };
   let texts = |at_ms| {
     track

@@ -371,7 +371,7 @@ fn reads_captions_saved_with_values_no_longer_offered() {
     "style": { "template": "duet", "entrance": "words", "accent": "lines" },
   });
   let captions: RecordingCaptions = serde_json::from_value(saved).unwrap();
-  assert_eq!(captions.style.template, CaptionTemplate::Clean);
-  assert_eq!(captions.style.entrance, CaptionEntrance::None);
+  assert_eq!(captions.style.template.as_str(), "clean");
+  assert_eq!(captions.style.motion, CaptionMotion::default());
   assert_eq!(captions.style.accent, CaptionAccent::None);
 }

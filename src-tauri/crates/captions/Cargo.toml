@@ -17,7 +17,5 @@ regex.workspace = true
 screenwide-lexicon.workspace = true
 screenwide-timeline.workspace = true
 serde.workspace = true
-ts-rs.workspace = true
-
-[dev-dependencies]
 serde_json.workspace = true
+ts-rs.workspace = true

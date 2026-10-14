@@ -1,0 +1,15 @@
+{
+  "formatVersion": 2,
+  "id": "pop",
+  "style": {
+    "font": {
+      "weight": 800,
+      "italic": false
+    },
+    "sizePercent": 140,
+    "allCaps": true,
+    "maxWords": 3,
+    "lines": "one",
+    "motion": "pop"
+  }
+}

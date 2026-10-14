@@ -7,7 +7,7 @@
 
 use screenwide_captions::{
   caption_pieces, Caption, CaptionAccent, CaptionFont, CaptionFrame, CaptionPiece, CaptionStyle,
-  CaptionTemplate, CaptionWord, RecordingCaptions,
+  CaptionTemplateId, CaptionWord, RecordingCaptions,
 };
 use screenwide_imaging::CapturedImage;
 
@@ -52,10 +52,10 @@ fn caption(accented: bool) -> Caption {
 }
 
 /// `template`'s style, with the word being said coloured.
-fn styled(template: CaptionTemplate) -> CaptionStyle {
+fn styled(template: &str) -> CaptionStyle {
   CaptionStyle {
     highlight_words: true,
-    ..template.style()
+    ..CaptionTemplateId::from(template).shipped_style()
   }
 }
 
@@ -147,7 +147,7 @@ fn is_dark([r, g, b]: [u8; 3]) -> bool {
 
 #[test]
 fn draws_a_caption_word_in_its_own_colour_with_a_dark_outline_and_no_box() {
-  let set = pieces(styled(CaptionTemplate::Clean));
+  let set = pieces(styled("clean"));
   let canvas = drawn(&set);
   let [first, said] = [&set.0[0], &set.0[1]];
   let size = first.size;
@@ -174,12 +174,12 @@ fn draws_the_outline_in_the_colour_picked_and_none_when_off() {
   };
   let blue = first_word(CaptionStyle {
     outline_color: "#1040ff".to_owned(),
-    ..styled(CaptionTemplate::Clean)
+    ..styled("clean")
   });
   assert!(blue.iter().any(|[r, g, b]| *b > 160 && *r < 80 && *g < 110));
   let bare = first_word(CaptionStyle {
     outline: false,
-    ..styled(CaptionTemplate::Clean)
+    ..styled("clean")
   });
   assert!(bare.iter().any(|pixel| is_white(*pixel)));
   assert!(!bare.iter().any(|pixel| is_dark(*pixel)));
@@ -187,7 +187,7 @@ fn draws_the_outline_in_the_colour_picked_and_none_when_off() {
 
 #[test]
 fn draws_the_box_template_on_a_dark_backdrop_and_the_highlight_on_a_pill() {
-  let boxed = pieces(styled(CaptionTemplate::Box));
+  let boxed = pieces(styled("box"));
   let canvas = drawn(&boxed);
   // Between the two words, where there is no type, the backdrop shows.
   let between = [
@@ -198,7 +198,7 @@ fn draws_the_box_template_on_a_dark_backdrop_and_the_highlight_on_a_pill() {
     .iter()
     .all(|pixel| is_dark(*pixel)));
 
-  let pill = pieces(styled(CaptionTemplate::Highlight));
+  let pill = pieces(styled("highlight"));
   let canvas = drawn(&pill);
   let said = pill.0.last().unwrap();
   let on_pill = around(&canvas, said.centre, [said.size, said.size * 0.4]);
@@ -219,7 +219,7 @@ fn white_count(set: &(Vec<CaptionPiece>, CaptionFaces)) -> usize {
 
 #[test]
 fn draws_a_word_growing_in_at_its_size_then() {
-  let settled = pieces(styled(CaptionTemplate::Clean));
+  let settled = pieces(styled("clean"));
   let mut growing = settled.clone();
   for piece in &mut growing.0 {
     piece.scale = [0.75; 2];
@@ -239,7 +239,7 @@ fn sets_the_type_in_the_family_and_weight_the_style_names() {
         italic: false,
       },
       highlight_words: false,
-      ..CaptionTemplate::Clean.style()
+      ..CaptionTemplateId::from("clean").shipped_style()
     })
   };
   // Georgia ships with both macOS and Windows, and its words are wider than
@@ -263,7 +263,7 @@ fn fits_the_pill_to_type_set_in_another_face() {
       weight: 700,
       italic: false,
     },
-    ..CaptionTemplate::Highlight.style()
+    ..CaptionTemplateId::from("highlight").shipped_style()
   });
   let canvas = drawn(&set);
   let said = set.0.last().unwrap();
@@ -305,7 +305,7 @@ fn sets_the_accent_in_a_family_the_app_carries_upright_or_italic() {
         italic,
       },
       highlight_words: false,
-      ..CaptionTemplate::Clean.style()
+      ..CaptionTemplateId::from("clean").shipped_style()
     })
   };
   let italic = accented("Instrument Serif", true);

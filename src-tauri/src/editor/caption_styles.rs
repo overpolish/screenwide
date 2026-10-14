@@ -11,7 +11,9 @@ use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex};
 
 use screenwide_annotations::text::installed::installed_families;
-use screenwide_captions::{CaptionLayout, CaptionStyle, CaptionTemplate, RecordingCaptions};
+use screenwide_captions::{
+  bundled_templates, CaptionLayout, CaptionStyle, CaptionTemplateId, RecordingCaptions,
+};
 use screenwide_compositor::compositor::caption_preview::{CaptionPreview, CaptionPreviewer};
 use screenwide_imaging::CapturedImage;
 use serde::Serialize;
@@ -58,7 +60,10 @@ pub struct FontFamily {
 /// its own here.
 #[tauri::command]
 pub fn caption_templates() -> Vec<CaptionStyle> {
-  CaptionTemplate::ALL.map(CaptionTemplate::style).to_vec()
+  bundled_templates()
+    .iter()
+    .map(|template| template.style.clone())
+    .collect()
 }
 
 /// The font families installed on the system, read once: reading every
@@ -99,10 +104,10 @@ pub(crate) fn warm(app: &AppHandle) {
     };
     let settings = crate::settings::current(&app);
     let sample = screenwide_i18n::t!("editor-panels-captions-sample");
-    for template in CaptionTemplate::ALL {
+    for template in bundled_templates() {
       let style = settings
         .caption_layout
-        .applied_to(template_style(&settings.caption_styles, template));
+        .applied_to(template_style(&settings.caption_styles, &template.id));
       // A preview that cannot be drawn now is drawn when the panel asks.
       let _ = preview_strip(&directory, &style, &sample);
     }
@@ -113,11 +118,11 @@ pub(crate) fn warm(app: &AppHandle) {
 /// `template` as it was last set as default, or as it ships: a saved look,
 /// over the layout options it ships with, which only the layout set by hand
 /// changes.
-fn template_style(saved: &[CaptionStyle], template: CaptionTemplate) -> CaptionStyle {
-  let shipped = template.style();
+fn template_style(saved: &[CaptionStyle], template: &CaptionTemplateId) -> CaptionStyle {
+  let shipped = template.shipped_style();
   let look = saved
     .iter()
-    .find(|style| style.template == template)
+    .find(|style| style.template == *template)
     .cloned()
     .unwrap_or_else(|| shipped.clone());
   CaptionLayout::of(&shipped).applied_to(look)
@@ -129,7 +134,7 @@ fn template_style(saved: &[CaptionStyle], template: CaptionTemplate) -> CaptionS
 /// until they are turned on.
 pub(crate) fn default_captions(app: &AppHandle) -> RecordingCaptions {
   let settings = crate::settings::current(app);
-  let style = template_style(&settings.caption_styles, settings.caption_template);
+  let style = template_style(&settings.caption_styles, &settings.caption_template);
   RecordingCaptions {
     settings: settings.caption_settings,
     style: settings.caption_layout.applied_to(style),

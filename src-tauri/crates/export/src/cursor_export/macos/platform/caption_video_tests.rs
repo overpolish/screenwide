@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use screenwide_captions::{Caption, CaptionTemplate, CaptionTrack, CaptionWord, RecordingCaptions};
+use screenwide_captions::{
+  Caption, CaptionTemplateId, CaptionTrack, CaptionWord, RecordingCaptions,
+};
 use std::process::Command;
 
 fn word(text: &str, start_ms: f64) -> CaptionWord {
@@ -92,7 +94,7 @@ fn exports_captions_into_the_picture_while_they_show() {
     }],
     recording: RecordingCaptions {
       enabled: true,
-      style: CaptionTemplate::Clean.style(),
+      style: CaptionTemplateId::from("clean").shipped_style(),
       ..Default::default()
     },
   };

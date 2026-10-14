@@ -1,0 +1,24 @@
+{
+  "formatVersion": 2,
+  "id": "stack",
+  "style": {
+    "font": {
+      "family": "Montserrat",
+      "weight": 800,
+      "italic": false
+    },
+    "sizePercent": 110,
+    "allCaps": true,
+    "maxWords": 6,
+    "arrangement": "stack",
+    "position": "center",
+    "revealWords": true,
+    "accent": "word",
+    "accentFont": {
+      "family": "Anton",
+      "weight": 400,
+      "italic": false
+    },
+    "accentSizePercent": 200
+  }
+}

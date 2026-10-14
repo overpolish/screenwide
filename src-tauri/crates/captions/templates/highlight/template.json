@@ -1,0 +1,16 @@
+{
+  "formatVersion": 2,
+  "id": "highlight",
+  "style": {
+    "font": {
+      "weight": 800,
+      "italic": false
+    },
+    "sizePercent": 120,
+    "allCaps": true,
+    "maxWords": 4,
+    "lines": "one",
+    "background": "word",
+    "highlightWords": true
+  }
+}

@@ -2,17 +2,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! How captions look and move. A style is a set of options, and a template
-//! is a style the app ships under a name: choosing one takes up its options,
-//! or the ones it was last saved with, and any of them can change after.
-//! Everything here is a template's to set; what is said and when stays in
-//! the recording's settings, whatever the template.
+//! is a style under an id: choosing one takes up its options, or the ones it
+//! was last saved with, and any of them can change after. Everything here is
+//! a template's to set; what is said and when stays in the recording's
+//! settings, whatever the template. What an option is where nothing sets it
+//! is in `baseline`.
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::layout::CaptionPosition;
+use crate::motion::CaptionMotion;
 use crate::size::CaptionSize;
-use crate::templates::CaptionTemplate;
+use crate::templates::CaptionTemplateId;
 
 /// How many lines one caption may take, where its words are set in lines.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
@@ -53,21 +55,6 @@ pub enum CaptionBackground {
   /// A pill behind the word being said, in the highlight colour, where the
   /// word being said is highlighted.
   Word,
-}
-
-/// How a caption comes on.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
-#[serde(rename_all = "kebab-case")]
-#[ts(export)]
-pub enum CaptionEntrance {
-  /// All at once. Captions set to come on word by word, before revealing
-  /// words was a switch of its own, are read as this.
-  #[default]
-  #[serde(alias = "words")]
-  None,
-  /// Growing in place past its size and settling: the whole caption, or
-  /// each word as it is said where words are revealed.
-  Pop,
 }
 
 /// Whether a template sets a key word of each caption apart in the
@@ -118,15 +105,6 @@ impl Default for CaptionFont {
 }
 
 impl CaptionFont {
-  /// `family` at `weight`, upright.
-  pub(crate) fn upright(family: &str, weight: u16) -> Self {
-    Self {
-      family: Some(family.to_owned()),
-      weight,
-      italic: false,
-    }
-  }
-
   fn normalized(&self) -> Self {
     Self {
       family: self
@@ -144,7 +122,7 @@ impl CaptionFont {
 #[ts(export)]
 pub struct CaptionStyle {
   /// The template the style was taken from, which its tile shows chosen.
-  pub template: CaptionTemplate,
+  pub template: CaptionTemplateId,
   pub font: CaptionFont,
   /// Type size, in percent of the size a caption is set at by default: the
   /// template's, which `size` steps from.
@@ -176,7 +154,13 @@ pub struct CaptionStyle {
   /// see-through, so it softens the type's edge rather than ringing it.
   pub outline_color: String,
   pub background: CaptionBackground,
-  pub entrance: CaptionEntrance,
+  /// How it comes on: the caption whole, and each word as it is said. An
+  /// older style's `entrance`, a preset's name, reads as the same motion.
+  #[serde(
+    alias = "entrance",
+    deserialize_with = "crate::motion::deserialize_motion"
+  )]
+  pub motion: CaptionMotion,
   /// Which words are set apart in the accent.
   pub accent: CaptionAccent,
   pub accent_font: CaptionFont,
@@ -205,12 +189,6 @@ pub(crate) const YELLOW: &str = "#ffd60a";
 pub(crate) const SHADE: &str = "#0000009e";
 /// Black: the outline is drawn see-through already.
 pub(crate) const BLACK: &str = "#000000";
-
-impl Default for CaptionStyle {
-  fn default() -> Self {
-    CaptionTemplate::Box.style()
-  }
-}
 
 /// `color`'s red, green, blue and alpha, each from 0 to 1, if it is written
 /// `#rrggbb` or `#rrggbbaa`.
@@ -264,6 +242,7 @@ impl CaptionStyle {
         100.0,
       ),
       accent_color: color(&self.accent_color, WHITE),
+      motion: self.motion.normalized(),
       ..self.clone()
     }
   }

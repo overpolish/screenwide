@@ -1,0 +1,19 @@
+{
+  "formatVersion": 2,
+  "id": "staircase",
+  "style": {
+    "font": {
+      "family": "DM Sans",
+      "weight": 700,
+      "italic": false
+    },
+    "sizePercent": 115,
+    "maxWords": 6,
+    "arrangement": "staircase",
+    "position": "center",
+    "revealWords": true,
+    "accent": "word",
+    "accentSizePercent": 135,
+    "accentColor": "#ffffff"
+  }
+}

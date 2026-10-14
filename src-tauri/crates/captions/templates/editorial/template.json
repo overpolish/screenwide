@@ -1,0 +1,16 @@
+{
+  "formatVersion": 2,
+  "id": "editorial",
+  "style": {
+    "font": {
+      "family": "DM Sans",
+      "weight": 600,
+      "italic": false
+    },
+    "sizePercent": 110,
+    "maxWords": 6,
+    "accent": "word",
+    "accentSizePercent": 130,
+    "accentColor": "#ffffff"
+  }
+}

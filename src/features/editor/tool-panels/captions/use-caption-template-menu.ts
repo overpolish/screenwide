@@ -7,7 +7,7 @@ import {
   usePopupMenu,
 } from "../../../popup-panel/use-popup-menu";
 
-import type { CaptionTemplate } from "../../../../bindings/CaptionTemplate";
+import type { CaptionTemplateId } from "../../../../bindings/CaptionTemplateId";
 
 const MENU_PREFIX = "caption-template:";
 const MENU_WIDTH = 200;
@@ -17,20 +17,19 @@ const RESET_TO_ORIGINAL = "reset-to-original";
  * menu: putting that template back to how it ships. The template travels
  * with it, so a pick reaches the one it opened on. */
 export function useCaptionTemplateMenu(
-  onResetToOriginal: (template: CaptionTemplate) => void,
+  onResetToOriginal: (template: CaptionTemplateId) => void,
 ) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
     label: t("editor-panels-template-actions"),
     mode: "menu",
     onSelect: (itemId, context) => {
-      if (itemId === RESET_TO_ORIGINAL)
-        onResetToOriginal(context as CaptionTemplate);
+      if (itemId === RESET_TO_ORIGINAL) onResetToOriginal(context);
     },
     showsAllItems: true,
     width: MENU_WIDTH,
   });
-  return (template: CaptionTemplate, anchor: PopupMenuAnchor) =>
+  return (template: CaptionTemplateId, anchor: PopupMenuAnchor) =>
     openMenu({
       anchor,
       context: template,

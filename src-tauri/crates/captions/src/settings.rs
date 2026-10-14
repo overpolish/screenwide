@@ -124,7 +124,7 @@ pub(crate) fn word_choice<T: Copy>(
 }
 
 /// A recording's captions as the edit keeps them.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct RecordingCaptions {
@@ -150,6 +150,21 @@ pub struct RecordingCaptions {
   #[serde(skip_serializing_if = "Vec::is_empty")]
   #[ts(optional, as = "Option<Vec<CaptionEmphasisChoice>>")]
   pub emphasis_choices: Vec<CaptionEmphasisChoice>,
+}
+
+impl Default for RecordingCaptions {
+  /// Off, saying everything, in the default template as it ships.
+  fn default() -> Self {
+    Self {
+      enabled: false,
+      settings: CaptionSettings::default(),
+      style: crate::templates::CaptionTemplateId::default().shipped_style(),
+      layout: CaptionLayout::default(),
+      breaks: Vec::new(),
+      word_choices: Vec::new(),
+      emphasis_choices: Vec::new(),
+    }
+  }
 }
 
 /// More than any recording has gaps between words: a cap on what a damaged

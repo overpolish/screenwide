@@ -71,7 +71,7 @@ impl CaptionStyle {
 #[cfg(test)]
 mod tests {
   use super::CaptionSize;
-  use crate::templates::CaptionTemplate;
+  use crate::templates::{bundled_templates, CaptionTemplateId};
 
   const STEPS: [CaptionSize; 4] = [
     CaptionSize::Small,
@@ -82,27 +82,33 @@ mod tests {
 
   #[test]
   fn each_step_sets_the_type_larger_from_the_templates_own_size() {
-    let mut style = CaptionTemplate::Supersize.style();
+    let mut style = CaptionTemplateId::from("supersize").shipped_style();
     let sizes = STEPS.map(|step| {
       style.size = step;
       style.drawn_size_percent()
     });
     assert!(sizes.windows(2).all(|pair| pair[0] < pair[1]));
-    assert_eq!(sizes[1], CaptionTemplate::Supersize.style().size_percent);
+    assert_eq!(
+      sizes[1],
+      CaptionTemplateId::from("supersize")
+        .shipped_style()
+        .size_percent
+    );
   }
 
   #[test]
   fn a_key_word_stays_larger_than_the_caption_at_every_step() {
-    for template in CaptionTemplate::ALL {
-      let mut style = template.style();
+    for template in bundled_templates() {
+      let mut style = template.style.clone();
       let sizes = STEPS.map(|step| {
         style.accent_size = step;
         style.drawn_accent_percent()
       });
-      assert!(sizes[0] > 100.0, "{template:?}");
+      assert!(sizes[0] > 100.0, "{}", template.id);
       assert!(
         sizes.windows(2).all(|pair| pair[0] < pair[1]),
-        "{template:?}"
+        "{}",
+        template.id
       );
     }
   }
