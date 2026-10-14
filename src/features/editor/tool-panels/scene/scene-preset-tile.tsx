@@ -127,8 +127,10 @@ export function ScenePresetTile({
       // The grid it sits in gives it a whole-pixel width.
       style={{ aspectRatio: Math.max(canvasAspect, TILE_MINIMUM_ASPECT) }}
     >
+      {/* The canvas is the visible frame, so a pane moved past its edge is
+          cut off there, as it is in the export. */}
       <span
-        className="relative mx-auto block h-full"
+        className="relative mx-auto block h-full overflow-hidden rounded-control"
         style={{ aspectRatio: canvasAspect }}
       >
         {cameraBehind ? [cameraPane, screenPane] : [screenPane, cameraPane]}
