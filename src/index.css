@@ -13,6 +13,15 @@
     format("truetype");
 }
 
+/* The app's own caption face, which the font list names in its own type. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  src: url("../src-tauri/assets/Inter-VariableFont_opsz,wght.ttf")
+    format("truetype");
+}
+
 /* The families the app's own caption templates bring, which the font list
    names in their own type. A face is only fetched once something is set in
    it. Those your templates bring are added as they are read. */
