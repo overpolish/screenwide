@@ -67,13 +67,11 @@ export function useRecordingTimelineEditState(artifact: EditorArtifact | null) {
     if (!next) return;
     recordOverlayTimeline(next, timelinesRef.current);
     revisionRef.current.value += 1;
-    void persistRecordingTimelineEdit(
+    persistRecordingTimelineEdit(
       next.artifactId,
       revisionRef.current.value,
       next,
-    ).catch((cause: unknown) => {
-      console.error("Could not persist recording timeline edit", cause);
-    });
+    );
   }, []);
   const sourceDurationMs =
     artifact?.kind === "recording" ? artifact.durationMs : 0;

@@ -94,6 +94,21 @@ const variantClassName = {
   },
 };
 
+/** One segment chosen, the way a picker's is; or any of them on together,
+ * the way a set of independent options is, as a macOS segmented control
+ * set to select any. */
+type PillGroupSelection =
+  | {
+      onSelectionChange: (id: string) => void;
+      selected: string;
+      selectionMode?: "single";
+    }
+  | {
+      onSelectionChange: (ids: string[]) => void;
+      selected: string[];
+      selectionMode: "multiple";
+    };
+
 export function PillGroup({
   "aria-label": ariaLabel,
   className,
@@ -102,15 +117,12 @@ export function PillGroup({
   isDisabled,
   itemClassName,
   items,
-  onSelectionChange,
-  selected,
   size = "regular",
   variant = "filled",
-}: {
+  ...selection
+}: PillGroupSelection & {
   "aria-label": string;
   items: PillGroupItem[];
-  onSelectionChange: (id: string) => void;
-  selected: string;
   className?: string;
   /** Items that stay visible but cannot be picked. */
   disabledIds?: string[];
@@ -124,6 +136,7 @@ export function PillGroup({
   size?: "regular" | "large" | "capture";
   variant?: "filled" | "ghost";
 }) {
+  const isMultiple = selection.selectionMode === "multiple";
   const selectionId = useId();
   const prefersReducedMotion = useReducedMotion();
   // Regular and large are the native control sizes; capture is the icon-only
@@ -144,7 +157,9 @@ export function PillGroup({
     duration: prefersReducedMotion ? 0 : motionDurations.travel,
     ease: motionEasings.out,
   };
-  const layoutId = `pill-selection-${selectionId}`;
+  // One knob slides from segment to segment; with several on, each keeps
+  // its own where it is.
+  const layoutId = isMultiple ? undefined : `pill-selection-${selectionId}`;
 
   return (
     <ToggleButtonGroup
@@ -160,14 +175,24 @@ export function PillGroup({
         styles.track,
         className,
       )}
-      disallowEmptySelection
+      disallowEmptySelection={!isMultiple}
       isDisabled={isDisabled}
-      onSelectionChange={(selection) => {
-        const id = selectedId(selection);
-        if (id !== null) onSelectionChange(id);
+      onSelectionChange={(keys) => {
+        if (selection.selectionMode === "multiple") {
+          selection.onSelectionChange([...keys].map(String));
+          return;
+        }
+        const id = selectedId(keys);
+        if (id !== null) selection.onSelectionChange(id);
       }}
-      selectedKeys={new Set([selected])}
-      selectionMode="single"
+      selectedKeys={
+        new Set(
+          selection.selectionMode === "multiple"
+            ? selection.selected
+            : [selection.selected],
+        )
+      }
+      selectionMode={isMultiple ? "multiple" : "single"}
     >
       {items.map((item) => {
         const isItemDisabled = disabledIds?.includes(item.id) ?? false;

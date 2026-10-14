@@ -85,18 +85,42 @@ pub struct CaptionWordChoice {
   pub kind: CaptionWordKind,
 }
 
-/// What `choices` asks of the word said from `start` to `end`, both shares
-/// of the recording: the choice placed within it, if any.
-pub(crate) fn word_choice(
-  choices: &[CaptionWordChoice],
+/// Whether a word chosen by hand is set apart in the accent, whatever the
+/// rule would pick.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "kebab-case")]
+#[ts(export)]
+pub enum CaptionEmphasisKind {
+  /// Set apart, in place of the word the rule picks in its caption.
+  Emphasized,
+  /// Never set apart, so the rule picks another.
+  Plain,
+}
+
+/// A word set apart by hand or kept plain, at a moment in the recording as
+/// a share of its length, as a word choice is placed.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CaptionEmphasisChoice {
+  pub source_at: f64,
+  pub kind: CaptionEmphasisKind,
+}
+
+/// What `choices`, sorted by `source_at` of each, asks of the word said
+/// from `start` to `end`, both shares of the recording: the choice placed
+/// within it, if any.
+pub(crate) fn word_choice<T: Copy>(
+  choices: &[T],
+  source_at: impl Fn(&T) -> f64,
   start: f64,
   end: f64,
-) -> Option<CaptionWordKind> {
-  let at = choices.partition_point(|choice| choice.source_at < start);
+) -> Option<T> {
+  let at = choices.partition_point(|choice| source_at(choice) < start);
   choices
     .get(at)
-    .filter(|choice| choice.source_at <= end)
-    .map(|choice| choice.kind)
+    .filter(|choice| source_at(choice) <= end)
+    .copied()
 }
 
 /// A recording's captions as the edit keeps them.
@@ -122,6 +146,10 @@ pub struct RecordingCaptions {
   #[serde(skip_serializing_if = "Vec::is_empty")]
   #[ts(optional, as = "Option<Vec<CaptionWordChoice>>")]
   pub word_choices: Vec<CaptionWordChoice>,
+  /// Sorted by `source_at`, at most one at a moment.
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  #[ts(optional, as = "Option<Vec<CaptionEmphasisChoice>>")]
+  pub emphasis_choices: Vec<CaptionEmphasisChoice>,
 }
 
 /// More than any recording has gaps between words: a cap on what a damaged
@@ -157,6 +185,9 @@ impl RecordingCaptions {
     }
     if !are_ordered(self.word_choices.iter().map(|choice| choice.source_at)) {
       return Err("The timeline records invalid caption word choices".to_owned());
+    }
+    if !are_ordered(self.emphasis_choices.iter().map(|choice| choice.source_at)) {
+      return Err("The timeline records invalid caption emphasis choices".to_owned());
     }
     Ok(())
   }

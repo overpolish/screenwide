@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { stepIndex } from "../step-slider/step-index";
+
 import type { AnnotationSizeMeasure } from "./annotation-text";
 import type { AnnotationKind, AnnotationRedaction } from "./types";
 
@@ -168,20 +170,15 @@ export const defaultAnnotationSize = (kind: AnnotationKind) =>
   ANNOTATION_SIZES[kind].defaultSize;
 
 /** Where `width` sits in `presets`: the nearest one to it, so a width from an
- * older document still lands the knob somewhere sensible. */
+ * older document still lands the knob somewhere sensible, and the tool's
+ * own default for a width that is no number. */
 export const annotationWidthIndex = (
   width: number,
   presets: number[] = ANNOTATION_WIDTHS,
-) => {
-  if (!Number.isFinite(width))
-    return Math.max(presets.indexOf(DEFAULT_ANNOTATION_WIDTH), 0);
-  let nearest = 0;
-  for (let index = 1; index < presets.length; index++) {
-    if (Math.abs(presets[index] - width) < Math.abs(presets[nearest] - width))
-      nearest = index;
-  }
-  return nearest;
-};
+) =>
+  Number.isFinite(width)
+    ? stepIndex(presets, width)
+    : Math.max(presets.indexOf(DEFAULT_ANNOTATION_WIDTH), 0);
 
 /** The preset at `index`, clamped to the list the control runs over. */
 export const annotationWidthAt = (

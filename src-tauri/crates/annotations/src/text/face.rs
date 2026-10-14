@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Which face type is set in. Annotations always use the app's own Inter
-//! SemiBold; captions may ask for any family installed on the system, at any
-//! weight, and fall back to Inter where the family is missing.
+//! SemiBold; captions may ask for any family installed on the system or
+//! carried by the app, at any weight, upright or italic, and fall back to
+//! Inter where the family is missing.
 
-/// A family and a weight on the CSS scale of 100 to 900. No family is the
-/// app's own Inter.
+/// A family, a weight on the CSS scale of 100 to 900, and whether italic.
+/// No family is the app's own Inter.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct TypeFace {
   pub family: Option<String>,
   pub weight: u16,
+  /// Set in the family's italic, where it has one; upright where not.
+  pub italic: bool,
 }
 
 impl Default for TypeFace {
@@ -23,16 +26,18 @@ impl TypeFace {
   pub const ANNOTATION: Self = Self {
     family: None,
     weight: 600,
+    italic: false,
   };
 
   /// The face, with no family where it names none.
-  pub fn new(family: Option<&str>, weight: u16) -> Self {
+  pub fn new(family: Option<&str>, weight: u16, italic: bool) -> Self {
     Self {
       family: family
         .map(str::trim)
         .filter(|family| !family.is_empty())
         .map(str::to_owned),
       weight: weight.clamp(100, 900),
+      italic,
     }
   }
 

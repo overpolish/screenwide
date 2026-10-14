@@ -8,9 +8,9 @@ import { AnnotationColorGrid } from "../../../../components/shared/annotation-st
 import { AnnotationFitGroup } from "../../../../components/shared/annotation-style/annotation-fit-group";
 import { AnnotationRadiusField } from "../../../../components/shared/annotation-style/annotation-radius-field";
 import { annotationSizeLabel } from "../../../../components/shared/annotation-style/annotation-text";
-import { AnnotationWidthSlider } from "../../../../components/shared/annotation-style/annotation-width-slider";
 import { redactionSizePresets } from "../../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
 import { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import { EditorKind } from "../../types";
@@ -164,13 +164,13 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         <ControlRow title={annotationSizeLabel(kind.sizeMeasure)}>
           {(controlProps) => (
             <div {...controlProps} role="group">
-              <AnnotationWidthSlider
+              <StepSlider
+                aria-label={annotationSizeLabel(kind.sizeMeasure)}
                 isDisabled={isLocked}
-                label={annotationSizeLabel(kind.sizeMeasure)}
                 onChange={(next) => {
                   change({ annotationStyle: { width: next } });
                 }}
-                presets={redactionSizePresets(redaction, kind.sizes)}
+                steps={redactionSizePresets(redaction, kind.sizes)}
                 value={width}
               />
             </div>

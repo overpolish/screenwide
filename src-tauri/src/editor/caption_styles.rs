@@ -27,7 +27,7 @@ const PREVIEW: CaptionPreview = CaptionPreview {
 };
 /// Changed whenever the preview is drawn differently, so no older strip is
 /// shown in its place.
-const PREVIEW_VERSION: u32 = 7;
+const PREVIEW_VERSION: u32 = 10;
 
 /// A style's preview: a strip of frames one above another in one picture,
 /// which the tile steps through.
@@ -41,14 +41,16 @@ pub struct CaptionPreviewStrip {
   pub frames: u32,
   pub frames_per_second: f64,
 }
-/// A font family installed on the system, and the weights it has upright on
-/// the CSS scale of 100 to 900, lightest first.
+/// A font family installed on the system or carried by the app, the weights
+/// it has upright on the CSS scale of 100 to 900, lightest first, and
+/// whether it has an italic.
 #[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct FontFamily {
   pub name: String,
   pub weights: Vec<u16>,
+  pub italic: bool,
 }
 
 /// Every caption template as it ships, in the order the panel offers them.
@@ -68,6 +70,7 @@ static FAMILIES: LazyLock<Vec<FontFamily>> = LazyLock::new(|| {
     .map(|family| FontFamily {
       name: family.name,
       weights: family.weights,
+      italic: family.italic,
     })
     .collect()
 });

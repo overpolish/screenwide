@@ -166,29 +166,39 @@ pub fn set_screenshot_background_radius(app: AppHandle, radius_percent: f64) -> 
   remember_screenshot_background_radius(&app, radius_percent).map(|_| ())
 }
 
+/// Saves the recording's timeline edit into its project, off the main
+/// thread: writing the project takes milliseconds, and the main thread draws
+/// every window.
 #[tauri::command]
-pub fn set_recording_timeline_edit(
+pub async fn set_recording_timeline_edit(
   app: AppHandle,
   artifact_id: u64,
   revision: u64,
   edit: screenwide_timeline_edit::RecordingTimelineEdit,
 ) -> Result<(), String> {
-  let state = app.state::<EditorState>();
-  let artifact = state
-    .recording
-    .artifact
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner());
-  let Some(EditorArtifact::Recording { id, project, .. }) = artifact.as_ref() else {
-    return Err("There is no recording to edit".to_owned());
+  let project = {
+    let state = app.state::<EditorState>();
+    let artifact = state
+      .recording
+      .artifact
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let Some(EditorArtifact::Recording { id, project, .. }) = artifact.as_ref() else {
+      return Err("There is no recording to edit".to_owned());
+    };
+    if *id != artifact_id {
+      return Err("That recording is no longer available in the editor".to_owned());
+    }
+    project.clone()
   };
-  if *id != artifact_id {
-    return Err("That recording is no longer available in the editor".to_owned());
-  }
-  // The pictures the edit's images show go into the project with it, so it
-  // shows them on another computer.
-  super::project_look::carry_pictures(project, &edit.annotation_clips);
-  timeline_edit::persist(project, artifact_id, revision, edit)
+  tauri::async_runtime::spawn_blocking(move || {
+    // The pictures the edit's images show go into the project with it, so
+    // it shows them on another computer.
+    super::project_look::carry_pictures(&project, &edit.annotation_clips);
+    timeline_edit::persist(&project, artifact_id, revision, edit)
+  })
+  .await
+  .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

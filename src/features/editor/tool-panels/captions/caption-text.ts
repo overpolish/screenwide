@@ -30,6 +30,8 @@ export type CaptionTextWord = TranscriptUnit & {
    * where the captions were made before its latest correction. */
   captionText: string | null;
   gap: CaptionGap;
+  /** Whether its caption sets it apart as its key word. */
+  isKeyWord: boolean;
 };
 
 /** The transcript as the Captions panel lays it out: every word the
@@ -46,6 +48,8 @@ export type CaptionText = {
 
 type Placed = TranscriptRange & {
   caption: number;
+  /** Whether the accent sets it apart. */
+  emphasis: boolean;
   /** Whether a space parts it from the word after in its caption. */
   spaced: boolean;
   text: string;
@@ -115,17 +119,22 @@ export function captionText(
     allCaps,
     breaks,
     captions,
+    keyWords = false,
   }: {
     /** Whether the captions are set in capitals, which the text undoes. */
     allCaps: boolean;
     breaks: readonly CaptionBreak[];
     captions: readonly Caption[];
+    /** Whether the captions set a key word of each apart; none do unless
+     * asked. */
+    keyWords?: boolean;
   },
 ): CaptionText {
   const placed = captions
     .flatMap((caption, index) =>
       caption.lines.flat().map((word) => ({
         caption: index,
+        emphasis: word.emphasis,
         endMs: word.sourceEndMs,
         spaced: caption.spaced,
         startMs: word.sourceStartMs,
@@ -177,6 +186,7 @@ export function captionText(
           : caption !== null && shownBefore !== null && shownBefore !== caption
             ? "break"
             : "none",
+        isKeyWord: keyWords && over.some((word) => word.emphasis),
       });
       if (caption !== null) shownBefore = caption;
     }
@@ -198,4 +208,22 @@ export const captionSaidAt = (
     (span) => span.startMs <= ms && ms < span.endMs,
   );
   return index >= 0 ? index : null;
+};
+
+/**
+ * Where pressing word `index` moves the playhead, in the source, from
+ * `playheadMs`: the middle of its caption, where the caption is fully on
+ * screen, or nowhere while the playhead is in that caption already. A word
+ * in no caption seeks to its own start.
+ */
+export const captionSeekMs = (
+  text: CaptionText,
+  index: number,
+  playheadMs: number,
+): number | null => {
+  const word = text.words[index];
+  if (word.caption === null) return word.startMs;
+  const caption = text.captions[word.caption];
+  if (caption.startMs <= playheadMs && playheadMs < caption.endMs) return null;
+  return (caption.startMs + caption.endMs) / 2;
 };

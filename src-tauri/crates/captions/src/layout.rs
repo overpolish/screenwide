@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where a caption sits, and the layout options set by hand. A template
-//! brings its own type size, case, words and lines per caption, and place;
-//! one set here stays as set whichever template is chosen after, and one
-//! left unset follows the template.
+//! Where a caption sits, how large it is, and the layout options set by
+//! hand. A template brings its own case, words and lines per caption, and
+//! place, and the sizes the size steps scale; one set here stays as set
+//! whichever template is chosen after, and one left unset follows the
+//! template.
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::size::CaptionSize;
 use crate::style::{CaptionLines, CaptionStyle};
 
 /// One of nine places on the picture a caption sits at: along the top,
@@ -56,7 +58,10 @@ impl CaptionPosition {
 pub struct CaptionLayout {
   #[serde(skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
-  pub size_percent: Option<f64>,
+  pub size: Option<CaptionSize>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub accent_size: Option<CaptionSize>,
   #[serde(skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub all_caps: Option<bool>,
@@ -79,7 +84,8 @@ impl CaptionLayout {
   /// Every layout option `style` holds, as though each were set.
   pub fn of(style: &CaptionStyle) -> Self {
     Self {
-      size_percent: Some(style.size_percent),
+      size: Some(style.size),
+      accent_size: Some(style.accent_size),
       all_caps: Some(style.all_caps),
       max_words: Some(style.max_words),
       lines: Some(style.lines),
@@ -90,7 +96,8 @@ impl CaptionLayout {
   /// `style` with the options set here in place of its own.
   pub fn applied_to(&self, style: CaptionStyle) -> CaptionStyle {
     CaptionStyle {
-      size_percent: self.size_percent.unwrap_or(style.size_percent),
+      size: self.size.unwrap_or(style.size),
+      accent_size: self.accent_size.unwrap_or(style.accent_size),
       all_caps: self.all_caps.unwrap_or(style.all_caps),
       max_words: self.max_words.unwrap_or(style.max_words),
       lines: self.lines.unwrap_or(style.lines),
@@ -103,7 +110,8 @@ impl CaptionLayout {
 #[cfg(test)]
 mod tests {
   use super::CaptionLayout;
-  use crate::style::{CaptionLines, CaptionTemplate};
+  use crate::style::CaptionLines;
+  use crate::templates::CaptionTemplate;
 
   #[test]
   fn options_set_by_hand_outlast_the_template_and_the_rest_follow_it() {

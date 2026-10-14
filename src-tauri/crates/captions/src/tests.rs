@@ -11,7 +11,7 @@ const FRAME: CaptionFrame = CaptionFrame {
 };
 const DURATION_MS: f64 = 100_000.0;
 
-fn measure(text: &str, _size: f64) -> f64 {
+fn measure(text: &str, _face: CaptionFace, _size: f64) -> f64 {
   text.chars().count() as f64 * 10.0
 }
 
@@ -306,4 +306,72 @@ fn refuses_breaks_out_of_order() {
     ..Default::default()
   };
   assert!(captions.validate().is_err());
+}
+
+/// Each caption's words set in the accent.
+fn emphasized(captions: &[Caption]) -> Vec<Vec<&str>> {
+  captions
+    .iter()
+    .map(|caption| {
+      caption
+        .lines
+        .iter()
+        .flatten()
+        .filter(|word| word.emphasis)
+        .map(|word| word.text.as_str())
+        .collect()
+    })
+    .collect()
+}
+
+/// A choice on the `index`th word `said` lays out, at its middle.
+fn emphasis_on(index: usize, kind: CaptionEmphasisKind) -> CaptionEmphasisChoice {
+  CaptionEmphasisChoice {
+    source_at: (index as f64 * 400.0 + 150.0) / DURATION_MS,
+    kind,
+  }
+}
+
+#[test]
+fn sets_apart_each_captions_longest_word_unless_chosen_by_hand() {
+  let mut case = Case::new("we built a remarkable thing. it works")
+    .styled(|style| style.accent = CaptionAccent::Word);
+  assert_eq!(
+    emphasized(&case.build()),
+    [vec!["remarkable"], vec!["works"]]
+  );
+  // A word chosen by hand takes the place of the one the rule picks, and a
+  // word kept plain is passed over for the next longest.
+  case.captions.emphasis_choices = vec![
+    emphasis_on(1, CaptionEmphasisKind::Emphasized),
+    emphasis_on(6, CaptionEmphasisKind::Plain),
+  ];
+  assert_eq!(emphasized(&case.build()), [vec!["built"], vec!["it"]]);
+  // Without the accent on words, nothing is set apart.
+  case.captions.style.accent = CaptionAccent::None;
+  assert!(emphasized(&case.build()).iter().all(Vec::is_empty));
+}
+
+#[test]
+fn stacks_a_word_or_two_a_line_with_the_word_set_apart_alone() {
+  let case = Case::new("this is the secret to growth").styled(|style| {
+    style.accent = CaptionAccent::Word;
+    style.arrangement = CaptionArrangement::Stack;
+    style.max_words = 6;
+  });
+  assert_eq!(case.texts(), ["this is\nthe\nsecret\nto growth"]);
+}
+
+#[test]
+fn reads_captions_saved_with_values_no_longer_offered() {
+  // Saved before revealing words was a switch, accents only key words, and
+  // with templates since retired: the edit they are in still reads.
+  let saved = serde_json::json!({
+    "enabled": true,
+    "style": { "template": "duet", "entrance": "words", "accent": "lines" },
+  });
+  let captions: RecordingCaptions = serde_json::from_value(saved).unwrap();
+  assert_eq!(captions.style.template, CaptionTemplate::Clean);
+  assert_eq!(captions.style.entrance, CaptionEntrance::None);
+  assert_eq!(captions.style.accent, CaptionAccent::None);
 }

@@ -86,18 +86,20 @@ static NSFont *with_weight_axis(NSFont *font, uint32_t weight) {
   return font;
 }
 
-/// The member of `family` nearest `weight`, as its PostScript name, or nil
-/// where the family is not installed. A family's members are separate faces
-/// at a few weights, and asking for a weight trait does not choose between
-/// them, so each member's own weight is read and the nearest taken. Kept per
-/// family and weight, since every measured line asks.
-static NSString *nearest_member(NSString *family, uint32_t weight) {
+/// The member of `family` nearest `weight`, upright or italic as asked, as
+/// its PostScript name, or nil where the family is not installed. A family's
+/// members are separate faces at a few weights, and asking for a weight
+/// trait does not choose between them, so each member's own weight is read
+/// and the nearest taken; one of the wrong slant only where the family has
+/// none of the right one. Kept per family, weight and slant, since every
+/// measured line asks.
+static NSString *nearest_member(NSString *family, uint32_t weight, BOOL italic) {
   static NSCache<NSString *, NSString *> *chosen;
   static dispatch_once_t once;
   dispatch_once(&once, ^{
     chosen = [[NSCache alloc] init];
   });
-  NSString *key = [NSString stringWithFormat:@"%@\n%u", family, weight];
+  NSString *key = [NSString stringWithFormat:@"%@\n%u\n%d", family, weight, italic];
   NSString *known = [chosen objectForKey:key];
   if (known != nil) return known.length > 0 ? known : nil;
   CGFloat wanted = appkit_weight(weight);
@@ -109,9 +111,8 @@ static NSString *nearest_member(NSString *family, uint32_t weight) {
     if (font == nil) continue;
     NSDictionary *traits = [font.fontDescriptor objectForKey:NSFontTraitsAttribute];
     CGFloat own = [traits[NSFontWeightTrait] doubleValue];
-    // Italics only where the family has nothing upright.
-    BOOL italic = ([traits[NSFontSymbolicTrait] unsignedIntValue] & NSFontItalicTrait) != 0;
-    CGFloat off = fabs(own - wanted) + (italic ? 10.0 : 0.0);
+    BOOL slanted = ([traits[NSFontSymbolicTrait] unsignedIntValue] & NSFontItalicTrait) != 0;
+    CGFloat off = fabs(own - wanted) + (slanted != italic ? 10.0 : 0.0);
     if (off < distance) {
       distance = off;
       best = name;
@@ -121,28 +122,138 @@ static NSString *nearest_member(NSString *family, uint32_t weight) {
   return best;
 }
 
-NSFont *screenwide_face_font(NSString *family, uint32_t weight, CGFloat size) {
-  if (family.length == 0) {
-    if (weight == (uint32_t)kScreenwideAnnotationWeight) return screenwide_annotation_font(size, NO);
-    register_inter_font();
+/// Defined in Rust, in `bundled.rs`: the font files the app carries for its
+/// caption templates, one at a time, null past the last.
+extern const uint8_t *screenwide_bundled_font(uint32_t index, uint32_t *length);
+
+/// Every face in the font files the app carries, with its family, weight
+/// trait and slant read once. They are set straight from the binary's own
+/// bytes, never registered with the system: Core Text only registers a
+/// face it can find again by file.
+static NSArray<NSDictionary *> *bundled_faces(void) {
+  static NSArray<NSDictionary *> *faces;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    NSMutableArray<NSDictionary *> *found = [NSMutableArray array];
+    uint32_t length = 0;
+    for (uint32_t index = 0;; index++) {
+      const uint8_t *bytes = screenwide_bundled_font(index, &length);
+      if (bytes == NULL) break;
+      // The bytes are the binary's own and never freed, so they are read in
+      // place rather than copied.
+      CFDataRef data = CFDataCreateWithBytesNoCopy(NULL, bytes, length, kCFAllocatorNull);
+      NSArray *descriptors = CFBridgingRelease(CTFontManagerCreateFontDescriptorsFromData(data));
+      CFRelease(data);
+      for (id descriptor in descriptors) {
+        CTFontRef font =
+            CTFontCreateWithFontDescriptor((__bridge CTFontDescriptorRef)descriptor, 12, NULL);
+        NSString *family = CFBridgingRelease(CTFontCopyFamilyName(font));
+        NSDictionary *traits = CFBridgingRelease(CTFontCopyTraits(font));
+        CFRelease(font);
+        uint32_t symbolic = [traits[(__bridge NSString *)kCTFontSymbolicTrait] unsignedIntValue];
+        [found addObject:@{
+          @"descriptor" : descriptor,
+          @"family" : family ?: @"",
+          @"weight" : traits[(__bridge NSString *)kCTFontWeightTrait] ?: @0,
+          @"italic" : @((symbolic & kCTFontItalicTrait) != 0),
+        }];
+      }
+    }
+    faces = found;
+  });
+  return faces;
+}
+
+/// `family` at `weight`, italic where asked and it has one, at the size the
+/// cache keeps it at, made from its nearest face and set at the weight
+/// exactly where it varies by weight; nil where the app does not carry the
+/// family.
+static CTFontRef make_bundled_font(NSString *family, uint32_t weight, BOOL italic,
+                                   CGFloat size) {
+  CGFloat wanted = appkit_weight(weight);
+  NSDictionary *best = nil;
+  CGFloat distance = CGFLOAT_MAX;
+  for (NSDictionary *face in bundled_faces()) {
+    if (![face[@"family"] isEqualToString:family]) continue;
+    CGFloat off = fabs([face[@"weight"] doubleValue] - wanted) +
+                  ([face[@"italic"] boolValue] != italic ? 10.0 : 0.0);
+    if (off < distance) {
+      distance = off;
+      best = face;
+    }
   }
-  NSString *member = nearest_member(family.length > 0 ? family : @"Inter", weight);
+  if (best == nil) return NULL;
+  CTFontRef font = CTFontCreateWithFontDescriptor(
+      (__bridge CTFontDescriptorRef)best[@"descriptor"], size, NULL);
+  NSArray *axes = CFBridgingRelease(CTFontCopyVariationAxes(font));
+  for (NSDictionary *axis in axes) {
+    NSNumber *tag = axis[(__bridge NSString *)kCTFontVariationAxisIdentifierKey];
+    if (tag.unsignedIntValue != kScreenwideWeightAxis) continue;
+    CTFontDescriptorRef own = CTFontCopyFontDescriptor(font);
+    CTFontDescriptorRef varied = CTFontDescriptorCreateCopyWithVariation(
+        own, (__bridge CFNumberRef)tag, (CGFloat)weight);
+    CTFontRef weighted = CTFontCreateCopyWithAttributes(font, size, NULL, varied);
+    CFRelease(varied);
+    CFRelease(own);
+    if (weighted != NULL) {
+      CFRelease(font);
+      font = weighted;
+    }
+    break;
+  }
+  return font;
+}
+
+/// [`make_bundled_font`] at `size`. Making a face from the binary's bytes
+/// takes far longer than measuring a word in it, and every measured word
+/// asks, so each family, weight and slant is made once and kept, then only
+/// copied to the size asked for.
+static NSFont *bundled_font(NSString *family, uint32_t weight, BOOL italic, CGFloat size) {
+  static NSCache<NSString *, id> *made;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    made = [[NSCache alloc] init];
+  });
+  NSString *key = [NSString stringWithFormat:@"%@\n%u\n%d", family, weight, italic];
+  id known = [made objectForKey:key];
+  if (known == nil) {
+    CTFontRef font = make_bundled_font(family, weight, italic, 12.0);
+    known = font != NULL ? CFBridgingRelease(font) : (id)[NSNull null];
+    [made setObject:known forKey:key];
+  }
+  if (known == [NSNull null]) return nil;
+  return CFBridgingRelease(
+      CTFontCreateCopyWithAttributes((__bridge CTFontRef)known, size, NULL, NULL));
+}
+
+NSFont *screenwide_face_font(NSString *family, uint32_t weight, BOOL italic, CGFloat size) {
+  if (family.length == 0) {
+    if (weight == (uint32_t)kScreenwideAnnotationWeight && !italic)
+      return screenwide_annotation_font(size, NO);
+    register_inter_font();
+  } else {
+    // The app's own copy of a family before the system's, as the font list
+    // offers it.
+    NSFont *bundled = bundled_font(family, weight, italic, size);
+    if (bundled != nil) return bundled;
+  }
+  NSString *member = nearest_member(family.length > 0 ? family : @"Inter", weight, italic);
   NSFont *font = member != nil ? [NSFont fontWithName:member size:size] : nil;
   if (font == nil) {
     // A family that has gone from this system falls back to Inter, and
     // Inter, where it could not be registered, to the system's face.
-    if (family.length > 0) return screenwide_face_font(nil, weight, size);
+    if (family.length > 0) return screenwide_face_font(nil, weight, italic, size);
     return [NSFont systemFontOfSize:size weight:appkit_weight(weight)];
   }
   return with_weight_axis(font, weight);
 }
 
 NSFont *screenwide_face_font_bytes(const uint8_t *family, uint32_t length, uint32_t weight,
-                                   CGFloat size) {
+                                   BOOL italic, CGFloat size) {
   NSString *name = family != NULL && length > 0
                        ? [[NSString alloc] initWithBytes:family
                                                   length:length
                                                 encoding:NSUTF8StringEncoding]
                        : nil;
-  return screenwide_face_font(name, weight, size);
+  return screenwide_face_font(name, weight, italic, size);
 }

@@ -35,6 +35,7 @@ struct NativeFace {
   family: *const u8,
   family_length: u32,
   weight: u32,
+  italic: u32,
   tabular: u32,
 }
 
@@ -98,6 +99,7 @@ impl TypeDevice {
       family: family.as_ptr(),
       family_length: family.len() as u32,
       weight: u32::from(self.face.weight),
+      italic: u32::from(self.face.italic),
       tabular: u32::from(self.tabular),
     }
   }

@@ -30,6 +30,12 @@ const tailwind = (): Plugin[] =>
 export default defineConfig(() => ({
   plugins: [react(), tailwind()],
 
+  // Stamps what the windows keep in storage with this build, so a window
+  // launched with it never takes up what an earlier build left there.
+  define: {
+    "import.meta.env.SCREENWIDE_BUILD": JSON.stringify(Date.now().toString(36)),
+  },
+
   // Every window is served from the same local WebView bundle. The desktop app
   // does not pay a network-transfer penalty for keeping that shared startup
   // path together, so use a limit that reflects the packaged application.

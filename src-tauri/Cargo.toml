@@ -87,7 +87,9 @@ tauri-plugin-global-shortcut = "2.3.2"
 tauri = "2"
 tokio = { version = "1", features = ["macros", "rt", "time"] }
 trash = "5"
-ts-rs = "=12.0.1"
+# Serde attributes that only shape reading, such as an alias kept for a value
+# no longer written, have nothing to say to the TypeScript a type exports.
+ts-rs = { version = "=12.0.1", features = ["no-serde-warnings"] }
 unic-langid = "0.9"
 wasapi = "0.23.0"
 wgpu = "30.0.0"

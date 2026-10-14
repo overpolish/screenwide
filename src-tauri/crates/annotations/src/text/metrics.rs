@@ -83,6 +83,7 @@ mod platform {
       family: *const u8,
       family_length: u32,
       weight: u32,
+      italic: u32,
     ) -> f64;
   }
 
@@ -102,6 +103,7 @@ mod platform {
         family.as_ptr(),
         family.len() as u32,
         u32::from(face.weight),
+        u32::from(face.italic),
       )
     }
     .max(0.0)

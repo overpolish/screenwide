@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { captionSaidAt, captionText } from "./caption-text";
+import { captionSaidAt, captionSeekMs, captionText } from "./caption-text";
 import { withBreak, withChoice } from "./caption-word-choices";
 
 import type { Caption } from "../../../../bindings/Caption";
@@ -22,6 +22,7 @@ const caption = (said: readonly TranscriptWord[]): Caption => ({
   id: said[0].startMs,
   lines: [
     said.map((heard) => ({
+      emphasis: false,
       endMs: heard.endMs,
       sourceEndMs: heard.endMs,
       sourceStartMs: heard.startMs,
@@ -140,6 +141,20 @@ describe("captionText", () => {
     expect(captionSaidAt(captions, 5_000)).toBeNull();
   });
 
+  it("seeks to the middle of a pressed caption unless the playhead is in it", () => {
+    // "um" is left out of the first caption, so it is in none.
+    const text = captionText(words, untouched, {
+      allCaps: false,
+      breaks: [],
+      captions: [caption([words[0], words[2]]), caption(words.slice(3, 6))],
+    });
+    // The first caption runs 1000 to 2100 ms, the second 2200 to 3300 ms.
+    expect(captionSeekMs(text, 2, 5_000)).toBe(1_550);
+    expect(captionSeekMs(text, 2, 1_000)).toBeNull();
+    expect(captionSeekMs(text, 3, 2_100)).toBe(2_750);
+    expect(captionSeekMs(text, 1, 5_000)).toBe(1_400);
+  });
+
   it("reads each word as its caption sets it, in the case it was said", () => {
     const said = [word("Oh", 1_000), word("damn,", 1_400), word("Bob.", 1_800)];
     const set = caption(said);
@@ -173,6 +188,23 @@ describe("captionText", () => {
       corrected: true,
       text: "going to",
     });
+  });
+
+  it("marks each caption's key word only where the captions set one apart", () => {
+    const set = caption(words.slice(2, 6));
+    set.lines[0][3].emphasis = true;
+    const keyWords = (asked: boolean) =>
+      captionText(words, untouched, {
+        allCaps: false,
+        breaks: [],
+        captions: [set],
+        keyWords: asked,
+      })
+        .words.filter((laid) => laid.isKeyWord)
+        .map((laid) => laid.text);
+    expect(keyWords(true)).toEqual(["test."]);
+    // An accent on alternate lines sets words apart, but none is a key word.
+    expect(keyWords(false)).toEqual([]);
   });
 });
 

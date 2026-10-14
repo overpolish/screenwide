@@ -12,17 +12,24 @@ const STARRED: Record<string, string> = { "damn,": "d***," };
 
 /** The sample transcript as captions of up to six words, a sentence's end
  * closing one early, with its fillers hidden and its profanity partly
- * starred: what the editor would make of it, nothing cut. */
+ * starred, and each one's longest word set apart as its key word: what the
+ * editor would make of it, nothing cut, with an accent on key words. */
 export const sampleCaptions: Caption[] = (() => {
   const captions: Caption[] = [];
   let said: typeof sampleTranscriptWords = [];
   const close = () => {
     if (said.length === 0) return;
+    const longest = said.reduce(
+      (best, word, index) =>
+        word.text.length > said[best].text.length ? index : best,
+      0,
+    );
     captions.push({
       endMs: said[said.length - 1].endMs,
       id: said[0].startMs,
       lines: [
-        said.map((word) => ({
+        said.map((word, index) => ({
+          emphasis: index === longest,
           endMs: word.endMs,
           sourceEndMs: word.endMs,
           sourceStartMs: word.startMs,

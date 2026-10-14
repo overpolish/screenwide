@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useState } from "react";
+import { useRef } from "react";
 
-import { PillGroup } from "../../../../components/base/pill-group/pill-group";
-import { AnnotationColorGrid } from "../../../../components/shared/annotation-style/annotation-color-grid";
+import { ColorChip } from "../../../../components/base/input-fields/color-chip";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { usePopupPanelPicker } from "../../../popup-panel/use-popup-panel-picker";
 
 import {
   CAPTION_COLOR_KEYS,
@@ -17,10 +17,64 @@ import {
 
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 
+/** The colour grid's own width: the palette's row, with its padding. */
+const GRID_SIZE = { height: 120, width: 340 };
+
+/** One of the style's colours as a well beside its name: a press opens the
+ * colour grid under it, which stays open to try one colour after another. */
+function CaptionColorWell({
+  isDisabled,
+  onChange,
+  role,
+  savedColors,
+  value,
+}: {
+  isDisabled: boolean;
+  onChange: (color: string) => void;
+  role: CaptionColorRole;
+  savedColors: string[];
+  value: string;
+}) {
+  const id = `caption-color:${role}`;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const picker = usePopupPanelPicker({
+    content: { kind: "colors", savedColors, value },
+    id,
+    label: captionColorLabel(role),
+    onPick: onChange,
+  });
+
+  return (
+    <div
+      data-popup-panel-trigger={id}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
+    >
+      <ColorChip
+        aria-expanded={picker.isOpen}
+        isDisabled={isDisabled}
+        label={captionColorLabel(role)}
+        onPress={(event) => {
+          const trigger = triggerRef.current;
+          if (trigger)
+            void picker.toggle(
+              trigger,
+              GRID_SIZE,
+              ["keyboard", "virtual"].includes(event.pointerType),
+            );
+        }}
+        ref={triggerRef}
+        value={value}
+      />
+    </div>
+  );
+}
+
 /**
- * The colours the style draws in: which of them to change, of the ones its
- * template offers, and the colour grid for it, with your own colours after
- * the palette and the system's Colours panel behind Custom.
+ * The colours the style draws in, of the ones its template offers, each a
+ * well opening the colour grid: the palette, your own colours after it, and
+ * the system's Colours panel behind Custom.
  */
 export function CaptionColorRows({
   isDisabled,
@@ -33,46 +87,31 @@ export function CaptionColorRows({
   savedColors: string[];
   style: CaptionStyle;
 }) {
-  const offered = offeredColors(style);
-  const [chosen, setChosen] = useState<CaptionColorRole>("text");
-  // A colour the style stopped offering, as when the highlight is turned
-  // off, gives way to the type's.
-  const role = offered.includes(chosen) ? chosen : "text";
-  const key = CAPTION_COLOR_KEYS[role];
-  const set = (color: string) => {
-    onChange({ [key]: color });
-  };
-
   return (
-    <>
-      {offered.length > 1 ? (
-        <ControlRow title={t("editor-panels-captions-color")}>
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <PillGroup
-                aria-label={t("editor-panels-captions-color")}
-                display="label"
+    <ControlRow title={t("editor-panels-captions-color")}>
+      {(controlProps) => (
+        <div
+          {...controlProps}
+          className="flex flex-wrap justify-end gap-control"
+          role="group"
+        >
+          {offeredColors(style).map((role) => {
+            const key = CAPTION_COLOR_KEYS[role];
+            return (
+              <CaptionColorWell
                 isDisabled={isDisabled}
-                items={offered.map((id) => ({
-                  id,
-                  label: captionColorLabel(id),
-                }))}
-                onSelectionChange={(next) => {
-                  setChosen(next as CaptionColorRole);
+                key={role}
+                onChange={(color) => {
+                  onChange({ [key]: color });
                 }}
-                selected={role}
+                role={role}
+                savedColors={savedColors}
+                value={style[key]}
               />
-            </div>
-          )}
-        </ControlRow>
-      ) : null}
-      <AnnotationColorGrid
-        isDisabled={isDisabled}
-        onChange={set}
-        onSettled={set}
-        savedColors={savedColors}
-        value={style[key]}
-      />
-    </>
+            );
+          })}
+        </div>
+      )}
+    </ControlRow>
   );
 }

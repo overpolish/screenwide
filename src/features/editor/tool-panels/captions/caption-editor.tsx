@@ -73,14 +73,21 @@ export function CaptionEditor({
   const { durationMs, played, removed } = transcript;
   const breaks = captions.breaks ?? [];
   const choices = captions.wordChoices ?? [];
+  const emphasis = captions.emphasisChoices ?? [];
   const allCaps = captions.style.allCaps;
+  const keyWords = captions.style.accent === "word";
   const text = useMemo(
     () =>
       words
         ? captionText(
             words,
             { corrections, durationMs, played, removed },
-            { allCaps, breaks: captions.breaks ?? [], captions: made },
+            {
+              allCaps,
+              breaks: captions.breaks ?? [],
+              captions: made,
+              keyWords,
+            },
           )
         : null,
     [
@@ -88,6 +95,7 @@ export function CaptionEditor({
       captions.breaks,
       corrections,
       durationMs,
+      keyWords,
       made,
       played,
       removed,
@@ -161,6 +169,18 @@ export function CaptionEditor({
       });
       return;
     }
+    if (action === "make-key-word" || action === "not-key-word") {
+      // Kept plain by hand rather than left to the rule, which would pick
+      // the word again were it its caption's longest.
+      onChange({
+        emphasisChoices: withChoice(
+          emphasis,
+          { durationMs, word },
+          action === "make-key-word" ? "emphasized" : "plain",
+        ),
+      });
+      return;
+    }
     if (index === 0) return;
     const gap = { after: word, before: text.words[index - 1], durationMs };
     const kind = action === "clear-break" ? null : action;
@@ -199,6 +219,8 @@ export function CaptionEditor({
             captionMenuItems({
               gap: gapBefore(word),
               isCorrected: text.words[word].corrected,
+              isKeyWord:
+                keyWords && isShown(word) ? text.words[word].isKeyWord : null,
               isShown: isShown(word),
             }),
           );
@@ -212,10 +234,13 @@ export function CaptionEditor({
       <div className="flex justify-end">
         <Button
           isDisabled={
-            isDisabled || (breaks.length === 0 && choices.length === 0)
+            isDisabled ||
+            (breaks.length === 0 &&
+              choices.length === 0 &&
+              emphasis.length === 0)
           }
           onPress={() => {
-            onChange({ breaks: [], wordChoices: [] });
+            onChange({ breaks: [], emphasisChoices: [], wordChoices: [] });
           }}
         >
           {t("editor-panels-captions-reset-text")}

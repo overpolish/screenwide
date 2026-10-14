@@ -154,12 +154,24 @@ if (!isNativePreview) {
         case "open_standalone_listboxes":
         case "render_caption_previews":
           return [];
-        case "installed_font_families":
+        case "installed_font_families": {
+          const every = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+          // The app's own families, as the editor lists them, among a few
+          // a system has.
           return [
-            { name: "Georgia", weights: [400, 700] },
-            { name: "Helvetica Neue", weights: [100, 300, 400, 500, 700] },
-            { name: "Times New Roman", weights: [400, 700] },
+            { italic: false, name: "Anton", weights: [400] },
+            { italic: false, name: "DM Sans", weights: every },
+            { italic: true, name: "Georgia", weights: [400, 700] },
+            {
+              italic: true,
+              name: "Helvetica Neue",
+              weights: [100, 300, 400, 500, 700],
+            },
+            { italic: true, name: "Instrument Serif", weights: [400] },
+            { italic: false, name: "Montserrat", weights: every },
+            { italic: true, name: "Times New Roman", weights: [400, 700] },
           ];
+        }
         case "find_transcript_marks":
           return storyTranscriptMarks(payload);
         // The sample transcript and the captions made of it, for panels

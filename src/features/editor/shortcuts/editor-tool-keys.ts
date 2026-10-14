@@ -34,6 +34,8 @@ export type EditorToolKeys = {
   onSceneTool?: () => void;
   onSelectTool?: () => void;
   onToggleBladeTool?: () => void;
+  /** U: the Captions panel, on or away. */
+  onToggleCaptionsPanel?: () => void;
   onToggleCrop?: () => void;
   /** Shift+C: the cursor panel, on or away. */
   onToggleCursorPanel?: () => void;
@@ -120,6 +122,7 @@ export const editorToolKeyAction = (
       KeyB: keys.onToggleBladeTool,
       KeyK: keys.onToggleKeyboardPanel,
       KeyP: keys.onTogglePlayback,
+      KeyU: keys.onToggleCaptionsPanel,
     }[code] ?? null
   );
 };

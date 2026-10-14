@@ -4,7 +4,6 @@
 import { Text } from "../../../../components/base/text/text";
 import { AnnotationPixelationGroup } from "../../../../components/shared/annotation-style/annotation-pixelation-group";
 import { AnnotationRedactionGroup } from "../../../../components/shared/annotation-style/annotation-redaction-group";
-import { AnnotationWidthSlider } from "../../../../components/shared/annotation-style/annotation-width-slider";
 import { AnnotationRedaction } from "../../../../components/shared/annotation-style/types";
 import {
   ANNOTATION_BLUR_STRENGTHS,
@@ -13,6 +12,7 @@ import {
   redactionSizePresets,
 } from "../../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
 
 import type { ToolPanelPatch } from "../tool-panel-patch";
@@ -110,13 +110,13 @@ export function AnnotationBlurStrengthRow({
     <ControlRow title={t("editor-panels-strength")}>
       {(controlProps) => (
         <div {...controlProps} role="group">
-          <AnnotationWidthSlider
+          <StepSlider
+            aria-label={t("editor-panels-strength")}
             isDisabled={isLocked}
-            label={t("editor-panels-strength")}
             onChange={(next) => {
               change({ annotationStyle: { strength: next } });
             }}
-            presets={ANNOTATION_BLUR_STRENGTHS}
+            steps={ANNOTATION_BLUR_STRENGTHS}
             value={strength}
           />
         </div>

@@ -38,13 +38,15 @@ static double line_width(NSString *line, NSFont *font) {
 }
 
 double screenwide_face_line_width(const uint8_t *text, uint32_t length, double font,
-                                  const uint8_t *family, uint32_t family_length, uint32_t weight) {
+                                  const uint8_t *family, uint32_t family_length, uint32_t weight,
+                                  uint32_t italic) {
   if (text == NULL || length == 0 || !(font > 0.0)) return 0.0;
   @autoreleasepool {
     NSString *line = [[NSString alloc] initWithBytes:text
                                               length:length
                                             encoding:NSUTF8StringEncoding];
     if (line == nil) return 0.0;
-    return line_width(line, screenwide_face_font_bytes(family, family_length, weight, font));
+    return line_width(
+        line, screenwide_face_font_bytes(family, family_length, weight, italic != 0, font));
   }
 }

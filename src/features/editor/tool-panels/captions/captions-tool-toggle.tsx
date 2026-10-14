@@ -40,6 +40,7 @@ export function CaptionsToolToggle({
           if (!bounds) return;
           void toggle("captions", bounds, resetsView);
         }}
+        shortcut="U"
       >
         <Captions />
       </ToolToggle>

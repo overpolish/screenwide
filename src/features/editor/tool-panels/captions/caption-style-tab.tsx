@@ -10,7 +10,7 @@ import {
 } from "../../recording/captions/use-caption-templates";
 
 import { CaptionStyleRows } from "./caption-style-rows";
-import { CaptionTemplateTiles } from "./caption-template-tiles";
+import { CaptionTemplateRow } from "./caption-template-row";
 
 import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
@@ -22,12 +22,12 @@ const isSameStyle = (a: CaptionStyle, b: CaptionStyle) =>
   );
 
 /**
- * The Style tab: the templates and the chosen one's look. Choosing a
+ * The Style tab: the template and the chosen one's look. Choosing a
  * template takes up its look and its layout, but for the layout options
  * changed by hand. Reset and Set as default are about the look alone: Reset
  * brings back the template's look as last set as default, and Set as
  * default makes new captions start with this template looking like this.
- * A template's own menu puts it back to how it ships.
+ * The template's own menu puts it back to how it ships.
  */
 export function CaptionStyleTab({
   isDisabled,
@@ -55,10 +55,12 @@ export function CaptionStyleTab({
   const isSaved = !!savedStyle && !!look && isSameStyle(look, savedStyle);
   const keepingLayout = (next: CaptionStyle) =>
     withLayout(layoutOf(style), next);
-
+  const shipped = templates.shipped.find(
+    (template) => template.template === style.template,
+  );
   return (
     <>
-      <CaptionTemplateTiles
+      <CaptionTemplateRow
         isDisabled={isDisabled}
         layout={layout}
         onChoose={(next) => {
@@ -66,14 +68,9 @@ export function CaptionStyleTab({
         }}
         onResetToOriginal={(template) => {
           onDefaultsChange({ original: template });
-          // Captions in that template take its original look at once, so
-          // the reset shows; the others keep theirs. It is a look, so the
-          // layout stays as it is.
-          const shipped = templates.shipped.find(
-            (each) => each.template === template,
-          );
-          if (shipped && template === style.template)
-            onChange(keepingLayout(shipped));
+          // The captions take the original look at once, so the reset
+          // shows. It is a look, so the layout stays as it is.
+          if (shipped) onChange(keepingLayout(shipped));
         }}
         style={style}
         templates={templates}

@@ -4,6 +4,7 @@
 import { isEmptyLayout } from "./caption-layout";
 
 import type { CaptionBreak } from "../../../../bindings/CaptionBreak";
+import type { CaptionEmphasisChoice } from "../../../../bindings/CaptionEmphasisChoice";
 import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionSettings } from "../../../../bindings/CaptionSettings";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
@@ -20,11 +21,9 @@ export const DEFAULT_CAPTION_SETTINGS: CaptionSettings = {
   removePunctuation: false,
 };
 
-/** The fewest and most words a caption may hold, the type size's range in
- * percent, and the weights a face is set at: the twins of the limits in
- * `screenwide_captions`. */
+/** The fewest and most words a caption may hold: the twins of the limits
+ * in `screenwide_captions`. */
 export const CAPTION_WORDS = { maximum: 20, minimum: 1 } as const;
-export const CAPTION_SIZE_PERCENT = { maximum: 400, minimum: 25 } as const;
 
 /** What captions start as where the edit has set nothing: the default
  * template's look, with the layout options kept for new captions, and the
@@ -56,14 +55,18 @@ export const recordingCaptions = (
     ...(edit?.captions?.wordChoices
       ? { wordChoices: edit.captions.wordChoices }
       : {}),
+    ...(edit?.captions?.emphasisChoices
+      ? { emphasisChoices: edit.captions.emphasisChoices }
+      : {}),
   };
 };
 
 /** A change the Captions panel asks for: whether they show, what they say
- * and how they look, the layout options set by hand, and the breaks and
- * words placed by hand, each list and the layout whole. */
+ * and how they look, the layout options set by hand, and the breaks, words
+ * and key words placed by hand, each list and the layout whole. */
 export type CaptionsPatch = {
   breaks?: CaptionBreak[];
+  emphasisChoices?: CaptionEmphasisChoice[];
   enabled?: boolean;
   layout?: CaptionLayout;
   settings?: Partial<CaptionSettings>;
@@ -75,7 +78,7 @@ export type CaptionsPatch = {
  * as the edit keeps none it does not need. */
 export function patchCaptions(
   captions: RecordingCaptions,
-  { breaks, layout, wordChoices, ...patch }: CaptionsPatch,
+  { breaks, emphasisChoices, layout, wordChoices, ...patch }: CaptionsPatch,
 ): RecordingCaptions {
   const patched: RecordingCaptions = {
     ...captions,
@@ -86,9 +89,11 @@ export function patchCaptions(
   if (breaks) patched.breaks = breaks;
   if (layout) patched.layout = layout;
   if (wordChoices) patched.wordChoices = wordChoices;
+  if (emphasisChoices) patched.emphasisChoices = emphasisChoices;
   if (patched.breaks?.length === 0) delete patched.breaks;
   if (patched.layout && isEmptyLayout(patched.layout)) delete patched.layout;
   if (patched.wordChoices?.length === 0) delete patched.wordChoices;
+  if (patched.emphasisChoices?.length === 0) delete patched.emphasisChoices;
   return patched;
 }
 

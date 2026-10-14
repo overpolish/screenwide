@@ -8,13 +8,17 @@
 //! writes and the captions drawn into the picture all come from here.
 
 mod draw;
+mod lay_out;
 mod layout;
 mod segment;
 mod settings;
+mod size;
 mod style;
 mod subtitles;
+mod templates;
 mod text;
 mod timing;
+mod widths;
 mod words;
 
 use std::collections::HashSet;
@@ -24,21 +28,29 @@ use screenwide_timeline::{output_duration_us, TimelineRange};
 use serde::Serialize;
 use ts_rs::TS;
 
-pub use draw::{caption_pieces, CaptionPiece, CaptionPieceKind, CaptionTrack};
+pub use draw::{caption_fit, caption_pieces, CaptionPiece, CaptionPieceKind, CaptionTrack};
+pub use lay_out::sample_caption;
 pub use layout::{CaptionLayout, CaptionPosition};
 pub use settings::{
-  CaptionBreak, CaptionBreakKind, CaptionProfanity, CaptionSettings, CaptionWordChoice,
-  CaptionWordKind, RecordingCaptions,
+  CaptionBreak, CaptionBreakKind, CaptionEmphasisChoice, CaptionEmphasisKind, CaptionProfanity,
+  CaptionSettings, CaptionWordChoice, CaptionWordKind, RecordingCaptions,
 };
+pub use size::CaptionSize;
 pub use style::{
-  rgba, CaptionBackground, CaptionEntrance, CaptionFont, CaptionLines, CaptionStyle,
-  CaptionTemplate, MAX_SIZE_PERCENT, MAX_WEIGHT, MAX_WORDS, MIN_SIZE_PERCENT, MIN_WEIGHT,
-  MIN_WORDS,
+  rgba, CaptionAccent, CaptionArrangement, CaptionBackground, CaptionEntrance, CaptionFace,
+  CaptionFont, CaptionLines, CaptionStyle, MAX_ACCENT_SIZE_PERCENT, MAX_SIZE_PERCENT, MAX_WEIGHT,
+  MAX_WORDS, MIN_ACCENT_SIZE_PERCENT, MIN_SIZE_PERCENT, MIN_WEIGHT, MIN_WORDS,
 };
 pub use subtitles::{srt, subtitles, vtt, SubtitleFile};
+pub use templates::CaptionTemplate;
 pub use words::{Correction, HeardWord};
 
-use segment::{Shown, Widths};
+use segment::Shown;
+use widths::Widths;
+
+/// How wide a text is set in one of a style's faces at a type size, both in
+/// pixels.
+pub type Measure<'a> = dyn FnMut(&str, CaptionFace, f64) -> f64 + 'a;
 
 /// One word of a caption, timed on the edited video and in the source.
 #[derive(Clone, Debug, PartialEq, Serialize, TS)]
@@ -50,6 +62,8 @@ pub struct CaptionWord {
   pub end_ms: f64,
   pub source_start_ms: f64,
   pub source_end_ms: f64,
+  /// Whether it is set in the accent.
+  pub emphasis: bool,
 }
 
 /// One caption: the words it shows, a line at a time, and when it shows on
@@ -102,7 +116,7 @@ const LINE_EMS: f64 = 23.0;
 
 /// The type size captions are set at in `frame`, in its pixels.
 pub fn type_size_px(style: &CaptionStyle, frame: CaptionFrame) -> f64 {
-  f64::from(frame.width.min(frame.height)) * TYPE_SHARE * style.normalized().size_percent / 100.0
+  f64::from(frame.width.min(frame.height)) * TYPE_SHARE * style.drawn_size_percent() / 100.0
 }
 
 /// The widest a caption line may be set in `frame` at `type_size`, both in
@@ -145,11 +159,12 @@ fn marks(
 
 /// The words the captions show, in the order the edited video plays them:
 /// those the rules keep, less the ones `choices` hides, plus the ones it
-/// shows as said.
+/// shows as said, each with what `emphasis` chose it as.
 fn shown(
   source: &CaptionSource,
   settings: &CaptionSettings,
   choices: &[CaptionWordChoice],
+  emphasis: &[CaptionEmphasisChoice],
 ) -> Vec<Shown> {
   let tokens = words::tokens(source.words, source.corrections, source.ranges);
   let (fillers, profanity) = marks(&tokens, source, settings);
@@ -184,11 +199,9 @@ fn shown(
       follows &= said_next[previous] == Some(index);
     }
     previous = Some(index);
-    let choice = settings::word_choice(
-      choices,
-      share(token.source_start_ms),
-      share(token.source_end_ms),
-    );
+    let (start, end) = (share(token.source_start_ms), share(token.source_end_ms));
+    let choice = settings::word_choice(choices, |choice| choice.source_at, start, end)
+      .map(|choice| choice.kind);
     let ruled = choice != Some(CaptionWordKind::Shown);
     let text = text::caption_text(
       &token.text,
@@ -208,6 +221,8 @@ fn shown(
       output_start_ms,
       output_end_ms,
       follows,
+      emphasis: settings::word_choice(emphasis, |choice| choice.source_at, start, end)
+        .map(|choice| choice.kind),
     });
     follows = true;
   }
@@ -215,19 +230,24 @@ fn shown(
 }
 
 /// The recording's captions, in the order the edited video shows them.
-/// `measure` gives a text's width set at a type size, both in pixels.
+/// `measure` gives a text's width set in a face at a type size.
 pub fn build(
   source: &CaptionSource,
   captions: &RecordingCaptions,
   frame: CaptionFrame,
-  measure: &mut dyn FnMut(&str, f64) -> f64,
+  measure: &mut Measure,
 ) -> Vec<Caption> {
   if source.source_duration_ms <= 0.0 {
     return Vec::new();
   }
   let settings = captions.settings;
   let style = captions.style.normalized();
-  let mut shown = shown(source, &settings, &captions.word_choices);
+  let mut shown = shown(
+    source,
+    &settings,
+    &captions.word_choices,
+    &captions.emphasis_choices,
+  );
   if style.all_caps {
     for word in &mut shown {
       word.text = word.text.to_uppercase();
@@ -235,7 +255,9 @@ pub fn build(
   }
   let gap = text::word_gap(source.language);
   let size = type_size_px(&style, frame);
-  let widths = Widths::new(&shown, gap, &mut |text| measure(text, size));
+  let widths = Widths::new(&shown, gap, style.accent, &mut |text, face| {
+    measure(text, face, size * style.scale_of(face))
+  });
   let max_width = max_line_width(frame, size);
   let mut built: Vec<Caption> = segment::captions(
     &shown,
@@ -246,42 +268,7 @@ pub fn build(
     &widths,
   )
   .into_iter()
-  .map(|words| {
-    let lines: Vec<Vec<CaptionWord>> = segment::lines(words.clone(), &style, max_width, &widths)
-      .into_iter()
-      .map(|line| {
-        shown[line]
-          .iter()
-          .map(|word| CaptionWord {
-            text: word.text.clone(),
-            start_ms: word.output_start_ms,
-            end_ms: word.output_end_ms,
-            source_start_ms: word.source_start_ms,
-            source_end_ms: word.source_end_ms,
-          })
-          .collect()
-      })
-      .collect();
-    let text = lines
-      .iter()
-      .map(|line| {
-        line
-          .iter()
-          .map(|word| word.text.as_str())
-          .collect::<Vec<_>>()
-          .join(gap)
-      })
-      .collect::<Vec<_>>()
-      .join("\n");
-    Caption {
-      id: shown[words.start].source_start_ms.round() as u64,
-      start_ms: shown[words.start].output_start_ms,
-      end_ms: shown[words.end - 1].output_end_ms,
-      text,
-      lines,
-      spaced: !gap.is_empty(),
-    }
-  })
+  .map(|words| lay_out::caption(&shown, words, &style, max_width, &widths, gap))
   .collect();
   let length_ms = output_duration_us(source.ranges).map_or(f64::INFINITY, |us| us as f64 / 1_000.0);
   timing::timed(&mut built, &settings, length_ms);

@@ -5,12 +5,15 @@
 //! the same shader and type the export uses, frame by frame, so a template's
 //! tile shows exactly how its captions will look and move.
 
-use screenwide_captions::{Caption, CaptionStyle, CaptionTrack, CaptionWord, RecordingCaptions};
+use screenwide_captions::{
+  caption_fit, sample_caption, Caption, CaptionArrangement, CaptionFrame, CaptionStyle,
+  CaptionTrack, CaptionWord, Measure, RecordingCaptions, MIN_SIZE_PERCENT,
+};
 use screenwide_imaging::CapturedImage;
 use screenwide_output::{MeshGradientPoint, NormalizedSourceRect, ScreenshotOutputSettings};
 
 use super::*;
-use crate::annotation_gpu::{caption_overlay, prepared_arrows};
+use crate::annotation_gpu::{caption_measure, caption_overlay, prepared_arrows, CaptionFaces};
 
 /// How long each sample word is said, and the pause after it, in
 /// milliseconds.
@@ -18,8 +21,15 @@ const WORD_MS: f64 = 330.0;
 const PAUSE_MS: f64 = 70.0;
 /// How long the last caption holds before the preview starts again.
 const HOLD_MS: f64 = 500.0;
-/// How many sample words one caption holds at most: two fit a small tile.
-const WORDS_PER_CAPTION: usize = 2;
+/// How many sample words one caption holds at most: two fit a small tile on
+/// one line, and three show a stack or a staircase breaking into lines.
+fn words_per_caption(style: &CaptionStyle) -> usize {
+  if style.arrangement == CaptionArrangement::Lines {
+    2
+  } else {
+    3
+  }
+}
 /// How much larger than in a video the preview sets its type: at a tile's
 /// size, type set as a video sets it would be too small to read.
 const PREVIEW_SCALE: f64 = 2.5;
@@ -31,44 +41,38 @@ pub struct CaptionPreview {
   pub frames_per_second: f64,
 }
 
-/// The sample `words` laid out as captions of a couple of words each, said
-/// one after another from the start, the last held a moment.
-fn sample_captions(words: &[&str], all_caps: bool) -> Vec<Caption> {
+/// The sample `words` laid out as captions of a few words each, as `style`
+/// lays a caption out in `frame`, measured by `measure`, said one after
+/// another from the start, the last held a moment.
+fn sample_captions(
+  words: &[&str],
+  style: &CaptionStyle,
+  frame: CaptionFrame,
+  measure: &mut Measure,
+) -> Vec<Caption> {
   let mut captions = Vec::new();
   let mut at = 0.0;
-  for (index, chunk) in words.chunks(WORDS_PER_CAPTION).enumerate() {
+  for chunk in words.chunks(words_per_caption(style)) {
     let start = at;
-    let line: Vec<CaptionWord> = chunk
+    let said: Vec<CaptionWord> = chunk
       .iter()
       .map(|word| {
-        let text = if all_caps {
-          word.to_uppercase()
-        } else {
-          (*word).to_owned()
-        };
         let said = CaptionWord {
-          text,
+          text: (*word).to_owned(),
           start_ms: at,
           end_ms: at + WORD_MS,
           source_start_ms: at,
           source_end_ms: at + WORD_MS,
+          emphasis: false,
         };
         at += WORD_MS + PAUSE_MS;
         said
       })
       .collect();
-    captions.push(Caption {
-      id: index as u64,
-      start_ms: start,
-      end_ms: at,
-      text: line
-        .iter()
-        .map(|word| word.text.as_str())
-        .collect::<Vec<_>>()
-        .join(" "),
-      lines: vec![line],
-      spaced: true,
-    });
+    let mut caption = sample_caption(&said, style, frame, measure);
+    caption.start_ms = start;
+    caption.end_ms = at;
+    captions.push(caption);
   }
   if let Some(last) = captions.last_mut() {
     last.end_ms += HOLD_MS;
@@ -182,7 +186,20 @@ impl CaptionPreviewer {
     let mut style = style.normalized();
     style.size_percent =
       (style.size_percent * PREVIEW_SCALE).min(screenwide_captions::MAX_SIZE_PERCENT);
-    let captions = sample_captions(words, style.all_caps);
+    let frame = CaptionFrame { width, height };
+    let faces = CaptionFaces::of(&style);
+    let mut measure = caption_measure(&faces);
+    let mut captions = sample_captions(words, &style, frame, &mut measure);
+    // Type too large for the tile is all set smaller alike, so the largest
+    // caption fits and every one keeps its size beside the others.
+    let fit = captions
+      .iter()
+      .map(|caption| caption_fit(caption, &style, frame, &mut measure))
+      .fold(1.0, f64::min);
+    if fit < 1.0 {
+      style.size_percent = (style.size_percent * fit).max(MIN_SIZE_PERCENT);
+      captions = sample_captions(words, &style, frame, &mut measure);
+    }
     let track = CaptionTrack {
       captions,
       recording: RecordingCaptions {

@@ -14,7 +14,7 @@ use screenwide_captions::{
   build, subtitles, Caption, CaptionFrame, CaptionSource, CaptionTrack, Correction, HeardWord,
   RecordingCaptions, SubtitleFile,
 };
-use screenwide_compositor::annotation_gpu::{caption_face, caption_measure};
+use screenwide_compositor::annotation_gpu::{caption_measure, CaptionFaces};
 use screenwide_export::recording_model::{AudioTrackKind, RecordingAudioTrack};
 use screenwide_speech::transcript::RecordingTranscript;
 use screenwide_timeline::TimelineRange;
@@ -96,10 +96,10 @@ fn captions_of(
     })
     .collect();
   let ranges = played(edit, duration_ms);
-  let face = caption_face(&captions.style.normalized().font);
-  // Measured in the face the compositor sets them in, so a line breaks
+  let faces = CaptionFaces::of(&captions.style);
+  // Measured in the faces the compositor sets them in, so a line breaks
   // where the drawn type would run too wide.
-  let mut measure = caption_measure(&face);
+  let mut measure = caption_measure(&faces);
   let source = CaptionSource {
     words: &words,
     language: Some(transcript.language.as_str()).filter(|language| !language.is_empty()),
@@ -129,15 +129,31 @@ struct CaptionsMade {
 /// in a `width` by `height` canvas: the preview draws them from now on while
 /// they are on, and the Captions lane shows what is answered. They are made
 /// while off too, for the Captions panel's text; none without a transcript.
+/// Made off the main thread, so a slider dragged through a run of changes
+/// never holds up the windows.
 #[tauri::command]
-pub fn make_recording_captions(
+pub async fn make_recording_captions(
   app: AppHandle,
   artifact_id: u64,
   edit: RecordingTimelineEdit,
   width: u32,
   height: u32,
 ) -> Result<Vec<Caption>, String> {
-  validate(&edit)?;
+  tauri::async_runtime::spawn_blocking(move || {
+    make_captions(&app, artifact_id, &edit, width, height)
+  })
+  .await
+  .map_err(|error| error.to_string())?
+}
+
+fn make_captions(
+  app: &AppHandle,
+  artifact_id: u64,
+  edit: &RecordingTimelineEdit,
+  width: u32,
+  height: u32,
+) -> Result<Vec<Caption>, String> {
+  validate(edit)?;
   let (project, audio_tracks, duration_ms) = {
     let state = app.state::<EditorState>();
     let artifact = state
@@ -158,9 +174,9 @@ pub fn make_recording_captions(
   };
   let made = all_captions(
     (&project, &audio_tracks, duration_ms),
-    &edit,
+    edit,
     frame_for(width, height),
-    || super::caption_styles::default_captions(&app),
+    || super::caption_styles::default_captions(app),
   );
   let track = edit
     .captions
@@ -171,7 +187,7 @@ pub fn make_recording_captions(
       captions: captions.clone(),
       recording: recording.clone(),
     });
-  super::recording_preview_player::show_captions(&app, artifact_id, track);
+  super::recording_preview_player::show_captions(app, artifact_id, track);
   let captions = made.unwrap_or_default();
   *MADE.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
     Some((artifact_id, captions.clone()));

@@ -7,20 +7,22 @@ import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 /** The layout options, which a template brings and the Layout tab sets by
  * hand: the twins of `CaptionLayout`'s fields in `screenwide_captions`. */
 const LAYOUT_KEYS = [
+  "accentSize",
   "allCaps",
   "lines",
   "maxWords",
   "position",
-  "sizePercent",
+  "size",
 ] as const;
 
 /** Every layout option `style` holds, as though each were set. */
 export const layoutOf = (style: CaptionStyle): Required<CaptionLayout> => ({
+  accentSize: style.accentSize,
   allCaps: style.allCaps,
   lines: style.lines,
   maxWords: style.maxWords,
   position: style.position,
-  sizePercent: style.sizePercent,
+  size: style.size,
 });
 
 /** `style` with the options `layout` sets in place of its own, as

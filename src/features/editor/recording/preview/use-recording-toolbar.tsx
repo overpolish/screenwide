@@ -56,7 +56,7 @@ export function useRecordingToolbar({
   // The shortcut opens the panel from the toolbar button's own bounds, the
   // same anchor a press would give it.
   const togglePanel = useCallback(
-    (panel: "cursor" | "keyboard" | "transcript") => {
+    (panel: "captions" | "cursor" | "keyboard" | "transcript") => {
       if (openToolPanel === panel) {
         dismissToolPanel();
         return;
@@ -82,6 +82,9 @@ export function useRecordingToolbar({
   }, [togglePanel]);
   const toggleTranscriptPanel = useCallback(() => {
     togglePanel("transcript");
+  }, [togglePanel]);
+  const toggleCaptionsPanel = useCallback(() => {
+    togglePanel("captions");
   }, [togglePanel]);
   // The tools read the committed `recordingOutput`, never the resize draft, so
   // holding the element keeps the title bar's tools stable mid-gesture. Held as
@@ -155,6 +158,7 @@ export function useRecordingToolbar({
   useProvideEditorToolbarTools(cropToggle ?? null);
   // A panel's shortcut does nothing where the recording has nothing for it.
   return {
+    toggleCaptionsPanel: hasMicrophone ? toggleCaptionsPanel : undefined,
     toggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
     toggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
     toggleTranscriptPanel: hasMicrophone ? toggleTranscriptPanel : undefined,

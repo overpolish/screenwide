@@ -4,7 +4,7 @@
 //! The next caption's words, readied before it comes on.
 
 use super::{full_hex, showing, CaptionPiece, CaptionPieceKind, CaptionTrack, POP_MS};
-use crate::style::CaptionBackground;
+use crate::style::{CaptionBackground, CaptionFace};
 use crate::{type_size_px, CaptionFrame};
 
 /// How long after a caption comes on the next one's words are readied: past
@@ -45,12 +45,19 @@ impl CaptionTrack {
       .iter()
       .flatten()
       .flat_map(|word| {
+        let face = if word.emphasis {
+          CaptionFace::Accent
+        } else {
+          CaptionFace::Main
+        };
+        let size = size * style.scale_of(face);
         outlines.iter().map(move |outline| CaptionPiece {
           kind: CaptionPieceKind::Word {
             ink: "#00000000".to_owned(),
             outline: outline.clone(),
           },
           text: word.text.clone(),
+          face,
           centre: [0.0; 2],
           size,
           scale: [1.0; 2],

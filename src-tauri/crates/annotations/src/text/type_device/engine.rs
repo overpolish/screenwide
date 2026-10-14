@@ -26,14 +26,14 @@ use windows::{
     DirectWrite::{
       DWriteCreateFactory, IDWriteFactory6, IDWriteFontCollection2, IDWriteFontSetBuilder1,
       IDWriteRenderingParams3, IDWriteTextFormat3, IDWriteTextLayout, IDWriteTypography,
-      DWRITE_FACTORY_TYPE_ISOLATED, DWRITE_FONT_AXIS_TAG_WEIGHT, DWRITE_FONT_AXIS_VALUE,
-      DWRITE_FONT_FAMILY_MODEL_TYPOGRAPHIC, DWRITE_FONT_FEATURE,
+      DWRITE_FACTORY_TYPE_ISOLATED, DWRITE_FONT_AXIS_TAG_ITALIC, DWRITE_FONT_AXIS_TAG_WEIGHT,
+      DWRITE_FONT_AXIS_VALUE, DWRITE_FONT_FAMILY_MODEL_TYPOGRAPHIC, DWRITE_FONT_FEATURE,
       DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES, DWRITE_FONT_LINE_GAP_USAGE_DEFAULT,
       DWRITE_FONT_METRICS, DWRITE_FONT_METRICS1, DWRITE_FONT_STRETCH_NORMAL,
-      DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_GRID_FIT_MODE_DISABLED,
-      DWRITE_LINE_SPACING, DWRITE_LINE_SPACING_METHOD_UNIFORM, DWRITE_PIXEL_GEOMETRY_FLAT,
-      DWRITE_RENDERING_MODE1_DEFAULT, DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
-      DWRITE_WORD_WRAPPING_NO_WRAP,
+      DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT,
+      DWRITE_GRID_FIT_MODE_DISABLED, DWRITE_LINE_SPACING, DWRITE_LINE_SPACING_METHOD_UNIFORM,
+      DWRITE_PIXEL_GEOMETRY_FLAT, DWRITE_RENDERING_MODE1_DEFAULT, DWRITE_TEXT_METRICS,
+      DWRITE_TEXT_RANGE, DWRITE_WORD_WRAPPING_NO_WRAP,
     },
     Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM,
     Gdi::{CreateCompatibleDC, HDC},
@@ -41,6 +41,7 @@ use windows::{
 };
 
 use super::INTER;
+use crate::text::bundled::BUNDLED_FILES;
 use crate::text::face::TypeFace;
 
 /// The size lines are measured at before scaling to the size asked for.
@@ -55,15 +56,16 @@ pub(super) struct Face {
   pub(super) reference: IDWriteTextFormat3,
   pub(super) ascent: f64,
   pub(super) descent: f64,
-  /// Where the family is found: the app's own Inter, or the system's.
+  /// Where the family is found: the app's own collection, or the system's.
   system: bool,
   family: HSTRING,
   weight: f32,
+  italic: bool,
 }
 
 pub(super) struct Engine {
   factory: IDWriteFactory6,
-  /// The app's own Inter.
+  /// The app's own families: Inter, and those its caption templates use.
   collection: IDWriteFontCollection2,
   /// Every family installed on the system, for captions.
   system: IDWriteFontCollection2,
@@ -111,15 +113,18 @@ impl Engine {
       let factory: IDWriteFactory6 = DWriteCreateFactory(DWRITE_FACTORY_TYPE_ISOLATED)?;
       let loader = factory.CreateInMemoryFontFileLoader()?;
       factory.RegisterFontFileLoader(&loader)?;
-      // No owner, so the loader keeps its own copy of the face.
-      let file = loader.CreateInMemoryFontFileReference(
-        &factory,
-        INTER.as_ptr().cast(),
-        INTER.len() as u32,
-        None::<&IUnknown>,
-      )?;
       let builder = factory.CreateFontSetBuilder()?;
-      IDWriteFontSetBuilder1::AddFontFile(&builder, &file)?;
+      // Inter goes first, so it is the set's first face, whose metrics are
+      // read below. No owner, so the loader keeps its own copy of each.
+      for bytes in std::iter::once(INTER).chain(BUNDLED_FILES.iter().copied()) {
+        let file = loader.CreateInMemoryFontFileReference(
+          &factory,
+          bytes.as_ptr().cast(),
+          bytes.len() as u32,
+          None::<&IUnknown>,
+        )?;
+        IDWriteFontSetBuilder1::AddFontFile(&builder, &file)?;
+      }
       let set = builder.CreateFontSet()?;
       let collection =
         factory.CreateFontCollectionFromFontSet(&set, DWRITE_FONT_FAMILY_MODEL_TYPOGRAPHIC)?;

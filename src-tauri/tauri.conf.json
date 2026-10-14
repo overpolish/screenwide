@@ -387,6 +387,10 @@
       }
     ],
     "resources": {
+      "assets/Anton-OFL-1.1.txt": "licenses/Anton-OFL-1.1.txt",
+      "assets/DMSans-OFL-1.1.txt": "licenses/DMSans-OFL-1.1.txt",
+      "assets/InstrumentSerif-OFL-1.1.txt": "licenses/InstrumentSerif-OFL-1.1.txt",
+      "assets/Montserrat-OFL-1.1.txt": "licenses/Montserrat-OFL-1.1.txt",
       "../FFMPEG.md": "licenses/FFMPEG.md",
       "assets/DeepFilterNet-MIT.txt": "licenses/DeepFilterNet-MIT.txt",
       "assets/Demucs-MIT.txt": "licenses/Demucs-MIT.txt",

@@ -6,6 +6,8 @@ import { create } from "zustand";
 import { EditorKind } from "../editor/types";
 
 import type { PopupPanelIcon } from "./popup-panel-item-glyph";
+import type { CaptionStyle } from "../../bindings/CaptionStyle";
+import type { CaptionTemplate } from "../../bindings/CaptionTemplate";
 import type { NoteTranscript } from "../editor/timeline/moments/recording-moments";
 
 type PopupPanelMode = "menu" | "select";
@@ -17,8 +19,9 @@ export type PopupPanelItem = {
    * a scale beside a size, say. */
   detail?: string;
   /** The typeface the label is set in, for a list of fonts or weights that
-   * shows each as it looks: a CSS family name and, if given, a weight. */
-  font?: { family: string; weight?: number };
+   * shows each as it looks: a CSS family name and, if given, a weight and
+   * whether italic. */
+  font?: { family: string; italic?: boolean; weight?: number };
   /** A glyph from the popup panel window's registry, for items without artwork.
    */
   icon?: PopupPanelIcon;
@@ -93,8 +96,27 @@ export type PopupPanelNoteContent = {
   waveform: number[];
 };
 
+/** The caption templates to choose from, as tiles of their moving previews.
+ * `styles` are each as choosing it would set the captions. */
+export type PopupPanelCaptionTemplatesContent = {
+  kind: "caption-templates";
+  selected: CaptionTemplate;
+  styles: CaptionStyle[];
+};
+
+/** A colour grid: the palette, `savedColors`, and Custom. */
+export type PopupPanelColorsContent = {
+  kind: "colors";
+  savedColors: string[];
+  value: string;
+};
+
 export type PopupPanelContent =
-  PopupPanelListContent | PopupPanelNoteContent | PopupPanelToolContent;
+  | PopupPanelCaptionTemplatesContent
+  | PopupPanelColorsContent
+  | PopupPanelListContent
+  | PopupPanelNoteContent
+  | PopupPanelToolContent;
 
 /** The one panel window every pop-up button borrows. A caller that names no
  * panel means this one. */

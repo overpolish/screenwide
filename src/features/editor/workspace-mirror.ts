@@ -7,6 +7,15 @@ import { EditorKind } from "./types";
 
 const WORKSPACES: EditorKind[] = ["recording", "screenshot"];
 
+/** The build that wrote a snapshot. Every window loads at launch, before
+ * its editor has published anything, and would otherwise take up what an
+ * earlier run left in storage: a snapshot whose shape an older build set,
+ * which this one's panels can fail to draw. */
+const BUILD = import.meta.env.SCREENWIDE_BUILD ?? "";
+
+/** A snapshot as stored, with the build that wrote it. */
+type Stored<T> = { build: string; snapshot: T };
+
 type WorkspaceMirror<T> = {
   publish: (workspace: EditorKind, snapshot: T) => void;
   snapshots: Partial<Record<EditorKind, T>>;
@@ -37,10 +46,12 @@ const isSameSnapshot = <T extends object>(a: T | undefined, b: T) =>
  */
 export function createWorkspaceMirror<T extends object>(name: string) {
   const keyOf = (workspace: EditorKind) => `${name}-${workspace}`;
+  /** The snapshot `raw` holds, where this build wrote it. */
   const parse = (raw: string | null): T | undefined => {
     if (raw === null) return undefined;
     try {
-      return JSON.parse(raw) as T;
+      const stored = JSON.parse(raw) as Partial<Stored<T>> | null;
+      return stored?.build === BUILD ? stored.snapshot : undefined;
     } catch {
       return undefined;
     }
@@ -57,7 +68,8 @@ export function createWorkspaceMirror<T extends object>(name: string) {
   const useMirror = create<WorkspaceMirror<T>>()((set, get) => ({
     publish: (workspace, snapshot) => {
       if (isSameSnapshot(get().snapshots[workspace], snapshot)) return;
-      localStorage.setItem(keyOf(workspace), JSON.stringify(snapshot));
+      const stored: Stored<T> = { build: BUILD, snapshot };
+      localStorage.setItem(keyOf(workspace), JSON.stringify(stored));
       set((state) => ({
         snapshots: { ...state.snapshots, [workspace]: snapshot },
       }));

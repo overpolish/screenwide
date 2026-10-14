@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { AnnotationColorGrid } from "./annotation-color-grid";
 import { AnnotationHeadGroup } from "./annotation-head-group";
-import { AnnotationWidthSlider } from "./annotation-width-slider";
 import { AnnotationHead } from "./types";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -35,17 +34,11 @@ function ColorGridExample() {
   );
 }
 
-function WidthSliderExample() {
-  const [width, setWidth] = useState(16);
-  return <AnnotationWidthSlider onChange={setWidth} value={width} />;
-}
-
 function HeadGroupExample() {
   const [head, setHead] = useState<AnnotationHead>("end");
   return <AnnotationHeadGroup onChange={setHead} value={head} />;
 }
 
 export const Colours: Story = { render: () => <ColorGridExample /> };
-export const Widths: Story = { render: () => <WidthSliderExample /> };
 
 export const Heads: Story = { render: () => <HeadGroupExample /> };

@@ -12,6 +12,7 @@ fn word(text: &str, start_ms: f64) -> CaptionWord {
     end_ms: start_ms + 400.0,
     source_start_ms: start_ms,
     source_end_ms: start_ms + 400.0,
+    emphasis: false,
   }
 }
 

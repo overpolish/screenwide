@@ -14,28 +14,35 @@ const MENU_PREFIX = "caption-words:";
 const MENU_WIDTH = 200;
 
 /** What a word of the caption text can be asked: edited or put back as it
- * was heard, a break in the gap before it placed or taken away, or hidden
- * or shown. */
+ * was heard, a break in the gap before it placed or taken away, hidden or
+ * shown, or made its caption's key word or not. */
 export type CaptionMenuAction =
   | "clear-break"
   | "edit"
   | "hide"
   | "join"
+  | "make-key-word"
+  | "not-key-word"
   | "restore-spelling"
   | "show"
   | "split";
 
 /** What the menu offers for a word: editing it, and putting back what was
  * heard where it was corrected; what can change in the gap before it, where
- * the two words were said one after the other; and whether it shows. */
+ * the two words were said one after the other; whether it shows; and,
+ * where the captions set a key word apart, whether it is one. */
 export const captionMenuItems = ({
   gap,
   isCorrected,
+  isKeyWord,
   isShown,
 }: {
   /** Null where no break can be placed before the word. */
   gap: CaptionGap | null;
   isCorrected: boolean;
+  /** Null where the captions set no key word apart, or the word is not
+   * shown. */
+  isKeyWord: boolean | null;
   isShown: boolean;
 }): (PopupPanelItem & { id: CaptionMenuAction })[] => [
   {
@@ -99,6 +106,21 @@ export const captionMenuItems = ({
         label: t("editor-panels-captions-show-word"),
         shortcut: "Backspace",
       },
+  ...(isKeyWord === null
+    ? []
+    : [
+        isKeyWord
+          ? {
+              icon: "key-word" as const,
+              id: "not-key-word" as const,
+              label: t("editor-panels-captions-not-key-word"),
+            }
+          : {
+              icon: "key-word" as const,
+              id: "make-key-word" as const,
+              label: t("editor-panels-captions-make-key-word"),
+            },
+      ]),
 ];
 
 /** A right click on a word of the caption text, answered with the app's own

@@ -226,10 +226,15 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               items={captionItems}
               label={t("editor-timeline-captions")}
               minimumItemWidthPx={CAPTION_MINIMUM_ITEM_WIDTH_PX}
-              onSelect={(fragment) => {
+              onSelect={({ item }) => {
                 blade.clearRangeSelection();
                 onSelectCaption?.();
-                onSeek(fragment.outputStart, "end");
+                // The middle shows the caption fully on screen; a playhead
+                // already in it is left where it was put.
+                const start = item.startMs / durationMs;
+                const end = item.endMs / durationMs;
+                const at = playhead.ratio();
+                if (at < start || at >= end) onSeek((start + end) / 2, "end");
               }}
               outputLengthMs={durationMs}
               sourceDurationMs={sourceDurationMs}

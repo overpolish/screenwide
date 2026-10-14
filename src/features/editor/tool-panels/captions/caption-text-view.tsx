@@ -20,7 +20,12 @@ import {
 } from "../transcript/transcript-edit-span";
 import { usePlayingWord } from "../transcript/use-playing-word";
 
-import { captionSaidAt, CaptionText, CaptionTextWord } from "./caption-text";
+import {
+  captionSaidAt,
+  captionSeekMs,
+  CaptionText,
+  CaptionTextWord,
+} from "./caption-text";
 
 import type { TranscriptMark } from "../transcript/use-transcript-marks";
 
@@ -39,9 +44,9 @@ const partsOf = (root: HTMLElement | null, caption: number) => [
 // pointer is over any of them, and the accent's tint while it is said.
 // Words the captions leave out read faded and struck through, as cut words
 // do in the transcript; fillers and profanity they keep take the warning and
-// error colours the Transcript panel marks them in, and words corrected by
-// hand its quiet underline. The word the keys are on takes the focus ring
-// while the text has focus.
+// error colours the Transcript panel marks them in, words corrected by hand
+// its quiet underline, and a caption's key word reads bold. The word the
+// keys are on takes the focus ring while the text has focus.
 const CAPTION_PART =
   "data-hovered:bg-fill-secondary data-current:bg-primary-tint";
 const wordClass = (
@@ -59,6 +64,7 @@ const wordClass = (
           mark === "profanity" && "text-error",
           word.corrected &&
             "underline decoration-content-fg-tertiary underline-offset-4",
+          word.isKeyWord && "font-semibold",
         ),
   );
 
@@ -97,10 +103,10 @@ const before = (
  * The transcript as the captions break it: its paragraphs, a mark wherever
  * one caption ends and the next begins and in another colour where that was
  * placed by hand, the caption being said tinted and kept in view, and the
- * one under the pointer filled. A press seeks to the start of the word's
- * caption, and a double-click edits the word in place. The arrows move
- * between words, Return edits, Backspace hides or shows a word, and the
- * menu key or a right click opens what else it can do.
+ * one under the pointer filled. A press seeks to the word's caption, as
+ * `captionSeekMs` says, and a double-click edits the word in place. The
+ * arrows move between words, Return edits, Backspace hides or shows a word,
+ * and the menu key or a right click opens what else it can do.
  */
 export function CaptionTextView({
   editing,
@@ -140,14 +146,6 @@ export function CaptionTextView({
     { content: text, current: playing ?? -1, isChoosing: false },
   );
   const wordId = (index: number) => `${id}-word-${index.toString()}`;
-  const seekTo = (index: number) => {
-    const word = text.words[index];
-    onSeek(
-      word.caption === null
-        ? word.startMs
-        : text.captions[word.caption].startMs,
-    );
-  };
   const hover = (caption: number | null) => {
     if (hoveredRef.current === caption) return;
     if (hoveredRef.current !== null)
@@ -219,7 +217,8 @@ export function CaptionTextView({
           const word = wordAt(event);
           if (word === null || editing) return;
           setActive(word);
-          seekTo(word);
+          const seek = captionSeekMs(text, word, playheadMs);
+          if (seek !== null) onSeek(seek);
         }}
         onContextMenu={(event) => {
           event.preventDefault();

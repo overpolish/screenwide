@@ -1,21 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Switch } from "../../../../components/base/switch/switch";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { t } from "../../../../i18n/i18n";
-
 import { CaptionColorRows } from "./caption-color-rows";
+import { CaptionEffectsRow } from "./caption-effects-row";
 import { CaptionFontRow } from "./caption-font-row";
-import { offersOutline, offersWordHighlight } from "./caption-templates";
 
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 
 /**
  * A caption template's look, which it sets and saves as its default: the
- * face, whether the word being said stands out, the outline, and the
- * colours. How large, where and how many words at a time are the Layout
- * tab's.
+ * faces, with the accent's beside the main one where the template sets a
+ * key word apart, the effects it draws, and the colours. How the words are
+ * arranged in lines is the template's own. How large, where and how many
+ * words at a time are the Layout tab's.
  */
 export function CaptionStyleRows({
   isDisabled,
@@ -38,35 +35,22 @@ export function CaptionStyleRows({
         }}
       />
 
-      {offersWordHighlight(style) ? (
-        <ControlRow title={t("editor-panels-captions-highlight-word")}>
-          {(controlProps) => (
-            <Switch
-              {...controlProps}
-              isDisabled={isDisabled}
-              isSelected={style.highlightWords}
-              onChange={(highlightWords) => {
-                onChange({ highlightWords });
-              }}
-            />
-          )}
-        </ControlRow>
+      {style.accent === "word" ? (
+        <CaptionFontRow
+          font={style.accentFont}
+          isAccent
+          isDisabled={isDisabled}
+          onChange={(accentFont) => {
+            onChange({ accentFont });
+          }}
+        />
       ) : null}
 
-      {offersOutline(style) ? (
-        <ControlRow title={t("editor-panels-captions-outline")}>
-          {(controlProps) => (
-            <Switch
-              {...controlProps}
-              isDisabled={isDisabled}
-              isSelected={style.outline}
-              onChange={(outline) => {
-                onChange({ outline });
-              }}
-            />
-          )}
-        </ControlRow>
-      ) : null}
+      <CaptionEffectsRow
+        isDisabled={isDisabled}
+        onChange={onChange}
+        style={style}
+      />
 
       <CaptionColorRows
         isDisabled={isDisabled}

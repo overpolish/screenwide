@@ -20,17 +20,19 @@ typedef struct {
 } ScreenwideTypeLine;
 
 /// The face a device asks for: Inter with tabular figures for a counter's
-/// number, or the family and weight named.
+/// number, or the family, weight and slant named.
 typedef struct {
   const uint8_t *family;
   uint32_t family_length;
   uint32_t weight;
+  uint32_t italic;
   uint32_t tabular;
 } ScreenwideTypeFace;
 
 static NSFont *face_font(const ScreenwideTypeFace *face, double size) {
   if (face->tabular != 0) return screenwide_annotation_font(size, YES);
-  return screenwide_face_font_bytes(face->family, face->family_length, face->weight, size);
+  return screenwide_face_font_bytes(face->family, face->family_length, face->weight,
+                                    face->italic != 0, size);
 }
 
 /// One line in the face, coloured by whatever fill the context has.

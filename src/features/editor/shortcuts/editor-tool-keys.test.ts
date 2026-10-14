@@ -50,6 +50,7 @@ describe("the editor's tool keys", () => {
     // that took one of these would silently steal it.
     const others = {
       onToggleBladeTool: vi.fn(),
+      onToggleCaptionsPanel: vi.fn(),
       onToggleCursorPanel: vi.fn(),
       onToggleKeyboardPanel: vi.fn(),
       onTogglePlayback: vi.fn(),

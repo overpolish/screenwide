@@ -3,18 +3,17 @@
 
 //! Captions drawn by the canvas shader: a word's type in its own colour with
 //! no box, the Box template's backdrop, the Highlight template's pill, and
-//! type set in the face the style names.
+//! type set in the faces the style names.
 
-use screenwide_annotations::text::face::TypeFace;
 use screenwide_captions::{
-  caption_pieces, Caption, CaptionFont, CaptionFrame, CaptionPiece, CaptionStyle, CaptionTemplate,
-  CaptionWord, RecordingCaptions,
+  caption_pieces, Caption, CaptionAccent, CaptionFont, CaptionFrame, CaptionPiece, CaptionStyle,
+  CaptionTemplate, CaptionWord, RecordingCaptions,
 };
 use screenwide_imaging::CapturedImage;
 
 use super::render_test_helpers::{compositor, gpu, target, view, OUTPUT};
 use super::*;
-use crate::annotation_gpu::{caption_arrows, caption_face, caption_measure};
+use crate::annotation_gpu::{caption_arrows, caption_measure, CaptionFaces};
 use screenwide_output::fixtures::test_output_settings;
 
 /// A mid grey picture filling the canvas, which neither white type nor a
@@ -34,16 +33,20 @@ fn word(text: &str, start_ms: f64) -> CaptionWord {
     end_ms: start_ms + 400.0,
     source_start_ms: start_ms,
     source_end_ms: start_ms + 400.0,
+    emphasis: false,
   }
 }
 
-fn caption() -> Caption {
+/// "WWW MMM", "MMM" set in the accent where `accented`.
+fn caption(accented: bool) -> Caption {
+  let mut said = word("MMM", 500.0);
+  said.emphasis = accented;
   Caption {
     id: 0,
     start_ms: 0.0,
     end_ms: 2_000.0,
     text: "WWW MMM".to_owned(),
-    lines: vec![vec![word("WWW", 0.0), word("MMM", 500.0)]],
+    lines: vec![vec![word("WWW", 0.0), said]],
     spaced: true,
   }
 }
@@ -57,30 +60,31 @@ fn styled(template: CaptionTemplate) -> CaptionStyle {
 }
 
 /// The pieces `style` draws 700 ms in, while "MMM" is being said, and the
-/// face they are set in.
-fn pieces(style: CaptionStyle) -> (Vec<CaptionPiece>, TypeFace) {
-  let face = caption_face(&style.font);
+/// faces they are set in.
+fn pieces(style: CaptionStyle) -> (Vec<CaptionPiece>, CaptionFaces) {
+  let faces = CaptionFaces::of(&style);
+  let accented = style.accent == CaptionAccent::Word;
   let recording = RecordingCaptions {
     enabled: true,
     style,
     ..Default::default()
   };
   let pieces = caption_pieces(
-    &[caption()],
+    &[caption(accented)],
     &recording,
     CaptionFrame {
       width: OUTPUT.0,
       height: OUTPUT.1,
     },
     700.0,
-    &mut caption_measure(&face),
+    &mut caption_measure(&faces),
   );
-  (pieces, face)
+  (pieces, faces)
 }
 
-/// The canvas with `pieces` set in `face` drawn over the grey picture, which
-/// fills it, BGRA.
-fn drawn((pieces, face): &(Vec<CaptionPiece>, TypeFace)) -> Vec<u8> {
+/// The canvas with `pieces` set in `faces` drawn over the grey picture,
+/// which fills it, BGRA.
+fn drawn((pieces, faces): &(Vec<CaptionPiece>, CaptionFaces)) -> Vec<u8> {
   let compositor = compositor();
   let image = grey();
   let mut settings = test_output_settings(OUTPUT.0, OUTPUT.1);
@@ -98,7 +102,7 @@ fn drawn((pieces, face): &(Vec<CaptionPiece>, TypeFace)) -> Vec<u8> {
     None,
   )
   .unwrap();
-  prepared.draw_above(caption_arrows(pieces, face));
+  prepared.draw_above(caption_arrows(pieces, faces));
   let output = target();
   compositor
     .draw_with_camera(
@@ -203,7 +207,7 @@ fn draws_the_box_template_on_a_dark_backdrop_and_the_highlight_on_a_pill() {
 }
 
 /// How many white pixels the caption's words leave on the canvas.
-fn white_count(set: &(Vec<CaptionPiece>, TypeFace)) -> usize {
+fn white_count(set: &(Vec<CaptionPiece>, CaptionFaces)) -> usize {
   let canvas = drawn(set);
   set
     .0
@@ -232,6 +236,7 @@ fn sets_the_type_in_the_family_and_weight_the_style_names() {
       font: CaptionFont {
         family: family.map(str::to_owned),
         weight,
+        italic: false,
       },
       highlight_words: false,
       ..CaptionTemplate::Clean.style()
@@ -241,7 +246,7 @@ fn sets_the_type_in_the_family_and_weight_the_style_names() {
   // Inter's, so they are laid out further apart.
   let inter = in_font(None, 600);
   let georgia = in_font(Some("Georgia"), 400);
-  let spread = |set: &(Vec<CaptionPiece>, TypeFace)| set.0[1].centre[0] - set.0[0].centre[0];
+  let spread = |set: &(Vec<CaptionPiece>, CaptionFaces)| set.0[1].centre[0] - set.0[0].centre[0];
   assert!((spread(&inter) - spread(&georgia)).abs() > 1.0);
   assert_ne!(drawn(&inter), drawn(&georgia));
   // A heavier weight lays down more ink.
@@ -256,6 +261,7 @@ fn fits_the_pill_to_type_set_in_another_face() {
     font: CaptionFont {
       family: Some("Courier New".to_owned()),
       weight: 700,
+      italic: false,
     },
     ..CaptionTemplate::Highlight.style()
   });
@@ -286,4 +292,30 @@ fn fits_the_pill_to_type_set_in_another_face() {
     reach.iter().all(|reach| (0.1..0.3).contains(reach)),
     "pill {pill:?} ink {ink:?}"
   );
+}
+
+#[test]
+fn sets_the_accent_in_a_family_the_app_carries_upright_or_italic() {
+  let accented = |family: &str, italic| {
+    pieces(CaptionStyle {
+      accent: CaptionAccent::Word,
+      accent_font: CaptionFont {
+        family: Some(family.to_owned()),
+        weight: 400,
+        italic,
+      },
+      highlight_words: false,
+      ..CaptionTemplate::Clean.style()
+    })
+  };
+  let italic = accented("Instrument Serif", true);
+  // The word set apart is in the accent's face, the other in the main one.
+  assert_eq!(italic.0[1].face, screenwide_captions::CaptionFace::Accent);
+  assert_eq!(italic.0[0].face, screenwide_captions::CaptionFace::Main);
+  // The app's own serif is found whatever the system has, and set in its
+  // italic: neither looks like its upright, nor like Inter, which a family
+  // that cannot be found falls back to.
+  let canvas = drawn(&italic);
+  assert_ne!(canvas, drawn(&accented("Instrument Serif", false)));
+  assert_ne!(canvas, drawn(&accented("No Such Family", true)));
 }

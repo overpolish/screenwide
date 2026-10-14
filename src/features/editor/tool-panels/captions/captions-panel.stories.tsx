@@ -99,12 +99,29 @@ export const PopRestyled: Story = {
       captions({
         style: {
           ...STORY_CAPTION_STYLES[2],
-          font: { family: "Georgia", weight: 700 },
+          font: { family: "Georgia", italic: false, weight: 700 },
           highlightWords: true,
           textColor: "#ff5a5a",
         },
       }),
     );
+    rememberCaptionPanelTab("style");
+  },
+};
+
+/** The Editorial template: each caption's key word, bold in the text, is
+ * set apart in a serif italic. */
+export const KeyWords: Story = {
+  beforeEach: () => {
+    seed(captions({ style: STORY_CAPTION_STYLES[6] }));
+  },
+};
+
+/** The Style tab for the Stack template: its words stacked, the key word
+ * on a line of its own in an accent font, size and colour. */
+export const StackAccent: Story = {
+  beforeEach: () => {
+    seed(captions({ style: STORY_CAPTION_STYLES[8] }));
     rememberCaptionPanelTab("style");
   },
 };

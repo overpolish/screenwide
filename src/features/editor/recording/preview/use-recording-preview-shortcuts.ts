@@ -35,6 +35,7 @@ export function useRecordingPreviewShortcuts({
   nudgeActiveTrack,
   player,
   step,
+  toggleCaptionsPanel,
   toggleCursorPanel,
   toggleKeyboardPanel,
   toggleTool,
@@ -67,6 +68,7 @@ export function useRecordingPreviewShortcuts({
   player: ReturnType<typeof useRecordingPreviewPlayer>;
   step: ReturnType<typeof useRecordingTimelineBlade>["step"];
   /** Each panel's toggle, unset where the recording has nothing for it. */
+  toggleCaptionsPanel: (() => void) | undefined;
   toggleCursorPanel: (() => void) | undefined;
   toggleKeyboardPanel: (() => void) | undefined;
   toggleTool: ReturnType<typeof useRecordingPreviewCanvasTool>["toggleTool"];
@@ -106,6 +108,7 @@ export function useRecordingPreviewShortcuts({
     onSceneTool: hasScenes && hasVisiblePanes ? toggleTool.scene : undefined,
     onSelectTool: hasVisiblePanes ? toggleTool.select : undefined,
     onStep: !canNudgeActiveTrack && layout ? step : undefined,
+    onToggleCaptionsPanel: toggleCaptionsPanel,
     onToggleCrop: hasVisiblePanes ? toggleTool.crop : undefined,
     onToggleCursorPanel: toggleCursorPanel,
     onToggleKeyboardPanel: toggleKeyboardPanel,

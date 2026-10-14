@@ -19,7 +19,11 @@ export const itemFontStyle = (
   font: PopupPanelItem["font"],
 ): CSSProperties | undefined =>
   font
-    ? { fontFamily: `"${font.family}"`, fontWeight: font.weight }
+    ? {
+        fontFamily: `"${font.family}"`,
+        fontStyle: font.italic ? "italic" : undefined,
+        fontWeight: font.weight,
+      }
     : undefined;
 
 /** One row of a pop-up list: its artwork or glyph, its label, and the badge

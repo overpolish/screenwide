@@ -6,8 +6,6 @@ import { middleOf } from "../transcript/transcript-words";
 
 import type { CaptionBreak } from "../../../../bindings/CaptionBreak";
 import type { CaptionBreakKind } from "../../../../bindings/CaptionBreakKind";
-import type { CaptionWordChoice } from "../../../../bindings/CaptionWordChoice";
-import type { CaptionWordKind } from "../../../../bindings/CaptionWordKind";
 
 // Breaks and choices sit at moments as shares of the recording, so they
 // name the same gap and the same word however a word's edges settle; these
@@ -59,13 +57,17 @@ export function withBreak(
   return [...kept, { kind, sourceAt }].sort((a, b) => a.sourceAt - b.sourceAt);
 }
 
+/** A choice made of one word, at a moment within it: whether it shows, or
+ * whether it is its caption's key word. */
+type WordChoice<K extends string> = { kind: K; sourceAt: number };
+
 /** `choices` with the word at `word` chosen as `kind`, at its middle, or
  * left to the rules with null. */
-export function withChoice(
-  choices: readonly CaptionWordChoice[],
+export function withChoice<K extends string>(
+  choices: readonly WordChoice<K>[],
   { durationMs, word }: { durationMs: number; word: TranscriptRange },
-  kind: CaptionWordKind | null,
-): CaptionWordChoice[] {
+  kind: K | null,
+): WordChoice<K>[] {
   const kept = choices.filter(
     (choice) =>
       choice.sourceAt < word.startMs / durationMs ||

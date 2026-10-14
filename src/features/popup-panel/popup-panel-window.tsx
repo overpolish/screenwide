@@ -4,7 +4,9 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { MomentNotePanel } from "../editor/timeline/moments/moment-note-panel";
+import { CaptionTemplatePanel } from "../editor/tool-panels/captions/caption-template-panel";
 
+import { PopupPanelColors } from "./popup-panel-colors";
 import { PopupPanelList } from "./popup-panel-list";
 import { PopupPanelTool } from "./popup-panel-tool";
 import {
@@ -51,6 +53,20 @@ export function PopupPanelWindow() {
 
   if (active.content.kind === "note") {
     return <MomentNotePanel content={active.content} />;
+  }
+
+  if (active.content.kind === "caption-templates") {
+    return (
+      <CaptionTemplatePanel
+        content={active.content}
+        focusContents={active.focusContents}
+        id={active.id}
+      />
+    );
+  }
+
+  if (active.content.kind === "colors") {
+    return <PopupPanelColors content={active.content} id={active.id} />;
   }
 
   return (

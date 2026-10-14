@@ -7,7 +7,6 @@ import { PillGroup } from "../../../../components/base/pill-group/pill-group";
 import { PositionGrid } from "../../../../components/base/position-grid/position-grid";
 import { Switch } from "../../../../components/base/switch/switch";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
 import {
   isEmptyLayout,
@@ -15,11 +14,12 @@ import {
   layoutOf,
 } from "../../recording/captions/caption-layout";
 import {
-  CAPTION_SIZE_PERCENT,
   CAPTION_WORDS,
   CaptionsPatch,
 } from "../../recording/captions/recording-captions";
 import { CaptionTemplates } from "../../recording/captions/use-caption-templates";
+
+import { CaptionSizeRow } from "./caption-size-row";
 
 import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionLines } from "../../../../bindings/CaptionLines";
@@ -51,11 +51,12 @@ const positionOptions = (): { id: CaptionPosition; label: string }[] => [
 ];
 
 /**
- * The Layout tab: how large the type is, where on the picture it sits, its
- * case, and how many words and lines a caption holds. A template brings all
- * of them; one changed here is kept as it is when another template is
- * chosen, and the rest follow the template. Reset lets every one follow the
- * template again; Set as default keeps the ones changed for new captions.
+ * The Layout tab: how large the type and its key word are, a step from the
+ * template's own sizes, where on the picture the type sits, its case, and
+ * how many words and lines a caption holds. A template brings all of them;
+ * one changed here is kept as it is when another template is chosen, and
+ * the rest follow the template. Reset lets every one follow the template
+ * again; Set as default keeps the ones changed for new captions.
  */
 export function CaptionLayoutTab({
   isDisabled,
@@ -81,25 +82,26 @@ export function CaptionLayoutTab({
 
   return (
     <>
-      <ControlRow title={t("editor-panels-size")}>
-        {(controlProps) => (
-          <div {...controlProps} role="group">
-            <SliderNumberField
-              aria-label={t("editor-panels-size")}
-              className="w-48"
-              isDisabled={isDisabled}
-              maxValue={CAPTION_SIZE_PERCENT.maximum}
-              minValue={CAPTION_SIZE_PERCENT.minimum}
-              onChange={(sizePercent) => {
-                set({ sizePercent });
-              }}
-              rightSection="%"
-              step={5}
-              value={style.sizePercent}
-            />
-          </div>
-        )}
-      </ControlRow>
+      <CaptionSizeRow
+        isDisabled={isDisabled}
+        onChange={(size) => {
+          set({ size });
+        }}
+        size={style.size}
+        title={t("editor-panels-size")}
+      />
+
+      {/* Only a template that sets a key word apart has one to size. */}
+      {style.accent === "word" ? (
+        <CaptionSizeRow
+          isDisabled={isDisabled}
+          onChange={(accentSize) => {
+            set({ accentSize });
+          }}
+          size={style.accentSize}
+          title={t("editor-panels-captions-accent-size")}
+        />
+      ) : null}
 
       <ControlRow title={t("editor-panels-position")}>
         {(controlProps) => (
@@ -132,23 +134,6 @@ export function CaptionLayoutTab({
         )}
       </ControlRow>
 
-      <ControlRow title={t("editor-panels-captions-lines")}>
-        {(controlProps) => (
-          <div {...controlProps} role="group">
-            <PillGroup
-              aria-label={t("editor-panels-captions-lines")}
-              display="label"
-              isDisabled={isDisabled}
-              items={lineOptions()}
-              onSelectionChange={(lines) => {
-                set({ lines: lines as CaptionLines });
-              }}
-              selected={style.lines}
-            />
-          </div>
-        )}
-      </ControlRow>
-
       <ControlRow title={t("editor-panels-captions-all-caps")}>
         {(controlProps) => (
           <Switch
@@ -161,6 +146,27 @@ export function CaptionLayoutTab({
           />
         )}
       </ControlRow>
+
+      {/* A stack or a staircase breaks its own lines, so the count only
+       * holds for captions set in lines. */}
+      {style.arrangement === "lines" ? (
+        <ControlRow title={t("editor-panels-captions-lines")}>
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <PillGroup
+                aria-label={t("editor-panels-captions-lines")}
+                display="label"
+                isDisabled={isDisabled}
+                items={lineOptions()}
+                onSelectionChange={(lines) => {
+                  set({ lines: lines as CaptionLines });
+                }}
+                selected={style.lines}
+              />
+            </div>
+          )}
+        </ControlRow>
+      ) : null}
 
       <div className="flex flex-wrap justify-end gap-control">
         <Button

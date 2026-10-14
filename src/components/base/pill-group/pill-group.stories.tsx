@@ -33,9 +33,21 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 function PillGroupExample(props: ComponentProps<typeof PillGroup>) {
-  const [selected, setSelected] = useState(props.selected);
+  const [selected, setSelected] = useState<string | string[]>(props.selected);
+  if (props.selectionMode === "multiple")
+    return (
+      <PillGroup
+        {...props}
+        onSelectionChange={setSelected}
+        selected={Array.isArray(selected) ? selected : [selected]}
+      />
+    );
   return (
-    <PillGroup {...props} onSelectionChange={setSelected} selected={selected} />
+    <PillGroup
+      {...props}
+      onSelectionChange={setSelected}
+      selected={Array.isArray(selected) ? (selected[0] ?? "") : selected}
+    />
   );
 }
 
@@ -51,6 +63,19 @@ export const Icons: Story = {
 
 export const IconAndText: Story = {
   args: { ...Icons.args, display: "icon-label" },
+  render: (args) => <PillGroupExample {...args} />,
+};
+
+/** Any of the segments on together, as a set of independent options. */
+export const AnyOn: Story = {
+  args: {
+    "aria-label": "Audio lanes",
+    display: "label",
+    items,
+    onSelectionChange: () => undefined,
+    selected: ["system", "camera"],
+    selectionMode: "multiple",
+  },
   render: (args) => <PillGroupExample {...args} />,
 };
 

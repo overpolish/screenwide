@@ -8,8 +8,8 @@ const FRAME: CaptionFrame = CaptionFrame {
   height: 1_000,
 };
 
-fn measure(text: &str, _size: f64) -> f64 {
-  text.chars().count() as f64 * 10.0
+fn measure(text: &str, _face: CaptionFace, size: f64) -> f64 {
+  text.chars().count() as f64 * size / 5.0
 }
 
 fn word(text: &str, start_ms: f64) -> CaptionWord {
@@ -19,6 +19,7 @@ fn word(text: &str, start_ms: f64) -> CaptionWord {
     end_ms: start_ms + 300.0,
     source_start_ms: start_ms,
     source_end_ms: start_ms + 300.0,
+    emphasis: false,
   }
 }
 
@@ -110,6 +111,48 @@ fn holds_a_caption_in_its_corner_with_its_lines_lined_up_to_that_side() {
   );
 }
 
+/// Whether `a` and `b` are the same point, give or take rounding.
+fn near(a: [f64; 2], b: [f64; 2]) -> bool {
+  (a[0] - b[0]).abs() < 1e-9 && (a[1] - b[1]).abs() < 1e-9
+}
+
+#[test]
+fn sets_a_word_apart_in_the_accent_standing_on_its_lines_baseline() {
+  let mut recording = styled(CaptionTemplate::Clean, false);
+  recording.style.accent = CaptionAccent::Word;
+  recording.style.accent_size_percent = 200.0;
+  recording.style.accent_color = "#ff0000".to_owned();
+  let mut said = captions();
+  said[0].lines[0][1].emphasis = true;
+  let drawn = caption_pieces(&said, &recording, FRAME, 1_500.0, &mut measure);
+  assert_eq!((drawn[1].face, drawn[1].size), (CaptionFace::Accent, 100.0));
+  assert_eq!(drawn[1].kind, word_in("#ff0000ff", true));
+  assert_eq!((drawn[0].face, drawn[0].size), (CaptionFace::Main, 50.0));
+  // "two" at twice the size makes its line 125 px tall and 110 px wide,
+  // with the accent's wider space; "one" sits lower, on the same baseline.
+  let expected = [[460.0, 793.0], [525.0, 775.0], [500.0, 868.75]];
+  for (piece, centre) in drawn.iter().zip(expected) {
+    assert!(
+      near(piece.centre, centre),
+      "{:?} != {centre:?}",
+      piece.centre
+    );
+  }
+}
+
+#[test]
+fn steps_each_line_of_a_staircase_further_along() {
+  let mut recording = styled(CaptionTemplate::Clean, false);
+  recording.style.arrangement = CaptionArrangement::Staircase;
+  let lefts: Vec<f64> = pieces(&recording, 1_500.0)
+    .iter()
+    .map(|piece| piece.centre[0] - measure(&piece.text, piece.face, piece.size) / 2.0)
+    .collect();
+  // "three" starts 1.5 ems, 75 px, further along than "one two", and the
+  // block, 125 px wide, is centred.
+  assert_eq!(lefts, [437.5, 477.5, 512.5]);
+}
+
 #[test]
 fn colours_the_word_being_said_where_asked() {
   let drawn = pieces(&styled(CaptionTemplate::Clean, true), 1_500.0);
@@ -125,7 +168,7 @@ fn colours_the_word_being_said_where_asked() {
 
 #[test]
 fn draws_in_the_colours_the_style_picks() {
-  let mut recording = styled(CaptionTemplate::Highlight, false);
+  let mut recording = styled(CaptionTemplate::Highlight, true);
   recording.style.text_color = "#ff0000".to_owned();
   // A dark pill takes light type on it.
   recording.style.highlight_color = "#202080".to_owned();
@@ -165,11 +208,13 @@ fn puts_the_box_behind_the_lines_and_the_pill_under_the_word_said() {
   assert_eq!(
     boxed[0].kind,
     CaptionPieceKind::Backdrop {
-      color: "#0000009e".to_owned()
+      color: "#0000009e".to_owned(),
+      // "one two" over "three", in 50 px type on 62.5 px lines.
+      block: [70.0, 125.0],
     }
   );
   assert_eq!(boxed[0].text, "one two\nthree");
-  let pill = pieces(&styled(CaptionTemplate::Highlight, false), 1_900.0);
+  let pill = pieces(&styled(CaptionTemplate::Highlight, true), 1_900.0);
   assert_eq!(
     kinds(&pill),
     [
@@ -184,16 +229,56 @@ fn puts_the_box_behind_the_lines_and_the_pill_under_the_word_said() {
       ("three", word_in("#000000ff", false)),
     ]
   );
+  // Not highlighting the word being said takes its pill away too.
+  let unmarked = pieces(&styled(CaptionTemplate::Highlight, false), 1_900.0);
+  assert_eq!(
+    kinds(&unmarked),
+    [
+      ("one", white_word()),
+      ("two", white_word()),
+      ("three", white_word())
+    ]
+  );
+}
+
+/// Clean, with its words revealed as they are said, popping where asked.
+fn revealed(popping: bool) -> RecordingCaptions {
+  let mut recording = styled(CaptionTemplate::Clean, false);
+  recording.style.reveal_words = true;
+  if popping {
+    recording.style.entrance = CaptionEntrance::Pop;
+  }
+  recording
 }
 
 #[test]
 fn reveals_each_word_as_it_is_said() {
-  let drawn = pieces(&styled(CaptionTemplate::Reveal, false), 1_445.0);
+  let drawn = pieces(&revealed(false), 1_445.0);
   assert_eq!(
     kinds(&drawn),
     [("one", white_word()), ("two", white_word())]
   );
   assert_eq!(drawn[1].opacity[0], 0.5);
+  // Popping as well, each word pops as it is said rather than with the
+  // caption: "two", said 400 ms in, starts small while "one" has settled.
+  let popped = pieces(&revealed(true), 1_400.0);
+  assert_eq!(popped[0].scale[0], 1.0);
+  assert_eq!(popped[1].scale[0], 0.75);
+}
+
+#[test]
+fn grows_the_box_over_the_words_revealed_so_far() {
+  let mut recording = styled(CaptionTemplate::Box, false);
+  recording.style.reveal_words = true;
+  let block = |at_ms| match pieces(&recording, at_ms)[0].kind.clone() {
+    CaptionPieceKind::Backdrop { block, .. } => block,
+    kind => panic!("{kind:?} is no box"),
+  };
+  // "one", then "one two", then both lines, in 50 px type on 62.5 px
+  // lines.
+  assert_eq!(block(1_100.0), [30.0, 62.5]);
+  assert_eq!(block(1_500.0), [70.0, 62.5]);
+  assert_eq!(block(1_900.0), [70.0, 125.0]);
 }
 
 #[test]

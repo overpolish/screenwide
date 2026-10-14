@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The families installed on Windows, read from DirectWrite's system
-//! collection: each family's name and the weights it has upright.
+//! collection: each family's name, the weights it has upright, and whether
+//! it has an italic.
 
 use windows::Win32::Graphics::DirectWrite::{
   DWriteCreateFactory, IDWriteFactory6, IDWriteLocalizedStrings, DWRITE_FACTORY_TYPE_SHARED,
@@ -42,14 +43,21 @@ pub(crate) fn installed_families() -> windows::core::Result<Vec<InstalledFamily>
         continue;
       }
       let mut weights = Vec::new();
+      let mut italic = false;
       for font_index in 0..family.GetFontCount() {
         let font = family.GetFont(font_index)?;
         if font.GetStyle() == DWRITE_FONT_STYLE_NORMAL {
           weights.push(font.GetWeight().0.clamp(100, 900) as u16);
+        } else {
+          italic = true;
         }
       }
       if !weights.is_empty() {
-        families.push(InstalledFamily { name, weights });
+        families.push(InstalledFamily {
+          name,
+          weights,
+          italic,
+        });
       }
     }
     Ok(families)

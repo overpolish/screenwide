@@ -8,18 +8,15 @@
 //! the pieces as text boxes of its own; everything about where they sit and
 //! how they move is decided here, so preview and export agree.
 
-use crate::style::{rgba, CaptionBackground, CaptionEntrance};
-use crate::{type_size_px, Caption, CaptionFrame, RecordingCaptions};
+use crate::style::{rgba, CaptionBackground, CaptionEntrance, CaptionFace, CaptionStyle};
+use crate::{Caption, CaptionFrame, Measure, RecordingCaptions};
 
+mod place;
 mod upcoming;
 
 /// A line's height, in ems: the twin of `LINE_HEIGHT` in the annotations'
 /// text metrics, which the compositor sets the type at.
 const LINE_HEIGHT: f64 = 1.25;
-/// How far in from the picture's edge a caption keeps, as a share of its
-/// height: the bottom of a caption's last line sits this far up from the
-/// bottom, and on every other side the caption keeps as many pixels clear.
-const EDGE_SHARE: f64 = 0.1;
 /// A frame at 60 frames a second, which a moving piece blurs across.
 const FRAME_MS: f64 = 1_000.0 / 60.0;
 /// How long a popping caption's words take to grow in, each from three
@@ -38,9 +35,9 @@ const WORD_FADE_MS: f64 = 90.0;
 /// What a piece of a caption is. Colours are written `#rrggbbaa`.
 #[derive(Clone, Debug, PartialEq)]
 pub enum CaptionPieceKind {
-  /// The box behind the lines, the size the caption's text sets it at, with
+  /// The box behind the lines, around a block of text `block` in size, with
   /// no type of its own.
-  Backdrop { color: String },
+  Backdrop { color: String, block: [f64; 2] },
   /// One word's type in `ink`, with an outline in `outline` where it has
   /// one.
   Word {
@@ -64,6 +61,8 @@ fn ink_on(color: &str) -> String {
 pub struct CaptionPiece {
   pub kind: CaptionPieceKind,
   pub text: String,
+  /// The face its type is set in, and a word's pill measured in.
+  pub face: CaptionFace,
   /// The centre of its text block.
   pub centre: [f64; 2],
   /// The type size it is set at, before `scale`.
@@ -90,7 +89,7 @@ impl CaptionTrack {
     &self,
     frame: CaptionFrame,
     at_ms: f64,
-    measure: &mut dyn FnMut(&str, f64) -> f64,
+    measure: &mut Measure,
   ) -> Vec<CaptionPiece> {
     caption_pieces(&self.captions, &self.recording, frame, at_ms, measure)
   }
@@ -117,62 +116,62 @@ fn showing(captions: &[Caption], at_ms: f64) -> Option<&Caption> {
   (at_ms < caption.end_ms).then_some(caption)
 }
 
+/// The share of its size `caption` takes to fit in `frame` within the
+/// picture's margins, set as `style` sets it: 1 where it fits already. A
+/// style's preview sets its sample at this, where the tile is too small for
+/// type as large as a video sets it.
+pub fn caption_fit(
+  caption: &Caption,
+  style: &CaptionStyle,
+  frame: CaptionFrame,
+  measure: &mut Measure,
+) -> f64 {
+  let block = place::place(caption, &style.normalized(), frame, measure).block;
+  let room = place::room(frame);
+  (0..2)
+    .filter(|&axis| block[axis] > 0.0)
+    .map(|axis| room[axis] / block[axis])
+    .fold(1.0, f64::min)
+}
+
 /// What the captions draw `at_ms` into the edited video, on a canvas
-/// `frame` in size. `measure` gives a text's width set at a type size, both
-/// in pixels, by the type the compositor sets the pieces in.
+/// `frame` in size. `measure` gives a text's width set in a face at a type
+/// size, both in pixels, by the type the compositor sets the pieces in.
 pub fn caption_pieces(
   captions: &[Caption],
   recording: &RecordingCaptions,
   frame: CaptionFrame,
   at_ms: f64,
-  measure: &mut dyn FnMut(&str, f64) -> f64,
+  measure: &mut Measure,
 ) -> Vec<CaptionPiece> {
   let Some(caption) = showing(captions, at_ms).filter(|_| recording.enabled) else {
     return Vec::new();
   };
   let style = recording.style.normalized();
-  let size = type_size_px(&style, frame);
-  let pitch = size * LINE_HEIGHT;
-  let gap = if caption.spaced {
-    measure(" ", size)
-  } else {
-    0.0
+  let placement = place::place(caption, &style, frame, measure);
+  let popping = style.entrance == CaptionEntrance::Pop;
+  // How large and how solid a piece is `elapsed_ms` after it comes on, now
+  // and a frame ago. A popping piece grows about its own middle, staying
+  // where it settles; the size a frame ago is the size now, so the growth
+  // is drawn sharp rather than blurred as an annotation's is. A word
+  // revealed without popping fades in.
+  let entering = |elapsed_ms: f64, fades: bool| {
+    if popping {
+      let (size, solidity) = pop(elapsed_ms);
+      ([size; 2], [solidity; 2])
+    } else if fades {
+      let fade = |ms: f64| (ms / WORD_FADE_MS).clamp(0.0, 1.0);
+      ([1.0; 2], [fade(elapsed_ms), fade(elapsed_ms - FRAME_MS)])
+    } else {
+      ([1.0; 2], [1.0; 2])
+    }
   };
-  let widths: Vec<Vec<f64>> = caption
-    .lines
-    .iter()
-    .map(|words| words.iter().map(|word| measure(&word.text, size)).collect())
-    .collect();
-  let line_widths: Vec<f64> = widths
-    .iter()
-    .map(|line| line.iter().sum::<f64>() + gap * line.len().saturating_sub(1) as f64)
-    .collect();
-  let block = [
-    line_widths.iter().copied().fold(0.0, f64::max),
-    pitch * caption.lines.len() as f64,
-  ];
-  let [across, down] = style.position.shares();
-  let edge = f64::from(frame.height) * EDGE_SHARE;
-  let room = [
-    f64::from(frame.width) - 2.0 * edge,
-    f64::from(frame.height) - 2.0 * edge,
-  ];
-  let left = edge + (room[0] - block[0]) * across;
-  let top = edge + (room[1] - block[1]) * down;
-  let centre = [left + block[0] / 2.0, top + block[1] / 2.0];
-  let elapsed = at_ms - caption.start_ms;
-  // A popping caption's words each grow about their own middle, staying
-  // where they settle; the size a frame ago is the size now, so the growth
-  // is drawn sharp rather than blurred as an annotation's is.
-  let (scale, opacity) = if style.entrance == CaptionEntrance::Pop {
-    let (size, solidity) = pop(elapsed);
-    ([size; 2], [solidity; 2])
-  } else {
-    ([1.0; 2], [1.0; 2])
-  };
-  let piece = |kind, text: &str, at: [f64; 2], opacity: [f64; 2]| CaptionPiece {
+  // The caption comes on whole, unless its words come on one by one.
+  let whole = entering(at_ms - caption.start_ms, false);
+  let piece = |kind, text: &str, at: [f64; 2], (size, face), (scale, opacity)| CaptionPiece {
     kind,
     text: text.to_owned(),
+    face,
     centre: at,
     size,
     scale,
@@ -190,68 +189,86 @@ pub fn caption_pieces(
     .last();
 
   let mut pieces = Vec::new();
-  if style.background == CaptionBackground::Box {
+  // Behind every line, or, as words are revealed, behind those said so far,
+  // growing with each.
+  let backdrop = match (style.background, style.reveal_words) {
+    (CaptionBackground::Box, false) => Some((placement.centre, placement.block, whole)),
+    (CaptionBackground::Box, true) => place::block_of(
+      caption
+        .lines
+        .iter()
+        .flatten()
+        .zip(&placement.words)
+        .filter(|(word, _)| word.start_ms <= at_ms)
+        .map(|(_, placed)| placed),
+    )
+    .map(|(centre, block)| (centre, block, ([1.0; 2], [1.0; 2]))),
+    _ => None,
+  };
+  if let Some((centre, block, shown)) = backdrop {
     pieces.push(piece(
       CaptionPieceKind::Backdrop {
         color: full_hex(&style.background_color),
+        block,
       },
       &caption.text,
       centre,
-      opacity,
+      (placement.size, CaptionFace::Main),
+      shown,
     ));
   }
   let highlight = full_hex(&style.highlight_color);
   let text_ink = full_hex(&style.text_color);
+  let accent_ink = full_hex(&style.accent_color);
   let outline = style.outline.then(|| full_hex(&style.outline_color));
   let mut pill = None;
   let mut words_drawn = Vec::new();
-  let mut index = 0;
-  for (line, words) in caption.lines.iter().enumerate() {
-    // Each line lines up within the caption as the caption does within the
-    // picture: from its left, about its middle, or from its right.
-    let mut left = left + (block[0] - line_widths[line]) * across;
-    let y = top + pitch * (line as f64 + 0.5);
-    for (word, width) in words.iter().zip(&widths[line]) {
-      let at = [left + width / 2.0, y];
-      left += width + gap;
-      let is_said = said == Some(index);
-      index += 1;
-      let opacity = match style.entrance {
-        CaptionEntrance::Words if word.start_ms > at_ms => continue,
-        CaptionEntrance::Words => {
-          let fade = |ms: f64| ((ms - word.start_ms) / WORD_FADE_MS).clamp(0.0, 1.0);
-          [fade(at_ms), fade(at_ms - FRAME_MS)]
-        }
-        _ => opacity,
-      };
-      let kind = if is_said && style.background == CaptionBackground::Word {
-        // The pill goes under every word, so a neighbour it reaches under
-        // stays on top, and the word on it takes type that reads on it.
-        pill = Some(piece(
-          CaptionPieceKind::Pill {
-            color: highlight.clone(),
-          },
-          &word.text,
-          at,
-          opacity,
-        ));
-        // The pill sets the word apart, so it needs no outline to read.
-        CaptionPieceKind::Word {
-          ink: ink_on(&highlight),
-          outline: None,
-        }
-      } else {
-        CaptionPieceKind::Word {
-          ink: if is_said && style.highlight_words {
-            highlight.clone()
-          } else {
-            text_ink.clone()
-          },
-          outline: outline.clone(),
-        }
-      };
-      words_drawn.push(piece(kind, &word.text, at, opacity));
-    }
+  for (index, (word, placed)) in caption
+    .lines
+    .iter()
+    .flatten()
+    .zip(&placement.words)
+    .enumerate()
+  {
+    let shown = if !style.reveal_words {
+      whole
+    } else if word.start_ms > at_ms {
+      continue;
+    } else {
+      entering(at_ms - word.start_ms, true)
+    };
+    let is_marked = said == Some(index) && style.highlight_words;
+    let set = (placed.size, placed.face);
+    let kind = if is_marked && style.background == CaptionBackground::Word {
+      // The pill goes under every word, so a neighbour it reaches under
+      // stays on top, and the word on it takes type that reads on it.
+      pill = Some(piece(
+        CaptionPieceKind::Pill {
+          color: highlight.clone(),
+        },
+        &word.text,
+        placed.centre,
+        set,
+        shown,
+      ));
+      // The pill sets the word apart, so it needs no outline to read.
+      CaptionPieceKind::Word {
+        ink: ink_on(&highlight),
+        outline: None,
+      }
+    } else {
+      CaptionPieceKind::Word {
+        ink: if is_marked {
+          highlight.clone()
+        } else if word.emphasis {
+          accent_ink.clone()
+        } else {
+          text_ink.clone()
+        },
+        outline: outline.clone(),
+      }
+    };
+    words_drawn.push(piece(kind, &word.text, placed.centre, set, shown));
   }
   pieces.extend(pill);
   pieces.extend(words_drawn);

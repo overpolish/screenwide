@@ -10,9 +10,10 @@
 
 use std::ops::Range;
 
-use crate::settings::{CaptionBreak, CaptionBreakKind};
-use crate::style::CaptionStyle;
+use crate::settings::{CaptionBreak, CaptionBreakKind, CaptionEmphasisKind};
+use crate::style::{CaptionArrangement, CaptionStyle};
 use crate::text::break_score;
+use crate::widths::{Emphasis, Widths};
 
 /// A word a caption shows, placed on the edited video.
 #[derive(Clone, Debug)]
@@ -28,38 +29,12 @@ pub(crate) struct Shown {
   /// Whether the edited video plays it straight after the word shown
   /// before it, as it was said.
   pub follows: bool,
+  /// Whether it was set apart in the accent by hand, or kept plain.
+  pub emphasis: Option<CaptionEmphasisKind>,
 }
 
-/// How wide a run of words is set: each word measured once, and the gap
-/// between two words once, so a line is never measured afresh.
-pub(crate) struct Widths {
-  /// The words' widths summed up to each index.
-  before: Vec<f64>,
-  gap: f64,
-}
-
-impl Widths {
-  pub fn new(words: &[Shown], gap: &str, measure: &mut dyn FnMut(&str) -> f64) -> Self {
-    let mut before = Vec::with_capacity(words.len() + 1);
-    let mut total = 0.0;
-    before.push(total);
-    for word in words {
-      total += measure(&word.text);
-      before.push(total);
-    }
-    Self {
-      before,
-      gap: if gap.is_empty() { 0.0 } else { measure(gap) },
-    }
-  }
-
-  pub fn of(&self, words: &Range<usize>) -> f64 {
-    if words.is_empty() {
-      return 0.0;
-    }
-    self.before[words.end] - self.before[words.start] + self.gap * (words.len() - 1) as f64
-  }
-}
+/// How many words a stacked line holds at most.
+const STACK_WORDS: usize = 2;
 
 /// A pause at least this long, on the edited video, always ends a caption.
 const LONG_PAUSE_MS: f64 = 1_000.0;
@@ -98,39 +73,87 @@ fn gaps(words: &[Shown], breaks: &[CaptionBreak], source_duration_ms: f64) -> Ve
     .collect()
 }
 
-/// Lays the caption `words` out in at most `line_count` lines: on one line
-/// where they fit on one, otherwise split where the longer line is
-/// shortest.
+/// Lays the caption `words` out in lines as the style arranges them.
 pub(crate) fn lines(
   words: Range<usize>,
   style: &CaptionStyle,
   max_width: f64,
   widths: &Widths,
 ) -> Vec<Range<usize>> {
-  if style.line_count() < 2 || words.len() < 2 || widths.of(&words) <= max_width {
+  let emphasis = widths.emphasis(&words);
+  match style.arrangement {
+    CaptionArrangement::Lines => in_lines(words, style, max_width, widths, emphasis),
+    CaptionArrangement::Stack | CaptionArrangement::Staircase => {
+      stacked(words, max_width, widths, emphasis)
+    }
+  }
+}
+
+/// In at most the style's lines: on one line where they fit on one,
+/// otherwise split where the longer line is shortest.
+fn in_lines(
+  words: Range<usize>,
+  style: &CaptionStyle,
+  max_width: f64,
+  widths: &Widths,
+  emphasis: Emphasis,
+) -> Vec<Range<usize>> {
+  let width = |line: Range<usize>| widths.of(&line, emphasis);
+  if style.line_count() < 2 || words.len() < 2 || width(words.clone()) <= max_width {
     return vec![words];
   }
-  let longer = |at: usize| {
-    widths
-      .of(&(words.start..at))
-      .max(widths.of(&(at..words.end)))
-  };
+  let longer = |at: usize| width(words.start..at).max(width(at..words.end));
   let split = (words.start + 1..words.end)
     .min_by(|&a, &b| longer(a).total_cmp(&longer(b)))
     .unwrap_or(words.end);
   vec![words.start..split, split..words.end]
 }
 
-/// Whether `words` fit one caption: within the word limit, and set in at
-/// most its lines with none wider than `max_width`. One word always fits.
+/// A word or two a line, in order, with each word set apart on a line of
+/// its own; two words too wide together take a line each.
+fn stacked(
+  words: Range<usize>,
+  max_width: f64,
+  widths: &Widths,
+  emphasis: Emphasis,
+) -> Vec<Range<usize>> {
+  let mut lines: Vec<Range<usize>> = Vec::new();
+  let pairs = |lines: &mut Vec<Range<usize>>, run: Range<usize>| {
+    let mut start = run.start;
+    while start < run.end {
+      let pair = start..(start + STACK_WORDS).min(run.end);
+      let line = if widths.of(&pair, emphasis) <= max_width {
+        pair
+      } else {
+        start..start + 1
+      };
+      start = line.end;
+      lines.push(line);
+    }
+  };
+  let mut run = words.start;
+  for index in words.clone() {
+    if widths.is_emphasized(emphasis, index) {
+      pairs(&mut lines, run..index);
+      lines.push(index..index + 1);
+      run = index + 1;
+    }
+  }
+  pairs(&mut lines, run..words.end);
+  lines
+}
+
+/// Whether `words` fit one caption: within the word limit, and set in its
+/// lines with none wider than `max_width`. One word always fits.
 fn fits(words: Range<usize>, style: &CaptionStyle, max_width: f64, widths: &Widths) -> bool {
   if words.len() <= 1 {
     return true;
   }
+  let emphasis = widths.emphasis(&words);
   words.len() <= style.max_words as usize
     && lines(words, style, max_width, widths)
       .iter()
-      .all(|line| widths.of(line) <= max_width)
+      .all(|line| widths.of(line, emphasis) <= max_width)
 }
 
 /// How strongly the gap before `words[index]` reads as an ending.

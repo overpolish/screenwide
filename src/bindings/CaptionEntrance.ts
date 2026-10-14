@@ -3,4 +3,4 @@
 /**
  * How a caption comes on.
  */
-export type CaptionEntrance = "none" | "pop" | "words";
+export type CaptionEntrance = "none" | "pop";

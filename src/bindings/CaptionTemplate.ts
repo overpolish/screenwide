@@ -3,4 +3,4 @@
 /**
  * A caption template.
  */
-export type CaptionTemplate = "box" | "clean" | "pop" | "highlight" | "reveal";
+export type CaptionTemplate = "box" | "clean" | "pop" | "highlight" | "karaoke" | "punch" | "editorial" | "supersize" | "stack" | "staircase";

@@ -1,0 +1,40 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { useRef } from "react";
+
+import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
+
+import { PopupPanelColorsContent } from "./store";
+import { useFittedPanel } from "./use-fitted-panel";
+import { reportPopupPanelPick } from "./use-popup-panel-picker";
+
+/**
+ * A colour grid in the panel window: each colour pressed, or settled on in
+ * the system Colours panel behind Custom, is reported to the window that
+ * opened it, and the panel stays open to try another.
+ */
+export function PopupPanelColors({
+  content,
+  id,
+}: {
+  content: PopupPanelColorsContent;
+  id: string;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  useFittedPanel(contentRef, id);
+  const pick = (color: string) => {
+    reportPopupPanelPick(id, color);
+  };
+
+  return (
+    <div className="w-full p-control-inset" ref={contentRef}>
+      <AnnotationColorGrid
+        onChange={pick}
+        onSettled={pick}
+        savedColors={content.savedColors}
+        value={content.value}
+      />
+    </div>
+  );
+}

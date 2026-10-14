@@ -13,6 +13,45 @@
     format("truetype");
 }
 
+/* The families the caption templates are set in, which the font list names
+   in their own type. A face is only fetched once something is set in it. */
+@font-face {
+  font-family: "Anton";
+  font-style: normal;
+  font-weight: 400;
+  src: url("../src-tauri/assets/Anton-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 100 1000;
+  src: url("../src-tauri/assets/DMSans-VariableFont_opsz,wght.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  src: url("../src-tauri/assets/InstrumentSerif-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  src: url("../src-tauri/assets/InstrumentSerif-Italic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  src: url("../src-tauri/assets/Montserrat-VariableFont_wght.ttf")
+    format("truetype");
+}
+
 @custom-variant dark (&:is(.dark *));
 /* The Windows skin. `main.tsx` stamps `data-platform` on the document and the
    Storybook toolbar toggles it. Token values swap in `@layer themes`; this
@@ -200,6 +239,9 @@
   /* Bezeled controls. macOS 26 keeps a rounded rectangle at the regular size;
      tuned by eye against a native push button. */
   --radius-control: 0.5rem;
+  /* A colour swatch, as the ruler's loupe draws its picked colour: an
+     icon-sized square with small corners, the same on both platforms. */
+  --radius-swatch: 0.25rem;
   /* The recording bar's 40px controls. macOS rounds a taller control more,
      up to the panel radius; Fluent keeps the control corner at any height. */
   --radius-capture: var(--radius-panel);

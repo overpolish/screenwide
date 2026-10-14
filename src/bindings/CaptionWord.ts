@@ -3,4 +3,8 @@
 /**
  * One word of a caption, timed on the edited video and in the source.
  */
-export type CaptionWord = { text: string, startMs: number, endMs: number, sourceStartMs: number, sourceEndMs: number, };
+export type CaptionWord = { text: string, startMs: number, endMs: number, sourceStartMs: number, sourceEndMs: number, 
+/**
+ * Whether it is set in the accent.
+ */
+emphasis: boolean, };

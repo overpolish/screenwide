@@ -148,6 +148,7 @@ fn cell_key(entry: &PreparedType, drawn: f64) -> Vec<u8> {
     key.extend_from_slice(entry.face.family_bytes());
     key.push(0xFE);
     key.extend_from_slice(&entry.face.weight.to_le_bytes());
+    key.push(u8::from(entry.face.italic));
     key.extend_from_slice(&entry.outline.to_bits().to_le_bytes());
   }
   if let Some(marks) = entry.marks {

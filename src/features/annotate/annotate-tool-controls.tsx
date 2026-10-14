@@ -10,8 +10,8 @@ import { AnnotationInkGroup } from "../../components/shared/annotation-style/ann
 import { AnnotationRadiusField } from "../../components/shared/annotation-style/annotation-radius-field";
 import { AnnotationStrokeGroup } from "../../components/shared/annotation-style/annotation-stroke-group";
 import { annotationSizeLabel } from "../../components/shared/annotation-style/annotation-text";
-import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
 import { annotationSizes } from "../../components/shared/annotation-style/widths";
+import { StepSlider } from "../../components/shared/step-slider/step-slider";
 
 import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
 
@@ -30,8 +30,8 @@ export function AnnotateToolControls({
   settings: AnnotateSettings;
 }) {
   const width = (
-    <AnnotationWidthSlider
-      label={annotationSizeLabel(
+    <StepSlider
+      aria-label={annotationSizeLabel(
         settings.defaultShape === "counter" ? "size" : "width",
       )}
       onChange={(size) => {
@@ -41,7 +41,7 @@ export function AnnotateToolControls({
             : { defaultWidth: size },
         );
       }}
-      presets={annotationSizes(settings.defaultShape)}
+      steps={annotationSizes(settings.defaultShape)}
       value={
         settings.defaultShape === "counter"
           ? settings.defaultCounterSize
