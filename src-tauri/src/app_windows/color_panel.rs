@@ -33,6 +33,7 @@ mod imp {
       context: *mut c_void,
     );
     fn screenwide_color_panel_close();
+    fn screenwide_color_panel_contains(x: f64, y: f64) -> bool;
   }
 
   /// The well that owns the panel right now: the window to tell, and the
@@ -105,6 +106,25 @@ mod imp {
     }
     unsafe { screenwide_color_panel_close() };
     Ok(())
+  }
+
+  pub fn contains(x: f64, y: f64) -> bool {
+    unsafe { screenwide_color_panel_contains(x, y) }
+  }
+}
+
+/// Whether a press at `x`, `y`, in global points, lands on the system
+/// Colours panel while it shows: a press there is picking a colour for the
+/// pop-up that opened it, which must stay up to hear the colours picked.
+pub(super) fn contains(x: f64, y: f64) -> bool {
+  #[cfg(target_os = "macos")]
+  {
+    imp::contains(x, y)
+  }
+  #[cfg(not(target_os = "macos"))]
+  {
+    let _ = (x, y);
+    false
   }
 }
 

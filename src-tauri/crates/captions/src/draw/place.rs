@@ -17,7 +17,7 @@ const EDGE_SHARE: f64 = 0.1;
 /// How far above its baseline a word's middle sits, in ems of its type:
 /// the middle of a line of the type the compositor sets a word in, which is
 /// what a piece's centre places.
-const MIDDLE_ABOVE_BASELINE: f64 = 0.36;
+pub(super) const MIDDLE_ABOVE_BASELINE: f64 = 0.36;
 /// How much further along each line of a staircase starts than the one
 /// above it, in ems of the caption's type.
 const STAIR_EMS: f64 = 1.5;

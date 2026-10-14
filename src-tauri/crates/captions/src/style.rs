@@ -11,8 +11,10 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::font::CaptionFont;
 use crate::layout::CaptionPosition;
 use crate::motion::CaptionMotion;
+use crate::shadow::CaptionShadow;
 use crate::size::CaptionSize;
 use crate::templates::CaptionTemplateId;
 
@@ -55,6 +57,12 @@ pub enum CaptionBackground {
   /// A pill behind the word being said, in the highlight colour, where the
   /// word being said is highlighted.
   Word,
+  /// A line under the word being said, in the highlight colour, sliding
+  /// from each word to the next, where the word being said is highlighted.
+  Underline,
+  /// A soft glow in the highlight colour around the word being said, fading
+  /// from each word to the next, where the word being said is highlighted.
+  Glow,
 }
 
 /// Whether a template sets a key word of each caption apart in the
@@ -77,44 +85,6 @@ pub enum CaptionAccent {
 pub enum CaptionFace {
   Main,
   Accent,
-}
-
-/// The face caption type is set in: a family installed on the system or
-/// carried by the app, or none for the app's own Inter, at a weight on the
-/// CSS scale of 100 to 900, upright or italic.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize, TS)]
-#[serde(default, rename_all = "camelCase")]
-#[ts(export)]
-pub struct CaptionFont {
-  #[serde(skip_serializing_if = "Option::is_none")]
-  #[ts(optional)]
-  pub family: Option<String>,
-  pub weight: u16,
-  /// Set in the family's italic, where it has one.
-  pub italic: bool,
-}
-
-impl Default for CaptionFont {
-  fn default() -> Self {
-    Self {
-      family: None,
-      weight: 600,
-      italic: false,
-    }
-  }
-}
-
-impl CaptionFont {
-  fn normalized(&self) -> Self {
-    Self {
-      family: self
-        .family
-        .clone()
-        .filter(|family| !family.trim().is_empty()),
-      weight: self.weight.clamp(MIN_WEIGHT, MAX_WEIGHT),
-      italic: self.italic,
-    }
-  }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
@@ -176,6 +146,8 @@ pub struct CaptionStyle {
   pub accent_size: CaptionSize,
   /// The accent's colour, as `#rrggbb` or `#rrggbbaa`.
   pub accent_color: String,
+  /// The shadow the words cast, or none.
+  pub shadow: Option<CaptionShadow>,
 }
 
 pub const MIN_WORDS: u32 = 1;
@@ -187,8 +159,6 @@ pub const MIN_SIZE_PERCENT: f64 = 25.0;
 pub const MAX_SIZE_PERCENT: f64 = 400.0;
 pub const MIN_ACCENT_SIZE_PERCENT: f64 = 50.0;
 pub const MAX_ACCENT_SIZE_PERCENT: f64 = 300.0;
-pub const MIN_WEIGHT: u16 = 100;
-pub const MAX_WEIGHT: u16 = 900;
 
 pub(crate) const WHITE: &str = "#ffffff";
 /// A warm yellow, which reads on white type and on any picture.
@@ -211,7 +181,7 @@ pub fn rgba(color: &str) -> Option<[f32; 4]> {
 }
 
 /// `value` within `min..=max`, or `fallback` where it is no number at all.
-fn clamped(value: f64, (min, max): (f64, f64), fallback: f64) -> f64 {
+pub(crate) fn clamped(value: f64, (min, max): (f64, f64), fallback: f64) -> f64 {
   if value.is_finite() {
     value.clamp(min, max)
   } else {
@@ -255,6 +225,7 @@ impl CaptionStyle {
       ),
       accent_color: color(&self.accent_color, WHITE),
       motion: self.motion.normalized(),
+      shadow: self.shadow.as_ref().map(CaptionShadow::normalized),
       ..self.clone()
     }
   }

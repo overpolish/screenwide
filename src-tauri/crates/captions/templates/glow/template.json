@@ -1,0 +1,34 @@
+{
+  "formatVersion": 4,
+  "id": "glow",
+  "name": "Glow",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Clean type, the word being said glowing in the highlight colour.",
+  "fonts": [
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
+  "style": {
+    "font": {
+      "weight": 700,
+      "italic": false
+    },
+    "maxWords": 4,
+    "lines": "one",
+    "highlightWords": true,
+    "background": "glow",
+    "outline": false
+  }
+}

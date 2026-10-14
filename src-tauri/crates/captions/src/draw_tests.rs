@@ -67,11 +67,12 @@ fn kinds(pieces: &[CaptionPiece]) -> Vec<(&str, CaptionPieceKind)> {
 }
 
 /// A word in `ink`, outlined in the dark the templates ship with where
-/// `outlined`.
+/// `outlined`, and casting no shadow.
 fn word_in(ink: &str, outlined: bool) -> CaptionPieceKind {
   CaptionPieceKind::Word {
     ink: ink.to_owned(),
     outline: outlined.then(|| "#000000ff".to_owned()),
+    shadow: None,
   }
 }
 
@@ -579,4 +580,67 @@ fn gives_each_piece_where_and_how_it_was_as_the_frames_exposure_began() {
   let paused = at(1_100.0, 0.0);
   assert_eq!(paused.previous_centre, paused.centre);
   assert_eq!(paused.scale[1], paused.scale[0]);
+}
+
+#[test]
+fn slides_the_line_under_the_word_said_to_the_next_on_its_line() {
+  let mut recording = styled("clean", true);
+  recording.style.background = CaptionBackground::Underline;
+  let line = |at_ms| {
+    pieces(&recording, at_ms)
+      .into_iter()
+      .find(|piece| matches!(piece.kind, CaptionPieceKind::Underline { .. }))
+      .unwrap()
+  };
+  let word_x = |at_ms, text: &str| {
+    pieces(&recording, at_ms)
+      .into_iter()
+      .find(|piece| piece.text == text && matches!(piece.kind, CaptionPieceKind::Word { .. }))
+      .unwrap()
+      .centre[0]
+  };
+  // Under "one" while it is said, the word keeping its own colour.
+  assert_eq!(line(1_200.0).centre[0], word_x(1_200.0, "one"));
+  assert_eq!(kinds(&pieces(&recording, 1_200.0))[1].1, white_word());
+  // On its way to "two" as that is said, and there once it has slid.
+  let sliding = line(1_450.0).centre[0];
+  assert!(word_x(1_450.0, "one") < sliding && sliding < word_x(1_450.0, "two"));
+  assert_eq!(line(1_700.0).centre[0], word_x(1_700.0, "two"));
+  // "three" is on the next line, so the line moves there at once.
+  let under_three = line(1_810.0);
+  assert_eq!(under_three.centre[0], word_x(1_810.0, "three"));
+  assert!(under_three.centre[1] > line(1_700.0).centre[1]);
+}
+
+#[test]
+fn passes_the_glow_from_the_word_before_to_the_one_said() {
+  let mut recording = styled("clean", true);
+  recording.style.background = CaptionBackground::Glow;
+  recording.style.highlight_color = "#5ee7ff".to_owned();
+  // How much of the highlight's alpha each word glows with, and how far.
+  let glows = |at_ms| {
+    pieces(&recording, at_ms)
+      .into_iter()
+      .map(|piece| match piece.kind {
+        CaptionPieceKind::Word { ink, shadow, .. } => {
+          let shadow = shadow.unwrap();
+          let alpha = u8::from_str_radix(&shadow.color[7..9], 16).unwrap();
+          (piece.text, ink, f64::from(alpha) / 255.0, shadow.softness)
+        }
+        _ => unreachable!("a glowing caption draws words alone"),
+      })
+      .collect::<Vec<_>>()
+  };
+  // 60 ms into "two": half in, "one" half out, "three" not at all, every
+  // word set alike and in its own colour.
+  let halfway = glows(1_460.0);
+  assert!((halfway[0].2 - 0.5).abs() < 0.01 && (halfway[1].2 - 0.5).abs() < 0.01);
+  assert_eq!(halfway[2].2, 0.0);
+  assert!(halfway.iter().all(|word| word.1 == "#ffffffff"));
+  assert!(halfway
+    .iter()
+    .all(|word| word.3 == halfway[0].3 && word.3 > 0.0));
+  // Then "two" alone.
+  let settled = glows(1_600.0);
+  assert_eq!([settled[0].2, settled[1].2], [0.0, 1.0]);
 }

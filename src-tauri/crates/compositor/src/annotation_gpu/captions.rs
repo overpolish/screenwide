@@ -10,6 +10,7 @@
 
 use super::arrows::PreviewGeometry;
 use super::caption_exposure::expose;
+use super::caption_shadow::cast;
 use super::{placed_arrows, PreparedArrows};
 use screenwide_annotations::flags::{BARE, CAPTION, SHADOW};
 use screenwide_annotations::reveal::AnnotationReveal;
@@ -68,7 +69,9 @@ pub fn caption_measure(faces: &CaptionFaces) -> impl FnMut(&str, CaptionFace, f6
 /// its width is set to the face's after.
 fn text_box(index: usize, piece: &CaptionPiece) -> Annotation {
   let color = match &piece.kind {
-    CaptionPieceKind::Backdrop { color, .. } | CaptionPieceKind::Pill { color } => color,
+    CaptionPieceKind::Backdrop { color, .. }
+    | CaptionPieceKind::Pill { color }
+    | CaptionPieceKind::Underline { color, .. } => color,
     CaptionPieceKind::Word { ink, .. } => ink,
   };
   let [width, height] = box_size(text_block(&piece.text, piece.size), piece.size);
@@ -203,12 +206,16 @@ pub fn caption_arrows(pieces: &[CaptionPiece], faces: &CaptionFaces) -> Prepared
     let face = faces.face(piece.face);
     entry.face = face.clone();
     match &piece.kind {
-      // A box or a pill draws no type, so the atlas sets none for it.
-      CaptionPieceKind::Backdrop { .. } | CaptionPieceKind::Pill { .. } => {
+      // A box, a pill or a line draws no type, so the atlas sets none for it.
+      CaptionPieceKind::Backdrop { .. }
+      | CaptionPieceKind::Pill { .. }
+      | CaptionPieceKind::Underline { .. } => {
         arrow.flags |= BARE;
         entry.text.clear();
       }
-      CaptionPieceKind::Word { outline, .. } => {
+      CaptionPieceKind::Word {
+        outline, shadow, ..
+      } => {
         arrow.flags |= CAPTION;
         // Set at the size it settles at, so a word growing in is the same
         // type every frame and the atlas rasterises it once; the shader
@@ -221,16 +228,25 @@ pub fn caption_arrows(pieces: &[CaptionPiece], faces: &CaptionFaces) -> Prepared
         if let Some([red, green, blue, _]) = outline.as_deref().and_then(rgba) {
           arrow.flags |= SHADOW;
           arrow.params = [red, green, blue];
+        }
+        // A shadow is the outline's shape, so the atlas sets one for a
+        // word that casts it, outlined or not.
+        if outline.is_some() || shadow.is_some() {
           entry.outline = OUTLINE * entry.size;
+        }
+        if let Some(shadow) = shadow {
+          cast(arrow, entry, shadow);
         }
       }
     }
     // A backdrop is sized by the block its words were laid out in, in
-    // their own faces; anything else by its text set in its face.
+    // their own faces, and a line under a word to its own size; anything
+    // else by its text set in its face.
     let backdrop = match piece.kind {
       CaptionPieceKind::Backdrop { block, .. } => {
         Some(box_size(block, piece.size).map(|side| side as f32))
       }
+      CaptionPieceKind::Underline { block, .. } => Some(block.map(|side| side as f32)),
       _ => None,
     };
     let ratio = face_ratio(piece, face);
@@ -267,27 +283,4 @@ pub fn caption_overlay(
   let mut pieces = track.pieces_at(frame, moment, &mut caption_measure(&faces));
   pieces.extend(track.upcoming_pieces(frame, moment.at_ms));
   caption_arrows(&pieces, &faces)
-}
-
-impl PreparedArrows {
-  /// Draws `above`, prepared in the same canvas pixels, over everything
-  /// these draw, the camera included. Only text boxes are taken: their
-  /// type follows in the side buffer, and they read no points.
-  pub fn draw_above(&mut self, above: PreparedArrows) {
-    let samples = self.samples.len() as u32;
-    let text = self.text.len() as u32;
-    self
-      .arrows
-      .extend(above.arrows.into_iter().map(|mut arrow| {
-        arrow.sample_first += samples;
-        arrow.data_offset += text;
-        arrow
-      }));
-    self.types.extend(above.types);
-    self.samples.extend(above.samples);
-    self.text.extend(above.text);
-    if self.pixel_scale <= 0.0 {
-      self.pixel_scale = above.pixel_scale;
-    }
-  }
 }

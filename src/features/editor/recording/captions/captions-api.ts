@@ -43,7 +43,7 @@ let fontFamilies: Promise<FontFamily[]> | null = null;
 
 /** Sent to every window when your templates change: one imported or
  * removed. From `src-tauri/src/editor/caption_template_files.rs`. */
-export const CAPTION_TEMPLATES_EVENT = "editor://caption-templates";
+const CAPTION_TEMPLATES_EVENT = "editor://caption-templates";
 
 /** Every caption template, the app's own first in the order the panel
  * offers them, then yours, each with what its manifest says of it. Kept

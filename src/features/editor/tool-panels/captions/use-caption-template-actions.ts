@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
+import { FEATURES } from "../../../../lib/feature-flags";
 import {
   PopupMenuAnchor,
   usePopupMenu,
@@ -27,9 +28,10 @@ const RESET_TO_ORIGINAL = "reset-to-original";
 /**
  * The chosen template's menu, in the app's own pop-up: import one someone
  * shared, export this one as a zip, remove it where it is one of yours, or
- * put it back to how it ships. The template travels with the menu, so a
- * pick reaches the one it opened on. An imported template is handed to
- * `onImported`, to be taken up.
+ * put it back to how it ships. The template files' actions show only where
+ * `FEATURES.captionTemplateFiles` is on. The template travels with the
+ * menu, so a pick reaches the one it opened on. An imported template is
+ * handed to `onImported`, to be taken up.
  */
 export function useCaptionTemplateActions({
   onImported,
@@ -65,7 +67,7 @@ export function useCaptionTemplateActions({
     width: MENU_WIDTH,
   });
   return (template: CaptionTemplateId, anchor: PopupMenuAnchor) => {
-    const items: PopupPanelItem[] = [
+    const files: PopupPanelItem[] = [
       {
         icon: "import",
         id: IMPORT,
@@ -85,6 +87,9 @@ export function useCaptionTemplateActions({
             },
           ]
         : []),
+    ];
+    const items: PopupPanelItem[] = [
+      ...(FEATURES.captionTemplateFiles ? files : []),
       {
         icon: "restore",
         id: RESET_TO_ORIGINAL,

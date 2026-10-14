@@ -195,6 +195,10 @@ editor-panels-captions-template-stack = Stack
 editor-panels-captions-template-staircase = Staircase
 editor-panels-captions-template-rise = Rise
 editor-panels-captions-template-stagger = Stagger
+editor-panels-captions-template-shadow = Shadow
+editor-panels-captions-template-offset = Offset
+editor-panels-captions-template-underline = Underline
+editor-panels-captions-template-glow = Glow
 # The few words each template's preview shows, said a couple at a time; short, so they fit a small tile.
 editor-panels-captions-sample = Captions that move with every word
 # The face caption type is set in, chosen from a list of the fonts installed on the computer and those the app carries.
@@ -235,6 +239,9 @@ editor-panels-captions-color-highlight = Highlight
 editor-panels-captions-color-accent = Accent
 editor-panels-captions-color-outline = Outline
 editor-panels-captions-color-background = Box
+editor-panels-captions-color-shadow = Shadow
+# The Style tab's row turning which way the words' shadow falls, where the template casts one.
+editor-panels-captions-shadow = Shadow
 # In each Captions tab: start new captions as these are now. On the Style tab, this template with this look; on the Words tab, these rules.
 editor-panels-captions-set-default = Set as default
 # In a caption template's menu: put the template back to how it ships, dropping any look set as its default.

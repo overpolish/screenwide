@@ -108,3 +108,26 @@ void screenwide_color_panel_show(const char *hex, ColorPanelChange onChange, Col
 void screenwide_color_panel_close(void) {
   [[NSColorPanel sharedColorPanel] orderOut:nil];
 }
+
+// Whether the point `x`, `y` is on the Colours panel while it shows, in the
+// global coordinates Core Graphics reports a press in: points down from the
+// top of the primary display, where AppKit counts up from its bottom. Asked
+// from the thread watching for presses, so the panel is read on the main
+// thread, as AppKit requires.
+bool screenwide_color_panel_contains(double x, double y) {
+  __block bool inside = false;
+  void (^check)(void) = ^{
+    if (![NSColorPanel sharedColorPanelExists]) return;
+    NSColorPanel *panel = [NSColorPanel sharedColorPanel];
+    NSScreen *primary = NSScreen.screens.firstObject;
+    if (!panel.visible || primary == nil) return;
+    NSPoint point = NSMakePoint(x, NSMaxY(primary.frame) - y);
+    inside = NSPointInRect(point, panel.frame);
+  };
+  if (NSThread.isMainThread) {
+    check();
+  } else {
+    dispatch_sync(dispatch_get_main_queue(), check);
+  }
+  return inside;
+}

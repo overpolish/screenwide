@@ -3,7 +3,8 @@
 
 //! The next caption's words, readied before it comes on.
 
-use super::{full_hex, showing, CaptionPiece, CaptionPieceKind, CaptionTrack};
+use super::glow::glow_spread;
+use super::{full_hex, showing, CaptionPiece, CaptionPieceKind, CaptionPieceShadow, CaptionTrack};
 use crate::style::{CaptionBackground, CaptionFace};
 use crate::{type_size_px, CaptionFrame};
 
@@ -35,11 +36,13 @@ impl CaptionTrack {
     let style = self.recording.style.normalized();
     let size = type_size_px(&style, frame);
     let outline = style.outline.then(|| full_hex(&style.outline_color));
-    // The word on a pill is set without its outline, so it is readied both
-    // ways.
-    let mut outlines = vec![outline.clone()];
-    if style.background == CaptionBackground::Word && outline.is_some() {
-      outlines.push(None);
+    let softness =
+      glow_spread(&style).or_else(|| style.shadow.as_ref().map(|shadow| shadow.softness));
+    // The word on a pill is set without its outline or shadow, so it is
+    // readied both ways.
+    let mut looks = vec![(outline.clone(), softness)];
+    if style.background == CaptionBackground::Word && (outline.is_some() || softness.is_some()) {
+      looks.push((None, None));
     }
     next
       .lines
@@ -52,10 +55,17 @@ impl CaptionTrack {
           CaptionFace::Main
         };
         let size = size * style.scale_of(face);
-        outlines.iter().map(move |outline| CaptionPiece {
+        // The cell the type is set in only depends on how soft its shadow
+        // is, so that is all a readied word carries of it.
+        looks.iter().map(move |(outline, softness)| CaptionPiece {
           kind: CaptionPieceKind::Word {
             ink: "#00000000".to_owned(),
             outline: outline.clone(),
+            shadow: softness.map(|softness| CaptionPieceShadow {
+              color: "#00000000".to_owned(),
+              offset: [0.0; 2],
+              softness: softness * size,
+            }),
           },
           text: word.text.clone(),
           face,

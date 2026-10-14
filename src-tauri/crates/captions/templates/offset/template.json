@@ -1,0 +1,47 @@
+{
+  "formatVersion": 4,
+  "id": "offset",
+  "name": "Offset",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Heavy capitals over their own outline set a step below.",
+  "fonts": [
+    {
+      "file": "fonts/Montserrat-VariableFont_wght.ttf",
+      "family": "Montserrat",
+      "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "license": "fonts/Montserrat-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
+  "style": {
+    "font": {
+      "family": "Montserrat",
+      "weight": 800,
+      "italic": false
+    },
+    "sizePercent": 120,
+    "allCaps": true,
+    "maxWords": 3,
+    "lines": "one",
+    "outline": false,
+    "shadow": {
+      "color": "#000000",
+      "angle": 180,
+      "distance": 0.1,
+      "softness": 0
+    }
+  }
+}

@@ -9,10 +9,11 @@ import { t } from "../../../../i18n/i18n";
 import { usePopupPanelPicker } from "../../../popup-panel/use-popup-panel-picker";
 
 import {
-  CAPTION_COLOR_KEYS,
+  captionColor,
   captionColorLabel,
   CaptionColorRole,
   offeredColors,
+  withCaptionColor,
 } from "./caption-templates";
 
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
@@ -95,21 +96,18 @@ export function CaptionColorRows({
           className="flex flex-wrap justify-end gap-control"
           role="group"
         >
-          {offeredColors(style).map((role) => {
-            const key = CAPTION_COLOR_KEYS[role];
-            return (
-              <CaptionColorWell
-                isDisabled={isDisabled}
-                key={role}
-                onChange={(color) => {
-                  onChange({ [key]: color });
-                }}
-                role={role}
-                savedColors={savedColors}
-                value={style[key]}
-              />
-            );
-          })}
+          {offeredColors(style).map((role) => (
+            <CaptionColorWell
+              isDisabled={isDisabled}
+              key={role}
+              onChange={(color) => {
+                onChange(withCaptionColor(style, role, color));
+              }}
+              role={role}
+              savedColors={savedColors}
+              value={captionColor(style, role)}
+            />
+          ))}
         </div>
       )}
     </ControlRow>

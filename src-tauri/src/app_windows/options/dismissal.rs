@@ -53,11 +53,16 @@ fn anchor_contains(app: &AppHandle, context: &StandaloneListboxContext, x: f64, 
 
 /// Answers a press made while a panel was open: each open, non-sticky panel
 /// the press landed outside of is put away, unless it landed on its trigger.
+/// A press on the system Colours panel puts nothing away: it is picking a
+/// colour for the panel that opened it, which hears the colours picked.
 pub(in crate::app_windows) fn dismiss_standalone_listbox_if_outside(
   app: &AppHandle,
   x: f64,
   y: f64,
 ) {
+  if super::super::color_panel::contains(x, y) {
+    return;
+  }
   let dismissible = dismissible_panels(&standalone_listbox_contexts());
   for panel in dismissible {
     let Some(context) = context_for(&panel) else {

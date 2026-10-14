@@ -6,6 +6,7 @@ import type { CaptionFont } from "./CaptionFont";
 import type { CaptionLines } from "./CaptionLines";
 import type { CaptionMotion } from "./CaptionMotion";
 import type { CaptionPosition } from "./CaptionPosition";
+import type { CaptionShadow } from "./CaptionShadow";
 import type { CaptionSize } from "./CaptionSize";
 import type { CaptionTemplateId } from "./CaptionTemplateId";
 
@@ -90,4 +91,8 @@ accentSize: CaptionSize,
 /**
  * The accent's colour, as `#rrggbb` or `#rrggbbaa`.
  */
-accentColor: string, };
+accentColor: string, 
+/**
+ * The shadow the words cast, or none.
+ */
+shadow: CaptionShadow | null, };

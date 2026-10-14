@@ -4,10 +4,12 @@
 //! The pieces one caption draws at a moment: on its way on, read, or on its
 //! way off once its time is over.
 
+use super::glow::{glow, glow_spread};
 use super::place::{self, Placed};
 use super::rolling::rolling_words;
 use super::shown::{Moving, Shown};
-use super::{full_hex, ink_on, CaptionMoment, CaptionPiece, CaptionPieceKind};
+use super::underline::underline;
+use super::{full_hex, ink_on, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionPieceShadow};
 use crate::motion::Mirror;
 use crate::style::{CaptionBackground, CaptionFace, CaptionStyle};
 use crate::{Caption, CaptionFrame, CaptionWord, Measure};
@@ -159,6 +161,22 @@ pub(super) fn pieces_of(
   let text_ink = full_hex(&style.text_color);
   let accent_ink = full_hex(&style.accent_color);
   let outline = style.outline.then(|| full_hex(&style.outline_color));
+  // In ems of each word's own type, so an accent casts a shadow as far as
+  // it is large; in a style that glows, every word casts its glow instead.
+  let said_from = said.and_then(|said| {
+    let word = words.drawn.iter().find(|drawn| drawn.index == said)?.word;
+    Some((said, word.start_ms))
+  });
+  let shadow_of = |index: usize, size: f64| {
+    if glow_spread(style).is_some() {
+      return glow(style, (index, size), said_from, at_ms);
+    }
+    style.shadow.as_ref().map(|shadow| CaptionPieceShadow {
+      color: full_hex(&shadow.color),
+      offset: shadow.offset().map(|ems| ems * size),
+      softness: shadow.softness * size,
+    })
+  };
   let mut pill = None;
   let mut words_drawn = Vec::new();
   for drawn in &words.drawn {
@@ -175,7 +193,14 @@ pub(super) fn pieces_of(
       exits: [caption_exit, (&motion.word_out, at_ms - drawn.leaves_ms)],
     }
     .shown(exposure_ms, mirror);
-    let is_marked = said == Some(drawn.index) && style.highlight_words;
+    // Under a line or in a glow, the word being said keeps its own colour:
+    // the highlight colour around it sets it apart.
+    let is_marked = said == Some(drawn.index)
+      && style.highlight_words
+      && !matches!(
+        style.background,
+        CaptionBackground::Underline | CaptionBackground::Glow
+      );
     let set = (placed.size, placed.face);
     let kind = if is_marked && style.background == CaptionBackground::Word {
       // The pill goes under every word, so a neighbour it reaches under
@@ -189,10 +214,12 @@ pub(super) fn pieces_of(
         set,
         shown,
       ));
-      // The pill sets the word apart, so it needs no outline to read.
+      // The pill sets the word apart, so it needs no outline or shadow to
+      // read.
       CaptionPieceKind::Word {
         ink: ink_on(&highlight),
         outline: None,
+        shadow: None,
       }
     } else {
       CaptionPieceKind::Word {
@@ -204,6 +231,7 @@ pub(super) fn pieces_of(
           text_ink.clone()
         },
         outline: outline.clone(),
+        shadow: shadow_of(drawn.index, placed.size),
       }
     };
     words_drawn.push(piece(
@@ -215,6 +243,31 @@ pub(super) fn pieces_of(
     ));
   }
   pieces.extend(pill);
+  let underlined =
+    said.filter(|_| style.highlight_words && style.background == CaptionBackground::Underline);
+  if let Some(((at, block), word)) = underlined.and_then(|said| {
+    let word = words.drawn.iter().find(|drawn| drawn.index == said)?.word;
+    Some((
+      underline(&words.drawn, said, at_ms, moment.opened_ms())?,
+      word,
+    ))
+  }) {
+    // It follows the caption off, and comes on with the word it is under.
+    let moving = Moving {
+      entrance: None,
+      exits: [caption_exit, unmoved],
+    };
+    pieces.push(piece(
+      CaptionPieceKind::Underline {
+        color: highlight.clone(),
+        block,
+      },
+      &word.text,
+      at,
+      (block[1], CaptionFace::Main),
+      moving.shown(exposure_ms, mirror),
+    ));
+  }
   pieces.extend(words_drawn);
   pieces
 }

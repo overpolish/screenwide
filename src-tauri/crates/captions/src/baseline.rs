@@ -7,12 +7,13 @@
 //! writes it out for anything reading the manifests outside Rust, and a test
 //! keeps the two alike.
 
+use crate::font::CaptionFont;
 use crate::layout::CaptionPosition;
 use crate::motion::CaptionMotion;
 use crate::size::CaptionSize;
 use crate::style::{
-  CaptionAccent, CaptionArrangement, CaptionBackground, CaptionFont, CaptionLines, CaptionStyle,
-  BLACK, SHADE, WHITE, YELLOW,
+  CaptionAccent, CaptionArrangement, CaptionBackground, CaptionLines, CaptionStyle, BLACK, SHADE,
+  WHITE, YELLOW,
 };
 use crate::templates::CaptionTemplateId;
 
@@ -48,6 +49,7 @@ impl Default for CaptionStyle {
       accent_size_percent: 120.0,
       accent_size: CaptionSize::Medium,
       accent_color: YELLOW.to_owned(),
+      shadow: None,
     }
   }
 }

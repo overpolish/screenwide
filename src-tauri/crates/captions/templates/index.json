@@ -4,15 +4,19 @@
   "templates": [
     "box",
     "clean",
-    "pop",
+    "editorial",
+    "glow",
     "highlight",
     "karaoke",
+    "offset",
+    "pop",
     "punch",
-    "editorial",
-    "supersize",
-    "stack",
-    "staircase",
     "rise",
-    "stagger"
+    "shadow",
+    "stack",
+    "stagger",
+    "staircase",
+    "supersize",
+    "underline"
   ]
 }

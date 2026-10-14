@@ -1,0 +1,29 @@
+{
+  "formatVersion": 4,
+  "id": "underline",
+  "name": "Underline",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Clean type over a line that slides from each word to the next as it is said.",
+  "fonts": [
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
+  "style": {
+    "maxWords": 4,
+    "lines": "one",
+    "highlightWords": true,
+    "background": "underline"
+  }
+}

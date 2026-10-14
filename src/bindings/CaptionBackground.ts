@@ -3,4 +3,4 @@
 /**
  * What sits behind a caption's type.
  */
-export type CaptionBackground = "none" | "box" | "word";
+export type CaptionBackground = "none" | "box" | "word" | "underline" | "glow";

@@ -155,6 +155,10 @@ fn cell_key(entry: &PreparedType, drawn: f64, fonts: u32) -> Vec<u8> {
     key.extend_from_slice(&entry.face.weight.to_le_bytes());
     key.push(u8::from(entry.face.italic));
     key.extend_from_slice(&entry.outline.to_bits().to_le_bytes());
+    if let Some(softness) = entry.shadow {
+      key.push(0xFE);
+      key.extend_from_slice(&softness.to_bits().to_le_bytes());
+    }
     key.extend_from_slice(&fonts.to_le_bytes());
   }
   if let Some(marks) = entry.marks {
@@ -168,15 +172,19 @@ fn cell_key(entry: &PreparedType, drawn: f64, fonts: u32) -> Vec<u8> {
 }
 
 /// How `entry`'s type is set at `size` atlas pixels: its face, and its
-/// outline grown from canvas pixels to atlas ones as the type is.
+/// outline and shadow grown from canvas pixels to atlas ones as the type is.
 fn look(entry: &PreparedType, size: f32) -> text_box::Look<'_> {
-  text_box::Look {
-    face: &entry.face,
-    outline: if entry.size > 0.0 {
-      f64::from(entry.outline * size / entry.size)
+  let atlas = |canvas: f32| {
+    if entry.size > 0.0 {
+      f64::from(canvas * size / entry.size)
     } else {
       0.0
-    },
+    }
+  };
+  text_box::Look {
+    face: &entry.face,
+    outline: atlas(entry.outline),
+    shadow: entry.shadow.map(atlas),
   }
 }
 

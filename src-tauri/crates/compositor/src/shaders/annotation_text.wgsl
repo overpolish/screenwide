@@ -140,9 +140,15 @@ fn annotation_text_bounds(box: PreviewTextBox, reach: f32, bounds: vec4<f32>) ->
 /// Where a text box and its pointer can reach. The exposure samples run
 /// steadily from last frame's reveal to this one's, so the first and last
 /// hold every one between: a pointer drawing back in trails past where its
-/// tip is now.
+/// tip is now. A caption's word reaches as far again as its shadow falls
+/// and spreads.
 fn annotation_text_reach(annotation: PreviewArrow, halo: f32, feather: f32) -> vec4<f32> {
-  let reach = halo + feather + 1.0;
+  var reach = halo + feather + 1.0;
+  if ((annotation.flags & annotation_text_casts) != 0u) {
+    let growth = max(annotation_caption_growth(annotation.geometry, annotation.geometry), 1.0);
+    let shadow = annotation_caption_shadow_of(annotation);
+    reach += (length(shadow.offset) + shadow.softness) * growth;
+  }
   var bounds = annotation_text_bounds(annotation_text_box(annotation.geometry), reach,
                                       annotation_no_bounds);
   if (annotation.sample_count > 0u) {
@@ -159,23 +165,57 @@ fn annotation_text_reach(annotation: PreviewArrow, halo: f32, feather: f32) -> v
 const annotation_text_outlined: u32 = 1u << 7u;
 const annotation_text_caption: u32 = 1u << 10u;
 const annotation_text_bare: u32 = 1u << 11u;
+const annotation_text_casts: u32 = 1u << 12u;
 
-/// A still caption word: its type alone in the annotation's colour, over an
-/// outline where it is outlined, in the colour its parameters carry, with no
-/// box drawn. The outline is set in the atlas beside the type and read with
-/// it, so both share one smooth edge. `solid` is how much of the box it is
-/// set in covers this pixel, which carries its colour's alpha.
-///
-/// A word's type is rasterised once, at the size it settles at, which its
-/// geometry keeps in `cx`; a word growing in is that type drawn larger or
-/// smaller, so growing never rasterises it again.
-fn annotation_caption_word(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
-                           canvas_point: vec2<f32>, box: PreviewTextBox, solid: f32,
-                           feather: f32, atlas: AnnotationTextAtlas) -> vec4<f32> {
+/// The shadow a caption's word casts, read out of the slots a text box
+/// leaves to its pointer, which a word has none of: how far it falls across
+/// and down and how far its edge spreads, in canvas pixels at the word's
+/// settled size, and its colour, packed as eight bits a channel.
+struct CaptionShadow {
+  offset: vec2<f32>,
+  softness: f32,
+  color: vec4<f32>,
+}
+
+fn annotation_caption_shadow_of(annotation: PreviewArrow) -> CaptionShadow {
+  var shadow: CaptionShadow;
+  shadow.offset = vec2<f32>(annotation.geometry.end_head_ax, annotation.geometry.end_head_ay);
+  shadow.softness = annotation.geometry.end_head_bx;
+  shadow.color = unpack4x8unorm(bitcast<u32>(annotation.geometry.end_head_by));
+  return shadow;
+}
+
+/// How many times its settled size, which its arrow keeps in `cx`, a word
+/// set as `geometry` is drawn.
+fn annotation_caption_growth(arrow: PreviewGeometry, geometry: PreviewGeometry) -> f32 {
+  return select(1.0, geometry.width / arrow.cx, arrow.cx > 0.0);
+}
+
+/// A caption word's type over this pixel as `box` sets it, `growth` times
+/// its settled size: its type in alpha, its outline in red, and in green the
+/// shadow it casts, its outline blurred in the atlas and read set off by
+/// `offset`, grown with the word.
+fn annotation_caption_texel(probe: vec2<f32>, box: PreviewTextBox, atlas: AnnotationTextAtlas,
+                            feather: f32, growth: f32, casts: bool,
+                            offset: vec2<f32>) -> vec4<f32> {
+  var texel = annotation_text_texel(probe, box, atlas, feather, growth);
+  texel.g = 0.0;
+  if (casts) {
+    texel.g = annotation_text_texel(probe - offset * growth, box, atlas, feather, growth).g;
+  }
+  return texel;
+}
+
+/// `texel`, a caption word's type, outline and shadow over a pixel, laid
+/// over `rgba_in`, each as solid as `solid` and the shadow as its colour
+/// says: the shadow under the outline under the type.
+fn annotation_caption_layers(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
+                             texel: vec4<f32>, solid: f32) -> vec4<f32> {
   var rgba = rgba_in;
-  let settled = annotation.geometry.cx;
-  let growth = select(1.0, annotation.geometry.width / settled, settled > 0.0);
-  let texel = annotation_text_texel(canvas_point, box, atlas, feather, growth);
+  if ((annotation.flags & annotation_text_casts) != 0u) {
+    let shadow = annotation_caption_shadow_of(annotation).color;
+    rgba = annotation_over(rgba, shadow.rgb, texel.g * shadow.a * solid);
+  }
   if ((annotation.flags & annotation_text_outlined) != 0u) {
     let outline = vec3<f32>(annotation.params[0], annotation.params[1], annotation.params[2]);
     rgba = annotation_over(rgba, outline, texel.r * solid * 0.85);
@@ -183,7 +223,26 @@ fn annotation_caption_word(rgba_in: vec4<f32>, annotation: PreviewArrow, color: 
   return annotation_over(rgba, color.rgb, texel.a * solid);
 }
 
-/// A moving caption word: its type and outline read at every exposure
+/// A still caption word: its type alone in the annotation's colour, over an
+/// outline where it is outlined, in the colour its parameters carry, and
+/// the shadow it casts, with no box drawn. The outline and the shadow are
+/// set in the atlas beside the type and read with it, so all share one
+/// smooth edge. `solid` is how solid the word is.
+///
+/// A word's type is rasterised once, at the size it settles at, which its
+/// geometry keeps in `cx`; a word growing in is that type drawn larger or
+/// smaller, so growing never rasterises it again.
+fn annotation_caption_word(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
+                           canvas_point: vec2<f32>, box: PreviewTextBox, solid: f32,
+                           feather: f32, atlas: AnnotationTextAtlas) -> vec4<f32> {
+  let growth = annotation_caption_growth(annotation.geometry, annotation.geometry);
+  let casts = (annotation.flags & annotation_text_casts) != 0u;
+  let offset = annotation_caption_shadow_of(annotation).offset;
+  let texel = annotation_caption_texel(canvas_point, box, atlas, feather, growth, casts, offset);
+  return annotation_caption_layers(rgba_in, annotation, color, texel, solid);
+}
+
+/// A moving caption word: its type, outline and shadow read at every exposure
 /// sample, where and as large as the word was then, each as solid as the
 /// word was then, and averaged, so the type itself smears along the way it
 /// came, as a moving annotation's shape does. The atlas places the type once,
@@ -191,24 +250,21 @@ fn annotation_caption_word(rgba_in: vec4<f32>, annotation: PreviewArrow, color: 
 fn annotation_caption_word_exposure(rgba_in: vec4<f32>, annotation: PreviewArrow,
                                     color: vec4<f32>, canvas_point: vec2<f32>, feather: f32,
                                     atlas: AnnotationTextAtlas) -> vec4<f32> {
-  let settled = annotation.geometry.cx;
   let current = annotation_text_box(annotation.geometry);
+  let casts = (annotation.flags & annotation_text_casts) != 0u;
+  let offset = annotation_caption_shadow_of(annotation).offset;
   var ink = vec4<f32>(0.0);
   for (var tap = 0u; tap < annotation.sample_count; tap++) {
     let sample = annotation_samples[annotation.sample_first + tap];
     var box = annotation_text_box(sample.geometry);
     box.text_origin = current.text_origin;
     box.text_size = current.text_size;
-    let growth = select(1.0, sample.geometry.width / settled, settled > 0.0);
-    ink += annotation_text_texel(canvas_point, box, atlas, feather, growth) * sample.opacity;
+    let growth = annotation_caption_growth(annotation.geometry, sample.geometry);
+    ink += annotation_caption_texel(canvas_point, box, atlas, feather, growth, casts, offset) *
+           sample.opacity;
   }
   ink /= f32(annotation.sample_count);
-  var rgba = rgba_in;
-  if ((annotation.flags & annotation_text_outlined) != 0u) {
-    let outline = vec3<f32>(annotation.params[0], annotation.params[1], annotation.params[2]);
-    rgba = annotation_over(rgba, outline, ink.r * color.a * 0.85);
-  }
-  return annotation_over(rgba, color.rgb, ink.a * color.a);
+  return annotation_caption_layers(rgba_in, annotation, color, ink, color.a);
 }
 
 /// One text box: its box and pointer in the annotation's own colour, and its
@@ -224,8 +280,15 @@ fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: ve
   let box = annotation_text_box(annotation.geometry);
   let distance = annotation_text_distance(canvas_point, box);
   var rgba = annotation_halo(rgba_in, color, distance, halo, feather);
-  if ((annotation.flags & annotation_text_caption) != 0u && annotation.sample_count > 0u) {
-    return annotation_caption_word_exposure(rgba, annotation, color, canvas_point, feather, atlas);
+  // A caption's word draws no box: its type, outline and shadow are its
+  // own, and the shadow falls outside the box it is set in.
+  if ((annotation.flags & annotation_text_caption) != 0u) {
+    if (annotation.sample_count > 0u) {
+      return annotation_caption_word_exposure(rgba, annotation, color, canvas_point, feather,
+                                              atlas);
+    }
+    return annotation_caption_word(rgba, annotation, color, canvas_point, box, color.a, feather,
+                                   atlas);
   }
   var coverage: f32;
   if (annotation.sample_count == 0u) {
@@ -237,10 +300,6 @@ fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: ve
     return rgba;
   }
   let alpha = coverage * color.a;
-  if ((annotation.flags & annotation_text_caption) != 0u) {
-    return annotation_caption_word(rgba, annotation, color, canvas_point, box, alpha, feather,
-                                   atlas);
-  }
   rgba = annotation_over(rgba, color.rgb, alpha);
   if ((annotation.flags & annotation_text_bare) != 0u) {
     return rgba;

@@ -3,6 +3,7 @@
 
 import { Ellipsis } from "lucide-react";
 import { useMemo, useRef } from "react";
+import { useCollator } from "react-aria";
 
 import { IconButton } from "../../../../components/base/button/icon-button";
 import { ListBoxItem } from "../../../../components/base/listbox-item/listbox-item";
@@ -63,15 +64,23 @@ export function CaptionTemplateRow({
   });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
-  const shown = useMemo(
-    () =>
-      templates.styles.map((template) =>
+  // Every template by its name as shown, the app's own and yours together,
+  // in the order the app's language sorts them.
+  const collator = useCollator({ sensitivity: "base" });
+  const shown = useMemo(() => {
+    const label = (template: CaptionStyle) =>
+      captionTemplateLabel(
+        template.template,
+        templates.names[template.template],
+      );
+    return templates.styles
+      .map((template) =>
         template.template === style.template
           ? style
           : withLayout(layout, template),
-      ),
-    [layout, style, templates.styles],
-  );
+      )
+      .sort((a, b) => collator.compare(label(a), label(b)));
+  }, [collator, layout, style, templates.names, templates.styles]);
   const picker = usePopupPanelPicker({
     closesOnPick: true,
     content: {

@@ -46,6 +46,14 @@ export const STORY_CAPTION_STYLES: CaptionStyle[] = index.templates.map(
   },
 );
 
+/** The style template `id` ships with, for a story or test that needs one
+ * template in particular. */
+export const storyCaptionStyle = (id: string): CaptionStyle => {
+  const style = STORY_CAPTION_STYLES.find((each) => each.template === id);
+  if (!style) throw new Error(`No bundled template "${id}"`);
+  return style;
+};
+
 export const STORY_CAPTION_TEMPLATES: CaptionTemplates = {
   defaultLayout: {},
   defaultSettings: DEFAULT_CAPTION_SETTINGS,

@@ -9,11 +9,13 @@
 
 mod baseline;
 mod draw;
+mod font;
 mod lay_out;
 mod layout;
 mod motion;
 mod segment;
 mod settings;
+mod shadow;
 mod size;
 mod style;
 mod subtitles;
@@ -31,8 +33,10 @@ use serde::Serialize;
 use ts_rs::TS;
 
 pub use draw::{
-  caption_fit, caption_pieces, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionTrack,
+  caption_fit, caption_pieces, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionPieceShadow,
+  CaptionTrack,
 };
+pub use font::{CaptionFont, MAX_WEIGHT, MIN_WEIGHT};
 pub use lay_out::sample_caption;
 pub use layout::{CaptionLayout, CaptionPosition};
 pub use motion::{
@@ -43,11 +47,12 @@ pub use settings::{
   CaptionBreak, CaptionBreakKind, CaptionEmphasisChoice, CaptionEmphasisKind, CaptionProfanity,
   CaptionSettings, CaptionWordChoice, CaptionWordKind, RecordingCaptions,
 };
+pub use shadow::CaptionShadow;
 pub use size::CaptionSize;
 pub use style::{
-  rgba, CaptionAccent, CaptionArrangement, CaptionBackground, CaptionFace, CaptionFont,
-  CaptionLines, CaptionStyle, MAX_ACCENT_SIZE_PERCENT, MAX_SIZE_PERCENT, MAX_WEIGHT, MAX_WORDS,
-  MIN_ACCENT_SIZE_PERCENT, MIN_SIZE_PERCENT, MIN_WEIGHT, MIN_WORDS,
+  rgba, CaptionAccent, CaptionArrangement, CaptionBackground, CaptionFace, CaptionLines,
+  CaptionStyle, MAX_ACCENT_SIZE_PERCENT, MAX_SIZE_PERCENT, MAX_WORDS, MIN_ACCENT_SIZE_PERCENT,
+  MIN_SIZE_PERCENT, MIN_WORDS,
 };
 pub use subtitles::{srt, subtitles, vtt, SubtitleFile};
 pub use templates::{

@@ -1,0 +1,31 @@
+{
+  "formatVersion": 4,
+  "id": "shadow",
+  "name": "Shadow",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Clean type over a soft shadow cast straight down.",
+  "fonts": [
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
+  "style": {
+    "shadow": {
+      "color": "#00000066",
+      "angle": 180,
+      "distance": 0.1,
+      "softness": 0.18
+    }
+  }
+}

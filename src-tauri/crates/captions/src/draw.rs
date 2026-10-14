@@ -13,9 +13,11 @@ use crate::style::{rgba, CaptionFace, CaptionStyle};
 use crate::{Caption, CaptionFrame, Measure, RecordingCaptions};
 
 mod caption;
+mod glow;
 mod place;
 mod rolling;
 mod shown;
+mod underline;
 mod upcoming;
 
 /// A line's height, in ems: the twin of `LINE_HEIGHT` in the annotations'
@@ -53,15 +55,29 @@ pub enum CaptionPieceKind {
   /// The box behind the lines, around a block of text `block` in size, with
   /// no type of its own.
   Backdrop { color: String, block: [f64; 2] },
-  /// One word's type in `ink`, with an outline in `outline` where it has
-  /// one.
+  /// One word's type in `ink`, with an outline in `outline` and a shadow
+  /// cast where it has them.
   Word {
     ink: String,
     outline: Option<String>,
+    shadow: Option<CaptionPieceShadow>,
   },
   /// A pill behind the word being said, a little wider than the word, with
   /// no type of its own.
   Pill { color: String },
+  /// A line under the word being said, `block` wide and thick, with no
+  /// type of its own.
+  Underline { color: String, block: [f64; 2] },
+}
+
+/// The shadow a word casts, in canvas pixels at the size the word is set:
+/// the shape its outline takes, set off `offset` across and down and its
+/// edge spread over `softness`, in `color`, written `#rrggbbaa`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CaptionPieceShadow {
+  pub color: String,
+  pub offset: [f64; 2],
+  pub softness: f64,
 }
 
 /// Type that reads on `color`: black on a light one, white on a dark one.

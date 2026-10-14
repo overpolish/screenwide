@@ -76,21 +76,79 @@ fn squared_distances(coverage: &[u8], (width, height): (usize, usize)) -> Vec<f6
   field
 }
 
+/// `channel`, a `cell` of one byte a pixel, blurred about as a Gaussian
+/// spread over `softness` pixels would: three passes of a box blur across
+/// and three down, each a third of the softness wide either side.
+fn blurred(channel: &[u8], (width, height): (usize, usize), softness: f64) -> Vec<u8> {
+  let radius = (softness / 3.0).round() as usize;
+  if radius == 0 {
+    return channel.to_vec();
+  }
+  let mut values: Vec<f64> = channel.iter().map(|&value| f64::from(value)).collect();
+  let span = (2 * radius + 1) as f64;
+  let mut line = Vec::new();
+  // One pass along every line `count` long, `stride` apart within it and
+  // `step` apart from the next line, `lines` of them.
+  let mut pass = |values: &mut Vec<f64>, count: usize, stride: usize, step: usize, lines: usize| {
+    for start in (0..lines).map(|which| which * step) {
+      line.clear();
+      line.extend((0..count).map(|at| values[start + at * stride]));
+      let at = |index: isize| {
+        usize::try_from(index)
+          .ok()
+          .and_then(|index| line.get(index))
+          .copied()
+          .unwrap_or(0.0)
+      };
+      let mut sum: f64 = (-(radius as isize)..=radius as isize).map(at).sum();
+      for index in 0..count {
+        values[start + index * stride] = sum / span;
+        let index = index as isize;
+        sum += at(index + radius as isize + 1) - at(index - radius as isize);
+      }
+    }
+  };
+  for _ in 0..3 {
+    pass(&mut values, width, 1, width, height);
+    pass(&mut values, height, width, 1, width);
+  }
+  values
+    .into_iter()
+    .map(|value| value.round().clamp(0.0, 255.0) as u8)
+    .collect()
+}
+
 /// `coverage`, a `cell` of type, as the atlas's BGRA pixels with its outline
 /// `width` atlas pixels wide: the type's coverage in the alpha channel, as
 /// every cell carries it, and the outline's, the type included, in the red.
-pub(super) fn outlined(coverage: &[u8], cell: (u32, u32), width: f64) -> Vec<u8> {
+/// Where the word casts a shadow, the outline blurred by its `shadow`
+/// softness is in the green, which the shader reads set off as the shadow.
+pub(super) fn outlined(
+  coverage: &[u8],
+  cell: (u32, u32),
+  width: f64,
+  shadow: Option<f64>,
+) -> Vec<u8> {
   let size = (cell.0 as usize, cell.1 as usize);
   let distances = squared_distances(coverage, size);
-  coverage
+  let outline: Vec<u8> = coverage
     .iter()
     .zip(distances)
-    .flat_map(|(&covered, squared)| {
+    .map(|(&covered, squared)| {
       // A pixel's centre is half a pixel past the edge of the covered one it
       // is nearest, so the outline's edge falls `width` past the type's.
       let reach = (width + 1.0 - squared.sqrt()).clamp(0.0, 1.0);
-      let outline = (reach * 255.0).round() as u8;
-      [255, 255, outline.max(covered), covered]
+      ((reach * 255.0).round() as u8).max(covered)
+    })
+    .collect();
+  let shadow = shadow.map(|softness| blurred(&outline, size, softness));
+  coverage
+    .iter()
+    .zip(&outline)
+    .enumerate()
+    .flat_map(|(index, (&covered, &outline))| {
+      let cast = shadow.as_ref().map_or(255, |shadow| shadow[index]);
+      [255, cast, outline, covered]
     })
     .collect()
 }
@@ -104,7 +162,7 @@ mod tests {
     // One covered pixel in the middle of a 21 by 21 cell.
     let mut coverage = vec![0; 21 * 21];
     coverage[10 * 21 + 10] = 255;
-    let pixels = outlined(&coverage, (21, 21), 4.0);
+    let pixels = outlined(&coverage, (21, 21), 4.0, None);
     let red = |x: usize, y: usize| pixels[(y * 21 + x) * 4 + 2];
     assert_eq!(red(10, 10), 255);
     assert_eq!(red(14, 10), 255);
@@ -113,5 +171,20 @@ mod tests {
     assert_eq!(red(14, 14), 0);
     // Between full and none at the edge, a pixel in.
     assert!((1..255).contains(&red(13, 13)), "{}", red(13, 13));
+  }
+
+  #[test]
+  fn casts_its_outline_blurred_beside_it_or_as_it_is_where_hard() {
+    let mut coverage = vec![0; 31 * 31];
+    coverage[15 * 31 + 15] = 255;
+    let green = |pixels: &[u8], x: usize, y: usize| pixels[(y * 31 + x) * 4 + 1];
+    let red = |pixels: &[u8], x: usize, y: usize| pixels[(y * 31 + x) * 4 + 2];
+    let hard = outlined(&coverage, (31, 31), 4.0, Some(0.0));
+    assert!((0..31).all(|x| green(&hard, x, 15) == red(&hard, x, 15)));
+    // Soft, it reaches past the outline and is fainter at its middle.
+    let soft = outlined(&coverage, (31, 31), 4.0, Some(9.0));
+    assert_eq!(red(&soft, 21, 15), 0);
+    assert!(green(&soft, 21, 15) > 0);
+    assert!(green(&soft, 15, 15) < 255);
   }
 }

@@ -47,6 +47,7 @@
     },
     "accentSizePercent": 120,
     "accentSize": "medium",
-    "accentColor": "#ffd60a"
+    "accentColor": "#ffd60a",
+    "shadow": null
   }
 }

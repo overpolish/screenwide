@@ -147,6 +147,10 @@ pub struct PreparedType {
   /// How wide an outline is drawn round the type, in canvas pixels, which
   /// the atlas sets beside it; zero for none.
   pub(crate) outline: f32,
+  /// How far the edge of the shadow a caption's word casts spreads, in
+  /// canvas pixels, which the atlas blurs its outline by beside it; none
+  /// for a word that casts none.
+  pub(crate) shadow: Option<f32>,
 }
 
 /// One image a composition draws: its place in the list, its picture's
@@ -191,6 +195,29 @@ pub struct PreparedArrows {
   /// standard deviation in canvas pixels and how far it has arrived, both
   /// zero where no spotlight blurs.
   pub(crate) spotlight_blur: [f32; 2],
+}
+
+impl PreparedArrows {
+  /// Draws `above`, prepared in the same canvas pixels, over everything
+  /// these draw, the camera included. Only text boxes are taken: their
+  /// type follows in the side buffer, and they read no points.
+  pub fn draw_above(&mut self, above: PreparedArrows) {
+    let samples = self.samples.len() as u32;
+    let text = self.text.len() as u32;
+    self
+      .arrows
+      .extend(above.arrows.into_iter().map(|mut arrow| {
+        arrow.sample_first += samples;
+        arrow.data_offset += text;
+        arrow
+      }));
+    self.types.extend(above.types);
+    self.samples.extend(above.samples);
+    self.text.extend(above.text);
+    if self.pixel_scale <= 0.0 {
+      self.pixel_scale = above.pixel_scale;
+    }
+  }
 }
 
 /// A CPU-written storage buffer that grows to fit the list it is handed. A

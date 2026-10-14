@@ -3,12 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { STORY_CAPTION_STYLES } from "../../tool-panels/captions/caption-template-fixtures";
+import { storyCaptionStyle } from "../../tool-panels/captions/caption-template-fixtures";
 
 import { DEFAULT_CAPTION_SETTINGS } from "./recording-captions";
 import { captionDefaultsSettings } from "./use-caption-templates";
 
-const [box, , pop] = STORY_CAPTION_STYLES;
+const [box, pop] = [storyCaptionStyle("box"), storyCaptionStyle("pop")];
 
 describe("captionDefaultsSettings", () => {
   it("sets a template, looking as it does now, as the default", () => {

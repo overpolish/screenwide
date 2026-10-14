@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { STORY_CAPTION_STYLES } from "../../tool-panels/captions/caption-template-fixtures";
+import { storyCaptionStyle } from "../../tool-panels/captions/caption-template-fixtures";
 
 import { withLayout } from "./caption-layout";
 import {
@@ -15,7 +15,7 @@ import {
 
 import type { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 
-const [box, , pop] = STORY_CAPTION_STYLES;
+const [box, pop] = [storyCaptionStyle("box"), storyCaptionStyle("pop")];
 const keptForNew = { maxWords: 5 };
 const defaults: CaptionDefaults = {
   layout: keptForNew,

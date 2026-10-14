@@ -20,7 +20,8 @@
 //! `entrance` named the same presets, and is read as it. Format 3 added the
 //! template's own name, which it needs, and its author, version and a line
 //! describing it, which it may give, and the fonts it brings. Format 4 added
-//! the motion's exits, `captionOut` and `wordOut`, and `visibleWords`.
+//! the motion's exits, `captionOut` and `wordOut`, `visibleWords`, `shadow`,
+//! and the `underline` and `glow` backgrounds.
 
 use std::fmt;
 
@@ -29,7 +30,7 @@ use serde_json::{Map, Value};
 
 use super::fonts::TemplateFont;
 use super::{CaptionTemplate, CaptionTemplateId, CaptionTemplateInfo, CaptionTemplateSource};
-use crate::style::CaptionStyle;
+use crate::style::{CaptionBackground, CaptionStyle};
 
 /// The newest manifest format this app reads; every one since the first is
 /// read too.
@@ -187,11 +188,8 @@ pub fn parse_manifest(
   }
   // An older format could not say these, so one that does was not written
   // for it.
-  if version < 4 && (style.motion.has_exit() || style.rolling_words().is_some()) {
-    return Err(ManifestError(
-      "its \"visibleWords\" and its motion's \"captionOut\" and \"wordOut\" are format 4 options"
-        .to_owned(),
-    ));
+  if let Some(option) = format_4_option(&style).filter(|_| version < 4) {
+    return Err(ManifestError(format!("{option} is a format 4 option")));
   }
   Ok(CaptionTemplate {
     id: CaptionTemplateId(manifest.id),
@@ -200,4 +198,22 @@ pub fn parse_manifest(
     fonts: manifest.fonts,
     style,
   })
+}
+
+/// The first option `style` sets that format 4 added, as a manifest names
+/// it.
+fn format_4_option(style: &CaptionStyle) -> Option<&'static str> {
+  if style.motion.has_exit() {
+    Some("the motion's \"captionOut\" or \"wordOut\"")
+  } else if style.rolling_words().is_some() {
+    Some("\"visibleWords\"")
+  } else if style.shadow.is_some() {
+    Some("\"shadow\"")
+  } else if style.background == CaptionBackground::Underline {
+    Some("the \"underline\" background")
+  } else if style.background == CaptionBackground::Glow {
+    Some("the \"glow\" background")
+  } else {
+    None
+  }
 }

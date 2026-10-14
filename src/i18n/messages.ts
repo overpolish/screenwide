@@ -282,6 +282,7 @@ export type Messages = {
   "editor-panels-captions-color-background": null;
   "editor-panels-captions-color-highlight": null;
   "editor-panels-captions-color-outline": null;
+  "editor-panels-captions-color-shadow": null;
   "editor-panels-captions-color-text": null;
   "editor-panels-captions-description": null;
   "editor-panels-captions-effect-highlight": null;
@@ -324,6 +325,7 @@ export type Messages = {
   "editor-panels-captions-reveal-words": null;
   "editor-panels-captions-sample": null;
   "editor-panels-captions-set-default": null;
+  "editor-panels-captions-shadow": null;
   "editor-panels-captions-show": null;
   "editor-panels-captions-show-word": null;
   "editor-panels-captions-split": null;
@@ -336,18 +338,22 @@ export type Messages = {
   "editor-panels-captions-template-clean": null;
   "editor-panels-captions-template-editorial": null;
   "editor-panels-captions-template-export": null;
+  "editor-panels-captions-template-glow": null;
   "editor-panels-captions-template-highlight": null;
   "editor-panels-captions-template-import": null;
   "editor-panels-captions-template-karaoke": null;
+  "editor-panels-captions-template-offset": null;
   "editor-panels-captions-template-picker": null;
   "editor-panels-captions-template-pop": null;
   "editor-panels-captions-template-punch": null;
   "editor-panels-captions-template-remove": null;
   "editor-panels-captions-template-rise": null;
+  "editor-panels-captions-template-shadow": null;
   "editor-panels-captions-template-stack": null;
   "editor-panels-captions-template-stagger": null;
   "editor-panels-captions-template-staircase": null;
   "editor-panels-captions-template-supersize": null;
+  "editor-panels-captions-template-underline": null;
   "editor-panels-captions-text": null;
   "editor-panels-captions-two-lines": null;
   "editor-panels-captions-weight": null;

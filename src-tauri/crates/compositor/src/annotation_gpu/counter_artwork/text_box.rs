@@ -62,17 +62,19 @@ fn block<'a>(face: &TypeFace, text: &'a str, size: f32) -> Result<Block<'a>, Str
 /// does, and the cell would cut what reaches out. Inter stays inside both.
 const FACE_ROOM: f64 = 0.25;
 
-/// How a box's type is set beyond its text: its face, and the outline drawn
-/// around it, as wide as `outline` atlas pixels, or none.
+/// How a box's type is set beyond its text: its face, the outline drawn
+/// around it, as wide as `outline` atlas pixels, or none, and the shadow a
+/// caption's word casts, its edge spread over `shadow` atlas pixels.
 #[derive(Clone, Copy)]
 pub(super) struct Look<'a> {
   pub(super) face: &'a TypeFace,
   pub(super) outline: f64,
+  pub(super) shadow: Option<f64>,
 }
 
 /// The room `look` is given on every side at `size`, in atlas pixels: its
-/// outline's width and a pixel for its edge, and more for a face of the
-/// system's.
+/// outline's width and a pixel for its edge, and its shadow's softness
+/// beyond that, and more for a face of the system's.
 fn room(look: Look, size: f32) -> f64 {
   let face = if *look.face == TypeFace::ANNOTATION {
     0.0
@@ -80,7 +82,7 @@ fn room(look: Look, size: f32) -> f64 {
     f64::from(size) * FACE_ROOM
   };
   let outline = if look.outline > 0.0 {
-    look.outline + 1.0
+    look.outline + 1.0 + look.shadow.unwrap_or(0.0)
   } else {
     0.0
   };
@@ -217,7 +219,7 @@ pub(super) fn draw(
     );
   }
   Ok(if look.outline > 0.0 {
-    outlined(&coverage, cell, look.outline)
+    outlined(&coverage, cell, look.outline, look.shadow)
   } else {
     tinted(&coverage)
   })

@@ -13,8 +13,8 @@ import {
 
 import { rememberCaptionPanelTab } from "./caption-panel-tab";
 import {
-  STORY_CAPTION_STYLES,
   STORY_CAPTION_TEMPLATES,
+  storyCaptionStyle,
 } from "./caption-template-fixtures";
 import { withBreak, withChoice } from "./caption-word-choices";
 
@@ -47,7 +47,7 @@ const captions = (
 ): RecordingCaptions => ({
   enabled: true,
   settings: DEFAULT_CAPTION_SETTINGS,
-  style: STORY_CAPTION_STYLES[0],
+  style: storyCaptionStyle("box"),
   ...change,
 });
 
@@ -98,7 +98,7 @@ export const PopRestyled: Story = {
     seed(
       captions({
         style: {
-          ...STORY_CAPTION_STYLES[2],
+          ...storyCaptionStyle("pop"),
           font: { family: "Georgia", italic: false, weight: 700 },
           highlightWords: true,
           textColor: "#ff5a5a",
@@ -113,7 +113,7 @@ export const PopRestyled: Story = {
  * set apart in a serif italic. */
 export const KeyWords: Story = {
   beforeEach: () => {
-    seed(captions({ style: STORY_CAPTION_STYLES[6] }));
+    seed(captions({ style: storyCaptionStyle("editorial") }));
   },
 };
 
@@ -121,7 +121,16 @@ export const KeyWords: Story = {
  * on a line of its own in an accent font, size and colour. */
 export const StackAccent: Story = {
   beforeEach: () => {
-    seed(captions({ style: STORY_CAPTION_STYLES[8] }));
+    seed(captions({ style: storyCaptionStyle("stack") }));
+    rememberCaptionPanelTab("style");
+  },
+};
+
+/** The Style tab for the Shadow template: which way its words' shadow
+ * falls, and the shadow's colour beside the type's. */
+export const ShadowAngle: Story = {
+  beforeEach: () => {
+    seed(captions({ style: storyCaptionStyle("shadow") }));
     rememberCaptionPanelTab("style");
   },
 };

@@ -10,6 +10,8 @@
 mod arrows;
 /// A caption piece blurred over the frame's exposure.
 mod caption_exposure;
+/// The shadow a caption's word casts, handed to the shader.
+mod caption_shadow;
 /// The captions showing in a frame, drawn as text boxes.
 mod captions;
 mod counter_artwork;
