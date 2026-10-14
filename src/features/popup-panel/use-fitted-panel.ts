@@ -23,10 +23,13 @@ const maximumPanelHeight = async () => {
  * keeps it sized as that content changes. The window opened unseen at a
  * guessed height: the fit is what sizes it and lets it be seen, in that
  * order. `content` names what is shown, so a new one is measured afresh.
+ * `maximumHeight` caps a panel that scrolls its content short of the
+ * screen's height.
  */
 export function useFittedPanel(
   contentRef: RefObject<HTMLElement | null>,
   content: unknown,
+  maximumHeight?: number,
 ) {
   useLayoutEffect(() => {
     // A story has no panel window to size.
@@ -37,12 +40,15 @@ export function useFittedPanel(
     let cancelled = false;
 
     const resize = async () => {
-      const maximumHeight = await maximumPanelHeight();
+      const screenHeight = await maximumPanelHeight();
       if (cancelled) return;
 
       const measured = panel.getBoundingClientRect().height;
-      const height =
-        maximumHeight === null ? measured : Math.min(measured, maximumHeight);
+      const height = Math.min(
+        measured,
+        screenHeight ?? Infinity,
+        maximumHeight ?? Infinity,
+      );
       if (height <= 0) return;
       await fitPopupPanel(height, label);
     };
@@ -58,5 +64,5 @@ export function useFittedPanel(
       cancelled = true;
       observer.disconnect();
     };
-  }, [content, contentRef]);
+  }, [content, contentRef, maximumHeight]);
 }

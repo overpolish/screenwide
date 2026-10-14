@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use super::{
   bundled, bundled_templates, caption_templates, load_user_templates, parse_manifest,
-  CaptionTemplateId, CaptionTemplateSource, FORMAT_VERSION,
+  CaptionPreviewBackdrop, CaptionTemplateId, CaptionTemplateSource, FORMAT_VERSION,
 };
 use crate::style::CaptionStyle;
 
@@ -124,6 +124,16 @@ fn a_manifest_is_turned_away_for_what_a_style_cannot_hold() {
   assert!(parse_manifest(&manifest(r#""style":{"maxWords":4}"#), USER).is_ok());
   let exit = r#""style":{"motion":{"captionOut":[{"property":"opacity","keyframes":[{"atMs":0,"value":1},{"atMs":200,"value":0}]}]}}"#;
   assert!(parse_manifest(&manifest(exit), USER).is_ok());
+  let backdrop = |rest: &str| {
+    parse_manifest(&manifest(&format!("{rest}\"style\":{{}}")), USER)
+      .unwrap()
+      .preview_backdrop
+  };
+  assert_eq!(backdrop(""), CaptionPreviewBackdrop::Light);
+  assert_eq!(
+    backdrop(r#""previewBackdrop":"dark","#),
+    CaptionPreviewBackdrop::Dark
+  );
   let long = "x".repeat(41);
   for wrong in [
     format!(
@@ -145,6 +155,9 @@ fn a_manifest_is_turned_away_for_what_a_style_cannot_hold() {
     manifest(exit).replace(&format!(":{FORMAT_VERSION},"), ":3,"),
     manifest(r#""style":{"visibleWords":3}"#).replace(&format!(":{FORMAT_VERSION},"), ":3,"),
     manifest(r#""style":{"visibleWords":9}"#),
+    manifest(r#""previewBackdrop":"grey","style":{}"#),
+    manifest(r#""previewBackdrop":"dark","style":{}"#)
+      .replace(&format!(":{FORMAT_VERSION},"), ":3,"),
   ] {
     assert!(parse_manifest(&wrong, USER).is_err(), "{wrong}");
   }

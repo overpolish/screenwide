@@ -54,6 +54,17 @@ impl CaptionTemplateId {
       .map(|template| template.style.clone())
       .unwrap_or_default()
   }
+
+  /// What the template's tiles preview it over: light where there is no
+  /// such template.
+  pub fn preview_backdrop(&self) -> CaptionPreviewBackdrop {
+    caption_templates()
+      .iter()
+      .find(|template| template.id == *self)
+      .map_or_else(CaptionPreviewBackdrop::default, |template| {
+        template.preview_backdrop
+      })
+  }
 }
 
 impl From<&str> for CaptionTemplateId {
@@ -108,6 +119,16 @@ pub enum CaptionTemplateSource {
   User,
 }
 
+/// The picture a template's tiles preview its captions over: whichever its
+/// captions and their effects read best on, as its manifest asks.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CaptionPreviewBackdrop {
+  #[default]
+  Light,
+  Dark,
+}
+
 /// A template: its id, what its manifest says of it, where it came from,
 /// the fonts it brings, and the style it ships with.
 #[derive(Clone, Debug, PartialEq, Serialize, TS)]
@@ -122,6 +143,10 @@ pub struct CaptionTemplate {
   #[serde(skip)]
   #[ts(skip)]
   pub fonts: Vec<TemplateFont>,
+  /// Only the previews are drawn over it, and they are drawn natively.
+  #[serde(skip)]
+  #[ts(skip)]
+  pub preview_backdrop: CaptionPreviewBackdrop,
   pub style: CaptionStyle,
 }
 

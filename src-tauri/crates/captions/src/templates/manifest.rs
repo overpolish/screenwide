@@ -7,7 +7,7 @@
 //! ```json
 //! { "formatVersion": 4, "id": "supersize", "name": "Supersize",
 //!   "author": "Screenwide", "version": "1.0.0", "description": "…",
-//!   "aliases": [], "style": { … } }
+//!   "previewBackdrop": "dark", "aliases": [], "style": { … } }
 //! ```
 //!
 //! `style` holds the options the template sets apart from
@@ -21,7 +21,8 @@
 //! template's own name, which it needs, and its author, version and a line
 //! describing it, which it may give, and the fonts it brings. Format 4 added
 //! the motion's exits, `captionOut` and `wordOut`, `visibleWords`, `shadow`,
-//! and the `underline` and `glow` backgrounds.
+//! the `underline` and `glow` backgrounds, and `previewBackdrop`: `light`,
+//! the default, or `dark`, whichever the template's tiles read best over.
 
 use std::fmt;
 
@@ -29,7 +30,10 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use super::fonts::TemplateFont;
-use super::{CaptionTemplate, CaptionTemplateId, CaptionTemplateInfo, CaptionTemplateSource};
+use super::{
+  CaptionPreviewBackdrop, CaptionTemplate, CaptionTemplateId, CaptionTemplateInfo,
+  CaptionTemplateSource,
+};
 use crate::style::{CaptionBackground, CaptionStyle};
 
 /// The newest manifest format this app reads; every one since the first is
@@ -64,6 +68,8 @@ struct Manifest {
   author: Option<String>,
   version: Option<String>,
   description: Option<String>,
+  #[serde(rename = "previewBackdrop")]
+  preview_backdrop: Option<CaptionPreviewBackdrop>,
   #[serde(default)]
   fonts: Vec<TemplateFont>,
   style: Map<String, Value>,
@@ -191,11 +197,17 @@ pub fn parse_manifest(
   if let Some(option) = format_4_option(&style).filter(|_| version < 4) {
     return Err(ManifestError(format!("{option} is a format 4 option")));
   }
+  if manifest.preview_backdrop.is_some() && version < 4 {
+    return Err(ManifestError(
+      "\"previewBackdrop\" is a format 4 option".to_owned(),
+    ));
+  }
   Ok(CaptionTemplate {
     id: CaptionTemplateId(manifest.id),
     info,
     source,
     fonts: manifest.fonts,
+    preview_backdrop: manifest.preview_backdrop.unwrap_or_default(),
     style,
   })
 }

@@ -57,9 +57,9 @@ pub use style::{
 pub use subtitles::{srt, subtitles, vtt, SubtitleFile};
 pub use templates::{
   bundled_templates, caption_templates, load_user_templates, parse_manifest, remove_user_template,
-  template_font_files, user_template_fonts, CaptionTemplate, CaptionTemplateId,
-  CaptionTemplateInfo, CaptionTemplateSource, ManifestError, TemplateFont, TemplatePackage,
-  FORMAT_VERSION, MANIFEST_FILE,
+  template_font_files, user_template_fonts, CaptionPreviewBackdrop, CaptionTemplate,
+  CaptionTemplateId, CaptionTemplateInfo, CaptionTemplateSource, ManifestError, TemplateFont,
+  TemplatePackage, FORMAT_VERSION, MANIFEST_FILE,
 };
 pub use words::{Correction, HeardWord};
 

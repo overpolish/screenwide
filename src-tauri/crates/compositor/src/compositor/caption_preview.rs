@@ -7,7 +7,8 @@
 
 use screenwide_captions::{
   caption_fit, sample_caption, Caption, CaptionArrangement, CaptionFrame, CaptionMoment,
-  CaptionStyle, CaptionTrack, CaptionWord, Measure, RecordingCaptions, MIN_SIZE_PERCENT,
+  CaptionPreviewBackdrop, CaptionStyle, CaptionTrack, CaptionWord, Measure, RecordingCaptions,
+  MIN_SIZE_PERCENT,
 };
 use screenwide_imaging::CapturedImage;
 use screenwide_output::{MeshGradientPoint, NormalizedSourceRect, ScreenshotOutputSettings};
@@ -84,14 +85,20 @@ fn sample_captions(
   captions
 }
 
-/// A dark picture for the captions to read over, lighter at the top, as a
-/// frame of video behind them would be.
-fn backdrop(width: u32, height: u32) -> CapturedImage {
+/// A picture for the captions to read over, lighter at the top, as a frame
+/// of video behind them would be: light, or dark where the template reads
+/// best over that.
+fn backdrop(width: u32, height: u32, kind: CaptionPreviewBackdrop) -> CapturedImage {
+  // Each channel's value at the top and at the bottom.
+  let [red, green, blue] = match kind {
+    CaptionPreviewBackdrop::Light => [(244.0, 217.0), (245.0, 220.0), (248.0, 227.0)],
+    CaptionPreviewBackdrop::Dark => [(64.0, 24.0), (70.0, 26.0), (92.0, 34.0)],
+  };
   let mut rgba = Vec::with_capacity((width * height * 4) as usize);
   for y in 0..height {
     let share = f64::from(y) / f64::from(height.max(1));
-    let shade = |top: f64, bottom: f64| (top + (bottom - top) * share).round() as u8;
-    let pixel = [shade(64.0, 24.0), shade(70.0, 26.0), shade(92.0, 34.0), 255];
+    let shade = |(top, bottom): (f64, f64)| (top + (bottom - top) * share).round() as u8;
+    let pixel = [shade(red), shade(green), shade(blue), 255];
     for _ in 0..width {
       rgba.extend_from_slice(&pixel);
     }
@@ -177,13 +184,14 @@ impl CaptionPreviewer {
     })
   }
 
-  /// `style`'s preview of the sample `words`: one RGBA frame after
-  /// another, as `preview` asks, through one whole run of the sample.
+  /// `style`'s preview of the sample `words` over `backdrop`: one RGBA frame
+  /// after another, as `preview` asks, through one whole run of the sample.
   pub fn frames(
     &self,
     style: &CaptionStyle,
     words: &[&str],
     preview: &CaptionPreview,
+    backdrop: CaptionPreviewBackdrop,
   ) -> Result<Vec<Vec<u8>>, String> {
     let (gpu, compositor) = (self.gpu, &self.compositor);
     let (width, height) = (preview.width.max(1), preview.height.max(1));
@@ -212,7 +220,7 @@ impl CaptionPreviewer {
         ..Default::default()
       },
     };
-    let image = backdrop(width, height);
+    let image = self::backdrop(width, height, backdrop);
     let settings = plain_settings(width, height);
     let source = compositor.screenshot_source(&image)?;
     let target = gpu.device.create_texture(&wgpu::TextureDescriptor {

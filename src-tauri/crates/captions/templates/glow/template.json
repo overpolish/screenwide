@@ -5,6 +5,7 @@
   "author": "Screenwide",
   "version": "1.0.0",
   "description": "Clean type, the word being said glowing in the highlight colour.",
+  "previewBackdrop": "dark",
   "fonts": [
     {
       "file": "fonts/InstrumentSerif-Regular.ttf",

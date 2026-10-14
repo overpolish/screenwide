@@ -18,6 +18,7 @@ import { usePopupPanelPicker } from "../../../popup-panel/use-popup-panel-picker
 import { withLayout } from "../../recording/captions/caption-layout";
 
 import { CAPTION_FIELD_WIDTH } from "./caption-field-widths";
+import { CAPTION_TEMPLATE_PANEL_SIZE } from "./caption-template-panel-size";
 import { captionTemplateLabel } from "./caption-templates";
 import { useCaptionTemplateActions } from "./use-caption-template-actions";
 
@@ -27,8 +28,6 @@ import type { CaptionTemplateId } from "../../../../bindings/CaptionTemplateId";
 import type { CaptionTemplates } from "../../recording/captions/use-caption-templates";
 
 const PICKER_ID = "caption-templates";
-/** Three tiles across; the panel fits its height to the rows. */
-const PICKER_SIZE = { height: 400, width: 380 };
 
 /**
  * The template the captions take their look from, named on a button that
@@ -148,7 +147,7 @@ export function CaptionTemplateRow({
               if (trigger)
                 void picker.toggle(
                   trigger,
-                  PICKER_SIZE,
+                  CAPTION_TEMPLATE_PANEL_SIZE,
                   ["keyboard", "virtual"].includes(event.pointerType),
                 );
             }}

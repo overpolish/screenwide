@@ -5,6 +5,7 @@
   "author": "Screenwide",
   "version": "1.0.0",
   "description": "Outlined type and no box, keeping the picture clear.",
+  "previewBackdrop": "dark",
   "aliases": ["reveal", "subtitle", "duet"],
   "fonts": [
     {

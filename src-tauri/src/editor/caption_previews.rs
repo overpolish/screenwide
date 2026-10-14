@@ -26,7 +26,7 @@ const PREVIEW: CaptionPreview = CaptionPreview {
 };
 /// Changed whenever the preview is drawn differently, so no older clip is
 /// shown in its place.
-const PREVIEW_VERSION: u32 = 13;
+const PREVIEW_VERSION: u32 = 14;
 /// Which frame stands for the whole preview: one a little way in, with a
 /// caption up and a word being said.
 const STILL_SHARE: f64 = 0.3;
@@ -105,9 +105,12 @@ fn preview_clip(
   style: &CaptionStyle,
   sample: &str,
 ) -> Result<CaptionPreviewClip, String> {
+  let backdrop = style.template.preview_backdrop();
   let description = serde_json::to_string(style).map_err(|error| error.to_string())?;
   let mut hasher = DefaultHasher::new();
-  (PREVIEW_VERSION, description, sample).hash(&mut hasher);
+  // The backdrop is named apart, as a manifest can change it without the
+  // style.
+  (PREVIEW_VERSION, description, sample, backdrop).hash(&mut hasher);
   let path = directory.join(format!("{:016x}.png", hasher.finish()));
   let clip = CaptionPreviewClip {
     still: still_path(&path),
@@ -128,7 +131,7 @@ fn preview_clip(
     .map_err(Clone::clone)?
     .lock()
     .map_err(|_| "The caption previewer is poisoned".to_owned())?
-    .frames(style, &words, &PREVIEW)?;
+    .frames(style, &words, &PREVIEW, backdrop)?;
   let still = (frames.len().saturating_sub(1) as f64 * STILL_SHARE).round() as usize;
   // The clip loops, so starting it at the still lets a tile go from the
   // still to the animation without a jump.
