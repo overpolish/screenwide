@@ -30,9 +30,15 @@ pub(crate) struct PreviewGeometry {
   pub(crate) end_head: [f32; 6],
   pub(crate) rounding: f32,
   pub(crate) head: u32,
+  /// For a caption piece that turns, flagged `TURNED`: the homography from
+  /// the canvas back onto the piece as it lies unturned, row by row, whose
+  /// third coordinate is positive only in front of the eye, and the canvas
+  /// bounds the turned piece reaches, low then high. Zero for anything
+  /// else, which never reads it.
+  pub(crate) turn: [f32; 13],
 }
 
-const _: () = assert!(std::mem::size_of::<PreviewGeometry>() == 92);
+const _: () = assert!(std::mem::size_of::<PreviewGeometry>() == 144);
 
 impl PreviewGeometry {
   pub(crate) fn new(geometry: ArrowGeometry) -> Self {
@@ -60,6 +66,7 @@ impl PreviewGeometry {
       end_head: triangle(geometry.end_head),
       rounding: geometry.rounding,
       head: geometry.head,
+      turn: [0.0; 13],
     }
   }
 }
@@ -81,15 +88,15 @@ pub struct PreviewArrow {
   pub(crate) data_count: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<PreviewArrow>() == 148);
-const _: () = assert!(std::mem::offset_of!(PreviewArrow, color) == 92);
-const _: () = assert!(std::mem::offset_of!(PreviewArrow, hover) == 108);
-const _: () = assert!(std::mem::offset_of!(PreviewArrow, sample_first) == 112);
-const _: () = assert!(std::mem::offset_of!(PreviewArrow, kind) == 120);
-const _: () = assert!(std::mem::offset_of!(PreviewArrow, flags) == 124);
-const _: () = assert!(std::mem::offset_of!(PreviewArrow, params) == 128);
-const _: () = assert!(std::mem::offset_of!(PreviewArrow, data_offset) == 140);
-const _: () = assert!(std::mem::offset_of!(PreviewArrow, data_count) == 144);
+const _: () = assert!(std::mem::size_of::<PreviewArrow>() == 200);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, color) == 144);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, hover) == 160);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, sample_first) == 164);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, kind) == 172);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, flags) == 176);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, params) == 180);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, data_offset) == 192);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, data_count) == 196);
 
 impl PreviewArrow {
   pub(crate) fn new(geometry: ArrowGeometry, color: [f32; 4], hover: f32, kind: u32) -> Self {
@@ -108,7 +115,8 @@ impl PreviewArrow {
   }
 }
 /// One exposure sample: the annotation part way through the interval this frame
-/// covers, and how solid it was then. The twin of `ScreenwideAnnotationSample`.
+/// covers, and how solid it was then. The twin of `PreviewSample` in
+/// `annotations.wgsl`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct PreviewSample {
@@ -116,7 +124,7 @@ pub struct PreviewSample {
   pub(crate) opacity: f32,
 }
 
-const _: () = assert!(std::mem::size_of::<PreviewSample>() == 96);
+const _: () = assert!(std::mem::size_of::<PreviewSample>() == 148);
 
 impl PreviewSample {
   pub(crate) fn new(geometry: ArrowGeometry, opacity: f32) -> Self {

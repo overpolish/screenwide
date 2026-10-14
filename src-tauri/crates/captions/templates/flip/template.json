@@ -1,0 +1,81 @@
+{
+  "formatVersion": 4,
+  "id": "flip",
+  "name": "Flip",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Each word flips round to face you as it is said.",
+  "fonts": [
+    {
+      "file": "fonts/DMSans-VariableFont_opsz,wght.ttf",
+      "family": "DM Sans",
+      "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "license": "fonts/DMSans-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
+  "style": {
+    "font": {
+      "family": "DM Sans",
+      "weight": 800,
+      "italic": false
+    },
+    "sizePercent": 110,
+    "maxWords": 4,
+    "revealWords": true,
+    "motion": {
+      "caption": [
+        {
+          "property": "rotateY",
+          "keyframes": [
+            { "atMs": 0, "value": 90 },
+            {
+              "atMs": 360,
+              "value": 0,
+              "easing": { "back-out": { "overshoot": 1.2 } }
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "atMs": 0, "value": 0 },
+            { "atMs": 60, "value": 1 }
+          ]
+        }
+      ],
+      "word": [
+        {
+          "property": "rotateY",
+          "keyframes": [
+            { "atMs": 0, "value": 90 },
+            {
+              "atMs": 320,
+              "value": 0,
+              "easing": { "back-out": { "overshoot": 1.2 } }
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "atMs": 0, "value": 0 },
+            { "atMs": 60, "value": 1 }
+          ]
+        }
+      ]
+    }
+  }
+}

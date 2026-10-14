@@ -224,6 +224,19 @@ impl CaptionMotion {
   pub(crate) fn has_exit(&self) -> bool {
     !self.caption_out.is_empty() || !self.word_out.is_empty()
   }
+
+  /// Whether it turns anything, which only a newer manifest format can say.
+  pub(crate) fn turns(&self) -> bool {
+    [&self.caption, &self.word, &self.caption_out, &self.word_out]
+      .into_iter()
+      .flatten()
+      .any(|track| {
+        matches!(
+          track.property,
+          CaptionProperty::Rotate | CaptionProperty::RotateX | CaptionProperty::RotateY
+        )
+      })
+  }
 }
 
 fn last_keyframe_ms<'a>(tracks: impl Iterator<Item = &'a CaptionMotionTrack>) -> f64 {

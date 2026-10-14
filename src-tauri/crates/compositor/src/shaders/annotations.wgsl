@@ -26,6 +26,10 @@ struct PreviewGeometry {
   end_head_cx: f32, end_head_cy: f32,
   rounding: f32,
   head: u32,
+  // A turning caption piece's way back from the canvas onto it unturned,
+  // row by row, and the canvas bounds it reaches; read only where `TURNED`
+  // is flagged.
+  turn: array<f32, 13>,
 }
 
 struct PreviewArrow {

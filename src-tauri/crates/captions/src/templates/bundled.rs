@@ -22,7 +22,7 @@ pub(super) struct Index {
 pub(super) const INDEX: &str = include_str!("../../templates/index.json");
 
 /// Every bundled manifest, one per template folder; the index orders them.
-pub(super) const MANIFESTS: [&str; 16] = [
+pub(super) const MANIFESTS: [&str; 17] = [
   include_str!("../../templates/box/template.json"),
   include_str!("../../templates/clean/template.json"),
   include_str!("../../templates/pop/template.json"),
@@ -39,6 +39,7 @@ pub(super) const MANIFESTS: [&str; 16] = [
   include_str!("../../templates/offset/template.json"),
   include_str!("../../templates/underline/template.json"),
   include_str!("../../templates/glow/template.json"),
+  include_str!("../../templates/flip/template.json"),
 ];
 
 /// The font files and licences the app's own templates share, by their

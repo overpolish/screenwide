@@ -114,13 +114,19 @@ fn annotation_text_coverage(probe: vec2<f32>, box: PreviewTextBox, atlas: Annota
 }
 
 /// A text box averaged over its exposure samples, as a counter is while it
-/// grows into place.
+/// grows into place. A turned caption piece is read where each sample's
+/// turn takes this pixel back onto it.
 fn annotation_text_exposure(probe: vec2<f32>, annotation: PreviewArrow, feather: f32) -> f32 {
+  let turned = (annotation.flags & annotation_text_turned) != 0u;
   var total = 0.0;
   for (var tap = 0u; tap < annotation.sample_count; tap++) {
     let sample = annotation_samples[annotation.sample_first + tap];
-    let distance = annotation_text_distance(probe, annotation_text_box(sample.geometry));
-    total += annotation_edge(distance, feather) * sample.opacity;
+    let at = annotation_caption_unturned(sample.geometry, turned, probe, feather);
+    if (!at.seen) {
+      continue;
+    }
+    let distance = annotation_text_distance(at.point, annotation_text_box(sample.geometry));
+    total += annotation_edge(distance, at.feather) * sample.opacity;
   }
   return total / f32(annotation.sample_count);
 }
@@ -141,9 +147,14 @@ fn annotation_text_bounds(box: PreviewTextBox, reach: f32, bounds: vec4<f32>) ->
 /// steadily from last frame's reveal to this one's, so the first and last
 /// hold every one between: a pointer drawing back in trails past where its
 /// tip is now. A caption's word reaches as far again as its shadow falls
-/// and spreads.
+/// and spreads. A turned caption piece carries the bounds every sample
+/// reaches, its shadow's included, as the CPU found them.
 fn annotation_text_reach(annotation: PreviewArrow, halo: f32, feather: f32) -> vec4<f32> {
   var reach = halo + feather + 1.0;
+  if ((annotation.flags & annotation_text_turned) != 0u) {
+    let turn = annotation.geometry.turn;
+    return vec4<f32>(turn[9], turn[10], turn[11], turn[12]) + vec4<f32>(-reach, -reach, reach, reach);
+  }
   if ((annotation.flags & annotation_text_casts) != 0u) {
     let growth = max(annotation_caption_growth(annotation.geometry, annotation.geometry), 1.0);
     let shadow = annotation_caption_shadow_of(annotation);
@@ -166,6 +177,44 @@ const annotation_text_outlined: u32 = 1u << 7u;
 const annotation_text_caption: u32 = 1u << 10u;
 const annotation_text_bare: u32 = 1u << 11u;
 const annotation_text_casts: u32 = 1u << 12u;
+const annotation_text_turned: u32 = 1u << 13u;
+
+/// A pixel taken back onto a caption piece as it lies unturned, through
+/// the inverse of its turn that `geometry` carries, with how far half a
+/// pixel there spreads, the larger of across and down: a piece turned near
+/// edge on is read over the many of its texels each pixel covers. Not seen
+/// where the pixel lies past the piece's horizon. An unturned piece is read
+/// where the pixel is.
+struct CaptionProbe {
+  point: vec2<f32>,
+  feather: f32,
+  seen: bool,
+}
+
+fn annotation_caption_unturned(geometry: PreviewGeometry, turned: bool, probe: vec2<f32>,
+                               feather: f32) -> CaptionProbe {
+  var at = CaptionProbe(probe, feather, true);
+  if (!turned) {
+    return at;
+  }
+  let turn = geometry.turn;
+  let across = vec3<f32>(turn[0], turn[1], turn[2]);
+  let down = vec3<f32>(turn[3], turn[4], turn[5]);
+  let depth = vec3<f32>(turn[6], turn[7], turn[8]);
+  let point = vec3<f32>(probe, 1.0);
+  let w = dot(depth, point);
+  if (w <= 0.0) {
+    at.seen = false;
+    return at;
+  }
+  at.point = vec2<f32>(dot(across, point), dot(down, point)) / w;
+  // The turn's derivative along each canvas axis, a homography's being its
+  // linear part less the point's share of the depth, over the depth.
+  let along_x = (vec2<f32>(across.x, down.x) - at.point * depth.x) / w;
+  let along_y = (vec2<f32>(across.y, down.y) - at.point * depth.y) / w;
+  at.feather = feather * max(length(along_x), length(along_y));
+  return at;
+}
 
 /// The shadow a caption's word casts, read out of the slots a text box
 /// leaves to its pointer, which a word has none of: how far it falls across
@@ -243,24 +292,29 @@ fn annotation_caption_word(rgba_in: vec4<f32>, annotation: PreviewArrow, color: 
 }
 
 /// A moving caption word: its type, outline and shadow read at every exposure
-/// sample, where and as large as the word was then, each as solid as the
-/// word was then, and averaged, so the type itself smears along the way it
-/// came, as a moving annotation's shape does. The atlas places the type once,
-/// for the word as it is now, and every sample reads it from there.
+/// sample, where, as large and as far turned as the word was then, each as
+/// solid as the word was then, and averaged, so the type itself smears along
+/// the way it came, as a moving annotation's shape does. The atlas places the
+/// type once, for the word as it is now, and every sample reads it from there.
 fn annotation_caption_word_exposure(rgba_in: vec4<f32>, annotation: PreviewArrow,
                                     color: vec4<f32>, canvas_point: vec2<f32>, feather: f32,
                                     atlas: AnnotationTextAtlas) -> vec4<f32> {
   let current = annotation_text_box(annotation.geometry);
   let casts = (annotation.flags & annotation_text_casts) != 0u;
+  let turned = (annotation.flags & annotation_text_turned) != 0u;
   let offset = annotation_caption_shadow_of(annotation).offset;
   var ink = vec4<f32>(0.0);
   for (var tap = 0u; tap < annotation.sample_count; tap++) {
     let sample = annotation_samples[annotation.sample_first + tap];
+    let at = annotation_caption_unturned(sample.geometry, turned, canvas_point, feather);
+    if (!at.seen) {
+      continue;
+    }
     var box = annotation_text_box(sample.geometry);
     box.text_origin = current.text_origin;
     box.text_size = current.text_size;
     let growth = annotation_caption_growth(annotation.geometry, sample.geometry);
-    ink += annotation_caption_texel(canvas_point, box, atlas, feather, growth, casts, offset) *
+    ink += annotation_caption_texel(at.point, box, atlas, at.feather, growth, casts, offset) *
            sample.opacity;
   }
   ink /= f32(annotation.sample_count);
@@ -270,16 +324,24 @@ fn annotation_caption_word_exposure(rgba_in: vec4<f32>, annotation: PreviewArrow
 /// One text box: its box and pointer in the annotation's own colour, and its
 /// type in whichever of black or white reads on that colour, clipped to the
 /// box's own coverage so the two share one antialiased edge. A caption's
-/// word draws its type alone, and a caption's backdrop its box alone.
+/// word draws its type alone, and a caption's backdrop its box alone; either
+/// read, where it turns, where its turn takes the pixel back onto it.
 fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
                          canvas_point: vec2<f32>, feather: f32, halo: f32,
                          atlas: AnnotationTextAtlas) -> vec4<f32> {
   if (annotation_outside(canvas_point, annotation_text_reach(annotation, halo, feather))) {
     return rgba_in;
   }
+  let turned = (annotation.flags & annotation_text_turned) != 0u;
+  let at = annotation_caption_unturned(annotation.geometry, turned, canvas_point, feather);
+  // Edge on now, a still piece shows nothing; a moving one is drawn by its
+  // samples alone.
+  if (!at.seen && annotation.sample_count == 0u) {
+    return rgba_in;
+  }
   let box = annotation_text_box(annotation.geometry);
-  let distance = annotation_text_distance(canvas_point, box);
-  var rgba = annotation_halo(rgba_in, color, distance, halo, feather);
+  let distance = annotation_text_distance(at.point, box);
+  var rgba = annotation_halo(rgba_in, color, distance, halo, at.feather);
   // A caption's word draws no box: its type, outline and shadow are its
   // own, and the shadow falls outside the box it is set in.
   if ((annotation.flags & annotation_text_caption) != 0u) {
@@ -287,12 +349,12 @@ fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: ve
       return annotation_caption_word_exposure(rgba, annotation, color, canvas_point, feather,
                                               atlas);
     }
-    return annotation_caption_word(rgba, annotation, color, canvas_point, box, color.a, feather,
+    return annotation_caption_word(rgba, annotation, color, at.point, box, color.a, at.feather,
                                    atlas);
   }
   var coverage: f32;
   if (annotation.sample_count == 0u) {
-    coverage = annotation_edge(distance, feather);
+    coverage = annotation_edge(distance, at.feather);
   } else {
     coverage = annotation_text_exposure(canvas_point, annotation, feather);
   }

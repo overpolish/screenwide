@@ -205,6 +205,8 @@ pub fn parse_manifest(
 fn format_4_option(style: &CaptionStyle) -> Option<&'static str> {
   if style.motion.has_exit() {
     Some("the motion's \"captionOut\" or \"wordOut\"")
+  } else if style.motion.turns() {
+    Some("the motion's \"rotate\", \"rotateX\" or \"rotateY\"")
   } else if style.rolling_words().is_some() {
     Some("\"visibleWords\"")
   } else if style.shadow.is_some() {

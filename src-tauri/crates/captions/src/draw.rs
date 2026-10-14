@@ -20,6 +20,9 @@ mod shown;
 mod underline;
 mod upcoming;
 
+#[cfg(test)]
+mod turn_tests;
+
 /// A line's height, in ems: the twin of `LINE_HEIGHT` in the annotations'
 /// text metrics, which the compositor sets the type at.
 const LINE_HEIGHT: f64 = 1.25;
@@ -104,6 +107,23 @@ pub struct CaptionPiece {
   pub scale: [f64; 2],
   /// How solid it is now and as the exposure began.
   pub opacity: [f64; 2],
+  /// How far it is turned about its own centre, now and as the exposure
+  /// began, in degrees about the horizontal, vertical and depth axes.
+  pub turn: [[f64; 3]; 2],
+  /// How the whole caption it is part of turns, where it does.
+  pub line_turn: Option<CaptionLineTurn>,
+}
+
+/// How a whole caption turns, as one: about `pivot`, the middle of its
+/// lines as the caption's own motion moves them, whose larger half is
+/// `reach` across, now and as the exposure began, in degrees about the
+/// horizontal, vertical and depth axes. The compositor turns each piece of
+/// it about this pivot after its own turn.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CaptionLineTurn {
+  pub turn: [[f64; 3]; 2],
+  pub pivot: [[f64; 2]; 2],
+  pub reach: f64,
 }
 
 /// A recording's captions as an export or a preview draws them: made once

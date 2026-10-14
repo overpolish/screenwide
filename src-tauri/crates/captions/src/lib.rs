@@ -33,8 +33,8 @@ use serde::Serialize;
 use ts_rs::TS;
 
 pub use draw::{
-  caption_fit, caption_pieces, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionPieceShadow,
-  CaptionTrack,
+  caption_fit, caption_pieces, CaptionLineTurn, CaptionMoment, CaptionPiece, CaptionPieceKind,
+  CaptionPieceShadow, CaptionTrack,
 };
 pub use font::{CaptionFont, MAX_WEIGHT, MIN_WEIGHT};
 pub use lay_out::sample_caption;

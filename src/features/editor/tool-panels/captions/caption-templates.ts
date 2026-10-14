@@ -17,6 +17,7 @@ export const captionTemplateLabel = (
     box: t("editor-panels-captions-template-box"),
     clean: t("editor-panels-captions-template-clean"),
     editorial: t("editor-panels-captions-template-editorial"),
+    flip: t("editor-panels-captions-template-flip"),
     glow: t("editor-panels-captions-template-glow"),
     highlight: t("editor-panels-captions-template-highlight"),
     karaoke: t("editor-panels-captions-template-karaoke"),

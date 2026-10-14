@@ -338,6 +338,7 @@ export type Messages = {
   "editor-panels-captions-template-clean": null;
   "editor-panels-captions-template-editorial": null;
   "editor-panels-captions-template-export": null;
+  "editor-panels-captions-template-flip": null;
   "editor-panels-captions-template-glow": null;
   "editor-panels-captions-template-highlight": null;
   "editor-panels-captions-template-import": null;

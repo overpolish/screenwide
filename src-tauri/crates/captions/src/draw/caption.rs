@@ -7,7 +7,7 @@
 use super::glow::{glow, glow_spread};
 use super::place::{self, Placed};
 use super::rolling::rolling_words;
-use super::shown::{Moving, Shown};
+use super::shown::{moved, Level, Moving, Shown};
 use super::underline::underline;
 use super::{full_hex, ink_on, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionPieceShadow};
 use crate::motion::Mirror;
@@ -89,30 +89,37 @@ pub(super) fn pieces_of(
   // goes off from its start.
   let exits_ms = (caption.end_ms - motion.exit_ms()).max(caption.start_ms);
   let words = words_of(caption, style, (frame, moment, exits_ms), measure);
-  let caption_exit = (&motion.caption_out[..], at_ms - exits_ms);
-  let unmoved = (&[][..], -1.0);
+  let caption_exit = (&motion.caption_out[..], at_ms - exits_ms, Level::Caption);
+  let unmoved = (&[][..], -1.0, Level::Caption);
   // The caption comes on whole, unless its words come on one by one, and
   // goes off whole as well as word by word.
-  let whole_entrance = Some((&motion.caption[..], at_ms - caption.start_ms));
+  let whole_entrance = Some((
+    &motion.caption[..],
+    at_ms - caption.start_ms,
+    Level::Caption,
+  ));
   let revealing = style.reveal_words || words.whole.is_none();
+  // The caption turns as one about the middle of its lines.
+  let line = place::block_of(words.drawn.iter().map(|drawn| &drawn.placed)).or(words.whole);
   // Moved by its motion, in ems of its own type, now and as the exposure
-  // began, from where it sat then.
+  // began, from where it sat then, and turned about its own middle and
+  // with its line.
   let piece = |kind,
                text: &str,
                [now, previous]: [[f64; 2]; 2],
                (size, face): (f64, CaptionFace),
                shown: Shown| {
-    let moved =
-      |at: [f64; 2], offset: [f64; 2]| [at[0] + offset[0] * size, at[1] + offset[1] * size];
     CaptionPiece {
       kind,
       text: text.to_owned(),
       face,
-      centre: moved(now, shown.offset[0]),
-      previous_centre: moved(previous, shown.offset[1]),
+      centre: moved(now, shown.offset[0], size),
+      previous_centre: moved(previous, shown.offset[1], size),
       size,
       scale: shown.scale,
       opacity: shown.opacity,
+      turn: shown.own_turn,
+      line_turn: shown.line(line, words.size),
     }
   };
   // The word being said: the last that has started, held through the pause
@@ -186,11 +193,14 @@ pub(super) fn pieces_of(
     } else if word.start_ms > at_ms {
       continue;
     } else {
-      Some((&motion.word[..], at_ms - word.start_ms))
+      Some((&motion.word[..], at_ms - word.start_ms, Level::Word))
     };
     let shown = Moving {
       entrance,
-      exits: [caption_exit, (&motion.word_out, at_ms - drawn.leaves_ms)],
+      exits: [
+        caption_exit,
+        (&motion.word_out, at_ms - drawn.leaves_ms, Level::Word),
+      ],
     }
     .shown(exposure_ms, mirror);
     // Under a line or in a glow, the word being said keeps its own colour:

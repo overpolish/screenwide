@@ -199,6 +199,7 @@ editor-panels-captions-template-shadow = Shadow
 editor-panels-captions-template-offset = Offset
 editor-panels-captions-template-underline = Underline
 editor-panels-captions-template-glow = Glow
+editor-panels-captions-template-flip = Flip
 # The few words each template's preview shows, said a couple at a time; short, so they fit a small tile.
 editor-panels-captions-sample = Captions that move with every word
 # The face caption type is set in, chosen from a list of the fonts installed on the computer and those the app carries.

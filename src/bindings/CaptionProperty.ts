@@ -3,4 +3,4 @@
 /**
  * A property of a caption's piece that a motion track animates.
  */
-export type CaptionProperty = "scale" | "opacity" | "offsetX" | "offsetY";
+export type CaptionProperty = "scale" | "opacity" | "offsetX" | "offsetY" | "rotate" | "rotateX" | "rotateY";

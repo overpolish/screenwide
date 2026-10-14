@@ -36,6 +36,23 @@
     "maxWords": 4,
     "revealWords": true,
     "motion": {
+      "caption": [
+        {
+          "property": "offsetY",
+          "fromEdge": true,
+          "keyframes": [
+            { "atMs": 0, "value": 0.4 },
+            { "atMs": 180, "value": 0, "easing": "ease-out" }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "atMs": 0, "value": 0 },
+            { "atMs": 120, "value": 1 }
+          ]
+        }
+      ],
       "word": [
         {
           "property": "offsetY",

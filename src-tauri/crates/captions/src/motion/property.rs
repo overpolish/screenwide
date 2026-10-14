@@ -22,6 +22,12 @@ pub enum CaptionProperty {
   /// How far it is moved across and down, in ems of its type.
   OffsetX,
   OffsetY,
+  /// How far it is turned, in degrees: flat on the picture, clockwise, and
+  /// about its horizontal and vertical axes, as a card flips, its top or its
+  /// right edge going away at positive turns.
+  Rotate,
+  RotateX,
+  RotateY,
 }
 
 pub(crate) struct PropertySpec {
@@ -31,7 +37,15 @@ pub(crate) struct PropertySpec {
 }
 
 impl CaptionProperty {
-  pub(crate) const ALL: [Self; 4] = [Self::Scale, Self::Opacity, Self::OffsetX, Self::OffsetY];
+  pub(crate) const ALL: [Self; 7] = [
+    Self::Scale,
+    Self::Opacity,
+    Self::OffsetX,
+    Self::OffsetY,
+    Self::Rotate,
+    Self::RotateX,
+    Self::RotateY,
+  ];
 
   pub(crate) fn spec(self) -> PropertySpec {
     let (name, range, rest) = match self {
@@ -39,6 +53,9 @@ impl CaptionProperty {
       Self::Opacity => ("opacity", (0.0, 1.0), 1.0),
       Self::OffsetX => ("offsetX", (-2.0, 2.0), 0.0),
       Self::OffsetY => ("offsetY", (-2.0, 2.0), 0.0),
+      Self::Rotate => ("rotate", (-720.0, 720.0), 0.0),
+      Self::RotateX => ("rotateX", (-720.0, 720.0), 0.0),
+      Self::RotateY => ("rotateY", (-720.0, 720.0), 0.0),
     };
     PropertySpec { name, range, rest }
   }
@@ -50,11 +67,12 @@ impl CaptionProperty {
 
   /// `a` and `b` together, as two motions moving one piece at once, such
   /// as the caption's going off and its word's: sizes and how solid it is
-  /// multiply, offsets add, so either at rest leaves the other as it is.
+  /// multiply, offsets and turns add, so either at rest leaves the other as
+  /// it is.
   pub(crate) fn stacked(self, a: f64, b: f64) -> f64 {
     match self {
       Self::Scale | Self::Opacity => a * b,
-      Self::OffsetX | Self::OffsetY => a + b,
+      Self::OffsetX | Self::OffsetY | Self::Rotate | Self::RotateX | Self::RotateY => a + b,
     }
   }
 }

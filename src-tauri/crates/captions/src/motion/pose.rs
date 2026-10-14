@@ -52,8 +52,10 @@ pub(crate) struct Mirror {
 }
 
 /// Every property's value `elapsed_ms` into `tracks`, a property no track
-/// moves at rest, and an offset measured from the caption's edge turned
-/// round as `mirror` says.
+/// moves at rest, and an offset or a flip measured from the caption's edge
+/// turned round as `mirror` says: a flip about the horizontal axis with
+/// the caption's place down the picture, and about the vertical one with
+/// its place across.
 pub(crate) fn pose(tracks: &[CaptionMotionTrack], elapsed_ms: f64, mirror: Mirror) -> Pose {
   Pose(CaptionProperty::ALL.map(|property| {
     let rest = property.spec().rest;
@@ -64,9 +66,9 @@ pub(crate) fn pose(tracks: &[CaptionMotionTrack], elapsed_ms: f64, mirror: Mirro
         let value = value_at(&track.keyframes, rest, elapsed_ms);
         let turned = track.from_edge
           && match property {
-            CaptionProperty::OffsetX => mirror.across,
-            CaptionProperty::OffsetY => mirror.down,
-            CaptionProperty::Scale | CaptionProperty::Opacity => false,
+            CaptionProperty::OffsetX | CaptionProperty::RotateY => mirror.across,
+            CaptionProperty::OffsetY | CaptionProperty::RotateX => mirror.down,
+            CaptionProperty::Scale | CaptionProperty::Opacity | CaptionProperty::Rotate => false,
           };
         if turned {
           -value

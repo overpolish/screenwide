@@ -377,3 +377,33 @@ fn smears_a_moving_word_along_the_way_it_came_over_the_exposure() {
   };
   assert!(ink(&moving_canvas) < ink(&still_canvas));
 }
+
+#[test]
+fn draws_a_word_turned_in_depth_narrower_with_its_far_side_shorter() {
+  let flat = pieces(styled("clean"));
+  // The same words turned 60 degrees about their upright axes, their
+  // right sides going away.
+  let mut turned = flat.clone();
+  for piece in &mut turned.0 {
+    piece.turn = [[0.0, 60.0, 0.0]; 2];
+  }
+  let (flat_canvas, turned_canvas) = (drawn(&flat), drawn(&turned));
+  let first = &flat.0[0];
+  let half = caption_measure(&flat.1)(&first.text, first.face, first.size) / 2.0;
+  let ink = |canvas: &[u8], from: f64, to: f64| {
+    let centre = [first.centre[0] + (from + to) / 2.0 * half, first.centre[1]];
+    around(canvas, centre, [(to - from) / 2.0 * half, first.size])
+      .into_iter()
+      .filter(|pixel| is_white(*pixel))
+      .count()
+  };
+  // Seen edge on in part, it covers less; and its right, turned away, is
+  // drawn smaller than its left, where flat the two halves match.
+  assert!(ink(&turned_canvas, -1.2, 1.2) < ink(&flat_canvas, -1.2, 1.2) * 3 / 4);
+  let [left, right] = [
+    ink(&turned_canvas, -1.2, 0.0),
+    ink(&turned_canvas, 0.0, 1.2),
+  ];
+  let [flat_left, flat_right] = [ink(&flat_canvas, -1.2, 0.0), ink(&flat_canvas, 0.0, 1.2)];
+  assert!(right * flat_left < left * flat_right * 9 / 10);
+}

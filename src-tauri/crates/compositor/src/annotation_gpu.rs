@@ -12,6 +12,8 @@ mod arrows;
 mod caption_exposure;
 /// The shadow a caption's word casts, handed to the shader.
 mod caption_shadow;
+/// A caption piece turned flat or in depth, handed to the shader.
+mod caption_turn;
 /// The captions showing in a frame, drawn as text boxes.
 mod captions;
 mod counter_artwork;
