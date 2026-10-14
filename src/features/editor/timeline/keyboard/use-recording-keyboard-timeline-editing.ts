@@ -13,7 +13,6 @@ import {
   deletedRecordingKeyboardShortcutIds,
   deleteRecordingKeyboardShortcutFragments,
   keyboardShortcutFragmentId,
-  recordingKeyboardShortcutPositions,
 } from "./recording-keyboard-timeline-edit";
 import { useRecordingKeyboardTimeline } from "./use-recording-keyboard-timeline";
 
@@ -64,15 +63,6 @@ export function useRecordingKeyboardTimelineEditing({
       ),
     [appliedEdit, edit],
   );
-  const adjustedFragmentIds = useMemo(
-    () =>
-      new Set(
-        recordingKeyboardShortcutPositions(edit).map((position) =>
-          keyboardShortcutFragmentId(position.shortcutId, position.segmentId),
-        ),
-      ),
-    [edit],
-  );
   const deleteSelected = useCallback(() => {
     if (!onChange || selection.ids.size === 0) return;
     const next = deleteRecordingKeyboardShortcutFragments(edit, selection.ids);
@@ -88,18 +78,11 @@ export function useRecordingKeyboardTimelineEditing({
   });
   return useMemo(
     () => ({
-      adjustedFragmentIds,
       hiddenFragmentIds,
       hiddenItemIds,
       items: allItems,
       selection,
     }),
-    [
-      adjustedFragmentIds,
-      allItems,
-      hiddenFragmentIds,
-      hiddenItemIds,
-      selection,
-    ],
+    [allItems, hiddenFragmentIds, hiddenItemIds, selection],
   );
 }

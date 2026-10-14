@@ -42,7 +42,7 @@ fn slot_left(values: &KeyboardConstants, slot: u32, mask: u32) -> f32 {
       total += slot_width(values, candidate);
     }
   }
-  let mut left = (values.dimensions[0] as f32 - total) * 0.5;
+  let mut left = (values.dimensions[0] as f32 - total) * values.position[2];
   for candidate in 0..slot {
     if mask & (1u32 << candidate) != 0 {
       left += slot_width(values, candidate) + gap;
@@ -69,17 +69,25 @@ pub(super) fn calculate(values: &KeyboardConstants, canvas: (u32, u32)) -> Optio
   };
   let row_height = canvas.1 as f32 * (60.0 / 1080.0) * effective;
   let row_width = row_height * values.dimensions[0] as f32 / values.dimensions[1] as f32;
-  // A key's group centre on one axis: non-negative is explicit, -1 follows
-  // the overlay centre, and at or below -1.5 the key keeps the default.
-  let key_axis = |key_value: f32, overlay_value: f32| {
-    if key_value >= 0.0 {
-      key_value
-    } else if key_value > -1.5 {
-      overlay_value
-    } else {
-      -1.0
-    }
+  // `keyboard_row_origin` in `preview.wgsl`.
+  let margin = canvas.1 as f32 * 0.055;
+  let [align_x, align_y] = [values.position[2], values.position[3]];
+  let room = if values.animation[2] > 0.0 {
+    row_height * values.animation[2] / 20.0
+  } else {
+    row_width
   };
+  let center_x = if values.position[0] >= 0.0 {
+    values.position[0] * canvas.0 as f32
+  } else {
+    margin + room * 0.5 + (canvas.0 as f32 - 2.0 * margin - room) * align_x
+  };
+  let center_y = if values.position[1] >= 0.0 {
+    values.position[1] * canvas.1 as f32
+  } else {
+    margin + row_height * 0.5 + (canvas.1 as f32 - 2.0 * margin - row_height) * align_y
+  };
+  let row_left = center_x - room * 0.5 + (room - row_width) * align_x;
   let mut bounds = [
     f32::INFINITY,
     f32::INFINITY,
@@ -96,39 +104,19 @@ pub(super) fn calculate(values: &KeyboardConstants, canvas: (u32, u32)) -> Optio
     if animation_scale <= 0.002 {
       continue;
     }
-    let ratio = if values.key_position[index][2] > 0.0 {
-      values.key_position[index][2]
-    } else {
-      1.0
-    };
-    let key_row_height = row_height * ratio;
-    let key_row_width = row_width * ratio;
-    let position_x = key_axis(values.key_position[index][0], values.position[0]);
-    let position_y = key_axis(values.key_position[index][1], values.position[1]);
-    let center_x = if position_x >= 0.0 {
-      position_x * canvas.0 as f32
-    } else {
-      canvas.0 as f32 * 0.5
-    };
-    let center_y = if position_y >= 0.0 {
-      position_y * canvas.1 as f32
-    } else {
-      canvas.1 as f32 * (1.0 - 0.055) - key_row_height * 0.5
-    };
     let slot = geometry[3];
     let masks = values.key_masks[index];
     let from = slot_left(values, slot, masks[0]) + slot_width(values, slot) * 0.5;
     let to = slot_left(values, slot, masks[1]) + slot_width(values, slot) * 0.5;
     let target = from + (to - from) * motion_spring(motion[3]);
-    let offset = (target - (geometry[0] as f32 + geometry[1] as f32 * 0.5)) * key_row_width
+    let offset = (target - (geometry[0] as f32 + geometry[1] as f32 * 0.5)) * row_width
       / values.dimensions[0] as f32;
-    let key_width = key_row_height * geometry[1] as f32 / values.dimensions[1] as f32;
-    let key_center = center_x - key_row_width * 0.5
-      + key_row_width * (geometry[0] as f32 + geometry[1] as f32 * 0.5)
-        / values.dimensions[0] as f32
+    let key_width = row_height * geometry[1] as f32 / values.dimensions[1] as f32;
+    let key_center = row_left
+      + row_width * (geometry[0] as f32 + geometry[1] as f32 * 0.5) / values.dimensions[0] as f32
       + offset;
     let half_width = key_width * animation_scale * 0.5;
-    let half_height = key_row_height * animation_scale * 0.5;
+    let half_height = row_height * animation_scale * 0.5;
     bounds[0] = bounds[0].min(key_center - half_width);
     bounds[1] = bounds[1].min(center_y - half_height);
     bounds[2] = bounds[2].max(key_center + half_width);
@@ -150,7 +138,7 @@ mod tests {
     let mut values = KeyboardConstants {
       dimensions: [100, 20, 2, 0],
       animation: [1.0, 1.0, 100.0, 1.0],
-      position: [0.5, 0.5, 0.0, 0.0],
+      position: [0.5, 0.5, 0.5, 0.5],
       ..Default::default()
     };
     values.key_geometry[0] = [0, 40, 1, 0];
@@ -178,5 +166,15 @@ mod tests {
     values.key_motion[0][0] = 0.0;
 
     assert_eq!(calculate(&values, (1_000, 1_000)), None);
+  }
+
+  #[test]
+  fn a_left_aligned_shortcut_starts_at_the_margin() {
+    let mut values = two_key_constants();
+    values.position = [-1.0, -1.0, 0.0, 1.0];
+
+    let bounds = calculate(&values, (1_000, 1_000)).unwrap();
+    assert!((bounds[0] - 0.055).abs() < 0.000_01);
+    assert!((bounds[1] + bounds[3] - 0.945).abs() < 0.000_01);
   }
 }

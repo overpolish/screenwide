@@ -16,7 +16,7 @@ export type EditorArtifact = { "kind": "screenshot", id: number, items: Array<Sc
  * The canvas and layers saved in the project, which the window shows in
  * place of the remembered look.
  */
-projectWorkspace?: ScreenshotWorkspaceOutputSettings | null, suggestedFileStem: string, extension: string, width: number, height: number, } | { "kind": "recording", audioTracks: Array<RecordingAudioTrack>, camera: RecordingCamera | null, canCompress: boolean, cursorDataVersion: number | null, hasCursorData: boolean, keyboardDataVersion: number | null, keyboardMaximumWidthUnits?: number | null, hasKeyboardData: boolean, id: number, suggestedFileStem: string, extension: string, width: number, height: number, durationMs: number, originalSizeBytes: number, 
+projectWorkspace?: ScreenshotWorkspaceOutputSettings | null, suggestedFileStem: string, extension: string, width: number, height: number, } | { "kind": "recording", audioTracks: Array<RecordingAudioTrack>, camera: RecordingCamera | null, canCompress: boolean, cursorDataVersion: number | null, hasCursorData: boolean, keyboardDataVersion: number | null, hasKeyboardData: boolean, id: number, suggestedFileStem: string, extension: string, width: number, height: number, durationMs: number, originalSizeBytes: number, 
 /**
  * The working file, for the window to play through the asset protocol.
  * Scoped to the recordings directory in `tauri.conf.json`, which is the

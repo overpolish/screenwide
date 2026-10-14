@@ -115,7 +115,7 @@ pub(super) fn load_cursor_effects(
   app: &AppHandle,
 ) -> screenwide_cursor_effects::CursorEffectSettings {
   load_preferences(app)
-    .and_then(|preferences| validate_cursor_effects(preferences.cursor_effects).ok())
+    .map(|preferences| preferences.cursor_effects)
     .unwrap_or_default()
 }
 
@@ -219,20 +219,10 @@ pub(super) fn remember_screenshot_output(
   store_preferences(app, &preferences)
 }
 
-fn validate_cursor_effects(
-  effects: screenwide_cursor_effects::CursorEffectSettings,
-) -> Result<screenwide_cursor_effects::CursorEffectSettings, String> {
-  if !effects.size_percent.is_finite() || !(50.0..=500.0).contains(&effects.size_percent) {
-    return Err("The cursor size is not valid".to_owned());
-  }
-  Ok(effects)
-}
-
 pub(super) fn remember_cursor_effects(
   app: &AppHandle,
   effects: screenwide_cursor_effects::CursorEffectSettings,
 ) -> Result<(), String> {
-  let effects = validate_cursor_effects(effects)?;
   *app
     .state::<EditorState>()
     .cursor_effects

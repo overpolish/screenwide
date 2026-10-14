@@ -62,15 +62,14 @@ int screenwide_workspace_scene_update_selected_resize(
 int screenwide_workspace_scene_update_selected_radius(const void *scene,
                                                       uint32_t selected_pane,
                                                       double radius_percent, int frame);
-/// Places the pane's shortcut strip at a normalised centre and scales it from
-/// where the gesture found it.
-int screenwide_workspace_scene_update_keyboard(const void *scene, uint32_t pane_index,
-                                               double center_x, double center_y,
-                                               double scale_ratio);
 /// Where the pane's shortcut strip shows, as shares of its canvas.
 int screenwide_workspace_scene_keyboard_bounds(const void *scene, uint32_t pane_index,
                                                double *x, double *y, double *width,
                                                double *height);
+/// Where the pane's caption shows, as shares of its canvas.
+int screenwide_workspace_scene_caption_bounds(const void *scene, uint32_t pane_index,
+                                              double *x, double *y, double *width,
+                                              double *height);
 
 /// Copies straight RGBA into a BGRA drawable's `id<MTLTexture>` of its size,
 /// on the shared queue.

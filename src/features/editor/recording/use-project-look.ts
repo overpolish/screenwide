@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef } from "react";
 
 import {
   normalizedCameraOverlay,
-  normalizedCursorEffects,
   normalizedKeyboardEffects,
 } from "../preview/preview-settings-normalization";
 import { normalizedScreenshotOutput } from "../screenshot/screenshot-output";
@@ -31,7 +30,6 @@ const saveRecordingProjectLook = (
         look.cameraOverlay,
         look.recordingOutput.primary,
       ),
-      cursorEffects: normalizedCursorEffects(look.cursorEffects),
       keyboardEffects: normalizedKeyboardEffects(look.keyboardEffects),
       recordingOutput: {
         camera: normalizedScreenshotOutput(look.recordingOutput.camera),

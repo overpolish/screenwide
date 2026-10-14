@@ -8,6 +8,8 @@
 //! a type atlas of its own; only the editor draws images.
 
 mod arrows;
+/// Where the caption showing is drawn, for hit-testing.
+mod caption_bounds;
 /// A caption piece blurred over the frame's exposure.
 mod caption_exposure;
 /// The shadow a caption's word casts, handed to the shader.
@@ -26,6 +28,7 @@ pub use arrows::{
   GpuBuffer, PreparedArrows, PreparedImage, PreparedType, PreviewArrow, PreviewSample,
   MAX_EXPOSURE_SAMPLES,
 };
+pub use caption_bounds::caption_visible_bounds;
 pub use captions::{caption_arrows, caption_face, caption_measure, caption_overlay, CaptionFaces};
 /// A counter's number and a text box's lines are type, so they are
 /// rasterised rather than drawn by the shader.

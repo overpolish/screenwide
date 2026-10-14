@@ -148,7 +148,7 @@ pub(in crate::editor) fn load_keyboard_effects(
   app: &AppHandle,
 ) -> screenwide_keyboard_effects::KeyboardEffectSettings {
   load_preferences(app)
-    .map(|preferences| preferences.keyboard_effects.normalized())
+    .map(|preferences| preferences.keyboard_effects)
     .unwrap_or_default()
 }
 
@@ -162,7 +162,6 @@ pub(super) fn remember_keyboard_effects(
   app: &AppHandle,
   effects: screenwide_keyboard_effects::KeyboardEffectSettings,
 ) -> Result<(), String> {
-  let effects = effects.normalized();
   *app
     .state::<EditorState>()
     .keyboard_effects

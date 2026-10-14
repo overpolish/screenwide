@@ -244,7 +244,7 @@ pub(super) fn sources_with_surface(
     })),
     keyboard_settings: Arc::new(RwLock::new(
       settings.map_or_else(KeyboardEffectSettings::default, |settings| {
-        settings.keyboard_effects.normalized()
+        settings.keyboard_effects
       }),
     )),
     captions: saved_captions,

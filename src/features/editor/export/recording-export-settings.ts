@@ -20,7 +20,7 @@ export const DEFAULT_CURSOR_EFFECTS: CursorEffectSettings = {
   clickAnimation: true,
   clipAtVideoEdge: false,
   motionBlur: true,
-  sizePercent: 100,
+  size: "standard",
   smoothMovement: true,
 };
 
@@ -28,7 +28,8 @@ export const DEFAULT_KEYBOARD_EFFECTS: KeyboardEffectSettings = {
   animation: "pop",
   appearance: "light",
   bake: true,
-  sizePercent: 100,
+  position: "bottom",
+  size: "standard",
 };
 
 /**

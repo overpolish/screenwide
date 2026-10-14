@@ -36,7 +36,6 @@ export function RecordingSection({
   onCameraOverlayChange,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
-  onKeyboardEffectsChange,
   onRecordingOutputChange,
   onRecordingTimelineEditChange,
   onSelectedTrackChange,
@@ -96,11 +95,9 @@ export function RecordingSection({
         isSheetOpen={isSheetOpen}
         key={artifact.id}
         keyboardEffects={keyboardEffects}
-        keyboardMaximumWidthUnits={artifact.keyboardMaximumWidthUnits}
         onCameraOverlayChange={onCameraOverlayChange}
         onEnabledTracksChange={onEnabledTracksChange}
         onEnabledVideoTracksChange={onEnabledVideoTracksChange}
-        onKeyboardEffectsChange={onKeyboardEffectsChange}
         onRecordingOutputChange={onRecordingOutputChange}
         onRecordingTimelineEditChange={onRecordingTimelineEditChange}
         onSelectedTrackChange={onSelectedTrackChange}

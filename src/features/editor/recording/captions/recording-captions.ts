@@ -58,16 +58,19 @@ export const recordingCaptions = (
     ...(edit?.captions?.emphasisChoices
       ? { emphasisChoices: edit.captions.emphasisChoices }
       : {}),
+    ...(edit?.captions?.hidden ? { hidden: edit.captions.hidden } : {}),
   };
 };
 
 /** A change the Captions panel asks for: whether they show, what they say
- * and how they look, the layout options set by hand, and the breaks, words
- * and key words placed by hand, each list and the layout whole. */
+ * and how they look, the layout options set by hand, the breaks, words and
+ * key words placed by hand, and the captions taken out of the video, each
+ * list and the layout whole. */
 export type CaptionsPatch = {
   breaks?: CaptionBreak[];
   emphasisChoices?: CaptionEmphasisChoice[];
   enabled?: boolean;
+  hidden?: number[];
   layout?: CaptionLayout;
   settings?: Partial<CaptionSettings>;
   style?: Partial<CaptionStyle>;
@@ -78,7 +81,14 @@ export type CaptionsPatch = {
  * as the edit keeps none it does not need. */
 export function patchCaptions(
   captions: RecordingCaptions,
-  { breaks, emphasisChoices, layout, wordChoices, ...patch }: CaptionsPatch,
+  {
+    breaks,
+    emphasisChoices,
+    hidden,
+    layout,
+    wordChoices,
+    ...patch
+  }: CaptionsPatch,
 ): RecordingCaptions {
   const patched: RecordingCaptions = {
     ...captions,
@@ -90,10 +100,12 @@ export function patchCaptions(
   if (layout) patched.layout = layout;
   if (wordChoices) patched.wordChoices = wordChoices;
   if (emphasisChoices) patched.emphasisChoices = emphasisChoices;
+  if (hidden) patched.hidden = hidden;
   if (patched.breaks?.length === 0) delete patched.breaks;
   if (patched.layout && isEmptyLayout(patched.layout)) delete patched.layout;
   if (patched.wordChoices?.length === 0) delete patched.wordChoices;
   if (patched.emphasisChoices?.length === 0) delete patched.emphasisChoices;
+  if (patched.hidden?.length === 0) delete patched.hidden;
   return patched;
 }
 
@@ -107,3 +119,24 @@ export const withCaptions = (
   ...edit,
   captions: patchCaptions(recordingCaptions(edit, defaults), patch),
 });
+
+/** `edit` with the captions `ids` name taken out of the video, beside those
+ * out already. The transcript and the audio keep the words; only the
+ * captions and the subtitles go without them. */
+export const hideCaptions = (
+  edit: RecordingTimelineEdit,
+  ids: Iterable<number>,
+): RecordingTimelineEdit => {
+  if (!edit.captions) return edit;
+  const hidden = new Set(edit.captions.hidden);
+  const before = hidden.size;
+  for (const id of ids) hidden.add(id);
+  if (hidden.size === before) return edit;
+  return {
+    ...edit,
+    captions: {
+      ...edit.captions,
+      hidden: [...hidden].sort((a, b) => a - b),
+    },
+  };
+};

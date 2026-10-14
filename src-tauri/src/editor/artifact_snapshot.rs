@@ -49,8 +49,6 @@ pub enum EditorArtifactSnapshot {
     cursor_data_version: Option<u16>,
     has_cursor_data: bool,
     keyboard_data_version: Option<u16>,
-    #[ts(optional = nullable)]
-    keyboard_maximum_width_units: Option<u16>,
     has_keyboard_data: bool,
     id: u64,
     suggested_file_stem: String,
@@ -135,7 +133,6 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
           cursor_data_version: cursor.as_ref().map(|cursor| cursor.format_version),
           has_cursor_data: cursor.is_some(),
           keyboard_data_version: keyboard.as_ref().map(|keyboard| keyboard.format_version),
-          keyboard_maximum_width_units: keyboard.as_ref().map(|value| value.maximum_width_units),
           has_keyboard_data: keyboard
             .as_ref()
             .is_some_and(|keyboard| keyboard.has_shortcuts),

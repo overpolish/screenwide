@@ -15,10 +15,10 @@ impl Builder<'_> {
     let mut replacement_enter = false;
     let mut replacement_candidates = Vec::new();
     if new_physical_chord {
-      // The new chord continues the badge on screen only when it will draw
-      // in the same place at the same size; otherwise that badge finishes
-      // the exit it already has scheduled, completely untouched, and this
-      // chord starts a fresh badge with fresh slots.
+      // The new chord continues the badge on screen only when neither is
+      // deleted there; otherwise that badge finishes the exit it already
+      // has scheduled, completely untouched, and this chord starts a fresh
+      // badge with fresh slots.
       let predecessor = self
         .slots
         .iter()

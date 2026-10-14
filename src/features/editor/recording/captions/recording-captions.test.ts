@@ -9,6 +9,7 @@ import { withLayout } from "./caption-layout";
 import {
   CaptionDefaults,
   DEFAULT_CAPTION_SETTINGS,
+  hideCaptions,
   recordingCaptions,
   withCaptions,
 } from "./recording-captions";
@@ -46,6 +47,18 @@ describe("withCaptions", () => {
     const set = withCaptions(edit, { layout: { allCaps: false } }, defaults);
     const cleared = withCaptions(set, { layout: {}, style: pop }, defaults);
     expect(cleared.captions?.layout).toBeUndefined();
+  });
+});
+
+describe("hideCaptions", () => {
+  it("keeps captions deleted through later changes until Restore all", () => {
+    const shown = withCaptions(edit, { enabled: true }, defaults);
+    const hidden = hideCaptions(hideCaptions(shown, [3_000, 1_000]), [1_000]);
+    expect(hidden.captions?.hidden).toEqual([1_000, 3_000]);
+    const restyled = withCaptions(hidden, { style: pop }, defaults);
+    expect(restyled.captions?.hidden).toEqual([1_000, 3_000]);
+    const restored = withCaptions(restyled, { hidden: [] }, defaults);
+    expect(restored.captions?.hidden).toBeUndefined();
   });
 });
 

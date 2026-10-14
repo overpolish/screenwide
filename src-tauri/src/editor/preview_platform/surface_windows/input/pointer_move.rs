@@ -241,13 +241,6 @@ pub(super) fn pointer_move(
               gesture.last_delta = (selection.x - start.x, selection.y - start.y);
               gesture.last_scale = factor;
             }
-            redraw_keyboard_transform(
-              inner,
-              &mut state,
-              gesture.keyboard_start,
-              selection,
-              gesture.last_scale,
-            );
             state.selection = Some(selection);
             state.gesture = Some(ActiveGesture::Selection(gesture));
             update_magnifier(&mut state);

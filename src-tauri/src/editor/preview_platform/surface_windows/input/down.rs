@@ -33,7 +33,17 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
     let frame_target = shared
       .filter(|(selection, handle)| *handle == 0 && selection.layer_id == FRAME_LAYER_ID)
       .map(|hit| hit.0);
-    if let Some(target) = inactive_frame_target {
+    let overlay = shared
+      .filter(|(selection, handle)| {
+        *handle == 0 && crate::editor::preview_platform::is_overlay_layer(selection.layer_id)
+      })
+      .map(|hit| hit.0);
+    if let Some(overlay) = overlay {
+      // An overlay takes its size and place from its tool, so the press only
+      // reports it, for the editor to open that tool.
+      state.gesture = None;
+      selected = Some(Some(overlay.layer_id));
+    } else if let Some(target) = inactive_frame_target {
       state.selection = Some(target);
       state.annotation.selected = -1;
       state.gesture = None;
@@ -57,7 +67,6 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         pane_start: selection_pane_rect(&state, selection),
         pointer_start: point,
         selection_start: selection,
-        keyboard_start: keyboard_transform_start(&state, selection),
       };
       state.gesture = Some(ActiveGesture::Selection(gesture));
       if changed {
@@ -88,7 +97,6 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         pane_start: selection_pane_rect(&state, selection),
         pointer_start: point,
         selection_start: selection,
-        keyboard_start: keyboard_transform_start(&state, selection),
       };
       if gesture.operation == SelectionGestureOperation::FrameResize {
         // Remember the transform that belongs to the canvas size being
@@ -156,12 +164,10 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         pane_start: selection_pane_rect(&state, selection),
         pointer_start: point,
         selection_start: selection,
-        keyboard_start: keyboard_transform_start(&state, selection),
       };
       // A pane a scene places never grows the canvas: the scene owns where it
       // sits on a canvas of a fixed size.
       state.move_auto_fit = (gesture.operation == SelectionGestureOperation::Move
-        && selection.layer_id != u32::MAX - 1
         && selection.framed == 0)
         .then(|| MoveAutoFit {
           active: false,

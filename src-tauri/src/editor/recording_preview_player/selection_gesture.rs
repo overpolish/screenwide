@@ -3,7 +3,9 @@
 
 use super::{PlaybackMode, PreviewPlayerManager, RecordingSelectionGesture};
 use super::{AUTO_FIT_COMMIT_EDGE, AUTO_FIT_MOVE_EDGE};
-use crate::editor::preview_platform::{SelectionGestureOperation, SelectionGesturePhase};
+use crate::editor::preview_platform::{
+  is_overlay_layer, SelectionGestureOperation, SelectionGesturePhase,
+};
 use crate::editor::preview_workspace_model::{
   apply_camera_geometry, apply_output_geometry, camera_geometry, output_canvas, output_geometry,
 };
@@ -23,7 +25,7 @@ impl PreviewPlayerManager {
     delta_x: f64,
     delta_y: f64,
   ) -> Result<(), String> {
-    if layer_id == u32::MAX - 1 {
+    if is_overlay_layer(layer_id) {
       self.selection_gesture = None;
       return Ok(());
     }

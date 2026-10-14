@@ -1,19 +1,26 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Dispatch, RefObject, SetStateAction, useMemo } from "react";
+import {
+  Dispatch,
+  RefObject,
+  SetStateAction,
+  useCallback,
+  useMemo,
+} from "react";
 
-import { t } from "../../../../i18n/i18n";
-import { useRecordingKeyboardPreviewEditing } from "../../keyboard-effect/use-recording-keyboard-canvas-editing";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
 } from "../../screenshot/screenshot-output";
-import { usePublishKeyboardShortcut } from "../../shortcuts/keyboard-shortcut-channel";
+import { createRecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { useRecordingKeyboardTimelineEditing } from "../../timeline/keyboard/use-recording-keyboard-timeline-editing";
 import { RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
+import { useCaptionSelection } from "../captions/use-caption-selection";
 import { useScenePreviewEditing } from "../scenes/use-scene-preview-editing";
 
+import { overlayTargets } from "./overlay-layers";
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { scenePanePicks } from "./recording-scene-picks";
 import {
@@ -26,12 +33,9 @@ import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
 
-/** A normalized coordinate as the panel's percent field shows it, held to two
- * decimals so a redrawn frame is not published as a new value. */
-const roundedPercent = (value: number) => Math.round(value * 10000) / 100;
-
-/** What the preview has in hand: the shortcut layer, the video selection drawn
- * over the panes, and the gestures that move and resize either of them. */
+/** What the preview has in hand: the video selection drawn over the panes,
+ * the gestures that move and resize it, and the overlays a press opens the
+ * tools of. */
 export function useRecordingPreviewSelection(
   props: ResolvedScrubPreviewProps,
   {
@@ -66,9 +70,7 @@ export function useRecordingPreviewSelection(
     durationMs,
     hasKeyboardData,
     keyboardEffects,
-    keyboardMaximumWidthUnits,
     onCameraOverlayChange,
-    onKeyboardEffectsChange,
     onRecordingOutputChange,
     onRecordingTimelineEditChange,
     onSelectedTrackChange,
@@ -78,25 +80,39 @@ export function useRecordingPreviewSelection(
   } = props;
   // The scene tool picks, moves and resizes the panes the way the select tool
   // does, with the Scene panel up in place of the Selection panel. The
-  // shortcut layer and the annotations stay the select tool's own.
+  // overlays and the annotations stay the select tool's own.
   const canvasTool = toolInHand === "scene" ? "select" : toolInHand;
-  const keyboardPreview = useRecordingKeyboardPreviewEditing({
+  const laneEdit = useMemo(
+    () => recordingTimelineEdit ?? createRecordingTimelineEdit(artifactId),
+    [artifactId, recordingTimelineEdit],
+  );
+  // Shortcuts and captions are chosen one kind at a time, so Delete only
+  // ever takes away one kind of thing.
+  const keyboardTimeline = useRecordingKeyboardTimelineEditing({
     artifactId,
-    canvasTool: toolInHand,
-    durationMs,
-    edit: recordingTimelineEdit,
+    edit: laneEdit,
     enabled: hasKeyboardData,
-    keyboardEffects,
-    maximumWidthUnits: keyboardMaximumWidthUnits,
     onChange: onRecordingTimelineEditChange,
-    onKeyboardEffectsChange,
-    onSelectionStart: () => onSelectedTrackChange?.(null),
-    output: effectiveRecordingOutput.primary,
-    positionMs: previewPositionMs,
+    onSelectionStart: () => {
+      captionSelection.onClear();
+      onSelectedTrackChange?.(null);
+    },
+    sourceDurationMs: durationMs,
   });
-  const keyboardCanvas = keyboardPreview.canvas;
-  const keyboardTimeline = keyboardPreview.timeline;
-  const visibleKeyboardFragment = keyboardPreview.visibleFragment;
+  const captionSelection = useCaptionSelection({
+    edit: laneEdit,
+    onChange: onRecordingTimelineEditChange,
+    onSelectionStart: () => {
+      keyboardTimeline.selection.onClear();
+      onSelectedTrackChange?.(null);
+    },
+  });
+  const clearKeyboardSelection = keyboardTimeline.selection.onClear;
+  const clearCaptionSelection = captionSelection.onClear;
+  const clearOverlaySelection = useCallback(() => {
+    clearKeyboardSelection();
+    clearCaptionSelection();
+  }, [clearCaptionSelection, clearKeyboardSelection]);
   const scene = useScenePreviewEditing({
     cameraOverlay,
     cameraSource: previewSourceDimensions.camera,
@@ -172,15 +188,6 @@ export function useRecordingPreviewSelection(
       selectionOutput,
     ],
   );
-  const keyboardSelection = keyboardPreview.selection;
-  // The shortcut is drawn for whichever fragment is on screen, but it is in
-  // hand only once it has been picked out.
-  const hasKeyboardSelection = Boolean(
-    keyboardSelection &&
-    keyboardTimeline.selection.ids.has(
-      visibleKeyboardFragment?.fragmentId ?? "",
-    ),
-  );
   // While the crop tool reframes a scene's pane, its selection is the crop
   // window over the pane's unzoomed picture. Panes not in hand keep their
   // boxes, which is what the preview draws for them.
@@ -195,29 +202,17 @@ export function useRecordingPreviewSelection(
     reframe,
     targets: videoSelectionTargets,
   });
-  const selectionOverlay = hasKeyboardSelection
-    ? keyboardSelection
-    : picks.overlay;
-  const selectionTargets = keyboardSelection
-    ? [...(picks.targets ?? []), keyboardSelection]
-    : picks.targets;
-  // The shortcut in hand, for the Selection panel in the panel window.
-  const keyboardGeometry = keyboardPreview.geometry;
-  usePublishKeyboardShortcut(
-    "recording",
-    hasKeyboardSelection && keyboardGeometry
-      ? {
-          kind: "shortcut",
-          label: t("editor-recording-shortcut"),
-          maximumSizePercent: keyboardGeometry.maximumSizePercent,
-          minimumSizePercent: keyboardGeometry.minimumSizePercent,
-          positionXPercent: roundedPercent(keyboardGeometry.center.x),
-          positionYPercent: roundedPercent(keyboardGeometry.center.y),
-          sizePercent: keyboardGeometry.sizePercent,
-        }
-      : null,
-    keyboardCanvas,
-  );
+  const selectionOverlay = picks.overlay;
+  // Last, so they are under the pointer before the panes they are drawn over.
+  const selectionTargets =
+    toolInHand === "select"
+      ? [
+          ...(picks.targets ?? []),
+          ...overlayTargets({
+            keyboard: hasKeyboardData && keyboardEffects.bake,
+          }),
+        ]
+      : picks.targets;
   const selectionGesture = useRecordingSelectionGesture({
     cameraOverlay,
     canPreviewBakedCamera,
@@ -226,7 +221,6 @@ export function useRecordingPreviewSelection(
     canvasTool: isFramed && canvasTool === "crop" ? "select" : canvasTool,
     editGesture,
     effectiveRecordingOutput,
-    keyboardCanvas,
     onCameraOverlayChange,
     onRecordingOutputChange,
     previewSourceDimensions,
@@ -259,9 +253,12 @@ export function useRecordingPreviewSelection(
           screen: selectionOutput.primary,
         }
       : null,
+    /** The captions chosen in their lane or in the picture. */
+    captionSelection,
+    /** Lets go of the shortcuts and captions chosen. */
+    clearOverlaySelection,
     /** Whether a scene places the panes at the playhead. */
     isFramed,
-    keyboardCanvas,
     keyboardTimeline,
     nudgeActiveTrack,
     /** The pane of the scene the crop tool is reframing, which the preview

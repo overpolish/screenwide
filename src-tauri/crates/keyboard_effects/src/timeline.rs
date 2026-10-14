@@ -4,12 +4,9 @@
 mod labels;
 use labels::shortcut_label;
 
-use super::{
-  state::TransitionKind, state::VisualKey, state::EXIT_US, KeyboardCompositor, KeyboardOverlay,
-  Shortcut, HOLD_US,
-};
+use super::{state::TransitionKind, state::EXIT_US, KeyboardCompositor, Shortcut, HOLD_US};
 use screenwide_timeline::{source_after_output_duration_us, TimelineRange};
-use screenwide_timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+use screenwide_timeline_edit::DeletedKeyboardShortcutRange;
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -35,55 +32,6 @@ impl KeyboardCompositor {
         .unwrap_or_else(|poisoned| poisoned.into_inner()) = ranges.to_vec();
     }
     self.rebake();
-  }
-
-  pub fn set_shortcut_positions(&self, positions: &[KeyboardShortcutPositionRange]) {
-    {
-      *self
-        .shortcut_positions
-        .write()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = positions.to_vec();
-    }
-    self.rebake();
-  }
-
-  pub(super) fn apply_shortcut_position(
-    &self,
-    overlay: &mut KeyboardOverlay,
-    visible: &[&VisualKey],
-    position_ms: u64,
-  ) {
-    let position = visible
-      .iter()
-      .max_by_key(|visual| visual.enter_us)
-      .map(|visual| visual.source_shortcut as u64)
-      .and_then(|shortcut_id| {
-        self
-          .shortcut_positions
-          .read()
-          .unwrap_or_else(|poisoned| poisoned.into_inner())
-          .iter()
-          .find(|position| {
-            position.shortcut_id == shortcut_id
-              && position_ms >= position.start_ms
-              && position_ms < position.end_ms
-          })
-          .map(|position| {
-            (
-              position.center_x as f32,
-              position.center_y as f32,
-              position.size_percent.map(|size| (size / 100.0) as f32),
-            )
-          })
-      });
-    if let Some((center_x, center_y, scale)) = position {
-      overlay.center_x = center_x;
-      overlay.center_y = center_y;
-      if let Some(scale) = scale {
-        overlay.scale = scale;
-        overlay.requested_scale = scale;
-      }
-    }
   }
 
   /// Returns captured shortcut groups in reconstruction order, using the same

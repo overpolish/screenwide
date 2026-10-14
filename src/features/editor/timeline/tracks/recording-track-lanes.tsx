@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Captions, Keyboard } from "lucide-react";
 import { memo, useEffect, useMemo } from "react";
 
 import { t } from "../../../../i18n/i18n";
@@ -24,20 +23,12 @@ import { TimelineHeader } from "../timeline-zoom-toolbar";
 import { useTimelineNavigation } from "../use-timeline-navigation";
 import { useTimelineSnapValue } from "../use-timeline-snap-value";
 
+import { RecordingOverlayLanes } from "./recording-overlay-lanes";
 import { RecordingTrackLanesProps } from "./recording-track-lanes-contract";
 import { RecordingVideoTrackRows } from "./recording-video-track-rows";
-import { timedLaneMinimumSpan } from "./timed-lane-layout";
-import { TimelineItemLane } from "./timeline-item-lane";
 
 import type { Caption } from "../../../../bindings/Caption";
 
-/** The narrowest a shortcut badge is drawn, in pixels; kept here beside the
- * lane that carries it so the lane and the meter agree on one number. */
-const KEYBOARD_MINIMUM_ITEM_WIDTH_PX = 48;
-/** The narrowest a caption is drawn, in pixels. Captions follow one another
- * and never overlap, so they keep one row and their true width; this only
- * keeps a one-word caption from vanishing zoomed out. */
-const CAPTION_MINIMUM_ITEM_WIDTH_PX = 2;
 const NO_IDS: ReadonlySet<string> = new Set();
 const NO_SCENES: RecordingSceneClip[] = [];
 const NO_CAPTIONS: readonly Caption[] = [];
@@ -45,13 +36,13 @@ const NO_MOMENTS: readonly RecordingMoment[] = [];
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
-  adjustedKeyboardFragmentIds,
   annotationCameraPlacement,
   annotationClips = [],
   annotationPinStatus,
   annotationPinning,
   audioTracks,
   blade,
+  captionSelection,
   captions = NO_CAPTIONS,
   durationMs,
   enabledTracks,
@@ -70,6 +61,8 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onAnnotationsSweep,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
+  onOpenCaptionsPanel,
+  onOpenKeyboardPanel,
   onSceneActivate,
   onScenePanelOpen,
   onSceneSelect,
@@ -78,8 +71,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onScenesDraftChange,
   onScenesSweep,
   onSeek,
-  onSelectCaption,
-  onSelectKeyboardShortcut,
   onSelectedTrackChange,
   playhead,
   sceneClips = NO_SCENES,
@@ -99,23 +90,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   useEffect(() => {
     if (highlightStart !== undefined) reveal(highlightStart);
   }, [highlightStart, reveal]);
-  // Overlapping shortcut badges stack into sublanes, so the lane is told the
-  // span a badge needs; derived from the same shared stacking it renders from.
-  const keyboardMinimumSpan = timedLaneMinimumSpan({
-    contentWidthPx: timeline.areaWidthPx,
-    minimumItemWidthPx: KEYBOARD_MINIMUM_ITEM_WIDTH_PX,
-    zoom: timeline.viewport.zoom,
-  });
-  const captionItems = useMemo(
-    () =>
-      captions.map((caption) => ({
-        endMs: caption.endMs,
-        id: caption.id,
-        label: caption.text.replace(/\n/gu, " "),
-        startMs: caption.startMs,
-      })),
-    [captions],
-  );
   const visibleMoments = useMemo(
     () => visibleRecordingMoments(blade.edit, moments, sourceDurationMs),
     [blade.edit, moments, sourceDurationMs],
@@ -195,52 +169,23 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               viewport={timeline.viewport}
             />
           ) : null}
-          {keyboardItems.length > 0 ? (
-            <TimelineItemLane
-              edit={blade.edit}
-              hiddenFragmentIds={hiddenKeyboardFragmentIds}
-              hiddenItemIds={hiddenKeyboardItemIds}
-              icon={<Keyboard />}
-              items={keyboardItems}
-              label={t("editor-timeline-shortcuts")}
-              minimumItemWidthPx={KEYBOARD_MINIMUM_ITEM_WIDTH_PX}
-              minimumSpan={keyboardMinimumSpan}
-              onClearSelection={keyboardSelection.onClear}
-              onSelect={(fragment, outputPosition, toggle) => {
-                blade.clearRangeSelection();
-                blade.selectSegment(null);
-                keyboardSelection.onSelect(fragment.fragmentId, toggle);
-                onSelectKeyboardShortcut?.();
-                onSeek(outputPosition, "end");
-              }}
-              selectedFragmentIds={keyboardSelection.ids}
-              sourceDurationMs={sourceDurationMs}
-              viewport={timeline.viewport}
-              warningFragmentIds={adjustedKeyboardFragmentIds}
-            />
-          ) : null}
-          {captionItems.length > 0 ? (
-            <TimelineItemLane
-              edit={blade.edit}
-              icon={<Captions />}
-              items={captionItems}
-              label={t("editor-timeline-captions")}
-              minimumItemWidthPx={CAPTION_MINIMUM_ITEM_WIDTH_PX}
-              onSelect={({ item }) => {
-                blade.clearRangeSelection();
-                onSelectCaption?.();
-                // The middle shows the caption fully on screen; a playhead
-                // already in it is left where it was put.
-                const start = item.startMs / durationMs;
-                const end = item.endMs / durationMs;
-                const at = playhead.ratio();
-                if (at < start || at >= end) onSeek((start + end) / 2, "end");
-              }}
-              outputLengthMs={durationMs}
-              sourceDurationMs={sourceDurationMs}
-              viewport={timeline.viewport}
-            />
-          ) : null}
+          <RecordingOverlayLanes
+            areaWidthPx={timeline.areaWidthPx}
+            blade={blade}
+            captions={captions}
+            captionSelection={captionSelection}
+            durationMs={durationMs}
+            hiddenKeyboardFragmentIds={hiddenKeyboardFragmentIds}
+            hiddenKeyboardItemIds={hiddenKeyboardItemIds}
+            keyboardItems={keyboardItems}
+            keyboardSelection={keyboardSelection}
+            onOpenCaptionsPanel={onOpenCaptionsPanel}
+            onOpenKeyboardPanel={onOpenKeyboardPanel}
+            onSeek={onSeek}
+            playhead={playhead}
+            sourceDurationMs={sourceDurationMs}
+            viewport={timeline.viewport}
+          />
           <RecordingVideoTrackRows
             blade={blade}
             enabledTracks={enabledTracks}

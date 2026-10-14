@@ -87,6 +87,12 @@
       set_selection_cursor([NSCursor arrowCursor]);
       return;
     }
+    if (hasSharedHit && sharedHandle == 0 && selection_is_overlay(target)) {
+      self.selectionDragActive = NO;
+      self.panning = NO;
+      report_overlay_press(self.surface, target);
+      return;
+    }
     if (hasSharedHit &&
         !(sharedHandle == 0 &&
           target.layer_id == ScreenwideFrameLayerId)) {
@@ -123,8 +129,6 @@
           self.selectionFramePaneStarts = [self.surface.editorBaseRects copy];
           begin_workspace_frame_resize(self.surface);
         }
-        if (self.selectionDragOperation == 1 && selection_is_keyboard(target))
-          begin_keyboard_transform(self.surface);
         self.selectionDragCentered =
             (event.modifierFlags & NSEventModifierFlagOption) != 0;
         emit_selection_gesture(self.surface, 0, self.selectionDragOperation,
@@ -182,9 +186,6 @@
       self.selectionFramePaneStarts = [self.surface.editorBaseRects copy];
       begin_workspace_frame_resize(self.surface);
     }
-    if (self.selectionDragOperation == 1 &&
-        selection_is_keyboard(self.selectionDragStart))
-      begin_keyboard_transform(self.surface);
     self.selectionDragCentered =
         (event.modifierFlags & NSEventModifierFlagOption) != 0;
     emit_selection_gesture(self.surface, 0, self.selectionDragOperation,
@@ -195,6 +196,12 @@
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {
     ScreenwidePreviewSelection target;
     if (selection_target_at_point(self.surface, point, &target)) {
+      if (selection_is_overlay(target)) {
+        self.selectionDragActive = NO;
+        self.panning = NO;
+        report_overlay_press(self.surface, target);
+        return;
+      }
       BOOL changed = self.surface.annotationSelected != -1 || !self.surface.hasSelection ||
                      self.surface.selection.pane_index != target.pane_index ||
                      self.surface.selection.layer_id != target.layer_id;
@@ -495,15 +502,8 @@
           : 1.0;
       double minimumWidthScale = 36.0 / MAX(pane.size.width * self.surface.editorZoom * start.width, 1.0);
       double minimumHeightScale = 36.0 / MAX(pane.size.height * self.surface.editorZoom * start.height, 1.0);
-      double minimumScale = selection_is_keyboard(start)
-          ? 0.01 : MAX(minimumWidthScale, minimumHeightScale);
+      double minimumScale = MAX(minimumWidthScale, minimumHeightScale);
       double maximumScale = 8.0;
-      if (start.minimum_scale > 0.0)
-        minimumScale = MAX(minimumScale, start.minimum_scale);
-      if (start.maximum_scale > 0.0)
-        maximumScale = MIN(maximumScale, start.maximum_scale);
-      maximumScale = keyboard_resize_limit(start, anchorX, anchorY, maximumScale);
-      maximumScale = MAX(maximumScale, 0.01);
       double effectiveMinimumScale = MIN(minimumScale, maximumScale);
       scale = fmin(maximumScale, fmax(effectiveMinimumScale, scale));
       BOOL snapping = self.surface.selectionSnappingEnabled &&
@@ -520,7 +520,6 @@
       ScreenwidePreviewSelection resized = start;
       resized.x = x; resized.y = y; resized.width = width; resized.height = height;
       self.surface.selection = selection_carrying_image(start, resized);
-      update_keyboard_transform(self.surface, resized, scale);
       apply_editor_transform(self.surface);
       emit_selection_gesture(self.surface, 1, 1, edges, scale,
                              x - start.x, y - start.y);
@@ -588,7 +587,6 @@
                                   NSEventModifierFlagControl)) != 0;
       if (snapping) snap_selection_move(self.surface, &x, &y);
       else clear_selection_snap_guides(self.surface);
-      clamp_keyboard_move(self.surface, self.selectionDragStart, &x, &y);
       // Auto-fit renormalizes the live OSC into each enlarged canvas. Always
       // derive the next sample from mouse-down geometry; reusing the already
       // renormalized width compounds that normalization and collapses the OSC.
@@ -661,7 +659,6 @@
         self.surface.editorPanY = self.selectionMovePanStart.y;
       }
       self.surface.selection = selection_carrying_image(self.selectionDragStart, moved);
-      update_keyboard_transform(self.surface, moved, 1.0);
       apply_editor_transform(self.surface);
       if (autoFit && self.surface.transformCallback)
         self.surface.transformCallback(self.surface.editorZoom * 100.0,
@@ -728,11 +725,7 @@
                            edges, scale, deltaX, deltaY);
     if (self.selectionDragOperation == 3 ||
         (self.selectionDragOperation == 0 &&
-         !NSIsEmptyRect(self.selectionMoveFrameStart)) ||
-        (self.selectionDragOperation == 0 &&
-         selection_is_keyboard(self.selectionDragStart)) ||
-        (self.selectionDragOperation == 1 &&
-         selection_is_keyboard(self.selectionDragStart))) {
+         !NSIsEmptyRect(self.selectionMoveFrameStart))) {
       // A Frame resize and an auto-fit Move both leave the view where the
       // drag's rebase put it; the layout echoing the grown canvas must keep
       // that transform rather than restore/recentre. A plain move sets this

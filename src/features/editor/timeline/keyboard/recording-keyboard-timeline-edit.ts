@@ -5,14 +5,11 @@ import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 
 import type { DeletedKeyboardShortcutFragment } from "../../../../bindings/DeletedKeyboardShortcutFragment";
 import type { DeletedKeyboardShortcutRange } from "../../../../bindings/DeletedKeyboardShortcutRange";
-import type { KeyboardShortcutPosition } from "../../../../bindings/KeyboardShortcutPosition";
-import type { KeyboardShortcutPositionRange } from "../../../../bindings/KeyboardShortcutPositionRange";
 
-export type { DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange };
+export type { DeletedKeyboardShortcutRange };
 
 const EMPTY_DELETED_SHORTCUT_FRAGMENTS: DeletedKeyboardShortcutFragment[] = [];
 const EMPTY_DELETED_SHORTCUT_IDS: number[] = [];
-const EMPTY_SHORTCUT_POSITIONS: KeyboardShortcutPosition[] = [];
 
 const keyboardEdit = (
   edit: RecordingTimelineEdit | null | undefined,
@@ -29,10 +26,6 @@ export const deletedRecordingKeyboardShortcutFragments = (
   keyboardEdit(edit)?.deletedKeyboardShortcutFragments ??
   EMPTY_DELETED_SHORTCUT_FRAGMENTS;
 
-export const recordingKeyboardShortcutPositions = (
-  edit: RecordingTimelineEdit | null | undefined,
-) => keyboardEdit(edit)?.keyboardShortcutPositions ?? EMPTY_SHORTCUT_POSITIONS;
-
 export const keyboardShortcutFragmentId = (
   shortcutId: number,
   segmentId: number,
@@ -44,13 +37,6 @@ export function inheritRecordingKeyboardSegmentEdits(
   next: RecordingTimelineEdit,
   descendantIds: ReadonlyMap<number, readonly number[]>,
 ): RecordingTimelineEdit {
-  const inheritedPositions = recordingKeyboardShortcutPositions(edit).flatMap(
-    (position) =>
-      (descendantIds.get(position.segmentId) ?? []).map((segmentId) => ({
-        ...position,
-        segmentId,
-      })),
-  );
   const inheritedDeleted = deletedRecordingKeyboardShortcutFragments(
     edit,
   ).flatMap((fragment) =>
@@ -59,30 +45,13 @@ export function inheritRecordingKeyboardSegmentEdits(
       segmentId,
     })),
   );
-  if (inheritedPositions.length === 0 && inheritedDeleted.length === 0)
-    return next;
+  if (inheritedDeleted.length === 0) return next;
   return {
     ...next,
-    ...(inheritedPositions.length > 0
-      ? {
-          keyboardShortcutPositions: [
-            ...recordingKeyboardShortcutPositions(edit),
-            ...inheritedPositions,
-          ].sort(
-            (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
-          ),
-        }
-      : {}),
-    ...(inheritedDeleted.length > 0
-      ? {
-          deletedKeyboardShortcutFragments: [
-            ...deletedRecordingKeyboardShortcutFragments(edit),
-            ...inheritedDeleted,
-          ].sort(
-            (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
-          ),
-        }
-      : {}),
+    deletedKeyboardShortcutFragments: [
+      ...deletedRecordingKeyboardShortcutFragments(edit),
+      ...inheritedDeleted,
+    ].sort((a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId),
   };
 }
 
@@ -123,135 +92,6 @@ export function deleteRecordingKeyboardShortcutFragments(
   return next;
 }
 
-export function moveRecordingKeyboardShortcutFragments({
-  bounds,
-  delta,
-  edit,
-  fragmentIds,
-  leaderCenter,
-}: {
-  bounds: { height: number; width: number };
-  delta: { x: number; y: number };
-  edit: RecordingTimelineEdit;
-  fragmentIds: Iterable<string>;
-  leaderCenter: { x: number; y: number };
-}): RecordingTimelineEdit {
-  const positions = new Map(
-    recordingKeyboardShortcutPositions(edit).map((position) => [
-      keyboardShortcutFragmentId(position.shortcutId, position.segmentId),
-      position,
-    ]),
-  );
-  let changed = false;
-  for (const fragmentId of fragmentIds) {
-    const fragment = parseKeyboardShortcutFragmentId(fragmentId);
-    if (!fragment) continue;
-    const centerX = Math.max(
-      bounds.width / 2,
-      Math.min(1 - bounds.width / 2, leaderCenter.x + delta.x),
-    );
-    const centerY = Math.max(
-      bounds.height / 2,
-      Math.min(1 - bounds.height / 2, leaderCenter.y + delta.y),
-    );
-    positions.set(fragmentId, {
-      ...positions.get(fragmentId),
-      ...fragment,
-      centerX,
-      centerY,
-    });
-    changed = true;
-  }
-  if (!changed) return edit;
-  const next: RecordingTimelineEdit = {
-    ...edit,
-    keyboardShortcutPositions: [...positions.values()].sort(
-      (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
-    ),
-  };
-  return next;
-}
-
-export function resizeRecordingKeyboardShortcutFragments({
-  center,
-  edit,
-  fragmentIds,
-  maximumSizePercent,
-  minimumSizePercent,
-  sizePercent,
-}: {
-  center: { x: number; y: number };
-  edit: RecordingTimelineEdit;
-  fragmentIds: Iterable<string>;
-  sizePercent: number;
-  maximumSizePercent?: number;
-  minimumSizePercent?: number;
-}): RecordingTimelineEdit {
-  const positions = new Map(
-    recordingKeyboardShortcutPositions(edit).map((position) => [
-      keyboardShortcutFragmentId(position.shortcutId, position.segmentId),
-      position,
-    ]),
-  );
-  let changed = false;
-  for (const fragmentId of fragmentIds) {
-    const fragment = parseKeyboardShortcutFragmentId(fragmentId);
-    if (!fragment) continue;
-    positions.set(fragmentId, {
-      ...positions.get(fragmentId),
-      ...fragment,
-      centerX: center.x,
-      centerY: center.y,
-      sizePercent: Math.max(
-        minimumSizePercent ?? 5,
-        Math.min(maximumSizePercent ?? 500, sizePercent),
-      ),
-    });
-    changed = true;
-  }
-  if (!changed) return edit;
-  return {
-    ...edit,
-    keyboardShortcutPositions: [...positions.values()].sort(
-      (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
-    ),
-  };
-}
-
-export function resetAllRecordingKeyboardShortcutPositions(
-  edit: RecordingTimelineEdit,
-): RecordingTimelineEdit {
-  const keyboard = edit;
-  if (!keyboard.keyboardShortcutPositions?.length) return edit;
-  const { keyboardShortcutPositions: _positions, ...rest } = keyboard;
-  return rest;
-}
-
-export function resetRecordingKeyboardShortcutPositions(
-  edit: RecordingTimelineEdit,
-  fragmentIds: Iterable<string>,
-): RecordingTimelineEdit {
-  const reset = new Set(fragmentIds);
-  const positions = recordingKeyboardShortcutPositions(edit).filter(
-    (position) =>
-      !reset.has(
-        keyboardShortcutFragmentId(position.shortcutId, position.segmentId),
-      ),
-  );
-  if (positions.length === recordingKeyboardShortcutPositions(edit).length)
-    return edit;
-  const keyboard = edit;
-  if (positions.length > 0) {
-    const next: RecordingTimelineEdit = {
-      ...keyboard,
-      keyboardShortcutPositions: positions,
-    };
-    return next;
-  }
-  const { keyboardShortcutPositions: _positions, ...rest } = keyboard;
-  return rest;
-}
-
 export function restoreRecordingKeyboardShortcuts(
   edit: RecordingTimelineEdit,
 ): RecordingTimelineEdit {
@@ -284,33 +124,6 @@ export function deletedRecordingKeyboardShortcutRanges(
         ? [
             {
               endMs: Math.round(segment.sourceEnd * sourceDurationMs),
-              shortcutId,
-              startMs: Math.round(segment.sourceStart * sourceDurationMs),
-            },
-          ]
-        : [];
-    },
-  );
-}
-
-export function recordingKeyboardShortcutPositionRanges(
-  edit: RecordingTimelineEdit | null | undefined,
-  sourceDurationMs: number,
-): KeyboardShortcutPositionRange[] {
-  if (!edit || sourceDurationMs <= 0) return [];
-  const segments = new Map(
-    edit.segments.map((segment) => [segment.id, segment]),
-  );
-  return recordingKeyboardShortcutPositions(edit).flatMap(
-    ({ centerX, centerY, segmentId, shortcutId, sizePercent }) => {
-      const segment = segments.get(segmentId);
-      return segment
-        ? [
-            {
-              centerX,
-              centerY,
-              endMs: Math.round(segment.sourceEnd * sourceDurationMs),
-              ...(sizePercent === undefined ? {} : { sizePercent }),
               shortcutId,
               startMs: Math.round(segment.sourceStart * sourceDurationMs),
             },

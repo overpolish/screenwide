@@ -6,7 +6,6 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { AnnotationStyle, ImageArt } from "./annotations/annotations";
 import {
   normalizedCameraOverlay,
-  normalizedCursorEffects,
   normalizedKeyboardEffects,
   normalizedAudioTrackVolumes,
 } from "./preview/preview-settings-normalization";
@@ -87,7 +86,7 @@ export const startRecordingPreviewPlayer = ({
         cameraOverlay,
         recordingOutput.primary,
       ),
-      cursorEffects: normalizedCursorEffects(cursorEffects),
+      cursorEffects,
       keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
       ...keyboardTimeline,
       recordingOutput: {
@@ -222,7 +221,7 @@ export const setRecordingPreviewCursorEffects = (
   sessionId: number,
 ) =>
   invoke<null>("set_recording_preview_cursor_effects", {
-    cursorEffects: normalizedCursorEffects(cursorEffects),
+    cursorEffects,
     sessionId,
   });
 

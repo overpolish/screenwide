@@ -20,8 +20,7 @@ const placedSelection = (
   selection: ToolPanelSnapshot["selection"],
   placement: SelectionPlacementPatch,
 ) => {
-  if (!selection || selection.kind === "audio" || selection.kind === "shortcut")
-    return selection;
+  if (!selection || selection.kind === "audio") return selection;
   const next = { ...selection };
   for (const key of ["height", "width", "x", "y"] as const) {
     const value = placement[key];
@@ -39,25 +38,6 @@ const flippedSwitch = (
   if (enabled === undefined) return state;
   if (!enabled) return "off";
   return state === "on" ? "on" : "cleaning";
-};
-
-/** The same rule for the shortcut: a size being typed leaves the position the
- * drag on the picture is still moving alone. */
-const placedShortcut = (
-  selection: ToolPanelSnapshot["selection"],
-  placement: NonNullable<ToolPanelPatch["shortcutPlacement"]>,
-) => {
-  if (selection?.kind !== "shortcut") return selection;
-  const next = { ...selection };
-  for (const key of [
-    "positionXPercent",
-    "positionYPercent",
-    "sizePercent",
-  ] as const) {
-    const value = placement[key];
-    if (value !== undefined) next[key] = value;
-  }
-  return next;
 };
 
 /** The same rule for the canvas and the crop: a width being typed does not pin
@@ -93,7 +73,6 @@ export function resolveToolPanelSnapshot(
     annotationAnimated,
     annotationImageSway,
     annotationStyle,
-    applyShortcutToAll: _applyShortcutToAll,
     audioVolume,
     autoVolume,
     autoZoomScenes: _autoZoomScenes,
@@ -124,13 +103,10 @@ export function resolveToolPanelSnapshot(
     removePreset: _removePreset,
     removeSceneTemplate: _removeSceneTemplate,
     removeSilences: _removeSilences,
-    resetAllShortcuts: _resetAllShortcuts,
     resetCrop: _resetCrop,
     resetFrame: _resetFrame,
-    resetKeyboardPosition: _resetKeyboardPosition,
     resetSceneFraming: _resetSceneFraming,
     resetSelection: _resetSelection,
-    resetShortcut: _resetShortcut,
     restoreShortcuts: _restoreShortcuts,
     restoreSilences: _restoreSilences,
     saveAnnotationColor: _saveAnnotationColor,
@@ -144,7 +120,6 @@ export function resolveToolPanelSnapshot(
     selectionInset,
     selectionOutput,
     selectionRadius,
-    shortcutPlacement,
     showCameraObject: _showCameraObject,
     studioDucking,
     studioSound,
@@ -168,10 +143,7 @@ export function resolveToolPanelSnapshot(
   // A dragged inset holds its own value until the editor acknowledges it, so
   // the knob stays under the pointer rather than snapping back a frame.
   const placed =
-    resolved.selection?.kind === "shortcut" ||
-    resolved.selection?.kind === "audio"
-      ? null
-      : resolved.selection;
+    resolved.selection?.kind === "audio" ? null : resolved.selection;
   const held =
     placed && selectionInset !== undefined
       ? { ...placed, inset: selectionInset }
@@ -290,9 +262,6 @@ export function resolveToolPanelSnapshot(
       : {}),
     ...(selectionOutput
       ? { selection: placedSelection(selection, selectionOutput) }
-      : {}),
-    ...(shortcutPlacement
-      ? { selection: placedShortcut(selection, shortcutPlacement) }
       : {}),
   };
 }

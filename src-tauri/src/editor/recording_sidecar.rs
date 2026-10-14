@@ -9,7 +9,6 @@ pub(crate) struct RecordingKeyboard {
   /// A sidecar can exist yet hold no shortcuts (nothing qualifying was ever
   /// pressed); keyboard UI is only offered when there is something to show.
   pub has_shortcuts: bool,
-  pub maximum_width_units: u16,
   pub path: PathBuf,
 }
 
@@ -32,12 +31,7 @@ impl RecordingKeyboard {
     let compositor = screenwide_keyboard_effects::KeyboardCompositor::open(&path).ok();
     Self {
       format_version: screenwide_records::keyboard::FORMAT_VERSION,
-      has_shortcuts: compositor
-        .as_ref()
-        .is_some_and(|keyboard| keyboard.shortcut_count() > 0),
-      maximum_width_units: compositor
-        .map(|keyboard| keyboard.maximum_width_units())
-        .unwrap_or(20),
+      has_shortcuts: compositor.is_some_and(|keyboard| keyboard.shortcut_count() > 0),
       path,
     }
   }

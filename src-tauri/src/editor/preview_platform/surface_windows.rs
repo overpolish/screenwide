@@ -91,9 +91,8 @@ use windows::Win32::{
 mod audio_ribbon;
 mod cursor_artwork;
 mod editor;
-mod keyboard_hit;
-use keyboard_hit::{keyboard_transform_start, redraw_keyboard_transform};
 mod image_drop;
+mod overlay_hit;
 mod recenter;
 mod selection;
 mod snapping;

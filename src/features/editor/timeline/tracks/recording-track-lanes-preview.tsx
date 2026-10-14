@@ -30,7 +30,7 @@ import { createPlayhead } from "../scrub-playhead";
 
 import { RecordingTrackLanes } from "./recording-track-lanes";
 import * as story from "./recording-track-lanes-preview-fixtures";
-import { selectTimelineItem } from "./timeline-item-selection";
+import { useTimelineItemSelection } from "./timeline-item-selection";
 
 /**
  * The timeline lanes wired to real edit state, shared by the lanes story and
@@ -74,9 +74,8 @@ export function RecordingTrackLanesPreview({
   const [snapGuidePosition, setSnapGuidePosition] = useState<number | null>(
     null,
   );
-  const [selectedKeyboardItems, setSelectedKeyboardItems] = useState(
-    () => new Set<string>(),
-  );
+  const keyboardSelection = useTimelineItemSelection<string>();
+  const captionSelection = useTimelineItemSelection<string>();
   const [rangeSelection, setRangeSelection] = useState<{
     end: number;
     start: number;
@@ -161,7 +160,6 @@ export function RecordingTrackLanesPreview({
   return (
     <EditorEditGestureContext value={editGesture}>
       <RecordingTrackLanes
-        adjustedKeyboardFragmentIds={new Set()}
         annotationClips={annotationClips}
         audioTracks={audioTracks}
         blade={{
@@ -241,23 +239,14 @@ export function RecordingTrackLanesPreview({
           updateTrim: () => null,
         }}
         captions={story.STORY_CAPTIONS}
+        captionSelection={captionSelection}
         durationMs={timelineDurationMs}
         enabledTracks={enabledAudio}
         enabledVideoTracks={enabledVideo}
         hiddenKeyboardFragmentIds={new Set()}
         hiddenKeyboardItemIds={new Set()}
         keyboardItems={story.STORY_KEYBOARD_ITEMS}
-        keyboardSelection={{
-          ids: selectedKeyboardItems,
-          onClear: () => {
-            setSelectedKeyboardItems(new Set());
-          },
-          onSelect: (itemId, toggle) => {
-            setSelectedKeyboardItems((current) =>
-              selectTimelineItem(current, itemId, toggle),
-            );
-          },
-        }}
+        keyboardSelection={keyboardSelection}
         layout={story.STORY_LAYOUT}
         moments={story.STORY_MOMENTS}
         onAnnotationsChange={setAnnotationClips}

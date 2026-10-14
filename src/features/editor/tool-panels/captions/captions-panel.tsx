@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Button } from "../../../../components/base/button/button";
 import { CircularProgress } from "../../../../components/base/circular-progress/circular-progress";
 import { PillGroup } from "../../../../components/base/pill-group/pill-group";
 import { Switch } from "../../../../components/base/switch/switch";
@@ -171,6 +172,17 @@ export function CaptionsPanel({ workspace }: { workspace: EditorKind }) {
           templates={templates}
         />
       )}
+
+      <div className="flex justify-end gap-control">
+        <Button
+          isDisabled={isLocked || !captions.hidden?.length}
+          onPress={() => {
+            ask({ hidden: [] });
+          }}
+        >
+          {t("editor-panels-captions-restore")}
+        </Button>
+      </div>
     </div>
   );
 }

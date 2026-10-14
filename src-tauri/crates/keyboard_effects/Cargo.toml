@@ -13,6 +13,7 @@ edition.workspace = true
 doctest = false
 
 [dependencies]
+screenwide-placement.workspace = true
 screenwide-timeline.workspace = true
 screenwide-timeline-edit.workspace = true
 serde.workspace = true

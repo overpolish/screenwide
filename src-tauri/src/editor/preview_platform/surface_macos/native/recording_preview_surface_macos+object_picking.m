@@ -44,7 +44,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL object_picking_camera_image(ScreenwidePreviewSur
   for (NSValue *value in surface.selectionTargets) {
     ScreenwidePreviewSelection target;
     [value getValue:&target size:sizeof(target)];
-    if (target.layer_id != layer || selection_is_keyboard(target)) continue;
+    if (target.layer_id != layer || selection_is_overlay(target)) continue;
     *image = selection_image_frame_for(surface, target);
     return image->size.width > 0.0 && image->size.height > 0.0;
   }

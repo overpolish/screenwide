@@ -7,15 +7,22 @@
 editor-panels-nothing-selected = Nothing selected
 editor-panels-size = Size
 editor-panels-position = Position
-editor-panels-reset-position = Reset position
+# The nine places on the picture an overlay such as captions or shortcuts can sit, each the accessible name of its cell in the Position grid.
+editor-panels-position-top-left = Top left
+editor-panels-position-top = Top
+editor-panels-position-top-right = Top right
+editor-panels-position-left = Left
+editor-panels-position-center = Centre
+editor-panels-position-right = Right
+editor-panels-position-bottom-left = Bottom left
+editor-panels-position-bottom = Bottom
+editor-panels-position-bottom-right = Bottom right
 editor-panels-inset = Inset
 editor-panels-drop-shadow = Drop shadow
 editor-panels-reset = Reset
-editor-panels-reset-all = Reset all
 editor-panels-recenter = Recenter
 editor-panels-delete = Delete
 editor-panels-clear-all = Clear all
-editor-panels-apply-to-all = Apply to all
 editor-panels-camera = Camera
 editor-panels-screen = Screen
 editor-panels-screenshot = Screenshot
@@ -78,8 +85,6 @@ editor-panels-keyboard = Keyboard
 editor-panels-keyboard-name = Keyboard shortcuts
 editor-panels-keyboard-empty = This recording has no keyboard shortcuts.
 editor-panels-keyboard-show = Show shortcuts
-editor-panels-shortcut-x = Shortcut X position
-editor-panels-shortcut-y = Shortcut Y position
 editor-panels-keyboard-animation = Animation
 editor-panels-keyboard-pop = Pop
 editor-panels-keyboard-fade = Fade
@@ -160,6 +165,8 @@ editor-panels-captions-description = Captions are made from the transcript.
 # The accessible name of the spinner the Captions panel shows while it comes up.
 editor-panels-captions-loading = Loading captions
 editor-panels-captions-show = Show captions
+# Brings back every caption deleted from the timeline or the picture. Deleting a caption only takes it out of the video and the subtitles; the transcript keeps its words.
+editor-panels-captions-restore = Restore all captions
 # The accessible name of the transcript as the captions break it, under Show captions.
 editor-panels-captions-text = Caption text
 # Under the caption text: take away every break, join, hidden or shown word and key word placed by hand. Spelling fixes stay.
@@ -266,16 +273,6 @@ editor-panels-captions-max-words = Max words
 editor-panels-captions-lines = Lines
 editor-panels-captions-one-line = One
 editor-panels-captions-two-lines = Two
-# The nine places on the picture a caption can sit, each the accessible name of its cell in the Position grid.
-editor-panels-captions-position-top-left = Top left
-editor-panels-captions-position-top = Top
-editor-panels-captions-position-top-right = Top right
-editor-panels-captions-position-left = Left
-editor-panels-captions-position-center = Centre
-editor-panels-captions-position-right = Right
-editor-panels-captions-position-bottom-left = Bottom left
-editor-panels-captions-position-bottom = Bottom
-editor-panels-captions-position-bottom-right = Bottom right
 # Keep each caption on screen through a silence until the next one starts.
 editor-panels-captions-hold-until-next = Hold until next caption
 editor-panels-captions-all-caps = All caps

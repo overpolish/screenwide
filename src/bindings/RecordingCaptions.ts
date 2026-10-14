@@ -34,4 +34,11 @@ wordChoices?: Array<CaptionWordChoice>,
 /**
  * Sorted by `source_at`, at most one at a moment.
  */
-emphasisChoices?: Array<CaptionEmphasisChoice>, };
+emphasisChoices?: Array<CaptionEmphasisChoice>, 
+/**
+ * Captions taken out of the video by hand, each named by its id: where
+ * its first word starts in the source, in milliseconds. Whichever caption
+ * holds the word said then is left out, however the settings regroup the
+ * words. Sorted, none twice.
+ */
+hidden?: Array<number>, };

@@ -251,7 +251,6 @@ export function EditorPanel({
                 onCameraOverlayChange={onCameraOverlayChange}
                 onEnabledTracksChange={onEnabledTracksChange}
                 onEnabledVideoTracksChange={onEnabledVideoTracksChange}
-                onKeyboardEffectsChange={onKeyboardEffectsChange}
                 onRecordingOutputChange={onRecordingOutputChange}
                 onRecordingTimelineEditChange={onRecordingTimelineEditChange}
                 onSelectedTrackChange={onSelectedTrackChange}

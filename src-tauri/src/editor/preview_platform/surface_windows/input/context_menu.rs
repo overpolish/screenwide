@@ -40,8 +40,10 @@ pub(super) fn open(inner: &std::sync::Arc<SurfaceInner>, point: (f64, f64)) {
   let Some((target, _)) = shared_selection_hit(inner, &state, point) else {
     return;
   };
-  // Frames and keyboard overlays have no layer-order menu.
-  if target.layer_id >= u32::MAX - 1 {
+  // Frames and the overlays drawn over the picture have no layer-order menu.
+  if target.layer_id == FRAME_LAYER_ID
+    || crate::editor::preview_platform::is_overlay_layer(target.layer_id)
+  {
     return;
   }
   let changed = state.selection.is_none_or(|current| {

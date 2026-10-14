@@ -18,36 +18,17 @@ import {
   CaptionsPatch,
 } from "../../recording/captions/recording-captions";
 import { CaptionTemplates } from "../../recording/captions/use-caption-templates";
+import { placementOptions } from "../placement-options";
 
 import { CaptionSizeRow } from "./caption-size-row";
 
 import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionLines } from "../../../../bindings/CaptionLines";
-import type { CaptionPosition } from "../../../../bindings/CaptionPosition";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 
 const lineOptions = (): { id: CaptionLines; label: string }[] => [
   { id: "one", label: t("editor-panels-captions-one-line") },
   { id: "two", label: t("editor-panels-captions-two-lines") },
-];
-
-/** The nine places, in reading order, as the grid lays them out. */
-const positionOptions = (): { id: CaptionPosition; label: string }[] => [
-  { id: "top-left", label: t("editor-panels-captions-position-top-left") },
-  { id: "top", label: t("editor-panels-captions-position-top") },
-  { id: "top-right", label: t("editor-panels-captions-position-top-right") },
-  { id: "left", label: t("editor-panels-captions-position-left") },
-  { id: "center", label: t("editor-panels-captions-position-center") },
-  { id: "right", label: t("editor-panels-captions-position-right") },
-  {
-    id: "bottom-left",
-    label: t("editor-panels-captions-position-bottom-left"),
-  },
-  { id: "bottom", label: t("editor-panels-captions-position-bottom") },
-  {
-    id: "bottom-right",
-    label: t("editor-panels-captions-position-bottom-right"),
-  },
 ];
 
 /**
@@ -108,7 +89,7 @@ export function CaptionLayoutTab({
           <PositionGrid
             aria-labelledby={controlProps["aria-labelledby"]}
             isDisabled={isDisabled}
-            items={positionOptions()}
+            items={placementOptions()}
             onChange={(position) => {
               set({ position });
             }}

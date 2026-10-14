@@ -3,7 +3,6 @@
 
 import {
   CameraOverlaySettings,
-  CursorEffectSettings,
   KeyboardEffectSettings,
   AudioTrackVolume,
 } from "../types";
@@ -36,13 +35,6 @@ export const normalizedCameraOverlay = (
   };
 };
 
-export const normalizedCursorEffects = (
-  settings: CursorEffectSettings,
-): CursorEffectSettings => ({
-  ...settings,
-  sizePercent: finite(settings.sizePercent, 100),
-});
-
 export const normalizedKeyboardEffects = (
   settings: KeyboardEffectSettings,
 ): KeyboardEffectSettings => ({
@@ -52,9 +44,8 @@ export const normalizedKeyboardEffects = (
       : "pop",
   appearance: settings.appearance === "dark" ? "dark" : "light",
   bake: settings.bake,
-  positionXPercent: settings.positionXPercent,
-  positionYPercent: settings.positionYPercent,
-  sizePercent: finite(settings.sizePercent, 100),
+  position: settings.position,
+  size: settings.size,
 });
 export const normalizedAudioTrackVolumes = (volumes: AudioTrackVolume[]) =>
   volumes.map((volume) => ({

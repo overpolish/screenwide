@@ -46,7 +46,6 @@ export type {
   ToolPanelLayerSelection,
   ToolPanelMicrophone,
   ToolPanelModel,
-  ToolPanelShortcutSelection,
 } from "./tool-panel-selection";
 
 /**
@@ -99,9 +98,6 @@ export type ToolPanelSnapshot = {
    * every control in them is disabled. */
   isLocked: boolean;
   keyboardEffects: KeyboardEffectSettings;
-  /** As big as a shortcut may be drawn in this recording's canvas, in percent:
-   * the point past which the widest shortcut would run off the edge. */
-  keyboardMaximum: number;
   /** Null where the recording has no screen and camera to arrange. */
   scene: ToolPanelScene | null;
   /** The scene layouts kept for every recording, oldest first. */
@@ -149,7 +145,6 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   hasKeyboardData: false,
   isLocked: false,
   keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
-  keyboardMaximum: 500,
   scene: null,
   sceneTemplates: [],
   selection: null,

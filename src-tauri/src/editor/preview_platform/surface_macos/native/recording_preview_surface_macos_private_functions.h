@@ -9,20 +9,14 @@
 @end
 NSRect editor_frame(ScreenwidePreviewSurface *surface, NSRect base);
 NSRect editor_base_bounds(ScreenwidePreviewSurface *surface);
-BOOL selection_is_keyboard(ScreenwidePreviewSelection selection);
-NSRect keyboard_hit_frame(ScreenwidePreviewSurface *surface,
-                          ScreenwidePreviewSelection selection);
-BOOL keyboard_body_contains(ScreenwidePreviewSurface *surface,
-                            ScreenwidePreviewSelection selection,
-                            NSPoint point);
-double keyboard_resize_limit(ScreenwidePreviewSelection start,
-    double anchorX, double anchorY, double maximum);
-void clamp_keyboard_move(ScreenwidePreviewSurface *surface,
-    ScreenwidePreviewSelection start, double *x, double *y);
-void begin_keyboard_transform(ScreenwidePreviewSurface *surface);
-void update_keyboard_transform(
-    ScreenwidePreviewSurface *surface, ScreenwidePreviewSelection selection,
-    double scale);
+BOOL selection_is_overlay(ScreenwidePreviewSelection selection);
+NSRect selection_hit_frame(ScreenwidePreviewSurface *surface,
+                           ScreenwidePreviewSelection selection);
+BOOL overlay_body_contains(ScreenwidePreviewSurface *surface,
+                           ScreenwidePreviewSelection selection,
+                           NSPoint point);
+void report_overlay_press(ScreenwidePreviewSurface *surface,
+                          ScreenwidePreviewSelection target);
 NSRect editor_frame_with_transform(
     ScreenwidePreviewSurface *surface, NSRect base, double zoom,
     NSPoint pan);

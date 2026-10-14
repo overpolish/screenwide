@@ -72,7 +72,7 @@ export function PositionGrid<T extends string>({
                 elementFocusVisible,
               )}
             >
-              {/* A caption's line where it is chosen, a point where it could
+              {/* A line where the overlay sits, a point where it could
                   go. */}
               <span className="size-1 rounded-full bg-content-fg-tertiary group-data-[selected]:w-4 group-data-[selected]:bg-primary-fg" />
             </RadioButton>

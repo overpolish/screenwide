@@ -11,6 +11,7 @@ import { KeyboardToolToggle } from "../../tool-panels/keyboard/keyboard-tool-tog
 import { TranscriptToolToggle } from "../../tool-panels/transcript/transcript-tool-toggle";
 import { useToolPanel } from "../../tool-panels/use-tool-panel";
 
+import { CAPTIONS_LAYER_ID, OverlayLayerId } from "./overlay-layers";
 import {
   RecordingCanvasTools,
   RecordingCanvasTool,
@@ -156,11 +157,22 @@ export function useRecordingToolbar({
   // them. The picture's tools are offered only while there is a picture to
   // point them at; the Transcript tool wherever there is a microphone.
   useProvideEditorToolbarTools(cropToggle ?? null);
+  // A chosen overlay asks for its panel rather than toggling it.
+  const openOverlayTool = useCallback(
+    (layerId: OverlayLayerId) => {
+      const panel = layerId === CAPTIONS_LAYER_ID ? "captions" : "keyboard";
+      if (openToolPanel !== panel) togglePanel(panel);
+    },
+    [openToolPanel, togglePanel],
+  );
   // A panel's shortcut does nothing where the recording has nothing for it.
   return {
-    toggleCaptionsPanel: hasMicrophone ? toggleCaptionsPanel : undefined,
-    toggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
-    toggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
-    toggleTranscriptPanel: hasMicrophone ? toggleTranscriptPanel : undefined,
+    openOverlayTool,
+    panelToggles: {
+      toggleCaptionsPanel: hasMicrophone ? toggleCaptionsPanel : undefined,
+      toggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
+      toggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
+      toggleTranscriptPanel: hasMicrophone ? toggleTranscriptPanel : undefined,
+    },
   };
 }

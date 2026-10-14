@@ -35,7 +35,7 @@ pub(super) fn shared_selection_hit(
       let rect = if selected {
         display_selection(state, *selection)?
       } else {
-        keyboard_hit::frame(inner, state, *selection)?
+        overlay_hit::frame(inner, state, *selection)?
       };
       Some(DisplayTarget {
         id: (u64::from(selection.pane_index) << 32) | u64::from(selection.layer_id),
@@ -59,8 +59,8 @@ pub(super) fn shared_selection_hit(
   let selection = selections
     .into_iter()
     .find(|selection| selection.pane_index == pane_index && selection.layer_id == layer_id)?;
-  if hit.handle == 0 && selection.layer_id == u32::MAX - 1 {
-    let frame = keyboard_hit::frame(inner, state, selection)?;
+  if hit.handle == 0 && crate::editor::preview_platform::is_overlay_layer(selection.layer_id) {
+    let frame = overlay_hit::frame(inner, state, selection)?;
     if point.0 < frame.x
       || point.0 > frame.x + frame.width
       || point.1 < frame.y

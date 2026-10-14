@@ -1,16 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ReactNode } from "react";
+import { ReactNode, RefObject } from "react";
 
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { t } from "../../../i18n/i18n";
 import { useRecordingCaptions } from "../recording/captions/use-recording-captions";
+import {
+  CAPTIONS_LAYER_ID,
+  KEYBOARD_LAYER_ID,
+  OverlayLayerId,
+} from "../recording/preview/overlay-layers";
 import { RecordingCanvasTool } from "../recording/preview/recording-crop-toggle";
 import { useRecordingPreviewSelection } from "../recording/preview/use-recording-preview-selection";
 import { useRecordingPreviewTransport } from "../recording/preview/use-recording-preview-transport";
 import { useCopyRecordingFrame } from "../recording/use-copy-recording-frame";
-import { useToolPanel } from "../tool-panels/use-tool-panel";
 import {
   RecordingPreviewLayout,
   RecordingTrackId,
@@ -19,12 +23,14 @@ import {
 
 import { usePauseForMomentNotes } from "./moments/moment-note-popover";
 import { useRecordingMoments } from "./moments/use-recording-moments";
+import { overlayPress } from "./overlay-press";
 import { RecordingPlaybackControls } from "./recording-playback-controls";
 import { ResizableRecordingTimelineArea } from "./resizable-recording-timeline-area";
 import { Playhead } from "./scrub-playhead";
 import { RecordingTrackLanes } from "./tracks/recording-track-lanes";
 import { useRecordingPreviewTracks } from "./tracks/use-recording-preview-tracks";
 
+import type { TimelineItemSelection } from "./tracks/timeline-item-selection";
 import type { ResolvedScrubPreviewProps } from "../recording/preview/recording-preview-props";
 
 /** The transport and the lanes under the picture, from the playback controls
@@ -34,6 +40,7 @@ export function RecordingPreviewTimelineBand({
   artifactId,
   audioTracks,
   audioVolumeByStream,
+  captionSelection,
   changeCanvasTool,
   changeEnabledTracks,
   changeEnabledVideoTracks,
@@ -42,14 +49,15 @@ export function RecordingPreviewTimelineBand({
   durationMs,
   enabledTracks,
   hasAnnotations,
-  hasVisiblePanes,
   isCameraSeparate,
   isPreparingAudio,
   keyboardEffects,
   keyboardTimeline,
   layout,
+  openOverlayTool,
   player,
   playhead,
+  pressOverlayRef,
   recordingOutput,
   scenes,
   selectedTrack,
@@ -79,7 +87,10 @@ export function RecordingPreviewTimelineBand({
     | "isCameraSeparate"
     | "selectedVideoTracks"
   > &
-  Pick<ReturnType<typeof useRecordingPreviewSelection>, "keyboardTimeline"> & {
+  Pick<
+    ReturnType<typeof useRecordingPreviewSelection>,
+    "captionSelection" | "keyboardTimeline"
+  > & {
     changeCanvasTool: (tool: RecordingCanvasTool) => void;
     changeEnabledTracks: (tracks: Set<number>) => void;
     changeEnabledVideoTracks: (tracks: Set<RecordingVideoTrackId>) => void;
@@ -87,9 +98,10 @@ export function RecordingPreviewTimelineBand({
     copyCurrentFrame: ReturnType<
       typeof useCopyRecordingFrame
     >["copyCurrentFrame"];
-    hasVisiblePanes: boolean;
     layout: RecordingPreviewLayout;
+    openOverlayTool: (layerId: OverlayLayerId) => void;
     playhead: Playhead;
+    pressOverlayRef: RefObject<(layerId: OverlayLayerId) => void>;
     zoomControl: ReactNode;
   }) {
   const moments = useRecordingMoments(artifactId);
@@ -104,30 +116,47 @@ export function RecordingPreviewTimelineBand({
   const openScenePanel = () => {
     changeCanvasTool("scene");
   };
-  // A caption's look is set in the Captions panel, so picking one opens it
-  // from its toolbar button, as the button itself would. With no picture
-  // there is nothing for the window to grow for.
-  const { openTool, toggle: toggleToolPanel } = useToolPanel("recording");
-  const openCaptionsPanel = () => {
-    if (openTool === "captions") return;
-    const bounds = document
-      .querySelector('[data-editor-tool="captions"]')
-      ?.getBoundingClientRect();
-    if (bounds)
-      void toggleToolPanel(
-        "captions",
-        bounds,
-        hasVisiblePanes ? undefined : false,
-      );
-  };
   // Choosing scenes lets go of whatever else was chosen, so Delete only ever
   // takes away one kind of thing.
   const clearOtherSelections = () => {
     annotations.clearSelection();
+    captionSelection.onClear();
     keyboardTimeline.selection.onClear();
     timelineBlade.blade.clearRangeSelection();
     timelineBlade.blade.selectSegment(null);
   };
+  // Shortcuts and captions likewise; each lets go of the other itself.
+  const clearForOverlay = () => {
+    annotations.clearSelection();
+    scenes.selection.onClear();
+    timelineBlade.blade.clearRangeSelection();
+    timelineBlade.blade.selectSegment(null);
+  };
+  const choosingAlone = (
+    selection: TimelineItemSelection<string>,
+  ): TimelineItemSelection<string> => ({
+    ...selection,
+    onSelect: (id, toggle) => {
+      clearForOverlay();
+      selection.onSelect(id, toggle);
+    },
+    onSelectSwept: (ids, additive) => {
+      if (ids.length > 0) clearForOverlay();
+      selection.onSelectSwept(ids, additive);
+    },
+  });
+  // A press on an overlay in the picture reads the lanes as they are now.
+  pressOverlayRef.current = overlayPress({
+    captionSelection,
+    captions,
+    edit: timelineBlade.blade.edit,
+    keyboard: keyboardTimeline,
+    onChoose: clearForOverlay,
+    openOverlayTool,
+    playhead,
+    sourceDurationMs: durationMs,
+    timelineDurationMs: timelineBlade.timelineDurationMs,
+  });
   return (
     <ResizableRecordingTimelineArea
       artifactId={artifactId}
@@ -157,7 +186,6 @@ export function RecordingPreviewTimelineBand({
         </div>
       ) : (
         <RecordingTrackLanes
-          adjustedKeyboardFragmentIds={keyboardTimeline.adjustedFragmentIds}
           annotationCameraPlacement={annotations.cameraPlacement}
           annotationClips={annotations.clips}
           annotationPinning={annotations.pinning}
@@ -165,6 +193,7 @@ export function RecordingPreviewTimelineBand({
           audioTracks={audioTracks}
           blade={timelineBlade.blade}
           captions={captions}
+          captionSelection={choosingAlone(captionSelection)}
           durationMs={timelineBlade.timelineDurationMs}
           enabledTracks={enabledTracks}
           enabledVideoTracks={selectedVideoTracks}
@@ -174,7 +203,7 @@ export function RecordingPreviewTimelineBand({
           // Shortcuts turned off leave nothing to place, so the lane goes
           // with them rather than showing items that are not drawn.
           keyboardItems={keyboardEffects.bake ? keyboardTimeline.items : []}
-          keyboardSelection={keyboardTimeline.selection}
+          keyboardSelection={choosingAlone(keyboardTimeline.selection)}
           layout={layout}
           moments={moments}
           onAnnotationsChange={
@@ -195,6 +224,12 @@ export function RecordingPreviewTimelineBand({
           }}
           onEnabledTracksChange={changeEnabledTracks}
           onEnabledVideoTracksChange={changeEnabledVideoTracks}
+          onOpenCaptionsPanel={() => {
+            openOverlayTool(CAPTIONS_LAYER_ID);
+          }}
+          onOpenKeyboardPanel={() => {
+            openOverlayTool(KEYBOARD_LAYER_ID);
+          }}
           // A scene clicked in its lane takes up the Scene tool, the way a
           // chosen annotation takes up Select: what else was chosen lets go.
           onSceneActivate={() => {
@@ -214,15 +249,7 @@ export function RecordingPreviewTimelineBand({
             scenes.selection.onSelectSwept(ids, additive);
           }}
           onSeek={timelineBlade.seek}
-          onSelectCaption={openCaptionsPanel}
           onSelectedTrackChange={changeSelectedTrack}
-          onSelectKeyboardShortcut={() => {
-            // Picking a shortcut badge puts it in hand, the way picking an
-            // annotation does: clear the annotation and take up the Select tool
-            // so the on-screen controls show the shortcut rather than a track.
-            annotations.clearSelection();
-            changeCanvasTool("select");
-          }}
           playhead={playhead}
           sceneClips={scenes.clips}
           scenesPaused={!scenes.canPlaceCamera}

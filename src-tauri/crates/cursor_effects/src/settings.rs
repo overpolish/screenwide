@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use screenwide_placement::OverlaySize;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -14,7 +15,8 @@ pub struct CursorEffectSettings {
   pub clip_at_video_edge: bool,
   pub motion_blur: bool,
   pub smooth_movement: bool,
-  pub size_percent: f64,
+  #[serde(default)]
+  pub size: OverlaySize,
 }
 
 impl Default for CursorEffectSettings {
@@ -25,7 +27,7 @@ impl Default for CursorEffectSettings {
       clip_at_video_edge: false,
       motion_blur: true,
       smooth_movement: true,
-      size_percent: 100.0,
+      size: OverlaySize::Standard,
     }
   }
 }

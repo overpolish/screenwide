@@ -29,7 +29,10 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_image_drop_macos.h");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+cursor.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor.m");
-    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+keyboard.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+overlay.m");
+    println!(
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+workspace_move.m"
+    );
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text.m");
     println!(
@@ -136,7 +139,8 @@ fn main() {
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+drop.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+cursor.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor.m")
-      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+keyboard.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+overlay.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+workspace_move.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_picking.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+object_picking.m")

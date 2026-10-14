@@ -12,11 +12,11 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::font::CaptionFont;
-use crate::layout::CaptionPosition;
 use crate::motion::CaptionMotion;
 use crate::shadow::CaptionShadow;
 use crate::size::CaptionSize;
 use crate::templates::CaptionTemplateId;
+use screenwide_placement::Placement;
 
 /// How many lines one caption may take, where its words are set in lines.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
@@ -105,7 +105,7 @@ pub struct CaptionStyle {
   pub lines: CaptionLines,
   pub arrangement: CaptionArrangement,
   /// Where on the picture the caption sits, and so how its lines line up.
-  pub position: CaptionPosition,
+  pub position: Placement,
   /// The type's colour, as `#rrggbb` or `#rrggbbaa`.
   pub text_color: String,
   /// The colour that marks the word being said: its type, or the pill

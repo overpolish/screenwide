@@ -8,7 +8,6 @@ import { drawingToolKind } from "../../tool-panels/tool-registry";
 import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
-import { useRecordingPreviewSelection } from "./use-recording-preview-selection";
 
 import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
 
@@ -19,8 +18,8 @@ export function useRecordingPreviewCanvasTool({
   bakeCamera,
   canvasTool,
   clearAnnotationRef,
+  clearOverlaySelection,
   hasVisiblePanes,
-  keyboardTimeline,
   onSelectedTrackChange,
   selectedAnnotationKind,
   setCanvasTool,
@@ -29,10 +28,10 @@ export function useRecordingPreviewCanvasTool({
   bakeCamera: boolean;
   canvasTool: RecordingCanvasTool;
   clearAnnotationRef: RefObject<() => void>;
+  /** Lets go of the shortcuts and captions chosen, which a drawing tool
+   * taken up does. */
+  clearOverlaySelection: () => void;
   hasVisiblePanes: boolean;
-  keyboardTimeline: ReturnType<
-    typeof useRecordingPreviewSelection
-  >["keyboardTimeline"];
   /** The shape of the annotation in hand, so a tool that draws the other one
    * knows to let it go. */
   selectedAnnotationKind: AnnotationKind | null;
@@ -48,7 +47,7 @@ export function useRecordingPreviewCanvasTool({
       if (drawingToolKind(next) !== null) {
         if (toolDisagreesWithAnnotation(next, selectedKindRef.current))
           clearAnnotationRef.current();
-        keyboardTimeline.selection.onClear();
+        clearOverlaySelection();
         onSelectedTrackChange?.(
           bakeCamera ? "primary" : (activeVideoTrack ?? "primary"),
         );
@@ -58,7 +57,7 @@ export function useRecordingPreviewCanvasTool({
     },
     [
       setCanvasTool,
-      keyboardTimeline.selection,
+      clearOverlaySelection,
       onSelectedTrackChange,
       bakeCamera,
       activeVideoTrack,

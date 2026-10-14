@@ -37,7 +37,7 @@ mod timeline_time;
 const MAX_SEGMENTS: usize = 100_000;
 
 mod keyboard;
-pub use keyboard::{KeyboardShortcutPositionRange, RecordingTimelineKeyboardDeletions};
+pub use keyboard::RecordingTimelineKeyboardDeletions;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -117,7 +117,6 @@ pub struct TimelinePlan {
   annotation_clips: Vec<screenwide_annotations::timing::RecordingAnnotationClip>,
   deleted_keyboard_shortcut_ids: Vec<u64>,
   deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
-  keyboard_shortcut_positions: Vec<KeyboardShortcutPositionRange>,
   /// Read by the export, which arranges each frame as they have it.
   pub scene_clips: Vec<screenwide_scenes::RecordingSceneClip>,
   duration_us: u64,
@@ -167,11 +166,6 @@ impl TimelinePlan {
         &edit.segments,
         duration_ms,
       ),
-      keyboard_shortcut_positions: keyboard::position_ranges(
-        &edit.keyboard_deletions,
-        &edit.segments,
-        duration_ms,
-      ),
       duration_us,
       scene_clips: edit.scene_clips.clone(),
       ranges,
@@ -180,8 +174,7 @@ impl TimelinePlan {
       || !plan.scene_clips.is_empty()
       || !plan.is_identity(source_duration_us)
       || !plan.deleted_keyboard_shortcut_ids.is_empty()
-      || !plan.deleted_keyboard_shortcut_ranges.is_empty()
-      || !plan.keyboard_shortcut_positions.is_empty())
+      || !plan.deleted_keyboard_shortcut_ranges.is_empty())
     .then_some(plan)
   }
 

@@ -67,9 +67,6 @@ pub(crate) fn evaluate_keyboard(
     deleted_keyboard_shortcut_ids,
     deleted_keyboard_shortcut_ranges,
   )?;
-  if let Some(timeline) = request.timeline {
-    keyboard.set_shortcut_positions(timeline.keyboard_shortcut_positions());
-  }
   let dimensions = (request.output.width, request.output.height);
   let frame_count = request
     .duration_ms

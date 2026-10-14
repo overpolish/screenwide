@@ -88,8 +88,8 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_choose(ScreenwidePreviewSurface *surf
 
 // The rule `drawing_layer` keeps in `src-tauri/crates/annotations/src/gesture.rs`:
 // the topmost picture under `point`, or off every picture the nearest one,
-// the topmost of any equally near; the canvas frame and the keyboard overlay
-// are none. `NO` only with no picture laid out.
+// the topmost of any equally near; the canvas frame and the overlays drawn
+// over the picture are none. `NO` only with no picture laid out.
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_target(ScreenwidePreviewSurface *surface,
                                                          NSPoint point,
                                                          ScreenwidePreviewSelection *found) {
@@ -98,7 +98,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_target(ScreenwidePreviewSurfa
   for (NSValue *value in surface.selectionTargets.reverseObjectEnumerator) {
     ScreenwidePreviewSelection target;
     [value getValue:&target size:sizeof(target)];
-    if (target.layer_id == ScreenwideFrameLayerId || selection_is_keyboard(target)) continue;
+    if (target.layer_id == ScreenwideFrameLayerId || selection_is_overlay(target)) continue;
     NSRect image = selection_image_frame_for(surface, target);
     CGFloat dx = MAX(MAX(NSMinX(image) - point.x, point.x - NSMaxX(image)), 0.0);
     CGFloat dy = MAX(MAX(NSMinY(image) - point.y, point.y - NSMaxY(image)), 0.0);

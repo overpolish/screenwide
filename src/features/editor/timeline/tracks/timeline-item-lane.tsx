@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ReactNode } from "react";
+import { ReactNode, useRef } from "react";
 
 import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import { TimelineViewportState } from "../timeline-viewport";
@@ -13,8 +13,12 @@ import {
   timedLaneFragmentBox,
   TimedLaneItem,
 } from "./timed-lane-layout";
+import { sweptLaneItems, useTimelineLaneBand } from "./timeline-lane-band";
+import { TimelineLaneBandBox } from "./timeline-lane-band-box";
 import { TimelineTrackHeader } from "./timeline-track-header";
 import { useTimedLaneRows } from "./use-timed-lane-rows";
+
+const ignore = () => undefined;
 
 /**
  * Mirrors `--spacing-control`, the gap that separates every row in the timeline
@@ -35,11 +39,11 @@ export function TimelineItemLane<
   minimumSpan = 0,
   onClearSelection,
   onSelect,
+  onSelectSwept,
   outputLengthMs,
   selectedFragmentIds,
   sourceDurationMs,
   viewport,
-  warningFragmentIds,
 }: {
   edit: RecordingTimelineEdit;
   icon: ReactNode;
@@ -58,11 +62,14 @@ export function TimelineItemLane<
     outputPosition: number,
     toggle: boolean,
   ) => void;
+  /** Choose the fragments a band drawn across empty lane swept over, by
+   * their fragment ids, alone or added to the choice. Without it a press on
+   * empty lane only clears the choice. */
+  onSelectSwept?: (fragmentIds: string[], additive: boolean) => void;
   /** Set where the items are timed on the edited video, this long, rather
    * than in the source. */
   outputLengthMs?: number;
   selectedFragmentIds?: ReadonlySet<string>;
-  warningFragmentIds?: ReadonlySet<string>;
 }) {
   // Overlapping fragments stack into sublanes so a badge that is still
   // fading stays visible beside its successor; the lane grows as needed.
@@ -75,6 +82,29 @@ export function TimelineItemLane<
     outputLengthMs,
     sourceDurationMs,
   });
+  const laneRef = useRef<HTMLDivElement>(null);
+  const { band, pressLane } = useTimelineLaneBand({
+    laneRef,
+    onClear: onClearSelection ?? ignore,
+    onSweep: onSelectSwept ?? ignore,
+    // A band chooses fragments, as a click does, so it names them by their
+    // fragment ids rather than by the items they belong to.
+    sweep: (box, laneWidthPx) =>
+      sweptLaneItems(
+        fragments.map((fragment) => ({
+          ...fragment,
+          item: { id: fragment.fragmentId },
+        })),
+        box,
+        { laneWidthPx, minimumWidthPx: minimumItemWidthPx, viewport },
+      ),
+  });
+  // While a band is drawn, the lane shows the choice it will make.
+  const isSelected = (fragmentId: string) =>
+    band
+      ? band.ids.has(fragmentId) ||
+        (band.additive && (selectedFragmentIds?.has(fragmentId) ?? false))
+      : (selectedFragmentIds?.has(fragmentId) ?? false);
 
   return (
     <div className="flex items-center gap-section">
@@ -85,14 +115,16 @@ export function TimelineItemLane<
       />
       <div
         className="relative min-w-0 grow overflow-hidden rounded-control bg-fill-tertiary transition-[height] duration-200"
-        onClick={onClearSelection}
+        onClick={onSelectSwept ? undefined : onClearSelection}
+        // Every press on a badge stops there, so what arrives is empty lane.
+        onPointerDown={onSelectSwept ? pressLane : undefined}
+        ref={laneRef}
         style={{ height: rowCount * TIMED_LANE_ROW_HEIGHT_PX }}
       >
         <TimelineViewportContent viewport={viewport}>
           {fragments.map((fragment) => {
             const { fragmentId, item, outputEnd, outputStart, row } = fragment;
-            const selected = selectedFragmentIds?.has(fragmentId) ?? false;
-            const warning = warningFragmentIds?.has(fragmentId) ?? false;
+            const selected = isSelected(fragmentId);
             // A segment split inside one item renders as a joined run: the
             // seam drops the rounding between the pair and the label appears
             // once, on the run's widest fragment. Run members also waive the
@@ -109,22 +141,15 @@ export function TimelineItemLane<
                 aria-label={item.label}
                 aria-pressed={selectedFragmentIds ? selected : undefined}
                 // A badge, built from the tokens the base Badge uses: footnote
-                // text on a fill. An adjusted fragment keeps its translucent
-                // warning fill whether or not it is selected, since text on
-                // the solid yellow cannot be read; its selection is a warning
-                // ring instead. Any other selected one takes the accent.
-                // The badge clips rather than grows: a badge narrower than
-                // its label's padding stays as wide as its time, instead of
-                // swelling over the badges beside it. Measured as a container
-                // so its label can leave once no letter of it would show.
+                // text on a fill, the accent once selected. The badge clips
+                // rather than grows: a badge narrower than its label's
+                // padding stays as wide as its time, instead of swelling over
+                // the badges beside it. Measured as a container so its label
+                // can leave once no letter of it would show.
                 className={`@container absolute flex items-center overflow-hidden rounded-control text-left text-footnote transition-[color,background-color] duration-200 ${seam} ${
-                  warning
-                    ? selected
-                      ? "bg-warning/35 text-content-fg inset-ring-2 inset-ring-warning"
-                      : "bg-warning/35 text-content-fg"
-                    : selected
-                      ? "bg-primary-surface text-primary-fg"
-                      : "bg-fill-secondary text-content-fg"
+                  selected
+                    ? "bg-primary-surface text-primary-fg"
+                    : "bg-fill-secondary text-content-fg"
                 } ${onSelect ? "cursor-default" : "pointer-events-none"}`}
                 key={fragmentId}
                 onClick={(event) => {
@@ -134,6 +159,9 @@ export function TimelineItemLane<
                     (outputStart + outputEnd) / 2,
                     event.metaKey || event.ctrlKey,
                   );
+                }}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
                 }}
                 style={{
                   ...timedLaneFragmentBox(row),
@@ -160,6 +188,7 @@ export function TimelineItemLane<
             );
           })}
         </TimelineViewportContent>
+        {band ? <TimelineLaneBandBox box={band.box} /> : null}
       </div>
     </div>
   );

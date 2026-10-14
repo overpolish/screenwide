@@ -59,7 +59,6 @@ pub(super) fn start(state: &mut SurfaceState, point: (f64, f64)) -> Option<Edito
     pane_start: selection_pane_rect(state, selection),
     pointer_start: point,
     selection_start: selection,
-    keyboard_start: None,
   })
 }
 

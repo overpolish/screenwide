@@ -5,7 +5,6 @@ import { invoke } from "@tauri-apps/api/core";
 
 import {
   normalizedCameraOverlay,
-  normalizedCursorEffects,
   normalizedKeyboardEffects,
 } from "../preview/preview-settings-normalization";
 import {
@@ -53,7 +52,7 @@ const frame = ({
     cameraOverlay,
     recordingOutput.primary,
   ),
-  cursorEffects: normalizedCursorEffects(cursorEffects),
+  cursorEffects,
   keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
   playbackRanges,
   positionMs: Math.max(0, Math.round(positionMs)),

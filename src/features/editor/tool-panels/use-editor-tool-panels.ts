@@ -9,7 +9,6 @@ import {
   useCanClearDrawings,
 } from "../annotations/annotation-channel";
 import { CameraOutput, composedVideoTracks } from "../export/camera-output";
-import { keyboardMaximumSizePercent } from "../keyboard-effect/keyboard-effect-geometry";
 import { useCaptionTools } from "../recording/captions/use-caption-tools";
 import { useMicrophoneTools } from "../recording/microphone/use-microphone-tools";
 import { useRecordingSceneSelection } from "../recording/scenes/recording-scene-channel";
@@ -17,10 +16,8 @@ import { useTranscriptTools } from "../recording/transcript/use-transcript-tools
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
-  screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
 } from "../screenshot/screenshot-output";
-import { useKeyboardShortcutSelection } from "../shortcuts/keyboard-shortcut-channel";
 import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
 import { useRestoreRecordingKeyboardShortcuts } from "../timeline/keyboard/use-restore-recording-keyboard-shortcuts";
 import {
@@ -179,24 +176,17 @@ export function useEditorToolPanels({
     selectedScreenshotItemId,
     selectedTrack,
   });
-  // The shortcut the preview has in hand, and the edits that move it. Both
-  // live with the preview, which is the only place that knows which fragment
-  // is on screen; the panel reaches them the way the padding controls reach
-  // the recentre calls.
-  const shortcutSelection = useKeyboardShortcutSelection(workspace);
   // The annotation the preview has in hand. It belongs to the tools that
-  // hit-test arrows rather than to the document, so it reaches the panel the
-  // way the selected shortcut does rather than through the workspace's
-  // settings.
+  // hit-test arrows rather than to the document, so it reaches the panel
+  // through its own channel rather than through the workspace's settings.
   const annotation = useAnnotationSelection(workspace);
   const annotationCount = useAnnotationSelectionCount(workspace);
   const canClearDrawings = useCanClearDrawings(workspace);
   // The scene under the playhead lives with the preview, which knows where
-  // the playhead is; it reaches the panel the way the selected shortcut does.
+  // the playhead is; it reaches the panel through its own channel too.
   const scene = useRecordingSceneSelection(workspace);
-  // Restoring and resetting every shortcut is an edit to the timeline the
-  // editor already owns, so the panel asks for it here rather than through the
-  // preview.
+  // Restoring every shortcut is an edit to the timeline the editor already
+  // owns, so the panel asks for it here rather than through the preview.
   const shortcuts = useRestoreRecordingKeyboardShortcuts(
     recordingTimelineEdit,
     onRecordingTimelineEditChange,
@@ -218,9 +208,6 @@ export function useEditorToolPanels({
     onEditChange: onRecordingTimelineEditChange,
     onGeneralChange: applyGeneralSettings,
   });
-  const keyboardOutput = recordingOutput
-    ? screenshotOutputDimensions(recordingOutput.primary)
-    : null;
   useToolPanelBridge(
     workspace,
     {
@@ -243,22 +230,9 @@ export function useEditorToolPanels({
         artifact?.kind === "recording" && artifact.hasKeyboardData,
       isLocked,
       keyboardEffects,
-      keyboardMaximum:
-        artifact?.kind === "recording" && keyboardOutput
-          ? keyboardMaximumSizePercent({
-              ...keyboardOutput,
-              maximumWidthUnits: artifact.keyboardMaximumWidthUnits,
-            })
-          : DEFAULT_TOOL_PANEL_SNAPSHOT.keyboardMaximum,
       scene,
       sceneTemplates,
-      // A selected shortcut is what the Select tool has in hand, so it is the
-      // selection the panel shows rather than the layer underneath it.
-      selection:
-        shortcutSelection ??
-        audioTarget?.selection ??
-        selectionTarget?.selection ??
-        null,
+      selection: audioTarget?.selection ?? selectionTarget?.selection ?? null,
       transcript: transcript.snapshot,
     },
     editorToolPanelHandlers({
@@ -274,7 +248,6 @@ export function useEditorToolPanels({
       onCursorEffectsChange,
       onKeyboardEffectsChange,
       onTranscriptRequest: transcript.handle,
-      resetShortcuts: shortcuts.reset,
       restoreShortcuts: shortcuts.restore,
       saveSceneTemplates: (templates) => {
         applyGeneralSettings({ sceneTemplates: templates });

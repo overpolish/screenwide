@@ -14,7 +14,6 @@ mod ffi;
 mod frame_resize;
 mod geometry;
 mod hit_test;
-pub mod keyboard_bounds;
 mod limits;
 #[cfg(any(target_os = "windows", test))]
 mod magnifier;

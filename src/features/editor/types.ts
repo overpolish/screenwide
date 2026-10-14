@@ -75,7 +75,7 @@ export const initialEditorSnapshot = (
     clickAnimation: true,
     clipAtVideoEdge: false,
     motionBlur: true,
-    sizePercent: 100,
+    size: "standard",
     smoothMovement: true,
   },
   directory: null,
@@ -83,7 +83,8 @@ export const initialEditorSnapshot = (
     animation: "pop",
     appearance: "light",
     bake: true,
-    sizePercent: 100,
+    position: "bottom",
+    size: "standard",
   },
   recordingExportChoices: {
     bakeCamera: null,

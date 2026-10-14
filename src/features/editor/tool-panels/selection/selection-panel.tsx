@@ -14,7 +14,6 @@ import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 import { AudioSelectionRows } from "./audio-selection-rows";
 import { CameraBackgroundRows, CameraEnhanceRow } from "./camera-effects-rows";
 import { CameraObjectRows } from "./camera-object-rows";
-import { ShortcutSelectionRows } from "./shortcut-selection-rows";
 
 /**
  * The Select tool's own controls: what is selected, how big it is in the
@@ -34,10 +33,6 @@ import { ShortcutSelectionRows } from "./shortcut-selection-rows";
  * panel offers how loud it is played back, and for a microphone the speech
  * tools. A camera can have the room behind the person taken away, blurred
  * or replaced, and its colour corrected.
- *
- * A keyboard shortcut is drawn rather than placed: it has no source pixels to
- * be sized against, no corners and no pad, so it is shown as the share of the
- * canvas it takes and the point it is centred on.
  */
 export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
@@ -45,16 +40,6 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
 
   if (!selection) {
     return <Text variant="body">{t("editor-panels-nothing-selected")}</Text>;
-  }
-
-  if (selection.kind === "shortcut") {
-    return (
-      <ShortcutSelectionRows
-        change={change}
-        isLocked={isLocked}
-        selection={selection}
-      />
-    );
   }
 
   if (selection.kind === "audio") {

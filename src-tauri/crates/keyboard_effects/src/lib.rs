@@ -5,7 +5,7 @@
 
 mod evaluation;
 
-use screenwide_timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+use screenwide_timeline_edit::DeletedKeyboardShortcutRange;
 use serde_json::Value;
 use std::{
   collections::HashSet,
@@ -20,8 +20,8 @@ use clock::AnimationClock;
 mod data;
 use data::{parse_v1, read_values, reconstruct_v2};
 mod gpu_wire;
+use gpu_wire::MAX_KEYS;
 pub use gpu_wire::{KeyboardKey, KeyboardOverlay};
-use gpu_wire::{KEY_CENTER_DEFAULT, KEY_CENTER_INHERIT, MAX_KEYS};
 mod geometry;
 mod layout;
 mod settings;
@@ -39,14 +39,13 @@ pub const HOLD_US: u64 = 750_000;
 #[derive(Clone, Debug)]
 pub struct KeyboardCompositor {
   /// Display state derived from the shortcuts plus the timeline edits.
-  /// Deletions and manual placements decide badge continuity, so every edit
-  /// rebakes this rather than being patched over a stale lifecycle.
+  /// Deletions decide badge continuity, so every edit rebakes this rather
+  /// than being patched over a stale lifecycle.
   baked: Arc<RwLock<BakedTimeline>>,
   shortcuts: Vec<Shortcut>,
   legacy_modifier_expansion: bool,
   deleted_shortcut_ids: Arc<RwLock<HashSet<u64>>>,
   deleted_shortcut_ranges: Arc<RwLock<Vec<DeletedKeyboardShortcutRange>>>,
-  shortcut_positions: Arc<RwLock<Vec<KeyboardShortcutPositionRange>>>,
   /// The retained playback ranges of the current edit. Animation durations
   /// run on the output clock, so decisions baked from them (fade pulled
   /// forward to finish by a press, the chord-roll assembly window) need the
@@ -107,7 +106,6 @@ impl KeyboardCompositor {
       legacy_modifier_expansion,
       deleted_shortcut_ids: Arc::new(RwLock::new(HashSet::new())),
       deleted_shortcut_ranges: Arc::new(RwLock::new(Vec::new())),
-      shortcut_positions: Arc::new(RwLock::new(Vec::new())),
       animation_ranges: Arc::new(RwLock::new(None)),
     };
     compositor.rebake();
@@ -132,8 +130,8 @@ impl KeyboardCompositor {
   }
 
   /// Rebuilds the display lifecycle from the shortcuts and the current
-  /// timeline edits. Called whenever deletions or manual placements change,
-  /// because they decide whether consecutive chords continue one badge.
+  /// timeline edits. Called whenever deletions change, because they decide
+  /// whether consecutive chords continue one badge.
   pub fn rebake(&self) {
     let deleted_ids = self
       .deleted_shortcut_ids
@@ -147,11 +145,6 @@ impl KeyboardCompositor {
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
       .clone();
-    let positions = self
-      .shortcut_positions
-      .read()
-      .unwrap_or_else(|poisoned| poisoned.into_inner())
-      .clone();
     let animation_ranges = self
       .animation_ranges
       .read()
@@ -162,7 +155,6 @@ impl KeyboardCompositor {
       ChainContext {
         deleted_ids: &deleted_ids,
         deleted_ranges: &deleted_ranges,
-        positions: &positions,
         ranges: animation_ranges.as_deref(),
       },
     );
@@ -219,9 +211,6 @@ impl KeyboardCompositor {
     self.shortcuts.len()
   }
 
-  pub fn maximum_width_units(&self) -> u16 {
-    self.maximum_width().ceil().clamp(0.0, f64::from(u16::MAX)) as u16
-  }
   pub(crate) fn maximum_size_percent(&self, width: u32, height: u32) -> f64 {
     geometry::maximum_size_percent(self.maximum_width(), width, height)
   }

@@ -7,6 +7,7 @@
 
 use crate::layout::CaptionLayout;
 use crate::style::CaptionStyle;
+use crate::Caption;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -150,6 +151,13 @@ pub struct RecordingCaptions {
   #[serde(skip_serializing_if = "Vec::is_empty")]
   #[ts(optional, as = "Option<Vec<CaptionEmphasisChoice>>")]
   pub emphasis_choices: Vec<CaptionEmphasisChoice>,
+  /// Captions taken out of the video by hand, each named by its id: where
+  /// its first word starts in the source, in milliseconds. Whichever caption
+  /// holds the word said then is left out, however the settings regroup the
+  /// words. Sorted, none twice.
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  #[ts(optional, as = "Option<Vec<u64>>")]
+  pub hidden: Vec<u64>,
 }
 
 impl Default for RecordingCaptions {
@@ -163,6 +171,7 @@ impl Default for RecordingCaptions {
       breaks: Vec::new(),
       word_choices: Vec::new(),
       emphasis_choices: Vec::new(),
+      hidden: Vec::new(),
     }
   }
 }
@@ -204,6 +213,29 @@ impl RecordingCaptions {
     if !are_ordered(self.emphasis_choices.iter().map(|choice| choice.source_at)) {
       return Err("The timeline records invalid caption emphasis choices".to_owned());
     }
+    if self.hidden.len() > MAX_BREAKS || !self.hidden.is_sorted_by(|a, b| a < b) {
+      return Err("The timeline records invalid hidden captions".to_owned());
+    }
     Ok(())
+  }
+
+  /// `built` without every caption that holds a hidden word: one whose start,
+  /// rounded as a caption's id is, a hidden id names. Matched word by word
+  /// rather than by span, as the caption before often ends just as the
+  /// hidden one starts. Done once the captions are timed, so those either
+  /// side keep their times rather than taking up the hidden one's.
+  pub(crate) fn without_hidden(&self, mut built: Vec<Caption>) -> Vec<Caption> {
+    if self.hidden.is_empty() {
+      return built;
+    }
+    built.retain(|caption| {
+      !caption.lines.iter().flatten().any(|word| {
+        self
+          .hidden
+          .binary_search(&(word.source_start_ms.round() as u64))
+          .is_ok()
+      })
+    });
+    built
   }
 }

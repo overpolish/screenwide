@@ -51,8 +51,6 @@ impl ScreenshotSelectionOverlay {
       width: self.rect.width,
       height: self.rect.height,
       radius_percent: self.radius_percent,
-      minimum_scale: 0.0,
-      maximum_scale: 0.0,
       ..PreviewSelection::default()
     }
   }

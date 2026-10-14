@@ -229,6 +229,20 @@ pub(crate) const FRAMED_FIXED: u32 = 1;
 /// grows the canvas, whose size the scene does not own.
 pub(crate) const FRAMED_FREE: u32 = 2;
 
+/// [`PreviewSelection::layer_id`] of the keyboard shortcuts drawn over the
+/// picture. The macOS overlay reads the same values.
+pub(crate) const KEYBOARD_LAYER_ID: u32 = u32::MAX - 1;
+/// [`PreviewSelection::layer_id`] of the captions drawn over the picture.
+pub(crate) const CAPTIONS_LAYER_ID: u32 = u32::MAX - 2;
+
+/// Whether `layer_id` is drawn over the picture rather than placed in it.
+/// Every shortcut and caption takes its size and place from its tool, so a
+/// press on one only reports it, for the editor to open that tool: it is
+/// never selected, moved or resized.
+pub(crate) const fn is_overlay_layer(layer_id: u32) -> bool {
+  layer_id == KEYBOARD_LAYER_ID || layer_id == CAPTIONS_LAYER_ID
+}
+
 /// A render-only selection overlay in workspace coordinates. The rectangle is
 /// normalized to its pane so the native surface can apply the same pan/zoom
 /// transform as the media without knowing frontend output sizes.
@@ -262,6 +276,4 @@ pub(crate) struct PreviewSelection {
   pub recenter_y: f64,
   pub recenter_width: f64,
   pub recenter_height: f64,
-  pub minimum_scale: f64,
-  pub maximum_scale: f64,
 }

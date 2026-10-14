@@ -31,10 +31,9 @@ pub(crate) struct KeyboardConstants {
   pub(crate) key_geometry: [[u32; 4]; MAX_KEYS],
   pub(crate) key_motion: [[f32; 4]; MAX_KEYS],
   pub(crate) key_masks: [[u32; 4]; MAX_KEYS],
-  pub(crate) key_position: [[f32; 4]; MAX_KEYS],
 }
 
-const _: () = assert!(size_of::<KeyboardConstants>() == 560);
+const _: () = assert!(size_of::<KeyboardConstants>() == 432);
 
 impl Default for KeyboardConstants {
   fn default() -> Self {
@@ -45,7 +44,6 @@ impl Default for KeyboardConstants {
       key_geometry: [[0; 4]; MAX_KEYS],
       key_motion: [[0.0; 4]; MAX_KEYS],
       key_masks: [[0; 4]; MAX_KEYS],
-      key_position: [[-1.0, -1.0, 1.0, 0.0]; MAX_KEYS],
     }
   }
 }

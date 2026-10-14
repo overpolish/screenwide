@@ -24,9 +24,10 @@ import type { Playhead } from "../scrub-playhead";
 import type { SeekHandler } from "../timeline-seek";
 
 export type RecordingTrackLanesProps = {
-  adjustedKeyboardFragmentIds: ReadonlySet<string>;
   audioTracks: PreparedAudioTrack[];
   blade: TimelineBladeController;
+  /** The captions chosen in their lane. */
+  captionSelection: TimelineItemSelection<string>;
   durationMs: number;
   enabledTracks: Set<number>;
   enabledVideoTracks: Set<RecordingVideoTrackId>;
@@ -69,6 +70,10 @@ export type RecordingTrackLanesProps = {
   onAnnotationsPreview?: (clips: RecordingAnnotationClip[] | null) => void;
   /** Choose what a band over the annotation lane swept, alone or added. */
   onAnnotationsSweep?: (ids: string[], additive: boolean) => void;
+  /** Opens the Captions panel, for a caption clicked alone. */
+  onOpenCaptionsPanel?: () => void;
+  /** Opens the Keyboard panel, for a shortcut clicked alone. */
+  onOpenKeyboardPanel?: () => void;
   /** A scene clicked rather than dragged: take up the Scene tool. The lane
    * has already parked the playhead in the middle of it. */
   onSceneActivate?: () => void;
@@ -86,12 +91,6 @@ export type RecordingTrackLanesProps = {
   onScenesDraftChange?: (clips: RecordingSceneClip[] | null) => void;
   /** Choose what a band over the scene lane swept, alone or added. */
   onScenesSweep?: (ids: string[], additive: boolean) => void;
-  /** Picking a caption opens the Captions panel, where its look is set. */
-  onSelectCaption?: () => void;
-  /** Picking a keyboard shortcut puts it in hand: the caller clears the
-   * annotation selection and takes up the Select tool, mirroring what the
-   * annotation lane's select does. */
-  onSelectKeyboardShortcut?: () => void;
   sceneClips?: RecordingSceneClip[];
   /** Whether the camera is not baked in, which leaves the scenes idle. */
   scenesPaused?: boolean;

@@ -100,7 +100,12 @@ fn update_uniforms(
     overlay.maximum_width,
     overlay.requested_scale,
   ];
-  values.position = [overlay.center_x, overlay.center_y, 0.0, 0.0];
+  values.position = [
+    overlay.center_x,
+    overlay.center_y,
+    overlay.align_x,
+    overlay.align_y,
+  ];
   for (index, (_, state)) in prepared.iter().enumerate() {
     values.key_geometry[index][2] = state.visible;
     values.key_geometry[index][3] = state.slot;
@@ -111,6 +116,5 @@ fn update_uniforms(
       state.layout_progress,
     ];
     values.key_masks[index] = [state.layout_from_mask, state.layout_to_mask, 0, 0];
-    values.key_position[index] = [state.center_x, state.center_y, state.scale_ratio, 0.0];
   }
 }

@@ -1,56 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where a caption sits, how large it is, and the layout options set by
-//! hand. A template brings its own case, words and lines per caption, and
-//! place, and the sizes the size steps scale; one set here stays as set
-//! whichever template is chosen after, and one left unset follows the
-//! template.
+//! How large a caption is and the layout options set by hand. A template
+//! brings its own case, words and lines per caption, and place, and the
+//! sizes the size steps scale; one set here stays as set whichever template
+//! is chosen after, and one left unset follows the template.
 
+use screenwide_placement::Placement;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::size::CaptionSize;
 use crate::style::{CaptionLines, CaptionStyle};
-
-/// One of nine places on the picture a caption sits at: along the top,
-/// through the middle or along the bottom, at the left, the centre or the
-/// right. The picture's own sides, whatever the language's direction.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
-#[serde(rename_all = "kebab-case")]
-#[ts(export)]
-pub enum CaptionPosition {
-  TopLeft,
-  Top,
-  TopRight,
-  Left,
-  Center,
-  Right,
-  BottomLeft,
-  #[default]
-  Bottom,
-  BottomRight,
-}
-
-impl CaptionPosition {
-  /// How far across and down the picture the caption is held, each from 0
-  /// at the left or top margin to 1 at the right or bottom one. Across, it
-  /// is also how its lines line up: from their left, about their middle, or
-  /// from their right.
-  pub(crate) fn shares(self) -> [f64; 2] {
-    match self {
-      Self::TopLeft => [0.0, 0.0],
-      Self::Top => [0.5, 0.0],
-      Self::TopRight => [1.0, 0.0],
-      Self::Left => [0.0, 0.5],
-      Self::Center => [0.5, 0.5],
-      Self::Right => [1.0, 0.5],
-      Self::BottomLeft => [0.0, 1.0],
-      Self::Bottom => [0.5, 1.0],
-      Self::BottomRight => [1.0, 1.0],
-    }
-  }
-}
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -73,7 +34,7 @@ pub struct CaptionLayout {
   pub lines: Option<CaptionLines>,
   #[serde(skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
-  pub position: Option<CaptionPosition>,
+  pub position: Option<Placement>,
 }
 
 impl CaptionLayout {

@@ -14,34 +14,6 @@ fn old_edits_default_deleted_shortcuts_to_empty() {
   .unwrap();
   assert!(edit.keyboard_deletions.fragments.is_empty());
   assert!(edit.keyboard_deletions.shortcut_ids.is_empty());
-  assert!(edit.keyboard_deletions.positions.is_empty());
-}
-
-#[test]
-fn shortcut_positions_map_to_their_fragment_source_range() {
-  let mut timeline = edit(1, 0.25);
-  timeline
-    .keyboard_deletions
-    .positions
-    .push(keyboard::KeyboardShortcutPositionFragment {
-      center_x: 0.25,
-      center_y: 0.75,
-      segment_id: 1,
-      shortcut_id: 7,
-      size_percent: Some(125.0),
-    });
-  let plan = TimelinePlan::from_edit(&timeline, 8_000).unwrap();
-  assert_eq!(
-    plan.keyboard_shortcut_positions(),
-    &[KeyboardShortcutPositionRange {
-      center_x: 0.25,
-      center_y: 0.75,
-      end_ms: 8_000,
-      shortcut_id: 7,
-      start_ms: 2_000,
-      size_percent: Some(125.0),
-    }]
-  );
 }
 
 #[test]

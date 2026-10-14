@@ -104,13 +104,6 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onKeyboardEffectsChange?.(values.keyboardEffects);
   }
   if (values.restoreShortcuts) on.onKeyboardShortcutsRestore?.();
-  if (values.resetAllShortcuts) on.onKeyboardShortcutsResetAll?.();
-  if (values.resetKeyboardPosition) on.onKeyboardPositionReset?.();
-  if (values.shortcutPlacement !== undefined) {
-    on.onShortcutPlacementChange?.(values.shortcutPlacement);
-  }
-  if (values.resetShortcut) on.onShortcutReset?.();
-  if (values.applyShortcutToAll) on.onShortcutApplyToAll?.();
   if (values.scenePreset !== undefined)
     on.onScenePresetChoose?.(values.scenePreset);
   if (values.customizeScene) on.onSceneCustomize?.();

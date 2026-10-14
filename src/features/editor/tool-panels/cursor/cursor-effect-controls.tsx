@@ -3,9 +3,10 @@
 
 import { Switch } from "../../../../components/base/switch/switch";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
 import { CursorEffectSettings } from "../../types";
+import { OVERLAY_SIZES } from "../placement-options";
 
 type CursorToggleKey = {
   [K in keyof CursorEffectSettings]: CursorEffectSettings[K] extends boolean
@@ -22,9 +23,6 @@ export function CursorEffectControls({
   settings: CursorEffectSettings;
   onChange?: (settings: CursorEffectSettings) => void;
 }) {
-  const sizePercent = Number.isFinite(settings.sizePercent)
-    ? settings.sizePercent
-    : 100;
   const update = (change: Partial<CursorEffectSettings>) => {
     onChange?.({ ...settings, ...change });
   };
@@ -47,18 +45,14 @@ export function CursorEffectControls({
       <ControlRow title={t("editor-panels-size")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
-            <SliderNumberField
+            <StepSlider
               aria-label={t("editor-panels-cursor-size")}
-              className="w-48"
               isDisabled={isDisabled}
-              maxValue={500}
-              minValue={50}
-              onChange={(nextSizePercent) => {
-                update({ sizePercent: nextSizePercent });
+              onChange={(size) => {
+                update({ size });
               }}
-              rightSection="%"
-              step={5}
-              value={sizePercent}
+              steps={OVERLAY_SIZES}
+              value={settings.size}
             />
           </div>
         )}

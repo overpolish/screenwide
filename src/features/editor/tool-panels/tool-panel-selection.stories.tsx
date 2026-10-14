@@ -3,10 +3,7 @@
 
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../popup-panel/layout";
-import {
-  DEFAULT_CURSOR_EFFECTS,
-  DEFAULT_KEYBOARD_EFFECTS,
-} from "../export/recording-export-settings";
+import { DEFAULT_CURSOR_EFFECTS } from "../export/recording-export-settings";
 
 import { ToolPanel } from "./tool-panel";
 import {
@@ -266,32 +263,6 @@ export const SelectionEmpty: Story = {
       hasCursorData: true,
       isLocked: false,
       selection: null,
-    });
-  },
-};
-
-/** A keyboard shortcut picked out with the Select tool: drawn rather than
- * placed, so it is sized and centred in percent and offered neither a shadow,
- * nor corners, nor a pad. */
-export const SelectionShortcut: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    seed({
-      cursorEffects: DEFAULT_CURSOR_EFFECTS,
-      frame: null,
-      hasKeyboardData: true,
-      isLocked: false,
-      keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
-      keyboardMaximum: 240,
-      selection: {
-        kind: "shortcut",
-        label: "Shortcut",
-        maximumSizePercent: 240,
-        minimumSizePercent: 50,
-        positionXPercent: 50,
-        positionYPercent: 91.2,
-        sizePercent: 100,
-      },
     });
   },
 };

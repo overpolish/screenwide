@@ -12,12 +12,13 @@ import { RecordingTrackId } from "../../types";
 
 export function useRecordingTrackSelection({
   clearAnnotations,
-  clearKeyboard,
+  clearOverlays,
   onSelectedTrackChange,
   setTool,
 }: {
   clearAnnotations: RefObject<() => void>;
-  clearKeyboard: () => void;
+  /** Lets go of the shortcuts and captions chosen in their lanes. */
+  clearOverlays: () => void;
   setTool: (tool: RecordingCanvasTool) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
 }) {
@@ -25,7 +26,7 @@ export function useRecordingTrackSelection({
   return useCallback(
     (trackId: RecordingTrackId) => {
       clearAnnotations.current();
-      clearKeyboard();
+      clearOverlays();
       onSelectedTrackChange?.(trackId);
       setTool("select");
       const bounds = previewViewport()?.getBoundingClientRect();
@@ -33,7 +34,7 @@ export function useRecordingTrackSelection({
     },
     [
       clearAnnotations,
-      clearKeyboard,
+      clearOverlays,
       onSelectedTrackChange,
       openPanel,
       setTool,

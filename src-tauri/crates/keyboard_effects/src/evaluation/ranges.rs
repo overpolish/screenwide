@@ -10,7 +10,6 @@ impl KeyboardCompositor {
     settings: KeyboardEffectSettings,
     ranges: Option<&[screenwide_timeline::TimelineRange]>,
   ) -> Option<KeyboardOverlay> {
-    let settings = settings.normalized();
     if !settings.bake {
       return None;
     }
@@ -26,7 +25,8 @@ impl KeyboardCompositor {
       KeyboardAnimation::Fade => KeyboardOverlay::ANIMATION_FADE,
       KeyboardAnimation::None => KeyboardOverlay::ANIMATION_NONE,
     };
-    let size_scale = (settings.size_percent / 100.0) as f32;
+    let size_scale = settings.size.scale() as f32;
+    let [align_x, align_y] = settings.position.shares();
     let appearance = match settings.appearance {
       KeyboardAppearance::Dark => KeyboardOverlay::APPEARANCE_DARK,
       KeyboardAppearance::Light => KeyboardOverlay::APPEARANCE_LIGHT,
@@ -39,12 +39,8 @@ impl KeyboardCompositor {
       progress: 1.0,
       maximum_width: baked.maximum_width as f32,
       requested_scale: size_scale,
-      center_x: settings
-        .position_x_percent
-        .map_or(-1.0, |position| (position / 100.0) as f32),
-      center_y: settings
-        .position_y_percent
-        .map_or(-1.0, |position| (position / 100.0) as f32),
+      align_x: align_x as f32,
+      align_y: align_y as f32,
       ..Default::default()
     };
     let deleted_ids = self
@@ -70,32 +66,6 @@ impl KeyboardCompositor {
       })
       .filter(|key| key.visible_at(now, clock))
       .collect::<Vec<_>>();
-    // Manual placements are per shortcut, so during a transition two groups
-    // can occupy different spots. The overlay centre follows the newest
-    // visible group as before; every key additionally carries its own
-    // group's centre so a differently placed badge finishes its animation
-    // where the user put it instead of teleporting to the successor.
-    let positions = self
-      .shortcut_positions
-      .read()
-      .unwrap_or_else(|poisoned| poisoned.into_inner())
-      .clone();
-    let placement_at = |shortcut: usize| {
-      positions
-        .iter()
-        .find(|position| {
-          position.shortcut_id == shortcut as u64
-            && position_ms >= position.start_ms
-            && position_ms < position.end_ms
-        })
-        .map(|position| (position.center_x, position.center_y, position.size_percent))
-    };
-    let base_center = (overlay.center_x, overlay.center_y);
-    self.apply_shortcut_position(&mut overlay, &visible, position_ms);
-    let overlay_placement = visible
-      .iter()
-      .max_by_key(|key| key.enter_us)
-      .and_then(|key| placement_at(key.source_shortcut));
     // Wire slot indices and layout masks are bit positions, so they must be
     // compact. Fresh badge groups keep allocating new slot ids for the whole
     // recording; only the slots this frame actually references are wired,
@@ -148,38 +118,6 @@ impl KeyboardCompositor {
       if overlay.key_count as usize >= MAX_KEYS {
         break;
       }
-      // Inherit the overlay centre when this key's group placement matches
-      // the group the overlay follows; otherwise pin the key to its own
-      // group's spot so it animates there.
-      let placement = placement_at(key.source_shortcut);
-      let (center_x, center_y, group_scale) = if placement == overlay_placement {
-        (
-          KEY_CENTER_INHERIT,
-          KEY_CENTER_INHERIT,
-          overlay.requested_scale,
-        )
-      } else if let Some((x, y, size)) = placement {
-        (
-          x as f32,
-          y as f32,
-          size.map_or(size_scale, |size| (size / 100.0) as f32),
-        )
-      } else {
-        (
-          if base_center.0 >= 0.0 {
-            base_center.0
-          } else {
-            KEY_CENTER_DEFAULT
-          },
-          if base_center.1 >= 0.0 {
-            base_center.1
-          } else {
-            KEY_CENTER_DEFAULT
-          },
-          size_scale,
-        )
-      };
-      let scale_ratio = group_scale / overlay.requested_scale.max(0.001);
       let entrance_seconds = if key.replacement_enter {
         EXIT_SECONDS
       } else {
@@ -248,9 +186,6 @@ impl KeyboardCompositor {
           .unwrap_or_default() as u32,
         layout_from_mask: layout::mask(layout.from, slots),
         layout_to_mask: layout::mask(layout.to, slots),
-        center_x,
-        center_y,
-        scale_ratio,
       };
       overlay.key_count += 1;
     }

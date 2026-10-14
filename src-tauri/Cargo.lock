@@ -5522,6 +5522,7 @@ version = "0.1.0"
 dependencies = [
  "regex",
  "screenwide-lexicon",
+ "screenwide-placement",
  "screenwide-timeline",
  "serde",
  "serde_json",
@@ -5579,6 +5580,7 @@ dependencies = [
  "screenwide-imaging",
  "screenwide-keyboard-effects",
  "screenwide-output",
+ "screenwide-placement",
  "screenwide-scenes",
  "screenwide-wgsl",
  "serde",
@@ -5594,6 +5596,7 @@ dependencies = [
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
+ "screenwide-placement",
  "screenwide-records",
  "serde",
  "ts-rs",
@@ -5678,6 +5681,7 @@ dependencies = [
 name = "screenwide-keyboard-effects"
 version = "0.1.0"
 dependencies = [
+ "screenwide-placement",
  "screenwide-timeline",
  "screenwide-timeline-edit",
  "serde",
@@ -5737,6 +5741,14 @@ dependencies = [
  "serde_json",
  "ts-rs",
  "wgpu",
+]
+
+[[package]]
+name = "screenwide-placement"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "ts-rs",
 ]
 
 [[package]]

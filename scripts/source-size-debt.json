@@ -9,7 +9,6 @@
   "src/features/editor/panel/editor-panel.stories.tsx": 372,
   "src/features/editor/preview/preview-viewport.tsx": 518,
   "src/features/editor/editor-window.tsx": 733,
-  "src/features/editor/timeline/keyboard/recording-keyboard-timeline-edit.ts": 348,
   "src/features/editor/timeline/editing/recording-timeline-edit.test.ts": 363,
   "src/features/editor/timeline/editing/recording-timeline-edit.ts": 340,
   "src/features/editor/screenshot/screenshot-output.ts": 703,

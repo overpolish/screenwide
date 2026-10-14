@@ -322,6 +322,37 @@ fn refuses_breaks_out_of_order() {
   assert!(captions.validate().is_err());
 }
 
+#[test]
+fn leaves_out_the_caption_holding_a_hidden_word_and_keeps_the_others_timed() {
+  let mut case = Case::new("one two three. four five six seven eight nine").styled(|style| {
+    style.max_words = 4;
+    style.lines = CaptionLines::One;
+  });
+  let all = case.build();
+  // "four" is said from 1.2 s, and starts the second caption.
+  case.captions.hidden = vec![1_200];
+  let kept = case.build();
+  assert_eq!(kept, [all[0].clone(), all[2].clone()]);
+  // Grouped otherwise, whichever caption now holds "four" goes instead.
+  let regrouped = case.styled(|style| style.max_words = 2).texts();
+  assert!(!regrouped.is_empty());
+  assert!(regrouped.iter().all(|text| !text.contains("four")));
+}
+
+#[test]
+fn keeps_the_caption_before_a_hidden_one_whose_last_word_ends_as_it_starts() {
+  let mut case = Case::new("one two three. four five six").styled(|style| {
+    style.max_words = 3;
+    style.lines = CaptionLines::One;
+  });
+  // Said without a pause: "three." ends at 1.2 s, as "four" starts.
+  for word in &mut case.words {
+    word.end_ms = word.start_ms + 400.0;
+  }
+  case.captions.hidden = vec![1_200];
+  assert_eq!(case.texts(), ["one two three."]);
+}
+
 /// Each caption's words set in the accent.
 fn emphasized(captions: &[Caption]) -> Vec<Vec<&str>> {
   captions

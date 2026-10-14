@@ -163,10 +163,10 @@ pub fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
   }
 }
 
-/// The first layer id that is not a picture: the keyboard overlay, then the
-/// canvas frame above it.
+/// The first layer id that is not a picture: the captions and the keyboard
+/// overlays, then the canvas frame above them.
 #[cfg(any(target_os = "windows", test))]
-const FIRST_NON_PICTURE_LAYER: u32 = u32::MAX - 1;
+const FIRST_NON_PICTURE_LAYER: u32 = u32::MAX - 2;
 
 /// The layer a fresh annotation is drawn on, out of `layers` listed back to
 /// front with their pictures' rects as x, y, width and height: the topmost

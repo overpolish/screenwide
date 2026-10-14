@@ -9,13 +9,6 @@ pub(super) fn cancel(inner: &std::sync::Arc<SurfaceInner>) {
   if let Ok(mut state) = inner.state.lock() {
     if let Some(ActiveGesture::Selection(gesture)) = state.gesture.take() {
       state.selection = Some(gesture.selection_start);
-      redraw_keyboard_transform(
-        inner,
-        &mut state,
-        gesture.keyboard_start,
-        gesture.selection_start,
-        1.0,
-      );
       state.move_auto_fit = None;
       // An auto-fit Move owns the workspace exactly like a Frame resize
       // until it commits, and is unwound the same way.

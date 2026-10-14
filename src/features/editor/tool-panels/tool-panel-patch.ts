@@ -47,8 +47,6 @@ export type ToolPanelPatch = Partial<
    * send the whole style back. Each one also becomes the next arrow's default.
    */
   annotationStyle?: Partial<AnnotationStyle>;
-  /** Put every shortcut back where the recording drew it. */
-  applyShortcutToAll?: true;
   /** Play the selected audio track this much louder or quieter than it was
    * recorded, in decibels. */
   audioVolume?: number;
@@ -120,20 +118,14 @@ export type ToolPanelPatch = Partial<
   /** Cut the long pauses out of the selected microphone's recording where
    * nothing happens on screen. */
   removeSilences?: true;
-  /** Put every shortcut's own placement away, the global one left as it is. */
-  resetAllShortcuts?: true;
   /** Show the whole source again, the committed crop taken away. */
   resetCrop?: true;
   /** Put the canvas back to the source size, refitting what is in it. */
   resetFrame?: true;
-  /** Put the shortcuts back where the recording draws them by default. */
-  resetKeyboardPosition?: true;
   /** Show the whole screen and camera again in the scene under the playhead. */
   resetSceneFraming?: true;
   /** Put the selection's size and position back to its source framing. */
   resetSelection?: true;
-  /** Put the selected shortcut back where the recording drew it. */
-  resetShortcut?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
   /** Bring back every pause Remove cut that is still cut. */
@@ -166,12 +158,6 @@ export type ToolPanelPatch = Partial<
   selectionOutput?: SelectionPlacementPatch;
   /** Round the selected layer's corners by this share of its shorter side. */
   selectionRadius?: number;
-  /** Draw the selected shortcut at this size and centre, all in percent. */
-  shortcutPlacement?: {
-    positionXPercent?: number;
-    positionYPercent?: number;
-    sizePercent?: number;
-  };
   /** Go to the frame the object with this id was picked in, and pick there
    * with it chosen. */
   showCameraObject?: number;

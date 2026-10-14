@@ -11,21 +11,23 @@ import {
   ToolPanelSnapshot,
 } from "./tool-panel-store";
 
+import type { OverlaySize } from "../../../bindings/OverlaySize";
+
 const snapshot = (
-  sizePercent: number,
+  size: OverlaySize,
   acknowledgedSeq = 0,
 ): ToolPanelSnapshot => ({
   ...DEFAULT_TOOL_PANEL_SNAPSHOT,
   acknowledgedSeq,
-  cursorEffects: { ...DEFAULT_CURSOR_EFFECTS, sizePercent },
+  cursorEffects: { ...DEFAULT_CURSOR_EFFECTS, size },
   frame: null,
   hasCursorData: true,
   isLocked: false,
   selection: null,
 });
-const draft = (sizePercent: number, seq: number): ToolPanelDraft => ({
+const draft = (size: OverlaySize, seq: number): ToolPanelDraft => ({
   seq,
-  values: { cursorEffects: { ...DEFAULT_CURSOR_EFFECTS, sizePercent } },
+  values: { cursorEffects: { ...DEFAULT_CURSOR_EFFECTS, size } },
   workspace: "recording",
 });
 const resolve = (value: ToolPanelSnapshot, pending: ToolPanelDraft | null) =>
@@ -35,7 +37,7 @@ const placed = (
   placement: { height: number; width: number; x: number; y: number },
   acknowledgedSeq = 0,
 ): ToolPanelSnapshot => ({
-  ...snapshot(100, acknowledgedSeq),
+  ...snapshot("standard", acknowledgedSeq),
   selection: {
     ...placement,
     dropShadow: true,
@@ -51,48 +53,58 @@ const placed = (
 
 describe("panel input during delayed editor replies", () => {
   it("shows the newest input immediately and ignores earlier drag replies", () => {
-    const latest = draft(250, 3);
-    for (const reply of [snapshot(100), snapshot(150, 1), snapshot(200, 2)]) {
-      expect(resolve(reply, latest).cursorEffects.sizePercent).toBe(250);
+    const latest = draft("giant", 3);
+    for (const reply of [
+      snapshot("standard"),
+      snapshot("large", 1),
+      snapshot("extra-large", 2),
+    ]) {
+      expect(resolve(reply, latest).cursorEffects.size).toBe("giant");
     }
   });
 
   it("waits for the latest sequence even when an older request had the same value", () => {
-    const latest = draft(150, 3);
-    expect(resolve(snapshot(150, 1), latest).cursorEffects.sizePercent).toBe(
-      150,
+    const latest = draft("large", 3);
+    expect(resolve(snapshot("large", 1), latest).cursorEffects.size).toBe(
+      "large",
     );
-    expect(resolve(snapshot(200, 2), latest).cursorEffects.sizePercent).toBe(
-      150,
+    expect(resolve(snapshot("extra-large", 2), latest).cursorEffects.size).toBe(
+      "large",
     );
   });
 
   it("accepts the canonical editor value when the latest request is acknowledged", () => {
-    const reply = snapshot(245, 3);
-    expect(resolve(reply, draft(250, 3))).toBe(reply);
+    const reply = snapshot("large", 3);
+    expect(resolve(reply, draft("extra-large", 3))).toBe(reply);
   });
 
   it("follows subsequent editor changes after acknowledgement", () => {
-    const latest = draft(250, 3);
-    expect(resolve(snapshot(250, 3), latest).cursorEffects.sizePercent).toBe(
-      250,
+    const latest = draft("giant", 3);
+    expect(resolve(snapshot("giant", 3), latest).cursorEffects.size).toBe(
+      "giant",
     );
-    expect(resolve(snapshot(100, 3), null).cursorEffects.sizePercent).toBe(100);
+    expect(resolve(snapshot("standard", 3), null).cursorEffects.size).toBe(
+      "standard",
+    );
   });
 
   it("keeps lock and availability metadata live while an edit is pending", () => {
-    const reply = { ...snapshot(100, 1), hasCursorData: false, isLocked: true };
-    const value = resolve(reply, draft(250, 3));
+    const reply = {
+      ...snapshot("standard", 1),
+      hasCursorData: false,
+      isLocked: true,
+    };
+    const value = resolve(reply, draft("giant", 3));
     expect(value.isLocked).toBe(true);
     expect(value.hasCursorData).toBe(false);
-    expect(value.cursorEffects.sizePercent).toBe(250);
+    expect(value.cursorEffects.size).toBe("giant");
   });
 
   it("does not carry another workspace's pending edits across", () => {
-    const reply = snapshot(100);
-    expect(resolveToolPanelSnapshot(reply, draft(250, 3), "screenshot")).toBe(
-      reply,
-    );
+    const reply = snapshot("standard");
+    expect(
+      resolveToolPanelSnapshot(reply, draft("giant", 3), "screenshot"),
+    ).toBe(reply);
   });
 });
 
@@ -143,7 +155,7 @@ describe("canvas size while a field is open", () => {
     frame: { height: number; width: number },
     acknowledgedSeq = 0,
   ): ToolPanelSnapshot => ({
-    ...snapshot(100, acknowledgedSeq),
+    ...snapshot("standard", acknowledgedSeq),
     frame: { ...frame, sourceHeight: 2338, sourceWidth: 3600 },
   });
   const live = { height: 2338, width: 3600 };
@@ -205,7 +217,7 @@ describe("canvas size while a field is open", () => {
       workspace: "recording",
     };
     const separate: ToolPanelSnapshot = {
-      ...snapshot(100),
+      ...snapshot("standard"),
       cameraOutput: "separate",
     };
 
@@ -215,7 +227,7 @@ describe("canvas size while a field is open", () => {
       resolve({ ...separate, acknowledgedSeq: 7 }, flipping).cameraOutput,
     ).toBe("separate");
     // Where there is no choice to make, a stray request offers none.
-    expect(resolve(snapshot(100), flipping).cameraOutput).toBeNull();
+    expect(resolve(snapshot("standard"), flipping).cameraOutput).toBeNull();
   });
 
   it("keeps a dragged volume until the editor answers", () => {
@@ -225,7 +237,7 @@ describe("canvas size while a field is open", () => {
       workspace: "recording",
     };
     const audio: ToolPanelSnapshot = {
-      ...snapshot(100),
+      ...snapshot("standard"),
       selection: { decibels: 0, kind: "audio", label: "Microphone" },
     };
 
@@ -239,7 +251,7 @@ describe("canvas size while a field is open", () => {
 
 describe("a counter's aim while the editor answers", () => {
   const aimed = (angle: number, acknowledgedSeq = 0): ToolPanelSnapshot => ({
-    ...snapshot(100, acknowledgedSeq),
+    ...snapshot("standard", acknowledgedSeq),
     annotation: {
       angle,
       animated: true,

@@ -3,10 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  deletedRecordingKeyboardShortcutFragments,
-  recordingKeyboardShortcutPositions,
-} from "../keyboard/recording-keyboard-timeline-edit";
+import { deletedRecordingKeyboardShortcutFragments } from "../keyboard/recording-keyboard-timeline-edit";
 
 import {
   createRecordingTimelineEdit,
@@ -103,19 +100,10 @@ describe("recording timeline range speed", () => {
     expect(recordingTimelineRangePlaybackRate(initial, 0.2, 0.8)).toBe(1);
   });
 
-  it("inherits segment-keyed keyboard settings across every split piece", () => {
+  it("inherits segment-keyed shortcut deletions across every split piece", () => {
     const initial = {
       ...createRecordingTimelineEdit(42),
       deletedKeyboardShortcutFragments: [{ segmentId: 0, shortcutId: 8 }],
-      keyboardShortcutPositions: [
-        {
-          centerX: 0.3,
-          centerY: 0.7,
-          segmentId: 0,
-          shortcutId: 8,
-          sizePercent: 125,
-        },
-      ],
     };
     const edit = setRecordingTimelineRangePlaybackRate(initial, {
       outputEnd: 0.75,
@@ -123,15 +111,6 @@ describe("recording timeline range speed", () => {
       playbackRate: 2,
     });
 
-    expect(recordingKeyboardShortcutPositions(edit)).toEqual(
-      [0, 1, 2].map((segmentId) => ({
-        centerX: 0.3,
-        centerY: 0.7,
-        segmentId,
-        shortcutId: 8,
-        sizePercent: 125,
-      })),
-    );
     expect(deletedRecordingKeyboardShortcutFragments(edit)).toEqual(
       [0, 1, 2].map((segmentId) => ({ segmentId, shortcutId: 8 })),
     );

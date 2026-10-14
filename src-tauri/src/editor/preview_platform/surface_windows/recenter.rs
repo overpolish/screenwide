@@ -24,18 +24,9 @@ pub(super) fn selection_resize(
   zoom: f64,
   centered: bool,
 ) -> workspace_editor::SelectionResize {
-  let minimum = if start.layer_id == u32::MAX - 1 {
-    0.01
-  } else {
-    (36.0 / (pane.0 * zoom * start.width).max(1.0))
-      .max(36.0 / (pane.1 * zoom * start.height).max(1.0))
-  };
-  let minimum = if start.minimum_scale > 0.0 {
-    minimum.max(start.minimum_scale)
-  } else {
-    minimum
-  };
-  let mut resize = workspace_editor::selection_resize(
+  let minimum = (36.0 / (pane.0 * zoom * start.width).max(1.0))
+    .max(36.0 / (pane.1 * zoom * start.height).max(1.0));
+  workspace_editor::selection_resize(
     workspace_editor::NormalizedRect {
       x: start.x,
       y: start.y,
@@ -46,14 +37,5 @@ pub(super) fn selection_resize(
     delta,
     minimum,
     centered,
-  );
-  super::keyboard_hit::resize_limit(start, &mut resize);
-  if start.maximum_scale > 0.0 {
-    resize.maximum_scale = resize.maximum_scale.min(start.maximum_scale);
-    resize.minimum_scale = resize.minimum_scale.min(resize.maximum_scale);
-    resize.scale = resize
-      .scale
-      .clamp(resize.minimum_scale, resize.maximum_scale);
-  }
-  resize
+  )
 }

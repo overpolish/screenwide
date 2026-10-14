@@ -7,8 +7,6 @@ import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import {
   deletedRecordingKeyboardShortcutFragments,
   deletedRecordingKeyboardShortcutIds,
-  recordingKeyboardShortcutPositions,
-  resetAllRecordingKeyboardShortcutPositions,
   restoreRecordingKeyboardShortcuts,
 } from "./recording-keyboard-timeline-edit";
 
@@ -23,9 +21,6 @@ export function useRestoreRecordingKeyboardShortcuts(
     (deletedRecordingKeyboardShortcutIds(edit).length > 0 ||
       deletedRecordingKeyboardShortcutFragments(edit).length > 0),
   );
-  const canReset = Boolean(
-    edit && onChange && recordingKeyboardShortcutPositions(edit).length > 0,
-  );
   const restore = () => {
     if (!edit || !onChange) return;
     const restored = restoreRecordingKeyboardShortcuts(edit);
@@ -34,13 +29,5 @@ export function useRestoreRecordingKeyboardShortcuts(
     onChange(restored);
     editGesture.endGesture();
   };
-  const reset = () => {
-    if (!edit || !onChange) return;
-    const next = resetAllRecordingKeyboardShortcutPositions(edit);
-    if (next === edit) return;
-    editGesture.beginGesture();
-    onChange(next);
-    editGesture.endGesture();
-  };
-  return { canRestore, reset: canReset ? reset : undefined, restore };
+  return { canRestore, restore };
 }

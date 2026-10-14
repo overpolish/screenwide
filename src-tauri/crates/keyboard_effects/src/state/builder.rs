@@ -12,16 +12,14 @@ use crate::clock::AnimationClock;
 use crate::HOLD_US;
 use crate::{KeyPress, Shortcut};
 use screenwide_timeline::{source_before_output_duration_us, TimelineRange};
-use screenwide_timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+use screenwide_timeline_edit::DeletedKeyboardShortcutRange;
 
 /// The timeline-edit state a chord's badge continuity depends on. A chord
-/// continues its predecessor's badge only when both are visible then and
-/// occupy the same place at the same size.
+/// continues its predecessor's badge only when both are visible then.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct ChainContext<'a> {
   pub deleted_ids: &'a [u64],
   pub deleted_ranges: &'a [DeletedKeyboardShortcutRange],
-  pub positions: &'a [KeyboardShortcutPositionRange],
   /// The edit's retained playback ranges; animation durations run on the
   /// output clock, so bake-time scheduling maps through them.
   pub ranges: Option<&'a [TimelineRange]>,
@@ -51,28 +49,13 @@ impl ChainContext<'_> {
       })
   }
 
-  fn placement(&self, shortcut: usize, at_ms: u64) -> Option<(f64, f64, Option<f64>)> {
-    self
-      .positions
-      .iter()
-      .find(|position| {
-        position.shortcut_id == shortcut as u64
-          && at_ms >= position.start_ms
-          && at_ms < position.end_ms
-      })
-      .map(|position| (position.center_x, position.center_y, position.size_percent))
-  }
-
   fn deleted_at(&self, shortcut: usize, at_us: u64) -> bool {
     self.deleted(shortcut, at_us / 1_000)
   }
 
   fn chains(&self, previous: usize, next: usize, at_us: u64) -> bool {
     let at_ms = at_us / 1_000;
-    if self.deleted(previous, at_ms) || self.deleted(next, at_ms) {
-      return false;
-    }
-    self.placement(previous, at_ms) == self.placement(next, at_ms)
+    !self.deleted(previous, at_ms) && !self.deleted(next, at_ms)
   }
 }
 

@@ -16,7 +16,6 @@ import {
   gesturedTrackOutput,
 } from "./recording-selection-gesture-geometry";
 
-import type { useRecordingKeyboardPreviewEditing } from "../../keyboard-effect/use-recording-keyboard-canvas-editing";
 import type { useEditorEditGesture } from "../../use-editor-edit-history";
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 
@@ -25,8 +24,7 @@ const AUTO_FIT_COMMIT_EDGE = 1 << 18;
 
 /**
  * Turns one native selection gesture into recording-output and camera-overlay
- * edits. The keyboard layer is offered the gesture first; everything else is a
- * move, resize, radius or crop of the pane the gesture began on.
+ * edits: a move, resize, radius or crop of the pane the gesture began on.
  */
 export function useRecordingSelectionGesture({
   cameraOverlay,
@@ -34,7 +32,6 @@ export function useRecordingSelectionGesture({
   canvasTool,
   editGesture,
   effectiveRecordingOutput,
-  keyboardCanvas,
   onCameraOverlayChange,
   onRecordingOutputChange,
   previewSourceDimensions,
@@ -47,9 +44,6 @@ export function useRecordingSelectionGesture({
   canvasTool: RecordingCanvasTool;
   editGesture: ReturnType<typeof useEditorEditGesture>;
   effectiveRecordingOutput: RecordingOutputSettings;
-  keyboardCanvas: ReturnType<
-    typeof useRecordingKeyboardPreviewEditing
-  >["canvas"];
   previewSourceDimensions: Partial<
     Record<RecordingVideoTrackId, { height: number; width: number }>
   >;
@@ -79,7 +73,6 @@ export function useRecordingSelectionGesture({
     trackId: RecordingVideoTrackId;
   } | null>(null);
   const applyGesture = (event: RecordingSelectionGestureEvent) => {
-    if (keyboardCanvas.applyGesture(event)) return;
     const trackId =
       event.paneIndex === 0
         ? "primary"

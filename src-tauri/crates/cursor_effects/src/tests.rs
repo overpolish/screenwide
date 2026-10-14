@@ -103,7 +103,7 @@ fn custom_arrow_fallback_keeps_the_recorded_arrow_size() {
       1_500,
       (1_008, 332),
       CursorEffectSettings {
-        size_percent: 400.0,
+        size: screenwide_placement::OverlaySize::Huge,
         ..CursorEffectSettings::default()
       },
     )
@@ -111,7 +111,7 @@ fn custom_arrow_fallback_keeps_the_recorded_arrow_size() {
 
   assert_eq!(cursor.width, 56.0);
   assert_eq!(cursor.height, 80.0);
-  assert_eq!(cursor.scale, 4.0);
+  assert_eq!(cursor.scale, 3.0);
 }
 
 #[test]

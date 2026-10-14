@@ -6,11 +6,6 @@ import { CaptionsPatch } from "../recording/captions/recording-captions";
 import { CaptionDefaultsPatch } from "../recording/captions/use-caption-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import {
-  applyKeyboardShortcutToAll,
-  placeKeyboardShortcut,
-  resetKeyboardShortcut,
-} from "../shortcuts/keyboard-shortcut-channel";
-import {
   CursorEffectSettings,
   EditorKind,
   KeyboardEffectSettings,
@@ -54,7 +49,6 @@ export type EditorToolPanelHandlerInputs = {
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
   onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onTranscriptRequest?: (request: TranscriptRequest) => void;
-  resetShortcuts?: () => void;
 };
 
 /** The handlers the panels reach, each one the editor's own commit path. */
@@ -71,7 +65,6 @@ export function editorToolPanelHandlers({
   onCursorEffectsChange,
   onKeyboardEffectsChange,
   onTranscriptRequest,
-  resetShortcuts,
   restoreShortcuts,
   saveSceneTemplates,
   sceneTemplates,
@@ -104,27 +97,7 @@ export function editorToolPanelHandlers({
     onKeyboardEffectsChange: (settings) => {
       onKeyboardEffectsChange?.({ ...keyboardEffects, ...settings });
     },
-    // The default place is the absence of a position: the bridge is JSON,
-    // which cannot carry an undefined, so the reset is its own request.
-    onKeyboardPositionReset: () => {
-      const {
-        positionXPercent: _x,
-        positionYPercent: _y,
-        ...rest
-      } = keyboardEffects;
-      onKeyboardEffectsChange?.(rest);
-    },
-    onKeyboardShortcutsResetAll: resetShortcuts,
     onKeyboardShortcutsRestore: restoreShortcuts,
-    onShortcutApplyToAll: () => {
-      applyKeyboardShortcutToAll(workspace);
-    },
-    onShortcutPlacementChange: (placement) => {
-      placeKeyboardShortcut(workspace, placement);
-    },
-    onShortcutReset: () => {
-      resetKeyboardShortcut(workspace);
-    },
     ...audioPanelHandlers(audioTarget),
     ...cropPanelHandlers(cropTarget),
     ...framePanelHandlers(frameTarget),

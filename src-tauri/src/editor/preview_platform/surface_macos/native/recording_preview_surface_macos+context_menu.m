@@ -68,7 +68,7 @@
   if (!shared_selection_hit(self.surface, point, &target, &sharedHandle) &&
       !selection_target_at_point(self.surface, point, &target))
     return NO;
-  if (target.layer_id == ScreenwideFrameLayerId || selection_is_keyboard(target))
+  if (target.layer_id == ScreenwideFrameLayerId || selection_is_overlay(target))
     return NO;
   if (!self.surface.hasSelection ||
       self.surface.selection.pane_index != target.pane_index ||

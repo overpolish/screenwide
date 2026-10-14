@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_placement::Placement;
 
 const FRAME: CaptionFrame = CaptionFrame {
   width: 1_000,
@@ -109,11 +110,11 @@ fn holds_a_caption_in_its_corner_with_its_lines_lined_up_to_that_side() {
   // 100 px in from every edge; the caption is 70 px wide and 125 px tall,
   // and "three" lines up with the side the caption keeps to.
   assert_eq!(
-    placed(CaptionPosition::TopLeft),
+    placed(Placement::TopLeft),
     [[115.0, 131.25], [155.0, 131.25], [125.0, 193.75]]
   );
   assert_eq!(
-    placed(CaptionPosition::BottomRight),
+    placed(Placement::BottomRight),
     [[845.0, 806.25], [885.0, 806.25], [875.0, 868.75]]
   );
 }

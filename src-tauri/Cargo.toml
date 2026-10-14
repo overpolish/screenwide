@@ -40,6 +40,7 @@ screenwide-lexicon = { path = "crates/lexicon" }
 screenwide-moments = { path = "crates/moments" }
 screenwide-osc = { path = "crates/osc" }
 screenwide-output = { path = "crates/output" }
+screenwide-placement = { path = "crates/placement" }
 screenwide-project = { path = "crates/project" }
 screenwide-records = { path = "crates/records" }
 screenwide-scenes = { path = "crates/scenes" }

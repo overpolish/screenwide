@@ -3,7 +3,7 @@
 
 use super::{PlaybackMode, RecordingPreviewPlayerState};
 use screenwide_keyboard_effects::KeyboardEffectSettings;
-use screenwide_timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+use screenwide_timeline_edit::DeletedKeyboardShortcutRange;
 use tauri::State;
 
 #[tauri::command]
@@ -25,8 +25,7 @@ pub(crate) fn set_recording_preview_keyboard_effects(
     .clone();
   *settings
     .write()
-    .map_err(|_| "The keyboard preview settings are unavailable".to_owned())? =
-    keyboard_effects.normalized();
+    .map_err(|_| "The keyboard preview settings are unavailable".to_owned())? = keyboard_effects;
   if !manager.is_playing {
     manager.restart(PlaybackMode::InteractiveStill)?;
   }
@@ -38,7 +37,6 @@ pub(crate) fn set_recording_preview_deleted_keyboard_shortcuts(
   state: State<'_, RecordingPreviewPlayerState>,
   shortcut_ids: Vec<u64>,
   shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
-  shortcut_positions: Vec<KeyboardShortcutPositionRange>,
   playback_ranges: Vec<super::RecordingPreviewPlaybackRange>,
   session_id: u64,
 ) -> Result<(), String> {
@@ -59,7 +57,6 @@ pub(crate) fn set_recording_preview_deleted_keyboard_shortcuts(
     super::animation_timeline_ranges(&playback_ranges);
   if let Some(keyboard) = keyboard {
     keyboard.set_deleted_shortcuts(&shortcut_ids, &shortcut_ranges);
-    keyboard.set_shortcut_positions(&shortcut_positions);
   }
   super::audio_visualizer::refresh_audio_ribbon(&manager);
   if !manager.is_playing {

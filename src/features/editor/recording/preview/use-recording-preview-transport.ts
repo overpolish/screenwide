@@ -4,7 +4,6 @@
 import { Dispatch, RefObject, SetStateAction, useMemo, useRef } from "react";
 
 import { useAnnotationDraft } from "../../annotations/annotation-draft";
-import { KEYBOARD_LAYER_ID } from "../../keyboard-effect/use-recording-keyboard-canvas-gesture";
 import { useRegisterPreviewFit } from "../../preview/preview-fit-context";
 import { usePreviewZoom } from "../../preview/use-preview-zoom";
 import {
@@ -27,6 +26,7 @@ import { useRecordingScenes } from "../scenes/use-recording-scenes";
 import { useSceneReframeDisplay } from "../scenes/use-scene-reframe-display";
 import { useRecordingPreviewPlayer } from "../use-recording-preview-player";
 
+import { isOverlayLayer, OverlayLayerId } from "./overlay-layers";
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { usePausedPreviewPosition } from "./use-paused-preview-position";
 import { useRecordingCropPreview } from "./use-recording-crop-preview";
@@ -52,6 +52,7 @@ export function useRecordingPreviewTransport(
     composedVideoTracks,
     effectiveRecordingOutput,
     playhead,
+    pressOverlayRef,
     previewPlayingRef,
     previewPositionMs,
     recenterRefreshRef,
@@ -71,6 +72,8 @@ export function useRecordingPreviewTransport(
     composedVideoTracks: Set<RecordingVideoTrackId>;
     effectiveRecordingOutput: RecordingOutputSettings;
     playhead: Playhead;
+    /** What a press on an overlay does, set by the lanes, which know it. */
+    pressOverlayRef: RefObject<(layerId: OverlayLayerId) => void>;
     previewPlayingRef: RefObject<boolean>;
     previewPositionMs: number;
     recenterRefreshRef: RefObject<
@@ -103,7 +106,7 @@ export function useRecordingPreviewTransport(
     previewSourceDimensions,
     recordingTimelineEdit,
   } = props;
-  const { keyboardCanvas, keyboardTimeline } = selection;
+  const { clearOverlaySelection } = selection;
   const totalDurationRef = useRef(durationMs);
   const trimPreview = useRecordingTrimPreview({
     edit: recordingTimelineEdit,
@@ -168,13 +171,14 @@ export function useRecordingPreviewTransport(
     },
     onSelectionChange: (paneIndex) => {
       if (paneIndex === null) return;
-      clearAnnotationRef.current();
-      if (paneIndex === KEYBOARD_LAYER_ID) {
-        keyboardCanvas.selectVisible();
-        onSelectedTrackChange?.(null);
+      // An overlay takes its size and place from its tool, so a press on it
+      // chooses it and opens that tool rather than taking up a pane.
+      if (isOverlayLayer(paneIndex)) {
+        pressOverlayRef.current(paneIndex);
         return;
       }
-      keyboardTimeline.selection.onClear();
+      clearAnnotationRef.current();
+      clearOverlaySelection();
       const trackId = paneIndex === 0 ? "primary" : "camera";
       if (composedVideoTracks.has(trackId)) onSelectedTrackChange?.(trackId);
     },
@@ -200,7 +204,7 @@ export function useRecordingPreviewTransport(
     onEdit: (next) => onRecordingTimelineEditChange?.(next),
     onSelectTrack: (track) => {
       if (player.isPlaying) player.pause();
-      keyboardTimeline.selection.onClear();
+      clearOverlaySelection();
       timelineBlade.blade.clearRangeSelection();
       timelineBlade.blade.selectSegment(null);
       onSelectedTrackChange?.(track);

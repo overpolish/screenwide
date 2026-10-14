@@ -61,7 +61,9 @@ pub(super) unsafe extern "C" fn selection_callback(
   context: *mut std::ffi::c_void,
 ) {
   if let Some(callback) = (context as *mut SelectionCallback).as_mut() {
-    callback(u32::try_from(pane_index).ok());
+    // The overlays' layer ids lie past `i32::MAX` and arrive negative; the
+    // bits are the id.
+    callback(Some(pane_index as u32));
   }
 }
 

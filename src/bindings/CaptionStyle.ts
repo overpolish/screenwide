@@ -5,10 +5,10 @@ import type { CaptionBackground } from "./CaptionBackground";
 import type { CaptionFont } from "./CaptionFont";
 import type { CaptionLines } from "./CaptionLines";
 import type { CaptionMotion } from "./CaptionMotion";
-import type { CaptionPosition } from "./CaptionPosition";
 import type { CaptionShadow } from "./CaptionShadow";
 import type { CaptionSize } from "./CaptionSize";
 import type { CaptionTemplateId } from "./CaptionTemplateId";
+import type { Placement } from "./Placement";
 
 export type CaptionStyle = { 
 /**
@@ -31,7 +31,7 @@ maxWords: number, lines: CaptionLines, arrangement: CaptionArrangement,
 /**
  * Where on the picture the caption sits, and so how its lines line up.
  */
-position: CaptionPosition, 
+position: Placement, 
 /**
  * The type's colour, as `#rrggbb` or `#rrggbbaa`.
  */

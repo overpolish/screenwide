@@ -8,7 +8,6 @@
 //! keeps the two alike.
 
 use crate::font::CaptionFont;
-use crate::layout::CaptionPosition;
 use crate::motion::CaptionMotion;
 use crate::size::CaptionSize;
 use crate::style::{
@@ -16,6 +15,7 @@ use crate::style::{
   WHITE, YELLOW,
 };
 use crate::templates::CaptionTemplateId;
+use screenwide_placement::Placement;
 
 impl Default for CaptionStyle {
   fn default() -> Self {
@@ -28,7 +28,7 @@ impl Default for CaptionStyle {
       max_words: 8,
       lines: CaptionLines::Two,
       arrangement: CaptionArrangement::Lines,
-      position: CaptionPosition::Bottom,
+      position: Placement::Bottom,
       text_color: WHITE.to_owned(),
       highlight_color: YELLOW.to_owned(),
       background_color: SHADE.to_owned(),

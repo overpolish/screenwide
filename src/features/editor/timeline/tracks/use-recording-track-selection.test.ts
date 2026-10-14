@@ -18,7 +18,7 @@ it("activates Select and opens its panel on every track selection", () => {
   const selected = vi.fn();
   const choose = useRecordingTrackSelection({
     clearAnnotations: { current: clear },
-    clearKeyboard: clear,
+    clearOverlays: clear,
     onSelectedTrackChange: selected,
     setTool,
   });

@@ -6,10 +6,7 @@ import {
   RecordingTimelineEdit,
 } from "../editing/recording-timeline-edit";
 
-import {
-  deletedRecordingKeyboardShortcutFragments,
-  recordingKeyboardShortcutPositions,
-} from "./recording-keyboard-timeline-edit";
+import { deletedRecordingKeyboardShortcutFragments } from "./recording-keyboard-timeline-edit";
 
 export function cutKeyboardTimeline(
   edit: RecordingTimelineEdit,
@@ -23,33 +20,15 @@ export function cutKeyboardTimeline(
   const next = cutRecordingTimeline(edit, sourcePosition);
   if (!sourceSegment || next === edit) return next;
   const segmentId = edit.nextSegmentId;
-  const positions = recordingKeyboardShortcutPositions(edit)
-    .filter((position) => position.segmentId === sourceSegment.id)
-    .map((position) => ({ ...position, segmentId }));
   const deleted = deletedRecordingKeyboardShortcutFragments(edit)
     .filter((fragment) => fragment.segmentId === sourceSegment.id)
     .map((fragment) => ({ ...fragment, segmentId }));
+  if (deleted.length === 0) return next;
   return {
     ...next,
-    ...(positions.length > 0
-      ? {
-          keyboardShortcutPositions: [
-            ...recordingKeyboardShortcutPositions(edit),
-            ...positions,
-          ].sort(
-            (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
-          ),
-        }
-      : {}),
-    ...(deleted.length > 0
-      ? {
-          deletedKeyboardShortcutFragments: [
-            ...deletedRecordingKeyboardShortcutFragments(edit),
-            ...deleted,
-          ].sort(
-            (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
-          ),
-        }
-      : {}),
+    deletedKeyboardShortcutFragments: [
+      ...deletedRecordingKeyboardShortcutFragments(edit),
+      ...deleted,
+    ].sort((a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId),
   };
 }

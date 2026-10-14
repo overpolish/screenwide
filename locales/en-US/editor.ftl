@@ -50,7 +50,6 @@ editor-recording-camera-preview = Camera preview
 editor-recording-preparing-preview = Preparing the preview
 editor-recording-preparing-recording = Preparing recording preview
 editor-recording-effects = Effects
-editor-recording-shortcut = Shortcut
 
 ## Scenes, as the lane and the Scene panel name them
 

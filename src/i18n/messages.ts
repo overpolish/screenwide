@@ -246,7 +246,6 @@ export type Messages = {
   "editor-opening": null;
   "editor-panels-animate": null;
   "editor-panels-annotations-selected": { count: number };
-  "editor-panels-apply-to-all": null;
   "editor-panels-audio": null;
   "editor-panels-auto-volume": null;
   "editor-panels-auto-volume-measuring": null;
@@ -305,15 +304,6 @@ export type Messages = {
   "editor-panels-captions-not-key-word": null;
   "editor-panels-captions-one-line": null;
   "editor-panels-captions-outline": null;
-  "editor-panels-captions-position-bottom": null;
-  "editor-panels-captions-position-bottom-left": null;
-  "editor-panels-captions-position-bottom-right": null;
-  "editor-panels-captions-position-center": null;
-  "editor-panels-captions-position-left": null;
-  "editor-panels-captions-position-right": null;
-  "editor-panels-captions-position-top": null;
-  "editor-panels-captions-position-top-left": null;
-  "editor-panels-captions-position-top-right": null;
   "editor-panels-captions-profanity-fully": null;
   "editor-panels-captions-profanity-hidden": null;
   "editor-panels-captions-profanity-partly": null;
@@ -322,6 +312,7 @@ export type Messages = {
   "editor-panels-captions-remove-join": null;
   "editor-panels-captions-reset-original": null;
   "editor-panels-captions-reset-text": null;
+  "editor-panels-captions-restore": null;
   "editor-panels-captions-reveal-words": null;
   "editor-panels-captions-sample": null;
   "editor-panels-captions-set-default": null;
@@ -435,6 +426,15 @@ export type Messages = {
   "editor-panels-playback-loop": null;
   "editor-panels-playback-once": null;
   "editor-panels-position": null;
+  "editor-panels-position-bottom": null;
+  "editor-panels-position-bottom-left": null;
+  "editor-panels-position-bottom-right": null;
+  "editor-panels-position-center": null;
+  "editor-panels-position-left": null;
+  "editor-panels-position-right": null;
+  "editor-panels-position-top": null;
+  "editor-panels-position-top-left": null;
+  "editor-panels-position-top-right": null;
   "editor-panels-recenter": null;
   "editor-panels-redaction-note": null;
   "editor-panels-redaction-style": null;
@@ -451,8 +451,6 @@ export type Messages = {
   "editor-panels-replace-camera-picture": null;
   "editor-panels-replace-image": null;
   "editor-panels-reset": null;
-  "editor-panels-reset-all": null;
-  "editor-panels-reset-position": null;
   "editor-panels-reset-volume": null;
   "editor-panels-restore-all": null;
   "editor-panels-restore-silences": null;
@@ -464,8 +462,6 @@ export type Messages = {
   "editor-panels-scene-paused": null;
   "editor-panels-screen": null;
   "editor-panels-screenshot": null;
-  "editor-panels-shortcut-x": null;
-  "editor-panels-shortcut-y": null;
   "editor-panels-silences": null;
   "editor-panels-silences-finding": null;
   "editor-panels-silences-none": null;
@@ -545,7 +541,6 @@ export type Messages = {
   "editor-recording-preparing-recording": null;
   "editor-recording-preview": null;
   "editor-recording-screen-preview": null;
-  "editor-recording-shortcut": null;
   "editor-scene-camera-only": null;
   "editor-scene-custom": null;
   "editor-scene-picture-in-picture": null;

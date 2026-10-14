@@ -134,11 +134,6 @@ pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, Strin
   if request.keyboard.is_some() && !request.keyboard_effects.bake {
     return Err("Keyboard baking was not enabled".to_owned());
   }
-  if !request.cursor_effects.size_percent.is_finite()
-    || !(50.0..=500.0).contains(&request.cursor_effects.size_percent)
-  {
-    return Err("The cursor size is not valid".to_owned());
-  }
   if !media_preview::supports_compression() {
     return Err("This FFmpeg build cannot finish the recording export".to_owned());
   }

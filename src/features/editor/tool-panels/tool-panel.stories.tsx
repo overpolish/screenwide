@@ -59,8 +59,8 @@ export const WithoutCursorData: Story = {
   },
 };
 
-/** The Keyboard tool's panel: how every captured shortcut is drawn, with the
- * two ways back from what the timeline and the canvas have done to them. */
+/** The Keyboard tool's panel: how every captured shortcut is drawn, and the
+ * way back from shortcuts deleted on the timeline. */
 export const Keyboard: Story = {
   args: { tool: "keyboard", workspace: "recording" },
   beforeEach: () => {
@@ -72,7 +72,6 @@ export const Keyboard: Story = {
       hasKeyboardData: true,
       isLocked: false,
       keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
-      keyboardMaximum: 240,
       selection: null,
     });
   },

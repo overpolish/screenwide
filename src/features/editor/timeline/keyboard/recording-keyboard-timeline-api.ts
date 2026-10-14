@@ -14,8 +14,6 @@ import {
   deletedRecordingKeyboardShortcutIds,
   deletedRecordingKeyboardShortcutRanges,
   DeletedKeyboardShortcutRange,
-  KeyboardShortcutPositionRange,
-  recordingKeyboardShortcutPositionRanges,
 } from "./recording-keyboard-timeline-edit";
 
 export const getRecordingKeyboardTimeline = (
@@ -26,14 +24,12 @@ export const getRecordingKeyboardTimeline = (
     artifactId,
     playbackRanges: deletions.playbackRanges,
     shortcutIds: deletions.deletedKeyboardShortcutIds,
-    shortcutPositions: deletions.keyboardShortcutPositions,
     shortcutRanges: deletions.deletedKeyboardShortcutRanges,
   });
 
 export type RecordingPreviewKeyboardDeletions = {
   deletedKeyboardShortcutIds: number[];
   deletedKeyboardShortcutRanges: DeletedKeyboardShortcutRange[];
-  keyboardShortcutPositions: KeyboardShortcutPositionRange[];
   playbackRanges: RecordingTimelinePlaybackRange[];
 };
 
@@ -43,10 +39,6 @@ export const recordingPreviewKeyboardDeletions = (
 ): RecordingPreviewKeyboardDeletions => ({
   deletedKeyboardShortcutIds: deletedRecordingKeyboardShortcutIds(edit),
   deletedKeyboardShortcutRanges: deletedRecordingKeyboardShortcutRanges(
-    edit,
-    sourceDurationMs,
-  ),
-  keyboardShortcutPositions: recordingKeyboardShortcutPositionRanges(
     edit,
     sourceDurationMs,
   ),
@@ -67,6 +59,5 @@ export const setRecordingPreviewDeletedKeyboardShortcuts = (
     playbackRanges: deletions.playbackRanges,
     sessionId,
     shortcutIds: deletions.deletedKeyboardShortcutIds,
-    shortcutPositions: deletions.keyboardShortcutPositions,
     shortcutRanges: deletions.deletedKeyboardShortcutRanges,
   });

@@ -21,6 +21,7 @@ import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCopyRecordingFrame } from "../use-copy-recording-frame";
 import { useProjectStill } from "../use-project-still";
 
+import { OverlayLayerId } from "./overlay-layers";
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { resolveScrubPreviewProps } from "./recording-preview-props";
 import { RecordingPreviewStage } from "./recording-preview-stage";
@@ -59,6 +60,8 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     (crop: ScreenshotOutputSettings["sourceCrop"]) => void
   >(() => undefined);
   const editGesture = useEditorEditGesture();
+  // The timeline band, which knows what shows at the playhead, sets it.
+  const pressOverlayRef = useRef((_layerId: OverlayLayerId) => undefined);
   const [playhead] = useState(createPlayhead);
   const { reportZoom, requestZoom, zoomPercent, zoomRequest } =
     usePreviewZoom();
@@ -115,6 +118,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     composedVideoTracks,
     effectiveRecordingOutput,
     playhead,
+    pressOverlayRef,
     previewPlayingRef,
     previewPositionMs,
     recenterRefreshRef,
@@ -144,6 +148,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     otherSelectionMade:
       annotations.hasSelection ||
       selection.keyboardTimeline.selection.ids.size > 0 ||
+      selection.captionSelection.ids.size > 0 ||
       transport.timelineBlade.blade.rangeSelection !== null ||
       transport.timelineBlade.blade.selectedSegmentId !== null,
     scenes: transport.scenes,
@@ -169,8 +174,8 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
       bakeCamera,
       canvasTool,
       clearAnnotationRef,
+      clearOverlaySelection: selection.clearOverlaySelection,
       hasVisiblePanes,
-      keyboardTimeline: selection.keyboardTimeline,
       onSelectedTrackChange,
       selectedAnnotationKind: annotations.selectedKind,
       setCanvasTool,
@@ -189,7 +194,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     [requestZoom, zoomPercent],
   );
 
-  const panelToggles = useRecordingToolbar({
+  const { openOverlayTool, panelToggles } = useRecordingToolbar({
     canEditActiveTrack,
     canResizeActiveTrack,
     canvasTool,
@@ -239,7 +244,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   );
   const changeSelectedTrack = useRecordingTrackSelection({
     clearAnnotations: clearAnnotationRef,
-    clearKeyboard: selection.keyboardTimeline.selection.onClear,
+    clearOverlays: selection.clearOverlaySelection,
     onSelectedTrackChange,
     setTool: changeCanvasTool,
   });
@@ -272,17 +277,19 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
           {...props}
           {...transport}
           audioVolumeByStream={audioVolumeByStream}
+          captionSelection={selection.captionSelection}
           changeCanvasTool={changeCanvasTool}
           changeEnabledTracks={changeEnabledTracks}
           changeEnabledVideoTracks={changeEnabledVideoTracks}
           changeSelectedTrack={changeSelectedTrack}
           copyCurrentFrame={copyCurrentFrame}
           enabledTracks={enabledTracks}
-          hasVisiblePanes={hasVisiblePanes}
           isCameraSeparate={isCameraSeparate}
           keyboardTimeline={selection.keyboardTimeline}
           layout={layout}
+          openOverlayTool={openOverlayTool}
           playhead={playhead}
+          pressOverlayRef={pressOverlayRef}
           selectedVideoTracks={selectedVideoTracks}
           zoomControl={zoomControl}
         />

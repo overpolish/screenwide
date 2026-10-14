@@ -7,6 +7,8 @@ export type TimelineItemSelection<ItemId> = {
   ids: ReadonlySet<ItemId>;
   onClear: () => void;
   onSelect: (itemId: ItemId, toggle: boolean) => void;
+  /** Choose the items a band swept over, alone or added to the choice. */
+  onSelectSwept: (ids: ItemId[], additive: boolean) => void;
 };
 
 export function selectTimelineItem<ItemId>(
@@ -43,5 +45,14 @@ export function useTimelineItemSelection<ItemId>(
     onSelectionStartRef.current?.();
     setIds((current) => selectTimelineItem(current, itemId, toggle));
   }, []);
-  return useMemo(() => ({ ids, onClear, onSelect }), [ids, onClear, onSelect]);
+  const onSelectSwept = useCallback((swept: ItemId[], additive: boolean) => {
+    if (swept.length > 0) onSelectionStartRef.current?.();
+    setIds((current) =>
+      additive ? new Set([...current, ...swept]) : new Set(swept),
+    );
+  }, []);
+  return useMemo(
+    () => ({ ids, onClear, onSelect, onSelectSwept }),
+    [ids, onClear, onSelect, onSelectSwept],
+  );
 }

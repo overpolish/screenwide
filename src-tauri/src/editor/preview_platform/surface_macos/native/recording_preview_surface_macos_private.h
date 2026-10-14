@@ -109,7 +109,6 @@ typedef struct {
   double radius_percent;
   double image_x, image_y, image_width, image_height;
   double recenter_x, recenter_y, recenter_width, recenter_height;
-  double minimum_scale, maximum_scale;
 } ScreenwidePreviewSelection;
 @class ScreenwidePreviewSurface;
 @interface ScreenwidePreviewInteractionView : NSView
@@ -166,7 +165,7 @@ typedef struct {
 @interface ScreenwidePreviewInteractionView (ContextMenu)
 - (BOOL)reportContextMenuAtPoint:(NSPoint)point;
 @end
-@interface ScreenwidePreviewInteractionView (Keyboard)
+@interface ScreenwidePreviewInteractionView (WorkspaceMove)
 - (void)beginWorkspaceMove;
 @end
 @interface ScreenwidePreviewView : NSView

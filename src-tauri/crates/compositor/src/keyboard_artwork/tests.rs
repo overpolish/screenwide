@@ -24,7 +24,6 @@ fn overlay_with(codes: &[u16]) -> KeyboardOverlay {
 
 #[test]
 fn keyboard_constants_match_the_shader_register_packing() {
-  assert_eq!(size_of::<KeyboardConstants>(), 560);
   assert_eq!(size_of::<KeyboardConstants>() % 16, 0);
 }
 

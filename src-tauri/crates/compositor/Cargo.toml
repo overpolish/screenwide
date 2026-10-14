@@ -35,6 +35,7 @@ windows = { workspace = true, features = [
 
 [dev-dependencies]
 screenwide-output = { workspace = true, features = ["test-support"] }
+screenwide-placement.workspace = true
 
 [build-dependencies]
 cc.workspace = true

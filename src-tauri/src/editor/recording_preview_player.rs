@@ -75,7 +75,7 @@ use screenwide_keyboard_effects::{KeyboardCompositor, KeyboardEffectSettings};
 use screenwide_project::PrimaryRecordingKind;
 use screenwide_scenes::CameraOverlaySettings;
 use screenwide_timeline::TimelineRange;
-use screenwide_timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+use screenwide_timeline_edit::DeletedKeyboardShortcutRange;
 
 pub(super) const AUTO_FIT_MOVE_EDGE: u32 = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE: u32 = 1 << 18;
@@ -100,8 +100,6 @@ pub(crate) struct PreviewPlayerSettings {
   pub deleted_keyboard_shortcut_ids: Vec<u64>,
   #[serde(default)]
   pub deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
-  #[serde(default)]
-  pub keyboard_shortcut_positions: Vec<KeyboardShortcutPositionRange>,
   #[serde(default)]
   pub playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pub recording_output: RecordingOutputSettings,

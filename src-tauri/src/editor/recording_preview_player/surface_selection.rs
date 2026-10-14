@@ -3,7 +3,9 @@
 
 //! Converts the webview's recording selection into the shared native OSC model.
 
-use crate::editor::preview_platform::{PreviewSelection, FRAMED_FIXED, FRAMED_FREE};
+use crate::editor::preview_platform::{
+  is_overlay_layer, PreviewSelection, FRAMED_FIXED, FRAMED_FREE,
+};
 use screenwide_compositor::PreviewSurfaceRect;
 
 #[derive(serde::Deserialize)]
@@ -19,10 +21,6 @@ pub(super) struct RecordingPreviewSelection {
   #[serde(default)]
   in_scene: bool,
   layer_id: Option<u32>,
-  #[serde(default)]
-  maximum_scale: Option<f64>,
-  #[serde(default)]
-  minimum_scale: Option<f64>,
   pane_index: u32,
   radius_percent: f64,
   #[serde(default)]
@@ -34,7 +32,7 @@ impl RecordingPreviewSelection {
   pub(super) fn into_native(self) -> PreviewSelection {
     let radius_disabled = self
       .layer_id
-      .is_some_and(|layer_id| layer_id == u32::MAX || layer_id == u32::MAX - 1);
+      .is_some_and(|layer_id| layer_id == u32::MAX || is_overlay_layer(layer_id));
     PreviewSelection {
       framed: if self.framed {
         FRAMED_FIXED
@@ -53,14 +51,6 @@ impl RecordingPreviewSelection {
       image_x: self.image.map_or(0.0, |image| image.x),
       image_y: self.image.map_or(0.0, |image| image.y),
       layer_id: self.layer_id.unwrap_or(self.pane_index),
-      maximum_scale: self
-        .maximum_scale
-        .filter(|scale| scale.is_finite() && *scale > 0.0)
-        .unwrap_or(0.0),
-      minimum_scale: self
-        .minimum_scale
-        .filter(|scale| scale.is_finite() && *scale > 0.0)
-        .unwrap_or(0.0),
       radius_disabled: u32::from(radius_disabled),
       pane_index: self.pane_index,
       x: self.rect.x,
@@ -83,8 +73,6 @@ mod tests {
       image: None,
       in_scene: false,
       layer_id: None,
-      maximum_scale: None,
-      minimum_scale: None,
       pane_index: 0,
       radius_percent: 18.0,
       recenter_bounds: None,
@@ -98,30 +86,13 @@ mod tests {
   }
 
   #[test]
-  fn keyboard_osc_is_square_without_changing_other_selection_radii() {
+  fn overlay_osc_is_square_without_changing_other_selection_radii() {
     let regular = selection().into_native();
     assert_eq!(regular.radius_disabled, 0);
     assert_eq!(regular.radius_percent, 18.0);
 
     let mut keyboard = selection();
-    keyboard.layer_id = Some(u32::MAX - 1);
+    keyboard.layer_id = Some(crate::editor::preview_platform::KEYBOARD_LAYER_ID);
     assert_eq!(keyboard.into_native().radius_disabled, 1);
-  }
-
-  #[test]
-  fn keyboard_resize_limits_are_forwarded_and_invalid_values_are_ignored() {
-    let mut keyboard = selection();
-    keyboard.maximum_scale = Some(1.75);
-    keyboard.minimum_scale = Some(0.5);
-    let native = keyboard.into_native();
-    assert_eq!(native.maximum_scale, 1.75);
-    assert_eq!(native.minimum_scale, 0.5);
-
-    let mut invalid = selection();
-    invalid.maximum_scale = Some(f64::NAN);
-    invalid.minimum_scale = Some(-1.0);
-    let native = invalid.into_native();
-    assert_eq!(native.maximum_scale, 0.0);
-    assert_eq!(native.minimum_scale, 0.0);
   }
 }

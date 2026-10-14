@@ -109,12 +109,12 @@ const annotations_drawn: bool = true;
 struct Keyboard {
   dimensions: vec4<u32>, // artwork width/height, key count, animation
   animation: vec4<f32>, // scale, layout progress, maximum width, requested scale
-  position: vec4<f32>, // normalized centre x/y; negative keeps the default
+  // Normalized centre x/y a live move holds the strip at, negative where it
+  // sits by alignment; alignment across and down, 0 to 1 between the margins.
+  position: vec4<f32>,
   key_geometry: array<vec4<u32>, 8>, // artwork x, artwork width, visible, slot
   key_motion: array<vec4<f32>, 8>, // alpha, scale, progress, layout progress
   key_masks: array<vec4<u32>, 8>, // layout from mask, layout to mask
-  // Group centre x/y; -1 inherits, <=-1.5 default; z group scale ratio.
-  key_position: array<vec4<f32>, 8>,
 }
 
 @group(0) @binding(0) var<uniform> canvas: Canvas;
@@ -844,18 +844,25 @@ fn keyboard_texel(source_in: vec2<f32>) -> vec4<f32> {
   return mix(mix(a, b, fraction.x), mix(c, d, fraction.x), fraction.y);
 }
 
-// A key's group centre on one axis: non-negative is explicit, -1 follows the
-// overlay centre, and at or below -1.5 the key keeps the built-in default.
-fn keyboard_key_axis(key_value: f32, overlay_value: f32) -> f32 {
-  if (key_value >= 0.0) {
-    return key_value;
+// Where a strip `width` wide and `height` tall starts across, and its centre
+// down. It sits in the room the recording's widest shortcut takes, so a short
+// shortcut keeps to the same side as a long one; the room is held between the
+// margins as the alignment says, or centred where a live move holds it, and
+// the strip lines up within it the same way.
+fn keyboard_row_origin(canvas_dimensions: vec2<f32>, width: f32, height: f32) -> vec2<f32> {
+  let margin = canvas_dimensions.y * 0.055;
+  let align = keyboard.position.zw;
+  let room = select(width, height * keyboard.animation.z / 20.0, keyboard.animation.z > 0.0);
+  var center = vec2<f32>(
+      mix(margin + room * 0.5, canvas_dimensions.x - margin - room * 0.5, align.x),
+      mix(margin + height * 0.5, canvas_dimensions.y - margin - height * 0.5, align.y));
+  if (keyboard.position.x >= 0.0) {
+    center.x = keyboard.position.x * canvas_dimensions.x;
   }
-  return select(-1.0, overlay_value, key_value > -1.5);
-}
-
-fn keyboard_key_ratio(index: u32) -> f32 {
-  let ratio = keyboard.key_position[index].z;
-  return select(1.0, ratio, ratio > 0.0);
+  if (keyboard.position.y >= 0.0) {
+    center.y = keyboard.position.y * canvas_dimensions.y;
+  }
+  return vec2<f32>(center.x - room * 0.5 + (room - width) * align.x, center.y);
 }
 
 fn keyboard_key_pixel(index: u32, canvas_point: vec2<f32>, canvas_dimensions: vec2<f32>,
@@ -865,21 +872,13 @@ fn keyboard_key_pixel(index: u32, canvas_point: vec2<f32>, canvas_dimensions: ve
   }
   let geometry = keyboard.key_geometry[index];
   let artwork = vec2<f32>(keyboard.dimensions.xy);
-  let height = canvas_dimensions.y * (60.0 / 1080.0) *
-      keyboard_effective_scale(canvas_dimensions) * keyboard_key_ratio(index);
+  let height = canvas_dimensions.y * (60.0 / 1080.0) * keyboard_effective_scale(canvas_dimensions);
   let width = height * artwork.x / max(artwork.y, 1.0);
-  let bottom = canvas_dimensions.y * 0.055;
-  let position_x = keyboard_key_axis(keyboard.key_position[index].x, keyboard.position.x);
-  let position_y = keyboard_key_axis(keyboard.key_position[index].y, keyboard.position.y);
-  let center_x = select(canvas_dimensions.x * 0.5, position_x * canvas_dimensions.x,
-                        position_x >= 0.0);
-  let center_y = select(canvas_dimensions.y - bottom - height * 0.5,
-                        position_y * canvas_dimensions.y, position_y >= 0.0);
-  let row_x = center_x - width * 0.5;
-  let key_x = row_x + width * f32(geometry.x) / artwork.x;
+  let origin = keyboard_row_origin(canvas_dimensions, width, height);
+  let key_x = origin.x + width * f32(geometry.x) / artwork.x;
   let key_width = width * f32(geometry.y) / artwork.x;
   let key_size = vec2<f32>(key_width, height) * animation_scale;
-  let center = vec2<f32>(key_x + key_width * 0.5 + x_offset, center_y);
+  let center = vec2<f32>(key_x + key_width * 0.5 + x_offset, origin.y);
   let uv = (canvas_point - (center - key_size * 0.5)) / key_size;
   if (any(uv < vec2<f32>(0.0)) || any(uv > vec2<f32>(1.0))) {
     return vec4<f32>(0.0);
@@ -946,7 +945,7 @@ fn keyboard_slot_left(slot: u32, mask: u32) -> f32 {
       total += keyboard_slot_width(candidate);
     }
   }
-  var left = (f32(keyboard.dimensions.x) - total) * 0.5;
+  var left = (f32(keyboard.dimensions.x) - total) * keyboard.position.z;
   for (var walked = 0u; walked < slot; walked++) {
     if ((mask & (1u << walked)) != 0u) {
       left += keyboard_slot_width(walked) + gap;
@@ -971,7 +970,7 @@ fn keyboard_layout_offset(index: u32, canvas_dimensions: vec2<f32>, progress_del
   let progress = keyboard_motion_spring(max(keyboard.key_motion[index].w - progress_delta, 0.0));
   let target_center = mix(from_center, to_center, progress);
   let source_offset = target_center - (f32(geometry.x) + f32(geometry.y) * 0.5);
-  return source_offset * full_width * keyboard_key_ratio(index) / max(artwork.x, 1.0);
+  return source_offset * full_width / max(artwork.x, 1.0);
 }
 
 // Whether key `index` drawn at up to `scale` may reach `canvas_point`: within
@@ -982,17 +981,11 @@ fn keyboard_layout_offset(index: u32, canvas_dimensions: vec2<f32>, progress_del
 fn keyboard_key_may_reach(index: u32, canvas_point: vec2<f32>, canvas_dimensions: vec2<f32>,
                           scale: f32) -> bool {
   let artwork = vec2<f32>(keyboard.dimensions.xy);
-  let height = canvas_dimensions.y * (60.0 / 1080.0) *
-      keyboard_effective_scale(canvas_dimensions) * keyboard_key_ratio(index);
+  let height = canvas_dimensions.y * (60.0 / 1080.0) * keyboard_effective_scale(canvas_dimensions);
   let width = height * artwork.x / max(artwork.y, 1.0);
-  let position_x = keyboard_key_axis(keyboard.key_position[index].x, keyboard.position.x);
-  let position_y = keyboard_key_axis(keyboard.key_position[index].y, keyboard.position.y);
-  let center_x = select(canvas_dimensions.x * 0.5, position_x * canvas_dimensions.x,
-                        position_x >= 0.0);
-  let center_y = select(canvas_dimensions.y - canvas_dimensions.y * 0.055 - height * 0.5,
-                        position_y * canvas_dimensions.y, position_y >= 0.0);
+  let origin = keyboard_row_origin(canvas_dimensions, width, height);
   let reach = vec2<f32>(width * (3.0 + scale), height * scale * 0.5) + 1.0;
-  return all(abs(canvas_point - vec2<f32>(center_x, center_y)) <= reach);
+  return all(abs(canvas_point - vec2<f32>(origin.x + width * 0.5, origin.y)) <= reach);
 }
 
 fn composite_keyboard(rgba_in: vec4<f32>, canvas_point: vec2<f32>,

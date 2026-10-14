@@ -15,6 +15,7 @@ mod exports;
 mod gestures;
 mod layers;
 mod loupe;
+mod overlay_bounds;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};

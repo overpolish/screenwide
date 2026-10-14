@@ -99,7 +99,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_target_at_point(ScreenwidePreviewSurfa
         ? [surface.workspaceActivePaneIndices containsObject:@(target.pane_index)]
         : target.pane_index < surface.views.count &&
               surface.views[target.pane_index].active;
-    NSRect rect = keyboard_hit_frame(surface, target);
+    NSRect rect = selection_hit_frame(surface, target);
     if (paneActive && NSPointInRect(point, rect)) {
       *result = target;
       return YES;
@@ -136,7 +136,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
         ? [surface.workspaceActivePaneIndices containsObject:@(target.pane_index)]
         : target.pane_index < surface.views.count &&
               surface.views[target.pane_index].active;
-    NSRect rect = selected ? selection_display_frame_for(surface, target) : keyboard_hit_frame(surface, target);
+    NSRect rect = selected ? selection_display_frame_for(surface, target) : selection_hit_frame(surface, target);
     int32_t zOrder = (int32_t)count;
     targets[count] = (ScreenwideDisplayTarget){
         .id = selection_target_id(target),
@@ -188,7 +188,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
     if (!found) return NO;
   }
   *handle = hit.handle;
-  if (*handle == 0 && !keyboard_body_contains(surface, *selection, point)) return NO;
+  if (*handle == 0 && !overlay_body_contains(surface, *selection, point)) return NO;
   return YES;
 }
 

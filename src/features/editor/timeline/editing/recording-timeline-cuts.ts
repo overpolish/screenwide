@@ -1,10 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  deletedRecordingKeyboardShortcutFragments,
-  recordingKeyboardShortcutPositions,
-} from "../keyboard/recording-keyboard-timeline-edit";
+import { deletedRecordingKeyboardShortcutFragments } from "../keyboard/recording-keyboard-timeline-edit";
 
 import {
   layoutRecordingTimelineSegments,
@@ -69,15 +66,12 @@ export const recordingTimelineCuts = (
   return cuts.sort((a, b) => a.outputPosition - b.outputPosition);
 };
 
-/** Shortcut moves and deletions are kept per segment, so a segment carrying
- * any cannot be folded into its neighbour without changing what they cover. */
+/** Shortcut deletions are kept per segment, so a segment carrying any cannot
+ * be folded into its neighbour without changing what they cover. */
 export const hasKeyboardSegmentEdits = (
   edit: RecordingTimelineEdit,
   segmentId: number,
 ) =>
-  recordingKeyboardShortcutPositions(edit).some(
-    (position) => position.segmentId === segmentId,
-  ) ||
   deletedRecordingKeyboardShortcutFragments(edit).some(
     (fragment) => fragment.segmentId === segmentId,
   );

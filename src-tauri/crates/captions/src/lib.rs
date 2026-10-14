@@ -38,7 +38,7 @@ pub use draw::{
 };
 pub use font::{CaptionFont, MAX_WEIGHT, MIN_WEIGHT};
 pub use lay_out::sample_caption;
-pub use layout::{CaptionLayout, CaptionPosition};
+pub use layout::CaptionLayout;
 pub use motion::{
   CaptionEasing, CaptionKeyframe, CaptionMotion, CaptionMotionTrack, CaptionProperty,
   MAX_KEYFRAMES, MAX_MOTION_MS,
@@ -290,7 +290,7 @@ pub fn build(
   .collect();
   let length_ms = output_duration_us(source.ranges).map_or(f64::INFINITY, |us| us as f64 / 1_000.0);
   timing::timed(&mut built, &settings, length_ms);
-  built
+  captions.without_hidden(built)
 }
 
 #[cfg(test)]

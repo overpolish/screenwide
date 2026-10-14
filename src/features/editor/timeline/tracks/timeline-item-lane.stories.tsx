@@ -57,13 +57,11 @@ function ItemLanePreview({
   items = shortcuts,
   minimumSpan = 0,
   selectedIds,
-  warningIds,
   widthClass = "w-[760px]",
 }: {
   items?: ShortcutItem[];
   minimumSpan?: number;
   selectedIds?: string[];
-  warningIds?: string[];
   widthClass?: string;
 }) {
   const [selected, setSelected] = useState(
@@ -89,7 +87,6 @@ function ItemLanePreview({
         selectedFragmentIds={selected}
         sourceDurationMs={STORY_DURATION_MS}
         viewport={fitTimelineViewport()}
-        warningFragmentIds={new Set(warningIds ?? [])}
       />
     </div>
   );
@@ -112,12 +109,6 @@ export const Default: Story = {};
  * contrast text. */
 export const Selected: Story = {
   args: { selectedIds: ["paste:0"] },
-};
-
-/** A shortcut whose timing the edit moved keeps the warning colour, selected
- * or not. */
-export const Adjusted: Story = {
-  args: { selectedIds: ["save:1"], warningIds: ["save:1", "copy:0"] },
 };
 
 /** Simultaneous items stack into sublanes and the lane grows to fit. */

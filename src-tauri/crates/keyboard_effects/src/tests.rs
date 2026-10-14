@@ -52,12 +52,6 @@ fn v1_fallback_is_one_key() {
 }
 
 #[test]
-fn native_payload_layout_is_stable() {
-  assert_eq!(std::mem::size_of::<KeyboardKey>(), 52);
-  assert_eq!(std::mem::size_of::<KeyboardOverlay>(), 452);
-}
-
-#[test]
 fn v2_keys_stagger_independently() {
   let records = vec![
     serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":1_000_000,"modifiers":["command"]}),

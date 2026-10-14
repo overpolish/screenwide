@@ -121,7 +121,6 @@ pub(super) fn apply(
     } else {
       clear_selection_snap_guides(state);
     }
-    keyboard_hit::clamp_move(selection, gesture, state);
     gesture.edges = if auto_fit { AUTO_FIT_MOVE_EDGE } else { 0 };
     if auto_fit {
       // Grow the canvas around the move: the pane box follows

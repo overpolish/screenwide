@@ -24,9 +24,9 @@ pub(super) enum TransitionKind {
 pub(super) struct VisualKey {
   pub source_shortcut: usize,
   /// Badge-continuity group. A chord joins its predecessor's group only when
-  /// it appears in the same place at the same size while that badge is still
-  /// on screen; slot reuse, replacement morphs, layout motion and anchoring
-  /// never cross group boundaries.
+  /// both are kept and that badge is still on screen; slot reuse,
+  /// replacement morphs, layout motion and anchoring never cross group
+  /// boundaries.
   pub group: u32,
   pub key_code: u16,
   pub modifier_mask: u32,

@@ -61,7 +61,6 @@ pub(super) struct EditorGesture {
   pub(super) pane_start: PreviewSurfaceRect,
   pub(super) pointer_start: (f64, f64),
   pub(super) selection_start: PreviewSelection,
-  pub(super) keyboard_start: Option<screenwide_keyboard_effects::KeyboardOverlay>,
 }
 
 /// Everything a Frame resize needs to stay reversible and drift-free: the

@@ -42,11 +42,9 @@ export type ScrubPreviewProps = {
   isSaving?: boolean;
   isSheetOpen?: boolean;
   keyboardEffects?: KeyboardEffectSettings;
-  keyboardMaximumWidthUnits?: number | null;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onEnabledTracksChange?: (streamIndices: number[]) => void;
   onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;
-  onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onRecordingOutputChange?: (
     trackId: RecordingVideoTrackId,
     settings: RecordingOutputSettings[RecordingVideoTrackId],

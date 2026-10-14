@@ -27,7 +27,7 @@ pub(super) fn render_video(
   let keyboard = request
     .keyboard
     .map(|path| {
-      let compositor = screenwide_keyboard_effects::KeyboardCompositor::open_with_deleted(
+      screenwide_keyboard_effects::KeyboardCompositor::open_with_deleted(
         path,
         request
           .timeline
@@ -35,11 +35,7 @@ pub(super) fn render_video(
         request
           .timeline
           .map_or(&[], |timeline| timeline.deleted_keyboard_shortcut_ranges()),
-      )?;
-      if let Some(timeline) = request.timeline {
-        compositor.set_shortcut_positions(timeline.keyboard_shortcut_positions());
-      }
-      Ok::<_, String>(compositor)
+      )
     })
     .transpose()?;
   let output_size = screenwide_output::output_dimensions(request.output)?;

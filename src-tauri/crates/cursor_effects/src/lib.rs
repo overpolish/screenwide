@@ -223,7 +223,7 @@ impl CursorCompositor {
       hotspot_x: output.hotspot_x as f32,
       hotspot_y: output.hotspot_y as f32,
       rotation_radians: output.cursor.rotation_degrees.to_radians() as f32 + rotation_adjustment,
-      scale: (output.cursor.scale * settings.size_percent.clamp(50.0, 500.0) / 100.0) as f32,
+      scale: (output.cursor.scale * settings.size.scale()) as f32,
       style: artwork,
       width: output.width as f32,
       // Keep the artwork origin on the output pixel grid. Fractional cursor
@@ -247,8 +247,7 @@ impl CursorCompositor {
     )?)?;
     let current = self.smoothed_position(timestamp_us, settings.smooth_movement)?;
     let rotation_degrees = if settings.smooth_movement {
-      let cursor_size_pixels =
-        appearance.width.max(appearance.height) * settings.size_percent.clamp(50.0, 500.0) / 100.0;
+      let cursor_size_pixels = appearance.width.max(appearance.height) * settings.size.scale();
       self.motion_lean_degrees(timestamp_us, cursor_size_pixels)
     } else {
       0.0

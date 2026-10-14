@@ -35,25 +35,6 @@ export type ToolPanelLayerSelection = {
 };
 
 /**
- * What the selection panel shows for the keyboard shortcut on screen.
- *
- * A shortcut is drawn rather than placed: it has no source pixels, no corners
- * and no pad, so it is sized as a share of its natural size and positioned by
- * its centre, both in percent - the very numbers the drag on it sets.
- */
-export type ToolPanelShortcutSelection = {
-  kind: "shortcut";
-  label: string;
-  /** As big as this recording's widest shortcut may be drawn. */
-  maximumSizePercent: number;
-  minimumSizePercent: number;
-  /** The shortcut's centre, as a share of the output canvas. */
-  positionXPercent: number;
-  positionYPercent: number;
-  sizePercent: number;
-};
-
-/**
  * What the selection panel shows for a recorded audio track.
  *
  * An audio track is neither placed nor drawn: it is heard, so what there is
@@ -195,9 +176,7 @@ export type ToolPanelModel = {
 };
 
 export type ToolPanelSelection =
-  | ToolPanelAudioSelection
-  | ToolPanelLayerSelection
-  | ToolPanelShortcutSelection;
+  ToolPanelAudioSelection | ToolPanelLayerSelection;
 
 /**
  * What the annotation panel shows: the annotation the preview has in hand, and

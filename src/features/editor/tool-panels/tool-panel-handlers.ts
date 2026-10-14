@@ -19,7 +19,6 @@ import {
 import { CursorEffectSettings, KeyboardEffectSettings } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
-import { ToolPanelPatch } from "./tool-panel-patch";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 /**
@@ -100,10 +99,6 @@ export type ToolPanelHandlers = {
   onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
   /** Draw every shortcut with these settings. */
   onKeyboardEffectsChange?: (settings: Partial<KeyboardEffectSettings>) => void;
-  /** Put the shortcuts back where the recording draws them by default. */
-  onKeyboardPositionReset?: () => void;
-  /** Put every shortcut's own placement away, the global one left as it is. */
-  onKeyboardShortcutsResetAll?: () => void;
   /** Bring back every shortcut deleted from the timeline. */
   onKeyboardShortcutsRestore?: () => void;
   /** Take the room's steady noise out of the selected microphone, or put it
@@ -151,14 +146,6 @@ export type ToolPanelHandlers = {
   /** Put the layer's content in the middle of its padded frame. */
   onSelectionRecenter?: () => void;
   onSelectionReset?: () => void;
-  /** Give every shortcut the selected one's size and position. */
-  onShortcutApplyToAll?: () => void;
-  /** Draw the selected shortcut at this size and centre, all in percent. */
-  onShortcutPlacementChange?: (
-    placement: NonNullable<ToolPanelPatch["shortcutPlacement"]>,
-  ) => void;
-  /** Put the selected shortcut back where the recording drew it. */
-  onShortcutReset?: () => void;
   /** Cut the long pauses out of the selected microphone's recording where
    * nothing happens on screen. */
   onSilencesRemove?: () => void;

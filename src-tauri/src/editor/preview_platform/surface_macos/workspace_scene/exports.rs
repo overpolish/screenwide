@@ -172,18 +172,24 @@ pub unsafe extern "C" fn screenwide_workspace_scene_update_selected_radius(
   )
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn screenwide_workspace_scene_update_keyboard(
-  scene: *const c_void,
-  pane_index: u32,
-  center_x: f64,
-  center_y: f64,
-  scale_ratio: f64,
+/// Writes `bounds`, x, y, width and height, through the out pointers; 1 when
+/// there are any, 0 otherwise.
+unsafe fn write_bounds(
+  bounds: Option<[f64; 4]>,
+  x: *mut f64,
+  y: *mut f64,
+  width: *mut f64,
+  height: *mut f64,
 ) -> i32 {
-  status(
-    unsafe { self::scene(scene) }
-      .is_some_and(|scene| scene.update_keyboard(pane_index, (center_x, center_y), scale_ratio)),
-  )
+  let Some([left, top, wide, tall]) = bounds else {
+    return 0;
+  };
+  for (out, value) in [(x, left), (y, top), (width, wide), (height, tall)] {
+    if let Some(out) = unsafe { out.as_mut() } {
+      *out = value;
+    }
+  }
+  1
 }
 
 #[no_mangle]
@@ -195,17 +201,21 @@ pub unsafe extern "C" fn screenwide_workspace_scene_keyboard_bounds(
   width: *mut f64,
   height: *mut f64,
 ) -> i32 {
-  let Some([left, top, wide, tall]) =
-    unsafe { self::scene(scene) }.and_then(|scene| scene.keyboard_bounds(pane_index))
-  else {
-    return 0;
-  };
-  for (out, value) in [(x, left), (y, top), (width, wide), (height, tall)] {
-    if let Some(out) = unsafe { out.as_mut() } {
-      *out = value;
-    }
-  }
-  1
+  let bounds = unsafe { self::scene(scene) }.and_then(|scene| scene.keyboard_bounds(pane_index));
+  unsafe { write_bounds(bounds, x, y, width, height) }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn screenwide_workspace_scene_caption_bounds(
+  scene: *const c_void,
+  pane_index: u32,
+  x: *mut f64,
+  y: *mut f64,
+  width: *mut f64,
+  height: *mut f64,
+) -> i32 {
+  let bounds = unsafe { self::scene(scene) }.and_then(|scene| scene.caption_bounds(pane_index));
+  unsafe { write_bounds(bounds, x, y, width, height) }
 }
 
 /// Copies `rgba`, straight RGBA `width` by `height`, into `texture`, a BGRA
