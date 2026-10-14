@@ -175,6 +175,41 @@ pub fn encode_truecolor_png(image: &CapturedImage) -> Result<Vec<u8>, String> {
   Ok(png)
 }
 
+/// Encodes `frames`, each `width` by `height` RGBA, as an animated PNG that
+/// shows each for `frame_ms` and plays them over and over. A viewer decodes
+/// it a frame at a time, where frames stacked in one picture are decoded
+/// whole.
+pub fn encode_animated_png(
+  frames: &[Vec<u8>],
+  width: u32,
+  height: u32,
+  frame_ms: u16,
+) -> Result<Vec<u8>, String> {
+  let count = u32::try_from(frames.len()).map_err(|error| error.to_string())?;
+  let mut png = Vec::new();
+  {
+    let mut encoder = png::Encoder::new(Cursor::new(&mut png), width, height);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_compression(png::Compression::High);
+    // No plays counted means it loops for good.
+    encoder
+      .set_animated(count, 0)
+      .map_err(|error| error.to_string())?;
+    encoder
+      .set_frame_delay(frame_ms, 1_000)
+      .map_err(|error| error.to_string())?;
+    let mut writer = encoder.write_header().map_err(|error| error.to_string())?;
+    for frame in frames {
+      writer
+        .write_image_data(frame)
+        .map_err(|error| error.to_string())?;
+    }
+    writer.finish().map_err(|error| error.to_string())?;
+  }
+  Ok(png)
+}
+
 /// Encodes a still as PNG bytes.
 ///
 /// Deliberately one function, so the compression backend can be swapped

@@ -5,7 +5,7 @@ import { convertFileSrc, invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 import type { Caption } from "../../../../bindings/Caption";
-import type { CaptionPreviewStrip } from "../../../../bindings/CaptionPreviewStrip";
+import type { CaptionPreviewClip } from "../../../../bindings/CaptionPreviewClip";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 import type { CaptionTemplate } from "../../../../bindings/CaptionTemplate";
 import type { CaptionTemplateFont } from "../../../../bindings/CaptionTemplateFont";
@@ -137,6 +137,12 @@ export const forgetFontFamilies = () => {
 };
 
 /** Each of `styles` previewed saying the `sample` words, drawn by the
- * compositor: a strip of frames, in order. */
+ * compositor: a clip that plays over and over, in order. */
 export const renderCaptionPreviews = (styles: CaptionStyle[], sample: string) =>
-  invoke<CaptionPreviewStrip[]>("render_caption_previews", { sample, styles });
+  invoke<CaptionPreviewClip[]>("render_caption_previews", { sample, styles });
+
+/** Every template previewed as new captions would take it up, saying the
+ * `sample` words: the clips launch draws, for loading before a panel
+ * opens. */
+export const launchCaptionPreviews = (sample: string) =>
+  invoke<CaptionPreviewClip[]>("launch_caption_previews", { sample });

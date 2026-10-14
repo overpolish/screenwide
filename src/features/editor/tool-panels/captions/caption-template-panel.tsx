@@ -10,7 +10,7 @@ import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { useFittedPanel } from "../../../popup-panel/use-fitted-panel";
 import { reportPopupPanelPick } from "../../../popup-panel/use-popup-panel-picker";
 
-import { CaptionPreviewStripView } from "./caption-preview-strip";
+import { CaptionPreviewClipView } from "./caption-preview-clip";
 import { captionTemplateLabel } from "./caption-templates";
 import { useCaptionPreviews } from "./use-caption-previews";
 
@@ -34,7 +34,7 @@ export function CaptionTemplatePanel({
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   useFittedPanel(contentRef, id);
-  const strips = useCaptionPreviews(content.styles);
+  const clips = useCaptionPreviews(content.styles);
 
   // Opened from the keyboard, the keys go to the chosen template.
   useEffect(() => {
@@ -78,7 +78,7 @@ export function CaptionTemplatePanel({
             id={style.template}
             key={style.template}
           >
-            <CaptionPreviewStripView strip={strips?.[index]} />
+            <CaptionPreviewClipView clip={clips[index]} />
             <Text className="text-center text-inherit" variant="footnote">
               {captionTemplateLabel(
                 style.template,

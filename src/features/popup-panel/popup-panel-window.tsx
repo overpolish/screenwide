@@ -6,6 +6,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCaptionTemplateFonts } from "../editor/recording/captions/use-caption-template-fonts";
 import { MomentNotePanel } from "../editor/timeline/moments/moment-note-panel";
 import { CaptionTemplatePanel } from "../editor/tool-panels/captions/caption-template-panel";
+import { usePreloadedCaptionPreviews } from "../editor/tool-panels/captions/use-caption-previews";
 
 import { PopupPanelColors } from "./popup-panel-colors";
 import { PopupPanelList } from "./popup-panel-list";
@@ -48,6 +49,8 @@ export function PopupPanelWindow() {
   // The font list names each family in its own type, those your templates
   // bring among them.
   useCaptionTemplateFonts();
+  // Only the shared panel window shows the templates.
+  usePreloadedCaptionPreviews(panel === SHARED_POPUP_PANEL);
 
   if (!active) return null;
 

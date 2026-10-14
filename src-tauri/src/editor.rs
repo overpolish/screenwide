@@ -10,6 +10,8 @@ pub(crate) mod auto_zoom;
 /// video draws the camera.
 pub(crate) mod camera_effects;
 mod camera_save;
+/// Each caption style's preview, drawn and kept for the template tiles.
+pub(crate) mod caption_previews;
 /// The templates and fonts the Captions panel styles captions with.
 pub(crate) mod caption_styles;
 /// Caption templates imported, exported and removed.

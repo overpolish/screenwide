@@ -112,3 +112,19 @@ fn rounds_only_the_requested_corners_with_antialiasing() {
   assert_eq!(rounded.width, image.width);
   assert_eq!(rounded.height, image.height);
 }
+
+#[test]
+fn an_animated_png_loops_every_frame_in_order_at_its_rate() {
+  let frames: Vec<Vec<u8>> = (0..3).map(|shade| vec![shade * 80; 4 * 4 * 4]).collect();
+  let png = encode_animated_png(&frames, 4, 4, 50).unwrap();
+  let mut reader = png::Decoder::new(Cursor::new(png)).read_info().unwrap();
+  let control = reader.info().animation_control.unwrap();
+  assert_eq!((control.num_frames, control.num_plays), (3, 0));
+  let mut buffer = vec![0; reader.output_buffer_size().unwrap()];
+  for frame in &frames {
+    reader.next_frame(&mut buffer).unwrap();
+    let delay = reader.info().frame_control.unwrap();
+    assert_eq!((delay.delay_num, delay.delay_den), (50, 1_000));
+    assert_eq!(&buffer, frame);
+  }
+}
