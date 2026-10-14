@@ -140,6 +140,20 @@ fn wraps_by_width_before_the_word_limit() {
 }
 
 #[test]
+fn holds_rolling_words_on_one_line_as_long_as_each_few_shown_fit() {
+  // Thirty characters a word: two fit in 80, and only two show at once.
+  let word = "x".repeat(30);
+  let case = Case::new(&[word.as_str(); 6].join(" ")).styled(|style| {
+    style.max_words = 6;
+    style.visible_words = 2;
+  });
+  let captions = case.build();
+  assert_eq!(captions.len(), 1);
+  assert_eq!(captions[0].lines.len(), 1);
+  assert_eq!(captions[0].lines[0].len(), 6);
+}
+
+#[test]
 fn runs_across_a_cut_but_never_across_words_the_edit_moved() {
   // "two" (400-700) is cut: the caption flows from "one" to "three".
   let mut cut = Case::new("one two three four");

@@ -73,13 +73,17 @@ fn gaps(words: &[Shown], breaks: &[CaptionBreak], source_duration_ms: f64) -> Ve
     .collect()
 }
 
-/// Lays the caption `words` out in lines as the style arranges them.
+/// Lays the caption `words` out in lines as the style arranges them: one
+/// line where they roll through, which only shows a few at a time.
 pub(crate) fn lines(
   words: Range<usize>,
   style: &CaptionStyle,
   max_width: f64,
   widths: &Widths,
 ) -> Vec<Range<usize>> {
+  if style.rolling_words().is_some() {
+    return vec![words];
+  }
   let emphasis = widths.emphasis(&words);
   match style.arrangement {
     CaptionArrangement::Lines => in_lines(words, style, max_width, widths, emphasis),
@@ -144,16 +148,24 @@ fn stacked(
 }
 
 /// Whether `words` fit one caption: within the word limit, and set in its
-/// lines with none wider than `max_width`. One word always fits.
+/// lines with none wider than `max_width`, or, rolling through them, with
+/// no run of as many as show at once wider. One word always fits.
 fn fits(words: Range<usize>, style: &CaptionStyle, max_width: f64, widths: &Widths) -> bool {
   if words.len() <= 1 {
     return true;
   }
   let emphasis = widths.emphasis(&words);
-  words.len() <= style.max_words as usize
-    && lines(words, style, max_width, widths)
-      .iter()
-      .all(|line| widths.of(line, emphasis) <= max_width)
+  if words.len() > style.max_words as usize {
+    return false;
+  }
+  if let Some(visible) = style.rolling_words() {
+    let last_start = words.end.saturating_sub(visible).max(words.start);
+    return (words.start..=last_start)
+      .all(|start| widths.of(&(start..(start + visible).min(words.end)), emphasis) <= max_width);
+  }
+  lines(words, style, max_width, widths)
+    .iter()
+    .all(|line| widths.of(line, emphasis) <= max_width)
 }
 
 /// How strongly the gap before `words[index]` reads as an ending.

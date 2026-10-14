@@ -45,14 +45,25 @@ pub fn face_text_block(face: &TypeFace, text: &str, font_px: f64) -> [f64; 2] {
 /// asks for every box it draws, the chrome for every box it picks and the
 /// snap engine for every box it lines up against, so the answers are kept;
 /// the cache is dropped whole once it grows, which a document never
-/// approaches.
+/// approaches, and when the templates bring fonts, which may set a family
+/// measured before in another face.
 fn widest_line(face: &TypeFace, text: &str, font_px: f64) -> f64 {
   const LIMIT: usize = 512;
+  /// The fonts' generation the widths were measured in, and each width by
+  /// face, text and size.
+  type Widths = (u32, HashMap<(TypeFace, String, u64), f64>);
   thread_local! {
-    static WIDTHS: RefCell<HashMap<(TypeFace, String, u64), f64>> = RefCell::new(HashMap::new());
+    static WIDTHS: RefCell<Widths> = RefCell::new((0, HashMap::new()));
   }
+  let generation = super::app_fonts::app_fonts_generation();
   let key = (face.clone(), text.to_owned(), font_px.to_bits());
-  if let Some(width) = WIDTHS.with(|widths| widths.borrow().get(&key).copied()) {
+  let known = WIDTHS.with(|widths| {
+    let widths = widths.borrow();
+    (widths.0 == generation)
+      .then(|| widths.1.get(&key).copied())
+      .flatten()
+  });
+  if let Some(width) = known {
     return width;
   }
   let width = text
@@ -61,10 +72,10 @@ fn widest_line(face: &TypeFace, text: &str, font_px: f64) -> f64 {
     .fold(0.0, f64::max);
   WIDTHS.with(|widths| {
     let mut widths = widths.borrow_mut();
-    if widths.len() >= LIMIT {
-      widths.clear();
+    if widths.0 != generation || widths.1.len() >= LIMIT {
+      *widths = (generation, HashMap::new());
     }
-    widths.insert(key, width);
+    widths.1.insert(key, width);
   });
   width
 }

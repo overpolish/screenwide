@@ -3,6 +3,7 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { useCaptionTemplateFonts } from "../editor/recording/captions/use-caption-template-fonts";
 import { MomentNotePanel } from "../editor/timeline/moments/moment-note-panel";
 import { CaptionTemplatePanel } from "../editor/tool-panels/captions/caption-template-panel";
 
@@ -44,6 +45,9 @@ function currentPanelLabel(): string {
 export function PopupPanelWindow() {
   const panel = currentPanelLabel();
   const active = usePopupPanelStore((state) => activePopupPanel(state, panel));
+  // The font list names each family in its own type, those your templates
+  // bring among them.
+  useCaptionTemplateFonts();
 
   if (!active) return null;
 

@@ -23,8 +23,12 @@ const PAUSE_MS: f64 = 70.0;
 const HOLD_MS: f64 = 500.0;
 /// How many sample words one caption holds at most: two fit a small tile on
 /// one line, and three show a stack or a staircase breaking into lines.
+/// Words rolling through all go in one caption, so the tile shows them
+/// roll.
 fn words_per_caption(style: &CaptionStyle) -> usize {
-  if style.arrangement == CaptionArrangement::Lines {
+  if style.rolling_words().is_some() {
+    usize::MAX
+  } else if style.arrangement == CaptionArrangement::Lines {
     2
   } else {
     3

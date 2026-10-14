@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{pose, presets, CaptionMotion, CaptionProperty, MAX_KEYFRAMES};
+use super::{pose, presets, CaptionMotion, CaptionProperty, Mirror, MAX_KEYFRAMES};
 use crate::style::CaptionStyle;
-use crate::templates::{parse_manifest, FORMAT_VERSION};
+use crate::templates::{parse_manifest, CaptionTemplateSource, FORMAT_VERSION};
 
 fn motion(json: serde_json::Value) -> Result<CaptionMotion, String> {
   serde_json::from_value::<CaptionStyle>(serde_json::json!({ "motion": json }))
@@ -27,7 +27,7 @@ fn the_presets_move_as_the_app_moved_captions_before() {
     let elapsed = f64::from(step) * 5.0;
     let (scale, opacity) = old_pop(elapsed);
     for tracks in [&pop.caption, &pop.word] {
-      let at = pose(tracks, elapsed);
+      let at = pose(tracks, elapsed, Mirror::default());
       assert!(
         (at.get(CaptionProperty::Scale) - scale).abs() < 1e-12,
         "{elapsed}"
@@ -37,14 +37,17 @@ fn the_presets_move_as_the_app_moved_captions_before() {
         "{elapsed}"
       );
     }
-    let faded = pose(&fade.word, elapsed);
+    let faded = pose(&fade.word, elapsed, Mirror::default());
     assert_eq!(
       faded.get(CaptionProperty::Opacity),
       (elapsed / 90.0).clamp(0.0, 1.0)
     );
     assert_eq!(faded.get(CaptionProperty::Scale), 1.0);
     // A plain caption does not move as it comes on.
-    assert_eq!(pose(&fade.caption, elapsed), pose(&[], 0.0));
+    assert_eq!(
+      pose(&fade.caption, elapsed, Mirror::default()),
+      pose(&[], 0.0, Mirror::default())
+    );
   }
 }
 
@@ -110,9 +113,10 @@ fn keeps_a_motion_within_its_limits() {
   let manifest = serde_json::json!({
     "formatVersion": FORMAT_VERSION,
     "id": "wild",
+    "name": "Wild",
     "style": { "motion": { "word": [{ "property": "opacity", "keyframes": [{ "atMs": 9000, "value": 1 }] }] } }
   });
-  assert!(parse_manifest(&manifest.to_string()).is_err());
+  assert!(parse_manifest(&manifest.to_string(), CaptionTemplateSource::User).is_err());
 }
 
 #[test]
@@ -124,7 +128,7 @@ fn holds_before_its_first_keyframe_and_after_its_last() {
     ] }]
   }))
   .unwrap();
-  let at = |ms| pose(&sliding.caption, ms).get(CaptionProperty::OffsetY);
+  let at = |ms| pose(&sliding.caption, ms, Mirror::default()).get(CaptionProperty::OffsetY);
   assert_eq!(at(0.0), 0.5);
   assert_eq!(at(1_000.0), 0.0);
   assert!(

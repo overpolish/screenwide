@@ -79,7 +79,11 @@ impl CounterAtlas {
       storage,
       draws,
     } = &mut *state;
-    let keys: Vec<Vec<u8>> = types.iter().map(|entry| cell_key(entry, drawn)).collect();
+    let fonts = app_fonts_generation();
+    let keys: Vec<Vec<u8>> = types
+      .iter()
+      .map(|entry| cell_key(entry, drawn, fonts))
+      .collect();
     let numbers: Vec<CounterNumber<'_>> = types
       .iter()
       .zip(&keys)
@@ -134,14 +138,15 @@ mod outline;
 mod rasterize;
 mod text_box;
 use super::gpu_atlas::GpuAtlas;
-use screenwide_annotations::text::face::TypeFace;
+use screenwide_annotations::text::{app_fonts::app_fonts_generation, face::TypeFace};
 
-/// What the atlas keys a piece of type by: its text, for a caption its face
-/// and outline too, and for a box being typed into its caret, its selection
-/// and the caret's width in atlas pixels too, so each change of them draws
-/// afresh. `0xFF` and `0xFE` never appear in UTF-8, so no text can collide
-/// with those tails.
-fn cell_key(entry: &PreparedType, drawn: f64) -> Vec<u8> {
+/// What the atlas keys a piece of type by: its text, for a caption its face,
+/// its outline and the generation of the templates' fonts too, and for a box
+/// being typed into its caret, its selection and the caret's width in atlas
+/// pixels too, so each change of them draws afresh: a family set in Inter
+/// before a template brought it is set in its own face after. `0xFF` and
+/// `0xFE` never appear in UTF-8, so no text can collide with those tails.
+fn cell_key(entry: &PreparedType, drawn: f64, fonts: u32) -> Vec<u8> {
   let mut key = entry.text.as_bytes().to_vec();
   if entry.face != TypeFace::ANNOTATION || entry.outline > 0.0 {
     key.push(0xFE);
@@ -150,6 +155,7 @@ fn cell_key(entry: &PreparedType, drawn: f64) -> Vec<u8> {
     key.extend_from_slice(&entry.face.weight.to_le_bytes());
     key.push(u8::from(entry.face.italic));
     key.extend_from_slice(&entry.outline.to_bits().to_le_bytes());
+    key.extend_from_slice(&fonts.to_le_bytes());
   }
   if let Some(marks) = entry.marks {
     key.push(0xFF);

@@ -12,6 +12,8 @@ pub(crate) mod camera_effects;
 mod camera_save;
 /// The templates and fonts the Captions panel styles captions with.
 pub(crate) mod caption_styles;
+/// Caption templates imported, exported and removed.
+pub(crate) mod caption_template_files;
 /// Captions made from the transcript, for the lane and an export's
 /// subtitle file.
 pub(crate) mod captions;

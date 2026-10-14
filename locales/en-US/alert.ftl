@@ -17,3 +17,6 @@ alert-replay-restart-failed = Replay buffer could not turn back on
 alert-replay-stopped = Replay buffer stopped
 alert-replay-save-failed = Replay could not be saved
 alert-project-open-failed = Project could not open
+alert-caption-template-import-failed = Caption template could not be imported
+alert-caption-template-export-failed = Caption template could not be exported
+alert-caption-template-remove-failed = Caption template could not be removed

@@ -5,9 +5,10 @@ import { useRef } from "react";
 
 import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
 
-import { PopupPanelColorsContent } from "./store";
 import { useFittedPanel } from "./use-fitted-panel";
 import { reportPopupPanelPick } from "./use-popup-panel-picker";
+
+import type { PopupPanelColorsContent } from "./picker-content";
 
 /**
  * A colour grid in the panel window: each colour pressed, or settled on in

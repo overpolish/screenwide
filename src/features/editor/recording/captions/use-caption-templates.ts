@@ -4,12 +4,19 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { layoutOf, withLayout } from "./caption-layout";
-import { captionTemplateStyles } from "./captions-api";
+import {
+  captionTemplates,
+  followCaptionTemplates,
+  forgetCaptionTemplates,
+} from "./captions-api";
+import { useCaptionTemplateFonts } from "./use-caption-template-fonts";
 
 import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionSettings } from "../../../../bindings/CaptionSettings";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
+import type { CaptionTemplate } from "../../../../bindings/CaptionTemplate";
 import type { CaptionTemplateId } from "../../../../bindings/CaptionTemplateId";
+import type { CaptionTemplateSource } from "../../../../bindings/CaptionTemplateSource";
 
 /** The caption templates as the panel offers them, and what new captions
  * start as: the template, its look, the layout options set by hand, and the
@@ -20,8 +27,12 @@ export type CaptionTemplates = {
   /** What new captions start out saying. */
   defaultSettings: CaptionSettings;
   defaultTemplate: CaptionTemplateId;
+  /** Each template's name, as its manifest gives it. */
+  names: Partial<Record<CaptionTemplateId, string>>;
   /** Each template as it ships, in the order the panel offers them. */
   shipped: CaptionStyle[];
+  /** Whether each template is the app's own or one of yours. */
+  sources: Partial<Record<CaptionTemplateId, CaptionTemplateSource>>;
   /** Each template's look as it was last set as default, or as it ships,
    * over the layout options it ships with: only the Layout tab changes
    * those, so a look saved with others never brings them back. */
@@ -41,7 +52,8 @@ export type CaptionDefaultsPatch = {
 
 /**
  * The caption templates with the defaults the general settings keep laid
- * over the ones they ship with. None until the shipped ones arrive.
+ * over the ones they ship with, asked for again whenever yours change. None
+ * until they arrive.
  */
 export function useCaptionTemplates(
   savedStyles: CaptionStyle[],
@@ -55,32 +67,47 @@ export function useCaptionTemplates(
     template: CaptionTemplateId;
   },
 ): CaptionTemplates | null {
-  const [shipped, setShipped] = useState<CaptionStyle[] | null>(null);
+  const [catalogue, setCatalogue] = useState<CaptionTemplate[] | null>(null);
+  useCaptionTemplateFonts();
   useEffect(() => {
     let current = true;
-    void captionTemplateStyles().then((styles) => {
-      if (current) setShipped(styles);
+    const ask = () => {
+      void captionTemplates().then((templates) => {
+        if (current) setCatalogue(templates);
+      });
+    };
+    ask();
+    const stop = followCaptionTemplates(() => {
+      forgetCaptionTemplates();
+      ask();
     });
     return () => {
       current = false;
+      stop();
     };
   }, []);
-  return useMemo(
-    () =>
-      shipped && {
-        defaultLayout,
-        defaultSettings,
-        defaultTemplate,
-        shipped,
-        styles: shipped.map((style) => {
-          const saved = savedStyles.find(
-            (each) => each.template === style.template,
-          );
-          return saved ? withLayout(layoutOf(style), saved) : style;
-        }),
-      },
-    [defaultLayout, defaultSettings, defaultTemplate, savedStyles, shipped],
-  );
+  return useMemo(() => {
+    if (!catalogue) return null;
+    const shipped = catalogue.map((template) => template.style);
+    return {
+      defaultLayout,
+      defaultSettings,
+      defaultTemplate,
+      names: Object.fromEntries(
+        catalogue.map((template) => [template.id, template.info.name]),
+      ),
+      shipped,
+      sources: Object.fromEntries(
+        catalogue.map((template) => [template.id, template.source]),
+      ),
+      styles: shipped.map((style) => {
+        const saved = savedStyles.find(
+          (each) => each.template === style.template,
+        );
+        return saved ? withLayout(layoutOf(style), saved) : style;
+      }),
+    };
+  }, [catalogue, defaultLayout, defaultSettings, defaultTemplate, savedStyles]);
 }
 
 /** What new captions start as: the default template, as set, with the

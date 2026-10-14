@@ -1,6 +1,31 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 4,
   "id": "karaoke",
+  "name": "Karaoke",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Heavy capitals, the word being said lit up in its colour.",
+  "fonts": [
+    {
+      "file": "fonts/Montserrat-VariableFont_wght.ttf",
+      "family": "Montserrat",
+      "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "license": "fonts/Montserrat-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
   "style": {
     "font": {
       "family": "Montserrat",

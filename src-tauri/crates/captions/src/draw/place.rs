@@ -8,7 +8,7 @@
 
 use super::LINE_HEIGHT;
 use crate::style::{CaptionArrangement, CaptionFace, CaptionStyle};
-use crate::{type_size_px, Caption, CaptionFrame, Measure};
+use crate::{type_size_px, Caption, CaptionFrame, CaptionWord, Measure};
 
 /// How far in from the picture's edge a caption keeps, as a share of its
 /// height: the bottom of a caption's last line sits this far up from the
@@ -64,8 +64,20 @@ pub(super) fn room(frame: CaptionFrame) -> [f64; 2] {
   ]
 }
 
+/// Where `caption`'s words sit, set in its lines.
 pub(super) fn place(
   caption: &Caption,
+  style: &CaptionStyle,
+  frame: CaptionFrame,
+  measure: &mut Measure,
+) -> Placement {
+  place_lines(caption.lines.iter(), caption.spaced, style, frame, measure)
+}
+
+/// Where the words of `lines` sit, a space between each where `spaced`.
+pub(super) fn place_lines<'w, L: IntoIterator<Item = &'w CaptionWord>>(
+  lines: impl IntoIterator<Item = L>,
+  spaced: bool,
   style: &CaptionStyle,
   frame: CaptionFrame,
   measure: &mut Measure,
@@ -75,7 +87,7 @@ pub(super) fn place(
   // The space after a word is its own face's, and the wider of two
   // neighbours' where they differ.
   let mut space = |face| {
-    if caption.spaced {
+    if spaced {
       measure(" ", face, size_in(face))
     } else {
       0.0
@@ -83,12 +95,11 @@ pub(super) fn place(
   };
   let spaces = [space(CaptionFace::Main), space(CaptionFace::Accent)];
   let space_of = |face| spaces[usize::from(face == CaptionFace::Accent)];
-  let lines: Vec<Line> = caption
-    .lines
-    .iter()
+  let lines: Vec<Line> = lines
+    .into_iter()
     .map(|line| {
       let words: Vec<(f64, f64, CaptionFace)> = line
-        .iter()
+        .into_iter()
         .map(|word| {
           let face = if word.emphasis {
             CaptionFace::Accent

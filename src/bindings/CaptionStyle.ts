@@ -54,6 +54,13 @@ highlightWords: boolean,
  */
 revealWords: boolean, 
 /**
+ * The most words shown at once, rolling through the caption: each comes
+ * on as it is said and, once this many show, the oldest goes off as the
+ * next comes on, the rest sliding along on one line. 0 shows every word
+ * of the caption at once, as it is set.
+ */
+visibleWords: number, 
+/**
  * A soft outline around the type, so it reads without a box.
  */
 outline: boolean, 

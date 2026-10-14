@@ -3,7 +3,10 @@
 
 import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
 
-import { STORY_CAPTION_STYLES } from "./caption-template-fixtures";
+import {
+  STORY_CAPTION_STYLES,
+  STORY_CAPTION_TEMPLATES,
+} from "./caption-template-fixtures";
 import { CaptionTemplatePanel } from "./caption-template-panel";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -12,6 +15,7 @@ const meta = {
   args: {
     content: {
       kind: "caption-templates",
+      names: STORY_CAPTION_TEMPLATES.names,
       selected: "editorial",
       styles: STORY_CAPTION_STYLES,
     },

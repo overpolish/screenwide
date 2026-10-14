@@ -1,5 +1,5 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 4,
   "style": {
     "font": {
       "weight": 600,
@@ -17,6 +17,7 @@
     "backgroundColor": "#0000009e",
     "highlightWords": false,
     "revealWords": false,
+    "visibleWords": 0,
     "outline": true,
     "outlineColor": "#000000",
     "background": "none",

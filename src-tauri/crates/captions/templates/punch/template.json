@@ -1,6 +1,31 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 4,
   "id": "punch",
+  "name": "Punch",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "A condensed display face a word or two at a time, popping in, the word being said in yellow.",
+  "fonts": [
+    {
+      "file": "fonts/Anton-Regular.ttf",
+      "family": "Anton",
+      "weights": [400],
+      "license": "fonts/Anton-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
   "style": {
     "font": {
       "family": "Anton",

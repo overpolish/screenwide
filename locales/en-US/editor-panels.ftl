@@ -193,6 +193,8 @@ editor-panels-captions-template-editorial = Editorial
 editor-panels-captions-template-supersize = Supersize
 editor-panels-captions-template-stack = Stack
 editor-panels-captions-template-staircase = Staircase
+editor-panels-captions-template-rise = Rise
+editor-panels-captions-template-stagger = Stagger
 # The few words each template's preview shows, said a couple at a time; short, so they fit a small tile.
 editor-panels-captions-sample = Captions that move with every word
 # The face caption type is set in, chosen from a list of the fonts installed on the computer and those the app carries.
@@ -237,6 +239,10 @@ editor-panels-captions-color-background = Box
 editor-panels-captions-set-default = Set as default
 # In a caption template's menu: put the template back to how it ships, dropping any look set as its default.
 editor-panels-captions-reset-original = Reset to original
+# Also in a caption template's menu: bring in a template someone shared, as a zip or its folder; save this one as a zip to share; and, for one you brought in, move it to the Trash.
+editor-panels-captions-template-import = Import template
+editor-panels-captions-template-export = Export template
+editor-panels-captions-template-remove = Remove template
 # Mark the word being said in a caption: in the highlight colour, or on a pill where the template sets it on one.
 editor-panels-captions-highlight-word = Highlight spoken word
 # Show each word of a caption as it is said, so the caption builds up with the voice.

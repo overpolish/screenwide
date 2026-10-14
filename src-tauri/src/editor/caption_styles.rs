@@ -10,9 +10,12 @@ use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex};
 
-use screenwide_annotations::text::installed::installed_families;
+use screenwide_annotations::text::app_fonts::{add_app_fonts, AppFamily};
+use screenwide_annotations::text::installed::{
+  system_families, with_app_families, InstalledFamily,
+};
 use screenwide_captions::{
-  bundled_templates, CaptionLayout, CaptionStyle, CaptionTemplateId, RecordingCaptions,
+  CaptionLayout, CaptionStyle, CaptionTemplate, CaptionTemplateId, RecordingCaptions,
 };
 use screenwide_compositor::compositor::caption_preview::{CaptionPreview, CaptionPreviewer};
 use screenwide_imaging::CapturedImage;
@@ -43,9 +46,9 @@ pub struct CaptionPreviewStrip {
   pub frames: u32,
   pub frames_per_second: f64,
 }
-/// A font family installed on the system or carried by the app, the weights
-/// it has upright on the CSS scale of 100 to 900, lightest first, and
-/// whether it has an italic.
+/// A font family installed on the system or brought by a template, the
+/// weights it has upright on the CSS scale of 100 to 900, lightest first,
+/// and whether it has an italic.
 #[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -55,30 +58,56 @@ pub struct FontFamily {
   pub italic: bool,
 }
 
-/// Every caption template as it ships, in the order the panel offers them.
-/// A template saved as a default in the general settings takes the place of
-/// its own here.
+/// Every caption template, the app's own first in the order the panel
+/// offers them, then yours: each with what its manifest says of it. A
+/// template saved as a default in the general settings takes the place of
+/// its own style in the panel.
 #[tauri::command]
-pub fn caption_templates() -> Vec<CaptionStyle> {
-  bundled_templates()
+pub fn caption_templates() -> Vec<CaptionTemplate> {
+  screenwide_captions::caption_templates()
+}
+
+/// Where your own templates are kept, a folder each.
+pub(crate) fn user_templates_folder(app: &AppHandle) -> Option<PathBuf> {
+  app
+    .path()
+    .app_data_dir()
+    .ok()
+    .map(|data| data.join("caption-templates"))
+}
+
+/// Reads your own templates, logging any left out and why: a template
+/// that cannot be read never stops the app. Then hands every template's
+/// fonts to the text engines, so captions are set in them from now on.
+fn load_user_templates(app: &AppHandle) {
+  if let Some(folder) = user_templates_folder(app) {
+    for problem in screenwide_captions::load_user_templates(&folder) {
+      eprintln!("A caption template was left out: {problem}");
+    }
+  }
+  hand_over_fonts();
+}
+
+/// Hands every template's fonts to the text engines. They keep a font
+/// handed over twice once, so this may run each time templates are read.
+pub(crate) fn hand_over_fonts() {
+  let fonts = screenwide_captions::template_font_files();
+  let families: Vec<AppFamily> = fonts
     .iter()
-    .map(|template| template.style.clone())
-    .collect()
+    .map(|(font, _)| AppFamily {
+      name: font.family.clone(),
+      weights: font.weights.clone(),
+      italic: font.italic,
+    })
+    .collect();
+  let files: Vec<&[u8]> = fonts.iter().map(|(_, bytes)| bytes.as_ref()).collect();
+  add_app_fonts(&families, &files);
 }
 
 /// The font families installed on the system, read once: reading every
 /// family's members takes half a second, and the panel asks each time it
 /// opens. [`warm`] reads them at launch, so the panel never waits.
-static FAMILIES: LazyLock<Vec<FontFamily>> = LazyLock::new(|| {
-  installed_families()
-    .into_iter()
-    .map(|family| FontFamily {
-      name: family.name,
-      weights: family.weights,
-      italic: family.italic,
-    })
-    .collect()
-});
+static SYSTEM_FAMILIES: LazyLock<Vec<InstalledFamily>> = LazyLock::new(system_families);
 
 /// The compositor previews are drawn with, made once: making one compiles
 /// its pipelines, which takes longer than drawing every template's preview.
@@ -96,15 +125,18 @@ static PREVIEWER: LazyLock<Result<Mutex<CaptionPreviewer>, String>> = LazyLock::
 /// new captions. A preview drawn before is only found, and the drawing
 /// readies the previewer.
 pub(crate) fn warm(app: &AppHandle) {
+  // Read before anything asks for the templates, which takes a moment for
+  // a few small files.
+  load_user_templates(app);
   let app = app.clone();
   std::thread::spawn(move || {
-    LazyLock::force(&FAMILIES);
+    LazyLock::force(&SYSTEM_FAMILIES);
     let Ok(directory) = preview_directory(&app) else {
       return;
     };
     let settings = crate::settings::current(&app);
     let sample = screenwide_i18n::t!("editor-panels-captions-sample");
-    for template in bundled_templates() {
+    for template in screenwide_captions::caption_templates() {
       let style = settings
         .caption_layout
         .applied_to(template_style(&settings.caption_styles, &template.id));
@@ -143,13 +175,23 @@ pub(crate) fn default_captions(app: &AppHandle) -> RecordingCaptions {
   }
 }
 
-/// The font families installed on the system, by name, as read at launch.
+/// The font families installed on the system, as read at launch, with
+/// those the templates bring, by name.
 #[tauri::command]
 pub async fn installed_font_families() -> Result<Vec<FontFamily>, String> {
   // Waits, off the main thread, only where launch has not read them yet.
-  tauri::async_runtime::spawn_blocking(|| FAMILIES.clone())
-    .await
-    .map_err(|error| error.to_string())
+  tauri::async_runtime::spawn_blocking(|| {
+    with_app_families(&SYSTEM_FAMILIES)
+      .into_iter()
+      .map(|family| FontFamily {
+        name: family.name,
+        weights: family.weights,
+        italic: family.italic,
+      })
+      .collect()
+  })
+  .await
+  .map_err(|error| error.to_string())
 }
 
 /// Where the previews live: one strip per style and sample, named by a hash

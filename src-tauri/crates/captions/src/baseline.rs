@@ -33,6 +33,7 @@ impl Default for CaptionStyle {
       background_color: SHADE.to_owned(),
       highlight_words: false,
       reveal_words: false,
+      visible_words: 0,
       outline: true,
       outline_color: BLACK.to_owned(),
       background: CaptionBackground::None,

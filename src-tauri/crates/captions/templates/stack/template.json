@@ -1,6 +1,24 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 4,
   "id": "stack",
+  "name": "Stack",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "A word or two a line, one beneath another as they are said, the key word set large on a line of its own.",
+  "fonts": [
+    {
+      "file": "fonts/Montserrat-VariableFont_wght.ttf",
+      "family": "Montserrat",
+      "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "license": "fonts/Montserrat-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/Anton-Regular.ttf",
+      "family": "Anton",
+      "weights": [400],
+      "license": "fonts/Anton-OFL-1.1.txt"
+    }
+  ],
   "style": {
     "font": {
       "family": "Montserrat",

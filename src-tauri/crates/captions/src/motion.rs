@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! How a caption moves as it comes on, as data: for the caption coming on
-//! whole, and for each word coming on as it is said, tracks of keyframes
-//! over the properties in [`property`]. A track holds a property at its
-//! first keyframe's value until then and at its last one's after, easing
-//! into each keyframe from the one before. A motion can also be written as
-//! a preset's name, which is how the templates and older saved styles name
-//! the ones the app ships.
+//! How a caption moves as it comes on and goes off, as data: for the
+//! caption coming on whole, for each word coming on as it is said, and for
+//! the caption and its words going off once it has been read, tracks of
+//! keyframes over the properties in [`property`]. A track holds a property
+//! at its first keyframe's value until then and at its last one's after,
+//! easing into each keyframe from the one before. A motion can also be
+//! written as a preset's name, which is how the templates and older saved
+//! styles name the ones the app ships.
 
+mod pose;
 mod presets;
 mod property;
 #[cfg(test)]
@@ -17,6 +19,7 @@ mod tests;
 use serde::{de, Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
 
+pub(crate) use pose::{pose, Mirror, Pose};
 pub use property::CaptionProperty;
 
 /// The longest a motion runs, so a template cannot leave a caption still
@@ -49,7 +52,7 @@ impl CaptionEasing {
   }
 
   /// How far along `progress`, from 0 to 1, has come once eased.
-  fn eased(self, progress: f64) -> f64 {
+  pub(crate) fn eased(self, progress: f64) -> f64 {
     match self {
       Self::Linear => progress,
       Self::EaseIn => progress * progress,
@@ -86,19 +89,31 @@ pub struct CaptionKeyframe {
   pub easing: CaptionEasing,
 }
 
-/// One property's keyframes, in time order.
+/// One property's keyframes, in time order. An offset track `from_edge`
+/// measures its offsets from the edge of the picture the caption sits
+/// against rather than in the picture's own directions: a caption along the
+/// top moves up where one along the bottom moves down, and one at the right
+/// moves right where one at the left moves left, so a word coming in from
+/// its edge does so wherever the caption is placed.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct CaptionMotionTrack {
   pub property: CaptionProperty,
+  #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  #[ts(optional, as = "Option<bool>")]
+  pub from_edge: bool,
   pub keyframes: Vec<CaptionKeyframe>,
 }
 
-/// How a caption comes on: `caption` for the caption coming on whole, and
-/// `word` for each word coming on as it is said, where words are revealed.
-/// A trigger left out does not move. Each field defaults on its own: the
-/// whole motion's default is a preset, read through this very type.
+/// How a caption comes on and goes off: `caption` for the caption coming
+/// on whole, `word` for each word coming on as it is said, where words are
+/// revealed, and `caption_out` and `word_out` for the caption and each of
+/// its words going off. An exit is timed to finish as its caption's time
+/// ends, its keyframes timed from when it starts, so a caption is gone by
+/// the edge of its clip, as everything else on the timeline is. A trigger
+/// left out does not move. Each field defaults on its own: the whole
+/// motion's default is a preset, read through this very type.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 #[ts(export)]
@@ -107,6 +122,12 @@ pub struct CaptionMotion {
   pub caption: Vec<CaptionMotionTrack>,
   #[serde(default)]
   pub word: Vec<CaptionMotionTrack>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  #[ts(optional, as = "Option<Vec<CaptionMotionTrack>>")]
+  pub caption_out: Vec<CaptionMotionTrack>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  #[ts(optional, as = "Option<Vec<CaptionMotionTrack>>")]
+  pub word_out: Vec<CaptionMotionTrack>,
 }
 
 impl Default for CaptionMotion {
@@ -157,6 +178,7 @@ fn normalized_tracks(tracks: &[CaptionMotionTrack]) -> Vec<CaptionMotionTrack> {
     keyframes.sort_by(|a, b| a.at_ms.total_cmp(&b.at_ms));
     kept.push(CaptionMotionTrack {
       property: track.property,
+      from_edge: track.from_edge,
       keyframes,
     });
   }
@@ -169,58 +191,44 @@ impl CaptionMotion {
     Self {
       caption: normalized_tracks(&self.caption),
       word: normalized_tracks(&self.word),
+      caption_out: normalized_tracks(&self.caption_out),
+      word_out: normalized_tracks(&self.word_out),
     }
   }
 
-  /// How long after it starts every track has reached its last keyframe.
+  /// How long after it starts every entrance track has reached its last
+  /// keyframe.
   pub(crate) fn settles_ms(&self) -> f64 {
-    self
-      .caption
-      .iter()
-      .chain(&self.word)
-      .filter_map(|track| track.keyframes.last())
-      .map(|keyframe| keyframe.at_ms)
-      .fold(0.0, f64::max)
+    last_keyframe_ms(self.caption.iter().chain(&self.word))
+  }
+
+  /// How long a caption's exit runs before the end of its time: until
+  /// every exit track has reached its last keyframe.
+  pub(crate) fn exit_ms(&self) -> f64 {
+    last_keyframe_ms(self.caption_out.iter().chain(&self.word_out))
+  }
+
+  /// How long a word takes to come on, which a rolling caption's words
+  /// slide along in as it does.
+  pub(crate) fn word_entrance_ms(&self) -> f64 {
+    last_keyframe_ms(self.word.iter())
+  }
+
+  /// How long a word takes to go off.
+  pub(crate) fn word_exit_ms(&self) -> f64 {
+    last_keyframe_ms(self.word_out.iter())
+  }
+
+  /// Whether it moves anything as a caption goes off, which only a newer
+  /// manifest format can say.
+  pub(crate) fn has_exit(&self) -> bool {
+    !self.caption_out.is_empty() || !self.word_out.is_empty()
   }
 }
 
-/// Every property's value at one moment of a motion.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Pose([f64; CaptionProperty::ALL.len()]);
-
-impl Pose {
-  pub(crate) fn get(&self, property: CaptionProperty) -> f64 {
-    self.0[property.index()]
-  }
-}
-
-/// A track's value `elapsed_ms` into its motion.
-fn value_at(keyframes: &[CaptionKeyframe], rest: f64, elapsed_ms: f64) -> f64 {
-  let Some(first) = keyframes.first() else {
-    return rest;
-  };
-  let next = keyframes.partition_point(|keyframe| keyframe.at_ms <= elapsed_ms);
-  match (
-    next.checked_sub(1).map(|at| &keyframes[at]),
-    keyframes.get(next),
-  ) {
-    (None, _) => first.value,
-    (Some(last), None) => last.value,
-    (Some(from), Some(to)) => {
-      let progress = (elapsed_ms - from.at_ms) / (to.at_ms - from.at_ms);
-      from.value + (to.value - from.value) * to.easing.eased(progress)
-    }
-  }
-}
-
-/// Every property's value `elapsed_ms` into `tracks`; a property no track
-/// moves is at rest.
-pub(crate) fn pose(tracks: &[CaptionMotionTrack], elapsed_ms: f64) -> Pose {
-  Pose(CaptionProperty::ALL.map(|property| {
-    let rest = property.spec().rest;
-    tracks
-      .iter()
-      .find(|track| track.property == property)
-      .map_or(rest, |track| value_at(&track.keyframes, rest, elapsed_ms))
-  }))
+fn last_keyframe_ms<'a>(tracks: impl Iterator<Item = &'a CaptionMotionTrack>) -> f64 {
+  tracks
+    .filter_map(|track| track.keyframes.last())
+    .map(|keyframe| keyframe.at_ms)
+    .fold(0.0, f64::max)
 }

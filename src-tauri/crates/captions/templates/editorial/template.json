@@ -1,6 +1,31 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 4,
   "id": "editorial",
+  "name": "Editorial",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "A quiet sans with one word of each caption set in a serif italic.",
+  "fonts": [
+    {
+      "file": "fonts/DMSans-VariableFont_opsz,wght.ttf",
+      "family": "DM Sans",
+      "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "license": "fonts/DMSans-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
   "style": {
     "font": {
       "family": "DM Sans",

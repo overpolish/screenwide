@@ -2,9 +2,13 @@
 import type { CaptionMotionTrack } from "./CaptionMotionTrack";
 
 /**
- * How a caption comes on: `caption` for the caption coming on whole, and
- * `word` for each word coming on as it is said, where words are revealed.
- * A trigger left out does not move. Each field defaults on its own: the
- * whole motion's default is a preset, read through this very type.
+ * How a caption comes on and goes off: `caption` for the caption coming
+ * on whole, `word` for each word coming on as it is said, where words are
+ * revealed, and `caption_out` and `word_out` for the caption and each of
+ * its words going off. An exit is timed to finish as its caption's time
+ * ends, its keyframes timed from when it starts, so a caption is gone by
+ * the edge of its clip, as everything else on the timeline is. A trigger
+ * left out does not move. Each field defaults on its own: the whole
+ * motion's default is a preset, read through this very type.
  */
-export type CaptionMotion = { caption: Array<CaptionMotionTrack>, word: Array<CaptionMotionTrack>, };
+export type CaptionMotion = { caption: Array<CaptionMotionTrack>, word: Array<CaptionMotionTrack>, captionOut?: Array<CaptionMotionTrack>, wordOut?: Array<CaptionMotionTrack>, };

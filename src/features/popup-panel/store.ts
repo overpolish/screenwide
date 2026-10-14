@@ -5,9 +5,11 @@ import { create } from "zustand";
 
 import { EditorKind } from "../editor/types";
 
+import type {
+  PopupPanelCaptionTemplatesContent,
+  PopupPanelColorsContent,
+} from "./picker-content";
 import type { PopupPanelIcon } from "./popup-panel-item-glyph";
-import type { CaptionStyle } from "../../bindings/CaptionStyle";
-import type { CaptionTemplateId } from "../../bindings/CaptionTemplateId";
 import type { NoteTranscript } from "../editor/timeline/moments/recording-moments";
 
 type PopupPanelMode = "menu" | "select";
@@ -94,21 +96,6 @@ export type PopupPanelNoteContent = {
   transcript: NoteTranscript | null;
   /** Peak levels from 0 to 1. */
   waveform: number[];
-};
-
-/** The caption templates to choose from, as tiles of their moving previews.
- * `styles` are each as choosing it would set the captions. */
-export type PopupPanelCaptionTemplatesContent = {
-  kind: "caption-templates";
-  selected: CaptionTemplateId;
-  styles: CaptionStyle[];
-};
-
-/** A colour grid: the palette, `savedColors`, and Custom. */
-export type PopupPanelColorsContent = {
-  kind: "colors";
-  savedColors: string[];
-  value: string;
 };
 
 export type PopupPanelContent =

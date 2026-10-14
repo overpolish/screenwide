@@ -358,6 +358,7 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
+          "$APPDATA/caption-templates/*/fonts/*",
           "$APPCACHE/background-thumbnails/*",
           "$APPCACHE/caption-previews/*",
           "$TEMP/Screenwide/application-sources/**",
@@ -387,10 +388,10 @@
       }
     ],
     "resources": {
-      "assets/Anton-OFL-1.1.txt": "licenses/Anton-OFL-1.1.txt",
-      "assets/DMSans-OFL-1.1.txt": "licenses/DMSans-OFL-1.1.txt",
-      "assets/InstrumentSerif-OFL-1.1.txt": "licenses/InstrumentSerif-OFL-1.1.txt",
-      "assets/Montserrat-OFL-1.1.txt": "licenses/Montserrat-OFL-1.1.txt",
+      "crates/captions/templates/fonts/Anton-OFL-1.1.txt": "licenses/Anton-OFL-1.1.txt",
+      "crates/captions/templates/fonts/DMSans-OFL-1.1.txt": "licenses/DMSans-OFL-1.1.txt",
+      "crates/captions/templates/fonts/InstrumentSerif-OFL-1.1.txt": "licenses/InstrumentSerif-OFL-1.1.txt",
+      "crates/captions/templates/fonts/Montserrat-OFL-1.1.txt": "licenses/Montserrat-OFL-1.1.txt",
       "../FFMPEG.md": "licenses/FFMPEG.md",
       "assets/DeepFilterNet-MIT.txt": "licenses/DeepFilterNet-MIT.txt",
       "assets/Demucs-MIT.txt": "licenses/Demucs-MIT.txt",

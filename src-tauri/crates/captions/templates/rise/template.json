@@ -1,0 +1,58 @@
+{
+  "formatVersion": 4,
+  "id": "rise",
+  "name": "Rise",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Each word slides up and fades in as it is said.",
+  "fonts": [
+    {
+      "file": "fonts/Montserrat-VariableFont_wght.ttf",
+      "family": "Montserrat",
+      "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "license": "fonts/Montserrat-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
+  "style": {
+    "font": {
+      "family": "Montserrat",
+      "weight": 800,
+      "italic": false
+    },
+    "allCaps": true,
+    "maxWords": 4,
+    "revealWords": true,
+    "motion": {
+      "word": [
+        {
+          "property": "offsetY",
+          "fromEdge": true,
+          "keyframes": [
+            { "atMs": 0, "value": 0.4 },
+            { "atMs": 180, "value": 0, "easing": "ease-out" }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "atMs": 0, "value": 0 },
+            { "atMs": 120, "value": 1 }
+          ]
+        }
+      ]
+    }
+  }
+}

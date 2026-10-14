@@ -18,4 +18,6 @@ screenwide-lexicon.workspace = true
 screenwide-timeline.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+trash.workspace = true
 ts-rs.workspace = true
+zip.workspace = true

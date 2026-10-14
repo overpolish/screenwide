@@ -1,10 +1,25 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 4,
   "id": "clean",
-  "aliases": [
-    "reveal",
-    "subtitle",
-    "duet"
+  "name": "Clean",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Outlined type and no box, keeping the picture clear.",
+  "aliases": ["reveal", "subtitle", "duet"],
+  "fonts": [
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
   ],
   "style": {}
 }

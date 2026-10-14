@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The font families captions may be set in: those installed on the
-//! system, and those the app carries.
+//! system, and those the caption templates bring.
 
-use super::bundled::BUNDLED_FAMILIES;
+use super::app_fonts::app_families;
 
 /// A family captions may be set in, the weights it has upright on the CSS
 /// scale of 100 to 900, lightest first, and whether it has an italic.
@@ -15,20 +15,26 @@ pub struct InstalledFamily {
   pub italic: bool,
 }
 
-/// Every family installed on the system or carried by the app, by name,
-/// each once. A family the app carries is listed as it carries it, though
-/// the system has its own copy, since the app's is the one set.
-pub fn installed_families() -> Vec<InstalledFamily> {
-  let mut families = platform::families();
-  families.retain(|family| {
-    BUNDLED_FAMILIES
-      .iter()
-      .all(|bundled| bundled.name != family.name)
-  });
-  families.extend(BUNDLED_FAMILIES.iter().map(|bundled| InstalledFamily {
-    name: bundled.name.to_owned(),
-    weights: bundled.weights.to_vec(),
-    italic: bundled.italic,
+/// Every family installed on the system, by name. Reading them takes a
+/// moment, so a caller keeps them.
+pub fn system_families() -> Vec<InstalledFamily> {
+  platform::families()
+}
+
+/// `system`'s families with those the templates bring, by name, each once.
+/// A family a template brings is listed as it brings it, though the system
+/// has its own copy, since that is the one set.
+pub fn with_app_families(system: &[InstalledFamily]) -> Vec<InstalledFamily> {
+  let brought = app_families();
+  let mut families: Vec<InstalledFamily> = system
+    .iter()
+    .filter(|family| brought.iter().all(|app| app.name != family.name))
+    .cloned()
+    .collect();
+  families.extend(brought.into_iter().map(|app| InstalledFamily {
+    name: app.name,
+    weights: app.weights,
+    italic: app.italic,
   }));
   for family in &mut families {
     family.weights.sort_unstable();
@@ -105,24 +111,35 @@ mod platform {
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod tests {
   use super::*;
+  use crate::text::app_fonts::{add_app_fonts, AppFamily};
 
   /// Georgia ships with both systems in a regular and a bold.
   #[test]
-  fn lists_each_installed_family_once_with_its_upright_weights() {
-    let families = installed_families();
+  fn lists_each_family_once_a_templates_own_in_place_of_the_systems() {
+    let system = system_families();
+    add_app_fonts(
+      &[AppFamily {
+        name: "Georgia".to_owned(),
+        weights: vec![900],
+        italic: false,
+      }],
+      &[],
+    );
+    let families = with_app_families(&system);
     let georgia: Vec<_> = families
       .iter()
       .filter(|family| family.name == "Georgia")
       .collect();
     assert_eq!(georgia.len(), 1);
-    assert!(georgia[0].weights.contains(&400) && georgia[0].weights.contains(&700));
-    assert!(georgia[0].italic);
-    assert!(families.iter().all(|family| !family.name.starts_with('.')));
-    // The app's own families are offered whatever the system has.
-    let serif = families
+    // The system's own has a regular, a bold and an italic; the one a
+    // template brings is listed as it brings it.
+    let installed = system
       .iter()
-      .find(|family| family.name == "Instrument Serif")
+      .find(|family| family.name == "Georgia")
       .unwrap();
-    assert_eq!((serif.weights.as_slice(), serif.italic), (&[400][..], true));
+    assert!(installed.weights.contains(&400) && installed.weights.contains(&700));
+    assert!(installed.italic);
+    assert_eq!(georgia[0].weights, [900]);
+    assert!(families.iter().all(|family| !family.name.starts_with('.')));
   }
 }

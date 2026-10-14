@@ -294,8 +294,25 @@ fn fits_the_pill_to_type_set_in_another_face() {
   );
 }
 
+/// Hands the app's own templates' fonts to the text engines, as the app
+/// does at launch.
+fn hand_over_template_fonts() {
+  use screenwide_annotations::text::app_fonts::{add_app_fonts, AppFamily};
+  let fonts = screenwide_captions::template_font_files();
+  let families: Vec<AppFamily> = fonts
+    .iter()
+    .map(|(font, _)| AppFamily {
+      name: font.family.clone(),
+      weights: font.weights.clone(),
+      italic: font.italic,
+    })
+    .collect();
+  let files: Vec<&[u8]> = fonts.iter().map(|(_, bytes)| bytes.as_ref()).collect();
+  add_app_fonts(&families, &files);
+}
+
 #[test]
-fn sets_the_accent_in_a_family_the_app_carries_upright_or_italic() {
+fn sets_the_accent_in_a_family_a_template_brings_upright_or_italic() {
   let accented = |family: &str, italic| {
     pieces(CaptionStyle {
       accent: CaptionAccent::Word,
@@ -308,14 +325,23 @@ fn sets_the_accent_in_a_family_the_app_carries_upright_or_italic() {
       ..CaptionTemplateId::from("clean").shipped_style()
     })
   };
+  // Drawn before the fonts are handed over, the family is not found, where
+  // the system has none of its own; after, it is, in place of the face
+  // remembered for it.
+  let installed = screenwide_annotations::text::installed::system_families()
+    .iter()
+    .any(|family| family.name == "Instrument Serif");
+  let before = drawn(&accented("Instrument Serif", true));
+  hand_over_template_fonts();
   let italic = accented("Instrument Serif", true);
   // The word set apart is in the accent's face, the other in the main one.
   assert_eq!(italic.0[1].face, screenwide_captions::CaptionFace::Accent);
   assert_eq!(italic.0[0].face, screenwide_captions::CaptionFace::Main);
-  // The app's own serif is found whatever the system has, and set in its
-  // italic: neither looks like its upright, nor like Inter, which a family
-  // that cannot be found falls back to.
+  // The serif a template brings is found whatever the system has, and set
+  // in its italic: neither looks like its upright, nor like Inter, which a
+  // family that cannot be found falls back to.
   let canvas = drawn(&italic);
   assert_ne!(canvas, drawn(&accented("Instrument Serif", false)));
   assert_ne!(canvas, drawn(&accented("No Such Family", true)));
+  assert!(installed || canvas != before);
 }

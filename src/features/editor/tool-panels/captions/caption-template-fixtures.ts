@@ -13,6 +13,7 @@ import type { CaptionTemplates } from "../../recording/captions/use-caption-temp
 /** A manifest's options, its motion written whole or as a preset's name. */
 type Manifest = {
   id: string;
+  name: string;
   style: Partial<Omit<CaptionStyle, "motion">> & {
     motion?: CaptionMotion | string;
   };
@@ -49,6 +50,12 @@ export const STORY_CAPTION_TEMPLATES: CaptionTemplates = {
   defaultLayout: {},
   defaultSettings: DEFAULT_CAPTION_SETTINGS,
   defaultTemplate: index.default,
+  names: Object.fromEntries(
+    Object.values(manifests).map((manifest) => [manifest.id, manifest.name]),
+  ),
   shipped: STORY_CAPTION_STYLES,
+  sources: Object.fromEntries(
+    STORY_CAPTION_STYLES.map((style) => [style.template, "bundled"]),
+  ),
   styles: STORY_CAPTION_STYLES,
 };

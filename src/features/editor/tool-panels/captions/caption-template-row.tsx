@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Ellipsis } from "lucide-react";
 import { useMemo, useRef } from "react";
 
+import { IconButton } from "../../../../components/base/button/icon-button";
 import { ListBoxItem } from "../../../../components/base/listbox-item/listbox-item";
 import { Select } from "../../../../components/base/select/select";
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
@@ -16,7 +18,7 @@ import { withLayout } from "../../recording/captions/caption-layout";
 
 import { CAPTION_FIELD_WIDTH } from "./caption-field-widths";
 import { captionTemplateLabel } from "./caption-templates";
-import { useCaptionTemplateMenu } from "./use-caption-template-menu";
+import { useCaptionTemplateActions } from "./use-caption-template-actions";
 
 import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
@@ -32,9 +34,10 @@ const PICKER_SIZE = { height: 400, width: 380 };
  * opens every template's moving preview to choose from. Each shows its saved
  * look with the layout options set by hand, as choosing it would set the
  * captions, and the chosen one the captions as they are set now. A choice
- * takes the template's style up whole, but for the layout set by hand; a
- * right click on the button, or the menu key, offers to put the chosen
- * template back to how it ships.
+ * takes the template's style up whole, but for the layout set by hand. The
+ * button beside it, a right click, or the menu key opens the template's
+ * menu: import one, export this one, remove one of yours, or put it back to
+ * how it ships. One imported is taken up at once.
  */
 export function CaptionTemplateRow({
   isDisabled,
@@ -51,8 +54,15 @@ export function CaptionTemplateRow({
   style: CaptionStyle;
   templates: CaptionTemplates;
 }) {
-  const openMenu = useCaptionTemplateMenu(onResetToOriginal);
+  const openMenu = useCaptionTemplateActions({
+    onImported: (template) => {
+      onChoose(template.style);
+    },
+    onResetToOriginal,
+    sources: templates.sources,
+  });
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
   const shown = useMemo(
     () =>
       templates.styles.map((template) =>
@@ -66,6 +76,7 @@ export function CaptionTemplateRow({
     closesOnPick: true,
     content: {
       kind: "caption-templates",
+      names: templates.names,
       selected: style.template,
       styles: shown,
     },
@@ -80,14 +91,17 @@ export function CaptionTemplateRow({
   });
   const chosen = {
     id: style.template,
-    label: captionTemplateLabel(style.template),
+    label: captionTemplateLabel(
+      style.template,
+      templates.names[style.template],
+    ),
   };
 
   return (
     <ControlRow title={t("editor-panels-captions-template-picker")}>
       {(controlProps) => (
         <div
-          className={CAPTION_FIELD_WIDTH}
+          className={`flex items-center gap-control ${CAPTION_FIELD_WIDTH}`}
           data-popup-panel-trigger={PICKER_ID}
           onContextMenu={(event) => {
             event.preventDefault();
@@ -115,7 +129,7 @@ export function CaptionTemplateRow({
         >
           <Select
             aria-labelledby={controlProps["aria-labelledby"]}
-            className="w-full"
+            className="min-w-0 flex-1"
             clearable={false}
             isDisabled={isDisabled}
             isOpen={picker.isOpen}
@@ -146,6 +160,21 @@ export function CaptionTemplateRow({
               </ListBoxItem>
             )}
           </Select>
+          <IconButton
+            aria-label={t("editor-panels-template-actions")}
+            isDisabled={isDisabled}
+            onPress={() => {
+              const menu = menuRef.current;
+              if (menu)
+                void openMenu(
+                  style.template,
+                  boundsAnchor(menu.getBoundingClientRect()),
+                );
+            }}
+            ref={menuRef}
+          >
+            <Ellipsis />
+          </IconButton>
         </div>
       )}
     </ControlRow>

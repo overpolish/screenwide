@@ -1,5 +1,5 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 4,
   "default": "box",
   "templates": [
     "box",
@@ -11,6 +11,8 @@
     "editorial",
     "supersize",
     "stack",
-    "staircase"
+    "staircase",
+    "rise",
+    "stagger"
   ]
 }

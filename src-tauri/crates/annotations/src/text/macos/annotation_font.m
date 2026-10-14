@@ -122,25 +122,34 @@ static NSString *nearest_member(NSString *family, uint32_t weight, BOOL italic) 
   return best;
 }
 
-/// Defined in Rust, in `bundled.rs`: the font files the app carries for its
-/// caption templates, one at a time, null past the last.
-extern const uint8_t *screenwide_bundled_font(uint32_t index, uint32_t *length);
+/// Defined in Rust, in `app_fonts.rs`: the font files the caption templates
+/// bring, one at a time, null past the last; and how many times more have
+/// been brought.
+extern const uint8_t *screenwide_app_font(uint32_t index, uint32_t *length);
+extern uint32_t screenwide_app_fonts_generation(void);
 
-/// Every face in the font files the app carries, with its family, weight
-/// trait and slant read once. They are set straight from the binary's own
-/// bytes, never registered with the system: Core Text only registers a
-/// face it can find again by file.
+/// Every face in the font files the caption templates bring, with its
+/// family, weight trait and slant, read again whenever more are brought.
+/// They are set straight from the bytes Rust keeps, never registered with
+/// the system: Core Text only registers a face it can find again by file.
 static NSArray<NSDictionary *> *bundled_faces(void) {
   static NSArray<NSDictionary *> *faces;
+  static uint32_t read;
+  static NSObject *guard;
   static dispatch_once_t once;
   dispatch_once(&once, ^{
+    guard = [[NSObject alloc] init];
+  });
+  @synchronized(guard) {
+    uint32_t generation = screenwide_app_fonts_generation();
+    if (faces != nil && read == generation) return faces;
     NSMutableArray<NSDictionary *> *found = [NSMutableArray array];
     uint32_t length = 0;
     for (uint32_t index = 0;; index++) {
-      const uint8_t *bytes = screenwide_bundled_font(index, &length);
+      const uint8_t *bytes = screenwide_app_font(index, &length);
       if (bytes == NULL) break;
-      // The bytes are the binary's own and never freed, so they are read in
-      // place rather than copied.
+      // Rust keeps the bytes for the process and never frees them, so they
+      // are read in place rather than copied.
       CFDataRef data = CFDataCreateWithBytesNoCopy(NULL, bytes, length, kCFAllocatorNull);
       NSArray *descriptors = CFBridgingRelease(CTFontManagerCreateFontDescriptorsFromData(data));
       CFRelease(data);
@@ -160,8 +169,9 @@ static NSArray<NSDictionary *> *bundled_faces(void) {
       }
     }
     faces = found;
-  });
-  return faces;
+    read = generation;
+    return faces;
+  }
 }
 
 /// `family` at `weight`, italic where asked and it has one, at the size the
@@ -204,17 +214,19 @@ static CTFontRef make_bundled_font(NSString *family, uint32_t weight, BOOL itali
   return font;
 }
 
-/// [`make_bundled_font`] at `size`. Making a face from the binary's bytes
-/// takes far longer than measuring a word in it, and every measured word
-/// asks, so each family, weight and slant is made once and kept, then only
-/// copied to the size asked for.
+/// [`make_bundled_font`] at `size`. Making a face from font bytes takes far
+/// longer than measuring a word in it, and every measured word asks, so
+/// each family, weight and slant is made once and kept, then only copied to
+/// the size asked for. The generation is in the key, so a family a template
+/// brings later is found rather than remembered as missing.
 static NSFont *bundled_font(NSString *family, uint32_t weight, BOOL italic, CGFloat size) {
   static NSCache<NSString *, id> *made;
   static dispatch_once_t once;
   dispatch_once(&once, ^{
     made = [[NSCache alloc] init];
   });
-  NSString *key = [NSString stringWithFormat:@"%@\n%u\n%d", family, weight, italic];
+  NSString *key = [NSString stringWithFormat:@"%@\n%u\n%d\n%u", family, weight, italic,
+                                             screenwide_app_fonts_generation()];
   id known = [made objectForKey:key];
   if (known == nil) {
     CTFontRef font = make_bundled_font(family, weight, italic, 12.0);

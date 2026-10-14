@@ -14,7 +14,7 @@ import { CaptionPreviewStripView } from "./caption-preview-strip";
 import { captionTemplateLabel } from "./caption-templates";
 import { useCaptionPreviews } from "./use-caption-previews";
 
-import type { PopupPanelCaptionTemplatesContent } from "../../../popup-panel/store";
+import type { PopupPanelCaptionTemplatesContent } from "../../../popup-panel/picker-content";
 
 /**
  * The caption templates in the panel window, each a small moving picture
@@ -64,7 +64,10 @@ export function CaptionTemplatePanel({
       >
         {content.styles.map((style, index) => (
           <ToggleButton
-            aria-label={captionTemplateLabel(style.template)}
+            aria-label={captionTemplateLabel(
+              style.template,
+              content.names[style.template],
+            )}
             className={cn(
               "flex cursor-default flex-col items-stretch gap-control-inset rounded-control p-control-inset transition-colors",
               focusStyles,
@@ -77,7 +80,10 @@ export function CaptionTemplatePanel({
           >
             <CaptionPreviewStripView strip={strips?.[index]} />
             <Text className="text-center text-inherit" variant="footnote">
-              {captionTemplateLabel(style.template)}
+              {captionTemplateLabel(
+                style.template,
+                content.names[style.template],
+              )}
             </Text>
           </ToggleButton>
         ))}

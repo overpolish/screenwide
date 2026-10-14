@@ -6,10 +6,13 @@ import { t } from "../../../../i18n/i18n";
 import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 import type { CaptionTemplateId } from "../../../../bindings/CaptionTemplateId";
 
-/** A caption template's name: a bundled template's from the app's own
- * translations, keyed by its id; any other's is its id, until templates from
- * elsewhere bring names of their own. */
-export const captionTemplateLabel = (template: CaptionTemplateId) => {
+/** A caption template's name: one the app ships, in the app's own
+ * translations, keyed by its id; any other's as its manifest gives it,
+ * `named`, or its id where there is none. */
+export const captionTemplateLabel = (
+  template: CaptionTemplateId,
+  named?: string,
+) => {
   const bundled: Partial<Record<CaptionTemplateId, string>> = {
     box: t("editor-panels-captions-template-box"),
     clean: t("editor-panels-captions-template-clean"),
@@ -18,11 +21,13 @@ export const captionTemplateLabel = (template: CaptionTemplateId) => {
     karaoke: t("editor-panels-captions-template-karaoke"),
     pop: t("editor-panels-captions-template-pop"),
     punch: t("editor-panels-captions-template-punch"),
+    rise: t("editor-panels-captions-template-rise"),
     stack: t("editor-panels-captions-template-stack"),
+    stagger: t("editor-panels-captions-template-stagger"),
     staircase: t("editor-panels-captions-template-staircase"),
     supersize: t("editor-panels-captions-template-supersize"),
   };
-  return bundled[template] ?? template;
+  return bundled[template] ?? named ?? template;
 };
 
 /** Whether `style` can outline its type: one set on a box reads without,

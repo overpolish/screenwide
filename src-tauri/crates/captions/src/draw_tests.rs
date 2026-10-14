@@ -315,6 +315,37 @@ fn moves_each_piece_by_its_motions_offset_in_ems_of_its_type() {
 }
 
 #[test]
+fn comes_in_from_the_edge_its_caption_sits_against_where_asked() {
+  // Half an em down and across at first, settling, measured from the edge.
+  let moved = |position: &str, from_edge: bool| {
+    let mut recording = styled("clean", false);
+    let tracks = ["offsetX", "offsetY"].map(|property| {
+      serde_json::json!({
+        "property": property, "fromEdge": from_edge, "keyframes": [
+          { "atMs": 0, "value": 0.5 }, { "atMs": 200, "value": 0 }
+        ]
+      })
+    });
+    recording.style = serde_json::from_value(serde_json::json!({
+      "position": position,
+      "motion": { "caption": tracks }
+    }))
+    .unwrap();
+    let at = |ms: f64| pieces(&recording, 1_000.0 + ms)[0].clone();
+    let (moving, settled) = (at(0.0), at(400.0));
+    [0, 1].map(|axis| (moving.centre[axis] - settled.centre[axis]).signum())
+  };
+  // Along the bottom at the left, and through the middle, as written.
+  assert_eq!(moved("bottom-left", true), [1.0, 1.0]);
+  assert_eq!(moved("center", true), [1.0, 1.0]);
+  // Along the top it comes down from above; at the right, in from the right.
+  assert_eq!(moved("top", true), [1.0, -1.0]);
+  assert_eq!(moved("top-right", true), [-1.0, -1.0]);
+  // A track not measured from the edge keeps the picture's directions.
+  assert_eq!(moved("top-right", false), [1.0, 1.0]);
+}
+
+#[test]
 fn readies_the_next_captions_words_unseen_and_set_as_they_will_be() {
   let track = CaptionTrack {
     captions: captions(),
@@ -363,4 +394,126 @@ fn readies_the_next_caption_only_once_the_one_showing_has_come_on() {
   // it; once it has settled, "four" is readied.
   assert!(texts(1_100.0).is_empty());
   assert_eq!(texts(1_500.0), ["four"]);
+}
+
+#[test]
+fn goes_off_over_the_end_of_its_time_gone_before_the_next_comes_on() {
+  let mut following = captions();
+  following.push(Caption {
+    id: 3_000,
+    start_ms: 3_000.0,
+    end_ms: 4_000.0,
+    text: "four".to_owned(),
+    lines: vec![vec![word("four", 3_000.0)]],
+    spaced: true,
+  });
+  let mut recording = styled("clean", false);
+  recording.style.motion = serde_json::from_value::<CaptionStyle>(serde_json::json!({
+    "motion": {
+      "captionOut": [{ "property": "opacity", "keyframes": [
+        { "atMs": 0, "value": 1 }, { "atMs": 300, "value": 0 }
+      ] }],
+      "wordOut": [{ "property": "scale", "keyframes": [
+        { "atMs": 0, "value": 1 }, { "atMs": 300, "value": 0.5 }
+      ] }]
+    }
+  }))
+  .unwrap()
+  .motion;
+  let at = |at_ms| caption_pieces(&following, &recording, FRAME, at_ms, &mut measure);
+  let texts = |pieces: &[CaptionPiece]| {
+    pieces
+      .iter()
+      .map(|piece| piece.text.clone())
+      .collect::<Vec<_>>()
+  };
+  // Read in full until its exit, timed to end with it.
+  let reading = at(2_690.0);
+  assert_eq!(texts(&reading), ["one", "two", "three"]);
+  assert!(reading
+    .iter()
+    .all(|piece| piece.opacity[0] == 1.0 && piece.scale[0] == 1.0));
+  // Then going off, half-way, its words moved by the caption's exit and
+  // their own at once.
+  let leaving = at(2_850.0);
+  assert_eq!(texts(&leaving), ["one", "two", "three"]);
+  assert!((leaving[0].opacity[0] - 0.5).abs() < 1e-9);
+  assert!((leaving[0].scale[0] - 0.75).abs() < 1e-9);
+  // Gone as its time ends, where the next comes on alone.
+  assert_eq!(texts(&at(3_000.0)), ["four"]);
+  assert!(at(4_000.0).is_empty());
+}
+
+#[test]
+fn rolls_its_words_through_a_few_at_a_time_sliding_the_rest_along() {
+  // Five words a fifth of a second apart, three showing at once.
+  let letters = ["a", "b", "c", "d", "e"];
+  let rolling = vec![Caption {
+    id: 1_000,
+    start_ms: 1_000.0,
+    end_ms: 3_000.0,
+    text: letters.join(" "),
+    lines: vec![letters
+      .iter()
+      .enumerate()
+      .map(|(at, letter)| word(letter, 1_000.0 + 200.0 * at as f64))
+      .collect()],
+    spaced: true,
+  }];
+  let mut recording = styled("clean", false);
+  recording.style.visible_words = 3;
+  recording.style.motion = serde_json::from_value::<CaptionStyle>(serde_json::json!({
+    "motion": {
+      "word": [{ "property": "opacity", "keyframes": [
+        { "atMs": 0, "value": 0 }, { "atMs": 100, "value": 1 }
+      ] }],
+      "wordOut": [{ "property": "opacity", "keyframes": [
+        { "atMs": 0, "value": 1 }, { "atMs": 200, "value": 0 }
+      ] }]
+    }
+  }))
+  .unwrap()
+  .motion;
+  let at = |at_ms| caption_pieces(&rolling, &recording, FRAME, at_ms, &mut measure);
+  let x_of = |pieces: &[CaptionPiece], text: &str| {
+    pieces
+      .iter()
+      .find(|piece| piece.text == text)
+      .unwrap()
+      .centre[0]
+  };
+  let texts = |pieces: &[CaptionPiece]| {
+    pieces
+      .iter()
+      .map(|piece| piece.text.clone())
+      .collect::<Vec<_>>()
+  };
+  // Each comes on as it is said, until three show.
+  let full = at(1_500.0);
+  assert_eq!(texts(&full), ["a", "b", "c"]);
+  // As the fourth comes on, the first goes off beneath the rest, and the
+  // line slides along as one to make room for it, the first carried along.
+  let sliding = at(1_650.0);
+  assert_eq!(texts(&sliding), ["a", "b", "c", "d"]);
+  let shift = |text| x_of(&sliding, text) - x_of(&full, text);
+  assert!(shift("a") < 0.0 && (shift("a") - shift("b")).abs() < 1e-9);
+  assert!(
+    (x_of(&sliding, "d") - x_of(&sliding, "c") - (x_of(&full, "c") - x_of(&full, "b"))).abs()
+      < 1e-9
+  );
+  assert!((sliding[0].opacity[0] - 0.75).abs() < 1e-9);
+  let settled = at(1_750.0);
+  assert!(x_of(&full, "b") > x_of(&sliding, "b") && x_of(&sliding, "b") > x_of(&settled, "b"));
+  // The line is centred on the same place, so the second takes the first's.
+  assert!((x_of(&settled, "b") - x_of(&full, "a")).abs() < 1e-9);
+  // Once its exit is over, the first is gone and the second goes.
+  assert_eq!(texts(&at(1_850.0)), ["b", "c", "d", "e"]);
+  // Over the end of the caption's time, the last three go together.
+  assert_eq!(texts(&at(2_500.0)), ["c", "d", "e"]);
+  let leaving = at(2_900.0);
+  assert_eq!(texts(&leaving), ["c", "d", "e"]);
+  assert!(leaving
+    .iter()
+    .all(|piece| (piece.opacity[0] - 0.5).abs() < 1e-9));
+  assert!(at(3_000.0).is_empty());
 }

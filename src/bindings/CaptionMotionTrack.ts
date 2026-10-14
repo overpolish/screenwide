@@ -3,6 +3,11 @@ import type { CaptionKeyframe } from "./CaptionKeyframe";
 import type { CaptionProperty } from "./CaptionProperty";
 
 /**
- * One property's keyframes, in time order.
+ * One property's keyframes, in time order. An offset track `from_edge`
+ * measures its offsets from the edge of the picture the caption sits
+ * against rather than in the picture's own directions: a caption along the
+ * top moves up where one along the bottom moves down, and one at the right
+ * moves right where one at the left moves left, so a word coming in from
+ * its edge does so wherever the caption is placed.
  */
-export type CaptionMotionTrack = { property: CaptionProperty, keyframes: Array<CaptionKeyframe>, };
+export type CaptionMotionTrack = { property: CaptionProperty, fromEdge?: boolean, keyframes: Array<CaptionKeyframe>, };

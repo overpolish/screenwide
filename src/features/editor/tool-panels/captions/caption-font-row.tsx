@@ -7,7 +7,11 @@ import { ControlRow } from "../../../../components/shared/control-row/control-ro
 import { t } from "../../../../i18n/i18n";
 import { PopupSelect } from "../../../popup-panel/popup-select";
 import { PopupPanelItem } from "../../../popup-panel/store";
-import { installedFontFamilies } from "../../recording/captions/captions-api";
+import {
+  followCaptionTemplates,
+  forgetFontFamilies,
+  installedFontFamilies,
+} from "../../recording/captions/captions-api";
 
 import {
   CAPTION_FAMILY_WIDTH,
@@ -64,19 +68,28 @@ const weightName = (weight: number, italic: boolean) => {
   return names[hundred - 1]();
 };
 
-/** The families installed on the system or carried by the app, once read. */
+/** The families installed on the system or brought by a template, once
+ * read, and read again when your templates change. */
 function useFontFamilies() {
   const [families, setFamilies] = useState<FontFamily[]>([]);
   useEffect(() => {
     let current = true;
-    void installedFontFamilies()
-      .then((found) => {
-        if (current) setFamilies(found);
-      })
-      // Without the system's list, the app's own Inter is still offered.
-      .catch(() => undefined);
+    const ask = () => {
+      void installedFontFamilies()
+        .then((found) => {
+          if (current) setFamilies(found);
+        })
+        // Without the system's list, the app's own Inter is still offered.
+        .catch(() => undefined);
+    };
+    ask();
+    const stop = followCaptionTemplates(() => {
+      forgetFontFamilies();
+      ask();
+    });
     return () => {
       current = false;
+      stop();
     };
   }, []);
   return families;

@@ -5,7 +5,9 @@
 //! beside anything else it brings.
 //!
 //! ```json
-//! { "formatVersion": 2, "id": "supersize", "aliases": [], "style": { … } }
+//! { "formatVersion": 4, "id": "supersize", "name": "Supersize",
+//!   "author": "Screenwide", "version": "1.0.0", "description": "…",
+//!   "aliases": [], "style": { … } }
 //! ```
 //!
 //! `style` holds the options the template sets apart from
@@ -15,19 +17,23 @@
 //! than misread.
 //!
 //! Format 2 added `motion`, written whole or as a preset's name; format 1's
-//! `entrance` named the same presets, and is read as it.
+//! `entrance` named the same presets, and is read as it. Format 3 added the
+//! template's own name, which it needs, and its author, version and a line
+//! describing it, which it may give, and the fonts it brings. Format 4 added
+//! the motion's exits, `captionOut` and `wordOut`, and `visibleWords`.
 
 use std::fmt;
 
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-use super::{CaptionTemplate, CaptionTemplateId};
+use super::fonts::TemplateFont;
+use super::{CaptionTemplate, CaptionTemplateId, CaptionTemplateInfo, CaptionTemplateSource};
 use crate::style::CaptionStyle;
 
 /// The newest manifest format this app reads; every one since the first is
 /// read too.
-pub const FORMAT_VERSION: u64 = 2;
+pub const FORMAT_VERSION: u64 = 4;
 
 /// Why a manifest cannot be read, in English for a log or an author.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -53,7 +59,46 @@ struct Manifest {
   id: String,
   #[serde(default)]
   aliases: Vec<String>,
+  name: Option<String>,
+  author: Option<String>,
+  version: Option<String>,
+  description: Option<String>,
+  #[serde(default)]
+  fonts: Vec<TemplateFont>,
   style: Map<String, Value>,
+}
+
+/// The longest each of a manifest's words about itself may run, in
+/// characters: enough to say, short enough for a tile and a menu.
+const MAX_NAME: usize = 40;
+const MAX_AUTHOR: usize = 60;
+const MAX_VERSION: usize = 20;
+const MAX_DESCRIPTION: usize = 200;
+
+/// What the manifest says of itself. Format 3 gives a template its own
+/// name; an older one is named by its id.
+fn info(version: u64, manifest: &Manifest) -> Result<CaptionTemplateInfo, ManifestError> {
+  let field = |label: &str, value: &Option<String>, longest: usize| {
+    let value = value.as_deref().map(str::trim);
+    match value {
+      Some("") => Err(ManifestError(format!("its {label} is empty"))),
+      Some(text) if text.chars().count() > longest => Err(ManifestError(format!(
+        "its {label} is longer than {longest} characters"
+      ))),
+      text => Ok(text.map(str::to_owned)),
+    }
+  };
+  let name = match field("name", &manifest.name, MAX_NAME)? {
+    Some(name) => name,
+    None if version < 3 => manifest.id.clone(),
+    None => return Err(ManifestError("it has no name".to_owned())),
+  };
+  Ok(CaptionTemplateInfo {
+    name,
+    author: field("author", &manifest.author, MAX_AUTHOR)?,
+    version: field("version", &manifest.version, MAX_VERSION)?,
+    description: field("description", &manifest.description, MAX_DESCRIPTION)?,
+  })
 }
 
 /// `json`'s format version, checked, and the rest of it, which can then be
@@ -101,10 +146,15 @@ pub(super) fn identity(json: &str) -> Result<(String, Vec<String>), ManifestErro
   read(json).map(|(_, manifest)| (manifest.id, manifest.aliases))
 }
 
-/// The template a manifest describes: its options over the defaults, every
-/// one an option a style has and within its range.
-pub fn parse_manifest(json: &str) -> Result<CaptionTemplate, ManifestError> {
+/// The template a manifest describes, from `source`: its options over the
+/// defaults, every one an option a style has and within its range.
+pub fn parse_manifest(
+  json: &str,
+  source: CaptionTemplateSource,
+) -> Result<CaptionTemplate, ManifestError> {
   let (version, manifest) = read(json)?;
+  let info = info(version, &manifest)?;
+  super::fonts::check(&manifest.fonts).map_err(ManifestError)?;
   let Value::Object(mut style) =
     serde_json::to_value(CaptionStyle::default()).map_err(ManifestError::json)?
   else {
@@ -135,8 +185,19 @@ pub fn parse_manifest(json: &str) -> Result<CaptionTemplate, ManifestError> {
       manifest.id
     )));
   }
+  // An older format could not say these, so one that does was not written
+  // for it.
+  if version < 4 && (style.motion.has_exit() || style.rolling_words().is_some()) {
+    return Err(ManifestError(
+      "its \"visibleWords\" and its motion's \"captionOut\" and \"wordOut\" are format 4 options"
+        .to_owned(),
+    ));
+  }
   Ok(CaptionTemplate {
     id: CaptionTemplateId(manifest.id),
+    info,
+    source,
+    fonts: manifest.fonts,
     style,
   })
 }

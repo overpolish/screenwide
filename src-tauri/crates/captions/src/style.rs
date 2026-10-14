@@ -148,6 +148,11 @@ pub struct CaptionStyle {
   pub highlight_words: bool,
   /// Show each word as it is said, so the caption builds up with the voice.
   pub reveal_words: bool,
+  /// The most words shown at once, rolling through the caption: each comes
+  /// on as it is said and, once this many show, the oldest goes off as the
+  /// next comes on, the rest sliding along on one line. 0 shows every word
+  /// of the caption at once, as it is set.
+  pub visible_words: u32,
   /// A soft outline around the type, so it reads without a box.
   pub outline: bool,
   /// The outline's colour, as `#rrggbb`; it is always drawn a little
@@ -175,6 +180,9 @@ pub struct CaptionStyle {
 
 pub const MIN_WORDS: u32 = 1;
 pub const MAX_WORDS: u32 = 20;
+/// The fewest and most words a rolling caption shows at once.
+pub const MIN_VISIBLE_WORDS: u32 = 2;
+pub const MAX_VISIBLE_WORDS: u32 = 5;
 pub const MIN_SIZE_PERCENT: f64 = 25.0;
 pub const MAX_SIZE_PERCENT: f64 = 400.0;
 pub const MIN_ACCENT_SIZE_PERCENT: f64 = 50.0;
@@ -231,6 +239,10 @@ impl CaptionStyle {
         100.0,
       ),
       max_words: self.max_words.clamp(MIN_WORDS, MAX_WORDS),
+      visible_words: match self.visible_words {
+        0 => 0,
+        words => words.clamp(MIN_VISIBLE_WORDS, MAX_VISIBLE_WORDS),
+      },
       text_color: color(&self.text_color, WHITE),
       highlight_color: color(&self.highlight_color, YELLOW),
       background_color: color(&self.background_color, SHADE),
@@ -257,6 +269,12 @@ impl CaptionStyle {
       CaptionLines::One => 1,
       CaptionLines::Two => 2,
     }
+  }
+
+  /// How many words show at once where they roll through the caption, or
+  /// none where every word of a caption shows at once.
+  pub fn rolling_words(&self) -> Option<usize> {
+    (self.visible_words > 0).then_some(self.visible_words as usize)
   }
 
   /// The font `face` is set in.

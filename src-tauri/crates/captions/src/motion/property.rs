@@ -47,6 +47,16 @@ impl CaptionProperty {
   pub(crate) fn index(self) -> usize {
     self as usize
   }
+
+  /// `a` and `b` together, as two motions moving one piece at once, such
+  /// as the caption's going off and its word's: sizes and how solid it is
+  /// multiply, offsets add, so either at rest leaves the other as it is.
+  pub(crate) fn stacked(self, a: f64, b: f64) -> f64 {
+    match self {
+      Self::Scale | Self::Opacity => a * b,
+      Self::OffsetX | Self::OffsetY => a + b,
+    }
+  }
 }
 
 impl<'de> Deserialize<'de> for CaptionProperty {

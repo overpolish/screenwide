@@ -1,6 +1,18 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 4,
   "id": "supersize",
+  "name": "Supersize",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Heavy capitals with one word of each caption set far larger.",
+  "fonts": [
+    {
+      "file": "fonts/Montserrat-VariableFont_wght.ttf",
+      "family": "Montserrat",
+      "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "license": "fonts/Montserrat-OFL-1.1.txt"
+    }
+  ],
   "style": {
     "font": {
       "family": "Montserrat",

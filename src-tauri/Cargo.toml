@@ -96,6 +96,9 @@ wgpu = "30.0.0"
 windows = "0.62.2"
 windows-numerics = "0.3.1"
 xcap = "0.9.8"
+# Caption template packages, shared as zips: read and written with deflate,
+# which is what every archiver writes.
+zip = { version = "4", default-features = false, features = ["deflate"] }
 
 [patch.crates-io]
 block = { path = "vendor/block-0.1.6" }

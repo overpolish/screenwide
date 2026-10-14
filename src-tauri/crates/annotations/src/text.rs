@@ -10,8 +10,8 @@
 //! [`super::shape`] is the list of what a kind has to answer, and every answer
 //! of the text box's is one function in this module.
 
-/// The families the app carries for its caption templates.
-pub mod bundled;
+/// The families the caption templates bring, read by the text engines.
+pub mod app_fonts;
 /// One box being typed into, from the press that opens it to the commit.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub mod edit;

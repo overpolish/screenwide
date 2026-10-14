@@ -1,0 +1,78 @@
+{
+  "formatVersion": 4,
+  "id": "stagger",
+  "name": "Stagger",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Three words at a time on one line, each new word pushing the oldest off.",
+  "fonts": [
+    {
+      "file": "fonts/Montserrat-VariableFont_wght.ttf",
+      "family": "Montserrat",
+      "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "license": "fonts/Montserrat-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
+  "style": {
+    "font": {
+      "family": "Montserrat",
+      "weight": 800,
+      "italic": false
+    },
+    "sizePercent": 110,
+    "allCaps": true,
+    "maxWords": 20,
+    "lines": "one",
+    "revealWords": true,
+    "visibleWords": 3,
+    "motion": {
+      "word": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "atMs": 0, "value": 0 },
+            { "atMs": 120, "value": 1 }
+          ]
+        },
+        {
+          "property": "offsetY",
+          "fromEdge": true,
+          "keyframes": [
+            { "atMs": 0, "value": 0.3 },
+            { "atMs": 200, "value": 0, "easing": "ease-out" }
+          ]
+        }
+      ],
+      "wordOut": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "atMs": 0, "value": 1 },
+            { "atMs": 200, "value": 0, "easing": "ease-in" }
+          ]
+        },
+        {
+          "property": "offsetY",
+          "fromEdge": true,
+          "keyframes": [
+            { "atMs": 0, "value": 0 },
+            { "atMs": 200, "value": -0.3, "easing": "ease-in" }
+          ]
+        }
+      ]
+    }
+  }
+}

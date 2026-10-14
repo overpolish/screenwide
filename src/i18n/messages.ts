@@ -5,6 +5,9 @@
 
 /** Every message, with the placeholders it takes; `null` for none. */
 export type Messages = {
+  "alert-caption-template-export-failed": null;
+  "alert-caption-template-import-failed": null;
+  "alert-caption-template-remove-failed": null;
   "alert-dismiss": null;
   "alert-project-open-failed": null;
   "alert-recording-capture-failed": null;
@@ -161,9 +164,12 @@ export type Messages = {
   "controls-window-maximize": null;
   "controls-window-minimize": null;
   "controls-window-restore": null;
+  "dialog-caption-template-filter": null;
   "dialog-choose-background": null;
   "dialog-choose-folder": null;
   "dialog-choose-image": null;
+  "dialog-export-caption-template": null;
+  "dialog-import-caption-template": null;
   "dialog-open-project": null;
   "dialog-pictures-filter": null;
   "dialog-project-filter": null;
@@ -329,12 +335,17 @@ export type Messages = {
   "editor-panels-captions-template-box": null;
   "editor-panels-captions-template-clean": null;
   "editor-panels-captions-template-editorial": null;
+  "editor-panels-captions-template-export": null;
   "editor-panels-captions-template-highlight": null;
+  "editor-panels-captions-template-import": null;
   "editor-panels-captions-template-karaoke": null;
   "editor-panels-captions-template-picker": null;
   "editor-panels-captions-template-pop": null;
   "editor-panels-captions-template-punch": null;
+  "editor-panels-captions-template-remove": null;
+  "editor-panels-captions-template-rise": null;
   "editor-panels-captions-template-stack": null;
+  "editor-panels-captions-template-stagger": null;
   "editor-panels-captions-template-staircase": null;
   "editor-panels-captions-template-supersize": null;
   "editor-panels-captions-text": null;
