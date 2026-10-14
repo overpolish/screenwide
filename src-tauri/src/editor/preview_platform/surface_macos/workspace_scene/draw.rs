@@ -43,8 +43,8 @@ impl WorkspaceScene {
       let mut prepared = layer
         .annotations
         .placed(geometry.placement, layer.hover, None);
-      if let Some((track, output_ms)) = &layer.captions {
-        prepared.draw_above(caption_overlay(track, *output_ms, geometry.size));
+      if let Some((track, moment)) = &layer.captions {
+        prepared.draw_above(caption_overlay(track, *moment, geometry.size));
       }
       // The canvas is drawn into its placement, which is rarely its own size:
       // zoomed out, one drawn pixel covers several canvas pixels, and an edge

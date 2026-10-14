@@ -6,8 +6,8 @@
 //! type set in the faces the style names.
 
 use screenwide_captions::{
-  caption_pieces, Caption, CaptionAccent, CaptionFont, CaptionFrame, CaptionPiece, CaptionStyle,
-  CaptionTemplateId, CaptionWord, RecordingCaptions,
+  caption_pieces, Caption, CaptionAccent, CaptionFont, CaptionFrame, CaptionMoment, CaptionPiece,
+  CaptionStyle, CaptionTemplateId, CaptionWord, RecordingCaptions,
 };
 use screenwide_imaging::CapturedImage;
 
@@ -76,7 +76,7 @@ fn pieces(style: CaptionStyle) -> (Vec<CaptionPiece>, CaptionFaces) {
       width: OUTPUT.0,
       height: OUTPUT.1,
     },
-    700.0,
+    CaptionMoment::still(700.0),
     &mut caption_measure(&faces),
   );
   (pieces, faces)
@@ -344,4 +344,36 @@ fn sets_the_accent_in_a_family_a_template_brings_upright_or_italic() {
   assert_ne!(canvas, drawn(&accented("Instrument Serif", false)));
   assert_ne!(canvas, drawn(&accented("No Such Family", true)));
   assert!(installed || canvas != before);
+}
+
+#[test]
+fn smears_a_moving_word_along_the_way_it_came_over_the_exposure() {
+  let still = pieces(styled("clean"));
+  // The same frame, the words having come 80 px from the left over it.
+  let mut moving = still.clone();
+  for piece in &mut moving.0 {
+    piece.previous_centre = [piece.centre[0] - 80.0, piece.centre[1]];
+  }
+  let (still_canvas, moving_canvas) = (drawn(&still), drawn(&moving));
+  let first = &still.0[0];
+  let half = caption_measure(&still.1)(&first.text, first.face, first.size) / 2.0;
+  // Beside the first word, on the side it came from, where it has no ink:
+  // still, the picture alone; moving, the word's white type and dark
+  // outline smeared across it.
+  let beside = [first.centre[0] - half - 40.0, first.centre[1]];
+  let band = [30.0, first.size * 0.3];
+  let changed = around(&moving_canvas, beside, band)
+    .into_iter()
+    .zip(around(&still_canvas, beside, band))
+    .filter(|(moving, still)| (0..3).any(|channel| moving[channel].abs_diff(still[channel]) > 4))
+    .count();
+  assert!(changed > 0, "the type trails back the way it came");
+  // Spread along the way, the word is fainter where it is now.
+  let ink = |canvas: &[u8]| {
+    around(canvas, first.centre, [half, first.size * 0.3])
+      .into_iter()
+      .filter(|pixel| is_white(*pixel))
+      .count()
+  };
+  assert!(ink(&moving_canvas) < ink(&still_canvas));
 }

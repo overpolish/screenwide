@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! How a piece is drawn at one moment: moved by the entrance it came on by,
-//! and, once its caption's time is over, by the exits it goes off by too.
+//! and, once its caption starts going off, by the exits it goes off by too.
 
-use super::FRAME_MS;
 use crate::motion::{pose, CaptionMotionTrack, CaptionProperty, Mirror, Pose};
 
-/// How a piece is drawn at one moment of its motion: how large about its
-/// centre and how solid, now and a frame ago, which the compositor blurs
-/// between, and how far it is moved, in ems of its type.
+/// How a piece is drawn, now and as the frame's exposure began, which the
+/// compositor blurs between: how large about its centre, how solid, and how
+/// far it is moved, in ems of its type.
 #[derive(Clone, Copy)]
 pub(super) struct Shown {
   pub(super) scale: [f64; 2],
   pub(super) opacity: [f64; 2],
-  pub(super) offset: [f64; 2],
+  pub(super) offset: [[f64; 2]; 2],
 }
 
 /// What moves a piece: the tracks it came on by, if any, and how long ago
@@ -44,23 +43,20 @@ impl Moving<'_> {
     posed
   }
 
-  /// The piece as it is drawn now. A growing piece stays where it settles,
-  /// and the size a frame ago is the size now, so growth is drawn sharp
-  /// rather than blurred as an annotation's is; how solid it is blurs
-  /// across the frame.
-  pub(super) fn shown(&self, mirror: Mirror) -> Shown {
-    let now = self.pose(0.0, mirror);
-    let before = self.pose(FRAME_MS, mirror);
+  /// The piece as it is drawn now and `exposure_ms` before.
+  pub(super) fn shown(&self, exposure_ms: f64, mirror: Mirror) -> Shown {
+    let [now, before] = [0.0, exposure_ms.max(0.0)].map(|back_ms| self.pose(back_ms, mirror));
+    let both = |property| [now.get(property), before.get(property)];
+    let offset = |pose: Pose| {
+      [
+        pose.get(CaptionProperty::OffsetX),
+        pose.get(CaptionProperty::OffsetY),
+      ]
+    };
     Shown {
-      scale: [now.get(CaptionProperty::Scale); 2],
-      opacity: [
-        now.get(CaptionProperty::Opacity),
-        before.get(CaptionProperty::Opacity),
-      ],
-      offset: [
-        now.get(CaptionProperty::OffsetX),
-        now.get(CaptionProperty::OffsetY),
-      ],
+      scale: both(CaptionProperty::Scale),
+      opacity: both(CaptionProperty::Opacity),
+      offset: [offset(now), offset(before)],
     }
   }
 }

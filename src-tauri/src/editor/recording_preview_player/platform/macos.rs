@@ -54,6 +54,9 @@ pub(crate) enum VideoFramePayload {
     overlay: Option<screenwide_compositor::compositor::still_overlay::StillOverlay>,
     bake_camera: bool,
     seconds: f64,
+    /// How much source time the frame covers, which its captions are
+    /// exposed over as its annotations are.
+    frame_ms: f32,
     clip_cursor_at_video_edge: bool,
   },
 }
@@ -70,6 +73,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
       overlay,
       bake_camera,
       seconds,
+      frame_ms,
       clip_cursor_at_video_edge,
     } => {
       if let Some(surface) = &sources.preview_surface {
@@ -92,7 +96,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
           seconds,
           cursor,
           keyboard,
-          captions: sources.captions_at(source_token),
+          captions: sources.captions_at(source_token, frame_ms),
           camera: None,
           camera_pixels: bake_camera
             .then_some(camera.as_ref())

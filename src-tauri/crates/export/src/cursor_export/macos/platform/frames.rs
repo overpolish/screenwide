@@ -194,7 +194,7 @@ impl<'a> FrameComposer<'a> {
     let mut prepared =
       prepared_arrows(&annotations.screen, source.size, settings, None, None, None)?;
     if let Some(captions) = &self.captions {
-      captions.draw_over(&mut prepared, frame.source_us);
+      captions.draw_over(&mut prepared, frame.source_us, frame.frame_ms);
     }
     let grid = grid_index(frame.source_us);
     self.compositor.draw_with_camera(

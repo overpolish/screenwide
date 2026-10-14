@@ -21,8 +21,31 @@ mod upcoming;
 /// A line's height, in ems: the twin of `LINE_HEIGHT` in the annotations'
 /// text metrics, which the compositor sets the type at.
 const LINE_HEIGHT: f64 = 1.25;
-/// A frame at 60 frames a second, which a moving piece blurs across.
-const FRAME_MS: f64 = 1_000.0 / 60.0;
+
+/// The moment a frame draws the captions at: how far into the edited video,
+/// and how long its exposure ran before then, which a moving piece smears
+/// over as a moving annotation does. A paused frame has none, and is drawn
+/// sharp.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CaptionMoment {
+  pub at_ms: f64,
+  pub exposure_ms: f64,
+}
+
+impl CaptionMoment {
+  /// `at_ms` into the edited video, drawn sharp.
+  pub fn still(at_ms: f64) -> Self {
+    Self {
+      at_ms,
+      exposure_ms: 0.0,
+    }
+  }
+
+  /// When its exposure began.
+  fn opened_ms(self) -> f64 {
+    self.at_ms - self.exposure_ms.max(0.0)
+  }
+}
 
 /// What a piece of a caption is. Colours are written `#rrggbbaa`.
 #[derive(Clone, Debug, PartialEq)]
@@ -55,14 +78,15 @@ pub struct CaptionPiece {
   pub text: String,
   /// The face its type is set in, and a word's pill measured in.
   pub face: CaptionFace,
-  /// The centre of its text block.
+  /// The centre of its text block, and where it was as the frame's exposure
+  /// began, which the compositor blurs between.
   pub centre: [f64; 2],
+  pub previous_centre: [f64; 2],
   /// The type size it is set at, before `scale`.
   pub size: f64,
-  /// How large it is drawn about its centre now and a frame ago, which the
-  /// compositor blurs between.
+  /// How large it is drawn about its centre now and as the exposure began.
   pub scale: [f64; 2],
-  /// How solid it is now and a frame ago.
+  /// How solid it is now and as the exposure began.
   pub opacity: [f64; 2],
 }
 
@@ -75,15 +99,15 @@ pub struct CaptionTrack {
 }
 
 impl CaptionTrack {
-  /// What the track draws `at_ms` into the edited video, on a canvas
+  /// What the track draws at `moment` into the edited video, on a canvas
   /// `frame` in size; see [`caption_pieces`].
   pub fn pieces_at(
     &self,
     frame: CaptionFrame,
-    at_ms: f64,
+    moment: CaptionMoment,
     measure: &mut Measure,
   ) -> Vec<CaptionPiece> {
-    caption_pieces(&self.captions, &self.recording, frame, at_ms, measure)
+    caption_pieces(&self.captions, &self.recording, frame, moment, measure)
   }
 }
 
@@ -127,14 +151,14 @@ pub fn caption_fit(
     .fold(1.0, f64::min)
 }
 
-/// What the captions draw `at_ms` into the edited video, on a canvas
+/// What the captions draw at `moment` into the edited video, on a canvas
 /// `frame` in size. `measure` gives a text's width set in a face at a type
 /// size, both in pixels, by the type the compositor sets the pieces in.
 pub fn caption_pieces(
   captions: &[Caption],
   recording: &RecordingCaptions,
   frame: CaptionFrame,
-  at_ms: f64,
+  moment: CaptionMoment,
   measure: &mut Measure,
 ) -> Vec<CaptionPiece> {
   if !recording.enabled {
@@ -149,10 +173,10 @@ pub fn caption_pieces(
     across: across >= 1.0,
     down: down <= 0.0,
   };
-  let Some(caption) = showing(captions, at_ms) else {
+  let Some(caption) = showing(captions, moment.at_ms) else {
     return Vec::new();
   };
-  caption::pieces_of(caption, &style, frame, at_ms, measure, mirror)
+  caption::pieces_of(caption, &style, frame, moment, measure, mirror)
 }
 
 /// `color` written out as `#rrggbbaa`, which an annotation's style carries.

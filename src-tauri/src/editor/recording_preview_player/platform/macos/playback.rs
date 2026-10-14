@@ -221,6 +221,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
             overlay,
             bake_camera: composition.bake_camera,
             seconds: target_ms as f64 / 1_000.0,
+            frame_ms,
             clip_cursor_at_video_edge: cursor_settings.clip_at_video_edge,
           },
         };

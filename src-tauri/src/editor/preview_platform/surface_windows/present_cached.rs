@@ -81,10 +81,10 @@ impl RecordingPreviewSurface {
       pane.annotation_halo,
       pane.annotation_typing,
     )?;
-    if let Some((track, output_ms)) = &pane.captions {
+    if let Some((track, moment)) = &pane.captions {
       prepared.draw_above(screenwide_compositor::annotation_gpu::caption_overlay(
         track,
-        *output_ms,
+        *moment,
         output_size,
       ));
     }

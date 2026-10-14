@@ -4,11 +4,12 @@
 //! The captions showing in a frame, drawn by the annotation shader as text
 //! boxes: each piece `screenwide_captions` lays out becomes a box placed in
 //! canvas pixels, set in the caption style's main face or its accent and
-//! blurred as it grows the way an annotation is, and flagged for the parts a
+//! blurred as it moves the way an annotation is, and flagged for the parts a
 //! caption draws differently - a word's type without its box, and a box
 //! without type.
 
 use super::arrows::PreviewGeometry;
+use super::caption_exposure::expose;
 use super::{placed_arrows, PreparedArrows};
 use screenwide_annotations::flags::{BARE, CAPTION, SHADOW};
 use screenwide_annotations::reveal::AnnotationReveal;
@@ -21,8 +22,8 @@ use screenwide_annotations::{
   AnnotationShape, AnnotationStyle,
 };
 use screenwide_captions::{
-  rgba, CaptionFace, CaptionFont, CaptionFrame, CaptionPiece, CaptionPieceKind, CaptionStyle,
-  CaptionTrack,
+  rgba, CaptionFace, CaptionFont, CaptionFrame, CaptionMoment, CaptionPiece, CaptionPieceKind,
+  CaptionStyle, CaptionTrack,
 };
 
 /// The face a caption font names, as the text engines take it.
@@ -60,30 +61,24 @@ pub fn caption_measure(faces: &CaptionFaces) -> impl FnMut(&str, CaptionFace, f6
   move |text, face, size| face_text_block(faces.face(face), text, size)[0]
 }
 
-/// A caption piece as a text box centred where the piece is, growing about
-/// that centre by its scale. Placing sizes a text box by Inter, so it is
-/// placed by Inter's size too, which keeps its centre on the piece's; its
-/// width is set to the face's after.
+/// A caption piece as a text box centred where the piece is, at its full
+/// size and solid: [`expose`] draws it as large and as solid as it is, and
+/// blurs it along the way it came. Placing sizes a text box by Inter, so it
+/// is placed by Inter's size too, which keeps its centre on the piece's;
+/// its width is set to the face's after.
 fn text_box(index: usize, piece: &CaptionPiece) -> Annotation {
   let color = match &piece.kind {
     CaptionPieceKind::Backdrop { color, .. } | CaptionPieceKind::Pill { color } => color,
     CaptionPieceKind::Word { ink, .. } => ink,
   };
   let [width, height] = box_size(text_block(&piece.text, piece.size), piece.size);
-  let as_f32 = |value: f64| value as f32;
   Annotation {
     above_camera: true,
     animated: true,
     id: format!("caption-{index}"),
     held: None,
     pen: false,
-    reveal: AnnotationReveal {
-      low: 0.0,
-      high: 1.0,
-      scale: as_f32(piece.scale[0]),
-      opacity: as_f32(piece.opacity[0]),
-      previous: [0.0, 1.0, as_f32(piece.scale[1]), as_f32(piece.opacity[1])],
-    },
+    reveal: AnnotationReveal::WHOLE,
     shape: AnnotationShape::Text {
       origin: AnnotationPoint {
         x: piece.centre[0] - width / 2.0,
@@ -198,12 +193,13 @@ pub fn caption_arrows(pieces: &[CaptionPiece], faces: &CaptionFaces) -> Prepared
     .map(|(index, piece)| text_box(index, piece))
     .collect();
   let mut prepared = placed_arrows(&boxes, (0.0, 0.0), (1.0, 1.0), 1.0, None, None);
-  let pieces_in_place = prepared
-    .arrows
-    .iter_mut()
-    .zip(prepared.types.iter_mut())
-    .zip(pieces);
-  for ((arrow, entry), piece) in pieces_in_place {
+  let PreparedArrows {
+    arrows,
+    types,
+    samples,
+    ..
+  } = &mut prepared;
+  for ((arrow, entry), piece) in arrows.iter_mut().zip(types.iter_mut()).zip(pieces) {
     let face = faces.face(piece.face);
     entry.face = face.clone();
     match &piece.kind {
@@ -240,35 +236,36 @@ pub fn caption_arrows(pieces: &[CaptionPiece], faces: &CaptionFaces) -> Prepared
     let ratio = face_ratio(piece, face);
     let pull =
       matches!(piece.kind, CaptionPieceKind::Pill { .. }).then(|| pill_pull(face, piece.size));
-    let first = arrow.sample_first as usize;
-    let samples = &mut prepared.samples[first..first + arrow.sample_count as usize];
-    for geometry in std::iter::once(&mut arrow.geometry)
-      .chain(samples.iter_mut().map(|sample| &mut sample.geometry))
-    {
-      if let Some(size) = backdrop {
-        resize(geometry, size);
-        continue;
-      }
+    let geometry = &mut arrow.geometry;
+    if let Some(size) = backdrop {
+      resize(geometry, size);
+    } else {
       widen(geometry, ratio);
       if let Some(pull) = pull {
         inset(geometry, pull);
       }
     }
+    expose(arrow, piece, backdrop.is_none(), samples);
   }
   prepared
 }
 
-/// What `track` draws `output_ms` into the edited video on a canvas `canvas`
-/// in size, ready to draw over a frame's own annotations, with the next
-/// caption's words asked for unseen so their type is ready when it comes on.
-pub fn caption_overlay(track: &CaptionTrack, output_ms: f64, canvas: (u32, u32)) -> PreparedArrows {
+/// What `track` draws at `moment` into the edited video on a canvas
+/// `canvas` in size, ready to draw over a frame's own annotations, with the
+/// next caption's words asked for unseen so their type is ready when it
+/// comes on.
+pub fn caption_overlay(
+  track: &CaptionTrack,
+  moment: CaptionMoment,
+  canvas: (u32, u32),
+) -> PreparedArrows {
   let frame = CaptionFrame {
     width: canvas.0,
     height: canvas.1,
   };
   let faces = CaptionFaces::of(&track.recording.style);
-  let mut pieces = track.pieces_at(frame, output_ms, &mut caption_measure(&faces));
-  pieces.extend(track.upcoming_pieces(frame, output_ms));
+  let mut pieces = track.pieces_at(frame, moment, &mut caption_measure(&faces));
+  pieces.extend(track.upcoming_pieces(frame, moment.at_ms));
   caption_arrows(&pieces, &faces)
 }
 

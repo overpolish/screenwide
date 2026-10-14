@@ -6,8 +6,8 @@
 //! tile shows exactly how its captions will look and move.
 
 use screenwide_captions::{
-  caption_fit, sample_caption, Caption, CaptionArrangement, CaptionFrame, CaptionStyle,
-  CaptionTrack, CaptionWord, Measure, RecordingCaptions, MIN_SIZE_PERCENT,
+  caption_fit, sample_caption, Caption, CaptionArrangement, CaptionFrame, CaptionMoment,
+  CaptionStyle, CaptionTrack, CaptionWord, Measure, RecordingCaptions, MIN_SIZE_PERCENT,
 };
 use screenwide_imaging::CapturedImage;
 use screenwide_output::{MeshGradientPoint, NormalizedSourceRect, ScreenshotOutputSettings};
@@ -230,12 +230,18 @@ impl CaptionPreviewer {
       view_formats: &[],
     });
     let view = target.create_view(&Default::default());
+    // Each frame is exposed over the time since the one before, as a video's
+    // is, so a tile shows the motion blurred as an export draws it.
+    let frame_ms = 1_000.0 / preview.frames_per_second;
     (0..preview.frame_count(words.len()))
       .map(|index| {
-        let at_ms = index as f64 * 1_000.0 / preview.frames_per_second;
+        let moment = CaptionMoment {
+          at_ms: index as f64 * frame_ms,
+          exposure_ms: frame_ms,
+        };
         let mut prepared =
           prepared_arrows(&[], (width, height), &settings, Some(&image), None, None)?;
-        prepared.draw_above(caption_overlay(&track, at_ms, (width, height)));
+        prepared.draw_above(caption_overlay(&track, moment, (width, height)));
         compositor.draw_with_camera(
           &view,
           &source,

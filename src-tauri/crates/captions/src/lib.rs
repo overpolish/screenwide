@@ -30,7 +30,9 @@ use screenwide_timeline::{output_duration_us, TimelineRange};
 use serde::Serialize;
 use ts_rs::TS;
 
-pub use draw::{caption_fit, caption_pieces, CaptionPiece, CaptionPieceKind, CaptionTrack};
+pub use draw::{
+  caption_fit, caption_pieces, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionTrack,
+};
 pub use lay_out::sample_caption;
 pub use layout::{CaptionLayout, CaptionPosition};
 pub use motion::{

@@ -41,7 +41,10 @@ pub(crate) struct RecordingWorkspaceLayer<'a> {
   pub keyboard: Option<KeyboardOverlay>,
   /// The captions drawn over the canvas, and the moment of the edited video
   /// they are drawn at.
-  pub captions: Option<(std::sync::Arc<screenwide_captions::CaptionTrack>, f64)>,
+  pub captions: Option<(
+    std::sync::Arc<screenwide_captions::CaptionTrack>,
+    screenwide_captions::CaptionMoment,
+  )>,
   pub camera: Option<&'a CapturedImage>,
   pub camera_pixels: Option<(*mut std::ffi::c_void, (u32, u32))>,
   pub overlay: Option<&'a StillOverlay>,

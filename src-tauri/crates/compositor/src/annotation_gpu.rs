@@ -8,6 +8,8 @@
 //! a type atlas of its own; only the editor draws images.
 
 mod arrows;
+/// A caption piece blurred over the frame's exposure.
+mod caption_exposure;
 /// The captions showing in a frame, drawn as text boxes.
 mod captions;
 mod counter_artwork;

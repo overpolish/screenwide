@@ -41,7 +41,10 @@ pub(super) struct Pane {
   /// The captions drawn over this pane's canvas, and the moment of the
   /// edited video they are drawn at. Kept across presents, so a redraw the
   /// annotations cause carries them.
-  pub(super) captions: Option<(std::sync::Arc<screenwide_captions::CaptionTrack>, f64)>,
+  pub(super) captions: Option<(
+    std::sync::Arc<screenwide_captions::CaptionTrack>,
+    screenwide_captions::CaptionMoment,
+  )>,
   /// Stable viewport-local geometry before the shared workspace transform.
   pub(super) base_rect: PreviewSurfaceRect,
   pub(super) clip: IDCompositionRectangleClip,

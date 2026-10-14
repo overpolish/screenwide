@@ -5,7 +5,7 @@
 //! its timeline lays out of the source.
 
 use super::*;
-use screenwide_captions::CaptionTrack;
+use screenwide_captions::{CaptionMoment, CaptionTrack};
 use screenwide_compositor::annotation_gpu::{caption_overlay, PreparedArrows};
 use screenwide_timeline_edit::TimelinePlan;
 
@@ -26,17 +26,18 @@ impl<'a> FrameCaptions<'a> {
     })
   }
 
-  /// Draws the captions showing at the frame `source_us` into the source
-  /// over everything `prepared` draws.
-  pub(super) fn draw_over(&self, prepared: &mut PreparedArrows, source_us: u64) {
+  /// Draws the captions showing at the frame `source_us` into the source,
+  /// exposed over the `frame_ms` of output time it covers, over everything
+  /// `prepared` draws.
+  pub(super) fn draw_over(&self, prepared: &mut PreparedArrows, source_us: u64, frame_ms: f32) {
     let output_us = self
       .timeline
       .and_then(|plan| plan.source_to_output_us(source_us))
       .unwrap_or(source_us);
-    prepared.draw_above(caption_overlay(
-      self.track,
-      output_us as f64 / 1_000.0,
-      self.canvas,
-    ));
+    let moment = CaptionMoment {
+      at_ms: output_us as f64 / 1_000.0,
+      exposure_ms: f64::from(frame_ms),
+    };
+    prepared.draw_above(caption_overlay(self.track, moment, self.canvas));
   }
 }

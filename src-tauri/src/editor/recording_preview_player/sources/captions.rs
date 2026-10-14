@@ -6,7 +6,7 @@
 //! Captions lane makes them again.
 
 use super::*;
-use screenwide_captions::CaptionTrack;
+use screenwide_captions::{CaptionMoment, CaptionTrack};
 use screenwide_timeline::source_to_output_us;
 use screenwide_timeline_edit::RecordingTimelineEdit;
 
@@ -33,11 +33,13 @@ pub(super) fn saved_captions(
 
 impl PlayerSources {
   /// The captions, and the moment of the edited video `source_ms` into the
-  /// recording plays at, for a frame to draw them at.
+  /// recording plays at, exposed over `frame_ms` as the frame's annotations
+  /// are, for a frame to draw them at.
   pub(in crate::editor::recording_preview_player) fn captions_at(
     &self,
     source_ms: u64,
-  ) -> Option<(Arc<CaptionTrack>, f64)> {
+    frame_ms: f32,
+  ) -> Option<(Arc<CaptionTrack>, CaptionMoment)> {
     let track = self
       .captions
       .read()
@@ -53,7 +55,11 @@ impl PlayerSources {
     } else {
       source_to_output_us(&ranges, source_us)?
     };
-    Some((track, output_us as f64 / 1_000.0))
+    let moment = CaptionMoment {
+      at_ms: output_us as f64 / 1_000.0,
+      exposure_ms: f64::from(frame_ms),
+    };
+    Some((track, moment))
   }
 }
 

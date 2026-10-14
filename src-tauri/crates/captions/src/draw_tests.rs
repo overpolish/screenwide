@@ -50,7 +50,13 @@ fn styled(template: &str, highlight_words: bool) -> RecordingCaptions {
 }
 
 fn pieces(recording: &RecordingCaptions, at_ms: f64) -> Vec<CaptionPiece> {
-  caption_pieces(&captions(), recording, FRAME, at_ms, &mut measure)
+  caption_pieces(
+    &captions(),
+    recording,
+    FRAME,
+    CaptionMoment::still(at_ms),
+    &mut measure,
+  )
 }
 
 fn kinds(pieces: &[CaptionPiece]) -> Vec<(&str, CaptionPieceKind)> {
@@ -124,7 +130,13 @@ fn sets_a_word_apart_in_the_accent_standing_on_its_lines_baseline() {
   recording.style.accent_color = "#ff0000".to_owned();
   let mut said = captions();
   said[0].lines[0][1].emphasis = true;
-  let drawn = caption_pieces(&said, &recording, FRAME, 1_500.0, &mut measure);
+  let drawn = caption_pieces(
+    &said,
+    &recording,
+    FRAME,
+    CaptionMoment::still(1_500.0),
+    &mut measure,
+  );
   assert_eq!((drawn[1].face, drawn[1].size), (CaptionFace::Accent, 100.0));
   assert_eq!(drawn[1].kind, word_in("#ff0000ff", true));
   assert_eq!((drawn[0].face, drawn[0].size), (CaptionFace::Main, 50.0));
@@ -420,7 +432,15 @@ fn goes_off_over_the_end_of_its_time_gone_before_the_next_comes_on() {
   }))
   .unwrap()
   .motion;
-  let at = |at_ms| caption_pieces(&following, &recording, FRAME, at_ms, &mut measure);
+  let at = |at_ms| {
+    caption_pieces(
+      &following,
+      &recording,
+      FRAME,
+      CaptionMoment::still(at_ms),
+      &mut measure,
+    )
+  };
   let texts = |pieces: &[CaptionPiece]| {
     pieces
       .iter()
@@ -474,7 +494,15 @@ fn rolls_its_words_through_a_few_at_a_time_sliding_the_rest_along() {
   }))
   .unwrap()
   .motion;
-  let at = |at_ms| caption_pieces(&rolling, &recording, FRAME, at_ms, &mut measure);
+  let at = |at_ms| {
+    caption_pieces(
+      &rolling,
+      &recording,
+      FRAME,
+      CaptionMoment::still(at_ms),
+      &mut measure,
+    )
+  };
   let x_of = |pieces: &[CaptionPiece], text: &str| {
     pieces
       .iter()
@@ -516,4 +544,39 @@ fn rolls_its_words_through_a_few_at_a_time_sliding_the_rest_along() {
     .iter()
     .all(|piece| (piece.opacity[0] - 0.5).abs() < 1e-9));
   assert!(at(3_000.0).is_empty());
+}
+
+#[test]
+fn gives_each_piece_where_and_how_it_was_as_the_frames_exposure_began() {
+  // Half an em down and three quarters size, settling over 200 ms.
+  let mut recording = styled("clean", false);
+  recording.style.motion = serde_json::from_value::<CaptionStyle>(serde_json::json!({
+    "motion": { "caption": [
+      { "property": "offsetY", "keyframes": [{ "atMs": 0, "value": 0.5 }, { "atMs": 200, "value": 0 }] },
+      { "property": "scale", "keyframes": [{ "atMs": 0, "value": 0.75 }, { "atMs": 200, "value": 1 }] }
+    ] }
+  }))
+  .unwrap()
+  .motion;
+  let at = |at_ms, exposure_ms| {
+    caption_pieces(
+      &captions(),
+      &recording,
+      FRAME,
+      CaptionMoment { at_ms, exposure_ms },
+      &mut measure,
+    )[0]
+      .clone()
+  };
+  // 100 ms in over a 50 ms exposure: a quarter em down then, from 3/8 em.
+  let moving = at(1_100.0, 50.0);
+  let settled = at(1_400.0, 0.0);
+  let down = |piece: &CaptionPiece, centre: [f64; 2]| (centre[1] - settled.centre[1]) / piece.size;
+  assert!((down(&moving, moving.centre) - 0.25).abs() < 1e-9);
+  assert!((down(&moving, moving.previous_centre) - 0.375).abs() < 1e-9);
+  assert!((moving.scale[0] - 0.875).abs() < 1e-9 && (moving.scale[1] - 0.8125).abs() < 1e-9);
+  // A paused frame has no exposure, and is drawn where it is.
+  let paused = at(1_100.0, 0.0);
+  assert_eq!(paused.previous_centre, paused.centre);
+  assert_eq!(paused.scale[1], paused.scale[0]);
 }

@@ -105,7 +105,10 @@ impl WindowsExportCompositor {
     // resolved for this frame by the caller, which owns the timeline.
     annotations: &[screenwide_annotations::Annotation],
     // The captions over the frame, and the moment of the edited video it is.
-    captions: Option<(&screenwide_captions::CaptionTrack, f64)>,
+    captions: Option<(
+      &screenwide_captions::CaptionTrack,
+      screenwide_captions::CaptionMoment,
+    )>,
     mut effects: Option<&mut FrameEffects>,
   ) -> Result<ID3D11Texture2D, String> {
     let _held = self.surface.hold()?;
@@ -168,10 +171,10 @@ impl WindowsExportCompositor {
       None,
       None,
     )?;
-    if let Some((track, output_ms)) = captions {
+    if let Some((track, moment)) = captions {
       prepared.draw_above(screenwide_compositor::annotation_gpu::caption_overlay(
         track,
-        output_ms,
+        moment,
         self.output_size,
       ));
     }

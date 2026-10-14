@@ -160,12 +160,11 @@ const annotation_text_outlined: u32 = 1u << 7u;
 const annotation_text_caption: u32 = 1u << 10u;
 const annotation_text_bare: u32 = 1u << 11u;
 
-/// A caption's word: its type alone in the annotation's colour, over an
+/// A still caption word: its type alone in the annotation's colour, over an
 /// outline where it is outlined, in the colour its parameters carry, with no
 /// box drawn. The outline is set in the atlas beside the type and read with
 /// it, so both share one smooth edge. `solid` is how much of the box it is
-/// set in covers this pixel, which carries its fade and the blur of its
-/// growing.
+/// set in covers this pixel, which carries its colour's alpha.
 ///
 /// A word's type is rasterised once, at the size it settles at, which its
 /// geometry keeps in `cx`; a word growing in is that type drawn larger or
@@ -184,6 +183,34 @@ fn annotation_caption_word(rgba_in: vec4<f32>, annotation: PreviewArrow, color: 
   return annotation_over(rgba, color.rgb, texel.a * solid);
 }
 
+/// A moving caption word: its type and outline read at every exposure
+/// sample, where and as large as the word was then, each as solid as the
+/// word was then, and averaged, so the type itself smears along the way it
+/// came, as a moving annotation's shape does. The atlas places the type once,
+/// for the word as it is now, and every sample reads it from there.
+fn annotation_caption_word_exposure(rgba_in: vec4<f32>, annotation: PreviewArrow,
+                                    color: vec4<f32>, canvas_point: vec2<f32>, feather: f32,
+                                    atlas: AnnotationTextAtlas) -> vec4<f32> {
+  let settled = annotation.geometry.cx;
+  let current = annotation_text_box(annotation.geometry);
+  var ink = vec4<f32>(0.0);
+  for (var tap = 0u; tap < annotation.sample_count; tap++) {
+    let sample = annotation_samples[annotation.sample_first + tap];
+    var box = annotation_text_box(sample.geometry);
+    box.text_origin = current.text_origin;
+    box.text_size = current.text_size;
+    let growth = select(1.0, sample.geometry.width / settled, settled > 0.0);
+    ink += annotation_text_texel(canvas_point, box, atlas, feather, growth) * sample.opacity;
+  }
+  ink /= f32(annotation.sample_count);
+  var rgba = rgba_in;
+  if ((annotation.flags & annotation_text_outlined) != 0u) {
+    let outline = vec3<f32>(annotation.params[0], annotation.params[1], annotation.params[2]);
+    rgba = annotation_over(rgba, outline, ink.r * color.a * 0.85);
+  }
+  return annotation_over(rgba, color.rgb, ink.a * color.a);
+}
+
 /// One text box: its box and pointer in the annotation's own colour, and its
 /// type in whichever of black or white reads on that colour, clipped to the
 /// box's own coverage so the two share one antialiased edge. A caption's
@@ -197,6 +224,9 @@ fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: ve
   let box = annotation_text_box(annotation.geometry);
   let distance = annotation_text_distance(canvas_point, box);
   var rgba = annotation_halo(rgba_in, color, distance, halo, feather);
+  if ((annotation.flags & annotation_text_caption) != 0u && annotation.sample_count > 0u) {
+    return annotation_caption_word_exposure(rgba, annotation, color, canvas_point, feather, atlas);
+  }
   var coverage: f32;
   if (annotation.sample_count == 0u) {
     coverage = annotation_edge(distance, feather);

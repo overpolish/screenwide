@@ -218,9 +218,16 @@ pub(super) fn render_video(
       camera_frame,
       camera_composition.as_ref(),
       &annotations.screen,
-      request
-        .captions
-        .map(|track| (track, output_us as f64 / 1_000.0)),
+      // Exposed over the frame's window, as its annotations are.
+      request.captions.map(|track| {
+        (
+          track,
+          screenwide_captions::CaptionMoment {
+            at_ms: output_us as f64 / 1_000.0,
+            exposure_ms: f64::from(window_ms),
+          },
+        )
+      }),
       camera_effects.as_mut(),
     )?;
     sink.write(

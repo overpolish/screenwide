@@ -11,6 +11,7 @@ use std::ops::Range;
 
 use super::caption::DrawnWord;
 use super::place::{place_lines, Placed, Placement};
+use super::CaptionMoment;
 use crate::motion::CaptionEasing;
 use crate::style::CaptionStyle;
 use crate::{type_size_px, Caption, CaptionFrame, CaptionWord, Measure};
@@ -23,7 +24,7 @@ fn moved(placed: Placed, by: [f64; 2]) -> Placed {
   }
 }
 
-/// The words of `caption` drawn `at_ms` into the edited video, rolling
+/// The words of `caption` drawn at `moment` into the edited video, rolling
 /// through `visible` at a time, set as `style` sets them, those still on
 /// the line going off with the caption from `exits_ms`, with the caption's
 /// own type size. Words going off come first, so those staying are drawn
@@ -32,9 +33,10 @@ pub(super) fn rolling_words<'a>(
   caption: &'a Caption,
   style: &CaptionStyle,
   visible: usize,
-  (frame, at_ms, exits_ms): (CaptionFrame, f64, f64),
+  (frame, moment, exits_ms): (CaptionFrame, CaptionMoment, f64),
   measure: &mut Measure,
 ) -> (Vec<DrawnWord<'a>>, f64) {
+  let at_ms = moment.at_ms;
   let words: Vec<&CaptionWord> = caption.lines.iter().flatten().collect();
   let said = words.partition_point(|word| word.start_ms <= at_ms);
   // The words on the line once `end` of them have been said.
@@ -50,8 +52,8 @@ pub(super) fn rolling_words<'a>(
   };
   let slide_ms = style.motion.word_entrance_ms();
   // As word `next` comes on, the line before it, how far the line moves to
-  // make room, and how much of that way it has come, eased out over as
-  // long as a word takes to come on.
+  // make room, and how much of that way it has come, now and as the frame's
+  // exposure began, eased out over as long as a word takes to come on.
   let mut slide = |next: usize| {
     let before = place(window(next));
     let after = place(window(next + 1));
@@ -61,11 +63,13 @@ pub(super) fn rolling_words<'a>(
       let to = after.words[kept - window(next + 1).start].centre;
       [to[0] - from[0], to[1] - from[1]]
     });
-    let progress = if slide_ms > 0.0 {
-      CaptionEasing::EaseOut.eased(((at_ms - words[next].start_ms) / slide_ms).clamp(0.0, 1.0))
-    } else {
-      1.0
-    };
+    let progress = [at_ms, moment.opened_ms()].map(|ms| {
+      if slide_ms > 0.0 {
+        CaptionEasing::EaseOut.eased(((ms - words[next].start_ms) / slide_ms).clamp(0.0, 1.0))
+      } else {
+        1.0
+      }
+    });
     (before, after, by, progress)
   };
   let Some(latest) = said.checked_sub(1) else {
@@ -82,20 +86,24 @@ pub(super) fn rolling_words<'a>(
       continue;
     }
     let (before, _, by, progress) = slide(pushed_by);
+    let at = |progress: f64| moved(before.words[0], by.map(|by| by * progress));
     drawn.push(DrawnWord {
       word: words[index],
       index,
-      placed: moved(before.words[0], by.map(|by| by * progress)),
+      placed: at(progress[0]),
+      previous: at(progress[1]).centre,
       leaves_ms,
     });
   }
   // The rest slide as one, the word just said coming on at the line's end.
   let (_, now, by, progress) = slide(latest);
   for (index, &placed) in window(said).zip(&now.words) {
+    let at = |progress: f64| moved(placed, by.map(|by| -by * (1.0 - progress)));
     drawn.push(DrawnWord {
       word: words[index],
       index,
-      placed: moved(placed, by.map(|by| -by * (1.0 - progress))),
+      placed: at(progress[0]),
+      previous: at(progress[1]).centre,
       leaves_ms: exits_ms,
     });
   }

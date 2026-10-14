@@ -170,7 +170,10 @@ impl RecordingPreviewSurface {
   pub(crate) fn set_captions(
     &self,
     index: u32,
-    captions: Option<(std::sync::Arc<screenwide_captions::CaptionTrack>, f64)>,
+    captions: Option<(
+      std::sync::Arc<screenwide_captions::CaptionTrack>,
+      screenwide_captions::CaptionMoment,
+    )>,
   ) {
     let Ok(mut state) = self.inner.state.lock() else {
       return;

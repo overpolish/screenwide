@@ -162,7 +162,7 @@ fn placed_native(
         ),
         kind => annotation_travel(kind, a, b, c, identity, width, reveal),
       };
-      let count = exposure_sample_count(travel, reveal);
+      let count = exposure_sample_count(travel, reveal.opacity - reveal.previous[3]);
       if count == 0 {
         // A still annotation carries its reveal's opacity in its colour. The
         // shader only knows the colour, so it is folded in here.
@@ -246,11 +246,12 @@ fn placed_native(
   prepared
 }
 
-/// How many exposure samples an annotation that moved `travel` pixels this
-/// frame needs: none when it has not moved, else enough that consecutive
-/// samples are under a pixel apart, from eight to forty-eight.
-fn exposure_sample_count(travel: f32, r: AnnotationReveal) -> u32 {
-  if travel < 1.5 && (r.opacity - r.previous[3]).abs() < 0.01 {
+/// How many exposure samples something that moved `travel` pixels and grew
+/// `fade` more solid this frame needs: none when it has done neither, else
+/// enough that consecutive samples are under a pixel apart, from eight to
+/// forty-eight.
+pub(super) fn exposure_sample_count(travel: f32, fade: f32) -> u32 {
+  if travel < 1.5 && fade.abs() < 0.01 {
     return 0;
   }
   ((travel / 0.75).ceil() + 1.0).clamp(8.0, MAX_EXPOSURE_SAMPLES as f32) as u32

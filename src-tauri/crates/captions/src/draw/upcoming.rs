@@ -60,6 +60,7 @@ impl CaptionTrack {
           text: word.text.clone(),
           face,
           centre: [0.0; 2],
+          previous_centre: [0.0; 2],
           size,
           scale: [1.0; 2],
           opacity: [0.0; 2],
