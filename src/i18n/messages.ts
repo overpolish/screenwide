@@ -82,6 +82,8 @@ export type Messages = {
   "annotation-tool-counter-name": null;
   "annotation-tool-draw": null;
   "annotation-tool-draw-name": null;
+  "annotation-tool-focus": null;
+  "annotation-tool-focus-name": null;
   "annotation-tool-highlight": null;
   "annotation-tool-highlight-name": null;
   "annotation-tool-image": null;
@@ -234,6 +236,7 @@ export type Messages = {
   "editor-lane-arrow": { number: string | number };
   "editor-lane-counter": { number: string | number };
   "editor-lane-drawing": { number: string | number };
+  "editor-lane-focus": { number: string | number };
   "editor-lane-highlight": { number: string | number };
   "editor-lane-image": { number: string | number };
   "editor-lane-magnifier": { number: string | number };

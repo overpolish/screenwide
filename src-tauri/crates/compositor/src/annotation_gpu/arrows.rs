@@ -6,6 +6,7 @@
 //! the asserts beside each struct, so a field added on one side fails the
 //! build rather than drifting silently.
 
+use super::FocusRegion;
 use screenwide_annotations::geometry::{ArrowGeometry, ArrowTriangle};
 
 /// One prepared arrow's geometry as scalars, shared by the annotation and by
@@ -203,6 +204,16 @@ pub struct PreparedArrows {
   /// standard deviation in canvas pixels and how far it has arrived, both
   /// zero where no spotlight blurs.
   pub(crate) spotlight_blur: [f32; 2],
+  /// The focus boxes this frame blurs around, in the source's own pixels;
+  /// `compositor::focus` applies them.
+  pub focus: Vec<FocusRegion>,
+  /// Where in `arrows` the topmost focus sits: everything drawn before it
+  /// is blurred, and the arrows from here on are drawn sharp over the blur.
+  pub(crate) focus_cut: u32,
+  /// Whether the topmost focus lies in the run above the camera, which
+  /// decides, as it does for a spotlight's shade, whether the camera lies
+  /// under it.
+  pub(crate) focus_above_camera: bool,
 }
 
 impl PreparedArrows {

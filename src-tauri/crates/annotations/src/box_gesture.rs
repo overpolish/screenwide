@@ -97,6 +97,7 @@ fn held_corners(shape: &AnnotationShape) -> Option<(AnnotationPoint, AnnotationP
     AnnotationShape::Redact { start, end, .. }
     | AnnotationShape::Shape { start, end, .. }
     | AnnotationShape::Spotlight { start, end }
+    | AnnotationShape::Focus { start, end }
     | AnnotationShape::Magnify { start, end, .. } => Some((*start, *end)),
     _ => None,
   }
@@ -106,6 +107,7 @@ fn write(annotation: &mut Annotation, bounds: SnapBox) {
   if let AnnotationShape::Redact { start, end, .. }
   | AnnotationShape::Shape { start, end, .. }
   | AnnotationShape::Spotlight { start, end }
+  | AnnotationShape::Focus { start, end }
   | AnnotationShape::Magnify { start, end, .. } = &mut annotation.shape
   {
     (*start, *end) = corners(bounds);

@@ -118,6 +118,13 @@ export const ANNOTATION_SIZES: Record<
     sizeMeasure: "width",
     sizes: ANNOTATION_WIDTHS,
   },
+  // A focus draws nothing: its width carries the least every clip must, the
+  // twin of `default_focus_style`'s.
+  focus: {
+    defaultSize: 1,
+    sizeMeasure: "width",
+    sizes: [1],
+  },
   highlight: {
     defaultSize: DEFAULT_ANNOTATION_HIGHLIGHT_SIZE,
     sizeMeasure: "height",

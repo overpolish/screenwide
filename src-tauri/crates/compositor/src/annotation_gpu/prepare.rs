@@ -7,7 +7,8 @@
 //! moving arrow smears along the path it actually travelled.
 
 use super::{
-  PreparedArrows, PreparedImage, PreparedType, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
+  FocusRegion, PreparedArrows, PreparedImage, PreparedType, PreviewArrow, PreviewSample,
+  MAX_EXPOSURE_SAMPLES,
 };
 use screenwide_annotations::exposure::{annotation_travel, highlight_travel, magnify_travel};
 use screenwide_annotations::native::{native_annotations, NativeAnnotations};
@@ -113,6 +114,14 @@ fn placed_native(
       .enumerate()
       .filter(|(_, annotation)| annotation.above_camera == above)
     {
+      // A focus's box goes to the blur, which softens the arrows drawn so
+      // far. It stays in the list at the cut, first of what is drawn sharp
+      // over the blur, where the canvas draws its hover halo and nothing else.
+      if annotation.shape_kind() == AnnotationKind::Focus {
+        prepared.focus.push(focus_region(annotation));
+        prepared.focus_cut = prepared.arrows.len() as u32;
+        prepared.focus_above_camera = above == 1;
+      }
       let (a, b, c) = (
         place(annotation.p0),
         place(annotation.p1),
@@ -244,6 +253,21 @@ fn placed_native(
   prepared.points = data.points;
   prepared.text = data.text;
   prepared
+}
+
+/// A focus's box as the blur reads it, in the source's own pixels: the
+/// record's corners, its corner radius from the share of its shorter side
+/// it keeps in `p1`, and how present its reveal has it.
+fn focus_region(item: &screenwide_annotations::native::NativeAnnotation) -> FocusRegion {
+  let [x0, y0] = item.p0;
+  let [x1, y1] = item.p2;
+  let shorter = (x1 - x0).abs().min((y1 - y0).abs());
+  FocusRegion {
+    bounds: [x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1)],
+    radius: shorter * item.p1[0].clamp(0.0, 50.0) / 100.0,
+    strength: item.params[0],
+    presence: item.reveal.opacity.clamp(0.0, 1.0),
+  }
 }
 
 /// How many exposure samples something that moved `travel` pixels and grew

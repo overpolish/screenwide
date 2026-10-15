@@ -133,6 +133,7 @@ fn grip_at_point(
     | AnnotationKind::Redact
     | AnnotationKind::Shape
     | AnnotationKind::Spotlight
+    | AnnotationKind::Focus
     | AnnotationKind::Draw
     | AnnotationKind::Magnify
     | AnnotationKind::Image => found,
@@ -208,6 +209,7 @@ pub(super) fn item_grips(
     AnnotationKind::Redact
     | AnnotationKind::Shape
     | AnnotationKind::Spotlight
+    | AnnotationKind::Focus
     | AnnotationKind::Draw
     | AnnotationKind::Image => Vec::new(),
     AnnotationKind::Magnify => vec![super::magnify_chrome::loupe_grip(image, item)],

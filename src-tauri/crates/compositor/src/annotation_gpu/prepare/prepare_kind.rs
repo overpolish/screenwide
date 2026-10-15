@@ -7,6 +7,7 @@
 use super::*;
 use screenwide_annotations::arrow::geometry::prepare_arrow;
 use screenwide_annotations::counter::geometry::prepare_counter;
+use screenwide_annotations::focus::geometry::prepare_focus;
 use screenwide_annotations::freehand::geometry::prepare_freehand;
 use screenwide_annotations::geometry::ArrowGeometry;
 use screenwide_annotations::highlight::geometry::prepare_highlight;
@@ -63,6 +64,9 @@ pub(super) fn prepared_geometry(
       reveal,
     ),
     AnnotationKind::Spotlight => prepare_spotlight(a, c, annotation.p1[0], annotation.p1[1]),
+    // The box the blur keeps sharp, which the canvas wears its hover halo
+    // round, as a spotlight's.
+    AnnotationKind::Focus => prepare_focus(a, c, annotation.p1[0]),
     // A stroke is placed by where its box's corner, that corner moved a
     // source pixel, and its far corner land.
     AnnotationKind::Draw => prepare_freehand(a, b, c, annotation.width, reveal),

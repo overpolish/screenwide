@@ -186,6 +186,16 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         />
       ) : null}
 
+      {/* A focus's strength is the width of its blur, the same five steps a
+          blurred redaction offers. */}
+      {annotation.kind === "focus" ? (
+        <AnnotationBlurStrengthRow
+          change={change}
+          isLocked={isLocked}
+          strength={strength}
+        />
+      ) : null}
+
       {kind.hasRadius ? (
         <ControlRow title={t("annotation-radius")}>
           {(controlProps) => (

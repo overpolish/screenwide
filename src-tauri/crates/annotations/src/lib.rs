@@ -58,6 +58,9 @@ pub mod exposure;
 pub(crate) mod ffi;
 /// The draw tool's own half of the model: a line drawn freehand. Not called
 /// `draw`, which is what every kind's native record is built by.
+/// The focus tool's own half of the model: a box left sharp while the
+/// picture around it softens.
+pub mod focus;
 pub mod freehand;
 /// The draw record every kind fills, and the arithmetic it is built with.
 /// Both platforms prepare from it: the shared compositor calls each kind's

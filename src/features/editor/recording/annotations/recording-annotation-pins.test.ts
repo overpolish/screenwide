@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { ANNOTATION_DRAW_IN_MS } from "../../annotations/annotation-kinds";
+import { ANNOTATION_DRAW_IN_MS } from "../../annotations/annotation-draw-in";
 import { Annotation } from "../../annotations/annotations";
 import {
   createRecordingTimelineEdit,

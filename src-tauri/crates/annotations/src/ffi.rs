@@ -13,6 +13,7 @@ use super::arrow::distance::prepared_arrow_distance;
 use super::arrow::geometry::prepare_arrow;
 use super::counter::geometry::prepare_counter;
 use super::counter::silhouette::prepared_counter_distance;
+use super::focus::geometry::{focus_distance, prepare_focus};
 use super::freehand::geometry::{freehand_body_distance, freehand_distance, prepare_freehand};
 use super::geometry::ArrowGeometry;
 use super::highlight::geometry::{flow_distance, prepare_highlight, HighlightFlow};
@@ -82,6 +83,7 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
     }
     Some(AnnotationKind::Shape) => prepare_shape([p0x, p0y], [p2x, p2y], p1x, p1y, width, reveal),
     Some(AnnotationKind::Spotlight) => prepare_spotlight([p0x, p0y], [p2x, p2y], p1x, p1y),
+    Some(AnnotationKind::Focus) => prepare_focus([p0x, p0y], [p2x, p2y], p1x),
     Some(AnnotationKind::Draw) => {
       prepare_freehand([p0x, p0y], [p1x, p1y], [p2x, p2y], width, reveal)
     }
@@ -161,6 +163,7 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
     Some(AnnotationKind::Redact) => redact_distance([px, py], geometry),
     Some(AnnotationKind::Shape) => shape_distance([px, py], geometry),
     Some(AnnotationKind::Spotlight) => spotlight_distance([px, py], geometry),
+    Some(AnnotationKind::Focus) => focus_distance([px, py], geometry),
     Some(AnnotationKind::Magnify) => magnify_distance([px, py], geometry),
     Some(AnnotationKind::Image) => image_distance([px, py], geometry),
     // A highlight's record places bands it does not carry, and a stroke's

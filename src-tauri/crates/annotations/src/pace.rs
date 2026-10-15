@@ -84,6 +84,7 @@ fn path_length(annotation: &Annotation) -> Option<f64> {
     AnnotationShape::Counter { .. }
     | AnnotationShape::Redact { .. }
     | AnnotationShape::Spotlight { .. }
+    | AnnotationShape::Focus { .. }
     | AnnotationShape::Magnify { .. }
     | AnnotationShape::Image { .. }
     | AnnotationShape::Text { .. } => None,

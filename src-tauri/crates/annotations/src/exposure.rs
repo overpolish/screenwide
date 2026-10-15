@@ -83,6 +83,7 @@ pub fn annotation_travel(
     AnnotationKind::Redact
     | AnnotationKind::Highlight
     | AnnotationKind::Spotlight
+    | AnnotationKind::Focus
     | AnnotationKind::Draw
     | AnnotationKind::Magnify => 0.0,
   }

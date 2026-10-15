@@ -84,6 +84,7 @@ export function useRecordingPreviewCanvasTool({
       counter: toggle("counter"),
       crop: toggle("crop"),
       draw: toggle("draw"),
+      focus: toggle("focus"),
       highlight: toggle("highlight"),
       image: toggle("image"),
       magnify: toggle("magnify"),

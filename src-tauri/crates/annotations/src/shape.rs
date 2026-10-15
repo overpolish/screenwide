@@ -82,6 +82,14 @@ pub enum AnnotationShape {
     start: AnnotationPoint,
     end: AnnotationPoint,
   },
+  /// A box left sharp while everything around it softens. `start` is its
+  /// top-left corner and `end` its bottom-right, in source pixels; the style
+  /// rounds its corners and sets how strong the blur is. Nothing is drawn
+  /// for it: the blur itself is the effect.
+  Focus {
+    start: AnnotationPoint,
+    end: AnnotationPoint,
+  },
   /// A line drawn freehand: the points the hand passed through, in source
   /// pixels, thinned as it was drawn. `smooth` fits the line loosely enough
   /// that a wobbly curve comes out clean.
@@ -144,6 +152,7 @@ impl AnnotationShape {
       Self::Highlight { .. } => AnnotationKind::Highlight,
       Self::Shape { .. } => AnnotationKind::Shape,
       Self::Spotlight { .. } => AnnotationKind::Spotlight,
+      Self::Focus { .. } => AnnotationKind::Focus,
       Self::Draw { .. } => AnnotationKind::Draw,
       Self::Magnify { .. } => AnnotationKind::Magnify,
       Self::Image { .. } => AnnotationKind::Image,
@@ -166,6 +175,7 @@ impl AnnotationShape {
       | Self::Highlight { .. }
       | Self::Shape { .. }
       | Self::Spotlight { .. }
+      | Self::Focus { .. }
       | Self::Draw { .. }
       | Self::Magnify { .. }
       | Self::Image { .. } => super::arrow::bend::ArrowBend::STRAIGHT,

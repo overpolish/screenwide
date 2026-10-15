@@ -25,7 +25,7 @@ const POINTER_OUT_SHARE: f32 = 240.0 / 280.0;
 
 /// How long a text box takes to arrive, pointer and all, where its clip names
 /// no pace. The twin of `ANNOTATION_TEXT_DRAW_IN_MS` in
-/// `src/features/editor/annotations/annotation-kinds.ts`, which reaches such a clip this
+/// `src/features/editor/annotations/annotation-draw-in.ts`, which reaches such a clip this
 /// far back so the box is whole by the time the playhead is reached.
 #[cfg(test)]
 const TEXT_REVEAL_IN_MS: f32 = COUNTER_REVEAL_IN_MS + POINTER_IN_MS;
@@ -124,14 +124,14 @@ mod tests {
   fn the_editor_places_a_text_clip_by_this_arrival() {
     const SOURCE: &str = include_str!(concat!(
       env!("CARGO_MANIFEST_DIR"),
-      "/../../../src/features/editor/annotations/annotation-kinds.ts"
+      "/../../../src/features/editor/annotations/annotation-draw-in.ts"
     ));
     let declared = SOURCE
       .lines()
       .find_map(|line| {
         line
           .trim()
-          .strip_prefix("const ANNOTATION_TEXT_DRAW_IN_MS = ")
+          .strip_prefix("export const ANNOTATION_TEXT_DRAW_IN_MS = ")
       })
       .and_then(|value| value.trim_end_matches(';').parse::<f32>().ok());
     assert_eq!(declared, Some(TEXT_REVEAL_IN_MS));

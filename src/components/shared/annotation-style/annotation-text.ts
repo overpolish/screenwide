@@ -18,6 +18,8 @@ export const annotationToolLabel = (kind: AnnotationKind) => {
       return t("annotation-tool-counter");
     case "draw":
       return t("annotation-tool-draw");
+    case "focus":
+      return t("annotation-tool-focus");
     case "highlight":
       return t("annotation-tool-highlight");
     case "image":
@@ -44,6 +46,8 @@ export const annotationToolName = (kind: AnnotationKind) => {
       return t("annotation-tool-counter-name");
     case "draw":
       return t("annotation-tool-draw-name");
+    case "focus":
+      return t("annotation-tool-focus-name");
     case "highlight":
       return t("annotation-tool-highlight-name");
     case "image":

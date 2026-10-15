@@ -8,6 +8,8 @@ mod precompiled_shaders;
 const MODULES: &[(&str, &[&str])] = &[
   ("annotation_blur", &["src/shaders/annotation_blur.wgsl"]),
   ("mips", &["src/shaders/mips.wgsl"]),
+  ("focus_blur", &["src/shaders/focus_blur.wgsl"]),
+  ("focus_copy", &["src/shaders/focus_copy.wgsl"]),
   (
     "preview",
     &[

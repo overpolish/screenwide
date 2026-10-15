@@ -6,7 +6,7 @@
 //! space.
 
 use super::super::{
-  arrow, counter, freehand, highlight, image, magnify, outline, redact, spotlight, text,
+  arrow, counter, focus, freehand, highlight, image, magnify, outline, redact, spotlight, text,
   AnnotationPoint,
 };
 
@@ -27,7 +27,8 @@ impl super::AnnotationShape {
       Self::Text { origin, .. } => [*origin; 3],
       Self::Redact { start, end, .. }
       | Self::Shape { start, end, .. }
-      | Self::Spotlight { start, end } => [*start, *end, *end],
+      | Self::Spotlight { start, end }
+      | Self::Focus { start, end } => [*start, *end, *end],
       Self::Magnify {
         start, end, loupe, ..
       } => [*start, *end, *loupe],
@@ -72,6 +73,7 @@ impl super::AnnotationShape {
       Self::Redact { start, end, .. } => redact::model::placed(*start, *end),
       Self::Shape { start, end, .. } => outline::model::placed(*start, *end),
       Self::Spotlight { start, end } => spotlight::model::placed(*start, *end),
+      Self::Focus { start, end } => focus::model::placed(*start, *end),
       Self::Highlight {
         start, end, bands, ..
       } => highlight::model::placed(*start, *end, bands),
@@ -151,6 +153,10 @@ impl super::AnnotationShape {
         seed: *seed,
       },
       Self::Spotlight { start, end } => Self::Spotlight {
+        start: map(*start),
+        end: map(*end),
+      },
+      Self::Focus { start, end } => Self::Focus {
         start: map(*start),
         end: map(*end),
       },

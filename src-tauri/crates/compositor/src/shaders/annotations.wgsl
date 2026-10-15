@@ -338,8 +338,13 @@ fn annotation_label_tint(color: vec3<f32>) -> vec3<f32> {
 /// is not drawn here, so this is the only thing that finds an erased box on
 /// its own surface: it is white round a dark fill and black round a light
 /// one, and stronger than the halo a coloured shape wears in its own colour.
-/// The twin of the halo `annotation_redact_halo` draws.
+/// The twin of the halo `annotation_redact_halo` draws. A focus wears it too,
+/// as a spotlight does.
 const annotation_redact_halo_alpha: f32 = 0.5;
+
+/// A focus, which the blur pass applies to the frame: the canvas draws only
+/// its hover halo. The twin of `AnnotationKind::Focus`.
+const annotation_focus_kind: u32 = 10u;
 
 fn annotation_redact_halo(rgba: vec4<f32>, annotation: PreviewArrow, canvas_point: vec2<f32>,
                           feather: f32) -> vec4<f32> {
@@ -447,7 +452,10 @@ fn annotation_arrow_bounds(arrow: PreviewGeometry, halo: f32, feather: f32) -> v
 fn annotation_layer(rgba: vec4<f32>, annotation: PreviewArrow, canvas_point: vec2<f32>,
                     feather: f32, number_atlas: AnnotationTextAtlas) -> vec4<f32> {
   let color = annotation_color(annotation);
-  if (annotation_kind_drawn(3u) && annotation.kind == 3u) {
+  // A redaction is applied to the source and a focus blurs the frame, so
+  // neither is drawn here but its hover halo, round its box.
+  if ((annotation_kind_drawn(3u) && annotation.kind == 3u) ||
+      (annotation_kind_drawn(annotation_focus_kind) && annotation.kind == annotation_focus_kind)) {
     return annotation_redact_halo(rgba, annotation, canvas_point, feather);
   }
   let halo = max(annotation.hover, 0.0);

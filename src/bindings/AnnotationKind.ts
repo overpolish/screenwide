@@ -9,4 +9,4 @@
  * `AnnotationShape` and what the live overlay's settings store, so a kind
  * is one word in a document, in settings, and over the native boundary.
  */
-export type AnnotationKind = "arrow" | "counter" | "text" | "redact" | "highlight" | "shape" | "spotlight" | "draw" | "magnify" | "image";
+export type AnnotationKind = "arrow" | "counter" | "text" | "redact" | "highlight" | "shape" | "spotlight" | "draw" | "magnify" | "image" | "focus";

@@ -95,6 +95,19 @@ struct Canvas {
   // says whether the screen is turned at all over the frame, the seventh's
   // whether the turn moved while the shutter was open.
   scene_turn: array<vec4<f32>, 9>,
+  // Which part of a focused frame this pass draws: the whole frame (0), only
+  // what lies under the topmost focus (1), or only what lies over it, on
+  // nothing (2); then where in the annotations that focus sits, and whether
+  // it lies in the run above the camera.
+  focus: vec4<f32>,
+}
+
+fn focus_mode() -> u32 {
+  return u32(canvas.focus.x);
+}
+
+fn focus_cut() -> u32 {
+  return u32(canvas.focus.y);
 }
 
 // How many placements a frame averages while a scene moves its panes; one
@@ -271,6 +284,13 @@ fn rounded_coverage(pixel: vec2<f32>, rect: vec4<f32>, radius: f32) -> f32 {
 
 fn drop_shadow(distance: f32, sigma: f32) -> f32 {
   return (36.0 / 255.0) * exp(-0.5 * distance * distance / (sigma * sigma));
+}
+
+// A shadow `shadow` strong laid over `result` as premultiplied black: on an
+// opaque canvas it darkens what is there, and on nothing, as the pass over a
+// focus draws, it is the shadow itself.
+fn shadowed(result: vec4<f32>, shadow: f32) -> vec4<f32> {
+  return vec4<f32>(result.rgb * (1.0 - shadow), result.a + shadow * (1.0 - result.a));
 }
 
 // The screen's drop shadow, its box read at `box_pixel` and its image at
@@ -775,13 +795,13 @@ fn camera_layer_at(result_in: vec4<f32>, pixel: vec2<f32>, frame: vec4<f32>,
       // lies inside the frame, so nothing farther out is reached.
       if (rounded_distance(pixel, frame, 0.0) < 4.5 * sigma) {
         let shadow = cut_out_shadow(camera_image, pixel, frame, crop, frame, vec2<f32>(0.0), sigma);
-        result = vec4<f32>(result.rgb * (1.0 - shadow), result.a);
+        result = shadowed(result, shadow);
       }
     } else {
       let shadow_pixel = pixel - vec2<f32>(0.0, sigma * 0.35);
       let distance = max(rounded_distance(shadow_pixel, frame, canvas.camera_effects.x), 0.0);
       let shadow = drop_shadow(distance, sigma);
-      result = vec4<f32>(result.rgb * (1.0 - shadow * (1.0 - camera_alpha)), result.a);
+      result = shadowed(result, shadow * (1.0 - camera_alpha));
     }
   }
   let camera_local = (pixel - frame.xy) / frame.zw;
@@ -857,7 +877,7 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
     if (foreground_only) {
       result.a = shadow * under;
     } else {
-      result = vec4<f32>(result.rgb * (1.0 - shadow * under), result.a);
+      result = shadowed(result, shadow * under);
     }
   }
   if (inset.a > 0.0) {
@@ -1222,13 +1242,30 @@ fn annotation_run(result_in: vec4<f32>, base: vec4<f32>, pixel: vec2<f32>, scree
                   camera_run: bool, feather: f32, atlas: AnnotationTextAtlas) -> Panes {
   let below = select(0u, canvas.annotation_options.x, annotations_drawn);
   let total = select(0u, canvas.annotation_options.y, annotations_drawn);
-  let first = select(0u, below, camera_run);
-  let last = select(below, total, camera_run);
+  var first = select(0u, below, camera_run);
+  var last = select(below, total, camera_run);
+  var all = total;
+  // A focused frame is drawn in two parts, cut where the topmost focus sits:
+  // what lies under it, which the focus blurs, and what lies over it, which
+  // is drawn sharp over the blur. Only the focus's own run is cut; the panes
+  // decide which pass draws a run on either side of it whole.
+  let own_run = focus_mode() != 0u && camera_run == focus_in_camera_run();
+  if (own_run && focus_mode() == 1u) {
+    all = min(all, focus_cut());
+    last = min(last, all);
+    first = min(first, last);
+  } else if (own_run) {
+    first = max(first, focus_cut());
+    last = max(last, first);
+  }
   let probe = select(screen.at, pixel, camera_run);
   let probe_feather = select(feather * screen.scale, feather, camera_run);
   probing_turned = !camera_run && screen_turned();
-  var result = composite_annotation_layers(result_in, base, probe, first, last, total,
-                                           probe_feather, atlas, !camera_run);
+  // The cursor lies on the picture, so it is drawn with the screen's run:
+  // under a focus in that run, and sharp where the whole run lies over one.
+  let cursor = !camera_run && !(own_run && focus_mode() == 2u);
+  var result = composite_annotation_layers(result_in, base, probe, first, last, all,
+                                           probe_feather, atlas, cursor);
   probing_turned = false;
   result = mix(result_in, result,
                select(canvas.scene_opacity.x, canvas.scene_opacity.y, camera_run));
@@ -1241,23 +1278,50 @@ fn has_camera_run() -> bool {
   return annotations_drawn && canvas.annotation_options.y > canvas.annotation_options.x;
 }
 
+// Whether the topmost focus lies in the camera's run rather than the screen's.
+fn focus_in_camera_run() -> bool {
+  return canvas.focus.z != 0.0;
+}
+
+// How many runs the panes draw: the camera's too where it carries
+// annotations, or where the focus lies in it.
+fn pane_runs() -> u32 {
+  return select(1u, 2u, has_camera_run() || (focus_mode() != 0u && focus_in_camera_run()));
+}
+
+// Whether this pass draws what sits at `order` in the panes' order, the focus
+// sitting at `at`: the whole frame everything, the pass under the focus what
+// comes before it and the pass over it what comes after, the focus's own run
+// in both, each its side of the cut. A pane comes before or after the focus
+// as a spotlight's shade darkens it or not.
+fn focus_keeps(order: u32, at: u32) -> bool {
+  let mode = focus_mode();
+  return mode == 0u || (mode == 1u && order <= at) || (mode == 2u && order >= at);
+}
+
 // The screen and its annotations, then the camera and its own. Both runs go
 // through the one call: the composite is large, and the GPU compiler inlines
 // every call site whole, which multiplies how long the pipeline takes to
-// build.
+// build. In order: the screen, its run, the camera, the camera's run.
 fn panes_camera_in_front(start: vec4<f32>, pixel: vec2<f32>, screen: ScreenPoint,
                          foreground_only: bool, feather: f32, atlas: AnnotationTextAtlas)
     -> Panes {
-  var result = screen_pane(start, screen, foreground_only);
+  let at = select(1u, 3u, focus_in_camera_run());
+  var result = start;
+  if (focus_keeps(0u, at)) {
+    result = screen_pane(start, screen, foreground_only);
+  }
   let base = result;
-  let runs = select(1u, 2u, has_camera_run());
+  let runs = pane_runs();
   for (var run = 0u; run < runs; run++) {
-    let drawn = annotation_run(result, base, pixel, screen, run == 1u, feather, atlas);
-    if (drawn.stopped) {
-      return drawn;
+    if (focus_keeps(1u + 2u * run, at)) {
+      let drawn = annotation_run(result, base, pixel, screen, run == 1u, feather, atlas);
+      if (drawn.stopped) {
+        return drawn;
+      }
+      result = drawn.rgba;
     }
-    result = drawn.rgba;
-    if (run == 0u) {
+    if (run == 0u && focus_keeps(2u, at)) {
       result = camera_layer(result, pixel);
     }
   }
@@ -1265,24 +1329,33 @@ fn panes_camera_in_front(start: vec4<f32>, pixel: vec2<f32>, screen: ScreenPoint
 }
 
 // The camera and its own annotations, then the screen and its annotations
-// over them, each run over the canvas its own pane was just laid on.
+// over them, each run over the canvas its own pane was just laid on. In
+// order: the camera, its run, the screen, the screen's run.
 fn panes_camera_behind(start: vec4<f32>, pixel: vec2<f32>, screen: ScreenPoint,
                        foreground_only: bool, feather: f32, atlas: AnnotationTextAtlas)
     -> Panes {
-  var result = camera_layer(start, pixel);
+  let at = select(3u, 1u, focus_in_camera_run());
+  var result = start;
+  if (focus_keeps(0u, at)) {
+    result = camera_layer(start, pixel);
+  }
   var base = result;
-  let runs = select(1u, 2u, has_camera_run());
+  let runs = pane_runs();
   for (var run = 0u; run < runs; run++) {
     let camera_run = run + 1u < runs;
     if (!camera_run) {
-      result = screen_pane(result, screen, foreground_only);
+      if (focus_keeps(2u, at)) {
+        result = screen_pane(result, screen, foreground_only);
+      }
       base = result;
     }
-    let drawn = annotation_run(result, base, pixel, screen, camera_run, feather, atlas);
-    if (drawn.stopped) {
-      return drawn;
+    if (focus_keeps(select(3u, 1u, camera_run), at)) {
+      let drawn = annotation_run(result, base, pixel, screen, camera_run, feather, atlas);
+      if (drawn.stopped) {
+        return drawn;
+      }
+      result = drawn.rgba;
     }
-    result = drawn.rgba;
   }
   return Panes(result, base, false);
 }
@@ -1303,10 +1376,6 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let foreground_only = canvas.cursor_options.w != 0u;
   let background_alpha = rounded_coverage(pixel, vec4<f32>(0.0, 0.0, canvas.output_source.xy),
                                           canvas.effects.y);
-  var result = vec4<f32>(0.0);
-  if (!foreground_only) {
-    result = vec4<f32>(background(pixel), 1.0);
-  }
   // Every annotation edge feathers over one *drawn* pixel, not one canvas
   // pixel: a canvas shown smaller than its resolution would otherwise take its
   // whole antialiasing band from inside a single drawn pixel and come out
@@ -1315,10 +1384,17 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   // The atlas's size and, in `motion.w`, how many atlas pixels it holds per
   // canvas pixel.
   let annotation_atlas = AnnotationTextAtlas(canvas.annotation_options.zw, canvas.motion.w);
+  let camera_front = canvas.camera_effects.w;
+  // The pass over a focus draws what comes after it on nothing, to lay sharp
+  // over the blurred frame; the panes decide what that is.
+  let over_focus = focus_mode() == 2u;
+  var result = vec4<f32>(0.0);
+  if (!foreground_only && !over_focus) {
+    result = vec4<f32>(background(pixel), 1.0);
+  }
   // While a scene crosses the order over, both orders are drawn and mixed:
   // outside the panes' overlap they agree, so only the overlap fades from one
   // pane to the other. The mark blur's layer is drawn from the nearer order.
-  let camera_front = canvas.camera_effects.w;
   var panes: Panes;
   if (canvas.camera_effects.y == 0.0 || camera_front >= 1.0 ||
       (annotation_blur_mode() == 1u && camera_front >= 0.5)) {
@@ -1340,13 +1416,21 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     return panes.rgba - panes.base;
   }
   result = panes.rgba;
-  result = composite_keyboard(result, pixel, canvas.output_source.xy);
-  if (!foreground_only) {
+  // Under a focus, the shortcut strip and the crop magnifier are left for
+  // the pass over it, which keeps them sharp.
+  if (focus_mode() != 1u) {
+    result = composite_keyboard(result, pixel, canvas.output_source.xy);
+  }
+  if (!foreground_only && !over_focus) {
     // Hashed at the drawn pixel's corner, as every macOS canvas has dithered.
     result = vec4<f32>(saturate(result.rgb + hash(floor(position.xy), 0x9e3779b9u) / 255.0), result.a);
   }
-  result = crop_magnifier(result, pixel);
+  if (focus_mode() != 1u) {
+    result = crop_magnifier(result, pixel);
+  }
   // DirectComposition consumes premultiplied alpha. Clip every composed layer
   // to the rounded canvas and premultiply only once at the final boundary.
-  return result * background_alpha;
+  // What lies under a focus is clipped after it is blurred, by the gather,
+  // so the canvas's own corners stay as sharp as they are drawn.
+  return result * select(background_alpha, 1.0, focus_mode() == 1u);
 }

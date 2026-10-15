@@ -21,6 +21,7 @@ mod cursor_artwork;
 #[cfg(target_os = "windows")]
 mod d3d11_source;
 mod draw;
+mod focus;
 mod layer;
 mod mark_blur;
 pub mod mips;
@@ -172,6 +173,7 @@ pub struct Compositor {
   camera_canvases: std::sync::Mutex<std::collections::HashMap<usize, SourceTexture>>,
   mark_blur: mark_blur::MarkBlur,
   mips: mips::Mips,
+  focus: focus::FocusBlur,
   sampler: wgpu::Sampler,
   point_sampler: wgpu::Sampler,
 }
@@ -243,6 +245,8 @@ mod caption_render_tests;
 mod crop_preview_tests;
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod cut_out_shadow_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod focus_tests;
 #[cfg(all(test, target_os = "windows", target_arch = "x86_64"))]
 mod fpu_tests;
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]

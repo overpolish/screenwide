@@ -19,6 +19,8 @@ mod caption_turn;
 /// The captions showing in a frame, drawn as text boxes.
 mod captions;
 mod counter_artwork;
+/// A focus box, held beside the arrows for the blur.
+mod focus_region;
 /// An atlas's texture.
 mod gpu_atlas;
 mod image_artwork;
@@ -33,6 +35,7 @@ pub use captions::{caption_arrows, caption_face, caption_measure, caption_overla
 /// A counter's number and a text box's lines are type, so they are
 /// rasterised rather than drawn by the shader.
 pub use counter_artwork::{numbered_arrows, CounterAtlas};
+pub use focus_region::FocusRegion;
 /// An image's picture is drawn into an atlas of its own, in colour.
 pub(crate) use image_artwork::{place_images, ImageAtlas};
 pub use prepare::SourceAnnotations;

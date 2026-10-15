@@ -42,7 +42,7 @@ use screenwide_timeline::easing::ease_in_out_cubic;
 /// overlay records. The editor paces every clip it writes by its own path, in
 /// `src/features/editor/annotations/annotation-pace.ts`, from this same second at a
 /// typical arrow's length. The twin of `ANNOTATION_DRAW_IN_MS` in
-/// `src/features/editor/annotations/annotation-kinds.ts`, which reaches a clip without a
+/// `src/features/editor/annotations/annotation-draw-in.ts`, which reaches a clip without a
 /// pace this far back; `the_editor_places_a_clip_by_this_phase` holds the two
 /// together.
 pub const REVEAL_DRAW_IN_MS: f32 = 1_000.0;

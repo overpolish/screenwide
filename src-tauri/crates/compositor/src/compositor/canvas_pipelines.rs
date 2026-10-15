@@ -226,25 +226,30 @@ impl Compositor {
   }
 
   /// Has a draw that is missing its variant compile it in the background
-  /// from now on, as a preview wants, and makes ready the two variants a
-  /// preview leans on: the one with no annotation, which most of its frames
-  /// draw with, and the one with every kind, which draws any frame whose own
-  /// variant is still compiling.
+  /// from now on, as a preview wants, and makes ready the variants a preview
+  /// leans on: the one with no annotation, which most of its frames draw
+  /// with, and the one with every kind, which draws any frame whose own
+  /// variant is still compiling - onto a whole canvas, and as a layer laid
+  /// over others, which a stacked screenshot's layers and what lies over a
+  /// focus are drawn as. A layer with none of its own ready would otherwise
+  /// be compiled where it is drawn, holding the frame.
   pub fn compile_annotation_kinds_in_background(&self) {
     let canvas = &self.canvas;
     canvas.in_background.store(true, Ordering::Relaxed);
-    let variants: Vec<_> = [0, every_kind()]
-      .into_iter()
-      .map(|kinds| canvas.variant(kinds))
-      .collect();
+    let (none, every) = (canvas.variant(0), canvas.variant(every_kind()));
+    let warm = [
+      (none, Target::Canvas),
+      (Arc::clone(&every), Target::Canvas),
+      (every, Target::Layer),
+    ];
     let (device, layout) = (canvas.device.clone(), canvas.layout.clone());
     // One thread, the variant with none first: a preview mostly draws with
     // it, and the one with every kind takes many times as long to compile.
     let _ = std::thread::Builder::new()
       .name("canvas-shader-warm".to_owned())
       .spawn(move || {
-        for variant in variants {
-          variant.pipeline(&device, &layout, Target::Canvas);
+        for (variant, target) in warm {
+          variant.pipeline(&device, &layout, target);
         }
       });
   }

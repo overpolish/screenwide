@@ -5,21 +5,27 @@
  * What each kind of annotation is and can do, one row per kind: how it is read
  * from a document, how long it takes to arrive, what the lane calls it and
  * which controls the panel offers it. `annotation-kind-lookup.ts` reads the
- * table for one stored kind or one annotation.
+ * table for one stored kind or one annotation. The kinds held by a box have
+ * their rows in `annotation-box-kinds.ts`, and every kind's arrival time is
+ * in `annotation-draw-in.ts`.
  */
 
 import { ANNOTATION_SIZES } from "../../../components/shared/annotation-style/widths";
 import { t } from "../../../i18n/i18n";
 
+import { BOX_KIND_ROWS } from "./annotation-box-kinds";
+import {
+  ANNOTATION_COUNTER_DRAW_IN_MS,
+  ANNOTATION_DRAW_IN_MS,
+  ANNOTATION_MAGNIFY_DRAW_IN_MS,
+  ANNOTATION_TEXT_DRAW_IN_MS,
+} from "./annotation-draw-in";
 import {
   arrowShape,
   counterShape,
   drawShape,
   highlightShape,
   magnifyShape,
-  outlineShape,
-  redactShape,
-  spotlightShape,
   imageShape,
   textShape,
 } from "./annotation-shape-parsers";
@@ -28,28 +34,12 @@ import type { AnnotationKindRow } from "./annotation-kind-row";
 import type { AnnotationShape } from "./annotations";
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
-/**
- * How long an animated annotation takes to arrive where its clip names no
- * pace, in source milliseconds. The twins of `REVEAL_DRAW_IN_MS`,
- * `COUNTER_REVEAL_IN_MS`, `TEXT_REVEAL_IN_MS`, `SPOTLIGHT_FADE_IN_MS` and
- * `MAGNIFY_REVEAL_IN_MS` in `src-tauri/src/editor/annotations/reveal.rs`,
- * `counter/reveal.rs`, `text/reveal.rs`, `spotlight/reveal.rs` and
- * `magnify/reveal.rs`, which Rust tests hold to these
- * lines. A clip the editor paces arrives over its path's own time instead, as
- * `annotation-pace.ts` works it out. A text box's is its box's arrival and
- * then its pointer's, and a spotlight's is its shade deepening.
- */
-export const ANNOTATION_DRAW_IN_MS = 1000;
-const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
-const ANNOTATION_TEXT_DRAW_IN_MS = 600;
-const ANNOTATION_SPOTLIGHT_DRAW_IN_MS = 400;
-const ANNOTATION_MAGNIFY_DRAW_IN_MS = 450;
-
 export const ANNOTATION_KINDS: {
   [Kind in AnnotationKind]: AnnotationKindRow<
     Extract<AnnotationShape, { kind: Kind }>
   >;
 } = {
+  ...BOX_KIND_ROWS,
   arrow: {
     ...ANNOTATION_SIZES.arrow,
     animates: true,
@@ -191,79 +181,6 @@ export const ANNOTATION_KINDS: {
     hasSoftness: false,
     laneLabel: (_, index) => t("editor-lane-magnifier", { number: index + 1 }),
     parseShape: magnifyShape,
-    reversible: false,
-    startsStill: false,
-  },
-  redact: {
-    ...ANNOTATION_SIZES.redact,
-    // A redaction ramps in on a counter's timing and never leaves. It starts
-    // without the ramp, since a box arriving shows what it hides until it
-    // has.
-    animates: true,
-    drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
-    hasAlign: false,
-    hasAngle: false,
-    hasBlur: false,
-    hasColor: true,
-    hasFit: false,
-    hasHandDrawn: false,
-    hasHead: false,
-    hasInk: false,
-    hasRadius: true,
-    hasRedaction: true,
-    hasShadow: false,
-    hasSize: true,
-    hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-redaction", { number: index + 1 }),
-    parseShape: redactShape,
-    reversible: false,
-    startsStill: true,
-  },
-  shape: {
-    ...ANNOTATION_SIZES.shape,
-    // Drawn round its outline the way an arrow is along its path.
-    animates: true,
-    drawInMs: ANNOTATION_DRAW_IN_MS,
-    hasAlign: false,
-    hasAngle: false,
-    hasBlur: false,
-    hasColor: true,
-    hasFit: false,
-    hasHandDrawn: true,
-    hasHead: false,
-    hasInk: false,
-    hasRadius: true,
-    hasRedaction: false,
-    hasShadow: false,
-    hasSize: true,
-    hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-shape", { number: index + 1 }),
-    parseShape: outlineShape,
-    reversible: false,
-    startsStill: false,
-  },
-  spotlight: {
-    ...ANNOTATION_SIZES.spotlight,
-    // The shade deepens round it as it arrives and lifts as it leaves. It is
-    // no colour and no stroke: only its box, its corners, its fade and
-    // whether what is outside it blurs.
-    animates: true,
-    drawInMs: ANNOTATION_SPOTLIGHT_DRAW_IN_MS,
-    hasAlign: false,
-    hasAngle: false,
-    hasBlur: true,
-    hasColor: false,
-    hasFit: false,
-    hasHandDrawn: false,
-    hasHead: false,
-    hasInk: false,
-    hasRadius: true,
-    hasRedaction: false,
-    hasShadow: false,
-    hasSize: false,
-    hasSoftness: true,
-    laneLabel: (_, index) => t("editor-lane-spotlight", { number: index + 1 }),
-    parseShape: spotlightShape,
     reversible: false,
     startsStill: false,
   },

@@ -63,6 +63,14 @@ impl Compositor {
     gpu
       .queue
       .write_buffer(&self.constants, 0, bytemuck::bytes_of(&values));
+    let focus = super::focus::FocusPlan::of(&values, prepared);
+    if let Some(plan) = &focus {
+      for (part, constants) in self.focus.constants.iter().enumerate() {
+        gpu
+          .queue
+          .write_buffer(constants, 0, bytemuck::bytes_of(&plan.pass(values, part)));
+      }
+    }
     let annotation_buffer = self.annotations.write(gpu, &annotations)?;
     let sample_buffer = self.samples.write(gpu, &prepared.samples)?;
     let points_buffer = self.annotation_points.write(gpu, &prepared.points)?;
@@ -162,24 +170,40 @@ impl Compositor {
         )
       })
       .transpose()?;
-    let bindings = bind(
-      &self.constants,
-      blurred
-        .as_ref()
-        .map_or([fallback, fallback], |[marks, cursor]| [marks, cursor]),
-    );
-    {
-      // A layer keeps the layers drawn under it; a whole canvas is written over
-      // every pixel, so what the target held is never read.
-      let load = if layer.clear {
-        wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
-      } else {
-        wgpu::LoadOp::Load
-      };
+    let layers = blurred
+      .as_ref()
+      .map_or([fallback, fallback], |[marks, cursor]| [marks, cursor]);
+    // A layer keeps the layers drawn under it; a whole canvas is written over
+    // every pixel, so what the target held is never read.
+    let load = if layer.clear {
+      wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
+    } else {
+      wgpu::LoadOp::Load
+    };
+    // A placed canvas keeps the target's own pixels, which the shader maps
+    // back to canvas pixels, and is cut to its rectangle. A viewport would
+    // scale it instead, but one is capped at the largest texture size, and
+    // a canvas zoomed far in is drawn larger than that.
+    let drawn = match layer.placement {
+      None => Some((size, None)),
+      Some(placement) => placement
+        .scissor()
+        .map(|scissor| (placement.target, Some(scissor))),
+    };
+    let canvas_target = if composition.foreground_only {
+      Target::Layer
+    } else {
+      Target::Canvas
+    };
+    let canvas_pass = |encoder: &mut wgpu::CommandEncoder,
+                       view: &wgpu::TextureView,
+                       load: wgpu::LoadOp<wgpu::Color>,
+                       pipeline: Target,
+                       bindings: &wgpu::BindGroup| {
       let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("Screenwide preview canvas"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-          view: target,
+          view,
           depth_slice: None,
           resolve_target: None,
           ops: wgpu::Operations {
@@ -189,30 +213,59 @@ impl Compositor {
         })],
         ..Default::default()
       });
-      // A placed canvas keeps the target's own pixels, which the shader maps
-      // back to canvas pixels, and is cut to its rectangle. A viewport would
-      // scale it instead, but one is capped at the largest texture size, and
-      // a canvas zoomed far in is drawn larger than that.
-      let drawn = match layer.placement {
-        None => Some((size, None)),
-        Some(placement) => placement
-          .scissor()
-          .map(|scissor| (placement.target, Some(scissor))),
-      };
       if let Some(((width, height), scissor)) = drawn {
         pass.set_viewport(0.0, 0.0, width as f32, height as f32, 0.0, 1.0);
         if let Some([x, y, width, height]) = scissor {
           pass.set_scissor_rect(x, y, width, height);
         }
-        let target = if composition.foreground_only {
-          Target::Layer
-        } else {
-          Target::Canvas
-        };
-        pass.set_pipeline(&self.canvas.get(target, kinds, every));
-        pass.set_bind_group(0, &bindings, &[]);
+        pass.set_pipeline(&self.canvas.get(pipeline, kinds, every));
+        pass.set_bind_group(0, bindings, &[]);
         pass.draw(0..3, 0..1);
       }
+    };
+    match (&focus, drawn) {
+      // A focused frame: what lies under the focus into the chain, blurred
+      // into the target, then what lies over it laid sharp on top.
+      (Some(plan), Some((frame, scissor))) => {
+        let [under, over] = &self.focus.constants;
+        let chain = self.focus.chain(gpu, frame, layer.redaction_slot)?;
+        canvas_pass(
+          &mut encoder,
+          &chain,
+          wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+          canvas_target,
+          &bind(under, layers),
+        );
+        self.focus.record(
+          gpu,
+          &mut encoder,
+          plan,
+          layer.redaction_slot,
+          super::focus::FocusTarget {
+            view: target,
+            load,
+            over: composition.foreground_only,
+            size: frame,
+            scissor,
+          },
+        )?;
+        if plan.draws_over(&values, &annotations, keyboard.is_some()) {
+          canvas_pass(
+            &mut encoder,
+            target,
+            wgpu::LoadOp::Load,
+            Target::Layer,
+            &bind(over, layers),
+          );
+        }
+      }
+      _ => canvas_pass(
+        &mut encoder,
+        target,
+        load,
+        canvas_target,
+        &bind(&self.constants, layers),
+      ),
     }
     gpu.queue.submit([encoder.finish()]);
     Ok(source_view)

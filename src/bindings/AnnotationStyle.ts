@@ -36,9 +36,9 @@ handDrawn: boolean,
  */
 manual: boolean, 
 /**
- * A redaction's, a shape's, a spotlight's or a magnifier's corner radius,
- * as a percentage of its box's shorter side from 0 to 50; the other kinds
- * carry zero.
+ * A redaction's, a shape's, a spotlight's, a focus's or a magnifier's
+ * corner radius, as a percentage of its box's shorter side from 0 to 50;
+ * the other kinds carry zero.
  */
 radius: number, redaction: AnnotationRedaction, 
 /**
@@ -52,8 +52,8 @@ softness: number,
  */
 shadow: boolean, 
 /**
- * A blurred redaction's strength, a step from 1 to 5; the other kinds
- * carry zero.
+ * A blurred redaction's or a focus's strength, a step from 1 to 5; the
+ * other kinds carry zero.
  */
 strength: number, 
 /**

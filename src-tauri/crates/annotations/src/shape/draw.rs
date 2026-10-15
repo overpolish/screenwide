@@ -34,6 +34,7 @@ impl super::AnnotationShape {
       Self::Spotlight { start, end } => {
         super::super::spotlight::native::draw_points(*start, *end, style)
       }
+      Self::Focus { start, end } => super::super::focus::native::draw_points(*start, *end, style),
       Self::Draw { points, .. } => super::super::freehand::native::draw_points(points),
       Self::Magnify {
         start, end, loupe, ..
@@ -74,6 +75,7 @@ impl super::AnnotationShape {
       | Self::Highlight { .. }
       | Self::Shape { .. }
       | Self::Spotlight { .. }
+      | Self::Focus { .. }
       | Self::Draw { .. }
       | Self::Magnify { .. } => 0,
       // Which way the picture faces: the shader mirrors it on one.
@@ -91,6 +93,7 @@ impl super::AnnotationShape {
       | Self::Highlight { .. }
       | Self::Shape { .. }
       | Self::Spotlight { .. }
+      | Self::Focus { .. }
       | Self::Draw { .. }
       | Self::Magnify { .. } => std::borrow::Cow::Borrowed(""),
       // The picture's library id, which the image atlas draws it from.
@@ -159,6 +162,9 @@ impl super::AnnotationShape {
       Self::Spotlight { start, end } => {
         super::super::spotlight::handles::grips(*start, *end, style, index, source)
       }
+      Self::Focus { start, end } => {
+        super::super::focus::handles::grips(*start, *end, style, index, source)
+      }
       Self::Draw { points, smooth } => super::super::freehand::handles::grips(
         points,
         *smooth,
@@ -221,6 +227,7 @@ impl super::AnnotationShape {
       Self::Redact { start, end, .. } => super::super::redact::snap::field_box(*start, *end),
       Self::Shape { start, end, .. } => super::super::outline::model::field_box(*start, *end),
       Self::Spotlight { start, end } => super::super::spotlight::model::field_box(*start, *end),
+      Self::Focus { start, end } => super::super::focus::model::field_box(*start, *end),
       Self::Draw { points, .. } => super::super::freehand::model::field_box(points),
       Self::Magnify { start, end, .. } => super::super::magnify::model::field_box(*start, *end),
       Self::Image {
@@ -262,6 +269,7 @@ impl super::AnnotationShape {
       | Self::Highlight { .. }
       | Self::Shape { .. }
       | Self::Spotlight { .. }
+      | Self::Focus { .. }
       | Self::Draw { .. }
       | Self::Magnify { .. }
       | Self::Image { .. } => None,

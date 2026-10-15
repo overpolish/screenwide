@@ -132,19 +132,20 @@ impl PinTarget {
         }
       }
       // A shape follows what it outlines as one region, and keeps its size;
-      // a spotlight follows what it lights the same way.
-      AnnotationShape::Shape { start, end, .. } | AnnotationShape::Spotlight { start, end } => {
-        Self {
-          anchor: [0.5 * (start.x + end.x), 0.5 * (start.y + end.y)],
-          region: [
-            start.x.min(end.x),
-            start.y.min(end.y),
-            start.x.max(end.x),
-            start.y.max(end.y),
-          ],
-          redaction: false,
-        }
-      }
+      // a spotlight follows what it lights the same way, and a focus follows
+      // what it keeps sharp.
+      AnnotationShape::Shape { start, end, .. }
+      | AnnotationShape::Spotlight { start, end }
+      | AnnotationShape::Focus { start, end } => Self {
+        anchor: [0.5 * (start.x + end.x), 0.5 * (start.y + end.y)],
+        region: [
+          start.x.min(end.x),
+          start.y.min(end.y),
+          start.x.max(end.x),
+          start.y.max(end.y),
+        ],
+        redaction: false,
+      },
       // A stroke follows what it marks as one region, and keeps its size.
       AnnotationShape::Draw { points, .. } => {
         let (low, high) = crate::freehand::model::bounds(points);

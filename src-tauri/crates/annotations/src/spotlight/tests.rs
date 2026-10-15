@@ -80,14 +80,14 @@ fn a_spotlight_fades_in_and_out_on_its_own_time() {
 fn the_editor_places_a_spotlight_by_its_fade() {
   const SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../../src/features/editor/annotations/annotation-kinds.ts"
+    "/../../../src/features/editor/annotations/annotation-draw-in.ts"
   ));
   let declared = SOURCE
     .lines()
     .find_map(|line| {
       line
         .trim()
-        .strip_prefix("const ANNOTATION_SPOTLIGHT_DRAW_IN_MS = ")
+        .strip_prefix("export const ANNOTATION_SPOTLIGHT_DRAW_IN_MS = ")
     })
     .and_then(|value| value.trim_end_matches(';').parse::<f32>().ok());
   assert_eq!(declared, Some(SPOTLIGHT_FADE_IN_MS));

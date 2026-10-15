@@ -13,8 +13,8 @@
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_kind_is_box(uint32_t kind) {
   return kind == ScreenwideAnnotationKindRedact || kind == ScreenwideAnnotationKindShape ||
-         kind == ScreenwideAnnotationKindSpotlight || kind == ScreenwideAnnotationKindDraw ||
-         kind == ScreenwideAnnotationKindMagnify;
+         kind == ScreenwideAnnotationKindSpotlight || kind == ScreenwideAnnotationKindFocus ||
+         kind == ScreenwideAnnotationKindDraw || kind == ScreenwideAnnotationKindMagnify;
 }
 
 /// Whether a box has a radius dot: a stroke has no corners to round.

@@ -35,7 +35,10 @@ impl super::super::Annotation {
         super::super::counter::gesture::drag(self, handle, point, origin, shift, snap)
       }
       AnnotationKind::Text => super::super::text::gesture::drag(self, handle, point, origin, snap),
-      AnnotationKind::Redact | AnnotationKind::Shape | AnnotationKind::Spotlight => {
+      AnnotationKind::Redact
+      | AnnotationKind::Shape
+      | AnnotationKind::Spotlight
+      | AnnotationKind::Focus => {
         super::super::box_gesture::drag(self, handle, point, origin, shift, snap)
       }
       AnnotationKind::Highlight => {
@@ -77,7 +80,10 @@ impl super::super::Annotation {
         origin,
         snap,
       ),
-      AnnotationKind::Redact | AnnotationKind::Shape | AnnotationKind::Spotlight => {
+      AnnotationKind::Redact
+      | AnnotationKind::Shape
+      | AnnotationKind::Spotlight
+      | AnnotationKind::Focus => {
         super::super::box_gesture::drag_new(self, point, origin, shift, snap)
       }
       AnnotationKind::Highlight => super::super::highlight::gesture::drag_new(self, point, origin),
@@ -132,6 +138,7 @@ impl AnnotationKind {
         style,
       ),
       Self::Spotlight => super::super::spotlight::model::new_spotlight(id, [point, point], style),
+      Self::Focus => super::super::focus::model::new_focus(id, [point, point], style),
       Self::Draw => super::super::freehand::model::new_draw(id, point, style),
       Self::Magnify => super::super::magnify::model::new_magnify(id, point, style),
       Self::Image => super::super::image::model::new_image(
@@ -189,6 +196,13 @@ impl AnnotationKind {
         Default::default(),
         1.0,
       ),
+      // A focus deepens its blur the way a spotlight's shade deepens.
+      Self::Focus => super::super::spotlight::reveal::spotlight_reveal_window(
+        elapsed_ms,
+        duration_ms,
+        Default::default(),
+        1.0,
+      ),
       Self::Magnify => {
         super::super::magnify::reveal::magnify_reveal_window(elapsed_ms, duration_ms, frame_ms)
       }
@@ -206,7 +220,12 @@ impl AnnotationKind {
         own.unwrap_or(super::super::reveal::REVEAL_DRAW_IN_MS)
       }
       Self::Text => own.unwrap_or(super::super::text::reveal::POINTER_IN_MS),
-      Self::Counter | Self::Redact | Self::Spotlight | Self::Magnify | Self::Image => 0.0,
+      Self::Counter
+      | Self::Redact
+      | Self::Spotlight
+      | Self::Focus
+      | Self::Magnify
+      | Self::Image => 0.0,
     }
   }
 
@@ -226,7 +245,7 @@ impl AnnotationKind {
       Self::Text => super::super::text::reveal::text_reveal_span_ms(path_ms),
       // A redaction ramps in and never leaves.
       Self::Redact => COUNTER_REVEAL_IN_MS,
-      Self::Spotlight => {
+      Self::Spotlight | Self::Focus => {
         use super::super::spotlight::reveal::{SPOTLIGHT_FADE_IN_MS, SPOTLIGHT_FADE_OUT_MS};
         SPOTLIGHT_FADE_IN_MS + SPOTLIGHT_FADE_OUT_MS
       }

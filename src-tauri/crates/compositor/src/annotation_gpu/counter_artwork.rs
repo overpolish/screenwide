@@ -261,6 +261,7 @@ pub fn numbered_arrows(
           | AnnotationKind::Highlight
           | AnnotationKind::Shape
           | AnnotationKind::Spotlight
+          | AnnotationKind::Focus
           | AnnotationKind::Draw
           | AnnotationKind::Magnify
           | AnnotationKind::Image,

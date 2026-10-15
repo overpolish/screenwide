@@ -44,12 +44,19 @@ export type AnnotationTool = AnnotationKind | "marquee" | "select";
  * corners round a picture rather than a box, and it has no colour to share.
  */
 type DressGroup =
-  "highlight" | "magnify" | "redact" | "shared" | "spotlight" | "image";
+  | "focus"
+  | "highlight"
+  | "magnify"
+  | "redact"
+  | "shared"
+  | "spotlight"
+  | "image";
 const lastUsed = new Map<DressGroup, AnnotationStyle>();
 const dressGroup = (kind: AnnotationKind): DressGroup =>
   kind === "redact" ||
   kind === "highlight" ||
   kind === "spotlight" ||
+  kind === "focus" ||
   kind === "magnify" ||
   kind === "image"
     ? kind
@@ -181,7 +188,7 @@ export const firstAnnotationDress = (
   align: "left",
   blur: false,
   color:
-    kind === "redact" || kind === "spotlight"
+    kind === "redact" || kind === "spotlight" || kind === "focus"
       ? "#000000"
       : kind === "magnify"
         ? "#ffffff"
@@ -189,11 +196,16 @@ export const firstAnnotationDress = (
   handDrawn: false,
   head: kind === "arrow" ? "end" : "none",
   manual: false,
-  radius: kind === "spotlight" ? SPOTLIGHT_RADIUS : kind === "magnify" ? 50 : 0,
+  radius:
+    kind === "spotlight" || kind === "focus"
+      ? SPOTLIGHT_RADIUS
+      : kind === "magnify"
+        ? 50
+        : 0,
   redaction: "erase",
   shadow: kind === "magnify",
   softness: kind === "spotlight" ? SOFT_SPOTLIGHT_EDGE : 0,
-  strength: kind === "redact" ? DEFAULT_BLUR_STRENGTH : 0,
+  strength: kind === "redact" || kind === "focus" ? DEFAULT_BLUR_STRENGTH : 0,
   tint: false,
   width: defaultAnnotationSize(kind),
 });

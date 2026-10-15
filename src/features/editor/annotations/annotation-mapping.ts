@@ -65,6 +65,7 @@ export const mappedAnnotationShape = (
     case "redact":
     case "shape":
     case "spotlight":
+    case "focus":
       return { ...shape, end: map(shape.end), start: map(shape.start) };
   }
 };

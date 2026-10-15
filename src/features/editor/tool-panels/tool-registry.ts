@@ -7,6 +7,7 @@ import {
   ArrowToolIcon,
   CounterToolIcon,
   DrawToolIcon,
+  FocusToolIcon,
   HighlightToolIcon,
   MagnifyToolIcon,
   RedactToolIcon,
@@ -93,6 +94,12 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     panel: "annotation",
     shortcut: "D",
   },
+  focus: {
+    drawsOnLayer: true,
+    icon: FocusToolIcon,
+    panel: "annotation",
+    shortcut: "B",
+  },
   frame: { panel: "frame", resetsView: true, shortcut: "F" },
   highlight: {
     drawsOnLayer: true,
@@ -165,6 +172,7 @@ const ANNOTATION_TOOL_ORDER: readonly AnnotationKind[] = [
   "highlight",
   "counter",
   "spotlight",
+  "focus",
   "magnify",
 ];
 

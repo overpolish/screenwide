@@ -42,6 +42,13 @@ static inline AnnotationArrowGeometry annotation_prepared(
                                   end.y, 0.0f, 0, annotation_reveal_whole(), &prepared);
     return prepared;
   }
+  if (item.kind == ScreenwideAnnotationKindFocus) {
+    // A focus reads as a spotlight does: its corner radius rides in
+    // `start_head`, and it draws nothing else.
+    screenwide_annotation_prepare(item.kind, start.x, start.y, item.start_head, 0.0f, end.x,
+                                  end.y, 0.0f, 0, annotation_reveal_whole(), &prepared);
+    return prepared;
+  }
   if (item.kind == ScreenwideAnnotationKindMagnify) {
     // The loupe's centre rides in `middle`, placed like the zoom area's
     // corners; its size rides in `end_head` as a share of the drawn width

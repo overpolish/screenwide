@@ -16,6 +16,7 @@ annotation-tool-magnify = Magnifier
 annotation-tool-redact = Redact
 annotation-tool-shape = Shape
 annotation-tool-spotlight = Spotlight
+annotation-tool-focus = Focus
 annotation-tool-text = Text
 annotation-tool-arrow-name = Draw an arrow
 annotation-tool-counter-name = Drop a counter
@@ -26,6 +27,7 @@ annotation-tool-magnify-name = Magnify a detail
 annotation-tool-redact-name = Redact a region
 annotation-tool-shape-name = Draw a shape
 annotation-tool-spotlight-name = Spotlight a region
+annotation-tool-focus-name = Keep a region sharp
 annotation-tool-text-name = Add text
 
 ## What the size control measures

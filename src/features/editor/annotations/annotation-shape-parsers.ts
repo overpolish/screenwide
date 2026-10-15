@@ -123,6 +123,13 @@ export const spotlightShape = (value: unknown): Shape<"spotlight"> | null => {
   return start && end ? { end, kind: "spotlight", start } : null;
 };
 
+export const focusShape = (value: unknown): Shape<"focus"> | null => {
+  const shape = (value ?? {}) as Record<string, unknown>;
+  const start = annotationPoint(shape.start);
+  const end = annotationPoint(shape.end);
+  return start && end ? { end, kind: "focus", start } : null;
+};
+
 /** A finite number above zero, or null. */
 const positive = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) && value > 0

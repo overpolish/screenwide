@@ -117,9 +117,9 @@ pub struct AnnotationStyle {
   /// the other kinds carry `false`.
   #[serde(default)]
   pub manual: bool,
-  /// A redaction's, a shape's, a spotlight's or a magnifier's corner radius,
-  /// as a percentage of its box's shorter side from 0 to 50; the other kinds
-  /// carry zero.
+  /// A redaction's, a shape's, a spotlight's, a focus's or a magnifier's
+  /// corner radius, as a percentage of its box's shorter side from 0 to 50;
+  /// the other kinds carry zero.
   #[serde(default)]
   pub radius: f64,
   #[serde(default)]
@@ -132,8 +132,8 @@ pub struct AnnotationStyle {
   /// kinds carry `false`.
   #[serde(default)]
   pub shadow: bool,
-  /// A blurred redaction's strength, a step from 1 to 5; the other kinds
-  /// carry zero.
+  /// A blurred redaction's or a focus's strength, a step from 1 to 5; the
+  /// other kinds carry zero.
   #[serde(default = "default_strength")]
   pub strength: f64,
   /// Whether a highlight tints what it covers, the way a felt marker does,

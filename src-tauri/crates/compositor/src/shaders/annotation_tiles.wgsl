@@ -50,7 +50,7 @@ fn annotation_reach(annotation: PreviewArrow, feather: f32) -> vec4<f32> {
   if (kind == annotation_highlight_kind) {
     return annotation_highlight_bounds(annotation, feather);
   }
-  if (kind == 3u) {
+  if (kind == 3u || kind == annotation_focus_kind) {
     return annotation_redact_halo_bounds(annotation, feather);
   }
   if (kind == 1u) {

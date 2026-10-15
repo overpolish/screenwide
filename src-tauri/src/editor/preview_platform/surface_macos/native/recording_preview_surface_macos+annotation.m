@@ -36,7 +36,8 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode
          mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact ||
          mode == ScreenwideAnnotationModeHighlight || mode == ScreenwideAnnotationModeShape ||
          mode == ScreenwideAnnotationModeSpotlight || mode == ScreenwideAnnotationModeDraw ||
-         mode == ScreenwideAnnotationModeMagnify || mode == ScreenwideAnnotationModeImage;
+         mode == ScreenwideAnnotationModeMagnify || mode == ScreenwideAnnotationModeImage ||
+         mode == ScreenwideAnnotationModeFocus;
 }
 
 /// What a press does if it never travels: an ordinary press, a toggle of the

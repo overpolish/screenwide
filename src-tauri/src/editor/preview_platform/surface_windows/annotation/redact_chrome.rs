@@ -20,6 +20,7 @@ pub(super) fn is_box(kind: AnnotationKind) -> bool {
     AnnotationKind::Redact
       | AnnotationKind::Shape
       | AnnotationKind::Spotlight
+      | AnnotationKind::Focus
       | AnnotationKind::Draw
       | AnnotationKind::Magnify
   )

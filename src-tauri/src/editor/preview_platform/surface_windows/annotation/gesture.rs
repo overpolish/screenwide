@@ -114,6 +114,7 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
           | AnnotationKind::Highlight
           | AnnotationKind::Shape
           | AnnotationKind::Spotlight
+          | AnnotationKind::Focus
           | AnnotationKind::Draw
           | AnnotationKind::Magnify,
         ) => {

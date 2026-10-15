@@ -113,6 +113,7 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindDraw = 7,
   ScreenwideAnnotationKindMagnify = 8,
   ScreenwideAnnotationKindImage = 9,
+  ScreenwideAnnotationKindFocus = 10,
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
@@ -132,6 +133,7 @@ typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeMagnify = 10,
   ScreenwideAnnotationModeMarquee = 11,
   ScreenwideAnnotationModeImage = 12,
+  ScreenwideAnnotationModeFocus = 13,
 };
 /// Which grip a press took hold of. A box's grips - a redaction's, a shape's
 /// or a spotlight's - report `Box` plus the sides they move - 1 left, 2 right, 4 top,

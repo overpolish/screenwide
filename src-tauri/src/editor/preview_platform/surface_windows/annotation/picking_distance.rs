@@ -45,7 +45,7 @@ pub(super) fn arrow_distance(
         &text_geometry(image, item),
       );
     }
-    AnnotationKind::Redact | AnnotationKind::Spotlight => {
+    AnnotationKind::Redact | AnnotationKind::Spotlight | AnnotationKind::Focus => {
       return super::redact_chrome::distance(image, item, point)
     }
     AnnotationKind::Shape => {

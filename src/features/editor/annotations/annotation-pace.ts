@@ -24,7 +24,8 @@
  * clip without one falls back to.
  */
 
-import { ANNOTATION_DRAW_IN_MS, ANNOTATION_KINDS } from "./annotation-kinds";
+import { ANNOTATION_DRAW_IN_MS } from "./annotation-draw-in";
+import { ANNOTATION_KINDS } from "./annotation-kinds";
 
 import type { Annotation } from "./annotations";
 import type { RecordingAnnotationClip } from "../recording/annotations/recording-annotations";
@@ -111,6 +112,7 @@ const pathLength = ({ shape, style }: Annotation) => {
     case "magnify":
     case "redact":
     case "spotlight":
+    case "focus":
     case "image":
     case "text":
       return null;

@@ -3,6 +3,7 @@
 
 import {
   ArrowUpRight,
+  Droplet,
   EyeOff,
   Flashlight,
   Highlighter,
@@ -29,6 +30,7 @@ export const RedactToolIcon = EyeOff;
 export const HighlightToolIcon = Highlighter;
 export const ShapeToolIcon = Square;
 export const SpotlightToolIcon = Flashlight;
+export const FocusToolIcon = Droplet;
 export const DrawToolIcon = Pencil;
 export const MagnifyToolIcon = ScanSearch;
 export const ImageToolIcon = Image;

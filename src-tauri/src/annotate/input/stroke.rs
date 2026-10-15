@@ -102,6 +102,7 @@ impl Stroke {
         | AnnotationKind::Redact
         | AnnotationKind::Shape
         | AnnotationKind::Spotlight
+        | AnnotationKind::Focus
         | AnnotationKind::Draw
         | AnnotationKind::Magnify
         | AnnotationKind::Image => settings.default_width,
@@ -159,7 +160,8 @@ impl Stroke {
       AnnotationKind::Text
       | AnnotationKind::Redact
       | AnnotationKind::Magnify
-      | AnnotationKind::Image => None,
+      | AnnotationKind::Image
+      | AnnotationKind::Focus => None,
     }
   }
 
@@ -185,7 +187,8 @@ impl Stroke {
       AnnotationKind::Text
       | AnnotationKind::Redact
       | AnnotationKind::Magnify
-      | AnnotationKind::Image => false,
+      | AnnotationKind::Image
+      | AnnotationKind::Focus => false,
     }
   }
 

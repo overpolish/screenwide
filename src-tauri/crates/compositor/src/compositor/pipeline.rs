@@ -75,6 +75,7 @@ impl Compositor {
       camera_canvases: std::sync::Mutex::new(std::collections::HashMap::new()),
       mark_blur: super::mark_blur::MarkBlur::new(gpu),
       mips: super::mips::Mips::new(gpu),
+      focus: super::focus::FocusBlur::new(gpu),
       sampler: sampler(device, wgpu::FilterMode::Linear),
       point_sampler: sampler(device, wgpu::FilterMode::Nearest),
     })

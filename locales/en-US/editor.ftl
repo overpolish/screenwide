@@ -66,6 +66,7 @@ editor-scene-stacked = Stacked
 editor-lane-arrow = Arrow { $number }
 editor-lane-counter = Counter { $number }
 editor-lane-drawing = Drawing { $number }
+editor-lane-focus = Focus { $number }
 editor-lane-highlight = Highlight { $number }
 editor-lane-image = Image { $number }
 editor-lane-magnifier = Magnifier { $number }

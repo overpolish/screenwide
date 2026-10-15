@@ -84,4 +84,9 @@ pub(super) struct Constants {
   /// shutter opened on, which a moving scene's steps blend toward. See
   /// `scene_turn.rs`.
   pub(super) scene_turn: [[f32; 4]; super::scene_turn::SCENE_TURN_ROWS],
+  /// Which part of a focused frame this pass draws: the whole frame (0),
+  /// only what lies under the topmost focus (1), or only what lies over it,
+  /// on nothing (2); then where in the annotations that focus sits, and
+  /// whether it lies in the run above the camera. See `focus.rs`.
+  pub(super) focus: [f32; 4],
 }

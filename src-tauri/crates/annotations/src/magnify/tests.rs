@@ -245,14 +245,14 @@ fn a_loupe_with_no_room_to_the_right_goes_to_the_left() {
 fn the_editor_places_a_fresh_magnifier_by_its_arrival() {
   const SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../../src/features/editor/annotations/annotation-kinds.ts"
+    "/../../../src/features/editor/annotations/annotation-draw-in.ts"
   ));
   let declared = SOURCE
     .lines()
     .find_map(|line| {
       line
         .trim()
-        .strip_prefix("const ANNOTATION_MAGNIFY_DRAW_IN_MS = ")
+        .strip_prefix("export const ANNOTATION_MAGNIFY_DRAW_IN_MS = ")
     })
     .and_then(|value| value.trim_end_matches(';').parse::<f32>().ok());
   assert_eq!(declared, Some(super::reveal::MAGNIFY_REVEAL_IN_MS));
