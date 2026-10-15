@@ -3,7 +3,6 @@
 
 import { Switch } from "../../../../components/base/switch/switch";
 import { Text } from "../../../../components/base/text/text";
-import { AnnotationAngleDial } from "../../../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationFitGroup } from "../../../../components/shared/annotation-style/annotation-fit-group";
 import { AnnotationRadiusField } from "../../../../components/shared/annotation-style/annotation-radius-field";
@@ -24,6 +23,7 @@ import {
   AnnotationRedactionRows,
 } from "./annotation-redaction-rows";
 import { AnnotationSelectionSummary } from "./annotation-selection-summary";
+import { AnnotationTurnRows } from "./annotation-turn-rows";
 import { ImageFrameRow, ImagePlaybackRow } from "./image-play-rows";
 import { ImageSourceRow } from "./image-source-row";
 import { ImageSwayRow } from "./image-sway-row";
@@ -202,26 +202,12 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         </ControlRow>
       ) : null}
 
-      {/* A counter is aimed by its tail, and an image turned by its grip, on
-          the picture or here. The dial's notch stands where the tail does,
-          and a held Shift snaps it to the same eighth of a turn a drag on the
-          picture snaps to. A fresh image always stands upright, so there is
-          no turn to choose before one is placed. */}
-      {kind.hasAngle && !(isDraft && annotation.kind === "image") ? (
-        <ControlRow title={t("annotation-angle")}>
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <AnnotationAngleDial
-                isDisabled={isLocked}
-                onChange={(next) => {
-                  change({ annotationAngle: next });
-                }}
-                value={annotation.angle ?? 0}
-              />
-            </div>
-          )}
-        </ControlRow>
-      ) : null}
+      <AnnotationTurnRows
+        annotation={annotation}
+        change={change}
+        hasAngle={kind.hasAngle}
+        isLocked={isLocked}
+      />
 
       <AnnotationOptionRows
         canShuffle={!isDraft}

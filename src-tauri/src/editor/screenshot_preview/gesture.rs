@@ -9,6 +9,7 @@ use super::state::PreviewManager;
 use screenwide_compositor::workspace_editor::{
   apply_layer_gesture, GestureOperation as WorkspaceGestureOperation, WorldRect,
 };
+use screenwide_scenes::SceneRotation;
 
 const AUTO_FIT_MOVE_EDGE: u32 = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE: u32 = 1 << 18;
@@ -172,6 +173,24 @@ impl PreviewManager {
         let Some(item) = next.items.get_mut(pane_index as usize) else {
           return Ok(());
         };
+        // The gizmo turns the layer, reporting the turn it reaches: about X
+        // and Y as its travel, about Z as its scale.
+        if operation == SelectionGestureOperation::Rotate {
+          item.output.rotation = Some(SceneRotation {
+            x: delta_x,
+            y: delta_y,
+            z: scale,
+          })
+          .filter(|rotation| !rotation.is_upright());
+          self.output = Some(next);
+          self.selection_gesture =
+            (!matches!(phase, SelectionGesturePhase::End)).then_some(SelectionGestureOverride {
+              native_workspace_owns_presentation: false,
+              operation,
+              snapshot,
+            });
+          return self.present_batch();
+        }
         let workspace_operation = match operation {
           SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
           SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
@@ -184,8 +203,9 @@ impl PreviewManager {
           | SelectionGestureOperation::CropDraw => {
             unreachable!("crop gestures are mirrored by the frontend")
           }
-          // A screenshot has no scene to turn it.
-          SelectionGestureOperation::Rotate => return Ok(()),
+          SelectionGestureOperation::Rotate => {
+            unreachable!("turns are handled before the layer's geometry")
+          }
         };
         let start_geometry = output_geometry(start);
         let geometry = apply_layer_gesture(

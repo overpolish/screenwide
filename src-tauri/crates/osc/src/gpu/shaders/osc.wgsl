@@ -297,17 +297,10 @@ fn ocr_box(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   return color;
 }
 
-// The crop window's marching ants: a capsule a period, `uv` running along the
-// edge in periods of 12 drawn pixels, so the pattern stays put wherever the
-// edge starts.
-fn marquee(kind: u32, uv: vec2<f32>) -> vec4<f32> {
-  let horizontal = kind <= 8u;
-  let longitudinal = select(uv.y, uv.x, horizontal);
-  let transverse = select(uv.x, uv.y, horizontal);
-  let period = 1.0 / max(fwidth(longitudinal), 0.0001);
-  let thickness = 1.0 / max(fwidth(transverse), 0.0001);
-  var offset = vec2<f32>((fract(longitudinal) - 0.5) * period, (transverse - 0.5) * thickness);
-  let radius = thickness * 0.5;
+// A marching ant: a capsule a period long, `offset` measured from its middle
+// in pixels along and across, of `radius` pixels round.
+fn ant(along_offset: vec2<f32>, radius: f32) -> vec4<f32> {
+  var offset = along_offset;
   let half_segment = 3.0;
   offset.x -= clamp(offset.x, -half_segment, half_segment);
   let distance = length(offset) - radius;
@@ -322,6 +315,45 @@ fn marquee(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   var color = mix(osc.control_colors[0], osc.control_colors[1], outline_mix);
   color.a *= coverage;
   return color;
+}
+
+// The crop window's marching ants: a capsule a period, `uv` running along the
+// edge in periods of 12 drawn pixels, so the pattern stays put wherever the
+// edge starts.
+fn marquee(kind: u32, uv: vec2<f32>) -> vec4<f32> {
+  let horizontal = kind <= 8u;
+  let longitudinal = select(uv.y, uv.x, horizontal);
+  let transverse = select(uv.x, uv.y, horizontal);
+  let period = 1.0 / max(fwidth(longitudinal), 0.0001);
+  let thickness = 1.0 / max(fwidth(transverse), 0.0001);
+  return ant(
+    vec2<f32>((fract(longitudinal) - 0.5) * period, (transverse - 0.5) * thickness),
+    thickness * 0.5,
+  );
+}
+
+// A side of a turned marquee band: the same ants along a side that need not
+// run along the pixel grid. Its quad is padded a pixel either side, as
+// `soft_line`'s is, for the ants' rims to anti-alias inside it; `uv.x` runs
+// along it in periods of 12 drawn pixels and `uv.y` across it. Each rate is
+// its gradient's length, as `quad_pixels` measures, since `fwidth` would
+// overstate it on a slanted side.
+fn soft_marquee(uv: vec2<f32>) -> vec4<f32> {
+  let period = 1.0 / max(length(vec2<f32>(dpdx(uv.x), dpdy(uv.x))), 0.0001);
+  let thickness = quad_pixels(uv).y;
+  return ant(
+    vec2<f32>((fract(uv.x) - 0.5) * period, (uv.y - 0.5) * thickness),
+    thickness * 0.5 - 1.0,
+  );
+}
+
+// The snap guides' colours: the canvas's own lines in one, another object's
+// in the other.
+fn guide_color(object: bool) -> vec4<f32> {
+  if (object) {
+    return select(vec4<f32>(0.055, 0.647, 0.914, 1.0), vec4<f32>(0.008, 0.518, 0.780, 1.0), is_light());
+  }
+  return vec4<f32>(0.918, 0.702, 0.031, 1.0);
 }
 
 fn handle(kind: u32, uv: vec2<f32>) -> vec4<f32> {
@@ -348,9 +380,11 @@ fn handle(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   return color;
 }
 
-// A side of a turned frame: a line whose quad is padded one pixel either side
-// so its edges can be anti-aliased, with `uv.y` running across it. 50 is the
-// line in the controls' fill and 51 the halo in their outline.
+// A line that need not run along the pixel grid, as a turned frame's sides
+// and a turned layer's snap chrome do: its quad is padded one pixel either
+// side so its edges can be anti-aliased, with `uv.y` running across it. 50
+// is the line in the controls' fill and 51 the halo in their outline; 61 and
+// 62 are a guide's, in the canvas's colour and another object's.
 fn soft_line(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   let dimensions = quad_pixels(uv);
   let across = abs(uv.y - 0.5) * dimensions.y;
@@ -360,6 +394,9 @@ fn soft_line(kind: u32, uv: vec2<f32>) -> vec4<f32> {
     discard;
   }
   var color = select(osc.control_colors[0], osc.control_colors[1], kind == 51u);
+  if (kind == 61u || kind == 62u) {
+    color = guide_color(kind == 62u);
+  }
   color.a *= coverage;
   return color;
 }
@@ -664,15 +701,15 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   if (kind == 3u || kind == 16u) {
     return handle(kind, uv);
   }
-  if (kind == 50u || kind == 51u) {
+  // 61 and 62 are the guides' soft twins, drawn on a turned layer.
+  if (kind == 50u || kind == 51u || kind == 61u || kind == 62u) {
     return soft_line(kind, uv);
   }
-  let guide = kind == 4u || kind == 5u;
-  if (guide) {
-    if (kind == 5u) {
-      return select(vec4<f32>(0.055, 0.647, 0.914, 1.0), vec4<f32>(0.008, 0.518, 0.780, 1.0), is_light());
-    }
-    return vec4<f32>(0.918, 0.702, 0.031, 1.0);
+  if (kind == 63u) {
+    return soft_marquee(uv);
+  }
+  if (kind == 4u || kind == 5u) {
+    return guide_color(kind == 5u);
   }
   var coverage = 1.0;
   if ((kind & 1u) != 0u) {

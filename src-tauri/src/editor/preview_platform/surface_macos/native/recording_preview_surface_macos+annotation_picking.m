@@ -44,14 +44,6 @@ SCREENWIDE_PREVIEW_PRIVATE NSPoint annotation_magnify_grip(NSRect image,
   return NSMakePoint(prepared.end_head.c.x, prepared.end_head.c.y);
 }
 
-/// Where an image's turning grip sits: above its top side, where Rust's
-/// preparation placed it.
-SCREENWIDE_PREVIEW_PRIVATE NSPoint annotation_image_turn_grip(NSRect image,
-                                                                ScreenwidePreviewAnnotation item) {
-  AnnotationArrowGeometry prepared = annotation_prepared(image, item);
-  return NSMakePoint(prepared.end_head.c.x, prepared.end_head.c.y);
-}
-
 /// How far `point` is from a stroke's drawn line, in display points, from
 /// the fitted line its grips point into; with `body`, its box picks it too.
 /// A stroke whose line was not published is nowhere.

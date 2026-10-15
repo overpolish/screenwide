@@ -35,7 +35,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** The screen track of a recording, at the size and position the preview
- * would be showing it, padded out past its own picture. */
+ * would be showing it, padded out past its own picture and turned in depth by
+ * its own turn, each dial aimed as the gizmo's ring of its colour stands. */
 export const Selection: Story = {
   args: { tool: "selection", workspace: "recording" },
   beforeEach: () => {
@@ -52,6 +53,7 @@ export const Selection: Story = {
         kind: "primary",
         label: "Screen",
         radius: 8,
+        rotation: { x: 15, y: -20, z: 0 },
         sourceHeight: 2338,
         sourceWidth: 3600,
         width: 3720,

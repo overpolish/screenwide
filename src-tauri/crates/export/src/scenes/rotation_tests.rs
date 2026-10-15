@@ -28,11 +28,21 @@ fn turned(id: &str, start_ms: u64, end_ms: u64, rotation: SceneRotation) -> Reco
   }
 }
 
-/// How `clips` turn the screen `source_ms` in.
-fn rotation(clips: &[RecordingSceneClip], source_ms: u64) -> Option<SceneRotation> {
+/// How `clips` turn a screen turned `own` on its own, `source_ms` in.
+fn rotation_over(
+  own: Option<SceneRotation>,
+  clips: &[RecordingSceneClip],
+  source_ms: u64,
+) -> Option<SceneRotation> {
   let mut output = test_output_settings(1_600, 900);
+  output.rotation = own;
   arrange(clips, &[], source_ms, 0.0, &mut output, None);
-  output.scene_rotation
+  output.rotation
+}
+
+/// How `clips` turn an upright screen `source_ms` in.
+fn rotation(clips: &[RecordingSceneClip], source_ms: u64) -> Option<SceneRotation> {
+  rotation_over(None, clips, source_ms)
 }
 
 #[test]
@@ -47,6 +57,21 @@ fn a_settled_scene_turns_the_screen_as_it_holds() {
 fn a_scene_turns_the_screen_in_with_its_arrival() {
   let clips = [turned("a", 1_000, 10_000, TILTED)];
   let halfway = rotation(&clips, 1_300).expect("the screen is turning in");
+  assert!((halfway.x - 10.0).abs() < 1e-9);
+  assert!((halfway.y + 15.0).abs() < 1e-9);
+  assert!((halfway.z - 5.0).abs() < 1e-9);
+}
+
+#[test]
+fn a_scene_replaces_the_screens_own_turn_and_arrives_from_it() {
+  let upright = SceneRotation::UPRIGHT;
+  let clips = [turned("a", 1_000, 10_000, upright)];
+  // Outside every scene the screen keeps its own turn.
+  assert_eq!(rotation_over(Some(TILTED), &clips, 500), Some(TILTED));
+  // Settled, a scene that stands the screen upright draws it upright.
+  assert_eq!(rotation_over(Some(TILTED), &clips, 5_000), None);
+  // Arriving, the turn runs from the screen's own to the scene's.
+  let halfway = rotation_over(Some(TILTED), &clips, 1_300).expect("the screen is turning in");
   assert!((halfway.x - 10.0).abs() < 1e-9);
   assert!((halfway.y + 15.0).abs() < 1e-9);
   assert!((halfway.z - 5.0).abs() < 1e-9);

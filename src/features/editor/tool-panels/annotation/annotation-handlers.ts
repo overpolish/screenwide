@@ -9,6 +9,7 @@ import {
   applyAnnotationAngle,
   applyAnnotationAnimated,
   applyAnnotationReverse,
+  applyAnnotationRotation,
   applyAnnotationShuffle,
   applyAnnotationsDelete,
   applyAnnotationImage,
@@ -39,6 +40,7 @@ export const annotationPanelHandlers = (
   | "onAnnotationImagePlayChange"
   | "onAnnotationImageSwayChange"
   | "onAnnotationReverse"
+  | "onAnnotationRotationChange"
   | "onAnnotationShuffle"
   | "onAnnotationsDelete"
   | "onAnnotationStyleChange"
@@ -67,6 +69,9 @@ export const annotationPanelHandlers = (
   },
   onAnnotationReverse: () => {
     applyAnnotationReverse(workspace);
+  },
+  onAnnotationRotationChange: (rotation) => {
+    applyAnnotationRotation(workspace, rotation);
   },
   onAnnotationShuffle: () => {
     applyAnnotationShuffle(workspace);

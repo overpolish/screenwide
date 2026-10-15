@@ -85,6 +85,8 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_group_add_osc(
   if (!annotation_has_group(surface)) return;
   NSUInteger total = 0;
   const ScreenwideAnnotationGroupBox *boxes = annotation_group_boxes(surface, &total);
+  double storage[9];
+  const double *turn = annotation_chrome_turn(surface, storage);
   // The whole group's box first, so a crowd of members can never crowd it
   // out of the vertex budget.
   for (uint32_t pass = 0; pass < 2; pass++) {
@@ -96,7 +98,7 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_group_add_osc(
       if (rect.size.width <= 0.0 && rect.size.height <= 0.0) continue;
       // The layer selection's own frame without its handles: it reads over
       // any picture, and says "chosen" the way every other OSC does.
-      screenwide_region_osc_add_selection_frame(vertices, count, size, rect, scale);
+      annotation_osc_add_group_frame(vertices, count, size, turn, rect, scale);
     }
   }
 }
@@ -126,8 +128,7 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_marquee_add_osc(
     ScreenwidePreviewSurface *surface, CGFloat scale) {
   NSRect band = surface.annotationMarquee;
   if (band.size.width <= 0.0 && band.size.height <= 0.0) return;
-  // The region selector's own marching ants, unfilled. The band is its own
-  // image, so no shade is drawn round it, and it has no handles to offer.
-  screenwide_region_osc_add_crop_with_handles(vertices, count, size, band, band, scale, 0.0, YES,
-                                              NO);
+  double storage[9];
+  annotation_osc_add_marquee(vertices, count, size, annotation_chrome_turn(surface, storage), band,
+                             scale);
 }

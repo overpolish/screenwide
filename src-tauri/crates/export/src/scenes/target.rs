@@ -9,7 +9,6 @@ use screenwide_scenes::framing::{drawn_frame, SceneFraming};
 use screenwide_scenes::geometry::{preset_panes, Rect};
 use screenwide_scenes::model::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_scenes::placement::Placement;
-use screenwide_scenes::rotation::SceneRotation;
 use screenwide_scenes::CameraOverlaySettings;
 
 /// What a frame is arranged from: the composition outside every scene, the
@@ -50,7 +49,7 @@ impl Base {
         ),
         opacity: (1.0, 1.0),
         camera_front: 1.0,
-        rotation: SceneRotation::UPRIGHT,
+        rotation: output.rotation.unwrap_or_default(),
       },
       canvas: (f64::from(output.width), f64::from(output.height)),
       camera_aspect: camera.map(|(_, aspect)| aspect),

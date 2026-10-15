@@ -3,52 +3,56 @@
 
 //! What moving an image's grips does to it.
 //!
-//! Its grips are those of its own turned frame, each moving the picture's
-//! own sides. A corner or an edge sizes the whole picture, keeping its
-//! proportions, with the frame's opposite side held where it was; the radius
-//! dot rounds its corners; the turning grip stands the picture's top towards
-//! the hand; the body carries it. Every sample is measured against the image
-//! the press began on, in that image's own frame.
+//! Its grips are those of its own frame, turned and tilted with the picture,
+//! each moving the picture's own sides. A corner or an edge sizes the whole
+//! picture, keeping its proportions, with the frame's opposite side held
+//! where it was; the radius dot rounds its corners; the body carries it.
+//! Every sample is measured against the image the press began on, in that
+//! image's own frame, the hand carried back through its tilt.
 
-use super::model::{field_box, from_local, half_extents, image_turn, to_local, MIN_IMAGE_SIZE};
+use super::model::{field_box, half_extents, MIN_IMAGE_SIZE};
+use super::tilt::{placed, unplaced};
+use super::ImageTilt;
 use crate::box_gesture::{carry, radius_at, EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP};
 use crate::gesture::{AnnotationDragOrigin, AnnotationHandle};
 use crate::snap::{SnapBox, SnapRequest, SnapResult};
 use crate::{Annotation, AnnotationPoint, AnnotationShape};
 
-/// The image a gesture began on: its middle, longer side, turn and
-/// proportions.
-fn held(shape: &AnnotationShape) -> Option<(AnnotationPoint, f64, f64, f64)> {
+/// The image a gesture began on: its middle, longer side, flat turn, turn in
+/// depth and proportions.
+fn held(shape: &AnnotationShape) -> Option<(AnnotationPoint, f64, f64, ImageTilt, f64)> {
   match shape {
     AnnotationShape::Image {
       center,
       size,
       angle,
+      tilt,
       aspect,
       ..
-    } => Some((*center, *size, *angle, *aspect)),
+    } => Some((*center, *size, *angle, tilt.unwrap_or_default(), *aspect)),
     _ => None,
   }
 }
 
-/// Move one grip of an image to `point`. `shift` holds its turn to the
-/// eighth turns.
+/// Move one grip of an image to `point`.
 pub(crate) fn drag(
   annotation: &mut Annotation,
   handle: AnnotationHandle,
   point: AnnotationPoint,
   origin: &AnnotationDragOrigin,
-  shift: bool,
   snap: Option<SnapRequest<'_>>,
 ) -> SnapResult {
-  let Some((from_center, from_size, from_angle, aspect)) = held(&origin.shape) else {
+  let Some((from_center, from_size, from_angle, tilt, aspect)) = held(&origin.shape) else {
     return SnapResult::default();
   };
   // The press's image in its own frame: its middle at the origin, its sides
-  // upright.
+  // upright. A hand past the tilted picture's horizon reaches no side of it.
   let (half_width, half_height) = half_extents(from_size, aspect);
-  let local = to_local(from_center, from_angle, point);
+  let local = unplaced(from_center, from_angle, tilt, from_size, point);
   if handle == AnnotationHandle::Radius {
+    let Some(local) = local else {
+      return SnapResult::default();
+    };
     let own = SnapBox {
       x: -half_width,
       y: -half_height,
@@ -58,21 +62,14 @@ pub(crate) fn drag(
     annotation.style.radius = radius_at(own, local, origin.source_per_point);
     return SnapResult::default();
   }
-  let AnnotationShape::Image {
-    center,
-    size,
-    angle,
-    ..
-  } = &mut annotation.shape
-  else {
+  let AnnotationShape::Image { center, size, .. } = &mut annotation.shape else {
     return SnapResult::default();
   };
   match handle {
-    AnnotationHandle::Tail => {
-      *angle = image_turn(from_center, point, from_angle, shift);
-      SnapResult::default()
-    }
     AnnotationHandle::Edges(edges) => {
+      let Some(local) = local else {
+        return SnapResult::default();
+      };
       let low = AnnotationPoint {
         x: -half_width,
         y: -half_height,
@@ -81,19 +78,29 @@ pub(crate) fn drag(
         x: half_width,
         y: half_height,
       };
+      // The middle moves within the picture's own plane, to where its tilt
+      // draws it there; the new picture is tilted about it alike.
       let (middle, next) = resized(low, high, from_size, edges, local);
-      (*center, *size) = (from_local(from_center, from_angle, middle), next);
+      (*center, *size) = (
+        placed(from_center, from_angle, tilt, from_size, middle),
+        next,
+      );
       SnapResult::default()
     }
     _ => {
-      let from = field_box(from_center, from_size, from_angle, aspect).unwrap_or(SnapBox {
+      let from = field_box(from_center, from_size, from_angle, tilt, aspect).unwrap_or(SnapBox {
         x: from_center.x,
         y: from_center.y,
         width: 0.0,
         height: 0.0,
       });
+      // The box carries the middle with it; a tilt sets the box off the
+      // middle, so the middle travels as far rather than to the box's.
       let (moved, result) = carry(from, point, origin.point, snap);
-      *center = middle(moved);
+      *center = AnnotationPoint {
+        x: from_center.x + moved.x - from.x,
+        y: from_center.y + moved.y - from.y,
+      };
       result
     }
   }
@@ -110,6 +117,7 @@ pub(crate) fn drag_new(
     center,
     size,
     angle,
+    tilt,
     aspect,
     ..
   } = &mut annotation.shape
@@ -120,20 +128,17 @@ pub(crate) fn drag_new(
     *center = point;
     return SnapResult::default();
   };
-  let Some(dropped) = field_box(point, *size, *angle, *aspect) else {
+  let Some(dropped) = field_box(point, *size, *angle, tilt.unwrap_or_default(), *aspect) else {
     *center = point;
     return SnapResult::default();
   };
   let (offset, result) = request.boxed(dropped, None);
-  *center = middle(dropped.moved(offset));
+  let moved = dropped.moved(offset);
+  *center = AnnotationPoint {
+    x: point.x + moved.x - dropped.x,
+    y: point.y + moved.y - dropped.y,
+  };
   result
-}
-
-fn middle(bounds: SnapBox) -> AnnotationPoint {
-  AnnotationPoint {
-    x: bounds.x + bounds.width * 0.5,
-    y: bounds.y + bounds.height * 0.5,
-  }
 }
 
 /// The middle and longer side that put the box's moved sides under `point`

@@ -193,6 +193,29 @@ impl RingDrag {
   }
 }
 
+/// The turn seen of something turned `inner` within a frame turned `outer`,
+/// as rings drawn over it show it: `inner` about its own axes, then `outer`.
+pub fn composed(outer: SceneRotation, inner: SceneRotation) -> SceneRotation {
+  let seen = multiply(outer.matrix(), inner.matrix());
+  SceneRotation::from_radians(decompose_near(seen, inner.radians()))
+}
+
+/// The turn within a frame turned `outer` that is seen as `seen`, nearest
+/// `near`: what a ring drag over something inside a turned frame leaves it
+/// turned by, as the inverse of [`composed`].
+pub fn within(outer: SceneRotation, seen: SceneRotation, near: SceneRotation) -> SceneRotation {
+  let back = transposed(outer.matrix());
+  SceneRotation::from_radians(decompose_near(
+    multiply(back, seen.matrix()),
+    near.radians(),
+  ))
+}
+
+/// The inverse of a rotation.
+fn transposed(m: Rotation3) -> Rotation3 {
+  [0, 1, 2].map(|column| [0, 1, 2].map(|row| m[row][column]))
+}
+
 /// A turn of `angle` about one axis.
 fn axis_turn(axis: usize, angle: f64) -> Rotation3 {
   let (sin, cos) = angle.sin_cos();

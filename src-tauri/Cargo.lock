@@ -5508,6 +5508,7 @@ dependencies = [
  "cc",
  "getrandom 0.3.4",
  "screenwide-imaging",
+ "screenwide-scenes",
  "screenwide-timeline",
  "serde",
  "serde_json",

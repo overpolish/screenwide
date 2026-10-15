@@ -41,10 +41,26 @@ pub(super) fn pointer_move(
             .and_then(Option::as_ref)
             .map(|pane| pane_canvas_rect(pane, owns_geometry));
           if let Some(pane) = pane {
-            let dx = (point.0 - gesture.pointer_start.0)
-              / (pane.width * state.workspace_transform.zoom).max(1.0);
-            let dy = (point.1 - gesture.pointer_start.1)
-              / (pane.height * state.workspace_transform.zoom).max(1.0);
+            // A turned layer's grips are dragged across the layer as its turn
+            // stood at the press, so the press and `point` are carried back
+            // for them; a move travels the canvas, as the picture does.
+            let (pointer_start, point) = if matches!(
+              gesture.operation,
+              SelectionGestureOperation::Resize | SelectionGestureOperation::Radius
+            ) && gesture.selection_start.framed
+              != crate::editor::preview_platform::FRAMED_FIXED
+            {
+              (
+                turn::unturned_point(&state, gesture.selection_start, gesture.pointer_start),
+                turn::unturned_point(&state, gesture.selection_start, point),
+              )
+            } else {
+              (gesture.pointer_start, point)
+            };
+            let dx =
+              (point.0 - pointer_start.0) / (pane.width * state.workspace_transform.zoom).max(1.0);
+            let dy =
+              (point.1 - pointer_start.1) / (pane.height * state.workspace_transform.zoom).max(1.0);
             let mut selection = gesture.selection_start;
             if gesture.selection_start.framed == crate::editor::preview_platform::FRAMED_FIXED
               && matches!(

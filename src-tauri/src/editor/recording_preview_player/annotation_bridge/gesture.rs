@@ -195,7 +195,11 @@ impl PreviewPlayerManager {
       field.anchors = anchors;
       edit.set_source_per_point(source_per_point(source_size.0, image_points));
       let request = threshold.map(|threshold| SnapRequest { field, threshold });
-      let result = edit.update(working, point, modifiers, request);
+      // A ring drag's sample is the turn it reached, not a point.
+      let result = match target.turn(x, y, image_points) {
+        Some(rotation) => edit.turn(working, rotation),
+        None => edit.update(working, point, modifiers, request),
+      };
       // A gesture that has ended leaves nothing on screen to explain.
       let shown = if matches!(phase, SelectionGesturePhase::End) {
         SnapResult::default()

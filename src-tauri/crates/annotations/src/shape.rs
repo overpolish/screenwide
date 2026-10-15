@@ -103,14 +103,18 @@ pub enum AnnotationShape {
   /// A picture of your own laid over the source.
   /// `center` is its middle and `size` its longer side, in source pixels;
   /// `aspect` is the picture's width over its height, `angle` how far it is
-  /// turned clockwise, in radians, and `flip` whether it is mirrored across
-  /// its upright axis. `asset` names the picture in the image library,
+  /// turned flat, clockwise, in radians, `tilt` how far it is turned in depth
+  /// first, absent where it lies flat, and `flip` whether it is mirrored
+  /// across its upright axis. `asset` names the picture in the image library,
   /// `play` how it plays where the picture moves, and `sway` the seed of the
   /// slight turn and drift a recording gives it, absent where it stands still.
   Image {
     center: AnnotationPoint,
     size: f64,
     angle: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    tilt: Option<super::image::ImageTilt>,
     aspect: f64,
     #[serde(default)]
     flip: bool,

@@ -39,6 +39,13 @@ pub(super) struct ObjectPicking {
   press: Option<Press>,
 }
 
+impl ObjectPicking {
+  /// Whether objects are being picked, which takes every press.
+  pub(super) fn is_active(&self) -> bool {
+    self.active
+  }
+}
+
 struct Pending {
   points: Vec<[f32; 2]>,
   removes: bool,

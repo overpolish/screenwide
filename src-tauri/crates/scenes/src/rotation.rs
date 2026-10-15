@@ -54,6 +54,16 @@ impl SceneRotation {
       .all(|angle| angle.is_finite() && angle.abs() <= MAX_DEGREES)
   }
 
+  /// Each angle held to what a turn can reach.
+  pub fn held(self) -> Self {
+    let hold = |angle: f64| angle.clamp(-MAX_DEGREES, MAX_DEGREES);
+    Self {
+      x: hold(self.x),
+      y: hold(self.y),
+      z: hold(self.z),
+    }
+  }
+
   /// The turn `t` of the way from this one to `to`, each angle on its own,
   /// so a scene that spins a whole turn arrives spinning.
   pub fn toward(self, to: Self, t: f64) -> Self {

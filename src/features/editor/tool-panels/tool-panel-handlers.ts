@@ -45,6 +45,8 @@ export type ToolPanelHandlers = {
   /** Turn the chosen annotation round, through the same commit path the drag on
    * the picture uses. */
   onAnnotationReverse?: () => void;
+  /** Turn the chosen image, a field at a time, in degrees about each axis. */
+  onAnnotationRotationChange?: (rotation: Partial<SceneRotation>) => void;
   /** Lay the chosen redaction's blocks out again, draw the chosen hand-drawn
    * highlight's stroke again, or sway the chosen image another way, from a
    * fresh seed. */
@@ -150,6 +152,8 @@ export type ToolPanelHandlers = {
   /** Put the layer's content in the middle of its padded frame. */
   onSelectionRecenter?: () => void;
   onSelectionReset?: () => void;
+  /** Turn the selected layer in depth, a field at a time. */
+  onSelectionRotationChange?: (rotation: Partial<SceneRotation>) => void;
   /** Cut the long pauses out of the selected microphone's recording where
    * nothing happens on screen. */
   onSilencesRemove?: () => void;

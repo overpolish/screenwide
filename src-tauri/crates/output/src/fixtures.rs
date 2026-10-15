@@ -52,7 +52,7 @@ pub fn test_output_settings(width: u32, height: u32) -> ScreenshotOutputSettings
     scene_motion: None,
     scene_opacity: None,
     scene_camera_front: None,
-    scene_rotation: None,
+    rotation: None,
     mesh_colors: vec![
       "#FF0000".to_owned(),
       "#00FF00".to_owned(),

@@ -102,6 +102,9 @@ typedef void (*screenwide_preview_context_menu_callback)(uint32_t pane_index,
 @property(nonatomic) ScreenwideTurnRingDrag turnDrag;
 @property(nonatomic) NSPoint turnDragOrigin;
 @property(nonatomic) uint32_t turnDragEdges;
+/// A ring of the chosen image's gizmo held, `+annotation_image_turn.m`.
+@property(nonatomic) BOOL imageTurnActive;
+@property(nonatomic) ScreenwideImageTurnHold imageTurnHold;
 @end
 
 @interface ScreenwidePreviewInteractionView (Cursor)

@@ -83,11 +83,11 @@ export function useRecordingSelectionGesture({
       event.operation === "frameResize" || event.operation === "frameRadius";
     const isCropGesture = isCropOperation(event.operation);
     if (event.phase === "begin") {
-      // A turn belongs to the scene under the playhead; with none there, it
-      // has nothing to turn.
+      // A turn outside every scene turns the screen's own layer; the camera
+      // never turns.
       if (
         !trackId ||
-        event.operation === "rotate" ||
+        (event.operation === "rotate" && trackId !== "primary") ||
         (isFrameGesture
           ? canvasTool !== "canvas"
           : isCropGesture
@@ -146,7 +146,9 @@ export function useRecordingSelectionGesture({
       Math.abs(event.deltaY) > 1e-9 ||
       ((event.operation === "resize" || event.operation === "frameResize") &&
         Math.abs(event.scale - 1) > 1e-9) ||
-      ((event.operation === "radius" || event.operation === "frameRadius") &&
+      ((event.operation === "radius" ||
+        event.operation === "frameRadius" ||
+        event.operation === "rotate") &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
     const differsFromLastUpdate =
       Math.abs(event.deltaX - active.lastDeltaX) > 1e-9 ||
@@ -154,7 +156,8 @@ export function useRecordingSelectionGesture({
       ((event.operation === "resize" ||
         event.operation === "frameResize" ||
         event.operation === "radius" ||
-        event.operation === "frameRadius") &&
+        event.operation === "frameRadius" ||
+        event.operation === "rotate") &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
     // The final native transform can legitimately be the original snapshot
     // after snapping. Apply it when it differs from the last live frame even

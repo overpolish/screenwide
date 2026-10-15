@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The canvas rows that turn the screen in depth. The shader reads every
-//! pixel the screen's pane covers back through the inverse of the turn, to
-//! the point of the upright pane it shows, and draws that point as it always
-//! has: the picture, its crop, rounding and shadow, its annotations and the
-//! cursor all turn together. What lies over the canvas as drawn, the camera
-//! and the blur layers, is found for a point of the pane through the turn
-//! itself. While a scene moves the screen, each step the frame averages is
-//! read back through a blend of the turn the shutter opened on and the
-//! frame's own.
+//! The canvas rows that turn a layer in depth, by its own turn or by the one
+//! a scene gives it. The shader reads every pixel the layer's pane covers
+//! back through the inverse of the turn, to the point of the upright pane it
+//! shows, and draws that point as it always has: the picture, its crop,
+//! rounding and shadow, its annotations and the cursor all turn together.
+//! What lies over the canvas as drawn, the camera and the blur layers, is
+//! found for a point of the pane through the turn itself. While a scene moves
+//! the screen, each step the frame averages is read back through a blend of
+//! the turn the shutter opened on and the frame's own.
 
 use screenwide_output::{OutputPlacement, ScreenshotOutputSettings};
 use screenwide_scenes::rotation::{inverted, turned_homography, Homography};
@@ -39,7 +39,7 @@ pub(super) fn scene_turn_rows(
     f64::from(placement.crop_x) + f64::from(placement.crop_width) / 2.0,
     f64::from(placement.crop_y) + f64::from(placement.crop_height) / 2.0,
   );
-  let drawn = settings.scene_rotation.unwrap_or(SceneRotation::UPRIGHT);
+  let drawn = settings.rotation.unwrap_or(SceneRotation::UPRIGHT);
   let (inverse, turn) = if drawn.is_upright() {
     (IDENTITY, IDENTITY)
   } else {

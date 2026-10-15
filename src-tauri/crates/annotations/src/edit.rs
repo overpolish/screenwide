@@ -69,7 +69,11 @@ impl AnnotationEdit {
   ) -> Option<Self> {
     let index = match target {
       AnnotationGestureTarget::New => fresh_annotation_index(annotations, kind?),
-      AnnotationGestureTarget::Existing { index, .. } if index < annotations.len() => index,
+      AnnotationGestureTarget::Existing { index, .. } | AnnotationGestureTarget::Turn { index }
+        if index < annotations.len() =>
+      {
+        index
+      }
       _ => return None,
     };
     let before = annotations.clone();
@@ -199,6 +203,23 @@ impl AnnotationEdit {
       }
       _ => SnapResult::default(),
     }
+  }
+
+  /// Turns the image this gesture holds to `rotation`, the reading of a ring
+  /// drag's sample. A turn snaps on the native side, to the ring's own steps,
+  /// so there is nothing here to explain on screen.
+  pub fn turn(
+    &mut self,
+    annotations: &mut [Annotation],
+    rotation: screenwide_scenes::SceneRotation,
+  ) -> SnapResult {
+    if let Some(annotation) = annotations
+      .get_mut(self.index)
+      .filter(|item| item.id == self.id)
+    {
+      super::image::turn_to(&mut annotation.shape, rotation);
+    }
+    SnapResult::default()
   }
 
   /// Reads a fresh stroke the hand has rested on long enough, and puts what

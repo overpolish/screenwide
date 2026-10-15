@@ -33,9 +33,14 @@ pub mod play;
 /// The slight turn and drift a recording can give it, worked out per frame.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod sway;
+/// How it is turned in depth, and where that puts its own frame's points.
+pub mod tilt;
 
 pub use model::ImageArt;
 pub use play::ImagePlay;
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) use tilt::turn_to;
+pub use tilt::ImageTilt;
 
 /// Sets how far into its clip `annotation` is drawn, where it is an image
 /// whose picture moves or that sways; anything else is left as it is.

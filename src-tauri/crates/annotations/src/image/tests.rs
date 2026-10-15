@@ -3,7 +3,8 @@
 
 use super::geometry::{image_distance, prepare_image};
 use super::gesture::resized;
-use super::model::{bounds, image_turn, MIN_IMAGE_SIZE};
+use super::model::{bounds, MIN_IMAGE_SIZE};
+use super::ImageTilt;
 use crate::box_gesture::{EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP};
 use crate::reveal::AnnotationReveal;
 use crate::{AnnotationPoint, AnnotationShape};
@@ -55,6 +56,7 @@ fn a_press_drops_the_chosen_picture_and_the_drag_carries_it() {
       center: point(140.0, 120.0),
       size: 192.0,
       angle: 0.0,
+      tilt: None,
       aspect: 0.5,
       flip: false,
       asset: PICTURE.to_owned(),
@@ -88,6 +90,46 @@ fn a_press_before_any_picture_is_chosen_places_nothing() {
   );
   assert!(edit.is_none());
   assert!(annotations.is_empty());
+}
+
+#[test]
+fn a_ring_drag_turns_the_image_it_holds_and_keeps_it_chosen() {
+  use crate::edit::{AnnotationEdit, FreshAnnotation};
+  use crate::gesture::AnnotationGestureTarget;
+  use screenwide_scenes::SceneRotation;
+  let mut annotations = vec![turned(0.0, point(0.0, 0.0)).0];
+  let before = annotations.clone();
+  let target = AnnotationGestureTarget::from_raw(7, 0, 0).expect("the turn target");
+  let mut edit = AnnotationEdit::begin(
+    &mut annotations,
+    target,
+    point(0.0, 0.0),
+    None,
+    None,
+    &FreshAnnotation::default(),
+    1.0,
+  )
+  .expect("a turn of the image");
+  // A sample carries the turn in place of a point: Z a quarter turn
+  // counter-clockwise, which the image's own angle runs the other way.
+  let rotation = target.turn(20.0, -30.0, 90.0).expect("a turn sample");
+  edit.turn(&mut annotations, rotation);
+  let AnnotationShape::Image { angle, tilt, .. } = &annotations[0].shape else {
+    panic!("an image");
+  };
+  assert!((angle + std::f64::consts::FRAC_PI_2).abs() < 1e-12);
+  assert_eq!(*tilt, Some(ImageTilt { x: 20.0, y: -30.0 }));
+  assert_eq!(edit.chosen_id(), Some(annotations[0].id.as_str()));
+  // Turned back level, it is flat again rather than tilted by nothing.
+  edit.turn(&mut annotations, SceneRotation::UPRIGHT);
+  let AnnotationShape::Image { tilt, .. } = &annotations[0].shape else {
+    panic!("an image");
+  };
+  assert_eq!(*tilt, None);
+  // Only the turn target reads a sample as a turn.
+  assert!(AnnotationGestureTarget::New.turn(1.0, 2.0, 3.0).is_none());
+  edit.cancel(&mut annotations);
+  assert_eq!(annotations, before);
 }
 
 #[test]
@@ -138,6 +180,7 @@ fn a_document_image_reads_back_unmirrored_and_still_when_it_does_not_say() {
       center: point(10.0, 20.0),
       size: 64.0,
       angle: 0.5,
+      tilt: None,
       aspect: 2.0,
       flip: false,
       asset: PICTURE.to_owned(),
@@ -180,7 +223,13 @@ fn an_image_keeps_how_it_plays_and_sways_but_never_its_clock() {
 #[test]
 fn a_turned_image_fits_the_box_its_grips_stand_on() {
   // A 2:1 picture 100 long, a quarter turn round: 50 wide and 100 tall.
-  let (low, high) = bounds(point(0.0, 0.0), 100.0, std::f64::consts::FRAC_PI_2, 2.0);
+  let (low, high) = bounds(
+    point(0.0, 0.0),
+    100.0,
+    std::f64::consts::FRAC_PI_2,
+    ImageTilt::default(),
+    2.0,
+  );
   assert!((high.x - low.x - 50.0).abs() < 1e-9, "{low:?} {high:?}");
   assert!((high.y - low.y - 100.0).abs() < 1e-9, "{low:?} {high:?}");
 }
@@ -246,7 +295,6 @@ fn a_turned_image_s_corner_sizes_it_from_its_own_opposite_corner() {
     AnnotationHandle::Edges(EDGE_RIGHT | EDGE_BOTTOM),
     point(-150.0, 150.0),
     &origin,
-    false,
     None,
   );
   let AnnotationShape::Image { center, size, .. } = image.shape else {
@@ -267,14 +315,7 @@ fn a_turned_image_s_radius_dot_reads_along_its_own_diagonal() {
   // and its diagonal runs in towards the bottom left.
   let (mut image, origin) = turned(std::f64::consts::FRAC_PI_2, point(50.0, -50.0));
   let at = |image: &mut crate::Annotation, x: f64, y: f64| {
-    super::gesture::drag(
-      image,
-      AnnotationHandle::Radius,
-      point(x, y),
-      &origin,
-      false,
-      None,
-    );
+    super::gesture::drag(image, AnnotationHandle::Radius, point(x, y), &origin, None);
     image.style.radius
   };
   // Half the shorter side's travel in: the whole radius.
@@ -283,19 +324,6 @@ fn a_turned_image_s_radius_dot_reads_along_its_own_diagonal() {
   // Outside the corner, none; past the middle, no more than the whole.
   assert_eq!(at(&mut image, 60.0, -60.0), 0.0);
   assert_eq!(at(&mut image, -40.0, 40.0), 50.0);
-}
-
-#[test]
-fn the_turning_grip_stands_the_top_towards_the_hand() {
-  let center = point(0.0, 0.0);
-  assert_eq!(image_turn(center, point(0.0, -10.0), 1.0, false), 0.0);
-  let right = image_turn(center, point(10.0, 0.0), 0.0, false);
-  assert!((right - std::f64::consts::FRAC_PI_2).abs() < 1e-9);
-  // Shift holds it to the eighth turns, a little off a diagonal included.
-  let snapped = image_turn(center, point(10.0, -9.0), 0.0, true);
-  assert!((snapped - std::f64::consts::FRAC_PI_4).abs() < 1e-9);
-  // A press on the middle keeps the turn it had.
-  assert_eq!(image_turn(center, center, 0.7, false), 0.7);
 }
 
 #[test]
@@ -308,10 +336,39 @@ fn a_turned_image_is_picked_inside_its_turned_box_only() {
     [90.0, 100.0],
     0.0,
     false,
+    [0.0, 0.0],
     AnnotationReveal::WHOLE,
   );
   assert!(image_distance([100.0, 115.0], &geometry) <= 0.0);
   assert!(image_distance([115.0, 100.0], &geometry) > 0.0);
+}
+
+#[test]
+fn a_tilted_image_is_picked_where_its_tilt_draws_it() {
+  // A picture 40 wide and 20 tall, its right side swung far away: the far
+  // end of where it lay flat is no longer on it, its near end still is.
+  let geometry = prepare_image(
+    [0.0, 0.0],
+    [20.0, 0.0],
+    [0.0, 10.0],
+    0.0,
+    false,
+    [0.0, 60f32.to_radians()],
+    AnnotationReveal::WHOLE,
+  );
+  assert!(image_distance([-8.0, 0.0], &geometry) <= 0.0);
+  assert!(image_distance([18.0, 0.0], &geometry) > 0.0);
+  // Tilting it back flat picks it where it lay.
+  let flat = prepare_image(
+    [0.0, 0.0],
+    [20.0, 0.0],
+    [0.0, 10.0],
+    0.0,
+    false,
+    [0.0, 0.0],
+    AnnotationReveal::WHOLE,
+  );
+  assert!(image_distance([18.0, 0.0], &flat) <= 0.0);
 }
 
 #[test]
@@ -320,7 +377,15 @@ fn an_arriving_image_grows_out_of_its_middle() {
     scale: 0.5,
     ..AnnotationReveal::WHOLE
   };
-  let geometry = prepare_image([0.0, 0.0], [40.0, 0.0], [0.0, 20.0], 0.0, false, reveal);
+  let geometry = prepare_image(
+    [0.0, 0.0],
+    [40.0, 0.0],
+    [0.0, 20.0],
+    0.0,
+    false,
+    [0.0, 0.0],
+    reveal,
+  );
   assert_eq!(geometry.b, [20.0, 0.0]);
   assert_eq!(geometry.c, [0.0, 10.0]);
   assert_eq!(geometry.width, 40.0);

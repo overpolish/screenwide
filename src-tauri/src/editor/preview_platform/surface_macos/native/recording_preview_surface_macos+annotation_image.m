@@ -1,18 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! An image's chrome: its own frame, turned with the picture, whose eight
-//! grips move the picture's own sides, its radius dot, and the grip above its
-//! top side that turns it. The frame is Rust's (`image/frame.rs`), so this
-//! side only reads it, draws it and picks from it.
+//! An image's chrome: its own frame, tilted and turned with the picture,
+//! whose eight grips move the picture's own sides, and its radius dot. The
+//! frame is Rust's (`image/frame.rs`), so this side only reads it, draws it
+//! and picks from it.
 
 #import "recording_preview_surface_macos_private.h"
 #include <math.h>
 #include "../../../../../crates/annotations/src/geometry.h"
 
 /// The chosen image's frame in display points. The middle rides in `middle`,
-/// the turn in `start_head`, the half width and half height in `end_head`
-/// and `width` as shares of the drawn width, and the radius in `radius`.
+/// the flat turn in `start_head`, the half width and half height in
+/// `end_head` and `width` as shares of the drawn width, the tilt in `tilt_x`
+/// and `tilt_y`, and the radius in `radius`.
 static AnnotationImageFrame annotation_image_own_frame(NSRect image,
                                                        ScreenwidePreviewAnnotation item) {
   AnnotationImageFrame frame;
@@ -20,7 +21,7 @@ static AnnotationImageFrame annotation_image_own_frame(NSRect image,
                          (float)(NSMinY(image) + image.size.height * item.middle_y),
                          (float)(item.end_head * image.size.width),
                          (float)(item.width * image.size.width), (float)item.start_head,
-                         (float)item.radius, &frame);
+                         (float)item.tilt_x, (float)item.tilt_y, (float)item.radius, &frame);
   return frame;
 }
 
@@ -31,9 +32,7 @@ SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_image_grips(
     handles[index] = NSMakePoint(frame.grips[index].x, frame.grips[index].y);
     kinds[index] = frame.handles[index];
   }
-  handles[9] = annotation_image_turn_grip(image, item);
-  kinds[9] = ScreenwideAnnotationHandleTail;
-  return 10;
+  return 9;
 }
 
 SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_image_cursor(ScreenwidePreviewAnnotation item,
@@ -67,17 +66,10 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_image_add_osc(
   NSPoint corners[4];
   for (NSUInteger index = 0; index < 4; index++)
     corners[index] = NSMakePoint(frame.corners[index].x, frame.corners[index].y);
+  double storage[9];
   // The radius dot is the ninth grip, after the frame's eight.
-  screenwide_region_osc_add_turned_selection(vertices, count, size, corners,
-                                             NSMakePoint(frame.grips[8].x, frame.grips[8].y),
-                                             scale);
-  // The turning grip wears the same disc an arrow's grips do.
-  NSPoint grip = annotation_image_turn_grip(image, item);
-  CGFloat extent = 4.0 + 2.0 / scale;
-  CGFloat x = round(grip.x * scale) / scale;
-  CGFloat y = round(grip.y * scale) / scale;
-  screenwide_region_osc_add_texture_quad(
-      vertices, count, size, NSMakeRect(x - extent, y - extent, extent * 2.0, extent * 2.0),
-      NSMakeRect(0.0, 0.0, 1.0, 1.0), 3);
+  annotation_osc_add_image_frame(vertices, count, size, annotation_chrome_turn(surface, storage),
+                                 corners, NSMakePoint(frame.grips[8].x, frame.grips[8].y),
+                                 scale);
   return YES;
 }

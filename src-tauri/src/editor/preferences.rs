@@ -92,9 +92,11 @@ pub(super) fn load_screenshot_radius(app: &AppHandle) -> f64 {
 /// Annotations are document content rather than a preference: they are drawn on
 /// one layer of one capture and mean nothing on another. They are dropped both
 /// on the way in and on the way out, so a file written before this rule existed
-/// stops handing yesterday's arrows to today's screenshot.
+/// stops handing yesterday's arrows to today's screenshot. A layer's turn is
+/// how that capture was posed, so it stays behind too.
 fn screenshot_output_template(mut output: ScreenshotOutputSettings) -> ScreenshotOutputSettings {
   output.annotations.clear();
+  output.rotation = None;
   output
 }
 
@@ -239,6 +241,9 @@ pub(super) fn remember_recording_output(
 ) -> Result<(), String> {
   output.primary.background_radius_percent = 0.0;
   output.camera.background_radius_percent = 0.0;
+  // A turn is how that recording was posed, not a look for the next one.
+  output.primary.rotation = None;
+  output.camera.rotation = None;
   super::project_look::keep_in_app_data(&mut output.primary);
   super::project_look::keep_in_app_data(&mut output.camera);
   *app

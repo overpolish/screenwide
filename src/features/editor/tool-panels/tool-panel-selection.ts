@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { AnnotationStyle, ImageArt } from "../annotations/annotations";
+import { SceneRotation } from "../layer-rotation";
 
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
@@ -32,6 +33,9 @@ export type ToolPanelLayerSelection = {
   y: number;
   /** The camera's effects, offered for the camera. */
   cameraEffects?: ToolPanelCameraEffects;
+  /** How the layer is turned in depth, where it can be turned: the screen of
+   * a recording and a screenshot's layers. */
+  rotation?: SceneRotation;
 };
 
 /**
@@ -196,8 +200,8 @@ export type ToolPanelAnnotation = {
   id: string;
   kind: AnnotationKind;
   style: AnnotationStyle;
-  /** A counter's aim or an image's turn, in radians clockwise from east.
-   * Absent on an arrow, which is aimed by its own two ends. */
+  /** A counter's aim, in radians clockwise from east. Absent on an arrow,
+   * which is aimed by its own two ends, and on an image, which is turned. */
   angle?: number;
   /** The picture an image shows, or the next image will. */
   image?: ImageArt;
@@ -205,6 +209,9 @@ export type ToolPanelAnnotation = {
    * its next one in. Its edits dress that one, and what only a drawn
    * annotation can do - turning it round, drawing it again - is not offered. */
   isDraft?: boolean;
+  /** How a placed image is turned, in degrees about each axis, as the
+   * Rotation row's dials show it. Absent on anything else. */
+  rotation?: SceneRotation;
   /** Whether a placed image sways over its clip. Absent on anything else. */
   sway?: boolean;
 };

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 
 import { RecordingSceneControls } from "./recording-scene-channel";
@@ -20,7 +21,6 @@ import {
   RecordingSceneClip,
   recordingSceneClipAt,
   rotatedSceneClip,
-  UPRIGHT_ROTATION,
 } from "./recording-scenes";
 
 /**

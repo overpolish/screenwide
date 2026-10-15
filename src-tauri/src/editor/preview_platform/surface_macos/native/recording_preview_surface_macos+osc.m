@@ -96,11 +96,10 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   // white core. Handles keep their 8pt fill and gain a 1-device-pixel ring.
   if (object_picking_add_osc(vertices, &count, &state, surface, size, scale)) {
   } else if (annotationMode) {
-    // A turned layer's annotations are turned with it, and their grips too.
-    NSUInteger from = count;
+    // A turned layer's annotation chrome is placed through its turn piece
+    // by piece, grips and all.
     annotation_add_osc(vertices, &count, size, surface, scale);
     annotation_add_snap_osc(vertices, &count, size, surface, scale);
-    turn_vertices(surface, vertices, from, count, size);
   } else if (surface.selection.crop_mode != 0)
     screenwide_region_osc_add_crop(
         vertices, &count, size, frame,

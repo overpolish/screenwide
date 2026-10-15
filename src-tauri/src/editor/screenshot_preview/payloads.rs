@@ -25,6 +25,10 @@ pub struct ScreenshotSelectionOverlay {
   #[serde(default)]
   pub(super) recenter_bounds: Option<PreviewSurfaceRect>,
   pub(super) rect: PreviewSurfaceRect,
+  /// Set where the select tool turns this layer with the rotation gizmo: how
+  /// it is turned now.
+  #[serde(default)]
+  pub(super) rotation: Option<screenwide_scenes::SceneRotation>,
 }
 
 impl ScreenshotSelectionOverlay {
@@ -53,6 +57,7 @@ impl ScreenshotSelectionOverlay {
       radius_percent: self.radius_percent,
       ..PreviewSelection::default()
     }
+    .turned_by(self.rotation)
   }
 }
 

@@ -11,6 +11,20 @@ import {
   ScreenshotSelectionGestureEvent,
 } from "./screenshot-preview-events";
 
+/** The native gesture operations, indexed by their native discriminant. */
+const SELECTION_GESTURE_OPERATIONS: readonly ScreenshotSelectionGestureEvent["operation"][] =
+  [
+    "move",
+    "resize",
+    "radius",
+    "frameResize",
+    "frameRadius",
+    "cropMove",
+    "cropResize",
+    "cropDraw",
+    "rotate",
+  ];
+
 /**
  * Everything the native screenshot preview reports back: the view transform,
  * which layer it selected, a pointer gesture in flight, and a finished
@@ -159,7 +173,11 @@ export function useScreenshotPreviewEvents({
         !Number.isFinite(payload.deltaX) ||
         !Number.isFinite(payload.deltaY) ||
         !Number.isInteger(payload.edges) ||
-        ![0, 1, 2, 3, 4, 5, 6, 7].includes(payload.operation) ||
+        !(
+          Number.isInteger(payload.operation) &&
+          payload.operation >= 0 &&
+          payload.operation < SELECTION_GESTURE_OPERATIONS.length
+        ) ||
         !Number.isInteger(payload.paneIndex) ||
         !Number.isFinite(payload.scale) ||
         !["begin", "update", "end", "cancel"].includes(payload.phase)
@@ -169,16 +187,7 @@ export function useScreenshotPreviewEvents({
         deltaX: payload.deltaX,
         deltaY: payload.deltaY,
         edges: payload.edges,
-        operation: [
-          "move",
-          "resize",
-          "radius",
-          "frameResize",
-          "frameRadius",
-          "cropMove",
-          "cropResize",
-          "cropDraw",
-        ][payload.operation] as ScreenshotSelectionGestureEvent["operation"],
+        operation: SELECTION_GESTURE_OPERATIONS[payload.operation],
         paneIndex: payload.paneIndex,
         phase: payload.phase,
         scale: payload.scale,

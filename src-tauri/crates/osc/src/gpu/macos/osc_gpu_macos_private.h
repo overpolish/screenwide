@@ -15,6 +15,13 @@ static inline ScreenwideRegionOscPoint ndc(NSSize size, CGFloat x, CGFloat y) {
   };
 }
 
+/// `screenwide_region_osc_add_line` with `uv.x` running from `along_from` at
+/// the extended start to `along_to` at the extended end, for a pattern laid
+/// along the line.
+void screenwide_region_osc_add_line_along(ScreenwideRegionOscVertex *vertices,
+                                          NSUInteger *count, NSSize size, NSPoint start,
+                                          NSPoint end, CGFloat width, uint32_t kind,
+                                          float along_from, float along_to);
 /// The handle artwork and the striped edges the selection frame and the crop
 /// frame both draw, kept in `osc_gpu_macos+primitives.m`.
 void screenwide_region_osc_add_pattern_quad(ScreenwideRegionOscVertex *vertices,

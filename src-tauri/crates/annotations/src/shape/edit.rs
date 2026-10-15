@@ -48,7 +48,7 @@ impl super::super::Annotation {
         super::super::magnify::gesture::drag(self, handle, point, origin, shift, snap)
       }
       AnnotationKind::Image => {
-        super::super::image::gesture::drag(self, handle, point, origin, shift, snap)
+        super::super::image::gesture::drag(self, handle, point, origin, snap)
       }
     }
   }

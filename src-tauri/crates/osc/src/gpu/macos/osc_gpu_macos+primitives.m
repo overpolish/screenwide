@@ -43,6 +43,14 @@ void screenwide_region_osc_add_line(ScreenwideRegionOscVertex *vertices,
                                     NSUInteger *count, NSSize size,
                                     NSPoint start, NSPoint end,
                                     CGFloat width, uint32_t kind) {
+  screenwide_region_osc_add_line_along(vertices, count, size, start, end, width, kind, 0.0f,
+                                       1.0f);
+}
+
+void screenwide_region_osc_add_line_along(ScreenwideRegionOscVertex *vertices,
+                                          NSUInteger *count, NSSize size, NSPoint start,
+                                          NSPoint end, CGFloat width, uint32_t kind,
+                                          float along_from, float along_to) {
   CGFloat dx = end.x - start.x;
   CGFloat dy = end.y - start.y;
   CGFloat length = hypot(dx, dy);
@@ -66,9 +74,9 @@ void screenwide_region_osc_add_line(ScreenwideRegionOscVertex *vertices,
   ScreenwideRegionOscPoint d =
       ndc(size, extendedStart.x - px, extendedStart.y - py);
   ScreenwideRegionOscVertex quad[6] = {
-      {a, {0, 0}, kind, 0}, {b, {1, 0}, kind, 0},
-      {c, {1, 1}, kind, 0}, {a, {0, 0}, kind, 0},
-      {c, {1, 1}, kind, 0}, {d, {0, 1}, kind, 0},
+      {a, {along_from, 0}, kind, 0}, {b, {along_to, 0}, kind, 0},
+      {c, {along_to, 1}, kind, 0},   {a, {along_from, 0}, kind, 0},
+      {c, {along_to, 1}, kind, 0},   {d, {along_from, 1}, kind, 0},
   };
   memcpy(vertices + *count, quad, sizeof(quad));
   *count += 6;

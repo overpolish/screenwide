@@ -27,8 +27,8 @@ pub(super) struct RecordingPreviewSelection {
   #[serde(default)]
   recenter_bounds: Option<PreviewSurfaceRect>,
   rect: PreviewSurfaceRect,
-  /// Set where a scene turns this pane and the select tool turns it with the
-  /// rotation gizmo: how it is turned now.
+  /// Set where the select tool turns this pane with the rotation gizmo, the
+  /// screen: how it is turned now, by its own turn or by a scene's.
   #[serde(default)]
   rotation: Option<SceneRotation>,
 }
@@ -63,11 +63,9 @@ impl RecordingPreviewSelection {
       width: self.rect.width,
       height: self.rect.height,
       radius_percent: self.radius_percent,
-      turnable: u32::from(self.rotation.is_some()),
-      rotation_x: self.rotation.map_or(0.0, |rotation| rotation.x),
-      rotation_y: self.rotation.map_or(0.0, |rotation| rotation.y),
-      rotation_z: self.rotation.map_or(0.0, |rotation| rotation.z),
+      ..PreviewSelection::default()
     }
+    .turned_by(self.rotation)
   }
 }
 

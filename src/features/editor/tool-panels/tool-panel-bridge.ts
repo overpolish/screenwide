@@ -32,6 +32,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAnnotationImagePlayChange?.(values.annotationImagePlay);
   if (values.annotationImageSway !== undefined)
     on.onAnnotationImageSwayChange?.(values.annotationImageSway);
+  if (values.annotationRotation !== undefined)
+    on.onAnnotationRotationChange?.(values.annotationRotation);
   if (values.reverseAnnotation) on.onAnnotationReverse?.();
   if (values.shuffleAnnotation) on.onAnnotationShuffle?.();
   if (values.clearDrawings) on.onDrawingsClear?.();
@@ -97,6 +99,9 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   }
   if (values.selectionRadius !== undefined) {
     on.onSelectionRadiusChange?.(values.selectionRadius);
+  }
+  if (values.selectionRotation !== undefined) {
+    on.onSelectionRotationChange?.(values.selectionRotation);
   }
   if (values.recenterSelection) on.onSelectionRecenter?.();
   if (values.resetSelection) on.onSelectionReset?.();

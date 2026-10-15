@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The rotation gizmo over a layer a scene turns, and that layer's chrome
-// carried through its turn. The chrome is laid out as for the upright layer,
-// in display points, and every vertex carried on through the turn the
-// compositor draws the layer with; a press on it is carried back the same
-// way. The geometry is Rust's (`osc/src/turn.rs`), so the rings, the chrome
-// and the picture cannot drift apart.
+// The rotation gizmo over a layer a turn tips, and that layer's own chrome
+// placed through its turn. The chrome is laid out as for the upright layer,
+// in display points, and its corners and grips carried through the turn the
+// compositor draws the layer with, then drawn in soft lines; a press on it
+// is carried back the same way. The geometry is Rust's (`osc/src/turn.rs`),
+// so the rings, the chrome and the picture cannot drift apart. The chosen
+// image's rings are `+annotation_image_turn.m`'s, drawn here in their place.
 
 #import "recording_preview_surface_macos_private.h"
 #include <math.h>
@@ -31,12 +32,9 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_is_turned(ScreenwidePreviewSelection s
           selection.rotation_z != 0.0);
 }
 
-/// The turn `selection`'s chrome goes through, in display points, and its
-/// inverse. NO where the layer stands upright, or is seen edge on, which
-/// leaves nothing of it to press.
-static BOOL selection_turn(ScreenwidePreviewSurface *surface,
-                           ScreenwidePreviewSelection selection, double forward[9],
-                           double inverse[9]) {
+SCREENWIDE_PREVIEW_PRIVATE BOOL selection_turn(ScreenwidePreviewSurface *surface,
+                                               ScreenwidePreviewSelection selection,
+                                               double forward[9], double inverse[9]) {
   if (!selection_is_turned(selection) ||
       selection.pane_index >= surface.editorBaseRects.count)
     return NO;
@@ -50,9 +48,7 @@ static BOOL selection_turn(ScreenwidePreviewSurface *surface,
                                       inverse) != 0;
 }
 
-/// Where `h` carries `point`, or far off every layer where it lands behind
-/// the eye.
-static NSPoint turn_apply(const double h[9], NSPoint point) {
+SCREENWIDE_PREVIEW_PRIVATE NSPoint turn_carry(const double h[9], NSPoint point) {
   double w = h[6] * point.x + h[7] * point.y + h[8];
   if (w <= 1e-9) return NSMakePoint(-1e7, -1e7);
   return NSMakePoint((h[0] * point.x + h[1] * point.y + h[2]) / w,
@@ -62,7 +58,7 @@ static NSPoint turn_apply(const double h[9], NSPoint point) {
 SCREENWIDE_PREVIEW_PRIVATE NSPoint selection_unturned_point(
     ScreenwidePreviewSurface *surface, ScreenwidePreviewSelection selection, NSPoint point) {
   double forward[9], inverse[9];
-  return selection_turn(surface, selection, forward, inverse) ? turn_apply(inverse, point)
+  return selection_turn(surface, selection, forward, inverse) ? turn_carry(inverse, point)
                                                               : point;
 }
 
@@ -81,23 +77,6 @@ SCREENWIDE_PREVIEW_PRIVATE NSPoint selection_drag_travel(ScreenwidePreviewIntera
   return NSMakePoint(point->x - origin.x, point->y - origin.y);
 }
 
-SCREENWIDE_PREVIEW_PRIVATE void turn_vertices(ScreenwidePreviewSurface *surface,
-                                              ScreenwideRegionOscVertex *vertices,
-                                              NSUInteger from, NSUInteger count,
-                                              NSSize size) {
-  double forward[9], inverse[9];
-  if (!surface.hasSelection || !selection_turn(surface, surface.selection, forward, inverse))
-    return;
-  double width = MAX(size.width, 1.0), height = MAX(size.height, 1.0);
-  for (NSUInteger index = from; index < count; index++) {
-    ScreenwideRegionOscPoint *at = &vertices[index].position;
-    NSPoint point = turn_apply(
-        forward, NSMakePoint((at->x + 1.0) * 0.5 * width, (1.0 - at->y) * 0.5 * height));
-    at->x = (float)(2.0 * point.x / width - 1.0);
-    at->y = (float)(1.0 - 2.0 * point.y / height);
-  }
-}
-
 SCREENWIDE_PREVIEW_PRIVATE void turn_add_selection(ScreenwideRegionOscVertex *vertices,
                                                    NSUInteger *count, NSSize size,
                                                    ScreenwidePreviewSurface *surface,
@@ -110,13 +89,13 @@ SCREENWIDE_PREVIEW_PRIVATE void turn_add_selection(ScreenwideRegionOscVertex *ve
                       surface.selection.radius_percent / 100.0 * 0.55 +
                   10.0;
   const NSPoint corners[4] = {
-      turn_apply(forward, NSMakePoint(NSMinX(frame), NSMinY(frame))),
-      turn_apply(forward, NSMakePoint(NSMaxX(frame), NSMinY(frame))),
-      turn_apply(forward, NSMakePoint(NSMaxX(frame), NSMaxY(frame))),
-      turn_apply(forward, NSMakePoint(NSMinX(frame), NSMaxY(frame))),
+      turn_carry(forward, NSMakePoint(NSMinX(frame), NSMinY(frame))),
+      turn_carry(forward, NSMakePoint(NSMaxX(frame), NSMinY(frame))),
+      turn_carry(forward, NSMakePoint(NSMaxX(frame), NSMaxY(frame))),
+      turn_carry(forward, NSMakePoint(NSMinX(frame), NSMaxY(frame))),
   };
-  NSPoint dot = turn_apply(forward, NSMakePoint(NSMinX(frame) + offset, NSMinY(frame) + offset));
-  screenwide_region_osc_add_turned_selection(vertices, count, size, corners, dot, scale);
+  NSPoint dot = turn_carry(forward, NSMakePoint(NSMinX(frame) + offset, NSMinY(frame) + offset));
+  screenwide_region_osc_add_turned_selection(vertices, count, size, corners, &dot, scale);
 }
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL turn_rings_shown(ScreenwidePreviewSurface *surface) {
@@ -153,16 +132,26 @@ SCREENWIDE_PREVIEW_PRIVATE void turn_add_rings(ScreenwideRegionOscVertex *vertic
                                                ScreenwideRegionOscRenderState *state,
                                                ScreenwidePreviewSurface *surface,
                                                CGFloat scale) {
-  if (!turn_rings_shown(surface)) return;
-  ScreenwidePreviewSelection selection = surface.selection;
-  NSPoint centre = turn_centre(surface);
-  double radius = turn_radius(surface);
+  // The chosen image's rings, or else the selected layer's.
+  ScreenwideImageGizmo gizmo;
+  if (!annotation_image_gizmo(surface, &gizmo)) {
+    if (!turn_rings_shown(surface)) return;
+    ScreenwidePreviewSelection selection = surface.selection;
+    gizmo.centre = turn_centre(surface);
+    gizmo.radius = turn_radius(surface);
+    gizmo.seen[0] = selection.rotation_x;
+    gizmo.seen[1] = selection.rotation_y;
+    gizmo.seen[2] = selection.rotation_z;
+  }
+  NSPoint centre = gizmo.centre;
+  double radius = gizmo.radius;
   ScreenwidePreviewInteractionView *view = surface.interaction;
-  NSInteger dragged = view.turnDragActive ? (NSInteger)view.turnDrag.axis : -1;
+  NSInteger dragged = view.turnDragActive    ? (NSInteger)view.turnDrag.axis
+                      : view.imageTurnActive ? (NSInteger)view.imageTurnHold.drag.axis
+                                             : -1;
   NSInteger held = dragged >= 0 ? dragged : surface.turnHoveredRing - 1;
   double basis[18];
-  screenwide_turn_ring_basis(selection.rotation_x, selection.rotation_y,
-                             selection.rotation_z, basis);
+  screenwide_turn_ring_basis(gizmo.seen[0], gizmo.seen[1], gizmo.seen[2], basis);
   // Each direction scaled to the ring in the target's pixels; the depth
   // only gives the side, so it stays as it is.
   for (NSUInteger row = 0; row < 6; row++) {
@@ -186,8 +175,8 @@ SCREENWIDE_PREVIEW_PRIVATE void turn_add_rings(ScreenwideRegionOscVertex *vertic
 
 SCREENWIDE_PREVIEW_PRIVATE NSCursor *turn_cursor(ScreenwidePreviewSurface *surface,
                                                  NSPoint point) {
-  if (!turn_rings_shown(surface)) return nil;
-  ScreenwideTurnRingHit hit = turn_ring_at(surface, point);
+  ScreenwideTurnRingHit hit = annotation_image_ring_at(surface, point);
+  if (hit.axis < 0 && turn_rings_shown(surface)) hit = turn_ring_at(surface, point);
   if (hit.axis < 0) return nil;
   return screenwide_region_resize_cursor(hit.edges) ?: [NSCursor arrowCursor];
 }
@@ -195,8 +184,12 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *turn_cursor(ScreenwidePreviewSurface *surfa
 SCREENWIDE_PREVIEW_PRIVATE void turn_update_hover(ScreenwidePreviewSurface *surface,
                                                   NSPoint point) {
   NSInteger ring = 0;
-  if (turn_rings_shown(surface) && !surface.interaction.turnDragActive)
-    ring = turn_ring_at(surface, point).axis + 1;
+  ScreenwidePreviewInteractionView *view = surface.interaction;
+  if (!view.turnDragActive && !view.imageTurnActive) {
+    ScreenwideTurnRingHit hit = annotation_image_ring_at(surface, point);
+    if (hit.axis < 0 && turn_rings_shown(surface)) hit = turn_ring_at(surface, point);
+    ring = hit.axis + 1;
+  }
   if (ring == surface.turnHoveredRing) return;
   surface.turnHoveredRing = ring;
   redraw_selection(surface);
@@ -212,6 +205,8 @@ static void emit_turn(ScreenwidePreviewSurface *surface, uint32_t phase) {
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL turn_mouse_down(ScreenwidePreviewInteractionView *view,
                                                 NSEvent *event, NSPoint point) {
+  // The chosen image's rings sit over the image, inside the layer's chrome.
+  if (image_turn_mouse_down(view, event, point)) return YES;
   ScreenwidePreviewSurface *surface = view.surface;
   if (event.buttonNumber != 0 || !turn_rings_shown(surface) ||
       surface.selectionGestureCallback == NULL)
@@ -237,6 +232,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL turn_mouse_down(ScreenwidePreviewInteractionView
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL turn_mouse_dragged(ScreenwidePreviewInteractionView *view,
                                                    NSEvent *event) {
+  if (image_turn_mouse_dragged(view, event)) return YES;
   if (!view.turnDragActive) return NO;
   ScreenwidePreviewSurface *surface = view.surface;
   NSPoint point = [view convertPoint:event.locationInWindow fromView:nil];
@@ -261,6 +257,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL turn_mouse_dragged(ScreenwidePreviewInteractionV
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL turn_mouse_up(ScreenwidePreviewInteractionView *view,
                                               NSEvent *event) {
+  if (image_turn_mouse_up(view, event)) return YES;
   if (!view.turnDragActive) return NO;
   // A release can land past the last drag sample; it is the turn kept.
   turn_mouse_dragged(view, event);

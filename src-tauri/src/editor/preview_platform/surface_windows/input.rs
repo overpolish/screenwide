@@ -51,12 +51,18 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
         refresh_cursor_for(inner);
         return;
       }
+      // The rotation gizmo's rings sit over the layer they turn.
+      if turn::down(inner, logical(x, y)) {
+        return;
+      }
+      // A turned layer's annotations are pressed where its turn draws them.
+      let layer = turn::layer_point(inner, logical(x, y));
       // A press is never a hover: the halo goes out before anything moves.
-      annotation::update_hover(inner, logical(x, y), true);
+      annotation::update_hover(inner, layer, true);
       // The arrow chrome gets the press first and keeps it if it lands on a
       // grip, on a shaft, or on empty picture with the arrow tool in hand.
       // Anything it declines belongs to the layer underneath.
-      if annotation::down(inner, logical(x, y)) {
+      if annotation::down(inner, layer) {
         if let Ok(mut state) = inner.state.lock() {
           state.last_pointer = logical(x, y);
         }
@@ -72,14 +78,21 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       pressed,
       snapping,
     } => {
+      if pressed && turn::pointer_move(inner, logical(x, y)) {
+        return;
+      }
       if pressed
         && (object_picking::pointer_move(inner, logical(x, y))
           || annotation::typing_move(inner, logical(x, y)))
       {
         return;
       }
-      annotation::update_hover(inner, logical(x, y), pressed);
-      if pressed && annotation::pointer_move(inner, logical(x, y)) {
+      if !pressed {
+        turn::hover(inner, logical(x, y));
+      }
+      let layer = turn::layer_point(inner, logical(x, y));
+      annotation::update_hover(inner, layer, pressed);
+      if pressed && annotation::pointer_move(inner, layer) {
         if let Ok(mut state) = inner.state.lock() {
           state.last_pointer = logical(x, y);
         }
@@ -93,7 +106,7 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
         state.last_pointer = point;
         // A selection drag already in flight on the primary button keeps
         // going; the middle button only pans from rest.
-        if state.gesture.is_none() {
+        if state.gesture.is_none() && state.turn.drag.is_none() {
           state.gesture = Some(ActiveGesture::Pan {
             pointer_start: point,
             transform_start: state.workspace_transform,
@@ -113,24 +126,31 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       }
     }
     editor::Input::Up { x, y } => {
+      if turn::up(inner, logical(x, y)) {
+        return;
+      }
       if object_picking::up(inner, logical(x, y)) {
         refresh_cursor_for(inner);
         return;
       }
-      if annotation::typing_up(inner) || annotation::up(inner, logical(x, y)) {
+      let layer = turn::layer_point(inner, logical(x, y));
+      if annotation::typing_up(inner) || annotation::up(inner, layer) {
         if let Ok(mut state) = inner.state.lock() {
           state.last_pointer = logical(x, y);
         }
         // What now lies under the resting pointer - an annotation just placed
         // or carried there - is haloed, so it can be deleted without the
         // pointer moving first; the press had put the halo out.
-        annotation::update_hover(inner, logical(x, y), false);
+        annotation::update_hover(inner, layer, false);
         refresh_cursor_for(inner);
         return;
       }
       up::up(inner, scale, x, y);
     }
     editor::Input::Cancel => {
+      if turn::cancel(inner) {
+        return;
+      }
       if let Ok(mut state) = inner.state.lock() {
         annotation::cancel(&mut state);
       }

@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  SceneRotation,
+  UPRIGHT_ROTATION,
+  withRotation,
+} from "../../layer-rotation";
+import {
   prepareRecenterInset,
   recenterWorkspaceContent,
 } from "../../recenter-inset-channel";
@@ -46,6 +51,8 @@ export type EditorSelectionTarget = {
   /** Put the layer back to the framing its source arrived in. */
   reset: () => void;
   selection: ToolPanelLayerSelection;
+  /** Turn the layer in depth, a field at a time, where it can be turned. */
+  applyRotation?: (rotation: Partial<SceneRotation>) => void;
   /** The camera's effects, where the layer is the camera. */
   cameraEffects?: CameraEffectsTool;
 };
@@ -64,6 +71,7 @@ export const placedSelectionTarget = ({
   label,
   settings,
   source,
+  turns,
   workspace,
 }: {
   apply: (next: ScreenshotOutputSettings) => void;
@@ -71,10 +79,14 @@ export const placedSelectionTarget = ({
   label: string;
   settings: ScreenshotOutputSettings;
   source: { height: number; width: number };
+  /** Whether the layer turns in depth: the screen of a recording and a
+   * screenshot's layers do, the camera does not. */
+  turns: boolean;
   /** The workspace whose padding analysis this layer's pad is filled from, or
    * null where a layer there carries no pad. */
   workspace: EditorKind | null;
 }): EditorSelectionTarget => {
+  const rotation = settings.rotation ?? UPRIGHT_ROTATION;
   return {
     // The shadow is the layer's own, cast onto whatever the canvas is wearing,
     // so it travels with the layer's output rather than with the canvas.
@@ -96,6 +108,13 @@ export const placedSelectionTarget = ({
     applyRadius: (radiusPercent) => {
       apply({ ...settings, radiusPercent });
     },
+    ...(turns
+      ? {
+          applyRotation: (turn: Partial<SceneRotation>) => {
+            apply(withRotation(settings, { ...rotation, ...turn }));
+          },
+        }
+      : {}),
     recenter: () => {
       if (workspace) recenterWorkspaceContent(workspace);
     },
@@ -117,6 +136,7 @@ export const placedSelectionTarget = ({
       kind,
       label,
       radius: settings.radiusPercent,
+      ...(turns ? { rotation } : {}),
       sourceHeight: source.height,
       sourceWidth: source.width,
     },

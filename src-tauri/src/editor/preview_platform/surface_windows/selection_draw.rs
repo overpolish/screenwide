@@ -81,9 +81,10 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   // The arrow chrome, when it owns the screen: its grips, which may be none
   // at all with the arrow tool in hand and nothing chosen yet, plus the disc
   // over a snapped tip, which is drawn exactly like one of them. `None`
-  // leaves the layer's own chrome standing.
+  // leaves the layer's own chrome standing. Playback and a scrub hide every
+  // chrome, as nothing on screen can be taken hold of meanwhile.
   let snap = annotation::snap_chrome(state, scale);
-  let annotation_handles = annotation::owns_chrome(state).then(|| {
+  let annotation_handles = (state.selection_visible && annotation::owns_chrome(state)).then(|| {
     let mut grips = annotation::selected_grips(state, scale);
     grips.extend(snap.anchor);
     grips
@@ -91,22 +92,28 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   // A chosen redaction wears the layer selection's own box, grips and radius
   // dot inside the annotation chrome, and a chosen image its own frame,
   // turned with it.
-  let annotation_box = annotation_handles
-    .is_some()
-    .then(|| annotation::selected_redaction(state, scale))
-    .flatten();
-  let annotation_frame = annotation_handles
-    .is_some()
-    .then(|| annotation::selected_image_frame(state, scale))
-    .flatten();
-  let (group, marquee) = if annotation_handles.is_some() {
+  let annotation_parts = annotation_handles.is_some().then(|| {
     (
+      annotation::selected_redaction(state, scale),
+      annotation::selected_image_frame(state, scale),
       annotation::group_frames(state, scale),
       annotation::marquee_frame(state, scale),
     )
-  } else {
-    (Vec::new(), None)
-  };
+  });
+  let annotation_chrome = annotation_handles
+    .as_deref()
+    .zip(annotation_parts.as_ref())
+    .map(
+      |(handles, (box_frame, image_frame, group, marquee))| selection::AnnotationChrome {
+        handles,
+        box_frame: *box_frame,
+        image_frame: *image_frame,
+        bounds: snap.bounds,
+        gaps: &snap.gaps,
+        group,
+        marquee: *marquee,
+      },
+    );
   // An annotation gesture owns the guides for as long as it owns the chrome:
   // its candidates are the source image's own lines, not the canvas's.
   let guides = if annotation_handles.is_some() {
@@ -153,7 +160,13 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
         height * scale as f32,
       ]
     });
-  let objects = object_picking::chrome(state);
+  let objects = state
+    .selection_visible
+    .then(|| object_picking::chrome(state))
+    .flatten();
+  // A turned layer's frame and annotation chrome are drawn through its turn,
+  // and the select tool's rings over it.
+  let turned = turn::chrome(state, scale);
   if let Ok(mut overlay) = inner.gpu.selection.lock() {
     let _ = overlay.draw(
       (
@@ -166,14 +179,9 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       crop_radius_percent,
       guides,
       magnifier_box,
-      annotation_handles.as_deref(),
-      annotation_box,
-      annotation_frame,
-      snap.bounds,
-      &snap.gaps,
-      &group,
-      marquee,
+      annotation_chrome.as_ref(),
       objects.as_ref(),
+      &turned,
       scale,
       luminance > 0.5,
     );

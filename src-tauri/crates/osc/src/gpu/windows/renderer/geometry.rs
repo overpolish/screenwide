@@ -74,6 +74,20 @@ pub fn add_line(
   width: f64,
   kind: u32,
 ) {
+  add_line_along(out, view, start, end, width, kind, [0.0, 1.0]);
+}
+
+/// `add_line` with `uv.x` running from `along[0]` at the extended start to
+/// `along[1]` at the extended end, for a pattern laid along the line.
+pub(super) fn add_line_along(
+  out: &mut Vec<Vertex>,
+  view: Size,
+  start: Point,
+  end: Point,
+  width: f64,
+  kind: u32,
+  along: [f32; 2],
+) {
   let dx = end.x - start.x;
   let dy = end.y - start.y;
   let length = dx.hypot(dy);
@@ -93,6 +107,7 @@ pub fn add_line(
     x: end.x + ux * half,
     y: end.y + uy * half,
   };
+  let [from, to] = along;
   push_quad(
     out,
     [
@@ -101,7 +116,7 @@ pub fn add_line(
       ndc(view, extended_end.x - px, extended_end.y - py),
       ndc(view, extended_start.x - px, extended_start.y - py),
     ],
-    UNIT_UVS,
+    [[from, 0.0], [to, 0.0], [to, 1.0], [from, 1.0]],
     kind,
   );
 }

@@ -35,10 +35,12 @@ impl super::AnnotationShape {
         center,
         size,
         angle,
+        tilt,
         aspect,
         ..
       } => {
-        let (low, high) = image::model::bounds(*center, *size, *angle, *aspect);
+        let (low, high) =
+          image::model::bounds(*center, *size, *angle, tilt.unwrap_or_default(), *aspect);
         [low, high, *center]
       }
       Self::Highlight {
@@ -84,9 +86,10 @@ impl super::AnnotationShape {
         center,
         size,
         angle,
+        tilt,
         aspect,
         ..
-      } => image::model::placed(*center, *size, *angle, *aspect),
+      } => image::model::placed(*center, *size, *angle, tilt.unwrap_or_default(), *aspect),
     }
   }
 
@@ -179,6 +182,7 @@ impl super::AnnotationShape {
         center,
         size,
         angle,
+        tilt,
         aspect,
         flip,
         asset,
@@ -187,8 +191,8 @@ impl super::AnnotationShape {
         clock_ms,
       } => {
         // Its size rides through as the magnifier's does; the turn, the
-        // mirroring, how it plays and how it sways are the same in every
-        // space, the drift being a share of its size.
+        // tilt, the mirroring, how it plays and how it sways are the same in
+        // every space, the drift being a share of its size.
         let centre = map(*center);
         let edge = map(AnnotationPoint {
           x: center.x + size,
@@ -198,6 +202,7 @@ impl super::AnnotationShape {
           center: centre,
           size: (edge.x - centre.x).abs(),
           angle: *angle,
+          tilt: *tilt,
           aspect: *aspect,
           flip: *flip,
           asset: asset.clone(),

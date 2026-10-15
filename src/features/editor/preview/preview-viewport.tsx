@@ -5,12 +5,11 @@ import { useRef, useState } from "react";
 
 import { useAnnotationDefaults } from "../annotations/annotation-defaults";
 import {
-  applyScreenshotCropGesture,
-  commitScreenshotCrop,
   isCropOperation,
   uncroppedScreenshotPreviewOutput,
 } from "../screenshot/screenshot-crop";
 import { SourceRect } from "../screenshot/screenshot-geometry";
+import { gesturedScreenshotLayer } from "../screenshot/screenshot-layer-gesture";
 import {
   ScreenshotOutputSettings,
   ScreenshotWorkspaceOutputSettings,
@@ -18,12 +17,12 @@ import {
   resizeScreenshotWorkspaceCanvasEdges,
   screenshotLayout,
   screenshotWorkspaceItemOutput,
-  screenshotGestureShift,
   screenshotOutputDimensions,
 } from "../screenshot/screenshot-output";
 import { screenshotAnnotationOutput } from "../screenshot/screenshot-preview-events";
 import {
   normalizedScreenshotSelection,
+  screenshotLayerTurn,
   screenshotSelectionTargets,
 } from "../screenshot/screenshot-selection";
 import {
@@ -323,7 +322,7 @@ export function PreviewViewport({
         (Math.abs(event.scale - 1) > 1e-9 ||
           Math.abs(event.deltaX) > 1e-9 ||
           Math.abs(event.deltaY) > 1e-9)) ||
-      (event.operation === "radius" &&
+      ((event.operation === "radius" || event.operation === "rotate") &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
     const differsFromLastUpdate =
       Math.abs(event.deltaX - active.lastDeltaX) > 1e-9 ||
@@ -331,63 +330,22 @@ export function PreviewViewport({
       event.edges !== active.lastEdges ||
       ((event.operation === "resize" ||
         event.operation === "radius" ||
+        event.operation === "rotate" ||
         event.operation === "cropResize") &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
     const cropOperation = isCropOperation(event.operation);
     const shouldApply =
       event.phase === "end" ? cropOperation || differsFromLastUpdate : changed;
-    const move = screenshotGestureShift(event, active.workspaceSnapshot);
-    const cropX = active.snapshot.cropX + move.x;
-    const cropY = active.snapshot.cropY + move.y;
-    let next: ScreenshotOutputSettings;
-    if (isCropOperation(event.operation)) {
-      const source = items.find((item) => item.id === active.itemId);
-      if (!source) return;
-      next = applyScreenshotCropGesture({
-        ...event,
-        anchor: active.anchor,
-        operation: event.operation,
-        output,
-        settings: active.snapshot,
-        source,
-      });
-      if (event.phase === "end")
-        next = commitScreenshotCrop(active.snapshot, next, source);
-    } else if (event.operation === "radius") {
-      next = {
-        ...active.snapshot,
-        radiusPercent: Math.min(50, Math.max(0, event.scale)),
-      };
-    } else if (event.operation === "resize") {
-      const scale = Math.min(8, Math.max(0, event.scale));
-      const transform = (
-        value: number,
-        startFrame: number,
-        nextFrame: number,
-      ) => {
-        if (Math.abs(scale - 1) < 1e-9) return value;
-        const anchor = (nextFrame - startFrame * scale) / (1 - scale);
-        return anchor + (value - anchor) * scale;
-      };
-      next = {
-        ...active.snapshot,
-        cropHeight: active.snapshot.cropHeight * scale,
-        cropWidth: active.snapshot.cropWidth * scale,
-        cropX,
-        cropY,
-        imageWidth: active.snapshot.imageWidth * scale,
-        imageX: transform(active.snapshot.imageX, active.snapshot.cropX, cropX),
-        imageY: transform(active.snapshot.imageY, active.snapshot.cropY, cropY),
-      };
-    } else {
-      next = {
-        ...active.snapshot,
-        cropX,
-        cropY,
-        imageX: active.snapshot.imageX + move.x,
-        imageY: active.snapshot.imageY + move.y,
-      };
-    }
+    const source = items.find((item) => item.id === active.itemId);
+    if (!source) return;
+    const next = gesturedScreenshotLayer({
+      anchor: active.anchor,
+      event,
+      output,
+      snapshot: active.snapshot,
+      source,
+      workspace: active.workspaceSnapshot,
+    });
     if (shouldApply) {
       const autoFit =
         event.operation === "move" && (event.edges & AUTO_FIT_MOVE_EDGE) !== 0;
@@ -448,6 +406,7 @@ export function PreviewViewport({
             cropMode: isEditing,
             paneIndex: selectedItemIndex,
             radiusPercent: selectedItemOutput.radiusPercent,
+            ...screenshotLayerTurn(selectedItemOutput, isEditing),
             ...normalizedScreenshotSelection(
               screenshotLayout(selectedItem, selectedItemOutput),
               output,

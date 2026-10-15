@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { UPRIGHT_ROTATION, SceneRotation } from "../../layer-rotation";
 import { RecordingSceneArrangement } from "../scenes/recording-scene-arrangement";
 
 import type { RecordingPreviewSelection } from "../use-recording-preview-surface";
@@ -13,12 +14,13 @@ const layerOf = (selection: RecordingPreviewSelection) =>
  * and every pane a press may land on. A pane the scene hides is neither drawn
  * nor picked. A custom scene's box moves and resizes like any layer, but the
  * canvas it sits on is the scene's to size, so dragging it never grows the
- * canvas. The screen carries how the scene turns it, which its chrome is
- * drawn through and the rotation gizmo turns. `freeScreen` frees the screen
- * of a scene that otherwise fixes its panes, a full scene's, which its first
- * move makes custom. While the crop tool reframes a pane, `reframe` stands in
- * for it. A press over both panes finds the last target, the one drawn in
- * front, so a scene that puts the camera behind lists the screen after it.
+ * canvas. The screen carries how it is turned, by the scene or, outside every
+ * scene, by its own turn, which its chrome is drawn through and the rotation
+ * gizmo turns. `freeScreen` frees the screen of a scene that otherwise fixes
+ * its panes, a full scene's, which its first move makes custom. While the
+ * crop tool reframes a pane, `reframe` stands in for it. A press over both
+ * panes finds the last target, the one drawn in front, so a scene that puts
+ * the camera behind lists the screen after it.
  */
 export function scenePanePicks({
   arrangement,
@@ -27,6 +29,7 @@ export function scenePanePicks({
   isFramed,
   overlay,
   reframe,
+  screenRotation,
   targets,
 }: {
   arrangement: RecordingSceneArrangement | null | undefined;
@@ -35,6 +38,8 @@ export function scenePanePicks({
   isFramed: boolean;
   overlay: RecordingPreviewSelection | null;
   reframe: RecordingPreviewSelection | undefined;
+  /** How the screen turns itself, outside every scene. */
+  screenRotation: SceneRotation | undefined;
   targets: RecordingPreviewSelection[] | null;
 }) {
   const placedFreely = (given: RecordingPreviewSelection) => {
@@ -49,8 +54,13 @@ export function scenePanePicks({
       layerOf(selection) <= 1
         ? { ...selection, inScene: true }
         : selection;
-    return arrangement && layerOf(placed) === 0 && !placed.cropMode
-      ? { ...placed, rotation: arrangement.rotation }
+    return layerOf(placed) === 0 && !placed.cropMode
+      ? {
+          ...placed,
+          rotation: arrangement
+            ? arrangement.rotation
+            : (screenRotation ?? UPRIGHT_ROTATION),
+        }
       : placed;
   };
   const opacity = arrangement?.opacity;

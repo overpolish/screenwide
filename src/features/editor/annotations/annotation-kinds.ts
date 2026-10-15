@@ -152,7 +152,7 @@ export const ANNOTATION_KINDS: {
     animates: true,
     drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
     hasAlign: false,
-    hasAngle: true,
+    hasAngle: false,
     hasBlur: false,
     hasColor: false,
     hasFit: false,

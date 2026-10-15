@@ -7,6 +7,7 @@
 //! sizing and turning it each touch one number. Its picture's own proportions
 //! ride beside it as `aspect`, which only choosing another picture changes.
 
+use super::ImageTilt;
 use crate::{Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -128,6 +129,7 @@ pub fn new_image(
       center,
       size: art.pixels.unwrap_or(NEW_IMAGE_POINTS * scale),
       angle: 0.0,
+      tilt: None,
       aspect: art.aspect,
       flip: false,
       asset: art.asset,
@@ -141,12 +143,19 @@ pub fn new_image(
 
 /// Whether an image is somewhere it can be drawn: a document read from disk
 /// carries whatever it was written with.
-pub(crate) fn placed(center: AnnotationPoint, size: f64, angle: f64, aspect: f64) -> bool {
+pub(crate) fn placed(
+  center: AnnotationPoint,
+  size: f64,
+  angle: f64,
+  tilt: ImageTilt,
+  aspect: f64,
+) -> bool {
   center.x.is_finite()
     && center.y.is_finite()
     && size.is_finite()
     && size > 0.0
     && angle.is_finite()
+    && tilt.is_finite()
     && aspect.is_finite()
     && aspect > 0.0
 }
@@ -200,50 +209,46 @@ pub(crate) fn from_local(
 }
 
 /// The upright box the turned picture fits in, as its top-left and
-/// bottom-right corners.
+/// bottom-right corners: round its corners as its tilt and its turn draw
+/// them.
 pub(crate) fn bounds(
   center: AnnotationPoint,
   size: f64,
   angle: f64,
+  tilt: ImageTilt,
   aspect: f64,
 ) -> (AnnotationPoint, AnnotationPoint) {
   let (half_width, half_height) = half_extents(size, aspect);
   let (across, down) = axes(angle);
-  let reach_x = (across[0] * half_width).abs() + (down[0] * half_height).abs();
-  let reach_y = (across[1] * half_width).abs() + (down[1] * half_height).abs();
-  (
-    AnnotationPoint {
-      x: center.x - reach_x,
-      y: center.y - reach_y,
-    },
-    AnnotationPoint {
-      x: center.x + reach_x,
-      y: center.y + reach_y,
-    },
-  )
-}
-
-/// The turn that stands the image's top towards `point`: its turning grip
-/// sits straight above its middle. A press exactly on the middle keeps the
-/// turn it had. `snap` holds it to the eighth turns the counter's tail and
-/// the angle control snap to.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) fn image_turn(
-  center: AnnotationPoint,
-  point: AnnotationPoint,
-  current: f64,
-  snap: bool,
-) -> f64 {
-  let (dx, dy) = (point.x - center.x, point.y - center.y);
-  if dx == 0.0 && dy == 0.0 {
-    return current;
+  let mut low = AnnotationPoint {
+    x: f64::INFINITY,
+    y: f64::INFINITY,
+  };
+  let mut high = AnnotationPoint {
+    x: f64::NEG_INFINITY,
+    y: f64::NEG_INFINITY,
+  };
+  for (x, y) in [
+    (-half_width, -half_height),
+    (half_width, -half_height),
+    (half_width, half_height),
+    (-half_width, half_height),
+  ] {
+    let local = tilt.tilted(size, AnnotationPoint { x, y });
+    let point = AnnotationPoint {
+      x: center.x + across[0] * local.x + down[0] * local.y,
+      y: center.y + across[1] * local.x + down[1] * local.y,
+    };
+    low = AnnotationPoint {
+      x: low.x.min(point.x),
+      y: low.y.min(point.y),
+    };
+    high = AnnotationPoint {
+      x: high.x.max(point.x),
+      y: high.y.max(point.y),
+    };
   }
-  let angle = dx.atan2(-dy);
-  if !snap {
-    return angle;
-  }
-  let step = crate::counter::model::COUNTER_SNAP_RADIANS;
-  (angle / step).round() * step
+  (low, high)
 }
 
 /// What an image offers the snap engine: the upright box it fits in.
@@ -252,9 +257,10 @@ pub(crate) fn field_box(
   center: AnnotationPoint,
   size: f64,
   angle: f64,
+  tilt: ImageTilt,
   aspect: f64,
 ) -> Option<crate::snap::SnapBox> {
-  let (low, high) = bounds(center, size, angle, aspect);
+  let (low, high) = bounds(center, size, angle, tilt, aspect);
   Some(crate::snap::SnapBox {
     x: low.x,
     y: low.y,

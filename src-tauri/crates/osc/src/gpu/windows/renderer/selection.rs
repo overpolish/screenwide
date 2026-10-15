@@ -232,4 +232,4 @@ mod crop;
 mod turned;
 
 pub use crop::{add_crop, add_crop_with_handles};
-pub use turned::add_turned_selection;
+pub use turned::{add_soft_guide, add_turned_marquee, add_turned_outline, add_turned_selection};

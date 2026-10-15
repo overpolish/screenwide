@@ -79,20 +79,56 @@ void screenwide_region_osc_add_selection(
   }
 }
 
-/// The twin of Rust's `add_turned_selection`. Its sides need not run along
-/// the pixel grid, so they are soft lines, each quad padded a pixel either
-/// side for the shader to anti-alias across, rather than snapped quads.
-void screenwide_region_osc_add_turned_selection(
-    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
-    const NSPoint corners[4], NSPoint radius_dot, CGFloat scale) {
-  CGFloat pad = 2.0 / scale;
+/// The pixel either side of a soft line's quad that its edge fades across.
+static CGFloat soft_pad(CGFloat scale) { return 2.0 / scale; }
+
+/// The twin of Rust's `add_turned_outline`.
+void screenwide_region_osc_add_turned_outline(ScreenwideRegionOscVertex *vertices,
+                                              NSUInteger *count, NSSize size,
+                                              const NSPoint corners[4], CGFloat scale) {
   const CGFloat widths[2] = {3.0 / scale, 1.0 / scale};
   const uint32_t kinds[2] = {51, 50};
   for (NSUInteger pass = 0; pass < 2; pass++)
     for (NSUInteger side = 0; side < 4; side++)
       screenwide_region_osc_add_line(vertices, count, size, corners[side],
-                                     corners[(side + 1) % 4], widths[pass] + pad,
+                                     corners[(side + 1) % 4], widths[pass] + soft_pad(scale),
                                      kinds[pass]);
+}
+
+/// The twin of Rust's `add_turned_marquee`.
+void screenwide_region_osc_add_turned_marquee(ScreenwideRegionOscVertex *vertices,
+                                              NSUInteger *count, NSSize size,
+                                              const NSPoint corners[4], CGFloat scale) {
+  CGFloat width = 3.0 / scale + soft_pad(scale);
+  CGFloat half = width * 0.5;
+  for (NSUInteger side = 0; side < 4; side++) {
+    NSPoint from = corners[side];
+    NSPoint to = corners[(side + 1) % 4];
+    CGFloat span = hypot(to.x - from.x, to.y - from.y);
+    // The quad runs half its width past each corner, so the periods are
+    // counted from there to keep the pattern anchored on the corner.
+    screenwide_region_osc_add_line_along(vertices, count, size, from, to, width, 63,
+                                         (float)(-half * scale / 12.0),
+                                         (float)((span + half) * scale / 12.0));
+  }
+}
+
+/// The twin of Rust's `add_soft_guide`.
+void screenwide_region_osc_add_soft_guide(ScreenwideRegionOscVertex *vertices,
+                                          NSUInteger *count, NSSize size, NSPoint from,
+                                          NSPoint to, CGFloat width, BOOL object,
+                                          CGFloat scale) {
+  screenwide_region_osc_add_line(vertices, count, size, from, to, width + soft_pad(scale),
+                                 object ? 62 : 61);
+}
+
+/// The twin of Rust's `add_turned_selection`. Its sides need not run along
+/// the pixel grid, so they are soft lines, each quad padded a pixel either
+/// side for the shader to anti-alias across, rather than snapped quads.
+void screenwide_region_osc_add_turned_selection(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
+    const NSPoint corners[4], const NSPoint *radius_dot, CGFloat scale) {
+  screenwide_region_osc_add_turned_outline(vertices, count, size, corners, scale);
   CGFloat radius = 4.0 + 1.0 / scale;
   // A side's pill lies along it, the length and thickness of an upright one.
   CGFloat length = 12.0 + 4.0 / scale;
@@ -113,7 +149,8 @@ void screenwide_region_osc_add_turned_selection(
                                    NSMakePoint(middle.x + along.x, middle.y + along.y),
                                    thickness, 16);
   }
-  screenwide_region_osc_add_circle(vertices, count, size,
-                                   screenwide_region_osc_snap_handle_point(radius_dot, scale),
-                                   radius, 1.0 / scale, 3);
+  if (radius_dot != NULL)
+    screenwide_region_osc_add_circle(vertices, count, size,
+                                     screenwide_region_osc_snap_handle_point(*radius_dot, scale),
+                                     radius, 1.0 / scale, 3);
 }

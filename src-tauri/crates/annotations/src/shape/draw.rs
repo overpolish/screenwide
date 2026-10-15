@@ -186,12 +186,14 @@ impl super::AnnotationShape {
         center,
         size,
         angle,
+        tilt,
         aspect,
         ..
       } => super::super::image::handles::grips(
         *center,
         *size,
         *angle,
+        tilt.unwrap_or_default(),
         *aspect,
         style.radius,
         index,
@@ -225,9 +227,16 @@ impl super::AnnotationShape {
         center,
         size,
         angle,
+        tilt,
         aspect,
         ..
-      } => super::super::image::model::field_box(*center, *size, *angle, *aspect),
+      } => super::super::image::model::field_box(
+        *center,
+        *size,
+        *angle,
+        tilt.unwrap_or_default(),
+        *aspect,
+      ),
       // A highlight lies over the text it marks; nothing lines up against it.
       Self::Highlight { .. } => None,
     }

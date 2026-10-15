@@ -74,20 +74,23 @@ pub(super) fn refresh_cursor_for(inner: &SurfaceInner) {
       {
         editor::CursorKind::Crosshair
       }
-      Some(ActiveGesture::Selection(gesture)) => {
-        let edges = gesture.edges & 0b1111;
-        if edges == 1 || edges == 2 {
-          editor::CursorKind::ResizeHorizontal
-        } else if edges == 4 || edges == 8 {
-          editor::CursorKind::ResizeVertical
-        } else if edges == (1 | 4) || edges == (2 | 8) {
-          editor::CursorKind::ResizeNwse
-        } else {
-          editor::CursorKind::ResizeNesw
-        }
-      }
+      Some(ActiveGesture::Selection(gesture)) => resize_cursor(gesture.edges),
       _ => cursor_for_state(inner, &state, state.last_pointer),
     })
     .unwrap_or(editor::CursorKind::Arrow);
   editor::EditorWindow::set_cursor(kind);
+}
+
+/// The resize cursor running along `edges`' sides.
+pub(super) fn resize_cursor(edges: u32) -> editor::CursorKind {
+  let edges = edges & 0b1111;
+  if edges == 1 || edges == 2 {
+    editor::CursorKind::ResizeHorizontal
+  } else if edges == 4 || edges == 8 {
+    editor::CursorKind::ResizeVertical
+  } else if edges == (1 | 4) || edges == (2 | 8) {
+    editor::CursorKind::ResizeNwse
+  } else {
+    editor::CursorKind::ResizeNesw
+  }
 }

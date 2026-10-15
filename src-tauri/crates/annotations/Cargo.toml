@@ -20,6 +20,7 @@ test-support = []
 bytemuck.workspace = true
 getrandom.workspace = true
 screenwide-imaging.workspace = true
+screenwide-scenes.workspace = true
 screenwide-timeline.workspace = true
 serde.workspace = true
 serde_json.workspace = true

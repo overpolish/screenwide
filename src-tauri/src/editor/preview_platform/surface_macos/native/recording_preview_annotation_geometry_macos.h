@@ -55,19 +55,22 @@ static inline AnnotationArrowGeometry annotation_prepared(
     return prepared;
   }
   if (item.kind == ScreenwideAnnotationKindImage) {
-    // The middle rides in `middle`, the turn in `start_head`, and the half
+    // The middle rides in `middle`, the flat turn in `start_head`, the half
     // width and half height in `end_head` and `width`, as shares of the
-    // drawn width; the picture's own sides are placed from them here, where
-    // points are the same length in either axis.
+    // drawn width, and the tilt in `tilt_x` and `tilt_y`; the picture's own
+    // sides are placed from them here, where points are the same length in
+    // either axis.
     NSPoint centre = annotation_display_point(image, item.middle_x, item.middle_y);
     double across = item.end_head * image.size.width;
     double down = item.width * image.size.width;
     double sine = sin(item.start_head);
     double cosine = cos(item.start_head);
-    screenwide_annotation_prepare(item.kind, centre.x, centre.y, centre.x + cosine * across,
-                                  centre.y + sine * across, centre.x - sine * down,
-                                  centre.y + cosine * down, 0.0f, 0,
-                                  annotation_reveal_whole(), &prepared);
+    screenwide_image_prepare((float)centre.x, (float)centre.y,
+                             (float)(centre.x + cosine * across),
+                             (float)(centre.y + sine * across),
+                             (float)(centre.x - sine * down),
+                             (float)(centre.y + cosine * down), (float)item.tilt_x,
+                             (float)item.tilt_y, &prepared);
     return prepared;
   }
   // A middle handle is reported rather than the curve's control point, so the

@@ -86,6 +86,7 @@ const recordingSelectionTarget = (
         : t("editor-panels-camera"),
     settings: output[track],
     source,
+    turns: track === "primary",
     // Only the screen track carries a pad, so only it has a colour to fill
     // one with.
     workspace: track === "primary" ? "recording" : null,
@@ -115,6 +116,7 @@ const screenshotSelectionTarget = (
         : t("editor-panels-screenshot"),
     settings: screenshotWorkspaceItemOutput(output, item.id),
     source: { height: item.height, width: item.width },
+    turns: true,
     workspace: "screenshot",
   });
 };

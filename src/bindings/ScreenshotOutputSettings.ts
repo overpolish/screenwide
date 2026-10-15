@@ -3,6 +3,7 @@ import type { Annotation } from "./Annotation";
 import type { CropPreviewRect } from "./CropPreviewRect";
 import type { MeshGradientPoint } from "./MeshGradientPoint";
 import type { NormalizedSourceRect } from "./NormalizedSourceRect";
+import type { SceneRotation } from "./SceneRotation";
 
 /**
  * One layer's canvas and its placement in it.
@@ -44,4 +45,10 @@ imageWidth: number, imageX: number, imageY: number, mode?: string | null, meshCo
  * Which picture the mesh background paints. Settings written before the
  * ported generators existed carry none, and are the app's own blob mesh.
  */
-meshGenerator: string, meshLockedColors: Array<boolean>, meshPoints: Array<MeshGradientPoint>, meshSeed: number, meshWarpPercent: number, radiusPercent: number, recenterInsetColor: string | null, sourceCrop: NormalizedSourceRect, width: number, };
+meshGenerator: string, meshLockedColors: Array<boolean>, meshPoints: Array<MeshGradientPoint>, meshSeed: number, meshWarpPercent: number, radiusPercent: number, recenterInsetColor: string | null, 
+/**
+ * How this layer is turned in depth about its crop's middle, with its
+ * annotations and cursor; absent where it stands upright. A scene replaces
+ * it in every frame the scene arranges.
+ */
+rotation?: SceneRotation, sourceCrop: NormalizedSourceRect, width: number, };

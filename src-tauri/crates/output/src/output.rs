@@ -95,11 +95,6 @@ pub struct ScreenshotOutputSettings {
   pub scene_opacity: Option<[f32; 2]>,
   #[serde(skip)]
   pub scene_camera_front: Option<f32>,
-  /// How a scene turns this layer in depth about its crop's middle, with its
-  /// annotations and cursor. Set per drawn frame by the scene arrangement,
-  /// never sent or saved; unset, it is drawn upright.
-  #[serde(skip)]
-  pub scene_rotation: Option<screenwide_scenes::SceneRotation>,
   pub mesh_colors: Vec<String>,
   /// Which picture the mesh background paints. Settings written before the
   /// ported generators existed carry none, and are the app's own blob mesh.
@@ -113,6 +108,12 @@ pub struct ScreenshotOutputSettings {
   pub radius_percent: f64,
   #[serde(default)]
   pub recenter_inset_color: Option<String>,
+  /// How this layer is turned in depth about its crop's middle, with its
+  /// annotations and cursor; absent where it stands upright. A scene replaces
+  /// it in every frame the scene arranges.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub rotation: Option<screenwide_scenes::SceneRotation>,
   pub source_crop: NormalizedSourceRect,
   pub width: u32,
 }

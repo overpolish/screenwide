@@ -49,13 +49,18 @@ export const defaultScreenshotOutput = (
  * Annotations are document content, not a preference. They are drawn on one
  * layer of one capture and mean nothing on another, so anything copied as a
  * default leaves them behind - otherwise the arrow drawn on yesterday's
- * screenshot turns up on today's.
+ * screenshot turns up on today's. A layer's turn is how that capture was
+ * posed, so it stays behind too.
  */
 export const screenshotOutputTemplate = <
   Settings extends ScreenshotOutputSettings,
 >(
   settings: Settings,
-): Settings => ({ ...settings, annotations: [] });
+): Settings => {
+  const template = { ...settings, annotations: [] };
+  delete template.rotation;
+  return template;
+};
 
 const finite = (value: number, fallback: number) =>
   Number.isFinite(value) ? value : fallback;

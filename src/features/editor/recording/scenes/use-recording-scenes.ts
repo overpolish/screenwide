@@ -3,6 +3,7 @@
 
 import { useEffect, useReducer, useRef } from "react";
 
+import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import {
   createRecordingTimelineEdit,
@@ -29,11 +30,7 @@ import {
 import { recordingSceneEdits } from "./recording-scene-edits";
 import { drawnCameraFrame } from "./recording-scene-framing";
 import { selectedPaneFraming } from "./recording-scene-pane-framing";
-import {
-  RecordingSceneClip,
-  recordingSceneClipAt,
-  UPRIGHT_ROTATION,
-} from "./recording-scenes";
+import { RecordingSceneClip, recordingSceneClipAt } from "./recording-scenes";
 import {
   RecordingSceneSelection,
   useRecordingSceneSelection,

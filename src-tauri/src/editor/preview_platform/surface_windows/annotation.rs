@@ -231,10 +231,16 @@ pub(super) use redact_chrome::selected_box as selected_redaction;
 /// A magnifier's loupe: where it is picked and the grip that sets its size.
 mod magnify_chrome;
 
-/// An image's turned picture, its own frame, its radius dot and the grip
-/// that turns it.
+/// An image's turned picture, its own frame and its radius dot.
 mod image_chrome;
 pub(super) use image_chrome::selected_frame as selected_image_frame;
+
+/// The rotation gizmo over the chosen image, and a drag of its rings.
+mod image_turn;
+pub(super) use image_turn::{
+  cancel as image_turn_cancel, down as image_turn_down, gizmo as image_gizmo,
+  pointer_move as image_turn_move, ring_hit as image_ring_hit, up as image_turn_up, ImageTurnDrag,
+};
 
 /// What a snapped sample draws, and where.
 mod snap_chrome;

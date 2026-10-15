@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { withRotation } from "../../layer-rotation";
 import { scaledCameraOverlay } from "../../preview/camera-overlay-placement";
 import {
   applyScreenshotCropGesture,
@@ -158,6 +159,14 @@ export function gesturedTrackOutput({
       settings: workspace,
     });
     next = screenshotWorkspaceItemOutput(resized, 0);
+  } else if (event.operation === "rotate") {
+    // The gizmo reports the turn it reaches: about X and Y as its travel,
+    // about Z as its scale.
+    next = withRotation(snapshot, {
+      x: event.deltaX,
+      y: event.deltaY,
+      z: event.scale,
+    });
   } else if (event.operation === "radius") {
     next = {
       ...snapshot,

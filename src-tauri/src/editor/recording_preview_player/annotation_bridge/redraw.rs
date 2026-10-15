@@ -44,26 +44,43 @@ impl PreviewPlayerManager {
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
       .clone();
-    let resolve = |track, picture| {
-      screenwide_annotations::timing::revealed_annotations(
+    // A redaction that reads the picture is handed the fill read from its
+    // clip's first frame, as every other frame hands it; without one it falls
+    // back to its style's colour for as long as the drag lasts.
+    let capture_widths = composition.as_ref().map(|composition| {
+      [
+        composition.recording_output.primary.capture_width_points,
+        composition.recording_output.camera.capture_width_points,
+      ]
+    });
+    let attach = |annotations: &mut Vec<Annotation>, held_pane: usize| {
+      if let (Some(held), Some(widths)) = (&sources.held_fills[held_pane], capture_widths) {
+        held.attach(annotations, &clips, widths[held_pane], position_ms);
+      }
+    };
+    let resolve = |track, picture, held_pane| {
+      let mut annotations = screenwide_annotations::timing::revealed_annotations(
         &clips,
         track,
         &ranges,
         position_ms,
         0.0,
         picture,
-      )
+      );
+      attach(&mut annotations, held_pane);
+      annotations
     };
     let mut annotations = resolve(
       super::gesture::track(pane),
       (layout.source_width, layout.source_height),
+      pane as usize,
     );
     let mut camera = None;
     if let Some(mut composition) = composition.filter(|_| baked) {
       let pictures = sources.annotation_pictures();
       composition.recording_output.primary.annotations = annotations;
       composition.recording_output.camera.annotations =
-        resolve(AnnotationTrack::Camera, pictures[1]);
+        resolve(AnnotationTrack::Camera, pictures[1], 1);
       sources.arrange_scene(&mut composition, position_ms, 0.0);
       super::super::annotation_preview::carry_camera_annotations(&mut composition, pictures);
       annotations = std::mem::take(&mut composition.recording_output.primary.annotations);

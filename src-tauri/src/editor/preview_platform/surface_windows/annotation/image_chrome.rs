@@ -1,25 +1,33 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! An image's chrome: where its turned picture is picked, its own frame -
-//! turned with the picture, whose eight grips move the picture's own sides -
-//! its radius dot, and the grip above its top side that turns it. The frame
-//! is `image::frame`'s. The twin of
-//! `recording_preview_surface_macos+annotation_image.m` and the image's
-//! branches in `recording_preview_surface_macos+annotation_picking.m` and
-//! `recording_preview_annotation_geometry_macos.h`.
+//! An image's chrome: where its tilted, turned picture is picked, its own
+//! frame - tilted and turned with the picture, whose eight grips move the
+//! picture's own sides - and its radius dot. The frame is `image::frame`'s.
+//! The twin of `recording_preview_surface_macos+annotation_image.m` and the
+//! image's branches in `recording_preview_surface_macos+annotation_picking.m`
+//! and `recording_preview_annotation_geometry_macos.h`.
 
 use super::*;
 use screenwide_annotations::geometry::ArrowGeometry;
 use screenwide_annotations::gesture::{BOX_HANDLES, RADIUS_HANDLE};
 use screenwide_annotations::image::frame::{cursor_sides, ImageFrame};
 use screenwide_annotations::image::geometry::{image_distance, prepare_image};
+use screenwide_annotations::image::ImageTilt;
 use screenwide_annotations::reveal::AnnotationReveal;
 use screenwide_annotations::AnnotationPoint;
 
+fn tilt(item: &NativeAnnotationHandles) -> ImageTilt {
+  ImageTilt {
+    x: item.tilt_x,
+    y: item.tilt_y,
+  }
+}
+
 /// An image prepared in display points, from the grips it was published
-/// with: its middle in `middle`, its turn in `start_head`, and its half width
-/// and half height, as shares of the drawn width, in `end_head` and `width`.
+/// with: its middle in `middle`, its flat turn in `start_head`, its half
+/// width and half height, as shares of the drawn width, in `end_head` and
+/// `width`, and its tilt in `tilt_x` and `tilt_y`.
 fn geometry(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> ArrowGeometry {
   let (x, y) = super::picking::display_point(image, item.middle_x, item.middle_y);
   let (sin, cos) = item.start_head.sin_cos();
@@ -33,6 +41,7 @@ fn geometry(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> ArrowG
     ],
     0.0,
     false,
+    tilt(item).radians(),
     AnnotationReveal::WHOLE,
   )
 }
@@ -43,13 +52,14 @@ fn own_frame(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> Image
   ImageFrame {
     center: AnnotationPoint { x, y },
     angle: item.start_head,
+    tilt: tilt(item),
     half_width: item.end_head * image.width,
     half_height: item.width * image.width,
   }
 }
 
-/// How far `point` is from the turned picture, in display points: zero or
-/// less anywhere on it.
+/// How far `point` is from the tilted, turned picture, in display points:
+/// zero or less anywhere on it.
 pub(super) fn distance(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -58,16 +68,9 @@ pub(super) fn distance(
   image_distance([point.0 as f32, point.1 as f32], &geometry(image, item))
 }
 
-/// Where the turning grip sits: above the picture's top side, where the
-/// preparation placed it.
-pub(super) fn turn_grip(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> (f64, f64) {
-  let grip = geometry(image, item).end_head.c;
-  (f64::from(grip[0]), f64::from(grip[1]))
-}
-
 /// The grip under `point`, as the handle it reports: the frame's eight,
-/// then its radius dot, then the turning grip. The frame's come first, so on
-/// a picture too small to keep them apart a corner wins over the dot.
+/// then its radius dot. The frame's come first, so on a picture too small to
+/// keep them apart a corner wins over the dot.
 pub(super) fn grip_at(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -80,7 +83,6 @@ pub(super) fn grip_at(
     .into_iter()
     .find(|(grip, _)| near((grip.x, grip.y)))
     .map(|(_, handle)| handle)
-    .or_else(|| near(turn_grip(image, item)).then_some(HANDLE_TAIL))
 }
 
 /// The resize cursor a frame grip or the radius dot shows, turned with the

@@ -85,13 +85,49 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
     Some(AnnotationKind::Draw) => {
       prepare_freehand([p0x, p0y], [p1x, p1y], [p2x, p2y], width, reveal)
     }
-    Some(AnnotationKind::Image) => {
-      prepare_image([p0x, p0y], [p1x, p1y], [p2x, p2y], width, head != 0, reveal)
-    }
-    // A magnifier's zoom and rounding are not among these; it prepares
-    // through `magnify::ffi::screenwide_magnify_prepare`.
-    Some(AnnotationKind::Magnify) | None => ArrowGeometry::default(),
+    // An image's tilt is not among these; it prepares through
+    // `screenwide_image_prepare`, and a magnifier's zoom and rounding through
+    // `magnify::ffi::screenwide_magnify_prepare`.
+    Some(AnnotationKind::Image) | Some(AnnotationKind::Magnify) | None => ArrowGeometry::default(),
   };
+}
+
+/// An image prepared from its middle and the middles of its right and bottom
+/// sides as it lies before its tilt, tilted `tilt_x` and `tilt_y` degrees in
+/// depth, for the macOS chrome to pick.
+///
+/// # Safety
+/// `out` must point at one writable [`ArrowGeometry`].
+#[cfg(target_os = "macos")]
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn screenwide_image_prepare(
+  center_x: f32,
+  center_y: f32,
+  right_x: f32,
+  right_y: f32,
+  bottom_x: f32,
+  bottom_y: f32,
+  tilt_x: f32,
+  tilt_y: f32,
+  out: *mut ArrowGeometry,
+) {
+  let Some(out) = (unsafe { out.as_mut() }) else {
+    return;
+  };
+  let tilt = crate::image::ImageTilt {
+    x: f64::from(tilt_x),
+    y: f64::from(tilt_y),
+  };
+  *out = prepare_image(
+    [center_x, center_y],
+    [right_x, right_y],
+    [bottom_x, bottom_y],
+    0.0,
+    false,
+    tilt.radians(),
+    AnnotationReveal::WHOLE,
+  );
 }
 
 /// How far a point falls from one prepared annotation's drawn shape, in the

@@ -92,7 +92,8 @@ export type ScreenshotSelectionGestureEvent = {
     | "frameResize"
     | "move"
     | "radius"
-    | "resize";
+    | "resize"
+    | "rotate";
   paneIndex: number;
   phase: "begin" | "update" | "end" | "cancel";
   scale: number;

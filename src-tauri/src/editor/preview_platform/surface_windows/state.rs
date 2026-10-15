@@ -43,6 +43,8 @@ pub(super) struct SurfaceState {
   /// annotation is drawn on.
   pub(super) selection_hit_testing: bool,
   pub(super) selection_targets: Vec<PreviewSelection>,
+  /// The rotation gizmo's held ring and the ring the pointer rests on.
+  pub(super) turn: turn::TurnState,
   pub(super) viewport: PreviewSurfaceRect,
   /// Recording marker layouts fill the viewport even above one point per
   /// output pixel; screenshot marker layouts stop at native size.

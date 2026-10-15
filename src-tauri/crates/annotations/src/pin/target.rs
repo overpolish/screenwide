@@ -172,10 +172,12 @@ impl PinTarget {
         center,
         size,
         angle,
+        tilt,
         aspect,
         ..
       } => {
-        let (low, high) = crate::image::model::bounds(*center, *size, *angle, *aspect);
+        let (low, high) =
+          crate::image::model::bounds(*center, *size, *angle, tilt.unwrap_or_default(), *aspect);
         Self {
           anchor: [center.x, center.y],
           region: [low.x, low.y, high.x, high.y],

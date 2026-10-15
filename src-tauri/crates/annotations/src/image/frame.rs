@@ -10,7 +10,9 @@
 //! the gesture reads it in the picture's own frame. Mirroring leaves the
 //! frame alone: every side and corner of the picture is the same either way.
 
-use super::model::{axes, from_local};
+use super::model::axes;
+use super::tilt::placed;
+use super::ImageTilt;
 use crate::box_gesture::{
   EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP, RADIUS_INSET_POINTS, RADIUS_TRAVEL,
 };
@@ -30,28 +32,31 @@ const GRIP_SIDES: [u32; 8] = [
   EDGE_LEFT,
 ];
 
-/// The picture as its chrome sees it: its middle, its turn and its half
-/// width and half height, all in display points.
+/// The picture as its chrome sees it: its middle, its flat turn, its turn in
+/// depth and its half width and half height, all in display points.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ImageFrame {
   pub center: AnnotationPoint,
   pub angle: f64,
+  pub tilt: ImageTilt,
   pub half_width: f64,
   pub half_height: f64,
 }
 
 impl ImageFrame {
+  /// Where the picture's own point `local`, from its middle, is drawn.
+  fn placed(&self, local: AnnotationPoint) -> AnnotationPoint {
+    let longer = 2.0 * self.half_width.max(self.half_height);
+    placed(self.center, self.angle, self.tilt, longer, local)
+  }
+
   /// The point `x` along the picture's own right and `y` down it, as shares
   /// of its half width and half height from its middle.
   fn at(&self, x: f64, y: f64) -> AnnotationPoint {
-    from_local(
-      self.center,
-      self.angle,
-      AnnotationPoint {
-        x: x * self.half_width,
-        y: y * self.half_height,
-      },
-    )
+    self.placed(AnnotationPoint {
+      x: x * self.half_width,
+      y: y * self.half_height,
+    })
   }
 
   /// Its four corners, clockwise from its own top-left.
@@ -72,14 +77,10 @@ impl ImageFrame {
     let shortest = (self.half_width.min(self.half_height) * 2.0).max(0.0);
     let inset =
       shortest * radius_percent.clamp(0.0, 50.0) / 100.0 * RADIUS_TRAVEL + RADIUS_INSET_POINTS;
-    from_local(
-      self.center,
-      self.angle,
-      AnnotationPoint {
-        x: inset - self.half_width,
-        y: inset - self.half_height,
-      },
-    )
+    self.placed(AnnotationPoint {
+      x: inset - self.half_width,
+      y: inset - self.half_height,
+    })
   }
 
   /// Every grip with the handle it reports: the eight of the frame, then
@@ -151,19 +152,22 @@ pub struct ImageFrameRecord {
 const _: () = assert!(std::mem::size_of::<ImageFrameRecord>() == 140);
 
 /// An image's own frame and grips, in the display points its middle and
-/// half extents are given in, turned `angle` radians clockwise and rounded
-/// `radius` percent.
+/// half extents are given in, turned `angle` radians clockwise, tilted
+/// `tilt_x` and `tilt_y` degrees in depth, and rounded `radius` percent.
 ///
 /// # Safety
 /// `out` must point at one writable [`ImageFrameRecord`].
 #[cfg(target_os = "macos")]
 #[no_mangle]
+#[allow(clippy::too_many_arguments)] // C callers pass the frame apart.
 pub unsafe extern "C" fn screenwide_image_frame(
   center_x: f32,
   center_y: f32,
   half_width: f32,
   half_height: f32,
   angle: f32,
+  tilt_x: f32,
+  tilt_y: f32,
   radius: f32,
   out: *mut ImageFrameRecord,
 ) {
@@ -176,6 +180,10 @@ pub unsafe extern "C" fn screenwide_image_frame(
       y: f64::from(center_y),
     },
     angle: f64::from(angle),
+    tilt: ImageTilt {
+      x: f64::from(tilt_x),
+      y: f64::from(tilt_y),
+    },
     half_width: f64::from(half_width),
     half_height: f64::from(half_height),
   };
@@ -203,6 +211,7 @@ mod tests {
     ImageFrame {
       center: AnnotationPoint { x: 100.0, y: 50.0 },
       angle,
+      tilt: ImageTilt::default(),
       half_width: 40.0,
       half_height: 20.0,
     }
@@ -247,6 +256,22 @@ mod tests {
     // Turned, it stays in its own corner.
     let turned = square(FRAC_PI_2).radius_dot(0.0);
     assert!(close(turned, (130.0, 20.0)));
+  }
+
+  #[test]
+  fn a_tilted_frame_foreshortens_the_side_turned_away() {
+    // Swung about its own up axis, the right side away from the viewer.
+    let tilted = ImageFrame {
+      tilt: ImageTilt { x: 0.0, y: 40.0 },
+      ..frame(0.0)
+    };
+    let [top_left, top_right, bottom_right, bottom_left] = tilted.corners();
+    let left = bottom_left.y - top_left.y;
+    let right = bottom_right.y - top_right.y;
+    assert!(right < left, "the far side {right} is shorter than {left}");
+    // Narrower than it is flat, and still about its own middle.
+    assert!(top_right.x - top_left.x < 80.0);
+    assert!(((top_left.y + bottom_left.y) / 2.0 - 50.0).abs() < 1e-9);
   }
 
   #[test]

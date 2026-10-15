@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { withRotation } from "../../layer-rotation";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
 
@@ -33,31 +34,12 @@ export const WHOLE_FRAMING: SceneFraming = {
 /** The furthest a scene zooms into a picture. */
 export const MAX_SCENE_ZOOM = 8;
 
-/** The screen standing upright: how a scene turns it until it is turned. */
-export const UPRIGHT_ROTATION: SceneRotation = { x: 0, y: 0, z: 0 };
-
-/** The furthest a scene turns the screen about any axis, in degrees: ten
- * whole turns either way. The twin of `MAX_DEGREES` in `rotation.rs`. */
-export const MAX_SCENE_TURN = 3600;
-
 /** `clip` turning the screen by `rotation`, each angle held to what a scene
  * can turn it; one that leaves it upright keeps no turn at all. */
 export const rotatedSceneClip = (
   clip: RecordingSceneClip,
   rotation: SceneRotation,
-): RecordingSceneClip => {
-  const { rotation: _rotation, ...rest } = clip;
-  const held = (angle: number) =>
-    Math.min(MAX_SCENE_TURN, Math.max(-MAX_SCENE_TURN, angle));
-  const turned = {
-    x: held(rotation.x),
-    y: held(rotation.y),
-    z: held(rotation.z),
-  };
-  return turned.x === 0 && turned.y === 0 && turned.z === 0
-    ? rest
-    : { ...rest, rotation: turned };
-};
+): RecordingSceneClip => withRotation(clip, rotation);
 
 /** Whether a scene places a camera, which it can only do where the camera is
  * drawn into the picture. A custom scene places one where it has a box for

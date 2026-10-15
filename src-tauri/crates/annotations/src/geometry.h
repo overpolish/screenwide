@@ -35,7 +35,9 @@ static inline AnnotationVector annotation_vector(float x, float y) {
 /// counter's prepared record reads back as its disc's centre in `a`, the
 /// tail's tip in `b`, the radius in `rounding`, the radius the tip is rounded
 /// to in `low` and the diameter in `width`; where its number was rasterised
-/// rides in `start_head`. A number no kind owns prepares nothing.
+/// rides in `start_head`. An image prepares through `screenwide_image_prepare`
+/// and a magnifier through `screenwide_magnify_prepare`; a number no kind
+/// owns prepares nothing.
 void screenwide_annotation_prepare(uint32_t kind, float p0x, float p0y,
                                    float p1x, float p1y, float p2x, float p2y,
                                    float width, uint32_t head,
@@ -50,6 +52,14 @@ void screenwide_magnify_prepare(float p0x, float p0y, float p1x, float p1y,
                                 float p2x, float p2y, float size, float radius,
                                 float width, AnnotationReveal reveal,
                                 AnnotationArrowGeometry *out);
+
+/// An image's draw geometry: its middle at `center` and the middles of its
+/// right and bottom sides at `right` and `bottom`, as it lies before its
+/// tilt, tilted `tilt_x` and `tilt_y` degrees in depth. The record reads back
+/// as `image/geometry.rs` describes.
+void screenwide_image_prepare(float center_x, float center_y, float right_x,
+                              float right_y, float bottom_x, float bottom_y,
+                              float tilt_x, float tilt_y, AnnotationArrowGeometry *out);
 
 /// Which part of a prepared magnifier a point is on: 1 for the loupe, 2 for
 /// the zoom area, 0 for neither.
@@ -95,10 +105,11 @@ typedef struct {
 _Static_assert(sizeof(AnnotationImageFrame) == 140, "Image frame ABI");
 
 /// The frame of an image whose middle is at `center`, turned `angle` radians
-/// clockwise and rounded `radius` percent of its shorter side.
+/// clockwise, tilted `tilt_x` and `tilt_y` degrees in depth and rounded
+/// `radius` percent of its shorter side.
 void screenwide_image_frame(float center_x, float center_y, float half_width,
-                            float half_height, float angle, float radius,
-                            AnnotationImageFrame *out);
+                            float half_height, float angle, float tilt_x,
+                            float tilt_y, float radius, AnnotationImageFrame *out);
 
 /// The upright sides whose resize cursor runs the way a grip moving `sides`
 /// of an image turned `angle` does on screen.

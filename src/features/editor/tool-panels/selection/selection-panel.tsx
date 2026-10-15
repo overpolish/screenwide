@@ -9,7 +9,7 @@ import { Dimensions } from "../../../../components/shared/dimensions/dimensions"
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
 import { EditorKind } from "../../types";
-import { SceneRotationRow } from "../scene/scene-rotation-row";
+import { RotationRow } from "../rotation-row";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { AudioSelectionRows } from "./audio-selection-rows";
@@ -18,8 +18,8 @@ import { CameraObjectRows } from "./camera-object-rows";
 
 /**
  * The Select tool's own controls: what is selected, how big it is in the
- * finished picture, and where it sits in it, and inside a scene how the
- * screen is turned in depth.
+ * finished picture, where it sits in it, and how the screen is turned in
+ * depth.
  *
  * Every number is in output pixels, the same units the size readout under the
  * preview uses, so a value typed here and a value dragged out there mean the
@@ -129,17 +129,26 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         )}
       </ControlRow>
 
-      {/* Inside a scene the screen turns in depth, as the select tool's
-          rotation gizmo turns it. */}
-      {scene?.hasSceneAtPlayhead &&
-      scene.framingPane === "screen" &&
-      scene.rotation ? (
-        <SceneRotationRow
+      {/* The screen turns in depth, as the select tool's rotation gizmo turns
+          it: by the scene's turn inside a scene, which replaces the layer's
+          own, and by its own turn outside every scene. */}
+      {scene?.hasSceneAtPlayhead ? (
+        scene.framingPane === "screen" && scene.rotation ? (
+          <RotationRow
+            isDisabled={isLocked}
+            onChange={(next) => {
+              change({ sceneRotation: next });
+            }}
+            rotation={scene.rotation}
+          />
+        ) : null
+      ) : selection.rotation ? (
+        <RotationRow
           isDisabled={isLocked}
           onChange={(next) => {
-            change({ sceneRotation: next });
+            change({ selectionRotation: next });
           }}
-          rotation={scene.rotation}
+          rotation={selection.rotation}
         />
       ) : null}
 

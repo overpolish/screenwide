@@ -31,16 +31,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A chosen image, turned a little and casting a shadow. */
+/** A chosen image, tilted back and turned a little, casting a shadow. */
 export const Chosen: Story = {
   beforeEach: () => {
     seedToolPanel({
       annotation: {
-        angle: -Math.PI / 12,
         animated: true,
         id: "image-1",
         image: { aspect: 1, asset: "image:0123456789abcdef0123456789abcdef" },
         kind: "image",
+        rotation: { x: 25, y: -15, z: 15 },
         style: { ...firstAnnotationDress("image"), shadow: true },
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
@@ -57,11 +57,11 @@ export const Swaying: Story = {
   beforeEach: () => {
     seedToolPanel({
       annotation: {
-        angle: 0,
         animated: true,
         id: "image-1",
         image: { aspect: 1, asset: "image:0123456789abcdef0123456789abcdef" },
         kind: "image",
+        rotation: { x: 0, y: 0, z: 0 },
         style: firstAnnotationDress("image"),
         sway: true,
       },

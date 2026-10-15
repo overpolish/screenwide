@@ -25,7 +25,7 @@ fn settings(rotation: Option<SceneRotation>) -> ScreenshotOutputSettings {
     settings.crop_x,
     settings.crop_y,
   ) = (760.0, 390.0, 760.0, 390.0);
-  settings.scene_rotation = rotation;
+  settings.rotation = rotation;
   settings
 }
 

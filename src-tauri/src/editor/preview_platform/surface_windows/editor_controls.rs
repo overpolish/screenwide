@@ -143,6 +143,16 @@ impl RecordingPreviewSurface {
 
   pub(crate) fn set_selection(&self, selection: Option<PreviewSelection>) {
     if let Ok(mut state) = self.inner.state.lock() {
+      // A drag keeps the selection it moves, resizes or turns, as the macOS
+      // surface's `selection_held_by_drag` does: a layout laid out from an
+      // earlier sample would pull the chrome back until the next one. A
+      // layout that takes the selection away lets a held ring go at the next
+      // pointer sample, without keeping the turn.
+      let dragging =
+        state.turn.drag.is_some() || matches!(state.gesture, Some(ActiveGesture::Selection(_)));
+      if dragging && selection.is_some() {
+        return;
+      }
       state.selection = selection;
       if state.gesture.is_none() {
         clear_selection_snap_guides(&mut state);

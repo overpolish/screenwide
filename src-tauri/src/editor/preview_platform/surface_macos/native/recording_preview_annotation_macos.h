@@ -24,7 +24,8 @@
 /// not square, and this side works in isotropic display points.
 ///
 /// An image's corner radius rides in `radius`, the one slot none of its
-/// others is free for; every other kind leaves it zero.
+/// others is free for, and its turn in depth in `tilt_x` and `tilt_y`, in
+/// degrees; every other kind leaves them zero.
 ///
 /// Rust solves the Bezier and owns the stroke's units; this side only places
 /// and hit-tests.
@@ -41,8 +42,9 @@ typedef struct {
   uint32_t kind;
   /// `ScreenwideAnnotationFlag` bits.
   uint32_t flags;
+  double tilt_x, tilt_y;
 } ScreenwidePreviewAnnotation;
-_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 96,
+_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 112,
                "Rust/C annotation handle layout mismatch");
 /// What a record's `flags` say. `Grouped` is an annotation chosen together
 /// with others: a press on it carries the group rather than choosing it.
@@ -153,8 +155,10 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
 /// a press on the body of the annotation at `index` (3), which only chooses
 /// it, a carry of every annotation chosen together (4), a click with the
 /// toggle modifier on the annotation at `index` (5), which adds it to the
-/// choice or takes it out, or a marquee band (6), whose begin and end are its
-/// two corners.
+/// choice or takes it out, a marquee band (6), whose begin and end are its
+/// two corners, or a drag of the rings round the image at `index` (7), whose
+/// samples carry the image's turn about X and Y as the point and about Z as
+/// the picture's width.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationTarget) {
   ScreenwideAnnotationTargetNew = 0,
   ScreenwideAnnotationTargetExisting = 1,
@@ -163,6 +167,7 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationTarget) {
   ScreenwideAnnotationTargetGroup = 4,
   ScreenwideAnnotationTargetToggle = 5,
   ScreenwideAnnotationTargetMarquee = 6,
+  ScreenwideAnnotationTargetTurn = 7,
 };
 /// One equal gap the snap chrome draws a bar across, normalised over the
 /// source: where it starts and ends along its own axis, and where it sits

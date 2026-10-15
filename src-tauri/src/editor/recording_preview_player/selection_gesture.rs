@@ -12,6 +12,7 @@ use crate::editor::preview_workspace_model::{
 use screenwide_compositor::workspace_editor::{
   apply_layer_gesture, fit_canvas_to_layers, GestureOperation as WorkspaceGestureOperation,
 };
+use screenwide_scenes::SceneRotation;
 impl PreviewPlayerManager {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   #[allow(clippy::too_many_arguments)] // Native editor callback fields stay separate.
@@ -98,7 +99,7 @@ impl PreviewPlayerManager {
             // A turn only redraws pictures already decoded.
             Some(clips) if operation == SelectionGestureOperation::Rotate => self
               .set_scene_clips(clips)
-              .and_then(|()| self.redraw_scenes()),
+              .and_then(|()| self.redraw_paused_frame()),
             Some(clips) => self
               .set_scene_clips(clips)
               .and_then(|()| self.refresh_selection_preview(layer_id)),
@@ -110,6 +111,29 @@ impl PreviewPlayerManager {
           return result;
         }
         let mut next = snapshot.clone();
+        // Outside every scene the gizmo turns the screen's own layer,
+        // reporting the turn it reaches: about X and Y as its travel, about Z
+        // as its scale. The camera never turns.
+        if operation == SelectionGestureOperation::Rotate {
+          let result = if layer_id == 0 {
+            next.recording_output.primary.rotation = Some(SceneRotation {
+              x: delta_x,
+              y: delta_y,
+              z: scale,
+            })
+            .filter(|rotation| !rotation.is_upright());
+            *settings
+              .write()
+              .map_err(|_| "The recording preview composition is unavailable".to_owned())? = next;
+            self.redraw_paused_frame()
+          } else {
+            Ok(())
+          };
+          if ending {
+            self.selection_gesture = None;
+          }
+          return result;
+        }
         if matches!(
           operation,
           SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius

@@ -25,7 +25,11 @@ pub(super) fn shared_selection_hit(
       selections.push(current);
     }
   }
-  let targets = selections
+  // A turned layer, the screen a scene turns, is measured apart: at the press
+  // carried back onto it, where every other layer is measured at the press
+  // itself.
+  let mut turned = None;
+  let mut targets = selections
     .iter()
     .enumerate()
     .filter_map(|(index, selection)| {
@@ -37,23 +41,62 @@ pub(super) fn shared_selection_hit(
       } else {
         overlay_hit::frame(inner, state, *selection)?
       };
-      Some(DisplayTarget {
-        id: (u64::from(selection.pane_index) << 32) | u64::from(selection.layer_id),
-        rect: DisplayRect {
-          x: rect.x,
-          y: rect.y,
-          width: rect.width,
-          height: rect.height,
+      Some((
+        *selection,
+        DisplayTarget {
+          id: (u64::from(selection.pane_index) << 32) | u64::from(selection.layer_id),
+          rect: DisplayRect {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          },
+          radius_enabled: u8::from(selection.crop_mode == 0 && selection.radius_disabled == 0),
+          radius_percent: selection.radius_percent,
+          z_order: index as i32,
+          selected: u8::from(selected),
+          visible: 1,
         },
-        radius_enabled: u8::from(selection.crop_mode == 0 && selection.radius_disabled == 0),
-        radius_percent: selection.radius_percent,
-        z_order: index as i32,
-        selected: u8::from(selected),
-        visible: 1,
-      })
+      ))
+    })
+    .enumerate()
+    .map(|(index, (selection, target))| {
+      if turned.is_none() && turn::selection_is_turned(state, selection) {
+        turned = Some((index, selection));
+      }
+      target
     })
     .collect::<Vec<_>>();
-  let hit = hit_test_display(&targets, point, 8.0)?;
+  let (hit, hit_point) = match turned {
+    None => (hit_test_display(&targets, point, 8.0)?, point),
+    Some((index, selection)) => {
+      let own_target = targets[index];
+      targets[index].visible = 0;
+      let others = hit_test_display(&targets, point, 8.0);
+      let unturned = turn::unturned_point(state, selection, point);
+      let own = hit_test_display(&[own_target], unturned, 8.0);
+      // Grips first, as the shared test has them: only the selected layer
+      // shows any. Then the body drawn in front.
+      let others_order = others.and_then(|others| {
+        targets
+          .iter()
+          .find(|target| target.id == others.target_id)
+          .map(|target| target.z_order)
+      });
+      match (own, others) {
+        (Some(own), others)
+          if own.handle != 0
+            || others.is_none_or(|others| {
+              others.handle == 0 && others_order.is_none_or(|order| own_target.z_order > order)
+            }) =>
+        {
+          (own, unturned)
+        }
+        (_, Some(others)) => (others, point),
+        (_, None) => return None,
+      }
+    }
+  };
   let pane_index = (hit.target_id >> 32) as u32;
   let layer_id = hit.target_id as u32;
   let selection = selections
@@ -61,10 +104,10 @@ pub(super) fn shared_selection_hit(
     .find(|selection| selection.pane_index == pane_index && selection.layer_id == layer_id)?;
   if hit.handle == 0 && crate::editor::preview_platform::is_overlay_layer(selection.layer_id) {
     let frame = overlay_hit::frame(inner, state, selection)?;
-    if point.0 < frame.x
-      || point.0 > frame.x + frame.width
-      || point.1 < frame.y
-      || point.1 > frame.y + frame.height
+    if hit_point.0 < frame.x
+      || hit_point.0 > frame.x + frame.width
+      || hit_point.1 < frame.y
+      || hit_point.1 > frame.y + frame.height
     {
       return None;
     }
@@ -155,11 +198,15 @@ pub(super) fn cursor_for_state(
   state: &SurfaceState,
   point: (f64, f64),
 ) -> editor::CursorKind {
-  // The arrow tool speaks first, exactly as `annotation_cursor` does: an
-  // arrow under the pointer is something to take hold of, and empty picture
-  // is something to draw on. The select tool leaves empty picture to the
-  // layer underneath.
-  if let Some(kind) = annotation::cursor_for(state, point) {
+  // The rings sit over everything they turn.
+  if let Some(kind) = turn::cursor(state, point) {
+    return kind;
+  }
+  // The arrow tool speaks next, exactly as `annotation_cursor` does: an arrow
+  // under the pointer is something to take hold of, and empty picture is
+  // something to draw on. The select tool leaves empty picture to the layer
+  // underneath. A turned layer's arrows are where its turn draws them.
+  if let Some(kind) = annotation::cursor_for(state, turn::selected_layer_point(state, point)) {
     return kind;
   }
   let hit = shared_selection_hit(inner, state, point);

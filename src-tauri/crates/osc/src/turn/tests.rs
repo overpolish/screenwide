@@ -109,3 +109,25 @@ fn a_sweep_past_a_quarter_turn_stays_continuous() {
   }
   assert!(previous > 100.0);
 }
+
+#[test]
+fn a_turn_within_a_turned_frame_is_recovered_from_the_turn_seen() {
+  let outer = turn(30.0, -20.0, 15.0);
+  let inner = turn(25.0, 40.0, -70.0);
+  let seen = composed(outer, inner);
+  // The rings show neither turn alone.
+  assert!((seen.x - inner.x).abs() > 1.0 || (seen.y - inner.y).abs() > 1.0);
+  let back = within(outer, seen, inner);
+  for (got, want) in [(back.x, inner.x), (back.y, inner.y), (back.z, inner.z)] {
+    assert!((got - want).abs() < 1e-9, "{back:?} against {inner:?}");
+  }
+}
+
+#[test]
+fn within_an_upright_frame_the_turn_seen_is_the_turn_itself() {
+  let inner = turn(10.0, -35.0, 400.0);
+  let seen = composed(SceneRotation::UPRIGHT, inner);
+  // Whole turns about Z are kept rather than wrapped.
+  assert!((seen.z - 400.0).abs() < 1e-9, "{seen:?}");
+  assert!((seen.x - 10.0).abs() < 1e-9 && (seen.y + 35.0).abs() < 1e-9);
+}

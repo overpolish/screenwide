@@ -29,10 +29,10 @@ use screenwide_annotations::text::geometry::prepare_text;
 /// size, in output pixels, in `p2`; neither is placed. A shape's and a
 /// spotlight's `p1` is never placed either. A magnifier places all three -
 /// its zoom area's corners and its loupe's centre - and reads its loupe's
-/// size out of `params`, stretched by `scale`, and its rounding beside it. A
+/// size out of `params`, stretched by `scale`, and its rounding beside it. An
 /// image places all three - its middle and the middles of its right and
-/// bottom sides - and reads its rounding out of `params` and its mirroring
-/// out of `head`.
+/// bottom sides - and reads its rounding out of `params`, its mirroring out
+/// of `head` and its tilt, an angle the same in either space, out of `p3`.
 pub(super) fn prepared_geometry(
   annotation: &NativeAnnotation,
   [a, b, c]: [[f32; 2]; 3],
@@ -75,8 +75,14 @@ pub(super) fn prepared_geometry(
       annotation.width,
       reveal,
     ),
-    AnnotationKind::Image => {
-      prepare_image(a, b, c, annotation.params[0], annotation.head != 0, reveal)
-    }
+    AnnotationKind::Image => prepare_image(
+      a,
+      b,
+      c,
+      annotation.params[0],
+      annotation.head != 0,
+      annotation.p3,
+      reveal,
+    ),
   }
 }

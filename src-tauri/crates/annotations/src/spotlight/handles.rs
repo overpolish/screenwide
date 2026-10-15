@@ -38,5 +38,7 @@ pub(crate) fn grips(
     end_head: 0.0,
     width: 0.0,
     radius: 0.0,
+    tilt_x: 0.0,
+    tilt_y: 0.0,
   }
 }

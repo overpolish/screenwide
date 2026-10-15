@@ -44,6 +44,9 @@ export type ToolPanelPatch = Partial<
   /** Sway the chosen image over its clip, or stand it still. Turning it on
    * gives it a sway of its own; the dice gives it another. */
   annotationImageSway?: boolean;
+  /** Turn the chosen image, in degrees about each axis, a field at a time:
+   * in depth about X and Y, flat about Z. */
+  annotationRotation?: Partial<SceneRotation>;
   /** Dress the chosen annotation, a field at a time so a panel never has to
    * send the whole style back. Each one also becomes the next arrow's default.
    */
@@ -162,6 +165,9 @@ export type ToolPanelPatch = Partial<
   selectionOutput?: SelectionPlacementPatch;
   /** Round the selected layer's corners by this share of its shorter side. */
   selectionRadius?: number;
+  /** Turn the selected layer in depth, in degrees about each axis, a field
+   * at a time. */
+  selectionRotation?: Partial<SceneRotation>;
   /** Go to the frame the object with this id was picked in, and pick there
    * with it chosen. */
   showCameraObject?: number;

@@ -70,6 +70,8 @@
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod audio_ribbon;
+/// A selection the select tool turns with the rotation gizmo.
+mod selection_turn;
 
 #[cfg(target_os = "macos")]
 mod surface_macos;

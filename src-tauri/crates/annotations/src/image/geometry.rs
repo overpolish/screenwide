@@ -5,34 +5,34 @@
 //!
 //! The record carries, in the pixels it was prepared in: the picture's
 //! middle in `a`, the middle of its right side in `b` and of its bottom side
-//! in `c`, so its half width and half height are the lengths from `a` and
-//! its turn is their direction; its full width in `width`, and its corner
-//! radius in `rounding`, all as this frame draws it; whether it is mirrored in
-//! `head`; and its turning grip, above its top side, in `end_head.c`, for
-//! the chrome. The compositor fills `start_head` with where its picture was
-//! rasterised, and replaces `end_head` with where its shadow was.
+//! in `c` as it lies before its tilt, so its half width and half height are
+//! the lengths from `a` and its flat turn is their direction; its full width
+//! in `width`, and its corner radius in `rounding`, all as this frame draws
+//! it; whether it is mirrored in `head`; and its turn in depth, in radians,
+//! in `start_head.c`. The compositor fills the rest of `start_head` with
+//! where its picture was rasterised, and `end_head` with where its shadow
+//! was.
 //!
 //! It arrives the way a counter does, growing out of its middle, so
-//! `reveal.scale` shrinks everything but the grip, which the chrome only
-//! draws on an image at rest.
+//! `reveal.scale` shrinks it.
 
+use super::ImageTilt;
 use crate::geometry::{add, length, scale, subtract, ArrowGeometry};
 use crate::reveal::AnnotationReveal;
 use crate::text::geometry::rounded_box_distance;
-
-/// How far above the picture's top side its turning grip stands, in the
-/// pixels it was prepared in: display points, where the chrome places it.
-const TURN_GRIP_REACH: f32 = 22.0;
+use crate::AnnotationPoint;
 
 /// `center` the picture's middle, `right` and `bottom` the middles of its
-/// right and bottom sides, `radius` its corner radius as a percentage of its
-/// shorter side, and `flip` whether it is mirrored.
+/// right and bottom sides as it lies before its tilt, `radius` its corner
+/// radius as a percentage of its shorter side, `flip` whether it is
+/// mirrored, and `tilt` its turn in depth in radians.
 pub fn prepare_image(
   center: [f32; 2],
   right: [f32; 2],
   bottom: [f32; 2],
   radius: f32,
   flip: bool,
+  tilt: [f32; 2],
   reveal: AnnotationReveal,
 ) -> ArrowGeometry {
   let grow = reveal.scale.clamp(0.0, 1.0);
@@ -55,15 +55,13 @@ pub fn prepare_image(
     head: u32::from(flip),
     ..Default::default()
   };
-  if half_height > 0.0 {
-    let up = scale(down, -1.0 / half_height);
-    geometry.end_head.c = add(center, scale(up, half_height + TURN_GRIP_REACH));
-  }
+  geometry.start_head.c = tilt;
   geometry
 }
 
 /// How far a point falls outside a prepared image: zero or less anywhere on
-/// its picture's box, so a press on a transparent corner still picks it.
+/// its picture's box as its tilt draws it, so a press on a transparent
+/// corner still picks it.
 pub fn image_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
   let across = subtract(geometry.b, geometry.a);
   let down = subtract(geometry.c, geometry.a);
@@ -72,12 +70,16 @@ pub fn image_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
     return f32::INFINITY;
   }
   let offset = subtract(point, geometry.a);
-  let local = [
-    (offset[0] * across[0] + offset[1] * across[1]) / half_width,
-    (offset[0] * down[0] + offset[1] * down[1]) / half_height,
-  ];
+  let drawn = AnnotationPoint {
+    x: f64::from((offset[0] * across[0] + offset[1] * across[1]) / half_width),
+    y: f64::from((offset[0] * down[0] + offset[1] * down[1]) / half_height),
+  };
+  let longer = f64::from(2.0 * half_width.max(half_height));
+  let Some(local) = ImageTilt::from_radians(geometry.start_head.c).untilted(longer, drawn) else {
+    return f32::INFINITY;
+  };
   rounded_box_distance(
-    local,
+    [local.x as f32, local.y as f32],
     [-half_width, -half_height],
     [half_width, half_height],
     geometry.rounding,

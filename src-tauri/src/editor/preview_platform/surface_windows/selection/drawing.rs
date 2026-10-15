@@ -16,31 +16,16 @@ impl SelectionOverlay {
     crop_radius_percent: f64,
     guides: Option<(Option<f32>, Option<f32>, bool, bool)>,
     magnifier_box: Option<[f32; 4]>,
-    // `Some` when the arrow chrome owns the screen, holding the selected
-    // arrow's grips in device pixels - possibly none, with the arrow tool in
-    // hand and nothing chosen. The layer's own chrome stands down for as long
-    // as it does, matching `annotation_owns_chrome`; `None` leaves it up.
-    annotation_handles: Option<&[[f32; 2]]>,
-    // The chosen box annotation's box in device pixels and its radius
-    // percentage, drawn as the layer selection draws its own; a stroke's has
-    // no radius dot.
-    annotation_box: Option<([f32; 4], Option<f64>)>,
-    // The chosen image's own frame in device pixels: its four corners,
-    // clockwise from the picture's own top-left, then its radius dot.
-    annotation_frame: Option<[[f32; 2]; 5]>,
-    // The element an arrow's tip has snapped to, outlined a device pixel
-    // wide so the anchor it took reads as part of that element.
-    annotation_bounds: Option<[f32; 4]>,
-    // The equal-gap bars a snapped counter lined up with, already device
-    // pixel rectangles: a hairline across each gap with a tick at each end.
-    annotation_gaps: &[[f32; 4]],
-    // The boxes round annotations chosen together, whole groups first, and
-    // the marquee band being drawn, all in device pixels.
-    annotation_group: &[[f32; 4]],
-    annotation_marquee: Option<[f32; 4]>,
+    // `Some` when the annotation chrome owns the screen. The layer's own
+    // chrome stands down for as long as it does, matching
+    // `annotation_owns_chrome`; `None` leaves it up.
+    annotation: Option<&super::AnnotationChrome>,
     // The objects picked in the camera while they are, drawn in place of
     // every other chrome.
     objects: Option<&super::super::object_picking::ObjectChrome>,
+    // A turned layer's frame and rings, and the turn its annotation chrome
+    // is carried through.
+    turned: &super::super::turn::TurnChrome,
     scale: f64,
     light: bool,
   ) -> Result<(), String> {
@@ -70,71 +55,14 @@ impl SelectionOverlay {
         objects,
         scale,
       );
-    } else if let Some(annotation_handles) = annotation_handles {
-      // The element first: it is the context for the anchor that landed on
-      // it, so the disc sits over its outline rather than under it. The
-      // object colour is the one the guides use too.
-      if let Some(bounds) = annotation_bounds.filter(|rect| rect[2] > 0.0 && rect[3] > 0.0) {
-        let rect = logical_rect(bounds, scale);
-        let pixel = 1.0 / scale;
-        for edge in [
-          Rect::from_xywh(rect.origin.x, rect.origin.y, rect.size.width, pixel),
-          Rect::from_xywh(
-            rect.origin.x,
-            rect.origin.y + rect.size.height - pixel,
-            rect.size.width,
-            pixel,
-          ),
-          Rect::from_xywh(rect.origin.x, rect.origin.y, pixel, rect.size.height),
-          Rect::from_xywh(
-            rect.origin.x + rect.size.width - pixel,
-            rect.origin.y,
-            pixel,
-            rect.size.height,
-          ),
-        ] {
-          osc_gpu::add_pixel_aligned_quad(&mut vertices, view, edge, scale, 5);
+    } else if let Some(annotation) = annotation {
+      // A turned layer's annotations are turned with it, and their grips too.
+      match turned.annotations {
+        Some(forward) => {
+          super::annotation_chrome::add_turned(&mut vertices, view, annotation, forward, scale)
         }
+        None => super::annotation_chrome::add_upright(&mut vertices, view, annotation, scale),
       }
-      // The equal gaps the counter lined up with, in the object colour the
-      // guides and the element outline use.
-      for bar in annotation_gaps {
-        osc_gpu::add_pixel_aligned_quad(&mut vertices, view, logical_rect(*bar, scale), scale, 5);
-      }
-      if let Some((frame, radius_percent)) = annotation_box {
-        osc_gpu::add_selection(
-          &mut vertices,
-          view,
-          logical_rect(frame, scale),
-          scale,
-          radius_percent.unwrap_or(0.0),
-          radius_percent.is_some(),
-        );
-      }
-      if let Some(frame) = annotation_frame {
-        let [a, b, c, d, dot] = frame.map(|[x, y]| Point {
-          x: f64::from(x) / scale,
-          y: f64::from(y) / scale,
-        });
-        osc_gpu::add_turned_selection(&mut vertices, view, [a, b, c, d], dot, scale);
-      }
-      for frame in annotation_group {
-        osc_gpu::add_group_frame(&mut vertices, view, logical_rect(*frame, scale), scale);
-      }
-      // The region selector's marching ants with no shade and no handles:
-      // the band is its own image, so nothing round it is dimmed.
-      if let Some(band) = annotation_marquee.filter(|rect| rect[2] > 0.0 || rect[3] > 0.0) {
-        let band = logical_rect(band, scale);
-        osc_gpu::add_crop_with_handles(&mut vertices, view, band, band, scale, 0.0, true, false);
-      }
-      let points = annotation_handles
-        .iter()
-        .map(|point| Point {
-          x: f64::from(point[0]) / scale,
-          y: f64::from(point[1]) / scale,
-        })
-        .collect::<Vec<_>>();
-      osc_gpu::add_annotation_handles(&mut vertices, view, &points, scale);
     } else if let Some(frame) = frame {
       let logical_frame = logical_rect(frame, scale);
       if let Some(image) = crop_image.filter(|rect| rect[2] >= 0.0) {
@@ -146,6 +74,12 @@ impl SelectionOverlay {
           scale,
           crop_radius_percent,
         );
+      } else if let Some(frame) = turned.frame {
+        let [a, b, c, d, dot] = frame.map(|[x, y]| Point {
+          x: f64::from(x) / scale,
+          y: f64::from(y) / scale,
+        });
+        osc_gpu::add_turned_selection(&mut vertices, view, [a, b, c, d], Some(dot), scale);
       } else {
         let radius_percent = radius_point
           .filter(|point| point[0].is_finite() && point[1].is_finite())
@@ -168,28 +102,46 @@ impl SelectionOverlay {
         );
       }
     }
-    if let Some((x, y, x_object, y_object)) = guides.filter(|_| objects.is_none()) {
-      let half = 0.5 / scale;
-      if let Some(x) = x {
-        let x = f64::from(x) / scale;
-        osc_gpu::add_pixel_aligned_quad(
-          &mut vertices,
-          view,
-          Rect::from_xywh(x - half, 0.0, half * 2.0, view.height),
-          scale,
-          if x_object { 5 } else { 4 },
-        );
+    if let Some(rings) = turned.rings.as_ref().filter(|_| objects.is_none()) {
+      constants.turn_rings = rings.rows;
+      osc_gpu::add_quad(
+        &mut vertices,
+        view,
+        logical_rect(rings.quad, scale),
+        super::super::turn::RING_KIND,
+      );
+    }
+    // A turned layer's annotation guides run across it, and are carried with
+    // it; the layer's own guides are the canvas's, which never turns.
+    let guides = guides.filter(|_| objects.is_none());
+    match (guides, turned.annotations.filter(|_| annotation.is_some())) {
+      (Some(guides), Some(forward)) => {
+        super::annotation_chrome::add_turned_guides(&mut vertices, view, guides, forward, scale);
       }
-      if let Some(y) = y {
-        let y = f64::from(y) / scale;
-        osc_gpu::add_pixel_aligned_quad(
-          &mut vertices,
-          view,
-          Rect::from_xywh(0.0, y - half, view.width, half * 2.0),
-          scale,
-          if y_object { 5 } else { 4 },
-        );
+      (Some((x, y, x_object, y_object)), None) => {
+        let half = 0.5 / scale;
+        if let Some(x) = x {
+          let x = f64::from(x) / scale;
+          osc_gpu::add_pixel_aligned_quad(
+            &mut vertices,
+            view,
+            Rect::from_xywh(x - half, 0.0, half * 2.0, view.height),
+            scale,
+            if x_object { 5 } else { 4 },
+          );
+        }
+        if let Some(y) = y {
+          let y = f64::from(y) / scale;
+          osc_gpu::add_pixel_aligned_quad(
+            &mut vertices,
+            view,
+            Rect::from_xywh(0.0, y - half, view.width, half * 2.0),
+            scale,
+            if y_object { 5 } else { 4 },
+          );
+        }
       }
+      (None, _) => {}
     }
     let Frame::Ready(frame) = self.surface.acquire(gpu)? else {
       return Ok(());

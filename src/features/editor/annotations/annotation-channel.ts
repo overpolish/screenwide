@@ -4,6 +4,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { requestImagePlacement } from "../images/image-requests";
+import { SceneRotation } from "../layer-rotation";
 import { ToolPanelAnnotation } from "../tool-panels/tool-panel-selection";
 import { EditorKind } from "../types";
 
@@ -40,6 +41,8 @@ type PublishedAnnotation = {
   /** Change how the chosen moving image plays. */
   applyImagePlay: (play: ImagePlayChange) => void;
   applyReverse: () => void;
+  /** Turn the chosen image, a field at a time, in degrees about each axis. */
+  applyRotation: (rotation: Partial<SceneRotation>) => void;
   applyShuffle: () => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
   /** Sway the chosen image over its clip, or stand it still. */
@@ -109,6 +112,9 @@ export function usePublishAnnotationSelection(
       },
       applyReverse: () => {
         applyRef.current.applyReverse();
+      },
+      applyRotation: (rotation) => {
+        applyRef.current.applyRotation(rotation);
       },
       applyShuffle: () => {
         applyRef.current.applyShuffle();
@@ -227,6 +233,15 @@ export const applyAnnotationAngle = (workspace: EditorKind, angle: number) => {
  * nothing drawn yet to turn. */
 export const applyAnnotationReverse = (workspace: EditorKind) => {
   chosen(workspace)?.applyReverse();
+};
+
+/** Turn the chosen image, a field at a time. A no-op with none chosen: a
+ * fresh image always lands upright. */
+export const applyAnnotationRotation = (
+  workspace: EditorKind,
+  rotation: Partial<SceneRotation>,
+) => {
+  chosen(workspace)?.applyRotation(rotation);
 };
 
 /** Give the chosen image the picture `art`. With none chosen, an image

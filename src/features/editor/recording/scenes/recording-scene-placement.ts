@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../../types";
 
@@ -10,7 +11,6 @@ import {
   RecordingSceneClip,
   SceneBox,
   SceneRotation,
-  UPRIGHT_ROTATION,
   WHOLE_FRAMING,
   sceneNeedsCamera,
 } from "./recording-scenes";
@@ -65,7 +65,8 @@ export const basePlacement = (
     camera: camera?.overlay.radiusPercent ?? 0,
     screen: output.radiusPercent,
   },
-  rotation: UPRIGHT_ROTATION,
+  // A scene arrives from the screen's own turn and leaves for it.
+  rotation: output.rotation ?? UPRIGHT_ROTATION,
   screen: {
     height: output.cropHeight,
     width: output.cropWidth,

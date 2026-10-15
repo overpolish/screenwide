@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 
+import { SceneRotation } from "../layer-rotation";
 import { sweptTimelineItems } from "../timeline/tracks/timeline-item-selection";
 import { EditorKind } from "../types";
 
@@ -34,6 +35,7 @@ import {
   ImageArt,
 } from "./annotations";
 import { relaidHighlight } from "./highlight-strokes";
+import { imageRotation, withImageRotation } from "./image-rotation";
 
 const NOTHING_CHOSEN: ReadonlySet<string> = new Set();
 const anyGroupable = () => true;
@@ -67,26 +69,16 @@ export function useAnnotations({
 
   // Where a counter's tail points is remembered however it was turned - by
   // its grip on the picture or by the panel's own control - so the next one
-  // is dropped aiming the same way. An image is turned the same two ways,
-  // but a fresh one always stands upright.
-  const angle =
-    selected?.shape.kind === "counter" || selected?.shape.kind === "image"
-      ? selected.shape.angle
-      : null;
+  // is dropped aiming the same way.
   const counterAngle =
     selected?.shape.kind === "counter" ? selected.shape.angle : null;
   useEffect(() => {
     if (counterAngle !== null) rememberAnnotationAngle(counterAngle);
   }, [counterAngle]);
 
-  /** Turn the chosen counter's tail or image, in radians clockwise from
-   * east. */
+  /** Turn the chosen counter's tail, in radians clockwise from east. */
   const applyAngle = (next: number) => {
-    if (
-      !selected ||
-      (selected.shape.kind !== "counter" && selected.shape.kind !== "image")
-    )
-      return;
+    if (!selected || selected.shape.kind !== "counter") return;
     const shape = selected.shape;
     if (!Number.isFinite(next) || shape.angle === next) return;
     commit(
@@ -94,6 +86,23 @@ export function useAnnotations({
         annotation.id === selected.id
           ? { ...annotation, shape: { ...shape, angle: next } }
           : annotation,
+      ),
+    );
+  };
+  // An image is turned flat by its angle and in depth by its tilt, which the
+  // Rotation row's dials show as one turn about three axes.
+  const rotation =
+    selected?.shape.kind === "image"
+      ? imageRotation(selected.shape)
+      : undefined;
+  /** Turn the chosen image, a field at a time, in degrees about each axis. */
+  const applyRotation = (next: Partial<SceneRotation>) => {
+    if (!selected || selected.shape.kind !== "image" || !rotation) return;
+    const shape = withImageRotation(selected.shape, { ...rotation, ...next });
+    if (shape === selected.shape) return;
+    commit(
+      annotations.map((annotation) =>
+        annotation.id === selected.id ? { ...annotation, shape } : annotation,
       ),
     );
   };
@@ -216,14 +225,14 @@ export function useAnnotations({
       count: selectedIds.size,
       selection: selected
         ? {
-            angle: angle ?? undefined,
+            angle: counterAngle ?? undefined,
             animated: selected.animated,
             id: selected.id,
             image: art ?? undefined,
             kind: selected.shape.kind,
             style: selected.style,
             ...(selected.shape.kind === "image"
-              ? { sway: selected.shape.sway !== undefined }
+              ? { rotation, sway: selected.shape.sway !== undefined }
               : {}),
           }
         : null,
@@ -236,6 +245,7 @@ export function useAnnotations({
       applyImage,
       applyImagePlay,
       applyReverse,
+      applyRotation,
       applyShuffle,
       applyStyle,
       applySway,

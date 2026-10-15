@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { UPRIGHT_ROTATION } from "../layer-rotation";
+
 import {
   ScreenshotLayout,
+  ScreenshotOutputSettings,
   ScreenshotWorkspaceOutputSettings,
   screenshotLayout,
 } from "./screenshot-output";
@@ -33,6 +36,14 @@ export function normalizedScreenshotSelection(
   };
 }
 
+/** How the select tool's gizmo finds a layer turned: by its own turn, upright
+ * where it has none. The crop tool reframes the layer upright, with no gizmo,
+ * so its selection carries none. */
+export const screenshotLayerTurn = (
+  output: ScreenshotOutputSettings,
+  cropMode: boolean,
+) => (cropMode ? {} : { rotation: output.rotation ?? UPRIGHT_ROTATION });
+
 /** One selectable target per workspace pane, in pane order, for the native
  * select and crop overlays to hit-test. Panes whose item is gone are skipped. */
 export function screenshotSelectionTargets(
@@ -50,6 +61,7 @@ export function screenshotSelectionTargets(
         cropMode,
         paneIndex,
         radiusPercent: itemOutput.output.radiusPercent,
+        ...screenshotLayerTurn(itemOutput.output, cropMode),
         ...normalizedScreenshotSelection(
           layout,
           target,

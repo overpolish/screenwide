@@ -201,6 +201,7 @@ export function useRecordingPreviewSelection(
     isFramed,
     overlay: videoSelectionOverlay,
     reframe,
+    screenRotation: effectiveRecordingOutput.primary.rotation,
     targets: videoSelectionTargets,
   });
   const selectionOverlay = picks.overlay;

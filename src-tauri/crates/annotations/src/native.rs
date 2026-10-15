@@ -27,7 +27,7 @@ pub struct NativeAnnotation {
   pub p0: [f32; 2],
   pub p1: [f32; 2],
   pub p2: [f32; 2],
-  pub(crate) p3: [f32; 2],
+  pub p3: [f32; 2],
   pub data_offset: u32,
   pub data_count: u32,
   pub(crate) hover: f32,
@@ -137,8 +137,20 @@ impl NativeAnnotationData {
     if let super::AnnotationShape::Magnify { size, .. } = &annotation.shape {
       super::magnify::native::fill(&mut record, *size, &annotation.style);
     }
-    if let super::AnnotationShape::Image { play, clock_ms, .. } = &annotation.shape {
-      super::image::native::fill(&mut record, &annotation.style, play.as_ref(), *clock_ms);
+    if let super::AnnotationShape::Image {
+      play,
+      clock_ms,
+      tilt,
+      ..
+    } = &annotation.shape
+    {
+      super::image::native::fill(
+        &mut record,
+        &annotation.style,
+        play.as_ref(),
+        *clock_ms,
+        tilt.unwrap_or_default(),
+      );
     }
     if let Some(fill) = fill {
       record.color = fill.color;

@@ -23,6 +23,7 @@ import type {
   AnnotationShape,
   AnnotationText,
   ImagePlay,
+  ImageTilt,
 } from "./annotations";
 
 type Shape<Kind extends AnnotationShape["kind"]> = Extract<
@@ -145,12 +146,27 @@ const imagePlay = (value: unknown): ImagePlay | undefined => {
   };
 };
 
+/** An image's turn in depth, or undefined where it lies flat or the tilt
+ * cannot be read. */
+const imageTilt = (value: unknown): ImageTilt | undefined => {
+  const tilt = (value ?? {}) as Record<string, unknown>;
+  const { x, y } = tilt;
+  return typeof x === "number" &&
+    typeof y === "number" &&
+    Number.isFinite(x) &&
+    Number.isFinite(y) &&
+    (x !== 0 || y !== 0)
+    ? { x, y }
+    : undefined;
+};
+
 export const imageShape = (value: unknown): Shape<"image"> | null => {
   const shape = (value ?? {}) as Record<string, unknown>;
   const center = annotationPoint(shape.center);
   const size = positive(shape.size);
   const aspect = positive(shape.aspect);
   const angle = shape.angle;
+  const tilt = imageTilt(shape.tilt);
   const play = imagePlay(shape.play);
   // A seed that cannot be read leaves the image standing still.
   const sway = annotationSeed(shape.sway);
@@ -170,6 +186,7 @@ export const imageShape = (value: unknown): Shape<"image"> | null => {
         ...(play ? { play } : {}),
         size,
         ...(sway === null ? {} : { sway }),
+        ...(tilt ? { tilt } : {}),
       }
     : null;
 };

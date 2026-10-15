@@ -18,13 +18,13 @@ import {
   sceneNeedsCamera,
 } from "../../recording/scenes/recording-scenes";
 import { EditorKind } from "../../types";
+import { RotationRow } from "../rotation-row";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { SceneFramingRows } from "./scene-framing-rows";
 import { sceneOffer } from "./scene-offer";
 import { SceneOutputRow } from "./scene-output-row";
 import { ScenePresetTile } from "./scene-preset-tile";
-import { SceneRotationRow } from "./scene-rotation-row";
 import { sceneSchematic } from "./scene-schematic";
 import { SceneTemplateTiles } from "./scene-template-tiles";
 import { SceneVariantRows } from "./scene-variant-rows";
@@ -220,7 +220,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {framing && scene.framingPane === "screen" && scene.rotation ? (
-        <SceneRotationRow
+        <RotationRow
           isDisabled={isLocked}
           onChange={(next) => {
             change({ sceneRotation: next });

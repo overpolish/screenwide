@@ -42,9 +42,10 @@ pub fn normalised_point(point: AnnotationPoint, source: (u32, u32)) -> (f64, f64
 /// the drawn width. Its one grip - the tail's tip - is placed from those by the
 /// native side, which works in isotropic display points. `kind` says which
 /// reading applies. An image's corner radius rides in `radius`, the one slot
-/// none of its others is free for; every other kind leaves it zero. Layer
-/// identity, index and kind follow the ten geometry doubles, matching the C
-/// `ScreenwidePreviewAnnotation`.
+/// none of its others is free for, and its turn in depth in `tilt_x` and
+/// `tilt_y`, in degrees; every other kind leaves them zero. Layer identity,
+/// index and kind follow the ten geometry doubles, then the tilt, matching
+/// the C `ScreenwidePreviewAnnotation`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct NativeAnnotationHandles {
@@ -64,13 +65,15 @@ pub struct NativeAnnotationHandles {
   pub kind: u32,
   /// [`HANDLE_FLAG_GROUPED`] where the annotation is one of several chosen.
   pub flags: u32,
+  pub tilt_x: f64,
+  pub tilt_y: f64,
 }
 
 /// The annotation is one of several chosen together, so a press on it carries
 /// the group rather than choosing it: the native `ScreenwideAnnotationFlagGrouped`.
 pub const HANDLE_FLAG_GROUPED: u32 = 1;
 
-const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 96);
+const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 112);
 
 /// The macOS chrome reads a record's kind in Objective-C; only the Windows
 /// one picks and prepares from it in Rust.

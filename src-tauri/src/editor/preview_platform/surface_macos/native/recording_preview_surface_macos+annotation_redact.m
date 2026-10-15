@@ -89,18 +89,13 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_redact_add_osc(
   NSRect image = annotation_image_frame(surface);
   if (image.size.width <= 0.0 || image.size.height <= 0.0) return YES;
   BOOL radius = annotation_box_has_radius(list[selected].kind);
-  screenwide_region_osc_add_selection(vertices, count, size,
-                                      redact_frame(image, list[selected]), scale,
-                                      radius ? list[selected].start_head : 0.0, radius);
+  double storage[9];
+  const double *turn = annotation_chrome_turn(surface, storage);
+  annotation_osc_add_box(vertices, count, size, turn, redact_frame(image, list[selected]),
+                         list[selected].start_head, radius, scale);
   NSPoint grip;
-  if (annotation_box_tail(image, list[selected], &grip)) {
-    // The loupe's grip wears the same disc an arrow's grips do.
-    CGFloat extent = 4.0 + 2.0 / scale;
-    CGFloat x = round(grip.x * scale) / scale;
-    CGFloat y = round(grip.y * scale) / scale;
-    screenwide_region_osc_add_texture_quad(
-        vertices, count, size, NSMakeRect(x - extent, y - extent, extent * 2.0, extent * 2.0),
-        NSMakeRect(0.0, 0.0, 1.0, 1.0), 3);
-  }
+  // The loupe's grip wears the same disc an arrow's grips do.
+  if (annotation_box_tail(image, list[selected], &grip))
+    annotation_osc_add_grip(vertices, count, size, turn, grip, scale);
   return YES;
 }

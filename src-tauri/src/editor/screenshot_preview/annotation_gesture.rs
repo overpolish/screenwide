@@ -184,7 +184,11 @@ impl PreviewManager {
       .annotations;
     let AnnotationGestureOverride { edit, field, .. } = self.annotation_gesture.as_mut()?;
     let request = threshold.map(|threshold| SnapRequest { field, threshold });
-    let result = edit.update(annotations, point, modifiers, request);
+    // A ring drag's sample is the turn it reached, not a point.
+    let result = match target.turn(x, y, image_points) {
+      Some(rotation) => edit.turn(annotations, rotation),
+      None => edit.update(annotations, point, modifiers, request),
+    };
     let gesture = self.annotation_gesture.as_ref()?;
     let id = gesture.edit.selected_id().to_owned();
     let chosen = gesture.edit.chosen_id().map(str::to_owned);

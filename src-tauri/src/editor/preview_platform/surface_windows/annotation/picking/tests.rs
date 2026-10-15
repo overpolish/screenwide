@@ -30,6 +30,8 @@ fn arrow() -> NativeAnnotationHandles {
     end_head: 0.0,
     width: 0.04,
     radius: 0.0,
+    tilt_x: 0.0,
+    tilt_y: 0.0,
     layer_id: 0,
     index: 0,
     kind: 0,

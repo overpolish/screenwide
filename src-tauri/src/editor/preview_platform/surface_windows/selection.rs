@@ -4,7 +4,10 @@
 //! Transparent selection overlay composed above the preview panes, drawn
 //! through the shared OSC shader.
 
+mod annotation_chrome;
 mod drawing;
+
+pub(super) use annotation_chrome::AnnotationChrome;
 
 use windows::Win32::Graphics::DirectComposition::{IDCompositionDevice, IDCompositionVisual};
 

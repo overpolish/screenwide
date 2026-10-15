@@ -54,9 +54,11 @@
   [super resetCursorRects];
 }
 - (void)cursorUpdate:(NSEvent *)event {
-  if (self.turnDragActive)
-    set_selection_cursor(screenwide_region_resize_cursor(self.turnDragEdges)
-                             ?: [NSCursor closedHandCursor]);
+  if (self.turnDragActive || self.imageTurnActive)
+    set_selection_cursor(
+        screenwide_region_resize_cursor(self.turnDragActive ? self.turnDragEdges
+                                                            : self.imageTurnHold.edges)
+            ?: [NSCursor closedHandCursor]);
   else if (self.selectionDragActive &&
       (self.selectionDragOperation == 2 || self.selectionDragOperation == 4))
     set_selection_cursor(screenwide_region_resize_cursor(1 | 4));

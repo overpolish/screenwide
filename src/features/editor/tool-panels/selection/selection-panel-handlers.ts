@@ -30,6 +30,7 @@ export const selectionPanelHandlers = (
   | "onSelectionRadiusChange"
   | "onSelectionRecenter"
   | "onSelectionReset"
+  | "onSelectionRotationChange"
 > => ({
   onCameraBackgroundChoose: () => {
     target?.cameraEffects?.chooseBackground();
@@ -71,6 +72,9 @@ export const selectionPanelHandlers = (
   },
   onSelectionReset: () => {
     target?.reset();
+  },
+  onSelectionRotationChange: (rotation) => {
+    target?.applyRotation?.(rotation);
   },
 });
 

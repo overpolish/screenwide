@@ -38,5 +38,7 @@ pub(crate) fn grips(
     end_head: head_reach(style, head != AnnotationHead::None, image_width),
     width: stroke_width(style, image_width),
     radius: 0.0,
+    tilt_x: 0.0,
+    tilt_y: 0.0,
   }
 }

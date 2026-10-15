@@ -263,8 +263,8 @@ pub(crate) fn place_images(
       arrow.geometry.end_head[4] = inset as f32;
     } else {
       arrow.geometry.start_head[..4].copy_from_slice(&cell);
-      // The preparation leaves the turning grip here, which only the chrome
-      // reads; a shadow's cell, which follows its picture's, replaces it.
+      // Cleared for a picture that casts no shadow; a shadow's cell, which
+      // follows its picture's, replaces it.
       arrow.geometry.end_head = [0.0; 6];
     }
   }

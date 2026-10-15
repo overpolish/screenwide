@@ -5,7 +5,7 @@
 //! the rotation gizmo's rings and the turn that carries a layer's chrome
 //! where the compositor draws it. Angles cross in degrees.
 
-use super::{ring_at, ring_basis, ring_radius, RingDrag};
+use super::{composed, ring_at, ring_basis, ring_radius, within, RingDrag};
 use screenwide_scenes::rotation::{inverted, turned_homography};
 use screenwide_scenes::SceneRotation;
 
@@ -103,6 +103,60 @@ pub unsafe extern "C" fn screenwide_turn_ring_drag(
   let turned = drag.turned((dx, dy), snap != 0);
   let out = unsafe { std::slice::from_raw_parts_mut(out, 3) };
   out.copy_from_slice(&[turned.x, turned.y, turned.z]);
+}
+
+/// The three angles at `values`, in degrees.
+///
+/// # Safety
+/// `values` must be valid for three reads.
+unsafe fn read_rotation(values: *const f64) -> SceneRotation {
+  let [x, y, z] = unsafe { *values.cast::<[f64; 3]>() };
+  rotation(x, y, z)
+}
+
+/// Writes the turn seen of something turned `inner` within a frame turned
+/// `outer` into `out`. Every turn is three angles in degrees.
+///
+/// # Safety
+/// `outer` and `inner` must each be valid for three reads, `out` for three
+/// writes.
+#[no_mangle]
+pub unsafe extern "C" fn screenwide_turn_compose(
+  outer: *const f64,
+  inner: *const f64,
+  out: *mut f64,
+) {
+  if outer.is_null() || inner.is_null() || out.is_null() {
+    return;
+  }
+  let seen = composed(unsafe { read_rotation(outer) }, unsafe {
+    read_rotation(inner)
+  });
+  unsafe { std::slice::from_raw_parts_mut(out, 3) }.copy_from_slice(&[seen.x, seen.y, seen.z]);
+}
+
+/// Writes the turn within a frame turned `outer` that is seen as `seen`,
+/// nearest `near`, into `out`. Every turn is three angles in degrees.
+///
+/// # Safety
+/// `outer`, `seen` and `near` must each be valid for three reads, `out` for
+/// three writes.
+#[no_mangle]
+pub unsafe extern "C" fn screenwide_turn_within(
+  outer: *const f64,
+  seen: *const f64,
+  near: *const f64,
+  out: *mut f64,
+) {
+  if outer.is_null() || seen.is_null() || near.is_null() || out.is_null() {
+    return;
+  }
+  let own = within(
+    unsafe { read_rotation(outer) },
+    unsafe { read_rotation(seen) },
+    unsafe { read_rotation(near) },
+  );
+  unsafe { std::slice::from_raw_parts_mut(out, 3) }.copy_from_slice(&[own.x, own.y, own.z]);
 }
 
 /// Writes the turn of a layer turned `x, y, z` about `cx, cy`, on a canvas

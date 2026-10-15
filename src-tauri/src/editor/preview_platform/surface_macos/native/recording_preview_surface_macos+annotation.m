@@ -285,15 +285,8 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_add_osc(
   uint32_t kinds[SCREENWIDE_ANNOTATION_MAX_GRIPS];
   NSUInteger grips = annotation_grips(annotation_image_frame(surface),
                                       list[surface.annotationSelected], handles, kinds);
-  // The same disc the selection OSC draws its corner grips with: a 4pt fill
-  // with a one-device-pixel ring, snapped to a whole device pixel.
-  CGFloat extent = 4.0 + 2.0 / scale;
-  for (NSUInteger index = 0; index < grips; index++) {
-    CGFloat x = round(handles[index].x * scale) / scale;
-    CGFloat y = round(handles[index].y * scale) / scale;
-    screenwide_region_osc_add_texture_quad(
-        vertices, count, size,
-        NSMakeRect(x - extent, y - extent, extent * 2.0, extent * 2.0),
-        NSMakeRect(0.0, 0.0, 1.0, 1.0), 3);
-  }
+  double storage[9];
+  const double *turn = annotation_chrome_turn(surface, storage);
+  for (NSUInteger index = 0; index < grips; index++)
+    annotation_osc_add_grip(vertices, count, size, turn, handles[index], scale);
 }

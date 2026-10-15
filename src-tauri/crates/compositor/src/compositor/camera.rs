@@ -81,7 +81,7 @@ impl CameraComposition {
       scene_motion: None,
       scene_opacity: None,
       scene_camera_front: None,
-      scene_rotation: None,
+      rotation: None,
       source_crop: NormalizedSourceRect {
         height: 1.0,
         width: 1.0,

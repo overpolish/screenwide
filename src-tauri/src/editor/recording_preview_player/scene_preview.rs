@@ -172,11 +172,12 @@ impl PreviewPlayerManager {
     Ok(())
   }
 
-  /// Draws the paused frame again after its scenes changed. A scene only
-  /// moves pictures that are already decoded, so the frame is recomposed
-  /// from the cached sources where it can be; a decoder restart would land
-  /// the picture well after the selection the webview moves with the edit.
-  pub(super) fn redraw_scenes(&mut self) -> Result<(), String> {
+  /// Draws the paused frame again after a change that only moves pictures
+  /// already decoded: its scenes, or the screen's turn. The frame is
+  /// recomposed from the cached sources where it can be; a decoder restart
+  /// would land the picture well after the selection the webview moves with
+  /// the edit.
+  pub(super) fn redraw_paused_frame(&mut self) -> Result<(), String> {
     if !self.is_playing && !self.recompose_paused_still() {
       self.restart(PlaybackMode::InteractiveStill)?;
     }
@@ -222,5 +223,5 @@ pub async fn set_recording_preview_scenes(
   *current_ranges = ranges;
   drop(current);
   drop(current_ranges);
-  manager.redraw_scenes()
+  manager.redraw_paused_frame()
 }

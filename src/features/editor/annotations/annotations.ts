@@ -18,6 +18,7 @@ import type { AnnotationStyle } from "../../../bindings/AnnotationStyle";
 import type { HighlightBand } from "../../../bindings/HighlightBand";
 import type { ImageArt } from "../../../bindings/ImageArt";
 import type { ImagePlay } from "../../../bindings/ImagePlay";
+import type { ImageTilt } from "../../../bindings/ImageTilt";
 import type { TextEditPhase } from "../../../bindings/TextEditPhase";
 import type { TextPointer } from "../../../bindings/TextPointer";
 
@@ -29,6 +30,7 @@ export type {
   HighlightBand,
   ImageArt,
   ImagePlay,
+  ImageTilt,
   TextPointer,
 };
 

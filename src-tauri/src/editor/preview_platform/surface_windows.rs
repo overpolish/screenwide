@@ -35,10 +35,11 @@ mod still;
 #[cfg(test)]
 mod tests;
 mod thread_dispatch;
+mod turn;
 mod workspace;
 
 use annotation::handle_typing_input;
-use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for};
+use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for, resize_cursor};
 use geometry::{
   auto_fit_selection_bounds, display_selection, frame_resize_start, maximum_editor_zoom,
   pane_canvas_rect, set_pane_geometry,

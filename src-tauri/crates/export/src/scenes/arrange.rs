@@ -126,7 +126,8 @@ pub fn arrange(
   output.radius_percent = placed.radius.0;
   output.scene_opacity = Some([placed.opacity.0 as f32, placed.opacity.1 as f32]);
   output.scene_camera_front = Some(placed.camera_front as f32);
-  output.scene_rotation = Some(placed.rotation).filter(|rotation| !rotation.is_upright());
+  // The scene's turn replaces the layer's own, upright where it gives none.
+  output.rotation = Some(placed.rotation).filter(|rotation| !rotation.is_upright());
   if let Some((overlay, _)) = camera {
     overlay.frame_x = placed.frame.x;
     overlay.frame_y = placed.frame.y;

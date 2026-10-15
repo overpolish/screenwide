@@ -163,10 +163,26 @@ void screenwide_region_osc_add_selection_frame(
     NSRect frame, CGFloat scale);
 /// A turned picture's own frame: the selection's outline along its four
 /// sides, its corner discs, the pills on its sides lying along them, and its
-/// radius dot. `corners` run clockwise from the picture's own top-left.
+/// radius dot where `radius_dot` is not NULL. `corners` run clockwise from
+/// the picture's own top-left.
 void screenwide_region_osc_add_turned_selection(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
-    const NSPoint corners[4], NSPoint radius_dot, CGFloat scale);
+    const NSPoint corners[4], const NSPoint *radius_dot, CGFloat scale);
+/// The selection's outline along a turned box's four sides, without its
+/// grips. `corners` run clockwise from the box's own top-left.
+void screenwide_region_osc_add_turned_outline(ScreenwideRegionOscVertex *vertices,
+                                              NSUInteger *count, NSSize view_size,
+                                              const NSPoint corners[4], CGFloat scale);
+/// A marquee band's marching ants along a turned band's four sides.
+void screenwide_region_osc_add_turned_marquee(ScreenwideRegionOscVertex *vertices,
+                                              NSUInteger *count, NSSize view_size,
+                                              const NSPoint corners[4], CGFloat scale);
+/// A snap guide's soft line from `from` to `to`, `width` across: the canvas's
+/// own colour, or another object's where `object` is set.
+void screenwide_region_osc_add_soft_guide(ScreenwideRegionOscVertex *vertices,
+                                          NSUInteger *count, NSSize view_size, NSPoint from,
+                                          NSPoint to, CGFloat width, BOOL object,
+                                          CGFloat scale);
 void screenwide_region_osc_add_ruler_box(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
     NSRect frame, CGFloat scale, BOOL hovered, CGFloat hover_width);

@@ -94,6 +94,9 @@ pub enum AnnotationGestureTarget {
   /// carries the corner it was pressed at and its end the corner it was let
   /// go at, and it chooses every annotation it touches.
   Marquee,
+  /// A drag of the rotation gizmo's rings round the image at `index`: each
+  /// sample carries the turn the rings reached rather than a point.
+  Turn { index: usize },
 }
 
 /// What the pointer does over the picture while a tool is in hand. The select
@@ -202,8 +205,8 @@ impl AnnotationGestureTarget {
   /// Reads the target the native interaction view reported: a new annotation
   /// (0), a grip of the annotation at `index` (1), no annotation at all (2), a
   /// press that only chooses the annotation at `index` (3), a carry of the
-  /// chosen group (4), a toggle of the annotation at `index` (5), or a
-  /// marquee band (6).
+  /// chosen group (4), a toggle of the annotation at `index` (5), a marquee
+  /// band (6), or a drag of the rings round the image at `index` (7).
   pub fn from_raw(kind: u32, index: u32, handle: u32) -> Option<Self> {
     match kind {
       0 => Some(Self::New),
@@ -220,8 +223,18 @@ impl AnnotationGestureTarget {
         index: index as usize,
       }),
       6 => Some(Self::Marquee),
+      7 => Some(Self::Turn {
+        index: index as usize,
+      }),
       _ => None,
     }
+  }
+
+  /// The turn a ring drag's sample reached, which it reports in place of a
+  /// point: about X and Y as `x` and `y`, about Z as `z`, in degrees, as a
+  /// layer's ring drag reports its own. `None` for every other target.
+  pub fn turn(self, x: f64, y: f64, z: f64) -> Option<screenwide_scenes::SceneRotation> {
+    matches!(self, Self::Turn { .. }).then_some(screenwide_scenes::SceneRotation { x, y, z })
   }
 }
 

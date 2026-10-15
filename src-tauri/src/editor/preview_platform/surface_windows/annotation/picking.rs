@@ -172,11 +172,11 @@ pub(super) fn highlight_flow(
 }
 
 /// The grips one annotation shows as discs, in display points: an arrow's
-/// three, the tip of a counter's tail or of a text box's pointer, a
-/// magnifier's loupe grip and an image's turning grip. A redaction's, a
-/// shape's and a spotlight's, and a magnifier's zoom area's, are the
-/// selection box's own, which `redact_chrome` draws and hits, and an image's
-/// frame is its own, which `image_chrome` does. The tail is placed here
+/// three, the tip of a counter's tail or of a text box's pointer, and a
+/// magnifier's loupe grip. A redaction's, a shape's and a spotlight's, and a
+/// magnifier's zoom area's, are the selection box's own, which
+/// `redact_chrome` draws and hits, and an image's frame is its own, which
+/// `image_chrome` does. The tail is placed here
 /// rather than sent because a normalised offset is a different length in
 /// each axis on a picture that is not square, while display points are
 /// isotropic.
@@ -204,13 +204,13 @@ pub(super) fn item_grips(
       let geometry = text_geometry(image, item);
       vec![(f64::from(geometry.c[0]), f64::from(geometry.c[1]))]
     }
+    // An image's grips are its frame's, which its chrome draws itself.
     AnnotationKind::Redact
     | AnnotationKind::Shape
     | AnnotationKind::Spotlight
-    | AnnotationKind::Draw => Vec::new(),
+    | AnnotationKind::Draw
+    | AnnotationKind::Image => Vec::new(),
     AnnotationKind::Magnify => vec![super::magnify_chrome::loupe_grip(image, item)],
-    // The grip that turns it stands above its top side.
-    AnnotationKind::Image => vec![super::image_chrome::turn_grip(image, item)],
     AnnotationKind::Highlight => {
       let flow = highlight_flow(image, item);
       [flow.start_grip(), flow.end_grip()]

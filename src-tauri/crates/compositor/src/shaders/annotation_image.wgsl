@@ -1,13 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The image: a picture laid over the canvas, turned, sized, mirrored and
-// rounded, with the shadow it may cast. Every number it reads was prepared by
-// `image::geometry::prepare_image`, which documents where the record
-// keeps each part; where its picture sits in the image atlas rides in
-// `start_head`, and its shadow's in `end_head`, as `image_artwork` wrote
-// them. The atlas holds premultiplied colour, so the picture is laid over the
-// canvas as it is, not tinted.
+// The image: a picture laid over the canvas, tilted in depth, turned, sized,
+// mirrored and rounded, with the shadow it may cast. Every number it reads
+// was prepared by `image::geometry::prepare_image`, which documents where the
+// record keeps each part; its tilt rides in `start_head`'s third point, where
+// its picture sits in the image atlas in the rest of `start_head`, and its
+// shadow's in `end_head`, as `image_artwork` wrote them. The atlas holds
+// premultiplied colour, so the picture is laid over the canvas as it is, not
+// tinted.
 
 const annotation_image_kind: u32 = 9u;
 // The flag an image that casts a shadow carries: `flags::SHADOW`.
@@ -27,20 +28,26 @@ const annotation_image_lift: f32 = 0.35;
 // so it is as dark as the loupe's along the picture's edge, where the
 // blurred silhouette is half.
 const annotation_image_shadow_strength: f32 = 0.28;
+// How far in front of a picture the eye sits, in lengths of its longer side:
+// the screen's own `EYE_DISTANCE` in `scenes/src/rotation.rs`, as
+// `image::tilt` sees a picture from it.
+const annotation_image_eye_distance: f32 = 2.0;
 
 /// The images' pictures, each drawn at about the size it is shown.
 @group(0) @binding(17) var annotation_image_pictures: texture_2d<f32>;
 
 /// An image read out of its prepared record: its middle, its picture's own
 /// right and down as unit vectors, its half width and height, its corner
-/// radius, where its picture and its shadow sit in the atlas, how far in from
-/// the shadow's cell its picture's box starts, and whether it is mirrored.
+/// radius, its tilt in radians, where its picture and its shadow sit in the
+/// atlas, how far in from the shadow's cell its picture's box starts, and
+/// whether it is mirrored.
 struct PreviewImage {
   center: vec2<f32>,
   across: vec2<f32>,
   down: vec2<f32>,
   half_size: vec2<f32>,
   rounding: f32,
+  tilt: vec2<f32>,
   cell_origin: vec2<f32>,
   cell_size: vec2<f32>,
   shadow_origin: vec2<f32>,
@@ -58,6 +65,7 @@ fn annotation_image(prepared: PreviewGeometry) -> PreviewImage {
   image.across = across / max(image.half_size.x, 1e-6);
   image.down = down / max(image.half_size.y, 1e-6);
   image.rounding = prepared.rounding;
+  image.tilt = vec2<f32>(prepared.start_head_cx, prepared.start_head_cy);
   image.cell_origin = vec2<f32>(prepared.start_head_ax, prepared.start_head_ay);
   image.cell_size = vec2<f32>(prepared.start_head_bx, prepared.start_head_by);
   image.shadow_origin = vec2<f32>(prepared.end_head_ax, prepared.end_head_ay);
@@ -67,10 +75,56 @@ fn annotation_image(prepared: PreviewGeometry) -> PreviewImage {
   return image;
 }
 
-/// `probe` in the picture's own frame: across and down from its middle.
+/// How far in front of the picture its tilt is seen from, in canvas pixels.
+fn annotation_image_eye(image: PreviewImage) -> f32 {
+  return annotation_image_eye_distance * 2.0 * max(image.half_size.x, image.half_size.y);
+}
+
+/// Where the tilt draws `local`, a point of the picture's own frame, still
+/// in that frame. The twin of `ImageTilt::tilted`.
+fn annotation_image_tilted(local: vec2<f32>, image: PreviewImage) -> vec2<f32> {
+  let sx = sin(image.tilt.x);
+  let cx = cos(image.tilt.x);
+  let sy = sin(image.tilt.y);
+  let cy = cos(image.tilt.y);
+  let w = 1.0 + (sy * local.x + cy * sx * local.y) / annotation_image_eye(image);
+  return vec2<f32>(cy * local.x - sy * sx * local.y, cx * local.y) / max(w, 1e-6);
+}
+
+/// The point of the picture's own frame the tilt draws at `drawn`, from the
+/// same frame; far off the picture where nothing of it is drawn there. The
+/// twin of `ImageTilt::untilted`.
+fn annotation_image_untilt(drawn: vec2<f32>, image: PreviewImage) -> vec2<f32> {
+  if (image.tilt.x == 0.0 && image.tilt.y == 0.0) {
+    return drawn;
+  }
+  let eye = annotation_image_eye(image);
+  let sx = sin(image.tilt.x);
+  let cx = cos(image.tilt.x);
+  let sy = sin(image.tilt.y);
+  let cy = cos(image.tilt.y);
+  // The tilted point's two equations, linear in the picture's own point.
+  let u_column = vec2<f32>(cy - drawn.x * sy / eye, -drawn.y * sy / eye);
+  let v_column = vec2<f32>(-sy * sx - drawn.x * cy * sx / eye, cx - drawn.y * cy * sx / eye);
+  let determinant = u_column.x * v_column.y - v_column.x * u_column.y;
+  if (abs(determinant) < 1e-9) {
+    return vec2<f32>(1e9);
+  }
+  let u = (drawn.x * v_column.y - v_column.x * drawn.y) / determinant;
+  let v = (u_column.x * drawn.y - drawn.x * u_column.y) / determinant;
+  // A point behind the eye maps back onto the picture too; it draws nothing.
+  if (1.0 + (sy * u + cy * sx * v) / eye <= 1e-6) {
+    return vec2<f32>(1e9);
+  }
+  return vec2<f32>(u, v);
+}
+
+/// `probe` in the picture's own frame: across and down from its middle, back
+/// through its tilt.
 fn annotation_image_local(probe: vec2<f32>, image: PreviewImage) -> vec2<f32> {
   let offset = probe - image.center;
-  return vec2<f32>(dot(offset, image.across), dot(offset, image.down));
+  return annotation_image_untilt(vec2<f32>(dot(offset, image.across), dot(offset, image.down)),
+                                 image);
 }
 
 /// How far `probe` falls outside the picture's rounded box: negative inside.
@@ -162,8 +216,8 @@ fn annotation_image_shadow(probe: vec2<f32>, image: PreviewImage) -> f32 {
   return annotation_image_shadow_strength * annotation_image_bilinear(texel, low, high).a;
 }
 
-/// Where an image can reach: its turned picture, at its largest across the
-/// exposure, and the shadow and halo round it.
+/// Where an image can reach: its tilted, turned picture, at its largest
+/// across the exposure, and the shadow and halo round it.
 fn annotation_image_bounds(annotation: PreviewArrow, halo: f32, feather: f32) -> vec4<f32> {
   var image = annotation_image(annotation.geometry);
   if (annotation.sample_count > 0u) {
@@ -172,14 +226,19 @@ fn annotation_image_bounds(annotation: PreviewArrow, halo: f32, feather: f32) ->
     let latest = annotation_image(annotation_samples[last].geometry);
     image.half_size = max(image.half_size, max(first.half_size, latest.half_size));
   }
-  let reach_x = abs(image.across.x) * image.half_size.x + abs(image.down.x) * image.half_size.y;
-  let reach_y = abs(image.across.y) * image.half_size.x + abs(image.down.y) * image.half_size.y;
+  var reach = vec2<f32>(0.0);
+  for (var corner = 0u; corner < 4u; corner++) {
+    let side = vec2<f32>(select(-1.0, 1.0, (corner & 1u) != 0u),
+                         select(-1.0, 1.0, (corner >> 1u) != 0u));
+    let drawn = annotation_image_tilted(side * image.half_size, image);
+    reach = max(reach, abs(image.across * drawn.x + image.down * drawn.y));
+  }
   var spill = halo + feather + 1.0;
   if ((annotation.flags & annotation_image_shadow_flag) != 0u) {
     spill += annotation_image_spread_of(image) * (3.0 + annotation_image_lift);
   }
-  let reach = vec2<f32>(reach_x, reach_y) + spill;
-  return vec4<f32>(image.center - reach, image.center + reach);
+  let spread = reach + spill;
+  return vec4<f32>(image.center - spread, image.center + spread);
 }
 
 /// One image over `rgba_in`, premultiplied: its shadow, then its picture,

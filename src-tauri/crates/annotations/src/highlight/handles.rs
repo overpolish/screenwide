@@ -51,6 +51,8 @@ pub(crate) fn grips(
     end_head: last.top / down,
     width: 0.0,
     radius: 0.0,
+    tilt_x: 0.0,
+    tilt_y: 0.0,
   }
 }
 

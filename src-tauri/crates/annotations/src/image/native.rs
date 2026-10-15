@@ -7,16 +7,17 @@
 //! of its bottom side, all placed like any point and swayed where it sways,
 //! so a placement carries its size and turn with it. `head` says whether it
 //! is mirrored, `params[0]` carries its corner radius as a percentage of its
-//! shorter side, which no placement touches, and `flags` carries `SHADOW`
-//! where it casts one. Its
-//! asset id travels as the record's text. It has no colour of its own: the
-//! record's white carries only how present it is. An image whose picture
-//! moves carries the frame it shows or starts on in `params[1]`, how far
-//! into its clip the frame is in `params[2]` (negative on a still), and
-//! `ONCE` where it plays through once; only the image atlas reads them.
+//! shorter side, which no placement touches, `p3` its turn in depth in
+//! radians, which no placement touches either, and `flags` carries `SHADOW`
+//! where it casts one. Its asset id travels as the record's text. It has no
+//! colour of its own: the record's white carries only how present it is. An
+//! image whose picture moves carries the frame it shows or starts on in
+//! `params[1]`, how far into its clip the frame is in `params[2]` (negative
+//! on a still), and `ONCE` where it plays through once; only the image atlas
+//! reads them.
 
 use super::model::{axes, half_extents};
-use super::ImagePlay;
+use super::{ImagePlay, ImageTilt};
 use crate::flags::{ONCE, SHADOW};
 use crate::native::NativeAnnotation;
 use crate::{AnnotationPoint, AnnotationStyle};
@@ -50,7 +51,9 @@ pub(crate) fn fill(
   style: &AnnotationStyle,
   play: Option<&ImagePlay>,
   clock_ms: Option<f64>,
+  tilt: ImageTilt,
 ) {
+  record.p3 = tilt.radians();
   let (frame, clock) = play.map_or((0.0, -1.0), |play| {
     (
       play.frame as f32,

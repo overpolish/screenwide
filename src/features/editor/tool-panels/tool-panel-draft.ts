@@ -72,6 +72,7 @@ export function resolveToolPanelSnapshot(
     annotationAngle,
     annotationAnimated,
     annotationImageSway,
+    annotationRotation,
     annotationStyle,
     audioVolume,
     autoVolume,
@@ -121,6 +122,7 @@ export function resolveToolPanelSnapshot(
     selectionInset,
     selectionOutput,
     selectionRadius,
+    selectionRotation,
     showCameraObject: _showCameraObject,
     studioDucking,
     studioSound,
@@ -157,15 +159,23 @@ export function resolveToolPanelSnapshot(
     rounded && selectionDropShadow !== undefined
       ? { ...rounded, dropShadow: selectionDropShadow }
       : rounded;
+  // A dialled turn shows at once, as a scene's does.
+  const turned =
+    shadowed?.rotation && selectionRotation
+      ? {
+          ...shadowed,
+          rotation: { ...shadowed.rotation, ...selectionRotation },
+        }
+      : shadowed;
   // The camera's effects change at once, as the microphone's switches do;
   // the bars arrive with the editor's answer.
   const layer =
-    shadowed?.cameraEffects && cameraEffects
+    turned?.cameraEffects && cameraEffects
       ? {
-          ...shadowed,
-          cameraEffects: { ...shadowed.cameraEffects, ...cameraEffects },
+          ...turned,
+          cameraEffects: { ...turned.cameraEffects, ...cameraEffects },
         }
-      : shadowed;
+      : turned;
   // A dragged volume is held the same way: the knob stays where it was let go
   // of until the editor answers with the level it committed. The microphone
   // switches flip at once too.
@@ -216,10 +226,14 @@ export function resolveToolPanelSnapshot(
     resolved.annotation && annotationAngle !== undefined
       ? { ...resolved.annotation, angle: annotationAngle }
       : resolved.annotation;
-  const switched =
-    aimed && annotationAnimated !== undefined
-      ? { ...aimed, animated: annotationAnimated }
+  const dialled =
+    aimed?.rotation && annotationRotation
+      ? { ...aimed, rotation: { ...aimed.rotation, ...annotationRotation } }
       : aimed;
+  const switched =
+    dialled && annotationAnimated !== undefined
+      ? { ...dialled, animated: annotationAnimated }
+      : dialled;
   const swayed =
     switched && annotationImageSway !== undefined
       ? { ...switched, sway: annotationImageSway }
