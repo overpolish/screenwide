@@ -35,6 +35,7 @@ fn screen(source_ms: u64, frame_ms: f32) -> ScreenshotOutputSettings {
     camera: None,
     boxes: None,
     radius: None,
+    rotation: None,
     variant: None,
     auto: false,
   }];

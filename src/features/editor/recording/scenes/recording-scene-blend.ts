@@ -60,7 +60,7 @@ const shrunk = (box: SceneRect, picture: Picture, factor: number) => {
  * move to, so it stays at its place in the other, shrinking to a quarter of
  * its size about its middle as it fades out, or growing from there as it
  * fades in. The twin of `Placement::toward` in
- * `src-tauri/src/editor/scenes/placement.rs`.
+ * `src-tauri/crates/scenes/src/placement.rs`.
  */
 export const towardPlacement = (
   from: Placement,
@@ -80,6 +80,11 @@ export const towardPlacement = (
       camera: mixed(from.radius.camera, to.radius.camera, t),
       screen: mixed(from.radius.screen, to.radius.screen, t),
     },
+    rotation: {
+      x: mixed(from.rotation.x, to.rotation.x, t),
+      y: mixed(from.rotation.y, to.rotation.y, t),
+      z: mixed(from.rotation.z, to.rotation.z, t),
+    },
     screen: mixedRect(from.screen, to.screen, t),
   };
   const screen = settling(from.opacity.screen, to.opacity.screen, t);
@@ -88,6 +93,7 @@ export const towardPlacement = (
     const held = shrunk(source.screen, source.image, screen.factor);
     next.screen = held.box;
     next.image = held.picture;
+    next.rotation = source.rotation;
   }
   const camera = settling(from.opacity.camera, to.opacity.camera, t);
   if (camera) {

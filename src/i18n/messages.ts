@@ -451,11 +451,16 @@ export type Messages = {
   "editor-panels-replace-camera-picture": null;
   "editor-panels-replace-image": null;
   "editor-panels-reset": null;
+  "editor-panels-reset-rotation": null;
   "editor-panels-reset-volume": null;
   "editor-panels-restore-all": null;
   "editor-panels-restore-silences": null;
   "editor-panels-reverse": null;
   "editor-panels-reverse-arrow": null;
+  "editor-panels-rotation": null;
+  "editor-panels-rotation-x": null;
+  "editor-panels-rotation-y": null;
+  "editor-panels-rotation-z": null;
   "editor-panels-save-template": null;
   "editor-panels-scene": null;
   "editor-panels-scene-needs-screen": null;

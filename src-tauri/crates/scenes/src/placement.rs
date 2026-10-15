@@ -4,6 +4,7 @@
 //! Where a scene puts the panes, and how one placement gives way to another.
 
 use super::geometry::Rect;
+use super::rotation::SceneRotation;
 
 /// How small a pane that appears or vanishes is drawn at the far end of its
 /// fade, as a share of its own size.
@@ -15,9 +16,10 @@ const VANISHED_SCALE: f64 = 0.25;
 /// the screen's and the camera's corner radii in percent of their boxes'
 /// shorter sides; how opaque each pane is drawn, zero for a pane the scene
 /// hides; and how far the camera is drawn in front of the screen, one in
-/// front and zero behind, between the two while a scene changes the order.
-/// The image and the picture only ever move and scale, so annotations and the
-/// cursor carried on them follow.
+/// front and zero behind, between the two while a scene changes the order;
+/// and how the screen is turned in depth about its box's middle. The image
+/// and the picture only ever move and scale in their pane, so annotations
+/// and the cursor carried on them follow, turn included.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Placement {
   pub screen: Rect,
@@ -27,6 +29,7 @@ pub struct Placement {
   pub radius: (f64, f64),
   pub opacity: (f64, f64),
   pub camera_front: f64,
+  pub rotation: SceneRotation,
 }
 
 /// For a pane whose opacity goes from `from` to `to`, whether it vanishes,
@@ -83,6 +86,7 @@ impl Placement {
         mix(self.opacity.1, to.opacity.1),
       ),
       camera_front: mix(self.camera_front, to.camera_front),
+      rotation: self.rotation.toward(to.rotation, t),
     };
     if let Some((vanishes, factor)) = settling(self.opacity.0, to.opacity.0, t) {
       let from = if vanishes { self } else { to };
@@ -90,6 +94,7 @@ impl Placement {
       let (x, y) = about((from.image.0, from.image.1), centre, factor);
       next.screen = from.screen.scaled(factor);
       next.image = (x, y, from.image.2 * factor);
+      next.rotation = from.rotation;
     }
     if let Some((vanishes, factor)) = settling(self.opacity.1, to.opacity.1, t) {
       let from = if vanishes { self } else { to };

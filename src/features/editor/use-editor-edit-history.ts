@@ -63,11 +63,6 @@ export type EditorEditState = {
   } | null;
 };
 
-const changedKey = <State extends object>(before: State, after: State) =>
-  Object.keys(after).find(
-    (key) => before[key as keyof State] !== after[key as keyof State],
-  );
-
 /** One undo stack for every option that changes the exported result. */
 export function useEditorEditHistory<State extends object>({
   apply,
@@ -134,7 +129,20 @@ export function useEditorEditHistory<State extends object>({
     }
 
     if (gestureRef.current) return;
-    const key = changedKey(previous, state);
+    // A fresh copy of what was there - an edit handed back unchanged after a
+    // gesture settled - is nothing to undo.
+    const changed = Object.keys(state).filter(
+      (name) => previous[name as keyof State] !== state[name as keyof State],
+    );
+    if (
+      changed.every(
+        (name) =>
+          JSON.stringify(previous[name as keyof State]) ===
+          JSON.stringify(state[name as keyof State]),
+      )
+    )
+      return;
+    const key = changed[0];
     if (pendingRef.current && pendingRef.current.key !== key) finishGroup();
     pendingRef.current ??= { key, start: previous };
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);

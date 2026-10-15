@@ -191,6 +191,7 @@ mod tests {
       scene_motion: None,
       scene_opacity: None,
       scene_camera_front: None,
+      scene_rotation: None,
       mesh_colors: Vec::new(),
       mesh_generator: String::new(),
       mesh_locked_colors: Vec::new(),

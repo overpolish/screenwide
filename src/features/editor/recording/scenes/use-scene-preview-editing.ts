@@ -59,29 +59,25 @@ export function useScenePreviewEditing({
   const cameraAspect = cameraSource
     ? cameraSource.width / Math.max(1, cameraSource.height)
     : 0;
+  const camera = useMemo(
+    () =>
+      canPreviewBakedCamera && cameraAspect > 0
+        ? { aspect: cameraAspect, overlay: cameraOverlay }
+        : null,
+    [cameraAspect, cameraOverlay, canPreviewBakedCamera],
+  );
   const arrangement = useMemo(
     () =>
       edit?.sceneClips
         ? arrangedRecordingScene({
-            camera:
-              canPreviewBakedCamera && cameraAspect > 0
-                ? { aspect: cameraAspect, overlay: cameraOverlay }
-                : null,
+            camera,
             clips: edit.sceneClips,
             output,
             ranges: recordingTimelinePlaybackRanges(edit, durationMs),
             sourceMs: positionMs,
           })
         : null,
-    [
-      cameraAspect,
-      cameraOverlay,
-      canPreviewBakedCamera,
-      durationMs,
-      edit,
-      output,
-      positionMs,
-    ],
+    [camera, durationMs, edit, output, positionMs],
   );
   const isEditing = canvasTool === "select" || canvasTool === "crop";
   // Each pane as the paused frame draws it: the box it sits in now and the
@@ -119,6 +115,7 @@ export function useScenePreviewEditing({
         }
       : null;
   const gesture = useRecordingSceneGesture({
+    camera,
     editGesture,
     // A zoom reframed on the canvas is yours from then on.
     onClipsChange: (clips) => {
@@ -185,6 +182,10 @@ export function useScenePreviewEditing({
     isCustom: Boolean(arrangement?.clip.boxes),
     /** Whether a scene places the panes at the playhead. */
     isFramed: arrangement !== null,
+    /** Whether the scene at the playhead is a full one, standing for the
+     * recording's own composition, whose screen the select tool moves and
+     * resizes as a custom scene's, making it custom. */
+    isFull: arrangement?.clip.preset === "full" && !arrangement.clip.boxes,
     reframeSelections,
   };
 }

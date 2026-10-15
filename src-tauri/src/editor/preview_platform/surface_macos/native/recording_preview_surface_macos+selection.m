@@ -100,7 +100,9 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_target_at_point(ScreenwidePreviewSurfa
         : target.pane_index < surface.views.count &&
               surface.views[target.pane_index].active;
     NSRect rect = selection_hit_frame(surface, target);
-    if (paneActive && NSPointInRect(point, rect)) {
+    // A turned layer is pressed where its turn draws it.
+    if (paneActive &&
+        NSPointInRect(selection_unturned_point(surface, target, point), rect)) {
       *result = target;
       return YES;
     }
@@ -122,6 +124,11 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
   if (targets == NULL) return NO;
   NSUInteger count = 0;
   BOOL includedSelection = NO;
+  // A turned layer, the screen a scene turns, is measured apart: at the
+  // press carried back onto it, where every other layer is measured at the
+  // press itself.
+  NSInteger turnedIndex = -1;
+  ScreenwidePreviewSelection turnedTarget = {0};
   for (NSValue *value in surface.selectionTargets) {
     ScreenwidePreviewSelection target;
     [value getValue:&target size:sizeof(target)];
@@ -138,6 +145,10 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
               surface.views[target.pane_index].active;
     NSRect rect = selected ? selection_display_frame_for(surface, target) : selection_hit_frame(surface, target);
     int32_t zOrder = (int32_t)count;
+    if (turnedIndex < 0 && selection_is_turned(target)) {
+      turnedIndex = (NSInteger)count;
+      turnedTarget = target;
+    }
     targets[count] = (ScreenwideDisplayTarget){
         .id = selection_target_id(target),
         .rect = {rect.origin.x, rect.origin.y, rect.size.width,
@@ -153,6 +164,10 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
   if (surface.hasSelection && !includedSelection) {
     ScreenwidePreviewSelection target = surface.selection;
     NSRect rect = selection_display_frame_for(surface, target);
+    if (turnedIndex < 0 && selection_is_turned(target)) {
+      turnedIndex = (NSInteger)count;
+      turnedTarget = target;
+    }
     targets[count++] = (ScreenwideDisplayTarget){
         .id = selection_target_id(target),
         .rect = {rect.origin.x, rect.origin.y, rect.size.width,
@@ -164,8 +179,29 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
         .visible = 1,
     };
   }
-  ScreenwideDisplayHit hit = screenwide_workspace_hit_test(
-      targets, count, point.x, point.y, 8.0);
+  ScreenwideDisplayHit hit;
+  NSPoint hitPoint = point;
+  if (turnedIndex < 0) {
+    hit = screenwide_workspace_hit_test(targets, count, point.x, point.y, 8.0);
+  } else {
+    ScreenwideDisplayTarget turned = targets[turnedIndex];
+    targets[turnedIndex].visible = 0;
+    ScreenwideDisplayHit others =
+        screenwide_workspace_hit_test(targets, count, point.x, point.y, 8.0);
+    NSPoint unturned = selection_unturned_point(surface, turnedTarget, point);
+    ScreenwideDisplayHit own =
+        screenwide_workspace_hit_test(&turned, 1, unturned.x, unturned.y, 8.0);
+    // Grips first, as the shared test has them: only the selected layer
+    // shows any. Then the body drawn in front.
+    int32_t othersOrder = INT32_MIN;
+    for (NSUInteger index = 0; others.found && index < count; index++)
+      if (targets[index].id == others.target_id) othersOrder = targets[index].z_order;
+    BOOL takesOwn = own.found &&
+        (own.handle != 0 || !others.found ||
+         (others.handle == 0 && turned.z_order > othersOrder));
+    hit = takesOwn ? own : others;
+    if (takesOwn) hitPoint = unturned;
+  }
   free(targets);
   if (!hit.found) return NO;
   uint32_t paneIndex = (uint32_t)(hit.target_id >> 32);
@@ -188,7 +224,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
     if (!found) return NO;
   }
   *handle = hit.handle;
-  if (*handle == 0 && !overlay_body_contains(surface, *selection, point)) return NO;
+  if (*handle == 0 && !overlay_body_contains(surface, *selection, hitPoint)) return NO;
   return YES;
 }
 
@@ -243,6 +279,7 @@ SCREENWIDE_PREVIEW_PRIVATE uint32_t selection_handle_edges(ScreenwidePreviewSurf
                                        NSPoint point) {
   NSRect frame = selection_display_frame(surface);
   if (NSIsEmptyRect(frame)) return 0;
+  point = selection_unturned_point(surface, surface.selection, point);
   NSPoint handles[8] = {
     NSMakePoint(NSMinX(frame), NSMinY(frame)),
     NSMakePoint(NSMidX(frame), NSMinY(frame)),
@@ -274,6 +311,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_radius_hit(ScreenwidePreviewSurface *s
                                  NSPoint point) {
   if (!surface.hasSelection || surface.selection.crop_mode != 0) return NO;
   NSPoint radius = selection_radius_point(surface);
+  point = selection_unturned_point(surface, surface.selection, point);
   return fabs(point.x - radius.x) <= 8.0 && fabs(point.y - radius.y) <= 8.0;
 }
 
@@ -496,9 +534,13 @@ static NSCursor *selection_move_cursor(void) {
 
 static NSCursor *selection_cursor(ScreenwidePreviewSurface *surface,
                                    NSPoint point) {
+  // The rotation gizmo's rings sit over everything they turn.
+  NSCursor *turn = turn_cursor(surface, point);
+  if (turn != nil) return turn;
   // An arrow under the pointer, or the arrow tool's empty picture, answers
-  // first; everything else is the layer's own choice.
-  NSCursor *annotation = annotation_cursor(surface, point);
+  // first; everything else is the layer's own choice. A turned layer's
+  // arrows are where its turn draws them.
+  NSCursor *annotation = annotation_cursor(surface, selected_layer_point(surface, point));
   if (annotation != nil) return annotation;
   if (crop_draw_starts_at_point(surface, point)) return [NSCursor crosshairCursor];
   ScreenwidePreviewSelection target;

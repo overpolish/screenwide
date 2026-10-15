@@ -90,12 +90,90 @@ struct Canvas {
   // (Enhance), then whether each is a person cut out, whose shadow follows
   // their outline.
   source_flags: vec4<f32>,
+  // How a scene turns the screen in depth: the inverse turn's rows, then the
+  // turn's, then the inverse turn the shutter opened on. The first row's `w`
+  // says whether the screen is turned at all over the frame, the seventh's
+  // whether the turn moved while the shutter was open.
+  scene_turn: array<vec4<f32>, 9>,
 }
 
 // How many placements a frame averages while a scene moves its panes; one
 // draws them sharp.
 fn scene_samples() -> u32 {
   return max(u32(canvas.scene_motion.w), 1u);
+}
+
+fn screen_turned() -> bool {
+  return canvas.scene_turn[0].w != 0.0;
+}
+
+fn turn_moving() -> bool {
+  return canvas.scene_turn[6].w != 0.0;
+}
+
+// The point of the upright screen `pixel` shows at `step` of the frame's
+// motion, zero where the shutter opened and one where the frame draws it: the
+// inverse turns there and here blended entry by entry, which the steps of a
+// single frame are close enough together to read as the turn between.
+fn moving_screen_point(pixel: vec2<f32>, step: f32) -> vec2<f32> {
+  let point = vec3<f32>(pixel, 1.0);
+  let x = mix(canvas.scene_turn[6].xyz, canvas.scene_turn[0].xyz, step);
+  let y = mix(canvas.scene_turn[7].xyz, canvas.scene_turn[1].xyz, step);
+  let w = mix(canvas.scene_turn[8].xyz, canvas.scene_turn[2].xyz, step);
+  let h = vec3<f32>(dot(x, point), dot(y, point), dot(w, point));
+  return select(vec2<f32>(-1e9), h.xy / h.z, h.z > 1e-6);
+}
+
+// While the turned screen is drawn, how many of its upright pixels one canvas
+// pixel covers, which every edge of it is softened over; zero otherwise. A
+// turned screen's square edges no longer run along the pixel grid.
+var<private> turned_edge: f32 = 0.0;
+
+// Whether the annotations being drawn are probed at points of the turned
+// screen, rather than at the pixel drawn.
+var<private> probing_turned: bool = false;
+
+// The point of the upright screen a canvas pixel shows, how many of its
+// pixels one canvas pixel covers there, and the canvas pixel itself, which a
+// moving turn reads afresh at every step.
+struct ScreenPoint {
+  at: vec2<f32>,
+  scale: f32,
+  pixel: vec2<f32>,
+}
+
+// What the canvas pixel `pixel` shows of the screen: the pixel itself, one to
+// one, while the screen is upright. A pixel past a turned screen's horizon
+// shows none of it, so it is sent far beyond every edge.
+fn screen_point(pixel: vec2<f32>) -> ScreenPoint {
+  if (!screen_turned()) {
+    return ScreenPoint(pixel, 1.0, pixel);
+  }
+  let x = canvas.scene_turn[0].xyz;
+  let y = canvas.scene_turn[1].xyz;
+  let w = canvas.scene_turn[2].xyz;
+  let point = vec3<f32>(pixel, 1.0);
+  let h = vec3<f32>(dot(x, point), dot(y, point), dot(w, point));
+  if (h.z <= 1e-6) {
+    return ScreenPoint(vec2<f32>(-1e9), 1.0, pixel);
+  }
+  let at = h.xy / h.z;
+  // The perspective divide's derivative along each canvas axis.
+  let along_x = (vec2<f32>(x.x, y.x) - at * w.x) / h.z;
+  let along_y = (vec2<f32>(x.y, y.y) - at * w.y) / h.z;
+  return ScreenPoint(at, max(length(along_x), length(along_y)), pixel);
+}
+
+// Where the canvas draws `point` of whatever the annotations being drawn lie
+// on: through the turn while that is the turned screen, else where it is.
+fn probed_drawn(point: vec2<f32>) -> vec2<f32> {
+  if (!probing_turned) {
+    return point;
+  }
+  let at = vec3<f32>(point, 1.0);
+  let h = vec3<f32>(dot(canvas.scene_turn[3].xyz, at), dot(canvas.scene_turn[4].xyz, at),
+                    dot(canvas.scene_turn[5].xyz, at));
+  return select(vec2<f32>(-1e9), h.xy / h.z, h.z > 1e-6);
 }
 
 // False in the lean pipelines a draw showing no annotation uses, whose module
@@ -182,6 +260,9 @@ fn rounded_distance(pixel: vec2<f32>, rect: vec4<f32>, radius: f32) -> f32 {
 
 fn rounded_coverage(pixel: vec2<f32>, rect: vec4<f32>, radius: f32) -> f32 {
   let distance = rounded_distance(pixel, rect, radius);
+  if (turned_edge > 0.0) {
+    return 1.0 - smoothstep(-0.75 * turned_edge, 0.75 * turned_edge, distance);
+  }
   if (radius <= 0.0) {
     return select(0.0, 1.0, distance < 0.0);
   }
@@ -536,13 +617,14 @@ fn annotation_camera_run() -> u32 {
   return canvas.annotation_options.x;
 }
 
-// The camera laid over `rgba` at canvas point `point`, where the canvas
-// draws it, without the averaging a moving layout adds: a loupe shows it
-// enlarged, standing still.
+// The camera laid over `rgba` where the canvas draws it, without the
+// averaging a moving layout adds: a loupe shows it enlarged, standing still.
+// The camera is never turned with the screen, so a point of a turned screen
+// finds it where the turn draws that point.
 fn annotation_camera_over(rgba: vec4<f32>, point: vec2<f32>) -> vec4<f32> {
   let picture = vec2<f32>(textureDimensions(camera_image));
   let crop = vec4<f32>(canvas.camera_crop.xy / picture, canvas.camera_crop.zw / picture);
-  return mix(rgba, camera_layer_at(rgba, point, canvas.camera_frame, crop),
+  return mix(rgba, camera_layer_at(rgba, probed_drawn(point), canvas.camera_frame, crop),
              canvas.scene_opacity.y);
 }
 
@@ -572,10 +654,12 @@ fn annotation_blur_at(point: vec2<f32>, layer: texture_2d<f32>) -> vec2<f32> {
 }
 
 // What the annotations under that shade add to the canvas at `point`,
-// blurred.
+// blurred. The layer lies over the canvas as drawn, so a point of a turned
+// screen reads it where the turn draws that point.
 fn annotation_marks_blurred(point: vec2<f32>) -> vec4<f32> {
   return textureSampleLevel(annotation_blur_layer, linear_sampler,
-                            annotation_blur_at(point, annotation_blur_layer), 0.0);
+                            annotation_blur_at(probed_drawn(point), annotation_blur_layer),
+                            0.0);
 }
 
 // Whether this pass reads the cursor's blur layer.
@@ -583,10 +667,12 @@ fn annotation_cursor_blur_layer() -> bool {
   return annotation_blur_mode() == 2u && canvas.annotation_blur.w != 0.0;
 }
 
-// The cursor alone at `point`, blurred, premultiplied.
+// The cursor alone at `point`, blurred, premultiplied, read as the marks'
+// layer is.
 fn annotation_cursor_blurred(point: vec2<f32>) -> vec4<f32> {
   return textureSampleLevel(annotation_cursor_layer, linear_sampler,
-                            annotation_blur_at(point, annotation_cursor_layer), 0.0);
+                            annotation_blur_at(probed_drawn(point), annotation_cursor_layer),
+                            0.0);
 }
 
 // A chosen picture covers the canvas: it is scaled until both sides reach,
@@ -792,13 +878,16 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
 // The screen, averaged over every step a scene moved it through while the
 // shutter was open. Its box and its image each only move and scale, so each
 // step reads the drawn screen at the points that step carried here; the
-// background under it stays sharp.
-fn moving_screen_layer(result_in: vec4<f32>, pixel: vec2<f32>, foreground_only: bool)
+// background under it stays sharp. A turn that moved too is read back
+// through the turn at each step, from the canvas pixel itself, before the
+// box and the image are carried.
+fn moving_screen_layer(result_in: vec4<f32>, screen: ScreenPoint, foreground_only: bool)
     -> vec4<f32> {
   let samples = scene_samples();
   if (samples == 1u) {
-    return screen_layer(result_in, pixel, pixel, foreground_only);
+    return screen_layer(result_in, screen.at, screen.at, foreground_only);
   }
+  let turning = turn_moving();
   var sum = vec4<f32>(0.0);
   for (var index = 0u; index < samples; index++) {
     let step = f32(index) / f32(samples - 1u);
@@ -806,6 +895,7 @@ fn moving_screen_layer(result_in: vec4<f32>, pixel: vec2<f32>, foreground_only: 
     let box_shift = mix(canvas.scene_motion.yz, vec2<f32>(0.0), step);
     let image_scale = mix(canvas.scene_image_motion.x, 1.0, step);
     let image_shift = mix(canvas.scene_image_motion.yz, vec2<f32>(0.0), step);
+    let pixel = select(screen.at, moving_screen_point(screen.pixel, step), turning);
     sum += screen_layer(result_in, (pixel - box_shift) / box_scale,
                         (pixel - image_shift) / image_scale, foreground_only);
   }
@@ -1108,28 +1198,38 @@ struct Panes {
 }
 
 // The screen over `result_in`, faded as a scene hides or shows it with the
-// cursor it carries, then the crop preview over it.
-fn screen_pane(result_in: vec4<f32>, pixel: vec2<f32>, foreground_only: bool) -> vec4<f32> {
+// cursor it carries, then the crop preview over it, all read at `screen`, the
+// point of the upright screen the pixel shows.
+fn screen_pane(result_in: vec4<f32>, screen: ScreenPoint, foreground_only: bool) -> vec4<f32> {
   var result = result_in;
+  turned_edge = select(0.0, screen.scale, screen_turned());
   let screen_opacity = canvas.scene_opacity.x;
   if (screen_opacity > 0.0) {
-    result = mix(result, moving_screen_layer(result, pixel, foreground_only), screen_opacity);
+    result = mix(result, moving_screen_layer(result, screen, foreground_only), screen_opacity);
   }
-  return crop_preview_layer(result, pixel);
+  result = crop_preview_layer(result, screen.at);
+  turned_edge = 0.0;
+  return result;
 }
 
 // One run of annotations over `result_in`: the screen's, which carries the
 // cursor, over every mark but shaded and hidden by what acts on the picture,
 // or the camera's own, which a scene fades with the camera rather than with
-// the screen.
-fn annotation_run(result_in: vec4<f32>, base: vec4<f32>, pixel: vec2<f32>, camera_run: bool,
-                  feather: f32, atlas: AnnotationTextAtlas) -> Panes {
+// the screen. The screen's are probed at `screen`, the point of the screen
+// the pixel shows, their edges feathered over as much of it as the pixel
+// covers; the camera's at the pixel itself.
+fn annotation_run(result_in: vec4<f32>, base: vec4<f32>, pixel: vec2<f32>, screen: ScreenPoint,
+                  camera_run: bool, feather: f32, atlas: AnnotationTextAtlas) -> Panes {
   let below = select(0u, canvas.annotation_options.x, annotations_drawn);
   let total = select(0u, canvas.annotation_options.y, annotations_drawn);
   let first = select(0u, below, camera_run);
   let last = select(below, total, camera_run);
-  var result = composite_annotation_layers(result_in, base, pixel, first, last, total, feather,
-                                           atlas, !camera_run);
+  let probe = select(screen.at, pixel, camera_run);
+  let probe_feather = select(feather * screen.scale, feather, camera_run);
+  probing_turned = !camera_run && screen_turned();
+  var result = composite_annotation_layers(result_in, base, probe, first, last, total,
+                                           probe_feather, atlas, !camera_run);
+  probing_turned = false;
   result = mix(result_in, result,
                select(canvas.scene_opacity.x, canvas.scene_opacity.y, camera_run));
   let shade = annotation_blur_spotlight();
@@ -1145,13 +1245,14 @@ fn has_camera_run() -> bool {
 // through the one call: the composite is large, and the GPU compiler inlines
 // every call site whole, which multiplies how long the pipeline takes to
 // build.
-fn panes_camera_in_front(start: vec4<f32>, pixel: vec2<f32>, foreground_only: bool,
-                         feather: f32, atlas: AnnotationTextAtlas) -> Panes {
-  var result = screen_pane(start, pixel, foreground_only);
+fn panes_camera_in_front(start: vec4<f32>, pixel: vec2<f32>, screen: ScreenPoint,
+                         foreground_only: bool, feather: f32, atlas: AnnotationTextAtlas)
+    -> Panes {
+  var result = screen_pane(start, screen, foreground_only);
   let base = result;
   let runs = select(1u, 2u, has_camera_run());
   for (var run = 0u; run < runs; run++) {
-    let drawn = annotation_run(result, base, pixel, run == 1u, feather, atlas);
+    let drawn = annotation_run(result, base, pixel, screen, run == 1u, feather, atlas);
     if (drawn.stopped) {
       return drawn;
     }
@@ -1165,18 +1266,19 @@ fn panes_camera_in_front(start: vec4<f32>, pixel: vec2<f32>, foreground_only: bo
 
 // The camera and its own annotations, then the screen and its annotations
 // over them, each run over the canvas its own pane was just laid on.
-fn panes_camera_behind(start: vec4<f32>, pixel: vec2<f32>, foreground_only: bool,
-                       feather: f32, atlas: AnnotationTextAtlas) -> Panes {
+fn panes_camera_behind(start: vec4<f32>, pixel: vec2<f32>, screen: ScreenPoint,
+                       foreground_only: bool, feather: f32, atlas: AnnotationTextAtlas)
+    -> Panes {
   var result = camera_layer(start, pixel);
   var base = result;
   let runs = select(1u, 2u, has_camera_run());
   for (var run = 0u; run < runs; run++) {
     let camera_run = run + 1u < runs;
     if (!camera_run) {
-      result = screen_pane(result, pixel, foreground_only);
+      result = screen_pane(result, screen, foreground_only);
       base = result;
     }
-    let drawn = annotation_run(result, base, pixel, camera_run, feather, atlas);
+    let drawn = annotation_run(result, base, pixel, screen, camera_run, feather, atlas);
     if (drawn.stopped) {
       return drawn;
     }
@@ -1188,12 +1290,14 @@ fn panes_camera_behind(start: vec4<f32>, pixel: vec2<f32>, foreground_only: bool
 @fragment
 fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let pixel = (position.xy - canvas.placement.xy) * canvas.placement.zw;
+  let screen = screen_point(pixel);
   if (annotation_blur_mode() == 3u) {
-    // Drawing the cursor's blur layer: the cursor alone, premultiplied.
-    if (!annotation_cursor_near(pixel, 1.0)) {
+    // Drawing the cursor's blur layer: the cursor alone, premultiplied, where
+    // the screen it lies on draws it.
+    if (!annotation_cursor_near(screen.at, 1.0)) {
       return vec4<f32>(0.0);
     }
-    let pointer = annotation_cursor_sample(pixel);
+    let pointer = annotation_cursor_sample(screen.at);
     return vec4<f32>(pointer.rgb * pointer.a, pointer.a);
   }
   let foreground_only = canvas.cursor_options.w != 0u;
@@ -1218,15 +1322,15 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   var panes: Panes;
   if (canvas.camera_effects.y == 0.0 || camera_front >= 1.0 ||
       (annotation_blur_mode() == 1u && camera_front >= 0.5)) {
-    panes = panes_camera_in_front(result, pixel, foreground_only, annotation_feather,
+    panes = panes_camera_in_front(result, pixel, screen, foreground_only, annotation_feather,
                                   annotation_atlas);
   } else if (camera_front <= 0.0 || annotation_blur_mode() == 1u) {
-    panes = panes_camera_behind(result, pixel, foreground_only, annotation_feather,
+    panes = panes_camera_behind(result, pixel, screen, foreground_only, annotation_feather,
                                 annotation_atlas);
   } else {
-    let behind = panes_camera_behind(result, pixel, foreground_only, annotation_feather,
+    let behind = panes_camera_behind(result, pixel, screen, foreground_only, annotation_feather,
                                      annotation_atlas);
-    let ahead = panes_camera_in_front(result, pixel, foreground_only, annotation_feather,
+    let ahead = panes_camera_in_front(result, pixel, screen, foreground_only, annotation_feather,
                                       annotation_atlas);
     panes = Panes(mix(behind.rgba, ahead.rgba, camera_front),
                   mix(behind.base, ahead.base, camera_front), false);

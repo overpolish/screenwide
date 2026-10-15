@@ -9,6 +9,8 @@ import { SceneRect, recordingScenePanes } from "./recording-scene-geometry";
 import {
   RecordingSceneClip,
   SceneBox,
+  SceneRotation,
+  UPRIGHT_ROTATION,
   WHOLE_FRAMING,
   sceneNeedsCamera,
 } from "./recording-scenes";
@@ -19,9 +21,10 @@ export type Picture = { width: number; x: number; y: number };
  * the whole screen image behind it by its corner and width, then the
  * camera's box and the camera picture behind it by its centre and width;
  * each pane's corner radius in percent of its box's shorter side; how
- * opaque each pane is drawn, zero for a pane the scene hides; and how far the
- * camera is drawn in front of the screen, one in front and zero behind. The
- * twin of `Placement` in `src-tauri/src/editor/scenes/placement.rs`. */
+ * opaque each pane is drawn, zero for a pane the scene hides; how far the
+ * camera is drawn in front of the screen, one in front and zero behind; and
+ * how the screen is turned in depth about its box's middle. The twin of
+ * `Placement` in `src-tauri/crates/scenes/src/placement.rs`. */
 export type Placement = {
   camera: Picture;
   cameraFront: number;
@@ -29,6 +32,7 @@ export type Placement = {
   image: Picture;
   opacity: { camera: number; screen: number };
   radius: { camera: number; screen: number };
+  rotation: SceneRotation;
   screen: SceneRect;
 };
 
@@ -61,6 +65,7 @@ export const basePlacement = (
     camera: camera?.overlay.radiusPercent ?? 0,
     screen: output.radiusPercent,
   },
+  rotation: UPRIGHT_ROTATION,
   screen: {
     height: output.cropHeight,
     width: output.cropWidth,
@@ -172,6 +177,7 @@ export const targeting =
         camera: clip.radius?.camera ?? cameraRadius,
         screen: clip.radius?.screen ?? base.radius.screen,
       },
+      rotation: clip.rotation ?? UPRIGHT_ROTATION,
       screen,
     };
   };

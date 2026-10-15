@@ -122,6 +122,10 @@ pub(crate) enum SelectionGestureOperation {
   /// the far corner's offset from the anchor, or the half extents when the
   /// centered edge bit is set.
   CropDraw = 7,
+  /// A ring of the rotation gizmo dragged round. Every sample carries the
+  /// turn it reaches, in degrees: about X in the X delta, about Y in the Y
+  /// delta and about Z in the scale.
+  Rotate = 8,
 }
 
 impl SelectionGestureOperation {
@@ -276,4 +280,15 @@ pub(crate) struct PreviewSelection {
   pub recenter_y: f64,
   pub recenter_width: f64,
   pub recenter_height: f64,
+  /// Non-zero where a scene turns this layer in depth and the select tool
+  /// turns it with the rotation gizmo's rings: the screen inside a scene.
+  pub turnable: u32,
+  /// How the layer is turned now, in degrees about each axis, which its
+  /// chrome is drawn and pressed through.
+  pub rotation_x: f64,
+  pub rotation_y: f64,
+  pub rotation_z: f64,
 }
+
+// The macOS overlay reads the same layout (`ScreenwidePreviewSelection`).
+const _: () = assert!(std::mem::size_of::<PreviewSelection>() == 160);

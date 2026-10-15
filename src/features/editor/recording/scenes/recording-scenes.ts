@@ -9,6 +9,7 @@ import type { RecordingScenePreset } from "../../../../bindings/RecordingScenePr
 import type { SceneBox } from "../../../../bindings/SceneBox";
 import type { SceneBoxes } from "../../../../bindings/SceneBoxes";
 import type { SceneFraming } from "../../../../bindings/SceneFraming";
+import type { SceneRotation } from "../../../../bindings/SceneRotation";
 
 export type {
   RecordingSceneClip,
@@ -16,6 +17,7 @@ export type {
   SceneBox,
   SceneBoxes,
   SceneFraming,
+  SceneRotation,
 };
 
 /** The presets the Scene panel offers beside Custom. */
@@ -30,6 +32,32 @@ export const WHOLE_FRAMING: SceneFraming = {
 
 /** The furthest a scene zooms into a picture. */
 export const MAX_SCENE_ZOOM = 8;
+
+/** The screen standing upright: how a scene turns it until it is turned. */
+export const UPRIGHT_ROTATION: SceneRotation = { x: 0, y: 0, z: 0 };
+
+/** The furthest a scene turns the screen about any axis, in degrees: ten
+ * whole turns either way. The twin of `MAX_DEGREES` in `rotation.rs`. */
+export const MAX_SCENE_TURN = 3600;
+
+/** `clip` turning the screen by `rotation`, each angle held to what a scene
+ * can turn it; one that leaves it upright keeps no turn at all. */
+export const rotatedSceneClip = (
+  clip: RecordingSceneClip,
+  rotation: SceneRotation,
+): RecordingSceneClip => {
+  const { rotation: _rotation, ...rest } = clip;
+  const held = (angle: number) =>
+    Math.min(MAX_SCENE_TURN, Math.max(-MAX_SCENE_TURN, angle));
+  const turned = {
+    x: held(rotation.x),
+    y: held(rotation.y),
+    z: held(rotation.z),
+  };
+  return turned.x === 0 && turned.y === 0 && turned.z === 0
+    ? rest
+    : { ...rest, rotation: turned };
+};
 
 /** Whether a scene places a camera, which it can only do where the camera is
  * drawn into the picture. A custom scene places one where it has a box for

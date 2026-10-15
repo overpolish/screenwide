@@ -6,6 +6,7 @@ import { MouseEventHandler, ReactNode } from "react";
 import { ToggleButton } from "react-aria-components";
 
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
+import { SceneRotation } from "../../recording/scenes/recording-scenes";
 
 import { SchematicComposition, SchematicRect } from "./scene-schematic";
 
@@ -13,6 +14,19 @@ import { SchematicComposition, SchematicRect } from "./scene-schematic";
  * width, so a portrait frame is drawn inside a square tile rather than
  * making the row a tower. */
 const TILE_MINIMUM_ASPECT = 1;
+
+/**
+ * The screen turned in depth as the compositor turns it
+ * (`scenes/src/rotation.rs`): about its middle by Rz * Ry * Rx, seen from two
+ * lengths of the canvas's longer side in front of it. That frame runs Y up
+ * where CSS runs it down, which turns X and Z the other way and leaves Y.
+ * The canvas is the query container, so the eye's distance follows the
+ * tile's size.
+ */
+const turned = ({ x, y, z }: SceneRotation) =>
+  x === 0 && y === 0 && z === 0
+    ? undefined
+    : `perspective(calc(2 * max(100cqw, 100cqh))) rotateZ(${String(-z)}deg) rotateY(${String(y)}deg) rotateX(${String(-x)}deg)`;
 
 /**
  * One pane of the drawing, placed as a share of the frame, with the glyph
@@ -34,10 +48,12 @@ function SchematicPane({
   children,
   isSelected,
   rect,
+  rotation,
 }: {
   children: ReactNode;
   isSelected: boolean;
   rect: SchematicRect;
+  rotation?: SceneRotation | null;
 }) {
   // Whole pixels for the pane and the glyph, so the glyph's margins come out
   // equal: a fractional box or glyph centres half a pixel off, which shows in
@@ -56,6 +72,7 @@ function SchematicPane({
         height: whole(rect.height),
         left: whole(rect.x),
         top: whole(rect.y),
+        transform: rotation ? turned(rotation) : undefined,
         width: whole(rect.width),
       }}
     >
@@ -68,10 +85,11 @@ function SchematicPane({
  * One scene on offer in the Scene panel: a small drawing of where it puts
  * the screen and the camera, at this recording's frame shape, each pane
  * marked with the glyph the recording bar gives that source so the sides read
- * at a glance. The name is the button's accessible name. A chosen tile fills
- * its panes with the accent rather than ringing the tile, which would crowd
- * the drawing. A pencil in the corner marks a tile that draws a layout it
- * would make editable rather than one of its own.
+ * at a glance, and the screen turned in depth as the scene turns it. The name
+ * is the button's accessible name. A chosen tile fills its panes with the
+ * accent rather than ringing the tile, which would crowd the drawing. A
+ * pencil in the corner marks a tile that draws a layout it would make
+ * editable rather than one of its own.
  */
 export function ScenePresetTile({
   canvasAspect,
@@ -83,6 +101,7 @@ export function ScenePresetTile({
   onContextMenu,
   onPress,
   schematic: { camera, cameraBehind = false, screen },
+  screenRotation,
 }: {
   /** The finished frame's width over its height. */
   canvasAspect: number;
@@ -96,9 +115,17 @@ export function ScenePresetTile({
   isDisabled?: boolean;
   /** A press of the secondary button, which is how a template is removed. */
   onContextMenu?: MouseEventHandler<HTMLDivElement>;
+  /** How the scene the tile would lay out turns the screen, which choosing
+   * the tile keeps. */
+  screenRotation?: SceneRotation | null;
 }) {
   const screenPane = screen ? (
-    <SchematicPane isSelected={isSelected} key="screen" rect={screen}>
+    <SchematicPane
+      isSelected={isSelected}
+      key="screen"
+      rect={screen}
+      rotation={screenRotation}
+    >
       <Monitor aria-hidden="true" />
     </SchematicPane>
   ) : null;
@@ -130,7 +157,7 @@ export function ScenePresetTile({
       {/* The canvas is the visible frame, so a pane moved past its edge is
           cut off there, as it is in the export. */}
       <span
-        className="relative mx-auto block h-full overflow-hidden rounded-control"
+        className="relative mx-auto block h-full overflow-hidden rounded-control [container-type:size]"
         style={{ aspectRatio: canvasAspect }}
       >
         {cameraBehind ? [cameraPane, screenPane] : [screenPane, cameraPane]}

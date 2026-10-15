@@ -12,6 +12,7 @@ import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
   RecordingScenePreset,
   SceneFraming,
+  SceneRotation,
 } from "../recording/scenes/recording-scenes";
 import { KeyboardEffectSettings } from "../types";
 
@@ -149,6 +150,9 @@ export type ToolPanelPatch = Partial<
   /** Round the selected pane's corners in the scene under the playhead by
    * this share of its shorter side, in percent. */
   sceneRadius?: number;
+  /** Turn the screen in depth in the scene under the playhead, in degrees
+   * about each axis, a field at a time. */
+  sceneRotation?: Partial<SceneRotation>;
   /** Change the options of the preset under the playhead, a field at a time. */
   sceneVariant?: SceneVariant;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */

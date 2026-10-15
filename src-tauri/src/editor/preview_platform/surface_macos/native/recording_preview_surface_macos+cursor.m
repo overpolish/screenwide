@@ -35,7 +35,9 @@
 - (void)mouseMoved:(NSEvent *)event {
   [self claimCursorControl];
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
-  annotation_update_hover(self.surface, point, self.annotationDragActive);
+  turn_update_hover(self.surface, point);
+  annotation_update_hover(self.surface, selected_layer_point(self.surface, point),
+                          self.annotationDragActive);
   set_selection_cursor_at_point(self.surface, point);
 }
 - (void)mouseEntered:(NSEvent *)event { [self mouseMoved:event]; }
@@ -52,7 +54,10 @@
   [super resetCursorRects];
 }
 - (void)cursorUpdate:(NSEvent *)event {
-  if (self.selectionDragActive &&
+  if (self.turnDragActive)
+    set_selection_cursor(screenwide_region_resize_cursor(self.turnDragEdges)
+                             ?: [NSCursor closedHandCursor]);
+  else if (self.selectionDragActive &&
       (self.selectionDragOperation == 2 || self.selectionDragOperation == 4))
     set_selection_cursor(screenwide_region_resize_cursor(1 | 4));
   else if (self.selectionDragActive &&

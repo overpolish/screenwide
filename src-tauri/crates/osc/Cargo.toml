@@ -21,6 +21,7 @@ bytemuck.workspace = true
 image.workspace = true
 screenwide-accent.workspace = true
 screenwide-gpu.workspace = true
+screenwide-scenes.workspace = true
 serde.workspace = true
 wgpu.workspace = true
 

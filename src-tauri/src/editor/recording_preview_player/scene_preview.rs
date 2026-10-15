@@ -6,8 +6,7 @@
 
 use super::scene_reframe::SceneReframe;
 use super::*;
-use crate::editor::preview_platform::SelectionGestureOperation;
-use screenwide_export::scenes::{arrange, camera_target};
+use screenwide_export::scenes::arrange;
 use screenwide_scenes::{validate_clips, RecordingSceneClip};
 
 /// The scenes the preview draws: the recording's clips, the timeline they
@@ -150,83 +149,6 @@ impl PreviewPlayerManager {
       .map(|composition| self.arranged_composition(&composition))
   }
 
-  /// What a gesture does while the paused frame is inside a scene. A custom
-  /// scene's boxes move and resize with the panes in them. Any other scene
-  /// owns where the panes sit, so a move or a resize only reaches the
-  /// camera's picture: dragged, it pans inside its box, and resized, it
-  /// zooms, which reframes the camera of the clip under the playhead. `clips`
-  /// are the clips as the gesture found them, which its deltas are measured
-  /// from. `None` outside every scene and for the gestures a scene leaves as
-  /// they are, a corner radius or the canvas's frame; `Some(None)` for a
-  /// gesture a scene leaves with nothing to do; else the clips the gesture
-  /// leaves.
-  pub(super) fn scene_gesture(
-    &self,
-    snapshot: &PreviewCompositionSettings,
-    clips: &[RecordingSceneClip],
-    (layer_id, operation): (u32, SelectionGestureOperation),
-    scale: f64,
-    delta: (f64, f64),
-  ) -> Option<Option<Vec<RecordingSceneClip>>> {
-    let scale = match operation {
-      SelectionGestureOperation::Move => 1.0,
-      SelectionGestureOperation::Resize | SelectionGestureOperation::Radius => scale,
-      _ => return None,
-    };
-    let sources = self.sources.as_ref()?;
-    let mut arranged = snapshot.clone();
-    if !sources.arrange_scene(&mut arranged, self.position_ms, 0.0) {
-      return None;
-    }
-    let timeline_ms = sources.scenes.timeline_ms(self.position_ms);
-    // A radius gesture reports the radius it reaches as its scale.
-    if operation == SelectionGestureOperation::Radius {
-      return super::scene_pane_gesture::radius_gesture(
-        clips,
-        timeline_ms,
-        snapshot.bake_camera,
-        layer_id,
-        scale,
-      )
-      .map(Some);
-    }
-    if let Some(next) = super::scene_pane_gesture::custom_box_gesture(
-      clips,
-      timeline_ms,
-      snapshot.bake_camera,
-      layer_id,
-      (delta, scale),
-    ) {
-      return next.map(Some);
-    }
-    // With the camera a pane of its own, no scene places it, so its gestures
-    // stay its own; the screen's are swallowed.
-    let camera = sources
-      .camera_source_size()
-      .filter(|_| snapshot.bake_camera);
-    let camera = match (camera, layer_id) {
-      (Some(camera), 1) => camera,
-      (None, 1) => return None,
-      _ => return Some(None),
-    };
-    let output = &snapshot.recording_output.primary;
-    let Some((index, frame, framing)) =
-      camera_target(clips, timeline_ms, output, &snapshot.camera_overlay, camera)
-    else {
-      return Some(None);
-    };
-    // The gesture's deltas are shares of the canvas it was made on.
-    let canvas = crate::editor::preview_workspace_model::output_canvas(output);
-    let mut next = clips.to_vec();
-    next[index].camera = Some(framing.reframed(
-      frame,
-      f64::from(camera.0) / f64::from(camera.1.max(1)),
-      (delta.0 * canvas.0, delta.1 * canvas.1),
-      scale,
-    ));
-    Some(Some(next))
-  }
-
   /// The scene clips the preview draws now, which a gesture starts from.
   pub(super) fn scene_clips(&self) -> Vec<RecordingSceneClip> {
     self
@@ -249,14 +171,22 @@ impl PreviewPlayerManager {
       .map_err(|_| "The scenes are unavailable".to_owned())? = clips;
     Ok(())
   }
+
+  /// Draws the paused frame again after its scenes changed. A scene only
+  /// moves pictures that are already decoded, so the frame is recomposed
+  /// from the cached sources where it can be; a decoder restart would land
+  /// the picture well after the selection the webview moves with the edit.
+  pub(super) fn redraw_scenes(&mut self) -> Result<(), String> {
+    if !self.is_playing && !self.recompose_paused_still() {
+      self.restart(PlaybackMode::InteractiveStill)?;
+    }
+    Ok(())
+  }
 }
 
 /// Hands the preview the recording's scene clips and the timeline they are
 /// timed on, as `playback_ranges` lay it out, redrawing a paused frame that
-/// they change. A scene only moves pictures that are already decoded, so the
-/// paused frame is recomposed from the cached sources; a decoder restart
-/// would land the picture well after the selection the webview moves with
-/// the same edit.
+/// they change.
 #[tauri::command]
 pub async fn set_recording_preview_scenes(
   state: tauri::State<'_, RecordingPreviewPlayerState>,
@@ -292,8 +222,5 @@ pub async fn set_recording_preview_scenes(
   *current_ranges = ranges;
   drop(current);
   drop(current_ranges);
-  if !manager.is_playing && !manager.recompose_paused_still() {
-    manager.restart(PlaybackMode::InteractiveStill)?;
-  }
-  Ok(())
+  manager.redraw_scenes()
 }

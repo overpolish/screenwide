@@ -15,6 +15,7 @@ import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
   RecordingScenePreset,
   SceneFraming,
+  SceneRotation,
 } from "../recording/scenes/recording-scenes";
 import { CursorEffectSettings, KeyboardEffectSettings } from "../types";
 
@@ -126,6 +127,9 @@ export type ToolPanelHandlers = {
   onScenePresetChoose?: (preset: RecordingScenePreset) => void;
   /** Round the selected pane's corners in the scene under the playhead. */
   onSceneRadiusChange?: (radius: number) => void;
+  /** Turn the screen in depth in the scene under the playhead, a field at a
+   * time. */
+  onSceneRotationChange?: (rotation: Partial<SceneRotation>) => void;
   /** Lay the scene under the playhead out as this template, or add a scene
    * there laid out so where there is none. */
   onSceneTemplateChoose?: (template: SceneTemplate) => void;

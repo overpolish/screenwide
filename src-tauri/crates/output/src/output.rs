@@ -95,6 +95,11 @@ pub struct ScreenshotOutputSettings {
   pub scene_opacity: Option<[f32; 2]>,
   #[serde(skip)]
   pub scene_camera_front: Option<f32>,
+  /// How a scene turns this layer in depth about its crop's middle, with its
+  /// annotations and cursor. Set per drawn frame by the scene arrangement,
+  /// never sent or saved; unset, it is drawn upright.
+  #[serde(skip)]
+  pub scene_rotation: Option<screenwide_scenes::SceneRotation>,
   pub mesh_colors: Vec<String>,
   /// Which picture the mesh background paints. Settings written before the
   /// ported generators existed carry none, and are the app's own blob mesh.

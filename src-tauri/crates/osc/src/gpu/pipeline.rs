@@ -5,7 +5,9 @@
 //! vertices through on both platforms: the region OSC, its ruler and OCR
 //! chrome, and the editor's selection.
 
-use crate::style::{control_palette, ocr_palette, overlay_palette, picked_palette, ruler_palette};
+use crate::style::{
+  control_palette, ocr_palette, overlay_palette, picked_palette, ruler_palette, turn_palette,
+};
 use screenwide_gpu::surface::FORMAT;
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/osc.wgsl"));
@@ -58,7 +60,19 @@ pub struct RenderConstants {
   /// through, in the target's pixels, two to a row of `picked_points`.
   pub picked_halo: [f32; 4],
   pub picked_points: [[f32; 4]; PICKED_POINT_PAIRS],
+  /// The rotation gizmo's X, Y and Z ring colours.
+  pub turn_colors: [[f32; 4]; 3],
+  /// The rotation gizmo, `TURN_RING_ROWS` rows: each ring's `u` direction,
+  /// then each ring's `v`, in the target's pixels with the depth toward the
+  /// viewer third, so a ring's point at angle `t` is `cos t * u + sin t * v`
+  /// from its middle; then the middle in pixels, the core's half width and
+  /// the outline's width; then the ring the pointer holds or `-1`, how far it
+  /// is lit toward white, and how strongly far halves show.
+  pub turn_rings: [[f32; 4]; TURN_RING_ROWS],
 }
+
+/// The rows of `RenderConstants::turn_rings`.
+pub const TURN_RING_ROWS: usize = 8;
 
 /// How many rows of two points a painted line's halo carries: up to 64.
 pub const PICKED_POINT_PAIRS: usize = 32;
@@ -102,6 +116,8 @@ impl RenderConstants {
       picked_colors: picked_palette(light_mode),
       picked_halo: [0.0; 4],
       picked_points: [[0.0; 4]; PICKED_POINT_PAIRS],
+      turn_colors: turn_palette(light_mode),
+      turn_rings: [[0.0; 4]; TURN_RING_ROWS],
     }
   }
 }

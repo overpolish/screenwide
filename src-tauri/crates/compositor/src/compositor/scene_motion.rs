@@ -35,6 +35,7 @@ pub(super) fn scene_motion_rows(
     camera_frame,
     camera_crop,
     samples,
+    ..
   } = motion;
   let [x, y, frame_width, frame_height] = camera_frame.map(|value| value as f32);
   [

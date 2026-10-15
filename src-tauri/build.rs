@@ -69,6 +69,9 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_annotation_geometry_macos.h");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+osc.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+selection.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+turn.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_turn_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_selection_macos.h");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+workspace.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+layout.m");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor_state.m");
@@ -155,6 +158,7 @@ fn main() {
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_group.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+osc.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+selection.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+turn.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+workspace.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+layout.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor_state.m")

@@ -30,6 +30,7 @@ mod redact;
 mod redact_pipeline;
 mod redact_targets;
 mod scene_motion;
+mod scene_turn;
 mod source;
 #[cfg(target_os = "macos")]
 pub mod still;
@@ -249,6 +250,8 @@ mod redact_tests;
 mod render_test_helpers;
 #[cfg(all(test, target_os = "windows"))]
 mod render_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod scene_turn_tests;
 
 /// Where a baked camera sits in the frame being composed: its crop and its
 /// frame in output pixels, and the corner radius it is drawn with.

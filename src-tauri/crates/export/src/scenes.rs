@@ -6,6 +6,7 @@
 //! themselves, and the layouts they take, are `screenwide_scenes`.
 
 pub mod arrange;
+mod target;
 
 pub use arrange::{arrange, camera_target};
 
@@ -19,5 +20,7 @@ mod motion_tests;
 mod preset_tests;
 #[cfg(test)]
 mod radius_tests;
+#[cfg(test)]
+mod rotation_tests;
 #[cfg(test)]
 mod tests;

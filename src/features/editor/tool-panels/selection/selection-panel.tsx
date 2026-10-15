@@ -9,6 +9,7 @@ import { Dimensions } from "../../../../components/shared/dimensions/dimensions"
 import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
 import { EditorKind } from "../../types";
+import { SceneRotationRow } from "../scene/scene-rotation-row";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { AudioSelectionRows } from "./audio-selection-rows";
@@ -17,7 +18,8 @@ import { CameraObjectRows } from "./camera-object-rows";
 
 /**
  * The Select tool's own controls: what is selected, how big it is in the
- * finished picture, and where it sits in it.
+ * finished picture, and where it sits in it, and inside a scene how the
+ * screen is turned in depth.
  *
  * Every number is in output pixels, the same units the size readout under the
  * preview uses, so a value typed here and a value dragged out there mean the
@@ -36,7 +38,7 @@ import { CameraObjectRows } from "./camera-object-rows";
  */
 export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { isLocked, selection } = snapshot;
+  const { isLocked, scene, selection } = snapshot;
 
   if (!selection) {
     return <Text variant="body">{t("editor-panels-nothing-selected")}</Text>;
@@ -126,6 +128,20 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           </div>
         )}
       </ControlRow>
+
+      {/* Inside a scene the screen turns in depth, as the select tool's
+          rotation gizmo turns it. */}
+      {scene?.hasSceneAtPlayhead &&
+      scene.framingPane === "screen" &&
+      scene.rotation ? (
+        <SceneRotationRow
+          isDisabled={isLocked}
+          onChange={(next) => {
+            change({ sceneRotation: next });
+          }}
+          rotation={scene.rotation}
+        />
+      ) : null}
 
       {/* A camera track is placed in the screen's picture rather than padded
           against a colour of its own, so it is offered no padding. */}

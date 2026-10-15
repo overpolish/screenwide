@@ -6,6 +6,7 @@ use ts_rs::TS;
 
 use super::framing::SceneFraming;
 use super::geometry::Rect;
+use super::rotation::SceneRotation;
 use super::variant::SceneVariant;
 
 /// The twin of `RecordingScenePreset` in
@@ -173,6 +174,11 @@ pub struct RecordingSceneClip {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub radius: Option<SceneRadius>,
+  /// How the scene turns the screen in depth, with everything drawn on it;
+  /// upright where unset.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub rotation: Option<SceneRotation>,
   /// How the preset is laid out, each option its default where unset.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
@@ -222,6 +228,7 @@ pub fn validate_clips(clips: &[RecordingSceneClip]) -> Result<(), String> {
         .any(|framing| !framing.is_valid())
       || clip.boxes.is_some_and(|boxes| !boxes.is_valid())
       || clip.radius.is_some_and(|radius| !radius.is_valid())
+      || clip.rotation.is_some_and(|rotation| !rotation.is_valid())
     {
       return Err("The scene clips are invalid".to_owned());
     }

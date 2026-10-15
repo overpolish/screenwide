@@ -40,6 +40,7 @@ fn clip(preset: RecordingScenePreset) -> RecordingSceneClip {
     camera: None,
     boxes: None,
     radius: None,
+    rotation: None,
     variant: None,
     auto: false,
   }

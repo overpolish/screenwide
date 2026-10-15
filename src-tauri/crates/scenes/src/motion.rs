@@ -10,6 +10,7 @@
 
 use super::geometry::Rect;
 use super::placement::Placement;
+use super::rotation::SceneRotation;
 
 /// The farthest apart two consecutive steps may land, in output pixels, and
 /// the most steps one frame takes. The screen is sampled whole at every step,
@@ -34,6 +35,9 @@ pub struct SceneMotion {
   /// picture. A scene changes the frame's shape, so the camera does not move
   /// as one piece the way the screen does.
   pub camera_crop: [f64; 4],
+  /// How the screen was turned in depth. The compositor turns each step's
+  /// box by the turn between this and the frame's own.
+  pub rotation: SceneRotation,
   /// How many steps the frame averages, the frame's own placement included.
   pub samples: u32,
 }
@@ -44,6 +48,15 @@ fn travel(a: Rect, b: Rect) -> f64 {
     .max((a.y - b.y).abs())
     .max((a.x + a.width - b.x - b.width).abs())
     .max((a.y + a.height - b.y - b.height).abs())
+}
+
+/// How far the screen's farthest point travels as it turns from `a` to `b`,
+/// in output pixels: the largest change of angle about any axis, carried out
+/// to the screen's corners. A turn in depth also moves points toward the eye,
+/// which this leaves out; the step count only needs the size of the motion.
+fn turn_travel(a: SceneRotation, b: SceneRotation, screen: Rect) -> f64 {
+  let [x, y, z] = [b.x - a.x, b.y - a.y, b.z - a.z].map(|degrees| degrees.abs().to_radians());
+  x.max(y).max(z) * screen.width.hypot(screen.height) / 2.0
 }
 
 impl SceneMotion {
@@ -61,7 +74,8 @@ impl SceneMotion {
       + (opened.image.2 - drawn.image.2).abs();
     let moved = travel(opened.screen, drawn.screen)
       .max(travel(opened.frame, drawn.frame))
-      .max(image_travel);
+      .max(image_travel)
+      .max(turn_travel(opened.rotation, drawn.rotation, drawn.screen));
     if moved < STEP_PIXELS
       || drawn.screen.width <= 0.0
       || drawn.image.2 <= 0.0
@@ -98,6 +112,7 @@ impl SceneMotion {
         opened.frame.width / width,
         opened.frame.height / height,
       ],
+      rotation: opened.rotation,
       samples: ((moved / STEP_PIXELS).ceil() + 1.0).clamp(2.0, MAX_SAMPLES) as u32,
     })
   }

@@ -5,20 +5,23 @@ import {
   fittedTemplateBoxes,
   SceneTemplate,
 } from "../../recording/scenes/recording-scene-template";
+import { SceneRotation } from "../../recording/scenes/recording-scenes";
 
 import { ScenePresetTile } from "./scene-preset-tile";
 import { useSceneTemplateMenu } from "./use-scene-template-menu";
 
 /**
  * The scene templates on offer after the presets, each drawn where it puts
- * the panes on this recording's canvas. A press lays the scene out so; a
- * right click offers to remove the template.
+ * the panes on this recording's canvas, with the screen turned as the scene
+ * it would lay out turns it. A press lays the scene out so; a right click
+ * offers to remove the template.
  */
 export function SceneTemplateTiles({
   canvasAspect,
   isDisabled,
   onChoose,
   onRemove,
+  screenRotation,
   selectedId,
   templates,
 }: {
@@ -26,6 +29,7 @@ export function SceneTemplateTiles({
   isDisabled: boolean;
   onChoose: (template: SceneTemplate) => void;
   onRemove: (templateId: string) => void;
+  screenRotation: SceneRotation | null;
   selectedId: string | null;
   templates: readonly SceneTemplate[];
 }) {
@@ -56,6 +60,7 @@ export function SceneTemplateTiles({
           cameraBehind: boxes.cameraBehind ?? false,
           screen: boxes.screen,
         }}
+        screenRotation={screenRotation}
       />
     );
   });

@@ -6,7 +6,6 @@
   "src-tauri/src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+input.m": 703,
   "src-tauri/src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ruler.m": 1964,
   "src/features/editor/api.ts": 529,
-  "src/features/editor/panel/editor-panel.stories.tsx": 372,
   "src/features/editor/preview/preview-viewport.tsx": 518,
   "src/features/editor/editor-window.tsx": 733,
   "src/features/editor/timeline/editing/recording-timeline-edit.test.ts": 363,

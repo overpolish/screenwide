@@ -13,13 +13,17 @@ const layerOf = (selection: RecordingPreviewSelection) =>
  * and every pane a press may land on. A pane the scene hides is neither drawn
  * nor picked. A custom scene's box moves and resizes like any layer, but the
  * canvas it sits on is the scene's to size, so dragging it never grows the
- * canvas. While the crop tool reframes a pane, `reframe` stands in for it.
- * A press over both panes finds the last target, the one drawn in front, so
- * a scene that puts the camera behind lists the screen after it.
+ * canvas. The screen carries how the scene turns it, which its chrome is
+ * drawn through and the rotation gizmo turns. `freeScreen` frees the screen
+ * of a scene that otherwise fixes its panes, a full scene's, which its first
+ * move makes custom. While the crop tool reframes a pane, `reframe` stands in
+ * for it. A press over both panes finds the last target, the one drawn in
+ * front, so a scene that puts the camera behind lists the screen after it.
  */
 export function scenePanePicks({
   arrangement,
   canPreviewBakedCamera,
+  freeScreen,
   isFramed,
   overlay,
   reframe,
@@ -27,18 +31,28 @@ export function scenePanePicks({
 }: {
   arrangement: RecordingSceneArrangement | null | undefined;
   canPreviewBakedCamera: boolean;
+  freeScreen: boolean;
   isFramed: boolean;
   overlay: RecordingPreviewSelection | null;
   reframe: RecordingPreviewSelection | undefined;
   targets: RecordingPreviewSelection[] | null;
 }) {
-  const placedFreely = (selection: RecordingPreviewSelection) =>
-    isFramed &&
-    !selection.framed &&
-    !selection.cropMode &&
-    layerOf(selection) <= 1
-      ? { ...selection, inScene: true }
-      : selection;
+  const placedFreely = (given: RecordingPreviewSelection) => {
+    const selection =
+      freeScreen && layerOf(given) === 0 && !given.cropMode
+        ? { ...given, framed: false }
+        : given;
+    const placed =
+      isFramed &&
+      !selection.framed &&
+      !selection.cropMode &&
+      layerOf(selection) <= 1
+        ? { ...selection, inScene: true }
+        : selection;
+    return arrangement && layerOf(placed) === 0 && !placed.cropMode
+      ? { ...placed, rotation: arrangement.rotation }
+      : placed;
+  };
   const opacity = arrangement?.opacity;
   const isHidden = (selection: RecordingPreviewSelection) =>
     opacity !== undefined &&

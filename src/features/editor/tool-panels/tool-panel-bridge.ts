@@ -111,6 +111,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onSceneFramingChange?.(values.sceneFraming);
   if (values.sceneRadius !== undefined)
     on.onSceneRadiusChange?.(values.sceneRadius);
+  if (values.sceneRotation !== undefined)
+    on.onSceneRotationChange?.(values.sceneRotation);
   if (values.sceneVariant) on.onSceneVariantChange?.(values.sceneVariant);
   if (values.chooseSceneTemplate)
     on.onSceneTemplateChoose?.(values.chooseSceneTemplate);

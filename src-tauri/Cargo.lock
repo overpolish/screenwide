@@ -5718,6 +5718,7 @@ dependencies = [
  "image",
  "screenwide-accent",
  "screenwide-gpu",
+ "screenwide-scenes",
  "screenwide-wgsl",
  "serde",
  "wgpu",

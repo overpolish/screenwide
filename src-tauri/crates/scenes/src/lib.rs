@@ -14,6 +14,7 @@ pub mod geometry;
 pub mod model;
 pub mod motion;
 pub mod placement;
+pub mod rotation;
 pub mod template;
 pub mod variant;
 
@@ -21,4 +22,5 @@ pub use camera_overlay::CameraOverlaySettings;
 pub use framing::SceneFraming;
 pub use model::{validate_clips, RecordingSceneClip, RecordingScenePreset, SceneRadius};
 pub use motion::SceneMotion;
+pub use rotation::SceneRotation;
 pub use template::SceneTemplate;

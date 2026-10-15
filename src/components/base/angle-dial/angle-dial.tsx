@@ -30,10 +30,20 @@ const dialStyles = cn(
 );
 
 const notchStyles = cn(
-  "absolute top-0.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-content-fg-secondary transition-colors windows:top-1.5",
-  "group-data-[hovered]:bg-content-fg group-data-[dragging]:bg-content-fg",
+  "absolute top-0.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full transition-colors windows:top-1.5",
   "group-data-[disabled]:bg-control-fg-disabled",
 );
+
+// A neutral notch is brought up to the full label colour while the hand is
+// on it; a coloured one names what it aims, such as an axis in its colour, and
+// keeps that colour throughout.
+const notchTones = {
+  error: "bg-error",
+  info: "bg-info",
+  neutral:
+    "bg-content-fg-secondary group-data-[hovered]:bg-content-fg group-data-[dragging]:bg-content-fg",
+  success: "bg-success",
+} as const;
 
 export type AngleDialProps = {
   "aria-label": string;
@@ -42,6 +52,8 @@ export type AngleDialProps = {
   value: number;
   className?: string;
   isDisabled?: boolean;
+  /** The notch's colour, neutral unless it stands for something coloured. */
+  tone?: keyof typeof notchTones;
 };
 
 /**
@@ -60,6 +72,7 @@ export function AngleDial({
   className,
   isDisabled = false,
   onChange,
+  tone = "neutral",
   value,
 }: AngleDialProps) {
   const dialRef = useRef<HTMLDivElement>(null);
@@ -191,7 +204,7 @@ export function AngleDial({
         className="absolute inset-0 transform-gpu"
         style={{ rotate: `${String(wrapAngle(value))}deg` }}
       >
-        <span className={notchStyles} ref={notchRef} />
+        <span className={cn(notchStyles, notchTones[tone])} ref={notchRef} />
       </span>
     </div>
   );

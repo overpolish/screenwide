@@ -19,6 +19,8 @@ import {
   RECORDING_SCENE_MINIMUM_MS,
   RecordingSceneClip,
   recordingSceneClipAt,
+  rotatedSceneClip,
+  UPRIGHT_ROTATION,
 } from "./recording-scenes";
 
 /**
@@ -156,15 +158,16 @@ export function recordingSceneEdits({
       const target = recordingSceneClipAt(clips, getTimelineMs());
       if (target) commit(clips.filter((clip) => clip.id !== target.id));
     },
-    // A custom scene goes back to its preset's boxes as well, and every pane
-    // to the recording's radius. The variant is the layout, not a framing,
-    // so it stays.
+    // A custom scene goes back to its preset's boxes as well, every pane to
+    // the recording's radius, and the screen upright. The variant is the
+    // layout, not a framing, so it stays.
     resetFraming: () => {
       reframeCurrent(
         ({
           boxes: _boxes,
           camera: _camera,
           radius: _radius,
+          rotation: _rotation,
           screen: _screen,
           ...clip
         }) => clip,
@@ -198,6 +201,15 @@ export function recordingSceneEdits({
           },
         };
       });
+    },
+    setRotation: (rotation) => {
+      reframeCurrent((clip) =>
+        rotatedSceneClip(clip, {
+          ...UPRIGHT_ROTATION,
+          ...clip.rotation,
+          ...rotation,
+        }),
+      );
     },
     setVariant: (variant) => {
       reframeCurrent((clip) => ({

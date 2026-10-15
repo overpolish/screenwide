@@ -10,7 +10,7 @@ mod renderer;
 
 use std::ffi::c_void;
 
-use super::pipeline::{RenderConstants, Vertex, PICKED_POINT_PAIRS};
+use super::pipeline::{RenderConstants, Vertex, PICKED_POINT_PAIRS, TURN_RING_ROWS};
 use renderer::RENDERER;
 use screenwide_gpu::macos::{bgra_render_target, sampled_texture};
 use screenwide_gpu::Gpu;
@@ -50,6 +50,7 @@ pub struct NativeRenderState {
   ruler_animation: [f32; 4],
   picked_halo: [f32; 4],
   picked_points: [[f32; 4]; PICKED_POINT_PAIRS],
+  turn_rings: [[f32; 4]; TURN_RING_ROWS],
 }
 
 /// What a draw does with its magnifier: 0 nothing, 1 keep the lens's box
@@ -74,6 +75,7 @@ impl NativeRenderState {
       ruler_animation: self.ruler_animation,
       picked_halo: self.picked_halo,
       picked_points: self.picked_points,
+      turn_rings: self.turn_rings,
       ..RenderConstants::new(self.light_mode != 0)
     }
   }

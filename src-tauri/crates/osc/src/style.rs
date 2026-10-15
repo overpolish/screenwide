@@ -155,6 +155,15 @@ pub fn picked_palette(light_appearance: bool) -> [[f32; 4]; 2] {
   }
 }
 
+/// The rotation gizmo's rings, in the colours every 3D tool gives its axes: X
+/// in `--color-error`'s red, Y in `--color-success`'s green and Z in the
+/// ruler's info blue, per appearance.
+pub fn turn_palette(light_appearance: bool) -> [[f32; 4]; 3] {
+  let [green, red] = picked_palette(light_appearance);
+  let blue = ruler_palette(light_appearance).info;
+  [red, green, blue]
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

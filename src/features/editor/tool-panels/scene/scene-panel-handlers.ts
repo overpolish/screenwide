@@ -37,6 +37,7 @@ export const scenePanelHandlers = (
   | "onScenePanesSwap"
   | "onScenePresetChoose"
   | "onSceneRadiusChange"
+  | "onSceneRotationChange"
   | "onSceneTemplateChoose"
   | "onSceneTemplateRemove"
   | "onSceneTemplateSave"
@@ -68,6 +69,9 @@ export const scenePanelHandlers = (
   },
   onSceneRadiusChange: (radius) => {
     recordingSceneControls(workspace)?.setRadius(radius);
+  },
+  onSceneRotationChange: (rotation) => {
+    recordingSceneControls(workspace)?.setRotation(rotation);
   },
   onSceneTemplateChoose: (template) => {
     recordingSceneControls(workspace)?.chooseTemplate(template);

@@ -7,6 +7,7 @@ use crate::editor::preview_platform::{
   is_overlay_layer, PreviewSelection, FRAMED_FIXED, FRAMED_FREE,
 };
 use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_scenes::SceneRotation;
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +27,10 @@ pub(super) struct RecordingPreviewSelection {
   #[serde(default)]
   recenter_bounds: Option<PreviewSurfaceRect>,
   rect: PreviewSurfaceRect,
+  /// Set where a scene turns this pane and the select tool turns it with the
+  /// rotation gizmo: how it is turned now.
+  #[serde(default)]
+  rotation: Option<SceneRotation>,
 }
 
 impl RecordingPreviewSelection {
@@ -58,6 +63,10 @@ impl RecordingPreviewSelection {
       width: self.rect.width,
       height: self.rect.height,
       radius_percent: self.radius_percent,
+      turnable: u32::from(self.rotation.is_some()),
+      rotation_x: self.rotation.map_or(0.0, |rotation| rotation.x),
+      rotation_y: self.rotation.map_or(0.0, |rotation| rotation.y),
+      rotation_z: self.rotation.map_or(0.0, |rotation| rotation.z),
     }
   }
 }
@@ -76,6 +85,7 @@ mod tests {
       pane_index: 0,
       radius_percent: 18.0,
       recenter_bounds: None,
+      rotation: None,
       rect: PreviewSurfaceRect {
         height: 80.0,
         width: 120.0,

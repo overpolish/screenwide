@@ -115,6 +115,7 @@ export function resolveToolPanelSnapshot(
     sceneFraming,
     scenePreset,
     sceneRadius,
+    sceneRotation,
     sceneVariant,
     selectionDropShadow,
     selectionInset,
@@ -240,7 +241,11 @@ export function resolveToolPanelSnapshot(
     // A scene chosen or reframed in the panel shows at once, the way the
     // output choice flips, until the editor answers with the scene it changed.
     ...(resolved.scene &&
-    (scenePreset || sceneFraming || sceneRadius !== undefined || sceneVariant)
+    (scenePreset ||
+      sceneFraming ||
+      sceneRadius !== undefined ||
+      sceneRotation ||
+      sceneVariant)
       ? {
           scene: {
             ...resolved.scene,
@@ -253,6 +258,10 @@ export function resolveToolPanelSnapshot(
               resolved.scene.radius === null
                 ? null
                 : (sceneRadius ?? resolved.scene.radius),
+            rotation:
+              resolved.scene.rotation && sceneRotation
+                ? { ...resolved.scene.rotation, ...sceneRotation }
+                : resolved.scene.rotation,
             variant:
               resolved.scene.variant && sceneVariant
                 ? { ...resolved.scene.variant, ...sceneVariant }

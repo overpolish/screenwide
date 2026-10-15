@@ -168,7 +168,7 @@ void screenwide_preview_surface_set_selection(void *handle,
                              surface.interaction.selectionDragEdges, 1.0, 0.0, 0.0);
       return;
     }
-    if (surface.interaction.selectionDragActive && hasSelection) return;
+    if (selection_held_by_drag(surface, hasSelection)) return;
     // Layout commands update selection, viewport and pane frames as one
     // logical scene. Drawing here would briefly apply the new normalized OSC
     // to the previous split/baked pane geometry; finish_layout draws it once

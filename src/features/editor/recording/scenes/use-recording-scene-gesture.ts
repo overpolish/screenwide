@@ -8,32 +8,21 @@ import {
   screenshotOutputDimensions,
 } from "../../screenshot/screenshot-output";
 
-import { movedSceneBox } from "./recording-scene-custom";
+import { customRecordingSceneClip } from "./recording-scene-custom";
 import {
   croppedCustomPane,
   customCropWindow,
 } from "./recording-scene-custom-crop";
 import {
-  framingFromWindow,
-  reframed,
-  reframeWindow,
-} from "./recording-scene-framing";
-import { SceneRect } from "./recording-scene-geometry";
-import {
-  RecordingSceneClip,
-  SceneBoxes,
-  SceneFraming,
-} from "./recording-scenes";
+  boxEdit,
+  framingEdit,
+  PaneName,
+  ScenePane,
+} from "./recording-scene-gesture-edits";
+import { SceneCamera } from "./recording-scene-placement";
+import { RecordingSceneClip, rotatedSceneClip } from "./recording-scenes";
 
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
-
-/** One pane of the scene at the playhead: its picture's aspect, the box it is
- * drawn in, in the canvas's output pixels, and the framing it shows there. */
-export type ScenePane = {
-  aspect: number;
-  box: SceneRect;
-  framing: SceneFraming;
-};
 
 /** The scene at the playhead, while a gesture on its panes can reframe it:
  * every clip, the one under the playhead, and its panes. */
@@ -44,8 +33,6 @@ export type RecordingSceneTarget = {
   clips: RecordingSceneClip[];
   screen: ScenePane;
 };
-
-type PaneName = "camera" | "screen";
 
 type ActiveGesture =
   | { kind: "screen" }
@@ -61,83 +48,31 @@ type ActiveGesture =
       kind: "edit";
     };
 
-/** A custom scene's box for `paneName` moved or resized by `event`, whose
- * travel is in shares of the canvas, as the boxes are. */
-const boxEdit =
-  (boxes: SceneBoxes, paneName: PaneName) =>
-  (clip: RecordingSceneClip, event: RecordingSelectionGestureEvent) => {
-    const box = boxes[paneName];
-    if (!box) return null;
-    return {
-      ...clip,
-      boxes: {
-        ...boxes,
-        [paneName]: movedSceneBox(box, {
-          delta: { x: event.deltaX, y: event.deltaY },
-          scale: event.operation === "resize" ? event.scale : 1,
-        }),
-      },
-    };
-  };
-
-/** `pane`'s framing reframed by `event`, whose travel is in output pixels:
- * the crop tool's window over its unzoomed picture moved or resized, or with
- * the select tool its picture panned inside its box or zoomed. */
-const framingEdit = (
-  pane: ScenePane,
-  {
-    delta,
-    event,
-  }: {
-    delta: { x: number; y: number };
-    event: RecordingSelectionGestureEvent;
-  },
-) => {
-  const { window } = reframeWindow(pane);
-  if (event.operation === "cropMove")
-    return framingFromWindow({
-      ...pane,
-      window: { ...window, x: window.x + delta.x, y: window.y + delta.y },
-    });
-  // A framed crop window reports its corner's travel and how far it grew, its
-  // shape kept.
-  if (event.operation === "cropResize")
-    return framingFromWindow({
-      ...pane,
-      window: {
-        height: window.height * event.scale,
-        width: window.width * event.scale,
-        x: window.x + delta.x,
-        y: window.y + delta.y,
-      },
-    });
-  return reframed({
-    ...pane,
-    delta,
-    frame: pane.box,
-    scale: event.operation === "resize" ? event.scale : 1,
-  });
-};
-
 /**
  * Takes the gestures on the screen and the camera while the playhead is
  * inside a scene. A custom scene's own boxes move and resize with the select
  * tool, and the crop tool crops them in place, freely, the picture staying
- * where it sits. Any other pane is fixed where the scene puts it: with the
- * select tool the screen's moves and resizes are swallowed and the camera's
- * pan its picture inside its box or zoom it, and with the crop tool a window
- * of the box's shape laid over the unzoomed picture picks the part the box
- * shows. A corner radius dragged on either pane is the scene's own. Each
- * edits the clip under the playhead. The canvas's frame is left to the
- * ordinary selection gesture, as is a camera a custom scene has no box for
- * and anything else `applyGesture` answers it did not take.
+ * where it sits. A full scene stands for the recording's own composition and
+ * is offered as Custom, so its screen moves and resizes too, which makes the
+ * scene custom as the panel's Custom does. Any other pane is fixed where the
+ * scene puts it: with the select tool the screen's moves and resizes are
+ * swallowed and the camera's pan its picture inside its box or zoom it, and
+ * with the crop tool a window of the box's shape laid over the unzoomed
+ * picture picks the part the box shows. A corner radius dragged on either
+ * pane is the scene's own. Each edits the clip under the playhead. The
+ * canvas's frame is left to the ordinary selection gesture, as is a camera a
+ * custom scene has no box for and anything else `applyGesture` answers it did
+ * not take.
  */
 export function useRecordingSceneGesture({
+  camera,
   editGesture,
   onClipsChange,
   primaryOutput,
   target,
 }: {
+  /** The camera a scene can place: one drawn into the picture. */
+  camera: SceneCamera | null;
   editGesture: { beginGesture: () => void; endGesture: () => void };
   onClipsChange: (clips: RecordingSceneClip[]) => void;
   primaryOutput: ScreenshotOutputSettings;
@@ -154,6 +89,23 @@ export function useRecordingSceneGesture({
     const pane = target[paneName];
     if (!pane) return null;
     const { clipId, clips } = target;
+    // The rotation gizmo turns the screen, the one pane a scene turns,
+    // reporting the turn it reaches: about X and Y as its travel, about Z as
+    // its scale.
+    if (event.operation === "rotate")
+      return paneName === "screen"
+        ? {
+            clipId,
+            clips,
+            edit: (clip, next) =>
+              rotatedSceneClip(clip, {
+                x: next.deltaX,
+                y: next.deltaY,
+                z: next.scale,
+              }),
+            kind: "edit",
+          }
+        : null;
     // A pane's corner radius is the scene's own, reported as the radius the
     // drag reaches.
     if (event.operation === "radius")
@@ -169,10 +121,23 @@ export function useRecordingSceneGesture({
         }),
         kind: "edit",
       };
-    const boxes = clips.find((clip) => clip.id === clipId)?.boxes;
+    const found = clips.find((clip) => clip.id === clipId);
+    const { operation } = event;
+    const owned =
+      found &&
+      !found.boxes &&
+      found.preset === "full" &&
+      paneName === "screen" &&
+      (operation === "move" || operation === "resize")
+        ? customRecordingSceneClip({
+            camera,
+            clip: found,
+            output: primaryOutput,
+          })
+        : found;
+    const boxes = owned?.boxes;
     // The native gesture reports its travel as shares of the canvas.
     const canvas = screenshotOutputDimensions(primaryOutput);
-    const { operation } = event;
     const isCrop = operation === "cropMove" || operation === "cropResize";
     // A custom scene's own boxes are cropped in place, drawn afresh included.
     if (boxes?.[paneName] && (isCrop || operation === "cropDraw")) {
@@ -217,7 +182,21 @@ export function useRecordingSceneGesture({
     if (!isCrop && operation !== "move" && operation !== "resize") return null;
     if (!isCrop && boxes) {
       if (!boxes[paneName]) return null;
-      return { clipId, clips, edit: boxEdit(boxes, paneName), kind: "edit" };
+      const edit = boxEdit(boxes, paneName);
+      return {
+        clipId,
+        clips,
+        // A press that selects a full scene's screen without moving it
+        // leaves the scene as it was rather than making it custom.
+        edit: (_clip, next) =>
+          owned !== found &&
+          next.deltaX === 0 &&
+          next.deltaY === 0 &&
+          (next.operation !== "resize" || next.scale === 1)
+            ? null
+            : edit(owned, next),
+        kind: "edit",
+      };
     }
     if (!isCrop && paneName === "screen") return { kind: "screen" };
     return {

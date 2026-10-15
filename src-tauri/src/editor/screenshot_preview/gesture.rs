@@ -184,6 +184,8 @@ impl PreviewManager {
           | SelectionGestureOperation::CropDraw => {
             unreachable!("crop gestures are mirrored by the frontend")
           }
+          // A screenshot has no scene to turn it.
+          SelectionGestureOperation::Rotate => return Ok(()),
         };
         let start_geometry = output_geometry(start);
         let geometry = apply_layer_gesture(

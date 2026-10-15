@@ -28,6 +28,8 @@ import {
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../types";
 
+import type { SceneRotation } from "./scenes/recording-scenes";
+
 export {
   clearBackdropMasks,
   effectiveBackdrop,
@@ -52,7 +54,11 @@ export type RecordingSelectionGestureEvent = {
     | "frameResize"
     | "move"
     | "radius"
-    | "resize";
+    | "resize"
+    /** A ring of the rotation gizmo: every sample carries the turn it
+     * reaches, in degrees, about X in `deltaX`, Y in `deltaY` and Z in
+     * `scale`. */
+    | "rotate";
   paneIndex: number;
   phase: "begin" | "update" | "end" | "cancel";
   scale: number;
@@ -76,6 +82,9 @@ export type RecordingPreviewSelection = {
   maximumScale?: number;
   minimumScale?: number;
   recenterBounds?: { height: number; width: number; x: number; y: number };
+  /** Where a scene turns this pane, which the select tool turns with the
+   * rotation gizmo: how it is turned now. */
+  rotation?: SceneRotation;
 };
 
 export function useRecordingPreviewSurface({
@@ -268,8 +277,10 @@ export function useRecordingPreviewSurface({
       // be allowed to follow a layer selection immediately; freezing layout
       // here leaves the native OSC on the new layer over the previous layer's
       // pixels until mouse-up.
+      // A turn, like a move or a resize, is drawn natively at pointer rate.
       if (payload.phase === "begin")
-        selectionGestureActiveRef.current = payload.operation < 5;
+        selectionGestureActiveRef.current =
+          payload.operation < 5 || payload.operation === 8;
       else if (payload.phase === "end" || payload.phase === "cancel")
         selectionGestureActiveRef.current = false;
       onSelectionGestureRef.current?.({
@@ -286,6 +297,7 @@ export function useRecordingPreviewSurface({
           "cropMove",
           "cropResize",
           "cropDraw",
+          "rotate",
         ][payload.operation] as RecordingSelectionGestureEvent["operation"],
         paneIndex: payload.paneIndex,
         phase: payload.phase,

@@ -12,6 +12,9 @@ const extensions = new Set([".h", ".m", ".mjs", ".rs", ".ts", ".tsx"]);
 // Generated from other sources, so they grow with what they list and there
 // is nothing to split by hand.
 const generated = new Set(["src/i18n/messages.ts"]);
+// Stories list the states of one component, each a fixture rather than
+// logic, so a component's states stay in one file however many there are.
+const isStory = (file) => file.endsWith(".stories.tsx");
 
 // Oversized legacy files are frozen at their surveyed size. Refactors remove
 // entries rather than raising ceilings, so new code and completed splits use
@@ -42,7 +45,7 @@ for (const file of files.sort()) {
   const lines = source.length === 0 ? 0 : source.split(/\r?\n/u).length;
   const normalized = file.split(path.sep).join("/");
   visited.add(normalized);
-  if (generated.has(normalized)) continue;
+  if (generated.has(normalized) || isStory(normalized)) continue;
   // Rust test modules live in `tests.rs`, `*_tests.rs`, or folders of the same
   // names once a test module has submodules of its own.
   const isTest =

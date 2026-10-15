@@ -13,62 +13,10 @@
 #import "recording_preview_workspace_scene_macos.h"
 #import "recording_preview_annotation_macos.h"
 #import "recording_preview_audio_ribbon_macos.h"
+#import "recording_preview_selection_macos.h"
+#import "recording_preview_turn_macos.h"
 
 #define SCREENWIDE_PREVIEW_PRIVATE __attribute__((visibility("hidden")))
-
-typedef struct {
-  double x;
-  double y;
-  double width;
-  double height;
-} ScreenwideDisplayRect;
-
-typedef struct {
-  uint64_t id;
-  ScreenwideDisplayRect rect;
-  uint8_t radius_enabled;
-  double radius_percent;
-  int32_t z_order;
-  uint8_t selected;
-  uint8_t visible;
-} ScreenwideDisplayTarget;
-
-typedef struct {
-  uint8_t found;
-  uint64_t target_id;
-  uint8_t handle;
-} ScreenwideDisplayHit;
-
-typedef struct {
-  ScreenwideDisplayRect fit;
-  double zoom;
-  double pan_x;
-  double pan_y;
-} ScreenwideDisplayFitRebase;
-
-typedef struct {
-  double pan_x;
-  double pan_y;
-  double zoom;
-} ScreenwideViewTransform;
-extern ScreenwideViewTransform screenwide_workspace_panel_fit(
-    double viewport_width, double viewport_height, double base_x, double base_y,
-    double base_width, double base_height, double fit_width);
-_Static_assert(sizeof(ScreenwideViewTransform) == 24,
-               "Rust/C view transform layout mismatch");
-
-extern ScreenwideDisplayHit screenwide_workspace_hit_test(
-    const ScreenwideDisplayTarget *targets, size_t count, double x, double y,
-    double handle_size);
-extern ScreenwideDisplayFitRebase screenwide_workspace_rebase_display_fit(
-    double viewport_width, double viewport_height, ScreenwideDisplayRect displayed, double natural_width,
-    double natural_height, double gutter, uint8_t allow_upscale);
-_Static_assert(sizeof(ScreenwideDisplayTarget) == 64,
-               "Rust/C display target layout mismatch");
-_Static_assert(sizeof(ScreenwideDisplayHit) == 24,
-               "Rust/C display hit layout mismatch");
-_Static_assert(sizeof(ScreenwideDisplayFitRebase) == 56,
-               "Rust/C display fit rebase layout mismatch");
 
 extern SCREENWIDE_PREVIEW_PRIVATE NSCursor *expected_selection_cursor;
 extern SCREENWIDE_PREVIEW_PRIVATE BOOL expected_selection_move_cursor;
@@ -101,15 +49,6 @@ typedef void (*screenwide_preview_context_menu_callback)(uint32_t pane_index,
                                                           double x, double y,
                                                           void *context);
 
-typedef struct {
-  uint32_t pane_index;
-  uint32_t layer_id;
-  uint32_t crop_mode, radius_disabled, framed;
-  double x, y, width, height;
-  double radius_percent;
-  double image_x, image_y, image_width, image_height;
-  double recenter_x, recenter_y, recenter_width, recenter_height;
-} ScreenwidePreviewSelection;
 @class ScreenwidePreviewSurface;
 @interface ScreenwidePreviewInteractionView : NSView
 @property(nonatomic, weak) ScreenwidePreviewSurface *surface;
@@ -157,6 +96,12 @@ typedef struct {
 @property(nonatomic) BOOL pinching;
 @property(nonatomic) BOOL suppressPinchScroll;
 @property(nonatomic) NSPoint pinchAnchor;
+/// A ring of the rotation gizmo held: the drag, where it was pressed, and the
+/// resize edges whose cursor runs the way it turns there.
+@property(nonatomic) BOOL turnDragActive;
+@property(nonatomic) ScreenwideTurnRingDrag turnDrag;
+@property(nonatomic) NSPoint turnDragOrigin;
+@property(nonatomic) uint32_t turnDragEdges;
 @end
 
 @interface ScreenwidePreviewInteractionView (Cursor)
@@ -273,6 +218,9 @@ typedef struct {
 @property(nonatomic) BOOL hasSelection;
 @property(nonatomic) BOOL selectionVisible;
 @property(nonatomic) ScreenwidePreviewSelection selection;
+/// The rotation gizmo ring under the pointer: its axis plus one, zero for
+/// none.
+@property(nonatomic) NSInteger turnHoveredRing;
 @property(nonatomic, strong) CAMetalLayer *selectionLayer;
 @property(nonatomic) uint64_t selectionDrawRevision;
 @property(nonatomic) BOOL selectionDrawInFlight;

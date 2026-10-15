@@ -4,6 +4,7 @@
 use super::background::background_constants;
 use super::layer::crop_preview_rect;
 use super::scene_motion::scene_motion_rows;
+use super::scene_turn::scene_turn_rows;
 use super::*;
 
 impl Compositor {
@@ -279,6 +280,7 @@ impl Compositor {
           flag(camera(|camera| camera.cut_out)),
         ]
       },
+      scene_turn: scene_turn_rows(settings, &placement, geometry.size),
     };
     self.submit(
       target,

@@ -29,7 +29,11 @@ import {
 import { recordingSceneEdits } from "./recording-scene-edits";
 import { drawnCameraFrame } from "./recording-scene-framing";
 import { selectedPaneFraming } from "./recording-scene-pane-framing";
-import { RecordingSceneClip, recordingSceneClipAt } from "./recording-scenes";
+import {
+  RecordingSceneClip,
+  recordingSceneClipAt,
+  UPRIGHT_ROTATION,
+} from "./recording-scenes";
 import {
   RecordingSceneSelection,
   useRecordingSceneSelection,
@@ -274,6 +278,7 @@ export function useRecordingScenes({
                   ? cameraOverlay.radiusPercent
                   : output.radiusPercent))
               : null,
+          rotation: current ? (current.rotation ?? UPRIGHT_ROTATION) : null,
           screenAspect,
           variant: current ? (current.variant ?? {}) : null,
         }

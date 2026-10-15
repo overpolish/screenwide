@@ -35,6 +35,13 @@ struct OscGpu {
   picked_colors: array<vec4<f32>, 2>, // an object kept, one removed
   picked_halo: vec4<f32>, // .x reach px, .y points of `picked_points`
   picked_points: array<vec4<f32>, 32>, // two points to a row, in pixels
+  turn_colors: array<vec4<f32>, 3>, // the X, Y and Z rings
+  // The rotation gizmo: rows 0-2 each ring's `u`, 3-5 each ring's `v`, in
+  // pixels with the depth toward the viewer in `.z`; row 6 the middle in
+  // pixels, the core's half width and the outline's width; row 7 the ring
+  // held or -1, how far it is lit toward white, and how strongly far halves
+  // show.
+  turn_rings: array<vec4<f32>, 8>,
 }
 
 @group(0) @binding(0) var<uniform> osc: OscGpu;
@@ -357,6 +364,93 @@ fn soft_line(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   return color;
 }
 
+// The rotation gizmo's three rings, drawn by one quad over all of them, as
+// Keyframeless draws them: each pixel measures its distance to the whole of
+// every ring at once, so a ring is one band with no seams where pieces of it
+// would overlap. A ring fades from full strength on its near half to dim on
+// its far half through the points level with the middle, and the three are
+// laid over one another by how near the pixel's point of each is. Each ring
+// draws a coloured core in a dark outline; the one the pointer holds is lit
+// toward white.
+const TURN_RING_KIND: u32 = 60u;
+
+// Points each ring is measured through: fine enough that the polyline lies
+// within a tenth of a pixel of the circle at the rings' size.
+const TURN_RING_SAMPLES: u32 = 64u;
+
+// The depth, as a share of the radius, over which a ring fades from its near
+// half's strength to its far half's.
+const TURN_RING_FADE: f32 = 0.15;
+
+// Ring `ring` with its nearest point `distance` pixels away at `depth`
+// toward the viewer, in straight alpha.
+fn turn_ring_paint(ring: u32, distance: f32, depth: f32) -> vec4<f32> {
+  let core = osc.turn_rings[6].z;
+  let outline_width = osc.turn_rings[6].w;
+  let coverage = clamp(core + outline_width - distance + 0.5, 0.0, 1.0);
+  var fill = osc.turn_colors[ring].rgb;
+  if (f32(ring) == osc.turn_rings[7].x) {
+    fill = mix(fill, vec3<f32>(1.0), osc.turn_rings[7].y);
+  }
+  let outline = clamp(distance - core + 0.5, 0.0, 1.0);
+  var color = mix(vec4<f32>(fill, 1.0), vec4<f32>(0.0, 0.0, 0.0, 0.75), outline);
+  let near = smoothstep(-TURN_RING_FADE, TURN_RING_FADE, depth);
+  color.a *= coverage * mix(osc.turn_rings[7].z, 1.0, near);
+  return color;
+}
+
+// `top` laid over `under`, both in straight alpha.
+fn turn_over(top: vec4<f32>, under: vec4<f32>) -> vec4<f32> {
+  let alpha = top.a + under.a * (1.0 - top.a);
+  if (alpha <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  return vec4<f32>((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / alpha, alpha);
+}
+
+fn turn_rings(at: vec2<f32>) -> vec4<f32> {
+  let point = at - osc.turn_rings[6].xy;
+  // Each ring's nearest distance and the depth there.
+  var nearest = array<vec2<f32>, 3>(vec2<f32>(1e9, 0.0), vec2<f32>(1e9, 0.0),
+                                    vec2<f32>(1e9, 0.0));
+  for (var ring = 0u; ring < 3u; ring++) {
+    let u = osc.turn_rings[ring].xyz;
+    let v = osc.turn_rings[ring + 3u].xyz;
+    var previous = u;
+    for (var index = 1u; index <= TURN_RING_SAMPLES; index++) {
+      let t = 6.2831853 * f32(index) / f32(TURN_RING_SAMPLES);
+      let current = cos(t) * u + sin(t) * v;
+      let edge = current.xy - previous.xy;
+      let along = clamp(dot(point - previous.xy, edge) / max(dot(edge, edge), 1e-6), 0.0, 1.0);
+      let distance = length(point - (previous.xy + along * edge));
+      if (distance < nearest[ring].x) {
+        nearest[ring] = vec2<f32>(distance, mix(previous.z, current.z, along));
+      }
+      previous = current;
+    }
+  }
+  // Farthest first, so the nearest ring is laid on top.
+  var order = array<u32, 3>(0u, 1u, 2u);
+  for (var round = 0u; round < 2u; round++) {
+    for (var index = 0u; index < 2u - round; index++) {
+      if (nearest[order[index]].y > nearest[order[index + 1u]].y) {
+        let swap = order[index];
+        order[index] = order[index + 1u];
+        order[index + 1u] = swap;
+      }
+    }
+  }
+  var color = vec4<f32>(0.0);
+  for (var index = 0u; index < 3u; index++) {
+    let ring = order[index];
+    color = turn_over(turn_ring_paint(ring, nearest[ring].x, nearest[ring].y), color);
+  }
+  if (color.a <= 0.0) {
+    discard;
+  }
+  return color;
+}
+
 // How strongly the halo round a chosen object picked in the camera shows:
 // as the halo round an annotation does (`annotation_hover_alpha`).
 const PICKED_HALO_ALPHA: f32 = 0.24;
@@ -449,6 +543,9 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   }
   if (kind == 57u || kind == 59u) {
     return picked_line_halo(kind, input.position.xy);
+  }
+  if (kind == TURN_RING_KIND) {
+    return turn_rings(input.position.xy);
   }
   if (kind == 33u) {
     // A frozen desktop is an opaque backing plane. Capture APIs may leave

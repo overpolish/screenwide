@@ -16,6 +16,7 @@ import {
 import {
   RecordingSceneClip,
   SceneFraming,
+  SceneRotation,
   WHOLE_FRAMING,
   sceneNeedsCamera,
 } from "./recording-scenes";
@@ -38,6 +39,8 @@ export type RecordingSceneArrangement = {
   /** How opaque the scene draws each pane now, zero where it hides one. */
   opacity: { camera: number; screen: number };
   output: ScreenshotOutputSettings;
+  /** How the scene turns the screen in depth now. */
+  rotation: SceneRotation;
   /** The part of the screen the clip shows, held where it fills its box, and
    * the aspect of the crop it frames, which is the picture its focus and zoom
    * are shares of. */
@@ -215,6 +218,7 @@ export function arrangedRecordingScene({
       imageY: placed.image.y,
       radiusPercent: placed.radius.screen,
     },
+    rotation: placed.rotation,
     screen: {
       aspect: output.cropWidth / output.cropHeight,
       framing: framingWithin(

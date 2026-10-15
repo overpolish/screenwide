@@ -24,6 +24,7 @@ import { SceneFramingRows } from "./scene-framing-rows";
 import { sceneOffer } from "./scene-offer";
 import { SceneOutputRow } from "./scene-output-row";
 import { ScenePresetTile } from "./scene-preset-tile";
+import { SceneRotationRow } from "./scene-rotation-row";
 import { sceneSchematic } from "./scene-schematic";
 import { SceneTemplateTiles } from "./scene-template-tiles";
 import { SceneVariantRows } from "./scene-variant-rows";
@@ -33,7 +34,8 @@ import { SceneVariantRows } from "./scene-variant-rows";
  * can place, then Custom, the presets and your templates, each drawn as it
  * looks, then the options of the preset under the playhead, or a custom
  * scene's Swap, then for that scene how far it zooms into its selected pane,
- * how round that pane's corners are, and which part of it the zoom shows.
+ * how round that pane's corners are, which part of it the zoom shows, and,
+ * for the screen, how it is turned in depth.
  * The camera is that pane while it is selected and the scene places it; the
  * screen otherwise. The presets, and the templates that place a camera, are
  * only offered while there is a camera drawn into the screen's video; over a
@@ -48,7 +50,7 @@ import { SceneVariantRows } from "./scene-variant-rows";
  * resize. Auto zoom makes the zooms that follow the cursor again, leaving
  * the scenes you made or edited alone. The actions end the panel: a custom
  * scene kept as a template, the preset's boxes and the whole screen and
- * camera shown again, or the scene taken away.
+ * camera shown again with the screen upright, or the scene taken away.
  */
 export function ScenePanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
@@ -142,6 +144,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
             change({ customizeScene: true });
           }}
           schematic={scene.boxes ?? schematicOf(scene.preset ?? "full")}
+          screenRotation={scene.rotation}
         />
         {presets.map((preset) => (
           <ScenePresetTile
@@ -155,6 +158,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
               change({ scenePreset: preset });
             }}
             schematic={schematicOf(preset)}
+            screenRotation={scene.rotation}
           />
         ))}
         <SceneTemplateTiles
@@ -166,6 +170,7 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
           onRemove={(id) => {
             change({ removeSceneTemplate: id });
           }}
+          screenRotation={scene.rotation}
           selectedId={templateId}
           templates={templates}
         />
@@ -211,6 +216,16 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
           }}
           paneName={paneName}
           radius={radius}
+        />
+      ) : null}
+
+      {framing && scene.framingPane === "screen" && scene.rotation ? (
+        <SceneRotationRow
+          isDisabled={isLocked}
+          onChange={(next) => {
+            change({ sceneRotation: next });
+          }}
+          rotation={scene.rotation}
         />
       ) : null}
 

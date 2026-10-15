@@ -232,3 +232,25 @@ describe("a scene's corner radius", () => {
     expect(rounded(1300)?.output.radiusPercent).toBeCloseTo(20);
   });
 });
+
+describe("a scene's turn of the screen", () => {
+  const turned = (sourceMs: number) =>
+    arrangedRecordingScene({
+      camera: null,
+      clips: [{ ...zoom, rotation: { x: 20, y: -30, z: 10 } }],
+      output,
+      ranges: uncut,
+      sourceMs,
+    })?.rotation;
+
+  it("turns the screen as it holds, as `rotation_tests.rs` pins", () => {
+    expect(turned(5000)).toEqual({ x: 20, y: -30, z: 10 });
+  });
+
+  it("turns the screen in with its arrival, each angle on its own", () => {
+    const halfway = turned(1300);
+    expect(halfway?.x).toBeCloseTo(10);
+    expect(halfway?.y).toBeCloseTo(-15);
+    expect(halfway?.z).toBeCloseTo(5);
+  });
+});

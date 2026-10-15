@@ -58,6 +58,11 @@ typedef struct {
   /// through, then the points, x and y in turn, in the target's pixels.
   float picked_halo[4];
   float picked_points[128];
+  /// The rotation gizmo: each ring's `u`, then each ring's `v`, in the
+  /// target's pixels with the depth toward the viewer third; the middle in
+  /// pixels, the core's half width and the outline's width; the ring held or
+  /// -1, how far it is lit toward white, and how strongly far halves show.
+  float turn_rings[32];
 } ScreenwideRegionOscRenderState;
 
 typedef struct {

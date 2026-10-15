@@ -83,8 +83,11 @@ export function useRecordingSelectionGesture({
       event.operation === "frameResize" || event.operation === "frameRadius";
     const isCropGesture = isCropOperation(event.operation);
     if (event.phase === "begin") {
+      // A turn belongs to the scene under the playhead; with none there, it
+      // has nothing to turn.
       if (
         !trackId ||
+        event.operation === "rotate" ||
         (isFrameGesture
           ? canvasTool !== "canvas"
           : isCropGesture

@@ -78,4 +78,10 @@ pub(super) struct Constants {
   /// where drawn larger than it is, then whether each is a person cut out,
   /// whose shadow follows their outline.
   pub(super) source_flags: [f32; 4],
+  /// How a scene turns the screen in depth: the rows of the inverse of the
+  /// turn, which carries a canvas pixel back to the point of the upright
+  /// screen it shows, then the rows of the turn, then the inverse turn the
+  /// shutter opened on, which a moving scene's steps blend toward. See
+  /// `scene_turn.rs`.
+  pub(super) scene_turn: [[f32; 4]; super::scene_turn::SCENE_TURN_ROWS],
 }

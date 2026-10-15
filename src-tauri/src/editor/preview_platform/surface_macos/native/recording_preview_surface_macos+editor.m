@@ -57,10 +57,13 @@
     apply_editor_fit_basis(self.surface);
     return;
   }
+  // The rotation gizmo's rings sit over the layer they turn.
+  if (turn_mouse_down(self, event, point)) return;
   // The arrow chrome sees every left press over the picture first: drawing,
   // choosing and dragging a grip are all its own. A press that lands on no
   // arrow with only the select tool in hand falls through to the layer.
-  if (event.buttonNumber == 0 && annotation_mouse_down(self, point)) return;
+  if (event.buttonNumber == 0 && annotation_mouse_down(self, selected_layer_point(self.surface, point)))
+    return;
   if (canGesture && crop_draw_mouse_down(self, point, event)) return;
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {
     ScreenwidePreviewSelection target;
@@ -257,7 +260,7 @@
   }
   BOOL isSelectionBody = canGesture &&
                          !selection_is_frame(self.surface) &&
-                         NSPointInRect(point, selectionFrame);
+                         NSPointInRect(selected_layer_point(self.surface, point), selectionFrame);
   if (isSelectionBody && event.buttonNumber == 0) {
     self.selectionDragActive = YES;
     self.selectionDragOperation = self.surface.selection.crop_mode != 0 ? 5 : 0;
@@ -277,12 +280,12 @@
   }
 }
 - (void)mouseDragged:(NSEvent *)event {
+  if (turn_mouse_dragged(self, event)) return;
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
-  if (annotation_mouse_dragged(self, point)) return;
+  if (annotation_mouse_dragged(self, selected_layer_point(self.surface, point))) return;
   if (crop_draw_mouse_dragged(self, event) || framed_selection_mouse_dragged(self, event)) return;
   if (self.selectionDragActive) {
-    NSPoint delta = NSMakePoint(point.x - self.selectionDragOrigin.x,
-                                point.y - self.selectionDragOrigin.y);
+    NSPoint delta = selection_drag_travel(self, &point);
     if (self.selectionDragOperation == 0 &&
         (event.modifierFlags & NSEventModifierFlagShift)) {
       if (fabs(delta.x) >= fabs(delta.y)) delta.y = 0;
@@ -674,9 +677,9 @@
   apply_editor_transform(self.surface);
 }
 - (void)mouseUp:(NSEvent *)event {
-  if (annotation_mouse_up(self, [self convertPoint:event.locationInWindow
-                                          fromView:nil]))
-    return;
+  if (turn_mouse_up(self, event)) return;
+  NSPoint released = [self convertPoint:event.locationInWindow fromView:nil];
+  if (annotation_mouse_up(self, selected_layer_point(self.surface, released))) return;
   if (crop_draw_mouse_up(self, event)) return;
   BOOL hadSnapGuides = self.surface.hasSelectionSnapGuideX ||
                        self.surface.hasSelectionSnapGuideY;

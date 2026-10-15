@@ -3,6 +3,7 @@ import type { RecordingScenePreset } from "./RecordingScenePreset";
 import type { SceneBoxes } from "./SceneBoxes";
 import type { SceneFraming } from "./SceneFraming";
 import type { SceneRadius } from "./SceneRadius";
+import type { SceneRotation } from "./SceneRotation";
 import type { SceneVariant } from "./SceneVariant";
 
 export type RecordingSceneClip = { id: string, startMs: number, endMs: number, preset: RecordingScenePreset, 
@@ -24,6 +25,11 @@ boxes?: SceneBoxes,
  * The panes' corner radii in this scene, which a reset takes away.
  */
 radius?: SceneRadius, 
+/**
+ * How the scene turns the screen in depth, with everything drawn on it;
+ * upright where unset.
+ */
+rotation?: SceneRotation, 
 /**
  * How the preset is laid out, each option its default where unset.
  */

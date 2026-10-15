@@ -74,8 +74,13 @@ fn bin_annotations(@builtin(global_invocation_id) id: vec3<u32>) {
   if (id.x >= grid.y || id.y >= grid.z) {
     return;
   }
-  let low = vec2<f32>(id.xy) * f32(grid.x);
-  let high = low + f32(grid.x);
+  // The edge tiles reach on past the canvas: a turned screen shows points of
+  // itself beyond the canvas's edges, which the canvas pass reads from the
+  // nearest tile.
+  let far = vec2<f32>(1e30);
+  let side = f32(grid.x);
+  let low = select(vec2<f32>(id.xy) * side, -far, id.xy == vec2<u32>(0u));
+  let high = select(vec2<f32>(id.xy + 1u) * side, far, id.xy + 1u == vec2<u32>(grid.y, grid.z));
   // The canvas pass's own feather: half a drawn pixel.
   let feather = max(canvas.motion.z, 1e-4) * 0.5;
   let total = canvas.annotation_options.y;

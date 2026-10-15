@@ -95,6 +95,10 @@ impl PreviewPlayerManager {
           (delta_x, delta_y),
         ) {
           let result = match reframing {
+            // A turn only redraws pictures already decoded.
+            Some(clips) if operation == SelectionGestureOperation::Rotate => self
+              .set_scene_clips(clips)
+              .and_then(|()| self.redraw_scenes()),
             Some(clips) => self
               .set_scene_clips(clips)
               .and_then(|()| self.refresh_selection_preview(layer_id)),
@@ -153,9 +157,9 @@ impl PreviewPlayerManager {
             SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
             SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
             SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-            SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
-              return Ok(())
-            }
+            SelectionGestureOperation::FrameResize
+            | SelectionGestureOperation::FrameRadius
+            | SelectionGestureOperation::Rotate => return Ok(()),
             SelectionGestureOperation::CropMove
             | SelectionGestureOperation::CropResize
             | SelectionGestureOperation::CropDraw => {
@@ -215,9 +219,9 @@ impl PreviewPlayerManager {
           SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
           SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
           SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-          SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
-            return Ok(())
-          }
+          SelectionGestureOperation::FrameResize
+          | SelectionGestureOperation::FrameRadius
+          | SelectionGestureOperation::Rotate => return Ok(()),
           SelectionGestureOperation::CropMove
           | SelectionGestureOperation::CropResize
           | SelectionGestureOperation::CropDraw => {

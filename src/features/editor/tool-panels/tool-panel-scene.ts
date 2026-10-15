@@ -5,6 +5,7 @@ import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
   RecordingScenePreset,
   SceneFraming,
+  SceneRotation,
 } from "../recording/scenes/recording-scenes";
 
 import { SchematicComposition } from "./scene/scene-schematic";
@@ -43,6 +44,9 @@ export type ToolPanelScene = {
   /** The selected pane's corner radius in the scene under the playhead, in
    * percent of its shorter side, null where there is no scene. */
   radius: number | null;
+  /** How the scene under the playhead turns the screen, in degrees about
+   * each axis, whichever pane is selected; null where there is no scene. */
+  rotation: SceneRotation | null;
   /** The screen's visible width over its height. */
   screenAspect: number;
   /** The options of the scene under the playhead's preset, null where there

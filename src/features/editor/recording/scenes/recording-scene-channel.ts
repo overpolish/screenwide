@@ -10,7 +10,11 @@ import { ScenePane } from "./recording-scene-order";
 import { SceneChoice, SceneSpanTarget } from "./recording-scene-span";
 import { SceneTemplate, SceneTemplateLayout } from "./recording-scene-template";
 import { SceneVariant } from "./recording-scene-variant";
-import { RecordingScenePreset, SceneFraming } from "./recording-scenes";
+import {
+  RecordingScenePreset,
+  SceneFraming,
+  SceneRotation,
+} from "./recording-scenes";
 
 import type { Arrangement } from "../../annotations/annotation-order";
 
@@ -41,13 +45,17 @@ export type RecordingSceneControls = {
   /** Make the scene custom, its panes kept where it puts them now. */
   customize: () => void;
   remove: () => void;
-  /** Show the whole screen and camera again, in the preset's own boxes. */
+  /** Show the whole screen and camera again, in the preset's own boxes, and
+   * the screen upright. */
   resetFraming: () => void;
   /** Zoom into the selected pane, or move the part of it shown, a field at a
    * time. */
   setFraming: (framing: Partial<SceneFraming>) => void;
   /** Round the selected pane's corners, in percent of its shorter side. */
   setRadius: (radius: number) => void;
+  /** Turn the screen in depth, in degrees about each axis, a field at a
+   * time. */
+  setRotation: (rotation: Partial<SceneRotation>) => void;
   /** Change the preset's options a field at a time. */
   setVariant: (variant: SceneVariant) => void;
   /** Trade a custom scene's two panes: boxes and order. */
@@ -124,6 +132,9 @@ export function usePublishRecordingScene(
         },
         setRadius: (radius) => {
           controlsRef.current.setRadius(radius);
+        },
+        setRotation: (rotation) => {
+          controlsRef.current.setRotation(rotation);
         },
         setVariant: (variant) => {
           controlsRef.current.setVariant(variant);

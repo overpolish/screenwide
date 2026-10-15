@@ -197,6 +197,7 @@ export function useRecordingPreviewSelection(
   const picks = scenePanePicks({
     arrangement: sceneArrangement,
     canPreviewBakedCamera,
+    freeScreen: scene.isFull && canvasTool === "select",
     isFramed,
     overlay: videoSelectionOverlay,
     reframe,

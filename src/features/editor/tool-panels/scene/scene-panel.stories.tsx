@@ -44,6 +44,7 @@ const scene = {
   hasAutoZooms: false,
   hasCamera: true,
   isBaked: true,
+  rotation: null,
   screenAspect: 16 / 10,
 } as const;
 
@@ -65,6 +66,7 @@ export const OverZoom: Story = {
         hasSceneAtPlayhead: true,
         preset: "full",
         radius: 12,
+        rotation: { x: 0, y: 0, z: 0 },
         variant: {},
       },
     });
@@ -113,6 +115,7 @@ export const Custom: Story = {
         hasSceneAtPlayhead: true,
         preset: "split-two-thirds",
         radius: 8,
+        rotation: { x: 12, y: -24, z: 0 },
         variant: {},
       },
     });
