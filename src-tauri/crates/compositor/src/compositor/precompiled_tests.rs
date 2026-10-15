@@ -50,8 +50,10 @@ fn annotations() -> Vec<Annotation> {
 }
 
 /// The whole canvas, BGRA: the picture with a rounded shadowed frame on a
-/// mesh background, under `annotations`.
+/// mesh background, under `annotations`, drawn as an export draws it: with
+/// the variant with no annotation or the one with every kind.
 fn drawn(compositor: &Compositor, annotations: Vec<Annotation>) -> Vec<u8> {
+  let _every = compositor.hold_every_annotation_kind();
   let image = picture();
   let mut settings = test_output_settings(OUTPUT.0, OUTPUT.1);
   settings.background_type = "mesh".to_owned();
@@ -103,14 +105,6 @@ fn drawn(compositor: &Compositor, annotations: Vec<Annotation>) -> Vec<u8> {
   gpu().read_texture(&output).unwrap()
 }
 
-/// `compositor` with the variant with no annotation and the one with every
-/// kind ready: a bare draw then takes the first, and a draw whose own set is
-/// not ready the second.
-fn prepared(compositor: Compositor) -> Compositor {
-  compositor.prepare_annotation_kinds(&[every_kind()]);
-  compositor
-}
-
 /// A compositor whose canvas variants are all compiled from WGSL.
 fn compiled_from_wgsl() -> Compositor {
   let mut compositor = compositor();
@@ -150,8 +144,8 @@ fn the_precompiled_variants_draw_what_wgsl_draws() {
       "the build compiled no variant for kinds {kinds:#x} on this device"
     );
   }
-  let precompiled = prepared(compositor());
-  let compiled = prepared(compiled_from_wgsl());
+  let precompiled = compositor();
+  let compiled = compiled_from_wgsl();
   let bare = drawn(&precompiled, Vec::new());
   assert_same_pixels(&bare, &drawn(&compiled, Vec::new()), "no annotation");
   let annotated = drawn(&precompiled, annotations());

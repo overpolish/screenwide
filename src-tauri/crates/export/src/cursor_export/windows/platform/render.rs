@@ -70,7 +70,6 @@ pub(super) fn render_video(
     .unwrap_or(i64::MAX / 10_000)
     .saturating_mul(10_000);
   let clips = super::super::super::frame_annotations::ExportAnnotations::for_request(request);
-  compositor.prepare_annotation_kinds(&clips.kind_sets());
   let scenes = super::super::super::frame_scene::ExportScenes::for_request(request);
   let mut progress_pace = super::super::super::progress_pace::ProgressPace::default();
   // A reordered timeline plays an earlier stretch of the source after a

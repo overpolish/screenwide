@@ -102,7 +102,6 @@ impl<'a> FrameComposer<'a> {
       })
       .transpose()?;
     let annotations = ExportAnnotations::for_request(request);
-    compositor.prepare_annotation_kinds(&annotations.kind_sets());
     let scenes = ExportScenes::for_request(request);
     let effects = FrameEffects::new(request.camera_effects.as_ref(), gpu)?;
     Ok(Self {
@@ -144,6 +143,9 @@ impl<'a> FrameComposer<'a> {
       "screen chroma",
     )?;
     let source = self.source(size);
+    // Annotated frames draw with the shader holding every kind; see
+    // `hold_every_annotation_kind`.
+    let _every = self.compositor.hold_every_annotation_kind();
     let mut encoder = gpu
       .device
       .create_command_encoder(&wgpu::CommandEncoderDescriptor {

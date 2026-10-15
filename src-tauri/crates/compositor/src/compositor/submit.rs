@@ -46,6 +46,9 @@ impl Compositor {
     } else {
       super::canvas_variants::kinds_of(&annotations)
     };
+    let every = self
+      .every_annotation_kind
+      .load(std::sync::atomic::Ordering::Relaxed);
     let blur = super::mark_blur::Plan::of(&values, &annotations, size);
     if let Some(plan) = blur {
       values.annotation_blur = plan.reading();
@@ -146,7 +149,7 @@ impl Compositor {
     let blurred = blur
       .map(|plan| {
         let [marks, cursor] = &self.mark_blur.constants;
-        let delta = self.canvas.get(Target::Delta, kinds);
+        let delta = self.canvas.get(Target::Delta, kinds, every);
         self.mark_blur.record(
           gpu,
           &mut encoder,
@@ -206,7 +209,7 @@ impl Compositor {
         } else {
           Target::Canvas
         };
-        pass.set_pipeline(&self.canvas.get(target, kinds));
+        pass.set_pipeline(&self.canvas.get(target, kinds, every));
         pass.set_bind_group(0, &bindings, &[]);
         pass.draw(0..3, 0..1);
       }

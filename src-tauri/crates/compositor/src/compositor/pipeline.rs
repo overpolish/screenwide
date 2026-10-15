@@ -70,6 +70,7 @@ impl Compositor {
       layout,
       tiles: super::tiles::AnnotationTiles::new(gpu, &module),
       canvas,
+      every_annotation_kind: std::sync::atomic::AtomicBool::new(false),
       redactor: redact::Redactor::new(gpu),
       camera_canvases: std::sync::Mutex::new(std::collections::HashMap::new()),
       mark_blur: super::mark_blur::MarkBlur::new(gpu),

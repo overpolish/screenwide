@@ -11,16 +11,22 @@
 //! and a list of when each camera frame shows, which the app finds the matte
 //! of the frame it draws by.
 //!
-//! The camera is matted in parts side by side, one model each on a share of
-//! the CPU. Each part but the first starts three seconds early and lets the
-//! model see them without keeping them: with less, RVM's memory of the
-//! person is not yet settled by the part's first kept frame, and it can
-//! take part of the room for them there.
+//! On Windows the model runs on the GPU through DirectML where it can, which
+//! answers as the CPU does and twice as fast, and the camera is matted in one
+//! part. Otherwise the camera is matted in parts side by side, one model each
+//! on a share of the CPU. Each part but the first starts three seconds early
+//! and lets the model see them without keeping them: with less, RVM's memory
+//! of the person is not yet settled by the part's first kept frame, and it
+//! can take part of the room for them there.
+//!
+//! Each part's frames are cleaned up on several threads ([`in_order`]),
+//! which otherwise take longer than the model.
 
 mod cleanup;
 mod compose;
 mod decode;
 mod encode;
+mod in_order;
 mod model;
 #[cfg(test)]
 mod tests;
@@ -33,11 +39,13 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
-use self::cleanup::Cleanup;
+use ort::session::Session;
+
 use self::decode::Decoder;
 use self::encode::Encoder;
+use self::in_order::{clean_in_order, Matted};
 use self::model::Matting;
-use crate::session::on_cpu_threads;
+use crate::session::{on_cpu_threads, on_directml};
 use screenwide_transcriber::MatteTimings;
 
 /// The feature's name in what the helper reports.
@@ -48,6 +56,9 @@ const WARM_UP_MS: u64 = 3_000;
 /// more than a quarter again.
 const PART_WARM_UPS: u64 = 4;
 const MOST_PARTS: usize = 4;
+/// The most threads a part cleans its frames up on: four keep up with the
+/// model on the GPU.
+const MOST_CLEANERS: usize = 4;
 
 /// The camera at `camera` matted at `size`, written to `matte` at
 /// `frames_per_second` with its frames' times in `timings`, by the model at
@@ -67,9 +78,22 @@ pub fn matte_camera(
     return Err("The camera recording has no frames to read".to_owned());
   }
   let cores = std::thread::available_parallelism().map_or(4, usize::from);
+  let mut gpu = on_directml(model, WHAT);
   let long_enough = (duration_ms / (WARM_UP_MS * PART_WARM_UPS)).max(1) as usize;
-  let count = (cores / 3).clamp(1, MOST_PARTS).min(long_enough);
+  let count = if gpu.is_some() {
+    1
+  } else {
+    (cores / 3).clamp(1, MOST_PARTS).min(long_enough)
+  };
   let threads = (cores / count).max(1);
+  // A part's model and its cleanup share its threads; on the GPU, the model
+  // takes none of them.
+  let cleaners = if gpu.is_some() {
+    threads.saturating_sub(2)
+  } else {
+    threads / 4
+  }
+  .clamp(1, MOST_CLEANERS);
   let parts = (0..count)
     .map(|index| Part {
       start_ms: duration_ms * index as u64 / count as u64,
@@ -83,20 +107,24 @@ pub fn matte_camera(
     .collect::<Vec<_>>();
   let done = AtomicU64::new(0);
   let stop = AtomicBool::new(false);
-  let job = Job {
+  let job = &Job {
     model,
     ffmpeg,
     camera,
     size,
     frames_per_second,
-    threads,
+    model_threads: threads.saturating_sub(cleaners).max(1),
+    cleaners,
     done: &done,
     stop: &stop,
   };
   let results = std::thread::scope(|scope| {
     let running = parts
       .iter()
-      .map(|part| scope.spawn(|| job.run(part)))
+      .map(|part| {
+        let session = gpu.take();
+        scope.spawn(move || job.run(part, session))
+      })
       .collect::<Vec<_>>();
     while !running.iter().all(|thread| thread.is_finished()) {
       progress((done.load(Ordering::Relaxed) as f32 / frames.max(1) as f32).min(1.0));
@@ -133,7 +161,10 @@ struct Job<'a> {
   camera: &'a Path,
   size: (u32, u32),
   frames_per_second: u32,
-  threads: usize,
+  /// The CPU threads a part's model runs on, where it runs on the CPU.
+  model_threads: usize,
+  /// The threads a part cleans its frames up on.
+  cleaners: usize,
   done: &'a AtomicU64,
   /// Set when a part fails, so the others stop rather than finish for
   /// nothing.
@@ -141,39 +172,32 @@ struct Job<'a> {
 }
 
 impl Job<'_> {
-  /// Mattes `part` into its own file, answering its frames' times.
-  fn run(&self, part: &Part) -> Result<Vec<f64>, String> {
-    let made = self.matte(part);
+  /// Mattes `part` into its own file with `session`, or on the CPU without
+  /// one, answering its frames' times.
+  fn run(&self, part: &Part, session: Option<Session>) -> Result<Vec<f64>, String> {
+    let made = self.matte(part, session);
     if made.is_err() {
       self.stop.store(true, Ordering::Relaxed);
     }
     made
   }
 
-  fn matte(&self, part: &Part) -> Result<Vec<f64>, String> {
+  fn matte(&self, part: &Part, session: Option<Session>) -> Result<Vec<f64>, String> {
     let (width, height) = (self.size.0 as usize, self.size.1 as usize);
-    let session = on_cpu_threads(self.model, WHAT, self.threads)?;
+    let session = match session {
+      Some(session) => session,
+      None => on_cpu_threads(self.model, WHAT, self.model_threads)?,
+    };
     let mut model = Matting::new(session, (width, height));
     let from_ms = part.start_ms.saturating_sub(WARM_UP_MS);
     let mut decoder = Decoder::start(self.ffmpeg, self.camera, from_ms, self.size)?;
     let encoder = Encoder::start(self.ffmpeg, self.size, self.frames_per_second, &part.path)?;
-    // The cleanup of one frame runs while the model reads the next: it
-    // takes one core, the model the rest of the part's share. Only the
-    // part's own frames are cleaned and kept.
-    let (send, receive) = std::sync::mpsc::sync_channel::<(Vec<u8>, Vec<u8>, bool)>(2);
+    // The model reads the next frames while the last are cleaned up. Only
+    // the part's own frames are cleaned up and kept.
+    let (send, receive) = std::sync::mpsc::sync_channel::<Matted>(self.cleaners * 2);
     std::thread::scope(|scope| {
-      let writer = scope.spawn(move || {
-        let mut encoder = encoder;
-        let mut cleanup = Cleanup::new((width, height));
-        for (mut alpha, rgb, keep) in receive {
-          if keep {
-            cleanup.apply(&mut alpha, &rgb);
-            encoder.write(&alpha)?;
-            self.done.fetch_add(1, Ordering::Relaxed);
-          }
-        }
-        encoder.finish()
-      });
+      let writer = scope
+        .spawn(move || clean_in_order(receive, encoder, (width, height), self.cleaners, self.done));
       let mut times = Vec::new();
       let read = (|| {
         let mut rgb = vec![0_u8; width * height * 3];
@@ -187,13 +211,14 @@ impl Job<'_> {
           }
           model.run(&rgb, (width, height), &mut alpha)?;
           // The first part keeps every frame; a later one keeps only its own.
-          let keep = part.start_ms == 0 || ms >= part.start_ms as f64;
-          if send.send((alpha.clone(), rgb.clone(), keep)).is_err() {
+          if part.start_ms > 0 && ms < part.start_ms as f64 {
+            continue;
+          }
+          let index = times.len() as u64;
+          if send.send((index, alpha.clone(), rgb.clone())).is_err() {
             break;
           }
-          if keep {
-            times.push(ms);
-          }
+          times.push(ms);
         }
         Ok(())
       })();

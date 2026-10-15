@@ -16,10 +16,16 @@
 //! launch, as nothing keeps DXC's output. A draw takes its own variant where
 //! it is ready; otherwise the smallest ready variant holding all its kinds,
 //! which draws the same picture more slowly; and only otherwise waits for its
-//! own. An export prepares every set its timeline shows before its first
-//! frame, all at once. A preview keeps the variant with every kind ready, so a
-//! kind new to what it draws is drawn at once, and compiles the set it was
-//! missing in the background, which the frames after it change to.
+//! own. A preview keeps the variant with every kind ready, so a kind new to
+//! what it draws is drawn at once, and compiles the set it was missing in the
+//! background, which the frames after it change to.
+//!
+//! An export draws every annotated frame with the variant with every kind
+//! ([`Compositor::hold_every_annotation_kind`]) and compiles nothing.
+//! Compiling its own sets held a Windows export over two minutes before its
+//! first frame (12 sets, 8 cores), while the variant with every kind cost
+//! about 1 ms more an annotated 1080p frame: it wins on any export with less
+//! than about 40 minutes of annotated video.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -148,10 +154,17 @@ impl CanvasPipelines {
     }))
   }
 
-  /// The pipeline that draws `kinds` into `target`: their own where it is
+  /// The pipeline that draws `kinds` into `target`: with `every`, the one
+  /// with every kind for any annotated draw; otherwise their own where it is
   /// ready, else the smallest ready one holding them all, else their own,
   /// compiled now.
-  pub(super) fn get(&self, target: Target, kinds: KindMask) -> wgpu::RenderPipeline {
+  pub(super) fn get(&self, target: Target, kinds: KindMask, every: bool) -> wgpu::RenderPipeline {
+    if every && kinds != 0 {
+      return self
+        .variant(every_kind())
+        .pipeline(&self.device, &self.layout, target)
+        .clone();
+    }
     let own = self.variant(kinds);
     if let Some(pipeline) = own.pipelines[target as usize].get() {
       return pipeline.clone();
@@ -202,24 +215,14 @@ impl CanvasPipelines {
 }
 
 impl Compositor {
-  /// Compiles the canvas pipeline for each set of kinds in `sets`, and the
-  /// one with none, all at once, returning when every one is ready: every
-  /// frame of an export then finds a variant holding what it shows without
-  /// waiting on a compile, and a frame showing nothing draws with no
-  /// annotation code at all rather than borrowing a set's.
-  pub fn prepare_annotation_kinds(&self, sets: &[KindMask]) {
-    let canvas = &self.canvas;
-    let variants: Vec<_> = std::iter::once(0)
-      .chain(sets.iter().copied())
-      .map(|kinds| canvas.variant(kinds))
-      .collect();
-    std::thread::scope(|scope| {
-      for variant in &variants {
-        scope.spawn(|| {
-          variant.pipeline(&canvas.device, &canvas.layout, Target::Canvas);
-        });
-      }
-    });
+  /// Draws every annotated frame with the variant with every kind until the
+  /// hold drops, as an export wants; see the module's notes. The Windows
+  /// export shares the preview's compositor, so it holds this only while
+  /// the preview is held off it.
+  #[must_use = "the hold ends when it drops"]
+  pub fn hold_every_annotation_kind(&self) -> EveryAnnotationKind<'_> {
+    self.every_annotation_kind.store(true, Ordering::Relaxed);
+    EveryAnnotationKind(self)
   }
 
   /// Has a draw that is missing its variant compile it in the background
@@ -244,5 +247,14 @@ impl Compositor {
           variant.pipeline(&device, &layout, Target::Canvas);
         }
       });
+  }
+}
+
+/// See [`Compositor::hold_every_annotation_kind`].
+pub struct EveryAnnotationKind<'a>(&'a Compositor);
+
+impl Drop for EveryAnnotationKind<'_> {
+  fn drop(&mut self) {
+    self.0.every_annotation_kind.store(false, Ordering::Relaxed);
   }
 }

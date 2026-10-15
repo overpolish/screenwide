@@ -51,6 +51,22 @@ pub(crate) fn on_cpu_threads(path: &Path, what: &str, threads: usize) -> Result<
     .map_err(|error| failed(error.to_string()))
 }
 
+/// The model at `path` for the feature named `what` on the GPU through
+/// DirectML, on Windows where ONNX Runtime can take it there. Elsewhere, or
+/// where it cannot, nothing, and the caller runs the model on the CPU.
+pub(crate) fn on_directml(path: &Path, what: &str) -> Option<Session> {
+  if !cfg!(windows) {
+    return None;
+  }
+  match on_gpu(path, gpu()?) {
+    Ok(session) => Some(session),
+    Err(error) => {
+      eprintln!("{what} runs on the CPU: {BACKEND} could not take it: {error}");
+      None
+    }
+  }
+}
+
 /// The model at `path` for the feature named `what` on the GPU through the
 /// platform's own machine learning layer, CoreML on macOS and DirectML on
 /// Windows, where ONNX Runtime can take it there, and on the CPU otherwise.

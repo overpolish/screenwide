@@ -77,13 +77,6 @@ impl WindowsExportCompositor {
     })
   }
 
-  /// Compiles the canvas pipelines for each set of annotation kinds an
-  /// export draws, before its first frame; see
-  /// [`compositor::Compositor::prepare_annotation_kinds`].
-  pub(crate) fn prepare_annotation_kinds(&self, sets: &[compositor::KindMask]) {
-    self.surface.compositor().prepare_annotation_kinds(sets);
-  }
-
   /// The GPU the export draws on, which the camera's effects draw on too.
   pub(crate) fn gpu(&self) -> &'static screenwide_gpu::Gpu {
     self.surface.gpu()
@@ -113,6 +106,7 @@ impl WindowsExportCompositor {
   ) -> Result<ID3D11Texture2D, String> {
     let _held = self.surface.hold()?;
     let compositor = self.surface.compositor();
+    let _every = compositor.hold_every_annotation_kind();
     let d3d11 = self.surface.d3d11();
     compositor.copy_source(d3d11, &self.source, texture, subresource)?;
     let ms = (composition.seconds * 1_000.0).round().max(0.0) as u64;

@@ -43,7 +43,7 @@ pub mod video_planes;
 mod whole_blur;
 
 pub use camera::CameraComposition;
-pub use canvas_variants::KindMask;
+pub use canvas_pipelines::EveryAnnotationKind;
 pub use layer::{CanvasGeometry, LayerDraw, LayerPlacement};
 
 use self::constants::Constants;
@@ -164,6 +164,9 @@ pub struct Compositor {
   tiles: tiles::AnnotationTiles,
   /// Shared by every compositor on the device; see `canvas_pipelines`.
   canvas: std::sync::Arc<canvas_pipelines::CanvasPipelines>,
+  /// Set while an export holds it: annotated draws take the canvas variant
+  /// with every kind; see `canvas_pipelines`.
+  every_annotation_kind: std::sync::atomic::AtomicBool,
   redactor: redact::Redactor,
   /// The pictures baked cameras are composed into, one for each slot.
   camera_canvases: std::sync::Mutex<std::collections::HashMap<usize, SourceTexture>>,
