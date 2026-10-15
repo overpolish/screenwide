@@ -106,7 +106,9 @@ static BOOL image_drop_point(ScreenwidePreviewSurface *surface, NSPoint point, i
 - (BOOL)performDragOperation:(id<NSDraggingInfo>)info {
   if (![self imageDropAccepts:info]) return NO;
   ScreenwidePreviewSurface *surface = self.surface;
-  NSPoint point = [self convertPoint:info.draggingLocation fromView:nil];
+  // On the layer standing upright, as a press with the image tool reads it.
+  NSPoint point =
+      selected_layer_point(surface, [self convertPoint:info.draggingLocation fromView:nil]);
   int32_t layer = -1;
   double x = 0.5;
   double y = 0.5;

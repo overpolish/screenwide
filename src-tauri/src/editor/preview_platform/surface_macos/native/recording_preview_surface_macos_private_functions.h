@@ -244,6 +244,25 @@ void annotation_text_layout(ScreenwidePreviewSurface *surface);
 BOOL annotation_text_press(ScreenwidePreviewInteractionView *view, NSEvent *event);
 /// The I-beam over the text being typed into, or nil anywhere else.
 NSCursor *annotation_text_cursor(ScreenwidePreviewSurface *surface, NSPoint point);
+/// The layer the box being typed into belongs to and its place in that
+/// layer's own list: the identity a gesture reports, and the scene draws by.
+void annotation_text_identity(ScreenwidePreviewSurface *surface, uint32_t *layer,
+                              uint32_t *index);
+/// Whether the box being typed into lies on a turned layer, where the text
+/// view stands upright away from it and so takes no press itself.
+BOOL annotation_text_turned(ScreenwidePreviewSurface *surface);
+/// Tells the scene where the caret and selection now are, and redraws if
+/// that changes them. `restart` shows the caret for a whole blink again, as
+/// after every edit and move.
+void annotation_text_marks_changed(ScreenwidePreviewSurface *surface, BOOL restart);
+/// Stops the blink and takes the caret and selection out of the scene.
+void annotation_text_marks_end(ScreenwidePreviewSurface *surface);
+/// Extends the selection a press in the box on a turned layer began to
+/// `point`, on the layer standing upright.
+void annotation_text_drag(ScreenwidePreviewSurface *surface, NSPoint point);
+/// The character a press at `point`, on the layer standing upright, lands
+/// nearest in the text being typed into.
+NSUInteger annotation_text_index_at(ScreenwidePreviewSurface *surface, NSPoint point);
 /// The whole source image's rectangle on screen, in the flipped interaction
 /// view's coordinates.
 NSRect annotation_image_frame(ScreenwidePreviewSurface *surface);

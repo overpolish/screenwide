@@ -206,9 +206,9 @@ impl RecordingPreviewSurface {
   }
 
   /// Opens the box at `index` in the published grips for typing, holding
-  /// `text`. macOS colours its caret by `_dark_ink`; here the caret is type,
-  /// which the shader inks the way it inks the text.
-  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str, _dark_ink: bool) {
+  /// `text`. The caret is type, which the shader inks the way it inks the
+  /// text.
+  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str) {
     {
       let Ok(mut state) = self.inner.state.lock() else {
         return;

@@ -32,6 +32,9 @@ const annotation_image_shadow_strength: f32 = 0.28;
 // the screen's own `EYE_DISTANCE` in `scenes/src/rotation.rs`, as
 // `image::tilt` sees a picture from it.
 const annotation_image_eye_distance: f32 = 2.0;
+// The most atlas reads one drawn pixel of a picture takes along the side a
+// tilt squeezes into it.
+const annotation_image_most_taps: f32 = 8.0;
 
 /// The images' pictures, each drawn at about the size it is shown.
 @group(0) @binding(17) var annotation_image_pictures: texture_2d<f32>;
@@ -127,13 +130,54 @@ fn annotation_image_local(probe: vec2<f32>, image: PreviewImage) -> vec2<f32> {
                                  image);
 }
 
-/// How far `probe` falls outside the picture's rounded box: negative inside.
-/// The per-pixel twin of `image::geometry::image_distance`.
-fn annotation_image_distance(probe: vec2<f32>, image: PreviewImage) -> f32 {
-  let local = annotation_image_local(probe, image);
+/// A canvas point in the picture's own frame: where it lands there, and how
+/// far it moves there for a step of one canvas pixel along each canvas axis.
+/// A tilt stretches those steps where the picture is turned away.
+struct ImageProbe {
+  local: vec2<f32>,
+  along_x: vec2<f32>,
+  along_y: vec2<f32>,
+}
+
+fn annotation_image_probe(probe: vec2<f32>, image: PreviewImage) -> ImageProbe {
+  let offset = probe - image.center;
+  let drawn = vec2<f32>(dot(offset, image.across), dot(offset, image.down));
+  let flat_x = vec2<f32>(image.across.x, image.down.x);
+  let flat_y = vec2<f32>(image.across.y, image.down.y);
+  let local = annotation_image_untilt(drawn, image);
+  if ((image.tilt.x == 0.0 && image.tilt.y == 0.0) || any(abs(local) >= vec2<f32>(1e8))) {
+    return ImageProbe(local, flat_x, flat_y);
+  }
+  // Drawn at `drawn` from `local`, the tilt has `w * drawn = A * local`, so a
+  // small move of the drawn point comes from `w` times the inverse of the
+  // same columns `annotation_image_untilt` solves with.
+  let eye = annotation_image_eye(image);
+  let sx = sin(image.tilt.x);
+  let cx = cos(image.tilt.x);
+  let sy = sin(image.tilt.y);
+  let cy = cos(image.tilt.y);
+  let depth = vec2<f32>(sy, cy * sx) / eye;
+  let w = 1.0 + dot(depth, local);
+  let u_column = vec2<f32>(cy, 0.0) - drawn * depth.x;
+  let v_column = vec2<f32>(-sy * sx, cx) - drawn * depth.y;
+  let scale = w / (u_column.x * v_column.y - v_column.x * u_column.y);
+  let along_x = vec2<f32>(flat_x.x * v_column.y - v_column.x * flat_x.y,
+                          u_column.x * flat_x.y - flat_x.x * u_column.y) * scale;
+  let along_y = vec2<f32>(flat_y.x * v_column.y - v_column.x * flat_y.y,
+                          u_column.x * flat_y.y - flat_y.x * u_column.y) * scale;
+  return ImageProbe(local, along_x, along_y);
+}
+
+/// How far `at` falls outside the picture's rounded box, in canvas pixels:
+/// negative inside. Measured in the picture's own frame and divided by how
+/// far that frame stretches there, so the far edge of a tilted picture
+/// feathers over a drawn pixel as its near edge does. The per-pixel twin of
+/// `image::geometry::image_distance`.
+fn annotation_image_distance(at: ImageProbe, image: PreviewImage) -> f32 {
   let rounding = min(image.rounding, min(image.half_size.x, image.half_size.y));
-  let q = abs(local) - (image.half_size - rounding);
-  return length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - rounding;
+  let q = abs(at.local) - (image.half_size - rounding);
+  let distance = length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - rounding;
+  return distance / max(max(length(at.along_x), length(at.along_y)), 1e-6);
 }
 
 /// The atlas's colour at `texel`, bilinearly filtered and held inside the
@@ -162,28 +206,35 @@ fn annotation_image_texel(local: vec2<f32>, image: PreviewImage) -> vec2<f32> {
   return image.cell_origin + 1.0 + share * (image.cell_size - 2.0);
 }
 
-/// The picture's premultiplied colour over one drawn pixel at `probe`, spread
-/// `feather` canvas pixels either way: four filtered taps over the one or two
-/// atlas pixels the drawn pixel spans. Clear outside the picture.
-fn annotation_image_colour(probe: vec2<f32>, image: PreviewImage,
-                             feather: f32) -> vec4<f32> {
+/// The picture's premultiplied colour over one drawn pixel at `at`, its
+/// sides `2 * feather` canvas pixels long: two filtered taps across the
+/// pixel's shorter side in the atlas, and one for each atlas pixel along the
+/// longer, so a picture tilted far away is averaged over everything the
+/// pixel squeezes in. Clear outside the picture.
+fn annotation_image_colour(at: ImageProbe, image: PreviewImage, feather: f32) -> vec4<f32> {
   if (image.cell_size.x <= 2.0 || image.cell_size.y <= 2.0) {
     return annotation_image_placeholder * vec4<f32>(annotation_image_placeholder.aaa, 1.0);
   }
   let atlas = vec2<f32>(textureDimensions(annotation_image_pictures));
   let low = image.cell_origin;
   let high = min(image.cell_origin + image.cell_size, atlas) - 1.0;
-  let per_canvas = (image.cell_size.x - 2.0) / max(2.0 * image.half_size.x, 1e-6);
-  let spread = 2.0 * feather * per_canvas * 0.25;
-  let local = annotation_image_local(probe, image);
-  let texel = annotation_image_texel(local, image);
+  // Atlas pixels per unit of the picture's own frame, along each of its axes.
+  let texels = (image.cell_size - 2.0) / max(2.0 * image.half_size, vec2<f32>(1e-6));
+  let side_x = at.along_x * 2.0 * feather;
+  let side_y = at.along_y * 2.0 * feather;
+  let long_x = length(side_x * texels) >= length(side_y * texels);
+  let major = select(side_y, side_x, long_x);
+  let minor = select(side_x, side_y, long_x);
+  let count = u32(clamp(ceil(length(major * texels)), 2.0, annotation_image_most_taps));
   var total = vec4<f32>(0.0);
-  for (var tap = 0u; tap < 4u; tap++) {
-    let offset = vec2<f32>(select(-spread, spread, (tap & 1u) != 0u),
-                           select(-spread, spread, (tap >> 1u) != 0u));
-    total += annotation_image_bilinear(texel + offset, low, high);
+  for (var step = 0u; step < count; step++) {
+    let along = major * ((f32(step) + 0.5) / f32(count) - 0.5);
+    for (var side = 0u; side < 2u; side++) {
+      let local = at.local + along + minor * select(-0.25, 0.25, side == 1u);
+      total += annotation_image_bilinear(annotation_image_texel(local, image), low, high);
+    }
   }
-  return total * 0.25;
+  return total / f32(2u * count);
 }
 
 /// How far an image's shadow spreads, in canvas pixels.
@@ -278,9 +329,10 @@ fn annotation_image_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, canvas_p
     if (shadowed) {
       shadow += annotation_image_shadow(canvas_point, image) * presence;
     }
-    let inside = annotation_edge(annotation_image_distance(canvas_point, image), feather);
+    let at = annotation_image_probe(canvas_point, image);
+    let inside = annotation_edge(annotation_image_distance(at, image), feather);
     if (inside > 0.0) {
-      picture += annotation_image_colour(canvas_point, image, feather) * inside * presence;
+      picture += annotation_image_colour(at, image, feather) * inside * presence;
     }
   }
   picture /= f32(taps);
@@ -289,7 +341,8 @@ fn annotation_image_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, canvas_p
   if (halo > 0.0) {
     let image = annotation_image(annotation.geometry);
     rgba = annotation_halo(rgba, annotation_image_halo_color,
-                           annotation_image_distance(canvas_point, image), halo, feather);
+                           annotation_image_distance(annotation_image_probe(canvas_point, image),
+                                                     image), halo, feather);
   }
   // The shadow darkens what lies under it, as the magnifier's does, and the
   // picture covers it.

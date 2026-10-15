@@ -160,12 +160,3 @@ pub(crate) fn normalised_text(text: &str) -> String {
 pub fn has_content(text: &str) -> bool {
   !text.trim().is_empty()
 }
-
-/// Whether a box in `style` has its text inked dark: the compositor's rule,
-/// which reads the colour's luminance so the palette's yellow takes black and
-/// its near-black takes white. The caret typed with follows it.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub fn dark_ink(style: &AnnotationStyle) -> bool {
-  let [red, green, blue, _] = crate::model::annotation_colour(&style.color);
-  0.2126 * red + 0.7152 * green + 0.0722 * blue > 0.6
-}

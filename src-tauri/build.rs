@@ -39,6 +39,9 @@ fn main() {
       "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text_input.m"
     );
     println!(
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text_marks.m"
+    );
+    println!(
       "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_chrome.m"
     );
     println!(
@@ -152,6 +155,7 @@ fn main() {
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+object_picking_osc.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text_input.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text_marks.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_chrome.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_redact.m")
       .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_image.m")

@@ -64,7 +64,8 @@ fn landing(inner: &SurfaceInner, client: (f64, f64)) -> (Option<ImagePoint>, Opt
     return (None, None);
   };
   let scale = state.scale.max(0.1);
-  let point = (client.0 / scale, client.1 / scale);
+  // On the layer standing upright, as a press with the image tool reads it.
+  let point = super::turn::selected_layer_point(&state, (client.0 / scale, client.1 / scale));
   let pictures: Vec<_> = state
     .selection_targets
     .iter()

@@ -47,7 +47,7 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       }
       // A box being typed into sees the press first: in the box it places the
       // caret, anywhere else it ends the typing and may carry on below.
-      if annotation::typing_press(inner, logical(x, y), false) {
+      if annotation::typing_press(inner, turn::layer_point(inner, logical(x, y)), false) {
         refresh_cursor_for(inner);
         return;
       }
@@ -83,7 +83,7 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       }
       if pressed
         && (object_picking::pointer_move(inner, logical(x, y))
-          || annotation::typing_move(inner, logical(x, y)))
+          || annotation::typing_move(inner, turn::layer_point(inner, logical(x, y))))
       {
         return;
       }
@@ -182,8 +182,8 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       // text box it opens the box for typing, and in a box being typed into
       // it selects a word; only elsewhere does it fit the view.
       if object_picking::double_click(inner, logical(x, y))
-        || annotation::typing_press(inner, logical(x, y), true)
-        || annotation::open_text(inner, logical(x, y))
+        || annotation::typing_press(inner, turn::layer_point(inner, logical(x, y)), true)
+        || annotation::open_text(inner, turn::layer_point(inner, logical(x, y)))
       {
         refresh_cursor_for(inner);
         return;

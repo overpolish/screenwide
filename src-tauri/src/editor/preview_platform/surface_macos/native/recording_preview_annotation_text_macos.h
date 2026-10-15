@@ -26,6 +26,15 @@
 /// there rather than at the end.
 @property(nonatomic) NSPoint annotationTextOpenPoint;
 @property(nonatomic) BOOL annotationTextOpensAtPoint;
+/// The caret the compositor draws into the box, which blinks on this timer,
+/// and whether it shows now. The text view's own caret and selection are
+/// clear, so they never sit flat over a turned layer.
+@property(nonatomic, strong) NSTimer *annotationTextBlink;
+@property(nonatomic) BOOL annotationTextCaretOn;
+/// Where a press in the box on a turned layer began its selection, and in
+/// what steps a drag from it selects: characters, words or paragraphs.
+@property(nonatomic) NSUInteger annotationTextSelectingFrom;
+@property(nonatomic) NSSelectionGranularity annotationTextSelectingBy;
 @end
 
 #endif

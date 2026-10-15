@@ -205,7 +205,11 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_dragged(
     ScreenwidePreviewInteractionView *view, NSPoint point) {
-  if (view.annotationPressIgnored) return YES;
+  if (view.annotationPressIgnored) {
+    // A press typing took on a turned layer drags its selection.
+    annotation_text_drag(view.surface, point);
+    return YES;
+  }
   if (!view.annotationDragActive) return NO;
   if (view.annotationDragPending) {
     if (hypot(point.x - view.annotationDragOrigin.x,

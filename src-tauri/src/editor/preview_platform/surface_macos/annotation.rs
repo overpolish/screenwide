@@ -130,9 +130,8 @@ impl RecordingPreviewSurface {
   }
 
   /// Opens the text box at `index` in the published grips for typing, holding
-  /// `text`. `dark_ink` is whether its text is inked dark, which the caret
-  /// follows.
-  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str, dark_ink: bool) {
+  /// `text`.
+  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str) {
     let Ok(index) = i32::try_from(index) else {
       return;
     };
@@ -142,7 +141,6 @@ impl RecordingPreviewSurface {
         index,
         text.as_ptr(),
         u32::try_from(text.len()).unwrap_or(u32::MAX),
-        u32::from(dark_ink),
       );
     }
   }

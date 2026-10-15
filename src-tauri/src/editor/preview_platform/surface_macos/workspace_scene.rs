@@ -22,6 +22,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use self::layers::{LayerCamera, SceneLayer, ScenePicture};
 pub(crate) use self::layers::{LayerPicture, StagedLayer};
+use screenwide_annotations::text::typing::TypingMarks;
 use screenwide_compositor::annotation_gpu::SourceAnnotations;
 use screenwide_compositor::compositor::still_overlay::StillOverlay;
 use screenwide_compositor::compositor::{
@@ -40,6 +41,11 @@ struct SceneState {
   sources: HashMap<u64, Arc<ScenePicture>>,
   /// The camera's effects, drawn on every camera frame the scene holds.
   effects: screenwide_export::camera_effects::preview::PreviewEffects,
+  /// The box being typed into: its layer, its place in that layer's list,
+  /// and the caret and selection drawn into its type. Kept on the scene
+  /// rather than on a layer, so the restaging every typed change causes
+  /// keeps it.
+  typing: Option<(u32, usize, TypingMarks)>,
 }
 
 pub(crate) struct WorkspaceScene {
@@ -61,6 +67,7 @@ impl WorkspaceScene {
         resize: None,
         sources: HashMap::new(),
         effects: Default::default(),
+        typing: None,
       }),
     })
   }
@@ -70,6 +77,17 @@ impl WorkspaceScene {
       .state
       .lock()
       .map_err(|_| "The workspace scene is poisoned".to_owned())
+  }
+
+  /// Draws the caret and selection `typing` holds into its box from now on,
+  /// or none with `None`. Answers whether that changes what is drawn.
+  pub(super) fn set_typing(&self, typing: Option<(u32, usize, TypingMarks)>) -> bool {
+    let Ok(mut state) = self.state() else {
+      return false;
+    };
+    let changed = state.typing != typing;
+    state.typing = typing;
+    changed
   }
 
   /// Replaces the scene with `layers`. While a native gesture has rewritten

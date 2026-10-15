@@ -40,17 +40,8 @@ static const CGFloat kTextCaretRoom = 2.0;
 static void report_text(ScreenwidePreviewSurface *surface, uint32_t phase) {
   ScreenwideAnnotationTextView *view = (ScreenwideAnnotationTextView *)surface.annotationTextView;
   if (view == nil || surface.annotationTextCallback == NULL) return;
-  NSUInteger count = 0;
-  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
-  NSInteger flat = surface.annotationTextIndex;
-  // The same identity a gesture reports: the layer the box belongs to, and
-  // its place in that layer's own list.
-  uint32_t layer = surface.selection.layer_id;
-  uint32_t index = 0;
-  if (flat >= 0 && (NSUInteger)flat < count) {
-    if (items[flat].layer_id >= 0) layer = (uint32_t)items[flat].layer_id;
-    index = items[flat].index;
-  }
+  uint32_t layer = 0, index = 0;
+  annotation_text_identity(surface, &layer, &index);
   NSData *bytes = [view.string dataUsingEncoding:NSUTF8StringEncoding] ?: [NSData data];
   surface.annotationTextRevision += 1;
   surface.annotationTextCallback(phase, layer, index, bytes.bytes, (uint32_t)bytes.length,
@@ -67,6 +58,7 @@ static void remove_text_view(ScreenwidePreviewSurface *surface) {
   BOOL focused = view.window.firstResponder == view;
   surface.annotationTextView = nil;
   surface.annotationTextIndex = -1;
+  annotation_text_marks_end(surface);
   [view removeFromSuperview];
   // Keyboard shortcuts belong to React again.
   if (focused && surface.webview != nil)
@@ -119,7 +111,32 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_finish(ScreenwidePreviewSurface 
 
 - (void)didChangeText {
   [super didChangeText];
-  if (!self.finishing) report_text(self.surface, 1);
+  if (self.finishing) return;
+  report_text(self.surface, 1);
+  annotation_text_marks_changed(self.surface, YES);
+}
+
+- (void)setSelectedRanges:(NSArray<NSValue *> *)ranges
+                 affinity:(NSSelectionAffinity)affinity
+           stillSelecting:(BOOL)stillSelecting {
+  [super setSelectedRanges:ranges affinity:affinity stillSelecting:stillSelecting];
+  if (!self.finishing && self.surface.annotationTextView == self)
+    annotation_text_marks_changed(self.surface, YES);
+}
+
+/// On a turned layer the view stands upright, away from the box it types
+/// into: the interaction view takes every press there and carries it back
+/// through the turn, and says itself where the I-beam shows.
+- (NSView *)hitTest:(NSPoint)point {
+  return annotation_text_turned(self.surface) ? nil : [super hitTest:point];
+}
+
+- (void)resetCursorRects {
+  if (!annotation_text_turned(self.surface)) [super resetCursorRects];
+}
+
+- (void)cursorUpdate:(NSEvent *)event {
+  if (!annotation_text_turned(self.surface)) [super cursorUpdate:event];
 }
 
 /// The editing keys a text field answers without a menu to route them: the
@@ -208,17 +225,14 @@ void screenwide_preview_surface_set_annotation_text_callback(
 }
 
 /// Opens the box at `index` in the published grips for typing, holding
-/// `text`. `dark_ink` is whether the box's text is inked dark, which is the
-/// colour the caret takes.
+/// `text`.
 void screenwide_preview_surface_begin_annotation_text(void *handle, int32_t index,
-                                                      const uint8_t *text, uint32_t length,
-                                                      uint32_t dark_ink) {
+                                                      const uint8_t *text, uint32_t length) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   NSString *value = text == NULL || length == 0
       ? @""
       : [[NSString alloc] initWithBytes:text length:length encoding:NSUTF8StringEncoding];
-  BOOL dark = dark_ink != 0;
   on_main_async(^{
     remove_text_view(surface);
     if (surface.interaction == nil) return;
@@ -242,10 +256,9 @@ void screenwide_preview_surface_begin_annotation_text(void *handle, int32_t inde
     view.textContainer.lineFragmentPadding = 0.0;
     view.textContainer.widthTracksTextView = NO;
     view.textContainer.heightTracksTextView = NO;
-    NSColor *ink = dark ? [NSColor blackColor] : [NSColor whiteColor];
-    view.insertionPointColor = ink;
-    view.selectedTextAttributes =
-        @{NSBackgroundColorAttributeName : [ink colorWithAlphaComponent:0.28]};
+    // The compositor draws the caret and the selection into the box's type.
+    view.insertionPointColor = [NSColor clearColor];
+    view.selectedTextAttributes = @{NSBackgroundColorAttributeName : [NSColor clearColor]};
     view.string = value ?: @"";
     surface.annotationTextIndex = index;
     surface.annotationTextRevision = 0;
@@ -256,11 +269,7 @@ void screenwide_preview_surface_begin_annotation_text(void *handle, int32_t inde
     // one fresh from its own press has nothing typed to place it in.
     NSUInteger caret = view.string.length;
     if (surface.annotationTextOpensAtPoint) {
-      [view.layoutManager ensureLayoutForTextContainer:view.textContainer];
-      caret = MIN([view characterIndexForInsertionAtPoint:
-                           [view convertPoint:surface.annotationTextOpenPoint
-                                     fromView:surface.interaction]],
-                  caret);
+      caret = MIN(annotation_text_index_at(surface, surface.annotationTextOpenPoint), caret);
       surface.annotationTextOpensAtPoint = NO;
     }
     [view setSelectedRange:NSMakeRange(caret, 0)];

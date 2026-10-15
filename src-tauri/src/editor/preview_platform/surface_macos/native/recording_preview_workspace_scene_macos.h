@@ -32,6 +32,13 @@ void screenwide_workspace_scene_release(const void *scene);
 /// Whether the scene holds `count` layers, one for each placement a redraw
 /// would pass. A redraw that cannot draw must not take a drawable.
 int screenwide_workspace_scene_ready(const void *scene, uint32_t count);
+/// Draws a caret and selection into the text box at `index` in layer
+/// `layer`'s list, from byte `start` to byte `end` of its UTF-8 text, the
+/// caret shown where `caret` is non-zero; with `typing` zero, into no box.
+/// Non-zero where that changes what is drawn.
+int screenwide_workspace_scene_set_typing(const void *scene, int typing, uint32_t layer,
+                                          uint32_t index, uint32_t start, uint32_t end,
+                                          int caret);
 /// Draws the scene into `texture`, the drawable's `id<MTLTexture>`, on the
 /// shared queue: one placement per layer, and the crop magnifier if active.
 int screenwide_workspace_scene_draw(const void *scene, void *texture,

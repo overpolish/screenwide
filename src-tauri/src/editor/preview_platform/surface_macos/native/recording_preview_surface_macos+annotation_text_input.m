@@ -3,7 +3,9 @@
 
 //! What the pointer does around a text box: the double-click that opens it
 //! for typing, the press that closes it, and the I-beam over it meanwhile.
-//! The typing itself is in `+annotation_text.m`.
+//! On a turned layer the presses in the box too: the text view stands
+//! upright away from it, so the press is carried back through the turn here
+//! and placed in the view's text. The typing itself is in `+annotation_text.m`.
 
 #import "recording_preview_surface_macos_private.h"
 
@@ -24,6 +26,61 @@ static BOOL annotation_press_drops_text(ScreenwidePreviewSurface *surface, NSPoi
          annotation_shaft_at_point(surface, point) < 0;
 }
 
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_turned(ScreenwidePreviewSurface *surface) {
+  double storage[9];
+  return surface != nil && surface.annotationTextView != nil &&
+         annotation_chrome_turn(surface, storage) != NULL;
+}
+
+SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_text_index_at(ScreenwidePreviewSurface *surface,
+                                                              NSPoint point) {
+  NSTextView *text = surface.annotationTextView;
+  if (text == nil) return 0;
+  [text.layoutManager ensureLayoutForTextContainer:text.textContainer];
+  return MIN([text characterIndexForInsertionAtPoint:[text convertPoint:point
+                                                                fromView:surface.interaction]],
+             text.string.length);
+}
+
+/// Selects from character `from` to character `to`, in the steps the press
+/// that began it selects by.
+static void select_between(ScreenwidePreviewSurface *surface, NSUInteger from, NSUInteger to) {
+  NSTextView *text = surface.annotationTextView;
+  NSRange range = NSMakeRange(MIN(from, to), MAX(from, to) - MIN(from, to));
+  if (surface.annotationTextSelectingBy != NSSelectByCharacter)
+    range = [text selectionRangeForProposedRange:range
+                                     granularity:surface.annotationTextSelectingBy];
+  [text setSelectedRange:range];
+}
+
+/// A press at `point`, on the layer standing upright, in the box being typed
+/// into on a turned layer: it places the caret, a double-click selects the
+/// word and a triple-click the paragraph, and Shift extends the selection.
+/// NO where the press is not that.
+static BOOL annotation_text_turned_press(ScreenwidePreviewSurface *surface, NSPoint point,
+                                         NSEvent *event) {
+  NSTextView *text = surface.annotationTextView;
+  if (!annotation_text_turned(surface) || !NSPointInRect(point, text.frame)) return NO;
+  NSUInteger at = annotation_text_index_at(surface, point);
+  surface.annotationTextSelectingBy = event.clickCount >= 3   ? NSSelectByParagraph
+                                      : event.clickCount == 2 ? NSSelectByWord
+                                                              : NSSelectByCharacter;
+  NSRange chosen = text.selectedRange;
+  BOOL extend = (event.modifierFlags & NSEventModifierFlagShift) != 0 &&
+                surface.annotationTextSelectingBy == NSSelectByCharacter;
+  surface.annotationTextSelectingFrom =
+      !extend ? at : at < chosen.location ? NSMaxRange(chosen) : chosen.location;
+  select_between(surface, surface.annotationTextSelectingFrom, at);
+  return YES;
+}
+
+SCREENWIDE_PREVIEW_PRIVATE void annotation_text_drag(ScreenwidePreviewSurface *surface,
+                                                     NSPoint point) {
+  if (!annotation_text_turned(surface)) return;
+  select_between(surface, surface.annotationTextSelectingFrom,
+                 annotation_text_index_at(surface, point));
+}
+
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_press(
     ScreenwidePreviewInteractionView *view, NSEvent *event) {
   ScreenwidePreviewSurface *surface = view.surface;
@@ -36,8 +93,15 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_press(
   // with nothing to read and lands on something other than empty picture,
   // because Rust removes that box and the grips this press would be read
   // against still count it. A fresh box is read against no grip.
+  // The points are on the layer standing upright, where the grips and the
+  // text view are.
+  NSPoint point = selected_layer_point(
+      surface, [view convertPoint:event.locationInWindow fromView:nil]);
   if (annotation_text_editing(surface)) {
-    NSPoint point = [view convertPoint:event.locationInWindow fromView:nil];
+    if (annotation_text_turned_press(surface, point, event)) {
+      view.annotationPressIgnored = YES;
+      return YES;
+    }
     BOOL drops = annotation_press_drops_text(surface, point);
     if (annotation_text_finish(surface) || drops) return NO;
     view.annotationPressIgnored = YES;
@@ -47,7 +111,6 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_press(
       annotation_active_mode(surface) == ScreenwideAnnotationModeNone ||
       surface.annotationTextCallback == NULL)
     return NO;
-  NSPoint point = [view convertPoint:event.locationInWindow fromView:nil];
   NSInteger shaft = annotation_shaft_at_point(surface, point);
   NSUInteger count = 0;
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);

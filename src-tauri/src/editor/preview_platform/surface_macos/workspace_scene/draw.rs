@@ -40,9 +40,13 @@ impl WorkspaceScene {
         continue;
       }
       let geometry = &layer.geometry;
+      let typing = state
+        .typing
+        .filter(|(typed, _, _)| *typed == layer.layer_id)
+        .map(|(_, index, marks)| (index, marks));
       let mut prepared = layer
         .annotations
-        .placed(geometry.placement, layer.hover, None);
+        .placed(geometry.placement, layer.hover, typing);
       if let Some((track, moment)) = &layer.captions {
         prepared.draw_above(caption_overlay(track, *moment, geometry.size));
       }

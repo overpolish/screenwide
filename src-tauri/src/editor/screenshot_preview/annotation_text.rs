@@ -55,11 +55,7 @@ impl PreviewManager {
     // The published grips are this pane's list in order, so the box's place
     // in it is its place in the grips.
     if let Some(surface) = self.surface.as_ref() {
-      surface.begin_annotation_text(
-        index,
-        text,
-        screenwide_annotations::text::model::dark_ink(&annotation.style),
-      );
+      surface.begin_annotation_text(index, text);
     }
     let mut commit = self.commit_for(pane_index, chosen)?;
     commit.text_edit = Some(TextEditPhase::Begin);

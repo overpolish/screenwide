@@ -147,11 +147,14 @@ var<private> turned_edge: f32 = 0.0;
 var<private> probing_turned: bool = false;
 
 // The point of the upright screen a canvas pixel shows, how many of its
-// pixels one canvas pixel covers there, and the canvas pixel itself, which a
-// moving turn reads afresh at every step.
+// pixels one canvas pixel covers there, how far that point travels for a step
+// of one canvas pixel along each canvas axis, and the canvas pixel itself,
+// which a moving turn reads afresh at every step.
 struct ScreenPoint {
   at: vec2<f32>,
   scale: f32,
+  along_x: vec2<f32>,
+  along_y: vec2<f32>,
   pixel: vec2<f32>,
 }
 
@@ -160,7 +163,7 @@ struct ScreenPoint {
 // shows none of it, so it is sent far beyond every edge.
 fn screen_point(pixel: vec2<f32>) -> ScreenPoint {
   if (!screen_turned()) {
-    return ScreenPoint(pixel, 1.0, pixel);
+    return ScreenPoint(pixel, 1.0, vec2<f32>(1.0, 0.0), vec2<f32>(0.0, 1.0), pixel);
   }
   let x = canvas.scene_turn[0].xyz;
   let y = canvas.scene_turn[1].xyz;
@@ -168,13 +171,13 @@ fn screen_point(pixel: vec2<f32>) -> ScreenPoint {
   let point = vec3<f32>(pixel, 1.0);
   let h = vec3<f32>(dot(x, point), dot(y, point), dot(w, point));
   if (h.z <= 1e-6) {
-    return ScreenPoint(vec2<f32>(-1e9), 1.0, pixel);
+    return ScreenPoint(vec2<f32>(-1e9), 1.0, vec2<f32>(0.0), vec2<f32>(0.0), pixel);
   }
   let at = h.xy / h.z;
   // The perspective divide's derivative along each canvas axis.
   let along_x = (vec2<f32>(x.x, y.x) - at * w.x) / h.z;
   let along_y = (vec2<f32>(x.y, y.y) - at * w.y) / h.z;
-  return ScreenPoint(at, max(length(along_x), length(along_y)), pixel);
+  return ScreenPoint(at, max(length(along_x), length(along_y)), along_x, along_y, pixel);
 }
 
 // Where the canvas draws `point` of whatever the annotations being drawn lie
@@ -848,7 +851,7 @@ fn camera_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
 // The screen layer over `result_in`: its shadow, its recentre inset and its
 // picture, its box read at `box_pixel` and its image at `image_pixel`.
 fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f32>,
-                foreground_only: bool) -> vec4<f32> {
+                foreground_only: bool, span_x: vec2<f32>, span_y: vec2<f32>) -> vec4<f32> {
   var result = result_in;
   let crop_alpha = rounded_coverage(box_pixel, canvas.crop_rect, canvas.effects.x);
   // Axis-aligned zero-radius source edges are already pixel-exact. Smoothing
@@ -885,10 +888,37 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
   }
   let uv = (image_pixel - canvas.image_rect.xy) / canvas.image_rect.zw;
   if (image_alpha > 0.0) {
-    // Sampled inside the motion's loop as well, so from the one level there is.
-    var video = textureSampleLevel(source_image, linear_sampler, uv, 0.0);
-    if (canvas.source_flags.x > 0.5 && is_enlarged(canvas.image_rect.zw, canvas.output_source.zw)) {
-      video = vec4<f32>(fsr_easu(source_image, uv), video.a);
+    var video = vec4<f32>(0.0);
+    // Upright, or averaged over the motion's own steps, one tap reads the
+    // picture; sharpened while it is enlarged.
+    let single = all(span_x == vec2<f32>(0.0)) && all(span_y == vec2<f32>(0.0));
+    if (single) {
+      video = textureSampleLevel(source_image, linear_sampler, uv, 0.0);
+      if (canvas.source_flags.x > 0.5 &&
+          is_enlarged(canvas.image_rect.zw, canvas.output_source.zw)) {
+        video = vec4<f32>(fsr_easu(source_image, uv), video.a);
+      }
+    } else {
+      // A turned screen squeezes the picture along the side it turns away
+      // from: one canvas pixel spans several source pixels there, so the
+      // picture is averaged over that whole footprint, two taps across the
+      // pixel's short way and one for each source pixel along the long way.
+      let source_size = vec2<f32>(textureDimensions(source_image));
+      let step_x = span_x * source_size;
+      let step_y = span_y * source_size;
+      let long_x = length(step_x) >= length(step_y);
+      let major = select(step_y, step_x, long_x);
+      let minor = select(step_x, step_y, long_x);
+      let count = u32(clamp(ceil(length(major)), 2.0, 8.0));
+      var total = vec4<f32>(0.0);
+      for (var step = 0u; step < count; step++) {
+        let along = major * ((f32(step) + 0.5) / f32(count) - 0.5);
+        for (var side = 0u; side < 2u; side++) {
+          let offset = along + minor * select(-0.25, 0.25, side == 1u);
+          total += textureSampleLevel(source_image, linear_sampler, uv + offset / source_size, 0.0);
+        }
+      }
+      video = total / f32(2u * count);
     }
     result = mix(result, vec4<f32>(video.rgb, 1.0), video.a * image_alpha);
   }
@@ -905,7 +935,12 @@ fn moving_screen_layer(result_in: vec4<f32>, screen: ScreenPoint, foreground_onl
     -> vec4<f32> {
   let samples = scene_samples();
   if (samples == 1u) {
-    return screen_layer(result_in, screen.at, screen.at, foreground_only);
+    // A still turned screen is read back through the turn's footprint, so
+    // the side squeezed away is averaged rather than sampled at a point.
+    let denom = max(canvas.image_rect.zw, vec2<f32>(1e-4));
+    let span_x = select(vec2<f32>(0.0), screen.along_x / denom, screen_turned());
+    let span_y = select(vec2<f32>(0.0), screen.along_y / denom, screen_turned());
+    return screen_layer(result_in, screen.at, screen.at, foreground_only, span_x, span_y);
   }
   let turning = turn_moving();
   var sum = vec4<f32>(0.0);
@@ -917,7 +952,8 @@ fn moving_screen_layer(result_in: vec4<f32>, screen: ScreenPoint, foreground_onl
     let image_shift = mix(canvas.scene_image_motion.yz, vec2<f32>(0.0), step);
     let pixel = select(screen.at, moving_screen_point(screen.pixel, step), turning);
     sum += screen_layer(result_in, (pixel - box_shift) / box_scale,
-                        (pixel - image_shift) / image_scale, foreground_only);
+                        (pixel - image_shift) / image_scale, foreground_only,
+                        vec2<f32>(0.0), vec2<f32>(0.0));
   }
   return sum / f32(samples);
 }
@@ -1222,7 +1258,7 @@ struct Panes {
 // point of the upright screen the pixel shows.
 fn screen_pane(result_in: vec4<f32>, screen: ScreenPoint, foreground_only: bool) -> vec4<f32> {
   var result = result_in;
-  turned_edge = select(0.0, screen.scale, screen_turned());
+  turned_edge = select(0.0, screen.scale * max(canvas.motion.z, 1e-4), screen_turned());
   let screen_opacity = canvas.scene_opacity.x;
   if (screen_opacity > 0.0) {
     result = mix(result, moving_screen_layer(result, screen, foreground_only), screen_opacity);

@@ -36,10 +36,7 @@ impl PreviewPlayerManager {
     let AnnotationShape::Text { text, .. } = &annotation.shape else {
       return None;
     };
-    let (text, dark_ink) = (
-      text.clone(),
-      screenwide_annotations::text::model::dark_ink(&annotation.style),
-    );
+    let text = text.clone();
     self.annotation.text = Some(TextSession {
       pane,
       position,
@@ -61,7 +58,7 @@ impl PreviewPlayerManager {
         .as_ref()
         .and_then(|s| s.preview_surface.as_ref()),
     ) {
-      surface.begin_annotation_text(index, &text, dark_ink);
+      surface.begin_annotation_text(index, &text);
     }
     self.commit(
       pane,

@@ -35,6 +35,32 @@ pub unsafe extern "C" fn screenwide_workspace_scene_ready(scene: *const c_void, 
   status(unsafe { self::scene(scene) }.is_some_and(|scene| scene.ready(count as usize)))
 }
 
+/// Draws a caret and selection into the text box at `index` in layer
+/// `layer`'s list, from byte `start` to byte `end` of its text, the caret
+/// shown where `caret` is non-zero; with `typing` zero, into no box. Answers
+/// whether that changes what is drawn.
+#[no_mangle]
+pub unsafe extern "C" fn screenwide_workspace_scene_set_typing(
+  scene: *const c_void,
+  typing: i32,
+  layer: u32,
+  index: u32,
+  start: u32,
+  end: u32,
+  caret: i32,
+) -> i32 {
+  let marks = (typing != 0).then_some((
+    layer,
+    index as usize,
+    screenwide_annotations::text::typing::TypingMarks {
+      start: start as usize,
+      end: end as usize,
+      caret: caret != 0,
+    },
+  ));
+  status(unsafe { self::scene(scene) }.is_some_and(|scene| scene.set_typing(marks)))
+}
+
 /// Draws the scene into `texture`, the workspace drawable's `id<MTLTexture>`,
 /// with one placement for each layer, in drawable pixels.
 #[no_mangle]
