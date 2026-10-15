@@ -86,7 +86,7 @@ pub(in crate::editor::camera_effects) fn compose(
         // the background was kept, the matte laid in before may hold an
         // object taken out since, so it goes, and is laid in afresh once the
         // background is taken away again.
-        if running.is_stopped() && !super::super::choice(&folder).removes_background() {
+        if running.is_stopped() && !camera.removes_background() {
           let _ = change(&folder, |picks| picks.composed = None);
           remove_composed(&folder, None);
         }

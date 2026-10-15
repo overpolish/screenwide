@@ -4,10 +4,12 @@
 import { Camera, FileVideoCamera, Monitor } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
+import { cn } from "../../../../lib/styling";
 import { RECORDING_VIDEO_TRACK_ORDER } from "../../screenshot/screenshot-output";
 import { RecordingVideoTrackId } from "../../types";
 import { TimelineViewportState } from "../timeline-viewport";
 
+import { CameraBackgroundStrip } from "./camera-background-strip";
 import { RecordingTrackLanesProps } from "./recording-track-lanes-contract";
 import { TimelineTrackHeader } from "./timeline-track-header";
 import { TimelineVideoClip } from "./timeline-video-clip";
@@ -15,25 +17,31 @@ import { TimelineVideoClip } from "./timeline-video-clip";
 type VideoTrackRowsProps = Pick<
   RecordingTrackLanesProps,
   | "blade"
+  | "cameraBackground"
   | "enabledTracks"
   | "enabledVideoTracks"
   | "isCameraSeparate"
   | "layout"
   | "onEnabledVideoTracksChange"
+  | "onSeek"
   | "onSelectedTrackChange"
   | "selectedTrack"
+  | "sourceDurationMs"
   | "thumbnails"
 > & { viewport: TimelineViewportState };
 
 export function RecordingVideoTrackRows({
   blade,
+  cameraBackground,
   enabledTracks,
   enabledVideoTracks,
   isCameraSeparate,
   layout,
   onEnabledVideoTracksChange,
+  onSeek,
   onSelectedTrackChange,
   selectedTrack,
+  sourceDurationMs,
   thumbnails,
   viewport,
 }: VideoTrackRowsProps) {
@@ -59,8 +67,41 @@ export function RecordingVideoTrackRows({
         const enabled = enabledVideoTracks.has(trackId);
         const mustRemainEnabled =
           enabled && enabledVideoTracks.size === 1 && enabledTracks.size === 0;
+        const strip =
+          pane.kind === "camera" && cameraBackground ? (
+            <CameraBackgroundStrip
+              edit={blade.edit}
+              isEnabled={enabled}
+              lane={cameraBackground}
+              onSeek={onSeek}
+              onSelectTrack={() => {
+                onSelectedTrackChange(trackId);
+              }}
+              sourceDurationMs={sourceDurationMs}
+              viewport={viewport}
+            />
+          ) : null;
+        const hasRanges =
+          strip !== null && (cameraBackground?.ranges.length ?? 0) > 0;
+        const clip = (
+          <TimelineVideoClip
+            blade={blade}
+            enabled={enabled}
+            onSelect={onSelectedTrackChange}
+            selected={selectedTrack === trackId}
+            thumbnails={thumbnails[trackId]}
+            trackId={trackId}
+            viewport={viewport}
+          />
+        );
         return (
-          <div className="flex items-center gap-section" key={trackId}>
+          <div
+            className={cn(
+              "flex gap-section",
+              strip ? "items-stretch" : "items-center",
+            )}
+            key={trackId}
+          >
             <TimelineTrackHeader
               icon={<Icon />}
               inclusion={{
@@ -90,16 +131,23 @@ export function RecordingVideoTrackRows({
               onSelect={() => {
                 onSelectedTrackChange(trackId);
               }}
+              spansRow={Boolean(strip)}
             />
-            <TimelineVideoClip
-              blade={blade}
-              enabled={enabled}
-              onSelect={onSelectedTrackChange}
-              selected={selectedTrack === trackId}
-              thumbnails={thumbnails[trackId]}
-              trackId={trackId}
-              viewport={viewport}
-            />
+            {strip ? (
+              // The ranges and the clip they act on share one fill, so the
+              // strip reads as part of the camera.
+              <div
+                className={cn(
+                  "flex min-w-0 grow flex-col rounded-control transition-colors duration-200",
+                  hasRanges && "bg-fill-tertiary",
+                )}
+              >
+                {strip}
+                {clip}
+              </div>
+            ) : (
+              clip
+            )}
           </div>
         );
       })}

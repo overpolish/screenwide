@@ -32,20 +32,25 @@ export const listenToCameraEffectsChanged = (
 export const getRecordingCameraEffects = (artifactId: number) =>
   invoke<CameraEffects>("get_recording_camera_effects", { artifactId });
 
-/** Gives the camera these effects, answering once what they need is made
- * with what the project says now. The first time takes a while. */
+/** Turns Enhance on or off, answering once what it needs is made with what
+ * the project says now. The first time takes a while. */
 export const setRecordingCameraEffects = (
   artifactId: number,
-  effects: CameraEffects,
+  enhance: boolean,
 ) =>
   invoke<CameraEffects>("set_recording_camera_effects", {
     artifactId,
-    effects,
+    enhance,
   });
 
-/** Asks for a picture to put behind the person on camera and puts it there,
- * answering with what the project says now. */
-export const chooseRecordingCameraBackground = (artifactId: number) =>
+/** Asks for a picture to put behind the person over the background range
+ * `rangeId` and keeps it as that range's, answering with what the project
+ * says now. */
+export const chooseRecordingCameraBackground = (
+  artifactId: number,
+  rangeId: string,
+) =>
   invoke<CameraEffects>("choose_recording_camera_background", {
     artifactId,
+    rangeId,
   });

@@ -108,7 +108,12 @@ impl RecordingPreviewSurface {
       .map_err(|_| "The camera's effects are poisoned".to_owned())?;
     let effected_source = if pane.source_is_camera {
       let matte = effects.matte_at(composition.seconds);
-      effects.drawn(&self.inner.gpu.compositor, source, matte.as_deref(), 0)?
+      effects.drawn(
+        &self.inner.gpu.compositor,
+        (source, composition.seconds),
+        matte.as_deref(),
+        0,
+      )?
     } else {
       None
     };
@@ -116,7 +121,12 @@ impl RecordingPreviewSurface {
     let effected_camera = match camera {
       Some((raw, ..)) => {
         let matte = effects.matte_at(composition.seconds);
-        effects.drawn(&self.inner.gpu.compositor, raw, matte.as_deref(), 1)?
+        effects.drawn(
+          &self.inner.gpu.compositor,
+          (raw, composition.seconds),
+          matte.as_deref(),
+          1,
+        )?
       }
       None => None,
     };

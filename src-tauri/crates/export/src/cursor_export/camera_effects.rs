@@ -31,12 +31,8 @@ impl FrameEffects {
       return Ok(None);
     };
     // The export reads the matte at the size it was made.
-    let matte = effects
-      .live
-      .matte
-      .as_ref()
-      .map(|file| MatteFrames::open(file, u32::MAX))
-      .transpose()?;
+    let matte =
+      (!effects.live.matte.is_empty()).then(|| MatteFrames::open(&effects.live.matte, u32::MAX));
     Ok(Some(Self {
       effects: effects.clone(),
       pass: EffectsPass::new(gpu),
@@ -63,7 +59,7 @@ impl FrameEffects {
     };
     self.pass.apply(
       compositor,
-      camera,
+      (camera, ms),
       matte.as_deref(),
       &self.effects.live,
       SLOT,

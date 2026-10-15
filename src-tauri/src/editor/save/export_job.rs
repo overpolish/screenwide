@@ -113,9 +113,11 @@ fn save_recording_media(
     *duration_ms,
     screenwide_timeline_edit::TimelinePlan::duration_ms,
   );
-  // The camera is exported with its effects as the preview draws them.
+  // The camera is exported with its effects as the preview draws them, over
+  // the background ranges of the edit the export follows.
+  let edit = timeline_edit::export_edit(timeline_model.as_ref(), project, *id, *duration_ms);
   let camera_effects = crate::editor::camera_effects::CameraRecording::of(artifact)
-    .and_then(|camera| crate::editor::camera_effects::live::load(&camera));
+    .and_then(|camera| crate::editor::camera_effects::live::load(&camera, edit.as_ref()));
   let camera_is_primary = *primary_kind == PrimaryRecordingKind::Camera;
   if !include_primary_video && !include_camera && enabled_stream_indices.is_empty() {
     return Err("Select at least one track to export".to_owned());

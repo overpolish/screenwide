@@ -79,7 +79,7 @@ pub(super) fn run(
     // the very one at this moment.
     let exact = sources
       .camera_effects_now()
-      .is_some_and(|live| live.matte.is_some());
+      .is_some_and(|live| !live.matte.is_empty());
     let cache_matches = image_cache.as_ref().is_some_and(|cache| {
       cache.screen_ms == screen_position_ms
         && cache.camera_ms == camera_position_ms

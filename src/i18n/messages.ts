@@ -559,6 +559,7 @@ export type Messages = {
   "editor-timeline-audio-visualizer": null;
   "editor-timeline-blade": null;
   "editor-timeline-blade-name": null;
+  "editor-timeline-camera-background-range": { background: string | number };
   "editor-timeline-camera-separate": null;
   "editor-timeline-captions": null;
   "editor-timeline-copy-frame": null;

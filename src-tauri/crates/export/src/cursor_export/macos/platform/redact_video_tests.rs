@@ -74,6 +74,7 @@ fn exported(source: &Path, destination: &Path, clip: Option<RecordingAnnotationC
       transcript_allowed_words: Vec::new(),
       captions: None,
       scene_clips: Vec::new(),
+      camera_background_ranges: Vec::new(),
       annotation_clips: clip.into_iter().collect(),
       segments: vec![RecordingTimelineSegment {
         id: 0,

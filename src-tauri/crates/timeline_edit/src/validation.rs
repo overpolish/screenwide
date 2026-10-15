@@ -6,6 +6,7 @@ use super::*;
 pub fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
   screenwide_annotations::timing::validate_clips(&edit.annotation_clips)?;
   screenwide_scenes::validate_clips(&edit.scene_clips)?;
+  camera_backgrounds::validate(&edit.camera_background_ranges)?;
   silences::validate(&edit.silence_cuts)?;
   transcript::validate(&edit.transcript_cuts, &edit.transcript_corrections)?;
   if let Some(captions) = &edit.captions {

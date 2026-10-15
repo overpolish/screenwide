@@ -29,10 +29,8 @@ impl StillEffects {
   /// its longer side, or nothing where there are none.
   pub fn new(live: Option<std::sync::Arc<LiveCameraEffects>>, longest_side: u32) -> Option<Self> {
     let live = live?;
-    let matte = live
-      .matte
-      .as_ref()
-      .and_then(|file| super::matte_frames::MatteFrames::open(file, longest_side).ok());
+    let matte = (!live.matte.is_empty())
+      .then(|| super::matte_frames::MatteFrames::open(&live.matte, longest_side));
     Some(Self { live, matte })
   }
 
@@ -42,33 +40,42 @@ impl StillEffects {
       .matte
       .as_mut()
       .and_then(|matte| matte.at(ms).ok().flatten());
-    apply(frame, matte.as_deref(), &self.live);
+    apply(frame, (matte.as_deref(), ms), &self.live);
   }
 
-  /// Whether the frames it draws keep a transparent background, which a
+  /// Whether the frames it draws may keep a transparent background, which a
   /// JPEG cannot carry.
   pub fn is_transparent(&self) -> bool {
-    self.live.background == CameraBackground::Transparent && self.matte.is_some()
+    self.matte.is_some()
+      && self
+        .live
+        .backgrounds
+        .iter()
+        .any(|range| range.background == CameraBackground::Transparent)
   }
 }
 
-/// Draws `effects` on `frame`, with its matte `matte`. A background taken
-/// away with no matte is left as recorded. Where there is no background the
-/// frame keeps its transparency in its alpha.
+/// Draws `effects` on `frame`, the frame `source_ms` into the recording,
+/// with its matte `matte`. Outside every background range, and where a
+/// range has no matte, the background is left as recorded. Where there is
+/// no background the frame keeps its transparency in its alpha.
 pub(crate) fn apply(
   frame: &mut CapturedImage,
-  matte: Option<&LumaFrame>,
+  (matte, source_ms): (Option<&LumaFrame>, u64),
   effects: &LiveCameraEffects,
 ) {
   let (width, height) = (frame.width, frame.height);
   if width == 0 || height == 0 {
     return;
   }
-  let background = if matte.is_some() {
-    effects.background
-  } else {
-    CameraBackground::Kept
-  };
+  let at = matte.and(effects.background_at(source_ms));
+  let (background, picture, strength) = at.map_or((CameraBackground::Kept, None, 0.0), |at| {
+    (
+      at.background,
+      at.picture.map(|picture| &**picture),
+      at.strength,
+    )
+  });
   let behind = match background {
     CameraBackground::Blurred => {
       RgbaImage::from_raw(width, height, frame.rgba.clone()).map(|room| {
@@ -86,10 +93,7 @@ pub(crate) fn apply(
         )
       })
     }
-    CameraBackground::Image => effects
-      .picture
-      .as_deref()
-      .map(|picture| (filled(picture, (width, height)), false)),
+    CameraBackground::Image => picture.map(|picture| (filled(picture, (width, height)), false)),
     CameraBackground::Kept | CameraBackground::Transparent => None,
   };
   // The frame as recorded, which soft edge pixels take the person's colour
@@ -104,11 +108,20 @@ pub(crate) fn apply(
     let mut person = sharp
       .as_ref()
       .map_or([pixel[0], pixel[1], pixel[2]], |sharp| sharp[index]);
+    // Faded, the person's share is grown toward the whole frame, as
+    // `camera_effects.wgsl` does.
+    let alpha = match (background, matte) {
+      (CameraBackground::Kept, _) | (_, None) => 255,
+      (_, Some(matte)) => {
+        let taken = f32::from(255 - sample(matte, (x, y), (width, height))) * strength;
+        255 - taken.round() as u8
+      }
+    };
     if let (Some(recorded), Some(matte)) = (recorded.as_deref(), matte) {
-      let alpha = f32::from(sample(matte, (x, y), (width, height))) / 255.0;
-      if alpha > 0.0 && alpha < 0.97 {
+      let share_of_person = f32::from(alpha) / 255.0;
+      if share_of_person > 0.0 && share_of_person < 0.97 {
         if let Some(inner) = inner_colour(recorded, matte, (x, y), (width, height)) {
-          let share = ((0.97 - alpha) / 0.5).clamp(0.0, 1.0);
+          let share = ((0.97 - share_of_person) / 0.5).clamp(0.0, 1.0);
           for (channel, value) in person.iter_mut().enumerate() {
             *value = (f32::from(*value) * (1.0 - share) + inner[channel] * share).round() as u8;
           }
@@ -118,10 +131,6 @@ pub(crate) fn apply(
     if let Some(grade) = effects.grade {
       person = grade.apply(person);
     }
-    let alpha = match (background, matte) {
-      (CameraBackground::Kept, _) | (_, None) => 255,
-      (_, Some(matte)) => sample(matte, (x, y), (width, height)),
-    };
     let mixed = match (&behind, background) {
       (Some((behind, graded)), _) => {
         let at = behind.get_pixel(x, y).0;

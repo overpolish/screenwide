@@ -98,12 +98,7 @@ impl RecordingPreviewSurface {
           .lock()
           .map_err(|_| "The camera's effects are poisoned".to_owned())?;
         let mut draw = |picture: &compositor::SourceTexture, slot| {
-          pass.drawn_once(
-            &gpu.compositor,
-            (effects.live, effects.matte),
-            picture,
-            slot,
-          )
+          pass.drawn_once(&gpu.compositor, &effects, picture, slot)
         };
         if effects.on_screen {
           (draw(&source, 2)?, camera_source)

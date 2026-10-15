@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { RecordingAnnotationClip } from "../../recording/annotations/recording-annotations";
+import { CameraBackgroundRange } from "../../recording/camera/camera-background-ranges";
 import { RecordingSceneClip } from "../../recording/scenes/recording-scenes";
 import {
   RecordingKeyboardTimelineItem,
@@ -121,13 +122,52 @@ export const STORY_LAYOUT: RecordingPreviewLayout = {
   width: 1920,
 };
 
-export const STORY_THUMBNAILS: RecordingTimelineThumbnails = {
-  camera: [],
-  primary: Array.from({ length: 24 }, (_, index) => ({
-    id: `primary-${index.toString()}`,
-    url: null,
-  })),
+/** The screen with the camera beside it, for the stories of the camera's
+ * row. */
+export const STORY_CAMERA_LAYOUT: RecordingPreviewLayout = {
+  ...STORY_LAYOUT,
+  panes: [
+    ...STORY_LAYOUT.panes,
+    {
+      height: 405,
+      kind: "camera",
+      sourceHeight: 1080,
+      sourceWidth: 1920,
+      width: 720,
+      x: 1160,
+      y: 635,
+    },
+  ],
 };
+
+const storyThumbnails = (track: string) =>
+  Array.from({ length: 24 }, (_, index) => ({
+    id: `${track}-${index.toString()}`,
+    url: null,
+  }));
+
+export const STORY_THUMBNAILS: RecordingTimelineThumbnails = {
+  camera: storyThumbnails("camera"),
+  primary: storyThumbnails("primary"),
+};
+
+/** The background taken away for an intro, blurred through a demo, and a
+ * picture behind the sign-off. */
+export const STORY_CAMERA_BACKGROUND_RANGES: CameraBackgroundRange[] = [
+  { background: "transparent", endMs: 12_000, id: "range-1", startMs: 0 },
+  { background: "blurred", endMs: 70_000, id: "range-2", startMs: 40_000 },
+  { background: "image", endMs: 120_000, id: "range-3", startMs: 104_000 },
+];
+
+/** One range over the whole recording, worked out from the playhead at 45s
+ * outward: done from 30s to 60s, the rest still to come. */
+export const STORY_CAMERA_BACKGROUND_WORKING: CameraBackgroundRange[] = [
+  { background: "transparent", endMs: 120_000, id: "range-all", startMs: 0 },
+];
+export const STORY_CAMERA_BACKGROUND_PENDING = [
+  { endMs: 30_000, startMs: 0 },
+  { endMs: 120_000, startMs: 60_000 },
+];
 
 /** A moment alone, one with a voice note, and another alone. */
 export const STORY_MOMENTS: RecordingMoment[] = [

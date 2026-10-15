@@ -26,21 +26,32 @@ pub(in crate::editor) fn persist_initial_edit(
     0,
     RecordingTimelineEdit {
       annotation_clips,
-      artifact_id,
-      keyboard_deletions: Box::default(),
-      silence_cuts: Vec::new(),
-      transcript_cuts: Vec::new(),
-      transcript_corrections: Vec::new(),
-      transcript_allowed_words: Vec::new(),
-      captions: None,
       scene_clips,
-      next_segment_id: 1,
-      segments: vec![RecordingTimelineSegment {
-        id: 0,
-        playback_rate: 1.0,
-        source_end: 1.0,
-        source_start: 0.0,
-      }],
+      ..untouched(artifact_id)
     },
   )
+}
+
+/// The edit of a recording nothing has been done to: the whole of it, once,
+/// at full rate.
+pub(in crate::editor) fn untouched(artifact_id: u64) -> RecordingTimelineEdit {
+  RecordingTimelineEdit {
+    annotation_clips: Vec::new(),
+    artifact_id,
+    keyboard_deletions: Box::default(),
+    silence_cuts: Vec::new(),
+    transcript_cuts: Vec::new(),
+    transcript_corrections: Vec::new(),
+    transcript_allowed_words: Vec::new(),
+    captions: None,
+    scene_clips: Vec::new(),
+    camera_background_ranges: Vec::new(),
+    next_segment_id: 1,
+    segments: vec![RecordingTimelineSegment {
+      id: 0,
+      playback_rate: 1.0,
+      source_end: 1.0,
+      source_start: 0.0,
+    }],
+  }
 }

@@ -71,7 +71,9 @@ export function TimelineVideoClip({
           renderContent={() => (
             <VideoThumbnailStrip enabled={enabled} thumbnails={thumbnails} />
           )}
-          selectedSegmentId={blade.selectedSegmentId}
+          // The segment is picked in the lane it was picked in: the others
+          // only share its time.
+          selectedSegmentId={selected ? blade.selectedSegmentId : null}
         />
       </TimelineViewportContent>
     </div>

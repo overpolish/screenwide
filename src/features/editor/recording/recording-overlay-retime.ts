@@ -6,12 +6,12 @@ import {
   RecordingTimelineChange,
   retimeRecordingTimelineClips,
 } from "../timeline/editing/recording-timeline-time";
+import { TimedSpanClip } from "../timeline/tracks/timed-span-clips";
 
 import {
   RecordingAnnotationClip,
   renumberedAnnotationClips,
 } from "./annotations/recording-annotations";
-import { RecordingSceneClip } from "./scenes/recording-scenes";
 
 import type { RecordingTimelineSegment } from "../timeline/recording-timeline-types";
 
@@ -53,12 +53,12 @@ const retimedAnnotationClips = (
     : renumberedAnnotationClips([...retimed], clips);
 };
 
-/** `clips` carried across `change`, kept in timeline order. A part after
- * the first takes an id of its own. */
-export const retimedSceneClips = (
-  clips: RecordingSceneClip[],
+/** `clips`, scenes or camera background ranges, carried across `change`,
+ * kept in timeline order. A part after the first takes an id of its own. */
+export const retimedSpanClips = <Clip extends TimedSpanClip>(
+  clips: Clip[],
   change: RecordingTimelineChange,
-): RecordingSceneClip[] => {
+): Clip[] => {
   const retimed = retimeRecordingTimelineClips(
     clips,
     change,
@@ -83,8 +83,9 @@ export type RecordingOverlayTimelines = WeakMap<
 >;
 
 /**
- * `next`, an edit of `previous`, with its annotations and scenes carried
- * onto its timeline. Clips are timed on the edited video, so an edit that
+ * `next`, an edit of `previous`, with its annotations, scenes and camera
+ * background ranges carried onto its timeline. Clips are timed on the edited
+ * video, so an edit that
  * changes the segments re-times each clip from the timeline its list was
  * timed on: footage it cut away shortens or removes the clip for good, and
  * footage it moved moves the clip with it. A gesture that commits edit after
@@ -124,18 +125,27 @@ export function retimeRecordingOverlays(
     timedOn(next.annotationClips, previous.annotationClips),
   );
   const sceneChange = changeFrom(timedOn(next.sceneClips, previous.sceneClips));
+  const rangeChange = changeFrom(
+    timedOn(next.cameraBackgroundRanges, previous.cameraBackgroundRanges),
+  );
   const annotationClips =
     next.annotationClips && annotationChange
       ? retimedAnnotationClips(next.annotationClips, annotationChange)
       : next.annotationClips;
   const sceneClips =
     next.sceneClips && sceneChange
-      ? retimedSceneClips(next.sceneClips, sceneChange)
+      ? retimedSpanClips(next.sceneClips, sceneChange)
       : next.sceneClips;
+  const cameraBackgroundRanges =
+    next.cameraBackgroundRanges && rangeChange
+      ? retimedSpanClips(next.cameraBackgroundRanges, rangeChange)
+      : next.cameraBackgroundRanges;
   const result =
-    annotationClips === next.annotationClips && sceneClips === next.sceneClips
+    annotationClips === next.annotationClips &&
+    sceneClips === next.sceneClips &&
+    cameraBackgroundRanges === next.cameraBackgroundRanges
       ? next
-      : { ...next, annotationClips, sceneClips };
+      : { ...next, annotationClips, cameraBackgroundRanges, sceneClips };
   recordOverlayTimeline(result, timelines);
   return result;
 }
@@ -148,4 +158,6 @@ export function recordOverlayTimeline(
 ) {
   if (edit.annotationClips) timelines.set(edit.annotationClips, edit.segments);
   if (edit.sceneClips) timelines.set(edit.sceneClips, edit.segments);
+  if (edit.cameraBackgroundRanges)
+    timelines.set(edit.cameraBackgroundRanges, edit.segments);
 }

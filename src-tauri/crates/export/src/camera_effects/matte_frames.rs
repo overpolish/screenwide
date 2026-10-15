@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The matte's frames beside a playing camera. A thread of its own reads
-//! them a window at a time, the next window while the last is drawn, so a
-//! camera playing on never waits for its matte; a camera moved elsewhere
-//! waits for one window read from there.
+//! The matte's frames beside a playing camera. The matte is one file or the
+//! chunks of it made so far, each holding a stretch of the camera. A thread
+//! of its own reads a file a window at a time, the next window while the
+//! last is drawn, so a camera playing on never waits for its matte; a camera
+//! moved elsewhere waits for one window read from there.
 
 use std::collections::VecDeque;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -20,7 +21,53 @@ const WINDOW_MS: u64 = 1_000;
 
 type Window = Result<Vec<LumaFrame>, String>;
 
+/// The camera's matte, read from whichever of its files holds the moment
+/// asked for. A moment no file holds has no matte, and is drawn as recorded.
 pub struct MatteFrames {
+  files: Vec<MatteFile>,
+  longest_side: u32,
+  /// The file read from last, by its place in `files`.
+  open: Option<(usize, FileFrames)>,
+}
+
+impl MatteFrames {
+  /// The matte in `files`, read at most `longest_side` pixels on its
+  /// longer side. Each file is opened once a moment it holds is asked for.
+  pub fn open(files: &[MatteFile], longest_side: u32) -> Self {
+    Self {
+      files: files.to_vec(),
+      longest_side,
+      open: None,
+    }
+  }
+
+  pub(crate) fn files(&self) -> &[MatteFile] {
+    &self.files
+  }
+
+  /// The matte of the camera frame showing at camera time `ms`, or nothing
+  /// where no file holds it.
+  pub fn at(&mut self, ms: u64) -> Result<Option<Arc<LumaFrame>>, String> {
+    let Some(index) = self
+      .files
+      .iter()
+      .position(|file| (file.covers.0..file.covers.1).contains(&ms))
+    else {
+      return Ok(None);
+    };
+    if self.open.as_ref().is_none_or(|(at, _)| *at != index) {
+      let frames = FileFrames::open(&self.files[index], self.longest_side)?;
+      self.open = Some((index, frames));
+    }
+    match self.open.as_mut() {
+      Some((_, frames)) => frames.at(ms),
+      None => Ok(None),
+    }
+  }
+}
+
+/// One matte file's frames, read a window at a time.
+struct FileFrames {
   file: MatteFile,
   frames: VecDeque<Arc<LumaFrame>>,
   /// Where the frames held end.
@@ -31,10 +78,10 @@ pub struct MatteFrames {
   ahead: Option<(u64, u64)>,
 }
 
-impl MatteFrames {
+impl FileFrames {
   /// The matte in `file`, read at most `longest_side` pixels on its longer
   /// side.
-  pub fn open(file: &MatteFile, longest_side: u32) -> Result<Self, String> {
+  fn open(file: &MatteFile, longest_side: u32) -> Result<Self, String> {
     let (requests, asked) = mpsc::channel::<(u64, u64)>();
     let (answer, replies) = mpsc::channel::<Window>();
     let (opened, open) = mpsc::channel();
@@ -79,12 +126,8 @@ impl MatteFrames {
     })
   }
 
-  pub(crate) fn file(&self) -> &MatteFile {
-    &self.file
-  }
-
   /// The matte of the camera frame showing at camera time `ms`.
-  pub fn at(&mut self, ms: u64) -> Result<Option<Arc<LumaFrame>>, String> {
+  fn at(&mut self, ms: u64) -> Result<Option<Arc<LumaFrame>>, String> {
     let slot_ms = self.file.matte_ms(ms);
     if self.held(slot_ms).is_none() {
       // The window read ahead is taken where it holds the frame, and let go

@@ -81,19 +81,19 @@ fn main() {
             camera,
             width,
             height,
-            duration_ms,
             frames,
             frames_per_second,
-            matte,
-            timings,
+            chunks,
           } => matte::matte_camera(
             (model, ffmpeg),
             camera,
             (*width, *height),
-            (*duration_ms, *frames),
-            *frames_per_second,
-            (matte, timings),
+            (*frames, *frames_per_second),
+            chunks,
             &mut progress,
+            &mut |index| {
+              send(&mut out.borrow_mut(), &Reply::ChunkMatted { id, index });
+            },
           )
           .map(|()| Reply::Matted { id }),
           Job::FollowObjects {

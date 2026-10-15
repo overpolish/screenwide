@@ -123,6 +123,9 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
         suggested_file_stem,
         width,
       } => {
+        // Before the edit is read, so a background kept as one choice
+        // arrives in it as a range.
+        super::camera_effects::carry_background(artifact);
         let (timeline_edit_revision, timeline_edit) =
           timeline_edit::snapshot_fields(project, *id, *duration_ms);
         EditorArtifactSnapshot::Recording {

@@ -60,6 +60,13 @@ pub(super) fn stop(folder: &Path, work: Work) {
   }
 }
 
+/// Whether `work` is under way on the camera in `folder`.
+pub(super) fn is_running(folder: &Path, work: Work) -> bool {
+  running()
+    .iter()
+    .any(|(at, each, _)| at == folder && *each == work)
+}
+
 fn running() -> std::sync::MutexGuard<'static, Vec<(PathBuf, Work, Arc<AtomicBool>)>> {
   RUNNING
     .lock()

@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { ComponentProps } from "react";
+
 import {
   RecordingTimelineEdit,
   setRecordingTimelineSegmentPlaybackRate,
@@ -8,18 +10,25 @@ import {
 import { moveRecordingTimelineSegment } from "../editing/recording-timeline-move";
 
 import { RecordingTrackLanesPreview } from "./recording-track-lanes-preview";
-import { STORY_CUT_EDIT } from "./recording-track-lanes-preview-fixtures";
+import {
+  STORY_CAMERA_BACKGROUND_PENDING,
+  STORY_CAMERA_BACKGROUND_RANGES,
+  STORY_CAMERA_BACKGROUND_WORKING,
+  STORY_CUT_EDIT,
+} from "./recording-track-lanes-preview-fixtures";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 function TimelinePreview({
+  camera,
   initialEdit,
 }: {
+  camera?: ComponentProps<typeof RecordingTrackLanesPreview>["camera"];
   initialEdit?: RecordingTimelineEdit;
 }) {
   return (
     <div className="w-[760px]">
-      <RecordingTrackLanesPreview initialEdit={initialEdit} />
+      <RecordingTrackLanesPreview camera={camera} initialEdit={initialEdit} />
     </div>
   );
 }
@@ -79,6 +88,25 @@ export const TrimmedEnds: Story = {
         { id: 0, playbackRate: 2, sourceEnd: 0.5, sourceStart: 0.04 },
         { id: 1, sourceEnd: 0.93, sourceStart: 0.5 },
       ],
+    },
+  },
+};
+
+/** The camera's background taken away in three stretches, each with its own
+ * background. A range slides along the strip over the camera and its edges
+ * trim it; Delete takes the chosen ones away, and the strip closes once the
+ * last is gone. */
+export const CameraBackgroundRanges: Story = {
+  args: { camera: { ranges: STORY_CAMERA_BACKGROUND_RANGES } },
+};
+
+/** The background taken away over the whole recording, worked out from the
+ * playhead outward: the stretches still to come are faded. */
+export const CameraBackgroundWorking: Story = {
+  args: {
+    camera: {
+      pending: STORY_CAMERA_BACKGROUND_PENDING,
+      ranges: STORY_CAMERA_BACKGROUND_WORKING,
     },
   },
 };

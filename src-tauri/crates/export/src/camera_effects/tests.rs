@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use super::balance;
-use super::live::{LiveCameraEffects, MatteFile};
+use super::live::{LiveBackground, LiveCameraEffects, MatteFile};
 use super::look::{self, to_display};
 use super::{cpu, CameraBackground};
 use screenwide_annotations::pin::LumaFrame;
@@ -22,6 +22,7 @@ fn the_matte_of_the_frame_on_screen_is_found_however_unsteady_the_camera() {
       frames_per_second: 30,
       frames_ms: vec![0.0, 5.0, 38.333, 71.667, 140.0, 141.5],
     }),
+    covers: (0, u64::MAX),
   };
   let slot = |frame: u64| (frame * 1_000).div_ceil(30);
   // Each moment shows the last frame stamped by then, as the decoders hand
@@ -56,15 +57,36 @@ fn frame_and_matte() -> (CapturedImage, LumaFrame) {
   (frame, matte)
 }
 
-fn effects(background: CameraBackground, picture: Option<::image::RgbaImage>) -> LiveCameraEffects {
+const VIDEO_MS: u64 = 10_000;
+
+/// Effects taking the background away over `ranges` of a ten-second video,
+/// each `[start_ms, end_ms)` with what is behind the person there.
+fn ranged(
+  ranges: &[(u64, u64, CameraBackground)],
+  picture: Option<::image::RgbaImage>,
+) -> LiveCameraEffects {
+  let picture = picture.map(Arc::new);
   LiveCameraEffects {
-    background,
+    backgrounds: ranges
+      .iter()
+      .map(|&(start_ms, end_ms, background)| LiveBackground {
+        start_ms,
+        end_ms,
+        background,
+        picture: picture.clone(),
+      })
+      .collect(),
+    timeline: Vec::new(),
+    video_ms: VIDEO_MS,
     grade: None,
-    picture: picture.map(Arc::new),
-    matte: None,
+    matte: Vec::new(),
     enhance: false,
     generation: 0,
   }
+}
+
+fn effects(background: CameraBackground, picture: Option<::image::RgbaImage>) -> LiveCameraEffects {
+  ranged(&[(0, VIDEO_MS, background)], picture)
 }
 
 #[test]
@@ -73,7 +95,7 @@ fn the_background_is_taken_from_where_the_matte_finds_no_person() {
   let (mut frame, matte) = frame_and_matte();
   cpu::apply(
     &mut frame,
-    Some(&matte),
+    (Some(&matte), 5_000),
     &effects(CameraBackground::Transparent, None),
   );
   assert_eq!(frame.rgba, [200, 0, 0, 255, 200, 0, 0, 0]);
@@ -83,7 +105,7 @@ fn the_background_is_taken_from_where_the_matte_finds_no_person() {
   let blue = ::image::RgbaImage::from_pixel(4, 2, ::image::Rgba([0, 0, 255, 255]));
   cpu::apply(
     &mut frame,
-    Some(&matte),
+    (Some(&matte), 5_000),
     &effects(CameraBackground::Image, Some(blue)),
   );
   assert_eq!(frame.rgba, [200, 0, 0, 255, 0, 0, 255, 255]);
@@ -92,10 +114,48 @@ fn the_background_is_taken_from_where_the_matte_finds_no_person() {
   let (mut frame, _) = frame_and_matte();
   cpu::apply(
     &mut frame,
-    None,
+    (None, 5_000),
     &effects(CameraBackground::Transparent, None),
   );
   assert_eq!(frame.rgba, [200, 0, 0, 255, 200, 0, 0, 255]);
+}
+
+/// How see-through the room is at `ms` with the background taken away over
+/// `ranges`: 0 as recorded, 255 gone.
+fn room_gone_at(ranges: &[(u64, u64, CameraBackground)], ms: u64) -> u8 {
+  let (mut frame, matte) = frame_and_matte();
+  cpu::apply(&mut frame, (Some(&matte), ms), &ranged(ranges, None));
+  255 - frame.rgba[7]
+}
+
+#[test]
+fn the_room_stays_outside_a_range_and_fades_at_its_edges() {
+  let ranges = [(2_000, 6_000, CameraBackground::Transparent)];
+  assert_eq!(room_gone_at(&ranges, 1_000), 0);
+  assert_eq!(room_gone_at(&ranges, 7_000), 0);
+  assert_eq!(room_gone_at(&ranges, 4_000), 255);
+  // Halfway through the 600 ms the room takes to go, and to come back.
+  let going = room_gone_at(&ranges, 2_300);
+  let coming = room_gone_at(&ranges, 5_700);
+  assert!((100..156).contains(&going), "{going}");
+  assert!((100..156).contains(&coming), "{coming}");
+}
+
+#[test]
+fn butted_ranges_hand_over_without_the_room_coming_back() {
+  let ranges = [
+    (2_000, 4_000, CameraBackground::Transparent),
+    (4_000, 6_000, CameraBackground::Transparent),
+  ];
+  for ms in [3_900, 4_000, 4_100] {
+    assert_eq!(room_gone_at(&ranges, ms), 255, "at {ms} ms");
+  }
+}
+
+#[test]
+fn a_range_at_the_start_of_the_video_holds_from_its_first_frame() {
+  let ranges = [(0, 3_000, CameraBackground::Transparent)];
+  assert_eq!(room_gone_at(&ranges, 0), 255);
 }
 
 /// `frames` frames of a 64 by 36 checkerboard of two greys, `dark` and

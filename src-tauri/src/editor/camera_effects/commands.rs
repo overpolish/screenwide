@@ -15,8 +15,7 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use ts_rs::TS;
 
 use super::make::{self, CameraTool};
-use super::stop::{self, Work};
-use super::{choice, image, keep, live, CameraBackground, CameraEffects, CameraRecording};
+use super::{as_told, choice, image, keep, live, CameraEffects, CameraRecording, Choice};
 use crate::editor::EditorState;
 
 /// The event that tells the editor how far a camera effect has got.
@@ -111,13 +110,31 @@ fn told() -> std::sync::MutexGuard<'static, Vec<(u64, CameraTool)>> {
   TOLD.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// Makes what the project's effects still need, then shows the camera with
-/// them.
+/// Makes what the project's effects still need, the matte nearest the
+/// preview's playhead first, showing the camera with each chunk of the
+/// matte as it is made and with everything once done. Chunks the ranges
+/// came to cover while it worked are made after.
 fn ready(app: &AppHandle, artifact_id: u64, camera: &CameraRecording) -> Result<(), String> {
+  /// Rounds of chunks made one after another, enough for edits made while
+  /// matting without going round for good on a camera that will not matte.
+  const MOST_ROUNDS: usize = 8;
   let mut bars = Bars::new(app, artifact_id);
-  let made = make::ready(app, camera, &mut |tool, fraction| {
-    bars.tell(tool, fraction);
-  });
+  let mut made = Ok(());
+  for _ in 0..MOST_ROUNDS {
+    let playhead_ms =
+      crate::editor::recording_preview_player::position_ms(app, artifact_id).unwrap_or(0);
+    made = make::ready(
+      app,
+      (camera, playhead_ms),
+      &mut |tool, fraction| {
+        bars.tell(tool, fraction);
+      },
+      &mut || shown_changed(app, artifact_id, camera),
+    );
+    if made.is_err() || !camera.removes_background() || !super::matte::has_missing(camera) {
+      break;
+    }
+  }
   drop(bars);
   shown_changed(app, artifact_id, camera);
   made
@@ -133,43 +150,57 @@ pub fn get_recording_camera_effects(
   artifact_id: u64,
 ) -> Result<CameraEffects, String> {
   let camera = open(&app, artifact_id)?;
-  let effects = choice(&camera.folder());
-  if make::has_work(&app, &camera, &effects) {
-    let app = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-      if let Err(error) = ready(&app, artifact_id, &camera) {
-        eprintln!("Could not make the camera's effects: {error}");
-      }
-    });
+  let folder = camera.folder();
+  if make::has_work(&app, &camera, &choice(&folder)) {
+    spawn_ready(&app, artifact_id, camera.clone());
   }
-  Ok(effects)
+  Ok(as_told(&camera))
 }
 
-/// Gives the camera `effects`, shown at once where nothing needs making
-/// first. Where making it fails, the camera keeps the effects it had.
-/// Answers with what the project says now.
+/// Makes what the project's effects need for `camera` in the background,
+/// telling its progress, then shows them.
+pub(super) fn spawn_ready(app: &AppHandle, artifact_id: u64, camera: CameraRecording) {
+  let app = app.clone();
+  tauri::async_runtime::spawn_blocking(move || {
+    if let Err(error) = ready(&app, artifact_id, &camera) {
+      eprintln!("Could not make the camera's effects: {error}");
+    }
+  });
+}
+
+/// Turns Enhance on or off, shown at once where nothing needs making first.
+/// Where making it fails, the camera keeps the effects it had. Answers with
+/// what the project says now.
 #[tauri::command]
 pub async fn set_recording_camera_effects(
   app: AppHandle,
   artifact_id: u64,
-  effects: CameraEffects,
+  enhance: bool,
 ) -> Result<CameraEffects, String> {
   let camera = open(&app, artifact_id)?;
-  if effects.background == CameraBackground::Image && !image::path(&camera.folder()).is_file() {
-    return Err("Choose a picture for the background first".to_owned());
-  }
-  apply(app, artifact_id, camera, effects).await
+  apply(app, artifact_id, camera, Choice { enhance }).await
 }
 
-/// Asks for a picture to put behind the person and puts it there, or does
-/// nothing when the picker is dismissed. Answers with what the project says
-/// now.
+/// Asks for a picture to put behind the person over the range `range_id`
+/// and keeps it as that range's, or does nothing when the picker is
+/// dismissed. Answers with what the project says now: the range shows the
+/// picture once the edit says it does.
 #[tauri::command]
 pub async fn choose_recording_camera_background(
   app: AppHandle,
   window: WebviewWindow,
   artifact_id: u64,
+  range_id: String,
 ) -> Result<CameraEffects, String> {
+  // The id names the picture's file, so it holds what the edit allows.
+  if range_id.is_empty()
+    || range_id.len() > 64
+    || !range_id
+      .bytes()
+      .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+  {
+    return Err("That background range is not one of this recording's".to_owned());
+  }
   let camera = open(&app, artifact_id)?;
   let folder = camera.folder();
   let picker = app.clone();
@@ -187,44 +218,32 @@ pub async fn choose_recording_camera_background(
       .set_parent(&window)
       .blocking_pick_file()
       .and_then(|path| path.into_path().ok());
-    picked.map(|path| image::import(&path, &folder)).transpose()
+    picked
+      .map(|path| image::import(&path, &folder, &range_id))
+      .transpose()
   })
   .await
   .map_err(|error| error.to_string())??;
-  let folder = camera.folder();
-  if chosen.is_none() {
-    return Ok(choice(&folder));
+  // A range showing its picture already shows the new one at once.
+  if chosen.is_some() {
+    shown_changed(&app, artifact_id, &camera);
   }
-  let effects = CameraEffects {
-    background: CameraBackground::Image,
-    ..choice(&folder)
-  };
-  apply(app, artifact_id, camera, effects).await
+  Ok(as_told(&camera))
 }
 
 /// Keeps `effects`, shows them, and makes what they need, putting back the
 /// effects the camera had where that fails and nothing has changed them
-/// since. Turning background removal off stops what was being made for it.
-/// Answers with what the project says once done.
+/// since. Answers with what the project says once done.
 async fn apply(
   app: AppHandle,
   artifact_id: u64,
   camera: CameraRecording,
-  effects: CameraEffects,
+  effects: Choice,
 ) -> Result<CameraEffects, String> {
   tauri::async_runtime::spawn_blocking(move || {
     let folder = camera.folder();
     let before = choice(&folder);
-    let effects = CameraEffects {
-      has_image: image::path(&folder).is_file(),
-      ..effects
-    };
     keep(&folder, &effects)?;
-    if !effects.removes_background() {
-      for work in [Work::Matte, Work::Following, Work::Composing] {
-        stop::stop(&folder, work);
-      }
-    }
     shown_changed(&app, artifact_id, &camera);
     if make::has_work(&app, &camera, &effects) {
       if let Err(error) = ready(&app, artifact_id, &camera) {
@@ -235,7 +254,7 @@ async fn apply(
         return Err(error);
       }
     }
-    Ok(choice(&folder))
+    Ok(as_told(&camera))
   })
   .await
   .map_err(|error| error.to_string())?
@@ -243,5 +262,9 @@ async fn apply(
 
 /// Shows the camera with its effects as the project has them now.
 pub(super) fn shown_changed(app: &AppHandle, artifact_id: u64, camera: &CameraRecording) {
-  crate::editor::recording_preview_player::set_camera_effects(app, artifact_id, live::load(camera));
+  crate::editor::recording_preview_player::set_camera_effects(
+    app,
+    artifact_id,
+    live::load(camera, None),
+  );
 }

@@ -49,8 +49,9 @@ pub(crate) struct EffectsPass {
   /// One opaque white texel, bound where a pass reads no matte or backdrop.
   blank: wgpu::TextureView,
   slots: Mutex<HashMap<usize, Slot>>,
-  /// The picture on the GPU, and the effects' generation it was made for.
-  picture: Mutex<Option<(u64, wgpu::Texture)>>,
+  /// The ranges' pictures on the GPU, by the effects' generation and the
+  /// range's place among them.
+  pictures: Mutex<HashMap<(u64, usize), wgpu::Texture>>,
 }
 
 impl EffectsPass {
@@ -110,18 +111,20 @@ impl EffectsPass {
       sampler,
       blank,
       slots: Mutex::new(HashMap::new()),
-      picture: Mutex::new(None),
+      pictures: Mutex::new(HashMap::new()),
     }
   }
 
-  /// `camera` drawn with `effects`, its matte `matte`, into a picture of its
-  /// own size that stays readable until `slot` is drawn again. A background
-  /// taken away with no matte to hand is drawn as recorded. A blurred room
-  /// is blurred by `compositor` as a blur redaction is.
+  /// `camera`, the frame `source_ms` into the recording, drawn with
+  /// `effects` and its matte `matte` into a picture of its own size that
+  /// stays readable until `slot` is drawn again. Outside every background
+  /// range, and where a range has no matte to hand, the background is drawn
+  /// as recorded. A blurred room is blurred by `compositor` as a blur
+  /// redaction is.
   pub(crate) fn apply(
     &self,
     compositor: &Compositor,
-    camera: &SourceTexture,
+    (camera, source_ms): (&SourceTexture, u64),
     matte: Option<&LumaFrame>,
     effects: &LiveCameraEffects,
     slot: usize,
@@ -135,17 +138,19 @@ impl EffectsPass {
     }
     let index = slot;
     let slot = slots.get_mut(&slot).expect("the slot is held");
-    let background = match (effects.background, matte) {
-      (CameraBackground::Kept, _) | (_, None) => 0,
-      (CameraBackground::Transparent, Some(_)) => 1,
-      (CameraBackground::Blurred, Some(_)) => 2,
-      (CameraBackground::Image, Some(_)) => 3,
+    let at = matte.and(effects.background_at(source_ms));
+    let background = match at.map(|at| at.background) {
+      None | Some(CameraBackground::Kept) => 0,
+      Some(CameraBackground::Transparent) => 1,
+      Some(CameraBackground::Blurred) => 2,
+      Some(CameraBackground::Image) => 3,
     };
     let matte_view = match matte {
       Some(matte) if background != 0 => slot.matte(self.gpu, matte, effects.generation),
       _ => self.blank.clone(),
     };
     let grade = effects.grade;
+    let strength = at.map_or(0.0, |at| at.strength);
     let uniform = |target: (u32, u32), picture: [f32; 4]| Uniform {
       mode: [
         background,
@@ -159,6 +164,7 @@ impl EffectsPass {
       }),
       picture,
       target_size: [target.0 as f32, target.1 as f32, 0.0, 0.0],
+      strength: [strength, 0.0, 0.0, 0.0],
     };
     let whole = [1.0, 1.0, 0.0, 0.0];
     let mut encoder = self
@@ -168,18 +174,15 @@ impl EffectsPass {
         label: Some("Screenwide camera effects"),
       });
     let blank = &self.blank;
-    let (backdrop, picture) = match background {
-      2 => (
+    let (backdrop, picture) = match (background, at.and_then(|at| Some((at.index, at.picture?)))) {
+      (2, _) => (
         compositor.blurred_whole(camera, room_blur_deviation(camera.size), index)?,
         whole,
       ),
-      3 => match effects.picture.as_deref() {
-        Some(picture) => (
-          self.picture(effects.generation, picture),
-          cover(picture, camera.size),
-        ),
-        None => (blank.clone(), whole),
-      },
+      (3, Some((range, picture))) => (
+        self.picture((effects.generation, range), picture),
+        cover(picture, camera.size),
+      ),
       _ => (blank.clone(), whole),
     };
     let main = uniform(camera.size, picture);
@@ -200,27 +203,30 @@ impl EffectsPass {
     })
   }
 
-  /// The picture on the GPU, uploaded once for each set of effects.
-  fn picture(&self, generation: u64, picture: &::image::RgbaImage) -> wgpu::TextureView {
+  /// The picture of range `index` on the GPU, uploaded once for each set of
+  /// effects. The pictures of earlier sets are let go.
+  fn picture(
+    &self,
+    (generation, index): (u64, usize),
+    picture: &::image::RgbaImage,
+  ) -> wgpu::TextureView {
     let mut held = self
-      .picture
+      .pictures
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if let Some((at, texture)) = held.as_ref() {
-      if *at == generation {
-        return texture.create_view(&Default::default());
-      }
-    }
-    let texture = upload(
-      self.gpu,
-      wgpu::TextureFormat::Rgba8Unorm,
-      picture.dimensions(),
-      picture.as_raw(),
-      "Screenwide camera background picture",
-    );
-    let view = texture.create_view(&Default::default());
-    *held = Some((generation, texture));
-    view
+    held.retain(|(at, _), _| *at == generation);
+    held
+      .entry((generation, index))
+      .or_insert_with(|| {
+        upload(
+          self.gpu,
+          wgpu::TextureFormat::Rgba8Unorm,
+          picture.dimensions(),
+          picture.as_raw(),
+          "Screenwide camera background picture",
+        )
+      })
+      .create_view(&Default::default())
   }
 
   fn pass(

@@ -20,12 +20,12 @@ mod sharpen;
 mod tests;
 
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
-/// What is behind the person on camera.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
+/// What is behind the person on camera. Projects kept it as one choice for
+/// the whole camera before backgrounds had ranges, so it still reads from
+/// there.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
-#[ts(export)]
 pub enum CameraBackground {
   /// The room, as recorded.
   #[default]

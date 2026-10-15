@@ -38,6 +38,7 @@ export function TimelineTrackHeader({
   label,
   note,
   onSelect,
+  spansRow = false,
 }: {
   icon: ReactNode;
   label: string;
@@ -45,6 +46,9 @@ export function TimelineTrackHeader({
   isSelected?: boolean;
   note?: { icon: ReactNode; label: string };
   onSelect?: () => void;
+  /** Fill the height of a row taller than one lane rather than sit at one
+   * lane's height. */
+  spansRow?: boolean;
 }) {
   const selectButton = (
     <Button
@@ -84,7 +88,10 @@ export function TimelineTrackHeader({
   const row = (
     <div
       className={cn(
-        "flex h-control-height w-timeline-gutter shrink-0 items-center",
+        "flex w-timeline-gutter shrink-0 items-center",
+        // A row of several lanes is chosen as a whole, so its header fills
+        // the row's height and the selection tint covers every lane in it.
+        spansRow ? "min-h-control-height self-stretch" : "h-control-height",
         // A lane of stacked rows can be taller than the band shows. Pinned to
         // both edges, the label stays centred while the lane fits and holds
         // to whichever edge cuts it off otherwise, never leaving its lane.

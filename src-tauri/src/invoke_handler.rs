@@ -114,7 +114,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     editor::camera_effects::picks::commands::set_recording_camera_picking,
     editor::camera_effects::picks::commands::remove_recording_camera_pick,
     editor::commands::set_export_directory,
-    editor::commands::set_recording_timeline_edit,
+    editor::commands::timeline::set_recording_timeline_edit,
     editor::commands::set_screenshot_background_radius,
     editor::commands::set_screenshot_radius,
     #[cfg(any(target_os = "macos", target_os = "windows"))]

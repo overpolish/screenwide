@@ -4,7 +4,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { useLaneAnnotationSelection } from "../../recording/annotations/use-lane-annotation-selection";
-import { useRecordingSceneSelection } from "../../recording/scenes/use-recording-scene-selection";
 import { useEditorWindowShortcuts } from "../../shortcuts/use-editor-window-shortcuts";
 import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
 import {
@@ -29,20 +28,25 @@ import { setRecordingTimelineRangePlaybackRate } from "../editing/recording-time
 import { createPlayhead } from "../scrub-playhead";
 
 import { RecordingTrackLanes } from "./recording-track-lanes";
+import { useStoryCameraBackground } from "./recording-track-lanes-preview-camera";
 import * as story from "./recording-track-lanes-preview-fixtures";
 import { useTimelineItemSelection } from "./timeline-item-selection";
+import { useTimedSpanSelection } from "./use-timed-span-selection";
 
 /**
  * The timeline lanes wired to real edit state, shared by the lanes story and
  * the resizable band story so neither has to hand-roll a shell around them.
  * `audioTrackCount` grows the band past a short viewport, which is what makes
- * the scrolling and its overflow shadows worth looking at.
+ * the scrolling and its overflow shadows worth looking at. `camera` adds the
+ * camera's row, with its background ranges over it.
  */
 export function RecordingTrackLanesPreview({
   audioTrackCount = 1,
+  camera,
   initialEdit = createRecordingTimelineEdit(1),
 }: {
   audioTrackCount?: number;
+  camera?: Parameters<typeof useStoryCameraBackground>[0];
   initialEdit?: RecordingTimelineEdit;
 }) {
   const audioTracks = useMemo(
@@ -53,8 +57,9 @@ export function RecordingTrackLanesPreview({
   const playhead = useMemo(() => createPlayhead(), []);
   const [enabledAudio, setEnabledAudio] = useState(() => new Set([0]));
   const [enabledVideo, setEnabledVideo] = useState<Set<RecordingVideoTrackId>>(
-    () => new Set(["primary"]),
+    () => new Set(camera ? ["primary", "camera"] : ["primary"]),
   );
+  const cameraBackground = useStoryCameraBackground(camera ?? {});
   const [annotationClips, setAnnotationClips] = useState(
     story.STORY_ANNOTATION_CLIPS,
   );
@@ -62,7 +67,7 @@ export function RecordingTrackLanesPreview({
   const [sceneClips, setSceneClips] = useState(story.STORY_SCENE_CLIPS);
   // The story's playhead only moves the drawn playhead, so the choice stays
   // where it is made rather than following it.
-  const sceneSelection = useRecordingSceneSelection({
+  const sceneSelection = useTimedSpanSelection({
     clips: sceneClips,
     commit: setSceneClips,
     currentId: null,
@@ -238,6 +243,7 @@ export function RecordingTrackLanesPreview({
           transcriptHighlight: null,
           updateTrim: () => null,
         }}
+        cameraBackground={camera ? cameraBackground : undefined}
         captions={story.STORY_CAPTIONS}
         captionSelection={captionSelection}
         durationMs={timelineDurationMs}
@@ -247,7 +253,7 @@ export function RecordingTrackLanesPreview({
         hiddenKeyboardItemIds={new Set()}
         keyboardItems={story.STORY_KEYBOARD_ITEMS}
         keyboardSelection={keyboardSelection}
-        layout={story.STORY_LAYOUT}
+        layout={camera ? story.STORY_CAMERA_LAYOUT : story.STORY_LAYOUT}
         moments={story.STORY_MOMENTS}
         onAnnotationsChange={setAnnotationClips}
         onAnnotationsClear={annotationSelection.onClearSelection}

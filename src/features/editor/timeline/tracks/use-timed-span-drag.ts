@@ -3,9 +3,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
-import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
-import { SeekHandler } from "../../timeline/timeline-seek";
+import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
+import { recordingTimelineLengthMs } from "../editing/recording-timeline-time";
+import { SeekHandler } from "../timeline-seek";
 import {
   beginTimelineSnapGesture,
   nearestTimelineSnapTarget,
@@ -13,61 +13,64 @@ import {
   TimelineSnapGesture,
   timelineSnapRangeShift,
   useTimelineSnap,
-} from "../../timeline/timeline-snap";
+} from "../timeline-snap";
 import {
   TimelineViewportState,
   timelineXToFraction,
-} from "../../timeline/timeline-viewport";
+} from "../timeline-viewport";
 
 import {
-  moveRecordingSceneClip,
-  RecordingSceneClip,
-  resizeRecordingSceneClip,
-} from "./recording-scenes";
+  moveTimedSpanClip,
+  resizeTimedSpanClip,
+  TimedSpanClip,
+} from "./timed-span-clips";
 
-export type RecordingSceneDragEdge = "body" | "endMs" | "startMs";
+export type TimedSpanDragEdge = "body" | "endMs" | "startMs";
 
 /** How far a press travels before it is a drag rather than a click. */
 const DRAG_SLOP_PX = 4;
 
-type Drag = {
-  edge: RecordingSceneDragEdge;
+type Drag<Clip> = {
+  edge: TimedSpanDragEdge;
   id: string;
   moved: boolean;
-  original: RecordingSceneClip[];
+  original: Clip[];
   snap: TimelineSnapGesture;
   startX: number;
 };
 
 /**
- * A press on a scene clip, owned until the pointer is released: the body
+ * A press on a span clip, owned until the pointer is released: the body
  * slides the clip in time and an edge trims it, both stopping at the clips on
- * either side. A trim parks the preview at the edge being moved. The draft
- * is shown in the preview as it changes and committed on release. The moves
- * and the release are listened for on the window, so a pointer that leaves
- * the lane mid-drag keeps dragging, and Escape abandons the drag.
+ * either side, and no clip shorter than `minimumMs`. A trim parks the preview
+ * at the edge being moved. The draft is shown in the preview as it changes
+ * and committed on release. The moves and the release are listened for on the
+ * window, so a pointer that leaves the lane mid-drag keeps dragging, and
+ * Escape abandons the drag.
  */
-export function useRecordingSceneDrag({
+export function useTimedSpanDrag<Clip extends TimedSpanClip>({
   clips,
   edit,
+  minimumMs,
   onCommit,
   onDraftChange,
   onSeek,
   sourceDurationMs,
   viewport,
 }: {
-  clips: RecordingSceneClip[];
+  clips: Clip[];
   edit: RecordingTimelineEdit;
-  onCommit: (clips: RecordingSceneClip[]) => void;
+  minimumMs: number;
+  onCommit: (clips: Clip[]) => void;
   sourceDurationMs: number;
   viewport: TimelineViewportState;
   /** Shows the draft in the preview, or the committed clips for null. */
-  onDraftChange?: (clips: RecordingSceneClip[] | null) => void;
+  onDraftChange?: (clips: Clip[] | null) => void;
   onSeek?: SeekHandler;
 }) {
-  const [draft, setDraft] = useState<RecordingSceneClip[] | null>(null);
-  const draftRef = useRef<RecordingSceneClip[] | null>(null);
-  const dragRef = useRef<Drag | null>(null);
+  const [draft, setDraft] = useState<Clip[] | null>(null);
+  const draftRef = useRef<Clip[] | null>(null);
+  const dragRef = useRef<Drag<Clip> | null>(null);
   // Read by the click that follows a release: a press that slid a clip was a
   // drag, and must not also count as a click on it.
   const movedRef = useRef(false);
@@ -75,11 +78,7 @@ export function useRecordingSceneDrag({
   const snap = useTimelineSnap();
   const lengthMs = recordingTimelineLengthMs(edit, sourceDurationMs);
   const detachRef = useRef<() => void>(() => undefined);
-  const seekEdge = (
-    next: RecordingSceneClip[],
-    drag: Drag,
-    phase: "end" | "move",
-  ) => {
+  const seekEdge = (next: Clip[], drag: Drag<Clip>, phase: "end" | "move") => {
     const clip = next.find((item) => item.id === drag.id);
     if (!clip || drag.edge === "body" || lengthMs <= 0) return;
     const edgeMs = drag.edge === "endMs" ? clip.endMs - 1 : clip.startMs;
@@ -101,7 +100,7 @@ export function useRecordingSceneDrag({
     const outputWidthPx = viewport.zoom * bounds.width;
     // Retaken every move: a wheel zoom mid-drag changes what 8px spans.
     drag.snap.threshold = TIMELINE_SNAP_THRESHOLD_PX / outputWidthPx;
-    let next: RecordingSceneClip[];
+    let next: Clip[];
     if (drag.edge === "body") {
       const clip = drag.original.find((item) => item.id === drag.id);
       if (!clip) return;
@@ -112,22 +111,24 @@ export function useRecordingSceneDrag({
         clip.endMs / lengthMs + shift,
       );
       drag.snap.showGuide(snapped?.target ?? null);
-      next = moveRecordingSceneClip({
+      next = moveTimedSpanClip({
         clips: drag.original,
         deltaOutput: shift + (snapped?.shift ?? 0),
         edit,
         id: drag.id,
+        minimumMs,
         sourceDurationMs,
       });
     } else {
       const reached = timelineXToFraction(clientX, viewport, bounds);
       const target = nearestTimelineSnapTarget(drag.snap, reached);
       drag.snap.showGuide(target);
-      next = resizeRecordingSceneClip({
+      next = resizeTimedSpanClip({
         clips: drag.original,
         edge: drag.edge,
         edit,
         id: drag.id,
+        minimumMs,
         output: target ?? reached,
         sourceDurationMs,
       });
@@ -167,11 +168,11 @@ export function useRecordingSceneDrag({
     id,
   }: {
     clientX: number;
-    edge: RecordingSceneDragEdge;
+    edge: TimedSpanDragEdge;
     id: string;
   }) => {
     detachRef.current();
-    const drag: Drag = {
+    const drag: Drag<Clip> = {
       edge,
       id,
       moved: false,

@@ -15,6 +15,7 @@ import {
   RecordingVideoTrackId,
 } from "../../types";
 
+import type { CameraBackgroundLane } from "./camera-background-strip";
 import type { TimelineItemSelection } from "./timeline-item-selection";
 import type { Caption } from "../../../../bindings/Caption";
 import type { AudioTrackVolumes } from "../audio/audio-level";
@@ -54,6 +55,9 @@ export type RecordingTrackLanesProps = {
   /** What an annotation clip's menu does to its pin. Without it, the lane
    * offers no pinning. */
   annotationPinning?: AnnotationClipPinning;
+  /** The camera's background ranges, drawn over its clip. Without it the
+   * camera row has no strip for them. */
+  cameraBackground?: CameraBackgroundLane;
   /** The captions the edit asks of the transcript, timed on the edited
    * video; none hides the lane. */
   captions?: readonly Caption[];

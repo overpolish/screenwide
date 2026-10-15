@@ -6,7 +6,7 @@
 //! shows the canvas through where the camera is the recording itself.
 
 use super::*;
-use crate::camera_effects::live::{LiveCameraEffects, MatteFile};
+use crate::camera_effects::live::{LiveBackground, LiveCameraEffects, MatteFile};
 use crate::camera_effects::CameraBackground;
 use crate::cursor_export::ExportCameraEffects;
 use screenwide_annotations::timing::AnnotationTrack;
@@ -45,10 +45,10 @@ fn movie(path: &Path, filter: &str, size: (u32, u32)) {
     .success());
 }
 
-/// The frame a second into the export of `screen`, as RGB.
-fn frame_of(destination: &Path) -> impl Fn(u32, u32) -> [u8; 3] {
+/// The frame `seconds` into the export at `destination`, as RGB.
+fn frame_of(destination: &Path, seconds: &str) -> impl Fn(u32, u32) -> [u8; 3] {
   let frame = Command::new(screenwide_sidecar::ffmpeg_path())
-    .args(["-hide_banner", "-loglevel", "error", "-ss", "1.0", "-i"])
+    .args(["-hide_banner", "-loglevel", "error", "-ss", seconds, "-i"])
     .arg(destination)
     .args([
       "-frames:v",
@@ -70,8 +70,13 @@ fn frame_of(destination: &Path) -> impl Fn(u32, u32) -> [u8; 3] {
 }
 
 /// A red camera with a matte holding the person on its left half only, and
-/// the effects `background` reading it, with a blue picture to hand.
-fn camera_with_matte(directory: &Path, background: CameraBackground) -> ExportCameraEffects {
+/// effects showing `background` behind them from the start of the video to
+/// `end_ms`, with a blue picture to hand.
+fn camera_with_matte(
+  directory: &Path,
+  background: CameraBackground,
+  end_ms: u64,
+) -> ExportCameraEffects {
   let (camera, matte) = (directory.join("camera.mov"), directory.join("matte.mp4"));
   movie(&camera, "drawbox=c=red:t=fill", (CAMERA.2, CAMERA.3));
   movie(
@@ -86,18 +91,25 @@ fn camera_with_matte(directory: &Path, background: CameraBackground) -> ExportCa
   let blue = ::image::RgbaImage::from_pixel(64, 48, ::image::Rgba([0, 0, 255, 255]));
   ExportCameraEffects {
     live: Arc::new(LiveCameraEffects {
-      background,
+      backgrounds: vec![LiveBackground {
+        start_ms: 0,
+        end_ms,
+        background,
+        picture: Some(Arc::new(blue)),
+      }],
+      timeline: Vec::new(),
+      video_ms: 2_000,
       grade: None,
-      picture: Some(Arc::new(blue)),
       enhance: false,
-      matte: Some(MatteFile {
+      matte: vec![MatteFile {
         path: matte,
         timings: Arc::new(MatteTimings {
           format: MatteTimings::FORMAT,
           frames_per_second: 10,
           frames_ms: (0..20).map(|frame| f64::from(frame) * 100.0).collect(),
         }),
-      }),
+        covers: (0, u64::MAX),
+      }],
       generation: 1,
     }),
     on_screen: false,
@@ -139,12 +151,11 @@ fn near([r, g, b]: [u8; 3], [er, eg, eb]: [u8; 3]) -> bool {
   r.abs_diff(er) < 60 && g.abs_diff(eg) < 60 && b.abs_diff(eb) < 60
 }
 
-#[test]
-fn a_baked_camera_shows_its_picture_where_the_matte_finds_no_person() {
-  let directory = directory("baked");
+/// Exports a blank screen with the camera of `effects` baked in, from the
+/// movies in `directory`, answering where the export is.
+fn baked_export(directory: &Path, effects: ExportCameraEffects) -> std::path::PathBuf {
   let (screen, destination) = (directory.join("screen.mov"), directory.join("output.mp4"));
   movie(&screen, "null", (WIDTH, HEIGHT));
-  let effects = camera_with_matte(&directory, CameraBackground::Image);
   let camera_path = directory.join("camera.mov");
   let output = output_settings();
   let cancelled = AtomicBool::new(false);
@@ -193,7 +204,14 @@ fn a_baked_camera_shows_its_picture_where_the_matte_finds_no_person() {
     width: WIDTH,
   });
   assert_eq!(result.unwrap(), ExportRunResult::Completed);
-  let pixel = frame_of(&destination);
+  destination
+}
+
+#[test]
+fn a_baked_camera_shows_its_picture_where_the_matte_finds_no_person() {
+  let directory = directory("baked");
+  let effects = camera_with_matte(&directory, CameraBackground::Image, 2_000);
+  let pixel = frame_of(&baked_export(&directory, effects), "1.0");
   std::fs::remove_dir_all(directory).unwrap();
   let middle = CAMERA.1 + CAMERA.3 / 2;
   let person = pixel(CAMERA.0 + CAMERA.2 / 4, middle);
@@ -202,11 +220,33 @@ fn a_baked_camera_shows_its_picture_where_the_matte_finds_no_person() {
   assert!(near(room, [0, 0, 255]), "the room is the picture: {room:?}");
 }
 
+/// A range over the first second only: the picture behind the person there,
+/// and the room as recorded once the range is over.
+#[test]
+fn a_baked_camera_keeps_its_room_outside_its_background_range() {
+  let directory = directory("ranged");
+  let effects = camera_with_matte(&directory, CameraBackground::Image, 1_000);
+  let destination = baked_export(&directory, effects);
+  let (during, after) = (frame_of(&destination, "0.2"), frame_of(&destination, "1.5"));
+  std::fs::remove_dir_all(directory).unwrap();
+  let room = (CAMERA.0 + CAMERA.2 * 3 / 4, CAMERA.1 + CAMERA.3 / 2);
+  assert!(
+    near(during(room.0, room.1), [0, 0, 255]),
+    "the room is the picture in the range: {:?}",
+    during(room.0, room.1)
+  );
+  assert!(
+    near(after(room.0, room.1), [255, 0, 0]),
+    "the room is back after it: {:?}",
+    after(room.0, room.1)
+  );
+}
+
 #[test]
 fn a_camera_recording_without_a_background_shows_the_canvas_behind_the_person() {
   let directory = directory("transparent");
   let destination = directory.join("output.mp4");
-  let mut effects = camera_with_matte(&directory, CameraBackground::Transparent);
+  let mut effects = camera_with_matte(&directory, CameraBackground::Transparent, 2_000);
   effects.on_screen = true;
   let camera_path = directory.join("camera.mov");
   // The camera fills the canvas, inset to show the green canvas around it.
@@ -242,7 +282,7 @@ fn a_camera_recording_without_a_background_shows_the_canvas_behind_the_person() 
     width: CAMERA.2,
   });
   assert_eq!(result.unwrap(), ExportRunResult::Completed);
-  let pixel = frame_of(&destination);
+  let pixel = frame_of(&destination, "1.0");
   std::fs::remove_dir_all(directory).unwrap();
   let middle = CAMERA.1 + CAMERA.3 / 2;
   let person = pixel(CAMERA.0 + CAMERA.2 / 4, middle);

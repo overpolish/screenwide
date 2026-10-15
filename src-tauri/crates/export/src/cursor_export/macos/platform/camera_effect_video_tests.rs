@@ -82,6 +82,7 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
       transcript_allowed_words: Vec::new(),
       captions: None,
       scene_clips: Vec::new(),
+      camera_background_ranges: Vec::new(),
       annotation_clips: camera
         .into_iter()
         .map(|annotation| RecordingAnnotationClip {

@@ -11,7 +11,7 @@ use screenwide_timeline_edit::{
 };
 
 mod initial_edit;
-pub(in crate::editor) use initial_edit::persist_initial_edit;
+pub(in crate::editor) use initial_edit::{persist_initial_edit, untouched};
 
 /// The project's edit and its revision, bound to `artifact_id`, for a
 /// recording `duration_ms` long. An older edit's clips are carried onto the
@@ -69,6 +69,21 @@ pub fn export_plan(
 /// recording's own length while it has no edit.
 pub fn edited_duration_ms(project: &Path, duration_ms: u64) -> u64 {
   export_plan(None, project, 0, duration_ms).map_or(duration_ms, |plan| plan.duration_ms())
+}
+
+/// The camera's background ranges as the project whose manifest is
+/// `project` keeps them in its edit; none where it has no edit this build
+/// reads. Ranges came with the edit's current version, so an older one has
+/// none to carry onto the timeline.
+pub fn saved_camera_background_ranges(
+  project: &Path,
+) -> Vec<screenwide_timeline_edit::CameraBackgroundRange> {
+  screenwide_project::read(project)
+    .ok()
+    .and_then(|manifest| manifest.timeline)
+    .filter(|persisted| persisted.version == FORMAT_VERSION && validate(&persisted.edit).is_ok())
+    .map(|persisted| persisted.edit.camera_background_ranges)
+    .unwrap_or_default()
 }
 
 pub fn persist(

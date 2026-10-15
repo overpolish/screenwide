@@ -100,7 +100,9 @@ pub enum Job {
     output: PathBuf,
   },
   /// The person in a camera recording told apart from the room behind them,
-  /// answered with [`Reply::Matted`] once the matte is written. The helper
+  /// one chunk of the camera at a time, in the order given: each chunk is
+  /// told with [`Reply::ChunkMatted`] once its matte is written, and the job
+  /// answered with [`Reply::Matted`] once every chunk's is. The helper
   /// decodes and encodes the video with the app's FFmpeg, so no frame passes
   /// through the protocol.
   MatteCamera {
@@ -114,20 +116,13 @@ pub enum Job {
     /// asks; the matte is stretched over the camera when drawn.
     width: u32,
     height: u32,
-    /// How long the camera is, in milliseconds, which it is split by to be
-    /// matted in parts side by side.
-    duration_ms: u64,
-    /// About how many frames the camera has, for the progress told.
+    /// About how many frames the chunks hold together, for the progress
+    /// told.
     frames: u64,
     /// The steady rate the matte's frames are written at, one for each frame
     /// of the camera in turn, whatever the camera's own timing.
     frames_per_second: u32,
-    /// Where the matte goes: how much of each pixel is the person, as the
-    /// brightness of an H.264 video, which every platform decodes.
-    matte: PathBuf,
-    /// Where the [`MatteTimings`] go, which line the matte's frames up with
-    /// the camera's.
-    timings: PathBuf,
+    chunks: Vec<MatteChunk>,
   },
   /// Objects clicked in one frame of the camera followed through the whole
   /// recording: forwards to the end, told with [`Reply::Halfway`] once
@@ -176,6 +171,20 @@ pub struct MatteTimings {
 impl MatteTimings {
   /// Changes whenever a matte made before would be read wrongly now.
   pub const FORMAT: u32 = 5;
+}
+
+/// One stretch of the camera to matte, the frames showing from `start_ms`
+/// up to but not including `end_ms`, in camera time, and where its matte
+/// goes: how much of each pixel is the person, as the brightness of an
+/// H.264 video every platform decodes, beside the [`MatteTimings`] that line
+/// its frames up with the camera's. Both are written whole or not at all.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatteChunk {
+  pub start_ms: u64,
+  pub end_ms: u64,
+  pub matte: PathBuf,
+  pub timings: PathBuf,
 }
 
 /// An object clicked, and where its masks go, each a grey H.264 video with a frame for each camera frame it
@@ -232,9 +241,15 @@ pub enum Reply {
   Separated {
     id: u64,
   },
-  /// The camera's matte is written.
+  /// The camera's matte is written: every chunk's.
   Matted {
     id: u64,
+  },
+  /// The matte of chunk `index`, in the order asked, is written. Sent before
+  /// the reply that ends the job.
+  ChunkMatted {
+    id: u64,
+    index: usize,
   },
   /// The objects' masks after the clicked frame are written, those before
   /// it to come. Sent before the reply that ends the job.

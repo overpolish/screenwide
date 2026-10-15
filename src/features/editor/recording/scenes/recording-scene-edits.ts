@@ -3,6 +3,7 @@
 
 import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
+import { timedSpanClipAt } from "../../timeline/tracks/timed-span-clips";
 
 import { RecordingSceneControls } from "./recording-scene-channel";
 import { customRecordingSceneClip } from "./recording-scene-custom";
@@ -19,7 +20,6 @@ import {
   insertRecordingSceneClip,
   RECORDING_SCENE_MINIMUM_MS,
   RecordingSceneClip,
-  recordingSceneClipAt,
   rotatedSceneClip,
 } from "./recording-scenes";
 
@@ -52,7 +52,7 @@ export function recordingSceneEdits({
   const reframeCurrent = (
     reframe: (clip: RecordingSceneClip) => RecordingSceneClip,
   ) => {
-    const target = recordingSceneClipAt(clips, getTimelineMs());
+    const target = timedSpanClipAt(clips, getTimelineMs());
     if (target)
       commit(
         clips.map((clip) => (clip.id === target.id ? reframe(clip) : clip)),
@@ -84,7 +84,7 @@ export function recordingSceneEdits({
   // one there and changes that at once.
   const chooseAtPlayhead = (choice: SceneChoice) => {
     const atMs = getTimelineMs();
-    const next = recordingSceneClipAt(clips, atMs)
+    const next = timedSpanClipAt(clips, atMs)
       ? clips
       : insertRecordingSceneClip({
           atMs,
@@ -93,7 +93,7 @@ export function recordingSceneEdits({
           lengthMs,
           preset: "full",
         })?.clips;
-    const target = next ? recordingSceneClipAt(next, atMs) : null;
+    const target = next ? timedSpanClipAt(next, atMs) : null;
     if (!next || !target) return;
     commit(
       next.map((clip) =>
@@ -155,7 +155,7 @@ export function recordingSceneEdits({
       chooseAtPlayhead({ type: "custom" });
     },
     remove: () => {
-      const target = recordingSceneClipAt(clips, getTimelineMs());
+      const target = timedSpanClipAt(clips, getTimelineMs());
       if (target) commit(clips.filter((clip) => clip.id !== target.id));
     },
     // A custom scene goes back to its preset's boxes as well, every pane to
@@ -221,7 +221,7 @@ export function recordingSceneEdits({
       reframeCurrent(swappedScenePanes);
     },
     templateLayout: () => {
-      const current = recordingSceneClipAt(clips, getTimelineMs());
+      const current = timedSpanClipAt(clips, getTimelineMs());
       return current ? sceneTemplateLayout(current, canvasAspect) : null;
     },
   };

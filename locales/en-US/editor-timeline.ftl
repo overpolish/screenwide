@@ -54,6 +54,13 @@ editor-timeline-captions = Captions
 editor-timeline-annotations = Annotations
 editor-timeline-scenes = Scenes
 editor-timeline-camera-separate = Saved as its own file
+# A stretch of the camera, drawn above it on the timeline, where the background behind the person is taken away. $background is what is shown instead: none, blur or picture.
+editor-timeline-camera-background-range =
+    { $background ->
+        [blur] Background blurred
+        [picture] Background picture
+       *[none] Background removed
+    }
 # $note says how the track is exported.
 editor-timeline-track-note = { $track }, { $note }
 editor-timeline-track-include = Include { $track }

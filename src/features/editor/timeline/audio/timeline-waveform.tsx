@@ -18,6 +18,7 @@ export function Waveform({
   blade,
   enabled,
   onSelect,
+  selected,
   track,
   viewport,
   volumeDecibels,
@@ -25,6 +26,7 @@ export function Waveform({
   blade: TimelineBladeController;
   enabled: boolean;
   onSelect: () => void;
+  selected: boolean;
   track: PreparedAudioTrack;
   viewport: TimelineViewportState;
   volumeDecibels: number;
@@ -84,7 +86,9 @@ export function Waveform({
               />
             </svg>
           )}
-          selectedSegmentId={blade.selectedSegmentId}
+          // The segment is picked in the lane it was picked in: the others
+          // only share its time.
+          selectedSegmentId={selected ? blade.selectedSegmentId : null}
         />
       </TimelineViewportContent>
     </div>

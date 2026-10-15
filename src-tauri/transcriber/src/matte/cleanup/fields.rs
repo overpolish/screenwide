@@ -2,9 +2,38 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! What the cleanup measures a frame with: the areas a mask falls into, how
-//! far each pixel is from the edge of a mask, and blurs.
+//! far each pixel is from the edge of a mask, and blurs. Distances and blurs
+//! work along `Lines`, the whole frame or only the stretches of it near the
+//! outline, which cost nothing elsewhere.
 
 use std::ops::Range;
+
+/// The stretches of a frame worked on: lines along rows and lines down
+/// columns, each as the index of its first pixel and its length. Every
+/// pixel on one is on the other, so values a pass along rows leaves are
+/// all read by the pass down columns.
+#[derive(Default)]
+pub(super) struct Lines {
+  pub(super) across: Vec<(usize, usize)>,
+  pub(super) down: Vec<(usize, usize)>,
+}
+
+impl Lines {
+  pub(super) fn whole((width, height): (usize, usize)) -> Self {
+    Self {
+      across: (0..height).map(|y| (y * width, width)).collect(),
+      down: (0..width).map(|x| (x, height)).collect(),
+    }
+  }
+
+  /// Each pixel on the lines, row by row.
+  pub(super) fn pixels(&self) -> impl Iterator<Item = usize> + '_ {
+    self
+      .across
+      .iter()
+      .flat_map(|&(start, count)| start..start + count)
+  }
+}
 
 /// One area: how many pixels, and where they sit in the order `label` left.
 pub(super) struct Area {
@@ -63,33 +92,34 @@ pub(super) fn label(
   areas
 }
 
-/// How far, in pixels, each pixel where `mask` is `value` is from the
-/// nearest pixel where it is not; zero elsewhere. Exact, as the straight
-/// line runs; a mask that is `value` everywhere answers a distance beyond
-/// the frame.
+/// How far, in pixels, each pixel on `lines` where `mask` is `value` is
+/// from the nearest pixel where it is not; zero elsewhere. Exact, as the
+/// straight line runs, wherever that pixel lies on the same lines; a mask
+/// that is `value` everywhere answers a distance beyond the frame.
 pub(super) fn distance(
   mask: &[bool],
   value: bool,
   (width, height): (usize, usize),
+  lines: &Lines,
   into: &mut [f32],
   scratch: &mut Vec<f32>,
 ) {
   // Beyond any distance in the frame, and small enough that sums with it
   // keep their whole pixels in an f32.
   let far = ((width + height) * (width + height)) as f32;
-  for (out, &inside) in into.iter_mut().zip(mask) {
-    *out = if inside == value { far } else { 0.0 };
+  for index in lines.pixels() {
+    into[index] = if mask[index] == value { far } else { 0.0 };
   }
   scratch.resize(width.max(height) * 3 + 1, 0.0);
   // Squared distances along each column, then along each row.
-  for x in 0..width {
-    squared_1d(into, (x, width, height), scratch);
+  for &(start, count) in &lines.down {
+    squared_1d(into, (start, width, count), scratch);
   }
-  for y in 0..height {
-    squared_1d(into, (y * width, 1, width), scratch);
+  for &(start, count) in &lines.across {
+    squared_1d(into, (start, 1, count), scratch);
   }
-  for value in into.iter_mut() {
-    *value = value.sqrt();
+  for index in lines.pixels() {
+    into[index] = into[index].sqrt();
   }
 }
 
@@ -138,29 +168,45 @@ fn squared_1d(
   }
 }
 
-/// `field` blurred in place to about a Gaussian of deviation `sigma` pixels,
-/// as three box blurs one after another, each pixel's cost the same however
-/// wide the blur.
+/// The radius of each of the three box blurs that together spread about as
+/// far as a Gaussian of deviation `sigma` pixels.
+fn box_radius(sigma: f32) -> usize {
+  (((12.0 * sigma * sigma / 3.0 + 1.0).sqrt() - 1.0) / 2.0)
+    .round()
+    .max(1.0) as usize
+}
+
+/// How far, in pixels, a value spreads in `blur` with `sigma`.
+pub(super) fn reach(sigma: f32) -> usize {
+  if sigma < 0.3 {
+    0
+  } else {
+    3 * box_radius(sigma)
+  }
+}
+
+/// `field` on `lines` blurred in place to about a Gaussian of deviation
+/// `sigma` pixels, as three box blurs one after another, each pixel's cost
+/// the same however wide the blur. Past the ends of a line its end values
+/// stand in.
 pub(super) fn blur(
   field: &mut [f32],
   scratch: &mut Vec<f32>,
   (width, height): (usize, usize),
   sigma: f32,
+  lines: &Lines,
 ) {
   if sigma < 0.3 {
     return;
   }
-  // The box width three passes of which spread as far as the Gaussian.
-  let radius = (((12.0 * sigma * sigma / 3.0 + 1.0).sqrt() - 1.0) / 2.0)
-    .round()
-    .max(1.0) as usize;
+  let radius = box_radius(sigma);
   scratch.resize(width.max(height), 0.0);
   for _ in 0..3 {
-    for y in 0..height {
-      box_1d(field, (y * width, 1, width), radius, scratch);
+    for &(start, count) in &lines.across {
+      box_1d(field, (start, 1, count), radius, scratch);
     }
-    for x in 0..width {
-      box_1d(field, (x, width, height), radius, scratch);
+    for &(start, count) in &lines.down {
+      box_1d(field, (start, width, count), radius, scratch);
     }
   }
 }

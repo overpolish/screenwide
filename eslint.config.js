@@ -191,7 +191,6 @@ export default defineConfig([
       "src/features/editor/recording/annotations/recording-annotation-clip-edges.tsx",
       "src/features/editor/recording/annotations/recording-annotation-lane.tsx",
       "src/features/editor/recording/annotations/recording-annotation-pin-overlay.tsx",
-      "src/features/editor/recording/scenes/recording-scene-lane.tsx",
       // The picture being edited:
       "src/features/editor/preview/**",
       "src/features/editor/recording/preview/**",

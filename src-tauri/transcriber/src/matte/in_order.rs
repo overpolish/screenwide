@@ -3,8 +3,8 @@
 
 //! The matte's frames cleaned up on several threads at once and written in
 //! turn. A frame's cleanup takes nothing from the frame before it, so frames
-//! cleaned side by side make the same matte; one thread could not keep up
-//! with the model, at about 45 ms a 960 by 540 frame.
+//! cleaned side by side make the same matte; at about 10 ms a 960 by 540
+//! frame, one thread keeps up with the model on the CPU but not on the GPU.
 
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};

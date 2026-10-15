@@ -91,9 +91,13 @@ pub(crate) fn composed_frame_image(
   let matte = live
     .as_deref()
     .filter(|_| on_screen || camera_frame.is_some())
-    .and_then(|live| live.matte.as_ref())
-    .and_then(|file| MatteFrames::open(file, STILL_MATTE_SIDE).ok())
-    .and_then(|mut frames| frames.at(position_ms).ok().flatten());
+    .filter(|live| !live.matte.is_empty())
+    .and_then(|live| {
+      MatteFrames::open(&live.matte, STILL_MATTE_SIDE)
+        .at(position_ms)
+        .ok()
+        .flatten()
+    });
   surface.compose_texture_to_image(
     (
       &frame.texture,
@@ -123,6 +127,7 @@ pub(crate) fn composed_frame_image(
     live.as_deref().map(|live| StillCameraEffects {
       live,
       matte: matte.as_deref(),
+      source_ms: position_ms,
       on_screen,
     }),
   )

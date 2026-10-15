@@ -23,6 +23,9 @@ struct Effects {
   picture: vec4<f32>,
   // The size of the target drawn into, in pixels.
   target_size: vec4<f32>,
+  // x: how far the room has gone, 0 as recorded to 1 taken away, as a range
+  // fades it out at its start and back in at its end.
+  strength: vec4<f32>,
 }
 
 @group(0) @binding(0) var source: texture_2d<f32>;
@@ -94,7 +97,9 @@ fn fs_effects(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> 
   if (background == 0u) {
     return vec4<f32>(corrected(person), 1.0);
   }
-  let alpha = textureSampleLevel(matte, linear_sampler, uv, 0.0).r;
+  // Faded, the person's share is grown toward the whole frame, so the room
+  // shows through where the matte would take it away.
+  let alpha = mix(1.0, textureSampleLevel(matte, linear_sampler, uv, 0.0).r, effects.strength.x);
   if (alpha > 0.0 && alpha < 0.97) {
     let inner = inner_colour(uv);
     let share = saturate((0.97 - alpha) / 0.5) * inner.a;

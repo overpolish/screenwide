@@ -286,6 +286,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       transcript_allowed_words: Vec::new(),
       captions: None,
       scene_clips: Vec::new(),
+      camera_background_ranges: Vec::new(),
       next_segment_id: 2,
       segments: vec![segment(0, 0.0, 0.2), segment(1, 0.8, 1.0)],
     },

@@ -34,17 +34,13 @@ impl PreviewEffects {
     live: Option<Arc<LiveCameraEffects>>,
     gpu: &'static Gpu,
   ) -> Result<(), String> {
-    let file = live.as_deref().and_then(|live| live.matte.as_ref());
-    let same_matte = match (self.matte.as_ref(), file) {
-      (Some(open), Some(file)) => {
-        open.file().path == file.path && open.file().timings == file.timings
-      }
-      _ => false,
-    };
+    let files = live.as_deref().map_or(&[][..], |live| &live.matte[..]);
+    let same_matte = self
+      .matte
+      .as_ref()
+      .is_some_and(|open| open.files() == files);
     if !same_matte {
-      self.matte = file
-        .map(|file| MatteFrames::open(file, MATTE_SIDE))
-        .transpose()?;
+      self.matte = (!files.is_empty()).then(|| MatteFrames::open(files, MATTE_SIDE));
     }
     if live.is_some() && self.pass.is_none() {
       self.pass = Some(EffectsPass::new(gpu));
@@ -56,7 +52,7 @@ impl PreviewEffects {
   /// The matte of the camera frame showing at `seconds`, where the effects
   /// read one.
   pub fn matte_at(&mut self, seconds: f64) -> Option<Arc<LumaFrame>> {
-    let ms = (seconds * 1_000.0).round().max(0.0) as u64;
+    let ms = ms_of(seconds);
     match self.matte.as_mut()?.at(ms) {
       Ok(frame) => frame,
       Err(error) => {
@@ -66,45 +62,61 @@ impl PreviewEffects {
     }
   }
 
-  /// `camera` as the effects draw it, into `slot`, or nothing where there
-  /// are no effects and the frame is drawn as decoded. `compositor` is the
-  /// one drawing the frame, which blurs the room.
+  /// `camera`, the frame `seconds` into the recording, as the effects draw
+  /// it, into `slot`, or nothing where there are no effects and the frame is
+  /// drawn as decoded. `compositor` is the one drawing the frame, which
+  /// blurs the room.
   pub fn drawn(
     &self,
     compositor: &Compositor,
-    camera: &SourceTexture,
+    (camera, seconds): (&SourceTexture, f64),
     matte: Option<&LumaFrame>,
     slot: usize,
   ) -> Result<Option<SourceTexture>, String> {
     let (Some(live), Some(pass)) = (self.live.as_deref(), self.pass.as_ref()) else {
       return Ok(None);
     };
-    pass.apply(compositor, camera, matte, live, slot).map(Some)
+    pass
+      .apply(compositor, (camera, ms_of(seconds)), matte, live, slot)
+      .map(Some)
   }
 
-  /// `camera` drawn with `live` and its matte `matte` into `slot`, apart from
-  /// the effects the preview draws with: a still made of another moment.
+  /// `camera` drawn with `still`'s effects into `slot`, apart from the
+  /// effects the preview draws with: a still made of another moment.
   #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
   pub fn drawn_once(
     &mut self,
     compositor: &Compositor,
-    (live, matte): (&LiveCameraEffects, Option<&LumaFrame>),
+    still: &StillCameraEffects<'_>,
     camera: &SourceTexture,
     slot: usize,
   ) -> Result<SourceTexture, String> {
     self
       .pass
       .get_or_insert_with(|| EffectsPass::new(compositor.gpu()))
-      .apply(compositor, camera, matte, live, slot)
+      .apply(
+        compositor,
+        (camera, still.source_ms),
+        still.matte,
+        still.live,
+        slot,
+      )
   }
 }
 
+/// `seconds` as whole milliseconds, as the matte is read at.
+fn ms_of(seconds: f64) -> u64 {
+  (seconds * 1_000.0).round().max(0.0) as u64
+}
+
 /// The camera's effects for one still drawn on the GPU, its matte read for
-/// the moment it shows, and whether they are drawn on the screen, which is
-/// the camera, or on the camera baked into it.
+/// the moment it shows, that moment, and whether they are drawn on the
+/// screen, which is the camera, or on the camera baked into it.
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub struct StillCameraEffects<'a> {
   pub live: &'a LiveCameraEffects,
   pub matte: Option<&'a LumaFrame>,
+  /// The moment the still shows, in milliseconds into the recording.
+  pub source_ms: u64,
   pub on_screen: bool,
 }

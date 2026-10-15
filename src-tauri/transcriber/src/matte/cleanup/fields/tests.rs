@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{blur, distance, label};
+use super::{blur, distance, label, Lines};
 
 #[test]
 fn distances_are_exact_to_the_nearest_pixel_of_the_other_side() {
@@ -17,7 +17,14 @@ fn distances_are_exact_to_the_nearest_pixel_of_the_other_side() {
   let mut scratch = Vec::new();
   for value in [true, false] {
     let mut found = vec![0.0; mask.len()];
-    distance(&mask, value, size, &mut found, &mut scratch);
+    distance(
+      &mask,
+      value,
+      size,
+      &Lines::whole(size),
+      &mut found,
+      &mut scratch,
+    );
     for (index, &got) in found.iter().enumerate() {
       let expected = if mask[index] != value {
         0.0
@@ -58,7 +65,7 @@ fn a_blur_keeps_the_total_and_spreads_a_point() {
   let size = (41, 41);
   let mut field = vec![0.0; size.0 * size.1];
   field[20 * 41 + 20] = 1.0;
-  blur(&mut field, &mut Vec::new(), size, 4.0);
+  blur(&mut field, &mut Vec::new(), size, 4.0, &Lines::whole(size));
   let total = field.iter().sum::<f32>();
   assert!((total - 1.0).abs() < 1e-3, "{total}");
   let at = |x: usize, y: usize| field[y * 41 + x];

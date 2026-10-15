@@ -63,7 +63,11 @@ impl WorkspaceScene {
         })
         .map(|(camera, picture, geometry)| {
           Ok::<_, String>((
-            camera.drawn(&state.compositor, picture, (&state.effects, index))?,
+            camera.drawn(
+              &state.compositor,
+              picture,
+              (&state.effects, index, layer.seconds),
+            )?,
             geometry,
             camera.drop_shadow,
             camera.on_top,
@@ -73,9 +77,12 @@ impl WorkspaceScene {
       // A camera pane is drawn with the camera's effects.
       let effected = if layer.source_is_camera {
         let matte = layer.source_matte.as_deref();
-        state
-          .effects
-          .drawn(&state.compositor, &layer.source.texture, matte, index * 2)?
+        state.effects.drawn(
+          &state.compositor,
+          (&layer.source.texture, layer.seconds),
+          matte,
+          index * 2,
+        )?
       } else {
         None
       };

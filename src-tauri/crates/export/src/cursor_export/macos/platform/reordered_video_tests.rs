@@ -36,6 +36,7 @@ fn exports_reordered_segments_in_the_order_they_play() {
       transcript_allowed_words: Vec::new(),
       captions: None,
       scene_clips: Vec::new(),
+      camera_background_ranges: Vec::new(),
       next_segment_id: 2,
       segments: vec![segment(1, 0.5, 1.0), segment(0, 0.0, 0.5)],
     },

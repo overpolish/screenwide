@@ -100,6 +100,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
       transcript_allowed_words: Vec::new(),
       captions: None,
       scene_clips: Vec::new(),
+      camera_background_ranges: Vec::new(),
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,
         pin: None,

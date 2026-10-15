@@ -157,18 +157,18 @@ impl LayerCamera {
     }
   }
 
-  /// The frame the canvas draws: the camera's own, drawn with its effects,
-  /// with the composed annotations drawn into it after where it has any.
-  /// `slot` is the layer's.
+  /// The frame the canvas draws: the camera's own, the frame `seconds` into
+  /// the recording, drawn with its effects, with the composed annotations
+  /// drawn into it after where it has any. `slot` is the layer's.
   pub(super) fn drawn(
     &self,
     compositor: &Compositor,
     picture: &ScenePicture,
-    (effects, slot): (&PreviewEffects, usize),
+    (effects, slot, seconds): (&PreviewEffects, usize, f64),
   ) -> Result<SourceTexture, String> {
     let effected = effects.drawn(
       compositor,
-      &picture.texture,
+      (&picture.texture, seconds),
       self.matte.as_deref(),
       slot * 2 + 1,
     )?;

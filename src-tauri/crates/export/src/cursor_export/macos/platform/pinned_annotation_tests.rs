@@ -101,6 +101,7 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
       transcript_allowed_words: Vec::new(),
       captions: None,
       scene_clips: Vec::new(),
+      camera_background_ranges: Vec::new(),
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,
         recording_span: None,

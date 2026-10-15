@@ -5,6 +5,7 @@ import { ReactNode, RefObject } from "react";
 
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { t } from "../../../i18n/i18n";
+import { useCameraBackgroundRanges } from "../recording/camera/use-camera-background-ranges";
 import { useRecordingCaptions } from "../recording/captions/use-recording-captions";
 import {
   CAPTIONS_LAYER_ID,
@@ -29,6 +30,7 @@ import { ResizableRecordingTimelineArea } from "./resizable-recording-timeline-a
 import { Playhead } from "./scrub-playhead";
 import { RecordingTrackLanes } from "./tracks/recording-track-lanes";
 import { useRecordingPreviewTracks } from "./tracks/use-recording-preview-tracks";
+import { lettingGoFirst } from "./tracks/use-timed-span-selection";
 
 import type { TimelineItemSelection } from "./tracks/timeline-item-selection";
 import type { ResolvedScrubPreviewProps } from "../recording/preview/recording-preview-props";
@@ -54,6 +56,7 @@ export function RecordingPreviewTimelineBand({
   keyboardEffects,
   keyboardTimeline,
   layout,
+  onRecordingTimelineEditChange,
   openOverlayTool,
   player,
   playhead,
@@ -73,6 +76,7 @@ export function RecordingPreviewTimelineBand({
   | "hasAnnotations"
   | "isPreparingAudio"
   | "keyboardEffects"
+  | "onRecordingTimelineEditChange"
   | "recordingOutput"
   | "selectedTrack"
 > &
@@ -111,6 +115,14 @@ export function RecordingPreviewTimelineBand({
     output: recordingOutput?.primary,
   });
   usePauseForMomentNotes(player.pause);
+  const cameraBackground = useCameraBackgroundRanges({
+    artifactId,
+    edit: timelineBlade.blade.edit,
+    getPositionMs: player.getPositionMs,
+    onEdit: (next) => onRecordingTimelineEditChange?.(next),
+    playhead,
+    sourceDurationMs: durationMs,
+  });
   // The Scene panel follows the scene tool, so the lane takes the tool up and
   // the panel comes with it, the only tool in hand.
   const openScenePanel = () => {
@@ -129,9 +141,15 @@ export function RecordingPreviewTimelineBand({
   const clearForOverlay = () => {
     annotations.clearSelection();
     scenes.selection.onClear();
+    cameraBackground.onClearSelection();
     timelineBlade.blade.clearRangeSelection();
     timelineBlade.blade.selectSegment(null);
   };
+  // Scenes and the camera's background ranges let go of each other too.
+  const sceneChoice = lettingGoFirst(scenes.selection, () => {
+    clearOtherSelections();
+    cameraBackground.onClearSelection();
+  });
   const choosingAlone = (
     selection: TimelineItemSelection<string>,
   ): TimelineItemSelection<string> => ({
@@ -192,6 +210,18 @@ export function RecordingPreviewTimelineBand({
           annotationPinStatus={annotations.pinStatus}
           audioTracks={audioTracks}
           blade={timelineBlade.blade}
+          cameraBackground={{
+            ...cameraBackground,
+            ...lettingGoFirst(cameraBackground, () => {
+              clearOtherSelections();
+              scenes.selection.onClear();
+            }),
+            // A range clicked in its strip takes up Select with the camera
+            // chosen, whose panel shows the range.
+            onActivate: () => {
+              changeCanvasTool("select");
+            },
+          }}
           captions={captions}
           captionSelection={choosingAlone(captionSelection)}
           durationMs={timelineBlade.timelineDurationMs}
@@ -240,14 +270,8 @@ export function RecordingPreviewTimelineBand({
           onScenesChange={scenes.isAvailable ? scenes.onClipsChange : undefined}
           onScenesClear={scenes.selection.onClear}
           onScenesDraftChange={scenes.onDraftChange}
-          onSceneSelect={(id, toggle) => {
-            clearOtherSelections();
-            scenes.selection.onSelect(id, toggle);
-          }}
-          onScenesSweep={(ids, additive) => {
-            if (ids.length > 0) clearOtherSelections();
-            scenes.selection.onSelectSwept(ids, additive);
-          }}
+          onSceneSelect={sceneChoice.onSelect}
+          onScenesSweep={sceneChoice.onSelectSwept}
           onSeek={timelineBlade.seek}
           onSelectedTrackChange={changeSelectedTrack}
           playhead={playhead}

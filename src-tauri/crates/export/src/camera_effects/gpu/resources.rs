@@ -107,6 +107,8 @@ pub(super) struct Uniform {
   pub(super) gain: [f32; 4],
   pub(super) picture: [f32; 4],
   pub(super) target_size: [f32; 4],
+  /// x: how far the room has gone, 0 to 1, as a range fades it out and in.
+  pub(super) strength: [f32; 4],
 }
 
 /// The part of `picture` a frame `size` covers when the picture fills it,

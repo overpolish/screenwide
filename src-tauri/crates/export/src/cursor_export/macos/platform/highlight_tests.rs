@@ -420,6 +420,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
       transcript_allowed_words: Vec::new(),
       captions: None,
       scene_clips: Vec::new(),
+      camera_background_ranges: Vec::new(),
       annotation_clips: vec![clip],
       segments: vec![RecordingTimelineSegment {
         id: 0,

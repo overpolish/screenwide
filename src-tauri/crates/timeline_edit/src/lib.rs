@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A recording's edit: the segments its timeline keeps and their speeds, the
-//! annotation and scene clips laid over it, the captions asked of its
-//! transcript, and what Remove silences, the Transcript panel and keyboard
-//! deletions cut. A project file keeps it; the plan an export or the preview
-//! follows is made from it. Annotation and scene clips are timed on the
+//! annotation and scene clips laid over it, where the camera's background is
+//! taken away, the captions asked of its transcript, and what Remove
+//! silences, the Transcript panel and keyboard deletions cut. A project file
+//! keeps it; the plan an export or the preview follows is made from it.
+//! Annotation and scene clips and background ranges are timed on the
 //! timeline; the edits that change the segments re-time them as they are
 //! made.
 
@@ -17,6 +18,8 @@ pub mod stacking;
 pub use silences::RecordingSilenceCut;
 mod transcript;
 pub use transcript::{RecordingTranscriptCorrection, RecordingTranscriptCut};
+mod camera_backgrounds;
+pub use camera_backgrounds::{CameraBackgroundRange, CameraRangeBackground};
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -88,6 +91,10 @@ pub struct RecordingTimelineEdit {
   /// Sorted by start, never overlapping; see [`super::scenes`].
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub scene_clips: Vec<screenwide_scenes::RecordingSceneClip>,
+  /// Where the camera's background is taken away; sorted by start, never
+  /// overlapping. See [`camera_backgrounds`].
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub camera_background_ranges: Vec<CameraBackgroundRange>,
   /// What Remove silences cut, for Restore all to bring back; see
   /// [`silences`].
   #[serde(default, skip_serializing_if = "Vec::is_empty")]

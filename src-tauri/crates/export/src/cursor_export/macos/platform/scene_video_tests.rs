@@ -96,6 +96,7 @@ pub(super) fn timeline(scene: serde_json::Value) -> TimelinePlan {
       transcript_allowed_words: Vec::new(),
       captions: None,
       scene_clips: vec![scene],
+      camera_background_ranges: Vec::new(),
       next_segment_id: 1,
       segments: vec![RecordingTimelineSegment {
         id: 0,

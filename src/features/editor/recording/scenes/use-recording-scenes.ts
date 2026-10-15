@@ -14,8 +14,13 @@ import {
   recordingTimelineMsAt,
 } from "../../timeline/editing/recording-timeline-time";
 import { Playhead } from "../../timeline/scrub-playhead";
+import { timedSpanClipAt } from "../../timeline/tracks/timed-span-clips";
+import {
+  TimedSpanSelection,
+  useTimedSpanSelection,
+} from "../../timeline/tracks/use-timed-span-selection";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
-import { retimedSceneClips } from "../recording-overlay-retime";
+import { retimedSpanClips } from "../recording-overlay-retime";
 
 import {
   ownEditedAutoZooms,
@@ -30,11 +35,7 @@ import {
 import { recordingSceneEdits } from "./recording-scene-edits";
 import { drawnCameraFrame } from "./recording-scene-framing";
 import { selectedPaneFraming } from "./recording-scene-pane-framing";
-import { RecordingSceneClip, recordingSceneClipAt } from "./recording-scenes";
-import {
-  RecordingSceneSelection,
-  useRecordingSceneSelection,
-} from "./use-recording-scene-selection";
+import { RecordingSceneClip } from "./recording-scenes";
 import { useScenePreviewSync } from "./use-scene-preview-sync";
 
 const EMPTY_CLIPS: RecordingSceneClip[] = [];
@@ -57,7 +58,7 @@ export type RecordingScenes = {
    * committed clips again for null. */
   onDraftChange: (clips: RecordingSceneClip[] | null) => void;
   /** The scenes chosen in their lane. */
-  selection: RecordingSceneSelection;
+  selection: TimedSpanSelection;
 };
 
 /**
@@ -156,7 +157,7 @@ export function useRecordingScenes({
     if (!isPlaying) return;
     return playhead.subscribe(() => {
       const id =
-        recordingSceneClipAt(
+        timedSpanClipAt(
           clips,
           recordingTimelineMsAt(edit, sourceDurationMs, getPositionMs()),
         )?.id ?? null;
@@ -165,7 +166,7 @@ export function useRecordingScenes({
       redraw();
     });
   }, [clips, edit, getPositionMs, isPlaying, playhead, sourceDurationMs]);
-  const current = recordingSceneClipAt(
+  const current = timedSpanClipAt(
     clips,
     timelineMsAt(isPlaying ? getPositionMs() : positionMs),
   );
@@ -178,7 +179,7 @@ export function useRecordingScenes({
     sessionId,
     sourceDurationMs,
   });
-  const selection = useRecordingSceneSelection({
+  const selection = useTimedSpanSelection({
     clips,
     commit,
     currentId: current?.id ?? null,
@@ -223,7 +224,7 @@ export function useRecordingScenes({
           commitClips(
             withAutoZooms(
               latest.sceneClips ?? EMPTY_CLIPS,
-              retimedSceneClips(planned, {
+              retimedSpanClips(planned, {
                 next: latest.segments,
                 previous: createRecordingTimelineEdit(latest.artifactId)
                   .segments,

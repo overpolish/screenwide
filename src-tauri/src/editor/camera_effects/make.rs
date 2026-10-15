@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use ts_rs::TS;
 
-use super::{matte, picks, CameraEffects, CameraRecording};
+use super::{matte, picks, CameraRecording, Choice};
 use screenwide_export::camera_effects::grade;
 
 /// Which camera effect is working, each with a bar of its own.
@@ -56,34 +56,47 @@ pub(super) fn measured(folder: &Path) -> Option<Measured> {
 /// readied on opening waits for the files rather than writing them again.
 static MAKING: Mutex<()> = Mutex::new(());
 
-/// Whether `effects` still need something made that this computer can make.
-pub(super) fn has_work(app: &AppHandle, camera: &CameraRecording, effects: &CameraEffects) -> bool {
+/// Whether `effects`, and the background ranges of the project's edit,
+/// still need something made that this computer can make and nothing is
+/// making already.
+pub(super) fn has_work(app: &AppHandle, camera: &CameraRecording, effects: &Choice) -> bool {
   let folder = camera.folder();
-  let unmatted = effects.removes_background() && !matte::is_made(&folder);
+  let removes = camera.removes_background();
+  let unmatted = removes
+    && !super::stop::is_running(&folder, super::stop::Work::Matte)
+    && matte::has_missing(camera);
   (unmatted && matte::model(app).is_some())
-    || (effects.removes_background() && picks::needs_composing(&folder))
+    || (removes && picks::needs_composing(&folder))
     || (effects.enhance && measured(&folder).is_none())
 }
 
-/// Makes what the project's effects need for `camera`, telling `progress`
-/// how far each tool has got. They are read once it is this camera's turn,
-/// so a switch turned off meanwhile makes nothing.
+/// Makes what the project's effects need for `camera`, the matte's chunks
+/// nearest `playhead_ms` first, telling `progress` how far each tool has
+/// got and `chunk_made` each time a chunk of the matte is made. They are
+/// read once it is this camera's turn, so a switch turned off meanwhile
+/// makes nothing.
 pub(super) fn ready(
   app: &AppHandle,
-  camera: &CameraRecording,
+  (camera, playhead_ms): (&CameraRecording, u64),
   progress: &mut dyn FnMut(CameraTool, f32),
+  chunk_made: &mut dyn FnMut(),
 ) -> Result<(), String> {
   let _making = MAKING
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
   let folder = camera.folder();
   let effects = super::choice(&folder);
-  if effects.removes_background() {
+  if camera.removes_background() {
     let model =
       matte::model(app).ok_or_else(|| "Download the background removal model first".to_owned())?;
-    matte::prepare(camera, model, &mut |fraction| {
-      progress(CameraTool::Background, fraction);
-    })?;
+    matte::prepare(
+      camera,
+      (model, playhead_ms),
+      &mut |fraction| {
+        progress(CameraTool::Background, fraction);
+      },
+      chunk_made,
+    )?;
     if picks::needs_composing(&folder) {
       picks::compose(camera, &mut |fraction| {
         progress(CameraTool::Objects, fraction);

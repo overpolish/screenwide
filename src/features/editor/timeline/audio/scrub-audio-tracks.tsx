@@ -70,6 +70,7 @@ export function ScrubAudioTracks({
               onSelect={() => {
                 onSelectTrack(track.streamIndex);
               }}
+              selected={selectedTrack === track.streamIndex}
               track={track}
               viewport={viewport}
               volumeDecibels={volumes.get(track.streamIndex) ?? 0}

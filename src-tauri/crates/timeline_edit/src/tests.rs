@@ -60,6 +60,7 @@ fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
     transcript_allowed_words: Vec::new(),
     captions: None,
     scene_clips: Vec::new(),
+    camera_background_ranges: Vec::new(),
     next_segment_id: 2,
     segments: vec![
       RecordingTimelineSegment {

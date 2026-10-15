@@ -171,13 +171,24 @@ impl Transcriber {
     }
   }
 
-  /// Runs `job`, a [`Job::MatteCamera`], which writes the camera's matte and
-  /// cutout into files of their own, telling `progress` how far it has got.
-  pub fn matte_camera(&mut self, job: Job, progress: &mut dyn FnMut(f32)) -> Result<(), String> {
+  /// Runs `job`, a [`Job::MatteCamera`], which writes each chunk's matte,
+  /// telling `progress` how far it has got and `chunk_done` each chunk's
+  /// place in the job once its matte is written.
+  pub fn matte_camera(
+    &mut self,
+    job: Job,
+    progress: &mut dyn FnMut(f32),
+    chunk_done: &mut dyn FnMut(usize),
+  ) -> Result<(), String> {
     if !matches!(job, Job::MatteCamera { .. }) {
       return Err("Only a camera can be matted".to_owned());
     }
-    match self.ask(job, progress)? {
+    let mut told = |told: Told| {
+      if let Told::Chunk(index) = told {
+        chunk_done(index);
+      }
+    };
+    match self.ask_telling(job, progress, &mut told)? {
       Reply::Matted { .. } => Ok(()),
       _ => Err("The transcriber answered with something else".to_owned()),
     }
@@ -195,7 +206,12 @@ impl Transcriber {
     if !matches!(job, Job::FollowObjects { .. } | Job::ComposeMatte { .. }) {
       return Err("Only a camera's objects are asked for here".to_owned());
     }
-    match self.ask_telling(job, progress, halfway)? {
+    let mut told = |told: Told| {
+      if let Told::Halfway = told {
+        halfway();
+      }
+    };
+    match self.ask_telling(job, progress, &mut told)? {
       Reply::Tracked { .. } | Reply::Composed { .. } => Ok(()),
       _ => Err("The transcriber answered with something else".to_owned()),
     }
@@ -204,15 +220,15 @@ impl Transcriber {
   /// Sends `job` and waits for the reply that ends it, handing any progress
   /// on the way to `progress`.
   fn ask(&mut self, job: Job, progress: &mut dyn FnMut(f32)) -> Result<Reply, String> {
-    self.ask_telling(job, progress, &mut || {})
+    self.ask_telling(job, progress, &mut |_| {})
   }
 
-  /// [`Self::ask`], also calling `halfway` where the job says it is.
+  /// [`Self::ask`], telling `told` of each step the job reaches on the way.
   fn ask_telling(
     &mut self,
     job: Job,
     progress: &mut dyn FnMut(f32),
-    halfway: &mut dyn FnMut(),
+    told: &mut dyn FnMut(Told),
   ) -> Result<Reply, String> {
     self.next_id += 1;
     let request = Request {
@@ -248,6 +264,7 @@ impl Transcriber {
       | Reply::Restored { id }
       | Reply::Separated { id }
       | Reply::Matted { id }
+      | Reply::ChunkMatted { id, .. }
       | Reply::Tracked { id }
       | Reply::Composed { id }
       | Reply::Halfway { id }
@@ -258,12 +275,20 @@ impl Transcriber {
       }
       match answer {
         Reply::Progress { fraction, .. } => progress(fraction),
-        Reply::Halfway { .. } => halfway(),
+        Reply::Halfway { .. } => told(Told::Halfway),
+        Reply::ChunkMatted { index, .. } => told(Told::Chunk(index)),
         Reply::Failed { message, .. } => return Err(message),
         answer => return Ok(answer),
       }
     }
   }
+}
+
+/// A step a job says it has reached before the reply that ends it: the
+/// masks after the click written, or the chunk at a place in the job.
+enum Told {
+  Halfway,
+  Chunk(usize),
 }
 
 impl Drop for Transcriber {

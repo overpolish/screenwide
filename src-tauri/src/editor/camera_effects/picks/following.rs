@@ -11,7 +11,7 @@ use tauri::{AppHandle, Emitter};
 
 use super::super::commands::shown_changed;
 use super::super::stop::{self, Running, Work};
-use super::super::{choice, CameraRecording};
+use super::super::CameraRecording;
 use super::commands::CHANGED_EVENT;
 use super::{change, compose, follow, model, read, remove_masks};
 
@@ -42,7 +42,7 @@ fn following() -> std::sync::MutexGuard<'static, Vec<(PathBuf, Vec<u32>)>> {
 pub(super) fn start_following(app: &AppHandle, artifact_id: u64, camera: &CameraRecording) {
   let folder = camera.folder();
   if model(app).is_none()
-    || !choice(&folder).removes_background()
+    || !camera.removes_background()
     || !read(&folder).picks.iter().any(|pick| !pick.followed)
   {
     return;
@@ -93,7 +93,7 @@ fn begin_lot(folder: &Path, ids: &[u32]) -> Running {
 fn follow_all(app: &AppHandle, artifact_id: u64, camera: &CameraRecording) {
   let folder = camera.folder();
   loop {
-    if !choice(&folder).removes_background() {
+    if !camera.removes_background() {
       return;
     }
     let waiting = read(&folder)
@@ -184,7 +184,7 @@ fn follow_all(app: &AppHandle, artifact_id: u64, camera: &CameraRecording) {
 /// matte where the background is taken away, and shows it.
 fn lay_in(app: &AppHandle, artifact_id: u64, camera: &CameraRecording) {
   let _ = app.emit(CHANGED_EVENT, artifact_id);
-  if !choice(&camera.folder()).removes_background() {
+  if !camera.removes_background() {
     return;
   }
   match compose(camera, &mut |_| {}) {

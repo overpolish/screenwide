@@ -34,6 +34,15 @@ impl Matting {
     }
   }
 
+  /// Forgets every frame seen, so the next is matted as if it were the
+  /// first: a chunk of the camera starts as the job's first does, whatever
+  /// was matted on the same model before it.
+  pub(super) fn restart(&mut self) {
+    for state in &mut self.states {
+      *state = (vec![1, 1, 1, 1], vec![0.0]);
+    }
+  }
+
   /// The alpha of the 8-bit RGB frame `rgb`, 0 to 255, into `alpha`.
   pub(super) fn run(
     &mut self,

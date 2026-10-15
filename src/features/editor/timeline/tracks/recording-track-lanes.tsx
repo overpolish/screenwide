@@ -42,6 +42,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   annotationPinning,
   audioTracks,
   blade,
+  cameraBackground,
   captionSelection,
   captions = NO_CAPTIONS,
   durationMs,
@@ -188,13 +189,16 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
           />
           <RecordingVideoTrackRows
             blade={blade}
+            cameraBackground={cameraBackground}
             enabledTracks={enabledTracks}
             enabledVideoTracks={enabledVideoTracks}
             isCameraSeparate={isCameraSeparate}
             layout={layout}
             onEnabledVideoTracksChange={onEnabledVideoTracksChange}
+            onSeek={onSeek}
             onSelectedTrackChange={onSelectedTrackChange}
             selectedTrack={selectedTrack}
+            sourceDurationMs={sourceDurationMs}
             thumbnails={thumbnails}
             viewport={timeline.viewport}
           />
