@@ -19,7 +19,23 @@
 #define SCREENWIDE_INFLIGHT_FRAMES 3
 
 @implementation ScreenwideVideoExport
+- (void)dealloc {
+  if (stream_pool != NULL) CVPixelBufferPoolRelease(stream_pool);
+}
 @end
+
+/// Hands the oldest in-flight frame on: to the encoder stream where there is
+/// one, otherwise to AVFoundation's writer.
+static ScreenwideDrainResult drain(ScreenwideVideoExport *session, ScreenwideInflightFrame *frame,
+                                   const ScreenwideExportCallbacks *callbacks, BOOL *primed,
+                                   NSError **error) {
+  if (session->stream_fd >= 0)
+    return screenwide_export_stream_inflight_frame(frame, session->stream_fd,
+                                                   session->stream_staging, callbacks, error);
+  return screenwide_export_drain_inflight_frame(frame, session->adaptor, session->writer_input,
+                                                session->writer, callbacks, primed,
+                                                session->source_frame_rate, error);
+}
 
 static NSError *loop_error(NSInteger code, NSString *message) {
   return [NSError errorWithDomain:@"ScreenwideVideoExport"
@@ -80,21 +96,25 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
                             uint32_t output_height, uint64_t bitrate, void *context,
                             ScreenwideShouldCancel should_cancel, ScreenwideProgress progress,
                             ScreenwideComposeFrame compose, ScreenwideWaitFrame wait,
-                            char *error_text, size_t error_capacity) {
+                            ScreenwideOpenStream open_stream, char *error_text,
+                            size_t error_capacity) {
   @autoreleasepool {
     ScreenwideVideoExport *session = [ScreenwideVideoExport new];
     session->output_width = output_width;
     session->output_height = output_height;
+    session->stream_fd = -1;
     if (![session prepareScreen:screen_path
                          camera:camera_path
                          output:output_path
                         bitrate:bitrate
+                         stream:open_stream
+                        context:context
                       errorText:error_text
                   errorCapacity:error_capacity])
       return 0;
     if (![session->screen_reader startReading] ||
         (session->camera_reader != nil && ![session->camera_reader startReading]) ||
-        ![session->writer startWriting]) {
+        (session->writer != nil && ![session->writer startWriting])) {
       return fail(error_text, error_capacity,
                   session->screen_reader.error.localizedDescription
                       ?: (session->camera_reader != nil
@@ -103,7 +123,7 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
                       ?: session->writer.error.localizedDescription
                       ?: @"The video export could not be started");
     }
-    [session->writer startSessionAtSourceTime:kCMTimeZero];
+    if (session->writer != nil) [session->writer startSessionAtSourceTime:kCMTimeZero];
     ScreenwideExportCallbacks callbacks = {context, should_cancel, progress, wait};
     NSError *error = nil;
     BOOL primed = NO;
@@ -128,47 +148,53 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
           break;
         }
         CMTime pts = export_source_time(output_pts, timeline_ranges, timeline_range_count);
-        if (!CMTIME_IS_VALID(pts)) continue;
-        if (!rewind_if_behind(session, pts, &screen_sample, &next_screen_sample, &camera_sample,
-                              &next_camera_sample, &error))
-          break;
-        advance(session->screen_output, &screen_sample, &next_screen_sample, pts);
-        advance(session->camera_output, &camera_sample, &next_camera_sample, pts);
-        CVPixelBufferRef destination = NULL;
-        if (CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault,
-                                               session->adaptor.pixelBufferPool,
-                                               &destination) != kCVReturnSuccess ||
-            destination == NULL) {
-          error = loop_error(2, @"The encoder ran out of video buffers");
-          break;
+        ScreenwideInflightFrame *frame = nil;
+        if (!CMTIME_IS_VALID(pts)) {
+          // A raw stream has no timestamps: a frame left out would pull every
+          // later one a frame early, out of step with the audio, so the one
+          // before shows again. AVFoundation's writer keeps the gap itself.
+          if (session->stream_fd < 0 || ring.lastObject == nil) continue;
+          frame = [ring.lastObject repeatedAt:output_pts];
+        } else {
+          if (!rewind_if_behind(session, pts, &screen_sample, &next_screen_sample,
+                                &camera_sample, &next_camera_sample, &error))
+            break;
+          advance(session->screen_output, &screen_sample, &next_screen_sample, pts);
+          advance(session->camera_output, &camera_sample, &next_camera_sample, pts);
+          CVPixelBufferRef destination = NULL;
+          CVPixelBufferPoolRef pool = session->stream_pool ?: session->adaptor.pixelBufferPool;
+          if (CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &destination) !=
+                  kCVReturnSuccess ||
+              destination == NULL) {
+            error = loop_error(2, @"The encoder ran out of video buffers");
+            break;
+          }
+          ScreenwideExportFrame request = {
+              .screen = CMSampleBufferGetImageBuffer(screen_sample),
+              .camera = camera_sample == NULL ? NULL : CMSampleBufferGetImageBuffer(camera_sample),
+              .destination = destination,
+              .source_us = (uint64_t)llround(MAX(CMTimeGetSeconds(pts), 0.0) * 1000000.0),
+              .frame_ms = 1000.0f / session->source_frame_rate,
+          };
+          uint64_t token = 0;
+          if (!compose(context, &request, &token)) {
+            CVPixelBufferRelease(destination);
+            error = loop_error(3, @"A video frame could not be composed");
+            break;
+          }
+          frame = [ScreenwideInflightFrame new];
+          frame.token = token;
+          frame.presentation = output_pts;
+          frame.destination = destination;
+          frame.screenSample = (CMSampleBufferRef)CFRetain(screen_sample);
+          frame.cameraSample =
+              camera_sample == NULL ? NULL : (CMSampleBufferRef)CFRetain(camera_sample);
         }
-        ScreenwideExportFrame request = {
-            .screen = CMSampleBufferGetImageBuffer(screen_sample),
-            .camera = camera_sample == NULL ? NULL : CMSampleBufferGetImageBuffer(camera_sample),
-            .destination = destination,
-            .source_us = (uint64_t)llround(MAX(CMTimeGetSeconds(pts), 0.0) * 1000000.0),
-            .frame_ms = 1000.0f / session->source_frame_rate,
-        };
-        uint64_t token = 0;
-        if (!compose(context, &request, &token)) {
-          CVPixelBufferRelease(destination);
-          error = loop_error(3, @"A video frame could not be composed");
-          break;
-        }
-        ScreenwideInflightFrame *frame = [ScreenwideInflightFrame new];
-        frame.token = token;
-        frame.presentation = output_pts;
-        frame.destination = destination;
-        frame.screenSample = (CMSampleBufferRef)CFRetain(screen_sample);
-        frame.cameraSample =
-            camera_sample == NULL ? NULL : (CMSampleBufferRef)CFRetain(camera_sample);
         [ring addObject:frame];
         if (ring.count > SCREENWIDE_INFLIGHT_FRAMES) {
           ScreenwideInflightFrame *oldest = ring.firstObject;
           [ring removeObjectAtIndex:0];
-          ScreenwideDrainResult drained = screenwide_export_drain_inflight_frame(
-              oldest, session->adaptor, session->writer_input, session->writer, &callbacks,
-              &primed, session->source_frame_rate, &error);
+          ScreenwideDrainResult drained = drain(session, oldest, &callbacks, &primed, &error);
           if (drained == ScreenwideDrainCancelled) cancelled = true;
           if (drained != ScreenwideDrainAppended) break;
         }
@@ -180,9 +206,7 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
       @autoreleasepool {
         ScreenwideInflightFrame *oldest = ring.firstObject;
         [ring removeObjectAtIndex:0];
-        ScreenwideDrainResult drained = screenwide_export_drain_inflight_frame(
-            oldest, session->adaptor, session->writer_input, session->writer, &callbacks, &primed,
-            session->source_frame_rate, &error);
+        ScreenwideDrainResult drained = drain(session, oldest, &callbacks, &primed, &error);
         if (drained == ScreenwideDrainCancelled) cancelled = true;
         if (drained != ScreenwideDrainAppended) break;
       }
@@ -199,15 +223,19 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
     if (cancelled) {
       [session->screen_reader cancelReading];
       if (session->camera_reader != nil) [session->camera_reader cancelReading];
-      [session->writer cancelWriting];
-      [[NSFileManager defaultManager] removeItemAtURL:session->output_url error:nil];
+      if (session->writer != nil) {
+        [session->writer cancelWriting];
+        [[NSFileManager defaultManager] removeItemAtURL:session->output_url error:nil];
+      }
       return -1;
     }
     if (error != nil || session->screen_reader.status == AVAssetReaderStatusFailed ||
         (session->camera_reader != nil &&
          session->camera_reader.status == AVAssetReaderStatusFailed)) {
-      [session->writer cancelWriting];
-      [[NSFileManager defaultManager] removeItemAtURL:session->output_url error:nil];
+      if (session->writer != nil) {
+        [session->writer cancelWriting];
+        [[NSFileManager defaultManager] removeItemAtURL:session->output_url error:nil];
+      }
       return fail(error_text, error_capacity,
                   error.localizedDescription
                       ?: session->screen_reader.error.localizedDescription
@@ -216,6 +244,8 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
                               : nil)
                       ?: @"The video export could not read the recording");
     }
+    // The stream's encoder finishes the file once its input closes.
+    if (session->writer == nil) return 1;
     [session->writer_input markAsFinished];
     dispatch_semaphore_t finish_semaphore = dispatch_semaphore_create(0);
     [session->writer finishWritingWithCompletionHandler:^{

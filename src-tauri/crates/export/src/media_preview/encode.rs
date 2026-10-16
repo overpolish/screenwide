@@ -5,6 +5,8 @@ mod process;
 #[cfg(test)]
 pub(super) use process::progress_milliseconds;
 pub(crate) use process::run_export;
+#[cfg(target_os = "macos")]
+pub(crate) use process::StreamedExport;
 use screenwide_sidecar::ffmpeg_command;
 
 use super::*;

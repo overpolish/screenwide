@@ -8,6 +8,8 @@ use std::ffi::{c_char, c_void};
 use std::sync::atomic::Ordering;
 
 use super::frames::{ExportFrame, FrameComposer};
+use super::mux::X264Plan;
+use crate::media_preview::StreamedExport;
 
 /// The share of the progress bar the GPU pass owns; muxing takes the rest.
 pub(super) const GPU_PROGRESS_PERCENT: u64 = 95;
@@ -21,6 +23,10 @@ pub(super) struct ExportContext<'a> {
   /// Why a frame could not be composed, which outranks the loop's own
   /// report of the frame it then stopped on.
   pub(super) error: Option<String>,
+  /// What x264 is started with once the loop knows the frame rate, and then
+  /// the run the frames are written to. With neither, AVFoundation encodes.
+  pub(super) x264: Option<X264Plan>,
+  pub(super) stream: Option<StreamedExport>,
 }
 
 pub(super) unsafe extern "C" fn should_cancel(context: *mut c_void) -> bool {
@@ -38,6 +44,24 @@ pub(super) unsafe extern "C" fn progress(context: *mut c_void, position_ms: u64)
   {
     (context.on_progress)(position_ms.saturating_mul(GPU_PROGRESS_PERCENT) / 100);
   }
+}
+
+/// Starts x264 at `frame_rate`, answering the descriptor each frame is
+/// written to, or -1 to have AVFoundation encode the frames instead.
+pub(super) unsafe extern "C" fn open_stream(context: *mut c_void, frame_rate: u32) -> i32 {
+  let context = unsafe { &mut *(context.cast::<ExportContext<'_>>()) };
+  let Some(stream) = context
+    .x264
+    .take()
+    .and_then(|plan| plan.start(frame_rate).ok())
+  else {
+    return -1;
+  };
+  let Some(input) = stream.input() else {
+    return -1;
+  };
+  context.stream = Some(stream);
+  input
 }
 
 pub(super) unsafe extern "C" fn compose_frame(
@@ -84,6 +108,7 @@ unsafe extern "C" {
     progress: unsafe extern "C" fn(*mut c_void, u64),
     compose: unsafe extern "C" fn(*mut c_void, *const ExportFrame, *mut u64) -> bool,
     wait: unsafe extern "C" fn(*mut c_void, u64) -> bool,
+    open_stream: unsafe extern "C" fn(*mut c_void, u32) -> i32,
     error_text: *mut c_char,
     error_capacity: usize,
   ) -> i32;

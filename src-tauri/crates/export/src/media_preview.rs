@@ -39,6 +39,8 @@ pub use audio::{prepare, waveform, HeardAs};
 pub use bake::bake_geometry;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use encode::timeline_audio_mapping_args;
+#[cfg(target_os = "macos")]
+pub(crate) use encode::StreamedExport;
 pub use encode::{
   camera_recording_exporter, remuxer, selected_audio_exporter, selected_recording_exporter, Remux,
   SelectedRecordingExport,

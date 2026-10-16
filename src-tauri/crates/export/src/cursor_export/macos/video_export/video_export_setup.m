@@ -43,11 +43,26 @@ static AVAssetReaderTrackOutput *reader_output(AVAssetReader *reader, AVAssetTra
   return output;
 }
 
+/// The NV12 buffers the GPU draws each exported frame into, backed by
+/// IOSurfaces it can open.
+static NSDictionary *output_pixel_attributes(uint32_t width, uint32_t height) {
+  return @{
+    (NSString *)kCVPixelBufferPixelFormatTypeKey :
+        @(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange),
+    (NSString *)kCVPixelBufferWidthKey : @(width),
+    (NSString *)kCVPixelBufferHeightKey : @(height),
+    (NSString *)kCVPixelBufferMetalCompatibilityKey : @YES,
+    (NSString *)kCVPixelBufferIOSurfacePropertiesKey : @{},
+  };
+}
+
 @implementation ScreenwideVideoExport (Setup)
 - (int)prepareScreen:(const char *)screen_path
               camera:(const char *)camera_path
               output:(const char *)output_path
              bitrate:(uint64_t)bitrate
+              stream:(ScreenwideOpenStream)open_stream
+             context:(void *)context
            errorText:(char *)error_text
        errorCapacity:(size_t)error_capacity {
   NSError *error = nil;
@@ -80,15 +95,20 @@ static AVAssetReaderTrackOutput *reader_output(AVAssetReader *reader, AVAssetTra
   if (camera_reader != nil && camera_output == nil)
     return fail(error_text, error_capacity, error.localizedDescription);
 
+  source_frame_rate = screen_track.nominalFrameRate;
+  if (!isfinite(source_frame_rate) || source_frame_rate < 60.0) source_frame_rate = 60.0;
+  source_duration_us = (uint64_t)llround(
+      CMTimeGetSeconds(CMTimeRangeGetEnd(screen_track.timeRange)) * 1000000.0);
+  // The loop stamps frame `n` at `n / fps` with the rate rounded, so the
+  // stream runs at that same whole rate.
+  stream_fd = open_stream(context, (uint32_t)llround(source_frame_rate));
+  if (stream_fd >= 0) return [self prepareStream:error_text errorCapacity:error_capacity];
+
   output_url = [NSURL fileURLWithPath:@(output_path)];
   [[NSFileManager defaultManager] removeItemAtURL:output_url error:nil];
   writer = [[AVAssetWriter alloc] initWithURL:output_url fileType:AVFileTypeMPEG4 error:&error];
   if (writer == nil) return fail(error_text, error_capacity, error.localizedDescription);
   writer.shouldOptimizeForNetworkUse = YES;
-  source_frame_rate = screen_track.nominalFrameRate;
-  if (!isfinite(source_frame_rate) || source_frame_rate < 60.0) source_frame_rate = 60.0;
-  source_duration_us = (uint64_t)llround(
-      CMTimeGetSeconds(CMTimeRangeGetEnd(screen_track.timeRange)) * 1000000.0);
   NSNumber *expected_frame_rate = @((NSInteger)llround(source_frame_rate));
   NSDictionary *video_settings = @{
     AVVideoCodecKey : AVVideoCodecTypeH264,
@@ -107,20 +127,28 @@ static AVAssetReaderTrackOutput *reader_output(AVAssetReader *reader, AVAssetTra
   };
   writer_input = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo
                                                 outputSettings:video_settings];
-  NSDictionary *pixel_attributes = @{
-    (NSString *)kCVPixelBufferPixelFormatTypeKey :
-        @(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange),
-    (NSString *)kCVPixelBufferWidthKey : @(output_width),
-    (NSString *)kCVPixelBufferHeightKey : @(output_height),
-    (NSString *)kCVPixelBufferMetalCompatibilityKey : @YES,
-    (NSString *)kCVPixelBufferIOSurfacePropertiesKey : @{},
-  };
   adaptor = [[AVAssetWriterInputPixelBufferAdaptor alloc]
          initWithAssetWriterInput:writer_input
-      sourcePixelBufferAttributes:pixel_attributes];
+      sourcePixelBufferAttributes:output_pixel_attributes(output_width, output_height)];
   if (![writer canAddInput:writer_input])
     return fail(error_text, error_capacity, @"AVFoundation rejected the video writer");
   [writer addInput:writer_input];
+  return 1;
+}
+
+/// Frames streamed to an encoder outside AVFoundation are drawn into a pool
+/// of the same buffers its writer would have given, then packed into
+/// `stream_staging` on their way out.
+- (int)prepareStream:(char *)error_text errorCapacity:(size_t)error_capacity {
+  CVPixelBufferPoolRef pool = NULL;
+  NSDictionary *attributes = output_pixel_attributes(output_width, output_height);
+  if (CVPixelBufferPoolCreate(kCFAllocatorDefault, NULL, (__bridge CFDictionaryRef)attributes,
+                              &pool) != kCVReturnSuccess ||
+      pool == NULL)
+    return fail(error_text, error_capacity, @"The video export could not make its frames");
+  stream_pool = pool;
+  size_t chroma = (size_t)((output_width + 1) / 2) * ((output_height + 1) / 2) * 2;
+  stream_staging = [NSMutableData dataWithLength:(size_t)output_width * output_height + chroma];
   return 1;
 }
 

@@ -25,6 +25,10 @@ typedef bool (*ScreenwideComposeFrame)(void *context, const ScreenwideExportFram
                                        uint64_t *token);
 /// Blocks until the GPU has finished the frame `token` names.
 typedef bool (*ScreenwideWaitFrame)(void *context, uint64_t token);
+/// Starts the encoder frames are streamed to at `frame_rate`, answering the
+/// descriptor each frame's planes are written to, or -1 to encode them with
+/// AVFoundation instead.
+typedef int (*ScreenwideOpenStream)(void *context, uint32_t frame_rate);
 
 typedef struct {
   uint64_t output_start_us;
@@ -49,6 +53,9 @@ static inline int fail(char *error, size_t capacity, NSString *message) {
 @property(nonatomic) CVPixelBufferRef destination;
 @property(nonatomic) CMSampleBufferRef screenSample;
 @property(nonatomic) CMSampleBufferRef cameraSample;
+/// The same picture shown again at `presentation`, once this frame's GPU
+/// work is done.
+- (instancetype)repeatedAt:(CMTime)presentation;
 @end
 
 typedef enum {
@@ -70,6 +77,12 @@ __attribute__((visibility("hidden"))) ScreenwideDrainResult screenwide_export_dr
     AVAssetWriterInput *input, AVAssetWriter *writer, const ScreenwideExportCallbacks *callbacks,
     BOOL *primed, float source_frame_rate, NSError **error);
 
+/// Waits for the oldest in-flight frame and writes its planes to `fd`, each
+/// plane's rows packed, through `staging`, which holds one whole frame.
+__attribute__((visibility("hidden"))) ScreenwideDrainResult screenwide_export_stream_inflight_frame(
+    ScreenwideInflightFrame *frame, int fd, NSMutableData *staging,
+    const ScreenwideExportCallbacks *callbacks, NSError **error);
+
 /// The reader and writer one export runs between.
 @interface ScreenwideVideoExport : NSObject {
 @public
@@ -87,6 +100,12 @@ __attribute__((visibility("hidden"))) ScreenwideDrainResult screenwide_export_dr
   AVAssetWriterInput *writer_input;
   AVAssetWriterInputPixelBufferAdaptor *adaptor;
   NSURL *output_url;
+  /// Where frames are written when an encoder outside AVFoundation takes
+  /// them, or -1; then the pool they are drawn into and the frame each is
+  /// packed in on its way there.
+  int stream_fd;
+  CVPixelBufferPoolRef stream_pool;
+  NSMutableData *stream_staging;
   float source_frame_rate;
   uint64_t source_duration_us;
   uint32_t output_width;
@@ -99,6 +118,8 @@ __attribute__((visibility("hidden"))) ScreenwideDrainResult screenwide_export_dr
               camera:(const char *)camera_path
               output:(const char *)output_path
              bitrate:(uint64_t)bitrate
+              stream:(ScreenwideOpenStream)open_stream
+             context:(void *)context
            errorText:(char *)error_text
        errorCapacity:(size_t)error_capacity;
 /// Starts reading both tracks again from `time`, for a timeline that plays
