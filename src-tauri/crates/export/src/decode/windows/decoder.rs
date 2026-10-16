@@ -64,7 +64,8 @@ impl Drop for MediaFoundation {
 
 pub struct NativeVideoReader {
   height: u32,
-  last_sample: Option<IMFSample>,
+  /// The last sample read, with its time in milliseconds.
+  last_sample: Option<(IMFSample, u64)>,
   reader: IMFSourceReader,
   width: u32,
   // Fields drop in declaration order. Keep the process-wide MF reference
@@ -138,8 +139,19 @@ impl NativeVideoReader {
   }
 
   pub fn seek(&mut self, position_ms: u64) -> Result<(), String> {
+    self.seek_to(position_ms.saturating_sub(SEEK_PREROLL_MS))
+  }
+
+  /// Seeks with no rewind, for a caller that takes any frame near
+  /// `position_ms`. Media Foundation's MPEG-4 source lands on the keyframe
+  /// at or before the position, the least decoding to a frame close by; a
+  /// fragmented MP4 may land on the keyframe after it instead.
+  pub fn seek_near(&mut self, position_ms: u64) -> Result<(), String> {
+    self.seek_to(position_ms)
+  }
+
+  fn seek_to(&mut self, seek_ms: u64) -> Result<(), String> {
     win(unsafe { self.reader.Flush(VIDEO_STREAM) })?;
-    let seek_ms = position_ms.saturating_sub(SEEK_PREROLL_MS);
     let position = PROPVARIANT::from(
       i64::try_from(seek_ms)
         .unwrap_or(i64::MAX / HUNDRED_NS_PER_MS)
@@ -151,6 +163,12 @@ impl NativeVideoReader {
   }
 
   pub fn frame_at(&mut self, target_ms: u64) -> Result<Option<CapturedImage>, String> {
+    Ok(self.timed_frame_at(target_ms)?.map(|(frame, _)| frame))
+  }
+
+  /// The first frame at or after `target_ms`, or the last one before the
+  /// stream ends, with the time in milliseconds it is from.
+  pub fn timed_frame_at(&mut self, target_ms: u64) -> Result<Option<(CapturedImage, u64)>, String> {
     loop {
       let mut flags = 0_u32;
       let mut timestamp = 0_i64;
@@ -169,7 +187,7 @@ impl NativeVideoReader {
         return self
           .last_sample
           .as_ref()
-          .map(|sample| sample_image(sample, self.width, self.height))
+          .map(|(sample, ms)| Ok((sample_image(sample, self.width, self.height)?, *ms)))
           .transpose();
       }
       if flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED.0 as u32 != 0 {
@@ -188,9 +206,12 @@ impl NativeVideoReader {
       let timestamp_ms = u64::try_from(timestamp.max(0) / HUNDRED_NS_PER_MS).unwrap_or_default();
       // Retain the native sample; copying a full RGBA frame just to cache
       // the last image doubles the allocation for every requested frame.
-      self.last_sample = Some(sample.clone());
+      self.last_sample = Some((sample.clone(), timestamp_ms));
       if timestamp_ms.saturating_add(2) >= target_ms {
-        return sample_image(&sample, self.width, self.height).map(Some);
+        return Ok(Some((
+          sample_image(&sample, self.width, self.height)?,
+          timestamp_ms,
+        )));
       }
     }
   }

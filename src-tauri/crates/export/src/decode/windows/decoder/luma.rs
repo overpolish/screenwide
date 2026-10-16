@@ -9,9 +9,8 @@
 
 use std::path::{Path, PathBuf};
 
-use windows::core::{Interface, GUID};
+use windows::core::Interface;
 use windows::Win32::Media::MediaFoundation::*;
-use windows::Win32::System::Com::StructuredStorage::PROPVARIANT;
 
 use super::{win, NativeVideoReader, HUNDRED_NS_PER_MS, VIDEO_STREAM};
 use screenwide_annotations::pin::{FrameSource, LumaFrame};
@@ -63,7 +62,7 @@ impl FrameSource for LumaReader {
       Some(reader) => reader,
       None => NativeVideoReader::open(&self.path, self.size.0, self.size.1, 0)?,
     };
-    seek(&mut reader, start_ms)?;
+    reader.seek_near(start_ms)?;
     loop {
       let mut flags = 0_u32;
       let mut timestamp = 0_i64;
@@ -105,19 +104,6 @@ impl FrameSource for LumaReader {
     self.reader = Some(reader);
     Ok(())
   }
-}
-
-/// Moves `reader` to `start_ms`. Media Foundation's MPEG-4 source lands on
-/// the keyframe before the position, so no preroll is added: the frames
-/// before the start are decoded and skipped either way.
-fn seek(reader: &mut NativeVideoReader, start_ms: u64) -> Result<(), String> {
-  win(unsafe { reader.reader.Flush(VIDEO_STREAM) })?;
-  let position = PROPVARIANT::from(
-    i64::try_from(start_ms)
-      .unwrap_or(i64::MAX / HUNDRED_NS_PER_MS)
-      .saturating_mul(HUNDRED_NS_PER_MS),
-  );
-  win(unsafe { reader.reader.SetCurrentPosition(&GUID::zeroed(), &position) })
 }
 
 /// The brightness of an ARGB32 sample, with the BT.709 weights.

@@ -6,78 +6,69 @@
 use tauri::ipc::{Channel, InvokeResponseBody};
 
 use crate::editor::recording_preview_player::{
-  timeline_thumbnails::{encoded_png, payload, target_width, THUMBNAIL_HEIGHT},
+  timeline_thumbnails::{
+    cell_centre_ms, cell_tolerance_ms, encoded_png, payload, thumbnail_tracks, ThumbnailTrack,
+    THUMBNAIL_HEIGHT,
+  },
   PlayerSources,
 };
+use screenwide_export::camera_effects::cpu::StillEffects;
 use screenwide_export::decode::windows::decoder::{encoded_jpeg, NativeVideoReader};
 
 pub(super) fn generate(sources: PlayerSources, count: u32, channel: Channel) {
-  let mut tracks = vec![(0_u32, &sources.screen_path, sources.duration_ms)];
-  if let Some(path) = &sources.camera_path {
-    tracks.push((
-      1,
-      path,
-      sources.camera_duration_ms.unwrap_or(sources.duration_ms),
-    ));
-  }
-  // The camera's thumbnails show its effects, see-through where it has no
-  // background, which only a PNG carries.
-  let camera_track = if sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera {
-    0
-  } else {
-    1
+  let recording_ms = sources.duration_ms;
+  // Each track on a thread of its own, so the camera's strip fills alongside
+  // the screen's rather than after it.
+  std::thread::scope(|scope| {
+    for track in thumbnail_tracks(&sources) {
+      let channel = &channel;
+      scope.spawn(move || generate_track(track, recording_ms, count, channel));
+    }
+  });
+}
+
+fn generate_track(track: ThumbnailTrack<'_>, recording_ms: u64, count: u32, channel: &Channel) {
+  let Ok(mut reader) = NativeVideoReader::open(track.path, track.width, THUMBNAIL_HEIGHT, 0) else {
+    return;
   };
-  for (track, path, duration_ms) in tracks {
-    let Some(pane) = sources.playback_layout.panes.get(track as usize) else {
+  let mut effects = StillEffects::new(track.effects, THUMBNAIL_HEIGHT * 4);
+  let see_through = effects.as_ref().is_some_and(StillEffects::is_transparent);
+  let tolerance_ms = cell_tolerance_ms(recording_ms, count);
+  let mut last_thumbnail = None;
+  for index in 0..count {
+    let target_ms =
+      cell_centre_ms(recording_ms, index, count).min(track.duration_ms.saturating_sub(1));
+    // Any frame from half a cell before the centre will do, so the seek does
+    // not rewind: most thumbnails are the keyframe it lands on, or a few
+    // frames after it.
+    let decoded = reader
+      .seek_near(target_ms)
+      .and_then(|()| reader.timed_frame_at(target_ms.saturating_sub(tolerance_ms)))
+      .ok()
+      .flatten()
+      .and_then(|(mut frame, frame_ms)| {
+        if let Some(effects) = effects.as_mut() {
+          // The matte is read for the moment the frame is from, which the
+          // tolerance lets differ from the cell's centre.
+          effects.apply(&mut frame, frame_ms);
+        }
+        let encoded = if see_through {
+          encoded_png(&frame)
+        } else {
+          encoded_jpeg(&frame, 80)
+        };
+        encoded.ok()
+      });
+    // Sidecars can end a fraction before the shared recording timeline.
+    // Keep the strip complete with the most recent real camera frame rather
+    // than exposing the frontend's grey missing-thumbnail placeholder.
+    let Some(bytes) = thumbnail_or_previous(decoded, &last_thumbnail) else {
       continue;
     };
-    let width = target_width(pane.source_width, pane.source_height);
-    let mut reader = match NativeVideoReader::open(path, width, THUMBNAIL_HEIGHT, 0) {
-      Ok(reader) => reader,
-      Err(_) => continue,
-    };
-    let mut effects = (track == camera_track)
-      .then(|| {
-        screenwide_export::camera_effects::cpu::StillEffects::new(
-          sources.camera_effects_now(),
-          THUMBNAIL_HEIGHT * 4,
-        )
-      })
-      .flatten();
-    let mut last_thumbnail = None;
-    for index in 0..count {
-      let position_ms = timeline_position(duration_ms, index, count);
-      let decoded = reader
-        .seek(position_ms)
-        .and_then(|()| reader.frame_at(position_ms))
-        .ok()
-        .flatten()
-        .and_then(|mut frame| match effects.as_mut() {
-          Some(effects) => {
-            effects.apply(&mut frame, position_ms);
-            if effects.is_transparent() {
-              encoded_png(&frame).ok()
-            } else {
-              encoded_jpeg(&frame, 80).ok()
-            }
-          }
-          None => encoded_jpeg(&frame, 80).ok(),
-        });
-      // Sidecars can end a fraction before the shared recording timeline.
-      // Keep the strip complete with the most recent real camera frame rather
-      // than exposing the frontend's grey missing-thumbnail placeholder.
-      let Some(bytes) = thumbnail_or_previous(decoded, &last_thumbnail) else {
-        continue;
-      };
-      last_thumbnail = Some(bytes.clone());
-      if channel
-        .send(InvokeResponseBody::Raw(payload(
-          track, index, count, &bytes,
-        )))
-        .is_err()
-      {
-        return;
-      }
+    let body = InvokeResponseBody::Raw(payload(track.id, index, count, &bytes));
+    last_thumbnail = Some(bytes);
+    if channel.send(body).is_err() {
+      return;
     }
   }
 }
@@ -86,22 +77,9 @@ fn thumbnail_or_previous(decoded: Option<Vec<u8>>, previous: &Option<Vec<u8>>) -
   decoded.or_else(|| previous.clone())
 }
 
-// Sample the beginning of each timeline bucket. In particular, the final
-// thumbnail stays inside the last bucket instead of asking Media Foundation
-// for the container endpoint, where no decodable frame has to exist.
-fn timeline_position(duration_ms: u64, index: u32, count: u32) -> u64 {
-  duration_ms.saturating_mul(u64::from(index)) / u64::from(count.max(1))
-}
-
 #[cfg(test)]
 mod tests {
-  use super::{thumbnail_or_previous, timeline_position};
-
-  #[test]
-  fn final_thumbnail_stays_inside_the_last_timeline_bucket() {
-    assert_eq!(timeline_position(9_000, 0, 9), 0);
-    assert_eq!(timeline_position(9_000, 8, 9), 8_000);
-  }
+  use super::thumbnail_or_previous;
 
   #[test]
   fn a_short_sidecar_reuses_its_last_real_thumbnail() {
