@@ -154,6 +154,31 @@ impl StreamedExport {
     )
   }
 
+  /// Ends the video and lets FFmpeg finish, answering what it wrote and
+  /// removing it: a sample to measure, not a file to keep. None where
+  /// `cancelled` stopped it first.
+  pub(crate) fn measure(mut self, cancelled: &AtomicBool) -> Result<Option<Vec<u8>>, String> {
+    drop(self.stdin.take());
+    let (Some(mut child), Some(stderr_reader)) = (self.child.take(), self.stderr_reader.take())
+    else {
+      return Err("FFmpeg was already stopped".to_owned());
+    };
+    if cancelled.load(Ordering::Acquire) {
+      let _ = child.kill();
+    }
+    let status = child.wait();
+    let stderr = stderr_reader.join().unwrap_or_default();
+    let written = std::fs::read(&self.temporary);
+    let _ = std::fs::remove_file(&self.temporary);
+    if cancelled.load(Ordering::Acquire) {
+      return Ok(None);
+    }
+    match (status, written) {
+      (Ok(status), Ok(stream)) if status.success() && !stream.is_empty() => Ok(Some(stream)),
+      _ => Err(remux_error(&stderr)),
+    }
+  }
+
   /// Stops FFmpeg and removes what it wrote, answering why it quit where it
   /// said.
   pub(crate) fn abandon(mut self) -> Option<String> {

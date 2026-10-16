@@ -271,7 +271,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
 
   let available = tracks(2);
   let selection = TrackSelection::new(&available, &[0, 1]);
-  let estimated = estimate_compressed_video_bytes(&source, 3_000, 2, 200, 100).unwrap();
+  let estimated = estimate_compressed_video_bytes(&source, 3_000, 2, 200, 100, false).unwrap();
   assert!(estimated > 0);
   let cancelled = AtomicBool::new(false);
   let mut progress = Vec::new();

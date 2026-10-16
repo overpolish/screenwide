@@ -21,6 +21,7 @@ pub(crate) mod caption_template_files;
 pub(crate) mod captions;
 pub(crate) mod commands;
 mod directory;
+mod export_picture;
 pub(crate) mod export_window;
 /// The pictures images show.
 pub(crate) mod images;
@@ -279,6 +280,8 @@ pub struct EditorState {
   /// Cached by artifact, stream kind (screen/camera/baked), quality and scale.
   compression_estimates: Mutex<HashMap<(u64, u8, u8, u16), u64>>,
   compression_estimate_preparation: Mutex<()>,
+  /// Set to stop the estimate running now once a newer one is asked for.
+  running_estimate: Mutex<Arc<AtomicBool>>,
 }
 
 impl EditorState {

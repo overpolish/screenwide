@@ -12,6 +12,7 @@ pub use time_mapping::{
   ascending_source_pieces, output_at_us, output_duration_us, output_end_at_us,
   output_start_to_source_us, output_to_source_us, plays_through, rate_at,
   source_after_output_duration_us, source_before_output_duration_us, source_to_output_us,
+  within_output_windows,
 };
 
 /// A stretch of the source the timeline keeps, the rate it plays at, and

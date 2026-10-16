@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use screenwide_export::cursor_export;
-use screenwide_export::media_preview;
+use crate::editor::export_picture::{ExportPicture, Screen};
+use screenwide_export::media_preview::VideoExportOptions;
 use screenwide_export::track_selection;
 mod estimate_helpers;
+mod video;
 
 #[tauri::command]
 pub async fn estimate_recording_export(
@@ -28,7 +29,7 @@ pub async fn estimate_recording_export(
     include_camera,
     include_primary_video,
     resolution_scale_percent,
-    recording_output,
+    mut recording_output,
     screenshot_output: _,
     subtitles: _,
     timeline_edit: timeline_model,
@@ -47,41 +48,30 @@ pub async fn estimate_recording_export(
 
   tauri::async_runtime::spawn_blocking(move || {
     let state = app.state::<EditorState>();
-    let (
-      path,
-      project,
-      tracks,
-      duration_ms,
-      original_size,
-      camera,
-      has_video,
-      width,
-      height,
-      primary_kind,
-      source_scale_percent,
-      has_cursor,
-      has_keyboard,
-    ) = {
+    let cancelled = estimate_helpers::replace_running(&state);
+    let (camera_recording, captures, recording) = {
       let artifact = state
         .recording
         .artifact
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
-      let Some(EditorArtifact::Recording {
-        audio_tracks,
-        camera,
-        cursor,
-        keyboard,
-        duration_ms,
-        height,
-        id,
-        path,
-        primary_kind,
-        project,
-        source_scale_percent,
-        width,
-        ..
-      }) = artifact.as_ref()
+      let Some(
+        artifact @ EditorArtifact::Recording {
+          audio_tracks,
+          camera,
+          cursor,
+          keyboard,
+          duration_ms,
+          height,
+          id,
+          path,
+          primary_kind,
+          project,
+          source_scale_percent,
+          width,
+          ..
+        },
+      ) = artifact.as_ref()
       else {
         return Err("There is no recording to estimate".to_owned());
       };
@@ -89,26 +79,37 @@ pub async fn estimate_recording_export(
         return Err("That recording is no longer available in the editor".to_owned());
       }
       (
-        path.clone(),
-        project.clone(),
-        audio_tracks.clone(),
-        *duration_ms,
-        std::fs::metadata(path).map_or(0, |metadata| metadata.len()),
-        camera.clone(),
-        *width > 0 && *height > 0,
-        *width,
-        *height,
-        *primary_kind,
-        *source_scale_percent,
-        cursor.is_some(),
-        keyboard.is_some(),
+        crate::editor::camera_effects::CameraRecording::of(artifact),
+        artifact.captures(),
+        (
+          audio_tracks.clone(),
+          camera.clone(),
+          cursor.as_ref().map(|cursor| cursor.path.clone()),
+          keyboard.as_ref().map(|keyboard| keyboard.path.clone()),
+          *duration_ms,
+          (*width, *height),
+          path.clone(),
+          *primary_kind,
+          project.clone(),
+          *source_scale_percent,
+        ),
       )
     };
+    let (
+      ref tracks,
+      ref camera,
+      ref cursor,
+      ref keyboard,
+      duration_ms,
+      (width, height),
+      ref path,
+      primary_kind,
+      ref project,
+      source_scale_percent,
+    ) = recording;
     if bake_camera && (!include_primary_video || !include_camera || camera.is_none()) {
       return Err("There is no camera recording to bake in".to_owned());
     }
-    let bake_cursor = cursor_effects.bake && include_primary_video && has_cursor;
-    let bake_keyboard = keyboard_effects.bake && include_primary_video && has_keyboard;
     if !include_primary_video && !include_camera && enabled_stream_indices.is_empty() {
       return Err("Select at least one track to export".to_owned());
     }
@@ -118,14 +119,16 @@ pub async fn estimate_recording_export(
       primary_kind,
     )?;
     validate_camera_resolution_scale(camera_resolution_scale_percent)?;
+    recording_output.stamp_captures(captures);
 
+    let project_folder = project.parent().unwrap_or(std::path::Path::new("."));
     let selection = crate::editor::speech::as_heard(
       track_selection::TrackSelection::with_volumes(
-        &tracks,
+        tracks,
         &enabled_stream_indices,
         &audio_track_volumes,
       )?,
-      project.parent().unwrap_or(std::path::Path::new(".")),
+      project_folder,
       &enabled_stream_indices,
     );
     let layout = if collapse_audio {
@@ -134,147 +137,101 @@ pub async fn estimate_recording_export(
       track_selection::AudioLayout::SeparateTracks
     };
     let timeline =
-      timeline_edit::export_plan(timeline_model.as_ref(), &project, artifact_id, duration_ms);
-    let selected_audio = selection.estimated_audio_bytes(&tracks, layout, duration_ms);
-
-    let all_indices = tracks
-      .iter()
-      .map(|track| track.stream_index)
-      .collect::<Vec<_>>();
-    let all = track_selection::TrackSelection::new(&tracks, &all_indices);
-    let original_audio = all.estimated_audio_bytes(
-      &tracks,
-      track_selection::AudioLayout::SeparateTracks,
-      duration_ms,
-    );
+      timeline_edit::export_plan(timeline_model.as_ref(), project, artifact_id, duration_ms);
+    let edit =
+      timeline_edit::export_edit(timeline_model.as_ref(), project, artifact_id, duration_ms);
+    // The same inputs the export reads: the camera's effects over the
+    // edit's background ranges, and the captions drawn into the picture.
+    let camera_effects = camera_recording
+      .and_then(|camera| crate::editor::camera_effects::live::load(&camera, edit.as_ref()));
+    let primary_output = &recording_output.primary;
+    let captions = edit.as_ref().and_then(|edit| {
+      crate::editor::captions::track_for(
+        (project, tracks, duration_ms),
+        edit,
+        crate::editor::captions::frame_for(primary_output.width, primary_output.height),
+      )
+    });
+    let camera_is_primary = primary_kind == PrimaryRecordingKind::Camera;
+    let has_video = width > 0 && height > 0;
 
     let _preparing = state
       .compression_estimate_preparation
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
-    // Captions drawn into the picture need it composed, as an annotation does.
-    let shows_captions = timeline_model
-      .as_ref()
-      .and_then(|edit| edit.captions.as_ref())
-      .is_some_and(|captions| captions.enabled);
-    let primary_composition =
-      shows_captions || cursor_export::needs_composition(&recording_output.primary, width, height);
-    let camera_composition = camera.as_ref().is_some_and(|camera| {
-      cursor_export::needs_composition(&recording_output.camera, camera.width, camera.height)
-    });
-    let estimate_compression =
-      if (bake_camera || bake_cursor || bake_keyboard || primary_composition) && compression == 0 {
-        // Original means no intentional quality reduction. Composition still
-        // requires an encode, so it uses the same high-quality step as High
-        // rather than pretending the source can be stream-copied.
-        1
-      } else {
-        compression
-      };
-    let key = (
+    // A newer estimate asked while this one waited its turn: its answer is
+    // the one wanted.
+    if cancelled.load(std::sync::atomic::Ordering::Acquire) {
+      return Err("A newer estimate replaced this one".to_owned());
+    }
+    let estimate = video::Estimate {
       artifact_id,
-      u8::from(bake_camera) * 2 + u8::from(bake_cursor) * 4 + u8::from(bake_keyboard) * 8,
-      estimate_compression,
-      resolution_scale_percent,
-    );
-    let cached = (!primary_composition)
-      .then(|| estimate_helpers::kept_estimate(&state, &key))
-      .flatten();
-    let screen_video = match cached {
-      _ if !include_primary_video => 0,
-      Some(bytes) => bytes,
-      None if !has_video => 0,
-      None if bake_cursor || bake_keyboard || bake_camera || primary_composition => {
-        cursor_export::estimated_video_bytes(
-          recording_output.primary.width,
-          recording_output.primary.height,
-          duration_ms,
-          media_preview::VideoExportOptions {
-            compression,
-            resolution_scale_percent: 100,
-            source_scale_percent: 100,
-          },
-          original_size.saturating_sub(original_audio),
-          (width, height),
-        )
-      }
-      None
-        if !bake_camera
-          && !bake_cursor
-          && !bake_keyboard
-          && compression == 0
-          && resolution_scale_percent == source_scale_percent =>
-      {
-        original_size.saturating_sub(original_audio)
-      }
-      None => {
-        let bytes = media_preview::estimate_compressed_video_bytes(
-          &path,
-          duration_ms,
-          estimate_compression,
-          source_scale_percent,
-          resolution_scale_percent,
-        )?;
-        estimate_helpers::keep_estimate(&state, key, bytes)
-      }
+      cancelled: &cancelled,
+      duration_ms,
+      state: &state,
+      timeline: timeline.as_ref(),
     };
-
-    let camera_video = if !include_camera {
-      0
-    } else if bake_camera {
-      // Baking necessarily re-encodes the screen. The screen sample remains
-      // the useful predictor; a small allowance covers motion in the overlay
-      // without counting the camera as a second deliverable file.
-      0
-    } else if let Some(camera) = camera {
-      let key = (
-        artifact_id,
-        1,
+    let video = VideoExportOptions {
+      compression,
+      resolution_scale_percent,
+      source_scale_percent,
+    };
+    let screen = |camera_effects| Screen {
+      camera_effects,
+      captions: captions.as_ref(),
+      cursor: cursor
+        .as_ref()
+        .filter(|_| cursor_effects.bake)
+        .map(|cursor| (cursor.as_path(), cursor_effects)),
+      keyboard: keyboard
+        .as_ref()
+        .filter(|_| keyboard_effects.bake)
+        .map(|keyboard| (keyboard.as_path(), keyboard_effects)),
+      duration_ms,
+      layout,
+      output: primary_output,
+      screen: path,
+      selection: &selection,
+      size: (width, height),
+      timeline: timeline.as_ref(),
+      video,
+    };
+    let screen_video = match camera.as_ref() {
+      _ if !include_primary_video || !has_video => 0,
+      Some(camera) if bake_camera => estimate.composed(ExportPicture::baked(
+        screen(camera_effects.clone()),
+        camera,
+        camera_overlay,
+        recording_output.camera.drop_shadow,
+      ))?,
+      _ => estimate.screen(
+        ExportPicture::screen(screen(camera_effects.clone().filter(|_| camera_is_primary))),
+        path,
+        tracks,
+        video,
+      )?,
+    };
+    let camera_video = match camera.as_ref() {
+      Some(camera) if include_camera && !bake_camera => estimate.camera(
+        ExportPicture::camera(
+          camera,
+          &recording_output.camera,
+          timeline.as_ref(),
+          camera_effects,
+          camera_compression,
+          None,
+        ),
+        camera,
         camera_compression,
         camera_resolution_scale_percent,
-      );
-      let cached = (!camera_composition)
-        .then(|| estimate_helpers::kept_estimate(&state, &key))
-        .flatten();
-      match cached {
-        Some(bytes) => bytes,
-        None if camera_composition => cursor_export::estimated_video_bytes(
-          recording_output.camera.width,
-          recording_output.camera.height,
-          camera.duration_ms,
-          media_preview::VideoExportOptions {
-            compression: camera_compression,
-            resolution_scale_percent: 100,
-            source_scale_percent: 100,
-          },
-          camera.original_size_bytes,
-          (camera.width, camera.height),
-        ),
-        None if camera_compression == 0 && camera_resolution_scale_percent == 100 => {
-          camera.original_size_bytes
-        }
-        None => {
-          let bytes = media_preview::estimate_compressed_video_bytes(
-            &camera.path,
-            camera.duration_ms,
-            camera_compression,
-            100,
-            camera_resolution_scale_percent,
-          )?;
-          estimate_helpers::keep_estimate(&state, key, bytes)
-        }
-      }
-    } else {
-      0
+      )?,
+      _ => 0,
     };
-
-    Ok(estimate_helpers::finish_estimate(
-      screen_video,
-      camera_video,
-      selected_audio,
-      bake_camera,
-      timeline.as_ref(),
-      duration_ms,
+    let audio = estimate.to_output(selection.estimated_audio_bytes(tracks, layout, duration_ms));
+    Ok(estimate_helpers::with_container(
+      screen_video
+        .saturating_add(camera_video)
+        .saturating_add(audio),
     ))
   })
   .await

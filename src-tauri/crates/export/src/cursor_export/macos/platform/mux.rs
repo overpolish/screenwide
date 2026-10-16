@@ -46,16 +46,28 @@ struct RawVideo {
   bitrate: u64,
 }
 
+/// Where an x264 run's video goes: into the exported MP4 beside its audio,
+/// or alone into a raw stream an estimate only measures.
+pub(super) enum X264Output {
+  /// FFmpeg writes `temporary` until the file is whole; see
+  /// `remux_temp_path`.
+  Export { audio: Audio, temporary: PathBuf },
+  /// `stretch_starts` being when each stretch after the first begins, in
+  /// the form `-force_key_frames` takes.
+  Measured {
+    path: PathBuf,
+    stretch_starts: Option<String>,
+  },
+}
+
 /// An export encoded with x264, waiting for the loop to know its frame rate.
 pub(super) struct X264Plan {
-  pub(super) audio: Audio,
+  pub(super) output: X264Output,
   pub(super) width: u32,
   pub(super) height: u32,
   pub(super) compression: u8,
   /// The bitrate the media engine would have been given, which caps x264's.
   pub(super) bitrate: u64,
-  /// Where FFmpeg writes until the file is whole; see `remux_temp_path`.
-  pub(super) temporary: PathBuf,
 }
 
 impl X264Plan {
@@ -68,10 +80,18 @@ impl X264Plan {
       compression: self.compression,
       bitrate: self.bitrate,
     };
-    media_preview::StreamedExport::start(
-      self.audio.x264_args(&video, &self.temporary),
-      &self.temporary,
-    )
+    match &self.output {
+      X264Output::Export { audio, temporary } => {
+        media_preview::StreamedExport::start(audio.x264_args(&video, temporary), temporary)
+      }
+      X264Output::Measured {
+        path,
+        stretch_starts,
+      } => media_preview::StreamedExport::start(
+        measured_args(&video, path, stretch_starts.as_deref()),
+        path,
+      ),
+    }
   }
 }
 
@@ -121,38 +141,7 @@ impl Audio {
   /// into `temporary`. The colour stays untagged, as the media engine's
   /// files were, so players read the BT.709 frames the same way.
   fn x264_args(&self, video: &RawVideo, temporary: &Path) -> Vec<OsString> {
-    let mut args = strings(&["-hide_banner", "-loglevel", "error", "-y"]);
-    args.extend(strings(&["-f", "rawvideo", "-pix_fmt", "nv12", "-s"]));
-    args.push(format!("{}x{}", video.width, video.height).into());
-    args.push("-framerate".into());
-    args.push(video.frame_rate.to_string().into());
-    args.extend(strings(&["-i", "pipe:0"]));
-    let mut codec = strings(&[
-      "-map",
-      "0:v:0",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "veryfast",
-      "-threads",
-      X264_THREADS,
-      "-profile:v",
-      "high",
-    ]);
-    // Constant quality spends next to nothing on a still screen; the cap, half
-    // again the media engine's bitrate over two seconds, holds a busy stretch
-    // to the size its level promises.
-    for (flag, value) in [
-      ("-crf", u64::from(x264_crf(video.compression))),
-      ("-maxrate", video.bitrate * 3 / 2),
-      ("-bufsize", video.bitrate * 2),
-      // A keyframe at least every four seconds, as the media engine wrote.
-      ("-g", u64::from(video.frame_rate) * 4),
-    ] {
-      codec.push(flag.into());
-      codec.push(value.to_string().into());
-    }
-    self.finish(args, codec, temporary)
+    self.finish(raw_input_args(video), x264_codec_args(video), temporary)
   }
 
   /// `inputs` with the audio after them, then `video`, which maps and
@@ -181,6 +170,69 @@ impl Audio {
     args.push(temporary.into());
     args
   }
+}
+
+/// FFmpeg's input: the raw frames on standard input.
+fn raw_input_args(video: &RawVideo) -> Vec<OsString> {
+  let mut args = strings(&["-hide_banner", "-loglevel", "error", "-y"]);
+  args.extend(strings(&["-f", "rawvideo", "-pix_fmt", "nv12", "-s"]));
+  args.push(format!("{}x{}", video.width, video.height).into());
+  args.push("-framerate".into());
+  args.push(video.frame_rate.to_string().into());
+  args.extend(strings(&["-i", "pipe:0"]));
+  args
+}
+
+/// The export's x264 settings for `video`, mapping the first input.
+fn x264_codec_args(video: &RawVideo) -> Vec<OsString> {
+  let mut codec = strings(&[
+    "-map",
+    "0:v:0",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-threads",
+    X264_THREADS,
+    "-profile:v",
+    "high",
+  ]);
+  // Constant quality spends next to nothing on a still screen; the cap, half
+  // again the media engine's bitrate over two seconds, holds a busy stretch
+  // to the size its level promises.
+  for (flag, value) in [
+    ("-crf", u64::from(x264_crf(video.compression))),
+    ("-maxrate", video.bitrate * 3 / 2),
+    ("-bufsize", video.bitrate * 2),
+    ("-g", keyframe_interval(video.frame_rate)),
+  ] {
+    codec.push(flag.into());
+    codec.push(value.to_string().into());
+  }
+  codec
+}
+
+/// How many frames apart the export's keyframes are at `frame_rate`: four
+/// seconds, as the media engine wrote.
+pub(super) fn keyframe_interval(frame_rate: u32) -> u64 {
+  u64::from(frame_rate) * 4
+}
+
+/// `video` encoded as the export encodes it into a raw stream at `path`,
+/// for an estimate to measure. The stretches it joins would look like scene
+/// cuts to x264, so scene detection is off and each stretch after the first
+/// opens on a keyframe at `stretch_starts`, which the estimate counts apart
+/// from the frames between.
+fn measured_args(video: &RawVideo, path: &Path, stretch_starts: Option<&str>) -> Vec<OsString> {
+  let mut args = raw_input_args(video);
+  args.extend(x264_codec_args(video));
+  args.extend(strings(&["-sc_threshold", "0"]));
+  if let Some(starts) = stretch_starts {
+    args.extend(strings(&["-force_key_frames", starts]));
+  }
+  args.extend(strings(&["-f", "h264"]));
+  args.push(path.into());
+  args
 }
 
 fn strings(values: &[&str]) -> Vec<OsString> {

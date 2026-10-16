@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::editor::export_picture::{ExportPicture, Screen};
 use screenwide_export::track_selection;
 
 mod publish;
@@ -178,6 +179,24 @@ fn save_recording_media(
     });
   }
 
+  let screen = |camera_effects| Screen {
+    camera_effects,
+    captions: captions.as_ref(),
+    cursor: baked_cursor.map(|cursor| (cursor, cursor_effects)),
+    keyboard: baked_keyboard.map(|keyboard| (keyboard, keyboard_effects)),
+    duration_ms: *duration_ms,
+    layout,
+    output: primary_output,
+    screen: working,
+    selection: &selection,
+    size: (*width, *height),
+    timeline: timeline.as_ref(),
+    video: screenwide_export::media_preview::VideoExportOptions {
+      compression,
+      resolution_scale_percent,
+      source_scale_percent: *source_scale_percent,
+    },
+  };
   if bake_camera {
     if !include_camera {
       return Err("Select the camera track before baking it in".to_owned());
@@ -186,27 +205,18 @@ fn save_recording_media(
       .as_ref()
       .ok_or_else(|| "There is no camera recording to bake in".to_owned())?;
     return camera_save::save_baked_recording(
-      working,
-      camera,
+      ExportPicture::baked(
+        screen(camera_effects),
+        camera,
+        camera_overlay,
+        camera_output.drop_shadow,
+      ),
+      export_duration_ms,
       writing,
       stem,
-      &selection,
-      layout,
       *id,
-      *duration_ms,
-      (*width, *height),
-      camera_overlay,
-      camera_output.drop_shadow,
-      screenwide_export::recording_model::CAMERA_IN_FRONT,
-      (compression, resolution_scale_percent, *source_scale_percent),
-      baked_cursor.map(|cursor| (cursor, cursor_effects)),
-      baked_keyboard.map(|keyboard| (keyboard, keyboard_effects)),
-      primary_output,
       progress_app,
       job_cancellation,
-      timeline.as_ref(),
-      camera_effects,
-      captions.as_ref(),
     );
   }
 
@@ -220,26 +230,10 @@ fn save_recording_media(
     artifact_id: *id,
     audio_tracks,
     cancelled: job_cancellation,
-    captions: captions.as_ref(),
-    compression,
-    camera_effects: camera_effects.clone().filter(|_| camera_is_primary),
-    cursor: baked_cursor,
-    cursor_effects,
-    keyboard: baked_keyboard,
-    keyboard_effects,
     directory: writing,
-    duration_ms: *duration_ms,
-    height: *height,
-    layout,
-    output: primary_output,
+    picture: screen(camera_effects.clone().filter(|_| camera_is_primary)),
     progress_share: screen_progress_share,
-    resolution_scale_percent,
-    screen: working,
-    selection: &selection,
-    source_scale_percent: *source_scale_percent,
     stem,
-    timeline: timeline.as_ref(),
-    width: *width,
   })?;
   let Some(saved) = saved else {
     return Ok(None);

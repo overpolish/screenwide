@@ -6,6 +6,7 @@
 //! in wgpu, and the hardware H.264 transform consumes the copy on the same
 //! Direct3D 11 device; see `export_surface`.
 
+mod encoder_config;
 mod render;
 use render::render_video;
 
@@ -62,8 +63,13 @@ impl VideoSink {
     let attributes = attributes(4)?;
     win(unsafe { attributes.SetUINT32(&MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 1) })?;
     win(unsafe { attributes.SetUnknown(&MF_SINK_WRITER_D3D_MANAGER, &manager) })?;
+    let bitrate = bitrate.min(u64::from(u32::MAX)) as u32;
+    match encoder_config::constant_bitrate(bitrate) {
+      Ok(store) => win(unsafe { attributes.SetUnknown(&MF_SINK_WRITER_ENCODER_CONFIG, &store) })?,
+      Err(message) => eprintln!("windows export: constant bitrate not applied: {message}"),
+    }
     let output = video_type(MFVideoFormat_H264, width, height)?;
-    win(unsafe { output.SetUINT32(&MF_MT_AVG_BITRATE, bitrate.min(u64::from(u32::MAX)) as u32) })?;
+    win(unsafe { output.SetUINT32(&MF_MT_AVG_BITRATE, bitrate) })?;
     win(unsafe { output.SetUINT32(&MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_High.0 as u32) })?;
     win(unsafe { output.SetUINT32(&MF_MT_MAX_KEYFRAME_SPACING, EXPORT_FPS) })?;
 
@@ -259,4 +265,21 @@ pub(in super::super) fn export(
   })();
   let _ = std::fs::remove_file(&video);
   result
+}
+
+/// The bytes the video stream of `request`'s export takes: the constant
+/// bitrate its encoder is held to, over the edited video, at the size
+/// `render_video` draws it.
+pub(in super::super) fn estimate_video_bytes(
+  request: CursorExportRequest<'_>,
+) -> Result<u64, String> {
+  let (width, height) = screenwide_output::output_dimensions(request.output)?;
+  let duration_ms = request
+    .timeline
+    .map_or(request.duration_ms, |timeline| timeline.duration_ms());
+  Ok(
+    super::super::video_bitrate(width, height, request.video.compression)
+      .saturating_mul(duration_ms)
+      / 8_000,
+  )
 }

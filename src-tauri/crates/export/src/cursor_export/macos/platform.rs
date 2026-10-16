@@ -25,6 +25,9 @@ mod frame_placement;
 mod frame_source;
 mod mux;
 
+mod estimate;
+pub(in super::super) use estimate::estimate_video_bytes;
+
 static GPU_EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 
 fn c_path(path: &Path) -> Result<CString, String> {
@@ -41,13 +44,15 @@ fn gpu_video_path() -> PathBuf {
   ))
 }
 
-/// Draws every frame of the export and encodes it: streamed to x264 as
-/// `x264` plans, answering the run to finish, or, where FFmpeg cannot be
-/// started, by AVFoundation into `path`.
+/// Draws the frames `ranges` lay out, every frame of the export where it
+/// keeps the whole source, and encodes them: streamed to x264 as `x264`
+/// plans, answering the run to finish, or, where FFmpeg cannot be started,
+/// by AVFoundation into `path`.
 fn render_gpu_video(
   request: &mut CursorExportRequest<'_>,
   timeline: Option<&macos::native::CursorTimeline>,
   keyboard_timeline: Option<&macos::native::KeyboardTimeline>,
+  ranges: &[screenwide_timeline::TimelineRange],
   path: &Path,
   x264: mux::X264Plan,
 ) -> Result<(ExportRunResult, Option<media_preview::StreamedExport>), String> {
@@ -55,9 +60,6 @@ fn render_gpu_video(
   let screen = c_path(request.screen)?;
   let camera = request.camera.map(|(path, _)| c_path(path)).transpose()?;
   let output = c_path(path)?;
-  let timeline_ranges = request
-    .timeline
-    .map_or(&[][..], |timeline| timeline.ranges());
   let bitrate = x264.bitrate;
   let composer = FrameComposer::new(request, timeline, keyboard_timeline)?;
   let mut error = vec![0_i8; 2_048];
@@ -78,8 +80,8 @@ fn render_gpu_video(
         .as_ref()
         .map_or(std::ptr::null(), |path| path.as_ptr()),
       output.as_ptr(),
-      timeline_ranges.as_ptr(),
-      timeline_ranges.len() as u32,
+      ranges.as_ptr(),
+      ranges.len() as u32,
       request.output.width,
       request.output.height,
       bitrate,
@@ -122,7 +124,10 @@ fn export_gpu(mut request: CursorExportRequest<'_>) -> Result<ExportRunResult, S
   let result = (|| {
     let video = gpu_video_path();
     let x264 = mux::X264Plan {
-      audio: mux::Audio::of(&request),
+      output: mux::X264Output::Export {
+        audio: mux::Audio::of(&request),
+        temporary: media_preview::remux_temp_path(request.destination),
+      },
       width: request.output.width,
       height: request.output.height,
       compression: request.video.compression,
@@ -131,12 +136,15 @@ fn export_gpu(mut request: CursorExportRequest<'_>) -> Result<ExportRunResult, S
         request.output.height,
         request.video.compression,
       ),
-      temporary: media_preview::remux_temp_path(request.destination),
     };
+    let ranges = request
+      .timeline
+      .map_or_else(Vec::new, |timeline| timeline.ranges().to_vec());
     let (video_result, stream) = render_gpu_video(
       &mut request,
       timeline.as_ref(),
       keyboard_timeline.as_ref(),
+      &ranges,
       &video,
       x264,
     )?;

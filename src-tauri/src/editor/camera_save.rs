@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::export_picture::{ExportPicture, Run};
 use super::save::{save_recording_copy, save_selected_recording_copy};
 use super::*;
 use screenwide_export::cursor_export;
@@ -109,44 +110,14 @@ pub(super) fn save_camera_copy(
     );
   };
 
-  if cursor_export::needs_composition(output, camera.width, camera.height)
-    || timeline.is_some_and(|plan| !plan.annotation_clips().is_empty())
-    || camera_effects.is_some()
-  {
+  let picture = ExportPicture::camera(camera, output, timeline, camera_effects, compression, None);
+  if picture.is_composed() {
     let path = unique_path(directory, &camera_stem, RECORDING_EXTENSION, &Path::exists);
-    let result = cursor_export::export(cursor_export::CursorExportRequest {
-      annotation_track: screenwide_annotations::timing::AnnotationTrack::Camera,
-      audio_layout: track_selection::AudioLayout::SeparateTracks,
-      audio_source: None,
-      camera: None,
-      camera_effects: camera_effects.map(|live| cursor_export::ExportCameraEffects {
-        live,
-        on_screen: true,
-      }),
-      camera_on_top: true,
+    let result = cursor_export::export(picture.request(Run {
       cancelled,
-      captions: None,
-      cursor: None,
-      cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),
-      keyboard: None,
-      keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings::default(),
       destination: &path,
-      duration_ms: camera.duration_ms,
-      height: camera.height,
       on_progress: &mut on_progress,
-      output,
-      screen: &camera.path,
-      selection: &empty_selection,
-      #[cfg(target_os = "windows")]
-      surface: crate::editor::preview_platform::recording_export_surface,
-      timeline,
-      video: media_preview::VideoExportOptions {
-        compression,
-        resolution_scale_percent: 100,
-        source_scale_percent: 100,
-      },
-      width: camera.width,
-    })?;
+    }))?;
     return match result {
       media_preview::ExportRunResult::Completed => Ok(Some(path)),
       media_preview::ExportRunResult::Cancelled => Ok(None),
@@ -204,10 +175,15 @@ pub(super) fn save_camera_as_primary(
     camera.duration_ms,
     screenwide_timeline_edit::TimelinePlan::duration_ms,
   );
-  if cursor_export::needs_composition(output, camera.width, camera.height)
-    || timeline.is_some_and(|plan| !plan.annotation_clips().is_empty())
-    || camera_effects.is_some()
-  {
+  let picture = ExportPicture::camera(
+    camera,
+    output,
+    timeline,
+    camera_effects,
+    compression,
+    Some((audio_source, selection, layout)),
+  );
+  if picture.is_composed() {
     let path = unique_path(directory, stem, RECORDING_EXTENSION, &|candidate| {
       candidate.exists()
     });
@@ -222,39 +198,11 @@ pub(super) fn save_camera_as_primary(
         99.0,
       );
     };
-    return match cursor_export::export(cursor_export::CursorExportRequest {
-      annotation_track: screenwide_annotations::timing::AnnotationTrack::Camera,
-      audio_layout: layout,
-      audio_source: Some(audio_source),
-      camera: None,
-      camera_effects: camera_effects.map(|live| cursor_export::ExportCameraEffects {
-        live,
-        on_screen: true,
-      }),
-      camera_on_top: true,
+    return match cursor_export::export(picture.request(Run {
       cancelled,
-      captions: None,
-      cursor: None,
-      cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),
-      keyboard: None,
-      keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings::default(),
       destination: &path,
-      duration_ms: camera.duration_ms,
-      height: camera.height,
       on_progress: &mut on_progress,
-      output,
-      screen: &camera.path,
-      selection,
-      #[cfg(target_os = "windows")]
-      surface: crate::editor::preview_platform::recording_export_surface,
-      timeline,
-      video: media_preview::VideoExportOptions {
-        compression,
-        resolution_scale_percent: 100,
-        source_scale_percent: 100,
-      },
-      width: camera.width,
-    })? {
+    }))? {
       media_preview::ExportRunResult::Completed => Ok(Some(path)),
       media_preview::ExportRunResult::Cancelled => Ok(None),
     };

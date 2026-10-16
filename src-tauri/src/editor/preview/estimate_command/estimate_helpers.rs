@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
 use crate::editor::EditorState;
 
 /// What one estimate is kept under: the recording, which of its baked
@@ -27,26 +30,23 @@ pub(super) fn keep_estimate(state: &EditorState, key: EstimateKey, bytes: u64) -
   bytes
 }
 
-pub(super) fn finish_estimate(
-  screen_video: u64,
-  camera_video: u64,
-  selected_audio: u64,
-  bake_camera: bool,
-  timeline: Option<&screenwide_timeline_edit::TimelinePlan>,
-  duration_ms: u64,
-) -> u64 {
-  // MP4's tables are small but real. Half a percent plus its fixed headers
-  // keeps the estimate honest without pretending CRF can predict exact size.
-  let screen_video = if bake_camera {
-    screen_video.saturating_add(screen_video / 12)
-  } else {
-    screen_video
-  };
-  let media = screen_video
-    .saturating_add(camera_video)
-    .saturating_add(selected_audio);
-  let media = timeline.map_or(media, |timeline| {
-    media.saturating_mul(timeline.duration_ms()) / duration_ms.max(1)
-  });
+/// Cancels the estimate running before this one, whose answer nobody waits
+/// for any more, and answers the flag that cancels this one in turn.
+pub(super) fn replace_running(state: &EditorState) -> Arc<AtomicBool> {
+  let cancelled = Arc::new(AtomicBool::new(false));
+  std::mem::replace(
+    &mut *state
+      .running_estimate
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner()),
+    cancelled.clone(),
+  )
+  .store(true, Ordering::Release);
+  cancelled
+}
+
+/// `media`, the file's streams, with its MP4 tables: small but real. Half a
+/// percent plus the fixed headers.
+pub(super) fn with_container(media: u64) -> u64 {
   media.saturating_add(media / 200).saturating_add(4_096)
 }

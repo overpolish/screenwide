@@ -77,6 +77,7 @@ pub struct ExportCameraEffects {
   pub on_screen: bool,
 }
 
+#[cfg(target_os = "macos")]
 fn output_dimensions(width: u32, height: u32, video: VideoExportOptions) -> (u32, u32) {
   let scale = u64::from(video.resolution_scale_percent);
   let source_scale = u64::from(video.source_scale_percent.max(1));
@@ -104,30 +105,20 @@ fn video_bitrate(width: u32, height: u32, compression: u8) -> u64 {
     .max(2_000_000.0) as u64
 }
 
-pub fn estimated_video_bytes(
-  width: u32,
-  height: u32,
-  duration_ms: u64,
-  video: VideoExportOptions,
-  source_video_bytes: u64,
-  source_size: (u32, u32),
-) -> u64 {
-  let (width, height) = output_dimensions(width, height, video);
-  let bitrate_ceiling =
-    video_bitrate(width, height, video.compression).saturating_mul(duration_ms) / 8_000;
-  let output_pixels = f64::from(width) * f64::from(height);
-  let source_pixels = f64::from(source_size.0.max(1)) * f64::from(source_size.1.max(1));
-  let resolution_factor = (output_pixels / source_pixels).powf(0.72);
-  let quality_factor = [0.95, 0.76, 0.56, 0.39, 0.27]
-    .get(video.compression as usize)
-    .copied()
-    .unwrap_or(0.27);
-  let complexity_estimate =
-    (source_video_bytes as f64 * resolution_factor * quality_factor).round() as u64;
-  complexity_estimate.min(bitrate_ceiling)
+pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
+  check_request(&request)?;
+  platform::export(request)
 }
 
-pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
+/// The bytes the video stream of `request`'s export takes, before its audio
+/// and its MP4 tables, as the platform's encoder would write it. The
+/// request's destination is never written.
+pub fn estimate_video_bytes(request: CursorExportRequest<'_>) -> Result<u64, String> {
+  check_request(&request)?;
+  platform::estimate_video_bytes(request)
+}
+
+fn check_request(request: &CursorExportRequest<'_>) -> Result<(), String> {
   if request.cursor.is_some() && !request.cursor_effects.bake {
     return Err("Cursor baking was not enabled".to_owned());
   }
@@ -137,7 +128,7 @@ pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, Strin
   if !media_preview::supports_compression() {
     return Err("This FFmpeg build cannot finish the recording export".to_owned());
   }
-  platform::export(request)
+  Ok(())
 }
 
 pub fn needs_composition(
@@ -230,54 +221,5 @@ mod tests {
     };
 
     assert!(needs_composition(&settings, 1_920, 1_080));
-  }
-
-  #[test]
-  fn composed_estimate_uses_the_source_as_its_complexity_baseline() {
-    let source = 5_422_083;
-    let estimate = estimated_video_bytes(
-      1_920,
-      1_080,
-      8_380,
-      VideoExportOptions {
-        compression: 0,
-        resolution_scale_percent: 100,
-        source_scale_percent: 100,
-      },
-      source,
-      (1_920, 1_080),
-    );
-    assert!(estimate < source);
-    assert!(estimate > source * 9 / 10);
-  }
-
-  #[test]
-  fn composed_estimate_falls_with_resolution_and_compression() {
-    let source = 8_000_000;
-    let original = estimated_video_bytes(
-      1_920,
-      1_080,
-      10_000,
-      VideoExportOptions {
-        compression: 0,
-        resolution_scale_percent: 100,
-        source_scale_percent: 100,
-      },
-      source,
-      (1_920, 1_080),
-    );
-    let smaller = estimated_video_bytes(
-      960,
-      540,
-      10_000,
-      VideoExportOptions {
-        compression: 2,
-        resolution_scale_percent: 100,
-        source_scale_percent: 100,
-      },
-      source,
-      (1_920, 1_080),
-    );
-    assert!(smaller < original);
   }
 }

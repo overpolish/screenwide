@@ -114,3 +114,36 @@ fn a_reader_starts_a_new_piece_where_the_timeline_goes_back() {
   ];
   assert_eq!(ascending_source_pieces(&in_order), [[0, 3_000_000]]);
 }
+
+#[test]
+fn output_windows_keep_their_source_across_reordered_ranges() {
+  let kept = within_output_windows(
+    &reordered(),
+    &[[500_000, 1_500_000], [2_800_000, 3_400_000]],
+  );
+  assert_eq!(
+    kept,
+    [
+      range(0, 4_500_000, 5_000_000),
+      range(500_000, 0, 500_000),
+      range(1_000_000, 2_800_000, 3_000_000),
+    ]
+  );
+}
+
+#[test]
+fn output_windows_on_a_faster_range_take_more_source() {
+  let fast = [TimelineRange {
+    playback_rate: 2.0,
+    ..range(0, 0, 4_000_000)
+  }];
+  let kept = within_output_windows(&fast, &[[500_000, 1_000_000]]);
+  assert_eq!(
+    kept,
+    [TimelineRange {
+      playback_rate: 2.0,
+      ..range(0, 1_000_000, 2_000_000)
+    }]
+  );
+  assert_eq!(output_duration_us(&kept), Some(500_000));
+}

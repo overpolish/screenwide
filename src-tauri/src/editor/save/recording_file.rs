@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::editor::export_picture::{ExportPicture, Run, Screen};
 use screenwide_export::cursor_export;
 use screenwide_export::media_preview;
 use screenwide_export::track_selection;
@@ -11,142 +12,30 @@ pub(in crate::editor) struct PrimaryRecordingSaveRequest<'a> {
   pub artifact_id: u64,
   pub audio_tracks: &'a [RecordingAudioTrack],
   pub cancelled: &'a AtomicBool,
-  /// The captions drawn into the picture.
-  pub captions: Option<&'a screenwide_captions::CaptionTrack>,
-  pub compression: u8,
-  /// The camera's effects, where the recording is of the camera alone.
-  pub camera_effects:
-    Option<std::sync::Arc<screenwide_export::camera_effects::live::LiveCameraEffects>>,
-  pub cursor: Option<&'a Path>,
-  pub cursor_effects: screenwide_cursor_effects::CursorEffectSettings,
-  pub keyboard: Option<&'a Path>,
-  pub keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
   pub directory: &'a Path,
-  pub duration_ms: u64,
-  pub height: u32,
-  pub layout: track_selection::AudioLayout,
-  pub output: &'a ScreenshotOutputSettings,
+  /// The screen's picture, with the camera's effects only where the
+  /// recording is of the camera alone.
+  pub picture: Screen<'a>,
   pub progress_share: f64,
-  pub resolution_scale_percent: u16,
-  pub screen: &'a Path,
-  pub selection: &'a track_selection::TrackSelection,
-  pub source_scale_percent: u16,
   pub stem: &'a str,
-  pub timeline: Option<&'a screenwide_timeline_edit::TimelinePlan>,
-  pub width: u32,
 }
 
 pub(in crate::editor) fn save_primary_recording(
   request: PrimaryRecordingSaveRequest<'_>,
 ) -> Result<Option<PathBuf>, String> {
-  let progress_duration_ms = request.timeline.map_or(
-    request.duration_ms,
+  let Screen {
+    duration_ms,
+    layout,
+    screen,
+    selection,
+    timeline,
+    video,
+    ..
+  } = request.picture;
+  let progress_duration_ms = timeline.map_or(
+    duration_ms,
     screenwide_timeline_edit::TimelinePlan::duration_ms,
   );
-  let video = media_preview::VideoExportOptions {
-    compression: request.compression,
-    resolution_scale_percent: request.resolution_scale_percent,
-    source_scale_percent: request.source_scale_percent,
-  };
-  if request.cursor.is_some() || request.keyboard.is_some() {
-    return cursor::save_baked(cursor::CursorSaveRequest {
-      app: request.app,
-      artifact_id: request.artifact_id,
-      camera_effects: request.camera_effects,
-      cancelled: request.cancelled,
-      captions: request.captions,
-      cursor: request.cursor,
-      cursor_effects: request.cursor_effects,
-      directory: request.directory,
-      duration_ms: request.duration_ms,
-      height: request.height,
-      keyboard: request.keyboard,
-      keyboard_effects: request.keyboard_effects,
-      layout: request.layout,
-      output: request.output,
-      progress_share: request.progress_share,
-      screen: request.screen,
-      selection: request.selection,
-      stem: request.stem,
-      timeline: request.timeline,
-      video,
-      width: request.width,
-    });
-  }
-  if cursor_export::needs_composition(request.output, request.width, request.height)
-    || request
-      .timeline
-      .is_some_and(|plan| !plan.annotation_clips().is_empty())
-    || request.camera_effects.is_some()
-    || request.captions.is_some()
-  {
-    let path = unique_path(
-      request.directory,
-      request.stem,
-      RECORDING_EXTENSION,
-      &|candidate| candidate.exists(),
-    );
-    let mut on_progress = |processed_ms| {
-      camera_save::emit_progress(
-        request.app,
-        request.artifact_id,
-        "recording",
-        processed_ms,
-        progress_duration_ms,
-        0.0,
-        request.progress_share,
-      );
-    };
-    return match cursor_export::export(cursor_export::CursorExportRequest {
-      annotation_track: screenwide_annotations::timing::AnnotationTrack::Primary,
-      audio_layout: request.layout,
-      audio_source: None,
-      camera: None,
-      camera_effects: request
-        .camera_effects
-        .map(|live| cursor_export::ExportCameraEffects {
-          live,
-          on_screen: true,
-        }),
-      camera_on_top: true,
-      cancelled: request.cancelled,
-      captions: request.captions,
-      cursor: None,
-      cursor_effects: request.cursor_effects,
-      keyboard: None,
-      keyboard_effects: request.keyboard_effects,
-      destination: &path,
-      duration_ms: request.duration_ms,
-      height: request.height,
-      on_progress: &mut on_progress,
-      output: request.output,
-      screen: request.screen,
-      selection: request.selection,
-      #[cfg(target_os = "windows")]
-      surface: crate::editor::preview_platform::recording_export_surface,
-      timeline: request.timeline,
-      video,
-      width: request.width,
-    })? {
-      media_preview::ExportRunResult::Completed => Ok(Some(path)),
-      media_preview::ExportRunResult::Cancelled => Ok(None),
-    };
-  }
-  if request.timeline.is_none()
-    && request.compression == 0
-    && request.resolution_scale_percent >= request.source_scale_percent
-    && !request
-      .selection
-      .needs_processing(request.audio_tracks, request.layout)
-  {
-    return save_recording_copy(
-      request.screen,
-      request.directory,
-      request.stem,
-      media_preview::remuxer(),
-    )
-    .map(Some);
-  }
   let mut on_progress = |processed_ms| {
     camera_save::emit_progress(
       request.app,
@@ -158,16 +47,46 @@ pub(in crate::editor) fn save_primary_recording(
       request.progress_share,
     );
   };
+  let picture = ExportPicture::screen(request.picture);
+  if picture.is_composed() {
+    let path = unique_path(
+      request.directory,
+      request.stem,
+      RECORDING_EXTENSION,
+      &|candidate| candidate.exists(),
+    );
+    return match cursor_export::export(picture.request(Run {
+      cancelled: request.cancelled,
+      destination: &path,
+      on_progress: &mut on_progress,
+    }))? {
+      media_preview::ExportRunResult::Completed => Ok(Some(path)),
+      media_preview::ExportRunResult::Cancelled => Ok(None),
+    };
+  }
+  if timeline.is_none()
+    && video.compression == 0
+    && video.resolution_scale_percent >= video.source_scale_percent
+    && !selection.needs_processing(request.audio_tracks, layout)
+  {
+    return save_recording_copy(
+      screen,
+      request.directory,
+      request.stem,
+      media_preview::remuxer(),
+    )
+    .map(Some);
+  }
   save_selected_recording_copy(
-    request.screen,
+    screen,
     request.directory,
     request.stem,
-    request.selection,
-    request.layout,
+    selection,
+    layout,
     media_preview::ExportRunOptions {
       cancelled: request.cancelled,
       on_progress: &mut on_progress,
-      timeline: request.timeline,
+      timeline,
       video,
     },
     media_preview::selected_recording_exporter(),

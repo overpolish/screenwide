@@ -6,3 +6,7 @@ use super::*;
 pub(super) fn export(_request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
   Err("Cursor baking is not available on this platform yet".to_owned())
 }
+
+pub(super) fn estimate_video_bytes(_request: CursorExportRequest<'_>) -> Result<u64, String> {
+  Err("Cursor baking is not available on this platform yet".to_owned())
+}

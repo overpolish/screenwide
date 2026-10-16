@@ -29,6 +29,7 @@ mod estimate;
 #[cfg(target_os = "macos")]
 mod macos;
 mod output;
+mod sample_frames;
 mod tools;
 #[cfg(target_os = "windows")]
 mod windows;
@@ -59,7 +60,11 @@ pub use windows::recording_info;
 
 pub(crate) use estimate::export_crf;
 use estimate::resolution_filter;
+#[cfg(target_os = "macos")]
+pub(crate) use estimate::{estimate_temp_path, sample_windows, sampled_to_whole};
 use output::{holds_bytes, plays_from_start_to_end, EXPORT_MP4_OUTPUT, OUTPUT_ERROR_DETAIL};
+#[cfg(target_os = "macos")]
+pub(crate) use sample_frames::{stretch_starts, SampleFrames};
 
 use crate::recording_model::{AudioTrackKind, RecordingAudioTrack};
 

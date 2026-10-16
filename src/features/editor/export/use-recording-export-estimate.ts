@@ -94,7 +94,9 @@ export function useRecordingExportEstimate({
           cameraOverlay.frameY,
           cameraOverlay.radiusPercent,
           JSON.stringify(recordingOutput),
-          JSON.stringify(recordingTimelineEdit?.segments ?? null),
+          // The whole edit: annotations, scenes and captions change what
+          // the export draws, and so its size, as much as its cuts do.
+          JSON.stringify(recordingTimelineEdit),
           collapseAudio ? "mix" : "separate",
           audioTrackVolumes
             .map(

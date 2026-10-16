@@ -159,6 +159,39 @@ pub fn output_duration_us(ranges: &[TimelineRange]) -> Option<u64> {
   })
 }
 
+/// The parts of `ranges` that play within the output `windows`, each
+/// `[start_us, end_us)` and in order, laid end to end from zero: a shorter
+/// timeline showing just those stretches, at their own rates.
+pub fn within_output_windows(ranges: &[TimelineRange], windows: &[[u64; 2]]) -> Vec<TimelineRange> {
+  let mut kept: Vec<TimelineRange> = Vec::new();
+  let mut output_us = 0_u64;
+  for &[window_start, window_end] in windows {
+    for range in ranges {
+      let range_end = output_duration_us(std::slice::from_ref(range)).unwrap_or_default();
+      let start = window_start.max(range.output_start_us);
+      let end = window_end.min(range_end);
+      if start >= end {
+        continue;
+      }
+      let source = |output: u64| {
+        let played = (output - range.output_start_us) as f64 * range.playback_rate;
+        (range.source_start_us + played.round() as u64).min(range.source_end_us)
+      };
+      let piece = TimelineRange {
+        output_start_us: output_us,
+        source_start_us: source(start),
+        source_end_us: source(end),
+        playback_rate: range.playback_rate,
+      };
+      if piece.source_end_us > piece.source_start_us {
+        output_us = output_duration_us(std::slice::from_ref(&piece)).unwrap_or(output_us);
+        kept.push(piece);
+      }
+    }
+  }
+  kept
+}
+
 /// Converts a source-time animation anchor plus an output-time duration back
 /// into a source coordinate. Timed lanes can map that coordinate normally and
 /// still match animations whose duration must not stretch with playback rate.

@@ -59,6 +59,12 @@ static void advance(AVAssetReaderTrackOutput *output, CMSampleBufferRef *current
 /// at its first moment is read too rather than the one after it.
 #define SCREENWIDE_REWIND_PREROLL_SECONDS 0.5
 
+/// How far ahead of the frame in hand a wanted frame must be before the
+/// readers start again there rather than decode their way to it. A cut this
+/// long, or a gap between the stretches a size estimate draws, costs less to
+/// seek over than to decode through.
+#define SCREENWIDE_SKIP_AHEAD_SECONDS 3.0
+
 /// Drops `samples` and reads the first two of `output` in their place.
 static void reread(AVAssetReaderTrackOutput *output, CMSampleBufferRef *current,
                    CMSampleBufferRef *next) {
@@ -69,24 +75,35 @@ static void reread(AVAssetReaderTrackOutput *output, CMSampleBufferRef *current,
 }
 
 /// Starts the readers again a little before `pts` where the frame wanted
-/// lies behind the one in hand: a reordered timeline plays an earlier
-/// stretch of the source after a later one. A frame less than one frame
-/// ahead is close enough, so the first frames of a file never restart it.
-/// False, with `error` set, when the readers could not be started again.
-static BOOL rewind_if_behind(ScreenwideVideoExport *session, CMTime pts,
-                             CMSampleBufferRef *screen_sample, CMSampleBufferRef *next_screen_sample,
-                             CMSampleBufferRef *camera_sample, CMSampleBufferRef *next_camera_sample,
-                             NSError **error) {
+/// lies behind the one in hand, as on a reordered timeline that plays an
+/// earlier stretch of the source after a later one, or far enough ahead of
+/// it that seeking beats decoding. A frame less than one frame ahead is
+/// close enough, so the first frames of a file never restart it. False,
+/// with `error` set, when the readers could not be started again.
+static BOOL reposition_if_far(ScreenwideVideoExport *session, CMTime pts,
+                              CMSampleBufferRef *screen_sample,
+                              CMSampleBufferRef *next_screen_sample,
+                              CMSampleBufferRef *camera_sample,
+                              CMSampleBufferRef *next_camera_sample, NSError **error) {
   CMTime slack = CMTimeMakeWithSeconds(1.0 / session->source_frame_rate, pts.timescale);
   CMTime held = CMSampleBufferGetPresentationTimeStamp(*screen_sample);
-  if (CMTimeCompare(CMTimeAdd(pts, slack), held) >= 0) return YES;
+  BOOL behind = CMTimeCompare(CMTimeAdd(pts, slack), held) < 0;
+  // Measured from the next frame to be read, not the one in hand: a still
+  // screen records no frames for a while, and the gap to the next one costs
+  // nothing to cross.
+  CMTime skip = CMTimeMakeWithSeconds(SCREENWIDE_SKIP_AHEAD_SECONDS, pts.timescale);
+  BOOL far_ahead =
+      *next_screen_sample != NULL &&
+      CMTimeCompare(pts, CMTimeAdd(CMSampleBufferGetPresentationTimeStamp(*next_screen_sample),
+                                   skip)) > 0;
+  if (!behind && !far_ahead) return YES;
   CMTime preroll = CMTimeMakeWithSeconds(SCREENWIDE_REWIND_PREROLL_SECONDS, pts.timescale);
   CMTime start = CMTimeMaximum(kCMTimeZero, CMTimeSubtract(pts, preroll));
   if (![session restartReadersAt:start error:error]) return NO;
   reread(session->screen_output, screen_sample, next_screen_sample);
   reread(session->camera_output, camera_sample, next_camera_sample);
   if (*screen_sample != NULL) return YES;
-  *error = loop_error(4, @"The recording could not be read again from an earlier point");
+  *error = loop_error(4, @"The recording could not be read again from another point");
   return NO;
 }
 
@@ -156,8 +173,8 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
           if (session->stream_fd < 0 || ring.lastObject == nil) continue;
           frame = [ring.lastObject repeatedAt:output_pts];
         } else {
-          if (!rewind_if_behind(session, pts, &screen_sample, &next_screen_sample,
-                                &camera_sample, &next_camera_sample, &error))
+          if (!reposition_if_far(session, pts, &screen_sample, &next_screen_sample,
+                                 &camera_sample, &next_camera_sample, &error))
             break;
           advance(session->screen_output, &screen_sample, &next_screen_sample, pts);
           advance(session->camera_output, &camera_sample, &next_camera_sample, pts);
