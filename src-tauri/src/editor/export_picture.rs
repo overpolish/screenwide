@@ -16,7 +16,7 @@ use screenwide_cursor_effects::CursorEffectSettings;
 use screenwide_export::camera_effects::live::LiveCameraEffects;
 use screenwide_export::cursor_export::{self, CursorExportRequest, ExportCameraEffects};
 use screenwide_export::media_preview::{
-  self, BakedVideoExportOptions, ExportRunResult, VideoExportOptions,
+  self, BakedVideoExportOptions, ExportRunResult, PreviewPicture, VideoExportOptions,
 };
 use screenwide_export::recording_model::RecordingCamera;
 use screenwide_export::track_selection::{AudioLayout, TrackSelection};
@@ -220,12 +220,13 @@ impl<'a> ExportPicture<'a> {
   }
 
   /// The frame at `output_us` of this picture's edited video, at `png`, as
-  /// the export writes it: drawn by the compositor, or re-encoded or copied
-  /// by FFmpeg.
+  /// `picture` asks: drawn by the compositor, or re-encoded or copied by
+  /// FFmpeg, as the export writes it or as drawn.
   pub(in crate::editor) fn preview_frame(
     self,
     cancelled: &AtomicBool,
     output_us: u64,
+    picture: PreviewPicture,
     png: &Path,
   ) -> Result<ExportRunResult, String> {
     if self.is_composed() {
@@ -236,6 +237,7 @@ impl<'a> ExportPicture<'a> {
           on_progress: &mut |_| {},
         }),
         output_us,
+        picture,
         png,
       );
     }
@@ -244,6 +246,7 @@ impl<'a> ExportPicture<'a> {
       (self.timeline, self.duration_ms),
       output_us,
       self.video,
+      picture,
       png,
     )?;
     Ok(ExportRunResult::Completed)

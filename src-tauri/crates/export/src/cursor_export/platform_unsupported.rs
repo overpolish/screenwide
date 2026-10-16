@@ -14,6 +14,7 @@ pub(super) fn estimate_video_bytes(_request: CursorExportRequest<'_>) -> Result<
 pub(super) fn preview_frame(
   _request: CursorExportRequest<'_>,
   _output_us: u64,
+  _picture: media_preview::PreviewPicture,
   _png: &Path,
 ) -> Result<ExportRunResult, String> {
   Err("Cursor baking is not available on this platform yet".to_owned())

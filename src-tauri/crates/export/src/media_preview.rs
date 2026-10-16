@@ -64,11 +64,11 @@ use estimate::resolution_filter;
 #[cfg(target_os = "macos")]
 pub(crate) use estimate::{estimate_temp_path, sample_windows, sampled_to_whole};
 use output::{holds_bytes, plays_from_start_to_end, EXPORT_MP4_OUTPUT, OUTPUT_ERROR_DETAIL};
-pub use preview_frame::preview_frame;
-#[cfg(target_os = "macos")]
-pub(crate) use preview_frame::preview_temp_path;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use preview_frame::{edited_ranges, write_last_frame, PreviewStretch};
+pub use preview_frame::{preview_frame, PreviewPicture};
+#[cfg(target_os = "macos")]
+pub(crate) use preview_frame::{preview_temp_path, write_picture};
 #[cfg(target_os = "macos")]
 pub(crate) use sample_frames::{stretch_starts, SampleFrames};
 

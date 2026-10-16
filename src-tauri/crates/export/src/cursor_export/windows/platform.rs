@@ -247,7 +247,7 @@ pub(in super::super) fn export(
   };
   let video = gpu_video_path();
   let result = (|| {
-    let rendered = render_video(&mut request, &video, None)?;
+    let (rendered, _) = render_video(&mut request, &video, None)?;
     if !matches!(rendered, ExportRunResult::Completed) {
       return Ok(rendered);
     }

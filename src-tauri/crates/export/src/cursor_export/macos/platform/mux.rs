@@ -47,7 +47,8 @@ struct RawVideo {
 }
 
 /// Where an x264 run's video goes: into the exported MP4 beside its audio,
-/// or alone into a raw stream an estimate only measures.
+/// or alone into a raw stream an estimate only measures. A preview's Original
+/// frame skips x264 altogether.
 pub(super) enum X264Output {
   /// FFmpeg writes `temporary` until the file is whole; see
   /// `remux_temp_path`.
@@ -58,6 +59,10 @@ pub(super) enum X264Output {
     path: PathBuf,
     stretch_starts: Option<String>,
   },
+  /// The one frame drawn, as a PPM picture at `path`, never encoded. FFmpeg
+  /// still turns it from NV12 into RGB, as it does the encoded frame it is
+  /// compared with, so the two differ by the encoder alone.
+  Picture { path: PathBuf },
 }
 
 /// An export encoded with x264, waiting for the loop to know its frame rate.
@@ -91,6 +96,9 @@ impl X264Plan {
         measured_args(&video, path, stretch_starts.as_deref()),
         path,
       ),
+      X264Output::Picture { path } => {
+        media_preview::StreamedExport::start(picture_args(&video, path), path)
+      }
     }
   }
 }
@@ -231,6 +239,25 @@ fn measured_args(video: &RawVideo, path: &Path, stretch_starts: Option<&str>) ->
     args.extend(strings(&["-force_key_frames", starts]));
   }
   args.extend(strings(&["-f", "h264"]));
+  args.push(path.into());
+  args
+}
+
+/// The one frame of `video` written to `path` as a PPM picture.
+fn picture_args(video: &RawVideo, path: &Path) -> Vec<OsString> {
+  let mut args = raw_input_args(video);
+  args.extend(strings(&[
+    "-map",
+    "0:v:0",
+    "-frames:v",
+    "1",
+    "-c:v",
+    "ppm",
+    "-update",
+    "1",
+    "-f",
+    "image2",
+  ]));
   args.push(path.into());
   args
 }

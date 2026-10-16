@@ -121,16 +121,17 @@ pub fn estimate_video_bytes(request: CursorExportRequest<'_>) -> Result<u64, Str
 }
 
 /// The frame at `output_us` of `request`'s edited video, written to `png` as
-/// the platform's encoder leaves it at the request's size and compression;
-/// see `media_preview::PreviewStretch`. The request's destination is never
-/// written.
+/// `picture` asks: as the platform's encoder leaves it at the request's size
+/// and compression, see `media_preview::PreviewStretch`, or as drawn. The
+/// request's destination is never written.
 pub fn preview_frame(
   request: CursorExportRequest<'_>,
   output_us: u64,
+  picture: media_preview::PreviewPicture,
   png: &Path,
 ) -> Result<ExportRunResult, String> {
   check_request(&request)?;
-  platform::preview_frame(request, output_us, png)
+  platform::preview_frame(request, output_us, picture, png)
 }
 
 /// How `request`'s edited video lays out its source.

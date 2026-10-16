@@ -5,11 +5,12 @@ use super::*;
 
 /// Draws and encodes `request`'s edited video into `path`, or only
 /// `stretch` of it, its samples then timed from the stretch's start.
+/// Answers how the run ended and how many frames it wrote.
 pub(super) fn render_video(
   request: &mut CursorExportRequest<'_>,
   path: &Path,
   stretch: Option<&media_preview::PreviewStretch>,
-) -> Result<ExportRunResult, String> {
+) -> Result<(ExportRunResult, u64), String> {
   screenwide_output::validate_output_settings(request.width, request.height, request.output)?;
   let surface = (request.surface)()?;
   let output_size = screenwide_output::output_dimensions(request.output)?;
@@ -109,10 +110,11 @@ pub(super) fn render_video(
     }
   }
   let mut piece = 0;
+  let mut frames = 0_u64;
   loop {
     if request.cancelled.load(Ordering::Acquire) {
       let _ = std::fs::remove_file(path);
-      return Ok(ExportRunResult::Cancelled);
+      return Ok((ExportRunResult::Cancelled, frames));
     }
     let next = reader.next_frame()?;
     let pts_100ns = current.timestamp_100ns.saturating_sub(timeline_origin);
@@ -261,6 +263,7 @@ pub(super) fn render_video(
         .saturating_mul(10),
       next_pts_100ns.saturating_sub(pts_100ns),
     )?;
+    frames += 1;
     if progress_pace.due(std::time::Instant::now(), next.is_none()) {
       (request.on_progress)(
         output_us
@@ -280,5 +283,5 @@ pub(super) fn render_video(
     current = next;
   }
   sink.finish()?;
-  Ok(ExportRunResult::Completed)
+  Ok((ExportRunResult::Completed, frames))
 }

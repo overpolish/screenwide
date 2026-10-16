@@ -13,7 +13,7 @@ use ts_rs::TS;
 
 use super::export_inputs::ExportInputs;
 use super::*;
-use screenwide_export::media_preview::ExportRunResult;
+use screenwide_export::media_preview::{ExportRunResult, PreviewPicture};
 
 /// The app cache folder the frames are written to, which the webview reads
 /// through the asset protocol.
@@ -39,6 +39,23 @@ impl ExportPreviewSide {
       Self::Export => "export",
     }
   }
+
+  /// Where this side's running frame is held in `running_export_preview`.
+  fn slot(self) -> usize {
+    match self {
+      Self::Original => 0,
+      Self::Export => 1,
+    }
+  }
+
+  /// The Original frame is drawn and never encoded; the exported one
+  /// passes through the export's encoder.
+  fn picture(self) -> PreviewPicture {
+    match self {
+      Self::Original => PreviewPicture::Drawn,
+      Self::Export => PreviewPicture::Encoded,
+    }
+  }
 }
 
 /// A frame written for the export window, at its own size.
@@ -51,15 +68,16 @@ pub struct ExportPreviewFrame {
   pub width: u32,
 }
 
-/// Cancels the frame being made before this one, which nobody waits for any
-/// more, and answers the flag that cancels this one in turn.
-fn replace_running(state: &EditorState) -> Arc<AtomicBool> {
+/// Cancels the frame of `side` being made before this one, which nobody
+/// waits for any more, and answers the flag that cancels this one in turn.
+/// The other side's frame is made alongside and left running.
+fn replace_running(state: &EditorState, side: ExportPreviewSide) -> Arc<AtomicBool> {
   let cancelled = Arc::new(AtomicBool::new(false));
   std::mem::replace(
-    &mut *state
+    &mut state
       .running_export_preview
       .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner()),
+      .unwrap_or_else(|poisoned| poisoned.into_inner())[side.slot()],
     cancelled.clone(),
   )
   .store(true, Ordering::Release);
@@ -102,7 +120,7 @@ pub async fn preview_recording_export_frame(
     .join(PREVIEW_FOLDER);
   tauri::async_runtime::spawn_blocking(move || {
     let state = app.state::<EditorState>();
-    let cancelled = replace_running(&state);
+    let cancelled = replace_running(&state, side);
     let mut inputs = ExportInputs::read(&state, artifact_id, options)?;
     if let ExportPreviewSide::Original = side {
       inputs.compression = 0;
@@ -120,7 +138,8 @@ pub async fn preview_recording_export_frame(
       .primary_picture()
       .ok_or_else(|| "The export has no video to preview".to_owned())?;
     let png = frame_path(&directory, side)?;
-    if picture.preview_frame(&cancelled, output_us, &png)? == ExportRunResult::Cancelled
+    if picture.preview_frame(&cancelled, output_us, side.picture(), &png)?
+      == ExportRunResult::Cancelled
       || cancelled.load(Ordering::Acquire)
     {
       return Ok(None);

@@ -3,13 +3,14 @@
 
 use super::*;
 
-/// The frame at `output_us` of `request`'s export, drawn and encoded at the
-/// end of its stretch exactly as the export draws and encodes it, at `png`.
-/// x264 writes the stretch as a raw stream, as it does for an estimate;
-/// where FFmpeg cannot be started AVFoundation writes it, as the export would.
+/// The frame at `output_us` of `request`'s export, at `png`, as `picture`
+/// asks: drawn and encoded at the end of its stretch exactly as the export
+/// draws and encodes it, x264 writing the stretch as a raw stream as it does
+/// for an estimate, or drawn alone and never encoded.
 pub(in super::super::super) fn preview_frame(
   request: CursorExportRequest<'_>,
   output_us: u64,
+  picture: media_preview::PreviewPicture,
   png: &Path,
 ) -> Result<ExportRunResult, String> {
   let output = export_output::scaled(&request);
@@ -20,16 +21,27 @@ pub(in super::super::super) fn preview_frame(
   };
   let cursor_timeline = macos::native::evaluate(&request)?;
   let keyboard_timeline = macos::native::evaluate_keyboard(&request)?;
-  let stretch = media_preview::PreviewStretch::leading_to(
-    &super::super::super::edited_ranges(&request),
-    output_us,
-  )?;
+  let whole = super::super::super::edited_ranges(&request);
+  let (stretch, output_plan) = match picture {
+    media_preview::PreviewPicture::Encoded => (
+      media_preview::PreviewStretch::leading_to(&whole, output_us)?,
+      mux::X264Output::Measured {
+        path: media_preview::estimate_temp_path(),
+        stretch_starts: None,
+      },
+    ),
+    media_preview::PreviewPicture::Drawn => (
+      media_preview::PreviewStretch::single(&whole, output_us)?,
+      mux::X264Output::Picture {
+        path: media_preview::preview_temp_path("ppm"),
+      },
+    ),
+  };
+  // AVFoundation writes here only where FFmpeg cannot be started, which
+  // the preview then cannot read either.
   let fallback = gpu_video_path();
   let x264 = mux::X264Plan {
-    output: mux::X264Output::Measured {
-      path: media_preview::estimate_temp_path(),
-      stretch_starts: None,
-    },
+    output: output_plan,
     width: request.output.width,
     height: request.output.height,
     compression: request.video.compression,
@@ -48,25 +60,28 @@ pub(in super::super::super) fn preview_frame(
     &fallback,
     x264,
   );
-  let result = match rendered {
-    Ok((ExportRunResult::Completed, Some(stream))) => match stream.measure(cancelled) {
-      Ok(Some(encoded)) => {
-        let raw = media_preview::preview_temp_path("h264");
-        let written = std::fs::write(&raw, encoded)
-          .map_err(|error| error.to_string())
-          .and_then(|()| media_preview::write_last_frame(&raw, Some("h264"), png));
-        let _ = std::fs::remove_file(&raw);
-        written.map(|()| ExportRunResult::Completed)
-      }
-      Ok(None) => Ok(ExportRunResult::Cancelled),
-      Err(error) => Err(error),
-    },
-    Ok((ExportRunResult::Completed, None)) => {
-      media_preview::write_last_frame(&fallback, None, png).map(|()| ExportRunResult::Completed)
-    }
-    Ok((ExportRunResult::Cancelled, _)) => Ok(ExportRunResult::Cancelled),
-    Err(error) => Err(error),
-  };
   let _ = std::fs::remove_file(&fallback);
-  result
+  let written = match rendered? {
+    (ExportRunResult::Completed, Some(stream)) => stream.measure(cancelled)?,
+    (ExportRunResult::Completed, None) => {
+      return Err("The preview needs FFmpeg, which could not be started".to_owned());
+    }
+    (ExportRunResult::Cancelled, _) => None,
+  };
+  let Some(written) = written else {
+    return Ok(ExportRunResult::Cancelled);
+  };
+  match picture {
+    media_preview::PreviewPicture::Encoded => {
+      let raw = media_preview::preview_temp_path("h264");
+      let frames = media_preview::SampleFrames::of(&written).frames();
+      let result = std::fs::write(&raw, written)
+        .map_err(|error| error.to_string())
+        .and_then(|()| media_preview::write_last_frame(&raw, Some("h264"), frames, png));
+      let _ = std::fs::remove_file(&raw);
+      result?;
+    }
+    media_preview::PreviewPicture::Drawn => media_preview::write_picture(&written, png)?,
+  }
+  Ok(ExportRunResult::Completed)
 }

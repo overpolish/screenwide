@@ -5,7 +5,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { usePreviewStill } from "../../recording/preview/preview-still-store";
-import { resolutionScales } from "../../resolution";
 import { useExportOptionsOpen } from "../options-window/use-export-options-open";
 import {
   RecordingExportInputs,
@@ -57,11 +56,6 @@ export function useRecordingExportPreview(inputs: RecordingExportInputs) {
     originalKey === null
       ? null
       : `${originalKey}:${compression.toString()}:${resolutionScalePercent.toString()}`;
-  // At Original size and compression the export is the Original frame.
-  const isOriginal =
-    recording !== null &&
-    compression === 0 &&
-    resolutionScalePercent === resolutionScales(recording)[0];
 
   const [made, setMade] = useState<{
     exported: Made | null;
@@ -75,6 +69,7 @@ export function useRecordingExportPreview(inputs: RecordingExportInputs) {
   // Raised by every request and every cleanup, so an answer arriving for
   // anything but the latest request is dropped.
   const generationRef = useRef(0);
+  const wasOpenRef = useRef(false);
 
   const artifactId = artifact?.id;
   useEffect(() => {
@@ -82,6 +77,8 @@ export function useRecordingExportPreview(inputs: RecordingExportInputs) {
   }, [artifactId]);
 
   useEffect(() => {
+    const justOpened = isExportOpen && !wasOpenRef.current;
+    wasOpenRef.current = isExportOpen;
     if (!isExportOpen || originalKey === null || exportKey === null) return;
     const current = madeRef.current;
     if (
@@ -93,6 +90,10 @@ export function useRecordingExportPreview(inputs: RecordingExportInputs) {
     setMade((state) => ({ ...state, failed: false }));
     generationRef.current += 1;
     const generation = generationRef.current;
+    const isCurrent = () => generationRef.current === generation;
+    // With nothing on screen there is no choice to wait out.
+    const delay =
+      justOpened || current.original === null ? 0 : PREVIEW_DEBOUNCE_MS;
     const timer = window.setTimeout(() => {
       const latest = inputsRef.current;
       const artifactId = latest.artifact?.id;
@@ -104,39 +105,36 @@ export function useRecordingExportPreview(inputs: RecordingExportInputs) {
           positionMs,
           side,
         });
-      void (async () => {
-        try {
-          const held = madeRef.current.original;
-          const original =
-            held?.key === originalKey ? held.frame : await make("original");
-          // Null where a newer frame was asked for, which takes over.
-          if (generationRef.current !== generation || original === null) {
-            return;
-          }
-          setMade((state) => ({
-            ...state,
-            original: { frame: original, key: originalKey },
-          }));
-          const exported = isOriginal ? original : await make("export");
-          if (generationRef.current !== generation || exported === null) {
-            return;
-          }
-          setMade((state) => ({
-            ...state,
-            exported: { frame: exported, key: exportKey },
-          }));
-        } catch (cause) {
-          if (generationRef.current !== generation) return;
-          console.error("Could not make the export preview", cause);
-          setMade((state) => ({ ...state, failed: true }));
-        }
-      })();
-    }, PREVIEW_DEBOUNCE_MS);
+      // Both sides are made at once; each answer is null where a newer
+      // frame of its side was asked for, which takes over.
+      const original =
+        madeRef.current.original?.key === originalKey
+          ? null
+          : make("original").then((frame) => {
+              if (!isCurrent() || frame === null) return;
+              setMade((state) => ({
+                ...state,
+                original: { frame, key: originalKey },
+              }));
+            });
+      const exported = make("export").then((frame) => {
+        if (!isCurrent() || frame === null) return;
+        setMade((state) => ({
+          ...state,
+          exported: { frame, key: exportKey },
+        }));
+      });
+      void Promise.all([original, exported]).catch((cause: unknown) => {
+        if (!isCurrent()) return;
+        console.error("Could not make the export preview", cause);
+        setMade((state) => ({ ...state, failed: true }));
+      });
+    }, delay);
     return () => {
       generationRef.current += 1;
       window.clearTimeout(timer);
     };
-  }, [exportKey, isExportOpen, isOriginal, originalKey, positionMs]);
+  }, [exportKey, isExportOpen, originalKey, positionMs]);
   const isUpdating =
     isExportOpen &&
     originalKey !== null &&
