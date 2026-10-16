@@ -35,6 +35,7 @@ mod trackpad;
 mod tween;
 mod virtual_desktops;
 mod wheel_hook;
+mod wheel_source;
 
 use input_kind::InputKind;
 

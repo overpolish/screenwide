@@ -170,11 +170,11 @@ unsafe extern "system" fn window_proc(
       LRESULT(0)
     }
     wheel_hook::WM_GLIDE_WHEEL_X => {
-      trackpad::handle_legacy_wheel(true, lparam.0 as i16);
+      trackpad::handle_navigation_wheel(true, lparam.0 as i16);
       LRESULT(0)
     }
     wheel_hook::WM_GLIDE_WHEEL_Y => {
-      trackpad::handle_legacy_wheel(false, lparam.0 as i16);
+      trackpad::handle_navigation_wheel(false, lparam.0 as i16);
       LRESULT(0)
     }
     wheel_hook::WM_GLIDE_MOUSE_MOVE => {

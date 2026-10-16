@@ -100,6 +100,9 @@ unsafe extern "system" fn callback(code: i32, wparam: WPARAM, lparam: LPARAM) ->
   if code == HC_ACTION as i32 {
     let message = wparam.0 as u32;
     let packet = unsafe { &*(lparam.0 as *const MSLLHOOKSTRUCT) };
+    if message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL {
+      super::wheel_source::note_hook_wheel(packet.flags & LLMHF_INJECTED != 0);
+    }
     if packet.flags & LLMHF_INJECTED != 0 && message != WM_MOUSEMOVE {
       return CallNextHookEx(None, code, wparam, lparam);
     }

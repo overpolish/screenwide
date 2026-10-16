@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{
-  handle_mouse_delta, key_hook, keyboard, native_trackpad, trackpad, wheel_hook, WHEEL_HOOK_ACTIVE,
+  handle_mouse_delta, key_hook, keyboard, native_trackpad, trackpad, wheel_hook, wheel_source,
+  WHEEL_HOOK_ACTIVE,
 };
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
+use windows::Win32::Foundation::HANDLE;
 use windows::Win32::UI::{
   Input::{
     GetRawInputData, HRAWINPUT, MOUSE_MOVE_ABSOLUTE, MOUSE_VIRTUAL_DESKTOP, RAWINPUT,
@@ -44,7 +46,7 @@ pub(crate) fn handle_raw_input(handle: HRAWINPUT) {
 
   if input.header.dwType == RIM_TYPEMOUSE.0 {
     let mouse = unsafe { input.data.mouse };
-    handle_mouse(mouse);
+    handle_mouse(input.header.hDevice, mouse);
   } else if input.header.dwType == RIM_TYPEKEYBOARD.0 {
     handle_keyboard(unsafe { input.data.keyboard });
   } else if input.header.dwType == RIM_TYPEHID.0 {
@@ -110,7 +112,7 @@ fn normalize_key(vkey: u16, make_code: u16, flags: u16) -> u32 {
   }
 }
 
-fn handle_mouse(mouse: RAWMOUSE) {
+fn handle_mouse(device: HANDLE, mouse: RAWMOUSE) {
   let button_flags = u32::from(unsafe { mouse.Anonymous.Anonymous.usButtonFlags });
   let timestamp = unsafe { GetMessageTime() } as u32;
   for (flag, button) in [
@@ -138,9 +140,9 @@ fn handle_mouse(mouse: RAWMOUSE) {
     0.0
   };
   if wheel_x != 0.0 || wheel_y != 0.0 {
-    if !WHEEL_HOOK_ACTIVE.load(Ordering::Relaxed) {
-      trackpad::handle_delta(wheel_x, wheel_y);
-    }
+    let hook_active = WHEEL_HOOK_ACTIVE.load(Ordering::Relaxed);
+    let source = wheel_source::classify(device, hook_active);
+    trackpad::handle_raw_wheel(source, wheel_x, wheel_y, hook_active);
     return;
   }
   if wheel_hook::hook_owns_mouse_motion() {

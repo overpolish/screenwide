@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Normalizes Precision Touchpad and legacy high-resolution wheel motion into
-//! the shared Glide detector's physical finger coordinates.
+//! Normalizes touchpad wheel motion into the shared Glide detector's physical
+//! finger coordinates, and steps spaces and monitors with any wheel.
 
 use std::{
   cell::RefCell,
@@ -14,7 +14,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
   SystemParametersInfoW, SYSTEM_PARAMETERS_INFO_ACTION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
 };
 
-use super::{begin_session, native_settings, session, InputKind, APP};
+use super::{begin_session, native_settings, session, wheel_source::WheelSource, InputKind, APP};
 
 const SPI_GETTOUCHPADPARAMETERS: SYSTEM_PARAMETERS_INFO_ACTION =
   SYSTEM_PARAMETERS_INFO_ACTION(0x00ae);
@@ -43,7 +43,10 @@ struct TouchpadParametersV1 {
   right_click_zone_height: u32,
 }
 
-pub(super) fn handle_legacy_wheel(horizontal: bool, delta: i16) {
+/// The low-level hook's wheel packets, which only step spaces and monitors.
+/// Window Glide takes its wheel motion from raw input instead, which names
+/// the device that scrolled.
+pub(super) fn handle_navigation_wheel(horizontal: bool, delta: i16) {
   if super::native_trackpad::suppresses_scroll_fallback() {
     return;
   }
@@ -61,10 +64,24 @@ pub(super) fn handle_legacy_wheel(horizontal: bool, delta: i16) {
       (0.0, -step)
     };
     handle_monitor_wheel(x, y);
+  }
+}
+
+/// Raw input wheel motion, in finger-travel axes. A mouse wheel never starts
+/// or drives a window Glide. With the hook installed, spaces and monitors
+/// take their steps from the hook, so their packets are left alone here.
+pub(super) fn handle_raw_wheel(source: WheelSource, delta_x: f64, delta_y: f64, hook_active: bool) {
+  let settings = native_settings::snapshot();
+  let navigating = super::spaces::active_input().is_some()
+    || native_settings::is_down(settings.spaces_modifier)
+    || session::monitor_mode()
+    || native_settings::is_down(settings.monitors_modifier);
+  if navigating && hook_active {
     return;
   }
-  let (delta_x, delta_y) = legacy_wheel_delta(horizontal, delta);
-  handle_delta(delta_x, delta_y);
+  if navigating || source.is_trackpad() {
+    handle_delta(delta_x, delta_y);
+  }
 }
 
 fn handle_spaces_wheel(x: f64, y: f64) {
@@ -105,17 +122,7 @@ fn handle_monitor_wheel(x: f64, y: f64) {
   }
 }
 
-fn legacy_wheel_delta(horizontal: bool, delta: i16) -> (f64, f64) {
-  if horizontal {
-    // Keep legacy and Raw Input horizontal packets in the same coordinate
-    // space before applying the user's physical-scroll-direction preference.
-    (-f64::from(delta), 0.0)
-  } else {
-    (0.0, f64::from(delta))
-  }
-}
-
-pub(super) fn handle_delta(delta_x: f64, delta_y: f64) {
+fn handle_delta(delta_x: f64, delta_y: f64) {
   if super::native_trackpad::suppresses_scroll_fallback() {
     return;
   }
@@ -225,7 +232,7 @@ fn scroll_reversed() -> bool {
 mod tests {
   use std::time::{Duration, Instant};
 
-  use super::{ignore_controlled_scroll, legacy_wheel_delta, physical_delta};
+  use super::{ignore_controlled_scroll, physical_delta};
 
   #[test]
   fn trackpad_motion_ignores_the_content_scroll_direction() {
@@ -233,12 +240,6 @@ mod tests {
       physical_delta(-20.0, -30.0, false),
       physical_delta(20.0, 30.0, true)
     );
-  }
-
-  #[test]
-  fn legacy_precision_wheel_matches_raw_input_axes() {
-    assert_eq!(legacy_wheel_delta(false, -42), (0.0, -42.0));
-    assert_eq!(legacy_wheel_delta(true, 17), (-17.0, 0.0));
   }
 
   #[test]
