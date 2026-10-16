@@ -50,6 +50,7 @@ function EditorExportPreview({
   extension,
   hasTranscript = true,
   includeCamera = false,
+  isEstimatingSize = false,
   progress,
   recordingOutput,
   withPreview = false,
@@ -61,6 +62,7 @@ function EditorExportPreview({
   extension?: string;
   hasTranscript?: boolean;
   includeCamera?: boolean;
+  isEstimatingSize?: boolean;
   /** When given, the window shows the running save instead of the form. */
   progress?: ExportProgressProps;
   recordingOutput?: RecordingOutputSettings;
@@ -98,6 +100,7 @@ function EditorExportPreview({
         fileStem,
         hasTranscript,
         includeCamera,
+        isEstimatingSize,
         onBrowse: () => {
           setDirectory((current) =>
             current?.endsWith("Desktop") ? "/Users/dom/Movies" : null,
@@ -169,6 +172,10 @@ export const Preview: Story = {
 /** No transcript yet, so there is nothing to make subtitles from. */
 export const Untranscribed: Story = {
   args: { hasTranscript: false },
+};
+
+export const EstimatingSize: Story = {
+  args: { isEstimatingSize: true },
 };
 
 export const Screenshot: Story = {

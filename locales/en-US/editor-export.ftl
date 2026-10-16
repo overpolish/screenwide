@@ -34,9 +34,11 @@ editor-export-open-folder = Open folder after saving
 editor-export-delete-project = Delete project
 editor-export-delete-project-description = After saving, moves it to Recently Deleted.
 editor-export-delete-project-copy-description = After saving or copying, moves it to Recently Deleted.
-# $size is a file size, or one of the two words below.
+# $size is a file size, or the word below.
 editor-export-estimated-size = Estimated size { $size }
-editor-export-estimating = Estimating
+# Shown beside a spinner while the size is being estimated.
+editor-export-estimated-size-label = Estimated size
+editor-export-estimating = Estimating size
 editor-export-unavailable = Unavailable
 editor-export-cancel = Cancel
 editor-export-confirm-cancel = Confirm cancel

@@ -3,6 +3,7 @@
 
 import { Button } from "../../../components/base/button/button";
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
+import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { TextField } from "../../../components/base/input-fields/text-field";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { Text } from "../../../components/base/text/text";
@@ -76,9 +77,8 @@ export function EditorExportForm({
   const showCompression =
     recording !== null && recording.primaryKind !== "audio";
   const compressionDisabled = Boolean(isSaving) || !recording?.canCompress;
-  const estimate = isEstimatingSize
-    ? t("editor-export-estimating")
-    : typeof estimatedSizeBytes === "number"
+  const estimate =
+    typeof estimatedSizeBytes === "number"
       ? formatBytes(estimatedSizeBytes)
       : t("editor-export-unavailable");
 
@@ -247,10 +247,21 @@ export function EditorExportForm({
       <div className="flex items-center justify-end gap-control-inset">
         {recording ? (
           <Text
-            className="me-auto tabular-nums text-content-fg-secondary"
+            className="me-auto flex items-center gap-control-inset tabular-nums text-content-fg-secondary"
             variant="subheadline"
           >
-            {t("editor-export-estimated-size", { size: estimate })}
+            {isEstimatingSize ? (
+              <>
+                {t("editor-export-estimated-size-label")}
+                <CircularProgress
+                  aria-label={t("editor-export-estimating")}
+                  isIndeterminate
+                  size="small"
+                />
+              </>
+            ) : (
+              t("editor-export-estimated-size", { size: estimate })
+            )}
           </Text>
         ) : null}
         <Button onPress={onCancel}>{t("editor-export-cancel")}</Button>

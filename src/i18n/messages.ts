@@ -205,6 +205,7 @@ export type Messages = {
   "editor-export-delete-project-copy-description": null;
   "editor-export-delete-project-description": null;
   "editor-export-estimated-size": { size: string | number };
+  "editor-export-estimated-size-label": null;
   "editor-export-estimating": null;
   "editor-export-file-name": null;
   "editor-export-finalizing": null;
