@@ -14,9 +14,10 @@ use windows::Win32::UI::{
     RAWINPUTHEADER, RAWMOUSE, RID_INPUT, RIM_TYPEHID, RIM_TYPEKEYBOARD, RIM_TYPEMOUSE,
   },
   WindowsAndMessaging::{
-    GetMessageTime, GetSystemMetrics, RI_MOUSE_BUTTON_3_UP, RI_MOUSE_BUTTON_4_UP,
-    RI_MOUSE_BUTTON_5_UP, RI_MOUSE_HWHEEL, RI_MOUSE_WHEEL, SM_CXSCREEN, SM_CXVIRTUALSCREEN,
-    SM_CYSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
+    GetMessageTime, GetSystemMetrics, RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_2_DOWN,
+    RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP, RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP,
+    RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP, RI_MOUSE_HWHEEL, RI_MOUSE_WHEEL, SM_CXSCREEN,
+    SM_CXVIRTUALSCREEN, SM_CYSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
   },
 };
 const ABSOLUTE_RANGE: f64 = 65_535.0;
@@ -74,6 +75,9 @@ fn handle_keyboard(keyboard_input: windows::Win32::UI::Input::RAWKEYBOARD) {
       keyboard::handle_transition(key, false, true);
     }
   } else {
+    if super::deliberate::is_typing(key) {
+      return;
+    }
     let timestamp = unsafe { windows::Win32::UI::WindowsAndMessaging::GetMessageTime() } as u32;
     if super::release_tracker::raw_press(key, timestamp) {
       super::native_settings::observe(key, true);
@@ -115,6 +119,16 @@ fn normalize_key(vkey: u16, make_code: u16, flags: u16) -> u32 {
 fn handle_mouse(device: HANDLE, mouse: RAWMOUSE) {
   let button_flags = u32::from(unsafe { mouse.Anonymous.Anonymous.usButtonFlags });
   let timestamp = unsafe { GetMessageTime() } as u32;
+  if button_flags
+    & (RI_MOUSE_BUTTON_1_DOWN
+      | RI_MOUSE_BUTTON_2_DOWN
+      | RI_MOUSE_BUTTON_3_DOWN
+      | RI_MOUSE_BUTTON_4_DOWN
+      | RI_MOUSE_BUTTON_5_DOWN)
+    != 0
+  {
+    super::deliberate::note_click();
+  }
   for (flag, button) in [
     (RI_MOUSE_BUTTON_3_UP, super::control::MOUSE_MIDDLE),
     (RI_MOUSE_BUTTON_4_UP, super::control::MOUSE_BACK),

@@ -27,6 +27,9 @@ pub(super) use preview_windows::preload;
 pub(super) fn cancel(app: &tauri::AppHandle) {
   lifecycle::request_end(app, true);
 }
+pub(super) fn is_active() -> bool {
+  SESSION.lock().is_ok_and(|state| state.is_some())
+}
 pub(super) fn is_synthetic(event: &core_graphics::event::CGEvent) -> bool {
   event.get_integer_value_field(core_graphics::event::EventField::EVENT_SOURCE_USER_DATA)
     == EVENT_TAG

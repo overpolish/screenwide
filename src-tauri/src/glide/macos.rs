@@ -15,6 +15,7 @@ mod commands;
 mod control;
 mod control_keys;
 mod cursor;
+mod deliberate;
 mod hardware;
 mod key;
 mod mouse_click;
@@ -123,6 +124,9 @@ fn handle_event(
   event_type: CGEventType,
   event: &CGEvent,
 ) -> CallbackResult {
+  if deliberate::types(app, state, event_type, event) {
+    return CallbackResult::Keep;
+  }
   native_settings::observe(event_type, event);
   if let Some(result) = spaces::handle_event(app, state, event_type, event) {
     return result;
@@ -224,10 +228,7 @@ fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callba
     // one.
     return CallbackResult::Keep;
   }
-  if !is_active(state)
-    && modifier_down
-    && !begin_if_titlebar(app, state, InputKind::Mouse, event.location())
-  {
+  if !is_active(state) && modifier_down && !deliberate::begin_mouse(app, state, event.location()) {
     return CallbackResult::Keep;
   }
   if active_input(state) == Some(InputKind::Trackpad) {

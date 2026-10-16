@@ -54,11 +54,11 @@ struct Session {
 
 static NEXT_SESSION_ID: AtomicU64 = AtomicU64::new(1);
 static STATE: std::sync::Mutex<Option<Session>> = std::sync::Mutex::new(None);
-pub(super) fn begin(app: &AppHandle, input: InputKind) -> bool {
+pub(super) fn begin(app: &AppHandle, input: InputKind, anchor: POINT) -> bool {
   if crate::glide::core::activity::BusyLease::is_busy() {
     return false;
   }
-  if super::navigation::cancelled() {
+  if super::navigation::cancelled() || super::deliberate::blocks_sessions() {
     return false;
   }
   if crate::shortcuts::is_capturing()
@@ -73,10 +73,6 @@ pub(super) fn begin(app: &AppHandle, input: InputKind) -> bool {
     return false;
   }
   if active_input().is_some() {
-    return false;
-  }
-  let mut anchor = POINT::default();
-  if unsafe { GetCursorPos(&mut anchor) }.is_err() {
     return false;
   }
   let Some((target, pid)) = WindowTarget::at(app, anchor) else {

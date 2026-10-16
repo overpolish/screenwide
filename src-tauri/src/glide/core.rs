@@ -7,6 +7,7 @@
 
 pub(crate) mod activity;
 pub(crate) mod armed;
+pub(crate) mod deliberate;
 pub(crate) mod desktop_gesture;
 pub(crate) mod desktop_selection;
 pub(crate) mod desktops;

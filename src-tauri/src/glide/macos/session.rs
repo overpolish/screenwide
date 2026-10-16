@@ -118,7 +118,7 @@ pub(super) fn begin_if_titlebar(
   input: InputKind,
   anchor: CGPoint,
 ) -> bool {
-  if crate::capture_overlays::blocks_glide(app) {
+  if crate::capture_overlays::blocks_glide(app) || super::deliberate::blocks_sessions() {
     return false;
   }
   // Turned off, no session ever opens - for either input. The tap keeps

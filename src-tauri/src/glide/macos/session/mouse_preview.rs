@@ -17,6 +17,7 @@ pub(in crate::glide::macos) fn poll(app: &AppHandle, state: &SharedState) {
   if !mouse_down {
     crate::glide::core::trace::input("mac-mouse", "mouse-control-released");
     super::set_suppression(state, InputKind::Mouse, false);
+    crate::glide::platform::deliberate::reset_mouse_start();
   }
   if active_input(state) == Some(InputKind::Mouse)
     && !super::monitor_mode(state)

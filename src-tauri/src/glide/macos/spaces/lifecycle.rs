@@ -20,7 +20,8 @@ use std::{
 use tauri::AppHandle;
 
 pub(super) fn begin(app: &AppHandle, input: Input, anchor: CGPoint) -> bool {
-  if CLOSING.load(Ordering::Acquire)
+  if crate::glide::platform::deliberate::blocks_sessions()
+    || CLOSING.load(Ordering::Acquire)
     || preview_windows::is_dismissing()
     || cursor::is_cursor_pinned()
     || crate::glide::core::activity::BusyLease::is_busy()

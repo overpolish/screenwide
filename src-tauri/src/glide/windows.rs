@@ -11,6 +11,7 @@ use windows::Win32::UI::WindowsAndMessaging::SetCursorPos;
 mod center;
 mod control;
 mod cursor;
+mod deliberate;
 mod input_kind;
 mod input_window;
 mod key;
@@ -85,15 +86,24 @@ pub(super) fn set_wheel_hook_active(active: bool) {
 pub(super) use mouse_motion::handle_mouse_delta;
 
 fn begin_session(input: InputKind) -> bool {
+  let mut anchor = windows::Win32::Foundation::POINT::default();
+  if unsafe { windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut anchor) }.is_err() {
+    return false;
+  }
+  begin_session_at(input, anchor)
+}
+
+fn begin_session_at(input: InputKind, anchor: windows::Win32::Foundation::POINT) -> bool {
   let Some(app) = APP.get() else {
     return false;
   };
-  session::begin(app, input)
+  session::begin(app, input, anchor)
 }
 
 pub(super) fn tick() {
   if let Some(app) = APP.get() {
     let settings = native_settings::snapshot();
+    deliberate::tick();
     spaces::clear_committed_if_released();
     session::clear_monitor_commit_if_released();
     if navigation::cancelled()

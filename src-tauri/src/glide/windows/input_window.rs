@@ -215,6 +215,10 @@ unsafe extern "system" fn window_proc(
       super::keyboard::handle_transition(wparam.0 as u32, lparam.0 != 0, lparam.0 == 0);
       LRESULT(0)
     }
+    key_hook::WM_GLIDE_SHORTCUT => {
+      super::deliberate::cancel_for_shortcut();
+      LRESULT(0)
+    }
     WM_DESTROY => LRESULT(0),
     _ => unsafe { DefWindowProcW(window, message, wparam, lparam) },
   }

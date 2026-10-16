@@ -21,6 +21,7 @@ use windows::Win32::{
 use super::{native_settings, session, titlebar, InputKind};
 
 pub(super) const WM_GLIDE_KEY: u32 = WM_APP + 3;
+pub(super) const WM_GLIDE_SHORTCUT: u32 = WM_APP + 7;
 static TARGET: AtomicIsize = AtomicIsize::new(0);
 #[derive(Default)]
 pub(super) struct Reservation {
@@ -88,8 +89,11 @@ unsafe extern "system" fn callback(code: i32, wparam: WPARAM, lparam: LPARAM) ->
       let pressed = matches!(message, WM_KEYDOWN | WM_SYSKEYDOWN);
       let released = matches!(message, WM_KEYUP | WM_SYSKEYUP);
       if pressed || released {
-        native_settings::observe(packet.vkCode, pressed);
         super::release_tracker::hook(packet.vkCode, pressed, packet.time);
+        if super::deliberate::types(packet.vkCode, pressed) {
+          return unsafe { CallNextHookEx(None, code, wparam, lparam) };
+        }
+        native_settings::observe(packet.vkCode, pressed);
         let configured = configured(packet.vkCode);
         let escaped = packet.vkCode
           == u32::from(windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE.0)
@@ -128,6 +132,22 @@ pub(super) fn forward(key: u32, pressed: bool) -> bool {
     }
   } else {
     false
+  }
+}
+
+/// Asks the input window to cancel the glide a shortcut interrupted, outside
+/// the hook, which must return quickly.
+pub(super) fn post_shortcut() {
+  let target = TARGET.load(Ordering::Acquire);
+  if target != 0 {
+    let _ = unsafe {
+      PostMessageW(
+        Some(HWND(target as *mut std::ffi::c_void)),
+        WM_GLIDE_SHORTCUT,
+        WPARAM(0),
+        LPARAM(0),
+      )
+    };
   }
 }
 

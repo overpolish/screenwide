@@ -107,13 +107,8 @@ pub(crate) fn handle_mouse_delta(delta_x: i32, delta_y: i32) {
     finish_current_session(false);
     return;
   }
-  if session::active_input().is_none() {
-    if !modifier_down {
-      return;
-    }
-    if !begin_session(InputKind::Mouse) {
-      return;
-    }
+  if session::active_input().is_none() && (!modifier_down || !deliberate::begin_mouse()) {
+    return;
   }
   if session::active_input() != Some(InputKind::Mouse) {
     return;

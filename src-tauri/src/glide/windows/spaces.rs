@@ -42,7 +42,7 @@ pub(super) fn begin(
   anchor: POINT,
   input: InputKind,
 ) -> bool {
-  if super::navigation::cancelled() {
+  if super::navigation::cancelled() || super::deliberate::blocks_sessions() {
     return false;
   }
   if crate::glide::core::activity::BusyLease::is_busy() {
