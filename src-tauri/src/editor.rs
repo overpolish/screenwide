@@ -282,6 +282,8 @@ pub struct EditorState {
   compression_estimate_preparation: Mutex<()>,
   /// Set to stop the estimate running now once a newer one is asked for.
   running_estimate: Mutex<Arc<AtomicBool>>,
+  /// Set to stop the export preview frame being made once a newer one is asked for.
+  running_export_preview: Mutex<Arc<AtomicBool>>,
 }
 
 impl EditorState {

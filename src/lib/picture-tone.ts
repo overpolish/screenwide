@@ -3,10 +3,10 @@
 
 type PictureTone = "dark" | "light";
 
-/** The parts of a card's picture something is drawn over, as shares of it
- * measured from the side text starts on: the selection box at the top start,
- * the tracks badge at the top end, and the length and size badges at the
- * bottom end. */
+/** The parts of a picture something is drawn over, as shares of it measured
+ * from the side text starts on: the start of its top edge, as a project
+ * card's selection box, and the ends of its top and bottom edges, as a
+ * card's badges. */
 const CORNERS = {
   bottomEnd: { height: 0.22, width: 0.45, x: 0.55, y: 0.78 },
   topEnd: { height: 0.22, width: 0.45, x: 0.55, y: 0 },
@@ -22,19 +22,37 @@ const SAMPLE = { height: 18, width: 32 };
 /**
  * Whether each corner of a loaded picture is light or dark, so what is drawn
  * over it can take the matching appearance. The corners turn with the writing
- * `direction`, as the badges over them do. Null when the picture cannot be
- * read, such as one served without leave to read its pixels.
+ * `direction`, as the badges over them do. `region`, in the picture's own
+ * pixels, is the part of it on screen where only part is. Null when the
+ * picture cannot be read, such as one served without leave to read its
+ * pixels.
  */
 export function pictureTones(
   image: HTMLImageElement,
   direction: "ltr" | "rtl",
+  region: { height: number; width: number; x: number; y: number } = {
+    height: image.naturalHeight,
+    width: image.naturalWidth,
+    x: 0,
+    y: 0,
+  },
 ): PictureTones | null {
   const canvas = document.createElement("canvas");
   canvas.width = SAMPLE.width;
   canvas.height = SAMPLE.height;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context || image.naturalWidth === 0) return null;
-  context.drawImage(image, 0, 0, SAMPLE.width, SAMPLE.height);
+  context.drawImage(
+    image,
+    region.x,
+    region.y,
+    region.width,
+    region.height,
+    0,
+    0,
+    SAMPLE.width,
+    SAMPLE.height,
+  );
   let pixels: Uint8ClampedArray;
   try {
     pixels = context.getImageData(0, 0, SAMPLE.width, SAMPLE.height).data;

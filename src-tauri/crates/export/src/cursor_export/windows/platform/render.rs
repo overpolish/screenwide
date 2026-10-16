@@ -3,9 +3,12 @@
 
 use super::*;
 
+/// Draws and encodes `request`'s edited video into `path`, or only
+/// `stretch` of it, its samples then timed from the stretch's start.
 pub(super) fn render_video(
   request: &mut CursorExportRequest<'_>,
   path: &Path,
+  stretch: Option<&media_preview::PreviewStretch>,
 ) -> Result<ExportRunResult, String> {
   screenwide_output::validate_output_settings(request.width, request.height, request.output)?;
   let surface = (request.surface)()?;
@@ -47,9 +50,14 @@ pub(super) fn render_video(
       )
     })
     .transpose()?;
+  // The camera is placed at the output's reference size; a scaled export
+  // draws on a canvas of another size.
   let camera_geometry = request
     .camera
-    .map(|(_, options)| media_preview::bake_geometry(options))
+    .map(|(_, options)| {
+      media_preview::bake_geometry(options)
+        .map(|geometry| export_output::on_canvas(geometry, request.output))
+    })
     .transpose()?;
   let mut camera_effects = crate::cursor_export::camera_effects::FrameEffects::new(
     request.camera_effects.as_ref(),
@@ -69,16 +77,37 @@ pub(super) fn render_video(
   let export_end_100ns = i64::try_from(request.duration_ms)
     .unwrap_or(i64::MAX / 10_000)
     .saturating_mul(10_000);
-  let clips = super::super::super::frame_annotations::ExportAnnotations::for_request(request);
+  let clips = super::super::super::frame_annotations::ExportAnnotations::for_request(
+    request,
+    stretch.map(media_preview::PreviewStretch::source_span_ms),
+  );
   let scenes = super::super::super::frame_scene::ExportScenes::for_request(request);
   let mut progress_pace = super::super::super::progress_pace::ProgressPace::default();
   // A reordered timeline plays an earlier stretch of the source after a
   // later one. The readers only move forward, so they are taken back to the
   // start of each such piece in turn.
-  let pieces = request.timeline.map_or_else(Vec::new, |timeline| {
-    screenwide_timeline::ascending_source_pieces(timeline.ranges())
-  });
+  let pieces = match stretch {
+    Some(stretch) => screenwide_timeline::ascending_source_pieces(&stretch.ranges),
+    None => request.timeline.map_or_else(Vec::new, |timeline| {
+      screenwide_timeline::ascending_source_pieces(timeline.ranges())
+    }),
+  };
+  let sample_origin_us = stretch.map_or(0, |stretch| stretch.start_us);
   let origin_ms = u64::try_from(timeline_origin.max(0) / 10_000).unwrap_or_default();
+  // A stretch starts anywhere in the recording, which the readers reach by
+  // seeking rather than by decoding everything before it.
+  if let (Some(_), Some(&[start_us, _])) = (stretch, pieces.first()) {
+    let seek_ms = origin_ms.saturating_add(start_us / 1_000);
+    reader.seek(seek_ms, false)?;
+    current = reader
+      .next_frame()?
+      .ok_or_else(|| "Media Foundation returned no frame for the preview".to_owned())?;
+    if let Some(camera) = camera_reader.as_mut() {
+      camera.seek(seek_ms, false)?;
+      camera_current = None;
+      camera_next = camera.next_frame()?;
+    }
+  }
   let mut piece = 0;
   loop {
     if request.cancelled.load(Ordering::Acquire) {
@@ -227,7 +256,7 @@ pub(super) fn render_video(
     )?;
     sink.write(
       &texture,
-      i64::try_from(output_us)
+      i64::try_from(output_us.saturating_sub(sample_origin_us))
         .unwrap_or(i64::MAX / 10)
         .saturating_mul(10),
       next_pts_100ns.saturating_sub(pts_100ns),

@@ -144,8 +144,12 @@ describe("seededExportChoices", () => {
     // "Original" chosen on a 1x capture is still "Original" on a Retina one.
     expect(scaleFor(200, 1)).toBe(200);
     expect(scaleFor(200, 0.5)).toBe(100);
-    // Half of a 150% capture is not offered, so it falls back to Original.
-    expect(scaleFor(150, 0.5)).toBe(150);
+    expect(scaleFor(100, 0.5)).toBe(50);
+    // Three quarters of a 125% capture rounds to 94%, and still reads as 0.75.
+    expect(scaleFor(125, 94 / 125)).toBe(94);
+    expect(scaleFor(200, 94 / 125)).toBe(150);
+    // A share no longer offered falls back to Original.
+    expect(scaleFor(150, 100 / 150)).toBe(150);
   });
 
   it("bakes only a recording that has a screen and a camera", () => {

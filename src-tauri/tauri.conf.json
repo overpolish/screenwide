@@ -360,6 +360,7 @@
         "scope": [
           "$APPDATA/caption-templates/*/fonts/*",
           "$APPCACHE/background-thumbnails/*",
+          "$APPCACHE/export-previews/*",
           "$APPCACHE/caption-previews/*",
           "$TEMP/Screenwide/application-sources/**",
           "$TEMP/Screenwide/camera-objects/*",

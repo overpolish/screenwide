@@ -222,6 +222,9 @@
   /* The least a title bar that carries tools leaves its logo and title before
      the tools give way, about a dozen characters. */
   --spacing-window-title: 8.75rem;
+  /* The export options column: as wide as it was alone in a 480px window,
+     with the recording's preview beside it. */
+  --spacing-export-form: 28.25rem;
   --spacing-focus-safe: 0.125rem;
   /* Icon sizes matched to SF Symbols in AppKit controls, measured on macOS 26:
      a 13pt regular control draws its symbol in a 17x16 box, small (11pt) in

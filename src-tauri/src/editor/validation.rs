@@ -3,8 +3,12 @@
 
 use screenwide_project::PrimaryRecordingKind;
 
+/// The choices the export offers: Original, three quarters and half of the
+/// capture's own scale, rounded as the export window rounds them.
 pub(super) fn validate_resolution_scale(selected: u16, source: u16) -> Result<(), String> {
-  if selected < 100 || selected > source {
+  let source = u32::from(source.clamp(100, 400));
+  let choices = [source, (source * 75 + 50) / 100, (source * 50 + 50) / 100];
+  if !choices.contains(&u32::from(selected)) {
     return Err("The selected output resolution is not available for this recording".to_owned());
   }
 

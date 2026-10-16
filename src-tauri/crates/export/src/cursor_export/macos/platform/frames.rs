@@ -14,9 +14,10 @@ use super::super::super::frame_scene::ExportScenes;
 use super::frame_camera::drawn_camera;
 use super::frame_captions::FrameCaptions;
 use super::frame_grid::{grid_frame, grid_index};
-use super::frame_placement::{carried_cursor, on_canvas};
+use super::frame_placement::carried_cursor;
 use super::*;
 use crate::cursor_export::camera_effects::FrameEffects;
+use crate::cursor_export::export_output::on_canvas;
 use screenwide_compositor::annotation_gpu::prepared_arrows;
 use screenwide_compositor::compositor::video_planes::VideoPlanes;
 use screenwide_compositor::compositor::BakeGeometry;
@@ -58,10 +59,12 @@ pub(super) struct FrameComposer<'a> {
 }
 
 impl<'a> FrameComposer<'a> {
+  /// `annotations_within_ms` is the stretch a preview draws; see `ExportAnnotations`.
   pub(super) fn new<'r: 'a>(
     request: &CursorExportRequest<'r>,
     timeline: Option<&'a macos::native::CursorTimeline>,
     keyboard_timeline: Option<&'a macos::native::KeyboardTimeline>,
+    annotations_within_ms: Option<[u64; 2]>,
   ) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
     let mut compositor = Compositor::new(gpu, NativeCursors::none())?;
@@ -101,7 +104,7 @@ impl<'a> FrameComposer<'a> {
         ))
       })
       .transpose()?;
-    let annotations = ExportAnnotations::for_request(request);
+    let annotations = ExportAnnotations::for_request(request, annotations_within_ms);
     let scenes = ExportScenes::for_request(request);
     let effects = FrameEffects::new(request.camera_effects.as_ref(), gpu)?;
     Ok(Self {

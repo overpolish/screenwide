@@ -365,7 +365,7 @@ export const streamRecordingTimelineThumbnails = (
     count,
   });
 
-type RecordingProcessingOptions = {
+export type RecordingProcessingOptions = {
   audioTrackVolumes: AudioTrackVolume[];
   bakeCamera: boolean;
   cameraCompression: number;
@@ -383,48 +383,28 @@ type RecordingProcessingOptions = {
   screenshotOutput: ScreenshotWorkspaceOutputSettings;
   timelineEdit?: RecordingTimelineEdit | null;
 };
+/** The options of a recording's export as the estimate and the preview
+ * frame read them, normalized as Rust expects. */
+export const recordingProcessingPayload = (
+  options: RecordingProcessingOptions,
+) => ({
+  ...options,
+  keyboardEffects: normalizedKeyboardEffects(options.keyboardEffects),
+  recordingOutput: {
+    camera: normalizedScreenshotOutput(options.recordingOutput.camera),
+    primary: normalizedScreenshotOutput(options.recordingOutput.primary),
+  },
+  screenshotOutput: normalizedScreenshotWorkspaceOutput(
+    options.screenshotOutput,
+  ),
+});
 export const estimateRecordingExport = ({
   artifactId,
-  audioTrackVolumes,
-  bakeCamera,
-  cameraCompression,
-  cameraOverlay,
-  cameraResolutionScalePercent,
-  collapseAudio,
-  compression,
-  cursorEffects,
-  enabledStreamIndices,
-  includeCamera,
-  includePrimaryVideo,
-  keyboardEffects,
-  recordingOutput,
-  resolutionScalePercent,
-  screenshotOutput,
-  timelineEdit,
+  ...options
 }: RecordingProcessingOptions & { artifactId: number }) =>
   invoke<number>("estimate_recording_export", {
     artifactId,
-    options: {
-      audioTrackVolumes,
-      bakeCamera,
-      cameraCompression,
-      cameraOverlay,
-      cameraResolutionScalePercent,
-      collapseAudio,
-      compression,
-      cursorEffects,
-      enabledStreamIndices,
-      includeCamera,
-      includePrimaryVideo,
-      keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
-      recordingOutput: {
-        camera: normalizedScreenshotOutput(recordingOutput.camera),
-        primary: normalizedScreenshotOutput(recordingOutput.primary),
-      },
-      resolutionScalePercent,
-      screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
-      timelineEdit,
-    },
+    options: recordingProcessingPayload(options),
   });
 type SaveExportOptions = RecordingProcessingOptions & {
   /** Moves the recording's project to the Trash once the export is saved. */

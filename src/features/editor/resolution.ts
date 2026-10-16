@@ -9,16 +9,15 @@ export const sourceScalePercent = (
   artifact: Extract<EditorArtifact, { kind: "recording" }>,
 ) => Math.min(400, Math.max(100, artifact.sourceScalePercent));
 
+/** Original, three quarters and half of what was captured, whatever the
+ * display's own scale: a quick way to make the export smaller. */
 export const resolutionScales = (
   artifact: Extract<EditorArtifact, { kind: "recording" }>,
 ) => {
   if (artifact.primaryKind === "audio") return [100];
   if (artifact.primaryKind === "camera") return cameraResolutionScales;
   const source = sourceScalePercent(artifact);
-  return [source, 200, 150, 100].filter(
-    (scale, index, choices) =>
-      scale <= source && choices.indexOf(scale) === index,
-  );
+  return [source, Math.round(source * 0.75), Math.round(source * 0.5)];
 };
 
 export const scaledVideoDimensions = ({

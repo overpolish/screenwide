@@ -3,30 +3,8 @@
 
 //! Carrying what the export placed once onto the canvas a frame is drawn on.
 
-use screenwide_compositor::compositor::BakeGeometry;
 use screenwide_cursor_effects::GpuCursor;
 use screenwide_output::{output_placement, ScreenshotOutputSettings};
-
-/// `geometry`, placed for its own baked output, carried onto the canvas
-/// `settings` describe.
-pub(super) fn on_canvas(
-  geometry: BakeGeometry,
-  settings: &ScreenshotOutputSettings,
-) -> BakeGeometry {
-  let scale_x = f64::from(settings.width) / f64::from(geometry.output_width.max(1));
-  let scale_y = f64::from(settings.height) / f64::from(geometry.output_height.max(1));
-  let scaled = |value: u32, scale: f64| (f64::from(value) * scale).round() as u32;
-  BakeGeometry {
-    frame_x: (f64::from(geometry.frame_x) * scale_x).round() as i32,
-    frame_y: (f64::from(geometry.frame_y) * scale_y).round() as i32,
-    frame_width: scaled(geometry.frame_width, scale_x),
-    frame_height: scaled(geometry.frame_height, scale_y),
-    radius: scaled(geometry.radius, scale_x.min(scale_y)),
-    output_width: settings.width,
-    output_height: settings.height,
-    ..geometry
-  }
-}
 
 /// `cursor`, evaluated on the canvas where `from` places a `source`-sized
 /// screen, carried to where `to` places it. The export evaluates its cursors

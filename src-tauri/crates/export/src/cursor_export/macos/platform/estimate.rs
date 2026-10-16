@@ -6,7 +6,7 @@
 //! by what it sees, so only the export's own frames, with their background,
 //! annotations, cursor and camera, tell it.
 
-use screenwide_timeline::{output_duration_us, within_output_windows, TimelineRange};
+use screenwide_timeline::{output_duration_us, within_output_windows};
 
 use super::*;
 
@@ -24,17 +24,7 @@ pub(in super::super::super) fn estimate_video_bytes(
   };
   let cursor_timeline = macos::native::evaluate(&request)?;
   let keyboard_timeline = macos::native::evaluate_keyboard(&request)?;
-  let whole = request.timeline.map_or_else(
-    || {
-      vec![TimelineRange {
-        output_start_us: 0,
-        source_end_us: request.duration_ms.saturating_mul(1_000),
-        source_start_us: 0,
-        playback_rate: 1.0,
-      }]
-    },
-    |timeline| timeline.ranges().to_vec(),
-  );
+  let whole = super::super::super::edited_ranges(&request);
   let duration_us = output_duration_us(&whole)
     .filter(|duration| *duration > 0)
     .ok_or_else(|| "The export has no video to estimate".to_owned())?;
@@ -70,7 +60,7 @@ pub(in super::super::super) fn estimate_video_bytes(
     &mut request,
     cursor_timeline.as_ref(),
     keyboard_timeline.as_ref(),
-    &sampled,
+    (&sampled, None),
     &fallback,
     x264,
   );

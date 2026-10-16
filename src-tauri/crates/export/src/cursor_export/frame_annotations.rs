@@ -28,7 +28,13 @@ pub(super) struct ExportAnnotations {
 }
 
 impl ExportAnnotations {
-  pub(super) fn for_request(request: &CursorExportRequest<'_>) -> Self {
+  /// `within_ms`, where given, is the stretch of the recording an export
+  /// preview draws: only the clips over it read their pictures, the decoding
+  /// that otherwise outlasts drawing so short a stretch many times over.
+  pub(super) fn for_request(
+    request: &CursorExportRequest<'_>,
+    within_ms: Option<[u64; 2]>,
+  ) -> Self {
     let mut clips = request
       .timeline
       .map_or(&[][..], |timeline| timeline.annotation_clips())
@@ -41,39 +47,24 @@ impl ExportAnnotations {
         .timeline
         .map_or(&[][..], |timeline| timeline.ranges()),
     );
-    // Pinned annotations take their paths, which the preview has normally
-    // worked out already. The redactions then take the fills read from their
-    // clips' frames: a secure pixelation's zones from its first, and the
-    // surface across it, both where the pin carries the box, each read from
-    // its own picture's recording. Both come before the stroke is scaled
-    // below: the preview placed counters' and text boxes' tips at the edited
-    // scale, so the export asks for the same paths.
-    if request.annotation_track == AnnotationTrack::Primary {
-      pin_paths::attach_for_export(
-        request.screen,
-        request.duration_ms,
-        &mut clips,
-        request.output.size_image_width(),
-        request.cancelled,
-      );
-    }
-    held_surfaces::attach_for_export(
-      (request.screen, request.annotation_track),
-      request.duration_ms,
-      &mut clips,
-      request.output.capture_width_points,
-    );
-    // A baked camera is captured one pixel to the point.
-    if let Some((path, options)) = request
-      .camera
-      .filter(|_| request.annotation_track == AnnotationTrack::Primary)
-    {
-      held_surfaces::attach_for_export(
-        (path, AnnotationTrack::Camera),
-        request.duration_ms,
-        &mut clips,
-        f64::from(options.camera_width),
-      );
+    match within_ms {
+      None => attach_pictures(request, &mut clips),
+      Some([from_ms, to_ms]) => {
+        let near: Vec<usize> = clips
+          .iter()
+          .enumerate()
+          .filter(|(_, clip)| {
+            let [start_ms, end_ms] = clip.recording_span();
+            start_ms <= to_ms && end_ms >= from_ms
+          })
+          .map(|(index, _)| index)
+          .collect();
+        let mut picked: Vec<_> = near.iter().map(|&index| clips[index].clone()).collect();
+        attach_pictures(request, &mut picked);
+        for (index, clip) in near.into_iter().zip(picked) {
+          clips[index] = clip;
+        }
+      }
     }
     // Annotations are authored against the source at its own scale while the
     // stroke follows the output. Scaled once rather than per frame. A
@@ -186,4 +177,42 @@ impl ExportAnnotations {
 pub(super) struct FrameAnnotations {
   pub(super) screen: Vec<Annotation>,
   pub(super) camera: Option<(ScreenshotOutputSettings, (u32, u32))>,
+}
+
+/// Hands `clips` what they read from the pictures under them. Pinned
+/// annotations take their paths, which the preview has normally worked out
+/// already. The redactions then take the fills read from their clips'
+/// frames: a secure pixelation's zones from its first, and the surface across
+/// it, both where the pin carries the box, each read from its own picture's
+/// recording. Both come before the stroke is scaled: the preview placed
+/// counters' and text boxes' tips at the edited scale, so the export asks for
+/// the same paths.
+fn attach_pictures(request: &CursorExportRequest<'_>, clips: &mut [RecordingAnnotationClip]) {
+  if request.annotation_track == AnnotationTrack::Primary {
+    pin_paths::attach_for_export(
+      request.screen,
+      request.duration_ms,
+      clips,
+      request.output.size_image_width(),
+      request.cancelled,
+    );
+  }
+  held_surfaces::attach_for_export(
+    (request.screen, request.annotation_track),
+    request.duration_ms,
+    clips,
+    request.output.capture_width_points,
+  );
+  // A baked camera is captured one pixel to the point.
+  if let Some((path, options)) = request
+    .camera
+    .filter(|_| request.annotation_track == AnnotationTrack::Primary)
+  {
+    held_surfaces::attach_for_export(
+      (path, AnnotationTrack::Camera),
+      request.duration_ms,
+      clips,
+      f64::from(options.camera_width),
+    );
+  }
 }

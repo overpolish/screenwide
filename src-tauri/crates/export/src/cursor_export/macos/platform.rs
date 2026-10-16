@@ -27,6 +27,8 @@ mod mux;
 
 mod estimate;
 pub(in super::super) use estimate::estimate_video_bytes;
+mod preview;
+pub(in super::super) use preview::preview_frame;
 
 static GPU_EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 
@@ -47,12 +49,13 @@ fn gpu_video_path() -> PathBuf {
 /// Draws the frames `ranges` lay out, every frame of the export where it
 /// keeps the whole source, and encodes them: streamed to x264 as `x264`
 /// plans, answering the run to finish, or, where FFmpeg cannot be started,
-/// by AVFoundation into `path`.
+/// by AVFoundation into `path`. `annotations_within_ms` is the stretch of the
+/// recording a preview draws, where it draws only that.
 fn render_gpu_video(
   request: &mut CursorExportRequest<'_>,
   timeline: Option<&macos::native::CursorTimeline>,
   keyboard_timeline: Option<&macos::native::KeyboardTimeline>,
-  ranges: &[screenwide_timeline::TimelineRange],
+  (ranges, annotations_within_ms): (&[screenwide_timeline::TimelineRange], Option<[u64; 2]>),
   path: &Path,
   x264: mux::X264Plan,
 ) -> Result<(ExportRunResult, Option<media_preview::StreamedExport>), String> {
@@ -61,7 +64,7 @@ fn render_gpu_video(
   let camera = request.camera.map(|(path, _)| c_path(path)).transpose()?;
   let output = c_path(path)?;
   let bitrate = x264.bitrate;
-  let composer = FrameComposer::new(request, timeline, keyboard_timeline)?;
+  let composer = FrameComposer::new(request, timeline, keyboard_timeline, annotations_within_ms)?;
   let mut error = vec![0_i8; 2_048];
   let mut context = ExportContext {
     cancelled: request.cancelled,
@@ -144,7 +147,7 @@ fn export_gpu(mut request: CursorExportRequest<'_>) -> Result<ExportRunResult, S
       &mut request,
       timeline.as_ref(),
       keyboard_timeline.as_ref(),
-      &ranges,
+      (&ranges, None),
       &video,
       x264,
     )?;
@@ -260,5 +263,3 @@ mod text_tests;
 
 #[cfg(test)]
 mod timed_annotation_tests;
-
-mod export_output;

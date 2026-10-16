@@ -5,56 +5,37 @@
 import { useEffect, useRef, useState } from "react";
 
 import { estimateRecordingExport } from "../api";
-import {
-  defaultScreenshotOutput,
-  RecordingOutputSettings,
-} from "../screenshot/screenshot-output";
-import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
-import {
-  AudioTrackVolume,
-  CameraOverlaySettings,
-  CursorEffectSettings,
-  EditorArtifact,
-  KeyboardEffectSettings,
-} from "../types";
 
-import { mixSignature, VideoExportSettings } from "./recording-export-settings";
+import {
+  RecordingExportInputs,
+  recordingProcessingOptions,
+} from "./recording-export-inputs";
+import { mixSignature } from "./recording-export-settings";
 
 const ESTIMATE_DEBOUNCE_MS = 450;
 
-export function useRecordingExportEstimate({
-  artifact,
-  audioTrackVolumes,
-  bakeCamera,
-  camera,
-  cameraOverlay,
-  collapseAudio,
-  compression,
-  cursorEffects,
-  enabledStreamIndices,
-  includeCamera,
-  includePrimaryVideo,
-  keyboardEffects,
-  recordingOutput,
-  recordingTimelineEdit,
-  resolutionScalePercent,
-}: {
-  artifact: EditorArtifact | null;
-  audioTrackVolumes: AudioTrackVolume[];
-  bakeCamera: boolean;
-  camera: VideoExportSettings;
-  cameraOverlay: CameraOverlaySettings;
-  collapseAudio: boolean;
-  compression: number;
-  cursorEffects: CursorEffectSettings;
-  enabledStreamIndices: number[] | null;
-  includeCamera: boolean;
-  includePrimaryVideo: boolean;
-  keyboardEffects: KeyboardEffectSettings;
-  recordingOutput: RecordingOutputSettings;
-  recordingTimelineEdit: RecordingTimelineEdit | null;
-  resolutionScalePercent: number;
-}) {
+export function useRecordingExportEstimate(inputs: RecordingExportInputs) {
+  const {
+    artifact,
+    audioTrackVolumes,
+    bakeCamera,
+    camera,
+    cameraOverlay,
+    collapseAudio,
+    compression,
+    cursorEffects,
+    enabledStreamIndices,
+    includeCamera,
+    includePrimaryVideo,
+    keyboardEffects,
+    recordingOutput,
+    recordingTimelineEdit,
+    resolutionScalePercent,
+  } = inputs;
+  // The effect below runs on the fields its signature names; the options
+  // sent are read from the latest inputs.
+  const inputsRef = useRef(inputs);
+  inputsRef.current = inputs;
   const cacheRef = useRef(new Map<string, number>());
   const [activeJobs, setActiveJobs] = useState(0);
   const [state, setState] = useState<{
@@ -142,23 +123,9 @@ export function useRecordingExportEstimate({
           : enabledSignature.split("-").map(Number);
       setActiveJobs((count) => count + 1);
       estimateRecordingExport({
+        ...recordingProcessingOptions(inputsRef.current),
         artifactId: artifact.id,
-        audioTrackVolumes,
-        bakeCamera,
-        cameraCompression: camera.compression,
-        cameraOverlay,
-        cameraResolutionScalePercent: camera.resolutionScalePercent,
-        collapseAudio,
-        compression,
-        cursorEffects,
         enabledStreamIndices: streamIndices,
-        includeCamera,
-        includePrimaryVideo,
-        keyboardEffects,
-        recordingOutput,
-        resolutionScalePercent,
-        screenshotOutput: { ...defaultScreenshotOutput(1, 1), items: [] },
-        timelineEdit: recordingTimelineEdit,
       })
         .then((bytes) => {
           if (disposed) return;

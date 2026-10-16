@@ -16,6 +16,7 @@ mod timeline_args;
 
 pub(super) use args::{audio_export_args, camera_export_args, remux_args, selected_export_args};
 pub(crate) use timeline_args::timeline_audio_mapping_args;
+pub(super) use timeline_args::video_encoding_args as x264_args;
 pub(super) use timeline_args::{
   timeline_audio_export_args, timeline_camera_export_args, timeline_selected_export_args,
 };

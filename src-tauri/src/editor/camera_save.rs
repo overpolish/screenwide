@@ -110,7 +110,15 @@ pub(super) fn save_camera_copy(
     );
   };
 
-  let picture = ExportPicture::camera(camera, output, timeline, camera_effects, compression, None);
+  let picture = ExportPicture::camera(
+    camera,
+    output,
+    timeline,
+    camera_effects,
+    compression,
+    resolution_scale_percent,
+    None,
+  );
   if picture.is_composed() {
     let path = unique_path(directory, &camera_stem, RECORDING_EXTENSION, &Path::exists);
     let result = cursor_export::export(picture.request(Run {
@@ -181,6 +189,7 @@ pub(super) fn save_camera_as_primary(
     timeline,
     camera_effects,
     compression,
+    resolution_scale_percent,
     Some((audio_source, selection, layout)),
   );
   if picture.is_composed() {

@@ -7,7 +7,9 @@
 //! Direct3D 11 device; see `export_surface`.
 
 mod encoder_config;
+mod preview;
 mod render;
+pub(in super::super) use preview::preview_frame;
 use render::render_video;
 
 use std::{
@@ -235,11 +237,17 @@ fn mux_args(request: &CursorExportRequest<'_>, video: &Path, temporary: &Path) -
 }
 
 pub(in super::super) fn export(
-  mut request: CursorExportRequest<'_>,
+  request: CursorExportRequest<'_>,
 ) -> Result<ExportRunResult, String> {
+  let output = export_output::scaled(&request);
+  let mut request = CursorExportRequest {
+    output: &output,
+    on_progress: &mut *request.on_progress,
+    ..request
+  };
   let video = gpu_video_path();
   let result = (|| {
-    let rendered = render_video(&mut request, &video)?;
+    let rendered = render_video(&mut request, &video, None)?;
     if !matches!(rendered, ExportRunResult::Completed) {
       return Ok(rendered);
     }
@@ -273,7 +281,7 @@ pub(in super::super) fn export(
 pub(in super::super) fn estimate_video_bytes(
   request: CursorExportRequest<'_>,
 ) -> Result<u64, String> {
-  let (width, height) = screenwide_output::output_dimensions(request.output)?;
+  let (width, height) = screenwide_output::output_dimensions(&export_output::scaled(&request))?;
   let duration_ms = request
     .timeline
     .map_or(request.duration_ms, |timeline| timeline.duration_ms());

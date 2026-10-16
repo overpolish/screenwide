@@ -20,6 +20,8 @@ use screenwide_output::ScreenshotOutputSettings;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) mod camera_effects;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+mod export_output;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod frame_annotations;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod frame_scene;
@@ -77,7 +79,7 @@ pub struct ExportCameraEffects {
   pub on_screen: bool,
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn output_dimensions(width: u32, height: u32, video: VideoExportOptions) -> (u32, u32) {
   let scale = u64::from(video.resolution_scale_percent);
   let source_scale = u64::from(video.source_scale_percent.max(1));
@@ -116,6 +118,25 @@ pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, Strin
 pub fn estimate_video_bytes(request: CursorExportRequest<'_>) -> Result<u64, String> {
   check_request(&request)?;
   platform::estimate_video_bytes(request)
+}
+
+/// The frame at `output_us` of `request`'s edited video, written to `png` as
+/// the platform's encoder leaves it at the request's size and compression;
+/// see `media_preview::PreviewStretch`. The request's destination is never
+/// written.
+pub fn preview_frame(
+  request: CursorExportRequest<'_>,
+  output_us: u64,
+  png: &Path,
+) -> Result<ExportRunResult, String> {
+  check_request(&request)?;
+  platform::preview_frame(request, output_us, png)
+}
+
+/// How `request`'s edited video lays out its source.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn edited_ranges(request: &CursorExportRequest<'_>) -> Vec<screenwide_timeline::TimelineRange> {
+  media_preview::edited_ranges(request.timeline, request.duration_ms)
 }
 
 fn check_request(request: &CursorExportRequest<'_>) -> Result<(), String> {

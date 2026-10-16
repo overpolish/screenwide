@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! What one exported video file shows, described once for the export that
-//! writes it and the estimate that sizes it, so the two always agree on
-//! whether the picture is drawn by the compositor and on what it draws.
+//! writes it, the estimate that sizes it and the preview that shows a frame
+//! of it, so they always agree on whether the picture is drawn by the
+//! compositor and on what it draws.
 
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
@@ -14,7 +15,9 @@ use screenwide_captions::CaptionTrack;
 use screenwide_cursor_effects::CursorEffectSettings;
 use screenwide_export::camera_effects::live::LiveCameraEffects;
 use screenwide_export::cursor_export::{self, CursorExportRequest, ExportCameraEffects};
-use screenwide_export::media_preview::{BakedVideoExportOptions, VideoExportOptions};
+use screenwide_export::media_preview::{
+  self, BakedVideoExportOptions, ExportRunResult, VideoExportOptions,
+};
 use screenwide_export::recording_model::RecordingCamera;
 use screenwide_export::track_selection::{AudioLayout, TrackSelection};
 use screenwide_keyboard_effects::KeyboardEffectSettings;
@@ -122,15 +125,17 @@ impl<'a> ExportPicture<'a> {
     }
   }
 
-  /// The camera recording as a file of its own, with `audio` beside it
-  /// where it stands in for the screen: the file its audio is read from,
-  /// which of its tracks, and how they are laid out.
+  /// The camera recording as a file of its own, at `resolution_scale_percent`
+  /// of its output, with `audio` beside it where it stands in for the
+  /// screen: the file its audio is read from, which of its tracks, and how
+  /// they are laid out.
   pub(in crate::editor) fn camera(
     camera: &'a RecordingCamera,
     output: &'a ScreenshotOutputSettings,
     timeline: Option<&'a TimelinePlan>,
     camera_effects: Option<Arc<LiveCameraEffects>>,
     compression: u8,
+    resolution_scale_percent: u16,
     audio: Option<(&'a Path, &'a TrackSelection, AudioLayout)>,
   ) -> Self {
     static SILENT: std::sync::LazyLock<TrackSelection> =
@@ -159,7 +164,7 @@ impl<'a> ExportPicture<'a> {
       timeline,
       video: VideoExportOptions {
         compression,
-        resolution_scale_percent: 100,
+        resolution_scale_percent,
         source_scale_percent: 100,
       },
     }
@@ -212,5 +217,35 @@ impl<'a> ExportPicture<'a> {
       video: self.video,
       width: self.size.0,
     }
+  }
+
+  /// The frame at `output_us` of this picture's edited video, at `png`, as
+  /// the export writes it: drawn by the compositor, or re-encoded or copied
+  /// by FFmpeg.
+  pub(in crate::editor) fn preview_frame(
+    self,
+    cancelled: &AtomicBool,
+    output_us: u64,
+    png: &Path,
+  ) -> Result<ExportRunResult, String> {
+    if self.is_composed() {
+      return cursor_export::preview_frame(
+        self.request(Run {
+          cancelled,
+          destination: Path::new(""),
+          on_progress: &mut |_| {},
+        }),
+        output_us,
+        png,
+      );
+    }
+    media_preview::preview_frame(
+      self.screen,
+      (self.timeline, self.duration_ms),
+      output_us,
+      self.video,
+      png,
+    )?;
+    Ok(ExportRunResult::Completed)
   }
 }

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Ref } from "react";
+import { ReactNode, Ref } from "react";
 
 import logoUrl from "../../../../assets/screenwide-mark.svg";
 import { WindowHeader } from "../../../../components/shared/window-header/window-header";
@@ -21,6 +21,8 @@ export type ExportOptionsWindowViewProps = {
   onClose: () => void;
   /** Measured by the window so it can fit itself to the form. */
   contentRef?: Ref<HTMLElement>;
+  /** Set beside the form, on its start side: the recording's preview. */
+  preview?: ReactNode;
   /** The running save. Required in practice whenever `isSaving`. */
   progress?: ExportProgressProps;
 };
@@ -36,6 +38,7 @@ export function ExportOptionsWindowView({
   form,
   isSaving,
   onClose,
+  preview,
   progress,
 }: ExportOptionsWindowViewProps) {
   return (
@@ -66,11 +69,21 @@ export function ExportOptionsWindowView({
       <div className="relative">
         <div
           className={cn(
-            "flex flex-col px-window-inset pb-window-inset",
+            "flex gap-layout px-window-inset pb-window-inset",
             isSaving && progress !== undefined && "invisible",
           )}
         >
-          <EditorExportForm {...form} isSaving={isSaving} />
+          {preview ? (
+            <div className="flex min-w-0 flex-1">{preview}</div>
+          ) : null}
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 flex-col",
+              preview !== undefined && "w-export-form flex-none",
+            )}
+          >
+            <EditorExportForm {...form} isSaving={isSaving} />
+          </div>
         </div>
         {isSaving && progress ? (
           <div className="absolute inset-0 flex items-center px-window-inset pb-window-inset">

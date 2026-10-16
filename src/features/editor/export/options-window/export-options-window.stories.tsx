@@ -11,6 +11,8 @@ import {
 } from "../../screenshot/screenshot-output";
 import { EditorArtifact } from "../../types";
 import { CameraOutput } from "../camera-output";
+import { ExportPreviewCompare } from "../preview/export-preview-compare";
+import { storyFrames } from "../preview/export-preview-story-fixtures";
 
 import { ExportOptionsWindowView } from "./export-options-window-view";
 import { ExportProgressProps } from "./export-progress";
@@ -50,6 +52,7 @@ function EditorExportPreview({
   includeCamera = false,
   progress,
   recordingOutput,
+  withPreview = false,
 }: {
   artifact: EditorArtifact;
   cameraOutput?: CameraOutput | null;
@@ -61,7 +64,10 @@ function EditorExportPreview({
   /** When given, the window shows the running save instead of the form. */
   progress?: ExportProgressProps;
   recordingOutput?: RecordingOutputSettings;
+  /** The frame at Original and as exported, beside the form. */
+  withPreview?: boolean;
 }) {
+  const [frames] = useState(() => (withPreview ? storyFrames() : null));
   const [fileStem, setFileStem] = useState(artifact.suggestedFileStem);
   const [directory, setDirectory] = useState<string | null>(
     "/Users/dom/Desktop",
@@ -115,6 +121,17 @@ function EditorExportPreview({
       }}
       isSaving={Boolean(progress)}
       onClose={() => undefined}
+      preview={
+        frames ? (
+          <ExportPreviewCompare
+            className="flex-1"
+            exported={frames.exported}
+            failed={false}
+            isUpdating={false}
+            original={frames.original}
+          />
+        ) : undefined
+      }
       progress={progress}
     />
   );
@@ -128,7 +145,7 @@ const meta = {
       <FeatureStoryStage
         height={context.args.artifact.kind === "recording" ? 700 : 480}
         viewMode={context.viewMode}
-        width={480}
+        width={context.args.withPreview ? 920 : 480}
       >
         <Story />
       </FeatureStoryStage>
@@ -142,6 +159,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Video: Story = {};
+
+/** The frame under the playhead at Original and as it will be exported,
+ * beside the form. */
+export const Preview: Story = {
+  args: { withPreview: true },
+};
 
 /** No transcript yet, so there is nothing to make subtitles from. */
 export const Untranscribed: Story = {

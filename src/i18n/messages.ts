@@ -211,6 +211,12 @@ export type Messages = {
   "editor-export-format": null;
   "editor-export-open-folder": null;
   "editor-export-output-size": null;
+  "editor-export-preview-divider": null;
+  "editor-export-preview-export": null;
+  "editor-export-preview-failed": null;
+  "editor-export-preview-frame": null;
+  "editor-export-preview-making": null;
+  "editor-export-preview-original": null;
   "editor-export-progress": null;
   "editor-export-quality": null;
   "editor-export-quality-balanced": null;

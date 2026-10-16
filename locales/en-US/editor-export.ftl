@@ -47,3 +47,18 @@ editor-export-saving-screenshot = Saving screenshot
 editor-export-saving-camera = Saving camera
 editor-export-saving-recording = Saving recording
 editor-export-finalizing = Finalizing recording
+
+## The preview beside the options: the frame under the playhead at Original
+## and as the export will write it, split by a line dragged across it.
+
+# Names the side of the compared frame shown at Original size and compression.
+editor-export-preview-original = Original
+# Names the side of the compared frame shown as the export will write it.
+editor-export-preview-export = Export
+# Accessible name of the line dragged across the frame to compare its sides.
+editor-export-preview-divider = Comparison divider
+# Accessible name of the frame, which is dragged, or moved with the arrow
+# keys, to look at another part of it.
+editor-export-preview-frame = Frame at the playhead
+editor-export-preview-making = Making the preview
+editor-export-preview-failed = The preview could not be made.

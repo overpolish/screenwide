@@ -116,7 +116,9 @@ export const restoredCameraOverlay = ({
   return valid ? restored : null;
 };
 
-/** The remembered share of "Original", where this recording offers it. */
+/** The remembered share of "Original", where this recording offers it. A
+ * share is stored as the percentages' ratio, which rounding moves a little
+ * off the 0.75 or 0.5 it was chosen as. */
 const restoredResolutionScale = (
   recording: RecordingArtifact,
   ratio: number | null,
@@ -125,7 +127,7 @@ const restoredResolutionScale = (
   if (ratio === null) return original;
   const scales = resolutionScales(recording);
   return (
-    scales.find((scale) => Math.abs(scale / scales[0] - ratio) < 0.001) ??
+    scales.find((scale) => Math.abs(scale / scales[0] - ratio) < 0.01) ??
     original
   );
 };

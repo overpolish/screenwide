@@ -200,32 +200,34 @@ pub fn hide_export_options(app: AppHandle, window: WebviewWindow) -> Result<(), 
   Ok(())
 }
 
-/// Fits the calling options window to the height its content asks for.
+/// Fits the calling options window to the size its content asks for: as wide
+/// as what it shows beside the form, and as tall as the form's rows.
 ///
-/// The width stays as configured: only the form's own height varies, with the
-/// rows a workspace happens to show. Being non-resizable is a style mask on
-/// macOS and no constraint on `setContentSize:`, so this still applies.
+/// Being non-resizable is a style mask on macOS and no constraint on
+/// `setContentSize:`, so this still applies.
 #[tauri::command]
 pub fn resize_export_options(
   app: AppHandle,
   window: WebviewWindow,
+  width: f64,
   height: f64,
 ) -> Result<(), String> {
   let kind = kind_of_options_label(window.label())
     .ok_or_else(|| "That window has no editor workspace".to_owned())?;
-  if !height.is_finite() || height <= 0.0 {
-    return Err("That is not a height".to_owned());
+  if !width.is_finite() || width <= 0.0 || !height.is_finite() || height <= 0.0 {
+    return Err("That is not a size".to_owned());
   }
   let resize = || -> tauri::Result<()> {
     let scale = window.scale_factor()?;
-    let current = window.inner_size()?;
-    let width = f64::from(current.width) / scale;
     window.set_size(LogicalSize::new(width, height))?;
-    // Centred against the height that is on its way, not the one still shown.
+    // Centred against the size that is on its way, not the one still shown.
     center_on_editor_sized(
       &app,
       kind,
-      PhysicalSize::new(current.width, (height * scale).round() as u32),
+      PhysicalSize::new(
+        (width * scale).round() as u32,
+        (height * scale).round() as u32,
+      ),
     )?;
     // The first fit after an opening is also the reveal, and every later one
     // asserts a visibility the window already has.

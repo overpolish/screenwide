@@ -51,6 +51,42 @@ function SliderTickMarks({
   );
 }
 
+/**
+ * The slider's knob on its own, for a slider laid out otherwise than
+ * `Slider`, such as a divider dragged across a picture. It sits in a React
+ * Aria slider's track, which places it.
+ */
+export function SliderKnob({ className }: { className?: string }) {
+  const prefersReducedMotion = useReducedMotion();
+  return (
+    <SliderThumb
+      className={cn(
+        "top-1/2 h-4 w-5 rounded-full bg-control-solid-fill shadow-sm outline-none transition-shadow",
+        "group-data-[disabled]:bg-fill-quaternary group-data-[disabled]:shadow-none",
+        // A 20px disc (measured), the same width as the macOS knob, so
+        // the track's overshoot of half a knob fits both.
+        "windows:size-5 windows:shadow-none windows:control-stroke windows:group-data-[disabled]:bg-control-solid-fill",
+        // The accent dot: 14px under the pointer, scaled to 10 at rest
+        // and 8 while dragging. Scaled rather than resized so it grows
+        // about its centre on the compositor, on WinUI's 167ms fast-out
+        // slow-in curve.
+        "windows:after:absolute windows:after:inset-0 windows:after:m-auto windows:after:size-3.5 windows:after:scale-[0.714] windows:after:rounded-full windows:after:bg-primary-surface windows:after:transition-[scale,background-color] windows:after:duration-[167ms] windows:after:ease-[cubic-bezier(0,0,0,1)] motion-reduce:after:transition-none windows:after:content-['']",
+        "windows:data-[hovered]:after:scale-100 windows:data-[hovered]:after:bg-primary-surface-hover",
+        "windows:data-[dragging]:after:scale-[0.571] windows:data-[dragging]:after:bg-primary-surface-pressed",
+        "windows:group-data-[disabled]:after:bg-primary-surface-disabled",
+        focusStyles,
+        elementFocusVisible,
+        className,
+      )}
+      style={{
+        transitionDuration: prefersReducedMotion
+          ? "0s"
+          : motionDurationCss("state"),
+      }}
+    />
+  );
+}
+
 export function Slider({ className, showTicks, ...props }: SliderProps) {
   const prefersReducedMotion = useReducedMotion();
   const transitionDuration = prefersReducedMotion
@@ -92,26 +128,7 @@ export function Slider({ className, showTicks, ...props }: SliderProps) {
           className="absolute top-1/2 -ms-2.5 box-content h-1.5! -translate-y-1/2 rounded-full bg-primary-surface ps-2.5 transition-colors group-data-[disabled]:bg-primary-surface-disabled windows:h-1! windows:group-data-[hovered]:bg-primary-surface-hover windows:group-data-[dragging]:bg-primary-surface-pressed"
           style={{ transitionDuration }}
         />
-        <SliderThumb
-          className={cn(
-            "top-1/2 h-4 w-5 rounded-full bg-control-solid-fill shadow-sm outline-none transition-shadow",
-            "group-data-[disabled]:bg-fill-quaternary group-data-[disabled]:shadow-none",
-            // A 20px disc (measured), the same width as the macOS knob, so
-            // the track's overshoot of half a knob fits both.
-            "windows:size-5 windows:shadow-none windows:control-stroke windows:group-data-[disabled]:bg-control-solid-fill",
-            // The accent dot: 14px under the pointer, scaled to 10 at rest
-            // and 8 while dragging. Scaled rather than resized so it grows
-            // about its centre on the compositor, on WinUI's 167ms fast-out
-            // slow-in curve.
-            "windows:after:absolute windows:after:inset-0 windows:after:m-auto windows:after:size-3.5 windows:after:scale-[0.714] windows:after:rounded-full windows:after:bg-primary-surface windows:after:transition-[scale,background-color] windows:after:duration-[167ms] windows:after:ease-[cubic-bezier(0,0,0,1)] motion-reduce:after:transition-none windows:after:content-['']",
-            "windows:data-[hovered]:after:scale-100 windows:data-[hovered]:after:bg-primary-surface-hover",
-            "windows:data-[dragging]:after:scale-[0.571] windows:data-[dragging]:after:bg-primary-surface-pressed",
-            "windows:group-data-[disabled]:after:bg-primary-surface-disabled",
-            focusStyles,
-            elementFocusVisible,
-          )}
-          style={{ transitionDuration }}
-        />
+        <SliderKnob />
         {tickCount > 0 ? (
           <SliderTickMarks count={tickCount} minValue={minValue} step={step} />
         ) : null}

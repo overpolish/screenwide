@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { isTauri } from "@tauri-apps/api/core";
+import { convertFileSrc, isTauri } from "@tauri-apps/api/core";
 import { UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useEditableGeneralSettings } from "../../../settings/use-general-settings";
 import { selectArtifact, useEditorStore } from "../../store";
 import { currentExportKind } from "../../window-kind";
+import { ExportPreviewCompare } from "../preview/export-preview-compare";
+import { useExportPreviewStore } from "../preview/export-preview-store";
 
 import {
   hideExportOptions,
@@ -23,31 +25,48 @@ import {
 } from "./store";
 import { useEchoedValue } from "./use-echoed-value";
 
+/** The window's width alone, and with the recording's preview beside the
+ * form: the form keeps the column it has alone. */
+const WINDOW_WIDTH = 480;
+const WINDOW_WIDTH_WITH_PREVIEW = 920;
+
 /**
  * Keeps the window as tall as its form, which changes with the rows a
- * workspace happens to need. Measured from the content rather than assumed,
- * so the configured height is only where the window starts.
+ * workspace happens to need, and `width` wide. Measured from the content
+ * rather than assumed, so the configured height is only where the window
+ * starts.
  *
  * The window is presented invisible and the fit is what reveals it, so an
- * opening always states a height even when nothing has changed - which is
+ * opening always states a size even when nothing has changed - which is
  * precisely the case from the second opening onwards, where the observer has
  * nothing to report and would otherwise leave the window unseen.
  */
-function useContentHeight(contentRef: React.RefObject<HTMLElement | null>) {
+function useContentSize(
+  contentRef: React.RefObject<HTMLElement | null>,
+  width: number,
+) {
+  const widthRef = useRef(width);
+  const fitRef = useRef<((unchangedToo: boolean) => void) | null>(null);
   useEffect(() => {
     const element = contentRef.current;
     if (!element || !isTauri()) return;
     let frame = 0;
-    let lastHeight = 0;
+    let last = { height: 0, width: 0 };
     const fit = (unchangedToo: boolean) => {
       frame = 0;
-      const height = Math.ceil(element.getBoundingClientRect().height);
-      if (height === 0 || (height === lastHeight && !unchangedToo)) return;
-      lastHeight = height;
-      resizeExportOptions(height).catch((cause: unknown) => {
+      const size = {
+        height: Math.ceil(element.getBoundingClientRect().height),
+        width: widthRef.current,
+      };
+      const unchanged =
+        size.height === last.height && size.width === last.width;
+      if (size.height === 0 || (unchanged && !unchangedToo)) return;
+      last = size;
+      resizeExportOptions(size.width, size.height).catch((cause: unknown) => {
         console.error("Could not fit the export options window", cause);
       });
     };
+    fitRef.current = fit;
     // One resize per frame: a row appearing can settle over several layouts.
     const observer = new ResizeObserver(() => {
       frame ||= window.requestAnimationFrame(() => {
@@ -72,11 +91,16 @@ function useContentHeight(contentRef: React.RefObject<HTMLElement | null>) {
       });
     return () => {
       unmounted = true;
+      fitRef.current = null;
       stopListening?.();
       observer.disconnect();
       if (frame !== 0) window.cancelAnimationFrame(frame);
     };
   }, [contentRef]);
+  useEffect(() => {
+    widthRef.current = width;
+    fitRef.current?.(false);
+  }, [width]);
 }
 
 /**
@@ -95,7 +119,20 @@ export function ExportOptionsWindow() {
     useExportOptionsStore((state) => state.snapshots[kind]) ??
     DEFAULT_EXPORT_OPTIONS;
   const contentRef = useRef<HTMLElement>(null);
-  useContentHeight(contentRef);
+  const recordingPreview = useExportPreviewStore(
+    (state) => state.snapshots.recording,
+  );
+  const preview =
+    kind === "recording" && recordingPreview?.available
+      ? recordingPreview
+      : null;
+  useContentSize(
+    contentRef,
+    preview ? WINDOW_WIDTH_WITH_PREVIEW : WINDOW_WIDTH,
+  );
+  const frame = (
+    shown: { height: number; path: string; width: number } | null,
+  ) => shown && { ...shown, src: convertFileSrc(shown.path) };
   // Revealing the file is a stored preference rather than a property of this
   // export, so it is read and written where the general settings live.
   const [general, changeGeneral] = useEditableGeneralSettings();
@@ -197,6 +234,17 @@ export function ExportOptionsWindow() {
       }}
       isSaving={isSaving}
       onClose={close}
+      preview={
+        preview ? (
+          <ExportPreviewCompare
+            className="flex-1"
+            exported={frame(preview.exported)}
+            failed={preview.failed}
+            isUpdating={preview.isUpdating}
+            original={frame(preview.original)}
+          />
+        ) : undefined
+      }
       progress={{
         // A screenshot is written in one pass the backend cannot interrupt.
         cancellable: kind === "recording",

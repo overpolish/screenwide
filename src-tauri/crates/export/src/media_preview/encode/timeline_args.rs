@@ -49,7 +49,9 @@ fn cut_fades(range: TimelineRange, index: usize, count: usize) -> String {
   fades
 }
 
-fn video_encoding_args(video: VideoExportOptions) -> Vec<OsString> {
+/// x264 at the export's quality: an export that follows an edit always
+/// re-encodes, Original included.
+pub(in crate::media_preview) fn video_encoding_args(video: VideoExportOptions) -> Vec<OsString> {
   let crf = export_crf(video.compression, true).unwrap_or(20);
   [
     "-c:v",

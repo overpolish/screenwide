@@ -22,6 +22,7 @@ import {
   cameraOutputChoice,
   exportedRecordingEdits,
 } from "./export/camera-output";
+import { useRecordingExportPreview } from "./export/preview/use-recording-export-preview";
 import { seededExportChoices } from "./export/recording-export-choices";
 import {
   cameraExportSettings,
@@ -338,7 +339,7 @@ export function EditorWindow() {
         : seededArtifactId,
     state: editState,
   });
-  const { estimatedSizeBytes, isEstimatingSize } = useRecordingExportEstimate({
+  const exportInputs = {
     artifact,
     audioTrackVolumes: currentAudioTrackVolumes,
     bakeCamera: effectiveBakeCamera,
@@ -354,7 +355,10 @@ export function EditorWindow() {
     recordingOutput: exportEdits.recordingOutput,
     recordingTimelineEdit: exportEdits.timelineEdit,
     resolutionScalePercent,
-  });
+  };
+  const { estimatedSizeBytes, isEstimatingSize } =
+    useRecordingExportEstimate(exportInputs);
+  useRecordingExportPreview(exportInputs);
 
   const onEnabledTracksChange = useCallback(
     (streamIndices: number[]) => {

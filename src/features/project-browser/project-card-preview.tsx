@@ -17,14 +17,13 @@ import { Button as AriaButton, type PressEvent } from "react-aria-components";
 import { Badge } from "../../components/base/badge/badge";
 import { Checkbox } from "../../components/base/checkbox/checkbox";
 import { t } from "../../i18n/i18n";
-import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
-import { formatBytes, formatDuration } from "../editor/duration";
-
 import {
   pictureTones,
   type PictureCorner,
   type PictureTones,
-} from "./picture-tone";
+} from "../../lib/picture-tone";
+import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
+import { formatBytes, formatDuration } from "../editor/duration";
 
 import type {
   ProjectKind,

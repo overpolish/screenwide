@@ -26,9 +26,9 @@ export const hideExportOptions = async () => {
   await invoke<null>("hide_export_options");
 };
 
-/** Fits this options window to the height its content asks for. */
-export const resizeExportOptions = async (height: number) => {
-  await invoke<null>("resize_export_options", { height });
+/** Fits this options window to the size its content asks for. */
+export const resizeExportOptions = async (width: number, height: number) => {
+  await invoke<null>("resize_export_options", { height, width });
 };
 
 const listenToVisibility = async (
