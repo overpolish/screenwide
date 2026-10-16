@@ -103,6 +103,9 @@ struct Canvas {
 }
 
 fn focus_mode() -> u32 {
+  if (!feature_kept(feature_focus)) {
+    return 0u;
+  }
   return u32(canvas.focus.x);
 }
 
@@ -113,15 +116,18 @@ fn focus_cut() -> u32 {
 // How many placements a frame averages while a scene moves its panes; one
 // draws them sharp.
 fn scene_samples() -> u32 {
+  if (!feature_kept(feature_scene_motion)) {
+    return 1u;
+  }
   return max(u32(canvas.scene_motion.w), 1u);
 }
 
 fn screen_turned() -> bool {
-  return canvas.scene_turn[0].w != 0.0;
+  return feature_kept(feature_turn) && canvas.scene_turn[0].w != 0.0;
 }
 
 fn turn_moving() -> bool {
-  return canvas.scene_turn[6].w != 0.0;
+  return feature_kept(feature_turn) && canvas.scene_turn[6].w != 0.0;
 }
 
 // The point of the upright screen `pixel` shows at `step` of the frame's
@@ -198,6 +204,31 @@ fn probed_drawn(point: vec2<f32>) -> vec2<f32> {
 // shader that walks empty lists. The cursor and the keyboard overlay are
 // drawn either way.
 const annotations_drawn: bool = true;
+
+// The paths a pipeline keeps besides the annotations, a bit each as
+// `compositor/canvas_features.rs` names them. Every bit is set in the shader as
+// written; a slim variant is this source with this one line changed, and the
+// compiler leaves out each path whose bit is clear. A frame takes a slim
+// variant only where each path it leaves out would have returned early for
+// that frame anyway, so the picture is the same: the full shader's registers
+// are sized for its deepest path, and a 4K canvas drew about 40 times slower
+// with every path kept than with only those it took.
+const canvas_features: u32 = 0xffffffffu;
+const feature_cursor: u32 = 1u;
+const feature_camera: u32 = 2u;
+const feature_keyboard: u32 = 4u;
+const feature_magnifier: u32 = 8u;
+const feature_scene_motion: u32 = 16u;
+const feature_turn: u32 = 32u;
+const feature_focus: u32 = 64u;
+const feature_crop_preview: u32 = 128u;
+const feature_background_picture: u32 = 256u;
+const feature_background_mesh: u32 = 512u;
+const feature_background_generator: u32 = 1024u;
+
+fn feature_kept(feature: u32) -> bool {
+  return (canvas_features & feature) != 0u;
+}
 
 // The twin of `KeyboardConstants`.
 struct Keyboard {
@@ -355,7 +386,7 @@ fn cut_out_shadow(picture: texture_2d<f32>, pixel: vec2<f32>, rect: vec4<f32>, c
 /// gives up. It samples the same source through the same image mapping, so
 /// the crop rectangle is a rounded window onto pixels already in place.
 fn crop_preview_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
-  if (canvas.crop_preview_effects.y == 0.0) {
+  if (!feature_kept(feature_crop_preview) || canvas.crop_preview_effects.y == 0.0) {
     return result_in;
   }
   var result = result_in;
@@ -546,7 +577,7 @@ fn artwork_cursor(point: vec2<f32>) -> vec4<f32> {
 }
 
 fn cursor_layer(pixel: vec2<f32>) -> vec4<f32> {
-  if (canvas.cursor_options.y == 0u) {
+  if (!feature_kept(feature_cursor) || canvas.cursor_options.y == 0u) {
     return vec4<f32>(0.0);
   }
   if (canvas.cursor_model.x != 0u) {
@@ -606,7 +637,7 @@ fn annotation_cursor_sample(probe: vec2<f32>) -> vec4<f32> {
 // the same reach `cursor_layer` turns pixels away at, so a probe farther off
 // samples nothing however far a blur's taps spread.
 fn annotation_cursor_near(probe: vec2<f32>, margin: f32) -> bool {
-  if (canvas.cursor_options.y == 0u) {
+  if (!feature_kept(feature_cursor) || canvas.cursor_options.y == 0u) {
     return false;
   }
   let travel = min(length(canvas.cursor_blur.xy), 80.0);
@@ -715,7 +746,7 @@ fn background_picture(pixel: vec2<f32>) -> vec3<f32> {
 }
 
 fn background(pixel: vec2<f32>) -> vec3<f32> {
-  if (canvas.background_options.x != 0u) {
+  if (feature_kept(feature_background_picture) && canvas.background_options.x != 0u) {
     return background_picture(pixel);
   }
   if (canvas.options.y == 0u) {
@@ -724,7 +755,7 @@ fn background(pixel: vec2<f32>) -> vec3<f32> {
   // A ported generator reads its palette from the front of the mesh colours,
   // the seed, and the same timeline seconds the classic mesh drifts with,
   // which `gen_pixel_shifted` scales by the generator's own speed in `motion.y`.
-  if (canvas.background_options.y != 0u) {
+  if (feature_kept(feature_background_generator) && canvas.background_options.y != 0u) {
     let palette = GenPalette(canvas.mesh_colors[0].rgb, canvas.mesh_colors[1].rgb,
                              canvas.mesh_colors[2].rgb, canvas.mesh_colors[3].rgb,
                              canvas.background_options.z);
@@ -737,6 +768,9 @@ fn background(pixel: vec2<f32>) -> vec3<f32> {
     }
     return gen_pixel_shifted(canvas.background_options.y, pixel, canvas.output_source.xy, palette,
                              shift, canvas.motion.x, canvas.motion.y);
+  }
+  if (!feature_kept(feature_background_mesh)) {
+    return canvas.solid_color.rgb;
   }
   let shortest = min(canvas.output_source.x, canvas.output_source.y);
   let dimensions = canvas.output_source.xy;
@@ -829,7 +863,7 @@ fn camera_layer_at(result_in: vec4<f32>, pixel: vec2<f32>, frame: vec4<f32>,
 // The camera's drawing is laid over `result_in` as opaque as the scene has it.
 fn camera_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
   let opacity = canvas.scene_opacity.y;
-  if (canvas.camera_effects.y == 0.0 || opacity <= 0.0) {
+  if (!feature_kept(feature_camera) || canvas.camera_effects.y == 0.0 || opacity <= 0.0) {
     return result_in;
   }
   let picture = vec2<f32>(textureDimensions(camera_image));
@@ -1136,8 +1170,8 @@ fn keyboard_key_may_reach(index: u32, canvas_point: vec2<f32>, canvas_dimensions
 
 fn composite_keyboard(rgba_in: vec4<f32>, canvas_point: vec2<f32>,
                       dimensions: vec2<f32>) -> vec4<f32> {
-  if (keyboard.dimensions.z == 0u || keyboard.dimensions.x == 0u ||
-      keyboard.dimensions.y == 0u) {
+  if (!feature_kept(feature_keyboard) || keyboard.dimensions.z == 0u ||
+      keyboard.dimensions.x == 0u || keyboard.dimensions.y == 0u) {
     return rgba_in;
   }
   var rgba = rgba_in;
@@ -1196,7 +1230,7 @@ fn composite_keyboard(rgba_in: vec4<f32>, canvas_point: vec2<f32>,
 // the camera pixel for pixel.
 fn crop_magnifier(result: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
   let magnifier = canvas.magnifier;
-  if (magnifier.z <= 0.0) {
+  if (!feature_kept(feature_magnifier) || magnifier.z <= 0.0) {
     return result;
   }
   let center = magnifier.xy;
@@ -1432,7 +1466,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   // outside the panes' overlap they agree, so only the overlap fades from one
   // pane to the other. The mark blur's layer is drawn from the nearer order.
   var panes: Panes;
-  if (canvas.camera_effects.y == 0.0 || camera_front >= 1.0 ||
+  if (!feature_kept(feature_camera) || canvas.camera_effects.y == 0.0 || camera_front >= 1.0 ||
       (annotation_blur_mode() == 1u && camera_front >= 0.5)) {
     panes = panes_camera_in_front(result, pixel, screen, foreground_only, annotation_feather,
                                   annotation_atlas);

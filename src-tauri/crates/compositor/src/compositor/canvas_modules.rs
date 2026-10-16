@@ -4,6 +4,7 @@
 //! A canvas variant's shader modules, from what the build compiled or from
 //! WGSL, and the render pipeline built from them for each target.
 
+use super::canvas_features::{self, FeatureMask, ALL_FEATURES};
 use super::canvas_pipelines::Target;
 use super::canvas_precompiled;
 use super::canvas_variants::{source, KindMask};
@@ -16,16 +17,22 @@ pub(super) struct CanvasModules {
   pub(super) fragment: wgpu::ShaderModule,
 }
 
-/// The modules drawing `kinds`: the build's where it compiled them and
-/// `precompiled` allows, otherwise compiled from WGSL.
-pub(super) fn modules(device: &wgpu::Device, kinds: KindMask, precompiled: bool) -> CanvasModules {
-  precompiled
+/// The modules drawing `kinds` keeping `features`: the build's where it
+/// compiled them and `precompiled` allows, otherwise compiled from WGSL. The
+/// build compiles only variants keeping every feature.
+pub(super) fn modules(
+  device: &wgpu::Device,
+  kinds: KindMask,
+  features: FeatureMask,
+  precompiled: bool,
+) -> CanvasModules {
+  (precompiled && features == ALL_FEATURES)
     .then(|| canvas_precompiled::modules(device, kinds))
     .flatten()
     .unwrap_or_else(|| {
       let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Screenwide preview shader"),
-        source: wgpu::ShaderSource::Wgsl(source(kinds).into()),
+        source: wgpu::ShaderSource::Wgsl(canvas_features::keeping(source(kinds), features).into()),
       });
       CanvasModules {
         vertex: module.clone(),

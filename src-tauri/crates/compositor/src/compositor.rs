@@ -8,6 +8,9 @@
 
 mod background;
 mod camera;
+mod canvas_features;
+#[cfg(all(test, target_os = "macos"))]
+mod canvas_features_tests;
 mod canvas_modules;
 mod canvas_pipelines;
 mod canvas_precompiled;

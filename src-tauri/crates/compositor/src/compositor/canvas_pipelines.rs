@@ -33,6 +33,13 @@
 //! on a Ryzen 7700X's integrated GPU), while compiling the set took DXC
 //! seconds of CPU on every launch and the frames drawn while it ran
 //! stuttered.
+//!
+//! On macOS each of those draws changes to a slim variant once one is ready:
+//! the same kinds, keeping only the shader's other paths the frame takes
+//! ([`super::canvas_features`]). Metal compiles it in the background the
+//! first time a frame asks for it, in about half a second with no annotation
+//! and about two with every kind, and the system keeps it for later launches;
+//! the frames until then are drawn as above.
 
 /// Whether every annotated draw takes the variant with every kind; see the
 /// module's notes.
@@ -42,6 +49,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
+use super::canvas_features::{FeatureMask, ALL_FEATURES};
 use super::canvas_modules::{self, CanvasModules};
 use super::canvas_variants::{covers, every_kind, KindMask};
 use super::Compositor;
@@ -61,7 +69,7 @@ pub(super) enum Target {
 pub(super) struct CanvasPipelines {
   device: wgpu::Device,
   layout: wgpu::PipelineLayout,
-  variants: Mutex<HashMap<KindMask, Arc<Variant>>>,
+  variants: Mutex<HashMap<(KindMask, FeatureMask), Arc<Variant>>>,
   /// Whether a draw missing its variant starts compiling it on another
   /// thread, as a preview's does, rather than only waiting for it.
   in_background: AtomicBool,
@@ -90,9 +98,11 @@ pub(super) fn shared(
   (layout, canvas)
 }
 
-/// The canvas shader built for `kinds`, compiled for each target as asked.
+/// The canvas shader built for `kinds` and `features`, compiled for each
+/// target as asked.
 struct Variant {
   kinds: KindMask,
+  features: FeatureMask,
   precompiled: bool,
   modules: OnceLock<CanvasModules>,
   pipelines: [OnceLock<wgpu::RenderPipeline>; 3],
@@ -110,9 +120,9 @@ impl Variant {
     target: Target,
   ) -> &wgpu::RenderPipeline {
     self.pipelines[target as usize].get_or_init(|| {
-      let modules = self
-        .modules
-        .get_or_init(|| canvas_modules::modules(device, self.kinds, self.precompiled));
+      let modules = self.modules.get_or_init(|| {
+        canvas_modules::modules(device, self.kinds, self.features, self.precompiled)
+      });
       canvas_modules::pipeline(device, layout, modules, target)
     })
   }
@@ -152,11 +162,12 @@ impl CanvasPipelines {
     }
   }
 
-  fn variant(&self, kinds: KindMask) -> Arc<Variant> {
+  fn variant(&self, kinds: KindMask, features: FeatureMask) -> Arc<Variant> {
     let mut variants = self.variants.lock().unwrap_or_else(PoisonError::into_inner);
-    Arc::clone(variants.entry(kinds).or_insert_with(|| {
+    Arc::clone(variants.entry((kinds, features)).or_insert_with(|| {
       Arc::new(Variant {
         kinds,
+        features,
         precompiled: self.precompiled,
         modules: OnceLock::new(),
         pipelines: Default::default(),
@@ -165,18 +176,37 @@ impl CanvasPipelines {
     }))
   }
 
-  /// The pipeline that draws `kinds` into `target`: with `every`, the one
-  /// with every kind for any annotated draw; otherwise their own where it is
-  /// ready, else the smallest ready one holding them all, else their own,
-  /// compiled now.
-  pub(super) fn get(&self, target: Target, kinds: KindMask, every: bool) -> wgpu::RenderPipeline {
+  /// The pipeline that draws `kinds` into `target` keeping `features`: the
+  /// slim variant keeping only those where it is ready, starting it compiling
+  /// in the background where it is not; otherwise one keeping every feature:
+  /// with `every`, the one with every kind for any annotated draw; otherwise
+  /// their own where it is ready, else the smallest ready one holding them
+  /// all, else their own, compiled now.
+  pub(super) fn get(
+    &self,
+    target: Target,
+    kinds: KindMask,
+    every: bool,
+    features: FeatureMask,
+  ) -> wgpu::RenderPipeline {
+    if features != ALL_FEATURES {
+      let slim = self.variant(kinds, features);
+      if let Some(pipeline) = slim.pipelines[target as usize].get() {
+        return pipeline.clone();
+      }
+      #[cfg(test)]
+      if super::canvas_features::TEST_SLIM.get() == Some(true) {
+        return slim.pipeline(&self.device, &self.layout, target).clone();
+      }
+      self.compile_in_background(&slim, target);
+    }
     if (every || ALWAYS_EVERY_KIND) && kinds != 0 {
       return self
-        .variant(every_kind())
+        .variant(every_kind(), ALL_FEATURES)
         .pipeline(&self.device, &self.layout, target)
         .clone();
     }
-    let own = self.variant(kinds);
+    let own = self.variant(kinds, ALL_FEATURES);
     if let Some(pipeline) = own.pipelines[target as usize].get() {
       return pipeline.clone();
     }
@@ -189,13 +219,13 @@ impl CanvasPipelines {
     own.pipeline(&self.device, &self.layout, target).clone()
   }
 
-  /// The smallest ready variant for `target` that holds every kind in
-  /// `kinds`, if one is.
+  /// The smallest ready variant for `target` keeping every feature that holds
+  /// every kind in `kinds`, if one is.
   fn ready_cover(&self, target: Target, kinds: KindMask) -> Option<wgpu::RenderPipeline> {
     let variants = self.variants.lock().ok()?;
     variants
       .values()
-      .filter(|variant| covers(variant.kinds, kinds))
+      .filter(|variant| variant.features == ALL_FEATURES && covers(variant.kinds, kinds))
       .filter_map(|variant| {
         let pipeline = variant.pipelines[target as usize].get()?;
         Some((variant.kinds.count_ones(), pipeline))
@@ -249,7 +279,10 @@ impl Compositor {
   pub fn compile_annotation_kinds_in_background(&self) {
     let canvas = &self.canvas;
     canvas.in_background.store(true, Ordering::Relaxed);
-    let (none, every) = (canvas.variant(0), canvas.variant(every_kind()));
+    let (none, every) = (
+      canvas.variant(0, ALL_FEATURES),
+      canvas.variant(every_kind(), ALL_FEATURES),
+    );
     let warm = [
       (none, Target::Canvas),
       (Arc::clone(&every), Target::Canvas),

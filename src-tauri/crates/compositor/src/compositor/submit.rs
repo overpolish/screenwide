@@ -64,6 +64,7 @@ impl Compositor {
       .queue
       .write_buffer(&self.constants, 0, bytemuck::bytes_of(&values));
     let focus = super::focus::FocusPlan::of(&values, prepared);
+    let features = super::canvas_features::of(&values, focus.is_some(), keyboard.is_some());
     if let Some(plan) = &focus {
       for (part, constants) in self.focus.constants.iter().enumerate() {
         gpu
@@ -157,7 +158,7 @@ impl Compositor {
     let blurred = blur
       .map(|plan| {
         let [marks, cursor] = &self.mark_blur.constants;
-        let delta = self.canvas.get(Target::Delta, kinds, every);
+        let delta = self.canvas.get(Target::Delta, kinds, every, features);
         self.mark_blur.record(
           gpu,
           &mut encoder,
@@ -218,7 +219,7 @@ impl Compositor {
         if let Some([x, y, width, height]) = scissor {
           pass.set_scissor_rect(x, y, width, height);
         }
-        pass.set_pipeline(&self.canvas.get(pipeline, kinds, every));
+        pass.set_pipeline(&self.canvas.get(pipeline, kinds, every, features));
         pass.set_bind_group(0, bindings, &[]);
         pass.draw(0..3, 0..1);
       }
