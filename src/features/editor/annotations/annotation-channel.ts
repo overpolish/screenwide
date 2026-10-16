@@ -3,18 +3,13 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
-import { requestImagePlacement } from "../images/image-requests";
 import { SceneRotation } from "../layer-rotation";
 import { ToolPanelAnnotation } from "../tool-panels/tool-panel-selection";
 import { EditorKind } from "../types";
 
-import {
-  rememberAnnotationAngle,
-  rememberAnnotationAnimated,
-  rememberAnnotationImage,
-  rememberAnnotationStyle,
-} from "./annotation-defaults";
 import { AnnotationStyle, ImageArt, ImagePlay } from "./annotations";
+
+import type { TextStyle } from "../../../bindings/TextStyle";
 
 /** What the panel changes about how a moving image plays. */
 export type ImagePlayChange = Partial<Pick<ImagePlay, "frame" | "once">>;
@@ -40,6 +35,7 @@ type PublishedAnnotation = {
   applyImage: (art: ImageArt) => void;
   /** Change how the chosen moving image plays. */
   applyImagePlay: (play: ImagePlayChange) => void;
+  applyLook: (look: TextStyle) => void;
   applyReverse: () => void;
   /** Turn the chosen image, a field at a time, in degrees about each axis. */
   applyRotation: (rotation: Partial<SceneRotation>) => void;
@@ -109,6 +105,9 @@ export function usePublishAnnotationSelection(
       },
       applyImagePlay: (play) => {
         applyRef.current.applyImagePlay(play);
+      },
+      applyLook: (look) => {
+        applyRef.current.applyLook(look);
       },
       applyReverse: () => {
         applyRef.current.applyReverse();
@@ -190,103 +189,14 @@ export const useCanClearDrawings = (workspace: EditorKind) =>
   );
 
 /** The workspace's published edits when it has an annotation chosen. */
-const chosen = (workspace: EditorKind) => {
+export const chosenAnnotation = (workspace: EditorKind) => {
   const published = workspaces.get(workspace);
   return published?.selection ? published : null;
 };
 
-/** Dress the chosen annotation, or with none chosen, the next one the tool in
- * hand draws. A no-op when the workspace has neither to dress. */
-export const applyAnnotationStyle = (
-  workspace: EditorKind,
-  style: Partial<AnnotationStyle>,
-) => {
-  const published = chosen(workspace);
-  if (published) {
-    published.applyStyle(style);
-    return;
-  }
-  const draft = drafts.get(workspace);
-  if (draft) rememberAnnotationStyle({ ...draft.style, ...style }, draft.kind);
-};
+/** The dress the tool in hand draws its next annotation in, if it draws one. */
+export const annotationDraft = (workspace: EditorKind) => drafts.get(workspace);
 
-/** Draw the chosen annotation in and out over its clip, or leave it standing;
- * with none chosen, the next one. */
-export const applyAnnotationAnimated = (
-  workspace: EditorKind,
-  animated: boolean,
-) => {
-  const published = chosen(workspace);
-  if (published) published.applyAnimated(animated);
-  else if (drafts.has(workspace)) rememberAnnotationAnimated(animated);
-};
-
-/** Turn the chosen counter's tail to `angle`, in radians clockwise from
- * east; with none chosen, the next counter's. */
-export const applyAnnotationAngle = (workspace: EditorKind, angle: number) => {
-  const published = chosen(workspace);
-  if (published) published.applyAngle(angle);
-  else if (drafts.has(workspace)) rememberAnnotationAngle(angle);
-};
-
-/** Turn the chosen annotation round. A no-op with none chosen: there is
- * nothing drawn yet to turn. */
-export const applyAnnotationReverse = (workspace: EditorKind) => {
-  chosen(workspace)?.applyReverse();
-};
-
-/** Turn the chosen image, a field at a time. A no-op with none chosen: a
- * fresh image always lands upright. */
-export const applyAnnotationRotation = (
-  workspace: EditorKind,
-  rotation: Partial<SceneRotation>,
-) => {
-  chosen(workspace)?.applyRotation(rotation);
-};
-
-/** Give the chosen image the picture `art`. With none chosen, an image
- * showing it is placed in the middle of the layer in hand, and the next
- * image shows it too. */
-export const applyAnnotationImage = (workspace: EditorKind, art: ImageArt) => {
-  const published = chosen(workspace);
-  if (published) {
-    published.applyImage(art);
-    return;
-  }
-  if (!drafts.has(workspace)) return;
-  rememberAnnotationImage(art);
-  requestImagePlacement(workspace, art);
-};
-
-/** Change how the chosen moving image plays. A no-op with none chosen: a
- * fresh image always starts on its first frame and loops. */
-export const applyAnnotationImagePlay = (
-  workspace: EditorKind,
-  play: ImagePlayChange,
-) => {
-  chosen(workspace)?.applyImagePlay(play);
-};
-
-/** Lay the chosen redaction's blocks out again, draw the chosen hand-drawn
- * highlight's stroke again, or sway the chosen image another way, from a
- * fresh seed. A no-op with none chosen: every fresh one is drawn from a seed
- * of its own. */
-export const applyAnnotationShuffle = (workspace: EditorKind) => {
-  chosen(workspace)?.applyShuffle();
-};
-
-/** Sway the chosen image over its clip, or stand it still. A no-op with
- * none chosen: a fresh image always stands still. */
-export const applyAnnotationSway = (workspace: EditorKind, sway: boolean) => {
-  chosen(workspace)?.applySway(sway);
-};
-
-/** Take every stroke off the picture this workspace edits, chosen or not. */
-export const applyClearDrawings = (workspace: EditorKind) => {
-  workspaces.get(workspace)?.applyClearDrawings();
-};
-
-/** Delete every annotation this workspace has chosen. */
-export const applyAnnotationsDelete = (workspace: EditorKind) => {
-  workspaces.get(workspace)?.applyDelete();
-};
+/** The workspace's published edits, whatever it has chosen. */
+export const publishedAnnotations = (workspace: EditorKind) =>
+  workspaces.get(workspace);

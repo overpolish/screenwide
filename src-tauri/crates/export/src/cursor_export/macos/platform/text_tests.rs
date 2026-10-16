@@ -4,19 +4,21 @@
 //! The compositor's text boxes, through a real GPU dispatch.
 
 use screenwide_annotations::text::geometry::box_size;
-use screenwide_annotations::text::metrics::text_block;
-use screenwide_annotations::text::model::TextPointer;
+use screenwide_annotations::text::model::{dressed_in, label_look, TextControlPoint};
 use screenwide_annotations::text::new_text;
 use screenwide_annotations::{
   Annotation, AnnotationAlign, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
+use screenwide_text::engine::metrics::text_block;
+use screenwide_text::BoxPoint;
 
 const SIZE: (u32, u32) = (480, 320);
 const ORIGIN: AnnotationPoint = AnnotationPoint { x: 60.0, y: 60.0 };
 const FONT: f64 = 28.0;
 
-fn text_box(text: &str, pointer: TextPointer, color: &str) -> Annotation {
-  let mut annotation = new_text("text".to_owned(), ORIGIN, None, 0.0);
+/// A box in the Label look worn in `color`, its tail's point at `pointer`.
+fn text_box(text: &str, pointer: BoxPoint, color: &str) -> Annotation {
+  let mut annotation = new_text("text".to_owned(), ORIGIN, None, None, 0.0);
   annotation.style = AnnotationStyle {
     align: AnnotationAlign::Left,
     blur: false,
@@ -32,10 +34,14 @@ fn text_box(text: &str, pointer: TextPointer, color: &str) -> Annotation {
     strength: 0.0,
     width: FONT,
   };
+  let mut look = label_look();
+  dressed_in(&mut look, color);
   annotation.shape = AnnotationShape::Text {
     origin: ORIGIN,
-    pointer,
     text: text.to_owned(),
+    look,
+    controls: [("tip".to_owned(), TextControlPoint::Box(pointer))].into(),
+    clock: None,
   };
   annotation
 }
@@ -114,7 +120,7 @@ fn inked(
 fn a_text_box_draws_its_box_and_inks_its_text_to_read_on_it() {
   let text = "Click here";
   let extent = box_extent(text);
-  let light = composed(text_box(text, TextPointer::default(), "#ffcc00"));
+  let light = composed(text_box(text, BoxPoint::TUCKED, "#ffcc00"));
   write_png("text-yellow", &light);
   // The box's padding is the box's colour, and outside it is the canvas.
   let padding = pixel(&light, ORIGIN.x + 4.0, ORIGIN.y + extent[1] * 0.5);
@@ -136,7 +142,7 @@ fn a_text_box_draws_its_box_and_inks_its_text_to_read_on_it() {
     "no dark ink on yellow"
   );
   // A dark box takes light ink instead.
-  let dark = composed(text_box(text, TextPointer::default(), "#1c1c1e"));
+  let dark = composed(text_box(text, BoxPoint::TUCKED, "#1c1c1e"));
   write_png("text-dark", &dark);
   assert!(
     inked(&dark, text, |sample| sample[0] > 192),
@@ -149,12 +155,9 @@ fn a_pointer_reaches_the_tip_it_is_given_and_nowhere_else() {
   let text = "Menu";
   let extent = box_extent(text);
   // Four and a bit ems straight out of the middle of the right edge.
-  let out = TextPointer {
-    along: AnnotationPoint { x: 1.0, y: 0.0 },
-    reach: AnnotationPoint {
-      x: 120.0 / FONT,
-      y: 0.0,
-    },
+  let out = BoxPoint {
+    along: [1.0, 0.0],
+    reach: [120.0 / FONT, 0.0],
   };
   let tip = AnnotationPoint {
     x: ORIGIN.x + extent[0] + 120.0,
@@ -172,6 +175,6 @@ fn a_pointer_reaches_the_tip_it_is_given_and_nowhere_else() {
   assert_eq!(pixel(&image, tip.x + 3.0, tip.y), [0, 0, 0]);
   assert_eq!(pixel(&image, ORIGIN.x - 20.0, tip.y), [0, 0, 0]);
   // Without the pointer the same place is canvas.
-  let bare = composed(text_box(text, TextPointer::default(), "#ffcc00"));
+  let bare = composed(text_box(text, BoxPoint::TUCKED, "#ffcc00"));
   assert_eq!(pixel(&bare, tip.x - 3.0, tip.y), [0, 0, 0]);
 }

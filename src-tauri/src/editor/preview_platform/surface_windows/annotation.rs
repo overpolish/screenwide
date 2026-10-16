@@ -219,7 +219,6 @@ mod picking_chrome;
 mod picking_distance;
 use picking::{
   handle_at_point, image_frame, item_image_frame, layer_selection, selected_item, shaft_at_point,
-  text_geometry,
 };
 pub(super) use picking::{layer_image_rect, take_drawing_layer};
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
@@ -230,6 +229,10 @@ pub(super) use redact_chrome::selected_box as selected_redaction;
 
 /// A magnifier's loupe: where it is picked and the grip that sets its size.
 mod magnify_chrome;
+
+/// A text box's box and tail, which its grip and its picking read.
+mod text_chrome;
+use text_chrome::text_geometry;
 
 /// An image's turned picture, its own frame and its radius dot.
 mod image_chrome;

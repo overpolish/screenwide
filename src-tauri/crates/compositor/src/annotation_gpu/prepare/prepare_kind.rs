@@ -18,7 +18,8 @@ use screenwide_annotations::outline::geometry::prepare_shape;
 use screenwide_annotations::redact::geometry::prepare_redact;
 use screenwide_annotations::reveal::AnnotationReveal;
 use screenwide_annotations::spotlight::geometry::prepare_spotlight;
-use screenwide_annotations::text::geometry::prepare_text;
+use screenwide_annotations::text::geometry::{prepare_text, HEAD_TAIL_PLACED};
+use screenwide_text::TailShape;
 
 /// `annotation` prepared at `reveal`, its points `p0`, `p1` and `p2` placed at
 /// `a`, `b` and `c` by a placement that stretches a length `scale` times.
@@ -26,8 +27,10 @@ use screenwide_annotations::text::geometry::prepare_text;
 /// A counter keeps its centre in `p0` and its aim in `p1[0]`, so only the
 /// centre is placed: the disc's diameter is in output pixels, as an arrow's
 /// stroke is, and an angle is the same angle in either space. A text box
-/// keeps its pointer, held against the box, in `p1` and its text block's
-/// size, in output pixels, in `p2`; neither is placed. A shape's and a
+/// keeps its tail's tip in `p1`, held against the box and never placed
+/// unless its `head` says it was put on the picture, its text block's size,
+/// in output pixels, in `p2`, which is never placed, and its tail's shape in
+/// `params`. A shape's and a
 /// spotlight's `p1` is never placed either. A magnifier places all three -
 /// its zoom area's corners and its loupe's centre - and reads its loupe's
 /// size out of `params`, stretched by `scale`, and its rounding beside it. An
@@ -44,10 +47,19 @@ pub(super) fn prepared_geometry(
     AnnotationKind::Counter => prepare_counter(a, annotation.width, annotation.p1[0], reveal),
     AnnotationKind::Text => prepare_text(
       a,
-      annotation.p1,
+      if annotation.head & HEAD_TAIL_PLACED != 0 {
+        b
+      } else {
+        annotation.p1
+      },
       annotation.p2,
       annotation.width,
       annotation.head,
+      TailShape {
+        base: annotation.params[0],
+        tip: annotation.params[1],
+        blend: annotation.params[2],
+      },
       reveal,
     ),
     AnnotationKind::Arrow => prepare_arrow(a, b, c, annotation.width, annotation.head, reveal),
@@ -88,5 +100,20 @@ pub(super) fn prepared_geometry(
       annotation.p3,
       reveal,
     ),
+  }
+}
+
+/// A focus's box as the blur reads it, in the source's own pixels: the
+/// record's corners, its corner radius from the share of its shorter side
+/// it keeps in `p1`, and how present its reveal has it.
+pub(super) fn focus_region(item: &screenwide_annotations::native::NativeAnnotation) -> FocusRegion {
+  let [x0, y0] = item.p0;
+  let [x1, y1] = item.p2;
+  let shorter = (x1 - x0).abs().min((y1 - y0).abs());
+  FocusRegion {
+    bounds: [x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1)],
+    radius: shorter * item.p1[0].clamp(0.0, 50.0) / 100.0,
+    strength: item.params[0],
+    presence: item.reveal.opacity.clamp(0.0, 1.0),
   }
 }

@@ -34,7 +34,7 @@ pub(in crate::editor::save) fn save_recording_artifact(
       let output = &options.recording_output.primary;
       let frame = captions::frame_for(output.width, output.height);
       if let Some(kind) = options.subtitles.file() {
-        let default = || crate::editor::caption_styles::default_captions(progress_app);
+        let default = || crate::editor::text_templates::default_captions(progress_app);
         subtitles = captions::subtitles_for(recording, &edit, frame, kind, default);
       }
       options.captions = captions::track_for(recording, &edit, frame);

@@ -29,7 +29,7 @@
   font-family: "Anton";
   font-style: normal;
   font-weight: 400;
-  src: url("../src-tauri/crates/captions/templates/fonts/Anton-Regular.ttf")
+  src: url("../src-tauri/crates/text/templates/fonts/Anton-Regular.ttf")
     format("truetype");
 }
 
@@ -37,7 +37,7 @@
   font-family: "DM Sans";
   font-style: normal;
   font-weight: 100 1000;
-  src: url("../src-tauri/crates/captions/templates/fonts/DMSans-VariableFont_opsz,wght.ttf")
+  src: url("../src-tauri/crates/text/templates/fonts/DMSans-VariableFont_opsz,wght.ttf")
     format("truetype");
 }
 
@@ -45,7 +45,7 @@
   font-family: "Instrument Serif";
   font-style: normal;
   font-weight: 400;
-  src: url("../src-tauri/crates/captions/templates/fonts/InstrumentSerif-Regular.ttf")
+  src: url("../src-tauri/crates/text/templates/fonts/InstrumentSerif-Regular.ttf")
     format("truetype");
 }
 
@@ -53,7 +53,7 @@
   font-family: "Instrument Serif";
   font-style: italic;
   font-weight: 400;
-  src: url("../src-tauri/crates/captions/templates/fonts/InstrumentSerif-Italic.ttf")
+  src: url("../src-tauri/crates/text/templates/fonts/InstrumentSerif-Italic.ttf")
     format("truetype");
 }
 
@@ -61,7 +61,7 @@
   font-family: "Montserrat";
   font-style: normal;
   font-weight: 100 900;
-  src: url("../src-tauri/crates/captions/templates/fonts/Montserrat-VariableFont_wght.ttf")
+  src: url("../src-tauri/crates/text/templates/fonts/Montserrat-VariableFont_wght.ttf")
     format("truetype");
 }
 

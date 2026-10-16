@@ -50,7 +50,7 @@ use resources::{Backdrop, Gpu, Pane};
 /// Inter SemiBold set by DirectWrite, which measures a text box as well as
 /// drawing its type: the annotations' face, which the macOS surface has a
 /// Core Text twin of.
-pub(crate) use screenwide_annotations::text::type_device;
+pub(crate) use screenwide_text::engine::type_device;
 use selection_draw::{draw_selection, redraw_stale_selection};
 use selection_hit::{
   clear_selection_snap_guides, crop_press_draws, cursor_for_state, radius_point,

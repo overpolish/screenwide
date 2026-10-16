@@ -4,6 +4,10 @@
 import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../../popup-panel/layout";
 import { DEFAULT_CURSOR_EFFECTS } from "../../export/recording-export-settings";
+import {
+  STORY_TEXT_TEMPLATES,
+  storyTextStyle,
+} from "../text-style/text-template-fixtures";
 import { ToolPanel } from "../tool-panel";
 import { seedToolPanel } from "../tool-panel-story-seed";
 
@@ -78,8 +82,9 @@ export const Group: Story = {
   },
 };
 
-/** The Text panel: a text box has no head or aim, and lines its lines up by
- * the alignment it carries instead. */
+/** The Text panel: a text box is dressed by its template's look, which
+ * leads the panel and carries its face and colours, and lines its lines up
+ * by the alignment it carries. */
 export const Text: Story = {
   args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
@@ -88,12 +93,36 @@ export const Text: Story = {
         animated: true,
         id: "text-1",
         kind: "text",
+        look: storyTextStyle("label"),
         style: { ...dress, align: "center", color: "#ffcc00", width: 28 },
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       isLocked: false,
       selection: null,
+      textTemplates: STORY_TEXT_TEMPLATES,
+    });
+  },
+};
+
+/** A text in a template without a box: its type casts its outline, and its
+ * one colour is its type's. */
+export const TextWithoutBox: Story = {
+  args: { tool: "annotation", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      annotation: {
+        animated: true,
+        id: "text-2",
+        kind: "text",
+        look: storyTextStyle("clean"),
+        style: { ...dress, align: "left", color: "#ffffff", width: 28 },
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+      textTemplates: STORY_TEXT_TEMPLATES,
     });
   },
 };

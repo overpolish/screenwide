@@ -17,16 +17,16 @@ import {
   CAPTION_WORDS,
   CaptionsPatch,
 } from "../../recording/captions/recording-captions";
-import { CaptionTemplates } from "../../recording/captions/use-caption-templates";
+import { TextTemplates } from "../../recording/captions/use-text-templates";
 import { placementOptions } from "../placement-options";
 
 import { CaptionSizeRow } from "./caption-size-row";
 
-import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
-import type { CaptionLines } from "../../../../bindings/CaptionLines";
-import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
+import type { TextLayout } from "../../../../bindings/TextLayout";
+import type { TextLines } from "../../../../bindings/TextLines";
+import type { TextStyle } from "../../../../bindings/TextStyle";
 
-const lineOptions = (): { id: CaptionLines; label: string }[] => [
+const lineOptions = (): { id: TextLines; label: string }[] => [
   { id: "one", label: t("editor-panels-captions-one-line") },
   { id: "two", label: t("editor-panels-captions-two-lines") },
 ];
@@ -48,13 +48,13 @@ export function CaptionLayoutTab({
   templates,
 }: {
   isDisabled: boolean;
-  layout: CaptionLayout;
+  layout: TextLayout;
   onChange: (patch: CaptionsPatch) => void;
-  onDefaultsChange: (layout: CaptionLayout) => void;
-  style: CaptionStyle;
-  templates: CaptionTemplates;
+  onDefaultsChange: (layout: TextLayout) => void;
+  style: TextStyle;
+  templates: TextTemplates;
 }) {
-  const set = (change: CaptionLayout) => {
+  const set = (change: TextLayout) => {
     onChange({ layout: { ...layout, ...change }, style: change });
   };
   const template = templates.styles.find(
@@ -140,7 +140,7 @@ export function CaptionLayoutTab({
                 isDisabled={isDisabled}
                 items={lineOptions()}
                 onSelectionChange={(lines) => {
-                  set({ lines: lines as CaptionLines });
+                  set({ lines: lines as TextLines });
                 }}
                 selected={style.lines}
               />

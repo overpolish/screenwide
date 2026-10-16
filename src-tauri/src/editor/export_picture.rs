@@ -11,7 +11,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use screenwide_annotations::timing::AnnotationTrack;
-use screenwide_captions::CaptionTrack;
 use screenwide_cursor_effects::CursorEffectSettings;
 use screenwide_export::camera_effects::live::LiveCameraEffects;
 use screenwide_export::cursor_export::{self, CursorExportRequest, ExportCameraEffects};
@@ -22,6 +21,7 @@ use screenwide_export::recording_model::RecordingCamera;
 use screenwide_export::track_selection::{AudioLayout, TrackSelection};
 use screenwide_keyboard_effects::KeyboardEffectSettings;
 use screenwide_output::ScreenshotOutputSettings;
+use screenwide_text::captions::CaptionTrack;
 use screenwide_timeline_edit::TimelinePlan;
 
 /// One video file's picture and the audio muxed beside it.

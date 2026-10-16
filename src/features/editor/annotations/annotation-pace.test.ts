@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import { recordingAnnotationClipAt } from "../recording/annotations/recording-annotations";
+import { storyTextStyle } from "../tool-panels/text-style/text-template-fixtures";
 
 import { annotationDrawInMs, annotationPathMs } from "./annotation-pace";
 import { Annotation, AnnotationShape } from "./annotations";
@@ -83,12 +84,13 @@ describe("annotation pace", () => {
     expect(clip.startMs).toBe(2_500);
   });
 
-  it("paces a text box's pointer by its reach, after the box has grown in", () => {
+  it("paces a text box's tail by its reach, after the box has grown in", () => {
     const text = (reach: number) =>
       dressed({
+        controls: { tip: { along: [0, 1], reach: [0, reach], space: "box" } },
         kind: "text",
+        look: storyTextStyle("label"),
         origin: { x: 0, y: 0 },
-        pointer: { along: { x: 0, y: 1 }, reach: { x: 0, y: reach } },
         text: "Hi",
       });
     const pointed = annotationPathMs(text(12), FRAME);

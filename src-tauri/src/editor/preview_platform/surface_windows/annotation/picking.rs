@@ -10,11 +10,8 @@
 
 use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
-use screenwide_annotations::geometry::ArrowGeometry;
 use screenwide_annotations::gesture::{drawing_layer, MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
 use screenwide_annotations::highlight::geometry::HighlightFlow;
-use screenwide_annotations::reveal::AnnotationReveal;
-use screenwide_annotations::text::geometry::prepare_text;
 use screenwide_annotations::AnnotationPoint;
 
 /// An annotation belongs to its image, independently of the selected layer. The
@@ -138,26 +135,6 @@ fn grip_at_point(
     | AnnotationKind::Magnify
     | AnnotationKind::Image => found,
   })
-}
-
-/// A text box prepared in display points, from the grips it was published
-/// with. The twin of the text branch of `annotation_prepared`.
-pub(super) fn text_geometry(
-  image: PreviewSurfaceRect,
-  item: &NativeAnnotationHandles,
-) -> ArrowGeometry {
-  let origin = display_point(image, item.start_x, item.start_y);
-  prepare_text(
-    [origin.0 as f32, origin.1 as f32],
-    [item.end_x as f32, item.end_y as f32],
-    [
-      (item.middle_x * image.width) as f32,
-      (item.middle_y * image.width) as f32,
-    ],
-    (item.width * image.width) as f32,
-    item.start_head as u32 & 3,
-    AnnotationReveal::WHOLE,
-  )
 }
 
 /// A highlight's flow of bands in display points, from the grips it was

@@ -18,10 +18,10 @@ import { CaptionPanelTab, useCaptionPanelTab } from "./caption-panel-tab";
 import { CaptionStyleTab } from "./caption-style-tab";
 import { CaptionWordsRows } from "./caption-words-rows";
 
-import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
+import type { TextLayout } from "../../../../bindings/TextLayout";
 
 /** Captions with no layout option set by hand, as one object. */
-const NO_LAYOUT: CaptionLayout = {};
+const NO_LAYOUT: TextLayout = {};
 
 const tabs = (): { id: CaptionPanelTab; label: string }[] => [
   { id: "words", label: t("editor-panels-captions-tab-words") },
@@ -41,12 +41,7 @@ const tabs = (): { id: CaptionPanelTab; label: string }[] => [
 export function CaptionsPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
   const [tab, setTab] = useCaptionPanelTab();
-  const {
-    captionTemplates: templates,
-    captions,
-    isLocked,
-    transcript,
-  } = snapshot;
+  const { captions, isLocked, textTemplates: templates, transcript } = snapshot;
   // The panel window is shown once it has something to measure, so it shows
   // the panel loading rather than waiting, unseen, for the editor's snapshot.
   if (!captions || !transcript || !templates)

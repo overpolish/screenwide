@@ -9,7 +9,7 @@ import { ImagePlayChange } from "../annotations/annotation-channel";
 import { AnnotationStyle, ImageArt } from "../annotations/annotations";
 import { CameraEffectsChange } from "../recording/camera/use-camera-effects";
 import { CaptionsPatch } from "../recording/captions/recording-captions";
-import { CaptionDefaultsPatch } from "../recording/captions/use-caption-templates";
+import { CaptionDefaultsPatch } from "../recording/captions/use-text-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -21,6 +21,8 @@ import { CursorEffectSettings, KeyboardEffectSettings } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
 import { TranscriptRequest } from "./tool-panel-transcript";
+
+import type { TextStyle } from "../../../bindings/TextStyle";
 
 /**
  * What a tool panel can ask for. Each one is an editor handler that already
@@ -44,6 +46,7 @@ export type ToolPanelHandlers = {
   onAnnotationImageSwayChange?: (sway: boolean) => void;
   /** Turn the chosen annotation round, through the same commit path the drag on
    * the picture uses. */
+  onAnnotationLookChange?: (look: TextStyle) => void;
   onAnnotationReverse?: () => void;
   /** Turn the chosen image, a field at a time, in degrees about each axis. */
   onAnnotationRotationChange?: (rotation: Partial<SceneRotation>) => void;

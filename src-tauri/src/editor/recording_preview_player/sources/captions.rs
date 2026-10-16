@@ -6,7 +6,7 @@
 //! Captions lane makes them again.
 
 use super::*;
-use screenwide_captions::{CaptionMoment, CaptionTrack};
+use screenwide_text::captions::{CaptionMoment, CaptionTrack};
 use screenwide_timeline::source_to_output_us;
 use screenwide_timeline_edit::RecordingTimelineEdit;
 

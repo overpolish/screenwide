@@ -37,13 +37,13 @@ pub(super) struct Pane {
   /// The box being typed into, if it belongs to this pane's layer: its place
   /// in that layer's list and the caret and selection drawn into its type.
   /// Kept across presents, so every redraw the typing causes carries it.
-  pub(super) annotation_typing: Option<(usize, screenwide_annotations::text::typing::TypingMarks)>,
+  pub(super) annotation_typing: Option<(usize, screenwide_text::engine::typing::TypingMarks)>,
   /// The captions drawn over this pane's canvas, and the moment of the
   /// edited video they are drawn at. Kept across presents, so a redraw the
   /// annotations cause carries them.
   pub(super) captions: Option<(
-    std::sync::Arc<screenwide_captions::CaptionTrack>,
-    screenwide_captions::CaptionMoment,
+    std::sync::Arc<screenwide_text::captions::CaptionTrack>,
+    screenwide_text::captions::CaptionMoment,
   )>,
   /// Stable viewport-local geometry before the shared workspace transform.
   pub(super) base_rect: PreviewSurfaceRect,

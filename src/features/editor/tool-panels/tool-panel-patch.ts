@@ -6,7 +6,7 @@ import { ImagePlayChange } from "../annotations/annotation-channel";
 import { AnnotationStyle, ImageArt } from "../annotations/annotations";
 import { CameraEffectsChange } from "../recording/camera/use-camera-effects";
 import { CaptionsPatch } from "../recording/captions/recording-captions";
-import { CaptionDefaultsPatch } from "../recording/captions/use-caption-templates";
+import { CaptionDefaultsPatch } from "../recording/captions/use-text-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
@@ -20,6 +20,7 @@ import { SelectionPlacementPatch } from "./selection-placement";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelSnapshot } from "./tool-panel-store";
+import type { TextStyle } from "../../../bindings/TextStyle";
 
 /** The settings a panel may ask the editor to change. */
 export type ToolPanelPatch = Partial<
@@ -44,6 +45,8 @@ export type ToolPanelPatch = Partial<
   /** Sway the chosen image over its clip, or stand it still. Turning it on
    * gives it a sway of its own; the dice gives it another. */
   annotationImageSway?: boolean;
+  /** Dress the chosen text in this look, which the next text wears too. */
+  annotationLook?: TextStyle;
   /** Turn the chosen image, in degrees about each axis, a field at a time:
    * in depth about X and Y, flat about Z. */
   annotationRotation?: Partial<SceneRotation>;

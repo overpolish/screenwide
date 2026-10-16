@@ -46,8 +46,8 @@ pub(crate) struct StagedLayer<'a> {
   /// The captions drawn over the canvas, and the moment of the edited video
   /// they are drawn at.
   pub(crate) captions: Option<(
-    Arc<screenwide_captions::CaptionTrack>,
-    screenwide_captions::CaptionMoment,
+    Arc<screenwide_text::captions::CaptionTrack>,
+    screenwide_text::captions::CaptionMoment,
   )>,
   /// The camera frame composed into the layer, and where its overlay puts
   /// it; without an overlay the frame is held but not drawn.
@@ -202,8 +202,8 @@ pub(super) struct SceneLayer {
   pub(super) cursor: Option<GpuCursor>,
   pub(super) keyboard: Option<KeyboardOverlay>,
   pub(super) captions: Option<(
-    Arc<screenwide_captions::CaptionTrack>,
-    screenwide_captions::CaptionMoment,
+    Arc<screenwide_text::captions::CaptionTrack>,
+    screenwide_text::captions::CaptionMoment,
   )>,
   pub(super) camera: Option<LayerCamera>,
   pub(super) foreground_only: bool,

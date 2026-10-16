@@ -5,11 +5,12 @@
 //! no box, the Box template's backdrop, the Highlight template's pill, and
 //! type set in the faces the style names.
 
-use screenwide_captions::{
-  caption_pieces, Caption, CaptionAccent, CaptionFont, CaptionFrame, CaptionMoment, CaptionPiece,
-  CaptionStyle, CaptionTemplateId, CaptionWord, RecordingCaptions,
-};
 use screenwide_imaging::CapturedImage;
+use screenwide_text::captions::{
+  caption_pieces, Caption, CaptionFrame, CaptionMoment, CaptionPiece, CaptionWord,
+  RecordingCaptions,
+};
+use screenwide_text::{TextAccent, TextFont, TextStyle, TextTemplateId};
 
 use super::render_test_helpers::{compositor, gpu, target, view, OUTPUT};
 use super::*;
@@ -52,18 +53,18 @@ fn caption(accented: bool) -> Caption {
 }
 
 /// `template`'s style, with the word being said coloured.
-fn styled(template: &str) -> CaptionStyle {
-  CaptionStyle {
+fn styled(template: &str) -> TextStyle {
+  TextStyle {
     highlight_words: true,
-    ..CaptionTemplateId::from(template).shipped_style()
+    ..TextTemplateId::from(template).shipped_style()
   }
 }
 
 /// The pieces `style` draws 700 ms in, while "MMM" is being said, and the
 /// faces they are set in.
-fn pieces(style: CaptionStyle) -> (Vec<CaptionPiece>, CaptionFaces) {
+fn pieces(style: TextStyle) -> (Vec<CaptionPiece>, CaptionFaces) {
   let faces = CaptionFaces::of(&style);
-  let accented = style.accent == CaptionAccent::Word;
+  let accented = style.accent == TextAccent::Word;
   let recording = RecordingCaptions {
     enabled: true,
     style,
@@ -166,18 +167,18 @@ fn draws_a_caption_word_in_its_own_colour_with_a_dark_outline_and_no_box() {
 
 #[test]
 fn draws_the_outline_in_the_colour_picked_and_none_when_off() {
-  let first_word = |style: CaptionStyle| {
+  let first_word = |style: TextStyle| {
     let set = pieces(style);
     let canvas = drawn(&set);
     let first = &set.0[0];
     around(&canvas, first.centre, [first.size, first.size * 0.4])
   };
-  let blue = first_word(CaptionStyle {
+  let blue = first_word(TextStyle {
     outline_color: "#1040ff".to_owned(),
     ..styled("clean")
   });
   assert!(blue.iter().any(|[r, g, b]| *b > 160 && *r < 80 && *g < 110));
-  let bare = first_word(CaptionStyle {
+  let bare = first_word(TextStyle {
     outline: false,
     ..styled("clean")
   });
@@ -232,14 +233,14 @@ fn draws_a_word_growing_in_at_its_size_then() {
 #[test]
 fn sets_the_type_in_the_family_and_weight_the_style_names() {
   let in_font = |family: Option<&str>, weight| {
-    pieces(CaptionStyle {
-      font: CaptionFont {
+    pieces(TextStyle {
+      font: TextFont {
         family: family.map(str::to_owned),
         weight,
         italic: false,
       },
       highlight_words: false,
-      ..CaptionTemplateId::from("clean").shipped_style()
+      ..TextTemplateId::from("clean").shipped_style()
     })
   };
   // Georgia ships with both macOS and Windows, and its words are wider than
@@ -257,13 +258,13 @@ fn sets_the_type_in_the_family_and_weight_the_style_names() {
 fn fits_the_pill_to_type_set_in_another_face() {
   // Courier New ships with both macOS and Windows and sets "MMM" at two
   // thirds of Inter's width: a pill sized by Inter would reach far past it.
-  let set = pieces(CaptionStyle {
-    font: CaptionFont {
+  let set = pieces(TextStyle {
+    font: TextFont {
       family: Some("Courier New".to_owned()),
       weight: 700,
       italic: false,
     },
-    ..CaptionTemplateId::from("highlight").shipped_style()
+    ..TextTemplateId::from("highlight").shipped_style()
   });
   let canvas = drawn(&set);
   let said = set.0.last().unwrap();
@@ -297,8 +298,8 @@ fn fits_the_pill_to_type_set_in_another_face() {
 /// Hands the app's own templates' fonts to the text engines, as the app
 /// does at launch.
 fn hand_over_template_fonts() {
-  use screenwide_annotations::text::app_fonts::{add_app_fonts, AppFamily};
-  let fonts = screenwide_captions::template_font_files();
+  use screenwide_text::engine::app_fonts::{add_app_fonts, AppFamily};
+  let fonts = screenwide_text::template_font_files();
   let families: Vec<AppFamily> = fonts
     .iter()
     .map(|(font, _)| AppFamily {
@@ -314,29 +315,29 @@ fn hand_over_template_fonts() {
 #[test]
 fn sets_the_accent_in_a_family_a_template_brings_upright_or_italic() {
   let accented = |family: &str, italic| {
-    pieces(CaptionStyle {
-      accent: CaptionAccent::Word,
-      accent_font: CaptionFont {
+    pieces(TextStyle {
+      accent: TextAccent::Word,
+      accent_font: TextFont {
         family: Some(family.to_owned()),
         weight: 400,
         italic,
       },
       highlight_words: false,
-      ..CaptionTemplateId::from("clean").shipped_style()
+      ..TextTemplateId::from("clean").shipped_style()
     })
   };
   // Drawn before the fonts are handed over, the family is not found, where
   // the system has none of its own; after, it is, in place of the face
   // remembered for it.
-  let installed = screenwide_annotations::text::installed::system_families()
+  let installed = screenwide_text::engine::installed::system_families()
     .iter()
     .any(|family| family.name == "Instrument Serif");
   let before = drawn(&accented("Instrument Serif", true));
   hand_over_template_fonts();
   let italic = accented("Instrument Serif", true);
   // The word set apart is in the accent's face, the other in the main one.
-  assert_eq!(italic.0[1].face, screenwide_captions::CaptionFace::Accent);
-  assert_eq!(italic.0[0].face, screenwide_captions::CaptionFace::Main);
+  assert_eq!(italic.0[1].face, screenwide_text::TextFace::Accent);
+  assert_eq!(italic.0[0].face, screenwide_text::TextFace::Main);
   // The serif a template brings is found whatever the system has, and set
   // in its italic: neither looks like its upright, nor like Inter, which a
   // family that cannot be found falls back to.

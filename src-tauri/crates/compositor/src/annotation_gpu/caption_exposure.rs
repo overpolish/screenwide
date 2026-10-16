@@ -10,7 +10,7 @@ use super::arrows::{PreviewArrow, PreviewGeometry, PreviewSample};
 use super::caption_turn::{hold_bounds, turn_geometry, Turn};
 use super::prepare::exposure_sample_count;
 use screenwide_annotations::flags::{CASTS, TURNED};
-use screenwide_captions::CaptionPiece;
+use screenwide_text::captions::CaptionPiece;
 
 /// `geometry`, prepared at its full size about `centre`, drawn `scale`
 /// times as large about that centre and moved `by`.

@@ -40,6 +40,6 @@ transcriptCorrections?: Array<RecordingTranscriptCorrection>,
 transcriptAllowedWords?: Array<string>, 
 /**
  * The captions made from the transcript, once any were asked for; see
- * [`screenwide_captions`].
+ * [`screenwide_text::captions`].
  */
 captions?: RecordingCaptions, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, };

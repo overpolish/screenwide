@@ -12,8 +12,9 @@ fn main() {
   // "what am I running on", not "what am I building for". Cross-compiling from
   // macOS to Windows must not hand the Objective-C sources to the MSVC target.
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
-    // Headers the annotations crate owns, included by the sources below.
-    println!("cargo:rerun-if-changed=crates/annotations/src/text/macos/annotation_text_box.h");
+    // Headers the annotations and text crates own, included by the sources
+    // below.
+    println!("cargo:rerun-if-changed=crates/text/src/engine/macos/annotation_text_box.h");
     println!("cargo:rerun-if-changed=crates/annotations/src/geometry.h");
     println!("cargo:rerun-if-changed=crates/annotations/src/reveal.h");
     println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos.m");

@@ -15,15 +15,18 @@ use screenwide_annotations::native::{native_annotations, NativeAnnotations};
 use screenwide_annotations::redact::native::RedactSource;
 use screenwide_annotations::reveal::AnnotationReveal;
 use screenwide_annotations::text::geometry::HEAD_ALIGN_MASK;
-use screenwide_annotations::text::typing::TypingMarks;
+use screenwide_annotations::text::native::look_of;
 use screenwide_annotations::{Annotation, AnnotationKind};
 use screenwide_imaging::CapturedImage;
 use screenwide_output::output_placement;
+use screenwide_text::engine::typing::TypingMarks;
 
 /// Which geometry each kind prepares from its placed points.
 mod prepare_kind;
 /// A layer's annotations resolved once and placed per draw.
 mod source;
+/// A text box drawn in its look.
+mod text_look;
 
 pub use source::SourceAnnotations;
 
@@ -81,18 +84,21 @@ pub fn placed_arrows(
     scale,
     halo,
     typing,
+    true,
   )
 }
 
 /// Flattened annotations placed into drawn pixels. The live overlay prepares
 /// through this too, so both draw from one resolved list rather than from
-/// two readings of the document.
-fn placed_native(
+/// two readings of the document. `in_looks` draws each text box in its look,
+/// as its box and then its type.
+pub(super) fn placed_native(
   native: NativeAnnotations,
   offset: (f64, f64),
   scale: (f64, f64),
   halo: Option<(usize, f32)>,
   typing: Option<(usize, TypingMarks)>,
+  in_looks: bool,
 ) -> PreparedArrows {
   let NativeAnnotations { items, data } = native;
   let annotations = &items;
@@ -106,6 +112,8 @@ fn placed_native(
     arrows: Vec::with_capacity(annotations.len()),
     ..Default::default()
   };
+  // The text moving texts' words add after the records' own.
+  let mut moving_text = Vec::new();
   // keep the order their layer stores them in, so a later annotation paints
   // over an earlier one.
   for above in [0, 1] {
@@ -118,7 +126,7 @@ fn placed_native(
       // far. It stays in the list at the cut, first of what is drawn sharp
       // over the blur, where the canvas draws its hover halo and nothing else.
       if annotation.shape_kind() == AnnotationKind::Focus {
-        prepared.focus.push(focus_region(annotation));
+        prepared.focus.push(prepare_kind::focus_region(annotation));
         prepared.focus_cut = prepared.arrows.len() as u32;
         prepared.focus_above_camera = above == 1;
       }
@@ -209,7 +217,7 @@ fn placed_native(
           .map(|text| String::from_utf8_lossy(text).into_owned())
           .unwrap_or_default()
       };
-      prepared.types.push(match annotation.shape_kind() {
+      let entry = match annotation.shape_kind() {
         AnnotationKind::Counter => PreparedType {
           text: text(),
           size: arrow.geometry.rounding,
@@ -228,7 +236,7 @@ fn placed_native(
         },
         // Only a counter and a text box carry type.
         _ => PreparedType::default(),
-      });
+      };
       // An image's picture is drawn at its full size, from its placed
       // middle and the middles of its right and bottom sides, and a moving
       // one at the frame its record says this moment shows.
@@ -244,7 +252,25 @@ fn placed_native(
           once: annotation.flags & screenwide_annotations::flags::ONCE != 0,
         });
       }
-      prepared.arrows.push(arrow);
+      match (in_looks && annotation.shape_kind() == AnnotationKind::Text)
+        .then(|| look_of(annotation, &data.looks))
+        .flatten()
+      {
+        Some(look) => text_look::push(
+          &mut prepared,
+          (&mut moving_text, data.text.len()),
+          (arrow, entry, look),
+          (
+            shape(AnnotationReveal::WHOLE),
+            annotation.head & HEAD_ALIGN_MASK,
+          ),
+          (annotation.reveal, count == 0),
+        ),
+        None => {
+          prepared.types.push(entry);
+          prepared.arrows.push(arrow);
+        }
+      }
     }
     if above == 0 {
       prepared.below_camera = prepared.arrows.len() as u32;
@@ -252,22 +278,8 @@ fn placed_native(
   }
   prepared.points = data.points;
   prepared.text = data.text;
+  prepared.text.extend(moving_text);
   prepared
-}
-
-/// A focus's box as the blur reads it, in the source's own pixels: the
-/// record's corners, its corner radius from the share of its shorter side
-/// it keeps in `p1`, and how present its reveal has it.
-fn focus_region(item: &screenwide_annotations::native::NativeAnnotation) -> FocusRegion {
-  let [x0, y0] = item.p0;
-  let [x1, y1] = item.p2;
-  let shorter = (x1 - x0).abs().min((y1 - y0).abs());
-  FocusRegion {
-    bounds: [x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1)],
-    radius: shorter * item.p1[0].clamp(0.0, 50.0) / 100.0,
-    strength: item.params[0],
-    presence: item.reveal.opacity.clamp(0.0, 1.0),
-  }
 }
 
 /// How many exposure samples something that moved `travel` pixels and grew

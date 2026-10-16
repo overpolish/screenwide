@@ -17,9 +17,9 @@ use std::sync::Arc;
 
 use super::*;
 use crate::editor::preview_platform::surface::type_device::line_width;
-use screenwide_annotations::text::face::TypeFace;
 use screenwide_annotations::text::geometry::text_distance;
-use screenwide_annotations::text::typing::{TextTyping, TypingLayout};
+use screenwide_text::engine::face::TypeFace;
+use screenwide_text::engine::typing::{TextTyping, TypingLayout};
 
 mod keys;
 mod presses;
@@ -32,6 +32,8 @@ pub(crate) struct Typing {
   /// what a report names it by, and what finds the pane it is drawn in.
   layer: u32,
   index: u32,
+  /// The face the box's look sets its type in.
+  face: TypeFace,
   edit: TextTyping,
   revision: u64,
   caret_on: bool,
@@ -49,11 +51,12 @@ struct Place {
   width: f64,
   font: f64,
   align: u32,
+  face: TypeFace,
 }
 
 impl Place {
   fn layout<R>(&self, work: impl FnOnce(&TypingLayout<'_>) -> R) -> R {
-    let width = |line: &str| line_width(&TypeFace::ANNOTATION, line, self.font);
+    let width = |line: &str| line_width(&self.face, line, self.font);
     work(&TypingLayout {
       width: &width,
       block_width: self.width,
@@ -67,7 +70,7 @@ impl Place {
   }
 }
 
-fn place(state: &SurfaceState, flat: usize) -> Option<Place> {
+fn place(state: &SurfaceState, flat: usize, face: &TypeFace) -> Option<Place> {
   let item = state
     .annotation
     .handles
@@ -82,6 +85,7 @@ fn place(state: &SurfaceState, flat: usize) -> Option<Place> {
     width,
     font: item.width * image.width,
     align: item.start_head as u32 & 3,
+    face: face.clone(),
   })
 }
 
@@ -206,9 +210,9 @@ impl RecordingPreviewSurface {
   }
 
   /// Opens the box at `index` in the published grips for typing, holding
-  /// `text`. The caret is type, which the shader inks the way it inks the
-  /// text.
-  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str) {
+  /// `text` set in `face`. The caret is type, which the shader inks the way
+  /// it inks the text.
+  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str, face: &TypeFace) {
     {
       let Ok(mut state) = self.inner.state.lock() else {
         return;
@@ -220,7 +224,7 @@ impl RecordingPreviewSurface {
       let mut edit = TextTyping::new(text);
       // A box opened by a double-click puts the caret where the click
       // landed; one fresh from its own press has nothing typed to place it in.
-      if let (Some(point), Some(place)) = (opening, place(&state, index)) {
+      if let (Some(point), Some(place)) = (opening, place(&state, index, face)) {
         let offset = place.layout(|layout| edit.offset_at(place.local(point), layout));
         edit.place(offset, false);
       }
@@ -228,6 +232,7 @@ impl RecordingPreviewSurface {
         flat: index,
         layer,
         index: item,
+        face: face.clone(),
         edit,
         revision: 0,
         caret_on: true,

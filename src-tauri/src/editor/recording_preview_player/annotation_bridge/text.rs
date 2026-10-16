@@ -33,10 +33,11 @@ impl PreviewPlayerManager {
     self.session_id?;
     let annotations = self.pane_annotations(pane);
     let annotation = annotations.iter().find(|annotation| annotation.id == id)?;
-    let AnnotationShape::Text { text, .. } = &annotation.shape else {
+    let AnnotationShape::Text { text, look, .. } = &annotation.shape else {
       return None;
     };
     let text = text.clone();
+    let face = screenwide_annotations::text::look::face(look);
     self.annotation.text = Some(TextSession {
       pane,
       position,
@@ -58,7 +59,7 @@ impl PreviewPlayerManager {
         .as_ref()
         .and_then(|s| s.preview_surface.as_ref()),
     ) {
-      surface.begin_annotation_text(index, &text);
+      surface.begin_annotation_text(index, &text, &face);
     }
     self.commit(
       pane,

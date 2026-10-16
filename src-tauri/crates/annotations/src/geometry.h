@@ -35,14 +35,31 @@ static inline AnnotationVector annotation_vector(float x, float y) {
 /// counter's prepared record reads back as its disc's centre in `a`, the
 /// tail's tip in `b`, the radius in `rounding`, the radius the tip is rounded
 /// to in `low` and the diameter in `width`; where its number was rasterised
-/// rides in `start_head`. An image prepares through `screenwide_image_prepare`
-/// and a magnifier through `screenwide_magnify_prepare`; a number no kind
-/// owns prepares nothing.
+/// rides in `start_head`. An image prepares through `screenwide_image_prepare`,
+/// a magnifier through `screenwide_magnify_prepare` and a text box through
+/// `screenwide_text_prepare`; a number no kind owns prepares nothing.
 void screenwide_annotation_prepare(uint32_t kind, float p0x, float p0y,
                                    float p1x, float p1y, float p2x, float p2y,
                                    float width, uint32_t head,
                                    AnnotationReveal reveal,
                                    AnnotationArrowGeometry *out);
+
+/// The bits a text box's `head` carries beside its alignment: it draws a
+/// tail, and that tail's tip is placed in the picture rather than held
+/// against the box. The twins of `HEAD_TAIL` and `HEAD_TAIL_PLACED` in
+/// `text/geometry.rs`.
+static const uint32_t SCREENWIDE_TEXT_HEAD_TAIL = 0x4u;
+static const uint32_t SCREENWIDE_TEXT_HEAD_TAIL_PLACED = 0x8u;
+
+/// A text box's draw geometry: its corner at `p0`, its tail's tip at `p1`,
+/// held against the box or, where `head` says so, placed, and its text
+/// block's size in `p2`, its tail `base`, `tip` and `blend` ems. The record
+/// reads back as `text/geometry.rs` describes.
+void screenwide_text_prepare(float p0x, float p0y, float p1x, float p1y,
+                             float p2x, float p2y, float width, uint32_t head,
+                             float base, float tip, float blend,
+                             AnnotationReveal reveal,
+                             AnnotationArrowGeometry *out);
 
 /// A magnifier's draw geometry: its zoom area from `p0` to `p2` and its loupe
 /// centred on `p1`, `size` along its longer side, rounded by `radius` percent

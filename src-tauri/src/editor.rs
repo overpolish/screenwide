@@ -10,12 +10,6 @@ pub(crate) mod auto_zoom;
 /// video draws the camera.
 pub(crate) mod camera_effects;
 mod camera_save;
-/// Each caption style's preview, drawn and kept for the template tiles.
-pub(crate) mod caption_previews;
-/// The templates and fonts the Captions panel styles captions with.
-pub(crate) mod caption_styles;
-/// Caption templates imported, exported and removed.
-pub(crate) mod caption_template_files;
 /// Captions made from the transcript, for the lane and an export's
 /// subtitle file.
 pub(crate) mod captions;
@@ -39,6 +33,12 @@ pub(crate) mod save;
 pub(crate) mod screenshot_preview;
 pub(crate) mod speech;
 mod startup;
+/// Each template's preview, drawn and kept for the template tiles.
+pub(crate) mod template_previews;
+/// Templates imported, exported and removed.
+pub(crate) mod text_template_files;
+/// The templates and fonts text is styled with.
+pub(crate) mod text_templates;
 mod timeline_edit;
 use screenwide_imaging::CapturedImage;
 pub(crate) use timeline_edit::edited_duration_ms;

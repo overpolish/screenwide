@@ -5,8 +5,8 @@
 //! its timeline lays out of the source.
 
 use super::*;
-use screenwide_captions::{CaptionMoment, CaptionTrack};
 use screenwide_compositor::annotation_gpu::{caption_overlay, PreparedArrows};
+use screenwide_text::captions::{CaptionMoment, CaptionTrack};
 use screenwide_timeline_edit::TimelinePlan;
 
 pub(super) struct FrameCaptions<'a> {

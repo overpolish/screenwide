@@ -30,9 +30,8 @@ use super::AnnotationKind;
 /// canvas pixels for the compositor, display points for the chrome. An arrow
 /// solves its curve from the three points; a counter places its disc at `p0`
 /// and aims its tail with `p1x`, which is the angle `native.rs` keeps there
-/// rather than a point, so no placement touches it; a text box places its
-/// corner at `p0` and its pointer's tip at `p1`, and reads its text block's
-/// size out of `p2`, which is a size rather than a point for the same reason.
+/// rather than a point, so no placement touches it; a text box prepares
+/// through [`screenwide_text_prepare`], which also takes its tail's shape.
 /// A highlight is placed by where `p0` and `p1` land - the source's origin and
 /// its pixel `(1, 1)` - and reads its tone out of `p2`. A shape's box runs
 /// from `p0` to `p2`, and `p1` carries its radius and its hand rather than a
@@ -74,9 +73,6 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
       prepare_arrow([p0x, p0y], [p1x, p1y], [p2x, p2y], width, head, reveal)
     }
     Some(AnnotationKind::Counter) => prepare_counter([p0x, p0y], width, p1x, reveal),
-    Some(AnnotationKind::Text) => {
-      prepare_text([p0x, p0y], [p1x, p1y], [p2x, p2y], width, head, reveal)
-    }
     Some(AnnotationKind::Redact) => prepare_redact([p0x, p0y], [p2x, p2y], width),
     Some(AnnotationKind::Highlight) => {
       prepare_highlight([p0x, p0y], [p1x, p1y], [p2x, p2y], reveal)
@@ -88,10 +84,54 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
       prepare_freehand([p0x, p0y], [p1x, p1y], [p2x, p2y], width, reveal)
     }
     // An image's tilt is not among these; it prepares through
-    // `screenwide_image_prepare`, and a magnifier's zoom and rounding through
-    // `magnify::ffi::screenwide_magnify_prepare`.
-    Some(AnnotationKind::Image) | Some(AnnotationKind::Magnify) | None => ArrowGeometry::default(),
+    // `screenwide_image_prepare`, a magnifier's zoom and rounding through
+    // `magnify::ffi::screenwide_magnify_prepare`, and a text box's tail
+    // through `screenwide_text_prepare`.
+    Some(AnnotationKind::Image)
+    | Some(AnnotationKind::Magnify)
+    | Some(AnnotationKind::Text)
+    | None => ArrowGeometry::default(),
   };
+}
+
+/// A text box prepared for the macOS chrome to pick and place its grip by:
+/// its corner at `p0`, its tail's tip at `p1` - against the box, or placed
+/// where `head` has `HEAD_TAIL_PLACED` - and its text block's size in `p2`,
+/// with its tail `base`, `tip` and `blend` ems, as `text::geometry` reads
+/// them.
+///
+/// # Safety
+/// `out` must point at one writable [`ArrowGeometry`].
+#[cfg(target_os = "macos")]
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn screenwide_text_prepare(
+  p0x: f32,
+  p0y: f32,
+  p1x: f32,
+  p1y: f32,
+  p2x: f32,
+  p2y: f32,
+  width: f32,
+  head: u32,
+  base: f32,
+  tip: f32,
+  blend: f32,
+  reveal: AnnotationReveal,
+  out: *mut ArrowGeometry,
+) {
+  if out.is_null() {
+    return;
+  }
+  *out = prepare_text(
+    [p0x, p0y],
+    [p1x, p1y],
+    [p2x, p2y],
+    width,
+    head,
+    screenwide_text::TailShape { base, tip, blend },
+    reveal,
+  );
 }
 
 /// An image prepared from its middle and the middles of its right and bottom

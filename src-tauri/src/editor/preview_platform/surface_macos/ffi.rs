@@ -183,6 +183,10 @@ unsafe extern "C" {
     index: i32,
     text: *const u8,
     length: u32,
+    family: *const u8,
+    family_length: u32,
+    weight: u32,
+    italic: u32,
   );
   pub(super) fn screenwide_preview_surface_end_annotation_text(handle: *mut std::ffi::c_void);
   pub(super) fn screenwide_preview_surface_set_audio_ribbon(

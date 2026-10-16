@@ -353,7 +353,8 @@ fn highlight_line(probe: vec2<f32>, low: vec2<f32>, high: vec2<f32>, window: vec
   // laid in strokes has no notch where two of them meet.
   // A settled corner is rounded as a one-line text box's is, as a share of
   // its height: `CORNER` over `LINE_HEIGHT` and twice `PAD_Y`, in
-  // `editor/annotations/text/geometry.rs` and `text/metrics.rs`.
+  // the annotations crate's `text/geometry.rs` and the text crate's
+  // `engine/metrics.rs`.
   let tip = height * 0.5;
   let square = height * 0.21 *
       (1.0 - select(joined.y, joined.x, probe.y < (low.y + high.y) * 0.5));

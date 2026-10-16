@@ -52,7 +52,7 @@ pub unsafe extern "C" fn screenwide_workspace_scene_set_typing(
   let marks = (typing != 0).then_some((
     layer,
     index as usize,
-    screenwide_annotations::text::typing::TypingMarks {
+    screenwide_text::engine::typing::TypingMarks {
       start: start as usize,
       end: end as usize,
       caret: caret != 0,

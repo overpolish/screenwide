@@ -6,6 +6,7 @@ import { RefObject, useEffect, useRef } from "react";
 import {
   useAnnotationAngleDefault,
   useAnnotationImageDefault,
+  useAnnotationTextLookDefault,
 } from "../annotations/annotation-defaults";
 import { AnnotationStyle } from "../annotations/annotations";
 import {
@@ -151,6 +152,9 @@ export function useScreenshotPreviewSurface({
   const annotationImage = useAnnotationImageDefault();
   const annotationImageRef = useRef(annotationImage);
   annotationImageRef.current = annotationImage;
+  const annotationTextLook = useAnnotationTextLookDefault();
+  const annotationTextLookRef = useRef(annotationTextLook);
+  annotationTextLookRef.current = annotationTextLook;
   const selectedAnnotationIdsRef = useRef(selectedAnnotationIds);
   selectedAnnotationIdsRef.current = selectedAnnotationIds;
   // Compared by value: the choice is rebuilt as a new list every render.
@@ -300,6 +304,7 @@ export function useScreenshotPreviewSurface({
             annotationCounterAngle: annotationAngleRef.current,
             annotationDefaults: annotationDefaultsRef.current,
             annotationImage: annotationImageRef.current,
+            annotationTextLook: annotationTextLookRef.current,
             annotationTool: annotationToolRef.current,
             backdrop,
             // A suspended editor stays enabled and keeps its transform;
@@ -328,6 +333,7 @@ export function useScreenshotPreviewSurface({
               annotationCounterAngle: annotationAngleRef.current,
               annotationDefaults: annotationDefaultsRef.current,
               annotationImage: annotationImageRef.current,
+              annotationTextLook: annotationTextLookRef.current,
               annotationTool: annotationToolRef.current,
               backdrop,
               fitWidth: resizeFitWidth(
@@ -374,6 +380,7 @@ export function useScreenshotPreviewSurface({
   }, [
     annotationCounterAngle,
     annotationImage,
+    annotationTextLook,
     annotationDefaults,
     annotationTool,
     outputKey,

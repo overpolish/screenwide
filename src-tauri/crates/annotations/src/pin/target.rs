@@ -8,7 +8,7 @@ use std::hash::{Hash, Hasher};
 
 use crate::counter::silhouette::counter_tail_tip;
 use crate::snap::disc_radius;
-use crate::text::gesture::pointer_tip;
+use crate::text::gesture::tail_tip;
 use crate::text::snap::text_box;
 use crate::{Annotation, AnnotationPoint, AnnotationShape};
 
@@ -36,7 +36,7 @@ pub struct PinTarget {
 
 impl PinTarget {
   /// The content an annotation points at: an arrow's tip, a counter's tail
-  /// tip, a text box's pointer tip (or its corner when the pointer is tucked
+  /// tip, a text box's tail tip (or its corner when the tail is tucked
   /// in), and everything a redaction covers. `source` is the recording's size,
   /// which sizes the patch around a point.
   ///
@@ -90,18 +90,21 @@ impl PinTarget {
       }
       AnnotationShape::Text {
         origin,
-        pointer,
         text,
+        look,
+        controls,
+        ..
       } => {
         if scale <= 0.0 {
           return around(*origin, *origin);
         }
-        let bounds = text_box(*origin, text, width, scale);
+        let bounds = text_box(*origin, text, look, width, scale);
         let middle = AnnotationPoint {
           x: bounds.x + bounds.width / 2.0,
           y: bounds.y + bounds.height / 2.0,
         };
-        match pointer_tip(bounds, width.max(0.0) * scale, pointer) {
+        let em = crate::text::look::type_size(look, width) * scale;
+        match tail_tip(bounds, em, look, controls) {
           Some(tip) => around(tip, middle),
           None => around(*origin, *origin),
         }

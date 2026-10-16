@@ -7,7 +7,7 @@
 use super::*;
 use crate::arrow::model::new_arrow;
 use crate::outline::model::new_shape;
-use crate::text::model::TextPointer;
+use crate::text::model::TextControlPoint;
 
 const FRAME: (u32, u32) = (1_920, 1_080);
 
@@ -45,12 +45,13 @@ fn a_shape_is_paced_round_its_outline() {
 #[test]
 fn a_pointer_is_paced_by_its_reach_and_a_tucked_one_not_at_all() {
   let text = |reach: f64| {
-    let mut text = crate::text::new_text("t".to_owned(), point(0.0, 0.0), None, 0.0);
-    if let AnnotationShape::Text { pointer, .. } = &mut text.shape {
-      *pointer = TextPointer {
-        along: point(0.0, 1.0),
-        reach: point(0.0, reach),
+    let mut text = crate::text::new_text("t".to_owned(), point(0.0, 0.0), None, None, 0.0);
+    if let AnnotationShape::Text { controls, .. } = &mut text.shape {
+      let tail = screenwide_text::BoxPoint {
+        along: [0.0, 1.0],
+        reach: [0.0, reach],
       };
+      controls.insert("tip".to_owned(), TextControlPoint::Box(tail));
     }
     text
   };

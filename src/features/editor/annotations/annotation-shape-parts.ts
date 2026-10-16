@@ -3,15 +3,16 @@
 
 /**
  * The pieces a stored annotation's shape is read from, each held to what the
- * compositor can draw: a point, a seed, a box's corners, a text box's pointer,
- * a highlight's band and the page it was read from.
+ * compositor can draw: a point, a seed, a box's corners, a text's look and
+ * its control points, a highlight's band and the page it was read from.
  */
 
 import type {
   AnnotationHighlight,
   AnnotationPoint,
+  AnnotationText,
   HighlightBand,
-  TextPointer,
+  TextControlPoint,
 } from "./annotations";
 
 /** A stored point, or null where it is not a finite one. */
@@ -70,25 +71,87 @@ export const highlightTone = (value: unknown): AnnotationHighlight["tone"] => {
   return { ink: share(tone.ink, 0), surface: share(tone.surface, 1) };
 };
 
-/** Where a fresh text box's pointer sits: tucked into the middle of its
- * bottom edge. The twin of `TextPointer::default`. */
-const TUCKED_POINTER: TextPointer = {
-  along: { x: 0, y: 1 },
-  reach: { x: 0, y: 0 },
+/** A stored look, kept as it was written where it names its template: Rust
+ * reads it and holds it to what a style can be. A text with none takes the
+ * Label look there. */
+export const textLook = (value: unknown): Pick<AnnotationText, "look"> => {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("template" in value) ||
+    typeof value.template !== "string"
+  )
+    return {};
+  // Rust wrote it, and Rust reads it back to its own rules.
+  const look = value as NonNullable<AnnotationText["look"]>;
+  return { look };
 };
 
-/** A stored pointer, or the tucked one where what is stored cannot be read. */
-export const textPointer = (value: unknown): TextPointer => {
-  const pointer = (value ?? {}) as Partial<TextPointer>;
-  const along = annotationPoint(pointer.along);
-  const reach = annotationPoint(pointer.reach);
-  return along && reach
+/** A pair of finite numbers, or null. */
+const finitePair = (value: unknown): [number, number] | null =>
+  Array.isArray(value) &&
+  value.length === 2 &&
+  value.every((entry) => typeof entry === "number" && Number.isFinite(entry))
+    ? [value[0] as number, value[1] as number]
+    : null;
+
+/** A stored control point, or null where it cannot be read. */
+const textControlPoint = (value: unknown): TextControlPoint | null => {
+  if (typeof value !== "object" || value === null || !("space" in value))
+    return null;
+  if (value.space === "picture") {
+    const at = annotationPoint(value);
+    return at ? { space: "picture", ...at } : null;
+  }
+  const along = "along" in value ? finitePair(value.along) : null;
+  const reach = "reach" in value ? finitePair(value.reach) : null;
+  return value.space === "box" && along && reach
     ? {
-        along: {
-          x: Math.min(1, Math.max(-1, along.x)),
-          y: Math.min(1, Math.max(-1, along.y)),
-        },
-        reach: { x: Math.max(0, reach.x), y: Math.max(0, reach.y) },
+        along: [
+          Math.min(1, Math.max(-1, along[0])),
+          Math.min(1, Math.max(-1, along[1])),
+        ],
+        reach: [Math.max(0, reach[0]), Math.max(0, reach[1])],
+        space: "box",
       }
-    : TUCKED_POINTER;
+    : null;
+};
+
+/** The stored control points that can be read; the rest start again where
+ * the look puts them. */
+export const textControls = (
+  value: unknown,
+): Pick<AnnotationText, "controls"> => {
+  if (typeof value !== "object" || value === null) return {};
+  const controls = Object.fromEntries(
+    Object.entries(value).flatMap(([id, point]) => {
+      const read = textControlPoint(point);
+      return read ? [[id, read] as const] : [];
+    }),
+  );
+  return Object.keys(controls).length > 0 ? { controls } : {};
+};
+
+/** How far past its box a text's tail reaches, in ems, where its look draws
+ * one; a tail put on the picture counts as reaching `pictureReach`. The twin
+ * of the text arm of `pace::path_ms` in Rust. */
+export const textTailReach = (
+  shape: AnnotationText,
+  pictureReach: number,
+): number => {
+  const look = shape.look;
+  if (!look || look.background !== "box") return 0;
+  // A tail is the one kind of element there is, and a look draws one at most.
+  const control = look.controls.find((control) =>
+    look.elements.some((element) => element.to === control.id),
+  );
+  if (!control) return 0;
+  const placed = shape.controls?.[control.id];
+  if (placed?.space === "picture" && control.space === "picture")
+    return pictureReach;
+  const reach =
+    placed?.space === "box" && control.space === "box"
+      ? placed.reach
+      : control.default.reach;
+  return Math.hypot(reach[0], reach[1]);
 };

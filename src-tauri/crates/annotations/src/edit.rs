@@ -19,6 +19,9 @@ use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle};
 pub struct FreshAnnotation {
   pub angle: Option<f64>,
   pub image: Option<super::image::ImageArt>,
+  /// The look a fresh text box is dressed in, colours and all; absent until
+  /// one has been chosen.
+  pub look: Option<screenwide_text::TextStyle>,
 }
 
 impl FreshAnnotation {
@@ -28,6 +31,7 @@ impl FreshAnnotation {
     Self {
       angle: self.angle,
       image: self.image.as_ref().map(|art| art.fitted(source)),
+      look: self.look.clone(),
     }
   }
 }

@@ -4,19 +4,19 @@
 //! The recording's captions as the editor makes them: from the transcript
 //! kept beside the project and the edit, set in the output canvas, for the
 //! Captions lane, the picture, and the subtitle file an export writes. The
-//! captions themselves are `screenwide_captions`.
+//! captions themselves are `screenwide_text`.
 
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use screenwide_captions::{
-  build, subtitles, Caption, CaptionFrame, CaptionSource, CaptionTrack, Correction, HeardWord,
-  RecordingCaptions, SubtitleFile,
-};
 use screenwide_compositor::annotation_gpu::{caption_measure, CaptionFaces};
 use screenwide_export::recording_model::{AudioTrackKind, RecordingAudioTrack};
 use screenwide_speech::transcript::RecordingTranscript;
+use screenwide_text::captions::{
+  build, subtitles, Caption, CaptionFrame, CaptionSource, CaptionTrack, Correction, HeardWord,
+  RecordingCaptions, SubtitleFile,
+};
 use screenwide_timeline::TimelineRange;
 use screenwide_timeline_edit::{validate, RecordingTimelineEdit, TimelinePlan};
 use serde::Serialize;
@@ -176,7 +176,7 @@ fn make_captions(
     (&project, &audio_tracks, duration_ms),
     edit,
     frame_for(width, height),
-    || super::caption_styles::default_captions(app),
+    || super::text_templates::default_captions(app),
   );
   let track = edit
     .captions

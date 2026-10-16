@@ -6,7 +6,7 @@
 
 use std::{ffi::c_void, sync::OnceLock};
 
-use screenwide_annotations::text::type_device::INTER;
+use screenwide_text::engine::type_device::INTER;
 use windows::Win32::Graphics::Gdi::AddFontMemResourceEx;
 
 pub fn register_inter_font() {

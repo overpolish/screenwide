@@ -26,6 +26,7 @@
 
 import { ANNOTATION_DRAW_IN_MS } from "./annotation-draw-in";
 import { ANNOTATION_KINDS } from "./annotation-kinds";
+import { textTailReach } from "./annotation-shape-parts";
 
 import type { Annotation } from "./annotations";
 import type { RecordingAnnotationClip } from "../recording/annotations/recording-annotations";
@@ -130,7 +131,7 @@ export const annotationPathMs = (
 ): number | undefined => {
   const shape = annotation.shape;
   if (shape.kind === "text") {
-    const reach = Math.hypot(shape.pointer.reach.x, shape.pointer.reach.y);
+    const reach = textTailReach(shape, POINTER_REFERENCE_EMS);
     return reach > 0
       ? paced(reach / POINTER_REFERENCE_EMS, POINTER_PACE)
       : undefined;

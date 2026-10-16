@@ -14,7 +14,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - `src/components/base`: single-purpose primitives built on React Aria. They import nothing from `shared` or `features`. Story group: `Primitives`.
 - `src/components/shared`: compositions of primitives reused by more than one feature. They import nothing from `features`. Story group: `Components`.
 - `src/features`: UI and behaviour owned by one feature. May import from `base` and `shared`. Story group: `Features`, or `Legacy` for windows not yet built on the current primitives.
-- `src/features/editor`, `src-tauri/src/editor`, and the `annotations`, `captions`, `compositor`, `cursor_effects`, `export`, `images`, `keyboard_effects`, `placement`, `scenes` and `timeline_edit` crates in `src-tauri/crates`: the Editor feature.
+- `src/features/editor`, `src-tauri/src/editor`, and the `annotations`, `compositor`, `cursor_effects`, `export`, `images`, `keyboard_effects`, `placement`, `scenes`, `text` and `timeline_edit` crates in `src-tauri/crates`: the Editor feature. `text` is the text engine: type set on each platform, the style vocabulary and templates, and captions as one of its users.
 - `src-tauri/crates`: the Rust workspace's crates, each a layer the app crate (`src-tauri/src`) and the crates above it depend on, never the reverse. New Rust subsystems start as their own crate there, not as a module of the app crate, which wires the crates together: Tauri setup, commands and windows. Test a crate on its own with `cargo test -p <crate>`.
 - `src/index.css`: shared theme tokens and global styles.
 - `src/lib/motion.ts`: shared motion timings and easing.

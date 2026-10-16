@@ -1,0 +1,55 @@
+{
+  "formatVersion": 5,
+  "style": {
+    "font": {
+      "weight": 600,
+      "italic": false
+    },
+    "sizePercent": 100,
+    "size": "medium",
+    "allCaps": false,
+    "maxWords": 8,
+    "lines": "two",
+    "arrangement": "lines",
+    "position": "bottom",
+    "textColor": "#ffffff",
+    "highlightColor": "#ffd60a",
+    "backgroundColor": "#0000009e",
+    "highlightWords": false,
+    "revealWords": false,
+    "visibleWords": 0,
+    "outline": true,
+    "outlineColor": "#000000",
+    "background": "none",
+    "motion": {
+      "caption": [],
+      "word": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 90,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    "accent": "none",
+    "accentFont": {
+      "family": "Instrument Serif",
+      "weight": 400,
+      "italic": true
+    },
+    "accentSizePercent": 120,
+    "accentSize": "medium",
+    "accentColor": "#ffd60a",
+    "shadow": null,
+    "controls": [],
+    "elements": []
+  }
+}

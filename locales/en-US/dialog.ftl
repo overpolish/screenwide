@@ -10,6 +10,6 @@ dialog-choose-background = Choose a background picture
 dialog-choose-image = Choose an image
 dialog-pictures-filter = Pictures
 # Importing takes a template's zip, or the template.json in its folder.
-dialog-import-caption-template = Import a caption template
-dialog-export-caption-template = Export caption template
-dialog-caption-template-filter = Caption template
+dialog-import-template = Import a template
+dialog-export-template = Export template
+dialog-template-filter = Template

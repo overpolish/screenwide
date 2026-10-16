@@ -5,13 +5,13 @@
 //! the same shader and type the export uses, frame by frame, so a template's
 //! tile shows exactly how its captions will look and move.
 
-use screenwide_captions::{
-  caption_fit, sample_caption, Caption, CaptionArrangement, CaptionFrame, CaptionMoment,
-  CaptionPreviewBackdrop, CaptionStyle, CaptionTrack, CaptionWord, Measure, RecordingCaptions,
-  MIN_SIZE_PERCENT,
-};
 use screenwide_imaging::CapturedImage;
 use screenwide_output::{MeshGradientPoint, NormalizedSourceRect, ScreenshotOutputSettings};
+use screenwide_text::captions::{
+  caption_fit, sample_caption, Caption, CaptionFrame, CaptionMoment, CaptionTrack, CaptionWord,
+  Measure, RecordingCaptions,
+};
+use screenwide_text::{TextArrangement, TextPreviewBackdrop, TextStyle, MIN_SIZE_PERCENT};
 
 use super::*;
 use crate::annotation_gpu::{caption_measure, caption_overlay, prepared_arrows, CaptionFaces};
@@ -26,10 +26,10 @@ const HOLD_MS: f64 = 500.0;
 /// one line, and three show a stack or a staircase breaking into lines.
 /// Words rolling through all go in one caption, so the tile shows them
 /// roll.
-fn words_per_caption(style: &CaptionStyle) -> usize {
+fn words_per_caption(style: &TextStyle) -> usize {
   if style.rolling_words().is_some() {
     usize::MAX
-  } else if style.arrangement == CaptionArrangement::Lines {
+  } else if style.arrangement == TextArrangement::Lines {
     2
   } else {
     3
@@ -51,7 +51,7 @@ pub struct CaptionPreview {
 /// another from the start, the last held a moment.
 fn sample_captions(
   words: &[&str],
-  style: &CaptionStyle,
+  style: &TextStyle,
   frame: CaptionFrame,
   measure: &mut Measure,
 ) -> Vec<Caption> {
@@ -88,11 +88,11 @@ fn sample_captions(
 /// A picture for the captions to read over, lighter at the top, as a frame
 /// of video behind them would be: light, or dark where the template reads
 /// best over that.
-fn backdrop(width: u32, height: u32, kind: CaptionPreviewBackdrop) -> CapturedImage {
+fn backdrop(width: u32, height: u32, kind: TextPreviewBackdrop) -> CapturedImage {
   // Each channel's value at the top and at the bottom.
   let [red, green, blue] = match kind {
-    CaptionPreviewBackdrop::Light => [(244.0, 217.0), (245.0, 220.0), (248.0, 227.0)],
-    CaptionPreviewBackdrop::Dark => [(64.0, 24.0), (70.0, 26.0), (92.0, 34.0)],
+    TextPreviewBackdrop::Light => [(244.0, 217.0), (245.0, 220.0), (248.0, 227.0)],
+    TextPreviewBackdrop::Dark => [(64.0, 24.0), (70.0, 26.0), (92.0, 34.0)],
   };
   let mut rgba = Vec::with_capacity((width * height * 4) as usize);
   for y in 0..height {
@@ -189,16 +189,16 @@ impl CaptionPreviewer {
   /// after another, as `preview` asks, through one whole run of the sample.
   pub fn frames(
     &self,
-    style: &CaptionStyle,
+    style: &TextStyle,
     words: &[&str],
     preview: &CaptionPreview,
-    backdrop: CaptionPreviewBackdrop,
+    backdrop: TextPreviewBackdrop,
   ) -> Result<Vec<Vec<u8>>, String> {
     let (gpu, compositor) = (self.gpu, &self.compositor);
     let (width, height) = (preview.width.max(1), preview.height.max(1));
     let mut style = style.normalized();
     style.size_percent =
-      (style.size_percent * PREVIEW_SCALE).min(screenwide_captions::MAX_SIZE_PERCENT);
+      (style.size_percent * PREVIEW_SCALE).min(screenwide_text::MAX_SIZE_PERCENT);
     let frame = CaptionFrame { width, height };
     let faces = CaptionFaces::of(&style);
     let mut measure = caption_measure(&faces);

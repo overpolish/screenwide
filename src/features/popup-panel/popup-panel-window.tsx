@@ -3,10 +3,10 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import { useCaptionTemplateFonts } from "../editor/recording/captions/use-caption-template-fonts";
+import { useTextTemplateFonts } from "../editor/recording/captions/use-text-template-fonts";
 import { MomentNotePanel } from "../editor/timeline/moments/moment-note-panel";
-import { CaptionTemplatePanel } from "../editor/tool-panels/captions/caption-template-panel";
-import { usePreloadedCaptionPreviews } from "../editor/tool-panels/captions/use-caption-previews";
+import { TextTemplatePanel } from "../editor/tool-panels/text-style/text-template-panel";
+import { usePreloadedTemplatePreviews } from "../editor/tool-panels/text-style/use-template-previews";
 
 import { PopupPanelColors } from "./popup-panel-colors";
 import { PopupPanelList } from "./popup-panel-list";
@@ -48,9 +48,9 @@ export function PopupPanelWindow() {
   const active = usePopupPanelStore((state) => activePopupPanel(state, panel));
   // The font list names each family in its own type, those your templates
   // bring among them.
-  useCaptionTemplateFonts();
+  useTextTemplateFonts();
   // Only the shared panel window shows the templates.
-  usePreloadedCaptionPreviews(panel === SHARED_POPUP_PANEL);
+  usePreloadedTemplatePreviews(panel === SHARED_POPUP_PANEL);
 
   if (!active) return null;
 
@@ -62,9 +62,9 @@ export function PopupPanelWindow() {
     return <MomentNotePanel content={active.content} />;
   }
 
-  if (active.content.kind === "caption-templates") {
+  if (active.content.kind === "text-templates") {
     return (
-      <CaptionTemplatePanel
+      <TextTemplatePanel
         content={active.content}
         focusContents={active.focusContents}
         id={active.id}

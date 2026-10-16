@@ -1,22 +1,23 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Switch } from "../../../../components/base/switch/switch";
 import { Text } from "../../../../components/base/text/text";
 import { AnnotationColorGrid } from "../../../../components/shared/annotation-style/annotation-color-grid";
-import { AnnotationFitGroup } from "../../../../components/shared/annotation-style/annotation-fit-group";
-import { AnnotationRadiusField } from "../../../../components/shared/annotation-style/annotation-radius-field";
-import { annotationSizeLabel } from "../../../../components/shared/annotation-style/annotation-text";
-import { redactionSizePresets } from "../../../../components/shared/annotation-style/widths";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
 import { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { AnnotationActions } from "./annotation-actions";
-import { AnnotationOptionRows } from "./annotation-option-rows";
+import {
+  AnnotationRadiusRow,
+  AnnotationSizeRow,
+} from "./annotation-geometry-rows";
+import {
+  AnnotationAnimateRow,
+  AnnotationFitRow,
+  AnnotationOptionRows,
+} from "./annotation-option-rows";
 import {
   AnnotationBlurStrengthRow,
   AnnotationRedactionNote,
@@ -27,6 +28,12 @@ import { AnnotationTurnRows } from "./annotation-turn-rows";
 import { ImageFrameRow, ImagePlaybackRow } from "./image-play-rows";
 import { ImageSourceRow } from "./image-source-row";
 import { ImageSwayRow } from "./image-sway-row";
+import {
+  AnnotationTextColorRows,
+  AnnotationTextStyleRows,
+  AnnotationTextTemplateRow,
+} from "./text/annotation-text-rows";
+import { shownTextLook } from "./text/text-look";
 import { useAnnotationColorMenu } from "./use-annotation-color-menu";
 
 /**
@@ -34,7 +41,8 @@ import { useAnnotationColorMenu } from "./use-annotation-color-menu";
  * over its clip, and what colour it is - plus the controls its shape has. An
  * arrow carries heads and can be turned round; a counter is a disc with a
  * number in it, which leaves it nothing to reverse and no head to choose; a
- * text box lines its lines up by its alignment; a highlight may be drawn by
+ * text is dressed by a template's look, its face, outline and colours, and
+ * lines its lines up by its alignment; a highlight may be drawn by
  * hand, and drawn again differently; a shape may be drawn by hand too, and
  * rounds its corners; a redaction chooses how it covers and how round its
  * corners are, and offers a pixelation style and a block size only when
@@ -66,6 +74,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
     annotationCount,
     canClearDrawings,
     isLocked,
+    textTemplates,
   } = snapshot;
   const showColorMenu = useAnnotationColorMenu((color) => {
     change({ removeAnnotationColor: color });
@@ -93,8 +102,15 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       ? redaction
       : null;
   const showsSize = kind.hasSize && (!kind.hasRedaction || pixelation !== null);
+  // A text is dressed by its look, which carries its own colours.
+  const look =
+    annotation.kind === "text" && textTemplates
+      ? shownTextLook(annotation.look, color, textTemplates)
+      : null;
   const showsColor =
-    kind.hasColor && (!kind.hasRedaction || redaction === "color");
+    kind.hasColor &&
+    annotation.kind !== "text" &&
+    (!kind.hasRedaction || redaction === "color");
   // A kind that always arrives still has no choice to make before it is drawn.
   const animates =
     workspace === "recording" &&
@@ -109,6 +125,15 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   // rows - which picture, which frame, how it plays - lead as its mode.
   return (
     <div className="flex flex-col gap-section">
+      {look && textTemplates ? (
+        <AnnotationTextTemplateRow
+          change={change}
+          isLocked={isLocked}
+          look={look}
+          still={workspace === "screenshot"}
+          templates={textTemplates}
+        />
+      ) : null}
       {annotation.kind === "image" ? (
         <ImageSourceRow
           change={change}
@@ -145,37 +170,17 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {kind.hasFit ? (
-        <ControlRow title={t("annotation-fit")}>
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <AnnotationFitGroup
-                isDisabled={isLocked}
-                onChange={(next) => {
-                  change({ annotationStyle: { manual: next } });
-                }}
-                value={manual}
-              />
-            </div>
-          )}
-        </ControlRow>
+        <AnnotationFitRow change={change} isLocked={isLocked} manual={manual} />
       ) : null}
 
       {showsSize ? (
-        <ControlRow title={annotationSizeLabel(kind.sizeMeasure)}>
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <StepSlider
-                aria-label={annotationSizeLabel(kind.sizeMeasure)}
-                isDisabled={isLocked}
-                onChange={(next) => {
-                  change({ annotationStyle: { width: next } });
-                }}
-                steps={redactionSizePresets(redaction, kind.sizes)}
-                value={width}
-              />
-            </div>
-          )}
-        </ControlRow>
+        <AnnotationSizeRow
+          change={change}
+          isLocked={isLocked}
+          kind={kind}
+          redaction={redaction}
+          width={width}
+        />
       ) : null}
 
       {kind.hasRedaction && redaction === "blur" ? (
@@ -197,19 +202,11 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {kind.hasRadius ? (
-        <ControlRow title={t("annotation-radius")}>
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <AnnotationRadiusField
-                isDisabled={isLocked}
-                onChange={(next) => {
-                  change({ annotationStyle: { radius: next } });
-                }}
-                value={radius}
-              />
-            </div>
-          )}
-        </ControlRow>
+        <AnnotationRadiusRow
+          change={change}
+          isLocked={isLocked}
+          radius={radius}
+        />
       ) : null}
 
       <AnnotationTurnRows
@@ -226,6 +223,13 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         kind={kind}
         style={annotation.style}
       />
+      {look ? (
+        <AnnotationTextStyleRows
+          change={change}
+          isLocked={isLocked}
+          look={look}
+        />
+      ) : null}
       <ImageSwayRow
         annotation={annotation}
         change={change}
@@ -237,18 +241,11 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           one: a screenshot is one instant, so the row is not offered there at
           all. It follows every other setting, so its absence moves none. */}
       {animates ? (
-        <ControlRow title={t("editor-panels-animate")}>
-          {(controlProps) => (
-            <Switch
-              {...controlProps}
-              isDisabled={isLocked}
-              isSelected={annotation.animated}
-              onChange={(next) => {
-                change({ annotationAnimated: next });
-              }}
-            />
-          )}
-        </ControlRow>
+        <AnnotationAnimateRow
+          animated={annotation.animated}
+          change={change}
+          isLocked={isLocked}
+        />
       ) : null}
       {/* The swatches say what they are, so the row carries no heading; it
           keeps the section gap its labelled neighbours sit on. */}
@@ -269,6 +266,15 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           }}
           savedColors={annotationColors}
           value={color}
+        />
+      ) : null}
+
+      {look ? (
+        <AnnotationTextColorRows
+          change={change}
+          isLocked={isLocked}
+          look={look}
+          savedColors={annotationColors}
         />
       ) : null}
 

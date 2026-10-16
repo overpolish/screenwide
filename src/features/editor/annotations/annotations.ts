@@ -19,8 +19,9 @@ import type { HighlightBand } from "../../../bindings/HighlightBand";
 import type { ImageArt } from "../../../bindings/ImageArt";
 import type { ImagePlay } from "../../../bindings/ImagePlay";
 import type { ImageTilt } from "../../../bindings/ImageTilt";
+import type { TextControlPoint } from "../../../bindings/TextControlPoint";
 import type { TextEditPhase } from "../../../bindings/TextEditPhase";
-import type { TextPointer } from "../../../bindings/TextPointer";
+import type { TextStyle } from "../../../bindings/TextStyle";
 
 export type {
   Annotation,
@@ -31,7 +32,7 @@ export type {
   ImageArt,
   ImagePlay,
   ImageTilt,
-  TextPointer,
+  TextControlPoint,
 };
 
 /** A quadratic Bézier from `start` to `end`, bent by `control`. */
@@ -56,15 +57,18 @@ export type AnnotationCounter = {
 };
 
 /**
- * Lines of type in a solid box. `origin` is the box's top-left corner and
- * `pointer` the pointer drawn out of it, held against the box. The box's size
- * follows from the text and the type size.
+ * Lines of type set and dressed by `look`, a text template's style. `origin`
+ * is the top-left corner of the box the type sits in, whose size follows from
+ * the text and the type size; `controls` are where the look's control points
+ * have been moved, by id. A text read without a look takes the Label look,
+ * which Rust gives it.
  */
 export type AnnotationText = {
   kind: "text";
   origin: AnnotationPoint;
-  pointer: TextPointer;
   text: string;
+  controls?: Record<string, TextControlPoint>;
+  look?: TextStyle;
 };
 
 /** One line a highlight covers, in source pixels. */

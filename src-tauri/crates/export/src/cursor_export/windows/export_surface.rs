@@ -168,8 +168,8 @@ impl WindowsExportCompositor {
     annotations: &[screenwide_annotations::Annotation],
     // The captions over the frame, and the moment of the edited video it is.
     captions: Option<(
-      &screenwide_captions::CaptionTrack,
-      screenwide_captions::CaptionMoment,
+      &screenwide_text::captions::CaptionTrack,
+      screenwide_text::captions::CaptionMoment,
     )>,
     mut effects: Option<&mut FrameEffects>,
   ) -> Result<ID3D11Texture2D, String> {

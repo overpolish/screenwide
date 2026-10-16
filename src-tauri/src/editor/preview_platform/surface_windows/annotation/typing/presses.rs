@@ -59,15 +59,16 @@ pub(crate) fn press(inner: &Arc<SurfaceInner>, point: (f64, f64), double: bool) 
     let Ok(mut state) = inner.state.lock() else {
       return false;
     };
-    let Some((flat, readable)) = state
-      .annotation
-      .typing
-      .as_ref()
-      .map(|typing| (typing.flat, has_content(typing.edit.text())))
-    else {
+    let Some((flat, readable, face)) = state.annotation.typing.as_ref().map(|typing| {
+      (
+        typing.flat,
+        has_content(typing.edit.text()),
+        typing.face.clone(),
+      )
+    }) else {
       return false;
     };
-    let place = place(&state, flat).filter(|_| inside(&state, flat, point));
+    let place = place(&state, flat, &face).filter(|_| inside(&state, flat, point));
     if let (Some(place), Some(typing)) = (place.as_ref(), state.annotation.typing.as_mut()) {
       let offset = place.layout(|layout| typing.edit.offset_at(place.local(point), layout));
       if double {
@@ -101,16 +102,16 @@ pub(crate) fn pointer_move(inner: &Arc<SurfaceInner>, point: (f64, f64)) -> bool
   if !state.annotation.press_taken {
     return false;
   }
-  let Some(flat) = state
+  let Some((flat, face)) = state
     .annotation
     .typing
     .as_ref()
     .filter(|typing| typing.selecting)
-    .map(|typing| typing.flat)
+    .map(|typing| (typing.flat, typing.face.clone()))
   else {
     return true;
   };
-  let place = place(&state, flat);
+  let place = place(&state, flat, &face);
   if let (Some(place), Some(typing)) = (place, state.annotation.typing.as_mut()) {
     let before = typing.edit.marks(true);
     let offset = place.layout(|layout| typing.edit.offset_at(place.local(point), layout));

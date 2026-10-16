@@ -5432,7 +5432,6 @@ dependencies = [
  "rxing",
  "screenwide-accent",
  "screenwide-annotations",
- "screenwide-captions",
  "screenwide-capture",
  "screenwide-compositor",
  "screenwide-cursor-effects",
@@ -5451,6 +5450,7 @@ dependencies = [
  "screenwide-scenes",
  "screenwide-sidecar",
  "screenwide-speech",
+ "screenwide-text",
  "screenwide-timeline",
  "screenwide-timeline-edit",
  "screenwide-transcriber",
@@ -5505,31 +5505,14 @@ name = "screenwide-annotations"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "cc",
  "getrandom 0.3.4",
  "screenwide-imaging",
  "screenwide-scenes",
+ "screenwide-text",
  "screenwide-timeline",
  "serde",
  "serde_json",
  "ts-rs",
- "windows 0.62.2",
- "windows-numerics 0.3.1",
-]
-
-[[package]]
-name = "screenwide-captions"
-version = "0.1.0"
-dependencies = [
- "regex",
- "screenwide-lexicon",
- "screenwide-placement",
- "screenwide-timeline",
- "serde",
- "serde_json",
- "trash",
- "ts-rs",
- "zip",
 ]
 
 [[package]]
@@ -5574,7 +5557,6 @@ dependencies = [
  "cc",
  "naga",
  "screenwide-annotations",
- "screenwide-captions",
  "screenwide-cursor-effects",
  "screenwide-gpu",
  "screenwide-images",
@@ -5583,6 +5565,7 @@ dependencies = [
  "screenwide-output",
  "screenwide-placement",
  "screenwide-scenes",
+ "screenwide-text",
  "screenwide-wgsl",
  "serde",
  "wgpu",
@@ -5612,7 +5595,6 @@ dependencies = [
  "cidre",
  "image",
  "screenwide-annotations",
- "screenwide-captions",
  "screenwide-compositor",
  "screenwide-cursor-effects",
  "screenwide-gpu",
@@ -5624,6 +5606,7 @@ dependencies = [
  "screenwide-records",
  "screenwide-scenes",
  "screenwide-sidecar",
+ "screenwide-text",
  "screenwide-timeline",
  "screenwide-timeline-edit",
  "screenwide-transcriber",
@@ -5801,6 +5784,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "screenwide-text"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "regex",
+ "screenwide-lexicon",
+ "screenwide-placement",
+ "screenwide-timeline",
+ "serde",
+ "serde_json",
+ "trash",
+ "ts-rs",
+ "windows 0.62.2",
+ "windows-numerics 0.3.1",
+ "zip",
+]
+
+[[package]]
 name = "screenwide-timeline"
 version = "0.1.0"
 
@@ -5809,8 +5810,8 @@ name = "screenwide-timeline-edit"
 version = "0.1.0"
 dependencies = [
  "screenwide-annotations",
- "screenwide-captions",
  "screenwide-scenes",
+ "screenwide-text",
  "screenwide-timeline",
  "serde",
  "serde_json",

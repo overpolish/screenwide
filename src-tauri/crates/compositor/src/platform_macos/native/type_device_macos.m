@@ -10,7 +10,7 @@
 #import <CoreText/CoreText.h>
 #include <math.h>
 
-#import "../../../../annotations/src/text/macos/annotation_text_box.h"
+#import "../../../../text/src/engine/macos/annotation_text_box.h"
 
 typedef struct {
   double x;

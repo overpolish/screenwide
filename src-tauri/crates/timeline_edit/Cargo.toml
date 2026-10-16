@@ -14,8 +14,8 @@ doctest = false
 
 [dependencies]
 screenwide-annotations.workspace = true
-screenwide-captions.workspace = true
 screenwide-scenes.workspace = true
+screenwide-text.workspace = true
 screenwide-timeline.workspace = true
 serde.workspace = true
 ts-rs.workspace = true

@@ -5,14 +5,14 @@ import { isEmptyLayout } from "./caption-layout";
 
 import type { CaptionBreak } from "../../../../bindings/CaptionBreak";
 import type { CaptionEmphasisChoice } from "../../../../bindings/CaptionEmphasisChoice";
-import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
 import type { CaptionSettings } from "../../../../bindings/CaptionSettings";
-import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 import type { CaptionWordChoice } from "../../../../bindings/CaptionWordChoice";
 import type { RecordingCaptions } from "../../../../bindings/RecordingCaptions";
+import type { TextLayout } from "../../../../bindings/TextLayout";
+import type { TextStyle } from "../../../../bindings/TextStyle";
 import type { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 
-/** The twin of `CaptionSettings::default` in `screenwide_captions`. */
+/** The twin of `CaptionSettings::default` in `screenwide_text::captions`. */
 export const DEFAULT_CAPTION_SETTINGS: CaptionSettings = {
   censorProfanity: false,
   hideFillers: false,
@@ -22,16 +22,16 @@ export const DEFAULT_CAPTION_SETTINGS: CaptionSettings = {
 };
 
 /** The fewest and most words a caption may hold: the twins of the limits
- * in `screenwide_captions`. */
+ * in `screenwide_text`. */
 export const CAPTION_WORDS = { maximum: 20, minimum: 1 } as const;
 
 /** What captions start as where the edit has set nothing: the default
  * template's look, with the layout options kept for new captions, and the
  * default rules. */
 export type CaptionDefaults = {
-  layout: CaptionLayout;
+  layout: TextLayout;
   settings: CaptionSettings;
-  style: CaptionStyle;
+  style: TextStyle;
 };
 
 /** The edit's captions, starting from `defaults` for whatever it has not
@@ -71,9 +71,9 @@ export type CaptionsPatch = {
   emphasisChoices?: CaptionEmphasisChoice[];
   enabled?: boolean;
   hidden?: number[];
-  layout?: CaptionLayout;
+  layout?: TextLayout;
   settings?: Partial<CaptionSettings>;
-  style?: Partial<CaptionStyle>;
+  style?: Partial<TextStyle>;
   wordChoices?: CaptionWordChoice[];
 };
 

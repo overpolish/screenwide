@@ -50,7 +50,7 @@ pub struct CursorExportRequest<'a> {
   pub camera_on_top: bool,
   pub cancelled: &'a AtomicBool,
   /// The captions drawn over the picture, timed on the edited video.
-  pub captions: Option<&'a screenwide_captions::CaptionTrack>,
+  pub captions: Option<&'a screenwide_text::captions::CaptionTrack>,
   pub cursor: Option<&'a Path>,
   pub cursor_effects: CursorEffectSettings,
   pub keyboard: Option<&'a Path>,

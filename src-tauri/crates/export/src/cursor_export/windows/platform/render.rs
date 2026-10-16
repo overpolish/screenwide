@@ -248,7 +248,7 @@ pub(super) fn render_video(
       request.captions.map(|track| {
         (
           track,
-          screenwide_captions::CaptionMoment {
+          screenwide_text::captions::CaptionMoment {
             at_ms: output_us as f64 / 1_000.0,
             exposure_ms: f64::from(window_ms),
           },

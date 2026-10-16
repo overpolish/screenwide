@@ -3,6 +3,7 @@
 
 import { Switch } from "../../../../components/base/switch/switch";
 import { AnnotationAlignGroup } from "../../../../components/shared/annotation-style/annotation-align-group";
+import { AnnotationFitGroup } from "../../../../components/shared/annotation-style/annotation-fit-group";
 import { AnnotationHeadGroup } from "../../../../components/shared/annotation-style/annotation-head-group";
 import { AnnotationInkGroup } from "../../../../components/shared/annotation-style/annotation-ink-group";
 import { AnnotationShuffleSwitch } from "../../../../components/shared/annotation-style/annotation-shuffle-switch";
@@ -165,5 +166,58 @@ export function AnnotationOptionRows({
         </ControlRow>
       ) : null}
     </>
+  );
+}
+
+/** Whether the annotation draws itself in and out over its clip. */
+export function AnnotationAnimateRow({
+  animated,
+  change,
+  isLocked,
+}: {
+  animated: boolean;
+  change: (patch: ToolPanelPatch) => void;
+  isLocked: boolean;
+}) {
+  return (
+    <ControlRow title={t("editor-panels-animate")}>
+      {(controlProps) => (
+        <Switch
+          {...controlProps}
+          isDisabled={isLocked}
+          isSelected={animated}
+          onChange={(next) => {
+            change({ annotationAnimated: next });
+          }}
+        />
+      )}
+    </ControlRow>
+  );
+}
+
+/** Whether a highlight is fitted to the text under it or laid by hand. */
+export function AnnotationFitRow({
+  change,
+  isLocked,
+  manual,
+}: {
+  change: (patch: ToolPanelPatch) => void;
+  isLocked: boolean;
+  manual: boolean;
+}) {
+  return (
+    <ControlRow title={t("annotation-fit")}>
+      {(controlProps) => (
+        <div {...controlProps} role="group">
+          <AnnotationFitGroup
+            isDisabled={isLocked}
+            onChange={(next) => {
+              change({ annotationStyle: { manual: next } });
+            }}
+            value={manual}
+          />
+        </div>
+      )}
+    </ControlRow>
   );
 }

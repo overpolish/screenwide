@@ -1,0 +1,91 @@
+{
+  "formatVersion": 5,
+  "presets": {
+    "fade": {
+      "caption": [],
+      "word": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 90,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    "pop": {
+      "caption": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0.75
+            },
+            {
+              "atMs": 220,
+              "value": 1,
+              "easing": {
+                "back-out": {
+                  "overshoot": 2.5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 50,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "word": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0.75
+            },
+            {
+              "atMs": 220,
+              "value": 1,
+              "easing": {
+                "back-out": {
+                  "overshoot": 2.5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 50,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

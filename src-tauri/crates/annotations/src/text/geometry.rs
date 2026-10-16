@@ -4,15 +4,16 @@
 //! Draw-ready text box geometry, prepared once per annotation for both
 //! backends, and the distance that picks it.
 //!
-//! The box is a rounded rectangle its text sits centred in. The pointer is a
-//! tapered stroke from a round base hidden inside the box to a rounded tip,
-//! blended into the box with a smooth minimum so it leaves the edge in a curve
-//! rather than a corner. It leaves the edge its tip reaches furthest past and
-//! slides along it as the tip moves. A pointer that reaches nowhere past the
+//! The box is a rounded rectangle its text sits centred in. A look's tail is
+//! a tapered stroke from a round base hidden inside the box to a rounded
+//! tip, blended into the box with a smooth minimum so it leaves the edge in a
+//! curve rather than a corner. It leaves the edge its tip reaches furthest
+//! past and slides along it as the tip moves. A tail whose tip is inside the
 //! box is tucked in and not drawn.
 
 use crate::geometry::{add, length, scale, subtract, ArrowGeometry};
 use crate::reveal::AnnotationReveal;
+use screenwide_text::TailShape;
 
 /// The padding either side of the text and above and below it, in ems.
 const PAD_X: f64 = 0.5;
@@ -30,14 +31,12 @@ pub(super) fn text_corner(em: f64) -> f64 {
   f64::from(CORNER) * em
 }
 
-/// The pointer's base and tip radii, and how far the blend into the box
-/// reaches, all in ems.
-const POINTER_BASE: f32 = 0.5;
-const POINTER_TIP: f32 = 0.04;
-const POINTER_BLEND: f32 = 0.3;
-
 /// The alignment a text box's native record carries in its `head`.
 pub const HEAD_ALIGN_MASK: u32 = 0b11;
+/// The record's look draws a tail to the point in its `p1`.
+pub const HEAD_TAIL: u32 = 0b100;
+/// The tail's tip is placed in the picture, not held against the box.
+pub const HEAD_TAIL_PLACED: u32 = 0b1000;
 
 /// The box around a text block of `block` at `font_px`, in the pixels both
 /// are in.
@@ -49,9 +48,9 @@ pub fn box_size(block: [f64; 2], font_px: f64) -> [f64; 2] {
   ]
 }
 
-/// One axis of a pointer as the native record carries it: the share of the
+/// One axis of a box point as the native record carries it: the share of the
 /// half size the tip sits at, and how many ems past the edge it reaches. The
-/// twin of `TextPointer::encoded`.
+/// twin of `model::encoded`.
 fn text_pointer_axis(encoded: f32) -> (f32, f32) {
   if encoded.abs() > 1.0 {
     (encoded.signum(), encoded.abs() - 1.0)
@@ -68,40 +67,53 @@ fn text_pointer_axis(encoded: f32) -> (f32, f32) {
 ///   rasterised at;
 /// - `start_head.c` is the text block's centre, and `start_head.a` and `.b`
 ///   carry where the text was rasterised, which only the compositor fills;
-/// - `c` is the pointer's tip, where its grip sits whether it is drawn or
+/// - `c` is the tail's tip, where its grip sits whether it is drawn or
 ///   tucked into the box;
-/// - a drawn pointer has `end_head.a` as its base, `end_head.b` the centre of
+/// - a drawn tail has `end_head.a` as its base, `end_head.b` the centre of
 ///   its rounded tip, `high` and `low` the base's and the tip's radii and
 ///   `end_head.c.x` how far the blend reaches. Otherwise `high` is zero;
 /// - `head` is the alignment.
 ///
-/// `origin` is the box's top-left corner in the caller's pixels, `pointer`
-/// the pointer as the native record encodes it, `block` the text measured at
-/// `font` and `head` the record's bits. The reveal grows the box and its type
-/// about the box's centre by `scale`, and draws the pointer out of the box by
-/// `high`, so the box arrives before it points and stops pointing before it
-/// leaves.
+/// `origin` is the box's top-left corner in the caller's pixels, `tip` the
+/// tail's tip as the native record carries it - against the box, or placed
+/// in the caller's pixels where `head` has [`HEAD_TAIL_PLACED`] - `block`
+/// the text measured at `font`, `head` the record's bits and `tail` the
+/// tail's shape, drawn only where `head` has [`HEAD_TAIL`]. The reveal grows
+/// the box and its type about the box's centre by `scale`, and draws the
+/// tail out of the box by `high`, so the box arrives before it points and
+/// stops pointing before it leaves.
 pub fn prepare_text(
   origin: [f32; 2],
-  pointer: [f32; 2],
+  tip: [f32; 2],
   block: [f32; 2],
   font: f32,
   head: u32,
+  tail: TailShape,
   reveal: AnnotationReveal,
 ) -> ArrowGeometry {
   let grown = reveal.scale.clamp(0.0, 1.0);
   let size = box_size([f64::from(block[0]), f64::from(block[1])], f64::from(font));
   let half = [size[0] as f32 * 0.5, size[1] as f32 * 0.5];
   let centre = add(origin, half);
+  let full_font = font.max(0.0);
+  let tip = if head & HEAD_TAIL_PLACED != 0 {
+    tip
+  } else {
+    let [(along_x, reach_x), (along_y, reach_y)] = tip.map(text_pointer_axis);
+    [
+      centre[0] + along_x * half[0] + reach_x.copysign(along_x) * full_font,
+      centre[1] + along_y * half[1] + reach_y.copysign(along_y) * full_font,
+    ]
+  };
+  // How far the tip is past each edge, measured on the box as it settles.
+  let out = [
+    (tip[0] - centre[0]).abs() - half[0],
+    (tip[1] - centre[1]).abs() - half[1],
+  ];
   let half = scale(half, grown);
-  let font = font.max(0.0) * grown;
+  let font = full_font * grown;
   let min = subtract(centre, half);
   let max = add(centre, half);
-  let [(along_x, reach_x), (along_y, reach_y)] = pointer.map(text_pointer_axis);
-  let tip = [
-    centre[0] + along_x * half[0] + reach_x.copysign(along_x) * font,
-    centre[1] + along_y * half[1] + reach_y.copysign(along_y) * font,
-  ];
   let mut result = ArrowGeometry {
     a: min,
     b: max,
@@ -113,18 +125,22 @@ pub fn prepare_text(
   };
   result.start_head.c = centre;
   let drawn = reveal.high.clamp(0.0, 1.0);
-  if font <= 0.0 || (reach_x <= 0.0 && reach_y <= 0.0) || drawn <= 0.0 {
+  if head & HEAD_TAIL == 0 || font <= 0.0 || (out[0] <= 0.0 && out[1] <= 0.0) || drawn <= 0.0 {
     return result;
   }
-  let base_radius = (POINTER_BASE * font).min(half[0]).min(half[1]);
-  let blend = POINTER_BLEND * font;
-  // The pointer leaves the edge it reaches furthest past, level with its tip
+  let base_radius = (tail.base * font).min(half[0]).min(half[1]);
+  let blend = tail.blend * font;
+  // The tail leaves the edge its tip is furthest past, level with its tip
   // along that edge. Its round base sits a base radius inside the edge it
   // leaves, and further than the blend from the edges beside it: a base
   // circle that grazed an edge would swell the blend into a bulge there.
-  let leaves_side = reach_x >= reach_y;
+  let leaves_side = out[0] >= out[1];
   let (exit_axis, side_axis) = if leaves_side { (0, 1) } else { (1, 0) };
-  let exit_sign = if exit_axis == 0 { along_x } else { along_y }.signum();
+  let exit_sign = if tip[exit_axis] < centre[exit_axis] {
+    -1.0
+  } else {
+    1.0
+  };
   let inset = base_radius + blend;
   let low = min[side_axis] + inset;
   let high = max[side_axis] - inset;
@@ -143,7 +159,7 @@ pub fn prepare_text(
   let tip = add(exit, scale(subtract(tip, exit), drawn));
   let reach = subtract(tip, base);
   let distance = length(reach);
-  let tip_radius = POINTER_TIP * font;
+  let tip_radius = tail.tip * font;
   if distance <= base_radius - tip_radius {
     return result;
   }

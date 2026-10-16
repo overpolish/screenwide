@@ -68,8 +68,8 @@ impl super::AnnotationShape {
       } => arrow::model::placed(*start, *control, *end),
       Self::Counter { center, angle, .. } => counter::model::placed(*center, *angle),
       Self::Text {
-        origin, pointer, ..
-      } => text::model::placed(*origin, pointer),
+        origin, controls, ..
+      } => text::model::placed(*origin, controls.values()),
       Self::Redact { start, end, .. } => redact::model::placed(*start, *end),
       Self::Shape { start, end, .. } => outline::model::placed(*start, *end),
       Self::Spotlight { start, end } => spotlight::model::placed(*start, *end),
@@ -122,12 +122,27 @@ impl super::AnnotationShape {
       },
       Self::Text {
         origin,
-        pointer,
         text,
+        look,
+        controls,
+        clock,
       } => Self::Text {
         origin: map(*origin),
-        pointer: *pointer,
         text: text.clone(),
+        look: look.clone(),
+        controls: controls
+          .iter()
+          .map(|(id, point)| {
+            let point = match point {
+              text::model::TextControlPoint::Picture(at) => {
+                text::model::TextControlPoint::Picture(map(*at))
+              }
+              held => *held,
+            };
+            (id.clone(), point)
+          })
+          .collect(),
+        clock: *clock,
       },
       Self::Redact { start, end, seed } => Self::Redact {
         start: map(*start),

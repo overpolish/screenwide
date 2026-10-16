@@ -33,14 +33,29 @@ pub enum AnnotationShape {
     value: u32,
     angle: f64,
   },
-  /// Lines of type in a solid box. `origin` is the box's top-left corner and
-  /// `pointer` the pointer drawn out of it, held against the box. The box's
-  /// size follows from the text and the type size.
+  /// Lines of type set and dressed by `look`, a text template's style.
+  /// `origin` is the top-left corner of the box the type sits in, whose size
+  /// follows from the text and the type size; `controls` are where the
+  /// look's control points have been moved, by id, the rest being where the
+  /// look starts them.
   Text {
     origin: AnnotationPoint,
-    #[serde(default)]
-    pointer: super::text::model::TextPointer,
     text: String,
+    #[serde(default = "super::text::model::label_look")]
+    #[ts(optional, as = "Option<screenwide_text::TextStyle>")]
+    look: Box<screenwide_text::TextStyle>,
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    #[ts(
+      optional,
+      as = "Option<std::collections::BTreeMap<String, super::text::model::TextControlPoint>>"
+    )]
+    controls: std::collections::BTreeMap<String, super::text::model::TextControlPoint>,
+    /// Where the text is in its clip at the frame being drawn, which its
+    /// look's motion is drawn at: set as a recording's frame is resolved,
+    /// never stored, and absent on a still.
+    #[serde(skip)]
+    #[ts(skip)]
+    clock: Option<super::text::model::TextClock>,
   },
   /// A box that hides what is under it. `start` is its top-left corner and
   /// `end` its bottom-right, in source pixels; `seed` generates a pixelated

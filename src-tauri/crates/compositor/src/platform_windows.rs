@@ -5,4 +5,4 @@
 
 pub mod font;
 pub mod keyboard_raster;
-pub use screenwide_annotations::text::type_device;
+pub use screenwide_text::engine::type_device;

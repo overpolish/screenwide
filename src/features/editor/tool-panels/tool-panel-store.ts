@@ -12,7 +12,7 @@ import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
 } from "../export/recording-export-settings";
-import { CaptionTemplates } from "../recording/captions/use-caption-templates";
+import { TextTemplates } from "../recording/captions/use-text-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import {
   CursorEffectSettings,
@@ -106,12 +106,13 @@ export type ToolPanelSnapshot = {
   selection: ToolPanelSelection | null;
   /** Latest panel request committed with this snapshot. */
   acknowledgedSeq?: number;
-  /** The caption templates, each with the default saved for it, and which
-   * new captions start from; absent or null until they are known. */
-  captionTemplates?: CaptionTemplates | null;
   /** The recording's captions, with the defaults for whatever is unset,
    * where it has a microphone to caption; absent or null otherwise. */
   captions?: RecordingCaptions | null;
+  /** The templates text and captions are dressed in, each with the default
+   * saved for it, and which new captions start from; absent or null until
+   * they are known. */
+  textTemplates?: TextTemplates | null;
   /** The recording's transcript, where it has a microphone to transcribe;
    * absent or null otherwise. */
   transcript?: ToolPanelTranscript | null;

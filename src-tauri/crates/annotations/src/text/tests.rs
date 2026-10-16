@@ -2,21 +2,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::edit::AnnotationTextEdit;
-use super::geometry::{box_size, prepare_text, text_distance};
-use super::metrics::{text_block, LINE_HEIGHT};
-use super::model::{new_text, TextPointer};
+use super::geometry::{box_size, prepare_text, text_distance, HEAD_TAIL};
+use super::model::{encoded, label_look, new_text, TextControlPoint};
 use crate::gesture::{AnnotationDragOrigin, AnnotationHandle};
 use crate::reveal::AnnotationReveal;
 use crate::{Annotation, AnnotationPoint, AnnotationShape};
+use screenwide_text::engine::metrics::{text_block, LINE_HEIGHT};
+use screenwide_text::{BoxPoint, TailShape};
 
 fn point(x: f64, y: f64) -> AnnotationPoint {
   AnnotationPoint { x, y }
 }
 
-fn pointer(along: (f64, f64), reach: (f64, f64)) -> TextPointer {
-  TextPointer {
-    along: point(along.0, along.1),
-    reach: point(reach.0, reach.1),
+fn pointer(along: (f64, f64), reach: (f64, f64)) -> BoxPoint {
+  BoxPoint {
+    along: [along.0, along.1],
+    reach: [reach.0, reach.1],
   }
 }
 
@@ -24,32 +25,41 @@ fn pointer(along: (f64, f64), reach: (f64, f64)) -> TextPointer {
 /// from the tool's default so a new default does not move their numbers.
 const EM: f64 = 28.0;
 
-fn text_box(text: &str, pointer: TextPointer) -> Annotation {
-  let mut annotation = new_text("t".to_owned(), point(100.0, 100.0), None, 0.0);
+/// A box in the Label look, its tail's point where `pointer` puts it.
+fn text_box(text: &str, pointer: BoxPoint) -> Annotation {
+  let mut annotation = new_text("t".to_owned(), point(100.0, 100.0), None, None, 0.0);
   annotation.style.width = EM;
   annotation.shape = AnnotationShape::Text {
     origin: point(100.0, 100.0),
-    pointer,
     text: text.to_owned(),
+    look: label_look(),
+    controls: [("tip".to_owned(), TextControlPoint::Box(pointer))].into(),
+    clock: None,
   };
   annotation
 }
 
-fn held_pointer(annotation: &Annotation) -> TextPointer {
-  let AnnotationShape::Text { pointer, .. } = &annotation.shape else {
+/// Where a box's tail point is, the Label look's default where it was never
+/// moved.
+fn held_pointer(annotation: &Annotation) -> BoxPoint {
+  let AnnotationShape::Text { controls, .. } = &annotation.shape else {
     unreachable!()
   };
-  *pointer
+  match controls.get("tip") {
+    Some(TextControlPoint::Box(point)) => *point,
+    _ => BoxPoint::TUCKED,
+  }
 }
 
 /// A box 80 by 25 of text at 20px, prepared whole.
-fn prepared(pointer: TextPointer, reveal: AnnotationReveal) -> crate::geometry::ArrowGeometry {
+fn prepared(pointer: BoxPoint, reveal: AnnotationReveal) -> crate::geometry::ArrowGeometry {
   prepare_text(
     [100.0, 100.0],
-    pointer.encoded(),
+    encoded(&pointer),
     [80.0, 25.0],
     20.0,
-    0,
+    HEAD_TAIL,
+    TailShape::default(),
     reveal,
   )
 }
@@ -74,10 +84,11 @@ fn a_pointer_leaves_the_edge_it_reaches_past_and_ends_at_its_tip() {
   // Three lines tall, so the base has room to slide level with the tip.
   let geometry = prepare_text(
     [100.0, 100.0],
-    pointer((1.0, -0.2), (4.0, 0.0)).encoded(),
+    encoded(&pointer((1.0, -0.2), (4.0, 0.0))),
     [80.0, 75.0],
     20.0,
-    0,
+    HEAD_TAIL,
+    TailShape::default(),
     AnnotationReveal::WHOLE,
   );
   // Four ems past the right edge, a fifth of the way up from the middle.
@@ -148,9 +159,9 @@ fn a_box_arrives_before_its_pointer_draws_out() {
 
 #[test]
 fn a_box_arriving_grows_about_its_centre() {
-  let whole = prepared(TextPointer::default(), AnnotationReveal::WHOLE);
+  let whole = prepared(BoxPoint::TUCKED, AnnotationReveal::WHOLE);
   let half = prepared(
-    TextPointer::default(),
+    BoxPoint::TUCKED,
     AnnotationReveal {
       scale: 0.5,
       ..AnnotationReveal::WHOLE
@@ -169,7 +180,7 @@ fn a_box_arriving_grows_about_its_centre() {
 /// in it tucks away on the nearest edge, clear of the corners.
 #[test]
 fn the_pointers_grip_tucks_points_and_stretches() {
-  let mut annotation = text_box("Hello", TextPointer::default());
+  let mut annotation = text_box("Hello", BoxPoint::TUCKED);
   let [width, height] = box_size(text_block("Hello", EM), EM);
   let mut origin = AnnotationDragOrigin::new(point(0.0, 0.0), &annotation.shape);
   origin.source_per_size = 1.0;
@@ -180,29 +191,29 @@ fn the_pointers_grip_tucks_points_and_stretches() {
     held_pointer(&annotation)
   };
   let short = drag(point(right + 10.0, middle));
-  assert_eq!(short.along, point(1.0, 0.0));
-  assert!((short.reach.x - 0.55).abs() < 1e-9, "{short:?}");
+  assert_eq!(short.along, [1.0, 0.0]);
+  assert!((short.reach[0] - 0.55).abs() < 1e-9, "{short:?}");
   let a_little_further = drag(point(right + 30.0, middle));
   assert_eq!(a_little_further, short);
   let stretched = drag(point(right + 280.0, middle));
-  assert!((stretched.reach.x - 10.0).abs() < 1e-9, "{stretched:?}");
+  assert!((stretched.reach[0] - 10.0).abs() < 1e-9, "{stretched:?}");
   // Just inside the left edge, it tucks onto that edge where it was let go.
   let tucked = drag(point(110.0, middle + 2.0));
-  assert!(!tucked.is_drawn());
-  assert_eq!(tucked.along.x, -1.0);
-  assert!((tucked.along.y - 4.0 / height).abs() < 1e-9, "{tucked:?}");
+  assert!(!tucked.is_out());
+  assert_eq!(tucked.along[0], -1.0);
+  assert!((tucked.along[1] - 4.0 / height).abs() < 1e-9, "{tucked:?}");
   // Let go in the middle of the box, it goes to the nearer, bottom edge.
   let middle_x = 100.0 + width / 2.0;
   let centred = drag(point(middle_x + 5.0, middle + 1.0));
-  assert_eq!(centred.along.y, 1.0);
+  assert_eq!(centred.along[1], 1.0);
   // Let go in a corner, nearer its left edge, it stays on the straight part
   // of that edge.
   let cornered = drag(point(101.0, 103.0));
   let half_height = height / 2.0;
   let corner = (0.4 * EM).min(half_height);
-  assert_eq!(cornered.along.x, -1.0);
+  assert_eq!(cornered.along[0], -1.0);
   assert!(
-    (cornered.along.y + (1.0 - corner / half_height)).abs() < 1e-6,
+    (cornered.along[1] + (1.0 - corner / half_height)).abs() < 1e-6,
     "{cornered:?}"
   );
 }
@@ -215,7 +226,7 @@ fn the_pointer_stretches_sooner_the_further_the_view_is_zoomed_in() {
   let right = 100.0 + width;
   let middle = 100.0 + height / 2.0;
   let pulled = |source_per_point: f64, past: f64| {
-    let mut annotation = text_box("Hello", TextPointer::default());
+    let mut annotation = text_box("Hello", BoxPoint::TUCKED);
     let mut origin = AnnotationDragOrigin::new(point(0.0, 0.0), &annotation.shape);
     origin.source_per_size = 1.0;
     origin.source_per_point = source_per_point;
@@ -226,7 +237,7 @@ fn the_pointer_stretches_sooner_the_further_the_view_is_zoomed_in() {
       false,
       None,
     );
-    held_pointer(&annotation).reach.x
+    held_pointer(&annotation).reach[0]
   };
   // One em is 28 source pixels. At 4x zoom, 24 points is 6 pixels: under the
   // standard reach, so a pull of 0.6 em is drawn at 0.6 em.
@@ -259,18 +270,20 @@ fn moving_or_retyping_the_box_carries_its_pointer_with_it() {
   // box has: a longer text moves it out with the edge.
   let short = prepare_text(
     [0.0, 0.0],
-    held.encoded(),
+    encoded(&held),
     [40.0, 25.0],
     20.0,
-    0,
+    HEAD_TAIL,
+    TailShape::default(),
     AnnotationReveal::WHOLE,
   );
   let long = prepare_text(
     [0.0, 0.0],
-    held.encoded(),
+    encoded(&held),
     [90.0, 25.0],
     20.0,
-    0,
+    HEAD_TAIL,
+    TailShape::default(),
     AnnotationReveal::WHOLE,
   );
   assert!((short.c[0] - short.b[0] - 60.0).abs() < 1e-3);
@@ -279,7 +292,7 @@ fn moving_or_retyping_the_box_carries_its_pointer_with_it() {
 
 #[test]
 fn a_box_left_with_nothing_to_read_is_removed() {
-  let mut annotations = vec![text_box("", TextPointer::default())];
+  let mut annotations = vec![text_box("", BoxPoint::TUCKED)];
   let mut edit = AnnotationTextEdit::begin("t".to_owned(), String::new());
   assert!(edit.take(" \n ", 1));
   assert!(!edit.finish(&mut annotations));
@@ -295,7 +308,7 @@ fn the_text_typed_so_far_is_laid_over_a_list_the_document_sends_back() {
   assert!(edit.take("New\r\nline", 2));
   // A change that arrives after a newer one is dropped.
   assert!(!edit.take("Ne", 1));
-  let mut echoed = vec![text_box("Ne", TextPointer::default())];
+  let mut echoed = vec![text_box("Ne", BoxPoint::TUCKED)];
   echoed[0].style.width = 48.0;
   assert!(edit.apply(&mut echoed));
   assert!(matches!(
@@ -308,16 +321,16 @@ fn the_text_typed_so_far_is_laid_over_a_list_the_document_sends_back() {
 }
 
 #[test]
-fn a_stored_box_reads_back_with_its_pointer_tucked_in_when_it_has_none() {
+fn a_stored_box_reads_back_in_the_label_look_with_its_tail_tucked_in() {
   let annotation: Annotation = serde_json::from_str(
     r##"{"id":"a","shape":{"kind":"text","origin":{"x":1,"y":2},"text":"Hi"},
       "style":{"color":"#fff000","width":28}}"##,
   )
   .unwrap();
-  assert_eq!(held_pointer(&annotation), TextPointer::default());
+  assert_eq!(held_pointer(&annotation), BoxPoint::TUCKED);
   let json = serde_json::to_string(&annotation).unwrap();
   assert!(json.contains("\"align\":\"left\""), "{json}");
-  assert!(json.contains("\"pointer\":{\"along\""), "{json}");
+  assert!(json.contains("\"template\":\"label\""), "{json}");
   assert_eq!(
     serde_json::from_str::<Annotation>(&json).unwrap(),
     annotation

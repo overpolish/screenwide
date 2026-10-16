@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The captions showing in a frame, drawn by the annotation shader as text
-//! boxes: each piece `screenwide_captions` lays out becomes a box placed in
+//! boxes: each piece `screenwide_text` lays out becomes a box placed in
 //! canvas pixels, set in the caption style's main face or its accent and
 //! blurred as it moves the way an annotation is, and flagged for the parts a
 //! caption draws differently - a word's type without its box, and a box
@@ -11,24 +11,19 @@
 use super::arrows::PreviewGeometry;
 use super::caption_exposure::expose;
 use super::caption_shadow::cast;
-use super::{placed_arrows, PreparedArrows};
+use super::PreparedArrows;
 use screenwide_annotations::flags::{BARE, CAPTION, SHADOW};
-use screenwide_annotations::reveal::AnnotationReveal;
-use screenwide_annotations::text::face::TypeFace;
 use screenwide_annotations::text::geometry::box_size;
-use screenwide_annotations::text::metrics::{face_text_block, text_block};
-use screenwide_annotations::text::model::TextPointer;
-use screenwide_annotations::{
-  Annotation, AnnotationAlign, AnnotationHead, AnnotationPoint, AnnotationRedaction,
-  AnnotationShape, AnnotationStyle,
+use screenwide_annotations::Annotation;
+use screenwide_text::captions::{
+  CaptionFrame, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionTrack,
 };
-use screenwide_captions::{
-  rgba, CaptionFace, CaptionFont, CaptionFrame, CaptionMoment, CaptionPiece, CaptionPieceKind,
-  CaptionStyle, CaptionTrack,
-};
+use screenwide_text::engine::face::TypeFace;
+use screenwide_text::engine::metrics::{face_text_block, text_block};
+use screenwide_text::{rgba, TextFace, TextFont, TextStyle};
 
 /// The face a caption font names, as the text engines take it.
-pub fn caption_face(font: &CaptionFont) -> TypeFace {
+pub fn caption_face(font: &TextFont) -> TypeFace {
   TypeFace::new(font.family.as_deref(), font.weight, font.italic)
 }
 
@@ -40,7 +35,7 @@ pub struct CaptionFaces {
 }
 
 impl CaptionFaces {
-  pub fn of(style: &CaptionStyle) -> Self {
+  pub fn of(style: &TextStyle) -> Self {
     let style = style.normalized();
     Self {
       main: caption_face(&style.font),
@@ -48,64 +43,18 @@ impl CaptionFaces {
     }
   }
 
-  pub fn face(&self, face: CaptionFace) -> &TypeFace {
+  pub fn face(&self, face: TextFace) -> &TypeFace {
     match face {
-      CaptionFace::Main => &self.main,
-      CaptionFace::Accent => &self.accent,
+      TextFace::Main => &self.main,
+      TextFace::Accent => &self.accent,
     }
   }
 }
 
 /// How wide `text` is set in one of `faces` at `size`, both in pixels: what
 /// the captions measure their words by, so they lay out by the widths drawn.
-pub fn caption_measure(faces: &CaptionFaces) -> impl FnMut(&str, CaptionFace, f64) -> f64 + '_ {
+pub fn caption_measure(faces: &CaptionFaces) -> impl FnMut(&str, TextFace, f64) -> f64 + '_ {
   move |text, face, size| face_text_block(faces.face(face), text, size)[0]
-}
-
-/// A caption piece as a text box centred where the piece is, at its full
-/// size and solid: [`expose`] draws it as large and as solid as it is, and
-/// blurs it along the way it came. Placing sizes a text box by Inter, so it
-/// is placed by Inter's size too, which keeps its centre on the piece's;
-/// its width is set to the face's after.
-fn text_box(index: usize, piece: &CaptionPiece) -> Annotation {
-  let color = match &piece.kind {
-    CaptionPieceKind::Backdrop { color, .. }
-    | CaptionPieceKind::Pill { color }
-    | CaptionPieceKind::Underline { color, .. } => color,
-    CaptionPieceKind::Word { ink, .. } => ink,
-  };
-  let [width, height] = box_size(text_block(&piece.text, piece.size), piece.size);
-  Annotation {
-    above_camera: true,
-    animated: true,
-    id: format!("caption-{index}"),
-    held: None,
-    pen: false,
-    reveal: AnnotationReveal::WHOLE,
-    shape: AnnotationShape::Text {
-      origin: AnnotationPoint {
-        x: piece.centre[0] - width / 2.0,
-        y: piece.centre[1] - height / 2.0,
-      },
-      pointer: TextPointer::default(),
-      text: piece.text.clone(),
-    },
-    style: AnnotationStyle {
-      align: AnnotationAlign::Center,
-      blur: false,
-      color: color.clone(),
-      head: AnnotationHead::default(),
-      hand_drawn: false,
-      manual: false,
-      radius: 0.0,
-      redaction: AnnotationRedaction::default(),
-      softness: 0.0,
-      shadow: false,
-      strength: 0.0,
-      tint: false,
-      width: piece.size,
-    },
-  }
 }
 
 /// How much closer than a text box hugs its text a pill hugs its word
@@ -184,7 +133,7 @@ fn face_ratio(piece: &CaptionPiece, face: &TypeFace) -> f32 {
 }
 
 /// How wide a caption word's outline is, in ems.
-const OUTLINE: f32 = 0.08;
+pub(super) const OUTLINE: f32 = 0.08;
 
 /// The caption pieces showing in a frame, each set in its face of `faces`,
 /// prepared to draw over everything else on its canvas, whose pixels the
@@ -193,9 +142,9 @@ pub fn caption_arrows(pieces: &[CaptionPiece], faces: &CaptionFaces) -> Prepared
   let boxes: Vec<Annotation> = pieces
     .iter()
     .enumerate()
-    .map(|(index, piece)| text_box(index, piece))
+    .map(|(index, piece)| super::caption_boxes::text_box(index, piece))
     .collect();
-  let mut prepared = placed_arrows(&boxes, (0.0, 0.0), (1.0, 1.0), 1.0, None, None);
+  let mut prepared = super::caption_boxes::placed_caption_pieces(&boxes);
   let PreparedArrows {
     arrows,
     types,

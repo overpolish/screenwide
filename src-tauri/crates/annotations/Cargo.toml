@@ -3,7 +3,7 @@
 
 [package]
 name = "screenwide-annotations"
-description = "Annotation documents, their geometry and editing, and the type they are set in"
+description = "Annotation documents, their geometry and editing"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -22,20 +22,7 @@ getrandom.workspace = true
 screenwide-imaging.workspace = true
 screenwide-scenes.workspace = true
 screenwide-timeline.workspace = true
+screenwide-text.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ts-rs.workspace = true
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { workspace = true, features = [
-  "Win32_Foundation",
-  "Win32_Graphics_Direct2D",
-  "Win32_Graphics_Direct2D_Common",
-  "Win32_Graphics_DirectWrite",
-  "Win32_Graphics_Dxgi_Common",
-  "Win32_Graphics_Gdi",
-] }
-windows-numerics.workspace = true
-
-[build-dependencies]
-cc.workspace = true

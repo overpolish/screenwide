@@ -23,6 +23,7 @@ fn a_press_drops_the_chosen_picture_and_the_drag_carries_it() {
   use crate::AnnotationKind;
   let fresh = FreshAnnotation {
     angle: Some(1.0),
+    look: None,
     image: Some(super::ImageArt {
       asset: PICTURE.to_owned(),
       aspect: 0.5,
@@ -77,6 +78,7 @@ fn a_press_before_any_picture_is_chosen_places_nothing() {
   let fresh = FreshAnnotation {
     angle: None,
     image: None,
+    look: None,
   };
   let mut annotations = Vec::new();
   let edit = AnnotationEdit::begin(
@@ -137,6 +139,7 @@ fn a_picture_of_its_own_lands_at_its_own_size_or_the_largest_that_fits() {
   use crate::edit::FreshAnnotation;
   let art = |pixels: f64, aspect: f64| FreshAnnotation {
     angle: None,
+    look: None,
     image: Some(super::ImageArt {
       asset: PICTURE.to_owned(),
       aspect,

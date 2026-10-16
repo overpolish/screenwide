@@ -57,7 +57,7 @@ fn main() {
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
     // Type and keyboard artwork are set by Core Text and AppKit.
     println!("cargo:rerun-if-changed=src/platform_macos/native");
-    println!("cargo:rerun-if-changed=../annotations/src/text/macos/annotation_text_box.h");
+    println!("cargo:rerun-if-changed=../text/src/engine/macos/annotation_text_box.h");
     cc::Build::new()
       .file("src/platform_macos/native/type_device_macos.m")
       .file("src/platform_macos/native/gpu_compositor_macos_keyboard_artwork.m")

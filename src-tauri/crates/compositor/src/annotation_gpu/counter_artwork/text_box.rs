@@ -12,9 +12,9 @@
 use super::outline::outlined;
 use super::rasterize::tinted;
 use crate::platform::type_device::TypeDevice;
-use screenwide_annotations::text::face::TypeFace;
-use screenwide_annotations::text::metrics::LINE_HEIGHT;
-use screenwide_annotations::text::typing::TypingMarks;
+use screenwide_text::engine::face::TypeFace;
+use screenwide_text::engine::metrics::LINE_HEIGHT;
+use screenwide_text::engine::typing::TypingMarks;
 
 /// Room either side of the widest line beyond the caret, in atlas pixels: one
 /// pixel keeps the shader's filtered taps on this cell. A caret after the

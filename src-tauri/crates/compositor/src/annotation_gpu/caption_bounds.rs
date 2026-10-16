@@ -5,7 +5,7 @@
 
 use super::captions::{caption_measure, CaptionFaces};
 use screenwide_annotations::text::geometry::box_size;
-use screenwide_captions::{CaptionFrame, CaptionMoment, CaptionPieceKind, CaptionTrack};
+use screenwide_text::captions::{CaptionFrame, CaptionMoment, CaptionPieceKind, CaptionTrack};
 
 /// A line's height in ems; the twin of `LINE_HEIGHT` in the captions' layout.
 const LINE_HEIGHT: f64 = 1.25;
@@ -67,8 +67,8 @@ pub fn caption_visible_bounds(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use screenwide_captions::{Caption, CaptionWord, RecordingCaptions};
   use screenwide_placement::Placement;
+  use screenwide_text::captions::{Caption, CaptionWord, RecordingCaptions};
 
   fn track(position: Placement) -> CaptionTrack {
     let word = |text: &str, start_ms: f64| CaptionWord {

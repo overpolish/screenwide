@@ -1,0 +1,37 @@
+{
+  "formatVersion": 5,
+  "id": "label",
+  "name": "Label",
+  "author": "Screenwide",
+  "version": "1.0.0",
+  "description": "Type on a solid rounded box in one colour, with a tail you can draw out to what it is about.",
+  "fonts": [
+    {
+      "file": "fonts/InstrumentSerif-Regular.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    },
+    {
+      "file": "fonts/InstrumentSerif-Italic.ttf",
+      "family": "Instrument Serif",
+      "weights": [400],
+      "italic": true,
+      "license": "fonts/InstrumentSerif-OFL-1.1.txt"
+    }
+  ],
+  "style": {
+    "background": "box",
+    "backgroundColor": "#ffcc00",
+    "textColor": "auto",
+    "outline": false,
+    "controls": [
+      {
+        "id": "tip",
+        "space": "box",
+        "default": { "along": [0, 1], "reach": [0, 0] }
+      }
+    ],
+    "elements": [{ "kind": "tail", "to": "tip" }]
+  }
+}

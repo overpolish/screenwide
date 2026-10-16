@@ -17,11 +17,11 @@ pub enum ExportSubtitles {
 }
 
 impl ExportSubtitles {
-  pub fn file(self) -> Option<screenwide_captions::SubtitleFile> {
+  pub fn file(self) -> Option<screenwide_text::captions::SubtitleFile> {
     match self {
       Self::None => None,
-      Self::Srt => Some(screenwide_captions::SubtitleFile::Srt),
-      Self::Vtt => Some(screenwide_captions::SubtitleFile::Vtt),
+      Self::Srt => Some(screenwide_text::captions::SubtitleFile::Srt),
+      Self::Vtt => Some(screenwide_text::captions::SubtitleFile::Vtt),
     }
   }
 }
@@ -54,7 +54,7 @@ pub struct RecordingExportOptions {
   /// The captions drawn into the picture, made from `timeline_edit` and the
   /// transcript as the export starts; never sent by the editor.
   #[serde(skip)]
-  pub captions: Option<screenwide_captions::CaptionTrack>,
+  pub captions: Option<screenwide_text::captions::CaptionTrack>,
 }
 
 impl EditorArtifact {

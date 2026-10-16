@@ -441,7 +441,7 @@ fn split(tops: &[f64]) -> Frames {
 #[test]
 fn a_counter_and_a_text_box_follow_what_their_tips_point_at() {
   use crate::counter::model::new_counter;
-  use crate::text::model::{new_text, TextPointer};
+  use crate::text::model::{label_look, new_text, TextControlPoint};
   use crate::{AnnotationPoint, AnnotationShape};
   let point = |x, y| AnnotationPoint { x, y };
   let tops = momentum(60, 2.0);
@@ -451,15 +451,21 @@ fn a_counter_and_a_text_box_follow_what_their_tips_point_at() {
   // pixels across each way, its tail tip 60 east of its centre.
   let mut counter = new_counter("c".to_owned(), point(150.0, 150.0), 1, None, Some(0.0));
   counter.style.width = 80.0;
-  let mut text = new_text("t".to_owned(), point(0.0, 0.0), None, 1.0);
+  let mut text = new_text("t".to_owned(), point(0.0, 0.0), None, None, 1.0);
   text.style.width = 16.0;
   text.shape = AnnotationShape::Text {
     origin: point(20.0, 140.0),
-    pointer: TextPointer {
-      along: point(1.0, 0.0),
-      reach: point(10.0, 0.0),
-    },
     text: "Hi".to_owned(),
+    look: label_look(),
+    controls: [(
+      "tip".to_owned(),
+      TextControlPoint::Box(screenwide_text::BoxPoint {
+        along: [1.0, 0.0],
+        reach: [10.0, 0.0],
+      }),
+    )]
+    .into(),
+    clock: None,
   };
   for annotation in [counter, text] {
     let target = PinTarget::of(&annotation, (WIDTH, HEIGHT), 1.0);

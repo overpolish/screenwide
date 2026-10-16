@@ -4,7 +4,8 @@
 //! How far a press is from each kind of annotation, in display points, from
 //! the grips it was published with.
 
-use super::picking::{display_point, highlight_flow, text_geometry};
+use super::picking::{display_point, highlight_flow};
+use super::text_geometry;
 use super::*;
 use screenwide_annotations::arrow::distance::prepared_arrow_distance;
 use screenwide_annotations::arrow::geometry::prepare_arrow;

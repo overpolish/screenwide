@@ -126,7 +126,9 @@ impl AnnotationKind {
         style,
         fresh.angle,
       ),
-      Self::Text => super::super::text::new_text(id, point, style, source_per_size),
+      Self::Text => {
+        super::super::text::new_text(id, point, style, fresh.look.as_ref(), source_per_size)
+      }
       Self::Redact => super::super::redact::new_redact(id, point, style),
       Self::Highlight => {
         super::super::highlight::model::new_highlight(id, point, style, source_per_size)

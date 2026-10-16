@@ -21,9 +21,17 @@ impl super::AnnotationShape {
       }
       Self::Text {
         origin,
-        pointer,
         text,
-      } => super::super::text::native::draw_points(*origin, pointer, text, style),
+        look,
+        controls,
+        ..
+      } => super::super::text::native::draw_points(
+        *origin,
+        text,
+        look,
+        controls,
+        super::super::text::look::type_size(look, style.width),
+      ),
       Self::Redact { start, end, .. } => super::super::redact::native::draw_points(*start, *end),
       Self::Highlight { tone, .. } => {
         super::super::highlight::geometry::draw_points(*tone, style.tint)
@@ -70,7 +78,9 @@ impl super::AnnotationShape {
         super::super::AnnotationHead::End => 1,
         super::super::AnnotationHead::Both => 2,
       },
-      Self::Text { .. } => style.align.raw(),
+      Self::Text { look, controls, .. } => {
+        super::super::text::native::head(look, controls, style.align.raw())
+      }
       Self::Redact { .. }
       | Self::Highlight { .. }
       | Self::Shape { .. }
@@ -99,7 +109,7 @@ impl super::AnnotationShape {
       // The picture's library id, which the image atlas draws it from.
       Self::Image { asset, .. } => std::borrow::Cow::Borrowed(asset),
       Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
-      Self::Text { text, .. } => std::borrow::Cow::Borrowed(text),
+      Self::Text { text, look, .. } => super::super::text::look::shown(look, text),
     }
   }
 
@@ -133,12 +143,17 @@ impl super::AnnotationShape {
       }
       Self::Text {
         origin,
-        pointer,
         text,
+        look,
+        controls,
+        ..
       } => super::super::text::handles::grips(
-        *origin,
-        pointer,
-        text,
+        super::super::text::handles::TextGrips {
+          origin: *origin,
+          text,
+          look,
+          controls,
+        },
         style,
         index,
         source,
@@ -221,9 +236,9 @@ impl super::AnnotationShape {
       Self::Counter { center, .. } => {
         super::super::counter::snap::field_box(*center, width, source_per_size)
       }
-      Self::Text { origin, text, .. } => {
-        super::super::text::snap::field_box(*origin, text, width, source_per_size)
-      }
+      Self::Text {
+        origin, text, look, ..
+      } => super::super::text::snap::field_box(*origin, text, look, width, source_per_size),
       Self::Redact { start, end, .. } => super::super::redact::snap::field_box(*start, *end),
       Self::Shape { start, end, .. } => super::super::outline::model::field_box(*start, *end),
       Self::Spotlight { start, end } => super::super::spotlight::model::field_box(*start, *end),

@@ -220,14 +220,14 @@ fn annotation_caption_unturned(geometry: PreviewGeometry, turned: bool, probe: v
 /// leaves to its pointer, which a word has none of: how far it falls across
 /// and down and how far its edge spreads, in canvas pixels at the word's
 /// settled size, and its colour, packed as eight bits a channel.
-struct CaptionShadow {
+struct TextShadow {
   offset: vec2<f32>,
   softness: f32,
   color: vec4<f32>,
 }
 
-fn annotation_caption_shadow_of(annotation: PreviewArrow) -> CaptionShadow {
-  var shadow: CaptionShadow;
+fn annotation_caption_shadow_of(annotation: PreviewArrow) -> TextShadow {
+  var shadow: TextShadow;
   shadow.offset = vec2<f32>(annotation.geometry.end_head_ax, annotation.geometry.end_head_ay);
   shadow.softness = annotation.geometry.end_head_bx;
   shadow.color = unpack4x8unorm(bitcast<u32>(annotation.geometry.end_head_by));

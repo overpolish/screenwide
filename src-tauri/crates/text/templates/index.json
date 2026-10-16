@@ -1,0 +1,24 @@
+{
+  "formatVersion": 5,
+  "default": "box",
+  "templates": [
+    "box",
+    "clean",
+    "editorial",
+    "flip",
+    "glow",
+    "highlight",
+    "karaoke",
+    "label",
+    "offset",
+    "pop",
+    "punch",
+    "rise",
+    "shadow",
+    "stack",
+    "stagger",
+    "staircase",
+    "supersize",
+    "underline"
+  ]
+}

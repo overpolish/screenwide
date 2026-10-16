@@ -225,6 +225,13 @@ pub fn revealed_annotations(
             .0;
           } else {
             annotation.reveal = kind.reveal_window(elapsed_ms, duration_ms, frame_ms, clip.path_ms);
+            if let super::AnnotationShape::Text { clock, .. } = &mut annotation.shape {
+              *clock = Some(super::text::model::TextClock {
+                elapsed_ms,
+                duration_ms,
+                frame_ms,
+              });
+            }
           }
         }
       }

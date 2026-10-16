@@ -6,7 +6,7 @@ import { create } from "zustand";
 import { EditorKind } from "../editor/types";
 
 import type {
-  PopupPanelCaptionTemplatesContent,
+  PopupPanelTextTemplatesContent,
   PopupPanelColorsContent,
 } from "./picker-content";
 import type { PopupPanelIcon } from "./popup-panel-item-glyph";
@@ -99,7 +99,7 @@ export type PopupPanelNoteContent = {
 };
 
 export type PopupPanelContent =
-  | PopupPanelCaptionTemplatesContent
+  | PopupPanelTextTemplatesContent
   | PopupPanelColorsContent
   | PopupPanelListContent
   | PopupPanelNoteContent

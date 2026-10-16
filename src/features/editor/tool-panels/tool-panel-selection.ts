@@ -4,6 +4,7 @@
 import { AnnotationStyle, ImageArt } from "../annotations/annotations";
 import { SceneRotation } from "../layer-rotation";
 
+import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
 /**
@@ -209,6 +210,9 @@ export type ToolPanelAnnotation = {
    * its next one in. Its edits dress that one, and what only a drawn
    * annotation can do - turning it round, drawing it again - is not offered. */
   isDraft?: boolean;
+  /** The look a text is dressed in, or the next text will be once one has
+   * been chosen. Absent on anything else. */
+  look?: TextStyle;
   /** How a placed image is turned, in degrees about each axis, as the
    * Rotation row's dials show it. Absent on anything else. */
   rotation?: SceneRotation;

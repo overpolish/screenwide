@@ -26,7 +26,6 @@ edition = "2021"
 [workspace.dependencies]
 screenwide-accent = { path = "crates/accent" }
 screenwide-annotations = { path = "crates/annotations" }
-screenwide-captions = { path = "crates/captions" }
 screenwide-capture = { path = "crates/capture" }
 screenwide-compositor = { path = "crates/compositor" }
 screenwide-cursor-effects = { path = "crates/cursor_effects" }
@@ -46,6 +45,7 @@ screenwide-records = { path = "crates/records" }
 screenwide-scenes = { path = "crates/scenes" }
 screenwide-sidecar = { path = "crates/sidecar" }
 screenwide-speech = { path = "crates/speech" }
+screenwide-text = { path = "crates/text" }
 screenwide-timeline = { path = "crates/timeline" }
 screenwide-timeline-edit = { path = "crates/timeline_edit" }
 # The transcriber's protocol only; the engine builds into its own program.
@@ -170,7 +170,6 @@ sys-locale.workspace = true
 screenwide-accent.workspace = true
 screenwide-annotations.workspace = true
 screenwide-capture.workspace = true
-screenwide-captions.workspace = true
 screenwide-compositor.workspace = true
 screenwide-cursor-effects.workspace = true
 screenwide-export.workspace = true
@@ -188,6 +187,7 @@ screenwide-records.workspace = true
 screenwide-scenes.workspace = true
 screenwide-sidecar.workspace = true
 screenwide-speech.workspace = true
+screenwide-text.workspace = true
 screenwide-transcriber.workspace = true
 screenwide-timeline.workspace = true
 screenwide-timeline-edit.workspace = true

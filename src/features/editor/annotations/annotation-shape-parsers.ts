@@ -13,7 +13,8 @@ import {
   annotationSeed,
   highlightBand,
   highlightTone,
-  textPointer,
+  textControls,
+  textLook,
 } from "./annotation-shape-parts";
 
 import type {
@@ -205,7 +206,8 @@ export const textShape = (value: unknown): Shape<"text"> | null => {
     ? {
         kind: "text",
         origin,
-        pointer: textPointer(shape.pointer),
+        ...textLook(shape.look),
+        ...textControls(shape.controls),
         text: shape.text,
       }
     : null;

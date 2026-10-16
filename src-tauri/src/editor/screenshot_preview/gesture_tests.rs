@@ -80,6 +80,7 @@ fn a_gesture_straight_after_typing_keeps_what_was_typed() {
     "t".to_owned(),
     AnnotationPoint { x: 10.0, y: 10.0 },
     None,
+    None,
     0.0,
   )];
   let mut manager = PreviewManager {

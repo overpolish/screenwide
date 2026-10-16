@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-text"
+description = "The text engine: type set on each platform, the style vocabulary and templates, and captions made from a transcript"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+regex.workspace = true
+screenwide-lexicon.workspace = true
+screenwide-placement.workspace = true
+screenwide-timeline.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+trash.workspace = true
+ts-rs.workspace = true
+zip.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Direct2D",
+  "Win32_Graphics_Direct2D_Common",
+  "Win32_Graphics_DirectWrite",
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_Graphics_Gdi",
+] }
+windows-numerics.workspace = true
+
+[build-dependencies]
+cc.workspace = true

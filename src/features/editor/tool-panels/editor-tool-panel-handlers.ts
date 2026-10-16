@@ -3,7 +3,7 @@
 
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { CaptionsPatch } from "../recording/captions/recording-captions";
-import { CaptionDefaultsPatch } from "../recording/captions/use-caption-templates";
+import { CaptionDefaultsPatch } from "../recording/captions/use-text-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import {
   CursorEffectSettings,

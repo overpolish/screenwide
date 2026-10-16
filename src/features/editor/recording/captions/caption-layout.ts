@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
-import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
+import type { TextLayout } from "../../../../bindings/TextLayout";
+import type { TextStyle } from "../../../../bindings/TextStyle";
 
 /** The layout options, which a template brings and the Layout tab sets by
- * hand: the twins of `CaptionLayout`'s fields in `screenwide_captions`. */
+ * hand: the twins of `TextLayout`'s fields in `screenwide_text`. */
 const LAYOUT_KEYS = [
   "accentSize",
   "allCaps",
@@ -16,7 +16,7 @@ const LAYOUT_KEYS = [
 ] as const;
 
 /** Every layout option `style` holds, as though each were set. */
-export const layoutOf = (style: CaptionStyle): Required<CaptionLayout> => ({
+export const layoutOf = (style: TextStyle): Required<TextLayout> => ({
   accentSize: style.accentSize,
   allCaps: style.allCaps,
   lines: style.lines,
@@ -26,11 +26,11 @@ export const layoutOf = (style: CaptionStyle): Required<CaptionLayout> => ({
 });
 
 /** `style` with the options `layout` sets in place of its own, as
- * `CaptionLayout::applied_to` does. */
+ * `TextLayout::applied_to` does. */
 export const withLayout = (
-  layout: CaptionLayout,
-  style: CaptionStyle,
-): CaptionStyle => ({
+  layout: TextLayout,
+  style: TextStyle,
+): TextStyle => ({
   ...style,
   ...Object.fromEntries(
     LAYOUT_KEYS.flatMap((key) =>
@@ -40,8 +40,7 @@ export const withLayout = (
 });
 
 /** Whether `a` and `b` set the same options to the same values. */
-export const isSameLayout = (a: CaptionLayout, b: CaptionLayout) =>
+export const isSameLayout = (a: TextLayout, b: TextLayout) =>
   LAYOUT_KEYS.every((key) => a[key] === b[key]);
 
-export const isEmptyLayout = (layout: CaptionLayout) =>
-  isSameLayout(layout, {});
+export const isEmptyLayout = (layout: TextLayout) => isSameLayout(layout, {});

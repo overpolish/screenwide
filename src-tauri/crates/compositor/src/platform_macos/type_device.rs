@@ -7,7 +7,7 @@
 //! `screenwide_annotation_font` and `screenwide_face_font`, shared with the
 //! rest of the native annotation type.
 
-use screenwide_annotations::text::face::TypeFace;
+use screenwide_text::engine::face::TypeFace;
 
 #[cfg(test)]
 mod tests;

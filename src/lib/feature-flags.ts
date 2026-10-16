@@ -5,9 +5,9 @@
  * Turning one on shows it; the code behind it is built and tested either
  * way, so each is typed as a switch rather than as its current value. */
 export const FEATURES: Readonly<{
-  /** Importing, exporting and removing caption templates as packages, from
-   * the template's menu. */
-  captionTemplateFiles: boolean;
+  /** Importing, exporting and removing templates as packages, from the
+   * template's menu. */
+  templateFiles: boolean;
 }> = {
-  captionTemplateFiles: false,
+  templateFiles: false,
 };

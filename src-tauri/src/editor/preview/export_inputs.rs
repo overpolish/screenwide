@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use super::*;
 use crate::editor::export_picture::{ExportPicture, Screen};
-use screenwide_captions::CaptionTrack;
 use screenwide_cursor_effects::CursorEffectSettings;
 use screenwide_export::camera_effects::live::LiveCameraEffects;
 use screenwide_export::media_preview::VideoExportOptions;
@@ -20,6 +19,7 @@ use screenwide_export::recording_model::{
 use screenwide_export::track_selection::{AudioLayout, TrackSelection};
 use screenwide_keyboard_effects::KeyboardEffectSettings;
 use screenwide_scenes::CameraOverlaySettings;
+use screenwide_text::captions::CaptionTrack;
 use screenwide_timeline_edit::TimelinePlan;
 
 pub(super) struct ExportInputs {

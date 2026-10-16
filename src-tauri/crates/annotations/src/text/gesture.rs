@@ -4,24 +4,26 @@
 //! What moving a text box's grips does to it.
 
 use super::geometry::text_corner;
-use super::model::TextPointer;
+use super::look::{self, box_point_at};
+use super::model::TextControlPoint;
 use super::snap::text_box;
 use crate::gesture::{AnnotationDragOrigin, AnnotationHandle};
 use crate::snap::{SnapBox, SnapOffset, SnapRequest, SnapResult};
 use crate::{Annotation, AnnotationPoint, AnnotationShape};
+use screenwide_text::{BoxPoint, ControlSpace};
 
-/// How far past the box a pointer reaches, in ems, until it is pulled past
-/// the stretch point: every box's pointer is the same short tooltip point
-/// unless one is deliberately drawn out to something.
+/// How far past the box a tail reaches, in ems, until it is pulled past the
+/// stretch point: every box's tail is the same short tooltip point unless
+/// one is deliberately drawn out to something.
 const STANDARD_REACH: f64 = 0.55;
-/// Where the pointer starts following the hand, in screen points past the
-/// box. Measured on screen so zooming in brings it closer in the picture,
-/// down to the standard reach itself, and any length can be drawn there.
+/// Where the tail starts following the hand, in screen points past the box.
+/// Measured on screen so zooming in brings it closer in the picture, down to
+/// the standard reach itself, and any length can be drawn there.
 const STRETCH_POINTS: f64 = 24.0;
 /// The stretch point in ems where the picture's size on screen is unknown.
 const STRETCH_FROM: f64 = 2.0;
 
-/// The reach past which the pointer follows the hand, in ems of `em` source
+/// The reach past which the tail follows the hand, in ems of `em` source
 /// pixels, for a picture drawn at `source_per_point` source pixels per
 /// screen point.
 fn stretch_from(em: f64, source_per_point: f64) -> f64 {
@@ -33,8 +35,8 @@ fn stretch_from(em: f64, source_per_point: f64) -> f64 {
 }
 
 /// Move one grip of a text box to `point`. The box itself is never resized:
-/// its only grip is the pointer's tip, and everything else carries the whole
-/// box, its pointer with it.
+/// its only grip is its look's tail tip, and everything else carries the
+/// whole box, a tail held against it with it.
 pub(crate) fn drag(
   annotation: &mut Annotation,
   handle: AnnotationHandle,
@@ -45,27 +47,42 @@ pub(crate) fn drag(
   let width = annotation.style.width;
   let AnnotationShape::Text {
     origin: corner,
-    pointer,
     text,
+    look,
+    controls,
+    ..
   } = &mut annotation.shape
   else {
     return SnapResult::default();
   };
   if handle == AnnotationHandle::Tail {
+    let Some(tail) = look::tail(look, controls) else {
+      return SnapResult::default();
+    };
+    let (id, space, limits) = (
+      tail.control.id.clone(),
+      tail.control.space,
+      tail.control.limits,
+    );
     // The tip lands on an element's edge the way an arrow's does, when it is
     // drawn out far enough to point at one.
-    let bounds = text_box(*corner, text, width, origin.source_per_size);
-    let em = width.max(0.0) * origin.source_per_size;
-    let from = stretch_from(em, origin.source_per_point);
     let mut result = SnapResult::default();
     let snapped = result.tip(point, snap);
-    let (held, stretched) = pointer_at(bounds, em, from, snapped);
-    if stretched {
-      *pointer = held;
+    if space == ControlSpace::Picture {
+      controls.insert(id, TextControlPoint::Picture(snapped));
       return result;
     }
-    *pointer = pointer_at(bounds, em, from, point).0;
-    return SnapResult::default();
+    let bounds = text_box(*corner, text, look, width, origin.source_per_size);
+    let em = look::type_size(look, width) * origin.source_per_size;
+    let from = stretch_from(em, origin.source_per_point);
+    let (held, stretched) = pointer_at(bounds, em, from, snapped);
+    let (held, result) = if stretched {
+      (held, result)
+    } else {
+      (pointer_at(bounds, em, from, point).0, SnapResult::default())
+    };
+    controls.insert(id, TextControlPoint::Box(held.within(&limits)));
+    return result;
   }
   let AnnotationShape::Text { origin: from, .. } = &origin.shape else {
     return SnapResult::default();
@@ -75,13 +92,16 @@ pub(crate) fn drag(
     y: point.y - origin.point.y,
   };
   let moved = travel.apply(*from);
-  // What snaps is the box the drag arrives at, and its pointer's tip, not
-  // the hand: the box may be held anywhere.
+  // What snaps is the box the drag arrives at, and a tail's tip that moves
+  // with it, not the hand: the box may be held anywhere.
   match snap {
     Some(request) => {
-      let bounds = text_box(moved, text, width, request.field.source_per_size());
-      let em = width.max(0.0) * request.field.source_per_size();
-      let (offset, result) = request.boxed(bounds, pointer_tip(bounds, em, pointer));
+      let source_per_size = request.field.source_per_size();
+      let bounds = text_box(moved, text, look, width, source_per_size);
+      let em = look::type_size(look, width) * source_per_size;
+      let tip =
+        tail_tip(bounds, em, look, controls).filter(|_| tail_moves_with_box(look, controls));
+      let (offset, result) = request.boxed(bounds, tip);
       *corner = offset.apply(moved);
       result
     }
@@ -92,11 +112,23 @@ pub(crate) fn drag(
   }
 }
 
-/// The pointer that puts its tip at `point`, against `bounds` with its type
-/// `em` source pixels high, and whether it is drawn out past `stretch_from`
-/// ems. A tip inside the box tucks the pointer in on the nearest stretch of
-/// edge, clear of the rounded corners, so its grip always sits on the
-/// outline; one just past the edge is the standard tooltip point, in the
+/// Whether a look's tail tip is carried along when its box moves: one held
+/// against the box is, one put on the picture stays where it was put.
+fn tail_moves_with_box(
+  look: &screenwide_text::TextStyle,
+  controls: &std::collections::BTreeMap<String, TextControlPoint>,
+) -> bool {
+  matches!(
+    look::tail(look, controls).map(|tail| tail.point),
+    Some(TextControlPoint::Box(_))
+  )
+}
+
+/// The box point that puts a tail's tip at `point`, against `bounds` with
+/// its type `em` source pixels high, and whether it is drawn out past
+/// `stretch_from` ems. A tip inside the box tucks the tail in on the nearest
+/// stretch of edge, clear of the rounded corners, so its grip always sits on
+/// the outline; one just past the edge is the standard tooltip point, in the
 /// direction it was pulled; only one pulled further stretches to where it
 /// was pulled.
 fn pointer_at(
@@ -104,7 +136,7 @@ fn pointer_at(
   em: f64,
   stretch_from: f64,
   point: AnnotationPoint,
-) -> (TextPointer, bool) {
+) -> (BoxPoint, bool) {
   let axis = |point: f64, start: f64, extent: f64| {
     let half = extent / 2.0;
     let offset = point - (start + half);
@@ -143,36 +175,34 @@ fn pointer_at(
     reach_y *= STANDARD_REACH / reach;
   }
   (
-    TextPointer {
-      along: AnnotationPoint {
-        x: along_x,
-        y: along_y,
-      },
-      reach: AnnotationPoint {
-        x: reach_x,
-        y: reach_y,
-      },
+    BoxPoint {
+      along: [along_x, along_y],
+      reach: [reach_x, reach_y],
     },
     stretched,
   )
 }
 
-/// Where a drawn pointer's tip is against `bounds`, for it to take an
-/// element's edge when the box is moved; `None` when it is tucked in.
-pub(crate) fn pointer_tip(
+/// Where a drawn tail's tip is in the picture against `bounds`, for it to
+/// take an element's edge when the box is moved; `None` when it is tucked
+/// in or the look draws none.
+pub(crate) fn tail_tip(
   bounds: SnapBox,
   em: f64,
-  pointer: &TextPointer,
+  look: &screenwide_text::TextStyle,
+  controls: &std::collections::BTreeMap<String, TextControlPoint>,
 ) -> Option<AnnotationPoint> {
-  if !pointer.is_drawn() {
-    return None;
-  }
-  let axis = |start: f64, extent: f64, along: f64, reach: f64| {
-    let half = extent / 2.0;
-    start + half + along * half + (reach * em).copysign(along)
-  };
-  Some(AnnotationPoint {
-    x: axis(bounds.x, bounds.width, pointer.along.x, pointer.reach.x),
-    y: axis(bounds.y, bounds.height, pointer.along.y, pointer.reach.y),
+  let tail = look::tail(look, controls).filter(|tail| tail.is_out())?;
+  Some(match tail.point {
+    TextControlPoint::Box(point) => box_point_at(
+      AnnotationPoint {
+        x: bounds.x,
+        y: bounds.y,
+      },
+      [bounds.width, bounds.height],
+      em,
+      &point,
+    ),
+    TextControlPoint::Picture(point) => point,
   })
 }

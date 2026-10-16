@@ -138,7 +138,7 @@ mod outline;
 mod rasterize;
 mod text_box;
 use super::gpu_atlas::GpuAtlas;
-use screenwide_annotations::text::{app_fonts::app_fonts_generation, face::TypeFace};
+use screenwide_text::engine::{app_fonts::app_fonts_generation, face::TypeFace};
 
 /// What the atlas keys a piece of type by: its text, for a caption its face,
 /// its outline and the generation of the templates' fonts too, and for a box

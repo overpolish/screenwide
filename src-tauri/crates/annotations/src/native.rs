@@ -51,13 +51,15 @@ impl NativeAnnotation {
 
 /// The side buffers every kind's variable-length data lives in: a points
 /// kind - a pixelated redaction's zones - indexes `points`, a text kind
-/// indexes `text`, through its record's `data_offset` and `data_count`. Kept
-/// apart from the items so a list that is longer than one scene - the video
-/// export's clips - can share one set of buffers and pass it beside the list.
+/// indexes `text`, through its record's `data_offset` and `data_count`, and
+/// names its look in `looks` through its `p3`. Kept apart from the items so a
+/// list that is longer than one scene - the video export's clips - can share
+/// one set of buffers and pass it beside the list.
 #[derive(Clone, Default)]
 pub struct NativeAnnotationData {
   pub points: Vec<[f32; 2]>,
   pub text: Vec<u8>,
+  pub looks: Vec<super::text::native::NativeTextLook>,
 }
 
 impl NativeAnnotationData {
@@ -154,6 +156,16 @@ impl NativeAnnotationData {
         *clock_ms,
         tilt.unwrap_or_default(),
       );
+    }
+    if let super::AnnotationShape::Text {
+      look,
+      controls,
+      clock,
+      ..
+    } = &annotation.shape
+    {
+      record.width = super::text::look::type_size(look, style.width) as f32;
+      super::text::native::fill(&mut record, &mut self.looks, look, controls, *clock);
     }
     if let Some(fill) = fill {
       record.color = fill.color;

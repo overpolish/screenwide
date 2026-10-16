@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::TypeDevice;
-use screenwide_annotations::text::face::TypeFace;
+use screenwide_text::engine::face::TypeFace;
 
 /// Type comes out with partial coverage along its edges, inside the width it
 /// was measured at, and standing on its baseline the ascent below the line's

@@ -111,10 +111,10 @@ pub struct RecordingTimelineEdit {
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub transcript_allowed_words: Vec<String>,
   /// The captions made from the transcript, once any were asked for; see
-  /// [`screenwide_captions`].
+  /// [`screenwide_text::captions`].
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
-  pub captions: Option<screenwide_captions::RecordingCaptions>,
+  pub captions: Option<screenwide_text::captions::RecordingCaptions>,
   pub next_segment_id: u64,
   pub segments: Vec<RecordingTimelineSegment>,
 }

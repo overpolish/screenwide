@@ -4,10 +4,11 @@ import type { HighlightBand } from "./HighlightBand";
 import type { HighlightTone } from "./HighlightTone";
 import type { ImagePlay } from "./ImagePlay";
 import type { ImageTilt } from "./ImageTilt";
-import type { TextPointer } from "./TextPointer";
+import type { TextControlPoint } from "./TextControlPoint";
+import type { TextStyle } from "./TextStyle";
 
 /**
  * What an annotation is. The tag leaves room for the shapes later tools add
  * without reshaping stored documents.
  */
-export type AnnotationShape = { "kind": "arrow", start: AnnotationPoint, control: AnnotationPoint, end: AnnotationPoint, } | { "kind": "counter", center: AnnotationPoint, value: number, angle: number, } | { "kind": "text", origin: AnnotationPoint, pointer: TextPointer, text: string, } | { "kind": "redact", start: AnnotationPoint, end: AnnotationPoint, seed: number, } | { "kind": "highlight", start: AnnotationPoint, end: AnnotationPoint, bands: Array<HighlightBand>, tone: HighlightTone, seed: number, } | { "kind": "shape", start: AnnotationPoint, end: AnnotationPoint, seed: number, } | { "kind": "spotlight", start: AnnotationPoint, end: AnnotationPoint, } | { "kind": "focus", start: AnnotationPoint, end: AnnotationPoint, } | { "kind": "draw", points: Array<AnnotationPoint>, smooth: boolean, } | { "kind": "magnify", start: AnnotationPoint, end: AnnotationPoint, loupe: AnnotationPoint, size: number, } | { "kind": "image", center: AnnotationPoint, size: number, angle: number, tilt?: ImageTilt, aspect: number, flip: boolean, asset: string, play?: ImagePlay, sway?: number, };
+export type AnnotationShape = { "kind": "arrow", start: AnnotationPoint, control: AnnotationPoint, end: AnnotationPoint, } | { "kind": "counter", center: AnnotationPoint, value: number, angle: number, } | { "kind": "text", origin: AnnotationPoint, text: string, look?: TextStyle, controls?: { [key in string]: TextControlPoint }, } | { "kind": "redact", start: AnnotationPoint, end: AnnotationPoint, seed: number, } | { "kind": "highlight", start: AnnotationPoint, end: AnnotationPoint, bands: Array<HighlightBand>, tone: HighlightTone, seed: number, } | { "kind": "shape", start: AnnotationPoint, end: AnnotationPoint, seed: number, } | { "kind": "spotlight", start: AnnotationPoint, end: AnnotationPoint, } | { "kind": "focus", start: AnnotationPoint, end: AnnotationPoint, } | { "kind": "draw", points: Array<AnnotationPoint>, smooth: boolean, } | { "kind": "magnify", start: AnnotationPoint, end: AnnotationPoint, loupe: AnnotationPoint, size: number, } | { "kind": "image", center: AnnotationPoint, size: number, angle: number, tilt?: ImageTilt, aspect: number, flip: boolean, asset: string, play?: ImagePlay, sway?: number, };

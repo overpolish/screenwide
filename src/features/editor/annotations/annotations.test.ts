@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import { withoutIsolates } from "../../../i18n/testing";
+import { storyTextStyle } from "../tool-panels/text-style/text-template-fixtures";
 
 import { renumberedCounterLists } from "./annotation-counters";
 import { validAnnotations } from "./annotation-documents";
@@ -137,10 +138,10 @@ describe("validAnnotations", () => {
     expect(unmarked).not.toHaveProperty("pen");
   });
 
-  it("reads a stored text box back, tucking in a pointer it cannot read", () => {
-    const box = (pointer: unknown) => ({
+  it("reads a stored text box back, dropping control points it cannot read", () => {
+    const box = (controls: unknown) => ({
       ...counter("t", 1),
-      shape: { kind: "text", origin: { x: 4, y: 5 }, pointer, text: "Hi" },
+      shape: { controls, kind: "text", origin: { x: 4, y: 5 }, text: "Hi" },
       style: {
         align: "center",
         blur: false,
@@ -157,20 +158,24 @@ describe("validAnnotations", () => {
         width: 28,
       },
     });
-    const out = { along: { x: 1, y: -0.5 }, reach: { x: 3, y: 0 } };
-    const [read] = validAnnotations([box(out)]);
+    const out = { along: [1, -0.5], reach: [3, 0], space: "box" };
+    const on = { space: "picture", x: 40, y: 50 };
+    const [read] = validAnnotations([box({ on, tip: out })]);
     expect(read.shape).toEqual({
+      controls: { on, tip: out },
       kind: "text",
       origin: { x: 4, y: 5 },
-      pointer: out,
       text: "Hi",
     });
     expect(read.style.align).toBe("center");
-    const tucked = { along: { x: 0, y: 1 }, reach: { x: 0, y: 0 } };
-    for (const unreadable of [null, { x: 9, y: 9 }, { along: out.along }])
-      expect(validAnnotations([box(unreadable)])[0].shape).toMatchObject({
-        pointer: tucked,
-      });
+    for (const unreadable of [
+      null,
+      { tip: { x: 9, y: 9 } },
+      { tip: { along: out.along, space: "box" } },
+    ])
+      expect(validAnnotations([box(unreadable)])[0].shape).not.toHaveProperty(
+        "controls",
+      );
   });
 
   it("reads a stored highlight back, and drops one with a band it cannot draw", () => {
@@ -255,8 +260,8 @@ describe("annotationLaneLabel", () => {
       ...counter("t", 1),
       shape: {
         kind: "text",
+        look: storyTextStyle("label"),
         origin: { x: 0, y: 0 },
-        pointer: { along: { x: 0, y: 1 }, reach: { x: 0, y: 0 } },
         text,
       },
     });

@@ -11,6 +11,7 @@ import {
 
 import { AnnotationStyle, ImageArt } from "./annotations";
 
+import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
 export type AnnotationTool = AnnotationKind | "marquee" | "select";
@@ -79,6 +80,11 @@ let lastAngle: number | null = null;
  * showing it. The annotation's own property too.
  */
 let lastImage: ImageArt | null = null;
+/**
+ * And the look the last text was dressed in, colours and all, so the next
+ * one is drawn in it. The text's own property too.
+ */
+let lastTextLook: TextStyle | null = null;
 const listeners = new Set<() => void>();
 
 const subscribe = (listener: () => void) => {
@@ -141,6 +147,13 @@ export const rememberAnnotationImage = (art: ImageArt) => {
   )
     return;
   lastImage = { ...art };
+  for (const listener of listeners) listener();
+};
+
+/** Remember the look the last text was dressed in. */
+export const rememberAnnotationTextLook = (look: TextStyle) => {
+  if (lastTextLook === look) return;
+  lastTextLook = look;
   for (const listener of listeners) listener();
 };
 
@@ -241,3 +254,8 @@ export const useAnnotationAngleDefault = () =>
  * the tool's own default stands. */
 export const useAnnotationImageDefault = () =>
   useSyncExternalStore(subscribe, () => lastImage);
+
+/** The look a fresh text is dressed in, or null while none has been chosen
+ * and the Label look in the tool's colour stands. */
+export const useAnnotationTextLookDefault = () =>
+  useSyncExternalStore(subscribe, () => lastTextLook);

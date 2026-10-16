@@ -9,10 +9,10 @@ use screenwide_annotations::redact::native::{
 };
 use screenwide_annotations::redact::records::{redact_records, RedactRecords};
 use screenwide_annotations::spotlight::native::{blur_deviation, blur_strength};
-use screenwide_annotations::text::typing::TypingMarks;
 use screenwide_annotations::Annotation;
 use screenwide_imaging::CapturedImage;
 use screenwide_output::{OutputPlacement, ScreenshotOutputSettings};
+use screenwide_text::engine::typing::TypingMarks;
 
 /// A layer's annotations resolved against its source once: what each draws,
 /// the redactions the pre-pass applies in the source's own pixels, and the
@@ -86,6 +86,7 @@ impl SourceAnnotations {
       ),
       halo,
       typing,
+      true,
     );
     prepared.redactions = self.redactions.clone();
     // The cursor and the marks are drawn on the canvas, so the source's blur

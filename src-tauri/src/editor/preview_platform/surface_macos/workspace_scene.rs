@@ -22,7 +22,6 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use self::layers::{LayerCamera, SceneLayer, ScenePicture};
 pub(crate) use self::layers::{LayerPicture, StagedLayer};
-use screenwide_annotations::text::typing::TypingMarks;
 use screenwide_compositor::annotation_gpu::SourceAnnotations;
 use screenwide_compositor::compositor::still_overlay::StillOverlay;
 use screenwide_compositor::compositor::{
@@ -30,6 +29,7 @@ use screenwide_compositor::compositor::{
 };
 use screenwide_cursor_effects::GpuArtwork;
 use screenwide_output::ScreenshotOutputSettings;
+use screenwide_text::engine::typing::TypingMarks;
 
 struct SceneState {
   compositor: Compositor,

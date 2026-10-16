@@ -9,9 +9,10 @@ use tauri_plugin_autostart::ManagerExt;
 
 use crate::settings::background_preset::BackgroundPreset;
 use screenwide_accent::AccentPreference;
-use screenwide_captions::{CaptionLayout, CaptionSettings, CaptionStyle, CaptionTemplateId};
 use screenwide_i18n::t;
 use screenwide_scenes::SceneTemplate;
+use screenwide_text::captions::CaptionSettings;
+use screenwide_text::{TextLayout, TextStyle, TextTemplateId};
 
 const SETTINGS_FILE: &str = "settings.json";
 const SETTINGS_CHANGED_EVENT: &str = "settings://changed";
@@ -46,14 +47,14 @@ pub struct GeneralSettings {
   pub scene_templates: Vec<SceneTemplate>,
   /// Caption templates as they were last saved as defaults, in place of the
   /// style each ships with; one never saved is not kept.
-  pub caption_styles: Vec<CaptionStyle>,
+  pub caption_styles: Vec<TextStyle>,
   /// The template a recording's captions start from.
-  pub caption_template: CaptionTemplateId,
+  pub caption_template: TextTemplateId,
   /// What a recording's captions start out saying, as last set as default.
   pub caption_settings: CaptionSettings,
   /// The layout options set by hand and kept for new captions, over any
   /// template.
-  pub caption_layout: CaptionLayout,
+  pub caption_layout: TextLayout,
   pub launch_at_login: bool,
   pub show_recording_bar_on_launch: bool,
   pub recording_countdown_seconds: u8,
@@ -76,9 +77,9 @@ impl Default for GeneralSettings {
       auto_zoom: true,
       scene_templates: Vec::new(),
       caption_styles: Vec::new(),
-      caption_template: CaptionTemplateId::default(),
+      caption_template: TextTemplateId::default(),
       caption_settings: CaptionSettings::default(),
-      caption_layout: CaptionLayout::default(),
+      caption_layout: TextLayout::default(),
       launch_at_login: false,
       show_recording_bar_on_launch: true,
       recording_countdown_seconds: 0,
@@ -107,7 +108,7 @@ fn read(app: &AppHandle) -> GeneralSettings {
   // A template edited by hand into something no scene can take is dropped
   // alone, rather than refusing every setting beside it.
   settings.scene_templates.retain(SceneTemplate::is_valid);
-  settings.caption_styles.retain(CaptionStyle::is_valid);
+  settings.caption_styles.retain(TextStyle::is_valid);
   settings
 }
 
@@ -142,7 +143,7 @@ fn validate(settings: &GeneralSettings) -> Result<(), String> {
   if !settings.scene_templates.iter().all(SceneTemplate::is_valid) {
     return Err("A scene template is not valid".to_owned());
   }
-  if !settings.caption_styles.iter().all(CaptionStyle::is_valid) {
+  if !settings.caption_styles.iter().all(TextStyle::is_valid) {
     return Err("A caption template is not valid".to_owned());
   }
   Ok(())

@@ -10,6 +10,8 @@
 mod arrows;
 /// Where the caption showing is drawn, for hit-testing.
 mod caption_bounds;
+/// Caption pieces as text boxes, placed as the arrows they already are.
+mod caption_boxes;
 /// A caption piece blurred over the frame's exposure.
 mod caption_exposure;
 /// The shadow a caption's word casts, handed to the shader.

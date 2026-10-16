@@ -43,9 +43,10 @@ impl PreviewManager {
       .enumerate()
       .find(|(_, annotation)| annotation.id == id)
       .map(|(index, annotation)| (index, annotation.clone()))?;
-    let AnnotationShape::Text { text, .. } = &annotation.shape else {
+    let AnnotationShape::Text { text, look, .. } = &annotation.shape else {
       return None;
     };
+    let face = screenwide_annotations::text::look::face(look);
     self.annotation_text = Some(TextSession {
       pane_index,
       edit: AnnotationTextEdit::begin(id.clone(), text.clone()),
@@ -55,7 +56,7 @@ impl PreviewManager {
     // The published grips are this pane's list in order, so the box's place
     // in it is its place in the grips.
     if let Some(surface) = self.surface.as_ref() {
-      surface.begin_annotation_text(index, text);
+      surface.begin_annotation_text(index, text, &face);
     }
     let mut commit = self.commit_for(pane_index, chosen)?;
     commit.text_edit = Some(TextEditPhase::Begin);

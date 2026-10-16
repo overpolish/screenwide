@@ -4,12 +4,12 @@
 import { ControlRow } from "../../../../components/shared/control-row/control-row";
 import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
 
-import type { CaptionSize } from "../../../../bindings/CaptionSize";
+import type { TextSize } from "../../../../bindings/TextSize";
 
 /** The steps from the template's size, smallest first; Medium is its own.
- * The twin of `CaptionSize` in `screenwide_captions`, which says how large
+ * The twin of `TextSize` in `screenwide_text`, which says how large
  * each one draws. */
-const STEPS: CaptionSize[] = ["small", "medium", "large", "extra-large"];
+const STEPS: TextSize[] = ["small", "medium", "large", "extra-large"];
 
 /** A size stepped through from the template's, as a text box's is. */
 export function CaptionSizeRow({
@@ -19,8 +19,8 @@ export function CaptionSizeRow({
   title,
 }: {
   isDisabled: boolean;
-  onChange: (size: CaptionSize) => void;
-  size: CaptionSize;
+  onChange: (size: TextSize) => void;
+  size: TextSize;
   title: string;
 }) {
   return (

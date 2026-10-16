@@ -95,8 +95,16 @@ fn path_length(annotation: &Annotation) -> Option<f64> {
 /// pixels in size, or `None` for one with no path, which arrives on its
 /// kind's own time.
 pub fn path_ms(annotation: &Annotation, frame: (u32, u32)) -> Option<f32> {
-  if let AnnotationShape::Text { pointer, .. } = &annotation.shape {
-    let reach = pointer.reach.x.hypot(pointer.reach.y);
+  if let AnnotationShape::Text { look, controls, .. } = &annotation.shape {
+    let reach = match crate::text::look::tail(look, controls).map(|tail| tail.point) {
+      Some(crate::text::model::TextControlPoint::Box(point)) => {
+        point.reach[0].hypot(point.reach[1])
+      }
+      // A tail put on the picture is paced as one drawn out to the reference
+      // length: how far its tip is depends on where the box is then.
+      Some(crate::text::model::TextControlPoint::Picture(_)) => POINTER_REFERENCE_EMS,
+      None => 0.0,
+    };
     return (reach > 0.0).then(|| {
       paced(
         POINTER_IN_MS,

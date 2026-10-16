@@ -30,6 +30,7 @@ import {
 } from "./types";
 
 import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
+import type { TextStyle } from "../../bindings/TextStyle";
 
 type PreviewSelectionLayout = {
   paneIndex: number;
@@ -267,6 +268,7 @@ export const layoutScreenshotPreviewSurface = ({
   annotationCounterAngle,
   annotationDefaults,
   annotationImage,
+  annotationTextLook,
   annotationTool,
   backdrop,
   fitWidth,
@@ -301,6 +303,8 @@ export const layoutScreenshotPreviewSurface = ({
   annotationDefaults?: AnnotationStyle | null;
   /** The picture a fresh image shows: whatever the last image was given. */
   annotationImage?: ImageArt | null;
+  /** The look a fresh text is dressed in: whatever the last text was. */
+  annotationTextLook?: TextStyle | null;
   /** The annotation tool in hand. "select" hit-tests the annotations already on
    * the layer and lets every other press fall through to it; "arrow" and
    * "counter" also make a new annotation on empty picture. */
@@ -315,6 +319,7 @@ export const layoutScreenshotPreviewSurface = ({
     annotationCounterAngle: annotationCounterAngle ?? null,
     annotationDefaults: annotationDefaults ?? null,
     annotationImage: annotationImage ?? null,
+    annotationTextLook: annotationTextLook ?? null,
     annotationTool: annotationTool ?? null,
     backdrop,
     fitWidth,

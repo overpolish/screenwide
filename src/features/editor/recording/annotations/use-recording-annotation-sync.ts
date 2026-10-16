@@ -10,6 +10,7 @@ import {
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
   useAnnotationImageDefault,
+  useAnnotationTextLookDefault,
 } from "../../annotations/annotation-defaults";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { recordingTimelinePlaybackRanges } from "../../timeline/recording-timeline-playback";
@@ -53,6 +54,7 @@ export function useRecordingAnnotationSync({
   const animated = useAnnotationAnimatedDefault();
   const counterAngle = useAnnotationAngleDefault();
   const image = useAnnotationImageDefault();
+  const textLook = useAnnotationTextLookDefault();
   useEffect(() => {
     if (sessionId === null) return;
     void invoke("set_recording_preview_annotations", {
@@ -65,6 +67,7 @@ export function useRecordingAnnotationSync({
       playbackRanges: recordingTimelinePlaybackRanges(edit, sourceDurationMs),
       selectedIds: [...selectedIds],
       sessionId,
+      textLook,
     }).catch((cause: unknown) => {
       console.error("Could not update recording annotations", cause);
     });
@@ -78,6 +81,7 @@ export function useRecordingAnnotationSync({
     selectedIds,
     sessionId,
     sourceDurationMs,
+    textLook,
     trackId,
   ]);
 }

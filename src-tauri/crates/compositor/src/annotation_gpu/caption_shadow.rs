@@ -8,7 +8,8 @@
 
 use super::arrows::{PreparedType, PreviewArrow};
 use screenwide_annotations::flags::CASTS;
-use screenwide_captions::{rgba, CaptionPieceShadow};
+use screenwide_text::captions::CaptionPieceShadow;
+use screenwide_text::rgba;
 
 /// `arrow` and its type `entry`, a word set at its settled size, casting
 /// `shadow`. The shader reads the slots back in `annotation_text.wgsl`'s

@@ -69,10 +69,13 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationGroupBoxKind) {
 /// Which shape an annotation is, matching the compositor's own kinds.
 ///
 /// A text box reads the grip slots its own way: `start` is the box's top-left
-/// corner; `end` is its pointer as Rust's `TextPointer::encoded` carries it,
-/// held against the box and never placed; `middle` is its text block's width
-/// and height and `width` its type size, both as shares of the drawn width;
-/// `start_head` is its alignment.
+/// corner; `end` is its tail's tip, held against the box as Rust's
+/// `text::model::encoded` carries it and never placed, or normalised like
+/// `start` where `start_head` has `SCREENWIDE_TEXT_HEAD_TAIL_PLACED`;
+/// `middle` is its text block's width and height and `width` its type size,
+/// both as shares of the drawn width; `start_head` is its alignment and its
+/// tail's bits; `radius`, `tilt_x` and `tilt_y` are its tail's base and tip
+/// radii and its blend, in ems.
 ///
 /// A redaction puts its box's top-left corner in `start`, its bottom-right in
 /// `end` and its centre in `middle`, all normalised like an arrow's grips,

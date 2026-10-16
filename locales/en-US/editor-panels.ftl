@@ -187,87 +187,87 @@ editor-panels-captions-tab-words = Words
 editor-panels-captions-tab-style = Style
 editor-panels-captions-tab-layout = Layout
 # The caption templates: the group's accessible name, and each one's name under its moving preview.
-editor-panels-captions-template = Caption style
+editor-panels-text-template = Caption style
 # The Style tab's row whose button opens the caption templates to choose from.
-editor-panels-captions-template-picker = Template
-editor-panels-captions-template-box = Box
-editor-panels-captions-template-clean = Clean
-editor-panels-captions-template-pop = Pop
-editor-panels-captions-template-highlight = Highlight
-editor-panels-captions-template-karaoke = Karaoke
-editor-panels-captions-template-punch = Punch
-editor-panels-captions-template-editorial = Editorial
-editor-panels-captions-template-supersize = Supersize
-editor-panels-captions-template-stack = Stack
-editor-panels-captions-template-staircase = Staircase
-editor-panels-captions-template-rise = Rise
-editor-panels-captions-template-stagger = Stagger
-editor-panels-captions-template-shadow = Shadow
-editor-panels-captions-template-offset = Offset
-editor-panels-captions-template-underline = Underline
-editor-panels-captions-template-glow = Glow
-editor-panels-captions-template-flip = Flip
+editor-panels-text-template-picker = Template
+editor-panels-text-template-box = Box
+editor-panels-text-template-clean = Clean
+editor-panels-text-template-pop = Pop
+editor-panels-text-template-highlight = Highlight
+editor-panels-text-template-karaoke = Karaoke
+editor-panels-text-template-punch = Punch
+editor-panels-text-template-editorial = Editorial
+editor-panels-text-template-supersize = Supersize
+editor-panels-text-template-stack = Stack
+editor-panels-text-template-staircase = Staircase
+editor-panels-text-template-rise = Rise
+editor-panels-text-template-stagger = Stagger
+editor-panels-text-template-shadow = Shadow
+editor-panels-text-template-offset = Offset
+editor-panels-text-template-underline = Underline
+editor-panels-text-template-glow = Glow
+editor-panels-text-template-flip = Flip
 # The few words each template's preview shows, said a couple at a time; short, so they fit a small tile.
-editor-panels-captions-sample = Captions that move with every word
+editor-panels-text-sample = Captions that move with every word
 # The face caption type is set in, chosen from a list of the fonts installed on the computer and those the app carries.
-editor-panels-captions-font = Font
+editor-panels-text-font = Font
 # The placeholder and accessible name of the field heading the font list, which finds a font by name.
-editor-panels-captions-font-search = Find a font
+editor-panels-text-font-search = Find a font
 # The app's own font in the font list, ahead of the ones installed on the computer.
-editor-panels-captions-font-built-in = Inter (built in)
+editor-panels-text-font-built-in = Inter (built in)
 # How heavy the caption type is, from the weights its font has, lightest first, by the names type designers give them.
-editor-panels-captions-weight = Weight
-editor-panels-captions-weight-thin = Thin
-editor-panels-captions-weight-extra-light = Extra light
-editor-panels-captions-weight-light = Light
-editor-panels-captions-weight-regular = Regular
-editor-panels-captions-weight-medium = Medium
-editor-panels-captions-weight-semibold = Semibold
-editor-panels-captions-weight-bold = Bold
-editor-panels-captions-weight-extra-bold = Extra bold
-editor-panels-captions-weight-black = Black
+editor-panels-text-weight = Weight
+editor-panels-text-weight-thin = Thin
+editor-panels-text-weight-extra-light = Extra light
+editor-panels-text-weight-light = Light
+editor-panels-text-weight-regular = Regular
+editor-panels-text-weight-medium = Medium
+editor-panels-text-weight-semibold = Semibold
+editor-panels-text-weight-bold = Bold
+editor-panels-text-weight-extra-bold = Extra bold
+editor-panels-text-weight-black = Black
 # The same weights set in the font's italic, for fonts that have one.
-editor-panels-captions-weight-thin-italic = Thin italic
-editor-panels-captions-weight-extra-light-italic = Extra light italic
-editor-panels-captions-weight-light-italic = Light italic
-editor-panels-captions-weight-regular-italic = Italic
-editor-panels-captions-weight-medium-italic = Medium italic
-editor-panels-captions-weight-semibold-italic = Semibold italic
-editor-panels-captions-weight-bold-italic = Bold italic
-editor-panels-captions-weight-extra-bold-italic = Extra bold italic
-editor-panels-captions-weight-black-italic = Black italic
+editor-panels-text-weight-thin-italic = Thin italic
+editor-panels-text-weight-extra-light-italic = Extra light italic
+editor-panels-text-weight-light-italic = Light italic
+editor-panels-text-weight-regular-italic = Italic
+editor-panels-text-weight-medium-italic = Medium italic
+editor-panels-text-weight-semibold-italic = Semibold italic
+editor-panels-text-weight-bold-italic = Bold italic
+editor-panels-text-weight-extra-bold-italic = Extra bold italic
+editor-panels-text-weight-black-italic = Black italic
 # The font a template's key word is set in, for templates that set one word of each caption apart, its weight's accessible name, and how large it is as a share of the caption's type.
-editor-panels-captions-accent = Accent
-editor-panels-captions-accent-weight = Accent weight
+editor-panels-text-accent = Accent
+editor-panels-text-accent-weight = Accent weight
 editor-panels-captions-accent-size = Accent size
 # Which colour of the caption the colour grid changes, and each choice: the type, the word being said, the accent, the outline around the type, and the box behind the lines.
-editor-panels-captions-color = Colour
-editor-panels-captions-color-text = Text
-editor-panels-captions-color-highlight = Highlight
-editor-panels-captions-color-accent = Accent
-editor-panels-captions-color-outline = Outline
-editor-panels-captions-color-background = Box
-editor-panels-captions-color-shadow = Shadow
+editor-panels-text-color = Colour
+editor-panels-text-color-text = Text
+editor-panels-text-color-highlight = Highlight
+editor-panels-text-color-accent = Accent
+editor-panels-text-color-outline = Outline
+editor-panels-text-color-background = Box
+editor-panels-text-color-shadow = Shadow
 # The Style tab's row turning which way the words' shadow falls, where the template casts one.
-editor-panels-captions-shadow = Shadow
+editor-panels-text-shadow = Shadow
 # In each Captions tab: start new captions as these are now. On the Style tab, this template with this look; on the Words tab, these rules.
 editor-panels-captions-set-default = Set as default
 # In a caption template's menu: put the template back to how it ships, dropping any look set as its default.
-editor-panels-captions-reset-original = Reset to original
+editor-panels-text-reset-original = Reset to original
 # Also in a caption template's menu: bring in a template someone shared, as a zip or its folder; save this one as a zip to share; and, for one you brought in, move it to the Trash.
-editor-panels-captions-template-import = Import template
-editor-panels-captions-template-export = Export template
-editor-panels-captions-template-remove = Remove template
+editor-panels-text-template-import = Import template
+editor-panels-text-template-export = Export template
+editor-panels-text-template-remove = Remove template
 # Mark the word being said in a caption: in the highlight colour, or on a pill where the template sets it on one.
-editor-panels-captions-highlight-word = Highlight spoken word
+editor-panels-text-highlight-word = Highlight spoken word
 # Show each word of a caption as it is said, so the caption builds up with the voice.
-editor-panels-captions-reveal-words = Reveal word by word
+editor-panels-text-reveal-words = Reveal word by word
 # A soft outline around the caption's type, so it reads over any picture.
-editor-panels-captions-outline = Outline
+editor-panels-text-outline = Outline
 # The Style tab's row of options a caption's look turns on or off, and the short names of the first two as its segments show them.
-editor-panels-captions-effects = Effects
-editor-panels-captions-effect-highlight = Highlight
-editor-panels-captions-effect-word-by-word = Word by word
+editor-panels-text-effects = Effects
+editor-panels-text-effect-highlight = Highlight
+editor-panels-text-effect-word-by-word = Word by word
 # The most words one caption shows at once, across its lines.
 editor-panels-captions-max-words = Max words
 editor-panels-captions-lines = Lines

@@ -220,7 +220,6 @@ export function useEditorToolPanels({
       cameraOutput,
       canClearDrawings,
       canRestoreShortcuts: shortcuts.canRestore,
-      captionTemplates: captions.templates,
       captions: captions.snapshot,
       crop: cropTarget?.snapshot ?? null,
       cursorEffects,
@@ -233,6 +232,7 @@ export function useEditorToolPanels({
       scene,
       sceneTemplates,
       selection: audioTarget?.selection ?? selectionTarget?.selection ?? null,
+      textTemplates: captions.templates,
       transcript: transcript.snapshot,
     },
     editorToolPanelHandlers({

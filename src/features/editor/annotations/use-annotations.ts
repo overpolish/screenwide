@@ -16,6 +16,7 @@ import {
   rememberAnnotationAnimated,
   rememberAnnotationImage,
   rememberAnnotationStyle,
+  rememberAnnotationTextLook,
 } from "./annotation-defaults";
 import {
   annotationDeleteTargets,
@@ -36,6 +37,8 @@ import {
 } from "./annotations";
 import { relaidHighlight } from "./highlight-strokes";
 import { imageRotation, withImageRotation } from "./image-rotation";
+
+import type { TextStyle } from "../../../bindings/TextStyle";
 
 const NOTHING_CHOSEN: ReadonlySet<string> = new Set();
 const anyGroupable = () => true;
@@ -76,6 +79,15 @@ export function useAnnotations({
     if (counterAngle !== null) rememberAnnotationAngle(counterAngle);
   }, [counterAngle]);
 
+  // Give the chosen annotation `shape` in one edit; null leaves it as it is.
+  const reshape = (shape: AnnotationShape | null) => {
+    if (!selected || shape === null) return;
+    commit(
+      annotations.map((annotation) =>
+        annotation.id === selected.id ? { ...annotation, shape } : annotation,
+      ),
+    );
+  };
   /** Turn the chosen counter's tail, in radians clockwise from east. */
   const applyAngle = (next: number) => {
     if (!selected || selected.shape.kind !== "counter") return;
@@ -121,37 +133,14 @@ export function useAnnotations({
     // A placed image keeps its size: only the picture and its proportions
     // change, whatever size the new picture is of its own.
     const { aspect, asset, play } = next;
-    commit(
-      annotations.map((annotation) =>
-        annotation.id === selected.id
-          ? { ...annotation, shape: { ...shape, aspect, asset, play } }
-          : annotation,
-      ),
-    );
+    reshape({ ...shape, aspect, asset, play });
   };
   // A moving image's frame, which a still shows and playback starts on,
   // and whether a recording plays it through once.
   const applyImagePlay = (next: ImagePlayChange) => {
     if (!selected || selected.shape.kind !== "image" || !selected.shape.play)
       return;
-    const shape = selected.shape;
-    const play = { ...selected.shape.play, ...next };
-    commit(
-      annotations.map((annotation) =>
-        annotation.id === selected.id
-          ? { ...annotation, shape: { ...shape, play } }
-          : annotation,
-      ),
-    );
-  };
-  // Give the chosen annotation `shape` in one edit; null leaves it as it is.
-  const reshape = (shape: AnnotationShape | null) => {
-    if (!selected || shape === null) return;
-    commit(
-      annotations.map((annotation) =>
-        annotation.id === selected.id ? { ...annotation, shape } : annotation,
-      ),
-    );
+    reshape({ ...selected.shape, play: { ...selected.shape.play, ...next } });
   };
   // Whether a recording gives the chosen image its slight turn and drift.
   // Turning it on draws a fresh seed, as the dice does.
@@ -171,6 +160,14 @@ export function useAnnotations({
           : annotation,
       ),
     );
+  };
+
+  // A text's look is its own, as an image's picture is, and the next text
+  // is dressed in it too.
+  const applyLook = (look: TextStyle) => {
+    if (selected?.shape.kind !== "text") return;
+    rememberAnnotationTextLook(look);
+    reshape({ ...selected.shape, look });
   };
 
   // Whether an annotation animates is not part of its dress: it sits on the
@@ -230,6 +227,8 @@ export function useAnnotations({
             id: selected.id,
             image: art ?? undefined,
             kind: selected.shape.kind,
+            look:
+              selected.shape.kind === "text" ? selected.shape.look : undefined,
             style: selected.style,
             ...(selected.shape.kind === "image"
               ? { rotation, sway: selected.shape.sway !== undefined }
@@ -244,6 +243,7 @@ export function useAnnotations({
       applyDelete,
       applyImage,
       applyImagePlay,
+      applyLook,
       applyReverse,
       applyRotation,
       applyShuffle,

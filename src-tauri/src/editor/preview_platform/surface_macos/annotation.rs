@@ -130,17 +130,27 @@ impl RecordingPreviewSurface {
   }
 
   /// Opens the text box at `index` in the published grips for typing, holding
-  /// `text`.
-  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str) {
+  /// `text` set in `face`, as the compositor sets the box's type.
+  pub(crate) fn begin_annotation_text(
+    &self,
+    index: usize,
+    text: &str,
+    face: &screenwide_text::engine::face::TypeFace,
+  ) {
     let Ok(index) = i32::try_from(index) else {
       return;
     };
+    let family = face.family_bytes();
     unsafe {
       screenwide_preview_surface_begin_annotation_text(
         self.handle,
         index,
         text.as_ptr(),
         u32::try_from(text.len()).unwrap_or(u32::MAX),
+        family.as_ptr(),
+        u32::try_from(family.len()).unwrap_or(0),
+        u32::from(face.weight),
+        u32::from(face.italic),
       );
     }
   }

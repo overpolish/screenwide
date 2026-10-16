@@ -16,19 +16,19 @@ import {
   CaptionDefaultsPatch,
   captionDefaultsSettings,
   defaultCaptions,
-  useCaptionTemplates,
-} from "./use-caption-templates";
+  useTextTemplates,
+} from "./use-text-templates";
 
-import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
-import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
 import type { GeneralSettings } from "../../../../bindings/GeneralSettings";
+import type { TextLayout } from "../../../../bindings/TextLayout";
+import type { TextStyle } from "../../../../bindings/TextStyle";
 
 /** No caption template saved as a default: one list, so the templates are
  * only worked out again when the settings change. */
-const NO_CAPTION_STYLES: CaptionStyle[] = [];
+const NO_CAPTION_STYLES: TextStyle[] = [];
 /** No layout option kept for new captions, as one object for the same
  * reason. */
-const NO_CAPTION_LAYOUT: CaptionLayout = {};
+const NO_CAPTION_LAYOUT: TextLayout = {};
 
 /**
  * The Captions tool for the recording open, where it has a microphone to
@@ -53,7 +53,7 @@ export function useCaptionTools({
   const editRef = useRef(edit);
   editRef.current = edit;
   const savedStyles = general?.captionStyles ?? NO_CAPTION_STYLES;
-  const templates = useCaptionTemplates(savedStyles, {
+  const templates = useTextTemplates(savedStyles, {
     layout: general?.captionLayout ?? NO_CAPTION_LAYOUT,
     settings: general?.captionSettings ?? DEFAULT_CAPTION_SETTINGS,
     template: general?.captionTemplate ?? "box",

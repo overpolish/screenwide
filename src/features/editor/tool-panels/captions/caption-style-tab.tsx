@@ -6,18 +6,17 @@ import { t } from "../../../../i18n/i18n";
 import { layoutOf, withLayout } from "../../recording/captions/caption-layout";
 import {
   CaptionDefaultsPatch,
-  CaptionTemplates,
-} from "../../recording/captions/use-caption-templates";
+  TextTemplates,
+} from "../../recording/captions/use-text-templates";
+import { TextStyleRows } from "../text-style/text-style-rows";
+import { TextTemplateRow } from "../text-style/text-template-row";
 
-import { CaptionStyleRows } from "./caption-style-rows";
-import { CaptionTemplateRow } from "./caption-template-row";
-
-import type { CaptionLayout } from "../../../../bindings/CaptionLayout";
-import type { CaptionStyle } from "../../../../bindings/CaptionStyle";
+import type { TextLayout } from "../../../../bindings/TextLayout";
+import type { TextStyle } from "../../../../bindings/TextStyle";
 
 /** Whether `a` and `b` hold every option alike, whatever their order. */
-const isSameStyle = (a: CaptionStyle, b: CaptionStyle) =>
-  (Object.keys(a) as (keyof CaptionStyle)[]).every(
+const isSameStyle = (a: TextStyle, b: TextStyle) =>
+  (Object.keys(a) as (keyof TextStyle)[]).every(
     (key) => JSON.stringify(a[key]) === JSON.stringify(b[key]),
   );
 
@@ -39,12 +38,12 @@ export function CaptionStyleTab({
   templates,
 }: {
   isDisabled: boolean;
-  layout: CaptionLayout;
-  onChange: (style: Partial<CaptionStyle>) => void;
+  layout: TextLayout;
+  onChange: (style: Partial<TextStyle>) => void;
   onDefaultsChange: (patch: CaptionDefaultsPatch) => void;
   savedColors: string[];
-  style: CaptionStyle;
-  templates: CaptionTemplates;
+  style: TextStyle;
+  templates: TextTemplates;
 }) {
   const savedStyle = templates.styles.find(
     (template) => template.template === style.template,
@@ -53,14 +52,13 @@ export function CaptionStyleTab({
   // the template ships with, so the captions' own are set aside to compare.
   const look = savedStyle && withLayout(layoutOf(savedStyle), style);
   const isSaved = !!savedStyle && !!look && isSameStyle(look, savedStyle);
-  const keepingLayout = (next: CaptionStyle) =>
-    withLayout(layoutOf(style), next);
+  const keepingLayout = (next: TextStyle) => withLayout(layoutOf(style), next);
   const shipped = templates.shipped.find(
     (template) => template.template === style.template,
   );
   return (
     <>
-      <CaptionTemplateRow
+      <TextTemplateRow
         isDisabled={isDisabled}
         layout={layout}
         onChoose={(next) => {
@@ -76,7 +74,7 @@ export function CaptionStyleTab({
         templates={templates}
       />
 
-      <CaptionStyleRows
+      <TextStyleRows
         isDisabled={isDisabled}
         onChange={onChange}
         savedColors={savedColors}

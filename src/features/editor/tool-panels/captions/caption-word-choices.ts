@@ -9,7 +9,7 @@ import type { CaptionBreakKind } from "../../../../bindings/CaptionBreakKind";
 
 // Breaks and choices sit at moments as shares of the recording, so they
 // name the same gap and the same word however a word's edges settle; these
-// are the rules `screenwide_captions` reads them by.
+// are the rules `screenwide_text::captions` reads them by.
 
 /** The gap between two words, in a recording `durationMs` long. */
 export type CaptionGapAt = {

@@ -20,7 +20,7 @@ use windows::Win32::{
 };
 
 use super::*;
-use screenwide_annotations::text::typing::Motion;
+use screenwide_text::engine::typing::Motion;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Outcome {
@@ -46,7 +46,7 @@ pub(super) fn edit(inner: &Arc<SurfaceInner>, input: editor::TypingInput) {
       .annotation
       .typing
       .as_ref()
-      .and_then(|typing| place(&state, typing.flat));
+      .and_then(|typing| place(&state, typing.flat, &typing.face));
     let scale = state.scale;
     let Some(typing) = state.annotation.typing.as_mut() else {
       return;

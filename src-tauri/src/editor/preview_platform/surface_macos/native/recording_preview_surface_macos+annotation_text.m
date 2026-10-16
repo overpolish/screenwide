@@ -12,7 +12,7 @@
 //! on screen is always the compositor's text, so nothing shifts on commit.
 
 #import "recording_preview_surface_macos_private.h"
-#import "../../../../../crates/annotations/src/text/macos/annotation_text_box.h"
+#import "../../../../../crates/text/src/engine/macos/annotation_text_box.h"
 #include <math.h>
 
 #include "recording_preview_annotation_layers_macos.h"
@@ -35,6 +35,10 @@ static const CGFloat kTextCaretRoom = 2.0;
 @property(nonatomic) BOOL finishing;
 @property(nonatomic) CGFloat fontPoints;
 @property(nonatomic) uint32_t alignmentValue;
+/// The face the box's look sets its type in; no family is the app's Inter.
+@property(nonatomic, copy) NSString *faceFamily;
+@property(nonatomic) uint32_t faceWeight;
+@property(nonatomic) BOOL faceItalic;
 @end
 
 static void report_text(ScreenwidePreviewSurface *surface, uint32_t phase) {
@@ -166,8 +170,8 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_finish(ScreenwidePreviewSurface 
 }
 @end
 
-/// Sets the view's type the way the rasteriser sets the box's, at the size
-/// the box is drawn on screen.
+/// Sets the view's type the way the rasteriser sets the box's, in its look's
+/// face at the size the box is drawn on screen.
 static void apply_text_style(ScreenwideAnnotationTextView *view, CGFloat points,
                              uint32_t alignment) {
   if (fabs(view.fontPoints - points) < 0.01 && view.alignmentValue == alignment) return;
@@ -178,7 +182,8 @@ static void apply_text_style(ScreenwideAnnotationTextView *view, CGFloat points,
   // Lines break only where the text has a line break, as the box's do.
   paragraph.lineBreakMode = NSLineBreakByClipping;
   NSDictionary *dress = @{
-    NSFontAttributeName : screenwide_annotation_font(points, NO),
+    NSFontAttributeName : screenwide_face_font(view.faceFamily, view.faceWeight, view.faceItalic,
+                                               points),
     NSParagraphStyleAttributeName : paragraph,
     NSForegroundColorAttributeName : [NSColor clearColor],
   };
@@ -225,20 +230,27 @@ void screenwide_preview_surface_set_annotation_text_callback(
 }
 
 /// Opens the box at `index` in the published grips for typing, holding
-/// `text`.
+/// `text`, set in the face `family`, `weight` and `italic` name.
 void screenwide_preview_surface_begin_annotation_text(void *handle, int32_t index,
-                                                      const uint8_t *text, uint32_t length) {
+                                                      const uint8_t *text, uint32_t length,
+                                                      const uint8_t *family, uint32_t family_length,
+                                                      uint32_t weight, uint32_t italic) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   NSString *value = text == NULL || length == 0
       ? @""
       : [[NSString alloc] initWithBytes:text length:length encoding:NSUTF8StringEncoding];
+  NSString *face = family == NULL ? nil
+      : [[NSString alloc] initWithBytes:family length:family_length encoding:NSUTF8StringEncoding];
   on_main_async(^{
     remove_text_view(surface);
     if (surface.interaction == nil) return;
     ScreenwideAnnotationTextView *view =
         [[ScreenwideAnnotationTextView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
     view.surface = surface;
+    view.faceFamily = face;
+    view.faceWeight = weight;
+    view.faceItalic = italic != 0;
     view.drawsBackground = NO;
     view.richText = NO;
     view.importsGraphics = NO;

@@ -4,6 +4,10 @@
 import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../../popup-panel/layout";
 import { DEFAULT_CAPTION_SETTINGS } from "../../recording/captions/recording-captions";
+import {
+  STORY_TEXT_TEMPLATES,
+  storyTextStyle,
+} from "../text-style/text-template-fixtures";
 import { ToolPanel } from "../tool-panel";
 import { seedToolPanel } from "../tool-panel-story-seed";
 import {
@@ -12,10 +16,6 @@ import {
 } from "../transcript/transcript-panel-fixtures";
 
 import { rememberCaptionPanelTab } from "./caption-panel-tab";
-import {
-  STORY_CAPTION_TEMPLATES,
-  storyCaptionStyle,
-} from "./caption-template-fixtures";
 import { withBreak, withChoice } from "./caption-word-choices";
 
 import type { RecordingCaptions } from "../../../../bindings/RecordingCaptions";
@@ -47,7 +47,7 @@ const captions = (
 ): RecordingCaptions => ({
   enabled: true,
   settings: DEFAULT_CAPTION_SETTINGS,
-  style: storyCaptionStyle("box"),
+  style: storyTextStyle("box"),
   ...change,
 });
 
@@ -60,8 +60,8 @@ const seed = (
 ) => {
   rememberCaptionPanelTab("words");
   seedToolPanel({
-    captionTemplates: STORY_CAPTION_TEMPLATES,
     captions: shown,
+    textTemplates: STORY_TEXT_TEMPLATES,
     transcript: transcript(status, model),
   });
 };
@@ -98,7 +98,7 @@ export const PopRestyled: Story = {
     seed(
       captions({
         style: {
-          ...storyCaptionStyle("pop"),
+          ...storyTextStyle("pop"),
           font: { family: "Georgia", italic: false, weight: 700 },
           highlightWords: true,
           textColor: "#ff5a5a",
@@ -113,7 +113,7 @@ export const PopRestyled: Story = {
  * set apart in a serif italic. */
 export const KeyWords: Story = {
   beforeEach: () => {
-    seed(captions({ style: storyCaptionStyle("editorial") }));
+    seed(captions({ style: storyTextStyle("editorial") }));
   },
 };
 
@@ -121,7 +121,7 @@ export const KeyWords: Story = {
  * on a line of its own in an accent font, size and colour. */
 export const StackAccent: Story = {
   beforeEach: () => {
-    seed(captions({ style: storyCaptionStyle("stack") }));
+    seed(captions({ style: storyTextStyle("stack") }));
     rememberCaptionPanelTab("style");
   },
 };
@@ -130,7 +130,7 @@ export const StackAccent: Story = {
  * falls, and the shadow's colour beside the type's. */
 export const ShadowAngle: Story = {
   beforeEach: () => {
-    seed(captions({ style: storyCaptionStyle("shadow") }));
+    seed(captions({ style: storyTextStyle("shadow") }));
     rememberCaptionPanelTab("style");
   },
 };
@@ -189,6 +189,6 @@ export const NeedsModel: Story = {
 /** Opened before the editor has sent what the panel shows. */
 export const Loading: Story = {
   beforeEach: () => {
-    seedToolPanel({ captionTemplates: null, captions: null, transcript: null });
+    seedToolPanel({ captions: null, textTemplates: null, transcript: null });
   },
 };

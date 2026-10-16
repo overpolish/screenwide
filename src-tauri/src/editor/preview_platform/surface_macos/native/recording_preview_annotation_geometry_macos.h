@@ -15,15 +15,18 @@ static inline AnnotationArrowGeometry annotation_prepared(
   NSPoint end = annotation_display_point(image, item.end_x, item.end_y);
   AnnotationArrowGeometry prepared;
   if (item.kind == ScreenwideAnnotationKindText) {
-    // The pointer rides in `end` held against the box, never placed; the text
-    // block's size rides in `middle` as shares of the drawn width and the
-    // alignment in `start_head`. See the kind's own reading.
-    screenwide_annotation_prepare(item.kind, start.x, start.y, item.end_x, item.end_y,
-                                  item.middle_x * image.size.width,
-                                  item.middle_y * image.size.width,
-                                  item.width * image.size.width,
-                                  (uint32_t)item.start_head & 3u,
-                                  annotation_reveal_whole(), &prepared);
+    // The tail's tip rides in `end`, held against the box and never placed
+    // unless the head says it was put on the picture; the text block's size
+    // rides in `middle` as shares of the drawn width, the head in
+    // `start_head` and the tail's shape in `radius` and the tilts. See the
+    // kind's own reading.
+    uint32_t head = (uint32_t)item.start_head;
+    BOOL placed = (head & SCREENWIDE_TEXT_HEAD_TAIL_PLACED) != 0;
+    screenwide_text_prepare(start.x, start.y, placed ? end.x : item.end_x,
+                            placed ? end.y : item.end_y, item.middle_x * image.size.width,
+                            item.middle_y * image.size.width, item.width * image.size.width,
+                            head, item.radius, item.tilt_x, item.tilt_y,
+                            annotation_reveal_whole(), &prepared);
     return prepared;
   }
   if (item.kind == ScreenwideAnnotationKindShape) {

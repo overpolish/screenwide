@@ -94,10 +94,13 @@ fn a_fresh_annotation_takes_the_place_its_kind_is_drawn_at() {
 fn a_new_text_box_is_centred_on_the_press_and_carried_there() {
   const SOURCE_PER_SIZE: f64 = 2.0;
   let centre = |annotation: &Annotation| {
-    let AnnotationShape::Text { origin, text, .. } = &annotation.shape else {
+    let AnnotationShape::Text {
+      origin, text, look, ..
+    } = &annotation.shape
+    else {
       unreachable!()
     };
-    let bounds = text_box(*origin, text, annotation.style.width, SOURCE_PER_SIZE);
+    let bounds = text_box(*origin, text, look, annotation.style.width, SOURCE_PER_SIZE);
     assert!(bounds.width > 0.0 && bounds.height > 0.0);
     point(
       bounds.x + bounds.width / 2.0,
