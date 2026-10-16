@@ -10,7 +10,9 @@
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "windows")]
-pub use self::windows::bridge::{device_on_gpu_adapter, BridgedTexture, D3d11Bridge};
+pub use self::windows::bridge::{
+  device_on_gpu_adapter, video_device_on_gpu_adapter, BridgedTexture, D3d11Bridge,
+};
 #[cfg(target_os = "windows")]
 pub use self::windows::interop::{d3d11, D3d11Layer, SharedTexture};
 #[cfg(target_os = "macos")]

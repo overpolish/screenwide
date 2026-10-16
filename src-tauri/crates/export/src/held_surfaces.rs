@@ -15,9 +15,12 @@ use screenwide_annotations::timing::{placed_annotation, AnnotationTrack, Recordi
 use screenwide_annotations::{AnnotationPoint, AnnotationRedaction, AnnotationShape};
 use screenwide_imaging::surface_colour::surrounding_colour;
 use screenwide_imaging::CapturedImage;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+
+/// How many recording readers an export's redactions are read with at once:
+/// each holds a decoder and a frame, so a few are kept.
+const READERS: usize = 4;
 
 /// Whether a redaction reads the picture: erase for its surface, and a
 /// secure pixelation for its zones and the surface its blank blocks show.
@@ -61,6 +64,18 @@ pub fn clip_surfaces(
   clip: &RecordingAnnotationClip,
   stop: &AtomicBool,
 ) -> Vec<[f32; 2]> {
+  read_clip(path, duration_ms, clip, stop, &mut None)
+}
+
+/// [`clip_surfaces`], also keeping in `first` the frame its pass starts on,
+/// which is the clip's first frame.
+fn read_clip(
+  path: &std::path::Path,
+  duration_ms: u64,
+  clip: &RecordingAnnotationClip,
+  stop: &AtomicBool,
+  first: &mut Option<CapturedImage>,
+) -> Vec<[f32; 2]> {
   if !matches!(clip.annotation.shape, AnnotationShape::Redact { .. }) {
     return Vec::new();
   }
@@ -68,6 +83,9 @@ pub fn clip_surfaces(
   let times: Vec<u64> = (start_ms..end_ms).step_by(SAMPLE_MS as usize).collect();
   let mut samples = Vec::with_capacity(times.len());
   let read = crate::decode::each_source_frame(path, &times, duration_ms, |time, frame| {
+    if time == start_ms {
+      *first = Some(frame.clone());
+    }
     // A pinned box's ring is read where the box is at that moment.
     let colour = box_at(clip, time).and_then(|(start, end)| {
       let bounds = painted_bounds(draw_points(start, end), frame.width, frame.height);
@@ -84,40 +102,60 @@ pub fn clip_surfaces(
 
 /// Hands each redaction on `track` among an export's `clips` that reads the
 /// picture its fill: a secure pixelation's zones from its clip's first frame,
-/// and the surface timeline across the clip, read from that track's recording
-/// at `path`. Each first frame is decoded once, however many clips start on
-/// it. `capture_width_points` is how many logical points that recording is
-/// wide.
+/// and the surface timeline across the clip, both from one decode pass over
+/// that track's recording at `path`. `capture_width_points` is how many
+/// logical points that recording is wide.
+///
+/// The decoding is on the CPU, about a second for a three-second clip, and
+/// an export waits for all of it before its first frame, so a few clips are
+/// read side by side.
 pub(crate) fn attach_for_export(
   (path, track): (&std::path::Path, AnnotationTrack),
   duration_ms: u64,
   clips: &mut [RecordingAnnotationClip],
   capture_width_points: f64,
 ) {
-  let mut frames: HashMap<u64, Option<CapturedImage>> = HashMap::new();
-  for clip in clips.iter_mut().filter(|clip| clip.track_id == track) {
-    let Some((start, end)) = first_box(clip) else {
-      continue;
-    };
-    if !reads_picture(clip.annotation.style.redaction) {
-      continue;
+  let reading: Vec<&mut RecordingAnnotationClip> = clips
+    .iter_mut()
+    .filter(|clip| {
+      clip.track_id == track
+        && first_box(clip).is_some()
+        && reads_picture(clip.annotation.style.redaction)
+    })
+    .collect();
+  let workers = std::thread::available_parallelism()
+    .map_or(1, |count| count.get())
+    .clamp(1, READERS)
+    .min(reading.len());
+  let queue = Mutex::new(reading.into_iter());
+  let read = || {
+    while let Some(clip) = queue.lock().ok().and_then(|mut queue| queue.next()) {
+      let Some((start, end)) = first_box(clip) else {
+        continue;
+      };
+      let mut first = None;
+      let surfaces = read_clip(path, duration_ms, clip, &AtomicBool::new(false), &mut first);
+      let frame = first.or_else(|| {
+        crate::decode::source_frame_image(path, clip.recording_span()[0], duration_ms).ok()
+      });
+      // A frame that cannot be decoded leaves the box flat in its own
+      // colour, which hides as much.
+      let Some(frame) = frame else {
+        continue;
+      };
+      let picture =
+        RedactPicture::new(&frame.rgba, frame.width, frame.height, capture_width_points);
+      clip.annotation.held = Some(Arc::new(HeldFill {
+        surfaces,
+        ..held_fill(start, end, &clip.annotation.style, &picture)
+      }));
     }
-    let start_ms = clip.recording_span()[0];
-    let frame = frames
-      .entry(start_ms)
-      .or_insert_with(|| crate::decode::source_frame_image(path, start_ms, duration_ms).ok());
-    // A frame that cannot be decoded leaves the box flat in its own colour,
-    // which hides as much.
-    let Some(frame) = frame else {
-      continue;
-    };
-    let picture = RedactPicture::new(&frame.rgba, frame.width, frame.height, capture_width_points);
-    let fill = HeldFill {
-      surfaces: clip_surfaces(path, duration_ms, clip, &AtomicBool::new(false)),
-      ..held_fill(start, end, &clip.annotation.style, &picture)
-    };
-    clip.annotation.held = Some(Arc::new(fill));
-  }
+  };
+  std::thread::scope(|scope| {
+    for _ in 0..workers {
+      scope.spawn(read);
+    }
+  });
 }
 
 /// Each of an export frame's redactions whose fill carries a surface

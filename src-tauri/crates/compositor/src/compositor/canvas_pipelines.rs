@@ -26,6 +26,17 @@
 //! first frame (12 sets, 8 cores), while the variant with every kind cost
 //! about 1 ms more an annotated 1080p frame: it wins on any export with less
 //! than about 40 minutes of annotated video.
+//!
+//! On Windows a preview does the same. Measured there, a frame drawn with
+//! the variant with every kind cost the GPU no more than one drawn with its
+//! own set (2.00 against 1.91 ms on an RTX 2070 Super, 67.6 against 72.6 ms
+//! on a Ryzen 7700X's integrated GPU), while compiling the set took DXC
+//! seconds of CPU on every launch and the frames drawn while it ran
+//! stuttered.
+
+/// Whether every annotated draw takes the variant with every kind; see the
+/// module's notes.
+const ALWAYS_EVERY_KIND: bool = cfg!(target_os = "windows");
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -159,7 +170,7 @@ impl CanvasPipelines {
   /// ready, else the smallest ready one holding them all, else their own,
   /// compiled now.
   pub(super) fn get(&self, target: Target, kinds: KindMask, every: bool) -> wgpu::RenderPipeline {
-    if every && kinds != 0 {
+    if (every || ALWAYS_EVERY_KIND) && kinds != 0 {
       return self
         .variant(every_kind())
         .pipeline(&self.device, &self.layout, target)
@@ -229,10 +240,12 @@ impl Compositor {
   /// from now on, as a preview wants, and makes ready the variants a preview
   /// leans on: the one with no annotation, which most of its frames draw
   /// with, and the one with every kind, which draws any frame whose own
-  /// variant is still compiling - onto a whole canvas, and as a layer laid
-  /// over others, which a stacked screenshot's layers and what lies over a
-  /// focus are drawn as. A layer with none of its own ready would otherwise
-  /// be compiled where it is drawn, holding the frame.
+  /// variant is still compiling, and every annotated frame on Windows - onto
+  /// a whole canvas, as a layer laid over others, which a stacked
+  /// screenshot's layers and what lies over a focus are drawn as, and as
+  /// what the annotations under a blurring spotlight add. One with none of
+  /// its own ready would otherwise be compiled where it is drawn, holding
+  /// the frame.
   pub fn compile_annotation_kinds_in_background(&self) {
     let canvas = &self.canvas;
     canvas.in_background.store(true, Ordering::Relaxed);
@@ -240,7 +253,8 @@ impl Compositor {
     let warm = [
       (none, Target::Canvas),
       (Arc::clone(&every), Target::Canvas),
-      (every, Target::Layer),
+      (Arc::clone(&every), Target::Layer),
+      (every, Target::Delta),
     ];
     let (device, layout) = (canvas.device.clone(), canvas.layout.clone());
     // One thread, the variant with none first: a preview mostly draws with

@@ -5,10 +5,6 @@ use super::*;
 use screenwide_export::cursor_export::windows::export_surface::{ExportSurface, Held};
 
 impl ExportSurface for RecordingPreviewSurface {
-  fn d3d11(&self) -> &'static D3d11Layer {
-    self.inner.gpu.d3d11
-  }
-
   fn compositor(&self) -> &compositor::Compositor {
     &self.inner.gpu.compositor
   }

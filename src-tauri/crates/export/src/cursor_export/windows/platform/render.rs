@@ -9,7 +9,16 @@ pub(super) fn render_video(
 ) -> Result<ExportRunResult, String> {
   screenwide_output::validate_output_settings(request.width, request.height, request.output)?;
   let surface = (request.surface)()?;
-  let device = surface.d3d11().device.clone();
+  let output_size = screenwide_output::output_dimensions(request.output)?;
+  let compositor = WindowsExportCompositor::new(
+    surface,
+    (request.width, request.height),
+    request
+      .camera
+      .map(|(_, options)| (options.camera_width, options.camera_height)),
+    output_size,
+  )?;
+  let device = compositor.device();
   let mut reader = GpuVideoReader::open(request.screen, 0, device.clone())?;
   let mut camera_reader = request
     .camera
@@ -38,15 +47,6 @@ pub(super) fn render_video(
       )
     })
     .transpose()?;
-  let output_size = screenwide_output::output_dimensions(request.output)?;
-  let compositor = WindowsExportCompositor::new(
-    surface,
-    (request.width, request.height),
-    request
-      .camera
-      .map(|(_, options)| (options.camera_width, options.camera_height)),
-    output_size,
-  )?;
   let camera_geometry = request
     .camera
     .map(|(_, options)| media_preview::bake_geometry(options))
@@ -57,7 +57,7 @@ pub(super) fn render_video(
   )?;
   let sink = VideoSink::new(
     path,
-    &device,
+    device,
     output_size.0,
     output_size.1,
     super::super::super::video_bitrate(output_size.0, output_size.1, request.video.compression),

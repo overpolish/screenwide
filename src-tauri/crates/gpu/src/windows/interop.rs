@@ -14,6 +14,8 @@
 //! Screen capture cannot use the layer: Windows.Graphics.Capture never gets
 //! its frame buffers back from a D3D11On12 device and stops after its first
 //! few frames. Recording captures on a device of its own; see `bridge_windows`.
+//! A video export decodes and encodes on one too: Media Foundation's hardware
+//! encoder on the layer took about 5 ms a frame whatever it encoded.
 
 use std::sync::{LazyLock, Mutex};
 
@@ -35,8 +37,8 @@ use windows::{
 use super::super::windows::raw_textures::{committed_texture, wgpu_texture, Dx12};
 use super::super::Gpu;
 
-/// Direct3D 11 on wgpu's device: what Media Foundation decodes and encodes
-/// on.
+/// Direct3D 11 on wgpu's device: what the preview's Media Foundation decoders
+/// run on.
 pub struct D3d11Layer {
   pub device: ID3D11Device,
   context: ID3D11DeviceContext,

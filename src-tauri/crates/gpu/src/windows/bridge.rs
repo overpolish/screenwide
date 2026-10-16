@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A plain Direct3D 11 device on wgpu's GPU, for screen capture, and the
-//! textures and fences that carry its frames to and from wgpu.
+//! A plain Direct3D 11 device on wgpu's GPU, for screen capture and video
+//! export, and the textures and fences that carry its frames to and from
+//! wgpu.
 //!
 //! Windows.Graphics.Capture only recycles its frame buffers on a real
 //! Direct3D 11 device; on the D3D11On12 layer it stops after its first few
-//! frames. So recording captures and encodes on a device of its own, made
-//! on the adapter wgpu draws with so a texture can be shared between them.
-//! The two devices have separate queues: each direction has its own shared
-//! fence, which one side signals and the other's queue waits on before its
-//! next work.
+//! frames, and Media Foundation's hardware encoder there is about three
+//! times slower. So recording captures and encodes, and an export decodes
+//! and encodes, on a device of its own, made on the adapter wgpu draws with
+//! so a texture can be shared between them. The two devices have separate
+//! queues: each direction has its own shared fence, which one side signals
+//! and the other's queue waits on before its next work.
 
 use std::sync::Mutex;
 
@@ -23,7 +25,8 @@ use windows::{
       Direct3D10::ID3D10Multithread,
       Direct3D11::{
         D3D11CreateDevice, ID3D11Device, ID3D11Device5, ID3D11DeviceContext, ID3D11DeviceContext4,
-        ID3D11Fence, ID3D11Texture2D, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_SDK_VERSION,
+        ID3D11Fence, ID3D11Texture2D, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_CREATE_DEVICE_FLAG,
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT, D3D11_SDK_VERSION,
       },
       Direct3D12::{ID3D12Device, ID3D12Fence, D3D12_FENCE_FLAG_SHARED, D3D12_HEAP_FLAG_SHARED},
       Dxgi::{CreateDXGIFactory2, IDXGIAdapter, IDXGIFactory4, DXGI_CREATE_FACTORY_FLAGS},
@@ -38,6 +41,25 @@ use super::super::Gpu;
 /// a device of its own, and only one on this adapter can share a texture
 /// with wgpu.
 pub fn device_on_gpu_adapter(gpu: &Gpu) -> Result<ID3D11Device, String> {
+  device_with_flags(gpu, D3D11_CREATE_DEVICE_BGRA_SUPPORT, "capture")
+}
+
+/// A Direct3D 11 device on wgpu's adapter that Media Foundation can decode
+/// on as well as encode: hardware decoding needs the video interfaces, and
+/// without them Media Foundation falls back to decoding on the CPU.
+pub fn video_device_on_gpu_adapter(gpu: &Gpu) -> Result<ID3D11Device, String> {
+  device_with_flags(
+    gpu,
+    D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+    "video",
+  )
+}
+
+fn device_with_flags(
+  gpu: &Gpu,
+  flags: D3D11_CREATE_DEVICE_FLAG,
+  purpose: &str,
+) -> Result<ID3D11Device, String> {
   let luid = {
     let hal = unsafe { gpu.device.as_hal::<Dx12>() }
       .ok_or_else(|| "The graphics device is not Direct3D 12".to_owned())?;
@@ -53,7 +75,7 @@ pub fn device_on_gpu_adapter(gpu: &Gpu) -> Result<ID3D11Device, String> {
       &adapter,
       D3D_DRIVER_TYPE_UNKNOWN,
       HMODULE::default(),
-      D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+      flags,
       Some(&[D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0]),
       D3D11_SDK_VERSION,
       Some(&mut device),
@@ -61,8 +83,9 @@ pub fn device_on_gpu_adapter(gpu: &Gpu) -> Result<ID3D11Device, String> {
       None,
     )
   }
-  .map_err(|error| format!("The capture device could not be opened: {error}"))?;
-  let device: ID3D11Device = device.ok_or("Direct3D 11 returned no capture device")?;
+  .map_err(|error| format!("The {purpose} device could not be opened: {error}"))?;
+  let device: ID3D11Device =
+    device.ok_or_else(|| format!("Direct3D 11 returned no {purpose} device"))?;
   // Capture, the camera and Media Foundation each use it from their own
   // threads.
   let multithread: ID3D10Multithread = device.cast().map_err(|error| error.to_string())?;
@@ -104,7 +127,8 @@ unsafe impl Send for BridgedTexture {}
 unsafe impl Sync for BridgedTexture {}
 
 impl D3d11Bridge {
-  /// The bridge for `device`, which [`device_on_gpu_adapter`] made.
+  /// The bridge for `device`, which [`device_on_gpu_adapter`] or
+  /// [`video_device_on_gpu_adapter`] made.
   pub fn new(gpu: &Gpu, device: &ID3D11Device) -> Result<Self, String> {
     let context = unsafe { device.GetImmediateContext() }.map_err(|error| error.to_string())?;
     let device5: ID3D11Device5 = device.cast().map_err(|error| error.to_string())?;

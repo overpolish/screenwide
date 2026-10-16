@@ -3,3 +3,5 @@
 
 pub mod export_surface;
 pub(super) mod platform;
+#[cfg(test)]
+mod benchmarks_tests;

@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Windows final-video composition. Media Foundation decodes on the
-//! Direct3D 11 layer over the shared wgpu device, the preview shader draws
-//! offscreen in wgpu, and the hardware H.264 transform consumes the copy.
+//! Windows final-video composition. Media Foundation decodes on a plain
+//! Direct3D 11 device on wgpu's adapter, the preview shader draws offscreen
+//! in wgpu, and the hardware H.264 transform consumes the copy on the same
+//! Direct3D 11 device; see `export_surface`.
 
 mod render;
 use render::render_video;
