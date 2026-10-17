@@ -33,18 +33,10 @@ pub(super) fn camera_pane_layer<'a>(
   if output.width < 64 || output.height < 64 {
     return None;
   }
-  let (source, source_pixels) = match camera.rgba() {
-    Some(source) => (Some(source), None),
-    None => (
-      None,
-      camera.pixels().map(|pixels| (pixels, camera.dimensions())),
-    ),
-  };
   Some(RecordingWorkspaceLayer {
     pane_index: 1,
     source_token: (camera_ms << 2) | 1,
-    source,
-    source_pixels,
+    source: camera.picture(),
     settings: output,
     placement: NativeWorkspacePlacement::default(),
     seconds: screen_ms as f64 / 1_000.0,
@@ -52,7 +44,6 @@ pub(super) fn camera_pane_layer<'a>(
     keyboard: None,
     captions: None,
     camera: None,
-    camera_pixels: None,
     overlay: None,
     camera_settings: None,
     clip_cursor_at_video_edge: false,

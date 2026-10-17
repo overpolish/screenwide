@@ -140,9 +140,8 @@ pub(crate) fn install(
     let Some(session_id) = manager.session_id else {
       return;
     };
-    // Both backends redraw the halo without recomposing: the D3D11 panes
-    // redraw from what they last composed, and the retained macOS scene has
-    // the halo set on the annotations it is already holding.
+    // The halo is redrawn without recomposing: the retained scene has it set
+    // on the annotations it is already holding.
     if let Some(surface) = manager
       .sources
       .as_ref()
@@ -205,10 +204,6 @@ pub(crate) fn install(
             / image_points;
           Some((pane, local, width as f32))
         });
-      #[cfg(target_os = "windows")]
-      surface
-        .redraw_annotation_hover(halo.map(|(pane, local, width)| (u64::from(pane), local, width)));
-      #[cfg(target_os = "macos")]
       surface.redraw_annotation_hover(halo);
     }
     let annotation_id = manager

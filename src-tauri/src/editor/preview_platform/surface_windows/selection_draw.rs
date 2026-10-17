@@ -146,20 +146,16 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   };
   let luminance =
     state.backdrop[0] * 0.2126 + state.backdrop[1] * 0.7152 + state.backdrop[2] * 0.0722;
-  let magnifier_box = state
-    .selection
-    .and_then(|selection| state.panes.get(selection.pane_index as usize))
-    .and_then(Option::as_ref)
-    .and_then(|pane| pane.magnifier)
-    .map(|magnifier| {
-      let [x, y, width, height] = magnifier.display_box;
-      [
-        x * scale as f32,
-        y * scale as f32,
-        width * scale as f32,
-        height * scale as f32,
-      ]
-    });
+  // The loupe is drawn by the workspace in the overlay's own pixels, both
+  // laid over the viewport.
+  let magnifier_box = state.workspace.magnifier.map(|magnifier| {
+    [
+      magnifier.box_origin[0] as f32,
+      magnifier.box_origin[1] as f32,
+      magnifier.box_size[0] as f32,
+      magnifier.box_size[1] as f32,
+    ]
+  });
   let objects = state
     .selection_visible
     .then(|| object_picking::chrome(state))

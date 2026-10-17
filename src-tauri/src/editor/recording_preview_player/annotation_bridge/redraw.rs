@@ -4,13 +4,13 @@
 use super::*;
 
 impl PreviewPlayerManager {
-  /// Re-presents the frame the pane already holds with the annotations the
-  /// clips resolve to at `position_ms`, without touching the decoder. Reports
-  /// whether there was a frame to redraw; a pane with nothing composed yet has
-  /// to be restarted the ordinary way. Only the D3D11 panes can do this - the
-  /// macOS workspace re-encodes from its retained scene instead. In One video
-  /// the camera is drawn in the screen's pane, with its annotations over it,
-  /// so a change on either redraws that pane.
+  /// Re-presents the frame the workspace already holds with the annotations
+  /// the clips resolve to at `position_ms`, without touching the decoder.
+  /// Reports whether there was a frame to redraw; a pane with nothing staged
+  /// yet has to be restarted the ordinary way. Only Windows does this; macOS
+  /// restarts its still decoder. In One video the camera is drawn in the
+  /// screen's pane, with its annotations over it, so a change on either
+  /// redraws that pane.
   #[cfg(target_os = "windows")]
   pub(in crate::editor::recording_preview_player) fn redraw_annotation_frame(
     &self,

@@ -42,7 +42,7 @@ pub(super) fn cancel(inner: &std::sync::Arc<SurfaceInner>) {
       }
       clear_selection_snap_guides(&mut state);
       update_magnifier(&mut state);
-      redraw_magnifier(inner, &mut state);
+      draw_workspace(inner, &mut state);
       draw_selection(inner, &state);
       cancelled = super::crop_draw::finish(&mut state, &gesture).then_some(gesture);
     } else {

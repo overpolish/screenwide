@@ -30,7 +30,7 @@ pub(super) fn up(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: f6
     }
     clear_selection_snap_guides(&mut state);
     update_magnifier(&mut state);
-    redraw_magnifier(inner, &mut state);
+    draw_workspace(inner, &mut state);
     draw_selection(inner, &state);
     editor::EditorWindow::set_cursor(cursor_for_state(inner, &state, point));
   }

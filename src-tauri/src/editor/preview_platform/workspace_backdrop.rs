@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The checkerboard the workspace's layers are drawn over. Every canvas shows
-//! what lies past its edge over it, so what will not be exported can still
-//! be seen, moved and deleted.
+//! The checkerboard the editor workspace's layers are drawn over. Every canvas
+//! shows what lies past its edge over it, so what will not be exported can
+//! still be seen, moved and deleted.
 
 use screenwide_gpu::Gpu;
 

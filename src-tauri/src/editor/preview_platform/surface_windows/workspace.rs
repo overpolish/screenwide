@@ -4,90 +4,20 @@
 use super::*;
 
 impl RecordingPreviewSurface {
-  #[allow(dead_code)]
-  pub(crate) fn present(&self, _index: u32, _image: &CapturedImage) -> bool {
-    false
-  }
-
-  #[allow(clippy::too_many_arguments)]
-  // Retained-workspace entry point; not wired on Windows yet.
-  #[allow(dead_code)]
-  pub(crate) fn present_recording_workspace(
-    &self,
-    layers: &[RecordingWorkspaceLayer<'_>],
-  ) -> Result<bool, String> {
-    if layers.is_empty() {
-      return Ok(false);
-    }
-    let batch = self.present_batch();
-    let mut presented = false;
-    for layer in layers {
-      let Some(source) = layer.source else {
-        // Keep this explicit rather than silently reading back a native
-        // texture. The Windows decoder's D3D11 path will provide this branch
-        // once its zero-copy source contract is promoted.
-        if layer.source_pixels.is_some() {
-          return Err("Windows recording workspace pixel sources are not wired".to_owned());
-        }
-        return Err("Recording workspace layer has no source".to_owned());
-      };
-      // The retained pane topology is already laid out by
-      // `layout_recording_workspace`; the shared workspace transform is
-      // applied by the pane visuals, so no CPU composition or intermediate
-      // webview transport is introduced here.
-      presented |= self.present_composed(
-        layer.pane_index,
-        layer.source_token,
-        source,
-        &layer.settings,
-        layer.seconds,
-        layer.cursor,
-        layer.camera,
-        layer.overlay,
-        layer.clip_cursor_at_video_edge,
-      )?;
-    }
-    drop(batch);
-    Ok(presented)
-  }
-
-  #[allow(clippy::too_many_arguments)]
-  #[allow(dead_code)]
-  pub(crate) fn present_composed_pixels(
-    &self,
-    _index: u32,
-    _source_token: u64,
-    _source_pixels: *mut std::ffi::c_void,
-    _source_size: (u32, u32),
-    _settings: &ScreenshotOutputSettings,
-    _seconds: f64,
-    _cursor: Option<&CapturedImage>,
-    _camera: Option<&CapturedImage>,
-    _camera_pixels: Option<*mut std::ffi::c_void>,
-    _overlay: Option<&StillOverlay>,
-    _clip_cursor_at_video_edge: bool,
-  ) -> Result<bool, String> {
-    Ok(false)
-  }
-
   pub(crate) fn hide(&self) {
     if let Ok(mut state) = self.inner.state.lock() {
-      state.camera_source = None;
-      state.primary_composition = None;
+      // Windows surfaces live for the editor window, not for one preview
+      // session, so the scene lets go of every picture the session staged:
+      // reusable screenshot item IDs must not find the last session's.
+      clear_workspace(&self.inner, &mut state);
       if let Ok(mut selection) = self.inner.gpu.selection.lock() {
         selection.release_drawables();
       }
       self.inner.gpu.backdrop.hide();
       for pane in state.panes.iter_mut().flatten() {
-        pane.hide();
-        pane.release_drawables(self.inner.gpu.shared);
-        // Windows surfaces live for the editor window, not for one preview
-        // session. Reusable screenshot item IDs therefore cannot be allowed
-        // to keep the previous session's immutable source texture alive.
-        pane.source = None;
         pane.source_token = None;
         pane.settings = None;
-        pane.magnifier = None;
+        pane.captions = None;
       }
       state.editor_active = false;
       state.selection = None;

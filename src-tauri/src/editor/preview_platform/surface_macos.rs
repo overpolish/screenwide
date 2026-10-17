@@ -6,7 +6,7 @@
 //! See the parent module for the contract a new platform has to satisfy. The
 //! pane hierarchy, layout batching, input and presents live in
 //! `editor/preview_platform/surface_macos/native/recording_preview_surface_macos.m`;
-//! the workspace is drawn by the shared compositor from `workspace_scene`.
+//! the workspace is drawn by the shared compositor from `../workspace_scene`.
 
 mod annotation;
 mod audio_ribbon;
@@ -21,7 +21,7 @@ use screenwide_compositor::object_picking::ObjectPickCallback;
 mod recording_workspace;
 mod screenshot_workspace;
 mod text_words;
-mod workspace_scene;
+mod workspace_scene_exports;
 
 use std::sync::Arc;
 
@@ -41,13 +41,13 @@ use self::ffi::{
   screenwide_preview_surface_set_selection_callback,
   screenwide_preview_surface_set_selection_gesture_callback,
 };
-pub(crate) use self::native_types::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
-use self::workspace_scene::WorkspaceScene;
+use super::workspace_scene::WorkspaceScene;
 use super::{
   AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, ContextMenuCallback,
   ImageDropCallback, PointerDownCallback, SelectionCallback, SelectionGestureCallback,
   TransformCallback,
 };
+use screenwide_compositor::compositor::NativeCursors;
 use screenwide_imaging::CapturedImage;
 
 pub(crate) struct RecordingPreviewSurface {
@@ -71,7 +71,7 @@ unsafe impl Sync for RecordingPreviewSurface {}
 impl RecordingPreviewSurface {
   pub(crate) fn from_window(window: &WebviewWindow) -> Result<Self, String> {
     let host_view = window.ns_view().map_err(|error| error.to_string())?;
-    let scene = Arc::new(WorkspaceScene::new()?);
+    let scene = Arc::new(WorkspaceScene::new(NativeCursors::none())?);
     let (device, queue) = screenwide_gpu::macos::metal_device_and_queue(screenwide_gpu::shared()?)?;
     // The surface holds its own reference, released when it is deallocated:
     // main-thread blocks it queued may still draw after this side is dropped.

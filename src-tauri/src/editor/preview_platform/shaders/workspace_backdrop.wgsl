@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The macOS editor workspace's backdrop: a checkerboard under every layer, so
-// what a canvas shows past its edge, which is never exported, reads as lying
-// off it. The squares are laid on the drawable's own pixels, so they keep
-// their size on screen however far the workspace is zoomed.
+// The editor workspace's backdrop: a checkerboard under every layer, so what
+// a canvas shows past its edge, which is never exported, reads as lying off
+// it. The squares are laid on the drawable's own pixels, so they keep their
+// size on screen however far the workspace is zoomed.
 
 struct Backdrop {
   // The two squares' colours, premultiplied.

@@ -38,7 +38,6 @@ mod scene_turn;
 mod source;
 #[cfg(target_os = "macos")]
 pub mod still;
-#[cfg(target_os = "macos")]
 pub mod still_overlay;
 mod submit;
 mod tiles;

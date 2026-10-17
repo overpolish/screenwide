@@ -8,7 +8,6 @@
 //! React remains semantic state and command/event transport.
 
 use super::ffi::screenwide_preview_surface_present_screenshot_workspace;
-use super::workspace_scene::{LayerPicture, StagedLayer};
 use super::RecordingPreviewSurface;
 use screenwide_imaging::CapturedImage;
 use screenwide_output::ScreenshotOutputSettings;
@@ -25,39 +24,11 @@ impl RecordingPreviewSurface {
     // and the halo's width in canvas pixels. It never reaches the export.
     hover: Option<(u64, usize, f32)>,
   ) -> Result<bool, String> {
-    let staged = layers
-      .iter()
-      .enumerate()
-      .map(|(index, (source_token, source, settings))| StagedLayer {
-        pane_index: 0,
-        // Screenshot selection and gesture events address layers by their
-        // workspace order. `source_token` remains the independent cache key;
-        // using it as the layer identity prevents the crop magnifier from
-        // resolving the selected retained source.
-        layer_id: u32::try_from(index).unwrap_or(u32::MAX - 1),
-        source_token: *source_token,
-        source: LayerPicture::Image(source),
-        redaction_picture: Some(source),
-        settings,
-        seconds: 0.0,
-        cursor: None,
-        keyboard: None,
-        captions: None,
-        camera: None,
-        overlay: None,
-        camera_settings: None,
-        foreground_only: index > 0,
-        source_is_camera: false,
-        hover: hover
-          .filter(|(layer, _, _)| layer == source_token)
-          .map(|(_, index, width)| (index, width)),
-      })
-      .collect::<Vec<_>>();
-    self.scene.stage(&staged, None)?;
+    self.scene.stage_screenshot(layers, hover)?;
     Ok(unsafe {
       screenwide_preview_surface_present_screenshot_workspace(
         self.handle,
-        staged.len().try_into().unwrap_or(u32::MAX),
+        layers.len().try_into().unwrap_or(u32::MAX),
       ) != 0
     })
   }

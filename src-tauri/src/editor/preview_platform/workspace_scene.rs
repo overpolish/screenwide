@@ -1,40 +1,47 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The macOS editor workspace's retained scene, drawn by the shared
-//! compositor into the workspace drawable.
+//! The editor workspace's retained scene, drawn by the shared compositor
+//! into the workspace drawable.
 //!
-//! Decoders and the screenshot preview stage layers here; Objective-C keeps
-//! the layer, the input and the present, and calls back in to draw on pan and
-//! zoom, to move the scene with a native gesture before React has caught up,
-//! and to read where the shortcut strip is.
+//! Decoders and the screenshot preview stage layers here; the platform
+//! surface keeps the drawable, the input and the present, and calls in to
+//! draw on pan and zoom, to move the scene with a native gesture before React
+//! has caught up, and to read where the shortcut strip is.
 
-mod backdrop;
 mod draw;
 mod effects;
-mod exports;
+// Windows drives Frame resizes and radius drags through React rather than
+// these native gestures.
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 mod gestures;
 mod layers;
 mod loupe;
 mod overlay_bounds;
+mod picture;
+mod recording;
+mod stage;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use self::layers::{LayerCamera, SceneLayer, ScenePicture};
-pub(crate) use self::layers::{LayerPicture, StagedLayer};
-use screenwide_compositor::annotation_gpu::SourceAnnotations;
+pub(crate) use self::draw::NativeWorkspacePlacement;
+#[cfg_attr(target_os = "windows", allow(unused_imports))]
+pub(in crate::editor::preview_platform) use self::gestures::FrameChange;
+pub(crate) use self::layers::StagedLayer;
+use self::layers::{LayerCamera, SceneLayer};
+pub(crate) use self::picture::LayerPicture;
+use self::picture::ScenePicture;
+pub(crate) use self::recording::{baked_camera_overlay, RecordingWorkspaceLayer};
+use crate::editor::preview_platform::workspace_backdrop::Backdrop;
 use screenwide_compositor::compositor::still_overlay::StillOverlay;
-use screenwide_compositor::compositor::{
-  CameraComposition, CanvasGeometry, Compositor, CursorArtwork, NativeCursors,
-};
-use screenwide_cursor_effects::GpuArtwork;
+use screenwide_compositor::compositor::{CanvasGeometry, Compositor, NativeCursors};
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_text::engine::typing::TypingMarks;
 
 struct SceneState {
   compositor: Compositor,
-  backdrop: backdrop::Backdrop,
+  backdrop: Backdrop,
   loupe: loupe::Loupe,
   layers: Vec<SceneLayer>,
   /// The layers as a native gesture found them, and whether an update has
@@ -61,16 +68,18 @@ pub(crate) struct WorkspaceScene {
 }
 
 impl WorkspaceScene {
-  pub(super) fn new() -> Result<Self, String> {
+  /// A scene whose recorded pointer is drawn from `cursors`. macOS hands over
+  /// none and stages its artwork with the layers instead.
+  pub(super) fn new(cursors: NativeCursors) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
-    let compositor = Compositor::new(gpu, NativeCursors::none())?;
+    let compositor = Compositor::new(gpu, cursors)?;
     // Drawn as it is edited: a set of kinds new to it is compiled on another
     // thread while the frames go on with a variant that holds it.
     compositor.compile_annotation_kinds_in_background();
     Ok(Self {
       state: Mutex::new(SceneState {
         compositor,
-        backdrop: backdrop::Backdrop::new(gpu),
+        backdrop: Backdrop::new(gpu),
         loupe: loupe::Loupe::new(gpu),
         layers: Vec::new(),
         resize: None,
@@ -108,91 +117,6 @@ impl WorkspaceScene {
     let changed = state.typing != typing;
     state.typing = typing;
     changed
-  }
-
-  /// Replaces the scene with `layers`. While a native gesture has rewritten
-  /// the scene, a late frame would put back geometry from an earlier pointer
-  /// sample, so it is accepted without being staged. Before that, as during a
-  /// plain move that only opened the session so Option can auto-fit later,
-  /// the decoder's frames are the only source of the moved pixels.
-  pub(super) fn stage(
-    &self,
-    layers: &[StagedLayer<'_>],
-    artworks: Option<&[GpuArtwork]>,
-  ) -> Result<(), String> {
-    let mut state = self.state()?;
-    if state.resize.as_ref().is_some_and(|(_, applied)| *applied) {
-      return Ok(());
-    }
-    if let Some(artworks) = artworks.filter(|artworks| !artworks.is_empty()) {
-      let artworks = artworks.iter().map(CursorArtwork::from).collect::<Vec<_>>();
-      state.compositor.use_cursor_artworks(&artworks)?;
-    }
-    let no_overlay = StillOverlay::default();
-    let mut staged = Vec::with_capacity(layers.len());
-    for layer in layers {
-      let source = match state.sources.get(&layer.source_token) {
-        Some(source) if source.texture.size == layer.source.size() => Arc::clone(source),
-        _ => {
-          let source = Arc::new(ScenePicture::new(&state.compositor, layer.source)?);
-          state
-            .sources
-            .insert(layer.source_token, Arc::clone(&source));
-          source
-        }
-      };
-      let size = source.texture.size;
-      let camera = layer
-        .camera
-        .map(|picture| {
-          let picture = ScenePicture::new(&state.compositor, picture)?;
-          let overlay = layer.overlay.unwrap_or(&no_overlay);
-          let composition = layer
-            .camera_settings
-            .map(|(settings, source)| {
-              CameraComposition::new(settings, source, picture.texture.size)
-            })
-            .transpose()?
-            .flatten();
-          let mut camera = LayerCamera::new(overlay, Some(Arc::new(picture)));
-          camera.composition = composition.map(Arc::new);
-          camera.matte = state.effects.matte_at(layer.seconds);
-          Ok::<_, String>(camera)
-        })
-        .transpose()?;
-      let source_matte = layer
-        .source_is_camera
-        .then(|| state.effects.matte_at(layer.seconds))
-        .flatten();
-      staged.push(SceneLayer {
-        pane_index: layer.pane_index,
-        layer_id: layer.layer_id,
-        source_token: layer.source_token,
-        geometry: CanvasGeometry::of(size, layer.settings)?,
-        annotations: Arc::new(SourceAnnotations::new(
-          &layer.settings.annotations,
-          size,
-          layer.settings,
-          layer.redaction_picture,
-        )),
-        settings: Arc::new(layer.settings.clone()),
-        source,
-        seconds: layer.seconds,
-        cursor: layer.cursor,
-        keyboard: layer.keyboard,
-        captions: layer.captions.clone(),
-        camera,
-        foreground_only: layer.foreground_only,
-        source_is_camera: layer.source_is_camera,
-        source_matte,
-        hover: layer.hover,
-      });
-    }
-    state
-      .sources
-      .retain(|token, _| staged.iter().any(|layer| layer.source_token == *token));
-    state.layers = staged;
-    Ok(())
   }
 
   /// The size of the camera frame `pane_index` carries, once it is resident.

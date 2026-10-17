@@ -108,7 +108,6 @@ impl PreviewPlayerManager {
   /// annotations as they were: a choice, not an edit.
   fn commit_choice(&mut self, pane: u32, position: u64, shown: Vec<Annotation>) -> Option<Commit> {
     self.publish_annotation_handles();
-    #[cfg(target_os = "macos")]
     if let Some(surface) = self
       .sources
       .as_ref()

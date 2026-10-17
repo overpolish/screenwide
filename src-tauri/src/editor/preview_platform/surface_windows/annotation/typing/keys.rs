@@ -78,7 +78,7 @@ pub(super) fn edit(inner: &Arc<SurfaceInner>, input: editor::TypingInput) {
       // Rust re-presents the box with its new text; the marks only have to
       // be in place for that.
       Outcome::Changed => sync_typing_marks(&mut state),
-      Outcome::Moved => redraw_composed_panes(inner, &mut state),
+      Outcome::Moved => redraw_workspace(inner, &mut state),
       Outcome::Unchanged | Outcome::Finish => {}
     }
     (outcome, change, caret)

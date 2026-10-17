@@ -145,13 +145,8 @@ pub async fn set_recording_preview_annotations(
       .and_then(|s| s.preview_surface.as_ref())
       .filter(|_| manager.annotation.mode != 0)
     {
-      // Only the retained macOS workspace re-presents itself from annotations
-      // alone. The D3D11 backend has no retained scene to repaint, and
-      // nothing to repaint yet either: its arrow overlay is not drawn.
-      #[cfg(target_os = "macos")]
+      // The retained workspace re-presents itself from annotations alone.
       surface.redraw_recording_workspace();
-      #[cfg(not(target_os = "macos"))]
-      let _ = surface;
     }
   }
   Ok(())

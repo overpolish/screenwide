@@ -4,8 +4,8 @@
 //! Retained-workspace pane reflow, fit rebasing, and geometry publication.
 
 use super::{
-  draw_selection, rebase_display_fit_mode, set_pane_geometry, DisplayRect, FrameResizeStart,
-  SurfaceInner, SurfaceState,
+  draw_selection, draw_workspace, rebase_display_fit_mode, set_pane_geometry, DisplayRect,
+  FrameResizeStart, SurfaceInner, SurfaceState,
 };
 use screenwide_compositor::PreviewSurfaceRect;
 
@@ -192,12 +192,12 @@ pub(super) fn rebase_workspace_fit(state: &mut SurfaceState, start: &FrameResize
   state.workspace_transform.pan_y = rebased.pan_y;
 }
 
-/// Publishes the workspace transform to every pane. `defer_geometry` parks the
-/// pane boxes instead of committing them: a canvas resize changes the box and
-/// the composition together, and the re-composed still that follows this call
-/// publishes the parked geometry with its own present, so the pane never shows
-/// the previous canvas letterboxed into the new box for a frame. The selection
-/// overlay is always redrawn immediately - it tracks the box, not the pixels.
+/// Publishes the workspace transform to every pane. `defer_geometry` holds the
+/// workspace's picture back instead of drawing it: a canvas resize changes the
+/// box and the composition together, and the re-composed still that follows
+/// this call draws both, so the workspace never shows the previous canvas
+/// letterboxed into the new box for a frame. The selection overlay is always
+/// redrawn immediately - it tracks the box, not the pixels.
 pub(super) fn apply_workspace_transform(
   inner: &std::sync::Arc<SurfaceInner>,
   state: &mut SurfaceState,
@@ -208,13 +208,17 @@ pub(super) fn apply_workspace_transform(
   let scale = state.scale;
   for pane in state.panes.iter_mut().flatten().filter(|pane| pane.seen) {
     let rect = transform.apply(viewport, pane.base_rect);
-    set_pane_geometry(pane, viewport, rect, scale, defer_geometry);
+    set_pane_geometry(pane, viewport, rect, scale);
+  }
+  if defer_geometry && inner.batch_depth.load(std::sync::atomic::Ordering::Acquire) == 0 {
+    state.workspace.held = true;
   }
   draw_selection(inner, state);
   // The halo is measured in canvas pixels against the size the picture is
   // drawn at, so a transform that redraws it at another size leaves it to be
   // measured again.
   super::annotation::refresh_hover(inner, state);
+  draw_workspace(inner, state);
   if inner.batch_depth.load(std::sync::atomic::Ordering::Acquire) == 0 {
     let _ = unsafe { inner.gpu.composition.Commit() };
   }

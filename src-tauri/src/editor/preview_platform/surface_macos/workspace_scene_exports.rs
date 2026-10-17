@@ -8,11 +8,11 @@
 use std::ffi::c_void;
 use std::sync::Arc;
 
-use super::backdrop::BackdropStyle;
-use super::gestures::FrameChange;
-use super::loupe::NativeMagnifier;
-use super::WorkspaceScene;
-use crate::editor::preview_platform::surface_macos::NativeWorkspacePlacement;
+use crate::editor::preview_platform::workspace_backdrop::BackdropStyle;
+use crate::editor::preview_platform::workspace_scene::{
+  FrameChange, NativeWorkspacePlacement, WorkspaceScene,
+};
+use screenwide_osc::gpu::magnifier::NativeMagnifier;
 
 /// Where the overlays drawn over the picture show, and the caption's words.
 mod overlays;

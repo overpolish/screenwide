@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use cidre::{arc, av};
 
 use super::image::frame_position;
+use crate::editor::preview_platform::LayerPicture;
 use screenwide_export::decode::macos::scrubber::{NativeFrameScrubber, NativePixelFrame};
 use screenwide_export::decode::macos::video::{open_asset, NativeVideoReader};
 use screenwide_output::ScreenshotOutputSettings;
@@ -45,10 +46,11 @@ impl DecodedFrame {
     }
   }
 
-  pub(super) fn pixels(&self) -> Option<*mut std::ffi::c_void> {
+  /// The frame as a workspace layer is drawn from it.
+  pub(super) fn picture(&self) -> LayerPicture<'_> {
     match self {
-      Self::Pixels(frame) => Some(frame.as_ptr()),
-      Self::Rgba(_) => None,
+      Self::Pixels(frame) => LayerPicture::Pixels(frame.as_ptr()),
+      Self::Rgba(frame) => LayerPicture::Image(frame),
     }
   }
 

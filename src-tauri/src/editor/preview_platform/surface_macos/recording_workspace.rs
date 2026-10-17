@@ -5,12 +5,9 @@ use super::ffi::{
   screenwide_preview_surface_present_recording_workspace,
   screenwide_preview_surface_redraw_workspace,
 };
-use super::native_types::RecordingWorkspaceLayer;
-use super::workspace_scene::{LayerPicture, StagedLayer};
 use super::RecordingPreviewSurface;
-use screenwide_compositor::compositor::still_overlay::StillOverlay;
-use screenwide_cursor_effects::{GpuArtwork, GpuCursor};
-use screenwide_export::media_preview;
+use crate::editor::preview_platform::workspace_scene::RecordingWorkspaceLayer;
+use screenwide_cursor_effects::GpuArtwork;
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::CameraOverlaySettings;
 
@@ -22,42 +19,10 @@ impl RecordingPreviewSurface {
     layers: &[RecordingWorkspaceLayer<'_>],
     artworks: Option<&[GpuArtwork]>,
   ) -> Result<bool, String> {
-    let picture = |image: Option<_>, pixels: Option<(*mut std::ffi::c_void, _)>| {
-      image
-        .map(LayerPicture::Image)
-        .or_else(|| pixels.map(|(pixels, _)| LayerPicture::Pixels(pixels)))
-    };
-    let staged = layers
-      .iter()
-      .map(|layer| {
-        Ok(StagedLayer {
-          pane_index: layer.pane_index,
-          layer_id: layer.pane_index,
-          source_token: layer.source_token,
-          source: picture(layer.source, layer.source_pixels)
-            .ok_or_else(|| "Recording workspace layer has no source".to_owned())?,
-          // A recording's redactions carry the fills held from their clips'
-          // first frames, so all a frame adds is how large its source is.
-          redaction_picture: None,
-          settings: &layer.settings,
-          seconds: layer.seconds,
-          cursor: layer.cursor.map(|cursor| GpuCursor {
-            clip_at_video_edge: layer.clip_cursor_at_video_edge,
-            ..cursor
-          }),
-          keyboard: layer.keyboard,
-          captions: layer.captions.clone(),
-          camera: picture(layer.camera, layer.camera_pixels),
-          overlay: layer.overlay,
-          camera_settings: layer.camera_settings,
-          foreground_only: layer.foreground_only,
-          source_is_camera: layer.source_is_camera,
-          // The halo is set on the scene by `redraw_annotation_hover`.
-          hover: None,
-        })
-      })
-      .collect::<Result<Vec<_>, String>>()?;
-    self.scene.stage(&staged, artworks)?;
+    if let Some(artworks) = artworks {
+      self.scene.use_cursor_artworks(artworks)?;
+    }
+    self.scene.stage_recording(layers)?;
     let panes = layers
       .iter()
       .map(|layer| layer.pane_index)
@@ -84,53 +49,7 @@ impl RecordingPreviewSurface {
     panes: &[(u32, &ScreenshotOutputSettings)],
     baked_camera: Option<(CameraOverlaySettings, bool, bool)>,
   ) -> Result<bool, String> {
-    // The incoming settings are the semantic source of truth once there is no
-    // active native gesture, so each canvas's size and uniforms change
-    // together: reusing a pre-undo size would stretch the restored pixels.
-    for (pane_index, settings) in panes {
-      if !self.scene.update_canvas(*pane_index, settings)? {
-        return Ok(false);
-      }
-    }
-    let Some((settings, drop_shadow, camera_on_top)) = baked_camera else {
-      return Ok(true);
-    };
-    let Some((_, screen)) = panes.iter().find(|(index, _)| *index == 0) else {
-      return Ok(false);
-    };
-    let Some((camera_width, camera_height)) = self.scene.camera_source_size(0) else {
-      return Ok(false);
-    };
-    let geometry = media_preview::bake_geometry(media_preview::BakedVideoExportOptions {
-      camera_drop_shadow: drop_shadow,
-      camera_height,
-      camera_width,
-      overlay: settings,
-      screen_height: screen.height,
-      screen_width: screen.width,
-      video: media_preview::VideoExportOptions {
-        compression: 0,
-        resolution_scale_percent: 100,
-        source_scale_percent: 100,
-      },
-    })?;
-    let overlay = StillOverlay {
-      camera_crop_x: geometry.crop_x,
-      camera_crop_y: geometry.crop_y,
-      camera_crop_width: geometry.crop_width,
-      camera_crop_height: geometry.crop_height,
-      camera_frame_x: geometry.frame_x,
-      camera_frame_y: geometry.frame_y,
-      camera_frame_width: geometry.frame_width,
-      camera_frame_height: geometry.frame_height,
-      camera_radius: geometry.radius,
-      camera_source_width: camera_width,
-      camera_source_height: camera_height,
-      camera_drop_shadow: u32::from(drop_shadow),
-      camera_on_top: u32::from(camera_on_top),
-      ..StillOverlay::default()
-    };
-    Ok(self.scene.update_camera(0, &overlay))
+    self.scene.recompose_recording(panes, baked_camera)
   }
 
   /// Moves the hover halo on the retained recording scene and redraws it.

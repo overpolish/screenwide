@@ -4,18 +4,6 @@
 use super::super::PreviewSelection;
 use screenwide_compositor::workspace_editor;
 
-pub(super) fn magnifier_bounds(selection: PreviewSelection) -> [f32; 4] {
-  if selection.recenter_width <= 0.0 || selection.recenter_height <= 0.0 {
-    return [0.0, 0.0, 1.0, 1.0];
-  }
-  [
-    ((selection.image_x - selection.recenter_x) / selection.recenter_width) as f32,
-    ((selection.image_y - selection.recenter_y) / selection.recenter_height) as f32,
-    (selection.image_width / selection.recenter_width) as f32,
-    (selection.image_height / selection.recenter_height) as f32,
-  ]
-}
-
 pub(super) fn selection_resize(
   start: PreviewSelection,
   edges: u32,

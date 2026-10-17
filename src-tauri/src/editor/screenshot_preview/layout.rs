@@ -275,13 +275,10 @@ pub async fn layout_screenshot_preview_surface(
         .lock()
         .map_err(|_| "The screenshot preview is unavailable".to_owned())?;
       manager.require_session(session_id)?;
-      #[cfg(target_os = "macos")]
       let hover = manager
         .annotation_hover
         .as_ref()
         .map(|hover| (hover.layer_id, hover.index, hover.width));
-      #[cfg(not(target_os = "macos"))]
-      let hover = None;
       (manager.output.clone(), manager.sources.clone(), hover)
     };
     if let (Some(output), sources, hover) = presentation {

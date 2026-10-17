@@ -9,6 +9,8 @@
 #[cfg(target_os = "macos")]
 pub mod macos;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+pub mod magnifier;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub mod pipeline;
 #[cfg(target_os = "windows")]
 pub mod windows;

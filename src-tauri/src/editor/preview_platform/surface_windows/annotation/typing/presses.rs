@@ -171,7 +171,7 @@ pub(crate) fn press(inner: &Arc<SurfaceInner>, point: (f64, f64), double: bool) 
       }
       typing.selecting = !double;
       typing.caret_on = true;
-      redraw_composed_panes(inner, &mut state);
+      redraw_workspace(inner, &mut state);
     }
     let in_box = place.is_some();
     // A caption left with nothing to read only hides its words, so a press
@@ -214,7 +214,7 @@ pub(crate) fn pointer_move(inner: &Arc<SurfaceInner>, point: (f64, f64)) -> bool
     });
     typing.edit.place(offset, true);
     if typing.edit.marks(true) != before {
-      redraw_composed_panes(inner, &mut state);
+      redraw_workspace(inner, &mut state);
     }
   }
   true

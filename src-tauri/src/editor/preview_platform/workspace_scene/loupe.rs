@@ -5,7 +5,7 @@
 //! from the picture the layer it magnifies was drawn from.
 
 use screenwide_gpu::Gpu;
-pub(super) use screenwide_osc::gpu::macos::NativeMagnifier;
+pub(super) use screenwide_osc::gpu::magnifier::NativeMagnifier;
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/workspace_magnifier.wgsl"));
 

@@ -17,12 +17,10 @@ impl PreviewPlayerManager {
       .map(|settings| settings.clone())
   }
 
-  /// Recomposes the paused stills from the cached full-resolution sources
-  /// against whatever composition is current, the way macOS recomposes its
-  /// retained workspace. `Ok(false)` means a source is not cached yet and the
-  /// decoder has to supply the frame - `redraw_still` still flushes its
-  /// present batch on that path, so geometry a deferred layout parked reaches
-  /// the compositor instead of stranding the pane at its previous box.
+  /// Recomposes the paused stills from the frames the workspace holds against
+  /// whatever composition is current, the way macOS recomposes its retained
+  /// workspace. `Ok(false)` means a frame is not resident yet and the decoder
+  /// has to supply it.
   #[cfg(target_os = "windows")]
   pub(super) fn redraw_still_now(&self) -> Result<bool, String> {
     let sources = self
@@ -41,14 +39,20 @@ impl PreviewPlayerManager {
       .map_err(|_| "The recording preview composition is unavailable".to_owned())?
       .clone();
     let composition = self.arranged_composition(&composition);
-    surface.redraw_still(
-      composition.bake_camera && sources.camera_path.is_some(),
-      &composition.recording_output.primary,
-      &composition.recording_output.camera,
-      composition.camera_overlay,
-      composition.recording_output.camera.drop_shadow,
-      screenwide_export::recording_model::CAMERA_IN_FRONT,
-    )
+    let baked = composition.bake_camera && sources.camera_path.is_some();
+    let mut panes = vec![(0, &composition.recording_output.primary)];
+    if !baked && sources.camera_path.is_some() {
+      panes.push((1, &composition.recording_output.camera));
+    }
+    let recomposed = surface.recompose_recording_workspace(
+      &panes,
+      baked.then_some((
+        composition.camera_overlay,
+        composition.recording_output.camera.drop_shadow,
+        screenwide_export::recording_model::CAMERA_IN_FRONT,
+      )),
+    )?;
+    Ok(recomposed && surface.redraw_recording_workspace())
   }
 
   #[cfg(target_os = "windows")]

@@ -3,13 +3,23 @@
 
 //! Drawing the retained scene into the workspace drawable.
 
-use super::backdrop::BackdropStyle;
 use super::loupe::NativeMagnifier;
 use super::{SceneState, WorkspaceScene};
-use crate::editor::preview_platform::surface_macos::NativeWorkspacePlacement;
+use crate::editor::preview_platform::workspace_backdrop::BackdropStyle;
 use crate::editor::preview_platform::CAPTIONS_LAYER_ID;
 use screenwide_compositor::annotation_gpu::caption_overlay_typed;
 use screenwide_compositor::compositor::{ComposedFrame, LayerDraw, LayerPlacement};
+
+/// Where one layer's canvas is drawn in the workspace drawable, in its
+/// pixels. The twin of `ScreenwideWorkspacePlacement`.
+#[repr(C)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct NativeWorkspacePlacement {
+  pub(crate) x: i32,
+  pub(crate) y: i32,
+  pub(crate) width: u32,
+  pub(crate) height: u32,
+}
 
 /// The scene as last composed, at the revision, placements and backdrop it
 /// was composed for, so a redraw of the selection chrome alone shows it
@@ -40,7 +50,8 @@ impl RetainedPicture {
 impl WorkspaceScene {
   /// Whether the scene holds `count` layers, one for each placement a redraw
   /// would pass. A redraw that cannot draw must not take a drawable.
-  pub(super) fn ready(&self, count: usize) -> bool {
+  #[cfg_attr(target_os = "windows", allow(dead_code))]
+  pub(in crate::editor::preview_platform) fn ready(&self, count: usize) -> bool {
     self
       .read()
       .is_ok_and(|state| count > 0 && state.layers.len() == count)
@@ -53,7 +64,7 @@ impl WorkspaceScene {
   /// copied in instead of composing it again: the redraw is for the
   /// selection chrome alone. The magnifier follows the pointer, so it is
   /// always composed afresh.
-  pub(super) fn draw(
+  pub(in crate::editor::preview_platform) fn draw(
     &self,
     target: &wgpu::Texture,
     placements: &[NativeWorkspacePlacement],
@@ -240,8 +251,8 @@ fn compose(
         redaction_slot: index,
         // The scene holds every picture it draws, so nothing writes into one
         // while it is drawn from; the effects' picture is drawn again each
-        // time.
-        retained_source: effected.is_none(),
+        // time, and a decoded frame's is refilled from the next frame.
+        retained_source: effected.is_none() && layer.source.retained,
       },
     )?;
     let magnified = magnifier.filter(|magnifier| {

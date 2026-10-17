@@ -11,10 +11,10 @@ use super::{SceneLayer, SceneState, WorkspaceScene};
 /// gesture began: where the origin moved to, the new size, and how far the
 /// selected layer itself moved inside it.
 #[derive(Clone, Copy)]
-pub(super) struct FrameChange {
-  pub(super) origin: (f64, f64),
-  pub(super) size: (f64, f64),
-  pub(super) moved: (f64, f64),
+pub(in crate::editor::preview_platform) struct FrameChange {
+  pub(in crate::editor::preview_platform) origin: (f64, f64),
+  pub(in crate::editor::preview_platform) size: (f64, f64),
+  pub(in crate::editor::preview_platform) moved: (f64, f64),
 }
 
 impl FrameChange {
@@ -80,7 +80,7 @@ impl SceneState {
 }
 
 impl WorkspaceScene {
-  pub(super) fn begin_resize(&self) -> bool {
+  pub(in crate::editor::preview_platform) fn begin_resize(&self) -> bool {
     let Ok(mut state) = self.state() else {
       return false;
     };
@@ -89,7 +89,7 @@ impl WorkspaceScene {
   }
 
   /// Puts the scene back as the gesture found it unless `commit`.
-  pub(super) fn end_resize(&self, commit: bool) {
+  pub(in crate::editor::preview_platform) fn end_resize(&self, commit: bool) {
     let Ok(mut state) = self.state() else {
       return;
     };
@@ -102,7 +102,11 @@ impl WorkspaceScene {
 
   /// Resizes every layer's canvas together, the screenshot workspace's Frame
   /// gesture; `selected` is the layer an auto-fit move carries, if any.
-  pub(super) fn update_resize(&self, selected: Option<u32>, change: FrameChange) -> bool {
+  pub(in crate::editor::preview_platform) fn update_resize(
+    &self,
+    selected: Option<u32>,
+    change: FrameChange,
+  ) -> bool {
     let Ok(mut state) = self.state() else {
       return false;
     };
@@ -127,7 +131,11 @@ impl WorkspaceScene {
   /// An Option-held move that grows one recording pane's canvas round its
   /// moved clip. A camera baked into a lone screen pane moves on its own,
   /// while the screen and its cursor only follow the canvas origin.
-  pub(super) fn update_recording_auto_fit_move(&self, pane: u32, change: FrameChange) -> bool {
+  pub(in crate::editor::preview_platform) fn update_recording_auto_fit_move(
+    &self,
+    pane: u32,
+    change: FrameChange,
+  ) -> bool {
     let Ok(mut state) = self.state() else {
       return false;
     };
@@ -163,7 +171,11 @@ impl WorkspaceScene {
   /// Resizes only `pane`'s canvas, leaving every other pane as it is. A
   /// camera baked into it keeps its place on the canvas while the origin
   /// moves under it.
-  pub(super) fn update_selected_resize(&self, pane: u32, change: FrameChange) -> bool {
+  pub(in crate::editor::preview_platform) fn update_selected_resize(
+    &self,
+    pane: u32,
+    change: FrameChange,
+  ) -> bool {
     let Ok(mut state) = self.state() else {
       return false;
     };
@@ -195,7 +207,12 @@ impl WorkspaceScene {
   /// The live corner radius of `pane`, as the export derives it: `frame`
   /// rounds the canvas, a share of its shorter side, and otherwise the clip,
   /// a share of the crop's shorter side.
-  pub(super) fn update_selected_radius(&self, pane: u32, percent: f64, frame: bool) -> bool {
+  pub(in crate::editor::preview_platform) fn update_selected_radius(
+    &self,
+    pane: u32,
+    percent: f64,
+    frame: bool,
+  ) -> bool {
     let Ok(mut state) = self.state() else {
       return false;
     };

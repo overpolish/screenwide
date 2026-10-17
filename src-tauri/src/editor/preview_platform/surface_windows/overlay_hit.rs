@@ -6,7 +6,6 @@
 
 use super::{display_selection, PreviewSelection, SurfaceInner, SurfaceState};
 use crate::editor::preview_platform::{CAPTIONS_LAYER_ID, KEYBOARD_LAYER_ID};
-use screenwide_compositor::annotation_gpu::caption_visible_bounds;
 use screenwide_compositor::PreviewSurfaceRect;
 
 /// The frame a press on `selection` is tested against: a layer's own, or for
@@ -19,19 +18,11 @@ pub(super) fn frame(
   if selection.layer_id != KEYBOARD_LAYER_ID && selection.layer_id != CAPTIONS_LAYER_ID {
     return display_selection(state, selection);
   }
-  let pane = state.panes.get(selection.pane_index as usize)?.as_ref()?;
-  let settings = pane.settings.as_ref()?;
-  let canvas = (settings.width, settings.height);
+  let scene = &inner.gpu.workspace.scene;
   let bounds = if selection.layer_id == KEYBOARD_LAYER_ID {
-    let overlay = pane.last_composition?.keyboard?;
-    inner
-      .gpu
-      .compositor
-      .keyboard_visible_bounds(&overlay, canvas)
-      .ok()??
+    scene.keyboard_bounds(selection.pane_index)?
   } else {
-    let (track, moment) = pane.captions.as_ref()?;
-    caption_visible_bounds(track, *moment, canvas)?
+    scene.caption_bounds(selection.pane_index)?
   };
   selection.x = bounds[0];
   selection.y = bounds[1];

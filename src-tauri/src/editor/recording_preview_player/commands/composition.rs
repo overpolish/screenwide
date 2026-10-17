@@ -56,30 +56,8 @@ pub async fn set_recording_preview_composition(
     // the newly active mode's source cache is absent or stale - and so do
     // cursor-effect changes, whose composition is stale by definition.
     #[cfg(target_os = "windows")]
-    if !bake_changed {
-      let has_camera = manager
-        .sources
-        .as_ref()
-        .is_some_and(|sources| sources.camera_path.is_some());
-      let redrawn = manager
-        .sources
-        .as_ref()
-        .and_then(|sources| sources.preview_surface.as_ref())
-        .is_some_and(|surface| {
-          surface
-            .redraw_still(
-              bake_camera && has_camera,
-              &recording_output.primary,
-              &recording_output.camera,
-              camera_overlay,
-              recording_output.camera.drop_shadow,
-              screenwide_export::recording_model::CAMERA_IN_FRONT,
-            )
-            .unwrap_or(false)
-        });
-      if redrawn {
-        return Ok(());
-      }
+    if !bake_changed && manager.redraw_still_now().unwrap_or(false) {
+      return Ok(());
     }
     manager.restart(PlaybackMode::InteractiveStill)?;
   }

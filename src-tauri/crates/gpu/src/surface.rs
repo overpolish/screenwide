@@ -108,6 +108,13 @@ impl Surface {
     (self.config.width, self.config.height)
   }
 
+  /// Lets the frames be the destination of a copy as well as drawn into, for
+  /// a picture composed elsewhere and copied in whole.
+  pub fn accept_copies(&mut self, gpu: &Gpu) {
+    self.config.usage |= wgpu::TextureUsages::COPY_DST;
+    self.surface.configure(&gpu.device, &self.config);
+  }
+
   /// Matches the swap chain to a physical size. No frame may be held across
   /// a resize. Consecutive frames are usually the same size, and a resize is
   /// a reallocation.

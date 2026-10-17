@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::PreviewSelection;
-use super::native_types::{NativeWorkspacePaneRect, NativeWorkspacePlacement};
+use super::native_types::NativeWorkspacePaneRect;
+use crate::editor::preview_platform::workspace_scene::NativeWorkspacePlacement;
 use screenwide_annotations::group::NativeAnnotationGroupBox;
 use screenwide_annotations::handles::{NativeAnnotationHandles, NativeAnnotationSnap};
 

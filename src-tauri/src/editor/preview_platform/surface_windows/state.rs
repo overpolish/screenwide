@@ -7,7 +7,6 @@ pub(super) struct SurfaceState {
   /// The published arrow chrome and any drag over it.
   pub(super) annotation: annotation::AnnotationState,
   pub(super) backdrop: [f64; 4],
-  pub(super) camera_source: Option<compositor::SourceTexture>,
   pub(super) editor_active: bool,
   /// A crop window being drawn from a press outside the current one. Set on
   /// the press, and taken when the gesture ends or is cancelled.
@@ -31,7 +30,6 @@ pub(super) struct SurfaceState {
   /// panel while one holds the basis, 0 for the whole viewport. Only the fit
   /// commands move it; a resize or a gesture never does.
   pub(super) panel_fit_width: f64,
-  pub(super) primary_composition: Option<ComposedFrame>,
   pub(super) scale: f64,
   pub(super) selection: Option<PreviewSelection>,
   pub(super) selection_visible: bool,
@@ -52,6 +50,7 @@ pub(super) struct SurfaceState {
   pub(super) workspace_natural_size: Option<(u32, u32)>,
   pub(super) workspace_transform: WorkspaceTransform,
   pub(super) workspace_transforms: HashMap<(u32, u32), WorkspaceTransform>,
+  pub(super) workspace: WorkspaceDraw,
 }
 
 #[derive(Clone, Copy)]

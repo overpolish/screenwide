@@ -14,15 +14,22 @@ mod window;
 
 pub(crate) use gpu_surface::GpuSurface;
 pub(crate) use window::{
-  create_child, create_on_owning_thread, disable_transitions, register_class, set_capture_affinity,
+  create_child, create_on_owning_thread, disable_transitions, light_mode, register_class,
+  set_capture_affinity,
 };
 
+use std::ffi::c_void;
+
 use windows::{
-  core::PCWSTR,
+  core::{w, PCWSTR},
   Win32::{
-    Foundation::{HINSTANCE, HWND},
+    Foundation::{ERROR_SUCCESS, HINSTANCE, HWND},
     Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_TRANSITIONS_FORCEDISABLED},
-    System::{LibraryLoader::GetModuleHandleW, Threading::GetCurrentThreadId},
+    System::{
+      LibraryLoader::GetModuleHandleW,
+      Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD},
+      Threading::GetCurrentThreadId,
+    },
     UI::WindowsAndMessaging::{
       CreateWindowExW, GetWindowThreadProcessId, LoadCursorW, RegisterClassW,
       SetWindowDisplayAffinity, HMENU, IDC_ARROW, WDA_EXCLUDEFROMCAPTURE, WDA_NONE, WNDCLASSW,

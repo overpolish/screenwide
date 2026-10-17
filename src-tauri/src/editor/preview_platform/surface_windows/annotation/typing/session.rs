@@ -55,7 +55,7 @@ impl RecordingPreviewSurface {
         surrogate: None,
         opening: None,
       });
-      redraw_composed_panes(&self.inner, &mut state);
+      redraw_workspace(&self.inner, &mut state);
     }
     self.inner.editor.begin_typing();
   }
@@ -96,7 +96,7 @@ impl RecordingPreviewSurface {
         surrogate: None,
         opening: opening.filter(|_| caret.is_none()),
       });
-      redraw_composed_panes(&self.inner, &mut state);
+      redraw_workspace(&self.inner, &mut state);
     }
     self.inner.editor.begin_typing();
   }

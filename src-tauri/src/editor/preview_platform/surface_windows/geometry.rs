@@ -106,46 +106,26 @@ pub(super) fn frame_resize_start(state: &SurfaceState) -> FrameResizeStart {
   }
 }
 
+/// Puts `pane`'s box at `rect`, viewport-local, in the window's physical
+/// pixels, which the workspace draws its layer in.
 pub(super) fn set_pane_geometry(
   pane: &mut Pane,
   viewport: PreviewSurfaceRect,
   rect: PreviewSurfaceRect,
   scale: f64,
-  defer_resize: bool,
 ) {
   let (x, right) = window::scaled_edges(viewport.x + rect.x, rect.width, scale);
   let (y, bottom) = window::scaled_edges(viewport.y + rect.y, rect.height, scale);
-  let width = (right - x).max(2);
-  let height = (bottom - y).max(2);
-  let (viewport_x, viewport_right) = window::scaled_edges(viewport.x, viewport.width, scale);
-  let (viewport_y, viewport_bottom) = window::scaled_edges(viewport.y, viewport.height, scale);
   pane.position = (x, y);
-  pane.display_size = (width, height);
+  pane.display_size = ((right - x).max(2), (bottom - y).max(2));
   pane.scale = scale;
-  pane.clip_edges = (
-    (viewport_x - x).clamp(0, width),
-    (viewport_y - y).clamp(0, height),
-    (viewport_right - x).clamp(0, width),
-    (viewport_bottom - y).clamp(0, height),
-  );
-  if defer_resize {
-    pane.pending_geometry = true;
-  } else {
-    // No present is on the way, so this geometry has to reach the compositor
-    // now - a pan that parked itself would leave the pane behind the DOM
-    // until something happened to compose a frame. Applying a box whose
-    // aspect has outrun the buffer is safe: `update_geometry` centres the
-    // composition inside it instead of stretching it across it.
-    pane.pending_geometry = false;
-    let _ = pane.update_geometry();
-  }
 }
 
 /// Where the pane's composed canvas actually is inside the box it was laid
 /// out in. A committed canvas resize keeps arriving from the DOM at the
-/// session's source aspect, and the composition is centred inside it (see
-/// `Pane::update_geometry`), so selection geometry has to follow the canvas
-/// rather than the box to stay on the pixels the user sees.
+/// session's source aspect, and the workspace centres the canvas inside it,
+/// so selection geometry has to follow the canvas rather than the box to stay
+/// on the pixels the user sees.
 pub(super) fn pane_canvas_rect(pane: &Pane, owns_geometry: bool) -> PreviewSurfaceRect {
   // A live Frame resize already places the canvas itself, so nothing there
   // needs fitting - and fitting against the composition that is still one

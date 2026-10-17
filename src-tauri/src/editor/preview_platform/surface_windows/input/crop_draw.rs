@@ -109,7 +109,7 @@ pub(super) fn drag(
   state.selection = Some(selection);
   state.gesture = Some(ActiveGesture::Selection(gesture));
   update_magnifier(state);
-  redraw_magnifier(inner, state);
+  draw_workspace(inner, state);
   draw_selection(inner, state);
   let _ = unsafe { inner.gpu.composition.Commit() };
   (began, Some(gesture))

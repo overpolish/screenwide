@@ -3,24 +3,6 @@
 
 use super::*;
 
-/// Replaces `effectiveAppearance`: the shell's app theme preference.
-pub(super) fn light_mode() -> bool {
-  let mut value = 0_u32;
-  let mut length = size_of::<u32>() as u32;
-  let status = unsafe {
-    RegGetValueW(
-      HKEY_CURRENT_USER,
-      w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
-      w!("AppsUseLightTheme"),
-      RRF_RT_REG_DWORD,
-      None,
-      Some((&raw mut value).cast::<c_void>()),
-      Some(&mut length),
-    )
-  };
-  status == ERROR_SUCCESS && value != 0
-}
-
 /// The region's own dispatch: the anchor child and the desktop peers are
 /// built the same way, so one call covers both.
 pub(crate) fn create_on_owning_thread(

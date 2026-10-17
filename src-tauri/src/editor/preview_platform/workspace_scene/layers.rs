@@ -6,8 +6,7 @@
 use screenwide_imaging::CapturedImage;
 use std::sync::Arc;
 
-use cidre::{arc, cv};
-
+use super::picture::{LayerPicture, ScenePicture};
 use screenwide_annotations::pin::LumaFrame;
 use screenwide_compositor::annotation_gpu::SourceAnnotations;
 use screenwide_compositor::compositor::still_overlay::StillOverlay;
@@ -19,14 +18,6 @@ use screenwide_cursor_effects::GpuCursor;
 use screenwide_export::camera_effects::preview::PreviewEffects;
 use screenwide_keyboard_effects::KeyboardOverlay;
 use screenwide_output::ScreenshotOutputSettings;
-
-/// A picture a layer is drawn from: a decoded image, or a CoreVideo buffer a
-/// decoder vends, which is drawn from without a copy.
-#[derive(Clone, Copy)]
-pub(crate) enum LayerPicture<'a> {
-  Image(&'a CapturedImage),
-  Pixels(*mut std::ffi::c_void),
-}
 
 /// One layer as a present hands it over.
 pub(crate) struct StagedLayer<'a> {
@@ -60,58 +51,6 @@ pub(crate) struct StagedLayer<'a> {
   /// Whether `source` is the camera, which the camera's effects draw on.
   pub(crate) source_is_camera: bool,
   pub(crate) hover: Option<(usize, f32)>,
-}
-
-/// A picture on the GPU, and the buffer a CoreVideo one is drawn from: the
-/// scene holds the buffer, so its decoder cannot hand it to another frame.
-pub(super) struct ScenePicture {
-  pub(super) texture: SourceTexture,
-  _pixels: Option<arc::R<cv::PixelBuf>>,
-}
-
-// SAFETY: the buffer is only held to keep it alive and is never read through
-// here; retaining and releasing a CVPixelBuffer is safe from any thread.
-unsafe impl Send for ScenePicture {}
-unsafe impl Sync for ScenePicture {}
-
-impl ScenePicture {
-  pub(super) fn new(compositor: &Compositor, picture: LayerPicture<'_>) -> Result<Self, String> {
-    match picture {
-      LayerPicture::Image(image) => Ok(Self {
-        texture: compositor.screenshot_source(image)?,
-        _pixels: None,
-      }),
-      LayerPicture::Pixels(pointer) => {
-        let pixels = unsafe { pointer.cast::<cv::PixelBuf>().as_ref() }
-          .ok_or_else(|| "The workspace frame is missing".to_owned())?;
-        let texture =
-          screenwide_gpu::macos::bgra_buffer_texture(compositor.gpu(), pixels, "workspace frame")?;
-        Ok(Self {
-          texture: SourceTexture {
-            size: (texture.width(), texture.height()),
-            view: texture.create_view(&Default::default()),
-            texture,
-            picture: None,
-            enhanced: false,
-            cut_out: false,
-          },
-          _pixels: Some(pixels.retained()),
-        })
-      }
-    }
-  }
-}
-
-impl LayerPicture<'_> {
-  pub(super) fn size(self) -> (u32, u32) {
-    match self {
-      Self::Image(image) => (image.width, image.height),
-      Self::Pixels(pointer) => unsafe { pointer.cast::<cv::PixelBuf>().as_ref() }
-        .map_or((0, 0), |pixels| {
-          (pixels.width() as u32, pixels.height() as u32)
-        }),
-    }
-  }
 }
 
 /// A layer's camera bubble: its frame, the part of it shown and where that
@@ -182,8 +121,15 @@ impl LayerCamera {
       let frame_pixels = self.geometry.crop_width as f32 / self.geometry.frame_width.max(1) as f32;
       (index, width * frame_pixels)
     });
-    // The effects' picture is drawn again each time, so it is not retained.
-    compositor.composed_camera(frame, composition, hover, slot, effected.is_none())
+    // The effects' picture is drawn again each time, and a refilled one
+    // changes under its texture, so neither is retained.
+    compositor.composed_camera(
+      frame,
+      composition,
+      hover,
+      slot,
+      effected.is_none() && picture.retained,
+    )
   }
 }
 

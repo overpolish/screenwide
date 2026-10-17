@@ -77,7 +77,9 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
       clip_cursor_at_video_edge,
     } => {
       if let Some(surface) = &sources.preview_surface {
-        use crate::editor::preview_platform::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
+        use crate::editor::preview_platform::{
+          LayerPicture, NativeWorkspacePlacement, RecordingWorkspaceLayer,
+        };
         let source_token = (seconds * 1_000.0).round().max(0.0) as u64;
         // A baked camera's settings carry what is composed into its frame;
         // a camera pane's are its own layer's.
@@ -89,19 +91,17 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
         let mut layers = vec![RecordingWorkspaceLayer {
           pane_index: 0,
           source_token: source_token << 2,
-          source: None,
-          source_pixels: Some((screen.as_ptr(), (screen.width, screen.height))),
+          source: LayerPicture::Pixels(screen.as_ptr()),
           settings: screen_output,
           placement: NativeWorkspacePlacement::default(),
           seconds,
           cursor,
           keyboard,
           captions: sources.captions_at(source_token, frame_ms),
-          camera: None,
-          camera_pixels: bake_camera
+          camera: bake_camera
             .then_some(camera.as_ref())
             .flatten()
-            .map(|frame| (frame.as_ptr(), (frame.width, frame.height))),
+            .map(|frame| LayerPicture::Pixels(frame.as_ptr())),
           overlay: overlay.as_ref(),
           camera_settings: baked_settings
             .as_ref()
@@ -116,8 +116,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
             layers.push(RecordingWorkspaceLayer {
               pane_index: 1,
               source_token: (source_token << 2) | 1,
-              source: None,
-              source_pixels: Some((camera.as_ptr(), (camera.width, camera.height))),
+              source: LayerPicture::Pixels(camera.as_ptr()),
               settings: camera_output,
               placement: NativeWorkspacePlacement::default(),
               seconds,
@@ -125,7 +124,6 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
               keyboard: None,
               captions: None,
               camera: None,
-              camera_pixels: None,
               overlay: None,
               camera_settings: None,
               clip_cursor_at_video_edge: false,

@@ -260,7 +260,7 @@ pub(super) fn pointer_move(
             state.selection = Some(selection);
             state.gesture = Some(ActiveGesture::Selection(gesture));
             update_magnifier(&mut state);
-            redraw_magnifier(inner, &mut state);
+            draw_workspace(inner, &mut state);
             draw_selection(inner, &state);
             let _ = unsafe { inner.gpu.composition.Commit() };
             update = Some(gesture);

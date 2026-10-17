@@ -19,26 +19,21 @@ mod submit;
 mod textures;
 mod window;
 pub(crate) use crate::app_windows::overlay_surface::set_capture_affinity;
-use crate::app_windows::overlay_surface::{self, disable_transitions, GpuSurface};
+use crate::app_windows::overlay_surface::{self, disable_transitions, light_mode, GpuSurface};
 use screenwide_gpu::surface::Frame;
 use screenwide_osc::gpu::windows::{bind_group_layout, pipeline, sampler, shader_module};
 use textures::upload_icons;
 pub(super) use textures::upload_rgba;
-use window::light_mode;
 pub(crate) use window::{create_on_owning_thread, set_pointer_passthrough};
 
-use std::ffi::c_void;
 use std::sync::{Arc, OnceLock};
 
 use windows::{
   core::{w, PCWSTR},
   Win32::{
-    Foundation::{COLORREF, ERROR_SUCCESS, HINSTANCE, HWND, POINT, RECT},
+    Foundation::{COLORREF, HINSTANCE, HWND, POINT, RECT},
     Graphics::Gdi::ScreenToClient,
-    System::{
-      LibraryLoader::GetModuleHandleW,
-      Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD},
-    },
+    System::LibraryLoader::GetModuleHandleW,
     UI::{
       HiDpi::GetDpiForWindow,
       WindowsAndMessaging::{

@@ -42,7 +42,14 @@ impl RecordingPreviewSurface {
 
   pub(crate) fn set_scale(&self, scale: f64) {
     if let Ok(mut state) = self.inner.state.lock() {
-      state.scale = scale.max(0.1);
+      let scale = scale.max(0.1);
+      let changed = state.scale != scale;
+      state.scale = scale;
+      self
+        .inner
+        .gpu
+        .backdrop
+        .set_geometry(state.viewport, state.scale);
       if let Ok(mut ribbon) = self.inner.gpu.audio_ribbon.lock() {
         let _ = ribbon.set_viewport(state.viewport, state.scale, state.backdrop);
       }
@@ -53,6 +60,9 @@ impl RecordingPreviewSurface {
         .editor
         .set_frame(x, y, right - x, bottom - y, state.editor_active);
       draw_selection(&self.inner, &state);
+      if changed {
+        draw_workspace(&self.inner, &mut state);
+      }
     }
   }
 

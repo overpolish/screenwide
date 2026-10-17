@@ -46,10 +46,6 @@ pub(super) struct AnnotationState {
   /// The strokes' fitted lines, normalised over their sources, which a
   /// stroke's grips point into.
   pub(super) paths: Vec<[f32; 2]>,
-  /// The arrow the pointer rests on: its layer, its place in that layer's
-  /// list, and how wide its halo has grown, in canvas pixels. Preview chrome
-  /// only - the export never sees it.
-  pub(super) hover: Option<(u64, usize, f32)>,
   /// Which arrow the pulse is on, and when it started, so every frame of the
   /// halo is derived from the clock rather than integrated.
   pub(super) hovered: i32,
@@ -90,7 +86,6 @@ impl Default for AnnotationState {
     Self {
       handles: Vec::new(),
       paths: Vec::new(),
-      hover: None,
       hovered: -1,
       hover_started: None,
       hover_revision: 0,
@@ -110,30 +105,6 @@ impl Default for AnnotationState {
 }
 
 impl RecordingPreviewSurface {
-  /// Publishes the halo the preview draws: the hovered arrow's layer, its
-  /// place in that layer's list, and the halo's width in canvas pixels. The
-  /// export never sees it, which is why it rides here rather than on the
-  /// document.
-  pub(crate) fn set_annotation_hover(&self, hover: Option<(u64, usize, f32)>) {
-    if let Ok(mut state) = self.inner.state.lock() {
-      state.annotation.hover = hover;
-    }
-  }
-
-  /// Moves the halo and redraws every pane from what it last composed. For a
-  /// recording, whose frames the player owns, this is the only way a halo
-  /// frame reaches the screen without asking the decoder for the frame again.
-  pub(crate) fn redraw_annotation_hover(&self, hover: Option<(u64, usize, f32)>) {
-    let Ok(mut state) = self.inner.state.lock() else {
-      return;
-    };
-    if state.annotation.hover == hover {
-      return;
-    }
-    state.annotation.hover = hover;
-    redraw_composed_panes(&self.inner, &mut state);
-  }
-
   /// Publishes what the sample on screen snapped to. It is only stored: a
   /// sample's annotations arrive immediately after and redraw the held frame
   /// together with this chrome, so drawing here would draw the overlay twice

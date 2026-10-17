@@ -17,17 +17,11 @@ impl RecordingPreviewSurface {
       if let Ok(mut ribbon) = self.inner.gpu.audio_ribbon.lock() {
         let _ = ribbon.set_viewport(rect, state.scale, backdrop);
       }
-      if state.backdrop != backdrop
-        && self
-          .inner
-          .gpu
-          .backdrop
-          .paint(self.inner.gpu.shared, backdrop)
-          .is_ok()
-      {
+      if state.backdrop != backdrop && self.inner.gpu.backdrop.paint(backdrop).is_ok() {
         state.backdrop = backdrop;
       }
       draw_selection(&self.inner, &state);
+      draw_workspace(&self.inner, &mut state);
     }
   }
 
@@ -39,9 +33,9 @@ impl RecordingPreviewSurface {
     }
   }
 
-  /// `defer_resize` holds the new pane geometry back until the re-composed
-  /// frame for it presents, so rect and pixels reach the compositor together
-  /// instead of the old buffer shifting into the new rect for a tick.
+  /// `defer_resize` holds the workspace's picture back until the frame
+  /// composed for the new box presents, so box and pixels reach the screen
+  /// together instead of the last frame sitting in the new box for a tick.
   pub(super) fn layout_pane(
     &self,
     state: &mut SurfaceState,
@@ -54,13 +48,7 @@ impl RecordingPreviewSurface {
       state.panes.resize_with(index + 1, || None);
     }
     if state.panes[index].is_none() {
-      let below = state.panes[..index]
-        .iter()
-        .rev()
-        .flatten()
-        .next()
-        .map(|pane| pane.visual.clone());
-      state.panes[index] = self.inner.gpu.pane(below.as_ref()).ok();
+      state.panes[index] = Some(Pane::default());
     }
     let scale = state.scale;
     let viewport = state.viewport;
@@ -81,20 +69,18 @@ impl RecordingPreviewSurface {
       pane.base_rect = rect;
     }
     let transformed = transform.apply(viewport, pane.base_rect);
-    // With a present on the way the geometry waits for it, so the pane's rect
-    // and its freshly composed pixels land in the same commit. A pure pan (no
-    // present coming) applies at once - but never while the DOM rect's aspect
-    // has outrun the buffer: stretching the old frame into a new-aspect rect
-    // for one transaction is exactly the jitter this avoids. Deferred
-    // geometry is published by the pane's next present or the batch flush.
-    let deferred = defer_resize || self.inner.batch_depth.load(Ordering::Acquire) > 0;
-    set_pane_geometry(pane, viewport, transformed, scale, deferred);
+    // With a present on the way the picture waits for it, so the pane's box
+    // and its freshly composed pixels land in the same draw. A pure pan (no
+    // present coming) draws at once. An open batch draws on its flush.
+    if defer_resize && self.inner.batch_depth.load(Ordering::Acquire) == 0 {
+      state.workspace.held = true;
+    }
+    set_pane_geometry(pane, viewport, transformed, scale);
   }
 
-  /// Lays out the recording panes as one retained workspace. DirectComposition
-  /// still uses one visual per source (each visual shares the same transform),
-  /// but callers submit the complete pane topology in one operation and the
-  /// existing batch keeps geometry and pixels atomic.
+  /// Lays out the recording panes as one retained workspace: callers submit
+  /// the complete pane topology in one operation, and the workspace draws
+  /// every layer in its box.
   pub(crate) fn layout_recording_workspace(
     &self,
     _rect: PreviewSurfaceRect,
@@ -183,18 +169,12 @@ impl RecordingPreviewSurface {
 
   pub(crate) fn finish_layout(&self) {
     if let Ok(mut state) = self.inner.state.lock() {
-      for pane in state.panes.iter_mut().flatten().filter(|pane| !pane.seen) {
-        pane.hide();
-        // A hidden pane has nothing stale to show; drop leftovers so a later
-        // flush cannot resurrect it at a parked offset.
-        pane.pending_geometry = false;
-        pane.parked = None;
-      }
       draw_selection(&self.inner, &state);
+      draw_workspace(&self.inner, &mut state);
       // An open batch commits for everything on its flush; a second
       // commit-and-wait here would add a display tick of latency to every
-      // layout that presents in the same invoke. The hides above changed the
-      // tree, though, so the flush has to know it owes a commit.
+      // layout that presents in the same invoke. The layout may have moved
+      // the viewport, though, so the flush has to know it owes a commit.
       if self.inner.batch_depth.load(Ordering::Acquire) > 0 {
         self.inner.commit_pending.store(true, Ordering::Release);
         return;

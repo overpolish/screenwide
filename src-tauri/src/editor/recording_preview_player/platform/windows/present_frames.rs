@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! One moment's decoded frames, composed and presented together. A baked
-//! camera is drawn into the screen's canvas, so presenting each frame on its
-//! own would compose that canvas twice and throw the first drawing away.
+//! One moment's decoded frames, staged on the workspace scene together. A
+//! baked camera is drawn into the screen's canvas, so it rides on the
+//! screen's layer rather than a pane of its own.
 
 use super::super::super::{annotation_preview, PlayerSources};
-use crate::editor::preview_platform::DecodedTexture;
+use crate::editor::preview_platform::{
+  baked_camera_overlay, LayerPicture, NativeWorkspacePlacement, RecordingWorkspaceLayer,
+};
 use screenwide_compositor::compositor::ComposedFrame;
 use screenwide_export::decode::windows::gpu_decoder::GpuFrame;
 use screenwide_output::ScreenshotOutputSettings;
@@ -62,73 +64,87 @@ pub(in crate::editor::recording_preview_player::platform) fn present_native_fram
     remap(sources, 1, &mut settings.recording_output.camera, frame);
   }
   let composed = screen_composition(sources, &settings.recording_output.primary, screen);
-  if let Some(frame) = screen {
-    surface.set_captions(0, sources.captions_at(frame.timestamp_ms, frame_ms));
-  }
-  if settings.bake_camera && sources.camera_path.is_some() {
-    surface
-      .present_baked_camera_textures(
-        screen.map(decoded),
-        camera.map(decoded),
+  let seconds = timestamp_ms as f64 / 1_000.0;
+  let captions = sources.captions_at(timestamp_ms, frame_ms);
+  let screen_is_camera = sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera;
+  let baked = settings.bake_camera && sources.camera_path.is_some();
+  // The baked camera's place on the canvas follows its frame's size, which
+  // only a new frame tells; a held camera stays where it was.
+  let overlay = match camera.filter(|_| baked) {
+    Some(frame) => {
+      match baked_camera_overlay(
+        (frame.width, frame.height),
         &settings.recording_output.primary,
-        (
-          &settings.recording_output.camera,
-          sources.annotation_pictures()[1],
-        ),
         settings.camera_overlay,
         settings.recording_output.camera.drop_shadow,
         screenwide_export::recording_model::CAMERA_IN_FRONT,
-        composed.unwrap_or(ComposedFrame {
-          cursor: None,
-          keyboard: None,
-          foreground_only: false,
-          seconds: timestamp_ms as f64 / 1_000.0,
-        }),
-      )
-      .unwrap_or(false)
-  } else {
-    // Two panes of their own still reach the compositor in one pass.
-    let _batch = (screen.is_some() && camera.is_some()).then(|| surface.present_batch());
-    let present = |index: u32, frame: &GpuFrame, output, composition, is_camera| {
-      surface
-        .present_composed_texture(index, decoded(frame), output, composition, is_camera)
-        .unwrap_or(false)
-    };
-    // A recording of the camera alone is the camera in its first pane.
-    let screen_is_camera = sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera;
-    let screen_drawn = screen.zip(composed).is_none_or(|(frame, composition)| {
-      present(
-        0,
-        frame,
-        &settings.recording_output.primary,
-        composition,
-        screen_is_camera,
-      )
-    });
-    let camera_drawn = camera.is_none_or(|frame| {
-      present(
-        1,
-        frame,
+      ) {
+        Ok(overlay) => Some(overlay),
+        Err(_) => return false,
+      }
+    }
+    None => None,
+  };
+  let mut layers = vec![RecordingWorkspaceLayer {
+    pane_index: 0,
+    source_token: 0,
+    source: picture(screen),
+    settings: settings.recording_output.primary.clone(),
+    placement: NativeWorkspacePlacement::default(),
+    seconds,
+    cursor: composed.and_then(|composed| composed.cursor),
+    keyboard: composed.and_then(|composed| composed.keyboard),
+    captions,
+    camera: baked.then(|| picture(camera)),
+    overlay: overlay.as_ref(),
+    camera_settings: baked.then(|| {
+      (
         &settings.recording_output.camera,
-        ComposedFrame {
-          cursor: None,
-          keyboard: None,
-          foreground_only: false,
-          seconds: frame.timestamp_ms as f64 / 1_000.0,
-        },
-        true,
+        sources.annotation_pictures()[1],
       )
+    }),
+    clip_cursor_at_video_edge: composed
+      .and_then(|composed| composed.cursor)
+      .is_some_and(|cursor| cursor.clip_at_video_edge),
+    foreground_only: false,
+    source_is_camera: screen_is_camera,
+  }];
+  if !baked && sources.camera_path.is_some() {
+    layers.push(RecordingWorkspaceLayer {
+      pane_index: 1,
+      source_token: 1,
+      source: picture(camera),
+      settings: settings.recording_output.camera.clone(),
+      placement: NativeWorkspacePlacement::default(),
+      seconds,
+      cursor: None,
+      keyboard: None,
+      captions: None,
+      camera: None,
+      overlay: None,
+      camera_settings: None,
+      clip_cursor_at_video_edge: false,
+      foreground_only: false,
+      source_is_camera: true,
     });
-    screen_drawn && camera_drawn
   }
+  surface
+    .present_recording_workspace(&layers)
+    .unwrap_or(false)
 }
 
-fn decoded(frame: &GpuFrame) -> DecodedTexture<'_> {
-  (
+/// The frame a layer is drawn from, or, where the decoder had no new frame
+/// for it, the picture it holds.
+fn picture(frame: Option<&GpuFrame>) -> LayerPicture<'_> {
+  frame.map_or(LayerPicture::Held, decoded)
+}
+
+fn decoded(frame: &GpuFrame) -> LayerPicture<'_> {
+  LayerPicture::Decoded((
     &frame.texture,
     frame.subresource,
     (frame.width, frame.height),
-  )
+  ))
 }
 
 fn remap(

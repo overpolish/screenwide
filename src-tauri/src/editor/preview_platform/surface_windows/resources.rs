@@ -8,32 +8,20 @@ pub(super) struct Gpu {
   pub(super) backdrop: Backdrop,
   /// Direct3D 11 on the shared device: Media Foundation decodes on it.
   pub(super) d3d11: &'static D3d11Layer,
+  /// Composes stills read back for the clipboard, apart from the workspace.
   pub(super) compositor: compositor::Compositor,
   pub(super) composition: IDCompositionDevice,
-  pub(super) root: IDCompositionVisual,
   pub(super) selection: Mutex<selection::SelectionOverlay>,
   pub(super) shared: &'static screenwide_gpu::Gpu,
   pub(super) _editor_target: IDCompositionTarget,
   pub(super) _target: IDCompositionTarget,
+  pub(super) workspace: WorkspaceView,
 }
 
-pub(super) struct Backdrop {
-  pub(super) scale_transform: IDCompositionScaleTransform,
-  pub(super) surface: Surface,
-  pub(super) visual: IDCompositionVisual,
-}
-
+/// One layer's box in the workspace and what was last presented in it, which
+/// selection, hit-testing and typing read. The workspace scene draws the
+/// layer itself.
 pub(super) struct Pane {
-  /// The halo this pane's composition draws, if the hovered arrow belongs to
-  /// its layer: the arrow's place in that layer's list and the halo's width
-  /// in canvas pixels. Preview chrome, resolved when the layer is presented.
-  pub(super) annotation_halo: Option<(usize, f32)>,
-  /// The annotations a baked camera has composed into its frame before the
-  /// canvas draws it, and the halo on one of them, its width in canvas
-  /// pixels. Kept with the camera overlay, so a local redraw composes them
-  /// again.
-  pub(super) camera_composition: Option<std::sync::Arc<compositor::CameraComposition>>,
-  pub(super) camera_halo: Option<(usize, f32)>,
   /// The box being typed into, if it belongs to this pane's layer: its place
   /// in that layer's list and the caret and selection drawn into its type.
   /// Kept across presents, so every redraw the typing causes carries it.
@@ -42,33 +30,17 @@ pub(super) struct Pane {
   /// kept across presents as the box's are.
   pub(super) caption_typing: Option<screenwide_text::engine::typing::TypingMarks>,
   /// The captions drawn over this pane's canvas, and the moment of the
-  /// edited video they are drawn at. Kept across presents, so a redraw the
-  /// annotations cause carries them.
+  /// edited video they are drawn at.
   pub(super) captions: Option<(
     std::sync::Arc<screenwide_text::captions::CaptionTrack>,
     screenwide_text::captions::CaptionMoment,
   )>,
   /// Stable viewport-local geometry before the shared workspace transform.
   pub(super) base_rect: PreviewSurfaceRect,
-  pub(super) clip: IDCompositionRectangleClip,
-  pub(super) clip_edges: (i32, i32, i32, i32),
-  /// The presented region of the surface - the actual output resolution.
-  /// The surface itself is kept larger, with headroom.
+  /// The size of the canvas last presented.
   pub(super) content_size: (u32, u32),
   pub(super) display_size: (i32, i32),
-  /// Geometry waiting to publish atomically with its matching frame.
-  pub(super) pending_geometry: bool,
-  /// Last composition, retained for redraws that do not need another decode.
-  pub(super) last_composition: Option<ComposedFrame>,
-  /// The camera overlay the most recent present composed over the source, so a
-  /// local redraw (magnifier, geometry) never drops the baked camera for a frame.
-  pub(super) last_camera: Option<(BakeGeometry, bool, bool)>,
   pub(super) settings: Option<ScreenshotOutputSettings>,
-  pub(super) magnifier: Option<CropMagnifier>,
-  /// A frame drawn inside an open present batch, waiting for the batch flush
-  /// to present it so every pane's new pixels reach the compositor in the
-  /// same pass.
-  pub(super) parked: Option<wgpu::SurfaceTexture>,
   pub(super) position: (i32, i32),
   /// The last present changed the composed canvas size. The selection overlay
   /// is fitted to that canvas (`pane_canvas_rect`), so it has to be redrawn
@@ -79,12 +51,31 @@ pub(super) struct Pane {
   /// The window's device-pixel scale as of the pane's last layout, so a blur
   /// expressed in CSS pixels can be converted without the surface state.
   pub(super) scale: f64,
-  pub(super) scale_transform: IDCompositionScaleTransform,
   pub(super) seen: bool,
-  pub(super) source: Option<compositor::SourceTexture>,
-  /// Whether `source` is the camera, which the camera's effects draw on.
-  pub(super) source_is_camera: bool,
+  /// The screenshot item the pane holds, by its token.
   pub(super) source_token: Option<u64>,
-  pub(super) surface: Surface,
-  pub(super) visual: IDCompositionVisual,
+}
+
+impl Default for Pane {
+  fn default() -> Self {
+    Self {
+      annotation_typing: None,
+      caption_typing: None,
+      captions: None,
+      base_rect: PreviewSurfaceRect {
+        height: 0.0,
+        width: 0.0,
+        x: 0.0,
+        y: 0.0,
+      },
+      content_size: (2, 2),
+      display_size: (2, 2),
+      settings: None,
+      position: (0, 0),
+      selection_stale: false,
+      scale: 1.0,
+      seen: true,
+      source_token: None,
+    }
+  }
 }

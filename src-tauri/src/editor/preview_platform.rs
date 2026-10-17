@@ -38,16 +38,14 @@
 //!    against the webview), a viewport with an alpha-preserving backdrop
 //!    ([`RecordingPreviewSurface::set_viewport`] - the backstop is what shows
 //!    through the webview's mask holes outside the panes),
-//!    [`RecordingPreviewSurface::hide`], and the present-composed entry points
-//!    below.
-//! 2. **Present-composed-frame entry points.** `present` uploads a plain RGBA
-//!    frame. [`RecordingPreviewSurface::present_composed`] takes a source image
-//!    plus [`ScreenshotOutputSettings`] and does the whole output composition
-//!    (background, rounding, shadow, cursor, camera overlay) on the GPU;
-//!    `present_composed_pixels` is the zero-copy variant that takes an
-//!    already-decoded platform pixel buffer so a playback frame never round
-//!    trips through system memory. A backend that cannot do zero-copy yet may
-//!    implement only `present_composed`.
+//!    [`RecordingPreviewSurface::hide`], and the workspace entry points below.
+//! 2. **The workspace drawable.** Both backends draw every layer through the
+//!    shared [`workspace_scene`]: `present_screenshot_workspace` and
+//!    `present_recording_workspace` stage the layers, each from a platform
+//!    picture ([`LayerPicture`]), and the surface draws the scene into one
+//!    drawable over the viewport, at its panes' boxes and over the
+//!    checkerboard, whenever a layout, a transform or a present changes it.
+//!    The scene does the whole output composition on the GPU.
 //! 3. **A pane decoder and frame scrubber for stills and scrubbing**, plus (4)
 //!    the **playback video path** - both live in
 //!    [`super::recording_preview_player::platform`], which selects backends the
@@ -61,17 +59,19 @@
 //! # Platform GPU backends
 //!
 //! Shaders are WGSL on the shared wgpu device ([`screenwide_gpu`]), drawn by the
-//! shared [`compositor`]. Windows presents through DirectComposition and
-//! macOS through Core Animation layers. On macOS the audio ribbon, still
-//! composition and video export run on wgpu; the live preview still drives
-//! Metal directly. Another OS can add its own backend behind this facade
-//! without leaking platform texture formats, coordinate conventions, or
-//! window-surface details into shared preview code.
+//! shared [`compositor`]; the live preview's workspace is the shared
+//! [`workspace_scene`] on both platforms. Windows presents through
+//! DirectComposition and macOS through Core Animation layers. Another OS can
+//! add its own backend behind this facade without leaking platform texture
+//! formats, coordinate conventions, or window-surface details into shared
+//! preview code.
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod audio_ribbon;
 /// A selection the select tool turns with the rotation gizmo.
 mod selection_turn;
+mod workspace_backdrop;
+mod workspace_scene;
 
 #[cfg(target_os = "macos")]
 mod surface_macos;
@@ -84,11 +84,12 @@ use self::surface_windows as surface;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use audio_ribbon::{ribbon_still, BAR_PITCH_POINTS as RIBBON_BAR_PITCH_POINTS};
+#[cfg(target_os = "macos")]
+pub(crate) use surface::run_on_main_queue;
 pub(crate) use surface::RecordingPreviewSurface;
 #[cfg(target_os = "windows")]
-pub(crate) use surface::{recording_export_surface, DecodedTexture};
-#[cfg(target_os = "macos")]
-pub(crate) use surface::{run_on_main_queue, NativeWorkspacePlacement, RecordingWorkspaceLayer};
+pub(crate) use surface::{baked_camera_overlay, recording_export_surface, DecodedTexture};
+pub(crate) use workspace_scene::{LayerPicture, NativeWorkspacePlacement, RecordingWorkspaceLayer};
 
 pub(crate) type TransformCallback = Box<dyn FnMut(f64) + Send + 'static>;
 pub(crate) type SelectionCallback = Box<dyn FnMut(Option<u32>) + Send + 'static>;

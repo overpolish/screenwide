@@ -10,29 +10,11 @@ mod renderer;
 
 use std::ffi::c_void;
 
+use super::magnifier::NativeMagnifier;
 use super::pipeline::{RenderConstants, Vertex, PICKED_POINT_PAIRS, TURN_RING_ROWS};
 use renderer::RENDERER;
 use screenwide_gpu::macos::{bgra_render_target, sampled_texture};
 use screenwide_gpu::Gpu;
-
-/// The twin of `ScreenwideRegionMagnifier`: the layer it reads, the anchor
-/// and the shown part of that picture as shares of it, and the box in
-/// drawable pixels.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct NativeMagnifier {
-  pub active: u32,
-  pub pane_index: u32,
-  pub layer_id: u32,
-  pub sample_camera: u32,
-  pub edges: u32,
-  pub light_mode: u32,
-  pub sample: [f32; 2],
-  pub source_min: [f32; 2],
-  pub source_max: [f32; 2],
-  pub box_origin: [i32; 2],
-  pub box_size: [u32; 2],
-}
 
 /// The twin of `ScreenwideRegionOscRenderState`, the palettes and animation
 /// state a surface draws with.

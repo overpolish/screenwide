@@ -109,10 +109,7 @@ impl PreviewPlayerManager {
             .as_ref()
             .and_then(|s| s.preview_surface.as_ref())
           {
-            #[cfg(target_os = "macos")]
             surface.redraw_recording_workspace();
-            #[cfg(not(target_os = "macos"))]
-            let _ = surface;
           }
           return self.commit(
             pane,

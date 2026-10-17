@@ -24,7 +24,6 @@ impl PreviewManager {
 
   /// Stages the current sources on the native workspace. `Ok(false)` means the
   /// pane was not there to stage them on yet (see `present_once_pane_exists`).
-  #[allow(clippy::needless_return)]
   pub(super) fn present_snapshot(
     surface: &RecordingPreviewSurface,
     output: &ScreenshotWorkspaceOutputSettings,
@@ -48,51 +47,22 @@ impl PreviewManager {
       let shift = output.borrowed_spotlights(layer, &source_width).shift();
       (layer, index + shift, width)
     });
-    #[cfg(target_os = "macos")]
-    {
-      let layers = output
-        .items
-        .iter()
-        .filter_map(|item_output| {
-          let source = sources.iter().find(|source| source.id == item_output.id)?;
-          Some((
-            item_output.id,
-            source.image.as_ref(),
-            output.output_for_id(item_output.id, source.capture, &source_width),
-          ))
-        })
-        .collect::<Vec<_>>();
-      if layers.is_empty() {
-        return Ok(true);
-      }
-      let staged = surface.present_screenshot_workspace(&layers, hover)?;
-      return Ok(staged);
+    let layers = output
+      .items
+      .iter()
+      .filter_map(|item_output| {
+        let source = sources.iter().find(|source| source.id == item_output.id)?;
+        Some((
+          item_output.id,
+          source.image.as_ref(),
+          output.output_for_id(item_output.id, source.capture, &source_width),
+        ))
+      })
+      .collect::<Vec<_>>();
+    if layers.is_empty() {
+      return Ok(true);
     }
-    #[cfg(target_os = "windows")]
-    surface.set_annotation_hover(hover);
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    let _ = hover;
-    #[cfg(not(target_os = "macos"))]
-    let mut staged = true;
-    #[cfg(not(target_os = "macos"))]
-    let mut has_source = false;
-    #[cfg(not(target_os = "macos"))]
-    for (index, item_output) in output.items.iter().enumerate() {
-      let Some(source) = sources.iter().find(|source| source.id == item_output.id) else {
-        continue;
-      };
-      has_source = true;
-      let item_settings = output.output_for_id(item_output.id, source.capture, &source_width);
-      staged &= surface.present_screenshot_layer(
-        index as u32,
-        item_output.id,
-        &source.image,
-        &item_settings,
-        index > 0,
-      )?;
-    }
-    #[cfg(not(target_os = "macos"))]
-    Ok(!has_source || staged)
+    surface.present_screenshot_workspace(&layers, hover)
   }
 
   pub(super) fn present_batch(&self) -> Result<(), String> {

@@ -47,7 +47,6 @@ impl RecordingPreviewSurface {
           state: Mutex::new(SurfaceState {
             annotation: Default::default(),
             backdrop: [0.09, 0.09, 0.10, 1.0],
-            camera_source: None,
             crop_draw: None,
             editor_active: false,
             frame_resize: None,
@@ -58,7 +57,6 @@ impl RecordingPreviewSurface {
             last_pointer: (0.0, 0.0),
             panes: Vec::new(),
             panel_fit_width: 0.0,
-            primary_composition: None,
             scale: 1.0,
             selection: None,
             selection_visible: true,
@@ -78,6 +76,7 @@ impl RecordingPreviewSurface {
             workspace_transform: WorkspaceTransform::default(),
             workspace_natural_size: None,
             workspace_transforms: HashMap::new(),
+            workspace: Default::default(),
           }),
         });
         // Published only once the surface is whole: the editor `window_proc`

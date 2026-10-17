@@ -199,7 +199,7 @@ fn end(inner: &Arc<SurfaceInner>) -> Option<Typing> {
   let typing = {
     let mut state = inner.state.lock().ok()?;
     let typing = state.annotation.typing.take()?;
-    redraw_composed_panes(inner, &mut state);
+    redraw_workspace(inner, &mut state);
     typing
   };
   inner.editor.end_typing();
@@ -237,7 +237,7 @@ pub(in crate::editor::preview_platform::surface_windows) fn handle_typing_input(
       if let Ok(mut state) = inner.state.lock() {
         if let Some(typing) = state.annotation.typing.as_mut() {
           typing.caret_on = !typing.caret_on;
-          redraw_composed_panes(&inner, &mut state);
+          redraw_workspace(&inner, &mut state);
         }
       }
     }

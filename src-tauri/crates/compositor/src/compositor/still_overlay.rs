@@ -1,14 +1,21 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A still composed from a frame and the overlays macOS hands across as one
-//! C struct: the camera bubble's placement and the cursor's size.
+//! The overlays a native surface hands across as one C struct: the camera
+//! bubble's placement and the cursor's size. On macOS, also a still composed
+//! from a frame and them.
 
+#[cfg(target_os = "macos")]
 use super::still::{compose_still, StillCamera, StillInputs};
+#[cfg(target_os = "macos")]
 use super::CursorArtwork;
+#[cfg(target_os = "macos")]
 use screenwide_cursor_effects::{GpuArtwork, GpuCursor};
+#[cfg(target_os = "macos")]
 use screenwide_imaging::CapturedImage;
+#[cfg(target_os = "macos")]
 use screenwide_keyboard_effects::KeyboardOverlay;
+#[cfg(target_os = "macos")]
 use screenwide_output::ScreenshotOutputSettings;
 
 #[repr(C)]
@@ -38,6 +45,7 @@ pub struct StillOverlay {
 /// `image` composed on the canvas `settings` describe, through the shared
 /// compositor. `overlay` carries the camera bubble's placement; the cursor is
 /// drawn from its artwork.
+#[cfg(target_os = "macos")]
 #[allow(clippy::too_many_arguments)]
 pub fn compose_output_layers(
   image: &CapturedImage,

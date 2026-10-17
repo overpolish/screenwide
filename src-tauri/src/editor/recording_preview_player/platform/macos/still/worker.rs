@@ -211,21 +211,10 @@ pub(super) fn run(
         .bake_camera
         .then_some(cache.camera.as_ref())
         .flatten();
-      let (screen_source, screen_pixels) = match cache.screen.rgba() {
-        Some(source) => (Some(source), None),
-        None => (
-          None,
-          cache
-            .screen
-            .pixels()
-            .map(|pixels| (pixels, cache.screen.dimensions())),
-        ),
-      };
       let mut layers = vec![RecordingWorkspaceLayer {
         pane_index: 0,
         source_token: screen_position_ms << 2,
-        source: screen_source,
-        source_pixels: screen_pixels,
+        source: cache.screen.picture(),
         settings: screen_output,
         placement: NativeWorkspacePlacement::default(),
         seconds: screen_position_ms as f64 / 1_000.0,
@@ -233,9 +222,7 @@ pub(super) fn run(
         keyboard,
         // A paused frame exposes nothing, so its captions are sharp.
         captions: sources.captions_at(screen_position_ms, 0.0),
-        camera: baked_camera.and_then(|camera| camera.rgba()),
-        camera_pixels: baked_camera
-          .and_then(|camera| camera.pixels().map(|pixels| (pixels, camera.dimensions()))),
+        camera: baked_camera.map(DecodedFrame::picture),
         overlay: overlay.as_ref(),
         camera_settings: composition.bake_camera.then(|| {
           (

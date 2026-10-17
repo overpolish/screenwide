@@ -9,9 +9,9 @@
 //! controls above the video.
 
 mod annotation;
+mod backdrop;
 mod batch;
 mod callbacks;
-mod camera_effects;
 mod creation;
 mod editor_controls;
 mod export;
@@ -22,31 +22,32 @@ mod input;
 mod layout;
 mod magnifier;
 mod object_picking;
-mod pane;
-mod present_cached;
-mod present_texture;
-pub(crate) use present_texture::DecodedTexture;
 mod readback;
+mod recording_workspace;
+pub(crate) use super::workspace_scene::baked_camera_overlay;
+pub(crate) use recording_workspace::DecodedTexture;
 mod resources;
+mod screenshot_workspace;
 mod selection_draw;
 mod selection_hit;
 mod state;
-mod still;
 #[cfg(test)]
 mod tests;
 mod thread_dispatch;
 mod turn;
 mod workspace;
+mod workspace_view;
 
 use annotation::handle_typing_input;
+use backdrop::Backdrop;
 use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for, resize_cursor};
 use geometry::{
   auto_fit_selection_bounds, display_selection, frame_resize_start, maximum_editor_zoom,
   pane_canvas_rect, set_pane_geometry,
 };
 use input::handle_editor_input;
-use magnifier::{redraw_composed_panes, redraw_magnifier, update_magnifier};
-use resources::{Backdrop, Gpu, Pane};
+use magnifier::{redraw_workspace, update_magnifier};
+use resources::{Gpu, Pane};
 /// Inter SemiBold set by DirectWrite, which measures a text box as well as
 /// drawing its type: the annotations' face, which the macOS surface has a
 /// Core Text twin of.
@@ -61,6 +62,9 @@ use state::{
   SurfaceInner, SurfaceState,
 };
 use thread_dispatch::create_editor_on_owning_thread;
+use workspace_view::{
+  clear_workspace, draw_workspace, present_workspace, WorkspaceDraw, WorkspaceView,
+};
 
 mod registry;
 use registry::{preview_surfaces, surface_for_editor, surface_index};
@@ -79,9 +83,8 @@ use windows::Win32::{
   Graphics::{
     Direct3D11::{ID3D11Device, ID3D11Texture2D},
     DirectComposition::{
-      DCompositionCreateDevice, IDCompositionDevice, IDCompositionRectangleClip,
-      IDCompositionScaleTransform, IDCompositionTarget, IDCompositionVisual,
-      DCOMPOSITION_BITMAP_INTERPOLATION_MODE_LINEAR,
+      DCompositionCreateDevice, IDCompositionDevice, IDCompositionScaleTransform,
+      IDCompositionTarget, IDCompositionVisual,
     },
     Dxgi::IDXGIDevice,
   },
@@ -106,7 +109,7 @@ use super::{
   ContextMenuCallback, ImageDropCallback, PointerDownCallback, PreviewSelection, SelectionCallback,
   SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
 };
-use screenwide_compositor::compositor::{self, ComposedFrame, CropMagnifier};
+use screenwide_compositor::compositor::{self, ComposedFrame};
 use screenwide_compositor::workspace_editor::{
   apply_crop_draw, apply_crop_move, apply_crop_resize, apply_framed_crop_resize,
   crop_magnifier_anchor, hit_test_display, rebase_display_fit_mode, DisplayRect, DisplayTarget,
@@ -114,7 +117,7 @@ use screenwide_compositor::workspace_editor::{
 };
 use screenwide_compositor::workspace_transform::WorkspaceTransform;
 use screenwide_compositor::PreviewSurfaceRect;
-use screenwide_export::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
+use screenwide_export::media_preview::BakeGeometry;
 use screenwide_gpu::surface::{Frame, Surface};
 use screenwide_gpu::D3d11Layer;
 use screenwide_imaging::CapturedImage;
@@ -125,8 +128,6 @@ use workspace_layout::{
   union_rect,
 };
 
-pub(crate) struct StillOverlay;
-
 const FRAME_LAYER_ID: u32 = u32::MAX;
 const CENTERED_RESIZE_EDGE: u32 = 1 << 16;
 /// Edge bits shared with the macOS surface and both preview managers: an
@@ -134,44 +135,6 @@ const CENTERED_RESIZE_EDGE: u32 = 1 << 16;
 /// mid-drag accepts that canvas as the origin for the rest of the gesture.
 const AUTO_FIT_MOVE_EDGE: u32 = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE: u32 = 1 << 18;
-
-/// Logical placement of a recording layer in the retained workspace. Windows
-/// keeps the placement in the DirectComposition pane geometry rather than
-/// baking it into an intermediate bitmap, but the type mirrors the macOS
-/// surface so the recording pipeline can submit one platform-independent
-/// workspace description.
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-// Retained-workspace contract kept in parity with macOS; not wired on Windows yet.
-#[allow(dead_code)]
-pub(crate) struct NativeWorkspacePlacement {
-  pub(crate) x: i32,
-  pub(crate) y: i32,
-  pub(crate) width: u32,
-  pub(crate) height: u32,
-}
-
-/// One decoded source in the retained recording workspace. Native Windows
-/// playback currently supplies RGBA frames; the pixel-buffer fields are kept
-/// in the contract for parity with the zero-copy macOS path and are rejected
-/// clearly until the Media Foundation texture path is wired here.
-// Retained-workspace contract kept in parity with macOS; not wired on Windows yet.
-#[allow(dead_code)]
-pub(crate) struct RecordingWorkspaceLayer<'a> {
-  pub pane_index: u32,
-  pub source_token: u64,
-  pub source: Option<&'a CapturedImage>,
-  pub source_pixels: Option<(*mut std::ffi::c_void, (u32, u32))>,
-  pub settings: ScreenshotOutputSettings,
-  pub placement: NativeWorkspacePlacement,
-  pub seconds: f64,
-  pub cursor: Option<&'a CapturedImage>,
-  pub camera: Option<&'a CapturedImage>,
-  pub camera_pixels: Option<(*mut std::ffi::c_void, (u32, u32))>,
-  pub overlay: Option<&'a StillOverlay>,
-  pub clip_cursor_at_video_edge: bool,
-  pub foreground_only: bool,
-}
 
 type ClipboardCamera<'a> = (
   &'a ID3D11Texture2D,
@@ -201,9 +164,8 @@ pub(super) fn refresh_editor_cursor(editor_hwnd: HWND) {
   refresh_cursor_for(&inner);
 }
 
-/// An open present batch. Dropping it presents every parked frame
-/// back-to-back, applies every pending pane geometry, and commits once, so
-/// all panes reach the compositor in (almost always) the same pass - the
+/// An open present batch. Dropping it draws the workspace once, with every
+/// layout and present made meanwhile, and commits once - the
 /// DirectComposition counterpart of the macOS single-`CATransaction` batch.
 pub(crate) struct PresentBatch<'a> {
   surface: &'a RecordingPreviewSurface,
