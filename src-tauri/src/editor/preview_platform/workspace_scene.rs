@@ -32,7 +32,9 @@ pub(crate) use self::layers::StagedLayer;
 use self::layers::{LayerCamera, SceneLayer};
 pub(crate) use self::picture::LayerPicture;
 use self::picture::ScenePicture;
-pub(crate) use self::recording::{baked_camera_overlay, RecordingWorkspaceLayer};
+#[cfg(target_os = "windows")]
+pub(crate) use self::recording::baked_camera_overlay;
+pub(crate) use self::recording::RecordingWorkspaceLayer;
 use crate::editor::preview_platform::workspace_backdrop::Backdrop;
 use screenwide_compositor::compositor::still_overlay::StillOverlay;
 use screenwide_compositor::compositor::{CanvasGeometry, Compositor, NativeCursors};

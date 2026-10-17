@@ -8,8 +8,10 @@
 use std::sync::Arc;
 
 use super::{LayerPicture, NativeWorkspacePlacement, StagedLayer, WorkspaceScene};
+#[cfg(target_os = "windows")]
 use screenwide_compositor::annotation_gpu::SourceAnnotations;
 use screenwide_compositor::compositor::still_overlay::StillOverlay;
+#[cfg(target_os = "windows")]
 use screenwide_compositor::compositor::CameraComposition;
 use screenwide_cursor_effects::GpuCursor;
 use screenwide_export::media_preview;
@@ -121,6 +123,7 @@ impl WorkspaceScene {
   }
 
   /// The pane each layer the scene holds is drawn in, in the scene's order.
+  #[cfg(target_os = "windows")]
   pub(in crate::editor::preview_platform) fn layer_panes(&self) -> Vec<u32> {
     self.read().map_or_else(
       |_| Vec::new(),
@@ -130,6 +133,7 @@ impl WorkspaceScene {
 
   /// The size of the picture `pane_index`'s layer is drawn from, once it is
   /// resident: the grid its annotations are placed on.
+  #[cfg(target_os = "windows")]
   pub(in crate::editor::preview_platform) fn source_size(
     &self,
     pane_index: u32,
@@ -147,6 +151,7 @@ impl WorkspaceScene {
   /// drag changes them every sample without the frame changing. `camera` is
   /// a baked camera's own settings, carrying the annotations composed into
   /// its frame, and its source size. `false` where the pane has no layer.
+  #[cfg(target_os = "windows")]
   pub(in crate::editor::preview_platform) fn update_annotations(
     &self,
     pane_index: u32,
