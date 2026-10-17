@@ -149,6 +149,13 @@ SCREENWIDE_PREVIEW_PRIVATE void draw_workspace(ScreenwidePreviewSurface *surface
     CAMetalLayer *layer = (CAMetalLayer *)workspace.layer;
     ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;
     int reuse = surface.workspaceSceneDirty ? 0 : 1;
+    // The checkerboard keeps its squares' size in points and follows the
+    // appearance the chrome is drawn in.
+    double scale = surface.host.window.backingScaleFactor ?: 1.0;
+    int light = [[surface.interaction.effectiveAppearance
+        bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua,
+                                            NSAppearanceNameDarkAqua]]
+        isEqualToString:NSAppearanceNameAqua] ? 1 : 0;
     // A redraw at a new drawable size lands beside the layout that resized
     // the workspace, in this turn's own transaction. Every other one is
     // composed off screen and presented from a drawable taken off the main
@@ -158,7 +165,8 @@ SCREENWIDE_PREVIEW_PRIVATE void draw_workspace(ScreenwidePreviewSurface *surface
       if (frame != nil &&
           screenwide_workspace_scene_draw(surface.scene, (__bridge void *)frame,
                                           workspace_placements(surface).bytes,
-                                          surface.workspaceLayerCount, &magnifier, reuse)) {
+                                          surface.workspaceLayerCount, &magnifier, scale,
+                                          light, reuse)) {
         present_workspace_frame(surface, workspace, frame);
         drawn = YES;
       }
@@ -167,7 +175,8 @@ SCREENWIDE_PREVIEW_PRIVATE void draw_workspace(ScreenwidePreviewSurface *surface
       if (drawable != nil) {
         screenwide_workspace_scene_draw(surface.scene, (__bridge void *)drawable.texture,
                                         workspace_placements(surface).bytes,
-                                        surface.workspaceLayerCount, &magnifier, reuse);
+                                        surface.workspaceLayerCount, &magnifier, scale, light,
+                                        reuse);
         present_workspace_drawable(surface, [surface.queue commandBuffer], drawable);
         surface.workspacePresentedSize = layer.drawableSize;
         drawn = YES;

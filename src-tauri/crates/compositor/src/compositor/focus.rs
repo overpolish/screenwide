@@ -33,13 +33,12 @@ use plan::FocusConstants;
 
 /// Where the gather lays the blurred frame: the target, how what it held is
 /// treated, whether the frame is laid over it as a layer, and the viewport
-/// and scissor the canvas pass draws with.
+/// the canvas pass draws with.
 pub(super) struct FocusTarget<'a> {
   pub(super) view: &'a wgpu::TextureView,
   pub(super) load: wgpu::LoadOp<wgpu::Color>,
   pub(super) over: bool,
   pub(super) size: (u32, u32),
-  pub(super) scissor: Option<[u32; 4]>,
 }
 
 pub(super) struct FocusBlur {
@@ -175,7 +174,7 @@ impl FocusBlur {
       target.view,
       target.load,
       (&self.gather[usize::from(target.over)], &gathered),
-      Some((target.size, target.scissor)),
+      Some(target.size),
     );
     Ok(())
   }

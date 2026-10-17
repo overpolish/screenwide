@@ -50,7 +50,8 @@ pub(super) fn crop_preview_rect(settings: &ScreenshotOutputSettings) -> Option<[
 }
 
 /// A canvas drawn into part of a larger target, scaled: its rectangle there,
-/// x, y, width and height in target pixels, and the target's size.
+/// x, y, width and height in target pixels, and the target's size. What lies
+/// past the rectangle's edge is drawn over the rest of the target.
 #[derive(Clone, Copy)]
 pub struct LayerPlacement {
   pub rect: [f32; 4],
@@ -74,6 +75,10 @@ pub struct LayerDraw {
 }
 
 impl LayerPlacement {
+  /// How opaque what lies past the canvas's edge is drawn: faded, so it reads
+  /// as off the canvas and not exported.
+  pub(super) const OVERFLOW_OPACITY: f32 = 0.55;
+
   /// The `Canvas.placement` row: the rectangle's corner, and the canvas
   /// pixels one target pixel covers.
   pub(super) fn row(placement: Option<Self>, canvas: (u32, u32)) -> [f32; 4] {
@@ -86,21 +91,5 @@ impl LayerPlacement {
         canvas.1 as f32 / height.max(1.0),
       ]
     })
-  }
-
-  /// The target pixels the rectangle covers, as a scissor: x, y, width and
-  /// height, or `None` where it lies wholly outside the target.
-  pub(super) fn scissor(self) -> Option<[u32; 4]> {
-    let [x, y, width, height] = self.rect;
-    let left = x.floor().max(0.0);
-    let top = y.floor().max(0.0);
-    let right = (x + width).ceil().min(self.target.0 as f32);
-    let bottom = (y + height).ceil().min(self.target.1 as f32);
-    (right > left && bottom > top).then_some([
-      left as u32,
-      top as u32,
-      (right - left) as u32,
-      (bottom - top) as u32,
-    ])
   }
 }

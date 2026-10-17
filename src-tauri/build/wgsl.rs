@@ -25,6 +25,10 @@ const MODULES: &[(&str, &[&str])] = &[
     &["src/editor/preview_platform/shaders/audio_ribbon.wgsl"],
   ),
   (
+    "workspace_backdrop",
+    &["src/editor/preview_platform/shaders/workspace_backdrop.wgsl"],
+  ),
+  (
     "workspace_magnifier",
     &[
       "src/editor/preview_platform/shaders/workspace_magnifier.wgsl",

@@ -127,7 +127,8 @@ impl FocusPlan {
           values.effects[1],
           // A layer laid over others keeps its own alpha.
           f32::from(u8::from(values.cursor_options[3] == 0)),
-          0.0,
+          // How opaque what lies past the canvas's edge is laid, sharp.
+          values.overflow[0],
         ],
       },
       regions,

@@ -179,17 +179,14 @@ pub(super) fn level(texture: &wgpu::Texture, at: u32) -> wgpu::TextureView {
   })
 }
 
-/// A pass's viewport size and scissor rectangle, as the canvas pass sets them.
-pub(super) type Viewport = ((u32, u32), Option<[u32; 4]>);
-
-/// The one triangle over `view`, through `pipeline` with `bindings`, within
-/// `viewport` where it is given.
+/// The one triangle over `view`, through `pipeline` with `bindings`, within a
+/// viewport of `viewport`'s size where it is given.
 pub(super) fn draw(
   encoder: &mut wgpu::CommandEncoder,
   view: &wgpu::TextureView,
   load: wgpu::LoadOp<wgpu::Color>,
   (pipeline, bindings): (&wgpu::RenderPipeline, &wgpu::BindGroup),
-  viewport: Option<Viewport>,
+  viewport: Option<(u32, u32)>,
 ) {
   let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
     label: Some("Screenwide focus pass"),
@@ -204,11 +201,8 @@ pub(super) fn draw(
     })],
     ..Default::default()
   });
-  if let Some(((width, height), scissor)) = viewport {
+  if let Some((width, height)) = viewport {
     pass.set_viewport(0.0, 0.0, width as f32, height as f32, 0.0, 1.0);
-    if let Some([x, y, width, height]) = scissor {
-      pass.set_scissor_rect(x, y, width, height);
-    }
   }
   pass.set_pipeline(pipeline);
   pass.set_bind_group(0, bindings, &[]);

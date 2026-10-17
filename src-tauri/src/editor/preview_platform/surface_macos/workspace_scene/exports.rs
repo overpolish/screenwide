@@ -8,6 +8,7 @@
 use std::ffi::c_void;
 use std::sync::Arc;
 
+use super::backdrop::BackdropStyle;
 use super::gestures::FrameChange;
 use super::loupe::NativeMagnifier;
 use super::WorkspaceScene;
@@ -65,16 +66,21 @@ pub unsafe extern "C" fn screenwide_workspace_scene_set_typing(
 }
 
 /// Draws the scene into `texture`, a BGRA `id<MTLTexture>` the size of the
-/// workspace drawable, with one placement for each layer, in drawable pixels.
-/// Non-zero `reuse` shows the picture last composed again where the scene
-/// has not changed since: the redraw is for the selection chrome alone.
+/// workspace drawable, with one placement for each layer, in drawable pixels,
+/// over a checkerboard sized for `scale` drawable pixels a point and coloured
+/// for the light appearance where `light` is non-zero. Non-zero `reuse` shows
+/// the picture last composed again where the scene has not changed since:
+/// the redraw is for the selection chrome alone.
 #[no_mangle]
+#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn screenwide_workspace_scene_draw(
   scene: *const c_void,
   texture: *mut c_void,
   placements: *const NativeWorkspacePlacement,
   count: u32,
   magnifier: *const NativeMagnifier,
+  scale: f64,
+  light: i32,
   reuse: i32,
 ) -> i32 {
   let Some(scene) = (unsafe { self::scene(scene) }) else {
@@ -85,9 +91,13 @@ pub unsafe extern "C" fn screenwide_workspace_scene_draw(
   }
   let placements = unsafe { std::slice::from_raw_parts(placements, count as usize) };
   let magnifier = unsafe { magnifier.as_ref() };
+  let backdrop = BackdropStyle {
+    scale,
+    light: light != 0,
+  };
   let drawn = screenwide_gpu::shared()
     .and_then(|gpu| unsafe { screenwide_gpu::macos::bgra_render_target(gpu, texture) })
-    .and_then(|target| scene.draw(&target, placements, magnifier, reuse != 0));
+    .and_then(|target| scene.draw(&target, placements, magnifier, backdrop, reuse != 0));
   match drawn {
     Ok(()) => 1,
     Err(error) => {

@@ -100,6 +100,9 @@ struct Canvas {
   // nothing (2); then where in the annotations that focus sits, and whether
   // it lies in the run above the camera.
   focus: vec4<f32>,
+  // How opaque what lies past the canvas's edge is drawn (`x`), as the
+  // workspace shows a placed canvas, none of it at zero; the rest are spare.
+  overflow: vec4<f32>,
 }
 
 fn focus_mode() -> u32 {
@@ -1458,9 +1461,18 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   // The pass over a focus draws what comes after it on nothing, to lay sharp
   // over the blurred frame; the panes decide what that is.
   let over_focus = focus_mode() == 2u;
+  // A canvas the workspace shows draws what lies past its edge too, over
+  // nothing: only the background stops at the edge, cut to it here rather
+  // than with everything at the end. It is skipped only two drawn pixels
+  // past the edge, where no pixel of a quad shows it, so a quad it does show
+  // in reads its textures with every neighbour's derivatives.
+  let overflow = canvas.overflow.x > 0.0;
+  let edge_reach = 2.0 * max(canvas.motion.z, 1e-4);
+  let near_canvas = all(pixel >= vec2<f32>(-edge_reach)) &&
+      all(pixel <= canvas.output_source.xy + edge_reach);
   var result = vec4<f32>(0.0);
-  if (!foreground_only && !over_focus) {
-    result = vec4<f32>(background(pixel), 1.0);
+  if (!foreground_only && !over_focus && (!overflow || near_canvas)) {
+    result = vec4<f32>(background(pixel), 1.0) * select(1.0, background_alpha, overflow);
   }
   // While a scene crosses the order over, both orders are drawn and mixed:
   // outside the panes' overlap they agree, so only the overlap fades from one
@@ -1493,7 +1505,10 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   }
   if (!foreground_only && !over_focus) {
     // Hashed at the drawn pixel's corner, as every macOS canvas has dithered.
-    result = vec4<f32>(saturate(result.rgb + hash(floor(position.xy), 0x9e3779b9u) / 255.0), result.a);
+    // Scaled by coverage, so what a workspace shows past the edge stays
+    // premultiplied; the canvas itself is opaque.
+    let dither = hash(floor(position.xy), 0x9e3779b9u) / 255.0 * result.a;
+    result = vec4<f32>(clamp(result.rgb + dither, vec3<f32>(0.0), vec3<f32>(result.a)), result.a);
   }
   if (focus_mode() != 1u) {
     result = crop_magnifier(result, pixel);
@@ -1501,6 +1516,8 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   // DirectComposition consumes premultiplied alpha. Clip every composed layer
   // to the rounded canvas and premultiply only once at the final boundary.
   // What lies under a focus is clipped after it is blurred, by the gather,
-  // so the canvas's own corners stay as sharp as they are drawn.
-  return result * select(background_alpha, 1.0, focus_mode() == 1u);
+  // so the canvas's own corners stay as sharp as they are drawn. What a
+  // workspace shows past the edge is faded rather than clipped.
+  let clip = select(background_alpha, 1.0, focus_mode() == 1u);
+  return result * select(clip, mix(canvas.overflow.x, 1.0, clip), overflow);
 }

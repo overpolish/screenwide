@@ -175,23 +175,22 @@ impl Compositor {
       .as_ref()
       .map_or([fallback, fallback], |[marks, cursor]| [marks, cursor]);
     // A layer keeps the layers drawn under it; a whole canvas is written over
-    // every pixel, so what the target held is never read.
+    // every pixel, so what the target held is never read. A placed canvas
+    // leaves the target as it was past its edge, under whatever lies there,
+    // so it is laid over the target as a layer is.
+    let blended = composition.foreground_only || layer.placement.is_some();
     let load = if layer.clear {
       wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
     } else {
       wgpu::LoadOp::Load
     };
     // A placed canvas keeps the target's own pixels, which the shader maps
-    // back to canvas pixels, and is cut to its rectangle. A viewport would
-    // scale it instead, but one is capped at the largest texture size, and
-    // a canvas zoomed far in is drawn larger than that.
-    let drawn = match layer.placement {
-      None => Some((size, None)),
-      Some(placement) => placement
-        .scissor()
-        .map(|scissor| (placement.target, Some(scissor))),
-    };
-    let canvas_target = if composition.foreground_only {
+    // back to canvas pixels, and covers the whole target, so what lies past
+    // its edge is drawn too. A viewport would scale it instead, but one is
+    // capped at the largest texture size, and a canvas zoomed far in is
+    // drawn larger than that.
+    let frame = layer.placement.map_or(size, |placement| placement.target);
+    let canvas_target = if blended {
       Target::Layer
     } else {
       Target::Canvas
@@ -214,20 +213,15 @@ impl Compositor {
         })],
         ..Default::default()
       });
-      if let Some(((width, height), scissor)) = drawn {
-        pass.set_viewport(0.0, 0.0, width as f32, height as f32, 0.0, 1.0);
-        if let Some([x, y, width, height]) = scissor {
-          pass.set_scissor_rect(x, y, width, height);
-        }
-        pass.set_pipeline(&self.canvas.get(pipeline, kinds, every, features));
-        pass.set_bind_group(0, bindings, &[]);
-        pass.draw(0..3, 0..1);
-      }
+      pass.set_viewport(0.0, 0.0, frame.0 as f32, frame.1 as f32, 0.0, 1.0);
+      pass.set_pipeline(&self.canvas.get(pipeline, kinds, every, features));
+      pass.set_bind_group(0, bindings, &[]);
+      pass.draw(0..3, 0..1);
     };
-    match (&focus, drawn) {
+    match &focus {
       // A focused frame: what lies under the focus into the chain, blurred
       // into the target, then what lies over it laid sharp on top.
-      (Some(plan), Some((frame, scissor))) => {
+      Some(plan) => {
         let [under, over] = &self.focus.constants;
         let chain = self.focus.chain(gpu, frame, layer.redaction_slot)?;
         canvas_pass(
@@ -245,9 +239,8 @@ impl Compositor {
           super::focus::FocusTarget {
             view: target,
             load,
-            over: composition.foreground_only,
+            over: blended,
             size: frame,
-            scissor,
           },
         )?;
         if plan.draws_over(&values, &annotations, keyboard.is_some()) {
@@ -260,7 +253,7 @@ impl Compositor {
           );
         }
       }
-      _ => canvas_pass(
+      None => canvas_pass(
         &mut encoder,
         target,
         load,

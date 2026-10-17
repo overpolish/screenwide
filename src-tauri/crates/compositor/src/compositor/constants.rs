@@ -89,4 +89,9 @@ pub(super) struct Constants {
   /// on nothing (2); then where in the annotations that focus sits, and
   /// whether it lies in the run above the camera. See `focus.rs`.
   pub(super) focus: [f32; 4],
+  /// How opaque what lies past the canvas's edge is drawn (`x`), as the
+  /// workspace shows a placed canvas: everything but the background, left
+  /// unclipped and faded, so what will not be exported can still be found.
+  /// None of it is drawn at zero. The rest are spare.
+  pub(super) overflow: [f32; 4],
 }

@@ -40,8 +40,9 @@ struct FocusConstants {
   shape: vec4<f32>,
   // How far past the screen's edge the background takes to reach the whole
   // blur, in canvas pixels; the canvas's corner radius, which the frame is
-  // clipped to after the blur; and whether the canvas is opaque to its edge,
-  // a whole canvas rather than a layer laid over others.
+  // clipped to after the blur; whether the canvas is opaque to its edge, a
+  // whole canvas rather than a layer laid over others; and how opaque what
+  // lies past its edge is laid, sharp as the canvas pass drew it, if at all.
   edge: vec4<f32>,
 }
 
@@ -126,6 +127,13 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let size = vec2<f32>(textureDimensions(chain));
   let scale = max(constants.placement.z, 1e-6);
   let pixel = (position.xy - constants.placement.xy) * constants.placement.zw;
+  let coverage = frame_coverage(pixel);
+  // Nothing past the canvas's edge is exported, so the focus leaves it be,
+  // faded as the canvas pass fades it.
+  let sharp = textureLoad(chain, vec2<i32>(position.xy), 0) * constants.edge.w;
+  if (coverage <= 0.0) {
+    return sharp;
+  }
   // The blur in target pixels, which the chain is laid in.
   let radius = circle_of_confusion(pixel) / scale;
   let top = f32(textureNumLevels(chain) - 1u);
@@ -153,5 +161,5 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   if (constants.edge.z != 0.0 && blurred.a > 1e-4) {
     blurred = vec4<f32>(blurred.rgb / blurred.a, 1.0);
   }
-  return blurred * frame_coverage(pixel);
+  return blurred * coverage + sharp * (1.0 - coverage);
 }

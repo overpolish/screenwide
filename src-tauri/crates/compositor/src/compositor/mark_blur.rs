@@ -133,6 +133,8 @@ impl Plan {
     values.placement = [0.0, 0.0, 1.0 / self.scale, 1.0 / self.scale];
     values.motion[2] = 1.0 / self.scale;
     values.annotation_blur = [self.scale, mode, self.spotlight_word(), 0.0];
+    // The layers are the canvas's own size; nothing past its edge is in them.
+    values.overflow = [0.0; 4];
     values
   }
 }

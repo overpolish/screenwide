@@ -283,6 +283,16 @@ impl Compositor {
       scene_turn: scene_turn_rows(settings, &placement, geometry.size),
       // Set in `submit` for the passes a focused frame takes.
       focus: [0.0; 4],
+      overflow: [
+        if layer.placement.is_some() {
+          LayerPlacement::OVERFLOW_OPACITY
+        } else {
+          0.0
+        },
+        0.0,
+        0.0,
+        0.0,
+      ],
     };
     self.submit(
       target,

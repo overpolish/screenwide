@@ -9,6 +9,7 @@
 //! zoom, to move the scene with a native gesture before React has caught up,
 //! and to read where the shortcut strip is.
 
+mod backdrop;
 mod draw;
 mod effects;
 mod exports;
@@ -33,6 +34,7 @@ use screenwide_text::engine::typing::TypingMarks;
 
 struct SceneState {
   compositor: Compositor,
+  backdrop: backdrop::Backdrop,
   loupe: loupe::Loupe,
   layers: Vec<SceneLayer>,
   /// The layers as a native gesture found them, and whether an update has
@@ -68,6 +70,7 @@ impl WorkspaceScene {
     Ok(Self {
       state: Mutex::new(SceneState {
         compositor,
+        backdrop: backdrop::Backdrop::new(gpu),
         loupe: loupe::Loupe::new(gpu),
         layers: Vec::new(),
         resize: None,

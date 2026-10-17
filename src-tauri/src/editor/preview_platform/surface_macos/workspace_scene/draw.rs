@@ -3,6 +3,7 @@
 
 //! Drawing the retained scene into the workspace drawable.
 
+use super::backdrop::BackdropStyle;
 use super::loupe::NativeMagnifier;
 use super::{SceneState, WorkspaceScene};
 use crate::editor::preview_platform::surface_macos::NativeWorkspacePlacement;
@@ -10,14 +11,15 @@ use crate::editor::preview_platform::CAPTIONS_LAYER_ID;
 use screenwide_compositor::annotation_gpu::caption_overlay_typed;
 use screenwide_compositor::compositor::{ComposedFrame, LayerDraw, LayerPlacement};
 
-/// The scene as last composed, at the revision and placements it was
-/// composed for, so a redraw of the selection chrome alone shows it again.
-/// One composed with the crop magnifier has no revision: the loupe follows
-/// the pointer, so it is never shown again.
+/// The scene as last composed, at the revision, placements and backdrop it
+/// was composed for, so a redraw of the selection chrome alone shows it
+/// again. One composed with the crop magnifier has no revision: the loupe
+/// follows the pointer, so it is never shown again.
 pub(super) struct RetainedPicture {
   texture: wgpu::Texture,
   revision: Option<u64>,
   placements: Vec<NativeWorkspacePlacement>,
+  backdrop: Option<BackdropStyle>,
 }
 
 impl RetainedPicture {
@@ -26,10 +28,12 @@ impl RetainedPicture {
     revision: u64,
     size: (u32, u32),
     placements: &[NativeWorkspacePlacement],
+    backdrop: BackdropStyle,
   ) -> bool {
     self.revision == Some(revision)
       && (self.texture.width(), self.texture.height()) == size
       && self.placements == placements
+      && self.backdrop == Some(backdrop)
   }
 }
 
@@ -43,16 +47,18 @@ impl WorkspaceScene {
   }
 
   /// Draws every layer into `target` at its placement, in drawable pixels,
-  /// the first at the bottom, and the crop magnifier over them all. With
-  /// `reuse`, a picture composed since the scene last changed, at the same
-  /// placements and size, is copied in instead of composing it again: the
-  /// redraw is for the selection chrome alone. The magnifier follows the
-  /// pointer, so it is always composed afresh.
+  /// the first at the bottom, over the `backdrop` checkerboard, and the crop
+  /// magnifier over them all. With `reuse`, a picture composed since the
+  /// scene last changed, at the same placements, size and backdrop, is
+  /// copied in instead of composing it again: the redraw is for the
+  /// selection chrome alone. The magnifier follows the pointer, so it is
+  /// always composed afresh.
   pub(super) fn draw(
     &self,
     target: &wgpu::Texture,
     placements: &[NativeWorkspacePlacement],
     magnifier: Option<&NativeMagnifier>,
+    backdrop: BackdropStyle,
     reuse: bool,
   ) -> Result<(), String> {
     let mut state = self.read()?;
@@ -68,7 +74,7 @@ impl WorkspaceScene {
       && state
         .picture
         .as_ref()
-        .is_some_and(|picture| picture.shows(revision, size, placements));
+        .is_some_and(|picture| picture.shows(revision, size, placements, backdrop));
     if !current {
       let mut picture = match state.picture.take() {
         Some(picture) if (picture.texture.width(), picture.texture.height()) == size => picture,
@@ -76,12 +82,14 @@ impl WorkspaceScene {
           texture: picture_texture(gpu, size),
           revision: None,
           placements: Vec::with_capacity(placements.len()),
+          backdrop: None,
         },
       };
-      compose(&state, &picture.texture, placements, magnifier)?;
+      compose(&state, &picture.texture, placements, magnifier, backdrop)?;
       picture.revision = (!magnified).then_some(revision);
       picture.placements.clear();
       picture.placements.extend_from_slice(placements);
+      picture.backdrop = Some(backdrop);
       state.picture = Some(picture);
     }
     let picture = state
@@ -125,18 +133,19 @@ fn picture_texture(gpu: &screenwide_gpu::Gpu, (width, height): (u32, u32)) -> wg
   })
 }
 
-/// Composes every layer of `state` into `target` at its placement, and the
-/// crop magnifier over them all.
+/// Composes every layer of `state` into `target` at its placement over the
+/// `backdrop` checkerboard, and the crop magnifier over them all.
 fn compose(
   state: &SceneState,
   target: &wgpu::Texture,
   placements: &[NativeWorkspacePlacement],
   magnifier: Option<&NativeMagnifier>,
+  backdrop: BackdropStyle,
 ) -> Result<(), String> {
   let gpu = state.compositor.gpu();
   let size = (target.width(), target.height());
   let view = target.create_view(&Default::default());
-  clear(gpu, &view);
+  state.backdrop.draw(gpu, &view, backdrop);
   let mut loupe = None;
   for (index, (layer, placement)) in state.layers.iter().zip(placements).enumerate() {
     if placement.width == 0 || placement.height == 0 {
@@ -263,28 +272,4 @@ fn compose(
       .draw(gpu, &view, size, magnifier, &picture, picture_size);
   }
   Ok(())
-}
-
-/// Clears `view` to transparent: the layers are drawn over it, and where none
-/// reaches the webview's backdrop shows through.
-fn clear(gpu: &screenwide_gpu::Gpu, view: &wgpu::TextureView) {
-  let mut encoder = gpu
-    .device
-    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-      label: Some("Screenwide workspace clear"),
-    });
-  encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-    label: Some("Screenwide workspace clear"),
-    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-      view,
-      depth_slice: None,
-      resolve_target: None,
-      ops: wgpu::Operations {
-        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-        store: wgpu::StoreOp::Store,
-      },
-    })],
-    ..Default::default()
-  });
-  gpu.queue.submit([encoder.finish()]);
 }
