@@ -8,7 +8,7 @@ use screenwide_keyboard_effects::KeyboardOverlay;
 use screenwide_output::ScreenshotOutputSettings;
 
 #[repr(C)]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct NativeWorkspacePlacement {
   pub(super) x: i32,
   pub(super) y: i32,

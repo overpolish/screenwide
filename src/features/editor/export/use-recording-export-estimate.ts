@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { estimateRecordingExport } from "../api";
 
+import { useExportOptionsOpen } from "./options-window/use-export-options-open";
 import {
   RecordingExportInputs,
   recordingProcessingOptions,
@@ -14,7 +15,13 @@ import { mixSignature } from "./recording-export-settings";
 
 const ESTIMATE_DEBOUNCE_MS = 450;
 
+/**
+ * The export's size, measured while the export window is open, the only
+ * place it is shown. Measuring draws stretches of the export on the GPU as
+ * fast as it can, so running it behind the editor stalls the preview.
+ */
 export function useRecordingExportEstimate(inputs: RecordingExportInputs) {
+  const { isExportOpen } = useExportOptionsOpen("recording");
   const {
     artifact,
     audioTrackVolumes,
@@ -37,6 +44,7 @@ export function useRecordingExportEstimate(inputs: RecordingExportInputs) {
   const inputsRef = useRef(inputs);
   inputsRef.current = inputs;
   const cacheRef = useRef(new Map<string, number>());
+  const wasOpenRef = useRef(false);
   const [activeJobs, setActiveJobs] = useState(0);
   const [state, setState] = useState<{
     bytes: number | null;
@@ -97,6 +105,8 @@ export function useRecordingExportEstimate(inputs: RecordingExportInputs) {
   }, [artifactId]);
 
   useEffect(() => {
+    const justOpened = isExportOpen && !wasOpenRef.current;
+    wasOpenRef.current = isExportOpen;
     if (
       artifact?.kind !== "recording" ||
       enabledSignature === null ||
@@ -109,11 +119,14 @@ export function useRecordingExportEstimate(inputs: RecordingExportInputs) {
       setState({ bytes: cached, isEstimating: false, signature });
       return;
     }
+    if (!isExportOpen) return;
 
     setState({ bytes: null, isEstimating: true, signature });
     let disposed = false;
+    // With nothing yet on screen there is no choice to wait out.
     const delay =
-      !bakeCamera && compression === 0 && camera.compression === 0
+      justOpened ||
+      (!bakeCamera && compression === 0 && camera.compression === 0)
         ? 0
         : ESTIMATE_DEBOUNCE_MS;
     const timer = window.setTimeout(() => {
@@ -160,6 +173,7 @@ export function useRecordingExportEstimate(inputs: RecordingExportInputs) {
     enabledSignature,
     includeCamera,
     includePrimaryVideo,
+    isExportOpen,
     resolutionScalePercent,
     recordingOutput,
     recordingTimelineEdit,

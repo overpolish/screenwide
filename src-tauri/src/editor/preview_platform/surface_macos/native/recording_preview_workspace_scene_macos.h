@@ -39,12 +39,14 @@ int screenwide_workspace_scene_ready(const void *scene, uint32_t count);
 int screenwide_workspace_scene_set_typing(const void *scene, int typing, uint32_t layer,
                                           uint32_t index, uint32_t start, uint32_t end,
                                           int caret);
-/// Draws the scene into `texture`, the drawable's `id<MTLTexture>`, on the
+/// Draws the scene into `texture`, a BGRA texture the drawable's size, on the
 /// shared queue: one placement per layer, and the crop magnifier if active.
+/// Non-zero `reuse` shows the picture last composed again where the scene has
+/// not changed since, for a redraw of the selection chrome alone.
 int screenwide_workspace_scene_draw(const void *scene, void *texture,
                                     const ScreenwideWorkspacePlacement *placements,
                                     uint32_t count,
-                                    const ScreenwideRegionMagnifier *magnifier);
+                                    const ScreenwideRegionMagnifier *magnifier, int reuse);
 
 /// Native Frame gestures transform the retained scene directly so the media
 /// and the OSC show the same pointer sample before React mirrors the update.

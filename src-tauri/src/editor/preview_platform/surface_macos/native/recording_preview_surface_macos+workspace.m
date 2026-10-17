@@ -8,54 +8,25 @@
 SCREENWIDE_PREVIEW_PRIVATE void remember_workspace_transform(
     ScreenwidePreviewSurface *surface, double width, double height);
 SCREENWIDE_PREVIEW_PRIVATE void on_main_async(dispatch_block_t block);
-SCREENWIDE_PREVIEW_PRIVATE void present_in_transaction(
-    ScreenwidePreviewSurface *surface, ScreenwidePreviewView *view,
-    id<MTLCommandBuffer> command, id<CAMetalDrawable> drawable);
-
-/// Main thread only. Releases the workspace draw slot and re-runs the redraw
-/// that was coalesced away while this one was in flight.
-static void clear_workspace_draw_in_flight(ScreenwidePreviewSurface *surface) {
+SCREENWIDE_PREVIEW_PRIVATE void clear_workspace_draw_in_flight(
+    ScreenwidePreviewSurface *surface) {
   [surface.workspaceLock lock];
   surface.workspaceDrawInFlight = NO;
   BOOL pending = surface.workspaceDrawPending;
   surface.workspaceDrawPending = NO;
   [surface.workspaceLock unlock];
-  if (pending) redraw_workspace(surface);
+  // Whether the scene changed meanwhile is already on the surface, so the
+  // coalesced redraw composes it again only if it did.
+  if (pending) draw_workspace(surface);
 }
 
-/// Draws the OSC over the drawn workspace and presents both. Both draws were
-/// submitted on the shared queue before `command`, so it runs after them.
-static void present_workspace_drawable(ScreenwidePreviewSurface *surface,
-                                       id<MTLCommandBuffer> command,
-                                       id<CAMetalDrawable> drawable) {
-  // Pixels and OSC land in one drawable, then use the same explicit Core
-  // Animation transaction handoff as the proven multi-pane path. Direct
-  // `presentDrawable` completed on the GPU quickly but could remain queued
-  // for seconds before Core Animation displayed it.
-  surface.workspaceEncodingTexture = drawable.texture;
-  redraw_selection(surface);
-  surface.workspaceEncodingTexture = nil;
-  ScreenwidePreviewView *workspace = surface.views.firstObject;
-  // SAME-TURN CONSTRAINT: a workspace redraw acquires its drawable and
-  // encodes on the main thread, so the present MUST happen in that same
-  // runloop turn. Deferring it - to this command buffer's completed handler,
-  // or to the batch's group-notify block - leaves the turn holding an
-  // acquired-but-unpresented drawable of a `presentsWithTransaction` layer;
-  // the turn's closing Core Animation flush then blocks waiting for a present
-  // that is itself queued behind that flush on the main queue, and gives up
-  // only at its ~1s watchdog. That is the measured 1-second hang. So hand the
-  // buffer to `present_in_transaction` unconditionally: batched or not, its
-  // main-thread path commits, waits for scheduled and presents inline here.
-  //
-  // Registered before the commit that `present_in_transaction` performs -
-  // Metal rejects completed handlers added after `commit`. This clear re-arms
-  // `workspaceDrawPending` coalescing, so it must stay.
-  [command addCompletedHandler:^(__unused id<MTLCommandBuffer> completed) {
-    dispatch_async(dispatch_get_main_queue(), ^{
-      clear_workspace_draw_in_flight(surface);
-    });
-  }];
-  present_in_transaction(surface, workspace, command, drawable);
+SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surface) {
+  surface.workspaceSceneDirty = YES;
+  draw_workspace(surface);
+}
+
+SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace_chrome(ScreenwidePreviewSurface *surface) {
+  draw_workspace(surface);
 }
 
 static ScreenwideWorkspacePlacement workspace_placement(
@@ -159,7 +130,7 @@ static NSMutableData *workspace_placements(ScreenwidePreviewSurface *surface) {
   return data;
 }
 
-SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surface) {
+SCREENWIDE_PREVIEW_PRIVATE void draw_workspace(ScreenwidePreviewSurface *surface) {
   if (!surface.workspaceMode || surface.workspaceLayerCount == 0 ||
       surface.views.count == 0 || !surface.workspaceHasPanes) return;
   ScreenwidePreviewView *workspace = surface.views[0];
@@ -173,24 +144,43 @@ SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surfa
   surface.workspaceDrawInFlight = YES;
   BOOL drawn = NO;
   // A scene that cannot draw is checked before a drawable is taken: one
-  // acquired here must be presented in this turn.
+  // acquired on the main thread must be presented in this turn.
   if (screenwide_workspace_scene_ready(surface.scene, surface.workspaceLayerCount)) {
-    id<CAMetalDrawable> drawable = [(CAMetalLayer *)workspace.layer nextDrawable];
-    if (drawable != nil) {
-      ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;
-      screenwide_workspace_scene_draw(surface.scene, (__bridge void *)drawable.texture,
-                                      workspace_placements(surface).bytes,
-                                      surface.workspaceLayerCount, &magnifier);
-      present_workspace_drawable(surface, [surface.queue commandBuffer], drawable);
-      drawn = YES;
+    CAMetalLayer *layer = (CAMetalLayer *)workspace.layer;
+    ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;
+    int reuse = surface.workspaceSceneDirty ? 0 : 1;
+    // A redraw at a new drawable size lands beside the layout that resized
+    // the workspace, in this turn's own transaction. Every other one is
+    // composed off screen and presented from a drawable taken off the main
+    // thread, which then never waits for the GPU to finish the picture.
+    if (CGSizeEqualToSize(layer.drawableSize, surface.workspacePresentedSize)) {
+      id<MTLTexture> frame = workspace_frame_texture(surface, layer.drawableSize);
+      if (frame != nil &&
+          screenwide_workspace_scene_draw(surface.scene, (__bridge void *)frame,
+                                          workspace_placements(surface).bytes,
+                                          surface.workspaceLayerCount, &magnifier, reuse)) {
+        present_workspace_frame(surface, workspace, frame);
+        drawn = YES;
+      }
+    } else {
+      id<CAMetalDrawable> drawable = [layer nextDrawable];
+      if (drawable != nil) {
+        screenwide_workspace_scene_draw(surface.scene, (__bridge void *)drawable.texture,
+                                        workspace_placements(surface).bytes,
+                                        surface.workspaceLayerCount, &magnifier, reuse);
+        present_workspace_drawable(surface, [surface.queue commandBuffer], drawable);
+        surface.workspacePresentedSize = layer.drawableSize;
+        drawn = YES;
+      }
     }
+    if (drawn) surface.workspaceSceneDirty = NO;
   }
   if (!drawn) {
     surface.workspaceDrawInFlight = NO;
     if (!surface.workspaceRedrawRetried) {
       surface.workspaceRedrawRetried = YES;
       dispatch_async(dispatch_get_main_queue(), ^{
-        redraw_workspace(surface);
+        draw_workspace(surface);
       });
     }
   } else {

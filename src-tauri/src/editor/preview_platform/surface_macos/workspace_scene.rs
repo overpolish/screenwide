@@ -46,6 +46,12 @@ struct SceneState {
   /// rather than on a layer, so the restaging every typed change causes
   /// keeps it.
   typing: Option<(u32, usize, TypingMarks)>,
+  /// Counts every time the scene may have changed; the retained picture is
+  /// only shown again while it is the revision that picture was drawn at.
+  revision: u64,
+  /// The scene as last composed, without the selection chrome drawn over it,
+  /// so a redraw of the chrome alone does not compose every layer again.
+  picture: Option<draw::RetainedPicture>,
 }
 
 pub(crate) struct WorkspaceScene {
@@ -68,11 +74,22 @@ impl WorkspaceScene {
         sources: HashMap::new(),
         effects: Default::default(),
         typing: None,
+        revision: 0,
+        picture: None,
       }),
     })
   }
 
+  /// The scene to change. Every hold counts as a change, so a picture drawn
+  /// before it is never shown again.
   fn state(&self) -> Result<MutexGuard<'_, SceneState>, String> {
+    let mut state = self.read()?;
+    state.revision = state.revision.wrapping_add(1);
+    Ok(state)
+  }
+
+  /// The scene to read or to draw, which leaves the retained picture current.
+  fn read(&self) -> Result<MutexGuard<'_, SceneState>, String> {
     self
       .state
       .lock()
@@ -177,7 +194,7 @@ impl WorkspaceScene {
 
   /// The size of the camera frame `pane_index` carries, once it is resident.
   pub(super) fn camera_source_size(&self, pane_index: u32) -> Option<(u32, u32)> {
-    let state = self.state().ok()?;
+    let state = self.read().ok()?;
     let layer = state
       .layers
       .iter()

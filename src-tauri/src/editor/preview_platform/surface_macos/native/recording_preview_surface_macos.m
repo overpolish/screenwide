@@ -327,9 +327,9 @@ static void run_on_main_transaction(dispatch_block_t body) {
 
 /// Main thread only. Applies every pane's pending frame and presents the given
 /// drawables inside the caller's transaction.
-static void commit_frames_and_drawables(ScreenwidePreviewSurface *surface,
-                                        NSArray<id<CAMetalDrawable>> *drawables,
-                                        NSArray<ScreenwidePreviewView *> *views) {
+SCREENWIDE_PREVIEW_PRIVATE void commit_frames_and_drawables(
+    ScreenwidePreviewSurface *surface, NSArray<id<CAMetalDrawable>> *drawables,
+    NSArray<ScreenwidePreviewView *> *views) {
   for (ScreenwidePreviewView *view in surface.views) {
     if (!view.hasPendingFrame) continue;
     view.frame = view.pendingFrame;

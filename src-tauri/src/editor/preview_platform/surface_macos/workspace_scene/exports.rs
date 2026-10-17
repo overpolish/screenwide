@@ -64,8 +64,10 @@ pub unsafe extern "C" fn screenwide_workspace_scene_set_typing(
   status(unsafe { self::scene(scene) }.is_some_and(|scene| scene.set_typing(marks)))
 }
 
-/// Draws the scene into `texture`, the workspace drawable's `id<MTLTexture>`,
-/// with one placement for each layer, in drawable pixels.
+/// Draws the scene into `texture`, a BGRA `id<MTLTexture>` the size of the
+/// workspace drawable, with one placement for each layer, in drawable pixels.
+/// Non-zero `reuse` shows the picture last composed again where the scene
+/// has not changed since: the redraw is for the selection chrome alone.
 #[no_mangle]
 pub unsafe extern "C" fn screenwide_workspace_scene_draw(
   scene: *const c_void,
@@ -73,6 +75,7 @@ pub unsafe extern "C" fn screenwide_workspace_scene_draw(
   placements: *const NativeWorkspacePlacement,
   count: u32,
   magnifier: *const NativeMagnifier,
+  reuse: i32,
 ) -> i32 {
   let Some(scene) = (unsafe { self::scene(scene) }) else {
     return 0;
@@ -84,7 +87,7 @@ pub unsafe extern "C" fn screenwide_workspace_scene_draw(
   let magnifier = unsafe { magnifier.as_ref() };
   let drawn = screenwide_gpu::shared()
     .and_then(|gpu| unsafe { screenwide_gpu::macos::bgra_render_target(gpu, texture) })
-    .and_then(|target| scene.draw(&target, placements, magnifier));
+    .and_then(|target| scene.draw(&target, placements, magnifier, reuse != 0));
   match drawn {
     Ok(()) => 1,
     Err(error) => {

@@ -13,7 +13,7 @@ use screenwide_text::captions::CaptionFrame;
 
 impl WorkspaceScene {
   pub(super) fn keyboard_bounds(&self, pane: u32) -> Option<[f64; 4]> {
-    let state = self.state().ok()?;
+    let state = self.read().ok()?;
     let layer = state.layers.iter().find(|layer| {
       layer.pane_index == pane
         && layer
@@ -30,7 +30,7 @@ impl WorkspaceScene {
   }
 
   pub(super) fn caption_bounds(&self, pane: u32) -> Option<[f64; 4]> {
-    let state = self.state().ok()?;
+    let state = self.read().ok()?;
     state
       .layers
       .iter()
@@ -45,7 +45,7 @@ impl WorkspaceScene {
   /// as shares of its canvas, its type size as a share of the block's
   /// height, and how its lines line up.
   pub(super) fn caption_editing_block(&self, pane: u32) -> Option<([f64; 4], f64, f64)> {
-    let state = self.state().ok()?;
+    let state = self.read().ok()?;
     state
       .layers
       .iter()
@@ -59,7 +59,7 @@ impl WorkspaceScene {
   /// Which word of the caption showing on `pane` is under the point `at`,
   /// as shares of its canvas, counted across the caption's lines.
   pub(super) fn caption_word_at(&self, pane: u32, at: [f64; 2]) -> Option<usize> {
-    let state = self.state().ok()?;
+    let state = self.read().ok()?;
     state
       .layers
       .iter()

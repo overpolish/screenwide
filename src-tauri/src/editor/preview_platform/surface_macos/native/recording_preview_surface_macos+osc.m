@@ -27,7 +27,7 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       surface.workspaceEncodingTexture != nil;
   if (surface.workspaceMode && !workspaceEncoding) {
     surface.selectionLayer.hidden = YES;
-    redraw_workspace(surface);
+    redraw_workspace_chrome(surface);
     return;
   }
   // The arrow chrome draws only its own grips: the layer's selection and crop

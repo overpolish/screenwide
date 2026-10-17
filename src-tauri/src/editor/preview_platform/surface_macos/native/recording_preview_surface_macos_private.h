@@ -168,6 +168,16 @@ typedef void (*screenwide_preview_context_menu_callback)(uint32_t pane_index,
 @property(nonatomic) BOOL workspaceLayoutAwaitsPresent;
 @property(nonatomic, strong) NSLock *workspaceLock;
 @property(nonatomic, strong) id<MTLTexture> workspaceEncodingTexture;
+/// The workspace composed off screen with its chrome, copied into a drawable
+/// taken off the main thread (`+workspace_present.m`).
+@property(nonatomic, strong) id<MTLTexture> workspaceFrameTexture;
+/// Whether the scene may have changed since it was last composed. A redraw
+/// of the selection chrome alone leaves it, and shows the last composed
+/// picture under the new chrome.
+@property(nonatomic) BOOL workspaceSceneDirty;
+/// The drawable size last presented. A redraw at another size presents in
+/// the main thread's own transaction, beside the layout that resized it.
+@property(nonatomic) CGSize workspacePresentedSize;
 @property(nonatomic) ScreenwideRegionMagnifier workspaceMagnifier;
 @property(nonatomic, strong) ScreenwidePreviewInteractionView *interaction;
 @property(nonatomic) BOOL editorEnabled;

@@ -87,7 +87,33 @@ BOOL update_workspace_auto_fit_move(
     double move_x, double move_y, NSRect start, NSRect resized);
 void end_workspace_frame_resize(
     ScreenwidePreviewSurface *surface, BOOL commit);
+/// Draws the workspace again after a change to what it shows. Main thread.
 void redraw_workspace(ScreenwidePreviewSurface *surface);
+/// Draws the workspace again for its selection chrome alone, over the picture
+/// last composed where the scene has not changed since. Main thread.
+void redraw_workspace_chrome(ScreenwidePreviewSurface *surface);
+/// Draws the workspace as the scene and chrome stand, composing the scene
+/// again only where it changed since. Main thread.
+void draw_workspace(ScreenwidePreviewSurface *surface);
+/// Releases the workspace draw slot and runs the redraw that was coalesced
+/// away while the draw was in flight. Main thread.
+void clear_workspace_draw_in_flight(ScreenwidePreviewSurface *surface);
+/// Draws the chrome over `frame`, the composed workspace, and presents it
+/// from a drawable taken off the main thread (`+workspace_present.m`).
+void present_workspace_frame(ScreenwidePreviewSurface *surface,
+                             ScreenwidePreviewView *workspace, id<MTLTexture> frame);
+/// Draws the chrome into `drawable`, taken on the main thread, and presents
+/// it in this turn after `command` (`+workspace_present.m`).
+void present_workspace_drawable(ScreenwidePreviewSurface *surface,
+                                id<MTLCommandBuffer> command,
+                                id<CAMetalDrawable> drawable);
+/// The off-screen texture the workspace is composed into at `size`.
+id<MTLTexture> workspace_frame_texture(ScreenwidePreviewSurface *surface, CGSize size);
+/// Applies every pane's pending frame and presents `drawables` inside the
+/// caller's transaction. Main thread.
+void commit_frames_and_drawables(ScreenwidePreviewSurface *surface,
+                                 NSArray<id<CAMetalDrawable>> *drawables,
+                                 NSArray<ScreenwidePreviewView *> *views);
 NSRect selection_image_frame_for(ScreenwidePreviewSurface *surface,
                                  ScreenwidePreviewSelection selection);
 /// The arrow tool's pointer handling. Each returns YES when the press,

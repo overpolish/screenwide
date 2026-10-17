@@ -145,6 +145,9 @@ pub fn show(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
 }
 
 pub fn hide(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
+  if kind == EditorKind::Recording {
+    super::preview::cancel_export_work(&app.state::<super::EditorState>());
+  }
   let Some(options) = app.get_webview_window(options_label(kind).as_str()) else {
     notify(app, kind.window_label().as_str(), kind, CLOSED_EVENT);
     return Ok(());
