@@ -16,6 +16,12 @@ const scriptPath = fileURLToPath(
 );
 const repositoryRoot = path.dirname(path.dirname(scriptPath));
 
+// Without BROWSER, Storybook on macOS opens the URL in Chrome whenever any
+// process named "Google Chrome" is running, including headless Chrome for
+// Testing. "open" hands it to the system default browser instead. Other
+// platforms already use the default browser and would treat "open" as an app.
+if (process.platform === "darwin") process.env.BROWSER ??= "open";
+
 let nativePreview: ChildProcess | undefined;
 
 const nativePreviewPlugin: PluginOption = {
