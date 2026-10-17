@@ -52,6 +52,14 @@ export const isAnnotationSwatch = (color: string) =>
 export const sameAnnotationColor = (first: string, second: string) =>
   first.toLowerCase() === second.toLowerCase();
 
+/** Whether ink over `color`, a `#rrggbb` hex, should be the dark of a light
+ * appearance. */
+export const isLight = (color: string) => {
+  const channel = (offset: number) =>
+    parseInt(color.slice(offset, offset + 2), 16) / 255;
+  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5) > 0.5;
+};
+
 /**
  * The saved colours with `color` kept among them, newest last.
  *

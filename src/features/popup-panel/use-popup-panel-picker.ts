@@ -9,6 +9,7 @@ import { useEffect, useRef } from "react";
 import { hidePopupPanel, panelStartX, showPopupPanel } from "./api";
 import {
   activePopupPanel,
+  PopupPanelAction,
   PopupPanelContent,
   SHARED_POPUP_PANEL,
   usePopupPanelStore,
@@ -29,12 +30,19 @@ type PopupPanelPickerOptions = {
   /** A picker holding one choice closes once it is made; one tried again
    * and again, as a colour is, stays open until put away. */
   closesOnPick?: boolean;
+  /** Something done to a value in the panel rather than a pick of it. */
+  onAction?: (action: PopupPanelAction, value: string) => void;
 };
 
-/** Reports `value` picked in the panel opened under `id`, from the panel
- * window, to whichever window opened it. */
-export const reportPopupPanelPick = (id: string, value: string) => {
+/** Reports `value` picked in the panel opened under `id`, or `action` done to
+ * it, from the panel window, to whichever window opened it. */
+export const reportPopupPanelPick = (
+  id: string,
+  value: string,
+  action?: PopupPanelAction,
+) => {
   usePopupPanelStore.getState().select({
+    action,
     id,
     panel: SHARED_POPUP_PANEL,
     pressedId: value,
@@ -60,6 +68,7 @@ export function usePopupPanelPicker({
   content,
   id,
   label,
+  onAction,
   onPick,
 }: PopupPanelPickerOptions) {
   const isOpen = usePopupPanelStore(
@@ -68,8 +77,10 @@ export function usePopupPanelPicker({
   const lastSelection = usePopupPanelStore((state) => state.lastSelection);
   const handledEventRef = useRef(lastSelection?.eventId ?? null);
   const pickRef = useRef(onPick);
+  const actionRef = useRef(onAction);
   useEffect(() => {
     pickRef.current = onPick;
+    actionRef.current = onAction;
   });
 
   useEffect(() => {
@@ -80,8 +91,14 @@ export function usePopupPanelPicker({
     )
       return;
     handledEventRef.current = lastSelection.eventId;
-    if (lastSelection.selectedIds.length > 0)
-      pickRef.current(lastSelection.selectedIds[0]);
+    const { action, selectedIds } = lastSelection;
+    const hasValue = selectedIds.length > 0;
+    // An action leaves the panel open on what it acted on.
+    if (action) {
+      if (hasValue) actionRef.current?.(action, selectedIds[0]);
+      return;
+    }
+    if (hasValue) pickRef.current(selectedIds[0]);
     if (closesOnPick) void putAway();
   }, [closesOnPick, id, lastSelection]);
 

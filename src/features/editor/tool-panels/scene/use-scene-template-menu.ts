@@ -20,8 +20,8 @@ const items = (): PopupPanelItem[] => [
 
 /**
  * A right click on a scene template, answered with the app's own menu. The
- * twin of `use-annotation-color-menu.ts`: a template is forgotten the way a
- * saved colour or background is.
+ * twin of `use-background-preset-menu.ts`: a template is forgotten the way a
+ * saved background is.
  */
 export function useSceneTemplateMenu(onRemove: (templateId: string) => void) {
   const openMenu = usePopupMenu({

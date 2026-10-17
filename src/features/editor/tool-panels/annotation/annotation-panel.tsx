@@ -34,7 +34,6 @@ import {
   AnnotationTextTemplateRow,
 } from "./text/annotation-text-rows";
 import { shownTextLook } from "./text/text-look";
-import { useAnnotationColorMenu } from "./use-annotation-color-menu";
 
 /**
  * The chosen annotation's own controls: how big it is drawn, whether it arrives
@@ -76,9 +75,12 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
     isLocked,
     textTemplates,
   } = snapshot;
-  const showColorMenu = useAnnotationColorMenu((color) => {
+  const saveColor = (color: string) => {
+    change({ saveAnnotationColor: color });
+  };
+  const removeColor = (color: string) => {
     change({ removeAnnotationColor: color });
-  });
+  };
   if (annotationCount > 1)
     return (
       <AnnotationSelectionSummary
@@ -255,18 +257,12 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       {showsColor ? (
         <AnnotationColorGrid
           isDisabled={isLocked}
+          offersCustom
           onChange={(next) => {
             change({ annotationStyle: { color: next } });
           }}
-          onContextMenuColor={(kept, anchor) => {
-            void showColorMenu(kept, anchor);
-          }}
-          onSettled={(settled) => {
-            change({
-              annotationStyle: { color: settled },
-              saveAnnotationColor: settled,
-            });
-          }}
+          onRemoveColor={removeColor}
+          onSaveColor={saveColor}
           savedColors={annotationColors}
           value={color}
         />
@@ -277,7 +273,11 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           change={change}
           isLocked={isLocked}
           look={look}
-          savedColors={annotationColors}
+          savedColors={{
+            colors: annotationColors,
+            onRemove: removeColor,
+            onSave: saveColor,
+          }}
         />
       ) : null}
 

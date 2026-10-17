@@ -8,6 +8,7 @@ import {
   CaptionDefaultsPatch,
   TextTemplates,
 } from "../../recording/captions/use-text-templates";
+import { SavedColors } from "../text-style/text-color-rows";
 import { TextStyleRows } from "../text-style/text-style-rows";
 import { TextTemplateRow } from "../text-style/text-template-row";
 
@@ -41,7 +42,7 @@ export function CaptionStyleTab({
   layout: TextLayout;
   onChange: (style: Partial<TextStyle>) => void;
   onDefaultsChange: (patch: CaptionDefaultsPatch) => void;
-  savedColors: string[];
+  savedColors: SavedColors;
   style: TextStyle;
   templates: TextTemplates;
 }) {

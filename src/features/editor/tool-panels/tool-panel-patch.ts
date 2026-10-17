@@ -147,8 +147,7 @@ export type ToolPanelPatch = Partial<
   /** Turn the chosen annotation round, so its head points the other way, or
    * mirror the chosen image. */
   reverseAnnotation?: true;
-  /** Keep a colour of your own, so it is on offer next time. Sent once a
-   * colour is settled on rather than on every step of a drag. */
+  /** Keep a colour of your own, so it is on offer next time. */
   saveAnnotationColor?: string;
   /** Keep the background being shown under a name. */
   savePreset?: BackgroundPreset;

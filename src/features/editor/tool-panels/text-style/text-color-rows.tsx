@@ -18,6 +18,13 @@ import {
 
 import type { TextStyle } from "../../../../bindings/TextStyle";
 
+/** The colours of your own, and keeping or forgetting one from the grid. */
+export type SavedColors = {
+  colors: string[];
+  onRemove: (color: string) => void;
+  onSave: (color: string) => void;
+};
+
 /** The colour grid's own width: the palette's row, with its padding. */
 const GRID_SIZE = { height: 120, width: 340 };
 
@@ -33,15 +40,19 @@ function CaptionColorWell({
   isDisabled: boolean;
   onChange: (color: string) => void;
   role: TextColorRole;
-  savedColors: string[];
+  savedColors: SavedColors;
   value: string;
 }) {
   const id = `caption-color:${role}`;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const picker = usePopupPanelPicker({
-    content: { kind: "colors", savedColors, value },
+    content: { kind: "colors", savedColors: savedColors.colors, value },
     id,
     label: styleColorLabel(role),
+    onAction: (action, color) => {
+      if (action === "save") savedColors.onSave(color);
+      else savedColors.onRemove(color);
+    },
     onPick: onChange,
   });
 
@@ -85,7 +96,7 @@ export function TextColorRows({
 }: {
   isDisabled: boolean;
   onChange: (style: Partial<TextStyle>) => void;
-  savedColors: string[];
+  savedColors: SavedColors;
   style: TextStyle;
 }) {
   return (

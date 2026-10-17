@@ -47,8 +47,6 @@ editor-panels-animate = Animate
 editor-panels-redaction-style = Style
 editor-panels-strength = Strength
 editor-panels-redaction-note = Use Erase or Colour for sensitive content.
-editor-panels-remove-color = Remove Colour
-editor-panels-color-actions = Colour actions
 
 ## Images placed as annotations
 

@@ -151,7 +151,15 @@ export function CaptionsPanel({ workspace }: { workspace: EditorKind }) {
           onDefaultsChange={(captionDefaults) => {
             change({ captionDefaults });
           }}
-          savedColors={snapshot.annotationColors}
+          savedColors={{
+            colors: snapshot.annotationColors,
+            onRemove: (color) => {
+              change({ removeAnnotationColor: color });
+            },
+            onSave: (color) => {
+              change({ saveAnnotationColor: color });
+            },
+          }}
           style={style}
           templates={templates}
         />

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { TextColorRows } from "./text-color-rows";
+import { SavedColors, TextColorRows } from "./text-color-rows";
 import { TextEffectsRow } from "./text-effects-row";
 import { TextFontRow } from "./text-font-row";
 import { TextShadowRow } from "./text-shadow-row";
@@ -24,7 +24,7 @@ export function TextStyleRows({
 }: {
   isDisabled: boolean;
   onChange: (style: Partial<TextStyle>) => void;
-  savedColors: string[];
+  savedColors: SavedColors;
   style: TextStyle;
 }) {
   return (

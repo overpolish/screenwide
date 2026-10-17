@@ -41,6 +41,7 @@ annotation-size-block = Block size
 
 annotation-color = Colour
 annotation-custom-color = Custom colour
+annotation-saved-color-armed = Right-click { $color } again to remove it
 annotation-color-red = Red
 annotation-color-orange = Orange
 annotation-color-yellow = Yellow

@@ -17,6 +17,7 @@ import { Popover } from "../../../components/base/popover/popover";
 import {
   ANNOTATION_SWATCHES,
   isAnnotationSwatch,
+  isLight,
   sameAnnotationColor,
 } from "../../../components/shared/annotation-style/palette";
 import { BackgroundTile } from "../../../components/shared/background-picker/background-tile";
@@ -26,13 +27,6 @@ import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 /** The colour as a kind keeps it: `#rrggbb` in lower case, whatever the
  * Colours panel reports. */
 const kindColor = (color: string) => color.slice(0, 7).toLowerCase();
-
-/** Whether ink over `color` should be the dark of a light appearance. */
-const isLight = (color: string) => {
-  const channel = (offset: number) =>
-    parseInt(color.slice(offset, offset + 2), 16) / 255;
-  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5) > 0.5;
-};
 
 export type KindColorChange = { color: string; customColor?: string };
 

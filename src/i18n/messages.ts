@@ -69,6 +69,7 @@ export type Messages = {
   "annotation-redaction-pixelate": null;
   "annotation-redaction-shuffle-blur": null;
   "annotation-redaction-shuffle-pixelation": null;
+  "annotation-saved-color-armed": { color: string | number };
   "annotation-size-block": null;
   "annotation-size-height": null;
   "annotation-size-size": null;
@@ -320,7 +321,6 @@ export type Messages = {
   "editor-panels-clear-all": null;
   "editor-panels-clear-auto-zooms": null;
   "editor-panels-clear-drawings": null;
-  "editor-panels-color-actions": null;
   "editor-panels-corner": null;
   "editor-panels-corner-bottom-left": null;
   "editor-panels-corner-bottom-right": null;
@@ -392,7 +392,6 @@ export type Messages = {
   "editor-panels-remove-background": null;
   "editor-panels-remove-background-description": null;
   "editor-panels-remove-background-working": null;
-  "editor-panels-remove-color": null;
   "editor-panels-remove-preset": null;
   "editor-panels-remove-template": null;
   "editor-panels-replace": null;

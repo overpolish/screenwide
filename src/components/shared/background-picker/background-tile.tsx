@@ -35,6 +35,7 @@ export function BackgroundTile({
   isDisabled,
   isSelected,
   onContextMenu,
+  onHoverEnd,
   onPress,
 }: {
   ariaLabel: string;
@@ -47,6 +48,7 @@ export function BackgroundTile({
   isDisabled?: boolean;
   isSelected?: boolean;
   onContextMenu?: MouseEventHandler<HTMLDivElement>;
+  onHoverEnd?: () => void;
 }) {
   const thumbnail = useBackgroundThumbnail(background, TILE_SIZE);
   const style = background
@@ -74,6 +76,7 @@ export function BackgroundTile({
       id={id}
       isDisabled={isDisabled}
       onContextMenu={onContextMenu}
+      onHoverEnd={onHoverEnd}
       onPress={onPress}
       style={style}
     >

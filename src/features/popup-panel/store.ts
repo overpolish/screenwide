@@ -119,10 +119,16 @@ export type OpenPopupPanel = {
   label?: string;
 };
 
+/** Something done to a value a panel offers rather than a pick of it: a
+ * colour of your own kept, or forgotten. */
+export type PopupPanelAction = "remove" | "save";
+
 type PopupPanelSelection = {
   eventId: string;
   id: string;
   selectedIds: string[];
+  /** Set when the press acted on `selectedIds` rather than choosing it. */
+  action?: PopupPanelAction;
   /** The item the press landed on. In a single-selection list this is the
    * choice; a toggle reports itself here while `selectedIds` carries the
    * whole tick list it belongs to. */
@@ -150,6 +156,7 @@ type PopupPanelSelectionRequest = {
   id: string;
   panel: string;
   selectedIds: string[];
+  action?: PopupPanelAction;
   pressedId?: string;
 };
 
@@ -240,8 +247,9 @@ export const usePopupPanelStore = create<PopupPanelStore>()((set, get) => {
     },
     lastSelection: null,
     open: put,
-    select: ({ id, panel, pressedId, selectedIds }) => {
+    select: ({ action, id, panel, pressedId, selectedIds }) => {
       const lastSelection = {
+        action,
         eventId: crypto.randomUUID(),
         id,
         pressedId,

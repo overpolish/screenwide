@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { TextColorRows } from "../../text-style/text-color-rows";
+import { SavedColors, TextColorRows } from "../../text-style/text-color-rows";
 import { TextEffectsRow } from "../../text-style/text-effects-row";
 import { TextFontRow } from "../../text-style/text-font-row";
 import { TextShadowRow } from "../../text-style/text-shadow-row";
@@ -125,7 +125,7 @@ export function AnnotationTextColorRows({
   isLocked,
   look,
   savedColors,
-}: RowsProps & { savedColors: string[] }) {
+}: RowsProps & { savedColors: SavedColors }) {
   return (
     <TextColorRows
       isDisabled={isLocked}
