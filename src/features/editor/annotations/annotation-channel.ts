@@ -7,7 +7,7 @@ import { SceneRotation } from "../layer-rotation";
 import { ToolPanelAnnotation } from "../tool-panels/tool-panel-selection";
 import { EditorKind } from "../types";
 
-import { AnnotationStyle, ImageArt, ImagePlay } from "./annotations";
+import { AnnotationStyle, ImageArt, ImagePlay, TextSpan } from "./annotations";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
 
@@ -31,6 +31,8 @@ type PublishedAnnotation = {
   applyClearDrawings: () => void;
   /** Delete every chosen annotation, in one edit. */
   applyDelete: () => void;
+  /** Set apart the chosen text's words `emphasis`, and no others. */
+  applyEmphasis: (emphasis: TextSpan[]) => void;
   /** Give the chosen image another picture. */
   applyImage: (art: ImageArt) => void;
   /** Change how the chosen moving image plays. */
@@ -99,6 +101,9 @@ export function usePublishAnnotationSelection(
       },
       applyDelete: () => {
         applyRef.current.applyDelete();
+      },
+      applyEmphasis: (emphasis) => {
+        applyRef.current.applyEmphasis(emphasis);
       },
       applyImage: (art) => {
         applyRef.current.applyImage(art);

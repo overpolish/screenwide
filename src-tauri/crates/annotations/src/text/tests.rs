@@ -8,7 +8,7 @@ use crate::gesture::{AnnotationDragOrigin, AnnotationHandle};
 use crate::reveal::AnnotationReveal;
 use crate::{Annotation, AnnotationPoint, AnnotationShape};
 use screenwide_text::engine::metrics::{text_block, LINE_HEIGHT};
-use screenwide_text::{BoxPoint, TailShape};
+use screenwide_text::{BoxPoint, TailShape, TextSpan};
 
 fn point(x: f64, y: f64) -> AnnotationPoint {
   AnnotationPoint { x, y }
@@ -34,6 +34,7 @@ fn text_box(text: &str, pointer: BoxPoint) -> Annotation {
     text: text.to_owned(),
     look: label_look(),
     controls: [("tip".to_owned(), TextControlPoint::Box(pointer))].into(),
+    emphasis: Vec::new(),
     clock: None,
   };
   annotation
@@ -293,7 +294,8 @@ fn moving_or_retyping_the_box_carries_its_pointer_with_it() {
 #[test]
 fn a_box_left_with_nothing_to_read_is_removed() {
   let mut annotations = vec![text_box("", BoxPoint::TUCKED)];
-  let mut edit = AnnotationTextEdit::begin("t".to_owned(), String::new());
+  let mut edit =
+    AnnotationTextEdit::begin("t".to_owned(), String::new(), &label_look(), Vec::new());
   assert!(edit.take(" \n ", 1));
   assert!(!edit.finish(&mut annotations));
   assert!(annotations.is_empty());
@@ -304,20 +306,57 @@ fn a_box_left_with_nothing_to_read_is_removed() {
 /// so far rather than the text it last heard of.
 #[test]
 fn the_text_typed_so_far_is_laid_over_a_list_the_document_sends_back() {
-  let mut edit = AnnotationTextEdit::begin("t".to_owned(), "Old".to_owned());
-  assert!(edit.take("New\r\nline", 2));
+  let chosen = vec![TextSpan { start: 0, end: 3 }];
+  let mut edit = AnnotationTextEdit::begin("t".to_owned(), "Old".to_owned(), &label_look(), chosen);
+  assert!(edit.take("Old\r\nline", 2));
   // A change that arrives after a newer one is dropped.
   assert!(!edit.take("Ne", 1));
   let mut echoed = vec![text_box("Ne", BoxPoint::TUCKED)];
   echoed[0].style.width = 48.0;
   assert!(edit.apply(&mut echoed));
+  // The word chosen stays chosen, and the line typed after it plain.
   assert!(matches!(
     &echoed[0].shape,
-    AnnotationShape::Text { text, .. } if text == "New\nline"
+    AnnotationShape::Text { text, emphasis, .. }
+      if text == "Old\nline" && emphasis == &[TextSpan { start: 0, end: 3 }]
   ));
   assert_eq!(echoed[0].style.width, 48.0);
   assert!(edit.finish(&mut echoed));
   assert_eq!(echoed.len(), 1);
+}
+
+/// The panel chooses words while the box is typed into: the document's copy,
+/// even one that trails the typing, brings the choice into the typing, and
+/// a copy that only echoes the typing's own choice changes nothing.
+#[test]
+fn words_chosen_in_the_panel_while_typing_are_taken_up() {
+  let mut edit =
+    AnnotationTextEdit::begin("t".to_owned(), "big".to_owned(), &label_look(), Vec::new());
+  assert!(edit.take("big cat", 1));
+  let chosen = |text: &str, emphasis: Vec<TextSpan>| {
+    let mut annotation = text_box(text, BoxPoint::TUCKED);
+    if let AnnotationShape::Text { emphasis: held, .. } = &mut annotation.shape {
+      *held = emphasis;
+    }
+    vec![annotation]
+  };
+  assert!(edit.adopt(&chosen("big cat", Vec::new())).is_none());
+  // Chosen in a copy a change behind, the word is carried to the text now.
+  let (_, _, emphasis) = edit
+    .adopt(&chosen("big", vec![TextSpan { start: 0, end: 3 }]))
+    .unwrap();
+  assert_eq!(emphasis, [TextSpan { start: 0, end: 3 }]);
+  let (_, _, emphasis) = edit
+    .adopt(&chosen("big cat", vec![TextSpan { start: 4, end: 7 }]))
+    .unwrap();
+  assert_eq!(emphasis, [TextSpan { start: 4, end: 7 }]);
+  let mut echoed = chosen("big", Vec::new());
+  assert!(edit.apply(&mut echoed));
+  assert!(matches!(
+    &echoed[0].shape,
+    AnnotationShape::Text { text, emphasis, .. }
+      if text == "big cat" && emphasis == &[TextSpan { start: 4, end: 7 }]
+  ));
 }
 
 #[test]

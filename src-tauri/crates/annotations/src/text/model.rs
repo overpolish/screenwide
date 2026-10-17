@@ -144,7 +144,7 @@ pub fn new_text(
       look
     }
   };
-  let empty = super::snap::text_box(point, "", &look, style.width, source_per_size);
+  let empty = super::snap::text_box(point, "", &look, &[], style.width, source_per_size);
   Annotation {
     above_camera: false,
     animated: true,
@@ -160,6 +160,7 @@ pub fn new_text(
       text: String::new(),
       look,
       controls: Default::default(),
+      emphasis: Vec::new(),
       clock: None,
     },
     style,

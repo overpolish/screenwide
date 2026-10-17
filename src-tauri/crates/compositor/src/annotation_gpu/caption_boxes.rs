@@ -28,7 +28,8 @@ pub(super) fn text_box(index: usize, piece: &CaptionPiece) -> Annotation {
   let color = match &piece.kind {
     CaptionPieceKind::Backdrop { color, .. }
     | CaptionPieceKind::Pill { color }
-    | CaptionPieceKind::Underline { color, .. } => color,
+    | CaptionPieceKind::Underline { color, .. }
+    | CaptionPieceKind::Bar { color, .. } => color,
     CaptionPieceKind::Word { ink, .. } => ink,
   };
   let [width, height] = box_size(text_block(&piece.text, piece.size), piece.size);
@@ -54,6 +55,7 @@ pub(super) fn text_box(index: usize, piece: &CaptionPiece) -> Annotation {
       text: piece.text.clone(),
       look: Box::new(look),
       controls: std::collections::BTreeMap::<String, TextControlPoint>::new(),
+      emphasis: Vec::new(),
       clock: None,
     },
     style: AnnotationStyle {

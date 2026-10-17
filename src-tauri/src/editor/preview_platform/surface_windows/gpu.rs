@@ -88,6 +88,7 @@ impl Gpu {
       camera_composition: None,
       camera_halo: None,
       annotation_typing: None,
+      caption_typing: None,
       captions: None,
       base_rect: PreviewSurfaceRect {
         height: 0.0,

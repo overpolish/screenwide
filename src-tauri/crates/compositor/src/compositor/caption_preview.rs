@@ -64,6 +64,7 @@ fn sample_captions(
       .map(|word| {
         let said = CaptionWord {
           text: (*word).to_owned(),
+          said: (*word).to_owned(),
           start_ms: at,
           end_ms: at + WORD_MS,
           source_start_ms: at,
@@ -220,6 +221,7 @@ impl CaptionPreviewer {
         style,
         ..Default::default()
       },
+      editing: None,
     };
     let image = self::backdrop(width, height, backdrop);
     let settings = plain_settings(width, height);

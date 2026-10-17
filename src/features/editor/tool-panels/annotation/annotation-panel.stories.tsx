@@ -127,6 +127,30 @@ export const TextWithoutBox: Story = {
   },
 };
 
+/** A text in a template that sets a key word apart: its words are offered
+ * to choose from, one of them chosen. */
+export const TextKeyWords: Story = {
+  args: { tool: "annotation", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      annotation: {
+        animated: true,
+        emphasis: [{ end: 15, start: 9 }],
+        id: "text-3",
+        kind: "text",
+        look: storyTextStyle("editorial"),
+        style: { ...dress, align: "left", color: "#ffffff", width: 28 },
+        text: "Ship the update\nthis week",
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+      textTemplates: STORY_TEXT_TEMPLATES,
+    });
+  },
+};
+
 /** The Redaction panel, pixelating securely: a style and a block size are
  * offered because the blocks are what it draws, and no colour, because
  * pixelation takes its colour from around the box. */

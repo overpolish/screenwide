@@ -187,8 +187,31 @@ unsafe extern "C" {
     family_length: u32,
     weight: u32,
     italic: u32,
+    words: *mut std::ffi::c_void,
   );
   pub(super) fn screenwide_preview_surface_end_annotation_text(handle: *mut std::ffi::c_void);
+  pub(super) fn screenwide_preview_surface_begin_caption_text(
+    handle: *mut std::ffi::c_void,
+    text: *const u8,
+    length: u32,
+    family: *const u8,
+    family_length: u32,
+    weight: u32,
+    italic: u32,
+    words: *mut std::ffi::c_void,
+    caret: i64,
+  );
+  pub(super) fn screenwide_preview_surface_set_annotation_text_words(
+    handle: *mut std::ffi::c_void,
+    words: *mut std::ffi::c_void,
+  );
+  pub(super) fn screenwide_preview_surface_replace_caption_text(
+    handle: *mut std::ffi::c_void,
+    start: u32,
+    end: u32,
+    text: *const u8,
+    length: u32,
+  );
   pub(super) fn screenwide_preview_surface_set_audio_ribbon(
     handle: *mut std::ffi::c_void,
     samples: *const f32,

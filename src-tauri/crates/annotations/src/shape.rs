@@ -37,7 +37,8 @@ pub enum AnnotationShape {
   /// `origin` is the top-left corner of the box the type sits in, whose size
   /// follows from the text and the type size; `controls` are where the
   /// look's control points have been moved, by id, the rest being where the
-  /// look starts them.
+  /// look starts them; `emphasis` the words chosen to be set apart, which a
+  /// look draws in its accent or highlights where it does either.
   Text {
     origin: AnnotationPoint,
     text: String,
@@ -50,6 +51,9 @@ pub enum AnnotationShape {
       as = "Option<std::collections::BTreeMap<String, super::text::model::TextControlPoint>>"
     )]
     controls: std::collections::BTreeMap<String, super::text::model::TextControlPoint>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(optional, as = "Option<Vec<screenwide_text::TextSpan>>")]
+    emphasis: Vec<screenwide_text::TextSpan>,
     /// Where the text is in its clip at the frame being drawn, which its
     /// look's motion is drawn at: set as a recording's frame is resolved,
     /// never stored, and absent on a still.

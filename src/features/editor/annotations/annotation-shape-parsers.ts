@@ -14,6 +14,7 @@ import {
   highlightBand,
   highlightTone,
   textControls,
+  textEmphasis,
   textLook,
 } from "./annotation-shape-parts";
 
@@ -208,6 +209,7 @@ export const textShape = (value: unknown): Shape<"text"> | null => {
         origin,
         ...textLook(shape.look),
         ...textControls(shape.controls),
+        ...textEmphasis(shape.emphasis),
         text: shape.text,
       }
     : null;

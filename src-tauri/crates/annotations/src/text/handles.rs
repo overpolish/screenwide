@@ -9,7 +9,7 @@ use super::look;
 use super::model::TextControlPoint;
 use crate::handles::{normalised_point, stroke_width, NativeAnnotationHandles};
 use crate::{AnnotationKind, AnnotationPoint, AnnotationStyle};
-use screenwide_text::{TailShape, TextStyle};
+use screenwide_text::{TailShape, TextSpan, TextStyle};
 
 /// The text a box's grips are read from.
 pub(crate) struct TextGrips<'a> {
@@ -17,6 +17,7 @@ pub(crate) struct TextGrips<'a> {
   pub text: &'a str,
   pub look: &'a TextStyle,
   pub controls: &'a BTreeMap<String, TextControlPoint>,
+  pub emphasis: &'a [TextSpan],
 }
 
 /// A text box reads the arrow's slots its own way: `start` is the box's
@@ -40,10 +41,12 @@ pub(crate) fn grips(
     text,
     look,
     controls,
+    emphasis,
   } = text;
   let (start_x, start_y) = normalised_point(origin, source);
   let font = look::type_size(look, style.width);
-  let [_, [end_x, end_y], block] = super::native::draw_points(origin, text, look, controls, font);
+  let [_, [end_x, end_y], block] =
+    super::native::draw_points(origin, (text, emphasis), look, controls, font);
   let head = super::native::head(look, controls, style.align.raw());
   let (end_x, end_y) = match look::tail(look, controls).map(|tail| tail.point) {
     Some(TextControlPoint::Picture(point)) => normalised_point(point, source),

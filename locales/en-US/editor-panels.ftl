@@ -248,6 +248,10 @@ editor-panels-text-color-accent = Accent
 editor-panels-text-color-outline = Outline
 editor-panels-text-color-background = Box
 editor-panels-text-color-shadow = Shadow
+# A text annotation's row choosing which of its words the template sets apart: in its accent, for templates that set a key word apart, or highlighted, for templates that highlight words.
+editor-panels-text-key-words = Key words
+editor-panels-text-highlighted-words = Highlighted words
+editor-panels-text-chosen-words-description = Choose the words the template sets apart.
 # The Style tab's row turning which way the words' shadow falls, where the template casts one.
 editor-panels-text-shadow = Shadow
 # In each Captions tab: start new captions as these are now. On the Style tab, this template with this look; on the Words tab, these rules.

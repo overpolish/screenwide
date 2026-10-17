@@ -9,30 +9,32 @@ import { offersOutline } from "./text-templates";
 
 import type { TextStyle } from "../../../../bindings/TextStyle";
 
-type CaptionEffect = "highlightWords" | "outline" | "revealWords";
+type WordEffect = "highlightWords" | "revealWords";
+type CaptionEffect = WordEffect | "outline";
 
 /**
  * The style's on-or-off options in one row, any of them on together:
- * whether the word being said is highlighted, whether the words are
- * revealed as they are said, and the outline, where the template draws its
- * type without a box. Text that is not spoken offers the outline alone, and
- * no row where there is none. Each segment names its option in full for
- * assistive technology.
+ * whether the word being said is highlighted, whether the words come on one
+ * after another, and the outline, where the template draws its type without
+ * a box. `words` names the word options the text offers: a caption both, a
+ * text placed by hand that moves the one, a still text neither. No row
+ * shows where there is nothing to offer. Each segment names its option in
+ * full for assistive technology.
  */
 export function TextEffectsRow({
   isDisabled,
   onChange,
-  spoken = true,
   style,
+  words = ["highlightWords", "revealWords"],
 }: {
   isDisabled: boolean;
   onChange: (style: Partial<TextStyle>) => void;
   style: TextStyle;
-  /** Whether the text's words are said, which the word options follow. */
-  spoken?: boolean;
+  /** The word options offered. */
+  words?: WordEffect[];
 }) {
   const effects: { ariaLabel: string; id: CaptionEffect; label: string }[] = [
-    ...(spoken ? spokenEffects() : []),
+    ...wordEffects().filter(({ id }) => words.some((word) => word === id)),
     ...(offersOutline(style)
       ? [
           {
@@ -69,8 +71,8 @@ export function TextEffectsRow({
   );
 }
 
-/** The options that follow the words as they are said. */
-const spokenEffects = (): {
+/** The options that follow the words. */
+const wordEffects = (): {
   ariaLabel: string;
   id: CaptionEffect;
   label: string;

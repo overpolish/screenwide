@@ -7,6 +7,7 @@
 //! video word by word. The editor's lane, the subtitle files an export
 //! writes and the captions drawn into the picture all come from here.
 
+mod changes;
 mod draw;
 mod lay_out;
 mod reading;
@@ -26,9 +27,13 @@ use ts_rs::TS;
 
 use crate::{TextFace, TextStyle};
 
+pub use changes::{
+  caption_changes, typed_caption_words, typed_emphasis, CaptionChanges, TypedCaptionWord,
+};
 pub use draw::{
-  caption_fit, caption_pieces, moves_text, text_item_pieces, CaptionLineTurn, CaptionMoment,
-  CaptionPiece, CaptionPieceKind, CaptionPieceShadow, CaptionTrack, TextItemSetting,
+  caption_fit, caption_pieces, editing_style, moves_text, text_item_pieces, CaptionEditing,
+  CaptionLineTurn, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionPieceShadow, CaptionTrack,
+  ItemTyping, TextItemLayout, TextItemSetting,
 };
 pub use lay_out::sample_caption;
 pub use settings::{
@@ -46,11 +51,17 @@ use widths::Widths;
 pub type Measure<'a> = dyn FnMut(&str, TextFace, f64) -> f64 + 'a;
 
 /// One word of a caption, timed on the edited video and in the source.
-#[derive(Clone, Debug, PartialEq, Serialize, TS)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct CaptionWord {
+  /// As the caption shows it.
   pub text: String,
+  /// As the transcript spells it, before the caption's own rules: what an
+  /// edit of the caption on the picture starts from and corrects.
+  #[serde(skip)]
+  #[ts(skip)]
+  pub said: String,
   pub start_ms: f64,
   pub end_ms: f64,
   pub source_start_ms: f64,

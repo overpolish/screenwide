@@ -6,7 +6,11 @@ import {
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
 import { ImagePlayChange } from "../annotations/annotation-channel";
-import { AnnotationStyle, ImageArt } from "../annotations/annotations";
+import {
+  AnnotationStyle,
+  ImageArt,
+  TextSpan,
+} from "../annotations/annotations";
 import { CameraEffectsChange } from "../recording/camera/use-camera-effects";
 import { CaptionsPatch } from "../recording/captions/recording-captions";
 import { CaptionDefaultsPatch } from "../recording/captions/use-text-templates";
@@ -38,6 +42,8 @@ export type ToolPanelHandlers = {
   onAnnotationColorRemove?: (color: string) => void;
   /** Keep a colour of your own, so it is on offer next time. */
   onAnnotationColorSave?: (color: string) => void;
+  /** Set apart the chosen text's words, and no others. */
+  onAnnotationEmphasisChange?: (emphasis: TextSpan[]) => void;
   /** Give the chosen image, or the next one, another picture. */
   onAnnotationImageChange?: (art: ImageArt) => void;
   /** Change how the chosen moving image plays. */

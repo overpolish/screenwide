@@ -72,12 +72,21 @@ export function useCaptionTools({
         : null,
     [defaults, edit, hasMicrophone],
   );
-  const change = (patch: CaptionsPatch) => {
+  /** `patch` made to the captions, after `before` is made to the rest of the
+   * edit where given, so a change spanning both is one step. */
+  const change = (
+    patch: CaptionsPatch,
+    before?: (edit: RecordingTimelineEdit) => RecordingTimelineEdit,
+  ) => {
     const current = editRef.current;
     if (!onEditChange || !current || !defaults) return;
     // Read back from the ref, not the render, so two changes sent together
     // build on each other rather than the second undoing the first.
-    const next = withCaptions(current, patch, defaults);
+    const next = withCaptions(
+      before ? before(current) : current,
+      patch,
+      defaults,
+    );
     editRef.current = next;
     onEditChange(next);
   };

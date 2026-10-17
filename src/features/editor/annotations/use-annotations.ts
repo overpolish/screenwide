@@ -29,11 +29,13 @@ import {
   shuffledShape,
   swayedShape,
 } from "./annotation-shape-edits";
+import { textSelection, withEmphasis } from "./annotation-text-selection";
 import {
   Annotation,
   AnnotationShape,
   AnnotationStyle,
   ImageArt,
+  TextSpan,
 } from "./annotations";
 import { relaidHighlight } from "./highlight-strokes";
 import { imageRotation, withImageRotation } from "./image-rotation";
@@ -169,6 +171,11 @@ export function useAnnotations({
     rememberAnnotationTextLook(look);
     reshape({ ...selected.shape, look });
   };
+  // The words a text sets apart are its own, and never carried to the next.
+  const applyEmphasis = (emphasis: TextSpan[]) => {
+    if (selected?.shape.kind === "text")
+      reshape(withEmphasis(selected.shape, emphasis));
+  };
 
   // Whether an annotation animates is not part of its dress: it sits on the
   // annotation itself, so it is committed on its own rather than through the
@@ -227,8 +234,7 @@ export function useAnnotations({
             id: selected.id,
             image: art ?? undefined,
             kind: selected.shape.kind,
-            look:
-              selected.shape.kind === "text" ? selected.shape.look : undefined,
+            ...textSelection(selected.shape),
             style: selected.style,
             ...(selected.shape.kind === "image"
               ? { rotation, sway: selected.shape.sway !== undefined }
@@ -241,6 +247,7 @@ export function useAnnotations({
       applyAnimated,
       applyClearDrawings,
       applyDelete,
+      applyEmphasis,
       applyImage,
       applyImagePlay,
       applyLook,

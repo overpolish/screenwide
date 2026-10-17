@@ -12,6 +12,7 @@ import {
   applyAnnotationRotation,
   applyAnnotationShuffle,
   applyAnnotationsDelete,
+  applyAnnotationEmphasis,
   applyAnnotationImage,
   applyAnnotationLook,
   applyAnnotationImagePlay,
@@ -37,6 +38,7 @@ export const annotationPanelHandlers = (
   | "onAnnotationAnimatedChange"
   | "onAnnotationColorRemove"
   | "onAnnotationColorSave"
+  | "onAnnotationEmphasisChange"
   | "onAnnotationImageChange"
   | "onAnnotationImagePlayChange"
   | "onAnnotationImageSwayChange"
@@ -59,6 +61,9 @@ export const annotationPanelHandlers = (
   },
   onAnnotationColorSave: (color) => {
     saveColors(withAnnotationColor(annotationColors, color));
+  },
+  onAnnotationEmphasisChange: (emphasis) => {
+    applyAnnotationEmphasis(workspace, emphasis);
   },
   onAnnotationImageChange: (art) => {
     applyAnnotationImage(workspace, art);

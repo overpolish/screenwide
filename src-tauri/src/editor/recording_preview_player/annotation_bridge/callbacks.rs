@@ -78,6 +78,17 @@ pub(crate) fn install(
     let text_clips = Arc::clone(&clips);
     let text_app = app.clone();
     surface.set_annotation_text_callback(Box::new(move |phase, pane, index, text, revision| {
+      // A report from the caption being typed into goes to its own session,
+      // and what it changed to React's captions; any other is a text box's.
+      let deliver = move |manager: &mut PreviewPlayerManager, app: &AppHandle, text: &str| {
+        if pane == crate::editor::preview_platform::CAPTIONS_LAYER_ID {
+          if let Some(edit) = manager.caption_text(phase, text, revision) {
+            let _ = app.emit("editor://recording-caption-edit", edit);
+          }
+        } else if let Some(commit) = manager.annotation_text(phase, pane, index, text, revision) {
+          let _ = app.emit("editor://recording-annotations", commit);
+        }
+      };
       // Never wait for this mutex from AppKit's main thread. No report may be
       // dropped - each one is typing - so a contended lock defers it, and the
       // revision keeps a late change from overwriting a newer one.
@@ -89,9 +100,7 @@ pub(crate) fn install(
         {
           return;
         }
-        if let Some(commit) = manager.annotation_text(phase, pane, index, text, revision) {
-          let _ = app.emit("editor://recording-annotations", commit);
-        }
+        deliver(manager, app, text);
       };
       let state = text_app.state::<RecordingPreviewPlayerState>();
       if let Ok(mut manager) = state.0.try_lock() {
@@ -112,9 +121,7 @@ pub(crate) fn install(
         {
           return;
         }
-        if let Some(commit) = manager.annotation_text(phase, pane, index, &text, revision) {
-          let _ = deferred.emit("editor://recording-annotations", commit);
-        }
+        deliver(&mut manager, &deferred, &text);
       });
     }));
   }

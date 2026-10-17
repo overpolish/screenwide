@@ -125,6 +125,7 @@ impl super::AnnotationShape {
         text,
         look,
         controls,
+        emphasis,
         clock,
       } => Self::Text {
         origin: map(*origin),
@@ -142,6 +143,7 @@ impl super::AnnotationShape {
             (id.clone(), point)
           })
           .collect(),
+        emphasis: emphasis.clone(),
         clock: *clock,
       },
       Self::Redact { start, end, seed } => Self::Redact {

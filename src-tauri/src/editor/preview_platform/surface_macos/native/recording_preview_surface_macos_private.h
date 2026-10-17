@@ -23,6 +23,9 @@ extern SCREENWIDE_PREVIEW_PRIVATE BOOL expected_selection_move_cursor;
 void install_native_cursor_guard(void);
 
 static const uint32_t ScreenwideFrameLayerId = UINT32_MAX;
+// `KEYBOARD_LAYER_ID` and `CAPTIONS_LAYER_ID` in `preview_platform.rs`.
+static const uint32_t ScreenwideKeyboardLayerId = UINT32_MAX - 1;
+static const uint32_t ScreenwideCaptionsLayerId = UINT32_MAX - 2;
 static const uint32_t ScreenwideCenteredResizeEdge = 1u << 16;
 static const uint32_t ScreenwideAutoFitMoveEdge = 1u << 17;
 static const uint32_t ScreenwideAutoFitCommitEdge = 1u << 18;

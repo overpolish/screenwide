@@ -3,9 +3,11 @@
 
 //! What the pointer does around a text box: the double-click that opens it
 //! for typing, the press that closes it, and the I-beam over it meanwhile.
-//! On a turned layer the presses in the box too: the text view stands
-//! upright away from it, so the press is carried back through the turn here
-//! and placed in the view's text. The typing itself is in `+annotation_text.m`.
+//! Where the text view's own layout is not what is drawn, the presses in the
+//! box too: on a turned layer the view stands upright away from it, so the
+//! press is carried back through the turn, and where words are set apart in
+//! their own faces Rust says where the press lands. The typing itself is in
+//! `+annotation_text.m`.
 
 #import "recording_preview_surface_macos_private.h"
 
@@ -32,10 +34,49 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_turned(ScreenwidePreviewSurface 
          annotation_chrome_turn(surface, storage) != NULL;
 }
 
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_sets_words_apart(
+    ScreenwidePreviewSurface *surface) {
+  return surface.annotationTextView != nil && surface.annotationTextWords != NULL &&
+         screenwide_text_words_sets_apart(surface.annotationTextWords) != 0;
+}
+
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_routed(ScreenwidePreviewSurface *surface) {
+  return annotation_text_turned(surface) || annotation_text_sets_words_apart(surface);
+}
+
+/// The UTF-16 index of byte `utf8` of `text`'s UTF-8.
+SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_text_utf16_index(NSString *text,
+                                                                 NSUInteger utf8) {
+  NSData *bytes = [text dataUsingEncoding:NSUTF8StringEncoding] ?: [NSData data];
+  NSUInteger length = MIN(utf8, bytes.length);
+  NSString *before = [[NSString alloc] initWithBytes:bytes.bytes
+                                              length:length
+                                            encoding:NSUTF8StringEncoding];
+  return MIN(before.length, text.length);
+}
+
+/// The byte of `text`'s UTF-8 that UTF-16 index `utf16` starts at.
+SCREENWIDE_PREVIEW_PRIVATE uint32_t annotation_text_utf8_offset(NSString *text,
+                                                               NSUInteger utf16) {
+  utf16 = MIN(utf16, text.length);
+  if (utf16 < text.length) utf16 = [text rangeOfComposedCharacterSequenceAtIndex:utf16].location;
+  return (uint32_t)[[text substringToIndex:utf16] lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+}
+
 SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_text_index_at(ScreenwidePreviewSurface *surface,
                                                               NSPoint point) {
   NSTextView *text = surface.annotationTextView;
   if (text == nil) return 0;
+  NSRect block = NSZeroRect;
+  CGFloat points = 0.0;
+  uint32_t align = 0;
+  if (annotation_text_sets_words_apart(surface) &&
+      annotation_text_words_place(surface, &block, &points, &align)) {
+    uint32_t offset =
+        screenwide_text_words_offset_at(surface.annotationTextWords, points, align,
+                                        point.x - NSMinX(block), point.y - NSMinY(block));
+    return annotation_text_utf16_index(text.string, offset);
+  }
   [text.layoutManager ensureLayoutForTextContainer:text.textContainer];
   return MIN([text characterIndexForInsertionAtPoint:[text convertPoint:point
                                                                 fromView:surface.interaction]],
@@ -54,13 +95,13 @@ static void select_between(ScreenwidePreviewSurface *surface, NSUInteger from, N
 }
 
 /// A press at `point`, on the layer standing upright, in the box being typed
-/// into on a turned layer: it places the caret, a double-click selects the
-/// word and a triple-click the paragraph, and Shift extends the selection.
-/// NO where the press is not that.
-static BOOL annotation_text_turned_press(ScreenwidePreviewSurface *surface, NSPoint point,
+/// into where the text view does not take it: it places the caret, a
+/// double-click selects the word and a triple-click the paragraph, and Shift
+/// extends the selection. NO where the press is not that.
+static BOOL annotation_text_routed_press(ScreenwidePreviewSurface *surface, NSPoint point,
                                          NSEvent *event) {
   NSTextView *text = surface.annotationTextView;
-  if (!annotation_text_turned(surface) || !NSPointInRect(point, text.frame)) return NO;
+  if (!annotation_text_routed(surface) || !NSPointInRect(point, text.frame)) return NO;
   NSUInteger at = annotation_text_index_at(surface, point);
   surface.annotationTextSelectingBy = event.clickCount >= 3   ? NSSelectByParagraph
                                       : event.clickCount == 2 ? NSSelectByWord
@@ -76,7 +117,7 @@ static BOOL annotation_text_turned_press(ScreenwidePreviewSurface *surface, NSPo
 
 SCREENWIDE_PREVIEW_PRIVATE void annotation_text_drag(ScreenwidePreviewSurface *surface,
                                                      NSPoint point) {
-  if (!annotation_text_turned(surface)) return;
+  if (!annotation_text_routed(surface)) return;
   select_between(surface, surface.annotationTextSelectingFrom,
                  annotation_text_index_at(surface, point));
 }
@@ -98,7 +139,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_press(
   NSPoint point = selected_layer_point(
       surface, [view convertPoint:event.locationInWindow fromView:nil]);
   if (annotation_text_editing(surface)) {
-    if (annotation_text_turned_press(surface, point, event)) {
+    if (annotation_text_routed_press(surface, point, event)) {
       view.annotationPressIgnored = YES;
       return YES;
     }

@@ -6,19 +6,24 @@
 use super::geometry::box_size;
 use super::look;
 use crate::snap::SnapBox;
-use crate::AnnotationPoint;
-use screenwide_text::TextStyle;
+use crate::{AnnotationPoint, AnnotationShape};
+use screenwide_text::{TextSpan, TextStyle};
 
 /// A text box's rectangle in source pixels, `origin` being its top-left
-/// corner and `width` its size in output points before its look's own.
+/// corner, `emphasis` the words it sets apart and `width` its size in
+/// output points before its look's own.
 pub(crate) fn text_box(
   origin: AnnotationPoint,
   text: &str,
   look: &TextStyle,
+  emphasis: &[TextSpan],
   width: f64,
   source_per_size: f64,
 ) -> SnapBox {
-  let size = box_size(look::block(look, text, width), look::type_size(look, width));
+  let size = box_size(
+    look::block(look, text, emphasis, width),
+    look::type_size(look, width),
+  );
   SnapBox {
     x: origin.x,
     y: origin.y,
@@ -27,13 +32,29 @@ pub(crate) fn text_box(
   }
 }
 
-/// A text box aligns by its box: its edges and its centre.
+/// A text box aligns by its box: its edges and its centre. None for any
+/// other shape.
 pub(crate) fn field_box(
-  origin: AnnotationPoint,
-  text: &str,
-  look: &TextStyle,
+  shape: &AnnotationShape,
   width: f64,
   source_per_size: f64,
 ) -> Option<SnapBox> {
-  Some(text_box(origin, text, look, width, source_per_size))
+  let AnnotationShape::Text {
+    origin,
+    text,
+    look,
+    emphasis,
+    ..
+  } = shape
+  else {
+    return None;
+  };
+  Some(text_box(
+    *origin,
+    text,
+    look,
+    emphasis,
+    width,
+    source_per_size,
+  ))
 }

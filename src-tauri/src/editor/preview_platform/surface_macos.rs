@@ -20,6 +20,7 @@ mod object_picking;
 use screenwide_compositor::object_picking::ObjectPickCallback;
 mod recording_workspace;
 mod screenshot_workspace;
+mod text_words;
 mod workspace_scene;
 
 use std::sync::Arc;

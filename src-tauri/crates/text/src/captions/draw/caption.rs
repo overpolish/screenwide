@@ -5,10 +5,10 @@
 //! way off once its time is over.
 
 use super::glow::{glow, glow_spread};
+use super::marked::{Highlighted, Marks};
 use super::place::{self, Ground, Placed};
 use super::rolling::rolling_words;
 use super::shown::{moved, Level, Moving, Shown};
-use super::underline::underline;
 use super::{full_hex, ink_on, CaptionMoment, CaptionPiece, CaptionPieceKind, CaptionPieceShadow};
 use crate::captions::{Caption, CaptionWord, Measure};
 use crate::motion::Mirror;
@@ -73,14 +73,15 @@ fn words_of<'a>(
 
 /// What `caption` draws at `moment` into the edited video, set as `style`
 /// sets it, normalized, and its offsets from its edge turned round as
-/// `mirror` says, in draw order.
+/// `mirror` says, in draw order, its highlight falling on the words
+/// `highlighted` says.
 pub(super) fn pieces_of(
   caption: &Caption,
   style: &TextStyle,
-  ground: Ground,
-  moment: CaptionMoment,
+  (ground, moment): (Ground, CaptionMoment),
   measure: &mut Measure,
   mirror: Mirror,
+  highlighted: Highlighted,
 ) -> Vec<CaptionPiece> {
   let (at_ms, exposure_ms) = (moment.at_ms, moment.exposure_ms);
   let motion = &style.motion;
@@ -120,16 +121,10 @@ pub(super) fn pieces_of(
       opacity: shown.opacity,
       turn: shown.own_turn,
       line_turn: shown.line(line, words.size),
+      word: None,
     }
   };
-  // The word being said: the last that has started, held through the pause
-  // after it until the next one starts, and on through the caption's exit.
-  let said = words
-    .drawn
-    .iter()
-    .filter(|drawn| drawn.word.start_ms <= at_ms)
-    .map(|drawn| drawn.index)
-    .max();
+  let marks = Marks::new(highlighted, &words.drawn, at_ms);
 
   let mut pieces = Vec::new();
   // Behind every line, or, as words are revealed, behind those said so far
@@ -170,13 +165,9 @@ pub(super) fn pieces_of(
   let outline = style.outline.then(|| full_hex(&style.outline_color));
   // In ems of each word's own type, so an accent casts a shadow as far as
   // it is large; in a style that glows, every word casts its glow instead.
-  let said_from = said.and_then(|said| {
-    let word = words.drawn.iter().find(|drawn| drawn.index == said)?.word;
-    Some((said, word.start_ms))
-  });
   let shadow_of = |index: usize, size: f64| {
     if glow_spread(style).is_some() {
-      return glow(style, (index, size), said_from, at_ms);
+      return glow(style, size, marks.glow(index));
     }
     style.shadow.as_ref().map(|shadow| CaptionPieceShadow {
       color: full_hex(&shadow.color),
@@ -184,7 +175,7 @@ pub(super) fn pieces_of(
       softness: shadow.softness * size,
     })
   };
-  let mut pill = None;
+  let mut pills = Vec::new();
   let mut words_drawn = Vec::new();
   for drawn in &words.drawn {
     let (word, placed) = (drawn.word, &drawn.placed);
@@ -203,9 +194,9 @@ pub(super) fn pieces_of(
       ],
     }
     .shown(exposure_ms, mirror);
-    // Under a line or in a glow, the word being said keeps its own colour:
+    // Under a line or in a glow, a highlighted word keeps its own colour:
     // the highlight colour around it sets it apart.
-    let is_marked = said == Some(drawn.index)
+    let is_marked = marks.has(drawn.index)
       && style.highlight_words
       && !matches!(
         style.background,
@@ -215,7 +206,7 @@ pub(super) fn pieces_of(
     let kind = if is_marked && style.background == TextBackground::Word {
       // The pill goes under every word, so a neighbour it reaches under
       // stays on top, and the word on it takes type that reads on it.
-      pill = Some(piece(
+      pills.push(piece(
         CaptionPieceKind::Pill {
           color: highlight.clone(),
         },
@@ -244,24 +235,24 @@ pub(super) fn pieces_of(
         shadow: shadow_of(drawn.index, placed.size),
       }
     };
-    words_drawn.push(piece(
-      kind,
-      &word.text,
-      [placed.centre, drawn.previous],
-      set,
-      shown,
-    ));
+    words_drawn.push(CaptionPiece {
+      word: Some(drawn.index),
+      ..piece(
+        kind,
+        &word.text,
+        [placed.centre, drawn.previous],
+        set,
+        shown,
+      )
+    });
   }
-  pieces.extend(pill);
-  let underlined =
-    said.filter(|_| style.highlight_words && style.background == TextBackground::Underline);
-  if let Some(((at, block), word)) = underlined.and_then(|said| {
-    let word = words.drawn.iter().find(|drawn| drawn.index == said)?.word;
-    Some((
-      underline(&words.drawn, said, at_ms, moment.opened_ms())?,
-      word,
-    ))
-  }) {
+  pieces.extend(pills);
+  let underlines = if style.highlight_words && style.background == TextBackground::Underline {
+    marks.underlines(moment.opened_ms())
+  } else {
+    Vec::new()
+  };
+  for ((at, block), word) in underlines {
     // It follows the caption off, and comes on with the word it is under.
     let moving = Moving {
       entrance: None,

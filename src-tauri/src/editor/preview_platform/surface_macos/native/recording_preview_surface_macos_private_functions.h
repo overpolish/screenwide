@@ -229,40 +229,6 @@ int32_t annotation_marquee_layer_at_point(ScreenwidePreviewSurface *surface,
 void annotation_marquee_add_osc(ScreenwideRegionOscVertex *vertices,
                                 NSUInteger *count, NSSize size,
                                 ScreenwidePreviewSurface *surface, CGFloat scale);
-/// Whether a text box is being typed into.
-BOOL annotation_text_editing(ScreenwidePreviewSurface *surface);
-/// Ends the typing, telling Rust the text it ended with. Answers whether that
-/// text has anything to read, which is what Rust keeps the box for.
-BOOL annotation_text_finish(ScreenwidePreviewSurface *surface);
-/// Lays the text view over its box again, at the box's current place and
-/// type size, or ends the typing when there is no box left to type into.
-void annotation_text_layout(ScreenwidePreviewSurface *surface);
-/// A press typing owns: one that ends the typing and does nothing else, and
-/// a double-click on a text box, which asks Rust to open it. A press outside
-/// the box being typed into ends the typing and, answering NO, carries on as
-/// the press it is. YES when the press was typing's.
-BOOL annotation_text_press(ScreenwidePreviewInteractionView *view, NSEvent *event);
-/// The I-beam over the text being typed into, or nil anywhere else.
-NSCursor *annotation_text_cursor(ScreenwidePreviewSurface *surface, NSPoint point);
-/// The layer the box being typed into belongs to and its place in that
-/// layer's own list: the identity a gesture reports, and the scene draws by.
-void annotation_text_identity(ScreenwidePreviewSurface *surface, uint32_t *layer,
-                              uint32_t *index);
-/// Whether the box being typed into lies on a turned layer, where the text
-/// view stands upright away from it and so takes no press itself.
-BOOL annotation_text_turned(ScreenwidePreviewSurface *surface);
-/// Tells the scene where the caret and selection now are, and redraws if
-/// that changes them. `restart` shows the caret for a whole blink again, as
-/// after every edit and move.
-void annotation_text_marks_changed(ScreenwidePreviewSurface *surface, BOOL restart);
-/// Stops the blink and takes the caret and selection out of the scene.
-void annotation_text_marks_end(ScreenwidePreviewSurface *surface);
-/// Extends the selection a press in the box on a turned layer began to
-/// `point`, on the layer standing upright.
-void annotation_text_drag(ScreenwidePreviewSurface *surface, NSPoint point);
-/// The character a press at `point`, on the layer standing upright, lands
-/// nearest in the text being typed into.
-NSUInteger annotation_text_index_at(ScreenwidePreviewSurface *surface, NSPoint point);
 /// The whole source image's rectangle on screen, in the flipped interaction
 /// view's coordinates.
 NSRect annotation_image_frame(ScreenwidePreviewSurface *surface);

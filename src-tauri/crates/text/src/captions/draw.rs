@@ -12,11 +12,15 @@ use crate::captions::{Caption, CaptionFrame, Measure, RecordingCaptions};
 use crate::motion::Mirror;
 use crate::style::{rgba, TextFace, TextStyle};
 
+pub use editing::{editing_style, CaptionEditing};
+pub use item::layout::{ItemTyping, TextItemLayout};
 pub use item::{moves_text, text_item_pieces, TextItemSetting};
 
 mod caption;
+mod editing;
 mod glow;
 mod item;
+mod marked;
 mod place;
 mod rolling;
 mod shown;
@@ -68,12 +72,15 @@ pub enum CaptionPieceKind {
     outline: Option<String>,
     shadow: Option<CaptionPieceShadow>,
   },
-  /// A pill behind the word being said, a little wider than the word, with
+  /// A pill behind a highlighted word, a little wider than the word, with
   /// no type of its own.
   Pill { color: String },
-  /// A line under the word being said, `block` wide and thick, with no
-  /// type of its own.
+  /// A line under a highlighted word or run of words, `block` wide and
+  /// thick, with no type of its own.
   Underline { color: String, block: [f64; 2] },
+  /// A square-cornered bar `block` in size, with no type of its own: the
+  /// caret or a line of the selection in a text being typed into.
+  Bar { color: String, block: [f64; 2] },
 }
 
 /// The shadow a word casts, in canvas pixels at the size the word is set:
@@ -115,6 +122,9 @@ pub struct CaptionPiece {
   pub turn: [[f64; 3]; 2],
   /// How the whole caption it is part of turns, where it does.
   pub line_turn: Option<CaptionLineTurn>,
+  /// Which of its caption's words a word's type is, counted across its
+  /// lines; none for anything else.
+  pub word: Option<usize>,
 }
 
 /// How a whole caption turns, as one: about `pivot`, the middle of its
@@ -135,9 +145,21 @@ pub struct CaptionLineTurn {
 pub struct CaptionTrack {
   pub captions: Vec<Caption>,
   pub recording: RecordingCaptions,
+  /// The caption being typed into on the picture, which shows as typed so
+  /// far in its place of the one it was made from.
+  pub editing: Option<CaptionEditing>,
 }
 
 impl CaptionTrack {
+  /// The track of `captions` made for `recording`, with none typed into.
+  pub fn new(captions: Vec<Caption>, recording: RecordingCaptions) -> Self {
+    Self {
+      captions,
+      recording,
+      editing: None,
+    }
+  }
+
   /// What the track draws at `moment` into the edited video, on a canvas
   /// `frame` in size; see [`caption_pieces`].
   pub fn pieces_at(
@@ -146,7 +168,13 @@ impl CaptionTrack {
     moment: CaptionMoment,
     measure: &mut Measure,
   ) -> Vec<CaptionPiece> {
-    caption_pieces(&self.captions, &self.recording, frame, moment, measure)
+    match self
+      .editing_at(moment.at_ms)
+      .filter(|_| self.recording.enabled)
+    {
+      Some(editing) => editing::editing_pieces(editing, &self.recording.style, frame, measure),
+      None => caption_pieces(&self.captions, &self.recording, frame, moment, measure),
+    }
   }
 }
 
@@ -215,7 +243,14 @@ pub fn caption_pieces(
   let Some(caption) = showing(captions, moment.at_ms) else {
     return Vec::new();
   };
-  caption::pieces_of(caption, &style, frame.into(), moment, measure, mirror)
+  caption::pieces_of(
+    caption,
+    &style,
+    (frame.into(), moment),
+    measure,
+    mirror,
+    marked::Highlighted::Said,
+  )
 }
 
 /// `color` written out as `#rrggbbaa`, which an annotation's style carries.

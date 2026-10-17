@@ -284,7 +284,7 @@ impl TextTyping {
 mod history;
 
 mod layout;
-pub use layout::TypingLayout;
+pub use layout::{TypingLayout, TypingLines};
 
 #[cfg(test)]
 mod tests;

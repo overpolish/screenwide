@@ -158,14 +158,22 @@ impl NativeAnnotationData {
       );
     }
     if let super::AnnotationShape::Text {
+      text,
       look,
       controls,
+      emphasis,
       clock,
       ..
     } = &annotation.shape
     {
       record.width = super::text::look::type_size(look, style.width) as f32;
-      super::text::native::fill(&mut record, &mut self.looks, look, controls, *clock);
+      super::text::native::fill(
+        &mut record,
+        &mut self.looks,
+        (look, controls),
+        (text, emphasis),
+        *clock,
+      );
     }
     if let Some(fill) = fill {
       record.color = fill.color;

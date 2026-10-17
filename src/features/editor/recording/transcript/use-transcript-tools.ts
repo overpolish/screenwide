@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { emitTo } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
-import { toolPanelLabel } from "../../tool-panels/tool-panel-window";
+import { middleOf } from "../../tool-panels/transcript/transcript-words";
 import { EditorArtifact, EditorKind } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { MicrophoneTools } from "../microphone/use-microphone-tools";
@@ -25,21 +24,36 @@ import {
   cancelRecordingTranscription,
   getRecordingTranscript,
   listenToTranscriptProgress,
-  TRANSCRIPT_PLAYHEAD_EVENT,
   transcribeRecording,
 } from "./transcript-api";
 import {
   editForTranscriptRequest,
   isTranscriptEditRequest,
   playedRecordingStretches,
+  TranscriptEditRequest,
 } from "./transcript-edit-requests";
 import { useTranscriptRevision } from "./transcript-revision";
+import { useTranscriptPlayheadToPanel } from "./use-transcript-playhead-to-panel";
 
 import type {
   ToolPanelTranscript,
+  TranscriptRange,
   TranscriptRequest,
 } from "../../tool-panels/tool-panel-transcript";
 import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
+
+/** The Transcript tool's asks and what the panel shows of it. */
+export type TranscriptTools = {
+  /** `edit` with `request` made, as `handle` would make it. */
+  edited: (
+    edit: RecordingTimelineEdit,
+    request: TranscriptEditRequest,
+  ) => RecordingTimelineEdit;
+  handle: (request: TranscriptRequest) => void;
+  /** The words heard over `range`, in order, as a correction reads them. */
+  heard: (range: TranscriptRange) => string[];
+  snapshot: ToolPanelTranscript | null;
+};
 
 /**
  * The Transcript tool for the recording open, where it has a microphone: the
@@ -61,10 +75,7 @@ export function useTranscriptTools({
   microphone: MicrophoneTools | null;
   workspace: EditorKind;
   onEditChange?: (edit: RecordingTimelineEdit) => void;
-}): {
-  handle: (request: TranscriptRequest) => void;
-  snapshot: ToolPanelTranscript | null;
-} {
+}): TranscriptTools {
   const editGesture = useEditorEditGesture();
   const recording = artifact?.kind === "recording" ? artifact : null;
   const hasMicrophone =
@@ -164,28 +175,7 @@ export function useTranscriptTools({
     };
   }, [artifactId]);
 
-  // The playhead, in source milliseconds, sent to the panel window on its
-  // own: once a frame, and only when it moved.
-  useEffect(() => {
-    if (!preview) return;
-    let lastMs = -1;
-    let frame: number | null = null;
-    const unsubscribe = preview.subscribe((sourceMs) => {
-      if (sourceMs === lastMs) return;
-      lastMs = sourceMs;
-      if (frame !== null) return;
-      frame = requestAnimationFrame(() => {
-        frame = null;
-        void emitTo(toolPanelLabel(workspace), TRANSCRIPT_PLAYHEAD_EVENT, {
-          playheadMs: lastMs,
-        }).catch(() => undefined);
-      });
-    });
-    return () => {
-      unsubscribe();
-      if (frame !== null) cancelAnimationFrame(frame);
-    };
-  }, [preview, workspace]);
+  useTranscriptPlayheadToPanel(preview, workspace);
 
   // What is made of the words elsewhere in the window follows them.
   const isReady = status === "ready";
@@ -206,15 +196,27 @@ export function useTranscriptTools({
     editGesture.endGesture();
   };
 
+  const heard = (range: TranscriptRange) =>
+    wordsRef.current
+      .filter((word) => {
+        const middle = middleOf(word);
+        return range.startMs <= middle && middle < range.endMs;
+      })
+      .map((word) => word.text);
+
+  const edited = (
+    edit: RecordingTimelineEdit,
+    request: TranscriptEditRequest,
+  ) =>
+    editForTranscriptRequest(edit, request, {
+      sourceDurationMs,
+      words: wordsRef.current,
+    });
+
   const handle = (request: TranscriptRequest) => {
     if (artifactId === null) return;
     if (isTranscriptEditRequest(request)) {
-      commit((current) =>
-        editForTranscriptRequest(current, request, {
-          sourceDurationMs,
-          words: wordsRef.current,
-        }),
-      );
+      commit((current) => edited(current, request));
       return;
     }
     switch (request.type) {
@@ -264,11 +266,13 @@ export function useTranscriptTools({
   };
 
   if (artifactId === null || !recording || !edit) {
-    return { handle, snapshot: null };
+    return { edited, handle, heard, snapshot: null };
   }
 
   return {
+    edited,
     handle,
+    heard,
     snapshot: {
       allowedWords: recordingTranscriptAllowedWords(edit),
       artifactId,

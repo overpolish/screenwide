@@ -7,10 +7,6 @@
 // and placed by their own tools. A press on one is reported, for the editor
 // to open that tool, and never selects, moves or resizes it.
 
-// `KEYBOARD_LAYER_ID` and `CAPTIONS_LAYER_ID` in `preview_platform.rs`.
-static const uint32_t ScreenwideKeyboardLayerId = UINT32_MAX - 1;
-static const uint32_t ScreenwideCaptionsLayerId = UINT32_MAX - 2;
-
 SCREENWIDE_PREVIEW_PRIVATE BOOL selection_is_overlay(
     ScreenwidePreviewSelection selection) {
   return selection.layer_id == ScreenwideKeyboardLayerId ||

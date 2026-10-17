@@ -224,6 +224,26 @@ export function applyRecordingTranscriptCorrections(
   };
 }
 
+/** `edit` with every correction over `range` of a recording
+ * `sourceDurationMs` long taken away, so its words read as they were heard,
+ * as a correction back to what was heard leaves them. */
+export function restoreRecordingTranscriptSpelling(
+  edit: RecordingTimelineEdit,
+  range: TranscriptRange,
+  sourceDurationMs: number,
+): RecordingTimelineEdit {
+  if (sourceDurationMs <= 0 || !edit.transcriptCorrections) return edit;
+  const start = range.startMs / sourceDurationMs;
+  const end = range.endMs / sourceDurationMs;
+  return {
+    ...edit,
+    transcriptCorrections: edit.transcriptCorrections.filter(
+      (correction) =>
+        !(correction.sourceStart < end && start < correction.sourceEnd),
+    ),
+  };
+}
+
 /** Every stretch the edit leaves out, in milliseconds, sorted and never
  * overlapping: the words inside show struck through. */
 export function recordingTranscriptRemovedMs(

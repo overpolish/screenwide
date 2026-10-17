@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Typing into a text box.
+//! Typing into a text box, or into the caption showing.
 //!
 //! The twin of `recording_preview_surface_macos+annotation_text.m` and its
 //! `_input.m`. macOS lays a native text view over the box; nothing can be laid
@@ -16,24 +16,40 @@
 use std::sync::Arc;
 
 use super::*;
-use crate::editor::preview_platform::surface::type_device::line_width;
+use crate::editor::preview_platform::CAPTIONS_LAYER_ID;
 use screenwide_annotations::text::geometry::text_distance;
+use screenwide_annotations::text::typed::TypedWords;
 use screenwide_text::engine::face::TypeFace;
-use screenwide_text::engine::typing::{TextTyping, TypingLayout};
+use screenwide_text::engine::typing::TextTyping;
 
 mod keys;
+mod place;
 mod presses;
-pub(crate) use presses::{open, pointer_move, press, up};
+mod session;
+use place::{place, Place};
+pub(crate) use presses::{
+  caption_offset_at, caption_target_at, open, open_caption, pointer_move, press, up,
+};
+
+/// What is typed into: the box at its place in the published grips, or the
+/// caption showing on the captions layer it was pressed on.
+#[derive(Clone, Copy)]
+enum Target {
+  Box(usize),
+  Caption(PreviewSelection),
+}
 
 pub(crate) struct Typing {
-  /// The box's place in the published grips.
-  flat: usize,
+  target: Target,
   /// The layer the box belongs to and its place in that layer's own list:
   /// what a report names it by, and what finds the pane it is drawn in.
   layer: u32,
   index: u32,
   /// The face the box's look sets its type in.
   face: TypeFace,
+  /// The box's words as drawn, where its look sets chosen ones apart: what
+  /// a press and a line move go by then, rather than lines set in `face`.
+  words: Option<TypedWords>,
   edit: TextTyping,
   revision: u64,
   caret_on: bool,
@@ -42,51 +58,15 @@ pub(crate) struct Typing {
   /// The first half of a character outside the Basic Multilingual Plane,
   /// which arrives as two units.
   surrogate: Option<u16>,
+  /// Where the double-click that opened a caption landed: its words are laid
+  /// out a present after it opens, so the caret is put there once they are.
+  opening: Option<(f64, f64)>,
 }
 
-/// Where a box sets its lines on screen, in display points.
-struct Place {
-  left: f64,
-  top: f64,
-  width: f64,
-  font: f64,
-  align: u32,
-  face: TypeFace,
-}
-
-impl Place {
-  fn layout<R>(&self, work: impl FnOnce(&TypingLayout<'_>) -> R) -> R {
-    let width = |line: &str| line_width(&self.face, line, self.font);
-    work(&TypingLayout {
-      width: &width,
-      block_width: self.width,
-      font: self.font,
-      align: self.align,
-    })
+impl Typing {
+  fn is_caption(&self) -> bool {
+    matches!(self.target, Target::Caption(_))
   }
-
-  fn local(&self, point: (f64, f64)) -> (f64, f64) {
-    (point.0 - self.left, point.1 - self.top)
-  }
-}
-
-fn place(state: &SurfaceState, flat: usize, face: &TypeFace) -> Option<Place> {
-  let item = state
-    .annotation
-    .handles
-    .get(flat)
-    .filter(|item| item.kind == AnnotationKind::Text.raw())?;
-  let image = item_image_frame(state, flat as i32)?;
-  let centre = text_geometry(image, item).start_head.c;
-  let (width, height) = (item.middle_x * image.width, item.middle_y * image.width);
-  Some(Place {
-    left: f64::from(centre[0]) - width / 2.0,
-    top: f64::from(centre[1]) - height / 2.0,
-    width,
-    font: item.width * image.width,
-    align: item.start_head as u32 & 3,
-    face: face.clone(),
-  })
 }
 
 /// The layer a box belongs to and its place in that layer's list, the
@@ -101,7 +81,13 @@ fn identity(state: &SurfaceState, flat: usize) -> Option<(u32, u32)> {
   Some((layer, item.index))
 }
 
-fn inside(state: &SurfaceState, flat: usize, point: (f64, f64)) -> bool {
+fn inside(state: &SurfaceState, typing: &Typing, point: (f64, f64)) -> bool {
+  let flat = match typing.target {
+    Target::Box(flat) => flat,
+    Target::Caption(_) => {
+      return place(state, typing.target, &typing.face).is_some_and(|place| place.contains(point))
+    }
+  };
   let Some(item) = state.annotation.handles.get(flat) else {
     return false;
   };
@@ -119,30 +105,53 @@ pub(super) fn over_box(state: &SurfaceState, point: (f64, f64)) -> bool {
     .annotation
     .typing
     .as_ref()
-    .is_some_and(|typing| inside(state, typing.flat, point))
+    .is_some_and(|typing| inside(state, typing, point))
 }
 
 /// Whether the typing has nothing left to type into: the tool put down, or
-/// the box gone from the published grips.
+/// the box gone from the published grips. A caption is typed into whatever
+/// tool is in hand.
 pub(super) fn lost_its_box(state: &SurfaceState) -> bool {
-  state.annotation.typing.as_ref().is_some_and(|typing| {
-    state.annotation.mode == MODE_NONE
-      || state
-        .annotation
-        .handles
-        .get(typing.flat)
-        .is_none_or(|item| item.kind != AnnotationKind::Text.raw())
-  })
+  state
+    .annotation
+    .typing
+    .as_ref()
+    .is_some_and(|typing| match typing.target {
+      Target::Caption(_) => false,
+      Target::Box(flat) => {
+        state.annotation.mode == MODE_NONE
+          || state
+            .annotation
+            .handles
+            .get(flat)
+            .is_none_or(|item| item.kind != AnnotationKind::Text.raw())
+      }
+    })
 }
 
 /// Hands every pane the caret and selection it draws: the pane the typed
-/// box's layer is drawn in gets them, every other pane none. A screenshot
-/// pane knows its layer by token; a recording pane is its own layer.
+/// box's layer is drawn in gets them, every other pane none, and the pane a
+/// caption is typed into on gets them for its caption. A screenshot pane
+/// knows its layer by token; a recording pane is its own layer. A caption's
+/// caret waiting for its words to be laid out is put where the press that
+/// opened it landed, once they are.
 pub(in crate::editor::preview_platform::surface_windows) fn sync_typing_marks(
   state: &mut SurfaceState,
 ) {
+  let opened = state.annotation.typing.as_ref().and_then(|typing| {
+    let point = typing.opening?;
+    let place = place(state, typing.target, &typing.face)?;
+    Some(place.layout(typing.words.as_ref(), |lines| {
+      typing.edit.offset_at(place.local(point), lines)
+    }))
+  });
+  if let (Some(offset), Some(typing)) = (opened, state.annotation.typing.as_mut()) {
+    typing.edit.place(offset, false);
+    typing.opening = None;
+  }
   let typing = state.annotation.typing.as_ref().map(|typing| {
     (
+      typing.target,
       u64::from(typing.layer),
       typing.index as usize,
       typing.edit.marks(typing.caret_on),
@@ -154,9 +163,19 @@ pub(in crate::editor::preview_platform::surface_windows) fn sync_typing_marks(
     .enumerate()
     .filter_map(|(index, pane)| pane.as_mut().map(|pane| (index, pane)))
   {
-    pane.annotation_typing = typing
-      .filter(|(layer, _, _)| pane.source_token == Some(*layer) || *layer == index as u64)
-      .map(|(_, typed, marks)| (typed, marks));
+    pane.annotation_typing = None;
+    pane.caption_typing = None;
+    match typing {
+      Some((Target::Caption(caption), _, _, marks)) if caption.pane_index as usize == index => {
+        pane.caption_typing = Some(marks);
+      }
+      Some((Target::Box(_), layer, typed, marks))
+        if pane.source_token == Some(layer) || layer == index as u64 =>
+      {
+        pane.annotation_typing = Some((typed, marks));
+      }
+      _ => {}
+    }
   }
 }
 
@@ -199,54 +218,6 @@ fn finish(inner: &Arc<SurfaceInner>) {
       text,
       typing.revision + 1,
     );
-  }
-}
-
-impl RecordingPreviewSurface {
-  pub(crate) fn set_annotation_text_callback(&mut self, callback: AnnotationTextCallback) {
-    if let Ok(mut callbacks) = self.inner.callbacks.lock() {
-      callbacks.annotation_text = Some(callback);
-    }
-  }
-
-  /// Opens the box at `index` in the published grips for typing, holding
-  /// `text` set in `face`. The caret is type, which the shader inks the way
-  /// it inks the text.
-  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str, face: &TypeFace) {
-    {
-      let Ok(mut state) = self.inner.state.lock() else {
-        return;
-      };
-      let opening = state.annotation.opening.take();
-      let Some((layer, item)) = identity(&state, index) else {
-        return;
-      };
-      let mut edit = TextTyping::new(text);
-      // A box opened by a double-click puts the caret where the click
-      // landed; one fresh from its own press has nothing typed to place it in.
-      if let (Some(point), Some(place)) = (opening, place(&state, index, face)) {
-        let offset = place.layout(|layout| edit.offset_at(place.local(point), layout));
-        edit.place(offset, false);
-      }
-      state.annotation.typing = Some(Typing {
-        flat: index,
-        layer,
-        index: item,
-        face: face.clone(),
-        edit,
-        revision: 0,
-        caret_on: true,
-        selecting: false,
-        surrogate: None,
-      });
-      redraw_composed_panes(&self.inner, &mut state);
-    }
-    self.inner.editor.begin_typing();
-  }
-
-  /// Takes the typing away, as Rust's own end of the session asks.
-  pub(crate) fn end_annotation_text(&self) {
-    end(&self.inner);
   }
 }
 

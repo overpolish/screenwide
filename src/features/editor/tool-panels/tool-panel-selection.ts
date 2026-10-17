@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationStyle, ImageArt } from "../annotations/annotations";
+import {
+  AnnotationStyle,
+  ImageArt,
+  TextSpan,
+} from "../annotations/annotations";
 import { SceneRotation } from "../layer-rotation";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
@@ -204,6 +208,9 @@ export type ToolPanelAnnotation = {
   /** A counter's aim, in radians clockwise from east. Absent on an arrow,
    * which is aimed by its own two ends, and on an image, which is turned. */
   angle?: number;
+  /** The words a placed text sets apart, each by its bytes in its UTF-8.
+   * Absent on anything else. */
+  emphasis?: TextSpan[];
   /** The picture an image shows, or the next image will. */
   image?: ImageArt;
   /** Whether this is no annotation yet but the dress the tool in hand draws
@@ -218,4 +225,6 @@ export type ToolPanelAnnotation = {
   rotation?: SceneRotation;
   /** Whether a placed image sways over its clip. Absent on anything else. */
   sway?: boolean;
+  /** What a placed text says. Absent on anything else. */
+  text?: string;
 };

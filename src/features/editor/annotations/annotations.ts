@@ -21,6 +21,7 @@ import type { ImagePlay } from "../../../bindings/ImagePlay";
 import type { ImageTilt } from "../../../bindings/ImageTilt";
 import type { TextControlPoint } from "../../../bindings/TextControlPoint";
 import type { TextEditPhase } from "../../../bindings/TextEditPhase";
+import type { TextSpan } from "../../../bindings/TextSpan";
 import type { TextStyle } from "../../../bindings/TextStyle";
 
 export type {
@@ -33,6 +34,7 @@ export type {
   ImagePlay,
   ImageTilt,
   TextControlPoint,
+  TextSpan,
 };
 
 /** A quadratic Bézier from `start` to `end`, bent by `control`. */
@@ -60,14 +62,17 @@ export type AnnotationCounter = {
  * Lines of type set and dressed by `look`, a text template's style. `origin`
  * is the top-left corner of the box the type sits in, whose size follows from
  * the text and the type size; `controls` are where the look's control points
- * have been moved, by id. A text read without a look takes the Label look,
- * which Rust gives it.
+ * have been moved, by id; `emphasis` the words chosen to be set apart, each
+ * by its bytes in the text's UTF-8, which a look draws in its accent or
+ * highlights where it does either. A text read without a look takes the
+ * Label look, which Rust gives it.
  */
 export type AnnotationText = {
   kind: "text";
   origin: AnnotationPoint;
   text: string;
   controls?: Record<string, TextControlPoint>;
+  emphasis?: TextSpan[];
   look?: TextStyle;
 };
 

@@ -465,6 +465,7 @@ fn a_counter_and_a_text_box_follow_what_their_tips_point_at() {
       }),
     )]
     .into(),
+    emphasis: Vec::new(),
     clock: None,
   };
   for annotation in [counter, text] {

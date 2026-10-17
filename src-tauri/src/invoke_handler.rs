@@ -56,6 +56,8 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     editor::recording_preview_player::scene_reframe::set_recording_preview_scene_reframe,
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     editor::recording_preview_player::annotation_bridge::set_recording_preview_annotations,
+    editor::recording_preview_player::annotation_bridge::caption_menu::edit_recording_caption,
+    editor::recording_preview_player::annotation_bridge::caption_menu::retype_caption_text,
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     editor::recording_preview_player::annotation_bridge::recording_preview_pin_statuses,
     editor::recording_preview_player::annotation_bridge::recording_preview_pin_back_in_view,

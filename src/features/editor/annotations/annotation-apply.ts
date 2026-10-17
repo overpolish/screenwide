@@ -23,7 +23,7 @@ import {
   rememberAnnotationStyle,
   rememberAnnotationTextLook,
 } from "./annotation-defaults";
-import { AnnotationStyle, ImageArt } from "./annotations";
+import { AnnotationStyle, ImageArt, TextSpan } from "./annotations";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
 
@@ -131,4 +131,13 @@ export const applyAnnotationLook = (workspace: EditorKind, look: TextStyle) => {
   if (published) published.applyLook(look);
   else if (annotationDraft(workspace) !== undefined)
     rememberAnnotationTextLook(look);
+};
+
+/** Set apart the chosen text's words `emphasis`, and no others. A no-op with
+ * none chosen: a text has words to choose only once it is typed. */
+export const applyAnnotationEmphasis = (
+  workspace: EditorKind,
+  emphasis: TextSpan[],
+) => {
+  chosenAnnotation(workspace)?.applyEmphasis(emphasis);
 };

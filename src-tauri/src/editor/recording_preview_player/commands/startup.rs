@@ -92,6 +92,19 @@ pub async fn start_recording_preview_player(
       }));
       let menu_app = app.clone();
       surface.set_context_menu_callback(Box::new(move |pane_index, annotation, x, y| {
+        // A press on a word of the caption opens the captions' word menu.
+        if pane_index == crate::editor::preview_platform::CAPTIONS_LAYER_ID {
+          let state = menu_app.state::<RecordingPreviewPlayerState>();
+          let Ok(manager) = state.0.try_lock() else {
+            return;
+          };
+          if let Some(menu) =
+            annotation.and_then(|at| manager.caption_word_menu(at as usize, (x, y)))
+          {
+            let _ = menu_window.emit("preview://caption-context-menu", menu);
+          }
+          return;
+        }
         // A press on an annotation opens its own menu, on either pane: the
         // menu offers what applies to it.
         let annotation_id = match annotation {

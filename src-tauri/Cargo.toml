@@ -290,3 +290,14 @@ qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
 # unaffected.
 [profile.dev.package."*"]
 opt-level = 3
+
+# A text box's outline and a caption word's are a distance field worked out
+# on the CPU for every pixel of its atlas cell. Unoptimized, one cell takes a
+# few hundred milliseconds in a dev build instead of about fifteen, so every
+# change to a box's words stalls the preview. These two crates are optimized
+# in dev builds for that; release builds are unaffected.
+[profile.dev.package.screenwide-compositor]
+opt-level = 3
+
+[profile.dev.package.screenwide-text]
+opt-level = 3

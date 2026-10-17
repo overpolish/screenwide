@@ -33,15 +33,20 @@ impl PreviewPlayerManager {
     self.session_id?;
     let annotations = self.pane_annotations(pane);
     let annotation = annotations.iter().find(|annotation| annotation.id == id)?;
-    let AnnotationShape::Text { text, look, .. } = &annotation.shape else {
+    let AnnotationShape::Text {
+      text,
+      look,
+      emphasis,
+      ..
+    } = &annotation.shape
+    else {
       return None;
     };
-    let text = text.clone();
-    let face = screenwide_annotations::text::look::face(look);
+    let (text, look, emphasis) = (text.clone(), look.clone(), emphasis.clone());
     self.annotation.text = Some(TextSession {
       pane,
       position,
-      edit: AnnotationTextEdit::begin(id.clone(), text.clone()),
+      edit: AnnotationTextEdit::begin(id.clone(), text.clone(), &look, emphasis.clone()),
     });
     self.annotation.selected = vec![id.clone()];
     self.publish_annotation_handles();
@@ -59,7 +64,7 @@ impl PreviewPlayerManager {
         .as_ref()
         .and_then(|s| s.preview_surface.as_ref()),
     ) {
-      surface.begin_annotation_text(index, &text, &face);
+      surface.begin_annotation_text(index, &text, &look, &emphasis);
     }
     self.commit(
       pane,
@@ -168,6 +173,34 @@ impl PreviewPlayerManager {
         )
       }
     }
+  }
+
+  /// Takes up words chosen or a dress changed in the panel while a box is
+  /// typed into, from React's `incoming` clips, and hands the typing the look
+  /// and words it now places the caret by.
+  pub(super) fn adopt_text_choice(&mut self, incoming: &[RecordingAnnotationClip]) {
+    let Some(session) = self.annotation.text.as_mut() else {
+      return;
+    };
+    let Some(clip) = incoming
+      .iter()
+      .find(|clip| clip.annotation.id == session.edit.id())
+    else {
+      return;
+    };
+    let Some(typing) = session.edit.adopt(std::slice::from_ref(&clip.annotation)) else {
+      return;
+    };
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    if let Some(surface) = self
+      .sources
+      .as_ref()
+      .and_then(|sources| sources.preview_surface.as_ref())
+    {
+      surface.set_annotation_text_words(typing.0, typing.1, typing.2, false);
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let _ = typing;
   }
 
   /// Lays the text typed so far over clips React sent while the box is open.

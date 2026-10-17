@@ -17,6 +17,7 @@ fn measure(text: &str, _face: TextFace, size: f64) -> f64 {
 fn word(text: &str, start_ms: f64) -> CaptionWord {
   CaptionWord {
     text: text.to_owned(),
+    said: text.to_owned(),
     start_ms,
     end_ms: start_ms + 300.0,
     source_start_ms: start_ms,

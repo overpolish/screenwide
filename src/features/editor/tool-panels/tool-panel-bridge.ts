@@ -30,6 +30,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAnnotationImageChange?.(values.annotationImage);
   if (values.annotationLook !== undefined)
     on.onAnnotationLookChange?.(values.annotationLook);
+  if (values.annotationEmphasis !== undefined)
+    on.onAnnotationEmphasisChange?.(values.annotationEmphasis);
   if (values.annotationImagePlay !== undefined)
     on.onAnnotationImagePlayChange?.(values.annotationImagePlay);
   if (values.annotationImageSway !== undefined)

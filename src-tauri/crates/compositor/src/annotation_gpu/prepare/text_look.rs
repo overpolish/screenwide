@@ -7,15 +7,14 @@
 //! and shadow. A look without a box draws its type alone.
 
 use super::super::caption_shadow::cast;
-use super::super::captions::{caption_arrows, caption_measure, CaptionFaces, OUTLINE};
+use super::super::captions::OUTLINE;
 use super::super::{PreparedArrows, PreparedType, PreviewArrow};
+use super::text_words::{word_pieces, WordsSetting};
 use screenwide_annotations::flags::{BARE, CAPTION, SHADOW};
 use screenwide_annotations::geometry::ArrowGeometry;
 use screenwide_annotations::reveal::AnnotationReveal;
-use screenwide_annotations::text::native::{NativeTextLook, NativeTextMotion};
-use screenwide_text::captions::{
-  text_item_pieces, CaptionMoment, CaptionPieceShadow, TextItemSetting,
-};
+use screenwide_annotations::text::native::NativeTextLook;
+use screenwide_text::captions::CaptionPieceShadow;
 
 /// What a text box's record draws in `look`: the arrow and type entry it was
 /// prepared as, made the box alone where the look has one, and then its
@@ -69,8 +68,8 @@ fn dressed(
   drawn
 }
 
-/// The box alone, where `look` has one, of a text whose type is drawn in
-/// its look's motion instead: drawn by [`moving_type`].
+/// The box alone, where `look` has one, of a text whose type is drawn word
+/// by word instead: drawn by [`word_pieces`].
 fn box_alone(
   mut arrow: PreviewArrow,
   mut entry: PreparedType,
@@ -84,45 +83,13 @@ fn box_alone(
   })
 }
 
-/// A text's type drawn in its look's motion at its clip's moment, as a
-/// caption's words are: `text` set at `size` about `centre`, its lines lined
-/// up by the record's alignment `align`, each piece as solid as the text's
-/// own reveal leaves it, so a text with no exit of its own still goes with
-/// its box.
-fn moving_type(
-  text: &str,
-  motion: &NativeTextMotion,
-  setting: (TextItemSetting, u32),
-  reveal: AnnotationReveal,
-) -> PreparedArrows {
-  let (mut setting, align) = setting;
-  setting.align = f64::from(align.min(2)) / 2.0;
-  setting.duration_ms = f64::from(motion.clock.duration_ms);
-  let faces = CaptionFaces::of(&motion.look);
-  let moment = CaptionMoment {
-    at_ms: f64::from(motion.clock.elapsed_ms),
-    exposure_ms: f64::from(motion.clock.frame_ms),
-  };
-  let mut pieces = text_item_pieces(
-    text,
-    &motion.look,
-    setting,
-    moment,
-    &mut caption_measure(&faces),
-  );
-  let present = [reveal.opacity, reveal.previous[3]].map(|share| f64::from(share.clamp(0.0, 1.0)));
-  for piece in &mut pieces {
-    piece.opacity = [piece.opacity[0] * present[0], piece.opacity[1] * present[1]];
-  }
-  caption_arrows(&pieces, &faces)
-}
-
 /// Draws a text box's record into `prepared` in its look, in its place
-/// among the arrows: its box, where the look has one, then its type, still
-/// or, at a recording's frame where its look moves it, in that motion; a
-/// box being typed into stands still, its type where the typing is. The
-/// moving words' text follows the records' own in the side buffer, after
-/// `moving.0`, the moving texts' so far, and `moving.1` bytes of the
+/// among the arrows: its box, where the look has one, then its type. Type
+/// whose look sets chosen words apart, or moves it at a recording's frame,
+/// is drawn word by word; a box being typed into stands still, and only one
+/// with words set apart keeps to its words while it is, caret and all. The
+/// words' text follows the records' own in the side buffer, after
+/// `moving.0`, the word-by-word texts' so far, and `moving.1` bytes of the
 /// records'. `whole` is the record prepared whole, `align` its alignment,
 /// and `still` whether it was drawn without exposure samples.
 pub(super) fn push(
@@ -132,7 +99,12 @@ pub(super) fn push(
   (whole, align): (ArrowGeometry, u32),
   (reveal, still): (AnnotationReveal, bool),
 ) {
-  let Some(motion) = look.motion.as_ref().filter(|_| entry.marks.is_none()) else {
+  let typing = entry.marks;
+  let Some(words) = look
+    .words
+    .as_ref()
+    .filter(|words| !words.emphasis.is_empty() || typing.is_none())
+  else {
     let opacity = if still {
       reveal.opacity.clamp(0.0, 1.0)
     } else {
@@ -145,18 +117,16 @@ pub(super) fn push(
     return;
   };
   let (moving_text, records_text) = moving;
-  let text = entry.text.clone();
   if let Some((arrow, entry)) = box_alone(arrow, entry, look) {
     prepared.types.push(entry);
     prepared.arrows.push(arrow);
   }
-  let setting = TextItemSetting {
+  let setting = WordsSetting {
     centre: whole.start_head.c.map(f64::from),
     size: f64::from(whole.width),
-    align: 0.0,
-    duration_ms: 0.0,
+    align,
   };
-  let pieces = moving_type(&text, motion, (setting, align), reveal);
+  let pieces = word_pieces(words, &setting, reveal, (typing, look.ink));
   let text_base = (records_text + moving_text.len()) as u32;
   let samples = prepared.samples.len() as u32;
   prepared

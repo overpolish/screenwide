@@ -439,6 +439,7 @@ export type Messages = {
   "editor-panels-template-actions": null;
   "editor-panels-text-accent": null;
   "editor-panels-text-accent-weight": null;
+  "editor-panels-text-chosen-words-description": null;
   "editor-panels-text-color": null;
   "editor-panels-text-color-accent": null;
   "editor-panels-text-color-background": null;
@@ -453,6 +454,8 @@ export type Messages = {
   "editor-panels-text-font-built-in": null;
   "editor-panels-text-font-search": null;
   "editor-panels-text-highlight-word": null;
+  "editor-panels-text-highlighted-words": null;
+  "editor-panels-text-key-words": null;
   "editor-panels-text-outline": null;
   "editor-panels-text-reset-original": null;
   "editor-panels-text-reveal-words": null;

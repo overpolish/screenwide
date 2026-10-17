@@ -12,6 +12,7 @@ use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
 use screenwide_annotations::gesture::{drawing_layer, MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
 use screenwide_annotations::highlight::geometry::HighlightFlow;
+use screenwide_annotations::text::geometry::HEAD_TAIL;
 use screenwide_annotations::AnnotationPoint;
 
 /// An annotation belongs to its image, independently of the selected layer. The
@@ -150,8 +151,9 @@ pub(super) fn highlight_flow(
 }
 
 /// The grips one annotation shows as discs, in display points: an arrow's
-/// three, the tip of a counter's tail or of a text box's pointer, and a
-/// magnifier's loupe grip. A redaction's, a shape's and a spotlight's, and a
+/// three, the tip of a counter's tail or of a text box's pointer where its
+/// look draws one, and a magnifier's loupe grip. A redaction's, a shape's
+/// and a spotlight's, and a
 /// magnifier's zoom area's, are the selection box's own, which
 /// `redact_chrome` draws and hits, and an image's frame is its own, which
 /// `image_chrome` does. The tail is placed here
@@ -177,7 +179,8 @@ pub(super) fn item_grips(
       vec![(tip.x, tip.y)]
     }
     // The pointer's tip, drawn out of the box or tucked into it where it was
-    // left.
+    // left; none where the look draws no pointer.
+    AnnotationKind::Text if item.start_head as u32 & HEAD_TAIL == 0 => Vec::new(),
     AnnotationKind::Text => {
       let geometry = text_geometry(image, item);
       vec![(f64::from(geometry.c[0]), f64::from(geometry.c[1]))]

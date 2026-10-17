@@ -9,6 +9,7 @@ use std::process::Command;
 fn word(text: &str, start_ms: f64) -> CaptionWord {
   CaptionWord {
     text: text.to_owned(),
+    said: text.to_owned(),
     start_ms,
     end_ms: start_ms + 400.0,
     source_start_ms: start_ms,
@@ -96,6 +97,7 @@ fn exports_captions_into_the_picture_while_they_show() {
       style: TextTemplateId::from("clean").shipped_style(),
       ..Default::default()
     },
+    editing: None,
   };
   let mut output = screenwide_output::fixtures::test_output_settings(640, 360);
   output.background_color = "#000000".to_owned();

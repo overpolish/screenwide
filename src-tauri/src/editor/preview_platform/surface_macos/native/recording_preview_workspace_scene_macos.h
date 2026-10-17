@@ -77,6 +77,15 @@ int screenwide_workspace_scene_keyboard_bounds(const void *scene, uint32_t pane_
 int screenwide_workspace_scene_caption_bounds(const void *scene, uint32_t pane_index,
                                               double *x, double *y, double *width,
                                               double *height);
+/// Where the caption being typed into on the pane sets its words: its block
+/// as x, y, width and height shares of its canvas in `block`, its type size
+/// as a share of the block's height, and how its lines line up.
+int screenwide_workspace_scene_caption_editing_block(const void *scene, uint32_t pane_index,
+                                                     double *block, double *size, double *align);
+/// The word of the pane's caption under the point, as shares of its canvas,
+/// counted across its lines; -1 over none.
+int32_t screenwide_workspace_scene_caption_word_at(const void *scene, uint32_t pane_index,
+                                                   double x, double y);
 
 /// Copies straight RGBA into a BGRA drawable's `id<MTLTexture>` of its size,
 /// on the shared queue.

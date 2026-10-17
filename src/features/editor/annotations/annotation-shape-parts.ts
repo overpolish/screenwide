@@ -132,6 +132,28 @@ export const textControls = (
   return Object.keys(controls).length > 0 ? { controls } : {};
 };
 
+/** The stored words chosen to be set apart that can be read: byte ranges
+ * of the text, each starting before it ends. Rust holds them to whole words
+ * of the text as it draws them. */
+export const textEmphasis = (
+  value: unknown,
+): Pick<AnnotationText, "emphasis"> => {
+  if (!Array.isArray(value)) return {};
+  const emphasis = value.flatMap((span: unknown) => {
+    if (typeof span !== "object" || span === null) return [];
+    const { end, start } = span as Record<string, unknown>;
+    return typeof start === "number" &&
+      typeof end === "number" &&
+      Number.isInteger(start) &&
+      Number.isInteger(end) &&
+      start >= 0 &&
+      start < end
+      ? [{ end, start }]
+      : [];
+  });
+  return emphasis.length > 0 ? { emphasis } : {};
+};
+
 /** How far past its box a text's tail reaches, in ems, where its look draws
  * one; a tail put on the picture counts as reaching `pictureReach`. The twin
  * of the text arm of `pace::path_ms` in Rust. */

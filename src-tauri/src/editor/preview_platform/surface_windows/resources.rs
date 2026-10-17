@@ -38,6 +38,9 @@ pub(super) struct Pane {
   /// in that layer's list and the caret and selection drawn into its type.
   /// Kept across presents, so every redraw the typing causes carries it.
   pub(super) annotation_typing: Option<(usize, screenwide_text::engine::typing::TypingMarks)>,
+  /// The caret and selection of the caption being typed into on this pane,
+  /// kept across presents as the box's are.
+  pub(super) caption_typing: Option<screenwide_text::engine::typing::TypingMarks>,
   /// The captions drawn over this pane's canvas, and the moment of the
   /// edited video they are drawn at. Kept across presents, so a redraw the
   /// annotations cause carries them.

@@ -21,7 +21,7 @@ use crate::native::NativeAnnotation;
 use crate::{annotation_colour, AnnotationPoint};
 use screenwide_text::captions::moves_text;
 use screenwide_text::engine::face::TypeFace;
-use screenwide_text::{rgba, TailShape, TextBackground, TextShadow, TextStyle};
+use screenwide_text::{rgba, TailShape, TextBackground, TextShadow, TextSpan, TextStyle};
 
 /// How a text box's type is drawn, which its record has no room for.
 #[derive(Clone, Debug, PartialEq)]
@@ -35,49 +35,53 @@ pub struct NativeTextLook {
   /// where the type has one.
   pub outline: Option<[f32; 4]>,
   pub shadow: Option<TextShadow>,
-  /// The look whole and where the text is in its clip, where the look
-  /// moves its type and the frame is one of a recording's.
-  pub motion: Option<NativeTextMotion>,
+  /// The text as its words, where it is drawn word by word: where its look
+  /// moves it at a recording's frame, or sets chosen words apart.
+  pub words: Option<NativeTextWords>,
 }
 
-/// A text's type drawn in its look's motion, at `clock`.
+/// A text drawn word by word, as a caption's words are: in its look whole,
+/// with the words of `emphasis` set apart, and where the look moves it, at
+/// `clock` in its clip.
 #[derive(Clone, Debug, PartialEq)]
-pub struct NativeTextMotion {
+pub struct NativeTextWords {
   pub look: Box<TextStyle>,
-  pub clock: TextClock,
+  /// The text as typed, which every byte range here is into.
+  pub text: String,
+  pub emphasis: Vec<TextSpan>,
+  pub clock: Option<TextClock>,
 }
 
 impl NativeTextLook {
-  fn of(look: &TextStyle, clock: Option<TextClock>) -> Self {
+  fn of(look: &TextStyle, (text, emphasis): (&str, &[TextSpan]), clock: Option<TextClock>) -> Self {
+    let clock = clock.filter(|_| moves_text(look));
+    let apart = look::sets_words_apart(look, text, emphasis);
     Self {
       face: look::face(look),
       boxed: look.background == TextBackground::Box,
       ink: rgba(look.ink()).unwrap_or([1.0; 4]),
       outline: look.outline.then(|| rgba(&look.outline_color)).flatten(),
       shadow: look.shadow.clone(),
-      motion: clock
-        .filter(|_| moves_text(look))
-        .map(|clock| NativeTextMotion {
-          look: Box::new(look.clone()),
-          clock,
-        }),
+      words: (clock.is_some() || apart).then(|| NativeTextWords {
+        look: Box::new(look.clone()),
+        text: text.to_owned(),
+        emphasis: if apart { emphasis.to_vec() } else { Vec::new() },
+        clock,
+      }),
     }
   }
 }
 
-/// The record's points for a text with its type set at `font`.
+/// The record's points for `text` with the words of `emphasis` set apart,
+/// its type set at `font`.
 pub(crate) fn draw_points(
   origin: AnnotationPoint,
-  text: &str,
+  (text, emphasis): (&str, &[TextSpan]),
   look: &TextStyle,
   controls: &BTreeMap<String, TextControlPoint>,
   font: f64,
 ) -> [[f32; 2]; 3] {
-  let block = screenwide_text::engine::metrics::face_text_block(
-    &look::face(look),
-    &look::shown(look, text),
-    font,
-  );
+  let block = look::item_block(look, text, emphasis, font);
   let tip = match look::tail(look, controls).map(|tail| tail.point) {
     Some(TextControlPoint::Box(point)) => encoded(&point),
     Some(TextControlPoint::Picture(point)) => [point.x as f32, point.y as f32],
@@ -111,8 +115,8 @@ pub(crate) fn head(
 pub(crate) fn fill(
   record: &mut NativeAnnotation,
   looks: &mut Vec<NativeTextLook>,
-  look: &TextStyle,
-  controls: &BTreeMap<String, TextControlPoint>,
+  (look, controls): (&TextStyle, &BTreeMap<String, TextControlPoint>),
+  words: (&str, &[TextSpan]),
   clock: Option<TextClock>,
 ) {
   let shape = look::tail(look, controls).map_or_else(TailShape::default, |tail| tail.shape);
@@ -123,7 +127,7 @@ pub(crate) fn fill(
     look.ink()
   });
   record.p3 = [(looks.len() + 1) as f32, 0.0];
-  looks.push(NativeTextLook::of(look, clock));
+  looks.push(NativeTextLook::of(look, words, clock));
 }
 
 /// The look a text's record names, if it names one.

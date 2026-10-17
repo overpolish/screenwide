@@ -37,6 +37,10 @@ pub(crate) mod reveal;
 /// Where a fresh text box lands, and what one offers the snap engine.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod snap;
+/// A box whose look sets chosen words apart, as the typing places the caret
+/// and reads presses by.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub mod typed;
 
 #[cfg(test)]
 mod tests;

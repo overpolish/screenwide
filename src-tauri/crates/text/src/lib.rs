@@ -10,6 +10,7 @@ mod baseline;
 pub mod captions;
 mod controls;
 mod elements;
+pub mod emphasis;
 pub mod engine;
 mod font;
 mod layout;
@@ -21,6 +22,7 @@ mod templates;
 
 pub use controls::{BoxPoint, ControlLimits, ControlSpace, TextControl, MAX_REACH};
 pub use elements::{TailShape, TextElement};
+pub use emphasis::TextSpan;
 pub use font::{TextFont, MAX_WEIGHT, MIN_WEIGHT};
 pub use layout::TextLayout;
 pub use motion::{

@@ -76,6 +76,7 @@ impl CaptionTrack {
           opacity: [0.0; 2],
           turn: [[0.0; 3]; 2],
           line_turn: None,
+          word: None,
         })
       })
       .collect()

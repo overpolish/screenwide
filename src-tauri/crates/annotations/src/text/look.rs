@@ -11,8 +11,13 @@ use std::collections::BTreeMap;
 
 use super::model::TextControlPoint;
 use crate::AnnotationPoint;
+use screenwide_text::captions::TextItemLayout;
+use screenwide_text::emphasis::{chosen_words, sets_apart};
 use screenwide_text::engine::face::TypeFace;
-use screenwide_text::{BoxPoint, ControlSpace, TailShape, TextControl, TextStyle};
+use screenwide_text::engine::metrics::face_text_block;
+use screenwide_text::{
+  BoxPoint, ControlSpace, TailShape, TextControl, TextFace, TextSpan, TextStyle,
+};
 
 /// The face `look` sets its type in.
 pub fn face(look: &TextStyle) -> TypeFace {
@@ -38,15 +43,37 @@ pub fn shown<'a>(look: &TextStyle, text: &'a str) -> Cow<'a, str> {
   }
 }
 
-/// How much room `text` takes as `look` sets it at `width` points, in the
-/// same units.
+/// Whether `look` sets any of the words `emphasis` chose in `text` apart,
+/// which sets the text as its words rather than as whole lines.
+pub fn sets_words_apart(look: &TextStyle, text: &str, emphasis: &[TextSpan]) -> bool {
+  sets_apart(look) && !chosen_words(text, emphasis).is_empty()
+}
+
+/// How wide a text is set in one of `look`'s faces at a type size, as the
+/// compositor sets it.
+pub fn measure(look: &TextStyle) -> impl FnMut(&str, TextFace, f64) -> f64 {
+  let faces = [&look.font, &look.accent_font]
+    .map(|font| TypeFace::new(font.family.as_deref(), font.weight, font.italic));
+  move |text, face, size| {
+    face_text_block(&faces[usize::from(face == TextFace::Accent)], text, size)[0]
+  }
+}
+
+/// How much room `text` takes as `look` sets it at type size `size`, with
+/// the words of `emphasis` set apart, in the same units.
+pub fn item_block(look: &TextStyle, text: &str, emphasis: &[TextSpan], size: f64) -> [f64; 2] {
+  if sets_words_apart(look, text, emphasis) {
+    TextItemLayout::new(text, look, emphasis, size, 0.0, &mut measure(look)).block
+  } else {
+    face_text_block(&face(look), &shown(look, text), size)
+  }
+}
+
+/// How much room `text` takes as `look` sets it at `width` points, with the
+/// words of `emphasis` set apart, in the same units.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub fn block(look: &TextStyle, text: &str, width: f64) -> [f64; 2] {
-  screenwide_text::engine::metrics::face_text_block(
-    &face(look),
-    &shown(look, text),
-    type_size(look, width),
-  )
+pub fn block(look: &TextStyle, text: &str, emphasis: &[TextSpan], width: f64) -> [f64; 2] {
+  item_block(look, text, emphasis, type_size(look, width))
 }
 
 /// The tail a look draws, the control point it is drawn to, and where that

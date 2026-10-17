@@ -7,6 +7,11 @@ import { TextFontRow } from "../../text-style/text-font-row";
 import { TextShadowRow } from "../../text-style/text-shadow-row";
 import { TextTemplateRow } from "../../text-style/text-template-row";
 
+import { AnnotationTextWordsRow } from "./annotation-text-words-row";
+import { asTitleLook, titleTemplates } from "./text-look";
+import { setsWordsApart, textWordLines } from "./text-words";
+
+import type { TextSpan } from "../../../../../bindings/TextSpan";
 import type { TextStyle } from "../../../../../bindings/TextStyle";
 import type { TextTemplates } from "../../../recording/captions/use-text-templates";
 import type { ToolPanelPatch } from "../../tool-panel-patch";
@@ -19,10 +24,12 @@ type RowsProps = {
 
 /**
  * The template a text is dressed in, which leads its panel as the choice
- * that changes the rows below it. A choice takes the template's look whole;
- * the template's menu puts it back to how it ships, here and for every text
- * and caption that takes it up after. A text in a screenshot never moves, so
- * its tiles hold on their stills.
+ * that changes the rows below it. A choice takes the template's look whole,
+ * its words coming on together; the template's menu puts it back to how it
+ * ships, here and for every text and caption that takes it up after. A
+ * template that rolls its words through follows speech, so it is not
+ * offered. A text in a screenshot never moves, so its tiles hold on their
+ * stills.
  */
 export function AnnotationTextTemplateRow({
   change,
@@ -35,8 +42,8 @@ export function AnnotationTextTemplateRow({
     <TextTemplateRow
       isDisabled={isLocked}
       layout={{}}
-      onChoose={(annotationLook) => {
-        change({ annotationLook });
+      onChoose={(chosen) => {
+        change({ annotationLook: asTitleLook(chosen) });
       }}
       onResetToOriginal={(template) => {
         const shipped = templates.shipped.find(
@@ -44,27 +51,48 @@ export function AnnotationTextTemplateRow({
         );
         change({
           captionDefaults: { original: template },
-          ...(shipped ? { annotationLook: shipped } : {}),
+          ...(shipped ? { annotationLook: asTitleLook(shipped) } : {}),
         });
       }}
       still={still}
       style={look}
-      templates={templates}
+      templates={titleTemplates(templates)}
     />
   );
 }
 
 /**
- * The options a text's look carries beyond its template: its face, which
- * way its shadow falls where it casts one, and its outline where it has no
- * box. The word options follow speech, which a text has none of.
+ * The options a text's look carries beyond its template: the words it sets
+ * apart, where the look sets any apart and the text has been typed, its
+ * face, which way its shadow falls where it casts one, and its effects: its
+ * outline where it has no box, and, where it moves, whether its words come
+ * on one after another. A text is not said, so nothing follows speech.
  */
-export function AnnotationTextStyleRows({ change, isLocked, look }: RowsProps) {
+export function AnnotationTextStyleRows({
+  change,
+  isLocked,
+  look,
+  still,
+  words,
+}: RowsProps & {
+  still: boolean;
+  words?: { emphasis?: TextSpan[]; text?: string };
+}) {
   const dress = (patch: Partial<TextStyle>) => {
     change({ annotationLook: { ...look, ...patch } });
   };
+  const text = words?.text ?? "";
   return (
     <>
+      {setsWordsApart(look) && textWordLines(text).length > 0 ? (
+        <AnnotationTextWordsRow
+          change={change}
+          emphasis={words?.emphasis ?? []}
+          isLocked={isLocked}
+          look={look}
+          text={text}
+        />
+      ) : null}
       <TextFontRow
         font={look.font}
         isDisabled={isLocked}
@@ -84,8 +112,8 @@ export function AnnotationTextStyleRows({ change, isLocked, look }: RowsProps) {
       <TextEffectsRow
         isDisabled={isLocked}
         onChange={dress}
-        spoken={false}
         style={look}
+        words={still ? [] : ["revealWords"]}
       />
     </>
   );

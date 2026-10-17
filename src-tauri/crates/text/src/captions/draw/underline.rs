@@ -16,6 +16,10 @@ const SLIDE_MS: f64 = 150.0;
 const BELOW_BASELINE: f64 = 0.17;
 const THICKNESS: f64 = 0.08;
 
+/// A line's middle now and as the frame's exposure began, and how wide and
+/// thick it is.
+pub(super) type UnderlineAt = ([[f64; 2]; 2], [f64; 2]);
+
 /// Where the line sits under `word` with its middle at `centre`: its own
 /// middle, and how wide and thick it is.
 fn under(word: &DrawnWord, centre: [f64; 2]) -> ([f64; 2], [f64; 2]) {
@@ -37,7 +41,7 @@ pub(super) fn underline(
   said: usize,
   at_ms: f64,
   opened_ms: f64,
-) -> Option<([[f64; 2]; 2], [f64; 2])> {
+) -> Option<UnderlineAt> {
   let to = words.iter().find(|word| word.index == said)?;
   let from = said
     .checked_sub(1)
@@ -58,4 +62,19 @@ pub(super) fn underline(
   let (now, block) = at(at_ms, |word| word.placed.centre);
   let (opened, _) = at(opened_ms, |word| word.previous);
   Some(([now, opened], block))
+}
+
+/// The line under a run of chosen words on one line, from the first's left
+/// to the last's right: its middle now and as the frame's exposure began,
+/// and how wide and thick it is, at the first word's size.
+pub(super) fn under_run(first: &DrawnWord, last: &DrawnWord) -> UnderlineAt {
+  let span = |centre: fn(&DrawnWord) -> [f64; 2]| {
+    let left = centre(first)[0] - first.placed.width / 2.0;
+    let right = centre(last)[0] + last.placed.width / 2.0;
+    let (middle, [_, thickness]) = under(first, [(left + right) / 2.0, centre(first)[1]]);
+    (middle, [right - left, thickness])
+  };
+  let (now, block) = span(|word| word.placed.centre);
+  let (opened, _) = span(|word| word.previous);
+  ([now, opened], block)
 }

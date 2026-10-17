@@ -9,6 +9,7 @@ import {
   useCanClearDrawings,
 } from "../annotations/annotation-channel";
 import { CameraOutput, composedVideoTracks } from "../export/camera-output";
+import { useCaptionCanvasEdits } from "../recording/captions/use-caption-canvas-edits";
 import { useCaptionTools } from "../recording/captions/use-caption-tools";
 import { useMicrophoneTools } from "../recording/microphone/use-microphone-tools";
 import { useRecordingSceneSelection } from "../recording/scenes/recording-scene-channel";
@@ -208,6 +209,7 @@ export function useEditorToolPanels({
     onEditChange: onRecordingTimelineEditChange,
     onGeneralChange: applyGeneralSettings,
   });
+  useCaptionCanvasEdits(captions, transcript);
   useToolPanelBridge(
     workspace,
     {

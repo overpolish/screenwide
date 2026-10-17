@@ -72,10 +72,11 @@ static double annotation_draw_distance(ScreenwidePreviewSurface *surface, NSRect
 }
 
 // An arrow has three grips; a counter one, the tip of its tail; a text box
-// one, its pointer's tip; a redaction, a shape or a spotlight the eight of
-// its box; a magnifier those of its zoom area's box and one on its loupe; an
-// image the eight of its own turned frame, its radius dot and one that turns
-// it; a highlight the selection's two ends.
+// one, its pointer's tip, where its look draws a pointer; a redaction, a
+// shape or a spotlight the eight of its box; a magnifier those of its zoom
+// area's box and one on its loupe; an image the eight of its own turned
+// frame, its radius dot and one that turns it; a highlight the selection's
+// two ends.
 SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_grips(
     NSRect image, ScreenwidePreviewAnnotation item, NSPoint *handles, uint32_t *kinds) {
   if (item.kind == ScreenwideAnnotationKindImage)
@@ -90,6 +91,9 @@ SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_grips(
     kinds[1] = ScreenwideAnnotationHandleEnd;
     return 2;
   }
+  if (item.kind == ScreenwideAnnotationKindText &&
+      ((uint32_t)item.start_head & SCREENWIDE_TEXT_HEAD_TAIL) == 0)
+    return 0;
   if (item.kind == ScreenwideAnnotationKindCounter || item.kind == ScreenwideAnnotationKindText) {
     handles[0] = item.kind == ScreenwideAnnotationKindText ? annotation_text_grip(image, item)
                                                            : annotation_counter_tail(image, item);

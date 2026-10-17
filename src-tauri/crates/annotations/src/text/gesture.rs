@@ -50,6 +50,7 @@ pub(crate) fn drag(
     text,
     look,
     controls,
+    emphasis,
     ..
   } = &mut annotation.shape
   else {
@@ -72,7 +73,7 @@ pub(crate) fn drag(
       controls.insert(id, TextControlPoint::Picture(snapped));
       return result;
     }
-    let bounds = text_box(*corner, text, look, width, origin.source_per_size);
+    let bounds = text_box(*corner, text, look, emphasis, width, origin.source_per_size);
     let em = look::type_size(look, width) * origin.source_per_size;
     let from = stretch_from(em, origin.source_per_point);
     let (held, stretched) = pointer_at(bounds, em, from, snapped);
@@ -97,7 +98,7 @@ pub(crate) fn drag(
   match snap {
     Some(request) => {
       let source_per_size = request.field.source_per_size();
-      let bounds = text_box(moved, text, look, width, source_per_size);
+      let bounds = text_box(moved, text, look, emphasis, width, source_per_size);
       let em = look::type_size(look, width) * source_per_size;
       let tip =
         tail_tip(bounds, em, look, controls).filter(|_| tail_moves_with_box(look, controls));

@@ -179,11 +179,16 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
     }
     editor::Input::DoubleClick { x, y } => {
       // Windows reports a double-click in place of its second press. Over a
-      // text box it opens the box for typing, and in a box being typed into
-      // it selects a word; only elsewhere does it fit the view.
+      // text box or the caption it opens it for typing, and in what is typed
+      // into it selects a word; only elsewhere does it fit the view.
       if object_picking::double_click(inner, logical(x, y))
         || annotation::typing_press(inner, turn::layer_point(inner, logical(x, y)), true)
         || annotation::open_text(inner, turn::layer_point(inner, logical(x, y)))
+        || annotation::open_caption(
+          inner,
+          logical(x, y),
+          turn::layer_point(inner, logical(x, y)),
+        )
       {
         refresh_cursor_for(inner);
         return;

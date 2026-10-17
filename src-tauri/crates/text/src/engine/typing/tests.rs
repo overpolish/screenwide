@@ -110,14 +110,14 @@ fn an_arrow_key_collapses_a_selection_to_the_edge_it_points_at() {
 #[test]
 fn line_moves_keep_to_where_they_began_across_a_short_line() {
   let width = ten;
-  let set = layout(&width, 80.0, 0);
+  let mut set = layout(&width, 80.0, 0);
   let mut typing = TextTyping::new("abcdefgh\nab\nabcdefgh");
   typing.place(6, false);
-  typing.go_line(true, false, &set);
+  typing.go_line(true, false, &mut set);
   assert_eq!(typing.marks(true).start, 11, "the end of the short line");
-  typing.go_line(true, false, &set);
+  typing.go_line(true, false, &mut set);
   assert_eq!(typing.marks(true).start, 18, "back to the sixth column");
-  typing.go_line(true, true, &set);
+  typing.go_line(true, true, &mut set);
   assert_eq!(
     typing.marks(true),
     TypingMarks {
@@ -132,12 +132,12 @@ fn line_moves_keep_to_where_they_began_across_a_short_line() {
 fn a_press_lands_on_the_nearest_gap_of_the_line_it_is_on() {
   let width = ten;
   // Centred in a block 80 wide, "ab" runs from 30 to 50.
-  let set = layout(&width, 80.0, 1);
+  let mut set = layout(&width, 80.0, 1);
   let typing = TextTyping::new("abcdefgh\nab");
-  assert_eq!(typing.offset_at((44.0, 13.0), &set), 9 + 1);
-  assert_eq!(typing.offset_at((5.0, 13.0), &set), 9);
-  assert_eq!(typing.offset_at((200.0, 900.0), &set), 11);
-  assert_eq!(typing.offset_at((26.0, 0.0), &set), 3);
+  assert_eq!(typing.offset_at((44.0, 13.0), &mut set), 9 + 1);
+  assert_eq!(typing.offset_at((5.0, 13.0), &mut set), 9);
+  assert_eq!(typing.offset_at((200.0, 900.0), &mut set), 11);
+  assert_eq!(typing.offset_at((26.0, 0.0), &mut set), 3);
 }
 
 #[test]

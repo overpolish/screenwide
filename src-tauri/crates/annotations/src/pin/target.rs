@@ -93,12 +93,13 @@ impl PinTarget {
         text,
         look,
         controls,
+        emphasis,
         ..
       } => {
         if scale <= 0.0 {
           return around(*origin, *origin);
         }
-        let bounds = text_box(*origin, text, look, width, scale);
+        let bounds = text_box(*origin, text, look, emphasis, width, scale);
         let middle = AnnotationPoint {
           x: bounds.x + bounds.width / 2.0,
           y: bounds.y + bounds.height / 2.0,

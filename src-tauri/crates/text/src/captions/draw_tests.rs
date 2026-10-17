@@ -21,7 +21,7 @@ fn word(text: &str, start_ms: f64) -> CaptionWord {
     end_ms: start_ms + 300.0,
     source_start_ms: start_ms,
     source_end_ms: start_ms + 300.0,
-    emphasis: false,
+    ..Default::default()
   }
 }
 
@@ -362,10 +362,7 @@ fn comes_in_from_the_edge_its_caption_sits_against_where_asked() {
 
 #[test]
 fn readies_the_next_captions_words_unseen_and_set_as_they_will_be() {
-  let track = CaptionTrack {
-    captions: captions(),
-    recording: styled("clean", false),
-  };
+  let track = CaptionTrack::new(captions(), styled("clean", false));
   let upcoming = track.upcoming_pieces(FRAME, 500.0);
   let shown = pieces(&track.recording, 2_000.0);
   let texts: Vec<&str> = upcoming.iter().map(|piece| piece.text.as_str()).collect();
@@ -394,10 +391,7 @@ fn readies_the_next_caption_only_once_the_one_showing_has_come_on() {
     lines: vec![vec![word("four", 3_000.0)]],
     spaced: true,
   });
-  let track = CaptionTrack {
-    captions: following,
-    recording: styled("pop", false),
-  };
+  let track = CaptionTrack::new(following, styled("pop", false));
   let texts = |at_ms| {
     track
       .upcoming_pieces(FRAME, at_ms)

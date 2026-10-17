@@ -42,6 +42,17 @@
   NSView *reference = self.surface.webview != nil ? self.surface.webview
                                                   : self.window.contentView;
   if (reference == nil) return NO;
+  // A press on the caption being typed into opens the word menu for the
+  // word under it, named by the byte of the typed text it landed at, and
+  // the typing goes on.
+  int64_t typed = caption_text_offset_at(self.surface, point);
+  if (typed >= 0) {
+    [self reportContextMenu:ScreenwideCaptionsLayerId
+                 annotation:(int32_t)MIN(typed, (int64_t)INT32_MAX)
+                    atPoint:point
+                  reference:reference];
+    return YES;
+  }
   NSInteger annotation =
       annotation_active_mode(self.surface) == ScreenwideAnnotationModeNone
           ? -1
@@ -60,14 +71,25 @@
                   reference:reference];
     return YES;
   }
+  // A press on a word of the caption opens the captions' word menu for it,
+  // with the select tool or the Captions tool in hand. The caption is drawn
+  // over every layer, so it comes before them.
+  ScreenwidePreviewSelection target;
+  if (caption_target_at(self.surface, point, &target)) {
+    int32_t word = caption_word_at(self.surface, target, point);
+    if (word < 0) return NO;
+    self.surface.annotationTextCaptionTarget = target;
+    [self reportContextMenu:target.layer_id annotation:word atPoint:point reference:reference];
+    return YES;
+  }
   // Layers are only picked while the select tool is in hand; an annotation
   // tool picks annotations, above, and nothing else.
   if (!self.surface.selectionHitTestingEnabled) return NO;
-  ScreenwidePreviewSelection target;
   uint8_t sharedHandle = 0;
   if (!shared_selection_hit(self.surface, point, &target, &sharedHandle) &&
       !selection_target_at_point(self.surface, point, &target))
     return NO;
+  // Anywhere else on an overlay there is no layer order to change.
   if (target.layer_id == ScreenwideFrameLayerId || selection_is_overlay(target))
     return NO;
   if (!self.surface.hasSelection ||

@@ -41,6 +41,7 @@ fn text_box(text: &str, pointer: BoxPoint, color: &str) -> Annotation {
     text: text.to_owned(),
     look,
     controls: [("tip".to_owned(), TextControlPoint::Box(pointer))].into(),
+    emphasis: Vec::new(),
     clock: None,
   };
   annotation

@@ -3,7 +3,11 @@
 
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { ImagePlayChange } from "../annotations/annotation-channel";
-import { AnnotationStyle, ImageArt } from "../annotations/annotations";
+import {
+  AnnotationStyle,
+  ImageArt,
+  TextSpan,
+} from "../annotations/annotations";
 import { CameraEffectsChange } from "../recording/camera/use-camera-effects";
 import { CaptionsPatch } from "../recording/captions/recording-captions";
 import { CaptionDefaultsPatch } from "../recording/captions/use-text-templates";
@@ -35,6 +39,9 @@ export type ToolPanelPatch = Partial<
    * travels beside the style rather than inside it. It also becomes the next
    * arrow's default. */
   annotationAnimated?: boolean;
+  /** Set apart the chosen text's words, each by its bytes in the text's
+   * UTF-8, and no others. */
+  annotationEmphasis?: TextSpan[];
   /** Give the chosen image this picture, which the next image shows too.
    * The picture is the annotation's own property rather than part of its
    * dress. */

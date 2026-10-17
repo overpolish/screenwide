@@ -43,20 +43,25 @@ impl PreviewManager {
       .enumerate()
       .find(|(_, annotation)| annotation.id == id)
       .map(|(index, annotation)| (index, annotation.clone()))?;
-    let AnnotationShape::Text { text, look, .. } = &annotation.shape else {
+    let AnnotationShape::Text {
+      text,
+      look,
+      emphasis,
+      ..
+    } = &annotation.shape
+    else {
       return None;
     };
-    let face = screenwide_annotations::text::look::face(look);
     self.annotation_text = Some(TextSession {
       pane_index,
-      edit: AnnotationTextEdit::begin(id.clone(), text.clone()),
+      edit: AnnotationTextEdit::begin(id.clone(), text.clone(), look, emphasis.clone()),
     });
     let chosen = vec![id];
     self.present_annotation_gesture(pane_index, &chosen);
     // The published grips are this pane's list in order, so the box's place
     // in it is its place in the grips.
     if let Some(surface) = self.surface.as_ref() {
-      surface.begin_annotation_text(index, text, &face);
+      surface.begin_annotation_text(index, text, look, emphasis);
     }
     let mut commit = self.commit_for(pane_index, chosen)?;
     commit.text_edit = Some(TextEditPhase::Begin);
@@ -144,6 +149,24 @@ impl PreviewManager {
         commit.text_edit = Some(TextEditPhase::End);
         Some(commit)
       }
+    }
+  }
+
+  /// Takes up words chosen or a dress changed in the panel while a box is
+  /// typed into, from React's `output`, and hands the typing the look and
+  /// words it now places the caret by.
+  pub(super) fn adopt_text_choice(&mut self, output: &ScreenshotWorkspaceOutputSettings) {
+    let Some(session) = self.annotation_text.as_mut() else {
+      return;
+    };
+    let Some(incoming) = output.items.get(session.pane_index as usize) else {
+      return;
+    };
+    let Some((text, look, emphasis)) = session.edit.adopt(&incoming.output.annotations) else {
+      return;
+    };
+    if let Some(surface) = self.surface.as_ref() {
+      surface.set_annotation_text_words(text, look, emphasis, false);
     }
   }
 

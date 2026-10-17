@@ -14,12 +14,14 @@
   if (self.surface != nil) redraw_selection(self.surface);
 }
 - (void)rightMouseDown:(NSEvent *)event {
+  NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
   if (self.surface.pointerDownCallback)
     self.surface.pointerDownCallback(self.surface.pointerDownContext);
-  if (self.surface.webview != nil)
+  // A press on the caption being typed into keeps the keyboard with the
+  // typing, which its word menu acts on.
+  if (self.surface.webview != nil && caption_text_offset_at(self.surface, point) < 0)
     [self.window makeFirstResponder:self.surface.webview];
-  [self reportContextMenuAtPoint:[self convertPoint:event.locationInWindow
-                                           fromView:nil]];
+  [self reportContextMenuAtPoint:point];
 }
 - (void)mouseDown:(NSEvent *)event {
   // Typing sees the press first: one while a box is open ends the typing and
@@ -51,6 +53,8 @@
                     self.surface.hasSelection &&
                     self.surface.selection.pane_index < self.surface.editorBaseRects.count;
   if (object_picking_mouse_down(self, event, point)) return;
+  // A double-click on the caption opens it for typing.
+  if (caption_text_press(self, event, point)) return;
   if (event.clickCount == 2) {
     // Back to the current fit basis: the space beside an open tool panel while
     // one is up, the whole viewport otherwise.

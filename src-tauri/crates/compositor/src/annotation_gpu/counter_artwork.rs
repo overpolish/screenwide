@@ -46,6 +46,7 @@ struct State {
   layout: AtlasLayout,
   storage: Option<GpuAtlas>,
   draws: Vec<AtlasDraw>,
+  typed: typed::TypedBox,
 }
 
 /// One atlas per pipeline: the editor's compositor keeps one and the live
@@ -78,6 +79,7 @@ impl CounterAtlas {
       layout,
       storage,
       draws,
+      typed,
     } = &mut *state;
     let fonts = app_fonts_generation();
     let keys: Vec<Vec<u8>> = types
@@ -104,6 +106,7 @@ impl CounterAtlas {
     if rects.iter().all(|rect| rect.width == 0.0) {
       return Ok(None);
     }
+    typed.redraws(types, &keys, rects, scale, draws);
     // A fresh layout gets a new texture rather than being drawn over;
     // otherwise the new cells land in space no earlier cell used.
     if placed.fresh
@@ -120,7 +123,13 @@ impl CounterAtlas {
       let rect = rects[draw.index];
       let origin = (rect.x as u32, rect.y as u32);
       let size = (rect.width as u32, rect.height as u32);
-      let pixels = draw_cell(&types[draw.index], draw.radius, drawn, size)?;
+      let entry = &types[draw.index];
+      let pixels = match entry.marks {
+        Some(marks) if entry.style != 0 => {
+          typed.draw(entry, &keys[draw.index], draw.radius, drawn, rect, marks)?
+        }
+        _ => draw_cell(entry, draw.radius, drawn, size)?,
+      };
       storage.write(gpu, origin, size, &pixels);
     }
     Ok(Some(AtlasBinding {
@@ -137,15 +146,19 @@ mod outline;
 /// and a text box's lines.
 mod rasterize;
 mod text_box;
+/// The box being typed into, whose caret and selection redraw its one cell.
+mod typed;
 use super::gpu_atlas::GpuAtlas;
 use screenwide_text::engine::{app_fonts::app_fonts_generation, face::TypeFace};
 
 /// What the atlas keys a piece of type by: its text, for a caption its face,
 /// its outline and the generation of the templates' fonts too, and for a box
-/// being typed into its caret, its selection and the caret's width in atlas
-/// pixels too, so each change of them draws afresh: a family set in Inter
-/// before a template brought it is set in its own face after. `0xFF` and
-/// `0xFE` never appear in UTF-8, so no text can collide with those tails.
+/// being typed into the caret's width in atlas pixels too, so each change of
+/// them draws afresh: a family set in Inter before a template brought it is
+/// set in its own face after. Where the caret and selection are is left out,
+/// so the box keeps its cell while they move: [`typed`] redraws it in place.
+/// `0xFF` and `0xFE` never appear in UTF-8, so no text can collide with those
+/// tails.
 fn cell_key(entry: &PreparedType, drawn: f64, fonts: u32) -> Vec<u8> {
   let mut key = entry.text.as_bytes().to_vec();
   if entry.face != TypeFace::ANNOTATION || entry.outline > 0.0 {
@@ -161,11 +174,8 @@ fn cell_key(entry: &PreparedType, drawn: f64, fonts: u32) -> Vec<u8> {
     }
     key.extend_from_slice(&fonts.to_le_bytes());
   }
-  if let Some(marks) = entry.marks {
+  if entry.marks.is_some() {
     key.push(0xFF);
-    key.extend_from_slice(&(marks.start as u32).to_le_bytes());
-    key.extend_from_slice(&(marks.end as u32).to_le_bytes());
-    key.push(u8::from(marks.caret));
     key.extend_from_slice(&((drawn * 4.0).round() as u32).to_le_bytes());
   }
   key
@@ -214,7 +224,6 @@ fn draw_cell(
     size,
     drawn,
     entry.style - 1,
-    entry.marks,
     cell,
   )
 }

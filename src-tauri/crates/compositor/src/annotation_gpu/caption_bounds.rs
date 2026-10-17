@@ -5,7 +5,9 @@
 
 use super::captions::{caption_measure, CaptionFaces};
 use screenwide_annotations::text::geometry::box_size;
-use screenwide_text::captions::{CaptionFrame, CaptionMoment, CaptionPieceKind, CaptionTrack};
+use screenwide_text::captions::{
+  editing_style, type_size_px, CaptionFrame, CaptionMoment, CaptionPieceKind, CaptionTrack,
+};
 
 /// A line's height in ems; the twin of `LINE_HEIGHT` in the captions' layout.
 const LINE_HEIGHT: f64 = 1.25;
@@ -38,7 +40,7 @@ pub fn caption_visible_bounds(
   for piece in pieces.iter().filter(|piece| piece.opacity[0] > 0.01) {
     let size = match piece.kind {
       CaptionPieceKind::Backdrop { block, .. } => box_size(block, piece.size),
-      CaptionPieceKind::Underline { block, .. } => block,
+      CaptionPieceKind::Underline { block, .. } | CaptionPieceKind::Bar { block, .. } => block,
       CaptionPieceKind::Word { .. } | CaptionPieceKind::Pill { .. } => [
         measure(&piece.text, piece.face, piece.size),
         piece.size * LINE_HEIGHT,
@@ -64,6 +66,39 @@ pub fn caption_visible_bounds(
   })
 }
 
+/// Where the caption being typed into sets its words on a `canvas`-sized
+/// picture, for the typing to place the caret and read presses by: its
+/// block as x, y, width and height shares of the picture, its type size as
+/// a share of the block's height, and how its lines line up, a share of the
+/// block's width from the left.
+pub fn caption_editing_block(
+  track: &CaptionTrack,
+  canvas: (u32, u32),
+) -> Option<([f64; 4], f64, f64)> {
+  if canvas.0 == 0 || canvas.1 == 0 || !track.recording.enabled {
+    return None;
+  }
+  let frame = CaptionFrame {
+    width: canvas.0,
+    height: canvas.1,
+  };
+  let faces = CaptionFaces::of(&track.recording.style);
+  let layout = track.editing_layout(frame, &mut caption_measure(&faces))?;
+  let style = editing_style(&track.recording.style);
+  let (width, height) = (f64::from(canvas.0), f64::from(canvas.1));
+  let block = [layout.block[0].max(1.0), layout.block[1].max(1.0)];
+  Some((
+    [
+      layout.origin[0] / width,
+      layout.origin[1] / height,
+      block[0] / width,
+      block[1] / height,
+    ],
+    type_size_px(&style, frame) / block[1],
+    style.position.shares()[0],
+  ))
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -73,6 +108,7 @@ mod tests {
   fn track(position: Placement) -> CaptionTrack {
     let word = |text: &str, start_ms: f64| CaptionWord {
       text: text.to_owned(),
+      said: text.to_owned(),
       start_ms,
       end_ms: start_ms + 400.0,
       source_start_ms: start_ms,
@@ -94,6 +130,7 @@ mod tests {
         spaced: true,
       }],
       recording,
+      editing: None,
     }
   }
 

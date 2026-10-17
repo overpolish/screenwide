@@ -71,6 +71,7 @@ export function resolveToolPanelSnapshot(
   const {
     annotationAngle,
     annotationAnimated,
+    annotationEmphasis,
     annotationImageSway,
     annotationRotation,
     annotationStyle,
@@ -220,8 +221,9 @@ export function resolveToolPanelSnapshot(
       : resolved.cameraOutput;
   // A colour being dragged in the system panel shows at once: the mirror
   // catches up an edit later, and the swatch must not blink back meanwhile.
-  // The Animate and Sway switches and the aim are held the same way, so none
-  // flicks back to the mirror's value between the edit and the commit.
+  // The Animate and Sway switches, the aim and the words chosen are held the
+  // same way, so none flicks back to the mirror's value between the edit and
+  // the commit.
   const aimed =
     resolved.annotation && annotationAngle !== undefined
       ? { ...resolved.annotation, angle: annotationAngle }
@@ -238,10 +240,14 @@ export function resolveToolPanelSnapshot(
     switched && annotationImageSway !== undefined
       ? { ...switched, sway: annotationImageSway }
       : switched;
-  const annotation =
-    swayed && annotationStyle
-      ? { ...swayed, style: { ...swayed.style, ...annotationStyle } }
+  const chosen =
+    swayed && annotationEmphasis
+      ? { ...swayed, emphasis: annotationEmphasis }
       : swayed;
+  const annotation =
+    chosen && annotationStyle
+      ? { ...chosen, style: { ...chosen.style, ...annotationStyle } }
+      : chosen;
   return {
     ...resolved,
     annotation,

@@ -82,11 +82,14 @@ impl RecordingPreviewSurface {
       pane.annotation_typing,
     )?;
     if let Some((track, moment)) = &pane.captions {
-      prepared.draw_above(screenwide_compositor::annotation_gpu::caption_overlay(
-        track,
-        *moment,
-        output_size,
-      ));
+      prepared.draw_above(
+        screenwide_compositor::annotation_gpu::caption_overlay_typed(
+          track,
+          *moment,
+          output_size,
+          pane.caption_typing,
+        ),
+      );
     }
     // The composed canvas is scaled onto the pane's box by the visual, so
     // one drawn pixel covers this many canvas pixels. The canvas is drawn at

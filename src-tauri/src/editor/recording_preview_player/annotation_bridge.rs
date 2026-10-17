@@ -43,6 +43,8 @@ pub(super) struct AnnotationState {
   /// The text box being typed into, which owns the pane's annotations the way
   /// a gesture does until the typing ends.
   text: Option<TextSession>,
+  /// The caption being typed into on the picture.
+  caption: Option<caption_text::CaptionSession>,
   /// The latest frame's detected UI elements, for an arrow's tip to land on.
   /// Behind its own lock because the detection that fills it runs on a
   /// blocking thread and must never wait for the manager.
@@ -88,6 +90,8 @@ pub async fn set_recording_preview_annotations(
   if manager.annotation.gesture.is_some() || manager.annotation.group.is_some() {
     return Ok(());
   }
+  // A text box being typed into takes up what the panel chose for it.
+  manager.adopt_text_choice(&clips);
   let sources = manager
     .sources
     .as_ref()
@@ -233,6 +237,11 @@ mod choice;
 
 mod text;
 use text::TextSession;
+
+/// The captions' word menu on the picture, and what its picks ask of it.
+pub mod caption_menu;
+/// Typing into the caption showing, on the picture.
+pub mod caption_text;
 
 mod callbacks;
 pub(super) use callbacks::install;

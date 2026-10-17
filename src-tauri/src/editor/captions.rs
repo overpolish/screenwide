@@ -183,10 +183,7 @@ fn make_captions(
     .as_ref()
     .filter(|captions| captions.enabled)
     .zip(made.as_ref())
-    .map(|(recording, captions)| CaptionTrack {
-      captions: captions.clone(),
-      recording: recording.clone(),
-    });
+    .map(|(recording, captions)| CaptionTrack::new(captions.clone(), recording.clone()));
   super::recording_preview_player::show_captions(app, artifact_id, track);
   let captions = made.unwrap_or_default();
   *MADE.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
@@ -218,10 +215,10 @@ pub(in crate::editor) fn track_for(
 ) -> Option<CaptionTrack> {
   let recording = edit.captions.as_ref().filter(|captions| captions.enabled)?;
   let transcript = transcript_of(project, audio_tracks)?;
-  Some(CaptionTrack {
-    captions: captions_of(&transcript, edit, recording, duration_ms, frame),
-    recording: recording.clone(),
-  })
+  Some(CaptionTrack::new(
+    captions_of(&transcript, edit, recording, duration_ms, frame),
+    recording.clone(),
+  ))
 }
 
 /// Every caption `edit` makes of the recording whose manifest is `project`,

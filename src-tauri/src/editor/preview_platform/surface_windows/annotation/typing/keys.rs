@@ -46,7 +46,7 @@ pub(super) fn edit(inner: &Arc<SurfaceInner>, input: editor::TypingInput) {
       .annotation
       .typing
       .as_ref()
-      .and_then(|typing| place(&state, typing.flat, &typing.face));
+      .and_then(|typing| place(&state, typing.target, &typing.face));
     let scale = state.scale;
     let Some(typing) = state.annotation.typing.as_mut() else {
       return;
@@ -57,9 +57,14 @@ pub(super) fn edit(inner: &Arc<SurfaceInner>, input: editor::TypingInput) {
     }
     if outcome == Outcome::Changed {
       typing.revision += 1;
+      if let Some(words) = typing.words.as_mut() {
+        words.follow(typing.edit.text());
+      }
     }
     let caret = place.as_ref().map(|place| {
-      let (x, y) = place.layout(|layout| typing.edit.caret_point(layout));
+      let (x, y) = place.layout(typing.words.as_ref(), |lines| {
+        typing.edit.caret_point(lines)
+      });
       ((place.left + x) * scale, (place.top + y) * scale)
     });
     let change = (outcome == Outcome::Changed).then(|| {
@@ -132,6 +137,9 @@ fn typed(typing: &mut Typing, unit: u16) -> Outcome {
   };
   let text = String::from_utf16_lossy(&units);
   match text.as_str() {
+    // Return ends the typing of a caption, as it does in a field: a
+    // caption's lines are its rules' and the breaks placed in the panel.
+    "\r" | "\n" if typing.is_caption() => Outcome::Finish,
     "\r" | "\n" => changed(typing.edit.insert("\n")),
     text if text.chars().all(char::is_control) => Outcome::Unchanged,
     text => changed(typing.edit.insert(text)),
@@ -169,7 +177,9 @@ fn pressed(
     }),
     VK_END => go(if ctrl { Motion::End } else { Motion::LineEnd }),
     VK_UP | VK_DOWN => place.map_or(Outcome::Unchanged, |place| {
-      place.layout(|layout| typing.edit.go_line(key == VK_DOWN, shift, layout));
+      place.layout(typing.words.as_ref(), |lines| {
+        typing.edit.go_line(key == VK_DOWN, shift, lines)
+      });
       Outcome::Moved
     }),
     _ if ctrl => shortcut(typing, key.0, shift, window),

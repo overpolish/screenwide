@@ -30,6 +30,7 @@ pub(crate) fn caption(
           let word = &shown[index];
           CaptionWord {
             text: word.text.clone(),
+            said: word.said.clone(),
             start_ms: word.output_start_ms,
             end_ms: word.output_end_ms,
             source_start_ms: word.source_start_ms,

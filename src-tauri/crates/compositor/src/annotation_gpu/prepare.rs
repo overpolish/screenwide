@@ -27,6 +27,8 @@ mod prepare_kind;
 mod source;
 /// A text box drawn in its look.
 mod text_look;
+/// A text box's type drawn word by word, caret and selection too.
+mod text_words;
 
 pub use source::SourceAnnotations;
 

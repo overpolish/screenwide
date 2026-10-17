@@ -77,6 +77,9 @@ pub(super) struct AnnotationState {
   /// Where the double-click that asked for a box to open landed, for the
   /// caret to start there once Rust opens it.
   opening: Option<(f64, f64)>,
+  /// The captions layer a press last opened the caption or its word menu
+  /// on, which a caption opened for typing is typed into on.
+  pub(super) caption: Option<PreviewSelection>,
   /// A press typing took - one that closed a box or opened one - whose drag
   /// and release belong to nothing else.
   press_taken: bool,
@@ -100,6 +103,7 @@ impl Default for AnnotationState {
       drag: None,
       typing: None,
       opening: None,
+      caption: None,
       press_taken: false,
     }
   }
@@ -264,6 +268,8 @@ pub(super) use gesture::{cancel, choose_at, down, pointer_move, up};
 
 /// Typing into a text box: the keyboard, the caret and the presses around it.
 mod typing;
+pub(crate) use typing::{
+  caption_offset_at, caption_target_at, open as open_text, open_caption, press as typing_press,
+};
 pub(super) use typing::{handle_typing_input, sync_typing_marks};
-pub(crate) use typing::{open as open_text, press as typing_press};
 pub(crate) use typing::{pointer_move as typing_move, up as typing_up};

@@ -13,6 +13,13 @@
 
 SCREENWIDE_PREVIEW_PRIVATE void annotation_text_identity(ScreenwidePreviewSurface *surface,
                                                          uint32_t *layer, uint32_t *index) {
+  // The caption being typed into is the captions layer's own, which the
+  // scene draws its marks into and Rust takes its reports by.
+  if (surface.annotationTextCaption) {
+    *layer = ScreenwideCaptionsLayerId;
+    *index = 0;
+    return;
+  }
   NSUInteger count = 0;
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
   NSInteger flat = surface.annotationTextIndex;
@@ -32,14 +39,6 @@ static NSTimeInterval blink_period(void) {
   return ms > 0.0 ? ms / 1000.0 : 0.5;
 }
 
-/// The UTF-8 offset of `utf16`, a UTF-16 offset into `text`: the scene draws
-/// the marks by bytes of the text as Rust holds it.
-static uint32_t utf8_offset(NSString *text, NSUInteger utf16) {
-  utf16 = MIN(utf16, text.length);
-  if (utf16 < text.length) utf16 = [text rangeOfComposedCharacterSequenceAtIndex:utf16].location;
-  return (uint32_t)[[text substringToIndex:utf16] lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
-}
-
 static void publish_marks(ScreenwidePreviewSurface *surface) {
   NSTextView *view = surface.annotationTextView;
   if (view == nil) return;
@@ -50,8 +49,9 @@ static void publish_marks(ScreenwidePreviewSurface *surface) {
   // A window in the background shows no caret, as a native field's does.
   BOOL caret = surface.annotationTextCaretOn && view.window.isKeyWindow;
   if (screenwide_workspace_scene_set_typing(surface.scene, 1, layer, index,
-                                            utf8_offset(text, range.location),
-                                            utf8_offset(text, NSMaxRange(range)), caret))
+                                            annotation_text_utf8_offset(text, range.location),
+                                            annotation_text_utf8_offset(text, NSMaxRange(range)),
+                                            caret))
     redraw_workspace(surface);
 }
 

@@ -10,6 +10,9 @@
 //! selection, the keyboard, the input methods and the clipboard, and every
 //! change goes to Rust, which re-presents the box with the new text. What is
 //! on screen is always the compositor's text, so nothing shifts on commit.
+//! Where the box's look sets chosen words apart in their own faces, the
+//! view's layout is not what is drawn, so Rust's layout of the words places
+//! presses and line moves instead.
 
 #import "recording_preview_surface_macos_private.h"
 #import "../../../../../crates/text/src/engine/macos/annotation_text_box.h"
@@ -30,18 +33,8 @@ static NSPoint annotation_display_point(NSRect image, double x, double y) {
 /// not clipped by the view's own edge, in points.
 static const CGFloat kTextCaretRoom = 2.0;
 
-@interface ScreenwideAnnotationTextView : NSTextView
-@property(nonatomic, weak) ScreenwidePreviewSurface *surface;
-@property(nonatomic) BOOL finishing;
-@property(nonatomic) CGFloat fontPoints;
-@property(nonatomic) uint32_t alignmentValue;
-/// The face the box's look sets its type in; no family is the app's Inter.
-@property(nonatomic, copy) NSString *faceFamily;
-@property(nonatomic) uint32_t faceWeight;
-@property(nonatomic) BOOL faceItalic;
-@end
-
-static void report_text(ScreenwidePreviewSurface *surface, uint32_t phase) {
+SCREENWIDE_PREVIEW_PRIVATE void annotation_text_report(ScreenwidePreviewSurface *surface,
+                                                       uint32_t phase) {
   ScreenwideAnnotationTextView *view = (ScreenwideAnnotationTextView *)surface.annotationTextView;
   if (view == nil || surface.annotationTextCallback == NULL) return;
   uint32_t layer = 0, index = 0;
@@ -62,6 +55,9 @@ static void remove_text_view(ScreenwidePreviewSurface *surface) {
   BOOL focused = view.window.firstResponder == view;
   surface.annotationTextView = nil;
   surface.annotationTextIndex = -1;
+  surface.annotationTextCaption = NO;
+  screenwide_text_words_free(surface.annotationTextWords);
+  surface.annotationTextWords = NULL;
   annotation_text_marks_end(surface);
   [view removeFromSuperview];
   // Keyboard shortcuts belong to React again.
@@ -81,94 +77,10 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_finish(ScreenwidePreviewSurface 
   // is removed when the typing ends.
   NSCharacterSet *blank = [NSCharacterSet whitespaceAndNewlineCharacterSet];
   BOOL readable = [view.string stringByTrimmingCharactersInSet:blank].length > 0;
-  report_text(surface, 2);
+  annotation_text_report(surface, 2);
   remove_text_view(surface);
   return readable;
 }
-
-@implementation ScreenwideAnnotationTextView
-- (BOOL)isFlipped {
-  return YES;
-}
-
-/// Escape commits: undo is there for a change that was not wanted.
-- (void)cancelOperation:(id)sender {
-  (void)sender;
-  annotation_text_finish(self.surface);
-}
-
-- (BOOL)resignFirstResponder {
-  BOOL resigned = [super resignFirstResponder];
-  // Anything else taking the keyboard - a click on the webview's panel, the
-  // workarea, another window - ends the typing. It ends a turn later, never
-  // in the middle of AppKit handing the keyboard over.
-  if (resigned && !self.finishing) {
-    __weak ScreenwideAnnotationTextView *weakSelf = self;
-    dispatch_async(dispatch_get_main_queue(), ^{
-      ScreenwideAnnotationTextView *view = weakSelf;
-      if (view != nil && view.surface.annotationTextView == view)
-        annotation_text_finish(view.surface);
-    });
-  }
-  return resigned;
-}
-
-- (void)didChangeText {
-  [super didChangeText];
-  if (self.finishing) return;
-  report_text(self.surface, 1);
-  annotation_text_marks_changed(self.surface, YES);
-}
-
-- (void)setSelectedRanges:(NSArray<NSValue *> *)ranges
-                 affinity:(NSSelectionAffinity)affinity
-           stillSelecting:(BOOL)stillSelecting {
-  [super setSelectedRanges:ranges affinity:affinity stillSelecting:stillSelecting];
-  if (!self.finishing && self.surface.annotationTextView == self)
-    annotation_text_marks_changed(self.surface, YES);
-}
-
-/// On a turned layer the view stands upright, away from the box it types
-/// into: the interaction view takes every press there and carries it back
-/// through the turn, and says itself where the I-beam shows.
-- (NSView *)hitTest:(NSPoint)point {
-  return annotation_text_turned(self.surface) ? nil : [super hitTest:point];
-}
-
-- (void)resetCursorRects {
-  if (!annotation_text_turned(self.surface)) [super resetCursorRects];
-}
-
-- (void)cursorUpdate:(NSEvent *)event {
-  if (!annotation_text_turned(self.surface)) [super cursorUpdate:event];
-}
-
-/// The editing keys a text field answers without a menu to route them: the
-/// app's menu is not guaranteed to carry an Edit menu, and without one these
-/// would go nowhere.
-- (BOOL)performKeyEquivalent:(NSEvent *)event {
-  if (self.window.firstResponder != self) return [super performKeyEquivalent:event];
-  NSEventModifierFlags flags = event.modifierFlags &
-      (NSEventModifierFlagCommand | NSEventModifierFlagShift |
-       NSEventModifierFlagOption | NSEventModifierFlagControl);
-  NSString *key = event.charactersIgnoringModifiers.lowercaseString;
-  if (flags == NSEventModifierFlagCommand) {
-    if ([key isEqualToString:@"a"]) [self selectAll:nil];
-    else if ([key isEqualToString:@"c"]) [self copy:nil];
-    else if ([key isEqualToString:@"v"]) [self pasteAsPlainText:nil];
-    else if ([key isEqualToString:@"x"]) [self cut:nil];
-    else if ([key isEqualToString:@"z"]) [self.undoManager undo];
-    else return [super performKeyEquivalent:event];
-    return YES;
-  }
-  if (flags == (NSEventModifierFlagCommand | NSEventModifierFlagShift) &&
-      [key isEqualToString:@"z"]) {
-    [self.undoManager redo];
-    return YES;
-  }
-  return [super performKeyEquivalent:event];
-}
-@end
 
 /// Sets the view's type the way the rasteriser sets the box's, in its look's
 /// face at the size the box is drawn on screen.
@@ -192,9 +104,54 @@ static void apply_text_style(ScreenwideAnnotationTextView *view, CGFloat points,
   view.defaultParagraphStyle = paragraph;
 }
 
+/// The box being typed into as published, and the picture it lies on. NO
+/// where it is gone from the grips or its picture has no size.
+static BOOL typed_item(ScreenwidePreviewSurface *surface, ScreenwidePreviewAnnotation *item,
+                       NSRect *image) {
+  NSUInteger count = 0;
+  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+  NSInteger flat = surface.annotationTextIndex;
+  if (flat < 0 || (NSUInteger)flat >= count || items[flat].kind != ScreenwideAnnotationKindText)
+    return NO;
+  *item = items[flat];
+  *image = annotation_layer_image(surface, item->layer_id);
+  return image->size.width > 0.0 && image->size.height > 0.0;
+}
+
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_words_place(ScreenwidePreviewSurface *surface,
+                                                            NSRect *block, CGFloat *points,
+                                                            uint32_t *align) {
+  if (surface.annotationTextCaption) return caption_text_place(surface, block, points, align);
+  ScreenwidePreviewAnnotation item;
+  NSRect image;
+  if (!typed_item(surface, &item, &image)) return NO;
+  *block = annotation_text_block(image, item, points);
+  *align = (uint32_t)item.start_head & 3u;
+  return *points > 0.0;
+}
+
+SCREENWIDE_PREVIEW_PRIVATE void annotation_text_lay_view(ScreenwideAnnotationTextView *view,
+                                                         NSRect block, CGFloat points,
+                                                         uint32_t align) {
+  apply_text_style(view, points, align);
+  CGFloat width = MAX(block.size.width, 1.0);
+  view.textContainer.size = NSMakeSize(width, CGFLOAT_MAX);
+  view.frame = NSMakeRect(NSMinX(block) - kTextCaretRoom, NSMinY(block),
+                          width + kTextCaretRoom * 2.0,
+                          MAX(block.size.height, points * SCREENWIDE_TEXT_BOX_LINE_HEIGHT));
+}
+
 SCREENWIDE_PREVIEW_PRIVATE void annotation_text_layout(ScreenwidePreviewSurface *surface) {
   ScreenwideAnnotationTextView *view = (ScreenwideAnnotationTextView *)surface.annotationTextView;
   if (view == nil || view.finishing) return;
+  NSRect block = NSZeroRect;
+  CGFloat points = 0.0;
+  uint32_t align = 0;
+  // A caption is typed into whatever tool is in hand.
+  if (surface.annotationTextCaption) {
+    caption_text_layout(surface, view);
+    return;
+  }
   NSUInteger count = 0;
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
   NSInteger flat = surface.annotationTextIndex;
@@ -205,18 +162,8 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_text_layout(ScreenwidePreviewSurface 
     annotation_text_finish(surface);
     return;
   }
-  ScreenwidePreviewAnnotation item = items[flat];
-  NSRect image = annotation_layer_image(surface, item.layer_id);
-  if (image.size.width <= 0.0 || image.size.height <= 0.0) return;
-  CGFloat points = 0.0;
-  NSRect block = annotation_text_block(image, item, &points);
-  if (points <= 0.0) return;
-  apply_text_style(view, points, (uint32_t)item.start_head & 3u);
-  CGFloat width = MAX(block.size.width, 1.0);
-  view.textContainer.size = NSMakeSize(width, CGFLOAT_MAX);
-  view.frame = NSMakeRect(NSMinX(block) - kTextCaretRoom, NSMinY(block),
-                          width + kTextCaretRoom * 2.0,
-                          MAX(block.size.height, points * SCREENWIDE_TEXT_BOX_LINE_HEIGHT));
+  if (annotation_text_words_place(surface, &block, &points, &align) && points > 0.0)
+    annotation_text_lay_view(view, block, points, align);
 }
 
 void screenwide_preview_surface_set_annotation_text_callback(
@@ -229,13 +176,78 @@ void screenwide_preview_surface_set_annotation_text_callback(
   });
 }
 
+SCREENWIDE_PREVIEW_PRIVATE void annotation_text_open(ScreenwidePreviewSurface *surface,
+                                                     NSInteger index, NSString *value,
+                                                     NSString *face, uint32_t weight,
+                                                     uint32_t italic, void *words, BOOL caption,
+                                                     int64_t caret_utf8) {
+  remove_text_view(surface);
+  if (surface.interaction == nil) {
+    screenwide_text_words_free(words);
+    return;
+  }
+  ScreenwideAnnotationTextView *view =
+      [[ScreenwideAnnotationTextView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
+  view.surface = surface;
+  view.faceFamily = face;
+  view.faceWeight = weight;
+  view.faceItalic = italic != 0;
+  view.drawsBackground = NO;
+  view.richText = NO;
+  view.importsGraphics = NO;
+  view.allowsUndo = YES;
+  view.usesFindBar = NO;
+  view.automaticQuoteSubstitutionEnabled = NO;
+  view.automaticDashSubstitutionEnabled = NO;
+  view.automaticTextReplacementEnabled = NO;
+  view.automaticSpellingCorrectionEnabled = NO;
+  view.continuousSpellCheckingEnabled = NO;
+  view.grammarCheckingEnabled = NO;
+  view.horizontallyResizable = NO;
+  view.verticallyResizable = NO;
+  view.textContainerInset = NSMakeSize(kTextCaretRoom, 0.0);
+  view.textContainer.lineFragmentPadding = 0.0;
+  view.textContainer.widthTracksTextView = NO;
+  view.textContainer.heightTracksTextView = NO;
+  // The compositor draws the caret and the selection into the box's type.
+  view.insertionPointColor = [NSColor clearColor];
+  view.selectedTextAttributes = @{NSBackgroundColorAttributeName : [NSColor clearColor]};
+  view.string = value ?: @"";
+  surface.annotationTextIndex = index;
+  surface.annotationTextCaption = caption;
+  surface.annotationTextWords = words;
+  surface.annotationTextRevision = 0;
+  surface.annotationTextView = view;
+  [surface.interaction addSubview:view];
+  annotation_text_layout(surface);
+  // A box opened by a double-click puts the caret where the click landed, a
+  // caption opened on one of its words after that word; one fresh from its
+  // own press has nothing typed to place it in.
+  NSUInteger caret = view.string.length;
+  if (caret_utf8 >= 0) {
+    caret = annotation_text_utf16_index(view.string, (NSUInteger)caret_utf8);
+    surface.annotationTextOpensAtPoint = NO;
+  } else if (surface.annotationTextOpensAtPoint && !caption) {
+    caret = MIN(annotation_text_index_at(surface, surface.annotationTextOpenPoint), caret);
+    surface.annotationTextOpensAtPoint = NO;
+  }
+  [view setSelectedRange:NSMakeRange(caret, 0)];
+  [view.window makeFirstResponder:view];
+}
+
 /// Opens the box at `index` in the published grips for typing, holding
-/// `text`, set in the face `family`, `weight` and `italic` name.
+/// `text`, set in the face `family`, `weight` and `italic` name, and the
+/// layout of its words where its look sets chosen ones apart, which the
+/// typing frees as it ends.
 void screenwide_preview_surface_begin_annotation_text(void *handle, int32_t index,
                                                       const uint8_t *text, uint32_t length,
                                                       const uint8_t *family, uint32_t family_length,
-                                                      uint32_t weight, uint32_t italic) {
-  if (handle == NULL) return;
+                                                      uint32_t weight, uint32_t italic,
+                                                      void *words) {
+  if (handle == NULL) {
+    screenwide_text_words_free(words);
+    return;
+  }
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   NSString *value = text == NULL || length == 0
       ? @""
@@ -243,49 +255,32 @@ void screenwide_preview_surface_begin_annotation_text(void *handle, int32_t inde
   NSString *face = family == NULL ? nil
       : [[NSString alloc] initWithBytes:family length:family_length encoding:NSUTF8StringEncoding];
   on_main_async(^{
-    remove_text_view(surface);
-    if (surface.interaction == nil) return;
+    annotation_text_open(surface, index, value, face, weight, italic, words, NO, -1);
+  });
+}
+
+/// Hands the box being typed into the layout of its words again, after the
+/// panel chose words or dressed it while it is typed into: NULL where it sets
+/// none apart now. The layout follows any change typed since Rust made it.
+void screenwide_preview_surface_set_annotation_text_words(void *handle, void *words) {
+  if (handle == NULL) {
+    screenwide_text_words_free(words);
+    return;
+  }
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  on_main_async(^{
     ScreenwideAnnotationTextView *view =
-        [[ScreenwideAnnotationTextView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
-    view.surface = surface;
-    view.faceFamily = face;
-    view.faceWeight = weight;
-    view.faceItalic = italic != 0;
-    view.drawsBackground = NO;
-    view.richText = NO;
-    view.importsGraphics = NO;
-    view.allowsUndo = YES;
-    view.usesFindBar = NO;
-    view.automaticQuoteSubstitutionEnabled = NO;
-    view.automaticDashSubstitutionEnabled = NO;
-    view.automaticTextReplacementEnabled = NO;
-    view.automaticSpellingCorrectionEnabled = NO;
-    view.continuousSpellCheckingEnabled = NO;
-    view.grammarCheckingEnabled = NO;
-    view.horizontallyResizable = NO;
-    view.verticallyResizable = NO;
-    view.textContainerInset = NSMakeSize(kTextCaretRoom, 0.0);
-    view.textContainer.lineFragmentPadding = 0.0;
-    view.textContainer.widthTracksTextView = NO;
-    view.textContainer.heightTracksTextView = NO;
-    // The compositor draws the caret and the selection into the box's type.
-    view.insertionPointColor = [NSColor clearColor];
-    view.selectedTextAttributes = @{NSBackgroundColorAttributeName : [NSColor clearColor]};
-    view.string = value ?: @"";
-    surface.annotationTextIndex = index;
-    surface.annotationTextRevision = 0;
-    surface.annotationTextView = view;
-    [surface.interaction addSubview:view];
-    annotation_text_layout(surface);
-    // A box opened by a double-click puts the caret where the click landed;
-    // one fresh from its own press has nothing typed to place it in.
-    NSUInteger caret = view.string.length;
-    if (surface.annotationTextOpensAtPoint) {
-      caret = MIN(annotation_text_index_at(surface, surface.annotationTextOpenPoint), caret);
-      surface.annotationTextOpensAtPoint = NO;
+        (ScreenwideAnnotationTextView *)surface.annotationTextView;
+    if (view == nil || view.finishing) {
+      screenwide_text_words_free(words);
+      return;
     }
-    [view setSelectedRange:NSMakeRange(caret, 0)];
-    [view.window makeFirstResponder:view];
+    NSData *bytes = [view.string dataUsingEncoding:NSUTF8StringEncoding] ?: [NSData data];
+    screenwide_text_words_follow(words, bytes.bytes, (uint32_t)bytes.length);
+    screenwide_text_words_free(surface.annotationTextWords);
+    surface.annotationTextWords = words;
+    // Whether the view takes presses itself may have changed with it.
+    [view.window invalidateCursorRectsForView:view];
   });
 }
 

@@ -6,7 +6,8 @@
 use super::loupe::NativeMagnifier;
 use super::WorkspaceScene;
 use crate::editor::preview_platform::surface_macos::NativeWorkspacePlacement;
-use screenwide_compositor::annotation_gpu::caption_overlay;
+use crate::editor::preview_platform::CAPTIONS_LAYER_ID;
+use screenwide_compositor::annotation_gpu::caption_overlay_typed;
 use screenwide_compositor::compositor::{ComposedFrame, LayerDraw, LayerPlacement};
 
 impl WorkspaceScene {
@@ -48,7 +49,13 @@ impl WorkspaceScene {
         .annotations
         .placed(geometry.placement, layer.hover, typing);
       if let Some((track, moment)) = &layer.captions {
-        prepared.draw_above(caption_overlay(track, *moment, geometry.size));
+        // The caption being typed into carries the caret and selection the
+        // typing marks it with.
+        let marks = state
+          .typing
+          .filter(|(typed, _, _)| *typed == CAPTIONS_LAYER_ID)
+          .map(|(_, _, marks)| marks);
+        prepared.draw_above(caption_overlay_typed(track, *moment, geometry.size, marks));
       }
       // The canvas is drawn into its placement, which is rarely its own size:
       // zoomed out, one drawn pixel covers several canvas pixels, and an edge

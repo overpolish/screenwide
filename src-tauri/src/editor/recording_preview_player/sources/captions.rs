@@ -72,14 +72,18 @@ pub(crate) fn show_captions(app: &AppHandle, artifact_id: u64, track: Option<Cap
   let Ok(mut manager) = state.0.lock() else {
     return;
   };
-  let Some(sources) = manager
-    .sources
-    .as_ref()
-    .filter(|_| manager.artifact_id == Some(artifact_id))
-  else {
+  if manager.sources.is_none() || manager.artifact_id != Some(artifact_id) {
+    return;
+  }
+  // A caption being typed into keeps showing as typed in the captions made
+  // again meanwhile, its key words as they set them apart now.
+  let track = track.map(|track| {
+    let editing = manager.caption_editing_in(&track);
+    Arc::new(CaptionTrack { editing, ..track })
+  });
+  let Some(sources) = manager.sources.as_ref() else {
     return;
   };
-  let track = track.map(Arc::new);
   {
     let mut shown = sources
       .captions

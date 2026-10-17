@@ -223,11 +223,14 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         kind={kind}
         style={annotation.style}
       />
+      {/* A draft has no words yet to set apart: only a typed text does. */}
       {look ? (
         <AnnotationTextStyleRows
           change={change}
           isLocked={isLocked}
           look={look}
+          still={workspace === "screenshot"}
+          words={isDraft ? undefined : annotation}
         />
       ) : null}
       <ImageSwayRow

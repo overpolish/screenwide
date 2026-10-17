@@ -15,13 +15,14 @@ use super::callbacks::{
   release_callback_on_main,
 };
 use super::ffi::{
-  screenwide_preview_surface_begin_annotation_text, screenwide_preview_surface_end_annotation_text,
+  screenwide_preview_surface_begin_annotation_text, screenwide_preview_surface_begin_caption_text,
+  screenwide_preview_surface_end_annotation_text, screenwide_preview_surface_replace_caption_text,
   screenwide_preview_surface_set_annotation_gesture_callback,
   screenwide_preview_surface_set_annotation_group,
   screenwide_preview_surface_set_annotation_hover_callback,
   screenwide_preview_surface_set_annotation_snap,
   screenwide_preview_surface_set_annotation_text_callback,
-  screenwide_preview_surface_set_annotations,
+  screenwide_preview_surface_set_annotation_text_words, screenwide_preview_surface_set_annotations,
 };
 use super::RecordingPreviewSurface;
 use screenwide_annotations::group::NativeAnnotationGroupBox;
@@ -130,17 +131,24 @@ impl RecordingPreviewSurface {
   }
 
   /// Opens the text box at `index` in the published grips for typing, holding
-  /// `text` set in `face`, as the compositor sets the box's type.
+  /// `text` set in `look`'s face, as the compositor sets the box's type. Where
+  /// the look sets any of the words `emphasis` chose apart, the view is also
+  /// handed their layout, which it places the caret by.
   pub(crate) fn begin_annotation_text(
     &self,
     index: usize,
     text: &str,
-    face: &screenwide_text::engine::face::TypeFace,
+    look: &screenwide_text::TextStyle,
+    emphasis: &[screenwide_text::TextSpan],
   ) {
     let Ok(index) = i32::try_from(index) else {
       return;
     };
+    let face = screenwide_annotations::text::look::face(look);
     let family = face.family_bytes();
+    let words = super::text_words::into_handle(
+      screenwide_annotations::text::typed::TypedWords::new(text, look, emphasis),
+    );
     unsafe {
       screenwide_preview_surface_begin_annotation_text(
         self.handle,
@@ -151,6 +159,41 @@ impl RecordingPreviewSurface {
         u32::try_from(family.len()).unwrap_or(0),
         u32::from(face.weight),
         u32::from(face.italic),
+        words,
+      );
+    }
+  }
+
+  /// Opens the caption showing for typing, holding `text` in `look`, the
+  /// caption's style as it is typed into, with its key words `emphasis`;
+  /// the caret at byte `caret` of `text`, or where the press that opened it
+  /// landed. Its words are always laid out by Rust, as the caption draws
+  /// them.
+  pub(crate) fn begin_caption_text(
+    &self,
+    text: &str,
+    look: &screenwide_text::TextStyle,
+    emphasis: &[screenwide_text::TextSpan],
+    caret: Option<usize>,
+  ) {
+    let face = screenwide_annotations::text::look::face(look);
+    let family = face.family_bytes();
+    let words = super::text_words::into_handle(Some(
+      screenwide_annotations::text::typed::TypedWords::caption(text, look, emphasis),
+    ));
+    unsafe {
+      screenwide_preview_surface_begin_caption_text(
+        self.handle,
+        text.as_ptr(),
+        u32::try_from(text.len()).unwrap_or(u32::MAX),
+        family.as_ptr(),
+        u32::try_from(family.len()).unwrap_or(0),
+        u32::from(face.weight),
+        u32::from(face.italic),
+        words,
+        caret
+          .and_then(|caret| i64::try_from(caret).ok())
+          .unwrap_or(-1),
       );
     }
   }
@@ -160,6 +203,42 @@ impl RecordingPreviewSurface {
   pub(crate) fn end_annotation_text(&self) {
     unsafe {
       screenwide_preview_surface_end_annotation_text(self.handle);
+    }
+  }
+
+  /// Hands the box or `caption` being typed into the layout of its words
+  /// again, `text` in `look` with the words of `emphasis` chosen, after the
+  /// panel chose words or dressed it: what a press and a line move go by
+  /// from now.
+  pub(crate) fn set_annotation_text_words(
+    &self,
+    text: &str,
+    look: &screenwide_text::TextStyle,
+    emphasis: &[screenwide_text::TextSpan],
+    caption: bool,
+  ) {
+    use screenwide_annotations::text::typed::TypedWords;
+    let words = super::text_words::into_handle(if caption {
+      Some(TypedWords::caption(text, look, emphasis))
+    } else {
+      TypedWords::new(text, look, emphasis)
+    });
+    unsafe {
+      screenwide_preview_surface_set_annotation_text_words(self.handle, words);
+    }
+  }
+
+  /// Types `text` over bytes `start` to `end` of the caption being typed
+  /// into, as typing would.
+  pub(crate) fn replace_caption_text(&self, start: usize, end: usize, text: &str) {
+    unsafe {
+      screenwide_preview_surface_replace_caption_text(
+        self.handle,
+        u32::try_from(start).unwrap_or(u32::MAX),
+        u32::try_from(end).unwrap_or(u32::MAX),
+        text.as_ptr(),
+        u32::try_from(text.len()).unwrap_or(0),
+      );
     }
   }
 }

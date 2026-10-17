@@ -24,10 +24,11 @@ impl super::AnnotationShape {
         text,
         look,
         controls,
+        emphasis,
         ..
       } => super::super::text::native::draw_points(
         *origin,
-        text,
+        (text, emphasis),
         look,
         controls,
         super::super::text::look::type_size(look, style.width),
@@ -146,6 +147,7 @@ impl super::AnnotationShape {
         text,
         look,
         controls,
+        emphasis,
         ..
       } => super::super::text::handles::grips(
         super::super::text::handles::TextGrips {
@@ -153,6 +155,7 @@ impl super::AnnotationShape {
           text,
           look,
           controls,
+          emphasis,
         },
         style,
         index,
@@ -236,9 +239,7 @@ impl super::AnnotationShape {
       Self::Counter { center, .. } => {
         super::super::counter::snap::field_box(*center, width, source_per_size)
       }
-      Self::Text {
-        origin, text, look, ..
-      } => super::super::text::snap::field_box(*origin, text, look, width, source_per_size),
+      Self::Text { .. } => super::super::text::snap::field_box(self, width, source_per_size),
       Self::Redact { start, end, .. } => super::super::redact::snap::field_box(*start, *end),
       Self::Shape { start, end, .. } => super::super::outline::model::field_box(*start, *end),
       Self::Spotlight { start, end } => super::super::spotlight::model::field_box(*start, *end),

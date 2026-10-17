@@ -27,13 +27,18 @@ mod focus_region;
 mod gpu_atlas;
 mod image_artwork;
 mod prepare;
+/// The caret and selection of text typed into word by word.
+mod typing_bars;
 
 pub use arrows::{
   GpuBuffer, PreparedArrows, PreparedImage, PreparedType, PreviewArrow, PreviewSample,
   MAX_EXPOSURE_SAMPLES,
 };
-pub use caption_bounds::caption_visible_bounds;
-pub use captions::{caption_arrows, caption_face, caption_measure, caption_overlay, CaptionFaces};
+pub use caption_bounds::{caption_editing_block, caption_visible_bounds};
+pub use captions::{
+  caption_arrows, caption_face, caption_measure, caption_overlay, caption_overlay_typed,
+  CaptionFaces,
+};
 /// A counter's number and a text box's lines are type, so they are
 /// rasterised rather than drawn by the shader.
 pub use counter_artwork::{numbered_arrows, CounterAtlas};
