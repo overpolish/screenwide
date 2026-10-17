@@ -27,6 +27,7 @@ import {
   recordingVideoSelectionOverlay,
   recordingVideoSelectionTargets,
 } from "./recording-selection-overlay";
+import { useRecordingCropTurn } from "./use-recording-crop-turn";
 import { useRecordingSelectionGesture } from "./use-recording-selection-gesture";
 import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 
@@ -131,6 +132,13 @@ export function useRecordingPreviewSelection(
   // the recording's own panes, so neither the selected pane nor the targets
   // tell the native overlay a scene fixes them.
   const framesPanes = isFramed && !(scene.isCustom && canvasTool === "select");
+  const turn = useRecordingCropTurn({
+    activeVideoTrack,
+    arrangement: sceneArrangement,
+    canvasTool,
+    screenRotation: effectiveRecordingOutput.primary.rotation,
+  });
+  const { chromeTool } = turn;
   const selectionCameraOverlay =
     sceneArrangement?.cameraOverlay ?? cameraOverlay;
   const selectionOutput = useMemo(
@@ -146,7 +154,7 @@ export function useRecordingPreviewSelection(
         activeVideoTrack,
         cameraOverlay: selectionCameraOverlay,
         canPreviewBakedCamera,
-        canvasTool,
+        canvasTool: chromeTool,
         effectiveRecordingOutput: selectionOutput,
         isFramed: framesPanes,
         previewSourceDimensions: {
@@ -158,7 +166,7 @@ export function useRecordingPreviewSelection(
     [
       activeVideoTrack,
       canPreviewBakedCamera,
-      canvasTool,
+      chromeTool,
       framesPanes,
       previewSourceDimensions.camera,
       previewSourceDimensions.primary,
@@ -172,7 +180,7 @@ export function useRecordingPreviewSelection(
       recordingVideoSelectionTargets({
         cameraOverlay: selectionCameraOverlay,
         canPreviewBakedCamera,
-        canvasTool,
+        canvasTool: chromeTool,
         effectiveRecordingOutput: selectionOutput,
         isFramed: framesPanes,
         previewSourceDimensions,
@@ -180,7 +188,7 @@ export function useRecordingPreviewSelection(
       }),
     [
       canPreviewBakedCamera,
-      canvasTool,
+      chromeTool,
       framesPanes,
       previewSourceDimensions,
       selectedVideoTracks,
@@ -189,19 +197,21 @@ export function useRecordingPreviewSelection(
     ],
   );
   // While the crop tool reframes a scene's pane, its selection is the crop
-  // window over the pane's unzoomed picture. Panes not in hand keep their
-  // boxes, which is what the preview draws for them.
-  const reframe = activeVideoTrack
-    ? scene.reframeSelections?.[activeVideoTrack]
-    : undefined;
+  // window over the pane's unzoomed picture, once the screen stands upright.
+  // Panes not in hand keep their boxes, which is what the preview draws for
+  // them.
+  const reframe =
+    activeVideoTrack && turn.cropTurn.isFlat
+      ? scene.reframeSelections?.[activeVideoTrack]
+      : undefined;
   const picks = scenePanePicks({
-    arrangement: sceneArrangement,
+    arrangement: turn.arrangement,
     canPreviewBakedCamera,
     freeScreen: scene.isFull && canvasTool === "select",
     isFramed,
     overlay: videoSelectionOverlay,
     reframe,
-    screenRotation: effectiveRecordingOutput.primary.rotation,
+    screenRotation: turn.screenRotation,
     targets: videoSelectionTargets,
   });
   const selectionOverlay = picks.overlay;
@@ -259,6 +269,8 @@ export function useRecordingPreviewSelection(
     captionSelection,
     /** Lets go of the shortcuts and captions chosen. */
     clearOverlaySelection,
+    /** The crop tool's turn ease, as the screen takes it. */
+    cropTurn: turn.cropTurn,
     /** Whether a scene places the panes at the playhead. */
     isFramed,
     keyboardTimeline,

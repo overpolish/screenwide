@@ -78,6 +78,19 @@ describe("recording Crop and Recenter parity", () => {
     expect(preview.radiusPercent).toBe(12);
   });
 
+  it("stands a turned layer upright under the crop overlay", () => {
+    const turned = {
+      ...defaultScreenshotOutput(1_000, 1_000),
+      rotation: { x: 20, y: -30, z: 15 },
+    };
+    const preview = uncroppedScreenshotPreviewOutput(source, turned);
+
+    expect(preview).not.toHaveProperty("rotation");
+    expect(preview.cropPreview).toEqual(
+      screenshotLayout(source, turned).sourceCrop,
+    );
+  });
+
   it("does not let Recenter recover source excluded by manual Crop", () => {
     const settings = defaultScreenshotOutput(1_000, 1_000);
     const live = applyScreenshotCropGesture({

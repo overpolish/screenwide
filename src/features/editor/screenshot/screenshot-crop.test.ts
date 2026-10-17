@@ -3,7 +3,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { applyScreenshotCropGesture } from "./screenshot-crop";
+import {
+  applyScreenshotCropGesture,
+  croppingScreenshotPreviewOutput,
+} from "./screenshot-crop";
 import { sourceRect } from "./screenshot-geometry";
 import {
   defaultScreenshotOutput,
@@ -49,5 +52,25 @@ describe("crop draw", () => {
     expect(drawn.y).toBeCloseTo(0.75);
     expect(drawn.width).toBeCloseTo(0.2);
     expect(drawn.height).toBeCloseTo(0.1);
+  });
+});
+
+describe("crop preview of a turned layer", () => {
+  const turned = {
+    ...withScreenshotSourceCrop(
+      defaultScreenshotOutput(1_000, 1_000),
+      sourceRect({ height: 0.5, width: 0.5, x: 0.2, y: 0.2 }),
+    ),
+    rotation: { x: 20, y: -30, z: 10 },
+  };
+
+  it("keeps the committed crop while the turn eases", () => {
+    const easing = croppingScreenshotPreviewOutput(source, turned, {
+      isFlat: false,
+      share: 0.5,
+    });
+    expect(easing.rotation).toEqual({ x: 10, y: -15, z: 5 });
+    expect(easing.sourceCrop).toEqual(turned.sourceCrop);
+    expect(easing.cropPreview).toBeUndefined();
   });
 });

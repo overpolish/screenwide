@@ -7,18 +7,50 @@
 //! the scene's box showing all of its crop and the camera as its whole picture
 //! covering its box. A custom scene's pane is cropped the way the recording's
 //! own composition is, so its picture is drawn where it already sits, uncut by
-//! its box. Only the paused frame is drawn this way; the clip itself is not
-//! changed.
+//! its box. The screen is drawn upright either way, since the crop window is
+//! never turned, and the webview eases the scene's turn of it out before the
+//! reframe and back in after. Only the paused frame is drawn this way; the
+//! clip itself is not changed.
 
 use super::*;
 use screenwide_output::ScreenshotOutputSettings;
-use screenwide_scenes::RecordingSceneClip;
+use screenwide_scenes::{RecordingSceneClip, SceneRotation};
 
 #[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) enum SceneReframe {
   Screen,
   Camera,
+}
+
+/// What the crop tool asks of the scenes: the pane it reframes, if any, and
+/// how much of a scene's turn of the screen is drawn, from upright at zero
+/// to as turned at one, while that turn eases out or back in.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct SceneCrop {
+  pub(super) pane: Option<SceneReframe>,
+  pub(super) screen_turn: f64,
+}
+
+impl Default for SceneCrop {
+  fn default() -> Self {
+    Self {
+      pane: None,
+      screen_turn: 1.0,
+    }
+  }
+}
+
+impl SceneCrop {
+  /// How much of the screen's turn is drawn: none while the screen itself is
+  /// reframed, whose crop window is never turned.
+  pub(super) fn screen_turn(self) -> f64 {
+    if self.pane == Some(SceneReframe::Screen) {
+      0.0
+    } else {
+      self.screen_turn
+    }
+  }
 }
 
 /// Whether the pane `reframe` names has a box of its own in `clip`, which the
@@ -67,6 +99,27 @@ pub(super) fn show_screen_picture(
   output.crop_height = base.crop_height * scale;
 }
 
+/// The screen of `output` drawn with `share` of its turn, each angle that part
+/// of the way from upright, and the turn its motion blur reads back through
+/// with it, so a frame the shutter left open on blends nothing of the rest.
+pub(super) fn ease_screen_turn(output: &mut ScreenshotOutputSettings, share: f64) {
+  if share >= 1.0 {
+    return;
+  }
+  let part = |rotation: SceneRotation| SceneRotation {
+    x: rotation.x * share,
+    y: rotation.y * share,
+    z: rotation.z * share,
+  };
+  output.rotation = output
+    .rotation
+    .map(part)
+    .filter(|rotation| !rotation.is_upright());
+  if let Some(motion) = &mut output.scene_motion {
+    motion.rotation = part(motion.rotation);
+  }
+}
+
 /// A camera overlay a scene arranged, its box opened out to the whole camera
 /// picture where the scene draws it, for a camera of `camera` source size.
 pub(super) fn show_camera_picture(overlay: &mut CameraOverlaySettings, camera: (u32, u32)) {
@@ -101,13 +154,18 @@ pub(super) fn show_whole_camera(overlay: &mut CameraOverlaySettings, camera: (u3
 }
 
 /// Tells the preview which pane of the scene under the playhead the crop tool
-/// is reframing, if any, redrawing a paused frame it changes.
+/// is reframing, if any, and how much of the scene's turn of the screen to
+/// draw, redrawing a paused frame they change.
 #[tauri::command]
 pub async fn set_recording_preview_scene_reframe(
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   session_id: u64,
   pane: Option<SceneReframe>,
+  screen_turn: f64,
 ) -> Result<(), String> {
+  if !(0.0..=1.0).contains(&screen_turn) {
+    return Err("The screen's turn must be a share between 0 and 1".to_owned());
+  }
   let mut manager = state
     .0
     .lock()
@@ -119,96 +177,17 @@ pub async fn set_recording_preview_scene_reframe(
     .ok_or_else(|| "The recording preview player is not open".to_owned())?;
   let mut current = sources
     .scenes
-    .reframe
+    .crop
     .write()
     .map_err(|_| "The scenes are unavailable".to_owned())?;
-  if *current == pane {
+  let next = SceneCrop { pane, screen_turn };
+  if *current == next {
     return Ok(());
   }
-  *current = pane;
+  *current = next;
   drop(current);
-  if !manager.is_playing {
-    manager.restart(PlaybackMode::InteractiveStill)?;
-  }
-  Ok(())
+  manager.redraw_paused_frame()
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn the_whole_camera_overhangs_a_square_box_from_its_middle() {
-    // The editor's `reframeWindow` pins the same picture for the same box.
-    let mut overlay = CameraOverlaySettings {
-      camera_x: 190.0,
-      camera_y: 190.0,
-      camera_width: 640.0,
-      frame_height: 180.0,
-      frame_width: 180.0,
-      frame_x: 100.0,
-      frame_y: 100.0,
-      radius_percent: 50.0,
-    };
-    show_whole_camera(&mut overlay, (1_920, 1_080));
-    assert_eq!(
-      (
-        overlay.frame_x,
-        overlay.frame_y,
-        overlay.frame_width,
-        overlay.frame_height
-      ),
-      (30.0, 100.0, 320.0, 180.0)
-    );
-    assert_eq!(
-      (overlay.camera_x, overlay.camera_y, overlay.camera_width),
-      (190.0, 190.0, 320.0)
-    );
-    assert_eq!(overlay.radius_percent, 0.0);
-  }
-
-  #[test]
-  fn a_custom_screen_cropped_in_place_shows_its_picture_where_it_sits() {
-    // A 2:1 screen in a box at a tenth of a 1600 by 900 canvas, zoomed twice
-    // past covering it. The editor's `pictureRect` pins the same rect.
-    let clip: RecordingSceneClip = serde_json::from_value(serde_json::json!({
-      "id": "c",
-      "startMs": 0,
-      "endMs": 10_000,
-      "preset": "full",
-      "screen": { "focusX": 0.5, "focusY": 0.5, "zoom": 2.0 },
-      "boxes": { "screen": { "x": 0.1, "y": 0.1, "width": 0.5, "height": 0.5 } },
-    }))
-    .expect("a custom clip");
-    assert!(crops_in_place(&clip, SceneReframe::Screen));
-    assert!(!crops_in_place(&clip, SceneReframe::Camera));
-    assert_eq!(
-      reframed_clips(
-        std::slice::from_ref(&clip),
-        Some(SceneReframe::Screen),
-        5_000
-      ),
-      None
-    );
-    let base = screenwide_output::fixtures::test_output_settings(1_600, 900);
-    let mut output = base.clone();
-    assert!(screenwide_export::scenes::arrange(
-      &[clip],
-      &[],
-      5_000,
-      0.0,
-      &mut output,
-      None
-    ));
-    show_screen_picture(&mut output, &base);
-    let shown = [
-      output.crop_x,
-      output.crop_y,
-      output.crop_width,
-      output.crop_height,
-    ];
-    for (shown, expected) in shown.into_iter().zip([-340.0, -135.0, 1_800.0, 900.0]) {
-      assert!((shown - expected).abs() < 1e-6, "{shown} is not {expected}");
-    }
-  }
-}
+mod tests;

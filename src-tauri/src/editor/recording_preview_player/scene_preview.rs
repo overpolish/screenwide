@@ -4,7 +4,7 @@
 //! The scenes, arranged into the native preview's compositions the way the
 //! export arranges its frames.
 
-use super::scene_reframe::SceneReframe;
+use super::scene_reframe::{SceneCrop, SceneReframe};
 use super::*;
 use screenwide_export::scenes::arrange;
 use screenwide_scenes::{validate_clips, RecordingSceneClip};
@@ -16,7 +16,7 @@ use screenwide_scenes::{validate_clips, RecordingSceneClip};
 pub(super) struct PreviewScenes {
   pub(super) clips: Arc<RwLock<Vec<RecordingSceneClip>>>,
   pub(super) ranges: Arc<RwLock<Vec<TimelineRange>>>,
-  pub(super) reframe: Arc<RwLock<Option<SceneReframe>>>,
+  pub(super) crop: Arc<RwLock<SceneCrop>>,
 }
 
 impl PreviewScenes {
@@ -24,7 +24,7 @@ impl PreviewScenes {
     Self {
       clips: Arc::new(RwLock::new(clips)),
       ranges: Arc::new(RwLock::new(ranges)),
-      reframe: Arc::default(),
+      crop: Arc::default(),
     }
   }
 
@@ -93,7 +93,13 @@ impl PlayerSources {
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     let timeline_ms = screenwide_annotations::timing::FrameTime::on(&ranges, source_ms).timeline_ms;
-    let reframe = self.scenes.reframe.read().ok().and_then(|reframe| *reframe);
+    let crop = self
+      .scenes
+      .crop
+      .read()
+      .map(|crop| *crop)
+      .unwrap_or_default();
+    let reframe = crop.pane;
     let reframed = super::scene_reframe::reframed_clips(&clips, reframe, timeline_ms);
     let camera = self.camera_source_size();
     let base = composition.recording_output.primary.clone();
@@ -104,6 +110,12 @@ impl PlayerSources {
       (source_ms, frame_ms),
       camera,
     );
+    if placed {
+      super::scene_reframe::ease_screen_turn(
+        &mut composition.recording_output.primary,
+        crop.screen_turn(),
+      );
+    }
     let Some(reframe) = reframe.filter(|_| placed) else {
       return placed;
     };

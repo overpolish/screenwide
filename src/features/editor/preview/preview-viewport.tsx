@@ -4,9 +4,10 @@
 import { useRef, useState } from "react";
 
 import { useAnnotationDefaults } from "../annotations/annotation-defaults";
+import { isTurned, withShareOfTurn } from "../layer-rotation";
 import {
+  croppingScreenshotWorkspace,
   isCropOperation,
-  uncroppedScreenshotPreviewOutput,
 } from "../screenshot/screenshot-crop";
 import { SourceRect } from "../screenshot/screenshot-geometry";
 import { gesturedScreenshotLayer } from "../screenshot/screenshot-layer-gesture";
@@ -36,6 +37,7 @@ import { useEditorEditGesture } from "../use-editor-edit-history";
 import { useRegisterPreviewFit } from "./preview-fit-context";
 import { PreviewPaneFit } from "./preview-transform";
 import { PreviewZoomRequest } from "./preview-zoom-state";
+import { useCropTurn } from "./use-crop-turn";
 
 type PreviewViewportProps = {
   alt: string;
@@ -147,26 +149,6 @@ export function PreviewViewport({
   const output = workspaceOutput
     ? screenshotOutputDimensions(workspaceOutput)
     : { height: naturalHeight, width: naturalWidth };
-  const previewOutput =
-    workspaceOutput && isEditing && selectedItemId !== null
-      ? {
-          ...workspaceOutput,
-          items: workspaceOutput.items.map((itemOutput) => {
-            const item = items.find(
-              (candidate) => candidate.id === itemOutput.id,
-            );
-            return item && item.id === selectedItemId
-              ? {
-                  ...itemOutput,
-                  output: uncroppedScreenshotPreviewOutput(
-                    item,
-                    itemOutput.output,
-                  ),
-                }
-              : itemOutput;
-          }),
-        }
-      : workspaceOutput;
   const selectedItemIndex =
     selectedItemId === null || !workspaceOutput
       ? -1
@@ -181,6 +163,17 @@ export function PreviewViewport({
     selectedItemId === null
       ? undefined
       : items.find((item) => item.id === selectedItemId);
+  // The crop tool works on the upright picture, so the layer's turn eases out
+  // before its crop is shown and back in once the tool is put down; the
+  // select chrome turns with it on the way.
+  const cropTurn = useCropTurn(
+    isEditing,
+    isTurned(selectedItemOutput?.rotation),
+  );
+  const isCropShown = cropTurn.isFlat;
+  const previewOutput =
+    workspaceOutput &&
+    croppingScreenshotWorkspace(workspaceOutput, selectedItem, cropTurn);
   const frameGesture = (event: ScreenshotSelectionGestureEvent) => {
     if (event.operation !== "frameResize" && event.operation !== "frameRadius")
       return false;
@@ -403,14 +396,17 @@ export function PreviewViewport({
           selectedItem &&
           selectedItemOutput
         ? {
-            cropMode: isEditing,
+            cropMode: isCropShown,
             paneIndex: selectedItemIndex,
             radiusPercent: selectedItemOutput.radiusPercent,
-            ...screenshotLayerTurn(selectedItemOutput, isEditing),
+            ...screenshotLayerTurn(
+              withShareOfTurn(selectedItemOutput, cropTurn.share),
+              isCropShown,
+            ),
             ...normalizedScreenshotSelection(
               screenshotLayout(selectedItem, selectedItemOutput),
               output,
-              isEditing ? "crop" : "select",
+              isCropShown ? "crop" : "select",
             ),
           }
         : null;
@@ -418,7 +414,7 @@ export function PreviewViewport({
     (isSelecting || isEditing || isDrawingArrows) && workspaceOutput
       ? screenshotSelectionTargets(items, workspaceOutput, {
           ...output,
-          cropMode: isEditing,
+          cropMode: isCropShown,
         })
       : null;
   const { fitDuringResize, fitPreview, setFitBasis } =

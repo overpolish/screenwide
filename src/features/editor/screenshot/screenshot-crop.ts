@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  UPRIGHT_ROTATION,
+  withRotation,
+  withShareOfTurn,
+} from "../layer-rotation";
+
+import {
   fullSourceRect,
   sourceRect,
   SourceRect,
@@ -9,12 +15,15 @@ import {
 } from "./screenshot-geometry";
 import {
   ScreenshotOutputSettings,
+  ScreenshotWorkspaceOutputSettings,
   screenshotLayout,
 } from "./screenshot-output";
 import {
   screenshotSourceCrop,
   withScreenshotSourceCrop,
 } from "./screenshot-output-settings";
+
+import type { CropTurn } from "../preview/use-crop-turn";
 
 export type CropOperation = "cropDraw" | "cropMove" | "cropResize";
 
@@ -154,20 +163,26 @@ export const resetCommittedScreenshotCrop = (
   );
 
 /**
- * Show the full source while the OSC marks the committed screenshot crop.
+ * Show the full source, upright, while the OSC marks the committed screenshot
+ * crop.
  *
  * The whole source becomes the visible rectangle so nothing being cropped away
  * disappears while the tool is open, and `cropPreview` keeps the committed crop
  * so the compositor can draw the layer the crop actually produces over that
  * ghost, rounded and shadowed. Both rectangles are in the same output pixels:
- * the source crop only moves the window, never the image behind it.
+ * the source crop only moves the window, never the image behind it. The layer
+ * loses its turn because the crop overlay and the magnifier work on the
+ * upright picture; a turned one would sit apart from the handles cropping it.
  */
 export const uncroppedScreenshotPreviewOutput = (
   source: { height: number; width: number },
   settings: ScreenshotOutputSettings,
 ): ScreenshotOutputSettings => {
   const cropPreview = screenshotLayout(source, settings).sourceCrop;
-  const previewSettings = withScreenshotSourceCrop(settings, fullSourceRect());
+  const previewSettings = withScreenshotSourceCrop(
+    withRotation(settings, UPRIGHT_ROTATION),
+    fullSourceRect(),
+  );
   const { image } = screenshotLayout(source, previewSettings);
   return {
     ...previewSettings,
@@ -176,5 +191,42 @@ export const uncroppedScreenshotPreviewOutput = (
     cropWidth: image.width,
     cropX: image.x,
     cropY: image.y,
+  };
+};
+
+/** A layer of `source` as the preview draws it while the crop tool comes and
+ * goes: whole and upright once `cropTurn` stands it up, and until then
+ * cropped as committed with the share of its turn the ease has reached. */
+export const croppingScreenshotPreviewOutput = (
+  source: { height: number; width: number },
+  settings: ScreenshotOutputSettings,
+  { isFlat, share }: CropTurn,
+): ScreenshotOutputSettings =>
+  isFlat
+    ? uncroppedScreenshotPreviewOutput(source, settings)
+    : withShareOfTurn(settings, share);
+
+/** `workspace` as the preview draws it while the crop tool works on the
+ * layer of `item`, as `croppingScreenshotPreviewOutput` draws it. */
+export const croppingScreenshotWorkspace = (
+  workspace: ScreenshotWorkspaceOutputSettings,
+  item: { height: number; id: number; width: number } | undefined,
+  cropTurn: CropTurn,
+): ScreenshotWorkspaceOutputSettings => {
+  if (!item || (!cropTurn.isFlat && cropTurn.share === 1)) return workspace;
+  return {
+    ...workspace,
+    items: workspace.items.map((itemOutput) =>
+      itemOutput.id === item.id
+        ? {
+            ...itemOutput,
+            output: croppingScreenshotPreviewOutput(
+              item,
+              itemOutput.output,
+              cropTurn,
+            ),
+          }
+        : itemOutput,
+    ),
   };
 };

@@ -134,8 +134,8 @@ export function useRecordingPreviewTransport(
       cameraOverlay,
       canvasTool,
       effectiveRecordingOutput,
-      isFramed: selection.isFramed,
       previewSourceDimensions,
+      selection,
     });
   // The tool the annotation chrome is drawn from. A camera saved as a
   // separate file is not drawn at all, so selecting it puts the tool down; a
@@ -236,7 +236,7 @@ export function useRecordingPreviewTransport(
     sessionId: player.sessionId,
     sourceDurationMs: durationMs,
   });
-  useSceneReframeDisplay(player.sessionId, selection.reframePane);
+  useSceneReframeDisplay(player.sessionId, selection);
   useToolPanelFollowsTool(
     "recording",
     recordingToolId(canvasTool),

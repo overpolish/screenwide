@@ -29,3 +29,28 @@ export const withRotation = <Turned extends { rotation?: SceneRotation }>(
   const upright = turned.x === 0 && turned.y === 0 && turned.z === 0;
   return (upright ? rest : { ...rest, rotation: turned }) as Turned;
 };
+
+/** Whether `rotation` turns a layer at all. */
+export const isTurned = (rotation: SceneRotation | undefined) =>
+  rotation !== undefined &&
+  (rotation.x !== 0 || rotation.y !== 0 || rotation.z !== 0);
+
+/** `share` of `rotation`, each angle that part of the way from upright: what
+ * a turn easing out or back in draws on its way. */
+export const shareOfTurn = (
+  rotation: SceneRotation,
+  share: number,
+): SceneRotation => ({
+  x: rotation.x * share,
+  y: rotation.y * share,
+  z: rotation.z * share,
+});
+
+/** `value` with `share` of its turn, as `shareOfTurn` takes it. */
+export const withShareOfTurn = <Turned extends { rotation?: SceneRotation }>(
+  value: Turned,
+  share: number,
+): Turned =>
+  share === 1 || !value.rotation
+    ? value
+    : withRotation(value, shareOfTurn(value.rotation, share));
