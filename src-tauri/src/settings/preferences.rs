@@ -39,6 +39,8 @@ pub struct GeneralSettings {
   pub open_location_after_export: bool,
   pub record_screenwide_windows: bool,
   pub show_recording_confidence_checks: bool,
+  /// Whether the recording pill shows how much of the recording is on disk.
+  pub show_recording_size: bool,
   /// Whether a new recording opens with zoom scenes made from its clicks and
   /// typing.
   pub auto_zoom: bool,
@@ -74,6 +76,7 @@ impl Default for GeneralSettings {
       open_location_after_export: true,
       record_screenwide_windows: false,
       show_recording_confidence_checks: true,
+      show_recording_size: false,
       auto_zoom: true,
       scene_templates: Vec::new(),
       caption_styles: Vec::new(),

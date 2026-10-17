@@ -27,6 +27,10 @@ backgroundPresets: Array<BackgroundPreset>,
  */
 projectDirectory: string | null, recordingDirectory: string | null, screenshotDirectory: string | null, openLocationAfterExport: boolean, recordScreenwideWindows: boolean, showRecordingConfidenceChecks: boolean, 
 /**
+ * Whether the recording pill shows how much of the recording is on disk.
+ */
+showRecordingSize: boolean, 
+/**
  * Whether a new recording opens with zoom scenes made from its clicks and
  * typing.
  */

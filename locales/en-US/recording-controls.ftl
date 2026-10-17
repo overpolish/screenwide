@@ -78,6 +78,7 @@ recording-controls-resume = Resume recording
 recording-controls-stop = Stop recording
 recording-controls-discard = Discard recording
 recording-controls-confirm-discard = Confirm discarding
+recording-controls-measuring-size = Measuring recording size
 # $moment is the name of a kind of moment: a point flagged while recording.
 recording-controls-recording-note = Recording a { $moment } voice note
 recording-controls-moment-placed = { $moment } moment placed

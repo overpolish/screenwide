@@ -6,8 +6,17 @@ import { useEffect, useState } from "react";
 
 import { RecordingDock } from "./recording-dock";
 
-/** Ticks a real second at a time so the digit roll can be watched. */
-function TickingDock({ fromMs }: { fromMs: number }) {
+/** Ticks a real second at a time so the digit roll can be watched, growing
+ * the size on disk by `bytesPerSecond` when it is given. */
+function TickingDock({
+  bytesPerSecond,
+  fromBytes = 0,
+  fromMs,
+}: {
+  fromMs: number;
+  bytesPerSecond?: number;
+  fromBytes?: number;
+}) {
   const [elapsedMs, setElapsedMs] = useState(fromMs);
 
   useEffect(() => {
@@ -20,8 +29,21 @@ function TickingDock({ fromMs }: { fromMs: number }) {
     };
   }, []);
 
-  return <RecordingDock elapsedMs={elapsedMs} status="recording" />;
+  return (
+    <RecordingDock
+      elapsedMs={elapsedMs}
+      status="recording"
+      writtenBytes={
+        bytesPerSecond === undefined
+          ? undefined
+          : fromBytes + ((elapsedMs - fromMs) / 1_000) * bytesPerSecond
+      }
+    />
+  );
 }
+
+/** 1080p at 30 fps: the encoder's 6.2 Mbit/s and a stereo audio track. */
+const HD_BYTES_PER_SECOND = 800_000;
 
 const meta = {
   component: RecordingDock,
@@ -187,4 +209,56 @@ export const Paused: Story = {
 
 export const Finishing: Story = {
   args: { elapsedMs: 42_000, status: "stopping" },
+};
+
+/* ------------------------------ Size on disk ------------------------------ */
+
+/** The size written so far, before the timer. */
+export const RecordingWithSize: Story = {
+  args: { elapsedMs: 83_000, status: "recording", writtenBytes: 66_400_000 },
+};
+
+/** Before the first measurement a spinner holds the size's place. */
+export const SizeNotYetMeasured: Story = {
+  args: { elapsedMs: 0, status: "recording", writtenBytes: null },
+};
+
+export const SizeWithConfidenceChecks: Story = {
+  args: { ...RecordingWithConfidenceChecks.args, writtenBytes: 33_600_000 },
+};
+
+/** The widest size it shows, with two decimals of a gigabyte. */
+export const SizeInGigabytes: Story = {
+  args: {
+    elapsedMs: 4_215_000,
+    status: "recording",
+    writtenBytes: 12_340_000_000,
+  },
+};
+
+export const PausedWithSize: Story = {
+  args: { elapsedMs: 83_000, status: "paused", writtenBytes: 66_400_000 },
+};
+
+/** Grows from the start at a 1080p recording's rate, through kilobytes into
+ * megabytes. */
+export const SizeGrowing: Story = {
+  render: () => (
+    <TickingDock
+      bytesPerSecond={HD_BYTES_PER_SECOND}
+      fromBytes={0}
+      fromMs={0}
+    />
+  ),
+};
+
+/** Grows through 999.9 MB into gigabytes, one second at a time. */
+export const SizeRollingIntoGigabytes: Story = {
+  render: () => (
+    <TickingDock
+      bytesPerSecond={HD_BYTES_PER_SECOND}
+      fromBytes={996_800_000}
+      fromMs={1_246_000}
+    />
+  ),
 };

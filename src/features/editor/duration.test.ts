@@ -8,8 +8,8 @@ import { withoutIsolates } from "../../i18n/testing";
 import { formatBytes } from "./duration";
 
 // Tests run in the source language, en-US.
-const size = (bytes: number, base: number) =>
-  withoutIsolates(formatBytes(bytes, base));
+const size = (bytes: number, base: number, fixedDecimals = false) =>
+  withoutIsolates(formatBytes(bytes, { base, fixedDecimals }));
 
 describe("formatBytes", () => {
   it("reads as Finder shows it on macOS", () => {
@@ -28,6 +28,12 @@ describe("formatBytes", () => {
   it("moves to the next unit when rounding would reach it", () => {
     expect(size(999_999, 1000)).toBe("1 MB");
     expect(size(999_996_000, 1000)).toBe("1 GB");
+  });
+
+  it("keeps trailing zeros when the decimals are fixed", () => {
+    expect(size(67_000_000, 1000, true)).toBe("67.0 MB");
+    expect(size(999_996_000, 1000, true)).toBe("1.00 GB");
+    expect(size(75_312, 1000, true)).toBe("75 KB");
   });
 
   it("says when there is no size", () => {

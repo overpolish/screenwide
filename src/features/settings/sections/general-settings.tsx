@@ -30,6 +30,12 @@ const recordingToggle = (): ToggleItem => ({
   title: t("settings-confidence-checks"),
 });
 
+const recordingSizeToggle = (): ToggleItem => ({
+  description: t("settings-recording-size-description"),
+  key: "showRecordingSize",
+  title: t("settings-recording-size"),
+});
+
 const autoZoomToggle = (): ToggleItem => ({
   description: t("settings-auto-zoom-description"),
   key: "autoZoom",
@@ -185,6 +191,7 @@ export function GeneralSettingsPanel({
       </GroupBox>
       <GroupBox title={t("settings-recording")}>
         {toggle(recordingToggle())}
+        {toggle(recordingSizeToggle())}
         {toggle(autoZoomToggle())}
         <ControlRow title={t("settings-countdown")}>
           {(controlProps) => (

@@ -7,6 +7,7 @@ mod session;
 pub(crate) mod sleep;
 mod state;
 mod ui;
+mod written_size;
 
 mod start_capture;
 #[cfg(test)]

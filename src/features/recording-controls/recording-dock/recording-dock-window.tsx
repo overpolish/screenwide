@@ -16,6 +16,7 @@ import {
 import { selectSnapshot, useRecordingStore } from "../store";
 import { useElapsedTime } from "../use-elapsed-time";
 import { useRecordingMonitor } from "../use-recording-monitor";
+import { useRecordingWrittenBytes } from "../use-recording-written-bytes";
 
 import { RecordingDock } from "./recording-dock";
 import { usePlacedMoment } from "./use-placed-moment";
@@ -32,6 +33,10 @@ export function RecordingDockWindow() {
   const elapsedMs = useElapsedTime(snapshot);
   const monitor = useRecordingMonitor(showConfidenceChecks);
   const moment = usePlacedMoment();
+  const writtenBytes = useRecordingWrittenBytes(
+    settings?.showRecordingSize ?? false,
+    snapshot.status,
+  );
 
   // The pill's first show stays transparent until this page has drawn. The
   // second animation frame after becoming visible runs once the first has
@@ -85,6 +90,7 @@ export function RecordingDockWindow() {
       }}
       onWidthChange={resizeToContent}
       status={snapshot.status}
+      writtenBytes={writtenBytes}
     />
   );
 }

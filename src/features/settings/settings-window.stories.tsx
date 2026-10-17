@@ -47,6 +47,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     screenshotDirectory: null,
     showRecordingBarOnLaunch: true,
     showRecordingConfidenceChecks: true,
+    showRecordingSize: false,
   };
   let glide: GlideSettings = {
     cursorFollows: true,

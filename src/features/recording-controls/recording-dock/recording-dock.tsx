@@ -20,6 +20,7 @@ import { RecordingStatus } from "../types";
 import { RecordingMonitorSnapshot } from "../use-recording-monitor";
 
 import { RecordingDockElapsed } from "./recording-dock-elapsed";
+import { RecordingDockSize } from "./recording-dock-size";
 
 import type { PlacedMoment } from "./use-placed-moment";
 
@@ -73,6 +74,9 @@ type RecordingDockProps = {
   onStop?: () => void;
   onWidthChange?: (width: number) => void;
   status?: RecordingStatus;
+  /** How much of the recording is on disk: null until first measured, and
+   * undefined when the size is not shown at all. */
+  writtenBytes?: number | null;
 };
 
 export function RecordingDock({
@@ -86,6 +90,7 @@ export function RecordingDock({
   onStop,
   onWidthChange,
   status = "recording",
+  writtenBytes,
 }: RecordingDockProps) {
   const dockRef = useRef<HTMLElement>(null);
   const isBusy = status === "starting" || status === "stopping";
@@ -237,20 +242,32 @@ export function RecordingDock({
             </div>
           )}
 
-          <div
-            className={cn(
-              "flex justify-center text-body tabular-nums",
-              TIME_SLOT_CLASS,
+          {/*
+           * The timer sits centred between the size and the buttons. On its
+           * other side come the dock's gap and the Pause button's inset around
+           * its icon, 12px on macOS and 16px on Windows, where controls are
+           * taller; the size takes the same distance.
+           */}
+          <div className="flex items-center gap-[calc(var(--spacing-control-inset)+(var(--spacing-control-height)-var(--spacing-icon))/2)]">
+            {writtenBytes !== undefined && (
+              <RecordingDockSize bytes={writtenBytes} />
             )}
-          >
-            <RecordingDockElapsed
-              hours={hours}
-              isPaused={isPaused}
-              minutes={minutes}
-              moment={moment}
-              noteDecibels={monitor?.noteDecibels}
-              seconds={seconds}
-            />
+
+            <div
+              className={cn(
+                "flex justify-center text-body tabular-nums",
+                TIME_SLOT_CLASS,
+              )}
+            >
+              <RecordingDockElapsed
+                hours={hours}
+                isPaused={isPaused}
+                minutes={minutes}
+                moment={moment}
+                noteDecibels={monitor?.noteDecibels}
+                seconds={seconds}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-control">

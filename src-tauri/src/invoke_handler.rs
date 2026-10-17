@@ -140,6 +140,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     transcription::commands::set_transcription_language,
     recording::commands::cancel_recording,
     recording::commands::get_recording_snapshot,
+    recording::commands::get_recording_written_bytes,
     recording::commands::get_replay_snapshot,
     recording::commands::pause_recording,
     recording::commands::resume_recording,

@@ -81,7 +81,17 @@ const SIZE_DECIMALS = [0, 0, 1, 2, 2];
 const sizeBase = () =>
   document.documentElement.dataset.platform === "windows" ? 1024 : 1000;
 
-export const formatBytes = (bytes: number, base = sizeBase()) => {
+type FormatBytesOptions = {
+  base?: number;
+  /** Keeps trailing zeros, so a size that is still growing changes width
+   * only when it gains a digit or a unit: 67.0 MB, not 67 MB. */
+  fixedDecimals?: boolean;
+};
+
+export const formatBytes = (
+  bytes: number,
+  { base = sizeBase(), fixedDecimals = false }: FormatBytesOptions = {},
+) => {
   if (bytes <= 0) return t("format-size-unknown");
   let order = Math.min(
     Math.floor(Math.log(bytes) / Math.log(base)),
@@ -94,6 +104,7 @@ export const formatBytes = (bytes: number, base = sizeBase()) => {
   if (rounded(order) >= base && order < SIZE_UNITS.length - 1) order += 1;
   const size = new Intl.NumberFormat(appLocale().formatLocale, {
     maximumFractionDigits: SIZE_DECIMALS[order],
+    minimumFractionDigits: fixedDecimals ? SIZE_DECIMALS[order] : 0,
   }).format(rounded(order));
   return t("format-size", { size, unit: SIZE_UNITS[order] });
 };

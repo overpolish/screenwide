@@ -825,6 +825,7 @@ export type Messages = {
   "recording-controls-finishing": null;
   "recording-controls-finishing-label": null;
   "recording-controls-flip": null;
+  "recording-controls-measuring-size": null;
   "recording-controls-microphone": null;
   "recording-controls-microphone-missing": null;
   "recording-controls-mode": null;
@@ -944,6 +945,8 @@ export type Messages = {
   "settings-recording": null;
   "settings-recording-folder": null;
   "settings-recording-folder-reset": null;
+  "settings-recording-size": null;
+  "settings-recording-size-description": null;
   "settings-ruler-centerlines": null;
   "settings-ruler-copy": null;
   "settings-ruler-copy-colour": null;

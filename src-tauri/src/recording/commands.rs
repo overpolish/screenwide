@@ -5,7 +5,9 @@
 
 use tauri::{AppHandle, State};
 
-use super::{cancel, pause, replay, resume, start, stop, RecordingState, ReplaySnapshot};
+use super::{
+  cancel, pause, replay, resume, start, stop, written_size, RecordingState, ReplaySnapshot,
+};
 use screenwide_capture::{RecordingSnapshot, StartRecordingOptions};
 
 #[tauri::command]
@@ -28,6 +30,13 @@ pub fn get_recording_snapshot(state: State<'_, RecordingState>) -> RecordingSnap
     .snapshot
     .read()
     .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// How much of the running recording is on disk, or None outside one. Async
+/// so the file system is asked off the main thread.
+#[tauri::command]
+pub async fn get_recording_written_bytes(app: AppHandle) -> Option<u64> {
+  written_size::written_bytes(&app)
 }
 
 #[tauri::command]

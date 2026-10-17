@@ -12,6 +12,10 @@ import {
 export const getRecordingSnapshot = () =>
   invoke<RecordingSnapshot>("get_recording_snapshot");
 
+/** How much of the running recording is on disk, or null outside one. */
+export const getRecordingWrittenBytes = () =>
+  invoke<number | null>("get_recording_written_bytes");
+
 // Every lifecycle call is awaited: Rust rejects illegal transitions, and a
 // swallowed rejection would leave the UI claiming a state that does not exist.
 export const startRecording = async (options: StartRecordingOptions) => {

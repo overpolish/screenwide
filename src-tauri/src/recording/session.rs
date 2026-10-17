@@ -108,6 +108,16 @@ pub(super) fn store_handles(app: &AppHandle, handles: CaptureHandles) {
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(handles);
 }
 
+/// Where the running recording writes its tracks, while there is one.
+pub(super) fn media_directory(app: &AppHandle) -> Option<PathBuf> {
+  state(app)
+    .handles
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .as_ref()
+    .map(|handles| handles.project.media.clone())
+}
+
 // ---------------------------------------------------------------------------
 // Capture. Every entry point here is called from a blocking task, never from
 // the thread that services the UI, and never with a recording lock held.
