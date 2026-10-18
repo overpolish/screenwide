@@ -59,6 +59,11 @@ controls-key-enter = Enter
 controls-key-tab = Tab
 controls-key-delete = Delete
 controls-key-backspace = Backspace
+# The arrow keys, which a Mac draws as arrows and names this way to a screen reader.
+controls-key-up = Up
+controls-key-down = Down
+controls-key-left = Left
+controls-key-right = Right
 controls-key-mouse-middle = Middle click
 controls-key-mouse-back = Mouse Back
 controls-key-mouse-forward = Mouse Forward

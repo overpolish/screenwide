@@ -90,16 +90,30 @@ describe("hotkey capture", () => {
         hotkeyFromEvent({ ...key, ctrlKey: true, ...overrides }),
       ).toBeNull();
   });
-  it("formats platform modifiers and key codes for Keyboard", () => {
+  it("formats platform modifiers in the platform's order, key last", () => {
     expect(hotkeyKeys("CommandOrControl+Alt+Digit1", true)).toEqual([
-      "Command",
       "Option",
+      "Command",
       "1",
     ]);
     expect(hotkeyKeys("CommandOrControl+Alt+Digit1", false)).toEqual([
       "Control",
       "Alt",
       "1",
+    ]);
+    expect(hotkeyKeys("Super+Control+Alt+Shift+KeyK", true)).toEqual([
+      "Control",
+      "Option",
+      "Shift",
+      "Command",
+      "K",
+    ]);
+    expect(hotkeyKeys("Shift+Super+Alt+Control+KeyK", false)).toEqual([
+      "Control",
+      "Alt",
+      "Win",
+      "Shift",
+      "K",
     ]);
     expect(hotkeyKeys("Super+ArrowUp", false)).toEqual(["Win", "Up"]);
     expect(hotkeyKeys(null, true)).toEqual([]);

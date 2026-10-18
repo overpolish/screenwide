@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { keyLabel } from "../../components/base/keyboard/key-label";
 import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
 import { ProgressPanel } from "../../components/shared/progress-panel/progress-panel";
 import { t } from "../../i18n/i18n";
 
 import { ScrollingCapturePhase } from "./scrolling-capture-events";
+
+const CANCEL_KEY = "Escape";
 
 const phaseLabel = (phase: ScrollingCapturePhase | undefined) => {
   if (phase === "capturing") return t("screenshots-scrolling-capturing");
@@ -45,7 +46,7 @@ export function ScrollingCaptureOverlay({
           cancellable && !finished ? (
             <span className="flex items-center gap-control whitespace-nowrap">
               <Shortcut>
-                <Keyboard>{keyLabel("escape")}</Keyboard>
+                <Keyboard>{CANCEL_KEY}</Keyboard>
               </Shortcut>
               <span>{t("screenshots-scrolling-cancel-hint")}</span>
             </span>

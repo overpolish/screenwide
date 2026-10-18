@@ -9,6 +9,7 @@ import { Badge } from "../../components/base/badge/badge";
 import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { hotkeyKeys } from "../../components/shared/hotkey-field/hotkey";
+import { isWindowsHost } from "../../lib/platform";
 
 import { PopupPanelItemGlyph } from "./popup-panel-item-glyph";
 import { PopupPanelItem, PopupPanelListContent } from "./store";
@@ -26,6 +27,33 @@ export const itemFontStyle = (
       }
     : undefined;
 
+// A menu's glyph at the platform's size. macOS 26 draws a menu item's SF
+// Symbol at 13pt in the small scale (trash in a 13 by 14 box), which Lucide
+// matches at 14px; WinUI flyouts and Explorer menus use 16px icons.
+const glyphClassName = "size-icon-small shrink-0 windows:size-icon";
+
+// Keys as the platform's menus set them: bare, in the secondary label colour.
+// A macOS menu turns them white with the label under the highlight and dims
+// them with a disabled item. A Fluent flyout keeps them secondary through
+// hover and press, a step smaller than the label, joined by plus signs.
+const shortcutClassName = [
+  "ms-auto gap-tight text-content-fg-secondary",
+  "group-data-[hovered]:text-primary-fg group-data-[focus-visible]:text-primary-fg group-data-[pressed]:text-primary-fg",
+  "group-data-[disabled]:text-control-fg-disabled",
+  "windows:gap-0 windows:text-subheadline",
+  "windows:group-data-[hovered]:text-content-fg-secondary windows:group-data-[focus-visible]:text-content-fg-secondary windows:group-data-[pressed]:text-content-fg-secondary",
+].join(" ");
+
+const shortcutKeys = (shortcut: string) =>
+  hotkeyKeys(shortcut).flatMap((key, index) => {
+    const keycap = (
+      <Keyboard key={`${key}-${index.toString()}`} variant="plain">
+        {key}
+      </Keyboard>
+    );
+    return index > 0 && isWindowsHost ? ["+" as const, keycap] : [keycap];
+  });
+
 /** One row of a pop-up list: its artwork or glyph, its label, and the badge
  * or keys after it. A press on a single choice reaches `onPress`. */
 export const renderPopupPanelItem = (
@@ -41,6 +69,7 @@ export const renderPopupPanelItem = (
   },
 ) => (
   <ListBoxItem
+    className="group"
     id={item.id}
     key={item.id}
     onPress={() => {
@@ -49,7 +78,7 @@ export const renderPopupPanelItem = (
     showsSelection={showsSelection}
     textValue={item.label}
   >
-    <span className="flex w-full min-w-0 items-center gap-control-inset [&_svg]:size-icon [&_svg]:shrink-0">
+    <span className="flex w-full min-w-0 items-center gap-control-inset">
       {item.iconPath ? (
         <img
           alt=""
@@ -57,11 +86,11 @@ export const renderPopupPanelItem = (
           src={convertFileSrc(item.iconPath)}
         />
       ) : item.icon ? (
-        <PopupPanelItemGlyph icon={item.icon} />
+        <PopupPanelItemGlyph className={glyphClassName} icon={item.icon} />
       ) : item.id === content.exclusiveId ? (
-        <Volume2 />
+        <Volume2 className={glyphClassName} />
       ) : content.selectionMode === "multiple" ? (
-        <AppWindowMac />
+        <AppWindowMac className={glyphClassName} />
       ) : null}
       {/* Often a device's, a folder's or a font's own name, in whichever
           direction it is written. */}
@@ -75,10 +104,8 @@ export const renderPopupPanelItem = (
       </span>
       {item.detail ? <Badge className="ms-auto">{item.detail}</Badge> : null}
       {item.shortcut ? (
-        <Shortcut className="ms-auto">
-          {hotkeyKeys(item.shortcut).map((key, index) => (
-            <Keyboard key={`${key}-${index.toString()}`}>{key}</Keyboard>
-          ))}
+        <Shortcut className={shortcutClassName}>
+          {shortcutKeys(item.shortcut)}
         </Shortcut>
       ) : null}
     </span>

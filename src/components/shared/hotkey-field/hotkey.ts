@@ -80,21 +80,34 @@ export function hotkeyFromEvent(
   return [...modifiers, event.code].join("+");
 }
 
+// The order each platform names modifiers in: a Mac menu draws ⌃⌥⇧⌘, and
+// WinUI writes an accelerator as Ctrl, Alt, Win, Shift. The key comes last.
+const MAC_MODIFIER_ORDER = ["Control", "Option", "Shift", "Command"];
+const WINDOWS_MODIFIER_ORDER = ["Control", "Alt", "Win", "Shift"];
+
 /** The keys of a shortcut, each as a name `Keyboard` and `keyLabel` know:
- * the platform's modifiers, the key a code stands for, or a mouse control. */
+ * the platform's modifiers in its order, then the key a code stands for or a
+ * mouse control. */
 export function hotkeyKeys(value: string | null, isMac = isMacHost): string[] {
+  if (!value) return [];
+  const order = isMac ? MAC_MODIFIER_ORDER : WINDOWS_MODIFIER_ORDER;
+  const rank = (key: string) => {
+    const index = order.indexOf(key);
+    return index === -1 ? order.length : index;
+  };
   return value
-    ? value.split("+").map((key) => {
-        key = key.replace(/^(Meta|Control|Alt|Shift)(Left|Right)$/, "$1");
-        if (key === "CommandOrControl") return isMac ? "Command" : "Control";
-        if (key === "Super" || key === "Meta" || key === "Command")
-          return isMac ? "Command" : "Win";
-        if (key === "Alt") return isMac ? "Option" : "Alt";
-        if (key.startsWith("Key")) return key.slice(3);
-        if (key.startsWith("Digit")) return key.slice(5);
-        return key.replace(/^Arrow/, "").replace(/^Numpad/, "Num ");
-      })
-    : [];
+    .split("+")
+    .map((key) => {
+      key = key.replace(/^(Meta|Control|Alt|Shift)(Left|Right)$/, "$1");
+      if (key === "CommandOrControl") return isMac ? "Command" : "Control";
+      if (key === "Super" || key === "Meta" || key === "Command")
+        return isMac ? "Command" : "Win";
+      if (key === "Alt") return isMac ? "Option" : "Alt";
+      if (key.startsWith("Key")) return key.slice(3);
+      if (key.startsWith("Digit")) return key.slice(5);
+      return key.replace(/^Arrow/, "").replace(/^Numpad/, "Num ");
+    })
+    .sort((a, b) => rank(a) - rank(b));
 }
 
 export const mouseControlFromButton = (button: number): string | null =>

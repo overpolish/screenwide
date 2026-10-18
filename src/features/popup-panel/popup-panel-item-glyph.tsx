@@ -42,6 +42,7 @@ import {
   SpotlightToolIcon,
   TextToolIcon,
 } from "../../components/shared/annotation-style/annotation-tool-icons";
+import { cn } from "../../lib/styling";
 
 import type { AnnotationKind } from "../../components/shared/annotation-style/types";
 
@@ -93,11 +94,20 @@ export type PopupPanelIcon = keyof typeof itemGlyphs;
 /** Glyphs that point the way text runs, and turn with it. */
 const directionalGlyphs = new Set<PopupPanelIcon>(["restore"]);
 
-export function PopupPanelItemGlyph({ icon }: { icon: PopupPanelIcon }) {
+export function PopupPanelItemGlyph({
+  className,
+  icon,
+}: {
+  icon: PopupPanelIcon;
+  className?: string;
+}) {
   const Glyph = itemGlyphs[icon];
   return (
     <Glyph
-      className={directionalGlyphs.has(icon) ? "rtl:-scale-x-100" : undefined}
+      className={cn(
+        directionalGlyphs.has(icon) && "rtl:-scale-x-100",
+        className,
+      )}
     />
   );
 }

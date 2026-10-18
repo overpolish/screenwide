@@ -2,7 +2,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { clsx } from "clsx";
-import { ArrowBigUp, ChevronUp, Command, Plus } from "lucide-react";
+import {
+  ArrowBigUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowRightToLine,
+  ArrowUp,
+  ChevronUp,
+  CircleArrowOutUpLeft,
+  Command,
+  CornerDownLeft,
+  Delete,
+  type LucideIcon,
+  Option,
+  Plus,
+} from "lucide-react";
 import {
   isValidElement,
   type HTMLAttributes,
@@ -12,6 +27,7 @@ import {
 } from "react";
 
 import { isMacHost } from "../../../lib/platform";
+import { cn } from "../../../lib/styling";
 
 import { keyLabel } from "./key-label";
 
@@ -37,9 +53,48 @@ const keyboardClassName = {
 const keyboardIconClassName =
   "[&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu";
 
-// A modifier glyph is drawn light beside SF Pro's thin keycap text; Segoe is
-// heavier, so on Windows the glyph keeps the icon set's regular stroke.
-const keyGlyphClassName = "stroke-1 windows:stroke-[1.5px]";
+// A Mac menu draws its modifiers and named keys as symbols; Windows spells
+// every key out, as its menus and keycaps do. Keys come in as `hotkeyKeys`
+// names them or as a story spells them.
+type MacGlyph = {
+  Glyph: LucideIcon;
+  keys: string[];
+  name: string;
+  className?: string;
+};
+const macGlyphList: MacGlyph[] = [
+  { Glyph: ArrowBigUp, keys: ["shift", "⇧"], name: "shift" },
+  {
+    Glyph: Command,
+    keys: ["command", "cmd", "⌘", "meta", "super", "win"],
+    name: "command",
+  },
+  { Glyph: ChevronUp, keys: ["control", "ctrl", "⌃"], name: "control" },
+  { Glyph: Option, keys: ["option", "alt", "⌥"], name: "option" },
+  { Glyph: CornerDownLeft, keys: ["enter", "return"], name: "enter" },
+  { Glyph: Delete, keys: ["backspace"], name: "backspace" },
+  // Forward delete, ⌦: the backspace symbol turned to point the other way.
+  {
+    Glyph: Delete,
+    className: "-scale-x-100",
+    keys: ["delete"],
+    name: "delete",
+  },
+  { Glyph: CircleArrowOutUpLeft, keys: ["esc", "escape"], name: "escape" },
+  { Glyph: ArrowRightToLine, keys: ["tab"], name: "tab" },
+  { Glyph: ArrowUp, keys: ["up"], name: "up" },
+  { Glyph: ArrowDown, keys: ["down"], name: "down" },
+  { Glyph: ArrowLeft, keys: ["left"], name: "left" },
+  { Glyph: ArrowRight, keys: ["right"], name: "right" },
+];
+const macGlyphs = new Map(
+  macGlyphList.flatMap((glyph) =>
+    glyph.keys.map((key) => [key, glyph] as const),
+  ),
+);
+
+// A symbol is drawn light, beside SF Pro's thin keycap text.
+const keyGlyphClassName = "stroke-1";
 
 // Brackets and parentheses drop below the baseline, so SF Pro centres their
 // ink about 0.1em below the cap's middle, where letters sit within 0.03em.
@@ -51,27 +106,14 @@ const mappedKey = (children: ReactNode) => {
   if (typeof children !== "string") return { children };
 
   const key = children.trim().toLowerCase();
-  if (key === "shift" || key === "⇧") {
+  const glyph = isMacHost ? macGlyphs.get(key) : undefined;
+  if (glyph) {
+    const { Glyph } = glyph;
     return {
-      accessibleName: keyLabel(key),
-      children: <ArrowBigUp aria-hidden className={keyGlyphClassName} />,
-    };
-  }
-  const command =
-    key === "command" ||
-    key === "cmd" ||
-    key === "⌘" ||
-    (isMacHost && (key === "meta" || key === "super" || key === "win"));
-  if (command) {
-    return {
-      accessibleName: keyLabel("command"),
-      children: <Command aria-hidden className={keyGlyphClassName} />,
-    };
-  }
-  if (isMacHost && (key === "control" || key === "ctrl" || key === "⌃")) {
-    return {
-      accessibleName: keyLabel(key),
-      children: <ChevronUp aria-hidden className={keyGlyphClassName} />,
+      accessibleName: keyLabel(glyph.name),
+      children: (
+        <Glyph aria-hidden className={cn(keyGlyphClassName, glyph.className)} />
+      ),
     };
   }
   if (descendingKeys.has(key)) {
@@ -145,7 +187,7 @@ export const Shortcut = ({
       // every language, as menus show them.
       dir="ltr"
       {...rest}
-      className={clsx("gap-control inline-flex items-center", className)}
+      className={cn("gap-control inline-flex items-center", className)}
       ref={ref}
     >
       {items.map((child, index) =>

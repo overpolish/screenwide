@@ -45,6 +45,14 @@ export const keyLabel = (key: string) => {
       return t("controls-key-delete");
     case "backspace":
       return t("controls-key-backspace");
+    case "up":
+      return t("controls-key-up");
+    case "down":
+      return t("controls-key-down");
+    case "left":
+      return t("controls-key-left");
+    case "right":
+      return t("controls-key-right");
     case "mousemiddle":
       return t("controls-key-mouse-middle");
     case "mouseback":
