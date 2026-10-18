@@ -31,6 +31,7 @@ impl LumaReader {
   /// A reader for `path` whose frames are at most `longest_side` pixels on
   /// their longer side, and never larger than the source.
   pub fn open(path: &Path, duration_ms: u64, longest_side: u32) -> Result<Self, String> {
+    let _pool = cidre::objc::AutoreleasePoolPage::push();
     let asset = open_asset(path)?;
     let tracks =
       tauri::async_runtime::block_on(asset.load_tracks_with_media_type(av::MediaType::video()))
@@ -65,6 +66,7 @@ impl FrameSource for LumaReader {
     end_ms: u64,
     each: &mut dyn FnMut(LumaFrame) -> bool,
   ) -> Result<(), String> {
+    let _pool = cidre::objc::AutoreleasePoolPage::push();
     let end_ms = end_ms.min(self.duration_ms);
     if start_ms >= end_ms {
       return Ok(());

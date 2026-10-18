@@ -57,14 +57,18 @@ describe("tool-panel resize fit", () => {
       layoutRef,
       measure,
       resize: () => {
-        expect(resizeFitWidth(fitRef.current, 800, 1)).toBe(480);
+        // Before the window grows there is no room beside the panel yet.
+        expect(resizeFitWidth(fitRef.current, 800, 1)).toBeUndefined();
         return growth.promise;
       },
+      // The picture needs 800 at full height beside the 320 gutter.
+      roomy: (width) => width >= 1120,
       sessionId: 1,
     });
     expect(resizeFitWidth(fitRef.current, 1120, 1)).toBe(800);
-    // A display that refuses the requested growth uses its actual bounds.
-    expect(resizeFitWidth(fitRef.current, 950, 1)).toBe(630);
+    // A display that refuses the requested growth leaves the picture
+    // centred rather than squeezed beside the panel.
+    expect(resizeFitWidth(fitRef.current, 950, 1)).toBeUndefined();
     growth.resolve();
     await growth.promise;
     expect(measure).toHaveBeenCalledOnce();

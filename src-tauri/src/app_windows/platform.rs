@@ -31,6 +31,8 @@ pub use self::macos::capture_exclusion::{exclude_from_capture, set_window_captur
 pub use self::macos::presentation::{
   hide, raise_without_activation, restore_nonactivating_overlay, show, show_interactive_overlay,
 };
+#[cfg(target_os = "macos")]
+pub(crate) use self::macos::webview::webview_view;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use glide_preview::fade_out as fade_glide_preview;

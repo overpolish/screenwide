@@ -9,7 +9,7 @@ import { activePopupPanel, usePopupPanelStore } from "../../popup-panel/store";
 import { usePreviewFit } from "../preview/preview-fit-context";
 import { EditorKind } from "../types";
 
-import { toolPanelGutter } from "./tool-panel-space";
+import { panelLeavesRoom, toolPanelGutter } from "./tool-panel-space";
 import { toolPanelLabel } from "./tool-panel-window";
 import { panelResetsView } from "./tool-registry";
 import { panelOffset, previewViewport } from "./use-tool-panel";
@@ -23,10 +23,11 @@ export function ToolPanelPlacement({ workspace }: { workspace: EditorKind }) {
   const { setFitBasis } = usePreviewFit();
 
   // A panel can also go away from outside the editor - Escape, the editor
-  // being minimised. However it went, the reset basis is the whole viewport
-  // again; the view itself never moves.
+  // being minimised - or give way to one that leaves the picture's fit alone,
+  // as Select does after Crop. However the fitting panel went, the reset
+  // basis is the whole viewport again; the view itself never moves.
   useEffect(() => {
-    if (openTool === null) setFitBasis();
+    if (openTool === null || !panelResetsView(openTool)) setFitBasis();
   }, [openTool, setFitBasis]);
 
   // An editor resize moves the corner the panel hangs from. It is re-placed
@@ -56,10 +57,21 @@ export function ToolPanelPlacement({ workspace }: { workspace: EditorKind }) {
         });
     };
     const queueMove = () => {
-      const bounds = previewViewport()?.getBoundingClientRect();
+      const preview = previewViewport();
+      const bounds = preview?.getBoundingClientRect();
       if (!bounds) return;
+      // Beside the panel only where there is room for the picture there;
+      // otherwise the reset centres it in the whole viewport.
       if (panelResetsView(openTool))
-        setFitBasis(Math.max(1, bounds.width - toolPanelGutter));
+        setFitBasis(
+          panelLeavesRoom(
+            bounds.width,
+            Number(preview?.dataset.previewFitWidth),
+            toolPanelGutter,
+          )
+            ? Math.max(1, bounds.width - toolPanelGutter)
+            : undefined,
+        );
       pending = { bounds };
       flush();
     };

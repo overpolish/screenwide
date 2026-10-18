@@ -13,6 +13,9 @@ import { createContext, use, useEffect } from "react";
 export type FitDuringResize = (
   gutter: number,
   resize: () => Promise<void>,
+  /** Whether the grown viewport leaves the picture room beside the panel;
+   * without room it is not fitted beside it. */
+  roomy?: (viewportWidth: number) => boolean,
 ) => Promise<void>;
 
 export type PreviewFit = {

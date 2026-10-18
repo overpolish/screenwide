@@ -24,6 +24,13 @@ pub(super) fn clear_cancelled_if_released() {
   }
 }
 
+/// Ends the session and keeps a new one from starting until the Spaces
+/// modifier is let go, as an Escape does.
+pub(super) fn cancel_until_release(app: &AppHandle) {
+  CANCELLED_UNTIL_RELEASE.store(true, Ordering::Release);
+  lifecycle::request_end(app, true);
+}
+
 pub(in crate::glide::macos) fn handle_event(
   app: &AppHandle,
   normal: &SharedState,

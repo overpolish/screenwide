@@ -287,57 +287,56 @@ fn label_hit_testing_walks_the_four_pools_in_order() {
 
 #[test]
 fn held_range_guide_and_radius_keys_latch_and_report_a_release_phase() {
+  let held = |shortcut, repeat, latched| {
+    let (key, modifiers) = press(shortcut);
+    key_command(key, modifiers, repeat, latched)
+  };
   assert_eq!(
-    key_command(0x31, 0, false, false),
+    held("Digit1", false, false),
     Some(KeyCommand {
       phase: 20,
       release: Some(22)
     })
   );
   assert_eq!(
-    key_command(0x48, 0, false, false),
+    held("KeyH", false, false),
     Some(KeyCommand {
       phase: 27,
       release: Some(28)
     })
   );
   assert_eq!(
-    key_command(0x52, 0, false, false),
+    held("KeyR", false, false),
     Some(KeyCommand {
       phase: 31,
       release: Some(32)
     })
   );
   // A held key does not re-fire, and neither does an auto-repeat.
-  assert_eq!(key_command(0x52, 0, false, true), None);
-  assert_eq!(key_command(0x52, 0, true, false), None);
+  assert_eq!(held("KeyR", false, true), None);
+  assert_eq!(held("KeyR", true, false), None);
 }
 
 #[test]
 fn the_command_keys_match_the_macos_keycode_table() {
-  let phase = |vk, command, shift| {
-    key_command(
-      vk,
-      (u32::from(command) * 2) | (u32::from(shift) * 8),
-      false,
-      false,
-    )
-    .map(|command| command.phase)
+  let phase = |shortcut| {
+    let (key, modifiers) = press(shortcut);
+    key_command(key, modifiers, false, false).map(|command| command.phase)
   };
-  assert_eq!(phase(0x58, false, false), Some(13));
-  assert_eq!(phase(0x09, false, false), Some(14));
-  assert_eq!(phase(0x08, false, false), Some(16));
-  assert_eq!(phase(0x2E, false, false), Some(16));
-  assert_eq!(phase(0x43, true, false), Some(17));
-  assert_eq!(phase(0x5A, true, false), Some(18));
-  assert_eq!(phase(0x5A, true, true), Some(19));
-  assert_eq!(phase(0x59, true, false), Some(19));
-  assert_eq!(phase(0x54, false, false), Some(29));
-  assert_eq!(phase(0x4D, false, false), Some(33));
-  assert_eq!(phase(0x56, false, false), Some(26));
+  assert_eq!(phase("KeyX"), Some(13));
+  assert_eq!(phase("Tab"), Some(14));
+  assert_eq!(phase("Backspace"), Some(16));
+  assert_eq!(phase("Delete"), Some(16));
+  assert_eq!(phase("CommandOrControl+KeyC"), Some(17));
+  assert_eq!(phase("CommandOrControl+KeyZ"), Some(18));
+  assert_eq!(phase("CommandOrControl+Shift+KeyZ"), Some(19));
+  assert_eq!(phase("CommandOrControl+KeyY"), Some(19));
+  assert_eq!(phase("KeyT"), Some(29));
+  assert_eq!(phase("KeyM"), Some(33));
+  assert_eq!(phase("KeyV"), Some(26));
   // The chorded phases need their modifier, and unknown keys stay unmapped.
-  assert_eq!(phase(0x43, false, false), None);
-  assert_eq!(phase(0x51, false, false), None);
+  assert_eq!(phase("KeyC"), None);
+  assert_eq!(phase("KeyQ"), None);
 }
 
 #[test]

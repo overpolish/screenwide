@@ -235,6 +235,8 @@ mod world;
 
 pub(crate) use assignment::assign_labels;
 #[cfg(test)]
+pub(crate) use commands::press;
+#[cfg(test)]
 use commands::KeyCommand;
 pub(crate) use commands::{key_command, MAC_KEYS};
 pub(crate) use data::DataChange;

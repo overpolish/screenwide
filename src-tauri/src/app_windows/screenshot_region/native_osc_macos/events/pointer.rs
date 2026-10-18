@@ -148,13 +148,18 @@ pub(super) fn handle(event: &NSEvent, kind: NSEventType) -> bool {
     NSEventType::ScrollWheel => {
       let precise = event.hasPreciseScrollingDeltas();
       let (dx, dy) = (event.scrollingDeltaX(), event.scrollingDeltaY());
+      let control = event
+        .modifierFlags()
+        .contains(NSEventModifierFlags::Control);
+      // A trackpad's two-finger scroll pans by its own points on both axes,
+      // in the direction AppKit already reports for the gesture.
+      if precise && !control {
+        return engine::trackpad_pan(window, screen_of(event), dx, dy);
+      }
       let horizontal = dx.abs() > dy.abs();
       let delta = if horizontal { dx } else { dy };
       // A wheel's notch is a line; a trackpad's points are finer.
       let notches = if precise { delta / 10.0 } else { delta };
-      let control = event
-        .modifierFlags()
-        .contains(NSEventModifierFlags::Control);
       engine::wheel(
         window,
         screen_of(event),
@@ -164,6 +169,7 @@ pub(super) fn handle(event: &NSEvent, kind: NSEventType) -> bool {
         control,
       )
     }
+    NSEventType::Magnify => engine::magnify(window, screen_of(event), event.magnification().exp()),
     _ => false,
   }
 }

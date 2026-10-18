@@ -5,3 +5,4 @@ pub(super) mod capture_exclusion;
 pub(super) mod panel_properties;
 pub(super) mod panels;
 pub(super) mod presentation;
+pub(super) mod webview;

@@ -12,6 +12,7 @@ pub fn source_frame_image(
   position_ms: u64,
   duration_ms: u64,
 ) -> Result<CapturedImage, String> {
+  let _pool = cidre::objc::AutoreleasePoolPage::push();
   let asset = open_asset(path)?;
   let tracks = tauri::async_runtime::block_on(
     asset.load_tracks_with_media_type(cidre::av::MediaType::video()),
@@ -47,6 +48,7 @@ pub fn each_source_frame(
   let Some(&first) = times_ms.first() else {
     return Ok(());
   };
+  let _pool = cidre::objc::AutoreleasePoolPage::push();
   let asset = open_asset(path)?;
   let tracks = tauri::async_runtime::block_on(
     asset.load_tracks_with_media_type(cidre::av::MediaType::video()),

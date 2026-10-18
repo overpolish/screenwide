@@ -97,6 +97,16 @@ fn cursor(shape: CursorShape) -> Option<Retained<NSCursor>> {
   })
 }
 
+/// Where `window` is. On the main thread it is read afresh from its view, so
+/// a resize since it was last recorded is seen; elsewhere the last record
+/// stands.
+fn placement(window: WindowId) -> Option<geometry::Placement> {
+  if MainThreadMarker::new().is_some() {
+    windows::refresh_placement(window);
+  }
+  geometry::placement(window.0)
+}
+
 impl RegionHost for MacRegionHost {
   fn webview_window(&self, window: &WebviewWindow) -> Option<WindowId> {
     window.ns_view().ok().map(|view| WindowId(view as isize))
@@ -207,11 +217,11 @@ impl RegionHost for MacRegionHost {
   }
 
   fn scale(&self, window: WindowId) -> f64 {
-    geometry::placement(window.0).map_or(1.0, |placement| placement.scale)
+    placement(window).map_or(1.0, |placement| placement.scale)
   }
 
   fn client_size(&self, window: WindowId) -> (u32, u32) {
-    geometry::placement(window.0).map_or((0, 0), |placement| {
+    placement(window).map_or((0, 0), |placement| {
       (
         placement.frame.size.width.round().max(0.0) as u32,
         placement.frame.size.height.round().max(0.0) as u32,
@@ -220,11 +230,11 @@ impl RegionHost for MacRegionHost {
   }
 
   fn screen_rect(&self, window: WindowId) -> Option<Rect> {
-    geometry::placement(window.0).map(|placement| placement.frame)
+    placement(window).map(|placement| placement.frame)
   }
 
   fn screen_to_client(&self, window: WindowId, point: ScreenPoint) -> (f64, f64) {
-    let origin = geometry::placement(window.0).map_or((0.0, 0.0), |placement| {
+    let origin = placement(window).map_or((0.0, 0.0), |placement| {
       (placement.frame.origin.x, placement.frame.origin.y)
     });
     (f64::from(point.x) - origin.0, f64::from(point.y) - origin.1)

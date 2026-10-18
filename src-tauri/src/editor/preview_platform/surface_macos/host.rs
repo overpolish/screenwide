@@ -12,7 +12,7 @@ use objc2::rc::Retained;
 use objc2::MainThreadMarker;
 use objc2_app_kit::{
   NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSApplication, NSEvent, NSEventModifierFlags,
-  NSView,
+  NSResponder, NSView,
 };
 use objc2_foundation::{NSArray, NSPoint};
 use objc2_quartz_core::CATransaction;
@@ -260,6 +260,19 @@ impl Host for MacHost {
 
   fn focus_webview(&self) {
     let _ = self.webview.set_focus();
+    // The typing made the input view the window's first responder. Focusing
+    // the window leaves it there, so the webview's shortcuts would never see
+    // a key again until something in the page was clicked.
+    self.views.later(|views, _| {
+      let (Some(window), Some(page)) = (
+        views.host.window(),
+        crate::app_windows::platform::webview_view(&views.host),
+      ) else {
+        return;
+      };
+      let page: &NSResponder = &page;
+      window.makeFirstResponder(Some(page));
+    });
   }
 
   fn clipboard_text(&self) -> Option<String> {

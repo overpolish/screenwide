@@ -72,13 +72,17 @@ impl Surface {
         ))
     }
     .map_err(|error| format!("A Metal layer surface could not be created: {error}"))?;
-    // Metal offers only Fifo and Immediate. `PostMultiplied` is wgpu's name
+    // Metal offers only Fifo and Immediate. Fifo holds every present for a
+    // display refresh, so a picture drawn twice for one pointer sample moves
+    // at half the rate of the chrome over it. Immediate hands each drawable
+    // to Core Animation at once, which composites the newest at the next
+    // refresh, as Mailbox does on Windows. `PostMultiplied` is wgpu's name
     // for a non-opaque layer; Core Animation still blends its pixels as
     // premultiplied.
     Ok(Self::configured(
       gpu,
       surface,
-      wgpu::PresentMode::Fifo,
+      wgpu::PresentMode::Immediate,
       wgpu::CompositeAlphaMode::PostMultiplied,
     ))
   }

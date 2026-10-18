@@ -17,7 +17,14 @@ export async function afterPreviewLayout(
   await request();
 }
 
-export type ResizeFit = { gutter: number; revision: number; sessionId: number };
+export type ResizeFit = {
+  gutter: number;
+  revision: number;
+  /** Whether a viewport this wide leaves the picture its room beside the
+   * panel. Where it does not, the picture is not fitted beside the panel. */
+  roomy: (viewportWidth: number) => boolean;
+  sessionId: number;
+};
 let resizeFitRevision = 0;
 
 export function resizeFitWidth(
@@ -25,7 +32,7 @@ export function resizeFitWidth(
   viewportWidth: number,
   sessionId: number,
 ) {
-  return fit?.sessionId === sessionId
+  return fit?.sessionId === sessionId && fit.roomy(viewportWidth)
     ? Math.max(1, viewportWidth - fit.gutter)
     : undefined;
 }
@@ -39,6 +46,7 @@ export async function fitPreviewDuringResize({
   layoutRef,
   measure,
   resize,
+  roomy = () => true,
   sessionId,
 }: {
   fitRef: RefObject<ResizeFit | null>;
@@ -48,8 +56,9 @@ export async function fitPreviewDuringResize({
   measure: () => void;
   resize: () => Promise<void>;
   sessionId: number;
+  roomy?: (viewportWidth: number) => boolean;
 }) {
-  const fit = { gutter, revision: ++resizeFitRevision, sessionId };
+  const fit = { gutter, revision: ++resizeFitRevision, roomy, sessionId };
   fitRef.current = fit;
   try {
     await resize();
@@ -114,7 +123,11 @@ export function useNativePreviewFit({
   );
 
   const fitDuringResize = useCallback(
-    async (gutter: number, resize: () => Promise<void>) => {
+    async (
+      gutter: number,
+      resize: () => Promise<void>,
+      roomy?: (viewportWidth: number) => boolean,
+    ) => {
       if (!startedRef.current) return resize();
       const sessionId = sessionIdRef.current;
       await fitPreviewDuringResize({
@@ -127,6 +140,7 @@ export function useNativePreviewFit({
           measureRef.current();
         },
         resize,
+        roomy,
         sessionId,
       });
     },

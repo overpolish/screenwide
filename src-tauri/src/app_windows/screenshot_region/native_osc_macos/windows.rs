@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use objc2::rc::Retained;
-use objc2::{MainThreadMarker, MainThreadOnly};
+use objc2::{MainThreadMarker, MainThreadOnly, Message};
 use objc2_app_kit::{
   NSAutoresizingMaskOptions, NSBackingStoreType, NSColor, NSPanel, NSView,
   NSWindowCollectionBehavior, NSWindowOrderingMode, NSWindowSharingType, NSWindowStyleMask,
@@ -27,6 +27,10 @@ pub(super) struct Overlay {
   pub(super) layer: Retained<CAMetalLayer>,
   /// The panel a peer is, `None` for the anchor.
   pub(super) panel: Option<Retained<NSPanel>>,
+  /// The region window's content view an anchor covers, `None` for a peer.
+  /// The engine measures the anchor by this view, as it measures the
+  /// webview's window on Windows.
+  pub(super) host: Option<Retained<NSView>>,
 }
 
 thread_local! {
@@ -53,6 +57,28 @@ pub(super) fn is_empty() -> bool {
   OVERLAYS.with(|overlays| overlays.borrow().is_empty())
 }
 
+/// Records `window`'s placement again from its view, which a resize may have
+/// moved since: an overlay by its own view, a host by the content view its
+/// anchor covers. Main thread only, where the views are.
+pub(super) fn refresh_placement(window: WindowId) {
+  OVERLAYS.with(|overlays| {
+    let overlays = overlays.borrow();
+    if let Some(overlay) = overlays.get(&window.0) {
+      if overlay.panel.is_none() {
+        record_placement(window.0, &overlay.view);
+      }
+      return;
+    }
+    if let Some(host) = overlays
+      .values()
+      .filter_map(|overlay| overlay.host.as_ref())
+      .find(|host| Retained::as_ptr(host) as isize == window.0)
+    {
+      record_placement(window.0, host);
+    }
+  });
+}
+
 /// A view whose layer is a Metal layer, for the engine to draw into.
 fn metal_view(mtm: MainThreadMarker, frame: NSRect) -> (Retained<NSView>, Retained<CAMetalLayer>) {
   let view = NSView::initWithFrame(NSView::alloc(mtm), frame);
@@ -61,15 +87,6 @@ fn metal_view(mtm: MainThreadMarker, frame: NSRect) -> (Retained<NSView>, Retain
   view.setLayer(Some(&layer));
   view.setWantsLayer(true);
   (view, layer)
-}
-
-/// The view the webview draws in, found by its class among `host`'s
-/// children.
-fn webview_view(host: &NSView) -> Option<Retained<NSView>> {
-  host
-    .subviews()
-    .iter()
-    .find(|view| view.class().name().to_string_lossy().contains("WKWebView"))
 }
 
 /// Records where `view` is, as the engine reads it.
@@ -96,10 +113,11 @@ pub(super) fn create_anchor(mtm: MainThreadMarker, host: &NSView) -> WindowId {
   view.setAutoresizingMask(
     NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,
   );
-  let page = webview_view(host);
+  let page = crate::app_windows::platform::webview_view(host);
   host.addSubview_positioned_relativeTo(&view, NSWindowOrderingMode::Above, page.as_deref());
   let id = Retained::as_ptr(&view) as isize;
   record_placement(id, &view);
+  record_placement(host as *const NSView as isize, host);
   OVERLAYS.with(|overlays| {
     overlays.borrow_mut().insert(
       id,
@@ -107,6 +125,7 @@ pub(super) fn create_anchor(mtm: MainThreadMarker, host: &NSView) -> WindowId {
         view,
         layer,
         panel: None,
+        host: Some(host.retain()),
       },
     )
   });
@@ -167,6 +186,7 @@ pub(super) fn create_peer(
         view,
         layer,
         panel: Some(panel),
+        host: None,
       },
     )
   });
@@ -185,6 +205,9 @@ pub(super) fn destroy(window: WindowId) {
   let removed = OVERLAYS.with(|overlays| overlays.borrow_mut().remove(&window.0));
   geometry::forget(window.0);
   if let Some(overlay) = removed {
+    if let Some(host) = &overlay.host {
+      geometry::forget(Retained::as_ptr(host) as isize);
+    }
     overlay.view.removeFromSuperview();
     if let Some(panel) = overlay.panel {
       panel.orderOut(None);
@@ -222,6 +245,7 @@ pub(super) fn raise(window: WindowId) {
     overlay.view.removeFromSuperviewWithoutNeedingDisplay();
     host.addSubview_positioned_relativeTo(&overlay.view, NSWindowOrderingMode::Above, None);
     record_placement(window.0, &overlay.view);
+    record_placement(Retained::as_ptr(&host) as isize, &host);
   });
 }
 

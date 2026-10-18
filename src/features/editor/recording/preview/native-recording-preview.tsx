@@ -171,13 +171,13 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   const { changeCanvasTool, isCropping, leaveCropTool, toggleTool } =
     useRecordingPreviewCanvasTool({
       activeVideoTrack,
+      annotations,
       bakeCamera,
       canvasTool,
       clearAnnotationRef,
       clearOverlaySelection: selection.clearOverlaySelection,
       hasVisiblePanes,
       onSelectedTrackChange,
-      selectedAnnotationKind: annotations.selectedKind,
       setCanvasTool,
     });
   // Both drawing tools pick up either shape, so the tool follows the annotation

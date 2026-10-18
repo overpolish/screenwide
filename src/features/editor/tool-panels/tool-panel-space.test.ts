@@ -8,6 +8,7 @@ import { growEditorForPanel } from "../api";
 import {
   openToolPanelSpace,
   panelGrowthDelta,
+  panelLeavesRoom,
   toolPanelGutter,
 } from "./tool-panel-space";
 
@@ -81,6 +82,24 @@ describe("panel growth target", () => {
     "falls back to gutter for unavailable geometry %s",
     (width) => {
       expect(panelGrowthDelta(400, width, 320)).toBe(320);
+    },
+  );
+});
+
+describe("room beside the panel", () => {
+  it("counts a window grown by exactly the requested delta as roomy", () => {
+    const grown = 400 + panelGrowthDelta(400, 960, 320);
+    expect(panelLeavesRoom(grown, 960, 320)).toBe(true);
+  });
+
+  it("keeps the picture centred where the display refused part of the growth", () => {
+    expect(panelLeavesRoom(1100, 960, 320)).toBe(false);
+  });
+
+  it.each([NaN, 0])(
+    "leaves an unmeasured picture %s beside the panel as before",
+    (fitWidth) => {
+      expect(panelLeavesRoom(500, fitWidth, 320)).toBe(true);
     },
   );
 });

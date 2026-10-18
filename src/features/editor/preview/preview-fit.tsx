@@ -16,8 +16,8 @@ export function PreviewFitProvider({ children }: { children: ReactNode }) {
   const basisRef = useRef<((width?: number) => void) | null>(null);
   const value = useMemo<PreviewFit>(
     () => ({
-      fitDuringResize: (gutter, resize) =>
-        resizeRef.current?.(gutter, resize) ?? resize(),
+      fitDuringResize: (gutter, resize, roomy) =>
+        resizeRef.current?.(gutter, resize, roomy) ?? resize(),
       fitPreview: (width) => {
         fitRef.current?.(width);
       },

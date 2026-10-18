@@ -24,6 +24,12 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     inner.selection_pending.store(true, Ordering::Release);
     return;
   }
+  // Mid-layout the panes are not placed yet, so the selection would be
+  // drawn without its layer for a frame; Core Animation shows each present
+  // as it lands, so that frame would flicker. The layout's finish draws it.
+  if state.workspace.laying_out {
+    return;
+  }
   let scale = state.scale.max(0.1);
   let (viewport_x, viewport_right) =
     pixels::scaled_edges(state.viewport.x, state.viewport.width, scale);

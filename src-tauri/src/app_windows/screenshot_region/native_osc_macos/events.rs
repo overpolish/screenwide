@@ -51,6 +51,7 @@ pub(super) fn install() {
       | NSEventMask::OtherMouseDragged
       | NSEventMask::OtherMouseUp
       | NSEventMask::ScrollWheel
+      | NSEventMask::Magnify
       | NSEventMask::KeyDown
       | NSEventMask::KeyUp
       | NSEventMask::FlagsChanged;

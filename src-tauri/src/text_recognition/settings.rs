@@ -123,7 +123,11 @@ pub fn initialize(app: &AppHandle) {
     .and_then(|bytes| serde_json::from_slice(&bytes).ok())
     .and_then(|settings| Runtime::new(settings).ok())
     .unwrap_or_else(|| Runtime::new(OcrSettings::default()).expect("valid OCR defaults"));
+  let enabled = runtime.settings.enabled;
   *RUNTIME.write().unwrap_or_else(|error| error.into_inner()) = runtime;
+  if enabled {
+    prepare();
+  }
 }
 
 #[tauri::command]
@@ -155,12 +159,21 @@ pub fn set_ocr_settings(app: AppHandle, settings: OcrSettings) -> Result<OcrSett
     let _ = crate::shortcuts::sync_ocr_enabled(&app);
     return Err(error);
   }
-  if !settings.enabled {
+  if settings.enabled {
+    prepare();
+  } else {
     super::dismiss(&app);
   }
   crate::tray::refresh(&app);
   let _ = app.emit("ocr-settings://changed", &settings);
   Ok(settings)
+}
+
+/// Has the recogniser ready before Text Recognition is first used, where the
+/// platform's takes a while to load.
+fn prepare() {
+  #[cfg(target_os = "macos")]
+  super::macos::warm_up::start();
 }
 
 pub(crate) fn key_phase(key: u16, modifiers: u32, mac: bool, repeat: bool) -> Option<u32> {

@@ -46,6 +46,10 @@ struct Pool {
   /// Cards still fading out after a commit.
   fading: usize,
   after_fade: Option<Box<dyn FnOnce() + Send>>,
+  /// The last icon looked up and the session it is for. The lookup can land
+  /// between a session building its cards and showing them, so cards shown
+  /// after it take the icon from here.
+  icon: Option<(u64, Option<PathBuf>)>,
 }
 
 static POOL: LazyLock<Mutex<Pool>> = LazyLock::new(Mutex::default);
@@ -138,7 +142,7 @@ fn ensure(app: &AppHandle, index: usize) -> tauri::Result<tauri::WebviewWindow> 
 /// points from the arrangement's corner.
 pub(crate) fn show_arranged(
   app: &AppHandle,
-  previews: Vec<Preview>,
+  mut previews: Vec<Preview>,
   anchor: Anchor,
   offsets: &[(f64, f64)],
 ) {
@@ -147,6 +151,14 @@ pub(crate) fn show_arranged(
   let generation = GENERATION.fetch_add(1, Ordering::AcqRel) + 1;
   {
     let mut pool = pool();
+    if let Some((session_id, icon_path)) = &pool.icon {
+      for preview in previews
+        .iter_mut()
+        .filter(|preview| preview.session_id == *session_id && preview.icon_path.is_none())
+      {
+        preview.icon_path = icon_path.clone();
+      }
+    }
     pool.previews = previews.clone();
     pool.active = true;
   }
@@ -241,6 +253,7 @@ fn render(app: &AppHandle, preview: Preview) {
 pub(crate) fn set_icon(app: &AppHandle, session_id: u64, icon_path: Option<PathBuf>) {
   let changed = {
     let mut pool = pool();
+    pool.icon = Some((session_id, icon_path.clone()));
     let mut changed = Vec::new();
     for item in pool
       .previews

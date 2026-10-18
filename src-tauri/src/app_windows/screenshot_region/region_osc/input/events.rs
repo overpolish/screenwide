@@ -130,6 +130,23 @@ pub(crate) fn wheel(
   ruler_viewport_screen(window, if zoom { 1 } else { 2 }, screen.x, screen.y, delta)
 }
 
+/// A trackpad pinch by `factor` at `screen`: the Ruler zooms about the
+/// pointer, as a wheel turn with Control does.
+#[cfg(target_os = "macos")]
+pub(crate) fn magnify(window: WindowId, screen: ScreenPoint, factor: f64) -> bool {
+  if !factor.is_finite() || factor <= 0.0 {
+    return false;
+  }
+  ruler_viewport_screen(window, 1, screen.x, screen.y, Point { x: factor, y: 0.0 })
+}
+
+/// A trackpad's two-finger scroll of `dx`, `dy` points at `screen`: the
+/// Ruler pans by it as it comes, as the gesture moves the content.
+#[cfg(target_os = "macos")]
+pub(crate) fn trackpad_pan(window: WindowId, screen: ScreenPoint, dx: f64, dy: f64) -> bool {
+  ruler_viewport_screen(window, 2, screen.x, screen.y, Point { x: dx, y: dy })
+}
+
 /// Sets the pointer the window's surface asks for. Answers whether it had
 /// one to set.
 pub(crate) fn cursor_request(window: WindowId) -> bool {

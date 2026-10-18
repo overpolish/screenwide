@@ -3,6 +3,7 @@
 
 import { RefObject, useCallback, useEffect, useMemo, useRef } from "react";
 
+import { useSelectToolMemory } from "../../annotations/use-select-tool-memory";
 import { toolDisagreesWithAnnotation } from "../../annotations/use-tool-follows-annotation";
 import { drawingToolKind } from "../../tool-panels/tool-registry";
 import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
@@ -15,16 +16,23 @@ import type { AnnotationKind } from "../../../../components/shared/annotation-st
  * on its way in. */
 export function useRecordingPreviewCanvasTool({
   activeVideoTrack,
+  annotations,
   bakeCamera,
   canvasTool,
   clearAnnotationRef,
   clearOverlaySelection,
   hasVisiblePanes,
   onSelectedTrackChange,
-  selectedAnnotationKind,
   setCanvasTool,
 }: {
   activeVideoTrack: RecordingVideoTrackId | null;
+  /** The annotations in hand. `selectedKind` is their shape, so a tool that
+   * draws the other one knows to let them go. */
+  annotations: {
+    onSelectedIdsChange: (ids: readonly string[]) => void;
+    selectedIds: ReadonlySet<string>;
+    selectedKind: AnnotationKind | null;
+  };
   bakeCamera: boolean;
   canvasTool: RecordingCanvasTool;
   clearAnnotationRef: RefObject<() => void>;
@@ -32,16 +40,17 @@ export function useRecordingPreviewCanvasTool({
    * taken up does. */
   clearOverlaySelection: () => void;
   hasVisiblePanes: boolean;
-  /** The shape of the annotation in hand, so a tool that draws the other one
-   * knows to let it go. */
-  selectedAnnotationKind: AnnotationKind | null;
   setCanvasTool: (tool: RecordingCanvasTool) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
 }) {
   const canvasToolRef = useRef(canvasTool);
   canvasToolRef.current = canvasTool;
-  const selectedKindRef = useRef(selectedAnnotationKind);
-  selectedKindRef.current = selectedAnnotationKind;
+  const selectedKindRef = useRef(annotations.selectedKind);
+  selectedKindRef.current = annotations.selectedKind;
+  const rememberSelection = useSelectToolMemory(
+    annotations.selectedIds,
+    annotations.onSelectedIdsChange,
+  );
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
       if (drawingToolKind(next) !== null) {
@@ -54,6 +63,7 @@ export function useRecordingPreviewCanvasTool({
       } else if (next !== "select" && next !== "marquee")
         clearAnnotationRef.current();
       setCanvasTool(next);
+      rememberSelection(canvasToolRef.current, next);
     },
     [
       setCanvasTool,
@@ -62,6 +72,7 @@ export function useRecordingPreviewCanvasTool({
       bakeCamera,
       activeVideoTrack,
       clearAnnotationRef,
+      rememberSelection,
     ],
   );
   // A canvas tool acts on the panes on screen. When the last video track is

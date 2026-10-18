@@ -31,6 +31,7 @@ import { EditorKind } from "../types";
 import {
   openToolPanelSpace,
   panelGrowthDelta,
+  panelLeavesRoom,
   toolPanelGutter,
 } from "./tool-panel-space";
 import { toolPanelLabel } from "./tool-panel-window";
@@ -127,15 +128,25 @@ export function useToolPanel(workspace: EditorKind) {
       }
       if (fitsView) {
         const viewport = previewViewport();
-        await fitDuringResize(toolPanelGutter, () =>
-          openToolPanelSpace(
-            panelGrowthDelta(
-              viewport?.getBoundingClientRect().width ?? anchor.width,
-              Number(viewport?.dataset.previewFitWidth),
-              toolPanelGutter,
+        const fitWidth = Number(viewport?.dataset.previewFitWidth);
+        const roomy = (width: number) =>
+          panelLeavesRoom(width, fitWidth, toolPanelGutter);
+        await fitDuringResize(
+          toolPanelGutter,
+          () =>
+            openToolPanelSpace(
+              panelGrowthDelta(
+                viewport?.getBoundingClientRect().width ?? anchor.width,
+                fitWidth,
+                toolPanelGutter,
+              ),
             ),
-          ),
+          roomy,
         );
+        // A display that refused the room the panel asked for: the picture is
+        // fitted centred in the whole viewport, with the panel over its edge.
+        const grown = previewViewport()?.getBoundingClientRect().width;
+        if (grown !== undefined && !roomy(grown)) fitPreview();
       }
       const bounds = previewViewport()?.getBoundingClientRect() ?? anchor;
       usePopupPanelStore.getState().open(panel, {
@@ -162,7 +173,7 @@ export function useToolPanel(workspace: EditorKind) {
         triggerId: id,
       });
     },
-    [fitDuringResize, isShowing, panel, workspace],
+    [fitDuringResize, fitPreview, isShowing, panel, workspace],
   );
 
   /**

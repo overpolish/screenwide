@@ -93,7 +93,9 @@ export function ScreenshotSection({
   // next annotation is drawn in.
   useAnnotationDraft("screenshot", screenshotToolId(tool));
   const setTool = useScreenshotTool({
+    chooseSelection: annotations.onSelectedIdsChange,
     clearSelection: annotations.clearSelection,
+    selectedIds: annotations.selectedIds,
     selectedKind: annotations.selectedKind,
     setActiveTool,
     tool,

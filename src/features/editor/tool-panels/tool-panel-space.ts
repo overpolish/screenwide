@@ -20,9 +20,26 @@ export function panelGrowthDelta(
     : gutter;
 }
 
+/** Whether a viewport `viewportWidth` wide leaves the picture its full-height
+ * `fitWidth` beside the panel. Where a display refused the growth that would
+ * make that room, the picture stays centred in the whole viewport rather
+ * than squeezed off-centre beside the panel. An unmeasured picture asks for
+ * no more than the panel's gutter. */
+export function panelLeavesRoom(
+  viewportWidth: number,
+  fitWidth: number,
+  gutter: number,
+) {
+  return (
+    !(Number.isFinite(fitWidth) && fitWidth > 0) ||
+    viewportWidth - gutter >= fitWidth - 0.5
+  );
+}
+
 /** Grow once, waiting for the webview to receive its new bounds before fitting.
- * A constrained display can refuse growth; fitting then uses the space left.
- * Closing a panel does not undo either the window size or the captured fit. */
+ * A constrained display can refuse growth; `panelLeavesRoom` then keeps the
+ * picture centred. Closing a panel does not undo either the window size or
+ * the captured fit. */
 export async function openToolPanelSpace(delta: number) {
   if (delta <= 0) return;
   const window = getCurrentWindow();

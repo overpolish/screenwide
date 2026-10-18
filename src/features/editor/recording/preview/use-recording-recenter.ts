@@ -31,6 +31,9 @@ export function useRecordingRecenter({
   source?: { height: number; width: number };
 }) {
   const requestRef = useRef<symbol | null>(null);
+  // The padding slider asks for the colour on every step until it lands, and
+  // each analysis reads the whole frame, so one is let run at a time.
+  const preparingRef = useRef(false);
   const currentRef = useRef({ output, source });
   currentRef.current = { output, source };
 
@@ -41,9 +44,15 @@ export function useRecordingRecenter({
   ) => {
     const current = currentRef.current;
     if (!current.source) return;
-    if (!applyBounds && !refresh && current.output.recenterInsetColor) return;
+    const preparing = !applyBounds && !refresh;
+    if (
+      preparing &&
+      (current.output.recenterInsetColor || preparingRef.current)
+    )
+      return;
     const request = Symbol();
     requestRef.current = request;
+    if (preparing) preparingRef.current = true;
     void getRecordingRecenterAnalysis(artifactId, getPositionMs(), sourceCrop)
       .then((analysis) => {
         if (!analysis || requestRef.current !== request) return;
@@ -74,6 +83,9 @@ export function useRecordingRecenter({
             : "Could not detect recording inset colour",
           error,
         );
+      })
+      .finally(() => {
+        if (preparing) preparingRef.current = false;
       });
   };
   const refresh = (sourceCrop: ScreenshotOutputSettings["sourceCrop"]) => {

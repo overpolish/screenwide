@@ -19,6 +19,7 @@ mod image_drop;
 mod layers;
 mod main_thread;
 mod pasteboard;
+mod picture_view;
 mod registry;
 mod view;
 mod workspace_view;

@@ -8,13 +8,14 @@
 use std::sync::Arc;
 
 use objc2::rc::Retained;
-use objc2::{MainThreadMarker, MainThreadOnly};
+use objc2::MainThreadMarker;
 use objc2_app_kit::{NSAutoresizingMaskOptions, NSView, NSWindowOrderingMode};
 
 use super::audio_ribbon::AudioRibbon;
 use super::host::{light_appearance, Gpu, MacHost, Views};
 use super::layers::Layers;
 use super::main_thread::OnMain;
+use super::picture_view::PictureView;
 use super::registry::slot_for;
 use super::view::EditorView;
 use super::workspace_view::{surface_on, WorkspaceView};
@@ -44,15 +45,6 @@ fn create(window: &WebviewWindow) -> Result<Arc<SurfaceInner>, String> {
   dispatch2::run_on_main(move |mtm| build(mtm, host, webview))
 }
 
-/// The view the webview draws in, found by its class among the content
-/// view's children.
-fn webview_view(host: &NSView) -> Option<Retained<NSView>> {
-  host
-    .subviews()
-    .iter()
-    .find(|view| view.class().name().to_string_lossy().contains("WKWebView"))
-}
-
 fn build(
   mtm: MainThreadMarker,
   host: usize,
@@ -64,7 +56,7 @@ fn build(
   let shared = screenwide_gpu::shared()?;
   let layers = Layers::new();
 
-  let below = NSView::initWithFrame(NSView::alloc(mtm), host.bounds());
+  let below = PictureView::new(mtm, host.bounds());
   // A layer-hosting view: the layer is set before the view wants one.
   below.setLayer(Some(&layers.root));
   below.setWantsLayer(true);
@@ -76,7 +68,7 @@ fn build(
   editor.setWantsLayer(true);
   // The picture goes immediately below the webview, so its DOM controls
   // paint over it, and the input view immediately above it.
-  let page = webview_view(&host);
+  let page = crate::app_windows::platform::webview_view(&host);
   host.addSubview_positioned_relativeTo(&below, NSWindowOrderingMode::Below, page.as_deref());
   host.addSubview_positioned_relativeTo(&editor, NSWindowOrderingMode::Above, page.as_deref());
 

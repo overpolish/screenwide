@@ -16,6 +16,8 @@ pub(crate) use events::{
   alt_changed, cursor_request, display_changed, hit_test, key_down, key_up, pan_begin, pan_end,
   pointer_cancelled, pointer_down, pointer_moved, pointer_up, right_click, timer, wheel,
 };
+#[cfg(target_os = "macos")]
+pub(crate) use events::{magnify, trackpad_pan};
 use keyboard::{keyboard_release, modifier_changed, overlay_keyboard_command};
 use ruler_input::{
   ruler_label_step, ruler_pan_begin, ruler_pan_drag, ruler_pan_end, ruler_right_click,

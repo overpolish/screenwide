@@ -3,7 +3,7 @@
 mod luma;
 pub use luma::LumaReader;
 
-use cidre::{arc, av, cm, cv, ns};
+use cidre::{arc, av, cm, cv, ns, objc};
 use screenwide_imaging::CapturedImage;
 use std::path::Path;
 unsafe extern "C" {
@@ -21,6 +21,7 @@ pub struct NativeVideoReader {
   pending: Option<arc::R<cm::SampleBuf>>,
 }
 pub fn open_asset(path: &Path) -> Result<arc::R<av::UrlAsset>, String> {
+  let _pool = objc::AutoreleasePoolPage::push();
   let path_text = path
     .to_str()
     .ok_or_else(|| "The recording path is not valid UTF-8".to_owned())?;
@@ -79,6 +80,11 @@ impl NativeVideoReader {
     start_ms: u64,
     duration_ms: u64,
   ) -> Result<Self, String> {
+    // AVFoundation hands its readers, outputs and tracks over autoreleased.
+    // The decode threads live as long as the editor and never drain a pool
+    // of their own, so without this every reader opened would stay alive,
+    // decoding, until AVFoundation has no decoders left to give.
+    let _pool = objc::AutoreleasePoolPage::push();
     let tracks =
       tauri::async_runtime::block_on(asset.load_tracks_with_media_type(av::MediaType::video()))
         .map_err(|error| error.to_string())?;
@@ -151,6 +157,7 @@ impl NativeVideoReader {
   }
 
   fn sample_at(&mut self, target_ms: u64) -> Result<Option<arc::R<cm::SampleBuf>>, String> {
+    let _pool = objc::AutoreleasePoolPage::push();
     loop {
       if self.pending.is_none() {
         self.pending = self

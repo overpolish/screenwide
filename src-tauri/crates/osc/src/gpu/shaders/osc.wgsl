@@ -95,13 +95,16 @@ fn material_backdrop(pixel_position: vec2<f32>) -> vec4<f32> {
   }
   let screen_uv = pixel_position / max(osc.chrome_backdrop.xy, vec2<f32>(1.0));
   let uv = osc.chrome_source.xy + screen_uv * osc.chrome_source.zw;
-  // A dense separable 5x5 Gaussian keeps edges smooth at fractional DPI. A
-  // sparse nine-tap grid exposes its sample blocks as visible pixels.
-  var weights = array<f32, 5>(0.06136, 0.24477, 0.38774, 0.24477, 0.06136);
+  // A dense separable 9x9 Gaussian, sigma two taps two and a half texels
+  // apart, reaches far enough that text under a plate turns to a wash
+  // rather than legible shapes, and dense enough that its sample blocks
+  // never show as pixels at fractional DPI.
+  var weights = array<f32, 9>(0.0276, 0.0663, 0.1238, 0.1802, 0.2042, 0.1802, 0.1238, 0.0663,
+                              0.0276);
   var blurred = vec4<f32>(0.0);
-  for (var y = 0; y < 5; y++) {
-    for (var x = 0; x < 5; x++) {
-      let offset = vec2<f32>(f32(x - 2), f32(y - 2)) * osc.chrome_backdrop.zw * 2.0;
+  for (var y = 0; y < 9; y++) {
+    for (var x = 0; x < 9; x++) {
+      let offset = vec2<f32>(f32(x - 4), f32(y - 4)) * osc.chrome_backdrop.zw * 2.5;
       blurred += textureSampleLevel(snapshot, linear_sampler, uv + offset, 0.0) * weights[x] *
           weights[y];
     }

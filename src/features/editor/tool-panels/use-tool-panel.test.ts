@@ -25,6 +25,7 @@ describe("useToolPanel", () => {
     expect(mocks.fitDuringResize).toHaveBeenCalledWith(
       320,
       expect.any(Function),
+      expect.any(Function),
     );
     expect(mocks.fitPreview).not.toHaveBeenCalled();
   });
@@ -39,6 +40,7 @@ describe("useToolPanel", () => {
     expect(mocks.openToolPanelSpace).toHaveBeenCalledWith(320);
     expect(mocks.fitDuringResize).toHaveBeenCalledWith(
       320,
+      expect.any(Function),
       expect.any(Function),
     );
     expect(mocks.fitPreview).not.toHaveBeenCalled();
@@ -109,6 +111,7 @@ describe("useToolPanel", () => {
     expect(mocks.fitDuringResize).toHaveBeenCalledWith(
       320,
       expect.any(Function),
+      expect.any(Function),
     );
     expect(mocks.fitPreview).not.toHaveBeenCalled();
     expect(mocks.setFitBasis).not.toHaveBeenCalled();
@@ -126,6 +129,7 @@ describe("useToolPanel", () => {
     await panel.toggle("cursor", anchor);
     expect(mocks.fitDuringResize).toHaveBeenCalledWith(
       320,
+      expect.any(Function),
       expect.any(Function),
     );
     expect(mocks.fitPreview).not.toHaveBeenCalled();

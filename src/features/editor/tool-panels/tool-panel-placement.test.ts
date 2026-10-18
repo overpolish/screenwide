@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
   active: true,
   cleanup: [] as (() => void)[],
   fit: vi.fn(),
+  /** The picture's full-height width, as the viewport reports it; empty
+   * while it has not been measured. */
+  fitWidth: "",
   move: vi.fn(() => Promise.resolve()),
   resize: (): void => undefined,
   setBasis: vi.fn(),
@@ -42,19 +45,26 @@ vi.mock("../../popup-panel/store", () => ({
 vi.mock("../preview/preview-fit-context", () => ({
   usePreviewFit: () => ({ fitPreview: mocks.fit, setFitBasis: mocks.setBasis }),
 }));
-vi.mock("./tool-panel-space", () => ({ toolPanelGutter: 320 }));
+vi.mock("./tool-panel-space", async (importOriginal) => ({
+  ...(await importOriginal<typeof ToolPanelSpace>()),
+  toolPanelGutter: 320,
+}));
 vi.mock("./use-tool-panel", () => ({
   panelOffset: (bounds: unknown) => bounds,
   previewViewport: () => ({
+    dataset: { previewFitWidth: mocks.fitWidth },
     getBoundingClientRect: () => ({ width: mocks.width }),
   }),
 }));
 
 import { ToolPanelPlacement } from "./tool-panel-placement";
 
+import type * as ToolPanelSpace from "./tool-panel-space";
+
 beforeEach(() => {
   mocks.active = true;
   mocks.width = 1200;
+  mocks.fitWidth = "";
   vi.clearAllMocks();
   vi.stubGlobal(
     "ResizeObserver",
@@ -93,6 +103,17 @@ it("updates the reset destination after narrowing without moving the current vie
     { width: 1200 },
     "tool-panel-recording",
   );
+  expect(mocks.fit).not.toHaveBeenCalled();
+});
+
+it("centres the reset once a narrowed viewport no longer holds the picture beside the panel", () => {
+  mocks.fitWidth = "800";
+  ToolPanelPlacement({ workspace: "recording" });
+  mocks.resize();
+  expect(mocks.setBasis).toHaveBeenLastCalledWith(880);
+  mocks.width = 1000;
+  mocks.resize();
+  expect(mocks.setBasis).toHaveBeenLastCalledWith(undefined);
   expect(mocks.fit).not.toHaveBeenCalled();
 });
 

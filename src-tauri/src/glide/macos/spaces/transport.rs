@@ -29,6 +29,16 @@ pub(super) fn inspect(app: &AppHandle, id: u64) {
       let result =
         MacDesktopAdapter::new(&target, anchor, cancelled).and_then(|adapter| adapter.snapshot());
       match result {
+        // A window on every Space, as the recording bar is, cannot be carried
+        // to another one, so it is offered no Spaces to pick from.
+        Ok(snapshot) if snapshot.membership.len() != 1 => {
+          if SESSION
+            .lock()
+            .is_ok_and(|state| state.as_ref().is_some_and(|session| session.id == id))
+          {
+            super::input::cancel_until_release(&worker_app);
+          }
+        }
         Ok(snapshot) => {
           let preview = SESSION.lock().ok().and_then(|mut state| {
             let session = state.as_mut().filter(|session| session.id == id)?;

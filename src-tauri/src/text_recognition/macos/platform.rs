@@ -29,6 +29,9 @@ fn clamp_rect(rect: TextRect, bounds: TextRect) -> Option<TextRect> {
 }
 
 pub fn recognize(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedLine>, String> {
+  // Vision hands its requests, results and candidates over autoreleased, and
+  // recognition runs on a pool thread that never drains one of its own.
+  let _pool = cidre::objc::AutoreleasePoolPage::push();
   let mut pixel_buffer = cv::PixelBuf::new(
     width as usize,
     height as usize,
@@ -80,7 +83,7 @@ pub fn recognize(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedL
       let text = candidate.string().to_string();
       let line_bounds = text_rect(observation.bounding_box());
       let mut utf16_offset = 0;
-      let characters = text
+      let mut characters = text
         .chars()
         .filter_map(|character| {
           let length = character.len_utf16();
@@ -99,7 +102,8 @@ pub fn recognize(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedL
               start,
             })
         })
-        .collect();
+        .collect::<Vec<_>>();
+      split_shared_boxes(&mut characters);
       lines.push(RecognizedLine {
         bounds: line_bounds,
         characters,
@@ -116,3 +120,26 @@ pub fn recognize(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedL
   });
   Ok(lines)
 }
+
+/// Vision answers a character's range with the box of the whole word it is
+/// in, so a drag could only stop at a word's edges. Each run of characters
+/// sharing one box takes an even share of it, as Windows' OCR words do.
+fn split_shared_boxes(characters: &mut [RecognizedCharacter]) {
+  let mut start = 0;
+  while start < characters.len() {
+    let bounds = characters[start].bounds;
+    let end = characters[start..]
+      .iter()
+      .position(|character| character.bounds != bounds)
+      .map_or(characters.len(), |length| start + length);
+    let count = (end - start) as f64;
+    for (index, character) in characters[start..end].iter_mut().enumerate() {
+      character.bounds.width = bounds.width / count;
+      character.bounds.x = bounds.x + bounds.width * index as f64 / count;
+    }
+    start = end;
+  }
+}
+
+#[cfg(test)]
+mod tests;
