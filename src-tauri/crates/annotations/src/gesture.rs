@@ -105,7 +105,6 @@ pub enum AnnotationGestureTarget {
 
 /// The first layer id that is not a picture: the captions and the keyboard
 /// overlays, then the canvas frame above them.
-#[cfg(any(target_os = "windows", test))]
 const FIRST_NON_PICTURE_LAYER: u32 = u32::MAX - 2;
 
 /// The layer a fresh annotation is drawn on, out of `layers` listed back to
@@ -113,9 +112,6 @@ const FIRST_NON_PICTURE_LAYER: u32 = u32::MAX - 2;
 /// picture under the press, or off every picture - on the canvas frame - the
 /// picture nearest it, the topmost of any equally near. `None` only where no
 /// picture is laid out, leaving the annotation to the layer already selected.
-/// The twin of `annotation_take_layer_at_point` in
-/// `recording_preview_surface_macos+annotation_report.m`.
-#[cfg(any(target_os = "windows", test))]
 pub fn drawing_layer(
   layers: impl DoubleEndedIterator<Item = (u32, [f64; 4])>,
   (x, y): (f64, f64),

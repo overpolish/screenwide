@@ -10,23 +10,18 @@
 
 mod crop;
 mod display;
-mod ffi;
 mod frame_resize;
 mod geometry;
 mod hit_test;
 mod limits;
-#[cfg(any(target_os = "windows", test))]
 mod magnifier;
 mod scene;
-#[cfg(any(target_os = "windows", test))]
 mod selection_resize;
 
 #[cfg(test)]
 mod tests;
 
-#[cfg(target_os = "windows")]
 pub use crop::apply_framed_crop_resize;
-#[cfg(any(target_os = "windows", test))]
 pub use crop::{apply_crop_draw, apply_crop_move, apply_crop_resize};
 // Preserve the original flat module API while implementations live at their
 // feature extension points.
@@ -49,9 +44,7 @@ pub use limits::{
 };
 #[cfg(test)]
 use limits::{FRAME_MAX_AREA, FRAME_MIN_SIZE};
-#[cfg(target_os = "windows")]
 pub use magnifier::crop_magnifier_anchor;
 #[allow(unused_imports)]
 pub use scene::{FrameId, LayerId, WorkspaceFrame, WorkspaceKind, WorkspaceLayer, WorkspaceScene};
-#[cfg(target_os = "windows")]
 pub use selection_resize::{selection_resize, SelectionResize};

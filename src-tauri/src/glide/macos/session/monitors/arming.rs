@@ -116,10 +116,11 @@ pub(super) fn publish(app: &AppHandle, id: u64) {
       return;
     };
     let _ = crate::app_windows::hide_glide_preview(&main);
-    if let Err(error) =
-      preview_windows::show_arranged(&main, previews, anchor.x, anchor.y, &offsets)
-    {
-      eprintln!("Could not show Glide monitor previews: {error}");
-    }
+    preview_cards::show_arranged(
+      &main,
+      previews,
+      preview_cards::Anchor::Logical(anchor.0, anchor.1),
+      &offsets,
+    );
   });
 }

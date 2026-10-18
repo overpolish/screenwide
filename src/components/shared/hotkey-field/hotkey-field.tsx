@@ -58,8 +58,6 @@ export function HotkeyField({
   const capturing = listening && !isDisabled;
   const single = captureMode === "single-control";
   const local = captureMode === "local-shortcut";
-  const isMac =
-    typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
   const instructions = single
     ? t("hotkey-field-instructions-single")
     : local
@@ -69,7 +67,7 @@ export function HotkeyField({
         : t("hotkey-field-instructions");
   // Reset during render so re-enabling cannot resume an old capture session.
   if (isDisabled && listening) setListening(false);
-  const keys = hotkeyKeys(value, isMac);
+  const keys = hotkeyKeys(value);
   const commit = (next: string) => {
     setListening(false);
     setReady(false);
@@ -241,8 +239,7 @@ export function HotkeyField({
             <X />
           </IconButton>
         ) : null}
-        {defaultValue !== undefined &&
-        !hotkeysEqual(value, defaultValue, isMac) ? (
+        {defaultValue !== undefined && !hotkeysEqual(value, defaultValue) ? (
           <IconButton
             aria-label={t("hotkey-field-reset", { label })}
             isDisabled={isDisabled}

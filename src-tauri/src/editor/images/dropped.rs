@@ -24,12 +24,6 @@ use screenwide_images::store::import_file;
 pub(crate) enum DroppedPicture {
   /// An image file, from Finder or Explorer.
   File(PathBuf),
-  /// A file the dragging app wrote out for the drop, as browsers on macOS
-  /// do for an image, into a folder of its own: kept, then removed with its
-  /// folder, since nothing else will. Windows hands the same file over as
-  /// data.
-  #[cfg(target_os = "macos")]
-  Written(PathBuf),
   /// The picture's own file data, in any format the `image` crate reads.
   Data(Vec<u8>),
 }
@@ -78,15 +72,6 @@ pub(crate) fn fresh_id(before: &[String], after: &[Annotation]) -> Option<String
 fn keep(picture: DroppedPicture) -> Result<ImageArt, String> {
   match picture {
     DroppedPicture::File(path) => import_file(&path),
-    #[cfg(target_os = "macos")]
-    DroppedPicture::Written(path) => {
-      let kept = import_file(&path);
-      let _ = std::fs::remove_file(&path);
-      if let Some(folder) = path.parent() {
-        let _ = std::fs::remove_dir(folder);
-      }
-      kept
-    }
     DroppedPicture::Data(bytes) => screenwide_images::store::import_bytes(&bytes),
   }
 }

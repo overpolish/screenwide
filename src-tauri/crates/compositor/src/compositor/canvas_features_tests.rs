@@ -29,14 +29,8 @@ struct Frame {
   annotations: Vec<Annotation>,
 }
 
-/// A compositor whose cursor artwork is opaque, so a cursor left out shows.
 fn compositor() -> Compositor {
-  let cursors = NativeCursors {
-    size: (8, 8),
-    layers: vec![255; 8 * 8 * 4 * 8],
-    hotspots: [[0.0; 4]; 8],
-  };
-  Compositor::new(gpu(), cursors).expect("the preview compositor")
+  Compositor::new(gpu()).expect("the preview compositor")
 }
 
 /// A grey screen in the middle of the canvas, with a shadow and rounding.

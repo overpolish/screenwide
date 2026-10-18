@@ -8,6 +8,7 @@ import { createRoot } from "react-dom/client";
 import { layoutLocale, loadAppLocale } from "./i18n/i18n";
 import "./index.css";
 import { installInactiveWindowHoverBridge } from "./lib/inactive-window-hover";
+import { hostPlatform, stampPlatform } from "./lib/platform";
 import { installPointerModalityGuard } from "./lib/pointer-modality";
 import { synchronizeSystemAccent } from "./lib/system-accent";
 import { synchronizeSystemTheme } from "./lib/theme";
@@ -32,9 +33,7 @@ if (!import.meta.env.DEV)
     event.preventDefault();
   });
 
-if (navigator.userAgent.includes("Windows")) {
-  document.documentElement.dataset.platform = "windows";
-}
+stampPlatform(hostPlatform);
 
 // The language loads before the window's code, so even text a module reads
 // as it is imported comes out in it.

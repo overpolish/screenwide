@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod annotation_bake;
 mod clipboard;
 pub(crate) mod delayed;
 pub(crate) mod desktop;
@@ -23,9 +25,8 @@ pub(crate) mod still_command;
 mod tests;
 pub(crate) mod thumbnail;
 
-/// A still composed on the macOS compositor as a screenshot is, for tests.
-/// Elsewhere `screenwide_output::compose_screenshot` composes on the CPU.
-#[cfg(all(target_os = "macos", test))]
+/// A still composed on the shared compositor as a screenshot is, for tests.
+#[cfg(all(any(target_os = "macos", target_os = "windows"), test))]
 fn compose_screenshot(
   image: &CapturedImage,
   settings: &screenwide_output::ScreenshotOutputSettings,
@@ -34,7 +35,7 @@ fn compose_screenshot(
     image, settings, 0.0, true, None, None, None, None, false, false,
   )
 }
-#[cfg(all(not(target_os = "macos"), test))]
+#[cfg(all(not(any(target_os = "macos", target_os = "windows")), test))]
 use screenwide_output::compose_screenshot;
 
 use serde::Deserialize;

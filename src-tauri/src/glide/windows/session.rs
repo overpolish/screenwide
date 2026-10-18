@@ -1,221 +1,257 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Windows session state around the shared Rust runtime and captured HWND.
+//! Windows' half of a Glide session: the captured HWND, the hidden system
+//! cursor and the monitor picker, under the shared session flow in
+//! `glide::session`. Coordinates are physical pixels.
 
-use std::{
-  path::PathBuf,
-  sync::atomic::{AtomicU64, Ordering},
-  time::Instant,
-};
+use std::path::PathBuf;
 
 use tauri::AppHandle;
 use windows::Win32::{Foundation::POINT, UI::WindowsAndMessaging::GetCursorPos};
 
 use super::monitors;
-use super::preview_windows;
-use super::{
-  cursor,
-  input_kind::InputKind,
-  native_settings,
-  target::WindowTarget,
-  tween::{self, FitContext},
-};
-use crate::glide::{
-  begin_physical,
-  core::{GlideEffects, GlideRuntime, GlideSample},
-  events, finish, finish_with_fade,
-  icon::spawn_icon_lookup,
-  present_locked,
-  region_rect::PlacedRegion,
-};
+use super::{cursor, input_kind::InputKind, native_settings, target::WindowTarget, tween};
+use crate::glide::core::GlideFrame;
+use crate::glide::preview_cards;
+use crate::glide::region_rect::{PlacedRegion, RegionGravity};
+use crate::glide::session::{self as shared, GlidePlatform, Point, Session};
 
 mod access;
 mod effects;
-mod end;
-pub(super) use end::end;
-
-struct Session {
-  anchor: POINT,
-  id: u64,
-  input: InputKind,
-  last_input: Instant,
-  moved: bool,
-  pointer_travel: f64,
-  revealed: bool,
-  runtime: GlideRuntime,
-  runtime_clock: Instant,
-  target: WindowTarget,
-  original_frame: crate::glide::core::GlideFrame,
-  monitors: Option<monitors::Selection>,
-  icon_path: Option<PathBuf>,
-  armed: bool,
-}
-
-static NEXT_SESSION_ID: AtomicU64 = AtomicU64::new(1);
-static STATE: std::sync::Mutex<Option<Session>> = std::sync::Mutex::new(None);
-pub(super) fn begin(app: &AppHandle, input: InputKind, anchor: POINT) -> bool {
-  if crate::glide::core::activity::BusyLease::is_busy() {
-    return false;
-  }
-  if super::navigation::cancelled() || super::deliberate::blocks_sessions() {
-    return false;
-  }
-  if crate::shortcuts::is_capturing()
-    || native_settings::is_down(native_settings::snapshot().spaces_modifier)
-  {
-    return false;
-  }
-  if super::spaces::active_input().is_some() || super::spaces::is_closing() {
-    return false;
-  }
-  if crate::capture_overlays::blocks_glide(app) || !native_settings::snapshot().enabled {
-    return false;
-  }
-  if active_input().is_some() {
-    return false;
-  }
-  let Some((target, pid)) = WindowTarget::at(app, anchor) else {
-    return false;
-  };
-  // A window Windows will not let us place has nothing to carry, so no session
-  // opens for it. The gesture still gets an answer: the preview shows the lock
-  // on the anchor and fades, holding the activity lease meanwhile.
-  if !target.is_movable() {
-    eprintln!("Windows does not allow moving this window");
-    present_locked(
-      app,
-      NEXT_SESSION_ID.fetch_add(1, Ordering::Relaxed),
-      f64::from(anchor.x),
-      f64::from(anchor.y),
-    );
-    return false;
-  }
-  let Ok(original_frame) = target.frame() else {
-    return false;
-  };
-  let id = NEXT_SESSION_ID.fetch_add(1, Ordering::Relaxed);
-  let settings = native_settings::snapshot();
-  if native_settings::is_down(settings.monitors_modifier) && access::monitor_commit_latched() {
-    return false;
-  }
-  crate::glide::core::trace::input(
-    "windows-session",
-    format!(
-      "begin input={input:?} mouse={} monitors={} spaces={}",
-      native_settings::is_down(settings.mouse_modifier),
-      native_settings::is_down(settings.monitors_modifier),
-      native_settings::is_down(settings.spaces_modifier)
-    ),
-  );
-  let monitors = native_settings::is_down(settings.monitors_modifier)
-    .then(|| monitors::capture(app, anchor))
-    .flatten();
-  if native_settings::is_down(settings.monitors_modifier) && monitors.is_none() {
-    return false;
-  }
-  target.raise();
-  if let Err(error) = begin_physical(app, id, anchor.x, anchor.y) {
-    eprintln!("Could not present Glide: {error}");
-    return false;
-  }
-  let mut session = Session {
-    anchor,
-    id,
-    input,
-    last_input: Instant::now(),
-    moved: false,
-    pointer_travel: 0.0,
-    revealed: false,
-    runtime: GlideRuntime::default(),
-    runtime_clock: Instant::now(),
-    target,
-    original_frame,
-    monitors,
-    icon_path: None,
-    armed: false,
-  };
-  if session.monitors.is_some() {
-    session.runtime.begin_monitor_navigation();
-  }
-  if let Ok(mut state) = STATE.lock() {
-    if state.is_some() {
-      finish(app, f64::from(anchor.x), f64::from(anchor.y), true);
-      return false;
-    }
-    *state = Some(session);
-    spawn_icon_lookup(app, id, pid);
-    true
-  } else {
-    finish(app, f64::from(anchor.x), f64::from(anchor.y), true);
-    false
-  }
-}
-
-pub(super) fn arm_monitor(app: &AppHandle) -> bool {
-  let Some(id) = STATE
-    .lock()
-    .ok()
-    .and_then(|state| state.as_ref().map(|session| session.id))
-  else {
-    return false;
-  };
-  if !STATE.lock().is_ok_and(|mut state| {
-    let Some(session) = state.as_mut().filter(|session| session.id == id) else {
-      return false;
-    };
-    session.armed = true;
-    true
-  }) {
-    return false;
-  }
-  effects::update_monitor(app, id, None, true);
-  true
-}
-
-pub(super) fn update(app: &AppHandle, delta_x: f64, delta_y: f64, thirds: bool) {
-  let result = STATE.lock().ok().and_then(|mut state| {
-    let session = state.as_mut()?;
-    if delta_x != 0.0 || delta_y != 0.0 {
-      session.armed = false;
-    }
-    session.last_input = Instant::now();
-    let effects = session.runtime.update(GlideSample {
-      delta_x,
-      delta_y,
-      thirds,
-      timestamp: session.runtime_clock.elapsed().as_secs_f64() * 1_000.0,
-    });
-    Some((session.id, effects))
-  });
-  apply(app, result);
-}
-
-pub(super) fn set_thirds(app: &AppHandle, thirds: bool) {
-  let result = STATE.lock().ok().and_then(|mut state| {
-    let session = state.as_mut()?;
-    Some((session.id, session.runtime.set_thirds(thirds)))
-  });
-  apply(app, result);
-}
-
-pub(super) fn tick(app: &AppHandle) {
-  let result = STATE
-    .lock()
-    .ok()
-    .and_then(|mut state| {
-      let session = state.as_mut()?;
-      let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;
-      let effects = session.runtime.settle(timestamp);
-      Some((effects.ready || effects.detection.changed).then_some((session.id, effects)))
-    })
-    .flatten();
-  apply(app, result);
-}
 
 pub(super) use access::{
   accumulate_pointer_travel, active_input, anchor, clear_monitor_commit,
   clear_monitor_commit_if_released, monitor_mode, next_id, pointer_displacement,
   promote_armed_to_mouse, promote_scroll_to_contacts, revealed, set_icon, target, target_hwnd,
 };
-use effects::apply;
+
+pub(super) struct WindowsGlide;
+
+/// What a Windows session keeps beyond the shared fields.
+#[derive(Default)]
+pub(super) struct Extra {
+  /// The process icon the monitor picker's cards show, once looked up.
+  icon_path: Option<PathBuf>,
+  /// A trackpad scroll that armed the monitor picker without travelling yet,
+  /// which a mouse may still take over.
+  armed: bool,
+}
+
+type WindowsSession = Session<WindowsGlide>;
+
+static STATE: std::sync::Mutex<Option<WindowsSession>> = std::sync::Mutex::new(None);
+
+fn point(anchor: Point) -> POINT {
+  POINT {
+    x: anchor.0.round() as i32,
+    y: anchor.1.round() as i32,
+  }
+}
+
+impl GlidePlatform for WindowsGlide {
+  type Window = WindowTarget;
+  type Input = InputKind;
+  type Monitors = monitors::Selection;
+  type Extra = Extra;
+  type State = Option<WindowsSession>;
+
+  fn with_state<R>(f: impl FnOnce(&mut Self::State) -> R) -> Option<R> {
+    STATE.lock().ok().map(|mut state| f(&mut state))
+  }
+
+  fn slot(state: &mut Self::State) -> &mut Option<WindowsSession> {
+    state
+  }
+
+  fn blocks_begin(_app: &AppHandle) -> bool {
+    let settings = native_settings::snapshot();
+    !settings.enabled
+      || super::navigation::cancelled()
+      || super::deliberate::blocks_sessions()
+      || preview_cards::is_dismissing()
+      || crate::shortcuts::is_capturing()
+      || native_settings::is_down(settings.spaces_modifier)
+      || super::spaces::active_input().is_some()
+      || super::spaces::is_closing()
+  }
+
+  fn target_at(app: &AppHandle, anchor: Point) -> Option<(WindowTarget, GlideFrame, Option<u32>)> {
+    let (target, pid) = WindowTarget::at(app, point(anchor))?;
+    let frame = target.frame().ok()?;
+    Some((target, frame, pid))
+  }
+
+  fn monitor_request() -> Option<bool> {
+    let settings = native_settings::snapshot();
+    crate::glide::core::trace::input(
+      "windows-session",
+      format!(
+        "begin mouse={} monitors={} spaces={}",
+        native_settings::is_down(settings.mouse_modifier),
+        native_settings::is_down(settings.monitors_modifier),
+        native_settings::is_down(settings.spaces_modifier)
+      ),
+    );
+    if !native_settings::is_down(settings.monitors_modifier) {
+      return Some(false);
+    }
+    // A monitor commit made with the trackpad holds until the modifier lets
+    // go, so the same press cannot open a second picker.
+    (!access::monitor_commit_latched()).then_some(true)
+  }
+
+  fn capture_monitors(app: &AppHandle, anchor: Point) -> Option<monitors::Selection> {
+    monitors::capture(app, point(anchor))
+  }
+
+  fn work_area(_app: &AppHandle, _anchor: Point, target: &WindowTarget) -> Option<GlideFrame> {
+    Some(target.work_area())
+  }
+
+  /// The pointer is never held on Windows: the system cursor is hidden while
+  /// it moves freely.
+  fn hold_pointer(_anchor: Point) -> Result<(), String> {
+    Ok(())
+  }
+
+  fn present(app: &AppHandle, id: u64, anchor: Point) -> Result<(), String> {
+    let anchor = point(anchor);
+    crate::glide::begin_physical(app, id, anchor.x, anchor.y)
+  }
+
+  fn session_began(_state: &mut Self::State) {}
+
+  fn on_ready(_app: &AppHandle) {}
+
+  fn on_sample(extra: &mut Extra, moved: bool) {
+    if moved {
+      extra.armed = false;
+    }
+  }
+
+  fn monitor_effects(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bool) -> bool {
+    if let Some(step) = step {
+      effects::update_monitor(app, id, Some(step), false);
+      return true;
+    }
+    if !monitor_mode() {
+      return false;
+    }
+    if ready {
+      effects::update_monitor(app, id, None, true);
+    }
+    true
+  }
+
+  fn hide_pointer() {
+    cursor::hide_cursor();
+  }
+
+  fn show_preview(app: &AppHandle, _id: u64, input: InputKind) -> Result<(), String> {
+    crate::app_windows::show_glide_preview(app, input == InputKind::Mouse)
+      .map_err(|error| error.to_string())
+  }
+
+  fn region_frame(session: &WindowsSession, region: &PlacedRegion) -> (GlideFrame, RegionGravity) {
+    let destination = session
+      .target
+      .destination(region, native_settings::snapshot().window_gap);
+    (destination.frame, destination.gravity)
+  }
+
+  fn session_taken(_state: &mut Self::State, session: &WindowsSession, cancelled: bool) {
+    if !cancelled
+      && session.monitors.is_some()
+      && session.input == InputKind::TrackpadContacts
+      && native_settings::is_down(native_settings::snapshot().monitors_modifier)
+    {
+      access::latch_monitor_commit();
+    }
+  }
+
+  fn end_monitors(app: &AppHandle, session: &mut WindowsSession, cancelled: bool) -> bool {
+    let Some(selection) = session.monitors.as_ref() else {
+      return false;
+    };
+    if !cancelled {
+      if let Some(frame) = monitors::commit_frame(app, selection, session.original_frame) {
+        tween::animate_to(session.target, frame, None);
+        session.moved = true;
+      }
+    }
+    preview_cards::dismiss(app, cancelled);
+    true
+  }
+
+  fn release_pointer(_anchor: Point, show: bool) {
+    if show {
+      cursor::show_cursor();
+    }
+  }
+
+  fn land_pointer(point: Point) {
+    Self::carry_pointer(point);
+    cursor::show_cursor();
+  }
+
+  fn carry_pointer(landing: Point) {
+    let landing = point(landing);
+    screenwide_capture::cursor::set_cursor_visibility(false, None);
+    let _ = unsafe { windows::Win32::UI::WindowsAndMessaging::SetCursorPos(landing.x, landing.y) };
+    screenwide_capture::cursor::set_cursor_visibility(
+      true,
+      Some((f64::from(landing.x), f64::from(landing.y))),
+    );
+  }
+
+  fn after_fade(_app: &AppHandle, _id: u64, completion: crate::glide::BusyLease) {
+    preview_cards::after_dismissed(Box::new(move || drop(completion)));
+  }
+}
+
+pub(super) fn begin(app: &AppHandle, input: InputKind, anchor: POINT) -> bool {
+  shared::begin::<WindowsGlide>(app, input, (f64::from(anchor.x), f64::from(anchor.y)))
+}
+
+pub(super) fn arm_monitor(app: &AppHandle) -> bool {
+  let Some(id) = shared::with_session::<WindowsGlide, _>(|session| {
+    session.extra.armed = true;
+    session.id
+  }) else {
+    return false;
+  };
+  effects::update_monitor(app, id, None, true);
+  true
+}
+
+pub(super) fn update(app: &AppHandle, delta_x: f64, delta_y: f64, thirds: bool) {
+  shared::update::<WindowsGlide>(app, delta_x, delta_y, thirds);
+}
+
+pub(super) fn set_thirds(app: &AppHandle, thirds: bool) {
+  shared::set_thirds::<WindowsGlide>(app, thirds);
+}
+
+pub(super) fn tick(app: &AppHandle) {
+  shared::settle::<WindowsGlide>(app);
+}
+
+pub(in crate::glide::windows) fn end(app: &AppHandle, cancelled: bool) {
+  crate::glide::core::trace::input(
+    "windows-session",
+    format!(
+      "end cancelled={cancelled} active={:?} monitor={}",
+      active_input(),
+      monitor_mode()
+    ),
+  );
+  shared::end::<WindowsGlide>(app, cancelled, native_settings::snapshot().cursor_follows);
+}
+
+/// The pointer as the system reports it, in physical pixels.
+fn cursor_position() -> Option<POINT> {
+  let mut pointer = POINT::default();
+  unsafe { GetCursorPos(&mut pointer) }.ok()?;
+  Some(pointer)
+}

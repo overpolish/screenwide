@@ -5,284 +5,42 @@
 //!
 //! Playback and stills share one `AVAssetReader` pipeline and one GPU
 //! compositor, so a paused frame is pixel-identical to the playing frame at
-//! that position. Decoded planes stay in Core Video and are presented straight
-//! onto the surface's `CAMetalLayer` panes - nothing crosses IPC.
+//! that position. Decoded planes stay in Core Video and are drawn by the
+//! workspace scene without a copy; nothing crosses IPC.
 
 mod composition;
-mod cursor;
 mod image;
 mod playback;
 mod still;
 mod still_decode;
 mod thumbnails;
 
-use screenwide_imaging::CapturedImage;
-
-use std::{
-  process::Child,
-  sync::{atomic::AtomicBool, mpsc::SyncSender, Arc, Mutex},
-};
-
 use tauri::ipc::Channel;
 
-use super::super::{video::VideoFrame, PlayerSources};
-use screenwide_compositor::compositor::still_overlay::compose_output_layers;
-use screenwide_cursor_effects::CursorEffectSettings;
-use screenwide_export::camera_effects::cpu::StillEffects;
-use screenwide_export::recording_model::RecordingOutputSettings;
-use screenwide_keyboard_effects::KeyboardOverlay;
-use screenwide_scenes::CameraOverlaySettings;
+use super::super::PlayerSources;
+use super::present::PaneFrame;
+use screenwide_export::decode::macos::scrubber::NativePixelFrame;
+use screenwide_workspace::scene::LayerPicture;
 
-/// The longest side a composed still reads the camera's matte at: stills
-/// are copied or shown small, and the edge it draws is soft.
-const STILL_MATTE_SIDE: u32 = 1_920;
+pub(super) use playback::open as open_playback;
 
-/// macOS decodes paused frames through [`StillDecoder`] rather than through
-/// [`spawn_video`].
-pub(crate) const NATIVE_STILLS: bool = true;
+pub(super) use still::Stills;
+pub(super) type Frame = NativePixelFrame;
 
-pub(crate) type StillDecoder = still::NativeStillDecoder;
+/// Playback decodes and composes at the on-screen pane size; see
+/// [`playback`].
+pub(super) const COMPOSES_AT_PANE_SIZE: bool = true;
 
-pub(crate) enum VideoFramePayload {
-  Native {
-    screen: screenwide_export::decode::macos::scrubber::NativePixelFrame,
-    camera: Option<screenwide_export::decode::macos::scrubber::NativePixelFrame>,
-    screen_output: screenwide_output::ScreenshotOutputSettings,
-    camera_output: screenwide_output::ScreenshotOutputSettings,
-    cursor: Option<screenwide_cursor_effects::GpuCursor>,
-    keyboard: Option<KeyboardOverlay>,
-    overlay: Option<screenwide_compositor::compositor::still_overlay::StillOverlay>,
-    bake_camera: bool,
-    seconds: f64,
-    /// How much source time the frame covers, which its captions are
-    /// exposed over as its annotations are.
-    frame_ms: f32,
-    clip_cursor_at_video_edge: bool,
-  },
-}
-
-pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) -> bool {
-  match payload {
-    VideoFramePayload::Native {
-      screen,
-      camera,
-      screen_output,
-      camera_output,
-      cursor,
-      keyboard,
-      overlay,
-      bake_camera,
-      seconds,
-      frame_ms,
-      clip_cursor_at_video_edge,
-    } => {
-      if let Some(surface) = &sources.preview_surface {
-        use crate::editor::preview_platform::{
-          LayerPicture, NativeWorkspacePlacement, RecordingWorkspaceLayer,
-        };
-        let source_token = (seconds * 1_000.0).round().max(0.0) as u64;
-        // A baked camera's settings carry what is composed into its frame;
-        // a camera pane's are its own layer's.
-        let (baked_settings, pane_settings) = if bake_camera {
-          (Some(camera_output), None)
-        } else {
-          (None, Some(camera_output))
-        };
-        let mut layers = vec![RecordingWorkspaceLayer {
-          pane_index: 0,
-          source_token: source_token << 2,
-          source: LayerPicture::Pixels(screen.as_ptr()),
-          settings: screen_output,
-          placement: NativeWorkspacePlacement::default(),
-          seconds,
-          cursor,
-          keyboard,
-          captions: sources.captions_at(source_token, frame_ms),
-          camera: bake_camera
-            .then_some(camera.as_ref())
-            .flatten()
-            .map(|frame| LayerPicture::Pixels(frame.as_ptr())),
-          overlay: overlay.as_ref(),
-          camera_settings: baked_settings
-            .as_ref()
-            .map(|settings| (settings, sources.annotation_pictures()[1])),
-          clip_cursor_at_video_edge,
-          foreground_only: false,
-          source_is_camera: sources.primary_kind
-            == screenwide_project::PrimaryRecordingKind::Camera,
-        }];
-        if let Some(camera_output) = pane_settings {
-          if let Some(camera) = camera.as_ref() {
-            layers.push(RecordingWorkspaceLayer {
-              pane_index: 1,
-              source_token: (source_token << 2) | 1,
-              source: LayerPicture::Pixels(camera.as_ptr()),
-              settings: camera_output,
-              placement: NativeWorkspacePlacement::default(),
-              seconds,
-              cursor: None,
-              keyboard: None,
-              captions: None,
-              camera: None,
-              overlay: None,
-              camera_settings: None,
-              clip_cursor_at_video_edge: false,
-              foreground_only: false,
-              source_is_camera: true,
-            });
-          }
-        }
-        return surface
-          .present_recording_workspace(
-            &layers,
-            sources.cursor_artworks.as_deref().map(Vec::as_slice),
-          )
-          .unwrap_or(false);
-      }
-      false
-    }
+impl PaneFrame for NativePixelFrame {
+  fn picture(&self) -> LayerPicture<'_> {
+    LayerPicture::Pixels(self.as_ptr())
   }
-}
 
-/// `still` and `child` are unused here: macOS stills go through
-/// [`StillDecoder`], and the decode runs in-process rather than as a child.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn spawn_video(
-  sources: &PlayerSources,
-  playback_factors: &[f64],
-  start_ms: u64,
-  playback_rate: f64,
-  _still: bool,
-  cancelled: Arc<AtomicBool>,
-  _child: Arc<Mutex<Option<Child>>>,
-  sender: SyncSender<VideoFrame>,
-) -> Result<std::thread::JoinHandle<()>, String> {
-  playback::spawn(
-    sources,
-    playback_factors,
-    start_ms,
-    playback_rate,
-    cancelled,
-    sender,
-  )
-}
-
-/// How much each pane's playback decode shrinks to match the on-screen pane
-/// size, mirroring what the still decoder presents.
-pub(crate) fn playback_factors(
-  pane_target_sizes: &[(u32, u32)],
-  sources: &PlayerSources,
-) -> Vec<f64> {
-  let composition = sources
-    .composition_settings
-    .as_ref()
-    .and_then(|settings| settings.read().ok().map(|settings| settings.clone()));
-  sources
-    .playback_layout
-    .panes
-    .iter()
-    .enumerate()
-    .map(|(index, pane)| {
-      let output_width = composition
-        .as_ref()
-        .map_or(pane.source_width, |composition| {
-          if index == 0 {
-            composition.recording_output.primary.width
-          } else {
-            composition.recording_output.camera.width
-          }
-        });
-      still_decode::pane_factor(pane_target_sizes, index, output_width)
-    })
-    .collect()
+  fn size(&self) -> (u32, u32) {
+    (self.width, self.height)
+  }
 }
 
 pub(crate) fn generate_thumbnails(sources: PlayerSources, count: u32, channel: Channel) {
   thumbnails::generate(sources, count, channel);
-}
-
-pub(crate) fn source_frame_jpeg(
-  path: &std::path::Path,
-  position_ms: u64,
-  duration_ms: u64,
-) -> Result<Vec<u8>, String> {
-  thumbnails::source_frame_jpeg(path, position_ms, duration_ms)
-}
-
-/// Renders one clipboard frame through the same still compositor as the
-/// live preview, including the baked camera and cursor layer ordering.
-pub(crate) fn composed_frame_image(
-  sources: &PlayerSources,
-  position_ms: u64,
-  bake_camera: bool,
-  camera_overlay: CameraOverlaySettings,
-  cursor_effects: CursorEffectSettings,
-  keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
-  recording_output: &RecordingOutputSettings,
-) -> Result<CapturedImage, String> {
-  let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
-  let mut screen = composition::decoded_rgba(&source_frame_jpeg(
-    &sources.screen_path,
-    position_ms,
-    sources.duration_ms,
-  )?)?;
-  let camera_duration_ms = sources.camera_duration_ms.unwrap_or(sources.duration_ms);
-  let mut camera = if bake_camera {
-    sources
-      .camera_path
-      .as_ref()
-      .map(|path| {
-        composition::decoded_rgba(&source_frame_jpeg(path, position_ms, camera_duration_ms)?)
-      })
-      .transpose()?
-  } else {
-    None
-  };
-  if let Some(mut effects) = StillEffects::new(sources.camera_effects_now(), STILL_MATTE_SIDE) {
-    if sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera {
-      effects.apply(&mut screen, position_ms);
-    } else if let Some(camera) = camera.as_mut() {
-      effects.apply(camera, position_ms.min(camera_duration_ms));
-    }
-  }
-  let cursor = cursor::gpu_cursor_preview(
-    sources.cursor.as_deref(),
-    position_ms,
-    cursor_effects,
-    (screen.width, screen.height),
-  );
-  let keyboard = sources.keyboard_overlay(
-    position_ms,
-    keyboard_effects,
-    (
-      recording_output.primary.width,
-      recording_output.primary.height,
-    ),
-  );
-  let (cursor, overlay) = composition::gpu_still_overlay(
-    &screen,
-    &recording_output.primary,
-    cursor.as_ref(),
-    camera.as_ref(),
-    camera.as_ref().map(|_| camera_overlay),
-    recording_output.camera.drop_shadow,
-    screenwide_export::recording_model::CAMERA_IN_FRONT,
-  )?;
-  compose_output_layers(
-    &screen,
-    &recording_output.primary,
-    position_ms as f64 / 1_000.0,
-    true,
-    cursor.as_ref().and_then(|cursor| {
-      sources
-        .cursor_artworks
-        .as_deref()
-        .map(|artworks| (cursor, artworks.as_slice()))
-    }),
-    camera.as_ref(),
-    overlay.as_ref(),
-    keyboard.as_ref(),
-    cursor_effects.clip_at_video_edge,
-    false,
-  )
 }

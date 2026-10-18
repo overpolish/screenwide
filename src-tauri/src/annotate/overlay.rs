@@ -15,8 +15,6 @@ mod tests;
 mod underlay;
 
 pub(super) use renderer::Renderer;
-#[cfg(target_os = "windows")]
-pub(super) use underlay::upload as upload_underlay;
 pub(super) use underlay::Underlays;
 
 use screenwide_compositor::annotation_gpu::{placed_arrows, PreparedArrows};

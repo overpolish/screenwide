@@ -2,72 +2,60 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Windows preview backend: Media Foundation hardware decode into D3D11
-//! textures presented by native flip-model swap chains. Live frames never enter
-//! system memory or cross the Tauri IPC boundary.
+//! textures, which the workspace scene copies into its own and presents
+//! through a native flip-model swap chain. Live frames never enter system
+//! memory or cross the Tauri IPC boundary.
 
-mod composed_frame;
 mod pane_decoder;
-mod present_frames;
+mod playback;
 mod still;
 mod thumbnails;
 
-pub(crate) use composed_frame::composed_frame_image;
-
-mod video_playback;
-pub(crate) use video_playback::playback_factors;
-pub(crate) use video_playback::spawn_video;
-
-use std::{
-  process::Child,
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    mpsc::{self, SyncSender, TrySendError},
-    Arc, Mutex,
-  },
-  time::Duration,
-};
-
 use tauri::ipc::Channel;
 
-use self::pane_decoder::PaneDecoder;
-use self::present_frames::present_native_frames;
-use super::super::{
-  video::{presentation_elapsed_ms, source_position_ms, VideoFrame},
-  PlayerSources,
-};
-use screenwide_export::decode::windows::gpu_decoder::{GpuFrame, GpuVideoReader};
+use super::super::PlayerSources;
+use super::present::{self, Moment, PaneFrame};
+use screenwide_export::decode::windows::gpu_decoder::GpuFrame;
+use screenwide_workspace::scene::LayerPicture;
 
-pub(crate) const NATIVE_STILLS: bool = true;
-pub(crate) type StillDecoder = still::NativeStillDecoder;
+pub(super) use playback::open as open_playback;
 
-/// One playback tick: the frame each stream decoded for it, presented
-/// together, and the decoder's retained samples released once `presented`
-/// hears back or is dropped.
-pub(crate) enum VideoFramePayload {
-  Native {
-    screen: Option<GpuFrame>,
-    camera: Option<GpuFrame>,
-    presented: Option<SyncSender<()>>,
-  },
+pub(super) use still::Stills;
+pub(super) type Frame = GpuFrame;
+
+/// The scene composes at the output's full size, and the swap chain scales
+/// the result to the pane.
+pub(super) const COMPOSES_AT_PANE_SIZE: bool = false;
+
+impl PaneFrame for GpuFrame {
+  fn picture(&self) -> LayerPicture<'_> {
+    LayerPicture::Decoded((&self.texture, self.subresource, (self.width, self.height)))
+  }
+
+  fn size(&self) -> (u32, u32) {
+    (self.width, self.height)
+  }
 }
 
-pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) -> bool {
-  let VideoFramePayload::Native {
+/// Presents a paused moment: the frames' own time, nothing moving.
+fn present_still(
+  sources: &PlayerSources,
+  screen: Option<&GpuFrame>,
+  camera: Option<&GpuFrame>,
+) -> bool {
+  let Some(timestamp_ms) = screen.or(camera).map(|frame| frame.timestamp_ms) else {
+    return false;
+  };
+  present::present(
+    sources,
     screen,
     camera,
-    presented,
-  } = payload;
-  // Playback exposes each frame for one frame interval, which is the window
-  // a moving annotation smears over; a paused still exposes nothing.
-  let frame_ms = sources
-    .frames_per_second
-    .filter(|rate| *rate > 0.0)
-    .map_or(0.0, |rate| (1_000.0 / rate) as f32);
-  let result = present_native_frames(sources, screen.as_ref(), camera.as_ref(), frame_ms);
-  if let Some(presented) = presented {
-    let _ = presented.send(());
-  }
-  result
+    Moment {
+      timestamp_ms,
+      frame_ms: 0.0,
+      factors: (1.0, 1.0),
+    },
+  )
 }
 
 pub(crate) fn generate_thumbnails(sources: PlayerSources, count: u32, channel: Channel) {

@@ -68,7 +68,6 @@ pub async fn save_export(
   }
 
   let writing = directory.clone();
-  let export_app = app.clone();
   let progress_app = app.clone();
   let job_cancellation = Arc::clone(&cancelled);
   // The artifact travels back with an error. Saving used to take it before the
@@ -83,7 +82,7 @@ pub async fn save_export(
           let path = unique_path(&writing, &stem, SCREENSHOT_EXTENSION, &|candidate| {
             candidate.exists()
           });
-          let composed = compose_screenshot_workspace(&export_app, items, &screenshot_output)?;
+          let composed = compose_screenshot_workspace(items, &screenshot_output)?;
           std::fs::write(&path, encode_png(&composed)?).map_err(|error| error.to_string())?;
           Ok(Some(path))
         }

@@ -61,8 +61,7 @@ impl PreviewPlayerManager {
       });
       return Ok(());
     }
-    if platform::NATIVE_STILLS
-      && matches!(mode, PlaybackMode::Still | PlaybackMode::InteractiveStill)
+    if matches!(mode, PlaybackMode::Still | PlaybackMode::InteractiveStill)
       && !sources.layout.panes.is_empty()
     {
       let rough = std::mem::take(&mut self.rough_seek);
@@ -148,9 +147,9 @@ impl PreviewPlayerManager {
         surface.end_annotation_text();
         surface.hide();
         // A save suspends the editor and the session ends before React lifts
-        // it; the Windows editor window keeps the flag and would stay hidden
-        // for every later session. After `hide`, lifting it shows nothing.
-        #[cfg(target_os = "windows")]
+        // it; the editor keeps the flag and would stay hidden for every later
+        // session. After `hide`, lifting it shows nothing.
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
         surface.set_editor_suspended(false);
       }
     }

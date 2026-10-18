@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { isWindowsHost } from "../../../lib/platform";
+
 import {
   CONTROL_GAP_PX,
   CONTROL_INSET_PX,
@@ -44,9 +46,7 @@ describe("the band's minimum height", () => {
     // Pinned so the sum below cannot drift silently when a token moves. The
     // Windows skin's 2rem rows make the minimum 160; macOS's 1.5rem rows make
     // 128. Both keep the transport, the ruler and two lane rows on screen.
-    expect(TIMELINE_MIN_HEIGHT_PX).toBe(
-      /Windows/i.test(navigator.userAgent) ? 160 : 128,
-    );
+    expect(TIMELINE_MIN_HEIGHT_PX).toBe(isWindowsHost ? 160 : 128);
   });
 
   it("is the sum of the rows that must stay visible", () => {

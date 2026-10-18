@@ -12,9 +12,9 @@
 use super::super::ScreenshotWorkspaceOutputSettings;
 use super::annotation_gesture::AnnotationCommit;
 use super::state::PreviewManager;
-use crate::editor::preview_platform::AnnotationTextPhase;
 use screenwide_annotations::text::edit::{AnnotationTextEdit, TextEditPhase};
 use screenwide_annotations::AnnotationShape;
+use screenwide_workspace::editing::AnnotationTextPhase;
 
 pub(super) struct TextSession {
   pane_index: u32,

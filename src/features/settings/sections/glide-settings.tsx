@@ -6,13 +6,11 @@ import { Switch } from "../../../components/base/switch/switch";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
 import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
-import { t } from "../../../i18n/i18n";
+import { platformArg, t } from "../../../i18n/i18n";
+import { isMacHost } from "../../../lib/platform";
 
 import type { GlideSettings } from "../../../bindings/GlideSettings";
 
-const isMac =
-  typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
-const platform = isMac ? "macos" : "windows";
 const toggles = () =>
   [
     {
@@ -41,7 +39,7 @@ const modifierTitle = (key: ModifierKey) => {
     case "thirdsModifier":
       return t("settings-glide-thirds-modifier");
     case "spacesModifier":
-      return t("settings-glide-spaces-modifier", { platform });
+      return t("settings-glide-spaces-modifier", { platform: platformArg() });
     case "monitorsModifier":
       return t("settings-glide-monitors-modifier");
   }
@@ -54,7 +52,9 @@ const modifierDescription = (key: ModifierKey) => {
     case "thirdsModifier":
       return t("settings-glide-thirds-modifier-description");
     case "spacesModifier":
-      return t("settings-glide-spaces-modifier-description", { platform });
+      return t("settings-glide-spaces-modifier-description", {
+        platform: platformArg(),
+      });
     case "monitorsModifier":
       return t("settings-glide-monitors-modifier-description");
   }
@@ -165,7 +165,7 @@ export function GlideSettingsPanel({
           )}
         </ControlRow>
         {toggles()
-          .filter(({ macOnly }) => !macOnly || isMac)
+          .filter(({ macOnly }) => !macOnly || isMacHost)
           .map((toggle) => (
             <ControlRow
               description={

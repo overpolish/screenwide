@@ -17,7 +17,7 @@ use windows::Win32::{
   },
 };
 
-use super::Input;
+use screenwide_workspace::editing::PointerInput as Input;
 
 const MK_LBUTTON_MASK: usize = 0x0001;
 const MK_CONTROL_MASK: usize = 0x0008;

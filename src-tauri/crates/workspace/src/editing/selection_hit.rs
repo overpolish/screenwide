@@ -1,0 +1,253 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+use super::*;
+
+pub(super) fn radius_point(frame: PreviewSurfaceRect, radius_percent: f64) -> (f64, f64) {
+  let offset =
+    frame.width.min(frame.height) * radius_percent.clamp(0.0, 50.0) / 100.0 * 0.55 + 10.0;
+  (frame.x + offset, frame.y + offset)
+}
+
+pub(super) fn shared_selection_hit(
+  inner: &SurfaceInner,
+  state: &SurfaceState,
+  point: (f64, f64),
+) -> Option<(PreviewSelection, u8)> {
+  let mut selections = state.selection_targets.clone();
+  if let Some(current) = state.selection {
+    if let Some(target) = selections
+      .iter_mut()
+      .find(|target| target.pane_index == current.pane_index && target.layer_id == current.layer_id)
+    {
+      *target = current;
+    } else {
+      selections.push(current);
+    }
+  }
+  // A turned layer, the screen a scene turns, is measured apart: at the press
+  // carried back onto it, where every other layer is measured at the press
+  // itself.
+  let mut turned = None;
+  let mut targets = selections
+    .iter()
+    .enumerate()
+    .filter_map(|(index, selection)| {
+      let selected = state.selection.is_some_and(|current| {
+        current.pane_index == selection.pane_index && current.layer_id == selection.layer_id
+      });
+      let rect = if selected {
+        display_selection(state, *selection)?
+      } else {
+        overlay_hit::frame(inner, state, *selection)?
+      };
+      Some((
+        *selection,
+        DisplayTarget {
+          id: (u64::from(selection.pane_index) << 32) | u64::from(selection.layer_id),
+          rect: DisplayRect {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          },
+          radius_enabled: u8::from(selection.crop_mode == 0 && selection.radius_disabled == 0),
+          radius_percent: selection.radius_percent,
+          z_order: index as i32,
+          selected: u8::from(selected),
+          visible: 1,
+        },
+      ))
+    })
+    .enumerate()
+    .map(|(index, (selection, target))| {
+      if turned.is_none() && turn::selection_is_turned(state, selection) {
+        turned = Some((index, selection));
+      }
+      target
+    })
+    .collect::<Vec<_>>();
+  let (hit, hit_point) = match turned {
+    None => (hit_test_display(&targets, point, 8.0)?, point),
+    Some((index, selection)) => {
+      let own_target = targets[index];
+      targets[index].visible = 0;
+      let others = hit_test_display(&targets, point, 8.0);
+      let unturned = turn::unturned_point(state, selection, point);
+      let own = hit_test_display(&[own_target], unturned, 8.0);
+      // Grips first, as the shared test has them: only the selected layer
+      // shows any. Then the body drawn in front.
+      let others_order = others.and_then(|others| {
+        targets
+          .iter()
+          .find(|target| target.id == others.target_id)
+          .map(|target| target.z_order)
+      });
+      match (own, others) {
+        (Some(own), others)
+          if own.handle != 0
+            || others.is_none_or(|others| {
+              others.handle == 0 && others_order.is_none_or(|order| own_target.z_order > order)
+            }) =>
+        {
+          (own, unturned)
+        }
+        (_, Some(others)) => (others, point),
+        (_, None) => return None,
+      }
+    }
+  };
+  let pane_index = (hit.target_id >> 32) as u32;
+  let layer_id = hit.target_id as u32;
+  let selection = selections
+    .into_iter()
+    .find(|selection| selection.pane_index == pane_index && selection.layer_id == layer_id)?;
+  if hit.handle == 0 && crate::is_overlay_layer(selection.layer_id) {
+    let frame = overlay_hit::frame(inner, state, selection)?;
+    if hit_point.0 < frame.x
+      || hit_point.0 > frame.x + frame.width
+      || hit_point.1 < frame.y
+      || hit_point.1 > frame.y + frame.height
+    {
+      return None;
+    }
+  }
+  Some((selection, hit.handle))
+}
+
+pub(super) fn shared_handle_edges(handle: u8) -> u32 {
+  match handle {
+    1 => 4,
+    2 => 8,
+    3 => 2,
+    4 => 1,
+    5 => 2 | 4,
+    6 => 1 | 4,
+    7 => 2 | 8,
+    8 => 1 | 8,
+    _ => 0,
+  }
+}
+
+pub(super) fn selection_pane_rect(
+  state: &SurfaceState,
+  selection: PreviewSelection,
+) -> PreviewSurfaceRect {
+  state
+    .panes
+    .get(selection.pane_index as usize)
+    .and_then(Option::as_ref)
+    .map_or(
+      PreviewSurfaceRect {
+        x: 0.0,
+        y: 0.0,
+        width: 1.0,
+        height: 1.0,
+      },
+      |pane| pane_canvas_rect(pane, state.frame_resize.is_some()),
+    )
+}
+
+pub(super) fn clear_selection_snap_guides(state: &mut SurfaceState) {
+  state.selection_snap_guide_x = None;
+  state.selection_snap_guide_y = None;
+}
+
+pub(super) fn selection_snap_targets(
+  state: &SurfaceState,
+  start: PreviewSelection,
+  horizontal: bool,
+) -> Vec<(u32, f64, f64)> {
+  let Some(start_pane) = state
+    .panes
+    .get(start.pane_index as usize)
+    .and_then(Option::as_ref)
+  else {
+    return Vec::new();
+  };
+  let same_frame = |target: &PreviewSelection| {
+    state
+      .panes
+      .get(target.pane_index as usize)
+      .and_then(Option::as_ref)
+      .is_some_and(|pane| {
+        let first = start_pane.base_rect;
+        let second = pane.base_rect;
+        (first.x - second.x).abs() < 0.000_001
+          && (first.y - second.y).abs() < 0.000_001
+          && (first.width - second.width).abs() < 0.000_001
+          && (first.height - second.height).abs() < 0.000_001
+      })
+  };
+  state
+    .selection_targets
+    .iter()
+    .filter(|target| same_frame(target))
+    .map(|target| {
+      if horizontal {
+        (target.layer_id, target.x, target.width)
+      } else {
+        (target.layer_id, target.y, target.height)
+      }
+    })
+    .collect()
+}
+
+pub(super) fn cursor_for_state(
+  inner: &SurfaceInner,
+  state: &SurfaceState,
+  point: (f64, f64),
+) -> CursorKind {
+  // The rings sit over everything they turn.
+  if let Some(kind) = turn::cursor(state, point) {
+    return kind;
+  }
+  // The arrow tool speaks next, exactly as `annotation_cursor` does: an arrow
+  // under the pointer is something to take hold of, and empty picture is
+  // something to draw on. The select tool leaves empty picture to the layer
+  // underneath. A turned layer's arrows are where its turn draws them.
+  if let Some(kind) = annotation::cursor_for(state, turn::selected_layer_point(state, point)) {
+    return kind;
+  }
+  let hit = shared_selection_hit(inner, state, point);
+  if crop_press_draws(state, hit) {
+    return CursorKind::Crosshair;
+  }
+  let Some((selection, handle)) = hit else {
+    return CursorKind::Arrow;
+  };
+  if handle == 0 && selection.layer_id == FRAME_LAYER_ID {
+    return CursorKind::Arrow;
+  }
+  let edges = shared_handle_edges(handle);
+  match handle {
+    0 => CursorKind::Move,
+    9 => CursorKind::ResizeNwse,
+    _ if edges == 1 || edges == 2 => CursorKind::ResizeHorizontal,
+    _ if edges == 4 || edges == 8 => CursorKind::ResizeVertical,
+    _ if edges == (1 | 4) || edges == (2 | 8) => CursorKind::ResizeNwse,
+    _ => CursorKind::ResizeNesw,
+  }
+}
+
+/// Whether a press while cropping draws a new crop window: one on nothing, or
+/// on the body of the active crop while it still covers its whole picture,
+/// which moving could not change. A grip resizes, and another layer's crop is
+/// chosen by the press.
+pub(super) fn crop_press_draws(state: &SurfaceState, hit: Option<(PreviewSelection, u8)>) -> bool {
+  let Some(active) = state.selection.filter(|selection| selection.crop_mode != 0) else {
+    return false;
+  };
+  let Some((target, handle)) = hit else {
+    return true;
+  };
+  let tolerance = 1e-4;
+  let uncropped = (active.x - active.image_x).abs() < tolerance
+    && (active.y - active.image_y).abs() < tolerance
+    && (active.width - active.image_width).abs() < tolerance
+    && (active.height - active.image_height).abs() < tolerance;
+  handle == 0
+    && target.pane_index == active.pane_index
+    && target.layer_id == active.layer_id
+    && uncropped
+}

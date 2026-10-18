@@ -5,7 +5,6 @@
 //! state as the native surface needs it.
 
 use super::*;
-use crate::editor::preview_platform::SelectionGesturePhase;
 use gesture::Gesture;
 use screenwide_annotations::edit::AnnotationEdit;
 use screenwide_annotations::gesture::{annotation_mode, drawing_kind, AnnotationGestureTarget};
@@ -20,6 +19,7 @@ use screenwide_annotations::timing::{
   active_annotations, validate_clips, AnnotationTrack, RecordingAnnotationClip,
 };
 use screenwide_annotations::{Annotation, AnnotationStyle};
+use screenwide_workspace::editing::SelectionGesturePhase;
 use tauri::Emitter;
 
 #[derive(Default)]

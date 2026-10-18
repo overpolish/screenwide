@@ -13,7 +13,7 @@
 
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 
-use super::super::preview_platform::{RecordingPreviewSurface, SelectionGesturePhase};
+use super::super::preview_platform::RecordingPreviewSurface;
 use super::annotation_gesture::AnnotationCommit;
 use super::payloads::{
   ScreenshotAnnotationChangeEvent, ScreenshotAnnotationHoverEvent, ScreenshotPreviewTransformEvent,
@@ -21,6 +21,7 @@ use super::payloads::{
 };
 use super::state::ScreenshotPreviewState;
 use screenwide_annotations::gesture::AnnotationGestureTarget;
+use screenwide_workspace::editing::SelectionGesturePhase;
 
 /// Hands a finished arrow gesture to React. Only the end of a gesture reports
 /// one: everything in between is drawn natively from the manager's own

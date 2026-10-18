@@ -23,7 +23,6 @@ mod native_settings;
 mod native_trackpad;
 mod navigation;
 mod precision_touchpad;
-mod preview_windows;
 mod raw_input;
 mod release_tracker;
 mod session;
@@ -48,7 +47,7 @@ static WHEEL_HOOK_ACTIVE: AtomicBool = AtomicBool::new(false);
 pub(super) fn start(app: AppHandle) -> Result<(), String> {
   let _ = APP.set(app.clone());
   native_settings::trace_state("startup");
-  preview_windows::preload(&app);
+  preload_cards(&app);
   titlebar::cache_own_windows(&app);
   tween::start();
   let (ready_tx, ready_rx) = std::sync::mpsc::sync_channel(1);
@@ -75,8 +74,27 @@ pub(super) fn set_icon(session_id: u64, path: Option<std::path::PathBuf>) {
   session::set_icon(session_id, path.clone());
   spaces::set_icon(session_id, path.clone());
   if let Some(app) = APP.get() {
-    preview_windows::set_icon(app, session_id, path);
+    crate::glide::preview_cards::set_icon(app, session_id, path);
   }
+}
+
+/// Loads a card for every monitor or desktop, whichever there are more of.
+/// Counting desktops goes through the shell, so it stays off the main thread.
+fn preload_cards(app: &AppHandle) {
+  let app = app.clone();
+  let _ = std::thread::Builder::new()
+    .name("glide-space-preload".to_owned())
+    .spawn(move || {
+      let monitors = app
+        .available_monitors()
+        .map_or(1, |monitors| monitors.len());
+      let desktops = if virtual_desktops::supported() {
+        winvd::get_desktops().map_or(0, |desktops| desktops.len())
+      } else {
+        0
+      };
+      crate::glide::preview_cards::preload(&app, monitors.max(desktops));
+    });
 }
 
 pub(super) fn set_wheel_hook_active(active: bool) {

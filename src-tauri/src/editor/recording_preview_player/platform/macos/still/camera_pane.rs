@@ -19,11 +19,11 @@ pub(super) fn camera_pane_layer<'a>(
   (camera_ms, screen_ms): (u64, u64),
 ) -> Option<RecordingWorkspaceLayer<'a>> {
   let own = &composition.recording_output.camera;
-  let factor = super::super::still_decode::pane_factor(target_sizes, 1, own.width);
+  let factor = pane_factor(target_sizes, 1, own.width);
   let mut output = scaled_output(own, factor);
   if let Some(source) = sources.playback_layout.panes.get(1) {
     let metadata = camera.metadata();
-    crate::editor::recording_preview_player::annotation_preview::remap_source(
+    screenwide_workspace::remap_source(
       &mut output,
       (source.source_width, source.source_height),
       (metadata.width, metadata.height),

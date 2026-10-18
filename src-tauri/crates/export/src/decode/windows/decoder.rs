@@ -19,9 +19,9 @@ pub use luma::LumaReader;
 
 const HUNDRED_NS_PER_MS: i64 = 10_000;
 const SEEK_PREROLL_MS: u64 = 1_500;
-const VIDEO_STREAM: u32 = MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32;
+pub(super) const VIDEO_STREAM: u32 = MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32;
 
-fn win<T>(result: windows::core::Result<T>) -> Result<T, String> {
+pub(super) fn win<T>(result: windows::core::Result<T>) -> Result<T, String> {
   result.map_err(|error| error.to_string())
 }
 
@@ -66,6 +66,9 @@ pub struct NativeVideoReader {
   height: u32,
   /// The last sample read, with its time in milliseconds.
   last_sample: Option<(IMFSample, u64)>,
+  /// Where the file's timeline starts as Media Foundation counts it, in
+  /// 100 ns units, subtracted from every time it reports.
+  origin: i64,
   reader: IMFSourceReader,
   width: u32,
   // Fields drop in declaration order. Keep the process-wide MF reference
@@ -130,6 +133,7 @@ impl NativeVideoReader {
     let mut value = Self {
       height,
       last_sample: None,
+      origin: super::origin::origin_100ns(Path::new(path)),
       reader,
       width,
       _runtime: runtime,
@@ -155,7 +159,8 @@ impl NativeVideoReader {
     let position = PROPVARIANT::from(
       i64::try_from(seek_ms)
         .unwrap_or(i64::MAX / HUNDRED_NS_PER_MS)
-        .saturating_mul(HUNDRED_NS_PER_MS),
+        .saturating_mul(HUNDRED_NS_PER_MS)
+        .saturating_add(self.origin),
     );
     win(unsafe { self.reader.SetCurrentPosition(&GUID::zeroed(), &position) })?;
     self.last_sample = None;
@@ -203,7 +208,7 @@ impl NativeVideoReader {
       let Some(sample) = sample else {
         continue;
       };
-      let timestamp_ms = u64::try_from(timestamp.max(0) / HUNDRED_NS_PER_MS).unwrap_or_default();
+      let timestamp_ms = super::origin::milliseconds(timestamp, self.origin);
       // Retain the native sample; copying a full RGBA frame just to cache
       // the last image doubles the allocation for every requested frame.
       self.last_sample = Some((sample.clone(), timestamp_ms));
@@ -269,47 +274,4 @@ pub fn encoded_jpeg(image: &CapturedImage, quality: u8) -> Result<Vec<u8>, Strin
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-  use windows::Win32::System::Com::COINIT_APARTMENTTHREADED;
-
-  #[test]
-  #[ignore = "uses the video path in SCREENWIDE_WINDOWS_PREVIEW_TEST"]
-  fn decodes_and_seeks_the_recorded_fragmented_mp4() {
-    let path = std::env::var_os("SCREENWIDE_WINDOWS_PREVIEW_TEST")
-      .map(std::path::PathBuf::from)
-      .expect("set SCREENWIDE_WINDOWS_PREVIEW_TEST to a recording");
-    let mut reader = NativeVideoReader::open(&path, 640, 360, 0).unwrap();
-    let first = reader.frame_at(0).unwrap().unwrap();
-    assert!(first.width <= 640 && first.height <= 360);
-    assert!(first.rgba.iter().any(|value| *value != 0));
-    reader.seek(5_000).unwrap();
-    let later = reader.frame_at(5_000).unwrap().unwrap();
-    assert_eq!(later.width, first.width);
-    assert_eq!(later.height, first.height);
-    let jpeg = encoded_jpeg(&later, 85).unwrap();
-    assert!(jpeg.len() > 1_024);
-    if let Some(output) = std::env::var_os("SCREENWIDE_WINDOWS_PREVIEW_FRAME") {
-      std::fs::write(output, jpeg).unwrap();
-    }
-  }
-
-  #[test]
-  #[ignore = "uses the video path in SCREENWIDE_WINDOWS_PREVIEW_TEST"]
-  fn decodes_video_from_an_sta_export_worker() {
-    let path = std::env::var_os("SCREENWIDE_WINDOWS_PREVIEW_TEST")
-      .map(std::path::PathBuf::from)
-      .expect("set SCREENWIDE_WINDOWS_PREVIEW_TEST to a recording");
-    std::thread::spawn(move || {
-      unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }
-        .ok()
-        .unwrap();
-      let decoded =
-        NativeVideoReader::open(&path, 640, 360, 0).and_then(|mut reader| reader.frame_at(0));
-      unsafe { CoUninitialize() };
-      assert!(decoded.unwrap().is_some());
-    })
-    .join()
-    .unwrap();
-  }
-}
+mod tests;

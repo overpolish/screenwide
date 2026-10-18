@@ -22,71 +22,11 @@ use windows::{
   },
 };
 
+pub(super) mod clipboard;
 mod input;
 mod typing_window;
-pub(super) use typing_window::TypingInput;
 
-#[derive(Clone, Copy)]
-pub(super) enum CursorKind {
-  Arrow,
-  /// The arrow tool over empty picture: it draws rather than picks up.
-  Crosshair,
-  Move,
-  ResizeHorizontal,
-  ResizeVertical,
-  ResizeNesw,
-  ResizeNwse,
-  /// Over a box being typed into.
-  IBeam,
-}
-
-#[derive(Clone, Copy)]
-// Payloads mirror the Win32 messages; not every field is consumed yet.
-#[allow(dead_code)]
-pub(super) enum Input {
-  ContextMenu {
-    x: f64,
-    y: f64,
-  },
-  DoubleClick {
-    x: f64,
-    y: f64,
-  },
-  Down {
-    centered: bool,
-    x: f64,
-    y: f64,
-    snapping: bool,
-  },
-  Move {
-    centered: bool,
-    x: f64,
-    y: f64,
-    pressed: bool,
-    snapping: bool,
-  },
-  Cancel,
-  /// Middle button: pans from wherever it lands, like any non-primary button
-  /// on macOS. Trackpads are rare on Windows and the primary button is taken
-  /// by selection over a pane.
-  PanDown {
-    x: f64,
-    y: f64,
-  },
-  PanUp {
-    x: f64,
-    y: f64,
-  },
-  Up {
-    x: f64,
-    y: f64,
-  },
-  Wheel {
-    x: f64,
-    y: f64,
-    delta: f64,
-  },
-}
+use screenwide_workspace::editing::CursorKind;
 
 pub(super) struct EditorWindow {
   hwnd: HWND,
@@ -262,8 +202,7 @@ impl super::RecordingPreviewSurface {
     let Ok(state) = self.inner.state.lock() else {
       return;
     };
-    self
-      .inner
+    super::windows(&self.inner)
       .editor
       .set_suspended(suspended, state.editor_active);
   }

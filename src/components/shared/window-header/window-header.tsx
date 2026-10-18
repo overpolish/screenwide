@@ -5,6 +5,7 @@ import { Copy, Minus, Square, X } from "lucide-react";
 import { ReactNode } from "react";
 
 import { t } from "../../../i18n/i18n";
+import { hostPlatform, type Platform } from "../../../lib/platform";
 import { cn } from "../../../lib/styling";
 import { IconButton } from "../../base/button/icon-button";
 import { ScrollArea } from "../../base/scroll-area/scroll-area";
@@ -15,17 +16,6 @@ import {
   useWindowHeaderCenterWidth,
   WindowHeaderCenterWidthContext,
 } from "./window-header-center-width";
-
-/**
- * The platform this build runs on, read the same way `main.tsx` reads it.
- * macOS windows that show this header wear the real traffic lights, so the
- * header leaves room for them and draws no window buttons of its own.
- */
-const detectedPlatform: "macos" | "windows" = navigator.userAgent.includes(
-  "Windows",
-)
-  ? "windows"
-  : "macos";
 
 export type WindowHeaderProps = {
   title: string;
@@ -48,8 +38,10 @@ export type WindowHeaderProps = {
   onMinimize?: () => void;
   onTitleChange?: (title: string) => void;
   onToggleMaximize?: () => void;
-  /** Stories only: the real windows follow the platform they run on. */
-  platform?: "macos" | "windows";
+  /** Stories only: the real windows follow the platform they run on. macOS
+   * windows wear the real traffic lights, so there the header leaves room for
+   * them and draws no window buttons of its own. */
+  platform?: Platform;
   variant?: "compact" | "display";
 };
 
@@ -65,7 +57,7 @@ export function WindowHeader({
   onMinimize,
   onTitleChange,
   onToggleMaximize,
-  platform = detectedPlatform,
+  platform = hostPlatform,
   title,
   variant = "display",
 }: WindowHeaderProps) {

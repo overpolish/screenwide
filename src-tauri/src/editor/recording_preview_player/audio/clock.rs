@@ -4,7 +4,7 @@
 //! Samples the device's scheduled output buffers at any display timestamp.
 //! Never projects past submitted audio, including during startup or a stall.
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(test)]
 use std::time::Duration;
 
 use cpal::{OutputStreamTimestamp, StreamInstant};
@@ -110,16 +110,6 @@ impl AudioClock {
 
   pub(crate) fn seconds(&self) -> f64 {
     self.seconds_at(Instant::now())
-  }
-
-  #[cfg(target_os = "macos")]
-  pub(crate) fn seconds_ahead(&self, seconds: f64) -> f64 {
-    let ahead = if seconds.is_finite() {
-      seconds.clamp(0.0, 0.05)
-    } else {
-      0.0
-    };
-    self.seconds_at(Instant::now() + Duration::from_secs_f64(ahead))
   }
 }
 

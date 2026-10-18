@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[cfg(any(target_os = "windows", test))]
 use super::{
   NormalizedRect, FRAME_EDGE_BOTTOM, FRAME_EDGE_CENTERED, FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT,
   FRAME_EDGE_TOP,
@@ -11,13 +10,11 @@ use super::{
 /// normalized geometry (`image.x + image.width - crop.width` against `image.x`
 /// while the crop still spans the whole image) can differ by an ULP. An
 /// inverted range collapses to `low`.
-#[cfg(any(target_os = "windows", test))]
 fn clamp_range(value: f64, low: f64, high: f64) -> f64 {
   value.max(low).min(high.max(low))
 }
 
 /// Move a crop window without changing the underlying image transform.
-#[cfg(any(target_os = "windows", test))]
 pub fn apply_crop_move(
   crop: NormalizedRect,
   image: NormalizedRect,
@@ -38,7 +35,6 @@ pub fn apply_crop_move(
 
 /// Resize a crop window from edge bits (left=1, right=2, top=4, bottom=8).
 /// The image bounds constrain the crop but are never modified.
-#[cfg(any(target_os = "windows", test))]
 pub fn apply_crop_resize(
   crop: NormalizedRect,
   image: NormalizedRect,
@@ -96,7 +92,6 @@ pub fn apply_crop_resize(
 /// the one opposite it and an edge from the middle of the far one, by however
 /// far the pointer took it along the axis that grew most. The window stays
 /// inside `image` and no smaller than `minimum` on either side.
-#[cfg(any(target_os = "windows", test))]
 pub fn apply_framed_crop_resize(
   crop: NormalizedRect,
   image: NormalizedRect,
@@ -155,7 +150,6 @@ pub fn apply_framed_crop_resize(
 /// anchor, or the half extents about it when `edges` carries the centered
 /// bit. The anchor is always a corner or the centre of `rect`, which is what
 /// lets the frontend rebuild the same rectangle from the anchor and `delta`.
-#[cfg(any(target_os = "windows", test))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CropDraw {
   pub rect: NormalizedRect,
@@ -167,7 +161,6 @@ pub struct CropDraw {
 /// sides are at least `minimum` long where the image leaves room, so a short
 /// drag or one along a single axis never collapses the crop. Centering is
 /// honoured only while the anchor has half a minimum of room on every side.
-#[cfg(any(target_os = "windows", test))]
 pub fn apply_crop_draw(
   anchor: (f64, f64),
   pointer: (f64, f64),

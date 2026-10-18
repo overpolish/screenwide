@@ -9,7 +9,7 @@ pub(super) fn publish(app: &AppHandle, s: &mut Session, phase: &'static str) {
   let mut cards = Vec::new();
   for group in &s.snapshot.groups {
     for desktop in group.desktops.iter().filter(|desktop| desktop.regular) {
-      cards.push(preview_windows::Preview {
+      cards.push(preview_cards::Preview {
         session_id: s.id,
         desktop: desktop.id.clone(),
         selected: desktop.id == selected,
@@ -32,11 +32,10 @@ pub(super) fn publish(app: &AppHandle, s: &mut Session, phase: &'static str) {
   let offsets = (0..count)
     .map(|index| (index as f64 * 56.0, 0.0))
     .collect::<Vec<_>>();
-  preview_windows::show_arranged(
+  preview_cards::show_arranged(
     app,
     cards,
-    f64::from(s.anchor.x),
-    f64::from(s.anchor.y),
+    Anchor::Physical(f64::from(s.anchor.x), f64::from(s.anchor.y)),
     &offsets,
   );
 }

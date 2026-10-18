@@ -36,23 +36,19 @@ pub(super) fn handle_key(
     && !thirds_key
   {
     if let Some(input) = active_input(state) {
-      end_session(app, state, true);
+      end_session(app, true);
       set_suppression(state, input, true);
       return CallbackResult::Drop;
     }
   }
   if mouse_key && matches!(event_type, CGEventType::KeyUp) {
     if active_input(state) == Some(InputKind::Mouse) {
-      end_session(app, state, false);
+      end_session(app, false);
     }
     set_suppression(state, InputKind::Mouse, false);
   }
   if thirds_key && is_active(state) {
-    set_detector_thirds(
-      app,
-      state,
-      native_settings::is_down(settings.thirds_modifier),
-    );
+    set_detector_thirds(app, native_settings::is_down(settings.thirds_modifier));
   }
   if settings.enabled && (mouse_reserved || thirds_reserved) {
     CallbackResult::Drop
@@ -80,16 +76,12 @@ pub(super) fn handle_mouse_button(
   let thirds_reserved = thirds_control && active.is_some();
   if mouse_control && matches!(event_type, CGEventType::OtherMouseUp) {
     if active == Some(InputKind::Mouse) {
-      end_session(app, state, false);
+      end_session(app, false);
     }
     set_suppression(state, InputKind::Mouse, false);
   }
   if thirds_control && active.is_some() {
-    set_detector_thirds(
-      app,
-      state,
-      native_settings::is_down(settings.thirds_modifier),
-    );
+    set_detector_thirds(app, native_settings::is_down(settings.thirds_modifier));
   }
   if settings.enabled && (mouse_reserved || thirds_reserved) {
     CallbackResult::Drop
@@ -102,13 +94,13 @@ pub(super) fn handle_flags_changed(app: &AppHandle, state: &SharedState) -> Call
   let modifier_down = native_settings::is_down(native_settings::snapshot().mouse_modifier);
   if !modifier_down {
     if active_input(state) == Some(InputKind::Mouse) {
-      end_session(app, state, false);
+      end_session(app, false);
     }
     set_suppression(state, InputKind::Mouse, false);
   }
   if is_active(state) {
     let thirds = native_settings::is_down(native_settings::snapshot().thirds_modifier);
-    set_detector_thirds(app, state, thirds);
+    set_detector_thirds(app, thirds);
   }
   CallbackResult::Keep
 }

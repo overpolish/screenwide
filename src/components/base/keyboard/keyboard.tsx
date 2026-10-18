@@ -11,7 +11,9 @@ import {
   type Ref,
 } from "react";
 
-import { isMacOS, keyLabel } from "./key-label";
+import { isMacHost } from "../../../lib/platform";
+
+import { keyLabel } from "./key-label";
 
 // A minimal keycap: a small rounded fill with the key in the label colour,
 // as Mac apps draw shortcut hints. No border, bottom edge or shadow; native
@@ -59,14 +61,14 @@ const mappedKey = (children: ReactNode) => {
     key === "command" ||
     key === "cmd" ||
     key === "⌘" ||
-    (isMacOS && (key === "meta" || key === "super" || key === "win"));
+    (isMacHost && (key === "meta" || key === "super" || key === "win"));
   if (command) {
     return {
       accessibleName: keyLabel("command"),
       children: <Command aria-hidden className={keyGlyphClassName} />,
     };
   }
-  if (isMacOS && (key === "control" || key === "ctrl" || key === "⌃")) {
+  if (isMacHost && (key === "control" || key === "ctrl" || key === "⌃")) {
     return {
       accessibleName: keyLabel(key),
       children: <ChevronUp aria-hidden className={keyGlyphClassName} />,

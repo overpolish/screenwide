@@ -80,24 +80,34 @@ impl KeyboardCompositor {
         // continuing badge at the exit moment, so the morph and pop tails -
         // and any layout reflow that follows them - belong to the
         // successor's clip and the lane ends at the handover.
-        let end_us = baked
+        let visuals = baked
           .timeline
           .visuals
           .iter()
-          .filter(|visual| visual.source_shortcut == index)
-          .filter_map(|visual| {
-            visual.exit.and_then(|(exit_us, kind)| match kind {
-              TransitionKind::Replacement | TransitionKind::Detached => {
-                source_after_output_duration_us(ranges, exit_us, 0)
-              }
-              _ => source_after_output_duration_us(ranges, exit_us, EXIT_US),
+          .filter(|visual| visual.source_shortcut == index);
+        // A key the recording never saw released stays on screen to the end,
+        // so its lane runs to the end of what the edit plays.
+        let held = visuals.clone().any(|visual| visual.exit.is_none());
+        let recording_end_us =
+          ranges.and_then(|ranges| ranges.iter().map(|range| range.source_end_us).max());
+        let end_us = if let Some(end_us) = recording_end_us.filter(|_| held) {
+          end_us
+        } else {
+          visuals
+            .filter_map(|visual| {
+              visual.exit.and_then(|(exit_us, kind)| match kind {
+                TransitionKind::Replacement | TransitionKind::Detached => {
+                  source_after_output_duration_us(ranges, exit_us, 0)
+                }
+                _ => source_after_output_duration_us(ranges, exit_us, EXIT_US),
+              })
             })
-          })
-          .max()
-          .unwrap_or_else(|| {
-            source_after_output_duration_us(ranges, last_key_us.saturating_add(HOLD_US), EXIT_US)
-              .unwrap_or(last_key_us)
-          });
+            .max()
+            .unwrap_or_else(|| {
+              source_after_output_duration_us(ranges, last_key_us.saturating_add(HOLD_US), EXIT_US)
+                .unwrap_or(last_key_us)
+            })
+        };
         Some(KeyboardTimelineItem {
           id: index as u64,
           start_ms: start_us / 1_000,

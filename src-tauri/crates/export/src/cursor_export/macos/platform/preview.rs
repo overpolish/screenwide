@@ -19,8 +19,6 @@ pub(in super::super::super) fn preview_frame(
     on_progress: &mut *request.on_progress,
     ..request
   };
-  let cursor_timeline = macos::native::evaluate(&request)?;
-  let keyboard_timeline = macos::native::evaluate_keyboard(&request)?;
   let whole = super::super::super::edited_ranges(&request);
   let (stretch, output_plan) = match picture {
     media_preview::PreviewPicture::Encoded => (
@@ -54,8 +52,6 @@ pub(in super::super::super) fn preview_frame(
   let cancelled = request.cancelled;
   let rendered = render_gpu_video(
     &mut request,
-    cursor_timeline.as_ref(),
-    keyboard_timeline.as_ref(),
     (&stretch.ranges, Some(stretch.source_span_ms())),
     &fallback,
     x264,

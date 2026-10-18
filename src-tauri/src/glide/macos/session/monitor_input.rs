@@ -52,7 +52,7 @@ pub(in crate::glide::macos) fn poll(app: &AppHandle, state: &SharedState) {
   {
     if let Ok(source) = CGEventSource::new(CGEventSourceStateID::CombinedSessionState) {
       if let Ok(event) = CGEvent::new(source) {
-        if begin_if_titlebar(app, state, InputKind::Wheel, event.location()) {
+        if begin_if_titlebar(app, InputKind::Wheel, event.location()) {
           CONTACT_OPEN.store(false, Ordering::Relaxed);
           if let Some(id) = super::monitors::current_id(state) {
             super::monitors::arm_preview(app, id);
@@ -185,7 +185,7 @@ pub(in crate::glide::macos) fn handle_event(
     }
   }
   if !active {
-    if !begin_if_titlebar(app, state, input, event.location()) {
+    if !begin_if_titlebar(app, input, event.location()) {
       // A missing destination must never fall through into resizing.
       return Some(CallbackResult::Keep);
     }
@@ -221,7 +221,7 @@ pub(in crate::glide::macos) fn handle_event(
     }
   }
   if x != 0.0 || y != 0.0 {
-    update_detector(app, state, x, y, false);
+    update_detector(app, x, y, false);
   }
   let phase = event.get_integer_value_field(99);
   if input == InputKind::Trackpad && phase & (4 | 8) != 0 {
@@ -251,7 +251,7 @@ fn finish(app: &AppHandle, state: &SharedState, cancelled: bool) {
     // Swallow an unfinished finger episode if the control was released first.
     super::set_suppression(state, InputKind::Trackpad, contact_open);
   }
-  end_session(app, state, cancelled);
+  end_session(app, cancelled);
 }
 
 fn deltas(event: &CGEvent, input: InputKind) -> (f64, f64) {

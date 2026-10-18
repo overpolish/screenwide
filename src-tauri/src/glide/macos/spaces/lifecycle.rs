@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{preview_windows, transport, Input, Session, CLOSING, NEXT_ID, SESSION};
+use super::{transport, Input, Session, CLOSING, NEXT_ID, SESSION};
+use crate::glide::preview_cards;
 use crate::glide::{
   begin_logical, finish, finish_with_fade,
   icon::spawn_icon_lookup,
@@ -22,7 +23,7 @@ use tauri::AppHandle;
 pub(super) fn begin(app: &AppHandle, input: Input, anchor: CGPoint) -> bool {
   if crate::glide::platform::deliberate::blocks_sessions()
     || CLOSING.load(Ordering::Acquire)
-    || preview_windows::is_dismissing()
+    || preview_cards::is_dismissing()
     || cursor::is_cursor_pinned()
     || crate::glide::core::activity::BusyLease::is_busy()
   {
@@ -31,7 +32,6 @@ pub(super) fn begin(app: &AppHandle, input: Input, anchor: CGPoint) -> bool {
   let Some((target, _, pid)) = session::target_at(app, anchor) else {
     return false;
   };
-  preview_windows::initialize(app);
   target.raise();
   if cursor::pin_cursor(anchor).is_err() {
     return false;
@@ -139,10 +139,10 @@ pub(super) fn close(app: &AppHandle) {
   CLOSING.store(true, Ordering::Release);
   let anchor = session.anchor;
   let cancelled = session.cancelled.load(Ordering::Acquire);
-  preview_windows::dismiss(app, cancelled);
+  preview_cards::dismiss(app, cancelled);
   let done_completion = completion.clone();
   let done = move || {
-    preview_windows::after_dismissed(Box::new(move || {
+    preview_cards::after_dismissed(Box::new(move || {
       let _completion = done_completion;
       CLOSING.store(false, Ordering::Release)
     }));

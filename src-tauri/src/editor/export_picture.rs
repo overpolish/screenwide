@@ -211,8 +211,6 @@ impl<'a> ExportPicture<'a> {
       output: self.output,
       screen: self.screen,
       selection: self.selection,
-      #[cfg(target_os = "windows")]
-      surface: crate::editor::preview_platform::recording_export_surface,
       timeline: self.timeline,
       video: self.video,
       width: self.size.0,

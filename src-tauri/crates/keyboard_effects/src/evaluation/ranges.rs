@@ -174,7 +174,15 @@ impl KeyboardCompositor {
       let layout = key.layout.sample(now, clock);
       overlay.keys[index] = KeyboardKey {
         key_code: key.key_code,
-        modifier_mask: key.modifier_mask,
+        // The renderer expands a lone key's mask into caps of their own,
+        // which only a version-one sidecar needs: it kept its modifiers on
+        // the key. A later sidecar records them as keys, and a key left held
+        // after its modifiers came up shows alone.
+        modifier_mask: if self.legacy_modifier_expansion {
+          key.modifier_mask
+        } else {
+          0
+        },
         visible: if exit_progress.is_some() { 2 } else { 1 },
         progress: key_progress,
         alpha: key_alpha,

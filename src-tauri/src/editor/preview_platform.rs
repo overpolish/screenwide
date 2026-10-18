@@ -19,31 +19,27 @@
 //! # Porting to a new platform
 //!
 //! A backend is a module that exports the same item names with the same
-//! signatures as [`surface_macos`], selected by the `cfg` block below. Five
-//! pieces make up a complete port, and a port has to be complete: the frontend
-//! has no software preview to fall back to, so a backend that omits any of
-//! them leaves that platform without a preview at all.
+//! signatures as `surface_windows` and `surface_macos`, selected by the
+//! `cfg` block below. Both are thin shells over the shared editing engine
+//! ([`screenwide_workspace::editing::WorkspaceEditor`]): a shell implements its
+//! `Host` trait and hands the engine its pointer and keyboard. Five pieces
+//! make up a complete port, and a port has to be complete: the frontend has no
+//! software preview to fall back to, so a backend that omits any of them
+//! leaves that platform without a preview at all.
 //!
 //! 1. **A compositing surface created from a tauri window, rendering below the
 //!    OS webview.** [`RecordingPreviewSurface::from_window`] takes the editor
-//!    [`WebviewWindow`] and attaches native panes as siblings *underneath* the
-//!    webview's own view, so webview chrome composites on top of them. On
-//!    macOS those are `CAMetalLayer`-backed views inserted below the
-//!    `WKWebView` in the same `NSView` hierarchy (see
-//!    `recording_preview_surface_macos.m`); on Windows the analogue is a
-//!    DirectComposition visual tree, or a child HWND, ordered under the
-//!    `WebView2` controller's HWND. The surface must provide batched pane
-//!    layout ([`RecordingPreviewSurface::begin_layout`] / `layout` /
-//!    `finish_layout`, so a resize is one atomic reposition and never tears
-//!    against the webview), a viewport with an alpha-preserving backdrop
-//!    ([`RecordingPreviewSurface::set_viewport`] - the backstop is what shows
-//!    through the webview's mask holes outside the panes),
-//!    [`RecordingPreviewSurface::hide`], and the workspace entry points below.
+//!    [`WebviewWindow`] and attaches native drawables underneath the webview's
+//!    own view, so webview chrome composites on top of them, and an input
+//!    surface over the workarea. On macOS those are `CAMetalLayer`s on a view
+//!    inserted below the `WKWebView`, with an input `NSView` above it; on
+//!    Windows a DirectComposition visual tree under the `WebView2` child and a
+//!    non-activating input child window above it.
 //! 2. **The workspace drawable.** Both backends draw every layer through the
-//!    shared [`workspace_scene`]: `present_screenshot_workspace` and
-//!    `present_recording_workspace` stage the layers, each from a platform
-//!    picture ([`LayerPicture`]), and the surface draws the scene into one
-//!    drawable over the viewport, at its panes' boxes and over the
+//!    shared [`screenwide_workspace::scene`]: `present_screenshot_workspace`
+//!    and `present_recording_workspace` stage the layers, each from a
+//!    platform picture (`LayerPicture`), and the surface draws the scene into
+//!    one drawable over the viewport, at its panes' boxes and over the
 //!    checkerboard, whenever a layout, a transform or a present changes it.
 //!    The scene does the whole output composition on the GPU.
 //! 3. **A pane decoder and frame scrubber for stills and scrubbing**, plus (4)
@@ -60,7 +56,7 @@
 //!
 //! Shaders are WGSL on the shared wgpu device ([`screenwide_gpu`]), drawn by the
 //! shared [`compositor`]; the live preview's workspace is the shared
-//! [`workspace_scene`] on both platforms. Windows presents through
+//! [`screenwide_workspace::scene`] on both platforms. Windows presents through
 //! DirectComposition and macOS through Core Animation layers. Another OS can
 //! add its own backend behind this facade without leaking platform texture
 //! formats, coordinate conventions, or window-surface details into shared
@@ -68,10 +64,6 @@
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod audio_ribbon;
-/// A selection the select tool turns with the rotation gizmo.
-mod selection_turn;
-mod workspace_backdrop;
-mod workspace_scene;
 
 #[cfg(target_os = "macos")]
 mod surface_macos;
@@ -84,94 +76,10 @@ use self::surface_windows as surface;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use audio_ribbon::{ribbon_still, BAR_PITCH_POINTS as RIBBON_BAR_PITCH_POINTS};
-#[cfg(target_os = "macos")]
-pub(crate) use surface::run_on_main_queue;
 pub(crate) use surface::RecordingPreviewSurface;
-#[cfg(target_os = "windows")]
-pub(crate) use surface::{baked_camera_overlay, recording_export_surface, DecodedTexture};
-pub(crate) use workspace_scene::{LayerPicture, NativeWorkspacePlacement, RecordingWorkspaceLayer};
 
-pub(crate) type TransformCallback = Box<dyn FnMut(f64) + Send + 'static>;
-pub(crate) type SelectionCallback = Box<dyn FnMut(Option<u32>) + Send + 'static>;
-pub(crate) type PointerDownCallback = Box<dyn FnMut() + Send + 'static>;
 pub(crate) const NATIVE_POINTER_DOWN_EVENT: &str = "preview://native-pointer-down";
-/// A right press on a video layer or an annotation in the native canvas: the
-/// pane it landed on, the annotation's place in the published list when it
-/// landed on one, and the point, in logical px from the top-left of the
-/// window's content, for the web layer to open its own menu at.
-pub(crate) type ContextMenuCallback = Box<dyn FnMut(u32, Option<u32>, f64, f64) + Send + 'static>;
 pub(crate) const NATIVE_CONTEXT_MENU_EVENT: &str = "preview://context-menu";
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SelectionGesturePhase {
-  Begin = 0,
-  Update = 1,
-  End = 2,
-  Cancel = 3,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
-pub(crate) enum SelectionGestureOperation {
-  Move = 0,
-  Resize = 1,
-  Radius = 2,
-  FrameResize = 3,
-  FrameRadius = 4,
-  CropMove = 5,
-  CropResize = 6,
-  /// A new crop window drawn from a press outside the current one. Begin
-  /// carries the anchor's offset from the crop's origin; later samples carry
-  /// the far corner's offset from the anchor, or the half extents when the
-  /// centered edge bit is set.
-  CropDraw = 7,
-  /// A ring of the rotation gizmo dragged round. Every sample carries the
-  /// turn it reaches, in degrees: about X in the X delta, about Y in the Y
-  /// delta and about Z in the scale.
-  Rotate = 8,
-}
-
-impl SelectionGestureOperation {
-  /// Crop gestures are mirrored by React's uncropped composition rather than
-  /// the native gesture managers.
-  pub(crate) const fn is_crop(self) -> bool {
-    matches!(self, Self::CropMove | Self::CropResize | Self::CropDraw)
-  }
-}
-
-/// One pointer sample of an annotation tool: the phase, the pane, whether the
-/// gesture makes a new annotation (0) or edits an existing one (1), that
-/// annotation's index and grip, the point in the layer's image-normalised
-/// space, which snapping modifiers were held - bit 0 Shift, which snaps a
-/// counter's tail to the quarter turns, bit 1 Cmd or Ctrl, which snaps the
-/// position itself - and how wide the layer's picture is drawn on screen, in
-/// points, which is what turns a snap's reach into source pixels.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) type AnnotationGestureCallback =
-  Box<dyn FnMut(SelectionGesturePhase, u32, u32, u32, u32, f64, f64, u32, f64) + Send + 'static>;
-
-/// The hover halo's progress: the arrow the pointer rests on (or -1), how far
-/// through the pulse it is, and how wide the layer's picture is drawn on
-/// screen, in points.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) type AnnotationHoverCallback = Box<dyn FnMut(i32, f64, f64) + Send + 'static>;
-
-/// What a text box being typed into reports: a double-click asking to open
-/// it, a change to its text, or the end of the typing.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum AnnotationTextPhase {
-  Open,
-  Change,
-  End,
-}
-
-/// One report from a text box being typed into: the phase, the layer and the
-/// box's place in its list, the text as it now stands, and the change's
-/// revision, which only ever grows within one session.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) type AnnotationTextCallback =
-  Box<dyn FnMut(AnnotationTextPhase, u32, u32, String, u64) + Send + 'static>;
 
 /// A picture dropped on the workspace, and where it landed: the layer under
 /// it and the point in that layer's image-normalised space, or `None` off
@@ -185,113 +93,17 @@ pub(crate) type ImageDropCallback = Box<
     + 'static,
 >;
 
-pub(crate) type SelectionGestureCallback = Box<
-  dyn FnMut(SelectionGesturePhase, u32, SelectionGestureOperation, u32, f64, f64, f64)
-    + Send
-    + 'static,
->;
-
-/// Builds the comparatively expensive Windows D3D/DirectComposition pipeline
-/// while the editor webview is still hidden. The first recording review can
-/// then open with only its media source to initialise.
-#[cfg(target_os = "windows")]
+/// Builds the comparatively expensive GPU pipeline while the editor webview is
+/// still hidden. The first recording review can then open with only its media
+/// source to initialise.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) fn prewarm(window: tauri::WebviewWindow) {
   tauri::async_runtime::spawn_blocking(move || {
     if let Err(error) = RecordingPreviewSurface::from_window(&window) {
-      eprintln!("Could not prewarm the Windows preview surface: {error}");
-    }
-  });
-}
-
-/// Opens the GPU and starts compiling the canvas variants a preview leans on
-/// while the editor webview is still hidden, as the Windows prewarm does
-/// through its surface. Every compositor on the device shares them, so the
-/// first preview finds them compiling or ready. The surface itself is not
-/// built here: it inserts views into the window, which AppKit allows only on
-/// the main thread.
-#[cfg(target_os = "macos")]
-pub(crate) fn prewarm(_window: tauri::WebviewWindow) {
-  tauri::async_runtime::spawn_blocking(|| {
-    match screenwide_gpu::shared().and_then(|gpu| {
-      screenwide_compositor::compositor::Compositor::new(
-        gpu,
-        screenwide_compositor::compositor::NativeCursors::none(),
-      )
-    }) {
-      Ok(compositor) => compositor.compile_annotation_kinds_in_background(),
-      Err(error) => eprintln!("Could not prewarm the macOS canvas shaders: {error}"),
+      eprintln!("Could not prewarm the preview surface: {error}");
     }
   });
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(crate) fn prewarm(_window: tauri::WebviewWindow) {}
-
-/// [`PreviewSelection::framed`] for a rectangle a scene fixes: a move pans
-/// the picture inside it, a resize zooms it, and the outline stays put. The
-/// macOS overlay reads the same values.
-pub(crate) const FRAMED_FIXED: u32 = 1;
-/// [`PreviewSelection::framed`] for a rectangle a scene places but leaves
-/// free, a custom scene's box: it moves and resizes like any layer but never
-/// grows the canvas, whose size the scene does not own.
-pub(crate) const FRAMED_FREE: u32 = 2;
-
-/// [`PreviewSelection::layer_id`] of the keyboard shortcuts drawn over the
-/// picture. The macOS overlay reads the same values.
-pub(crate) const KEYBOARD_LAYER_ID: u32 = u32::MAX - 1;
-/// [`PreviewSelection::layer_id`] of the captions drawn over the picture.
-pub(crate) const CAPTIONS_LAYER_ID: u32 = u32::MAX - 2;
-
-/// Whether `layer_id` is drawn over the picture rather than placed in it.
-/// Every shortcut and caption takes its size and place from its tool, so a
-/// press on one only reports it, for the editor to open that tool: it is
-/// never selected, moved or resized.
-pub(crate) const fn is_overlay_layer(layer_id: u32) -> bool {
-  layer_id == KEYBOARD_LAYER_ID || layer_id == CAPTIONS_LAYER_ID
-}
-
-/// A render-only selection overlay in workspace coordinates. The rectangle is
-/// normalized to its pane so the native surface can apply the same pan/zoom
-/// transform as the media without knowing frontend output sizes.
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-pub(crate) struct PreviewSelection {
-  pub pane_index: u32,
-  /// Logical editable layer. This is independent of the physical pane: a
-  /// baked camera and its screen both render in pane 0 but remain two layers.
-  pub layer_id: u32,
-  /// Non-zero when this rectangle is a crop window over an independent image.
-  pub crop_mode: u32,
-  /// Non-zero when this selection has no corner-radius gesture or OSC.
-  pub radius_disabled: u32,
-  /// Where a scene places this rectangle: zero outside every scene,
-  /// [`FRAMED_FIXED`] where the scene fixes it, and [`FRAMED_FREE`] where the
-  /// scene places it but leaves it free to move and resize.
-  pub framed: u32,
-  pub x: f64,
-  pub y: f64,
-  pub width: f64,
-  pub height: f64,
-  pub radius_percent: f64,
-  pub image_x: f64,
-  pub image_y: f64,
-  pub image_width: f64,
-  pub image_height: f64,
-  /// The uncropped picture this rectangle is cut from, in pane fractions.
-  /// Only crop selections carry it; it bounds the crop magnifier.
-  pub recenter_x: f64,
-  pub recenter_y: f64,
-  pub recenter_width: f64,
-  pub recenter_height: f64,
-  /// Non-zero where a scene turns this layer in depth and the select tool
-  /// turns it with the rotation gizmo's rings: the screen inside a scene.
-  pub turnable: u32,
-  /// How the layer is turned now, in degrees about each axis, which its
-  /// chrome is drawn and pressed through.
-  pub rotation_x: f64,
-  pub rotation_y: f64,
-  pub rotation_z: f64,
-}
-
-// The macOS overlay reads the same layout (`ScreenwidePreviewSelection`).
-const _: () = assert!(std::mem::size_of::<PreviewSelection>() == 160);

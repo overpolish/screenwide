@@ -92,8 +92,6 @@ fn recenter_detected_dark_background_matches_native_composition() {
     output: &settings,
     screen: &source,
     selection: &TrackSelection::default(),
-    #[cfg(target_os = "windows")]
-    surface: crate::editor::preview_platform::recording_export_surface,
     timeline: None,
     video: VideoExportOptions {
       compression: 1,

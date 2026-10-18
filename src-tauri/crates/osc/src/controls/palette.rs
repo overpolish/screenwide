@@ -138,7 +138,6 @@ const fn content_alpha(appearance: Appearance, disabled: bool) -> f32 {
 /// A bezel's hairline stroke, the web skin's `control-stroke`: Fluent's
 /// control stroke on the Windows skin. macOS bezels have no stroke, and only
 /// the Windows chrome draws it, as the plate's outline.
-#[cfg(target_os = "windows")]
 pub const fn control_stroke(appearance: Appearance) -> [f32; 4] {
   match appearance {
     Appearance::Light => [0.0, 0.0, 0.0, 0.058],

@@ -5,6 +5,8 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
+import { isMacHost } from "../../../lib/platform";
+
 /** Tells the callers apart, so only the one that opened the panel hears it. */
 let nextToken = 0;
 
@@ -13,8 +15,7 @@ let nextToken = 0;
  * is a window we can neither place nor theme, so the Mac app asks AppKit for
  * the real panel instead; everywhere else keeps the native input.
  */
-export const usesSystemColorPanel = () =>
-  isTauri() && navigator.userAgent.includes("Mac");
+export const usesSystemColorPanel = () => isTauri() && isMacHost;
 
 /**
  * The system Colours panel, as one control owns it.

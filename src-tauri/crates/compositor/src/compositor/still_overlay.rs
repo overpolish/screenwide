@@ -2,20 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The overlays a native surface hands across as one C struct: the camera
-//! bubble's placement and the cursor's size. On macOS, also a still composed
-//! from a frame and them.
+//! bubble's placement and the cursor's size; and a still composed from a
+//! frame and them.
 
-#[cfg(target_os = "macos")]
 use super::still::{compose_still, StillCamera, StillInputs};
-#[cfg(target_os = "macos")]
-use super::CursorArtwork;
-#[cfg(target_os = "macos")]
-use screenwide_cursor_effects::{GpuArtwork, GpuCursor};
-#[cfg(target_os = "macos")]
+use screenwide_cursor_effects::GpuCursor;
 use screenwide_imaging::CapturedImage;
-#[cfg(target_os = "macos")]
 use screenwide_keyboard_effects::KeyboardOverlay;
-#[cfg(target_os = "macos")]
 use screenwide_output::ScreenshotOutputSettings;
 
 #[repr(C)]
@@ -43,16 +36,15 @@ pub struct StillOverlay {
 }
 
 /// `image` composed on the canvas `settings` describe, through the shared
-/// compositor. `overlay` carries the camera bubble's placement; the cursor is
-/// drawn from its artwork.
-#[cfg(target_os = "macos")]
+/// compositor. `overlay` carries the camera bubble's placement; `cursor` is
+/// placed on the canvas.
 #[allow(clippy::too_many_arguments)]
 pub fn compose_output_layers(
   image: &CapturedImage,
   settings: &ScreenshotOutputSettings,
   seconds: f64,
   transparent_background: bool,
-  cursor: Option<(&GpuCursor, &[GpuArtwork])>,
+  cursor: Option<&GpuCursor>,
   camera: Option<&CapturedImage>,
   overlay: Option<&StillOverlay>,
   keyboard: Option<&KeyboardOverlay>,
@@ -81,24 +73,14 @@ pub fn compose_output_layers(
     }),
     _ => None,
   };
-  let artworks = cursor
-    .map_or(&[][..], |(_, artworks)| artworks)
-    .iter()
-    .map(CursorArtwork::from)
-    .collect::<Vec<_>>();
   compose_still(
     image,
     settings,
     StillInputs {
       seconds,
-      cursor: cursor.map(|(cursor, _)| {
-        (
-          GpuCursor {
-            clip_at_video_edge: clip_cursor_at_video_edge,
-            ..*cursor
-          },
-          artworks.as_slice(),
-        )
+      cursor: cursor.map(|cursor| GpuCursor {
+        clip_at_video_edge: clip_cursor_at_video_edge,
+        ..*cursor
       }),
       camera,
       keyboard: keyboard.copied(),

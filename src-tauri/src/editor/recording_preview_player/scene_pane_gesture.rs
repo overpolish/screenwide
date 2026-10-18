@@ -6,10 +6,10 @@
 //! the screen turned with the rotation gizmo.
 
 use super::{PreviewCompositionSettings, PreviewPlayerManager};
-use crate::editor::preview_platform::SelectionGestureOperation;
 use screenwide_export::scenes::camera_target;
 use screenwide_scenes::model::{SceneBox, SceneBoxes};
 use screenwide_scenes::{RecordingSceneClip, RecordingScenePreset, SceneRadius, SceneRotation};
+use screenwide_workspace::editing::SelectionGestureOperation;
 
 /// The index of the clip `timeline_ms` falls in.
 fn clip_at(clips: &[RecordingSceneClip], timeline_ms: u64) -> Option<usize> {

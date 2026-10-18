@@ -13,13 +13,7 @@ pub(super) fn gpu() -> &'static Gpu {
 }
 
 pub(super) fn compositor() -> Compositor {
-  // One transparent texel per cursor style: these tests draw no cursor.
-  let cursors = NativeCursors {
-    size: (1, 1),
-    layers: vec![0; 4 * 8],
-    hotspots: [[0.0; 4]; 8],
-  };
-  Compositor::new(gpu(), cursors).expect("the preview compositor")
+  Compositor::new(gpu()).expect("the preview compositor")
 }
 
 pub(super) fn target() -> wgpu::Texture {

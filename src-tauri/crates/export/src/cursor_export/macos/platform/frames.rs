@@ -1,55 +1,25 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Each exported frame composed on the shared GPU device. AVFoundation reads
-//! and writes the frames' buffers; this draws one into the next, and says
-//! when the GPU is done with it.
+//! The macOS side of an exported frame: AVFoundation's decoded planes in,
+//! the shared [`FrameDraw`] over them, and the canvas back out as planes.
 
 use std::collections::VecDeque;
 
 use cidre::cv;
 
-use super::super::super::frame_annotations::ExportAnnotations;
-use super::super::super::frame_scene::ExportScenes;
-use super::frame_camera::drawn_camera;
-use super::frame_captions::FrameCaptions;
-use super::frame_grid::{grid_frame, grid_index};
-use super::frame_placement::carried_cursor;
+use super::super::super::frame_draw::FrameDraw;
 use super::*;
-use crate::cursor_export::camera_effects::FrameEffects;
-use crate::cursor_export::export_output::on_canvas;
-use screenwide_compositor::annotation_gpu::prepared_arrows;
 use screenwide_compositor::compositor::video_planes::VideoPlanes;
-use screenwide_compositor::compositor::BakeGeometry;
-use screenwide_compositor::compositor::{
-  ComposedFrame, Compositor, CursorArtwork, NativeCursors, SourceTexture, FORMAT,
-};
-use screenwide_cursor_effects::GpuCursor;
-use screenwide_gpu::macos::buffer_plane_texture;
+use screenwide_compositor::compositor::{Compositor, SourceTexture, FORMAT};
+use screenwide_gpu::macos::{bgra_buffer_texture, buffer_plane_texture};
 use screenwide_gpu::Gpu;
-use screenwide_keyboard_effects::KeyboardOverlay;
-use screenwide_output::ScreenshotOutputSettings;
 
 pub(super) struct FrameComposer<'a> {
   gpu: &'static Gpu,
   compositor: Compositor,
   planes: VideoPlanes,
-  settings: &'a ScreenshotOutputSettings,
-  annotations: ExportAnnotations,
-  cursors: &'a [Option<GpuCursor>],
-  keyboards: &'a [KeyboardOverlay],
-  /// The captions drawn over each frame.
-  captions: Option<FrameCaptions<'a>>,
-  /// Where the camera sits, whether it casts a shadow, and whether it is
-  /// drawn over the screen's annotations.
-  camera: Option<(BakeGeometry, bool, bool)>,
-  /// The scenes that move the screen and the camera frame by frame.
-  scenes: ExportScenes,
-  /// The camera's effects, on the baked-in camera or on the screen where the
-  /// screen is the camera.
-  effects: Option<FrameEffects>,
-  /// The screen's decoded size, which places the cursors the scenes move.
-  source_size: (u32, u32),
+  draw: FrameDraw<'a>,
   /// The screen frame as the canvas samples it, made from its planes.
   source: Option<SourceTexture>,
   canvas: wgpu::TextureView,
@@ -62,20 +32,10 @@ impl<'a> FrameComposer<'a> {
   /// `annotations_within_ms` is the stretch a preview draws; see `ExportAnnotations`.
   pub(super) fn new<'r: 'a>(
     request: &CursorExportRequest<'r>,
-    timeline: Option<&'a macos::native::CursorTimeline>,
-    keyboard_timeline: Option<&'a macos::native::KeyboardTimeline>,
     annotations_within_ms: Option<[u64; 2]>,
   ) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
-    let mut compositor = Compositor::new(gpu, NativeCursors::none())?;
-    if let Some(timeline) = timeline.filter(|timeline| !timeline.artworks.is_empty()) {
-      let artworks = timeline
-        .artworks
-        .iter()
-        .map(CursorArtwork::from)
-        .collect::<Vec<_>>();
-      compositor.use_cursor_artworks(&artworks)?;
-    }
+    let compositor = Compositor::new(gpu)?;
     let (width, height) = screenwide_output::output_dimensions(request.output)?;
     let canvas = gpu
       .device
@@ -94,32 +54,11 @@ impl<'a> FrameComposer<'a> {
         view_formats: &[],
       })
       .create_view(&Default::default());
-    let camera = request
-      .camera
-      .map(|(_, options)| {
-        Ok::<_, String>((
-          on_canvas(media_preview::bake_geometry(options)?, request.output),
-          options.camera_drop_shadow,
-          request.camera_on_top,
-        ))
-      })
-      .transpose()?;
-    let annotations = ExportAnnotations::for_request(request, annotations_within_ms);
-    let scenes = ExportScenes::for_request(request);
-    let effects = FrameEffects::new(request.camera_effects.as_ref(), gpu)?;
     Ok(Self {
       gpu,
       planes: VideoPlanes::new(gpu),
+      draw: FrameDraw::new(request, gpu, annotations_within_ms)?,
       compositor,
-      settings: request.output,
-      annotations,
-      cursors: timeline.map_or(&[][..], |timeline| timeline.frames.as_slice()),
-      keyboards: keyboard_timeline.map_or(&[][..], |timeline| timeline.frames.as_slice()),
-      captions: FrameCaptions::for_request(request, (width, height)),
-      camera,
-      scenes,
-      effects,
-      source_size: (request.width, request.height),
       source: None,
       canvas,
       submitted: VecDeque::new(),
@@ -146,9 +85,6 @@ impl<'a> FrameComposer<'a> {
       "screen chroma",
     )?;
     let source = self.source(size);
-    // Annotated frames draw with the shader holding every kind; see
-    // `hold_every_annotation_kind`.
-    let _every = self.compositor.hold_every_annotation_kind();
     let mut encoder = gpu
       .device
       .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -158,73 +94,15 @@ impl<'a> FrameComposer<'a> {
       .planes
       .decode(gpu, &mut encoder, &view(luma), &view(chroma), &source.view);
     gpu.queue.submit([encoder.finish()]);
-    let source_ms = (frame.source_us + 500) / 1_000;
-    let source = match self.effects.as_mut().filter(|effects| effects.on_screen()) {
-      Some(effects) => effects.drawn(&self.compositor, &source, source_ms)?,
-      None => source,
-    };
-    // A frame inside a scene is drawn on its own arrangement; every other
-    // frame keeps the request's composition and the camera placed once.
-    let arranged = self.scenes.at(self.settings, source_ms, frame.frame_ms);
-    let settings = arranged
-      .as_ref()
-      .map_or(self.settings, |(settings, _)| settings);
-    let placement = match (&arranged, self.camera) {
-      (Some((settings, Some(options))), Some((_, shadow, on_top))) => Some((
-        on_canvas(media_preview::bake_geometry(*options)?, settings),
-        shadow,
-        on_top,
-      )),
-      _ => self.camera,
-    };
-    let annotations = self.annotations.with_camera_at(
-      source_ms,
-      frame.frame_ms,
-      settings,
-      arranged.as_ref().and_then(|(_, options)| *options),
-    );
-    let camera_effects = self.effects.as_mut().filter(|effects| !effects.on_screen());
     let camera = unsafe { pixel_buffer(frame.camera) }
-      .zip(placement)
-      .map(|(pixels, placement)| {
-        let drawn = drawn_camera(
-          &self.compositor,
-          pixels,
-          annotations.camera.as_ref(),
-          (camera_effects, source_ms),
-        )?;
-        Ok::<_, String>((drawn, placement))
-      })
+      .map(|pixels| camera_source(gpu, pixels))
       .transpose()?;
-    let mut prepared =
-      prepared_arrows(&annotations.screen, source.size, settings, None, None, None)?;
-    if let Some(captions) = &self.captions {
-      captions.draw_over(&mut prepared, frame.source_us, frame.frame_ms);
-    }
-    let grid = grid_index(frame.source_us);
-    self.compositor.draw_with_camera(
+    self.draw.draw(
+      &self.compositor,
       &self.canvas,
       &source,
-      settings,
-      ComposedFrame {
-        cursor: match (&arranged, grid_frame(self.cursors, grid).flatten()) {
-          (Some((arranged, _)), Some(cursor)) => Some(carried_cursor(
-            cursor,
-            self.source_size,
-            self.settings,
-            arranged,
-          )?),
-          (_, cursor) => cursor,
-        },
-        keyboard: grid_frame(self.keyboards, grid),
-        foreground_only: false,
-        seconds: frame.source_us as f64 / 1_000_000.0,
-      },
-      camera
-        .as_ref()
-        .map(|(camera, (geometry, shadow, on_top))| (camera, *geometry, *shadow, *on_top)),
-      None,
-      &prepared,
+      camera.as_ref(),
+      (frame.source_us, frame.frame_ms),
     )?;
     let luma = buffer_plane_texture(gpu, destination, 0, wgpu::TextureFormat::R8Unorm, "luma")?;
     let chroma =
@@ -277,6 +155,19 @@ impl<'a> FrameComposer<'a> {
     self.source = Some(source.clone());
     source
   }
+}
+
+/// The decoded camera frame `pixels` as the canvas samples it.
+fn camera_source(gpu: &Gpu, pixels: &cv::PixelBuf) -> Result<SourceTexture, String> {
+  let texture = bgra_buffer_texture(gpu, pixels, "export camera")?;
+  Ok(SourceTexture {
+    size: (texture.width(), texture.height()),
+    view: texture.create_view(&Default::default()),
+    texture,
+    picture: None,
+    enhanced: false,
+    cut_out: false,
+  })
 }
 
 /// One frame the export loop hands over: its decoded screen, its camera

@@ -1,20 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Keeps typing and shortcuts out of Glide. A letter control pressed while
-//! someone is typing types instead. Any other key pressed while a control is
-//! held makes a shortcut of it: whatever glide is open is cancelled, and none
-//! opens again until every control is released. The mouse control opens a
-//! glide only once the pointer has travelled with it held.
-
-use std::{
-  collections::HashSet,
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    LazyLock, Mutex,
-  },
-  time::Instant,
-};
+//! macOS's half of keeping typing and shortcuts out of Glide: the event tap's
+//! key codes, flags and locations read for the shared guard in
+//! `glide::core::typing_guard`.
 
 use core_graphics::{
   event::{CGEvent, CGEventFlags, CGEventType, EventField, KeyCode},
@@ -24,21 +13,11 @@ use tauri::AppHandle;
 
 use super::{
   native_settings,
+  own_window::any_titlebar,
   session::{self, InputKind, SharedState},
   spaces,
 };
-use crate::glide::core::deliberate::{StartTravel, TypingIntent};
-
-#[derive(Default)]
-struct Typing {
-  intent: TypingIntent,
-  /// Letter controls that went down as typing, until they are released.
-  letters: HashSet<i64>,
-}
-
-static TYPING: LazyLock<Mutex<Typing>> = LazyLock::new(Mutex::default);
-static CHORDED: AtomicBool = AtomicBool::new(false);
-static MOUSE_START: LazyLock<Mutex<StartTravel>> = LazyLock::new(Mutex::default);
+use crate::glide::core::typing_guard::{self as guard, KeyRole};
 
 /// Whether this event types rather than drives Glide. Such an event passes on
 /// untouched, unseen by every other handler, so it never counts as a held
@@ -62,10 +41,10 @@ pub(super) fn types(
   }
   match event_type {
     CGEventType::KeyDown => key_down(app, state, event),
-    CGEventType::KeyUp => typing().letters.remove(&key_code(event)),
+    CGEventType::KeyUp => guard::key_up(key_code(event)),
     _ => {
       let point = event.location();
-      typing().intent.note_click((point.x, point.y));
+      guard::note_click((point.x, point.y));
       false
     }
   }
@@ -73,11 +52,9 @@ pub(super) fn types(
 
 fn key_down(app: &AppHandle, state: &SharedState, event: &CGEvent) -> bool {
   let code = key_code(event);
-  if event.get_integer_value_field(EventField::KEYBOARD_EVENT_AUTOREPEAT) != 0 {
-    return typing().letters.contains(&code);
-  }
+  let repeat = event.get_integer_value_field(EventField::KEYBOARD_EVENT_AUTOREPEAT) != 0;
   let settings = native_settings::snapshot();
-  if !settings.enabled || crate::shortcuts::is_capturing() {
+  if !repeat && (!settings.enabled || crate::shortcuts::is_capturing()) {
     return false;
   }
   let letter = [
@@ -87,25 +64,37 @@ fn key_down(app: &AppHandle, state: &SharedState, event: &CGEvent) -> bool {
     settings.thirds_modifier,
   ]
   .iter()
-  .any(|control| control.matches_key(code));
-  if !letter && code == i64::from(KeyCode::ESCAPE) {
-    return false;
-  }
+  .any(|control| control.matches_key(i64::from(code)));
+  let role = if letter {
+    KeyRole::Letter
+  } else if i64::from(code) == i64::from(KeyCode::ESCAPE) {
+    KeyRole::Ignored
+  } else {
+    KeyRole::Other
+  };
   let point = event.location();
-  let now = Instant::now();
-  let mut typing = typing();
-  if letter {
-    // A glide under way owns its controls, the thirds control among them.
-    let gliding = session::is_active(state) || spaces::is_active();
-    if gliding || (!shortcut_held(event) && typing.intent.claims_control(now, (point.x, point.y))) {
-      return false;
+  // The event tap holds a letter control back only over a title bar; a glide
+  // under way is the guard's to decide.
+  let reservable = letter && !repeat && any_titlebar(app, point);
+  let outcome = guard::key_down(
+    code,
+    repeat,
+    role,
+    shortcut_held(event),
+    session::is_active(state) || spaces::is_active(),
+    any_control_down(),
+    reservable,
+    (point.x, point.y),
+  );
+  if outcome.shortcut {
+    if session::is_active(state) {
+      session::end_session(app, true);
     }
-    typing.letters.insert(code);
+    if spaces::is_active() {
+      spaces::cancel(app);
+    }
   }
-  typing.intent.note_key(now, (point.x, point.y));
-  drop(typing);
-  interrupt(app, state);
-  letter
+  outcome.types
 }
 
 /// Command, Control and Option turn a letter into a shortcut. Shift does not:
@@ -118,29 +107,9 @@ fn shortcut_held(event: &CGEvent) -> bool {
   )
 }
 
-fn interrupt(app: &AppHandle, state: &SharedState) {
-  if !any_control_down() {
-    return;
-  }
-  CHORDED.store(true, Ordering::Release);
-  if session::is_active(state) {
-    session::end_session(app, state, true);
-  }
-  if spaces::is_active() {
-    spaces::cancel(app);
-  }
-}
-
 /// Whether a shortcut made with a held control still keeps glides closed.
 pub(super) fn blocks_sessions() -> bool {
-  if !CHORDED.load(Ordering::Acquire) {
-    return false;
-  }
-  if any_control_down() {
-    return true;
-  }
-  CHORDED.store(false, Ordering::Release);
-  false
+  guard::blocks_sessions(any_control_down())
 }
 
 /// The controls that open a glide while held. Thirds only refines one.
@@ -157,37 +126,17 @@ fn any_control_down() -> bool {
 
 /// Opens the mouse control's glide once the pointer has travelled far enough
 /// with the control held, anchored where it set off.
-pub(super) fn begin_mouse(app: &AppHandle, state: &SharedState, pointer: CGPoint) -> bool {
-  let reached = mouse_start().reached((pointer.x, pointer.y));
-  let Some((x, y)) = reached else {
-    return false;
-  };
-  let began = session::begin_if_titlebar(app, state, InputKind::Mouse, CGPoint::new(x, y));
-  let mut start = mouse_start();
-  if began {
-    start.reset();
-  } else {
-    start.restart((pointer.x, pointer.y));
-  }
-  began
+pub(super) fn begin_mouse(app: &AppHandle, pointer: CGPoint) -> bool {
+  guard::begin_mouse((pointer.x, pointer.y), |(x, y)| {
+    session::begin_if_titlebar(app, InputKind::Mouse, CGPoint::new(x, y))
+  })
 }
 
 pub(super) fn reset_mouse_start() {
-  mouse_start().reset();
+  guard::reset_mouse_start();
 }
 
-fn key_code(event: &CGEvent) -> i64 {
-  event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE)
-}
-
-fn typing() -> std::sync::MutexGuard<'static, Typing> {
-  TYPING
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-fn mouse_start() -> std::sync::MutexGuard<'static, StartTravel> {
-  MOUSE_START
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
+/// The key code, which fits in 16 bits on macOS.
+fn key_code(event: &CGEvent) -> u32 {
+  u32::try_from(event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE)).unwrap_or(0)
 }

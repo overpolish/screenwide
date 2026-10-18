@@ -123,9 +123,6 @@ impl PreviewManager {
         );
       }
     };
-    #[cfg(target_os = "macos")]
-    super::preview_platform::run_on_main_queue(Box::new(work));
-    #[cfg(not(target_os = "macos"))]
     let _ = app.run_on_main_thread(work);
   }
 }

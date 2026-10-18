@@ -1,0 +1,241 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! The annotation tool's half of the editing engine: picking and the gesture
+//! state machine. It speaks the layer's image-normalised space, never source
+//! pixels, so everything above the surface is the same on every platform.
+
+use super::*;
+/// What the pointer does over the picture, from the tool React has in hand,
+/// and which shape a drawing mode makes, declared once beside the gesture
+/// model.
+use screenwide_annotations::gesture::{drawing_kind, hovers_nothing, MODE_NONE};
+use screenwide_annotations::handles::{
+  NativeAnnotationHandles, NativeAnnotationSnap, NativeGapSpan, SNAP_FLAG_ANCHOR, SNAP_FLAG_GAP_X,
+  SNAP_FLAG_GAP_Y, SNAP_FLAG_GUIDE_X, SNAP_FLAG_GUIDE_Y,
+};
+use screenwide_annotations::AnnotationKind;
+
+/// The grip's hit box, matching the selection handles'.
+const HANDLE_HIT: f64 = 8.0;
+
+/// What a gesture acts on, matching `ScreenwideAnnotationTarget`.
+const TARGET_NEW: u32 = 0;
+const TARGET_EXISTING: u32 = 1;
+const TARGET_NONE: u32 = 2;
+const TARGET_SELECT: u32 = 3;
+const TARGET_GROUP: u32 = 4;
+const TARGET_TOGGLE: u32 = 5;
+const TARGET_MARQUEE: u32 = 6;
+
+/// Which grip a press took hold of, matching `ScreenwideAnnotationHandle`.
+const HANDLE_MIDDLE: u32 = 1;
+const HANDLE_END: u32 = 2;
+const HANDLE_BODY: u32 = 3;
+const HANDLE_TAIL: u32 = 4;
+
+/// The published arrow chrome and the drag in progress over it.
+pub(super) struct AnnotationState {
+  /// Every arrow's grips, in the order the layers store them.
+  pub(super) handles: Vec<NativeAnnotationHandles>,
+  /// The strokes' fitted lines, normalised over their sources, which a
+  /// stroke's grips point into.
+  pub(super) paths: Vec<[f32; 2]>,
+  /// Which arrow the pulse is on, and when it started, so every frame of the
+  /// halo is derived from the clock rather than integrated.
+  pub(super) hovered: i32,
+  pub(super) hover_started: Option<std::time::Instant>,
+  /// Bumped whenever the hovered arrow changes, so a pulse that is no longer
+  /// the current one stops reporting.
+  pub(super) hover_revision: u64,
+  /// A re-measure of the halo against the picture's current size is already
+  /// on its way, so a zoom drag that moves the transform every sample asks
+  /// for one report rather than one per sample.
+  pub(super) hover_refreshing: bool,
+  /// The arrow whose grips are drawn and hit-tested, or -1 for none.
+  pub(super) selected: i32,
+  pub(super) mode: u32,
+  /// What the last gesture sample snapped to, for the chrome to draw. Zeroed
+  /// whenever a sample snaps to nothing, and when the gesture ends.
+  pub(super) snap: NativeAnnotationSnap,
+  /// The boxes round the annotations chosen together, as Rust published them.
+  pub(super) group: Vec<screenwide_annotations::group::NativeAnnotationGroupBox>,
+  /// The marquee band being drawn, in display points.
+  pub(super) marquee: Option<PreviewSurfaceRect>,
+  drag: Option<Drag>,
+  /// The box being typed into, if any.
+  pub(super) typing: Option<typing::Typing>,
+  /// Where the double-click that asked for a box to open landed, for the
+  /// caret to start there once Rust opens it.
+  opening: Option<(f64, f64)>,
+  /// The captions layer a press last opened the caption or its word menu
+  /// on, which a caption opened for typing is typed into on.
+  pub(super) caption: Option<PreviewSelection>,
+  /// A press typing took - one that closed a box or opened one - whose drag
+  /// and release belong to nothing else.
+  press_taken: bool,
+}
+
+impl Default for AnnotationState {
+  fn default() -> Self {
+    Self {
+      handles: Vec::new(),
+      paths: Vec::new(),
+      hovered: -1,
+      hover_started: None,
+      hover_revision: 0,
+      hover_refreshing: false,
+      selected: -1,
+      mode: MODE_NONE,
+      snap: NativeAnnotationSnap::default(),
+      group: Vec::new(),
+      marquee: None,
+      drag: None,
+      typing: None,
+      opening: None,
+      caption: None,
+      press_taken: false,
+    }
+  }
+}
+
+impl WorkspaceEditor {
+  /// Publishes what the sample on screen snapped to. It is only stored: a
+  /// sample's annotations arrive immediately after and redraw the held frame
+  /// together with this chrome, so drawing here would draw the overlay twice
+  /// and leave the guides a frame ahead of the geometry they explain.
+  pub fn set_annotation_snap_guides(&self, snap: NativeAnnotationSnap) {
+    if let Ok(mut state) = self.inner.state.lock() {
+      state.annotation.snap = snap;
+    }
+  }
+  /// Publishes the selected layer's arrow grips. `selected_index` is the
+  /// arrow whose three handles are drawn, or -1 for none; `mode` is what the
+  /// pointer does over the picture: nothing (0), hit-test the arrows that are
+  /// there and otherwise fall through to the layer (1), or also draw a new
+  /// arrow on empty picture (2). `paths` holds the strokes' fitted lines the
+  /// grips point into.
+  pub fn set_annotations(
+    &self,
+    handles: &[NativeAnnotationHandles],
+    paths: &[[f32; 2]],
+    selected_index: i32,
+    mode: u32,
+  ) {
+    self.set_annotation_layer(handles, paths, selected_index, mode, -1);
+  }
+
+  pub fn set_annotation_layer(
+    &self,
+    handles: &[NativeAnnotationHandles],
+    paths: &[[f32; 2]],
+    selected_index: i32,
+    mode: u32,
+    _active_layer: i32,
+  ) {
+    let Ok(mut state) = self.inner.state.lock() else {
+      return;
+    };
+    // A list that grew or shrank has moved what the hovered index names.
+    let recounted = state.annotation.handles.len() != handles.len();
+    state.annotation.handles.clear();
+    state.annotation.handles.extend_from_slice(handles);
+    state.annotation.paths.clear();
+    state.annotation.paths.extend_from_slice(paths);
+    state.annotation.selected = selected_index;
+    let changed = state.annotation.mode != mode;
+    state.annotation.mode = mode;
+    // A new tool or list, no tool, or the pen: the halo goes, since the
+    // pointer may never move again to retire it, and a pulse still running
+    // must stop reporting it.
+    if changed || recounted || hovers_nothing(mode) {
+      state.annotation.hovered = -1;
+      state.annotation.hover_revision += 1;
+    }
+    // The tool put down, or the box gone from under the typing: there is
+    // nothing left to type into, and what was typed is kept.
+    if typing::lost_its_box(&state) {
+      self.inner.host.finish_typing();
+    }
+    // The grips are chrome: publishing them is what moves them on screen,
+    // and what stands the layer's own chrome up or down. The cursor needs no
+    // push - the window re-asks on the next pointer move.
+    draw_selection(&self.inner, &state);
+  }
+
+  pub fn set_annotation_gesture_callback(&self, callback: AnnotationGestureCallback) {
+    if let Ok(mut callbacks) = self.inner.callbacks.lock() {
+      callbacks.annotation_gesture = Some(callback);
+    }
+  }
+
+  pub fn set_annotation_hover_callback(&self, callback: AnnotationHoverCallback) {
+    if let Ok(mut callbacks) = self.inner.callbacks.lock() {
+      callbacks.annotation_hover = Some(callback);
+    }
+  }
+}
+
+/// A press the chrome has taken, before and after it becomes a drag.
+mod drag;
+use drag::Drag;
+
+/// Resolving the picture an annotation is drawn in, and picking the grip or
+/// shaft a press lands on.
+mod picking;
+/// The chrome's grips, whether it owns the screen, and its cursor.
+mod picking_chrome;
+/// How far a press is from each kind of annotation.
+mod picking_distance;
+use picking::{
+  handle_at_point, image_frame, item_image_frame, layer_selection, selected_item, shaft_at_point,
+};
+pub(super) use picking::{layer_image_rect, take_drawing_layer};
+pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
+
+/// A redaction's box, grips and radius dot.
+mod redact_chrome;
+pub(super) use redact_chrome::selected_box as selected_redaction;
+
+/// A magnifier's loupe: where it is picked and the grip that sets its size.
+mod magnify_chrome;
+
+/// A text box's box and tail, which its grip and its picking read.
+mod text_chrome;
+use text_chrome::text_geometry;
+
+/// An image's turned picture, its own frame and its radius dot.
+mod image_chrome;
+pub(super) use image_chrome::selected_frame as selected_image_frame;
+
+/// The rotation gizmo over the chosen image, and a drag of its rings.
+mod image_turn;
+pub(super) use image_turn::{
+  cancel as image_turn_cancel, down as image_turn_down, gizmo as image_gizmo,
+  pointer_move as image_turn_move, ring_hit as image_ring_hit, up as image_turn_up, ImageTurnDrag,
+};
+
+/// What a snapped sample draws, and where.
+mod snap_chrome;
+pub(super) use snap_chrome::snap_chrome;
+
+/// The boxes round a group, and the marquee band.
+mod group_chrome;
+pub(super) use group_chrome::{group_frames, has_group, marquee_frame};
+use group_chrome::{group_layer_at_point, marquee_layer_at_point};
+
+/// The halo that grows under the arrow the pointer rests on.
+mod hover;
+pub(crate) use hover::{refresh as refresh_hover, update as update_hover};
+
+/// The gesture the press becomes, and the samples it reports.
+mod gesture;
+pub(super) use gesture::{cancel, choose_at, down, pointer_move, up};
+
+/// Typing into a text box: the keyboard, the caret and the presses around it.
+mod typing;
+pub(crate) use typing::{
+  caption_offset_at, caption_target_at, open as open_text, open_caption, press as typing_press,
+};
+pub(super) use typing::{handle_typing_input, sync_typing_marks};
+pub(crate) use typing::{pointer_move as typing_move, up as typing_up};

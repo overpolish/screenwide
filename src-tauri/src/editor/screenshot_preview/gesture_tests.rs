@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::preview_platform::{SelectionGestureOperation, SelectionGesturePhase};
 use super::state::PreviewManager;
 use crate::editor::screenshot_model::ScreenshotWorkspaceItemOutput;
 use crate::editor::ScreenshotWorkspaceOutputSettings;
 use screenwide_output::fixtures::test_output_settings;
+use screenwide_workspace::editing::{SelectionGestureOperation, SelectionGesturePhase};
 
 #[test]
 fn moving_an_item_keeps_canvas_presentation_fields() {
@@ -71,9 +71,9 @@ fn moving_an_item_keeps_canvas_presentation_fields() {
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 #[test]
 fn a_gesture_straight_after_typing_keeps_what_was_typed() {
-  use super::super::preview_platform::AnnotationTextPhase;
   use screenwide_annotations::text::new_text;
   use screenwide_annotations::{AnnotationPoint, AnnotationShape};
+  use screenwide_workspace::editing::AnnotationTextPhase;
 
   let mut item = test_output_settings(800, 600);
   item.annotations = vec![new_text(

@@ -3,7 +3,6 @@
 
 //! A highlight's grips, as the native chrome needs them.
 
-#[cfg(target_os = "windows")]
 use super::geometry::HighlightFlow;
 use super::model::HighlightBand;
 use crate::handles::NativeAnnotationHandles;
@@ -58,7 +57,6 @@ pub(crate) fn grips(
 
 /// The flow a grips' record carries, placed in the pixels `place` carries a
 /// normalised point into.
-#[cfg(target_os = "windows")]
 pub fn flow(
   record: &NativeAnnotationHandles,
   place: impl Fn(f64, f64) -> [f32; 2],

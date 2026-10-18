@@ -12,8 +12,6 @@
 //! another thread reach it through [`redraw`], which dispatches; the rest are
 //! documented as owning-thread only and are dispatched by `host.rs`.
 
-mod bake;
-pub(in super::super) use bake::bake;
 mod frame;
 mod surface;
 mod window_proc;

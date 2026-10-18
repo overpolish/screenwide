@@ -7,7 +7,6 @@ mod adapter;
 mod input;
 mod lifecycle;
 mod presentation;
-pub(super) mod preview_windows;
 mod transport;
 
 use super::tween::WindowTarget;
@@ -23,7 +22,27 @@ use std::{
 
 pub(super) use input::handle_event;
 pub(super) use lifecycle::poll;
-pub(super) use preview_windows::preload;
+
+/// Loads a card for every Space or monitor, whichever there are more of.
+/// Counting Spaces asks the window server, so it stays off the main thread.
+pub(super) fn preload(app: &tauri::AppHandle) {
+  let app = app.clone();
+  let result = std::thread::Builder::new()
+    .name("glide-space-preload".into())
+    .spawn(move || {
+      unsafe extern "C" {
+        fn sw_glide_space_preview_count() -> usize;
+      }
+      let spaces = unsafe { sw_glide_space_preview_count() };
+      let monitors = app
+        .available_monitors()
+        .map_or(0, |monitors| monitors.len());
+      crate::glide::preview_cards::preload(&app, spaces.max(monitors));
+    });
+  if let Err(error) = result {
+    eprintln!("Could not start Glide Space preload: {error}");
+  }
+}
 pub(super) fn cancel(app: &tauri::AppHandle) {
   lifecycle::request_end(app, true);
 }
@@ -70,6 +89,7 @@ pub(in crate::glide) fn set_icon(
   id: u64,
   path: Option<std::path::PathBuf>,
 ) {
-  super::session::monitors::set_icon(app, id, path.clone());
-  presentation::set_icon(app, id, path);
+  super::session::monitors::set_icon(id, path.clone());
+  presentation::set_icon(id, path.clone());
+  crate::glide::preview_cards::set_icon(app, id, path);
 }

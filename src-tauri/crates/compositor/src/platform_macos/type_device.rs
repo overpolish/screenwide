@@ -13,7 +13,7 @@ use screenwide_text::engine::face::TypeFace;
 mod tests;
 
 /// A face at one size in pixels.
-pub(crate) struct TypeDevice {
+pub struct TypeDevice {
   face: TypeFace,
   size: f64,
   tabular: bool,
@@ -65,14 +65,19 @@ unsafe extern "C" {
 
 impl TypeDevice {
   /// `face` at `size` pixels.
-  pub(crate) fn in_face(face: TypeFace, size: f64) -> Result<Self, String> {
+  pub fn in_face(face: TypeFace, size: f64) -> Result<Self, String> {
     Ok(Self::create(face, size, false))
   }
 
   /// The annotations' face at `size` with tabular figures, so a counter's
   /// number does not shift as it grows.
-  pub(crate) fn numbers(size: f64) -> Result<Self, String> {
+  pub fn numbers(size: f64) -> Result<Self, String> {
     Ok(Self::create(TypeFace::ANNOTATION, size, true))
+  }
+
+  /// `face` at `size` pixels with tabular figures.
+  pub fn tabular_in_face(face: TypeFace, size: f64) -> Result<Self, String> {
+    Ok(Self::create(face, size, true))
   }
 
   fn create(face: TypeFace, size: f64, tabular: bool) -> Self {
@@ -105,7 +110,7 @@ impl TypeDevice {
   }
 
   /// How far `text` advances, zero for nothing to set.
-  pub(crate) fn advance(&self, text: &str) -> f64 {
+  pub fn advance(&self, text: &str) -> f64 {
     if text.is_empty() {
       return 0.0;
     }
@@ -115,18 +120,14 @@ impl TypeDevice {
   }
 
   /// The face's ascent and descent at this size, in pixels.
-  pub(crate) fn vertical_metrics(&self) -> (f64, f64) {
+  pub fn vertical_metrics(&self) -> (f64, f64) {
     (self.ascent, self.descent)
   }
 
   /// `lines` drawn into a cell of `cell` pixels, each with its top-left at
   /// the point given and its baseline the ascent below that: one coverage
   /// byte per pixel, top row first.
-  pub(crate) fn draw(
-    &self,
-    cell: (u32, u32),
-    lines: &[((f64, f64), &str)],
-  ) -> Result<Vec<u8>, String> {
+  pub fn draw(&self, cell: (u32, u32), lines: &[((f64, f64), &str)]) -> Result<Vec<u8>, String> {
     let mut coverage = vec![0_u8; cell.0 as usize * cell.1 as usize];
     if coverage.is_empty() {
       return Ok(coverage);

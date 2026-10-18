@@ -16,5 +16,7 @@ pub mod media_preview;
 pub mod pin_cache;
 pub mod pin_paths;
 pub mod recording_model;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod render_tests;
 pub mod scenes;
 pub mod track_selection;

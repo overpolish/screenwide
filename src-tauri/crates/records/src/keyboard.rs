@@ -51,9 +51,21 @@ pub enum KeyboardRecord {
   Typing { timestamp_us: u64 },
 }
 
-/// When `records` show typing: the typing marks, and every key pressed
-/// without Command or Control that is not itself a modifier - Return,
-/// Backspace, an arrow, or a letter typed outside a text field.
+/// Whether `key_code` is a modifier: Command, Shift, Caps Lock, Option,
+/// Control or Function.
+pub fn is_modifier_key(key_code: u16) -> bool {
+  matches!(key_code, 54..=63)
+}
+
+/// Whether a key types rather than makes a shortcut: any key but a modifier,
+/// pressed without Command or Control (`command_or_control`). Return,
+/// Backspace, an arrow and a letter typed outside a text field all type.
+pub fn types(key_code: u16, command_or_control: bool) -> bool {
+  !is_modifier_key(key_code) && !command_or_control
+}
+
+/// When `records` show typing: the typing marks, and every key pressed that
+/// [`types`].
 pub fn typing_times_us(records: &[KeyboardRecord]) -> Vec<u64> {
   let mut times: Vec<u64> = records
     .iter()
@@ -63,13 +75,15 @@ pub fn typing_times_us(records: &[KeyboardRecord]) -> Vec<u64> {
         key_code,
         modifiers,
         timestamp_us,
-      } if !matches!(key_code, 54..=63)
-        && !modifiers.iter().any(|modifier| {
+      } if types(
+        *key_code,
+        modifiers.iter().any(|modifier| {
           matches!(
             modifier,
             KeyboardModifier::Command | KeyboardModifier::Control
           )
-        }) =>
+        }),
+      ) =>
       {
         Some(*timestamp_us)
       }

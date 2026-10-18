@@ -10,17 +10,13 @@ use std::path::{Path, PathBuf};
 use cidre::{arc, av};
 
 use super::image::frame_position;
-use crate::editor::preview_platform::LayerPicture;
 use screenwide_export::decode::macos::scrubber::{NativeFrameScrubber, NativePixelFrame};
 use screenwide_export::decode::macos::video::{open_asset, NativeVideoReader};
-use screenwide_output::ScreenshotOutputSettings;
+use screenwide_workspace::scene::LayerPicture;
 
 /// How far an exact seek rewinds before the target so the frame straddling a
 /// seek position is still delivered.
 const BACKWARD_TOLERANCE_MS: u64 = 100;
-/// Decode width used before the webview has reported how large the preview
-/// panes actually are on screen.
-const FALLBACK_TARGET_WIDTH: u32 = 1_600;
 
 /// One video track with a cached `AVAsset` and a resumable sequential reader.
 pub(super) struct PaneDecoder {
@@ -51,13 +47,6 @@ impl DecodedFrame {
     match self {
       Self::Pixels(frame) => LayerPicture::Pixels(frame.as_ptr()),
       Self::Rgba(frame) => LayerPicture::Image(frame),
-    }
-  }
-
-  pub(super) fn rgba(&self) -> Option<&CapturedImage> {
-    match self {
-      Self::Pixels(_) => None,
-      Self::Rgba(frame) => Some(frame),
     }
   }
 
@@ -203,41 +192,4 @@ impl PaneDecoder {
       .frame_at(target_ms)
       .map(|frame| frame.map(DecodedFrame::Rgba))
   }
-}
-
-pub(super) fn scaled_output(
-  settings: &ScreenshotOutputSettings,
-  factor: f64,
-) -> ScreenshotOutputSettings {
-  if factor >= 1.0 {
-    return settings.clone();
-  }
-  // The compositor validates output dimensions at 64 pixels minimum, so a
-  // tiny on-screen pane must not scale the composition below that.
-  let minimum = (64.0 / f64::from(settings.width.max(1)))
-    .max(64.0 / f64::from(settings.height.max(1)))
-    .min(1.0);
-  let factor = factor.max(minimum);
-  let mut scaled = settings.clone();
-  scaled.width = ((f64::from(settings.width) * factor).round().max(64.0)) as u32;
-  scaled.height = ((f64::from(settings.height) * factor).round().max(64.0)) as u32;
-  scaled
-}
-
-/// How much a pane's decode and composition shrink so the presented drawable
-/// matches the on-screen pane instead of the full output resolution. Zooming
-/// grows the reported target, so this reaches 1.0 exactly when the view needs
-/// native pixels.
-pub(super) fn pane_factor(target_sizes: &[(u32, u32)], index: usize, output_width: u32) -> f64 {
-  if output_width == 0 {
-    return 1.0;
-  }
-  // A pane that has not reported a real on-screen size yet (or was laid out
-  // collapsed) must not shrink the composition to nothing.
-  let target_width = target_sizes
-    .get(index)
-    .map(|size| size.0)
-    .filter(|width| *width >= 16)
-    .unwrap_or(FALLBACK_TARGET_WIDTH);
-  (f64::from(target_width) / f64::from(output_width)).min(1.0)
 }

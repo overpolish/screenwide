@@ -9,10 +9,12 @@ use core_graphics::geometry::CGPoint;
 use super::{InputKind, SharedState};
 
 pub(in crate::glide::macos) fn session_anchor(state: &SharedState) -> Option<CGPoint> {
-  state
-    .lock()
-    .ok()
-    .and_then(|state| state.session.as_ref().map(|session| session.anchor))
+  state.lock().ok().and_then(|state| {
+    state
+      .session
+      .as_ref()
+      .map(|session| CGPoint::new(session.anchor.0, session.anchor.1))
+  })
 }
 
 pub(in crate::glide::macos) fn accumulate_pointer_travel(
@@ -70,8 +72,8 @@ pub(in crate::glide::macos) fn mouse_center_context(
     }
     Some((
       session.target.duplicate(),
-      session.work_origin,
-      session.work_size,
+      (session.work.x, session.work.y),
+      (session.work.width, session.work.height),
     ))
   })?;
   let frame = target.frame()?;

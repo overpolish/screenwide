@@ -30,7 +30,6 @@ use crate::AnnotationPoint;
 /// Placing and picking a counter's grip from its aim is the Windows chrome's
 /// work; the macOS chrome picks from the prepared record.
 pub const COUNTER_TAIL_REACH: f64 = 1.5;
-#[cfg(any(target_os = "windows", test))]
 const COUNTER_TIP_SHARE: f64 = 0.125;
 
 /// Where the tail's tip falls, in the space `center` and `radius` are in.
@@ -45,7 +44,6 @@ pub fn counter_tail_tip(center: AnnotationPoint, radius: f64, angle: f64) -> Ann
 /// How far `point` falls outside one counter's drawn silhouette, in the space
 /// the geometry is in. Zero anywhere the annotation is painted, which is what
 /// picks it.
-#[cfg(any(target_os = "windows", test))]
 pub fn counter_distance(
   point: (f64, f64),
   center: AnnotationPoint,

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Paused-frame and scrub decoding for the native preview player.
+//! macOS's paused frames and timeline scrubs.
 //!
 //! Stills are decoded by the same `AVAssetReader` pipeline as playback and
 //! composed by the same GPU compositor, so a paused frame is pixel-identical
@@ -8,35 +8,17 @@
 //! size and the settled frame is refined at full resolution.
 mod camera_pane;
 mod worker;
-use worker::run;
 
+use super::super::present::{pane_factor, scaled_output};
+use super::super::still::{announce_ready, Seek, StillFrames};
 use super::composition::gpu_still_overlay;
-use super::cursor::gpu_cursor_preview;
 use super::image::frame_position;
-use super::still_decode::{scaled_output, DecodedFrame, PaneDecoder};
-use crate::editor::preview_platform::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
+use super::still_decode::{DecodedFrame, PaneDecoder};
 use crate::editor::recording_preview_player::{PlayerSources, RecordingPreviewPlayerEvent};
-use screenwide_annotations::timing::RecordingAnnotationClip;
-use std::sync::{Arc, RwLock};
-use std::{sync::atomic::Ordering, sync::mpsc, thread::JoinHandle};
+use screenwide_workspace::scene::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
+use std::sync::atomic::Ordering;
 use tauri::ipc::Channel;
-enum DecoderCommand {
-  Seek {
-    annotation_clips: Vec<RecordingAnnotationClip>,
-    position_ms: u64,
-    request_id: u64,
-    target_sizes: Vec<(u32, u32)>,
-    /// A mid-gesture skim: the scrubber may land on the cheapest nearby frame
-    /// instead of decoding the exact position.
-    rough: bool,
-  },
-  Stop,
-}
-pub(crate) struct NativeStillDecoder {
-  annotation_clips: Arc<RwLock<Vec<RecordingAnnotationClip>>>,
-  sender: mpsc::Sender<DecoderCommand>,
-  thread: Option<JoinHandle<()>>,
-}
+
 struct CachedImages {
   camera: Option<DecodedFrame>,
   camera_ms: Option<u64>,
@@ -47,61 +29,47 @@ struct CachedImages {
   sizes: (u32, u32, Option<(u32, u32)>),
 }
 
-impl NativeStillDecoder {
-  pub(crate) fn spawn(
-    sources: PlayerSources,
-    event_channel: Channel<RecordingPreviewPlayerEvent>,
-  ) -> Result<Self, String> {
-    let (sender, receiver) = mpsc::channel();
-    let annotation_clips = Arc::clone(&sources.annotation_clips);
-    let thread = std::thread::Builder::new()
-      .name("recording-preview-still".to_owned())
-      .spawn(move || run(sources, receiver, event_channel))
-      .map_err(|error| error.to_string())?;
+pub(in crate::editor::recording_preview_player::platform) struct Stills {
+  screen: PaneDecoder,
+  camera: Option<PaneDecoder>,
+  image_cache: Option<CachedImages>,
+}
+
+impl StillFrames for Stills {
+  fn open(sources: &PlayerSources) -> Result<Self, String> {
+    let screen_pane = &sources.playback_layout.panes[0];
+    let screen = PaneDecoder::open(
+      &sources.screen_path,
+      screen_pane.source_width,
+      screen_pane.source_height,
+      sources.duration_ms,
+    )?;
+    let camera = match (
+      sources.camera_path.as_deref(),
+      sources.camera_duration_ms,
+      sources.playback_layout.panes.get(1),
+    ) {
+      (Some(path), Some(duration_ms), Some(pane)) => Some(PaneDecoder::open(
+        path,
+        pane.source_width,
+        pane.source_height,
+        duration_ms,
+      )?),
+      _ => None,
+    };
     Ok(Self {
-      annotation_clips,
-      sender,
-      thread: Some(thread),
+      screen,
+      camera,
+      image_cache: None,
     })
   }
 
-  pub(crate) fn seek(
-    &self,
-    position_ms: u64,
-    request_id: u64,
-    rough: bool,
-    target_sizes: Vec<(u32, u32)>,
-  ) -> Result<(), String> {
-    self
-      .sender
-      .send(DecoderCommand::Seek {
-        annotation_clips: self
-          .annotation_clips
-          .read()
-          .map_err(|_| "The annotations are unavailable")?
-          .clone(),
-        position_ms,
-        request_id,
-        rough,
-        target_sizes,
-      })
-      .map_err(|_| "The native preview decoder stopped".to_owned())
-  }
-
-  pub(crate) fn is_finished(&self) -> bool {
-    self
-      .thread
-      .as_ref()
-      .is_some_and(std::thread::JoinHandle::is_finished)
-  }
-
-  pub(crate) fn stop(mut self) {
-    let _ = self.sender.send(DecoderCommand::Stop);
-    if let Some(thread) = self.thread.take() {
-      let _ = thread.join();
-    }
+  fn show(
+    &mut self,
+    sources: &PlayerSources,
+    seek: Seek,
+    events: &Channel<RecordingPreviewPlayerEvent>,
+  ) {
+    worker::show(self, sources, seek, events);
   }
 }
-
-#[cfg(test)]
-mod tests;

@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { isMacHost } from "../../../lib/platform";
+
 type KeyEvent = Pick<
   KeyboardEvent,
   | "key"
@@ -19,8 +21,7 @@ export type HotkeyCaptureMode =
 /** Compare persisted shortcuts without treating equivalent aliases/order as edits. */
 function normalizeHotkey(
   value: string | null,
-  isMac = typeof navigator !== "undefined" &&
-    navigator.userAgent.includes("Mac"),
+  isMac = isMacHost,
 ): string | null {
   if (value === null) return null;
   const parts = value.split("+");
@@ -49,8 +50,7 @@ function normalizeHotkey(
 export function hotkeysEqual(
   value: string | null,
   defaultValue: string | null,
-  isMac = typeof navigator !== "undefined" &&
-    navigator.userAgent.includes("Mac"),
+  isMac = isMacHost,
 ): boolean {
   return normalizeHotkey(value, isMac) === normalizeHotkey(defaultValue, isMac);
 }
@@ -82,11 +82,7 @@ export function hotkeyFromEvent(
 
 /** The keys of a shortcut, each as a name `Keyboard` and `keyLabel` know:
  * the platform's modifiers, the key a code stands for, or a mouse control. */
-export function hotkeyKeys(
-  value: string | null,
-  isMac = typeof navigator !== "undefined" &&
-    navigator.userAgent.includes("Mac"),
-): string[] {
+export function hotkeyKeys(value: string | null, isMac = isMacHost): string[] {
   return value
     ? value.split("+").map((key) => {
         key = key.replace(/^(Meta|Control|Alt|Shift)(Left|Right)$/, "$1");

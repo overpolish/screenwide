@@ -22,8 +22,6 @@ pub(in super::super::super) fn estimate_video_bytes(
     on_progress: &mut *request.on_progress,
     ..request
   };
-  let cursor_timeline = macos::native::evaluate(&request)?;
-  let keyboard_timeline = macos::native::evaluate_keyboard(&request)?;
   let whole = super::super::super::edited_ranges(&request);
   let duration_us = output_duration_us(&whole)
     .filter(|duration| *duration > 0)
@@ -56,14 +54,7 @@ pub(in super::super::super) fn estimate_video_bytes(
     ),
   };
   let cancelled = request.cancelled;
-  let rendered = render_gpu_video(
-    &mut request,
-    cursor_timeline.as_ref(),
-    keyboard_timeline.as_ref(),
-    (&sampled, None),
-    &fallback,
-    x264,
-  );
+  let rendered = render_gpu_video(&mut request, (&sampled, None), &fallback, x264);
   let measured = match rendered {
     Ok((ExportRunResult::Completed, Some(stream))) => {
       stream.measure(cancelled)?.map(Measured::Stream)

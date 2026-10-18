@@ -3,267 +3,220 @@
 
 use super::*;
 
-pub(super) fn run(
-  sources: PlayerSources,
-  receiver: mpsc::Receiver<DecoderCommand>,
-  event_channel: Channel<RecordingPreviewPlayerEvent>,
+/// Decodes the frames `seek` asks for, reusing the last ones where they are
+/// the same, and presents them composed at the panes' on-screen size.
+pub(super) fn show(
+  stills: &mut Stills,
+  sources: &PlayerSources,
+  seek: Seek,
+  events: &Channel<RecordingPreviewPlayerEvent>,
 ) {
-  let screen_pane = &sources.playback_layout.panes[0];
-  let mut screen = match PaneDecoder::open(
-    &sources.screen_path,
-    screen_pane.source_width,
-    screen_pane.source_height,
-    sources.duration_ms,
-  ) {
-    Ok(decoder) => decoder,
-    Err(message) => {
-      let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
-      return;
-    }
-  };
-  let mut camera = match (
-    sources.camera_path.as_deref(),
-    sources.camera_duration_ms,
-    sources.playback_layout.panes.get(1),
-  ) {
-    (Some(path), Some(duration_ms), Some(pane)) => {
-      match PaneDecoder::open(path, pane.source_width, pane.source_height, duration_ms) {
-        Ok(decoder) => Some(decoder),
-        Err(message) => {
-          let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
-          return;
-        }
-      }
-    }
-    _ => None,
-  };
-  let mut image_cache: Option<CachedImages> = None;
-  let mut pending_command = None;
-  while let Ok(mut command) = pending_command.take().map_or_else(|| receiver.recv(), Ok) {
-    while let Ok(next) = receiver.try_recv() {
-      command = next;
-    }
-    let DecoderCommand::Seek {
-      annotation_clips,
-      position_ms,
-      request_id,
+  let Seek {
+    annotation_clips,
+    position_ms,
+    request_id,
+    rough,
+    target_sizes,
+  } = seek;
+  let Stills {
+    screen,
+    camera,
+    image_cache,
+  } = stills;
+  let _batch = sources
+    .preview_surface
+    .as_ref()
+    .map(|surface| surface.present_batch());
+  let composition = sources.annotated_composition(
+    frame_position(position_ms, sources.duration_ms),
+    &annotation_clips,
+  );
+  // Paused editing keeps one native-resolution source frame resident. Frame,
+  // crop and OSC gestures then only rerun the GPU composition instead of
+  // invalidating the decoder cache for every changing pane size. Live
+  // playback still uses pane-sized decode factors in `video.rs`.
+  let screen_size = screen.decode_size(1.0);
+  let camera_size = camera.as_ref().map(|camera| camera.decode_size(1.0));
+  let screen_position_ms = frame_position(position_ms, sources.duration_ms);
+  let camera_position_ms = camera.as_ref().zip(camera_size).map(|_| {
+    frame_position(
+      screen_position_ms,
+      sources.camera_duration_ms.unwrap_or(sources.duration_ms),
+    )
+  });
+  let sizes_key = (screen_size.0, screen_size.1, camera_size);
+  // A matte is made for each camera frame, so the frame under it has to be
+  // the very one at this moment.
+  let exact = sources
+    .camera_effects_now()
+    .is_some_and(|live| !live.matte.is_empty());
+  let cache_matches = image_cache.as_ref().is_some_and(|cache| {
+    cache.screen_ms == screen_position_ms
+      && cache.camera_ms == camera_position_ms
+      && cache.sizes == sizes_key
+      && cache.exact == exact
+  });
+  if !cache_matches {
+    let screen_image = match screen.frame_at(
+      screen_position_ms,
+      screen_size.0,
+      screen_size.1,
       rough,
-      target_sizes,
-    } = command
-    else {
-      break;
+      exact,
+    ) {
+      Ok(Some(image)) => image,
+      Ok(None) => {
+        return;
+      }
+      Err(message) => {
+        let _ = events.send(RecordingPreviewPlayerEvent::Error { message });
+        return;
+      }
     };
-    let _batch = sources
-      .preview_surface
-      .as_ref()
-      .map(|surface| surface.present_batch());
-    let composition = sources.annotated_composition(
-      frame_position(position_ms, sources.duration_ms),
-      &annotation_clips,
-    );
-    // Paused editing keeps one native-resolution source frame resident. Frame,
-    // crop and OSC gestures then only rerun the GPU composition instead of
-    // invalidating the decoder cache for every changing pane size. Live
-    // playback still uses pane-sized decode factors in `video.rs`.
-    let screen_size = screen.decode_size(1.0);
-    let camera_size = camera.as_ref().map(|camera| camera.decode_size(1.0));
-    let screen_position_ms = frame_position(position_ms, sources.duration_ms);
-    let camera_position_ms = camera.as_ref().zip(camera_size).map(|_| {
-      frame_position(
-        screen_position_ms,
-        sources.camera_duration_ms.unwrap_or(sources.duration_ms),
-      )
-    });
-    let sizes_key = (screen_size.0, screen_size.1, camera_size);
-    // A matte is made for each camera frame, so the frame under it has to be
-    // the very one at this moment.
-    let exact = sources
-      .camera_effects_now()
-      .is_some_and(|live| !live.matte.is_empty());
-    let cache_matches = image_cache.as_ref().is_some_and(|cache| {
-      cache.screen_ms == screen_position_ms
-        && cache.camera_ms == camera_position_ms
-        && cache.sizes == sizes_key
-        && cache.exact == exact
-    });
-    if !cache_matches {
-      let screen_image = match screen.frame_at(
-        screen_position_ms,
-        screen_size.0,
-        screen_size.1,
-        rough,
-        exact,
-      ) {
-        Ok(Some(image)) => image,
-        Ok(None) => {
-          continue;
-        }
-        Err(message) => {
-          let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
-          continue;
-        }
-      };
-      let camera_image = match (camera.as_mut(), camera_size, camera_position_ms) {
-        (Some(camera), Some((width, height)), Some(camera_ms)) => {
-          match camera.frame_at(camera_ms, width, height, rough, exact) {
-            Ok(image) => image,
-            Err(message) => {
-              let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
-              continue;
-            }
+    let camera_image = match (camera.as_mut(), camera_size, camera_position_ms) {
+      (Some(camera), Some((width, height)), Some(camera_ms)) => {
+        match camera.frame_at(camera_ms, width, height, rough, exact) {
+          Ok(image) => image,
+          Err(message) => {
+            let _ = events.send(RecordingPreviewPlayerEvent::Error { message });
+            return;
           }
         }
-        _ => None,
-      };
-      image_cache = Some(CachedImages {
-        camera: camera_image,
-        camera_ms: camera_position_ms,
-        exact,
-        screen: screen_image,
-        screen_ms: screen_position_ms,
-        sizes: sizes_key,
-      });
-    }
-    let cache = image_cache
-      .as_ref()
-      .expect("a decoded still is cached after a successful request");
-    let cursor_settings = sources
-      .cursor_settings
-      .read()
-      .map(|settings| *settings)
-      .unwrap_or_default();
-    let cursor = gpu_cursor_preview(
-      sources.cursor.as_deref(),
-      screen_position_ms,
-      cursor_settings,
-      (
-        sources.playback_layout.panes[0].source_width,
-        sources.playback_layout.panes[0].source_height,
-      ),
-    );
-    let keyboard_settings = sources
-      .keyboard_settings
-      .read()
-      .map(|settings| *settings)
-      .unwrap_or_default();
-    let keyboard_dimensions = composition.as_ref().map_or(
-      (
-        sources.playback_layout.panes[0].source_width,
-        sources.playback_layout.panes[0].source_height,
-      ),
-      |composition| {
-        (
-          composition.recording_output.primary.width,
-          composition.recording_output.primary.height,
-        )
-      },
-    );
-    let keyboard =
-      sources.keyboard_overlay(screen_position_ms, keyboard_settings, keyboard_dimensions);
-    if sources.playing.load(Ordering::Acquire) {
-      continue;
-    }
-    let Some(surface) = sources.preview_surface.as_ref() else {
-      continue;
-    };
-    let presented = if let Some(composition) = &composition {
-      let screen_factor = super::super::still_decode::pane_factor(
-        &target_sizes,
-        0,
-        composition.recording_output.primary.width,
-      );
-      let mut screen_output = scaled_output(&composition.recording_output.primary, screen_factor);
-      // Placeholder settings below the compositor's validation floor mean the
-      // webview has not sent real output dimensions yet; wait quietly.
-      if screen_output.width < 64 || screen_output.height < 64 {
-        continue;
       }
-      let screen_metadata = cache.screen.metadata();
-      let source = &sources.playback_layout.panes[0];
-      crate::editor::recording_preview_player::annotation_preview::remap_source(
-        &mut screen_output,
-        (source.source_width, source.source_height),
-        (screen_metadata.width, screen_metadata.height),
+      _ => None,
+    };
+    *image_cache = Some(CachedImages {
+      camera: camera_image,
+      camera_ms: camera_position_ms,
+      exact,
+      screen: screen_image,
+      screen_ms: screen_position_ms,
+      sizes: sizes_key,
+    });
+  }
+  let cache = image_cache
+    .as_ref()
+    .expect("a decoded still is cached after a successful request");
+  let cursor_settings = sources
+    .cursor_settings
+    .read()
+    .map(|settings| *settings)
+    .unwrap_or_default();
+  let cursor = sources
+    .cursor
+    .as_deref()
+    .map(|cursor| (cursor, screen_position_ms, cursor_settings));
+  let keyboard_settings = sources
+    .keyboard_settings
+    .read()
+    .map(|settings| *settings)
+    .unwrap_or_default();
+  let keyboard_dimensions = composition.as_ref().map_or(
+    (
+      sources.playback_layout.panes[0].source_width,
+      sources.playback_layout.panes[0].source_height,
+    ),
+    |composition| {
+      (
         composition.recording_output.primary.width,
-      );
-      let camera_metadata = cache.camera.as_ref().map(DecodedFrame::metadata);
-      let (cursor, overlay) = match gpu_still_overlay(
-        &screen_metadata,
-        &screen_output,
-        cursor.as_ref(),
-        composition
-          .bake_camera
-          .then_some(camera_metadata.as_ref())
-          .flatten(),
-        composition
-          .bake_camera
-          .then_some(composition.camera_overlay),
-        composition.recording_output.camera.drop_shadow,
-        screenwide_export::recording_model::CAMERA_IN_FRONT,
-      ) {
-        Ok(value) => value,
-        Err(message) => {
-          let _ = event_channel.send(RecordingPreviewPlayerEvent::Error { message });
-          continue;
-        }
-      };
-      let baked_camera = composition
+        composition.recording_output.primary.height,
+      )
+    },
+  );
+  let keyboard =
+    sources.keyboard_overlay(screen_position_ms, keyboard_settings, keyboard_dimensions);
+  if sources.playing.load(Ordering::Acquire) {
+    return;
+  }
+  let Some(surface) = sources.preview_surface.as_ref() else {
+    return;
+  };
+  let presented = if let Some(composition) = &composition {
+    let screen_factor = pane_factor(&target_sizes, 0, composition.recording_output.primary.width);
+    let mut screen_output = scaled_output(&composition.recording_output.primary, screen_factor);
+    // Placeholder settings below the compositor's validation floor mean the
+    // webview has not sent real output dimensions yet; wait quietly.
+    if screen_output.width < 64 || screen_output.height < 64 {
+      return;
+    }
+    let screen_metadata = cache.screen.metadata();
+    let source = &sources.playback_layout.panes[0];
+    screenwide_workspace::remap_source(
+      &mut screen_output,
+      (source.source_width, source.source_height),
+      (screen_metadata.width, screen_metadata.height),
+      composition.recording_output.primary.width,
+    );
+    let camera_metadata = cache.camera.as_ref().map(DecodedFrame::metadata);
+    let (cursor, overlay) = match gpu_still_overlay(
+      &screen_metadata,
+      &screen_output,
+      cursor,
+      composition
         .bake_camera
-        .then_some(cache.camera.as_ref())
-        .flatten();
-      let mut layers = vec![RecordingWorkspaceLayer {
-        pane_index: 0,
-        source_token: screen_position_ms << 2,
-        source: cache.screen.picture(),
-        settings: screen_output,
-        placement: NativeWorkspacePlacement::default(),
-        seconds: screen_position_ms as f64 / 1_000.0,
-        cursor,
-        keyboard,
-        // A paused frame exposes nothing, so its captions are sharp.
-        captions: sources.captions_at(screen_position_ms, 0.0),
-        camera: baked_camera.map(DecodedFrame::picture),
-        overlay: overlay.as_ref(),
-        camera_settings: composition.bake_camera.then(|| {
-          (
-            &composition.recording_output.camera,
-            sources.annotation_pictures()[1],
-          )
-        }),
-        clip_cursor_at_video_edge: cursor_settings.clip_at_video_edge,
-        foreground_only: false,
-        source_is_camera: sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera,
-      }];
-      if let Some(camera) = cache.camera.as_ref().filter(|_| !composition.bake_camera) {
-        layers.extend(super::camera_pane::camera_pane_layer(
-          composition,
-          &sources,
-          &target_sizes,
-          camera,
-          (camera_position_ms.unwrap_or(0), screen_position_ms),
-        ));
+        .then_some(camera_metadata.as_ref())
+        .flatten(),
+      composition
+        .bake_camera
+        .then_some(composition.camera_overlay),
+      composition.recording_output.camera.drop_shadow,
+      screenwide_export::recording_model::CAMERA_IN_FRONT,
+    ) {
+      Ok(value) => value,
+      Err(message) => {
+        let _ = events.send(RecordingPreviewPlayerEvent::Error { message });
+        return;
       }
-      surface
-        .present_recording_workspace(
-          &layers,
-          sources.cursor_artworks.as_deref().map(Vec::as_slice),
-        )
-        .unwrap_or(false)
-    } else {
-      cache
-        .screen
-        .rgba()
-        .is_some_and(|image| surface.present(0, image))
     };
-    if presented {
-      let camera_ms = camera_position_ms.unwrap_or(screen_position_ms);
-      sources.let_go_elsewhere(camera_ms);
-      sources.show_picked(Some(camera_ms));
-      let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
-        position_ms,
-        request_id,
-      });
+    let baked_camera = composition
+      .bake_camera
+      .then_some(cache.camera.as_ref())
+      .flatten();
+    let mut layers = vec![RecordingWorkspaceLayer {
+      pane_index: 0,
+      source_token: screen_position_ms << 2,
+      source: cache.screen.picture(),
+      settings: screen_output,
+      placement: NativeWorkspacePlacement::default(),
+      seconds: screen_position_ms as f64 / 1_000.0,
+      cursor,
+      keyboard,
+      // A paused frame exposes nothing, so its captions are sharp.
+      captions: sources.captions_at(screen_position_ms, 0.0),
+      camera: baked_camera.map(DecodedFrame::picture),
+      overlay: overlay.as_ref(),
+      camera_settings: composition.bake_camera.then(|| {
+        (
+          &composition.recording_output.camera,
+          sources.annotation_pictures()[1],
+        )
+      }),
+      clip_cursor_at_video_edge: cursor_settings.clip_at_video_edge,
+      foreground_only: false,
+      source_is_camera: sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera,
+    }];
+    if let Some(camera) = cache.camera.as_ref().filter(|_| !composition.bake_camera) {
+      layers.extend(super::camera_pane::camera_pane_layer(
+        composition,
+        sources,
+        &target_sizes,
+        camera,
+        (camera_position_ms.unwrap_or(0), screen_position_ms),
+      ));
     }
-    continue;
+    surface
+      .present_recording_workspace(&layers)
+      .unwrap_or(false)
+  } else {
+    // Without composition settings there is nothing to draw the still as.
+    false
+  };
+  if presented {
+    announce_ready(
+      sources,
+      events,
+      (position_ms, screen_position_ms),
+      request_id,
+    );
   }
 }

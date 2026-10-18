@@ -7,13 +7,13 @@
 //! touches. A still's choice belongs to one layer, so a choice made on
 //! another layer starts that layer's afresh and selects it.
 
-use super::super::preview_platform::SelectionGesturePhase;
 use super::annotation_gesture::AnnotationCommit;
 use super::state::PreviewManager;
 use screenwide_annotations::handles::source_point;
 use screenwide_annotations::marquee::{chosen_after_band, swept_annotations};
 use screenwide_annotations::snap::{source_per_size, SnapModifiers};
 use screenwide_annotations::AnnotationPoint;
+use screenwide_workspace::editing::SelectionGesturePhase;
 
 /// A marquee band under way: the layer it was pressed on, the corner it was
 /// pressed at, in that layer's source pixels, and whether it adds to the

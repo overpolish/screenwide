@@ -10,8 +10,6 @@
 //! from the gizmo's middle, Y running down; the turn's own frame runs Y up,
 //! as `screenwide_scenes::rotation` describes.
 
-mod ffi;
-
 use screenwide_scenes::rotation::{euler_matrix, Rotation3};
 use screenwide_scenes::SceneRotation;
 

@@ -26,7 +26,7 @@ use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
 pub use self::windows::band_guard::initialize as initialize_band_guard;
 mod glide_preview;
 #[cfg(target_os = "macos")]
-pub use self::macos::capture_exclusion::exclude_from_capture;
+pub use self::macos::capture_exclusion::{exclude_from_capture, set_window_capture_affinity};
 #[cfg(target_os = "macos")]
 pub use self::macos::presentation::{
   hide, raise_without_activation, restore_nonactivating_overlay, show, show_interactive_overlay,

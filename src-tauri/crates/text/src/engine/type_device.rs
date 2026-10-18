@@ -22,9 +22,8 @@ use super::face::TypeFace;
 use engine::REFERENCE_SIZE;
 use windows::Win32::Graphics::DirectWrite::IDWriteTextFormat3;
 
-/// The bundled Inter face. The app registers the same bytes with GDI for its
-/// keyboard artwork, so the binary carries one copy.
-pub static INTER: &[u8] = include_bytes!("../../../../assets/Inter-VariableFont_opsz,wght.ttf");
+/// The bundled Inter face, loaded into DirectWrite's font collection.
+static INTER: &[u8] = include_bytes!("../../../../assets/Inter-VariableFont_opsz,wght.ttf");
 
 /// The face at one size in pixels.
 pub struct TypeDevice {
@@ -45,6 +44,11 @@ impl TypeDevice {
   /// `screenwide_annotation_font(size, YES)`.
   pub fn numbers(size: f64) -> Result<Self, String> {
     Self::create(&TypeFace::ANNOTATION, size, true)
+  }
+
+  /// `face` at `size` pixels with tabular figures.
+  pub fn tabular_in_face(face: TypeFace, size: f64) -> Result<Self, String> {
+    Self::create(&face, size, true)
   }
 
   fn create(face: &TypeFace, size: f64, tabular: bool) -> Result<Self, String> {

@@ -37,7 +37,6 @@ pub(super) struct RunContext {
   pub selected_audio: Arc<RwLock<Vec<usize>>>,
   pub sources: PlayerSources,
   pub start_ms: u64,
-  pub video_child: Arc<Mutex<Option<Child>>>,
 }
 
 fn output_duration_ms(source_duration_ms: u64, playback_rate: f64) -> u64 {
@@ -143,17 +142,6 @@ pub(super) fn run(context: RunContext) {
   let Some((mut current_video, audio)) = start(&context, &video, &ranges) else {
     return;
   };
-  let display_clock = audio.as_ref().and_then(|audio| {
-    super::super::audio_visualizer_clock::install(
-      &context.sources,
-      &audio.clock,
-      &ranges,
-      context.playback_rate,
-      &context.cancelled,
-      &context.position_ms,
-      context.start_ms,
-    )
-  });
   let video_clock_start = Instant::now();
   let _ = context
     .event_channel
@@ -200,12 +188,8 @@ pub(super) fn run(context: RunContext) {
           rate,
         ))
         .min(range.source_end_ms);
-      if context.sources.presents_video()
-        || !display_clock.as_ref().is_some_and(|clock| clock.active())
-      {
-        context.position_ms.store(current, Ordering::Release);
-      }
-      if !context.sources.presents_video() && display_clock.is_none() {
+      context.position_ms.store(current, Ordering::Release);
+      if !context.sources.presents_video() {
         present_audio_position(&context.sources, current);
       }
       if context.sources.presents_video() && !platform::send_frame(&context.sources, frame.payload)
@@ -251,7 +235,6 @@ pub(super) fn run(context: RunContext) {
   }
   let was_cancelled = context.cancelled.load(Ordering::Acquire);
   context.cancelled.store(true, Ordering::Release);
-  stop_child(&context.video_child);
   if let Some(audio) = audio {
     stop_audio(&context, audio);
   }

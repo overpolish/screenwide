@@ -10,11 +10,10 @@
 //! playback ends.
 
 use std::{
-  process::Child,
   sync::{
     atomic::{AtomicBool, Ordering},
     mpsc::{self, Receiver},
-    Arc, Mutex,
+    Arc,
   },
   thread::JoinHandle,
 };
@@ -28,7 +27,6 @@ pub(super) struct VideoSource {
   sources: PlayerSources,
   playback_factors: Vec<f64>,
   playback_rate: f64,
-  video_child: Arc<Mutex<Option<Child>>>,
 }
 
 impl VideoSource {
@@ -37,7 +35,6 @@ impl VideoSource {
       sources: context.sources.clone(),
       playback_factors: context.playback_factors.clone(),
       playback_rate: context.playback_rate,
-      video_child: Arc::clone(&context.video_child),
     })
   }
 
@@ -51,9 +48,7 @@ impl VideoSource {
       &self.playback_factors,
       range.source_start_ms,
       effective_rate(range, self.playback_rate),
-      false,
       Arc::clone(&cancelled),
-      Arc::clone(&self.video_child),
       sender,
     )?;
     Ok(VideoPlayback {

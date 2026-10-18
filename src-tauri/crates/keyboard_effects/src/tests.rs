@@ -68,6 +68,23 @@ fn v2_keys_stagger_independently() {
 }
 
 #[test]
+fn a_key_held_after_its_modifiers_shows_alone() {
+  let records = vec![
+    serde_json::json!({"type":"keyDown","keyCode":59,"timestampUs":1_000_000,"modifiers":["control"]}),
+    serde_json::json!({"type":"keyDown","keyCode":56,"timestampUs":1_050_000,"modifiers":["shift"]}),
+    serde_json::json!({"type":"keyDown","keyCode":0,"timestampUs":1_500_000,"modifiers":["control","shift"]}),
+    serde_json::json!({"type":"keyUp","keyCode":56,"timestampUs":1_650_000,"modifiers":["shift"]}),
+    serde_json::json!({"type":"keyUp","keyCode":59,"timestampUs":1_700_000,"modifiers":["control"]}),
+  ];
+  let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
+  let overlay = compositor.evaluate(6_000, Default::default()).unwrap();
+  assert_eq!(overlay.key_count, 1);
+  assert_eq!(overlay.keys[0].key_code, 0);
+  // A mask left on the key would draw Control and Shift caps behind it.
+  assert_eq!(overlay.keys[0].modifier_mask, 0);
+}
+
+#[test]
 fn modifiers_follow_press_order_and_the_primary_key_stays_last() {
   let records = vec![
     serde_json::json!({"type":"keyDown","keyCode":60,"timestampUs":1_000_000,"modifiers":["shift"]}),

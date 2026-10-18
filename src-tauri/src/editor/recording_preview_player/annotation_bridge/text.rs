@@ -11,9 +11,9 @@
 
 use super::gesture::Commit;
 use super::*;
-use crate::editor::preview_platform::AnnotationTextPhase;
 use screenwide_annotations::text::edit::{AnnotationTextEdit, TextEditPhase};
 use screenwide_annotations::AnnotationShape;
+use screenwide_workspace::editing::AnnotationTextPhase;
 
 pub(super) struct TextSession {
   pane: u32,

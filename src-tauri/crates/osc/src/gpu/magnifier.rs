@@ -22,3 +22,43 @@ pub struct NativeMagnifier {
   pub box_origin: [i32; 2],
   pub box_size: [u32; 2],
 }
+
+/// The lens's edge in points; its box is this times the display scale.
+const BOX_POINTS: f64 = 96.0;
+
+impl NativeMagnifier {
+  /// A lens centred on `point`, in points of a `scale` display, reading
+  /// `sample` within the shown part `source_min` to `source_max` of a layer's
+  /// picture, every share clamped to it.
+  #[allow(clippy::too_many_arguments)]
+  pub fn new(
+    point: (f64, f64),
+    scale: f64,
+    edges: u32,
+    light_mode: u32,
+    (pane_index, layer_id, sample_camera): (u32, u32, u32),
+    sample: [f32; 2],
+    source_min: [f32; 2],
+    source_max: [f32; 2],
+  ) -> Self {
+    let size = ((BOX_POINTS * scale).round() as i32).max(1);
+    let center = (
+      (point.0 * scale).round() as i32,
+      (point.1 * scale).round() as i32,
+    );
+    let unit = |share: [f32; 2]| share.map(|value| value.clamp(0.0, 1.0));
+    Self {
+      active: 1,
+      pane_index,
+      layer_id,
+      sample_camera,
+      edges,
+      light_mode,
+      sample: unit(sample),
+      source_min: unit(source_min),
+      source_max: unit(source_max),
+      box_origin: [center.0 - size / 2, center.1 - size / 2],
+      box_size: [size as u32, size as u32],
+    }
+  }
+}

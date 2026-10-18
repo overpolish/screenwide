@@ -81,7 +81,7 @@ pub(crate) fn install(
       // A report from the caption being typed into goes to its own session,
       // and what it changed to React's captions; any other is a text box's.
       let deliver = move |manager: &mut PreviewPlayerManager, app: &AppHandle, text: &str| {
-        if pane == crate::editor::preview_platform::CAPTIONS_LAYER_ID {
+        if pane == screenwide_workspace::CAPTIONS_LAYER_ID {
           if let Some(edit) = manager.caption_text(phase, text, revision) {
             let _ = app.emit("editor://recording-caption-edit", edit);
           }

@@ -19,7 +19,7 @@ use crate::{Annotation, AnnotationHead, AnnotationShape, AnnotationStyle};
 /// rather than a choice: dark enough that the eye goes to the light, light
 /// enough that what is around it can still be read. The twin of
 /// `annotation_spotlight_dim` in the WGSL spotlight pass.
-#[cfg(all(any(test, feature = "test-support"), target_os = "macos"))]
+#[cfg(any(test, feature = "test-support"))]
 pub const SPOTLIGHT_DIM: f32 = 0.4;
 
 /// The softness a fresh spotlight's edge fades over, as a percentage of its

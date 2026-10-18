@@ -71,6 +71,21 @@ pub struct KeyPress {
   up_us: Option<u64>,
 }
 
+impl Shortcut {
+  /// Whether the chord is a shortcut rather than typing: some key in it other
+  /// than a modifier was pressed with Command or Control.
+  fn is_shortcut(&self) -> bool {
+    const COMMAND_OR_CONTROL: u32 = 1 | 2;
+    self.keys.iter().any(|press| {
+      !screenwide_records::keyboard::is_modifier_key(press.key_code)
+        && !screenwide_records::keyboard::types(
+          press.key_code,
+          press.modifier_mask & COMMAND_OR_CONTROL != 0,
+        )
+    })
+  }
+}
+
 impl KeyboardCompositor {
   pub fn open(path: &Path) -> Result<Self, String> {
     Self::open_with_deleted(path, &[], &[])
@@ -86,11 +101,18 @@ impl KeyboardCompositor {
       .and_then(|value| value.get("version"))
       .and_then(Value::as_u64)
       .unwrap_or(1);
-    let shortcuts = if version >= 2 {
+    let mut shortcuts = if version >= 2 {
       reconstruct_v2(&records)
     } else {
       parse_v1(&records)
     };
+    // Typing shows no keys, only shortcuts do. A chord that typed is emptied
+    // rather than removed, so every other keeps the id its deletions name.
+    for shortcut in &mut shortcuts {
+      if !shortcut.is_shortcut() {
+        shortcut.keys.clear();
+      }
+    }
     let compositor = Self::from_shortcuts_with_legacy(shortcuts, version < 2);
     compositor.set_deleted_shortcuts(deleted_ids, deleted_ranges);
     Ok(compositor)

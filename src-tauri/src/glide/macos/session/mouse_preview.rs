@@ -24,6 +24,6 @@ pub(in crate::glide::macos) fn poll(app: &AppHandle, state: &SharedState) {
     && (!mouse_down || blocked)
   {
     crate::glide::core::trace::input("mac-mouse", "end-normal-mouse-preview");
-    super::end_session(app, state, blocked);
+    super::end_session(app, blocked);
   }
 }

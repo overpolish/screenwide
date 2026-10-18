@@ -9,6 +9,8 @@ pub(crate) mod native_osc_macos;
 pub(crate) mod native_osc_windows;
 pub(crate) mod osc_command;
 pub(crate) mod presentation;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) mod region_osc;
 
 pub(super) fn acquire_quick_screenshot_cursor(app: &tauri::AppHandle) -> Result<(), String> {
   adapter::acquire_quick_screenshot_cursor(app)

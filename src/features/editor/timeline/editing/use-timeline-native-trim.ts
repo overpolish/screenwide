@@ -9,6 +9,7 @@ import {
   useRef,
 } from "react";
 
+import { isMacHost } from "../../../../lib/platform";
 import {
   beginTimelineSnapGesture,
   TIMELINE_SNAP_THRESHOLD_PX,
@@ -19,7 +20,6 @@ import { RecordingTimelineTrimEdge } from "./recording-timeline-edit";
 
 import type { TimelineBladeController } from "./timeline-blade";
 
-const isMacOS = navigator.userAgent.includes("Mac");
 type CursorScrubEvent = { deltaX: number; type: "move" } | { type: "end" };
 
 export function useTimelineNativeTrim({
@@ -85,7 +85,7 @@ export function useTimelineNativeTrim({
     [blade, outputPositionAt, position],
   );
   useEffect(() => {
-    if (isTauri() && !isMacOS) return;
+    if (isTauri() && !isMacHost) return;
     const onMove = (event: PointerEvent) => {
       move(event.movementX);
     };

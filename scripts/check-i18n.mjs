@@ -5,8 +5,7 @@
 // code that uses them. Failing: a syntax error; a message out of its file's
 // namespace, with attributes or without a value; a translation with a message,
 // file or placeholder the source lacks, or a term it does not define; a source
-// message no code uses; an id in Rust's `t!` or Objective-C's
-// `screenwide_osc_localized` the source lacks; out-of-date
+// message no code uses; an id in Rust's `t!` the source lacks; out-of-date
 // `src/i18n/messages.ts`. Untranslated messages are listed but pass: the
 // source fills them in.
 
@@ -128,17 +127,16 @@ for (const language of languages()) {
     untranslated.push(`${language}: ${String(missing)} untranslated`);
 }
 
-// Usage. Ids are passed to `t`, `t!` and `screenwide_osc_localized` as
-// literals, so a quoted id in the code is a use; messages may also include
-// one another.
+// Usage. Ids are passed to `t` and `t!` as literals, so a quoted id in the
+// code is a use; messages may also include one another.
 const typescript = filesIn("src", new Set([".ts", ".tsx"]))
   .filter((file) => file !== join(TYPES_FILE))
   .map((file) => readFileSync(file, "utf8"))
   .join("\n");
-// Rust and the Objective-C overlays. Comments are left out: they may show
-// the macro without using a message.
+// Rust. Comments are left out: they may show the macro without using a
+// message.
 const native = ["src-tauri/src", "src-tauri/crates"]
-  .flatMap((root) => filesIn(root, new Set([".rs", ".m", ".h"])))
+  .flatMap((root) => filesIn(root, new Set([".rs"])))
   .flatMap((file) => readFileSync(file, "utf8").split("\n"))
   .filter((line) => !line.trimStart().startsWith("//"))
   .join("\n");
@@ -152,9 +150,7 @@ for (const [id, entry] of source.entries) {
     errors.push(`${entry.at}: ${id} is not used anywhere`);
   }
 }
-const nativeUses = native.matchAll(
-  /(\bt!\(|\bscreenwide_osc_localized\(@)\s*"([^"]+)"/g,
-);
+const nativeUses = native.matchAll(/(\bt!\()\s*"([^"]+)"/g);
 for (const [, call, id] of nativeUses) {
   if (!source.entries.has(id) || id.startsWith("-")) {
     errors.push(`${call}"${id}") uses a message ${SOURCE} does not define`);

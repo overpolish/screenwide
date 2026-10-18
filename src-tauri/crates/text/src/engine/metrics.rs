@@ -41,6 +41,12 @@ pub fn face_text_block(face: &TypeFace, text: &str, font_px: f64) -> [f64; 2] {
   ]
 }
 
+/// How wide one line of type in `face` is at `font_px`, as the platform's
+/// text engine sets it.
+pub fn line_width(face: &TypeFace, line: &str, font_px: f64) -> f64 {
+  platform::line_width(face, line, font_px)
+}
+
 /// The widest line's width, measured once per face, text and size. A frame
 /// asks for every box it draws, the chrome for every box it picks and the
 /// snap engine for every box it lines up against, so the answers are kept;

@@ -93,7 +93,7 @@ pub async fn start_recording_preview_player(
       let menu_app = app.clone();
       surface.set_context_menu_callback(Box::new(move |pane_index, annotation, x, y| {
         // A press on a word of the caption opens the captions' word menu.
-        if pane_index == crate::editor::preview_platform::CAPTIONS_LAYER_ID {
+        if pane_index == screenwide_workspace::CAPTIONS_LAYER_ID {
           let state = menu_app.state::<RecordingPreviewPlayerState>();
           let Ok(manager) = state.0.try_lock() else {
             return;
@@ -141,19 +141,18 @@ pub async fn start_recording_preview_player(
             .is_ok();
           // A Frame drag, or an Alt-drag Move growing the canvas around its
           // layer, moves the pane box on every pointer move, so the composition
-          // follows it immediately. macOS recomposes natively; Windows redraws the
-          // paused still from its cached sources here, which also publishes
-          // the geometry the drag deferred. Without this the pane would show
-          // the previous canvas letterboxed into the new box until mouse-up.
-          #[cfg(target_os = "windows")]
+          // follows it immediately: the paused still is redrawn from its
+          // cached sources here, which also publishes the geometry the drag
+          // deferred. Without this the pane would show the previous canvas
+          // letterboxed into the new box until mouse-up.
+          #[cfg(any(target_os = "macos", target_os = "windows"))]
           if updated
-            && (operation
-              == crate::editor::preview_platform::SelectionGestureOperation::FrameResize
-              || (operation == crate::editor::preview_platform::SelectionGestureOperation::Move
+            && (operation == screenwide_workspace::editing::SelectionGestureOperation::FrameResize
+              || (operation == screenwide_workspace::editing::SelectionGestureOperation::Move
                 && edges & super::super::AUTO_FIT_MOVE_EDGE != 0))
             && !matches!(
               phase,
-              crate::editor::preview_platform::SelectionGesturePhase::Begin
+              screenwide_workspace::editing::SelectionGesturePhase::Begin
             )
           {
             // The surface state lock is not held here (`handle_editor_input`
@@ -170,10 +169,10 @@ pub async fn start_recording_preview_player(
           None
         };
         let phase = match phase {
-          crate::editor::preview_platform::SelectionGesturePhase::Begin => "begin",
-          crate::editor::preview_platform::SelectionGesturePhase::Update => "update",
-          crate::editor::preview_platform::SelectionGesturePhase::End => "end",
-          crate::editor::preview_platform::SelectionGesturePhase::Cancel => "cancel",
+          screenwide_workspace::editing::SelectionGesturePhase::Begin => "begin",
+          screenwide_workspace::editing::SelectionGesturePhase::Update => "update",
+          screenwide_workspace::editing::SelectionGesturePhase::End => "end",
+          screenwide_workspace::editing::SelectionGesturePhase::Cancel => "cancel",
         };
         let operation = operation as u32;
         let _ = event_app.emit(

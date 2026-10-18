@@ -25,7 +25,7 @@ use windows::Win32::{
 use super::{titlebar, tween};
 mod geometry;
 use crate::glide::{
-  core::{landing_point, GlideFrame},
+  core::GlideFrame,
   region_rect::{region_gravity, region_rect, PlacedRegion, RegionGravity},
 };
 use geometry::{frame, frame_insets, outer_frame, visible_frame, FrameInsets};
@@ -46,13 +46,11 @@ pub(super) struct WindowTarget {
   was_maximized: bool,
 }
 
-/// Where a region places this window: the rectangle asked for, the edge it is
-/// pulled towards if the window cannot fill it, and the work area the preview
-/// reports against.
+/// Where a region places this window: the rectangle asked for and the edge it
+/// is pulled towards if the window cannot fill it.
 pub(super) struct Destination {
   pub frame: GlideFrame,
   pub gravity: RegionGravity,
-  pub work: GlideFrame,
 }
 
 impl WindowTarget {
@@ -103,7 +101,6 @@ impl WindowTarget {
         height: size.1,
       },
       gravity: region_gravity(region),
-      work,
     }
   }
 
@@ -146,31 +143,12 @@ impl WindowTarget {
     }
   }
 
+  /// Minimizes the window. The session stops the tween first, so a late frame
+  /// cannot fight the minimize.
   pub fn minimize(self) {
-    tween::cancel();
     if self.ensure_window().is_ok() {
       let _ = unsafe { ShowWindowAsync(self.hwnd(), SW_MINIMIZE) };
     }
-  }
-
-  /// Where the cursor lands after a commit: the same grip on the window it had
-  /// at the anchor. A window still travelling is judged by its destination.
-  pub fn landing(self, anchor: POINT) -> Option<POINT> {
-    let achieved = tween::in_flight_destination()
-      .or_else(|| self.frame().ok())
-      .unwrap_or(self.original);
-    if crate::glide::core::frames_match(self.original, achieved, 1.0) {
-      return None;
-    }
-    let (x, y) = landing_point(
-      (f64::from(anchor.x), f64::from(anchor.y)),
-      self.original,
-      achieved,
-    );
-    Some(POINT {
-      x: x.round() as i32,
-      y: y.round() as i32,
-    })
   }
 
   /// Readies the window for a tween and reads the frame it starts from. A

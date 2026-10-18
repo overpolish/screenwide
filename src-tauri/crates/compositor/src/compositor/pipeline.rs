@@ -5,7 +5,16 @@ use super::preview_bindings::{PreviewBinding, PREVIEW_BINDINGS};
 use super::*;
 
 impl Compositor {
-  pub fn new(gpu: &'static Gpu, cursors: NativeCursors) -> Result<Self, String> {
+  /// A compositor drawing the cursor from the platform's artwork.
+  pub fn new(gpu: &'static Gpu) -> Result<Self, String> {
+    Self::with_cursor_artworks(gpu, screenwide_cursor_effects::gpu_artworks())
+  }
+
+  /// A compositor drawing the cursor from `artworks`, one per style index.
+  pub fn with_cursor_artworks(
+    gpu: &'static Gpu,
+    artworks: &[screenwide_cursor_effects::GpuArtwork],
+  ) -> Result<Self, String> {
     let device = &gpu.device;
     // The tile binning reads the full module: it compiles only its own entry
     // point, which needs every kind's reach. The canvas pass compiles a
@@ -23,29 +32,7 @@ impl Compositor {
         mapped_at_creation: false,
       })
     };
-    let layer_bytes = cursors.size.0 as usize * cursors.size.1 as usize * 4;
-    if layer_bytes == 0
-      || cursors.layers.is_empty()
-      || !cursors.layers.len().is_multiple_of(layer_bytes)
-    {
-      return Err("The cursor artwork does not fill its layers".to_owned());
-    }
-    let cursor_view = gpu
-      .texture_with_pixels(
-        "Screenwide cursor atlas",
-        (
-          cursors.size.0,
-          cursors.size.1,
-          (cursors.layers.len() / layer_bytes) as u32,
-        ),
-        FORMAT,
-        &cursors.layers,
-      )
-      .create_view(&wgpu::TextureViewDescriptor {
-        dimension: Some(wgpu::TextureViewDimension::D2Array),
-        ..Default::default()
-      });
-    let cursor_hotspots = cursors.hotspots;
+    let (cursor_view, cursor_artworks) = super::cursor_artwork::upload(gpu, artworks)?;
     let fallback_view = gpu
       .texture_with_pixels("Screenwide preview fallback", (1, 1, 1), FORMAT, &[0; 4])
       .create_view(&Default::default());
@@ -58,11 +45,8 @@ impl Compositor {
       annotation_text: GpuBuffer::new(gpu, "Screenwide annotation text"),
       constants: uniform("Screenwide canvas", size_of::<Constants>()),
       keyboard_constants: uniform("Screenwide keyboard", size_of::<KeyboardConstants>()),
-      cursor_hotspots,
       cursor_view,
-      cursor_artworks: Vec::new(),
-      #[cfg(target_os = "macos")]
-      cursor_artwork_key: 0,
+      cursor_artworks,
       counter_atlas: CounterAtlas::default(),
       image_atlas: ImageAtlas::default(),
       keyboard_cache: KeyboardArtworkCache::default(),

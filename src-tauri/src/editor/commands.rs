@@ -95,7 +95,7 @@ pub fn copy_editor_to_clipboard(
   let EditorArtifact::Screenshot { items, project, .. } = artifact else {
     return Err("There is nothing to copy".to_owned());
   };
-  let composed = compose_screenshot_workspace(&app, &items, &screenshot_output)?;
+  let composed = compose_screenshot_workspace(&items, &screenshot_output)?;
 
   app
     .clipboard()

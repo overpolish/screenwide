@@ -23,8 +23,6 @@ fn manager() -> PreviewPlayerManager {
     captures: Default::default(),
     composition_settings: None,
     cursor: None,
-    #[cfg(target_os = "macos")]
-    cursor_artworks: None,
     cursor_settings: Default::default(),
     keyboard: None,
     animation_ranges: Default::default(),

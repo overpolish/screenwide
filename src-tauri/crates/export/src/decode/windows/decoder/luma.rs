@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use windows::core::Interface;
 use windows::Win32::Media::MediaFoundation::*;
 
-use super::{win, NativeVideoReader, HUNDRED_NS_PER_MS, VIDEO_STREAM};
+use super::{win, NativeVideoReader, VIDEO_STREAM};
 use screenwide_annotations::pin::{FrameSource, LumaFrame};
 
 pub struct LumaReader {
@@ -89,7 +89,7 @@ impl FrameSource for LumaReader {
       let Some(sample) = sample else {
         continue;
       };
-      let ms = u64::try_from(timestamp.max(0) / HUNDRED_NS_PER_MS).unwrap_or_default();
+      let ms = crate::decode::windows::origin::milliseconds(timestamp, reader.origin);
       // A seek lands on the keyframe before the start.
       if ms < start_ms {
         continue;

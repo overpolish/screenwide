@@ -16,6 +16,11 @@ use objc2_app_kit::{NSWindow, NSWindowSharingType};
 use tauri::{Manager, WebviewWindow};
 
 pub fn exclude_from_capture(window: &WebviewWindow) -> tauri::Result<()> {
+  set_window_capture_affinity(window, false)
+}
+
+/// Lets captures see `window` or keeps it out of them.
+pub fn set_window_capture_affinity(window: &WebviewWindow, capturable: bool) -> tauri::Result<()> {
   let window = window.clone();
   let app = window.app_handle().clone();
   // Applied on the next main-loop turn, which still lands before the window is
@@ -23,7 +28,11 @@ pub fn exclude_from_capture(window: &WebviewWindow) -> tauri::Result<()> {
   app.run_on_main_thread(move || {
     if let Ok(raw) = window.ns_window() {
       let native: &NSWindow = unsafe { &*raw.cast() };
-      native.setSharingType(NSWindowSharingType::None);
+      native.setSharingType(if capturable {
+        NSWindowSharingType::ReadOnly
+      } else {
+        NSWindowSharingType::None
+      });
     }
   })
 }

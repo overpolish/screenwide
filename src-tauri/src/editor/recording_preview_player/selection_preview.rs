@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[cfg(target_os = "macos")]
 use super::worker::PlaybackMode;
 use super::{PreviewCompositionSettings, PreviewPlayerManager};
 
@@ -18,10 +17,9 @@ impl PreviewPlayerManager {
   }
 
   /// Recomposes the paused stills from the frames the workspace holds against
-  /// whatever composition is current, the way macOS recomposes its retained
-  /// workspace. `Ok(false)` means a frame is not resident yet and the decoder
-  /// has to supply it.
-  #[cfg(target_os = "windows")]
+  /// whatever composition is current, as the scenes arrange it, without
+  /// asking the decoder for the same source pixels. `Ok(false)` means a frame
+  /// is not resident yet and the decoder has to supply it.
   pub(super) fn redraw_still_now(&self) -> Result<bool, String> {
     let sources = self
       .sources
@@ -55,15 +53,18 @@ impl PreviewPlayerManager {
     Ok(recomposed && surface.redraw_recording_workspace())
   }
 
-  #[cfg(target_os = "windows")]
-  pub(super) fn refresh_selection_preview(&self, _layer_id: u32) -> Result<(), String> {
-    self.redraw_still_now().map(|_| ())
+  /// Redraws the paused still a selection gesture changed from the frames
+  /// the workspace holds, or has the decoder supply them where it holds none.
+  pub(super) fn refresh_selection_preview(&mut self, _layer_id: u32) -> Result<(), String> {
+    if self.redraw_still_now()? {
+      return Ok(());
+    }
+    self.restart(PlaybackMode::InteractiveStill)
   }
 
   /// Redraws the paused still a layout changed, from the cached sources. A
   /// bake toggle moves the camera in or out of the picture, which the
   /// annotations carried for it follow.
-  #[cfg(target_os = "windows")]
   pub(super) fn redraw_layout_still(&self, bake_changed: bool) -> bool {
     if bake_changed {
       self.recompose_paused_still()
@@ -78,7 +79,6 @@ impl PreviewPlayerManager {
   /// was, so they are resolved again for where it is now, in the same
   /// present. `false` means a source is not cached yet and the decoder has to
   /// supply the frame.
-  #[cfg(target_os = "windows")]
   pub(super) fn recompose_paused_still(&self) -> bool {
     let Some(surface) = self
       .sources
@@ -89,57 +89,5 @@ impl PreviewPlayerManager {
     };
     let _batch = surface.present_batch();
     self.redraw_still_now().unwrap_or(false) && self.redraw_annotation_frame(0, self.position_ms)
-  }
-
-  /// Recomposes the retained workspace against the current composition, as
-  /// the scenes arrange it, without asking the decoder for the same source
-  /// pixels. `false` where it has to: the retained scene keeps the
-  /// annotations it was staged with, and in One video the camera's are
-  /// carried in the screen's list, placed where the camera was, so a camera
-  /// that carries any is composed afresh as it moves.
-  #[cfg(target_os = "macos")]
-  pub(super) fn recompose_paused_still(&self) -> bool {
-    let carries_annotations = !self.pane_annotations(1).is_empty();
-    self
-      .sources
-      .as_ref()
-      .and_then(|sources| {
-        let surface = sources.preview_surface.as_ref()?;
-        let composition =
-          self.arranged_composition(&sources.composition_settings.as_ref()?.read().ok()?.clone());
-        if composition.bake_camera && carries_annotations {
-          return None;
-        }
-        let mut panes = vec![(0, &composition.recording_output.primary)];
-        if !composition.bake_camera && sources.camera_path.is_some() {
-          panes.push((1, &composition.recording_output.camera));
-        }
-        surface
-          .recompose_recording_workspace(
-            &panes,
-            composition.bake_camera.then_some((
-              composition.camera_overlay,
-              composition.recording_output.camera.drop_shadow,
-              screenwide_export::recording_model::CAMERA_IN_FRONT,
-            )),
-          )
-          .ok()
-          .filter(|updated| *updated)
-          .map(|_| surface.redraw_recording_workspace())
-      })
-      .unwrap_or(false)
-  }
-
-  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  pub(super) fn recompose_paused_still(&self) -> bool {
-    false
-  }
-
-  #[cfg(target_os = "macos")]
-  pub(super) fn refresh_selection_preview(&mut self, layer_id: u32) -> Result<(), String> {
-    if layer_id == 1 && self.recompose_paused_still() {
-      return Ok(());
-    }
-    self.restart(PlaybackMode::InteractiveStill)
   }
 }

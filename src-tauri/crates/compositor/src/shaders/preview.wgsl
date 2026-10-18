@@ -45,7 +45,6 @@ struct Canvas {
   magnifier: vec4<f32>,
   magnifier_options: vec4<f32>,
   magnifier_bounds: vec4<f32>,
-  native_cursor_hotspots: array<vec4<f32>, 8>, // normalized atlas hotspot x/y
   options: vec4<u32>, // seed, mesh enabled, point count, shadow enabled
   cursor_options: vec4<u32>, // artwork, enabled, clip to video, foreground only
   background_options: vec4<u32>, // has background image, generator, palette size
@@ -248,7 +247,7 @@ struct Keyboard {
 @group(0) @binding(0) var<uniform> canvas: Canvas;
 @group(0) @binding(1) var<uniform> keyboard: Keyboard;
 @group(0) @binding(2) var source_image: texture_2d<f32>;
-@group(0) @binding(3) var native_cursor_images: texture_2d_array<f32>;
+@group(0) @binding(3) var cursor_images: texture_2d_array<f32>;
 @group(0) @binding(4) var camera_image: texture_2d<f32>;
 @group(0) @binding(5) var keyboard_image: texture_2d<f32>;
 @group(0) @binding(6) var background_image: texture_2d<f32>;
@@ -412,32 +411,8 @@ fn crop_preview_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
   return result;
 }
 
-fn cursor_sample(source_pixel: vec2<f32>, anchor: vec2<f32>) -> vec4<f32> {
-  // The preview's screen-space rotation convention is opposite to the
-  // raster convention used to calculate the motion lean.
-  var angle = -canvas.cursor_effects.z;
-  if (canvas.cursor_options.x == 2u) {
-    angle += 1.57079632679;
-  }
-  let delta = source_pixel - anchor;
-  let cosine = cos(angle);
-  let sine = sin(angle);
-  let local = vec2<f32>(cosine * delta.x + sine * delta.y, -sine * delta.x + cosine * delta.y) /
-      max(canvas.cursor_effects.w, 0.01);
-  let atlas_uv = local / canvas.cursor_geometry.zw +
-      canvas.native_cursor_hotspots[canvas.cursor_options.x].xy;
-  if (any(atlas_uv < vec2<f32>(0.0)) || any(atlas_uv >= vec2<f32>(1.0))) {
-    return vec4<f32>(0.0);
-  }
-  // The atlas has one level, and the layers sample it inside loops: a loupe's
-  // exposure and the cursor's blur.
-  return textureSampleLevel(native_cursor_images, linear_sampler, atlas_uv,
-                            canvas.cursor_options.x, 0.0);
-}
-
-// The cursor drawn from the artwork it was handed, as the macOS canvas draws
-// it: a port of `CursorRaster::sample` and `draw_blurred`
-// (editor/cursor_effects/raster.rs) in output pixels.
+// The cursor drawn from its style's artwork: a port of `CursorRaster::sample`
+// and `draw_blurred` (cursor_effects/raster.rs) in output pixels.
 
 // One bilinear read of the style's bitmap at `point`, in its own pixels,
 // weighted by alpha so transparent texels lend no colour.
@@ -450,10 +425,10 @@ fn artwork_texel(point_in: vec2<f32>) -> vec4<f32> {
   let fraction = point - vec2<f32>(low);
   let layer = i32(canvas.cursor_options.x);
   let samples = array<vec4<f32>, 4>(
-    textureLoad(native_cursor_images, vec2<i32>(low), layer, 0),
-    textureLoad(native_cursor_images, vec2<i32>(i32(high.x), i32(low.y)), layer, 0),
-    textureLoad(native_cursor_images, vec2<i32>(i32(low.x), i32(high.y)), layer, 0),
-    textureLoad(native_cursor_images, vec2<i32>(high), layer, 0),
+    textureLoad(cursor_images, vec2<i32>(low), layer, 0),
+    textureLoad(cursor_images, vec2<i32>(i32(high.x), i32(low.y)), layer, 0),
+    textureLoad(cursor_images, vec2<i32>(i32(low.x), i32(high.y)), layer, 0),
+    textureLoad(cursor_images, vec2<i32>(high), layer, 0),
   );
   let weights = array<f32, 4>(
     (1.0 - fraction.x) * (1.0 - fraction.y),
@@ -583,56 +558,15 @@ fn cursor_layer(pixel: vec2<f32>) -> vec4<f32> {
   if (!feature_kept(feature_cursor) || canvas.cursor_options.y == 0u) {
     return vec4<f32>(0.0);
   }
-  if (canvas.cursor_model.x != 0u) {
-    return artwork_cursor(pixel);
-  }
-  let image_rect = canvas.image_rect;
-  let source_size = canvas.output_source.zw;
-  let source_pixel = (pixel - image_rect.xy) / image_rect.zw * source_size;
-  // The recorded hotspot is source-space, but the atlas is sampled in the
-  // pane's physical output. Snap that transformed hotspot to a pixel edge so
-  // pixel-centred samples hit the cursor artwork consistently instead of
-  // bilinearly splitting a thin I-beam or crosshair across two pixels.
-  let display_anchor = image_rect.xy + canvas.cursor_geometry.xy / source_size * image_rect.zw;
-  let anchor = (round(display_anchor) - image_rect.xy) / image_rect.zw * source_size;
-  let travel = min(length(canvas.cursor_blur.xy), 80.0);
-  let radius = length(canvas.cursor_geometry.zw) * canvas.cursor_effects.w + travel + 4.0;
-  if (any(abs(source_pixel - anchor) > vec2<f32>(radius))) {
-    return vec4<f32>(0.0);
-  }
-  if (travel <= 1.25) {
-    return cursor_sample(source_pixel, anchor);
-  }
-  let direction = canvas.cursor_blur.xy / max(length(canvas.cursor_blur.xy), 0.001);
-  var accumulated = vec4<f32>(0.0);
-  var total_weight = 0.0;
-  for (var index = 0u; index < 24u; index++) {
-    let progress = f32(index) / 23.0;
-    let centered = (progress - 0.5) / 0.34;
-    let weight = exp(-0.5 * centered * centered);
-    let sample_anchor = anchor + direction * ((progress - 0.8) * travel);
-    let sample = cursor_sample(source_pixel, sample_anchor);
-    accumulated += vec4<f32>(sample.rgb * sample.a * weight, sample.a * weight);
-    total_weight += weight;
-  }
-  let alpha = accumulated.a / total_weight;
-  if (alpha <= 0.0) {
-    return vec4<f32>(0.0, 0.0, 0.0, alpha);
-  }
-  return vec4<f32>(accumulated.rgb / (total_weight * alpha), alpha);
+  return artwork_cursor(pixel);
 }
 
-// The cursor for the annotation layers, straight alpha: faded by its opacity
-// and, where it is clipped to the video, held inside the shown picture.
+// The cursor for the annotation layers, straight alpha, faded by its
+// opacity. A cursor clipped to the video is clipped inside `artwork_cursor`,
+// pixel by pixel.
 fn annotation_cursor_sample(probe: vec2<f32>) -> vec4<f32> {
   var cursor = cursor_layer(probe);
   cursor.a *= canvas.cursor_effects.x;
-  // The artwork model clips inside `artwork_cursor`, pixel by pixel.
-  if (canvas.cursor_options.z != 0u && canvas.cursor_model.x == 0u) {
-    cursor.a *= rounded_coverage(probe, canvas.crop_rect, canvas.effects.x) *
-        rounded_coverage(probe, canvas.image_rect, 0.0) *
-        rounded_coverage(probe, canvas.source_crop_rect, 0.0);
-  }
   return cursor;
 }
 
@@ -645,15 +579,7 @@ fn annotation_cursor_near(probe: vec2<f32>, margin: f32) -> bool {
   }
   let travel = min(length(canvas.cursor_blur.xy), 80.0);
   let radius = length(canvas.cursor_geometry.zw) * canvas.cursor_effects.w + travel + 4.0;
-  if (canvas.cursor_model.x != 0u) {
-    return all(abs(probe - canvas.cursor_geometry.xy) <= vec2<f32>(radius + margin));
-  }
-  let image_rect = canvas.image_rect;
-  let source_size = canvas.output_source.zw;
-  let source_pixel = (probe - image_rect.xy) / image_rect.zw * source_size;
-  let display_anchor = image_rect.xy + canvas.cursor_geometry.xy / source_size * image_rect.zw;
-  let anchor = (round(display_anchor) - image_rect.xy) / image_rect.zw * source_size;
-  return all(abs(source_pixel - anchor) <= radius + margin * source_size / image_rect.zw);
+  return all(abs(probe - canvas.cursor_geometry.xy) <= vec2<f32>(radius + margin));
 }
 
 fn annotation_spotlight_blur() -> AnnotationSpotlightBlur {
@@ -1069,11 +995,26 @@ fn keyboard_key_pixel(index: u32, canvas_point: vec2<f32>, canvas_dimensions: ve
   // `keyboard_texel` treats integer coordinates as texel centres. Convert
   // from rectangle-edge UVs accordingly and clamp to this key so linear
   // sampling cannot pull colour from its neighbouring gap or key.
-  var source = vec2<f32>(f32(geometry.x) + uv.x * f32(geometry.y) - 0.5,
+  let centre = vec2<f32>(f32(geometry.x) + uv.x * f32(geometry.y) - 0.5,
                          uv.y * artwork.y - 0.5);
-  source.x = clamp(source.x, f32(geometry.x), f32(geometry.x + max(geometry.y, 1u) - 1u));
-  source.y = clamp(source.y, 0.0, f32(keyboard.dimensions.y - 1u));
-  return keyboard_texel(source);
+  let low = vec2<f32>(f32(geometry.x), 0.0);
+  let high = vec2<f32>(f32(geometry.x + max(geometry.y, 1u) - 1u),
+                       f32(keyboard.dimensions.y - 1u));
+  // The artwork is rasterised for the strip's largest size, and a canvas
+  // drawn smaller than its own size covers several canvas pixels with each
+  // drawn one, so each pixel covers several texels. One bilinear read there
+  // skips most of them and leaves the type's edges jagged; a grid of reads
+  // across the pixel averages what it covers.
+  let footprint = artwork.y / max(key_size.y, 0.001) * max(canvas.motion.z, 1.0);
+  let taps = u32(clamp(ceil(footprint), 1.0, 8.0));
+  var sum = vec4<f32>(0.0);
+  for (var row = 0u; row < taps; row++) {
+    for (var column = 0u; column < taps; column++) {
+      let offset = ((vec2<f32>(f32(column), f32(row)) + 0.5) / f32(taps) - 0.5) * footprint;
+      sum += keyboard_texel(clamp(centre + offset, low, high));
+    }
+  }
+  return sum / f32(taps * taps);
 }
 
 fn keyboard_motion_spring(progress: f32) -> f32 {

@@ -4,7 +4,7 @@
 //! Windows final-video composition. Media Foundation decodes on a plain
 //! Direct3D 11 device on wgpu's adapter, the preview shader draws offscreen
 //! in wgpu, and the hardware H.264 transform consumes the copy on the same
-//! Direct3D 11 device; see `export_surface`.
+//! Direct3D 11 device; see `export_canvas`.
 
 mod encoder_config;
 mod preview;
@@ -27,12 +27,10 @@ use ::windows::{
 };
 
 use super::super::*;
-use super::export_surface::WindowsExportCompositor;
+use super::export_canvas::WindowsExportCanvas;
+use crate::cursor_export::frame_draw::FrameDraw;
 use crate::decode::windows::gpu_decoder::GpuVideoReader;
-use screenwide_compositor::compositor::ComposedFrame;
-use screenwide_cursor_effects::CursorCompositor;
 
-const EXPORT_FPS: u32 = 60;
 const GPU_PROGRESS_PERCENT: u64 = 95;
 static EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 
@@ -51,8 +49,7 @@ impl VideoSink {
   fn new(
     path: &Path,
     device: &ID3D11Device,
-    width: u32,
-    height: u32,
+    ((width, height), fps): ((u32, u32), u32),
     bitrate: u64,
   ) -> Result<Self, String> {
     let mut reset_token = 0;
@@ -70,10 +67,10 @@ impl VideoSink {
       Ok(store) => win(unsafe { attributes.SetUnknown(&MF_SINK_WRITER_ENCODER_CONFIG, &store) })?,
       Err(message) => eprintln!("windows export: constant bitrate not applied: {message}"),
     }
-    let output = video_type(MFVideoFormat_H264, width, height)?;
+    let output = video_type(MFVideoFormat_H264, (width, height), fps)?;
     win(unsafe { output.SetUINT32(&MF_MT_AVG_BITRATE, bitrate) })?;
     win(unsafe { output.SetUINT32(&MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_High.0 as u32) })?;
-    win(unsafe { output.SetUINT32(&MF_MT_MAX_KEYFRAME_SPACING, EXPORT_FPS) })?;
+    win(unsafe { output.SetUINT32(&MF_MT_MAX_KEYFRAME_SPACING, fps) })?;
 
     let wide = path
       .to_str()
@@ -91,7 +88,7 @@ impl VideoSink {
     })?;
     let media_sink = win(unsafe { MFCreateFMPEG4MediaSink(&byte_stream, &output, None) })?;
     let sink = win(unsafe { MFCreateSinkWriterFromMediaSink(&media_sink, &attributes) })?;
-    let input = video_type(MFVideoFormat_ARGB32, width, height)?;
+    let input = video_type(MFVideoFormat_ARGB32, (width, height), fps)?;
     win(unsafe { sink.SetInputMediaType(0, &input, None) })?;
     win(unsafe { sink.BeginWriting() })?;
     Ok(Self {
@@ -153,8 +150,8 @@ fn attributes(capacity: u32) -> Result<IMFAttributes, String> {
 
 fn video_type(
   subtype: ::windows::core::GUID,
-  width: u32,
-  height: u32,
+  (width, height): (u32, u32),
+  fps: u32,
 ) -> Result<IMFMediaType, String> {
   let value = unsafe { MFCreateMediaType() }.map_err(|error| error.to_string())?;
   win(unsafe { value.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video) })?;
@@ -165,7 +162,7 @@ fn video_type(
       (u64::from(width) << 32) | u64::from(height),
     )
   })?;
-  win(unsafe { value.SetUINT64(&MF_MT_FRAME_RATE, (u64::from(EXPORT_FPS) << 32) | 1) })?;
+  win(unsafe { value.SetUINT64(&MF_MT_FRAME_RATE, (u64::from(fps) << 32) | 1) })?;
   win(unsafe { value.SetUINT64(&MF_MT_PIXEL_ASPECT_RATIO, (1_u64 << 32) | 1) })?;
   win(unsafe { value.SetUINT32(&MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive.0 as u32) })?;
   Ok(value)

@@ -3,9 +3,6 @@
 
 use super::{PlaybackMode, PreviewPlayerManager, RecordingSelectionGesture};
 use super::{AUTO_FIT_COMMIT_EDGE, AUTO_FIT_MOVE_EDGE};
-use crate::editor::preview_platform::{
-  is_overlay_layer, SelectionGestureOperation, SelectionGesturePhase,
-};
 use crate::editor::preview_workspace_model::{
   apply_camera_geometry, apply_output_geometry, camera_geometry, output_canvas, output_geometry,
 };
@@ -13,6 +10,7 @@ use screenwide_compositor::workspace_editor::{
   apply_layer_gesture, fit_canvas_to_layers, GestureOperation as WorkspaceGestureOperation,
 };
 use screenwide_scenes::SceneRotation;
+use screenwide_workspace::editing::{SelectionGestureOperation, SelectionGesturePhase};
 impl PreviewPlayerManager {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   #[allow(clippy::too_many_arguments)] // Native editor callback fields stay separate.
@@ -26,7 +24,7 @@ impl PreviewPlayerManager {
     delta_x: f64,
     delta_y: f64,
   ) -> Result<(), String> {
-    if is_overlay_layer(layer_id) {
+    if screenwide_workspace::is_overlay_layer(layer_id) {
       self.selection_gesture = None;
       return Ok(());
     }

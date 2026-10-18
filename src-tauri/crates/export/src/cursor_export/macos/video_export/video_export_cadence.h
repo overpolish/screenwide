@@ -3,29 +3,31 @@
 
 #pragma once
 
-// Capture may omit unchanged screen frames. Effects still need an output
-// clock: sampling only captured frames freezes the cursor and annotations.
-static uint64_t export_duration_us(uint64_t source_duration,
-    const ScreenwideTimelineRange *ranges, uint32_t count) {
-  if (ranges == NULL || count == 0) return source_duration;
-  const ScreenwideTimelineRange *last = &ranges[count - 1];
-  return last->output_start_us + (uint64_t)llround(
-      (last->source_end_us - last->source_start_us) / last->playback_rate);
+// The export's output clock and its readers' seeking are the shared Rust
+// ones (`cursor_export/frame_clock.rs`), so every platform draws the same
+// frames at the same moments.
+uint32_t screenwide_export_frame_rate(double nominal);
+uint64_t screenwide_export_duration_us(uint64_t source_duration_us,
+                                       const ScreenwideTimelineRange *ranges, uint32_t count);
+int screenwide_export_source_time_us(uint64_t output_us, const ScreenwideTimelineRange *ranges,
+                                     uint32_t count, uint64_t *source_us);
+int screenwide_export_should_reposition(uint64_t wanted_us, uint64_t held_us, uint64_t next_us,
+                                        uint64_t frame_us);
+uint64_t screenwide_export_rewind_preroll_us(void);
+
+static inline uint64_t export_time_us(CMTime time) {
+  return (uint64_t)llround(MAX(CMTimeGetSeconds(time), 0.0) * 1000000.0);
 }
 
-static CMTime export_source_time(CMTime output,
+static inline uint64_t export_duration_us(uint64_t source_duration,
     const ScreenwideTimelineRange *ranges, uint32_t count) {
-  if (ranges == NULL || count == 0) return output;
-  uint64_t output_us = (uint64_t)llround(CMTimeGetSeconds(output) * 1000000.0);
-  for (uint32_t i = 0; i < count; i++) {
-    const ScreenwideTimelineRange *range = &ranges[i];
-    uint64_t end = range->output_start_us + (uint64_t)llround(
-        (range->source_end_us - range->source_start_us) / range->playback_rate);
-    if (output_us >= range->output_start_us && output_us < end) {
-      uint64_t source = range->source_start_us + (uint64_t)llround(
-          (output_us - range->output_start_us) * range->playback_rate);
-      return CMTimeMake((int64_t)MIN(source, range->source_end_us - 1), 1000000);
-    }
-  }
-  return kCMTimeInvalid;
+  return screenwide_export_duration_us(source_duration, ranges, count);
+}
+
+static inline CMTime export_source_time(CMTime output,
+    const ScreenwideTimelineRange *ranges, uint32_t count) {
+  uint64_t source_us = 0;
+  if (!screenwide_export_source_time_us(export_time_us(output), ranges, count, &source_us))
+    return kCMTimeInvalid;
+  return CMTimeMake((int64_t)source_us, 1000000);
 }

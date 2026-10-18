@@ -14,12 +14,14 @@ use screenwide_records::cursor::CursorStyle;
 mod platform_macos;
 #[cfg(target_os = "macos")]
 use self::platform_macos as platform;
-#[cfg(target_os = "macos")]
-pub(super) use platform::gpu_rotation_radians;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod platform_unsupported;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use self::platform_unsupported as platform;
+#[cfg(target_os = "windows")]
+mod platform_windows;
+#[cfg(target_os = "windows")]
+use self::platform_windows as platform;
 
 mod fallback;
 
@@ -103,13 +105,28 @@ pub(super) fn artwork_index(style: CursorStyle) -> u32 {
     .unwrap_or(0) as u32
 }
 
+/// Whether `style` is drawn a quarter turn round: a vertical style drawn with
+/// horizontal artwork, borrowed from another style or from the fallback.
+pub(super) fn turned_quarter(style: CursorStyle) -> bool {
+  fallback::is_vertical(style)
+    && (platform::canonical_style(style) != style || platform::artwork(style).is_none())
+}
+
+pub(super) fn gpu_rotation_radians(style: CursorStyle) -> f32 {
+  if turned_quarter(style) {
+    std::f32::consts::FRAC_PI_2
+  } else {
+    0.0
+  }
+}
+
 /// One style's artwork bitmap plus the mapping the shader needs to place it,
 /// mirroring exactly what [`CursorRaster::sample`] does on the CPU. A system
 /// style's artwork stretches over the recorded cursor box; artwork placed by
 /// its own design frame (the vector fallback, and the arrow a custom cursor
 /// draws) keeps that frame's aspect inside the box and anchors `origin` at the
 /// recorded position, so the frame and origin travel with it.
-#[cfg(target_os = "macos")]
+#[derive(Clone)]
 pub struct GpuArtwork {
   pub design_height: f32,
   pub design_width: f32,
@@ -128,11 +145,23 @@ pub struct GpuArtwork {
 /// Texels per design unit when the vector fallback is baked for the GPU. The
 /// shader supersamples the same 4x4 box `sample_for_draw` uses, so the bake
 /// stays point-sampled rather than pre-filtered.
-#[cfg(target_os = "macos")]
 const FALLBACK_BAKE_SCALE: u32 = 8;
 
-#[cfg(target_os = "macos")]
-pub(super) fn gpu_artworks() -> Vec<GpuArtwork> {
+/// Every style's artwork in `GPU_ARTWORK_STYLES` order and the custom slot
+/// after them. A process that has not loaded the system artwork, as the tests,
+/// gets the fallback set; each set is made once.
+pub(super) fn gpu_artworks() -> &'static [GpuArtwork] {
+  static LOADED: std::sync::OnceLock<Vec<GpuArtwork>> = std::sync::OnceLock::new();
+  static FALLBACK: std::sync::OnceLock<Vec<GpuArtwork>> = std::sync::OnceLock::new();
+  let set = if platform::artwork(CursorStyle::Arrow).is_some() {
+    &LOADED
+  } else {
+    &FALLBACK
+  };
+  set.get_or_init(artworks)
+}
+
+fn artworks() -> Vec<GpuArtwork> {
   GPU_ARTWORK_STYLES
     .iter()
     .copied()
@@ -148,9 +177,7 @@ pub(super) fn gpu_artworks() -> Vec<GpuArtwork> {
 /// The artwork a custom cursor draws. Taking the arrow entry as an argument
 /// keeps the routing testable in a process that never loaded system artwork.
 ///
-/// Geometry, matching [`CursorRaster::sample`] and the Windows compositor's
-/// `native_cursor_hotspots` rule (preview_platform/surface_windows
-/// /compositor.rs:118):
+/// Geometry, matching [`CursorRaster::sample`]:
 /// - the design frame is the arrow bitmap itself, so the shader's `use_design`
 ///   path scales it by `min(box_width / frame_width, box_height / frame_height)`
 ///   and never stretches it to the recorded box's aspect;
@@ -160,7 +187,6 @@ pub(super) fn gpu_artworks() -> Vec<GpuArtwork> {
 ///   out of it (`output_hotspot`, cursor_effects.rs:94);
 /// - the fitted arrow reaches outside the recorded box on the hotspot's side,
 ///   so only the design frame clips it.
-#[cfg(target_os = "macos")]
 fn custom_gpu_artwork(arrow: Option<&platform::StyleArtwork>) -> GpuArtwork {
   // Last resort: with no system artwork at all (headless, tests) the baked
   // vector arrow still draws by exactly the same rules.
@@ -181,7 +207,6 @@ fn custom_gpu_artwork(arrow: Option<&platform::StyleArtwork>) -> GpuArtwork {
   }
 }
 
-#[cfg(target_os = "macos")]
 fn gpu_artwork(style: CursorStyle) -> GpuArtwork {
   if let Some(image) = platform::artwork(style) {
     return GpuArtwork {
@@ -200,7 +225,6 @@ fn gpu_artwork(style: CursorStyle) -> GpuArtwork {
   fallback_gpu_artwork(style)
 }
 
-#[cfg(target_os = "macos")]
 fn fallback_gpu_artwork(style: CursorStyle) -> GpuArtwork {
   let artwork = fallback::artwork(style);
   // The design frames and origin come from `CursorRaster::sample`

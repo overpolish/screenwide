@@ -3,8 +3,6 @@
 
 use tauri::AppHandle;
 
-#[cfg(target_os = "macos")]
-use super::super::preview_platform::SelectionGestureOperation;
 use super::super::ScreenshotWorkspaceOutputSettings;
 use super::payloads::{ScreenshotSelectionOverlay, ScreenshotSurfacePane};
 use super::state::{PreviewManager, ScreenshotPreviewState};
@@ -124,20 +122,6 @@ pub async fn layout_screenshot_preview_surface(
     let Some(surface) = manager.surface.clone() else {
       return Ok(());
     };
-    // macOS: the retained GPU workspace presents a live Frame resize or
-    // auto-fit Move itself, so a layout must not race it with an equivalent
-    // but differently normalised scene. Windows has no such presenter: the
-    // layout re-presents the manager's own gesture output (never React's -
-    // see above), which also covers a gesture sample whose present was
-    // dropped on a contended lock, the way the recording layout redraws its
-    // still.
-    #[cfg(target_os = "macos")]
-    let frame_owns_presentation = manager.selection_gesture.as_ref().is_some_and(|gesture| {
-      gesture.operation == SelectionGestureOperation::FrameResize
-        || gesture.native_workspace_owns_presentation
-    });
-    #[cfg(not(target_os = "macos"))]
-    let frame_owns_presentation = false;
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     let (annotation_layout, hover_cleared) = super::annotation::apply_annotation_layout(
       &mut manager,
@@ -155,8 +139,7 @@ pub async fn layout_screenshot_preview_surface(
     let (annotation_layout, hover_cleared) = ((), false);
     // The halo is drawn into the presented scene, so a tool put down under
     // it takes a present to retire it, however little else changed.
-    let will_present = !frame_owns_presentation
-      && (!manager.has_layout || output_changed || size_changed || hover_cleared);
+    let will_present = !manager.has_layout || output_changed || size_changed || hover_cleared;
     let natural_size = (output.canvas.width, output.canvas.height);
     manager.has_layout = true;
     (
@@ -180,19 +163,8 @@ pub async fn layout_screenshot_preview_surface(
       .map(ScreenshotSelectionOverlay::preview_selection)
       .collect::<Vec<_>>()
   });
-  // On macOS every setter below would redraw the workspace at once, from the
-  // scene staged by the previous layout, and that stale frame could still
-  // reach the screen after the one the present below draws. Opening the
-  // layout first holds those draws back: the workspace has no panes until
-  // `layout_workspace` restores them, and the layout ends in one full redraw,
-  // from the present or from `finish_layout`.
-  #[cfg(target_os = "macos")]
-  {
-    surface.set_scale(scale);
-    surface.begin_layout();
-  }
-  // Install hit targets and the arrow chrome before the selected item. Off
-  // macOS `set_selection` performs the draw, so everything it depends on -
+  // Install hit targets and the arrow chrome before the selected item.
+  // `set_selection` performs the draw, so everything it depends on -
   // the targets, and which tool owns the chrome - has to be in place first,
   // or the layer's chrome shows for a frame as the arrow tool comes in hand.
   // Under a drawing tool the targets only say which picture a fresh
@@ -229,20 +201,13 @@ pub async fn layout_screenshot_preview_surface(
   // immediately, so the drawable would land a tick before the frame and be
   // fitted into the old rect meanwhile. A layout that will not present (a
   // pure pan) applies its frames at once, or they would never land.
-  #[cfg(not(target_os = "macos"))]
-  {
-    surface.set_scale(scale);
-    surface.begin_layout();
-  }
+  surface.set_scale(scale);
+  surface.begin_layout();
   // Open before viewport and pane geometry so a fit reset cannot publish an
   // intermediate transform against the previous layout.
   let batch = (will_present || fit_width.is_some()).then(|| surface.present_batch());
   surface.set_viewport(viewport, backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]));
-  #[cfg(target_os = "macos")]
-  if let Some(pane) = panes.first() {
-    surface.layout_workspace(pane.rect, natural_size, will_present);
-  }
-  #[cfg(target_os = "windows")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
     let pane_rects = panes
       .iter()

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #import "video_export.h"
+#import "video_export_cadence.h"
 
 static NSArray<AVAssetTrack *> *video_tracks(AVURLAsset *asset, NSError **error) {
   dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
@@ -95,8 +96,7 @@ static NSDictionary *output_pixel_attributes(uint32_t width, uint32_t height) {
   if (camera_reader != nil && camera_output == nil)
     return fail(error_text, error_capacity, error.localizedDescription);
 
-  source_frame_rate = screen_track.nominalFrameRate;
-  if (!isfinite(source_frame_rate) || source_frame_rate < 60.0) source_frame_rate = 60.0;
+  source_frame_rate = (float)screenwide_export_frame_rate(screen_track.nominalFrameRate);
   source_duration_us = (uint64_t)llround(
       CMTimeGetSeconds(CMTimeRangeGetEnd(screen_track.timeRange)) * 1000000.0);
   // The loop stamps frame `n` at `n / fps` with the rate rounded, so the

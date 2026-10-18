@@ -16,6 +16,12 @@ const SEARCH_SLACK: f32 = 32.0;
 /// How long a target found again by the hand counts as having been lost, in
 /// frames, which widens the search to about a hundred tracking pixels more.
 const FIND_LOST_FRAMES: u32 = 25;
+/// How long a target is lost on screen, in frames, before it is looked for
+/// only every [`LONG_LOST_EVERY`] frames. A search costs about ten frames of
+/// following, and a target gone half a second is as likely gone for good: it
+/// comes back a few frames late rather than costing a wide search a frame.
+const LONG_LOST_FRAMES: u32 = 30;
+const LONG_LOST_EVERY: u32 = 4;
 impl Tracker {
   /// Looks for the target near where it was last seen, by its latest look
   /// and then by the pinned one. A find is taken once the pinned frame's
@@ -57,8 +63,16 @@ impl Tracker {
     let radius = (2.0 * size + SEARCH_SLACK + growth).min(MAX_SEARCH * diagonal);
     // A search costs about ten frames of following, so a target off the
     // frame is looked for every other frame: it comes back at most a frame
-    // late, while its entrance plays.
-    if self.status == Status::Hidden && self.lost_frames.is_multiple_of(2) {
+    // late, while its entrance plays. One lost on screen a while is looked
+    // for less often still.
+    let rests = match self.status {
+      Status::Hidden => self.lost_frames.is_multiple_of(2),
+      Status::Lost => {
+        self.lost_frames > LONG_LOST_FRAMES && !self.lost_frames.is_multiple_of(LONG_LOST_EVERY)
+      }
+      _ => false,
+    };
+    if rests {
       return Observation {
         ms: next.ms,
         transform: last,

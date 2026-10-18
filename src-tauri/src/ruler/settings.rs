@@ -230,16 +230,5 @@ fn resolve(
   })
 }
 
-#[cfg(target_os = "macos")]
-#[no_mangle]
-pub extern "C" fn screenwide_ruler_key_phase(
-  key: u16,
-  modifiers: u32,
-  repeat: bool,
-  latched: bool,
-) -> u32 {
-  key_command(key, modifiers, true, repeat, latched).map_or(0, |command| command.phase)
-}
-
 #[cfg(test)]
 mod tests;

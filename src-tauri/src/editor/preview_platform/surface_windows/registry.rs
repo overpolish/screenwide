@@ -19,13 +19,11 @@ pub(super) type SurfaceSlot =
 
 static PREVIEW_SURFACES: OnceLock<Mutex<HashMap<isize, SurfaceSlot>>> = OnceLock::new();
 
-/// Reverse lookups, filled once a surface exists. The editor `window_proc` is
-/// handed only its own HWND, and the recording export knows only which
-/// workspace it is saving; neither can name the host window.
+/// The reverse lookup, filled once a surface exists: the editor `window_proc`
+/// is handed only its own HWND, which cannot name the host window.
 #[derive(Default)]
 pub(super) struct SurfaceIndex {
   pub(super) by_editor: HashMap<isize, std::sync::Arc<SurfaceInner>>,
-  pub(super) by_kind: HashMap<crate::editor::EditorKind, std::sync::Arc<SurfaceInner>>,
 }
 
 static SURFACE_INDEX: OnceLock<Mutex<SurfaceIndex>> = OnceLock::new();

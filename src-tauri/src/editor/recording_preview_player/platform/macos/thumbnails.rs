@@ -167,20 +167,6 @@ fn encoded(
   }
 }
 
-pub(super) fn source_frame_jpeg(
-  path: &std::path::Path,
-  position_ms: u64,
-  duration_ms: u64,
-) -> Result<Vec<u8>, String> {
-  let generator = image_generator(path)?;
-  let position = frame_position(position_ms.min(duration_ms), duration_ms);
-  let (image, _) =
-    tauri::async_runtime::block_on(generator.cg_image_for_time(super::image::time(position)))
-      .map_err(|error| error.to_string())?;
-  let captured = super::image::captured_image(&image)?;
-  super::composition::encoded_jpeg(&captured)
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;

@@ -116,9 +116,8 @@ pub async fn save_screenshot_project_still(
       _ => return Err("That screenshot is no longer open in the editor".to_owned()),
     }
   };
-  let composer = app.clone();
   let composed = tauri::async_runtime::spawn_blocking(move || {
-    compose_screenshot_workspace(&composer, &items, &screenshot_output)
+    compose_screenshot_workspace(&items, &screenshot_output)
   })
   .await
   .map_err(|error| error.to_string())??;

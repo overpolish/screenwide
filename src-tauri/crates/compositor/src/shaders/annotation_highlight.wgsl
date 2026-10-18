@@ -276,15 +276,47 @@ fn highlight_tint(base: vec3<f32>, colour: vec3<f32>) -> vec3<f32> {
   return mix(laid, lifted, dark);
 }
 
+/// One pixel of the picture, `lit` in linear light, recoloured onto a
+/// highlight in `colour`, as linear light: the page becomes the colour and
+/// the ink a colour that reads on it. `page` and `toward` are the page's
+/// level and which way ink lies from it; `full` is what counts as the
+/// glyph's full ink.
+fn highlight_ink_pixel(lit: vec3<f32>, colour: vec3<f32>, page: f32, toward: f32,
+                       full: f32) -> vec3<f32> {
+  let stands = toward * (dot(lit, highlight_weights) - page);
+  // How much of the pixel the ink covers, in a straight line from the page to
+  // the ink. The ink is laid at full strength from a third of the glyph's own:
+  // a thin stroke's anti-aliased pixels mostly fall short of its brightest,
+  // and shared out pixel by pixel they let the highlight back through and
+  // leave the type faint. The floor keeps page texture and a page a little off
+  // the tone the selection read from being inked: the steeper the ramp, the
+  // more a near miss would show.
+  let cover = saturate(stands / full);
+  let share = saturate((cover - 0.08) / 0.25);
+  // The ink taken back out of the page it was mixed with, the page read as a
+  // grey of its brightness, so an edge is not inked in the page's colour.
+  let text = highlight_encode((lit - page * (1.0 - cover)) / max(cover, 0.1));
+  let text_luminance = dot(text, highlight_weights);
+  var ink: vec3<f32>;
+  if (dot(colour, highlight_weights) > 0.5) {
+    ink = text * min(1.0, 0.2 / max(text_luminance, 1e-3));
+  } else {
+    ink = 1.0 - (1.0 - text) * min(1.0, 0.15 / max(1.0 - text_luminance, 1e-3));
+  }
+  return mix(highlight_light(colour), highlight_light(ink), share);
+}
+
 /// `base` recoloured under a highlight in `colour`: the page becomes the
 /// highlight's colour and its ink - whatever stands out from the page - a
 /// colour that reads on it. The ink keeps its hue, pushed dark on a light
 /// highlight and light on a dark one. `tone` is the page's luminance and its
 /// ink's, encoded, read around `canvas_point` on a line whose top and bottom
 /// are `rows`. Where `fills`, a fill the line is drawn on is tinted instead,
-/// type and all, so it reads as the marker laid over it.
+/// type and all, so it reads as the marker laid over it. `footprint` is how
+/// many canvas pixels the drawn pixel covers.
 fn highlight_recolour(base: vec3<f32>, colour: vec3<f32>, tone: vec2<f32>,
-                      canvas_point: vec2<f32>, rows: vec2<f32>, fills: bool) -> vec3<f32> {
+                      canvas_point: vec2<f32>, rows: vec2<f32>, fills: bool,
+                      footprint: f32) -> vec3<f32> {
   var span = tone.y - tone.x;
   // No page was read under it - a photo, a gradient, a box laid by hand - so
   // there is nothing to map from, and the highlight tints what is there.
@@ -300,31 +332,34 @@ fn highlight_recolour(base: vec3<f32>, colour: vec3<f32>, tone: vec2<f32>,
   let page = levels.x;
   let toward = select(-1.0, 1.0, span > 0.0);
   let faint = toward * (levels.z - page);
-  let lit = highlight_light(base);
-  let stands = toward * (dot(lit, highlight_weights) - page);
   // What counts as the glyph's full ink: its own strongest pixel, but never
   // less than the quarter mark. Without a picture, the ink the selection read.
   let peak = highlight_peak(canvas_point, rows.y - rows.x, page, toward);
   let full = select(max(peak, faint), toward * (levels.y - page), peak < 0.0);
-  // How much of the pixel the ink covers, in a straight line from the page to
-  // the ink, so an edge keeps the share it has in the capture. The floor keeps
-  // faint page texture off.
-  let cover = saturate(stands / full);
-  let share = saturate((cover - 0.04) / 0.96);
-  // The ink taken back out of the page it was mixed with, the page read as a
-  // grey of its brightness, so an edge is not inked in the page's colour.
-  let text = highlight_encode((lit - page * (1.0 - cover)) / max(cover, 0.1));
-  let text_luminance = dot(text, highlight_weights);
-  var ink: vec3<f32>;
-  if (dot(colour, highlight_weights) > 0.5) {
-    ink = text * min(1.0, 0.2 / max(text_luminance, 1e-3));
+  // A canvas drawn smaller than its own size covers several of its pixels
+  // with each drawn one; read at its centre alone, a stroke a pixel wide is
+  // there or missed from one pixel to the next. Each pixel the drawn one
+  // covers is recoloured and the light averaged, where there is a picture
+  // to read them from.
+  let taps = select(1u, u32(clamp(ceil(footprint), 1.0, 4.0)), peak >= 0.0);
+  var light = vec3<f32>(0.0);
+  if (taps == 1u) {
+    light = highlight_ink_pixel(highlight_light(base), colour, page, toward, full);
   } else {
-    ink = 1.0 - (1.0 - text) * min(1.0, 0.15 / max(1.0 - text_luminance, 1e-3));
+    for (var row = 0u; row < taps; row++) {
+      for (var column = 0u; column < taps; column++) {
+        let offset = ((vec2<f32>(f32(column), f32(row)) + 0.5) / f32(taps) - 0.5) * footprint;
+        let lit = highlight_light(highlight_fetch(canvas_point + offset));
+        light += highlight_ink_pixel(lit, colour, page, toward, full);
+      }
+    }
+    light /= f32(taps * taps);
   }
-  let recoloured = highlight_encode(mix(highlight_light(colour), highlight_light(ink), share));
+  let recoloured = highlight_encode(light);
   if (!fills) {
     return recoloured;
   }
+  let stands = toward * (dot(highlight_light(base), highlight_weights) - page);
   let fill = highlight_fill(canvas_point, rows, page, toward, stands, faint);
   return mix(recoloured, highlight_tint(base, colour), fill);
 }
@@ -489,7 +524,9 @@ fn annotation_highlight_layer(rgba_in: vec4<f32>, base: vec4<f32>, annotation: P
   // A box's bands are strokes a marker tall, not lines with fills drawn under
   // them, so it recolours every pixel.
   let fills = (annotation.flags & annotation_highlight_laid_by_hand) == 0u;
-  let recoloured = highlight_recolour(base.rgb, colour.rgb, tone, canvas_point, rows, fills);
+  // `feather` is half a drawn pixel, in canvas pixels.
+  let recoloured =
+      highlight_recolour(base.rgb, colour.rgb, tone, canvas_point, rows, fills, feather * 2.0);
   return vec4<f32>(recoloured * alpha + rgba.rgb * (1.0 - alpha), alpha + rgba.a * (1.0 - alpha));
 }
 

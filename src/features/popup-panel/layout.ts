@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { isWindowsHost } from "../../lib/platform";
+
 export const popupPanelMaxHeight = 150;
 export const emptyPopupPanelHeight = 64;
 /** A list found by typing opens at one height whatever it holds, so the
@@ -48,10 +50,7 @@ export const toolPanelWidth = 368;
 export const popupPanelSpacing = 12;
 
 /** Windows tool panels use the `--spacing-window-inset` right edge token. */
-export const toolPanelSpacing =
-  typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent)
-    ? 14
-    : popupPanelSpacing;
+export const toolPanelSpacing = isWindowsHost ? 14 : popupPanelSpacing;
 
 /** What a tool panel opens at before its own content is measured. */
 export const initialToolPanelHeight = 200;

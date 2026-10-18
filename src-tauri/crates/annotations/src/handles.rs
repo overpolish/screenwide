@@ -3,7 +3,6 @@
 
 //! Native handle conversion, independent of the owning workspace.
 
-#[cfg(target_os = "windows")]
 use super::AnnotationKind;
 use super::{Annotation, AnnotationPoint, AnnotationStyle};
 
@@ -77,7 +76,6 @@ const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 112);
 
 /// The macOS chrome reads a record's kind in Objective-C; only the Windows
 /// one picks and prepares from it in Rust.
-#[cfg(target_os = "windows")]
 impl NativeAnnotationHandles {
   /// Which shape these grips belong to. A number no kind owns cannot come
   /// from [`annotation_handles`], and the arrow is what such a record was

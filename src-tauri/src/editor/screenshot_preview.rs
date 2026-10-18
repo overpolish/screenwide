@@ -76,7 +76,4 @@ pub use state::ScreenshotPreviewState;
 
 // Native screenshot document extensions enter through presentation; React
 // remains the semantic settings, history, and command/event transport layer.
-// Only the macOS path reaches back for `run_on_main_queue`.
-#[cfg(target_os = "macos")]
-pub(super) use super::preview_platform;
 pub(super) use super::preview_workspace_model;

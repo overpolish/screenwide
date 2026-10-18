@@ -38,55 +38,6 @@ pub fn layout(
   })
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeToolbarRect {
-  pub x: f64,
-  pub y: f64,
-  pub width: f64,
-  pub height: f64,
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn screenwide_ocr_toolbar_layout(
-  selection_x: f64,
-  selection_y: f64,
-  selection_width: f64,
-  selection_height: f64,
-  viewport_width: f64,
-  viewport_height: f64,
-  widths: *const f64,
-  height: f64,
-  output: *mut NativeToolbarRect,
-  capacity: usize,
-) -> usize {
-  if widths.is_null() || output.is_null() || capacity < CONTROL_COUNT {
-    return CONTROL_COUNT;
-  }
-  let widths = std::slice::from_raw_parts(widths, CONTROL_COUNT);
-  let rects = layout(
-    Rect::from_xywh(selection_x, selection_y, selection_width, selection_height),
-    Size {
-      width: viewport_width,
-      height: viewport_height,
-    },
-    widths.try_into().expect("fixed OCR toolbar width count"),
-    height,
-  );
-  for (destination, rect) in std::slice::from_raw_parts_mut(output, CONTROL_COUNT)
-    .iter_mut()
-    .zip(rects)
-  {
-    *destination = NativeToolbarRect {
-      x: rect.origin.x,
-      y: rect.origin.y,
-      width: rect.size.width,
-      height: rect.size.height,
-    };
-  }
-  CONTROL_COUNT
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;

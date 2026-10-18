@@ -32,23 +32,27 @@ use windows::{
 
 use super::EditorWindow;
 
-/// What the typing window hands on to the box being typed into.
-#[derive(Clone, Copy)]
-pub(in crate::editor::preview_platform::surface_windows) enum TypingInput {
-  /// A key went down, with whether Ctrl and Shift were held.
-  Key { key: u16, ctrl: bool, shift: bool },
-  /// One UTF-16 unit of typed text, after the keyboard layout and any input
-  /// method have had their say.
-  Char(u16),
-  /// The caret's blink turned over.
-  Blink,
-  /// The keyboard went elsewhere: to the webview's panel, another window.
-  FocusLost,
-  /// The box went away from under the typing.
-  Finish,
-  /// The typing ended while it held the keyboard, which goes back to the
-  /// webview.
-  Released,
+use screenwide_workspace::editing::{TypingInput, TypingKey};
+
+/// The key a virtual-key code names, as a box being typed into knows it.
+fn typing_key(key: u16) -> TypingKey {
+  use windows::Win32::UI::Input::KeyboardAndMouse::{
+    VIRTUAL_KEY, VK_BACK, VK_DELETE, VK_DOWN, VK_END, VK_ESCAPE, VK_HOME, VK_LEFT, VK_RIGHT, VK_UP,
+  };
+  match VIRTUAL_KEY(key) {
+    VK_ESCAPE => TypingKey::Escape,
+    VK_BACK => TypingKey::Backspace,
+    VK_DELETE => TypingKey::Delete,
+    VK_LEFT => TypingKey::Left,
+    VK_RIGHT => TypingKey::Right,
+    VK_HOME => TypingKey::Home,
+    VK_END => TypingKey::End,
+    VK_UP => TypingKey::Up,
+    VK_DOWN => TypingKey::Down,
+    // Letter keys' codes are their upper-case ASCII letters.
+    VIRTUAL_KEY(code @ 0x41..=0x5A) => TypingKey::Letter(char::from(code as u8)),
+    _ => TypingKey::Other,
+  }
 }
 
 const BEGIN: u32 = WM_APP + 1;
@@ -175,8 +179,8 @@ unsafe extern "system" fn window_proc(
       dispatch(
         hwnd,
         TypingInput::Key {
-          key: wparam.0 as u16,
-          ctrl: pressed(VK_CONTROL.0),
+          key: typing_key(wparam.0 as u16),
+          shortcut: pressed(VK_CONTROL.0),
           shift: pressed(VK_SHIFT.0),
         },
       );

@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-use super::{input_kind::InputKind, preview_windows, target::WindowTarget, virtual_desktops};
+use super::{input_kind::InputKind, target::WindowTarget, virtual_desktops};
 use crate::glide::core::{
   desktop_gesture::DesktopGesture,
   desktop_selection,
   desktops::{self, Snapshot},
 };
+use crate::glide::preview_cards::{self, Anchor};
 use std::{
   path::PathBuf,
   sync::{
@@ -42,7 +43,10 @@ pub(super) fn begin(
   anchor: POINT,
   input: InputKind,
 ) -> bool {
-  if super::navigation::cancelled() || super::deliberate::blocks_sessions() {
+  if super::navigation::cancelled()
+    || super::deliberate::blocks_sessions()
+    || preview_cards::is_dismissing()
+  {
     return false;
   }
   if crate::glide::core::activity::BusyLease::is_busy() {
@@ -206,7 +210,7 @@ pub(super) fn end(app: &AppHandle, cancelled: bool) {
   {
     COMMITTED_UNTIL_RELEASE.store(true, Ordering::Release);
   }
-  preview_windows::hide(app);
+  preview_cards::dismiss(app, cancelled);
   if s.revealed {
     if cancelled
       || s

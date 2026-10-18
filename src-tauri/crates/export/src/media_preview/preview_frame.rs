@@ -58,9 +58,6 @@ pub(crate) fn edited_ranges(
 pub(crate) struct PreviewStretch {
   /// The stretch, as ranges laid end to end from zero.
   pub(crate) ranges: Vec<TimelineRange>,
-  /// Where the stretch starts on the whole edited video.
-  #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
-  pub(crate) start_us: u64,
 }
 
 impl PreviewStretch {
@@ -83,7 +80,7 @@ impl PreviewStretch {
     if ranges.is_empty() {
       return Err("The preview frame is outside the edited video".to_owned());
     }
-    Ok(Self { ranges, start_us })
+    Ok(Self { ranges })
   }
 
   /// The stretch of the recording the stretch draws from, in milliseconds.

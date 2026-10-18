@@ -175,14 +175,9 @@ pub struct CaptionPreviewer {
 
 impl CaptionPreviewer {
   pub fn new(gpu: &'static Gpu) -> Result<Self, String> {
-    let cursors = NativeCursors {
-      size: (1, 1),
-      layers: vec![0; 4 * 8],
-      hotspots: [[0.0; 4]; 8],
-    };
     Ok(Self {
       gpu,
-      compositor: Compositor::new(gpu, cursors)?,
+      compositor: Compositor::new(gpu)?,
     })
   }
 

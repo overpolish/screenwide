@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#![cfg_attr(not(target_os = "macos"), allow(dead_code))]
-
 mod geometry_helpers;
 mod record_ingestion;
 
@@ -19,6 +17,8 @@ use std::path::Path;
 
 mod appearance_timeline;
 use appearance_timeline::{fit_to_artwork, normalize_custom_fallback_size, stable_appearances};
+#[cfg(test)]
+mod gpu_cursor_tests;
 mod raster;
 mod settings;
 #[cfg(test)]
@@ -184,25 +184,8 @@ impl CursorCompositor {
       source_size.1 as usize,
       settings,
     )?;
-    // Windows composites from an eight-slice atlas of the standard system
-    // cursors; every other platform indexes the shared artwork order.
-    #[cfg(target_os = "windows")]
-    let artwork = match output.cursor.appearance.style {
-      CursorStyle::IBeam => 1,
-      CursorStyle::VerticalIBeam => 2,
-      CursorStyle::ResizeHorizontal => 3,
-      CursorStyle::ResizeVertical => 4,
-      CursorStyle::PointingHand | CursorStyle::ClosedHand | CursorStyle::OpenHand => 5,
-      CursorStyle::Crosshair => 6,
-      CursorStyle::NotAllowed => 7,
-      _ => 0,
-    };
-    #[cfg(not(target_os = "windows"))]
     let artwork = raster::artwork_index(output.cursor.appearance.style);
-    #[cfg(target_os = "macos")]
     let rotation_adjustment = raster::gpu_rotation_radians(output.cursor.appearance.style);
-    #[cfg(not(target_os = "macos"))]
-    let rotation_adjustment = 0.0;
     Some(GpuCursor {
       opacity: self.visibility_opacity(
         position_ms
@@ -271,11 +254,9 @@ pub fn initialize_artwork() {
   raster::initialize_system_artwork();
 }
 
-#[cfg(target_os = "macos")]
 pub use raster::GpuArtwork;
 
-/// The style-indexed artwork the native compositor uploads once per export.
-#[cfg(target_os = "macos")]
-pub fn gpu_artworks() -> Vec<GpuArtwork> {
+/// The style-indexed artwork every compositor draws the cursor from.
+pub fn gpu_artworks() -> &'static [GpuArtwork] {
   raster::gpu_artworks()
 }

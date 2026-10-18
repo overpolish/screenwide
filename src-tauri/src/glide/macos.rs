@@ -107,7 +107,7 @@ fn run(app: AppHandle) {
         CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, POLL_INTERVAL, false);
       }
       native_settings::reconcile();
-      settle_detector(&poll_app, &poll_state);
+      settle_detector(&poll_app);
       session::monitor_input::poll(&poll_app, &poll_state);
       spaces::poll(&poll_app, &poll_state);
       session::mouse_preview::poll(&poll_app, &poll_state);
@@ -188,11 +188,11 @@ fn handle_scroll(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callb
   let mouse_modifier_down = native_settings::is_down(native_settings::snapshot().mouse_modifier);
   if trackpad::ignore_episode(phase, mouse_modifier_down) {
     if active_input(state) == Some(InputKind::Trackpad) {
-      end_session(app, state, true);
+      end_session(app, true);
     }
     return CallbackResult::Keep;
   }
-  if !is_active(state) && !begin_if_titlebar(app, state, InputKind::Trackpad, event.location()) {
+  if !is_active(state) && !begin_if_titlebar(app, InputKind::Trackpad, event.location()) {
     return CallbackResult::Keep;
   }
   if active_input(state) != Some(InputKind::Trackpad) {
@@ -204,12 +204,12 @@ fn handle_scroll(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callb
   let delta_y =
     event.get_integer_value_field(EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_1) as f64;
   if delta_x != 0.0 || delta_y != 0.0 {
-    update_detector(app, state, delta_x, delta_y, is_thirds(event));
+    update_detector(app, delta_x, delta_y, is_thirds(event));
   }
 
   if phase & (SCROLL_PHASE_ENDED | SCROLL_PHASE_CANCELLED) != 0 {
     set_momentum_suppression(state, true);
-    end_session(app, state, false);
+    end_session(app, false);
   }
   CallbackResult::Drop
 }
@@ -220,7 +220,7 @@ fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callba
     return CallbackResult::Keep;
   }
   if active_input(state) == Some(InputKind::Mouse) && !modifier_down {
-    end_session(app, state, false);
+    end_session(app, false);
     return CallbackResult::Keep;
   }
   if !is_active(state) && modifier_down && is_suppressing(state, InputKind::Mouse) {
@@ -228,7 +228,7 @@ fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callba
     // one.
     return CallbackResult::Keep;
   }
-  if !is_active(state) && modifier_down && !deliberate::begin_mouse(app, state, event.location()) {
+  if !is_active(state) && modifier_down && !deliberate::begin_mouse(app, event.location()) {
     return CallbackResult::Keep;
   }
   if active_input(state) == Some(InputKind::Trackpad) {
@@ -238,7 +238,7 @@ fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callba
     let delta_y = event.get_integer_value_field(EventField::MOUSE_EVENT_DELTA_Y) as f64;
     let travel = accumulate_pointer_travel(state, delta_x.abs() + delta_y.abs());
     if travel >= POINTER_DISMISS_DISTANCE {
-      end_session(app, state, false);
+      end_session(app, false);
     }
     return CallbackResult::Keep;
   }
@@ -252,7 +252,7 @@ fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callba
   let delta_x = event.get_integer_value_field(EventField::MOUSE_EVENT_DELTA_X) as f64;
   let delta_y = event.get_integer_value_field(EventField::MOUSE_EVENT_DELTA_Y) as f64;
   if delta_x != 0.0 || delta_y != 0.0 {
-    update_detector(app, state, delta_x, delta_y, is_thirds(event));
+    update_detector(app, delta_x, delta_y, is_thirds(event));
   }
   CallbackResult::Drop
 }

@@ -35,7 +35,6 @@ pub(super) struct Constants {
   pub(super) magnifier: [f32; 4],
   pub(super) magnifier_options: [f32; 4],
   pub(super) magnifier_bounds: [f32; 4],
-  pub(super) native_cursor_hotspots: [[f32; 4]; 8],
   pub(super) options: [u32; 4],
   pub(super) cursor_options: [u32; 4],
   pub(super) background_options: [u32; 4],

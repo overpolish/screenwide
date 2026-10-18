@@ -5,11 +5,11 @@ use cidre::cg;
 use core_graphics::geometry::CGPoint;
 use tauri::{AppHandle, LogicalPosition, LogicalSize, Monitor};
 
-use super::cursor::{carry_cursor, landing_point, returns_to_origin};
 use super::native_settings;
 use super::own_window::own_window_at;
 use super::titlebar::{ax_window_at, AxHit};
-use super::tween::{after_current, animate_to, WindowTarget};
+use super::tween::{glide_frame, WindowTarget};
+use crate::glide::core::GlideFrame;
 
 /// Centers the window under a global point on the monitor that point lies on,
 /// keeping the window's size. This runs on the event tap thread, like the
@@ -42,41 +42,18 @@ pub(super) fn center_captured(
   work_size: (f64, f64),
   anchor: CGPoint,
 ) {
-  let (x, y) = centered_origin(
-    LogicalPosition::new(work_position.0, work_position.1),
-    LogicalSize::new(work_size.0, work_size.1),
-    (frame.size.width, frame.size.height),
-  );
-  animate_to(
+  crate::glide::session::center::<super::session::MacGlide>(
     target,
-    cg::Rect {
-      origin: cg::Point { x, y },
-      size: frame.size,
+    glide_frame(frame),
+    GlideFrame {
+      x: work_position.0,
+      y: work_position.1,
+      width: work_size.0,
+      height: work_size.1,
     },
-    None,
+    (anchor.x, anchor.y),
+    native_settings::snapshot().cursor_follows,
   );
-  follow_cursor(target, anchor, frame);
-}
-
-/// Centering commits a move like every other glide, so the pointer keeps its
-/// grip on the window when "Move pointer with window" is on. The warp waits for
-/// the tween and reads the frame the window actually reached: a window that
-/// never travelled - already centered, or one its application refused to move -
-/// leaves the pointer where the hand put it.
-fn follow_cursor(target: &WindowTarget, anchor: CGPoint, original: cg::Rect) {
-  if !native_settings::snapshot().cursor_follows {
-    return;
-  }
-  let grip = target.duplicate();
-  after_current(Box::new(move || {
-    let Some(achieved) = grip.frame() else {
-      return;
-    };
-    if returns_to_origin(original, achieved) {
-      return;
-    }
-    carry_cursor(landing_point(anchor, original, achieved));
-  }));
 }
 
 /// The window under a global point as something the tween can drive, with the
@@ -129,48 +106,4 @@ fn contains(monitor: &Monitor, point: CGPoint) -> bool {
     && point.x < position.x + size.width
     && point.y >= position.y
     && point.y < position.y + size.height
-}
-
-/// The top-left corner that centers a window of `window_size` in a logical work
-/// area. A window larger than the work area pins to the work area's origin.
-fn centered_origin(
-  work_position: LogicalPosition<f64>,
-  work_size: LogicalSize<f64>,
-  window_size: (f64, f64),
-) -> (f64, f64) {
-  let origin = crate::app_windows::centered_logical_position(
-    work_position,
-    work_size,
-    LogicalSize::new(window_size.0, window_size.1),
-  );
-  (origin.x, origin.y)
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn centers_a_window_in_the_work_area_of_its_monitor() {
-    assert_eq!(
-      centered_origin(
-        LogicalPosition::new(-1_440.0, 25.0),
-        LogicalSize::new(1_440.0, 875.0),
-        (800.0, 475.0),
-      ),
-      (-1_120.0, 225.0)
-    );
-  }
-
-  #[test]
-  fn pins_a_window_larger_than_the_work_area_to_its_origin() {
-    assert_eq!(
-      centered_origin(
-        LogicalPosition::new(0.0, 25.0),
-        LogicalSize::new(1_440.0, 875.0),
-        (1_800.0, 1_000.0),
-      ),
-      (0.0, 25.0)
-    );
-  }
 }

@@ -41,7 +41,6 @@ fn custom_cursors_never_share_a_system_style_artwork() {
 /// The test process never calls `initialize_system_artwork`, so
 /// `gpu_artworks` can only observe the fallback branch; the routing is
 /// pinned through `custom_gpu_artwork` with a stand-in arrow entry.
-#[cfg(target_os = "macos")]
 #[test]
 fn custom_cursors_index_the_system_arrow_fitted_to_their_box() {
   assert_eq!(
@@ -83,7 +82,6 @@ fn custom_cursors_index_the_system_arrow_fitted_to_their_box() {
 }
 
 /// Without system artwork at all the slot keeps the baked vector arrow.
-#[cfg(target_os = "macos")]
 #[test]
 fn custom_cursors_fall_back_to_the_baked_arrow_without_system_artwork() {
   let artwork = custom_gpu_artwork(None);

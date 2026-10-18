@@ -222,7 +222,6 @@ impl Compositor {
       magnifier: magnifier.map_or([0.0; 4], |value| value.geometry),
       magnifier_options: magnifier.map_or([0.0; 4], |value| value.options),
       magnifier_bounds: magnifier.map_or([0.0, 0.0, 1.0, 1.0], |value| value.bounds),
-      native_cursor_hotspots: self.cursor_hotspots,
       options: [
         settings.mesh_seed,
         u32::from(background.mesh),

@@ -124,7 +124,6 @@ use screenwide_capture::FinalizeInfo;
 use screenwide_output::{encode_png, ScreenshotOutputSettings};
 use screenwide_project::PrimaryRecordingKind;
 
-#[cfg(target_os = "macos")]
 pub(crate) fn initialize_cursor_artwork() {
   screenwide_cursor_effects::initialize_artwork();
 }

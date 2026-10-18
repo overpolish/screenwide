@@ -1,27 +1,33 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::*;
+//! What the input hooks read of the live session, and the monitor commit
+//! latch.
+
 use std::sync::atomic::{AtomicBool, Ordering};
+
+use super::*;
 
 static MONITOR_COMMITTED_UNTIL_RELEASE: AtomicBool = AtomicBool::new(false);
 
+fn with_session<R>(f: impl FnOnce(&mut WindowsSession) -> R) -> Option<R> {
+  shared::with_session::<WindowsGlide, R>(f)
+}
+
 pub(in crate::glide::windows) fn next_id() -> u64 {
-  NEXT_SESSION_ID.fetch_add(1, Ordering::Relaxed)
+  shared::next_id()
 }
 
 pub(in crate::glide::windows) fn promote_scroll_to_contacts() -> bool {
-  STATE.lock().is_ok_and(|mut state| {
-    let Some(session) = state.as_mut() else {
-      return false;
-    };
+  with_session(|session| {
     if session.input != InputKind::TrackpadScroll {
       return false;
     }
-    session.armed = false;
+    session.extra.armed = false;
     session.input = InputKind::TrackpadContacts;
     true
   })
+  .unwrap_or(false)
 }
 
 pub(super) fn monitor_commit_latched() -> bool {
@@ -44,96 +50,61 @@ pub(in crate::glide::windows) fn clear_monitor_commit() {
 }
 
 pub(in crate::glide::windows) fn active_input() -> Option<InputKind> {
-  STATE
-    .lock()
-    .ok()
-    .and_then(|state| state.as_ref().map(|session| session.input))
+  with_session(|session| session.input)
 }
 
 pub(in crate::glide::windows) fn revealed() -> bool {
-  STATE
-    .lock()
-    .ok()
-    .and_then(|state| state.as_ref().map(|session| session.revealed))
-    .unwrap_or(false)
+  with_session(|session| session.revealed).unwrap_or(false)
 }
 
 pub(in crate::glide::windows) fn target_hwnd() -> Option<isize> {
-  STATE.lock().ok().and_then(|state| {
-    state
-      .as_ref()
-      .map(|session| session.target.native_hwnd().0 as isize)
-  })
+  with_session(|session| session.target.native_hwnd().0 as isize)
 }
 
 pub(in crate::glide::windows) fn target() -> Option<WindowTarget> {
-  STATE.lock().ok().and_then(|state| {
-    state
-      .as_ref()
-      .filter(|session| session.input == InputKind::Mouse)
-      .map(|session| session.target)
-  })
+  with_session(|session| (session.input == InputKind::Mouse).then_some(session.target)).flatten()
 }
 
 pub(in crate::glide::windows) fn set_icon(id: u64, path: Option<PathBuf>) {
-  if let Ok(mut state) = STATE.lock() {
-    if let Some(session) = state.as_mut().filter(|session| session.id == id) {
-      session.icon_path = path;
+  with_session(|session| {
+    if session.id == id {
+      session.extra.icon_path = path;
     }
-  }
+  });
 }
 
 pub(in crate::glide::windows) fn monitor_mode() -> bool {
-  STATE.lock().ok().is_some_and(|state| {
-    state
-      .as_ref()
-      .is_some_and(|session| session.monitors.is_some())
-  })
+  with_session(|session| session.monitors.is_some()).unwrap_or(false)
 }
 
 pub(in crate::glide::windows) fn anchor() -> Option<POINT> {
-  STATE
-    .lock()
-    .ok()
-    .and_then(|state| state.as_ref().map(|session| session.anchor))
+  with_session(|session| point(session.anchor))
 }
 
 pub(in crate::glide::windows) fn pointer_displacement() -> Option<f64> {
-  let anchor = STATE.lock().ok().and_then(|state| {
-    state
-      .as_ref()
-      .filter(|session| session.input.is_trackpad())
-      .map(|session| session.anchor)
-  })?;
-  let mut pointer = POINT::default();
-  unsafe { GetCursorPos(&mut pointer) }.ok()?;
+  let anchor =
+    with_session(|session| session.input.is_trackpad().then(|| point(session.anchor))).flatten()?;
+  let pointer = cursor_position()?;
   Some(f64::from(pointer.x.abs_diff(anchor.x)) + f64::from(pointer.y.abs_diff(anchor.y)))
 }
 
 pub(in crate::glide::windows) fn accumulate_pointer_travel(distance: f64) -> f64 {
-  STATE
-    .lock()
-    .ok()
-    .and_then(|mut state| {
-      state.as_mut().map(|session| {
-        session.pointer_travel += distance;
-        session.pointer_travel
-      })
-    })
-    .unwrap_or(0.0)
+  with_session(|session| {
+    session.pointer_travel += distance;
+    session.pointer_travel
+  })
+  .unwrap_or(0.0)
 }
 
 pub(crate) fn promote_armed_to_mouse() -> bool {
-  STATE.lock().is_ok_and(|mut state| {
-    let Some(session) = state.as_mut() else {
-      return false;
-    };
-    if session.armed && session.input == InputKind::TrackpadScroll {
-      session.armed = false;
+  with_session(|session| {
+    if session.extra.armed && session.input == InputKind::TrackpadScroll {
+      session.extra.armed = false;
       session.input = InputKind::Mouse;
       true
     } else {
       false
     }
   })
+  .unwrap_or(false)
 }

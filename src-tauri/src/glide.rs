@@ -23,6 +23,10 @@ pub(crate) use core::activity::BusyLease;
 mod locked;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use locked::present_locked;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod preview_cards;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod session;
 
 mod events;
 pub mod settings;

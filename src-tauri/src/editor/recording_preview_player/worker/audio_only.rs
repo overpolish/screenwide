@@ -138,15 +138,6 @@ pub(super) fn run(context: RunContext) {
     }
     return;
   }
-  let display_clock = super::super::audio_visualizer_clock::install(
-    &sources,
-    &audio.clock,
-    &ranges,
-    playback_rate,
-    &cancelled,
-    &position_ms,
-    start_ms,
-  );
   let mut announced_playing = false;
   let mut last_presented = start_ms;
   let output_duration_ms = ranges
@@ -169,12 +160,8 @@ pub(super) fn run(context: RunContext) {
       });
     }
     if current != last_presented {
-      if !display_clock.as_ref().is_some_and(|clock| clock.active()) {
-        position_ms.store(current, Ordering::Release);
-      }
-      if display_clock.is_none() {
-        present_audio_position(&sources, current);
-      }
+      position_ms.store(current, Ordering::Release);
+      present_audio_position(&sources, current);
       last_presented = current;
       let _ = event_channel.send(RecordingPreviewPlayerEvent::Position {
         position_ms: current,

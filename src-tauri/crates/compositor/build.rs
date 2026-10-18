@@ -55,12 +55,11 @@ fn main() {
   // Build scripts run on the host, so the target is read from Cargo rather
   // than `cfg!`: a Windows build from macOS must not compile Objective-C.
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
-    // Type and keyboard artwork are set by Core Text and AppKit.
+    // Type is set by Core Text.
     println!("cargo:rerun-if-changed=src/platform_macos/native");
     println!("cargo:rerun-if-changed=../text/src/engine/macos/annotation_text_box.h");
     cc::Build::new()
       .file("src/platform_macos/native/type_device_macos.m")
-      .file("src/platform_macos/native/gpu_compositor_macos_keyboard_artwork.m")
       .flag("-fobjc-arc")
       .compile("screenwide_compositor_type");
     for framework in ["AppKit", "CoreGraphics", "CoreText", "Foundation"] {

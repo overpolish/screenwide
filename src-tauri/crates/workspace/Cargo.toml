@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-workspace"
+description = "The editor's workspace on every platform: the scene its layers draw in and the input that edits them"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+bytemuck.workspace = true
+screenwide-annotations.workspace = true
+screenwide-compositor.workspace = true
+screenwide-cursor-effects.workspace = true
+screenwide-export.workspace = true
+screenwide-gpu.workspace = true
+screenwide-imaging.workspace = true
+screenwide-keyboard-effects.workspace = true
+screenwide-osc.workspace = true
+screenwide-output.workspace = true
+screenwide-scenes.workspace = true
+screenwide-text.workspace = true
+wgpu.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cidre.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = ["Win32_Graphics_Direct3D11"] }
+
+[dev-dependencies]
+screenwide-output = { workspace = true, features = ["test-support"] }
+
+[build-dependencies]
+screenwide-wgsl.workspace = true

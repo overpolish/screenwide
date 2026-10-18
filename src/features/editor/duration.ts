@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { appLocale, t } from "../../i18n/i18n";
+import { isWindows } from "../../lib/platform";
 
 /**
  * One frame of the recording preview. The native player renders at
@@ -78,8 +79,7 @@ const SIZE_DECIMALS = [0, 0, 1, 2, 2];
 
 /** How many bytes make the next unit up: Finder counts in thousands, as macOS
  * has since 10.6, and Explorer in 1024s, so a size reads as each shows it. */
-const sizeBase = () =>
-  document.documentElement.dataset.platform === "windows" ? 1024 : 1000;
+const sizeBase = () => (isWindows() ? 1024 : 1000);
 
 type FormatBytesOptions = {
   base?: number;

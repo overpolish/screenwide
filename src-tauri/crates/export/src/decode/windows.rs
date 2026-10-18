@@ -5,4 +5,5 @@
 
 pub mod decoder;
 pub mod gpu_decoder;
+mod origin;
 pub mod source_frames;

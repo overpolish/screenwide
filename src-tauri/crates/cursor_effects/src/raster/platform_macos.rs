@@ -10,14 +10,6 @@ use objc2_foundation::NSArray;
 
 use screenwide_records::cursor::CursorStyle;
 
-pub fn gpu_rotation_radians(style: CursorStyle) -> f32 {
-  if artwork(style).is_none() && super::fallback::is_vertical(style) {
-    std::f32::consts::FRAC_PI_2
-  } else {
-    0.0
-  }
-}
-
 /// One system cursor's bitmap plus the hotspot that bitmap addresses. The
 /// hotspot is stored in bitmap texels rather than points so callers can anchor
 /// the artwork without knowing what backing scale the decoded representation

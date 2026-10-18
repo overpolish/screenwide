@@ -8,6 +8,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 mod classifier_windows;
+mod focus_probe;
 use self::classifier_windows as classifier;
 
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
@@ -154,12 +155,10 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
   }
   let _ = ready.send(Ok(()));
 
-  let focus_source = classifier::Focus::enter();
+  let focus = focus_probe::FocusProbe::start(Arc::clone(&cached_focus));
   let mut tracker = classifier::KeyTracker::default();
-  while !stop.load(Ordering::Acquire) {
-    let fresh = focus_source.context();
-    cached_focus.store(classifier::encode_focus(fresh), Ordering::Release);
-    while let Ok(event) = pending.try_recv() {
+  let mut deliver = |events: Vec<classifier::PendingEvent>, fresh: FocusContext| {
+    for event in events {
       let focus = FocusContext::conservative(classifier::decode_focus(event.focus), fresh);
       let Some(classified) = tracker.classify(&event) else {
         continue;
@@ -172,8 +171,13 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
         modifiers: classified.modifiers,
       });
     }
+  };
+  while !stop.load(Ordering::Acquire) {
+    deliver(pending.try_iter().collect(), focus.current());
     std::thread::sleep(POLL);
   }
+  // What the hook passed on before the stop still belongs to the recording.
+  deliver(pending.try_iter().collect(), focus.current());
 
   quit(&thread_id);
   let _ = hook.join();

@@ -3,11 +3,10 @@
 
 //! Converts the webview's recording selection into the shared native OSC model.
 
-use crate::editor::preview_platform::{
-  is_overlay_layer, PreviewSelection, FRAMED_FIXED, FRAMED_FREE,
-};
 use screenwide_compositor::PreviewSurfaceRect;
 use screenwide_scenes::SceneRotation;
+use screenwide_workspace::editing::{PreviewSelection, FRAMED_FIXED, FRAMED_FREE};
+use screenwide_workspace::is_overlay_layer;
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -100,7 +99,7 @@ mod tests {
     assert_eq!(regular.radius_percent, 18.0);
 
     let mut keyboard = selection();
-    keyboard.layer_id = Some(crate::editor::preview_platform::KEYBOARD_LAYER_ID);
+    keyboard.layer_id = Some(screenwide_workspace::KEYBOARD_LAYER_ID);
     assert_eq!(keyboard.into_native().radius_disabled, 1);
   }
 }

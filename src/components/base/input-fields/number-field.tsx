@@ -15,6 +15,7 @@ import {
 import { VariantProps } from "tailwind-variants";
 
 import { t } from "../../../i18n/i18n";
+import { isMacHost } from "../../../lib/platform";
 import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
@@ -73,8 +74,7 @@ export const NumberField = ({
 }: NumberFieldProps) => {
   // A disabled field neither scrubs nor advertises it with the cursor.
   const nativeScrubbing = isTauri() && !props.isDisabled;
-  const nativeSelectionRepaint =
-    nativeScrubbing && navigator.userAgent.includes("Mac");
+  const nativeSelectionRepaint = nativeScrubbing && isMacHost;
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue ?? 0);
   const resolvedValue = value ?? uncontrolledValue;
   const valueRef = useRef(resolvedValue);

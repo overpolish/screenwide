@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{
-  preview_windows::{self, Preview},
-  SESSION,
+use super::SESSION;
+use crate::glide::{
+  core::desktops::Snapshot,
+  platform::cursor,
+  preview_cards::{self, Anchor, Preview},
 };
-use crate::glide::{core::desktops::Snapshot, platform::cursor};
 use std::path::PathBuf;
 use tauri::AppHandle;
 
@@ -69,7 +70,7 @@ pub(super) fn publish(
       phase,
       icon_path: icon_path.clone(),
     })
-    .collect();
+    .collect::<Vec<_>>();
   let main = app.clone();
   let _ = app.run_on_main_thread(move || {
     if !SESSION.lock().is_ok_and(|state| {
@@ -79,27 +80,27 @@ pub(super) fn publish(
     }) {
       return;
     }
-    if let Err(error) = preview_windows::show(&main, previews, anchor.x, anchor.y) {
-      eprintln!("Could not show Glide Space windows: {error}");
-      // Close asynchronously: session cleanup also schedules native UI work.
-      super::lifecycle::request_end(&main, true);
-    }
+    let offsets: Vec<_> = (0..previews.len())
+      .map(|index| (index as f64 * 56.0, 0.0))
+      .collect();
+    preview_cards::show_arranged(
+      &main,
+      previews,
+      Anchor::Logical(anchor.x, anchor.y),
+      &offsets,
+    );
   });
 }
 
-pub(super) fn set_icon(app: &AppHandle, id: u64, path: Option<PathBuf>) {
-  let context = SESSION.lock().ok().and_then(|mut state| {
-    let session = state
+/// Keeps the icon for the cards Spaces shows from now on; the cards up
+/// already take it from `preview_cards::set_icon`.
+pub(super) fn set_icon(id: u64, path: Option<PathBuf>) {
+  if let Ok(mut state) = SESSION.lock() {
+    if let Some(session) = state
       .as_mut()
-      .filter(|session| session.id == id && !session.ending)?;
-    session.icon_path = path;
-    Some((
-      session.snapshot.clone()?,
-      session.selected.clone(),
-      session.preview_phase,
-    ))
-  });
-  if let Some((snapshot, selected, phase)) = context {
-    publish(app, id, &snapshot, selected.as_deref(), phase);
+      .filter(|session| session.id == id && !session.ending)
+    {
+      session.icon_path = path;
+    }
   }
 }

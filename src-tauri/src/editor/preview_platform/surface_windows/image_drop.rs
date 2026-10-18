@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Pictures dropped on the workspace: the editor window's OLE drop target.
-//! The twin of `recording_preview_surface_macos+drop.m`.
 //!
 //! OLE calls the target on the thread that registered it, the event loop's,
 //! which tao has initialised for OLE. Everything a drop needs is read during
@@ -22,11 +21,8 @@ use windows::Win32::System::Ole::{
 };
 use windows::Win32::System::SystemServices::MODIFIERKEYS_FLAGS;
 
-use super::annotation::{layer_image_rect, take_drawing_layer};
 use super::*;
 use crate::editor::images::dropped::ImagePoint;
-use crate::editor::preview_platform::ImageDropCallback;
-use screenwide_annotations::gesture::drawing_layer;
 
 #[implement(IDropTarget)]
 struct ImageDropTarget {
@@ -54,47 +50,17 @@ pub(super) fn revoke(hwnd: HWND) {
   let _ = unsafe { RevokeDragDrop(hwnd) };
 }
 
-/// Where a drop at `client`, in the editor window's pixels, lands: the
-/// picture a press there would draw on, by the rule [`drawing_layer`] keeps,
-/// and the point in its image-normalised space - beyond 0 to 1 for a drop on
-/// the frame - with the layer taken in hand where that changed the choice,
-/// as a press with the image tool there would.
-fn landing(inner: &SurfaceInner, client: (f64, f64)) -> (Option<ImagePoint>, Option<u32>) {
-  let Ok(mut state) = inner.state.lock() else {
-    return (None, None);
-  };
-  let scale = state.scale.max(0.1);
-  // On the layer standing upright, as a press with the image tool reads it.
-  let point = super::turn::selected_layer_point(&state, (client.0 / scale, client.1 / scale));
-  let pictures: Vec<_> = state
-    .selection_targets
-    .iter()
-    .filter_map(|target| {
-      let rect = layer_image_rect(&state, target.layer_id as i32)?;
-      Some((target.layer_id, [rect.x, rect.y, rect.width, rect.height]))
-    })
-    .collect();
-  let at = drawing_layer(pictures.into_iter(), point).and_then(|layer| {
-    let image = layer_image_rect(&state, layer as i32)?;
-    (image.width > 0.0 && image.height > 0.0).then(|| ImagePoint {
-      layer,
-      x: (point.0 - image.x) / image.width,
-      y: (point.1 - image.y) / image.height,
-    })
-  });
-  let taken = take_drawing_layer(inner, &mut state, point);
-  (at, taken)
-}
-
 impl ImageDropTarget {
   /// The surface, while it takes drops: an editor showing, not covered by
   /// the frontend's own chrome, with somewhere to hand the picture.
-  fn surface(&self) -> Option<std::sync::Arc<SurfaceInner>> {
-    let inner = surface_for_editor(self.hwnd)?;
-    let taking = inner.callbacks.lock().ok()?.image_drop.is_some()
-      && !inner.editor.is_suspended()
-      && inner.state.lock().ok()?.editor_active;
-    taking.then_some(inner)
+  fn surface(&self) -> Option<WorkspaceEditor> {
+    let engine = engine_for(self.hwnd)?;
+    let taking = windows(&engine.inner)
+      .image_drop
+      .lock()
+      .is_ok_and(|callback| callback.is_some())
+      && engine.takes_drops();
+    taking.then_some(engine)
   }
 
   fn effect(&self) -> DROPEFFECT {
@@ -154,7 +120,7 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
     if !self.accepts.replace(false) {
       return Ok(());
     }
-    let Some(inner) = self.surface() else {
+    let Some(engine) = self.surface() else {
       return Ok(());
     };
     let Some(picture) = data.as_ref().and_then(formats::picture) else {
@@ -165,12 +131,11 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
       y: point.y,
     };
     let _ = unsafe { ScreenToClient(self.hwnd, &mut client) };
-    let (at, taken) = landing(&inner, (f64::from(client.x), f64::from(client.y)));
-    if let Some(layer) = taken {
-      emit_selection(&inner, Some(layer));
-    }
-    if let Ok(mut callbacks) = inner.callbacks.lock() {
-      if let Some(callback) = callbacks.image_drop.as_mut() {
+    let at = engine
+      .land_drop((f64::from(client.x), f64::from(client.y)))
+      .map(|(layer, x, y)| ImagePoint { layer, x, y });
+    if let Ok(mut callback) = windows(&engine.inner).image_drop.lock() {
+      if let Some(callback) = callback.as_mut() {
         callback(picture, at);
         answer(effect, DROPEFFECT_COPY);
       }
@@ -183,8 +148,8 @@ impl RecordingPreviewSurface {
   /// Installs the callback a picture dropped on the workspace is handed to.
   /// Without one, nothing can be dropped there.
   pub(crate) fn set_image_drop_callback(&mut self, callback: ImageDropCallback) {
-    if let Ok(mut callbacks) = self.inner.callbacks.lock() {
-      callbacks.image_drop = Some(callback);
+    if let Ok(mut slot) = windows(&self.inner).image_drop.lock() {
+      *slot = Some(callback);
     }
   }
 }

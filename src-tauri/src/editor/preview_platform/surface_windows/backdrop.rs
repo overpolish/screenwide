@@ -88,8 +88,8 @@ impl Backdrop {
       self.hide();
       return;
     }
-    let (x, right) = window::scaled_edges(rect.x, rect.width, scale);
-    let (y, bottom) = window::scaled_edges(rect.y, rect.height, scale);
+    let (x, right) = pixels::scaled_edges(rect.x, rect.width, scale);
+    let (y, bottom) = pixels::scaled_edges(rect.y, rect.height, scale);
     let _ = unsafe {
       self
         .visual

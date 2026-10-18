@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { isWindowsHost } from "../../../../lib/platform";
 import {
   RecordingTimelineEdit,
   recordingTimelineRetainedDuration,
@@ -128,14 +129,11 @@ export type StackedLaneFragment<
 /**
  * One sublane row's height in CSS pixels. Mirrors the `--spacing-control-height`
  * token, which every row in the timeline band is laid out to - 1.5rem (24px) on
- * macOS, 2rem (32px) in the Windows skin - read the same way `main.tsx` stamps
- * `data-platform`. The lane's absolutely positioned fragments need the number
- * in JS, so it is kept here beside the stacking that produces rows.
+ * macOS, 2rem (32px) in the Windows skin. The lane's absolutely positioned
+ * fragments need the number in JS, so it is kept here beside the stacking that
+ * produces rows.
  */
-export const TIMED_LANE_ROW_HEIGHT_PX =
-  typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent)
-    ? 32
-    : 24;
+export const TIMED_LANE_ROW_HEIGHT_PX = isWindowsHost ? 32 : 24;
 
 /**
  * The breathing space a fragment leaves above and below itself inside its row,

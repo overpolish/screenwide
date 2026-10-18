@@ -21,6 +21,7 @@ import {
   PSEUDO_BIDI,
 } from "../src/i18n/i18n";
 import { installKeyboardNavigationModality } from "../src/lib/keyboard-navigation-modality";
+import { isWindowsHost, stampPlatform } from "../src/lib/platform";
 import { synchronizeSystemAccent } from "../src/lib/system-accent";
 
 import type { Decorator, Loader, Preview } from "@storybook/react-vite";
@@ -35,18 +36,7 @@ const isNativePreview =
 // `main.tsx`. Stories default to the host OS so a reviewer sees their own
 // platform first, and the toolbar switches to the other one. The native
 // preview runs inside the real app shell, so it always takes the host.
-type Platform = "macos" | "windows";
-const hostPlatform: Platform = navigator.userAgent.includes("Windows")
-  ? "windows"
-  : "macos";
-
-const applyPlatform = (platform: Platform) => {
-  if (platform === "windows") {
-    document.documentElement.dataset.platform = "windows";
-  } else {
-    delete document.documentElement.dataset.platform;
-  }
-};
+const hostPlatform = isWindowsHost ? "windows" : "macos";
 
 // The theme decorator applies its class only once the manager has sent the
 // globals, so every reload rendered light first and then flipped. The iframe
@@ -57,7 +47,7 @@ if (!isNativePreview) {
   const theme = /(?:^|;)theme:(\w+)/.exec(globals ?? "")?.[1] ?? "dark";
   document.documentElement.classList.add(theme === "light" ? "light" : "dark");
   const platform = /(?:^|;)platform:(\w+)/.exec(globals ?? "")?.[1];
-  applyPlatform(
+  stampPlatform(
     platform === "windows" || platform === "macos" ? platform : hostPlatform,
   );
 }
@@ -74,7 +64,7 @@ if (isNativePreview) {
 
   synchronizeNativeTheme(systemDarkMode);
   systemDarkMode.addEventListener("change", synchronizeNativeTheme);
-  applyPlatform(hostPlatform);
+  stampPlatform(hostPlatform);
   // The native preview runs inside the app shell, so the OS accent is real.
   synchronizeSystemAccent();
 }
@@ -303,7 +293,7 @@ const preview: Preview = {
 };
 
 const withPlatform: Decorator = (Story, { globals }) => {
-  applyPlatform(globals.platform === "windows" ? "windows" : "macos");
+  stampPlatform(globals.platform === "windows" ? "windows" : "macos");
   return Story();
 };
 

@@ -21,8 +21,8 @@ pub(crate) mod annotation_bridge;
 pub(crate) mod annotation_preview;
 mod audio;
 pub(crate) mod audio_visualizer;
-mod audio_visualizer_clock;
 pub(crate) mod commands;
+mod composed_frame;
 pub(crate) mod composed_frames;
 pub(crate) mod editor_suspend;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -65,8 +65,6 @@ use super::preview_platform::RecordingPreviewSurface;
 use super::{EditorArtifact, EditorKind, EditorState};
 pub use commands::stop_all;
 use screenwide_compositor::workspace_editor::WorkspaceScene;
-#[cfg(target_os = "macos")]
-use screenwide_cursor_effects::GpuArtwork;
 use screenwide_cursor_effects::{CursorCompositor, CursorEffectSettings};
 use screenwide_export::recording_model::{
   AudioTrackVolume, RecordingAudioTrack, RecordingOutputSettings,

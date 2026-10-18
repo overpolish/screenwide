@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{
-  adapter::MacDesktopAdapter, lifecycle, presentation, preview_windows, Session, SESSION,
-};
+use super::{adapter::MacDesktopAdapter, lifecycle, presentation, Session, SESSION};
 use crate::glide::core::{
   desktop_selection,
   desktops::{self, DesktopAdapter},
 };
+use crate::glide::preview_cards;
 use std::sync::atomic::Ordering;
 use tauri::AppHandle;
 
@@ -151,7 +150,7 @@ pub(super) fn commit(app: &AppHandle) {
     return;
   };
   // Commit ends preview presentation; the native carry keeps cursor ownership.
-  preview_windows::dismiss(app, false);
+  preview_cards::dismiss(app, false);
   let worker_app = app.clone();
   let result = std::thread::Builder::new()
     .name("glide-space-carry".into())

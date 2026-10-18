@@ -112,3 +112,32 @@ impl AudioRibbon {
     .map_err(|error| error.to_string())
   }
 }
+
+impl super::RecordingPreviewSurface {
+  pub(crate) fn set_audio_ribbon(&self, envelopes: &AudioRibbonEnvelopes) {
+    let Ok(state) = self.inner.state.lock() else {
+      return;
+    };
+    let gpu = &super::windows(&self.inner).gpu;
+    if let Ok(mut ribbon) = gpu.audio_ribbon.lock() {
+      gpu.backdrop.set_geometry(state.viewport, state.scale);
+      let _ = ribbon.set_viewport(state.viewport, state.scale, state.backdrop);
+      if let Err(error) = ribbon.set_envelopes(envelopes) {
+        eprintln!("Could not upload the audio ribbon: {error}");
+      }
+    }
+  }
+
+  pub(crate) fn set_audio_ribbon_playhead(&self, ratio: f64) {
+    let Ok(state) = self.inner.state.lock() else {
+      return;
+    };
+    let gpu = &super::windows(&self.inner).gpu;
+    if let Ok(mut ribbon) = gpu.audio_ribbon.lock() {
+      if ribbon.has_envelopes() {
+        gpu.backdrop.set_geometry(state.viewport, state.scale);
+        let _ = ribbon.set_playhead(ratio);
+      }
+    }
+  }
+}

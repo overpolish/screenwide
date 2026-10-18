@@ -25,7 +25,7 @@ pub(super) fn handle_mouse_down(
   }
   let point = event.location();
   if let Some((target, frame, work_position, work_size)) = mouse_center_context(state) {
-    end_session(app, state, true);
+    end_session(app, true);
     set_mouse_up_swallow(state, true);
     center_captured(&target, frame, work_position, work_size, point);
     return CallbackResult::Drop;
@@ -48,7 +48,7 @@ pub(super) fn handle_mouse_down(
   // about to center would be two destinations at once. The cancel's restore, if
   // the click landed on a glide that had already moved something, is preempted
   // by the centering below before the tween thread can take a single step.
-  end_session(app, state, true);
+  end_session(app, true);
   set_mouse_up_swallow(state, true);
   center_window_at(app, point);
   CallbackResult::Drop

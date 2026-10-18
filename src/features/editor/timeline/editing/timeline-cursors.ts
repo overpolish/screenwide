@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { isMacHost } from "../../../../lib/platform";
+
 // Exact Lucide geometry. Custom CSS cursors are rasterized by the WebView, so
 // density variants keep OS-level cursor enlargement from starting at 24 px.
 const SCISSORS_PATHS = `
@@ -10,8 +12,6 @@ const SCISSORS_PATHS = `
   <circle cx="6" cy="18" r="3"/>
   <path d="M14.8 14.8 20 20"/>
 `;
-const isMacOS =
-  typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
 // A cursor is rasterized from a data URI, which cannot reach the document's
 // custom properties, so these literals mirror the theme tokens the cursor is
 // drawn from: the glyph takes a label colour (`--color-content-fg`) and its
@@ -23,8 +23,8 @@ const CONTENT_LIGHT = "rgb(255, 255, 255)";
 const CONTENT_FG_DARK = "rgba(255, 255, 255, 0.85)";
 const CONTENT_DARK = "rgb(30, 30, 30)";
 const cursorSvg = (paths: string, density: number) => {
-  const iconColor = isMacOS ? CONTENT_FG_LIGHT : CONTENT_FG_DARK;
-  const outlineColor = isMacOS ? CONTENT_LIGHT : CONTENT_DARK;
+  const iconColor = isMacHost ? CONTENT_FG_LIGHT : CONTENT_FG_DARK;
+  const outlineColor = isMacHost ? CONTENT_LIGHT : CONTENT_DARK;
   const size = 24 * density;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.toString()}" height="${size.toString()}" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${outlineColor}" stroke-width="5">${paths}</g><g stroke="${iconColor}" stroke-width="2">${paths}</g></svg>`;
 };

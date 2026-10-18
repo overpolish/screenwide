@@ -23,6 +23,11 @@ mod settling;
 pub(crate) mod taps;
 pub(crate) mod trace;
 mod travel;
+pub(crate) mod tween;
+pub(crate) mod tween_completion;
+pub(crate) mod tween_motion;
+pub(crate) mod tween_settle;
+pub(crate) mod typing_guard;
 
 // Checkpoint 1 builds and verifies the shared policy before checkpoint 2 makes
 // the native input path its runtime owner.

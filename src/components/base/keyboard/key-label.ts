@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../i18n/i18n";
-
-export const isMacOS =
-  typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
+import { isMacHost } from "../../../lib/platform";
 
 /**
  * A key's name in the app's language: the modifiers and named keys, written
@@ -23,11 +21,11 @@ export const keyLabel = (key: string) => {
     case "meta":
     case "super":
     case "win":
-      return isMacOS ? t("controls-key-command") : t("controls-key-windows");
+      return isMacHost ? t("controls-key-command") : t("controls-key-windows");
     case "control":
     case "ctrl":
     case "⌃":
-      return isMacOS ? t("controls-key-control") : t("controls-key-ctrl");
+      return isMacHost ? t("controls-key-control") : t("controls-key-ctrl");
     case "option":
     case "⌥":
       return t("controls-key-option");

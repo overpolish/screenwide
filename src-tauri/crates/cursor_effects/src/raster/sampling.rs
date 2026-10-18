@@ -170,11 +170,8 @@ impl CursorRaster {
         origin_y: entry.hotspot_y,
         width: f64::from(entry.image.width()),
       });
-    let vertical = system_artwork.is_none() && fallback::is_vertical(style);
-    #[cfg(target_os = "windows")]
-    let rotation_degrees = -rotation_degrees;
     let rotation = rotation_degrees.to_radians()
-      + if vertical {
+      + if super::turned_quarter(style) {
         std::f64::consts::FRAC_PI_2
       } else {
         0.0

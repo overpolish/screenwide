@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::preview_platform::PreviewSelection;
 use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_workspace::editing::PreviewSelection;
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,9 +46,6 @@ impl ScreenshotSelectionOverlay {
       image_x: self.image.map_or(0.0, |image| image.x),
       image_y: self.image.map_or(0.0, |image| image.y),
       layer_id: self.layer_id.unwrap_or(self.pane_index),
-      #[cfg(target_os = "macos")]
-      pane_index: 0,
-      #[cfg(not(target_os = "macos"))]
       pane_index: self.pane_index,
       x: self.rect.x,
       y: self.rect.y,

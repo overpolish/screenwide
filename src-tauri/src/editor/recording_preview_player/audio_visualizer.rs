@@ -34,7 +34,6 @@ pub struct AudioVisualizerTrack {
 
 /// The sampling payload: `tracks` rows of `points` samples, row-major.
 #[derive(Clone, Debug, Default, PartialEq)]
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(crate) struct AudioRibbonEnvelopes {
   pub gains: Vec<f32>,
   pub points: u32,

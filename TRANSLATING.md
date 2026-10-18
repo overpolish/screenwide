@@ -82,4 +82,4 @@ The `en-XB` pseudo-locale lays the interface out right to left and shows English
 
 ## For developers
 
-Code rules for text are in the Translation section of `AGENTS.md`. In short: the webviews call `t("id")` from `src/i18n/i18n.ts`, Rust calls `t!("id")` from the `screenwide_i18n` crate, and the Objective-C overlays call `screenwide_osc_localized(@"id")`. After changing an `en-US` message, run `pnpm i18n:generate` to update `src/i18n/messages.ts`, which type-checks ids and placeholders.
+Code rules for text are in the Translation section of `AGENTS.md`. In short: the webviews call `t("id")` from `src/i18n/i18n.ts` and Rust calls `t!("id")` from the `screenwide_i18n` crate. After changing an `en-US` message, run `pnpm i18n:generate` to update `src/i18n/messages.ts`, which type-checks ids and placeholders.

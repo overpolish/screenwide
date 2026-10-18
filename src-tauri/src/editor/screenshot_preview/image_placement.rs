@@ -6,12 +6,12 @@
 
 use tauri::AppHandle;
 
-use super::super::preview_platform::SelectionGesturePhase;
 use super::annotation_gesture::AnnotationCommit;
 use super::state::{PreviewManager, ScreenshotPreviewState};
 use crate::editor::images::dropped::{annotation_ids, fresh_id, ImagePoint};
 use screenwide_annotations::gesture::{AnnotationGestureTarget, MODE_IMAGE};
 use screenwide_annotations::image::ImageArt;
+use screenwide_workspace::editing::SelectionGesturePhase;
 
 impl PreviewManager {
   /// Places an image showing `art` `at` a point on a layer, or in the

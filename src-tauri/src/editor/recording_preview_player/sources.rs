@@ -24,8 +24,6 @@ pub(super) struct PlayerSources {
   pub(super) captures: [screenwide_output::Capture; 2],
   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
   pub(super) cursor: Option<Arc<CursorCompositor>>,
-  #[cfg(target_os = "macos")]
-  pub(super) cursor_artworks: Option<Arc<Vec<GpuArtwork>>>,
   pub(super) cursor_settings: Arc<RwLock<CursorEffectSettings>>,
   pub(super) keyboard: Option<Arc<KeyboardCompositor>>,
   /// The kept source ranges keyboard badges animate on.
@@ -198,10 +196,6 @@ pub(super) fn sources_with_surface(
     .as_ref()
     .map(|path| keyboard::keyboard_compositor(path, settings, persisted.as_ref()))
     .transpose()?;
-  #[cfg(target_os = "macos")]
-  let cursor_artworks = cursor
-    .as_ref()
-    .map(|_| Arc::new(screenwide_cursor_effects::gpu_artworks()));
   let processing = super::PreviewProcessing::for_project(
     project.parent().unwrap_or(std::path::Path::new(".")),
     &audio_tracks
@@ -219,8 +213,6 @@ pub(super) fn sources_with_surface(
     camera_effects: super::camera_effects::shared(app, artifact_id),
     camera_picking: Default::default(),
     cursor,
-    #[cfg(target_os = "macos")]
-    cursor_artworks,
     composition_settings: settings.map(|settings| {
       let mut recording_output = settings.recording_output.clone();
       recording_output.stamp_captures(captures);

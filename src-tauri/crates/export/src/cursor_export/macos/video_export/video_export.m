@@ -55,16 +55,6 @@ static void advance(AVAssetReaderTrackOutput *output, CMSampleBufferRef *current
   }
 }
 
-/// How far before a stretch a restarted reader begins, so the frame showing
-/// at its first moment is read too rather than the one after it.
-#define SCREENWIDE_REWIND_PREROLL_SECONDS 0.5
-
-/// How far ahead of the frame in hand a wanted frame must be before the
-/// readers start again there rather than decode their way to it. A cut this
-/// long, or a gap between the stretches a size estimate draws, costs less to
-/// seek over than to decode through.
-#define SCREENWIDE_SKIP_AHEAD_SECONDS 3.0
-
 /// Drops `samples` and reads the first two of `output` in their place.
 static void reread(AVAssetReaderTrackOutput *output, CMSampleBufferRef *current,
                    CMSampleBufferRef *next) {
@@ -74,31 +64,25 @@ static void reread(AVAssetReaderTrackOutput *output, CMSampleBufferRef *current,
   *next = output == nil ? NULL : [output copyNextSampleBuffer];
 }
 
-/// Starts the readers again a little before `pts` where the frame wanted
-/// lies behind the one in hand, as on a reordered timeline that plays an
-/// earlier stretch of the source after a later one, or far enough ahead of
-/// it that seeking beats decoding. A frame less than one frame ahead is
-/// close enough, so the first frames of a file never restart it. False,
-/// with `error` set, when the readers could not be started again.
+/// Starts the readers again a little before `pts` where the shared clock's
+/// `should_reposition` says to: the frame wanted lies behind the one in hand,
+/// as on a reordered timeline, or far enough ahead of it that seeking beats
+/// decoding. False, with `error` set, when the readers could not be started
+/// again.
 static BOOL reposition_if_far(ScreenwideVideoExport *session, CMTime pts,
                               CMSampleBufferRef *screen_sample,
                               CMSampleBufferRef *next_screen_sample,
                               CMSampleBufferRef *camera_sample,
                               CMSampleBufferRef *next_camera_sample, NSError **error) {
-  CMTime slack = CMTimeMakeWithSeconds(1.0 / session->source_frame_rate, pts.timescale);
-  CMTime held = CMSampleBufferGetPresentationTimeStamp(*screen_sample);
-  BOOL behind = CMTimeCompare(CMTimeAdd(pts, slack), held) < 0;
-  // Measured from the next frame to be read, not the one in hand: a still
-  // screen records no frames for a while, and the gap to the next one costs
-  // nothing to cross.
-  CMTime skip = CMTimeMakeWithSeconds(SCREENWIDE_SKIP_AHEAD_SECONDS, pts.timescale);
-  BOOL far_ahead =
-      *next_screen_sample != NULL &&
-      CMTimeCompare(pts, CMTimeAdd(CMSampleBufferGetPresentationTimeStamp(*next_screen_sample),
-                                   skip)) > 0;
-  if (!behind && !far_ahead) return YES;
-  CMTime preroll = CMTimeMakeWithSeconds(SCREENWIDE_REWIND_PREROLL_SECONDS, pts.timescale);
-  CMTime start = CMTimeMaximum(kCMTimeZero, CMTimeSubtract(pts, preroll));
+  uint64_t wanted = export_time_us(pts);
+  uint64_t held = export_time_us(CMSampleBufferGetPresentationTimeStamp(*screen_sample));
+  uint64_t next = *next_screen_sample == NULL
+                      ? UINT64_MAX
+                      : export_time_us(CMSampleBufferGetPresentationTimeStamp(*next_screen_sample));
+  uint64_t frame = (uint64_t)llround(1000000.0 / session->source_frame_rate);
+  if (!screenwide_export_should_reposition(wanted, held, next, frame)) return YES;
+  uint64_t preroll = screenwide_export_rewind_preroll_us();
+  CMTime start = CMTimeMake((int64_t)(wanted > preroll ? wanted - preroll : 0), 1000000);
   if (![session restartReadersAt:start error:error]) return NO;
   reread(session->screen_output, screen_sample, next_screen_sample);
   reread(session->camera_output, camera_sample, next_camera_sample);

@@ -24,17 +24,6 @@ const MODULES: &[(&str, &[&str])] = &[
     "audio_ribbon",
     &["src/editor/preview_platform/shaders/audio_ribbon.wgsl"],
   ),
-  (
-    "workspace_backdrop",
-    &["src/editor/preview_platform/shaders/workspace_backdrop.wgsl"],
-  ),
-  (
-    "workspace_magnifier",
-    &[
-      "src/editor/preview_platform/shaders/workspace_magnifier.wgsl",
-      "crates/osc/src/gpu/shaders/lens.wgsl",
-    ],
-  ),
 ];
 
 pub(crate) fn assemble() {

@@ -33,10 +33,6 @@ impl Gpu {
       .map_err(|error| format!("The Windows selection visual could not be created: {error}"))?;
     unsafe { editor_target.SetRoot(&editor_root) }
       .map_err(|error| format!("The Windows selection visual could not be attached: {error}"))?;
-    let compositor = compositor::Compositor::new(shared, cursor_artwork::native_cursors()?)?;
-    // Drawn as it is edited: a set of kinds new to it is compiled on another
-    // thread while the frames go on with a variant that holds it.
-    compositor.compile_annotation_kinds_in_background();
     let audio_ribbon = audio_ribbon::AudioRibbon::new(shared, &composition, &root)?;
     let selection = selection::SelectionOverlay::new(shared, &composition, &editor_root)?;
     unsafe { composition.Commit() }
@@ -45,10 +41,8 @@ impl Gpu {
       audio_ribbon: std::sync::Mutex::new(audio_ribbon),
       backdrop,
       d3d11,
-      compositor,
       composition,
       selection: Mutex::new(selection),
-      shared,
       _editor_target: editor_target,
       _target: target,
       workspace,

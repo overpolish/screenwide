@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::preview_platform::{SelectionGestureOperation, SelectionGesturePhase};
 use super::super::preview_workspace_model::{apply_output_geometry, output_geometry};
 use super::super::ScreenshotWorkspaceOutputSettings;
 use super::geometry::fit_workspace_to_items;
@@ -10,15 +9,14 @@ use screenwide_compositor::workspace_editor::{
   apply_layer_gesture, GestureOperation as WorkspaceGestureOperation, WorldRect,
 };
 use screenwide_scenes::SceneRotation;
+use screenwide_workspace::editing::{SelectionGestureOperation, SelectionGesturePhase};
 
 const AUTO_FIT_MOVE_EDGE: u32 = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE: u32 = 1 << 18;
 
-// Only the macOS layout reads the gesture's presentation ownership.
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+/// The output a selection gesture started from, which every pointer update
+/// is applied to afresh.
 pub(super) struct SelectionGestureOverride {
-  pub(super) native_workspace_owns_presentation: bool,
-  pub(super) operation: SelectionGestureOperation,
   pub(super) snapshot: ScreenshotWorkspaceOutputSettings,
 }
 
@@ -58,8 +56,6 @@ impl PreviewManager {
           return Ok(());
         }
         self.selection_gesture = Some(SelectionGestureOverride {
-          native_workspace_owns_presentation: false,
-          operation,
           snapshot: current.clone(),
         });
         return if operation == SelectionGestureOperation::FrameResize {
@@ -82,22 +78,15 @@ impl PreviewManager {
         self
           .selection_gesture
           .get_or_insert_with(|| SelectionGestureOverride {
-            native_workspace_owns_presentation: false,
-            operation,
             snapshot: current.clone(),
           });
         if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_COMMIT_EDGE != 0 {
           if let Some(gesture) = self.selection_gesture.as_mut() {
             // Option release accepts the native workspace geometry as the
             // origin for the remainder of this same pointer/history gesture.
-            gesture.native_workspace_owns_presentation = false;
             gesture.snapshot = current;
           }
           return Ok(());
-        }
-        if let Some(gesture) = self.selection_gesture.as_mut() {
-          gesture.native_workspace_owns_presentation =
-            operation == SelectionGestureOperation::Move && edges & AUTO_FIT_MOVE_EDGE != 0;
         }
         let Some(gesture) = self.selection_gesture.as_ref() else {
           return Ok(());
@@ -134,19 +123,13 @@ impl PreviewManager {
           if matches!(phase, SelectionGesturePhase::End) {
             self.selection_gesture = None;
           } else {
-            self.selection_gesture = Some(SelectionGestureOverride {
-              native_workspace_owns_presentation: false,
-              operation,
-              snapshot,
-            });
+            self.selection_gesture = Some(SelectionGestureOverride { snapshot });
           }
-          // macOS recomposes the resized canvas in its retained GPU workspace;
-          // Windows has no such presenter, so the re-composition happens here,
-          // in the same input, and its present publishes the pane box the
-          // native drag deferred.
-          #[cfg(target_os = "windows")]
+          // The re-composition happens here, in the same input, and its
+          // present publishes the pane box the native drag deferred.
+          #[cfg(any(target_os = "macos", target_os = "windows"))]
           return self.present_batch();
-          #[cfg(not(target_os = "windows"))]
+          #[cfg(not(any(target_os = "macos", target_os = "windows")))]
           return Ok(());
         }
         if operation == SelectionGestureOperation::FrameRadius {
@@ -155,11 +138,7 @@ impl PreviewManager {
           if matches!(phase, SelectionGesturePhase::End) {
             self.selection_gesture = None;
           } else {
-            self.selection_gesture = Some(SelectionGestureOverride {
-              native_workspace_owns_presentation: false,
-              operation,
-              snapshot,
-            });
+            self.selection_gesture = Some(SelectionGestureOverride { snapshot });
           }
           return self.present_batch();
         }
@@ -183,12 +162,8 @@ impl PreviewManager {
           })
           .filter(|rotation| !rotation.is_upright());
           self.output = Some(next);
-          self.selection_gesture =
-            (!matches!(phase, SelectionGesturePhase::End)).then_some(SelectionGestureOverride {
-              native_workspace_owns_presentation: false,
-              operation,
-              snapshot,
-            });
+          self.selection_gesture = (!matches!(phase, SelectionGesturePhase::End))
+            .then_some(SelectionGestureOverride { snapshot });
           return self.present_batch();
         }
         let workspace_operation = match operation {
@@ -226,24 +201,15 @@ impl PreviewManager {
           // when Command snapping is released) from shifting on commit.
           self.selection_gesture = None;
         } else {
-          self.selection_gesture = Some(SelectionGestureOverride {
-            native_workspace_owns_presentation: operation == SelectionGestureOperation::Move
-              && edges & AUTO_FIT_MOVE_EDGE != 0,
-            operation,
-            snapshot,
-          });
+          self.selection_gesture = Some(SelectionGestureOverride { snapshot });
         }
         if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_MOVE_EDGE != 0 {
-          // The native workspace presenter owns this complete live scene:
-          // frame resize, selected-layer movement and OSC are encoded from
-          // one immutable gesture snapshot. Replacing it here would race a
-          // differently normalized but semantically equivalent React scene.
-          // Windows has no retained presenter: the fitted canvas is composed
-          // here, and `native_workspace_owns_presentation` still keeps React's
-          // equivalent layouts from re-presenting it meanwhile.
-          #[cfg(target_os = "windows")]
+          // Frame resize, selected-layer movement and OSC are encoded from one
+          // immutable gesture snapshot, and the fitted canvas is composed from
+          // it here, in the same input.
+          #[cfg(any(target_os = "macos", target_os = "windows"))]
           return self.present_batch();
-          #[cfg(not(target_os = "windows"))]
+          #[cfg(not(any(target_os = "macos", target_os = "windows")))]
           return Ok(());
         }
         return self.present_batch();

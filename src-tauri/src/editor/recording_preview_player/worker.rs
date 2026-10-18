@@ -8,7 +8,7 @@ use std::{
   process::Child,
   sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
-    mpsc, Arc, Mutex, RwLock,
+    Arc, Mutex, RwLock,
   },
 };
 
@@ -45,7 +45,6 @@ pub(super) struct PreviewPlayerWorker {
   selected_audio: Arc<RwLock<Vec<usize>>>,
   audio_volumes: Arc<RwLock<Vec<AudioTrackVolume>>>,
   thread: Option<std::thread::JoinHandle<()>>,
-  video_child: Arc<Mutex<Option<Child>>>,
 }
 
 fn stop_child(child: &Arc<Mutex<Option<Child>>>) {
@@ -76,7 +75,6 @@ struct RunContext {
   selected_audio: Arc<RwLock<Vec<usize>>>,
   sources: PlayerSources,
   start_ms: u64,
-  video_child: Arc<Mutex<Option<Child>>>,
 }
 
 fn run(context: RunContext) {
@@ -94,7 +92,6 @@ fn run(context: RunContext) {
     playback_ranges,
     position_ms,
     request_id,
-    video_child,
     audio_child,
   } = context;
   if sources.layout.panes.is_empty() {
@@ -114,42 +111,6 @@ fn run(context: RunContext) {
       start_ms,
     });
   }
-  if matches!(mode, PlaybackMode::Still | PlaybackMode::InteractiveStill) {
-    let (frame_tx, frame_rx) = mpsc::sync_channel(3);
-    let video_thread = match platform::spawn_video(
-      &sources,
-      &playback_factors,
-      start_ms,
-      1.0,
-      true,
-      Arc::clone(&cancelled),
-      Arc::clone(&video_child),
-      frame_tx,
-    ) {
-      Ok(thread) => thread,
-      Err(error) => {
-        send_error(&event_channel, error);
-        return;
-      }
-    };
-    if let Ok(frame) = frame_rx.recv() {
-      if !cancelled.load(Ordering::Acquire)
-        && (!sources.presents_video() || platform::send_frame(&sources, frame.payload))
-      {
-        position_ms.store(start_ms, Ordering::Release);
-        if !sources.presents_video() {
-          super::audio_visualizer::present_audio_position(&sources, start_ms);
-        }
-        let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
-          position_ms: start_ms,
-          request_id,
-        });
-      }
-    }
-    stop_child(&video_child);
-    let _ = video_thread.join();
-    return;
-  }
   ranged::run(ranged::RunContext {
     audio_child,
     audio_volumes,
@@ -163,7 +124,6 @@ fn run(context: RunContext) {
     selected_audio,
     sources,
     start_ms,
-    video_child,
   });
 }
 
@@ -185,7 +145,6 @@ impl PreviewPlayerWorker {
     } = launch;
     let cancelled = Arc::new(AtomicBool::new(false));
     let position_ms = Arc::new(AtomicU64::new(start_ms));
-    let video_child = Arc::new(Mutex::new(None));
     let audio_child = Arc::new(Mutex::new(None));
     let selected_audio = Arc::new(RwLock::new(audio.enabled_stream_indices));
     let audio_volumes = Arc::new(RwLock::new(audio.audio_track_volumes));
@@ -194,7 +153,6 @@ impl PreviewPlayerWorker {
       .spawn({
         let cancelled = Arc::clone(&cancelled);
         let position_ms = Arc::clone(&position_ms);
-        let video_child = Arc::clone(&video_child);
         let audio_child = Arc::clone(&audio_child);
         let selected_audio = Arc::clone(&selected_audio);
         let audio_volumes = Arc::clone(&audio_volumes);
@@ -214,7 +172,6 @@ impl PreviewPlayerWorker {
             audio_volumes,
             sources,
             start_ms,
-            video_child,
           });
         }
       })
@@ -226,7 +183,6 @@ impl PreviewPlayerWorker {
       selected_audio,
       audio_volumes,
       thread: Some(thread),
-      video_child,
     })
   }
 
@@ -257,7 +213,6 @@ impl PreviewPlayerWorker {
   /// and join through `cancel` off the main thread.
   pub(super) fn signal_cancel(&self) {
     self.cancelled.store(true, Ordering::Release);
-    stop_child(&self.video_child);
     stop_child(&self.audio_child);
   }
 
@@ -268,7 +223,6 @@ impl PreviewPlayerWorker {
 
   pub(super) fn cancel(mut self) -> u64 {
     self.cancelled.store(true, Ordering::Release);
-    stop_child(&self.video_child);
     stop_child(&self.audio_child);
     if let Some(thread) = self.thread.take() {
       let _ = thread.join();

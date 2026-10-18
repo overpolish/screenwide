@@ -48,25 +48,3 @@ pub fn icon_atlas() -> &'static IconAtlas {
     }
   })
 }
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct NativeIconAtlas {
-  pub pixels: *const u8,
-  pub length: usize,
-  pub width: u32,
-  pub height: u32,
-  pub columns: u32,
-}
-
-#[no_mangle]
-pub extern "C" fn screenwide_osc_icon_atlas() -> NativeIconAtlas {
-  let atlas = icon_atlas();
-  NativeIconAtlas {
-    pixels: atlas.pixels().as_ptr(),
-    length: atlas.pixels().len(),
-    width: atlas.width,
-    height: atlas.height,
-    columns: ICON_ATLAS_COLUMNS,
-  }
-}

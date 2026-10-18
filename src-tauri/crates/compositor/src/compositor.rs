@@ -9,7 +9,7 @@
 mod background;
 mod camera;
 mod canvas_features;
-#[cfg(all(test, target_os = "macos"))]
+#[cfg(test)]
 mod canvas_features_tests;
 mod canvas_modules;
 mod canvas_pipelines;
@@ -19,6 +19,7 @@ mod canvas_variants;
 pub mod caption_preview;
 mod constants;
 mod cursor_artwork;
+pub mod cursor_placement;
 /// Sources fed from Direct3D 11 textures: capture, the camera and Media
 /// Foundation hand frames over through the shared D3D11 layer.
 #[cfg(target_os = "windows")]
@@ -36,7 +37,6 @@ mod redact_targets;
 mod scene_motion;
 mod scene_turn;
 mod source;
-#[cfg(target_os = "macos")]
 pub mod still;
 pub mod still_overlay;
 mod submit;
@@ -91,42 +91,6 @@ pub struct CropMagnifier {
   pub options: [f32; 4],
 }
 
-/// The cursor artwork the platform draws the recorded pointer with: one
-/// premultiplied BGRA bitmap per style, every one `size`, one after another,
-/// and each style's hotspot in it, normalised.
-pub struct NativeCursors {
-  pub size: (u32, u32),
-  pub layers: Vec<u8>,
-  pub hotspots: [[f32; 4]; 8],
-}
-
-#[cfg(target_os = "macos")]
-impl NativeCursors {
-  /// For a compositor whose cursor is drawn from artwork it is handed: one
-  /// transparent texel a style.
-  pub fn none() -> Self {
-    Self {
-      size: (1, 1),
-      layers: vec![0; 4 * 8],
-      hotspots: [[0.0; 4]; 8],
-    }
-  }
-}
-
-/// One cursor style drawn from artwork the caller hands over (macOS): its
-/// straight RGBA bitmap, the drawing's own size and origin where it was
-/// designed rather than captured, and how it is drawn.
-#[cfg(target_os = "macos")]
-pub struct CursorArtwork<'a> {
-  pub(crate) pixels: &'a [u8],
-  pub(crate) size: (u32, u32),
-  pub(crate) design: (f32, f32),
-  pub(crate) origin: (f32, f32),
-  pub(crate) use_design: bool,
-  pub(crate) clip_local_box: bool,
-  pub(crate) supersample: bool,
-}
-
 /// What the shader needs of one uploaded style, by style index.
 #[derive(Clone, Copy)]
 struct ArtworkStyle {
@@ -149,13 +113,9 @@ pub struct Compositor {
   annotation_text: GpuBuffer,
   constants: wgpu::Buffer,
   keyboard_constants: wgpu::Buffer,
-  cursor_hotspots: [[f32; 4]; 8],
+  /// Every cursor style's artwork, one layer each, and how each is drawn.
   cursor_view: wgpu::TextureView,
-  /// The styles `cursor_view` holds when it holds handed artwork, and a
-  /// fingerprint of that artwork, so an unchanged set is not uploaded again.
   cursor_artworks: Vec<ArtworkStyle>,
-  #[cfg(target_os = "macos")]
-  cursor_artwork_key: u64,
   counter_atlas: CounterAtlas,
   image_atlas: ImageAtlas,
   keyboard_cache: KeyboardArtworkCache,

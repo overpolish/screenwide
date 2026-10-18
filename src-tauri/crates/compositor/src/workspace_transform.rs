@@ -75,37 +75,35 @@ impl WorkspaceTransform {
   }
 }
 
-/// C ABI used by the macOS surface; Windows calls the same calculation directly.
-#[no_mangle]
-pub(super) extern "C" fn screenwide_workspace_panel_fit(
-  viewport_width: f64,
-  viewport_height: f64,
-  base_x: f64,
-  base_y: f64,
-  base_width: f64,
-  base_height: f64,
-  fit_width: f64,
-) -> WorkspaceTransform {
-  WorkspaceTransform::for_panel(
-    PreviewSurfaceRect {
-      x: base_x,
-      y: base_y,
-      width: base_width,
-      height: base_height,
-    },
-    PreviewSurfaceRect {
-      x: 0.0,
-      y: 0.0,
-      width: viewport_width,
-      height: viewport_height,
-    },
-    fit_width,
-  )
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn panel_fit(
+    viewport_width: f64,
+    viewport_height: f64,
+    base_x: f64,
+    base_y: f64,
+    base_width: f64,
+    base_height: f64,
+    fit_width: f64,
+  ) -> WorkspaceTransform {
+    WorkspaceTransform::for_panel(
+      PreviewSurfaceRect {
+        x: base_x,
+        y: base_y,
+        width: base_width,
+        height: base_height,
+      },
+      PreviewSurfaceRect {
+        x: 0.0,
+        y: 0.0,
+        width: viewport_width,
+        height: viewport_height,
+      },
+      fit_width,
+    )
+  }
 
   fn rect(x: f64, y: f64, width: f64, height: f64) -> PreviewSurfaceRect {
     PreviewSurfaceRect {
@@ -202,7 +200,7 @@ mod tests {
     assert_eq!(panel.width, base.width);
     assert_eq!(panel.x + panel.width / 2.0, 340.0);
     assert!(panel.x + panel.width > 680.0);
-    let reset = screenwide_workspace_panel_fit(1000.0, 600.0, 50.0, 50.0, 900.0, 500.0, 0.0);
+    let reset = panel_fit(1000.0, 600.0, 50.0, 50.0, 900.0, 500.0, 0.0);
     let shown = reset.apply(viewport, base);
     assert_eq!((shown.x, shown.width, reset.zoom), (50.0, 900.0, 1.0));
   }
@@ -231,10 +229,10 @@ mod tests {
   #[test]
   fn invalid_fit_inputs_are_identity_and_do_not_panic() {
     for width in [0.0, -1.0, f64::NAN, f64::INFINITY] {
-      let fit = screenwide_workspace_panel_fit(1000.0, 600.0, 0.0, 0.0, 900.0, 500.0, width);
+      let fit = panel_fit(1000.0, 600.0, 0.0, 0.0, 900.0, 500.0, width);
       assert_eq!((fit.zoom, fit.pan_x, fit.pan_y), (1.0, 0.0, 0.0));
     }
-    let fit = screenwide_workspace_panel_fit(-1.0, 600.0, 0.0, 0.0, 900.0, 500.0, 680.0);
+    let fit = panel_fit(-1.0, 600.0, 0.0, 0.0, 900.0, 500.0, 680.0);
     assert_eq!(fit.zoom, 1.0);
   }
 

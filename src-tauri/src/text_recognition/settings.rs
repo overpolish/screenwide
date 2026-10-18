@@ -173,11 +173,5 @@ pub(crate) fn key_phase(key: u16, modifiers: u32, mac: bool, repeat: bool) -> Op
     .phase(key, modifiers, mac, repeat)
 }
 
-#[cfg(target_os = "macos")]
-#[no_mangle]
-pub extern "C" fn screenwide_ocr_key_phase(key: u16, modifiers: u32, repeat: bool) -> u32 {
-  key_phase(key, modifiers, true, repeat).unwrap_or(0)
-}
-
 #[cfg(test)]
 mod tests;

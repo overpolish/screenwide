@@ -24,13 +24,21 @@ mod export_output;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod frame_annotations;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+mod frame_clock;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod frame_draw;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod frame_scene;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod progress_pace;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod project_benchmark_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod video_tests;
 #[cfg(target_os = "windows")]
-pub mod windows;
+mod windows;
 #[cfg(target_os = "macos")]
 use self::macos::platform;
 #[cfg(target_os = "windows")]
@@ -40,7 +48,7 @@ mod platform_unsupported;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use self::platform_unsupported as platform;
 
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 pub struct CursorExportRequest<'a> {
   pub annotation_track: screenwide_annotations::timing::AnnotationTrack,
   pub audio_layout: AudioLayout,
@@ -61,10 +69,6 @@ pub struct CursorExportRequest<'a> {
   pub on_progress: &'a mut dyn FnMut(u64),
   pub screen: &'a Path,
   pub selection: &'a TrackSelection,
-  /// The preview surface a Windows export composites on, looked up when
-  /// the export starts drawing.
-  #[cfg(target_os = "windows")]
-  pub surface: fn() -> Result<std::sync::Arc<dyn windows::export_surface::ExportSurface>, String>,
   pub timeline: Option<&'a screenwide_timeline_edit::TimelinePlan>,
   pub output: &'a ScreenshotOutputSettings,
   pub video: VideoExportOptions,

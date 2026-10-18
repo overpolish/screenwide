@@ -131,6 +131,14 @@ pub(crate) fn set_window_capture_affinity(
   platform::set_capture_affinity(window, capturable)
 }
 
+#[cfg(target_os = "macos")]
+pub(crate) fn set_window_capture_affinity(
+  window: &WebviewWindow,
+  capturable: bool,
+) -> tauri::Result<()> {
+  super::platform::set_window_capture_affinity(window, capturable)
+}
+
 #[cfg(all(test, target_os = "windows"))]
 mod tests {
   use super::{is_capturing, mark_capturing, window_capturable, Capture};

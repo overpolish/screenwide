@@ -51,6 +51,7 @@ screenwide-timeline-edit = { path = "crates/timeline_edit" }
 # The transcriber's protocol only; the engine builds into its own program.
 screenwide-transcriber = { path = "transcriber" }
 screenwide-wgsl = { path = "crates/wgsl" }
+screenwide-workspace = { path = "crates/workspace" }
 block2 = "0.6.2"
 bytemuck = { version = "1.25.2", features = ["derive"] }
 cc = "1"
@@ -73,6 +74,7 @@ nokhwa = { version = "0.10.11", default-features = false, features = ["decoding"
 objc2 = "0.6.4"
 objc2-app-kit = "0.3.2"
 objc2-foundation = "0.3.2"
+objc2-quartz-core = "0.3.2"
 png = "0.18.1"
 pollster = "1.0.1"
 quantette = "0.6.0"
@@ -181,6 +183,7 @@ screenwide-keyboard-effects.workspace = true
 screenwide-lexicon.workspace = true
 screenwide-moments.workspace = true
 screenwide-osc.workspace = true
+screenwide-workspace.workspace = true
 screenwide-output.workspace = true
 screenwide-project.workspace = true
 screenwide-records.workspace = true
@@ -272,6 +275,7 @@ dispatch2.workspace = true
 objc2.workspace = true
 objc2-app-kit.workspace = true
 objc2-foundation.workspace = true
+objc2-quartz-core.workspace = true
 plist = "1"
 
 [dev-dependencies]
@@ -300,4 +304,16 @@ opt-level = 3
 opt-level = 3
 
 [profile.dev.package.screenwide-text]
+opt-level = 3
+
+# A pinned annotation is followed through every frame at full size: the
+# export crate reduces each decoded frame to its brightness and the
+# annotations crate matches the pinned region in it. Unoptimized, a pin over
+# a 2.7 second clip of a 1080p recording takes about 21 seconds in a dev build
+# instead of one, and the export preview waits for it. These two crates are
+# optimized in dev builds for that; release builds are unaffected.
+[profile.dev.package.screenwide-annotations]
+opt-level = 3
+
+[profile.dev.package.screenwide-export]
 opt-level = 3

@@ -39,7 +39,6 @@ pub async fn set_recording_preview_composition(
   if *current == next {
     return Ok(());
   }
-  #[cfg(target_os = "windows")]
   let bake_changed = current.bake_camera != bake_camera;
   drop(current);
   *settings
@@ -50,12 +49,10 @@ pub async fn set_recording_preview_composition(
   }
   if !manager.is_playing {
     // A composition change leaves the decoded frame and its cursor valid, so
-    // Windows redraws the paused still synchronously from the cached sources
-    // instead of restarting the decoder; a full reopen per pointer move made
-    // camera drags trail the pointer. A bake toggle keeps the decoder path -
-    // the newly active mode's source cache is absent or stale - and so do
-    // cursor-effect changes, whose composition is stale by definition.
-    #[cfg(target_os = "windows")]
+    // the paused still is redrawn synchronously from the frames the workspace
+    // holds instead of restarting the decoder; a full reopen per pointer move
+    // made camera drags trail the pointer. A bake toggle keeps the decoder
+    // path - the newly active mode's source cache is absent or stale.
     if !bake_changed && manager.redraw_still_now().unwrap_or(false) {
       return Ok(());
     }

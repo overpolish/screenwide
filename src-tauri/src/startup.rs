@@ -38,10 +38,7 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     }
   }
 
-  #[cfg(target_os = "macos")]
-  {
-    editor::initialize_cursor_artwork();
-  }
+  editor::initialize_cursor_artwork();
   #[cfg(desktop)]
   crate::tray::initialize(app)?;
   crate::settings::initialize(app.handle());

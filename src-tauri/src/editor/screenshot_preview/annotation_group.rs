@@ -6,7 +6,6 @@
 //! carry, as it does through any annotation gesture, and the release hands
 //! the whole list back to React as one edit.
 
-use super::super::preview_platform::SelectionGesturePhase;
 use super::annotation_gesture::AnnotationCommit;
 use super::state::PreviewManager;
 use screenwide_annotations::group::{group_bounds, GroupMember, GroupMove};
@@ -15,6 +14,7 @@ use screenwide_annotations::snap::{
   source_per_size, threshold_source_px, SnapField, SnapModifiers, SnapRequest, SnapResult,
 };
 use screenwide_annotations::Annotation;
+use screenwide_workspace::editing::SelectionGesturePhase;
 
 pub(crate) struct GroupDrag {
   pane_index: u32,

@@ -1,0 +1,197 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+use super::*;
+mod cancel;
+mod context_menu;
+mod crop_draw;
+mod down;
+mod framed;
+mod pointer_move;
+mod up;
+mod view_motion;
+
+pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput) {
+  if matches!(
+    input,
+    PointerInput::Down { .. } | PointerInput::PanDown { .. } | PointerInput::ContextMenu { .. }
+  ) {
+    if let Ok(mut callbacks) = inner.callbacks.lock() {
+      if let Some(callback) = callbacks.pointer_down.as_mut() {
+        callback();
+      }
+    }
+  }
+  // Gestures read the modifiers as of the event being handled, so either can
+  // be taken and let go part way through a drag.
+  let modifiers = inner.host.modifiers();
+  let scale = inner.state.lock().ok().map_or(1.0, |mut state| {
+    state.modifiers = modifiers;
+    state.scale.max(0.1)
+  });
+  let logical = |x: f64, y: f64| (x / scale, y / scale);
+  match input {
+    PointerInput::ContextMenu { x, y } => context_menu::open(inner, logical(x, y)),
+    PointerInput::Down {
+      centered,
+      x,
+      y,
+      snapping: _,
+    } => {
+      // While objects are picked in the camera every press is theirs, Alt
+      // removing what it picks.
+      if object_picking::down(inner, logical(x, y), centered) {
+        refresh_cursor_for(inner);
+        return;
+      }
+      // A box being typed into sees the press first: in the box it places the
+      // caret, anywhere else it ends the typing and may carry on below.
+      if annotation::typing_press(inner, turn::layer_point(inner, logical(x, y)), false) {
+        refresh_cursor_for(inner);
+        return;
+      }
+      // The rotation gizmo's rings sit over the layer they turn.
+      if turn::down(inner, logical(x, y)) {
+        return;
+      }
+      // A turned layer's annotations are pressed where its turn draws them.
+      let layer = turn::layer_point(inner, logical(x, y));
+      // A press is never a hover: the halo goes out before anything moves.
+      annotation::update_hover(inner, layer, true);
+      // The arrow chrome gets the press first and keeps it if it lands on a
+      // grip, on a shaft, or on empty picture with the arrow tool in hand.
+      // Anything it declines belongs to the layer underneath.
+      if annotation::down(inner, layer) {
+        if let Ok(mut state) = inner.state.lock() {
+          state.last_pointer = logical(x, y);
+        }
+        refresh_cursor_for(inner);
+        return;
+      }
+      down::down(inner, scale, x, y);
+    }
+    PointerInput::Move {
+      centered,
+      x,
+      y,
+      pressed,
+      snapping,
+    } => {
+      if pressed && turn::pointer_move(inner, logical(x, y)) {
+        return;
+      }
+      if pressed
+        && (object_picking::pointer_move(inner, logical(x, y))
+          || annotation::typing_move(inner, turn::layer_point(inner, logical(x, y))))
+      {
+        return;
+      }
+      if !pressed {
+        turn::hover(inner, logical(x, y));
+      }
+      let layer = turn::layer_point(inner, logical(x, y));
+      annotation::update_hover(inner, layer, pressed);
+      if pressed && annotation::pointer_move(inner, layer) {
+        if let Ok(mut state) = inner.state.lock() {
+          state.last_pointer = logical(x, y);
+        }
+        return;
+      }
+      pointer_move::pointer_move(inner, scale, centered, x, y, pressed, snapping);
+    }
+    PointerInput::PanDown { x, y } => {
+      let point = logical(x, y);
+      if let Ok(mut state) = inner.state.lock() {
+        state.last_pointer = point;
+        // A selection drag already in flight on the primary button keeps
+        // going; the middle button only pans from rest.
+        if state.gesture.is_none() && state.turn.drag.is_none() {
+          state.gesture = Some(ActiveGesture::Pan {
+            pointer_start: point,
+            transform_start: state.workspace_transform,
+          });
+        }
+      }
+      refresh_cursor_for(inner);
+    }
+    PointerInput::PanUp { x, y } => {
+      let point = logical(x, y);
+      if let Ok(mut state) = inner.state.lock() {
+        state.last_pointer = point;
+        if matches!(state.gesture, Some(ActiveGesture::Pan { .. })) {
+          state.gesture = None;
+        }
+        inner
+          .host
+          .set_cursor(cursor_for_state(inner, &state, point));
+      }
+    }
+    PointerInput::Up { x, y } => {
+      if turn::up(inner, logical(x, y)) {
+        return;
+      }
+      if object_picking::up(inner, logical(x, y)) {
+        refresh_cursor_for(inner);
+        return;
+      }
+      let layer = turn::layer_point(inner, logical(x, y));
+      if annotation::typing_up(inner) || annotation::up(inner, layer) {
+        if let Ok(mut state) = inner.state.lock() {
+          state.last_pointer = logical(x, y);
+        }
+        // What now lies under the resting pointer - an annotation just placed
+        // or carried there - is haloed, so it can be deleted without the
+        // pointer moving first; the press had put the halo out.
+        annotation::update_hover(inner, layer, false);
+        refresh_cursor_for(inner);
+        return;
+      }
+      up::up(inner, scale, x, y);
+    }
+    PointerInput::Cancel => {
+      if turn::cancel(inner) {
+        return;
+      }
+      if let Ok(mut state) = inner.state.lock() {
+        annotation::cancel(&mut state);
+      }
+      cancel::cancel(inner);
+    }
+    PointerInput::Wheel { x, y, delta } => {
+      view_motion::zoom_at(inner, logical(x, y), (delta * 0.12).exp());
+    }
+    PointerInput::Magnify { x, y, factor } => view_motion::zoom_at(inner, logical(x, y), factor),
+    PointerInput::Scroll { dx, dy } => view_motion::pan_by(inner, dx, dy),
+    PointerInput::DoubleClick { x, y } => {
+      // A platform reports a double-click in place of its second press. Over
+      // a text box or the caption it opens it for typing, and in what is typed
+      // into it selects a word; only elsewhere does it fit the view.
+      if object_picking::double_click(inner, logical(x, y))
+        || annotation::typing_press(inner, turn::layer_point(inner, logical(x, y)), true)
+        || annotation::open_text(inner, turn::layer_point(inner, logical(x, y)))
+        || annotation::open_caption(
+          inner,
+          logical(x, y),
+          turn::layer_point(inner, logical(x, y)),
+        )
+      {
+        refresh_cursor_for(inner);
+        return;
+      }
+      // Back to the current fit basis: the space beside an open tool panel
+      // while one is up, the whole viewport otherwise.
+      let mut zoom = 1.0;
+      if let Ok(mut state) = inner.state.lock() {
+        let transform = fit_basis_transform(&state);
+        state.workspace_transform = transform;
+        zoom = transform.zoom;
+        apply_workspace_transform(inner, &mut state, false);
+      }
+      emit_transform(inner, zoom);
+    }
+  }
+}
+
+mod frame_resize;
+
+mod selection_move;

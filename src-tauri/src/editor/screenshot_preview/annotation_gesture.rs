@@ -13,7 +13,6 @@
 //! mouse-up hands the finished list back to React to commit into the document
 //! and its history.
 
-use super::super::preview_platform::SelectionGesturePhase;
 use super::state::PreviewManager;
 use screenwide_annotations::edit::AnnotationEdit;
 use screenwide_annotations::gesture::{drawing_kind, AnnotationGestureTarget};
@@ -23,6 +22,7 @@ use screenwide_annotations::snap::{
   SnapResult,
 };
 use screenwide_annotations::Annotation;
+use screenwide_workspace::editing::SelectionGesturePhase;
 
 /// The list React is asked to commit when a gesture ends, or as a text box is
 /// typed into: `text_edit` says where in the typing it falls.

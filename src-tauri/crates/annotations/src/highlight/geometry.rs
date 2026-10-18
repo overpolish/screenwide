@@ -66,7 +66,6 @@ pub struct HighlightFlow {
   pub(crate) block: [f32; 2],
 }
 
-#[cfg(target_os = "windows")]
 impl HighlightFlow {
   /// Where the grip at the selection's start sits: the first band's left
   /// end, half way down it.

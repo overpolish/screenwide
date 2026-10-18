@@ -37,7 +37,7 @@ pub(super) fn ignore_pointer(
     return false;
   }
   if active_input(state) == Some(InputKind::Mouse) {
-    end_session(app, state, true);
+    end_session(app, true);
   }
   true
 }

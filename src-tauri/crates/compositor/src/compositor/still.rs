@@ -27,8 +27,8 @@ pub struct StillCamera<'a> {
 /// What one still draws besides the picture and its annotations.
 pub struct StillInputs<'a> {
   pub seconds: f64,
-  /// The cursor, and the artwork its styles are drawn with.
-  pub cursor: Option<(GpuCursor, &'a [CursorArtwork<'a>])>,
+  /// The cursor, placed on the canvas.
+  pub cursor: Option<GpuCursor>,
   pub camera: Option<StillCamera<'a>>,
   pub keyboard: Option<KeyboardOverlay>,
   pub foreground_only: bool,
@@ -39,9 +39,8 @@ pub struct StillInputs<'a> {
 
 /// Every still is composed through one compositor, one at a time: its
 /// uniforms and lists are written for each draw before it is submitted.
-static STILLS: LazyLock<Result<Mutex<Compositor>, String>> = LazyLock::new(|| {
-  Compositor::new(screenwide_gpu::shared()?, NativeCursors::none()).map(Mutex::new)
-});
+static STILLS: LazyLock<Result<Mutex<Compositor>, String>> =
+  LazyLock::new(|| Compositor::new(screenwide_gpu::shared()?).map(Mutex::new));
 
 /// `image` composed on the canvas `settings` describe, as RGBA whose colour
 /// is premultiplied by its alpha.
@@ -50,14 +49,21 @@ pub fn compose_still(
   settings: &ScreenshotOutputSettings,
   inputs: StillInputs<'_>,
 ) -> Result<CapturedImage, String> {
-  let mut compositor = STILLS
+  let compositor = STILLS
     .as_ref()
     .map_err(Clone::clone)?
     .lock()
     .map_err(|_| "The still compositor is unavailable".to_owned())?;
-  if let Some((_, artworks)) = inputs.cursor {
-    compositor.use_cursor_artworks(artworks)?;
-  }
+  compose_still_on(&compositor, image, settings, inputs)
+}
+
+/// [`compose_still`] through `compositor`, which no other draw may be using.
+pub fn compose_still_on(
+  compositor: &Compositor,
+  image: &CapturedImage,
+  settings: &ScreenshotOutputSettings,
+  inputs: StillInputs<'_>,
+) -> Result<CapturedImage, String> {
   let gpu = compositor.gpu();
   let (width, height) = screenwide_output::output_dimensions(settings)?;
   let mut source = compositor.screenshot_source(image)?;
@@ -94,7 +100,82 @@ pub fn compose_still(
     None,
     None,
   )?;
-  let target = gpu.device.create_texture(&wgpu::TextureDescriptor {
+  let target = canvas_target(gpu, (width, height));
+  compositor.draw_with_camera(
+    &target.create_view(&Default::default()),
+    &source,
+    settings,
+    ComposedFrame {
+      cursor: inputs.cursor,
+      keyboard: inputs.keyboard,
+      foreground_only: inputs.foreground_only,
+      seconds: inputs.seconds,
+    },
+    camera
+      .as_ref()
+      .map(|(source, geometry, drop_shadow, on_top)| (source, *geometry, *drop_shadow, *on_top)),
+    None,
+    &prepared,
+  )?;
+  // The canvas's colour is already faded out past its rounded corners; an
+  // opaque canvas keeps full alpha there, as an encoder with no alpha sees it.
+  let opaque = !inputs.transparent_background && !inputs.foreground_only;
+  read_rgba(gpu, &target, opaque)
+}
+
+/// Screenshot items composed onto one canvas, the first with the canvas's
+/// background and the rest laid over it, as the editor shows them. The
+/// canvas keeps its alpha past its rounded corners.
+pub fn compose_layers(
+  layers: &[(&CapturedImage, ScreenshotOutputSettings)],
+) -> Result<CapturedImage, String> {
+  let (_, first) = layers
+    .first()
+    .ok_or_else(|| "The screenshot workspace is empty".to_owned())?;
+  let compositor = STILLS
+    .as_ref()
+    .map_err(Clone::clone)?
+    .lock()
+    .map_err(|_| "The still compositor is unavailable".to_owned())?;
+  let gpu = compositor.gpu();
+  let size = screenwide_output::output_dimensions(first)?;
+  let target = canvas_target(gpu, size);
+  let view = target.create_view(&Default::default());
+  for (index, (image, settings)) in layers.iter().enumerate() {
+    if screenwide_output::output_dimensions(settings)? != size {
+      return Err("The screenshot layers do not share a canvas size".to_owned());
+    }
+    let mut source = compositor.screenshot_source(image)?;
+    source.picture = Some(std::sync::Arc::new((*image).clone()));
+    // The export never carries a halo, nor a caret.
+    let prepared = crate::annotation_gpu::prepared_arrows(
+      &settings.annotations,
+      (image.width, image.height),
+      settings,
+      Some(*image),
+      None,
+      None,
+    )?;
+    compositor.draw_with_camera(
+      &view,
+      &source,
+      settings,
+      ComposedFrame {
+        cursor: None,
+        keyboard: None,
+        foreground_only: index > 0,
+        seconds: 0.0,
+      },
+      None,
+      None,
+      &prepared,
+    )?;
+  }
+  read_rgba(gpu, &target, false)
+}
+
+fn canvas_target(gpu: &Gpu, (width, height): (u32, u32)) -> wgpu::Texture {
+  gpu.device.create_texture(&wgpu::TextureDescriptor {
     label: Some("Screenwide still canvas"),
     size: wgpu::Extent3d {
       width,
@@ -107,27 +188,12 @@ pub fn compose_still(
     format: FORMAT,
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
     view_formats: &[],
-  });
-  compositor.draw_with_camera(
-    &target.create_view(&Default::default()),
-    &source,
-    settings,
-    ComposedFrame {
-      cursor: inputs.cursor.map(|(cursor, _)| cursor),
-      keyboard: inputs.keyboard,
-      foreground_only: inputs.foreground_only,
-      seconds: inputs.seconds,
-    },
-    camera
-      .as_ref()
-      .map(|(source, geometry, drop_shadow, on_top)| (source, *geometry, *drop_shadow, *on_top)),
-    None,
-    &prepared,
-  )?;
-  let mut rgba = gpu.read_texture(&target)?;
-  // The canvas's colour is already faded out past its rounded corners; an
-  // opaque canvas keeps full alpha there, as an encoder with no alpha sees it.
-  let opaque = !inputs.transparent_background && !inputs.foreground_only;
+  })
+}
+
+/// `target`'s BGRA canvas as RGBA, fully opaque where `opaque`.
+fn read_rgba(gpu: &Gpu, target: &wgpu::Texture, opaque: bool) -> Result<CapturedImage, String> {
+  let mut rgba = gpu.read_texture(target)?;
   for pixel in rgba.as_chunks_mut::<4>().0 {
     pixel.swap(0, 2);
     if opaque {
@@ -135,36 +201,8 @@ pub fn compose_still(
     }
   }
   Ok(CapturedImage {
-    width,
-    height,
-    rgba,
-  })
-}
-
-/// `overlay` laid over `base`, both premultiplied RGBA of one size.
-pub fn alpha_composite(
-  base: &CapturedImage,
-  overlay: &CapturedImage,
-) -> Result<CapturedImage, String> {
-  if base.width != overlay.width
-    || base.height != overlay.height
-    || base.rgba.len() != overlay.rgba.len()
-  {
-    return Err("The screenshot layers do not share a canvas size".to_owned());
-  }
-  let mut rgba = vec![0_u8; base.rgba.len()];
-  let (below, _) = base.rgba.as_chunks::<4>();
-  let (above, _) = overlay.rgba.as_chunks::<4>();
-  for ((output, below), above) in rgba.as_chunks_mut::<4>().0.iter_mut().zip(below).zip(above) {
-    let inverse = 1.0 - f32::from(above[3]) / 255.0;
-    for channel in 0..4 {
-      let value = f32::from(above[channel]) / 255.0 + f32::from(below[channel]) / 255.0 * inverse;
-      output[channel] = (value.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
-    }
-  }
-  Ok(CapturedImage {
-    width: base.width,
-    height: base.height,
+    width: target.width(),
+    height: target.height(),
     rgba,
   })
 }

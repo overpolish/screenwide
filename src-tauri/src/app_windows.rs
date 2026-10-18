@@ -48,7 +48,7 @@ pub(crate) use capture_affinity::apply_capture_policy;
 pub(crate) use capture_affinity::exclude_from_capture;
 #[cfg(target_os = "windows")]
 pub(crate) use capture_affinity::is_capturing;
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use capture_affinity::set_window_capture_affinity;
 #[cfg(target_os = "windows")]
 pub use capture_affinity::sync_capture_affinity;

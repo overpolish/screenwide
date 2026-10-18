@@ -177,47 +177,16 @@ pub async fn layout_recording_preview_surface(
   if topology_changed {
     surface.clear_workspace_transform_history();
   }
-  #[cfg(target_os = "macos")]
-  let retained_recomposition = if composition_changed && !bake_changed {
-    let active_outputs = panes
-      .iter()
-      .filter(|pane| !bake_camera || pane.index == 0)
-      .map(|pane| {
-        (
-          pane.index,
-          if pane.index == 0 {
-            &recording_output.primary
-          } else {
-            &recording_output.camera
-          },
-        )
-      })
-      .collect::<Vec<_>>();
-    surface.recompose_recording_workspace(
-      &active_outputs,
-      bake_camera.then_some((
-        camera_overlay,
-        recording_output.camera.drop_shadow,
-        screenwide_export::recording_model::CAMERA_IN_FRONT,
-      )),
-    )?
-  } else {
-    false
-  };
-  #[cfg(not(target_os = "macos"))]
-  let retained_recomposition = false;
   let wants_still = (sizes_changed || composition_changed)
     && !manager.is_playing
     && manager.still_decoder.is_some();
   // The decoder can produce its first still before the DOM has supplied a
   // native pane, in which case there is nowhere to present it. Ask for that
   // initial frame again once the first real layout exists. A bake toggle
-  // also asks it: the cached camera frame may show another moment. Windows
-  // redraws every other change, a bake toggle too, from the cached sources.
-  let needs_decoder_still = wants_still
-    && !retained_recomposition
-    && (!cfg!(target_os = "windows") || needs_initial_frame || bake_changed);
-  let redraw_still = cfg!(target_os = "windows") && wants_still && !needs_initial_frame;
+  // also asks it: the cached camera frame may show another moment. Every
+  // other change, a bake toggle too, is redrawn from the cached sources.
+  let needs_decoder_still = wants_still && (needs_initial_frame || bake_changed);
+  let redraw_still = wants_still && !needs_initial_frame;
   // Hold the pane size while a new composed or live frame is on its way.
   let defer_resize = needs_decoder_still || redraw_still || manager.is_playing;
   surface.set_scale(scale);
@@ -234,15 +203,12 @@ pub async fn layout_recording_preview_surface(
   // has to be in place first. The batch coalesces both into one draw, so
   // putting the tool down cannot paint the standing selection with the tool
   // already gone either.
-  #[cfg(target_os = "windows")]
   let layout_batch = (redraw_still || fit_width.is_some()).then(|| surface.present_batch());
-  #[cfg(target_os = "windows")]
   let chrome_batch = surface.present_batch();
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   manager.publish_annotation_handles();
   surface.set_selection_targets(selection_targets.as_deref(), picking);
   surface.set_selection(selection);
-  #[cfg(target_os = "windows")]
   drop(chrome_batch);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor);
@@ -272,17 +238,9 @@ pub async fn layout_recording_preview_surface(
   // pane geometry and the re-composed still cost a single compositor wait.
   // The decoder path keeps the batch closed unless a fit reset must be folded
   // into this layout; its present arrives later and finds the geometry parked.
-  #[cfg(target_os = "macos")]
-  if retained_recomposition {
-    surface.redraw_recording_workspace();
-  }
   surface.finish_layout();
-  #[cfg(target_os = "windows")]
   let redraw_failed = redraw_still && !manager.redraw_layout_still(bake_changed);
-  #[cfg(target_os = "windows")]
   drop(layout_batch);
-  #[cfg(not(target_os = "windows"))]
-  let redraw_failed = redraw_still;
   if needs_decoder_still || redraw_failed {
     if let Some(decoder) = &manager.still_decoder {
       decoder.seek(

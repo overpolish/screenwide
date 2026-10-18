@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#import "osc_gpu_macos.h"
+#import <AppKit/AppKit.h>
 
 NSCursor *screenwide_region_resize_cursor(uint32_t edges) {
   if (@available(macOS 15.0, *)) {

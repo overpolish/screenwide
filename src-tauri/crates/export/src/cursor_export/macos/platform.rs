@@ -18,10 +18,6 @@ use ffi::{
 mod frames;
 use frames::FrameComposer;
 
-mod frame_camera;
-mod frame_captions;
-mod frame_grid;
-mod frame_placement;
 mod frame_source;
 mod mux;
 
@@ -53,8 +49,6 @@ fn gpu_video_path() -> PathBuf {
 /// recording a preview draws, where it draws only that.
 fn render_gpu_video(
   request: &mut CursorExportRequest<'_>,
-  timeline: Option<&macos::native::CursorTimeline>,
-  keyboard_timeline: Option<&macos::native::KeyboardTimeline>,
   (ranges, annotations_within_ms): (&[screenwide_timeline::TimelineRange], Option<[u64; 2]>),
   path: &Path,
   x264: mux::X264Plan,
@@ -64,7 +58,7 @@ fn render_gpu_video(
   let camera = request.camera.map(|(path, _)| c_path(path)).transpose()?;
   let output = c_path(path)?;
   let bitrate = x264.bitrate;
-  let composer = FrameComposer::new(request, timeline, keyboard_timeline, annotations_within_ms)?;
+  let composer = FrameComposer::new(request, annotations_within_ms)?;
   let mut error = vec![0_i8; 2_048];
   let mut context = ExportContext {
     cancelled: request.cancelled,
@@ -119,8 +113,6 @@ fn render_gpu_video(
 }
 
 fn export_gpu(mut request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
-  let timeline = macos::native::evaluate(&request)?;
-  let keyboard_timeline = macos::native::evaluate_keyboard(&request)?;
   let duration_ms = request
     .timeline
     .map_or(request.duration_ms, |timeline| timeline.duration_ms());
@@ -143,14 +135,7 @@ fn export_gpu(mut request: CursorExportRequest<'_>) -> Result<ExportRunResult, S
     let ranges = request
       .timeline
       .map_or_else(Vec::new, |timeline| timeline.ranges().to_vec());
-    let (video_result, stream) = render_gpu_video(
-      &mut request,
-      timeline.as_ref(),
-      keyboard_timeline.as_ref(),
-      (&ranges, None),
-      &video,
-      x264,
-    )?;
+    let (video_result, stream) = render_gpu_video(&mut request, (&ranges, None), &video, x264)?;
     if let Some(stream) = stream {
       // A run left unfinished stops FFmpeg and removes its file as it drops.
       if !matches!(video_result, ExportRunResult::Completed) {
@@ -201,65 +186,3 @@ pub(in super::super) fn export(
     ..request
   })
 }
-
-#[cfg(test)]
-mod annotation_tests;
-#[cfg(test)]
-mod camera_background_video_tests;
-#[cfg(test)]
-mod camera_effect_video_tests;
-#[cfg(test)]
-mod caption_video_tests;
-#[cfg(test)]
-mod counter_tests;
-#[cfg(test)]
-mod cursor_order_tests;
-#[cfg(test)]
-mod cursor_order_video_tests;
-#[cfg(test)]
-mod draw_tests;
-#[cfg(test)]
-mod highlight_tests;
-#[cfg(test)]
-mod image_tests;
-#[cfg(test)]
-mod keyboard_tests;
-#[cfg(test)]
-mod magnify_tests;
-#[cfg(test)]
-mod magnify_video_tests;
-#[cfg(test)]
-mod pinned_annotation_tests;
-#[cfg(test)]
-mod recenter_tests;
-#[cfg(test)]
-mod redact_attack_tests;
-#[cfg(test)]
-mod redact_blur_tests;
-#[cfg(test)]
-mod redact_classic_tests;
-#[cfg(test)]
-mod redact_tests;
-#[cfg(test)]
-mod redact_video_tests;
-#[cfg(test)]
-mod reordered_video_tests;
-#[cfg(test)]
-mod scene_custom_video_tests;
-#[cfg(test)]
-mod scene_layout_video_tests;
-#[cfg(test)]
-mod scene_video_tests;
-#[cfg(test)]
-mod shape_tests;
-#[cfg(test)]
-mod spotlight_tests;
-#[cfg(test)]
-mod spotlight_video_tests;
-#[cfg(test)]
-mod tests;
-#[cfg(test)]
-mod text_tests;
-
-#[cfg(test)]
-mod timed_annotation_tests;

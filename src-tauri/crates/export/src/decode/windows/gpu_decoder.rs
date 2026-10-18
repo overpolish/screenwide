@@ -56,6 +56,9 @@ pub struct GpuVideoReader {
   last_timestamp_ms: u64,
   pending_frame: Option<GpuFrame>,
   pending_sample: Option<IMFSample>,
+  /// Where the file's timeline starts as Media Foundation counts it, in
+  /// 100 ns units, subtracted from every time it reports.
+  origin: i64,
   reader: IMFSourceReader,
   width: u32,
   _device_manager: IMFDXGIDeviceManager,
@@ -133,6 +136,7 @@ impl GpuVideoReader {
       last_timestamp_ms: 0,
       pending_frame: None,
       pending_sample: None,
+      origin: super::origin::origin_100ns(std::path::Path::new(path)),
       reader,
       width,
       _device_manager: device_manager,
@@ -153,7 +157,8 @@ impl GpuVideoReader {
     let position = PROPVARIANT::from(
       i64::try_from(seek_ms)
         .unwrap_or(i64::MAX / HUNDRED_NS_PER_MS)
-        .saturating_mul(HUNDRED_NS_PER_MS),
+        .saturating_mul(HUNDRED_NS_PER_MS)
+        .saturating_add(self.origin),
     );
     win(unsafe { self.reader.SetCurrentPosition(&GUID::zeroed(), &position) })?;
     self.last_frame = None;
@@ -234,9 +239,9 @@ impl GpuVideoReader {
       let Some(sample) = sample else {
         continue;
       };
-      let timestamp_ms = u64::try_from(timestamp.max(0) / HUNDRED_NS_PER_MS).unwrap_or_default();
+      let timestamp_ms = super::origin::milliseconds(timestamp, self.origin);
       let mut frame = sample_texture(&sample, self.width, self.height)?;
-      frame.timestamp_100ns = timestamp.max(0);
+      frame.timestamp_100ns = (timestamp - self.origin).max(0);
       frame.timestamp_ms = timestamp_ms;
       return Ok(Some((frame, sample)));
     }

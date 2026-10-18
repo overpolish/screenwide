@@ -2,17 +2,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The keyboard-shortcut artwork strip: one 20pt-tall run of rounded key caps,
-//! rasterised by the platform once per appearance, density and shortcut, then
-//! uploaded and animated entirely on the GPU. The platform's rasteriser sets
-//! the caps' labels in its own key names and type.
+//! rasterised once per appearance, density and shortcut, then uploaded and
+//! animated entirely on the GPU. The caps are labelled in the platform's key
+//! names, set by its text engine.
 
 mod cache;
+mod raster;
 #[cfg(test)]
 mod tests;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod visible_bounds;
 
-use crate::platform::keyboard_raster::rasterize_keyboard;
+use raster::rasterize_keyboard;
 use screenwide_keyboard_effects::{KeyboardKey, KeyboardOverlay};
 
 const MAX_KEYS: usize = 8;

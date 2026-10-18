@@ -8,16 +8,15 @@
 use screenwide_annotations::timing::RecordingAnnotationClip;
 use tauri::AppHandle;
 
-use super::{platform, sources::sources_with_surface};
+use super::{composed_frame::composed_frame_image, sources::sources_with_surface};
 use screenwide_cursor_effects::CursorEffectSettings;
 use screenwide_export::recording_model::RecordingOutputSettings;
 use screenwide_imaging::CapturedImage;
 use screenwide_keyboard_effects::KeyboardEffectSettings;
 use screenwide_scenes::CameraOverlaySettings;
 
-/// macOS composes this many frames at once: each decodes on its own and the
+/// This many frames are composed at once: each decodes on its own and the
 /// GPU device takes work from any thread.
-#[cfg(target_os = "macos")]
 const WORKERS: usize = 4;
 
 /// One composed frame of the open recording: the preview's settings at
@@ -128,7 +127,7 @@ pub(crate) async fn compose_preview_frames(
           camera,
         );
       }
-      platform::composed_frame_image(
+      composed_frame_image(
         &sources,
         position_ms,
         bake_camera,
@@ -146,7 +145,6 @@ pub(crate) async fn compose_preview_frames(
 
 /// Runs `compose_at` over `positions_ms` on up to [`WORKERS`] threads, each
 /// taking every [`WORKERS`]th position, and returns the frames in order.
-#[cfg(target_os = "macos")]
 fn compose_spread(
   positions_ms: &[u64],
   compose_at: &(dyn Fn(u64) -> Result<CapturedImage, String> + Sync),
@@ -185,19 +183,5 @@ fn compose_spread(
   slots
     .into_iter()
     .map(|slot| slot.ok_or_else(|| "A frame was not composed".to_owned()))
-    .collect()
-}
-
-/// Runs `compose_at` over `positions_ms` one at a time, in order. Windows
-/// composes through the editor window's one shared surface, so frames cannot
-/// be composed in parallel.
-#[cfg(not(target_os = "macos"))]
-fn compose_spread(
-  positions_ms: &[u64],
-  compose_at: &dyn Fn(u64) -> Result<CapturedImage, String>,
-) -> Result<Vec<CapturedImage>, String> {
-  positions_ms
-    .iter()
-    .map(|&position| compose_at(position))
     .collect()
 }

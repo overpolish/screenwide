@@ -12,12 +12,12 @@
 //! changed so far, against the caption as it was opened.
 
 use super::*;
-use crate::editor::preview_platform::AnnotationTextPhase;
 use screenwide_text::captions::{
   caption_changes, editing_style, typed_emphasis, Caption, CaptionEditing, CaptionTrack,
 };
 use screenwide_text::emphasis::follow_edit;
 use screenwide_text::TextStyle;
+use screenwide_workspace::editing::AnnotationTextPhase;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Counts the typings of captions on the picture, so each one's changes are

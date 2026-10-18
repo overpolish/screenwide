@@ -8,16 +8,14 @@ use crate::glide::{
     monitors::{self, Monitor},
     GlideFrame,
   },
-  platform::{
-    cursor,
-    spaces::preview_windows::{self, Preview},
-  },
+  platform::cursor,
+  preview_cards::{self, Preview},
 };
 use core_graphics::geometry::CGPoint;
 use std::path::PathBuf;
 use tauri::AppHandle;
 
-pub(super) struct Selection {
+pub(crate) struct Selection {
   displays: Vec<Monitor>,
   source: usize,
   selected: usize,
@@ -25,7 +23,6 @@ pub(super) struct Selection {
   pub armed: bool,
   icon_path: Option<PathBuf>,
   preview_phase: &'static str,
-  landing_frame: Option<cidre::cg::Rect>,
 }
 
 fn snapshot(app: &AppHandle) -> Vec<Monitor> {
@@ -91,7 +88,6 @@ pub(super) fn capture(app: &AppHandle, point: CGPoint) -> Option<Selection> {
     armed: false,
     icon_path: None,
     preview_phase: "idle",
-    landing_frame: None,
   })
 }
 
@@ -131,24 +127,21 @@ mod arming;
 use arming::publish;
 pub(super) use arming::{arm_preview, claim_armed, current_id, is_armed};
 
-pub(in crate::glide::macos) fn set_icon(app: &AppHandle, id: u64, path: Option<PathBuf>) {
+/// Keeps the icon for the cards the picker shows from now on; the cards up
+/// already take it from `preview_cards::set_icon`.
+pub(in crate::glide::macos) fn set_icon(id: u64, path: Option<PathBuf>) {
   let Some(state) = STATE.get() else {
     return;
   };
-  let active = state.lock().is_ok_and(|mut state| {
-    let Some(selection) = state
+  if let Ok(mut state) = state.lock() {
+    if let Some(selection) = state
       .session
       .as_mut()
       .filter(|session| session.id == id)
       .and_then(|session| session.monitors.as_mut())
-    else {
-      return false;
-    };
-    selection.icon_path = path;
-    selection.active
-  });
-  if active {
-    publish(app, id);
+    {
+      selection.icon_path = path;
+    }
   }
 }
 
@@ -183,54 +176,13 @@ pub(super) fn commit(app: &AppHandle, session: &mut Session) {
     eprintln!("Glide monitor move: selected display is no longer available");
     return;
   };
-  let original = session.original_frame;
   let frame = monitors::carry_frame(
-    GlideFrame {
-      x: original.origin.x,
-      y: original.origin.y,
-      width: original.size.width,
-      height: original.size.height,
-    },
+    session.original_frame,
     selection.displays[selection.source].work,
     destination.work,
   );
-  session.work_origin = (destination.work.x, destination.work.y);
-  session.work_size = (destination.work.width, destination.work.height);
-  if let Some(selection) = session.monitors.as_mut() {
-    selection.landing_frame = Some(cidre::cg::Rect {
-      origin: cidre::cg::Point {
-        x: frame.x,
-        y: frame.y,
-      },
-      size: cidre::cg::Size {
-        width: frame.width,
-        height: frame.height,
-      },
-    });
-  }
+  session.work = destination.work;
   session.moved = true;
   session.returned_to_origin = false;
-  super::super::tween::animate_to(
-    &session.target,
-    cidre::cg::Rect {
-      origin: cidre::cg::Point {
-        x: frame.x,
-        y: frame.y,
-      },
-      size: cidre::cg::Size {
-        width: frame.width,
-        height: frame.height,
-      },
-    },
-    None,
-  );
-}
-
-pub(super) fn landing(session: &Session) -> Option<CGPoint> {
-  let frame = session.monitors.as_ref()?.landing_frame?;
-  Some(cursor::landing_point(
-    session.anchor,
-    session.original_frame,
-    frame,
-  ))
+  crate::glide::core::tween::animate_to(session.target.duplicate(), frame, None);
 }

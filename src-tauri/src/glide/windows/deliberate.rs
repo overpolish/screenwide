@@ -1,20 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Keeps typing and shortcuts out of Glide. A letter control pressed while
-//! someone is typing types instead. Any other key pressed while a control is
-//! held makes a shortcut of it: whatever glide is open is cancelled, and none
-//! opens again until every control is released. The mouse control opens a
-//! glide only once the pointer has travelled with it held.
-
-use std::{
-  collections::HashSet,
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    LazyLock, Mutex, MutexGuard,
-  },
-  time::Instant,
-};
+//! Windows' half of keeping typing and shortcuts out of Glide: virtual-key
+//! codes and the cursor read for the shared guard in
+//! `glide::core::typing_guard`.
 
 use windows::Win32::{
   Foundation::POINT,
@@ -25,26 +14,15 @@ use windows::Win32::{
 };
 
 use super::{key_hook, native_settings, session, spaces, InputKind};
-use crate::glide::core::deliberate::{StartTravel, TypingIntent};
-
-#[derive(Default)]
-struct Typing {
-  intent: TypingIntent,
-  /// Letter controls that went down as typing, until they are released.
-  letters: HashSet<u32>,
-}
-
-static TYPING: LazyLock<Mutex<Typing>> = LazyLock::new(Mutex::default);
-static CHORDED: AtomicBool = AtomicBool::new(false);
-static MOUSE_START: LazyLock<Mutex<StartTravel>> = LazyLock::new(Mutex::default);
+use crate::glide::core::typing_guard::{self as guard, KeyRole};
 
 /// Whether a keyboard hook transition types rather than drives Glide. Such a
 /// key passes on untouched and is never recorded as a held control.
 pub(super) fn types(key: u32, pressed: bool) -> bool {
   if !pressed {
-    return typing().letters.remove(&key);
+    return guard::key_up(key);
   }
-  if is_typing(key) {
+  if guard::is_typing(key) {
     return true;
   }
   let settings = native_settings::snapshot();
@@ -59,45 +37,42 @@ pub(super) fn types(key: u32, pressed: bool) -> bool {
   ]
   .into_iter()
   .find(|control| control.matches(key));
-  let letter = match control {
+  let role = match control {
     // Modifiers neither type nor count as typing; a repeat of a held control
     // keeps the role its first press took.
     Some(control) if control.is_keyboard_modifier() || native_settings::is_down(control) => {
-      return false
+      KeyRole::Ignored
     }
-    Some(_) => true,
-    None if is_modifier_key(key) || key == u32::from(VK_ESCAPE.0) => return false,
-    None => false,
+    Some(_) => KeyRole::Letter,
+    None if is_modifier_key(key) || key == u32::from(VK_ESCAPE.0) => KeyRole::Ignored,
+    None => KeyRole::Other,
   };
-  let pointer = cursor().unwrap_or_default();
-  let now = Instant::now();
-  let mut typing = typing();
-  if letter {
-    // A glide under way owns its controls, the thirds control among them.
-    let gliding = session::active_input().is_some() || spaces::active_input().is_some();
-    if gliding || (!shortcut_held() && typing.intent.claims_control(now, pointer)) {
-      return false;
-    }
-    typing.letters.insert(key);
-  }
-  typing.intent.note_key(now, pointer);
-  drop(typing);
-  if any_control_down() {
-    CHORDED.store(true, Ordering::Release);
+  let gliding = session::active_input().is_some() || spaces::active_input().is_some();
+  let outcome = guard::key_down(
+    key,
+    false,
+    role,
+    shortcut_held(),
+    gliding,
+    any_control_down(),
+    key_hook::suppresses(key),
+    cursor().unwrap_or_default(),
+  );
+  if outcome.shortcut {
     key_hook::post_shortcut();
   }
-  letter
+  outcome.types
 }
 
 /// Whether raw input should leave this key alone: the keyboard hook has
 /// already passed it on as typing.
 pub(super) fn is_typing(key: u32) -> bool {
-  typing().letters.contains(&key)
+  guard::is_typing(key)
 }
 
 pub(super) fn note_click() {
   if let Some(pointer) = cursor() {
-    typing().intent.note_click(pointer);
+    guard::note_click(pointer);
   }
 }
 
@@ -111,17 +86,15 @@ pub(super) fn cancel_for_shortcut() {
 
 /// Whether a shortcut made with a held control still keeps glides closed.
 pub(super) fn blocks_sessions() -> bool {
-  CHORDED.load(Ordering::Acquire)
+  guard::blocks_sessions(any_control_down())
 }
 
 /// Releases what a held control kept: the shortcut latch once every control
 /// is up, and the mouse glide's origin once the mouse control is.
 pub(super) fn tick() {
-  if CHORDED.load(Ordering::Acquire) && !any_control_down() {
-    CHORDED.store(false, Ordering::Release);
-  }
+  guard::blocks_sessions(any_control_down());
   if !native_settings::is_down(native_settings::snapshot().mouse_modifier) {
-    mouse_start().reset();
+    guard::reset_mouse_start();
   }
 }
 
@@ -131,22 +104,15 @@ pub(super) fn begin_mouse() -> bool {
   let Some(pointer) = cursor() else {
     return false;
   };
-  let reached = mouse_start().reached(pointer);
-  let Some((x, y)) = reached else {
-    return false;
-  };
-  let anchor = POINT {
-    x: x as i32,
-    y: y as i32,
-  };
-  let began = super::begin_session_at(InputKind::Mouse, anchor);
-  let mut start = mouse_start();
-  if began {
-    start.reset();
-  } else {
-    start.restart(pointer);
-  }
-  began
+  guard::begin_mouse(pointer, |(x, y)| {
+    super::begin_session_at(
+      InputKind::Mouse,
+      POINT {
+        x: x as i32,
+        y: y as i32,
+      },
+    )
+  })
 }
 
 /// The controls that open a glide while held. Thirds only refines one.
@@ -178,16 +144,4 @@ fn cursor() -> Option<(f64, f64)> {
   unsafe { GetCursorPos(&mut point) }
     .ok()
     .map(|()| (f64::from(point.x), f64::from(point.y)))
-}
-
-fn typing() -> MutexGuard<'static, Typing> {
-  TYPING
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-fn mouse_start() -> MutexGuard<'static, StartTravel> {
-  MOUSE_START
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
 }

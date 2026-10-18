@@ -9,11 +9,8 @@ pub(super) fn output_hotspot(appearance: Appearance) -> (f64, f64) {
     // stands in the system arrow: the recorded hotspot addresses artwork that
     // is not being drawn and is dropped here. The stand-in is anchored by its
     // own hotspot instead, which travels with the artwork rather than the
-    // cursor frame (`custom_gpu_artwork`'s `origin`, cursor_effects/raster.rs),
-    // exactly as the Windows compositor anchors its atlas entries by
-    // `native_cursor_hotspots` (preview_platform/surface_windows
-    // /compositor.rs:118). A zero here puts that origin at the recorded
-    // position.
+    // cursor frame (`custom_gpu_artwork`'s `origin`, cursor_effects/raster.rs).
+    // A zero here puts that origin at the recorded position.
     return (0.0, 0.0);
   }
   (appearance.hotspot_x, appearance.hotspot_y)
