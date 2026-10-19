@@ -6,7 +6,6 @@ mod app_accent;
 mod app_locale;
 mod app_windows;
 mod audio_preview;
-mod camera_frames;
 mod camera_preview;
 mod capture_overlays;
 #[cfg(any(target_os = "macos", target_os = "windows"))]

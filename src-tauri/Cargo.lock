@@ -5488,7 +5488,6 @@ dependencies = [
  "winreg 0.55.0",
  "winvd",
  "xcap",
- "yuv",
 ]
 
 [[package]]
@@ -5552,6 +5551,7 @@ dependencies = [
  "wgpu",
  "windows 0.62.2",
  "xcap",
+ "yuv",
 ]
 
 [[package]]

@@ -99,6 +99,7 @@ wgpu = "30.0.0"
 windows = "0.62.2"
 windows-numerics = "0.3.1"
 xcap = "0.9.8"
+yuv = "0.8.16"
 # Caption template packages, shared as zips: read and written with deflate,
 # which is what every archiver writes.
 zip = { version = "4", default-features = false, features = ["deflate"] }
@@ -149,7 +150,6 @@ rxing = { version = "0.9.2", default-features = false, features = ["decoders", "
 rapidfuzz = "0.5.0"
 rayon.workspace = true
 cpal.workspace = true
-yuv = "0.8.16"
 quantette.workspace = true
 png.workspace = true
 tauri-plugin-dialog = "2.7.2"
@@ -316,4 +316,12 @@ opt-level = 3
 opt-level = 3
 
 [profile.dev.package.screenwide-export]
+opt-level = 3
+
+# Camera frames are converted on the CPU at full size for every frame the
+# camera delivers. Unoptimized, converting one 1080p NV12 frame takes about
+# 70 milliseconds in a dev build instead of about six, so a 30 fps camera
+# records and previews at 12. Optimized in dev builds for that; release builds
+# are unaffected.
+[profile.dev.package.screenwide-capture]
 opt-level = 3

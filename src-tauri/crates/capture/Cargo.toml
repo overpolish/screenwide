@@ -29,6 +29,7 @@ tauri.workspace = true
 tokio.workspace = true
 ts-rs.workspace = true
 wgpu.workspace = true
+yuv.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cidre.workspace = true

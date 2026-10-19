@@ -9,6 +9,8 @@
 pub mod camera_format;
 #[cfg(target_os = "macos")]
 pub mod camera_frame_rate;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub mod camera_frames;
 #[cfg(target_os = "windows")]
 pub mod camera_power_line;
 pub mod capture_geometry;

@@ -22,28 +22,8 @@ pub(super) fn frame_payload(frame: Buffer) -> Result<Vec<u8>, String> {
   let (width, height, frame_data, rgba) = if preserve_mjpeg {
     (source_size.0, source_size.1, frame.buffer().to_vec(), false)
   } else {
-    let decoded = match frame.source_frame_format() {
-      FrameFormat::YUYV => image::RgbaImage::from_raw(
-        source_size.0,
-        source_size.1,
-        crate::camera_frames::yuyv_to_rgba(frame.buffer(), source_size.0, source_size.1)?,
-      )
-      .ok_or_else(|| "The camera preview produced an incomplete image".to_owned())?,
-      _ => frame
-        .decode_image::<RgbAFormat>()
-        .map_err(|error| error.to_string())?,
-    };
-    let decoded = if source_size == target_size {
-      decoded
-    } else {
-      image::imageops::resize(
-        &decoded,
-        target_size.0,
-        target_size.1,
-        image::imageops::FilterType::Triangle,
-      )
-    };
-    (target_size.0, target_size.1, decoded.into_raw(), true)
+    let rgba = screenwide_capture::camera_frames::preview_rgba(&frame, target_size)?;
+    (target_size.0, target_size.1, rgba.into_raw(), true)
   };
   let mut payload = Vec::with_capacity(9 + frame_data.len());
   payload.extend_from_slice(&width.to_le_bytes());

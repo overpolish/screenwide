@@ -14,6 +14,8 @@ mod confidence;
 mod tests;
 
 mod frames;
+mod nv12;
+use confidence::Pixels;
 use frames::{bgra_pixels, camera_frame_clock, report_once, texture};
 
 use std::sync::{
@@ -26,7 +28,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use nokhwa::{
   pixel_format::RgbAFormat,
   query,
-  utils::{ApiBackend, RequestedFormat, RequestedFormatType},
+  utils::{ApiBackend, FrameFormat, RequestedFormat, RequestedFormatType},
   CallbackCamera,
 };
 use rayon::prelude::*;
@@ -137,6 +139,11 @@ pub(super) fn start(
   {
     eprintln!("The camera's power line frequency was not set: {error}");
   }
+  // Media Foundation's NV12 modes are converted on the GPU; anything else
+  // (YUYV, MJPEG) is decoded on the CPU into BGRA.
+  let mut nv12 = (format.format() == FrameFormat::NV12)
+    .then(|| nv12::Nv12Converter::new(&device, spec.width, spec.height, spec.fps, spec.flipped))
+    .transpose()?;
   let confidence = confidence::ConfidenceWorker::spawn(Arc::clone(&monitor))?;
   let confidence_frames = confidence.sender();
   let cancelled = Arc::new(AtomicBool::new(false));
@@ -194,23 +201,31 @@ pub(super) fn start(
           callback_cancelled.store(true, Ordering::Release);
           return;
         }
-        let result = frame
-          .decode_image::<RgbAFormat>()
-          .map_err(|error| error.to_string())
-          .map(|image| image.into_raw())
-          .and_then(|rgba| {
-            let rgba = Arc::new(rgba);
-            if monitor.is_subscribed() {
-              let _ = confidence_frames.try_send(confidence::CameraFrame {
-                flipped: spec.flipped,
-                height: spec.height,
-                rgba: Arc::clone(&rgba),
-                width: spec.width,
-              });
-            }
-            let bgra = bgra_pixels(&rgba, spec.width, spec.height, spec.flipped);
-            texture(&device, spec.width, spec.height, &bgra)
-          });
+        let offer_thumbnail = |pixels: Pixels<'_>| {
+          if monitor.is_subscribed() {
+            let _ = confidence_frames.try_send(confidence::thumbnail(
+              pixels,
+              spec.width,
+              spec.height,
+              spec.flipped,
+            ));
+          }
+        };
+        let result = match (&mut nv12, frame.source_frame_format()) {
+          (Some(converter), FrameFormat::NV12) => {
+            offer_thumbnail(Pixels::Nv12(frame.buffer()));
+            converter.convert(frame.buffer())
+          }
+          _ => frame
+            .decode_image::<RgbAFormat>()
+            .map_err(|error| error.to_string())
+            .and_then(|image| {
+              let rgba = image.into_raw();
+              offer_thumbnail(Pixels::Rgba(&rgba));
+              let bgra = bgra_pixels(&rgba, spec.width, spec.height, spec.flipped);
+              texture(&device, spec.width, spec.height, &bgra)
+            }),
+        };
         match result {
           Ok(texture) => {
             match commands.try_send(Command::Frame(Frame {

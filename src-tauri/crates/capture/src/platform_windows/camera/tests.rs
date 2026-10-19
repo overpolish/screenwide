@@ -24,6 +24,18 @@ fn converts_rgba_to_native_bgra_and_mirrors_when_requested() {
 }
 
 #[test]
+fn mirrors_nv12_without_swapping_chroma_components() {
+  let frame = [
+    1, 2, 3, 4, // luma row 0
+    5, 6, 7, 8, // luma row 1
+    10, 11, 20, 21, // chroma: (U, V) pairs
+  ];
+  let mut mirrored = [0; 12];
+  nv12::mirror_nv12(&frame, &mut mirrored, 4, 2);
+  assert_eq!(mirrored, [4, 3, 2, 1, 8, 7, 6, 5, 20, 21, 10, 11]);
+}
+
+#[test]
 fn native_capture_time_removes_webcam_delivery_latency() {
   let arrived = Instant::now();
   let epoch = Duration::from_secs(10_000);
