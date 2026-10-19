@@ -558,6 +558,7 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
             frame_x: 60.0,
             frame_y: 40.0,
             radius_percent: 10.0,
+            follow_face: false,
           },
           screen_height: 180,
           screen_width: 320,

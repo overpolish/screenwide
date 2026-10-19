@@ -51,6 +51,9 @@ export type EditorSelectionTarget = {
   /** Put the layer back to the framing its source arrived in. */
   reset: () => void;
   selection: ToolPanelLayerSelection;
+  /** Have the camera follow the face, or stop, where the layer is a camera
+   * drawn into the screen's picture. */
+  applyFollowFace?: (follow: boolean) => void;
   /** Turn the layer in depth, a field at a time, where it can be turned. */
   applyRotation?: (rotation: Partial<SceneRotation>) => void;
   /** The camera's effects, where the layer is the camera. */

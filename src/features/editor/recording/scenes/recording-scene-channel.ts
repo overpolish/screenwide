@@ -48,6 +48,9 @@ export type RecordingSceneControls = {
   /** Show the whole screen and camera again, in the preset's own boxes, and
    * the screen upright. */
   resetFraming: () => void;
+  /** Have the camera follow the face, which starts it in the middle of the
+   * camera's box, or stop following it. */
+  setFollowFace: (follow: boolean) => void;
   /** Zoom into the selected pane, or move the part of it shown, a field at a
    * time. */
   setFraming: (framing: Partial<SceneFraming>) => void;
@@ -126,6 +129,9 @@ export function usePublishRecordingScene(
         },
         resetFraming: () => {
           controlsRef.current.resetFraming();
+        },
+        setFollowFace: (follow) => {
+          controlsRef.current.setFollowFace(follow);
         },
         setFraming: (framing) => {
           controlsRef.current.setFraming(framing);

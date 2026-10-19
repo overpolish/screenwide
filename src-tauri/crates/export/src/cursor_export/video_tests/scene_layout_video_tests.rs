@@ -38,6 +38,7 @@ fn export_scene(name: &str, scene: serde_json::Value) -> (PathBuf, PathBuf) {
       frame_x: 560.0,
       frame_y: 297.5,
       radius_percent: 0.0,
+      follow_face: false,
     },
     screen_height: HEIGHT,
     screen_width: WIDTH,

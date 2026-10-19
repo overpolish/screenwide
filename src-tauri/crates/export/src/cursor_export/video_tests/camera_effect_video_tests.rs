@@ -144,6 +144,7 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
           frame_x: f64::from(CAMERA.0),
           frame_y: f64::from(CAMERA.1),
           radius_percent: 0.0,
+          follow_face: false,
         },
         video,
       },

@@ -46,6 +46,12 @@ export const bakedCameraSelectionTarget = ({
     applyDropShadow: (dropShadow) => {
       onRecordingOutputChange?.("camera", { ...cameraOutput, dropShadow });
     },
+    // Following holds the face in the middle of the crop, wherever the
+    // picture sat behind it, so the crop keeps its size, shape and zoom.
+    applyFollowFace: (follow) => {
+      const { followFace: _followFace, ...still } = cameraOverlay;
+      onCameraOverlayChange?.(follow ? { ...still, followFace: true } : still);
+    },
     applyInset: () => {
       // A baked camera is placed in the screen's picture rather than padded
       // against a colour of its own, so it carries no pad.
@@ -66,6 +72,7 @@ export const bakedCameraSelectionTarget = ({
     },
     selection: {
       dropShadow: cameraOutput.dropShadow,
+      followsFace: cameraOverlay.followFace ?? false,
       height: whole(cameraOverlay.frameHeight),
       inset: 0,
       insetMaximum: 0,

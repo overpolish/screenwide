@@ -26,6 +26,8 @@ export type ToolPanelScene = {
   /** The recording's own composition as shares of the canvas, which a full
    * scene keeps. */
   composition: SchematicComposition;
+  /** Whether the scene under the playhead has the camera follow the face. */
+  followsFace: boolean;
   /** What part of the selected pane the scene under the playhead shows, null
    * where there is no scene. */
   framing: SceneFraming | null;

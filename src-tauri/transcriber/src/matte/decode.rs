@@ -10,7 +10,7 @@ use std::path::Path;
 use std::process::{Child, ChildStdout, Command, Stdio};
 use std::sync::mpsc::{self, Receiver};
 
-pub(super) struct Decoder {
+pub(crate) struct Decoder {
   child: Child,
   frames: BufReader<ChildStdout>,
   /// Each frame's time in seconds, told by FFmpeg's `showinfo` filter as it
@@ -21,7 +21,7 @@ pub(super) struct Decoder {
 impl Decoder {
   /// The camera at `camera` from `from_ms` on, scaled to `size`. Its
   /// timestamps are kept as recorded, so a frame's time is the camera's own.
-  pub(super) fn start(
+  pub(crate) fn start(
     ffmpeg: &Path,
     camera: &Path,
     from_ms: u64,
@@ -83,7 +83,7 @@ impl Decoder {
 
   /// Fills `rgb` with the next frame, answering when it shows from in
   /// milliseconds, or nothing at the end of the camera.
-  pub(super) fn next(&mut self, rgb: &mut [u8]) -> Result<Option<f64>, String> {
+  pub(crate) fn next(&mut self, rgb: &mut [u8]) -> Result<Option<f64>, String> {
     if !read_frame(&mut self.frames, rgb)? {
       return Ok(None);
     }

@@ -34,6 +34,7 @@ export const scenePanelHandlers = (
   | "onSceneDelete"
   | "onSceneFramingChange"
   | "onSceneFramingReset"
+  | "onSceneFollowFaceChange"
   | "onScenePanesSwap"
   | "onScenePresetChoose"
   | "onSceneRadiusChange"
@@ -54,6 +55,9 @@ export const scenePanelHandlers = (
   },
   onSceneDelete: () => {
     recordingSceneControls(workspace)?.remove();
+  },
+  onSceneFollowFaceChange: (follow) => {
+    recordingSceneControls(workspace)?.setFollowFace(follow);
   },
   onSceneFramingChange: (framing) => {
     recordingSceneControls(workspace)?.setFraming(framing);

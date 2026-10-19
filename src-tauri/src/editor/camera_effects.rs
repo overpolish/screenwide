@@ -22,6 +22,8 @@
 mod carry;
 pub(crate) mod commands;
 mod edit_saved;
+/// Where the face is over a recording's camera, for the scenes that follow it.
+pub(crate) mod face_tracking;
 mod image;
 pub(crate) mod live;
 mod make;

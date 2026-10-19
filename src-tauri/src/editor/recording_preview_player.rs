@@ -37,6 +37,7 @@ mod processing;
 pub(crate) use processing::{refresh as refresh_processing, PreviewProcessing};
 mod camera_effects;
 mod camera_picking;
+mod face_preview;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod pin_tracks;
 mod platform;
@@ -51,6 +52,7 @@ pub(crate) use camera_effects::{position_ms, set_camera_effects};
 pub(crate) use camera_picking::{
   choose_camera_object, set_camera_picking, CameraPicking, PickedSpan,
 };
+pub(crate) use face_preview::set_face_path;
 pub(crate) use sources::captions::show_captions;
 pub(crate) mod surface_commands;
 mod surface_selection;

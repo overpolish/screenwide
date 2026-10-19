@@ -162,9 +162,17 @@ pub struct RecordingSceneClip {
   pub screen: Option<SceneFraming>,
   /// What part of the camera fills its box. Unset, a full scene keeps the
   /// recording's own camera crop and an arrangement shows the whole camera.
+  /// While the scene follows the face, its focus is where the face sits in
+  /// the box instead: the middle of the picture centres the face.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub camera: Option<SceneFraming>,
+  /// Whether the camera's framing follows the face found in it, so the face
+  /// holds its place in the box however the person moves. Unset, the scene
+  /// does as the camera does outside every scene.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub follow_face: Option<bool>,
   /// Set, a custom scene: the panes sit in these boxes instead of the
   /// preset's, which a reset returns them to.
   #[serde(default, skip_serializing_if = "Option::is_none")]

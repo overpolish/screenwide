@@ -25,6 +25,7 @@ fn rounded_split() -> RecordingSceneClip {
     }),
     rotation: None,
     variant: None,
+    follow_face: None,
     auto: false,
   }
 }
@@ -43,6 +44,7 @@ fn radii(source_ms: u64) -> (f64, f64) {
     frame_x: 1_310.0,
     frame_y: 660.0,
     radius_percent: 50.0,
+    follow_face: false,
   };
   arrange(
     &[rounded_split()],

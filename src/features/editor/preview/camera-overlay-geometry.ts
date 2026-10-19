@@ -50,15 +50,20 @@ export const cameraOverlayGeometry = (
   };
 };
 
-/** Display-only overlay used by the native compositor while camera crop is active. */
+/** Display-only overlay used by the native compositor while camera crop is
+ * active: the whole picture where it sits, still, so the crop window laid
+ * over it picks from what is drawn. A camera that follows the face picks
+ * only its crop's size and shape this way; the face is held in the middle
+ * of the crop once it is made. */
 export const uncroppedCameraPreviewOverlay = (
   screen: RecordingPreviewPane,
   camera: RecordingPreviewPane,
   settings: CameraOverlaySettings,
 ): CameraOverlaySettings => {
   const { camera: image } = cameraOverlayGeometry(screen, camera, settings);
+  const { followFace: _followFace, ...still } = settings;
   return {
-    ...settings,
+    ...still,
     frameHeight: image.height,
     frameWidth: image.width,
     frameX: image.x,

@@ -169,6 +169,7 @@ mod tests {
       frame_x: 700.0,
       frame_y: 325.0,
       radius_percent: 50.0,
+      follow_face: false,
     };
     baked_camera_annotations(
       camera,

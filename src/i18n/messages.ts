@@ -345,6 +345,8 @@ export type Messages = {
   "editor-panels-enhance": null;
   "editor-panels-enhance-working": null;
   "editor-panels-flip": null;
+  "editor-panels-follow-face": null;
+  "editor-panels-follow-face-finding": null;
   "editor-panels-frame": null;
   "editor-panels-image-description": null;
   "editor-panels-inset": null;

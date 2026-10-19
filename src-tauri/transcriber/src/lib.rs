@@ -155,6 +155,20 @@ pub enum Job {
     /// Where the matte with the objects in goes, in the matte's form.
     output: PathBuf,
   },
+  /// Where the face is in a camera recording, a few times a second, written
+  /// to `output` as [`FaceTrack`] and answered with [`Reply::FacesFound`].
+  FindFaces {
+    /// The face detection model file.
+    model: PathBuf,
+    ffmpeg: PathBuf,
+    camera: PathBuf,
+    /// The camera picture's size in pixels.
+    width: u32,
+    height: u32,
+    /// About how long the camera runs, for the progress told.
+    duration_ms: u64,
+    output: PathBuf,
+  },
 }
 
 /// When each camera frame the matte was made from shows: frame `n` of the
@@ -171,6 +185,25 @@ pub struct MatteTimings {
 impl MatteTimings {
   /// Changes whenever a matte made before would be read wrongly now.
   pub const FORMAT: u32 = 5;
+}
+
+/// Where the face is in a camera recording: each frame looked at, by the
+/// camera time it shows from in milliseconds, with the face found there as
+/// its centre across and down and its height, each a share of the picture's,
+/// or nothing where none was found. `aspect` is the picture's width to its
+/// height.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FaceTrack {
+  pub format: u32,
+  pub aspect: f64,
+  pub duration_ms: f64,
+  pub frames: Vec<(f64, Option<[f32; 3]>)>,
+}
+
+impl FaceTrack {
+  /// Changes whenever a track found before would be read wrongly now.
+  pub const FORMAT: u32 = 1;
 }
 
 /// One stretch of the camera to matte, the frames showing from `start_ms`
@@ -262,6 +295,10 @@ pub enum Reply {
   },
   /// The matte with the objects in is written.
   Composed {
+    id: u64,
+  },
+  /// The camera's face track is written.
+  FacesFound {
     id: u64,
   },
   /// How far a long job has got, 0 to 1. Sent any number of times before the

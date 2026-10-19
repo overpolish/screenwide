@@ -25,6 +25,7 @@ export const selectionPanelHandlers = (
   | "onCameraObjectsDownload"
   | "onCameraObjectsPick"
   | "onSelectionDropShadowChange"
+  | "onSelectionFollowFaceChange"
   | "onSelectionInsetChange"
   | "onSelectionPlacementChange"
   | "onSelectionRadiusChange"
@@ -55,6 +56,9 @@ export const selectionPanelHandlers = (
   },
   onSelectionDropShadowChange: (dropShadow) => {
     target?.applyDropShadow(dropShadow);
+  },
+  onSelectionFollowFaceChange: (follow) => {
+    target?.applyFollowFace?.(follow);
   },
   // The pad is the layer's own frame grown past its picture, so it travels
   // with the layer's output the way its size and position do.

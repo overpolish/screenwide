@@ -206,7 +206,13 @@ pub(super) fn sources_with_surface(
   Ok(PlayerSources {
     annotation_clips: Arc::new(RwLock::new(annotation_clips)),
     annotation_ranges: Arc::new(RwLock::new(overlay_ranges.clone())),
-    scenes: super::scene_preview::PreviewScenes::new(scene_clips, overlay_ranges),
+    scenes: super::scene_preview::PreviewScenes::new(
+      scene_clips,
+      overlay_ranges,
+      camera
+        .as_ref()
+        .and_then(|camera| screenwide_export::scenes::face_track::load(&camera.path)),
+    ),
     audio_tracks,
     camera_duration_ms: camera.as_ref().map(|value| value.duration_ms),
     camera_path: camera.as_ref().map(|value| value.path.clone()),

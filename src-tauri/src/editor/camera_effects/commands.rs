@@ -32,7 +32,7 @@ pub struct CameraEffectsProgress {
 }
 
 /// The camera of the recording open in the editor, if it is `artifact_id`.
-pub(super) fn open(app: &AppHandle, artifact_id: u64) -> Result<CameraRecording, String> {
+pub(crate) fn open(app: &AppHandle, artifact_id: u64) -> Result<CameraRecording, String> {
   let state = app.state::<EditorState>();
   let artifact = state
     .recording

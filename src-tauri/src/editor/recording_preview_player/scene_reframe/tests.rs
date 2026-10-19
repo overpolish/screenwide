@@ -15,6 +15,7 @@ fn the_whole_camera_overhangs_a_square_box_from_its_middle() {
     frame_x: 100.0,
     frame_y: 100.0,
     radius_percent: 50.0,
+    follow_face: false,
   };
   show_whole_camera(&mut overlay, (1_920, 1_080));
   assert_eq!(

@@ -12,17 +12,29 @@ use screenwide_scenes::placement::Placement;
 use screenwide_scenes::CameraOverlaySettings;
 
 /// What a frame is arranged from: the composition outside every scene, the
-/// canvas, and the camera picture's aspect where a camera is drawn into it.
+/// canvas, the camera picture's aspect where a camera is drawn into it, and
+/// where the face is in that picture on this frame, where it is known.
 pub(super) struct Base {
+  /// The composition outside every scene, its camera following the face
+  /// where the recording's camera does.
   pub(super) placement: Placement,
   pub(super) canvas: (f64, f64),
   pub(super) camera_aspect: Option<f64>,
+  pub(super) face: Option<(f64, f64)>,
+  /// Whether the recording's camera follows the face, which a scene that
+  /// says nothing of its own does too.
+  pub(super) follows: bool,
+  /// The recording's camera picture where its crop puts it, followed or
+  /// not, and how far that crop zooms into it.
+  own_camera: (f64, f64, f64),
+  own_zoom: f64,
 }
 
 impl Base {
   pub(super) fn of(
     output: &ScreenshotOutputSettings,
     camera: Option<(&CameraOverlaySettings, f64)>,
+    face: Option<(f64, f64)>,
   ) -> Self {
     let overlay = camera.map(|(overlay, _)| *overlay);
     // Where the camera is drawn rather than where its box is stored, so a
@@ -30,6 +42,21 @@ impl Base {
     let frame = camera.map_or(Rect::default(), |(overlay, aspect)| {
       drawn_frame(overlay, aspect)
     });
+    let follows = overlay.is_some_and(|overlay| overlay.follow_face);
+    let own_camera = overlay.map_or((0.0, 0.0, 0.0), |overlay| {
+      (overlay.camera_x, overlay.camera_y, overlay.camera_width)
+    });
+    let own_zoom = camera.map_or(1.0, |(overlay, aspect)| {
+      SceneFraming::of_camera(overlay, aspect).zoom
+    });
+    // Following, the crop keeps its window and its zoom and the face is
+    // held in the middle of it, wherever the picture sat behind it.
+    let drawn_camera = match (camera, face) {
+      (Some((_, aspect)), Some(face)) if follows => SceneFraming::centred(own_zoom)
+        .following(face)
+        .place(frame, aspect),
+      _ => own_camera,
+    };
     Self {
       placement: Placement {
         screen: Rect {
@@ -40,9 +67,7 @@ impl Base {
         },
         image: (output.image_x, output.image_y, output.image_width),
         frame,
-        camera: overlay.map_or((0.0, 0.0, 0.0), |overlay| {
-          (overlay.camera_x, overlay.camera_y, overlay.camera_width)
-        }),
+        camera: drawn_camera,
         radius: (
           output.radius_percent,
           overlay.map_or(0.0, |overlay| overlay.radius_percent),
@@ -53,6 +78,31 @@ impl Base {
       },
       canvas: (f64::from(output.width), f64::from(output.height)),
       camera_aspect: camera.map(|(_, aspect)| aspect),
+      face,
+      follows,
+      own_camera,
+      own_zoom,
+    }
+  }
+
+  /// Whether `clip` has the camera follow the face: as it says, or as the
+  /// recording's camera does where it says nothing.
+  pub(super) fn follows(&self, clip: &RecordingSceneClip) -> bool {
+    clip.follow_face.unwrap_or(self.follows)
+  }
+
+  /// The framing a drag on the camera in `clip` starts from where the clip
+  /// keeps none of its own: the whole picture for an arrangement, and for a
+  /// full scene the recording's crop, which following centres on the face.
+  pub(super) fn unframed(
+    &self,
+    clip: &RecordingSceneClip,
+    overlay: &CameraOverlaySettings,
+  ) -> SceneFraming {
+    match (clip.needs_camera(), self.follows(clip), self.camera_aspect) {
+      (true, _, _) | (false, _, None) => SceneFraming::WHOLE,
+      (false, true, Some(_)) => SceneFraming::centred(self.own_zoom),
+      (false, false, Some(aspect)) => SceneFraming::of_camera(overlay, aspect),
     }
   }
 
@@ -114,9 +164,23 @@ impl Base {
       y - height / 2.0 + (base.image.1 - crop.y) * scale,
       base.image.2 * scale,
     );
+    let follows = self.follows(clip);
+    let followed = |framing: SceneFraming| match self.face.filter(|_| follows) {
+      Some(face) => framing.following(face),
+      None => framing,
+    };
     let camera = match (self.camera_aspect, clip.camera) {
-      (Some(aspect), Some(framing)) => framing.place(frame, aspect),
-      (Some(aspect), None) if clip.needs_camera() => SceneFraming::WHOLE.place(frame, aspect),
+      (Some(aspect), Some(framing)) => followed(framing).place(frame, aspect),
+      (Some(aspect), None) if clip.needs_camera() => {
+        followed(SceneFraming::WHOLE).place(frame, aspect)
+      }
+      // A full scene keeps the recording's own crop, followed or still as
+      // the scene says.
+      (Some(aspect), None) => match (follows, self.follows) {
+        (true, false) => followed(SceneFraming::centred(self.own_zoom)).place(frame, aspect),
+        (false, true) => self.own_camera,
+        _ => base.camera,
+      },
       _ => base.camera,
     };
     let radius = clip.radius.unwrap_or_default();

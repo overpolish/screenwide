@@ -18,4 +18,11 @@ pub struct CameraOverlaySettings {
   pub frame_x: f64,
   pub frame_y: f64,
   pub radius_percent: f64,
+  /// Set where the camera follows the face found in it: the face is held
+  /// in the middle of the crop window at the zoom the crop gives, wherever
+  /// the picture sits behind it, and a scene follows it too unless it says
+  /// otherwise.
+  #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  #[ts(type = "true")]
+  pub follow_face: bool,
 }

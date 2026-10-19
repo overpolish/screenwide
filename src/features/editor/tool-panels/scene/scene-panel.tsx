@@ -17,10 +17,12 @@ import {
   RecordingScenePreset,
   sceneNeedsCamera,
 } from "../../recording/scenes/recording-scenes";
+import { useIsFindingFace } from "../../recording/scenes/use-face-tracking-progress";
 import { EditorKind } from "../../types";
 import { RotationRow } from "../rotation-row";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
+import { SceneActions } from "./scene-actions";
 import { SceneFramingRows } from "./scene-framing-rows";
 import { sceneOffer } from "./scene-offer";
 import { SceneOutputRow } from "./scene-output-row";
@@ -33,9 +35,10 @@ import { SceneVariantRows } from "./scene-variant-rows";
  * The Scene tool's controls: the output first, since it decides what a scene
  * can place, then Custom, the presets and your templates, each drawn as it
  * looks, then the options of the preset under the playhead, or a custom
- * scene's Swap, then for that scene how far it zooms into its selected pane,
- * how round that pane's corners are, which part of it the zoom shows, and,
- * for the screen, how it is turned in depth.
+ * scene's Swap, then for that scene whether the camera follows the face, how
+ * far it zooms into its selected pane, how round that pane's corners are,
+ * which part of it the zoom shows, and, for the screen, how it is turned in
+ * depth.
  * The camera is that pane while it is selected and the scene places it; the
  * screen otherwise. The presets, and the templates that place a camera, are
  * only offered while there is a camera drawn into the screen's video; over a
@@ -48,13 +51,13 @@ import { SceneVariantRows } from "./scene-variant-rows";
  * scene, a press turns the scene under the playhead into that arrangement,
  * Custom keeping its panes where they are for the select tool to move and
  * resize. Auto zoom makes the zooms that follow the cursor again, leaving
- * the scenes you made or edited alone. The actions end the panel: a custom
- * scene kept as a template, the preset's boxes and the whole screen and
- * camera shown again with the screen upright, or the scene taken away.
+ * the scenes you made or edited alone. The actions end the panel, as
+ * `SceneActions` lists them.
  */
 export function ScenePanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
   const { cameraOutput, hasCursorData, isLocked, scene } = snapshot;
+  const isFindingFace = useIsFindingFace();
 
   if (!scene) {
     return (
@@ -204,6 +207,23 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
         </ControlRow>
       ) : null}
 
+      {/* While the camera follows the face, Position below says where the
+          face sits in the camera's box. */}
+      {framing && scene.hasSceneAtPlayhead && scene.framingPane === "camera" ? (
+        <ControlRow title={t("editor-panels-follow-face")}>
+          {(controlProps) => (
+            <Switch
+              {...controlProps}
+              isDisabled={isLocked}
+              isSelected={scene.followsFace}
+              onChange={(follow) => {
+                change({ sceneFollowFace: follow });
+              }}
+            />
+          )}
+        </ControlRow>
+      ) : null}
+
       {framing ? (
         <SceneFramingRows
           framing={framing}
@@ -262,35 +282,17 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
         </ControlRow>
       ) : null}
 
+      {scene.followsFace && isFindingFace ? (
+        <Text variant="footnote">{t("editor-panels-follow-face-finding")}</Text>
+      ) : null}
+
       {scene.hasSceneAtPlayhead ? (
-        <div className="flex justify-end gap-control">
-          {scene.boxes ? (
-            <Button
-              isDisabled={isLocked}
-              onPress={() => {
-                change({ saveSceneTemplate: true });
-              }}
-            >
-              {t("editor-panels-save-template")}
-            </Button>
-          ) : null}
-          <Button
-            isDisabled={isLocked}
-            onPress={() => {
-              change({ resetSceneFraming: true });
-            }}
-          >
-            {t("editor-panels-reset")}
-          </Button>
-          <Button
-            isDisabled={isLocked}
-            onPress={() => {
-              change({ deleteScene: true });
-            }}
-          >
-            {t("editor-panels-delete")}
-          </Button>
-        </div>
+        <SceneActions
+          canRecenter={scene.followsFace && scene.framingPane === "camera"}
+          canSaveTemplate={scene.boxes !== null}
+          change={change}
+          isDisabled={isLocked}
+        />
       ) : null}
     </div>
   );

@@ -26,7 +26,7 @@
 
 mod cleanup;
 mod compose;
-mod decode;
+pub(crate) mod decode;
 mod encode;
 mod in_order;
 mod model;

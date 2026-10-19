@@ -173,6 +173,26 @@ export function recordingSceneEdits({
         }) => clip,
       );
     },
+    // Following starts with the face in the middle of the camera's box at
+    // the zoom the camera has now; a drag or the Position fields then set
+    // how far off the middle it sits. Stopping keeps that framing as it is.
+    // Either way the scene says so itself, whatever the camera does outside
+    // it.
+    setFollowFace: (follow) => {
+      reframeCurrent((clip) => {
+        if (!follow) return { ...clip, followFace: false };
+        const pane = paneOf(clip);
+        const zoom =
+          pane?.pane === "camera"
+            ? pane.framing.zoom
+            : (clip.camera?.zoom ?? 1);
+        return {
+          ...clip,
+          camera: { focusX: 0.5, focusY: 0.5, zoom },
+          followFace: true,
+        };
+      });
+    },
     // The framing is held where the picture still fills its box, so a
     // position typed past the edge lands on the edge.
     setFraming: (framing) => {

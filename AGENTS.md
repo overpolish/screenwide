@@ -53,6 +53,11 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - Layouts mirror in right-to-left languages. Name sides by start and end: `ms-`/`me-`, `ps-`/`pe-`, `start-`/`end-`, `text-start`, `rounded-s`, `border-e`, and `insetInlineStart`-style keys in `style`. `screenwide/logical-direction` flags left and right. Where something must sit on a physical side, say so with an `rtl:` or `ltr:` variant; a sideways `translate-x` needs its `rtl:` twin by hand. Directional icons (arrows, chevrons) flip with `rtl:-scale-x-100`. The timeline, the picture and screen geometry stay left to right: their roots carry `dir="ltr"`, and their files are exempt from the rule in `eslint.config.js`.
 - Names that come from the system or the user (devices, windows, projects, files, moments) take `dir="auto"`, so an English name in a right-to-left window keeps its own order and is cut short at its own end.
 
+## Models
+
+- A model is usable when the licence on its weights permits it. Go by the licence the authors attach to the weights; do not trace the licences of the datasets they were trained on.
+- Weights with no licence of their own take the licence of the repository that publishes them. Weights published with no licence anywhere are not usable.
+
 ## Stories and verification
 
 - Feature windows built on the current primitives live under `Features` and use `FeatureStoryStage`. Unfinished or older windows stay under `Legacy`.

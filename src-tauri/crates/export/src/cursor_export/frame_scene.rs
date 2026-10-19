@@ -9,37 +9,59 @@ use crate::media_preview::{BakedVideoExportOptions, VideoExportOptions};
 use crate::scenes;
 use screenwide_annotations::timing::{covers, video_ms, FrameTime};
 use screenwide_output::ScreenshotOutputSettings;
-use screenwide_scenes::RecordingSceneClip;
+use screenwide_scenes::{FacePath, RecordingSceneClip};
 use screenwide_timeline::TimelineRange;
+use std::sync::Arc;
 
-/// The export's scene clips, and the baked camera they move where there is
-/// one. A scene that places a camera stands idle without one, while a full
-/// scene still frames the screen.
+/// The export's scene clips, the baked camera they move where there is one,
+/// and where the face is over that camera where the camera or a scene
+/// follows it. A scene that places a camera stands idle without one, while a
+/// full scene still frames the screen.
 pub(super) struct ExportScenes {
   camera: Option<BakedVideoExportOptions>,
   clips: Vec<RecordingSceneClip>,
   ranges: Vec<TimelineRange>,
+  face_path: Option<Arc<FacePath>>,
 }
 
 impl ExportScenes {
   pub(super) fn for_request(request: &CursorExportRequest<'_>) -> Self {
+    let clips = request
+      .timeline
+      .map_or_else(Vec::new, |timeline| timeline.scene_clips.clone());
+    let follows = request
+      .camera
+      .is_some_and(|(_, options)| options.overlay.follow_face)
+      || clips.iter().any(|clip| clip.follow_face == Some(true));
     Self {
       camera: request.camera.map(|(_, options)| options),
-      clips: request
-        .timeline
-        .map_or_else(Vec::new, |timeline| timeline.scene_clips.clone()),
       ranges: request
         .timeline
         .map_or(&[][..], |timeline| timeline.ranges())
         .to_vec(),
+      face_path: request
+        .camera
+        .filter(|_| follows)
+        .and_then(|(path, _)| scenes::face_track::load(path)),
+      clips,
     }
+  }
+
+  /// Whether the recording's own camera follows the face, which moves it on
+  /// every frame, outside the scenes too.
+  fn camera_follows(&self) -> bool {
+    self.face_path.is_some()
+      && self
+        .camera
+        .is_some_and(|options| options.overlay.follow_face)
   }
 
   /// The frame `source_ms` into the recording as the scenes arrange it: the
   /// screen's settings on the canvas `output` describes, carrying how far a
   /// scene moved it over the frame's `frame_ms` of source time, and the baked
   /// camera's options measured on that same canvas where there is one. `None`
-  /// outside every scene, where the request's own composition stands.
+  /// outside every scene, where the request's own composition stands, unless
+  /// the camera follows the face there.
   pub(super) fn at(
     &self,
     output: &ScreenshotOutputSettings,
@@ -48,10 +70,11 @@ impl ExportScenes {
   ) -> Option<(ScreenshotOutputSettings, Option<BakedVideoExportOptions>)> {
     let timeline_ms = FrameTime::on(&self.ranges, source_ms).timeline_ms;
     let video_ms = video_ms(&self.ranges);
-    if !self
-      .clips
-      .iter()
-      .any(|clip| covers(video_ms, [clip.start_ms, clip.end_ms], timeline_ms))
+    if !self.camera_follows()
+      && !self
+        .clips
+        .iter()
+        .any(|clip| covers(video_ms, [clip.start_ms, clip.end_ms], timeline_ms))
     {
       return None;
     }
@@ -82,11 +105,10 @@ impl ExportScenes {
       }
     });
     let mut arranged = output.clone();
-    let placed = scenes::arrange(
+    let placed = scenes::arrange_following(
       &self.clips,
       &self.ranges,
-      source_ms,
-      frame_ms,
+      (source_ms, frame_ms),
       &mut arranged,
       camera.as_mut().map(|options| {
         (
@@ -94,7 +116,11 @@ impl ExportScenes {
           (options.camera_width, options.camera_height),
         )
       }),
+      self
+        .face_path
+        .as_ref()
+        .map(|path| path.at(source_ms as f64)),
     );
-    placed.then_some((arranged, camera))
+    (placed || self.camera_follows()).then_some((arranged, camera))
   }
 }

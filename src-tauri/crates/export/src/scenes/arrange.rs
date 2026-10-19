@@ -86,19 +86,40 @@ pub fn arrange(
   output: &mut ScreenshotOutputSettings,
   camera: Option<(&mut CameraOverlaySettings, (u32, u32))>,
 ) -> bool {
-  if clips.is_empty() || !output.has_placement() {
-    return false;
-  }
+  arrange_following(clips, ranges, (source_ms, frame_ms), output, camera, None)
+}
+
+/// [`arrange`], where the camera follows the face at `face`: where the face
+/// is on this frame, as shares of the camera picture. A clip that follows it
+/// centres it in the clip's box, and where the recording's camera follows
+/// it, the camera outside every scene is moved to follow it too, though no
+/// scene placed it. Without `face`, as before the face is found, the camera
+/// is framed as it would be without following.
+pub fn arrange_following(
+  clips: &[RecordingSceneClip],
+  ranges: &[TimelineRange],
+  (source_ms, frame_ms): (u64, f32),
+  output: &mut ScreenshotOutputSettings,
+  camera: Option<(&mut CameraOverlaySettings, (u32, u32))>,
+  face: Option<(f64, f64)>,
+) -> bool {
   let camera = camera.filter(|(_, (width, height))| *width > 0 && *height > 0);
   let base = Base::of(
     output,
     camera
       .as_ref()
       .map(|(overlay, (width, height))| (&**overlay, f64::from(*width) / f64::from(*height))),
+    face,
   );
   let timeline_ms = FrameTime::on(ranges, source_ms).timeline_ms;
   let video_ms = video_ms(ranges);
-  let Some(placed) = placement_at(clips, (timeline_ms, video_ms), &base) else {
+  let placed = (!clips.is_empty() && output.has_placement())
+    .then(|| placement_at(clips, (timeline_ms, video_ms), &base))
+    .flatten();
+  let Some(placed) = placed else {
+    if let Some((overlay, _)) = camera {
+      (overlay.camera_x, overlay.camera_y, overlay.camera_width) = base.placement.camera;
+    }
     return false;
   };
   if frame_ms > 0.0 {
@@ -154,7 +175,7 @@ pub fn camera_target(
     return None;
   }
   let aspect = f64::from(camera.0) / f64::from(camera.1);
-  let base = Base::of(output, Some((overlay, aspect)));
+  let base = Base::of(output, Some((overlay, aspect)), None);
   let index = clips
     .iter()
     .position(|clip| covers(None, [clip.start_ms, clip.end_ms], timeline_ms))?;
@@ -164,12 +185,6 @@ pub fn camera_target(
     return None;
   }
   let frame = target.frame;
-  let framing = clip.camera.unwrap_or_else(|| {
-    if clip.needs_camera() {
-      SceneFraming::WHOLE
-    } else {
-      SceneFraming::of_camera(overlay, aspect)
-    }
-  });
+  let framing = clip.camera.unwrap_or_else(|| base.unframed(clip, overlay));
   Some((index, frame, framing.within(frame, aspect)))
 }

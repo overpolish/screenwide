@@ -14,6 +14,7 @@ import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { AudioSelectionRows } from "./audio-selection-rows";
 import { CameraBackgroundRows, CameraEnhanceRow } from "./camera-effects-rows";
+import { CameraFollowFaceRow } from "./camera-follow-face-row";
 import { CameraObjectRows } from "./camera-object-rows";
 
 /**
@@ -81,6 +82,15 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           objects={selection.cameraEffects.objects}
         />
       ) : null}
+      {selection.followsFace === undefined ? null : (
+        <CameraFollowFaceRow
+          follows={selection.followsFace}
+          isLocked={isLocked}
+          onChange={(follow) => {
+            change({ selectionFollowFace: follow });
+          }}
+        />
+      )}
       {/* `Dimensions` has no disabled state of its own: a save takes the whole
           group out of reach the way the output controls do. */}
       <div className={isLocked ? "pointer-events-none opacity-50" : ""}>

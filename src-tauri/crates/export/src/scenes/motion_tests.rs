@@ -20,6 +20,7 @@ fn overlay() -> CameraOverlaySettings {
     frame_x: 1_310.0,
     frame_y: 660.0,
     radius_percent: 50.0,
+    follow_face: false,
   }
 }
 
@@ -37,6 +38,7 @@ fn screen(source_ms: u64, frame_ms: f32) -> ScreenshotOutputSettings {
     radius: None,
     rotation: None,
     variant: None,
+    follow_face: None,
     auto: false,
   }];
   let mut output = test_output_settings(1_600, 900);

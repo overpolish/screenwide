@@ -394,6 +394,8 @@
       "crates/text/templates/fonts/InstrumentSerif-OFL-1.1.txt": "licenses/InstrumentSerif-OFL-1.1.txt",
       "crates/text/templates/fonts/Montserrat-OFL-1.1.txt": "licenses/Montserrat-OFL-1.1.txt",
       "../FFMPEG.md": "licenses/FFMPEG.md",
+      "assets/BlazeFace-Apache-2.0.txt": "licenses/BlazeFace-Apache-2.0.txt",
+      "assets/blazeface-short-range.onnx": "models/blazeface-short-range.onnx",
       "assets/DeepFilterNet-MIT.txt": "licenses/DeepFilterNet-MIT.txt",
       "assets/Demucs-MIT.txt": "licenses/Demucs-MIT.txt",
       "../LICENSE": "licenses/GPL-3.0.txt",

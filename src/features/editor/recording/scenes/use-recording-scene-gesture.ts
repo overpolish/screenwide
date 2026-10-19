@@ -16,6 +16,7 @@ import {
 import {
   boxEdit,
   framingEdit,
+  keepingFaceSpot,
   PaneName,
   ScenePane,
 } from "./recording-scene-gesture-edits";
@@ -139,6 +140,12 @@ export function useRecordingSceneGesture({
     // The native gesture reports its travel as shares of the canvas.
     const canvas = screenshotOutputDimensions(primaryOutput);
     const isCrop = operation === "cropMove" || operation === "cropResize";
+    // A crop of a camera that follows the face keeps where the face sits.
+    const follows =
+      paneName === "camera" &&
+      (found?.followFace ?? camera?.overlay.followFace ?? false);
+    const keptSpot = (framing: ScenePane["framing"]) =>
+      follows ? keepingFaceSpot(framing, pane.framing) : framing;
     // A custom scene's own boxes are cropped in place, drawn afresh included.
     if (boxes?.[paneName] && (isCrop || operation === "cropDraw")) {
       const anchor = {
@@ -171,7 +178,7 @@ export function useRecordingSceneGesture({
           return {
             ...clip,
             boxes: { ...boxes, [paneName]: cropped.box },
-            [paneName]: cropped.framing,
+            [paneName]: keptSpot(cropped.framing),
           };
         },
         kind: "edit",
@@ -202,16 +209,16 @@ export function useRecordingSceneGesture({
     return {
       clipId,
       clips,
-      edit: (clip, next) => ({
-        ...clip,
-        [paneName]: framingEdit(pane, {
+      edit: (clip, next) => {
+        const framing = framingEdit(pane, {
           delta: {
             x: next.deltaX * canvas.width,
             y: next.deltaY * canvas.height,
           },
           event: next,
-        }),
-      }),
+        });
+        return { ...clip, [paneName]: isCrop ? keptSpot(framing) : framing };
+      },
       kind: "edit",
     };
   };

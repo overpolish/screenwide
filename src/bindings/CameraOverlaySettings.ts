@@ -4,4 +4,11 @@
  * A baked camera's placement, in the screen output's own pixels: the camera
  * image by its centre and width, and the crop window that frames it.
  */
-export type CameraOverlaySettings = { cameraX: number, cameraY: number, cameraWidth: number, frameHeight: number, frameWidth: number, frameX: number, frameY: number, radiusPercent: number, };
+export type CameraOverlaySettings = { cameraX: number, cameraY: number, cameraWidth: number, frameHeight: number, frameWidth: number, frameX: number, frameY: number, radiusPercent: number, 
+/**
+ * Set where the camera follows the face found in it: the face is held
+ * in the middle of the crop window at the zoom the crop gives, wherever
+ * the picture sits behind it, and a scene follows it too unless it says
+ * otherwise.
+ */
+followFace?: true, };

@@ -6,12 +6,15 @@
 //! themselves, and the layouts they take, are `screenwide_scenes`.
 
 pub mod arrange;
+pub mod face_track;
 mod target;
 
-pub use arrange::{arrange, camera_target};
+pub use arrange::{arrange, arrange_following, camera_target};
 
 #[cfg(test)]
 mod custom_tests;
+#[cfg(test)]
+mod follow_tests;
 #[cfg(test)]
 mod framing_tests;
 #[cfg(test)]

@@ -40,6 +40,7 @@ const scene = {
   cameraAspect: 16 / 9,
   canvasAspect: 16 / 9,
   composition: STORY_COMPOSITION,
+  followsFace: false,
   framingPane: "screen",
   hasAutoZooms: false,
   hasCamera: true,
@@ -201,6 +202,27 @@ export const OverPresetWithCamera: Story = {
         preset: "split-two-thirds",
         radius: 50,
         variant: { cameraSize: "two-thirds", swap: true },
+      },
+    });
+  },
+};
+
+/** The camera selected in a scene that follows the face: Follow face is on,
+ * with Recenter to bring the face back to the middle. */
+export const FollowingTheFace: Story = {
+  beforeEach: () => {
+    seed({
+      cameraOutput: "combined",
+      isLocked: false,
+      scene: {
+        ...scene,
+        followsFace: true,
+        framing: { focusX: 0.55, focusY: 0.5, zoom: 2 },
+        framingPane: "camera",
+        hasSceneAtPlayhead: true,
+        preset: "picture-in-picture",
+        radius: 50,
+        variant: {},
       },
     });
   },

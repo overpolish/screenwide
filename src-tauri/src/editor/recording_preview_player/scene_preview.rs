@@ -6,24 +6,31 @@
 
 use super::scene_reframe::{SceneCrop, SceneReframe};
 use super::*;
-use screenwide_export::scenes::arrange;
-use screenwide_scenes::{validate_clips, RecordingSceneClip};
+use screenwide_export::scenes::arrange_following;
+use screenwide_scenes::{validate_clips, FacePath, RecordingSceneClip};
 
 /// The scenes the preview draws: the recording's clips, the timeline they
-/// are timed on, and the pane of the one under the playhead the crop tool is
+/// are timed on, where the face is over the camera for the clips that
+/// follow it, and the pane of the one under the playhead the crop tool is
 /// reframing, drawn unzoomed so the crop window shows what it picks from.
 #[derive(Clone, Default)]
 pub(super) struct PreviewScenes {
   pub(super) clips: Arc<RwLock<Vec<RecordingSceneClip>>>,
   pub(super) ranges: Arc<RwLock<Vec<TimelineRange>>>,
+  pub(super) face_path: Arc<RwLock<Option<Arc<FacePath>>>>,
   pub(super) crop: Arc<RwLock<SceneCrop>>,
 }
 
 impl PreviewScenes {
-  pub(super) fn new(clips: Vec<RecordingSceneClip>, ranges: Vec<TimelineRange>) -> Self {
+  pub(super) fn new(
+    clips: Vec<RecordingSceneClip>,
+    ranges: Vec<TimelineRange>,
+    face_path: Option<Arc<FacePath>>,
+  ) -> Self {
     Self {
       clips: Arc::new(RwLock::new(clips)),
       ranges: Arc::new(RwLock::new(ranges)),
+      face_path: Arc::new(RwLock::new(face_path)),
       crop: Arc::default(),
     }
   }
@@ -44,22 +51,24 @@ impl PreviewScenes {
 /// arranged where it is drawn into the picture, so a scene that places one
 /// stands idle while the camera is its own pane or there is none. `camera` is
 /// the camera's source size; `frame_ms` is how much source time the drawn
-/// frame covers, zero for a still.
+/// frame covers, zero for a still; `face` is where the face is on the frame,
+/// for a scene that follows it.
 pub(super) fn arrange_composition(
   composition: &mut PreviewCompositionSettings,
   clips: &[RecordingSceneClip],
   ranges: &[TimelineRange],
   (source_ms, frame_ms): (u64, f32),
   camera: Option<(u32, u32)>,
+  face: Option<(f64, f64)>,
 ) -> bool {
   let camera = camera.filter(|_| composition.bake_camera);
-  arrange(
+  arrange_following(
     clips,
     ranges,
-    source_ms,
-    frame_ms,
+    (source_ms, frame_ms),
     &mut composition.recording_output.primary,
     camera.map(|size| (&mut composition.camera_overlay, size)),
+    face,
   )
 }
 
@@ -102,6 +111,16 @@ impl PlayerSources {
     let reframe = crop.pane;
     let reframed = super::scene_reframe::reframed_clips(&clips, reframe, timeline_ms);
     let camera = self.camera_source_size();
+    // While the crop tool reframes the camera it is drawn still, the picture
+    // where the webview's crop window expects it; the face is followed again
+    // once the crop is made.
+    let face = self
+      .scenes
+      .face_path
+      .read()
+      .ok()
+      .filter(|_| reframe != Some(SceneReframe::Camera))
+      .and_then(|path| path.as_ref().map(|path| path.at(source_ms as f64)));
     let base = composition.recording_output.primary.clone();
     let placed = arrange_composition(
       composition,
@@ -109,6 +128,7 @@ impl PlayerSources {
       &ranges,
       (source_ms, frame_ms),
       camera,
+      face,
     );
     if placed {
       super::scene_reframe::ease_screen_turn(
@@ -199,9 +219,11 @@ impl PreviewPlayerManager {
 
 /// Hands the preview the recording's scene clips and the timeline they are
 /// timed on, as `playback_ranges` lay it out, redrawing a paused frame that
-/// they change.
+/// they change. Where a scene follows the face before it has been found in
+/// the camera, finding it starts.
 #[tauri::command]
 pub async fn set_recording_preview_scenes(
+  app: tauri::AppHandle,
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   session_id: u64,
   clips: Vec<RecordingSceneClip>,
@@ -218,6 +240,18 @@ pub async fn set_recording_preview_scenes(
     .sources
     .as_ref()
     .ok_or_else(|| "The recording preview player is not open".to_owned())?;
+  let camera_follows = sources
+    .composition_settings
+    .as_ref()
+    .and_then(|settings| {
+      settings
+        .read()
+        .ok()
+        .map(|settings| settings.camera_overlay.follow_face)
+    })
+    .unwrap_or(false);
+  let unfound =
+    sources.awaits_face(camera_follows || clips.iter().any(|clip| clip.follow_face == Some(true)));
   let mut current = sources
     .scenes
     .clips
@@ -228,12 +262,20 @@ pub async fn set_recording_preview_scenes(
     .ranges
     .write()
     .map_err(|_| "The scenes are unavailable".to_owned())?;
-  if *current == clips && *current_ranges == ranges {
-    return Ok(());
-  }
+  let changed = *current != clips || *current_ranges != ranges;
   *current = clips;
   *current_ranges = ranges;
   drop(current);
   drop(current_ranges);
-  manager.redraw_paused_frame()
+  let artifact_id = manager.artifact_id;
+  let redrawn = if changed {
+    manager.redraw_paused_frame()
+  } else {
+    Ok(())
+  };
+  drop(manager);
+  // A project reopened with a scene that follows the face, but no face kept
+  // beside it, finds it again as well as a scene just set to follow.
+  super::face_preview::find_face_when(unfound, app, artifact_id);
+  redrawn
 }

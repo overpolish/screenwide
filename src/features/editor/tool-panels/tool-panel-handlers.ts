@@ -126,6 +126,9 @@ export type ToolPanelHandlers = {
   onSceneCustomize?: () => void;
   /** Delete the scene under the playhead. */
   onSceneDelete?: () => void;
+  /** Have the camera in the scene under the playhead follow the face, or
+   * stop following it. */
+  onSceneFollowFaceChange?: (follow: boolean) => void;
   /** Zoom the scene under the playhead into its selected pane, or move the
    * part of the pane it shows. */
   onSceneFramingChange?: (framing: Partial<SceneFraming>) => void;
@@ -152,6 +155,8 @@ export type ToolPanelHandlers = {
   onSceneVariantChange?: (variant: SceneVariant) => void;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */
   onSelectionDropShadowChange?: (dropShadow: boolean) => void;
+  /** Have the selected camera follow the face, or stop following it. */
+  onSelectionFollowFaceChange?: (follow: boolean) => void;
   /** Pad the selected layer by this many output pixels on each side. */
   onSelectionInsetChange?: (inset: number) => void;
   /** Place the selection at the size and position a field asked for. */

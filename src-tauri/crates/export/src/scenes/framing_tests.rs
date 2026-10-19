@@ -24,6 +24,7 @@ fn recording_overlay() -> CameraOverlaySettings {
     frame_x: 1_310.0,
     frame_y: 660.0,
     radius_percent: 50.0,
+    follow_face: false,
   }
 }
 
@@ -45,6 +46,7 @@ fn clip(preset: RecordingScenePreset, camera: Option<SceneFraming>) -> [Recordin
     radius: None,
     rotation: None,
     variant: None,
+    follow_face: None,
     auto: false,
   }]
 }
@@ -181,6 +183,7 @@ fn a_box_stored_past_the_camera_is_placed_where_the_bake_draws_it() {
     frame_x: 100.0,
     frame_y: 120.0,
     radius_percent: 0.0,
+    follow_face: false,
   };
   let drawn = drawn_frame(&overlay, ASPECT);
   let baked = crate::media_preview::bake_geometry(crate::media_preview::BakedVideoExportOptions {

@@ -305,6 +305,9 @@ editor-panels-output = Output
 editor-panels-output-combined = One video
 editor-panels-output-separate = Separate files
 editor-panels-swap = Swap
+# A switch that keeps the camera's crop on the person's face as they move.
+editor-panels-follow-face = Follow face
+editor-panels-follow-face-finding = Finding your face in the camera.
 editor-panels-zoom = Zoom
 # $pane is the part of the scene being framed: Screen or Camera.
 editor-panels-pane-zoom = { $pane } zoom

@@ -42,6 +42,7 @@ fn clip(preset: RecordingScenePreset) -> RecordingSceneClip {
     radius: None,
     rotation: None,
     variant: None,
+    follow_face: None,
     auto: false,
   }
 }
@@ -62,6 +63,7 @@ fn arranged(
     frame_x: 1_310.0,
     frame_y: 660.0,
     radius_percent: 50.0,
+    follow_face: false,
   };
   arrange(
     &[clip],

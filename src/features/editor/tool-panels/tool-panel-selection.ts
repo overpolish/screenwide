@@ -38,6 +38,9 @@ export type ToolPanelLayerSelection = {
   y: number;
   /** The camera's effects, offered for the camera. */
   cameraEffects?: ToolPanelCameraEffects;
+  /** Whether the camera follows the face, offered for a camera drawn into
+   * the screen's picture. */
+  followsFace?: boolean;
   /** How the layer is turned in depth, where it can be turned: the screen of
    * a recording and a screenshot's layers. */
   rotation?: SceneRotation;

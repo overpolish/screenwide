@@ -7,6 +7,7 @@
 
 mod clean;
 mod engine;
+mod faces;
 mod matte;
 mod restore;
 mod separate;
@@ -145,6 +146,23 @@ fn main() {
             &mut progress,
           )
           .map(|()| Reply::Composed { id }),
+          Job::FindFaces {
+            model,
+            ffmpeg,
+            camera,
+            width,
+            height,
+            duration_ms,
+            output,
+          } => faces::find_faces(
+            (model, ffmpeg),
+            camera,
+            (*width, *height),
+            *duration_ms,
+            output,
+            &mut progress,
+          )
+          .map(|()| Reply::FacesFound { id }),
         };
         result.unwrap_or_else(|message| Reply::Failed { id, message })
       }

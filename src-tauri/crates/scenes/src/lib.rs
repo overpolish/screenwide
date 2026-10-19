@@ -9,6 +9,7 @@
 //! already has. Applying a clip to a frame's output settings is the app's.
 
 mod camera_overlay;
+pub mod face;
 pub mod framing;
 pub mod geometry;
 pub mod model;
@@ -19,6 +20,7 @@ pub mod template;
 pub mod variant;
 
 pub use camera_overlay::CameraOverlaySettings;
+pub use face::{FacePath, FaceSighting};
 pub use framing::SceneFraming;
 pub use model::{validate_clips, RecordingSceneClip, RecordingScenePreset, SceneRadius};
 pub use motion::SceneMotion;

@@ -95,6 +95,9 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.selectionDropShadow !== undefined) {
     on.onSelectionDropShadowChange?.(values.selectionDropShadow);
   }
+  if (values.selectionFollowFace !== undefined) {
+    on.onSelectionFollowFaceChange?.(values.selectionFollowFace);
+  }
   if (values.selectionInset !== undefined) {
     on.onSelectionInsetChange?.(values.selectionInset);
   }
@@ -118,6 +121,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.customizeScene) on.onSceneCustomize?.();
   if (values.sceneFraming !== undefined)
     on.onSceneFramingChange?.(values.sceneFraming);
+  if (values.sceneFollowFace !== undefined)
+    on.onSceneFollowFaceChange?.(values.sceneFollowFace);
   if (values.sceneRadius !== undefined)
     on.onSceneRadiusChange?.(values.sceneRadius);
   if (values.sceneRotation !== undefined)

@@ -83,3 +83,16 @@ export const framingEdit = (
     scale: event.operation === "resize" ? event.scale : 1,
   });
 };
+
+/** A crop's `framing` for a camera that follows the face, with the focus of
+ * the framing it had kept: following, the focus says where the face sits in
+ * the box, which a drag or the Position fields set, and a crop only picks how
+ * much of the picture the box shows and its shape. */
+export const keepingFaceSpot = (
+  framing: SceneFraming,
+  kept: SceneFraming,
+): SceneFraming => ({
+  ...framing,
+  focusX: kept.focusX,
+  focusY: kept.focusY,
+});

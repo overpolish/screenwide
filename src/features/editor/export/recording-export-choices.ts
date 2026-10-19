@@ -113,7 +113,8 @@ export const restoredCameraOverlay = ({
     imageWidth >= screen.width * MIN_OVERLAY_SHARE &&
     frameWidth >= screen.width * MIN_OVERLAY_SHARE &&
     frameHeight >= screen.height * MIN_OVERLAY_SHARE;
-  return valid ? restored : null;
+  if (!valid) return null;
+  return overlay.followFace ? { ...restored, followFace: true } : restored;
 };
 
 /** The remembered share of "Original", where this recording offers it. A

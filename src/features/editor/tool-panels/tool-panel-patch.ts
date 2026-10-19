@@ -153,6 +153,9 @@ export type ToolPanelPatch = Partial<
   savePreset?: BackgroundPreset;
   /** Keep the custom scene under the playhead as a template. */
   saveSceneTemplate?: true;
+  /** Have the camera in the scene under the playhead follow the face, or
+   * stop following it. */
+  sceneFollowFace?: boolean;
   /** Zoom the scene under the playhead into its selected pane, or move the
    * part of the pane it shows, a field at a time. */
   sceneFraming?: Partial<SceneFraming>;
@@ -169,6 +172,9 @@ export type ToolPanelPatch = Partial<
   sceneVariant?: SceneVariant;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */
   selectionDropShadow?: boolean;
+  /** Have the selected camera follow the face, outside every scene and in
+   * each scene that says nothing of its own, or stop following it. */
+  selectionFollowFace?: boolean;
   /** Pad the selected layer by this many output pixels on each side. */
   selectionInset?: number;
   selectionOutput?: SelectionPlacementPatch;

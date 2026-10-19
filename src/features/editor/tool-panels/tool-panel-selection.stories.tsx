@@ -82,6 +82,7 @@ export const SelectionInTurnedScene: Story = {
           camera: { height: 0.22, width: 0.124, x: 0.84, y: 0.72 },
           screen: { height: 0.889, width: 0.8, x: 0.1, y: 0.056 },
         },
+        followsFace: false,
         framing: { focusX: 0.5, focusY: 0.5, zoom: 1.5 },
         framingPane: "screen",
         hasAutoZooms: false,
@@ -141,7 +142,8 @@ export const SelectionCamera: Story = {
 };
 
 /** The same camera drawn into the screen's picture: the overlay is what is
- * placed, so the size is the window it is drawn in and there is no pad. */
+ * placed, so the size is the window it is drawn in and there is no pad. It
+ * can follow the face. */
 export const SelectionBakedCamera: Story = {
   args: { tool: "selection", workspace: "recording" },
   beforeEach: () => {
@@ -152,6 +154,7 @@ export const SelectionBakedCamera: Story = {
       isLocked: false,
       selection: {
         dropShadow: true,
+        followsFace: true,
         height: 506,
         inset: 0,
         insetMaximum: 0,
@@ -170,6 +173,7 @@ export const SelectionBakedCamera: Story = {
 
 const BAKED_CAMERA = {
   dropShadow: false,
+  followsFace: false,
   height: 506,
   inset: 0,
   insetMaximum: 0,

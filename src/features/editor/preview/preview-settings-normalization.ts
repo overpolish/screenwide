@@ -32,6 +32,7 @@ export const normalizedCameraOverlay = (
     frameX: finite(settings.frameX, width * 0.72),
     frameY: finite(settings.frameY, height * 0.03),
     radiusPercent: finite(settings.radiusPercent, 8),
+    ...(settings.followFace ? { followFace: true as const } : {}),
   };
 };
 

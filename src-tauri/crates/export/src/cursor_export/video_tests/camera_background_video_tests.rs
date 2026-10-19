@@ -180,6 +180,7 @@ fn baked_export(directory: &Path, effects: ExportCameraEffects) -> std::path::Pa
           frame_x: f64::from(CAMERA.0),
           frame_y: f64::from(CAMERA.1),
           radius_percent: 0.0,
+          follow_face: false,
         },
         video: VIDEO,
       },

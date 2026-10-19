@@ -7,6 +7,7 @@ use super::*;
 // redraw must not block the main thread's input pump.
 #[tauri::command]
 pub async fn set_recording_preview_composition(
+  app: tauri::AppHandle,
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   bake_camera: bool,
   camera_overlay: CameraOverlaySettings,
@@ -22,6 +23,12 @@ pub async fn set_recording_preview_composition(
     .sources
     .as_ref()
     .ok_or_else(|| "The recording preview player is not open".to_owned())?;
+  // The camera set to follow the face before it is found finds it.
+  super::super::face_preview::find_face_when(
+    sources.awaits_face(camera_overlay.follow_face),
+    app,
+    manager.artifact_id,
+  );
   let mut recording_output = recording_output;
   recording_output.stamp_captures(sources.captures);
   let settings = sources

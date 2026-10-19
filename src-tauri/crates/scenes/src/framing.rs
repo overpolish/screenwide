@@ -106,6 +106,29 @@ impl SceneFraming {
     }
   }
 
+  /// The middle of the picture at `zoom`: where following starts the face.
+  pub const fn centred(zoom: f64) -> Self {
+    Self {
+      focus_x: 0.5,
+      focus_y: 0.5,
+      zoom,
+    }
+  }
+
+  /// This framing following a face centred at `face`, as shares of the
+  /// picture: its focus says where the face sits, the middle of the picture
+  /// putting the face in the middle of the box and any other point setting
+  /// it off by as much. Held where the picture still covers the box when
+  /// placed, so near the picture's edge the face sits as near the middle as
+  /// the picture allows.
+  pub fn following(self, face: (f64, f64)) -> Self {
+    Self {
+      focus_x: face.0 + self.focus_x - 0.5,
+      focus_y: face.1 + self.focus_y - 0.5,
+      zoom: self.zoom,
+    }
+  }
+
   /// The centre and width of a picture of `aspect` that frames `frame` this
   /// way.
   pub fn place(self, frame: Rect, aspect: f64) -> (f64, f64, f64) {

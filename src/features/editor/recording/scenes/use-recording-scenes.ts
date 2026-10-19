@@ -261,6 +261,7 @@ export function useRecordingScenes({
               : null,
             screen: share(crop),
           },
+          followsFace: current?.followFace ?? cameraOverlay.followFace ?? false,
           framing: currentPane?.framing ?? null,
           framingPane: currentPane?.pane ?? "screen",
           hasAutoZooms: clips.some((clip) => clip.auto),

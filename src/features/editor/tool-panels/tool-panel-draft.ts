@@ -5,6 +5,7 @@ import { patchCaptions } from "../recording/captions/recording-captions";
 import { EditorKind } from "../types";
 
 import { SelectionPlacementPatch } from "./selection-placement";
+import { draftedLayer } from "./tool-panel-draft-layer";
 import { ToolPanelPatch } from "./tool-panel-patch";
 import { ToolPanelMicrophone, ToolPanelSnapshot } from "./tool-panel-store";
 
@@ -114,12 +115,14 @@ export function resolveToolPanelSnapshot(
     saveAnnotationColor: _saveAnnotationColor,
     savePreset: _savePreset,
     saveSceneTemplate: _saveSceneTemplate,
+    sceneFollowFace,
     sceneFraming,
     scenePreset,
     sceneRadius,
     sceneRotation,
     sceneVariant,
     selectionDropShadow,
+    selectionFollowFace,
     selectionInset,
     selectionOutput,
     selectionRadius,
@@ -144,42 +147,20 @@ export function resolveToolPanelSnapshot(
     captions:
       snapshot.captions && patchCaptions(snapshot.captions, captions ?? {}),
   };
-  // A dragged inset holds its own value until the editor acknowledges it, so
-  // the knob stays under the pointer rather than snapping back a frame.
-  const placed =
-    resolved.selection?.kind === "audio" ? null : resolved.selection;
-  const held =
-    placed && selectionInset !== undefined
-      ? { ...placed, inset: selectionInset }
-      : placed;
-  const rounded =
-    held && selectionRadius !== undefined
-      ? { ...held, radius: selectionRadius }
-      : held;
-  const shadowed =
-    rounded && selectionDropShadow !== undefined
-      ? { ...rounded, dropShadow: selectionDropShadow }
-      : rounded;
-  // A dialled turn shows at once, as a scene's does.
-  const turned =
-    shadowed?.rotation && selectionRotation
-      ? {
-          ...shadowed,
-          rotation: { ...shadowed.rotation, ...selectionRotation },
-        }
-      : shadowed;
-  // The camera's effects change at once, as the microphone's switches do;
-  // the bars arrive with the editor's answer.
-  const layer =
-    turned?.cameraEffects && cameraEffects
-      ? {
-          ...turned,
-          cameraEffects: { ...turned.cameraEffects, ...cameraEffects },
-        }
-      : turned;
-  // A dragged volume is held the same way: the knob stays where it was let go
-  // of until the editor answers with the level it committed. The microphone
-  // switches flip at once too.
+  const layer = draftedLayer(
+    resolved.selection?.kind === "audio" ? null : resolved.selection,
+    {
+      cameraEffects,
+      selectionDropShadow,
+      selectionFollowFace,
+      selectionInset,
+      selectionRadius,
+      selectionRotation,
+    },
+  );
+  // A dragged volume is held as a dragged inset is: the knob stays where it
+  // was let go of until the editor answers with the level it committed. The
+  // microphone switches flip at once too.
   const audio =
     resolved.selection?.kind === "audio" ? resolved.selection : null;
   const flipping =
@@ -263,12 +244,14 @@ export function resolveToolPanelSnapshot(
     ...(resolved.scene &&
     (scenePreset ||
       sceneFraming ||
+      sceneFollowFace !== undefined ||
       sceneRadius !== undefined ||
       sceneRotation ||
       sceneVariant)
       ? {
           scene: {
             ...resolved.scene,
+            followsFace: sceneFollowFace ?? resolved.scene.followsFace,
             framing:
               resolved.scene.framing && sceneFraming
                 ? { ...resolved.scene.framing, ...sceneFraming }

@@ -60,11 +60,17 @@ export function selectedPaneFraming({
     target.opacity.camera > 0 &&
     (selectsCamera || target.opacity.screen === 0);
   if (reachesCamera) {
+    // A full scene keeps the recording's own crop; following the face, that
+    // crop's zoom with the face in its middle, which is what its framing
+    // then says, as `Base::unframed` reads it natively.
+    const own = cameraFramingOf(camera.overlay, camera.aspect);
     const framing =
       clip.camera ??
       (sceneNeedsCamera(clip)
         ? WHOLE_FRAMING
-        : cameraFramingOf(camera.overlay, camera.aspect));
+        : (clip.followFace ?? camera.overlay.followFace ?? false)
+          ? { focusX: 0.5, focusY: 0.5, zoom: own.zoom }
+          : own);
     return {
       aspect: camera.aspect,
       box: target.frame,
