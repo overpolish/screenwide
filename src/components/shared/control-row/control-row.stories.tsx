@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 
-import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { PillGroup } from "../../base/pill-group/pill-group";
 import { Switch } from "../../base/switch/switch";
 import { HotkeyField } from "../hotkey-field/hotkey-field";
@@ -22,13 +22,7 @@ const meta = {
     title: "Open location after export",
   },
   component: ControlRow,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={64} viewMode={context.viewMode} width={576}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ height: 64, width: 576 })],
   parameters: { layout: "fullscreen" },
   title: "Components/ControlRow",
 } satisfies Meta<typeof ControlRow>;

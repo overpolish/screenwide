@@ -154,6 +154,7 @@ settings-voice-notes-enabled = Voice notes
 settings-voice-notes-enabled-description = Hold a moment's shortcut to record a note.
 settings-voice-notes-microphone = Microphone
 settings-voice-notes-microphone-description = Same as Recording falls back to the system default.
+settings-voice-notes-microphone-level = Microphone level
 settings-voice-notes-same-microphone = Same as Recording
 settings-voice-notes-transcription = Transcription
 # $model is a transcription model's name; $size its download size.

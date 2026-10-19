@@ -3,13 +3,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { AudioMeter } from "../../../audio-inputs/audio-meter";
+import { AudioMeter } from "../../../../components/base/audio-meter/audio-meter";
+import { t } from "../../../../i18n/i18n";
 import { PreparedAudioTrack } from "../../types";
 import { Playhead } from "../scrub-playhead";
 
 import { AudioTrackVolumes, trackGain } from "./audio-level";
 
-/** The meter column's width in CSS pixels; it is the meter's own `width` prop,
+/** The meter column's width in CSS pixels; it is the meter's own `thickness`,
  * named here so the wrapper and the meter can never disagree about it. */
 const METER_WIDTH_PX = 8;
 
@@ -64,12 +65,13 @@ export function TimelineAudioMeter({
     // so it begins beside the first lane.
     <div className="shrink-0 self-start pl-control">
       <AudioMeter
+        aria-label={t("editor-timeline-level")}
         decibels={level}
-        height={height}
         hidePeakTick
+        length={height}
         orientation="vertical"
         peak={peak}
-        width={METER_WIDTH_PX}
+        thickness={METER_WIDTH_PX}
       />
     </div>
   );

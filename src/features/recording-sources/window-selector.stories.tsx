@@ -3,7 +3,7 @@
 
 import { Meta, StoryObj } from "@storybook/react-vite";
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { WindowDetails } from "./types";
 import { WindowSelector } from "./window-selector";
@@ -38,13 +38,12 @@ const meta = {
   },
   component: WindowSelector,
   decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={250} viewMode={context.viewMode} width={500}>
-        <div className="window-surface p-section h-full w-full overflow-hidden">
-          <Story />
-        </div>
-      </FeatureStoryStage>
+    (Story) => (
+      <div className="window-surface p-section h-full w-full overflow-hidden">
+        <Story />
+      </div>
     ),
+    featureStage({ height: 250, width: 500 }),
   ],
   parameters: { layout: "fullscreen" },
   title: "Features/Window Selection",

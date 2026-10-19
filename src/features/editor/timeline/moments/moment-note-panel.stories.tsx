@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
+import { featureStage } from "../../../../storybook/feature-story-stage";
 
 import { MomentNotePanel } from "./moment-note-panel";
 
@@ -28,13 +28,7 @@ const note: PopupPanelNoteContent = {
 const meta = {
   args: { content: note },
   component: MomentNotePanel,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={260}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: 260 })],
   parameters: { layout: "fullscreen" },
   title: "Features/Editor/Moment Note",
 } satisfies Meta<typeof MomentNotePanel>;

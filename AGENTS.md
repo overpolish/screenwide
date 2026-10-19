@@ -18,7 +18,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - `src-tauri/crates`: the Rust workspace's crates, each a layer the app crate (`src-tauri/src`) and the crates above it depend on, never the reverse. New Rust subsystems start as their own crate there, not as a module of the app crate, which wires the crates together: Tauri setup, commands and windows. Test a crate on its own with `cargo test -p <crate>`.
 - `src/index.css`: shared theme tokens and global styles.
 - `src/lib/motion.ts`: shared motion timings and easing.
-- `src/storybook/feature-story-stage.tsx`: standard feature-window story frame.
+- `src/storybook/feature-story-stage.tsx`: `featureStage`, the decorator that frames a feature story at its production size.
 - **Editor** is the editing window and its workspace, in internal names, routes, events, and stories. **Export** means producing or saving finished files.
 - **Annotation** is the only word for a drawn arrow or counter, in identifiers, comments, tests, and user-visible copy. Do not reintroduce "mark" as a synonym. **Annotate** stays the verb form for the live desktop overlay feature and its settings, routes, and commands. `mark` in this repository means the brand mark or a timeline tick marker, and nothing else.
 - Native preview is owned by the native compositor. Browser stories cannot reproduce it; do not add a substitute rendering path just for stories.
@@ -27,6 +27,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 
 - Reuse primitives from `base` and components from `shared`. Inspect their APIs before adding custom controls, sizes, padding, typography, or interaction behaviour.
 - Use the semantic tokens for colours, spacing, radii, and motion. A raw colour or spacing value must not replace an existing token. Use stories under `Features` as reference for current usage; `Legacy` stories show unfinished work.
+- Name a component's colour prop `color`. Use status names (`error`, `success`) only when the colour means that status. Colours that only tell things apart, such as rotation axes, take hue names (`red`, `green`, `blue`) drawn with the status colours, so the app keeps one palette.
 - Use `WindowHeader` for window titles. Its display variant is the default; version text belongs in its actions area and uses the mono font.
 - Window layout owns the inset and header/content gap. Use flex/grid gaps for sibling separation rather than adding spacing inside the header.
 - Use `ScrollArea` for scrolling regions. With `edgeEffect="inset"` it owns its inner padding and provides the recessed content treatment. Settings sections are separated by spacing only: no borders, dividers, or blur.
@@ -39,6 +40,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - Text buttons carry no icon, primary or neutral: dialogs, sheets, Settings, forms, footers, and tool panel actions are text only, as on macOS and Windows. A window toolbar (the Editor titlebar, the recording bar) is the exception: there every text command takes a leading icon, and an action always uses the same icon. Icon-only buttons are unaffected. Exempt are icons that belong to a control or its content rather than decorating a label: `PathField`, `HotkeyField`, `Select`, `NumberField` steppers, source thumbnails, and `ConfirmActionButton`, whose icon signals its armed state.
 - No ellipsis ("…" or "...") in labels, buttons, menu items, or status and loading text. Truncating content that does not fit, such as a shortened file path, may still use one.
 - Preserve keyboard navigation, accessible names, focus behaviour, and disabled states. Reuse the existing Escape-cancellation handling where applicable.
+- Every primitive tells assistive technology what it is and what value it holds: build it on React Aria's hook or component for that role (`useMeter`, `useSlider`, `useSwitch`). A control with no visible label takes a required `aria-label`, and its value text is a translated message. Parts that only decorate (ticks, glyphs, a readout beside an announced value) are `aria-hidden`.
 - Settings uses icon-only `SidebarNav` with tooltips.
 
 ## Translation
@@ -60,8 +62,12 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 
 ## Stories and verification
 
-- Feature windows built on the current primitives live under `Features` and use `FeatureStoryStage`. Unfinished or older windows stay under `Legacy`.
+- Feature windows built on the current primitives live under `Features`. Unfinished or older windows stay under `Legacy`.
+- Frame every feature story with the `featureStage` decorator, so the canvas scrolls instead of squeezing it. A window in `src-tauri/tauri.conf.json` takes `featureStage({ window: "<label>" })`, never copied numbers: a resizable window then fills the canvas down to its minimum size. A window sized at runtime, a Rust-built window or a part of one takes `featureStage({ width, height })`; omit `height` when the content sets it. Pass a function to pick the size from args. Other decorators go before it in the array, so the stage wraps them. A window's root fills its parent, as `WindowShell` does by default, never the viewport (`h-screen`, `w-screen`, `dvh`): in a story the viewport is the canvas, not the window.
 - Keep each story focused on one useful state. Avoid explanatory filler and artificial backgrounds unrelated to the feature. Use safe preview callbacks instead of triggering native saves, updates, or other live actions.
+- Storybook Docs shows a component's JSDoc. A primitive whose name says what it does gets no component JSDoc; notes for whoever edits it go in `//` comments. Prop JSDoc gives the unit or meaning in a few words ("Angle in degrees."), or is omitted when the name says it. Stories take no JSDoc: the story's name says what it shows.
+- Give a `color` or variant prop an `inline-radio` control with its default in `table.defaultValue`, and one story that shows every value side by side, with Controls disabled.
+- Do not add a story that only changes a value Controls already sets, such as a number or text. Interaction states such as disabled keep their own story.
 - Verify in proportion to the change. Use existing meaningful tests; do not add tests that merely repeat implementation details.
 - For UI changes, inspect the relevant story. Native visual behaviour still needs native verification; lint and type checks do not prove appearance.
 - Report unrelated pre-existing failures separately from failures introduced by the change. Do not quietly fix unrelated code to make checks pass.

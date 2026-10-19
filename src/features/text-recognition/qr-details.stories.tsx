@@ -3,7 +3,7 @@
 
 import { type Meta, type StoryObj } from "@storybook/react-vite";
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { QrDetails } from "./qr-details";
 
@@ -21,13 +21,7 @@ const meta = {
     },
   },
   component: QrDetails,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={360} viewMode={context.viewMode} width={480}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ height: 360, width: 480 })],
   parameters: { layout: "fullscreen" },
   title: "Features/QR Details",
 } satisfies Meta<typeof QrDetails>;

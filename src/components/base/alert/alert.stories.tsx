@@ -13,6 +13,7 @@ const colors: ComponentProps<typeof Alert>["color"][] = ["neutral", "error"];
 
 const meta = {
   argTypes: {
+    children: { control: "text" },
     color: {
       control: "inline-radio",
       options: colors,
@@ -25,7 +26,7 @@ const meta = {
   },
   component: Alert,
   parameters: {
-    controls: { exclude: ["action", "children", "className", "icon"] },
+    controls: { exclude: ["action", "className", "icon"] },
     layout: "centered",
   },
   title: "Primitives/Alert",
@@ -44,21 +45,6 @@ export const Default: Story = {
   ],
 };
 
-export const Paragraph: Story = {
-  args: {
-    children:
-      "Screenwide could not access this recording source. Check that the source is still available, then try selecting it again.",
-  },
-  decorators: [
-    (Story) => (
-      <div className="w-80">
-        <Story />
-      </div>
-    ),
-  ],
-};
-
-/** A notice the user can answer, such as undoing what it reports. */
 export const WithAction: Story = {
   args: {
     action: <Button variant="ghost">Undo</Button>,

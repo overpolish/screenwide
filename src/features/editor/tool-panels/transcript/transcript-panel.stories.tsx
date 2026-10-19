@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
+import { featureStage } from "../../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../../popup-panel/layout";
 import {
   createRecordingTimelineEdit,
@@ -42,13 +42,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={toolPanelWidth}>
-        <ToolPanelSurface>
-          <Story />
-        </ToolPanelSurface>
-      </FeatureStoryStage>
+    (Story) => (
+      <ToolPanelSurface>
+        <Story />
+      </ToolPanelSurface>
     ),
+    featureStage({ width: toolPanelWidth }),
   ],
   parameters: { layout: "fullscreen" },
   title: "Features/Editor/Tool Panel/Transcript",

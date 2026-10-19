@@ -124,6 +124,8 @@ export type Messages = {
   "background-solid-yellow": null;
   "background-type": null;
   "background-type-label": null;
+  "controls-audio-meter-silent": null;
+  "controls-audio-meter-value": { decibels: string | number };
   "controls-clear-selection": null;
   "controls-decrement": null;
   "controls-dimensions": null;
@@ -592,6 +594,7 @@ export type Messages = {
     time: string | number;
   };
   "editor-timeline-label": null;
+  "editor-timeline-level": null;
   "editor-timeline-microphone": null;
   "editor-timeline-no-model": null;
   "editor-timeline-no-speech": null;
@@ -824,6 +827,7 @@ export type Messages = {
   "recording-controls-flip": null;
   "recording-controls-measuring-size": null;
   "recording-controls-microphone": null;
+  "recording-controls-microphone-level": null;
   "recording-controls-microphone-missing": null;
   "recording-controls-mode": null;
   "recording-controls-mode-audio": null;
@@ -854,6 +858,7 @@ export type Messages = {
   "recording-controls-starting-label": null;
   "recording-controls-stop": null;
   "recording-controls-system-audio": null;
+  "recording-controls-system-audio-level": null;
   "recording-controls-system-audio-picker": null;
   "recording-inputs-all-audio": null;
   "recording-sources-displays": null;
@@ -1024,6 +1029,7 @@ export type Messages = {
   "settings-voice-notes-microphone": null;
   "settings-voice-notes-microphone-denied": null;
   "settings-voice-notes-microphone-description": null;
+  "settings-voice-notes-microphone-level": null;
   "settings-voice-notes-needs-model": {
     model: string | number;
     size: string | number;

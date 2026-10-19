@@ -4,7 +4,7 @@
 import { type Meta, type StoryObj } from "@storybook/react-vite";
 
 import { displayThumbnail } from "../../../storybook/display-thumbnail";
-import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { seedRecordingInputDevices } from "../../../storybook/recording-input-fixtures";
 import { MonitorDetails, WindowDetails } from "../../recording-sources/types";
 import { ReplaySnapshot } from "../types";
@@ -60,16 +60,13 @@ const meta = {
   },
   component: RecordingBar,
   decorators: [
-    (Story, context) => {
+    (Story) => {
       // Storybook's Tauri stub lists no devices, so the inputs would all
       // read as absent; the store is seeded with a typical Mac's instead.
       seedRecordingInputDevices();
-      return (
-        <FeatureStoryStage height={56} viewMode={context.viewMode} width={891}>
-          <Story />
-        </FeatureStoryStage>
-      );
+      return <Story />;
     },
+    featureStage({ height: 56, width: 891 }),
   ],
   parameters: {
     layout: "fullscreen",

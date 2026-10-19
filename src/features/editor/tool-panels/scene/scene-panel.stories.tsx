@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
+import { featureStage } from "../../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../../popup-panel/layout";
 import { ToolPanel } from "../tool-panel";
 import { seedToolPanel } from "../tool-panel-story-seed";
@@ -13,13 +13,7 @@ const seed = seedToolPanel;
 const meta = {
   args: { tool: "scene", workspace: "recording" },
   component: ToolPanel,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={toolPanelWidth}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: toolPanelWidth })],
   parameters: { layout: "fullscreen" },
   title: "Features/Editor/Tool Panel/Scene",
 } satisfies Meta<typeof ToolPanel>;

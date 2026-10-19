@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
+import { featureStage } from "../../../../storybook/feature-story-stage";
 
 import { ExportPreviewCompare } from "./export-preview-compare";
 import { storyFrames } from "./export-preview-story-fixtures";
@@ -19,13 +19,7 @@ const meta = {
     original: frames.original,
   },
   component: ExportPreviewCompare,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={470} viewMode={context.viewMode} width={416}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ height: 470, width: 416 })],
   parameters: { layout: "fullscreen" },
   title: "Features/Editor/Export Preview",
 } satisfies Meta<typeof ExportPreviewCompare>;

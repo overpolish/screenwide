@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { Alert } from "./alert";
 
@@ -15,13 +15,7 @@ const meta = {
     title: "Recording could not start",
   },
   component: Alert,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={420}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: 420 })],
   parameters: { layout: "fullscreen" },
   title: "Features/Alert",
 } satisfies Meta<typeof Alert>;

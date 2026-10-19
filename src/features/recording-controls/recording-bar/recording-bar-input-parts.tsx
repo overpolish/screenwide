@@ -4,8 +4,8 @@
 import { Lock, TriangleAlert } from "lucide-react";
 import { ReactNode } from "react";
 
+import { AudioMeter } from "../../../components/base/audio-meter/audio-meter";
 import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
-import { AudioMeter } from "../../audio-inputs/audio-meter";
 
 /** An input's corner badge: a warning when it cannot be recorded, which wins
  * over the lock of a missing permission. `warning` is set only while the
@@ -36,15 +36,19 @@ export const warnedToggle = (warning: string | undefined) =>
  * shape in both states. A vertical meter in the glyph's place read as a
  * divider whenever the input was quiet.
  */
-export const inputMeter = (isOn: boolean, decibels: number, peak: number) => (
+export const inputMeter = (
+  label: string,
+  isOn: boolean,
+  { decibels, peak }: { decibels: number; peak: number },
+) => (
   <AudioMeter
+    aria-label={label}
     decibels={decibels}
     disabled={!isOn}
-    height={3}
     hidePeakTick
     hideTicks
     peak={peak}
     radius={1.5}
-    width="100%"
+    thickness={3}
   />
 );

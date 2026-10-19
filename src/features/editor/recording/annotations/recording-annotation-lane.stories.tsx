@@ -4,7 +4,7 @@
 import { useState } from "react";
 
 import { Text } from "../../../../components/base/text/text";
-import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
+import { featureStage } from "../../../../storybook/feature-story-stage";
 import { Annotation } from "../../annotations/annotations";
 import { formatDuration } from "../../duration";
 import { createRecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
@@ -127,13 +127,7 @@ function Preview() {
 
 const meta = {
   component: Preview,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={760}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: 760 })],
   parameters: { layout: "centered" },
   title: "Features/Editor/Recording Annotation Lane",
 } satisfies Meta<typeof Preview>;

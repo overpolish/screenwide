@@ -199,7 +199,7 @@ export function EditorPanel({
     <PreviewFitProvider>
       <EditorToolbarProvider>
         <WindowShell
-          className="relative h-screen w-screen"
+          className="relative"
           header={
             <EditorTitlebar
               artifact={artifact}

@@ -7,6 +7,7 @@ import {
   type StoryObj,
 } from "@storybook/react-vite";
 
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { EditorArtifact } from "../types";
 
 import { EditorPanel } from "./editor-panel";
@@ -111,7 +112,15 @@ const meta = {
     screenshotOutput: { ...screenshotOutput, items: [] },
   },
   component: EditorPanel,
-  decorators: [withGpuPreviewPlaceholder],
+  decorators: [
+    withGpuPreviewPlaceholder,
+    featureStage(({ args }) => ({
+      window:
+        args.artifact?.kind === "screenshot"
+          ? "editor-screenshot"
+          : "editor-recording",
+    })),
+  ],
   parameters: {
     layout: "fullscreen",
   },

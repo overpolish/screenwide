@@ -5,7 +5,7 @@ import { Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { useState } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
-import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { IconToggleButton } from "../../base/button/icon-button";
 import { ButtonGroup } from "../../base/button-group/button-group";
 
@@ -29,13 +29,12 @@ const meta = {
   },
   component: WindowHeader,
   decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={52} viewMode={context.viewMode} width={672}>
-        <div className="window-surface text-content-fg">
-          <Story />
-        </div>
-      </FeatureStoryStage>
+    (Story) => (
+      <div className="window-surface text-content-fg">
+        <Story />
+      </div>
     ),
+    featureStage({ height: 52, width: 672 }),
   ],
   parameters: { layout: "fullscreen" },
   title: "Components/Window Header",

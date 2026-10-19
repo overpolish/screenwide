@@ -3,7 +3,7 @@
 
 import { use, useState } from "react";
 
-import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { SettingsApiContext } from "../settings-api-context";
 import {
   transcriptionPreviewApi,
@@ -41,13 +41,7 @@ function TranscriptionPreview({ seed }: { seed: TranscriptionPreviewSeed }) {
 const meta = {
   args: { seed: { progress: null, status: "available" } },
   component: TranscriptionPreview,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={520}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: 520 })],
   parameters: { controls: { disable: true }, layout: "fullscreen" },
   title: "Features/Settings/Models",
 } satisfies Meta<typeof TranscriptionPreview>;

@@ -13,13 +13,13 @@ import { ContentRotate } from "../../../components/base/content-rotate/content-r
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
-import { AudioMeter } from "../../audio-inputs/audio-meter";
 import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { formatElapsedTime } from "../elapsed-time";
 import { RecordingStatus } from "../types";
 import { RecordingMonitorSnapshot } from "../use-recording-monitor";
 
 import { RecordingDockElapsed } from "./recording-dock-elapsed";
+import { RecordingDockMeter } from "./recording-dock-meter";
 import { RecordingDockSize } from "./recording-dock-size";
 
 import type { PlacedMoment } from "./use-placed-moment";
@@ -212,28 +212,18 @@ export function RecordingDock({
               {(monitor.hasSystemAudio || monitor.hasMicrophone) && (
                 <div className="flex gap-tight">
                   {monitor.hasSystemAudio && (
-                    <AudioMeter
+                    <RecordingDockMeter
+                      aria-label={t("recording-controls-system-audio-level")}
                       decibels={monitor.systemAudioDecibels}
                       disabled={confidenceDisabled}
-                      height={16}
-                      hidePeakTick
-                      hideTicks
-                      orientation="vertical"
-                      radius={1}
-                      width={2}
                     />
                   )}
                   {monitor.hasMicrophone && (
                     <div className={cn("flex", isRecordingNote && "invisible")}>
-                      <AudioMeter
+                      <RecordingDockMeter
+                        aria-label={t("recording-controls-microphone-level")}
                         decibels={monitor.microphoneDecibels}
                         disabled={confidenceDisabled}
-                        height={16}
-                        hidePeakTick
-                        hideTicks
-                        orientation="vertical"
-                        radius={1}
-                        width={2}
                       />
                     </div>
                   )}

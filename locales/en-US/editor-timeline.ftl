@@ -23,6 +23,8 @@ editor-timeline-audio-visualizer = Audio visualizer
 editor-timeline-segment = Timeline segment { $number }
 editor-timeline-system-audio = System audio
 editor-timeline-microphone = Microphone
+# The meter beside the audio lanes, showing the level under the playhead.
+editor-timeline-level = Audio level
 # An audio track the recording did not name. $number counts from 1.
 editor-timeline-audio-track = Audio { $number }
 

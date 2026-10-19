@@ -3,13 +3,13 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { AudioMeter } from "../../../components/base/audio-meter/audio-meter";
 import { Button } from "../../../components/base/button/button";
 import { GroupBox } from "../../../components/base/group-box/group-box";
 import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { t } from "../../../i18n/i18n";
-import { AudioMeter } from "../../audio-inputs/audio-meter";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
@@ -147,14 +147,14 @@ export function VoiceNoteSettings({
               selectedId={settings.noteMicrophone ?? SAME_AS_RECORDING}
             />
             <AudioMeter
+              aria-label={t("settings-voice-notes-microphone-level")}
               decibels={level.decibels}
               disabled={!isListening}
-              height={3}
               hidePeakTick
               hideTicks
               peak={level.peak}
               radius={1.5}
-              width="100%"
+              thickness={3}
             />
           </div>
         )}

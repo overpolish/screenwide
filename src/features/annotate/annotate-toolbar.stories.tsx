@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { AnnotateToolbar, AnnotateToolbarProps } from "./annotate-toolbar";
 
@@ -55,13 +55,7 @@ const meta = {
     settings,
   },
   component: AnnotateToolbar,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={620}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: 620 })],
   parameters: { layout: "fullscreen" },
   render: (args) => <AnnotateToolbarExample {...args} />,
   title: "Features/Annotate Toolbar",

@@ -3,7 +3,7 @@
 
 import { type ContextType, useState } from "react";
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { SettingsApiContext } from "./settings-api-context";
 import { momentsPreviewApi } from "./settings-moments-preview";
@@ -191,13 +191,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
 
 const meta = {
   component: SettingsWindow,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={520} viewMode={context.viewMode} width={720}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ window: "settings" })],
   parameters: {
     controls: { exclude: ["updateSetting"] },
     layout: "fullscreen",

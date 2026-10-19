@@ -1,15 +1,30 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useState } from "react";
+import { ComponentProps, useState } from "react";
 
 import { AngleDial } from "./angle-dial";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
+const colors: ComponentProps<typeof AngleDial>["color"][] = [
+  "neutral",
+  "red",
+  "green",
+  "blue",
+];
+
 const meta = {
+  argTypes: {
+    color: {
+      control: "inline-radio",
+      options: colors,
+      table: { defaultValue: { summary: "neutral" } },
+    },
+  },
   args: {
     "aria-label": "Angle",
+    color: "neutral",
     onChange: () => undefined,
     value: 0,
   },
@@ -51,10 +66,18 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Turned: Story = {
-  args: { value: 135 },
-};
-
 export const Disabled: Story = {
   args: { isDisabled: true, value: 45 },
+};
+
+export const Colors: Story = {
+  args: { value: 45 },
+  parameters: { controls: { disable: true } },
+  render: (args) => (
+    <div className="flex items-center gap-control">
+      {colors.map((color) => (
+        <AngleDial key={color} {...args} color={color} />
+      ))}
+    </div>
+  ),
 };

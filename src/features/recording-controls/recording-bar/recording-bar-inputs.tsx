@@ -207,9 +207,9 @@ export function RecordingBarInputs({
             isMicrophoneLocked,
           )}
           detail={inputMeter(
+            t("recording-controls-microphone-level"),
             inputs.microphone,
-            microphonePreview.decibels,
-            microphonePreview.peak,
+            microphonePreview,
           )}
           isMenuDisabled={isDisabled}
           isSelected={inputs.microphone}
@@ -249,9 +249,9 @@ export function RecordingBarInputs({
             false,
           )}
           detail={inputMeter(
+            t("recording-controls-system-audio-level"),
             inputs.systemAudio,
-            systemAudioPreview.decibels,
-            systemAudioPreview.peak,
+            systemAudioPreview,
           )}
           isMenuDisabled={isDisabled}
           isSelected={inputs.systemAudio}

@@ -1,15 +1,21 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { SVGAttributes, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useMeter, useNumberFormatter } from "react-aria";
 
-import { Text } from "../../components/base/text/text";
+import { t } from "../../../i18n/i18n";
+import { cn } from "../../../lib/styling";
+import { Text } from "../text/text";
+
+/** The quietest level the meter draws; anything below reads as silence. */
+const FLOOR_DECIBELS = -60;
 
 const decibelToPercentage = (decibel: number): number => {
-  if (decibel < -60) return 0;
+  if (decibel < FLOOR_DECIBELS) return 0;
   if (decibel > 0) return 100;
 
-  const normalized = (decibel + 60) / 60;
+  const normalized = (decibel - FLOOR_DECIBELS) / -FLOOR_DECIBELS;
   const power = 1.357; // -24 dB map to ~50%
   return Math.pow(normalized, power) * 100;
 };
@@ -51,31 +57,35 @@ const Tick = ({ orientation = "horizontal", tick }: TickProps) => {
 };
 
 type AudioMeterProps = {
+  "aria-label": string;
   decibels: number;
+  /** Thickness in pixels. */
+  thickness: number;
   disabled?: boolean;
-  height?: number;
   hidePeakTick?: boolean;
   hideTicks?: boolean;
+  /** Length in pixels, or a CSS length. */
+  length?: number | string;
   orientation?: "horizontal" | "vertical";
+  /** Peak in decibels. */
   peak?: number;
+  /** Corner radius in pixels. */
   radius?: number;
-  width?: number | string;
 };
 
 export const AudioMeter = ({
+  "aria-label": label,
   decibels,
   disabled,
-  height,
   hidePeakTick,
   hideTicks,
+  length = "100%",
   orientation = "horizontal",
   peak = -Infinity,
   radius = 2,
-  width,
+  thickness,
 }: AudioMeterProps) => {
   const vertical = orientation === "vertical";
-  const meterHeight = height ?? (vertical ? 150 : 10);
-  const meterWidth = width ?? (vertical ? 10 : 150);
   const idRef = useRef<number | null>(null);
   idRef.current ??= nextMeterId++;
   const id = idRef.current;
@@ -85,19 +95,28 @@ export const AudioMeter = ({
   const percentage = disabled ? 0 : decibelToPercentage(decibels);
   const peakPercentage = decibelToPercentage(Math.min(peak, -0.5));
 
+  const level = disabled
+    ? FLOOR_DECIBELS
+    : Math.min(0, Math.max(FLOOR_DECIBELS, decibels));
+  const formatter = useNumberFormatter({ maximumFractionDigits: 0 });
+  const { meterProps } = useMeter({
+    "aria-label": label,
+    maxValue: 0,
+    minValue: FLOOR_DECIBELS,
+    value: level,
+    valueLabel:
+      level <= FLOOR_DECIBELS
+        ? t("controls-audio-meter-silent")
+        : t("controls-audio-meter-value", {
+            // `|| 0` keeps a level just under full scale from reading "-0".
+            decibels: formatter.format(Math.round(level) || 0),
+          }),
+  });
+
   const svgRef = useRef<SVGSVGElement>(null);
   const [ticks, setTicks] = useState(() =>
-    ticksForLength(
-      vertical ? meterHeight : typeof meterWidth === "number" ? meterWidth : 0,
-    ),
+    ticksForLength(typeof length === "number" ? length : 0),
   );
-
-  const METER: SVGAttributes<SVGRectElement> = {
-    height: "100%",
-    rx: radius,
-    ry: radius,
-    width: "100%",
-  };
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -117,21 +136,29 @@ export const AudioMeter = ({
     };
   }, [vertical]);
 
+  // No viewBox: the rects are laid out in CSS pixels, so the corner radius
+  // stays round at any length instead of stretching with the meter.
+  const meterRect = { height: "100%", rx: radius, ry: radius, width: "100%" };
+
   return (
     <div
-      className={`pointer-events-none select-none ${vertical ? "flex items-stretch" : ""}`}
+      {...meterProps}
+      className={cn(
+        "pointer-events-none select-none",
+        vertical && "flex items-stretch",
+        vertical && typeof length !== "number" && "h-full",
+      )}
     >
       {/* Using SVG due to layering divs with border-radius and linear gradient
        * causing bleeding */}
       <svg
+        aria-hidden="true"
         // Drawn filling to the right, so a horizontal meter turns to fill
         // from the start in a right-to-left language.
         className={vertical ? undefined : "rtl:-scale-x-100"}
-        height={meterHeight}
-        preserveAspectRatio="none"
+        height={vertical ? length : thickness}
         ref={svgRef}
-        viewBox={`0 0 ${typeof meterWidth === "number" ? meterWidth.toString() : "150"} ${meterHeight.toString()}`}
-        width={meterWidth}
+        width={vertical ? thickness : length}
       >
         <defs>
           <linearGradient
@@ -163,7 +190,7 @@ export const AudioMeter = ({
 
           <clipPath id={peakClipId}>
             {!disabled &&
-              peak >= -60 &&
+              peak >= FLOOR_DECIBELS &&
               (vertical ? (
                 <rect
                   height="2px"
@@ -182,21 +209,22 @@ export const AudioMeter = ({
           </clipPath>
         </defs>
 
-        <rect className="fill-fill" {...METER} width="100%" />
+        <rect className="fill-fill" {...meterRect} />
         <rect
           clipPath={`url(#${meterClipId})`}
           fill={`url(#${fillId})`}
-          {...METER}
+          {...meterRect}
         />
         <rect
           clipPath={`url(#${peakClipId})`}
           fill={`url(#${fillId})`}
-          {...METER}
+          {...meterRect}
         />
       </svg>
 
       {(!hideTicks || !hidePeakTick) && (
         <div
+          aria-hidden="true"
           className={
             vertical
               ? `relative ${hidePeakTick ? "w-control" : "w-8"}`
@@ -208,7 +236,7 @@ export const AudioMeter = ({
               <Tick key={tick} orientation={orientation} tick={tick} />
             ))}
 
-          {!hidePeakTick && !disabled && peak >= -60 && (
+          {!hidePeakTick && !disabled && peak >= FLOOR_DECIBELS && (
             <Text
               as="span"
               className={`pointer-events-none absolute tabular-nums select-none ${

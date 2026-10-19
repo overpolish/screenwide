@@ -4,7 +4,7 @@
 import { Meta, StoryObj } from "@storybook/react-vite";
 
 import { displayThumbnail } from "../../storybook/display-thumbnail";
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { MonitorSelector } from "./monitor-selector";
 import { MonitorDetails } from "./types";
@@ -55,13 +55,12 @@ const meta = {
   },
   component: MonitorSelector,
   decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={250} viewMode={context.viewMode} width={500}>
-        <div className="window-surface p-section flex h-full w-full items-center justify-center">
-          <Story />
-        </div>
-      </FeatureStoryStage>
+    (Story) => (
+      <div className="window-surface p-section flex h-full w-full items-center justify-center">
+        <Story />
+      </div>
     ),
+    featureStage({ height: 250, width: 500 }),
   ],
   parameters: { layout: "fullscreen" },
   title: "Features/Monitor Selection",

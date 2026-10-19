@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { type GlideRegion } from "./detection/glide-regions";
 import { GlidePreview } from "./glide-preview";
@@ -37,16 +37,7 @@ const meta = {
     region: region({ gridCols: 2 }),
   },
   component: GlidePreview,
-  decorators: [
-    (Story, context) =>
-      context.parameters.productionStage === false ? (
-        <Story />
-      ) : (
-        <FeatureStoryStage height={32} viewMode={context.viewMode} width={48}>
-          <Story />
-        </FeatureStoryStage>
-      ),
-  ],
+  decorators: [featureStage({ window: "glide" })],
   parameters: { layout: "fullscreen" },
   title: "Features/Glide Preview",
 } satisfies Meta<typeof GlidePreview>;

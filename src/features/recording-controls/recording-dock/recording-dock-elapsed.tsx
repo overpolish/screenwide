@@ -6,7 +6,8 @@ import { Mic, MicOff } from "lucide-react";
 import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
-import { AudioMeter } from "../../audio-inputs/audio-meter";
+
+import { RecordingDockMeter } from "./recording-dock-meter";
 
 import type { PlacedMoment } from "./use-placed-moment";
 
@@ -36,14 +37,9 @@ function MomentShown({
         role="status"
       >
         {noteDecibels !== undefined && (
-          <AudioMeter
+          <RecordingDockMeter
+            aria-label={t("recording-controls-microphone-level")}
             decibels={noteDecibels}
-            height={16}
-            hidePeakTick
-            hideTicks
-            orientation="vertical"
-            radius={1}
-            width={2}
           />
         )}
         <Mic

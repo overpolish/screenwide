@@ -3,12 +3,9 @@
 
 import { type Meta, type StoryObj } from "@storybook/react-vite";
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { UpdatePrompt } from "./update-prompt";
-
-const previewWidth = 620;
-const previewHeight = 520;
 
 // Shaped like GitHub's sanitized `body_html`: headings, paragraphs, lists and
 // inline code, so the capped type scale is visible in the story.
@@ -60,17 +57,7 @@ const meta = {
     updateVersion: "1.0.0",
   },
   component: UpdatePrompt,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage
-        height={previewHeight}
-        viewMode={context.viewMode}
-        width={previewWidth}
-      >
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ window: "update" })],
   parameters: { layout: "fullscreen" },
   title: "Features/Update Prompt",
 } satisfies Meta<typeof UpdatePrompt>;

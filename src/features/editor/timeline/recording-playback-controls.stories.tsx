@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { PreviewZoomField } from "../preview/preview-readouts";
 
 import { RecordingPlaybackControls } from "./recording-playback-controls";
@@ -72,12 +72,8 @@ function PlaybackBarPreview() {
 
 const meta = {
   component: PlaybackBarPreview,
+  decorators: [featureStage({ width: 720 })],
   parameters: { layout: "centered" },
-  render: (_args, { viewMode }) => (
-    <FeatureStoryStage viewMode={viewMode} width={720}>
-      <PlaybackBarPreview />
-    </FeatureStoryStage>
-  ),
   title: "Features/Editor/Playback Bar",
 } satisfies Meta<typeof PlaybackBarPreview>;
 

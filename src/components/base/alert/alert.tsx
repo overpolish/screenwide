@@ -46,6 +46,7 @@ type AlertProps = Omit<ComponentProps<"div">, "color"> &
   VariantProps<typeof alertVariants> & {
     /** A control that answers the notice, such as Undo. */
     action?: ReactNode;
+    /** Replaces the default icon; `false` hides it. */
     icon?: ReactNode | false;
   };
 

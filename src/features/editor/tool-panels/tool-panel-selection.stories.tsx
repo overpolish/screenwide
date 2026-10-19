@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../popup-panel/layout";
 import { DEFAULT_CURSOR_EFFECTS } from "../export/recording-export-settings";
 
@@ -20,13 +20,7 @@ const seed = seedToolPanel;
 const meta = {
   args: { tool: "selection", workspace: "recording" },
   component: ToolPanel,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={toolPanelWidth}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: toolPanelWidth })],
   parameters: { layout: "fullscreen" },
   title: "Features/Editor/Tool Panel/Selection",
 } satisfies Meta<typeof ToolPanel>;

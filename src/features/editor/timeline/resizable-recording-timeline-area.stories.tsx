@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { PreviewZoomField } from "../preview/preview-readouts";
 
 import { RecordingPlaybackControls } from "./recording-playback-controls";
@@ -84,12 +84,8 @@ function BandPreview({ audioTrackCount }: { audioTrackCount: number }) {
 
 const meta = {
   component: BandPreview,
+  decorators: [featureStage({ height: 440, width: 760 })],
   parameters: { layout: "centered" },
-  render: ({ audioTrackCount }, { viewMode }) => (
-    <FeatureStoryStage height={440} viewMode={viewMode} width={760}>
-      <BandPreview audioTrackCount={audioTrackCount} />
-    </FeatureStoryStage>
-  ),
   title: "Features/Editor/Resizable Recording Timeline Area",
 } satisfies Meta<typeof BandPreview>;
 

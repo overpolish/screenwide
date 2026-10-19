@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
+import { featureStage } from "../../../../storybook/feature-story-stage";
 
 import {
   STORY_TEXT_STYLES,
@@ -25,17 +25,9 @@ const meta = {
   },
   component: TextTemplatePanel,
   decorators: [
-    (Story, context) => (
-      // As tall as the panel grows before it scrolls, which every template
-      // here reaches.
-      <FeatureStoryStage
-        height={TEXT_TEMPLATE_PANEL_SIZE.height}
-        viewMode={context.viewMode}
-        width={TEXT_TEMPLATE_PANEL_SIZE.width}
-      >
-        <Story />
-      </FeatureStoryStage>
-    ),
+    // As tall as the panel grows before it scrolls, which every template
+    // here reaches.
+    featureStage(TEXT_TEMPLATE_PANEL_SIZE),
   ],
   parameters: { layout: "fullscreen" },
   title: "Features/Editor/Text Templates",

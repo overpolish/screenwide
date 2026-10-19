@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { PopupPanelColors } from "./popup-panel-colors";
 
@@ -13,13 +13,7 @@ const meta = {
     id: "caption-color:accent",
   },
   component: PopupPanelColors,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={340}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: 340 })],
   parameters: { layout: "fullscreen" },
   title: "Features/Popup Panel/Colours",
 } satisfies Meta<typeof PopupPanelColors>;

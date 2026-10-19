@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import {
   GlideSpacePreview,
@@ -35,16 +35,7 @@ const event = (
 const meta = {
   args: { event: event(), pulse: 0 },
   component: GlideSpacePreview,
-  decorators: [
-    (Story, context) =>
-      context.parameters.productionStage === false ? (
-        <Story />
-      ) : (
-        <FeatureStoryStage height={32} viewMode={context.viewMode} width={48}>
-          <Story />
-        </FeatureStoryStage>
-      ),
-  ],
+  decorators: [featureStage({ window: "glide" })],
   parameters: { layout: "fullscreen" },
   title: "Features/Glide Space Preview",
 } satisfies Meta<typeof GlideSpacePreview>;

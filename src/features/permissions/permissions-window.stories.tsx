@@ -3,7 +3,7 @@
 
 import { type Meta, type StoryObj } from "@storybook/react-vite";
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { permissionsPreviewSnapshot } from "./permissions-preview";
 import { PermissionsWindow } from "./permissions-window";
@@ -40,12 +40,9 @@ const meta = {
   decorators: [
     (Story, context) => {
       applyPreviewTheme(context.globals.theme);
-      return (
-        <FeatureStoryStage viewMode={context.viewMode} width={480}>
-          <Story />
-        </FeatureStoryStage>
-      );
+      return <Story />;
     },
+    featureStage({ width: 480 }),
   ],
   parameters: { layout: "fullscreen" },
   title: "Features/Permissions",

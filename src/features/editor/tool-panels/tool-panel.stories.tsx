@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { builtInBackgroundPresets } from "../../../components/shared/background-picker/background-presets";
-import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../popup-panel/layout";
 import {
   DEFAULT_CURSOR_EFFECTS,
@@ -19,13 +19,7 @@ const seed = seedToolPanel;
 const meta = {
   args: { tool: "cursor", workspace: "recording" },
   component: ToolPanel,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage viewMode={context.viewMode} width={toolPanelWidth}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ width: toolPanelWidth })],
   parameters: { layout: "fullscreen" },
   title: "Features/Editor/Tool Panel",
 } satisfies Meta<typeof ToolPanel>;

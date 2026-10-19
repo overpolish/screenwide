@@ -44,6 +44,8 @@ recording-controls-choose-microphone = Choose microphone
 recording-controls-choose-system-audio = Choose system audio
 recording-controls-no-camera = No Camera
 recording-controls-no-microphone = No Microphone
+recording-controls-microphone-level = Microphone level
+recording-controls-system-audio-level = System audio level
 # Several apps chosen to record the sound of.
 recording-controls-sources =
     { $count ->

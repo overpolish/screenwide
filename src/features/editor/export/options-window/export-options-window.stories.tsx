@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 
-import { FeatureStoryStage } from "../../../../storybook/feature-story-stage";
+import { featureStage } from "../../../../storybook/feature-story-stage";
 import { recording, screenshot } from "../../panel/editor-story-fixtures";
 import {
   defaultRecordingOutput,
@@ -144,15 +144,12 @@ const meta = {
   args: { artifact: recording },
   component: EditorExportPreview,
   decorators: [
-    (Story, context) => (
-      <FeatureStoryStage
-        height={context.args.artifact.kind === "recording" ? 700 : 480}
-        viewMode={context.viewMode}
-        width={context.args.withPreview ? 920 : 480}
-      >
-        <Story />
-      </FeatureStoryStage>
-    ),
+    // The window fits its height to the form at runtime, so the config's
+    // size does not apply.
+    featureStage(({ args }) => ({
+      height: args.artifact.kind === "recording" ? 700 : 480,
+      width: args.withPreview ? 920 : 480,
+    })),
   ],
   parameters: { layout: "fullscreen" },
   title: "Features/Editor/Export",

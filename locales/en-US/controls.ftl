@@ -14,6 +14,10 @@ controls-document-name = Document name
 # $label names the value the slider and field set together.
 controls-slider = { $label } slider
 controls-slider-value = { $label } value
+# An audio level meter's reading for a screen reader. $decibels is a whole number, 0 at full scale and negative below it.
+controls-audio-meter-value = { $decibels } dB
+# An audio level meter whose input is quiet or switched off.
+controls-audio-meter-silent = Silent
 
 ## Window buttons on Windows
 

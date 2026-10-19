@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { ProjectBrowser } from "./project-browser";
 import {
@@ -199,13 +199,7 @@ const meta = {
     thumbnails,
   },
   component: ProjectBrowser,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={560} viewMode={context.viewMode} width={880}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ window: "projects" })],
   parameters: { layout: "fullscreen" },
   title: "Features/Project Browser",
 } satisfies Meta<typeof ProjectBrowser>;

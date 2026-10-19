@@ -36,43 +36,38 @@ const notchStyles = cn(
 
 // A neutral notch is brought up to the full label colour while the hand is
 // on it; a coloured one names what it aims, such as an axis in its colour, and
-// keeps that colour throughout.
-const notchTones = {
-  error: "bg-error",
-  info: "bg-info",
+// keeps that colour throughout. Hues reuse the status colours so the app keeps
+// one red, one green and one blue.
+const notchColors = {
+  blue: "bg-info",
+  green: "bg-success",
   neutral:
     "bg-content-fg-secondary group-data-[hovered]:bg-content-fg group-data-[dragging]:bg-content-fg",
-  success: "bg-success",
+  red: "bg-error",
 } as const;
 
 export type AngleDialProps = {
   "aria-label": string;
   onChange: (degrees: number) => void;
-  /** Where the notch points, in degrees clockwise from twelve o'clock. */
+  /** Angle in degrees. */
   value: number;
   className?: string;
+  color?: keyof typeof notchColors;
   isDisabled?: boolean;
-  /** The notch's colour, neutral unless it stands for something coloured. */
-  tone?: keyof typeof notchTones;
 };
 
-/**
- * A circular dial for an angle: the value is a direction, so the control is
- * one too, and the notch stands where the thing being aimed stands.
- *
- * A press on the disc aims the dial at the pointer; a press on the notch picks
- * it up where it is, so it does not jump out from under the finger. Either way
- * the drag goes on outside the control, where the arm is long and a degree is
- * a wide movement, and holding Shift through it snaps to the eight aims that
- * matter. The value wraps: the arrows carry it past the turn in both
- * directions rather than stopping a degree short of where they started.
- */
+// A press on the disc aims the dial at the pointer; a press on the notch picks
+// it up where it is, so it does not jump out from under the finger. Either way
+// the drag goes on outside the control, where the arm is long and a degree is
+// a wide movement, and holding Shift through it snaps to the eight aims that
+// matter. The value wraps: the arrows carry it past the turn in both
+// directions rather than stopping a degree short of where they started.
 export function AngleDial({
   "aria-label": label,
   className,
+  color = "neutral",
   isDisabled = false,
   onChange,
-  tone = "neutral",
   value,
 }: AngleDialProps) {
   const dialRef = useRef<HTMLDivElement>(null);
@@ -204,7 +199,7 @@ export function AngleDial({
         className="absolute inset-0 transform-gpu"
         style={{ rotate: `${String(wrapAngle(value))}deg` }}
       >
-        <span className={cn(notchStyles, notchTones[tone])} ref={notchRef} />
+        <span className={cn(notchStyles, notchColors[color])} ref={notchRef} />
       </span>
     </div>
   );

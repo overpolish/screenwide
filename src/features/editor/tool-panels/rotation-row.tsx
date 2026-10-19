@@ -51,9 +51,9 @@ export function RotationRow({
   rotation: SceneRotation;
 }) {
   const axes = [
-    { axis: "x", label: t("editor-panels-rotation-x"), tone: "error" },
-    { axis: "y", label: t("editor-panels-rotation-y"), tone: "success" },
-    { axis: "z", label: t("editor-panels-rotation-z"), tone: "info" },
+    { axis: "x", color: "red", label: t("editor-panels-rotation-x") },
+    { axis: "y", color: "green", label: t("editor-panels-rotation-y") },
+    { axis: "z", color: "blue", label: t("editor-panels-rotation-z") },
   ] as const;
   const upright = rotation.x === 0 && rotation.y === 0 && rotation.z === 0;
   return (
@@ -73,15 +73,15 @@ export function RotationRow({
           >
             <RotateCcw />
           </IconButton>
-          {axes.map(({ axis, label, tone }) => (
+          {axes.map(({ axis, color, label }) => (
             <AngleDial
               aria-label={label}
+              color={color}
               isDisabled={isDisabled}
               key={axis}
               onChange={(dial) => {
                 onChange({ [axis]: turnedTo(axis, rotation[axis], dial) });
               }}
-              tone={tone}
               value={dialOf(axis, rotation[axis])}
             />
           ))}

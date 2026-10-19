@@ -3,20 +3,14 @@
 
 import { type Meta, type StoryObj } from "@storybook/react-vite";
 
-import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+import { featureStage } from "../../storybook/feature-story-stage";
 
 import { ScrollingCaptureOverlay } from "./scrolling-capture-overlay";
 
 const meta = {
   args: { cancellable: true, phase: "working" },
   component: ScrollingCaptureOverlay,
-  decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={72} viewMode={context.viewMode} width={160}>
-        <Story />
-      </FeatureStoryStage>
-    ),
-  ],
+  decorators: [featureStage({ height: 72, width: 160 })],
   parameters: { layout: "fullscreen" },
   title: "Features/Scrolling Capture Overlay",
 } satisfies Meta<typeof ScrollingCaptureOverlay>;
