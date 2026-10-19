@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { clsx } from "clsx";
 import {
   AnimatePresence,
   motion,
@@ -14,6 +13,8 @@ import {
   TooltipProps as AriaTooltipProps,
   TooltipTriggerStateContext,
 } from "react-aria-components";
+
+import { cn } from "../../../lib/styling";
 
 // A native tooltip: a small panel on the window colour with the label in the
 // small text style, a control radius and a soft shadow. No arrow, no colour
@@ -57,7 +58,7 @@ export const Tooltip = ({
         <MotionAriaTooltip
           {...props}
           animate={{ opacity: 1 }}
-          className={clsx(tooltipPanelClassName, className)}
+          className={cn(tooltipPanelClassName, className)}
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           isOpen

@@ -8,12 +8,15 @@ import { Badge } from "./badge";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
+  argTypes: {
+    children: { control: "text" },
+  },
   args: {
-    children: <>Default</>,
+    children: "Optional",
   },
   component: Badge,
   parameters: {
-    controls: { exclude: ["children", "className"] },
+    controls: { exclude: ["className"] },
     layout: "centered",
   },
   title: "Primitives/Badge",
@@ -29,7 +32,7 @@ export const WithIcon: Story = {
     children: (
       <>
         <Check />
-        Default
+        Optional
       </>
     ),
   },

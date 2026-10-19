@@ -1,30 +1,49 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Meta, StoryObj } from "@storybook/react";
 import { Circle, ClipboardCopy, Upload } from "lucide-react";
+import { ComponentProps } from "react";
 
-import { Text } from "../text/text";
+import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
 
 import { Button } from "./button";
 
-const variants: React.ComponentProps<typeof Button>["variant"][] = [
-  "solid",
-  "ghost",
-] as const;
-const colors: React.ComponentProps<typeof Button>["color"][] = [
-  "primary",
-  "neutral",
-];
+import type { Meta, StoryObj } from "@storybook/react-vite";
+
+type ButtonProps = ComponentProps<typeof Button>;
+
+const variants: NonNullable<ButtonProps["variant"]>[] = ["solid", "ghost"];
+const colors: NonNullable<ButtonProps["color"]>[] = ["neutral", "primary"];
+const sizes: NonNullable<ButtonProps["size"]>[] = ["regular", "capture"];
+
+// Colours down, variants across: each colour changes how a variant looks.
+function VariantGrid(args: ButtonProps) {
+  return (
+    <StoryGrid columns={variants}>
+      {colors.map((color) => (
+        <StoryGridRow key={color} label={color}>
+          {variants.map((variant) => (
+            <Button key={variant} {...args} color={color} variant={variant} />
+          ))}
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
+  );
+}
 
 const meta = {
   argTypes: {
+    children: { control: "text" },
     color: {
       control: "inline-radio",
       options: colors,
+      table: { defaultValue: { summary: "neutral" } },
     },
-    isDisabled: {
-      control: "boolean",
+    isDisabled: { control: "boolean" },
+    size: {
+      control: "inline-radio",
+      options: sizes,
+      table: { defaultValue: { summary: "regular" } },
     },
     variant: {
       control: "inline-radio",
@@ -33,14 +52,15 @@ const meta = {
     },
   },
   args: {
-    children: "Default",
+    children: "Sign out",
     color: "neutral",
+    isDisabled: false,
+    size: "regular",
+    variant: "solid",
   },
   component: Button,
   parameters: {
-    controls: {
-      exclude: ["ref", "className", "slot"],
-    },
+    controls: { exclude: ["ref", "className", "slot"] },
     layout: "centered",
   },
   title: "Primitives/Button",
@@ -49,108 +69,47 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/* --------------------------------- Stories -------------------------------- */
-export const Default: Story = {
-  args: {
-    /* eslint-disable sort-keys */
-    variant: "solid",
-    isDisabled: false,
-    /* eslint-enable sort-keys */
-  },
-};
+export const Default: Story = {};
 
 export const Variants: Story = {
   parameters: { controls: { disable: true } },
-  render: (args) => (
-    <div className="flex gap-section items-center">
-      {variants.map((variant) => (
-        <Button color="primary" key={variant} variant={variant} {...args} />
-      ))}
-    </div>
-  ),
+  render: (args) => <VariantGrid {...args} />,
 };
 
-export const Colors: Story = {
+export const Disabled: Story = {
+  args: { isDisabled: true },
+  parameters: { controls: { disable: true } },
+  render: (args) => <VariantGrid {...args} />,
+};
+
+export const Sizes: Story = {
   parameters: { controls: { disable: true } },
   render: (args) => (
-    <div className="flex gap-section items-center">
-      {colors.map((color) => (
-        <Button key={color} {...args} color={color} />
-      ))}
-    </div>
-  ),
-};
-
-export const States: Story = {
-  // Padded rather than centered: centering lands the row on a fractional
-  // pixel, which makes the bezel and glyph snap differently.
-  parameters: { controls: { disable: true }, layout: "padded" },
-  render: (args) => (
-    <div className="flex flex-col gap-section">
-      {colors.map((color) => (
-        <div className="flex gap-section items-center" key={color}>
-          <Text className="w-16" variant="footnote">
-            {color}
-          </Text>
-          <Button {...args} color={color}>
-            Rest
-          </Button>
-          <Button {...args} color={color} isDisabled>
-            Disabled
-          </Button>
-          <Button {...args} color={color} variant="ghost">
-            Ghost
-          </Button>
-          <Button {...args} color={color} isDisabled variant="ghost">
-            Ghost disabled
-          </Button>
-        </div>
-      ))}
-    </div>
-  ),
-};
-
-/** The recording bar's 40px control next to the regular size. */
-export const Sizes: Story = {
-  parameters: { controls: { disable: true }, layout: "padded" },
-  render: (args) => (
-    <div className="flex flex-col gap-section">
-      {(["regular", "capture"] as const).map((size) => (
-        <div className="flex gap-section items-center" key={size}>
-          <Text className="w-16" variant="footnote">
-            {size}
-          </Text>
-          <Button {...args} size={size}>
-            Sign out
-          </Button>
-          <Button {...args} color="primary" size={size}>
-            Record
-          </Button>
+    <StoryGrid columns={3}>
+      {sizes.map((size) => (
+        <StoryGridRow key={size} label={size}>
+          <Button {...args} size={size} />
+          <Button {...args} color="primary" size={size} />
           {/* Icon only: the capture size is exactly 48 wide with a lone
               28px glyph. */}
           <Button {...args} aria-label="Record" color="primary" size={size}>
             <Circle />
           </Button>
-        </div>
+        </StoryGridRow>
       ))}
-    </div>
+    </StoryGrid>
   ),
 };
 
-/** Text buttons carry no icon, whatever their colour. The exception is a
- * window toolbar, such as the Editor titlebar or the recording bar, where every
- * text command pairs a leading symbol with its label, as macOS toolbar items
- * and Windows command bar buttons do. A trailing glyph is reserved for a menu
- * or disclosure indicator drawn by the control itself. */
 export const WithIcon: Story = {
   parameters: { controls: { disable: true } },
-  render: () => (
-    <div className="gap-control flex items-center">
-      <Button variant="ghost">
+  render: (args) => (
+    <div className="flex items-center gap-control">
+      <Button {...args} variant="ghost">
         <ClipboardCopy />
         Copy
       </Button>
-      <Button color="primary">
+      <Button {...args} color="primary">
         <Upload />
         Export
       </Button>

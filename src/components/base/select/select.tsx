@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { clsx } from "clsx";
 import { ChevronDown, ChevronsUpDown } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { type ComponentProps, type ReactNode, type Ref } from "react";
@@ -15,7 +14,7 @@ import {
   SelectValue,
 } from "react-aria-components";
 
-import { focusStyles } from "../../../lib/styling";
+import { cn, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 import { ListBox } from "../listbox/listbox";
 import { ScrollArea } from "../scroll-area/scroll-area";
@@ -148,7 +147,7 @@ export const Select = <T extends object>({
                 {leftSection != null && <div>{leftSection}</div>}
 
                 <SelectValue<T>
-                  className={clsx(
+                  className={cn(
                     "truncate data-[placeholder]:text-content-fg-secondary",
                     renderValue && "min-w-0 flex-1",
                   )}
@@ -189,7 +188,7 @@ export const Select = <T extends object>({
 
           <Popover
             className={({ placement }) =>
-              clsx(
+              cn(
                 isOpen ? "animate-in fade-in" : "animate-out fade-out",
                 isOpen
                   ? placement === "bottom"
@@ -208,7 +207,7 @@ export const Select = <T extends object>({
             {scrollShadow ? (
               <ScrollArea
                 constrainHeight
-                rootClassName={clsx(popoverSurface, listBoxClassName)}
+                rootClassName={cn(popoverSurface, listBoxClassName)}
               >
                 {listBox}
               </ScrollArea>

@@ -205,5 +205,24 @@ export default defineConfig([
       "screenwide/logical-direction": "error",
     },
   },
+  {
+    // `cn` merges conflicting Tailwind classes; plain `clsx` keeps both.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/styling.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              message:
+                "Use `cn` from src/lib/styling.ts, which resolves conflicting Tailwind classes.",
+              name: "clsx",
+            },
+          ],
+        },
+      ],
+    },
+  },
   eslintConfigPrettier,
 ]);

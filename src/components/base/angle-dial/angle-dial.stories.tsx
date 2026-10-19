@@ -3,11 +3,13 @@
 
 import { ComponentProps, useState } from "react";
 
+import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
+
 import { AngleDial } from "./angle-dial";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-const colors: ComponentProps<typeof AngleDial>["color"][] = [
+const colors: NonNullable<ComponentProps<typeof AngleDial>["color"]>[] = [
   "neutral",
   "red",
   "green",
@@ -74,10 +76,12 @@ export const Colors: Story = {
   args: { value: 45 },
   parameters: { controls: { disable: true } },
   render: (args) => (
-    <div className="flex items-center gap-control">
+    <StoryGrid>
       {colors.map((color) => (
-        <AngleDial key={color} {...args} color={color} />
+        <StoryGridRow key={color} label={color}>
+          <AngleDial {...args} color={color} />
+        </StoryGridRow>
       ))}
-    </div>
+    </StoryGrid>
   ),
 };

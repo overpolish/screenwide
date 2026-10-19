@@ -3,13 +3,17 @@
 
 import { ComponentProps } from "react";
 
+import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
 import { Button } from "../button/button";
 
 import { Alert } from "./alert";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-const colors: ComponentProps<typeof Alert>["color"][] = ["neutral", "error"];
+const colors: NonNullable<ComponentProps<typeof Alert>["color"]>[] = [
+  "neutral",
+  "error",
+];
 
 const meta = {
   argTypes: {
@@ -62,13 +66,14 @@ export const WithAction: Story = {
 export const Colors: Story = {
   parameters: { controls: { disable: true } },
   render: (args) => (
-    <div className="gap-section flex w-80 flex-col">
+    <StoryGrid>
       {colors.map((color) => (
-        <Alert key={color} {...args} color={color}>
-          {color?.[0].toUpperCase()}
-          {color?.slice(1)} alert
-        </Alert>
+        <StoryGridRow key={color} label={color}>
+          <div className="w-80">
+            <Alert {...args} color={color} />
+          </div>
+        </StoryGridRow>
       ))}
-    </div>
+    </StoryGrid>
   ),
 };

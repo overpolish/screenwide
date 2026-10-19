@@ -3,14 +3,15 @@
 
 import { ComponentProps } from "react";
 
+import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
+
 import { AudioMeter } from "./audio-meter";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-const orientations: ComponentProps<typeof AudioMeter>["orientation"][] = [
-  "horizontal",
-  "vertical",
-];
+const orientations: NonNullable<
+  ComponentProps<typeof AudioMeter>["orientation"]
+>[] = ["horizontal", "vertical"];
 
 const meta = {
   argTypes: {
@@ -63,14 +64,16 @@ export const Disabled: Story = {
 export const Orientations: Story = {
   parameters: { controls: { disable: true } },
   render: (args) => (
-    <div className="flex h-40 items-center gap-section">
-      <div className="w-64">
-        <AudioMeter {...args} orientation="horizontal" />
-      </div>
-      {/* Stretched, so the vertical meter has a height to fill. */}
-      <div className="self-stretch">
-        <AudioMeter {...args} orientation="vertical" />
-      </div>
-    </div>
+    <StoryGrid>
+      {orientations.map((orientation) => (
+        <StoryGridRow key={orientation} label={orientation}>
+          {/* The meter fills its length, so its box is long in that
+              direction. */}
+          <div className={orientation === "vertical" ? "h-40" : "w-64"}>
+            <AudioMeter {...args} orientation={orientation} />
+          </div>
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
   ),
 };

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { clsx } from "clsx";
 import {
   ArrowBigUp,
   ArrowDown,
@@ -143,7 +142,7 @@ export const Keyboard = ({
     <kbd
       {...rest}
       aria-label={ariaLabel ?? key.accessibleName}
-      className={clsx(
+      className={cn(
         keyboardClassName[variant],
         keyboardIconClassName,
         className,
