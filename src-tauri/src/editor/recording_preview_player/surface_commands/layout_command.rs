@@ -9,6 +9,7 @@ use super::*;
 // drag this layout is following.
 #[tauri::command]
 pub async fn layout_recording_preview_surface(
+  app: tauri::AppHandle,
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   layout: RecordingPreviewSurfaceLayout,
 ) -> Result<(), String> {
@@ -86,6 +87,14 @@ pub async fn layout_recording_preview_surface(
   } = manager.arranged_composition(&composition);
   if composition_changed {
     sources.reattach_pins(manager.position_ms);
+    // The camera just set to follow the face finds it. Only on a change: this
+    // runs every drag frame, and a camera with no face would search again on
+    // each one.
+    super::super::face_preview::find_face_when(
+      sources.awaits_face(composition.camera_overlay.follow_face),
+      app,
+      manager.artifact_id,
+    );
   }
   let scale = if scale.is_finite() && scale > 0.0 {
     scale
