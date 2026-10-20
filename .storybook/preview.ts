@@ -32,10 +32,9 @@ import "./styles.css";
 const isNativePreview =
   new URLSearchParams(window.location.search).get("screenwide-native") === "1";
 
-// The skin is a token layer keyed off `data-platform`, as the app sets it in
-// `main.tsx`. Stories default to the host OS so a reviewer sees their own
-// platform first, and the toolbar switches to the other one. The native
-// preview runs inside the real app shell, so it always takes the host.
+// The app stamps `data-platform` in `main.tsx` for what the OS dictates:
+// shortcut labels and the traffic-light inset. The look is the same on both,
+// so stories take the host's platform and offer no switch.
 const hostPlatform = isWindowsHost ? "windows" : "macos";
 
 // The theme decorator applies its class only once the manager has sent the
@@ -46,10 +45,7 @@ if (!isNativePreview) {
   const globals = new URLSearchParams(window.location.search).get("globals");
   const theme = /(?:^|;)theme:(\w+)/.exec(globals ?? "")?.[1] ?? "dark";
   document.documentElement.classList.add(theme === "light" ? "light" : "dark");
-  const platform = /(?:^|;)platform:(\w+)/.exec(globals ?? "")?.[1];
-  stampPlatform(
-    platform === "windows" || platform === "macos" ? platform : hostPlatform,
-  );
+  stampPlatform(hostPlatform);
 }
 
 if (isNativePreview) {
@@ -257,22 +253,10 @@ const preview: Preview = {
             title: "Language",
           },
         },
-        platform: {
-          description: "Platform skin",
-          toolbar: {
-            dynamicTitle: true,
-            icon: hostPlatform === "windows" ? "windows" : "apple",
-            items: [
-              { icon: "apple", title: "macOS", value: "macos" },
-              { icon: "windows", title: "Windows", value: "windows" },
-            ],
-            title: "Platform",
-          },
-        },
       },
   initialGlobals: isNativePreview
     ? {}
-    : { direction: "auto", locale: LANGUAGES[0], platform: hostPlatform },
+    : { direction: "auto", locale: LANGUAGES[0] },
   parameters: {
     controls: {
       matchers: {
@@ -290,11 +274,6 @@ const preview: Preview = {
     },
   },
   tags: ["autodocs"],
-};
-
-const withPlatform: Decorator = (Story, { globals }) => {
-  stampPlatform(globals.platform === "windows" ? "windows" : "macos");
-  return Story();
 };
 
 // Loaded before each render, so a story's first frame is in the language.
@@ -333,7 +312,6 @@ export const decorators = (
     ? [withLocale]
     : [
         withLocale,
-        withPlatform,
         withThemeByClassName({
           defaultTheme: "dark",
           parentSelector: "html",

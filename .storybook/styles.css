@@ -3,7 +3,7 @@
 
 html,
 body {
-  background-color: var(--color-content);
+  background-color: white;
   border-radius: 0;
 }
 
@@ -17,16 +17,21 @@ html.screenwide-native-preview body {
   background: transparent;
 }
 
-/* The application shell intentionally cannot scroll, but Storybook Docs can. */
-html:has(body.sb-main-fullscreen) {
+/* The application shell cannot scroll, but a story taller or wider than the
+   canvas must, in every layout. A centred story stays centred while it fits,
+   since Storybook centres it with auto margins. */
+html:has(body.sb-main-fullscreen),
+html:has(body.sb-main-centered),
+html:has(body.sb-main-padded) {
   min-height: 100%;
   height: 100%;
-  overflow-x: auto;
-  overflow-y: scroll;
+  overflow: auto;
   overscroll-behavior: auto;
 }
 
-body.sb-main-fullscreen {
+body.sb-main-fullscreen,
+body.sb-main-centered,
+body.sb-main-padded {
   min-height: 100%;
   height: auto;
   overflow: visible;

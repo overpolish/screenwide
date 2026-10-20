@@ -1,223 +1,180 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { ReactNode } from "react";
+import { cn, focusStyles } from "../lib/styling";
 
-import { Settings } from "lucide-react";
+import { StoryGrid, StoryGridRow } from "./story-grid";
 
-import { Text, TextProps } from "../components/base/text/text";
-import { focusStyles } from "../lib/styling";
+// Every design token from `src/styles`, rendered through the Tailwind
+// utility generated from it, so a story fails visibly if a token is renamed
+// or dropped. Each sits on the story grid, its utility class as the row's
+// label, as the primitives' stories lay out their values.
 
-/**
- * Every design token from `src/index.css` rendered through the Tailwind
- * utilities generated from it, so the page fails visibly if a token is renamed
- * or dropped. Nothing here hardcodes a value: the utility class is both the
- * sample and the label.
- */
+const typographyTokens = [
+  "text-title",
+  "text-heading",
+  "text-body",
+  "text-label",
+  "text-caption",
+];
 
-const typographyTokens: {
-  token: string;
-  className?: string;
-  variant?: TextProps["variant"];
-}[] = [
-  { token: "text-title", variant: "title" },
-  { token: "text-headline", variant: "headline" },
-  { token: "text-body", variant: "body" },
-  { token: "text-subheadline", variant: "subheadline" },
-  { token: "text-section", variant: "section" },
-  { token: "text-footnote", variant: "footnote" },
+const textColorTokens = [
+  "text-fg",
+  "text-fg-secondary",
+  "text-fg-tertiary",
+  "text-fg-disabled",
 ];
 
 const colorTokens = [
-  "bg-content",
-  "bg-content-fg",
-  "bg-content-fg-secondary",
-  "bg-content-fg-tertiary",
-  "bg-content-fg-quaternary",
+  "bg-fill",
+  "bg-fill-strong",
+  "bg-recess",
+  "bg-divider",
+  "bg-surface",
   "bg-primary",
-  "bg-primary-surface-hover",
-  "bg-primary-surface-pressed",
-  "bg-primary-tint",
-  "bg-focus-ring",
+  "bg-primary-hover",
+  "bg-primary-pressed",
+  "bg-on-primary",
+  "bg-accent",
+  "bg-on-accent",
+  "bg-selected",
+  "bg-emphasis",
+  "bg-focus",
   "bg-success",
   "bg-info",
   "bg-warning",
   "bg-error",
-  "bg-accent-heading",
 ];
 
-const contentForegroundTokens = [
-  "text-content-fg",
-  "text-content-fg-secondary",
-  "text-content-fg-tertiary",
-  "text-content-fg-quaternary",
+// The raised material, at rest, hovered and pressed, and the primary
+// action's fill with its bevel.
+const materialTokens = [
+  "control-raised",
+  "control-raised control-raised-hover",
+  "control-raised-pressed",
+  "bg-primary primary-raised",
+  "bg-primary-pressed primary-raised-pressed",
 ];
 
-const fillTokens = [
-  "bg-fill",
-  "bg-fill-secondary",
-  "bg-fill-tertiary",
-  "bg-fill-quaternary",
-  "bg-control-fill",
-  "bg-control-fill-hover",
-  "bg-control-fill-pressed",
-  "bg-control-fill-disabled",
-  "bg-control-subtle-hover",
-  "bg-control-subtle-pressed",
-  "bg-control-alt-fill",
-  "bg-control-alt-fill-hover",
-  "bg-control-alt-fill-pressed",
-  "bg-control-alt-fill-disabled",
-];
+const radiusTokens = ["rounded-sm", "rounded-control", "rounded-panel"];
 
-const spacingTokens = [
-  "w-tight",
-  "w-control",
-  "w-control-inset",
-  "w-section",
-  "w-layout",
-  "w-window-inset",
-  "w-control-height",
-  "w-traffic-lights",
-];
-
-const radiusTokens = ["rounded-window", "rounded-panel", "rounded-control"];
-
-const iconTokens = [
-  "size-icon-mini",
-  "size-icon-small",
-  "size-icon",
-  "size-icon-large",
-  "size-icon-xl",
-];
-
-function Group({ children, title }: { children: ReactNode; title: string }) {
+function TokenGrid({
+  sample,
+  tokens,
+}: {
+  sample: (token: string) => React.ReactNode;
+  tokens: string[];
+}) {
   return (
-    <section className="flex flex-col gap-section">
-      <Text as="h2" variant="headline">
-        {title}
-      </Text>
-      {children}
-    </section>
-  );
-}
-
-export function Page({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-layout p-window-inset">{children}</div>
+    <StoryGrid>
+      {tokens.map((token) => (
+        <StoryGridRow key={token} label={token}>
+          {sample(token)}
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
   );
 }
 
 export function Typography() {
   return (
-    <Group title="Typography">
-      <div className="flex flex-col gap-control-inset">
-        {typographyTokens.map(({ className, token, variant }) => (
-          <div className="flex items-baseline gap-control-inset" key={token}>
-            <Text className={className} variant={variant}>
-              The quick brown fox
-            </Text>
-            <Text variant="footnote">{token}</Text>
-          </div>
-        ))}
-      </div>
-    </Group>
+    <TokenGrid
+      sample={(token) => <span className={token}>The quick brown fox</span>}
+      tokens={typographyTokens}
+    />
   );
 }
 
+// Text colours read as text and the rest as swatches, on one grid: they are
+// all colour tokens. Each swatch takes a hairline edge in the divider
+// colour, so the ones close to the canvas (`surface`, `recess`, the colours
+// that sit on a fill) still show as swatches rather than gaps.
 export function Colors() {
   return (
-    <Group title="Colors">
-      <div className="grid grid-cols-5 gap-section">
-        {colorTokens.map((token) => (
-          <div className="flex items-center gap-control" key={token}>
-            <div className={`size-8 shrink-0 rounded-control ${token}`} />
-            <Text variant="footnote">{token}</Text>
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-col gap-tight">
-        {contentForegroundTokens.map((token) => (
-          <Text className={token} key={token}>
-            The quick brown fox jumps over the lazy dog ({token})
-          </Text>
-        ))}
-      </div>
-    </Group>
+    <TokenGrid
+      sample={(token) =>
+        token.startsWith("text-") ? (
+          <span className={token}>The quick brown fox</span>
+        ) : (
+          <span
+            className={cn(
+              "block size-5 rounded-sm shadow-[inset_0_0_0_0.5px_var(--color-divider)]",
+              token,
+            )}
+          />
+        )
+      }
+      tokens={[...textColorTokens, ...colorTokens]}
+    />
   );
 }
 
-export function Fills() {
+export function Materials() {
   return (
-    <Group title="Fills">
-      <div className="flex flex-col gap-tight">
-        {fillTokens.map((token) => (
-          <div
-            className={`flex items-center px-control-inset py-control ${token}`}
-            key={token}
-          >
-            <Text variant="footnote">{token}</Text>
-          </div>
-        ))}
-      </div>
-    </Group>
+    <TokenGrid
+      sample={(token) => (
+        <span
+          className={cn("block h-control-height w-24 rounded-control", token)}
+        />
+      )}
+      tokens={materialTokens}
+    />
   );
 }
+
+export function Sizes() {
+  return (
+    <StoryGrid>
+      <StoryGridRow label="h-control-height">
+        <span className="block h-control-height w-16 rounded-control bg-fill-strong" />
+      </StoryGridRow>
+    </StoryGrid>
+  );
+}
+
+// Each spacing shown as the bare space it measures, labelled with the
+// utility it is used through.
+const spacingTokens = [
+  { label: "gap-inline", width: "w-inline" },
+  { label: "px-inset", width: "w-inset" },
+  { label: "ps-traffic-lights", width: "w-traffic-lights" },
+];
 
 export function Spacing() {
   return (
-    <Group title="Spacing">
-      <div className="flex flex-col gap-control">
-        {spacingTokens.map((token) => (
-          <div className="flex items-center gap-control-inset" key={token}>
-            <div className={`h-control-inset bg-fill ${token}`} />
-            <Text variant="footnote">{token}</Text>
-          </div>
-        ))}
-      </div>
-    </Group>
+    <StoryGrid>
+      {spacingTokens.map(({ label, width }) => (
+        <StoryGridRow key={label} label={label}>
+          <span className={cn("block h-4 rounded-sm bg-fill-strong", width)} />
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
   );
 }
 
 export function Radii() {
   return (
-    <Group title="Radii">
-      <div className="flex flex-wrap gap-section">
-        {radiusTokens.map((token) => (
-          <div className="flex flex-col items-center gap-control" key={token}>
-            <div className={`size-16 bg-fill ${token}`} />
-            <Text variant="footnote">{token}</Text>
-          </div>
-        ))}
-      </div>
-    </Group>
+    <TokenGrid
+      sample={(token) => (
+        <span className={cn("block size-10 bg-fill-strong", token)} />
+      )}
+      tokens={radiusTokens}
+    />
   );
 }
 
 export function Focus() {
   return (
-    <Group title="Focus">
-      <div className="flex flex-col items-center gap-control self-start">
-        <div
-          className={`h-control-height w-16 rounded-control bg-fill ring-3 ${focusStyles}`}
+    <TokenGrid
+      sample={() => (
+        <span
+          className={cn(
+            "block h-control-height w-16 rounded-control bg-fill ring-3",
+            focusStyles,
+          )}
         />
-        <Text variant="footnote">ring-focus-ring</Text>
-      </div>
-    </Group>
-  );
-}
-
-export function Icons() {
-  return (
-    <Group title="Icons">
-      <div className="flex flex-wrap items-end gap-section">
-        {iconTokens.map((token) => (
-          <div className="flex flex-col items-center gap-control" key={token}>
-            <Settings className={`text-content-fg ${token}`} />
-            <Text variant="footnote">{token}</Text>
-          </div>
-        ))}
-      </div>
-    </Group>
+      )}
+      tokens={["ring-focus"]}
+    />
   );
 }

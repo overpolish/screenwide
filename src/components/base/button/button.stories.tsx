@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Circle, ClipboardCopy, Upload } from "lucide-react";
+import { ClipboardCopy, Upload } from "lucide-react";
 import { ComponentProps } from "react";
 
 import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
@@ -12,19 +12,25 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 type ButtonProps = ComponentProps<typeof Button>;
 
-const variants: NonNullable<ButtonProps["variant"]>[] = ["solid", "ghost"];
-const colors: NonNullable<ButtonProps["color"]>[] = ["neutral", "primary"];
-const sizes: NonNullable<ButtonProps["size"]>[] = ["regular", "capture"];
+// The looks a button can take: a solid one in either colour, or a ghost.
+// The primary action is always filled, so there is no primary ghost.
+const looks = [
+  { label: "neutral", look: { variant: "solid" } },
+  { label: "primary", look: { color: "primary", variant: "solid" } },
+  { label: "ghost", look: { variant: "ghost" } },
+] as const;
 
-// Colours down, variants across: each colour changes how a variant looks.
-function VariantGrid(args: ButtonProps) {
+function LookGrid({
+  children,
+  isDisabled,
+}: Pick<ButtonProps, "children" | "isDisabled">) {
   return (
-    <StoryGrid columns={variants}>
-      {colors.map((color) => (
-        <StoryGridRow key={color} label={color}>
-          {variants.map((variant) => (
-            <Button key={variant} {...args} color={color} variant={variant} />
-          ))}
+    <StoryGrid>
+      {looks.map(({ label, look }) => (
+        <StoryGridRow key={label} label={label}>
+          <Button {...look} isDisabled={isDisabled}>
+            {children}
+          </Button>
         </StoryGridRow>
       ))}
     </StoryGrid>
@@ -36,18 +42,13 @@ const meta = {
     children: { control: "text" },
     color: {
       control: "inline-radio",
-      options: colors,
+      options: ["neutral", "primary"],
       table: { defaultValue: { summary: "neutral" } },
     },
     isDisabled: { control: "boolean" },
-    size: {
-      control: "inline-radio",
-      options: sizes,
-      table: { defaultValue: { summary: "regular" } },
-    },
     variant: {
       control: "inline-radio",
-      options: variants,
+      options: ["solid", "ghost"],
       table: { defaultValue: { summary: "solid" } },
     },
   },
@@ -55,7 +56,6 @@ const meta = {
     children: "Sign out",
     color: "neutral",
     isDisabled: false,
-    size: "regular",
     variant: "solid",
   },
   component: Button,
@@ -73,43 +73,24 @@ export const Default: Story = {};
 
 export const Variants: Story = {
   parameters: { controls: { disable: true } },
-  render: (args) => <VariantGrid {...args} />,
+  render: ({ children }) => <LookGrid>{children}</LookGrid>,
 };
 
 export const Disabled: Story = {
-  args: { isDisabled: true },
   parameters: { controls: { disable: true } },
-  render: (args) => <VariantGrid {...args} />,
+  render: ({ children }) => <LookGrid isDisabled>{children}</LookGrid>,
 };
 
-export const Sizes: Story = {
-  parameters: { controls: { disable: true } },
-  render: (args) => (
-    <StoryGrid columns={3}>
-      {sizes.map((size) => (
-        <StoryGridRow key={size} label={size}>
-          <Button {...args} size={size} />
-          <Button {...args} color="primary" size={size} />
-          {/* Icon only: the capture size is exactly 48 wide with a lone
-              28px glyph. */}
-          <Button {...args} aria-label="Record" color="primary" size={size}>
-            <Circle />
-          </Button>
-        </StoryGridRow>
-      ))}
-    </StoryGrid>
-  ),
-};
-
+// A window toolbar is the one place a text button carries an icon.
 export const WithIcon: Story = {
   parameters: { controls: { disable: true } },
-  render: (args) => (
-    <div className="flex items-center gap-control">
-      <Button {...args} variant="ghost">
+  render: () => (
+    <div className="flex items-center gap-2">
+      <Button variant="ghost">
         <ClipboardCopy />
         Copy
       </Button>
-      <Button {...args} color="primary">
+      <Button color="primary">
         <Upload />
         Export
       </Button>

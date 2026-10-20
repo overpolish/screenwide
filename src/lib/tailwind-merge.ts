@@ -4,49 +4,24 @@
 import { extendTailwindMerge } from "tailwind-merge";
 
 /**
- * Semantic font sizes declared as `--text-*` in `index.css`. tailwind-merge
+ * Semantic font sizes declared as `--text-*` in `styles/theme.css`. tailwind-merge
  * treats unknown `text-*` classes as colours, so without this the size class
  * gets dropped whenever a text colour follows it.
  */
-const fontSizes = [
-  "title",
-  "headline",
-  "body",
-  "subheadline",
-  "section",
-  "footnote",
-];
+const fontSizes = ["title", "heading", "body", "label", "caption"];
 
 /**
- * Semantic spacing declared as `--spacing-*` in `index.css`. Without these,
- * two padding classes on different tokens are both kept and CSS order decides.
+ * Semantic spacing declared as `--spacing-*` in `styles/theme.css`. Without these,
+ * two sizing classes on different tokens are both kept and CSS order decides.
  */
-const spacing = [
-  "tight",
-  "control",
-  "control-inset",
-  "section",
-  "list-inset",
-  "layout",
-  "window-inset",
-  "control-height",
-  "control-compact",
-  "timeline-gutter",
-  "traffic-lights",
-  "focus-safe",
-  "icon",
-  "icon-small",
-  "icon-mini",
-  "icon-large",
-  "icon-xl",
-];
+const spacing = ["control-height", "inline", "inset", "traffic-lights"];
 
 /**
- * Semantic radii declared as `--radius-*` in `index.css`. Without these, two
+ * Semantic radii declared as `--radius-*` in `styles/theme.css`. Without these, two
  * `rounded-*` classes on different tokens are both kept and CSS order decides
  * which corner a control ends up with.
  */
-const radii = ["window", "panel", "control", "checkbox"];
+const radii = ["control", "panel"];
 
 /**
  * An axis class covers both logical sides, as it covers both physical ones:

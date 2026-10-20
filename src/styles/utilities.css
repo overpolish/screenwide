@@ -1,0 +1,92 @@
+/* SPDX-FileCopyrightText: 2026 overpolish */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Utilities over the colour tokens that a plain `text-*` or `bg-*` cannot
+   express. */
+
+/* A text colour also sets the alpha its icons draw at, which applies to the
+   whole glyph rather than per stroke (see the `.lucide` rule). Opaque colours
+   reset it, so an icon recoloured inside a secondary-coloured container is
+   not faded twice. */
+@utility text-fg {
+  color: var(--color-fg);
+  --icon-alpha: var(--alpha-fg);
+}
+@utility text-fg-secondary {
+  color: var(--color-fg-secondary);
+  --icon-alpha: var(--alpha-fg-secondary);
+}
+@utility text-fg-tertiary {
+  color: var(--color-fg-tertiary);
+  --icon-alpha: var(--alpha-fg-tertiary);
+}
+@utility text-fg-disabled {
+  color: var(--color-fg-disabled);
+  --icon-alpha: var(--alpha-fg-disabled);
+}
+@utility text-on-primary {
+  color: var(--color-on-primary);
+  --icon-alpha: 1;
+}
+@utility text-on-accent {
+  color: var(--color-on-accent);
+  --icon-alpha: 1;
+}
+@utility text-success {
+  color: var(--color-success);
+  --icon-alpha: 1;
+}
+@utility text-info {
+  color: var(--color-info);
+  --icon-alpha: 1;
+}
+@utility text-warning {
+  color: var(--color-warning);
+  --icon-alpha: 1;
+}
+@utility text-error {
+  color: var(--color-error);
+  --icon-alpha: 1;
+}
+@utility text-white {
+  color: white;
+  --icon-alpha: 1;
+}
+
+/* The raised material (`colors.css`). The bevel goes in Tailwind's own
+   shadow slot and the box shadow is restated in Tailwind's composition, so a
+   focus ring drawn over the control adds to the bevel rather than replacing
+   it. */
+@utility control-raised {
+  background-image: var(--control-raised);
+  --tw-shadow: var(--control-bevel);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+@utility control-raised-hover {
+  background-image: var(--control-raised-hover);
+}
+@utility control-raised-pressed {
+  background-image: var(--control-raised-pressed);
+  --tw-shadow: var(--control-bevel-pressed);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+/* The primary action's sheen and bevel over its `bg-primary` fill. Pressed,
+   the sheen goes, as the raised material flattens. */
+@utility primary-raised {
+  background-image: var(--primary-sheen);
+  --tw-shadow: var(--primary-bevel);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+@utility primary-raised-pressed {
+  background-image: none;
+  --tw-shadow: var(--primary-bevel-pressed);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}

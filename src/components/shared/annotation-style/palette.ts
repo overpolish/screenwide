@@ -10,9 +10,9 @@ import { t } from "../../../i18n/i18n";
  * so it is a value rather than a token: the shader has no theme to resolve
  * against, and an annotation must not change colour when the editor does. The
  * palette is the AppKit system palette measured on macOS 26 - the same source
- * as the semantic colours in `src/index.css`, whose four values are repeated
- * here exactly rather than approximated - plus the two achromatic ends every
- * annotation tool offers.
+ * as the status colours in `src/styles/colors.css`, whose four values are
+ * repeated here exactly rather than approximated - plus the two achromatic
+ * ends every annotation tool offers.
  */
 export type AnnotationSwatch = {
   /** `#rrggbb`, as the document stores it. */

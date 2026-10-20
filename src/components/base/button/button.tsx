@@ -5,13 +5,17 @@ import { motion, MotionProps } from "motion/react";
 import { Ref } from "react";
 import { AriaButtonProps, HoverEvents } from "react-aria";
 import { Button as AriaButton } from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
 
 import { buttonVariants } from "./button-variants";
 
+// The primary action is always filled, so a ghost button has no colour.
+type ButtonLook =
+  | { color?: "neutral" | "primary"; variant?: "solid" }
+  | { variant: "ghost"; color?: "neutral" };
+
 type ButtonProps = AriaButtonProps &
   HoverEvents &
-  VariantProps<typeof buttonVariants> &
+  ButtonLook &
   MotionProps & {
     className?: string;
     ref?: Ref<HTMLButtonElement>;
@@ -24,7 +28,6 @@ export const Button = ({
   children,
   className,
   color,
-  size,
   variant,
   ...props
 }: ButtonProps) => {
@@ -35,7 +38,6 @@ export const Button = ({
         className,
         color,
         isDisabled: props.isDisabled,
-        size,
         variant,
       })}
     >

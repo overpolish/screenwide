@@ -1,0 +1,133 @@
+/* SPDX-FileCopyrightText: 2026 overpolish */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Polaris's warm greys and its controls lit from above, with the bevel
+   brought down to a hairline highlight and a faint shade; shadcn's
+   restraint for everything else. The window's own material is the page:
+   nothing here paints the window. Floating windows (the tool panel, the
+   ring, menus) are the only opaque cards. */
+
+/* The app's own face, the one the compositor already sets text in, so the
+   windows and what is drawn on the picture share a typeface. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  src: url("../../../../../src-tauri/assets/Inter-VariableFont_opsz,wght.ttf")
+    format("truetype");
+}
+
+.look-combined {
+  --font-sans: "Inter", system-ui, sans-serif;
+  font-family: var(--font-sans);
+  --surface: #ffffff;
+  --surface-2: #f6f6f7;
+  --fg: #303030;
+  --fg-2: #616161;
+  --fg-3: #8a8a8a;
+  --fill: rgb(0 0 0 / 5%);
+  --fill-2: rgb(0 0 0 / 9%);
+  --recess: rgb(0 0 0 / 4%);
+  --divider: rgb(0 0 0 / 8%);
+  /* Monochrome, as Polaris is. The primary action and anything checked or
+     on (a switch, an option, a held toggle, the selected clip) take the
+     near-black fill with white on it. One of a set chosen in place (a
+     segment, a style, a selected range) takes a grey surface. Orange, the
+     logo's colour, is kept for emphasis: where you are (the playhead and
+     the selection on the picture), focus and progress. It is never text. */
+  --primary: #303030;
+  --primary-fg: #ffffff;
+  --accent: var(--primary);
+  --on-accent: var(--primary-fg);
+  --selected: rgb(0 0 0 / 12%);
+  --emphasis: oklch(66% 0.181 47.604);
+  --record: #e51c00;
+  --level: #29845a;
+  /* A white highlight vanishes on white, so in light the depth comes from
+     the other edge: a faint fall-off to the bottom, a shaded bottom lip and
+     a crisp outline. Dark keeps the lit top edge, which reads there. */
+  --raised-bg: linear-gradient(180deg, #ffffff, #f4f4f5);
+  --bevel:
+    inset 0 -1px 0 rgb(0 0 0 / 8%), 0 0 0 0.5px rgb(0 0 0 / 22%),
+    0 1px 1.5px rgb(0 0 0 / 10%);
+  --bevel-primary:
+    inset 0 1px 0 rgb(255 255 255 / 16%), inset 0 -1px 0 rgb(0 0 0 / 40%),
+    0 1px 1.5px rgb(0 0 0 / 22%);
+  --card: 0 0 0 0.5px rgb(0 0 0 / 12%), 0 10px 28px rgb(0 0 0 / 12%);
+  --clip-scene: rgb(128 81 255 / 16%);
+  --clip-annotation: rgb(255 184 0 / 22%);
+  --clip-screen: rgb(0 91 211 / 12%);
+  --clip-camera: rgb(0 166 155 / 16%);
+}
+
+.dark .look-combined {
+  --surface: #2a2a2b;
+  --raised-bg: var(--surface);
+  --surface-2: #323234;
+  --fg: #e3e3e3;
+  --fg-2: #b5b5b5;
+  --fg-3: #8a8a8a;
+  --fill: rgb(255 255 255 / 6%);
+  --fill-2: rgb(255 255 255 / 10%);
+  --recess: rgb(0 0 0 / 22%);
+  --divider: rgb(255 255 255 / 8%);
+  /* Dark: near-white with near-black on it, and the softer orange. */
+  --primary: #e3e3e3;
+  --primary-fg: #1a1a1a;
+  --selected: rgb(255 255 255 / 16%);
+  --emphasis: oklch(78% 0.14 47.604);
+  --record: #ff6b52;
+  --level: #3fbf7f;
+  --bevel:
+    inset 0 1px 0 rgb(255 255 255 / 7%), 0 1px 1px rgb(0 0 0 / 30%),
+    0 0 0 0.5px rgb(0 0 0 / 45%);
+  --bevel-primary:
+    inset 0 1px 0 rgb(255 255 255 / 40%), 0 1px 1px rgb(0 0 0 / 35%);
+  --card: 0 0 0 0.5px rgb(0 0 0 / 50%), 0 12px 32px rgb(0 0 0 / 45%);
+  --clip-scene: rgb(150 115 255 / 22%);
+  --clip-annotation: rgb(255 184 0 / 20%);
+  --clip-screen: rgb(75 155 255 / 18%);
+  --clip-camera: rgb(0 200 185 / 18%);
+}
+
+/* A control lit from above: a hairline of depth at its edges, and nothing
+   more. */
+.combined-raised {
+  background: var(--raised-bg);
+  box-shadow: var(--bevel);
+}
+
+.combined-primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  box-shadow: var(--bevel-primary);
+}
+
+/* Something checked or on: the near-black fill (near-white in dark), its
+   content in the colour that reads on it. */
+.combined-accent {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* One of a set chosen in place: a grey surface, the text unchanged. */
+.combined-selected {
+  background: var(--selected);
+  color: var(--fg);
+}
+
+/* Stands in for a window of its own (tool panel, timeline, ring, menu):
+   the app opens it as a separate window that draws its own material. */
+.combined-card {
+  background: var(--surface);
+  box-shadow: var(--card);
+}
+
+/* A slider's knob or a range's handle: white in both appearances, as a
+   physical knob would be. */
+.combined-knob {
+  background: #ffffff;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 22%),
+    0 1px 2px rgb(0 0 0 / 25%);
+}

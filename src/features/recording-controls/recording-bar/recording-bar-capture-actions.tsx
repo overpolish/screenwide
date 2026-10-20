@@ -230,7 +230,6 @@ export function RecordingBarCaptureActions({
         color="primary"
         isDisabled={!canRecord && !isLocked}
         onPress={isLocked ? onRequiredPermissionsPress : onRecord}
-        size="capture"
       >
         {isLocked ? <Lock /> : <Circle />}
       </Button>

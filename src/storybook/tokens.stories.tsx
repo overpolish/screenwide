@@ -1,25 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Text } from "../components/base/text/text";
-
-import {
-  Colors,
-  Fills,
-  Focus,
-  Icons,
-  Page,
-  Radii,
-  Spacing,
-  Typography,
-} from "./token-sections";
+import * as Sections from "./token-sections";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   parameters: {
     controls: { disable: true },
-    layout: "fullscreen",
+    layout: "centered",
   },
   title: "Foundations/Tokens",
 } satisfies Meta;
@@ -27,75 +16,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const All: Story = {
-  render: () => (
-    <Page>
-      <Text as="h1" variant="title">
-        Design tokens
-      </Text>
-      <Typography />
-      <Colors />
-      <Fills />
-      <Spacing />
-      <Radii />
-      <Focus />
-      <Icons />
-    </Page>
-  ),
-};
+export const Typography: Story = { render: () => <Sections.Typography /> };
 
-export const TypographyTokens: Story = {
-  render: () => (
-    <Page>
-      <Typography />
-    </Page>
-  ),
-};
+export const Colors: Story = { render: () => <Sections.Colors /> };
 
-export const ColorTokens: Story = {
-  render: () => (
-    <Page>
-      <Colors />
-    </Page>
-  ),
-};
+export const Materials: Story = { render: () => <Sections.Materials /> };
 
-export const FillTokens: Story = {
-  render: () => (
-    <Page>
-      <Fills />
-    </Page>
-  ),
-};
+export const Sizes: Story = { render: () => <Sections.Sizes /> };
 
-export const SpacingTokens: Story = {
-  render: () => (
-    <Page>
-      <Spacing />
-    </Page>
-  ),
-};
+export const Spacing: Story = { render: () => <Sections.Spacing /> };
 
-export const RadiusTokens: Story = {
-  render: () => (
-    <Page>
-      <Radii />
-    </Page>
-  ),
-};
+export const Radii: Story = { render: () => <Sections.Radii /> };
 
-export const FocusTokens: Story = {
-  render: () => (
-    <Page>
-      <Focus />
-    </Page>
-  ),
-};
-
-export const IconTokens: Story = {
-  render: () => (
-    <Page>
-      <Icons />
-    </Page>
-  ),
-};
+export const Focus: Story = { render: () => <Sections.Focus /> };

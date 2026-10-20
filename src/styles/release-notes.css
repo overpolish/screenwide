@@ -1,0 +1,150 @@
+/* SPDX-FileCopyrightText: 2026 overpolish */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Compact GitHub-rendered release notes for the updater surfaces. Spacing
+   is Tailwind's 4px step, `--spacing`. */
+.release-notes {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  overflow-wrap: anywhere;
+}
+
+.release-notes > :first-child {
+  margin-top: 0;
+}
+
+.release-notes > :last-child {
+  margin-bottom: 0;
+}
+
+.release-notes p {
+  margin: calc(var(--spacing) * 2) 0;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+/* GitHub's release HTML arrives with its own heading scale; every level is
+   capped to the app's heading role so the notes read as app text. */
+.release-notes h1,
+.release-notes h2,
+.release-notes h3,
+.release-notes h4,
+.release-notes h5,
+.release-notes h6 {
+  margin: calc(var(--spacing) * 3) 0 var(--spacing);
+  font-size: var(--text-heading);
+  font-weight: var(--text-heading--font-weight);
+  line-height: var(--text-heading--line-height);
+}
+
+.release-notes ul,
+.release-notes ol {
+  margin: calc(var(--spacing) * 2) 0;
+  padding-left: calc(var(--spacing) * 6);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.release-notes ul ul,
+.release-notes ul ol,
+.release-notes ol ul,
+.release-notes ol ol {
+  margin-top: var(--spacing);
+}
+
+.release-notes ul {
+  list-style: disc;
+}
+
+.release-notes ol {
+  list-style: decimal;
+}
+
+.release-notes li {
+  margin: var(--spacing) 0;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+/* Text keeps the text colour; the underline marks the link. */
+.release-notes a,
+.release-notes a:visited {
+  color: var(--color-fg);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.release-notes ul.contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.release-notes .task-list-item {
+  position: relative;
+  list-style: none;
+}
+
+.release-notes-task-marker {
+  display: inline-flex;
+  margin-inline-end: calc(var(--spacing) * 2);
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+.release-notes img,
+.release-notes video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: calc(var(--spacing) * 2) 0;
+  border-radius: var(--radius-sm);
+}
+
+.release-notes code {
+  padding: calc(var(--spacing) * 0.5) var(--spacing);
+  border-radius: var(--radius-sm);
+  background: var(--color-fill);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+}
+
+.release-notes pre {
+  margin: calc(var(--spacing) * 2) 0;
+  padding: calc(var(--spacing) * 3);
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  background: var(--color-fill);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+}
+
+.release-notes pre code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 1em;
+}
+
+.release-notes blockquote {
+  margin: calc(var(--spacing) * 2) 0;
+  padding: calc(var(--spacing) * 3);
+  border-radius: var(--radius-sm);
+  background: var(--color-recess);
+  color: var(--color-fg-secondary);
+}
+
+.release-notes blockquote > :first-child {
+  margin-top: 0;
+}
+
+.release-notes blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.release-notes hr {
+  margin: calc(var(--spacing) * 3) 0;
+  border: 0;
+}

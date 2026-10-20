@@ -7,7 +7,7 @@ import { TIMED_LANE_ROW_HEIGHT_PX } from "./tracks/timed-lane-layout";
  * The timeline band is laid out entirely from spacing tokens, but the band's
  * height is a number in JS: the divider drags it, and the minimum stop is an
  * arithmetic sum of the rows that must stay visible.
- * These mirror the `@theme` tokens in `src/index.css` so the arithmetic below
+ * These mirror the `@theme` tokens in `src/styles/theme.css` so the arithmetic below
  * is written in tokens rather than in magic numbers.
  */
 

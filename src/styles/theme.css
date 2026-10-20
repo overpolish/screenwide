@@ -1,0 +1,80 @@
+/* SPDX-FileCopyrightText: 2026 overpolish */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* The app's scale: type, the control height, the window chrome's inset and
+   radii. Spacing otherwise is Tailwind's 4px scale (`gap-1`, `p-3`), and a
+   control sizes its own icons. Colours live in `colors.css`. */
+@theme {
+  /* Inter, the face the compositor already sets text in, so the windows and
+     what is drawn on the picture share a typeface. Carried by the app, so
+     it is the same on every platform. */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono:
+    "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* Five type roles: title for a window's title, heading for a section's,
+     body for text, label for the text inside a control, and caption for
+     help text and readouts. Resetting --text-* drops Tailwind's default
+     sizes (text-xs, text-sm, ...) so only these roles are available. Inter's
+     bold is heavy at these sizes, so emphasis is semibold. */
+  --text-*: initial;
+  --text-title: 15px;
+  --text-title--line-height: 20px;
+  --text-title--font-weight: 600;
+  --text-heading: 13px;
+  --text-heading--line-height: 16px;
+  --text-heading--font-weight: 600;
+  --text-body: 13px;
+  --text-body--line-height: 16px;
+  --text-body--font-weight: 400;
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-label--font-weight: 500;
+  --text-caption: 11px;
+  --text-caption--line-height: 14px;
+  --text-caption--font-weight: 400;
+
+  /* A control's height. Mirrored in JS by `TIMED_LANE_ROW_HEIGHT_PX`,
+     which the timeline's rows are laid out to. */
+  --spacing-control-height: 1.75rem;
+
+  /* Spacing by what it separates, added as a role needs one; anything else
+     takes Tailwind's 4px scale. Inline: between things read as one, such as
+     an icon and its label. Inset: inside a control, between its edge and
+     its content. Traffic lights: the room the OS leaves for the window
+     buttons at a title bar's leading edge, with the window inset after
+     them. */
+  --spacing-inline: 0.375rem;
+  --spacing-inset: 0.75rem;
+  --spacing-traffic-lights: 5.5rem;
+
+  /* Small parts (a swatch, a checkbox, a chip), controls, and the panels
+     and cards controls sit on. The native window draws its own corners. */
+  --radius-sm: 0.25rem;
+  --radius-control: 0.5rem;
+  --radius-panel: 0.75rem;
+
+  --animate-mesh-drift: mesh-drift 18s ease-in-out infinite alternate;
+  /* Selection halo breathing; entry/exit fades come from an opacity
+     transition on the always-mounted halo element. */
+  --animate-halo: halo-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes halo-pulse {
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  @keyframes mesh-drift {
+    0% {
+      transform: translate3d(-1.2%, -0.8%, 0) scale(1.015) rotate(-0.15deg);
+    }
+    45% {
+      transform: translate3d(1%, -1.1%, 0) scale(1.028) rotate(0.12deg);
+    }
+    100% {
+      transform: translate3d(-0.4%, 1.2%, 0) scale(1.02) rotate(-0.08deg);
+    }
+  }
+}

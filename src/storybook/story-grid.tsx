@@ -3,7 +3,9 @@
 
 import { ReactNode } from "react";
 
-import { Text } from "../components/base/text/text";
+// Labels in the caption role, written out rather than through `Text`, so the
+// grid reads the same whatever state the primitives are in.
+const labelClass = "text-caption text-fg-secondary";
 
 /**
  * Shows a prop's values side by side: a `StoryGridRow` per value, and, when a
@@ -20,16 +22,16 @@ export function StoryGrid({
   const count = typeof columns === "number" ? columns : columns.length;
   return (
     <div
-      className="grid items-center justify-items-start gap-section"
+      className="grid items-center justify-items-start gap-3"
       style={{ gridTemplateColumns: `auto repeat(${String(count)}, auto)` }}
     >
       {typeof columns === "number" ? null : (
         <>
           <span />
           {columns.map((column) => (
-            <Text key={column} variant="footnote">
+            <span className={labelClass} key={column}>
               {column}
-            </Text>
+            </span>
           ))}
         </>
       )}
@@ -48,7 +50,7 @@ export function StoryGridRow({
 }) {
   return (
     <>
-      <Text variant="footnote">{label}</Text>
+      <span className={labelClass}>{label}</span>
       {children}
     </>
   );
