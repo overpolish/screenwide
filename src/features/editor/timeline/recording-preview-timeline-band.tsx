@@ -3,8 +3,8 @@
 
 import { ReactNode, RefObject } from "react";
 
-import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { t } from "../../../i18n/i18n";
+import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { useCameraBackgroundRanges } from "../recording/camera/use-camera-background-ranges";
 import { useRecordingCaptions } from "../recording/captions/use-recording-captions";
 import {

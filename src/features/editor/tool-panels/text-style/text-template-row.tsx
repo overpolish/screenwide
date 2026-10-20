@@ -5,11 +5,11 @@ import { Ellipsis } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { useCollator } from "react-aria";
 
-import { IconButton } from "../../../../components/base/button/icon-button";
-import { ListBoxItem } from "../../../../components/base/listbox-item/listbox-item";
-import { Select } from "../../../../components/base/select/select";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { IconButton } from "../../../../primitives/button/icon-button";
+import { ListBoxItem } from "../../../../primitives/listbox-item/listbox-item";
+import { Select } from "../../../../primitives/select/select";
 import {
   boundsAnchor,
   pointerAnchor,

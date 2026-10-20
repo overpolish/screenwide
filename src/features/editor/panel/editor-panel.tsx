@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
-import { WindowShell } from "../../../components/shared/window-shell/window-shell";
+import { WindowShell } from "../../../composites/window-shell/window-shell";
 import { t } from "../../../i18n/i18n";
+import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { cameraOutputChoice } from "../export/camera-output";
 import { useExportOptionsBridge } from "../export/options-window/use-export-options-bridge";
 import {

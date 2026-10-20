@@ -4,7 +4,7 @@
 import {
   Background,
   BackgroundPreset,
-} from "../../../components/shared/background-picker/background";
+} from "../../../composites/background-picker/background";
 import { ImagePlayChange } from "../annotations/annotation-channel";
 import {
   AnnotationStyle,

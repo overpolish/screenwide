@@ -29,9 +29,9 @@
   --color-surface: oklch(99.5% 0.002 47.6);
 
   /* Primary is the primary action, the one control a window exists for,
-     and the fill of anything checked or on (a switch, a chosen option, the
-     selected clip): the warm black with white on it. The component says
-     which it means. */
+     the fill of anything checked or on (a switch, a chosen option, the
+     selected clip), and progress: the warm black with white on it. The
+     component says which it means. */
   --color-primary: oklch(26% 0.012 47.6);
   --color-on-primary: white;
   --color-primary-hover: oklch(21% 0.012 47.6);
@@ -40,7 +40,7 @@
      surface with the text unchanged. */
   --color-selected: oklch(18% 0.01 47.6 / 12%);
   /* The brand orange, the logo's colour, kept for emphasis: where you are
-     (the playhead, the selection on the picture), focus and progress. A
+     (the playhead, the selection on the picture) and focus. A
      mark, never text. The OS accent replaces it while the user follows it
      (`src/lib/system-accent.ts`); that setting goes with the platform
      unification. */

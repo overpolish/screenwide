@@ -3,8 +3,8 @@
 
 import { ZoomIn } from "lucide-react";
 
-import { NumberField } from "../../../components/base/input-fields/number-field";
 import { t } from "../../../i18n/i18n";
+import { NumberField } from "../../../primitives/input-fields/number-field";
 
 /**
  * The zoom field, at the left of a workspace's closing row. The native surface

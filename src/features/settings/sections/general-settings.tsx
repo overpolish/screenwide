@@ -4,12 +4,12 @@
 import { type ReactNode } from "react";
 import { useNumberFormatter } from "react-aria";
 
-import { GroupBox } from "../../../components/base/group-box/group-box";
-import { PillGroup } from "../../../components/base/pill-group/pill-group";
-import { Switch } from "../../../components/base/switch/switch";
-import { ControlRow } from "../../../components/shared/control-row/control-row";
-import { PathField } from "../../../components/shared/path-field/path-field";
+import { ControlRow } from "../../../composites/control-row/control-row";
+import { PathField } from "../../../composites/path-field/path-field";
 import { t } from "../../../i18n/i18n";
+import { GroupBox } from "../../../primitives/group-box/group-box";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
+import { Switch } from "../../../primitives/switch/switch";
 import { useRecordingInputStore } from "../../recording-inputs/store";
 import { RecordingFps } from "../../recording-inputs/types";
 import { useSettingsApi } from "../settings-api-context";

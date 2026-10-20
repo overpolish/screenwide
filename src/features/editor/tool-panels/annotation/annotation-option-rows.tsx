@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Switch } from "../../../../components/base/switch/switch";
-import { AnnotationAlignGroup } from "../../../../components/shared/annotation-style/annotation-align-group";
-import { AnnotationFitGroup } from "../../../../components/shared/annotation-style/annotation-fit-group";
-import { AnnotationHeadGroup } from "../../../../components/shared/annotation-style/annotation-head-group";
-import { AnnotationInkGroup } from "../../../../components/shared/annotation-style/annotation-ink-group";
-import { AnnotationShuffleSwitch } from "../../../../components/shared/annotation-style/annotation-shuffle-switch";
-import { SOFT_SPOTLIGHT_EDGE } from "../../../../components/shared/annotation-style/widths";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { AnnotationAlignGroup } from "../../../../composites/annotation-style/annotation-align-group";
+import { AnnotationFitGroup } from "../../../../composites/annotation-style/annotation-fit-group";
+import { AnnotationHeadGroup } from "../../../../composites/annotation-style/annotation-head-group";
+import { AnnotationInkGroup } from "../../../../composites/annotation-style/annotation-ink-group";
+import { AnnotationShuffleSwitch } from "../../../../composites/annotation-style/annotation-shuffle-switch";
+import { SOFT_SPOTLIGHT_EDGE } from "../../../../composites/annotation-style/widths";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { Switch } from "../../../../primitives/switch/switch";
 
 import type { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import type { AnnotationStyle } from "../../annotations/annotations";

@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
-import { PillGroup } from "../../../../components/base/pill-group/pill-group";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { ToolPanelPatch } from "../tool-panel-patch";
 import { ToolPanelCameraEffects } from "../tool-panel-store";
 

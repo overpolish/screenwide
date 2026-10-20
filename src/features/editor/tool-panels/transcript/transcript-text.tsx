@@ -11,8 +11,8 @@ import {
   useState,
 } from "react";
 
-import { ScrollArea } from "../../../../components/base/scroll-area/scroll-area";
 import { t } from "../../../../i18n/i18n";
+import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 
 import { TranscriptDropCaret } from "./transcript-drop-caret";
 import { ClientPoint, EditStart } from "./transcript-edit-span";

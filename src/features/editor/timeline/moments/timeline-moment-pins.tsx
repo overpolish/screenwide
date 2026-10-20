@@ -3,7 +3,7 @@
 
 import { Button } from "react-aria-components";
 
-import { NativeTooltipTrigger } from "../../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { NativeTooltipTrigger } from "../../../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { formatDuration } from "../../duration";

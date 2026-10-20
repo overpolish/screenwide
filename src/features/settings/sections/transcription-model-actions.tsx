@@ -3,10 +3,10 @@
 
 import { Check, Trash2 } from "lucide-react";
 
-import { Button } from "../../../components/base/button/button";
-import { ProgressBar } from "../../../components/base/progress-bar/progress-bar";
-import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
+import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
+import { Button } from "../../../primitives/button/button";
+import { ProgressBar } from "../../../primitives/progress-bar/progress-bar";
 
 import type { TranscriptionControls } from "./use-transcription";
 import type { TranscriptionModel } from "../../transcription/types";

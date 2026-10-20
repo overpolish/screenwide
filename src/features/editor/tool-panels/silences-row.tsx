@@ -3,9 +3,9 @@
 
 import { useEffect, useState } from "react";
 
-import { Button } from "../../../components/base/button/button";
-import { ControlRow } from "../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
+import { Button } from "../../../primitives/button/button";
 import { formatDuration } from "../duration";
 
 import { ToolProgress } from "./selection/tool-progress";

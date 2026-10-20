@@ -4,8 +4,8 @@
 import { X } from "lucide-react";
 import { Ref, useState } from "react";
 
-import { IconButton } from "../../../components/base/button/icon-button";
 import { t } from "../../../i18n/i18n";
+import { IconButton } from "../../../primitives/button/icon-button";
 import { RecordingInputs } from "../../recording-inputs/types";
 import {
   MonitorDetails,

@@ -1,19 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Text } from "../../../../components/base/text/text";
-import { AnnotationPixelationGroup } from "../../../../components/shared/annotation-style/annotation-pixelation-group";
-import { AnnotationRedactionGroup } from "../../../../components/shared/annotation-style/annotation-redaction-group";
-import { AnnotationRedaction } from "../../../../components/shared/annotation-style/types";
+import { AnnotationPixelationGroup } from "../../../../composites/annotation-style/annotation-pixelation-group";
+import { AnnotationRedactionGroup } from "../../../../composites/annotation-style/annotation-redaction-group";
+import { AnnotationRedaction } from "../../../../composites/annotation-style/types";
 import {
   ANNOTATION_BLUR_STRENGTHS,
   annotationWidthAt,
   annotationWidthIndex,
   redactionSizePresets,
-} from "../../../../components/shared/annotation-style/widths";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
+} from "../../../../composites/annotation-style/widths";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
+import { Text } from "../../../../primitives/text/text";
 
 import type { ToolPanelPatch } from "../tool-panel-patch";
 

@@ -4,10 +4,10 @@
 import { ReactNode } from "react";
 import { Button } from "react-aria-components";
 
-import { Switch } from "../../../../components/base/switch/switch";
-import { NativeTooltipTrigger } from "../../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { NativeTooltipTrigger } from "../../../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
+import { Switch } from "../../../../primitives/switch/switch";
 
 /** Whether a track is carried into the export, and whether that can change. */
 export type TimelineTrackInclusion = {

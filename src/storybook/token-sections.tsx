@@ -136,11 +136,19 @@ export function Sizes() {
       <StoryGridRow label="h-part-height">
         <span className="block h-part-height w-10 rounded-part bg-fill-strong" />
       </StoryGridRow>
+      <StoryGridRow label="size-mark">
+        <span className="block size-mark rounded-sm bg-fill-strong" />
+      </StoryGridRow>
     </StoryGrid>
   );
 }
 
-const iconTokens = ["size-icon-sm", "size-icon", "size-icon-lg"];
+const iconTokens = [
+  "size-icon-xs",
+  "size-icon-sm",
+  "size-icon",
+  "size-icon-lg",
+];
 
 export function Icons() {
   return (

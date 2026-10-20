@@ -3,12 +3,12 @@
 
 import { useEffect, useState } from "react";
 
-import { Button } from "../../../../components/base/button/button";
-import { CircularProgress } from "../../../../components/base/circular-progress/circular-progress";
-import { ProgressBar } from "../../../../components/base/progress-bar/progress-bar";
-import { ScrollArea } from "../../../../components/base/scroll-area/scroll-area";
-import { Text } from "../../../../components/base/text/text";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
+import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
+import { ProgressBar } from "../../../../primitives/progress-bar/progress-bar";
+import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
+import { Text } from "../../../../primitives/text/text";
 import {
   downloadTranscriptionModel,
   listenToTranscription,

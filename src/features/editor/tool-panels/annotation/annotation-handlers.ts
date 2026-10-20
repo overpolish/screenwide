@@ -4,7 +4,7 @@
 import {
   withAnnotationColor,
   withoutAnnotationColor,
-} from "../../../../components/shared/annotation-style/palette";
+} from "../../../../composites/annotation-style/palette";
 import {
   applyAnnotationAngle,
   applyAnnotationAnimated,

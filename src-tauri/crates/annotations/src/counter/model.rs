@@ -13,7 +13,7 @@ use crate::{Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, Annota
 
 /// The disc diameters the counter control offers, in points. The twin of
 /// `ANNOTATION_COUNTER_SIZES` in
-/// `src/components/shared/annotation-style/widths.ts`.
+/// `src/composites/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const COUNTER_SIZES: [f64; 5] = [28.0, 36.0, 48.0, 64.0, 80.0];
 

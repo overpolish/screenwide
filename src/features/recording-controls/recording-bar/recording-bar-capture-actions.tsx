@@ -16,13 +16,13 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 
-import { Button } from "../../../components/base/button/button";
+import { t } from "../../../i18n/i18n";
+import { cn } from "../../../lib/styling";
+import { Button } from "../../../primitives/button/button";
 import {
   IconButton,
   IconToggleButton,
-} from "../../../components/base/button/icon-button";
-import { t } from "../../../i18n/i18n";
-import { cn } from "../../../lib/styling";
+} from "../../../primitives/button/icon-button";
 import {
   hidePopupPanel,
   panelStartX,

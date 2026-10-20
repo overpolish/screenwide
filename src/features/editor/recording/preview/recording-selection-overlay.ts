@@ -15,7 +15,7 @@ import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { normalizedRecordingSelection } from "./recording-selection";
 
-import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
+import type { AnnotationKind } from "../../../../composites/annotation-style/types";
 
 const FRAME_LAYER_ID = 0xffffffff;
 

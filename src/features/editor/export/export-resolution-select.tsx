@@ -4,7 +4,7 @@
 import { t } from "../../../i18n/i18n";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
-import type { ControlRowControlProps } from "../../../components/shared/control-row/control-row";
+import type { ControlRowControlProps } from "../../../composites/control-row/control-row";
 
 export type ExportResolutionItem = {
   height: number;

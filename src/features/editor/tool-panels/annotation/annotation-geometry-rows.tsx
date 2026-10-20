@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationRadiusField } from "../../../../components/shared/annotation-style/annotation-radius-field";
-import { annotationSizeLabel } from "../../../../components/shared/annotation-style/annotation-text";
-import { redactionSizePresets } from "../../../../components/shared/annotation-style/widths";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
+import { AnnotationRadiusField } from "../../../../composites/annotation-style/annotation-radius-field";
+import { annotationSizeLabel } from "../../../../composites/annotation-style/annotation-text";
+import { redactionSizePresets } from "../../../../composites/annotation-style/widths";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
 import { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 

@@ -40,9 +40,12 @@
   --spacing-control-height: 1.75rem;
   /* A small part's height: a badge, a keyboard key, a chip. */
   --spacing-part-height: 1.125rem;
+  /* A small selection mark's size: a checkbox, a radio. */
+  --spacing-mark: 1rem;
   /* Icon sizes, each matched to the text it sits beside: small beside a
      caption, the default beside body text and control labels, large for
-     an icon that stands alone where it needs more presence. */
+     an icon that stands alone where it needs more presence. The extra-small
+     size carries its own stroke, so it is a utility (`utilities.css`). */
   --spacing-icon-sm: 0.875rem;
   --spacing-icon: 1rem;
   --spacing-icon-lg: 1.25rem;

@@ -15,10 +15,10 @@ import {
   SpotlightToolIcon,
   ImageToolIcon,
   TextToolIcon,
-} from "../../../components/shared/annotation-style/annotation-tool-icons";
+} from "../../../composites/annotation-style/annotation-tool-icons";
 import { ToolPanelKind } from "../../popup-panel/store";
 
-import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+import type { AnnotationKind } from "../../../composites/annotation-style/types";
 
 /** Every tool the editor toolbar offers, under one name each. A drawing
  * tool's name is its [`AnnotationKind`], so the tool and the shape it makes

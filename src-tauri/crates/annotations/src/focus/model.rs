@@ -24,7 +24,7 @@ pub const NEW_FOCUS_RADIUS: f64 = 12.0;
 /// The strength a fresh focus takes, the middle step of the five a blurred
 /// redaction offers: enough to read as a lens without smearing what is
 /// around the box. The twin of `DEFAULT_BLUR_STRENGTH` in
-/// `src/components/shared/annotation-style/widths.ts`.
+/// `src/composites/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub const NEW_FOCUS_STRENGTH: f64 = 3.0;
 

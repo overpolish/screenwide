@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
-import { Text } from "../../../../components/base/text/text";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
+import { Text } from "../../../../primitives/text/text";
 import { ModelDownloadRow } from "../selection/microphone-switch-rows";
 import { ToolProgress } from "../selection/tool-progress";
 import { ToolPanelTranscript } from "../tool-panel-transcript";

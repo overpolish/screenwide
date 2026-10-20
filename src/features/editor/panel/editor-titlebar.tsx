@@ -5,11 +5,11 @@ import { Check, ClipboardCopy, Trash2, Upload } from "lucide-react";
 import { ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
-import { Button } from "../../../components/base/button/button";
-import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
-import { ToolToggleDisabledContext } from "../../../components/shared/tool-toggle/tool-toggle-disabled";
-import { WindowHeader } from "../../../components/shared/window-header/window-header";
+import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
+import { ToolToggleDisabledContext } from "../../../composites/tool-toggle/tool-toggle-disabled";
+import { WindowHeader } from "../../../composites/window-header/window-header";
 import { t } from "../../../i18n/i18n";
+import { Button } from "../../../primitives/button/button";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorArtifact } from "../types";
 

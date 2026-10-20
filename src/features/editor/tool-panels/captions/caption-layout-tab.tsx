@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
-import { NumberField } from "../../../../components/base/input-fields/number-field";
-import { PillGroup } from "../../../../components/base/pill-group/pill-group";
-import { PositionGrid } from "../../../../components/base/position-grid/position-grid";
-import { Switch } from "../../../../components/base/switch/switch";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
+import { NumberField } from "../../../../primitives/input-fields/number-field";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
+import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
+import { Switch } from "../../../../primitives/switch/switch";
 import {
   isEmptyLayout,
   isSameLayout,

@@ -3,10 +3,10 @@
 
 import { Copy, FolderInput, Trash2 } from "lucide-react";
 
-import { Alert } from "../../components/base/alert/alert";
-import { Button } from "../../components/base/button/button";
-import { ProgressBar } from "../../components/base/progress-bar/progress-bar";
 import { t } from "../../i18n/i18n";
+import { Alert } from "../../primitives/alert/alert";
+import { Button } from "../../primitives/button/button";
+import { ProgressBar } from "../../primitives/progress-bar/progress-bar";
 
 /** The last delete, named for the notice that offers to undo it. */
 export type DeletedProjects = { count: number; title: string };

@@ -4,12 +4,12 @@
 import { Check, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { GroupBox } from "../../../components/base/group-box/group-box";
-import { TextField } from "../../../components/base/input-fields/text-field";
-import { Text } from "../../../components/base/text/text";
-import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
-import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
+import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
+import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
+import { GroupBox } from "../../../primitives/group-box/group-box";
+import { TextField } from "../../../primitives/input-fields/text-field";
+import { Text } from "../../../primitives/text/text";
 
 import { KindColorPicker } from "./kind-color-picker";
 import { VoiceNoteSettings } from "./voice-note-settings";

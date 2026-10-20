@@ -11,9 +11,9 @@ import {
   useState,
 } from "react";
 
-import { ScrollArea } from "../../../../components/base/scroll-area/scroll-area";
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
+import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import {
   EditStart,
   TranscriptEditSpan,

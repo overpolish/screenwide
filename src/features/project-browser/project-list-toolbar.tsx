@@ -3,10 +3,10 @@
 
 import { ReactNode } from "react";
 
-import { Badge } from "../../components/base/badge/badge";
-import { Checkbox } from "../../components/base/checkbox/checkbox";
-import { PillGroup } from "../../components/base/pill-group/pill-group";
 import { t } from "../../i18n/i18n";
+import { Badge } from "../../primitives/badge/badge";
+import { Checkbox } from "../../primitives/checkbox/checkbox";
+import { PillGroup } from "../../primitives/pill-group/pill-group";
 import { formatBytes } from "../editor/duration";
 
 import type { KindFilter } from "./project-list";

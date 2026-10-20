@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { GroupBox } from "../../../components/base/group-box/group-box";
-import { Switch } from "../../../components/base/switch/switch";
-import { ControlRow } from "../../../components/shared/control-row/control-row";
-import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
-import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
+import { ControlRow } from "../../../composites/control-row/control-row";
+import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
+import { SliderNumberField } from "../../../composites/slider-number-field/slider-number-field";
 import { platformArg, t } from "../../../i18n/i18n";
 import { isMacHost } from "../../../lib/platform";
+import { GroupBox } from "../../../primitives/group-box/group-box";
+import { Switch } from "../../../primitives/switch/switch";
 
 import type { GlideSettings } from "../../../bindings/GlideSettings";
 

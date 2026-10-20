@@ -4,17 +4,17 @@
 import { Ellipsis } from "lucide-react";
 import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { IconButton } from "../../../components/base/button/icon-button";
-import { Toolbar } from "../../../components/base/toolbar/toolbar";
 import {
   annotationToolLabel,
   annotationToolName,
-} from "../../../components/shared/annotation-style/annotation-text";
-import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
-import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
-import { ToolToggleDisabledContext } from "../../../components/shared/tool-toggle/tool-toggle-disabled";
-import { WindowHeaderCenterWidthContext } from "../../../components/shared/window-header/window-header-center-width";
+} from "../../../composites/annotation-style/annotation-text";
+import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
+import { ToolToggle } from "../../../composites/tool-toggle/tool-toggle";
+import { ToolToggleDisabledContext } from "../../../composites/tool-toggle/tool-toggle-disabled";
+import { WindowHeaderCenterWidthContext } from "../../../composites/window-header/window-header-center-width";
 import { t } from "../../../i18n/i18n";
+import { IconButton } from "../../../primitives/button/icon-button";
+import { Toolbar } from "../../../primitives/toolbar/toolbar";
 import { ANNOTATION_TOOLS, AnnotationTool } from "../tool-panels/tool-registry";
 
 import { annotationToolLayout } from "./annotation-tool-layout";
@@ -23,7 +23,7 @@ import {
   useAnnotationToolMenu,
 } from "./use-annotation-tool-menu";
 
-import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+import type { AnnotationKind } from "../../../composites/annotation-style/types";
 
 /**
  * How many equal buttons the strip has room for: the title bar's centre less

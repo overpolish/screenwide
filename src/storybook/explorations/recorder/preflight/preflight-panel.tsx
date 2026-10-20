@@ -4,15 +4,12 @@
 import { SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "../../../../components/base/button/button";
-import { IconButton } from "../../../../components/base/button/icon-button";
-import {
-  Keyboard,
-  Shortcut,
-} from "../../../../components/base/keyboard/keyboard";
-import { Switch } from "../../../../components/base/switch/switch";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { cn } from "../../../../lib/styling";
+import { Button } from "../../../../primitives/button/button";
+import { IconButton } from "../../../../primitives/button/icon-button";
+import { Keyboard, Shortcut } from "../../../../primitives/keyboard/keyboard";
+import { Switch } from "../../../../primitives/switch/switch";
 import {
   DEFAULT_INPUTS,
   type InputId,

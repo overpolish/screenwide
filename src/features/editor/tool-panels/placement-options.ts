@@ -5,7 +5,7 @@ import { t } from "../../../i18n/i18n";
 
 import type { OverlaySize } from "../../../bindings/OverlaySize";
 import type { Placement } from "../../../bindings/Placement";
-import type { PositionGridItem } from "../../../components/base/position-grid/position-grid";
+import type { PositionGridItem } from "../../../primitives/position-grid/position-grid";
 
 /** The nine places an overlay sits at, in reading order, as `PositionGrid`
  * lays them out. Captions and shortcuts offer the same ones. */

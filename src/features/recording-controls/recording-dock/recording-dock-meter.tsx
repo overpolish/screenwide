@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AudioMeter } from "../../../components/base/audio-meter/audio-meter";
+import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
 
 /** An input's level in the dock: a hairline standing beside it. */
 export function RecordingDockMeter({

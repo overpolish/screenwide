@@ -90,7 +90,7 @@ pub fn dressed_in(look: &mut TextStyle, color: &str) {
 /// The type sizes the text control offers, in points: two small steps for
 /// labels, then steps that grow by a ratio so the large ones are big enough
 /// to title a screen. The twin of `ANNOTATION_TEXT_SIZES` in
-/// `src/components/shared/annotation-style/widths.ts`.
+/// `src/composites/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const TEXT_SIZES: [f64; 5] = [10.0, 14.0, 24.0, 40.0, 64.0];
 

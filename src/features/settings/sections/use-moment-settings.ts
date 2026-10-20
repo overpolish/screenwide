@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ANNOTATION_SWATCHES,
   sameAnnotationColor,
-} from "../../../components/shared/annotation-style/palette";
+} from "../../../composites/annotation-style/palette";
 import { t } from "../../../i18n/i18n";
 import { useSettingsApi } from "../settings-api-context";
 

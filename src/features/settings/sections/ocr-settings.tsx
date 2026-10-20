@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { GroupBox } from "../../../components/base/group-box/group-box";
-import { Switch } from "../../../components/base/switch/switch";
-import { ControlRow } from "../../../components/shared/control-row/control-row";
-import { HotkeyField } from "../../../components/shared/hotkey-field/hotkey-field";
+import { ControlRow } from "../../../composites/control-row/control-row";
+import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
+import { GroupBox } from "../../../primitives/group-box/group-box";
+import { Switch } from "../../../primitives/switch/switch";
 
 import type { OcrAction } from "../../../bindings/OcrAction";
 import type { OcrSettings } from "../../../bindings/OcrSettings";

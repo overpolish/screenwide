@@ -1,8 +1,18 @@
 /* SPDX-FileCopyrightText: 2026 overpolish */
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 
-/* Utilities over the colour tokens that a plain `text-*` or `bg-*` cannot
+/* Utilities over the tokens that a plain `text-*`, `bg-*` or `size-*` cannot
    express. */
+
+/* The smallest icon, laid over a small part such as a swatch. It draws
+   Lucide's stroke thinner than the app's default (see the `.lucide` rule),
+   or the glyph closes up at this size. A utility rather than a spacing
+   token, so the size never comes without its stroke. */
+@utility size-icon-xs {
+  width: 0.625rem;
+  height: 0.625rem;
+  stroke-width: 1px;
+}
 
 /* A text colour also sets the alpha its icons draw at, which applies to the
    whole glyph rather than per stroke (see the `.lucide` rule). Opaque colours

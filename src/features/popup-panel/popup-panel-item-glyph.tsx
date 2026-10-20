@@ -41,10 +41,10 @@ import {
   ShapeToolIcon,
   SpotlightToolIcon,
   TextToolIcon,
-} from "../../components/shared/annotation-style/annotation-tool-icons";
+} from "../../composites/annotation-style/annotation-tool-icons";
 import { cn } from "../../lib/styling";
 
-import type { AnnotationKind } from "../../components/shared/annotation-style/types";
+import type { AnnotationKind } from "../../composites/annotation-style/types";
 
 // Items cross a window boundary as data, so a glyph travels by name. Every
 // annotation tool has one, under `tool-` so it stays apart from `image`, the

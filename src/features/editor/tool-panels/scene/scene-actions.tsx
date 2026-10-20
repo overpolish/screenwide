@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
 import { ToolPanelPatch } from "../tool-panel-patch";
 
 /**

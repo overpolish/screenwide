@@ -7,10 +7,10 @@ import {
   ListBoxSection as AriaListBoxSection,
 } from "react-aria-components";
 
-import { ListBox } from "../../components/base/listbox/listbox";
-import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
-import { Text } from "../../components/base/text/text";
 import { t } from "../../i18n/i18n";
+import { ListBox } from "../../primitives/listbox/listbox";
+import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
+import { Text } from "../../primitives/text/text";
 
 import { hidePopupPanel } from "./api";
 import { renderPopupPanelItem } from "./popup-panel-list-item";

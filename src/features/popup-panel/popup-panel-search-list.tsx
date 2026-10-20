@@ -9,8 +9,8 @@ import {
   Virtualizer,
 } from "react-aria-components";
 
-import { SearchField } from "../../components/base/input-fields/search-field";
-import { ListBox } from "../../components/base/listbox/listbox";
+import { SearchField } from "../../primitives/input-fields/search-field";
+import { ListBox } from "../../primitives/listbox/listbox";
 
 import { PopupPanelItem, PopupPanelListContent } from "./store";
 

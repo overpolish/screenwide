@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { builtInBackgroundPresets } from "../../../components/shared/background-picker/background-presets";
+import { builtInBackgroundPresets } from "../../../composites/background-picker/background-presets";
 import { featureStage } from "../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../popup-panel/layout";
 import {

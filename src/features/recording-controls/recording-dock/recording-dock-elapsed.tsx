@@ -3,9 +3,9 @@
 
 import { Mic, MicOff } from "lucide-react";
 
-import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
+import { ContentRotate } from "../../../primitives/content-rotate/content-rotate";
 
 import { RecordingDockMeter } from "./recording-dock-meter";
 

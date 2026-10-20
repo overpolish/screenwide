@@ -5,13 +5,13 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { AppWindowMac } from "lucide-react";
 import { ListBoxItem } from "react-aria-components";
 
-import { buttonVariants } from "../../components/base/button/button-variants";
-import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
-import { ListBox } from "../../components/base/listbox/listbox";
-import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
-import { Text } from "../../components/base/text/text";
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
+import { buttonVariants } from "../../primitives/button/button-variants";
+import { CircularProgress } from "../../primitives/circular-progress/circular-progress";
+import { ListBox } from "../../primitives/listbox/listbox";
+import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
+import { Text } from "../../primitives/text/text";
 
 import { WindowDetails } from "./types";
 

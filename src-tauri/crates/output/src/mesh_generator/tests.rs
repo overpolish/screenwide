@@ -17,7 +17,7 @@ fn numbers_are_the_wire_format() {
 fn picker_generators() -> Vec<(String, usize)> {
   let source = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../../src/components/shared/background-picker/background-generators.ts"
+    "/../../../src/composites/background-picker/background-generators.ts"
   ));
   let mut found = Vec::new();
   let mut count: Option<usize> = None;

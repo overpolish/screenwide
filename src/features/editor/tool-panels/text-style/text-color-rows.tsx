@@ -3,8 +3,8 @@
 
 import { useRef } from "react";
 
-import { ColorChip } from "../../../../components/base/input-fields/color-chip";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ColorButton } from "../../../../composites/color-button/color-button";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { usePopupPanelPicker } from "../../../popup-panel/use-popup-panel-picker";
 
@@ -63,7 +63,7 @@ function CaptionColorWell({
         event.stopPropagation();
       }}
     >
-      <ColorChip
+      <ColorButton
         aria-expanded={picker.isOpen}
         isDisabled={isDisabled}
         label={styleColorLabel(role)}

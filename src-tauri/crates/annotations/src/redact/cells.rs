@@ -15,7 +15,7 @@
 /// A blur's standard deviation at each strength, weakest first, in logical
 /// points: about as soft as the averaged cells it replaced. The twin of
 /// `ANNOTATION_BLUR_STRENGTHS` in
-/// `src/components/shared/annotation-style/widths.ts`, which names the steps.
+/// `src/composites/annotation-style/widths.ts`, which names the steps.
 const BLUR_DEVIATIONS: [f64; 5] = [4.5, 6.0, 7.5, 10.0, 13.0];
 
 /// The smallest block classic pixelation draws, in logical points: anything

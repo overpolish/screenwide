@@ -268,8 +268,18 @@ const preview: Preview = {
       theme: themes.dark,
     },
     options: {
+      // The layers bottom up, as the source builds on them; work in progress
+      // after. Alphabetical within each group.
       storySort: {
         method: "alphabetical",
+        order: [
+          "Foundations",
+          "Primitives",
+          "Composites",
+          "Features",
+          "Legacy",
+          "Explorations",
+        ],
       },
     },
   },

@@ -5,12 +5,12 @@ import { Check } from "lucide-react";
 import { ReactNode } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
-import { Badge } from "../../components/base/badge/badge";
-import { Button } from "../../components/base/button/button";
-import { Tooltip } from "../../components/base/tooltip/tooltip";
-import { ControlRow } from "../../components/shared/control-row/control-row";
+import { ControlRow } from "../../composites/control-row/control-row";
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
+import { Badge } from "../../primitives/badge/badge";
+import { Button } from "../../primitives/button/button";
+import { Tooltip } from "../../primitives/tooltip/tooltip";
 
 import { PermissionKind, PermissionStatus } from "./types";
 

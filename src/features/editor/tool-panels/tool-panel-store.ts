@@ -6,7 +6,7 @@ import { create } from "zustand";
 import {
   Background,
   BackgroundPreset,
-} from "../../../components/shared/background-picker/background";
+} from "../../../composites/background-picker/background";
 import { CameraOutput } from "../export/camera-output";
 import {
   DEFAULT_CURSOR_EFFECTS,

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { BackgroundPreset } from "../../../components/shared/background-picker/background";
+import { BackgroundPreset } from "../../../composites/background-picker/background";
 import { CaptionsPatch } from "../recording/captions/recording-captions";
 import { CaptionDefaultsPatch } from "../recording/captions/use-text-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";

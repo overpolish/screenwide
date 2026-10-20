@@ -4,8 +4,8 @@
 import { Lock, TriangleAlert } from "lucide-react";
 import { ReactNode } from "react";
 
-import { AudioMeter } from "../../../components/base/audio-meter/audio-meter";
-import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
+import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
 
 /** An input's corner badge: a warning when it cannot be recorded, which wins
  * over the lock of a missing permission. `warning` is set only while the

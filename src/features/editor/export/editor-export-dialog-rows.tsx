@@ -3,14 +3,14 @@
 
 import { ReactNode, useId } from "react";
 
-import { PillGroup } from "../../../components/base/pill-group/pill-group";
-import { Text } from "../../../components/base/text/text";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
+import { Text } from "../../../primitives/text/text";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
-import type { ControlRowControlProps } from "../../../components/shared/control-row/control-row";
+import type { ControlRowControlProps } from "../../../composites/control-row/control-row";
 
 /** Compression levels are the numbers the export backend takes, 0 through 4. */
 const compressionOptions = () => [

@@ -3,13 +3,13 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 
-import { AudioMeter } from "../../../components/base/audio-meter/audio-meter";
-import { Button } from "../../../components/base/button/button";
-import { GroupBox } from "../../../components/base/group-box/group-box";
-import { Switch } from "../../../components/base/switch/switch";
-import { Text } from "../../../components/base/text/text";
-import { ControlRow } from "../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
+import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
+import { Button } from "../../../primitives/button/button";
+import { GroupBox } from "../../../primitives/group-box/group-box";
+import { Switch } from "../../../primitives/switch/switch";
+import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { useAudioPreview } from "../../recording-inputs/use-audio-preview";

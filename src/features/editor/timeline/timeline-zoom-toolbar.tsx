@@ -13,11 +13,11 @@ import {
 } from "lucide-react";
 import { RefObject } from "react";
 
-import { IconButton } from "../../../components/base/button/icon-button";
-import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
-import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
-import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
+import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
+import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
+import { ToolToggle } from "../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../i18n/i18n";
+import { IconButton } from "../../../primitives/button/icon-button";
 
 import { isRecordingTimelineReordered } from "./editing/recording-timeline-move";
 import { TimelineBladeController } from "./editing/timeline-blade";

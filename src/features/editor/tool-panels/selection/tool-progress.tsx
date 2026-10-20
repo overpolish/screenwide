@@ -4,8 +4,8 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 
-import { ProgressBar } from "../../../../components/base/progress-bar/progress-bar";
 import { motionDurations, motionEasings } from "../../../../lib/motion";
+import { ProgressBar } from "../../../../primitives/progress-bar/progress-bar";
 
 /** Work shorter than this finishes without a bar. */
 const SHOW_AFTER_MS = 500;

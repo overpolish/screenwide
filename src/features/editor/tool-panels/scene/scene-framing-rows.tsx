@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { NumberField } from "../../../../components/base/input-fields/number-field";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { SliderNumberField } from "../../../../composites/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
+import { NumberField } from "../../../../primitives/input-fields/number-field";
 import {
   MAX_SCENE_ZOOM,
   SceneFraming,

@@ -3,7 +3,7 @@
 
 import { Clapperboard } from "lucide-react";
 
-import { ToolToggle } from "../../../../components/shared/tool-toggle/tool-toggle";
+import { ToolToggle } from "../../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
 
 /**

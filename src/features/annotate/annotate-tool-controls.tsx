@@ -1,17 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationAngleDial } from "../../components/shared/annotation-style/annotation-angle-dial";
-import { AnnotationBlurGroup } from "../../components/shared/annotation-style/annotation-blur-group";
-import { AnnotationEdgeGroup } from "../../components/shared/annotation-style/annotation-edge-group";
-import { AnnotationFitGroup } from "../../components/shared/annotation-style/annotation-fit-group";
-import { AnnotationHeadGroup } from "../../components/shared/annotation-style/annotation-head-group";
-import { AnnotationInkGroup } from "../../components/shared/annotation-style/annotation-ink-group";
-import { AnnotationRadiusField } from "../../components/shared/annotation-style/annotation-radius-field";
-import { AnnotationStrokeGroup } from "../../components/shared/annotation-style/annotation-stroke-group";
-import { annotationSizeLabel } from "../../components/shared/annotation-style/annotation-text";
-import { annotationSizes } from "../../components/shared/annotation-style/widths";
-import { StepSlider } from "../../components/shared/step-slider/step-slider";
+import { AnnotationAngleDial } from "../../composites/annotation-style/annotation-angle-dial";
+import { AnnotationBlurGroup } from "../../composites/annotation-style/annotation-blur-group";
+import { AnnotationEdgeGroup } from "../../composites/annotation-style/annotation-edge-group";
+import { AnnotationFitGroup } from "../../composites/annotation-style/annotation-fit-group";
+import { AnnotationHeadGroup } from "../../composites/annotation-style/annotation-head-group";
+import { AnnotationInkGroup } from "../../composites/annotation-style/annotation-ink-group";
+import { AnnotationRadiusField } from "../../composites/annotation-style/annotation-radius-field";
+import { AnnotationStrokeGroup } from "../../composites/annotation-style/annotation-stroke-group";
+import { annotationSizeLabel } from "../../composites/annotation-style/annotation-text";
+import { annotationSizes } from "../../composites/annotation-style/widths";
+import { StepSlider } from "../../composites/step-slider/step-slider";
 
 import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
 

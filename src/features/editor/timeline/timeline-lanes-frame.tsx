@@ -3,7 +3,7 @@
 
 import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 
-import { ScrollArea } from "../../../components/base/scroll-area/scroll-area";
+import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
 
 import { useReportTimelineBlockHeight } from "./timeline-band-block";
 import { timelineLanesHeight } from "./timeline-band-metrics";

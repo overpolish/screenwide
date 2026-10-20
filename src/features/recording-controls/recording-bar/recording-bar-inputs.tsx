@@ -4,9 +4,9 @@
 import { CameraOff, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useMemo } from "react";
 
-import { ToggleMenuButton } from "../../../components/base/button/toggle-menu-button";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
+import { ToggleMenuButton } from "../../../primitives/button/toggle-menu-button";
 import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { useRecordingInputStore } from "../../recording-inputs/store";
 import { RecordingInputs } from "../../recording-inputs/types";

@@ -5,11 +5,11 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { AppWindowMac, Volume2 } from "lucide-react";
 import { CSSProperties } from "react";
 
-import { Badge } from "../../components/base/badge/badge";
-import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
-import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
-import { hotkeyKeys } from "../../components/shared/hotkey-field/hotkey";
+import { hotkeyKeys } from "../../composites/hotkey-field/hotkey";
 import { isWindowsHost } from "../../lib/platform";
+import { Badge } from "../../primitives/badge/badge";
+import { Keyboard, Shortcut } from "../../primitives/keyboard/keyboard";
+import { ListBoxItem } from "../../primitives/listbox-item/listbox-item";
 
 import { PopupPanelItemGlyph } from "./popup-panel-item-glyph";
 import { PopupPanelItem, PopupPanelListContent } from "./store";

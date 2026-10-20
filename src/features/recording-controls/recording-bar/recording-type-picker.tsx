@@ -11,12 +11,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { t } from "../../../i18n/i18n";
+import { cn } from "../../../lib/styling";
 import {
   PillGroup,
   type PillGroupItem,
-} from "../../../components/base/pill-group/pill-group";
-import { t } from "../../../i18n/i18n";
-import { cn } from "../../../lib/styling";
+} from "../../../primitives/pill-group/pill-group";
 import {
   MonitorDetails,
   RecordingMode,

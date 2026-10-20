@@ -12,13 +12,13 @@ import {
 import { useState } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
-import { Button } from "../../components/base/button/button";
-import { SearchField } from "../../components/base/input-fields/search-field";
-import { SidebarNav } from "../../components/base/sidebar-nav/sidebar-nav";
-import { Text } from "../../components/base/text/text";
-import { WindowHeader } from "../../components/shared/window-header/window-header";
-import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { WindowHeader } from "../../composites/window-header/window-header";
+import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
+import { Button } from "../../primitives/button/button";
+import { SearchField } from "../../primitives/input-fields/search-field";
+import { SidebarNav } from "../../primitives/sidebar-nav/sidebar-nav";
+import { Text } from "../../primitives/text/text";
 
 import {
   ProjectBrowserNotices,

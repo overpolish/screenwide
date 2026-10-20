@@ -6,12 +6,12 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRef } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
-import { Button } from "../../components/base/button/button";
-import { GroupBox } from "../../components/base/group-box/group-box";
-import { WindowHeader } from "../../components/shared/window-header/window-header";
-import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { WindowHeader } from "../../composites/window-header/window-header";
+import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { useFitWindowHeight } from "../../lib/use-fit-window-height";
+import { Button } from "../../primitives/button/button";
+import { GroupBox } from "../../primitives/group-box/group-box";
 
 import {
   dismissPermissionsWindow,

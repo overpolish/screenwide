@@ -7,12 +7,12 @@ import {
   DEFAULT_BLUR_STRENGTH,
   defaultAnnotationSize,
   SOFT_SPOTLIGHT_EDGE,
-} from "../../../components/shared/annotation-style/widths";
+} from "../../../composites/annotation-style/widths";
 
 import { AnnotationStyle, ImageArt } from "./annotations";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
-import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+import type { AnnotationKind } from "../../../composites/annotation-style/types";
 
 export type AnnotationTool = AnnotationKind | "marquee" | "select";
 

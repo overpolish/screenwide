@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 
-import { Text } from "../../../../components/base/text/text";
+import { Text } from "../../../../primitives/text/text";
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { Annotation } from "../../annotations/annotations";
 import { formatDuration } from "../../duration";

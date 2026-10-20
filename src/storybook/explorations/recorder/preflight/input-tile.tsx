@@ -4,8 +4,8 @@
 import { ChevronDown } from "lucide-react";
 import { Button, ToggleButton } from "react-aria-components";
 
-import { AudioMeter } from "../../../../components/base/audio-meter/audio-meter";
 import { cn } from "../../../../lib/styling";
+import { AudioMeter } from "../../../../primitives/audio-meter/audio-meter";
 
 import type { InputSource } from "../shared/recorder-data";
 

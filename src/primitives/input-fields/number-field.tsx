@@ -1,0 +1,266 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { isTauri } from "@tauri-apps/api/core";
+import { Minus, Plus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Button,
+  Group,
+  Input,
+  NumberField as AriaNumberField,
+  NumberFieldProps as AriaNumberFieldProps,
+  Label,
+} from "react-aria-components";
+import { VariantProps } from "tailwind-variants";
+
+import { t } from "../../i18n/i18n";
+import { isMacHost } from "../../lib/platform";
+import { elementFocusVisible, focusStyles } from "../../lib/styling";
+import { tv } from "../../lib/variants";
+
+import { fieldVariants } from "./input-field";
+import { useNumberFieldScrub } from "./use-number-field-scrub";
+
+const numberFieldVariants = tv({
+  extend: fieldVariants,
+  slots: {
+    input: "text-end tabular-nums",
+    stepper: [
+      "flex h-full shrink-0 cursor-default items-center px-control text-content-fg-secondary outline-none transition-colors",
+      "data-[hovered]:bg-control-subtle-hover data-[hovered]:text-content-fg",
+      "data-[pressed]:bg-control-subtle-pressed",
+      "data-[disabled]:text-control-fg-disabled",
+      "[&_svg]:size-icon-mini [&_svg]:transform-gpu",
+      focusStyles,
+      elementFocusVisible,
+    ],
+  },
+});
+
+export type NumberFieldProps = AriaNumberFieldProps &
+  VariantProps<typeof numberFieldVariants> & {
+    className?: string;
+    fieldClassName?: string;
+    label?: string;
+    labelClassName?: string;
+    leftSection?: React.ReactNode;
+    /** Called for each keystroke that reads as a number, instead of
+     * `onChange`, which React Aria fires on blur or Enter. Give this to a field
+     * whose value is read from outside the window it is typed in, where a value
+     * waiting behind an unfocused field is a value the reader never sees. Plain
+     * numeric entry only: a formatted field would need a parse of its own. */
+    onTypedChange?: (value: number) => void;
+    rightSection?: React.ReactNode;
+    showSteppers?: boolean;
+  };
+
+export const NumberField = ({
+  className,
+  defaultValue,
+  fieldClassName,
+  label,
+  labelClassName,
+  leftSection,
+  maxValue,
+  minValue,
+  onChange,
+  onTypedChange,
+  rightSection,
+  showSteppers = true,
+  step,
+  value,
+  ...props
+}: NumberFieldProps) => {
+  // A disabled field neither scrubs nor advertises it with the cursor.
+  const nativeScrubbing = isTauri() && !props.isDisabled;
+  const nativeSelectionRepaint = nativeScrubbing && isMacHost;
+  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue ?? 0);
+  const resolvedValue = value ?? uncontrolledValue;
+  const valueRef = useRef(resolvedValue);
+  const groupRef = useRef<HTMLDivElement>(null);
+  /** The typed commit as of this render, so the listener below subscribes
+   * once rather than on every change of the handler's identity. */
+  const commitTypedRef = useRef<(value: number) => void>(() => undefined);
+  const typedCommits = onTypedChange !== undefined;
+
+  useEffect(() => {
+    const blurOnOutsidePointer = (event: PointerEvent) => {
+      const group = groupRef.current;
+      const input = group?.querySelector("input");
+      if (
+        !group ||
+        !input ||
+        document.activeElement !== input ||
+        group.contains(event.target as Node)
+      ) {
+        return;
+      }
+      input.blur();
+    };
+
+    document.addEventListener("pointerdown", blurOnOutsidePointer, true);
+    return () => {
+      document.removeEventListener("pointerdown", blurOnOutsidePointer, true);
+    };
+  }, []);
+
+  // Each keystroke is the value, so nothing waits behind the field: the owner
+  // of a setting read outside this window needs it at once, and a press on
+  // another window blurs nothing here.
+  useEffect(() => {
+    if (!typedCommits) return;
+    const input = groupRef.current?.querySelector("input");
+    if (!input) return;
+
+    const commitTyped = () => {
+      const entry = input.value.trim();
+      if (entry === "") return;
+      const typed = Number(entry);
+      if (Number.isFinite(typed)) commitTypedRef.current(typed);
+    };
+
+    input.addEventListener("input", commitTyped);
+    return () => {
+      input.removeEventListener("input", commitTyped);
+    };
+  }, [typedCommits]);
+
+  valueRef.current = resolvedValue;
+
+  /** A value the field settles on, held to the step and the bounds. `notify` is
+   * what tells the owner, which differs between a typed keystroke and every
+   * other way the value moves. */
+  const applyValue = useCallback(
+    (nextValue: number, notify?: (value: number) => void) => {
+      const clampedValue = Math.min(
+        maxValue ?? Number.POSITIVE_INFINITY,
+        Math.max(minValue ?? Number.NEGATIVE_INFINITY, nextValue),
+      );
+      const precision = Math.max(
+        0,
+        String(step ?? 1).split(".")[1]?.length ?? 0,
+      );
+      const roundedValue = Number(clampedValue.toFixed(precision));
+
+      valueRef.current = roundedValue;
+      if (value === undefined) {
+        setUncontrolledValue(roundedValue);
+      }
+      notify?.(roundedValue);
+    },
+    [maxValue, minValue, step, value],
+  );
+
+  const changeValue = useCallback(
+    (nextValue: number) => {
+      applyValue(nextValue, onChange);
+    },
+    [applyValue, onChange],
+  );
+  commitTypedRef.current = (nextValue: number) => {
+    applyValue(nextValue, onTypedChange);
+  };
+
+  const handlePointerDown = useNumberFieldScrub({
+    changeValue,
+    groupRef,
+    step,
+    valueRef,
+  });
+
+  const {
+    base,
+    field,
+    input,
+    inputWrapper,
+    label: _label,
+    section,
+    stepper,
+  } = numberFieldVariants();
+
+  return (
+    <AriaNumberField
+      {...props}
+      className={base({ className })}
+      maxValue={maxValue}
+      minValue={minValue}
+      onChange={changeValue}
+      step={step}
+      value={resolvedValue}
+    >
+      {label && (
+        <Label className={_label({ className: labelClassName })}>{label}</Label>
+      )}
+
+      <Group
+        className={field({
+          className: [nativeScrubbing && "cursor-ns-resize", fieldClassName],
+        })}
+        onPointerDown={nativeScrubbing ? handlePointerDown : undefined}
+        ref={groupRef}
+      >
+        {showSteppers && (
+          <Button
+            aria-label={t("controls-decrement")}
+            className={stepper({ className: "rounded-s-[inherit]" })}
+            slot="decrement"
+          >
+            <Minus />
+          </Button>
+        )}
+
+        <div className={inputWrapper()}>
+          {leftSection != null && (
+            <span className={section()}>{leftSection}</span>
+          )}
+
+          <Input
+            className={input({
+              className: nativeScrubbing && "cursor-ns-resize",
+            })}
+            onBlur={(event) => {
+              const input = event.currentTarget;
+              window.requestAnimationFrame(() => {
+                if (document.activeElement === input) return;
+
+                const caret = input.value.length;
+                input.setSelectionRange(caret, caret);
+
+                if (nativeSelectionRepaint) {
+                  // WKWebView can retain a one-pixel selection bitmap after a
+                  // selected input blurs. A synchronous visibility flush
+                  // discards it before the browser presents another frame.
+                  const previousVisibility = input.style.visibility;
+                  input.style.visibility = "hidden";
+                  input.getBoundingClientRect();
+                  input.style.visibility = previousVisibility;
+                }
+              });
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== "Escape") return;
+              event.preventDefault();
+              event.stopPropagation();
+              event.currentTarget.blur();
+            }}
+          />
+
+          {rightSection != null && (
+            <span className={section()}>{rightSection}</span>
+          )}
+        </div>
+
+        {showSteppers && (
+          <Button
+            aria-label={t("controls-increment")}
+            className={stepper({ className: "rounded-e-[inherit]" })}
+            slot="increment"
+          >
+            <Plus />
+          </Button>
+        )}
+      </Group>
+    </AriaNumberField>
+  );
+};

@@ -1,0 +1,38 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { t } from "../../i18n/i18n";
+import { PillGroup } from "../../primitives/pill-group/pill-group";
+
+import { SOFT_SPOTLIGHT_EDGE } from "./widths";
+
+const items = (): { id: "hard" | "soft"; label: string }[] => [
+  { id: "hard", label: t("annotation-edge-hard") },
+  { id: "soft", label: t("annotation-edge-soft") },
+];
+
+/** Whether a spotlight's edge is hard or fades in from its box, labelled for
+ * a toolbar that has no room for a row heading. `value` is the softness it
+ * draws with, any fade at all reading as soft. */
+export function AnnotationEdgeGroup({
+  isDisabled,
+  onChange,
+  value,
+}: {
+  onChange: (softness: number) => void;
+  value: number;
+  isDisabled?: boolean;
+}) {
+  return (
+    <PillGroup
+      aria-label={t("annotation-edge")}
+      display="label"
+      isDisabled={isDisabled}
+      items={items()}
+      onSelectionChange={(id) => {
+        onChange(id === "soft" ? SOFT_SPOTLIGHT_EDGE : 0);
+      }}
+      selected={value > 0 ? "soft" : "hard"}
+    />
+  );
+}

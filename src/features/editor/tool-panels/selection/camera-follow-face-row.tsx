@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Switch } from "../../../../components/base/switch/switch";
-import { Text } from "../../../../components/base/text/text";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { Switch } from "../../../../primitives/switch/switch";
+import { Text } from "../../../../primitives/text/text";
 import { useIsFindingFace } from "../../recording/scenes/use-face-tracking-progress";
 
 /**

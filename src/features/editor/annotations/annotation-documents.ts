@@ -6,7 +6,7 @@
  * can draw.
  */
 
-import { DEFAULT_BLUR_STRENGTH } from "../../../components/shared/annotation-style/widths";
+import { DEFAULT_BLUR_STRENGTH } from "../../../composites/annotation-style/widths";
 
 import { isAnnotationKind } from "./annotation-kind-lookup";
 import { ANNOTATION_KINDS } from "./annotation-kinds";
@@ -16,7 +16,7 @@ import type {
   AnnotationAlign,
   AnnotationHead,
   AnnotationRedaction,
-} from "../../../components/shared/annotation-style/types";
+} from "../../../composites/annotation-style/types";
 
 const annotationHead = (value: unknown): AnnotationHead =>
   value === "none" || value === "both" ? value : "end";

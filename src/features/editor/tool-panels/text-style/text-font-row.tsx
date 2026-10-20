@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { PopupSelect } from "../../../popup-panel/popup-select";
 import { PopupPanelItem } from "../../../popup-panel/store";

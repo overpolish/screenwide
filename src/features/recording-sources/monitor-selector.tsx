@@ -4,11 +4,11 @@
 import { RefObject, useLayoutEffect, useRef, useState } from "react";
 import { ListBoxItem } from "react-aria-components";
 
-import { buttonVariants } from "../../components/base/button/button-variants";
-import { ListBox } from "../../components/base/listbox/listbox";
-import { Text } from "../../components/base/text/text";
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
+import { buttonVariants } from "../../primitives/button/button-variants";
+import { ListBox } from "../../primitives/listbox/listbox";
+import { Text } from "../../primitives/text/text";
 
 import { orderMonitorsForNavigation } from "./monitor-selection";
 import { MonitorDetails } from "./types";

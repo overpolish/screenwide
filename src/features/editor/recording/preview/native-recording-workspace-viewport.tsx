@@ -3,8 +3,8 @@
 
 import { RefObject, useEffect, useRef, useState } from "react";
 
-import { CircularProgress } from "../../../../components/base/circular-progress/circular-progress";
 import { t } from "../../../../i18n/i18n";
+import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
 
 /** A pane's geometry is expressed in the unscaled workspace coordinate space. */
 type NativeRecordingWorkspacePane = {

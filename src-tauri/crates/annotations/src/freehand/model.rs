@@ -14,7 +14,7 @@ use crate::{Annotation, AnnotationHead, AnnotationShape, AnnotationStyle};
 
 /// The pen a fresh stroke is drawn with, in points: an arrow's, so the two
 /// read as one set of marks. The twin of `DEFAULT_ANNOTATION_WIDTH` in
-/// `src/components/shared/annotation-style/widths.ts`.
+/// `src/composites/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub const NEW_DRAW_WIDTH: f64 = 8.0;
 

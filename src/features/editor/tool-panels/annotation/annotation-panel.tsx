@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Text } from "../../../../components/base/text/text";
-import { AnnotationColorGrid } from "../../../../components/shared/annotation-style/annotation-color-grid";
+import { AnnotationColorGrid } from "../../../../composites/annotation-style/annotation-color-grid";
 import { t } from "../../../../i18n/i18n";
+import { Text } from "../../../../primitives/text/text";
 import { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";

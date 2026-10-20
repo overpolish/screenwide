@@ -9,10 +9,10 @@ import {
 } from "lucide-react";
 import { ReactNode } from "react";
 
-import { PillGroup } from "../../../../components/base/pill-group/pill-group";
-import { Switch } from "../../../../components/base/switch/switch";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
+import { Switch } from "../../../../primitives/switch/switch";
 import {
   DEFAULT_BUBBLE_SIZE,
   DEFAULT_CAMERA_SIZE,

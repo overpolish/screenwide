@@ -3,10 +3,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
-import { Text } from "../../components/base/text/text";
 import { t } from "../../i18n/i18n";
 import { isWindows } from "../../lib/platform";
+import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
+import { Text } from "../../primitives/text/text";
 import { ownsTextEditingKeys } from "../editor/shortcuts/keyboard-target";
 
 import { ProjectCard } from "./project-card";

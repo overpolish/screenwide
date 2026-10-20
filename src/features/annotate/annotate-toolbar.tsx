@@ -4,17 +4,17 @@
 import { Eraser, GripVertical, Undo2, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { IconButton } from "../../components/base/button/icon-button";
-import { Toolbar } from "../../components/base/toolbar/toolbar";
-import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
+import { AnnotationColorGrid } from "../../composites/annotation-style/annotation-color-grid";
 import {
   annotationToolLabel,
   annotationToolName,
-} from "../../components/shared/annotation-style/annotation-text";
-import { BackgroundTile } from "../../components/shared/background-picker/background-tile";
-import { NativeTooltipTrigger } from "../../components/shared/native-tooltip/native-tooltip-trigger";
-import { ToolToggle } from "../../components/shared/tool-toggle/tool-toggle";
+} from "../../composites/annotation-style/annotation-text";
+import { BackgroundTile } from "../../composites/background-picker/background-tile";
+import { NativeTooltipTrigger } from "../../composites/native-tooltip/native-tooltip-trigger";
+import { ToolToggle } from "../../composites/tool-toggle/tool-toggle";
 import { t } from "../../i18n/i18n";
+import { IconButton } from "../../primitives/button/icon-button";
+import { Toolbar } from "../../primitives/toolbar/toolbar";
 
 import { AnnotateToolControls } from "./annotate-tool-controls";
 import { ANNOTATE_TOOLS } from "./annotate-tools";

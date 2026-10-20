@@ -3,14 +3,14 @@
 
 import { RotateCcw } from "lucide-react";
 
-import { AngleDial } from "../../../components/base/angle-dial/angle-dial";
+import { ControlRow } from "../../../composites/control-row/control-row";
+import { t } from "../../../i18n/i18n";
+import { AngleDial } from "../../../primitives/angle-dial/angle-dial";
 import {
   signedAngle,
   wrapAngle,
-} from "../../../components/base/angle-dial/angle-geometry";
-import { IconButton } from "../../../components/base/button/icon-button";
-import { ControlRow } from "../../../components/shared/control-row/control-row";
-import { t } from "../../../i18n/i18n";
+} from "../../../primitives/angle-dial/angle-geometry";
+import { IconButton } from "../../../primitives/button/icon-button";
 import { MAX_TURN, SceneRotation } from "../layer-rotation";
 
 type Axis = keyof SceneRotation;

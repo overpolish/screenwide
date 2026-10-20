@@ -4,13 +4,13 @@
 import { Images, Pause, Play } from "lucide-react";
 import { memo, ReactNode } from "react";
 
+import { CheckOnClick } from "../../../composites/check-on-click/check-on-click";
+import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
+import { appLocale, t } from "../../../i18n/i18n";
 import {
   IconButton,
   IconToggleButton,
-} from "../../../components/base/button/icon-button";
-import { CheckOnClick } from "../../../components/shared/check-on-click/check-on-click";
-import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
-import { appLocale, t } from "../../../i18n/i18n";
+} from "../../../primitives/button/icon-button";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { formatDuration } from "../duration";
 

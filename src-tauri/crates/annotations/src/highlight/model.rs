@@ -96,7 +96,7 @@ impl Default for HighlightTone {
 /// The marker every highlight is drawn with, in points: the stroke a box laid
 /// by hand is covered in, and the band drawn where no text is found. The twin
 /// of `DEFAULT_ANNOTATION_HIGHLIGHT_SIZE` in
-/// `src/components/shared/annotation-style/widths.ts`.
+/// `src/composites/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub const NEW_HIGHLIGHT_WIDTH: f64 = 12.0;
 

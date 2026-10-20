@@ -14,8 +14,6 @@ import { useState } from "react";
 import { useListFormatter, useLocale } from "react-aria";
 import { Button as AriaButton, type PressEvent } from "react-aria-components";
 
-import { Badge } from "../../components/base/badge/badge";
-import { Checkbox } from "../../components/base/checkbox/checkbox";
 import { t } from "../../i18n/i18n";
 import {
   pictureTones,
@@ -23,6 +21,8 @@ import {
   type PictureTones,
 } from "../../lib/picture-tone";
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
+import { Badge } from "../../primitives/badge/badge";
+import { Checkbox } from "../../primitives/checkbox/checkbox";
 import { formatBytes, formatDuration } from "../editor/duration";
 
 import type {

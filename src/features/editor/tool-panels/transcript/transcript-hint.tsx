@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Keyboard } from "../../../../components/base/keyboard/keyboard";
-import { Text } from "../../../../components/base/text/text";
-import { hotkeyKeys } from "../../../../components/shared/hotkey-field/hotkey";
+import { hotkeyKeys } from "../../../../composites/hotkey-field/hotkey";
 import { t } from "../../../../i18n/i18n";
+import { Keyboard } from "../../../../primitives/keyboard/keyboard";
+import { Text } from "../../../../primitives/text/text";
 
 /** Stands in for the keycap while the message is translated, so the whole
  * sentence stays one message and the key sits wherever a language puts it. */

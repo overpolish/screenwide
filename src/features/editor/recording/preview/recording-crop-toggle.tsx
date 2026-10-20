@@ -8,13 +8,13 @@ import {
   SquareDashedMousePointer,
 } from "lucide-react";
 
-import { Toolbar } from "../../../../components/base/toolbar/toolbar";
-import { ToolToggle } from "../../../../components/shared/tool-toggle/tool-toggle";
+import { ToolToggle } from "../../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
+import { Toolbar } from "../../../../primitives/toolbar/toolbar";
 import { SceneToolToggle } from "../../tool-panels/scene/scene-tool-toggle";
 import { AnnotationToolStrip } from "../../toolbar/annotation-tool-strip";
 
-import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
+import type { AnnotationKind } from "../../../../composites/annotation-style/types";
 
 export type RecordingCanvasTool =
   AnnotationKind | "canvas" | "crop" | "marquee" | "scene" | "select" | null;

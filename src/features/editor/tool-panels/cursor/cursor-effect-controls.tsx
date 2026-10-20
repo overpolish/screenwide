@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Switch } from "../../../../components/base/switch/switch";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
+import { Switch } from "../../../../primitives/switch/switch";
 import { CursorEffectSettings } from "../../types";
 import { OVERLAY_SIZES } from "../placement-options";
 

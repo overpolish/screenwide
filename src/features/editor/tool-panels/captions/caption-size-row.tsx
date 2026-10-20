@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { StepSlider } from "../../../../composites/step-slider/step-slider";
 
 import type { TextSize } from "../../../../bindings/TextSize";
 

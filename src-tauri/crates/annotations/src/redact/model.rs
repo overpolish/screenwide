@@ -18,7 +18,7 @@ use crate::{Annotation, AnnotationHead, AnnotationRedaction, AnnotationShape, An
 /// content: a 2x capture draws each at twice as many source pixels, so a
 /// block hides as much text on a Retina capture as on a 1x one. The twin of
 /// `ANNOTATION_REDACT_SIZES` in
-/// `src/components/shared/annotation-style/widths.ts`.
+/// `src/composites/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const REDACT_BLOCK_SIZES: [f64; 5] = [4.0, 6.0, 8.0, 12.0, 16.0];
 

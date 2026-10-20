@@ -3,10 +3,10 @@
 
 import { Ref } from "react";
 
-import { Button } from "../../components/base/button/button";
-import { Text } from "../../components/base/text/text";
-import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
+import { Button } from "../../primitives/button/button";
+import { Text } from "../../primitives/text/text";
 
 export type AlertProps = {
   message: string;

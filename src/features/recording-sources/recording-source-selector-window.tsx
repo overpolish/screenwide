@@ -4,8 +4,8 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
 import { t } from "../../i18n/i18n";
+import { CircularProgress } from "../../primitives/circular-progress/circular-progress";
 
 import {
   collapseRecordingSourceSelector,

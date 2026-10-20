@@ -8,7 +8,7 @@ import {
   Selection,
 } from "react-aria-components";
 
-import { ControlRow } from "../../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../../composites/control-row/control-row";
 import { t } from "../../../../../i18n/i18n";
 import {
   cn,

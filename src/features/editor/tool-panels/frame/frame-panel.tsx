@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Text } from "../../../../components/base/text/text";
-import { presetName } from "../../../../components/shared/background-picker/background";
-import { BackgroundPicker } from "../../../../components/shared/background-picker/background-picker";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { Dimensions } from "../../../../components/shared/dimensions/dimensions";
-import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { presetName } from "../../../../composites/background-picker/background";
+import { BackgroundPicker } from "../../../../composites/background-picker/background-picker";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { Dimensions } from "../../../../composites/dimensions/dimensions";
+import { SliderNumberField } from "../../../../composites/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
+import { Text } from "../../../../primitives/text/text";
 import { browseBackgroundImage } from "../../api";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";

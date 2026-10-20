@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Badge } from "../../../components/base/badge/badge";
-import { GroupBox } from "../../../components/base/group-box/group-box";
-import { Text } from "../../../components/base/text/text";
-import { ControlRow } from "../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
+import { Badge } from "../../../primitives/badge/badge";
+import { GroupBox } from "../../../primitives/group-box/group-box";
+import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 

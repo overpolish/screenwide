@@ -3,10 +3,10 @@
 
 import { RotateCcw } from "lucide-react";
 
-import { IconButton } from "../../../../components/base/button/icon-button";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { SliderNumberField } from "../../../../composites/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
+import { IconButton } from "../../../../primitives/button/icon-button";
 import { SilencesRow } from "../silences-row";
 import { ToolPanelPatch } from "../tool-panel-patch";
 import {

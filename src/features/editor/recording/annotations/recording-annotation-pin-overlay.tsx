@@ -5,7 +5,7 @@ import { Pin } from "lucide-react";
 import { MouseEvent, PointerEvent } from "react";
 import { Focusable } from "react-aria-components";
 
-import { NativeTooltipTrigger } from "../../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { NativeTooltipTrigger } from "../../../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../../../i18n/i18n";
 import {
   RecordingTimelineEdit,

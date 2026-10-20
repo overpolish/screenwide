@@ -5,11 +5,11 @@ import { Ellipsis } from "lucide-react";
 import { useState } from "react";
 import { useDateFormatter } from "react-aria";
 
-import { IconButton } from "../../components/base/button/icon-button";
-import { Text } from "../../components/base/text/text";
-import { EditableTitle } from "../../components/shared/editable-title/editable-title";
+import { EditableTitle } from "../../composites/editable-title/editable-title";
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
+import { IconButton } from "../../primitives/button/icon-button";
+import { Text } from "../../primitives/text/text";
 import {
   boundsAnchor,
   PopupMenuAnchor,

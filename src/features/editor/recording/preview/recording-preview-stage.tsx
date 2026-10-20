@@ -3,9 +3,9 @@
 
 import { RefObject } from "react";
 
-import { CircularProgress } from "../../../../components/base/circular-progress/circular-progress";
-import { Text } from "../../../../components/base/text/text";
 import { t } from "../../../../i18n/i18n";
+import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
+import { Text } from "../../../../primitives/text/text";
 import {
   RecordingOutputSettings,
   defaultScreenshotOutput,

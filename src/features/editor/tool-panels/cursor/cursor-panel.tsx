@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
-import { Text } from "../../../../components/base/text/text";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
+import { Text } from "../../../../primitives/text/text";
 import { DEFAULT_CURSOR_EFFECTS } from "../../export/recording-export-settings";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";

@@ -3,10 +3,10 @@
 
 import { ArrowRightToLine, Repeat } from "lucide-react";
 
-import { PillGroup } from "../../../../components/base/pill-group/pill-group";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { SliderNumberField } from "../../../../composites/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 
 import type { ImagePlay } from "../../annotations/annotations";
 import type { EditorKind } from "../../types";

@@ -198,7 +198,7 @@ export default defineConfig([
       "src/features/glide/glide-preview.tsx",
       "src/features/recording-sources/monitor-selector.tsx",
       "src/features/editor/tool-panels/scene/scene-preset-tile.tsx",
-      "src/components/base/angle-dial/**",
+      "src/primitives/angle-dial/**",
     ],
     plugins: { screenwide },
     rules: {

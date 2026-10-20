@@ -6,10 +6,6 @@ import { Ref, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFocusRing, useMove } from "react-aria";
 import { Slider, SliderTrack } from "react-aria-components";
 
-import { Badge } from "../../../../components/base/badge/badge";
-import { CircularProgress } from "../../../../components/base/circular-progress/circular-progress";
-import { SliderKnob } from "../../../../components/base/slider/slider";
-import { Text } from "../../../../components/base/text/text";
 import { t } from "../../../../i18n/i18n";
 import { motionDurationCss } from "../../../../lib/motion";
 import {
@@ -18,6 +14,10 @@ import {
   PictureTones,
 } from "../../../../lib/picture-tone";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
+import { Badge } from "../../../../primitives/badge/badge";
+import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
+import { SliderKnob } from "../../../../primitives/slider/slider";
+import { Text } from "../../../../primitives/text/text";
 
 /** A frame to compare, at its own pixel size. */
 export type ComparedFrame = { height: number; src: string; width: number };

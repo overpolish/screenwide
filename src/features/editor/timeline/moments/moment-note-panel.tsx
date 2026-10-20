@@ -4,9 +4,9 @@
 import { Pause, Play } from "lucide-react";
 import { useId, useMemo, useRef } from "react";
 
-import { IconButton } from "../../../../components/base/button/icon-button";
-import { Text } from "../../../../components/base/text/text";
 import { t } from "../../../../i18n/i18n";
+import { IconButton } from "../../../../primitives/button/icon-button";
+import { Text } from "../../../../primitives/text/text";
 import { useFittedPanel } from "../../../popup-panel/use-fitted-panel";
 import { formatDuration } from "../../duration";
 import { timelineWaveformPath } from "../audio/timeline-waveform-path";

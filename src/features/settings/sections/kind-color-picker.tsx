@@ -10,19 +10,19 @@ import {
 } from "react-aria-components";
 
 import {
-  useColorPanel,
-  usesSystemColorPanel,
-} from "../../../components/base/input-fields/use-color-panel";
-import { Popover } from "../../../components/base/popover/popover";
-import {
   ANNOTATION_SWATCHES,
   isAnnotationSwatch,
   isLight,
   sameAnnotationColor,
-} from "../../../components/shared/annotation-style/palette";
-import { BackgroundTile } from "../../../components/shared/background-picker/background-tile";
+} from "../../../composites/annotation-style/palette";
+import { BackgroundTile } from "../../../composites/background-picker/background-tile";
 import { t } from "../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
+import {
+  useColorPanel,
+  usesSystemColorPanel,
+} from "../../../primitives/input-fields/use-color-panel";
+import { Popover } from "../../../primitives/popover/popover";
 
 /** The colour as a kind keeps it: `#rrggbb` in lower case, whatever the
  * Colours panel reports. */

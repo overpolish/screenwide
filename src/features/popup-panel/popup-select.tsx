@@ -8,9 +8,9 @@ import {
 } from "@tauri-apps/api/window";
 import { ReactNode, useEffect, useRef } from "react";
 
-import { Badge } from "../../components/base/badge/badge";
-import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
-import { Select } from "../../components/base/select/select";
+import { Badge } from "../../primitives/badge/badge";
+import { ListBoxItem } from "../../primitives/listbox-item/listbox-item";
+import { Select } from "../../primitives/select/select";
 
 import { hidePopupPanel, panelStartX, showPopupPanel } from "./api";
 import { initialPopupPanelHeight, searchablePopupPanelHeight } from "./layout";

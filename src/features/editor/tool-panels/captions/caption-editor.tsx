@@ -3,8 +3,8 @@
 
 import { useMemo, useState } from "react";
 
-import { Button } from "../../../../components/base/button/button";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
 import { boundsAnchor } from "../../../popup-panel/use-popup-menu";
 import { CaptionsPatch } from "../../recording/captions/recording-captions";
 import { ToolPanelTranscript } from "../tool-panel-transcript";

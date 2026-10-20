@@ -4,15 +4,15 @@
 import { useDateFormatter, useNumberFormatter } from "react-aria";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
-import { Alert } from "../../components/base/alert/alert";
-import { Button } from "../../components/base/button/button";
-import { GroupBox } from "../../components/base/group-box/group-box";
-import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
-import { Text } from "../../components/base/text/text";
-import { ProgressPanel } from "../../components/shared/progress-panel/progress-panel";
-import { WindowHeader } from "../../components/shared/window-header/window-header";
-import { WindowShell } from "../../components/shared/window-shell/window-shell";
+import { ProgressPanel } from "../../composites/progress-panel/progress-panel";
+import { WindowHeader } from "../../composites/window-header/window-header";
+import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
+import { Alert } from "../../primitives/alert/alert";
+import { Button } from "../../primitives/button/button";
+import { GroupBox } from "../../primitives/group-box/group-box";
+import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
+import { Text } from "../../primitives/text/text";
 
 import { ReleaseNotes } from "./release-notes";
 

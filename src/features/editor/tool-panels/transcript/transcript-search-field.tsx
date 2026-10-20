@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { SearchField } from "../../../../components/base/input-fields/search-field";
 import { t } from "../../../../i18n/i18n";
+import { SearchField } from "../../../../primitives/input-fields/search-field";
 
 /**
  * The search over the transcript's words. Enter and Down go to the next

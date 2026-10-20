@@ -4,8 +4,8 @@
 import { useState } from "react";
 import { RadioButton, RadioField, RadioGroup } from "react-aria-components";
 
-import { Button } from "../../../../components/base/button/button";
 import { cn } from "../../../../lib/styling";
+import { Button } from "../../../../primitives/button/button";
 import {
   AREA,
   DISPLAY,

@@ -3,8 +3,8 @@
 
 import { Check, X } from "lucide-react";
 
-import { ConfirmActionButton } from "../../../../components/shared/confirm-action-button/confirm-action-button";
-import { ProgressPanel } from "../../../../components/shared/progress-panel/progress-panel";
+import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
+import { ProgressPanel } from "../../../../composites/progress-panel/progress-panel";
 import { t } from "../../../../i18n/i18n";
 import { formatEta } from "../../duration";
 import { ExportPhase } from "../use-export-progress";

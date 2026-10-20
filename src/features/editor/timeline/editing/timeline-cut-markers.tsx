@@ -4,9 +4,9 @@
 import { UnfoldHorizontal } from "lucide-react";
 import { useNumberFormatter } from "react-aria";
 
-import { IconButton } from "../../../../components/base/button/icon-button";
-import { NativeTooltipTrigger } from "../../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { NativeTooltipTrigger } from "../../../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../../../i18n/i18n";
+import { IconButton } from "../../../../primitives/button/icon-button";
 import { formatDuration } from "../../duration";
 import { TimelineViewportState } from "../timeline-viewport";
 

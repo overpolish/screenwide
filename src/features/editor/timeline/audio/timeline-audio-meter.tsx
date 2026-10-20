@@ -3,8 +3,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { AudioMeter } from "../../../../components/base/audio-meter/audio-meter";
 import { t } from "../../../../i18n/i18n";
+import { AudioMeter } from "../../../../primitives/audio-meter/audio-meter";
 import { PreparedAudioTrack } from "../../types";
 import { Playhead } from "../scrub-playhead";
 

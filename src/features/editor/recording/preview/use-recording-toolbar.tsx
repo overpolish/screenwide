@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { useCallback, useMemo } from "react";
 
-import { Toolbar } from "../../../../components/base/toolbar/toolbar";
 import { t } from "../../../../i18n/i18n";
+import { Toolbar } from "../../../../primitives/toolbar/toolbar";
 import { useProvideEditorToolbarTools } from "../../panel/editor-toolbar-context";
 import { CaptionsToolToggle } from "../../tool-panels/captions/captions-tool-toggle";
 import { CursorToolToggle } from "../../tool-panels/cursor/cursor-tool-toggle";

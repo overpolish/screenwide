@@ -1,0 +1,148 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import {
+  OverlayScrollbarsComponent,
+  type OverlayScrollbarsComponentRef,
+} from "overlayscrollbars-react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
+
+import { cn } from "../../lib/styling";
+
+import { getEdgeOpacities } from "./scroll-area-edges";
+
+import type { OverlayScrollbars } from "overlayscrollbars";
+
+type ScrollAreaProps = {
+  children?: ReactNode;
+  className?: string;
+  constrainHeight?: boolean;
+  /** The edge a horizontal scroll starts from follows this direction. `auto`
+   * takes it from the content's own letters, for a strip that holds a name. */
+  dir?: "auto" | "ltr" | "rtl";
+  /** Classes for the edge overlays only, e.g. a radius the content must not get. */
+  edgeClassName?: string;
+  edgeEffect?: "shadow" | "none";
+  /** Called once the viewport is set up and scrolls, which happens a moment
+   * after mounting: what is to be scrolled into view first waits for it. */
+  onInitialized?: (viewport: HTMLElement) => void;
+  orientation?: "horizontal" | "vertical";
+  rootClassName?: string;
+  scrollbarAutoHide?: "scroll" | "never";
+  /** Scroll without a visible scrollbar, for strips with no room for one. */
+  scrollbarHidden?: boolean;
+};
+
+export function ScrollArea({
+  children,
+  className,
+  constrainHeight,
+  dir,
+  edgeClassName,
+  edgeEffect = "shadow",
+  onInitialized,
+  orientation = "vertical",
+  rootClassName,
+  scrollbarAutoHide = "scroll",
+  scrollbarHidden = false,
+}: ScrollAreaProps) {
+  const scrollRef = useRef<OverlayScrollbarsComponentRef>(null);
+  const startRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const horizontal = orientation === "horizontal";
+
+  const updateEdges = useCallback(
+    (instance: OverlayScrollbars) => {
+      const { viewport } = instance.elements();
+      if (!startRef.current || !endRef.current) return;
+      const position = horizontal ? viewport.scrollLeft : viewport.scrollTop;
+      const maximum = horizontal
+        ? viewport.scrollWidth - viewport.clientWidth
+        : viewport.scrollHeight - viewport.clientHeight;
+      const rtl = horizontal && getComputedStyle(viewport).direction === "rtl";
+      const opacity = getEdgeOpacities(rtl ? -position : position, maximum, {
+        effect: edgeEffect,
+      });
+      startRef.current.style.setProperty("opacity", String(opacity.start));
+      endRef.current.style.setProperty("opacity", String(opacity.end));
+    },
+    [edgeEffect, horizontal],
+  );
+
+  // Also refresh after changing the effect in Storybook or a parent render.
+  useEffect(() => {
+    const instance = scrollRef.current?.osInstance();
+    if (instance) updateEdges(instance);
+  }, [updateEdges]);
+
+  const edge = (side: "start" | "end") => {
+    const start = side === "start";
+    return (
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute z-100 rounded-[inherit]",
+          edgeClassName,
+          horizontal ? "inset-y-0" : "inset-x-0",
+          horizontal
+            ? start
+              ? "start-0"
+              : "end-0"
+            : start
+              ? "top-0"
+              : "bottom-0",
+          "from-shadow to-transparent opacity-0",
+          horizontal ? "w-control-inset" : "h-control-inset",
+          // Gradients have no start and end, so a horizontal edge turns with
+          // the writing direction.
+          horizontal
+            ? start
+              ? "bg-gradient-to-r rtl:bg-gradient-to-l"
+              : "bg-gradient-to-l rtl:bg-gradient-to-r"
+            : start
+              ? "bg-gradient-to-b"
+              : "bg-gradient-to-t",
+        )}
+        ref={start ? startRef : endRef}
+      />
+    );
+  };
+
+  return (
+    <div
+      className={cn("relative h-full w-full overflow-hidden", rootClassName)}
+      dir={dir}
+    >
+      <OverlayScrollbarsComponent
+        className={cn("h-full w-full", constrainHeight && "max-h-[inherit]")}
+        defer
+        events={{
+          initialized: (instance) => {
+            updateEdges(instance);
+            onInitialized?.(instance.elements().viewport);
+          },
+          scroll: updateEdges,
+          updated: updateEdges,
+        }}
+        options={{
+          overflow: {
+            x: horizontal ? "scroll" : "hidden",
+            y: horizontal ? "hidden" : "scroll",
+          },
+          scrollbars: {
+            autoHide: scrollbarAutoHide,
+            theme: "os-theme-screenwide",
+            visibility: scrollbarHidden ? "hidden" : "auto",
+          },
+        }}
+        ref={scrollRef}
+      >
+        <div className={cn(horizontal && "text-nowrap", className)}>
+          {children}
+        </div>
+      </OverlayScrollbarsComponent>
+      {edgeEffect === "shadow" && edge("start")}
+      {edgeEffect === "shadow" && edge("end")}
+    </div>
+  );
+}

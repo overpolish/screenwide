@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
-import { Switch } from "../../../../components/base/switch/switch";
-import { Text } from "../../../../components/base/text/text";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { Dimensions } from "../../../../components/shared/dimensions/dimensions";
-import { SliderNumberField } from "../../../../components/shared/slider-number-field/slider-number-field";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { Dimensions } from "../../../../composites/dimensions/dimensions";
+import { SliderNumberField } from "../../../../composites/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
+import { Switch } from "../../../../primitives/switch/switch";
+import { Text } from "../../../../primitives/text/text";
 import { EditorKind } from "../../types";
 import { RotationRow } from "../rotation-row";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";

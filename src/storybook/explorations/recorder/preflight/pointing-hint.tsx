@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Keyboard } from "../../../../components/base/keyboard/keyboard";
+import { Keyboard } from "../../../../primitives/keyboard/keyboard";
 import { AREA, WINDOW } from "../shared/recorder-data";
 
 // Beside the pointer while the panel has stepped aside: what a click or a

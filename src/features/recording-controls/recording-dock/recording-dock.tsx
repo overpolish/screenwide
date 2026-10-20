@@ -4,15 +4,15 @@
 import { Check, Pause, Play, Square, Trash2, X } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 
+import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
+import { t } from "../../../i18n/i18n";
+import { cn } from "../../../lib/styling";
 import {
   IconButton,
   IconToggleButton,
-} from "../../../components/base/button/icon-button";
-import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
-import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
-import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
-import { t } from "../../../i18n/i18n";
-import { cn } from "../../../lib/styling";
+} from "../../../primitives/button/icon-button";
+import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
+import { ContentRotate } from "../../../primitives/content-rotate/content-rotate";
 import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { formatElapsedTime } from "../elapsed-time";
 import { RecordingStatus } from "../types";

@@ -3,9 +3,9 @@
 
 import { Check, Trash2 } from "lucide-react";
 
-import { Button } from "../../components/base/button/button";
-import { ConfirmActionButton } from "../../components/shared/confirm-action-button/confirm-action-button";
+import { ConfirmActionButton } from "../../composites/confirm-action-button/confirm-action-button";
 import { platformArg, t } from "../../i18n/i18n";
+import { Button } from "../../primitives/button/button";
 import { boundsAnchor, PopupMenuAnchor } from "../popup-panel/use-popup-menu";
 
 import type { ProjectActions } from "./use-project-menu";

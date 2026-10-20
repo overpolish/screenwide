@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Dimensions } from "../../../../components/shared/dimensions/dimensions";
+import { Dimensions } from "../../../../composites/dimensions/dimensions";
 import { t } from "../../../../i18n/i18n";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";

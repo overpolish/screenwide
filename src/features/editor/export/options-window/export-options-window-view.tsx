@@ -4,8 +4,8 @@
 import { ReactNode, Ref } from "react";
 
 import logoUrl from "../../../../assets/screenwide-mark.svg";
-import { WindowHeader } from "../../../../components/shared/window-header/window-header";
-import { WindowShell } from "../../../../components/shared/window-shell/window-shell";
+import { WindowHeader } from "../../../../composites/window-header/window-header";
+import { WindowShell } from "../../../../composites/window-shell/window-shell";
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
 import { EditorExportForm } from "../editor-export-form";

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Background } from "../../../../components/shared/background-picker/background";
-import { DEFAULT_GENERATOR_ID } from "../../../../components/shared/background-picker/background-generators";
+import { Background } from "../../../../composites/background-picker/background";
+import { DEFAULT_GENERATOR_ID } from "../../../../composites/background-picker/background-generators";
 import { randomMeshComposition } from "../../screenshot/screenshot-background";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 

@@ -6,8 +6,8 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { Checkbox } from "../../components/base/checkbox/checkbox";
 import { t } from "../../i18n/i18n";
+import { Checkbox } from "../../primitives/checkbox/checkbox";
 
 type ReleaseNotesProps = {
   html: string;

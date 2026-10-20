@@ -3,9 +3,9 @@
 
 import { useEffect, useState } from "react";
 
-import { Button } from "../../../../components/base/button/button";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
 
 /**
  * A row that cuts every word of one kind the transcript marks, fillers or

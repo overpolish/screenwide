@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../../components/base/button/button";
-import { PillGroup } from "../../../../components/base/pill-group/pill-group";
-import { PositionGrid } from "../../../../components/base/position-grid/position-grid";
-import { Switch } from "../../../../components/base/switch/switch";
-import { Text } from "../../../../components/base/text/text";
-import { ControlRow } from "../../../../components/shared/control-row/control-row";
-import { StepSlider } from "../../../../components/shared/step-slider/step-slider";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
+import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
+import { Switch } from "../../../../primitives/switch/switch";
+import { Text } from "../../../../primitives/text/text";
 import {
   EditorKind,
   KeyboardEffectAnimation,

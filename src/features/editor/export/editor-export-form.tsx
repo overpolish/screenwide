@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../components/base/button/button";
-import { Checkbox } from "../../../components/base/checkbox/checkbox";
-import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
-import { TextField } from "../../../components/base/input-fields/text-field";
-import { PillGroup } from "../../../components/base/pill-group/pill-group";
-import { Text } from "../../../components/base/text/text";
-import { PathField } from "../../../components/shared/path-field/path-field";
+import { PathField } from "../../../composites/path-field/path-field";
 import { t } from "../../../i18n/i18n";
+import { Button } from "../../../primitives/button/button";
+import { Checkbox } from "../../../primitives/checkbox/checkbox";
+import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
+import { TextField } from "../../../primitives/input-fields/text-field";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
+import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../duration";
 
 import {

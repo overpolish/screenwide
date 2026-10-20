@@ -10,8 +10,8 @@ import {
   HighlightToolIcon,
   ShapeToolIcon,
   SpotlightToolIcon,
-} from "../../components/shared/annotation-style/annotation-tool-icons";
-import { AnnotationKind } from "../../components/shared/annotation-style/types";
+} from "../../composites/annotation-style/annotation-tool-icons";
+import { AnnotationKind } from "../../composites/annotation-style/types";
 
 /** One tool the overlay can draw with. A shape added to the overlay becomes a
  * row here, and the toolbar grows a toggle without being touched.

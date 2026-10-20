@@ -9,8 +9,8 @@ import {
   getTooltip,
   listenToTooltipText,
   NativeTooltipContent,
-} from "../../components/shared/native-tooltip/api";
-import { NativeTooltipSurface } from "../../components/shared/native-tooltip/native-tooltip-surface";
+} from "../../composites/native-tooltip/api";
+import { NativeTooltipSurface } from "../../composites/native-tooltip/native-tooltip-surface";
 
 /** What the window shows before its first tooltip. It is concealed until one
  * arrives, so this is never seen. */

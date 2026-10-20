@@ -1,0 +1,80 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { t } from "../../i18n/i18n";
+
+/**
+ * The colours an arrow is offered.
+ *
+ * An annotation's colour is stored in the document and drawn by the compositor,
+ * so it is a value rather than a token: the shader has no theme to resolve
+ * against, and an annotation must not change colour when the editor does. The
+ * palette is the AppKit system palette measured on macOS 26, plus the two
+ * achromatic ends every annotation tool offers. It is content, not the app's
+ * own status colours in `src/styles/colors.css`, so it keeps these values
+ * whatever the interface's palette does.
+ */
+export type AnnotationSwatch = {
+  /** `#rrggbb`, as the document stores it. */
+  color: string;
+  /** The colour's name in the app's language. */
+  name: () => string;
+};
+
+/** What a fresh arrow is drawn in before anything has been chosen: yellow reads
+ * as an annotation on almost any screenshot, where the accent is sometimes the
+ * very colour being pointed at. Rust dresses that first arrow - this is the
+ * twin of `NEW_ARROW_COLOR` in
+ * `src-tauri/src/editor/screenshot_preview/annotation.rs`, and the palette's
+ * own Yellow is the same colour so the swatch reads as chosen. */
+const DEFAULT_ANNOTATION_COLOR = "#ffcc00";
+
+export const ANNOTATION_SWATCHES: AnnotationSwatch[] = [
+  { color: "#ff383c", name: () => t("annotation-color-red") },
+  { color: "#ff8d28", name: () => t("annotation-color-orange") },
+  { color: DEFAULT_ANNOTATION_COLOR, name: () => t("annotation-color-yellow") },
+  { color: "#34c759", name: () => t("annotation-color-green") },
+  { color: "#0088ff", name: () => t("annotation-color-blue") },
+  { color: "#cb30e0", name: () => t("annotation-color-purple") },
+  { color: "#ffffff", name: () => t("annotation-color-white") },
+  { color: "#000000", name: () => t("annotation-color-black") },
+];
+
+/** Whether `color` is one of the offered swatches, ignoring the case the
+ * native colour panel happens to report its hex in. */
+export const isAnnotationSwatch = (color: string) =>
+  ANNOTATION_SWATCHES.some((swatch) =>
+    sameAnnotationColor(swatch.color, color),
+  );
+
+/** Two colours are the same colour whatever case their hex arrives in: the
+ * palette is written in lower case and AppKit reports upper. */
+export const sameAnnotationColor = (first: string, second: string) =>
+  first.toLowerCase() === second.toLowerCase();
+
+/** Whether ink over `color`, a `#rrggbb` hex, should be the dark of a light
+ * appearance. */
+export const isLight = (color: string) => {
+  const channel = (offset: number) =>
+    parseInt(color.slice(offset, offset + 2), 16) / 255;
+  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5) > 0.5;
+};
+
+/**
+ * The saved colours with `color` kept among them, newest last.
+ *
+ * A colour already on offer is not saved twice, and one that is already kept
+ * moves to the end rather than being added again, so the row reads as what
+ * has been used lately. Kept in lower case, whatever case AppKit reports it
+ * in, so the same colour can never be kept twice over.
+ */
+export const withAnnotationColor = (saved: string[], color: string) => {
+  if (!/^#[0-9a-f]{6}([0-9a-f]{2})?$/iu.test(color)) return saved;
+  if (isAnnotationSwatch(color)) return saved;
+  const rest = saved.filter((kept) => !sameAnnotationColor(kept, color));
+  return [...rest, color.toLowerCase()];
+};
+
+/** The saved colours with `color` forgotten. */
+export const withoutAnnotationColor = (saved: string[], color: string) =>
+  saved.filter((kept) => !sameAnnotationColor(kept, color));

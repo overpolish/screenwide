@@ -9,7 +9,7 @@ import {
 import { SceneRotation } from "../layer-rotation";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
-import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+import type { AnnotationKind } from "../../../composites/annotation-style/types";
 
 /**
  * What the selection panel shows for a placed layer: the selected layer, its

@@ -10,7 +10,7 @@ import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 
-import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
+import type { AnnotationKind } from "../../../../composites/annotation-style/types";
 
 /** Picking a canvas tool up and putting it down, and what each change clears
  * on its way in. */

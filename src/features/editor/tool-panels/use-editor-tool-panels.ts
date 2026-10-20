@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { BackgroundPreset } from "../../../components/shared/background-picker/background";
+import { BackgroundPreset } from "../../../composites/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
 import {
   useAnnotationSelection,

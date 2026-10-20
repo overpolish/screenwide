@@ -11,12 +11,15 @@ import { extendTailwindMerge } from "tailwind-merge";
 const fontSizes = ["title", "heading", "body", "label", "caption"];
 
 /**
- * Semantic spacing declared as `--spacing-*` in `styles/theme.css`. Without these,
- * two sizing classes on different tokens are both kept and CSS order decides.
+ * Semantic spacing declared as `--spacing-*` in `styles/theme.css`, and
+ * `icon-xs`, the size utility in `styles/utilities.css`. Without these, two
+ * sizing classes on different tokens are both kept and CSS order decides.
  */
 const spacing = [
   "control-height",
   "part-height",
+  "mark",
+  "icon-xs",
   "icon-sm",
   "icon",
   "icon-lg",

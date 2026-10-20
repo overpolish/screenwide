@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { AnnotationShape } from "./annotations";
-import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
-import type { ANNOTATION_SIZES } from "../../../components/shared/annotation-style/widths";
+import type { AnnotationKind } from "../../../composites/annotation-style/types";
+import type { ANNOTATION_SIZES } from "../../../composites/annotation-style/widths";
 
 /**
  * What one kind of annotation is and can do: how it is read from a document,

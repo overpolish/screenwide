@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
-import { ProgressPanel } from "../../components/shared/progress-panel/progress-panel";
+import { ProgressPanel } from "../../composites/progress-panel/progress-panel";
 import { t } from "../../i18n/i18n";
+import { Keyboard, Shortcut } from "../../primitives/keyboard/keyboard";
 
 import { ScrollingCapturePhase } from "./scrolling-capture-events";
 

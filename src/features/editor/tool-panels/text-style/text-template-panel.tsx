@@ -4,10 +4,10 @@
 import { useEffect, useRef } from "react";
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components";
 
-import { ScrollArea } from "../../../../components/base/scroll-area/scroll-area";
-import { Text } from "../../../../components/base/text/text";
 import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
+import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
+import { Text } from "../../../../primitives/text/text";
 import { useFittedPanel } from "../../../popup-panel/use-fitted-panel";
 import { reportPopupPanelPick } from "../../../popup-panel/use-popup-panel-picker";
 

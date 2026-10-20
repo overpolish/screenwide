@@ -4,10 +4,10 @@
 import { ChevronDown, ReplaceAll } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "../../../../components/base/button/button";
-import { IconButton } from "../../../../components/base/button/icon-button";
-import { TextField } from "../../../../components/base/input-fields/text-field";
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
+import { IconButton } from "../../../../primitives/button/icon-button";
+import { TextField } from "../../../../primitives/input-fields/text-field";
 
 import { replacementCorrections } from "./transcript-replace";
 import { TranscriptMatch } from "./transcript-search";
