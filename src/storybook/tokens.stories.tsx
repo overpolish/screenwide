@@ -24,6 +24,8 @@ export const Materials: Story = { render: () => <Sections.Materials /> };
 
 export const Sizes: Story = { render: () => <Sections.Sizes /> };
 
+export const Icons: Story = { render: () => <Sections.Icons /> };
+
 export const Spacing: Story = { render: () => <Sections.Spacing /> };
 
 export const Radii: Story = { render: () => <Sections.Radii /> };

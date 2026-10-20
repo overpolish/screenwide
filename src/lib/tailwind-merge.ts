@@ -14,7 +14,16 @@ const fontSizes = ["title", "heading", "body", "label", "caption"];
  * Semantic spacing declared as `--spacing-*` in `styles/theme.css`. Without these,
  * two sizing classes on different tokens are both kept and CSS order decides.
  */
-const spacing = ["control-height", "inline", "inset", "traffic-lights"];
+const spacing = [
+  "control-height",
+  "icon-sm",
+  "icon",
+  "icon-lg",
+  "inline",
+  "separate",
+  "inset",
+  "traffic-lights",
+];
 
 /**
  * Semantic radii declared as `--radius-*` in `styles/theme.css`. Without these, two

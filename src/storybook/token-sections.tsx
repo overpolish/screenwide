@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Settings } from "lucide-react";
+
 import { cn, focusStyles } from "../lib/styling";
 
 import { StoryGrid, StoryGridRow } from "./story-grid";
@@ -35,8 +37,6 @@ const colorTokens = [
   "bg-primary-hover",
   "bg-primary-pressed",
   "bg-on-primary",
-  "bg-accent",
-  "bg-on-accent",
   "bg-selected",
   "bg-emphasis",
   "bg-focus",
@@ -132,11 +132,23 @@ export function Sizes() {
   );
 }
 
+const iconTokens = ["size-icon-sm", "size-icon", "size-icon-lg"];
+
+export function Icons() {
+  return (
+    <TokenGrid
+      sample={(token) => <Settings className={cn("text-fg", token)} />}
+      tokens={iconTokens}
+    />
+  );
+}
+
 // Each spacing shown as the bare space it measures, labelled with the
 // utility it is used through.
 const spacingTokens = [
   { label: "gap-inline", width: "w-inline" },
-  { label: "px-inset", width: "w-inset" },
+  { label: "gap-separate", width: "w-separate" },
+  { label: "p-inset", width: "w-inset" },
   { label: "ps-traffic-lights", width: "w-traffic-lights" },
 ];
 

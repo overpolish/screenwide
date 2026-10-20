@@ -28,10 +28,6 @@
   color: var(--color-on-primary);
   --icon-alpha: 1;
 }
-@utility text-on-accent {
-  color: var(--color-on-accent);
-  --icon-alpha: 1;
-}
 @utility text-success {
   color: var(--color-success);
   --icon-alpha: 1;
@@ -53,22 +49,22 @@
   --icon-alpha: 1;
 }
 
-/* The raised material (`colors.css`). The bevel goes in Tailwind's own
+/* The control material (`colors.css`). The bevel goes in Tailwind's own
    shadow slot and the box shadow is restated in Tailwind's composition, so a
    focus ring drawn over the control adds to the bevel rather than replacing
    it. */
 @utility control-raised {
-  background-image: var(--control-raised);
+  background-color: var(--control-raised);
   --tw-shadow: var(--control-bevel);
   box-shadow:
     var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
     var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }
 @utility control-raised-hover {
-  background-image: var(--control-raised-hover);
+  background-color: var(--control-raised-hover);
 }
 @utility control-raised-pressed {
-  background-image: var(--control-raised-pressed);
+  background-color: var(--control-raised-pressed);
   --tw-shadow: var(--control-bevel-pressed);
   box-shadow:
     var(--tw-inset-shadow), var(--tw-inset-ring-shadow),

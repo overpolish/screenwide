@@ -9,10 +9,10 @@ import { t } from "../../../i18n/i18n";
  * An annotation's colour is stored in the document and drawn by the compositor,
  * so it is a value rather than a token: the shader has no theme to resolve
  * against, and an annotation must not change colour when the editor does. The
- * palette is the AppKit system palette measured on macOS 26 - the same source
- * as the status colours in `src/styles/colors.css`, whose four values are
- * repeated here exactly rather than approximated - plus the two achromatic
- * ends every annotation tool offers.
+ * palette is the AppKit system palette measured on macOS 26, plus the two
+ * achromatic ends every annotation tool offers. It is content, not the app's
+ * own status colours in `src/styles/colors.css`, so it keeps these values
+ * whatever the interface's palette does.
  */
 export type AnnotationSwatch = {
   /** `#rrggbb`, as the document stores it. */

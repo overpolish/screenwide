@@ -38,14 +38,22 @@
   /* A control's height. Mirrored in JS by `TIMED_LANE_ROW_HEIGHT_PX`,
      which the timeline's rows are laid out to. */
   --spacing-control-height: 1.75rem;
+  /* Icon sizes, each matched to the text it sits beside: small beside a
+     caption, the default beside body text and control labels, large for
+     an icon that stands alone where it needs more presence. */
+  --spacing-icon-sm: 0.875rem;
+  --spacing-icon: 1rem;
+  --spacing-icon-lg: 1.25rem;
 
-  /* Spacing by what it separates, added as a role needs one; anything else
-     takes Tailwind's 4px scale. Inline: between things read as one, such as
-     an icon and its label. Inset: inside a control, between its edge and
-     its content. Traffic lights: the room the OS leaves for the window
-     buttons at a title bar's leading edge, with the window inset after
-     them. */
+  /* Spacing by what it separates. Inline: between things read as one, such
+     as an icon and its label. Separate: between neighbours that stand on
+     their own, such as a message and its action, or two buttons side by
+     side. Inset: between a box's edge and its content, in a control, a
+     notice or a card. Traffic lights: the room the OS leaves for the
+     window buttons at a title bar's leading edge, with the window inset
+     after them. A new role gets a token when it appears. */
   --spacing-inline: 0.375rem;
+  --spacing-separate: 0.75rem;
   --spacing-inset: 0.75rem;
   --spacing-traffic-lights: 5.5rem;
 

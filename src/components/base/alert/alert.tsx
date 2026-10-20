@@ -7,23 +7,22 @@ import { VariantProps } from "tailwind-variants";
 
 import { tv } from "../../../lib/variants";
 
-// An inline notice, as native apps show one: a grouped box with a faint fill,
-// body text in the label colour, and a symbol that carries the meaning. The
-// text is never tinted; colour is applied to the glyph alone.
+// An inline notice: the translucent fill on the window's material, the
+// message in the text colour, and an icon that carries the meaning. A status
+// colours the icon alone; the box and the text are never tinted.
 const alertVariants = tv({
   defaultVariants: {
     color: "neutral",
   },
   slots: {
-    // A Fluent info bar's action sits at its trailing edge, centred on the
-    // first line the way the icon is: the slot is a line tall and the
-    // control overhangs it evenly into the padding.
+    // Centred on the first line, as the icon is: the slot is a line tall and
+    // the control overhangs it evenly into the padding.
     action: "flex h-[1lh] shrink-0 items-center",
-    // On the layer tokens: the faintest fill on macOS, a Fluent info bar's
-    // card fill and hairline stroke on Windows.
-    base: "flex items-start gap-control-inset rounded-control bg-layer inset-ring inset-ring-layer-stroke p-section text-body text-content-fg",
+    base: "flex items-start gap-separate rounded-panel bg-fill p-inset text-body text-fg",
     content: "min-w-0 grow",
-    icon: "flex h-[1lh] w-icon shrink-0 items-center justify-center [&>svg]:size-icon [&>svg]:transform-gpu",
+    icon: "flex h-[1lh] shrink-0 items-center [&>svg]:size-icon [&>svg]:transform-gpu",
+    // The icon and the message, read as one.
+    lead: "flex min-w-0 grow items-start gap-inline",
   },
   variants: {
     color: {
@@ -31,7 +30,7 @@ const alertVariants = tv({
         icon: "text-error",
       },
       neutral: {
-        icon: "text-content-fg-secondary",
+        icon: "text-fg-secondary",
       },
     },
   },
@@ -58,7 +57,7 @@ export function Alert({
   icon: customIcon,
   ...props
 }: AlertProps) {
-  const { action, base, content, icon } = alertVariants({
+  const { action, base, content, icon, lead } = alertVariants({
     className,
     color,
   });
@@ -66,12 +65,14 @@ export function Alert({
 
   return (
     <div className={base()} {...props}>
-      {customIcon === false ? null : (
-        <span aria-hidden="true" className={icon()}>
-          {customIcon ?? <DefaultIcon />}
-        </span>
-      )}
-      <div className={content()}>{children}</div>
+      <div className={lead()}>
+        {customIcon === false ? null : (
+          <span aria-hidden="true" className={icon()}>
+            {customIcon ?? <DefaultIcon />}
+          </span>
+        )}
+        <div className={content()}>{children}</div>
+      </div>
       {actionContent ? <div className={action()}>{actionContent}</div> : null}
     </div>
   );

@@ -7,7 +7,7 @@ import { tv } from "../../../lib/variants";
 export const buttonVariants = tv({
   base: [
     "relative inline-flex h-control-height cursor-default items-center justify-center gap-inline rounded-control px-inset text-label transition select-none",
-    "[&_svg.lucide]:size-4 [&_svg]:shrink-0 [&_svg]:transform-gpu",
+    "[&_svg.lucide]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
     focusStyles,
     elementFocusVisible,
   ],
