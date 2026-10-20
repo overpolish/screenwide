@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { useCallback, useMemo } from "react";
 
-import { ButtonGroup } from "../../../../components/base/button-group/button-group";
+import { Toolbar } from "../../../../components/base/toolbar/toolbar";
 import { t } from "../../../../i18n/i18n";
 import { useProvideEditorToolbarTools } from "../../panel/editor-toolbar-context";
 import { CaptionsToolToggle } from "../../tool-panels/captions/captions-tool-toggle";
@@ -95,10 +95,7 @@ export function useRecordingToolbar({
       hasVisiblePanes ? (
         <>
           {hasCursorData || hasKeyboardData || hasMicrophone ? (
-            <ButtonGroup
-              aria-label={t("editor-recording-effects")}
-              className="gap-control"
-            >
+            <Toolbar aria-label={t("editor-recording-effects")}>
               {hasCursorData ? (
                 <CursorToolToggle onDismiss={dismissToolPanel} />
               ) : null}
@@ -111,7 +108,7 @@ export function useRecordingToolbar({
                   <CaptionsToolToggle onDismiss={dismissToolPanel} />
                 </>
               ) : null}
-            </ButtonGroup>
+            </Toolbar>
           ) : null}
           <RecordingCanvasTools
             hasAnnotations={hasAnnotations}
@@ -128,16 +125,13 @@ export function useRecordingToolbar({
         // The transcript and its captions are the voice's, not the picture's,
         // so they are offered with no picture to point the other tools at: an
         // audio recording, or one whose video tracks are all turned off.
-        <ButtonGroup
-          aria-label={t("editor-recording-effects")}
-          className="gap-control"
-        >
+        <Toolbar aria-label={t("editor-recording-effects")}>
           <TranscriptToolToggle
             onDismiss={dismissToolPanel}
             resetsView={false}
           />
           <CaptionsToolToggle onDismiss={dismissToolPanel} resetsView={false} />
-        </ButtonGroup>
+        </Toolbar>
       ) : undefined,
     [
       canEditActiveTrack,

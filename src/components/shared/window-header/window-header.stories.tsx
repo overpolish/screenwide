@@ -7,7 +7,7 @@ import { useState } from "react";
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { featureStage } from "../../../storybook/feature-story-stage";
 import { IconToggleButton } from "../../base/button/icon-button";
-import { ButtonGroup } from "../../base/button-group/button-group";
+import { Toolbar } from "../../base/toolbar/toolbar";
 
 import { WindowHeader } from "./window-header";
 
@@ -109,7 +109,7 @@ export const LongTitle: Story = {
 export const WithCenter: Story = {
   args: {
     center: (
-      <ButtonGroup aria-label="View tools" className="gap-control">
+      <Toolbar aria-label="View tools">
         <IconToggleButton aria-label="Select" isSelected>
           <MousePointer2 />
         </IconToggleButton>
@@ -119,7 +119,7 @@ export const WithCenter: Story = {
         <IconToggleButton aria-label="Crop">
           <Crop />
         </IconToggleButton>
-      </ButtonGroup>
+      </Toolbar>
     ),
     leadingSection: mark,
     title:

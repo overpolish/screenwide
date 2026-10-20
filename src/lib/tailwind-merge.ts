@@ -26,6 +26,7 @@ const spacing = [
   "control",
   "control-inset",
   "section",
+  "list-inset",
   "layout",
   "window-inset",
   "control-height",
@@ -45,7 +46,7 @@ const spacing = [
  * `rounded-*` classes on different tokens are both kept and CSS order decides
  * which corner a control ends up with.
  */
-const radii = ["window", "panel", "control"];
+const radii = ["window", "panel", "control", "checkbox"];
 
 /**
  * An axis class covers both logical sides, as it covers both physical ones:

@@ -5,7 +5,7 @@ import { Eraser, GripVertical, Undo2, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { IconButton } from "../../components/base/button/icon-button";
-import { ButtonGroup } from "../../components/base/button-group/button-group";
+import { Toolbar } from "../../components/base/toolbar/toolbar";
 import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
 import {
   annotationToolLabel,
@@ -116,7 +116,7 @@ export function AnnotateToolbar({
 
         {/* The tools, as the Editor's own toolbars show them: one cluster of
             toggles, each naming itself in a tooltip. */}
-        <ButtonGroup aria-label={t("annotate-tools")} className="gap-control">
+        <Toolbar aria-label={t("annotate-tools")}>
           {ANNOTATE_TOOLS.map((tool) => (
             <ToolToggle
               isSelected={tool.id === settings.defaultShape}
@@ -133,7 +133,7 @@ export function AnnotateToolbar({
               {tool.icon}
             </ToolToggle>
           ))}
-        </ButtonGroup>
+        </Toolbar>
 
         <div className="flex items-center gap-control-inset">
           {hasColor ? (

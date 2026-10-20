@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { RefObject, useLayoutEffect, useRef, useState } from "react";
+import { ListBoxItem } from "react-aria-components";
 
-import { Button } from "../../components/base/button/button";
-import { ButtonGroup } from "../../components/base/button-group/button-group";
+import { buttonVariants } from "../../components/base/button/button-variants";
+import { ListBox } from "../../components/base/listbox/listbox";
 import { Text } from "../../components/base/text/text";
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
@@ -114,70 +115,81 @@ export function MonitorSelector({
 
   return (
     // The display arrangement as Displays settings draws it: tiles laid out
-    // as the displays sit, with the chosen one on the accent.
+    // as the displays sit, with the chosen one on the accent. A list box, so
+    // the chosen display is announced as selected; the arrow keys move by
+    // where the tiles sit.
     <div
       className="flex h-full w-full items-center justify-center overflow-hidden rounded-panel p-control-inset"
       dir="ltr"
       ref={containerRef}
     >
-      <ButtonGroup
+      <ListBox
         aria-label={t("recording-sources-displays")}
-        className="relative"
-        orientation={orientation}
+        className="relative block w-auto overflow-visible p-0"
+        layout="grid"
+        selectedKeys={selectedMonitor ? [selectedMonitor.id] : []}
+        selectionBehavior="replace"
+        selectionMode="single"
         style={fitted}
       >
-        {orderedMonitors.map((monitor) => {
-          const isSelected = selectedMonitor?.id === monitor.id;
-
-          return (
-            <Button
-              aria-label={t("recording-sources-select-display", {
-                display: monitor.name,
-              })}
-              className={cn(
-                "absolute h-auto min-h-8 min-w-12 transform-gpu justify-center overflow-hidden px-control",
-                focusContents && monitor.id === focusTargetId && "focus:ring-3",
-              )}
-              color={isSelected ? "primary" : "neutral"}
-              data-source-selector-focus-target={
-                monitor.id === focusTargetId ? "true" : undefined
-              }
-              key={monitor.id}
-              onPress={(event) => {
-                onCommit(
-                  monitor,
-                  ["keyboard", "virtual"].includes(event.pointerType),
-                );
-              }}
-              onPressStart={() => {
-                onSelect(monitor);
-              }}
-              style={{
-                height: `${String((monitor.layoutSize.height / layoutHeight) * 100)}%`,
-                left: `${String(((monitor.layoutPosition.x - bounds.minX) / layoutWidth) * 100)}%`,
-                top: `${String(((monitor.layoutPosition.y - bounds.minY) / layoutHeight) * 100)}%`,
-                width: `${String((monitor.layoutSize.width / layoutWidth) * 100)}%`,
-              }}
-            >
-              {/* The still is the tile: position and picture say which
-                  display this is, as the Displays settings arrangement does,
-                  and the name is left to the accessible label. Without a
-                  still the name is all there is to show. */}
-              {thumbnails[monitor.id] ? (
-                <img
-                  alt=""
-                  className="absolute inset-0 size-full object-cover"
-                  src={thumbnails[monitor.id]}
-                />
-              ) : (
-                <span className="relative max-w-full truncate text-subheadline">
-                  {monitor.name}
-                </span>
-              )}
-            </Button>
-          );
-        })}
-      </ButtonGroup>
+        {orderedMonitors.map((monitor) => (
+          <ListBoxItem
+            aria-label={t("recording-sources-select-display", {
+              display: monitor.name,
+            })}
+            className={({ isSelected }) =>
+              buttonVariants({
+                className: cn(
+                  "absolute h-auto min-h-8 min-w-12 transform-gpu justify-center overflow-hidden px-control",
+                  focusContents &&
+                    monitor.id === focusTargetId &&
+                    "focus:ring-3",
+                ),
+                color: isSelected ? "primary" : "neutral",
+              })
+            }
+            data-source-selector-focus-target={
+              monitor.id === focusTargetId ? "true" : undefined
+            }
+            id={monitor.id}
+            key={monitor.id}
+            // Press rather than selection change, so choosing the display
+            // that is already chosen still closes the selector.
+            onPress={(event) => {
+              onCommit(
+                monitor,
+                ["keyboard", "virtual"].includes(event.pointerType),
+              );
+            }}
+            onPressStart={() => {
+              onSelect(monitor);
+            }}
+            style={{
+              height: `${String((monitor.layoutSize.height / layoutHeight) * 100)}%`,
+              left: `${String(((monitor.layoutPosition.x - bounds.minX) / layoutWidth) * 100)}%`,
+              top: `${String(((monitor.layoutPosition.y - bounds.minY) / layoutHeight) * 100)}%`,
+              width: `${String((monitor.layoutSize.width / layoutWidth) * 100)}%`,
+            }}
+            textValue={monitor.name}
+          >
+            {/* The still is the tile: position and picture say which
+                display this is, as the Displays settings arrangement does,
+                and the name is left to the accessible label. Without a
+                still the name is all there is to show. */}
+            {thumbnails[monitor.id] ? (
+              <img
+                alt=""
+                className="absolute inset-0 size-full object-cover"
+                src={thumbnails[monitor.id]}
+              />
+            ) : (
+              <span className="relative max-w-full truncate text-subheadline">
+                {monitor.name}
+              </span>
+            )}
+          </ListBoxItem>
+        ))}
+      </ListBox>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { Ellipsis } from "lucide-react";
 import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { IconButton } from "../../../components/base/button/icon-button";
-import { ButtonGroup } from "../../../components/base/button-group/button-group";
+import { Toolbar } from "../../../components/base/toolbar/toolbar";
 import {
   annotationToolLabel,
   annotationToolName,
@@ -101,9 +101,9 @@ export function AnnotationToolStrip({
 
   return (
     <div className="flex" ref={stripRef}>
-      <ButtonGroup aria-label={t("annotate-tools")} className="gap-control">
+      <Toolbar aria-label={t("annotate-tools")}>
         {/* No `data-editor-tool` marker: the annotation panel hangs from the
-            picture, never from a toolbar button. */}
+          picture, never from a toolbar button. */}
         {shown.map(({ icon: Icon, id, shortcut }) => (
           <ToolToggle
             isDisabled={isDisabled}
@@ -135,7 +135,7 @@ export function AnnotationToolStrip({
             </IconButton>
           </NativeTooltipTrigger>
         ) : null}
-      </ButtonGroup>
+      </Toolbar>
     </div>
   );
 }

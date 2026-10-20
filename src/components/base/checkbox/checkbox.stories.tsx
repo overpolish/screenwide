@@ -1,17 +1,61 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { ComponentProps } from "react";
+import { useArgs } from "storybook/preview-api";
+
+import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
+
 import { Checkbox } from "./checkbox";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
+type CheckboxProps = ComponentProps<typeof Checkbox>;
+
+// Unchecked, checked and indeterminate side by side, all with the given args.
+function StateGrid(args: CheckboxProps) {
+  return (
+    <StoryGrid>
+      <StoryGridRow label="unchecked">
+        <Checkbox {...args} isIndeterminate={false} isSelected={false} />
+      </StoryGridRow>
+      <StoryGridRow label="checked">
+        <Checkbox {...args} isIndeterminate={false} isSelected />
+      </StoryGridRow>
+      <StoryGridRow label="indeterminate">
+        <Checkbox {...args} isIndeterminate />
+      </StoryGridRow>
+    </StoryGrid>
+  );
+}
+
 const meta = {
+  argTypes: {
+    children: { control: "text" },
+    description: { control: "text" },
+    isDisabled: { control: "boolean" },
+    isIndeterminate: { control: "boolean" },
+    isSelected: { control: "boolean" },
+  },
   args: {
-    children: "Label",
+    children: "Open folder after export",
+    isDisabled: false,
+    isIndeterminate: false,
+    isSelected: false,
   },
   component: Checkbox,
-  parameters: {
-    layout: "padded",
+  parameters: { layout: "centered" },
+  // A click updates the isSelected control, so the two never disagree.
+  render: function Render(args) {
+    const [, updateArgs] = useArgs();
+    return (
+      <Checkbox
+        {...args}
+        onChange={(isSelected) => {
+          updateArgs({ isIndeterminate: false, isSelected });
+        }}
+      />
+    );
   },
   title: "Primitives/Checkbox",
 } satisfies Meta<typeof Checkbox>;
@@ -21,39 +65,19 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const States: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => (
-    <div className="gap-section flex flex-col items-start">
-      <Checkbox>Unchecked</Checkbox>
-      <Checkbox isReadOnly isSelected>
-        Checked
-      </Checkbox>
-      <Checkbox isIndeterminate isReadOnly>
-        Indeterminate
-      </Checkbox>
-      <Checkbox isDisabled>Disabled</Checkbox>
-      <Checkbox isDisabled isSelected>
-        Disabled checked
-      </Checkbox>
-    </div>
-  ),
-};
-
-export const WithoutLabel: Story = {
-  args: {
-    "aria-label": "Selected",
-    children: undefined,
-    defaultSelected: true,
-  },
-};
-
-/** Fine print under the label, in the secondary tone; the box lines up with
- * the label's first line. */
 export const WithDescription: Story = {
   args: {
-    children: "Bake cursor into recording",
-    defaultSelected: true,
-    description: "Dynamic Screenwide cursor",
+    children: "Delete project after export",
+    description: "The recording and its edits are moved to the Trash.",
   },
+};
+
+export const States: Story = {
+  parameters: { controls: { disable: true } },
+  render: (args) => <StateGrid {...args} isDisabled={false} />,
+};
+
+export const Disabled: Story = {
+  parameters: { controls: { disable: true } },
+  render: (args) => <StateGrid {...args} isDisabled />,
 };

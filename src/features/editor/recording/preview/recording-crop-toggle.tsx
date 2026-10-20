@@ -8,7 +8,7 @@ import {
   SquareDashedMousePointer,
 } from "lucide-react";
 
-import { ButtonGroup } from "../../../../components/base/button-group/button-group";
+import { Toolbar } from "../../../../components/base/toolbar/toolbar";
 import { ToolToggle } from "../../../../components/shared/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
 import { SceneToolToggle } from "../../tool-panels/scene/scene-tool-toggle";
@@ -43,12 +43,9 @@ export function RecordingCanvasTools({
 }) {
   return (
     <>
-      <ButtonGroup
-        aria-label={t("editor-pointer-tools")}
-        className="gap-control"
-      >
+      <Toolbar aria-label={t("editor-pointer-tools")}>
         {/* The marker is the anchor Select's panel hangs from: taking the tool
-            up opens it, however the tool was taken up. */}
+          up opens it, however the tool was taken up. */}
         <span className="inline-flex" data-editor-tool="select">
           <ToolToggle
             isDisabled={!isSelectEnabled}
@@ -75,11 +72,8 @@ export function RecordingCanvasTools({
         >
           <SquareDashedMousePointer />
         </ToolToggle>
-      </ButtonGroup>
-      <ButtonGroup
-        aria-label={t("editor-canvas-tools")}
-        className="gap-control"
-      >
+      </Toolbar>
+      <Toolbar aria-label={t("editor-canvas-tools")}>
         <ToolToggle
           isDisabled={!isFrameEnabled}
           isSelected={tool === "canvas" && isFrameEnabled}
@@ -112,7 +106,7 @@ export function RecordingCanvasTools({
         >
           <Crop />
         </ToolToggle>
-      </ButtonGroup>
+      </Toolbar>
       {hasAnnotations ? (
         <AnnotationToolStrip
           isDisabled={!isArrowEnabled}

@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
-import { ButtonGroup } from "../../../components/base/button-group/button-group";
+import { Toolbar } from "../../../components/base/toolbar/toolbar";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 import { t } from "../../../i18n/i18n";
 import { AnnotationToolStrip } from "../toolbar/annotation-tool-strip";
@@ -90,12 +90,9 @@ export function useScreenshotTools({
   return useMemo(
     () => (
       <>
-        <ButtonGroup
-          aria-label={t("editor-pointer-tools")}
-          className="gap-control"
-        >
+        <Toolbar aria-label={t("editor-pointer-tools")}>
           {/* The marker is the anchor Select's panel hangs from: taking the
-              tool up opens it, however the tool was taken up. */}
+            tool up opens it, however the tool was taken up. */}
           <span className="inline-flex" data-editor-tool="select">
             <ToolToggle
               isSelected={tool === "select"}
@@ -116,11 +113,8 @@ export function useScreenshotTools({
           >
             <SquareDashedMousePointer />
           </ToolToggle>
-        </ButtonGroup>
-        <ButtonGroup
-          aria-label={t("editor-canvas-tools")}
-          className="gap-control"
-        >
+        </Toolbar>
+        <Toolbar aria-label={t("editor-canvas-tools")}>
           <ToolToggle
             isSelected={tool === "canvas"}
             label={t("editor-tool-canvas")}
@@ -139,7 +133,7 @@ export function useScreenshotTools({
           >
             <Crop />
           </ToolToggle>
-        </ButtonGroup>
+        </Toolbar>
         <AnnotationToolStrip onChoose={chooseAnnotationTool} tool={tool} />
       </>
     ),

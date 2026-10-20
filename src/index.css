@@ -258,6 +258,9 @@
   /* A colour swatch, as the ruler's loupe draws its picked colour: an
      icon-sized square with small corners, the same on both platforms. */
   --radius-swatch: 0.25rem;
+  /* A checkbox's box. AppKit's 16pt box has a continuous corner whose closest
+     circle is 5.5px (fitted to a 4x render on macOS 27); Fluent's is 4px. */
+  --radius-checkbox: 0.34375rem;
   /* The recording bar's 40px controls. macOS rounds a taller control more,
      up to the panel radius; Fluent keeps the control corner at any height. */
   --radius-capture: var(--radius-panel);
@@ -478,6 +481,7 @@
     --radius-capture: var(--radius-control);
     --radius-panel: 8px;
     --radius-window: 8px;
+    --radius-checkbox: 4px;
 
     /* The layer base Fluent draws controls over. A Fluent bezel in light
        appearance is white at 70%, so the surface must sit below white for
