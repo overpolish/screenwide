@@ -56,7 +56,12 @@ const materialTokens = [
   "bg-primary-pressed primary-raised-pressed",
 ];
 
-const radiusTokens = ["rounded-sm", "rounded-control", "rounded-panel"];
+const radiusTokens = [
+  "rounded-sm",
+  "rounded-part",
+  "rounded-control",
+  "rounded-panel",
+];
 
 function TokenGrid({
   sample,
@@ -128,6 +133,9 @@ export function Sizes() {
       <StoryGridRow label="h-control-height">
         <span className="block h-control-height w-16 rounded-control bg-fill-strong" />
       </StoryGridRow>
+      <StoryGridRow label="h-part-height">
+        <span className="block h-part-height w-10 rounded-part bg-fill-strong" />
+      </StoryGridRow>
     </StoryGrid>
   );
 }
@@ -149,6 +157,7 @@ const spacingTokens = [
   { label: "gap-inline", width: "w-inline" },
   { label: "gap-separate", width: "w-separate" },
   { label: "p-inset", width: "w-inset" },
+  { label: "p-inset-sm", width: "w-inset-sm" },
   { label: "ps-traffic-lights", width: "w-traffic-lights" },
 ];
 

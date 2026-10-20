@@ -16,12 +16,14 @@ const fontSizes = ["title", "heading", "body", "label", "caption"];
  */
 const spacing = [
   "control-height",
+  "part-height",
   "icon-sm",
   "icon",
   "icon-lg",
   "inline",
   "separate",
   "inset",
+  "inset-sm",
   "traffic-lights",
 ];
 
@@ -30,7 +32,7 @@ const spacing = [
  * `rounded-*` classes on different tokens are both kept and CSS order decides
  * which corner a control ends up with.
  */
-const radii = ["control", "panel"];
+const radii = ["part", "control", "panel"];
 
 /**
  * An axis class covers both logical sides, as it covers both physical ones:

@@ -45,7 +45,7 @@ const meta = {
       setDraft({ source: args.value, value: args.value });
     }
     return (
-      <div className="flex items-center gap-control-inset">
+      <div className="flex items-center gap-inline">
         <AngleDial
           {...args}
           onChange={(value) => {
@@ -54,7 +54,7 @@ const meta = {
           }}
           value={draft.value}
         />
-        <span className="w-10 text-body text-content-fg-secondary tabular-nums">
+        <span className="w-10 text-body text-fg-secondary tabular-nums">
           {draft.value}°
         </span>
       </div>

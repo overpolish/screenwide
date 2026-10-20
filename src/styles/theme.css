@@ -38,6 +38,8 @@
   /* A control's height. Mirrored in JS by `TIMED_LANE_ROW_HEIGHT_PX`,
      which the timeline's rows are laid out to. */
   --spacing-control-height: 1.75rem;
+  /* A small part's height: a badge, a keyboard key, a chip. */
+  --spacing-part-height: 1.125rem;
   /* Icon sizes, each matched to the text it sits beside: small beside a
      caption, the default beside body text and control labels, large for
      an icon that stands alone where it needs more presence. */
@@ -49,17 +51,22 @@
      as an icon and its label. Separate: between neighbours that stand on
      their own, such as a message and its action, or two buttons side by
      side. Inset: between a box's edge and its content, in a control, a
-     notice or a card. Traffic lights: the room the OS leaves for the
-     window buttons at a title bar's leading edge, with the window inset
-     after them. A new role gets a token when it appears. */
+     notice or a card; the small inset does the same in a small part. Traffic
+     lights: the room the OS leaves for the window buttons at a title bar's
+     leading edge, with the window inset after them. A new role gets a token
+     when it appears. */
   --spacing-inline: 0.375rem;
   --spacing-separate: 0.75rem;
   --spacing-inset: 0.75rem;
+  --spacing-inset-sm: 0.375rem;
   --spacing-traffic-lights: 5.5rem;
 
-  /* Small parts (a swatch, a checkbox, a chip), controls, and the panels
-     and cards controls sit on. The native window draws its own corners. */
+  /* Small marks (a swatch, a checkbox), small parts (a badge, a key, a
+     chip), controls, and the panels and cards controls sit on. A part's
+     corner keeps a button's proportion at its smaller height. The native
+     window draws its own corners. */
   --radius-sm: 0.25rem;
+  --radius-part: 0.375rem;
   --radius-control: 0.5rem;
   --radius-panel: 0.75rem;
 

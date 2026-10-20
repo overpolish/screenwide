@@ -153,7 +153,6 @@ export function VoiceNoteSettings({
               hidePeakTick
               hideTicks
               peak={level.peak}
-              radius={1.5}
               thickness={3}
             />
           </div>

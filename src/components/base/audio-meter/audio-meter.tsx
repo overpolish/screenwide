@@ -6,7 +6,6 @@ import { useMeter, useNumberFormatter } from "react-aria";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
-import { Text } from "../text/text";
 
 /** The quietest level the meter draws; anything below reads as silence. */
 const FLOOR_DECIBELS = -60;
@@ -34,7 +33,8 @@ type TickProps = {
   orientation?: "horizontal" | "vertical";
 };
 /**
- * Native level indicators draw unlabelled tick marks: a hairline per stop.
+ * Native level indicators draw unlabelled tick marks: a hairline per stop,
+ * in the track's colour, so they read as the track's scale.
  * Vertical marks are anchored by `bottom`, so centring them shifts downward.
  */
 const Tick = ({ orientation = "horizontal", tick }: TickProps) => {
@@ -42,10 +42,10 @@ const Tick = ({ orientation = "horizontal", tick }: TickProps) => {
   const vertical = orientation === "vertical";
   return (
     <div
-      className={`pointer-events-none absolute bg-content-fg-quaternary select-none ${
+      className={`pointer-events-none absolute bg-fill select-none ${
         vertical
-          ? "h-px w-control translate-y-1/2"
-          : "h-control w-px -translate-x-1/2 rtl:translate-x-1/2"
+          ? "h-px w-1 translate-y-1/2"
+          : "h-1 w-px -translate-x-1/2 rtl:translate-x-1/2"
       }`}
       style={
         vertical
@@ -69,8 +69,6 @@ type AudioMeterProps = {
   orientation?: "horizontal" | "vertical";
   /** Peak in decibels. */
   peak?: number;
-  /** Corner radius in pixels. */
-  radius?: number;
 };
 
 export const AudioMeter = ({
@@ -82,7 +80,6 @@ export const AudioMeter = ({
   length = "100%",
   orientation = "horizontal",
   peak = -Infinity,
-  radius = 2,
   thickness,
 }: AudioMeterProps) => {
   const vertical = orientation === "vertical";
@@ -136,9 +133,16 @@ export const AudioMeter = ({
     };
   }, [vertical]);
 
-  // No viewBox: the rects are laid out in CSS pixels, so the corner radius
-  // stays round at any length instead of stretching with the meter.
-  const meterRect = { height: "100%", rx: radius, ry: radius, width: "100%" };
+  // No viewBox: the rects are laid out in CSS pixels, so the corners stay
+  // round at any length instead of stretching with the meter. The small-mark
+  // radius, as a swatch has, held to half the thickness so a hairline meter
+  // stays a capsule rather than overflowing its own corners.
+  const corner = `min(var(--radius-sm), ${String(thickness / 2)}px)`;
+  const meterRect = {
+    height: "100%",
+    style: { rx: corner, ry: corner },
+    width: "100%",
+  };
 
   return (
     <div
@@ -168,9 +172,12 @@ export const AudioMeter = ({
             y1={vertical ? "100%" : "0%"}
             y2="0%"
           >
+            {/* The level reads as a traffic light, the convention every
+                level meter shares: green while it is good, amber from
+                about -6 dB, red near clipping. */}
             <stop offset="0%" stopColor="var(--color-success)" />
-            <stop offset="65%" stopColor="var(--color-success)" />
-            <stop offset="85%" stopColor="var(--color-warning)" />
+            <stop offset="78%" stopColor="var(--color-success)" />
+            <stop offset="87%" stopColor="var(--color-warning)" />
             <stop offset="93%" stopColor="var(--color-warning)" />
             <stop offset="96%" stopColor="var(--color-error)" />
             <stop offset="100%" stopColor="var(--color-error)" />
@@ -227,8 +234,8 @@ export const AudioMeter = ({
           aria-hidden="true"
           className={
             vertical
-              ? `relative ${hidePeakTick ? "w-control" : "w-8"}`
-              : `relative ${hidePeakTick ? "h-control" : "h-6"}`
+              ? `relative ${hidePeakTick ? "w-1" : "w-8"}`
+              : `relative ${hidePeakTick ? "h-1" : "h-6"}`
           }
         >
           {!hideTicks &&
@@ -237,22 +244,20 @@ export const AudioMeter = ({
             ))}
 
           {!hidePeakTick && !disabled && peak >= FLOOR_DECIBELS && (
-            <Text
-              as="span"
+            <span
               className={`pointer-events-none absolute tabular-nums select-none ${
                 vertical
-                  ? `translate-y-1/2 ${hideTicks ? "" : "ms-control"}`
-                  : `-translate-x-1/2 rtl:translate-x-1/2 ${hideTicks ? "" : "mt-control"}`
+                  ? `translate-y-1/2 text-caption text-fg-secondary ${hideTicks ? "" : "ms-inline"}`
+                  : `-translate-x-1/2 text-caption text-fg-secondary rtl:translate-x-1/2 ${hideTicks ? "" : "mt-inline"}`
               }`}
               style={
                 vertical
                   ? { bottom: `${peakPercentage.toString()}%` }
                   : { insetInlineStart: `${peakPercentage.toString()}%` }
               }
-              variant="footnote"
             >
               {peak.toFixed(1)}
-            </Text>
+            </span>
           )}
         </div>
       )}

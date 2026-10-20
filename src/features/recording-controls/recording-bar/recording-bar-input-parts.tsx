@@ -48,7 +48,6 @@ export const inputMeter = (
     hidePeakTick
     hideTicks
     peak={peak}
-    radius={1.5}
     thickness={3}
   />
 );

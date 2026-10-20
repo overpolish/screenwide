@@ -15,34 +15,30 @@ const COARSE_STEP = 10;
 /** Eighths of a turn: the quarters and the diagonals between them. */
 const SNAP_STEP = 45;
 
-// The knob. A bezel's disc rather than a slider's raised thumb, so it sits in
-// a row of fields and buttons as one of them, at the same height. The notch is
-// the value: a dimple in the outer band that the disc turns under, drawn in
-// the secondary label colour and brought up to the full one while the hand is
-// on it. Drawn as a rotation of the whole span rather than a moved dot, so the
-// turn stays on the compositor.
+// The knob: a disc in the control material, so it sits in a row of fields
+// and buttons as one of them, at the same height, and sinks while dragged as
+// a pressed button does. The dot is the value, drawn as a rotation of the
+// whole span rather than a moved dot, so the turn stays on the compositor.
 const dialStyles = cn(
-  "group relative size-control-height shrink-0 cursor-default touch-none rounded-full bg-control-fill select-none control-stroke",
-  "data-[hovered]:bg-control-fill-hover",
-  "data-[disabled]:bg-control-fill-disabled",
+  "group relative size-control-height shrink-0 cursor-default touch-none rounded-full select-none",
+  "control-raised data-[hovered]:control-raised-hover data-[dragging]:control-raised-pressed",
+  "data-[disabled]:opacity-40",
   focusStyles,
   elementFocusVisible,
 );
 
-const notchStyles = cn(
-  "absolute top-0.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full transition-colors windows:top-1.5",
-  "group-data-[disabled]:bg-control-fg-disabled",
-);
+const notchStyles =
+  "absolute top-1 left-1/2 size-1.5 -translate-x-1/2 rounded-full transition-colors";
 
-// A neutral notch is brought up to the full label colour while the hand is
-// on it; a coloured one names what it aims, such as an axis in its colour, and
-// keeps that colour throughout. Hues reuse the status colours so the app keeps
-// one red, one green and one blue.
+// A neutral dot is brought up to the full text colour while the hand is on
+// it; a coloured one names what it aims, such as an axis in its colour, and
+// keeps that colour throughout. Hues reuse the status colours so the app
+// keeps one red, one green and one blue.
 const notchColors = {
   blue: "bg-info",
   green: "bg-success",
   neutral:
-    "bg-content-fg-secondary group-data-[hovered]:bg-content-fg group-data-[dragging]:bg-content-fg",
+    "bg-fg-secondary group-data-[dragging]:bg-fg group-data-[hovered]:bg-fg",
   red: "bg-error",
 } as const;
 

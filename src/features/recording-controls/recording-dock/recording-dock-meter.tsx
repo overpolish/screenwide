@@ -22,7 +22,6 @@ export function RecordingDockMeter({
       hideTicks
       length={16}
       orientation="vertical"
-      radius={1}
       thickness={2}
     />
   );

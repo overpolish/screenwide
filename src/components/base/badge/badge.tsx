@@ -10,17 +10,19 @@ type BadgeProps = {
   className?: string;
 };
 
+// A small part: caption text on the faint fill, at a part's corner. Inline
+// and a span, so it can sit in a label or a button.
+// Tabular figures keep a count or a size from changing width as it changes.
 export function Badge({ children, className }: BadgeProps) {
   return (
-    <div
+    <span
       className={cn(
-        // A native badge: a capsule of subheadline text in the secondary label
-        // colour on a faint fill, as in sidebar counts and toolbar item badges.
-        "flex flex-row items-center justify-center gap-control rounded-full bg-fill px-control-inset py-tight text-subheadline text-content-fg-secondary [&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu",
+        "inline-flex h-part-height shrink-0 items-center gap-inline rounded-part bg-fill px-inset-sm text-caption whitespace-nowrap text-fg-secondary tabular-nums",
+        "[&_svg]:size-icon-sm [&_svg]:shrink-0 [&_svg]:transform-gpu",
         className,
       )}
     >
       {children}
-    </div>
+    </span>
   );
 }
