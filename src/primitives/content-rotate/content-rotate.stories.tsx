@@ -1,68 +1,39 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Meta, StoryObj } from "@storybook/react";
-import { IceCream } from "lucide-react";
-import { ReactNode } from "react";
-
-import { Button } from "../button/button";
-
 import { ContentRotate } from "./content-rotate";
 
-const childrenOptions: Record<string, ReactNode> = {
-  textOnly: "Chocolate",
-  withIcon: (
-    <>
-      <IceCream className="size-icon" />
-      Vanilla
-    </>
-  ),
-};
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** Styling is left to consumer */
-const meta: Meta<typeof ContentRotate> = {
+const counts = ["3", "2", "1"];
+
+const meta = {
   argTypes: {
     contentKey: {
-      control: {
-        labels: {
-          textOnly: "Text Only",
-          withIcon: "With Icon",
-        },
-        type: "inline-radio",
-      },
-      options: Object.keys(childrenOptions),
+      control: "inline-radio",
+      options: counts,
+      table: { defaultValue: { summary: "3" } },
     },
   },
-  args: {
-    children: childrenOptions.withIcon,
-    className: "flex items-center gap-control-inset text-content-fg",
-    contentKey: "textOnly",
-  },
+  args: { children: null, contentKey: "3" },
   component: ContentRotate,
   parameters: {
-    controls: { exclude: ["className", "children"] },
+    controls: { include: ["contentKey"] },
     layout: "centered",
   },
+  // The shown count follows the key, so picking another value plays the turn.
+  render: ({ contentKey }) => (
+    <ContentRotate
+      className="text-title text-fg tabular-nums"
+      contentKey={contentKey}
+    >
+      {contentKey}
+    </ContentRotate>
+  ),
   title: "Primitives/Content Rotate",
-};
+} satisfies Meta<typeof ContentRotate>;
 
 export default meta;
-type Story = StoryObj<typeof ContentRotate>;
+type Story = StoryObj<typeof meta>;
 
-/* --------------------------------- Stories -------------------------------- */
-export const Default: Story = {
-  render: ({ children: _children, ...args }) => (
-    <ContentRotate {...args}>{childrenOptions[args.contentKey]}</ContentRotate>
-  ),
-};
-
-/** Recommendation is to set a defined width. */
-export const InButton: Story = {
-  render: ({ children: _children, ...args }) => (
-    <Button className="w-25 justify-center">
-      <ContentRotate {...args}>
-        {childrenOptions[args.contentKey]}
-      </ContentRotate>
-    </Button>
-  ),
-};
+export const Default: Story = {};

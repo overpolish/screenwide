@@ -1,31 +1,75 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Meta, StoryObj } from "@storybook/react";
-import { Crop, DoorOpen, Pause, Play } from "lucide-react";
+import { DoorOpen } from "lucide-react";
+import { ComponentProps } from "react";
+import { fn } from "storybook/test";
 
-import { Text } from "../text/text";
+import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
-import { IconButton, IconToggleButton } from "./icon-button";
+import { IconButton } from "./icon-button";
 
-const colors: React.ComponentProps<typeof IconButton>["color"][] = [
-  "neutral",
-  "primary",
+import type { Meta, StoryObj } from "@storybook/react-vite";
+
+type IconButtonProps = ComponentProps<typeof IconButton>;
+
+// Button's looks: a solid one in either colour, or a ghost.
+const looks = [
+  { label: "neutral", look: { variant: "solid" } },
+  { label: "primary", look: { color: "primary", variant: "solid" } },
+  { label: "ghost", look: { variant: "ghost" } },
 ] as const;
+
+function LookGrid({
+  isDisabled,
+  onPress,
+}: Pick<IconButtonProps, "isDisabled" | "onPress">) {
+  return (
+    <StoryGrid>
+      {looks.map(({ label, look }) => (
+        <StoryGridRow key={label} label={label}>
+          <IconButton
+            {...look}
+            aria-label="Sign out"
+            isDisabled={isDisabled}
+            onPress={onPress}
+          >
+            <DoorOpen />
+          </IconButton>
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
+  );
+}
 
 const meta = {
   argTypes: {
-    color: { control: "inline-radio", options: colors },
+    color: {
+      control: "inline-radio",
+      options: ["neutral", "primary"],
+      table: { defaultValue: { summary: "neutral" } },
+    },
+    isDisabled: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+    variant: {
+      control: "inline-radio",
+      options: ["solid", "ghost"],
+      table: { defaultValue: { summary: "solid" } },
+    },
   },
   args: {
     "aria-label": "Sign out",
     children: <DoorOpen />,
     color: "neutral",
     isDisabled: false,
+    onPress: fn(),
+    variant: "solid",
   },
   component: IconButton,
   parameters: {
-    controls: { exclude: ["children", "className", "ref"] },
+    controls: { include: ["aria-label", "color", "isDisabled", "variant"] },
     layout: "centered",
   },
   title: "Primitives/Icon Button",
@@ -36,107 +80,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Colors: Story = {
+export const Variants: Story = {
   parameters: { controls: { disable: true } },
-  render: (args) => (
-    <div className="flex items-center gap-section">
-      {colors.map((color) => (
-        <IconButton key={color} {...args} color={color} />
-      ))}
-    </div>
-  ),
+  render: ({ onPress }) => <LookGrid onPress={onPress} />,
 };
 
-export const States: Story = {
-  // Padded rather than centered: centering lands the row on a fractional
-  // pixel, which makes the bezel and glyph snap differently.
-  parameters: { controls: { disable: true }, layout: "padded" },
-  render: (args) => (
-    <div className="flex flex-col gap-section">
-      {colors.map((color) => (
-        <div className="flex items-center gap-section" key={color}>
-          <Text className="w-16" variant="footnote">
-            {color}
-          </Text>
-          <IconButton {...args} color={color} />
-          <IconButton {...args} color={color} isDisabled />
-        </div>
-      ))}
-      <div className="flex items-center gap-section">
-        <Text className="w-16" variant="footnote">
-          toggle
-        </Text>
-        <IconToggleButton aria-label="Crop (off)" defaultSelected={false}>
-          <Crop />
-        </IconToggleButton>
-        <IconToggleButton aria-label="Crop (on)" defaultSelected>
-          <Crop />
-        </IconToggleButton>
-        <IconToggleButton
-          aria-label="Crop (disabled)"
-          defaultSelected
-          isDisabled
-        >
-          <Crop />
-        </IconToggleButton>
-      </div>
-    </div>
-  ),
-};
-
-/** The recording bar's 40px control and the compact control that marks the
- * timeline ruler, next to the regular size. */
-export const Sizes: Story = {
-  parameters: { controls: { disable: true }, layout: "padded" },
-  render: (args) => (
-    <div className="flex flex-col gap-section">
-      {(["compact", "regular", "capture"] as const).map((size) => (
-        <div className="flex items-center gap-section" key={size}>
-          <Text className="w-16" variant="footnote">
-            {size}
-          </Text>
-          <IconButton {...args} size={size} />
-          <IconToggleButton aria-label="Crop" defaultSelected size={size}>
-            <Crop />
-          </IconToggleButton>
-        </div>
-      ))}
-    </div>
-  ),
-};
-
-export const Toggle: Story = {
+export const Disabled: Story = {
   parameters: { controls: { disable: true } },
-  render: () => (
-    <div className="flex items-center gap-section">
-      <IconToggleButton
-        aria-label="Play"
-        defaultSelected={false}
-        off={<Play />}
-      >
-        <Pause />
-      </IconToggleButton>
-      <IconToggleButton aria-label="Pause" defaultSelected off={<Play />}>
-        <Pause />
-      </IconToggleButton>
-    </div>
-  ),
-};
-
-export const SingleIconToggle: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => (
-    <IconToggleButton aria-label="Crop" defaultSelected>
-      <Crop />
-    </IconToggleButton>
-  ),
-};
-
-export const DisabledSingleIconToggle: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => (
-    <IconToggleButton aria-label="Crop" defaultSelected isDisabled>
-      <Crop />
-    </IconToggleButton>
-  ),
+  render: ({ onPress }) => <LookGrid isDisabled onPress={onPress} />,
 };

@@ -9,7 +9,7 @@ import { Button as AriaButton } from "react-aria-components";
 import { buttonVariants } from "./button-variants";
 
 // The primary action is always filled, so a ghost button has no colour.
-type ButtonLook =
+export type ButtonLook =
   | { color?: "neutral" | "primary"; variant?: "solid" }
   | { variant: "ghost"; color?: "neutral" };
 

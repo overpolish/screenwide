@@ -37,6 +37,8 @@ import {
 } from "../../popup-panel/store";
 import { ReplaySnapshot, ScreenshotState } from "../types";
 
+import { CAPTURE_CONTROL_CLASS } from "./recording-bar-control";
+
 /** Identifies this trigger in the shared popup panel window. */
 const SCREENSHOT_MENU_ID = "recording-bar-screenshot";
 /** The alternate actions read wider than the button they hang off. */
@@ -197,6 +199,7 @@ export function RecordingBarCaptureActions({
       <div data-popup-panel-trigger={SCREENSHOT_MENU_ID}>
         <IconButton
           aria-label={t("recording-controls-screenshot")}
+          className={CAPTURE_CONTROL_CLASS}
           isDisabled={isScreenshotDisabled}
           onPress={(event) => {
             void showMenu(
@@ -204,7 +207,6 @@ export function RecordingBarCaptureActions({
               ["keyboard", "virtual"].includes(event.pointerType),
             );
           }}
-          size="capture"
         >
           {/* Status is carried by the glyph alone, as the alert does. */}
           {screenshotState === "done" ? (
@@ -239,6 +241,7 @@ export function RecordingBarCaptureActions({
           aria-label={t("recording-controls-replay", {
             seconds: replay.lengthSeconds,
           })}
+          className={CAPTURE_CONTROL_CLASS}
           // Starting needs settings the bar could record with; turning it off
           // is always allowed, whatever the bar is set to now.
           isDisabled={
@@ -247,7 +250,6 @@ export function RecordingBarCaptureActions({
           }
           isSelected={replay.status !== "off"}
           onChange={onReplayChange}
-          size="capture"
         >
           <History
             className={cn(

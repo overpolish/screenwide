@@ -21,6 +21,7 @@ import {
 } from "../types";
 
 import { RecordingBarCaptureActions } from "./recording-bar-capture-actions";
+import { CAPTURE_CONTROL_CLASS } from "./recording-bar-control";
 import { RecordingBarInputs } from "./recording-bar-inputs";
 import { RecordingTypePicker } from "./recording-type-picker";
 
@@ -194,8 +195,8 @@ export function RecordingBar(props: RecordingBarProps) {
     >
       <IconButton
         aria-label={t("recording-controls-cancel")}
+        className={CAPTURE_CONTROL_CLASS}
         onPress={onCancel}
-        size="capture"
       >
         <X />
       </IconButton>

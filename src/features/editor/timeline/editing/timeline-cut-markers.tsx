@@ -85,11 +85,12 @@ export function TimelineCutMarkers({
                   duration,
                   time,
                 })}
-                className="pointer-events-auto"
+                // Small enough to sit under the ruler's ticks; only this
+                // marker needs it, so it is set here.
+                className="pointer-events-auto size-3.5 [&_svg.lucide]:size-icon-xs"
                 onPress={() => {
                   blade.restoreCut(cut);
                 }}
-                size="compact"
               >
                 <UnfoldHorizontal aria-hidden />
               </IconButton>

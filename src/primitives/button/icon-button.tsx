@@ -8,30 +8,33 @@ import {
   Button as AriaButton,
   ToggleButton as AriaToggleButton,
 } from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
 
-import { iconButtonVariants } from "./icon-button-variants";
+import { cn } from "../../lib/styling";
 
-type IconButtonStyleProps = Omit<
-  VariantProps<typeof iconButtonVariants>,
-  "hasSelectedBackground" | "isToggle"
-> & {
-  className?: string;
-};
+import { ButtonLook } from "./button";
+import { buttonVariants } from "./button-variants";
+
+// Button's looks, props and defaults in a square, so an icon button and a
+// text button never drift apart. A disabled button that stays focusable says
+// so with `aria-disabled`, and fades too.
+const square = "w-control-height px-0 aria-disabled:opacity-40";
 
 type IconButtonProps = AriaButtonProps &
-  IconButtonStyleProps &
+  ButtonLook &
   MotionProps & {
+    className?: string;
     ref?: Ref<HTMLButtonElement>;
     slot?: string | null;
   };
 
 type IconToggleButtonProps = AriaToggleButtonProps &
-  Omit<IconButtonStyleProps, "color"> &
   MotionProps & {
-    /** Alternate deselected icon. Without one, selection adds a background. */
+    className?: string;
+    /** The glyph shown while off. Without one, being on fills the button. */
     off?: ReactNode;
     ref?: Ref<HTMLButtonElement>;
+    /** The look while off, as Button's. */
+    variant?: "ghost" | "solid";
   };
 
 const MotionAriaButton = motion.create(AriaButton);
@@ -40,91 +43,90 @@ const MotionAriaToggleButton = motion.create(AriaToggleButton);
 export const IconButton = ({
   className,
   color,
-  size,
+  variant,
   ...props
-}: IconButtonProps) => {
-  return (
-    <MotionAriaButton
-      {...props}
-      className={iconButtonVariants({
-        className,
-        color,
-        isDisabled: props.isDisabled,
-        size,
-      })}
-    />
-  );
+}: IconButtonProps) => (
+  <MotionAriaButton
+    {...props}
+    className={cn(
+      buttonVariants({ color, isDisabled: props.isDisabled, variant }),
+      square,
+      className,
+    )}
+  />
+);
+
+const scaleAnimation: MotionProps = {
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0 },
+  initial: { opacity: 0, scale: 0 },
+};
+const fadeAnimation: MotionProps = {
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 1 },
+  initial: { opacity: 0, scale: 1 },
 };
 
+// Off, a toggle is a button in its own look, ghost unless asked otherwise:
+// toggles sit in toolbars and beside other controls, where a raised square
+// each would crowd the row. A toggle with one glyph is on when it is filled
+// in the primary colour, as anything on is; one with a glyph for each state
+// says which by the glyph alone and keeps its look. The two set the same
+// background, so the look is picked per state rather than layered as
+// variants.
 export const IconToggleButton = ({
   children,
   className,
   off,
-  size,
+  variant = "ghost",
   ...props
-}: IconToggleButtonProps) => {
-  const scaleAnimation: MotionProps = {
-    animate: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0 },
-    initial: { opacity: 0, scale: 0 },
-  };
-  const fadeAnimation: MotionProps = {
-    animate: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 1 },
-    initial: { opacity: 0, scale: 1 },
-  };
-
-  return (
-    <MotionAriaToggleButton
-      {...props}
-      className={iconButtonVariants({
+}: IconToggleButtonProps) => (
+  <MotionAriaToggleButton
+    {...props}
+    className={({ isSelected }) =>
+      cn(
+        buttonVariants(
+          off == null && isSelected
+            ? { color: "primary", isDisabled: props.isDisabled }
+            : { isDisabled: props.isDisabled, variant },
+        ),
+        square,
         className,
-        color: "neutral",
-        hasSelectedBackground:
-          off == null &&
-          !props.isDisabled &&
-          props["aria-disabled"] !== true &&
-          props["aria-disabled"] !== "true",
-        isDisabled: props.isDisabled,
-        isToggle: true,
-        size,
-      })}
-    >
-      {({ isSelected }) =>
-        off == null ? (
-          // Same glyph either way: selection is a colour change, which the
-          // button's transition already animates.
-          children
-        ) : (
-          <>
-            <span className="invisible flex items-center justify-center">
-              {children}
-            </span>
-            <AnimatePresence initial={false}>
-              {isSelected ? (
-                <motion.span
-                  key="selected"
-                  {...scaleAnimation}
-                  className="absolute inset-0 flex items-center justify-center"
-                  exit={fadeAnimation.exit}
-                >
-                  {children}
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="deselected"
-                  {...fadeAnimation}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  {off}
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </>
-        )
-      }
-    </MotionAriaToggleButton>
-  );
-};
+      )
+    }
+  >
+    {({ isSelected }) =>
+      off == null ? (
+        children
+      ) : (
+        <>
+          <span className="invisible flex items-center justify-center">
+            {children}
+          </span>
+          <AnimatePresence initial={false}>
+            {isSelected ? (
+              <motion.span
+                key="selected"
+                {...scaleAnimation}
+                className="absolute inset-0 flex items-center justify-center"
+                exit={fadeAnimation.exit}
+              >
+                {children}
+              </motion.span>
+            ) : (
+              <motion.span
+                key="deselected"
+                {...fadeAnimation}
+                className="absolute inset-0 flex items-center justify-center"
+              >
+                {off}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </>
+      )
+    }
+  </MotionAriaToggleButton>
+);
 
 export type { IconButtonProps, IconToggleButtonProps };
