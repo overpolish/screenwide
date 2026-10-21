@@ -19,9 +19,6 @@ export const SetEditorToolbarContext = createContext<
   (tools: ReactNode) => void
 >(() => undefined);
 
-/** The title bar's side: whatever the visible section is offering. */
-export const useEditorToolbarTools = () => use(EditorToolbarContext);
-
 /**
  * The section's side. Pass a memoized element: it is published as-is, so an
  * element rebuilt every render would re-render the title bar every render.

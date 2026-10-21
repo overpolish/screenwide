@@ -101,7 +101,6 @@ export function EditorExportForm({
             <PathField
               aria-label={t("editor-export-save-to")}
               className="w-full"
-              fullWidth
               isDisabled={isSaving}
               onBrowse={onBrowse}
               value={directory}

@@ -4,20 +4,20 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { ReactNode, RefObject, use, useEffect, useRef } from "react";
 import {
-  TooltipTrigger,
+  TooltipTrigger as AriaTooltipTrigger,
   TooltipTriggerStateContext,
 } from "react-aria-components";
 
 import { cn } from "../../lib/styling";
 
-import { hideTooltip, NativeTooltipContent, showTooltip } from "./api";
+import { hideTooltip, TooltipContent, showTooltip } from "./api";
 
 /** The standard tooltip delay. */
 const DELAY_MS = 400;
 
-type NativeTooltipTriggerProps = {
+type TooltipTriggerProps = {
   children: ReactNode;
-  tooltip: NativeTooltipContent | string;
+  tooltip: TooltipContent | string;
   /** Layout for the anchor wrapping the control, such as a full width. */
   className?: string;
   /** How long the pointer must rest on the control first. */
@@ -26,7 +26,7 @@ type NativeTooltipTriggerProps = {
   isDisabled?: boolean;
 };
 
-const asContent = (tooltip: NativeTooltipContent | string) =>
+const asContent = (tooltip: TooltipContent | string) =>
   typeof tooltip === "string" ? { label: tooltip } : tooltip;
 
 /**
@@ -37,12 +37,12 @@ const asContent = (tooltip: NativeTooltipContent | string) =>
  * that opens the next tooltip at once, the focus-visible rule and the close on
  * press all come from the trigger this sits inside.
  */
-function NativeTooltipPresenter({
+function TooltipPresenter({
   anchorRef,
   content,
 }: {
   anchorRef: RefObject<HTMLSpanElement | null>;
-  content: NativeTooltipContent;
+  content: TooltipContent;
 }) {
   const state = use(TooltipTriggerStateContext);
   const isOpen = state?.isOpen ?? false;
@@ -95,26 +95,26 @@ function NativeTooltipPresenter({
  * a browser, there is no window to open, so nothing is shown, as with the
  * pop-up panels; `pnpm dev:storybook-native` opens the real window.
  */
-export function NativeTooltipTrigger({
+export function TooltipTrigger({
   children,
   className,
   delay = DELAY_MS,
   isDisabled,
   tooltip,
-}: NativeTooltipTriggerProps) {
+}: TooltipTriggerProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const content = asContent(tooltip);
 
   return (
-    <TooltipTrigger delay={delay} isDisabled={isDisabled}>
+    <AriaTooltipTrigger delay={delay} isDisabled={isDisabled}>
       {/* The anchor the window is placed against: it wraps the control
           tightly, so its bounds are the control's bounds. */}
       <span className={cn("inline-flex", className)} ref={anchorRef}>
         {children}
       </span>
       {isTauri() ? (
-        <NativeTooltipPresenter anchorRef={anchorRef} content={content} />
+        <TooltipPresenter anchorRef={anchorRef} content={content} />
       ) : null}
-    </TooltipTrigger>
+    </AriaTooltipTrigger>
   );
 }

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../composites/control-row/control-row";
-import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
+import { HotkeyField } from "../hotkey-field/hotkey-field";
 import { SettingsGroup } from "../settings-group";
 
 import type { ShortcutAction } from "../../../bindings/ShortcutAction";

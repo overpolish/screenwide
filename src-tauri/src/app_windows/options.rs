@@ -60,6 +60,9 @@ pub(super) struct StandaloneListboxContext {
   /// not dismiss it first.
   anchor: Option<AnchorRect>,
   focus_contents: bool,
+  /// The parent page's height, which says where the page begins in its
+  /// window, for placing the anchor on screen.
+  page_height: Option<f64>,
   /// Whether this window is showing a panel. An entry outlives its panel so
   /// that closing one window's panel says nothing about the others.
   open: bool,
@@ -106,6 +109,7 @@ pub fn show_standalone_listbox(
   sticky: Option<bool>,
   panel: Option<String>,
   fitted: Option<bool>,
+  page_height: Option<f64>,
 ) -> tauri::Result<()> {
   let panel = panel_label(panel);
   let _lifecycle = STANDALONE_LISTBOX.lock();
@@ -117,8 +121,8 @@ pub fn show_standalone_listbox(
     .ok_or_else(|| tauri::Error::WindowNotFound)?;
   #[cfg(not(target_os = "windows"))]
   let position = {
-    let scale = parent.scale_factor()?;
-    let parent_position = parent.outer_position()?.to_logical::<f64>(scale);
+    // The offset is relative to where the page begins, below any title bar.
+    let parent_position = super::geometry::page_origin(&parent, page_height)?;
     let mut position =
       LogicalPosition::new(parent_position.x + offset.x, parent_position.y + offset.y);
 
@@ -202,6 +206,7 @@ pub fn show_standalone_listbox(
       #[cfg(target_os = "windows")]
       offset,
       focus_contents,
+      page_height,
       open: true,
       parent_window_label,
       sticky,

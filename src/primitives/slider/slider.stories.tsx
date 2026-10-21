@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useState } from "react";
 import { fn } from "storybook/test";
 
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
@@ -50,6 +51,34 @@ export const Stepped: Story = {
     maxValue: 10,
     showTicks: true,
     step: 1,
+  },
+};
+
+const SIZES = ["small", "medium", "large", "extra-large"] as const;
+const NAMES = {
+  "extra-large": "Extra large",
+  large: "Large",
+  medium: "Medium",
+  small: "Small",
+};
+
+export const Steps: Story = {
+  parameters: { controls: { disable: true } },
+  render: function Render({ onChange }) {
+    const [size, setSize] = useState<(typeof SIZES)[number]>("medium");
+    return (
+      <Slider
+        aria-label="Size"
+        className="w-48"
+        onChange={(next) => {
+          onChange?.(SIZES.indexOf(next));
+          setSize(next);
+        }}
+        stepLabel={(step) => NAMES[step]}
+        steps={SIZES}
+        value={size}
+      />
+    );
   },
 };
 

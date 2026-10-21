@@ -3,10 +3,7 @@
 
 import { useEffect, useRef } from "react";
 
-import {
-  useColorPanel,
-  usesSystemColorPanel,
-} from "../../primitives/input-fields/use-color-panel";
+import { useColorPanel, usesSystemColorPanel } from "./use-color-panel";
 
 /**
  * The system's colour picker, opened from a press. On the Mac app that is

@@ -4,10 +4,10 @@
 import { ReactNode } from "react";
 import { Button } from "react-aria-components";
 
-import { NativeTooltipTrigger } from "../../../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { Switch } from "../../../../primitives/switch/switch";
+import { TooltipTrigger } from "../../../../primitives/tooltip/tooltip-trigger";
 
 /** Whether a track is carried into the export, and whether that can change. */
 export type TimelineTrackInclusion = {
@@ -139,7 +139,7 @@ export function TimelineTrackHeader({
     ? t("editor-timeline-track-required-tooltip")
     : note?.label;
   return tooltip ? (
-    <NativeTooltipTrigger tooltip={tooltip}>{row}</NativeTooltipTrigger>
+    <TooltipTrigger tooltip={tooltip}>{row}</TooltipTrigger>
   ) : (
     row
   );

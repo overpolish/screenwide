@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
-import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
+import { Slider } from "../../../../primitives/slider/slider";
 import { AnnotationChoice } from "../../../annotations/annotation-choice";
 import { pixelationChoice } from "../../../annotations/annotation-choices";
 import { AnnotationRedactionGroup } from "../../../annotations/annotation-redaction-group";
@@ -111,8 +111,9 @@ export function AnnotationBlurStrengthRow({
     <ControlRow title={t("editor-panels-strength")}>
       {(controlProps) => (
         <div {...controlProps} role="group">
-          <StepSlider
+          <Slider
             aria-label={t("editor-panels-strength")}
+            className="w-48"
             isDisabled={isLocked}
             onChange={(next) => {
               change({ annotationStyle: { strength: next } });

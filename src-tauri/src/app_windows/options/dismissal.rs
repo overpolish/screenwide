@@ -38,13 +38,10 @@ fn anchor_contains(app: &AppHandle, context: &StandaloneListboxContext, x: f64, 
   let Some(parent) = app.get_webview_window(&context.parent_window_label) else {
     return false;
   };
-  let Ok(position) = parent.outer_position() else {
+  // The anchor is relative to where the page begins, below any title bar.
+  let Ok(position) = super::super::geometry::page_origin(&parent, context.page_height) else {
     return false;
   };
-  let Ok(scale) = parent.scale_factor() else {
-    return false;
-  };
-  let position = position.to_logical::<f64>(scale);
   let left = position.x + anchor.x;
   let top = position.y + anchor.y;
 
@@ -94,6 +91,7 @@ mod tests {
       anchor: None,
       attached_to: None,
       focus_contents: false,
+      page_height: None,
       open,
       parent_window_label: parent.to_owned(),
       sticky,

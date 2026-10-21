@@ -5,8 +5,8 @@ import { Pin } from "lucide-react";
 import { MouseEvent, PointerEvent } from "react";
 import { Focusable } from "react-aria-components";
 
-import { NativeTooltipTrigger } from "../../../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../../../i18n/i18n";
+import { TooltipTrigger } from "../../../../primitives/tooltip/tooltip-trigger";
 import {
   RecordingTimelineEdit,
   recordingTimelineSourceToOutput,
@@ -124,7 +124,7 @@ function RecordingAnnotationPinStretches({
           key={`${label}:${String(range[0])}`}
           style={box}
         >
-          <NativeTooltipTrigger tooltip={label}>
+          <TooltipTrigger tooltip={label}>
             <Focusable excludeFromTabOrder>
               <span
                 aria-label={label}
@@ -134,7 +134,7 @@ function RecordingAnnotationPinStretches({
                 role="img"
               />
             </Focusable>
-          </NativeTooltipTrigger>
+          </TooltipTrigger>
         </div>
       ) : null;
     }),

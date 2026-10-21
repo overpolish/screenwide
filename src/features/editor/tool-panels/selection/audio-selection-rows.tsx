@@ -62,8 +62,8 @@ export function AudioSelectionRows({
               onChange={(decibels) => {
                 change({ audioVolume: decibels });
               }}
-              rightSection="dB"
               step={1}
+              unit="dB"
               value={selection.decibels}
             />
           </div>

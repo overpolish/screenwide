@@ -50,7 +50,7 @@ export function ExportProgress({
 }: ExportProgressProps) {
   return (
     <ProgressPanel
-      action={
+      actions={
         cancellable ? (
           <ConfirmActionButton
             confirmLabel={t("editor-export-confirm-cancel")}
@@ -67,7 +67,7 @@ export function ExportProgress({
       label={saveLabel({ isAudioOnly, isRecording, phase })}
       progress={progress}
       progressLabel={t("editor-export-progress")}
-      secondary={etaSeconds === null ? undefined : formatEta(etaSeconds)}
+      status={etaSeconds === null ? undefined : formatEta(etaSeconds)}
     />
   );
 }

@@ -205,7 +205,6 @@ export function EditorPanel({
               artifact={artifact}
               canExport={canExport}
               isSaving={isSaving}
-              isToolbarDisabled={isLocked}
               onClose={onCancel}
               onCopy={onCopy}
               onDelete={onDeleteProject}

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { hotkeyKeys } from "../../../../composites/hotkey-field/hotkey";
 import { t } from "../../../../i18n/i18n";
+import { hotkeyKeys } from "../../../../lib/hotkey";
 import { Keyboard } from "../../../../primitives/keyboard/keyboard";
 
 /** Stands in for the keycap while the message is translated, so the whole

@@ -3,7 +3,6 @@
 
 import { useDateFormatter, useNumberFormatter } from "react-aria";
 
-import logoUrl from "../../assets/screenwide-mark.svg";
 import { ProgressPanel } from "../../composites/progress-panel/progress-panel";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
@@ -72,14 +71,6 @@ export function UpdatePrompt({
     <WindowShell
       header={
         <WindowHeader
-          leadingSection={
-            <img
-              alt={t("updates-logo")}
-              className="brightness-0 dark:invert"
-              draggable={false}
-              src={logoUrl}
-            />
-          }
           onClose={busy ? undefined : onRemindLater}
           title={t("updates-title")}
         />
@@ -91,7 +82,7 @@ export function UpdatePrompt({
             label={t("updates-downloading")}
             progress={percent}
             progressLabel={t("updates-download-progress")}
-            secondary={
+            status={
               percent === null
                 ? undefined
                 : percentFormatter.format(percent / 100)

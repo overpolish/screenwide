@@ -4,8 +4,8 @@
 import { ScrollText } from "lucide-react";
 import { useRef } from "react";
 
-import { ToolToggle } from "../../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
+import { ToolbarTool } from "../../../../primitives/toolbar/toolbar-tool";
 import { useToolPanel } from "../use-tool-panel";
 
 /**
@@ -30,11 +30,11 @@ export function TranscriptToolToggle({
       data-editor-tool="transcript"
       ref={triggerRef}
     >
-      <ToolToggle
+      <ToolbarTool
+        aria-label={t("editor-panels-transcript-name")}
         isSelected={openTool === "transcript"}
         label={t("editor-panels-transcript")}
-        name={t("editor-panels-transcript-name")}
-        onSelectedChange={(selected) => {
+        onChange={(selected) => {
           if (!selected) {
             onDismiss();
             return;
@@ -46,7 +46,7 @@ export function TranscriptToolToggle({
         shortcut="Shift+T"
       >
         <ScrollText />
-      </ToolToggle>
+      </ToolbarTool>
     </span>
   );
 }

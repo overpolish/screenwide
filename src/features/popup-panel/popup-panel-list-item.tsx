@@ -5,7 +5,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { AppWindowMac, Volume2 } from "lucide-react";
 import { CSSProperties } from "react";
 
-import { hotkeyKeys } from "../../composites/hotkey-field/hotkey";
+import { hotkeyKeys } from "../../lib/hotkey";
 import { isWindowsHost } from "../../lib/platform";
 import { Badge } from "../../primitives/badge/badge";
 import { Keyboard, Shortcut } from "../../primitives/keyboard/keyboard";

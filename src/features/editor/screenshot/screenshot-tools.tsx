@@ -9,9 +9,9 @@ import {
 } from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
-import { ToolToggle } from "../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../i18n/i18n";
 import { Toolbar } from "../../../primitives/toolbar/toolbar";
+import { ToolbarTool } from "../../../primitives/toolbar/toolbar-tool";
 import { AnnotationToolStrip } from "../toolbar/annotation-tool-strip";
 
 import type { AnnotationKind } from "../../annotations/types";
@@ -94,45 +94,45 @@ export function useScreenshotTools({
           {/* The marker is the anchor Select's panel hangs from: taking the
             tool up opens it, however the tool was taken up. */}
           <span className="inline-flex" data-editor-tool="select">
-            <ToolToggle
+            <ToolbarTool
+              aria-label={t("editor-tool-select-name")}
               isSelected={tool === "select"}
               label={t("editor-tool-select")}
-              name={t("editor-tool-select-name")}
-              onSelectedChange={chooseSelectTool}
+              onChange={chooseSelectTool}
               shortcut="V"
             >
               <MousePointer2 />
-            </ToolToggle>
+            </ToolbarTool>
           </span>
-          <ToolToggle
+          <ToolbarTool
+            aria-label={t("editor-tool-marquee-name")}
             isSelected={tool === "marquee"}
             label={t("editor-tool-marquee")}
-            name={t("editor-tool-marquee-name")}
-            onSelectedChange={chooseMarqueeTool}
+            onChange={chooseMarqueeTool}
             shortcut="G"
           >
             <SquareDashedMousePointer />
-          </ToolToggle>
+          </ToolbarTool>
         </Toolbar>
         <Toolbar aria-label={t("editor-canvas-tools")}>
-          <ToolToggle
+          <ToolbarTool
+            aria-label={t("editor-tool-canvas")}
             isSelected={tool === "canvas"}
             label={t("editor-tool-canvas")}
-            name={t("editor-tool-canvas")}
-            onSelectedChange={chooseCanvasTool}
+            onChange={chooseCanvasTool}
             shortcut="F"
           >
             <ScanSquare />
-          </ToolToggle>
-          <ToolToggle
+          </ToolbarTool>
+          <ToolbarTool
+            aria-label={t("editor-tool-crop-name")}
             isSelected={tool === "crop"}
             label={t("editor-tool-crop")}
-            name={t("editor-tool-crop-name")}
-            onSelectedChange={chooseCropTool}
+            onChange={chooseCropTool}
             shortcut="C"
           >
             <Crop />
-          </ToolToggle>
+          </ToolbarTool>
         </Toolbar>
         <AnnotationToolStrip onChoose={chooseAnnotationTool} tool={tool} />
       </>

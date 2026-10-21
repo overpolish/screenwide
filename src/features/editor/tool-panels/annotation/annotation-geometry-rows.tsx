@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
-import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
+import { Slider } from "../../../../primitives/slider/slider";
 import { AnnotationRadiusField } from "../../../annotations/annotation-radius-field";
 import { annotationSizeLabel } from "../../../annotations/annotation-text";
 import { redactionSizePresets } from "../../../annotations/widths";
@@ -33,8 +33,9 @@ export function AnnotationSizeRow({
     <ControlRow title={annotationSizeLabel(kind.sizeMeasure)}>
       {(controlProps) => (
         <div {...controlProps} role="group">
-          <StepSlider
+          <Slider
             aria-label={annotationSizeLabel(kind.sizeMeasure)}
+            className="w-48"
             isDisabled={isLocked}
             onChange={(next) => {
               change({ annotationStyle: { width: next } });

@@ -8,9 +8,9 @@ import {
   SquareDashedMousePointer,
 } from "lucide-react";
 
-import { ToolToggle } from "../../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
 import { Toolbar } from "../../../../primitives/toolbar/toolbar";
+import { ToolbarTool } from "../../../../primitives/toolbar/toolbar-tool";
 import { SceneToolToggle } from "../../tool-panels/scene/scene-tool-toggle";
 import { AnnotationToolStrip } from "../../toolbar/annotation-tool-strip";
 
@@ -47,45 +47,45 @@ export function RecordingCanvasTools({
         {/* The marker is the anchor Select's panel hangs from: taking the tool
           up opens it, however the tool was taken up. */}
         <span className="inline-flex" data-editor-tool="select">
-          <ToolToggle
+          <ToolbarTool
+            aria-label={t("editor-tool-select-clip-name")}
             isDisabled={!isSelectEnabled}
             isSelected={tool === "select" && isSelectEnabled}
             label={t("editor-tool-select")}
-            name={t("editor-tool-select-clip-name")}
-            onSelectedChange={(selected) => {
+            onChange={(selected) => {
               onToolChange(selected ? "select" : null);
             }}
             shortcut="V"
           >
             <MousePointer2 />
-          </ToolToggle>
+          </ToolbarTool>
         </span>
-        <ToolToggle
+        <ToolbarTool
+          aria-label={t("editor-tool-marquee-name")}
           isDisabled={!isArrowEnabled}
           isSelected={tool === "marquee" && isArrowEnabled}
           label={t("editor-tool-marquee")}
-          name={t("editor-tool-marquee-name")}
-          onSelectedChange={(selected) => {
+          onChange={(selected) => {
             onToolChange(selected ? "marquee" : null);
           }}
           shortcut="G"
         >
           <SquareDashedMousePointer />
-        </ToolToggle>
+        </ToolbarTool>
       </Toolbar>
       <Toolbar aria-label={t("editor-canvas-tools")}>
-        <ToolToggle
+        <ToolbarTool
+          aria-label={t("editor-tool-frame-name")}
           isDisabled={!isFrameEnabled}
           isSelected={tool === "canvas" && isFrameEnabled}
           label={t("editor-tool-frame")}
-          name={t("editor-tool-frame-name")}
-          onSelectedChange={(selected) => {
+          onChange={(selected) => {
             onToolChange(selected ? "canvas" : null);
           }}
           shortcut="F"
         >
           <ScanSquare />
-        </ToolToggle>
+        </ToolbarTool>
         {hasScenes ? (
           <SceneToolToggle
             isSelected={tool === "scene"}
@@ -94,18 +94,18 @@ export function RecordingCanvasTools({
             }}
           />
         ) : null}
-        <ToolToggle
+        <ToolbarTool
+          aria-label={t("editor-tool-crop-clip-name")}
           isDisabled={!isEnabled}
           isSelected={tool === "crop" && isEnabled}
           label={t("editor-tool-crop")}
-          name={t("editor-tool-crop-clip-name")}
-          onSelectedChange={(selected) => {
+          onChange={(selected) => {
             onToolChange(selected ? "crop" : null);
           }}
           shortcut="C"
         >
           <Crop />
-        </ToolToggle>
+        </ToolbarTool>
       </Toolbar>
       {hasAnnotations ? (
         <AnnotationToolStrip

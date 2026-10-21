@@ -23,6 +23,7 @@ pub fn move_standalone_listbox(
   parent_window_label: String,
   offset: LogicalPosition<f64>,
   panel: Option<String>,
+  page_height: Option<f64>,
 ) -> tauri::Result<()> {
   let panel = panel_label(panel);
   let _lifecycle = STANDALONE_LISTBOX.lock();
@@ -52,8 +53,8 @@ pub fn move_standalone_listbox(
   }
   #[cfg(not(target_os = "windows"))]
   {
-    let scale = parent.scale_factor()?;
-    let parent_position = parent.outer_position()?.to_logical::<f64>(scale);
+    // The offset is relative to where the page begins, below any title bar.
+    let parent_position = super::super::geometry::page_origin(&parent, page_height)?;
     let size = window
       .outer_size()?
       .to_logical::<f64>(window.scale_factor()?);

@@ -3,7 +3,6 @@
 
 import { ReactNode, Ref } from "react";
 
-import logoUrl from "../../../../assets/screenwide-mark.svg";
 import { WindowHeader } from "../../../../composites/window-header/window-header";
 import { WindowShell } from "../../../../composites/window-shell/window-shell";
 import { t } from "../../../../i18n/i18n";
@@ -47,14 +46,6 @@ export function ExportOptionsWindowView({
       header={
         <WindowHeader
           isDraggable={false}
-          leadingSection={
-            <img
-              alt={t("editor-logo")}
-              className="brightness-0 dark:invert"
-              draggable={false}
-              src={logoUrl}
-            />
-          }
           // The save is watched from here, so there is no way out until it ends.
           onClose={isSaving ? undefined : onClose}
           title={t("editor-export")}

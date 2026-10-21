@@ -4,7 +4,6 @@
 ### The window offering a new version of the app.
 
 updates-title = Update Available
-updates-logo = { -app-name }
 updates-available = A new version of { -app-name } is available.
 updates-available-version = { -app-name } { $version } is available.
 # $current is the version installed now.

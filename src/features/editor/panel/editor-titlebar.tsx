@@ -2,24 +2,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ClipboardCopy, Upload, Trash2 } from "lucide-react";
-import { ReactNode, useCallback, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
-import logoUrl from "../../../assets/screenwide-mark.svg";
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
-import { ToolToggleDisabledContext } from "../../../composites/tool-toggle/tool-toggle-disabled";
 import { WindowHeader } from "../../../composites/window-header/window-header";
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorArtifact } from "../types";
 
-import { useEditorToolbarTools } from "./editor-toolbar-context";
-
 export function EditorTitlebar({
   artifact,
   canExport,
   isSaving,
-  isToolbarDisabled = false,
   onClose,
   onCopy,
   onDelete,
@@ -27,14 +22,10 @@ export function EditorTitlebar({
   onMinimize,
   onRename,
   onToggleMaximize,
-  tools,
 }: {
   artifact: EditorArtifact | null;
   canExport: boolean;
   isSaving?: boolean;
-  /** Takes the tools out of reach while leaving them in view, as under a
-   * sheet. */
-  isToolbarDisabled?: boolean;
   onClose?: () => void;
   onCopy?: () => void;
   /** Closes the editor and sets the project aside in Recently Deleted, for
@@ -45,9 +36,6 @@ export function EditorTitlebar({
   /** Renames the project, which the title names. */
   onRename?: (title: string) => void;
   onToggleMaximize?: () => void;
-  /** The workspace's tools, carried in the bar. Defaults to what the visible
-   * section is offering through `EditorToolbarContext`. */
-  tools?: ReactNode;
 }) {
   const canExportRef = useRef(canExport);
   const onExportRef = useRef(onExport);
@@ -75,13 +63,10 @@ export function EditorTitlebar({
     onExport: canExport ? onShortcutExport : undefined,
   });
 
-  const sectionTools = useEditorToolbarTools();
-  const barTools = tools ?? sectionTools;
-
   return (
     <WindowHeader
       actions={
-        <div className="gap-control flex shrink-0 items-center">
+        <div className="flex shrink-0 items-center gap-inline">
           {onDelete ? (
             // Two presses: it sits beside Export, and the editor closes
             // behind it.
@@ -105,21 +90,6 @@ export function EditorTitlebar({
             {t("editor-export")}
           </Button>
         </div>
-      }
-      center={
-        barTools ? (
-          <ToolToggleDisabledContext value={isToolbarDisabled}>
-            {barTools}
-          </ToolToggleDisabledContext>
-        ) : null
-      }
-      leadingSection={
-        <img
-          alt={t("editor-logo")}
-          className="brightness-0 dark:invert"
-          draggable={false}
-          src={logoUrl}
-        />
       }
       onClose={onClose}
       onMinimize={onMinimize}

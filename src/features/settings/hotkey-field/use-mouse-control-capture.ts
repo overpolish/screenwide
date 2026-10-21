@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { mouseControlFromButton } from "./hotkey";
+import { mouseControlFromButton } from "../../../lib/hotkey";
 
 const HOLD_DURATION_MS = 500;
 

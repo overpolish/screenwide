@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import logoUrl from "../../assets/screenwide-mark.svg";
 import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
@@ -163,7 +162,7 @@ export function ProjectBrowser({
       header={
         <WindowHeader
           actions={
-            <div className="gap-control flex items-center">
+            <div className="flex items-center gap-inline">
               <SearchField
                 aria-label={t("project-browser-search-label")}
                 className="w-48"
@@ -176,14 +175,6 @@ export function ProjectBrowser({
                 {t("project-browser-open-file")}
               </Button>
             </div>
-          }
-          leadingSection={
-            <img
-              alt={t("project-browser-logo")}
-              className="brightness-0 dark:invert"
-              draggable={false}
-              src={logoUrl}
-            />
           }
           onClose={onClose}
           onMinimize={onMinimize}

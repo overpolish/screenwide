@@ -4,18 +4,18 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 
-import { hotkeyKeys } from "../../composites/hotkey-field/hotkey";
+import { hotkeyKeys } from "../../lib/hotkey";
 import {
   fitTooltip,
   getTooltip,
   listenToTooltipText,
-  NativeTooltipContent,
-} from "../../composites/native-tooltip/api";
+  TooltipContent,
+} from "../../primitives/tooltip/api";
 import { Tooltip } from "../../primitives/tooltip/tooltip";
 
 /** What the window shows before its first tooltip. It is concealed until one
  * arrives, so this is never seen. */
-const NOTHING: NativeTooltipContent = { label: "" };
+const NOTHING: TooltipContent = { label: "" };
 
 /**
  * The Editor's tooltips as their own window.
@@ -26,7 +26,7 @@ const NOTHING: NativeTooltipContent = { label: "" };
  * watching a discarded element.
  */
 export function TooltipWindow() {
-  const [content, setContent] = useState<NativeTooltipContent | null>(null);
+  const [content, setContent] = useState<TooltipContent | null>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
   // The window is sized to the words and revealed only once it is: measured

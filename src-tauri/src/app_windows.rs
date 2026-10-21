@@ -62,7 +62,7 @@ mod dock_visibility;
 #[cfg(target_os = "windows")]
 pub(crate) mod drag_release;
 mod escape;
-mod geometry;
+pub(crate) mod geometry;
 mod lifecycle;
 pub(crate) mod monitor_capture;
 pub(crate) mod options;

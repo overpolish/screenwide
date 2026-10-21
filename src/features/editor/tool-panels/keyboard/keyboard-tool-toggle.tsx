@@ -4,8 +4,8 @@
 import { Keyboard } from "lucide-react";
 import { useRef } from "react";
 
-import { ToolToggle } from "../../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
+import { ToolbarTool } from "../../../../primitives/toolbar/toolbar-tool";
 import { useToolPanel } from "../use-tool-panel";
 
 /**
@@ -23,11 +23,11 @@ export function KeyboardToolToggle({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <span className="inline-flex" data-editor-tool="keyboard" ref={triggerRef}>
-      <ToolToggle
+      <ToolbarTool
+        aria-label={t("editor-panels-keyboard-name")}
         isSelected={openTool === "keyboard"}
         label={t("editor-panels-keyboard")}
-        name={t("editor-panels-keyboard-name")}
-        onSelectedChange={(selected) => {
+        onChange={(selected) => {
           if (!selected) {
             onDismiss();
             return;
@@ -39,7 +39,7 @@ export function KeyboardToolToggle({ onDismiss }: { onDismiss: () => void }) {
         shortcut="K"
       >
         <Keyboard />
-      </ToolToggle>
+      </ToolbarTool>
     </span>
   );
 }

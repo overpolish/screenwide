@@ -1,75 +1,91 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { File, Folder, RotateCcw, X } from "lucide-react";
+import { Folder, RotateCcw } from "lucide-react";
+import { Button } from "react-aria-components";
 
-import { truncatePath } from "../../lib/path-label";
-import { cn } from "../../lib/styling";
-import { Button } from "../../primitives/button/button";
+import { t } from "../../i18n/i18n";
+import { folderName } from "../../lib/path-label";
+import { cn, elementFocusVisible } from "../../lib/styling";
 import { IconButton } from "../../primitives/button/icon-button";
-import { NativeTooltipTrigger } from "../native-tooltip/native-tooltip-trigger";
+import { fieldVariants } from "../../primitives/field/field-variants";
+import { TooltipTrigger } from "../../primitives/tooltip/tooltip-trigger";
 
-export type PathFieldProps = {
+// Shows the folder's name, with its full path in the tooltip. The host opens
+// the system's picker and keeps the choice.
+
+type PathFieldProps = {
   "aria-label": string;
   onBrowse: () => void;
+  /** Full path; `null` before one is chosen. */
   value: string | null;
+  /** Width; `w-40` when left out. */
   className?: string;
-  emptyLabel?: string;
-  fullWidth?: boolean;
   isDisabled?: boolean;
-  kind?: "file" | "folder";
-  maxLabelLength?: number;
-  secondaryAction?: {
-    label: string;
-    onPress: () => void;
-    type: "clear" | "reset";
-  };
-};
+  /** "Choose folder" when left out. */
+  placeholder?: string;
+} & (
+  | { onReset: () => void; resetLabel: string }
+  | { onReset?: never; resetLabel?: never }
+);
 
-/** The host owns native pickers and persistence. */
+const fieldStyles = cn(
+  fieldVariants({ material: "raised" }).field(),
+  "w-full min-w-0 cursor-default gap-inline px-inset text-body",
+  "data-[hovered]:control-raised-hover data-[pressed]:control-raised-pressed data-[disabled]:opacity-40",
+  elementFocusVisible,
+);
+
 export function PathField({
   "aria-label": label,
   className,
-  emptyLabel,
-  fullWidth,
   isDisabled,
-  kind = "folder",
-  maxLabelLength = 30,
   onBrowse,
-  secondaryAction,
+  onReset,
+  placeholder,
+  resetLabel,
   value,
 }: PathFieldProps) {
-  const display = value
-    ? truncatePath(value, maxLabelLength, kind)
-    : (emptyLabel ?? `Choose ${kind}`);
-  // The tooltip only earns its place when the label hides part of the path.
-  const isTruncated = value !== null && display !== value;
+  const empty = placeholder ?? t("controls-path-field-choose");
   return (
-    <div className={cn("inline-flex items-center gap-control", className)}>
-      <NativeTooltipTrigger
-        className={fullWidth ? "w-full" : undefined}
-        isDisabled={!isTruncated}
+    <div className="flex min-w-0 items-center gap-inline">
+      <TooltipTrigger
+        className={cn("w-40 min-w-0", className)}
+        isDisabled={value === null}
         tooltip={value ?? ""}
       >
         <Button
-          aria-label={`${label}: ${value || display}`}
-          className={fullWidth ? "w-full justify-start" : undefined}
+          aria-label={t("controls-path-field", {
+            label,
+            path: value ?? empty,
+          })}
+          className={fieldStyles}
           isDisabled={isDisabled}
           onPress={onBrowse}
         >
-          {kind === "folder" ? <Folder /> : <File />}
-          <span className="whitespace-nowrap" dir="auto">
-            {display}
+          <Folder
+            aria-hidden="true"
+            className="size-icon shrink-0 text-fg-secondary"
+          />
+          <span
+            className={cn(
+              "min-w-0 truncate",
+              value === null ? "text-fg-tertiary" : "text-fg",
+            )}
+            dir="auto"
+          >
+            {value === null ? empty : folderName(value)}
           </span>
         </Button>
-      </NativeTooltipTrigger>
-      {secondaryAction ? (
+      </TooltipTrigger>
+      {onReset && value !== null ? (
         <IconButton
-          aria-label={secondaryAction.label}
-          isDisabled={isDisabled || !value}
-          onPress={secondaryAction.onPress}
+          aria-label={resetLabel}
+          isDisabled={isDisabled}
+          onPress={onReset}
+          variant="ghost"
         >
-          {secondaryAction.type === "reset" ? <RotateCcw /> : <X />}
+          <RotateCcw />
         </IconButton>
       ) : null}
     </div>

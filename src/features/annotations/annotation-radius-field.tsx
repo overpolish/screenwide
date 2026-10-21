@@ -19,16 +19,12 @@ export function AnnotationRadiusField({
     <SliderNumberField
       aria-label={t("annotation-radius")}
       className="w-48"
-      formatOptions={{
-        maximumFractionDigits: 1,
-        minimumFractionDigits: 1,
-      }}
       isDisabled={isDisabled}
       maxValue={50}
       minValue={0}
       onChange={onChange}
-      rightSection="%"
       step={0.1}
+      unit="%"
       value={value}
     />
   );

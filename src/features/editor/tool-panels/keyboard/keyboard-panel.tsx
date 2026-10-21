@@ -2,18 +2,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
-import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
+import { Slider } from "../../../../primitives/slider/slider";
 import { Switch } from "../../../../primitives/switch/switch";
 import {
   EditorKind,
   KeyboardEffectAnimation,
   KeyboardEffectAppearance,
 } from "../../types";
-import { OVERLAY_SIZES, placementOptions } from "../placement-options";
+import {
+  OVERLAY_SIZES,
+  placementOptions,
+  useOverlaySizeLabel,
+} from "../placement-options";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 const animationOptions = (): {
@@ -44,6 +48,7 @@ const appearanceOptions = (): {
  */
 export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
+  const overlaySizeLabel = useOverlaySizeLabel();
   const { canRestoreShortcuts, hasKeyboardData, isLocked, keyboardEffects } =
     snapshot;
 
@@ -75,12 +80,14 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
       <ControlRow title={t("editor-panels-size")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
-            <StepSlider
+            <Slider
               aria-label={t("editor-panels-size")}
+              className="w-48"
               isDisabled={isDisabled}
               onChange={(size) => {
                 change({ keyboardEffects: { size } });
               }}
+              stepLabel={overlaySizeLabel}
               steps={OVERLAY_SIZES}
               value={keyboardEffects.size}
             />

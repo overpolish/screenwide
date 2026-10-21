@@ -50,6 +50,7 @@ export const NumberField = ({
   defaultValue,
   label,
   leftSection,
+  material,
   maxValue,
   minValue,
   onChange,
@@ -164,7 +165,7 @@ export const NumberField = ({
     inputWrapper,
     label: _label,
     section,
-  } = numberFieldVariants();
+  } = numberFieldVariants({ material });
 
   return (
     <AriaNumberField

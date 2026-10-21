@@ -4,7 +4,6 @@
 ### The Settings window. Descriptions under a setting stay short: ten words
 ### or fewer where possible.
 
-settings-logo = { -app-name }
 settings-sections = Settings sections
 settings-add-moment = Add Moment
 settings-shortcuts = Shortcuts

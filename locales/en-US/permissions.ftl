@@ -5,7 +5,6 @@
 ### names follow the operating system's own settings.
 
 permissions-title = Permissions
-permissions-logo = { -app-name }
 permissions-restart = Restart { -app-name }
 permissions-optional = Optional
 permissions-grant = Grant

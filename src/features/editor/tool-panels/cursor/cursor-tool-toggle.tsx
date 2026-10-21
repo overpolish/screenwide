@@ -4,8 +4,8 @@
 import { MousePointer } from "lucide-react";
 import { useRef } from "react";
 
-import { ToolToggle } from "../../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
+import { ToolbarTool } from "../../../../primitives/toolbar/toolbar-tool";
 import { useToolPanel } from "../use-tool-panel";
 
 /**
@@ -22,11 +22,11 @@ export function CursorToolToggle({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <span className="inline-flex" data-editor-tool="cursor" ref={triggerRef}>
-      <ToolToggle
+      <ToolbarTool
+        aria-label={t("editor-panels-cursor-name")}
         isSelected={openTool === "cursor"}
         label={t("editor-panels-cursor")}
-        name={t("editor-panels-cursor-name")}
-        onSelectedChange={(selected) => {
+        onChange={(selected) => {
           if (!selected) {
             onDismiss();
             return;
@@ -38,7 +38,7 @@ export function CursorToolToggle({ onDismiss }: { onDismiss: () => void }) {
         shortcut="Shift+C"
       >
         <MousePointer />
-      </ToolToggle>
+      </ToolbarTool>
     </span>
   );
 }

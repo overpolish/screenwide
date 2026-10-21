@@ -10,6 +10,10 @@ controls-sidebar-expand = Expand sidebar
 controls-document-name = Document name
 # Said aloud after a copy button copies.
 controls-copied = Copied
+# A field showing a chosen folder, pressed to choose another. $label names what the folder is for; $path is the folder's full path.
+controls-path-field = { $label }: { $path }
+# Shown in a folder field before a folder is chosen.
+controls-path-field-choose = Choose folder
 # $label names the value the slider and field set together.
 controls-slider = { $label } slider
 controls-slider-value = { $label } value
@@ -24,26 +28,6 @@ controls-window-minimize = Minimize
 controls-window-maximize = Maximize
 controls-window-restore = Restore
 controls-window-close = Close
-
-## Width and height fields
-
-controls-dimensions = Dimensions
-controls-dimensions-reset = Reset dimensions
-controls-dimensions-width = Aspect Ratio Width
-controls-dimensions-height = Aspect Ratio Height
-controls-dimensions-link = Link dimensions
-controls-dimensions-unlink = Unlink dimensions
-
-## Colour palette generator
-
-controls-palette-colors = Colours
-# $index counts the colours from 1.
-controls-palette-color = Palette colour { $index }
-controls-palette-bright = Bright palette
-controls-palette-dull = Dull palette
-controls-palette-shades = Shades palette
-controls-palette-chaotic = Chaotic palette
-controls-palette-lock-hint = Right-click a colour to lock it
 
 ## Key names, as each platform prints them on its keys
 

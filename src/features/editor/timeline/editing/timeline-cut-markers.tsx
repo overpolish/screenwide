@@ -4,9 +4,9 @@
 import { UnfoldHorizontal } from "lucide-react";
 import { useNumberFormatter } from "react-aria";
 
-import { NativeTooltipTrigger } from "../../../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../../../i18n/i18n";
 import { IconButton } from "../../../../primitives/button/icon-button";
+import { TooltipTrigger } from "../../../../primitives/tooltip/tooltip-trigger";
 import { formatDuration } from "../../duration";
 import { TimelineViewportState } from "../timeline-viewport";
 
@@ -77,7 +77,7 @@ export function TimelineCutMarkers({
             key={cut.sourceStart}
             style={{ left: `${(left * 100).toString()}%` }}
           >
-            <NativeTooltipTrigger
+            <TooltipTrigger
               tooltip={t("editor-timeline-restore-cut", { duration })}
             >
               <IconButton
@@ -94,7 +94,7 @@ export function TimelineCutMarkers({
               >
                 <UnfoldHorizontal aria-hidden />
               </IconButton>
-            </NativeTooltipTrigger>
+            </TooltipTrigger>
           </div>
         );
       })}

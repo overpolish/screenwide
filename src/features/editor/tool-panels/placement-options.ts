@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useNumberFormatter } from "react-aria";
+
 import { t } from "../../../i18n/i18n";
 
 import type { OverlaySize } from "../../../bindings/OverlaySize";
@@ -31,3 +33,18 @@ export const OVERLAY_SIZES: OverlaySize[] = [
   "huge",
   "giant",
 ];
+
+// How many times its own size each draws at: the twin of `OverlaySize::scale`.
+const OVERLAY_SCALE: Record<OverlaySize, number> = {
+  "extra-large": 2,
+  giant: 5,
+  huge: 3,
+  large: 1.5,
+  standard: 1,
+};
+
+/** Names an overlay size by how large it draws, such as 150%. */
+export const useOverlaySizeLabel = () => {
+  const percent = useNumberFormatter({ style: "percent" });
+  return (size: OverlaySize) => percent.format(OVERLAY_SCALE[size]);
+};

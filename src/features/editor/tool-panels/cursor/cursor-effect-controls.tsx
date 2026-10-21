@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
-import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
+import { Slider } from "../../../../primitives/slider/slider";
 import { Switch } from "../../../../primitives/switch/switch";
 import { CursorEffectSettings } from "../../types";
-import { OVERLAY_SIZES } from "../placement-options";
+import { OVERLAY_SIZES, useOverlaySizeLabel } from "../placement-options";
 
 type CursorToggleKey = {
   [K in keyof CursorEffectSettings]: CursorEffectSettings[K] extends boolean
@@ -23,6 +23,7 @@ export function CursorEffectControls({
   settings: CursorEffectSettings;
   onChange?: (settings: CursorEffectSettings) => void;
 }) {
+  const overlaySizeLabel = useOverlaySizeLabel();
   const update = (change: Partial<CursorEffectSettings>) => {
     onChange?.({ ...settings, ...change });
   };
@@ -45,12 +46,14 @@ export function CursorEffectControls({
       <ControlRow title={t("editor-panels-size")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
-            <StepSlider
+            <Slider
               aria-label={t("editor-panels-cursor-size")}
+              className="w-48"
               isDisabled={isDisabled}
               onChange={(size) => {
                 update({ size });
               }}
+              stepLabel={overlaySizeLabel}
               steps={OVERLAY_SIZES}
               value={settings.size}
             />

@@ -4,11 +4,10 @@
 import { useState } from "react";
 
 import { ColorButton } from "../../../../../composites/color-button/color-button";
-import { useColorPicker } from "../../../../../composites/color-button/use-color-picker";
-import { ColorPaletteGenerator } from "../../../../../composites/color-palette-generator/color-palette-generator";
 import { ControlRow } from "../../../../../composites/control-row/control-row";
 import { t } from "../../../../../i18n/i18n";
 import { Button } from "../../../../../primitives/button/button";
+import { useColorPicker } from "../../../../../primitives/input-fields/use-color-picker";
 import { PillGroup } from "../../../../../primitives/pill-group/pill-group";
 
 import { Background } from "./background";
@@ -20,6 +19,7 @@ import {
   randomMeshBackground,
   randomizeMeshBackground,
 } from "./background-random";
+import { MeshPalette } from "./mesh-palette";
 
 const backgroundKinds = () => [
   { id: "solid", label: t("background-kind-solid") },
@@ -136,7 +136,7 @@ export function BackgroundEditor({
           )}
         </ControlRow>
       ) : (
-        <ColorPaletteGenerator
+        <MeshPalette
           colors={palette}
           isDisabled={isDisabled}
           locked={palette.map((_, index) => mesh.lockedColors[index] ?? false)}

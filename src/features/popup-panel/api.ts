@@ -63,6 +63,8 @@ export const showPopupPanel = ({
     fitted,
     focusContents,
     offset,
+    // The page's own height says where it begins in its window.
+    pageHeight: window.innerHeight,
     panel: panel ?? null,
     parentWindowLabel,
     size,
@@ -85,6 +87,7 @@ export const movePopupPanel = (
 ) =>
   invoke<null>("move_standalone_listbox", {
     offset,
+    pageHeight: window.innerHeight,
     panel: panel ?? null,
     parentWindowLabel,
   });

@@ -10,35 +10,9 @@ import { ColorButton } from "./color-button";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-type ColorButtonProps = ComponentProps<typeof ColorButton>;
-
-// Both presentations, a row each, with the given state.
-function PresentationGrid({
-  isDisabled,
-  isLocked,
-  onPress,
-  value,
-}: Pick<ColorButtonProps, "isDisabled" | "isLocked" | "onPress" | "value">) {
-  const state = { isDisabled, isLocked, onPress, value };
-  return (
-    <StoryGrid>
-      <StoryGridRow label="labelled">
-        <ColorButton {...state} label="Text" />
-      </StoryGridRow>
-      <StoryGridRow label="swatch only">
-        <ColorButton {...state} aria-label="Text" />
-      </StoryGridRow>
-    </StoryGrid>
-  );
-}
-
 const meta = {
   argTypes: {
     isDisabled: {
-      control: "boolean",
-      table: { defaultValue: { summary: "false" } },
-    },
-    isLocked: {
       control: "boolean",
       table: { defaultValue: { summary: "false" } },
     },
@@ -47,7 +21,6 @@ const meta = {
   },
   args: {
     isDisabled: false,
-    isLocked: false,
     label: "Text",
     onPress: fn(),
     value: "#FFD60A",
@@ -55,8 +28,7 @@ const meta = {
   component: ColorButton,
   parameters: {
     // Default is the labelled form; the swatch-only form, named by
-    // `aria-label` instead, is shown under Presentations. `aria-expanded`
-    // is only announced, so there is nothing to see in changing it.
+    // `aria-label` instead, is shown under States.
     controls: { exclude: ["aria-expanded", "aria-label", "onPress", "ref"] },
     layout: "centered",
   },
@@ -68,23 +40,49 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Presentations: Story = {
-  parameters: { controls: { disable: true } },
-  render: ({ onPress, value }) => (
-    <PresentationGrid onPress={onPress} value={value} />
-  ),
-};
+// A strong colour, white and a translucent one, which keep their outline by
+// the hairline edge, in both forms.
+const COLORS = [
+  { label: "colour", value: "#FFD60A" },
+  { label: "white", value: "#FFFFFF" },
+  { label: "translucent", value: "#0A84FF40" },
+];
 
-export const Locked: Story = {
+function FormGrid({
+  isDisabled,
+  onPress,
+}: {
+  onPress: ComponentProps<typeof ColorButton>["onPress"];
+  isDisabled?: boolean;
+}) {
+  return (
+    <StoryGrid columns={["labelled", "swatch only"]}>
+      {COLORS.map(({ label, value }) => (
+        <StoryGridRow key={label} label={label}>
+          <ColorButton
+            isDisabled={isDisabled}
+            label="Text"
+            onPress={onPress}
+            value={value}
+          />
+          <ColorButton
+            aria-label="Text"
+            isDisabled={isDisabled}
+            onPress={onPress}
+            value={value}
+          />
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
+  );
+}
+
+export const States: Story = {
   parameters: { controls: { disable: true } },
-  render: ({ onPress, value }) => (
-    <PresentationGrid isLocked onPress={onPress} value={value} />
-  ),
+  render: ({ onPress }) => <FormGrid onPress={onPress} />,
 };
 
 export const Disabled: Story = {
   parameters: { controls: { disable: true } },
-  render: ({ onPress, value }) => (
-    <PresentationGrid isDisabled onPress={onPress} value={value} />
-  ),
+  render: ({ onPress }) => <FormGrid isDisabled onPress={onPress} />,
 };

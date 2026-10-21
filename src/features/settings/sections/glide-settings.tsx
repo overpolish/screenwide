@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../composites/control-row/control-row";
-import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { SliderNumberField } from "../../../composites/slider-number-field/slider-number-field";
 import { platformArg, t } from "../../../i18n/i18n";
 import { isMacHost } from "../../../lib/platform";
 import { Switch } from "../../../primitives/switch/switch";
+import { HotkeyField } from "../hotkey-field/hotkey-field";
 import { SettingsGroup } from "../settings-group";
 
 import type { GlideSettings } from "../../../bindings/GlideSettings";
@@ -158,7 +158,7 @@ export function GlideSettingsPanel({
                 onChange={(windowGap) => {
                   update({ windowGap });
                 }}
-                rightSection="px"
+                unit="px"
                 value={settings.windowGap}
               />
             </div>

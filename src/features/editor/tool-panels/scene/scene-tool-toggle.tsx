@@ -3,8 +3,8 @@
 
 import { Clapperboard } from "lucide-react";
 
-import { ToolToggle } from "../../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
+import { ToolbarTool } from "../../../../primitives/toolbar/toolbar-tool";
 
 /**
  * The editor toolbar's scene tool. Like the select tool it picks, moves and
@@ -21,15 +21,15 @@ export function SceneToolToggle({
 }) {
   return (
     <span className="inline-flex" data-editor-tool="scene">
-      <ToolToggle
+      <ToolbarTool
+        aria-label={t("editor-panels-scene")}
         isSelected={isSelected}
         label={t("editor-panels-scene")}
-        name={t("editor-panels-scene")}
-        onSelectedChange={onSelectedChange}
+        onChange={onSelectedChange}
         shortcut="L"
       >
         <Clapperboard />
-      </ToolToggle>
+      </ToolbarTool>
     </span>
   );
 }

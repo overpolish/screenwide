@@ -4,12 +4,12 @@
 import { Eraser, GripVertical, Undo2, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { NativeTooltipTrigger } from "../../composites/native-tooltip/native-tooltip-trigger";
-import { ToolToggle } from "../../composites/tool-toggle/tool-toggle";
 import { t } from "../../i18n/i18n";
 import { IconButton } from "../../primitives/button/icon-button";
 import { Swatch } from "../../primitives/swatch/swatch";
 import { Toolbar } from "../../primitives/toolbar/toolbar";
+import { ToolbarTool } from "../../primitives/toolbar/toolbar-tool";
+import { TooltipTrigger } from "../../primitives/tooltip/tooltip-trigger";
 import { AnnotationColorGrid } from "../annotations/annotation-color-grid";
 import {
   annotationToolLabel,
@@ -118,12 +118,12 @@ export function AnnotateToolbar({
             toggles, each naming itself in a tooltip. */}
         <Toolbar aria-label={t("annotate-tools")}>
           {ANNOTATE_TOOLS.map((tool) => (
-            <ToolToggle
+            <ToolbarTool
+              aria-label={annotationToolName(tool.id)}
               isSelected={tool.id === settings.defaultShape}
               key={tool.id}
               label={annotationToolLabel(tool.id)}
-              name={annotationToolName(tool.id)}
-              onSelectedChange={(selected) => {
+              onChange={(selected) => {
                 // The overlay always has a tool in hand, so pressing the one
                 // already chosen leaves it chosen.
                 if (selected) onChange({ defaultShape: tool.id });
@@ -131,7 +131,7 @@ export function AnnotateToolbar({
               shortcut={tool.shortcut}
             >
               {tool.icon}
-            </ToolToggle>
+            </ToolbarTool>
           ))}
         </Toolbar>
 
@@ -151,7 +151,7 @@ export function AnnotateToolbar({
         </div>
 
         <div className="flex items-center gap-control">
-          <NativeTooltipTrigger
+          <TooltipTrigger
             tooltip={{
               label: t("annotate-undo"),
               shortcut: "CommandOrControl+KeyZ",
@@ -160,8 +160,8 @@ export function AnnotateToolbar({
             <IconButton aria-label={t("annotate-undo-label")} onPress={onUndo}>
               <Undo2 className="rtl:-scale-x-100" />
             </IconButton>
-          </NativeTooltipTrigger>
-          <NativeTooltipTrigger
+          </TooltipTrigger>
+          <TooltipTrigger
             tooltip={{ label: t("annotate-clear"), shortcut: "Backspace" }}
           >
             <IconButton
@@ -170,14 +170,14 @@ export function AnnotateToolbar({
             >
               <Eraser />
             </IconButton>
-          </NativeTooltipTrigger>
-          <NativeTooltipTrigger
+          </TooltipTrigger>
+          <TooltipTrigger
             tooltip={{ label: t("annotate-close"), shortcut: "Esc" }}
           >
             <IconButton aria-label={t("annotate-close-label")} onPress={onDone}>
               <X />
             </IconButton>
-          </NativeTooltipTrigger>
+          </TooltipTrigger>
         </div>
       </div>
 

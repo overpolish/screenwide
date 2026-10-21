@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
-import { Dimensions } from "../../../../composites/dimensions/dimensions";
 import { SliderNumberField } from "../../../../composites/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { Switch } from "../../../../primitives/switch/switch";
 import { EditorKind } from "../../types";
+import { DimensionsField } from "../dimensions/dimensions-field";
 import { RotationRow } from "../rotation-row";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
@@ -56,12 +56,8 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
     );
   }
 
-  const place = (placement: { height?: number; width?: number }) => {
-    change({ selectionOutput: placement });
-  };
-
   return (
-    <div className="flex flex-col gap-section">
+    <div className="flex flex-col gap-separate">
       {selection.cameraEffects ? (
         <CameraEnhanceRow
           change={change}
@@ -92,29 +88,20 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           }}
         />
       )}
-      {/* `Dimensions` has no disabled state of its own: a save takes the whole
-          group out of reach the way the output controls do. */}
-      <div className={isLocked ? "pointer-events-none opacity-50" : ""}>
-        <Dimensions
-          height={selection.height}
-          initialLinked
-          label={t("editor-panels-size")}
-          layout="stacked"
-          onReset={() => {
-            change({ resetSelection: true });
-          }}
-          setDimensions={(width, height) => {
-            place({ height, width });
-          }}
-          setHeight={(height) => {
-            place({ height });
-          }}
-          setWidth={(width) => {
-            place({ width });
-          }}
-          width={selection.width}
-        />
-      </div>
+      <ControlRow title={t("editor-panels-size")}>
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <DimensionsField
+              height={selection.height}
+              isDisabled={isLocked}
+              onChange={(selectionOutput) => {
+                change({ selectionOutput });
+              }}
+              width={selection.width}
+            />
+          </div>
+        )}
+      </ControlRow>
 
       <ControlRow title={t("annotation-radius")}>
         {(controlProps) => (
@@ -122,18 +109,14 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
             <SliderNumberField
               aria-label={t("annotation-radius")}
               className="w-48"
-              formatOptions={{
-                maximumFractionDigits: 1,
-                minimumFractionDigits: 1,
-              }}
               isDisabled={isLocked}
               maxValue={50}
               minValue={0}
               onChange={(radius) => {
                 change({ selectionRadius: radius });
               }}
-              rightSection="%"
               step={0.1}
+              unit="%"
               value={selection.radius}
             />
           </div>
@@ -181,8 +164,8 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
                 onChange={(inset) => {
                   change({ selectionInset: inset });
                 }}
-                rightSection="px"
                 sliderMaxValue={Math.max(1, selection.insetMaximum)}
+                unit="px"
                 value={selection.inset}
               />
             </div>
@@ -203,8 +186,10 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         )}
       </ControlRow>
 
-      {selection.kind === "camera" ? null : (
-        <div className="flex justify-end">
+      <div className="flex justify-end gap-inline">
+        {/* A camera track is placed in the screen's picture, so it has no
+            centre of its own to go back to. */}
+        {selection.kind === "camera" ? null : (
           <Button
             isDisabled={isLocked}
             onPress={() => {
@@ -213,8 +198,16 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           >
             {t("editor-panels-recenter")}
           </Button>
-        </div>
-      )}
+        )}
+        <Button
+          isDisabled={isLocked}
+          onPress={() => {
+            change({ resetSelection: true });
+          }}
+        >
+          {t("editor-panels-reset")}
+        </Button>
+      </div>
     </div>
   );
 }

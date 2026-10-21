@@ -6,69 +6,69 @@ import { cn } from "../../lib/styling";
 import { NumberField } from "../../primitives/input-fields/number-field";
 import { Slider } from "../../primitives/slider/slider";
 
-import type { NumberFieldProps } from "../../primitives/input-fields/number-field";
+// The value reads as text beside the slider and is a field only under the
+// pointer or while typed into, so a panel of sliders does not read as a
+// form, yet an exact value is one click away.
 
-export type SliderNumberFieldProps = Pick<
-  NumberFieldProps,
-  "leftSection" | "rightSection" | "formatOptions" | "isDisabled"
-> & {
+type SliderNumberFieldProps = {
   "aria-label": string;
   maxValue: number;
   minValue: number;
   onChange: (value: number) => void;
   value: number;
+  /** Width of the whole row. */
   className?: string;
-  numberFieldClassName?: string;
+  isDisabled?: boolean;
   /** Soft bounds for the slider; typing and scrubbing use the full range. */
   sliderMaxValue?: number;
   sliderMinValue?: number;
   step?: number;
+  unit?: string;
 };
 
 export function SliderNumberField({
   "aria-label": label,
   className,
-  formatOptions,
   isDisabled,
-  leftSection,
   maxValue,
   minValue,
-  numberFieldClassName,
   onChange,
-  rightSection,
   sliderMaxValue = maxValue,
   sliderMinValue = minValue,
   step = 1,
+  unit,
   value,
 }: SliderNumberFieldProps) {
-  if (
-    import.meta.env.DEV &&
-    (![minValue, maxValue, sliderMinValue, sliderMaxValue, step].every(
-      Number.isFinite,
-    ) ||
-      minValue >= maxValue ||
-      sliderMinValue < minValue ||
-      sliderMaxValue > maxValue ||
-      sliderMinValue >= sliderMaxValue ||
-      step <= 0)
-  ) {
-    throw new Error(
-      "SliderNumberField requires finite bounds with minValue <= sliderMinValue < sliderMaxValue <= maxValue and a positive finite step.",
-    );
+  if (import.meta.env.DEV) {
+    const ordered =
+      minValue <= sliderMinValue &&
+      sliderMinValue < sliderMaxValue &&
+      sliderMaxValue <= maxValue;
+    if (!ordered || !(step > 0))
+      throw new Error(
+        "SliderNumberField needs minValue <= sliderMinValue < sliderMaxValue <= maxValue and a positive step.",
+      );
   }
 
-  const changeValue = (nextValue: number) => {
-    // An empty/invalid number draft must not erase the shared numeric value.
-    if (isDisabled || !Number.isFinite(nextValue)) return;
-    onChange(Math.min(maxValue, Math.max(minValue, nextValue)));
+  const changeValue = (next: number) => {
+    // A field emptied while typing must not erase the value.
+    if (isDisabled || !Number.isFinite(next)) return;
+    onChange(Math.min(maxValue, Math.max(minValue, next)));
+  };
+
+  // As many decimals as the step has, always shown, so 0.1 reads 8.0.
+  const decimals = String(step).split(".")[1]?.length ?? 0;
+  const formatOptions = {
+    maximumFractionDigits: decimals,
+    minimumFractionDigits: decimals,
   };
 
   return (
     <div
       aria-label={label}
-      className={cn("flex min-w-0 items-center gap-control-inset", className)}
+      className={cn("flex min-w-0 items-center gap-inline", className)}
       onPointerDownCapture={(event) => {
-        // Prevent native scrubbing from starting on a disabled Number Field.
+        // Native scrubbing would otherwise start on a disabled field.
         if (isDisabled) event.stopPropagation();
       }}
       role="group"
@@ -86,14 +86,16 @@ export function SliderNumberField({
       />
       <NumberField
         aria-label={t("controls-slider-value", { label })}
-        className={cn("w-24 shrink-0", numberFieldClassName)}
+        // Pulled out by its padding, so the value lines up with the column's
+        // end and the frame shown on hover reaches past it instead.
+        className="-me-inset-sm w-20 shrink-0"
         formatOptions={formatOptions}
         isDisabled={isDisabled}
-        leftSection={leftSection}
+        material="quiet"
         maxValue={maxValue}
         minValue={minValue}
         onChange={changeValue}
-        rightSection={rightSection}
+        rightSection={unit}
         step={step}
         value={value}
       />

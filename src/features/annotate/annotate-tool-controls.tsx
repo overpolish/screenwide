@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { StepSlider } from "../../composites/step-slider/step-slider";
+import { Slider } from "../../primitives/slider/slider";
 import { AnnotationAngleDial } from "../annotations/annotation-angle-dial";
 import { AnnotationChoice } from "../annotations/annotation-choice";
 import {
@@ -33,10 +33,11 @@ export function AnnotateToolControls({
   settings: AnnotateSettings;
 }) {
   const width = (
-    <StepSlider
+    <Slider
       aria-label={annotationSizeLabel(
         settings.defaultShape === "counter" ? "size" : "width",
       )}
+      className="w-48"
       onChange={(size) => {
         onChange(
           settings.defaultShape === "counter"

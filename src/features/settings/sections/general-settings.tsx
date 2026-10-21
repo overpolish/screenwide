@@ -165,7 +165,6 @@ export function GeneralSettingsPanel({
               <div {...controlProps} role="group">
                 <PathField
                   aria-label={title}
-                  emptyLabel={t("settings-default-folder")}
                   isDisabled={isSaving}
                   onBrowse={() => {
                     void browseDefaultLocation(kind)
@@ -176,13 +175,11 @@ export function GeneralSettingsPanel({
                         onError(String(reason));
                       });
                   }}
-                  secondaryAction={{
-                    label: reset,
-                    onPress: () => {
-                      update({ [key]: null });
-                    },
-                    type: "reset",
+                  onReset={() => {
+                    update({ [key]: null });
                   }}
+                  placeholder={t("settings-default-folder")}
+                  resetLabel={reset}
                   value={settings[key]}
                 />
               </div>

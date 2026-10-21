@@ -2,29 +2,41 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useState } from "react";
+import { fn } from "storybook/test";
+
+import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { SliderNumberField } from "./slider-number-field";
 
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
+
+// The width a tool panel gives it.
+const rowWidth: Decorator = (Story) => (
+  <div className="w-48">
+    <Story />
+  </div>
+);
 
 const meta = {
+  argTypes: {
+    isDisabled: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+    unit: { control: "text" },
+  },
   args: {
-    "aria-label": "Amount",
+    "aria-label": "Radius",
+    isDisabled: false,
     maxValue: 100,
     minValue: 0,
-    onChange: () => undefined,
+    onChange: fn(),
+    unit: "%",
     value: 25,
   },
   component: SliderNumberField,
-  decorators: [
-    (Story) => (
-      <div className="w-96">
-        <Story />
-      </div>
-    ),
-  ],
   parameters: {
-    controls: { exclude: ["className", "numberFieldClassName", "onChange"] },
+    controls: { exclude: ["aria-label", "className", "onChange"] },
     layout: "centered",
   },
   render: function Render(args) {
@@ -32,7 +44,7 @@ const meta = {
       source: args.value,
       value: args.value,
     });
-    // Accept edits from Controls while keeping pointer-rate changes local.
+    // Takes edits from Controls while keeping pointer-rate changes local.
     if (draft.source !== args.value) {
       setDraft({ source: args.value, value: args.value });
     }
@@ -53,46 +65,63 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = { decorators: [rowWidth] };
 
-export const RestrictedSliderRange: Story = {
-  args: {
-    "aria-label": "Window gap",
-    maxValue: 200,
-    rightSection: "px",
-    sliderMaxValue: 50,
-  },
-};
+// The slider's soft range is 0 to 50; typing reaches 0 to 200, and below 0
+// for the second field's range, with the knob held at its end.
+function StateGrid({ isDisabled }: { isDisabled?: boolean }) {
+  const shared = { isDisabled, onChange: () => undefined };
+  return (
+    <StoryGrid>
+      <StoryGridRow label="in range">
+        <div className="w-48">
+          <SliderNumberField
+            {...shared}
+            aria-label="Gap"
+            maxValue={200}
+            minValue={0}
+            sliderMaxValue={50}
+            unit="px"
+            value={24}
+          />
+        </div>
+      </StoryGridRow>
+      <StoryGridRow label="above slider">
+        <div className="w-48">
+          <SliderNumberField
+            {...shared}
+            aria-label="Gap"
+            maxValue={200}
+            minValue={0}
+            sliderMaxValue={50}
+            unit="px"
+            value={120}
+          />
+        </div>
+      </StoryGridRow>
+      <StoryGridRow label="below slider">
+        <div className="w-48">
+          <SliderNumberField
+            {...shared}
+            aria-label="Volume"
+            maxValue={12}
+            minValue={-60}
+            sliderMinValue={-24}
+            unit="dB"
+            value={-36}
+          />
+        </div>
+      </StoryGridRow>
+    </StoryGrid>
+  );
+}
 
-export const AboveSliderRange: Story = {
-  args: { ...RestrictedSliderRange.args, value: 120 },
-};
-
-export const BelowSliderRange: Story = {
-  args: {
-    "aria-label": "Offset",
-    minValue: -100,
-    rightSection: "px",
-    sliderMinValue: 0,
-    value: -30,
-  },
-};
-
-export const Units: Story = {
-  args: { "aria-label": "Scale", rightSection: "%", value: 75 },
-};
-
-export const DecimalStep: Story = {
-  args: {
-    "aria-label": "Duration",
-    maxValue: 10,
-    rightSection: "s",
-    sliderMaxValue: 5,
-    step: 0.1,
-    value: 2.5,
-  },
+export const States: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => <StateGrid />,
 };
 
 export const Disabled: Story = {
-  args: { ...AboveSliderRange.args, isDisabled: true },
+  parameters: { controls: { disable: true } },
+  render: () => <StateGrid isDisabled />,
 };

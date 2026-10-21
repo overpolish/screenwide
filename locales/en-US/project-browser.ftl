@@ -4,7 +4,6 @@
 ### The project browser: the window listing recordings and screenshots.
 
 project-browser-title = Projects
-project-browser-logo = { -app-name }
 project-browser-search-label = Search projects
 project-browser-search-placeholder = Search
 project-browser-open-file = Open File

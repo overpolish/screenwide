@@ -128,24 +128,24 @@ fn present_concealed(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<(
 }
 
 /// Asks for a tooltip over `anchor`, which is in the asking window's own
-/// logical coordinates. A tooltip already on screen is only told the new
-/// words: the move comes with the next fit, so crossing from one button to
-/// its neighbour does not blink.
+/// logical coordinates. The window is revealed by the fit that follows, once
+/// the words are sized and placed.
 #[tauri::command]
 pub fn show_tooltip(
   app: AppHandle,
   content: TooltipContent,
   anchor: AnchorRect,
   parent_window_label: String,
+  // The asking page's height, which says where it begins in its window.
+  page_height: Option<f64>,
 ) -> Result<(), String> {
   let parent = app
     .get_webview_window(&parent_window_label)
     .ok_or_else(|| "The window asking for a tooltip is gone".to_owned())?;
-  let scale = parent.scale_factor().map_err(|error| error.to_string())?;
-  let origin = parent
-    .outer_position()
-    .map_err(|error| error.to_string())?
-    .to_logical::<f64>(scale);
+  // The anchor is measured in the page, so it is placed from where the page
+  // begins, below any title bar the window has of its own.
+  let origin = crate::app_windows::geometry::page_origin(&parent, page_height)
+    .map_err(|error| error.to_string())?;
   let anchor = AnchorRect {
     x: origin.x + anchor.x,
     y: origin.y + anchor.y,
@@ -174,8 +174,13 @@ pub fn show_tooltip(
     });
   }
 
-  // A reused window is already loaded and would otherwise still be showing the
-  // last tooltip; a fresh one has no listener yet and reads the words on mount.
+  // A tooltip already on screen is hidden first: shown at once, the new words
+  // would sit in the old bubble, at its old size and place, for the round
+  // trip until the fit moves it. A reused window is already loaded; a fresh
+  // one has no listener yet and reads the words on mount.
+  if was_visible {
+    presentation::conceal(&app, &window).map_err(|error| error.to_string())?;
+  }
   let _ = app.emit_to(WindowLabel::Tooltip.as_str(), SHOWN_EVENT, content);
   if !was_visible {
     present_concealed(&app, &window).map_err(|error| error.to_string())?;

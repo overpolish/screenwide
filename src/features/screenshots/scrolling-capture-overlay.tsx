@@ -36,15 +36,15 @@ export function ScrollingCaptureOverlay({
     : phaseLabel(phase);
 
   return (
-    // The Finder copy-dialog column: phrase, bar, and the way out beneath.
+    // What is happening, the bar, and the key that stops it.
     <main className="window-surface flex h-full w-full items-center overflow-hidden rounded-window p-section text-content-fg">
       <ProgressPanel
         label={label}
         progress={null}
         progressLabel={t("screenshots-scrolling-progress")}
-        secondary={
+        status={
           cancellable && !finished ? (
-            <span className="flex items-center gap-control whitespace-nowrap">
+            <span className="flex items-center gap-inline whitespace-nowrap">
               <Shortcut>
                 <Keyboard>{CANCEL_KEY}</Keyboard>
               </Shortcut>

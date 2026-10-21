@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
-import { StepSlider } from "../../../../composites/step-slider/step-slider";
+import { t } from "../../../../i18n/i18n";
+import { Slider } from "../../../../primitives/slider/slider";
 
 import type { TextSize } from "../../../../bindings/TextSize";
 
@@ -23,14 +24,22 @@ export function CaptionSizeRow({
   size: TextSize;
   title: string;
 }) {
+  const names: Record<TextSize, string> = {
+    "extra-large": t("editor-panels-text-size-extra-large"),
+    large: t("editor-panels-text-size-large"),
+    medium: t("editor-panels-text-size-medium"),
+    small: t("editor-panels-text-size-small"),
+  };
   return (
     <ControlRow title={title}>
       {(controlProps) => (
         <div {...controlProps} role="group">
-          <StepSlider
+          <Slider
             aria-label={title}
+            className="w-48"
             isDisabled={isDisabled}
             onChange={onChange}
+            stepLabel={(step) => names[step]}
             steps={STEPS}
             value={size}
           />

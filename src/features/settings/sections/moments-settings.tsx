@@ -5,9 +5,9 @@ import { Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
-import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
 import { TextField } from "../../../primitives/input-fields/text-field";
+import { HotkeyField } from "../hotkey-field/hotkey-field";
 import { SettingsGroup } from "../settings-group";
 
 import { KindColorPicker } from "./kind-color-picker";

@@ -5,6 +5,26 @@ use tauri::{
   AppHandle, LogicalPosition, LogicalSize, Monitor, PhysicalPosition, PhysicalSize, WebviewWindow,
 };
 
+/// Where a window's page begins on screen, in logical pixels: the origin that
+/// page coordinates, such as a control's bounds, are measured from. The page
+/// says how tall it is (`window.innerHeight`). On macOS a window with a title
+/// bar of its own, as the Storybook preview has, reports its content as the
+/// whole window while the page begins below that bar, so the page starts as
+/// far down as the content is taller than the page. A page that fills its
+/// window, as every app window's does, starts at the content's corner.
+pub(crate) fn page_origin(
+  window: &WebviewWindow,
+  page_height: Option<f64>,
+) -> tauri::Result<LogicalPosition<f64>> {
+  let scale = window.scale_factor()?;
+  let origin = window.inner_position()?.to_logical::<f64>(scale);
+  let inset = match page_height {
+    Some(height) => (window.inner_size()?.to_logical::<f64>(scale).height - height).max(0.0),
+    None => 0.0,
+  };
+  Ok(LogicalPosition::new(origin.x, origin.y + inset))
+}
+
 /// The area, in physical pixels, that a window shares with a monitor.
 pub(super) fn overlap_area(
   monitor_position: PhysicalPosition<i32>,

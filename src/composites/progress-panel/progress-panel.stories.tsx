@@ -1,46 +1,77 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { fn } from "storybook/test";
+
+import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 import { ConfirmActionButton } from "../confirm-action-button/confirm-action-button";
 
 import { ProgressPanel } from "./progress-panel";
 
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 
-/** Cancelling running work is a two-press confirmation, as it is in the app. */
-const cancel = (
-  <ConfirmActionButton confirmLabel="Confirm cancel" label="Cancel" />
+// One panel at the width it is given in place; grids size themselves.
+const panelWidth: Decorator = (Story) => (
+  <div className="w-80">
+    <Story />
+  </div>
 );
 
 const meta = {
-  args: { label: "Saving recording", progress: 42 },
+  argTypes: {
+    label: { control: "text" },
+    progress: { control: { max: 100, min: 0, type: "range" } },
+    status: { control: "text" },
+  },
+  args: {
+    label: "Saving recording",
+    progress: 42,
+    status: "Less than a minute remaining",
+  },
   component: ProgressPanel,
-  decorators: [
-    (Story) => (
-      <div className="w-80">
-        <Story />
-      </div>
-    ),
-  ],
-  parameters: { layout: "padded" },
+  parameters: {
+    controls: { exclude: ["actions", "progressLabel"] },
+    layout: "centered",
+  },
   title: "Composites/Progress Panel",
 } satisfies Meta<typeof ProgressPanel>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Determinate: Story = {
-  args: {
-    action: cancel,
-    secondary: "About 2 min remaining",
-  },
+export const Default: Story = { decorators: [panelWidth] };
+
+export const States: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <StoryGrid>
+      <StoryGridRow label="determinate">
+        <div className="w-80">
+          <ProgressPanel
+            label="Downloading update"
+            progress={64}
+            status="64%"
+          />
+        </div>
+      </StoryGridRow>
+      <StoryGridRow label="indeterminate">
+        <div className="w-80">
+          <ProgressPanel label="Finishing recording" progress={null} />
+        </div>
+      </StoryGridRow>
+    </StoryGrid>
+  ),
 };
 
-/** Work that cannot report how far it has come carries the wait in the bar. */
-export const Indeterminate: Story = {
+export const WithActions: Story = {
   args: {
-    action: cancel,
-    label: "Finalizing recording",
-    progress: null,
+    actions: (
+      <ConfirmActionButton
+        confirmLabel="Confirm cancel"
+        label="Cancel"
+        onConfirm={fn()}
+      />
+    ),
   },
+  decorators: [panelWidth],
 };

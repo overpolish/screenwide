@@ -5,7 +5,6 @@ import { Disc, Mic, PersonStanding, Video } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef } from "react";
 
-import logoUrl from "../../assets/screenwide-mark.svg";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
@@ -86,14 +85,6 @@ export function PermissionsWindow({
                 </motion.div>
               ) : null}
             </AnimatePresence>
-          }
-          leadingSection={
-            <img
-              alt={t("permissions-logo")}
-              className="brightness-0 dark:invert"
-              draggable={false}
-              src={logoUrl}
-            />
           }
           onClose={onClose}
           title={t("permissions-title")}

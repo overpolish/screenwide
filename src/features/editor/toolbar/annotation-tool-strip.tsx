@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Ellipsis } from "lucide-react";
-import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 
-import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
-import { ToolToggle } from "../../../composites/tool-toggle/tool-toggle";
-import { ToolToggleDisabledContext } from "../../../composites/tool-toggle/tool-toggle-disabled";
-import { WindowHeaderCenterWidthContext } from "../../../composites/window-header/window-header-center-width";
 import { t } from "../../../i18n/i18n";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { Toolbar } from "../../../primitives/toolbar/toolbar";
+import { ToolbarDisabledContext } from "../../../primitives/toolbar/toolbar-disabled";
+import { ToolbarTool } from "../../../primitives/toolbar/toolbar-tool";
+import { TooltipTrigger } from "../../../primitives/tooltip/tooltip-trigger";
 import {
   annotationToolLabel,
   annotationToolName,
@@ -26,28 +25,9 @@ import {
 import type { AnnotationKind } from "../../annotations/types";
 
 /**
- * How many equal buttons the strip has room for: the title bar's centre less
- * the groups beside the strip, which do not depend on it, so a measurement
- * never feeds its own result.
- */
-function measureCapacity(strip: HTMLElement, centerWidth: number) {
-  const row = strip.parentElement;
-  const group = strip.firstElementChild;
-  const button = strip.querySelector("button");
-  if (!row || !group || !button) return null;
-  const beside =
-    row.getBoundingClientRect().width - strip.getBoundingClientRect().width;
-  const gap = parseFloat(getComputedStyle(group).columnGap) || 0;
-  const step = button.getBoundingClientRect().width + gap;
-  // Half a pixel of slack, so subpixel rounding does not cost a button.
-  return Math.floor((centerWidth - beside + gap + 0.5) / step);
-}
-
-/**
- * The annotation tools in the title bar, folding the least used into a menu
- * when the bar is too narrow for all of them. The tool in hand always has a
- * button: one hidden in the menu takes the slot before the menu button when
- * it is taken up, by the menu or by its shortcut.
+ * The annotation tools. The tool in hand always has a button: one hidden in
+ * the menu takes the slot before the menu button when it is taken up, by the
+ * menu or by its shortcut.
  */
 export function AnnotationToolStrip({
   isDisabled = false,
@@ -58,11 +38,8 @@ export function AnnotationToolStrip({
   tool: string | null;
   isDisabled?: boolean;
 }) {
-  const centerWidth = use(WindowHeaderCenterWidthContext);
-  const isBarDisabled = use(ToolToggleDisabledContext);
-  const stripRef = useRef<HTMLDivElement>(null);
+  const isBarDisabled = use(ToolbarDisabledContext);
   const moreRef = useRef<HTMLButtonElement>(null);
-  const [capacity, setCapacity] = useState<number | null>(null);
   const [slotted, setSlotted] = useState<AnnotationTool | null>(null);
   const openMenu = useAnnotationToolMenu(({ id }) => {
     onChoose(id, true);
@@ -73,54 +50,34 @@ export function AnnotationToolStrip({
     void closeAnnotationToolMenu();
   }, [tool]);
 
-  useLayoutEffect(() => {
-    const strip = stripRef.current;
-    const row = strip?.parentElement;
-    if (centerWidth === null || !strip || !row) return;
-    // The observer's first report, before paint, is the first measurement;
-    // later ones follow the groups beside the strip, which come and go with
-    // what a recording holds.
-    const observer = new ResizeObserver(() => {
-      setCapacity(measureCapacity(strip, centerWidth));
-    });
-    observer.observe(row);
-    return () => {
-      observer.disconnect();
-    };
-  }, [centerWidth]);
-
-  const layout = annotationToolLayout(
-    ANNOTATION_TOOLS,
-    centerWidth === null ? null : capacity,
-    slotted,
-  );
+  const layout = annotationToolLayout(ANNOTATION_TOOLS, null, slotted);
   const active = ANNOTATION_TOOLS.find(({ id }) => id === tool);
   if (active && layout.hidden.includes(active)) setSlotted(active);
 
   const shown = layout.slot ? [...layout.visible, layout.slot] : layout.visible;
 
   return (
-    <div className="flex" ref={stripRef}>
+    <div className="flex">
       <Toolbar aria-label={t("annotate-tools")}>
         {/* No `data-editor-tool` marker: the annotation panel hangs from the
           picture, never from a toolbar button. */}
         {shown.map(({ icon: Icon, id, shortcut }) => (
-          <ToolToggle
+          <ToolbarTool
+            aria-label={annotationToolName(id)}
             isDisabled={isDisabled}
             isSelected={tool === id && !isDisabled}
             key={id}
             label={annotationToolLabel(id)}
-            name={annotationToolName(id)}
-            onSelectedChange={(selected) => {
+            onChange={(selected) => {
               onChoose(id, selected);
             }}
             shortcut={shortcut}
           >
             <Icon />
-          </ToolToggle>
+          </ToolbarTool>
         ))}
         {layout.hidden.length > 0 ? (
-          <NativeTooltipTrigger tooltip={t("editor-toolbar-more-tools")}>
+          <TooltipTrigger tooltip={t("editor-toolbar-more-tools")}>
             <IconButton
               aria-label={t("editor-toolbar-more-annotation-tools")}
               className="text-content-fg-secondary"
@@ -133,7 +90,7 @@ export function AnnotationToolStrip({
             >
               <Ellipsis />
             </IconButton>
-          </NativeTooltipTrigger>
+          </TooltipTrigger>
         ) : null}
       </Toolbar>
     </div>

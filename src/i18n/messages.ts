@@ -101,6 +101,7 @@ export type Messages = {
   "annotation-tool-text-name": null;
   "background-color": null;
   "background-color-label": null;
+  "background-colors": null;
   "background-custom": null;
   "background-generator-aurora": null;
   "background-generator-currents": null;
@@ -115,6 +116,13 @@ export type Messages = {
   "background-kind-mesh": null;
   "background-kind-solid": null;
   "background-label": null;
+  "background-palette-bright": null;
+  "background-palette-color": { index: string | number };
+  "background-palette-lock": { index: string | number };
+  "background-palette-mixed": null;
+  "background-palette-muted": null;
+  "background-palette-new": null;
+  "background-palette-shades": null;
   "background-save-preset": null;
   "background-solid-blue": null;
   "background-solid-graphite": null;
@@ -127,12 +135,6 @@ export type Messages = {
   "controls-audio-meter-silent": null;
   "controls-audio-meter-value": { decibels: string | number };
   "controls-copied": null;
-  "controls-dimensions": null;
-  "controls-dimensions-height": null;
-  "controls-dimensions-link": null;
-  "controls-dimensions-reset": null;
-  "controls-dimensions-unlink": null;
-  "controls-dimensions-width": null;
   "controls-document-name": null;
   "controls-key-alt": null;
   "controls-key-backspace": null;
@@ -156,13 +158,8 @@ export type Messages = {
   "controls-key-windows": null;
   "controls-no-content": null;
   "controls-no-items": null;
-  "controls-palette-bright": null;
-  "controls-palette-chaotic": null;
-  "controls-palette-color": { index: string | number };
-  "controls-palette-colors": null;
-  "controls-palette-dull": null;
-  "controls-palette-lock-hint": null;
-  "controls-palette-shades": null;
+  "controls-path-field": { label: string | number; path: string | number };
+  "controls-path-field-choose": null;
   "controls-sidebar-collapse": null;
   "controls-sidebar-expand": null;
   "controls-slider": { label: string | number };
@@ -257,7 +254,6 @@ export type Messages = {
   "editor-lane-spotlight": { number: string | number };
   "editor-lane-text": { number: string | number };
   "editor-layer-actions": null;
-  "editor-logo": null;
   "editor-opening": null;
   "editor-panels-animate": null;
   "editor-panels-annotations-selected": { count: number };
@@ -348,8 +344,10 @@ export type Messages = {
   "editor-panels-follow-face": null;
   "editor-panels-follow-face-finding": null;
   "editor-panels-frame": null;
+  "editor-panels-height": null;
   "editor-panels-image-description": null;
   "editor-panels-inset": null;
+  "editor-panels-keep-aspect-ratio": null;
   "editor-panels-keyboard": null;
   "editor-panels-keyboard-animation": null;
   "editor-panels-keyboard-appearance": null;
@@ -466,6 +464,10 @@ export type Messages = {
   "editor-panels-text-reveal-words": null;
   "editor-panels-text-sample": null;
   "editor-panels-text-shadow": null;
+  "editor-panels-text-size-extra-large": null;
+  "editor-panels-text-size-large": null;
+  "editor-panels-text-size-medium": null;
+  "editor-panels-text-size-small": null;
   "editor-panels-text-template": null;
   "editor-panels-text-template-box": null;
   "editor-panels-text-template-clean": null;
@@ -539,6 +541,7 @@ export type Messages = {
   "editor-panels-vocal-cleanup": null;
   "editor-panels-voice-cleaning": null;
   "editor-panels-volume": null;
+  "editor-panels-width": null;
   "editor-panels-zoom": null;
   "editor-pin-clear-corrections": null;
   "editor-pin-delete-correction": null;
@@ -718,7 +721,6 @@ export type Messages = {
   "permissions-camera-description": null;
   "permissions-enable-manually": null;
   "permissions-grant": null;
-  "permissions-logo": null;
   "permissions-microphone": null;
   "permissions-microphone-description": null;
   "permissions-open-settings": null;
@@ -758,7 +760,6 @@ export type Messages = {
   "project-browser-kind-screenshot": null;
   "project-browser-location-actions": null;
   "project-browser-locations": null;
-  "project-browser-logo": null;
   "project-browser-more-actions": { title: string | number };
   "project-browser-move-to": null;
   "project-browser-move-to-trash": { platform: string | number };
@@ -924,7 +925,6 @@ export type Messages = {
   "settings-include-app": null;
   "settings-include-app-description": null;
   "settings-launch-at-login": null;
-  "settings-logo": null;
   "settings-moment-color": { moment: string | number };
   "settings-moment-confirm-remove": { moment: string | number };
   "settings-moment-name": { moment: string | number };
@@ -1098,7 +1098,6 @@ export type Messages = {
   "updates-failed": { error: string | number };
   "updates-install": null;
   "updates-installing": null;
-  "updates-logo": null;
   "updates-release-notes": null;
   "updates-release-notes-fallback": null;
   "updates-released": { date: string | number };

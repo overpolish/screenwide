@@ -6,6 +6,10 @@
 
 editor-panels-nothing-selected = Nothing selected
 editor-panels-size = Size
+# The two fields of a size, and the toggle between them that keeps their proportions when one is changed.
+editor-panels-width = Width
+editor-panels-height = Height
+editor-panels-keep-aspect-ratio = Keep aspect ratio
 editor-panels-position = Position
 # The nine places on the picture an overlay such as captions or shortcuts can sit, each the accessible name of its cell in the Position grid.
 editor-panels-position-top-left = Top left
@@ -238,6 +242,11 @@ editor-panels-text-weight-black-italic = Black italic
 editor-panels-text-accent = Accent
 editor-panels-text-accent-weight = Accent weight
 editor-panels-captions-accent-size = Accent size
+# The steps of a text size slider, as a screen reader names them; Medium is the template's own size.
+editor-panels-text-size-small = Small
+editor-panels-text-size-medium = Medium
+editor-panels-text-size-large = Large
+editor-panels-text-size-extra-large = Extra large
 # Which colour of the caption the colour grid changes, and each choice: the type, the word being said, the accent, the outline around the type, and the box behind the lines.
 editor-panels-text-color = Colour
 editor-panels-text-color-text = Text

@@ -12,11 +12,13 @@ import { tv } from "../../lib/variants";
  * The frame is a control's height and corners, so it lines up with buttons
  * in a row. Its material says how it is used: sunken for a field typed into,
  * the counterpart of a button's raised one; raised for a trigger pressed to
- * choose. A sunken field shows the focus ring whenever its input has focus,
- * by click as by keyboard, as text fields on both platforms mark the one
- * being typed into, through a plain `focus-within` since the frame is a bare
- * div; a raised one leaves focus to its trigger. An invalid field takes the
- * ring in the error colour.
+ * choose; quiet for a value that reads as text beside the control it belongs
+ * to, such as a slider's, and shows its sunken frame only under the pointer
+ * or while typed into. A sunken or quiet field shows the focus ring whenever
+ * its input has focus, by click as by keyboard, as text fields on both
+ * platforms mark the one being typed into, through a plain `focus-within`
+ * since the frame is a bare div; a raised one leaves focus to its trigger.
+ * An invalid field takes the ring in the error colour.
  */
 export const fieldVariants = tv({
   defaultVariants: { material: "sunken" },
@@ -41,6 +43,12 @@ export const fieldVariants = tv({
   variants: {
     centered: { true: { input: "text-center" } },
     material: {
+      quiet: {
+        field:
+          "data-[hovered]:control-sunken focus-within:ring-3 focus-within:control-sunken",
+        input: "text-fg-secondary focus:text-fg",
+        inputWrapper: "px-inset-sm",
+      },
       raised: { field: "control-raised" },
       sunken: { field: "control-sunken focus-within:ring-3" },
     },

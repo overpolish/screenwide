@@ -3,62 +3,47 @@
 
 import { ReactNode } from "react";
 
-import { cn } from "../../lib/styling";
 import { ProgressBar } from "../../primitives/progress-bar/progress-bar";
 
-export type ProgressPanelProps = {
-  /** What is happening, in one short phrase. */
+// The label and status share a line above the bar; actions sit in a row
+// below, at the end. The feature that is waiting supplies every phrase.
+
+type ProgressPanelProps = {
   label: string;
-  /** Percent complete, or `null` when the work cannot report how far it is. */
+  /** Percent complete; `null` while it cannot tell. */
   progress: number | null;
-  /** Offered at the end of the bar row, typically a single button. */
-  action?: ReactNode;
-  /** The accessible name of the bar, when the label is too terse to serve. */
+  actions?: ReactNode;
+  /** The bar's accessible name; `label` when left out. */
   progressLabel?: string;
-  /** A line under the bar: an estimate, a shortcut hint. */
-  secondary?: ReactNode;
+  status?: ReactNode;
 };
 
-/**
- * The Finder copy-dialog layout: the label above, the bar beneath with the
- * action at the end of its row, and the estimate below.
- *
- * Presentational: it neither owns the work nor decides how to describe it, so
- * every phrase, estimate and action arrives from the feature that is waiting.
- */
 export function ProgressPanel({
-  action,
+  actions,
   label,
   progress,
   progressLabel,
-  secondary,
+  status,
 }: ProgressPanelProps) {
   return (
-    // One control gap between each row: the secondary line can carry a
-    // keycap, which has no leading of its own to space it from the bar.
-    <div className="flex w-full flex-col gap-control">
-      <span className="text-body text-fg">{label}</span>
-      {/* The action trails the bar, where Finder and Safari put the stop. It
-          is taller than the bar, so its overhang is pulled in and the gaps
-          above and below measure from the bar rather than the button. */}
-      <div
-        className={cn(
-          "flex items-center gap-control-inset",
-          action != null && "-my-2.25",
+    <div className="flex w-full flex-col gap-inline">
+      <div className="flex items-center justify-between gap-separate">
+        <span className="text-label text-fg">{label}</span>
+        {status === undefined ? null : (
+          <span className="text-caption text-fg-tertiary tabular-nums">
+            {status}
+          </span>
         )}
-      >
-        <ProgressBar
-          aria-label={progressLabel ?? label}
-          className="flex-1"
-          isIndeterminate={progress === null}
-          value={progress ?? undefined}
-        />
-        {action}
       </div>
-      {secondary === undefined ? null : (
-        <span className="text-body text-fg-secondary tabular-nums">
-          {secondary}
-        </span>
+      <ProgressBar
+        aria-label={progressLabel ?? label}
+        isIndeterminate={progress === null}
+        value={progress ?? undefined}
+      />
+      {actions === undefined ? null : (
+        <div className="mt-inline flex items-center justify-end gap-inline">
+          {actions}
+        </div>
       )}
     </div>
   );

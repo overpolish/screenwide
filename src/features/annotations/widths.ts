@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { stepIndex } from "../../composites/step-slider/step-index";
+import { stepIndex } from "../../primitives/slider/step-index";
 
 import type { AnnotationSizeMeasure } from "./annotation-text";
 import type { AnnotationKind, AnnotationRedaction } from "./types";

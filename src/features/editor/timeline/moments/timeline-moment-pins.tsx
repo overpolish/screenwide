@@ -3,9 +3,9 @@
 
 import { Button } from "react-aria-components";
 
-import { NativeTooltipTrigger } from "../../../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
+import { TooltipTrigger } from "../../../../primitives/tooltip/tooltip-trigger";
 import { formatDuration } from "../../duration";
 import { RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import { SeekHandler } from "../timeline-seek";
@@ -96,7 +96,7 @@ export function TimelineMomentPins({
             key={moment.index}
             style={{ left: `${(left * 100).toString()}%` }}
           >
-            <NativeTooltipTrigger tooltip={label}>
+            <TooltipTrigger tooltip={label}>
               <Button
                 aria-label={
                   moment.note
@@ -135,7 +135,7 @@ export function TimelineMomentPins({
                   />
                 ) : null}
               </Button>
-            </NativeTooltipTrigger>
+            </TooltipTrigger>
           </div>
         );
       })}

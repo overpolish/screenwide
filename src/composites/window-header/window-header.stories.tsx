@@ -1,128 +1,80 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Crop, MousePointer2, ScanSquare } from "lucide-react";
+import { ClipboardCopy, Upload } from "lucide-react";
 import { useState } from "react";
+import { fn } from "storybook/test";
 
-import logoUrl from "../../assets/screenwide-mark.svg";
-import { IconToggleButton } from "../../primitives/button/icon-button";
-import { Toolbar } from "../../primitives/toolbar/toolbar";
+import { Button } from "../../primitives/button/button";
 import { featureStage } from "../../storybook/feature-story-stage";
 
 import { WindowHeader } from "./window-header";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-const mark = (
-  <img
-    alt="Screenwide"
-    className="brightness-0 dark:invert"
-    draggable={false}
-    src={logoUrl}
-  />
-);
-
 const meta = {
+  argTypes: {
+    platform: {
+      control: "inline-radio",
+      options: ["macos", "windows"],
+    },
+  },
   args: {
-    onClose: () => undefined,
-    title: "Open link",
+    onClose: fn(),
+    onMinimize: fn(),
+    onToggleMaximize: fn(),
+    platform: "macos",
+    title: "Settings",
   },
   component: WindowHeader,
-  decorators: [
-    (Story) => (
-      <div className="window-surface text-content-fg">
-        <Story />
-      </div>
-    ),
-    featureStage({ height: 52, width: 672 }),
-  ],
-  parameters: { layout: "fullscreen" },
+  decorators: [featureStage({ height: 48, width: 720 })],
+  parameters: {
+    controls: {
+      exclude: [
+        "actions",
+        "onClose",
+        "onMinimize",
+        "onTitleChange",
+        "onToggleMaximize",
+      ],
+    },
+    layout: "fullscreen",
+  },
   title: "Composites/Window Header",
 } satisfies Meta<typeof WindowHeader>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-  args: { variant: "compact" },
-};
+export const Default: Story = {};
 
-export const Display: Story = {
+// A window toolbar's commands carry a leading icon; the one thing the window
+// is for is primary.
+export const WithActions: Story = {
   args: {
-    leadingSection: mark,
-    title: "Permissions",
-    variant: "display",
+    actions: (
+      <>
+        <Button variant="ghost">
+          <ClipboardCopy />
+          Copy
+        </Button>
+        <Button color="primary">
+          <Upload />
+          Export
+        </Button>
+      </>
+    ),
+    title: "Screenwide 2026-08-08 at 14.32.05",
   },
 };
-
-/** macOS: the OS draws the traffic lights over the inset the header leaves. */
-export const MacOS: Story = {
-  args: {
-    leadingSection: mark,
-    onMinimize: () => undefined,
-    onToggleMaximize: () => undefined,
-    platform: "macos",
-    title: "Settings",
-  },
-};
-
-/** Windows: the header draws the caption buttons and keeps no inset. */
-export const Windows: Story = {
-  args: {
-    leadingSection: mark,
-    onMinimize: () => undefined,
-    onToggleMaximize: () => undefined,
-    platform: "windows",
-    title: "Settings",
-  },
-};
-
-function EditableTitlePreview() {
-  const [title, setTitle] = useState("Untitled recording");
-
-  return (
-    <WindowHeader
-      leadingSection={mark}
-      onClose={() => undefined}
-      onTitleChange={setTitle}
-      title={title}
-    />
-  );
-}
 
 export const EditableTitle: Story = {
-  render: () => <EditableTitlePreview />,
-};
-
-export const LongTitle: Story = {
-  args: {
-    leadingSection: mark,
-    title:
-      "Screenwide product walkthrough - recording and screenshot editing - September 2026",
+  render: function Render(args) {
+    const [title, setTitle] = useState("Untitled recording");
+    return <WindowHeader {...args} onTitleChange={setTitle} title={title} />;
   },
 };
 
-/**
- * A unified toolbar: the tools take the window's centre and the title clips
- * against them rather than pushing them off it.
- */
-export const WithCenter: Story = {
-  args: {
-    center: (
-      <Toolbar aria-label="View tools">
-        <IconToggleButton aria-label="Select" isSelected>
-          <MousePointer2 />
-        </IconToggleButton>
-        <IconToggleButton aria-label="Resize canvas">
-          <ScanSquare />
-        </IconToggleButton>
-        <IconToggleButton aria-label="Crop">
-          <Crop />
-        </IconToggleButton>
-      </Toolbar>
-    ),
-    leadingSection: mark,
-    title:
-      "Screenwide product walkthrough - recording and screenshot editing - September 2026",
-  },
+export const Windows: Story = {
+  args: { platform: "windows" },
 };

@@ -4,7 +4,6 @@
 import { Plus } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
-import logoUrl from "../../assets/screenwide-mark.svg";
 import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
@@ -211,14 +210,6 @@ export function SettingsWindow({
                 {t("settings-add-moment")}
               </Button>
             ) : undefined
-          }
-          leadingSection={
-            <img
-              alt={t("settings-logo")}
-              className="brightness-0 dark:invert"
-              draggable={false}
-              src={logoUrl}
-            />
           }
           onClose={() => void hideSettings()}
           onMinimize={() => void minimize()}

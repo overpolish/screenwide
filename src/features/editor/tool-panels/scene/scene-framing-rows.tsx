@@ -49,8 +49,8 @@ export function SceneFramingRows({
               onChange={(value) => {
                 onFramingChange({ zoom: value / 100 });
               }}
-              rightSection="%"
               step={10}
+              unit="%"
               value={Math.round(framing.zoom * 100)}
             />
           </div>
@@ -63,16 +63,12 @@ export function SceneFramingRows({
               <SliderNumberField
                 aria-label={t("editor-panels-pane-radius", { pane: paneName })}
                 className="w-48"
-                formatOptions={{
-                  maximumFractionDigits: 1,
-                  minimumFractionDigits: 1,
-                }}
                 isDisabled={isDisabled}
                 maxValue={50}
                 minValue={0}
                 onChange={onRadiusChange}
-                rightSection="%"
                 step={0.1}
+                unit="%"
                 value={radius}
               />
             </div>

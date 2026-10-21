@@ -3,7 +3,6 @@
 
 ### The editor window: its title bar, tools, preview and menus.
 
-editor-logo = { -app-name }
 editor-opening = Opening the editor
 editor-screenshot-preview = Screenshot preview
 editor-zoom = Zoom

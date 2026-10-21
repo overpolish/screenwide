@@ -3,10 +3,10 @@
 
 import { Dices } from "lucide-react";
 
-import { NativeTooltipTrigger } from "../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../i18n/i18n";
 import { IconButton } from "../../primitives/button/icon-button";
 import { Switch } from "../../primitives/switch/switch";
+import { TooltipTrigger } from "../../primitives/tooltip/tooltip-trigger";
 
 /**
  * A switch for something drawn from a seed: a hand-drawn stroke, an image's
@@ -30,7 +30,7 @@ export function AnnotationShuffleSwitch({
   return (
     <div className="flex items-center gap-control">
       {isSelected && onRandomise ? (
-        <NativeTooltipTrigger tooltip={{ label: t("annotation-randomise") }}>
+        <TooltipTrigger tooltip={{ label: t("annotation-randomise") }}>
           <IconButton
             aria-label={t("annotation-randomise")}
             isDisabled={isDisabled}
@@ -38,7 +38,7 @@ export function AnnotationShuffleSwitch({
           >
             <Dices />
           </IconButton>
-        </NativeTooltipTrigger>
+        </TooltipTrigger>
       ) : null}
       <Switch
         aria-label={label}

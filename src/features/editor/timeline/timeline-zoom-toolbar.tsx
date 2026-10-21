@@ -13,10 +13,10 @@ import {
 import { RefObject } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
-import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
-import { ToolToggle } from "../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../i18n/i18n";
 import { IconButton } from "../../../primitives/button/icon-button";
+import { ToolbarTool } from "../../../primitives/toolbar/toolbar-tool";
+import { TooltipTrigger } from "../../../primitives/tooltip/tooltip-trigger";
 
 import { isRecordingTimelineReordered } from "./editing/recording-timeline-move";
 import { TimelineBladeController } from "./editing/timeline-blade";
@@ -57,36 +57,36 @@ export function TimelineZoomToolbar({
 }) {
   return (
     <div className="flex h-control-height w-timeline-gutter shrink-0 items-center gap-control">
-      <ToolToggle
+      <ToolbarTool
+        aria-label={t("editor-timeline-blade-name")}
         isSelected={isBladeActive}
         label={t("editor-timeline-blade")}
-        name={t("editor-timeline-blade-name")}
-        onSelectedChange={onBladeActiveChange}
+        onChange={onBladeActiveChange}
         shortcut="B"
       >
         <Scissors />
-      </ToolToggle>
-      <ToolToggle
+      </ToolbarTool>
+      <ToolbarTool
+        aria-label={t("editor-timeline-range-name")}
         isSelected={isRangeActive}
         label={t("editor-timeline-range")}
-        name={t("editor-timeline-range-name")}
-        onSelectedChange={onRangeActiveChange}
+        onChange={onRangeActiveChange}
         shortcut="Shift+R"
       >
         <SquareDashed />
-      </ToolToggle>
-      <ToolToggle
+      </ToolbarTool>
+      <ToolbarTool
+        aria-label={t("editor-timeline-snap-name")}
         isSelected={isSnapActive}
         label={t("editor-timeline-snap")}
-        name={t("editor-timeline-snap-name")}
-        onSelectedChange={onSnapActiveChange}
+        onChange={onSnapActiveChange}
         shortcut="Shift+S"
       >
         <Magnet />
-      </ToolToggle>
+      </ToolbarTool>
       {/* The arrow keeps pointing right in every language: the timeline runs
           left to right in all of them. */}
-      <NativeTooltipTrigger tooltip={t("editor-timeline-restore-order")}>
+      <TooltipTrigger tooltip={t("editor-timeline-restore-order")}>
         <ConfirmActionButton
           confirmLabel={t("editor-timeline-restore-order-confirm")}
           icon={<LayoutArrowRight />}
@@ -95,9 +95,9 @@ export function TimelineZoomToolbar({
           onConfirm={onRestoreOrder}
           variant="ghost"
         />
-      </NativeTooltipTrigger>
+      </TooltipTrigger>
       <div className="ml-auto flex items-center gap-control">
-        <NativeTooltipTrigger tooltip={t("editor-timeline-zoom-out")}>
+        <TooltipTrigger tooltip={t("editor-timeline-zoom-out")}>
           <IconButton
             aria-label={t("editor-timeline-zoom-out-label")}
             isDisabled={viewport.zoom <= 1}
@@ -107,8 +107,8 @@ export function TimelineZoomToolbar({
           >
             <ZoomOut />
           </IconButton>
-        </NativeTooltipTrigger>
-        <NativeTooltipTrigger
+        </TooltipTrigger>
+        <TooltipTrigger
           tooltip={{ label: t("editor-timeline-fit"), shortcut: "Shift+KeyZ" }}
         >
           <IconButton
@@ -119,8 +119,8 @@ export function TimelineZoomToolbar({
           >
             <Maximize2 />
           </IconButton>
-        </NativeTooltipTrigger>
-        <NativeTooltipTrigger tooltip={t("editor-timeline-zoom-in")}>
+        </TooltipTrigger>
+        <TooltipTrigger tooltip={t("editor-timeline-zoom-in")}>
           <IconButton
             aria-label={t("editor-timeline-zoom-in-label")}
             isDisabled={viewport.zoom >= TIMELINE_MAX_ZOOM}
@@ -130,7 +130,7 @@ export function TimelineZoomToolbar({
           >
             <ZoomIn />
           </IconButton>
-        </NativeTooltipTrigger>
+        </TooltipTrigger>
       </div>
     </div>
   );

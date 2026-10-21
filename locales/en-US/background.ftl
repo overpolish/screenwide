@@ -14,6 +14,20 @@ background-color = Colour
 background-color-label = Background colour
 background-save-preset = Save Preset
 
+## A mesh's colours: each can be picked or locked, and the rest made again in a mood
+
+background-colors = Colours
+# $index counts the colours from 1.
+background-palette-color = Colour { $index }
+# A small toggle on each colour's corner; while it is on, a new palette keeps that colour. $index counts the colours from 1.
+background-palette-lock = Lock colour { $index }
+# Names the row of mood buttons, each of which makes a new palette in its mood.
+background-palette-new = New palette
+background-palette-bright = Bright
+background-palette-muted = Muted
+background-palette-shades = Shades
+background-palette-mixed = Mixed
+
 ## Gradient styles the app paints
 
 background-generator-mesh = Mesh

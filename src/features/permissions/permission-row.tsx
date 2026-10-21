@@ -5,11 +5,11 @@ import { Check } from "lucide-react";
 import { ReactNode } from "react";
 
 import { ControlRow } from "../../composites/control-row/control-row";
-import { NativeTooltipTrigger } from "../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 import { Badge } from "../../primitives/badge/badge";
 import { Button } from "../../primitives/button/button";
+import { TooltipTrigger } from "../../primitives/tooltip/tooltip-trigger";
 
 import { PermissionKind, PermissionStatus } from "./types";
 
@@ -62,7 +62,7 @@ export function PermissionRow({
             <Check className="size-icon text-success" />
           </div>
         ) : (
-          <NativeTooltipTrigger
+          <TooltipTrigger
             isDisabled={status.canRequest}
             tooltip={t("permissions-enable-manually")}
           >
@@ -71,7 +71,7 @@ export function PermissionRow({
                 ? t("permissions-grant")
                 : t("permissions-open-settings")}
             </Button>
-          </NativeTooltipTrigger>
+          </TooltipTrigger>
         )
       }
     </ControlRow>

@@ -4,8 +4,8 @@
 import { Lock, TriangleAlert } from "lucide-react";
 import { ReactNode } from "react";
 
-import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
 import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
+import { TooltipTrigger } from "../../../primitives/tooltip/tooltip-trigger";
 
 /** An input's corner badge: a warning when it cannot be recorded, which wins
  * over the lock of a missing permission. `warning` is set only while the
@@ -27,7 +27,7 @@ export const warnedToggle = (warning: string | undefined) =>
   warning === undefined
     ? undefined
     : (toggle: ReactNode) => (
-        <NativeTooltipTrigger tooltip={warning}>{toggle}</NativeTooltipTrigger>
+        <TooltipTrigger tooltip={warning}>{toggle}</TooltipTrigger>
       );
 
 /**

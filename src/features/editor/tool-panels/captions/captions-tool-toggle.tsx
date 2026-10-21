@@ -4,8 +4,8 @@
 import { Captions } from "lucide-react";
 import { useRef } from "react";
 
-import { ToolToggle } from "../../../../composites/tool-toggle/tool-toggle";
 import { t } from "../../../../i18n/i18n";
+import { ToolbarTool } from "../../../../primitives/toolbar/toolbar-tool";
 import { useToolPanel } from "../use-tool-panel";
 
 /**
@@ -27,11 +27,11 @@ export function CaptionsToolToggle({
 
   return (
     <span className="inline-flex" data-editor-tool="captions" ref={triggerRef}>
-      <ToolToggle
+      <ToolbarTool
+        aria-label={t("editor-panels-captions-name")}
         isSelected={openTool === "captions"}
         label={t("editor-panels-captions")}
-        name={t("editor-panels-captions-name")}
-        onSelectedChange={(selected) => {
+        onChange={(selected) => {
           if (!selected) {
             onDismiss();
             return;
@@ -43,7 +43,7 @@ export function CaptionsToolToggle({
         shortcut="U"
       >
         <Captions />
-      </ToolToggle>
+      </ToolbarTool>
     </span>
   );
 }
