@@ -1,31 +1,30 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { ProgressBar } from "./progress-bar";
 
+import type { Meta, StoryObj } from "@storybook/react-vite";
+
 const meta = {
   argTypes: {
-    isIndeterminate: { control: "boolean" },
+    isIndeterminate: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
     value: { control: { max: 100, min: 0, type: "range" } },
   },
   args: {
-    "aria-label": "Example progress",
+    "aria-label": "Progress",
+    className: "w-64",
     isIndeterminate: false,
     value: 62,
   },
   component: ProgressBar,
-  decorators: [
-    (Story) => (
-      <div className="w-80">
-        <Story />
-      </div>
-    ),
-  ],
   parameters: {
     controls: { include: ["isIndeterminate", "value"] },
-    layout: "padded",
+    layout: "centered",
   },
   title: "Primitives/Progress Bar",
 } satisfies Meta<typeof ProgressBar>;
@@ -33,9 +32,18 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Determinate: Story = {};
+export const Default: Story = {};
 
-/** Work that cannot report how far it has come sweeps instead. */
-export const Indeterminate: Story = {
-  args: { isIndeterminate: true },
+export const States: Story = {
+  parameters: { controls: { disable: true } },
+  render: (args) => (
+    <StoryGrid>
+      <StoryGridRow label="determinate">
+        <ProgressBar {...args} isIndeterminate={false} />
+      </StoryGridRow>
+      <StoryGridRow label="indeterminate">
+        <ProgressBar {...args} isIndeterminate />
+      </StoryGridRow>
+    </StoryGrid>
+  ),
 };

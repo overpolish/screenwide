@@ -9,9 +9,12 @@ import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import { cn } from "../../lib/styling";
 
-import { getEdgeOpacities } from "./scroll-area-edges";
+import { getEdgeFades } from "./scroll-area-edges";
 
 import type { OverlayScrollbars } from "overlayscrollbars";
+
+/** How far the content fades at an end with more beyond it, in px. */
+const FADE_LENGTH = 16;
 
 type ScrollAreaProps = {
   children?: ReactNode;
@@ -20,9 +23,7 @@ type ScrollAreaProps = {
   /** The edge a horizontal scroll starts from follows this direction. `auto`
    * takes it from the content's own letters, for a strip that holds a name. */
   dir?: "auto" | "ltr" | "rtl";
-  /** Classes for the edge overlays only, e.g. a radius the content must not get. */
-  edgeClassName?: string;
-  edgeEffect?: "shadow" | "none";
+  edgeEffect?: "fade" | "none";
   /** Called once the viewport is set up and scrolls, which happens a moment
    * after mounting: what is to be scrolled into view first waits for it. */
   onInitialized?: (viewport: HTMLElement) => void;
@@ -33,13 +34,17 @@ type ScrollAreaProps = {
   scrollbarHidden?: boolean;
 };
 
+// Where there is more to scroll, the content itself fades out at that end, a
+// mask on the viewport rather than a band painted over it, so it reads the
+// same on any background: a window, a field, a native panel's material. The
+// fade grows with the first stretch scrolled from an end, and a horizontal
+// strip's ends turn with its writing direction.
 export function ScrollArea({
   children,
   className,
   constrainHeight,
   dir,
-  edgeClassName,
-  edgeEffect = "shadow",
+  edgeEffect = "fade",
   onInitialized,
   orientation = "vertical",
   rootClassName,
@@ -47,24 +52,30 @@ export function ScrollArea({
   scrollbarHidden = false,
 }: ScrollAreaProps) {
   const scrollRef = useRef<OverlayScrollbarsComponentRef>(null);
-  const startRef = useRef<HTMLDivElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const horizontal = orientation === "horizontal";
 
   const updateEdges = useCallback(
     (instance: OverlayScrollbars) => {
       const { viewport } = instance.elements();
-      if (!startRef.current || !endRef.current) return;
       const position = horizontal ? viewport.scrollLeft : viewport.scrollTop;
       const maximum = horizontal
         ? viewport.scrollWidth - viewport.clientWidth
         : viewport.scrollHeight - viewport.clientHeight;
       const rtl = horizontal && getComputedStyle(viewport).direction === "rtl";
-      const opacity = getEdgeOpacities(rtl ? -position : position, maximum, {
+      const fade = getEdgeFades(rtl ? -position : position, maximum, {
         effect: edgeEffect,
+        length: FADE_LENGTH,
       });
-      startRef.current.style.setProperty("opacity", String(opacity.start));
-      endRef.current.style.setProperty("opacity", String(opacity.end));
+      const mask =
+        fade.start === 0 && fade.end === 0
+          ? ""
+          : `linear-gradient(${
+              horizontal ? (rtl ? "to left" : "to right") : "to bottom"
+            }, transparent 0, #000 ${String(fade.start)}px, #000 calc(100% - ${String(
+              fade.end,
+            )}px), transparent 100%)`;
+      viewport.style.setProperty("mask-image", mask);
+      viewport.style.setProperty("-webkit-mask-image", mask);
     },
     [edgeEffect, horizontal],
   );
@@ -74,39 +85,6 @@ export function ScrollArea({
     const instance = scrollRef.current?.osInstance();
     if (instance) updateEdges(instance);
   }, [updateEdges]);
-
-  const edge = (side: "start" | "end") => {
-    const start = side === "start";
-    return (
-      <div
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute z-100 rounded-[inherit]",
-          edgeClassName,
-          horizontal ? "inset-y-0" : "inset-x-0",
-          horizontal
-            ? start
-              ? "start-0"
-              : "end-0"
-            : start
-              ? "top-0"
-              : "bottom-0",
-          "from-shadow to-transparent opacity-0",
-          horizontal ? "w-control-inset" : "h-control-inset",
-          // Gradients have no start and end, so a horizontal edge turns with
-          // the writing direction.
-          horizontal
-            ? start
-              ? "bg-gradient-to-r rtl:bg-gradient-to-l"
-              : "bg-gradient-to-l rtl:bg-gradient-to-r"
-            : start
-              ? "bg-gradient-to-b"
-              : "bg-gradient-to-t",
-        )}
-        ref={start ? startRef : endRef}
-      />
-    );
-  };
 
   return (
     <div
@@ -141,8 +119,6 @@ export function ScrollArea({
           {children}
         </div>
       </OverlayScrollbarsComponent>
-      {edgeEffect === "shadow" && edge("start")}
-      {edgeEffect === "shadow" && edge("end")}
     </div>
   );
 }

@@ -16,14 +16,16 @@ import { cn } from "../../lib/styling";
 /** One sweep of the indeterminate segment, in seconds. */
 const SWEEP_DURATION = 1.25;
 
+// A 6px capsule on the fill, a height only this bar needs, with the value in
+// the primary colour, as all progress is. A value eases to each new figure;
+// work that cannot say how far it has come sweeps a third-length segment
+// across instead.
+const fillClassName = "absolute inset-y-0 rounded-full bg-primary";
+
 type ProgressBarProps = Omit<AriaProgressBarProps, "children" | "className"> & {
   className?: string;
 };
 
-/**
- * The native linear progress indicator: a capsule track with an accent fill,
- * matching an NSProgressIndicator bar and a WinUI ProgressBar.
- */
 export function ProgressBar({
   className,
   isIndeterminate = false,
@@ -36,12 +38,8 @@ export function ProgressBar({
 
   return (
     <AriaProgressBar
-      // Fluent's bar is a 4px accent value on a hairline track in the strong
-      // fill, so on Windows the track is a centred 1px line rather than a
-      // capsule; the value keeps its capsule.
       className={cn(
         "relative h-1.5 w-full overflow-hidden rounded-full bg-fill",
-        "windows:h-1 windows:bg-transparent windows:bg-[linear-gradient(var(--color-control-strong-fill),var(--color-control-strong-fill))] windows:bg-[length:100%_1px] windows:bg-center windows:bg-no-repeat",
         className,
       )}
       isIndeterminate={isIndeterminate}
@@ -49,14 +47,16 @@ export function ProgressBar({
     >
       {({ percentage }) =>
         isIndeterminate ? (
-          // The segment crosses the track and re-enters from the left; with
+          // The segment crosses the track and re-enters from the start; with
           // reduced motion it rests at the start and breathes in place.
           prefersReducedMotion ? (
-            <span className="absolute inset-y-0 start-0 w-1/3 animate-pulse rounded-full bg-primary-surface" />
+            <span
+              className={cn(fillClassName, "start-0 w-1/3 animate-pulse")}
+            />
           ) : (
             <motion.span
               animate={{ left: ["-33%", "100%"] }}
-              className="absolute inset-y-0 w-1/3 rounded-full bg-primary-surface"
+              className={cn(fillClassName, "w-1/3")}
               transition={{
                 duration: SWEEP_DURATION,
                 ease: "linear",
@@ -67,7 +67,7 @@ export function ProgressBar({
         ) : (
           <motion.span
             animate={{ width: `${String(percentage ?? 0)}%` }}
-            className="absolute inset-y-0 start-0 rounded-full bg-primary-surface"
+            className={cn(fillClassName, "start-0")}
             initial={false}
             transition={transition}
           />

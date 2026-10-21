@@ -86,7 +86,7 @@ export function TimelineLanesFrame({
       <div className="relative flex min-w-0 grow flex-col gap-control">
         <div className="shrink-0 pl-window-inset">{ruler}</div>
         <div className="min-h-0 grow" ref={viewportRef}>
-          <ScrollArea edgeEffect="shadow" scrollbarHidden>
+          <ScrollArea scrollbarHidden>
             {/* The strip's bottom inset travels with the rows, so the last
                 lane clears the band's edge once it is scrolled to. */}
             <div

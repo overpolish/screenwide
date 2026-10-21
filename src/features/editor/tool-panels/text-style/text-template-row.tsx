@@ -136,7 +136,6 @@ export function TextTemplateRow({
           <Select
             aria-labelledby={controlProps["aria-labelledby"]}
             className="min-w-0 flex-1"
-            clearable={false}
             isDisabled={isDisabled}
             isOpen={picker.isOpen}
             items={[chosen]}
@@ -156,7 +155,6 @@ export function TextTemplateRow({
                 </span>
               ) : null
             }
-            standalone
             triggerRef={triggerRef}
             value={chosen.id}
           >

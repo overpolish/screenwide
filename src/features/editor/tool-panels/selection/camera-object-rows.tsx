@@ -111,7 +111,6 @@ function PickedObjects({ change, isLocked, objects }: RowsProps) {
           >
             {picks.length > 0 ? (
               <ScrollArea
-                edgeClassName="rounded-control"
                 orientation="horizontal"
                 rootClassName="min-w-0"
                 scrollbarHidden

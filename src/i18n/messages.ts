@@ -126,7 +126,6 @@ export type Messages = {
   "background-type-label": null;
   "controls-audio-meter-silent": null;
   "controls-audio-meter-value": { decibels: string | number };
-  "controls-clear-selection": null;
   "controls-dimensions": null;
   "controls-dimensions-height": null;
   "controls-dimensions-link": null;

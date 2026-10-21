@@ -259,12 +259,12 @@ html[data-platform="windows"] .glide-app-icon-windows-boost {
   --os-track-border-radius: 10px;
   --os-handle-interactive-area-offset: 4px;
   --os-handle-border-radius: 10px;
-  /* Native overlay scrollbars: a thumb at the secondary label colour and a
-     faint track that appears only while the pointer is over it. */
+  /* An overlay scrollbar: a thumb a step behind secondary text, coming up
+     to it under the pointer, over a faint track that shows only then. */
   --os-track-bg: transparent;
-  --os-track-bg-hover: var(--color-recess);
-  --os-track-bg-active: var(--color-recess);
-  --os-handle-bg: var(--color-fg-secondary);
-  --os-handle-bg-hover: var(--color-fg);
-  --os-handle-bg-active: var(--color-fg);
+  --os-track-bg-hover: var(--color-fill);
+  --os-track-bg-active: var(--color-fill);
+  --os-handle-bg: var(--color-fg-tertiary);
+  --os-handle-bg-hover: var(--color-fg-secondary);
+  --os-handle-bg-active: var(--color-fg-secondary);
 }

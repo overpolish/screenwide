@@ -159,7 +159,6 @@ export function PopupSelect({
         aria-label={ariaLabelledBy ? undefined : label}
         aria-labelledby={ariaLabelledBy}
         className="w-full"
-        clearable={false}
         isDisabled={isDisabled}
         isOpen={active?.id === id}
         items={selectedItem ? [selectedItem] : []}
@@ -186,7 +185,6 @@ export function PopupSelect({
             </span>
           ) : null
         }
-        standalone
         triggerRef={triggerRef}
         value={selectedId}
       >

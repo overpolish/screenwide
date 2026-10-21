@@ -3,48 +3,29 @@
 
 import { describe, expect, it } from "vitest";
 
-import { getEdgeOpacities } from "./scroll-area-edges";
+import { getEdgeFades } from "./scroll-area-edges";
+
+const fade = { effect: "fade", length: 16 } as const;
 
 describe("scroll area edges", () => {
-  it("hides effects without overflow or when disabled", () => {
-    expect(getEdgeOpacities(0, 0, { effect: "shadow" })).toEqual({
-      end: 0,
-      start: 0,
-    });
-    expect(getEdgeOpacities(20, 100, { effect: "none" })).toEqual({
+  it("fades nothing without overflow or when turned off", () => {
+    expect(getEdgeFades(0, 0, fade)).toEqual({ end: 0, start: 0 });
+    expect(getEdgeFades(20, 100, { effect: "none", length: 16 })).toEqual({
       end: 0,
       start: 0,
     });
   });
-  it("preserves the default shadow fade", () => {
-    expect(getEdgeOpacities(25, 100, { effect: "shadow" })).toEqual({
-      end: 0.75,
-      start: 0.25,
-    });
+  it("fades only the ends with more beyond them", () => {
+    expect(getEdgeFades(0, 100, fade)).toEqual({ end: 16, start: 0 });
+    expect(getEdgeFades(50, 100, fade)).toEqual({ end: 16, start: 16 });
+    expect(getEdgeFades(100, 100, fade)).toEqual({ end: 0, start: 16 });
   });
-  it("hides the shadow at the corresponding boundary", () => {
-    expect(getEdgeOpacities(0, 100, { effect: "shadow" })).toEqual({
-      end: 1,
-      start: 0,
-    });
-    expect(getEdgeOpacities(50, 100, { effect: "shadow" })).toEqual({
-      end: 0.5,
-      start: 0.5,
-    });
-    expect(getEdgeOpacities(100, 100, { effect: "shadow" })).toEqual({
-      end: 0,
-      start: 1,
-    });
-    expect(getEdgeOpacities(12, 100, { effect: "shadow" }).start).toBe(0.12);
+  it("grows a fade over the first stretch scrolled from its end", () => {
+    expect(getEdgeFades(6, 100, fade)).toEqual({ end: 16, start: 6 });
+    expect(getEdgeFades(96, 100, fade)).toEqual({ end: 4, start: 16 });
   });
-  it("clamps overscroll at both boundaries", () => {
-    expect(getEdgeOpacities(-10, 100, { effect: "shadow" })).toEqual({
-      end: 1,
-      start: 0,
-    });
-    expect(getEdgeOpacities(110, 100, { effect: "shadow" })).toEqual({
-      end: 0,
-      start: 1,
-    });
+  it("clamps overscroll at both ends", () => {
+    expect(getEdgeFades(-10, 100, fade)).toEqual({ end: 16, start: 0 });
+    expect(getEdgeFades(110, 100, fade)).toEqual({ end: 0, start: 16 });
   });
 });

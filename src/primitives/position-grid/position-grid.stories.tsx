@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useState } from "react";
+import { useArgs } from "storybook/preview-api";
+import { fn } from "storybook/test";
 
 import { PositionGrid } from "./position-grid";
 
@@ -19,27 +20,46 @@ const items = [
   { id: "bottom-right", label: "Bottom right" },
 ];
 
-function PositionGridExample({ isDisabled }: { isDisabled?: boolean }) {
-  const [value, setValue] = useState("bottom");
-  return (
-    <PositionGrid
-      isDisabled={isDisabled}
-      items={items}
-      onChange={setValue}
-      value={value}
-    />
-  );
-}
-
 const meta = {
-  component: PositionGridExample,
-  parameters: { layout: "centered" },
+  argTypes: {
+    isDisabled: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+  },
+  args: {
+    isDisabled: false,
+    items,
+    onChange: fn(),
+    value: "bottom",
+  },
+  component: PositionGrid,
+  parameters: {
+    controls: { include: ["isDisabled"] },
+    layout: "centered",
+  },
+  // A press moves the value, so the fill slides there.
+  render: function Render(args) {
+    const [, updateArgs] = useArgs();
+    return (
+      <PositionGrid
+        {...args}
+        onChange={(value) => {
+          args.onChange(value);
+          updateArgs({ value });
+        }}
+      />
+    );
+  },
   title: "Primitives/Position Grid",
-} satisfies Meta<typeof PositionGridExample>;
+} satisfies Meta<typeof PositionGrid<string>>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Disabled: Story = { args: { isDisabled: true } };
+export const Disabled: Story = {
+  args: { isDisabled: true },
+  parameters: { controls: { disable: true } },
+};

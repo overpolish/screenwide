@@ -91,7 +91,6 @@ export function MomentNoteTranscript({
         // Room for the scrollbar, so it never sits over the last word.
         className="pr-control-inset"
         constrainHeight
-        edgeEffect="shadow"
         rootClassName="max-h-32"
       >
         <p className="text-body text-fg select-text">{transcript.text}</p>

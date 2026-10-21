@@ -1,44 +1,32 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Pencil } from "lucide-react";
-import { useRef, useState } from "react";
-import {
-  Button,
-  DialogTrigger,
-  ToggleButtonGroup,
-} from "react-aria-components";
+import { useEffect, useRef } from "react";
 
-import {
-  ANNOTATION_SWATCHES,
-  isAnnotationSwatch,
-  isLight,
-  sameAnnotationColor,
-} from "../../../composites/annotation-style/palette";
-import { BackgroundTile } from "../../../composites/background-picker/background-tile";
+import { ColorButton } from "../../../composites/color-button/color-button";
 import { t } from "../../../i18n/i18n";
-import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
-import {
-  useColorPanel,
-  usesSystemColorPanel,
-} from "../../../primitives/input-fields/use-color-panel";
-import { Popover } from "../../../primitives/popover/popover";
+import { usePopupPanelPicker } from "../../popup-panel/use-popup-panel-picker";
 
 /** The colour as a kind keeps it: `#rrggbb` in lower case, whatever the
  * Colours panel reports. */
 const kindColor = (color: string) => color.slice(0, 7).toLowerCase();
 
-export type KindColorChange = { color: string; customColor?: string };
+/** The colour grid's own size: the palette's row, with its padding. */
+const GRID_SIZE = { height: 120, width: 340 };
+
+/** How long the colour rests before it is kept: a drag in the Colours panel
+ * reports every step, and each is shown at once, but only where it settles
+ * is saved. */
+const SETTLE_MS = 400;
+
+export type KindColorChange = { color: string; customColor?: string | null };
 
 /**
- * A kind's colour as one swatch in its row, opening the palette, then one
- * square of the kind's own. That square is always there: empty until a
- * colour is chosen in it, and from then on showing the last one chosen,
- * which it keeps while a palette colour is in use. Pressing it takes that
- * colour back and opens the Colours panel on it.
- *
- * The Colours panel belongs to the swatch, not to the palette: opening it
- * closes the palette, and the panel's steps still have somewhere to go.
+ * A kind's colour as a swatch in its row, opening the shared colour grid
+ * under it, as every colour in the app is chosen: the palette, the kind's own
+ * colour kept beside it, and Custom for the system's Colours panel. Each
+ * colour tried shows at once; the one it rests on is kept. Keeping a custom
+ * colour makes it the kind's own, and forgetting it clears that.
  */
 export function KindColorPicker({
   color,
@@ -54,130 +42,67 @@ export function KindColorPicker({
   name: string;
   /** A colour to keep. */
   onChange: (change: KindColorChange) => void;
-  /** A step of a drag in the Colours panel, shown until the drag settles. */
+  /** A colour being tried, shown until it settles. */
   onPreview: (change: KindColorChange) => void;
   isDisabled?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const systemPanel = usesSystemColorPanel();
-  const colorPanel = useColorPanel({
-    onChange: (next) => {
-      onPreview({ color: kindColor(next), customColor: kindColor(next) });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const settleRef = useRef<{
+    change: KindColorChange;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const keep = () => {
+    const pending = settleRef.current;
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    settleRef.current = null;
+    onChangeRef.current(pending.change);
+  };
+  // A colour still settling when the row goes is kept rather than lost.
+  useEffect(() => keep, []);
+
+  const label = t("settings-moment-color", { moment: name });
+  const picker = usePopupPanelPicker({
+    content: {
+      kind: "colors",
+      savedColors: customColor ? [customColor] : [],
+      value: color,
     },
-    onClose: (settled) => {
-      if (settled)
-        onChange({
-          color: kindColor(settled),
-          customColor: kindColor(settled),
-        });
+    id: `moment-kind-color:${name}`,
+    label,
+    onAction: (action, value) => {
+      onChange({
+        color,
+        customColor: action === "save" ? kindColor(value) : null,
+      });
+    },
+    onPick: (value) => {
+      const change = { color: kindColor(value) };
+      onPreview(change);
+      if (settleRef.current) clearTimeout(settleRef.current.timer);
+      settleRef.current = { change, timer: setTimeout(keep, SETTLE_MS) };
     },
   });
-  // The input reports a blur however it was left; only one that picked a
-  // colour has anything to keep.
-  const pickedRef = useRef(false);
-  const isCustom = !isAnnotationSwatch(color);
-  const takeCustom = () => {
-    if (customColor && !isCustom) onChange({ color: customColor });
-  };
-  const pick = (next: string) => {
-    onChange({ color: next });
-    setOpen(false);
-  };
 
   return (
-    <DialogTrigger isOpen={open} onOpenChange={setOpen}>
-      <Button
-        aria-label={t("settings-moment-color", { moment: name })}
-        className={cn(
-          "size-control-height shrink-0 cursor-default rounded-control inset-ring-1 inset-ring-content-fg-quaternary",
-          focusStyles,
-          elementFocusVisible,
-          isDisabled && "opacity-50",
-        )}
-        isDisabled={isDisabled}
-        style={{ backgroundColor: color }}
-      />
-      {/* Hung from the swatch's leading edge, so the palette opens over its
-          own row rather than out past the group. */}
-      <Popover
-        aria-label={t("settings-moment-color", { moment: name })}
-        placement="bottom start"
-      >
-        <ToggleButtonGroup
-          aria-label={t("annotation-color")}
-          className="flex gap-control"
-          disallowEmptySelection
-          selectedKeys={new Set([isCustom ? "custom" : color.toLowerCase()])}
-          selectionMode="single"
-        >
-          {ANNOTATION_SWATCHES.map((swatch) => (
-            <BackgroundTile
-              ariaLabel={swatch.name()}
-              background={{ color: swatch.color, kind: "solid" }}
-              id={swatch.color}
-              isSelected={!isCustom && sameAnnotationColor(swatch.color, color)}
-              key={swatch.color}
-              onPress={() => {
-                pick(swatch.color);
-              }}
-            />
-          ))}
-          <span className="relative inline-flex">
-            <BackgroundTile
-              ariaLabel={t("annotation-custom-color")}
-              background={
-                customColor ? { color: customColor, kind: "solid" } : undefined
-              }
-              id="custom"
-              isSelected={isCustom}
-              onPress={() => {
-                takeCustom();
-                if (!systemPanel) return;
-                setOpen(false);
-                colorPanel.open(customColor ?? color);
-              }}
-            >
-              {/* The pen takes the appearance of what it sits on, so it reads
-                  on a light colour and a dark one alike; on the empty square
-                  it is the window's own. */}
-              <span
-                className={cn(
-                  "flex text-content-fg",
-                  customColor &&
-                    (isLight(customColor)
-                      ? "appearance-light"
-                      : "appearance-dark"),
-                )}
-              >
-                <Pencil aria-hidden="true" />
-              </span>
-            </BackgroundTile>
-            {/* Off the Mac there is no panel to open, so the platform's colour
-                input sits over the square at zero opacity and settles on
-                blur. */}
-            {systemPanel ? null : (
-              <input
-                aria-label={t("annotation-custom-color")}
-                className="absolute inset-0 size-full cursor-default opacity-0 outline-none"
-                onBlur={(event) => {
-                  if (!pickedRef.current) return;
-                  pickedRef.current = false;
-                  const settled = kindColor(event.currentTarget.value);
-                  onChange({ color: settled, customColor: settled });
-                }}
-                onChange={(event) => {
-                  pickedRef.current = true;
-                  const next = kindColor(event.currentTarget.value);
-                  onPreview({ color: next, customColor: next });
-                }}
-                onClick={takeCustom}
-                type="color"
-                value={customColor ?? color}
-              />
-            )}
-          </span>
-        </ToggleButtonGroup>
-      </Popover>
-    </DialogTrigger>
+    <ColorButton
+      aria-expanded={picker.isOpen}
+      aria-label={label}
+      isDisabled={isDisabled}
+      onPress={(event) => {
+        const trigger = triggerRef.current;
+        if (trigger)
+          void picker.toggle(
+            trigger,
+            GRID_SIZE,
+            ["keyboard", "virtual"].includes(event.pointerType),
+          );
+      }}
+      ref={triggerRef}
+      value={color}
+    />
   );
 }

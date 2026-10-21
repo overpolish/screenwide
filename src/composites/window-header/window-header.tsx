@@ -89,8 +89,6 @@ export function WindowHeader({
         className="flex w-max items-center"
         // A document's name runs in whichever direction it is written.
         dir="auto"
-        edgeClassName="rounded-control"
-        edgeEffect="shadow"
         orientation="horizontal"
         // A plain title is part of the drag region like the logo; only an
         // editable one takes the pointer.

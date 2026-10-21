@@ -242,11 +242,7 @@ export function SettingsWindow({
           selected={section}
         />
         <div className="gap-section flex min-h-0 min-w-0 grow flex-col">
-          <ScrollArea
-            edgeEffect="shadow"
-            key={section}
-            rootClassName="min-h-0 min-w-0 grow"
-          >
+          <ScrollArea key={section} rootClassName="min-h-0 min-w-0 grow">
             <section
               aria-label={sectionTitle(section)}
               className="pe-window-inset pb-window-inset flex flex-col"

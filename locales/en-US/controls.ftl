@@ -3,7 +3,6 @@
 
 ### Controls every window shares: fields, lists, window buttons and key caps.
 
-controls-clear-selection = Clear selection
 controls-no-items = No items found.
 controls-no-content = No Content
 controls-sidebar-collapse = Collapse sidebar
