@@ -22,7 +22,6 @@ import {
 const numberFieldStyles: React.ComponentProps<typeof NumberField> = {
   className: "w-20",
   rightSection: "px",
-  showSteppers: false,
 };
 
 type DimensionsProps = {

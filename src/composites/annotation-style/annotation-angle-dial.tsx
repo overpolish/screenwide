@@ -86,7 +86,6 @@ export function AnnotationAngleDial({
           change(next, true);
         }}
         rightSection="°"
-        showSteppers={false}
         step={1}
         value={degrees}
       />

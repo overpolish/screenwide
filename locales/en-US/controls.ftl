@@ -3,8 +3,6 @@
 
 ### Controls every window shares: fields, lists, window buttons and key caps.
 
-controls-decrement = Decrement
-controls-increment = Increment
 controls-clear-selection = Clear selection
 controls-no-items = No items found.
 controls-no-content = No Content

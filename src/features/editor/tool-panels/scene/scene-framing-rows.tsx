@@ -94,7 +94,6 @@ export function SceneFramingRows({
                 onFramingChange({ focusX: value / 100 });
               }}
               rightSection="%"
-              showSteppers={false}
               step={1}
               value={percent(framing.focusX)}
             />
@@ -109,7 +108,6 @@ export function SceneFramingRows({
                 onFramingChange({ focusY: value / 100 });
               }}
               rightSection="%"
-              showSteppers={false}
               step={1}
               value={percent(framing.focusY)}
             />

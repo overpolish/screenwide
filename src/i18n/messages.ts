@@ -127,7 +127,6 @@ export type Messages = {
   "controls-audio-meter-silent": null;
   "controls-audio-meter-value": { decibels: string | number };
   "controls-clear-selection": null;
-  "controls-decrement": null;
   "controls-dimensions": null;
   "controls-dimensions-height": null;
   "controls-dimensions-link": null;
@@ -135,7 +134,6 @@ export type Messages = {
   "controls-dimensions-unlink": null;
   "controls-dimensions-width": null;
   "controls-document-name": null;
-  "controls-increment": null;
   "controls-key-alt": null;
   "controls-key-backspace": null;
   "controls-key-command": null;

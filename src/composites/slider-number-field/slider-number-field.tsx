@@ -94,7 +94,6 @@ export function SliderNumberField({
         minValue={minValue}
         onChange={changeValue}
         rightSection={rightSection}
-        showSteppers={false}
         step={step}
         value={value}
       />

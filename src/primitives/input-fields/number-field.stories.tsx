@@ -1,26 +1,88 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Meta, StoryObj } from "@storybook/react";
 import { Ruler } from "lucide-react";
+import { ComponentProps } from "react";
+import { fn } from "storybook/test";
+
+import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { NumberField } from "./number-field";
 
+import type { Meta, StoryObj } from "@storybook/react-vite";
+
+type NumberFieldProps = ComponentProps<typeof NumberField>;
+
+// At rest with a value, empty with its placeholder, and invalid.
+const states: { label: string; props: Partial<NumberFieldProps> }[] = [
+  { label: "rest", props: { defaultValue: 5 } },
+  {
+    label: "empty",
+    props: { defaultValue: Number.NaN, placeholder: "Amount" },
+  },
+  { label: "invalid", props: { defaultValue: 5, isInvalid: true } },
+];
+
+function StateGrid({
+  isDisabled,
+  onChange,
+}: Pick<NumberFieldProps, "isDisabled" | "onChange">) {
+  return (
+    <StoryGrid>
+      {states.map(({ label, props }) => (
+        <StoryGridRow key={label} label={label}>
+          <NumberField
+            {...props}
+            aria-label="Amount"
+            className="w-32"
+            isDisabled={isDisabled}
+            maxValue={100}
+            minValue={0}
+            onChange={onChange}
+          />
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
+  );
+}
+
 const meta = {
   argTypes: {
-    showSteppers: { control: "boolean" },
+    isDisabled: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+    isInvalid: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+    label: { control: "text" },
+    maxValue: { control: "number" },
+    minValue: { control: "number" },
+    step: { control: "number" },
   },
   args: {
+    className: "w-32",
     defaultValue: 5,
+    isDisabled: false,
+    isInvalid: false,
     label: "Amount",
     maxValue: 100,
     minValue: 0,
+    onChange: fn(),
     step: 1,
   },
   component: NumberField,
   parameters: {
     controls: {
-      exclude: ["className", "leftSection", "rightSection"],
+      include: [
+        "isDisabled",
+        "isInvalid",
+        "label",
+        "maxValue",
+        "minValue",
+        "step",
+      ],
     },
     layout: "centered",
   },
@@ -28,64 +90,20 @@ const meta = {
 } satisfies Meta<typeof NumberField>;
 
 export default meta;
-
 type Story = StoryObj<typeof meta>;
 
-/* --------------------------------- Stories -------------------------------- */
-export const Default: Story = {
-  args: {
-    showSteppers: true,
-  },
-};
-
-export const WithoutSteppers: Story = {
-  args: {
-    label: undefined,
-    showSteppers: false,
-  },
-  parameters: { controls: { disable: true } },
-};
+export const Default: Story = {};
 
 export const Sections: Story = {
-  args: {
-    leftSection: <Ruler />,
-    rightSection: "px",
-    showSteppers: false,
-  },
-  parameters: { controls: { include: ["showSteppers"] } },
-};
-
-export const Disabled: Story = {
-  args: { isDisabled: true },
+  args: { leftSection: <Ruler />, rightSection: "px" },
 };
 
 export const States: Story = {
-  parameters: { controls: { disable: true }, layout: "padded" },
-  render: () => (
-    <div className="flex flex-col gap-section">
-      {(
-        [
-          { label: "Rest", props: { defaultValue: 5 } },
-          {
-            label: "Empty",
-            props: { defaultValue: Number.NaN, placeholder: "Amount" },
-          },
-          { label: "Invalid", props: { defaultValue: 5, isInvalid: true } },
-          { label: "Disabled", props: { defaultValue: 5, isDisabled: true } },
-        ] as const
-      ).map((row) => (
-        <div className="flex items-center gap-section" key={row.label}>
-          <p className="w-16 text-caption text-fg-secondary">{row.label}</p>
-          <NumberField
-            className="w-48"
-            label="Amount"
-            maxValue={100}
-            minValue={0}
-            step={1}
-            {...row.props}
-          />
-        </div>
-      ))}
-    </div>
-  ),
+  parameters: { controls: { disable: true } },
+  render: ({ onChange }) => <StateGrid onChange={onChange} />,
+};
+
+export const Disabled: Story = {
+  parameters: { controls: { disable: true } },
+  render: ({ onChange }) => <StateGrid isDisabled onChange={onChange} />,
 };

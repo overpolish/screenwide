@@ -54,7 +54,8 @@
      as an icon and its label. Separate: between neighbours that stand on
      their own, such as a message and its action, or two buttons side by
      side. Inset: between a box's edge and its content, in a control, a
-     notice or a card; the small inset does the same in a small part. Traffic
+     notice or a card; the small inset is the tight one, inside a small part,
+     round a list in its panel, and inside a list's items. Traffic
      lights: the room the OS leaves for the window buttons at a title bar's
      leading edge, with the window inset after them. A new role gets a token
      when it appears. */

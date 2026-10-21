@@ -27,7 +27,6 @@ export function PreviewZoomField({
       minValue={10}
       onChange={onChange}
       rightSection="%"
-      showSteppers={false}
       step={1}
       value={zoomPercent}
     />

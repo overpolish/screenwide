@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { isTauri } from "@tauri-apps/api/core";
-import { Minus, Plus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Button,
   Group,
   Input,
   NumberField as AriaNumberField,
@@ -14,36 +12,28 @@ import {
 } from "react-aria-components";
 import { VariantProps } from "tailwind-variants";
 
-import { t } from "../../i18n/i18n";
 import { isMacHost } from "../../lib/platform";
-import { elementFocusVisible, focusStyles } from "../../lib/styling";
 import { tv } from "../../lib/variants";
 import { fieldVariants } from "../field/field-variants";
+import { focusFieldInput } from "../field/focus-field-input";
 
 import { useNumberFieldScrub } from "./use-number-field-scrub";
 
+// The shared field with the value set as figures read: from the end, in
+// digits of one width, so a changing value does not shift. It steps by the
+// arrow keys, and in the app by dragging on the field; there are no stepper
+// buttons.
 const numberFieldVariants = tv({
   extend: fieldVariants,
   slots: {
     input: "text-end tabular-nums",
-    stepper: [
-      "flex h-full shrink-0 cursor-default items-center px-control text-content-fg-secondary outline-none transition-colors",
-      "data-[hovered]:bg-control-subtle-hover data-[hovered]:text-content-fg",
-      "data-[pressed]:bg-control-subtle-pressed",
-      "data-[disabled]:text-control-fg-disabled",
-      "[&_svg]:size-icon-mini [&_svg]:transform-gpu",
-      focusStyles,
-      elementFocusVisible,
-    ],
   },
 });
 
 export type NumberFieldProps = AriaNumberFieldProps &
   VariantProps<typeof numberFieldVariants> & {
     className?: string;
-    fieldClassName?: string;
     label?: string;
-    labelClassName?: string;
     leftSection?: React.ReactNode;
     /** Called for each keystroke that reads as a number, instead of
      * `onChange`, which React Aria fires on blur or Enter. Give this to a field
@@ -51,23 +41,21 @@ export type NumberFieldProps = AriaNumberFieldProps &
      * waiting behind an unfocused field is a value the reader never sees. Plain
      * numeric entry only: a formatted field would need a parse of its own. */
     onTypedChange?: (value: number) => void;
+    placeholder?: string;
     rightSection?: React.ReactNode;
-    showSteppers?: boolean;
   };
 
 export const NumberField = ({
   className,
   defaultValue,
-  fieldClassName,
   label,
-  labelClassName,
   leftSection,
   maxValue,
   minValue,
   onChange,
   onTypedChange,
+  placeholder,
   rightSection,
-  showSteppers = true,
   step,
   value,
   ...props
@@ -176,7 +164,6 @@ export const NumberField = ({
     inputWrapper,
     label: _label,
     section,
-    stepper,
   } = numberFieldVariants();
 
   return (
@@ -189,27 +176,18 @@ export const NumberField = ({
       step={step}
       value={resolvedValue}
     >
-      {label && (
-        <Label className={_label({ className: labelClassName })}>{label}</Label>
-      )}
+      {label && <Label className={_label()}>{label}</Label>}
 
       <Group
         className={field({
-          className: [nativeScrubbing && "cursor-ns-resize", fieldClassName],
+          className: nativeScrubbing && "cursor-ns-resize",
         })}
+        // In the app a press on the field scrubs, and focuses the input when
+        // it does not move; elsewhere a press focuses it at once.
+        onMouseDown={nativeScrubbing ? undefined : focusFieldInput}
         onPointerDown={nativeScrubbing ? handlePointerDown : undefined}
         ref={groupRef}
       >
-        {showSteppers && (
-          <Button
-            aria-label={t("controls-decrement")}
-            className={stepper({ className: "rounded-s-[inherit]" })}
-            slot="decrement"
-          >
-            <Minus />
-          </Button>
-        )}
-
         <div className={inputWrapper()}>
           {leftSection != null && (
             <span className={section()}>{leftSection}</span>
@@ -244,22 +222,13 @@ export const NumberField = ({
               event.stopPropagation();
               event.currentTarget.blur();
             }}
+            placeholder={placeholder}
           />
 
           {rightSection != null && (
             <span className={section()}>{rightSection}</span>
           )}
         </div>
-
-        {showSteppers && (
-          <Button
-            aria-label={t("controls-increment")}
-            className={stepper({ className: "rounded-e-[inherit]" })}
-            slot="increment"
-          >
-            <Plus />
-          </Button>
-        )}
       </Group>
     </AriaNumberField>
   );
