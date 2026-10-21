@@ -4,7 +4,7 @@
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
-import { GroupBox } from "../../../primitives/group-box/group-box";
+import { SettingsGroup } from "../settings-group";
 
 import type { ShortcutAction } from "../../../bindings/ShortcutAction";
 import type { ShortcutSettings } from "../../../bindings/ShortcutSettings";
@@ -73,7 +73,7 @@ export function HotkeySettingsPanel({
   return (
     <div className="gap-layout flex flex-col">
       {groups().map((group) => (
-        <GroupBox key={group.id} title={group.title}>
+        <SettingsGroup key={group.id} title={group.title}>
           {group.rows.map(({ action, description, label }) => (
             <ControlRow description={description} key={action} title={label}>
               {(controlProps) => (
@@ -99,7 +99,7 @@ export function HotkeySettingsPanel({
               )}
             </ControlRow>
           ))}
-        </GroupBox>
+        </SettingsGroup>
       ))}
     </div>
   );

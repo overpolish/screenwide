@@ -1,19 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Crop,
-  MousePointer2,
-  Scissors,
-  Type,
-  Undo2,
-  Upload,
-} from "lucide-react";
-import { ComponentProps } from "react";
+import { Crop, MousePointer2, Type } from "lucide-react";
+import { ComponentProps, useState } from "react";
 
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
-import { Button } from "../button/button";
-import { IconButton, IconToggleButton } from "../button/icon-button";
+import { IconToggleButton } from "../button/icon-button";
 
 import { Toolbar } from "./toolbar";
 
@@ -23,19 +15,29 @@ const orientations: NonNullable<
   ComponentProps<typeof Toolbar>["orientation"]
 >[] = ["horizontal", "vertical"];
 
-const tools = (
-  <>
-    <IconToggleButton aria-label="Select" isSelected>
-      <MousePointer2 />
+const toolList = [
+  { icon: <MousePointer2 />, id: "select", label: "Select" },
+  { icon: <Crop />, id: "crop", label: "Crop" },
+  { icon: <Type />, id: "text", label: "Text" },
+];
+
+// One choice, as the editor's toolbars are: choosing a tool lets go of the
+// last, and pressing the chosen one again keeps it.
+function Tools() {
+  const [chosen, setChosen] = useState("select");
+  return toolList.map(({ icon, id, label }) => (
+    <IconToggleButton
+      aria-label={label}
+      isSelected={chosen === id}
+      key={id}
+      onChange={() => {
+        setChosen(id);
+      }}
+    >
+      {icon}
     </IconToggleButton>
-    <IconToggleButton aria-label="Crop">
-      <Crop />
-    </IconToggleButton>
-    <IconToggleButton aria-label="Text">
-      <Type />
-    </IconToggleButton>
-  </>
-);
+  ));
+}
 
 const meta = {
   argTypes: {
@@ -47,12 +49,12 @@ const meta = {
   },
   args: {
     "aria-label": "Tools",
-    children: tools,
+    children: <Tools />,
     orientation: "horizontal",
   },
   component: Toolbar,
   parameters: {
-    controls: { exclude: ["children", "className", "style"] },
+    controls: { exclude: ["aria-label", "children", "className", "style"] },
     layout: "centered",
   },
   title: "Primitives/Toolbar",
@@ -74,26 +76,4 @@ export const Orientations: Story = {
       ))}
     </StoryGrid>
   ),
-};
-
-export const TextAndIcons: Story = {
-  args: {
-    "aria-label": "Timeline",
-    // In a window toolbar every text command takes a leading icon.
-    children: (
-      <>
-        <IconButton aria-label="Undo">
-          <Undo2 />
-        </IconButton>
-        <Button variant="ghost">
-          <Scissors />
-          Split
-        </Button>
-        <Button color="primary">
-          <Upload />
-          Export
-        </Button>
-      </>
-    ),
-  },
 };

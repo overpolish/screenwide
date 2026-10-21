@@ -7,12 +7,12 @@ import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
 import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
 import { Button } from "../../../primitives/button/button";
-import { GroupBox } from "../../../primitives/group-box/group-box";
 import { Switch } from "../../../primitives/switch/switch";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
 import { useSettingsApi } from "../settings-api-context";
+import { SettingsGroup } from "../settings-group";
 
 import { TranscriptionModelActions } from "./transcription-model-actions";
 import { modelFor, type TranscriptionControls } from "./use-transcription";
@@ -107,7 +107,7 @@ export function VoiceNoteSettings({
   const isDenied = settings.voiceNotes && access?.granted === false;
 
   return (
-    <GroupBox title={t("settings-voice-notes")}>
+    <SettingsGroup title={t("settings-voice-notes")}>
       <ControlRow
         description={t("settings-voice-notes-enabled-description")}
         title={t("settings-voice-notes-enabled")}
@@ -207,6 +207,6 @@ export function VoiceNoteSettings({
           </div>
         </>
       ) : null}
-    </GroupBox>
+    </SettingsGroup>
   );
 }

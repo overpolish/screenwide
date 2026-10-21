@@ -1,42 +1,28 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Meta, StoryObj } from "@storybook/react";
-import { TooltipTrigger } from "react-aria-components";
+import { ComponentProps } from "react";
 
-import { Button } from "../button/button";
+import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { Tooltip } from "./tooltip";
 
-const placements: React.ComponentProps<typeof Tooltip>["placement"][] = [
-  "left",
-  "top",
-  "bottom",
-  "end",
-] as const;
-const isolatedDocsStory = {
-  docs: {
-    story: {
-      height: "160px",
-      inline: false,
-    },
-  },
-} as const;
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/**
- * Must be using inside a `TooltipTrigger`.
- */
+const contents: { label: string; props: ComponentProps<typeof Tooltip> }[] = [
+  { label: "label", props: { label: "Reset the view" } },
+  { label: "shortcut", props: { keys: ["C"], label: "Crop" } },
+  {
+    label: "modified shortcut",
+    props: { keys: ["Command", "Z"], label: "Undo" },
+  },
+];
+
 const meta = {
-  argTypes: {
-    children: { control: { disable: true } },
-    className: { control: { disable: true } },
-  },
-  args: {
-    children: "World!",
-  },
+  args: { label: "Crop the recording" },
   component: Tooltip,
   parameters: {
-    controls: { disable: true },
+    controls: { include: ["label"] },
     layout: "centered",
   },
   title: "Primitives/Tooltip",
@@ -45,30 +31,25 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/* --------------------------------- Stories -------------------------------- */
-export const Default: Story = {
-  render: (args) => (
-    <TooltipTrigger>
-      <Button>Hello</Button>
-      <Tooltip {...args} placement="bottom" />
-    </TooltipTrigger>
+export const Default: Story = {};
+
+export const Contents: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <StoryGrid>
+      {contents.map(({ label, props }) => (
+        <StoryGridRow key={label} label={label}>
+          <Tooltip {...props} />
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
   ),
 };
 
-/** None exhaustive. */
-export const Placements: Story = {
-  parameters: {
-    controls: { disable: true },
-    ...isolatedDocsStory,
+export const LongText: Story = {
+  args: {
+    label:
+      "/Users/dom/Movies/Screenwide/Recordings/2026/September/Product walkthrough - final take.screenwide",
   },
-  render: (args) => (
-    <div className="flex items-center gap-section">
-      {placements.map((placement) => (
-        <TooltipTrigger isOpen key={placement}>
-          <Button>Hello</Button>
-          <Tooltip placement={placement} {...args} />
-        </TooltipTrigger>
-      ))}
-    </div>
-  ),
+  parameters: { controls: { disable: true } },
 };

@@ -36,6 +36,9 @@
   --color-on-primary: white;
   --color-primary-hover: oklch(21% 0.012 47.6);
   --color-primary-pressed: oklch(17% 0.012 47.6);
+  /* A mark on a knob's face, such as the angle dial's dot: the warm black in
+     both appearances, since a knob is light in both. */
+  --color-on-knob: oklch(26% 0.012 47.6);
   /* One of a set chosen in place (a chosen style, a selected range): a grey
      surface with the text unchanged. */
   --color-selected: oklch(18% 0.01 47.6 / 12%);
@@ -93,9 +96,9 @@
     --control-well:
       inset 0 0.5px 1px rgb(0 0 0 / 8%),
       inset 0 0 0 0.5px oklch(18% 0.01 47.6 / 12%);
-    /* A knob's face: opaque and lighter than the track it sits in, white
-       in light; in dark a raised grey, since the darker surface face would
-       read as sunk into a lighter track. */
+    /* A knob's face: opaque and light in both appearances, as a grabbed part
+       is on macOS, so it stands off the track it sits in. On the primary fill
+       it takes `on-primary` instead, as a check on a checked box does. */
     --control-knob: oklch(99.5% 0.002 47.6);
   }
 }
@@ -120,6 +123,7 @@
     /* A warm near-white with the warm black on it, and the softer orange. */
     --color-primary: oklch(93% 0.008 47.6);
     --color-on-primary: oklch(22% 0.012 47.6);
+    --color-on-knob: oklch(22% 0.012 47.6);
     --color-primary-hover: oklch(97% 0.006 47.6);
     --color-primary-pressed: oklch(86% 0.008 47.6);
     --color-selected: oklch(98% 0.005 47.6 / 16%);
@@ -142,7 +146,7 @@
     --control-well:
       inset 0 0.5px 1px rgb(0 0 0 / 35%),
       inset 0 0 0 0.5px oklch(98% 0.005 47.6 / 10%);
-    --control-knob: oklch(40% 0.006 47.6);
+    --control-knob: oklch(85% 0.004 47.6);
 
     /* Lifted to read on the dark material, each well past 4.5:1. */
     --color-success: oklch(76% 0.15 150);

@@ -33,7 +33,7 @@ const meta = {
   },
   component: AngleDial,
   parameters: {
-    controls: { exclude: ["className", "onChange"] },
+    controls: { exclude: ["aria-label", "className", "onChange"] },
     layout: "centered",
   },
   render: function Render(args) {

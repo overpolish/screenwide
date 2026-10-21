@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { File, Folder, RotateCcw, X } from "lucide-react";
-import { TooltipTrigger } from "react-aria-components";
 
 import { truncatePath } from "../../lib/path-label";
 import { cn } from "../../lib/styling";
 import { Button } from "../../primitives/button/button";
 import { IconButton } from "../../primitives/button/icon-button";
-import { Tooltip } from "../../primitives/tooltip/tooltip";
+import { NativeTooltipTrigger } from "../native-tooltip/native-tooltip-trigger";
 
 export type PathFieldProps = {
   "aria-label": string;
@@ -47,7 +46,11 @@ export function PathField({
   const isTruncated = value !== null && display !== value;
   return (
     <div className={cn("inline-flex items-center gap-control", className)}>
-      <TooltipTrigger isDisabled={!isTruncated}>
+      <NativeTooltipTrigger
+        className={fullWidth ? "w-full" : undefined}
+        isDisabled={!isTruncated}
+        tooltip={value ?? ""}
+      >
         <Button
           aria-label={`${label}: ${value || display}`}
           className={fullWidth ? "w-full justify-start" : undefined}
@@ -59,8 +62,7 @@ export function PathField({
             {display}
           </span>
         </Button>
-        <Tooltip className="max-w-80 break-words">{value}</Tooltip>
-      </TooltipTrigger>
+      </NativeTooltipTrigger>
       {secondaryAction ? (
         <IconButton
           aria-label={secondaryAction.label}

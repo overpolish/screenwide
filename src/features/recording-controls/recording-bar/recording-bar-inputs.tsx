@@ -6,7 +6,6 @@ import { useMemo } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
-import { ToggleMenuButton } from "../../../primitives/button/toggle-menu-button";
 import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { useRecordingInputStore } from "../../recording-inputs/store";
 import { RecordingInputs } from "../../recording-inputs/types";
@@ -14,6 +13,7 @@ import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
 import { useCameraPreview } from "../../recording-inputs/use-camera-preview";
 import { RecordingMode } from "../../recording-sources/types";
 
+import { RecordingBarInputControl } from "./recording-bar-input-control";
 import { useRecordingBarInputDevices } from "./recording-bar-input-devices";
 import {
   inputBadge,
@@ -138,7 +138,7 @@ export function RecordingBarInputs({
   return (
     <div className={cn("flex items-center gap-control-inset", className)}>
       <div className="flex" data-popup-panel-trigger={CAMERA_PANEL_ID}>
-        <ToggleMenuButton
+        <RecordingBarInputControl
           aria-label={t("recording-controls-camera")}
           badge={inputBadge(
             isCameraOn ? cameraWarning : undefined,
@@ -171,8 +171,6 @@ export function RecordingBarInputs({
             });
           }}
           renderToggle={warnedToggle(isCameraOn ? cameraWarning : undefined)}
-          size="capture"
-          variant="ghost"
         >
           {/* The thumbnail is the on glyph: the canvas stays mounted while the
               camera is on so the preview has somewhere to draw, and the glyph
@@ -196,11 +194,11 @@ export function RecordingBarInputs({
               isFlipped={cameraFlipped}
             />
           </span>
-        </ToggleMenuButton>
+        </RecordingBarInputControl>
       </div>
 
       <div className="flex" data-popup-panel-trigger={MICROPHONE_PANEL_ID}>
-        <ToggleMenuButton
+        <RecordingBarInputControl
           aria-label={t("recording-controls-microphone")}
           badge={inputBadge(
             inputs.microphone ? microphoneWarning : undefined,
@@ -234,15 +232,13 @@ export function RecordingBarInputs({
           renderToggle={warnedToggle(
             inputs.microphone ? microphoneWarning : undefined,
           )}
-          size="capture"
-          variant="ghost"
         >
           <Mic />
-        </ToggleMenuButton>
+        </RecordingBarInputControl>
       </div>
 
       <div className="flex" data-popup-panel-trigger={SYSTEM_AUDIO_PANEL_ID}>
-        <ToggleMenuButton
+        <RecordingBarInputControl
           aria-label={t("recording-controls-system-audio-picker")}
           badge={inputBadge(
             inputs.systemAudio ? systemAudioWarning : undefined,
@@ -274,11 +270,9 @@ export function RecordingBarInputs({
           renderToggle={warnedToggle(
             inputs.systemAudio ? systemAudioWarning : undefined,
           )}
-          size="capture"
-          variant="ghost"
         >
           <Volume2 />
-        </ToggleMenuButton>
+        </RecordingBarInputControl>
       </div>
     </div>
   );

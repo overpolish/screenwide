@@ -3,56 +3,44 @@
 
 import { Crop } from "lucide-react";
 
-import { IconToggleButton } from "../../primitives/button/icon-button";
+import { IconButton } from "../../primitives/button/icon-button";
 
-import { NativeTooltipSurface } from "./native-tooltip-surface";
 import { NativeTooltipTrigger } from "./native-tooltip-trigger";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/**
- * The Editor's tooltips are drawn in a window of their own, because the
- * preview they stand over is a native surface the page cannot appear above.
- * There is no such window in a browser, so the trigger falls back to the
- * in-page tooltip here.
- */
+// The trigger opens the tooltip window, which only exists in the app: in
+// `pnpm dev:storybook-native` hovering the button shows it, and in a browser
+// nothing does. The window's content is the Tooltip primitive.
 const meta = {
-  args: { content: { label: "Crop", shortcut: "C" } },
-  component: NativeTooltipSurface,
-  parameters: { layout: "centered" },
+  argTypes: {
+    isDisabled: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+    tooltip: { control: "text" },
+  },
+  args: {
+    children: null,
+    isDisabled: false,
+    tooltip: "Crop the recording",
+  },
+  component: NativeTooltipTrigger,
+  parameters: {
+    controls: { include: ["isDisabled", "tooltip"] },
+    layout: "centered",
+  },
+  render: (args) => (
+    <NativeTooltipTrigger {...args}>
+      <IconButton aria-label="Crop" variant="ghost">
+        <Crop />
+      </IconButton>
+    </NativeTooltipTrigger>
+  ),
   title: "Composites/Native Tooltip",
-} satisfies Meta<typeof NativeTooltipSurface>;
+} satisfies Meta<typeof NativeTooltipTrigger>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The surface as the tooltip window draws it, at the size it asks for. */
-export const Surface: Story = {};
-
-/** Without a shortcut, a tooltip is the label alone. */
-export const LabelOnly: Story = {
-  args: { content: { label: "Reset the view" } },
-};
-
-/** A shortcut with a modifier, named the way the running platform names it:
- * Command on macOS, Ctrl on Windows. */
-export const ModifiedShortcut: Story = {
-  args: { content: { label: "Undo", shortcut: "CommandOrControl+KeyZ" } },
-};
-
-/** The trigger, hovered or focused: in Storybook it shows the in-page
- * tooltip, and in the app the window. */
-export const Trigger: Story = {
-  render: (args) => (
-    <NativeTooltipTrigger tooltip={args.content}>
-      <IconToggleButton
-        aria-keyshortcuts={args.content.shortcut}
-        aria-label="Crop the recording"
-        isSelected={false}
-        onChange={() => undefined}
-      >
-        <Crop />
-      </IconToggleButton>
-    </NativeTooltipTrigger>
-  ),
-};
+export const Default: Story = {};

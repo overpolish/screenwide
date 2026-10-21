@@ -12,12 +12,12 @@ import {
 import { useState } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
+import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { Button } from "../../primitives/button/button";
 import { SearchField } from "../../primitives/input-fields/search-field";
-import { SidebarNav } from "../../primitives/sidebar-nav/sidebar-nav";
 
 import {
   ProjectBrowserNotices,

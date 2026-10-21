@@ -7,12 +7,12 @@ import { useNumberFormatter } from "react-aria";
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { PathField } from "../../../composites/path-field/path-field";
 import { t } from "../../../i18n/i18n";
-import { GroupBox } from "../../../primitives/group-box/group-box";
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { Switch } from "../../../primitives/switch/switch";
 import { useRecordingInputStore } from "../../recording-inputs/store";
 import { RecordingFps } from "../../recording-inputs/types";
 import { useSettingsApi } from "../settings-api-context";
+import { SettingsGroup } from "../settings-group";
 import { LiveSoftwareUpdateSetting } from "../settings-update-actions";
 
 import type { GeneralSettings } from "../../../bindings/GeneralSettings";
@@ -132,8 +132,10 @@ export function GeneralSettingsPanel({
   });
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title={t("settings-software-update")}>{updateSetting}</GroupBox>
-      <GroupBox title={t("settings-appearance")}>
+      <SettingsGroup title={t("settings-software-update")}>
+        {updateSetting}
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-appearance")}>
         <ControlRow
           description={t("settings-accent-description")}
           title={t("settings-accent")}
@@ -155,8 +157,8 @@ export function GeneralSettingsPanel({
             </div>
           )}
         </ControlRow>
-      </GroupBox>
-      <GroupBox title={t("settings-saving")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-saving")}>
         {folders().map(({ description, key, kind, reset, title }) => (
           <ControlRow description={description} key={kind} title={title}>
             {(controlProps) => (
@@ -187,8 +189,8 @@ export function GeneralSettingsPanel({
             )}
           </ControlRow>
         ))}
-      </GroupBox>
-      <GroupBox title={t("settings-recording")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-recording")}>
         {toggle(recordingToggle())}
         {toggle(recordingSizeToggle())}
         {toggle(autoZoomToggle())}
@@ -233,8 +235,8 @@ export function GeneralSettingsPanel({
             </div>
           )}
         </ControlRow>
-      </GroupBox>
-      <GroupBox title={t("settings-capture")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-capture")}>
         {toggle(captureToggle())}
         <ControlRow title={t("settings-screenshot-delay")}>
           {(controlProps) => (
@@ -253,10 +255,10 @@ export function GeneralSettingsPanel({
             </div>
           )}
         </ControlRow>
-      </GroupBox>
-      <GroupBox title={t("settings-startup")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-startup")}>
         {startupToggles().map((item) => toggle(item))}
-      </GroupBox>
+      </SettingsGroup>
     </div>
   );
 }

@@ -37,6 +37,7 @@ const colorTokens = [
   "bg-primary-hover",
   "bg-primary-pressed",
   "bg-on-primary",
+  "bg-on-knob",
   "bg-selected",
   "bg-emphasis",
   "bg-focus",

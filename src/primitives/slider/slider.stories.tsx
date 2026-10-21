@@ -1,26 +1,39 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { fn } from "storybook/test";
+
+import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
+
 import { Slider } from "./slider";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
+  argTypes: {
+    isDisabled: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+    showTicks: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+  },
   args: {
-    "aria-label": "Value",
+    "aria-label": "Volume",
+    className: "w-64",
     defaultValue: 40,
     maxValue: 100,
     minValue: 0,
+    onChange: fn(),
+    onChangeEnd: fn(),
   },
   component: Slider,
-  decorators: [
-    (Story) => (
-      <div className="w-80">
-        <Story />
-      </div>
-    ),
-  ],
   parameters: {
+    controls: {
+      exclude: ["aria-label", "className", "onChange", "onChangeEnd"],
+    },
     layout: "centered",
   },
   title: "Primitives/Slider",
@@ -31,34 +44,32 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const SetValue: Story = {
-  args: {
-    defaultValue: 75,
-  },
-};
-
 export const Stepped: Story = {
   args: {
     defaultValue: 4,
     maxValue: 10,
-    minValue: 0,
     showTicks: true,
     step: 1,
   },
 };
 
 export const Disabled: Story = {
-  args: {
-    isDisabled: true,
-  },
-};
-
-export const ConstrainedWidth: Story = {
-  decorators: [
-    (Story) => (
-      <div className="w-40">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: { controls: { disable: true } },
+  render: (args) => (
+    <StoryGrid>
+      <StoryGridRow label="continuous">
+        <Slider {...args} isDisabled />
+      </StoryGridRow>
+      <StoryGridRow label="stepped">
+        <Slider
+          {...args}
+          defaultValue={4}
+          isDisabled
+          maxValue={10}
+          showTicks
+          step={1}
+        />
+      </StoryGridRow>
+    </StoryGrid>
+  ),
 };

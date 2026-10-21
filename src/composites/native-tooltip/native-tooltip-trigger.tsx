@@ -8,19 +8,22 @@ import {
   TooltipTriggerStateContext,
 } from "react-aria-components";
 
-import { Tooltip } from "../../primitives/tooltip/tooltip";
+import { cn } from "../../lib/styling";
 
 import { hideTooltip, NativeTooltipContent, showTooltip } from "./api";
-import { NativeTooltipLabel } from "./native-tooltip-surface";
 
-/** The standard tooltip delay, as the in-page tooltips use. */
+/** The standard tooltip delay. */
 const DELAY_MS = 400;
 
 type NativeTooltipTriggerProps = {
   children: ReactNode;
   tooltip: NativeTooltipContent | string;
+  /** Layout for the anchor wrapping the control, such as a full width. */
+  className?: string;
   /** How long the pointer must rest on the control first. */
   delay?: number;
+  /** Keeps the tooltip shut, as when the control already shows it all. */
+  isDisabled?: boolean;
 };
 
 const asContent = (tooltip: NativeTooltipContent | string) =>
@@ -86,35 +89,32 @@ function NativeTooltipPresenter({
 }
 
 /**
- * A tooltip drawn in a window of its own.
- *
- * The Editor's preview is a native surface layered over the webview, so a
- * tooltip drawn in the page is covered by it. Outside Tauri - in Storybook -
- * there is no window to open and no surface to clear, so the in-page tooltip
- * is used instead and the stories keep working.
+ * A tooltip drawn in a window of its own, as every tooltip is: nothing
+ * floats in the page, and the Editor's preview is a native surface layered
+ * over the webview that would cover a tooltip drawn there. Outside Tauri, in
+ * a browser, there is no window to open, so nothing is shown, as with the
+ * pop-up panels; `pnpm dev:storybook-native` opens the real window.
  */
 export function NativeTooltipTrigger({
   children,
+  className,
   delay = DELAY_MS,
+  isDisabled,
   tooltip,
 }: NativeTooltipTriggerProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const content = asContent(tooltip);
 
   return (
-    <TooltipTrigger delay={delay}>
+    <TooltipTrigger delay={delay} isDisabled={isDisabled}>
       {/* The anchor the window is placed against: it wraps the control
           tightly, so its bounds are the control's bounds. */}
-      <span className="inline-flex" ref={anchorRef}>
+      <span className={cn("inline-flex", className)} ref={anchorRef}>
         {children}
       </span>
       {isTauri() ? (
         <NativeTooltipPresenter anchorRef={anchorRef} content={content} />
-      ) : (
-        <Tooltip placement="top">
-          <NativeTooltipLabel content={content} />
-        </Tooltip>
-      )}
+      ) : null}
     </TooltipTrigger>
   );
 }

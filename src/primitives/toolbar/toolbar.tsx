@@ -21,10 +21,11 @@ export function Toolbar({
   return (
     <AriaToolbar
       {...props}
-      // Independent tools sit at the standard sibling spacing, each with its
-      // own hover and pressed fill.
+      // Tools sit 2px apart, so each one's hover fill and the chosen tool's
+      // primary fill stay apart while the set still reads as one. Separate
+      // groups are separate toolbars, spaced by whoever lays them out.
       className={cn(
-        "flex gap-control",
+        "flex gap-0.5",
         orientation === "horizontal" ? "flex-row" : "flex-col",
         className,
       )}

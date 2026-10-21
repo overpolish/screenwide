@@ -11,7 +11,6 @@ import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { useFitWindowHeight } from "../../lib/use-fit-window-height";
 import { Button } from "../../primitives/button/button";
-import { GroupBox } from "../../primitives/group-box/group-box";
 
 import {
   dismissPermissionsWindow,
@@ -104,7 +103,7 @@ export function PermissionsWindow({
       ref={contentRef}
     >
       <div className="flex flex-col px-window-inset pb-window-inset">
-        <GroupBox>
+        <div className="flex flex-col gap-separate">
           <PermissionRow
             color={gradients.blue}
             description={t("permissions-accessibility-description")}
@@ -143,7 +142,7 @@ export function PermissionsWindow({
             status={permissions.microphone}
             title={t("permissions-microphone")}
           />
-        </GroupBox>
+        </div>
       </div>
     </WindowShell>
   );

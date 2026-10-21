@@ -10,7 +10,6 @@ import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { Alert } from "../../primitives/alert/alert";
 import { Button } from "../../primitives/button/button";
-import { GroupBox } from "../../primitives/group-box/group-box";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
 
 import { ReleaseNotes } from "./release-notes";
@@ -113,17 +112,11 @@ export function UpdatePrompt({
           </div>
         )}
 
-        {/* The box owns the notes' inset, so the scroll area reaches its inner
-            edge and the scrollbar rides there rather than floating inside. */}
-        <GroupBox
-          className="flex min-h-0 grow flex-col [&>div]:min-h-0 [&>div]:grow [&>div>*]:px-0 [&>div>*]:py-0"
-          title={t("updates-release-notes")}
-        >
-          <ScrollArea
-            className="px-section"
-            edgeEffect="none"
-            rootClassName="min-h-0 grow"
-          >
+        <section className="flex min-h-0 grow flex-col gap-inline">
+          <h2 className="text-heading text-fg-secondary">
+            {t("updates-release-notes")}
+          </h2>
+          <ScrollArea rootClassName="min-h-0 grow">
             {releaseNotes ? (
               <ReleaseNotes html={releaseNotes} />
             ) : (
@@ -132,7 +125,7 @@ export function UpdatePrompt({
               </p>
             )}
           </ScrollArea>
-        </GroupBox>
+        </section>
 
         {status === "error" && error ? (
           <Alert color="error">{t("updates-failed", { error })}</Alert>

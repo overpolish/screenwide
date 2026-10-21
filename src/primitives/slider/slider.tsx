@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useReducedMotion } from "motion/react";
 import { use } from "react";
 import {
   Slider as AriaSlider,
@@ -12,19 +11,16 @@ import {
   SliderTrack,
 } from "react-aria-components";
 
-import { motionDurationCss } from "../../lib/motion";
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
 
 type SliderProps = Omit<AriaSliderProps<number>, "children" | "className"> & {
   className?: string;
-  /** Draw a dot under the track at every step, as a native stepped slider does. */
+  /** Draw a dot under the track at every step. */
   showTicks?: boolean;
 };
 
-/**
- * Dots 3px below the track at every step, as a native stepped slider draws
- * them; the dot under the current value is hidden.
- */
+// Dots 3px below the track at every step; the dot under the current value is
+// hidden, since the knob stands there.
 function SliderTickMarks({
   count,
   minValue,
@@ -43,7 +39,7 @@ function SliderTickMarks({
     index === activeIndex ? null : (
       <span
         aria-hidden
-        className="absolute top-[calc(50%+6px)] size-0.5 -translate-x-1/2 rounded-full bg-content-fg-tertiary rtl:translate-x-1/2"
+        className="absolute top-[calc(50%+6px)] size-0.5 -translate-x-1/2 rounded-full bg-fg-tertiary rtl:translate-x-1/2"
         key={index}
         style={{ insetInlineStart: `${String((index / count) * 100)}%` }}
       />
@@ -51,47 +47,27 @@ function SliderTickMarks({
   );
 }
 
-/**
- * The slider's knob on its own, for a slider laid out otherwise than
- * `Slider`, such as a divider dragged across a picture. It sits in a React
- * Aria slider's track, which places it.
- */
+// The knob on its own, for a slider laid out otherwise than `Slider`, such
+// as a divider dragged across a picture. It sits in a React Aria slider's
+// track, which places it. A 20 by 16 capsule in the knob material, which
+// stands lighter than the track in either appearance.
 export function SliderKnob({ className }: { className?: string }) {
-  const prefersReducedMotion = useReducedMotion();
   return (
     <SliderThumb
       className={cn(
-        "top-1/2 h-4 w-5 rounded-full bg-control-solid-fill shadow-sm outline-none transition-shadow",
-        "group-data-[disabled]:bg-fill-quaternary group-data-[disabled]:shadow-none",
-        // A 20px disc (measured), the same width as the macOS knob, so
-        // the track's overshoot of half a knob fits both.
-        "windows:size-5 windows:shadow-none windows:control-stroke windows:group-data-[disabled]:bg-control-solid-fill",
-        // The accent dot: 14px under the pointer, scaled to 10 at rest
-        // and 8 while dragging. Scaled rather than resized so it grows
-        // about its centre on the compositor, on WinUI's 167ms fast-out
-        // slow-in curve.
-        "windows:after:absolute windows:after:inset-0 windows:after:m-auto windows:after:size-3.5 windows:after:scale-[0.714] windows:after:rounded-full windows:after:bg-primary-surface windows:after:transition-[scale,background-color] windows:after:duration-[167ms] windows:after:ease-[cubic-bezier(0,0,0,1)] motion-reduce:after:transition-none windows:after:content-['']",
-        "windows:data-[hovered]:after:scale-100 windows:data-[hovered]:after:bg-primary-surface-hover",
-        "windows:data-[dragging]:after:scale-[0.571] windows:data-[dragging]:after:bg-primary-surface-pressed",
-        "windows:group-data-[disabled]:after:bg-primary-surface-disabled",
+        "top-1/2 h-mark w-5 rounded-full outline-none control-knob",
         focusStyles,
         elementFocusVisible,
         className,
       )}
-      style={{
-        transitionDuration: prefersReducedMotion
-          ? "0s"
-          : motionDurationCss("state"),
-      }}
     />
   );
 }
 
+// The progress bar's track, a 6px capsule on the fill, with the value up to
+// the knob in the primary colour, read at a glance as progress is. Disabled,
+// the whole slider fades as other controls do.
 export function Slider({ className, showTicks, ...props }: SliderProps) {
-  const prefersReducedMotion = useReducedMotion();
-  const transitionDuration = prefersReducedMotion
-    ? "0s"
-    : motionDurationCss("state");
   const { maxValue = 100, minValue = 0, step = 1 } = props;
   const tickCount = showTicks
     ? Math.max(0, Math.round((maxValue - minValue) / step))
@@ -100,34 +76,22 @@ export function Slider({ className, showTicks, ...props }: SliderProps) {
   return (
     <AriaSlider
       {...props}
-      // A macOS 26 slider without the glass, measured from a live capture: a
-      // 6px track on the fill, the accent up to the knob, and a raised capsule
-      // knob of 20 by 16 that is white in light and a light grey in dark. No
-      // hover on the track. Fluent's is a 4px track on the strong fill with
-      // an 18px disc knob, a solid fill under an elevation border, carrying
-      // an accent dot that grows on hover and shrinks while dragging; its
-      // accent fades on hover and press. Colours are the platform tokens and
-      // the Fluent geometry is the Windows variant.
-      className={cn("group flex w-full cursor-default items-center", className)}
+      className={cn(
+        "group flex w-full cursor-default items-center data-[disabled]:opacity-40",
+        className,
+      )}
     >
       {/* The knob travels inside the track by half its width, so the track
           element is inset by that amount and the visible track and fill
           extend back out to the full width. Ticks share the knob's span. */}
       <SliderTrack
-        className={cn(
-          "group relative mx-2.5 flex-1",
-          tickCount > 0 ? "h-6" : "h-5",
-        )}
+        className={cn("relative mx-2.5 flex-1", tickCount > 0 ? "h-6" : "h-5")}
       >
         <span
           aria-hidden
-          className="absolute -inset-x-2.5 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-control-strong-fill transition-colors group-data-[disabled]:bg-control-strong-fill-disabled windows:h-1"
-          style={{ transitionDuration }}
+          className="absolute -inset-x-2.5 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-fill"
         />
-        <SliderFill
-          className="absolute top-1/2 -ms-2.5 box-content h-1.5! -translate-y-1/2 rounded-full bg-primary-surface ps-2.5 transition-colors group-data-[disabled]:bg-primary-surface-disabled windows:h-1! windows:group-data-[hovered]:bg-primary-surface-hover windows:group-data-[dragging]:bg-primary-surface-pressed"
-          style={{ transitionDuration }}
-        />
+        <SliderFill className="absolute top-1/2 -ms-2.5 box-content h-1.5! -translate-y-1/2 rounded-full bg-primary ps-2.5" />
         <SliderKnob />
         {tickCount > 0 ? (
           <SliderTickMarks count={tickCount} minValue={minValue} step={step} />

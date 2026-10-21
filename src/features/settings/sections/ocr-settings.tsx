@@ -4,8 +4,8 @@
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
-import { GroupBox } from "../../../primitives/group-box/group-box";
 import { Switch } from "../../../primitives/switch/switch";
+import { SettingsGroup } from "../settings-group";
 
 import type { OcrAction } from "../../../bindings/OcrAction";
 import type { OcrSettings } from "../../../bindings/OcrSettings";
@@ -52,7 +52,7 @@ export function OcrSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title={t("settings-section-ocr")}>
+      <SettingsGroup title={t("settings-section-ocr")}>
         <ControlRow
           description={t("settings-ocr-enabled-description")}
           title={t("settings-ocr-enabled")}
@@ -81,8 +81,8 @@ export function OcrSettingsPanel({
             />
           )}
         </ControlRow>
-      </GroupBox>
-      <GroupBox title={t("settings-shortcuts")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-shortcuts")}>
         {actions().map(({ action, description, label }) => (
           <ControlRow description={description} key={action} title={label}>
             {(controlProps) => (
@@ -103,7 +103,7 @@ export function OcrSettingsPanel({
             )}
           </ControlRow>
         ))}
-      </GroupBox>
+      </SettingsGroup>
     </div>
   );
 }

@@ -4,9 +4,9 @@
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
 import { Badge } from "../../../primitives/badge/badge";
-import { GroupBox } from "../../../primitives/group-box/group-box";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
+import { SettingsGroup } from "../settings-group";
 
 import {
   transcriptionLanguageName,
@@ -47,7 +47,7 @@ export function TranscriptionSettingsPanel({
       <p className="text-body text-fg-secondary px-section">
         {t("settings-transcription-local")}
       </p>
-      <GroupBox title={t("settings-transcription-models")}>
+      <SettingsGroup title={t("settings-transcription-models")}>
         {state.models.map((model) => (
           <ControlRow
             description={model.description}
@@ -64,8 +64,8 @@ export function TranscriptionSettingsPanel({
             )}
           </ControlRow>
         ))}
-      </GroupBox>
-      <GroupBox title={t("settings-transcription-language")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-transcription-language")}>
         <ControlRow
           description={t("settings-transcription-language-description")}
           title={t("settings-transcription-language")}
@@ -86,7 +86,7 @@ export function TranscriptionSettingsPanel({
             </div>
           )}
         </ControlRow>
-      </GroupBox>
+      </SettingsGroup>
     </div>
   );
 }

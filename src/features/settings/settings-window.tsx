@@ -5,13 +5,13 @@ import { Plus } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
+import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { Alert } from "../../primitives/alert/alert";
 import { Button } from "../../primitives/button/button";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
-import { SidebarNav } from "../../primitives/sidebar-nav/sidebar-nav";
 
 import { useAnnotateSettingsSave } from "./sections/use-annotate-settings-save";
 import { useGlideSettingsSave } from "./sections/use-glide-settings-save";

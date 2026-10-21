@@ -7,8 +7,8 @@ import { useState } from "react";
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
-import { GroupBox } from "../../../primitives/group-box/group-box";
 import { TextField } from "../../../primitives/input-fields/text-field";
+import { SettingsGroup } from "../settings-group";
 
 import { KindColorPicker } from "./kind-color-picker";
 import { VoiceNoteSettings } from "./voice-note-settings";
@@ -74,7 +74,7 @@ export function MomentsSettingsPanel({
   return (
     <div className="gap-layout flex flex-col">
       {/* One line per moment: everything one is, editable at a glance. */}
-      <GroupBox title={t("settings-section-moments")}>
+      <SettingsGroup title={t("settings-section-moments")}>
         {kinds.map((kind) => (
           <div className="gap-control flex items-center" key={kind.id}>
             <KindColorPicker
@@ -127,7 +127,7 @@ export function MomentsSettingsPanel({
         <p className="text-caption text-fg-secondary">
           {t("settings-moments-footnote")}
         </p>
-      </GroupBox>
+      </SettingsGroup>
       <VoiceNoteSettings
         isSaving={isSaving}
         onChange={(next) => {

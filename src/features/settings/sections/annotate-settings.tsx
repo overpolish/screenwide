@@ -4,8 +4,8 @@
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
-import { GroupBox } from "../../../primitives/group-box/group-box";
 import { Switch } from "../../../primitives/switch/switch";
+import { SettingsGroup } from "../settings-group";
 
 import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 
@@ -38,7 +38,7 @@ export function AnnotateSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title={t("settings-section-annotate")}>
+      <SettingsGroup title={t("settings-section-annotate")}>
         <ControlRow
           description={t("settings-annotate-enabled-description")}
           title={t("settings-annotate-enabled")}
@@ -95,7 +95,7 @@ export function AnnotateSettingsPanel({
             />
           )}
         </ControlRow>
-      </GroupBox>
+      </SettingsGroup>
     </div>
   );
 }

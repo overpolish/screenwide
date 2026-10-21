@@ -4,13 +4,14 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 
+import { hotkeyKeys } from "../../composites/hotkey-field/hotkey";
 import {
   fitTooltip,
   getTooltip,
   listenToTooltipText,
   NativeTooltipContent,
 } from "../../composites/native-tooltip/api";
-import { NativeTooltipSurface } from "../../composites/native-tooltip/native-tooltip-surface";
+import { Tooltip } from "../../primitives/tooltip/tooltip";
 
 /** What the window shows before its first tooltip. It is concealed until one
  * arrives, so this is never seen. */
@@ -83,5 +84,12 @@ export function TooltipWindow() {
     };
   }, []);
 
-  return <NativeTooltipSurface content={content ?? NOTHING} ref={surfaceRef} />;
+  const shown = content ?? NOTHING;
+  return (
+    <Tooltip
+      keys={hotkeyKeys(shown.shortcut ?? null)}
+      label={shown.label}
+      ref={surfaceRef}
+    />
+  );
 }

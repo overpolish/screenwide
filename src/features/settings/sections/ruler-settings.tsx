@@ -4,8 +4,8 @@
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { t } from "../../../i18n/i18n";
-import { GroupBox } from "../../../primitives/group-box/group-box";
 import { Switch } from "../../../primitives/switch/switch";
+import { SettingsGroup } from "../settings-group";
 
 import type { RulerAction } from "../../../bindings/RulerAction";
 import type { RulerSettings } from "../../../bindings/RulerSettings";
@@ -94,7 +94,7 @@ export function RulerSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title={t("settings-section-ruler")}>
+      <SettingsGroup title={t("settings-section-ruler")}>
         <ControlRow
           description={t("settings-ruler-enabled-description")}
           title={t("settings-ruler-enabled")}
@@ -127,8 +127,8 @@ export function RulerSettingsPanel({
             />
           )}
         </ControlRow>
-      </GroupBox>
-      <GroupBox title={t("settings-shortcuts")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-shortcuts")}>
         {actions().map(({ action, description, label }) => (
           <ControlRow description={description} key={action} title={label}>
             {(controlProps) => (
@@ -149,7 +149,7 @@ export function RulerSettingsPanel({
             )}
           </ControlRow>
         ))}
-      </GroupBox>
+      </SettingsGroup>
     </div>
   );
 }

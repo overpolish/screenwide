@@ -39,7 +39,7 @@ const meta = {
   },
   component: AudioMeter,
   parameters: {
-    controls: { exclude: ["length"] },
+    controls: { exclude: ["aria-label", "length"] },
     layout: "centered",
   },
   // The meter fills its length, so it gets a box that is long in that

@@ -3,7 +3,6 @@
 
 import { CircleDashed, Cloud, Dices, Sun } from "lucide-react";
 import { ReactNode } from "react";
-import { TooltipTrigger } from "react-aria-components";
 
 import { t } from "../../i18n/i18n";
 import {
@@ -11,9 +10,9 @@ import {
   PaletteMode,
 } from "../../lib/palette-generator";
 import { IconButton } from "../../primitives/button/icon-button";
-import { Tooltip } from "../../primitives/tooltip/tooltip";
 import { ColorButton } from "../color-button/color-button";
 import { useColorPicker } from "../color-button/use-color-picker";
+import { NativeTooltipTrigger } from "../native-tooltip/native-tooltip-trigger";
 
 const paletteActions = (): Array<{
   icon: typeof Sun;
@@ -119,7 +118,7 @@ export function ColorPaletteGenerator({
       <div className="flex items-center justify-between gap-section">
         <div className="flex items-center gap-control">
           {paletteActions().map(({ icon: Icon, label, mode }) => (
-            <TooltipTrigger delay={400} key={mode}>
+            <NativeTooltipTrigger key={mode} tooltip={label}>
               <IconButton
                 aria-label={label}
                 isDisabled={isDisabled}
@@ -131,8 +130,7 @@ export function ColorPaletteGenerator({
               >
                 <Icon />
               </IconButton>
-              <Tooltip>{label}</Tooltip>
-            </TooltipTrigger>
+            </NativeTooltipTrigger>
           ))}
         </div>
         {endContent ?? (

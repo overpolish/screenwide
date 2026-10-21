@@ -15,13 +15,15 @@ const COARSE_STEP = 10;
 /** Eighths of a turn: the quarters and the diagonals between them. */
 const SNAP_STEP = 45;
 
-// The knob: a disc in the control material, so it sits in a row of fields
-// and buttons as one of them, at the same height, and sinks while dragged as
-// a pressed button does. The dot is the value, drawn as a rotation of the
-// whole span rather than a moved dot, so the turn stays on the compositor.
+// The knob: a disc in the knob material, light in both appearances as
+// anything turned or slid by hand is, at a control's height so it sits in a
+// row of fields and buttons as one of them. While dragged its bevel flattens,
+// as a pressed button's does. The dot is the value, drawn as a rotation of
+// the whole span rather than a moved dot, so the turn stays on the
+// compositor.
 const dialStyles = cn(
   "group relative size-control-height shrink-0 cursor-default touch-none rounded-full select-none",
-  "control-raised data-[hovered]:control-raised-hover data-[dragging]:control-raised-pressed",
+  "control-knob data-[dragging]:[--tw-shadow:var(--control-bevel-pressed)]",
   "data-[disabled]:opacity-40",
   focusStyles,
   elementFocusVisible,
@@ -30,15 +32,14 @@ const dialStyles = cn(
 const notchStyles =
   "absolute top-1 left-1/2 size-1.5 -translate-x-1/2 rounded-full transition-colors";
 
-// A neutral dot is brought up to the full text colour while the hand is on
-// it; a coloured one names what it aims, such as an axis in its colour, and
-// keeps that colour throughout. Hues reuse the status colours so the app
-// keeps one red, one green and one blue.
+// A neutral dot is the knob's own ink, dark on the light face in both
+// appearances; a coloured one names what it aims, such as an axis in its
+// colour. Hues reuse the status colours so the app keeps one red, one green
+// and one blue.
 const notchColors = {
   blue: "bg-info",
   green: "bg-success",
-  neutral:
-    "bg-fg-secondary group-data-[dragging]:bg-fg group-data-[hovered]:bg-fg",
+  neutral: "bg-on-knob",
   red: "bg-error",
 } as const;
 

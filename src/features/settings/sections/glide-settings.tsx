@@ -6,8 +6,8 @@ import { HotkeyField } from "../../../composites/hotkey-field/hotkey-field";
 import { SliderNumberField } from "../../../composites/slider-number-field/slider-number-field";
 import { platformArg, t } from "../../../i18n/i18n";
 import { isMacHost } from "../../../lib/platform";
-import { GroupBox } from "../../../primitives/group-box/group-box";
 import { Switch } from "../../../primitives/switch/switch";
+import { SettingsGroup } from "../settings-group";
 
 import type { GlideSettings } from "../../../bindings/GlideSettings";
 
@@ -88,7 +88,7 @@ export function GlideSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <GroupBox title={t("settings-section-glide")}>
+      <SettingsGroup title={t("settings-section-glide")}>
         <ControlRow
           description={t("settings-glide-enabled-description")}
           title={t("settings-glide-enabled")}
@@ -104,8 +104,8 @@ export function GlideSettingsPanel({
             />
           )}
         </ControlRow>
-      </GroupBox>
-      <GroupBox title={t("settings-glide-controls")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-glide-controls")}>
         {modifierKeys.map((key) => {
           const otherKeys = modifierKeys.filter(
             (candidate) => candidate !== key,
@@ -144,8 +144,8 @@ export function GlideSettingsPanel({
             </ControlRow>
           );
         })}
-      </GroupBox>
-      <GroupBox title={t("settings-glide-behavior")}>
+      </SettingsGroup>
+      <SettingsGroup title={t("settings-glide-behavior")}>
         <ControlRow title={t("settings-glide-window-gap")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
@@ -186,7 +186,7 @@ export function GlideSettingsPanel({
               )}
             </ControlRow>
           ))}
-      </GroupBox>
+      </SettingsGroup>
     </div>
   );
 }
