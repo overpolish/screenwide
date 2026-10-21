@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 
-import { ANNOTATION_WIDTHS } from "../annotation-style/widths";
+import { ANNOTATION_WIDTHS } from "../../features/annotations/widths";
 
 import { StepSlider } from "./step-slider";
 

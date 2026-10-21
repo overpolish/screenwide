@@ -14,7 +14,7 @@ import { t } from "../../../i18n/i18n";
 import { Toolbar } from "../../../primitives/toolbar/toolbar";
 import { AnnotationToolStrip } from "../toolbar/annotation-tool-strip";
 
-import type { AnnotationKind } from "../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../annotations/types";
 
 export type ScreenshotTool =
   AnnotationKind | "canvas" | "crop" | "marquee" | "select" | null;

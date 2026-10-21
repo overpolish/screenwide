@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Background } from "../../../../composites/background-picker/background";
-import { DEFAULT_GENERATOR_ID } from "../../../../composites/background-picker/background-generators";
 import { randomMeshComposition } from "../../screenshot/screenshot-background";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
+
+import { Background } from "./background/background";
+import { DEFAULT_GENERATOR_ID } from "./background/background-generators";
 
 /**
  * The canvas's background, as the picker speaks of it.

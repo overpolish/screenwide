@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, Paintbrush, Trash2 } from "lucide-react";
+import { Paintbrush, Trash2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
@@ -173,11 +173,10 @@ function PickedObjects({ change, isLocked, objects }: RowsProps) {
             ) : null}
             {chosen !== null ? (
               <ConfirmActionButton
-                armedIcon={<Check />}
-                armedLabel={t("editor-panels-camera-object-confirm-remove")}
-                idleIcon={<Trash2 />}
-                idleLabel={t("editor-panels-camera-object-remove")}
+                confirmLabel={t("editor-panels-camera-object-confirm-remove")}
+                icon={<Trash2 />}
                 isDisabled={isLocked}
+                label={t("editor-panels-camera-object-remove")}
                 onConfirm={() => {
                   change({ removeCameraObject: chosen });
                 }}

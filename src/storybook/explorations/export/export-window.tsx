@@ -3,11 +3,11 @@
 
 import { type ReactNode, useState } from "react";
 
+import { ControlRow } from "../../../composites/control-row/control-row";
 import { Button } from "../../../primitives/button/button";
 import { ProgressBar } from "../../../primitives/progress-bar/progress-bar";
 import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
 import { Switch } from "../../../primitives/switch/switch";
-import { SettingRow } from "../shared/setting-row";
 
 import {
   BALANCED,
@@ -77,16 +77,16 @@ function Option({
 }) {
   const [isOn, setIsOn] = useState(initial);
   return (
-    <SettingRow description={description} title={title}>
-      {(labelledBy) => (
+    <ControlRow description={description} title={title}>
+      {(controlProps) => (
         <Switch
-          aria-labelledby={labelledBy}
+          {...controlProps}
           isDisabled={isDisabled}
           isSelected={isOn && !isDisabled}
           onChange={setIsOn}
         />
       )}
-    </SettingRow>
+    </ControlRow>
   );
 }
 

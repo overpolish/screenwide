@@ -1,17 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationAngleDial } from "../../composites/annotation-style/annotation-angle-dial";
-import { AnnotationBlurGroup } from "../../composites/annotation-style/annotation-blur-group";
-import { AnnotationEdgeGroup } from "../../composites/annotation-style/annotation-edge-group";
-import { AnnotationFitGroup } from "../../composites/annotation-style/annotation-fit-group";
-import { AnnotationHeadGroup } from "../../composites/annotation-style/annotation-head-group";
-import { AnnotationInkGroup } from "../../composites/annotation-style/annotation-ink-group";
-import { AnnotationRadiusField } from "../../composites/annotation-style/annotation-radius-field";
-import { AnnotationStrokeGroup } from "../../composites/annotation-style/annotation-stroke-group";
-import { annotationSizeLabel } from "../../composites/annotation-style/annotation-text";
-import { annotationSizes } from "../../composites/annotation-style/widths";
 import { StepSlider } from "../../composites/step-slider/step-slider";
+import { AnnotationAngleDial } from "../annotations/annotation-angle-dial";
+import { AnnotationChoice } from "../annotations/annotation-choice";
+import {
+  blurChoice,
+  edgeChoice,
+  fitChoice,
+  headChoice,
+  inkChoice,
+  strokeChoice,
+} from "../annotations/annotation-choices";
+import { AnnotationRadiusField } from "../annotations/annotation-radius-field";
+import { annotationSizeLabel } from "../annotations/annotation-text";
+import { annotationSizes } from "../annotations/widths";
 
 import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
 
@@ -54,19 +57,22 @@ export function AnnotateToolControls({
     case "highlight":
       return (
         <>
-          <AnnotationFitGroup
+          <AnnotationChoice
+            choice={fitChoice}
             onChange={(highlightManual) => {
               onChange({ highlightManual });
             }}
             value={settings.highlightManual}
           />
-          <AnnotationInkGroup
+          <AnnotationChoice
+            choice={inkChoice}
             onChange={(highlightTint) => {
               onChange({ highlightTint });
             }}
             value={settings.highlightTint}
           />
-          <AnnotationStrokeGroup
+          <AnnotationChoice
+            choice={strokeChoice}
             onChange={(highlightHandDrawn) => {
               onChange({ highlightHandDrawn });
             }}
@@ -90,7 +96,8 @@ export function AnnotateToolControls({
       return (
         <>
           {width}
-          <AnnotationStrokeGroup
+          <AnnotationChoice
+            choice={strokeChoice}
             onChange={(shapeHandDrawn) => {
               onChange({ shapeHandDrawn });
             }}
@@ -114,13 +121,15 @@ export function AnnotateToolControls({
             }}
             value={settings.spotlightRadius}
           />
-          <AnnotationEdgeGroup
+          <AnnotationChoice
+            choice={edgeChoice}
             onChange={(spotlightSoftness) => {
               onChange({ spotlightSoftness });
             }}
             value={settings.spotlightSoftness}
           />
-          <AnnotationBlurGroup
+          <AnnotationChoice
+            choice={blurChoice}
             onChange={(spotlightBlur) => {
               onChange({ spotlightBlur });
             }}
@@ -140,7 +149,8 @@ export function AnnotateToolControls({
       return (
         <>
           {width}
-          <AnnotationHeadGroup
+          <AnnotationChoice
+            choice={headChoice}
             onChange={(defaultHead) => {
               onChange({ defaultHead });
             }}

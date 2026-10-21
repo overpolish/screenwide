@@ -1,30 +1,48 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Disc } from "lucide-react";
 import { useState } from "react";
 
-import { PillGroup } from "../../primitives/pill-group/pill-group";
+import { Badge } from "../../primitives/badge/badge";
 import { Switch } from "../../primitives/switch/switch";
-import { featureStage } from "../../storybook/feature-story-stage";
-import { HotkeyField } from "../hotkey-field/hotkey-field";
-import { PathField } from "../path-field/path-field";
-import { SliderNumberField } from "../slider-number-field/slider-number-field";
 
 import { ControlRow } from "./control-row";
 
-import type { ControlRowControlProps } from "./control-row";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
+// A switch as the row's control, live so the row can be tried.
+function RowSwitch(controlProps: {
+  "aria-labelledby": string;
+  "aria-describedby"?: string;
+}) {
+  const [isOn, setIsOn] = useState(true);
+  return <Switch {...controlProps} isSelected={isOn} onChange={setIsOn} />;
+}
+
 const meta = {
+  argTypes: {
+    description: { control: "text" },
+    title: { control: "text" },
+  },
   args: {
-    children: (controlProps) => <Switch {...controlProps} defaultSelected />,
-    description: "Show the containing folder after a successful export.",
-    title: "Open location after export",
+    children: (controlProps) => <RowSwitch {...controlProps} />,
+    description: "Show it in Finder once the file is saved.",
+    title: "Open folder after saving",
   },
   component: ControlRow,
-  decorators: [featureStage({ height: 64, width: 576 })],
-  parameters: { layout: "fullscreen" },
-  title: "Composites/ControlRow",
+  decorators: [
+    (Story) => (
+      <div className="w-80">
+        <Story />
+      </div>
+    ),
+  ],
+  parameters: {
+    controls: { include: ["description", "title"] },
+    layout: "centered",
+  },
+  title: "Composites/Control Row",
 } satisfies Meta<typeof ControlRow>;
 
 export default meta;
@@ -32,110 +50,27 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-// Composite controls keep their own action labels. The surrounding group links
-// the whole control to the row title and description.
-function GapControl(props: ControlRowControlProps) {
-  const [value, setValue] = useState(12);
-  return (
-    <div {...props} role="group">
-      <SliderNumberField
-        aria-label="Window gap"
-        className="w-64"
-        maxValue={200}
-        minValue={0}
-        onChange={setValue}
-        rightSection="px"
-        sliderMaxValue={50}
-        value={value}
-      />
-    </div>
-  );
-}
-
-function LocationControl(props: ControlRowControlProps) {
-  const [value, setValue] = useState<string | null>(null);
-  return (
-    <div {...props} role="group">
-      <PathField
-        aria-label="Recording location"
-        emptyLabel="System default"
-        onBrowse={() => {
-          setValue("/Users/demo/Documents/Screenwide/Recordings");
-        }}
-        secondaryAction={{
-          label: "Use system default",
-          onPress: () => {
-            setValue(null);
-          },
-          type: "reset",
-        }}
-        value={value}
-      />
-    </div>
-  );
-}
-
-function ShortcutControl(props: ControlRowControlProps) {
-  const [value, setValue] = useState<string | null>(
-    "CommandOrControl+Shift+KeyR",
-  );
-  return (
-    <div {...props} role="group">
-      <HotkeyField
-        aria-label="Show recording bar shortcut"
-        onChange={setValue}
-        value={value}
-      />
-    </div>
-  );
-}
-
-function FormatControl(props: ControlRowControlProps) {
-  const [selected, setSelected] = useState("png");
-  return (
-    <div {...props} role="group">
-      <PillGroup
-        aria-label="Screenshot format"
-        items={[
-          { id: "png", label: "PNG" },
-          { id: "jpeg", label: "JPEG" },
-          { id: "webp", label: "WebP" },
-        ]}
-        onSelectionChange={setSelected}
-        selected={selected}
-      />
-    </div>
-  );
-}
-
-export const WithSliderNumberField: Story = {
+// An icon tile before the text, as the permissions window lists them.
+export const WithLeading: Story = {
   args: {
-    children: (props) => <GapControl {...props} />,
-    description: "Space between arranged windows.",
-    title: "Window gap",
+    description: "Screen and system audio in recordings.",
+    title: "Screen Recording",
   },
+  render: (args) => (
+    <ControlRow
+      {...args}
+      leading={
+        <span className="flex size-8 items-center justify-center rounded-control bg-error text-white [&_svg]:size-icon">
+          <Disc />
+        </span>
+      }
+    />
+  ),
 };
 
-export const WithPathField: Story = {
-  args: {
-    children: (props) => <LocationControl {...props} />,
-    description: "The folder new recording exports start in.",
-    title: "Recording location",
-  },
-};
-
-export const WithHotkeyField: Story = {
-  args: {
-    children: (props) => <ShortcutControl {...props} />,
-    description: "Choose a shortcut to open the recording controls.",
-    title: "Show recording bar",
-  },
-};
-
-export const WithPillGroup: Story = {
-  args: {
-    children: (props) => <FormatControl {...props} />,
-    description: "The default format for exported screenshots.",
-    title: "Screenshot format",
-  },
+export const WithAccessory: Story = {
+  args: { description: undefined, title: "Camera" },
+  render: (args) => (
+    <ControlRow {...args} titleAccessory={<Badge>Optional</Badge>} />
+  ),
 };

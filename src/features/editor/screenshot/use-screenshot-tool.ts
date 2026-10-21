@@ -9,7 +9,7 @@ import { isAnnotationTool } from "../tool-panels/tool-registry";
 
 import { ScreenshotTool } from "./screenshot-tools";
 
-import type { AnnotationKind } from "../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../annotations/types";
 
 /** Picking a screenshot tool up, and what that clears on its way in. The twin
  * of `useRecordingPreviewCanvasTool`'s own `changeCanvasTool`. */

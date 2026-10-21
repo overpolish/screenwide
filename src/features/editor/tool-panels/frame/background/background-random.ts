@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { generatePalette, PaletteMode } from "../../lib/palette-generator";
+import {
+  generatePalette,
+  PaletteMode,
+} from "../../../../../lib/palette-generator";
 
 import { Background, BackgroundMeshPoint } from "./background";
 import {

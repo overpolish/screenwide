@@ -8,7 +8,7 @@ import {
   backgroundPresetsWithWallpapers,
   builtInBackgroundPresets,
   SystemWallpaper,
-} from "../../../../composites/background-picker/background-presets";
+} from "./background/background-presets";
 
 /**
  * The backgrounds the picker offers: the app's own, and the pictures on the

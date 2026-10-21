@@ -1,18 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationPixelationGroup } from "../../../../composites/annotation-style/annotation-pixelation-group";
-import { AnnotationRedactionGroup } from "../../../../composites/annotation-style/annotation-redaction-group";
-import { AnnotationRedaction } from "../../../../composites/annotation-style/types";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { StepSlider } from "../../../../composites/step-slider/step-slider";
+import { t } from "../../../../i18n/i18n";
+import { AnnotationChoice } from "../../../annotations/annotation-choice";
+import { pixelationChoice } from "../../../annotations/annotation-choices";
+import { AnnotationRedactionGroup } from "../../../annotations/annotation-redaction-group";
+import { AnnotationRedaction } from "../../../annotations/types";
 import {
   ANNOTATION_BLUR_STRENGTHS,
   annotationWidthAt,
   annotationWidthIndex,
   redactionSizePresets,
-} from "../../../../composites/annotation-style/widths";
-import { ControlRow } from "../../../../composites/control-row/control-row";
-import { StepSlider } from "../../../../composites/step-slider/step-slider";
-import { t } from "../../../../i18n/i18n";
+} from "../../../annotations/widths";
 
 import type { ToolPanelPatch } from "../tool-panel-patch";
 
@@ -69,7 +70,8 @@ export function AnnotationRedactionRows({
         <ControlRow title={t("editor-panels-redaction-style")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
-              <AnnotationPixelationGroup
+              <AnnotationChoice
+                choice={pixelationChoice}
                 isDisabled={isLocked}
                 onChange={(next) => {
                   // The styles offer different block sizes, so the block moves

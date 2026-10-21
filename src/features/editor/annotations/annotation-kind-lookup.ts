@@ -9,7 +9,7 @@
 import { ANNOTATION_KINDS } from "./annotation-kinds";
 
 import type { Annotation, AnnotationShape } from "./annotations";
-import type { AnnotationKind } from "../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../annotations/types";
 
 /** Whether `value` names a kind this build knows how to draw. */
 export const isAnnotationKind = (value: unknown): value is AnnotationKind =>

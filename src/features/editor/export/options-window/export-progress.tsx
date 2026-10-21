@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, X } from "lucide-react";
-
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { ProgressPanel } from "../../../../composites/progress-panel/progress-panel";
 import { t } from "../../../../i18n/i18n";
@@ -55,17 +53,14 @@ export function ExportProgress({
       action={
         cancellable ? (
           <ConfirmActionButton
-            armedIcon={<Check />}
-            armedLabel={t("editor-export-confirm-cancel")}
-            idleIcon={<X />}
-            idleLabel={
+            confirmLabel={t("editor-export-confirm-cancel")}
+            isDisabled={isCancelingSave}
+            label={
               isCancelingSave
                 ? t("editor-export-canceling")
                 : t("editor-export-cancel")
             }
-            isDisabled={isCancelingSave}
             onConfirm={onCancel}
-            variant="text"
           />
         ) : undefined
       }

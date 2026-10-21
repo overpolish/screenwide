@@ -5,12 +5,13 @@ import { Image as ImageGlyph, Plus } from "lucide-react";
 import { useState } from "react";
 import { ToggleButtonGroup } from "react-aria-components";
 
-import { t } from "../../i18n/i18n";
+import { t } from "../../../../../i18n/i18n";
+import { Swatch } from "../../../../../primitives/swatch/swatch";
 
 import { Background, BackgroundPreset, sameBackground } from "./background";
 import { BackgroundEditor } from "./background-editor";
 import { randomMeshForGenerator } from "./background-random";
-import { BackgroundTile } from "./background-tile";
+import { BackgroundSwatch } from "./background-swatch";
 
 /**
  * The backgrounds on offer, and the one the canvas is wearing.
@@ -107,8 +108,8 @@ export function BackgroundPicker({
   };
 
   const tile = (preset: BackgroundPreset, isSaved: boolean) => (
-    <BackgroundTile
-      ariaLabel={preset.name}
+    <BackgroundSwatch
+      aria-label={preset.name}
       background={preset.background}
       id={preset.id}
       isDisabled={isDisabled}
@@ -133,12 +134,12 @@ export function BackgroundPicker({
   );
 
   return (
-    <div className="flex flex-col gap-control-inset">
+    <div className="flex flex-col gap-separate">
       <ToggleButtonGroup
         aria-label={t("background-label")}
         // Centred rows: the tiles keep their size and gap, and whatever the
         // row cannot fill is split evenly between the two edges.
-        className="flex flex-wrap justify-center gap-control"
+        className="flex flex-wrap justify-center gap-inline"
         disallowEmptySelection
         isDisabled={isDisabled}
         selectedKeys={new Set([selectedId])}
@@ -149,8 +150,8 @@ export function BackgroundPicker({
         {/* The Image tile is a button that picks a new picture; a picked one
             becomes a preset with a tile of its own, so this one is always the
             glyph and never the chosen background. */}
-        <BackgroundTile
-          ariaLabel={t("background-image")}
+        <Swatch
+          aria-label={t("background-image")}
           id="image"
           isDisabled={isDisabled}
           isSelected={false}
@@ -166,9 +167,9 @@ export function BackgroundPicker({
           }}
         >
           <ImageGlyph aria-hidden="true" />
-        </BackgroundTile>
-        <BackgroundTile
-          ariaLabel={t("background-custom")}
+        </Swatch>
+        <Swatch
+          aria-label={t("background-custom")}
           id="custom"
           isDisabled={isDisabled}
           isSelected={selectedId === "custom"}
@@ -177,7 +178,7 @@ export function BackgroundPicker({
           }}
         >
           <Plus aria-hidden="true" />
-        </BackgroundTile>
+        </Swatch>
       </ToggleButtonGroup>
 
       {showEditor ? (

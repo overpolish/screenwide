@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
-  Check,
   LayoutArrowRight,
   Magnet,
   Maximize2,
@@ -89,12 +88,12 @@ export function TimelineZoomToolbar({
           left to right in all of them. */}
       <NativeTooltipTrigger tooltip={t("editor-timeline-restore-order")}>
         <ConfirmActionButton
-          armedIcon={<Check />}
-          armedLabel={t("editor-timeline-restore-order-confirm")}
-          idleIcon={<LayoutArrowRight />}
-          idleLabel={t("editor-timeline-restore-order")}
+          confirmLabel={t("editor-timeline-restore-order-confirm")}
+          icon={<LayoutArrowRight />}
           isDisabled={!isReordered}
+          label={t("editor-timeline-restore-order")}
           onConfirm={onRestoreOrder}
+          variant="ghost"
         />
       </NativeTooltipTrigger>
       <div className="ml-auto flex items-center gap-control">

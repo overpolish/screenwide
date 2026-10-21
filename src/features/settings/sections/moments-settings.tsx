@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
@@ -107,20 +107,18 @@ export function MomentsSettingsPanel({
               value={kind.shortcut}
             />
             <ConfirmActionButton
-              armedIcon={<Check />}
-              armedLabel={t("settings-moment-confirm-remove", {
+              confirmLabel={t("settings-moment-confirm-remove", {
                 moment: kind.name,
               })}
-              idleIcon={<Trash2 />}
-              idleLabel={t("settings-moment-remove", { moment: kind.name })}
+              icon={<Trash2 />}
               isDisabled={isSaving}
+              label={t("settings-moment-remove", { moment: kind.name })}
               onConfirm={() => {
                 void save({
                   ...settings,
                   kinds: kinds.filter((other) => other.id !== kind.id),
                 });
               }}
-              variant="icon"
             />
           </div>
         ))}

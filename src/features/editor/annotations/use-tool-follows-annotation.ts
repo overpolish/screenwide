@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { drawingToolKind } from "../tool-panels/tool-registry";
 
-import type { AnnotationKind } from "../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../annotations/types";
 
 /**
  * A drawing tool follows the annotation that was chosen with it.

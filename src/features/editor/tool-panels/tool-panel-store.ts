@@ -3,10 +3,6 @@
 
 import { create } from "zustand";
 
-import {
-  Background,
-  BackgroundPreset,
-} from "../../../composites/background-picker/background";
 import { CameraOutput } from "../export/camera-output";
 import {
   DEFAULT_CURSOR_EFFECTS,
@@ -21,6 +17,7 @@ import {
 } from "../types";
 import { createWorkspaceMirror } from "../workspace-mirror";
 
+import { Background, BackgroundPreset } from "./frame/background/background";
 import { ToolPanelFrame } from "./tool-panel-frame";
 import { ToolPanelPatch } from "./tool-panel-patch";
 import { ToolPanelScene } from "./tool-panel-scene";

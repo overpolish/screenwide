@@ -29,6 +29,7 @@ import {
   X,
 } from "lucide-react";
 
+import { cn } from "../../lib/styling";
 import {
   ArrowToolIcon,
   CounterToolIcon,
@@ -41,10 +42,9 @@ import {
   ShapeToolIcon,
   SpotlightToolIcon,
   TextToolIcon,
-} from "../../composites/annotation-style/annotation-tool-icons";
-import { cn } from "../../lib/styling";
+} from "../annotations/annotation-tool-icons";
 
-import type { AnnotationKind } from "../../composites/annotation-style/types";
+import type { AnnotationKind } from "../annotations/types";
 
 // Items cross a window boundary as data, so a glyph travels by name. Every
 // annotation tool has one, under `tool-` so it stays apart from `image`, the

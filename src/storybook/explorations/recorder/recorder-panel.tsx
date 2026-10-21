@@ -4,12 +4,12 @@
 import { SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
+import { ControlRow } from "../../../composites/control-row/control-row";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { Keyboard, Shortcut } from "../../../primitives/keyboard/keyboard";
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { Switch } from "../../../primitives/switch/switch";
-import { SettingRow } from "../shared/setting-row";
 
 import { InputTile } from "./input-tile";
 import {
@@ -103,18 +103,18 @@ export function RecorderPanel({
           );
         })}
       </div>
-      <SettingRow description="Keeps the last 30 seconds" title="Replay buffer">
-        {(labelledBy) => (
+      <ControlRow description="Keeps the last 30 seconds" title="Replay buffer">
+        {(controlProps) => (
           <>
             {isReplayOn ? <Button>Save</Button> : null}
             <Switch
-              aria-labelledby={labelledBy}
+              {...controlProps}
               isSelected={isReplayOn}
               onChange={setIsReplayOn}
             />
           </>
         )}
-      </SettingRow>
+      </ControlRow>
       <div className="flex gap-inline">
         {hasScreen ? (
           <Button isDisabled={!canRecordScreen}>Screenshot</Button>

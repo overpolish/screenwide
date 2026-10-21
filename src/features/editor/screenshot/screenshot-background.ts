@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { randomMeshBackground } from "../../../composites/background-picker/background-random";
+import { randomMeshBackground } from "../tool-panels/frame/background/background-random";
 
 /** A fresh mesh in the flat fields the output settings carry it in. */
 export const randomMeshComposition = (colorCount?: number) => {

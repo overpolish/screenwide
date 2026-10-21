@@ -4,7 +4,7 @@
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 
-import type { AnnotationKind } from "../../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../../annotations/types";
 import type { ToolPanelPatch } from "../tool-panel-patch";
 
 /**

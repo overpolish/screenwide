@@ -8,6 +8,8 @@ controls-no-content = No Content
 controls-sidebar-collapse = Collapse sidebar
 controls-sidebar-expand = Expand sidebar
 controls-document-name = Document name
+# Said aloud after a copy button copies.
+controls-copied = Copied
 # $label names the value the slider and field set together.
 controls-slider = { $label } slider
 controls-slider-value = { $label } value

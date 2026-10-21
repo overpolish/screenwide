@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CopyableText } from "../../composites/copyable-text/copyable-text";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { Alert } from "../../primitives/alert/alert";
 import { Button } from "../../primitives/button/button";
+
+import { CopyableText } from "./copyable-text";
 
 import type { QrPayload } from "./qr-code-payload";
 

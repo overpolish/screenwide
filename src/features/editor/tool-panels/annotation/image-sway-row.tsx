@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationShuffleSwitch } from "../../../../composites/annotation-style/annotation-shuffle-switch";
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { AnnotationShuffleSwitch } from "../../../annotations/annotation-shuffle-switch";
 
 import type { EditorKind } from "../../types";
 import type { ToolPanelPatch } from "../tool-panel-patch";

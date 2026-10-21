@@ -8,8 +8,8 @@
  * `src-tauri/crates/annotations`.
  */
 
-import { ANNOTATION_SIZES } from "../../../composites/annotation-style/widths";
 import { t } from "../../../i18n/i18n";
+import { ANNOTATION_SIZES } from "../../annotations/widths";
 
 import {
   ANNOTATION_COUNTER_DRAW_IN_MS,

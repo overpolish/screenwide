@@ -26,15 +26,17 @@ export type ConfirmActionTriggerProps = {
  * or the action becoming unavailable all disarm it again.
  */
 export function useConfirmAction({
+  isArmedAtFirst = false,
   isDisabled,
   onConfirm,
   timeoutMs = DEFAULT_CONFIRM_TIMEOUT_MS,
 }: {
+  isArmedAtFirst?: boolean;
   isDisabled?: boolean;
   onConfirm?: () => void;
   timeoutMs?: number;
 }): { buttonProps: ConfirmActionTriggerProps; isArmed: boolean } {
-  const [isArmed, setIsArmed] = useState(false);
+  const [isArmed, setIsArmed] = useState(isArmedAtFirst);
   const disarmRef = useRef<number | undefined>(undefined);
   const interactionFocus = useInteractionFocus();
   const buttonRef = useRef<HTMLButtonElement>(null);

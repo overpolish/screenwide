@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { annotationToolLabel } from "../../../composites/annotation-style/annotation-text";
 import { t } from "../../../i18n/i18n";
+import { annotationToolLabel } from "../../annotations/annotation-text";
 import {
   boundsAnchor,
   closePopupMenu,

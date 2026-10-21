@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, ClipboardCopy, Trash2, Upload } from "lucide-react";
+import { ClipboardCopy, Upload, Trash2 } from "lucide-react";
 import { ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
@@ -86,12 +86,12 @@ export function EditorTitlebar({
             // Two presses: it sits beside Export, and the editor closes
             // behind it.
             <ConfirmActionButton
-              armedIcon={<Check />}
-              armedLabel={t("editor-confirm-delete")}
-              idleIcon={<Trash2 />}
-              idleLabel={t("editor-delete")}
+              confirmLabel={t("editor-confirm-delete")}
+              icon={<Trash2 />}
               isDisabled={!artifact || isSaving}
+              label={t("editor-delete")}
               onConfirm={onDelete}
+              variant="ghost"
             />
           ) : null}
           {artifact?.kind === "screenshot" ? (

@@ -10,8 +10,8 @@
  * in `annotation-draw-in.ts`.
  */
 
-import { ANNOTATION_SIZES } from "../../../composites/annotation-style/widths";
 import { t } from "../../../i18n/i18n";
+import { ANNOTATION_SIZES } from "../../annotations/widths";
 
 import { BOX_KIND_ROWS } from "./annotation-box-kinds";
 import {
@@ -32,7 +32,7 @@ import {
 
 import type { AnnotationKindRow } from "./annotation-kind-row";
 import type { AnnotationShape } from "./annotations";
-import type { AnnotationKind } from "../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../annotations/types";
 
 export const ANNOTATION_KINDS: {
   [Kind in AnnotationKind]: AnnotationKindRow<

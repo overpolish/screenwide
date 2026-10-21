@@ -4,17 +4,17 @@
 import { Eraser, GripVertical, Undo2, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { AnnotationColorGrid } from "../../composites/annotation-style/annotation-color-grid";
-import {
-  annotationToolLabel,
-  annotationToolName,
-} from "../../composites/annotation-style/annotation-text";
-import { BackgroundTile } from "../../composites/background-picker/background-tile";
 import { NativeTooltipTrigger } from "../../composites/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../composites/tool-toggle/tool-toggle";
 import { t } from "../../i18n/i18n";
 import { IconButton } from "../../primitives/button/icon-button";
+import { Swatch } from "../../primitives/swatch/swatch";
 import { Toolbar } from "../../primitives/toolbar/toolbar";
+import { AnnotationColorGrid } from "../annotations/annotation-color-grid";
+import {
+  annotationToolLabel,
+  annotationToolName,
+} from "../annotations/annotation-text";
 
 import { AnnotateToolControls } from "./annotate-tool-controls";
 import { ANNOTATE_TOOLS } from "./annotate-tools";
@@ -137,9 +137,9 @@ export function AnnotateToolbar({
 
         <div className="flex items-center gap-control-inset">
           {hasColor ? (
-            <BackgroundTile
-              ariaLabel={t("annotation-color")}
-              background={{ color: settings.defaultColor, kind: "solid" }}
+            <Swatch
+              aria-label={t("annotation-color")}
+              color={settings.defaultColor}
               id="color"
               isSelected={showColors}
               onPress={() => {

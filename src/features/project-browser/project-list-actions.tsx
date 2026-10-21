@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, Trash2 } from "lucide-react";
-
 import { ConfirmActionButton } from "../../composites/confirm-action-button/confirm-action-button";
 import { platformArg, t } from "../../i18n/i18n";
 import { Button } from "../../primitives/button/button";
@@ -75,13 +73,10 @@ export function ListActions({
   if (!("onRestore" in actions)) return null;
   return (
     <ConfirmActionButton
-      armedIcon={<Check />}
-      armedLabel={t("project-browser-empty-recently-deleted-confirm")}
-      idleIcon={<Trash2 />}
-      idleLabel={t("project-browser-empty-recently-deleted")}
+      confirmLabel={t("project-browser-empty-recently-deleted-confirm")}
       isDisabled={isEmpty}
+      label={t("project-browser-empty-recently-deleted")}
       onConfirm={actions.onEmpty}
-      variant="text"
     />
   );
 }

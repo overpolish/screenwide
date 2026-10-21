@@ -3,7 +3,7 @@
 
 import { useRef } from "react";
 
-import { AnnotationColorGrid } from "../../composites/annotation-style/annotation-color-grid";
+import { AnnotationColorGrid } from "../annotations/annotation-color-grid";
 
 import { useFittedPanel } from "./use-fitted-panel";
 import { reportPopupPanelPick } from "./use-popup-panel-picker";

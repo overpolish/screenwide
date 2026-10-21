@@ -3,11 +3,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { t } from "../../../i18n/i18n";
 import {
   ANNOTATION_SWATCHES,
   sameAnnotationColor,
-} from "../../../composites/annotation-style/palette";
-import { t } from "../../../i18n/i18n";
+} from "../../annotations/palette";
 import { useSettingsApi } from "../settings-api-context";
 
 import type { MomentKind } from "../../../bindings/MomentKind";

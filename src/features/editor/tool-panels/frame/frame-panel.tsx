@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { presetName } from "../../../../composites/background-picker/background";
-import { BackgroundPicker } from "../../../../composites/background-picker/background-picker";
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { Dimensions } from "../../../../composites/dimensions/dimensions";
 import { SliderNumberField } from "../../../../composites/slider-number-field/slider-number-field";
@@ -11,6 +9,8 @@ import { browseBackgroundImage } from "../../api";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
+import { presetName } from "./background/background";
+import { BackgroundPicker } from "./background/background-picker";
 import { useBackgroundPresetMenu } from "./use-background-preset-menu";
 import { useBuiltInBackgroundPresets } from "./use-background-presets";
 

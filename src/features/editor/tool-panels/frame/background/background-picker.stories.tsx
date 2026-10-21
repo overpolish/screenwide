@@ -76,7 +76,7 @@ function PickerHarness({ initial }: { initial: Background }) {
 const meta = {
   component: PickerHarness,
   parameters: { layout: "centered" },
-  title: "Composites/Background Picker",
+  title: "Features/Editor/Background Picker",
 } satisfies Meta<typeof PickerHarness>;
 
 export default meta;

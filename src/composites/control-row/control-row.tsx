@@ -11,6 +11,7 @@ export type ControlRowControlProps = {
 };
 
 export type ControlRowProps = {
+  /** Spread the props onto the control itself, not a wrapper around it. */
   children: (controlProps: ControlRowControlProps) => ReactNode;
   title: string;
   className?: string;
@@ -22,9 +23,13 @@ export type ControlRowProps = {
   titleAccessory?: ReactNode;
 };
 
-/** Spread controlProps onto the actual control, not its layout wrapper.
- * The parent owns spacing between rows; the row itself is not clickable.
- */
+// A setting's row, as System Settings and inspector panels lay one out: its
+// name, a note under it when the name needs one, and the control at the end,
+// which the name and note label for assistive technology. At least a
+// control's height, so a row reads the same whether or not it has a note.
+// The note is set back, in the caption type and a quieter colour, so it reads
+// as a note rather than a second name. The parent owns the space between
+// rows; the row itself is not pressable.
 export function ControlRow({
   children,
   className,
@@ -39,30 +44,37 @@ export function ControlRow({
   const descriptionId = description ? `${id}-description` : undefined;
 
   return (
-    // A labelled control row as System Settings and inspector panels lay one
-    // out: title with its description directly beneath, and the control
-    // trailing.
-    <div className={cn("flex items-center gap-layout", className)}>
+    <div
+      className={cn(
+        "flex min-h-control-height items-center gap-separate",
+        className,
+      )}
+    >
       {leading ? (
-        <div className="-me-section flex shrink-0 items-center">{leading}</div>
+        <div className="flex shrink-0 items-center">{leading}</div>
       ) : null}
-      <div className="flex min-w-0 flex-1 flex-col gap-tight">
-        <div className="flex items-center gap-control">
-          <p className="text-body text-fg break-words" id={titleId}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-center gap-inline">
+          <p className="text-body break-words text-fg" id={titleId}>
             {title}
           </p>
           {titleAccessory}
         </div>
         {description ? (
           <p
-            className="text-body text-fg-secondary break-words"
+            className="text-caption break-words text-fg-tertiary"
             id={descriptionId}
           >
             {description}
           </p>
         ) : null}
       </div>
-      <div className={cn("flex shrink-0 items-center", controlClassName)}>
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-inline",
+          controlClassName,
+        )}
+      >
         {children({
           "aria-describedby": descriptionId,
           "aria-labelledby": titleId,

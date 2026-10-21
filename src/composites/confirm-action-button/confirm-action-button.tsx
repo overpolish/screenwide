@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Check } from "lucide-react";
 import {
   AnimatePresence,
   motion,
@@ -23,32 +24,47 @@ const SWAP_ANIMATION: MotionProps = {
   initial: { opacity: 0 },
 };
 
+// Armed, the button is the primary button, as anything on is filled, so
+// "press again to confirm" reads at a glance in either form, without a
+// status colour on a label. Button draws it, hover and press included.
+const ARMED = { color: "primary", variant: "solid" } as const;
+
 type ConfirmActionButtonProps = {
-  armedIcon: ReactNode;
-  armedLabel: string;
-  idleIcon: ReactNode;
-  idleLabel: string;
+  /** What the second press does, said while armed and shown on the text
+   * button. */
+  confirmLabel: string;
+  /** What the first press offers to do. */
+  label: string;
   className?: string;
+  /** The glyph at rest; given, the button is an icon button. */
+  icon?: ReactNode;
+  /** Starts armed, for a story to show the armed look. */
+  isArmedAtFirst?: boolean;
   isDisabled?: boolean;
   onConfirm?: () => void;
   timeoutMs?: number;
-  /** Icon-only, or an icon beside the label it is confirming. */
-  variant?: "icon" | "text";
+  variant?: "ghost" | "solid";
 };
 
+// An action that asks twice: the first press arms it, the second within a
+// moment does it. Leaving the button, Escape, or the moment passing disarms
+// it. With an icon it is an icon button whose glyph gives way to a check;
+// without one, a text button whose label gives way to its confirm label,
+// reserving the wider of the two words so arming never moves the layout.
 export function ConfirmActionButton({
-  armedIcon,
-  armedLabel,
   className,
-  idleIcon,
-  idleLabel,
+  confirmLabel,
+  icon,
+  isArmedAtFirst,
   isDisabled,
+  label,
   onConfirm,
   timeoutMs,
-  variant = "icon",
+  variant = "solid",
 }: ConfirmActionButtonProps) {
   const reducedMotion = useReducedMotion();
   const { buttonProps, isArmed } = useConfirmAction({
+    isArmedAtFirst,
     isDisabled,
     onConfirm,
     timeoutMs,
@@ -59,43 +75,41 @@ export function ConfirmActionButton({
     ease: motionEasings.out,
   };
   const buttonClassName = cn(className, focusClassName);
-  // Armed, the control reads as destructive the native way: red content on
-  // an otherwise unchanged bezel. The colour lives on the armed content, which
-  // crossfades, rather than on the button, whose colour would lerp into the
-  // idle content as it returns.
-  const contentClassName = cn(
-    "absolute inset-0 flex items-center justify-center",
-    isArmed && !isDisabled && "text-error",
+  const look = isArmed ? ARMED : { variant };
+  const swap = (key: string, content: ReactNode) => (
+    <AnimatePresence initial={false}>
+      <motion.span
+        aria-hidden
+        className="col-start-1 row-start-1 flex items-center justify-center"
+        key={key}
+        {...SWAP_ANIMATION}
+        transition={transition}
+      >
+        {content}
+      </motion.span>
+    </AnimatePresence>
   );
 
-  if (variant === "text") {
-    // Armed, the word gives way to the icon alone; the idle row reserves the
-    // width so confirming never moves the layout.
+  if (icon === undefined) {
     return (
       <Button
         {...pressProps}
-        aria-label={isArmed ? armedLabel : undefined}
-        className={cn("relative", buttonClassName)}
+        aria-label={isArmed ? confirmLabel : label}
+        className={buttonClassName}
         isDisabled={isDisabled}
+        {...look}
       >
-        <span
-          aria-hidden
-          className="invisible inline-flex items-center gap-control"
-        >
-          {idleIcon}
-          {idleLabel}
+        {/* Both words hold the same cell, so the button is as wide as the
+            wider one whichever is showing. */}
+        <span className="grid">
+          <span aria-hidden className="invisible col-start-1 row-start-1">
+            {label}
+          </span>
+          <span aria-hidden className="invisible col-start-1 row-start-1">
+            {confirmLabel}
+          </span>
+          {swap(isArmed ? "armed" : "idle", isArmed ? confirmLabel : label)}
         </span>
-        <AnimatePresence initial={false}>
-          <motion.span
-            key={isArmed ? "armed" : "idle"}
-            {...SWAP_ANIMATION}
-            className={cn(contentClassName, "gap-control")}
-            transition={transition}
-          >
-            {isArmed ? armedIcon : idleIcon}
-            {isArmed ? null : idleLabel}
-          </motion.span>
-        </AnimatePresence>
       </Button>
     );
   }
@@ -103,24 +117,14 @@ export function ConfirmActionButton({
   return (
     <IconButton
       {...pressProps}
-      aria-label={isArmed ? armedLabel : idleLabel}
+      aria-label={isArmed ? confirmLabel : label}
       className={buttonClassName}
       isDisabled={isDisabled}
+      {...look}
     >
-      <span aria-hidden className="invisible flex items-center justify-center">
-        {idleIcon}
+      <span className="grid">
+        {swap(isArmed ? "armed" : "idle", isArmed ? <Check /> : icon)}
       </span>
-      <AnimatePresence initial={false}>
-        <motion.span
-          aria-hidden
-          key={isArmed ? "armed" : "idle"}
-          {...SWAP_ANIMATION}
-          className={contentClassName}
-          transition={transition}
-        >
-          {isArmed ? armedIcon : idleIcon}
-        </motion.span>
-      </AnimatePresence>
     </IconButton>
   );
 }

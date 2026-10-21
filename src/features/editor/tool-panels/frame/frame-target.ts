@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Background } from "../../../../composites/background-picker/background";
 import {
   RecordingOutputSettings,
   resizeScreenshotCanvas,
@@ -14,6 +13,7 @@ import { EditorArtifact, RecordingVideoTrackId } from "../../types";
 import { ToolPanelHandlers } from "../tool-panel-handlers";
 import { ToolPanelFrame } from "../tool-panel-store";
 
+import { Background } from "./background/background";
 import {
   applyBackgroundToOutput,
   backgroundFromOutput,

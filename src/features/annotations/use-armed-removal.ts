@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { DEFAULT_CONFIRM_TIMEOUT_MS } from "../confirm-action-button/use-confirm-action";
+import { DEFAULT_CONFIRM_TIMEOUT_MS } from "../../composites/confirm-action-button/use-confirm-action";
 
 /**
  * Removal by two right clicks on the same colour: the first arms it, the

@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, X } from "lucide-react";
-
 import { ConfirmActionButton } from "../confirm-action-button/confirm-action-button";
 
 import { ProgressPanel } from "./progress-panel";
@@ -11,13 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 /** Cancelling running work is a two-press confirmation, as it is in the app. */
 const cancel = (
-  <ConfirmActionButton
-    armedIcon={<Check />}
-    armedLabel="Confirm cancel"
-    idleIcon={<X />}
-    idleLabel="Cancel"
-    variant="text"
-  />
+  <ConfirmActionButton confirmLabel="Confirm cancel" label="Cancel" />
 );
 
 const meta = {

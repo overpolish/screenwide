@@ -12,7 +12,7 @@ import {
   useColorPanel,
   usesSystemColorPanel,
 } from "../../primitives/input-fields/use-color-panel";
-import { BackgroundTile } from "../background-picker/background-tile";
+import { Swatch } from "../../primitives/swatch/swatch";
 
 import {
   ANNOTATION_SWATCHES,
@@ -34,7 +34,7 @@ function TileGlyph({
   return (
     <span
       className={cn(
-        "flex text-content-fg",
+        "flex text-fg",
         color && (isLight(color) ? "appearance-light" : "appearance-dark"),
       )}
     >
@@ -90,16 +90,16 @@ export function AnnotationColorGrid({
   return (
     <ToggleButtonGroup
       aria-label={t("annotation-color")}
-      className="flex flex-wrap justify-center gap-control"
+      className="flex flex-wrap justify-center gap-inline"
       disallowEmptySelection
       isDisabled={isDisabled}
       selectedKeys={new Set([chosen])}
       selectionMode="single"
     >
       {ANNOTATION_SWATCHES.map((swatch) => (
-        <BackgroundTile
-          ariaLabel={swatch.name()}
-          background={{ color: swatch.color, kind: "solid" }}
+        <Swatch
+          aria-label={swatch.name()}
+          color={swatch.color}
           id={swatch.color}
           isDisabled={isDisabled}
           isSelected={chosen === swatch.color}
@@ -110,13 +110,13 @@ export function AnnotationColorGrid({
         />
       ))}
       {saved.map((kept) => (
-        <BackgroundTile
-          ariaLabel={
+        <Swatch
+          aria-label={
             armed === kept
               ? t("annotation-saved-color-armed", { color: kept })
               : kept
           }
-          background={{ color: kept, kind: "solid" }}
+          color={kept}
           id={kept}
           isDisabled={isDisabled}
           isSelected={chosen === kept}
@@ -136,7 +136,7 @@ export function AnnotationColorGrid({
               <Trash2 aria-hidden="true" />
             </TileGlyph>
           ) : null}
-        </BackgroundTile>
+        </Swatch>
       ))}
       {/* The Custom tile is a button that opens the system Colours panel.
           While the colour matches no tile it shows that colour behind its
@@ -152,9 +152,9 @@ export function AnnotationColorGrid({
             if (!isDisabled && isCustom) onSaveColor?.(value);
           }}
         >
-          <BackgroundTile
-            ariaLabel={t("annotation-custom-color")}
-            background={isCustom ? { color: value, kind: "solid" } : undefined}
+          <Swatch
+            aria-label={t("annotation-custom-color")}
+            color={isCustom ? value : undefined}
             id="custom"
             isDisabled={isDisabled}
             isSelected={isCustom}
@@ -165,7 +165,7 @@ export function AnnotationColorGrid({
             <TileGlyph color={isCustom ? value : null}>
               <Plus aria-hidden="true" />
             </TileGlyph>
-          </BackgroundTile>
+          </Swatch>
           {systemPanel ? null : (
             <input
               aria-label={t("annotation-custom-color")}

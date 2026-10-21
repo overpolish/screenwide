@@ -1,15 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationAlignGroup } from "../../../../composites/annotation-style/annotation-align-group";
-import { AnnotationFitGroup } from "../../../../composites/annotation-style/annotation-fit-group";
-import { AnnotationHeadGroup } from "../../../../composites/annotation-style/annotation-head-group";
-import { AnnotationInkGroup } from "../../../../composites/annotation-style/annotation-ink-group";
-import { AnnotationShuffleSwitch } from "../../../../composites/annotation-style/annotation-shuffle-switch";
-import { SOFT_SPOTLIGHT_EDGE } from "../../../../composites/annotation-style/widths";
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { Switch } from "../../../../primitives/switch/switch";
+import { AnnotationChoice } from "../../../annotations/annotation-choice";
+import {
+  alignChoice,
+  fitChoice,
+  headChoice,
+  inkChoice,
+} from "../../../annotations/annotation-choices";
+import { AnnotationShuffleSwitch } from "../../../annotations/annotation-shuffle-switch";
+import { SOFT_SPOTLIGHT_EDGE } from "../../../annotations/widths";
 
 import type { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import type { AnnotationStyle } from "../../annotations/annotations";
@@ -51,7 +54,8 @@ export function AnnotationOptionRows({
         <ControlRow title={t("annotation-head")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
-              <AnnotationHeadGroup
+              <AnnotationChoice
+                choice={headChoice}
                 isDisabled={isLocked}
                 onChange={(next) => {
                   change({ annotationStyle: { head: next } });
@@ -67,7 +71,8 @@ export function AnnotationOptionRows({
         <ControlRow title={t("annotation-alignment")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
-              <AnnotationAlignGroup
+              <AnnotationChoice
+                choice={alignChoice}
                 isDisabled={isLocked}
                 onChange={(next) => {
                   change({ annotationStyle: { align: next } });
@@ -83,7 +88,8 @@ export function AnnotationOptionRows({
         <ControlRow title={t("annotation-ink")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
-              <AnnotationInkGroup
+              <AnnotationChoice
+                choice={inkChoice}
                 isDisabled={isLocked}
                 onChange={(next) => {
                   change({ annotationStyle: { tint: next } });
@@ -209,7 +215,8 @@ export function AnnotationFitRow({
     <ControlRow title={t("annotation-fit")}>
       {(controlProps) => (
         <div {...controlProps} role="group">
-          <AnnotationFitGroup
+          <AnnotationChoice
+            choice={fitChoice}
             isDisabled={isLocked}
             onChange={(next) => {
               change({ annotationStyle: { manual: next } });

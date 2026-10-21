@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, Pause, Play, Square, Trash2, X } from "lucide-react";
+import { Pause, Play, Square, X, Trash2 } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
@@ -52,12 +52,11 @@ type DiscardButtonProps = {
 function DiscardButton({ onDiscard }: DiscardButtonProps) {
   return (
     <ConfirmActionButton
-      armedIcon={<Check />}
-      armedLabel={t("recording-controls-confirm-discard")}
-      idleIcon={<Trash2 />}
-      idleLabel={t("recording-controls-discard")}
+      confirmLabel={t("recording-controls-confirm-discard")}
+      icon={<Trash2 />}
+      label={t("recording-controls-discard")}
       onConfirm={onDiscard}
-      variant="icon"
+      variant="ghost"
     />
   );
 }

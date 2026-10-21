@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { SliderNumberField } from "../../composites/slider-number-field/slider-number-field";
 import { t } from "../../i18n/i18n";
-import { SliderNumberField } from "../slider-number-field/slider-number-field";
 
 /** How round a redaction's, a shape's or a spotlight's corners are, as a
  * percentage of its box's shorter side from 0 to 50. */

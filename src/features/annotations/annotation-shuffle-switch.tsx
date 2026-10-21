@@ -3,10 +3,10 @@
 
 import { Dices } from "lucide-react";
 
+import { NativeTooltipTrigger } from "../../composites/native-tooltip/native-tooltip-trigger";
 import { t } from "../../i18n/i18n";
 import { IconButton } from "../../primitives/button/icon-button";
 import { Switch } from "../../primitives/switch/switch";
-import { NativeTooltipTrigger } from "../native-tooltip/native-tooltip-trigger";
 
 /**
  * A switch for something drawn from a seed: a hand-drawn stroke, an image's

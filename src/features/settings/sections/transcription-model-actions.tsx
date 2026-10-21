@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
@@ -57,16 +57,14 @@ export function TranscriptionModelActions({
   if (!isRemovable) return null;
   return (
     <ConfirmActionButton
-      armedIcon={<Check />}
-      armedLabel={t("settings-transcription-confirm-remove", {
+      confirmLabel={t("settings-transcription-confirm-remove", {
         model: model.name,
       })}
-      idleIcon={<Trash2 />}
-      idleLabel={t("settings-transcription-remove", { model: model.name })}
+      icon={<Trash2 />}
+      label={t("settings-transcription-remove", { model: model.name })}
       onConfirm={() => {
         controls.remove(model.id);
       }}
-      variant="icon"
     />
   );
 }

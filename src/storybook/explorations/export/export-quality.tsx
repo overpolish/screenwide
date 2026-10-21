@@ -4,9 +4,10 @@
 import { useState } from "react";
 import { RadioButton, RadioField, RadioGroup } from "react-aria-components";
 
+import { ControlRow } from "../../../composites/control-row/control-row";
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
-import { SettingRow } from "../shared/setting-row";
+import { ChangedDot } from "../shared/changed-dot";
 
 import { BALANCED, type QualityStep } from "./export-data";
 import { Choose } from "./export-parts";
@@ -57,7 +58,7 @@ function Presets({ steps }: { steps: QualityStep[] }) {
 function Custom() {
   return (
     <div className="flex flex-col gap-inline">
-      <SettingRow isChanged title="Size">
+      <ControlRow title="Size" titleAccessory={<ChangedDot setting="Size" />}>
         {() => (
           <Choose
             className="w-36"
@@ -65,8 +66,8 @@ function Custom() {
             label="Size"
           />
         )}
-      </SettingRow>
-      <SettingRow title="Compression">
+      </ControlRow>
+      <ControlRow title="Compression">
         {() => (
           <Choose
             className="w-36"
@@ -74,7 +75,7 @@ function Custom() {
             label="Compression"
           />
         )}
-      </SettingRow>
+      </ControlRow>
       <span className="text-caption text-fg-tertiary tabular-nums">
         About 58 MB
       </span>

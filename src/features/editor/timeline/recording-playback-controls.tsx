@@ -4,13 +4,10 @@
 import { Images, Pause, Play } from "lucide-react";
 import { memo, ReactNode } from "react";
 
-import { CheckOnClick } from "../../../composites/check-on-click/check-on-click";
+import { CopyButton } from "../../../composites/copy-button/copy-button";
 import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
 import { appLocale, t } from "../../../i18n/i18n";
-import {
-  IconButton,
-  IconToggleButton,
-} from "../../../primitives/button/icon-button";
+import { IconToggleButton } from "../../../primitives/button/icon-button";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { formatDuration } from "../duration";
 
@@ -118,11 +115,12 @@ export const RecordingPlaybackControls = memo(
         {onCopyCurrentFrame ? (
           <div className="absolute right-window-inset flex items-center gap-section">
             <NativeTooltipTrigger tooltip={t("editor-timeline-copy-frame")}>
-              <CheckOnClick onPress={() => onCopyCurrentFrame()}>
-                <IconButton aria-label={t("editor-timeline-copy-frame-label")}>
-                  <Images />
-                </IconButton>
-              </CheckOnClick>
+              <CopyButton
+                aria-label={t("editor-timeline-copy-frame-label")}
+                onCopy={() => onCopyCurrentFrame()}
+              >
+                <Images />
+              </CopyButton>
             </NativeTooltipTrigger>
           </div>
         ) : null}

@@ -5,16 +5,17 @@ import { CopyPlus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { RadioButton, RadioField, RadioGroup } from "react-aria-components";
 
+import { ControlRow } from "../../../composites/control-row/control-row";
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { Slider } from "../../../primitives/slider/slider";
 import { Switch } from "../../../primitives/switch/switch";
+import { ChangedDot } from "../shared/changed-dot";
 import { ANNOTATION_COLORS, ARROW_COLOR, PRESETS } from "../shared/mock-data";
 import { PanelWindow } from "../shared/panel-window";
 import { ArrowGlyph } from "../shared/picture";
-import { SettingRow } from "../shared/setting-row";
 
 import { ANNOTATIONS, at, clock, span } from "./editor-data";
 
@@ -141,18 +142,17 @@ export function ArrowPanel() {
       {ARROW ? <Span end={ARROW.end} start={ARROW.start} /> : null}
       <Presets />
       <div className="flex flex-col gap-inline">
-        <SettingRow isChanged title="Width">
-          {(labelledBy) => (
-            <Slider
-              aria-labelledby={labelledBy}
-              className="w-28"
-              defaultValue={45}
-            />
+        <ControlRow
+          title="Width"
+          titleAccessory={<ChangedDot setting="Width" />}
+        >
+          {(controlProps) => (
+            <Slider {...controlProps} className="w-28" defaultValue={45} />
           )}
-        </SettingRow>
-        <SettingRow title="Head">
-          {(labelledBy) => (
-            <span aria-labelledby={labelledBy} role="group">
+        </ControlRow>
+        <ControlRow title="Head">
+          {(controlProps) => (
+            <span {...controlProps} role="group">
               <PillGroup
                 aria-label="Head"
                 items={[
@@ -165,25 +165,25 @@ export function ArrowPanel() {
               />
             </span>
           )}
-        </SettingRow>
-        <SettingRow title="Hand-drawn">
-          {(labelledBy) => (
+        </ControlRow>
+        <ControlRow title="Hand-drawn">
+          {(controlProps) => (
             <Switch
-              aria-labelledby={labelledBy}
+              {...controlProps}
               isSelected={isHandDrawn}
               onChange={setIsHandDrawn}
             />
           )}
-        </SettingRow>
-        <SettingRow title="Animate">
-          {(labelledBy) => (
+        </ControlRow>
+        <ControlRow title="Animate">
+          {(controlProps) => (
             <Switch
-              aria-labelledby={labelledBy}
+              {...controlProps}
               isSelected={isAnimated}
               onChange={setIsAnimated}
             />
           )}
-        </SettingRow>
+        </ControlRow>
       </div>
       <Colors />
       <div className="flex justify-end">

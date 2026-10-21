@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { builtInBackgroundPresets } from "../../../composites/background-picker/background-presets";
 import { featureStage } from "../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../popup-panel/layout";
 import {
@@ -9,6 +8,7 @@ import {
   DEFAULT_KEYBOARD_EFFECTS,
 } from "../export/recording-export-settings";
 
+import { builtInBackgroundPresets } from "./frame/background/background-presets";
 import { ToolPanel } from "./tool-panel";
 import { seedToolPanel } from "./tool-panel-story-seed";
 

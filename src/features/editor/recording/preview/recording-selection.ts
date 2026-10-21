@@ -10,7 +10,7 @@ import { normalizedScreenshotSelection } from "../../screenshot/screenshot-selec
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 
-import type { AnnotationKind } from "../../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../../annotations/types";
 
 type SelectionTool = Exclude<
   RecordingCanvasTool,

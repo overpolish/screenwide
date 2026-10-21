@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationAngleDial } from "../../../../composites/annotation-style/annotation-angle-dial";
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
+import { AnnotationAngleDial } from "../../../annotations/annotation-angle-dial";
 
 import type { TextShadow } from "../../../../bindings/TextShadow";
 

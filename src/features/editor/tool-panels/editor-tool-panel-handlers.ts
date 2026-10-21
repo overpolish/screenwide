@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { BackgroundPreset } from "../../../composites/background-picker/background";
 import { CaptionsPatch } from "../recording/captions/recording-captions";
 import { CaptionDefaultsPatch } from "../recording/captions/use-text-templates";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
@@ -13,6 +12,7 @@ import {
 
 import { annotationPanelHandlers } from "./annotation/annotation-handlers";
 import { cropPanelHandlers, EditorCropTarget } from "./crop/crop-target";
+import { BackgroundPreset } from "./frame/background/background";
 import { EditorFrameTarget, framePanelHandlers } from "./frame/frame-target";
 import { scenePanelHandlers } from "./scene/scene-panel-handlers";
 import { EditorSelectionTarget } from "./selection/placed-selection-target";

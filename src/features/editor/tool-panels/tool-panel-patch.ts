@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { BackgroundPreset } from "../../../composites/background-picker/background";
 import { ImagePlayChange } from "../annotations/annotation-channel";
 import {
   AnnotationStyle,
@@ -20,6 +19,7 @@ import {
 } from "../recording/scenes/recording-scenes";
 import { KeyboardEffectSettings } from "../types";
 
+import { BackgroundPreset } from "./frame/background/background";
 import { SelectionPlacementPatch } from "./selection-placement";
 import { TranscriptRequest } from "./tool-panel-transcript";
 

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { BackgroundPreset } from "../../../composites/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
 import {
   useAnnotationSelection,
@@ -33,6 +32,7 @@ import {
 
 import { editorCropTarget } from "./crop/crop-target";
 import { editorToolPanelHandlers } from "./editor-tool-panel-handlers";
+import { BackgroundPreset } from "./frame/background/background";
 import { editorFrameTarget } from "./frame/frame-target";
 import { editorAudioSelectionTarget } from "./selection/selection-target";
 import { useLayerSelectionTarget } from "./selection/use-layer-selection-target";

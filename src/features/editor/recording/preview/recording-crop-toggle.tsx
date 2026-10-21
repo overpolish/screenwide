@@ -14,7 +14,7 @@ import { Toolbar } from "../../../../primitives/toolbar/toolbar";
 import { SceneToolToggle } from "../../tool-panels/scene/scene-tool-toggle";
 import { AnnotationToolStrip } from "../../toolbar/annotation-tool-strip";
 
-import type { AnnotationKind } from "../../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../../annotations/types";
 
 export type RecordingCanvasTool =
   AnnotationKind | "canvas" | "crop" | "marquee" | "scene" | "select" | null;

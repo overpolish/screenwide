@@ -8,7 +8,7 @@ import {
   isDrawingTool,
 } from "../tool-panels/tool-registry";
 
-import type { AnnotationKind } from "../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../annotations/types";
 
 /**
  * The letter keys that take up a tool or put its panel on screen.

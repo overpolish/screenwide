@@ -4,10 +4,6 @@
 import { Ellipsis } from "lucide-react";
 import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import {
-  annotationToolLabel,
-  annotationToolName,
-} from "../../../composites/annotation-style/annotation-text";
 import { NativeTooltipTrigger } from "../../../composites/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../../composites/tool-toggle/tool-toggle";
 import { ToolToggleDisabledContext } from "../../../composites/tool-toggle/tool-toggle-disabled";
@@ -15,6 +11,10 @@ import { WindowHeaderCenterWidthContext } from "../../../composites/window-heade
 import { t } from "../../../i18n/i18n";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { Toolbar } from "../../../primitives/toolbar/toolbar";
+import {
+  annotationToolLabel,
+  annotationToolName,
+} from "../../annotations/annotation-text";
 import { ANNOTATION_TOOLS, AnnotationTool } from "../tool-panels/tool-registry";
 
 import { annotationToolLayout } from "./annotation-tool-layout";
@@ -23,7 +23,7 @@ import {
   useAnnotationToolMenu,
 } from "./use-annotation-tool-menu";
 
-import type { AnnotationKind } from "../../../composites/annotation-style/types";
+import type { AnnotationKind } from "../../annotations/types";
 
 /**
  * How many equal buttons the strip has room for: the title bar's centre less
