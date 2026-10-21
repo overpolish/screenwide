@@ -3,7 +3,8 @@
 
 import { ArrowUpRight, EyeOff, MapPinPlusInside, Type } from "lucide-react";
 
-import { cn } from "../../../../lib/styling";
+import { cn } from "../../../lib/styling";
+import { Keyboard, Shortcut } from "../../../primitives/keyboard/keyboard";
 
 import {
   ANNOTATIONS,
@@ -12,7 +13,7 @@ import {
   SHORTCUTS,
   span,
   STRETCHES,
-} from "./combined-data";
+} from "./editor-data";
 import { Band, Sound, TimelineFrame } from "./timeline-parts";
 import { Filmstrip } from "./timeline-stills";
 
@@ -62,7 +63,7 @@ function ConnectedAnnotations() {
             <span
               className={cn(
                 "absolute bottom-0 w-px",
-                isSelected ? "bg-(--accent)" : "bg-(--fg-3)/40",
+                isSelected ? "bg-primary" : "bg-fg-tertiary",
               )}
               style={{
                 height: bottom,
@@ -74,13 +75,12 @@ function ConnectedAnnotations() {
             <span
               aria-label={label}
               className={cn(
-                "absolute flex items-center overflow-hidden rounded-[5px] px-1",
+                "absolute flex items-center overflow-hidden rounded-sm px-1",
                 isSelected
-                  ? "combined-accent"
-                  : "bg-(--clip-annotation) text-(--fg)",
+                  ? "bg-primary text-on-primary"
+                  : "bg-fill-strong text-fg",
               )}
               style={{ ...span(start, end), bottom, height: ROW }}
-              title={label}
             >
               <Icon className="size-3 shrink-0" />
             </span>
@@ -116,10 +116,10 @@ function Voices() {
   return (
     <>
       <Band className="top-0 h-1/2">
-        <Sound className="text-(--fg-3)" seed={1} />
+        <Sound className="text-fg-tertiary" seed={1} />
       </Band>
       <Band className="bottom-0 h-1/2">
-        <Sound className="text-(--level)" seed={4} />
+        <Sound className="text-fg-secondary" seed={4} />
       </Band>
     </>
   );
@@ -133,7 +133,7 @@ function Storyline({ hasPicture }: { hasPicture: boolean }) {
     <div className={cn("relative", hasPicture ? "h-20" : "h-8")} dir="ltr">
       {STRETCHES.map(([start, end]) => (
         <span
-          className="absolute inset-y-0 overflow-hidden rounded-[6px] bg-(--fill-2) shadow-[inset_0_0_0_1px_var(--divider)]"
+          className="absolute inset-y-0 overflow-hidden rounded-part bg-fill inset-ring inset-ring-divider"
           key={start}
           style={span(start, end)}
         />
@@ -142,7 +142,7 @@ function Storyline({ hasPicture }: { hasPicture: boolean }) {
         <>
           <Band className="top-0 h-3">
             <Labels
-              className="border-s-2 border-(--clip-scene) ps-1 text-[9px] leading-3 font-medium text-(--fg-2)"
+              className="border-s-2 border-fg-tertiary ps-1 text-[9px] leading-3 text-fg-secondary"
               items={SCENES}
             />
           </Band>
@@ -152,18 +152,20 @@ function Storyline({ hasPicture }: { hasPicture: boolean }) {
           <Band className="top-6 h-6">
             <Filmstrip source="screen" />
           </Band>
-          {/* Each shortcut over the picture for as long as it shows: a
-              tint across its time, its keycap at the start. */}
+          {/* Each shortcut over the picture for as long as it shows: its
+              keycaps at the start, over a shade across its time. */}
           <Band className="top-6 h-6">
-            {SHORTCUTS.map(({ end, label, start }) => (
+            {SHORTCUTS.map(({ end, keys, start }) => (
               <span
-                className="absolute inset-y-0.5 flex items-center rounded-[4px] bg-black/35 ps-0.5 ring-1 ring-white/40"
+                className="absolute inset-y-0.5 flex items-center rounded-sm bg-black/35 ps-0.5 appearance-dark"
                 key={start}
                 style={span(start, end)}
               >
-                <span className="combined-raised rounded-[3px] px-1 text-[9px] leading-4 font-medium whitespace-nowrap text-(--fg-2)">
-                  {label}
-                </span>
+                <Shortcut>
+                  {keys.map((key) => (
+                    <Keyboard key={key}>{key}</Keyboard>
+                  ))}
+                </Shortcut>
               </span>
             ))}
           </Band>
@@ -172,7 +174,7 @@ function Storyline({ hasPicture }: { hasPicture: boolean }) {
           </Band>
           <Band className="bottom-0 h-3">
             <Labels
-              className="border-s-2 border-(--fg-3)/50 ps-1 text-[9px] leading-3 text-(--fg-3)"
+              className="border-s-2 border-divider ps-1 text-[9px] leading-3 text-fg-tertiary"
               items={CAPTIONS}
             />
           </Band>

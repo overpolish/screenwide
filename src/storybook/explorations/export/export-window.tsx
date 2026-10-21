@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import "../direction/combined/combined.css";
+import { type ReactNode, useState } from "react";
 
-import { Captions, ChevronDown, FolderOpen, Merge, Trash2 } from "lucide-react";
-import { type ReactNode } from "react";
-
-import { cn } from "../../../lib/styling";
-import { Btn, Row } from "../direction/combined/combined-controls";
+import { Button } from "../../../primitives/button/button";
+import { ProgressBar } from "../../../primitives/progress-bar/progress-bar";
+import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
+import { Switch } from "../../../primitives/switch/switch";
+import { SettingRow } from "../shared/setting-row";
 
 import {
   BALANCED,
@@ -17,65 +17,23 @@ import {
 } from "./export-data";
 import {
   CameraFrame,
-  Chip,
-  ChipLine,
+  Choose,
   ComparePreview,
-  Destination,
-  FileTitle,
-  QualitySteps,
+  FileLine,
   SoundPreview,
 } from "./export-parts";
+import { Quality } from "./export-quality";
 
-// The export window in the unified look, built around the file it makes
-// rather than a form of its settings: the frame as it will come out, the
-// name and place to save it, one quality choice that shows its result, and
-// the rest as chips. Every choice is one the app already has.
+// The export window's content, built around the file it makes rather than a
+// form of its settings: the frame as it will come out, the name and place to
+// save it, one quality choice that shows its result, and the rest as
+// switches, each a setting the app already has. The body scrolls under a
+// fixed foot, so Export is always in reach.
 
 export type ExportKind = "recording" | "screenshot" | "sound";
 export type ExportSaving = "confirm-cancel" | "progress";
 
-function Select({ children }: { children: ReactNode }) {
-  return (
-    <Btn className="min-w-36 justify-between">
-      {children}
-      <ChevronDown className="opacity-60" />
-    </Btn>
-  );
-}
-
-/** Today's separate size and compression, for when no step fits. */
-function CustomQuality() {
-  return (
-    <div className="flex flex-col gap-1 rounded-xl bg-(--fill) px-3 py-1.5">
-      <Row isChanged label="Size">
-        <Select>
-          <span className="tabular-nums">2880 × 1620</span>
-        </Select>
-      </Row>
-      <Row label="Compression">
-        <Select>Balanced</Select>
-      </Row>
-    </div>
-  );
-}
-
-function Quality({ isCustomised }: { isCustomised: boolean }) {
-  return (
-    <section className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[12px] font-medium text-(--fg-2)">Quality</span>
-        <Btn variant="ghost">{isCustomised ? "Use a preset" : "Customise"}</Btn>
-      </div>
-      {isCustomised ? (
-        <CustomQuality />
-      ) : (
-        <QualitySteps selected={BALANCED} steps={SCREEN_STEPS} />
-      )}
-    </section>
-  );
-}
-
-/** A file of a recording saved as two: its frame, what it is, its size. */
+/** A file of a recording saved as two: its frame, what it is, its quality. */
 function FileCard({
   label,
   picture,
@@ -87,39 +45,77 @@ function FileCard({
 }) {
   const step = steps[BALANCED];
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-inline">
       {picture}
-      <span className="flex items-baseline justify-between gap-2 text-[12px]">
-        <span className="font-medium">{label}</span>
-        <span className="text-(--fg-3) tabular-nums">
-          {step.dimensions} · {step.size}
+      <span className="flex items-baseline justify-between gap-inline">
+        <span className="text-label">{label}</span>
+        <span className="flex gap-inline text-caption text-fg-tertiary tabular-nums">
+          <span>{step.dimensions}</span>
+          <span>{step.size}</span>
         </span>
       </span>
-      <Select>{step.label}</Select>
+      <Choose
+        className="w-full"
+        items={steps.map(({ label: id }) => ({ id, label: id }))}
+        label={`${label} quality`}
+        selected={step.label}
+      />
     </div>
   );
 }
 
+function Option({
+  description,
+  initial = false,
+  isDisabled,
+  title,
+}: {
+  title: string;
+  description?: string;
+  initial?: boolean;
+  isDisabled?: boolean;
+}) {
+  const [isOn, setIsOn] = useState(initial);
+  return (
+    <SettingRow description={description} title={title}>
+      {(labelledBy) => (
+        <Switch
+          aria-labelledby={labelledBy}
+          isDisabled={isDisabled}
+          isSelected={isOn && !isDisabled}
+          onChange={setIsOn}
+        />
+      )}
+    </SettingRow>
+  );
+}
+
+// Saving shows its progress where the settings were. Cancelling throws the
+// partial file away, so it asks first, in words, with keeping on as the
+// primary choice.
 function Saving({ isConfirming }: { isConfirming: boolean }) {
   return (
-    <section className="flex items-center gap-3 rounded-xl bg-(--fill) p-3">
-      <div className="flex min-w-0 grow flex-col gap-1.5">
-        <span className="text-[12px] font-medium">Saving camera</span>
-        <span className="h-1 overflow-hidden rounded-full bg-(--fill-2)">
-          <span className="block h-full w-[42%] rounded-full bg-(--emphasis)" />
-        </span>
-        <span className="text-[11px] text-(--fg-3)">
+    <section className="flex flex-col gap-inline">
+      <span className="flex items-baseline justify-between">
+        <span className="text-label">Saving camera</span>
+        <span className="text-caption text-fg-tertiary">
           Less than a minute remaining
         </span>
-      </div>
-      {/* The raised material outranks a utility background, so the armed
-          state starts from the plain button. */}
-      <Btn
-        className={cn(isConfirming && "bg-(--record) text-white")}
-        variant={isConfirming ? "ghost" : "default"}
-      >
-        {isConfirming ? "Confirm cancel" : "Cancel"}
-      </Btn>
+      </span>
+      <ProgressBar aria-label="Saving" value={42} />
+      <span className="mt-inline flex items-center justify-end gap-inline">
+        {isConfirming ? (
+          <>
+            <span className="me-auto text-body text-fg-secondary">
+              Stop and delete what is saved so far?
+            </span>
+            <Button>Stop</Button>
+            <Button color="primary">Keep saving</Button>
+          </>
+        ) : (
+          <Button>Cancel</Button>
+        )}
+      </span>
     </section>
   );
 }
@@ -149,14 +145,14 @@ export function ExportWindow({
       : kind === "sound"
         ? "6 MB"
         : hasSeparateCamera
-          ? "Two files, 96 MB"
-          : SCREEN_STEPS[BALANCED].size;
+          ? "96 MB"
+          : undefined;
 
   const preview =
     kind === "sound" ? (
       <SoundPreview />
     ) : hasSeparateCamera ? (
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-separate">
         <FileCard
           label="Screen"
           picture={<ComparePreview isComparing={false} />}
@@ -173,56 +169,54 @@ export function ExportWindow({
     );
 
   return (
-    <div className="look-combined flex size-full flex-col font-sans text-(--fg)">
-      <div className="flex h-9 shrink-0 items-center ps-traffic-lights pe-3 text-[12px] font-medium text-(--fg-2)">
+    <div className="flex size-full flex-col text-fg">
+      <header className="flex h-12 shrink-0 items-center ps-traffic-lights pe-inset text-heading">
         Export
-      </div>
-      <div className="flex min-h-0 grow flex-col gap-3 px-3 pb-3">
+      </header>
+      <ScrollArea
+        className="flex flex-col gap-separate px-inset pb-inset"
+        rootClassName="min-h-0 grow"
+      >
         {preview}
-        <div className="flex flex-col gap-0.5">
-          <FileTitle extension={extension} />
-          <Destination size={size} />
-        </div>
+        <FileLine extension={extension} size={size} />
         {saving ? (
           <Saving isConfirming={saving === "confirm-cancel"} />
         ) : (
           <>
             {hasPicture && isRecording && !hasSeparateCamera ? (
-              <Quality isCustomised={isCustomised} />
+              <Quality initialCustomised={isCustomised} steps={SCREEN_STEPS} />
             ) : null}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-inline">
               {isRecording ? (
-                <ChipLine label="Include">
-                  <Chip
-                    hasMenu={hasTranscript}
-                    icon={Captions}
+                <>
+                  <Option
+                    description={
+                      hasTranscript
+                        ? "An SRT file beside the video"
+                        : "Transcribe the recording to add subtitles."
+                    }
+                    initial
                     isDisabled={!hasTranscript}
-                    isOn={hasTranscript}
-                  >
-                    {hasTranscript ? "Subtitles, SRT" : "Subtitles"}
-                  </Chip>
-                  <Chip icon={Merge}>Mix audio tracks</Chip>
-                </ChipLine>
+                    title="Subtitles"
+                  />
+                  <Option
+                    description="One sound track instead of two"
+                    title="Mix audio tracks"
+                  />
+                </>
               ) : null}
-              {hasTranscript ? null : (
-                <span className="ps-[82px] text-[11px] text-(--fg-3)">
-                  Transcribe the recording to add subtitles.
-                </span>
-              )}
-              <ChipLine label="After saving">
-                <Chip icon={FolderOpen} isOn>
-                  Open folder
-                </Chip>
-                <Chip icon={Trash2}>Delete project</Chip>
-              </ChipLine>
-            </div>
-            <div className="mt-auto flex justify-end gap-2">
-              <Btn>Cancel</Btn>
-              <Btn variant="primary">Export</Btn>
+              <Option initial title="Open folder after saving" />
+              <Option title="Delete project after saving" />
             </div>
           </>
         )}
-      </div>
+      </ScrollArea>
+      {saving ? null : (
+        <footer className="flex shrink-0 justify-end gap-inline px-inset pb-inset">
+          <Button>Cancel</Button>
+          <Button color="primary">Export</Button>
+        </footer>
+      )}
     </div>
   );
 }

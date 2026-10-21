@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { span, STRETCHES } from "./combined-data";
+import { span, STRETCHES } from "./editor-data";
 
 // Stills along the Picture row, so footage is recognised by what it shows.
 // Each stretch either side of the cut gets its own strip, the two meeting
@@ -45,7 +45,7 @@ const STILLS_PER_STRETCH = 60;
 export function Filmstrip({ source }: { source: "camera" | "screen" }) {
   return STRETCHES.map(([start, end], stretch) => (
     <span
-      className="absolute inset-y-0 flex gap-px overflow-hidden rounded-[3px] bg-(--fill-2)"
+      className="absolute inset-y-0 flex gap-px overflow-hidden rounded-[3px] bg-fill-strong"
       key={start}
       style={span(start, end)}
     >

@@ -35,10 +35,11 @@ export const SCENES: Timed[] = [
   { end: 94, label: "Picture in picture", start: 70 },
 ];
 
-export const SHORTCUTS: Timed[] = [
-  { end: 21, label: "⌘ C", start: 17 },
-  { end: 44, label: "⌘ V", start: 40 },
-  { end: 70, label: "⇧ ⌘ 4", start: 64 },
+/** Shortcuts pressed while recording, each as the keys shown. */
+export const SHORTCUTS: (Omit<Timed, "label"> & { keys: string[] })[] = [
+  { end: 21, keys: ["Command", "C"], start: 17 },
+  { end: 44, keys: ["Command", "V"], start: 40 },
+  { end: 70, keys: ["Shift", "Command", "4"], start: 64 },
 ];
 
 export const CAPTIONS: Timed[] = [

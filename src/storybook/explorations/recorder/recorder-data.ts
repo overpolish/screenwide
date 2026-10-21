@@ -1,33 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  AppWindow,
-  Mic,
-  MicOff,
-  Monitor,
-  MonitorOff,
-  SquareDashed,
-  Video,
-  VideoOff,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Volume2, VolumeX } from "lucide-react";
 
 // Camera only and audio only are not targets of their own: with No screen,
 // the inputs alone decide, so a camera means a camera recording and no
 // camera means sound only. The camera then has one control, its tile.
 export type TargetId = "area" | "display" | "none" | "window";
 
-export const TARGETS: {
-  icon: typeof Monitor;
-  id: TargetId;
-  label: string;
-}[] = [
-  { icon: Monitor, id: "display", label: "Display" },
-  { icon: AppWindow, id: "window", label: "Window" },
-  { icon: SquareDashed, id: "area", label: "Area" },
-  { icon: MonitorOff, id: "none", label: "No screen" },
+// Named rather than drawn: four words fit the panel's width as one
+// segmented choice, and an icon beside each would not.
+export const TARGETS: { id: TargetId; label: string }[] = [
+  { id: "display", label: "Display" },
+  { id: "window", label: "Window" },
+  { id: "area", label: "Area" },
+  { id: "none", label: "No screen" },
 ];
 
 export const DISPLAY = { id: "studio", name: "Studio Display" };

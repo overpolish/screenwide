@@ -4,8 +4,9 @@
 import { UnfoldHorizontal } from "lucide-react";
 import { type ReactNode } from "react";
 
-import { cn } from "../../../../lib/styling";
-import { Waveform } from "../shared/mock-parts";
+import { cn } from "../../../lib/styling";
+import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
+import { Waveform } from "../shared/picture";
 
 import {
   at,
@@ -17,9 +18,12 @@ import {
   SPEED,
   STRETCHES,
   TIMELINE_LABEL_WIDTH,
-} from "./combined-data";
+} from "./editor-data";
 
-// The timeline's frame and the pieces its rows are built from.
+// The timeline's frame and the pieces its rows are built from. Monochrome:
+// clips are told apart by where they sit and what they say, not by hue. Only
+// the playhead is orange, where you are, and only a moment keeps its own
+// colour, which names its kind.
 
 /** A horizontal slice of a row, placed by its classes. */
 export function Band({
@@ -45,9 +49,9 @@ export function Lane({
   className?: string;
 }) {
   return (
-    <div className={cn("flex h-[22px] items-center", className)}>
+    <div className={cn("flex items-center", className)}>
       <span
-        className="flex h-full shrink-0 items-center gap-1.5 pe-2 text-[11px] text-(--fg-2)"
+        className="flex h-full shrink-0 items-center pe-inline text-caption text-fg-secondary"
         style={{ width: TIMELINE_LABEL_WIDTH }}
       >
         {label}
@@ -59,17 +63,18 @@ export function Lane({
   );
 }
 
+/** A sound track either side of the cut; its waveform takes the text
+ * colour given. */
 export function Sound({
   className,
   seed,
 }: {
-  /** The track's fill and, through `text-*`, its waveform's colour. */
   className: string;
   seed: number;
 }) {
   return STRETCHES.map(([start, end], index) => (
     <span
-      className={cn("absolute inset-y-px flex rounded-[5px] px-0.5", className)}
+      className={cn("absolute inset-y-px flex rounded-sm px-0.5", className)}
       key={start}
       style={span(start, end)}
     >
@@ -78,16 +83,19 @@ export function Sound({
   ));
 }
 
-/** Times every 30 s, moments as dots, the speed as plain text, and the
- * button that restores a cut over the place it closed up. */
+// Times every 30 s, moments as dots in their kind's colour, the speed as
+// plain text, and the button that restores a cut over the place it closed.
 function Ruler({ labelWidth }: { labelWidth: number }) {
   return (
     <div className="flex h-5 items-end">
       <span className="shrink-0" style={{ width: labelWidth }} />
-      <div className="relative h-full grow text-[10px] text-(--fg-3)" dir="ltr">
+      <div
+        className="relative h-full grow text-caption text-fg-tertiary"
+        dir="ltr"
+      >
         {[0, 30, 60, 90].map((second) => (
           <span
-            className="absolute bottom-0 border-s border-(--divider) ps-1 leading-3 tabular-nums"
+            className="absolute bottom-0 border-s border-divider ps-1 leading-3 tabular-nums"
             key={second}
             style={{ insetInlineStart: at(second) }}
           >
@@ -95,7 +103,7 @@ function Ruler({ labelWidth }: { labelWidth: number }) {
           </span>
         ))}
         <span
-          className="absolute top-0 flex h-2.5 items-center justify-center border-x border-(--divider) text-[9px] font-medium text-(--fg-3)"
+          className="absolute top-0 flex h-2.5 items-center justify-center border-x border-divider text-[9px] leading-none"
           style={span(SPEED.start, SPEED.end)}
         >
           {SPEED.rate}
@@ -108,12 +116,10 @@ function Ruler({ labelWidth }: { labelWidth: number }) {
             style={{ background: color, insetInlineStart: at(second) }}
           />
         ))}
-        {/* The app's restore button at a cut: the footage unfolds back. */}
         <span
           aria-label={`Restore the ${String(CUT.seconds)} s cut at ${clock(CUT.at)}`}
-          className="combined-raised absolute bottom-0 flex size-4 -translate-x-1/2 items-center justify-center rounded-[4px] text-(--fg-2)"
+          className="absolute bottom-0 flex size-4 -translate-x-1/2 items-center justify-center rounded-sm text-fg-secondary control-raised"
           style={{ insetInlineStart: at(CUT.at) }}
-          title={`Restore ${String(CUT.seconds)} s cut`}
         >
           <UnfoldHorizontal className="size-3" />
         </span>
@@ -122,7 +128,8 @@ function Ruler({ labelWidth }: { labelWidth: number }) {
   );
 }
 
-/** The playhead, over every row under the ruler. */
+// The playhead over every row under the ruler: where you are, the one place
+// the orange stands for in the timeline.
 function Playhead({ labelWidth }: { labelWidth: number }) {
   return (
     <div
@@ -130,30 +137,17 @@ function Playhead({ labelWidth }: { labelWidth: number }) {
       dir="ltr"
       style={{ insetInlineStart: labelWidth }}
     >
-      {/* Where you are: the one place the orange stands for, beside focus
-          and progress. */}
       <span
-        className="absolute -top-0.5 bottom-0 w-0.5 -translate-x-1/2 bg-(--emphasis)"
+        className="absolute -top-0.5 bottom-0 w-0.5 -translate-x-1/2 bg-emphasis"
         style={{ insetInlineStart: at(PLAYHEAD_S) }}
       >
-        <span className="absolute -top-0.5 start-1/2 size-2.5 -translate-x-1/2 rounded-full bg-(--emphasis)" />
+        <span className="absolute -top-0.5 start-1/2 size-2.5 -translate-x-1/2 rounded-full bg-emphasis" />
       </span>
     </div>
   );
 }
 
-function LevelMeter() {
-  return (
-    <span
-      aria-label="Audio level"
-      className="relative mt-5 w-1.5 shrink-0 overflow-hidden rounded-full bg-(--fill)"
-    >
-      <span className="absolute inset-x-0 bottom-0 h-[58%] rounded-full bg-(--level)" />
-    </span>
-  );
-}
-
-/** Rows under the ruler, the playhead over them and the meter beside. A
+/** Rows under the ruler, the playhead over them and the level beside. A
  * timeline without row names passes a `labelWidth` of 0. */
 export function TimelineFrame({
   children,
@@ -163,13 +157,23 @@ export function TimelineFrame({
   labelWidth?: number;
 }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-inline">
       <div className="relative flex grow flex-col gap-1">
         <Ruler labelWidth={labelWidth} />
         {children}
         <Playhead labelWidth={labelWidth} />
       </div>
-      <LevelMeter />
+      <span className="mt-5 flex [&_svg]:block">
+        <AudioMeter
+          aria-label="Output level"
+          decibels={-14}
+          hidePeakTick
+          hideTicks
+          length="100%"
+          orientation="vertical"
+          thickness={4}
+        />
+      </span>
     </div>
   );
 }

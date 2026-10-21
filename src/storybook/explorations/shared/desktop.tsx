@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check } from "lucide-react";
 import { type ReactNode } from "react";
 
-import { cn } from "../../../../lib/styling";
+import { cn } from "../../../lib/styling";
 
 const WALLPAPER =
   "linear-gradient(135deg, #5b7cfa 0%, #9b6cf0 45%, #f08a8a 100%)";
@@ -75,7 +74,7 @@ export function TargetStill({
   // A window records without the desktop behind it.
   if (target === "window") {
     return (
-      <div className={cn("relative bg-fill-tertiary", className)}>
+      <div className={cn("relative bg-recess", className)}>
         <FakeWindow className="inset-[8%_14%] shadow-none" />
       </div>
     );
@@ -90,57 +89,4 @@ export function TargetStill({
     );
   }
   return <Desktop className={className} />;
-}
-
-// Native menus in the app; drawn here so the stories show what they hold.
-
-export function MenuStandIn({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex w-64 flex-col rounded-panel bg-popover p-tight text-body text-content-fg shadow-lg",
-        className,
-      )}
-      role="presentation"
-    >
-      {children}
-    </div>
-  );
-}
-
-export function MenuHeading({ children }: { children: ReactNode }) {
-  return (
-    <span className="px-control-inset pt-tight text-section text-content-fg-secondary">
-      {children}
-    </span>
-  );
-}
-
-export function MenuItem({
-  children,
-  isChecked = false,
-}: {
-  children: ReactNode;
-  isChecked?: boolean;
-}) {
-  return (
-    <span className="flex h-6 items-center gap-tight rounded-[5px] px-control-inset">
-      <Check
-        className={cn("size-icon-small shrink-0", !isChecked && "invisible")}
-      />
-      <span className="truncate" dir="auto">
-        {children}
-      </span>
-    </span>
-  );
-}
-
-export function MenuSeparator() {
-  return <span className="mx-control-inset my-tight h-px bg-fill" />;
 }

@@ -3,7 +3,7 @@
 
 import { ReactNode } from "react";
 
-import { cn } from "../../../../lib/styling";
+import { cn } from "../../../lib/styling";
 
 import { ARROW_COLOR, ARROW_ENDS, SELECTION_BOX, waveform } from "./mock-data";
 
