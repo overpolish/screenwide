@@ -10,6 +10,9 @@ import { t } from "../../i18n/i18n";
 import { Alert } from "../../primitives/alert/alert";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
 
+import { SettingsSearchField } from "./search/settings-search-field";
+import { SettingsSearchResults } from "./search/settings-search-results";
+import { useSettingsSearch } from "./search/use-settings-search";
 import { useAnnotateSettingsSave } from "./sections/use-annotate-settings-save";
 import { useGlideSettingsSave } from "./sections/use-glide-settings-save";
 import { useMomentSettings } from "./sections/use-moment-settings";
@@ -30,11 +33,16 @@ import type { RulerSettings } from "../../bindings/RulerSettings";
 import type { ShortcutAction } from "../../bindings/ShortcutAction";
 import type { ShortcutDefaults } from "../../bindings/ShortcutDefaults";
 import type { ShortcutSettings } from "../../bindings/ShortcutSettings";
+import type { TranscriptionModel } from "../transcription/types";
+
+const NO_MODELS: readonly TranscriptionModel[] = [];
 
 export function SettingsWindow({
+  initialQuery,
   initialSection = "general",
   updateSetting,
 }: {
+  initialQuery?: string;
   initialSection?: SettingsSection;
   updateSetting?: ReactNode;
 }) {
@@ -95,6 +103,11 @@ export function SettingsWindow({
     });
   const moments = useMomentSettings(setError);
   const transcription = useTranscription(setError);
+  const search = useSettingsSearch({
+    initialQuery,
+    models: transcription.state?.models ?? NO_MODELS,
+    setSection,
+  });
 
   useEffect(() => {
     Promise.all([
@@ -199,7 +212,11 @@ export function SettingsWindow({
         <WindowHeader
           onClose={() => void hideSettings()}
           onMinimize={() => void minimize()}
-          title={sectionTitle(section)}
+          title={
+            search.isActive
+              ? t("settings-search-results")
+              : sectionTitle(section)
+          }
         />
       }
     >
@@ -207,53 +224,67 @@ export function SettingsWindow({
           the window's end and bottom edges so its scroll fade lands there,
           and carries the inset on the scrolled content instead. */}
       <div className="flex min-h-0 grow gap-group ps-inset">
-        <SidebarNav
-          aria-label={t("settings-sections")}
-          className="pb-inset"
-          isExpandable={false}
-          isExpanded
-          items={settingsSidebarItems()}
-          onSelectionChange={(id) => {
-            setSection(id as SettingsSection);
-          }}
-          selected={section}
-        />
+        <div className="flex shrink-0 flex-col gap-separate pb-inset">
+          <SettingsSearchField search={search} />
+          <SidebarNav
+            aria-label={t("settings-sections")}
+            isExpandable={false}
+            isExpanded
+            items={settingsSidebarItems()}
+            onSelectionChange={(id) => {
+              search.setQuery("");
+              setSection(id as SettingsSection);
+            }}
+            selected={section}
+          />
+        </div>
         <div className="flex min-h-0 min-w-0 grow flex-col gap-separate">
-          <ScrollArea key={section} rootClassName="min-h-0 min-w-0 grow">
-            <section
-              aria-label={sectionTitle(section)}
-              className="flex flex-col pe-inset pb-inset"
-            >
-              <SettingsPanes
-                annotate={annotate}
-                defaults={defaults}
-                general={general}
-                glide={glide}
-                moments={moments}
-                ocr={ocr}
-                onCaptureChange={onCaptureChange}
-                onChangeAnnotate={changeAnnotate}
-                onChangeBinding={changeBinding}
-                onChangeGeneral={changeGeneral}
-                onChangeGlide={changeGlide}
-                onChangeOcr={changeOcr}
-                onChangeRuler={(next) => {
-                  void changeRuler(next);
-                }}
-                onError={setError}
-                ruler={ruler}
-                savingAnnotate={savingAnnotate}
-                savingGeneral={savingGeneral}
-                savingGlide={savingGlide}
-                savingOcr={savingOcr}
-                savingRuler={savingRuler}
-                savingShortcut={saving}
-                section={section}
-                shortcuts={settings}
-                transcription={transcription}
-                updateSetting={updateSetting}
-              />
-            </section>
+          <ScrollArea
+            inWindowCorner
+            key={search.isActive ? "search" : section}
+            rootClassName="min-h-0 min-w-0 grow"
+          >
+            {search.isActive ? (
+              <div className="flex flex-col pe-inset pb-inset">
+                <SettingsSearchResults search={search} />
+              </div>
+            ) : (
+              <section
+                aria-label={sectionTitle(section)}
+                className="flex flex-col pe-inset pb-inset"
+                ref={search.paneRef}
+              >
+                <SettingsPanes
+                  annotate={annotate}
+                  defaults={defaults}
+                  general={general}
+                  glide={glide}
+                  moments={moments}
+                  ocr={ocr}
+                  onCaptureChange={onCaptureChange}
+                  onChangeAnnotate={changeAnnotate}
+                  onChangeBinding={changeBinding}
+                  onChangeGeneral={changeGeneral}
+                  onChangeGlide={changeGlide}
+                  onChangeOcr={changeOcr}
+                  onChangeRuler={(next) => {
+                    void changeRuler(next);
+                  }}
+                  onError={setError}
+                  ruler={ruler}
+                  savingAnnotate={savingAnnotate}
+                  savingGeneral={savingGeneral}
+                  savingGlide={savingGlide}
+                  savingOcr={savingOcr}
+                  savingRuler={savingRuler}
+                  savingShortcut={saving}
+                  section={section}
+                  shortcuts={settings}
+                  transcription={transcription}
+                  updateSetting={updateSetting}
+                />
+              </section>
+            )}
           </ScrollArea>
           {error ? (
             <Alert className="me-inset mb-inset" color="error" role="alert">

@@ -149,7 +149,7 @@ export function ProjectListPane({
           </p>
         </div>
       ) : (
-        <ScrollArea rootClassName="min-h-0 min-w-0 grow">
+        <ScrollArea inWindowCorner rootClassName="min-h-0 min-w-0 grow">
           <div className="gap-layout pe-window-inset pb-window-inset flex flex-col">
             {groups.map((group) => (
               <section

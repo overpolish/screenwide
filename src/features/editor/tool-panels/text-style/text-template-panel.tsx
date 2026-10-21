@@ -49,13 +49,14 @@ export function TextTemplatePanel({
 
   return (
     <ScrollArea
+      inWindowCorner
       onInitialized={(viewport) => {
         viewport
           .querySelector("[data-selected]")
           ?.scrollIntoView({ block: "center" });
       }}
       // The scrollbar keeps out of the rounded corners.
-      rootClassName="rounded-window [--scrollbar-inset:var(--radius-window)]"
+      rootClassName="rounded-window"
     >
       <div className="w-full p-control-inset" ref={contentRef}>
         <ToggleButtonGroup

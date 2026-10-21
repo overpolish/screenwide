@@ -5,6 +5,11 @@ import { t } from "../../../i18n/i18n";
 import { SettingsGroup } from "../settings-group";
 
 import { GlideKeys } from "./glide-keys";
+import {
+  type GlobalShortcut,
+  recordingShortcuts,
+  screenshotShortcuts,
+} from "./global-shortcuts";
 import { ocrShortcuts } from "./ocr-shortcuts";
 import { rulerShortcuts } from "./ruler-shortcuts";
 import { ShortcutRow } from "./shortcut-row";
@@ -16,39 +21,6 @@ import type { RulerSettings } from "../../../bindings/RulerSettings";
 import type { ShortcutAction } from "../../../bindings/ShortcutAction";
 import type { ShortcutDefaults } from "../../../bindings/ShortcutDefaults";
 import type { ShortcutSettings } from "../../../bindings/ShortcutSettings";
-
-type GlobalShortcut = {
-  action: ShortcutAction;
-  label: string;
-  description?: string;
-};
-
-const recording = (): GlobalShortcut[] => [
-  { action: "toggleRecordingBar", label: t("settings-shortcut-toggle-bar") },
-  { action: "startStopRecording", label: t("settings-shortcut-start-stop") },
-  {
-    action: "pauseResumeRecording",
-    label: t("settings-shortcut-pause-resume"),
-  },
-  {
-    action: "saveReplay",
-    description: t("settings-shortcut-save-replay-description"),
-    label: t("settings-shortcut-save-replay"),
-  },
-];
-
-const screenshots = (): GlobalShortcut[] => [
-  {
-    action: "takeScreenshot",
-    description: t("settings-shortcut-screenshot-description"),
-    label: t("settings-shortcut-screenshot"),
-  },
-  {
-    action: "takeScreenshotToClipboard",
-    description: t("settings-shortcut-copy-screenshot-description"),
-    label: t("settings-shortcut-copy-screenshot"),
-  },
-];
 
 const bindingOf = (
   bindings: ShortcutSettings | null | undefined,
@@ -124,10 +96,10 @@ export function HotkeySettingsPanel({
   return (
     <div className="flex flex-col gap-group">
       <SettingsGroup title={t("settings-recording")}>
-        {recording().map((shortcut) => globalRow(shortcut))}
+        {recordingShortcuts().map((shortcut) => globalRow(shortcut))}
       </SettingsGroup>
       <SettingsGroup title={t("settings-screenshots")}>
-        {screenshots().map((shortcut) => globalRow(shortcut))}
+        {screenshotShortcuts().map((shortcut) => globalRow(shortcut))}
       </SettingsGroup>
       {glide ? (
         <SettingsGroup

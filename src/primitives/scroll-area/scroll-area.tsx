@@ -24,6 +24,8 @@ type ScrollAreaProps = {
    * takes it from the content's own letters, for a strip that holds a name. */
   dir?: "auto" | "ltr" | "rtl";
   edgeEffect?: "fade" | "none";
+  /** Runs into a rounded window corner. */
+  inWindowCorner?: boolean;
   /** Called once the viewport is set up and scrolls, which happens a moment
    * after mounting: what is to be scrolled into view first waits for it. */
   onInitialized?: (viewport: HTMLElement) => void;
@@ -45,6 +47,7 @@ export function ScrollArea({
   constrainHeight,
   dir,
   edgeEffect = "fade",
+  inWindowCorner = false,
   onInitialized,
   orientation = "vertical",
   rootClassName,
@@ -88,7 +91,13 @@ export function ScrollArea({
 
   return (
     <div
-      className={cn("relative h-full w-full overflow-hidden", rootClassName)}
+      className={cn(
+        "relative h-full w-full overflow-hidden",
+        // The bar stops a corner's radius short of its ends, as native
+        // overlay scrollbars do, so the corner never clips it.
+        inWindowCorner && "[--scrollbar-inset:var(--radius-window)]",
+        rootClassName,
+      )}
       dir={dir}
     >
       <OverlayScrollbarsComponent

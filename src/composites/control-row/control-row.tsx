@@ -50,6 +50,8 @@ export function ControlRow({
         "flex min-h-control-height items-center gap-separate",
         className,
       )}
+      // Lets a search result find the row it names.
+      data-control-row={title}
     >
       {leading ? (
         <div className="flex shrink-0 items-center">{leading}</div>

@@ -8,28 +8,9 @@ import { isMacHost } from "../../../lib/platform";
 import { Switch } from "../../../primitives/switch/switch";
 import { SettingsGroup } from "../settings-group";
 
-import type { GlideSettings } from "../../../bindings/GlideSettings";
+import { glideToggles } from "./glide-rows";
 
-const toggles = () =>
-  [
-    {
-      key: "cursorFollows",
-      macOnly: false,
-      title: t("settings-glide-cursor-follows"),
-    },
-    {
-      description: t("settings-glide-haptics-description"),
-      key: "haptics",
-      macOnly: true,
-      title: t("settings-glide-haptics"),
-    },
-    {
-      description: t("settings-glide-double-tap-description"),
-      key: "doubleTapCenter",
-      macOnly: false,
-      title: t("settings-glide-double-tap"),
-    },
-  ] as const;
+import type { GlideSettings } from "../../../bindings/GlideSettings";
 
 // Glide's held keys live with every other shortcut, in the Shortcuts pane.
 export function GlideSettingsPanel({
@@ -62,7 +43,7 @@ export function GlideSettingsPanel({
           />
         )}
       </ControlRow>
-      {toggles()
+      {glideToggles()
         .filter(({ macOnly }) => !macOnly || isMacHost)
         .map((toggle) => (
           <ControlRow

@@ -192,3 +192,29 @@ settings-shortcut-screenshot = Take a screenshot
 settings-shortcut-screenshot-description = Choose an area of your screen to capture.
 settings-shortcut-copy-screenshot = Copy a screenshot
 settings-shortcut-copy-screenshot-description = Choose an area to copy, ready to paste elsewhere.
+
+## Search: the field above the sections, its results, and the extra words each
+## setting is found by. A keywords message is space-separated words people
+## might type for that setting beyond its name; translate them as words a
+## reader of the language would try, not word for word.
+
+settings-search-label = Search settings
+settings-search-placeholder = Search
+settings-search-results = Search results
+# Shown above a way into each section when nothing matches. $query is what
+# was typed.
+settings-search-no-results = No settings match “{ $query }”. Try one of these instead.
+settings-search-keywords-folders = location path directory save export
+settings-search-keywords-countdown = timer delay wait
+settings-search-keywords-frame-rate = fps framerate smooth
+settings-search-keywords-glide = window manager snap tile arrange resize
+settings-search-keywords-window-gap = gap padding margin spacing
+settings-search-keywords-startup = login boot launch open
+settings-search-keywords-ruler = measure pixels distance size
+settings-search-keywords-annotate = draw pen highlight arrow
+settings-search-keywords-ocr = text recognition copy scan
+settings-search-keywords-models = ai download machine learning
+settings-search-keywords-shortcut = hotkey keyboard key binding
+settings-search-keywords-updates = version update upgrade
+settings-search-keywords-microphone = mic audio input
+settings-search-keywords-moments = marker bookmark flag

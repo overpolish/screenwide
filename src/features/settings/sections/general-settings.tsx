@@ -15,72 +15,17 @@ import { useSettingsApi } from "../settings-api-context";
 import { SettingsGroup } from "../settings-group";
 import { LiveSoftwareUpdateSetting } from "../settings-update-actions";
 
+import {
+  autoZoomToggle,
+  captureToggle,
+  folders,
+  recordingSizeToggle,
+  recordingToggle,
+  startupToggles,
+  type ToggleItem,
+} from "./general-rows";
+
 import type { GeneralSettings } from "../../../bindings/GeneralSettings";
-
-/** The preferences a Switch row can drive. */
-type ToggleKey = {
-  [K in keyof GeneralSettings]: GeneralSettings[K] extends boolean ? K : never;
-}[keyof GeneralSettings];
-
-type ToggleItem = { key: ToggleKey; title: string; description?: string };
-
-const recordingToggle = (): ToggleItem => ({
-  description: t("settings-confidence-checks-description"),
-  key: "showRecordingConfidenceChecks",
-  title: t("settings-confidence-checks"),
-});
-
-const recordingSizeToggle = (): ToggleItem => ({
-  description: t("settings-recording-size-description"),
-  key: "showRecordingSize",
-  title: t("settings-recording-size"),
-});
-
-const autoZoomToggle = (): ToggleItem => ({
-  description: t("settings-auto-zoom-description"),
-  key: "autoZoom",
-  title: t("settings-auto-zoom"),
-});
-
-const captureToggle = (): ToggleItem => ({
-  description: t("settings-include-app-description"),
-  key: "recordScreenwideWindows",
-  title: t("settings-include-app"),
-});
-
-const startupToggles = (): ToggleItem[] => [
-  { key: "launchAtLogin", title: t("settings-launch-at-login") },
-  {
-    key: "showRecordingBarOnLaunch",
-    title: t("settings-show-bar-on-launch"),
-  },
-];
-
-/** The folders Settings names: where projects live, and where exports go. */
-const folders = () =>
-  [
-    {
-      description: t("settings-projects-folder-description"),
-      key: "projectDirectory",
-      kind: "project",
-      reset: t("settings-projects-folder-reset"),
-      title: t("settings-projects-folder"),
-    },
-    {
-      description: t("settings-export-folder-description"),
-      key: "recordingDirectory",
-      kind: "recording",
-      reset: t("settings-recording-folder-reset"),
-      title: t("settings-recording-folder"),
-    },
-    {
-      description: t("settings-export-folder-description"),
-      key: "screenshotDirectory",
-      kind: "screenshot",
-      reset: t("settings-screenshot-folder-reset"),
-      title: t("settings-screenshot-folder"),
-    },
-  ] as const;
 
 export function GeneralSettingsPanel({
   isSaving,

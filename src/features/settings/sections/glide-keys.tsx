@@ -2,47 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ControlRow } from "../../../composites/control-row/control-row";
-import { platformArg, t } from "../../../i18n/i18n";
 import { HotkeyField } from "../hotkey-field/hotkey-field";
 
+import { modifierDescription, modifierKeys, modifierTitle } from "./glide-rows";
+
 import type { GlideSettings } from "../../../bindings/GlideSettings";
-
-const modifierTitle = (key: ModifierKey) => {
-  switch (key) {
-    case "mouseModifier":
-      return t("settings-glide-mouse-modifier");
-    case "thirdsModifier":
-      return t("settings-glide-thirds-modifier");
-    case "spacesModifier":
-      return t("settings-glide-spaces-modifier", { platform: platformArg() });
-    case "monitorsModifier":
-      return t("settings-glide-monitors-modifier");
-  }
-};
-
-const modifierDescription = (key: ModifierKey) => {
-  switch (key) {
-    case "mouseModifier":
-      return t("settings-glide-mouse-modifier-description");
-    case "thirdsModifier":
-      return t("settings-glide-thirds-modifier-description");
-    case "spacesModifier":
-      return t("settings-glide-spaces-modifier-description", {
-        platform: platformArg(),
-      });
-    case "monitorsModifier":
-      return t("settings-glide-monitors-modifier-description");
-  }
-};
-
-const modifierKeys = [
-  "mouseModifier",
-  "thirdsModifier",
-  "spacesModifier",
-  "monitorsModifier",
-] as const;
-
-type ModifierKey = (typeof modifierKeys)[number];
 
 // The keys held while dragging a window to steer Glide, one each. Taking a
 // key another one already has swaps the two, so no two ever share a key.

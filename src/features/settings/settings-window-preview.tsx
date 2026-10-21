@@ -222,6 +222,7 @@ export const settingsWindowMeta = {
     return (
       <SettingsApiContext value={api}>
         <SettingsWindow
+          initialQuery={args.initialQuery}
           initialSection={args.initialSection}
           updateSetting={
             args.updateSetting ?? (

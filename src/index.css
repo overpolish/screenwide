@@ -240,6 +240,11 @@ html[data-platform="windows"] .glide-app-icon-windows-boost {
   display: block;
 }
 
+/* Windows 11 rounds a window's corners at 8px (DWMWCP_ROUND). */
+html[data-platform="windows"] {
+  --radius-window: 0.5rem;
+}
+
 /*
  * The library sets `contain: size layout` on the scrollbar box. WebKit then
  * skips re-laying it out when only its host changes width (an intrinsically

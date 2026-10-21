@@ -72,7 +72,8 @@ export function WindowSelector({
     // arrow keys move by where the thumbnails sit.
     <ScrollArea
       className="p-control-inset"
-      rootClassName="rounded-window [--scrollbar-inset:var(--radius-window)]"
+      inWindowCorner
+      rootClassName="rounded-window"
     >
       <ListBox
         aria-label={t("recording-sources-windows")}
