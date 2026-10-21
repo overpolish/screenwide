@@ -8,7 +8,6 @@ import { Button } from "../../../../primitives/button/button";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
 import { ProgressBar } from "../../../../primitives/progress-bar/progress-bar";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
-import { Text } from "../../../../primitives/text/text";
 import {
   downloadTranscriptionModel,
   listenToTranscription,
@@ -44,9 +43,9 @@ function NoModel({ model }: { model: string }) {
   if (download?.status === "downloading")
     return (
       <div className="gap-control flex items-center">
-        <Text className="shrink-0" variant="footnote">
+        <p className="text-caption text-fg-secondary shrink-0">
           {t("editor-timeline-downloading-model")}
-        </Text>
+        </p>
         <ProgressBar
           aria-label={t("editor-timeline-downloading-model-label")}
           value={(download.progress ?? 0) * 100}
@@ -55,7 +54,9 @@ function NoModel({ model }: { model: string }) {
     );
   return (
     <div className="gap-control flex items-center justify-between">
-      <Text variant="footnote">{t("editor-timeline-no-model")}</Text>
+      <p className="text-caption text-fg-secondary">
+        {t("editor-timeline-no-model")}
+      </p>
       <Button
         onPress={() => {
           void downloadTranscriptionModel(model).catch((error: unknown) => {
@@ -79,7 +80,11 @@ export function MomentNoteTranscript({
   transcript: NoteTranscript;
 }) {
   if (transcript.status === "ready" && !transcript.text.trim())
-    return <Text variant="footnote">{t("editor-timeline-no-speech")}</Text>;
+    return (
+      <p className="text-caption text-fg-secondary">
+        {t("editor-timeline-no-speech")}
+      </p>
+    );
   if (transcript.status === "ready")
     return (
       <ScrollArea
@@ -89,12 +94,14 @@ export function MomentNoteTranscript({
         edgeEffect="shadow"
         rootClassName="max-h-32"
       >
-        <Text className="select-text">{transcript.text}</Text>
+        <p className="text-body text-fg select-text">{transcript.text}</p>
       </ScrollArea>
     );
   if (transcript.status === "failed")
     return (
-      <Text variant="footnote">{t("editor-timeline-transcribe-failed")}</Text>
+      <p className="text-caption text-fg-secondary">
+        {t("editor-timeline-transcribe-failed")}
+      </p>
     );
   if (transcript.status === "noModel")
     return <NoModel model={transcript.model} />;
@@ -105,11 +112,11 @@ export function MomentNoteTranscript({
         isIndeterminate
         size="small"
       />
-      <Text variant="footnote">
+      <p className="text-caption text-fg-secondary">
         {transcript.status === "transcribing"
           ? t("editor-timeline-transcribing")
           : t("editor-timeline-transcribe-waiting")}
-      </Text>
+      </p>
     </div>
   );
 }

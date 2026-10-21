@@ -7,7 +7,6 @@ import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { Alert } from "../../primitives/alert/alert";
 import { Button } from "../../primitives/button/button";
-import { Text } from "../../primitives/text/text";
 
 import type { QrPayload } from "./qr-code-payload";
 
@@ -44,7 +43,7 @@ export function QrDetails({
       header={<WindowHeader onClose={onClose} title={payload.label} />}
     >
       <div className="gap-section px-window-inset pb-window-inset flex min-h-0 grow flex-col">
-        <Text>{description(payload)}</Text>
+        <p className="text-body text-fg">{description(payload)}</p>
         {status ? (
           <Alert color="error" role="alert">
             {status}

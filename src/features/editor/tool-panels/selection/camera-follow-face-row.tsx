@@ -4,7 +4,6 @@
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { Switch } from "../../../../primitives/switch/switch";
-import { Text } from "../../../../primitives/text/text";
 import { useIsFindingFace } from "../../recording/scenes/use-face-tracking-progress";
 
 /**
@@ -35,7 +34,9 @@ export function CameraFollowFaceRow({
         )}
       </ControlRow>
       {follows && isFindingFace ? (
-        <Text variant="footnote">{t("editor-panels-follow-face-finding")}</Text>
+        <p className="text-caption text-fg-secondary">
+          {t("editor-panels-follow-face-finding")}
+        </p>
       ) : null}
     </>
   );

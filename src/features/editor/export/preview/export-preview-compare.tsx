@@ -17,7 +17,6 @@ import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { Badge } from "../../../../primitives/badge/badge";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
 import { SliderKnob } from "../../../../primitives/slider/slider";
-import { Text } from "../../../../primitives/text/text";
 
 /** A frame to compare, at its own pixel size. */
 export type ComparedFrame = { height: number; src: string; width: number };
@@ -264,7 +263,9 @@ export function ExportPreviewCompare({
         </>
       ) : failed ? (
         <div className="absolute inset-0 flex items-center justify-center p-section">
-          <Text variant="subheadline">{t("editor-export-preview-failed")}</Text>
+          <p className="text-body text-fg-secondary">
+            {t("editor-export-preview-failed")}
+          </p>
         </div>
       ) : null}
       {isUpdating || (!original && !failed) ? (

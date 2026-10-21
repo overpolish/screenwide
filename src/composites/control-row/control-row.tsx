@@ -4,7 +4,6 @@
 import { useId, type ReactNode } from "react";
 
 import { cn } from "../../lib/styling";
-import { Text } from "../../primitives/text/text";
 
 export type ControlRowControlProps = {
   "aria-labelledby": string;
@@ -49,19 +48,18 @@ export function ControlRow({
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col gap-tight">
         <div className="flex items-center gap-control">
-          <Text className="break-words" id={titleId}>
+          <p className="text-body text-fg break-words" id={titleId}>
             {title}
-          </Text>
+          </p>
           {titleAccessory}
         </div>
         {description ? (
-          <Text
-            className="break-words"
+          <p
+            className="text-body text-fg-secondary break-words"
             id={descriptionId}
-            variant="subheadline"
           >
             {description}
-          </Text>
+          </p>
         ) : null}
       </div>
       <div className={cn("flex shrink-0 items-center", controlClassName)}>

@@ -12,7 +12,6 @@ import { Alert } from "../../primitives/alert/alert";
 import { Button } from "../../primitives/button/button";
 import { GroupBox } from "../../primitives/group-box/group-box";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
-import { Text } from "../../primitives/text/text";
 
 import { ReleaseNotes } from "./release-notes";
 
@@ -101,13 +100,15 @@ export function UpdatePrompt({
           />
         ) : (
           <div className="flex flex-col gap-tight">
-            <Text>{availabilityLine(currentVersion, updateVersion)}</Text>
+            <p className="text-body text-fg">
+              {availabilityLine(currentVersion, updateVersion)}
+            </p>
             {released ? (
-              <Text className="text-content-fg-secondary" variant="subheadline">
+              <p className="text-body text-fg-secondary text-content-fg-secondary">
                 {t("updates-released", {
                   date: dateFormatter.format(released),
                 })}
-              </Text>
+              </p>
             ) : null}
           </div>
         )}
@@ -126,7 +127,9 @@ export function UpdatePrompt({
             {releaseNotes ? (
               <ReleaseNotes html={releaseNotes} />
             ) : (
-              <Text>{t("updates-release-notes-fallback")}</Text>
+              <p className="text-body text-fg">
+                {t("updates-release-notes-fallback")}
+              </p>
             )}
           </ScrollArea>
         </GroupBox>

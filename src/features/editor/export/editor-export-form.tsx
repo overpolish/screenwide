@@ -8,7 +8,6 @@ import { Checkbox } from "../../../primitives/checkbox/checkbox";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { TextField } from "../../../primitives/input-fields/text-field";
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
-import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../duration";
 
 import {
@@ -246,10 +245,7 @@ export function EditorExportForm({
       </div>
       <div className="flex items-center justify-end gap-control-inset">
         {recording ? (
-          <Text
-            className="me-auto flex items-center gap-control-inset tabular-nums text-content-fg-secondary"
-            variant="subheadline"
-          >
+          <p className="text-body text-fg-secondary me-auto flex items-center gap-control-inset tabular-nums text-content-fg-secondary">
             {isEstimatingSize ? (
               <>
                 {t("editor-export-estimated-size-label")}
@@ -262,7 +258,7 @@ export function EditorExportForm({
             ) : (
               t("editor-export-estimated-size", { size: estimate })
             )}
-          </Text>
+          </p>
         ) : null}
         <Button onPress={onCancel}>{t("editor-export-cancel")}</Button>
         <Button color="primary" isDisabled={!canExport} onPress={onExport}>

@@ -18,8 +18,8 @@ import { t } from "../../i18n/i18n";
 import { isMacHost } from "../../lib/platform";
 import { elementFocusVisible, focusStyles } from "../../lib/styling";
 import { tv } from "../../lib/variants";
+import { fieldVariants } from "../field/field-variants";
 
-import { fieldVariants } from "./input-field";
 import { useNumberFieldScrub } from "./use-number-field-scrub";
 
 const numberFieldVariants = tv({

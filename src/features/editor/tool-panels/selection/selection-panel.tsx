@@ -7,7 +7,6 @@ import { SliderNumberField } from "../../../../composites/slider-number-field/sl
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { Switch } from "../../../../primitives/switch/switch";
-import { Text } from "../../../../primitives/text/text";
 import { EditorKind } from "../../types";
 import { RotationRow } from "../rotation-row";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -42,7 +41,9 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
   const { isLocked, scene, selection } = snapshot;
 
   if (!selection) {
-    return <Text variant="body">{t("editor-panels-nothing-selected")}</Text>;
+    return (
+      <p className="text-body text-fg">{t("editor-panels-nothing-selected")}</p>
+    );
   }
 
   if (selection.kind === "audio") {

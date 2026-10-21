@@ -4,7 +4,6 @@
 import { hotkeyKeys } from "../../../../composites/hotkey-field/hotkey";
 import { t } from "../../../../i18n/i18n";
 import { Keyboard } from "../../../../primitives/keyboard/keyboard";
-import { Text } from "../../../../primitives/text/text";
 
 /** Stands in for the keycap while the message is translated, so the whole
  * sentence stays one message and the key sits wherever a language puts it. */
@@ -20,7 +19,7 @@ export function TranscriptHint() {
     .replace(`\u2068${KEY_MARK}\u2069`, KEY_MARK)
     .split(KEY_MARK);
   return (
-    <Text variant="footnote">
+    <p className="text-caption text-fg-secondary">
       {before}
       {hotkeyKeys("CommandOrControl").map((key) => (
         <Keyboard className="align-middle" key={key}>
@@ -28,6 +27,6 @@ export function TranscriptHint() {
         </Keyboard>
       ))}
       {after}
-    </Text>
+    </p>
   );
 }

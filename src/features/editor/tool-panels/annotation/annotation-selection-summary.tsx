@@ -3,7 +3,6 @@
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { Text } from "../../../../primitives/text/text";
 
 /**
  * The panel while several annotations are chosen. They share no one dress to
@@ -20,9 +19,9 @@ export function AnnotationSelectionSummary({
 }) {
   return (
     <div className="flex flex-col gap-section">
-      <Text variant="body">
+      <p className="text-body text-fg">
         {t("editor-panels-annotations-selected", { count })}
-      </Text>
+      </p>
       <div className="flex justify-end">
         <Button
           aria-label={t("editor-panels-delete-annotations")}

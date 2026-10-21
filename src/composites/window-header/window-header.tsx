@@ -9,7 +9,6 @@ import { hostPlatform, type Platform } from "../../lib/platform";
 import { cn } from "../../lib/styling";
 import { IconButton } from "../../primitives/button/icon-button";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
-import { Text } from "../../primitives/text/text";
 import { EditableTitle } from "../editable-title/editable-title";
 
 import {
@@ -101,10 +100,11 @@ export function WindowHeader({
         )}
         scrollbarHidden
       >
-        <Text
-          as="h1"
-          className={cn(variant === "display" && "text-accent-heading")}
-          variant="title"
+        <h1
+          className={cn(
+            "text-title text-fg",
+            variant === "display" && "text-accent-heading",
+          )}
         >
           {onTitleChange ? (
             <EditableTitle
@@ -115,7 +115,7 @@ export function WindowHeader({
           ) : (
             title
           )}
-        </Text>
+        </h1>
       </ScrollArea>
     </div>
   );

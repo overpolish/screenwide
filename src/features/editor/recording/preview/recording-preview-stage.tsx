@@ -5,7 +5,6 @@ import { RefObject } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
-import { Text } from "../../../../primitives/text/text";
 import {
   RecordingOutputSettings,
   defaultScreenshotOutput,
@@ -29,12 +28,9 @@ import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
 function PreviewError({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <Text
-      className="px-window-inset pb-control-inset text-error"
-      variant="footnote"
-    >
+    <p className="text-caption text-fg-secondary px-window-inset pb-control-inset text-error">
       {message}
-    </Text>
+    </p>
   );
 }
 

@@ -4,8 +4,6 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { Ruler } from "lucide-react";
 
-import { Text } from "../text/text";
-
 import { NumberField } from "./number-field";
 
 const meta = {
@@ -77,9 +75,7 @@ export const States: Story = {
         ] as const
       ).map((row) => (
         <div className="flex items-center gap-section" key={row.label}>
-          <Text className="w-16" variant="footnote">
-            {row.label}
-          </Text>
+          <p className="w-16 text-caption text-fg-secondary">{row.label}</p>
           <NumberField
             className="w-48"
             label="Amount"

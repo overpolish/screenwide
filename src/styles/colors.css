@@ -40,13 +40,15 @@
      surface with the text unchanged. */
   --color-selected: oklch(18% 0.01 47.6 / 12%);
   /* The brand orange, the logo's colour, kept for emphasis: where you are
-     (the playhead, the selection on the picture) and focus. A
-     mark, never text. The OS accent replaces it while the user follows it
+     (the playhead, the selection on the picture). A mark, never text. The
+     OS accent replaces it while the user follows it
      (`src/lib/system-accent.ts`); that setting goes with the platform
      unification. */
   --color-emphasis: var(--system-accent, oklch(66% 0.181 47.604));
-  /* Keyboard focus: the emphasis at half strength around the control. */
-  --color-focus: color-mix(in oklab, var(--color-emphasis) 50%, transparent);
+  /* Focus: the primary ink at a third of its strength around the control,
+     monochrome like the rest of the interface, so it marks where typing
+     goes without the weight of a colour. It follows primary into dark. */
+  --color-focus: color-mix(in oklab, var(--color-primary) 35%, transparent);
 
   /* Status colours, set beside the orange in the same space: one lightness
      band, so none shouts over the others, and red kept well clear of the
@@ -85,6 +87,12 @@
       inset 0 0.5px 0 rgb(255 255 255 / 18%), 0 0 0 0.5px rgb(0 0 0 / 40%),
       0 1px 2px rgb(0 0 0 / 20%);
     --primary-bevel-pressed: 0 0 0 0.5px rgb(0 0 0 / 40%);
+    /* A field sinks into the window as a button stands up from it: a fainter
+       fill, a hairline edge and a soft shade under its top edge. */
+    --control-sunken: oklch(18% 0.01 47.6 / 4%);
+    --control-well:
+      inset 0 0.5px 1px rgb(0 0 0 / 8%),
+      inset 0 0 0 0.5px oklch(18% 0.01 47.6 / 12%);
   }
 }
 
@@ -126,6 +134,10 @@
     --primary-bevel:
       inset 0 -0.5px 0 rgb(0 0 0 / 14%), 0 1px 2px rgb(0 0 0 / 35%);
     --primary-bevel-pressed: 0 1px 1px rgb(0 0 0 / 35%);
+    --control-sunken: oklch(98% 0.005 47.6 / 5%);
+    --control-well:
+      inset 0 0.5px 1px rgb(0 0 0 / 35%),
+      inset 0 0 0 0.5px oklch(98% 0.005 47.6 / 10%);
 
     /* Lifted to read on the dark material, each well past 4.5:1. */
     --color-success: oklch(76% 0.15 150);

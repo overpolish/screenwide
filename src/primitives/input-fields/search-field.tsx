@@ -10,8 +10,8 @@ import {
 } from "react-aria-components";
 
 import { IconButton } from "../button/icon-button";
-
-import { fieldVariants } from "./input-field";
+import { fieldVariants } from "../field/field-variants";
+import { focusFieldInput } from "../field/focus-field-input";
 
 export type SearchFieldProps = Omit<
   AriaSearchFieldProps,
@@ -38,7 +38,7 @@ export function SearchField({
   return (
     <AriaSearchField {...props} className={base({ className })}>
       {({ isDisabled, isEmpty }) => (
-        <div className={field()}>
+        <div className={field()} onMouseDown={focusFieldInput}>
           <div className={inputWrapper()}>
             <span className={section()}>
               <Search aria-hidden />

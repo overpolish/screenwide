@@ -4,7 +4,6 @@
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { Text } from "../../../../primitives/text/text";
 import { ModelDownloadRow } from "../selection/microphone-switch-rows";
 import { ToolProgress } from "../selection/tool-progress";
 import { ToolPanelTranscript } from "../tool-panel-transcript";
@@ -70,9 +69,9 @@ export function TranscriptSetup({
         value={transcript.progress}
       />
       {transcript.error ? (
-        <Text className="mt-control text-error" variant="footnote">
+        <p className="text-caption text-fg-secondary mt-control text-error">
           {transcript.error}
-        </Text>
+        </p>
       ) : null}
     </div>
   );

@@ -6,7 +6,6 @@ import { useId, useMemo, useRef } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { IconButton } from "../../../../primitives/button/icon-button";
-import { Text } from "../../../../primitives/text/text";
 import { useFittedPanel } from "../../../popup-panel/use-fitted-panel";
 import { formatDuration } from "../../duration";
 import { timelineWaveformPath } from "../audio/timeline-waveform-path";
@@ -91,9 +90,9 @@ export function MomentNotePanel({
             vectorEffect="non-scaling-stroke"
           />
         </svg>
-        <Text className="shrink-0 tabular-nums" variant="footnote">
+        <p className="text-caption text-fg-secondary shrink-0 tabular-nums">
           {formatDuration(content.durationMs)}
-        </Text>
+        </p>
       </div>
       {transcript ? <MomentNoteTranscript transcript={transcript} /> : null}
     </div>

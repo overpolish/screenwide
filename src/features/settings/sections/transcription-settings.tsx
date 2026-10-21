@@ -5,7 +5,6 @@ import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
 import { Badge } from "../../../primitives/badge/badge";
 import { GroupBox } from "../../../primitives/group-box/group-box";
-import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
@@ -45,9 +44,9 @@ export function TranscriptionSettingsPanel({
   return (
     <div className="gap-layout flex flex-col">
       {/* First, so it is read before anything is downloaded. */}
-      <Text className="px-section" variant="subheadline">
+      <p className="text-body text-fg-secondary px-section">
         {t("settings-transcription-local")}
-      </Text>
+      </p>
       <GroupBox title={t("settings-transcription-models")}>
         {state.models.map((model) => (
           <ControlRow

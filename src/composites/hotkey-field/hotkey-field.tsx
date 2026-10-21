@@ -13,7 +13,6 @@ import { IconButton } from "../../primitives/button/icon-button";
 import { CircularProgress } from "../../primitives/circular-progress/circular-progress";
 import { keyLabel } from "../../primitives/keyboard/key-label";
 import { Keyboard, Shortcut } from "../../primitives/keyboard/keyboard";
-import { Text } from "../../primitives/text/text";
 
 import {
   type HotkeyCaptureMode,
@@ -256,13 +255,12 @@ export function HotkeyField({
         ) : null}
       </div>
       {captureError ? (
-        <Text
-          className="max-w-64 text-end text-error"
+        <p
+          className="text-body text-fg-secondary max-w-64 text-end text-error"
           role="alert"
-          variant="subheadline"
         >
           {captureError}
-        </Text>
+        </p>
       ) : null}
       <VisuallyHidden>
         <span aria-live="polite" role="status">

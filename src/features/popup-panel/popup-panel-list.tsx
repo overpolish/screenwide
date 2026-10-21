@@ -10,7 +10,6 @@ import {
 import { t } from "../../i18n/i18n";
 import { ListBox } from "../../primitives/listbox/listbox";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
-import { Text } from "../../primitives/text/text";
 
 import { hidePopupPanel } from "./api";
 import { renderPopupPanelItem } from "./popup-panel-list-item";
@@ -192,13 +191,9 @@ export function PopupPanelList({
               >
                 {group.section ? (
                   <Header>
-                    <Text
-                      as="span"
-                      className="px-control-inset py-control block"
-                      variant="section"
-                    >
+                    <span className="text-heading text-fg-secondary px-control-inset py-control block">
                       {group.section}
-                    </Text>
+                    </span>
                   </Header>
                 ) : null}
                 {group.items.map(renderItem)}

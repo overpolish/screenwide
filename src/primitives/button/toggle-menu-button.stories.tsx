@@ -5,8 +5,6 @@ import { Meta, StoryObj } from "@storybook/react";
 import { Lock, Mic, MicOff, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 
-import { Text } from "../text/text";
-
 import { ToggleMenuButton } from "./toggle-menu-button";
 
 const meta = {
@@ -65,9 +63,7 @@ export const Badges: Story = {
   render: (args) => (
     <div className="flex flex-col gap-section">
       <div className="flex gap-section items-center">
-        <Text className="w-16" variant="footnote">
-          warning
-        </Text>
+        <p className="w-16 text-caption text-fg-secondary">warning</p>
         <ToggleMenuButton
           {...args}
           badge={<TriangleAlert className="text-warning" />}
@@ -75,9 +71,7 @@ export const Badges: Story = {
         />
       </div>
       <div className="flex gap-section items-center">
-        <Text className="w-16" variant="footnote">
-          locked
-        </Text>
+        <p className="w-16 text-caption text-fg-secondary">locked</p>
         <ToggleMenuButton
           {...args}
           badge={<Lock className="text-muted" />}
@@ -93,21 +87,15 @@ export const States: Story = {
   render: (args) => (
     <div className="flex flex-col gap-section">
       <div className="flex gap-section items-center">
-        <Text className="w-16" variant="footnote">
-          toggle off
-        </Text>
+        <p className="w-16 text-caption text-fg-secondary">toggle off</p>
         <ToggleMenuButton {...args} isSelected isToggleDisabled />
       </div>
       <div className="flex gap-section items-center">
-        <Text className="w-16" variant="footnote">
-          menu off
-        </Text>
+        <p className="w-16 text-caption text-fg-secondary">menu off</p>
         <ToggleMenuButton {...args} isMenuDisabled isSelected />
       </div>
       <div className="flex gap-section items-center">
-        <Text className="w-16" variant="footnote">
-          both off
-        </Text>
+        <p className="w-16 text-caption text-fg-secondary">both off</p>
         <ToggleMenuButton {...args} isMenuDisabled isToggleDisabled />
       </div>
     </div>
@@ -126,9 +114,9 @@ export const Ghost: Story = {
             className="flex gap-section items-center"
             key={`${size}-${isSelected ? "on" : "off"}`}
           >
-            <Text className="w-24" variant="footnote">
+            <p className="w-24 text-caption text-fg-secondary">
               {`${size} ${isSelected ? "on" : "off"}`}
-            </Text>
+            </p>
             <ToggleMenuButton
               {...args}
               isSelected={isSelected}
@@ -153,9 +141,9 @@ export const Sizes: Story = {
             className="flex gap-section items-center"
             key={`${size}-${isSelected ? "on" : "off"}`}
           >
-            <Text className="w-24" variant="footnote">
+            <p className="w-24 text-caption text-fg-secondary">
               {`${size} ${isSelected ? "on" : "off"}`}
-            </Text>
+            </p>
             <ToggleMenuButton
               {...args}
               isSelected={isSelected}

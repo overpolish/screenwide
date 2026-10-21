@@ -5,7 +5,6 @@ import { ReactNode } from "react";
 
 import { cn } from "../../lib/styling";
 import { ProgressBar } from "../../primitives/progress-bar/progress-bar";
-import { Text } from "../../primitives/text/text";
 
 export type ProgressPanelProps = {
   /** What is happening, in one short phrase. */
@@ -38,7 +37,7 @@ export function ProgressPanel({
     // One control gap between each row: the secondary line can carry a
     // keycap, which has no leading of its own to space it from the bar.
     <div className="flex w-full flex-col gap-control">
-      <Text as="span">{label}</Text>
+      <span className="text-body text-fg">{label}</span>
       {/* The action trails the bar, where Finder and Safari put the stop. It
           is taller than the bar, so its overhang is pulled in and the gaps
           above and below measure from the bar rather than the button. */}
@@ -57,9 +56,9 @@ export function ProgressPanel({
         {action}
       </div>
       {secondary === undefined ? null : (
-        <Text as="span" className="tabular-nums" variant="subheadline">
+        <span className="text-body text-fg-secondary tabular-nums">
           {secondary}
-        </Text>
+        </span>
       )}
     </div>
   );

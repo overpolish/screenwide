@@ -9,7 +9,6 @@ import { EditableTitle } from "../../composites/editable-title/editable-title";
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 import { IconButton } from "../../primitives/button/icon-button";
-import { Text } from "../../primitives/text/text";
 import {
   boundsAnchor,
   PopupMenuAnchor,
@@ -107,7 +106,7 @@ export function ProjectCard({
       />
       <div className="gap-control flex items-center">
         <div className="px-control flex min-w-0 grow flex-col">
-          <Text as="h3" title={project.title}>
+          <h3 className="text-body text-fg" title={project.title}>
             {project.available && onRename ? (
               <EditableTitle
                 className="truncate focus:text-clip"
@@ -125,15 +124,15 @@ export function ProjectCard({
                 {project.title}
               </span>
             )}
-          </Text>
-          <Text className="truncate" variant="footnote">
+          </h3>
+          <p className="text-caption text-fg-secondary truncate">
             {footnote ??
               (!project.available
                 ? t("project-browser-unavailable")
                 : project.modifiedMs === null
                   ? null
                   : editedAt.format(new Date(project.modifiedMs)))}
-          </Text>
+          </p>
         </div>
         <IconButton
           aria-label={t("project-browser-more-actions", {

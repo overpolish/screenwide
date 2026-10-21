@@ -9,18 +9,17 @@ import {
   type TextFieldProps as AriaTextFieldProps,
 } from "react-aria-components";
 
-import { fieldVariants } from "./input-field";
+import { fieldVariants } from "../field/field-variants";
+import { focusFieldInput } from "../field/focus-field-input";
 
 export type TextFieldProps = Omit<
   AriaTextFieldProps,
   "children" | "className"
 > & {
   className?: string;
-  /** A glyph before the text, as the search field's magnifier sits, saying
-   * what the field is for. Decorative: the label or aria name names it. */
+  /** Decorative glyph before the value; the label still names the field. */
   icon?: ReactNode;
   label?: string;
-  /** Hint text in the empty field, for a field whose label is its aria name. */
   placeholder?: string;
 };
 
@@ -43,7 +42,7 @@ export function TextField({
   return (
     <AriaTextField {...props} className={base({ className })}>
       {label ? <Label className={labelSlot()}>{label}</Label> : null}
-      <div className={field()}>
+      <div className={field()} onMouseDown={focusFieldInput}>
         <div className={inputWrapper()}>
           {icon ? (
             <span aria-hidden className={section()}>

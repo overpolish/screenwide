@@ -7,7 +7,6 @@ import { ToggleButton, ToggleButtonGroup } from "react-aria-components";
 import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
-import { Text } from "../../../../primitives/text/text";
 import { useFittedPanel } from "../../../popup-panel/use-fitted-panel";
 import { reportPopupPanelPick } from "../../../popup-panel/use-popup-panel-picker";
 
@@ -95,12 +94,12 @@ export function TextTemplatePanel({
                 clip={clips[index]}
                 still={content.still === true}
               />
-              <Text className="text-center text-inherit" variant="footnote">
+              <p className="text-caption text-fg-secondary text-center text-inherit">
                 {textTemplateLabel(
                   style.template,
                   content.names[style.template],
                 )}
-              </Text>
+              </p>
             </ToggleButton>
           ))}
         </ToggleButtonGroup>

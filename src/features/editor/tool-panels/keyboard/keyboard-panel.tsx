@@ -8,7 +8,6 @@ import { Button } from "../../../../primitives/button/button";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
 import { Switch } from "../../../../primitives/switch/switch";
-import { Text } from "../../../../primitives/text/text";
 import {
   EditorKind,
   KeyboardEffectAnimation,
@@ -49,7 +48,11 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
     snapshot;
 
   if (!hasKeyboardData) {
-    return <Text variant="footnote">{t("editor-panels-keyboard-empty")}</Text>;
+    return (
+      <p className="text-caption text-fg-secondary">
+        {t("editor-panels-keyboard-empty")}
+      </p>
+    );
   }
 
   const isDisabled = isLocked || !keyboardEffects.bake;

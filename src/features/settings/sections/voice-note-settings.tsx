@@ -9,7 +9,6 @@ import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
 import { Button } from "../../../primitives/button/button";
 import { GroupBox } from "../../../primitives/group-box/group-box";
 import { Switch } from "../../../primitives/switch/switch";
-import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
@@ -194,9 +193,9 @@ export function VoiceNoteSettings({
       </ControlRow>
       {isDenied ? (
         <>
-          <Text variant="footnote">
+          <p className="text-caption text-fg-secondary">
             {t("settings-voice-notes-microphone-denied")}
-          </Text>
+          </p>
           <div className="gap-control flex justify-end">
             <Button
               onPress={() => {

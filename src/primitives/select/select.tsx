@@ -14,8 +14,9 @@ import {
   SelectValue,
 } from "react-aria-components";
 
-import { cn, focusStyles } from "../../lib/styling";
+import { cn } from "../../lib/styling";
 import { tv } from "../../lib/variants";
+import { fieldVariants } from "../field/field-variants";
 import { ListBox } from "../listbox/listbox";
 import { ScrollArea } from "../scroll-area/scroll-area";
 
@@ -27,27 +28,26 @@ import { ClearButton } from "./clear-button";
 const popoverSurface =
   "rounded-panel bg-popover shadow-md inset-ring inset-ring-popover-stroke";
 
+// The shared field in its raised material: a select is a trigger pressed to
+// choose, not a field typed into. The trigger button carries the interaction
+// state, so the frame around it takes its hover and press, and shows the
+// focus ring only for keyboard focus, as a button does.
 const selectVariants = tv({
   defaultVariants: {
+    material: "raised",
     showFocus: true,
   },
+  extend: fieldVariants,
   slots: {
-    base: "gap-control flex shrink-0 flex-col",
+    base: "shrink-0",
     controls:
       "text-content-fg-secondary [&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu",
     field: [
-      "relative inline-flex h-control-height shrink-0 items-stretch rounded-control bg-control-fill text-content-fg outline-none transition-[background-color,box-shadow,color] control-stroke",
-      // The bezel's states are the platform tokens, as on a button: a
-      // pop-up button on macOS darkens its bezel on press and ignores hover,
-      // a Fluent combo box reacts to both. The trigger button carries the
-      // interaction state; the field wrapping it and the clear button paints.
-      "has-[[data-select-trigger][data-hovered]]:bg-control-fill-hover",
-      "has-[[data-select-trigger][data-pressed]]:bg-control-fill-pressed has-[[data-select-trigger][data-pressed]]:text-control-fg-pressed",
-      "has-[[data-select-trigger][data-disabled]]:bg-control-fill-disabled has-[[data-select-trigger][data-disabled]]:text-control-fg-disabled",
+      "inline-flex shrink-0 items-stretch",
+      "has-[[data-select-trigger][data-hovered]]:control-raised-hover",
+      "has-[[data-select-trigger][data-pressed]]:control-raised-pressed",
       "has-[[data-select-clear]]:[&>[data-select-trigger]]:pe-0",
-      focusStyles,
     ],
-    label: "text-body text-content-fg",
     trigger:
       "group relative inline-flex min-w-0 flex-1 shrink-0 cursor-default flex-row items-center justify-between gap-control-inset bg-transparent px-section text-body text-content-fg outline-none",
     value:
@@ -56,10 +56,7 @@ const selectVariants = tv({
   variants: {
     showFocus: {
       true: {
-        // The trigger is a button, so the ring is keyboard-only. The Windows
-        // form mirrors `elementFocusVisible` for a wrapper.
-        field:
-          "has-[[data-select-trigger][data-focus-visible]]:ring-3 windows:has-[[data-select-trigger][data-focus-visible]]:ring-2 windows:has-[[data-select-trigger][data-focus-visible]]:ring-offset-1 windows:has-[[data-select-trigger][data-focus-visible]]:ring-offset-focus-ring-inner",
+        field: "has-[[data-select-trigger][data-focus-visible]]:ring-3",
       },
     },
   },

@@ -6,7 +6,6 @@ import { Ref } from "react";
 import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { Button } from "../../primitives/button/button";
-import { Text } from "../../primitives/text/text";
 
 export type AlertProps = {
   message: string;
@@ -28,8 +27,8 @@ export function Alert({ contentRef, message, onDismiss, title }: AlertProps) {
   return (
     <WindowShell height="content" ref={contentRef}>
       <div className="flex flex-col gap-section p-window-inset" role="alert">
-        <Text variant="headline">{title}</Text>
-        <Text className="select-text">{message}</Text>
+        <p className="text-heading text-fg">{title}</p>
+        <p className="text-body text-fg select-text">{message}</p>
         <div className="flex justify-end">
           <Button color="primary" onPress={onDismiss}>
             {t("alert-dismiss")}

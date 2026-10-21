@@ -6,7 +6,6 @@ import { ReactNode, useId } from "react";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
-import { Text } from "../../../primitives/text/text";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
@@ -57,18 +56,21 @@ export function ExportRow({
     "aria-labelledby": titleId,
   });
   const descriptionText = description ? (
-    <Text id={descriptionId} variant="subheadline">
+    <p className="text-body text-fg-secondary" id={descriptionId}>
       {description}
-    </Text>
+    </p>
   ) : null;
 
   return (
     <div className="col-span-2 grid grid-cols-subgrid">
       {/* The label sits with the first line of its control: 16px of text
           padded to the 24px a control is tall, so the two share a centre. */}
-      <Text as="label" className="py-1 text-end whitespace-nowrap" id={titleId}>
+      <label
+        className="text-body text-fg py-1 text-end whitespace-nowrap"
+        id={titleId}
+      >
         {title}
-      </Text>
+      </label>
       {layout === "trailing" ? (
         <div className="flex min-h-control-height min-w-0 items-center justify-end gap-control-inset text-end">
           {descriptionText}

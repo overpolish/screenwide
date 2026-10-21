@@ -46,14 +46,15 @@ const colorTokens = [
   "bg-error",
 ];
 
-// The raised material, at rest, hovered and pressed, and the primary
-// action's fill with its bevel.
+// The raised material, at rest, hovered and pressed; the primary action's
+// fill with its bevel; and the sunken material a field is drawn in.
 const materialTokens = [
   "control-raised",
   "control-raised control-raised-hover",
   "control-raised-pressed",
   "bg-primary primary-raised",
   "bg-primary-pressed primary-raised-pressed",
+  "control-sunken",
 ];
 
 const radiusTokens = [

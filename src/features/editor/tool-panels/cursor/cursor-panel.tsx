@@ -3,7 +3,6 @@
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { Text } from "../../../../primitives/text/text";
 import { DEFAULT_CURSOR_EFFECTS } from "../../export/recording-export-settings";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -15,7 +14,11 @@ export function CursorPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
 
   if (!snapshot.hasCursorData) {
-    return <Text variant="footnote">{t("editor-panels-cursor-none")}</Text>;
+    return (
+      <p className="text-caption text-fg-secondary">
+        {t("editor-panels-cursor-none")}
+      </p>
+    );
   }
 
   return (

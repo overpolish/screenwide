@@ -3,8 +3,8 @@
 
 import { Ref } from "react";
 
+import { cn } from "../../lib/styling";
 import { Keyboard, Shortcut } from "../../primitives/keyboard/keyboard";
-import { Text } from "../../primitives/text/text";
 import { tooltipShapeClassName } from "../../primitives/tooltip/tooltip";
 import { hotkeyKeys } from "../hotkey-field/hotkey";
 
@@ -55,15 +55,16 @@ export function NativeTooltipSurface({
     // Shrink-wrapped, so what is measured is the size the words need rather
     // than the size the window happens to be.
     <div className="inline-flex w-max max-w-72" ref={ref}>
-      <Text
-        as="span"
+      <span
         // Glass: the window's material is the background, as a native
         // tooltip's is, so the surface paints only its shape and text.
-        className={`window-surface ${tooltipShapeClassName} inline-flex`}
-        variant="subheadline"
+        className={cn(
+          "window-surface inline-flex text-body text-fg-secondary",
+          tooltipShapeClassName,
+        )}
       >
         <NativeTooltipLabel content={content} />
-      </Text>
+      </span>
     </div>
   );
 }

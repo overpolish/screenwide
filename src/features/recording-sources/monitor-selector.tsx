@@ -8,7 +8,6 @@ import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 import { buttonVariants } from "../../primitives/button/button-variants";
 import { ListBox } from "../../primitives/listbox/listbox";
-import { Text } from "../../primitives/text/text";
 
 import { orderMonitorsForNavigation } from "./monitor-selection";
 import { MonitorDetails } from "./types";
@@ -100,7 +99,9 @@ export function MonitorSelector({
   if (monitors.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-panel p-control-inset">
-        <Text variant="subheadline">{t("recording-sources-no-displays")}</Text>
+        <p className="text-body text-fg-secondary">
+          {t("recording-sources-no-displays")}
+        </p>
       </div>
     );
   }

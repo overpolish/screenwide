@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 
-import { Text } from "../../../../primitives/text/text";
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { Annotation } from "../../annotations/annotations";
 import { formatDuration } from "../../duration";
@@ -102,9 +101,12 @@ function Preview() {
   const selection = useLaneAnnotationSelection(clips);
   return (
     <div className="flex flex-col gap-section p-window-inset">
-      <Text aria-label="Playhead" className="font-mono" variant="footnote">
+      <p
+        aria-label="Playhead"
+        className="text-caption text-fg-secondary font-mono"
+      >
         {formatDuration(position * 66000)}
-      </Text>
+      </p>
       <RecordingAnnotationLane
         clips={clips}
         edit={{

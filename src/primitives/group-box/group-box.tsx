@@ -4,7 +4,6 @@
 import { ComponentProps, ReactNode } from "react";
 
 import { cn } from "../../lib/styling";
-import { Text } from "../text/text";
 
 type GroupBoxProps = ComponentProps<"section"> & {
   /** A small heading above the box, as a settings pane titles a group. */
@@ -26,9 +25,7 @@ export function GroupBox({
   return (
     <section {...props} className={cn("flex flex-col gap-control", className)}>
       {title ? (
-        <Text as="h2" className="px-section" variant="section">
-          {title}
-        </Text>
+        <h2 className="px-section text-heading text-fg-secondary">{title}</h2>
       ) : null}
       <div className="flex flex-col rounded-panel bg-layer inset-ring inset-ring-layer-stroke py-control [&>*]:px-section [&>*]:py-control-inset">
         {children}

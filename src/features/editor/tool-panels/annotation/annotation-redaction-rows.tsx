@@ -13,7 +13,6 @@ import {
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { StepSlider } from "../../../../composites/step-slider/step-slider";
 import { t } from "../../../../i18n/i18n";
-import { Text } from "../../../../primitives/text/text";
 
 import type { ToolPanelPatch } from "../tool-panel-patch";
 
@@ -143,5 +142,9 @@ export function AnnotationRedactionNote({
   const isStylistic =
     redaction === "pixelateClassic" || redaction === "blur" || animated;
   if (!isStylistic) return null;
-  return <Text variant="footnote">{t("editor-panels-redaction-note")}</Text>;
+  return (
+    <p className="text-caption text-fg-secondary">
+      {t("editor-panels-redaction-note")}
+    </p>
+  );
 }

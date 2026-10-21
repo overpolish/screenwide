@@ -80,6 +80,16 @@
     var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
     var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }
+/* The field material (`colors.css`): the counterpart of `control-raised`
+   for a control that takes text. Its edge and shade go in the shadow slot,
+   composed the same way, so a focus ring adds to them. */
+@utility control-sunken {
+  background-color: var(--control-sunken);
+  --tw-shadow: var(--control-well);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
 /* The primary action's sheen and bevel over its `bg-primary` fill. Pressed,
    the sheen goes, as the raised material flattens. */
 @utility primary-raised {

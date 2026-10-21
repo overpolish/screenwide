@@ -1,20 +1,32 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Meta, StoryObj } from "@storybook/react";
-import { TooltipTrigger } from "react-aria-components";
-
-import { Button } from "../button/button";
-import { Tooltip } from "../tooltip/tooltip";
+import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { Keyboard, Shortcut } from "./keyboard";
 
-const shortcutSeparator = "+" as const;
+import type { Meta, StoryObj } from "@storybook/react-vite";
+
+const variants = ["keycap", "plain"] as const;
+
+// A modifier, a named key, a letter, a digit and a bracket: on the Mac the
+// first two draw as symbols.
+const sampleKeys = ["Command", "Escape", "B", "4", "["];
+const separator = "+" as const;
 
 const meta = {
+  argTypes: {
+    children: { control: "text" },
+    variant: {
+      control: "inline-radio",
+      options: variants,
+      table: { defaultValue: { summary: "keycap" } },
+    },
+  },
+  args: { children: "Esc", variant: "keycap" },
   component: Keyboard,
   parameters: {
-    controls: { exclude: ["children", "ref"] },
+    controls: { include: ["children", "variant"] },
     layout: "centered",
   },
   title: "Primitives/Keyboard",
@@ -23,56 +35,46 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/* --------------------------------- Stories -------------------------------- */
-export const Default: Story = {
-  args: {
-    children: <>Esc</>,
-  },
+export const Default: Story = {};
+
+export const Variants: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <StoryGrid columns={sampleKeys.length}>
+      {variants.map((variant) => (
+        <StoryGridRow key={variant} label={variant}>
+          {sampleKeys.map((key) => (
+            <Keyboard key={key} variant={variant}>
+              {key}
+            </Keyboard>
+          ))}
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
+  ),
 };
 
 export const ShortcutKeys: Story = {
   name: "Shortcut",
   parameters: { controls: { disable: true } },
   render: () => (
-    <Shortcut>
-      <Keyboard>Command</Keyboard>
-      {shortcutSeparator}
-      <Keyboard>Shift</Keyboard>
-      {shortcutSeparator}
-      <Keyboard>4</Keyboard>
-    </Shortcut>
-  ),
-};
-
-export const InTooltip: Story = {
-  name: "In Tooltip",
-  parameters: {
-    controls: { disable: true },
-    docs: { story: { height: "140px", inline: false } },
-  },
-  render: () => (
-    <TooltipTrigger isOpen>
-      <Button>Blade tool</Button>
-      <Tooltip placement="bottom">
-        <span className="gap-control-inset flex items-center">
-          Blade
-          <Shortcut>
-            <Keyboard>B</Keyboard>
-          </Shortcut>
-        </span>
-      </Tooltip>
-    </TooltipTrigger>
-  ),
-};
-
-export const Modifiers: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => (
-    <div className="gap-section flex items-center">
-      <Keyboard>Command</Keyboard>
-      <Keyboard>Control</Keyboard>
-      <Keyboard>Shift</Keyboard>
-      <Keyboard>Meta</Keyboard>
-    </div>
+    <StoryGrid>
+      <StoryGridRow label="separated">
+        <Shortcut>
+          <Keyboard>Command</Keyboard>
+          {separator}
+          <Keyboard>Shift</Keyboard>
+          {separator}
+          <Keyboard>4</Keyboard>
+        </Shortcut>
+      </StoryGridRow>
+      <StoryGridRow label="together">
+        <Shortcut>
+          <Keyboard>Command</Keyboard>
+          <Keyboard>Shift</Keyboard>
+          <Keyboard>4</Keyboard>
+        </Shortcut>
+      </StoryGridRow>
+    </StoryGrid>
   ),
 };

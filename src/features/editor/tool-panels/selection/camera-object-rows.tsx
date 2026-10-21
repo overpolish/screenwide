@@ -13,7 +13,6 @@ import { Badge } from "../../../../primitives/badge/badge";
 import { Button } from "../../../../primitives/button/button";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
-import { Text } from "../../../../primitives/text/text";
 import { formatBytes } from "../../duration";
 import { ToolPanelPatch } from "../tool-panel-patch";
 import { ToolPanelCameraObjects } from "../tool-panel-store";
@@ -199,9 +198,9 @@ function PickedObjects({ change, isLocked, objects }: RowsProps) {
         )}
       </ControlRow>
       {isPicking ? (
-        <Text variant="footnote">
+        <p className="text-caption text-fg-secondary">
           {t("editor-panels-camera-objects-hint", { platform: platformArg() })}
-        </Text>
+        </p>
       ) : null}
       <ToolProgress
         isWorking={objects.working}

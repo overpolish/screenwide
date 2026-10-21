@@ -8,7 +8,6 @@ import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 import { IconButton } from "../../primitives/button/icon-button";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
-import { Text } from "../../primitives/text/text";
 import { CheckOnClick } from "../check-on-click/check-on-click";
 
 type CopyableTextProps = Omit<ComponentProps<"section">, "children"> & {
@@ -41,9 +40,9 @@ export function CopyableText({
       {...props}
     >
       <div className="flex items-center justify-between gap-control-inset">
-        <Text as="span" id={labelId} variant="section">
+        <span className="text-heading text-fg-secondary" id={labelId}>
           {label}
-        </Text>
+        </span>
         <CheckOnClick onPress={onCopy}>
           <IconButton aria-label={copyLabel} isDisabled={!value}>
             <Copy aria-hidden />
@@ -64,7 +63,7 @@ export function CopyableText({
             {value}
           </pre>
         ) : (
-          <Text variant="subheadline">{emptyText}</Text>
+          <p className="text-body text-fg-secondary">{emptyText}</p>
         )}
       </ScrollArea>
     </section>

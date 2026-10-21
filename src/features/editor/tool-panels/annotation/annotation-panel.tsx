@@ -3,7 +3,6 @@
 
 import { AnnotationColorGrid } from "../../../../composites/annotation-style/annotation-color-grid";
 import { t } from "../../../../i18n/i18n";
-import { Text } from "../../../../primitives/text/text";
 import { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -92,7 +91,9 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       />
     );
   if (!annotation)
-    return <Text variant="body">{t("editor-panels-nothing-selected")}</Text>;
+    return (
+      <p className="text-body text-fg">{t("editor-panels-nothing-selected")}</p>
+    );
 
   const { color, manual, radius, redaction, strength, width } =
     annotation.style;

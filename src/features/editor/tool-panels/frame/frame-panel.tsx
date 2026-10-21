@@ -7,7 +7,6 @@ import { ControlRow } from "../../../../composites/control-row/control-row";
 import { Dimensions } from "../../../../composites/dimensions/dimensions";
 import { SliderNumberField } from "../../../../composites/slider-number-field/slider-number-field";
 import { t } from "../../../../i18n/i18n";
-import { Text } from "../../../../primitives/text/text";
 import { browseBackgroundImage } from "../../api";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -91,9 +90,9 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
       </ControlRow>
 
       <div className="flex flex-col gap-control">
-        <Text as="h2" variant="section">
+        <h2 className="text-heading text-fg-secondary">
           {t("background-label")}
-        </Text>
+        </h2>
         <BackgroundPicker
           isDisabled={isLocked}
           onChange={(next) => {

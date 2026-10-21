@@ -18,7 +18,6 @@ import { t } from "../../i18n/i18n";
 import { Button } from "../../primitives/button/button";
 import { SearchField } from "../../primitives/input-fields/search-field";
 import { SidebarNav } from "../../primitives/sidebar-nav/sidebar-nav";
-import { Text } from "../../primitives/text/text";
 
 import {
   ProjectBrowserNotices,
@@ -99,18 +98,18 @@ function EmptyState({
 }) {
   return (
     <div className="gap-control pe-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
-      <Text variant="headline">
+      <p className="text-heading text-fg">
         {selected === DELETED
           ? t("project-browser-empty-deleted-title")
           : t("project-browser-empty-title")}
-      </Text>
-      <Text variant="subheadline">
+      </p>
+      <p className="text-body text-fg-secondary">
         {selected === DELETED
           ? t("project-browser-empty-deleted")
           : location
             ? t("project-browser-empty-location")
             : t("project-browser-empty-recent")}
-      </Text>
+      </p>
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../../i18n/i18n";
 import { isWindows } from "../../lib/platform";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
-import { Text } from "../../primitives/text/text";
 import { ownsTextEditingKeys } from "../editor/shortcuts/keyboard-target";
 
 import { ProjectCard } from "./project-card";
@@ -142,12 +141,12 @@ export function ProjectListPane({
       />
       {listed.length === 0 ? (
         <div className="gap-control pe-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
-          <Text variant="headline">
+          <p className="text-heading text-fg">
             {t("project-browser-no-results-title")}
-          </Text>
-          <Text variant="subheadline">
+          </p>
+          <p className="text-body text-fg-secondary">
             {t("project-browser-no-results", { query: query.trim() })}
-          </Text>
+          </p>
         </div>
       ) : (
         <ScrollArea edgeEffect="shadow" rootClassName="min-h-0 min-w-0 grow">
@@ -159,9 +158,9 @@ export function ProjectListPane({
                 key={group.label ?? "results"}
               >
                 {group.label ? (
-                  <Text as="h2" className="px-control" variant="section">
+                  <h2 className="text-heading text-fg-secondary px-control">
                     {group.label}
-                  </Text>
+                  </h2>
                 ) : null}
                 <div className="gap-section grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
                   {group.projects.map((project) => (

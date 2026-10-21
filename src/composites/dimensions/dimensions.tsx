@@ -11,7 +11,6 @@ import {
   IconToggleButton,
 } from "../../primitives/button/icon-button";
 import { NumberField } from "../../primitives/input-fields/number-field";
-import { Text } from "../../primitives/text/text";
 
 import {
   AspectRatioParts,
@@ -279,7 +278,7 @@ export const Dimensions = ({
     >
       {layout === "stacked" ? (
         <div className="flex items-center">
-          <Text as="span">{label}</Text>
+          <span className="text-body text-fg">{label}</span>
           <div className="grow" />
           {dimensionFields}
         </div>

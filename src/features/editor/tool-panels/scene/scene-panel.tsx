@@ -5,9 +5,7 @@ import { ToggleButtonGroup } from "react-aria-components";
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
-import { Button } from "../../../../primitives/button/button";
 import { Switch } from "../../../../primitives/switch/switch";
-import { Text } from "../../../../primitives/text/text";
 import {
   sceneCustomLabel,
   scenePresetLabel,
@@ -23,6 +21,7 @@ import { RotationRow } from "../rotation-row";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { SceneActions } from "./scene-actions";
+import { SceneAutoZoomRow } from "./scene-auto-zoom-row";
 import { SceneFramingRows } from "./scene-framing-rows";
 import { sceneOffer } from "./scene-offer";
 import { SceneOutputRow } from "./scene-output-row";
@@ -61,7 +60,9 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
 
   if (!scene) {
     return (
-      <Text variant="footnote">{t("editor-panels-scene-needs-screen")}</Text>
+      <p className="text-caption text-fg-secondary">
+        {t("editor-panels-scene-needs-screen")}
+      </p>
     );
   }
   const { isCombined, presets, templates } = sceneOffer(scene, snapshot);
@@ -91,7 +92,9 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
   if (isIdle)
     return (
       outputRow ?? (
-        <Text variant="footnote">{t("editor-panels-scene-paused")}</Text>
+        <p className="text-caption text-fg-secondary">
+          {t("editor-panels-scene-paused")}
+        </p>
       )
     );
   const schematicOf = (preset: RecordingScenePreset) =>
@@ -250,40 +253,24 @@ export function ScenePanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {/* The zooms follow the cursor, so a recording without one has none
-          to make. Clear all stays in place while there is nothing to clear,
-          so the row never shifts as zooms come and go. */}
+          to make. */}
       {hasCursorData ? (
-        <ControlRow
-          controlClassName="gap-control"
-          title={t("editor-panels-auto-zoom")}
-        >
-          {(controlProps) => (
-            <>
-              <Button
-                {...controlProps}
-                isDisabled={isLocked}
-                onPress={() => {
-                  change({ autoZoomScenes: true });
-                }}
-              >
-                {t("editor-panels-regenerate")}
-              </Button>
-              <Button
-                aria-label={t("editor-panels-clear-auto-zooms")}
-                isDisabled={isLocked || !scene.hasAutoZooms}
-                onPress={() => {
-                  change({ clearAutoZooms: true });
-                }}
-              >
-                {t("editor-panels-clear-all")}
-              </Button>
-            </>
-          )}
-        </ControlRow>
+        <SceneAutoZoomRow
+          hasAutoZooms={scene.hasAutoZooms}
+          isDisabled={isLocked}
+          onClear={() => {
+            change({ clearAutoZooms: true });
+          }}
+          onRegenerate={() => {
+            change({ autoZoomScenes: true });
+          }}
+        />
       ) : null}
 
       {scene.followsFace && isFindingFace ? (
-        <Text variant="footnote">{t("editor-panels-follow-face-finding")}</Text>
+        <p className="text-caption text-fg-secondary">
+          {t("editor-panels-follow-face-finding")}
+        </p>
       ) : null}
 
       {scene.hasSceneAtPlayhead ? (

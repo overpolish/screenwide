@@ -11,7 +11,6 @@ import { buttonVariants } from "../../primitives/button/button-variants";
 import { CircularProgress } from "../../primitives/circular-progress/circular-progress";
 import { ListBox } from "../../primitives/listbox/listbox";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
-import { Text } from "../../primitives/text/text";
 
 import { WindowDetails } from "./types";
 
@@ -44,9 +43,7 @@ export function WindowSelector({
   if (error) {
     return (
       <div className="flex h-full items-center justify-center p-window-inset text-center">
-        <Text className="text-error" variant="subheadline">
-          {error}
-        </Text>
+        <p className="text-body text-fg-secondary text-error">{error}</p>
       </div>
     );
   }
@@ -54,7 +51,9 @@ export function WindowSelector({
   if (windows.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Text variant="subheadline">{t("recording-sources-no-windows")}</Text>
+        <p className="text-body text-fg-secondary">
+          {t("recording-sources-no-windows")}
+        </p>
       </div>
     );
   }
