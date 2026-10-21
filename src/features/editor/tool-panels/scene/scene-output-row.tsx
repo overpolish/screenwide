@@ -33,7 +33,6 @@ export function SceneOutputRow({
         <div {...controlProps} role="group">
           <PillGroup
             aria-label={t("editor-panels-output")}
-            display="label"
             isDisabled={isDisabled}
             items={outputOptions()}
             onSelectionChange={(output) => {

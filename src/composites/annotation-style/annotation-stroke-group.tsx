@@ -23,7 +23,6 @@ export function AnnotationStrokeGroup({
   return (
     <PillGroup
       aria-label={t("annotation-stroke")}
-      display="label"
       isDisabled={isDisabled}
       items={items()}
       onSelectionChange={(id) => {

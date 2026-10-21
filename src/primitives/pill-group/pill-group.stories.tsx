@@ -1,139 +1,93 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  AppWindowMac,
-  AudioLines,
-  Camera,
-  Mic,
-  Monitor,
-  SquareDashed,
-  Volume2,
-} from "lucide-react";
+import { Camera, Volume2 } from "lucide-react";
 import { type ComponentProps, useState } from "react";
 import { fn } from "storybook/test";
 
-import { PillGroup } from "./pill-group";
+import { PillGroup, type PillGroupItem } from "./pill-group";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-const items = [
-  { icon: <Volume2 />, id: "system", label: "System audio" },
-  { icon: <Mic />, id: "microphone", label: "Microphone" },
+type PillGroupProps = ComponentProps<typeof PillGroup>;
+
+// What each segment shows comes from its item, so one mixed group covers
+// every way a segment renders: an icon alone, text alone, and both.
+const items: PillGroupItem[] = [
+  { ariaLabel: "System audio", icon: <Volume2 />, id: "system" },
+  { id: "microphone", label: "Microphone" },
   { icon: <Camera />, id: "camera", label: "Camera" },
 ];
 
+// Holds the selection, so pressing a segment moves the knob, and reports
+// each change to the story's action.
+function LiveGroup(props: PillGroupProps) {
+  const [selected, setSelected] = useState(props.selected);
+  if (props.selectionMode === "multiple") {
+    const report = props.onSelectionChange;
+    return (
+      <PillGroup
+        {...props}
+        onSelectionChange={(next: string[]) => {
+          report(next);
+          setSelected(next);
+        }}
+        selected={selected as string[]}
+      />
+    );
+  }
+  const report = props.onSelectionChange;
+  return (
+    <PillGroup
+      {...props}
+      onSelectionChange={(next: string) => {
+        report(next);
+        setSelected(next);
+      }}
+      selected={selected as string}
+    />
+  );
+}
+
 const meta = {
+  argTypes: {
+    isDisabled: {
+      control: "boolean",
+      table: { defaultValue: { summary: "false" } },
+    },
+  },
+  args: {
+    "aria-label": "Audio lanes",
+    isDisabled: false,
+    items,
+    onSelectionChange: fn(),
+    selected: "system",
+  },
   component: PillGroup,
-  parameters: { layout: "centered" },
+  parameters: {
+    controls: { include: ["isDisabled"] },
+    layout: "centered",
+  },
+  render: (args) => <LiveGroup {...args} />,
   title: "Primitives/Pill Group",
 } satisfies Meta<typeof PillGroup>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function PillGroupExample(props: ComponentProps<typeof PillGroup>) {
-  const [selected, setSelected] = useState<string | string[]>(props.selected);
-  if (props.selectionMode === "multiple")
-    return (
-      <PillGroup
-        {...props}
-        onSelectionChange={setSelected}
-        selected={Array.isArray(selected) ? selected : [selected]}
-      />
-    );
-  return (
-    <PillGroup
-      {...props}
-      onSelectionChange={setSelected}
-      selected={Array.isArray(selected) ? (selected[0] ?? "") : selected}
-    />
-  );
-}
+export const Default: Story = {};
 
-export const Icons: Story = {
-  args: {
-    "aria-label": "Audio lanes",
-    items,
-    onSelectionChange: () => undefined,
-    selected: "system",
-  },
-  render: (args) => <PillGroupExample {...args} />,
+export const Multiple: Story = {
+  args: { selected: ["system", "camera"], selectionMode: "multiple" },
+  parameters: { controls: { disable: true } },
 };
 
-export const IconAndText: Story = {
-  args: { ...Icons.args, display: "icon-label" },
-  render: (args) => <PillGroupExample {...args} />,
-};
-
-/** Any of the segments on together, as a set of independent options. */
-export const AnyOn: Story = {
-  args: {
-    "aria-label": "Audio lanes",
-    display: "label",
-    items,
-    onSelectionChange: () => undefined,
-    selected: ["system", "camera"],
-    selectionMode: "multiple",
-  },
-  render: (args) => <PillGroupExample {...args} />,
-};
-
-export const Text: Story = {
-  args: { ...Icons.args, display: "label" },
-  render: (args) => <PillGroupExample {...args} />,
-};
-
-export const DisabledItem: Story = {
-  args: {
-    ...IconAndText.args,
-    disabledIds: ["microphone"],
-  },
-  render: (args) => <PillGroupExample {...args} />,
+export const DisabledSegment: Story = {
+  args: { disabledIds: ["microphone"] },
+  parameters: { controls: { disable: true } },
 };
 
 export const Disabled: Story = {
-  args: {
-    ...IconAndText.args,
-    isDisabled: true,
-  },
-  render: (args) => <PillGroupExample {...args} />,
-};
-
-/** The bezel-less form, at the regular size. The recording bar's ghost
- * control is the Capture story. */
-export const Ghost: Story = {
-  args: {
-    ...Icons.args,
-    display: "icon-label",
-    variant: "ghost",
-  },
-  render: (args) => <PillGroupExample {...args} />,
-};
-
-const captureItems = [
-  { icon: <Monitor />, id: "screen", label: "Screen" },
-  { icon: <AppWindowMac />, id: "window", label: "Window" },
-  { icon: <SquareDashed />, id: "region", label: "Region" },
-  { icon: <Camera />, id: "camera", label: "Camera" },
-  { icon: <AudioLines />, id: "audio", label: "Audio" },
-];
-
-/** The recording bar's control: icon-only 48 by 40 segments under 28px
- * glyphs. Each segment reports its presses after the selection has settled,
- * which is how a Screen segment opens its display chooser whether it was just
- * chosen or already was; the action log shows them. */
-export const Capture: Story = {
-  args: {
-    "aria-label": "Recording type",
-    items: captureItems.map((item) => ({
-      ...item,
-      onPress: fn().mockName(`onPress ${item.id}`),
-    })),
-    onSelectionChange: () => undefined,
-    selected: "screen",
-    size: "capture",
-    variant: "ghost",
-  },
-  render: (args) => <PillGroupExample {...args} />,
+  args: { isDisabled: true },
+  parameters: { controls: { disable: true } },
 };

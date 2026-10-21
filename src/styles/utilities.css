@@ -90,6 +90,17 @@
     var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
     var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }
+/* The knob: a part that slides within a track, such as a switch's thumb. An
+   opaque face (`colors.css`) with the control bevel, so it stands lighter
+   than the track under it in either appearance, where the raised material,
+   being translucent ink, would read as pressed in. */
+@utility control-knob {
+  background-color: var(--control-knob);
+  --tw-shadow: var(--control-bevel);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
 /* The primary action's sheen and bevel over its `bg-primary` fill. Pressed,
    the sheen goes, as the raised material flattens. */
 @utility primary-raised {

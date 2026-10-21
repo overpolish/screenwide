@@ -150,7 +150,6 @@ export function SubtitlesRow({
       {() => (
         <PillGroup
           aria-label={t("editor-export-subtitles")}
-          display="label"
           isDisabled={isDisabled || !hasTranscript}
           items={options}
           onSelectionChange={(id) => {

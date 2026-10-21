@@ -18,7 +18,6 @@ export function AnnotationPixelationGroup({
   return (
     <PillGroup
       aria-label={t("annotation-pixelation")}
-      display="label"
       isDisabled={isDisabled}
       items={[
         { id: "pixelate", label: t("annotation-pixelation-secure") },

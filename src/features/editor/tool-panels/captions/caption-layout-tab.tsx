@@ -136,7 +136,6 @@ export function CaptionLayoutTab({
             <div {...controlProps} role="group">
               <PillGroup
                 aria-label={t("editor-panels-captions-lines")}
-                display="label"
                 isDisabled={isDisabled}
                 items={lineOptions()}
                 onSelectionChange={(lines) => {

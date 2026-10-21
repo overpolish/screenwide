@@ -92,7 +92,6 @@ export function BackgroundEditor({
           <div {...controlProps} role="group">
             <PillGroup
               aria-label={t("background-type-label")}
-              display="label"
               isDisabled={isDisabled}
               items={backgroundKinds().map((item) =>
                 item.id === "mesh"

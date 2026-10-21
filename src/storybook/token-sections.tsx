@@ -47,7 +47,8 @@ const colorTokens = [
 ];
 
 // The raised material, at rest, hovered and pressed; the primary action's
-// fill with its bevel; and the sunken material a field is drawn in.
+// fill with its bevel; the sunken material a field is drawn in; and the knob
+// that slides within a track.
 const materialTokens = [
   "control-raised",
   "control-raised control-raised-hover",
@@ -55,6 +56,7 @@ const materialTokens = [
   "bg-primary primary-raised",
   "bg-primary-pressed primary-raised-pressed",
   "control-sunken",
+  "control-knob",
 ];
 
 const radiusTokens = [

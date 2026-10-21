@@ -88,7 +88,6 @@ export function ImagePlaybackRow({
         <div {...controlProps} role="group">
           <PillGroup
             aria-label={t("editor-panels-playback")}
-            display="icon-label"
             isDisabled={isLocked}
             items={playbackItems()}
             onSelectionChange={(id) => {

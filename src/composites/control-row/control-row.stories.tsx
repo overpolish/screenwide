@@ -96,7 +96,6 @@ function FormatControl(props: ControlRowControlProps) {
     <div {...props} role="group">
       <PillGroup
         aria-label="Screenshot format"
-        display="label"
         items={[
           { id: "png", label: "PNG" },
           { id: "jpeg", label: "JPEG" },

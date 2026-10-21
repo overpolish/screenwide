@@ -23,7 +23,6 @@ export function AnnotationFitGroup({
   return (
     <PillGroup
       aria-label={t("annotation-fit")}
-      display="label"
       isDisabled={isDisabled}
       items={items()}
       onSelectionChange={(id) => {

@@ -93,6 +93,10 @@
     --control-well:
       inset 0 0.5px 1px rgb(0 0 0 / 8%),
       inset 0 0 0 0.5px oklch(18% 0.01 47.6 / 12%);
+    /* A knob's face: opaque and lighter than the track it sits in, white
+       in light; in dark a raised grey, since the darker surface face would
+       read as sunk into a lighter track. */
+    --control-knob: oklch(99.5% 0.002 47.6);
   }
 }
 
@@ -138,6 +142,7 @@
     --control-well:
       inset 0 0.5px 1px rgb(0 0 0 / 35%),
       inset 0 0 0 0.5px oklch(98% 0.005 47.6 / 10%);
+    --control-knob: oklch(40% 0.006 47.6);
 
     /* Lifted to read on the dark material, each well past 4.5:1. */
     --color-success: oklch(76% 0.15 150);

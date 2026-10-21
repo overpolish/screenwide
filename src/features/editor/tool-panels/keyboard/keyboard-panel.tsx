@@ -107,7 +107,6 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
           <div {...controlProps} role="group">
             <PillGroup
               aria-label={t("editor-panels-keyboard-animation")}
-              display="label"
               isDisabled={isDisabled}
               items={animationOptions()}
               onSelectionChange={(animation) => {
@@ -128,7 +127,6 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
           <div {...controlProps} role="group">
             <PillGroup
               aria-label={t("editor-panels-keyboard-appearance")}
-              display="label"
               isDisabled={isDisabled}
               items={appearanceOptions()}
               onSelectionChange={(appearance) => {

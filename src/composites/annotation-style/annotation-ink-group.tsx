@@ -24,7 +24,6 @@ export function AnnotationInkGroup({
   return (
     <PillGroup
       aria-label={t("annotation-ink")}
-      display="label"
       isDisabled={isDisabled}
       items={items()}
       onSelectionChange={(id) => {

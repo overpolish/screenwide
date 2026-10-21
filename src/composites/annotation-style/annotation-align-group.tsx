@@ -10,24 +10,24 @@ import { PillGroup } from "../../primitives/pill-group/pill-group";
 import { AnnotationAlign } from "./types";
 
 const items = (): {
+  ariaLabel: string;
   icon: ReactNode;
   id: AnnotationAlign;
-  label: string;
 }[] => [
   {
+    ariaLabel: t("annotation-align-left"),
     icon: <AlignLeft aria-hidden="true" />,
     id: "left",
-    label: t("annotation-align-left"),
   },
   {
+    ariaLabel: t("annotation-align-center"),
     icon: <AlignCenter aria-hidden="true" />,
     id: "center",
-    label: t("annotation-align-center"),
   },
   {
+    ariaLabel: t("annotation-align-right"),
     icon: <AlignRight aria-hidden="true" />,
     id: "right",
-    label: t("annotation-align-right"),
   },
 ];
 

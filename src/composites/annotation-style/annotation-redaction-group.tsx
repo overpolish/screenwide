@@ -30,14 +30,14 @@ export function AnnotationRedactionGroup({
       isDisabled={isDisabled}
       items={[
         {
+          ariaLabel: t("annotation-redaction-erase"),
           icon: <Eraser aria-hidden="true" />,
           id: "erase",
-          label: t("annotation-redaction-erase"),
         },
         {
+          ariaLabel: t("annotation-redaction-color"),
           icon: <PaintBucket aria-hidden="true" />,
           id: "color",
-          label: t("annotation-redaction-color"),
         },
         {
           // The press lands after the selection has moved, but `value` is the
@@ -49,7 +49,6 @@ export function AnnotationRedactionGroup({
               : t("annotation-redaction-pixelate"),
           icon: <Grid2x2 aria-hidden="true" />,
           id: "pixelate",
-          label: t("annotation-redaction-pixelate"),
           onPress: value === "pixelate" ? onShuffle : undefined,
         },
         {
@@ -59,7 +58,6 @@ export function AnnotationRedactionGroup({
               : t("annotation-redaction-blur"),
           icon: <Droplet aria-hidden="true" />,
           id: "blur",
-          label: t("annotation-redaction-blur"),
           onPress: value === "blur" ? onShuffle : undefined,
         },
       ]}

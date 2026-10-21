@@ -142,7 +142,6 @@ export function GeneralSettingsPanel({
             <div {...controlProps} role="group">
               <PillGroup
                 aria-label={t("settings-accent")}
-                display="label"
                 isDisabled={isSaving}
                 items={[
                   { id: "system", label: t("settings-accent-system") },
@@ -198,7 +197,6 @@ export function GeneralSettingsPanel({
             <div {...controlProps} role="group">
               <PillGroup
                 aria-label={t("settings-countdown")}
-                display="label"
                 isDisabled={isSaving}
                 items={[
                   { id: "0", label: t("settings-countdown-off") },
@@ -223,7 +221,6 @@ export function GeneralSettingsPanel({
             <div {...controlProps} role="group">
               <PillGroup
                 aria-label={t("settings-frame-rate")}
-                display="label"
                 items={[
                   { id: "30", label: t("settings-fps", { fps: 30 }) },
                   { id: "60", label: t("settings-fps", { fps: 60 }) },
@@ -244,7 +241,6 @@ export function GeneralSettingsPanel({
             <div {...controlProps} role="group">
               <PillGroup
                 aria-label={t("settings-screenshot-delay")}
-                display="label"
                 isDisabled={isSaving}
                 items={[secondsItem(3), secondsItem(5), secondsItem(10)]}
                 onSelectionChange={(next) => {

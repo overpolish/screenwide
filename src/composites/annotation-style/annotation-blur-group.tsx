@@ -23,7 +23,6 @@ export function AnnotationBlurGroup({
   return (
     <PillGroup
       aria-label={t("annotation-outside")}
-      display="label"
       isDisabled={isDisabled}
       items={items()}
       onSelectionChange={(id) => {

@@ -113,7 +113,6 @@ export function EditorExportForm({
           {() => (
             <PillGroup
               aria-label={t("editor-export-format")}
-              display="label"
               isDisabled
               items={[{ id: extension, label: extension.toUpperCase() }]}
               onSelectionChange={() => undefined}

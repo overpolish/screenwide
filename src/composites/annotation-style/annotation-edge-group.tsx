@@ -26,7 +26,6 @@ export function AnnotationEdgeGroup({
   return (
     <PillGroup
       aria-label={t("annotation-edge")}
-      display="label"
       isDisabled={isDisabled}
       items={items()}
       onSelectionChange={(id) => {

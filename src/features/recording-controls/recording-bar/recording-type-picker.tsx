@@ -23,6 +23,8 @@ import {
   WindowDetails,
 } from "../../recording-sources/types";
 
+import { CAPTURE_CONTROL_CLASS } from "./recording-bar-control";
+
 export function RecordingTypePicker({
   isDisabled,
   mode,
@@ -73,47 +75,46 @@ export function RecordingTypePicker({
         <Monitor />
       ),
       id: "screen",
-      label: t("recording-controls-mode-screen"),
       onPress: onChooseMonitor,
     },
     {
       ariaLabel: t("recording-controls-mode-window"),
       icon: <WindowAppIcon window={selectedWindow} />,
       id: "window",
-      label: t("recording-controls-mode-window"),
       onPress: onChooseWindow,
     },
     {
+      ariaLabel: t("recording-controls-mode-region"),
       icon: <SquareDashed />,
       id: "region",
-      label: t("recording-controls-mode-region"),
     },
     // The camcorder, not the still camera: the still camera is the input
     // toggle beside this control, and one glyph must not mean two things.
     {
+      ariaLabel: t("recording-controls-mode-camera"),
       icon: <Video />,
       id: "camera",
-      label: t("recording-controls-mode-camera"),
     },
     {
+      ariaLabel: t("recording-controls-mode-audio"),
       icon: <AudioLines />,
       id: "audio",
-      label: t("recording-controls-mode-audio"),
     },
   ];
 
   return (
     <PillGroup
       aria-label={t("recording-controls-mode")}
-      display="icon"
+      // The bar's own control size: its 48 by 40 segments, and a track whose
+      // corners run parallel to theirs, 2px out.
+      className="h-auto rounded-[calc(var(--radius-panel)+0.125rem)]"
       isDisabled={isDisabled}
+      itemClassName={CAPTURE_CONTROL_CLASS}
       items={items}
       onSelectionChange={(id) => {
         onModeChange(id as RecordingMode);
       }}
       selected={mode}
-      size="capture"
-      variant="ghost"
     />
   );
 }

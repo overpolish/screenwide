@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ReactNode, useId } from "react";
 import {
   Selection,
@@ -16,11 +16,12 @@ import {
 } from "../../lib/motion";
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
 
+// A segment shows what its item gives: its icon, its label, or both, so a
+// group can mix them. One with no label shows its icon alone and is named by
+// `ariaLabel`, which a labelled segment may also give to say more than its
+// label.
 export type PillGroupItem = {
   id: string;
-  label: string;
-  ariaLabel?: string;
-  icon?: ReactNode;
   /** Geometry for the label itself, e.g. a truncation cap on a window title. */
   labelClassName?: string;
   /**
@@ -32,7 +33,10 @@ export type PillGroupItem = {
    * it on the segment. Arrow-key selection is not a press.
    */
   onPress?: (anchor: DOMRect, fromKeyboard: boolean) => void;
-};
+} & (
+  | { label: string; ariaLabel?: string; icon?: ReactNode }
+  | { ariaLabel: string; icon: ReactNode; label?: never }
+);
 
 const selectedId = (selection: Selection) => {
   if (selection === "all") return null;
@@ -40,63 +44,32 @@ const selectedId = (selection: Selection) => {
   return typeof first === "string" ? first : null;
 };
 
-/** The track insets the segments by `--spacing-tight` on every side, so a
- * segment's corner is the track's less that inset. The capture size is a
- * larger control and takes the next radius up. */
-const trackRadius = {
-  capture: "rounded-capture",
-  default: "rounded-control",
-};
-const segmentRadius = {
-  capture: "rounded-[calc(var(--radius-panel)-var(--spacing-tight))]",
-  default: "rounded-[calc(var(--radius-control)-var(--spacing-tight))]",
-};
+// A segmented control: a track on the fill, a control's height so it lines
+// up with buttons and fields, with the chosen segment filled in the primary
+// colour on a knob that slides between segments, so what is chosen can be
+// read at a glance across a panel of them. The track insets its segments by
+// 2px, a value only a segmented track needs, so a segment's corner is the
+// track's less that inset and the two run parallel.
+const trackClassName =
+  "flex h-control-height items-stretch gap-0.5 rounded-control bg-fill p-0.5";
 
-// Text colour follows the knob's arrival; the hover fill on a ghost segment
-// must be gone by the time the knob lands on it, or the two read as a double
-// box, so it takes the feedback duration instead.
-const segmentBase =
-  "flex cursor-default items-center justify-center text-body text-content-fg outline-none transition-[color,background-color] select-none";
+// Unselected segments are a step back and come up under the pointer; the
+// chosen one takes the on-primary colour over its knob. The text colour
+// follows the knob's arrival.
+const segmentClassName = [
+  "group relative flex cursor-default items-center justify-center rounded-[calc(var(--radius-control)-0.125rem)] text-label text-fg-secondary outline-none transition-colors select-none",
+  "data-[hovered]:not-data-[selected]:text-fg data-[selected]:text-on-primary",
+  "data-[disabled]:opacity-40",
+  "[&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
+  focusStyles,
+  elementFocusVisible,
+];
 
-// A Fluent selector bar item (WinUI's SelectorBar): no fill in any state,
-// the label going secondary under the pointer and tertiary while pressed,
-// 12px of side padding and 8px between items.
-const windowsSelectorItem =
-  "windows:data-[hovered]:not-data-[selected]:bg-transparent windows:data-[pressed]:not-data-[selected]:bg-transparent windows:data-[hovered]:text-content-fg-secondary windows:data-[pressed]:text-content-fg-tertiary";
-
-// The selection. On macOS it is the knob that fills the selected segment;
-// on Windows, a Fluent selector bar marks the selected item with a 16 by 3
-// accent pill centred under it instead, and that is what slides between
-// items.
-const knobBase =
-  "absolute inset-0 transform-gpu rounded-[inherit] backface-hidden will-change-transform windows:top-auto windows:end-auto windows:start-1/2 windows:h-[3px] windows:w-4 windows:-translate-x-1/2 windows:rtl:translate-x-1/2 windows:rounded-full windows:bg-primary-surface windows:group-data-[disabled]:bg-primary-surface-disabled";
-// Filled is the native segmented control: accent knob under white content.
-// Ghost is the capture-toolbar form QuickTime uses: no track, and the
-// selected segment sits on a neutral fill in the label colour.
-const variantClassName = {
-  filled: {
-    // A bezeled control does not react to hover on macOS.
-    hover: windowsSelectorItem,
-    knob: `${knobBase} bg-primary-surface`,
-    // The ring shares the knob's accent, so a selected segment gets a gap.
-    // Under the underline the label keeps its colour.
-    selectedText:
-      "data-[selected]:text-primary-fg data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content windows:data-[selected]:text-content-fg",
-    // Fluent's selector bar has no track at all.
-    track: "bg-fill windows:bg-transparent",
-  },
-  ghost: {
-    // Ghost segments are toolbar items, which do.
-    hover: `data-[hovered]:not-data-[selected]:bg-control-subtle-hover data-[pressed]:not-data-[selected]:bg-control-subtle-pressed ${windowsSelectorItem}`,
-    knob: `${knobBase} bg-fill`,
-    selectedText: "data-[selected]:text-content-fg",
-    track: "bg-transparent",
-  },
-};
+const knobClassName =
+  "absolute inset-0 transform-gpu rounded-[inherit] bg-primary primary-raised backface-hidden will-change-transform";
 
 /** One segment chosen, the way a picker's is; or any of them on together,
- * the way a set of independent options is, as a macOS segmented control
- * set to select any. */
+ * the way a set of independent options is. */
 type PillGroupSelection =
   | {
       onSelectionChange: (id: string) => void;
@@ -113,12 +86,9 @@ export function PillGroup({
   "aria-label": ariaLabel,
   className,
   disabledIds,
-  display = "icon",
   isDisabled,
   itemClassName,
   items,
-  size = "regular",
-  variant = "filled",
   ...selection
 }: PillGroupSelection & {
   "aria-label": string;
@@ -126,55 +96,44 @@ export function PillGroup({
   className?: string;
   /** Items that stay visible but cannot be picked. */
   disabledIds?: string[];
-  display?: "icon" | "icon-label" | "label";
   isDisabled?: boolean;
   /** Applies shared geometry overrides to every item. */
   itemClassName?: string;
-  /** `large` is the 28px track AppKit uses for the large segmented control;
-   * `capture` is the recording bar's icon-only control, whose segments are
-   * 48 by 40 under 28px glyphs. */
-  size?: "regular" | "large" | "capture";
-  variant?: "filled" | "ghost";
 }) {
   const isMultiple = selection.selectionMode === "multiple";
   const selectionId = useId();
   const prefersReducedMotion = useReducedMotion();
-  // Regular and large are the native control sizes; capture is the icon-only
-  // control the recording bar carries.
-  const segmentHeight =
-    size === "capture" ? "h-10" : size === "large" ? "h-6" : "h-5";
-  // An icon-only capture segment is a landscape rectangle, a toolbar item
-  // rather than the glyph box the smaller sizes use.
-  const iconWidth = size === "capture" ? "w-12" : "w-icon-large";
-  const radii = size === "capture" ? "capture" : "default";
-  const glyphClassName =
-    size === "capture" ? "[&_svg]:size-icon-xl" : "[&_svg]:size-icon";
-  const styles = variantClassName[variant];
   const transitionDuration = prefersReducedMotion
-    ? "0s, 0s"
-    : `${motionDurationCss("state")}, ${motionDurationCss("feedback")}`;
+    ? "0s"
+    : motionDurationCss("state");
   const knobTransition = {
     duration: prefersReducedMotion ? 0 : motionDurations.travel,
     ease: motionEasings.out,
   };
   // One knob slides from segment to segment; with several on, each keeps
-  // its own where it is.
+  // its own where it is, growing in as its segment turns on and shrinking
+  // away as it turns off, or only fading where motion is reduced.
   const layoutId = isMultiple ? undefined : `pill-selection-${selectionId}`;
+  const knobOff = {
+    opacity: 0,
+    scale: prefersReducedMotion ? 1 : 0.85,
+  };
+  const knobPresence = isMultiple
+    ? {
+        animate: { opacity: 1, scale: 1 },
+        exit: knobOff,
+        initial: knobOff,
+        transition: {
+          duration: motionDurations.state,
+          ease: motionEasings.out,
+        },
+      }
+    : { transition: knobTransition };
 
   return (
     <ToggleButtonGroup
       aria-label={ariaLabel}
-      // A macOS 26 segmented control, measured from a live capture: a track on
-      // the fill, 24px tall with a 2px inset, and the selected segment filled
-      // with the accent under white content. The track sizes from its
-      // segments so larger geometry, such as the screen recording mode
-      // picker, keeps the same construction.
-      className={cn(
-        "flex items-stretch gap-tight p-tight windows:gap-control-inset windows:px-0 windows:py-control",
-        trackRadius[radii],
-        styles.track,
-        className,
-      )}
+      className={cn(trackClassName, className)}
       disallowEmptySelection={!isMultiple}
       isDisabled={isDisabled}
       onSelectionChange={(keys) => {
@@ -196,36 +155,20 @@ export function PillGroup({
     >
       {items.map((item) => {
         const isItemDisabled = disabledIds?.includes(item.id) ?? false;
-        const label = item.labelClassName ? (
-          <span className={item.labelClassName}>{item.label}</span>
-        ) : (
-          item.label
-        );
-        const contents = (
-          <span className="relative z-10 flex min-w-0 items-center justify-center gap-control whitespace-nowrap">
-            {display !== "label" ? item.icon : null}
-            {display !== "icon" ? label : null}
-          </span>
-        );
+        const label =
+          item.label !== undefined && item.labelClassName ? (
+            <span className={item.labelClassName}>{item.label}</span>
+          ) : (
+            item.label
+          );
 
         return (
           <ToggleButton
             aria-label={item.ariaLabel ?? item.label}
             className={cn(
-              "group relative",
-              segmentBase,
-              segmentHeight,
-              segmentRadius[radii],
-              display === "icon"
-                ? iconWidth
-                : "px-control-inset windows:px-section",
-              styles.selectedText,
-              styles.hover,
-              "data-[disabled]:text-control-fg-disabled data-[disabled]:data-[selected]:text-control-fg-disabled",
-              glyphClassName,
-              "[&_svg]:shrink-0 [&_svg]:transform-gpu",
-              focusStyles,
-              elementFocusVisible,
+              segmentClassName,
+              // A segment showing only its icon is a square the track's height.
+              item.label === undefined ? "aspect-square" : "px-inset",
               itemClassName,
             )}
             id={item.id}
@@ -244,18 +187,25 @@ export function PillGroup({
           >
             {({ isSelected }) => (
               <>
-                {isSelected ? (
-                  <motion.span
-                    aria-hidden="true"
-                    className={cn(
-                      styles.knob,
-                      "group-data-[disabled]:bg-fill-quaternary",
-                    )}
-                    layoutId={layoutId}
-                    transition={knobTransition}
-                  />
-                ) : null}
-                {contents}
+                <AnimatePresence initial={false}>
+                  {isSelected ? (
+                    <motion.span
+                      aria-hidden="true"
+                      className={knobClassName}
+                      key="knob"
+                      layoutId={layoutId}
+                      {...knobPresence}
+                    />
+                  ) : null}
+                </AnimatePresence>
+                {/* Above the knob in every segment, not just its own: while
+                    the knob slides it is drawn from the segment it is moving
+                    to, which comes later in the page than the ones it
+                    crosses, and would otherwise cover their text. */}
+                <span className="relative z-10 flex min-w-0 items-center justify-center gap-inline whitespace-nowrap">
+                  {item.icon}
+                  {label}
+                </span>
               </>
             )}
           </ToggleButton>

@@ -25,7 +25,6 @@ export function AnnotationHeadGroup({
   return (
     <PillGroup
       aria-label={t("annotation-head")}
-      display="label"
       isDisabled={isDisabled}
       items={items()}
       onSelectionChange={(id) => {

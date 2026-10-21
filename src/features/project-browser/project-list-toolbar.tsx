@@ -95,7 +95,6 @@ export function ProjectListToolbar({
           disabledIds={kinds
             .filter(({ id }) => id !== "all" && !kindsPresent.has(id))
             .map(({ id }) => id)}
-          display="label"
           items={kinds}
           onSelectionChange={(id) => {
             onKindChange(id as KindFilter);

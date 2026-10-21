@@ -98,7 +98,6 @@ export function SceneVariantRows({
             <div {...controlProps} role="group">
               <PillGroup
                 aria-label={t("editor-panels-camera-size")}
-                display="label"
                 isDisabled={isDisabled}
                 items={cameraSizes()}
                 onSelectionChange={(size) => {
@@ -134,7 +133,6 @@ export function SceneVariantRows({
             <div {...controlProps} role="group">
               <PillGroup
                 aria-label={t("editor-panels-camera-size")}
-                display="label"
                 isDisabled={isDisabled}
                 items={bubbleSizes()}
                 onSelectionChange={(size) => {

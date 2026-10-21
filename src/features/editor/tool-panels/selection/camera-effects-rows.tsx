@@ -61,7 +61,6 @@ export function CameraBackgroundRows({ change, effects, isLocked }: RowsProps) {
             <div {...controlProps} role="group">
               <PillGroup
                 aria-label={t("editor-panels-camera-background")}
-                display="label"
                 isDisabled={isLocked}
                 items={[
                   {

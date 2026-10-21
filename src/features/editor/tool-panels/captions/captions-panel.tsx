@@ -120,7 +120,6 @@ export function CaptionsPanel({ workspace }: { workspace: EditorKind }) {
       <PillGroup
         aria-label={t("editor-panels-captions-tabs")}
         className="w-full"
-        display="label"
         itemClassName="flex-1"
         items={tabs()}
         onSelectionChange={(id) => {

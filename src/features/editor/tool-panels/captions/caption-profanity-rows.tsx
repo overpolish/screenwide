@@ -39,7 +39,6 @@ export function CaptionProfanityRows({
         <div {...controlProps} role="group">
           <PillGroup
             aria-label={t("editor-panels-captions-profanity-style")}
-            display="label"
             isDisabled={isDisabled}
             items={profanityOptions()}
             onSelectionChange={(choice) => {

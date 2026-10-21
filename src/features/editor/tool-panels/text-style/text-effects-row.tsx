@@ -52,7 +52,6 @@ export function TextEffectsRow({
         <div {...controlProps} role="group">
           <PillGroup
             aria-label={t("editor-panels-text-effects")}
-            display="label"
             isDisabled={isDisabled}
             items={effects}
             onSelectionChange={(on) => {
