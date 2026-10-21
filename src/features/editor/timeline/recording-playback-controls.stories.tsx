@@ -74,7 +74,7 @@ const meta = {
   component: PlaybackBarPreview,
   decorators: [featureStage({ width: 720 })],
   parameters: { layout: "centered" },
-  title: "Features/Editor/Playback Bar",
+  title: "Features/Editor/Timeline/Playback Bar",
 } satisfies Meta<typeof PlaybackBarPreview>;
 
 export default meta;

@@ -12,7 +12,7 @@ const meta = {
   component: ScrollingCaptureOverlay,
   decorators: [featureStage({ height: 72, width: 160 })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Scrolling Capture Overlay",
+  title: "Features/Screenshots/Scrolling Capture Overlay",
 } satisfies Meta<typeof ScrollingCaptureOverlay>;
 
 export default meta;

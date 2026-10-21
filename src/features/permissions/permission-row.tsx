@@ -2,19 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Check } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useId } from "react";
 
 import { ControlRow } from "../../composites/control-row/control-row";
 import { t } from "../../i18n/i18n";
-import { cn } from "../../lib/styling";
 import { Badge } from "../../primitives/badge/badge";
 import { Button } from "../../primitives/button/button";
-import { TooltipTrigger } from "../../primitives/tooltip/tooltip-trigger";
 
+import { PermissionIcon } from "./permission-icon";
 import { PermissionKind, PermissionStatus } from "./types";
 
 type PermissionRowProps = {
-  color: string;
   icon: ReactNode;
   onGrant: (permission: PermissionKind, status: PermissionStatus) => void;
   permission: PermissionKind;
@@ -24,8 +22,10 @@ type PermissionRowProps = {
   isOptional?: boolean;
 };
 
+// Granted, the row ends in a check; otherwise in the one step that grants
+// it: asking, where the system still can, or its settings, where only the
+// person can switch it on.
 export function PermissionRow({
-  color,
   description,
   icon,
   isOptional,
@@ -34,23 +34,13 @@ export function PermissionRow({
   status,
   title,
 }: PermissionRowProps) {
-  const grant = () => {
-    onGrant(permission, status);
-  };
-
+  // Named by its own words and then the row, as "Grant Camera": the row's
+  // title alone would hide what the button does.
+  const buttonId = useId();
   return (
     <ControlRow
       description={description}
-      leading={
-        <div
-          className={cn(
-            "flex size-8 items-center justify-center rounded-control text-white [&_svg]:size-icon",
-            color,
-          )}
-        >
-          {icon}
-        </div>
-      }
+      leading={<PermissionIcon>{icon}</PermissionIcon>}
       title={title}
       titleAccessory={
         isOptional ? <Badge>{t("permissions-optional")}</Badge> : undefined
@@ -58,20 +48,26 @@ export function PermissionRow({
     >
       {(controlProps) =>
         status.granted ? (
-          <div className="flex h-control-height shrink-0 items-center">
-            <Check className="size-icon text-success" />
-          </div>
-        ) : (
-          <TooltipTrigger
-            isDisabled={status.canRequest}
-            tooltip={t("permissions-enable-manually")}
+          <span
+            aria-label={t("permissions-granted")}
+            className="flex h-control-height items-center"
+            role="img"
           >
-            <Button {...controlProps} onPress={grant}>
-              {status.canRequest
-                ? t("permissions-grant")
-                : t("permissions-open-settings")}
-            </Button>
-          </TooltipTrigger>
+            <Check aria-hidden="true" className="size-icon text-success" />
+          </span>
+        ) : (
+          <Button
+            aria-describedby={controlProps["aria-describedby"]}
+            aria-labelledby={`${buttonId} ${controlProps["aria-labelledby"]}`}
+            id={buttonId}
+            onPress={() => {
+              onGrant(permission, status);
+            }}
+          >
+            {status.canRequest
+              ? t("permissions-grant")
+              : t("permissions-open-settings")}
+          </Button>
         )
       }
     </ControlRow>

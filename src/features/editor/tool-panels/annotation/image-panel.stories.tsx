@@ -19,7 +19,7 @@ const meta = {
   component: ToolPanel,
   decorators: [featureStage({ width: toolPanelWidth })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Editor/Tool Panel/Image",
+  title: "Features/Editor/Tool Panels/Image",
 } satisfies Meta<typeof ToolPanel>;
 
 export default meta;

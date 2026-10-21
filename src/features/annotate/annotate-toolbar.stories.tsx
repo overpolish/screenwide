@@ -58,7 +58,7 @@ const meta = {
   decorators: [featureStage({ width: 620 })],
   parameters: { layout: "fullscreen" },
   render: (args) => <AnnotateToolbarExample {...args} />,
-  title: "Features/Annotate Toolbar",
+  title: "Features/Annotate/Annotate Toolbar",
 } satisfies Meta<typeof AnnotateToolbar>;
 
 export default meta;

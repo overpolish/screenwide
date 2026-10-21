@@ -71,7 +71,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
-  title: "Features/Recording Bar",
+  title: "Features/Recording Controls/Recording Bar",
 } satisfies Meta<typeof RecordingBar>;
 
 export default meta;

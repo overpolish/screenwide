@@ -36,7 +36,7 @@ function TimelinePreview({
 const meta = {
   component: TimelinePreview,
   parameters: { layout: "centered" },
-  title: "Features/Editor/Timeline",
+  title: "Features/Editor/Timeline/Tracks",
 } satisfies Meta<typeof TimelinePreview>;
 
 export default meta;

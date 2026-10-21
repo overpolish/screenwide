@@ -135,7 +135,7 @@ function BladePreview({
 const meta = {
   component: BladePreview,
   parameters: { layout: "centered" },
-  title: "Features/Editor/Timeline Blade",
+  title: "Features/Editor/Timeline/Timeline Blade",
 } satisfies Meta<typeof BladePreview>;
 
 export default meta;

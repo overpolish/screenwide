@@ -43,7 +43,7 @@ const meta = {
   component: TranscriptionPreview,
   decorators: [featureStage({ width: 520 })],
   parameters: { controls: { disable: true }, layout: "fullscreen" },
-  title: "Features/Settings/Models",
+  title: "Features/Settings/Sections/Models",
 } satisfies Meta<typeof TranscriptionPreview>;
 
 export default meta;

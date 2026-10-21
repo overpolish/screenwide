@@ -131,7 +131,7 @@ const meta = {
   component: Preview,
   decorators: [featureStage({ width: 760 })],
   parameters: { layout: "centered" },
-  title: "Features/Editor/Recording Annotation Lane",
+  title: "Features/Editor/Recording/Recording Annotation Lane",
 } satisfies Meta<typeof Preview>;
 
 export default meta;

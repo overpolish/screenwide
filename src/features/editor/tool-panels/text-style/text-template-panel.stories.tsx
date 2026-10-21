@@ -30,7 +30,7 @@ const meta = {
     featureStage(TEXT_TEMPLATE_PANEL_SIZE),
   ],
   parameters: { layout: "fullscreen" },
-  title: "Features/Editor/Text Templates",
+  title: "Features/Editor/Tool Panels/Text Templates",
 } satisfies Meta<typeof TextTemplatePanel>;
 
 export default meta;

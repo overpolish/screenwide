@@ -220,7 +220,7 @@ const meta = {
       </SettingsApiContext>
     );
   },
-  title: "Features/Settings",
+  title: "Features/Settings/Settings Window",
 } satisfies Meta<typeof SettingsWindow>;
 
 export default meta;

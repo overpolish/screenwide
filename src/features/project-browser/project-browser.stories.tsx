@@ -201,7 +201,7 @@ const meta = {
   component: ProjectBrowser,
   decorators: [featureStage({ window: "projects" })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Project Browser",
+  title: "Features/Project Browser/Project Browser",
 } satisfies Meta<typeof ProjectBrowser>;
 
 export default meta;

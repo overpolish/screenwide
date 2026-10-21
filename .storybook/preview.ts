@@ -24,6 +24,8 @@ import { installKeyboardNavigationModality } from "../src/lib/keyboard-navigatio
 import { isWindowsHost, stampPlatform } from "../src/lib/platform";
 import { synchronizeSystemAccent } from "../src/lib/system-accent";
 
+import { DocsPage } from "./docs-page";
+
 import type { Decorator, Loader, Preview } from "@storybook/react-vite";
 
 import "../src/index.css";
@@ -265,6 +267,7 @@ const preview: Preview = {
       },
     },
     docs: {
+      page: DocsPage,
       theme: themes.dark,
     },
     options: {

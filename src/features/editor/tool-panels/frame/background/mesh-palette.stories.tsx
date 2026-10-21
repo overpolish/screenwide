@@ -56,7 +56,7 @@ const meta = {
       />
     );
   },
-  title: "Features/Editor/Mesh Palette",
+  title: "Features/Editor/Tool Panels/Mesh Palette",
 } satisfies Meta<typeof MeshPalette>;
 
 export default meta;

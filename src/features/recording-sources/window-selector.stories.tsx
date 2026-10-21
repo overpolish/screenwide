@@ -46,7 +46,7 @@ const meta = {
     featureStage({ height: 250, width: 500 }),
   ],
   parameters: { layout: "fullscreen" },
-  title: "Features/Window Selection",
+  title: "Features/Recording Sources/Window Selection",
 } satisfies Meta<typeof WindowSelector>;
 
 export default meta;

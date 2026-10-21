@@ -21,7 +21,7 @@ const meta = {
   component: ExportPreviewCompare,
   decorators: [featureStage({ height: 470, width: 416 })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Editor/Export Preview",
+  title: "Features/Editor/Export/Export Preview",
 } satisfies Meta<typeof ExportPreviewCompare>;
 
 export default meta;

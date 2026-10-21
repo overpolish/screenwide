@@ -9,7 +9,8 @@ permissions-restart = Restart { -app-name }
 permissions-optional = Optional
 permissions-grant = Grant
 permissions-open-settings = Open System Settings
-permissions-enable-manually = Enable manually
+# Said for a permission already given, where the row shows a check.
+permissions-granted = Granted
 permissions-accessibility = Accessibility
 permissions-accessibility-description = Cursor and keyboard events in recordings.
 permissions-screen-recording = Screen Recording

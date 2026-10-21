@@ -59,7 +59,7 @@ const meta = {
   component: UpdatePrompt,
   decorators: [featureStage({ window: "update" })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Update Prompt",
+  title: "Features/Updates/Update Prompt",
 } satisfies Meta<typeof UpdatePrompt>;
 
 export default meta;

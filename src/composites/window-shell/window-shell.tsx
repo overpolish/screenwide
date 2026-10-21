@@ -5,29 +5,22 @@ import { ReactNode, Ref } from "react";
 
 import { cn } from "../../lib/styling";
 
+// A titled window's page: the header, then the content. It paints nothing:
+// the native window's material is the surface and the system draws its
+// corners. The header and content meet with no gap, as a native title bar
+// meets its content; the content brings its own inset.
+
 type WindowShellProps = {
   children: ReactNode;
   className?: string;
-  /** The window's `WindowHeader`. Left out by a sheet, which is placed by the
-   * window that opened it and has no title bar of its own. */
+  /** Left out by a sheet, which has no title bar of its own. */
   header?: ReactNode;
-  /** `fill` takes the window's height, for a window sized in its config;
-   * `content` lets the shell be as tall as what it holds, for a window that
-   * fits itself to it (see `useFitWindowHeight`). */
+  /** `content` lets the page be as tall as what it holds, for a window that
+   * fits itself to it with `useFitWindowHeight`. */
   height?: "fill" | "content";
   ref?: Ref<HTMLElement>;
 };
 
-/**
- * The surface every titled window is drawn on: the material, the window
- * radius, the label colour, and the header at the top.
- *
- * There is deliberately no gap between the header and the content. The
- * header's own inset is the space below the title, and the content brings
- * its own inset, the way a native window's title bar meets its content.
- * A window must not add one; the header and content would then sit twice
- * the inset apart.
- */
 export function WindowShell({
   children,
   className,
@@ -38,9 +31,7 @@ export function WindowShell({
   return (
     <main
       className={cn(
-        // A framed window: on Windows, DWM draws the frame's corners, so the
-        // content is not clipped to a radius of its own.
-        "window-surface flex w-full flex-col overflow-hidden rounded-window text-content-fg windows:rounded-none",
+        "flex w-full flex-col overflow-hidden text-fg",
         height === "fill" && "h-full",
         className,
       )}
@@ -51,5 +42,3 @@ export function WindowShell({
     </main>
   );
 }
-
-export type { WindowShellProps };

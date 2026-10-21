@@ -30,7 +30,7 @@ const meta = {
   component: MomentNotePanel,
   decorators: [featureStage({ width: 260 })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Editor/Moment Note",
+  title: "Features/Editor/Timeline/Moment Note",
 } satisfies Meta<typeof MomentNotePanel>;
 
 export default meta;

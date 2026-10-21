@@ -719,8 +719,8 @@ export type Messages = {
   "permissions-accessibility-description": null;
   "permissions-camera": null;
   "permissions-camera-description": null;
-  "permissions-enable-manually": null;
   "permissions-grant": null;
+  "permissions-granted": null;
   "permissions-microphone": null;
   "permissions-microphone-description": null;
   "permissions-open-settings": null;

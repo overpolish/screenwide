@@ -63,7 +63,7 @@ const meta = {
     featureStage({ height: 250, width: 500 }),
   ],
   parameters: { layout: "fullscreen" },
-  title: "Features/Monitor Selection",
+  title: "Features/Recording Sources/Monitor Selection",
 } satisfies Meta<typeof MonitorSelector>;
 
 export default meta;

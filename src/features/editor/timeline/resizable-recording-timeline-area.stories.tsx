@@ -86,7 +86,7 @@ const meta = {
   component: BandPreview,
   decorators: [featureStage({ height: 440, width: 760 })],
   parameters: { layout: "centered" },
-  title: "Features/Editor/Resizable Recording Timeline Area",
+  title: "Features/Editor/Timeline/Resizable Recording Timeline Area",
 } satisfies Meta<typeof BandPreview>;
 
 export default meta;

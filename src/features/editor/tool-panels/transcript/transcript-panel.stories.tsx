@@ -50,7 +50,7 @@ const meta = {
     featureStage({ width: toolPanelWidth }),
   ],
   parameters: { layout: "fullscreen" },
-  title: "Features/Editor/Tool Panel/Transcript",
+  title: "Features/Editor/Tool Panels/Transcript",
 } satisfies Meta;
 
 export default meta;

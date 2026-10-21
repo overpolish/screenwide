@@ -60,7 +60,10 @@ export const WithLeading: Story = {
     <ControlRow
       {...args}
       leading={
-        <span className="flex size-8 items-center justify-center rounded-control bg-error text-white [&_svg]:size-icon">
+        <span
+          aria-hidden="true"
+          className="flex size-control-height items-center justify-center rounded-control bg-fill text-fg-secondary [&_svg]:size-icon"
+        >
           <Disc />
         </span>
       }

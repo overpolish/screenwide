@@ -37,7 +37,7 @@ const meta = {
   component: GlideSpacePreview,
   decorators: [featureStage({ window: "glide" })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Glide Space Preview",
+  title: "Features/Glide/Glide Space Preview",
 } satisfies Meta<typeof GlideSpacePreview>;
 
 export default meta;
