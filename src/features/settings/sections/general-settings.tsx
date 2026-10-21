@@ -131,33 +131,7 @@ export function GeneralSettingsPanel({
     label: seconds.format(value),
   });
   return (
-    <div className="gap-layout flex flex-col">
-      <SettingsGroup title={t("settings-software-update")}>
-        {updateSetting}
-      </SettingsGroup>
-      <SettingsGroup title={t("settings-appearance")}>
-        <ControlRow
-          description={t("settings-accent-description")}
-          title={t("settings-accent")}
-        >
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <PillGroup
-                aria-label={t("settings-accent")}
-                isDisabled={isSaving}
-                items={[
-                  { id: "system", label: t("settings-accent-system") },
-                  { id: "screenwide", label: t("settings-accent-app") },
-                ]}
-                onSelectionChange={(accent) => {
-                  update({ accent: accent as GeneralSettings["accent"] });
-                }}
-                selected={settings.accent}
-              />
-            </div>
-          )}
-        </ControlRow>
-      </SettingsGroup>
+    <div className="flex flex-col gap-group">
       <SettingsGroup title={t("settings-saving")}>
         {folders().map(({ description, key, kind, reset, title }) => (
           <ControlRow description={description} key={kind} title={title}>
@@ -256,6 +230,8 @@ export function GeneralSettingsPanel({
       <SettingsGroup title={t("settings-startup")}>
         {startupToggles().map((item) => toggle(item))}
       </SettingsGroup>
+      {/* Last, as an app's About is: looked at rarely, and not a setting. */}
+      <SettingsGroup title={t("settings-about")}>{updateSetting}</SettingsGroup>
     </div>
   );
 }

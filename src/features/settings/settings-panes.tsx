@@ -52,11 +52,6 @@ export type SettingsPanesProps = {
   updateSetting?: ReactNode;
 };
 
-const bindingOf = (
-  bindings: ShortcutSettings | null | undefined,
-  action: ShortcutAction,
-) => bindings?.bindings.find((binding) => binding.action === action)?.shortcut;
-
 /** The pane the sidebar selection asks for, with nothing around it: the
  * window owns the shell and the scrolling. */
 export function SettingsPanes({
@@ -96,66 +91,42 @@ export function SettingsPanes({
         updateSetting={updateSetting}
       />
     ) : null;
-  if (section === "glide")
-    return glide ? (
-      <GlideSettingsPanel
-        defaults={defaults?.glide}
-        isSaving={savingGlide}
-        onCaptureChange={onCaptureChange}
-        onChange={onChangeGlide}
-        settings={glide}
-      />
-    ) : null;
-  if (section === "ruler")
-    return ruler ? (
-      <RulerSettingsPanel
-        activationDefault={bindingOf(defaults?.shortcuts, "rulerOverlay")}
-        defaults={defaults?.ruler}
-        isSaving={savingRuler}
-        onActivationChange={(value) => {
-          onChangeBinding("rulerOverlay", value);
-        }}
-        onCaptureChange={onCaptureChange}
-        onChange={onChangeRuler}
-        savingShortcut={savingShortcut !== null}
-        settings={ruler}
-        shortcuts={shortcuts}
-      />
-    ) : null;
-  if (section === "annotate")
-    return annotate ? (
-      <AnnotateSettingsPanel
-        activation={bindingOf(shortcuts, "annotateOverlay") ?? null}
-        activationDefault={bindingOf(defaults?.shortcuts, "annotateOverlay")}
-        clear={bindingOf(shortcuts, "annotateClear") ?? null}
-        clearDefault={bindingOf(defaults?.shortcuts, "annotateClear")}
-        isSaving={savingAnnotate || savingShortcut !== null}
-        onActivationChange={(value) => {
-          onChangeBinding("annotateOverlay", value);
-        }}
-        onCaptureChange={onCaptureChange}
-        onChange={onChangeAnnotate}
-        onClearChange={(value) => {
-          onChangeBinding("annotateClear", value);
-        }}
-        settings={annotate}
-      />
-    ) : null;
-  if (section === "ocr")
-    return ocr ? (
-      <OcrSettingsPanel
-        activation={bindingOf(shortcuts, "recognizeText") ?? null}
-        activationDefault={bindingOf(defaults?.shortcuts, "recognizeText")}
-        defaults={defaults?.ocr}
-        isSaving={savingOcr || savingShortcut !== null}
-        onActivationChange={(value) => {
-          onChangeBinding("recognizeText", value);
-        }}
-        onCaptureChange={onCaptureChange}
-        onChange={onChangeOcr}
-        settings={ocr}
-      />
-    ) : null;
+  // Each tool is a box of its own: what it does, then how it behaves; their
+  // keys are with every other shortcut.
+  if (section === "tools")
+    return (
+      <div className="flex flex-col gap-group">
+        {glide ? (
+          <GlideSettingsPanel
+            defaults={defaults?.glide}
+            isSaving={savingGlide}
+            onChange={onChangeGlide}
+            settings={glide}
+          />
+        ) : null}
+        {ruler ? (
+          <RulerSettingsPanel
+            isSaving={savingRuler}
+            onChange={onChangeRuler}
+            settings={ruler}
+          />
+        ) : null}
+        {annotate ? (
+          <AnnotateSettingsPanel
+            isSaving={savingAnnotate}
+            onChange={onChangeAnnotate}
+            settings={annotate}
+          />
+        ) : null}
+        {ocr ? (
+          <OcrSettingsPanel
+            isSaving={savingOcr}
+            onChange={onChangeOcr}
+            settings={ocr}
+          />
+        ) : null}
+      </div>
+    );
   if (section === "moments")
     return (
       <MomentsSettingsPanel
@@ -168,10 +139,21 @@ export function SettingsPanes({
     return <TranscriptionSettingsPanel controls={transcription} />;
   return (
     <HotkeySettingsPanel
-      defaults={defaults?.shortcuts}
+      annotate={annotate}
+      defaults={defaults}
+      glide={glide}
+      ocr={ocr}
       onCaptureChange={onCaptureChange}
       onChange={onChangeBinding}
+      onChangeGlide={onChangeGlide}
+      onChangeOcr={onChangeOcr}
+      onChangeRuler={onChangeRuler}
+      ruler={ruler}
       saving={savingShortcut}
+      savingAnnotate={savingAnnotate}
+      savingGlide={savingGlide}
+      savingOcr={savingOcr}
+      savingRuler={savingRuler}
       settings={shortcuts}
     />
   );

@@ -3,10 +3,9 @@
 
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { SliderNumberField } from "../../../composites/slider-number-field/slider-number-field";
-import { platformArg, t } from "../../../i18n/i18n";
+import { t } from "../../../i18n/i18n";
 import { isMacHost } from "../../../lib/platform";
 import { Switch } from "../../../primitives/switch/switch";
-import { HotkeyField } from "../hotkey-field/hotkey-field";
 import { SettingsGroup } from "../settings-group";
 
 import type { GlideSettings } from "../../../bindings/GlideSettings";
@@ -32,54 +31,17 @@ const toggles = () =>
     },
   ] as const;
 
-const modifierTitle = (key: ModifierKey) => {
-  switch (key) {
-    case "mouseModifier":
-      return t("settings-glide-mouse-modifier");
-    case "thirdsModifier":
-      return t("settings-glide-thirds-modifier");
-    case "spacesModifier":
-      return t("settings-glide-spaces-modifier", { platform: platformArg() });
-    case "monitorsModifier":
-      return t("settings-glide-monitors-modifier");
-  }
-};
-
-const modifierDescription = (key: ModifierKey) => {
-  switch (key) {
-    case "mouseModifier":
-      return t("settings-glide-mouse-modifier-description");
-    case "thirdsModifier":
-      return t("settings-glide-thirds-modifier-description");
-    case "spacesModifier":
-      return t("settings-glide-spaces-modifier-description", {
-        platform: platformArg(),
-      });
-    case "monitorsModifier":
-      return t("settings-glide-monitors-modifier-description");
-  }
-};
-
-const modifierKeys = [
-  "mouseModifier",
-  "thirdsModifier",
-  "spacesModifier",
-  "monitorsModifier",
-] as const;
-
-type ModifierKey = (typeof modifierKeys)[number];
-
+// Glide's held keys live with every other shortcut, in the Shortcuts pane.
 export function GlideSettingsPanel({
   defaults,
   isSaving,
-  onCaptureChange,
   onChange,
   settings,
 }: {
   isSaving: boolean;
-  onCaptureChange: (capturing: boolean) => Promise<void>;
   onChange: (settings: GlideSettings) => void;
   settings: GlideSettings;
+  /** What each setting returns to on reset. */
   defaults?: GlideSettings;
 }) {
   const update = (changes: Partial<GlideSettings>) => {
@@ -87,106 +49,60 @@ export function GlideSettingsPanel({
   };
   const isOff = isSaving || !settings.enabled;
   return (
-    <div className="gap-layout flex flex-col">
-      <SettingsGroup title={t("settings-section-glide")}>
-        <ControlRow
-          description={t("settings-glide-enabled-description")}
-          title={t("settings-glide-enabled")}
-        >
-          {(controlProps) => (
-            <Switch
-              {...controlProps}
-              isDisabled={isSaving}
-              isSelected={settings.enabled}
-              onChange={(enabled) => {
-                update({ enabled });
-              }}
-            />
-          )}
-        </ControlRow>
-      </SettingsGroup>
-      <SettingsGroup title={t("settings-glide-controls")}>
-        {modifierKeys.map((key) => {
-          const otherKeys = modifierKeys.filter(
-            (candidate) => candidate !== key,
-          );
-          const title = modifierTitle(key);
-          return (
-            <ControlRow
-              description={modifierDescription(key)}
-              key={key}
-              title={title}
-            >
-              {(controlProps) => (
-                <HotkeyField
-                  aria-describedby={controlProps["aria-describedby"]}
-                  aria-label={title}
-                  captureMode="single-control"
-                  defaultValue={defaults?.[key]}
-                  isClearable={false}
-                  isDisabled={isOff}
-                  onCaptureChange={onCaptureChange}
-                  onChange={(value) => {
-                    if (value === null) return;
-                    const collidingKey = otherKeys.find(
-                      (candidate) => settings[candidate] === value,
-                    );
-                    update({
-                      [key]: value,
-                      ...(collidingKey
-                        ? { [collidingKey]: settings[key] }
-                        : {}),
-                    });
-                  }}
-                  value={settings[key]}
-                />
-              )}
-            </ControlRow>
-          );
-        })}
-      </SettingsGroup>
-      <SettingsGroup title={t("settings-glide-behavior")}>
-        <ControlRow title={t("settings-glide-window-gap")}>
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <SliderNumberField
-                aria-label={t("settings-glide-window-gap")}
-                className="w-56"
-                isDisabled={!settings.enabled}
-                maxValue={32}
-                minValue={0}
-                onChange={(windowGap) => {
-                  update({ windowGap });
+    <SettingsGroup title={t("settings-section-glide")}>
+      <ControlRow title={t("settings-glide-enabled")}>
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isSaving}
+            isSelected={settings.enabled}
+            onChange={(enabled) => {
+              update({ enabled });
+            }}
+          />
+        )}
+      </ControlRow>
+      {toggles()
+        .filter(({ macOnly }) => !macOnly || isMacHost)
+        .map((toggle) => (
+          <ControlRow
+            description={
+              "description" in toggle ? toggle.description : undefined
+            }
+            key={toggle.key}
+            title={toggle.title}
+          >
+            {(controlProps) => (
+              <Switch
+                {...controlProps}
+                isDisabled={isOff}
+                isSelected={settings[toggle.key]}
+                onChange={(selected) => {
+                  update({ [toggle.key]: selected });
                 }}
-                unit="px"
-                value={settings.windowGap}
               />
-            </div>
-          )}
-        </ControlRow>
-        {toggles()
-          .filter(({ macOnly }) => !macOnly || isMacHost)
-          .map((toggle) => (
-            <ControlRow
-              description={
-                "description" in toggle ? toggle.description : undefined
-              }
-              key={toggle.key}
-              title={toggle.title}
-            >
-              {(controlProps) => (
-                <Switch
-                  {...controlProps}
-                  isDisabled={isOff}
-                  isSelected={settings[toggle.key]}
-                  onChange={(selected) => {
-                    update({ [toggle.key]: selected });
-                  }}
-                />
-              )}
-            </ControlRow>
-          ))}
-      </SettingsGroup>
-    </div>
+            )}
+          </ControlRow>
+        ))}
+      <ControlRow title={t("settings-glide-window-gap")}>
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <SliderNumberField
+              aria-label={t("settings-glide-window-gap")}
+              className="w-56"
+              defaultValue={defaults?.windowGap}
+              isDisabled={!settings.enabled}
+              maxValue={32}
+              minValue={0}
+              onChange={(windowGap) => {
+                update({ windowGap });
+              }}
+              unit="px"
+              value={settings.windowGap}
+            />
+          </div>
+        )}
+      </ControlRow>
+    </SettingsGroup>
   );
 }

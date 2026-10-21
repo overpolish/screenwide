@@ -8,7 +8,6 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
 use crate::settings::background_preset::BackgroundPreset;
-use screenwide_accent::AccentPreference;
 use screenwide_i18n::t;
 use screenwide_scenes::SceneTemplate;
 use screenwide_text::captions::CaptionSettings;
@@ -21,7 +20,6 @@ const SETTINGS_CHANGED_EVENT: &str = "settings://changed";
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct GeneralSettings {
-  pub accent: AccentPreference,
   /// Colours the annotation tools were given that none of their presets
   /// offers, newest last. Kept beside the saved backgrounds because they are
   /// the same kind of thing: a choice made once that should be findable the
@@ -67,7 +65,6 @@ pub struct GeneralSettings {
 impl Default for GeneralSettings {
   fn default() -> Self {
     Self {
-      accent: AccentPreference::System,
       annotation_colors: Vec::new(),
       background_presets: Vec::new(),
       project_directory: None,
@@ -155,7 +152,6 @@ fn validate(settings: &GeneralSettings) -> Result<(), String> {
 pub fn initialize(app: &AppHandle) {
   let mut settings = read(app);
   settings.launch_at_login = app.autolaunch().is_enabled().unwrap_or(false);
-  screenwide_accent::set_preference(settings.accent);
   *app
     .state::<GeneralSettingsState>()
     .0
@@ -216,9 +212,6 @@ pub fn set_general_settings(
     .0
     .write()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = settings.clone();
-  if settings.accent != current_settings.accent {
-    screenwide_accent::preference_changed(&app, settings.accent);
-  }
   let _ = app.emit(SETTINGS_CHANGED_EVENT, &settings);
   Ok(settings)
 }

@@ -4,6 +4,7 @@
 import { ReactNode } from "react";
 
 import { ProgressBar } from "../../primitives/progress-bar/progress-bar";
+import { Text } from "../../primitives/text/text";
 
 // The label and status share a line above the bar; actions sit in a row
 // below, at the end. The feature that is waiting supplies every phrase.
@@ -28,11 +29,13 @@ export function ProgressPanel({
   return (
     <div className="flex w-full flex-col gap-inline">
       <div className="flex items-center justify-between gap-separate">
-        <span className="text-label text-fg">{label}</span>
+        <Text as="span" variant="label">
+          {label}
+        </Text>
         {status === undefined ? null : (
-          <span className="text-caption text-fg-tertiary tabular-nums">
+          <Text as="span" className="tabular-nums" variant="caption">
             {status}
-          </span>
+          </Text>
         )}
       </div>
       <ProgressBar

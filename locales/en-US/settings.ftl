@@ -6,13 +6,15 @@
 
 settings-sections = Settings sections
 settings-add-moment = Add Moment
-settings-shortcuts = Shortcuts
+# Under a feature's group in the Shortcuts pane while the feature is turned off; its shortcuts are greyed out. $feature is the feature's name, such as Ruler.
+settings-shortcuts-feature-off = Turn on { $feature } to use these shortcuts.
 settings-recording = Recording
 settings-screenshots = Screenshots
 
 ## Sidebar sections, also the window's title
 
 settings-section-general = General
+settings-section-tools = Tools
 settings-section-glide = Glide
 settings-section-ruler = Ruler
 settings-section-annotate = Annotate
@@ -23,16 +25,12 @@ settings-section-shortcuts = Shortcuts
 
 ## General
 
-settings-software-update = Software Update
+# The group at the end of General holding the app's version and its updates.
+settings-about = About
 settings-app-name = { -app-name }
 settings-version = Version { $version }
 settings-update-to = Update to v{ $version }
 settings-check-updates = Check for Updates
-settings-appearance = Appearance
-settings-accent = Accent colour
-settings-accent-description = Controls and highlights use the system accent colour, or { -app-name }'s own.
-settings-accent-system = System
-settings-accent-app = { -app-name }
 settings-saving = Saving
 settings-default-folder = Default folder
 settings-projects-folder = Projects folder
@@ -64,9 +62,7 @@ settings-show-bar-on-launch = Show recording controls on startup
 
 ## Glide
 
-settings-glide-enabled = Use Glide
-settings-glide-enabled-description = Move and resize windows to fit your screen.
-settings-glide-controls = Controls
+settings-glide-enabled = Move and resize windows to fit your screen
 settings-glide-mouse-modifier = Glide control for mouse
 settings-glide-mouse-modifier-description = Hold while moving from a window's top bar.
 settings-glide-thirds-modifier = Control for screen thirds
@@ -84,7 +80,6 @@ settings-glide-spaces-modifier-description =
     }
 settings-glide-monitors-modifier = Modifier for Monitors
 settings-glide-monitors-modifier-description = Hold while moving between monitors.
-settings-glide-behavior = Behavior
 settings-glide-window-gap = Space around windows
 settings-glide-cursor-follows = Move pointer with window
 settings-glide-haptics = Trackpad feedback
@@ -94,8 +89,7 @@ settings-glide-double-tap-description = Two fingers, or hold mouse control while
 
 ## Ruler
 
-settings-ruler-enabled = Use Ruler
-settings-ruler-enabled-description = Measure sizes and distances on your screen.
+settings-ruler-enabled = Measure sizes and distances on your screen
 settings-ruler-show = Show ruler
 settings-ruler-crosshair = Toggle crosshair
 settings-ruler-copy-colour = Copy colour
@@ -121,8 +115,8 @@ settings-ruler-centerlines = Toggle centerlines
 
 ## Annotate
 
-settings-annotate-enabled = Use Annotate
-settings-annotate-enabled-description = Draw on your screen, and keep the annotations in a recording.
+settings-annotate-enabled = Draw on your screen
+settings-annotate-enabled-description = The annotations are kept in recordings.
 settings-annotate-draw = Draw on the screen
 settings-annotate-keep = Keep annotations after exiting
 settings-annotate-keep-description = They stay on screen until you clear them.
@@ -130,8 +124,7 @@ settings-annotate-clear = Clear annotations
 
 ## OCR: reading text and QR codes on screen
 
-settings-ocr-enabled = Use OCR
-settings-ocr-enabled-description = Select text or a QR code on your screen.
+settings-ocr-enabled = Select text or a QR code on your screen
 settings-ocr-activate = Read text or a QR code
 settings-ocr-select-all = Select all text
 settings-ocr-select-all-description = Select all recognized text.
@@ -177,7 +170,6 @@ settings-transcription-camera-objects-description = Keeps or removes objects on 
 # The model the recording's transcript and voice notes are made with, named for what it does.
 settings-transcription-transcripts = Transcripts
 settings-transcription-transcripts-description = Turns your recordings and voice notes into text.
-settings-transcription-models = Models
 settings-transcription-language = Language
 settings-transcription-language-description = The language your recordings are spoken in.
 # $language is the computer's own language.

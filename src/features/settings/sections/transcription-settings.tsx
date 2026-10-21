@@ -42,12 +42,9 @@ export function TranscriptionSettingsPanel({
     })),
   ];
   return (
-    <div className="gap-layout flex flex-col">
-      {/* First, so it is read before anything is downloaded. */}
-      <p className="text-body text-fg-secondary px-section">
-        {t("settings-transcription-local")}
-      </p>
-      <SettingsGroup title={t("settings-transcription-models")}>
+    <div className="flex flex-col gap-group">
+      {/* Said first, so it is read before anything is downloaded. */}
+      <SettingsGroup description={t("settings-transcription-local")}>
         {state.models.map((model) => (
           <ControlRow
             description={model.description}
@@ -65,7 +62,7 @@ export function TranscriptionSettingsPanel({
           </ControlRow>
         ))}
       </SettingsGroup>
-      <SettingsGroup title={t("settings-transcription-language")}>
+      <SettingsGroup>
         <ControlRow
           description={t("settings-transcription-language-description")}
           title={t("settings-transcription-language")}

@@ -160,6 +160,7 @@ export type Messages = {
   "controls-no-items": null;
   "controls-path-field": { label: string | number; path: string | number };
   "controls-path-field-choose": null;
+  "controls-reset": { label: string | number };
   "controls-sidebar-collapse": null;
   "controls-sidebar-expand": null;
   "controls-slider": { label: string | number };
@@ -878,10 +879,7 @@ export type Messages = {
   "screenshots-scrolling-progress": null;
   "screenshots-scrolling-stitching": null;
   "screenshots-scrolling-working": null;
-  "settings-accent": null;
-  "settings-accent-app": null;
-  "settings-accent-description": null;
-  "settings-accent-system": null;
+  "settings-about": null;
   "settings-add-moment": null;
   "settings-annotate-clear": null;
   "settings-annotate-draw": null;
@@ -890,7 +888,6 @@ export type Messages = {
   "settings-annotate-keep": null;
   "settings-annotate-keep-description": null;
   "settings-app-name": null;
-  "settings-appearance": null;
   "settings-auto-zoom": null;
   "settings-auto-zoom-description": null;
   "settings-capture": null;
@@ -904,13 +901,10 @@ export type Messages = {
   "settings-fps": { fps: string | number };
   "settings-frame-rate": null;
   "settings-frame-rate-description": null;
-  "settings-glide-behavior": null;
-  "settings-glide-controls": null;
   "settings-glide-cursor-follows": null;
   "settings-glide-double-tap": null;
   "settings-glide-double-tap-description": null;
   "settings-glide-enabled": null;
-  "settings-glide-enabled-description": null;
   "settings-glide-haptics": null;
   "settings-glide-haptics-description": null;
   "settings-glide-monitors-modifier": null;
@@ -936,7 +930,6 @@ export type Messages = {
   "settings-ocr-copy": null;
   "settings-ocr-copy-description": null;
   "settings-ocr-enabled": null;
-  "settings-ocr-enabled-description": null;
   "settings-ocr-select-all": null;
   "settings-ocr-select-all-description": null;
   "settings-projects-folder": null;
@@ -956,7 +949,6 @@ export type Messages = {
   "settings-ruler-delete": null;
   "settings-ruler-delete-description": null;
   "settings-ruler-enabled": null;
-  "settings-ruler-enabled-description": null;
   "settings-ruler-guide-horizontal": null;
   "settings-ruler-guide-horizontal-description": null;
   "settings-ruler-guide-vertical": null;
@@ -983,6 +975,7 @@ export type Messages = {
   "settings-section-ocr": null;
   "settings-section-ruler": null;
   "settings-section-shortcuts": null;
+  "settings-section-tools": null;
   "settings-section-transcription": null;
   "settings-sections": null;
   "settings-shortcut-copy-screenshot": null;
@@ -994,9 +987,8 @@ export type Messages = {
   "settings-shortcut-screenshot-description": null;
   "settings-shortcut-start-stop": null;
   "settings-shortcut-toggle-bar": null;
-  "settings-shortcuts": null;
+  "settings-shortcuts-feature-off": { feature: string | number };
   "settings-show-bar-on-launch": null;
-  "settings-software-update": null;
   "settings-startup": null;
   "settings-transcription-camera-background": null;
   "settings-transcription-camera-background-description": null;
@@ -1010,7 +1002,6 @@ export type Messages = {
   "settings-transcription-language": null;
   "settings-transcription-language-description": null;
   "settings-transcription-local": null;
-  "settings-transcription-models": null;
   "settings-transcription-remove": { model: string | number };
   "settings-transcription-studio-ducking": null;
   "settings-transcription-studio-ducking-description": null;

@@ -16,7 +16,6 @@ doctest = false
 serde.workspace = true
 serde_json.workspace = true
 tauri.workspace = true
-ts-rs.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 block2.workspace = true

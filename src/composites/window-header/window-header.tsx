@@ -8,6 +8,7 @@ import { t } from "../../i18n/i18n";
 import { hostPlatform, type Platform } from "../../lib/platform";
 import { cn } from "../../lib/styling";
 import { IconButton } from "../../primitives/button/icon-button";
+import { Text } from "../../primitives/text/text";
 import { EditableTitle } from "../editable-title/editable-title";
 
 // The same bar on both platforms: macOS draws its traffic lights over the
@@ -54,10 +55,12 @@ export function WindowHeader({
       )}
       data-tauri-drag-region={isDraggable ? "deep" : undefined}
     >
-      <h1
-        className="pointer-events-none min-w-0 flex-1 truncate text-heading text-fg"
+      <Text
+        as="h1"
+        className="pointer-events-none min-w-0 flex-1 truncate"
         data-tauri-drag-region={isDraggable ? "" : undefined}
         dir="auto"
+        variant="heading"
       >
         {onTitleChange ? (
           <EditableTitle
@@ -69,7 +72,7 @@ export function WindowHeader({
         ) : (
           title
         )}
-      </h1>
+      </Text>
       {actions ? (
         <div className="flex shrink-0 items-center gap-inline">{actions}</div>
       ) : null}

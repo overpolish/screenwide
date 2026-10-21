@@ -49,6 +49,17 @@ export function PathField({
   const empty = placeholder ?? t("controls-path-field-choose");
   return (
     <div className="flex min-w-0 items-center gap-inline">
+      {/* Before the field, so the field never moves when it appears. */}
+      {onReset && value !== null ? (
+        <IconButton
+          aria-label={resetLabel}
+          isDisabled={isDisabled}
+          onPress={onReset}
+          variant="ghost"
+        >
+          <RotateCcw />
+        </IconButton>
+      ) : null}
       <TooltipTrigger
         className={cn("w-40 min-w-0", className)}
         isDisabled={value === null}
@@ -78,16 +89,6 @@ export function PathField({
           </span>
         </Button>
       </TooltipTrigger>
-      {onReset && value !== null ? (
-        <IconButton
-          aria-label={resetLabel}
-          isDisabled={isDisabled}
-          onPress={onReset}
-          variant="ghost"
-        >
-          <RotateCcw />
-        </IconButton>
-      ) : null}
     </div>
   );
 }

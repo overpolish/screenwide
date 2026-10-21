@@ -6,6 +6,7 @@ import { ComponentProps, ReactNode } from "react";
 import { VariantProps } from "tailwind-variants";
 
 import { tv } from "../../lib/variants";
+import { Text } from "../text/text";
 
 // An inline notice: the translucent fill on the window's material, the
 // message in the text colour, and an icon that carries the meaning. A status
@@ -18,7 +19,7 @@ const alertVariants = tv({
     // Centred on the first line, as the icon is: the slot is a line tall and
     // the control overhangs it evenly into the padding.
     action: "flex h-[1lh] shrink-0 items-center",
-    base: "flex items-start gap-separate rounded-panel bg-fill p-inset text-body text-fg",
+    base: "flex items-start gap-separate rounded-panel bg-fill p-inset",
     content: "min-w-0 grow",
     icon: "flex h-[1lh] shrink-0 items-center [&>svg]:size-icon [&>svg]:transform-gpu",
     // The icon and the message, read as one.
@@ -63,8 +64,10 @@ export function Alert({
   });
   const DefaultIcon = defaultIcons[color];
 
+  // Body copy throughout, so the icon and action slots, a line of it tall,
+  // centre on the message's first line.
   return (
-    <div className={base()} {...props}>
+    <Text {...props} as="div" className={base()}>
       <div className={lead()}>
         {customIcon === false ? null : (
           <span aria-hidden="true" className={icon()}>
@@ -74,6 +77,6 @@ export function Alert({
         <div className={content()}>{children}</div>
       </div>
       {actionContent ? <div className={action()}>{actionContent}</div> : null}
-    </div>
+    </Text>
   );
 }

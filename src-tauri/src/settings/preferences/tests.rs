@@ -1,27 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{AccentPreference, GeneralSettings};
+use super::GeneralSettings;
 
 #[test]
 fn opens_export_location_when_the_setting_is_missing() {
   let settings: GeneralSettings = serde_json::from_str("{}").unwrap();
 
   assert!(settings.open_location_after_export);
-}
-
-#[test]
-fn follows_the_system_accent_when_the_setting_is_missing() {
-  let settings: GeneralSettings = serde_json::from_str("{}").unwrap();
-
-  assert_eq!(settings.accent, AccentPreference::System);
-}
-
-#[test]
-fn reads_a_stored_brand_accent_choice() {
-  let settings: GeneralSettings = serde_json::from_str(r#"{"accent":"screenwide"}"#).unwrap();
-
-  assert_eq!(settings.accent, AccentPreference::Screenwide);
 }
 
 #[test]

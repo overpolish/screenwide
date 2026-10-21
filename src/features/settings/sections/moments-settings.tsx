@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
+import { Button } from "../../../primitives/button/button";
 import { TextField } from "../../../primitives/input-fields/text-field";
 import { HotkeyField } from "../hotkey-field/hotkey-field";
 import { SettingsGroup } from "../settings-group";
@@ -59,7 +60,7 @@ export function MomentsSettingsPanel({
   onCaptureChange: (capturing: boolean) => Promise<void>;
   transcription: TranscriptionControls;
 }) {
-  const { isSaving, preview, save, settings } = moments;
+  const { addKind, isSaving, preview, save, settings } = moments;
   if (!settings) return null;
   const { kinds } = settings;
   const withChange = (id: string, changes: Partial<MomentKind>) => ({
@@ -72,11 +73,11 @@ export function MomentsSettingsPanel({
     void save(withChange(id, changes));
   };
   return (
-    <div className="gap-layout flex flex-col">
+    <div className="flex flex-col gap-group">
       {/* One line per moment: everything one is, editable at a glance. */}
-      <SettingsGroup title={t("settings-section-moments")}>
+      <SettingsGroup footnote={t("settings-moments-footnote")}>
         {kinds.map((kind) => (
-          <div className="gap-control flex items-center" key={kind.id}>
+          <div className="flex items-center gap-inline" key={kind.id}>
             <KindColorPicker
               color={kind.color}
               customColor={kind.customColor}
@@ -119,12 +120,19 @@ export function MomentsSettingsPanel({
                   kinds: kinds.filter((other) => other.id !== kind.id),
                 });
               }}
+              variant="ghost"
             />
           </div>
         ))}
-        <p className="text-caption text-fg-secondary">
-          {t("settings-moments-footnote")}
-        </p>
+        {/* Added at the end of the list it adds to. */}
+        <Button
+          className="self-start"
+          isDisabled={isSaving}
+          onPress={addKind}
+          variant="ghost"
+        >
+          {t("settings-add-moment")}
+        </Button>
       </SettingsGroup>
       <VoiceNoteSettings
         isSaving={isSaving}

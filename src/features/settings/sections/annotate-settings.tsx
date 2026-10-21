@@ -4,98 +4,55 @@
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
 import { Switch } from "../../../primitives/switch/switch";
-import { HotkeyField } from "../hotkey-field/hotkey-field";
 import { SettingsGroup } from "../settings-group";
 
 import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 
+// Annotate's keys live with every other shortcut, in the Shortcuts pane.
 export function AnnotateSettingsPanel({
-  activation,
-  activationDefault,
-  clear,
-  clearDefault,
   isSaving,
-  onActivationChange,
-  onCaptureChange,
   onChange,
-  onClearChange,
   settings,
 }: {
-  activation: string | null;
-  clear: string | null;
   isSaving: boolean;
-  onActivationChange: (value: string | null) => void;
-  onCaptureChange: (capturing: boolean) => Promise<void>;
   onChange: (settings: AnnotateSettings) => void;
-  onClearChange: (value: string | null) => void;
   settings: AnnotateSettings;
-  activationDefault?: string | null;
-  clearDefault?: string | null;
 }) {
   const update = (changes: Partial<AnnotateSettings>) => {
     onChange({ ...settings, ...changes });
   };
-  const isOff = isSaving || !settings.enabled;
   return (
-    <div className="gap-layout flex flex-col">
-      <SettingsGroup title={t("settings-section-annotate")}>
-        <ControlRow
-          description={t("settings-annotate-enabled-description")}
-          title={t("settings-annotate-enabled")}
-        >
-          {(controlProps) => (
-            <Switch
-              {...controlProps}
-              isDisabled={isSaving}
-              isSelected={settings.enabled}
-              onChange={(enabled) => {
-                update({ enabled });
-              }}
-            />
-          )}
-        </ControlRow>
-        <ControlRow title={t("settings-annotate-draw")}>
-          {(controlProps) => (
-            <HotkeyField
-              aria-describedby={controlProps["aria-describedby"]}
-              aria-label={t("settings-annotate-draw")}
-              defaultValue={activationDefault}
-              isDisabled={isOff}
-              onCaptureChange={onCaptureChange}
-              onChange={onActivationChange}
-              value={activation}
-            />
-          )}
-        </ControlRow>
-        <ControlRow
-          description={t("settings-annotate-keep-description")}
-          title={t("settings-annotate-keep")}
-        >
-          {(controlProps) => (
-            <Switch
-              {...controlProps}
-              isDisabled={isOff}
-              isSelected={settings.keepAnnotationsBetweenSessions}
-              onChange={(keepAnnotationsBetweenSessions) => {
-                update({ keepAnnotationsBetweenSessions });
-              }}
-            />
-          )}
-        </ControlRow>
-        <ControlRow title={t("settings-annotate-clear")}>
-          {(controlProps) => (
-            <HotkeyField
-              aria-describedby={controlProps["aria-describedby"]}
-              aria-label={t("settings-annotate-clear")}
-              defaultValue={clearDefault}
-              isDisabled={isOff}
-              onCaptureChange={onCaptureChange}
-              onChange={onClearChange}
-              value={clear}
-            />
-          )}
-        </ControlRow>
-      </SettingsGroup>
-    </div>
+    <SettingsGroup title={t("settings-section-annotate")}>
+      <ControlRow
+        description={t("settings-annotate-enabled-description")}
+        title={t("settings-annotate-enabled")}
+      >
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isSaving}
+            isSelected={settings.enabled}
+            onChange={(enabled) => {
+              update({ enabled });
+            }}
+          />
+        )}
+      </ControlRow>
+      <ControlRow
+        description={t("settings-annotate-keep-description")}
+        title={t("settings-annotate-keep")}
+      >
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isSaving || !settings.enabled}
+            isSelected={settings.keepAnnotationsBetweenSessions}
+            onChange={(keepAnnotationsBetweenSessions) => {
+              update({ keepAnnotationsBetweenSessions });
+            }}
+          />
+        )}
+      </ControlRow>
+    </SettingsGroup>
   );
 }

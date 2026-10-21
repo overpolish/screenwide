@@ -182,6 +182,23 @@ export function HotkeyField({
       }}
     >
       <div className="inline-flex items-center gap-inline">
+        {/* Before the field, so the field never moves when it appears. */}
+        {defaultValue !== undefined && !hotkeysEqual(value, defaultValue) ? (
+          <IconButton
+            aria-label={t("hotkey-field-reset", { label })}
+            isDisabled={isDisabled}
+            onPress={() => {
+              setListening(false);
+              setReady(false);
+              onChange(defaultValue);
+              setFeedback(t("hotkey-field-reset-done"));
+              buttonRef.current?.focus();
+            }}
+            variant="ghost"
+          >
+            <RotateCcw />
+          </IconButton>
+        ) : null}
         <Button
           aria-describedby={describedBy}
           aria-description={instructions}
@@ -243,38 +260,24 @@ export function HotkeyField({
             </span>
           )}
         </Button>
-        {isClearable ? (
-          <IconButton
-            aria-label={t("hotkey-field-clear", { label })}
-            isDisabled={isDisabled || value === null}
-            onPress={() => {
-              setListening(false);
-              setReady(false);
-              onChange(null);
-              setFeedback(t("hotkey-field-cleared"));
-              buttonRef.current?.focus();
-            }}
-            variant="ghost"
-          >
-            <X />
-          </IconButton>
-        ) : null}
-        {defaultValue !== undefined && !hotkeysEqual(value, defaultValue) ? (
-          <IconButton
-            aria-label={t("hotkey-field-reset", { label })}
-            isDisabled={isDisabled}
-            onPress={() => {
-              setListening(false);
-              setReady(false);
-              onChange(defaultValue);
-              setFeedback(t("hotkey-field-reset-done"));
-              buttonRef.current?.focus();
-            }}
-            variant="ghost"
-          >
-            <RotateCcw />
-          </IconButton>
-        ) : null}
+        <IconButton
+          aria-label={t("hotkey-field-clear", { label })}
+          // The slot is kept even with nothing to clear, or a key that can
+          // never be cleared, so every field in a list of shortcuts lines up;
+          // then it is neither seen nor reached.
+          className={!isClearable || value === null ? "invisible" : undefined}
+          isDisabled={isDisabled || !isClearable}
+          onPress={() => {
+            setListening(false);
+            setReady(false);
+            onChange(null);
+            setFeedback(t("hotkey-field-cleared"));
+            buttonRef.current?.focus();
+          }}
+          variant="ghost"
+        >
+          <X />
+        </IconButton>
       </div>
       {/* The glyph carries the error colour; the words stay readable. */}
       {captureError ? (

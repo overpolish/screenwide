@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Plus } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
@@ -9,7 +8,6 @@ import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { Alert } from "../../primitives/alert/alert";
-import { Button } from "../../primitives/button/button";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
 
 import { useAnnotateSettingsSave } from "./sections/use-annotate-settings-save";
@@ -199,18 +197,6 @@ export function SettingsWindow({
     <WindowShell
       header={
         <WindowHeader
-          actions={
-            section === "moments" ? (
-              <Button
-                isDisabled={!moments.settings || moments.isSaving}
-                onPress={moments.addKind}
-                variant="ghost"
-              >
-                <Plus />
-                {t("settings-add-moment")}
-              </Button>
-            ) : undefined
-          }
           onClose={() => void hideSettings()}
           onMinimize={() => void minimize()}
           title={sectionTitle(section)}
@@ -218,12 +204,12 @@ export function SettingsWindow({
       }
     >
       {/* Only the sidebar keeps the window inset; the content column runs to
-          the window's right and bottom edges so its scroll shadow lands there,
+          the window's end and bottom edges so its scroll fade lands there,
           and carries the inset on the scrolled content instead. */}
-      <div className="gap-layout ps-window-inset flex min-h-0 grow">
+      <div className="flex min-h-0 grow gap-group ps-inset">
         <SidebarNav
           aria-label={t("settings-sections")}
-          className="pb-window-inset"
+          className="pb-inset"
           isExpandable={false}
           isExpanded
           items={settingsSidebarItems()}
@@ -232,11 +218,11 @@ export function SettingsWindow({
           }}
           selected={section}
         />
-        <div className="gap-section flex min-h-0 min-w-0 grow flex-col">
+        <div className="flex min-h-0 min-w-0 grow flex-col gap-separate">
           <ScrollArea key={section} rootClassName="min-h-0 min-w-0 grow">
             <section
               aria-label={sectionTitle(section)}
-              className="pe-window-inset pb-window-inset flex flex-col"
+              className="flex flex-col pe-inset pb-inset"
             >
               <SettingsPanes
                 annotate={annotate}
@@ -270,11 +256,7 @@ export function SettingsWindow({
             </section>
           </ScrollArea>
           {error ? (
-            <Alert
-              className="me-window-inset mb-window-inset"
-              color="error"
-              role="alert"
-            >
+            <Alert className="me-inset mb-inset" color="error" role="alert">
               {error}
             </Alert>
           ) : null}

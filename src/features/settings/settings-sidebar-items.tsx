@@ -5,10 +5,7 @@ import {
   AudioLines,
   Flag,
   Keyboard,
-  LayoutGrid,
-  PenTool,
-  Ruler,
-  ScanText,
+  PencilRuler,
   Settings,
 } from "lucide-react";
 import { type ReactNode } from "react";
@@ -17,10 +14,7 @@ import { sectionTitle, type SettingsSection } from "./settings-sections";
 
 const icons: [SettingsSection, ReactNode][] = [
   ["general", <Settings key="general" />],
-  ["glide", <LayoutGrid key="glide" />],
-  ["ruler", <Ruler key="ruler" />],
-  ["annotate", <PenTool key="annotate" />],
-  ["ocr", <ScanText key="ocr" />],
+  ["tools", <PencilRuler key="tools" />],
   ["moments", <Flag key="moments" />],
   ["transcription", <AudioLines key="transcription" />],
   ["hotkeys", <Keyboard key="hotkeys" />],

@@ -37,7 +37,7 @@ export function TranscriptionModelActions({
     );
   if (model.status === "downloading")
     return (
-      <div className="gap-control flex items-center">
+      <div className="flex items-center gap-inline">
         <ProgressBar
           aria-label={t("settings-transcription-downloading", {
             model: model.name,
@@ -65,6 +65,7 @@ export function TranscriptionModelActions({
       onConfirm={() => {
         controls.remove(model.id);
       }}
+      variant="ghost"
     />
   );
 }

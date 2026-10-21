@@ -8,6 +8,7 @@ import { t } from "../../../i18n/i18n";
 import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
 import { Button } from "../../../primitives/button/button";
 import { Switch } from "../../../primitives/switch/switch";
+import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../../editor/duration";
 import { PopupSelect } from "../../popup-panel/popup-select";
 import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
@@ -124,11 +125,45 @@ export function VoiceNoteSettings({
         )}
       </ControlRow>
       <ControlRow
+        // The switch says on or off by itself; only a missing model needs
+        // a word, to say what the Download beside it fetches.
+        description={
+          needsModel
+            ? t("settings-voice-notes-needs-model", {
+                model: transcriptsModel.name,
+                size: formatBytes(transcriptsModel.sizeBytes),
+              })
+            : undefined
+        }
+        title={t("settings-voice-notes-transcription")}
+      >
+        {(controlProps) => (
+          <div className="flex items-center gap-inline">
+            {/* The model is fetched into the one list Settings › Models
+                keeps; the switch never fetches or removes it. */}
+            {needsModel ? (
+              <TranscriptionModelActions
+                controls={transcription}
+                model={transcriptsModel}
+              />
+            ) : null}
+            <Switch
+              {...controlProps}
+              isDisabled={isSaving || !settings.voiceNotes}
+              isSelected={settings.transcribeNotes}
+              onChange={(transcribeNotes) => {
+                onChange({ ...settings, transcribeNotes });
+              }}
+            />
+          </div>
+        )}
+      </ControlRow>
+      <ControlRow
         description={t("settings-voice-notes-microphone-description")}
         title={t("settings-voice-notes-microphone")}
       >
         {(controlProps) => (
-          <div className="flex w-48 flex-col gap-control-inset">
+          <div className="flex w-48 flex-col gap-inline">
             <PopupSelect
               {...controlProps}
               id="moments-note-microphone"
@@ -157,46 +192,12 @@ export function VoiceNoteSettings({
           </div>
         )}
       </ControlRow>
-      <ControlRow
-        // The switch says on or off by itself; only a missing model needs
-        // a word, to say what the Download beside it fetches.
-        description={
-          needsModel
-            ? t("settings-voice-notes-needs-model", {
-                model: transcriptsModel.name,
-                size: formatBytes(transcriptsModel.sizeBytes),
-              })
-            : undefined
-        }
-        title={t("settings-voice-notes-transcription")}
-      >
-        {(controlProps) => (
-          <div className="gap-control flex items-center">
-            {/* The model is fetched into the one list Settings ›
-                Transcription keeps; the switch never fetches or removes it. */}
-            {needsModel ? (
-              <TranscriptionModelActions
-                controls={transcription}
-                model={transcriptsModel}
-              />
-            ) : null}
-            <Switch
-              {...controlProps}
-              isDisabled={isSaving || !settings.voiceNotes}
-              isSelected={settings.transcribeNotes}
-              onChange={(transcribeNotes) => {
-                onChange({ ...settings, transcribeNotes });
-              }}
-            />
-          </div>
-        )}
-      </ControlRow>
       {isDenied ? (
         <>
-          <p className="text-caption text-fg-secondary">
+          <Text variant="caption">
             {t("settings-voice-notes-microphone-denied")}
-          </p>
-          <div className="gap-control flex justify-end">
+          </Text>
+          <div className="flex justify-end gap-inline">
             <Button
               onPress={() => {
                 void openMicrophoneSettings();

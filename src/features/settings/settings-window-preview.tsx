@@ -7,7 +7,10 @@ import { featureStage } from "../../storybook/feature-story-stage";
 
 import { SettingsApiContext } from "./settings-api-context";
 import { momentsPreviewApi } from "./settings-moments-preview";
-import { transcriptionPreviewApi } from "./settings-transcription-preview";
+import {
+  transcriptionPreviewApi,
+  type TranscriptionPreviewSeed,
+} from "./settings-transcription-preview";
 import { SoftwareUpdateSetting } from "./settings-update-actions";
 import { SettingsWindow } from "./settings-window";
 
@@ -18,11 +21,19 @@ import type { OcrSettings } from "../../bindings/OcrSettings";
 import type { RulerSettings } from "../../bindings/RulerSettings";
 import type { ShortcutDefaults } from "../../bindings/ShortcutDefaults";
 import type { ShortcutSettings } from "../../bindings/ShortcutSettings";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta } from "@storybook/react-vite";
 
-function createPreviewApi(): ContextType<typeof SettingsApiContext> {
+// Whether a story named where the models start.
+const isModelSeed = (value: unknown): value is TranscriptionPreviewSeed =>
+  typeof value === "object" &&
+  value !== null &&
+  "status" in value &&
+  "progress" in value;
+
+function createPreviewApi(
+  modelSeed?: TranscriptionPreviewSeed,
+): ContextType<typeof SettingsApiContext> {
   let general: GeneralSettings = {
-    accent: "system",
     annotationColors: [],
     autoZoom: true,
     backgroundPresets: [],
@@ -127,7 +138,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     toolbarPosition: null,
   };
   const defaults: ShortcutDefaults = {
-    glide: { ...glide },
+    glide: { ...glide, windowGap: 0 },
     ocr: { bindings: { ...ocr.bindings }, enabled: ocr.enabled },
     ruler: { bindings: { ...ruler.bindings }, enabled: ruler.enabled },
     shortcuts: {
@@ -136,7 +147,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   };
   return {
     ...momentsPreviewApi(),
-    ...transcriptionPreviewApi(),
+    ...transcriptionPreviewApi(modelSeed),
     beginShortcutCapture: () => Promise.resolve(null),
     browseDefaultLocation: (kind) =>
       Promise.resolve(
@@ -189,15 +200,24 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   };
 }
 
-const meta = {
+// What every Settings story shares: the window at its configured size, a
+// settings API that keeps changes in memory, and a pane picked by the story.
+export const settingsWindowMeta = {
   component: SettingsWindow,
   decorators: [featureStage({ window: "settings" })],
   parameters: {
-    controls: { exclude: ["updateSetting"] },
+    // Each pane is its own story, so the pane is not a control.
+    controls: { exclude: ["initialSection", "updateSetting"] },
     layout: "fullscreen",
   },
-  render: function Render(args) {
-    const [api] = useState(createPreviewApi);
+  // A story picks where the models start through `parameters.modelSeed`,
+  // since it is the preview's state rather than the window's props.
+  render: function Render(args, { parameters }) {
+    const [api] = useState(() =>
+      createPreviewApi(
+        isModelSeed(parameters.modelSeed) ? parameters.modelSeed : undefined,
+      ),
+    );
     const [checked, setChecked] = useState(false);
     return (
       <SettingsApiContext value={api}>
@@ -220,62 +240,4 @@ const meta = {
       </SettingsApiContext>
     );
   },
-  title: "Features/Settings/Settings Window",
 } satisfies Meta<typeof SettingsWindow>;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {};
-
-export const Glide: Story = { args: { initialSection: "glide" } };
-export const Ruler: Story = { args: { initialSection: "ruler" } };
-export const Annotate: Story = { args: { initialSection: "annotate" } };
-export const Ocr: Story = { args: { initialSection: "ocr" } };
-export const Moments: Story = { args: { initialSection: "moments" } };
-export const Models: Story = {
-  args: { initialSection: "transcription" },
-};
-export const Shortcuts: Story = { args: { initialSection: "hotkeys" } };
-
-export const UpdateAvailable: Story = {
-  args: {
-    updateSetting: (
-      <SoftwareUpdateSetting
-        currentVersion="0.1.0"
-        error={null}
-        onPress={() => undefined}
-        status="available"
-        updateVersion="1.0.0"
-      />
-    ),
-  },
-};
-
-export const UpdateChecking: Story = {
-  args: {
-    updateSetting: (
-      <SoftwareUpdateSetting
-        currentVersion="0.1.0"
-        error={null}
-        onPress={() => undefined}
-        status="checking"
-        updateVersion={null}
-      />
-    ),
-  },
-};
-
-export const UpdateError: Story = {
-  args: {
-    updateSetting: (
-      <SoftwareUpdateSetting
-        currentVersion="0.1.0"
-        error="Could not reach the update server."
-        onPress={() => undefined}
-        status="error"
-        updateVersion={null}
-      />
-    ),
-  },
-};
