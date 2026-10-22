@@ -54,8 +54,11 @@ export function featureStage<TArgs = Args>(
 
     if (context.viewMode === "docs") {
       return (
+        // Centred, as on the canvas; a frame wider than the column starts at
+        // its edge and scrolls instead, since an auto margin does not go
+        // below zero.
         <div className="max-w-full overflow-auto p-6">
-          <div className="shrink-0" style={{ height, width }}>
+          <div className="mx-auto shrink-0" style={{ height, width }}>
             <Story />
           </div>
         </div>

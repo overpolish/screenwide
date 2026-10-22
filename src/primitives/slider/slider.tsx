@@ -127,7 +127,7 @@ function TrackSlider({
     <AriaSlider
       {...props}
       className={cn(
-        "group flex w-full cursor-default items-center data-[disabled]:opacity-40",
+        "group flex w-full cursor-default items-center transition-opacity data-[disabled]:opacity-40",
         className,
       )}
       // Controlled, React Aria reports every pointer move, whether or not

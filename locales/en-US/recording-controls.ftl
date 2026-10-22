@@ -33,6 +33,15 @@ recording-controls-replay =
        *[other] Replay buffer, keeps the last { $seconds } seconds
     }
 
+# The island's switch for the replay buffer, in its recording options.
+recording-controls-island-replay = Replay buffer
+recording-controls-island-replay-length =
+    { $seconds ->
+        [one] Keeps the last { $seconds } second
+       *[other] Keeps the last { $seconds } seconds
+    }
+recording-controls-island-replay-starting = Starting
+
 ## Inputs: camera, microphone and system audio
 
 recording-controls-camera = Camera
@@ -86,3 +95,49 @@ recording-controls-recording-note = Recording a { $moment } voice note
 recording-controls-moment-placed = { $moment } moment placed
 recording-controls-note-no-microphone = No microphone for a voice note
 recording-controls-note-no-microphone-short = No mic
+
+## Island: the recording controls as one shape at the top of the screen that
+## grows into whatever is being chosen and becomes the dock while recording.
+
+recording-controls-island = Recording controls
+recording-controls-island-source = Choose what to record
+recording-controls-island-pick-window = Click a window to record it.
+recording-controls-island-pick-region = Select a region of the screen to record.
+# Beside the window picked to be recorded; picks another on the screen.
+recording-controls-island-change-window = Change Window
+# Beside the region selected to be recorded; selects another on the screen.
+recording-controls-island-change-region = Change Region
+# The size of the area to be recorded, in pixels.
+recording-controls-island-region-size = { $width } × { $height }
+# Under the area's size, when it lies on more than one display.
+recording-controls-island-region-displays =
+    { $count ->
+        [one] On { $count } display
+       *[other] Across { $count } displays
+    }
+# The island's mode that records no screen, only the inputs that are on.
+recording-controls-island-mode-none = No Screen
+# In the No Screen mode, what will be recorded, from the inputs that are on;
+# with none on, what to do instead.
+recording-controls-island-no-screen =
+    { $inputs ->
+        [camera] Only your camera is recorded.
+        [microphone] Only your microphone is recorded.
+        [system-audio] Only your system audio is recorded.
+        [camera-microphone] Your camera and microphone are recorded.
+        [camera-system-audio] Your camera and system audio are recorded.
+        [microphone-system-audio] Your microphone and system audio are recorded.
+        [all] Your camera, microphone and system audio are recorded.
+       *[none] Switch on an input to record without the screen.
+    }
+recording-controls-island-input-options = { $input } options
+recording-controls-island-camera-locked = Screenwide can’t use your camera.
+recording-controls-island-microphone-locked = Screenwide can’t use your microphone.
+recording-controls-island-screen-locked = Screenwide needs permission to record your screen.
+recording-controls-island-microphone-silent = Your microphone hears nothing.
+recording-controls-island-choose-another = Choose another
+recording-controls-island-elapsed = Recording for { $time }
+recording-controls-island-paused = Paused at { $time }
+recording-controls-island-choose-window = Choose a Window
+recording-controls-island-choose-region = Choose a Region
+recording-controls-island-record-options = Recording options

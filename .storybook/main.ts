@@ -101,11 +101,16 @@ const nativePreviewPreset = fileURLToPath(
   new URL("./native-preview-preset.ts", import.meta.url),
 );
 
+const notchPreset = fileURLToPath(
+  new URL("./notch-preset.ts", import.meta.url),
+);
+
 const config: StorybookConfig = {
   addons: [
     nativePreviewPreset,
     "@storybook/addon-docs",
     "@storybook/addon-themes",
+    notchPreset,
   ],
   framework: {
     name: "@storybook/react-vite",

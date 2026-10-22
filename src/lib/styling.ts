@@ -9,8 +9,11 @@ export function cn(...classes: ClassValue[]) {
   return twMerge(clsx(classes));
 }
 
+// The focus ring's transition, which every control shares and which comes
+// last in their classes, so it is the transition they keep. It carries
+// opacity too, so a control fades into and out of its disabled state.
 export const focusStyles =
-  "outline-none ring-focus transition-[box-shadow,background-color,color,border-color]";
+  "outline-none ring-focus transition-[box-shadow,background-color,color,border-color,opacity]";
 
 // Interactive elements where focus is not required on non-keyboard
 // interaction, e.g. buttons: a 3px halo from the control's edge, no gap.

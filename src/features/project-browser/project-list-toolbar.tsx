@@ -109,7 +109,7 @@ export function ProjectListToolbar({
               ? t("project-browser-selected-count", { count: selected.length })
               : t("project-browser-project-count", { count: listed.length })}
           </Badge>
-          {bytes > 0 ? <Badge>{formatBytes(bytes)}</Badge> : null}
+          <Badge isShown={bytes > 0}>{formatBytes(bytes)}</Badge>
         </div>
         {selected.length > 0 ? null : listActions}
       </div>

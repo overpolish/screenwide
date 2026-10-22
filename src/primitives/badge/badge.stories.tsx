@@ -10,9 +10,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   argTypes: {
     children: { control: "text" },
+    isShown: {
+      control: "boolean",
+      table: { defaultValue: { summary: "true" } },
+    },
   },
   args: {
     children: "Optional",
+    isShown: true,
   },
   component: Badge,
   parameters: {

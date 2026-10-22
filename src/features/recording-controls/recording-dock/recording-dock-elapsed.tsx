@@ -5,7 +5,6 @@ import { Mic, MicOff } from "lucide-react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
-import { ContentRotate } from "../../../primitives/content-rotate/content-rotate";
 
 import { RecordingDockMeter } from "./recording-dock-meter";
 
@@ -82,23 +81,6 @@ function MomentShown({
   );
 }
 
-/**
- * Rotates each digit on its own, so a tick only animates what actually
- * changed: 58 to 59 moves the units alone, while 59 to 00 moves both. Rotating
- * the pair as one unit would swing the tens digit on every single second.
- */
-function RotatingDigits({ value }: { value: string }) {
-  const leading = value.slice(0, -1);
-  const last = value.slice(-1);
-
-  return (
-    <>
-      <ContentRotate contentKey={leading}>{leading}</ContentRotate>
-      <ContentRotate contentKey={last}>{last}</ContentRotate>
-    </>
-  );
-}
-
 /** The timer, which a placed moment's kind replaces for a moment, in the
  * slot the timer already holds so the pill never changes width. */
 export function RecordingDockElapsed({
@@ -118,14 +100,7 @@ export function RecordingDockElapsed({
   seconds: string;
 }) {
   return (
-    <ContentRotate
-      containerClassName="w-full"
-      contentKey={
-        moment
-          ? `moment-${moment.key.toString()}-${moment.noteMs !== null ? "note" : moment.noMicrophone ? "none" : "kind"}`
-          : "timer"
-      }
-    >
+    <div className="w-full">
       {moment ? (
         <MomentShown moment={moment} noteDecibels={noteDecibels} />
       ) : (
@@ -134,15 +109,13 @@ export function RecordingDockElapsed({
             "flex justify-center transition-colors",
             isPaused && "text-content-fg-secondary",
           )}
-          // A clock reads left to right in every language; its digits are
-          // laid out one by one, so they would otherwise run backwards.
+          // A clock reads left to right in every language, hours first,
+          // so it keeps that order in a right-to-left layout.
           dir="ltr"
         >
-          <RotatingDigits value={hours} />:
-          <RotatingDigits value={minutes} />:
-          <RotatingDigits value={seconds} />
+          {hours}:{minutes}:{seconds}
         </div>
       )}
-    </ContentRotate>
+    </div>
   );
 }

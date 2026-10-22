@@ -18,7 +18,7 @@ const listBoxItemVariants = tv({
   base: [
     "relative flex h-control-height shrink-0 cursor-default items-center gap-inline truncate rounded-part px-inset-sm text-body text-fg outline-none",
     "data-[focus-visible]:bg-fill data-[hovered]:bg-fill data-[pressed]:bg-fill-strong",
-    "data-[disabled]:opacity-40",
+    "transition-opacity data-[disabled]:opacity-40",
   ],
 });
 

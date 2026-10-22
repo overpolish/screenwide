@@ -240,26 +240,24 @@ export function ExportPreviewCompare({
           >
             {t("editor-export-preview-original")}
           </Badge>
-          {exported ? (
-            <Badge
-              className={cn(
-                "pointer-events-none absolute end-control top-control backdrop-blur-sm",
-                appearanceOver("topEnd"),
-              )}
-            >
-              {t("editor-export-preview-export")}
-            </Badge>
-          ) : null}
-          {failed ? (
-            <Badge
-              className={cn(
-                "pointer-events-none absolute end-control bottom-control backdrop-blur-sm",
-                appearanceOver("bottomEnd"),
-              )}
-            >
-              {t("editor-export-preview-failed")}
-            </Badge>
-          ) : null}
+          <Badge
+            className={cn(
+              "pointer-events-none absolute end-control top-control backdrop-blur-sm",
+              appearanceOver("topEnd"),
+            )}
+            isShown={Boolean(exported)}
+          >
+            {t("editor-export-preview-export")}
+          </Badge>
+          <Badge
+            className={cn(
+              "pointer-events-none absolute end-control bottom-control backdrop-blur-sm",
+              appearanceOver("bottomEnd"),
+            )}
+            isShown={failed}
+          >
+            {t("editor-export-preview-failed")}
+          </Badge>
         </>
       ) : failed ? (
         <div className="absolute inset-0 flex items-center justify-center p-section">

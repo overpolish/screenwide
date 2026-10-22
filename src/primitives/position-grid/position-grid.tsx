@@ -74,7 +74,7 @@ export function PositionGrid<T extends string>({
     <div dir="ltr" onKeyDownCapture={moveRow} ref={frameRef}>
       <RadioGroup
         aria-labelledby={ariaLabelledBy}
-        className="grid w-fit grid-cols-3 gap-0.5 rounded-control bg-fill p-0.5 data-[disabled]:opacity-40"
+        className="grid w-fit grid-cols-3 gap-0.5 rounded-control bg-fill p-0.5 transition-opacity data-[disabled]:opacity-40"
         isDisabled={isDisabled}
         onChange={(id) => {
           onChange(id as T);

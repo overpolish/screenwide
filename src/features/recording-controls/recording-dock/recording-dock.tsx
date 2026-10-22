@@ -12,7 +12,6 @@ import {
   IconToggleButton,
 } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
-import { ContentRotate } from "../../../primitives/content-rotate/content-rotate";
 import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { formatElapsedTime } from "../elapsed-time";
 import { RecordingStatus } from "../types";
@@ -148,12 +147,9 @@ export function RecordingDock({
             role="status"
           >
             {status === "starting" && countdownSeconds > 0 ? (
-              <ContentRotate
-                className="flex items-center justify-center text-title tabular-nums"
-                contentKey={String(countdownSeconds)}
-              >
+              <span className="flex items-center justify-center text-title tabular-nums">
                 {countdownSeconds}
-              </ContentRotate>
+              </span>
             ) : (
               <div className="flex items-center justify-center gap-control-inset text-body">
                 <CircularProgress isIndeterminate size="small" />

@@ -39,6 +39,9 @@
   /* A mark on a knob's face, such as the angle dial's dot: the warm black in
      both appearances, since a knob is light in both. */
   --color-on-knob: oklch(26% 0.012 47.6);
+  /* The island's black, which is the notch's: the same in both appearances,
+     as the island has to read as part of the hardware it meets. */
+  --color-island: oklch(0% 0 0);
   /* One of a set chosen in place (a chosen style, a selected range): a grey
      surface with the text unchanged. */
   --color-selected: oklch(18% 0.01 47.6 / 12%);

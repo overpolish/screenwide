@@ -42,6 +42,10 @@
   --spacing-part-height: 1.125rem;
   /* A small selection mark's size: a checkbox, a radio. */
   --spacing-mark: 1rem;
+  /* An island control's size: the island stands at the top of the screen
+     beside the hardware, so its round controls are a size up from a
+     window's. */
+  --spacing-island-control: 2rem;
   /* Icon sizes, each matched to the text it sits beside: small beside a
      caption, the default beside body text and control labels, large for
      an icon that stands alone where it needs more presence. The extra-small

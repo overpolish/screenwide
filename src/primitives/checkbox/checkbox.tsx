@@ -50,7 +50,7 @@ export const Checkbox = ({
 }: CheckboxProps) => {
   return (
     <AriaCheckboxField {...props} className="contents">
-      <AriaCheckboxButton className="group inline-flex cursor-default items-start gap-inline text-body text-fg outline-none data-[disabled]:opacity-40">
+      <AriaCheckboxButton className="group inline-flex cursor-default items-start gap-inline text-body text-fg outline-none transition-opacity data-[disabled]:opacity-40">
         {({ isIndeterminate, isSelected }) => {
           const state = isIndeterminate
             ? "indeterminate"

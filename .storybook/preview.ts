@@ -255,10 +255,15 @@ const preview: Preview = {
             title: "Language",
           },
         },
+        // The notch on MacBooks, which the recording controls are laid out
+        // around when there is one. Switched by its own toolbar toggle
+        // (`notch-tool.tsx`), shown only on stories that set
+        // `parameters.notch`.
+        notch: { description: "MacBook notch" },
       },
   initialGlobals: isNativePreview
     ? {}
-    : { direction: "auto", locale: LANGUAGES[0] },
+    : { direction: "auto", locale: LANGUAGES[0], notch: "on" },
   parameters: {
     controls: {
       matchers: {

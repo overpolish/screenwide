@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { motion } from "motion/react";
+import { motion, PresenceContext } from "motion/react";
 import {
   ProgressBar as AriaProgressBar,
   ProgressBarProps,
@@ -84,43 +84,49 @@ export function CircularProgress({
           <circle className={track()} cx="50" cy="50" r={radius} />
 
           {isIndeterminate ? (
-            <motion.circle
-              animate={{
-                rotate: [0, 180, 360],
-                strokeDasharray: [
-                  `${(circumference * 0.1).toString()} ${circumference.toString()}`,
-                  `${(circumference * 0.25).toString()} ${circumference.toString()}`,
-                  `${(circumference * 0.1).toString()} ${circumference.toString()}`,
-                ],
-                strokeDashoffset: [
-                  circumference * 0.45,
-                  circumference * 0.67,
-                  circumference * 0.45,
-                ],
-              }}
-              className={progress()}
-              cx="50"
-              cy="50"
-              r={radius}
-              style={{ transformOrigin: "50% 50%" }}
-              transition={{
-                rotate: {
-                  duration: ANIMATION_DURATION,
-                  ease: "linear",
-                  repeat: Infinity,
-                },
-                strokeDasharray: {
-                  duration: ANIMATION_DURATION,
-                  ease: "easeInOut",
-                  repeat: Infinity,
-                },
-                strokeDashoffset: {
-                  duration: ANIMATION_DURATION,
-                  ease: "easeInOut",
-                  repeat: Infinity,
-                },
-              }}
-            />
+            // The spin is the ring's whole life, not an entrance, so it runs
+            // wherever the ring is placed: an `AnimatePresence` with
+            // `initial={false}` above it would otherwise block its first and
+            // only animation, and the ring would stand still.
+            <PresenceContext value={null}>
+              <motion.circle
+                animate={{
+                  rotate: [0, 180, 360],
+                  strokeDasharray: [
+                    `${(circumference * 0.1).toString()} ${circumference.toString()}`,
+                    `${(circumference * 0.25).toString()} ${circumference.toString()}`,
+                    `${(circumference * 0.1).toString()} ${circumference.toString()}`,
+                  ],
+                  strokeDashoffset: [
+                    circumference * 0.45,
+                    circumference * 0.67,
+                    circumference * 0.45,
+                  ],
+                }}
+                className={progress()}
+                cx="50"
+                cy="50"
+                r={radius}
+                style={{ transformOrigin: "50% 50%" }}
+                transition={{
+                  rotate: {
+                    duration: ANIMATION_DURATION,
+                    ease: "linear",
+                    repeat: Infinity,
+                  },
+                  strokeDasharray: {
+                    duration: ANIMATION_DURATION,
+                    ease: "easeInOut",
+                    repeat: Infinity,
+                  },
+                  strokeDashoffset: {
+                    duration: ANIMATION_DURATION,
+                    ease: "easeInOut",
+                    repeat: Infinity,
+                  },
+                }}
+              />
+            </PresenceContext>
           ) : null}
 
           {percentage !== undefined && !isIndeterminate ? (

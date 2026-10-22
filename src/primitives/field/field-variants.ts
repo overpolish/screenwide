@@ -23,7 +23,7 @@ import { tv } from "../../lib/variants";
 export const fieldVariants = tv({
   defaultVariants: { material: "sunken" },
   slots: {
-    base: "group flex min-w-0 flex-col gap-inline data-[disabled]:opacity-40",
+    base: "group flex min-w-0 flex-col gap-inline transition-opacity data-[disabled]:opacity-40",
     field: [
       "relative flex h-control-height flex-row items-center rounded-control text-fg outline-none",
       focusStyles,

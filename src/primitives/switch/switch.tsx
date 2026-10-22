@@ -54,7 +54,7 @@ export const Switch = ({ children, className, ...props }: SwitchProps) => {
     <AriaSwitchField {...props} className="contents">
       <AriaSwitchButton
         className={cn(
-          "group inline-flex cursor-default items-center gap-inline text-body text-fg outline-none data-[disabled]:opacity-40",
+          "group inline-flex cursor-default items-center gap-inline text-body text-fg outline-none transition-opacity data-[disabled]:opacity-40",
           className,
         )}
       >
