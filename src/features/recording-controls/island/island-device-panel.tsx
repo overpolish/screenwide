@@ -10,6 +10,7 @@ import { cn } from "../../../lib/styling";
 import { IslandListRow } from "../../../primitives/island/island-controls";
 import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
 import { Switch } from "../../../primitives/switch/switch";
+import { Text } from "../../../primitives/text/text";
 
 import { INPUT_GLYPHS, inputName } from "./island-names";
 
@@ -135,7 +136,7 @@ export function DevicePanel({
       )}
     >
       <div className="flex items-center justify-between gap-separate px-inset-sm">
-        <p className="text-label text-fg">{inputName(kind)}</p>
+        <Text variant="label">{inputName(kind)}</Text>
         <Switch
           aria-label={inputName(kind)}
           isSelected={input.isOn}
@@ -172,7 +173,9 @@ export function DevicePanel({
         </span>
       ) : null}
       {input.warning ? (
-        <p className="px-inset-sm text-caption text-error">{input.warning}</p>
+        <Text className="px-inset-sm text-error" variant="caption">
+          {input.warning}
+        </Text>
       ) : null}
       {/* About six devices show; more scroll, so a long list never pushes
           the island down the screen. */}

@@ -9,6 +9,7 @@ import {
 
 import { t } from "../../i18n/i18n";
 import { tv } from "../../lib/variants";
+import { Text } from "../text/text";
 
 // A list lives in a native panel window, which supplies the material, so it
 // draws no surface of its own. As in a native menu it pads the panel by the
@@ -35,9 +36,12 @@ export const ListBox = <T extends object>({
     <AriaListBox
       ref={ref}
       renderEmptyState={() => (
-        <span className="flex h-control-height items-center justify-center px-inset-sm text-body opacity-40">
+        <Text
+          as="span"
+          className="flex h-control-height items-center justify-center px-inset-sm opacity-40"
+        >
           {t("controls-no-items")}
-        </span>
+        </Text>
       )}
       {...props}
       className={listBoxVariants({ className })}

@@ -16,6 +16,11 @@ export type IslandAnchor = "center" | "end" | "start";
 export const ISLAND = {
   /** The curved inner corner where the section meets the row. */
   fillet: 14,
+  /** Under a notch, how far the island's top flares out into the screen's
+   * top edge on each side: out, enough to read as flowing from the bezel;
+   * tucked away, the notch's own shoulders, so it lines up with them. */
+  flare: 12,
+  hiddenFlare: 6,
   /** The corners once tucked away: the notch's own, or a speck's. */
   hiddenNotchRadius: 10,
   hiddenRadius: 6,
@@ -41,25 +46,6 @@ export const ISLAND = {
 } as const;
 
 export const px = (value: number) => `${String(value)}px`;
-
-/** The section's curves, in its box: a size container as tall as its black,
- * which reaches up behind the row by `reach`, the row's corner radius. A
- * side that meets the row's end keeps the section's corner whole; it is the
- * row's corner carried down as the section grows, and back up as it folds.
- * On an open side, once what shows below the row is shorter than the corner
- * and a join together, the two shrink in step with it, so the outline stays
- * one smooth S, the join curving in and the corner out, rather than the
- * corner pinching the join to a point. */
-export function islandCurves(reach: number) {
-  const shown = `(100cqh - ${px(reach)})`;
-  const share = (radius: number) =>
-    `max(0px, min(${px(radius)}, calc(${shown} * ${String(radius / (ISLAND.fillet + ISLAND.sectionRadius))})))`;
-  return {
-    fillet: share(ISLAND.fillet),
-    meeting: `min(${px(ISLAND.sectionRadius)}, 100cqh)`,
-    open: share(ISLAND.sectionRadius),
-  };
-}
 
 /** What content in the island reads from its root: how far in the section
  * holds it, and the corner a list's last row takes to sit concentric with

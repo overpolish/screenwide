@@ -12,6 +12,7 @@ import {
 } from "../../../lib/motion";
 import { cn } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
+import { Text } from "../../../primitives/text/text";
 
 import { ModeIcon } from "./island-glyphs";
 import { modeName } from "./island-names";
@@ -44,7 +45,7 @@ export function ModeCards({
         <button
           aria-checked={mode === item}
           className={cn(
-            "relative flex flex-col items-center rounded-control py-2 text-caption transition-colors",
+            "relative flex flex-col items-center rounded-control py-2 transition-colors",
             mode === item
               ? "text-on-primary"
               : "text-fg-secondary hover:bg-fill hover:text-fg",
@@ -76,7 +77,12 @@ export function ModeCards({
               crossing a mode on its way does not cover its name. */}
           <span className="relative z-10 flex flex-col items-center gap-1">
             <ModeIcon className="size-icon" mode={item} />
-            {modeName(item)}
+            <Text
+              as="span"
+              className={mode === item ? "text-on-primary" : undefined}
+            >
+              {modeName(item)}
+            </Text>
           </span>
         </button>
       ))}
@@ -127,12 +133,9 @@ export function DisplayGrid({
               />
             ) : null}
           </span>
-          <p
-            className="truncate text-center text-caption text-fg-tertiary"
-            dir="auto"
-          >
+          <Text className="truncate text-center" dir="auto">
             {display.label}
-          </p>
+          </Text>
         </button>
       ))}
     </div>
@@ -170,15 +173,15 @@ export function ChosenRow({
     <div className="flex items-center gap-separate rounded-control bg-fill px-inset py-separate">
       {picture}
       <div className="flex min-w-0 grow flex-col">
-        <p
-          className="truncate text-body text-fg tabular-nums"
+        <Text
+          className="truncate tabular-nums"
           dir={isTitleDirectional ? "auto" : undefined}
         >
           {title}
-        </p>
-        <p className="truncate text-caption text-fg-tertiary" dir="auto">
+        </Text>
+        <Text className="truncate" dir="auto" variant="caption">
           {detail}
-        </p>
+        </Text>
       </div>
       <Button className="shrink-0" onPress={onAction}>
         {action}
@@ -199,7 +202,7 @@ export function PromptRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-separate rounded-control bg-fill px-inset py-separate">
-      <p className="text-body text-fg-secondary">{prompt}</p>
+      <Text>{prompt}</Text>
       <Button className="shrink-0" onPress={onAction}>
         {action}
       </Button>

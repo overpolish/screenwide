@@ -1,8 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, animate, motion } from "motion/react";
+import {
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Toolbar } from "react-aria-components";
 
 import { motionDurations } from "../../lib/motion";
@@ -14,7 +21,6 @@ import {
   type IslandAnchor,
   islandCssVariables,
   type IslandNotch,
-  px,
 } from "./island-geometry";
 import { islandLayout } from "./island-layout";
 import {
@@ -25,6 +31,7 @@ import {
   morph,
 } from "./island-motion";
 import { useOpening } from "./island-opening";
+import { useIslandOutline, useIslandShapeValues } from "./island-outline-sync";
 import { useRowOffset } from "./island-row-offset";
 import { IslandSection } from "./island-section";
 import { useSize } from "./island-size";
@@ -32,13 +39,15 @@ import { useSize } from "./island-size";
 // A shape at the top of the screen in the notch's black: a row of controls,
 // and beneath it a section only as wide as what it holds, hung under the
 // part of the row it belongs to. Where the two meet the black flows round a
-// curved inner corner, so it reads as one shape. A section that would leave
-// only a sliver of row beside it takes the row's width instead, and one
-// wider than the row widens the row with it. Each part grows by changing its
-// real size, so what it holds is laid out once, in its place, and only
-// revealed as the shape opens around it. Around a notch each side of the row
-// is only as wide as it needs, and the whole shape moves sideways by half
-// the difference so the notch stays over its gap. Hidden, it tucks into the
+// curved inner corner, so it reads as one shape, and it is drawn as one: an
+// outline worked out from where its parts are (`island-outline.ts`), so no
+// seam can open between them. A section that would leave only a sliver of
+// row beside it takes the row's width instead, and one wider than the row
+// widens the row with it. Each part grows by changing its real size, so
+// what it holds is laid out once, in its place, and only revealed as the
+// shape opens around it. Around a notch each side of the row is only as
+// wide as it needs, and the whole shape moves sideways by half the
+// difference so the notch stays over its gap. Hidden, it tucks into the
 // notch, or shrinks to a speck and fades where there is none.
 //
 // The row is a toolbar: arrow keys move between its controls. The section is
@@ -109,7 +118,7 @@ export function Island({
     rowSize,
     sectionSize,
   });
-  const { isOpen, radius, rowTarget, top, width } = layout;
+  const { flare, isOpen, radius, rowTarget, top, width } = layout;
   // A section opens out of the middle, and folds back into it, only as the
   // island comes out of the notch or goes back in.
   const isFromMiddle = !isShown || isComing;
@@ -122,6 +131,25 @@ export function Island({
     shiftTarget: isShown && notch ? shift : 0,
     width,
   });
+
+  // The parts are laid out and animated as boxes that paint nothing; the
+  // black is their outline, drawn from the same animated values.
+  const values = useIslandShapeValues({ flare, radius, top });
+  useLayoutEffect(() => {
+    const corners = [
+      animate(values.flare, flare, curve),
+      animate(values.radius, radius, curve),
+      animate(values.top, top, curve),
+    ];
+    return () => {
+      corners.forEach((corner) => {
+        corner.stop();
+      });
+    };
+  }, [curve, flare, radius, top, values]);
+  const rowPathRef = useRef<SVGPathElement>(null);
+  const shapePathRef = useRef<SVGPathElement>(null);
+  useIslandOutline({ rowPathRef, shapePathRef, values, width: shapeWidth });
 
   return (
     // The frame only centres the island; hover is read from the island's
@@ -144,31 +172,38 @@ export function Island({
             always drawn dark. */}
         <motion.div
           aria-hidden={!isShown}
-          // Its own stacking context, so the section, drawn behind the row,
-          // stays in front of whatever the island sits on.
-          className={cn(
-            "dark relative isolate text-fg",
-            isShown && "drop-shadow-xl",
-          )}
+          className="dark relative text-fg"
           style={{ x: islandX }}
         >
+          {/* The outline, under everything the island holds. It carries
+              the shadow itself, so what the island holds changing, as the
+              recording's time does each second, does not redraw it. Drawn
+              from the row's start, it is mirrored right to left. */}
+          <svg
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute start-0 top-0 h-px w-full overflow-visible fill-island rtl:-scale-x-100",
+              isShown && "drop-shadow-xl",
+            )}
+          >
+            <path ref={rowPathRef} />
+            <path ref={shapePathRef} />
+          </svg>
           <motion.div
             animate={{
-              // The row keeps its corners: a section that meets the row's
-              // end fills in under it from behind (`IslandSection`).
-              borderEndEndRadius: px(radius),
-              borderEndStartRadius: px(radius),
-              borderStartEndRadius: px(top),
-              borderStartStartRadius: px(top),
               height: rowTarget.height,
               opacity: isShown || notch ? 1 : 0,
             }}
-            className="relative overflow-hidden bg-island"
+            className="relative overflow-hidden"
             initial={false}
             onAnimationComplete={() => {
               setIsComing(false);
             }}
-            style={{ width: shapeWidth }}
+            style={{
+              height: values.row.height,
+              opacity: values.row.opacity,
+              width: shapeWidth,
+            }}
             transition={{
               ...curve,
               // Hidden without a notch, it fades once it has shrunk.
@@ -215,6 +250,7 @@ export function Island({
             onElement={setSectionElement}
             onOpened={finish}
             sectionX={sectionX}
+            values={values.section}
           >
             {section}
           </IslandSection>

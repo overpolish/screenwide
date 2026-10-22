@@ -12,6 +12,7 @@ import {
   IslandButton,
   IslandPrimaryButton,
 } from "../../../primitives/island/island-controls";
+import { Text } from "../../../primitives/text/text";
 
 // The island while it records: a countdown that can be pressed to cancel,
 // then a dot that pulses beside the time, with the controls opening under
@@ -180,9 +181,9 @@ export function Starting({ onCancel }: { onCancel?: () => void }) {
           size="small"
         />
       </span>
-      <span className="text-label text-fg" role="status">
+      <Text as="span" role="status" variant="label">
         {t("recording-controls-starting")}
-      </span>
+      </Text>
       <IslandButton
         aria-label={t("recording-controls-cancel-starting")}
         className={LIVE}
@@ -207,9 +208,9 @@ export function Finishing() {
           size="small"
         />
       </span>
-      <span className="text-label text-fg" role="status">
+      <Text as="span" role="status" variant="label">
         {t("recording-controls-finishing")}
-      </span>
+      </Text>
     </span>
   );
 }

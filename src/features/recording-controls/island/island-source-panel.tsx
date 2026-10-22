@@ -4,6 +4,7 @@
 import { useNumberFormatter } from "react-aria";
 
 import { t } from "../../../i18n/i18n";
+import { Text } from "../../../primitives/text/text";
 
 import {
   ChosenRow,
@@ -129,11 +130,11 @@ export function SourcePanel({
           />
         )
       ) : (
-        <p className="rounded-control bg-fill px-inset py-separate text-body text-fg-secondary">
+        <Text className="rounded-control bg-fill px-inset py-separate">
           {t("recording-controls-island-no-screen", {
             inputs: inputsOn(camera.isOn, microphone.isOn, systemAudio.isOn),
           })}
-        </p>
+        </Text>
       )}
     </div>
   );

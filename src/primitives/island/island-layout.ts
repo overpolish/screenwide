@@ -64,6 +64,8 @@ export function islandLayout({
       : ISLAND.hiddenRadius;
   return {
     closed,
+    /** Under a notch, how far the top flares out into the screen's edge. */
+    flare: notch ? (isShown ? ISLAND.flare : ISLAND.hiddenFlare) : 0,
     held,
     // While it opens or folds, what it holds is moved against the box so it
     // keeps its place and the black opens around it. Both move on one curve
@@ -71,12 +73,7 @@ export function islandLayout({
     inPlace: sectionStart + inset + closed / 2,
     inset,
     isOpen,
-    meetsEnd: isOpen && offset + sectionWidth > openWidth - 1,
-    meetsStart: isOpen && offset < 1,
     radius,
-    /** How far the section's black reaches up behind the row: the open
-     * row's corner radius, which it fills in under. */
-    reach: notch ? ISLAND.notchRadius : ISLAND.radius,
     rowTarget: isShown ? rowOpen : hidden,
     sectionStart,
     sectionWidth,

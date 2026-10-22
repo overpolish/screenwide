@@ -7,6 +7,7 @@ import { type ReactNode, type Ref } from "react";
 
 import { motionDurations, motionEasings } from "../../lib/motion";
 import { cn } from "../../lib/styling";
+import { Text } from "../text/text";
 
 // What the island's content is made of. Its controls are circles of one size,
 // a size up from a window's. Each is a native button so its tooltip is the
@@ -182,7 +183,9 @@ export function IslandWarning({
       <span className="flex shrink-0 text-error">
         <AlertCircle aria-hidden className="size-icon" />
       </span>
-      <p className="grow text-label text-fg">{message}</p>
+      <Text className="grow" variant="label">
+        {message}
+      </Text>
       {action ? (
         <button
           className="h-control-height shrink-0 rounded-full bg-fill-strong px-inset text-label hover:bg-fill"

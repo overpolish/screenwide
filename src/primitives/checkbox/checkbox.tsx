@@ -10,6 +10,7 @@ import {
 } from "react-aria-components";
 
 import { cn, focusStyles, groupFocusVisible } from "../../lib/styling";
+import { Text } from "../text/text";
 
 // The box is drawn in the control material when off, as a neutral button
 // is, and in the primary fill when on, as everything checked or on is; both
@@ -83,9 +84,9 @@ export const Checkbox = ({
               {description ? (
                 <span className="flex min-w-0 flex-col">
                   <span>{children}</span>
-                  <span className="text-caption text-fg-secondary">
+                  <Text as="span" variant="caption">
                     {description}
-                  </span>
+                  </Text>
                 </span>
               ) : (
                 children
