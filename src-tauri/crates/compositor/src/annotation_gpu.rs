@@ -42,7 +42,7 @@ pub use captions::{
 /// A counter's number and a text box's lines are type, so they are
 /// rasterised rather than drawn by the shader.
 pub use counter_artwork::{numbered_arrows, CounterAtlas};
-pub use focus_region::FocusRegion;
+pub use focus_region::{FocusRegion, GpuFocusRegion, FOCUS_REACH_SHARE, FOCUS_WIDEST_SHARE};
 /// An image's picture is drawn into an atlas of its own, in colour.
 pub(crate) use image_artwork::{place_images, ImageAtlas};
 pub use prepare::SourceAnnotations;

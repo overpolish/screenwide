@@ -19,19 +19,16 @@ const LOOKS = [
  * box, blurred as a camera's depth of field or dimmed as a spotlight's shade.
  * One tool for both, as both point at one box: the blur is the look, and the
  * dim keeps whatever moves behind the overlay live, where a blur can only
- * soften a still of the screen.
- *
- * Until the overlay draws a focus of its own the choice is held in the
- * spotlight's settings: blurred is `spotlightBlur`, dimmed is without it. */
+ * soften a still of the screen. Blurred draws a focus, dimmed a spotlight. */
 export function FocusPen({ onChange, ref, settings }: SectionProps) {
   return (
     <IslandCrossfade ref={ref}>
       <div className="flex gap-separate">
         <CornerChoice
-          onChange={(spotlightRadius) => {
-            onChange({ spotlightRadius });
+          onChange={(focusRadius) => {
+            onChange({ focusRadius });
           }}
-          value={settings.spotlightRadius}
+          value={settings.focusRadius}
         />
         <IslandChoice
           items={LOOKS.map(({ id, label }) => ({
@@ -41,9 +38,9 @@ export function FocusPen({ onChange, ref, settings }: SectionProps) {
           }))}
           label={t("annotation-outside")}
           onChange={(id) => {
-            onChange({ spotlightBlur: id === "blur" });
+            onChange({ focusDims: id === "dim" });
           }}
-          value={settings.spotlightBlur ? "blur" : "dim"}
+          value={settings.focusDims ? "dim" : "blur"}
         />
       </div>
     </IslandCrossfade>

@@ -55,11 +55,15 @@ pub fn is_active(app: &AppHandle) -> bool {
   app.state::<AnnotateState>().active_generation().is_some()
 }
 
-/// Whether the tool in hand points with the I-beam: the highlight selects the
-/// text it covers, where the other tools draw with the crosshair.
+/// Whether the tool in hand points with the I-beam: a highlight fitted to
+/// text selects the text it covers, where a highlight laid over a box and the
+/// other tools draw with the crosshair. Option held turns the highlight the
+/// other way, and the pointer with it.
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 fn text_cursor() -> bool {
-  settings::current().default_shape == screenwide_annotations::AnnotationKind::Highlight
+  let settings = settings::current();
+  settings.default_shape == screenwide_annotations::AnnotationKind::Highlight
+    && settings.highlight_manual == input::option_held()
 }
 
 /// The pointer following a tool picked up while drawing. The Windows overlay

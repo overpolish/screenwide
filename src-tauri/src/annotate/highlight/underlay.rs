@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The pixels a display's highlights are recoloured from, and its spotlights
+//! The pixels a display's highlights are recoloured from, and its focuses
 //! blur.
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::OnceLock;
 
 use screenwide_imaging::CapturedImage;
 
@@ -16,9 +15,6 @@ static REVISION: AtomicU64 = AtomicU64::new(1);
 pub(crate) struct Underlay {
   pub(crate) image: CapturedImage,
   pub(crate) revision: u64,
-  /// The image softened for the spotlights' blur, made the first time it is
-  /// asked for: most underlays are only ever recoloured by a highlight.
-  softened: OnceLock<CapturedImage>,
 }
 
 impl Underlay {
@@ -31,16 +27,7 @@ impl Underlay {
     Self {
       image,
       revision: REVISION.fetch_add(1, Ordering::Relaxed),
-      softened: OnceLock::new(),
     }
-  }
-
-  /// The underlay softened, at a fraction of its size, for the spotlights'
-  /// blur to stretch back over the display.
-  pub(crate) fn softened(&self) -> &CapturedImage {
-    self
-      .softened
-      .get_or_init(|| screenwide_annotations::spotlight::soften::soften(&self.image))
   }
 }
 

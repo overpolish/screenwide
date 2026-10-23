@@ -47,6 +47,6 @@ pub(super) const TOOL_KEYS: &[(u16, AnnotationKind)] = &[
   (KEY_N, AnnotationKind::Counter),
   (KEY_H, AnnotationKind::Highlight),
   (KEY_O, AnnotationKind::Shape),
-  (KEY_S, AnnotationKind::Spotlight),
+  (KEY_S, AnnotationKind::Focus),
   (KEY_D, AnnotationKind::Draw),
 ];

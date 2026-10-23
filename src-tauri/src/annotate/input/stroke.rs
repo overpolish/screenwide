@@ -7,6 +7,7 @@ use std::time::Instant;
 
 use screenwide_annotations::arrow::new_arrow;
 use screenwide_annotations::counter::new_counter;
+use screenwide_annotations::focus::model::{default_focus_style, new_focus};
 use screenwide_annotations::freehand::gesture::extend;
 use screenwide_annotations::freehand::hold::StrokeHold;
 use screenwide_annotations::freehand::model::{default_draw_style, new_draw};
@@ -56,18 +57,23 @@ impl Stroke {
   /// are different measurements of different things, so the width comes from
   /// the setting that belongs to the shape; a highlight has one marker, and a
   /// shape's pen is an arrow's. A highlight and a shape are each drawn by
-  /// hand by their own choice, and a spotlight has its own corners, fade and
-  /// blur. The pen wears an arrow's colour and weight and nothing else, as a
-  /// fresh stroke in the editor does. The overlay offers no text, redaction
-  /// or magnifier tool, and its settings refuse all three, so none ever
-  /// reaches here.
+  /// hand by their own choice. The focus has its own corners, blurred or
+  /// dimmed, and its dimmed look (a spotlight) its own fade. The pen wears an
+  /// arrow's colour and weight and nothing else, as a fresh stroke in the
+  /// editor does. The overlay offers no text, redaction or magnifier tool,
+  /// and its settings refuse all three, so none ever reaches here.
   pub(super) fn style(&self) -> AnnotationStyle {
     let settings = super::super::settings::current();
     let shape = self.shape == AnnotationKind::Shape;
+    if self.shape == AnnotationKind::Focus {
+      return AnnotationStyle {
+        radius: settings.focus_radius,
+        ..default_focus_style()
+      };
+    }
     if self.shape == AnnotationKind::Spotlight {
       return AnnotationStyle {
-        blur: settings.spotlight_blur,
-        radius: settings.spotlight_radius,
+        radius: settings.focus_radius,
         softness: settings.spotlight_softness,
         ..default_spotlight_style()
       };
@@ -149,6 +155,11 @@ impl Stroke {
         [self.start, self.end],
         Some(&style),
       )),
+      AnnotationKind::Focus => Some(new_focus(
+        self.id.clone(),
+        [self.start, self.end],
+        Some(&style),
+      )),
       // The line is kept as it is drawn; the dress is still read every frame,
       // while what a held stroke was taken for keeps its own head and corners.
       AnnotationKind::Draw => self.line.clone().map(|mut line| {
@@ -160,22 +171,22 @@ impl Stroke {
       AnnotationKind::Text
       | AnnotationKind::Redact
       | AnnotationKind::Magnify
-      | AnnotationKind::Image
-      | AnnotationKind::Focus => None,
+      | AnnotationKind::Image => None,
     }
   }
 
-  /// Whether the stroke has anything to show. An arrow, a shape or a
-  /// spotlight with both ends in one place is a blob, and the press that
-  /// starts every stroke would flash one before the drag begins; so would a
+  /// Whether the stroke has anything to show. An arrow, a shape or a focus
+  /// with both ends in one place is a blob, and the press that starts every
+  /// stroke would flash one before the drag begins; so would a
   /// pen stroke of one point. A counter is an annotation the moment it is
   /// dropped. A highlight has nothing to recolour until the desktop under it
   /// is read.
   pub(super) fn is_drawn(&self) -> bool {
     match self.shape {
-      AnnotationKind::Arrow | AnnotationKind::Shape | AnnotationKind::Spotlight => {
-        self.start != self.end
-      }
+      AnnotationKind::Arrow
+      | AnnotationKind::Shape
+      | AnnotationKind::Spotlight
+      | AnnotationKind::Focus => self.start != self.end,
       AnnotationKind::Highlight => {
         self.start != self.end && super::super::highlight::ready(&self.id)
       }
@@ -187,8 +198,7 @@ impl Stroke {
       AnnotationKind::Text
       | AnnotationKind::Redact
       | AnnotationKind::Magnify
-      | AnnotationKind::Image
-      | AnnotationKind::Focus => false,
+      | AnnotationKind::Image => false,
     }
   }
 

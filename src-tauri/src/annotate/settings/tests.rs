@@ -98,3 +98,16 @@ fn settings_without_the_newer_fields_take_their_defaults() {
   assert!(!settings.highlight_manual);
   assert!(validated(settings).is_ok());
 }
+
+/// The spotlight is the focus's dimmed look: a stored file that had it in
+/// hand picks up the focus, dimmed, rather than being refused or blurring.
+#[test]
+fn a_stored_spotlight_loads_as_the_focus_dimmed() {
+  let settings: AnnotateSettings = serde_json::from_str(
+    r##"{"defaultShape":"spotlight","spotlightBlur":true,"spotlightRadius":20.0}"##,
+  )
+  .unwrap();
+  let settings = validated(settings).unwrap();
+  assert_eq!(settings.default_shape, AnnotationKind::Focus);
+  assert!(settings.focus_dims);
+}

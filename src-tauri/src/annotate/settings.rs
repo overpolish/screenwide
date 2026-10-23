@@ -70,13 +70,15 @@ pub struct AnnotateSettings {
   /// How round a fresh shape's corners are, as a percentage of its shorter
   /// side from 0 to 50: a square rounded all the way is a circle.
   pub shape_radius: f64,
-  /// Whether a fresh spotlight also blurs what lies outside it.
-  pub spotlight_blur: bool,
-  /// How round a fresh spotlight's corners are, as a percentage of its
-  /// shorter side from 0 to 50.
-  pub spotlight_radius: f64,
-  /// How far a fresh spotlight's edge fades, as a percentage of its shorter
-  /// side from 0 to 50.
+  /// How a fresh focus treats what lies around its box: dimmed, as a
+  /// spotlight's shade, rather than blurred, as a camera's depth of field.
+  /// The focus is one tool, so this is the look it keeps between uses.
+  pub focus_dims: bool,
+  /// How round a fresh focus's corners are, blurred or dimmed, as a
+  /// percentage of its shorter side from 0 to 50.
+  pub focus_radius: f64,
+  /// How far a dimmed focus's edge fades, as a percentage of its shorter side
+  /// from 0 to 50.
   pub spotlight_softness: f64,
 }
 
@@ -96,8 +98,8 @@ impl Default for AnnotateSettings {
       highlight_tint: false,
       shape_hand_drawn: false,
       shape_radius: 0.0,
-      spotlight_blur: false,
-      spotlight_radius: screenwide_annotations::spotlight::model::NEW_SPOTLIGHT_RADIUS,
+      focus_dims: false,
+      focus_radius: screenwide_annotations::focus::model::NEW_FOCUS_RADIUS,
       spotlight_softness: screenwide_annotations::spotlight::model::NEW_SPOTLIGHT_SOFTNESS,
     }
   }
@@ -123,9 +125,14 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     AnnotationKind::Text | AnnotationKind::Redact | AnnotationKind::Magnify | AnnotationKind::Image
   ) {
     return Err(
-      "The live overlay draws arrows, counters, highlights, shapes, spotlights and strokes"
-        .to_owned(),
+      "The live overlay draws arrows, counters, highlights, shapes, focuses and strokes".to_owned(),
     );
+  }
+  // The spotlight is the focus's dimmed look rather than a tool of its own,
+  // so settings kept from before the two were one pick up the focus, dimmed.
+  if settings.default_shape == AnnotationKind::Spotlight {
+    settings.default_shape = AnnotationKind::Focus;
+    settings.focus_dims = true;
   }
   if !settings.default_width.is_finite()
     || !(MIN_WIDTH..=MAX_WIDTH).contains(&settings.default_width)
@@ -144,8 +151,8 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
   if !share(settings.shape_radius) {
     return Err("That is not a shape radius".to_owned());
   }
-  if !share(settings.spotlight_radius) || !share(settings.spotlight_softness) {
-    return Err("That is not a spotlight radius or softness".to_owned());
+  if !share(settings.focus_radius) || !share(settings.spotlight_softness) {
+    return Err("That is not a focus radius or softness".to_owned());
   }
   settings.default_color = format!("#{digits}");
   Ok(settings)
@@ -225,7 +232,11 @@ pub fn set_annotate_settings(
   if !settings.enabled {
     super::disable(&app);
   }
-  if settings.default_shape != previous.default_shape {
+  // The pointer says which way a highlight is laid, so it follows the
+  // highlight's choice as well as the tool.
+  if settings.default_shape != previous.default_shape
+    || settings.highlight_manual != previous.highlight_manual
+  {
     super::follow_tool(&app);
   }
   crate::tray::refresh(&app);

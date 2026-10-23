@@ -21,15 +21,10 @@ import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 const EDIT_SETTLE_MS = 150;
 
 /** The settings a drag changes a step at a time, whose write can wait for
- * the pointer to settle. Everything else (the tool, the colour, the head) is
- * a single press, and has to reach the overlay before the next stroke does. */
-const DRAGGED_EDITS = new Set<keyof AnnotateSettings>([
-  "defaultCounterAngle",
-  "defaultCounterSize",
-  "defaultWidth",
-  "shapeRadius",
-  "spotlightRadius",
-]);
+ * the pointer to settle: the counter's aim, turned on a dial. Everything else
+ * is a single press, and has to reach the overlay before the next stroke
+ * does. */
+const DRAGGED_EDITS = new Set<keyof AnnotateSettings>(["defaultCounterAngle"]);
 
 const report = (action: string) => (cause: unknown) => {
   console.error(`Could not ${action}`, cause);

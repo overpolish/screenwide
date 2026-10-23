@@ -11,6 +11,7 @@ const MODULES: &[(&str, &[&str])] = &[
     "focus_blur",
     &[
       "src/shaders/focus_blur.wgsl",
+      "src/shaders/focus_falloff.wgsl",
       "../gpu/src/shaders/disc_blur.wgsl",
     ],
   ),

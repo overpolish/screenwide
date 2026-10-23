@@ -50,6 +50,7 @@ fn pointer(child: HWND, phase: u32, lparam: LPARAM) {
     phase,
     display.origin.0 + x / scale,
     display.origin.1 + y / scale,
+    pressed_modifiers(),
   );
   redraw();
 }
@@ -67,18 +68,28 @@ fn key(code: u16, modifiers: u32) -> bool {
   handled
 }
 
-/// The modifiers behind a key press.
+/// The modifiers behind a key press or a pointer step.
 fn pressed_modifiers() -> u32 {
   let down = |key: VIRTUAL_KEY| unsafe { GetKeyState(i32::from(key.0)) } < 0;
-  (if down(VK_CONTROL) {
-    input::MODIFIER_COMMAND
+  [
+    (VK_CONTROL, input::MODIFIER_COMMAND),
+    (VK_SHIFT, input::MODIFIER_SHIFT),
+    (VK_MENU, input::MODIFIER_OPTION),
+  ]
+  .into_iter()
+  .filter(|(key, _)| down(*key))
+  .fold(0, |modifiers, (_, bit)| modifiers | bit)
+}
+
+/// The pointer the tool in hand draws with: the highlight fitted to text
+/// selects it with the I-beam, everything else draws with the crosshair.
+fn set_tool_cursor() {
+  let cursor = if super::super::super::text_cursor() {
+    IDC_IBEAM
   } else {
-    0
-  }) | (if down(VK_SHIFT) {
-    input::MODIFIER_SHIFT
-  } else {
-    0
-  })
+    IDC_CROSS
+  };
+  unsafe { SetCursor(LoadCursorW(None, cursor).ok()) };
 }
 
 pub(super) extern "system" fn window_proc(
@@ -102,16 +113,19 @@ pub(super) extern "system" fn window_proc(
     // Nothing is taken, and no cursor is set, while the annotations are only
     // being shown.
     _ if click_through => unsafe { DefWindowProcW(hwnd, message, wparam, lparam) },
-    // The highlight selects the text it covers, so it points with the I-beam;
-    // the other tools draw with the crosshair.
+    // The highlight fitted to text points with the I-beam; the other tools,
+    // and the highlight laid over a box, draw with the crosshair.
     WM_SETCURSOR => {
-      let cursor = if super::super::super::text_cursor() {
-        IDC_IBEAM
-      } else {
-        IDC_CROSS
-      };
-      unsafe { SetCursor(LoadCursorW(None, cursor).ok()) };
+      set_tool_cursor();
       LRESULT(1)
+    }
+    // Alt turns a highlight the other way, and the pointer shows which way.
+    // Swallowed, so letting it go does not start the menu bar's keyboard
+    // mode the overlay has no menu for.
+    WM_SYSKEYDOWN | WM_SYSKEYUP | WM_KEYUP if wparam.0 as u16 == VK_MENU.0 => {
+      input::set_option_held(message == WM_SYSKEYDOWN);
+      set_tool_cursor();
+      LRESULT(0)
     }
     WM_LBUTTONDOWN => {
       // Captured so a drag that leaves the display keeps reporting, and so the

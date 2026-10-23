@@ -24,9 +24,9 @@ pub(in crate::annotate) fn begin(app: &tauri::AppHandle, stroke: &str, point: An
   capture(app, point, Some(stroke.to_owned()));
 }
 
-/// A spotlight that blurs pressed at `point`: reads the display under it
-/// again, so the blur softens the desktop as it is now. Until the capture
-/// lands, and where it fails, the spotlight only shades.
+/// A focus pressed at `point`: reads the display under it again, so the blur
+/// softens the desktop as it is now. Until the capture lands, and where it
+/// fails, nothing around the focus blurs.
 pub(in crate::annotate) fn refresh(app: &tauri::AppHandle, point: AnnotationPoint) {
   capture(app, point, None);
 }

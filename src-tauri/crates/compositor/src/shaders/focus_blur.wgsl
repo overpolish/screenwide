@@ -7,19 +7,8 @@
 // upright screen it shows lies past a box's rounded edge and, on a screen
 // turned in depth, by how far past the box the screen sits; the background
 // lies beyond the screen and takes the whole blur, read as a disc from the
-// chain (`disc_blur.wgsl`).
-
-struct FocusRegion {
-  // The box's top-left and bottom-right corners, in source pixels.
-  box: vec4<f32>,
-  // The corner radius in source pixels, the strength from one to five, how
-  // present the box is this frame, and the inverse turn's weight at the
-  // box's middle, which the depth term measures from.
-  radius: f32,
-  strength: f32,
-  presence: f32,
-  reference: f32,
-}
+// chain (`disc_blur.wgsl`). The falloff past a box is `focus_falloff.wgsl`,
+// which the live overlay shares; a box is held there in source pixels.
 
 struct FocusConstants {
   // The canvas's size, then the source's.
@@ -50,13 +39,6 @@ struct FocusConstants {
 @group(0) @binding(2) var<uniform> constants: FocusConstants;
 @group(0) @binding(3) var<storage, read> regions: array<FocusRegion>;
 
-// How far past a rounded box a point lies: negative inside it.
-fn box_distance(point: vec2<f32>, region: FocusRegion) -> f32 {
-  let half_size = (region.box.zw - region.box.xy) * 0.5;
-  let q = abs(point - (region.box.xy + region.box.zw) * 0.5) - half_size + region.radius;
-  return length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - region.radius;
-}
-
 // How wide the blur is at canvas pixel `pixel`, in canvas pixels: the least
 // any box showing asks for, so a pixel any box keeps sharp stays sharp.
 fn circle_of_confusion(pixel: vec2<f32>) -> f32 {
@@ -83,9 +65,8 @@ fn circle_of_confusion(pixel: vec2<f32>) -> f32 {
     let region = regions[index];
     // Measured on the upright screen, so the box stays where its grips are
     // however the screen is turned, then carried into canvas pixels.
-    let distance = box_distance(source_point, region) / max(per.x, 1e-6);
-    let fall = clamp(distance / reach, 0.0, 1.0);
-    let flat = fall * fall * (3.0 - 2.0 * fall);
+    let distance = focus_box_distance(source_point, region) / max(per.x, 1e-6);
+    let flat = focus_falloff(distance, reach);
     // The inverse turn's weight goes as the reciprocal of a point's depth,
     // so its change from the box's middle is how far the screen there sits
     // in front of or behind the box. An upright screen has none.
@@ -93,7 +74,7 @@ fn circle_of_confusion(pixel: vec2<f32>) -> f32 {
         clamp(abs(h.z - region.reference) / max(abs(region.reference), 1e-3) *
               constants.shape.z / max(widest, 1e-3), 0.0, 1.0);
     let amount = max(max(flat, depth), beyond);
-    coc = min(coc, widest * (region.strength / 3.0) * region.presence * amount);
+    coc = min(coc, focus_width(region, widest, amount));
   }
   return select(0.0, coc, count > 0u);
 }

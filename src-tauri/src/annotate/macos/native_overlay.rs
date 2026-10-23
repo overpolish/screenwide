@@ -63,8 +63,9 @@ unsafe extern "C" {
   fn screenwide_annotate_attach(view: *mut c_void) -> *mut c_void;
   fn screenwide_annotate_detach(view: *mut c_void);
   fn screenwide_annotate_install_input(
-    pointer: extern "C" fn(u32, f64, f64),
+    pointer: extern "C" fn(u32, f64, f64, u32),
     key: extern "C" fn(u16, u32) -> u32,
+    modifiers: extern "C" fn(u32),
   );
   fn screenwide_annotate_teardown_input();
   fn screenwide_annotate_set_text_cursor(text: u32);
@@ -112,7 +113,7 @@ fn draw(renderer: &Renderer, host: &mut Host) -> Result<(), String> {
   Ok(())
 }
 
-extern "C" fn pointer(phase: u32, x: f64, y: f64) {
+extern "C" fn pointer(phase: u32, x: f64, y: f64, modifiers: u32) {
   // A press on the picture is drawing, so the keyboard belongs to the canvas
   // again. It has to be said here: the monitor swallows this press, so AppKit
   // never sees it and an island holding key status would keep it.
@@ -121,7 +122,7 @@ extern "C" fn pointer(phase: u32, x: f64, y: f64) {
       super::super::island::return_keyboard(app);
     }
   }
-  super::super::input::pointer(APP.get(), phase, x, y);
+  super::super::input::pointer(APP.get(), phase, x, y, modifiers);
 }
 
 extern "C" fn key(key_code: u16, modifiers: u32) -> u32 {
@@ -129,6 +130,16 @@ extern "C" fn key(key_code: u16, modifiers: u32) -> u32 {
     return 0;
   };
   u32::from(super::super::input::key(app, key_code, modifiers))
+}
+
+/// The modifiers held changed. Option turns a highlight the other way, so
+/// the pointer follows it. The monitor runs on the main thread.
+extern "C" fn modifiers(modifiers: u32) {
+  let held = modifiers & super::super::input::MODIFIER_OPTION != 0;
+  if super::super::input::option_held() != held {
+    super::super::input::set_option_held(held);
+    super::cursor::follow_tool();
+  }
 }
 
 /// Names the displays the overlay is about to cover. Their order is the order
@@ -195,7 +206,7 @@ extern "C" fn screenwide_annotate_redraw() {
 /// Starts swallowing pointer and key events. Main thread only.
 pub(in super::super) fn install_input(app: &AppHandle) {
   let _ = APP.set(app.clone());
-  unsafe { screenwide_annotate_install_input(pointer, key) };
+  unsafe { screenwide_annotate_install_input(pointer, key, modifiers) };
 }
 
 /// Stops swallowing input. The displays stay: annotations left on screen are still

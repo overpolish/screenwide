@@ -30,8 +30,24 @@ fn style(width: f64) -> AnnotationStyle {
 /// `annotations` drawn by the overlay's renderer over a cleared target, as
 /// premultiplied BGRA rows.
 fn drawn(annotations: &[screenwide_annotations::Annotation]) -> Vec<u8> {
+  drawn_over(annotations, None)
+}
+
+/// `annotations` drawn over `desktop`, the underlay a highlight recolours
+/// and a focus blurs.
+fn drawn_over(
+  annotations: &[screenwide_annotations::Annotation],
+  desktop: Option<&screenwide_imaging::CapturedImage>,
+) -> Vec<u8> {
   let renderer = Renderer::new().expect("the overlay renderer");
   let gpu = renderer.gpu();
+  let underlay = desktop.map(|image| underlay::upload(gpu, image).expect("the underlay uploads"));
+  let focus = desktop.map(|image| {
+    renderer
+      .chains()
+      .chain(gpu, image)
+      .expect("the focus chain is made")
+  });
   let target = gpu.device.create_texture(&wgpu::TextureDescriptor {
     label: None,
     size: wgpu::Extent3d {
@@ -51,8 +67,8 @@ fn drawn(annotations: &[screenwide_annotations::Annotation]) -> Vec<u8> {
       &target.create_view(&Default::default()),
       (WIDTH, HEIGHT),
       &placed_arrows(annotations, (0.0, 0.0), (1.0, 1.0), 1.0, None, None),
-      None,
-      None,
+      underlay.as_ref(),
+      focus.as_ref(),
     )
     .expect("the annotations draw");
   gpu.read_texture(&target).expect("the frame reads back")
@@ -114,4 +130,35 @@ fn a_counter_shows_its_number_on_its_disc() {
     })
     .count();
   assert!(number > 10, "only {number} white pixels of the number");
+}
+
+/// A focus drawn live leaves its box to the live desktop and lays the
+/// desktop it was drawn on, softened, over everything well past it.
+#[test]
+fn a_focus_blurs_around_its_box_and_leaves_the_box_live() {
+  // A one-pixel checkerboard, which any blur turns grey.
+  let rgba = (0..HEIGHT)
+    .flat_map(|y| (0..WIDTH).map(move |x| if (x + y) % 2 == 0 { 255 } else { 0 }))
+    .flat_map(|value| [value, value, value, 255])
+    .collect();
+  let desktop = screenwide_imaging::CapturedImage {
+    width: WIDTH,
+    height: HEIGHT,
+    rgba,
+  };
+  let focus = screenwide_annotations::focus::model::new_focus(
+    "focus".to_owned(),
+    [
+      AnnotationPoint { x: 60.0, y: 40.0 },
+      AnnotationPoint { x: 100.0, y: 80.0 },
+    ],
+    None,
+  );
+  let pixels = drawn_over(&[focus], Some(&desktop));
+  // Inside the box: nothing laid, so the live desktop shows.
+  assert_eq!(pixel(&pixels, 80, 60)[3], 0);
+  // Well past it: the desktop it was drawn on, opaque and softened to grey.
+  let [blue, _, _, alpha] = pixel(&pixels, 5, 5);
+  assert_eq!(alpha, 255);
+  assert!((60..200).contains(&blue), "{blue} is not softened");
 }

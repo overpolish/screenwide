@@ -14,12 +14,19 @@ static NSCursor *region_expected_cursor = nil;
 /// never keeps a window alive.
 static __weak NSWindow *cursor_guard_exempt_window = nil;
 
-/// Whether the pointer is over the exempt window. Its frame is in screen
-/// coordinates, as `NSEvent.mouseLocation` is, and the window sits above
-/// every other one the tool owns, so being inside the frame is being over it.
+/// Whether the pointer is over the exempt window where it takes clicks. Its
+/// frame is in screen coordinates, as `NSEvent.mouseLocation` is, and the
+/// window sits above every other one the tool owns. A window larger than
+/// what it draws, as the island's is, lets clicks through everywhere but its
+/// parts, so over the rest of its frame the pointer is still the tool's.
 static BOOL pointerOverExemptWindow(void) {
   NSWindow *exempt = cursor_guard_exempt_window;
-  return exempt != nil && NSPointInRect(NSEvent.mouseLocation, exempt.frame);
+  return exempt != nil && !exempt.ignoresMouseEvents &&
+         NSPointInRect(NSEvent.mouseLocation, exempt.frame);
+}
+
+BOOL screenwide_cursor_guard_over_exempt_window(void) {
+  return pointerOverExemptWindow();
 }
 
 static void guarded_cursor_set(id receiver, SEL selector) {

@@ -6,16 +6,11 @@
 //! constants each canvas pass of the frame is drawn with.
 
 use super::super::constants::Constants;
-use crate::annotation_gpu::{PreparedArrows, PreviewArrow};
+use crate::annotation_gpu::{
+  GpuFocusRegion, PreparedArrows, PreviewArrow, FOCUS_REACH_SHARE, FOCUS_WIDEST_SHARE,
+};
 use screenwide_annotations::AnnotationKind;
 
-/// How wide the blur reaches at the middle strength, as a share of the
-/// canvas's shorter side: enough to read as a lens without smearing what is
-/// around the box out of recognition.
-const WIDEST_SHARE: f32 = 0.013;
-/// How far past a box the blur takes to arrive, as a share of the canvas's
-/// shorter side.
-const REACH_SHARE: f32 = 0.45;
 /// How wide the depth term reaches as far from the box's depth as the turn
 /// carries the screen, as a share of the canvas's shorter side.
 const DEPTH_SHARE: f32 = 0.05;
@@ -28,17 +23,6 @@ const EDGE_SHARE: f32 = 0.1;
 /// The canvas pass's `focus` modes.
 const UNDER: f32 = 1.0;
 const OVER: f32 = 2.0;
-
-/// The twin of `FocusRegion` in `focus_blur.wgsl`, a 32-byte stride.
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-pub(super) struct GpuRegion {
-  bounds: [f32; 4],
-  radius: f32,
-  strength: f32,
-  presence: f32,
-  reference: f32,
-}
 
 /// The twin of `FocusConstants` in `focus_blur.wgsl`.
 #[repr(C)]
@@ -56,7 +40,7 @@ pub(super) struct FocusConstants {
 /// One focused frame's blur.
 pub(in super::super) struct FocusPlan {
   pub(super) constants: FocusConstants,
-  pub(super) regions: Vec<GpuRegion>,
+  pub(super) regions: Vec<GpuFocusRegion>,
   cut: u32,
   /// Whether the focus lies in the run above the camera.
   above_camera: bool,
@@ -96,13 +80,7 @@ impl FocusPlan {
         } else {
           1.0
         };
-        GpuRegion {
-          bounds: region.bounds,
-          radius: region.radius,
-          strength: region.strength,
-          presence: region.presence,
-          reference,
-        }
+        GpuFocusRegion::new(region, reference)
       })
       .collect::<Vec<_>>();
     Some(Self {
@@ -117,8 +95,8 @@ impl FocusPlan {
           values.scene_turn[2],
         ],
         shape: [
-          REACH_SHARE * shorter,
-          WIDEST_SHARE * shorter,
+          FOCUS_REACH_SHARE * shorter,
+          FOCUS_WIDEST_SHARE * shorter,
           DEPTH_SHARE * shorter,
           regions.len() as f32,
         ],

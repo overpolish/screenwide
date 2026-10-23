@@ -92,7 +92,7 @@ export const Shape: Story = {
 };
 
 export const Focus: Story = {
-  args: { settings: { ...settings, defaultShape: "spotlight" } },
+  args: { settings: { ...settings, defaultShape: "focus" } },
 };
 
 export const Draw: Story = {

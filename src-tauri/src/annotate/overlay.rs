@@ -9,6 +9,7 @@
 //! Nothing is mirrored: every frame pulls [`super::live_clips`] and the stroke
 //! in hand, so there is no second copy of the document to keep in step.
 
+mod focus;
 mod renderer;
 #[cfg(test)]
 mod tests;
@@ -48,13 +49,13 @@ impl Renderer {
     scale: f64,
     underlays: &mut Underlays,
   ) -> Result<(), String> {
-    let (underlay, softened) = underlays.current(self.gpu(), index)?;
+    let (underlay, focus) = underlays.current(self, index)?;
     self.draw_arrows(
       target,
       size,
       &scene(origin, scale),
       underlay.as_ref(),
-      softened.as_ref(),
+      focus.as_ref(),
     )
   }
 }

@@ -3,10 +3,12 @@
 
 //! What a highlight is recoloured from, as a texture the overlay's shader
 //! reads: a display's underlay, or the still a highlight is baked into; and
-//! the same softened for a spotlight's blur.
+//! the same with its mip chain for a focus's blur.
 
 use screenwide_gpu::Gpu;
 use screenwide_imaging::CapturedImage;
+
+use super::Renderer;
 
 /// An uploaded picture and which of Rust's revisions it is.
 struct Held {
@@ -14,21 +16,21 @@ struct Held {
   revision: u64,
 }
 
-/// One display's underlay and its softened copy as the surface holds them,
+/// One display's underlay and its focus chain as the surface holds them,
 /// each uploaded again only when Rust has made a new one.
 #[derive(Default)]
 pub(in crate::annotate) struct Underlays {
   underlay: Option<Held>,
-  softened: Option<Held>,
+  focus: Option<Held>,
 }
 
 impl Underlays {
-  /// The underlay display `index`'s highlights read, and while a spotlight
-  /// blurs the same softened for its blur; `None` for either where there is
-  /// none.
+  /// The underlay display `index`'s highlights read, and while a focus is on
+  /// screen the same with its mip chain for the blur; `None` for either
+  /// where there is none.
   pub(in crate::annotate) fn current(
     &mut self,
-    gpu: &Gpu,
+    renderer: &Renderer,
     index: u32,
   ) -> Result<(Option<wgpu::TextureView>, Option<wgpu::TextureView>), String> {
     let Some(current) = crate::annotate::highlight::underlay(index as usize) else {
@@ -36,21 +38,21 @@ impl Underlays {
     };
     if self.underlay.as_ref().map(|held| held.revision) != Some(current.revision) {
       self.underlay = Some(Held {
-        view: upload(gpu, &current.image)?,
+        view: upload(renderer.gpu(), &current.image)?,
         revision: current.revision,
       });
     }
-    if !crate::annotate::input::spotlight_blurs() {
-      self.softened = None;
-    } else if self.softened.as_ref().map(|held| held.revision) != Some(current.revision) {
-      self.softened = Some(Held {
-        view: upload(gpu, current.softened())?,
+    if !crate::annotate::input::focus_shows() {
+      self.focus = None;
+    } else if self.focus.as_ref().map(|held| held.revision) != Some(current.revision) {
+      self.focus = Some(Held {
+        view: renderer.chains().chain(renderer.gpu(), &current.image)?,
         revision: current.revision,
       });
     }
     Ok((
       self.underlay.as_ref().map(|held| held.view.clone()),
-      self.softened.as_ref().map(|held| held.view.clone()),
+      self.focus.as_ref().map(|held| held.view.clone()),
     ))
   }
 }

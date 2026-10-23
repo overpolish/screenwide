@@ -5,20 +5,26 @@
 
 #include <stdint.h>
 
-/// Modifier bits carried with a key press. Named here rather than passing
-/// AppKit's flags through, so the Rust side never depends on AppKit.
+/// Modifier bits carried with a key press, a pointer step and a change of
+/// what is held. Named here rather than passing AppKit's flags through, so
+/// the Rust side never depends on AppKit.
 #define SCREENWIDE_ANNOTATE_MODIFIER_COMMAND 1u
 #define SCREENWIDE_ANNOTATE_MODIFIER_SHIFT 2u
 #define SCREENWIDE_ANNOTATE_MODIFIER_OPTION 4u
 #define SCREENWIDE_ANNOTATE_MODIFIER_CONTROL 8u
 
-/// A pointer step: 0 down, 1 drag, 2 up. The point is in global desktop
-/// points with y running down, the space the cursor sidecar reports in.
-typedef void (*ScreenwideAnnotatePointer)(uint32_t phase, double x, double y);
+/// A pointer step: 0 down, 1 drag, 2 up, with the modifiers held. The point
+/// is in global desktop points with y running down, the space the cursor
+/// sidecar reports in.
+typedef void (*ScreenwideAnnotatePointer)(uint32_t phase, double x, double y,
+                                          uint32_t modifiers);
 
 /// A key press. Returns non-zero when the overlay acted on it.
 typedef uint32_t (*ScreenwideAnnotateKey)(uint16_t key_code,
                                           uint32_t modifiers);
+
+/// The modifiers held changed.
+typedef void (*ScreenwideAnnotateModifiers)(uint32_t modifiers);
 
 /// Gives one host window's view a `CAMetalLayer` for Rust to draw into, and
 /// returns it; NULL when the view cannot take one. Main thread only.
@@ -34,7 +40,8 @@ void screenwide_annotate_redraw(void);
 /// overlay has no pass-through mode: while input is installed, nothing under
 /// it sees any. Main thread only.
 void screenwide_annotate_install_input(ScreenwideAnnotatePointer pointer,
-                                       ScreenwideAnnotateKey key);
+                                       ScreenwideAnnotateKey key,
+                                       ScreenwideAnnotateModifiers modifiers);
 
 /// Stops swallowing input. Main thread only.
 void screenwide_annotate_teardown_input(void);

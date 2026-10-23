@@ -10,7 +10,7 @@
 //! is on screen but not in the recording, so a drag that is abandoned costs
 //! nothing.
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
@@ -24,11 +24,13 @@ use keys::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z, TOOL_KEYS};
 use stroke::{pen_down, Stroke};
 
 /// The modifier bits the native overlay sends. Windows reports Ctrl as
-/// `MODIFIER_COMMAND`: undo is the same gesture under a different name.
+/// `MODIFIER_COMMAND`: undo is the same gesture under a different name, and
+/// Alt as `MODIFIER_OPTION`.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) const MODIFIER_COMMAND: u32 = 1;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) const MODIFIER_SHIFT: u32 = 2;
+pub(super) const MODIFIER_OPTION: u32 = 4;
 
 /// Pointer phases as the native overlay reports them. Up is the fallback
 /// phase in [`step`], so only the Windows overlay names it.
@@ -39,6 +41,9 @@ pub(super) const PHASE_UP: u32 = 2;
 
 static DRAWING: LazyLock<Mutex<Option<Stroke>>> = LazyLock::new(|| Mutex::new(None));
 static NEXT_ANNOTATION: AtomicU64 = AtomicU64::new(1);
+/// Whether Option (Alt on Windows) is held, as the overlay last heard: it
+/// turns the highlight the other way, and the pointer shows which way.
+static OPTION_HELD: AtomicBool = AtomicBool::new(false);
 /// How often a pen stroke is asked whether the hand has rested on it: well
 /// inside the hold, so a stroke is read soon after its rest has lasted.
 const HOLD_TICK: Duration = Duration::from_millis(40);
@@ -123,26 +128,41 @@ pub(super) fn in_progress() -> Option<Annotation> {
     .annotation()
 }
 
-/// Whether a spotlight on screen, or the one in hand, blurs: what the
-/// overlays soften their underlay for.
-pub(super) fn spotlight_blurs() -> bool {
-  let blurs = |annotation: &Annotation| {
-    annotation.style.blur
-      && matches!(
-        annotation.shape,
-        screenwide_annotations::AnnotationShape::Spotlight { .. }
-      )
-  };
-  super::live_clips::annotations().iter().any(blurs) || in_progress().is_some_and(|a| blurs(&a))
+/// Whether a focus that blurs is on screen or in hand: what the overlays
+/// make their underlay's mip chain for.
+pub(super) fn focus_shows() -> bool {
+  let focus = |annotation: &Annotation| annotation.shape.kind() == AnnotationKind::Focus;
+  super::live_clips::annotations().iter().any(focus) || in_progress().is_some_and(|a| focus(&a))
 }
 
-/// A pointer step in global desktop points: 0 down, 1 drag, 2 up. `app` is
-/// what a highlight's press, or a blurring spotlight's, captures the desktop
-/// with.
-pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64) {
+/// Option (Alt on Windows) went down or up, as the overlay heard it.
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
+pub(super) fn set_option_held(held: bool) {
+  OPTION_HELD.store(held, Ordering::Relaxed);
+}
+
+pub(super) fn option_held() -> bool {
+  OPTION_HELD.load(Ordering::Relaxed)
+}
+
+/// What a fresh stroke of the tool in hand is: the focus's dimmed look is a
+/// spotlight, its blurred look a focus.
+fn stroke_shape(settings: &super::settings::AnnotateSettings) -> AnnotationKind {
+  match settings.default_shape {
+    AnnotationKind::Focus if settings.focus_dims => AnnotationKind::Spotlight,
+    shape => shape,
+  }
+}
+
+/// A pointer step in global desktop points: 0 down, 1 drag, 2 up, with the
+/// modifiers held. `app` is what a highlight's press, or a focus's, captures
+/// the desktop with. Option held through a press lays a highlight the other
+/// way: by hand over the box the drag spans where it would fit itself to
+/// text, and the other way round.
+pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64, modifiers: u32) {
   let settings = super::settings::current();
   let tool = Tool {
-    shape: settings.default_shape,
+    shape: stroke_shape(&settings),
     // The number a counter takes is its place among the counters already on
     // screen, which only a press has to know. Clearing the screen starts the
     // count again, and undo only ever takes the newest, so the numbers stay
@@ -153,7 +173,7 @@ pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64
       0
     },
     angle: settings.default_counter_angle,
-    manual: settings.highlight_manual,
+    manual: settings.highlight_manual != (modifiers & MODIFIER_OPTION != 0),
   };
   let point = AnnotationPoint { x, y };
   if phase != PHASE_DOWN && phase != PHASE_DRAG {
@@ -174,7 +194,7 @@ pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64
       (AnnotationKind::Highlight, Some(stroke), Some(app)) => {
         super::highlight::begin(app, &stroke, point);
       }
-      (AnnotationKind::Spotlight, Some(_), Some(app)) if settings.spotlight_blur => {
+      (AnnotationKind::Focus, Some(_), Some(app)) => {
         super::highlight::refresh(app, point);
       }
       (AnnotationKind::Draw, Some(stroke), Some(app)) => watch_hold(app.clone(), stroke),
@@ -238,10 +258,12 @@ pub(super) fn key(app: &tauri::AppHandle, key_code: u16, modifiers: u32) -> bool
   }
 }
 
-/// Drops the stroke in hand. The overlay closing must not leave half a drag
-/// for the next session to finish.
+/// Drops the stroke in hand, and what was held with it. The overlay closing
+/// must not leave half a drag for the next session to finish, nor a key it
+/// will never hear let go of.
 pub(super) fn cancel() {
   drawing().take();
+  OPTION_HELD.store(false, Ordering::Relaxed);
   super::highlight::cancel();
 }
 

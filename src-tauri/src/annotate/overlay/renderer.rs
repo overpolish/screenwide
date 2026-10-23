@@ -9,6 +9,8 @@ use screenwide_compositor::annotation_gpu::{
 };
 use screenwide_gpu::Gpu;
 
+use super::focus::{FocusChains, FocusFrame};
+
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/annotate_overlay.wgsl"));
 
 /// The twin of `Overlay` in `annotate_overlay.wgsl`.
@@ -28,10 +30,15 @@ struct Constants {
   /// The target's size in pixels, which the highlights' underlay is read
   /// across.
   target: [f32; 2],
-  spare: f32,
+  /// How many focus boxes there are, how far past a box its blur takes to
+  /// arrive and how wide the middle strength's blur is, in target pixels.
+  focus_count: u32,
+  focus_reach: f32,
+  focus_widest: f32,
+  spare: [f32; 2],
 }
 
-const _: () = assert!(std::mem::size_of::<Constants>() == 32);
+const _: () = assert!(std::mem::size_of::<Constants>() == 48);
 
 /// Everything every surface of one session shares.
 pub(in crate::annotate) struct Renderer {
@@ -44,11 +51,13 @@ pub(in crate::annotate) struct Renderer {
   /// A highlight's bands.
   points: GpuBuffer,
   text: GpuBuffer,
+  focus: GpuBuffer,
+  chains: FocusChains,
   /// The counters' numbers, rasterised at the size they are drawn into an
   /// atlas that keeps them, so a frame that redraws an unchanged screen does
   /// no work.
   counters: CounterAtlas,
-  /// Bound where the numbers, the underlay or its softened copy go when there
+  /// Bound where the numbers, the underlay or its focus chain go when there
   /// is none: one transparent pixel, which the shader reads as none.
   empty: wgpu::TextureView,
 }
@@ -108,6 +117,8 @@ impl Renderer {
       samples: GpuBuffer::new(gpu, "Screenwide annotate exposure"),
       points: GpuBuffer::new(gpu, "Screenwide annotate highlight bands"),
       text: GpuBuffer::new(gpu, "Screenwide annotate text"),
+      focus: GpuBuffer::new(gpu, "Screenwide annotate focus boxes"),
+      chains: FocusChains::new(device),
       counters: CounterAtlas::default(),
       empty: gpu
         .texture_with_pixels(
@@ -124,6 +135,10 @@ impl Renderer {
     self.gpu
   }
 
+  pub(in crate::annotate) fn chains(&self) -> &FocusChains {
+    &self.chains
+  }
+
   /// Draws the prepared annotations over a cleared target of `size` physical
   /// pixels. Shared by a display's frame and by a still that leaves the app as
   /// pixels, so both draw the same annotations the same way.
@@ -133,18 +148,19 @@ impl Renderer {
   /// texture - the same pass the editor's compositor makes. `underlay` is what
   /// a highlight recolours: the desktop captured under it, or the still it is
   /// baked into. Without one there is nothing under a highlight to read.
-  /// `softened` is the same softened for a spotlight's blur; without one a
-  /// spotlight only shades.
+  /// `focus` is the same with its mip chain, which a focus's blur reads;
+  /// without one no focus blurs.
   pub(in crate::annotate) fn draw_arrows(
     &self,
     target: &wgpu::TextureView,
     size: (u32, u32),
     prepared: &PreparedArrows,
     underlay: Option<&wgpu::TextureView>,
-    softened: Option<&wgpu::TextureView>,
+    focus: Option<&wgpu::TextureView>,
   ) -> Result<(), String> {
     let gpu = self.gpu;
     let (numbers, numbered) = numbered_arrows(&self.counters, gpu, prepared)?;
+    let blur = FocusFrame::of(prepared, size);
     let constants = Constants {
       count: numbered.len() as u32,
       feather: 0.5,
@@ -154,7 +170,14 @@ impl Renderer {
       }),
       atlas_scale: numbers.as_ref().map_or(0.0, |atlas| atlas.scale),
       target: [size.0 as f32, size.1 as f32],
-      spare: 0.0,
+      focus_count: if focus.is_some() {
+        blur.regions.len() as u32
+      } else {
+        0
+      },
+      focus_reach: blur.reach,
+      focus_widest: blur.widest,
+      spare: [0.0; 2],
     };
     gpu
       .queue
@@ -163,6 +186,7 @@ impl Renderer {
     let sample_buffer = self.samples.write(gpu, &prepared.samples)?;
     let point_buffer = self.points.write(gpu, &prepared.points)?;
     let text_buffer = self.text.write(gpu, &prepared.text)?;
+    let focus_buffer = self.focus.write(gpu, &blur.regions)?;
     fn texture(binding: u32, view: &wgpu::TextureView) -> wgpu::BindGroupEntry<'_> {
       wgpu::BindGroupEntry {
         binding,
@@ -181,7 +205,12 @@ impl Renderer {
       entries: &[
         buffer(0, &self.constants),
         texture(1, underlay.unwrap_or(&self.empty)),
-        texture(2, softened.unwrap_or(&self.empty)),
+        texture(2, focus.unwrap_or(&self.empty)),
+        wgpu::BindGroupEntry {
+          binding: 3,
+          resource: wgpu::BindingResource::Sampler(&self.chains.sampler),
+        },
+        buffer(4, &focus_buffer),
         buffer(7, &arrow_buffer),
         buffer(8, &sample_buffer),
         texture(9, numbers.as_ref().map_or(&self.empty, |atlas| &atlas.view)),
@@ -249,6 +278,11 @@ fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
       ),
       entry(1, texture),
       entry(2, texture),
+      entry(
+        3,
+        wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+      ),
+      entry(4, storage),
       entry(7, storage),
       entry(8, storage),
       entry(9, texture),

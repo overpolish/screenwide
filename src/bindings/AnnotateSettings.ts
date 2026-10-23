@@ -62,16 +62,18 @@ shapeHandDrawn: boolean,
  */
 shapeRadius: number, 
 /**
- * Whether a fresh spotlight also blurs what lies outside it.
+ * How a fresh focus treats what lies around its box: dimmed, as a
+ * spotlight's shade, rather than blurred, as a camera's depth of field.
+ * The focus is one tool, so this is the look it keeps between uses.
  */
-spotlightBlur: boolean, 
+focusDims: boolean, 
 /**
- * How round a fresh spotlight's corners are, as a percentage of its
- * shorter side from 0 to 50.
+ * How round a fresh focus's corners are, blurred or dimmed, as a
+ * percentage of its shorter side from 0 to 50.
  */
-spotlightRadius: number, 
+focusRadius: number, 
 /**
- * How far a fresh spotlight's edge fades, as a percentage of its shorter
- * side from 0 to 50.
+ * How far a dimmed focus's edge fades, as a percentage of its shorter side
+ * from 0 to 50.
  */
 spotlightSoftness: number, };

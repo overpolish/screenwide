@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The live overlay's one pass, the twin of `native_overlay_macos_shader.h`.
-// Assembled with the editor's annotation pieces by `build/wgsl.rs`; this part
+// The live overlay's one pass. Assembled with the editor's annotation pieces
+// and its focus falloff by `build/wgsl.rs`; this part
 // comes first because it carries the module's directive.
 //
 // Everything that decides what an annotation looks like - the curve solve, the
@@ -14,9 +14,9 @@
 // A highlight recolours what is under it, which the overlay never sees: it
 // reads `annotate_underlay` instead, the desktop captured when it was drawn, or
 // the still it is baked into. A spotlight's shade is black laid over the
-// desktop, and its blur is `annotate_softened`, the same desktop softened once
-// in Rust, laid under the shade where the blur reaches. A 1x1 softened texture
-// is none at all.
+// desktop. A focus's blur is `annotate_focus`, the same desktop with its mip
+// chain, read as the editor's focus reads its frame (`focus_falloff.wgsl`,
+// `disc_blur.wgsl`) and laid over the live desktop where the blur reaches.
 //
 // Annotations arrive in this display's layer pixels, so there is no canvas
 // placement to apply and one drawn pixel is one annotation pixel.
@@ -41,7 +41,14 @@ struct Overlay {
   // The target's size in pixels, which the underlay is read across.
   target_width: f32,
   target_height: f32,
-  spare: f32,
+  // How many focus boxes `annotate_focus_regions` holds, none without a
+  // chain to blur; how far past a box its blur takes to arrive; and how wide
+  // the middle strength's blur is, both in target pixels.
+  focus_count: u32,
+  focus_reach: f32,
+  focus_widest: f32,
+  spare_x: f32,
+  spare_y: f32,
 }
 
 fn overlay_target() -> vec2<f32> {
@@ -51,8 +58,10 @@ fn overlay_target() -> vec2<f32> {
 @group(0) @binding(0) var<uniform> overlay: Overlay;
 // What the highlights recolour, laid over the whole target.
 @group(0) @binding(1) var annotate_underlay: texture_2d<f32>;
-// The same softened for the spotlights' blur, stretched over the target.
-@group(0) @binding(2) var annotate_softened: texture_2d<f32>;
+// The same with its mip chain, for a focus's blur.
+@group(0) @binding(2) var annotate_focus: texture_2d<f32>;
+@group(0) @binding(3) var annotate_focus_sampler: sampler;
+@group(0) @binding(4) var<storage, read> annotate_focus_regions: array<FocusRegion>;
 
 // The overlay offers no magnifier, but its highlights read the picture to
 // find each glyph's full ink: the underlay, laid over the whole target.
@@ -101,21 +110,36 @@ fn vs_main(@builtin(vertex_index) id: u32) -> @builtin(position) vec4<f32> {
   return vec4<f32>(position * vec2<f32>(2.0, -2.0) + vec2<f32>(-1.0, 1.0), 0.0, 1.0);
 }
 
-// The softened desktop at `across`, a share of the target, read between its
-// four nearest pixels: it is a fraction of the target's size, and read pixel
-// by pixel it would show its blocks.
-fn annotate_softened_at(across: vec2<f32>, size: vec2<u32>) -> vec3<f32> {
-  let texel = across * vec2<f32>(size) - 0.5;
-  let base = floor(texel);
-  let t = texel - base;
-  let last = vec2<i32>(size) - 1;
-  let low = clamp(vec2<i32>(base), vec2<i32>(0), last);
-  let high = clamp(vec2<i32>(base) + 1, vec2<i32>(0), last);
-  let top = mix(textureLoad(annotate_softened, vec2<i32>(low.x, low.y), 0).rgb,
-                textureLoad(annotate_softened, vec2<i32>(high.x, low.y), 0).rgb, t.x);
-  let bottom = mix(textureLoad(annotate_softened, vec2<i32>(low.x, high.y), 0).rgb,
-                   textureLoad(annotate_softened, vec2<i32>(high.x, high.y), 0).rgb, t.x);
-  return mix(top, bottom, t.y);
+// How wide the focus blur is at target pixel `pixel`, in target pixels: the
+// least any box asks for, so a pixel any box keeps sharp stays sharp.
+fn annotate_focus_width(pixel: vec2<f32>) -> f32 {
+  var width = overlay.focus_widest * 4.0;
+  for (var index = 0u; index < overlay.focus_count; index++) {
+    let region = annotate_focus_regions[index];
+    let amount = focus_falloff(focus_box_distance(pixel, region), overlay.focus_reach);
+    width = min(width, focus_width(region, overlay.focus_widest, amount));
+  }
+  return width;
+}
+
+// The desktop under target pixel `pixel` as a focus softens it, laid over
+// the live desktop as far as the blur reaches. Where the blur is under a
+// pixel wide nothing is laid, so the live desktop shows rather than the
+// still the blur is read from.
+fn annotate_focus_layer(pixel: vec2<f32>) -> vec4<f32> {
+  if (overlay.focus_count == 0u) {
+    return vec4<f32>(0.0);
+  }
+  let width = annotate_focus_width(pixel);
+  let shown = smoothstep(0.5, 1.5, width);
+  if (shown <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  let size = vec2<f32>(textureDimensions(annotate_focus));
+  let per = size / max(overlay_target(), vec2<f32>(1.0));
+  let blurred = disc_blur(annotate_focus, annotate_focus_sampler, pixel * per, width * per.x,
+                          vec2<f32>(0.5), size - 0.5);
+  return vec4<f32>(blurred.rgb * shown, shown);
 }
 
 @fragment
@@ -125,18 +149,11 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let texel = min(vec2<u32>(across * vec2<f32>(size)), size - 1u);
   let base = vec4<f32>(textureLoad(annotate_underlay, vec2<i32>(texel), 0).rgb, 1.0);
   // Composed over nothing, so the result is already premultiplied - which is
-  // what DirectComposition expects of a premultiplied swap chain. The blur is
-  // the softened desktop laid over the live one as far as it reaches, and the
-  // shade darkens both: what shows through is the desktop times what the blur
-  // leaves of it times what the shade leaves.
-  var result = vec4<f32>(0.0);
-  let soft_size = textureDimensions(annotate_softened);
-  if (soft_size.x > 1u) {
-    let blur = annotation_spotlight_cover(position.xy, 0u, overlay.count, overlay.feather, true);
-    if (blur > 0.0) {
-      result = vec4<f32>(annotate_softened_at(across, soft_size) * blur, blur);
-    }
-  }
+  // what DirectComposition expects of a premultiplied swap chain. The focus's
+  // blur is laid over the live desktop as far as it reaches, and a dimmed
+  // focus's shade darkens both: what shows through is the desktop times what
+  // the blur leaves of it times what the shade leaves.
+  var result = annotate_focus_layer(position.xy);
   let lift = 1.0 - annotation_spotlight_dim *
       annotation_spotlight_cover(position.xy, 0u, overlay.count, overlay.feather, false);
   result = vec4<f32>(result.rgb * lift, 1.0 - (1.0 - result.a) * lift);

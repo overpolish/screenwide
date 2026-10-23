@@ -39,9 +39,6 @@ pub mod native;
 /// How a spotlight fades in and out over its clip.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod reveal;
-/// A picture softened as the blur softens one, for the live overlay.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub mod soften;
 
 #[cfg(test)]
 mod tests;

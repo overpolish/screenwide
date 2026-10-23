@@ -27,12 +27,10 @@ import type { AnnotationKind } from "../../annotations/types";
 /** The tools the islands offer, in the toolbar's order, each with its glyph
  * and the pen that hangs under the tools while it is in hand.
  *
- * The spotlight is offered as Focus: one tool for drawing the eye to a box,
- * by blurring what lies around it or dimming it (`FocusPen`). It keeps the
- * spotlight's kind and settings until the overlay draws a focus of its own,
- * and is named and drawn here alone until the shared tool names and icons
- * follow. It draws in no colour, so the colour is not offered while it is in
- * hand. */
+ * The focus is one tool for drawing the eye to a box, by blurring what lies
+ * around it or dimming it (`FocusPen`): blurred it draws a focus, dimmed a
+ * spotlight. It is named here for both looks, and draws in no colour, so the
+ * colour is not offered while it is in hand. */
 export const ISLAND_TOOLS: {
   icon: typeof ArrowToolIcon;
   id: AnnotationKind;
@@ -47,7 +45,7 @@ export const ISLAND_TOOLS: {
   {
     hasNoColor: true,
     icon: Focus,
-    id: "spotlight",
+    id: "focus",
     name: () => t("annotate-island-focus-name"),
     pen: FocusPen,
   },

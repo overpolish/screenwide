@@ -127,14 +127,14 @@ function createPreviewApi(
     defaultShape: "arrow",
     defaultWidth: 8,
     enabled: true,
+    focusDims: false,
+    focusRadius: 12,
     highlightHandDrawn: false,
     highlightManual: false,
     highlightTint: false,
     keepAnnotationsBetweenSessions: false,
     shapeHandDrawn: false,
     shapeRadius: 0,
-    spotlightBlur: false,
-    spotlightRadius: 12,
     spotlightSoftness: 10,
   };
   const defaults: ShortcutDefaults = {

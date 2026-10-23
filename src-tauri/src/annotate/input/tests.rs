@@ -221,3 +221,31 @@ fn a_counter_is_on_screen_from_the_press_and_an_arrow_is_not() {
   );
   assert!(drawing.as_ref().unwrap().is_drawn());
 }
+
+/// The focus is one tool with two looks, and each is its own kind: blurred,
+/// a focus the editor softens around; dimmed, a spotlight's shade.
+#[test]
+fn the_focus_draws_a_focus_or_a_spotlight_by_its_look() {
+  for (dims, kind) in [
+    (false, AnnotationKind::Focus),
+    (true, AnnotationKind::Spotlight),
+  ] {
+    let settings = super::super::settings::AnnotateSettings {
+      default_shape: AnnotationKind::Focus,
+      focus_dims: dims,
+      ..Default::default()
+    };
+    let tool = Tool {
+      shape: stroke_shape(&settings),
+      value: 0,
+      angle: 0.0,
+      manual: false,
+    };
+    let mut drawing = None;
+    let at = Instant::now();
+    step(&mut drawing, PHASE_DOWN, at, point(10.0, 10.0), &tool);
+    let (annotation, _) =
+      step(&mut drawing, PHASE_UP, at, point(50.0, 40.0), &tool).expect("the box completes");
+    assert_eq!(annotation.shape.kind(), kind);
+  }
+}

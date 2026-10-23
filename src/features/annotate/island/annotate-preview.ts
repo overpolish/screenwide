@@ -14,14 +14,14 @@ export const PREVIEW_ANNOTATE_SETTINGS: AnnotateSettings = {
   defaultShape: "arrow",
   defaultWidth: 12,
   enabled: true,
+  focusDims: false,
+  focusRadius: 25,
   highlightHandDrawn: false,
   highlightManual: false,
   highlightTint: false,
   keepAnnotationsBetweenSessions: false,
   shapeHandDrawn: false,
   shapeRadius: 0,
-  spotlightBlur: true,
-  spotlightRadius: 25,
   spotlightSoftness: 10,
 };
 

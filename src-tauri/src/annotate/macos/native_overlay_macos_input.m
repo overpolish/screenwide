@@ -9,8 +9,13 @@
 #import "native_overlay_macos.h"
 #import "native_overlay_macos_private.h"
 
+/// `src/ruler/cursor_guard_macos.m`: whether the pointer is over the chrome
+/// window the cursor guard exempts, where that window takes clicks.
+BOOL screenwide_cursor_guard_over_exempt_window(void);
+
 static ScreenwideAnnotatePointer pointerCallback = NULL;
 static ScreenwideAnnotateKey keyCallback = NULL;
+static ScreenwideAnnotateModifiers modifiersCallback = NULL;
 static id eventMonitor = nil;
 /// Whether the tool in hand points with the I-beam rather than the crosshair.
 static BOOL textCursor = NO;
@@ -52,6 +57,10 @@ static CGPoint pointerLocation(NSEvent *event) {
 static NSEvent *handleEvent(NSEvent *event) {
   if (!screenwide_annotate_has_surfaces())
     return event;
+  // Option turns a highlight the other way, and the pointer shows which way
+  // before the press, wherever the keyboard is.
+  if (event.type == NSEventTypeFlagsChanged && modifiersCallback != NULL)
+    modifiersCallback(modifiersOf(event));
   if (event.window != nil && !screenwide_annotate_owns_window(event.window)) {
     // Chrome rather than canvas: the pointer says "press", not "draw". The
     // cursor guard exempts this window, so the arrow survives being set.
@@ -68,7 +77,7 @@ static NSEvent *handleEvent(NSEvent *event) {
       uint32_t phase = event.type == NSEventTypeLeftMouseDown ? 0
                        : event.type == NSEventTypeLeftMouseDragged ? 1
                                                                    : 2;
-      pointerCallback(phase, point.x, point.y);
+      pointerCallback(phase, point.x, point.y, modifiersOf(event));
       screenwide_annotate_redraw();
     }
     return nil;
@@ -79,6 +88,13 @@ static NSEvent *handleEvent(NSEvent *event) {
     return nil;
   }
   case NSEventTypeMouseMoved:
+    // The anchor host holds the keyboard, so the pointer's moves arrive
+    // carrying it even over the island above it. Over the island's parts the
+    // pointer says "press", as it does over its own window.
+    if (screenwide_cursor_guard_over_exempt_window()) {
+      [NSCursor.arrowCursor set];
+      return nil;
+    }
     // Back over the canvas, where the tool's pointer says a stroke starts here.
     [(textCursor ? NSCursor.IBeamCursor : NSCursor.crosshairCursor) set];
     return nil;
@@ -88,11 +104,13 @@ static NSEvent *handleEvent(NSEvent *event) {
 }
 
 void screenwide_annotate_install_input(ScreenwideAnnotatePointer pointer,
-                                       ScreenwideAnnotateKey key) {
+                                       ScreenwideAnnotateKey key,
+                                       ScreenwideAnnotateModifiers modifiers) {
   if (!NSThread.isMainThread)
     return;
   pointerCallback = pointer;
   keyCallback = key;
+  modifiersCallback = modifiers;
   if (eventMonitor != nil)
     return;
   NSEventMask mask = NSEventMaskLeftMouseDown | NSEventMaskLeftMouseDragged |
@@ -100,7 +118,7 @@ void screenwide_annotate_install_input(ScreenwideAnnotatePointer pointer,
                      NSEventMaskRightMouseUp | NSEventMaskOtherMouseDown |
                      NSEventMaskOtherMouseUp | NSEventMaskMouseMoved |
                      NSEventMaskScrollWheel | NSEventMaskKeyDown |
-                     NSEventMaskKeyUp;
+                     NSEventMaskKeyUp | NSEventMaskFlagsChanged;
   eventMonitor = [NSEvent
       addLocalMonitorForEventsMatchingMask:mask
                                    handler:^NSEvent *(NSEvent *event) {
@@ -118,5 +136,6 @@ void screenwide_annotate_teardown_input(void) {
   // The annotations source stays: hosts left showing still draw from it.
   pointerCallback = NULL;
   keyCallback = NULL;
+  modifiersCallback = NULL;
 }
 
