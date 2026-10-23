@@ -6,8 +6,10 @@ import { type ReactNode, useState } from "react";
 
 import { motionDurations } from "../../lib/motion";
 
+import { IslandSectionContext } from "./island-context";
 import { px } from "./island-geometry";
 import { focusIn, glide } from "./island-motion";
+import { useSwapHold } from "./island-swap-hold";
 
 import type { islandLayout } from "./island-layout";
 import type { IslandShapeValues } from "./island-outline-sync";
@@ -18,6 +20,7 @@ import type { IslandShapeValues } from "./island-outline-sync";
  * animated by. */
 export function IslandSection({
   children,
+  heading,
   isFromMiddle,
   isOpening,
   isShown,
@@ -28,6 +31,9 @@ export function IslandSection({
   values,
 }: {
   children: ReactNode;
+  /** Where the island is going sideways under a notch, set at once while the
+   * island glides to it, which `sectionX` holds what hangs against. */
+  heading: MotionValue<number>;
   /** The island coming out of the notch or going back in, which a section
    * opens out of and folds into the middle with. */
   isFromMiddle: boolean;
@@ -85,6 +91,13 @@ export function IslandSection({
     : isOpen
       ? { duration: 0 }
       : { delay: motionDurations.travel, duration: 0 };
+  const swapHold = useSwapHold({
+    boxStart: values.start,
+    heading,
+    isOpen,
+    isOpening,
+    target: sectionStart,
+  });
 
   return (
     <div className="absolute start-1/2 top-0">
@@ -143,29 +156,31 @@ export function IslandSection({
             }}
             className="absolute top-0"
             initial={false}
-            style={{ x: sectionX }}
+            style={{ marginInlineStart: swapHold.offset, x: sectionX }}
             transition={
               isPlacedAtOnce
                 ? { ...glide, insetInlineStart: { duration: 0 } }
                 : glide
             }
           >
-            <AnimatePresence initial={false}>
-              {isShown && children ? (
-                <motion.div
-                  key="section"
-                  {...focusIn}
-                  // Positioned, so a part swapped out is lifted from the
-                  // flow (`popLayout`) and only the incoming one is
-                  // measured.
-                  className="relative flex w-max flex-col gap-inline px-(--island-section-inset) pt-inset-sm pb-(--island-section-inset)"
-                  initial={false}
-                  ref={onElement}
-                >
-                  {children}
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
+            <IslandSectionContext value={swapHold.context}>
+              <AnimatePresence initial={false}>
+                {isShown && children ? (
+                  <motion.div
+                    key="section"
+                    {...focusIn}
+                    // Positioned, so a part swapped out is lifted from the
+                    // flow (`popLayout`) and only the incoming one is
+                    // measured.
+                    className="relative flex w-max flex-col gap-inline px-(--island-section-inset) pt-inset-sm pb-(--island-section-inset)"
+                    initial={false}
+                    ref={onElement}
+                  >
+                    {children}
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </IslandSectionContext>
           </motion.div>
         </motion.div>
       </motion.div>

@@ -11,7 +11,7 @@ import { cn } from "../../lib/styling";
 import { Button } from "../../primitives/button/button";
 import { swatchStyles } from "../../primitives/swatch/swatch-styles";
 
-// Without a label the button is the colour itself, on Swatch's square; with
+// Without a label the button is the colour itself, on Swatch's circle; with
 // one it is a neutral button with the colour beside its name.
 
 type ColorButtonProps = {
@@ -62,7 +62,7 @@ export function ColorButton({
       <span
         aria-hidden="true"
         className={cn(
-          "size-icon shrink-0 rounded-sm",
+          "size-icon shrink-0 rounded-full",
           "inset-ring-1 inset-ring-divider",
         )}
         style={{ backgroundColor: value }}

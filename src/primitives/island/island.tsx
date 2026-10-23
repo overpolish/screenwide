@@ -49,9 +49,8 @@ import { useSize } from "./island-size";
 // notch, or shrinks to a speck and fades where there is none.
 //
 // The row is a toolbar: arrow keys move between its controls. The section is
-// outside it, so a list in the section keeps its own arrow keys. Controls are
-// native buttons with native tooltips (`title`): the OS draws those outside
-// the island's small window, where a tooltip of the page's own is clipped.
+// outside it, so a list in the section keeps its own arrow keys. Nothing on
+// it has a tooltip (`island-controls.tsx`).
 
 export type IslandProps = {
   "aria-label": string;
@@ -130,13 +129,14 @@ export function Island({
   const isFromMiddle = !isShown || isComing;
   const { finish, isOpening } = useOpening(isOpen);
 
-  const { islandX, rowLayerRef, rowX, sectionX, shapeWidth } = useRowOffset({
-    hasNotch: notch !== null,
-    holdsContent: !isShown,
-    rowElement,
-    shiftTarget: isShown && notch ? shift : 0,
-    width,
-  });
+  const { heading, islandX, rowLayerRef, rowX, sectionX, shapeWidth } =
+    useRowOffset({
+      hasNotch: notch !== null,
+      holdsContent: !isShown,
+      rowElement,
+      shiftTarget: isShown && notch ? shift : 0,
+      width,
+    });
 
   // The parts are laid out and animated as boxes that paint nothing; the
   // black is their outline, drawn from the same animated values.
@@ -246,6 +246,7 @@ export function Island({
           </motion.div>
 
           <IslandSection
+            heading={heading}
             isFromMiddle={isFromMiddle}
             isOpening={isOpening}
             isShown={isShown}

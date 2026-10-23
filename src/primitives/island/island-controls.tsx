@@ -9,9 +9,13 @@ import { motionDurations, motionEasings } from "../../lib/motion";
 import { cn } from "../../lib/styling";
 import { Text } from "../text/text";
 
+import { IslandFill } from "./island-fill";
+
 // What the island's content is made of. Its controls are circles of one size,
-// a size up from a window's. Each is a native button so its tooltip is the
-// OS's own (see `island.tsx`); a toggle says so with `aria-pressed`.
+// a size up from a window's; a toggle says so with `aria-pressed`. None has a
+// tooltip: the island sits by the hardware, where a label springing up under
+// the pointer would be clutter, so each control is drawn to say what it is
+// and names itself only to assistive technology.
 
 type ButtonProps = {
   "aria-label": string;
@@ -22,13 +26,12 @@ type ButtonProps = {
   isDisabled?: boolean;
   onPress?: () => void;
   ref?: Ref<HTMLButtonElement>;
-  /** The tooltip; the label when not given. */
-  title?: string;
 };
 
-/** A round control on the island's black: plain, with a fill under the
- * pointer, and a stronger one while what it opens is open. Raised, it is the
- * one control that names a choice rather than switching something. */
+/** A round control on the island's black: plain, with a fill growing in under
+ * the pointer, and a stronger one while it is on or what it opens is open.
+ * Raised, it is the one control that names a choice rather than switching
+ * something. */
 export function IslandButton({
   children,
   className,
@@ -37,27 +40,23 @@ export function IslandButton({
   isRaised = false,
   onPress,
   ref,
-  title,
   ...aria
 }: ButtonProps & { isOpen?: boolean; isRaised?: boolean }) {
   return (
     <button
       {...aria}
       className={cn(
-        "relative flex size-island-control shrink-0 items-center justify-center rounded-full transition-[background-color,color,opacity] disabled:opacity-40",
-        isRaised
-          ? "overflow-hidden text-fg control-raised hover:control-raised-hover active:control-raised-pressed"
-          : isOpen
-            ? "bg-fill-strong"
-            : "enabled:hover:bg-fill",
+        "group relative isolate flex size-island-control shrink-0 items-center justify-center rounded-full transition-[background-color,color,opacity] disabled:opacity-40",
+        isRaised &&
+          "overflow-hidden text-fg control-raised hover:control-raised-hover active:control-raised-pressed",
         className,
       )}
       disabled={isDisabled}
       onClick={onPress}
       ref={ref}
-      title={title ?? aria["aria-label"]}
       type="button"
     >
+      {isRaised ? null : <IslandFill isChosen={isOpen} />}
       {children}
     </button>
   );
@@ -71,7 +70,6 @@ export function IslandPrimaryButton({
   isDisabled,
   onPress,
   ref,
-  title,
   ...aria
 }: ButtonProps) {
   return (
@@ -84,7 +82,6 @@ export function IslandPrimaryButton({
       disabled={isDisabled}
       onClick={onPress}
       ref={ref}
-      title={title ?? aria["aria-label"]}
       type="button"
     >
       {children}
@@ -120,7 +117,6 @@ export function IslandOptions({
         )}
         disabled={isDisabled}
         onClick={onOpen}
-        title={label}
         type="button"
       >
         <ChevronDown aria-hidden className="size-3" />

@@ -5,9 +5,9 @@ import { createElement } from "react";
 import { fn } from "storybook/test";
 
 import { featureStage } from "../../../storybook/feature-story-stage";
+import { PREVIEW_NOTCH } from "../../../storybook/preview-notch";
 import { StoryNotch } from "../../../storybook/story-notch";
 
-import { PREVIEW_NOTCH } from "./island-preview";
 import { IslandStage } from "./island-stage";
 
 import type { Meta } from "@storybook/react-vite";

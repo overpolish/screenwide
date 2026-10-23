@@ -13,7 +13,7 @@ import {
 
 import { t } from "../../../i18n/i18n";
 
-import type { IslandInput, IslandInputKind, IslandMode } from "./island-types";
+import type { IslandInputKind, IslandMode } from "./island-types";
 
 // The words and glyphs the island uses for its inputs, its modes and its
 // clock.
@@ -43,18 +43,6 @@ export const clock = (seconds: number) => {
   return hours > 0
     ? `${String(hours)}:${pad(minutes)}:${pad(whole % 60)}`
     : `${String(minutes)}:${pad(whole % 60)}`;
-};
-
-/** What an input records from: its device's name, or for several system
- * audio sources how many there are; none when nothing is chosen. */
-export const chosenName = (input: IslandInput): string | undefined => {
-  const chosen = input.devices.filter(({ id }) =>
-    input.selectedIds.includes(id),
-  );
-  if (chosen.length === 0) return undefined;
-  return chosen.length > 1
-    ? t("recording-controls-sources", { count: chosen.length })
-    : chosen[0].label;
 };
 
 /** Each input's glyph, on and off. */

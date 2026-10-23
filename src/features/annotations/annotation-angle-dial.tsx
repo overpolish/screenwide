@@ -3,27 +3,9 @@
 
 import { t } from "../../i18n/i18n";
 import { AngleDial } from "../../primitives/angle-dial/angle-dial";
-import {
-  signedAngle,
-  wrapAngle,
-} from "../../primitives/angle-dial/angle-geometry";
 import { NumberField } from "../../primitives/input-fields/number-field";
 
-/** Between the dial's twelve o'clock and the document's east. */
-const QUARTER_TURN = 90;
-
-/**
- * The dial reads clockwise from twelve o'clock and the document stores radians
- * clockwise from east, a quarter turn apart. Converting here rather than
- * showing the document's own zero is what lets the notch stand where the
- * annotation's tail stands on the picture and the field agree with the notch.
- */
-const dialDegrees = (radians: number) =>
-  wrapAngle(Math.round((radians * 180) / Math.PI) + QUARTER_TURN);
-
-/** The reverse, signed the way `atan2` leaves an angle a drag produced. */
-const radiansFromDial = (degrees: number) =>
-  (signedAngle(degrees - QUARTER_TURN) * Math.PI) / 180;
+import { dialDegrees, radiansFromDial } from "./annotation-angle";
 
 /**
  * Where a counter's tail points: a dial with the aim under its notch, and the

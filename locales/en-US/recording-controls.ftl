@@ -31,12 +31,6 @@ recording-controls-microphone = Microphone
 recording-controls-system-audio = System Audio
 recording-controls-microphone-level = Microphone level
 recording-controls-system-audio-level = System audio level
-# Several apps chosen to record the sound of.
-recording-controls-sources =
-    { $count ->
-        [one] { $count } Source
-       *[other] { $count } Sources
-    }
 recording-controls-flip = Flip Horizontally
 recording-controls-camera-missing = This camera is no longer connected
 recording-controls-camera-mode-missing = This camera no longer offers { $size } at { $fps } fps

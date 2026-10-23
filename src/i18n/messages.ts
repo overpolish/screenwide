@@ -22,6 +22,16 @@ export type Messages = {
   "annotate-clear-label": null;
   "annotate-close": null;
   "annotate-close-label": null;
+  "annotate-island-corners-round": null;
+  "annotate-island-corners-rounded": null;
+  "annotate-island-corners-square": null;
+  "annotate-island-draw-hint": null;
+  "annotate-island-focus-blur": null;
+  "annotate-island-focus-dim": null;
+  "annotate-island-focus-name": null;
+  "annotate-island-highlight-box-hint": { key: string | number };
+  "annotate-island-highlight-fit-hint": { key: string | number };
+  "annotate-island-points": { points: string | number };
   "annotate-tools": null;
   "annotate-undo": null;
   "annotate-undo-label": null;
@@ -859,7 +869,6 @@ export type Messages = {
   "recording-controls-screenshot": null;
   "recording-controls-screenshot-options": null;
   "recording-controls-scrolling-screenshot": null;
-  "recording-controls-sources": { count: number };
   "recording-controls-starting": null;
   "recording-controls-starting-label": null;
   "recording-controls-stop": null;

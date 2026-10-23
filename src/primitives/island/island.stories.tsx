@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
+import { PREVIEW_NOTCH } from "../../storybook/preview-notch";
 import { StoryNotch } from "../../storybook/story-notch";
 
 import { Island } from "./island";
@@ -27,7 +28,6 @@ import { IslandRow } from "./island-row";
 import type { IslandAnchor } from "./island-geometry";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-const NOTCH = { height: 32, width: 190 };
 const COLOURS = ["#f5f5f4", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6"];
 const TOOLS = [
   { icon: Pen, label: "Pen" },
@@ -114,7 +114,7 @@ function IslandDemo({
           anchor={open?.anchor}
           aria-label="Drawing tools"
           isShown={isShown}
-          notch={hasNotch ? NOTCH : null}
+          notch={hasNotch ? PREVIEW_NOTCH : null}
           row={
             <IslandRow
               end={
@@ -187,7 +187,7 @@ function IslandDemo({
           section={open?.content}
         />
       </div>
-      {hasNotch ? <StoryNotch notch={NOTCH} /> : null}
+      {hasNotch ? <StoryNotch notch={PREVIEW_NOTCH} /> : null}
     </div>
   );
 }

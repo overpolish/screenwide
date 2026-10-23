@@ -18,3 +18,10 @@ export const IslandContext = createContext<{
   notch: null,
   setShift: () => undefined,
 });
+
+/** What the section tells the parts it swaps between: a part coming in calls
+ * `noteSwap` as it mounts, so a move of the section's box that follows the
+ * swap holds what it holds still rather than carrying it along. */
+export const IslandSectionContext = createContext<{ noteSwap: () => void }>({
+  noteSwap: () => undefined,
+});

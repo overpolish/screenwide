@@ -14,7 +14,7 @@ import {
 import { IslandRow } from "../../../primitives/island/island-row";
 
 import { InputGlyph, SourceChip } from "./island-glyphs";
-import { INPUTS, modeName } from "./island-names";
+import { INPUTS } from "./island-names";
 import { canRecord, canScreenshot } from "./island-warning";
 
 import type {
@@ -42,12 +42,6 @@ export function RestingRow({
   const display = props.displays.find(
     ({ id }) => id === props.selectedDisplayId,
   );
-  const label =
-    mode === "screen"
-      ? (display?.label ?? modeName(mode))
-      : mode === "window"
-        ? (props.chosenWindow?.title ?? modeName(mode))
-        : modeName(mode);
   const picture =
     mode === "screen" && display?.thumbnail
       ? {
@@ -143,7 +137,6 @@ export function RestingRow({
           <SourceChip
             hasProblem={!canRecord(props)}
             isOpen={panel === "source"}
-            label={label}
             mode={mode}
             onPress={() => {
               toggle("source");

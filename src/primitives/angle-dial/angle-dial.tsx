@@ -1,19 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef, useState } from "react";
-import { useFocusRing, useHover } from "react-aria";
-
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
 
-import { angleAtPoint, snapAngle, wrapAngle } from "./angle-geometry";
+import { wrapAngle } from "./angle-geometry";
+import { type DialSteps, EIGHTH_TURN, useAngleDial } from "./use-angle-dial";
 
-/** A degree at a time, as fine as the dial can be read. */
-const STEP = 1;
-/** Held Shift takes the arrows ten degrees at a time. */
-const COARSE_STEP = 10;
-/** Eighths of a turn: the quarters and the diagonals between them. */
-const SNAP_STEP = 45;
+/** A degree at a time, as fine as the dial can be read; held Shift snaps a
+ * drag to the eight aims that matter and takes the arrows ten at a time. */
+const STEPS: DialSteps = {
+  drag: { plain: 1, shifted: EIGHTH_TURN },
+  key: { plain: 1, shifted: 10 },
+};
 
 // The knob: a disc in the knob material, light in both appearances as
 // anything turned or slid by hand is, at a control's height so it sits in a
@@ -53,12 +51,6 @@ export type AngleDialProps = {
   isDisabled?: boolean;
 };
 
-// A press on the disc aims the dial at the pointer; a press on the notch picks
-// it up where it is, so it does not jump out from under the finger. Either way
-// the drag goes on outside the control, where the arm is long and a degree is
-// a wide movement, and holding Shift through it snaps to the eight aims that
-// matter. The value wraps: the arrows carry it past the turn in both
-// directions rather than stopping a degree short of where they started.
 export function AngleDial({
   "aria-label": label,
   className,
@@ -67,131 +59,15 @@ export function AngleDial({
   onChange,
   value,
 }: AngleDialProps) {
-  const dialRef = useRef<HTMLDivElement>(null);
-  const notchRef = useRef<HTMLSpanElement>(null);
-  /** How far the press landed from the notch, while a grab on it is held. */
-  const grabOffsetRef = useRef<number | null>(null);
-  /** The last degree sent, so a drag across one of them sends it once. */
-  const sentRef = useRef<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const { focusProps, isFocusVisible } = useFocusRing();
-  const { hoverProps, isHovered } = useHover({ isDisabled });
-
-  const send = (degrees: number) => {
-    if (degrees === sentRef.current) return;
-    sentRef.current = degrees;
-    onChange(degrees);
-  };
-
-  const aimAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    const dial = dialRef.current;
-    if (!dial) return;
-    const bearing = angleAtPoint(dial.getBoundingClientRect(), event);
-    if (bearing === null) return;
-    const grabOffset = grabOffsetRef.current;
-    send(
-      snapAngle(
-        grabOffset === null ? bearing : bearing - grabOffset,
-        event.shiftKey ? SNAP_STEP : STEP,
-      ),
-    );
-  };
-
-  const beginDrag = (event: React.PointerEvent<HTMLDivElement>) => {
-    const dial = dialRef.current;
-    if (isDisabled || event.button !== 0 || !dial) return;
-    const heldNotch = notchRef.current?.contains(event.target as Node) ?? false;
-    const bearing = angleAtPoint(dial.getBoundingClientRect(), event);
-    grabOffsetRef.current =
-      heldNotch && bearing !== null ? wrapAngle(bearing - value) : null;
-    sentRef.current = snapAngle(value, STEP);
-    setIsDragging(true);
-    dial.setPointerCapture(event.pointerId);
-    dial.focus({ preventScroll: true });
-    aimAtPointer(event);
-  };
-
-  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    dialRef.current?.releasePointerCapture(event.pointerId);
-    grabOffsetRef.current = null;
-    sentRef.current = null;
-    setIsDragging(false);
-  };
-
-  const turn = (event: React.KeyboardEvent<HTMLDivElement>, by: number) => {
-    event.preventDefault();
-    onChange(snapAngle(value + by, STEP));
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (isDisabled) return;
-    const stride = event.shiftKey ? COARSE_STEP : STEP;
-    switch (event.key) {
-      case "ArrowDown":
-      case "ArrowLeft": {
-        turn(event, -stride);
-        break;
-      }
-      case "ArrowRight":
-      case "ArrowUp": {
-        turn(event, stride);
-        break;
-      }
-      case "End": {
-        event.preventDefault();
-        onChange(360 - STEP);
-        break;
-      }
-      case "Home": {
-        event.preventDefault();
-        onChange(0);
-        break;
-      }
-      case "PageDown": {
-        turn(event, -SNAP_STEP);
-        break;
-      }
-      case "PageUp": {
-        turn(event, SNAP_STEP);
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-  };
-
-  const degrees = snapAngle(value, STEP);
-
+  const { dialProps, notchRef } = useAngleDial({
+    isDisabled,
+    label,
+    onChange,
+    steps: STEPS,
+    value,
+  });
   return (
-    <div
-      {...focusProps}
-      {...hoverProps}
-      aria-disabled={isDisabled || undefined}
-      aria-label={label}
-      aria-valuemax={360 - STEP}
-      aria-valuemin={0}
-      aria-valuenow={degrees}
-      aria-valuetext={`${String(degrees)}°`}
-      className={cn(dialStyles, className)}
-      data-disabled={isDisabled || undefined}
-      data-dragging={isDragging || undefined}
-      data-focus-visible={isFocusVisible || undefined}
-      data-hovered={isHovered || undefined}
-      // A clock face: clockwise from twelve in every language.
-      dir="ltr"
-      onKeyDown={handleKeyDown}
-      onPointerCancel={endDrag}
-      onPointerDown={beginDrag}
-      onPointerMove={(event) => {
-        if (isDragging) aimAtPointer(event);
-      }}
-      onPointerUp={endDrag}
-      ref={dialRef}
-      role="slider"
-      tabIndex={isDisabled ? undefined : 0}
-    >
+    <div {...dialProps} className={cn(dialStyles, className)}>
       <span
         className="absolute inset-0 transform-gpu"
         style={{ rotate: `${String(wrapAngle(value))}deg` }}

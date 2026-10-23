@@ -13,6 +13,7 @@ import {
   usesSystemColorPanel,
 } from "../../primitives/input-fields/use-color-panel";
 import { Swatch } from "../../primitives/swatch/swatch";
+import { type SwatchSize } from "../../primitives/swatch/swatch-styles";
 
 import {
   ANNOTATION_SWATCHES,
@@ -54,17 +55,23 @@ function TileGlyph({
  * last tried. Two right clicks on a kept colour forget it.
  */
 export function AnnotationColorGrid({
+  columns,
   isDisabled,
   offersCustom,
   onChange,
   onRemoveColor,
   onSaveColor,
   savedColors = [],
+  size,
   value,
 }: {
   onChange: (color: string) => void;
   /** `#rrggbb` or `#rrggbbaa`, as the document stores it. */
   value: string;
+  /** The most swatches a row holds, past which they wrap; the rows start at
+   * the same edge so the columns line up. Left out, they wrap to the width
+   * they are given, centred. */
+  columns?: number;
   isDisabled?: boolean;
   /** Offers the Custom tile. The live overlay's toolbar leaves it out: it
    * closes on every pick, so it could not stay open through a drag. */
@@ -75,6 +82,8 @@ export function AnnotationColorGrid({
   onSaveColor?: (color: string) => void;
   /** Colours of your own, drawn after the palette. */
   savedColors?: string[];
+  /** The swatches' size; small where a row of many would crowd. */
+  size?: SwatchSize;
 }) {
   const systemPanel = usesSystemColorPanel();
   const colorPanel = useColorPanel({ onChange });
@@ -86,15 +95,27 @@ export function AnnotationColorGrid({
       (offered) => sameAnnotationColor(offered, value),
     ) ?? "custom";
   const isCustom = chosen === "custom";
+  const count =
+    ANNOTATION_SWATCHES.length + saved.length + (offersCustom ? 1 : 0);
 
   return (
     <ToggleButtonGroup
       aria-label={t("annotation-color")}
-      className="flex flex-wrap justify-center gap-inline"
+      className={cn(
+        "gap-inline",
+        columns === undefined ? "flex flex-wrap justify-center" : "grid",
+      )}
       disallowEmptySelection
       isDisabled={isDisabled}
       selectedKeys={new Set([chosen])}
       selectionMode="single"
+      style={
+        columns === undefined
+          ? undefined
+          : {
+              gridTemplateColumns: `repeat(${String(Math.min(count, columns))}, auto)`,
+            }
+      }
     >
       {ANNOTATION_SWATCHES.map((swatch) => (
         <Swatch
@@ -107,6 +128,7 @@ export function AnnotationColorGrid({
           onPress={() => {
             onChange(swatch.color);
           }}
+          size={size}
         />
       ))}
       {saved.map((kept) => (
@@ -130,6 +152,7 @@ export function AnnotationColorGrid({
             removal.disarm();
             onChange(kept);
           }}
+          size={size}
         >
           {armed === kept ? (
             <TileGlyph color={kept}>
@@ -161,6 +184,7 @@ export function AnnotationColorGrid({
             onPress={() => {
               if (systemPanel) colorPanel.open(value);
             }}
+            size={size}
           >
             <TileGlyph color={isCustom ? value : null}>
               <Plus aria-hidden="true" />

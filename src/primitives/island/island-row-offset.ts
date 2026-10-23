@@ -37,6 +37,9 @@ export function useRowOffset({
   /** How wide the row's black should be, in px. */
   width: number;
 }): {
+  /** Where the island is going sideways, in px from centre: set at once as
+   * the shift changes, while `islandX` glides to it. */
+  heading: MotionValue<number>;
   islandX: MotionValue<number>;
   rowLayerRef: React.RefObject<HTMLDivElement | null>;
   rowX: MotionValue<number>;
@@ -112,5 +115,5 @@ export function useRowOffset({
     );
   });
 
-  return { islandX, rowLayerRef, rowX, sectionX, shapeWidth };
+  return { heading, islandX, rowLayerRef, rowX, sectionX, shapeWidth };
 }

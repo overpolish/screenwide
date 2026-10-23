@@ -21,6 +21,11 @@ const meta = {
       control: "boolean",
       table: { defaultValue: { summary: "false" } },
     },
+    size: {
+      control: "inline-radio",
+      options: ["md", "sm"],
+      table: { defaultValue: { summary: "md" } },
+    },
   },
   args: {
     "aria-label": "Orange",
@@ -31,7 +36,7 @@ const meta = {
   },
   component: Swatch,
   parameters: {
-    controls: { include: ["color", "isDisabled", "isSelected"] },
+    controls: { include: ["color", "isDisabled", "isSelected", "size"] },
     layout: "centered",
   },
   // A press toggles the swatch, as a lone one does; in a group the group
@@ -95,4 +100,29 @@ export const States: Story = {
 export const Disabled: Story = {
   parameters: { controls: { disable: true } },
   render: () => <StateGrid isDisabled />,
+};
+
+export const Sizes: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <StoryGrid columns={["at rest", "chosen"]}>
+      {(["md", "sm"] as const).map((size) => (
+        <StoryGridRow key={size} label={size}>
+          {[false, true].map((isSelected) => (
+            <span className="flex gap-inline" key={String(isSelected)}>
+              <Swatch
+                aria-label="Orange"
+                color="#ff9f0a"
+                isSelected={isSelected}
+                size={size}
+              />
+              <Swatch aria-label="Custom" isSelected={isSelected} size={size}>
+                <Plus />
+              </Swatch>
+            </span>
+          ))}
+        </StoryGridRow>
+      ))}
+    </StoryGrid>
+  ),
 };

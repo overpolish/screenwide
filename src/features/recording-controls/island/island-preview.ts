@@ -31,9 +31,6 @@ export const PREVIEW_DISPLAYS: IslandDisplay[] = [
   },
 ];
 
-/** A MacBook's notch, as its screen reports it, for the stories. */
-export const PREVIEW_NOTCH = { height: 32, width: 190 };
-
 /** A stand-in app icon: a rounded square in two colours. */
 const appIcon = (from: string, to: string) =>
   `data:image/svg+xml;utf8,${encodeURIComponent(

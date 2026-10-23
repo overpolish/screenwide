@@ -18,7 +18,7 @@ import {
   IslandOptions,
 } from "../../../primitives/island/island-controls";
 
-import { chosenName, INPUT_GLYPHS, inputName } from "./island-names";
+import { INPUT_GLYPHS, inputName } from "./island-names";
 
 import type { IslandInput, IslandInputKind, IslandMode } from "./island-types";
 
@@ -72,7 +72,6 @@ export function InputGlyph({
         aria-pressed={input.isOn}
         isOpen={isOpen}
         onPress={onToggle}
-        title={chosenName(input) ?? inputName(kind)}
       >
         <IconSwap swapKey={input.isOn ? "on" : "off"}>
           {input.isOn ? (
@@ -163,20 +162,18 @@ export function ModeIcon({
 
 /** What will be recorded, as its picture: the chosen display's still or
  * window's app icon, or else the mode's icon. Raised, as the one control
- * that names a choice rather than switching something; its name is in its
- * tooltip and in the part it opens. It carries the problem dot when what is
- * chosen cannot be recorded. */
+ * that names a choice rather than switching something; its name is in the
+ * part it opens. It carries the problem dot when what is chosen cannot be
+ * recorded. */
 export function SourceChip({
   hasProblem,
   isOpen,
-  label,
   mode,
   onPress,
   picture,
 }: {
   hasProblem: boolean;
   isOpen: boolean;
-  label: string;
   mode: IslandMode;
   onPress: () => void;
   /** `id` names the source, so a refreshed still of the same display is
@@ -189,7 +186,6 @@ export function SourceChip({
       aria-label={t("recording-controls-island-source")}
       isRaised
       onPress={onPress}
-      title={label}
     >
       <IconSwap swapKey={picture ? `${picture.kind} ${picture.id}` : mode}>
         {picture ? (

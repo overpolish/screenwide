@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { motion } from "motion/react";
 import { type Ref } from "react";
 
-import { motionDurations, motionEasings } from "../../../lib/motion";
+import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 
 import { DevicePanel } from "./island-device-panel";
 import { RecordPanel, ScreenshotPanel } from "./island-panels";
@@ -13,9 +12,7 @@ import { canRecord } from "./island-warning";
 
 import type { IslandPanel, RecordingIslandProps } from "./island-types";
 
-// Whichever part the island has grown into, faded across as it changes. It
-// takes a ref so `popLayout` can lift the outgoing part from the flow while
-// it fades, leaving only the incoming one to size the island.
+// Whichever part the island has grown into, faded across as it changes.
 
 export function PanelBody({
   panel,
@@ -27,13 +24,7 @@ export function PanelBody({
   ref?: Ref<HTMLDivElement>;
 }) {
   return (
-    <motion.div
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      initial={{ opacity: 0 }}
-      ref={ref}
-      transition={{ duration: motionDurations.state, ease: motionEasings.out }}
-    >
+    <IslandCrossfade ref={ref}>
       {panel === "source" ? (
         <SourcePanel {...props} />
       ) : panel === "screenshot" ? (
@@ -62,6 +53,6 @@ export function PanelBody({
           preview={panel === "camera" ? props.cameraPreview : undefined}
         />
       )}
-    </motion.div>
+    </IslandCrossfade>
   );
 }

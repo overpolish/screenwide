@@ -2,22 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
+import { splitAtPlaceable } from "../../../../i18n/split-at-placeable";
 import { hotkeyKeys } from "../../../../lib/hotkey";
 import { Keyboard } from "../../../../primitives/keyboard/keyboard";
-
-/** Stands in for the keycap while the message is translated, so the whole
- * sentence stays one message and the key sits wherever a language puts it. */
-const KEY_MARK = "\uE000";
 
 /** The help line under the transcript, with the modifier a click takes drawn
  * as a key: Command on macOS, Ctrl on Windows. */
 export function TranscriptHint() {
-  const [before, after = ""] = t("editor-panels-transcript-hint", {
-    key: KEY_MARK,
-  })
-    // Fluent isolates a placeable's direction; the keycap does that itself.
-    .replace(`\u2068${KEY_MARK}\u2069`, KEY_MARK)
-    .split(KEY_MARK);
+  const [before, after] = splitAtPlaceable((key) =>
+    t("editor-panels-transcript-hint", { key }),
+  );
   return (
     <p className="text-caption text-fg-secondary">
       {before}

@@ -71,7 +71,6 @@ function CameraFrame({
             : "bg-island/60 text-fg hover:bg-island/80",
         )}
         onClick={() => onFlipChange?.(!isFlipped)}
-        title={t("recording-controls-flip")}
         type="button"
       >
         <TrianglesCenterlineDashedVertical aria-hidden className="size-icon" />
