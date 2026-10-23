@@ -12,10 +12,17 @@ import { lookById, type LookId, type Pen } from "./looks";
 // The pens, each showing what it draws in the project's look, so the tool is
 // its own preview: pick it and point.
 
-function PenIcon({ lookId, pen }: { lookId: LookId; pen: Pen }) {
+// Every pen on a white tile, the picture's own ground, so the preview reads
+// the same on a toolbar's fill and on the island's black.
+export function PenIcon({ lookId, pen }: { lookId: LookId; pen: Pen }) {
   const look = lookById(lookId);
   const color = look.id === "product" ? look.ink : look.accent;
-  if (pen === "focus") return <Focus className="size-5" style={{ color }} />;
+  if (pen === "focus")
+    return (
+      <span className="flex size-7 items-center justify-center rounded-[6px] bg-white">
+        <Focus className="size-5" style={{ color }} />
+      </span>
+    );
   return (
     <svg
       aria-hidden

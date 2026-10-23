@@ -6,7 +6,6 @@ import { featureStage } from "../../feature-story-stage";
 import { ActionScript } from "./action-script";
 import { FisheyeTimeline } from "./fisheye-timeline";
 import { KeyboardMap } from "./keyboard-map";
-import { LivingBar } from "./living-bar";
 import { LivingSettings } from "./living-settings";
 import { LookPens } from "./look-pens";
 import { PointAnnotate } from "./point-annotate";
@@ -26,8 +25,6 @@ type Story = StoryObj<typeof meta>;
 export const LooksAndPens: Story = { render: () => <LookPens /> };
 
 export const PointDontDraw: Story = { render: () => <PointAnnotate /> };
-
-export const LivingRecordingBar: Story = { render: () => <LivingBar /> };
 
 export const SettingsYouCanSee: Story = { render: () => <LivingSettings /> };
 

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { type ReactNode } from "react";
-import { Header, ListBoxSection } from "react-aria-components";
 
 import { cn } from "../../../lib/styling";
 
@@ -26,24 +25,5 @@ export function PanelWindow({
     >
       {children}
     </div>
-  );
-}
-
-// A titled run of a menu's items, its heading set back as a native menu's
-// section heading is.
-export function MenuSection({
-  children,
-  title,
-}: {
-  children: ReactNode;
-  title: string;
-}) {
-  return (
-    <ListBoxSection className="flex flex-col not-first:mt-inset-sm">
-      <Header className="px-inset-sm pt-1 pb-1 text-caption text-fg-tertiary">
-        {title}
-      </Header>
-      {children}
-    </ListBoxSection>
   );
 }

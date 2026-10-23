@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ClipboardCopy, Redo2, Share, Trash2, Undo2 } from "lucide-react";
+import { ClipboardCopy, Redo2, Share, Undo2 } from "lucide-react";
 
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { Toolbar } from "../../../primitives/toolbar/toolbar";
 import { PROJECT_NAME } from "../shared/mock-data";
 
-export type EditorKind = "audio" | "recording" | "screenshot";
+import { type EditorKind } from "./model/use-editor";
 
 // The window's own bar: the name after the window buttons, then history and
-// what leaves the editor. A window toolbar, so its text commands carry a
+// what leaves the editor. Delete is the selection's, so it sits on the
+// island with the selection. A window toolbar, so its text commands carry a
 // leading icon; Export is the one thing the window is for, so it alone is
 // primary. A screenshot is copied as often as it is saved, so Copy sits
 // beside it.
@@ -29,9 +30,6 @@ export function TitleBar({ kind }: { kind: EditorKind }) {
         </IconButton>
         <IconButton aria-label="Redo" isDisabled variant="ghost">
           <Redo2 />
-        </IconButton>
-        <IconButton aria-label="Delete" variant="ghost">
-          <Trash2 />
         </IconButton>
       </Toolbar>
       <span className="flex items-center gap-inline">

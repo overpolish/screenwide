@@ -5,11 +5,14 @@ import { ReactNode } from "react";
 
 import { cn } from "../../../lib/styling";
 
-import { ARROW_COLOR, ARROW_ENDS, SELECTION_BOX, waveform } from "./mock-data";
+import { ARROW_ENDS, SELECTION_BOX, waveform } from "./mock-data";
+
+/** The annotation red the recording's arrows are drawn in. */
+const ARROW_COLOR = "#ff453a";
 
 /** Stands in for the recorded screen: an app window on a styled background,
  * as the export would frame it. Content, so the same in every direction. */
-export function FakeScreen({ className }: { className?: string }) {
+function FakeScreen({ className }: { className?: string }) {
   return (
     <div
       className={cn("relative overflow-hidden p-[7%]", className)}
@@ -52,39 +55,6 @@ export function FakeScreen({ className }: { className?: string }) {
         </div>
       </div>
     </div>
-  );
-}
-
-/** An arrow at the shape and colour an annotation preview or preset uses. */
-export function ArrowGlyph({
-  className,
-  color = ARROW_COLOR,
-  head = "end",
-  isHandDrawn,
-  width = 3,
-}: {
-  className?: string;
-  color?: string;
-  head?: "both" | "end" | "none";
-  isHandDrawn?: boolean;
-  width?: number;
-}) {
-  const line = isHandDrawn ? "M6 26 C 12 22, 18 15, 24 13" : "M6 26 L 24 8";
-  return (
-    <svg
-      aria-hidden
-      className={className}
-      fill="none"
-      stroke={color}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={width}
-      viewBox="0 0 32 32"
-    >
-      <path d={line} />
-      {head === "none" ? null : <path d="M14 8 L 25 7 L 24 18" />}
-      {head === "both" ? <path d="M7 15 L 6 26 L 17 25" /> : null}
-    </svg>
   );
 }
 

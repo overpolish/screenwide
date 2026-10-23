@@ -1,96 +1,137 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// A recording with everything the editor shows in its timeline today: scenes,
-// shortcuts, captions, a cut, a sped-up stretch, moments with a voice note,
-// the camera with its background removed, two audio tracks and annotations.
+import {
+  ACTIONS,
+  type Action,
+  RECORDING_S,
+  SEGMENTS,
+} from "../ideas/ideas-data";
 
-export const DURATION_S = 94;
-export const PLAYHEAD_S = 31;
+// The editor edits the same 48-second walkthrough as the ideas. Its backbone
+// is what was done, not what was said: the recording's cursor and key files
+// already give every click, drag, typing run, shortcut and app switch
+// (`src-tauri/src/editor/auto_zoom/signals.rs`), so a recording with no
+// voice has as much to edit by as one with. Speech, where there is any, is
+// a layer over that.
 
-/** The timeline's column of row names, in pixels: wide enough for the
- * timeline's three zoom buttons at the head of the ruler. */
-export const TIMELINE_LABEL_WIDTH = 60;
+export { ACTIONS, RECORDING_S };
 
-/** Where `seconds` falls along the recording, in percent. */
-export const at = (seconds: number) =>
-  `${String((seconds / DURATION_S) * 100)}%`;
+/** A stretch of the recording to edit by: something done, from the pointer
+ * setting off to the work settling, or for a recording with only sound, a
+ * spoken line. Between beats is still time, which a squeeze gives up. */
+export type Beat =
+  | { action: Action; end: number; id: string; kind: "action"; start: number }
+  | { end: number; id: string; kind: "speech"; start: number; text: string };
 
-/** A span placed by start and end in seconds. Lanes are `dir="ltr"`: time
- * runs left to right in every language. */
-export const span = (start: number, end: number) => ({
-  insetInlineStart: at(start),
-  width: at(end - start),
-});
-
-export const clock = (seconds: number) =>
-  `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
-
-export type Timed = { end: number; label: string; start: number };
-
-export const SCENES: Timed[] = [
-  { end: 20, label: "Screen only", start: 0 },
-  { end: 46, label: "Zoom", start: 20 },
-  { end: 70, label: "Side by side", start: 46 },
-  { end: 94, label: "Picture in picture", start: 70 },
-];
-
-/** Shortcuts pressed while recording, each as the keys shown. */
-export const SHORTCUTS: (Omit<Timed, "label"> & { keys: string[] })[] = [
-  { end: 21, keys: ["Command", "C"], start: 17 },
-  { end: 44, keys: ["Command", "V"], start: 40 },
-  { end: 70, keys: ["Shift", "Command", "4"], start: 64 },
-];
-
-export const CAPTIONS: Timed[] = [
-  { end: 14, label: "Welcome to the dashboard", start: 1 },
-  { end: 30, label: "Click New project", start: 17 },
-  { end: 49, label: "Name it and pick a template", start: 33 },
-  { end: 70, label: "Invite your team", start: 54 },
-  { end: 90, label: "And you are ready to go", start: 74 },
-];
-
-/** Where seconds were cut out. The timeline closes up behind a cut, leaving
- * a sliver so the join shows; the button over it on the ruler restores it. */
-export const CUT = { at: 38, seconds: 4 };
-
-/** Half the sliver between the footage either side of a cut, in seconds. */
-const JOIN = 0.18;
-
-/** The footage either side of the cut. */
-export const STRETCHES = [
-  [0, CUT.at - JOIN],
-  [CUT.at + JOIN, DURATION_S],
-] as const;
-
-/** Played faster; the ruler shows the rate with handles at its ends. */
-export const SPEED = { end: 66, rate: "2×", start: 52 };
-
-export type Moment = {
-  at: number;
-  color: string;
-  name: string;
-  note?: { duration: string; transcript: string };
+/** How long before each action the pointer sets off, and after it the work
+ * settles, in seconds. */
+const LEAD: Record<Action["kind"], [number, number]> = {
+  click: [1.4, 0.5],
+  idle: [0, 0],
+  keys: [0.4, 0.5],
+  switch: [0.4, 0.6],
+  type: [0.6, 1.2],
 };
 
-export const MOMENTS: Moment[] = [
-  { at: 18, color: "#ffcc00", name: "Funny" },
-  {
-    at: 47.5,
-    color: "#0088ff",
-    name: "Notable",
-    note: {
-      duration: "0:04",
-      transcript:
-        "Cut the intro here, the demo really starts once the settings window opens.",
-    },
-  },
-  { at: 91, color: "#ffcc00", name: "Funny" },
+export const ACTION_BEATS: Beat[] = ACTIONS.filter(
+  ({ kind }) => kind !== "idle",
+).map((action) => ({
+  action,
+  end: action.at + LEAD[action.kind][1],
+  id: `a${String(action.at)}`,
+  kind: "action",
+  start: action.at - LEAD[action.kind][0],
+}));
+
+export const SPEECH = SEGMENTS.flatMap((segment) =>
+  segment.kind === "speech" ? [segment] : [],
+);
+
+export const SPEECH_BEATS: Beat[] = SPEECH.map((segment) => ({
+  end: segment.end,
+  id: `s${String(segment.start)}`,
+  kind: "speech",
+  start: segment.start,
+  text: segment.text,
+}));
+
+/** Every word with the moment it starts, spread over its sentence. */
+export const WORDS = SPEECH.flatMap((segment) => {
+  const words = segment.text.split(" ");
+  const step = (segment.end - segment.start) / words.length;
+  return words.map((word, index) => ({
+    at: segment.start + index * step,
+    word,
+  }));
+});
+
+/** Where the work moved on: at an app switch or a long still stretch, not
+ * at a sentence. `element` is what the step is about, outlined on its
+ * still. */
+export type Step = {
+  end: number;
+  start: number;
+  title: string;
+  /** A shortcut is done on no element, so its step outlines none. */
+  element?: string;
+};
+
+export const STEPS: Step[] = [
+  { element: "new", end: 11.5, start: 0, title: "Start a project" },
+  { element: "name", end: 17.5, start: 11.5, title: "Name it" },
+  { element: "create", end: 30, start: 17.5, title: "Pick and create" },
+  { end: 36, start: 30, title: "Save" },
+  { element: "share", end: RECORDING_S, start: 36, title: "Share it" },
 ];
 
-export const ANNOTATIONS: (Timed & { isSelected?: boolean })[] = [
-  { end: 16, label: "Counter 1", start: 6 },
-  { end: 36, isSelected: true, label: "Arrow 1", start: 26 },
-  { end: 60, label: "Text 1", start: 51 },
-  { end: 84, label: "Redaction 1", start: 73 },
+export type Layout = "follow" | "pip" | "screen" | "side";
+
+export const LAYOUTS: { id: Layout; label: string }[] = [
+  { id: "screen", label: "Screen" },
+  { id: "follow", label: "Follow pointer" },
+  { id: "side", label: "Side by side" },
+  { id: "pip", label: "Picture in picture" },
 ];
+
+export const DEFAULT_SCENES: Layout[] = [
+  "screen",
+  "follow",
+  "follow",
+  "screen",
+  "pip",
+];
+
+/** When each seeded mark (`look-pens-model.ts`) shows: from the action on
+ * its element to the end of that action's step. */
+export const SEEDED_TIMES: Record<number, { end: number; start: number }> = {
+  1: { end: 30, start: 16.2 },
+  2: { end: 11.5, start: 8.9 },
+  3: { end: RECORDING_S, start: 43.1 },
+};
+
+export type Backdrop = "dark" | "none" | "warm";
+
+export const BACKDROPS: { background: string; id: Backdrop; label: string }[] =
+  [
+    { background: "transparent", id: "none", label: "None" },
+    {
+      background: "linear-gradient(135deg, #f6d365, #fda085)",
+      id: "warm",
+      label: "Warm",
+    },
+    {
+      background: "linear-gradient(135deg, #2b2d42, #111)",
+      id: "dark",
+      label: "Dark",
+    },
+  ];
+
+export const backdropOf = (id: Backdrop) =>
+  BACKDROPS.find((item) => item.id === id)?.background ?? "transparent";
+
+export const stepAt = (seconds: number) =>
+  Math.max(
+    0,
+    STEPS.findIndex(({ end, start }) => seconds >= start && seconds < end),
+  );

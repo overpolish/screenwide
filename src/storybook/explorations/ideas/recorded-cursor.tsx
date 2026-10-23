@@ -3,10 +3,17 @@
 
 import { clickAt, cursorAt } from "./cursor-path";
 
-// The recording's own pointer, with a ripple where it clicked.
-export function RecordedCursor({ seconds }: { seconds: number }) {
+// The recording's own pointer, with a ripple where it clicked unless the
+// clicks are not shown.
+export function RecordedCursor({
+  hasRipple = true,
+  seconds,
+}: {
+  seconds: number;
+  hasRipple?: boolean;
+}) {
   const { x, y } = cursorAt(seconds);
-  const ripple = clickAt(seconds);
+  const ripple = hasRipple ? clickAt(seconds) : null;
   return (
     <span
       className="pointer-events-none absolute"

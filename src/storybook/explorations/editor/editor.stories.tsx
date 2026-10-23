@@ -7,32 +7,58 @@ import { EditorWindow } from "./editor-window";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
+// One working editor, to try at a top level: pick a tool in the left column
+// and its options open beside it; pick a pen and point at the screen; select
+// an annotation and drag its bar or ends on the timeline; hover the strip,
+// scrub from the step names, drag its end in, select a beat and press
+// Delete; switch to Steps and double-click a card. Space plays; Escape steps
+// back.
+
 const meta = {
+  argTypes: {
+    isVoiced: { control: "boolean" },
+    kind: {
+      control: "inline-radio",
+      options: ["recording", "screenshot", "audio"],
+      table: { defaultValue: { summary: "recording" } },
+    },
+  },
   component: EditorWindow,
   decorators: [featureStage({ window: "editor-recording" })],
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    controls: { include: ["isVoiced", "kind"] },
+    layout: "fullscreen",
+  },
+  // Changing the kind or the voice starts the editor afresh.
+  render: (args) => (
+    <EditorWindow
+      key={`${String(args.kind)}-${String(args.isVoiced)}`}
+      {...args}
+    />
+  ),
   title: "Explorations/Editor",
 } satisfies Meta<typeof EditorWindow>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const ArrowSelected: Story = { args: { hasPanel: true } };
+export const NoVoice: Story = { args: { isVoiced: false } };
 
-export const Magnetic: Story = {
-  args: { hasPanel: true, isMagnetic: true },
+export const WithVoice: Story = { args: { isVoiced: true } };
+
+export const AnnotationSelected: Story = {
+  args: {
+    isVoiced: false,
+    start: { playhead: 44, selection: { id: 3, kind: "mark" } },
+  },
 };
 
-export const MagneticSoundOnly: Story = {
-  args: { isMagnetic: true, kind: "audio" },
+export const Steps: Story = {
+  args: { isVoiced: false, start: { view: "board" } },
 };
-
-export const TracksMenu: Story = { args: { isTracksOpen: true } };
-
-export const AnnotationRing: Story = { args: { isRingOpen: true } };
-
-export const MomentNote: Story = { args: { isNoteOpen: true } };
 
 export const Screenshot: Story = { args: { kind: "screenshot" } };
 
-export const SoundOnly: Story = { args: { kind: "audio" } };
+export const SoundOnly: Story = {
+  args: { kind: "audio", start: { playhead: 14 } },
+};

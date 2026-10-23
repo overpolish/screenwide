@@ -5,34 +5,6 @@
 
 export const PROJECT_NAME = "Onboarding walkthrough";
 
-/** The annotation palette: content colours, the same in every direction. */
-export const ANNOTATION_COLORS = [
-  "#ff453a",
-  "#ff9f0a",
-  "#ffd60a",
-  "#30d158",
-  "#0a84ff",
-  "#bf5af2",
-  "#ffffff",
-  "#1c1c1e",
-];
-
-export const ARROW_COLOR = ANNOTATION_COLORS[0];
-
-export type ArrowStyle = {
-  color: string;
-  name: string;
-  width: number;
-  isHandDrawn?: boolean;
-};
-
-export const PRESETS: ArrowStyle[] = [
-  { color: "#ff453a", name: "Callout", width: 4 },
-  { color: "#ffffff", name: "Subtle", width: 2 },
-  { color: "#ffd60a", isHandDrawn: true, name: "Marker", width: 5 },
-  { color: "#0a84ff", name: "Pointer", width: 3 },
-];
-
 /** A deterministic waveform: `count` levels between 0 and 1. */
 export const waveform = (count: number, seed: number): number[] =>
   Array.from({ length: count }, (_, index) => {
