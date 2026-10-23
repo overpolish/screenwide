@@ -81,39 +81,15 @@ fn a_counter_aim_that_is_not_an_angle_is_refused() {
   .is_ok());
 }
 
-#[test]
-fn a_toolbar_position_that_is_not_a_place_is_refused() {
-  for (x, y) in [(f64::NAN, 0.0), (0.0, f64::INFINITY)] {
-    assert!(validated(AnnotateSettings {
-      toolbar_position: Some(ToolbarPosition {
-        display_id: 1,
-        x,
-        y
-      }),
-      ..AnnotateSettings::default()
-    })
-    .is_err());
-  }
-  assert!(validated(AnnotateSettings {
-    toolbar_position: Some(ToolbarPosition {
-      display_id: 1,
-      x: -12.0,
-      y: 8.0
-    }),
-    ..AnnotateSettings::default()
-  })
-  .is_ok());
-}
-
-/// A stored file written before the toolbar and the counter existed still
-/// loads, and the arrow it dresses keeps its head.
+/// A stored file written before the counter existed, and while the toolbar
+/// kept its own place, still loads, and the arrow it dresses keeps its head.
 #[test]
 fn settings_without_the_newer_fields_take_their_defaults() {
-  let settings: AnnotateSettings =
-    serde_json::from_str(r##"{"enabled":true,"defaultColor":"#ffcc00","defaultWidth":8.0}"##)
-      .unwrap();
+  let settings: AnnotateSettings = serde_json::from_str(
+    r##"{"enabled":true,"defaultColor":"#ffcc00","defaultWidth":8.0,"toolbarPosition":{"displayId":1,"x":4.0,"y":8.0}}"##,
+  )
+  .unwrap();
   assert_eq!(settings.default_head, AnnotationHead::End);
-  assert_eq!(settings.toolbar_position, None);
   assert_eq!(settings.default_shape, AnnotationKind::Arrow);
   assert_eq!(settings.default_counter_size, MIN_COUNTER_SIZE);
   assert_eq!(settings.default_counter_angle, 0.0);

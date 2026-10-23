@@ -39,8 +39,8 @@ use key_codes::{KEY_A, KEY_D, KEY_H, KEY_N, KEY_O, KEY_S};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) use key_codes::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z};
 
-/// The tool each unmodified letter picks up, the twin of the toolbar's own
-/// hints. A shape added to the overlay takes its letter here.
+/// The tool each unmodified letter picks up, the twin of the island's tool
+/// buttons. A shape added to the overlay takes its letter here.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) const TOOL_KEYS: &[(u16, AnnotationKind)] = &[
   (KEY_A, AnnotationKind::Arrow),

@@ -115,10 +115,10 @@ fn draw(renderer: &Renderer, host: &mut Host) -> Result<(), String> {
 extern "C" fn pointer(phase: u32, x: f64, y: f64) {
   // A press on the picture is drawing, so the keyboard belongs to the canvas
   // again. It has to be said here: the monitor swallows this press, so AppKit
-  // never sees it and a toolbar field holding key status would keep it.
+  // never sees it and an island holding key status would keep it.
   if phase == super::super::input::PHASE_DOWN {
     if let Some(app) = APP.get() {
-      super::super::toolbar::return_keyboard(app);
+      super::super::island::return_keyboard(app);
     }
   }
   super::super::input::pointer(APP.get(), phase, x, y);

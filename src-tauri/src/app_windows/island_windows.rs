@@ -138,7 +138,7 @@ pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
   platform::set_pointer_passthrough(&window, true)?;
   island::announce_shown(app, None);
   platform::show(&window, 1.0)?;
-  platform::restore_recording_level(&window)?;
+  apply_level(app)?;
   watch(app.clone());
   Ok(())
 }
@@ -148,6 +148,13 @@ pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
 pub(super) fn set_hiding(app: &AppHandle, is_hiding: bool) {
   HIDING.store(is_hiding, Ordering::Relaxed);
   update(app);
+}
+
+/// Raises the island to the top of the topmost windows. Windows has no
+/// levels, so standing above the capture overlays is being raised after
+/// them, which is when Annotate asks.
+pub(super) fn apply_level(app: &AppHandle) -> tauri::Result<()> {
+  platform::restore_recording_level(&window(app)?)
 }
 
 /// The next look at the pointer finds the island's new shape.

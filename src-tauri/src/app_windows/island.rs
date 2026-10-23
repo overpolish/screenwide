@@ -18,7 +18,7 @@ use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 
 use super::WindowLabel;
 
@@ -43,6 +43,10 @@ mod native {
   pub(super) fn set_hiding(_app: &AppHandle, _is_hiding: bool) {}
 
   pub(super) fn refresh_hit_area(_app: &AppHandle) {}
+
+  pub(super) fn apply_level(_app: &AppHandle) -> tauri::Result<()> {
+    Ok(())
+  }
 
   pub(super) fn hide(_app: &AppHandle) -> tauri::Result<()> {
     Ok(())
@@ -102,6 +106,28 @@ static DISPLAY: Mutex<Option<u32>> = Mutex::new(None);
 /// The island's parts as last reported, kept while it is hidden so it comes
 /// back knowing where they are.
 static RECTS: Mutex<Vec<IslandRect>> = Mutex::new(Vec::new());
+/// The island stands above the capture overlays, for as long as Annotate
+/// draws: its tools must never be covered by a stroke.
+static ABOVE_OVERLAYS: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn window(app: &AppHandle) -> Option<WebviewWindow> {
+  app.get_webview_window(WindowLabel::Island.as_str())
+}
+
+/// Raises the island above the capture overlays, or puts it back at its own
+/// level. It keeps the choice while hidden and is placed by it when shown.
+pub fn set_above_overlays(app: &AppHandle, above: bool) -> tauri::Result<()> {
+  ABOVE_OVERLAYS.store(above, Ordering::Relaxed);
+  if SHOWN.load(Ordering::Relaxed) {
+    native::apply_level(app)?;
+  }
+  Ok(())
+}
+
+#[cfg(target_os = "macos")]
+pub(super) fn is_above_overlays() -> bool {
+  ABOVE_OVERLAYS.load(Ordering::Relaxed)
+}
 
 /// Whether the island is out or coming out: up, and not tucking away.
 pub fn is_shown() -> bool {

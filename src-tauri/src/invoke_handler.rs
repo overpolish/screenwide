@@ -173,14 +173,8 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     annotate::commands::clear_annotations,
     annotate::commands::undo_annotation,
     annotate::commands::dismiss_annotate,
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    annotate::commands::begin_annotate_toolbar_typing,
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    annotate::commands::end_annotate_toolbar_typing,
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    annotate::toolbar::finish_annotate_toolbar_drag,
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    annotate::toolbar::resize_annotate_toolbar,
+    annotate::commands::return_annotate_keyboard,
+    annotate::island::annotate_drawing,
     ruler::settings::get_ruler_settings,
     ruler::settings::set_ruler_settings,
     ruler::cancel_ruler,

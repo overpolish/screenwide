@@ -158,9 +158,9 @@ pub(in super::super) fn detach(window: &WebviewWindow) {
 
 /// Gives the keyboard to the anchor's overlay child: the Windows twin of the
 /// macOS anchor host being made key. The overlay hears keys only while it
-/// holds focus. A press on the toolbar's web view moves focus into it without
+/// holds focus. A press on the island's web view moves focus into it without
 /// activating anything, and neither side can get it back on its own, so every
-/// way back to drawing (a press on the picture, a toolbar press that is done
+/// way back to drawing (a press on the picture, an island press that is done
 /// with) ends here. Escape and the activation shortcut are global
 /// registrations and work wherever focus is. Owning thread only.
 pub(in super::super) fn focus_input() {

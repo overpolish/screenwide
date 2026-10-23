@@ -1,14 +1,12 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-### Annotate: drawing on the desktop live, and its floating toolbar.
+### Annotate: drawing on the desktop live, and its tools on the island.
 
 annotate-tools = Annotation tools
-annotate-undo = Undo
 annotate-undo-label = Undo the last annotation
 annotate-clear = Clear
 annotate-clear-label = Clear annotations
-annotate-close = Close
 annotate-close-label = Close the annotate overlay
 
 # The island: a size it offers to choose, an arrow's stroke or a counter's disc, in points.

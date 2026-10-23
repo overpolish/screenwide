@@ -84,21 +84,6 @@ pub(super) fn monitor_with_most_overlap(
   Ok(target.cloned())
 }
 
-fn contained_position(
-  area_position: PhysicalPosition<i32>,
-  area_size: PhysicalSize<u32>,
-  window_position: PhysicalPosition<i32>,
-  window_size: PhysicalSize<u32>,
-) -> PhysicalPosition<i32> {
-  let maximum_x = area_position.x + area_size.width.saturating_sub(window_size.width) as i32;
-  let maximum_y = area_position.y + area_size.height.saturating_sub(window_size.height) as i32;
-
-  PhysicalPosition::new(
-    window_position.x.clamp(area_position.x, maximum_x),
-    window_position.y.clamp(area_position.y, maximum_y),
-  )
-}
-
 pub(crate) fn centered_logical_position(
   area_position: LogicalPosition<f64>,
   area_size: LogicalSize<f64>,
@@ -108,28 +93,6 @@ pub(crate) fn centered_logical_position(
     area_position.x + (area_size.width - window_size.width).max(0.0) / 2.0,
     area_position.y + (area_size.height - window_size.height).max(0.0) / 2.0,
   )
-}
-
-/// Pulls a dragged window back inside the monitor it mostly covers - the
-/// whole screen, not its work area - so none of it is left off an edge.
-/// Every window the user drags around is settled this way when it is
-/// dropped.
-pub(crate) fn contain_window_on_its_monitor(
-  app: &AppHandle,
-  window: &WebviewWindow,
-) -> tauri::Result<()> {
-  let monitor = monitor_with_most_overlap(app, window)?.ok_or(tauri::Error::WindowNotFound)?;
-  let position = window.outer_position()?;
-  let contained = contained_position(
-    *monitor.position(),
-    *monitor.size(),
-    position,
-    window.outer_size()?,
-  );
-  if contained != position {
-    window.set_position(contained)?;
-  }
-  Ok(())
 }
 
 pub(super) fn keep_window_on_a_monitor(
@@ -155,55 +118,6 @@ pub(super) fn keep_window_on_a_monitor(
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  const WORK_AREA_POSITION: PhysicalPosition<i32> = PhysicalPosition::new(100, 50);
-  const WORK_AREA_SIZE: PhysicalSize<u32> = PhysicalSize::new(1_600, 900);
-  const WINDOW_SIZE: PhysicalSize<u32> = PhysicalSize::new(800, 600);
-
-  #[test]
-  fn keeps_a_window_that_already_fits_unchanged() {
-    let position = PhysicalPosition::new(500, 200);
-
-    assert_eq!(
-      contained_position(WORK_AREA_POSITION, WORK_AREA_SIZE, position, WINDOW_SIZE),
-      position
-    );
-  }
-
-  #[test]
-  fn clamps_every_edge_to_the_work_area() {
-    assert_eq!(
-      contained_position(
-        WORK_AREA_POSITION,
-        WORK_AREA_SIZE,
-        PhysicalPosition::new(-50, -50),
-        WINDOW_SIZE,
-      ),
-      WORK_AREA_POSITION
-    );
-    assert_eq!(
-      contained_position(
-        WORK_AREA_POSITION,
-        WORK_AREA_SIZE,
-        PhysicalPosition::new(1_500, 800),
-        WINDOW_SIZE,
-      ),
-      PhysicalPosition::new(900, 350)
-    );
-  }
-
-  #[test]
-  fn anchors_a_window_larger_than_the_work_area() {
-    assert_eq!(
-      contained_position(
-        WORK_AREA_POSITION,
-        WORK_AREA_SIZE,
-        PhysicalPosition::new(500, 200),
-        PhysicalSize::new(2_000, 1_000),
-      ),
-      WORK_AREA_POSITION
-    );
-  }
 
   #[test]
   fn centers_a_logical_window_independent_of_display_scale() {

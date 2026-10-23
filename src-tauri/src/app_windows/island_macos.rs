@@ -168,7 +168,7 @@ pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
     .get_webview_window(WindowLabel::Island.as_str())
     .ok_or(tauri::Error::WindowNotFound)?;
   let panel = platform::island_panel(&window)?;
-  platform::restore_recording_level(&window)?;
+  apply_level(app)?;
   let preferred = island::preferred_display(app);
   let app = app.clone();
   window.clone().run_on_main_thread(move || {
@@ -229,6 +229,19 @@ pub(super) fn set_hiding(app: &AppHandle, is_hiding: bool) {
     });
     update();
   });
+}
+
+/// The island's level: its own, above the menu bar, or above the capture
+/// overlays while Annotate draws.
+pub(super) fn apply_level(app: &AppHandle) -> tauri::Result<()> {
+  let window = app
+    .get_webview_window(WindowLabel::Island.as_str())
+    .ok_or(tauri::Error::WindowNotFound)?;
+  if island::is_above_overlays() {
+    platform::set_above_capture_overlays(&window, true)
+  } else {
+    platform::restore_recording_level(&window)
+  }
 }
 
 pub(super) fn refresh_hit_area(app: &AppHandle) {

@@ -37,7 +37,7 @@ export function AnnotateIsland({
   settings,
 }: AnnotateIslandProps) {
   const { hasColor, pen, showPen, showsColors, toggleColors } =
-    useAnnotateParts({ initialSection, settings });
+    useAnnotateParts({ initialSection, shape: settings.defaultShape });
 
   return (
     <Island

@@ -20,10 +20,6 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
       (module) => module.AlertWindow,
     ),
   "/annotate": null,
-  "/annotate-toolbar": () =>
-    import("../features/annotate/annotate-toolbar-window").then(
-      (module) => module.AnnotateToolbarWindow,
-    ),
   "/editor": () =>
     import("./editor-entry").then((module) => module.EditorEntry),
   "/export-options": () =>

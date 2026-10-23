@@ -29,9 +29,9 @@ pub(super) fn present(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), 
       .map_err(|error| error.to_string())?;
     receiver.recv().map_err(|error| error.to_string())??;
   }
-  // After the hosts, so the toolbar stands above them among the topmost
+  // After the hosts, so the island stands above them among the topmost
   // windows rather than under what is drawn.
-  crate::annotate::toolbar::present(app);
+  crate::annotate::island::present(app);
   Ok(())
 }
 
@@ -51,7 +51,7 @@ pub(super) fn resume(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), S
       .map_err(|error| error.to_string())?;
     receiver.recv().map_err(|error| error.to_string())??;
   }
-  crate::annotate::toolbar::present(app);
+  crate::annotate::island::present(app);
   Ok(())
 }
 

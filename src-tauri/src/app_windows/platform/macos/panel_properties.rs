@@ -18,9 +18,9 @@ pub fn restore_recording_level(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 /// Raises a floating panel over the capture overlays, or puts the ordinary
-/// floating level back. The tooltip uses it: a control on the live annotation
-/// overlay's toolbar sits above every ordinary window, so the tooltip that
-/// describes it has to clear that toolbar rather than hide under it.
+/// floating level back. The island takes it while Annotate draws, so no
+/// stroke covers its tools, and the tooltip while the overlay is up, so it
+/// is not hidden under what is drawn.
 pub fn set_above_capture_overlays(window: &WebviewWindow, above: bool) -> tauri::Result<()> {
   let level = if above {
     i64::from(crate::capture_overlays::FOREGROUND_LEVEL as i32 + 2)
@@ -43,18 +43,6 @@ pub fn set_opacity(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   let panel = ensure_recording_panel(window)?;
   let app = window.app_handle().clone();
   app.run_on_main_thread(move || panel.set_alpha_value(opacity))
-}
-
-/// Gives a panel key status without activating the application.
-///
-/// Only a panel configured `becomes_key_only_if_needed` should be asked: on one
-/// that takes key status on every press this would be indistinguishable from a
-/// click, and on one that refuses it outright it does nothing at all.
-pub fn take_key_focus(window: &WebviewWindow) -> tauri::Result<()> {
-  let panel = ensure_recording_panel(window)?;
-  window
-    .app_handle()
-    .run_on_main_thread(move || panel.make_key_window())
 }
 
 /// Whether this panel is the one WindowServer is sending keystrokes to. Main

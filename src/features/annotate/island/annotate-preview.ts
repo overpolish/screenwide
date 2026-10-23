@@ -23,7 +23,6 @@ export const PREVIEW_ANNOTATE_SETTINGS: AnnotateSettings = {
   spotlightBlur: true,
   spotlightRadius: 25,
   spotlightSoftness: 10,
-  toolbarPosition: null,
 };
 
 /** Colours of your own for the stories, after the palette. */

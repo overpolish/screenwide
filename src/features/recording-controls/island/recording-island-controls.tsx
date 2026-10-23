@@ -52,6 +52,7 @@ import {
 } from "./use-recording-ui-session";
 
 import type { IslandMode, IslandPanel, IslandPhase } from "./island-types";
+import type { AnnotateRows } from "../../annotate/island/annotate-rows";
 import type { IslandHost } from "../../island/island-window";
 
 const report = (action: string) => (error: unknown) => {
@@ -70,8 +71,15 @@ const islandModeOf = (mode: RecordingMode): IslandMode =>
   mode === "camera" || mode === "audio" ? "none" : mode;
 
 /** The recording controls, as the island shows them: what it records and
- * with what, from the stores, and the recording, from Rust. */
-export function RecordingIslandControls({ island }: { island: IslandHost }) {
+ * with what, from the stores, and the recording, from Rust. While Annotate
+ * draws during a recording, its tools lie under the recording's row. */
+export function RecordingIslandControls({
+  annotate,
+  island,
+}: {
+  island: IslandHost;
+  annotate?: AnnotateRows;
+}) {
   const settings = useGeneralSettings();
   // The checks are on until the stored settings say otherwise.
   const hasConfidenceChecks = settings?.showRecordingConfidenceChecks ?? true;
@@ -154,6 +162,7 @@ export function RecordingIslandControls({ island }: { island: IslandHost }) {
   return (
     <RecordingIsland
       {...inputs}
+      annotate={annotate}
       chosenRegion={
         recordingMode === "region" && selectedMonitor
           ? {

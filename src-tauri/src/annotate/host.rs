@@ -21,8 +21,8 @@ mod planning;
 pub(super) use planning::{build, plan, HostPlan};
 
 /// Whether a label names one of the overlay's hosts. The peers are numbered
-/// after the anchor, and the number is what tells a host from the toolbar,
-/// whose label shares the feature's prefix.
+/// after the anchor, and the number is what tells a host from any other
+/// window whose label shares the feature's prefix.
 pub(crate) fn is_host_label(label: &str) -> bool {
   let anchor = WindowLabel::Annotate.as_str();
   label == anchor
@@ -101,9 +101,9 @@ pub(super) fn present(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), 
       })
       .map_err(|error| error.to_string())?;
     receiver.recv().map_err(|error| error.to_string())??;
-    // After the anchor has the foreground, so ordering the toolbar front
+    // After the anchor has the foreground, so ordering the island front
     // cannot take it back off the window that owns the keyboard.
-    super::toolbar::present(app);
+    super::island::present(app);
     Ok(())
   }
 }
@@ -152,7 +152,7 @@ pub(super) fn resume(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), S
       })
       .map_err(|error| error.to_string())?;
     receiver.recv().map_err(|error| error.to_string())??;
-    super::toolbar::present(app);
+    super::island::present(app);
     Ok(())
   }
 }
@@ -181,7 +181,7 @@ fn resume_on_main_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<(),
 /// application back.
 pub(super) fn close(app: &AppHandle) -> bool {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  super::toolbar::close(app);
+  super::island::withdraw(app);
   let hosts = windows(app);
   if hosts.is_empty() {
     return false;
@@ -232,9 +232,9 @@ fn close_on_main_thread(hosts: &[WebviewWindow]) -> bool {
 /// hosts to hand over.
 pub(super) fn show_only(app: &AppHandle) -> bool {
   // Annotations that are only being shown take no input, so there is nothing
-  // for a toolbar to edit.
+  // for the tools to edit.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  super::toolbar::hide(app);
+  super::island::withdraw(app);
   let hosts = windows(app);
   if hosts.is_empty() {
     return false;

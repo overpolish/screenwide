@@ -10,7 +10,6 @@ window-titles-export-screenshot = Export screenshot
 window-titles-tool-panel-recording = Screenwide Tool Panel (Recording)
 window-titles-tool-panel-screenshot = Screenwide Tool Panel (Screenshot)
 window-titles-permissions = Screenwide Permissions
-window-titles-annotate-toolbar = Screenwide Annotate Toolbar
 window-titles-glide = Screenwide Glide
 window-titles-island = Screenwide Island
 window-titles-qr-details = QR Details

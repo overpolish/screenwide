@@ -10,16 +10,8 @@ use crate::{app_windows::WindowLabel, capture_overlays};
 /// One host's geometry, read from the monitor layout before any window is
 /// built: xcap's display handles are not `Send`, so nothing here may await.
 pub(crate) struct HostPlan {
-  /// The capture display this host covers, which is how the toolbar
-  /// recognises the screen it was last dropped on.
-  pub(crate) display_id: u32,
   pub(crate) position: tauri::LogicalPosition<f64>,
   pub(crate) size: tauri::LogicalSize<f64>,
-  /// The display less the menu bar, the notch and the Dock. The hosts cover
-  /// the whole screen, but anything the user has to read or press - the
-  /// toolbar - belongs inside this.
-  pub(crate) work_position: tauri::LogicalPosition<f64>,
-  pub(crate) work_size: tauri::LogicalSize<f64>,
 }
 
 /// The anchor keeps the plain label so the window is recognisable; the peers
@@ -52,14 +44,7 @@ pub(crate) fn plan(app: &AppHandle) -> Result<Vec<HostPlan>, String> {
       size: (size.width, size.height),
       scale: *scale,
     });
-    let work_area = monitor.work_area();
-    plans.push(HostPlan {
-      display_id: *display_id,
-      position,
-      size,
-      work_position: work_area.position.to_logical::<f64>(*scale),
-      work_size: work_area.size.to_logical::<f64>(*scale),
-    });
+    plans.push(HostPlan { position, size });
   }
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   crate::annotate::native_overlay::set_displays(displays);

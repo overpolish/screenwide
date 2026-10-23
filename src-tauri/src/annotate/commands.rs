@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What the overlay's toolbar asks for: the same three steps its keys take.
+//! What the annotate tools on the island ask for: the same three steps their
+//! keys take, and the keyboard back.
 //!
-//! Every one of them is the keyboard's own path, so a button and its shortcut
+//! Every step is the keyboard's own path, so a button and its shortcut
 //! cannot drift apart.
 
 use tauri::AppHandle;
@@ -35,19 +36,14 @@ pub fn dismiss_annotate(app: AppHandle) {
   super::dismiss(&app);
 }
 
-/// A field on the toolbar took focus. Its panel refuses key status until asked,
-/// so until this the keystrokes go to the anchor host and draw instead of
-/// arriving in the field.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+/// A press on the island is done with. The keyboard goes back to the
+/// picture, where the letters pick tools up again.
 #[tauri::command]
-pub fn begin_annotate_toolbar_typing(app: AppHandle) -> Result<(), String> {
-  super::toolbar::take_keyboard(&app)
-}
-
-/// The field is done with: the keyboard goes back to the picture, where the
-/// letters pick tools up again.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-#[tauri::command]
-pub fn end_annotate_toolbar_typing(app: AppHandle) {
-  super::toolbar::return_keyboard(&app);
+pub fn return_annotate_keyboard(app: AppHandle) {
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if super::is_active(&app) {
+    super::island::return_keyboard(&app);
+  }
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let _ = app;
 }

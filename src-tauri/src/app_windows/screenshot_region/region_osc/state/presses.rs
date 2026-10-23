@@ -61,7 +61,7 @@ pub(super) fn surface_passthrough(context: &Context, input_enabled: bool) -> boo
 }
 
 /// What takes a press on `surface`, when its overlay's presses are taken.
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+#[cfg(target_os = "windows")]
 pub(crate) fn press_taker(surface: WindowId) -> Option<Taker> {
   let context = context_for_surface(surface)?;
   taken()

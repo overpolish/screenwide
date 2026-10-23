@@ -64,15 +64,15 @@ pub(in super::super) fn release(window: &WebviewWindow) {
   });
 }
 
-/// The toolbar is chrome rather than canvas, so the guard leaves the pointer
+/// The island is chrome rather than canvas, so the guard leaves the pointer
 /// alone over it: its controls are pressed, not drawn on. Main thread only.
-pub(in super::super) fn exempt_toolbar(window: &WebviewWindow) {
+pub(in super::super) fn exempt_window(window: &WebviewWindow) {
   with_window(window, |native| unsafe {
     screenwide_set_cursor_guard_exempt_window(std::ptr::from_ref(native).cast_mut().cast());
   });
 }
 
-/// Main thread only, once the toolbar is no longer on screen.
-pub(in super::super) fn forget_toolbar() {
+/// Main thread only, once the island no longer carries the tools.
+pub(in super::super) fn forget_exempt_window() {
   unsafe { screenwide_set_cursor_guard_exempt_window(std::ptr::null_mut()) };
 }

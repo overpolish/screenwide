@@ -136,7 +136,6 @@ function createPreviewApi(
     spotlightBlur: false,
     spotlightRadius: 12,
     spotlightSoftness: 10,
-    toolbarPosition: null,
   };
   const defaults: ShortcutDefaults = {
     glide: { ...glide, windowGap: 0 },

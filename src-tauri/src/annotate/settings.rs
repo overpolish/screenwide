@@ -28,19 +28,6 @@ const MAX_COUNTER_SIZE: f64 = 80.0;
 /// `src/composites/annotation-style/palette.ts`.
 const DEFAULT_COLOR: &str = "#ffcc00";
 
-/// Where the user dragged the toolbar, in logical points from the top-left of
-/// the display it was dropped on. Held per display so the toolbar comes back
-/// where it was left on that screen, and falls back to top-centre on a
-/// display it has never been dragged on.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct ToolbarPosition {
-  pub display_id: u32,
-  pub x: f64,
-  pub y: f64,
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, TS)]
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
@@ -91,7 +78,6 @@ pub struct AnnotateSettings {
   /// How far a fresh spotlight's edge fades, as a percentage of its shorter
   /// side from 0 to 50.
   pub spotlight_softness: f64,
-  pub toolbar_position: Option<ToolbarPosition>,
 }
 
 impl Default for AnnotateSettings {
@@ -113,7 +99,6 @@ impl Default for AnnotateSettings {
       spotlight_blur: false,
       spotlight_radius: screenwide_annotations::spotlight::model::NEW_SPOTLIGHT_RADIUS,
       spotlight_softness: screenwide_annotations::spotlight::model::NEW_SPOTLIGHT_SOFTNESS,
-      toolbar_position: None,
     }
   }
 }
@@ -161,12 +146,6 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
   }
   if !share(settings.spotlight_radius) || !share(settings.spotlight_softness) {
     return Err("That is not a spotlight radius or softness".to_owned());
-  }
-  if settings
-    .toolbar_position
-    .is_some_and(|position| !position.x.is_finite() || !position.y.is_finite())
-  {
-    return Err("That is not a toolbar position".to_owned());
   }
   settings.default_color = format!("#{digits}");
   Ok(settings)
@@ -254,23 +233,9 @@ pub fn set_annotate_settings(
   Ok(settings)
 }
 
-/// Remembers where the toolbar was dropped. It goes through the ordinary
-/// write so the change event fires: the toolbar and the Settings page are one
-/// state, and a drag is an edit like any other.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(super) fn store_toolbar_position(
-  app: &AppHandle,
-  position: ToolbarPosition,
-) -> Result<(), String> {
-  let settings = AnnotateSettings {
-    toolbar_position: Some(position),
-    ..current()
-  };
-  set_annotate_settings(app.clone(), settings).map(|_| ())
-}
-
-/// The keyboard picking a tool up. Goes through the ordinary write for the
-/// same reason a drag does.
+/// The keyboard picking a tool up. Goes through the ordinary write so the
+/// change event fires: the island's tools and the Settings page are one
+/// state, and a key is an edit like any other.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(super) fn store_default_shape(app: &AppHandle, shape: AnnotationKind) -> Result<(), String> {
   let settings = AnnotateSettings {

@@ -7,10 +7,10 @@ mod macos;
 mod windows;
 #[cfg(target_os = "windows")]
 pub use self::windows::windows_api::{
-  hide, initialize_annotate_toolbar, initialize_editor, initialize_island,
-  initialize_region_selector, initialize_standalone_listbox, initialize_tooltip, is_visible,
-  prepare_to_show, raise_without_activation, restore_recording_level, set_capture_affinity,
-  set_normal_level, set_opacity, set_owner, set_pointer_passthrough, show,
+  hide, initialize_editor, initialize_island, initialize_region_selector,
+  initialize_standalone_listbox, initialize_tooltip, is_visible, prepare_to_show,
+  raise_without_activation, restore_recording_level, set_capture_affinity, set_normal_level,
+  set_opacity, set_owner, set_pointer_passthrough, show,
 };
 
 #[cfg(target_os = "macos")]
@@ -98,18 +98,6 @@ pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
   configure_panel::<KeylessPanel>(window, PanelLevel::Floating.value() as i32)
 }
 
-/// The annotate toolbar's panel. It sits one level above the overlay's hosts,
-/// so nothing can be drawn over the controls, and takes key status only when a
-/// view on it needs the keyboard: the anchor host owns it otherwise, which is
-/// what keeps the keys that draw working while the toolbar is used.
-#[cfg(target_os = "macos")]
-pub fn initialize_annotate_toolbar(window: &WebviewWindow) -> tauri::Result<()> {
-  configure_panel::<AnnotateToolbarPanel>(
-    window,
-    crate::capture_overlays::FOREGROUND_LEVEL as i32 + 1,
-  )
-}
-
 /// The island's panel: the recording panels' kind, at the island's level,
 /// without the window's shadow, as the island draws its own.
 #[cfg(target_os = "macos")]
@@ -122,7 +110,7 @@ pub(crate) fn island_panel(window: &WebviewWindow) -> tauri::Result<PanelHandle<
 #[cfg(target_os = "macos")]
 pub use self::macos::panel_properties::{
   is_key_panel, release_key_focus, restore_recording_level, set_above_capture_overlays,
-  set_normal_level, set_opacity, take_key_focus,
+  set_normal_level, set_opacity,
 };
 
 /// Every window this app floats over the desktop is an overlay: always on top,

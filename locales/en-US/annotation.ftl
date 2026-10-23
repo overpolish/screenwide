@@ -63,12 +63,7 @@ annotation-radius = Radius
 annotation-randomise = Randomise
 # Whether what lies outside a spotlight stays sharp or is blurred.
 annotation-outside = Outside
-annotation-outside-sharp = Sharp
 annotation-outside-blur = Blur
-# Whether a spotlight's edge is hard or fades in.
-annotation-edge = Edge
-annotation-edge-hard = Hard
-annotation-edge-soft = Soft
 # Whether a highlight fits itself to the text under it or is laid by hand.
 annotation-fit = Fit
 annotation-fit-auto = Auto

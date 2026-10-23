@@ -24,8 +24,6 @@ pub enum WindowLabel {
   Permissions,
   /// The live annotation overlay's transparent host surface.
   Annotate,
-  /// The live annotation overlay's floating toolbar, above every host.
-  AnnotateToolbar,
   Glide,
   /// The island at the top of the screen: one window, whatever it shows.
   Island,
@@ -53,7 +51,6 @@ impl WindowLabel {
     #[cfg(target_os = "macos")]
     Self::Permissions,
     Self::Annotate,
-    Self::AnnotateToolbar,
     Self::Glide,
     Self::Island,
     Self::Ruler,
@@ -79,7 +76,6 @@ impl WindowLabel {
       #[cfg(target_os = "macos")]
       Self::Permissions => "permissions",
       Self::Annotate => "annotate",
-      Self::AnnotateToolbar => "annotate-toolbar",
       Self::Glide => "glide",
       Self::Island => "island",
       Self::Ruler => "ruler",
@@ -107,7 +103,6 @@ impl WindowLabel {
       Self::ToolPanelScreenshot => t!("window-titles-tool-panel-screenshot"),
       #[cfg(target_os = "macos")]
       Self::Permissions => t!("window-titles-permissions"),
-      Self::AnnotateToolbar => t!("window-titles-annotate-toolbar"),
       Self::Glide => t!("window-titles-glide"),
       Self::Island => t!("window-titles-island"),
       Self::QrDetails => t!("window-titles-qr-details"),

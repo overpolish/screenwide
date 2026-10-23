@@ -133,16 +133,6 @@ pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
   super::super::round_corners(window)
 }
 
-/// The annotate toolbar: an overlay like the rest, and never activated, so a
-/// press on its controls leaves the keyboard with the anchor host and the
-/// keys that draw keep working while the toolbar is used.
-#[cfg(target_os = "windows")]
-pub fn initialize_annotate_toolbar(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)?;
-  super::super::round_corners(window)?;
-  refuse_activation(window)
-}
-
 /// `WS_EX_NOACTIVATE`: a press on the window leaves the foreground, and the
 /// keyboard, where it was. WebView2 still receives the press: the style
 /// refuses activation, not input.
@@ -174,8 +164,8 @@ fn refuse_activation(window: &WebviewWindow) -> tauri::Result<()> {
 /// the same one the export sheet uses over the editor.
 ///
 /// The owner has to outlive the ownership: destroying a window destroys the
-/// windows it owns, so a panel that is kept between sessions must be released
-/// before its owner closes.
+/// windows it owns, so a window that outlives its owner, as the island
+/// outlives the overlay's hosts, must be released before its owner closes.
 #[cfg(target_os = "windows")]
 pub fn set_owner(window: &WebviewWindow, owner: Option<&WebviewWindow>) -> tauri::Result<()> {
   use ::windows::Win32::{

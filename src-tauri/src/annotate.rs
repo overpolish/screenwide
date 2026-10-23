@@ -26,6 +26,7 @@ mod highlight;
 mod host;
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 mod input;
+pub(crate) mod island;
 pub(crate) mod live_clips;
 #[cfg(target_os = "macos")]
 use self::macos::native_overlay;
@@ -39,8 +40,6 @@ mod screenshot;
 mod screenshot_mode;
 mod session;
 pub(crate) mod settings;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) mod toolbar;
 
 #[cfg(target_os = "windows")]
 pub(crate) use host::is_host_label;

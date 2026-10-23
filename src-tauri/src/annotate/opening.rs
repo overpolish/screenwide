@@ -6,8 +6,6 @@
 
 use tauri::{AppHandle, Manager, WebviewWindow};
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use super::toolbar;
 use super::{abandon, host, is_active, settings, stop_drawing, AnnotateState};
 use crate::capture_overlays;
 
@@ -40,6 +38,13 @@ fn open(app: &AppHandle, rebuild: bool) -> Result<(), String> {
     return open(app, true);
   }
   capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::Annotate]);
+  // The island shows one thing at a time: idle recording controls step aside
+  // for the annotate tools, which take the island once the hosts are up.
+  if crate::app_windows::is_recording_ui_visible() && crate::recording::is_idle(app) {
+    if let Err(error) = crate::app_windows::hide_recording_ui(app.clone()) {
+      eprintln!("Could not put the recording controls away for Annotate: {error}");
+    }
+  }
   let generation = app.state::<AnnotateState>().begin();
   crate::glide::suspend_for_capture(app);
   // Taken before the windows exist: the lease remembers the application the
@@ -51,7 +56,7 @@ fn open(app: &AppHandle, rebuild: bool) -> Result<(), String> {
     return Err(error);
   }
   let result = if resume {
-    resume_hosts(app, hosts, &plans)
+    resume_hosts(app, hosts)
   } else {
     start_hosts(app, generation, &plans)
   };
@@ -66,20 +71,9 @@ fn start_hosts(app: &AppHandle, generation: u64, plans: &[host::HostPlan]) -> Re
   for (index, plan) in plans.iter().enumerate() {
     hosts.push(host::build(app, index, plan)?);
   }
-  // The toolbar belongs to the anchor display, whose host is the window made
-  // key; it is built here so every window is in place before any is seen.
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  match plans.first() {
-    Some(anchor) => {
-      toolbar::build(app, anchor)?;
-    }
-    None => return Err("No monitor is available for Annotate".to_owned()),
-  }
   // A newer session may have started while the windows were being built. It
   // owns the overlay now, and these windows are not part of it.
   if !app.state::<AnnotateState>().install(generation) {
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    toolbar::close(app);
     for window in hosts {
       let _ = window.close();
     }
@@ -92,20 +86,7 @@ fn start_hosts(app: &AppHandle, generation: u64, plans: &[host::HostPlan]) -> Re
 
 /// Drawing again on the hosts that were showing the annotations. No window is
 /// built, so there is no gap for a newer session to have started in.
-fn resume_hosts(
-  app: &AppHandle,
-  hosts: Vec<WebviewWindow>,
-  plans: &[host::HostPlan],
-) -> Result<(), String> {
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  match plans.first() {
-    Some(anchor) => {
-      toolbar::build(app, anchor)?;
-    }
-    None => return Err("No monitor is available for Annotate".to_owned()),
-  }
-  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  let _ = plans;
+fn resume_hosts(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), String> {
   host::resume(app, hosts)?;
   hosts_presented(app);
   Ok(())

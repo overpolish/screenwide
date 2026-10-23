@@ -42,7 +42,9 @@ function AnnotatingStage({
     savedColors: PREVIEW_SAVED_COLORS,
     settings,
   });
-  return <IslandStage {...props} annotate={isAnnotating ? rows : undefined} />;
+  return (
+    <IslandStage {...props} annotate={(isAnnotating && rows) || undefined} />
+  );
 }
 
 const meta = {

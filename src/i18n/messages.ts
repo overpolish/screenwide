@@ -20,7 +20,6 @@ export type Messages = {
   "alert-template-remove-failed": null;
   "annotate-clear": null;
   "annotate-clear-label": null;
-  "annotate-close": null;
   "annotate-close-label": null;
   "annotate-island-corners-round": null;
   "annotate-island-corners-rounded": null;
@@ -33,7 +32,6 @@ export type Messages = {
   "annotate-island-highlight-fit-hint": { key: string | number };
   "annotate-island-points": { points: string | number };
   "annotate-tools": null;
-  "annotate-undo": null;
   "annotate-undo-label": null;
   "annotation-align-center": null;
   "annotation-align-left": null;
@@ -51,9 +49,6 @@ export type Messages = {
   "annotation-color-white": null;
   "annotation-color-yellow": null;
   "annotation-custom-color": null;
-  "annotation-edge": null;
-  "annotation-edge-hard": null;
-  "annotation-edge-soft": null;
   "annotation-fit": null;
   "annotation-fit-auto": null;
   "annotation-fit-manual": null;
@@ -66,7 +61,6 @@ export type Messages = {
   "annotation-ink-tint": null;
   "annotation-outside": null;
   "annotation-outside-blur": null;
-  "annotation-outside-sharp": null;
   "annotation-pixelation": null;
   "annotation-pixelation-classic": null;
   "annotation-pixelation-secure": null;
@@ -1118,7 +1112,6 @@ export type Messages = {
   "updates-skip": null;
   "updates-task": null;
   "updates-title": null;
-  "window-titles-annotate-toolbar": null;
   "window-titles-app": null;
   "window-titles-editor": null;
   "window-titles-export-recording": null;

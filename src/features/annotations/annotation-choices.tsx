@@ -7,7 +7,6 @@ import { t } from "../../i18n/i18n";
 import { type PillGroupItem } from "../../primitives/pill-group/pill-group";
 
 import { AnnotationAlign, AnnotationHead } from "./types";
-import { SOFT_SPOTLIGHT_EDGE } from "./widths";
 
 // One way an annotation can be dressed, offered as a segmented choice: its
 // name, its segments, and how the value the annotation stores maps to a
@@ -109,14 +108,6 @@ export const fitChoice = either(
   { id: "manual", label: () => t("annotation-fit-manual") },
 );
 
-/** Whether what lies outside a spotlight is left sharp or blurred. True is
- * blurred. */
-export const blurChoice = either(
-  () => t("annotation-outside"),
-  { id: "sharp", label: () => t("annotation-outside-sharp") },
-  { id: "blur", label: () => t("annotation-outside-blur") },
-);
-
 /** Whether a highlight or a shape is drawn clean or as a pen stroke by
  * hand. True is hand-drawn. */
 export const strokeChoice = either(
@@ -124,15 +115,3 @@ export const strokeChoice = either(
   { id: "clean", label: () => t("annotation-stroke-clean") },
   { id: "hand", label: () => t("annotation-stroke-hand-drawn") },
 );
-
-/** Whether a spotlight's edge is hard or fades in from its box. The value is
- * the softness it draws with, any fade at all reading as soft. */
-export const edgeChoice: AnnotationChoiceDefinition<number> = {
-  items: () => [
-    { id: "hard", label: t("annotation-edge-hard") },
-    { id: "soft", label: t("annotation-edge-soft") },
-  ],
-  label: () => t("annotation-edge"),
-  pick: (id) => (id === "soft" ? SOFT_SPOTLIGHT_EDGE : 0),
-  select: (value) => (value > 0 ? "soft" : "hard"),
-};

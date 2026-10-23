@@ -46,7 +46,7 @@ static CGPoint pointerLocation(NSEvent *event) {
 /// Escape leave by their own global registrations.
 ///
 /// The exception is this application's other windows. An event carrying a
-/// window that is not a host belongs to the toolbar - or to a panel it opened
+/// window that is not a host belongs to the island - or to a panel it opened
 /// - and is handed straight back, so its controls can be pressed and, while
 /// it holds key status, typed into.
 static NSEvent *handleEvent(NSEvent *event) {

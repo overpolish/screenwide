@@ -225,7 +225,7 @@ pub(super) fn key(app: &tauri::AppHandle, key_code: u16, modifiers: u32) -> bool
     }
     _ if modifiers == 0 => match TOOL_KEYS.iter().find(|(key, _)| *key == key_code) {
       Some((_, shape)) => {
-        // A settings write, like the toolbar's: the toolbar and the Settings
+        // A settings write, like the island's: the island and the Settings
         // page follow the change event. Nothing on screen changes.
         if let Err(error) = super::settings::store_default_shape(app, *shape) {
           eprintln!("Could not choose the annotate tool: {error}");

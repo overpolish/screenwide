@@ -117,7 +117,7 @@ pub(super) extern "system" fn window_proc(
       // Captured so a drag that leaves the display keeps reporting, and so the
       // release arrives even over another window.
       let _ = unsafe { SetCapture(hwnd) };
-      // A press on the picture is the way back from the toolbar, which took
+      // A press on the picture is the way back from the island, which took
       // the keyboard when it was pressed. The macOS side hands it back here
       // too.
       focus_input();

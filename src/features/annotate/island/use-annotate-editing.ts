@@ -1,37 +1,28 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   getAnnotateSettings,
   listenToAnnotateSettings,
   setAnnotateSettings,
-} from "../settings/api";
-import { useGeneralSettings } from "../settings/use-general-settings";
+} from "../../settings/api";
+import { useGeneralSettings } from "../../settings/use-general-settings";
+import { clearAnnotations, dismissAnnotate, undoAnnotation } from "../api";
 
-import { AnnotateToolbar } from "./annotate-toolbar";
-import {
-  clearAnnotations,
-  dismissAnnotate,
-  finishAnnotateToolbarDrag,
-  resizeAnnotateToolbar,
-  undoAnnotation,
-} from "./api";
-import { useToolbarTyping } from "./use-toolbar-typing";
+import type { AnnotatePartsProps } from "./use-annotate-parts";
+import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 
-import type { AnnotateSettings } from "../../bindings/AnnotateSettings";
-
-/** How long a dragged edit has to stand still before it is written. A slider
- * reports every step of a drag, and each step would otherwise be a
- * validation, a file write, a tray refresh and a change event the plate
- * follows back - which is what made the controls flicker under the
- * pointer. */
+/** How long a dragged edit has to stand still before it is written. A drag
+ * reports every step, and each step would otherwise be a validation, a file
+ * write, a tray refresh and a change event the tools follow back, which
+ * makes the controls flicker under the pointer. */
 const EDIT_SETTLE_MS = 150;
 
-/** The dress a drag changes a step at a time, whose write can wait for the
- * pointer to settle. Everything else - the tool, the colour, the head - is a
- * single press, and has to reach the overlay before the next stroke does. */
+/** The settings a drag changes a step at a time, whose write can wait for
+ * the pointer to settle. Everything else (the tool, the colour, the head) is
+ * a single press, and has to reach the overlay before the next stroke does. */
 const DRAGGED_EDITS = new Set<keyof AnnotateSettings>([
   "defaultCounterAngle",
   "defaultCounterSize",
@@ -44,32 +35,36 @@ const report = (action: string) => (cause: unknown) => {
   console.error(`Could not ${action}`, cause);
 };
 
+/** What the annotate tools edit and do, wherever the island shows them. */
+export type AnnotateEditing = Omit<AnnotatePartsProps, "initialSection">;
+
 /**
- * The toolbar as its own window.
+ * The annotate settings as the island's tools edit them, or `null` until
+ * they are read.
  *
- * It holds no state of its own: what it shows is the annotate settings, and
- * every edit is a write of them. A write elsewhere - the Settings page -
- * arrives as the change event, so the two are never out of step. The colours
- * of your own come from the general settings the editor keeps them in.
+ * The tools hold no state of their own: what they show is the annotate
+ * settings, and every edit is a write of them. A write elsewhere (the
+ * Settings page, a tool's letter over the overlay) arrives as the change
+ * event, so they are never out of step. The colours of your own come from
+ * the general settings the editor keeps them in.
  */
-export function AnnotateToolbarWindow() {
+export function useAnnotateEditing(): AnnotateEditing | null {
   const [settings, setSettings] = useState<AnnotateSettings | null>(null);
   // An edit of our own is outstanding while `latest` runs ahead of `settled`.
-  // Until it catches up the plate shows the choice under the pointer, and
+  // Until it catches up the tools show the choice under the pointer, and
   // neither a write's answer nor the change event it fires may move it.
   const editRef = useRef({ latest: 0, settled: 0 });
-  // The last dress Rust took, which is what a refused edit falls back to and
-  // what every write is built on.
+  // The settings Rust last took, which a refused edit falls back to and
+  // every write is built on.
   const acceptedRef = useRef<AnnotateSettings | null>(null);
   // Our own edits not yet answered. A write carries them over what Rust last
-  // took rather than over the plate's copy, which stops following the change
-  // event while an edit is outstanding: a slider write landing after a tool
+  // took rather than over the shown copy, which stops following the change
+  // event while an edit is outstanding: a drag's write landing after a tool
   // key would otherwise put the old tool back.
   const outstandingRef = useRef<Partial<AnnotateSettings>>({});
-  // The editor's kept colours, which the store broadcasts, so one saved while
-  // the overlay is up appears here without the toolbar asking again.
+  // The editor's kept colours, which the store broadcasts, so one saved
+  // while the overlay is up appears without asking again.
   const general = useGeneralSettings();
-  useToolbarTyping();
 
   useEffect(() => {
     let stopped = false;
@@ -99,33 +94,16 @@ export function AnnotateToolbarWindow() {
     };
   }, []);
 
-  // A drag moves the window natively, so it is settled on the release: pulled
-  // back on screen and its place kept. A release that ends a plain press
-  // leaves both alone.
-  useEffect(() => {
-    const finish = () => {
-      finishAnnotateToolbarDrag().catch(report("keep the toolbar's place"));
-    };
-    window.addEventListener("pointerup", finish);
-    return () => {
-      window.removeEventListener("pointerup", finish);
-    };
-  }, []);
-
-  const onSizeChange = useCallback((width: number, height: number) => {
-    resizeAnnotateToolbar(width, height).catch(report("size the toolbar"));
-  }, []);
+  if (!settings) return null;
 
   // Optimistic: the control shows the choice at once, and Rust's answer is
-  // what the plate settles on, so a refused colour or size puts it back -
+  // what the tools settle on, so a refused colour or size puts it back,
   // unless a later edit has arrived, which is the one being shown.
   //
-  // A dragged edit's write waits for the pointer to settle, so a slider drag
-  // costs one settings write rather than one per step. An edit that carries no
-  // drag says so: a typed value has to be in the settings before the press that
-  // draws with it, and that press is on the picture, a window away.
+  // A dragged edit's write waits for the pointer to settle, so a drag costs
+  // one settings write rather than one per step. An edit that carries no
+  // drag says so with `immediate`.
   const onChange = (patch: Partial<AnnotateSettings>, immediate = false) => {
-    if (!settings) return;
     setSettings({ ...settings, ...patch });
     outstandingRef.current = { ...outstandingRef.current, ...patch };
     editRef.current.latest += 1;
@@ -164,23 +142,18 @@ export function AnnotateToolbarWindow() {
     }, EDIT_SETTLE_MS);
   };
 
-  if (!settings) return null;
-
-  return (
-    <AnnotateToolbar
-      onChange={onChange}
-      onClear={() => {
-        clearAnnotations().catch(report("clear the annotations"));
-      }}
-      onDone={() => {
-        dismissAnnotate().catch(report("leave the overlay"));
-      }}
-      onSizeChange={onSizeChange}
-      onUndo={() => {
-        undoAnnotation().catch(report("undo the last annotation"));
-      }}
-      savedColors={general?.annotationColors}
-      settings={settings}
-    />
-  );
+  return {
+    onChange,
+    onClear: () => {
+      clearAnnotations().catch(report("clear the annotations"));
+    },
+    onDone: () => {
+      dismissAnnotate().catch(report("leave the overlay"));
+    },
+    onUndo: () => {
+      undoAnnotation().catch(report("undo the last annotation"));
+    },
+    savedColors: general?.annotationColors,
+    settings,
+  };
 }

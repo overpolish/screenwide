@@ -37,18 +37,17 @@ export type AnnotateRows = {
 /** The annotate tools as a line under another island's row and what hangs
  * from it, sharing one state, so the island can lay them out as the
  * annotate island does: the line in the row's black, the options hanging
- * from it. */
-export function useAnnotateRows({
-  initialSection,
-  onChange,
-  onClear,
-  onDone,
-  onUndo,
-  savedColors,
-  settings,
-}: AnnotatePartsProps): AnnotateRows {
+ * from it. `null` while there are no tools to show. */
+export function useAnnotateRows(
+  props: AnnotatePartsProps | null,
+): AnnotateRows | null {
   const { hasColor, pen, showPen, showsColors, toggleColors } =
-    useAnnotateParts({ initialSection, settings });
+    useAnnotateParts({
+      initialSection: props?.initialSection,
+      shape: props?.settings.defaultShape,
+    });
+  if (!props) return null;
+  const { onChange, onClear, onDone, onUndo, savedColors, settings } = props;
   return {
     anchor: showsColors ? "end" : "start",
     options: (
