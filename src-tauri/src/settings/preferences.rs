@@ -37,7 +37,7 @@ pub struct GeneralSettings {
   pub open_location_after_export: bool,
   pub record_screenwide_windows: bool,
   pub show_recording_confidence_checks: bool,
-  /// Whether the recording pill shows how much of the recording is on disk.
+  /// Whether the island shows how much of the recording is on disk.
   pub show_recording_size: bool,
   /// Whether a new recording opens with zoom scenes made from its clicks and
   /// typing.
@@ -56,7 +56,13 @@ pub struct GeneralSettings {
   /// template.
   pub caption_layout: TextLayout,
   pub launch_at_login: bool,
-  pub show_recording_bar_on_launch: bool,
+  /// Read from settings saved when the controls were the recording bar.
+  #[serde(alias = "showRecordingBarOnLaunch")]
+  pub show_recording_controls_on_launch: bool,
+  /// The display the island sits at the top of, by id, while it is
+  /// connected. None, or a display not connected, keeps it on the primary
+  /// display, the one with the menu bar.
+  pub recording_controls_display: Option<u32>,
   pub recording_countdown_seconds: u8,
   /// How long Delayed Screenshot waits before the shutter fires.
   pub screenshot_delay_seconds: u8,
@@ -81,7 +87,8 @@ impl Default for GeneralSettings {
       caption_settings: CaptionSettings::default(),
       caption_layout: TextLayout::default(),
       launch_at_login: false,
-      show_recording_bar_on_launch: true,
+      show_recording_controls_on_launch: true,
+      recording_controls_display: None,
       recording_countdown_seconds: 0,
       screenshot_delay_seconds: 3,
     }

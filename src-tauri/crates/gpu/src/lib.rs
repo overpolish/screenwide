@@ -17,6 +17,7 @@ pub use self::windows::bridge::{
 pub use self::windows::interop::{d3d11, D3d11Layer, SharedTexture};
 #[cfg(target_os = "macos")]
 pub mod macos;
+pub mod mips;
 pub mod surface;
 mod textures;
 

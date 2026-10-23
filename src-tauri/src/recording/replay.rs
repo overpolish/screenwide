@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The replay buffer: the last stretch of what the recording bar was set to
+//! The replay buffer: the last stretch of what the recording controls were set to
 //! capture, held in memory until the user saves it as a clip.
 //!
 //! It runs beside the recording state machine, not inside it. A replay is
-//! never "recording" as far as the bar, the dock or the tray's recording
-//! controls are concerned, and a recording can start and stop while it runs.
-//! Its capture settings are taken when it starts; changing the bar afterwards
+//! never "recording" as far as the island or the tray's recording controls
+//! are concerned, and a recording can start and stop while it runs. Its
+//! capture settings are taken when it starts; changing the controls afterwards
 //! sets up the next recording, not the replay.
 //!
 //! A save holds what has happened since the previous save, and never more than
@@ -138,7 +138,7 @@ fn update<T>(app: &AppHandle, change: impl FnOnce(&mut Inner) -> T) -> T {
   result
 }
 
-/// Tells the user the buffer failed: as an event for the bar, and in an alert
+/// Tells the user the buffer failed: as an event for the island, and in an alert
 /// titled `title`, since the buffer may have been started from the tray or by
 /// a wake with nothing else on screen.
 fn report(app: &AppHandle, title: &str, message: &str) {
@@ -152,7 +152,7 @@ fn report(app: &AppHandle, title: &str, message: &str) {
   crate::alert::show(app, title, message);
 }
 
-/// Starts the buffer with `options`, the recording bar's settings as they are
+/// Starts the buffer with `options`, the recording controls' settings as they are
 /// now. Returns once the start is under way; the state event says when it is
 /// running or that it could not start.
 pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), String> {

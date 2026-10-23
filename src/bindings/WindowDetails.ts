@@ -2,4 +2,4 @@
 import type { Position } from "./Position";
 import type { Size } from "./Size";
 
-export type WindowDetails = { id: number, pid: number, appName: string, title: string, position: Position, size: Size, appIconPath: string | null, thumbnailPath: string | null, };
+export type WindowDetails = { id: number, pid: number, appName: string, title: string, position: Position, size: Size, appIconPath: string | null, };

@@ -7,6 +7,5 @@
   "src/features/editor/screenshot/screenshot-output.ts": 703,
   "src/features/editor/recording/use-recording-preview-player.ts": 530,
   "src/features/editor/recording/use-recording-preview-surface.ts": 702,
-  "src/features/editor/screenshot/use-screenshot-preview-surface.ts": 458,
-  "src/features/recording-controls/recording-bar/recording-bar-window.tsx": 605
+  "src/features/editor/screenshot/use-screenshot-preview-surface.ts": 458
 }

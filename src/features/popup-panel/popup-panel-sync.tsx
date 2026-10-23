@@ -34,11 +34,11 @@ export function PopupPanelSync() {
     // The open listbox is presentation state and must not survive an app
     // launch. Every window mounts this, and one created later, such as the
     // tooltip's on its first hover, must not put away panels the editor has
-    // open; so only the recording bar, which boots with the app and is never
+    // open; so only the island, which boots with the app and is never
     // created lazily, does the reset. It keeps the panels Rust has on screen:
     // an editor recovered after a crash may have its tool panel up before
-    // the bar has finished booting, and that panel is not a leftover.
-    if (isTauri() && getCurrentWindow().label === "recording-bar") {
+    // the island has finished booting, and that panel is not a leftover.
+    if (isTauri() && getCurrentWindow().label === "island") {
       void openPopupPanels().then((panels) => {
         usePopupPanelStore.getState().keepOnly(panels);
       });

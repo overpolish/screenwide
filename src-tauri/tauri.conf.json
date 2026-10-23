@@ -192,27 +192,6 @@
         "visible": false
       },
       {
-        "label": "recording-bar",
-        "title": "Screenwide Recording Bar",
-        "url": "/recording-bar",
-        "width": 843,
-        "height": 56,
-        "acceptFirstMouse": true,
-        "alwaysOnTop": false,
-        "decorations": false,
-        "focus": false,
-        "resizable": false,
-        "shadow": true,
-        "skipTaskbar": true,
-        "transparent": true,
-        "visible": false,
-        "windowEffects": {
-          "effects": ["underWindowBackground", "mica"],
-          "radius": 10,
-          "state": "active"
-        }
-      },
-      {
         "label": "glide",
         "title": "Screenwide Glide",
         "url": "/glide",
@@ -220,27 +199,6 @@
         "height": 32,
         "acceptFirstMouse": false,
         "alwaysOnTop": true,
-        "decorations": false,
-        "focus": false,
-        "resizable": false,
-        "shadow": true,
-        "skipTaskbar": true,
-        "transparent": true,
-        "visible": false,
-        "windowEffects": {
-          "effects": ["underWindowBackground", "mica"],
-          "radius": 10,
-          "state": "active"
-        }
-      },
-      {
-        "label": "recording-source-selector",
-        "title": "Screenwide Recording Source Selector",
-        "url": "/recording-source-selector",
-        "width": 400,
-        "height": 200,
-        "acceptFirstMouse": true,
-        "alwaysOnTop": false,
         "decorations": false,
         "focus": false,
         "resizable": false,
@@ -333,25 +291,20 @@
         }
       },
       {
-        "label": "recording-dock",
-        "title": "Screenwide Recording Dock",
-        "url": "/recording-dock",
-        "width": 200,
-        "height": 40,
+        "label": "island",
+        "title": "Screenwide Island",
+        "url": "/island",
+        "width": 900,
+        "height": 640,
         "acceptFirstMouse": true,
-        "alwaysOnTop": true,
+        "alwaysOnTop": false,
         "decorations": false,
         "focus": false,
         "resizable": false,
-        "shadow": true,
+        "shadow": false,
         "skipTaskbar": true,
         "transparent": true,
-        "visible": false,
-        "windowEffects": {
-          "effects": ["underWindowBackground", "mica"],
-          "radius": 10,
-          "state": "active"
-        }
+        "visible": false
       }
     ],
     "security": {

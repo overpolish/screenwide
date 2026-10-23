@@ -10,7 +10,7 @@ use super::{
 use screenwide_osc::scene::RegionSceneOwner;
 
 #[test]
-fn a_region_gesture_does_not_raise_the_source_selector() {
+fn a_region_gesture_does_not_raise_the_recording_controls() {
   assert!(recording_controls_may_raise(true, false, false));
   assert!(!recording_controls_may_raise(true, true, false));
   assert!(!recording_controls_may_raise(false, false, false));
@@ -56,7 +56,7 @@ fn a_screenshot_session_presents_the_borrowed_region_window() {
 }
 
 #[test]
-fn a_running_region_keeps_its_scene_when_the_recording_bar_hides() {
+fn a_running_region_keeps_its_scene_when_the_recording_controls_hide() {
   assert_eq!(
     region_scene_owner(false, false, false, false),
     RegionSceneOwner::Normal

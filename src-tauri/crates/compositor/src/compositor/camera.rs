@@ -120,7 +120,7 @@ impl Compositor {
       .annotations
       .placed(composition.geometry.placement, hover, None);
     self.draw_layer(
-      &super::mips::first_level(&canvas.texture),
+      &screenwide_gpu::mips::first_level(&canvas.texture),
       camera,
       &composition.settings,
       &composition.geometry,
@@ -169,7 +169,7 @@ impl Compositor {
         height: size.1,
         depth_or_array_layers: 1,
       },
-      mip_level_count: super::mips::levels(size),
+      mip_level_count: screenwide_gpu::mips::levels(size),
       sample_count: 1,
       dimension: wgpu::TextureDimension::D2,
       format: FORMAT,

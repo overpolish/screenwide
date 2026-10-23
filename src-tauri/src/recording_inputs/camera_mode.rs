@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Whether a selected camera mode can still be opened, answered with the same
-//! lookups a recording's camera makes when it starts. The bar's warning and
+//! lookups a recording's camera makes when it starts. The controls' warning and
 //! the start therefore cannot disagree about a camera.
 
 use nokhwa::{
@@ -70,11 +70,11 @@ pub(crate) fn require_camera_mode(
   match camera_mode_status(device_id, width, height, fps) {
     CameraModeStatus::Available => Ok(()),
     CameraModeStatus::Missing => Err(
-      "The selected camera is no longer connected. Choose another camera in the recording bar, or turn the camera off."
+      "The selected camera is no longer connected. Choose another camera in the recording controls, or turn the camera off."
         .to_owned(),
     ),
     CameraModeStatus::ModeUnavailable => Err(format!(
-      "The camera no longer offers {width} × {height} at {fps} fps. Choose another camera mode in the recording bar, or turn the camera off."
+      "The camera no longer offers {width} × {height} at {fps} fps. Choose another camera mode in the recording controls, or turn the camera off."
     )),
   }
 }

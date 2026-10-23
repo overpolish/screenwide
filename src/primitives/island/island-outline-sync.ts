@@ -7,8 +7,9 @@ import {
   type MotionValue,
   motionValue,
 } from "motion/react";
-import { type RefObject, useLayoutEffect, useState } from "react";
+import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 
+import { ISLAND } from "./island-geometry";
 import { islandOutline } from "./island-outline";
 
 // The values the island's parts are animated by, and the drawing of its
@@ -52,24 +53,97 @@ export function useIslandShapeValues(corners: {
   return values;
 }
 
+/** A part of the island, in CSS pixels from the top left of the page. */
+export type IslandPart = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+const sameParts = (a: IslandPart[], b: IslandPart[]) =>
+  a.length === b.length &&
+  a.every(
+    (part, index) =>
+      Math.abs(part.x - b[index].x) < 0.5 &&
+      Math.abs(part.y - b[index].y) < 0.5 &&
+      Math.abs(part.width - b[index].width) < 0.5 &&
+      Math.abs(part.height - b[index].height) < 0.5,
+  );
+
 const read = (value: MotionValue<number> | MotionValue<string>) =>
   Number.parseFloat(String(value.get())) || 0;
 
 /** Draws the outline into `shape`, and, while the section fades on its own
  * as the island comes out or goes away, the row alone into `row` beneath it:
- * one path cannot fade only part of itself. */
+ * one path cannot fade only part of itself. Tells `onShapeChange` where the
+ * row and the section are, as they move, and nothing while they rest. */
 export function useIslandOutline({
+  onShapeChange,
   rowPathRef,
   shapePathRef,
   values,
   width,
+  x,
 }: {
   rowPathRef: RefObject<SVGPathElement | null>;
   shapePathRef: RefObject<SVGPathElement | null>;
   values: IslandShapeValues;
   width: MotionValue<number>;
+  /** How far the whole island has moved sideways, to keep the gap in its
+   * row under the notch: its parts move with it. */
+  x: MotionValue<number>;
+  onShapeChange?: (parts: IslandPart[]) => void;
 }) {
+  const onShapeChangeRef = useRef(onShapeChange);
   useLayoutEffect(() => {
+    onShapeChangeRef.current = onShapeChange;
+  });
+  useLayoutEffect(() => {
+    let reported: IslandPart[] = [];
+    const report = ({
+      row,
+      rowOpacity,
+      section,
+      svg,
+    }: {
+      row: { height: number; width: number };
+      rowOpacity: number;
+      section: { height: number; start: number; width: number } | null;
+      svg: SVGSVGElement;
+    }) => {
+      const onShape = onShapeChangeRef.current;
+      if (!onShape) return;
+      // The outline is drawn from the row's start, so in a right-to-left
+      // page its parts are measured from the other side. Its box has room
+      // round it for the shadow.
+      const room = ISLAND.shadowRoom;
+      const outer = svg.getBoundingClientRect();
+      const box = { left: outer.left + room, top: outer.top + room };
+      const isRtl = getComputedStyle(svg).direction === "rtl";
+      const parts: IslandPart[] = [];
+      if (rowOpacity > 0.01) {
+        parts.push({
+          height: row.height,
+          width: row.width,
+          x: box.left,
+          y: box.top,
+        });
+      }
+      if (section) {
+        parts.push({
+          height: section.height,
+          width: section.width,
+          x:
+            box.left +
+            (isRtl ? row.width - section.start - section.width : section.start),
+          y: box.top + row.height,
+        });
+      }
+      if (sameParts(parts, reported)) return;
+      reported = parts;
+      onShape(parts);
+    };
     const draw = () => {
       const shape = shapePathRef.current;
       const under = rowPathRef.current;
@@ -104,6 +178,9 @@ export function useIslandOutline({
         isWhole ? "" : islandOutline({ row, section: null }),
       );
       under.style.opacity = String(rowOpacity);
+      if (shape.ownerSVGElement) {
+        report({ row, rowOpacity, section, svg: shape.ownerSVGElement });
+      }
     };
     let isQueued = false;
     const render = () => {
@@ -118,6 +195,7 @@ export function useIslandOutline({
     draw();
     const stops = [
       width,
+      x,
       values.flare,
       values.radius,
       values.top,
@@ -131,5 +209,5 @@ export function useIslandOutline({
       });
       cancelFrame(render);
     };
-  }, [rowPathRef, shapePathRef, values, width]);
+  }, [rowPathRef, shapePathRef, values, width, x]);
 }

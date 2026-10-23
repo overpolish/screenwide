@@ -49,3 +49,11 @@ fn accepts_but_does_not_reserialize_the_retired_capture_on_draw_setting() {
 
   assert!(serialized.get("captureScreenshotOnDraw").is_none());
 }
+
+#[test]
+fn keeps_launching_without_the_controls_as_saved_for_the_recording_bar() {
+  let settings: GeneralSettings =
+    serde_json::from_str(r#"{"showRecordingBarOnLaunch":false}"#).unwrap();
+
+  assert!(!settings.show_recording_controls_on_launch);
+}

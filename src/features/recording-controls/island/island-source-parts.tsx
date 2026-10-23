@@ -161,10 +161,12 @@ export function ChosenRow({
   picture,
   title,
 }: {
-  action: string;
   detail: string;
   picture: ReactNode;
   title: string;
+  /** Changes what was chosen; none where it is changed in place, as a
+   * region is on the screen. */
+  action?: string;
   /** A name to show in its own direction; false for figures. */
   isTitleDirectional?: boolean;
   onAction?: () => void;
@@ -183,29 +185,34 @@ export function ChosenRow({
           {detail}
         </Text>
       </div>
-      <Button className="shrink-0" onPress={onAction}>
-        {action}
-      </Button>
+      {action ? (
+        <Button className="shrink-0" onPress={onAction}>
+          {action}
+        </Button>
+      ) : null}
     </div>
   );
 }
 
-/** What a mode still needs, and the button that sets about it. */
+/** What a mode still needs, and the button that sets about it, where it is
+ * not done on the screen itself. */
 export function PromptRow({
   action,
   onAction,
   prompt,
 }: {
-  action: string;
   prompt: string;
+  action?: string;
   onAction?: () => void;
 }) {
   return (
     <div className="flex items-center justify-between gap-separate rounded-control bg-fill px-inset py-separate">
       <Text>{prompt}</Text>
-      <Button className="shrink-0" onPress={onAction}>
-        {action}
-      </Button>
+      {action ? (
+        <Button className="shrink-0" onPress={onAction}>
+          {action}
+        </Button>
+      ) : null}
     </div>
   );
 }

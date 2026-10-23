@@ -56,7 +56,7 @@ pub(super) fn state(app: &AppHandle) -> State<'_, RecordingState> {
   app.state::<RecordingState>()
 }
 
-/// The dock's confidence monitor, which voice notes also report their level
+/// The island's confidence monitor, which voice notes also report their level
 /// through.
 pub(crate) fn confidence_monitor(app: &AppHandle) -> Arc<RecordingMonitor> {
   Arc::clone(&state(app).monitor)

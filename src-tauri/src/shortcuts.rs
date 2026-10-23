@@ -75,7 +75,9 @@ pub(crate) fn in_native_callback() -> bool {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum ShortcutAction {
-  ToggleRecordingBar,
+  /// Read from settings saved when the controls were the recording bar.
+  #[serde(alias = "toggleRecordingBar")]
+  ToggleRecordingControls,
   StartStopRecording,
   PauseResumeRecording,
   SaveReplay,

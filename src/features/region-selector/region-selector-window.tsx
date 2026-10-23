@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -13,6 +12,7 @@ import {
   setRecordingControlsBorrowed,
   setRegionSelectorPassthrough,
   showRegionSelector,
+  showWindowPickBackdrop,
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
 import { MonitorDetails } from "../recording-sources/types";
@@ -20,16 +20,15 @@ import { MonitorDetails } from "../recording-sources/types";
 import { EMPTY_REGION, fitRegion, snapRegion } from "./region-geometry";
 import {
   captureScreenshotRegion,
-  endScreenshotCapture,
   screenshotCaptureDestination,
 } from "./screenshot-session";
 import { useNativeScreenshotRegion } from "./use-native-screenshot-region";
 import { useRegionGestureVisibility } from "./use-region-gesture-visibility";
+import { useScreenshotCancel } from "./use-screenshot-cancel";
 import { useScreenshotShortcut } from "./use-screenshot-shortcut";
+import { useWindowPickOverlay } from "./use-window-pick-overlay";
 
 const EMPTY_BOUNDS = { height: 0, width: 0 };
-const SCREENSHOT_DISMISS_REQUESTED_EVENT =
-  "screenshot-region://dismiss-requested";
 
 export function RegionSelectorWindow() {
   const {
@@ -65,6 +64,11 @@ export function RegionSelectorWindow() {
   const nativeMonitorRef = useRef<number | null>(null);
   const isIdle = recordingStatus === "idle";
   useScreenshotShortcut();
+  useScreenshotCancel();
+  // Picking a window borrows the overlay to outline the one under the
+  // pointer, with nothing to edit.
+  const windowPick = useWindowPickOverlay();
+  const { isPicking } = windowPick;
 
   const commitRecordingRegion = useCallback(
     (nextRegion: typeof region, monitorId?: number) => {
@@ -98,9 +102,11 @@ export function RegionSelectorWindow() {
 
   const activeMonitor = isScreenshotSurface
     ? screenshotMonitor
-    : recordingMode === "region"
-      ? selectedMonitor
-      : null;
+    : isPicking
+      ? (windowPick.monitor ?? selectedMonitor)
+      : recordingMode === "region"
+        ? selectedMonitor
+        : null;
   useEffect(() => {
     nativeMonitorRef.current = activeMonitor?.id ?? null;
   }, [activeMonitor?.id, isScreenshotSurface]);
@@ -108,17 +114,20 @@ export function RegionSelectorWindow() {
   const { beginGesture, finishGesture } =
     useRegionGestureVisibility(gestureActive);
   const nativeOscEnabled =
-    !!activeMonitor && (isScreenshotSurface || recordingMode === "region");
+    !!activeMonitor &&
+    (isScreenshotSurface || isPicking || recordingMode === "region");
+  const picked = windowPick.outline;
 
   const nativeOscAvailable = useNativeScreenshotRegion({
     allowDrawing: isScreenshotSurface,
-    aspect: isScreenshotSurface ? undefined : regionAspectRatio,
+    aspect: isScreenshotSurface || isPicking ? undefined : regionAspectRatio,
     bounds: activeMonitor?.size ?? EMPTY_BOUNDS,
     desktop: true,
     enabled: nativeOscEnabled,
-    inputEnabled: isIdle,
+    inputEnabled: isIdle && !isPicking,
     monitorId: activeMonitor?.id,
     onFinished: (nextRegion, gesture, monitorId) => {
+      if (isPicking) return;
       const snapped = snapRegion(nextRegion);
       if (isScreenshotSurface) {
         if (gesture !== "drawing" || !activeMonitor || isCapturingRef.current)
@@ -146,6 +155,7 @@ export function RegionSelectorWindow() {
       }
     },
     onReconciled: (nextRegion, monitorId) => {
+      if (isPicking) return;
       if (isScreenshotSurface) {
         setDraft(nextRegion);
       } else {
@@ -153,10 +163,23 @@ export function RegionSelectorWindow() {
       }
     },
     onRegionChange: setDraft,
-    region: draft,
-    showFrame: isScreenshotSurface || (recordingMode === "region" && isIdle),
-    showHandles: !isScreenshotSurface && isIdle,
-    visible: isScreenshotSurface ? isIdle : nativeOscEnabled,
+    region: picked
+      ? {
+          position: { x: picked.x, y: picked.y },
+          size: { height: picked.height, width: picked.width },
+        }
+      : draft,
+    showFrame:
+      isPicking ||
+      isScreenshotSurface ||
+      (recordingMode === "region" && isIdle),
+    showHandles: !isPicking && !isScreenshotSurface && isIdle,
+    visible: isPicking
+      ? windowPick.hovered !== null
+      : isScreenshotSurface
+        ? isIdle
+        : nativeOscEnabled,
+    windowHighlight: isPicking,
     windowLabel: nativeOscEnabled ? getCurrentWindow().label : undefined,
   });
 
@@ -200,41 +223,6 @@ export function RegionSelectorWindow() {
   }, [isScreenshotSurface]);
 
   useEffect(() => {
-    let unlisten: UnlistenFn | undefined;
-    let disposed = false;
-    let cancelling = false;
-    const cancel = () => {
-      if (!useRecordingSourceStore.getState().isScreenshotCapture) return;
-      if (cancelling) return;
-      cancelling = true;
-      // Escape closes only the borrowed screenshot overlay. The ruler was
-      // already open before this session and remains available underneath it.
-      void endScreenshotCapture()
-        .catch((error: unknown) => {
-          console.error("Could not cancel the screenshot session", error);
-        })
-        .finally(() => {
-          cancelling = false;
-        });
-    };
-    const cancelKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") cancel();
-    };
-
-    window.addEventListener("keydown", cancelKey);
-    void listen(SCREENSHOT_DISMISS_REQUESTED_EVENT, cancel).then((listener) => {
-      if (disposed) listener();
-      else unlisten = listener;
-    });
-
-    return () => {
-      disposed = true;
-      window.removeEventListener("keydown", cancelKey);
-      unlisten?.();
-    };
-  }, []);
-
-  useEffect(() => {
     void setRecordingControlsBorrowed(isScreenshotCapture);
   }, [isScreenshotCapture]);
 
@@ -263,10 +251,18 @@ export function RegionSelectorWindow() {
     void showRegionSelector(activeMonitor, true);
   }, [activeMonitor, isScreenshotSurface, region, setRegion]);
 
+  // The frozen desktop goes behind a pick once the native overlay is up.
+  useEffect(() => {
+    if (!isPicking || !nativeOscAvailable) return;
+    void showWindowPickBackdrop();
+  }, [isPicking, nativeOscAvailable]);
+
   useEffect(() => {
     if (!activeMonitor) return;
 
-    void setRegionSelectorPassthrough(!isIdle);
+    // Fading out after a pick, the overlay already lets clicks through to the
+    // window picked.
+    void setRegionSelectorPassthrough(!isIdle || windowPick.isLeaving);
     if (!isIdle || captureRequest === 0 || !nativeOscAvailable) return;
     void prepareScreenshotRegionMagnifier(
       activeMonitor.id,
@@ -280,6 +276,7 @@ export function RegionSelectorWindow() {
     isIdle,
     isScreenshotSurface,
     nativeOscAvailable,
+    windowPick.isLeaving,
   ]);
 
   if (!activeMonitor) return null;

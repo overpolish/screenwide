@@ -140,6 +140,9 @@ pub(crate) fn apply_region_scene(window: &WebviewWindow, next: RegionScene) -> b
   if previous.chrome.handles_visible != next.chrome.handles_visible {
     set_show_handles(window, next.chrome.handles_visible);
   }
+  if previous.chrome.window_highlight != next.chrome.window_highlight {
+    set_window_highlight(window, next.chrome.window_highlight);
+  }
   if previous.interaction.input_enabled != next.interaction.input_enabled {
     set_input_enabled(window, next.interaction.input_enabled);
   }

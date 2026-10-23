@@ -40,10 +40,14 @@ impl Surface {
       .magnifier_source
       .as_ref()
       .map_or(&gpu.placeholder, |source| &source.view);
-    let snapshot = self
-      .snapshot
-      .as_ref()
-      .map_or(&gpu.placeholder, |source| &source.view);
+    // A window being picked has the picking backdrop in the frozen desktop's
+    // place.
+    let snapshot = if self.window_highlight {
+      self.backdrop.as_ref()
+    } else {
+      self.snapshot.as_ref()
+    }
+    .map_or(&gpu.placeholder, |source| &source.view);
     let pipeline = &gpu.pipeline;
     let target = frame.texture.create_view(&Default::default());
     let mut encoder = shared

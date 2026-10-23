@@ -13,7 +13,10 @@ export type GlobalShortcut = {
 };
 
 export const recordingShortcuts = (): GlobalShortcut[] => [
-  { action: "toggleRecordingBar", label: t("settings-shortcut-toggle-bar") },
+  {
+    action: "toggleRecordingControls",
+    label: t("settings-shortcut-toggle-controls"),
+  },
   { action: "startStopRecording", label: t("settings-shortcut-start-stop") },
   {
     action: "pauseResumeRecording",

@@ -24,7 +24,7 @@ pub(super) const INITIAL_SIZE: LogicalSize<f64> = LogicalSize {
 /// `origin` and `size` are its usable area: a toolbar opened top-centre has
 /// to clear the menu bar and the notch, and a dropped place is measured from
 /// that corner. `screen_origin` and `screen_size` are the whole display,
-/// which is what a dropped toolbar is kept inside, as the recording bar is.
+/// which is what a dropped toolbar is kept inside.
 /// Kept from the build so a later fit can place the window again without
 /// reading the monitor layout a second time.
 pub(super) struct Anchor {
@@ -149,7 +149,7 @@ mod tests {
   }
 
   #[test]
-  fn a_place_dropped_over_the_menu_bar_is_kept_like_the_recording_bars() {
+  fn a_place_dropped_over_the_menu_bar_is_kept() {
     let at = placed(&anchor(), dropped(1, 300.0, -20.0), PLATE);
     assert_eq!((at.x, at.y), (400.0, 5.0));
     let above = placed(&anchor(), dropped(1, 300.0, -60.0), PLATE);

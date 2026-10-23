@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use objc2_app_kit::NSWindowOrderingMode;
 use tauri::{Manager, WebviewWindow};
 use tauri_nspanel::StyleMask;
 
@@ -76,31 +75,10 @@ pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
 pub fn show(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   window.set_ignore_cursor_events(false)?;
   let panel = ensure_recording_panel(window)?;
-  let parent = if window.label() == "recording-source-selector" {
-    let bar = window
-      .app_handle()
-      .get_webview_window("recording-bar")
-      .ok_or(tauri::Error::WindowNotFound)?;
-    Some(ensure_recording_panel(&bar)?)
-  } else {
-    None
-  };
   let app = window.app_handle().clone();
   let window = window.clone();
   app.run_on_main_thread(move || {
     let _ = show_webview(&window);
-    // Ordering a child panel out can clear its parent relationship. Restore it
-    // on every show so subsequent source changes keep both panels moving as
-    // one compositor unit.
-    if let Some(parent) = parent {
-      if panel.as_panel().parentWindow().is_none() {
-        unsafe {
-          parent
-            .as_panel()
-            .addChildWindow_ordered(panel.as_panel(), NSWindowOrderingMode::Above);
-        }
-      }
-    }
     panel.set_alpha_value(opacity);
     panel.show();
   })

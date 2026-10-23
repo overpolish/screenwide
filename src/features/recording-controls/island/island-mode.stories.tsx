@@ -13,7 +13,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...islandMeta,
-  title: "Features/Recording Controls/Island/Mode",
+  title: "Features/Recording Island/Mode",
 } satisfies Meta<typeof IslandStage>;
 
 export default meta;
@@ -29,6 +29,13 @@ export const Window: Story = { args: { initialMode: "window" } };
 
 export const WindowChosen: Story = {
   args: { chosenWindow: PREVIEW_WINDOWS[0], initialMode: "window" },
+};
+
+export const WindowPicking: Story = {
+  args: {
+    initialMode: "window",
+    windowPick: { hovered: PREVIEW_WINDOWS[1] },
+  },
 };
 
 export const Region: Story = { args: { initialMode: "region" } };

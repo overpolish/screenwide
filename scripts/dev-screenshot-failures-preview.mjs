@@ -10,7 +10,7 @@ if (arguments_[0] === "--") arguments_.shift();
 const result = spawnPnpmSync(["tauri", "dev", ...arguments_], {
   env: {
     ...env,
-    SCREENWIDE_SHOW_RECORDING_BAR: "1",
+    SCREENWIDE_SHOW_RECORDING_CONTROLS: "1",
     VITE_SCREENWIDE_SCREENSHOT_FAILURE_PREVIEW: "1",
   },
   stdio: "inherit",

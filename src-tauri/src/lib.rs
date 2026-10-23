@@ -40,6 +40,8 @@ mod transcription;
 #[cfg(desktop)]
 mod tray;
 mod updates;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod window_front;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   #[cfg(target_os = "macos")]

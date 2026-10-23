@@ -17,10 +17,10 @@ export const ISLAND = {
   /** The curved inner corner where the section meets the row. */
   fillet: 14,
   /** Under a notch, how far the island's top flares out into the screen's
-   * top edge on each side: out, enough to read as flowing from the bezel;
-   * tucked away, the notch's own shoulders, so it lines up with them. */
+   * top edge on each side when out, enough to read as flowing from the
+   * bezel. Tucked away it has none: the menu bar meets the notch square, so
+   * any flare would show beside it as the island comes out. */
   flare: 12,
-  hiddenFlare: 6,
   /** The corners once tucked away: the notch's own, or a speck's. */
   hiddenNotchRadius: 10,
   hiddenRadius: 6,
@@ -28,12 +28,17 @@ export const ISLAND = {
    * hold the row's rounded corner and the fillet, or the two curves
    * collide. */
   minStep: 40,
+  /** Between what the row holds and the notch on either side of it, as
+   * between neighbouring controls (`gap-separate`). */
+  notchGap: 12,
   /** The open shape's corners. Under a notch the row's bottom corners are a
    * little tighter, to sit with the notch's own curve. */
   notchRadius: 20,
   radius: 24,
   /** Between the black's edge and the row's controls. */
   rowInset: 4,
+  /** Without a notch, how far below the top of the screen the island hangs. */
+  screenGap: 6,
   /** Between the section's edge and what it holds, at the sides and bottom:
    * the row's inset and a list's own, so a list row's corner can follow the
    * section's (`--island-list-radius`). */
@@ -41,6 +46,9 @@ export const ISLAND = {
   /** The hanging section's bottom corners, a little under the row's: the
    * narrower box reads as round as the row with them. */
   sectionRadius: 22,
+  /** Room round the outline for its shadow. The drawing's box has to hold
+   * the shadow: native WebKit draws nothing of a filter outside the box. */
+  shadowRoom: 48,
   /** What the island shrinks to where there is no notch, before it fades. */
   speck: { height: 10, width: 44 },
 } as const;

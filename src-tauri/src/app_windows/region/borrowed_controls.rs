@@ -93,7 +93,7 @@ pub fn set_screenshot_region_session(
 ///
 /// This deliberately leaves `RECORDING_CONTROLS_VISIBLE` unchanged: borrowing
 /// is presentation state, not a request to close the recording UI. Returning
-/// the controls therefore restores the bar only when it is still logically
+/// the controls therefore brings the island back only when they are still logically
 /// visible and the app is idle. The region-selector window is not touched
 /// because it is the driver for the screenshot session.
 #[tauri::command]
@@ -101,18 +101,18 @@ pub fn set_recording_controls_borrowed(app: AppHandle, borrowed: bool) -> tauri:
   RECORDING_CONTROLS_BORROWED.store(borrowed, Ordering::Release);
 
   if borrowed {
-    // The capture flow puts the bar's own menus away with the bar. A tool
-    // panel belongs to an editor, not to the bar, and stays with its editor:
-    // a capture that lands in that editor must find the panel still there.
+    // The capture flow puts the controls' own menus away with them. A tool
+    // panel belongs to an editor, not to the controls, and stays with its
+    // editor: a capture that lands in that editor must find the panel still
+    // there.
     super::super::options::close_standalone_listbox(
       app.clone(),
       false,
       WindowLabel::StandaloneListbox.as_str(),
     )?;
-    source_selector::hide(&app)?;
-    if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
-      platform::hide(&bar)?;
-    }
+    crate::recording_sources::window_pick::cancel(&app);
+    // At once: the capture that follows must not find it on screen.
+    super::super::island::hide_at_once(&app)?;
     return Ok(());
   }
 
@@ -120,10 +120,7 @@ pub fn set_recording_controls_borrowed(app: AppHandle, borrowed: bool) -> tauri:
     RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
     crate::recording::is_idle(&app),
   ) {
-    if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
-      platform::show(&bar, 1.0)?;
-      platform::restore_recording_level(&bar)?;
-    }
+    super::super::island::show(&app)?;
   }
   Ok(())
 }

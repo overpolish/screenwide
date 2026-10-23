@@ -99,9 +99,9 @@ export function AnnotateToolbarWindow() {
     };
   }, []);
 
-  // A drag moves the window natively, so it is settled on the release, as the
-  // recording bar is: pulled back on screen and its place kept. A release that
-  // ends a plain press leaves both alone.
+  // A drag moves the window natively, so it is settled on the release: pulled
+  // back on screen and its place kept. A release that ends a plain press
+  // leaves both alone.
   useEffect(() => {
     const finish = () => {
       finishAnnotateToolbarDrag().catch(report("keep the toolbar's place"));

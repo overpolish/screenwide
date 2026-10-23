@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   ...islandMeta,
   args: { ...islandMeta.args, appears: true },
-  title: "Features/Recording Controls/Island/Appearing",
+  title: "Features/Recording Island/Appearing",
 } satisfies Meta<typeof IslandStage>;
 
 export default meta;

@@ -7,7 +7,8 @@ use tauri::{AppHandle, Emitter};
 
 use crate::app_windows::WindowLabel;
 
-/// Sits immediately above the recording Dock's native macOS level (32).
+/// Sits above every recording panel's native macOS level: the island, its
+/// window list and the pop-ups (28 to 31).
 pub const FOREGROUND_LEVEL: isize = 33;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,6 +37,7 @@ pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), Stri
           .map(|raw_window| {
             let native_window: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
             native_window.setLevel(level);
+            crate::app_windows::panel_presentation_macos::disable_order_animation(native_window);
           });
         let _ = sender.send(result);
       })
@@ -90,7 +92,7 @@ pub fn emit_lifecycle(app: &AppHandle, active: bool) {
   } else {
     "capture-overlay://ended"
   };
-  let _ = app.emit_to(WindowLabel::RecordingBar.as_str(), event, ());
+  let _ = app.emit_to(WindowLabel::Island.as_str(), event, ());
 }
 
 // xcap::Monitor wraps a raw display handle that is not Send on every

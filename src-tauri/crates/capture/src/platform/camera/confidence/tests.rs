@@ -64,7 +64,7 @@ fn scales_a_bgra_frame_to_the_thumbnail_size() {
   }
 
   let (width, height) = thumbnail_size(&buffer).expect("a thumbnail size");
-  assert_eq!((width, height), (72, 54));
+  assert_eq!((width, height), (96, 72));
   let mut pixels = vec![0_u8; usize::from(width) * usize::from(height) * 4];
   assert!(scaler.thumbnail(&buffer, width, height, &mut pixels));
   assert_every_pixel_is(&pixels, [200, 100, 50]);

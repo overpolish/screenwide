@@ -59,6 +59,22 @@ pub(super) fn capture_monitor_thumbnails(
   )
 }
 
+/// Scales a capture into the given box and writes it to the stills' cache.
+pub(super) fn write_thumbnail(
+  image: RgbaImage,
+  width: u32,
+  height: u32,
+  cache_dir: &Path,
+  file_name: &str,
+) -> Option<PathBuf> {
+  let path = cache_dir.join(file_name);
+  DynamicImage::ImageRgba8(image)
+    .thumbnail(width, height)
+    .save(&path)
+    .ok()?;
+  Some(path)
+}
+
 #[cfg(test)]
 mod tests {
   use super::thumbnail_dimensions;

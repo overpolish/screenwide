@@ -69,6 +69,13 @@ pub struct RenderConstants {
   /// the outline's width; then the ring the pointer holds or `-1`, how far it
   /// is lit toward white, and how strongly far halves show.
   pub turn_rings: [[f32; 4]; TURN_RING_ROWS],
+  /// The window being picked, in the target's pixels: x, y, width, height.
+  pub window_cutout: [f32; 4],
+  /// The window being picked: `.x` its corner radius, `.y` how far the
+  /// screen round it has faded in, `.z` how wide the backdrop's blur is, zero
+  /// with no backdrop, and `.w` how wide its edge feathers, every length in
+  /// the target's pixels.
+  pub window_shape: [f32; 4],
 }
 
 /// The rows of `RenderConstants::turn_rings`.
@@ -118,6 +125,8 @@ impl RenderConstants {
       picked_points: [[0.0; 4]; PICKED_POINT_PAIRS],
       turn_colors: turn_palette(light_mode),
       turn_rings: [[0.0; 4]; TURN_RING_ROWS],
+      window_cutout: [0.0; 4],
+      window_shape: [0.0; 4],
     }
   }
 }

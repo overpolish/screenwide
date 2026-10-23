@@ -5,7 +5,7 @@
 
 //! Lightweight confidence signals from the active capture session.
 //!
-//! The dock subscribes to this shared boundary; it never opens a second
+//! The island subscribes to this shared boundary; it never opens a second
 //! microphone, camera or system-audio session. Platform capture adapters only
 //! need to feed levels and occasional small camera frames into this type.
 

@@ -3,15 +3,12 @@
 
 mod application_metadata;
 mod monitor_thumbnails;
-mod window_enumeration;
+pub(crate) mod window_pick;
 use application_metadata::application_details;
 pub(crate) use application_metadata::application_icon_cache_dir;
 use screenwide_capture::types::{Position, Size};
 
 use monitor_thumbnails::capture_monitor_thumbnails;
-
-use window_enumeration::enumerate_windows;
-use window_enumeration::write_thumbnail;
 
 use std::{
   collections::{HashMap, HashSet},
@@ -66,7 +63,6 @@ pub struct WindowDetails {
   position: Position,
   size: Size,
   app_icon_path: Option<PathBuf>,
-  thumbnail_path: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -142,20 +138,6 @@ pub fn list_monitors(app: AppHandle) -> Result<Vec<MonitorDetails>, String> {
       })
     })
     .collect()
-}
-
-#[tauri::command]
-pub async fn list_windows(app: AppHandle) -> Result<Vec<WindowDetails>, String> {
-  let cache_dir = app
-    .path()
-    .temp_dir()
-    .map_err(|error| error.to_string())?
-    .join("Screenwide")
-    .join("window-selector");
-  let icon_dir = application_icon_cache_dir(&app)?;
-  tauri::async_runtime::spawn_blocking(move || enumerate_windows(&cache_dir, &icon_dir))
-    .await
-    .map_err(|error| error.to_string())?
 }
 
 /// A still of every attached display for the Screen segment and the display

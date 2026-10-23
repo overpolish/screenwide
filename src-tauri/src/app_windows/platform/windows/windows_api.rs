@@ -105,16 +105,13 @@ pub fn prepare_to_show(window: &WebviewWindow) -> tauri::Result<()> {
   set_capture_affinity(window, record_screenwide_windows)
 }
 
+/// The island: an overlay like the rest, never activated, and without the
+/// rounded corner the other panels take, as it draws its own shape and
+/// shadow on a transparent window, which the corner would clip.
 #[cfg(target_os = "windows")]
-pub fn initialize_recording_bar(window: &WebviewWindow) -> tauri::Result<()> {
+pub fn initialize_island(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_overlay(window)?;
-  super::super::round_corners(window)
-}
-
-#[cfg(target_os = "windows")]
-pub fn initialize_recording_source_selector(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)?;
-  super::super::round_corners(window)
+  refuse_activation(window)
 }
 
 #[cfg(target_os = "windows")]
@@ -128,12 +125,6 @@ pub fn initialize_standalone_listbox(window: &WebviewWindow) -> tauri::Result<()
   super::super::round_corners(window)
 }
 
-#[cfg(target_os = "windows")]
-pub fn initialize_recording_dock(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)?;
-  super::super::round_corners(window)
-}
-
 /// The tooltip is an overlay like the rest, and never activated: it is shown
 /// with `raise_without_activation`, which keeps focus where the user left it.
 #[cfg(target_os = "windows")]
@@ -142,13 +133,21 @@ pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
   super::super::round_corners(window)
 }
 
-/// The annotate toolbar: an overlay like the rest, and never activated.
-/// `WS_EX_NOACTIVATE` is what keeps a press on its controls from taking the
-/// foreground - and the keyboard - off the anchor host, so the keys that draw
-/// keep working while the toolbar is used. WebView2 still receives the press:
-/// the style refuses activation, not input.
+/// The annotate toolbar: an overlay like the rest, and never activated, so a
+/// press on its controls leaves the keyboard with the anchor host and the
+/// keys that draw keep working while the toolbar is used.
 #[cfg(target_os = "windows")]
 pub fn initialize_annotate_toolbar(window: &WebviewWindow) -> tauri::Result<()> {
+  initialize_overlay(window)?;
+  super::super::round_corners(window)?;
+  refuse_activation(window)
+}
+
+/// `WS_EX_NOACTIVATE`: a press on the window leaves the foreground, and the
+/// keyboard, where it was. WebView2 still receives the press: the style
+/// refuses activation, not input.
+#[cfg(target_os = "windows")]
+fn refuse_activation(window: &WebviewWindow) -> tauri::Result<()> {
   use ::windows::Win32::{
     Foundation::HWND,
     UI::WindowsAndMessaging::{
@@ -156,8 +155,6 @@ pub fn initialize_annotate_toolbar(window: &WebviewWindow) -> tauri::Result<()> 
     },
   };
 
-  initialize_overlay(window)?;
-  super::super::round_corners(window)?;
   let hwnd = HWND(window.hwnd()?.0);
   let current = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
   let next = current | WS_EX_NOACTIVATE.0 as isize;

@@ -35,7 +35,7 @@ const isPageVisible = () => document.visibilityState === "visible";
 /**
  * Whether holding a kind's shortcut records a voice note, and from which
  * microphone, with that microphone's level under its name the way the
- * recording bar shows one. Switching notes on is when microphone access is
+ * island shows one. Switching notes on is when microphone access is
  * asked for, so the question never comes up in the middle of a recording.
  */
 export function VoiceNoteSettings({

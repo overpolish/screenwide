@@ -37,7 +37,7 @@ const ANCHORS: Record<IslandPanel, IslandAnchor> = {
 // screenshot and Record, with what will be recorded shown beneath them. Any
 // other choice opens in its place and every way of closing it steps back to
 // what will be recorded; before recording the island is never just the row.
-// Recording, it becomes the dock in the same place, its controls showing
+// Recording, it shows the recording in the same place, its controls showing
 // while the pointer is on it.
 
 export function RecordingIsland(props: RecordingIslandProps) {
@@ -49,6 +49,10 @@ export function RecordingIsland(props: RecordingIslandProps) {
     setWasShown(isShown);
     if (isShown) setPanel(initialPanel);
   }
+  const { onPanelChange } = props;
+  useEffect(() => {
+    onPanelChange?.(panel);
+  }, [onPanelChange, panel]);
   const [isHovered, setIsHovered] = useState(false);
   // Pressing what is open steps back to the source.
   const toggle = (next: IslandPanel) => {
@@ -155,7 +159,9 @@ export function RecordingIsland(props: RecordingIslandProps) {
       aria-label={t("recording-controls-island")}
       isShown={isShown}
       notch={notch}
+      onHidden={props.onHidden}
       onHoverChange={setIsHovered}
+      onShapeChange={props.onShapeChange}
       row={row}
       section={section}
     />

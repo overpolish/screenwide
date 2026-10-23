@@ -12,7 +12,7 @@ export const startRecordingOptions = (): StartRecordingOptions => {
     useRecordingSourceStore.getState();
   const {
     cameraFlippedById,
-    cameraPalById,
+    cameraPal,
     fps,
     inputs,
     selectedCamera,
@@ -37,10 +37,7 @@ export const startRecordingOptions = (): StartRecordingOptions => {
     cameraFps: wantsCamera ? (selectedCameraMode?.fps ?? null) : null,
     cameraHeight: wantsCamera ? (selectedCameraMode?.height ?? null) : null,
     cameraId: wantsCamera ? (selectedCamera?.id ?? null) : null,
-    cameraPal:
-      wantsCamera && selectedCamera
-        ? (cameraPalById[selectedCamera.id] ?? false)
-        : false,
+    cameraPal: wantsCamera && selectedCamera ? cameraPal : false,
     cameraWidth: wantsCamera ? (selectedCameraMode?.width ?? null) : null,
     // The cursor and the keyboard overlay are always recorded; the editor
     // decides whether either is shown.

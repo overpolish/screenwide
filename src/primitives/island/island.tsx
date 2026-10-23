@@ -13,9 +13,9 @@ import {
 import { Toolbar } from "react-aria-components";
 
 import { motionDurations } from "../../lib/motion";
-import { cn } from "../../lib/styling";
 
 import { IslandContext } from "./island-context";
+import { IslandDrawing } from "./island-drawing";
 import {
   ISLAND,
   type IslandAnchor,
@@ -23,15 +23,13 @@ import {
   type IslandNotch,
 } from "./island-geometry";
 import { islandLayout } from "./island-layout";
-import {
-  type Curve,
-  focusIn,
-  glide,
-  HOVER_LINGER_MS,
-  morph,
-} from "./island-motion";
+import { focusIn, glide, HOVER_LINGER_MS } from "./island-motion";
 import { useOpening } from "./island-opening";
-import { useIslandOutline, useIslandShapeValues } from "./island-outline-sync";
+import {
+  type IslandPart,
+  useIslandOutline,
+  useIslandShapeValues,
+} from "./island-outline-sync";
 import { useRowOffset } from "./island-row-offset";
 import { IslandSection } from "./island-section";
 import { useSize } from "./island-size";
@@ -66,10 +64,15 @@ export type IslandProps = {
   /** The notch of the screen the island is on, measured; leave it out on a
    * screen without one. */
   notch?: IslandNotch | null;
+  /** The island has tucked itself away after `isShown` turned false. */
+  onHidden?: () => void;
   /** The pointer coming onto the island, which takes in its row and what
    * hangs from it, and leaving it, a moment after it goes, so a slip does
    * not close what hovering opened. */
   onHoverChange?: (isHovered: boolean) => void;
+  /** Where the row and what hangs from it are, in the page, as they move:
+   * for a window that lets clicks through everywhere but the island. */
+  onShapeChange?: (parts: IslandPart[]) => void;
   /** What hangs beneath the row, if anything. */
   section?: ReactNode;
 };
@@ -79,7 +82,9 @@ export function Island({
   "aria-label": label,
   isShown = true,
   notch = null,
+  onHidden,
   onHoverChange,
+  onShapeChange,
   row,
   section,
 }: IslandProps) {
@@ -90,7 +95,6 @@ export function Island({
   const rowSize = useSize(rowElement);
   const sectionSize = useSize(sectionElement);
   const [shift, setShift] = useState(0);
-  const context = useMemo(() => ({ notch, setShift }), [notch]);
 
   const closeRef = useRef(0);
   useEffect(
@@ -100,15 +104,17 @@ export function Island({
     [],
   );
 
-  // The spring is kept from the moment the island is shown or hidden until
-  // the row has settled; everything after that glides.
+  // From the moment the island is shown or hidden until its row has settled.
   const [wasShown, setWasShown] = useState(isShown);
   const [isComing, setIsComing] = useState(false);
   if (wasShown !== isShown) {
     setWasShown(isShown);
     setIsComing(true);
   }
-  const curve: Curve = isComing ? morph : glide;
+  const context = useMemo(
+    () => ({ isShown, notch, setShift }),
+    [isShown, notch],
+  );
 
   const layout = islandLayout({
     anchor,
@@ -125,8 +131,8 @@ export function Island({
   const { finish, isOpening } = useOpening(isOpen);
 
   const { islandX, rowLayerRef, rowX, sectionX, shapeWidth } = useRowOffset({
-    curve,
     hasNotch: notch !== null,
+    holdsContent: !isShown,
     rowElement,
     shiftTarget: isShown && notch ? shift : 0,
     width,
@@ -137,25 +143,33 @@ export function Island({
   const values = useIslandShapeValues({ flare, radius, top });
   useLayoutEffect(() => {
     const corners = [
-      animate(values.flare, flare, curve),
-      animate(values.radius, radius, curve),
-      animate(values.top, top, curve),
+      animate(values.flare, flare, glide),
+      animate(values.radius, radius, glide),
+      animate(values.top, top, glide),
     ];
     return () => {
       corners.forEach((corner) => {
         corner.stop();
       });
     };
-  }, [curve, flare, radius, top, values]);
+  }, [flare, radius, top, values]);
   const rowPathRef = useRef<SVGPathElement>(null);
   const shapePathRef = useRef<SVGPathElement>(null);
-  useIslandOutline({ rowPathRef, shapePathRef, values, width: shapeWidth });
+  useIslandOutline({
+    onShapeChange,
+    rowPathRef,
+    shapePathRef,
+    values,
+    width: shapeWidth,
+    x: islandX,
+  });
 
   return (
-    // The frame only centres the island; hover is read from the island's
-    // own box.
+    // The frame only centres the island. Hover is read from the island's own
+    // box, which carries its sideways shift round a notch, so the pointer is
+    // on the island exactly where the island is seen.
     <div className="flex justify-center">
-      <div
+      <motion.div
         className="w-fit"
         onPointerEnter={() => {
           window.clearTimeout(closeRef.current);
@@ -166,29 +180,16 @@ export function Island({
             onHoverChange?.(false);
           }, HOVER_LINGER_MS);
         }}
-        style={islandCssVariables}
+        style={{ ...islandCssVariables, x: islandX }}
       >
         {/* The black is the notch's whatever the theme, so what it holds is
             always drawn dark. */}
-        <motion.div
-          aria-hidden={!isShown}
-          className="dark relative text-fg"
-          style={{ x: islandX }}
-        >
-          {/* The outline, under everything the island holds. It carries
-              the shadow itself, so what the island holds changing, as the
-              recording's time does each second, does not redraw it. Drawn
-              from the row's start, it is mirrored right to left. */}
-          <svg
-            aria-hidden
-            className={cn(
-              "pointer-events-none absolute start-0 top-0 h-px w-full overflow-visible fill-island rtl:-scale-x-100",
-              isShown && "drop-shadow-xl",
-            )}
-          >
-            <path ref={rowPathRef} />
-            <path ref={shapePathRef} />
-          </svg>
+        <div aria-hidden={!isShown} className="dark relative text-fg">
+          <IslandDrawing
+            isShown={isShown}
+            rowPathRef={rowPathRef}
+            shapePathRef={shapePathRef}
+          />
           <motion.div
             animate={{
               height: rowTarget.height,
@@ -198,6 +199,7 @@ export function Island({
             initial={false}
             onAnimationComplete={() => {
               setIsComing(false);
+              if (!isShown) onHidden?.();
             }}
             style={{
               height: values.row.height,
@@ -205,7 +207,7 @@ export function Island({
               width: shapeWidth,
             }}
             transition={{
-              ...curve,
+              ...glide,
               // Hidden without a notch, it fades once it has shrunk.
               opacity: isShown
                 ? { duration: motionDurations.state }
@@ -220,29 +222,30 @@ export function Island({
               ref={rowLayerRef}
               style={{ x: rowX }}
             >
-              <AnimatePresence initial={false}>
-                {isShown ? (
-                  <motion.div
-                    key="row"
-                    {...focusIn}
-                    className="flex w-max"
-                    initial={false}
-                    ref={setRowElement}
-                    style={{ padding: ISLAND.rowInset }}
-                  >
-                    <IslandContext value={context}>
+              {/* Round the presence, not in it: a row on its way out still
+                  hears the island, and folds into the notch as it goes. */}
+              <IslandContext value={context}>
+                <AnimatePresence initial={false}>
+                  {isShown ? (
+                    <motion.div
+                      key="row"
+                      {...focusIn}
+                      className="flex w-max"
+                      initial={false}
+                      ref={setRowElement}
+                      style={{ padding: ISLAND.rowInset }}
+                    >
                       <Toolbar aria-label={label} className="flex">
                         {row}
                       </Toolbar>
-                    </IslandContext>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </IslandContext>
             </motion.div>
           </motion.div>
 
           <IslandSection
-            curve={curve}
             isFromMiddle={isFromMiddle}
             isOpening={isOpening}
             isShown={isShown}
@@ -254,8 +257,8 @@ export function Island({
           >
             {section}
           </IslandSection>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

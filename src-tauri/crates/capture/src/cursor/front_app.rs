@@ -54,8 +54,8 @@ impl FrontApp {
     self.changed(front_process())
   }
 
-  /// Screenwide's own windows coming forward, its recording bar or a
-  /// countdown, neither count nor end the app before them: going back to
+  /// Screenwide's own windows coming forward, its island or a countdown,
+  /// neither count nor end the app before them: going back to
   /// that app is no switch. The first app seen is where the recording
   /// starts, not a switch either.
   fn changed(&mut self, front: Option<u32>) -> bool {
@@ -79,10 +79,10 @@ mod tests {
     let mut front = FrontApp::with_own(OWN);
     assert!(!front.changed(Some(10)), "where the recording starts");
     assert!(!front.changed(Some(10)));
-    assert!(!front.changed(Some(OWN)), "Screenwide's own bar");
+    assert!(!front.changed(Some(OWN)), "Screenwide's own island");
     assert!(
       !front.changed(Some(10)),
-      "back from the bar to the same app"
+      "back from the island to the same app"
     );
     assert!(!front.changed(None));
     assert!(front.changed(Some(20)));

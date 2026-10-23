@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The recording bar's camera confidence thumbnail: the camera frame sampled
+// The island's camera confidence picture: the camera frame sampled
 // straight down to a few dozen pixels, as opaque RGBA. A BGRA frame is one
 // texture; a 4:2:0 frame is its luma and its interleaved chroma.
 

@@ -42,18 +42,9 @@ mod fit;
 const GLIDABLE_WINDOW_LABELS: &[WindowLabel] = &[
   WindowLabel::Projects,
   WindowLabel::Settings,
-  WindowLabel::RecordingBar,
-  WindowLabel::RecordingDock,
   WindowLabel::EditorRecording,
   WindowLabel::EditorScreenshot,
 ];
-
-const fn uses_full_surface(label: WindowLabel) -> bool {
-  matches!(
-    label,
-    WindowLabel::RecordingBar | WindowLabel::RecordingDock
-  )
-}
 
 /// Glide's preview has the same logical dimensions on both platforms. Windows
 /// reapplies them when a session begins because moving a hidden WebView between

@@ -5,9 +5,11 @@
 //! happens in the shared runtime; this file only turns the monitor list into
 //! a [`DesktopBinding`].
 
+mod placement;
 #[cfg(test)]
 mod tests;
 
+use placement::{host_rect, place_over_anchor};
 use tauri::{Manager, WebviewWindow};
 
 use screenwide_osc::{
@@ -115,37 +117,6 @@ pub(crate) fn configure_window(
     place_over_anchor(window, *anchor);
   }
   Ok((binding, probes))
-}
-
-/// The desktop compositor owns the host window's placement, exactly as the
-/// macOS `rebuild_surfaces` sets the parent frame to the anchor screen:
-/// `show_region_selector` deliberately skips sizing in desktop mode.
-fn place_over_anchor(window: &WebviewWindow, anchor: MonitorProbe) {
-  let target = Rect::from_xywh(
-    anchor.origin.x,
-    anchor.origin.y,
-    anchor.size.width,
-    anchor.size.height,
-  );
-  if host_rect(window) == Some(target) {
-    return;
-  }
-  let position = tauri::PhysicalPosition::new(anchor.origin.x as i32, anchor.origin.y as i32);
-  let size = tauri::PhysicalSize::new(anchor.size.width as u32, anchor.size.height as u32);
-  if window.set_position(position).is_err() || window.set_size(size).is_err() {
-    eprintln!("The Windows region OSC could not cover the anchor monitor");
-  }
-}
-
-fn host_rect(window: &WebviewWindow) -> Option<Rect> {
-  let position = window.outer_position().ok()?;
-  let size = window.outer_size().ok()?;
-  Some(Rect::from_xywh(
-    f64::from(position.x),
-    f64::from(position.y),
-    f64::from(size.width),
-    f64::from(size.height),
-  ))
 }
 
 /// Builds the binding from physical monitor geometry.

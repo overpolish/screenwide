@@ -6,9 +6,8 @@
 // the focus boxes. A pixel on the screen softens by how far the point of the
 // upright screen it shows lies past a box's rounded edge and, on a screen
 // turned in depth, by how far past the box the screen sits; the background
-// lies beyond the screen and takes the whole blur. A wider blur reads a lower
-// level of the chain, so however wide it grows it costs the same disc of
-// samples; two adjacent levels are mixed for a smooth arrival.
+// lies beyond the screen and takes the whole blur, read as a disc from the
+// chain (`disc_blur.wgsl`).
 
 struct FocusRegion {
   // The box's top-left and bottom-right corners, in source pixels.
@@ -50,10 +49,6 @@ struct FocusConstants {
 @group(0) @binding(1) var linear: sampler;
 @group(0) @binding(2) var<uniform> constants: FocusConstants;
 @group(0) @binding(3) var<storage, read> regions: array<FocusRegion>;
-
-// How many taps the blur disc reads. A Vogel disc spreads them evenly enough
-// that this few reads as smooth rather than as copies of the outline.
-const TAPS: u32 = 16u;
 
 // How far past a rounded box a point lies: negative inside it.
 fn box_distance(point: vec2<f32>, region: FocusRegion) -> f32 {
@@ -136,25 +131,10 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   }
   // The blur in target pixels, which the chain is laid in.
   let radius = circle_of_confusion(pixel) / scale;
-  let top = f32(textureNumLevels(chain) - 1u);
-  let level = clamp(log2(max(radius, 1.0)), 0.0, top);
-  let lower = floor(level);
-  let rise = level - lower;
   // Taps stay on the canvas, so its edge never draws in what lies past it.
   let low = max(constants.placement.xy, vec2<f32>(0.0)) + 0.5;
   let high = min(constants.placement.xy + constants.output_source.xy / scale, size) - 0.5;
-  let golden = 2.39996323;
-  var sum = vec4<f32>(0.0);
-  for (var tap = 0u; tap < TAPS; tap++) {
-    let k = f32(tap) + 0.5;
-    let angle = k * golden;
-    let offset = vec2<f32>(cos(angle), sin(angle)) * (sqrt(k / f32(TAPS)) * radius);
-    let uv = clamp(position.xy + offset, low, max(low, high)) / size;
-    let nearer = textureSampleLevel(chain, linear, uv, lower);
-    let further = textureSampleLevel(chain, linear, uv, min(lower + 1.0, top));
-    sum += mix(nearer, further, rise);
-  }
-  var blurred = sum / f32(TAPS);
+  var blurred = disc_blur(chain, linear, position.xy, radius, low, max(low, high));
   // A whole canvas is opaque to its edge. Where a coarse level averages in
   // what lies past the edge, its colour is read back at full strength, so
   // the edge neither darkens nor thins; then the frame is clipped, sharp.

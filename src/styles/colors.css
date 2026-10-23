@@ -103,6 +103,13 @@
        is on macOS, so it stands off the track it sits in. On the primary fill
        it takes `on-primary` instead, as a check on a checked box does. */
     --control-knob: oklch(99.5% 0.002 47.6);
+    /* The island floats over the desktop as a window does, but draws its own
+       shape, so it cannot have the system's window shadow: this stands in
+       for it, a close contact shadow and a soft wide one. A whole filter,
+       not a `--drop-shadow-*` theme value: Tailwind wraps those in a single
+       `drop-shadow()`, which cannot hold two. */
+    --island-shadow: drop-shadow(0 1px 3px rgb(0 0 0 / 25%))
+      drop-shadow(0 10px 28px rgb(0 0 0 / 35%));
   }
 }
 

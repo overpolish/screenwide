@@ -127,8 +127,9 @@ fn repeated_screenshots_can_precede_the_first_normal_region_scene() {
   let mut state = RegionSceneState::default();
 
   // This is the lifecycle that used to retain RegionScene::default() as a
-  // drawing-capable "normal" scene and panic when Recording Bar first opened
-  // Region after Quick Screenshot had been started and cancelled a few times.
+  // drawing-capable "normal" scene and panic when the recording controls
+  // first opened Region after Quick Screenshot had been started and
+  // cancelled a few times.
   for _ in 0..3 {
     let quick = RegionScene {
       visible: true,

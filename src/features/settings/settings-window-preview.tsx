@@ -51,13 +51,14 @@ function createPreviewApi(
     openLocationAfterExport: true,
     projectDirectory: null,
     recordScreenwideWindows: true,
+    recordingControlsDisplay: null,
     recordingCountdownSeconds: 3,
     recordingDirectory: null,
     sceneTemplates: [],
     screenshotDelaySeconds: 3,
     screenshotDirectory: null,
-    showRecordingBarOnLaunch: true,
     showRecordingConfidenceChecks: true,
+    showRecordingControlsOnLaunch: true,
     showRecordingSize: false,
   };
   let glide: GlideSettings = {
@@ -74,7 +75,7 @@ function createPreviewApi(
   let shortcuts: ShortcutSettings = {
     bindings: [
       {
-        action: "toggleRecordingBar",
+        action: "toggleRecordingControls",
         shortcut: "CommandOrControl+Shift+Digit6",
       },
       { action: "startStopRecording", shortcut: null },

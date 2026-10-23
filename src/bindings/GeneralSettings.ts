@@ -26,7 +26,7 @@ backgroundPresets: Array<BackgroundPreset>,
  */
 projectDirectory: string | null, recordingDirectory: string | null, screenshotDirectory: string | null, openLocationAfterExport: boolean, recordScreenwideWindows: boolean, showRecordingConfidenceChecks: boolean, 
 /**
- * Whether the recording pill shows how much of the recording is on disk.
+ * Whether the island shows how much of the recording is on disk.
  */
 showRecordingSize: boolean, 
 /**
@@ -56,7 +56,17 @@ captionSettings: CaptionSettings,
  * The layout options set by hand and kept for new captions, over any
  * template.
  */
-captionLayout: TextLayout, launchAtLogin: boolean, showRecordingBarOnLaunch: boolean, recordingCountdownSeconds: number, 
+captionLayout: TextLayout, launchAtLogin: boolean, 
+/**
+ * Read from settings saved when the controls were the recording bar.
+ */
+showRecordingControlsOnLaunch: boolean, 
+/**
+ * The display the island sits at the top of, by id, while it is
+ * connected. None, or a display not connected, keeps it on the primary
+ * display, the one with the menu bar.
+ */
+recordingControlsDisplay: number | null, recordingCountdownSeconds: number, 
 /**
  * How long Delayed Screenshot waits before the shutter fires.
  */

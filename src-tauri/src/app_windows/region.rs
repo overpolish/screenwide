@@ -29,7 +29,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
 
 use super::{
-  escape, platform, region_gesture, source_selector, WindowLabel, RECORDING_CONTROLS_VISIBLE,
+  escape, platform, region_gesture, WindowLabel, RECORDING_CONTROLS_VISIBLE,
   REGION_SELECTOR_INTERACTIVE,
 };
 
@@ -182,12 +182,10 @@ fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
     return Ok(());
   }
 
-  if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
-    platform::raise_without_activation(&bar)?;
-  }
-  if source_selector::is_expanded() {
-    if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
-      platform::raise_without_activation(&selector)?;
+  // Raised only while out: raising orders a hidden panel on screen.
+  if super::island::is_shown() {
+    if let Some(island) = app.get_webview_window(WindowLabel::Island.as_str()) {
+      platform::raise_without_activation(&island)?;
     }
   }
   Ok(())

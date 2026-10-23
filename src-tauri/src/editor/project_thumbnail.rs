@@ -35,7 +35,7 @@ pub fn project_thumbnail(file: &Path) -> Result<Option<PathBuf>, String> {
   let recording = manifest.recorded()?;
   let movie = screenwide_project::resolve(file, &recording.media.primary)?;
   // The middle stands for the recording better than its start, which is
-  // often the recording bar going away. A project from before its length was
+  // often the recording controls going away. A project from before its length was
   // kept is measured.
   let duration_ms = recording
     .duration_ms

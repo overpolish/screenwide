@@ -179,7 +179,9 @@ export function SourceChip({
   label: string;
   mode: IslandMode;
   onPress: () => void;
-  picture?: { kind: "app" | "display"; src: string };
+  /** `id` names the source, so a refreshed still of the same display is
+   * the same picture. */
+  picture?: { id: string; kind: "app" | "display"; src: string };
 }) {
   return (
     <IslandButton
@@ -189,7 +191,7 @@ export function SourceChip({
       onPress={onPress}
       title={label}
     >
-      <IconSwap swapKey={picture ? `${picture.kind} ${picture.src}` : mode}>
+      <IconSwap swapKey={picture ? `${picture.kind} ${picture.id}` : mode}>
         {picture ? (
           // A display's still fills the circle; an app's icon sits in it.
           <img

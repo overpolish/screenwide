@@ -72,7 +72,7 @@ pub(super) fn start(
       camera_path: None,
       include_own_windows,
       microphone_id: options.microphone_id.clone(),
-      // The buffer's own: the dock shows a recording's levels, not these.
+      // The buffer's own: the island shows a recording's levels, not these.
       monitor: Arc::new(RecordingMonitor::default()),
       on_failure: Arc::new(move |reason: String| {
         super::report(

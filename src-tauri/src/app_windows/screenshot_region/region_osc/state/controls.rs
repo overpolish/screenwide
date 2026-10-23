@@ -148,6 +148,22 @@ pub(crate) fn set_show_handles(window: &WebviewWindow, show_handles: bool) -> bo
   .is_some()
 }
 
+/// Draws the region as a window being picked, or as a region again.
+pub(crate) fn set_window_highlight(window: &WebviewWindow, window_highlight: bool) -> bool {
+  with_context(window, |context| {
+    if let Ok(mut scene) = context.runtime.scene.lock() {
+      scene.chrome.window_highlight = window_highlight;
+    }
+    if let Ok(mut set) = context.surfaces.lock() {
+      for surface in set.all_mut() {
+        surface.window_highlight = window_highlight;
+        surface.draw();
+      }
+    }
+  })
+  .is_some()
+}
+
 pub(crate) fn set_show_frame(window: &WebviewWindow, show_frame: bool) -> bool {
   with_context(window, |context| {
     if let Ok(mut scene) = context.runtime.scene.lock() {

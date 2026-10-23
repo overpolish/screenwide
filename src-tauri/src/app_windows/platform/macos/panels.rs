@@ -5,11 +5,11 @@ use super::super::*;
 
 #[cfg(target_os = "macos")]
 tauri_panel! {
-  // The recording bar, the source selector, the standalone listbox and the
-  // region selector all take typed input at some point, so they have to be
-  // able to become key - `becomes_key_only_if_needed` keeps that to the moments
-  // a text field actually asks for it.
-  panel!(RecordingBarPanel {
+  // The island, the standalone listbox and the region selector all take
+  // typed input at some point, so they have to be able to
+  // become key - `becomes_key_only_if_needed` keeps that to the moments a text
+  // field actually asks for it.
+  panel!(RecordingPanel {
     config: {
       can_become_key_window: true,
       can_become_main_window: false,
@@ -34,10 +34,10 @@ tauri_panel! {
     }
   })
 
-  // The dock is buttons only: it never needs the keyboard, so it refuses key
-  // status outright. That way nothing it does can pull keyboard focus off the
-  // app the user is recording.
-  panel!(RecordingDockPanel {
+  // Glide's windows and the tooltip never need the keyboard, so they refuse
+  // key status outright. That way nothing they do can pull keyboard focus off
+  // the app the user is working in.
+  panel!(KeylessPanel {
     config: {
       can_become_key_window: false,
       can_become_main_window: false,
@@ -165,10 +165,7 @@ pub(in super::super) fn configure_panel<T: tauri_nspanel::FromWindow<tauri::Wry>
   panel.set_alpha_value(0.0);
   panel.set_level(PanelLevel::Custom(level).value());
   panel.set_style_mask(StyleMask::empty().nonactivating_panel().into());
-  super::super::super::panel_presentation_macos::configure_order_animation(
-    window.label(),
-    panel.as_panel(),
-  );
+  super::super::super::panel_presentation_macos::disable_order_animation(panel.as_panel());
   panel.set_collection_behavior(
     CollectionBehavior::new()
       .full_screen_auxiliary()
@@ -199,10 +196,10 @@ pub(in super::super) fn registered_panel(
 pub(in super::super) fn recording_panel_level(window: &WebviewWindow) -> Option<i32> {
   match window.label() {
     "region-selector" => Some(27),
-    "recording-bar" => Some(28),
-    "recording-source-selector" => Some(29),
+    // Above the menu bar, so the island can sit in it under the notch, and
+    // above the region selector it is used beside; the pop-ups go over it.
+    "island" => Some(28),
     label if label == "standalone-listbox" || label.starts_with("tool-panel-") => Some(31),
-    "recording-dock" => Some(32),
     label if label == "glide" || label.starts_with("glide-space-") => Some(34),
     _ => None,
   }
@@ -217,12 +214,12 @@ pub(in super::super) fn ensure_recording_panel(
   }
 
   let level = recording_panel_level(window).ok_or(tauri::Error::WindowNotFound)?;
-  if window.label().starts_with("glide") || window.label() == "recording-dock" {
-    configure_panel::<RecordingDockPanel>(window, level)?;
+  if window.label().starts_with("glide") {
+    configure_panel::<KeylessPanel>(window, level)?;
   } else if window.label() == "region-selector" {
     configure_panel::<RegionSelectorPanel>(window, level)?;
   } else {
-    configure_panel::<RecordingBarPanel>(window, level)?;
+    configure_panel::<RecordingPanel>(window, level)?;
   }
   registered_panel(window)
 }

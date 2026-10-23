@@ -29,7 +29,7 @@ const result = spawnPnpmSync(["tauri", "dev", ...arguments_], {
   env: {
     ...env,
     SCREENWIDE_FAULT: faults,
-    SCREENWIDE_SHOW_RECORDING_BAR: "1",
+    SCREENWIDE_SHOW_RECORDING_CONTROLS: "1",
   },
   stdio: "inherit",
 });

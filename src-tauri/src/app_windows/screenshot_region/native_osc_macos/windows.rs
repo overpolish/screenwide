@@ -159,6 +159,7 @@ pub(super) fn create_peer(
       | NSWindowCollectionBehavior::Stationary,
   );
   panel.setHasShadow(false);
+  crate::app_windows::panel_presentation_macos::disable_order_animation(&panel);
   panel.setHidesOnDeactivate(false);
   if let Some(parent) = parent.window() {
     panel.setLevel(parent.level());

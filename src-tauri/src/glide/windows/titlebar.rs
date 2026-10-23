@@ -17,15 +17,14 @@ use windows::Win32::{
 
 const WINDOWS_DPI: f64 = 96.0;
 const FALLBACK_TITLEBAR_HEIGHT: f64 = 48.0;
-static OWN_WINDOWS: LazyLock<RwLock<Vec<(isize, bool)>>> =
-  LazyLock::new(|| RwLock::new(Vec::new()));
+static OWN_WINDOWS: LazyLock<RwLock<Vec<isize>>> = LazyLock::new(|| RwLock::new(Vec::new()));
 
 pub(super) fn cache_own_windows(app: &AppHandle) {
   let windows = crate::glide::GLIDABLE_WINDOW_LABELS
     .iter()
     .filter_map(|label| {
       let hwnd = app.get_webview_window(label.as_str())?.hwnd().ok()?;
-      Some((hwnd.0 as isize, crate::glide::uses_full_surface(*label)))
+      Some(hwnd.0 as isize)
     })
     .collect();
   *OWN_WINDOWS
@@ -34,17 +33,17 @@ pub(super) fn cache_own_windows(app: &AppHandle) {
 }
 
 pub(super) fn window_at(app: &AppHandle, point: POINT) -> Option<HWND> {
-  window_at_with_own(point, |window| own_window_uses_full_surface(app, window))
+  window_at_with_own(point, |window| is_own_glidable(app, window))
 }
 
 /// Hook-safe titlebar lookup. Low-level hooks must return promptly, so this
 /// path uses HWNDs cached during Glide startup and never asks Tauri/WebView for
 /// window state from inside the callback.
 pub(super) fn cached_window_at(point: POINT) -> Option<HWND> {
-  window_at_with_own(point, cached_own_window_uses_full_surface)
+  window_at_with_own(point, is_cached_own_glidable)
 }
 
-fn window_at_with_own(point: POINT, own_window: impl FnOnce(HWND) -> Option<bool>) -> Option<HWND> {
+fn window_at_with_own(point: POINT, is_glidable: impl FnOnce(HWND) -> bool) -> Option<HWND> {
   let hovered = unsafe { WindowFromPoint(point) };
   if hovered.0.is_null() {
     return None;
@@ -58,8 +57,10 @@ fn window_at_with_own(point: POINT, own_window: impl FnOnce(HWND) -> Option<bool
   }
   let mut process_id = 0;
   unsafe { GetWindowThreadProcessId(window, Some(&mut process_id)) };
-  if process_id == std::process::id() && own_window(window)? {
-    return Some(window);
+  // Of our own windows, only the glidable ones move, by their titlebar as
+  // any other window does.
+  if process_id == std::process::id() && !is_glidable(window) {
+    return None;
   }
 
   // Chromium, WinUI and other client-drawn windows report HTCLIENT for their
@@ -70,24 +71,20 @@ fn window_at_with_own(point: POINT, own_window: impl FnOnce(HWND) -> Option<bool
   titlebar_band_contains(window, point).then_some(window)
 }
 
-fn cached_own_window_uses_full_surface(hwnd: HWND) -> Option<bool> {
+fn is_cached_own_glidable(hwnd: HWND) -> bool {
   OWN_WINDOWS
     .read()
     .unwrap_or_else(|poisoned| poisoned.into_inner())
-    .iter()
-    .find_map(|(window, full_surface)| (*window == hwnd.0 as isize).then_some(*full_surface))
+    .contains(&(hwnd.0 as isize))
 }
 
-fn own_window_uses_full_surface(app: &AppHandle, hwnd: HWND) -> Option<bool> {
-  crate::glide::GLIDABLE_WINDOW_LABELS
-    .iter()
-    .find_map(|label| {
-      let matches = app
-        .get_webview_window(label.as_str())
-        .and_then(|window| window.hwnd().ok())
-        .is_some_and(|window| window.0 == hwnd.0);
-      matches.then(|| crate::glide::uses_full_surface(*label))
-    })
+fn is_own_glidable(app: &AppHandle, hwnd: HWND) -> bool {
+  crate::glide::GLIDABLE_WINDOW_LABELS.iter().any(|label| {
+    app
+      .get_webview_window(label.as_str())
+      .and_then(|window| window.hwnd().ok())
+      .is_some_and(|window| window.0 == hwnd.0)
+  })
 }
 
 /// Explorer implements the taskbars and desktop as ordinary top-level HWNDs.
@@ -160,23 +157,14 @@ mod tests {
     assert_eq!(
       labels,
       [
+        "projects",
         "settings",
-        "recording-bar",
-        "recording-dock",
         "editor-recording",
         "editor-screenshot"
       ]
     );
     assert!(!labels.contains(&"glide"));
+    assert!(!labels.contains(&"island"));
     assert!(!labels.contains(&"region-selector"));
-    assert!(crate::glide::uses_full_surface(
-      crate::app_windows::WindowLabel::RecordingBar
-    ));
-    assert!(crate::glide::uses_full_surface(
-      crate::app_windows::WindowLabel::RecordingDock
-    ));
-    assert!(!crate::glide::uses_full_surface(
-      crate::app_windows::WindowLabel::Settings
-    ));
   }
 }

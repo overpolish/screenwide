@@ -87,7 +87,7 @@ fn capture_desktop_region(
 
 pub fn capture(target: ScreenshotTarget, show_cursor: bool) -> Result<CapturedImage, String> {
   // Windows Graphics Capture cannot draw the pointer into a frame, so the
-  // bar's "Show cursor" toggle has no effect on stills here. macOS honours it
+  // "Show cursor" setting has no effect on stills here. macOS honours it
   // through ScreenCaptureKit. This divergence is a platform limit, not a bug,
   // and is why the toggle is not disabled on Windows: it still governs
   // recordings.

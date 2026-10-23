@@ -236,6 +236,8 @@ pub fn add_selection(
 
 mod crop;
 mod turned;
+mod window;
 
 pub use crop::{add_crop, add_crop_with_handles};
 pub use turned::{add_soft_guide, add_turned_marquee, add_turned_outline, add_turned_selection};
+pub use window::add_window_highlight;

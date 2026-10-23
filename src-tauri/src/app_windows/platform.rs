@@ -7,11 +7,10 @@ mod macos;
 mod windows;
 #[cfg(target_os = "windows")]
 pub use self::windows::windows_api::{
-  hide, initialize_annotate_toolbar, initialize_editor, initialize_recording_bar,
-  initialize_recording_dock, initialize_recording_source_selector, initialize_region_selector,
-  initialize_standalone_listbox, initialize_tooltip, is_visible, prepare_to_show,
-  raise_without_activation, restore_recording_level, set_capture_affinity, set_normal_level,
-  set_opacity, set_owner, set_pointer_passthrough, show,
+  hide, initialize_annotate_toolbar, initialize_editor, initialize_island,
+  initialize_region_selector, initialize_standalone_listbox, initialize_tooltip, is_visible,
+  prepare_to_show, raise_without_activation, restore_recording_level, set_capture_affinity,
+  set_normal_level, set_opacity, set_owner, set_pointer_passthrough, show,
 };
 
 #[cfg(target_os = "macos")]
@@ -96,7 +95,7 @@ pub fn initialize_editor(_window: &WebviewWindow) -> tauri::Result<()> {
 /// keyboard away from the control the pointer is over.
 #[cfg(target_os = "macos")]
 pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
-  configure_panel::<RecordingDockPanel>(window, PanelLevel::Floating.value() as i32)
+  configure_panel::<KeylessPanel>(window, PanelLevel::Floating.value() as i32)
 }
 
 /// The annotate toolbar's panel. It sits one level above the overlay's hosts,
@@ -109,6 +108,15 @@ pub fn initialize_annotate_toolbar(window: &WebviewWindow) -> tauri::Result<()> 
     window,
     crate::capture_overlays::FOREGROUND_LEVEL as i32 + 1,
   )
+}
+
+/// The island's panel: the recording panels' kind, at the island's level,
+/// without the window's shadow, as the island draws its own.
+#[cfg(target_os = "macos")]
+pub(crate) fn island_panel(window: &WebviewWindow) -> tauri::Result<PanelHandle<tauri::Wry>> {
+  let panel = ensure_recording_panel(window)?;
+  panel.set_has_shadow(false);
+  Ok(panel)
 }
 
 #[cfg(target_os = "macos")]
@@ -170,7 +178,7 @@ fn disable_show_transitions(window: &WebviewWindow) -> tauri::Result<()> {
 
 /// Asks DWM to round the window's corners, as it does for every framed
 /// window on Windows 11 but not for an undecorated one. The floating panels
-/// (recording bar and dock, pop-up lists, tooltips) are Fluent flyouts, which
+/// (pop-up lists, tooltips, the window list) are Fluent flyouts, which
 /// carry the 8px overlay corner; the DWM corner is the only one that clips
 /// the window's own material and shadow.
 #[cfg(target_os = "windows")]
@@ -214,12 +222,7 @@ fn initialize_capture_affinity(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn initialize_recording_bar(_window: &WebviewWindow) -> tauri::Result<()> {
-  Ok(())
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn initialize_recording_source_selector(_window: &WebviewWindow) -> tauri::Result<()> {
+pub fn initialize_island(_window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 
@@ -230,11 +233,6 @@ pub fn initialize_region_selector(_window: &WebviewWindow) -> tauri::Result<()> 
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn initialize_standalone_listbox(_window: &WebviewWindow) -> tauri::Result<()> {
-  Ok(())
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn initialize_recording_dock(_window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 

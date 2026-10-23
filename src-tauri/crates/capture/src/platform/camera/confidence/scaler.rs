@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The recording bar shows a 48 × 27 CSS-pixel camera confidence thumbnail,
-//! and a 96 × 54 backing image keeps it crisp on Retina displays. Scaling on
+//! The island shows the camera's confidence picture in a 32-point circle,
+//! and a backing image of up to 128 × 72 keeps it crisp on Retina displays. Scaling on
 //! the CPU meant a full-frame format conversion plus a ColorSync colour match
 //! per frame, so the camera frame is wrapped as textures in place and sampled
 //! straight down to the thumbnail on the GPU.
@@ -46,7 +46,7 @@ mod pipeline;
 impl Scaler {
   /// Scales `buffer` into `out`, `width` by `height` RGBA, and waits for it.
   /// False for a pixel format the camera is never asked for, or a size past
-  /// the recording bar's budget.
+  /// the island's budget.
   pub(super) fn thumbnail(
     &mut self,
     buffer: &cv::PixelBuf,

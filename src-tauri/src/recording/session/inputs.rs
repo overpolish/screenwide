@@ -17,7 +17,7 @@ pub(in crate::recording) fn check_inputs(options: &StartRecordingOptions) -> Res
       || screenwide_capture::devices::resolve_microphone(Some(microphone_id)).is_err()
     {
       return Err(
-        "The selected microphone is no longer connected. Choose another microphone in the recording bar, or turn the microphone off."
+        "The selected microphone is no longer connected. Choose another microphone in the recording controls, or turn the microphone off."
           .to_owned(),
       );
     }

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! How much of the running recording is on disk, for the pill to show.
+//! How much of the running recording is on disk, for the island to show.
 
 use std::{fs, path::Path};
 

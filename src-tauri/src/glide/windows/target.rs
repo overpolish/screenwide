@@ -10,12 +10,10 @@ use windows::Win32::{
     Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS},
     Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTONEAREST},
   },
-  System::Threading::{AttachThreadInput, GetCurrentThreadId},
   UI::{
     HiDpi::GetDpiForWindow,
     WindowsAndMessaging::{
-      BringWindowToTop, GetForegroundWindow, GetWindowLongPtrW, GetWindowRect,
-      GetWindowThreadProcessId, IsWindow, IsZoomed, SetForegroundWindow, SetWindowPos, ShowWindow,
+      GetWindowLongPtrW, GetWindowRect, IsWindow, IsZoomed, SetWindowPos, ShowWindow,
       ShowWindowAsync, GWL_STYLE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE,
       SWP_NOZORDER, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, WS_THICKFRAME,
     },
@@ -104,32 +102,9 @@ impl WindowTarget {
     }
   }
 
-  /// Brings the captured window to the front. A background process may not
-  /// take the foreground on its own, so the input thread briefly attaches to
-  /// the thread that currently owns it and hands the foreground over.
+  /// Brings the captured window to the front.
   pub fn raise(self) {
-    if self.ensure_window().is_err() {
-      return;
-    }
-    let hwnd = self.hwnd();
-    let foreground = unsafe { GetForegroundWindow() };
-    if foreground == hwnd {
-      return;
-    }
-    let current = unsafe { GetCurrentThreadId() };
-    let owner = if foreground.0.is_null() {
-      0
-    } else {
-      unsafe { GetWindowThreadProcessId(foreground, None) }
-    };
-    let attached = owner != 0
-      && owner != current
-      && unsafe { AttachThreadInput(current, owner, true) }.as_bool();
-    let _ = unsafe { BringWindowToTop(hwnd) };
-    let _ = unsafe { SetForegroundWindow(hwnd) };
-    if attached {
-      let _ = unsafe { AttachThreadInput(current, owner, false) };
-    }
+    crate::window_front::raise(self.hwnd());
   }
 
   /// Puts the window back where the session found it. A maximized window

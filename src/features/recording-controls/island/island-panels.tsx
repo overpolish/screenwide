@@ -85,13 +85,6 @@ export function RecordPanel({
   return (
     <ControlRow
       className="px-inset-sm"
-      description={
-        replay.status === "starting"
-          ? t("recording-controls-island-replay-starting")
-          : t("recording-controls-island-replay-length", {
-              seconds: replay.lengthSeconds,
-            })
-      }
       title={t("recording-controls-island-replay")}
     >
       {(controlProps) => (

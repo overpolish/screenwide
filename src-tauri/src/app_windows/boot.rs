@@ -19,13 +19,11 @@ const HIDDEN_ON_LAUNCH: &[WindowLabel] = &[WindowLabel::Update];
 
 /// Overlays and transients, which are only ever hidden, never closed.
 const DISMISSED_ON_CLOSE: &[WindowLabel] = &[
-  WindowLabel::RecordingBar,
-  WindowLabel::RecordingSourceSelector,
+  WindowLabel::Island,
   WindowLabel::RegionSelector,
   WindowLabel::StandaloneListbox,
   WindowLabel::ToolPanelRecording,
   WindowLabel::ToolPanelScreenshot,
-  WindowLabel::RecordingDock,
 ];
 
 /// The windows whose page carries the title bar. On macOS they are configured
@@ -87,7 +85,7 @@ pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
     hide_instead_of_close(app, label);
   }
 
-  // The tool panels are floating flyouts like the recording bar, but have no
+  // The tool panels are floating flyouts like the pop-up lists, but have no
   // initialiser of their own: they are only ever shown. Their corners are
   // rounded here, once, with the rest of the boot.
   #[cfg(target_os = "windows")]

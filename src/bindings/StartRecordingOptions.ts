@@ -3,7 +3,7 @@ import type { RecordingMode } from "./RecordingMode";
 import type { Region } from "./Region";
 
 /**
- * Options assembled by the recording bar from the source and input stores.
+ * Options assembled by the recording controls from the source and input stores.
  */
 export type StartRecordingOptions = { mode: RecordingMode, monitorId: number | null, windowId: number | null, region: Region | null, showCursor: boolean, captureKeyboardShortcuts: boolean, systemAudio: boolean, systemAudioApplicationIds: Array<string>, systemAudioProcessIds: Array<number>, microphoneId: string | null, cameraId: string | null, cameraWidth: number | null, cameraHeight: number | null, cameraFps: number | null, cameraFlipped: boolean, 
 /**

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The dock's camera thumbnail during a Windows recording.
+//! The island's camera picture during a Windows recording.
 //!
 //! The capture callback samples each frame down to thumbnail size itself: a
 //! few thousand reads, where handing the worker a full frame would mean
@@ -15,8 +15,8 @@ use std::{
 
 use crate::monitor::RecordingMonitor;
 
-const MAX_WIDTH: u32 = 96;
-const MAX_HEIGHT: u32 = 54;
+const MAX_WIDTH: u32 = 128;
+const MAX_HEIGHT: u32 = 72;
 
 /// A camera frame's pixels as the capture callback holds them.
 pub(super) enum Pixels<'a> {

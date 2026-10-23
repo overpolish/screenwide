@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 
 import type { IslandNotch } from "../../../primitives/island/island-geometry";
+import type { IslandPart } from "../../../primitives/island/island-outline-sync";
 import type { ScreenshotAction, ScreenshotState } from "../types";
 
 // What the island shows, handed to it whole: it keeps only which part is
@@ -65,12 +66,8 @@ export type IslandMoment = {
   noteMs: number | null;
 };
 
-/** The replay buffer, where it can run: how much it keeps, and whether it is
- * off, on, or still starting. */
-export type IslandReplay = {
-  lengthSeconds: number;
-  status: "off" | "on" | "starting";
-};
+/** The replay buffer, where it can run: off, on, or still starting. */
+export type IslandReplay = { status: "off" | "on" | "starting" };
 
 /** What is recorded: a display, a window, a region, or no screen at all,
  * only the inputs that are on. The island's own modes; whoever drives it
@@ -124,19 +121,29 @@ export type RecordingIslandProps = {
   onCameraFlipChange?: (isFlipped: boolean) => void;
   onCancelCountdown?: () => void;
   onCancelStarting?: () => void;
-  onChooseRegion?: () => void;
+  onCancelWindowPick?: () => void;
   onChooseWindow?: () => void;
   onDiscard?: () => void;
   onDisplayChange?: (id: number) => void;
+  /** The island has tucked itself away after `isShown` turned false. */
+  onHidden?: () => void;
   onOpenPermissions?: () => void;
+  /** The part now open, as it changes: the camera's, say, which wants the
+   * camera's picture. */
+  onPanelChange?: (panel: IslandPanel) => void;
   onPause?: () => void;
   onReplayChange?: (isOn: boolean) => void;
   onResume?: () => void;
   onScreenshot?: (action: ScreenshotAction | "delayed" | "save") => void;
+  /** Where the island's parts are, as they move (`Island`). */
+  onShapeChange?: (parts: IslandPart[]) => void;
   onStop?: () => void;
   /** The replay buffer; none where it cannot run. */
   replay?: IslandReplay;
   screenshotState?: ScreenshotState;
+  /** A window being picked by clicking it: the one under the pointer, or
+   * null over none. None when not picking. */
+  windowPick?: { hovered: IslandWindow | null } | null;
   /** How much of the recording is on disk: null until first measured, and
    * undefined when the size is not shown at all. */
   writtenBytes?: number | null;

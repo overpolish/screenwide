@@ -39,6 +39,15 @@ function inputsOn(camera: boolean, microphone: boolean, systemAudio: boolean) {
   return on.length ? on.join("-") : "none";
 }
 
+/** A window as its app's icon, or as the mode's glyph where it has none. */
+function WindowPicture({ window }: { window: IslandWindow }) {
+  return window.icon ? (
+    <img alt="" className="size-8 shrink-0" src={window.icon} />
+  ) : (
+    <ModePicture mode="window" />
+  );
+}
+
 export function SourcePanel({
   camera,
   chosenRegion,
@@ -46,12 +55,13 @@ export function SourcePanel({
   displays,
   microphone,
   mode,
-  onChooseRegion,
+  onCancelWindowPick,
   onChooseWindow,
   onDisplayChange,
   onModeChange,
   selectedDisplayId,
   systemAudio,
+  windowPick,
 }: {
   camera: IslandInput;
   displays: IslandDisplay[];
@@ -62,9 +72,10 @@ export function SourcePanel({
   systemAudio: IslandInput;
   chosenRegion?: IslandRegion;
   chosenWindow?: IslandWindow;
-  onChooseRegion?: () => void;
+  onCancelWindowPick?: () => void;
   onChooseWindow?: () => void;
   onDisplayChange?: (id: number) => void;
+  windowPick?: { hovered: IslandWindow | null } | null;
 }) {
   // Pixels read as plain figures: no grouping, so 3200 is not 3,200.
   const pixels = useNumberFormatter({ useGrouping: false });
@@ -78,22 +89,29 @@ export function SourcePanel({
           selectedDisplayId={selectedDisplayId}
         />
       ) : mode === "window" ? (
-        chosenWindow ? (
+        windowPick ? (
+          // Picking: the window under the pointer, named as it is clicked.
+          windowPick.hovered ? (
+            <ChosenRow
+              action={t("recording-controls-island-cancel-pick")}
+              detail={windowPick.hovered.appName}
+              onAction={onCancelWindowPick}
+              picture={<WindowPicture window={windowPick.hovered} />}
+              title={windowPick.hovered.title}
+            />
+          ) : (
+            <PromptRow
+              action={t("recording-controls-island-cancel-pick")}
+              onAction={onCancelWindowPick}
+              prompt={t("recording-controls-island-pick-window")}
+            />
+          )
+        ) : chosenWindow ? (
           <ChosenRow
             action={t("recording-controls-island-change-window")}
             detail={chosenWindow.appName}
             onAction={onChooseWindow}
-            picture={
-              chosenWindow.icon ? (
-                <img
-                  alt=""
-                  className="size-8 shrink-0"
-                  src={chosenWindow.icon}
-                />
-              ) : (
-                <ModePicture mode="window" />
-              )
-            }
+            picture={<WindowPicture window={chosenWindow} />}
             title={chosenWindow.title}
           />
         ) : (
@@ -106,7 +124,6 @@ export function SourcePanel({
       ) : mode === "region" ? (
         chosenRegion ? (
           <ChosenRow
-            action={t("recording-controls-island-change-region")}
             detail={
               chosenRegion.displays.length > 1
                 ? t("recording-controls-island-region-displays", {
@@ -115,7 +132,6 @@ export function SourcePanel({
                 : (chosenRegion.displays[0] ?? "")
             }
             isTitleDirectional={false}
-            onAction={onChooseRegion}
             picture={<ModePicture mode="region" />}
             title={t("recording-controls-island-region-size", {
               height: pixels.format(chosenRegion.height),
@@ -123,11 +139,7 @@ export function SourcePanel({
             })}
           />
         ) : (
-          <PromptRow
-            action={t("recording-controls-island-choose-region")}
-            onAction={onChooseRegion}
-            prompt={t("recording-controls-island-pick-region")}
-          />
+          <PromptRow prompt={t("recording-controls-island-pick-region")} />
         )
       ) : (
         <Text className="rounded-control bg-fill px-inset py-separate">

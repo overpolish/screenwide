@@ -7,8 +7,13 @@ mod precompiled_shaders;
 /// The compositor's shaders as the parts each joins, in order.
 const MODULES: &[(&str, &[&str])] = &[
   ("annotation_blur", &["src/shaders/annotation_blur.wgsl"]),
-  ("mips", &["src/shaders/mips.wgsl"]),
-  ("focus_blur", &["src/shaders/focus_blur.wgsl"]),
+  (
+    "focus_blur",
+    &[
+      "src/shaders/focus_blur.wgsl",
+      "../gpu/src/shaders/disc_blur.wgsl",
+    ],
+  ),
   ("focus_copy", &["src/shaders/focus_copy.wgsl"]),
   (
     "preview",

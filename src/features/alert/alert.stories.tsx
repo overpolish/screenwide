@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   args: {
     message:
-      "The camera no longer offers 1920 × 1080 at 30 fps. Choose another camera mode in the recording bar, or turn the camera off.",
+      "The camera no longer offers 1920 × 1080 at 30 fps. Choose another camera mode in the recording controls, or turn the camera off.",
     onDismiss: () => undefined,
     title: "Recording could not start",
   },

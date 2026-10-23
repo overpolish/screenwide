@@ -24,22 +24,24 @@ pub use recording_ui::{__cmd__open_recording_ui, __tauri_command_name_open_recor
 pub use recording_ui::{__cmd__recording_ui_visible, __tauri_command_name_recording_ui_visible};
 pub use recording_ui::{__cmd__toggle_recording_ui, __tauri_command_name_toggle_recording_ui};
 
-mod labels;
-mod recording_bar_movement;
-pub use labels::WindowLabel;
+pub(crate) mod island;
+#[cfg(target_os = "macos")]
+mod island_macos;
+#[cfg(target_os = "windows")]
+mod island_windows;
+pub use island::{__cmd__finish_hiding_island, __tauri_command_name_finish_hiding_island};
+pub use island::{__cmd__island_presence, __tauri_command_name_island_presence};
+pub use island::{__cmd__set_island_hit_area, __tauri_command_name_set_island_hit_area};
+pub use island::{finish_hiding_island, island_presence, set_island_hit_area};
 
-pub use recording_bar_movement::finish_recording_bar_drag;
-pub use recording_bar_movement::manage_recording_bar_movement;
-pub use recording_bar_movement::{
-  __cmd__finish_recording_bar_drag, __tauri_command_name_finish_recording_bar_drag,
-};
+mod labels;
+pub use labels::WindowLabel;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "windows")]
 use tauri::WebviewWindow;
-use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder, WindowEvent};
-use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 mod boot;
 mod capture_affinity;
@@ -56,7 +58,6 @@ pub use capture_affinity::sync_capture_affinity;
 pub(crate) use capture_affinity::{mark_capturing, Capture};
 pub(crate) mod color_panel;
 mod dismissal;
-pub(crate) mod dock;
 #[cfg(target_os = "macos")]
 mod dock_visibility;
 #[cfg(target_os = "windows")]
@@ -69,15 +70,13 @@ pub(crate) mod options;
 #[cfg(target_os = "windows")]
 pub(crate) mod overlay_surface;
 #[cfg(target_os = "macos")]
-mod panel_presentation_macos;
+pub(crate) mod panel_presentation_macos;
 pub(crate) mod panel_space;
 pub(crate) mod platform;
 mod popover_dismissal;
 pub(crate) mod region;
 pub(crate) mod region_gesture;
 pub(crate) mod screenshot_region;
-pub(crate) mod source_selector;
-mod source_selector_layout;
 mod topology;
 mod transient_popover;
 mod webview_visibility;
@@ -86,21 +85,14 @@ pub(crate) use webview_visibility::hide_window as hide;
 
 pub use boot::initialize_predefined_windows;
 pub use dismissal::hide_without_focus_transfer;
-#[cfg(not(target_os = "macos"))]
-pub use dock::initialize_recording_dock;
-pub use dock::{hide_recording_dock, manage_recording_dock_movement, show_recording_dock};
 pub(crate) use geometry::{centered_logical_position, contain_window_on_its_monitor};
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
 pub use lifecycle::{
-  hide_instead_of_close, initialize_editor, initialize_normal_window,
-  initialize_recording_bar_position, recover_window_position, show,
+  hide_instead_of_close, initialize_editor, initialize_normal_window, recover_window_position, show,
 };
 #[cfg(not(target_os = "macos"))]
-pub use lifecycle::{
-  initialize_recording_bar, initialize_recording_source_selector, initialize_region_selector,
-  initialize_standalone_listbox,
-};
+pub use lifecycle::{initialize_island, initialize_region_selector, initialize_standalone_listbox};
 #[cfg(target_os = "windows")]
 pub(crate) use platform::round_corners;
 pub use popover_dismissal::manage_transient_popover_dismissal;
@@ -171,21 +163,13 @@ pub fn initialize_topology_management(app: &AppHandle) {
 
 static RECORDING_CONTROLS_VISIBLE: AtomicBool = AtomicBool::new(false);
 static REGION_SELECTOR_INTERACTIVE: AtomicBool = AtomicBool::new(false);
-#[cfg(target_os = "windows")]
-static BAR_DRAG_ACTIVE: AtomicBool = AtomicBool::new(false);
-
-pub fn hide_recording_bar(app: &AppHandle) -> tauri::Result<()> {
+/// Puts the recording controls away: Escape no longer dismisses them, and the
+/// island stops showing them. The island itself stays for what it shows
+/// next, such as the recording they started; `hide_recording_ui` takes it
+/// away too.
+pub fn close_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   escape::sync(app, false, false, crate::ruler::is_active(app));
-  // Clear first so later overlay ordering cannot raise the bar again.
+  // Cleared first, so later overlay ordering cannot raise them again.
   RECORDING_CONTROLS_VISIBLE.store(false, Ordering::Relaxed);
-  if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
-    platform::hide(&bar)?;
-    app.emit_to(
-      WindowLabel::RecordingBar.as_str(),
-      "recording-ui://hidden",
-      (),
-    )?;
-  }
-
-  Ok(())
+  app.emit_to(WindowLabel::Island.as_str(), "recording-ui://hidden", ())
 }

@@ -18,13 +18,13 @@ pub(crate) use attachment::{
 };
 use attachment::{context_arc, with_surfaces};
 pub(crate) use content::{
-  reset_text_recognition_input, set_ocr, set_ocr_cancel_visible, set_snapshot,
+  reset_text_recognition_input, set_backdrops, set_ocr, set_ocr_cancel_visible, set_snapshot,
   set_snapshot_composited, set_snapshot_presented,
 };
 use controls::set_exclusion_rect;
 pub(crate) use controls::{
   claim_pointer_surface, set_allow_drawing, set_aspect, set_desktop_presented, set_input_enabled,
-  set_magnifier_source, set_monitor, set_show_frame, set_show_handles,
+  set_magnifier_source, set_monitor, set_show_frame, set_show_handles, set_window_highlight,
 };
 
 pub(crate) use desktop::{
@@ -52,7 +52,7 @@ use super::host::{host, WindowId};
 use super::desktop::{global_committed, peer_plan, MonitorProbe, PeerPlan};
 use super::input;
 use super::ruler::{self, RulerData};
-use super::surface::{self, Gpu, Surface};
+use super::surface::{self, Gpu, Surface, Texture};
 use crate::osc::runtime::OscRuntime;
 use crate::text_recognition::visual::OcrRectPacket;
 use screenwide_osc::controller::RegionController;
@@ -77,6 +77,9 @@ type LayoutSnapshot = (Vec<DesktopDisplay>, u32);
 pub(crate) struct SurfaceSet {
   root: Surface,
   peers: Vec<Surface>,
+  /// The frozen desktop behind window picking, by display, handed to
+  /// whichever surface covers each display, again whenever they are rebuilt.
+  backdrops: HashMap<u32, Texture>,
 }
 
 impl SurfaceSet {
@@ -96,6 +99,14 @@ impl SurfaceSet {
   /// always exists, so this never has to fall back.
   pub(crate) fn root_hwnd(&self) -> WindowId {
     self.root.hwnd()
+  }
+
+  /// Gives every surface its own display's backdrop.
+  fn share_backdrops(&mut self) {
+    let backdrops = &self.backdrops;
+    for surface in std::iter::once(&mut self.root).chain(self.peers.iter_mut()) {
+      surface.show_backdrop(backdrops.get(&surface.display_id).cloned());
+    }
   }
 
   fn for_display_mut(&mut self, display_id: u32) -> Option<&mut Surface> {

@@ -42,6 +42,8 @@ struct OscGpu {
   // held or -1, how far it is lit toward white, and how strongly far halves
   // show.
   turn_rings: array<vec4<f32>, 8>,
+  window_cutout: vec4<f32>, // the window being picked, px: x, y, width, height
+  window_shape: vec4<f32>, // .x corner radius px, .y fade, .z blur px (0: none), .w feather px
 }
 
 @group(0) @binding(0) var<uniform> osc: OscGpu;
@@ -68,6 +70,7 @@ struct VertexOut {
 
 // The magnifier lens. Crop corners already own 45.
 const LENS_KIND: u32 = 49u;
+const WINDOW_BACKDROP_KIND: u32 = 64u;
 
 // Positions arrive in NDC: the vertex builder does the pixel-to-clip mapping
 // on the CPU, so there is no transform here.
@@ -121,6 +124,30 @@ fn material_backdrop(pixel_position: vec2<f32>) -> vec4<f32> {
       is_light());
   let tint = select(vec3<f32>(0.070, 0.072, 0.080), vec3<f32>(0.965, 0.965, 0.975), is_light());
   return vec4<f32>(mix(luminosity_base, tint, select(0.36, 0.30, is_light())), 1.0);
+}
+
+// The screen round the window being picked: the desktop frozen as picking
+// starts, softened by the focus blur's disc (`disc_blur.wgsl`) from its mip
+// levels, under the overlay's shade; the shade alone when the display could
+// not be frozen. The window's rounded rectangle stays clear so the window
+// shows live, the shade and the blur feathering into it together.
+fn window_backdrop(pixel_position: vec2<f32>) -> vec4<f32> {
+  let half_size = osc.window_cutout.zw * 0.5;
+  let radius = min(osc.window_shape.x, min(half_size.x, half_size.y));
+  let distance = rounded_distance(pixel_position - (osc.window_cutout.xy + half_size), half_size,
+      radius);
+  let feather = max(osc.window_shape.w, 1.0);
+  let outside = smoothstep(-0.5 * feather, 0.5 * feather, distance) * osc.window_shape.y;
+  let shade = osc.overlay_shade;
+  if (osc.window_shape.z <= 0.0) {
+    return vec4<f32>(shade.rgb, shade.a * outside);
+  }
+  // The backdrop is the display's own pixels, which the target covers.
+  let size = vec2<f32>(textureDimensions(snapshot));
+  let per = size / max(osc.chrome_backdrop.xy, vec2<f32>(1.0));
+  let blurred = disc_blur(snapshot, linear_sampler, pixel_position * per,
+      osc.window_shape.z * per.x, vec2<f32>(0.5), size - 0.5);
+  return vec4<f32>(mix(blurred.rgb, shade.rgb, shade.a), outside);
 }
 
 // A quad's size in pixels, from how fast its unit uv changes across one. The
@@ -602,6 +629,9 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
       sampled = textureSampleLevel(snapshot, point_sampler, uv, 0.0);
     }
     return vec4<f32>(sampled.rgb, 1.0);
+  }
+  if (kind == WINDOW_BACKDROP_KIND) {
+    return window_backdrop(input.position.xy);
   }
   if (kind == 46u) {
     // The rounded chrome plate. Kinds 12-14 stay rectangular because on macOS

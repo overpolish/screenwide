@@ -96,7 +96,7 @@ impl Scaler {
         mapped_at_creation: false,
       }),
       target: None,
-      // The largest thumbnail the recording bar asks for, allocated once.
+      // The largest thumbnail the island asks for, allocated once.
       readback: device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Screenwide camera thumbnail readback"),
         size: u64::from(ROW_PITCH) * MAX_HEIGHT as u64,

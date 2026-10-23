@@ -3,9 +3,16 @@
 
 import { createElement, useEffect, useState } from "react";
 
+import { t } from "../../../i18n/i18n";
+
 import { SamplePicture } from "./island-stage-picture";
 
-import type { IslandReplay } from "./island-types";
+import type {
+  IslandInput,
+  IslandInputKind,
+  IslandPhase,
+  IslandReplay,
+} from "./island-types";
 
 // The stage's stand-ins for what the app would drive: the camera's picture,
 // which follows Flip, and the replay buffer, off unless a story says
@@ -18,7 +25,7 @@ const STARTING_MS = 900;
  * and what its switch does to it. */
 export function useStageReplay(initial: IslandReplay | null | undefined) {
   const [replay, setReplay] = useState<IslandReplay | null>(
-    initial === undefined ? { lengthSeconds: 30, status: "off" } : initial,
+    initial === undefined ? { status: "off" } : initial,
   );
   // A story that opens on the buffer starting holds it there to be looked
   // at, until the switch is used.
@@ -50,5 +57,30 @@ export function useStageCamera(isFlippedAtFirst = false) {
     cameraPreview: createElement(SamplePicture, { isFlipped: isCameraFlipped }),
     isCameraFlipped,
     onCameraFlipChange: setIsCameraFlipped,
+  };
+}
+
+/** The stage's microphone, as a story names its problem: missing, or silent,
+ * which hears nothing and says so once recording. The levels the inputs
+ * report follow, nothing from an input that is off or a silent microphone. */
+export function stageMicrophone({
+  inputs,
+  phase,
+  problem,
+}: {
+  inputs: Record<IslandInputKind, IslandInput>;
+  phase: IslandPhase;
+  problem?: "missing" | "silent";
+}) {
+  const isSilent = problem === "silent";
+  return {
+    level: (kind: "microphone" | "systemAudio", value = 0) =>
+      inputs[kind].isOn && !(kind === "microphone" && isSilent) ? value : 0,
+    warning:
+      problem === "missing"
+        ? t("recording-controls-microphone-missing")
+        : isSilent && phase !== "idle"
+          ? t("recording-controls-island-microphone-silent")
+          : inputs.microphone.warning,
   };
 }

@@ -16,21 +16,22 @@ const REPLAY_START_REQUESTED_EVENT = "replay://start-requested";
 
 const turnOn = () => startReplayBuffer(startRecordingOptions());
 
-/** Shows the bar, whose warnings say what kept the buffer from starting. */
-const revealBar = () => {
+/** Shows the recording controls, whose warnings say what kept the buffer
+ * from starting. */
+const revealControls = () => {
   openRecordingUi().catch((error: unknown) => {
-    console.error("Could not show the recording bar", error);
+    console.error("Could not show the recording controls", error);
   });
 };
 
 /**
- * The replay buffer as Rust reports it, and the switch the recording bar
- * turns it on and off with. Turning it on takes the bar's settings as they
- * are at that moment; later changes only set up the next recording.
+ * The replay buffer as Rust reports it, and the switch the recording
+ * controls turn it on and off with. Turning it on takes their settings as
+ * they are at that moment; later changes only set up the next recording.
  *
  * The tray turns it on through this window too, since only it holds those
- * settings. A tray start that cannot happen shows the bar rather than failing
- * out of sight; `canStart` is the bar's own readiness for its settings.
+ * settings. A tray start that cannot happen shows the controls rather than
+ * failing out of sight; `canStart` is their own readiness for their settings.
  */
 export function useReplayBuffer(canStart: boolean) {
   const [snapshot, setSnapshot] = useState<ReplaySnapshot>(
@@ -50,7 +51,7 @@ export function useReplayBuffer(canStart: boolean) {
     const failTrayStart = () => {
       if (!trayStartPending) return;
       trayStartPending = false;
-      revealBar();
+      revealControls();
     };
     const keep = (listener: UnlistenFn) => {
       if (disposed) listener();
@@ -67,11 +68,11 @@ export function useReplayBuffer(canStart: boolean) {
       console.error(`Replay buffer: ${payload.message}`);
       failTrayStart();
     }).then(keep);
-    // Readiness only sees missing devices while the bar is visible, so a
-    // start that passes it can still fail in Rust; both paths show the bar.
+    // Readiness only sees missing devices while the controls are open, so a
+    // start that passes it can still fail in Rust; both paths show them.
     void listen(REPLAY_START_REQUESTED_EVENT, () => {
       if (!canStartRef.current) {
-        revealBar();
+        revealControls();
         return;
       }
       trayStartPending = true;

@@ -69,6 +69,7 @@ pub(crate) fn configure_desktop(
       let root = set.root_mut();
       root.display_id = binding.anchor_id;
       root.set_desktop_offset(anchor.origin);
+      set.share_backdrops();
     }
     *current_controller = controller;
     *desktop = Some(binding.clone());
@@ -161,6 +162,7 @@ pub(super) fn sync_peers(window: &WebviewWindow, binding: &DesktopBinding) {
     let visible = root.visible;
     let show_frame = root.show_frame;
     let show_handles = root.show_handles;
+    let window_highlight = root.window_highlight;
     let input_enabled = root.input_enabled;
     let desktop_presented = root.desktop_presented;
     let snapshot_presented = root.snapshot_presented;
@@ -170,6 +172,7 @@ pub(super) fn sync_peers(window: &WebviewWindow, binding: &DesktopBinding) {
       peer.set_desktop_offset(offset);
       peer.show_frame = show_frame;
       peer.show_handles = show_handles;
+      peer.window_highlight = window_highlight;
       peer.input_enabled = input_enabled;
       peer.desktop_presented = desktop_presented;
       peer.snapshot_presented = snapshot_presented;
@@ -178,6 +181,7 @@ pub(super) fn sync_peers(window: &WebviewWindow, binding: &DesktopBinding) {
       peer.set_region(region, visible);
       set.peers.push(peer);
     }
+    set.share_backdrops();
     (retired, adopted)
   };
   for hwnd in retired {

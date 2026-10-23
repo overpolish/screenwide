@@ -50,9 +50,17 @@ export function RestingRow({
         : modeName(mode);
   const picture =
     mode === "screen" && display?.thumbnail
-      ? { kind: "display" as const, src: display.thumbnail }
+      ? {
+          id: String(display.id),
+          kind: "display" as const,
+          src: display.thumbnail,
+        }
       : mode === "window" && props.chosenWindow?.icon
-        ? { kind: "app" as const, src: props.chosenWindow.icon }
+        ? {
+            id: props.chosenWindow.icon,
+            kind: "app" as const,
+            src: props.chosenWindow.icon,
+          }
         : undefined;
   const record = (
     <IslandPrimaryButton

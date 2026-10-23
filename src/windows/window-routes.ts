@@ -38,6 +38,8 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     import("../features/glide/glide-spaces-preview").then(
       (module) => module.GlideSpaceWindow,
     ),
+  "/island": () =>
+    import("./island-entry").then((module) => module.IslandEntry),
   "/permissions": () =>
     import("./permissions-entry").then((module) => module.PermissionsEntry),
   "/projects": () =>
@@ -47,14 +49,6 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
   "/qr-details": () =>
     import("../features/text-recognition/qr-details-window").then(
       (module) => module.QrDetailsWindow,
-    ),
-  "/recording-dock": () =>
-    import("./recording-dock-entry").then(
-      (module) => module.RecordingDockEntry,
-    ),
-  "/recording-source-selector": () =>
-    import("./recording-source-selector-entry").then(
-      (module) => module.RecordingSourceSelectorEntry,
     ),
   "/region-selector": () =>
     import("./region-selector-entry").then(
@@ -82,13 +76,9 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     ),
 };
 
-/** The recording bar is the window at the root path. */
-const loadRecordingBar: WindowLoader = () =>
-  import("./recording-bar-entry").then((module) => module.RecordingBarEntry);
-
-/** The window at `pathname`, or `null` for a native surface's host. */
+/** The window at `pathname`, or `null` for a native surface's host or a
+ * path no window has. */
 export function loadWindow(pathname: string): Promise<ComponentType | null> {
-  const route =
-    pathname in WINDOW_ROUTES ? WINDOW_ROUTES[pathname] : loadRecordingBar;
+  const route = pathname in WINDOW_ROUTES ? WINDOW_ROUTES[pathname] : null;
   return route ? route() : Promise.resolve(null);
 }

@@ -16,6 +16,9 @@ doctest = false
 pollster.workspace = true
 wgpu.workspace = true
 
+[build-dependencies]
+screenwide-wgsl.workspace = true
+
 [target.'cfg(target_os = "macos")'.dependencies]
 cidre.workspace = true
 objc2.workspace = true

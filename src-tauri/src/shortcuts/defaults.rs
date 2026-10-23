@@ -10,7 +10,7 @@ impl Default for ShortcutSettings {
     Self {
       bindings: vec![
         ShortcutBinding {
-          action: ShortcutAction::ToggleRecordingBar,
+          action: ShortcutAction::ToggleRecordingControls,
           shortcut: Some("CommandOrControl+Shift+Digit6".to_owned()),
         },
         ShortcutBinding {

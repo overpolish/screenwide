@@ -10,7 +10,7 @@
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Fault {
-  /// The selected camera mode reads as no longer offered, to the bar's
+  /// The selected camera mode reads as no longer offered, to the controls'
   /// warning and to the start alike.
   CameraMode,
   /// The selected microphone reads as disconnected at the start.

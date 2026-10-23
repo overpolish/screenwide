@@ -40,6 +40,8 @@ pub(super) struct RegionSceneRequest {
   pub exclusion_rect: Option<Rect>,
   pub show_frame: bool,
   pub show_handles: bool,
+  /// The region is a window being picked: a rounded cutout, unframed.
+  pub window_highlight: bool,
   pub allow_drawing: bool,
   pub monitor_width: f64,
   pub monitor_height: f64,
@@ -58,8 +60,11 @@ pub(super) fn resolve_region_scene(
   desktop: Option<&DesktopBinding>,
 ) -> RegionSceneResolution {
   let committed = request.rect.committed().then_some(request.rect);
-  let reconciled =
-    desktop.and_then(|binding| committed.and_then(|region| binding.reconcile_local(region)));
+  // A region must be capturable, so it is kept on the displays. A window being
+  // picked is drawn where it is, partly off the displays as it may be.
+  let reconciled = desktop
+    .filter(|_| !request.window_highlight)
+    .and_then(|binding| committed.and_then(|region| binding.reconcile_local(region)));
   scene.region = reconciled
     .map(|region| region.global)
     .or_else(|| desktop.and_then(|binding| binding.project_local(request.rect)))
@@ -67,6 +72,7 @@ pub(super) fn resolve_region_scene(
   scene.visible = request.visible;
   scene.chrome.frame_visible = request.show_frame;
   scene.chrome.handles_visible = request.show_handles;
+  scene.chrome.window_highlight = request.window_highlight;
   scene.interaction.input_enabled = request.input_enabled;
   scene.interaction.allow_drawing = request.allow_drawing;
   scene.interaction.aspect = request.aspect;
@@ -116,6 +122,7 @@ mod tests {
       exclusion_rect: None,
       show_frame: true,
       show_handles: false,
+      window_highlight: false,
       allow_drawing: true,
       monitor_width: 3720.0,
       monitor_height: 1169.0,
@@ -167,6 +174,7 @@ mod tests {
       exclusion_rect: None,
       show_frame: true,
       show_handles: true,
+      window_highlight: false,
       allow_drawing: false,
       monitor_width: 220.0,
       monitor_height: 80.0,
@@ -181,6 +189,50 @@ mod tests {
     );
     assert_eq!(resolved.controller_committed, Some(request.rect));
     assert_eq!(resolved.layout_event.unwrap().monitor_id, Some(2));
+  }
+
+  #[test]
+  fn a_window_being_picked_keeps_its_frame_past_the_displays_where_a_region_is_kept_on_them() {
+    use screenwide_osc::desktop::DesktopDisplay;
+
+    let binding = DesktopBinding {
+      displays: vec![DesktopDisplay {
+        id: 1,
+        origin: Point { x: 0.0, y: 0.0 },
+        size: Size {
+          width: 100.0,
+          height: 80.0,
+        },
+        scale: 2.0,
+      }],
+      anchor_id: 1,
+      size: Size {
+        width: 100.0,
+        height: 80.0,
+      },
+      layout_changed: false,
+    };
+    let past_the_bottom = Rect::from_xywh(20.0, 60.0, 50.0, 40.0);
+    let request = |window_highlight| RegionSceneRequest {
+      rect: past_the_bottom,
+      visible: true,
+      aspect: None,
+      input_enabled: false,
+      exclusion_rect: None,
+      show_frame: false,
+      show_handles: false,
+      window_highlight,
+      allow_drawing: false,
+      monitor_width: 100.0,
+      monitor_height: 80.0,
+      desktop_anchor: Some(1),
+    };
+
+    let region = resolve_region_scene(request(false), RegionScene::default(), Some(&binding));
+    let window = resolve_region_scene(request(true), RegionScene::default(), Some(&binding));
+
+    assert_eq!(region.scene.region, Rect::from_xywh(20.0, 40.0, 50.0, 40.0));
+    assert_eq!(window.scene.region, past_the_bottom);
   }
 
   #[test]

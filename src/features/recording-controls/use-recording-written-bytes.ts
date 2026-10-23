@@ -23,7 +23,7 @@ export function useRecordingWrittenBytes(
   const isUnderWay = status === "recording" || status === "paused";
   const [bytes, setBytes] = useState<number | null>(null);
   const [wasUnderWay, setWasUnderWay] = useState(isUnderWay);
-  // The dock stays mounted between recordings: each one starts from the
+  // The island stays mounted between recordings: each one starts from the
   // spinner rather than the size the last one ended on.
   if (wasUnderWay !== isUnderWay) {
     setWasUnderWay(isUnderWay);

@@ -30,8 +30,8 @@ const isUsable = (input: IslandInput) =>
 
 /** Whether anything at all would be recorded: the screen, unless it is left
  * out, or else at least one input that can be. A screen recording goes ahead
- * without a broken input, as the recording bar's did; with no screen, that
- * input may be all there is. */
+ * without a broken input, which leaves the screen still worth recording;
+ * with no screen, that input may be all there is. */
 const hasSomethingToRecord = (props: RecordingIslandProps) =>
   props.mode !== "none" || INPUTS.some((kind) => isUsable(props[kind]));
 

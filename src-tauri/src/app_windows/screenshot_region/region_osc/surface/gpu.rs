@@ -23,6 +23,7 @@ impl Gpu {
       point_sampler: sampler(device, wgpu::FilterMode::Nearest),
       placeholder,
       icons,
+      mips: screenwide_gpu::mips::Mips::new(device, RGBA),
     }))
   }
 

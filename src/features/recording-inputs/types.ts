@@ -25,7 +25,7 @@ export type SystemAudioSource = InputDevice & {
 };
 
 /**
- * Frame rates the bar offers. Two, because the choice is between "smooth" and
+ * Frame rates Settings offers. Two, because the choice is between "smooth" and
  * "half the file size", and every value between them is a worse version of one
  * of those answers.
  */

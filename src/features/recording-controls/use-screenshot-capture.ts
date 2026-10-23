@@ -106,7 +106,7 @@ export function useScreenshotCapture() {
     })();
   };
 
-  // Rust runs the countdown and hides the bar, so there is no feedback to
+  // Rust runs the countdown and tucks the island away, so there is no feedback to
   // show here: the tray carries it.
   const takeDelayedScreenshot = () => {
     const target = screenshotTarget(true);

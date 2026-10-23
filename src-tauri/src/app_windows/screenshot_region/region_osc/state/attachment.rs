@@ -56,6 +56,7 @@ pub(super) fn create(
     surfaces: Mutex::new(SurfaceSet {
       root,
       peers: Vec::new(),
+      backdrops: HashMap::new(),
     }),
     layout: Mutex::new(None),
     probes: Mutex::new(Vec::new()),

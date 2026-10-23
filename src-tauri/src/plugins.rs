@@ -6,9 +6,7 @@
 
 use tauri::{Builder, Wry};
 
-/// Every plugin the app uses, in one place. The window-state plugin is
-/// deliberately narrow: only the recording bar's position is remembered, and
-/// not on the run that first places it.
+/// Every plugin the app uses, in one place.
 pub(crate) fn with_plugins(builder: Builder<Wry>) -> Builder<Wry> {
   // First, so a second launch hands over before any other plugin starts: a
   // double-clicked project reaches the running app instead of a new one.
@@ -31,14 +29,7 @@ pub(crate) fn with_plugins(builder: Builder<Wry>) -> Builder<Wry> {
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_process::init())
-    .plugin(tauri_plugin_updater::Builder::new().build())
-    .plugin(
-      tauri_plugin_window_state::Builder::default()
-        .with_state_flags(tauri_plugin_window_state::StateFlags::POSITION)
-        .with_filter(|label| label == crate::app_windows::WindowLabel::RecordingBar.as_str())
-        .skip_initial_state(crate::app_windows::WindowLabel::RecordingBar.as_str())
-        .build(),
-    );
+    .plugin(tauri_plugin_updater::Builder::new().build());
   #[cfg(target_os = "macos")]
   let builder = builder
     .plugin(tauri_plugin_macos_permissions::init())

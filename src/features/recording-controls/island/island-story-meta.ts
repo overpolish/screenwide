@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { createElement } from "react";
 import { fn } from "storybook/test";
 
 import { featureStage } from "../../../storybook/feature-story-stage";
+import { StoryNotch } from "../../../storybook/story-notch";
 
 import { PREVIEW_NOTCH } from "./island-preview";
 import { IslandStage } from "./island-stage";
@@ -45,7 +47,7 @@ export const islandMeta = {
     initialPhase: "idle",
     isScreenLocked: false,
     microphoneLevel: 0.6,
-    onChooseRegion: fn(),
+    onCancelWindowPick: fn(),
     onChooseWindow: fn(),
     onOpenPermissions: fn(),
     onScreenshot: fn(),
@@ -54,13 +56,17 @@ export const islandMeta = {
   },
   component: IslandStage,
   decorators: [
-    (Story, { args, globals }) =>
-      Story({
-        args: {
-          ...args,
-          notch: globals.notch === "off" ? null : PREVIEW_NOTCH,
-        },
-      }),
+    // The notch is the screen's own in a real window; here it is drawn over
+    // the island, as a Mac with one shows it.
+    (Story, { args, globals }) => {
+      const notch = globals.notch === "off" ? null : PREVIEW_NOTCH;
+      return createElement(
+        "div",
+        { className: "relative size-full" },
+        Story({ args: { ...args, notch } }),
+        notch ? createElement(StoryNotch, { notch }) : null,
+      );
+    },
     featureStage({ height: 520, width: 720 }),
   ],
   parameters: {

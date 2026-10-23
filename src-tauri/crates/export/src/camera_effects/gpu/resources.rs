@@ -5,8 +5,8 @@
 //! slot it draws, the matte uploaded beside the frame, and the picture.
 
 use screenwide_annotations::pin::LumaFrame;
-use screenwide_compositor::compositor::mips::{first_level, levels};
 use screenwide_compositor::compositor::{SourceTexture, FORMAT};
+use screenwide_gpu::mips::{first_level, levels};
 use screenwide_gpu::Gpu;
 
 /// The effects' generation and the frame time a matte was uploaded for.

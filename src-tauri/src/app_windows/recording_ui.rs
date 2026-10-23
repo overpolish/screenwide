@@ -13,9 +13,9 @@ pub fn hide_recording_ui(app: AppHandle) -> tauri::Result<()> {
     return Ok(());
   }
 
-  RECORDING_CONTROLS_VISIBLE.store(false, Ordering::Relaxed);
-  source_selector::hide(&app)?;
-  hide_recording_bar(&app)?;
+  crate::recording_sources::window_pick::cancel(&app);
+  close_recording_controls(&app)?;
+  super::island::hide(&app)?;
   region::hide_region_selector(app.clone())?;
 
   Ok(())
@@ -28,30 +28,18 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
   }
 
   RECORDING_CONTROLS_VISIBLE.store(true, Ordering::Relaxed);
-  let bar = app
-    .get_webview_window(WindowLabel::RecordingBar.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  platform::show(&bar, 1.0)?;
+  super::island::show(app)?;
   escape::sync(
     app,
     true,
     region::SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
     crate::ruler::is_active(app),
   );
-  // Asserted rather than assumed: a screenshot session may have borrowed and
-  // hidden the bar. Coming back to idle is where its complete presentation is
-  // put right.
-  platform::restore_recording_level(&bar)?;
-
-  app.emit_to(
-    WindowLabel::RecordingBar.as_str(),
-    "recording-ui://shown",
-    (),
-  )
+  app.emit_to(WindowLabel::Island.as_str(), "recording-ui://shown", ())
 }
 
-/// The bar showing itself: a start the tray asked of it could not happen, and
-/// its warnings say why.
+/// The recording controls showing themselves: a start the tray asked of them
+/// could not happen, and their warnings say why.
 #[tauri::command]
 pub fn open_recording_ui(app: AppHandle) -> tauri::Result<()> {
   show_recording_ui(&app)

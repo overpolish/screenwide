@@ -41,6 +41,27 @@ impl Surface {
     }
   }
 
+  /// A display's frozen desktop behind window picking, with the mip levels
+  /// its blur reads.
+  pub(crate) fn upload_backdrop(&self, rgba: &[u8], width: u32, height: u32) -> Option<Texture> {
+    if width == 0 || height == 0 || rgba.len() != width as usize * height as usize * 4 {
+      return None;
+    }
+    let shared = self.gpu.device();
+    let texture = upload_rgba_with_levels(shared, rgba, width, height);
+    self.gpu.mips.fill(shared, &texture);
+    Some(Texture {
+      view: texture.create_view(&Default::default()),
+      size: (width, height),
+    })
+  }
+
+  /// This surface's display's backdrop, or none.
+  pub(crate) fn show_backdrop(&mut self, backdrop: Option<Texture>) {
+    self.backdrop = backdrop;
+    self.draw();
+  }
+
   pub(super) fn upload(&self, rgba: &[u8], width: u32, height: u32) -> Option<Texture> {
     let expected = width as usize * height as usize * 4;
     if width == 0 || height == 0 || rgba.len() != expected {

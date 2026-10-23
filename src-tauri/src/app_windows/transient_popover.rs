@@ -4,18 +4,15 @@
 //! Shared serialized state and outside-click semantics for native popovers.
 
 use std::sync::{
-  atomic::{AtomicBool, AtomicU64, Ordering},
+  atomic::{AtomicBool, Ordering},
   Mutex, MutexGuard,
 };
 
-use tauri::{AppHandle, Manager, WebviewWindow};
-
-use super::WindowLabel;
+use tauri::WebviewWindow;
 
 pub struct TransientPopover {
   lifecycle: Mutex<()>,
   open: AtomicBool,
-  revision: AtomicU64,
 }
 
 impl TransientPopover {
@@ -23,7 +20,6 @@ impl TransientPopover {
     Self {
       lifecycle: Mutex::new(()),
       open: AtomicBool::new(false),
-      revision: AtomicU64::new(0),
     }
   }
 
@@ -38,36 +34,8 @@ impl TransientPopover {
       .unwrap_or_else(|poisoned| poisoned.into_inner())
   }
 
-  pub fn revision(&self) -> u64 {
-    self.revision.load(Ordering::Relaxed)
-  }
-
   pub fn set_open(&self, open: bool) {
     self.open.store(open, Ordering::Relaxed);
-    self.touch();
-  }
-
-  pub fn touch(&self) {
-    self.revision.fetch_add(1, Ordering::Relaxed);
-  }
-
-  /// Whether a press at `x`, `y`, made while this popover was open, falls
-  /// outside it and what it owns.
-  pub fn should_dismiss(
-    &self,
-    app: &AppHandle,
-    inside_anchor: bool,
-    x: f64,
-    y: f64,
-    owned_windows: &[WindowLabel],
-  ) -> bool {
-    self.is_open()
-      && !inside_anchor
-      && !owned_windows.iter().any(|label| {
-        app
-          .get_webview_window(label.as_str())
-          .is_some_and(|window| coordinate_is_in_visible_window(x, y, &window))
-      })
   }
 }
 
@@ -91,23 +59,4 @@ pub(super) fn coordinate_is_in_visible_window(x: f64, y: f64, window: &WebviewWi
     && x <= position.x + size.width
     && y >= position.y
     && y <= position.y + size.height
-}
-
-#[cfg(test)]
-mod tests {
-  use super::TransientPopover;
-
-  #[test]
-  fn state_changes_are_revisioned() {
-    let popover = TransientPopover::new();
-    assert!(!popover.is_open());
-    assert_eq!(popover.revision(), 0);
-
-    popover.set_open(true);
-    assert!(popover.is_open());
-    assert_eq!(popover.revision(), 1);
-
-    popover.touch();
-    assert_eq!(popover.revision(), 2);
-  }
 }

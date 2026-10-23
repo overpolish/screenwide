@@ -117,6 +117,7 @@ pub use ruler::{add_ruler_arc, add_ruler_box};
 pub use selection::{
   add_annotation_handles, add_crop, add_crop_with_handles, add_group_frame, add_selection,
   add_soft_guide, add_turned_marquee, add_turned_outline, add_turned_selection,
+  add_window_highlight,
 };
 
 /// The lens is emitted last as a quad over `magnifier_box`. It has its own

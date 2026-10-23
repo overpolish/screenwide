@@ -47,30 +47,25 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   crate::glide::settings::initialize(app.handle());
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   crate::glide::initialize(app.handle()).map_err(std::io::Error::other)?;
-  let recording_bar_preview_enabled =
-    cfg!(debug_assertions) && std::env::var_os("SCREENWIDE_SHOW_RECORDING_BAR").is_some();
+  let recording_controls_preview_enabled =
+    cfg!(debug_assertions) && std::env::var_os("SCREENWIDE_SHOW_RECORDING_CONTROLS").is_some();
   // Windows passes a double-clicked project to the launch it starts, which
   // then opens that instead of the recording controls.
   let cwd = std::env::current_dir().unwrap_or_default();
   let launch_project = editor::project_argument(std::env::args_os().skip(1), &cwd);
-  let show_recording_bar_on_launch = launch_project.is_none()
-    && (recording_bar_preview_enabled
-      || crate::settings::current(app.handle()).show_recording_bar_on_launch);
+  let show_recording_controls_on_launch = launch_project.is_none()
+    && (recording_controls_preview_enabled
+      || crate::settings::current(app.handle()).show_recording_controls_on_launch);
 
   // Create panels lazily so conversion cannot order a stale frame onscreen.
   #[cfg(not(target_os = "macos"))]
   {
-    app_windows::initialize_recording_bar(app.handle())?;
-    app_windows::initialize_recording_source_selector(app.handle())?;
+    app_windows::initialize_island(app.handle())?;
     app_windows::initialize_region_selector(app.handle())?;
     app_windows::initialize_standalone_listbox(app.handle())?;
-    app_windows::initialize_recording_dock(app.handle())?;
   }
   app_windows::initialize_predefined_windows(app.handle())?;
-  app_windows::initialize_recording_bar_position(app.handle())?;
   app_windows::initialize_topology_management(app.handle());
-  app_windows::manage_recording_bar_movement(app.handle());
-  app_windows::manage_recording_dock_movement(app.handle());
   editor::initialize(app.handle());
   // The Captions panel's fonts and template previews take a moment to
   // ready; done in the background now, the panel has them when it opens.
@@ -81,10 +76,10 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   app_windows::manage_transient_popover_dismissal(app.handle());
 
   #[cfg(target_os = "macos")]
-  crate::permissions::show_on_launch(app.handle(), show_recording_bar_on_launch)?;
+  crate::permissions::show_on_launch(app.handle(), show_recording_controls_on_launch)?;
 
   #[cfg(not(target_os = "macos"))]
-  if show_recording_bar_on_launch {
+  if show_recording_controls_on_launch {
     app_windows::show_recording_ui(app.handle())?;
   }
   crate::permissions::start_watcher(app.handle().clone());

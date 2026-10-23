@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use super::*;
 
 #[test]
-fn defaults_open_the_bar_save_replays_take_screenshots_and_recognize_text() {
+fn defaults_open_the_controls_save_replays_take_screenshots_and_recognize_text() {
   let settings = ShortcutSettings::default();
   let assigned = settings
     .bindings
@@ -18,7 +18,7 @@ fn defaults_open_the_bar_save_replays_take_screenshots_and_recognize_text() {
     assigned,
     [
       (
-        ShortcutAction::ToggleRecordingBar,
+        ShortcutAction::ToggleRecordingControls,
         "CommandOrControl+Shift+Digit6"
       ),
       (ShortcutAction::SaveReplay, "CommandOrControl+Shift+Digit9"),
@@ -114,12 +114,12 @@ fn a_new_default_on_keys_the_user_already_bound_is_left_unbound() {
 #[test]
 fn each_frontend_action_goes_to_the_window_that_performs_it() {
   assert_eq!(
-    action_window(ShortcutAction::ToggleRecordingBar).map(WindowLabel::as_str),
-    Some(WindowLabel::RecordingBar.as_str())
+    action_window(ShortcutAction::ToggleRecordingControls).map(WindowLabel::as_str),
+    Some(WindowLabel::Island.as_str())
   );
   assert_eq!(
     action_window(ShortcutAction::StartStopRecording).map(WindowLabel::as_str),
-    Some(WindowLabel::RecordingBar.as_str())
+    Some(WindowLabel::Island.as_str())
   );
   assert_eq!(
     action_window(ShortcutAction::TakeScreenshot).map(WindowLabel::as_str),
@@ -131,12 +131,12 @@ fn each_frontend_action_goes_to_the_window_that_performs_it() {
   );
   assert_eq!(
     action_window(ShortcutAction::RecognizeText).map(WindowLabel::as_str),
-    Some(WindowLabel::RecordingBar.as_str())
+    Some(WindowLabel::Island.as_str())
   );
 }
 
 #[test]
-fn taking_a_screenshot_never_reaches_the_recording_bar() {
+fn taking_a_screenshot_never_reaches_the_island() {
   assert_ne!(
     action_window(ShortcutAction::TakeScreenshot).map(WindowLabel::as_str),
     action_window(ShortcutAction::StartStopRecording).map(WindowLabel::as_str)
@@ -195,4 +195,14 @@ fn every_action_appears_once() {
     .map(|binding| binding.action)
     .collect::<HashSet<_>>();
   assert_eq!(actions.len(), settings.bindings.len());
+}
+
+#[test]
+fn a_shortcut_saved_for_the_recording_bar_opens_the_controls() {
+  let binding: ShortcutBinding = serde_json::from_str(
+    r#"{"action":"toggleRecordingBar","shortcut":"CommandOrControl+Shift+Digit6"}"#,
+  )
+  .unwrap();
+
+  assert_eq!(binding.action, ShortcutAction::ToggleRecordingControls);
 }

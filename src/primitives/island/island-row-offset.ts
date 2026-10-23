@@ -4,7 +4,7 @@
 import { animate, type MotionValue, useMotionValue } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
 
-import type { Curve } from "./island-motion";
+import { glide } from "./island-motion";
 
 // Where the island and what its row holds sit sideways as the row changes.
 // Around a notch the island moves by the shift that keeps the notch over its
@@ -21,14 +21,16 @@ function placeRow(layer: HTMLElement | null, offset: number) {
 }
 
 export function useRowOffset({
-  curve,
   hasNotch,
+  holdsContent,
   rowElement,
   shiftTarget,
   width,
 }: {
-  curve: Curve;
   hasNotch: boolean;
+  /** Tucking away: what the island holds keeps its place while the island
+   * moves, as it fades, rather than leaping to where the island is going. */
+  holdsContent: boolean;
   rowElement: HTMLElement | null;
   /** Where the island should sit, in px from centre. */
   shiftTarget: number;
@@ -73,9 +75,9 @@ export function useRowOffset({
   // The shift and the black's width start together on one curve: an edge
   // that should stay put is their sum, and started apart they would rock it.
   useLayoutEffect(() => {
-    heading.set(shiftTarget);
-    const settling = animate(islandX, shiftTarget, curve);
-    const widening = animate(shapeWidth, width, curve);
+    if (!holdsContent) heading.set(shiftTarget);
+    const settling = animate(islandX, shiftTarget, glide);
+    const widening = animate(shapeWidth, width, glide);
     placeRow(
       rowLayerRef.current,
       heading.get() - islandX.get() + recentring.get(),
@@ -84,7 +86,15 @@ export function useRowOffset({
       settling.stop();
       widening.stop();
     };
-  }, [curve, heading, islandX, recentring, shapeWidth, shiftTarget, width]);
+  }, [
+    heading,
+    holdsContent,
+    islandX,
+    recentring,
+    shapeWidth,
+    shiftTarget,
+    width,
+  ]);
 
   // After every render, before paint: the row's width only changes when what
   // it holds is rendered.
@@ -95,7 +105,7 @@ export function useRowOffset({
     if (next === undefined || previous === null || next === previous) return;
     if (hasNotch) return;
     recentring.set(recentring.get() + (next - previous) / 2);
-    animate(recentring, 0, curve);
+    animate(recentring, 0, glide);
     placeRow(
       rowLayerRef.current,
       heading.get() - islandX.get() + recentring.get(),

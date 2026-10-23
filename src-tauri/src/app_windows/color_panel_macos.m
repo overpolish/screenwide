@@ -96,7 +96,7 @@ void screenwide_color_panel_show(const char *hex, ColorPanelChange onChange, Col
   NSColor *color = colorFromHex(hex);
   if (color != nil) panel.color = color;
 
-  // Screenwide's own chrome (tool panels, the recording dock, Glide overlays)
+  // Screenwide's own chrome (tool panels, the island, Glide overlays)
   // sits on custom window levels up to 34, well above the Colours panel's
   // default floating level, so it would otherwise open behind the very panel
   // that asked for it. The app is left alone: the panel is ordered front

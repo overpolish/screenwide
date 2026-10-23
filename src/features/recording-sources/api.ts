@@ -3,19 +3,12 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-import {
-  MonitorDetails,
-  MonitorThumbnail,
-  SelectorState,
-  WindowDetails,
-} from "./types";
+import { MonitorDetails, MonitorThumbnail, WindowDetails } from "./types";
 
 export const listMonitors = () => invoke<MonitorDetails[]>("list_monitors");
 
 export const listMonitorThumbnails = () =>
   invoke<MonitorThumbnail[]>("list_monitor_thumbnails");
-
-export const listWindows = () => invoke<WindowDetails[]>("list_windows");
 
 export const selectedWindowStatus = (window: WindowDetails) =>
   invoke<{ appIconPath: string | null; available: boolean }>(
@@ -26,27 +19,27 @@ export const selectedWindowStatus = (window: WindowDetails) =>
     },
   );
 
-export const expandRecordingSourceSelector = (
-  windowSelector: boolean,
-  focusContents: boolean,
-) =>
-  invoke<null>("expand_recording_source_selector", {
-    focusContents,
-    windowSelector,
-  });
+/** Starts picking the window to record by clicking it: the region overlay
+ * cuts out the window under the pointer (`window-pick://hovered`), anchored
+ * for the whole pick to `anchorMonitorId`, the monitor it is already on. */
+export const startWindowPick = (anchorMonitorId: number | null) =>
+  invoke<null>("start_window_pick", { anchorMonitorId });
 
-/** Orders the expanded popover onscreen once the painted content matches the
- * mode it was opened for. `revision` is the state revision that was painted, so
- * a reveal from a superseded state is ignored. */
+/** Moves the pick through the stacked windows, for the keyboard. */
+export const stepWindowPick = (delta: number) =>
+  invoke<null>("step_window_pick", { delta });
 
-export const collapseRecordingSourceSelector = (returnFocus?: boolean) =>
-  invoke<null>("collapse_recording_source_selector", { returnFocus });
+/** Picks the window the pick is on (`window-pick://picked`); over none,
+ * picking goes on. */
+export const pickWindow = () => invoke<null>("pick_window");
 
-export const getRecordingSourceSelectorState = () =>
-  invoke<SelectorState>("get_recording_source_selector_state");
+/** Ends picking without a window. */
+export const cancelWindowPick = () => invoke<null>("cancel_window_pick");
 
-export const finishRecordingBarDrag = () =>
-  invoke<null>("finish_recording_bar_drag");
+/** Puts every display's frozen desktop behind the overlay picking a window,
+ * once the overlay is attached. */
+export const showWindowPickBackdrop = () =>
+  invoke<null>("show_window_pick_backdrop");
 
 export const hideRecordingUi = () => invoke<null>("hide_recording_ui");
 
@@ -55,9 +48,6 @@ export const openRecordingUi = () => invoke<null>("open_recording_ui");
 export const recordingUiVisible = () => invoke<boolean>("recording_ui_visible");
 
 export const toggleRecordingUi = () => invoke<null>("toggle_recording_ui");
-
-export const setRecordingSourceSelectorVisible = (visible: boolean) =>
-  invoke<null>("set_recording_source_selector_visible", { visible });
 
 export const showRegionSelector = (monitor: MonitorDetails, desktop = false) =>
   invoke<null>("show_region_selector", {
@@ -99,6 +89,8 @@ export type ScreenshotRegionOscOptions = {
   monitorId?: number;
   showFrame?: boolean;
   showHandles?: boolean;
+  /** The region is a window being picked: a rounded cutout, unframed. */
+  windowHighlight?: boolean;
 };
 
 export const setScreenshotRegionOsc = (options: ScreenshotRegionOscOptions) =>
@@ -117,6 +109,7 @@ export const setScreenshotRegionOsc = (options: ScreenshotRegionOscOptions) =>
     visible: options.visible,
     width: options.region.width,
     window: options.window,
+    windowHighlight: options.windowHighlight ?? false,
     x: options.region.x,
     y: options.region.y,
   });

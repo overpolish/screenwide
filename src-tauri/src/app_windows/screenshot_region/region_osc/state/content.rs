@@ -91,6 +91,24 @@ pub(crate) fn reset_text_recognition_input(window: &WebviewWindow) -> bool {
   .unwrap_or(false)
 }
 
+/// The desktop behind window picking: each display's frozen picture, by
+/// display id, for the surface covering it. None lets them go.
+pub(crate) fn set_backdrops(window: &WebviewWindow, images: &[(u32, &[u8], u32, u32)]) -> bool {
+  with_surfaces(window, |set| {
+    let mut backdrops = HashMap::with_capacity(images.len());
+    for &(display_id, rgba, width, height) in images {
+      let Some(texture) = set.root.upload_backdrop(rgba, width, height) else {
+        return false;
+      };
+      backdrops.insert(display_id, texture);
+    }
+    set.backdrops = backdrops;
+    set.share_backdrops();
+    true
+  })
+  .unwrap_or(false)
+}
+
 pub(crate) fn set_snapshot_presented(window: &WebviewWindow, presented: bool) -> bool {
   with_context(window, |context| {
     if let Ok(mut scene) = context.runtime.scene.lock() {

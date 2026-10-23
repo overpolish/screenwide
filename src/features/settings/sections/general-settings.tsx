@@ -46,10 +46,13 @@ export function GeneralSettingsPanel({
     unit: "second",
     unitDisplay: "narrow",
   });
-  // The frame rate lives with the recording inputs the bar records with, not
-  // in the stored preferences; settings only offers the choice.
+  // The frame rate and anti-flicker live with the recording inputs the
+  // controls record with, not in the stored preferences; settings only
+  // offers the choice.
   const fps = useRecordingInputStore((state) => state.fps);
   const setFps = useRecordingInputStore((state) => state.setFps);
+  const cameraPal = useRecordingInputStore((state) => state.cameraPal);
+  const setCameraPal = useRecordingInputStore((state) => state.setCameraPal);
   const update = (changes: Partial<GeneralSettings>) => {
     onChange({ ...settings, ...changes });
   };
@@ -149,6 +152,18 @@ export function GeneralSettingsPanel({
                 selected={String(fps)}
               />
             </div>
+          )}
+        </ControlRow>
+        <ControlRow
+          description={t("settings-anti-flicker-description")}
+          title={t("settings-anti-flicker")}
+        >
+          {(controlProps) => (
+            <Switch
+              {...controlProps}
+              isSelected={cameraPal}
+              onChange={setCameraPal}
+            />
           )}
         </ControlRow>
       </SettingsGroup>

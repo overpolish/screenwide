@@ -10,7 +10,7 @@ pub(super) fn snapshots(app: &AppHandle) -> EditorSnapshots {
   }
 }
 
-/// Broadcast rather than sent to the owning window: the recording bar tracks
+/// Broadcast rather than sent to the owning window: the recording controls track
 /// what is waiting too. Receivers route the payload by its `workspace`.
 pub(super) fn emit_snapshot(app: &AppHandle, kind: EditorKind) {
   let _ = app.emit(EDITOR_CHANGED_EVENT, snapshot(app, kind));

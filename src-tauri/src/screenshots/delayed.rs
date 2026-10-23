@@ -4,7 +4,7 @@
 //! Delayed Screenshot: a still taken a few seconds after it is asked for, so
 //! the user has time to bring up a tooltip, menu or hover state first.
 //!
-//! The countdown runs here rather than in the recording bar, which hides as it
+//! The countdown runs here rather than in the island, which tucks away as it
 //! begins, and the tray icon shows the seconds left.
 
 use std::sync::Mutex;
@@ -24,7 +24,7 @@ const TRAY_SETTLE: Duration = Duration::from_millis(150);
 /// What the shot is of.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum DelayedTarget {
-  /// The source chosen in the recording bar.
+  /// The source chosen in the recording controls.
   Source(ScreenshotTarget),
   /// The tray has no source chosen, so it takes the whole display the pointer
   /// is on when the countdown ends.
@@ -177,8 +177,8 @@ fn pointer_position() -> Option<(i32, i32)> {
   None
 }
 
-/// The recording bar's way in: the bar steps aside for the countdown so that
-/// it neither covers what the user hovers nor appears in the shot.
+/// The recording controls' way in: the island steps aside for the countdown
+/// so that it neither covers what the user hovers nor appears in the shot.
 #[tauri::command]
 pub fn start_delayed_screenshot(app: AppHandle, target: ScreenshotTarget) -> Result<(), String> {
   start(&app, DelayedTarget::Source(target))?;

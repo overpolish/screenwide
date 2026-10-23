@@ -15,8 +15,9 @@ pub(super) const SAVE_MENU_ID: &str = "save-replay";
 pub(super) const START_MENU_ID: &str = "start-replay";
 pub(super) const STOP_MENU_ID: &str = "stop-replay";
 
-/// Asks the recording bar to turn the buffer on. The bar's settings live in
-/// its webview, so it builds the options, exactly as its own toggle does.
+/// Asks the recording controls to turn the buffer on. Their settings live in
+/// the island's webview, so it builds the options, exactly as its own toggle
+/// does.
 const START_REQUESTED_EVENT: &str = "replay://start-requested";
 
 /// Adds the replay controls where this platform has a replay buffer.
@@ -80,11 +81,7 @@ fn request_start(app: &AppHandle) {
     let _ = crate::permissions::show_permissions_window(app);
     return;
   }
-  if let Err(error) = app.emit_to(
-    WindowLabel::RecordingBar.as_str(),
-    START_REQUESTED_EVENT,
-    (),
-  ) {
-    eprintln!("Could not ask the recording bar to turn on the replay buffer: {error}");
+  if let Err(error) = app.emit_to(WindowLabel::Island.as_str(), START_REQUESTED_EVENT, ()) {
+    eprintln!("Could not ask the recording controls to turn on the replay buffer: {error}");
   }
 }

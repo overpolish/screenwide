@@ -8,6 +8,7 @@ fn main() {
       // First: it carries the module's directive.
       "src/gpu/shaders/osc.wgsl",
       "src/gpu/shaders/lens.wgsl",
+      "../gpu/src/shaders/disc_blur.wgsl",
     ],
   )]);
   // Build scripts run on the host, so the target is read from Cargo rather

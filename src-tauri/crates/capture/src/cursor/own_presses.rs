@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Presses on Screenwide's own windows, left out of a recording that leaves
-//! those windows out of its picture: a click on the recording dock lands on
+//! those windows out of its picture: a click on the island lands on
 //! nothing the recording shows, so no click effect or auto zoom may follow
 //! it. A recording that shows those windows keeps them like any other.
 

@@ -1,46 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Putting transient popovers away when the user presses elsewhere.
+//! Putting the pop-up lists away when the user presses elsewhere: on the
+//! press itself, the way a native menu does, so dragging a window or its edge
+//! does not leave one hanging until release. A list's trigger is excluded by
+//! its anchor.
 
 use tauri::AppHandle;
 
-use super::{options, source_selector};
-
-#[derive(Clone, Copy, Default)]
-struct PopoversOpenOnPress {
-  source_selector: bool,
-  standalone_listbox: bool,
-}
-
-impl PopoversOpenOnPress {
-  fn capture() -> Self {
-    Self {
-      source_selector: source_selector::is_expanded(),
-      standalone_listbox: options::is_standalone_listbox_open(),
-    }
-  }
-}
-
-/// Which popover an outside press is being answered for. A pop-up panel goes
-/// on the press itself, the way a native menu does, so dragging the window or
-/// its edge does not leave it hanging until release; its trigger is excluded
-/// by its anchor. The source selector waits for release: it has no anchor, and
-/// its trigger toggles on release, which would open it straight back up.
-#[derive(Clone, Copy)]
-enum OutsidePress {
-  Listbox,
-  SourceSelector,
-}
-
-impl OutsidePress {
-  fn dismiss(self, app: &AppHandle, x: f64, y: f64) {
-    match self {
-      Self::Listbox => options::dismiss_standalone_listbox_if_outside(app, x, y),
-      Self::SourceSelector => source_selector::dismiss_if_outside(app, x, y),
-    }
-  }
-}
+use super::options;
 
 #[cfg(target_os = "windows")]
 pub fn manage_transient_popover_dismissal(app: &AppHandle) {
@@ -48,16 +16,15 @@ pub fn manage_transient_popover_dismissal(app: &AppHandle) {
 
   use rdev::{listen, Button, EventType};
 
-  let (dismiss_tx, dismiss_rx) = mpsc::channel::<(OutsidePress, f64, f64)>();
+  let (dismiss_tx, dismiss_rx) = mpsc::channel::<(f64, f64)>();
   let dismiss_app = app.clone();
   std::thread::spawn(move || {
-    while let Ok((press, x, y)) = dismiss_rx.recv() {
-      press.dismiss(&dismiss_app, x, y);
+    while let Ok((x, y)) = dismiss_rx.recv() {
+      options::dismiss_standalone_listbox_if_outside(&dismiss_app, x, y);
     }
   });
   std::thread::spawn(move || {
     let mut position = (0.0, 0.0);
-    let mut open_on_press = PopoversOpenOnPress::default();
     // rdev invokes this callback before CallNextHookEx. Dismissal is deferred
     // because its window geometry queries synchronously wait for the UI
     // thread, which cannot process them while the hook callback is live.
@@ -66,18 +33,9 @@ pub fn manage_transient_popover_dismissal(app: &AppHandle) {
         position = (x, y);
       }
       EventType::ButtonPress(Button::Left) => {
-        open_on_press = PopoversOpenOnPress::capture();
-        if open_on_press.standalone_listbox {
-          let (x, y) = position;
-          let _ = dismiss_tx.send((OutsidePress::Listbox, x, y));
+        if options::is_standalone_listbox_open() {
+          let _ = dismiss_tx.send(position);
         }
-      }
-      EventType::ButtonRelease(Button::Left) => {
-        if open_on_press.source_selector {
-          let (x, y) = position;
-          let _ = dismiss_tx.send((OutsidePress::SourceSelector, x, y));
-        }
-        open_on_press = PopoversOpenOnPress::default();
       }
       _ => {}
     });
@@ -95,26 +53,15 @@ pub fn manage_transient_popover_dismissal(app: &AppHandle) {
   let app = app.clone();
   std::thread::spawn(move || {
     let mut was_pressed = EventSrcState::CombinedSession.button_state(MouseButton::Left);
-    let mut open_on_press = PopoversOpenOnPress::default();
 
     loop {
       let is_pressed = EventSrcState::CombinedSession.button_state(MouseButton::Left);
-      if was_pressed != is_pressed {
+      if is_pressed && !was_pressed && options::is_standalone_listbox_open() {
         let Some(event) = Event::with_src(None) else {
           break;
         };
         let position = event.location();
-        if is_pressed {
-          open_on_press = PopoversOpenOnPress::capture();
-          if open_on_press.standalone_listbox {
-            OutsidePress::Listbox.dismiss(&app, position.x, position.y);
-          }
-        } else {
-          if open_on_press.source_selector {
-            OutsidePress::SourceSelector.dismiss(&app, position.x, position.y);
-          }
-          open_on_press = PopoversOpenOnPress::default();
-        }
+        options::dismiss_standalone_listbox_if_outside(&app, position.x, position.y);
       }
 
       was_pressed = is_pressed;

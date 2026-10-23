@@ -10,15 +10,15 @@ use super::*;
 /// these events and each listener has to match on the action itself.
 pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel> {
   match action {
-    ShortcutAction::ToggleRecordingBar | ShortcutAction::StartStopRecording => {
-      Some(WindowLabel::RecordingBar)
+    ShortcutAction::ToggleRecordingControls | ShortcutAction::StartStopRecording => {
+      Some(WindowLabel::Island)
     }
     // The overlay opens itself in region-edit mode and captures what the user
-    // settles on, so the screenshot never goes near the recording bar.
+    // settles on, so the screenshot never goes near the recording controls.
     ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard => {
       Some(WindowLabel::RegionSelector)
     }
-    ShortcutAction::RecognizeText => Some(WindowLabel::RecordingBar),
+    ShortcutAction::RecognizeText => Some(WindowLabel::Island),
     ShortcutAction::AnnotateClear
     | ShortcutAction::AnnotateOverlay
     | ShortcutAction::PauseResumeRecording
@@ -63,7 +63,7 @@ pub(super) const fn preserved_capture_overlays(
 pub(super) const fn requires_frontend_turn(action: ShortcutAction) -> bool {
   matches!(
     action,
-    ShortcutAction::ToggleRecordingBar
+    ShortcutAction::ToggleRecordingControls
       | ShortcutAction::RecognizeText
       | ShortcutAction::TakeScreenshot
       | ShortcutAction::TakeScreenshotToClipboard
@@ -134,7 +134,7 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
 
   crate::capture_overlays::dismiss_except(app, preserved_capture_overlays(action));
   match action {
-    ShortcutAction::ToggleRecordingBar
+    ShortcutAction::ToggleRecordingControls
     | ShortcutAction::RecognizeText
     | ShortcutAction::TakeScreenshot
     | ShortcutAction::TakeScreenshotToClipboard => {

@@ -52,13 +52,15 @@ settings-countdown-off = Off
 settings-frame-rate = Frame rate
 settings-frame-rate-description = More frames look smoother and make a larger file.
 settings-fps = { $fps } fps
+settings-anti-flicker = Camera anti-flicker
+settings-anti-flicker-description = Stops camera flicker under 50 Hz lights.
 settings-capture = Capture
 settings-include-app = Include { -app-name } in captures
 settings-include-app-description = Show { -app-name }'s own windows in recordings and screenshots.
 settings-screenshot-delay = Delayed Screenshot
 settings-startup = Startup
 settings-launch-at-login = Start when you sign in
-settings-show-bar-on-launch = Show recording controls on startup
+settings-show-controls-on-launch = Show recording controls on startup
 
 ## Glide
 
@@ -183,7 +185,7 @@ settings-transcription-confirm-remove = Confirm removing the { $model } model
 
 ## Keyboard shortcuts
 
-settings-shortcut-toggle-bar = Show or hide recording controls
+settings-shortcut-toggle-controls = Show or hide recording controls
 settings-shortcut-start-stop = Start or stop recording
 settings-shortcut-pause-resume = Pause or resume recording
 settings-shortcut-save-replay = Save replay

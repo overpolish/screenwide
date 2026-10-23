@@ -10,6 +10,7 @@
 
 mod content;
 mod creation;
+mod cutout;
 mod geometry;
 mod gpu;
 mod render;
@@ -17,8 +18,8 @@ mod submit;
 mod textures;
 use screenwide_gpu::surface::Frame;
 use screenwide_osc::gpu::vertices::{bind_group_layout, pipeline, sampler, shader_module};
-use textures::upload_icons;
 pub(super) use textures::upload_rgba;
+use textures::{upload_icons, upload_rgba_with_levels, RGBA};
 
 use std::sync::Arc;
 
@@ -37,7 +38,8 @@ pub(crate) struct MagnifierAnchor {
   pub edges: u32,
 }
 
-struct Texture {
+#[derive(Clone)]
+pub(crate) struct Texture {
   view: wgpu::TextureView,
   size: (u32, u32),
 }
@@ -55,6 +57,8 @@ pub(crate) struct Gpu {
   placeholder: wgpu::TextureView,
   /// The shared control-icon atlas, bound for every frame.
   icons: wgpu::TextureView,
+  /// Makes the picking backdrop's levels, which its blur reads.
+  mips: screenwide_gpu::mips::Mips,
 }
 
 impl Gpu {
@@ -85,6 +89,8 @@ pub(crate) struct Surface {
   vertices: Vec<Vertex>,
   magnifier_source: Option<Texture>,
   snapshot: Option<Texture>,
+  /// The desktop behind window picking, frozen as picking starts.
+  backdrop: Option<Texture>,
 
   // What the surface presents.
   pub(crate) display_id: u32,
@@ -92,6 +98,9 @@ pub(crate) struct Surface {
   pub(crate) visible: bool,
   pub(crate) show_frame: bool,
   pub(crate) show_handles: bool,
+  /// The region is a window being picked: a cutout as round as the window.
+  pub(crate) window_highlight: bool,
+  pub(crate) cutout: cutout::CutoutFade,
   pub(crate) input_enabled: bool,
   pub(crate) exclusion_rect: Rect,
   pub(crate) magnifier: Option<MagnifierAnchor>,

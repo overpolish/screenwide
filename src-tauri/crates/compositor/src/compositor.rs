@@ -28,7 +28,7 @@ mod draw;
 mod focus;
 mod layer;
 mod mark_blur;
-pub mod mips;
+mod mips;
 mod pipeline;
 mod preview_bindings;
 mod redact;
@@ -134,7 +134,7 @@ pub struct Compositor {
   /// The pictures baked cameras are composed into, one for each slot.
   camera_canvases: std::sync::Mutex<std::collections::HashMap<usize, SourceTexture>>,
   mark_blur: mark_blur::MarkBlur,
-  mips: mips::Mips,
+  mips: screenwide_gpu::mips::Mips,
   focus: focus::FocusBlur,
   sampler: wgpu::Sampler,
   point_sampler: wgpu::Sampler,

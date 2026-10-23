@@ -219,7 +219,7 @@ pub struct EditorSnapshot {
   /// Unset until a screenshot has been exported or copied once.
   pub screenshot_delete_project_after_export: Option<bool>,
   /// Which workspace this describes. The change event is app-wide because the
-  /// recording bar listens to it too, so every receiver needs to know which of
+  /// recording controls listen to it too, so every receiver needs to know which of
   /// its snapshots the payload replaces.
   pub workspace: EditorKind,
 }

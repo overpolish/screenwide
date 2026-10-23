@@ -118,7 +118,7 @@ mod tests {
   #[test]
   fn an_outside_press_leaves_each_editors_tool_panel_alone() {
     let contexts = contexts([
-      ("standalone-listbox", context("recording-bar", true, false)),
+      ("standalone-listbox", context("settings", true, false)),
       (
         "tool-panel-recording",
         context("editor-recording", true, true),
@@ -135,7 +135,7 @@ mod tests {
   #[test]
   fn a_panel_already_put_away_is_not_dismissed_again() {
     let contexts = contexts([
-      ("standalone-listbox", context("recording-bar", false, false)),
+      ("standalone-listbox", context("settings", false, false)),
       (
         "tool-panel-recording",
         context("editor-recording", true, false),

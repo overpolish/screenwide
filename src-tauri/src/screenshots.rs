@@ -193,6 +193,13 @@ pub(crate) async fn capture_overlay_snapshot(monitor_id: u32) -> Result<Captured
   }
 }
 
+/// Freezes a whole monitor as the desktop behind window picking. Screenwide's
+/// own windows stay out, where the platform allows, so the island is not
+/// blurred in under itself, and so does the pointer.
+pub(crate) async fn capture_desktop_backdrop(monitor_id: u32) -> Result<CapturedImage, String> {
+  capture_content(ScreenshotTarget::Screen { monitor_id }, false, false).await
+}
+
 pub(crate) async fn capture_text_recognition_snapshot(
   monitor_id: u32,
 ) -> Result<CapturedImage, String> {

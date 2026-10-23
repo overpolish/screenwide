@@ -74,8 +74,9 @@ const isCameraDevice = (value: unknown): value is CameraDevice => {
 
 type RecordingInputStore = {
   cameraFlippedById: Record<string, boolean>;
-  cameraModeIdById: Record<string, string>;
-  cameraPalById: Record<string, boolean>;
+  /** Cameras asked for 50 Hz cadences, so they do not flicker under lights
+   * on 50 Hz power (`cameraRequestFps`). */
+  cameraPal: boolean;
   fps: RecordingFps;
   inputs: RecordingInputs;
   selectedCamera: CameraDevice | null;
@@ -83,10 +84,9 @@ type RecordingInputStore = {
   selectedMicrophone: InputDevice | null;
   selectedSystemAudio: SystemAudioSource[];
   setCameraFlipped: (cameraId: string, flipped: boolean) => void;
-  setCameraPal: (cameraId: string, pal: boolean) => void;
+  setCameraPal: (pal: boolean) => void;
   setFps: (fps: RecordingFps) => void;
   setInput: (input: keyof RecordingInputs, selected: boolean) => void;
-  setSelectedCameraMode: (mode: CameraResolution | null) => void;
   setSelectedCameraSelection: (
     camera: CameraDevice | null,
     mode: CameraResolution | null,
@@ -99,8 +99,7 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
   persist(
     (set) => ({
       cameraFlippedById: {},
-      cameraModeIdById: {},
-      cameraPalById: {},
+      cameraPal: false,
       fps: DEFAULT_FPS,
       inputs: {
         camera: false,
@@ -119,13 +118,8 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
           },
         }));
       },
-      setCameraPal: (cameraId, pal) => {
-        set((state) => ({
-          cameraPalById: {
-            ...state.cameraPalById,
-            [cameraId]: pal,
-          },
-        }));
+      setCameraPal: (cameraPal) => {
+        set({ cameraPal });
       },
       setFps: (fps) => {
         set({ fps });
@@ -135,30 +129,8 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
           inputs: { ...state.inputs, [input]: selected },
         }));
       },
-      setSelectedCameraMode: (selectedCameraMode) => {
-        set((state) => ({
-          cameraModeIdById:
-            state.selectedCamera && selectedCameraMode
-              ? {
-                  ...state.cameraModeIdById,
-                  [state.selectedCamera.id]: selectedCameraMode.id,
-                }
-              : state.cameraModeIdById,
-          selectedCameraMode,
-        }));
-      },
       setSelectedCameraSelection: (selectedCamera, selectedCameraMode) => {
-        set((state) => ({
-          cameraModeIdById:
-            selectedCamera && selectedCameraMode
-              ? {
-                  ...state.cameraModeIdById,
-                  [selectedCamera.id]: selectedCameraMode.id,
-                }
-              : state.cameraModeIdById,
-          selectedCamera,
-          selectedCameraMode,
-        }));
+        set({ selectedCamera, selectedCameraMode });
       },
       setSelectedMicrophone: (selectedMicrophone) => {
         set({ selectedMicrophone });
@@ -169,7 +141,21 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
     }),
     {
       merge: (persistedState, currentState) => {
-        const persisted = persistedState as Partial<RecordingInputStore>;
+        // Older builds remembered a mode and anti-flicker per camera. Cameras
+        // now record at their largest picture, and anti-flicker is one
+        // setting, on if it was on for any camera.
+        const {
+          cameraModeIdById: _cameraModeIdById,
+          cameraPalById,
+          ...persisted
+        } = persistedState as Partial<RecordingInputStore> & {
+          cameraModeIdById?: unknown;
+          cameraPalById?: unknown;
+        };
+        const wasPal =
+          !!cameraPalById &&
+          typeof cameraPalById === "object" &&
+          Object.values(cameraPalById).some((pal) => pal === true);
         return {
           ...currentState,
           ...persisted,
@@ -178,16 +164,10 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
             typeof persisted.cameraFlippedById === "object"
               ? persisted.cameraFlippedById
               : {},
-          cameraModeIdById:
-            persisted.cameraModeIdById &&
-            typeof persisted.cameraModeIdById === "object"
-              ? persisted.cameraModeIdById
-              : {},
-          cameraPalById:
-            persisted.cameraPalById &&
-            typeof persisted.cameraPalById === "object"
-              ? persisted.cameraPalById
-              : {},
+          cameraPal:
+            typeof persisted.cameraPal === "boolean"
+              ? persisted.cameraPal
+              : wasPal,
           fps: recordingFpsOptions.includes(persisted.fps as RecordingFps)
             ? (persisted.fps as RecordingFps)
             : DEFAULT_FPS,

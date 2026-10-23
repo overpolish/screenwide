@@ -17,14 +17,13 @@ pub(super) fn prepare_windows(
 ) -> Result<(), String> {
   let to_message = |error: tauri::Error| error.to_string();
 
-  app_windows::source_selector::collapse(app.clone(), Some(false)).map_err(to_message)?;
-  app_windows::source_selector::set_recording_source_selector_visible(app.clone(), false)
-    .map_err(to_message)?;
-  app_windows::hide_recording_bar(app).map_err(to_message)?;
-  // The dock is useful feedback while hardware streams warm up. Its Starting
-  // overlay prevents controls being used until the first encoded frames prove
-  // that every configured video stream is ready.
-  app_windows::show_recording_dock(app).map_err(to_message)?;
+  crate::recording_sources::window_pick::cancel(app);
+  app_windows::close_recording_controls(app).map_err(to_message)?;
+  // The island shows the recording from here, out already if the controls
+  // started it, brought out if a shortcut did. Its Starting state keeps the
+  // controls from being used until the first encoded frames prove that every
+  // configured video stream is ready.
+  app_windows::island::show(app).map_err(to_message)?;
   // A recording is one of our own captures for its whole length. The windows
   // whose exclusion depends on that follow it from here, which gives the
   // compositor the countdown to present the excluded state.
@@ -49,11 +48,13 @@ pub(super) fn prepare_windows(
   Ok(())
 }
 
+/// Puts the recording's windows back. The island is left out: whether it goes
+/// depends on where the recording ends up (`hide_island`,
+/// `show_recording_ui`).
 pub(super) fn restore_windows(app: &AppHandle) {
-  let _ = app_windows::hide_recording_dock(app);
   if app_windows::is_region_selector_visible(app) {
     // Interactivity is deliberately not touched here. The overlay is about to
-    // be hidden, and when the bar shows it again `show_region_selector`
+    // be hidden, and when the controls show it again `show_region_selector`
     // re-asserts the invariant for us.
     let _ = app_windows::hide_region_selector(app.clone());
   }
@@ -66,10 +67,19 @@ pub(super) fn restore_windows(app: &AppHandle) {
   }
 }
 
-/// Shows the recording bar again. Must run after the snapshot is back to
-/// `Idle` so the bar's mode-driven UI sync is no longer gated.
+/// Shows the recording controls again, in the island that showed the
+/// recording. Must run after the snapshot is back to `Idle` so their
+/// mode-driven UI sync is no longer gated.
 pub(super) fn show_recording_ui(app: &AppHandle) {
   if let Err(error) = app_windows::show_recording_ui(app) {
-    eprintln!("Could not restore the recording bar: {error}");
+    eprintln!("Could not restore the recording controls: {error}");
+  }
+}
+
+/// The recording is finished and goes to the Editor, so the island that
+/// showed it goes.
+pub(super) fn hide_island(app: &AppHandle) {
+  if let Err(error) = app_windows::island::hide(app) {
+    eprintln!("Could not put the island away: {error}");
   }
 }

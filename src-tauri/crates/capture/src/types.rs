@@ -11,7 +11,7 @@ use ts_rs::TS;
 
 use super::encoding::FailureReport;
 
-/// Frame rates the bar offers.
+/// The frame rate a recording takes unless Settings says otherwise.
 pub const DEFAULT_FPS: u32 = 60;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, TS)]
@@ -58,7 +58,7 @@ pub struct Region {
   pub size: LogicalSize<f64>,
 }
 
-/// Options assembled by the recording bar from the source and input stores.
+/// Options assembled by the recording controls from the source and input stores.
 #[derive(Clone, Debug, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

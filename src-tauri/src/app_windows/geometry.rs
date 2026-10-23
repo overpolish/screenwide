@@ -99,16 +99,6 @@ fn contained_position(
   )
 }
 
-fn contained_size(
-  area_size: PhysicalSize<u32>,
-  window_size: PhysicalSize<u32>,
-) -> PhysicalSize<u32> {
-  PhysicalSize::new(
-    window_size.width.min(area_size.width),
-    window_size.height.min(area_size.height),
-  )
-}
-
 pub(crate) fn centered_logical_position(
   area_position: LogicalPosition<f64>,
   area_size: LogicalSize<f64>,
@@ -118,33 +108,6 @@ pub(crate) fn centered_logical_position(
     area_position.x + (area_size.width - window_size.width).max(0.0) / 2.0,
     area_position.y + (area_size.height - window_size.height).max(0.0) / 2.0,
   )
-}
-
-pub(super) fn contain_window_in_work_area(
-  app: &AppHandle,
-  window: &WebviewWindow,
-) -> tauri::Result<()> {
-  if window.is_fullscreen()? || window.is_maximized()? {
-    return Ok(());
-  }
-
-  let Some(monitor) = monitor_with_most_overlap(app, window)? else {
-    return Ok(());
-  };
-  let work_area = monitor.work_area();
-  let position = window.outer_position()?;
-  let size = window.outer_size()?;
-  let contained_size = contained_size(work_area.size, size);
-  let contained = contained_position(work_area.position, work_area.size, position, contained_size);
-
-  if size != contained_size {
-    window.set_size(contained_size)?;
-  }
-  if position != contained {
-    window.set_position(contained)?;
-  }
-
-  Ok(())
 }
 
 /// Pulls a dragged window back inside the monitor it mostly covers - the
@@ -240,15 +203,6 @@ mod tests {
       ),
       WORK_AREA_POSITION
     );
-  }
-
-  #[test]
-  fn reduces_an_oversized_window_to_the_work_area() {
-    assert_eq!(
-      contained_size(WORK_AREA_SIZE, PhysicalSize::new(2_000, 1_000)),
-      WORK_AREA_SIZE
-    );
-    assert_eq!(contained_size(WORK_AREA_SIZE, WINDOW_SIZE), WINDOW_SIZE);
   }
 
   #[test]

@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where the toolbar is dropped, settled as the recording bar's is: on the
-//! release it is pulled back inside the screen it mostly covers, and that is
-//! the place kept.
+//! Where the toolbar is dropped, settled on the release: it is pulled back
+//! inside the screen it mostly covers, and that is the place kept.
 
 use tauri::{AppHandle, LogicalPosition, WebviewWindow};
 

@@ -30,7 +30,7 @@ const meta = {
     value: { control: "text" },
   },
   args: {
-    "aria-label": "Show recording bar",
+    "aria-label": "Show recording controls",
     captureMode: "shortcut",
     isClearable: true,
     isDisabled: false,
@@ -78,7 +78,7 @@ function StateGrid({ isDisabled }: { isDisabled?: boolean }) {
       {rows.map(({ label, value }) => (
         <StoryGridRow key={label} label={label}>
           <HotkeyField
-            aria-label="Show recording bar"
+            aria-label="Show recording controls"
             defaultValue={DEFAULT_SHORTCUT}
             isDisabled={isDisabled}
             onChange={() => undefined}

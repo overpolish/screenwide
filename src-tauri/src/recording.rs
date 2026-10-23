@@ -20,7 +20,6 @@ pub use start_capture::start;
 use std::time::Instant;
 use tauri::AppHandle;
 
-use crate::app_windows;
 use screenwide_capture::capture;
 
 pub use replay::{ReplaySnapshot, ReplayState};
@@ -35,7 +34,7 @@ use session::{
 #[cfg(test)]
 use state::apply_transition;
 use state::{set_countdown, state, transition};
-use ui::{prepare_windows, restore_windows, show_recording_ui};
+use ui::{hide_island, prepare_windows, restore_windows, show_recording_ui};
 
 // ---------------------------------------------------------------------------
 // Lifecycle. Each entry point validates before it causes any side effect, and
@@ -100,6 +99,9 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
   transition(app, RecordingStatus::Stopping, None).inspect_err(|error| {
     emit_error(app, "stop", error);
   })?;
+  // Away at once rather than back to the controls while the recording is
+  // finished: the Editor takes over, or, if it cannot, the controls return.
+  hide_island(app);
   state(app).cancel();
   let handles = take_handles(app);
   if let Some(handles) = &handles {

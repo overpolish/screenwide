@@ -3,6 +3,36 @@
 
 use super::*;
 
+/// How wide the picking backdrop's blur is, in points: slight, so the other
+/// windows stay recognisable.
+const BACKDROP_BLUR: f64 = 4.0;
+
+/// How wide the edge between a picked window and the screen round it
+/// feathers, in points, half inside the window and half out.
+const CUTOUT_FEATHER: f64 = 3.0;
+
+/// How much of the overlay's shade goes over the picking backdrop, which the
+/// blur already pushes back.
+const BACKDROP_SHADE: f32 = 0.75;
+
+/// How round a window's corners are, in points, so a picked window's cutout
+/// sits on it: macOS 26 rounds its windows well beyond the 10 points before
+/// it; Windows 11 rounds them 8 pixels.
+#[cfg(target_os = "macos")]
+fn window_corner_radius() -> f64 {
+  let version = objc2_foundation::NSProcessInfo::processInfo().operatingSystemVersion();
+  if version.majorVersion >= 26 {
+    16.0
+  } else {
+    10.0
+  }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn window_corner_radius() -> f64 {
+  8.0
+}
+
 impl Surface {
   pub(crate) fn draw(&mut self) {
     if self.drawing {
@@ -24,15 +54,20 @@ impl Surface {
 
   pub(super) fn render(&mut self) -> Result<(), String> {
     let (width, height) = self.client_size();
-    if !should_show(self.is_root(), self.visible, self.desktop_presented)
-      || width == 0
-      || height == 0
-    {
+    let now = std::time::Instant::now();
+    // A picked window's cutout fades out after it is hidden, so the surface
+    // stays up until it has gone.
+    let cut = self.window_highlight && self.visible && !is_empty(self.region);
+    self.cutout.head_for(cut, now);
+    let cutout = self.cutout.opacity(now);
+    let showing = self.visible || (self.window_highlight && cutout > 0.0);
+    if !should_show(self.is_root(), showing, self.desktop_presented) || width == 0 || height == 0 {
       if self.shown {
         self.shown = false;
         host().show(self.hwnd, false);
       }
       self.release_drawables();
+      self.set_animating(false);
       return Ok(());
     }
     self.drawables_released = false;
@@ -60,7 +95,6 @@ impl Surface {
     let canvas = Rect::from_xywh(0.0, 0.0, view.width, view.height);
 
     let light = host().light_mode();
-    let now = std::time::Instant::now();
     let mut constants = RenderConstants::new(light);
     // The ruler animation row is frame-global: the world halos read its hover
     // alpha and width, and the loupe reads the copied and tolerance progress.
@@ -139,6 +173,35 @@ impl Surface {
     let region = self.local_rect(self.region);
     if is_empty(region) {
       renderer::add_quad(&mut vertices, view, canvas, 6);
+    } else if self.window_highlight {
+      let blur = match self.backdrop.as_ref() {
+        Some(backdrop) => {
+          let (source_width, source_height) = backdrop.size;
+          constants.chrome_backdrop = [
+            pixels.width as f32,
+            pixels.height as f32,
+            1.0 / source_width.max(1) as f32,
+            1.0 / source_height.max(1) as f32,
+          ];
+          constants.chrome_source = [0.0, 0.0, 1.0, 1.0];
+          constants.overlay_shade[3] *= BACKDROP_SHADE;
+          BACKDROP_BLUR * scale
+        }
+        None => 0.0,
+      };
+      constants.window_cutout = [
+        (region.origin.x * scale) as f32,
+        (region.origin.y * scale) as f32,
+        (region.size.width * scale) as f32,
+        (region.size.height * scale) as f32,
+      ];
+      constants.window_shape = [
+        (window_corner_radius() * scale) as f32,
+        cutout,
+        blur as f32,
+        (CUTOUT_FEATHER * scale) as f32,
+      ];
+      renderer::add_window_highlight(&mut vertices, view, canvas);
     } else {
       renderer::add_crop_with_handles(
         &mut vertices,
@@ -202,7 +265,9 @@ impl Surface {
     // Control transitions, the confirm crossfade and every ruler transition
     // are time based, so a frame is retimed while one is running
     //.
-    self.set_animating(self.ocr.is_animating() || self.ruler.is_animating(now));
+    self.set_animating(
+      self.ocr.is_animating() || self.ruler.is_animating(now) || self.cutout.is_fading(now),
+    );
     result
   }
 }

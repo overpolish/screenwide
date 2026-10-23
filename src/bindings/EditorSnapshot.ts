@@ -14,7 +14,7 @@ export type EditorSnapshot = { artifact: EditorArtifact | null, cursorEffects: C
 screenshotDeleteProjectAfterExport: boolean | null, 
 /**
  * Which workspace this describes. The change event is app-wide because the
- * recording bar listens to it too, so every receiver needs to know which of
+ * recording controls listen to it too, so every receiver needs to know which of
  * its snapshots the payload replaces.
  */
 workspace: EditorKind, };

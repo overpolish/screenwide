@@ -7,17 +7,10 @@ import { useMeter, useNumberFormatter } from "react-aria";
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 
-/** The quietest level the meter draws; anything below reads as silence. */
-const FLOOR_DECIBELS = -60;
+import { decibelLevel, FLOOR_DECIBELS } from "./decibel-level";
 
-const decibelToPercentage = (decibel: number): number => {
-  if (decibel < FLOOR_DECIBELS) return 0;
-  if (decibel > 0) return 100;
-
-  const normalized = (decibel - FLOOR_DECIBELS) / -FLOOR_DECIBELS;
-  const power = 1.357; // -24 dB map to ~50%
-  return Math.pow(normalized, power) * 100;
-};
+const decibelToPercentage = (decibel: number): number =>
+  decibelLevel(decibel) * 100;
 
 let nextMeterId = 0;
 

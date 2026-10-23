@@ -61,6 +61,7 @@ export type NativeScreenshotRegionOptions = {
   onReconciled?: (region: Region, monitorId?: number) => void;
   showFrame?: boolean;
   showHandles?: boolean;
+  windowHighlight?: boolean;
 };
 
 export const resizeDirections: Record<NativeHandle, ResizeDirection> = {

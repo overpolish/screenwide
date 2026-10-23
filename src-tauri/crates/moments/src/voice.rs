@@ -27,7 +27,7 @@ use screenwide_capture::note_gate::{self, NoteTee, NOTE_THRESHOLD};
 /// buffers arrive a little after the moment they were captured.
 const TRAILING_AUDIO: Duration = Duration::from_millis(150);
 
-/// What a press does about a note, as the dock shows it.
+/// What a press does about a note, as the island shows it.
 #[derive(Clone, Copy, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Voice {

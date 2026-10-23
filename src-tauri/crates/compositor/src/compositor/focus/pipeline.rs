@@ -156,7 +156,7 @@ pub(super) fn chain(gpu: &Gpu, size: (u32, u32)) -> Chain {
       height: size.1,
       depth_or_array_layers: 1,
     },
-    mip_level_count: super::super::mips::levels(size),
+    mip_level_count: screenwide_gpu::mips::levels(size),
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
     format: FORMAT,

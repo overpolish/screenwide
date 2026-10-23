@@ -39,8 +39,7 @@ pub(super) fn own_window_at(app: &AppHandle, point: CGPoint) -> Option<(WebviewW
     .iter()
     .find_map(|label| {
       let window = app.get_webview_window(label.as_str())?;
-      window_hit(&window, point, crate::glide::uses_full_surface(*label))
-        .map(|frame| (window.clone(), frame))
+      window_hit(&window, point).map(|frame| (window.clone(), frame))
     })
 }
 
@@ -84,27 +83,17 @@ pub(super) fn decoration_size(window: &WebviewWindow) -> Option<LogicalSize<f64>
 
 /// The frame of a window the point lands on the titlebar of. A hidden or
 /// minimized window is nowhere, whatever its last frame said.
-fn window_hit(window: &WebviewWindow, point: CGPoint, full_surface: bool) -> Option<cg::Rect> {
+fn window_hit(window: &WebviewWindow, point: CGPoint) -> Option<cg::Rect> {
   if !window.is_visible().ok()? || window.is_minimized().ok()? {
     return None;
   }
   let frame = logical_frame(window)?;
-  if full_surface {
-    return contains(frame, point).then_some(frame);
-  }
   let bottom = chrome_bottom(window, frame)?;
   let hit = point.x >= frame.origin.x
     && point.x <= frame.origin.x + frame.size.width
     && point.y >= frame.origin.y
     && point.y <= bottom;
   hit.then_some(frame)
-}
-
-fn contains(frame: cg::Rect, point: CGPoint) -> bool {
-  point.x >= frame.origin.x
-    && point.x <= frame.origin.x + frame.size.width
-    && point.y >= frame.origin.y
-    && point.y <= frame.origin.y + frame.size.height
 }
 
 /// The lowest point that still starts a gesture. Tauri measures the real

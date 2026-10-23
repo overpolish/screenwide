@@ -16,6 +16,9 @@ use std::ops::{Deref, DerefMut};
 pub struct RegionChrome {
   pub frame_visible: bool,
   pub handles_visible: bool,
+  /// The region is a window being picked: a cutout as round as the window,
+  /// rather than framed for editing.
+  pub window_highlight: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -74,8 +77,9 @@ impl Default for RegionSceneState {
     let presented = RegionScene::default();
     // `RegionScene::default` is drawing-capable because Quick Screenshot is
     // the first workflow that commonly attaches the shared compositor. The
-    // separately retained Recording Bar scene must nevertheless be a normal
-    // (non-drawing) scene even before that UI has submitted its first update.
+    // separately retained recording controls' scene must nevertheless be a
+    // normal (non-drawing) scene even before they have submitted their first
+    // update.
     let mut requested_normal = presented;
     requested_normal.interaction.allow_drawing = false;
     Self {
@@ -155,6 +159,7 @@ impl Default for RegionScene {
       chrome: RegionChrome {
         frame_visible: true,
         handles_visible: true,
+        window_highlight: false,
       },
       interaction: RegionInteraction {
         input_enabled: false,

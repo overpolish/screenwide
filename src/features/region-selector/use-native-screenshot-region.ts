@@ -32,6 +32,7 @@ export function useNativeScreenshotRegion({
   showHandles = true,
   inputEnabled = visible,
   monitorId,
+  windowHighlight = false,
   windowLabel,
 }: NativeScreenshotRegionOptions) {
   const [available, setAvailable] = useState(false);
@@ -55,6 +56,7 @@ export function useNativeScreenshotRegion({
     showFrame,
     showHandles,
     visible,
+    windowHighlight,
   });
   const handshakeRef = useRef(0);
   const nativeGestureRef = useRef(false);
@@ -72,11 +74,15 @@ export function useNativeScreenshotRegion({
     desktop,
     exclusionRect,
     inputEnabled,
-    monitorId,
+    // Disabled once its monitor has gone, as a finished window pick is, the
+    // overlay is still hidden on the monitor it was on: a desktop overlay
+    // must name one.
+    monitorId: monitorId ?? configRef.current.monitorId,
     region,
     showFrame,
     showHandles,
     visible,
+    windowHighlight,
   };
 
   useEffect(() => {
@@ -176,6 +182,7 @@ export function useNativeScreenshotRegion({
           showHandles: c.showHandles,
           visible: c.visible,
           window: windowLabel,
+          windowHighlight: c.windowHighlight,
         });
         if (handshake === handshakeRef.current) setAvailable(ok);
       } catch (error) {
@@ -205,6 +212,7 @@ export function useNativeScreenshotRegion({
         showHandles: c.showHandles,
         visible: false,
         window: windowLabel,
+        windowHighlight: c.windowHighlight,
       });
     };
   }, [enabled, windowLabel]);
@@ -234,6 +242,7 @@ export function useNativeScreenshotRegion({
           showHandles,
           visible: false,
           window: windowLabel,
+          windowHighlight,
         });
       } finally {
         setAvailable(false);
@@ -257,6 +266,7 @@ export function useNativeScreenshotRegion({
       showHandles,
       visible,
       window: windowLabel,
+      windowHighlight,
     })
       .then((ok) => {
         if (!ok) void disable();
@@ -276,6 +286,7 @@ export function useNativeScreenshotRegion({
     showFrame,
     showHandles,
     visible,
+    windowHighlight,
     windowLabel,
   ]);
   return available;

@@ -65,7 +65,7 @@ export function islandLayout({
   return {
     closed,
     /** Under a notch, how far the top flares out into the screen's edge. */
-    flare: notch ? (isShown ? ISLAND.flare : ISLAND.hiddenFlare) : 0,
+    flare: notch && isShown ? ISLAND.flare : 0,
     held,
     // While it opens or folds, what it holds is moved against the box so it
     // keeps its place and the black opens around it. Both move on one curve

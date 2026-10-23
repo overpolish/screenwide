@@ -60,8 +60,8 @@ const cameraWarning = (
 };
 
 /**
- * Whether each selected input could still be recorded, checked while the bar
- * is in use. An input that could not is returned as the warning its control
+ * Whether each selected input could still be recorded, checked while the
+ * recording controls are open. An input that could not is returned as the warning its control
  * shows; the camera is asked about its exact mode, by the same lookups the
  * start makes, so the warning and the start never disagree.
  */

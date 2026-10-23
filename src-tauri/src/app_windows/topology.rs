@@ -5,12 +5,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use tauri::{AppHandle, Manager};
-use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
-use super::{
-  geometry::{contain_window_in_work_area, keep_window_on_a_monitor},
-  WindowLabel,
-};
+use super::{geometry::keep_window_on_a_monitor, WindowLabel};
 
 #[cfg(target_os = "macos")]
 mod platform_macos;
@@ -31,8 +27,9 @@ static REVISION: AtomicU64 = AtomicU64::new(0);
 enum Policy {
   /// A normal app window is recovered only if it is completely off-screen.
   Recoverable,
-  /// A persistent floating control keeps its location when valid and is saved after correction.
-  PersistentControl,
+  /// The island is placed again at the top of the pointer's display, under
+  /// its notch if it has one.
+  Island,
   /// A transient is derived from another window and should not preserve stale topology geometry.
   OwnedTransient,
   /// Native desktop compositor surfaces own their complete display-union rebuild.
@@ -49,7 +46,7 @@ const fn policy(label: WindowLabel) -> Policy {
     | WindowLabel::Update => Policy::Recoverable,
     #[cfg(target_os = "macos")]
     WindowLabel::Permissions => Policy::Recoverable,
-    WindowLabel::RecordingBar | WindowLabel::RecordingDock => Policy::PersistentControl,
+    WindowLabel::Island => Policy::Island,
     // An export options window is derived from the editor it hangs off and is
     // recentred on it whenever that moves, so it never carries stale geometry.
     // The alert is recentred on the pointer's display each time it opens.
@@ -58,7 +55,6 @@ const fn policy(label: WindowLabel) -> Policy {
     | WindowLabel::ExportRecording
     | WindowLabel::ExportScreenshot
     | WindowLabel::Glide
-    | WindowLabel::RecordingSourceSelector
     | WindowLabel::StandaloneListbox
     | WindowLabel::ToolPanelRecording
     | WindowLabel::ToolPanelScreenshot => Policy::OwnedTransient,
@@ -73,13 +69,11 @@ const fn policy(label: WindowLabel) -> Policy {
 }
 
 fn close_transients(app: &AppHandle) {
-  let _ = super::source_selector::collapse(app.clone(), Some(false));
   let _ = super::options::close_all_standalone_listboxes(app.clone(), false);
 }
 
 fn reconcile(app: &AppHandle) {
   close_transients(app);
-  let mut persistent_position_may_have_changed = false;
   for &label in WindowLabel::ALL {
     match policy(label) {
       Policy::Recoverable => {
@@ -87,19 +81,11 @@ fn reconcile(app: &AppHandle) {
           let _ = keep_window_on_a_monitor(app, &window);
         }
       }
-      Policy::PersistentControl => {
-        let Some(window) = app.get_webview_window(label.as_str()) else {
-          continue;
-        };
-        if contain_window_in_work_area(app, &window).is_ok() {
-          persistent_position_may_have_changed = true;
-        }
+      Policy::Island => {
+        let _ = super::island::follow_displays(app);
       }
       Policy::OwnedTransient | Policy::DesktopSurface => {}
     }
-  }
-  if persistent_position_may_have_changed {
-    let _ = app.save_window_state(StateFlags::POSITION);
   }
   // The annotate overlay's host covers one display's geometry, which a layout
   // change invalidates. Ruler and OCR are told by their own native surfaces.

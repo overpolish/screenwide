@@ -72,10 +72,9 @@ export function CameraThumbnail({
         ref={canvasRef}
       />
       {hasFrame ? null : (
-        // Sized from the stage rather than from the icon scale: the same
-        // thumbnail is drawn at 48px in the dock and at 20px in the bar's
-        // inputs row, and an ancestor's glyph sizing would overflow the
-        // smaller one.
+        // Sized from the stage rather than from the icon scale, so it fits
+        // whatever box the thumbnail is drawn in without an ancestor's glyph
+        // sizing overflowing a small one.
         <Camera
           className="absolute text-content-fg-tertiary"
           style={{ height: "auto", width: "50%" }}

@@ -146,8 +146,8 @@ export function LiveControls({
           <Pause aria-hidden className="size-icon" />
         )}
       </IslandButton>
-      {/* Discarding sits beside stopping, so it asks twice, as the dock's
-          did: the bin gives way to a check, and only that discards. */}
+      {/* Discarding sits beside stopping, so it asks twice: the bin gives
+          way to a check, and only that discards. */}
       <ConfirmActionButton
         className="size-island-control rounded-full"
         confirmLabel={t("recording-controls-confirm-discard")}

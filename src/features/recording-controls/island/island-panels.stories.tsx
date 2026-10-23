@@ -8,7 +8,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...islandMeta,
-  title: "Features/Recording Controls/Island/Panels",
+  title: "Features/Recording Island/Panels",
 } satisfies Meta<typeof IslandStage>;
 
 export default meta;
@@ -48,6 +48,6 @@ export const RecordOptions: Story = { args: { initialPanel: "record" } };
 export const ReplayStarting: Story = {
   args: {
     initialPanel: "record",
-    replay: { lengthSeconds: 30, status: "starting" },
+    replay: { status: "starting" },
   },
 };

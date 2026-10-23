@@ -69,7 +69,8 @@ const fn should_be_armed(
 }
 
 /// A capture overlay borrows Escape while it is active. Otherwise the visible
-/// recording bar owns it even though its panel does not take focus.
+/// recording controls own it even though the island's panel does not take
+/// focus.
 pub(super) fn arm(app: &AppHandle) {
   if ARMED
     .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
@@ -105,14 +106,14 @@ fn dismiss_owner(app: &AppHandle) {
     crate::annotate::is_active(app),
   ) {
     Some(EscapeOwner::Annotate) => {
-      // Carried out here rather than through the recording bar: the overlay is
+      // Carried out here rather than through the island's page: the overlay is
       // native, so there is no frontend turn to wait for.
       crate::annotate::dismiss(app);
       return;
     }
     Some(EscapeOwner::TextRecognition) => {
       let _ = app.emit_to(
-        WindowLabel::RecordingBar.as_str(),
+        WindowLabel::Island.as_str(),
         TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT,
         (),
       );
@@ -128,7 +129,7 @@ fn dismiss_owner(app: &AppHandle) {
     }
     Some(EscapeOwner::Ruler) => {
       let _ = app.emit_to(
-        WindowLabel::RecordingBar.as_str(),
+        WindowLabel::Island.as_str(),
         RULER_DISMISS_REQUESTED_EVENT,
         (),
       );
@@ -140,21 +141,17 @@ fn dismiss_owner(app: &AppHandle) {
   if !is_recording_ui_visible() {
     return;
   }
-  if super::source_selector::is_expanded() {
-    let _ = super::source_selector::collapse(app.clone(), Some(true));
+  if crate::recording_sources::window_pick::is_active() {
+    crate::recording_sources::window_pick::cancel(app);
     return;
   }
   if super::options::is_standalone_listbox_open() {
     let _ = super::options::close_all_standalone_listboxes(app.clone(), true);
     return;
   }
-  // Teardown runs on the bar's later IPC turn rather than unregistering the
+  // Teardown runs on the island's later IPC turn rather than unregistering the
   // shortcut from inside its native callback.
-  let _ = app.emit_to(
-    WindowLabel::RecordingBar.as_str(),
-    DISMISS_REQUESTED_EVENT,
-    (),
-  );
+  let _ = app.emit_to(WindowLabel::Island.as_str(), DISMISS_REQUESTED_EVENT, ());
 }
 
 pub(super) fn disarm(app: &AppHandle) {

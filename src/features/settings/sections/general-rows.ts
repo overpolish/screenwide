@@ -45,8 +45,8 @@ export const captureToggle = (): ToggleItem => ({
 export const startupToggles = (): ToggleItem[] => [
   { key: "launchAtLogin", title: t("settings-launch-at-login") },
   {
-    key: "showRecordingBarOnLaunch",
-    title: t("settings-show-bar-on-launch"),
+    key: "showRecordingControlsOnLaunch",
+    title: t("settings-show-controls-on-launch"),
   },
 ];
 

@@ -3,18 +3,20 @@
 
 import { useEffect, useState } from "react";
 
-import { t } from "../../../i18n/i18n";
-import { StoryNotch } from "../../../storybook/story-notch";
+import { ISLAND } from "../../../primitives/island/island-geometry";
 
 import {
   PREVIEW_DISPLAYS,
-  PREVIEW_REGIONS,
   PREVIEW_WINDOWS,
   previewCamera,
   previewMicrophone,
   previewSystemAudio,
 } from "./island-preview";
-import { useStageCamera, useStageReplay } from "./island-stage-state";
+import {
+  stageMicrophone,
+  useStageCamera,
+  useStageReplay,
+} from "./island-stage-state";
 import { RecordingIsland } from "./recording-island";
 
 import type {
@@ -41,16 +43,19 @@ export type IslandStageProps = Pick<
   RecordingIslandProps,
   | "notch"
   | "isScreenLocked"
-  | "onChooseRegion"
+  | "isShown"
+  | "onCancelWindowPick"
   | "onChooseWindow"
   | "onOpenPermissions"
   | "onScreenshot"
+  | "onHidden"
+  | "onShapeChange"
+  | "windowPick"
 > & {
   /** Shows the island coming out and going away, over and over. */
   appears?: boolean;
   camera?: Partial<IslandInput>;
-  /** The area already dragged out; Choose a Region takes the sample areas in
-   * turn, standing in for dragging on the screen. */
+  /** The area already dragged out. */
   chosenRegion?: IslandRegion;
   /** The window already picked; Choose a Window picks the sample windows in
    * turn, standing in for the picker on the screen. */
@@ -92,7 +97,6 @@ export function IslandStage(props: IslandStageProps) {
   const [phase, setPhase] = useState<IslandPhase>(props.initialPhase ?? "idle");
   const [display, setDisplay] = useState(1);
   const [chosenWindow, setChosenWindow] = useState(props.chosenWindow);
-  const [chosenRegion, setChosenRegion] = useState(props.chosenRegion);
   const [moment, setMoment] = useState(props.moment ?? null);
   const camera = useStageCamera(props.isCameraFlipped);
   const [count, setCount] = useState(3);
@@ -181,23 +185,22 @@ export function IslandStage(props: IslandStageProps) {
     };
   }, [isShown, props.appears]);
 
-  const isSilent = props.microphoneProblem === "silent";
-  const level = (kind: "microphone" | "systemAudio", value = 0) =>
-    inputs[kind].isOn && !(kind === "microphone" && isSilent) ? value : 0;
-  const microphoneWarning =
-    props.microphoneProblem === "missing"
-      ? t("recording-controls-microphone-missing")
-      : isSilent && phase !== "idle"
-        ? t("recording-controls-island-microphone-silent")
-        : inputs.microphone.warning;
+  const { level, warning: microphoneWarning } = stageMicrophone({
+    inputs,
+    phase,
+    problem: props.microphoneProblem,
+  });
 
   return (
     <div className="relative size-full" dir="ltr">
-      <div className="absolute inset-x-0" style={{ top: props.notch ? 0 : 6 }}>
+      <div
+        className="absolute inset-x-0"
+        style={{ top: props.notch ? 0 : ISLAND.screenGap }}
+      >
         <RecordingIsland
           {...camera}
           camera={inputs.camera}
-          chosenRegion={chosenRegion}
+          chosenRegion={props.chosenRegion}
           chosenWindow={chosenWindow}
           countdown={count}
           displays={props.displays ?? PREVIEW_DISPLAYS}
@@ -205,7 +208,7 @@ export function IslandStage(props: IslandStageProps) {
           hasConfidenceChecks={props.hasConfidenceChecks}
           initialPanel={props.initialPanel}
           isScreenLocked={props.isScreenLocked}
-          isShown={isShown}
+          isShown={props.isShown ?? isShown}
           microphone={{
             ...inputs.microphone,
             level: level("microphone", props.microphoneLevel),
@@ -220,14 +223,7 @@ export function IslandStage(props: IslandStageProps) {
           onCancelStarting={() => {
             setPhase("idle");
           }}
-          onChooseRegion={() => {
-            props.onChooseRegion?.();
-            setChosenRegion((current) =>
-              current === PREVIEW_REGIONS[0]
-                ? PREVIEW_REGIONS[1]
-                : PREVIEW_REGIONS[0],
-            );
-          }}
+          onCancelWindowPick={props.onCancelWindowPick}
           onChooseWindow={() => {
             props.onChooseWindow?.();
             setChosenWindow((current) =>
@@ -246,6 +242,7 @@ export function IslandStage(props: IslandStageProps) {
             setPhase("idle");
           }}
           onDisplayChange={setDisplay}
+          onHidden={props.onHidden}
           onInputChange={(kind, isOn) => {
             setInputs((current) => ({
               ...current,
@@ -268,6 +265,7 @@ export function IslandStage(props: IslandStageProps) {
             setPhase("recording");
           }}
           onScreenshot={props.onScreenshot}
+          onShapeChange={props.onShapeChange}
           onStop={() => {
             setPhase("finishing");
           }}
@@ -278,6 +276,7 @@ export function IslandStage(props: IslandStageProps) {
             ...inputs.systemAudio,
             level: level("systemAudio", props.systemAudioLevel),
           }}
+          windowPick={props.windowPick}
           writtenBytes={
             props.showsSize
               ? elapsed < 1
@@ -287,7 +286,6 @@ export function IslandStage(props: IslandStageProps) {
           }
         />
       </div>
-      {props.notch ? <StoryNotch notch={props.notch} /> : null}
     </div>
   );
 }

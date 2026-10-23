@@ -29,7 +29,7 @@ pub(super) fn inspect(app: &AppHandle, id: u64) {
       let result =
         MacDesktopAdapter::new(&target, anchor, cancelled).and_then(|adapter| adapter.snapshot());
       match result {
-        // A window on every Space, as the recording bar is, cannot be carried
+        // A window on every Space, as the island is, cannot be carried
         // to another one, so it is offered no Spaces to pick from.
         Ok(snapshot) if snapshot.membership.len() != 1 => {
           if SESSION

@@ -84,7 +84,7 @@ function SchematicPane({
 /**
  * One scene on offer in the Scene panel: a small drawing of where it puts
  * the screen and the camera, at this recording's frame shape, each pane
- * marked with the glyph the recording bar gives that source so the sides read
+ * marked with the glyph the recording controls give that source so the sides read
  * at a glance, and the screen turned in depth as the scene turns it. The name
  * is the button's accessible name. A chosen tile fills its panes with the
  * accent rather than ringing the tile, which would crowd the drawing. A

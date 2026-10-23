@@ -1,15 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { motion } from "motion/react";
+import {
+  animate,
+  motion,
+  type MotionValue,
+  useMotionValue,
+} from "motion/react";
 import { type ReactNode, type Ref, use, useLayoutEffect, useRef } from "react";
 
 import { cn } from "../../lib/styling";
 
 import { IslandContext } from "./island-context";
-import { reveal } from "./island-motion";
-
-import type { IslandNotch } from "./island-geometry";
+import { ISLAND, type IslandNotch } from "./island-geometry";
+import { glide, reveal } from "./island-motion";
 
 // The island's row: what it holds at its start and its end. Around a notch
 // the two sides are parted by the notch's width, each only as wide as it
@@ -18,32 +22,36 @@ import type { IslandNotch } from "./island-geometry";
 
 /** One half of the row, revealed where it sits as the island grows: it comes
  * into focus and to its size, as though the glass were clearing, and never
- * travels. */
+ * travels in. Around a notch it folds into it as the island tucks away
+ * (`x`). */
 function Half({
   children,
   notch,
   notchSide,
   ref,
+  x,
 }: {
   children: ReactNode;
   notch?: IslandNotch;
   /** Which edge of this half meets the notch. */
   notchSide?: "end" | "start";
   ref?: Ref<HTMLSpanElement>;
+  x?: MotionValue<number>;
 }) {
-  const room = notch ? notch.width / 2 : 0;
+  const room = notch ? notch.width / 2 + ISLAND.notchGap : 0;
   return (
     <motion.span
       {...reveal}
       className="relative flex items-center gap-separate"
       ref={ref}
-      style={
-        notchSide === "end"
+      style={{
+        x,
+        ...(notchSide === "end"
           ? { paddingInlineEnd: room }
           : notchSide === "start"
             ? { paddingInlineStart: room }
-            : undefined
-      }
+            : undefined),
+      }}
     >
       {children}
     </motion.span>
@@ -78,7 +86,38 @@ function NotchSplit({
   const rowRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<HTMLSpanElement>(null);
   const endRef = useRef<HTMLSpanElement>(null);
-  const { setShift } = use(IslandContext);
+  const { isShown, setShift } = use(IslandContext);
+  const startX = useMotionValue(0);
+  const endX = useMotionValue(0);
+  // Tucking away, each half folds into the notch with its own edge of the
+  // black: as far as what it holds is wide, on the shape's own curve, so a
+  // wider half travels further, as its edge does, and neither is left behind
+  // as the shape slides under it. Coming back out, both are in place.
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    const startHalf = startRef.current;
+    const endHalf = endRef.current;
+    if (!row || !startHalf || !endHalf) return;
+    const room = notch.width / 2 + ISLAND.notchGap;
+    const towardsEnd = getComputedStyle(row).direction === "rtl" ? -1 : 1;
+    const folds = [
+      animate(
+        startX,
+        isShown ? 0 : towardsEnd * (startHalf.offsetWidth - room),
+        glide,
+      ),
+      animate(
+        endX,
+        isShown ? 0 : -towardsEnd * (endHalf.offsetWidth - room),
+        glide,
+      ),
+    ];
+    return () => {
+      folds.forEach((fold) => {
+        fold.stop();
+      });
+    };
+  }, [endX, isShown, notch.width, startX]);
   // After every render, before paint, so a half that changes with what it
   // holds is balanced in the same frame it is drawn in; an observer would
   // answer a frame late, and that frame would show the island jump.
@@ -102,10 +141,10 @@ function NotchSplit({
   }, [setShift]);
   return (
     <div className={ROW} ref={rowRef}>
-      <Half notch={notch} notchSide="end" ref={startRef}>
+      <Half notch={notch} notchSide="end" ref={startRef} x={startX}>
         {start}
       </Half>
-      <Half notch={notch} notchSide="start" ref={endRef}>
+      <Half notch={notch} notchSide="start" ref={endRef} x={endX}>
         {end}
       </Half>
     </div>

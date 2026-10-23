@@ -12,8 +12,8 @@ use cidre::{arc, cv};
 use crate::monitor::RecordingMonitor;
 use scaler::Scaler;
 
-const MAX_WIDTH: usize = 96;
-const MAX_HEIGHT: usize = 54;
+const MAX_WIDTH: usize = 128;
+const MAX_HEIGHT: usize = 72;
 
 pub(super) struct CameraFrame(pub(super) arc::R<cv::PixelBuf>);
 
@@ -86,8 +86,8 @@ impl Drop for ConfidenceWorker {
   }
 }
 
-/// The thumbnail keeps the source aspect ratio inside the recording bar's
-/// budget and never upscales a camera that is already smaller.
+/// The thumbnail keeps the source aspect ratio inside the island's budget
+/// and never upscales a camera that is already smaller.
 fn thumbnail_size(buffer: &cv::PixelBuf) -> Option<(u16, u16)> {
   let source_width = buffer.width();
   let source_height = buffer.height();

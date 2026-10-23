@@ -7,7 +7,7 @@ import { type ReactNode, useState } from "react";
 import { motionDurations } from "../../lib/motion";
 
 import { px } from "./island-geometry";
-import { type Curve, focusIn } from "./island-motion";
+import { focusIn, glide } from "./island-motion";
 
 import type { islandLayout } from "./island-layout";
 import type { IslandShapeValues } from "./island-outline-sync";
@@ -18,7 +18,6 @@ import type { IslandShapeValues } from "./island-outline-sync";
  * animated by. */
 export function IslandSection({
   children,
-  curve,
   isFromMiddle,
   isOpening,
   isShown,
@@ -29,7 +28,6 @@ export function IslandSection({
   values,
 }: {
   children: ReactNode;
-  curve: Curve;
   /** The island coming out of the notch or going back in, which a section
    * opens out of and folds into the middle with. */
   isFromMiddle: boolean;
@@ -116,11 +114,11 @@ export function IslandSection({
         transition={
           isPlacedAtOnce
             ? {
-                ...curve,
+                ...glide,
                 insetInlineStart: { duration: 0 },
                 width: { duration: 0 },
               }
-            : curve
+            : glide
         }
       >
         <motion.div
@@ -133,7 +131,7 @@ export function IslandSection({
           initial={false}
           onAnimationComplete={onOpened}
           style={{ height: values.height, opacity: values.opacity }}
-          transition={{ ...curve, opacity: opacityTransition }}
+          transition={{ ...glide, opacity: opacityTransition }}
         >
           <motion.div
             animate={{
@@ -148,8 +146,8 @@ export function IslandSection({
             style={{ x: sectionX }}
             transition={
               isPlacedAtOnce
-                ? { ...curve, insetInlineStart: { duration: 0 } }
-                : curve
+                ? { ...glide, insetInlineStart: { duration: 0 } }
+                : glide
             }
           >
             <AnimatePresence initial={false}>

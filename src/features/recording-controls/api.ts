@@ -38,18 +38,6 @@ export const cancelRecording = async () => {
   await invoke<null>("cancel_recording");
 };
 
-// Committing on drag end mirrors the recording bar: the pill reappears where
-// the user left it on the next recording.
-export const finishRecordingDockDrag = () =>
-  invoke<null>("finish_recording_dock_drag");
-
-export const resizeRecordingDock = (width: number) =>
-  invoke<null>("resize_recording_dock", { width });
-
-/** Tells native the pill's page has drawn, which reveals its first show. */
-export const recordingDockPainted = () =>
-  invoke<null>("recording_dock_painted");
-
 export const startRecordingMonitor = (
   subscriptionId: number,
   channel: Channel<ArrayBuffer>,
@@ -61,7 +49,8 @@ export const stopRecordingMonitor = (subscriptionId: number) =>
 export const getReplaySnapshot = () =>
   invoke<ReplaySnapshot>("get_replay_snapshot");
 
-/** Starts the replay buffer with the bar's settings as they are now. */
+/** Starts the replay buffer with the recording controls' settings as they
+ * are now. */
 export const startReplayBuffer = async (options: StartRecordingOptions) => {
   await invoke<null>("start_replay_buffer", { options });
 };

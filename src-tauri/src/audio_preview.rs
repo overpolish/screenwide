@@ -258,8 +258,11 @@ pub async fn start_audio_preview(
   Ok(())
 }
 
+/// Async, so it runs off the main thread: stopping tears the preview's device
+/// down, which for the system's mix takes long enough to stall every window
+/// drawn meanwhile.
 #[tauri::command]
-pub fn stop_audio_preview(
+pub async fn stop_audio_preview(
   window: tauri::WebviewWindow,
   state: tauri::State<'_, AudioPreviewState>,
   kind: AudioPreviewKind,
