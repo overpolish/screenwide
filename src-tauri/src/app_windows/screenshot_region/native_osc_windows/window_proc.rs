@@ -76,6 +76,9 @@ pub(super) unsafe extern "system" fn window_proc(
       LRESULT(0)
     }
     WM_LBUTTONDOWN | WM_LBUTTONDBLCLK => {
+      if guard(|| events::take_press(window)).unwrap_or(false) {
+        return LRESULT(0);
+      }
       unsafe { SetCapture(hwnd) };
       let (x, y) = client_point(lparam);
       let double = message == WM_LBUTTONDBLCLK;

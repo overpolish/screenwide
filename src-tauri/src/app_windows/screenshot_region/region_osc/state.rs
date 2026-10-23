@@ -9,6 +9,7 @@ mod attachment;
 mod content;
 mod controls;
 mod desktop;
+mod presses;
 mod ruler_updates;
 mod scene;
 pub(crate) use attachment::{
@@ -30,6 +31,8 @@ pub(crate) use controls::{
 pub(crate) use desktop::{
   configure_desktop, configure_desktop_window, notify_layout_changed_for_surface,
 };
+use presses::surface_passthrough;
+pub(crate) use presses::{press_taker, presses_taken, take_presses};
 pub(crate) use ruler_updates::{
   apply_ruler_result, refresh_ruler_pointer, ruler_expire_copied, ruler_expire_tolerance,
   ruler_settle_frame, set_ruler_transient_chrome,

@@ -23,7 +23,8 @@ pub fn move_standalone_listbox(
   parent_window_label: String,
   offset: LogicalPosition<f64>,
   panel: Option<String>,
-  page_height: Option<f64>,
+  // Windows places against the work area, not the page.
+  #[cfg_attr(target_os = "windows", allow(unused_variables))] page_height: Option<f64>,
 ) -> tauri::Result<()> {
   let panel = panel_label(panel);
   let _lifecycle = STANDALONE_LISTBOX.lock();

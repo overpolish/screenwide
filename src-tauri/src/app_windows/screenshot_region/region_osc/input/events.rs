@@ -11,11 +11,14 @@ use crate::app_windows::screenshot_region::region_osc::host::ScreenPoint;
 
 /// Whether a press at `screen` passes through the overlay to what is under
 /// it: disabled input, a hidden scene, and the webview's own toolbar inside
-/// `exclusion_rect` are not the overlay's.
+/// `exclusion_rect` are not the overlay's, unless its presses are taken.
 pub(crate) fn hit_test(window: WindowId, screen: ScreenPoint) -> bool {
   let Some(context) = state::context_for_surface(window) else {
     return true;
   };
+  if state::presses_taken(&context) {
+    return false;
+  }
   let Ok(mut set) = context.surfaces.lock() else {
     return true;
   };
@@ -72,6 +75,17 @@ pub(crate) fn pointer_down(window: WindowId, x: f64, y: f64, modifiers: u8, doub
     return;
   }
   dispatch(window, PHASE_DOWN, x, y, modifiers);
+}
+
+/// Hands a press on to what has taken the overlay's presses, saying whether
+/// it went there instead of to the region engine.
+#[cfg(target_os = "windows")]
+pub(crate) fn take_press(window: WindowId) -> bool {
+  let Some(taker) = state::press_taker(window) else {
+    return false;
+  };
+  taker();
+  true
 }
 
 pub(crate) fn pointer_up(window: WindowId, x: f64, y: f64, modifiers: u8) {

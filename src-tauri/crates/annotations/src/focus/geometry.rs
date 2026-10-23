@@ -28,7 +28,7 @@ pub fn prepare_focus(start: [f32; 2], end: [f32; 2], radius: f32) -> ArrowGeomet
 
 /// How far `point` falls from the prepared box: zero or less anywhere inside
 /// it, so a press anywhere in the box picks it.
-#[cfg(any(target_os = "macos", test, feature = "test-support"))]
+#[cfg(target_os = "macos")]
 pub(crate) fn focus_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
   crate::text::geometry::rounded_box_distance(point, geometry.a, geometry.b, geometry.rounding)
 }

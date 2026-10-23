@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+#[cfg(not(target_os = "windows"))]
+use rayon::prelude::*;
 
 #[cfg(target_os = "windows")]
 mod windows;

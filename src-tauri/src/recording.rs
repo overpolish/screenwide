@@ -34,7 +34,7 @@ use session::{
 #[cfg(test)]
 use state::apply_transition;
 use state::{set_countdown, state, transition};
-use ui::{hide_island, prepare_windows, restore_windows, show_recording_ui};
+use ui::{prepare_windows, restore_windows, show_recording_ui};
 
 // ---------------------------------------------------------------------------
 // Lifecycle. Each entry point validates before it causes any side effect, and
@@ -99,9 +99,6 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
   transition(app, RecordingStatus::Stopping, None).inspect_err(|error| {
     emit_error(app, "stop", error);
   })?;
-  // Away at once rather than back to the controls while the recording is
-  // finished: the Editor takes over, or, if it cannot, the controls return.
-  hide_island(app);
   state(app).cancel();
   let handles = take_handles(app);
   if let Some(handles) = &handles {
@@ -120,26 +117,30 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
     };
 
     restore_windows(&app);
-    if let Err(error) = transition(&app, RecordingStatus::Idle, None) {
-      emit_error(&app, "stop", &error);
-    }
 
     match finalized {
       Some(Ok((info, project))) => {
         // Notes are transcribed whether or not the Editor opens.
         crate::transcription::notes::queue_project(&app, &project);
-        if let Err(error) = crate::editor::present_recording(&app, project, info) {
+        // The island shows the recording finishing until the Editor is up and
+        // tucks it away; only then is the recording over, so the island does
+        // not show its controls in between.
+        let presented = crate::editor::present_recording(&app, project, info);
+        finish_stop(&app);
+        if let Err(error) = presented {
           crate::editor::release_recording_workspace(&app);
           report_failure(&app, "stop", &error);
           show_recording_ui(&app);
         }
       }
       Some(Err(error)) => {
+        finish_stop(&app);
         crate::editor::release_recording_workspace(&app);
         report_failure(&app, "stop", &error);
         show_recording_ui(&app);
       }
       None => {
+        finish_stop(&app);
         crate::editor::release_recording_workspace(&app);
         show_recording_ui(&app);
       }
@@ -147,6 +148,13 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
   });
 
   Ok(())
+}
+
+/// The recording is over once it is finished, whatever became of it.
+fn finish_stop(app: &AppHandle) {
+  if let Err(error) = transition(app, RecordingStatus::Idle, None) {
+    emit_error(app, "stop", &error);
+  }
 }
 
 pub fn cancel(app: &AppHandle) -> Result<(), String> {

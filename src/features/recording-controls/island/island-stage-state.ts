@@ -4,6 +4,7 @@
 import { createElement, useEffect, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
+import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 
 import { SamplePicture } from "./island-stage-picture";
 
@@ -50,11 +51,25 @@ export function useStageReplay(initial: IslandReplay | null | undefined) {
 }
 
 /** The island's camera props on the stage: its picture, and Flip, which the
- * picture follows. */
-export function useStageCamera(isFlippedAtFirst = false) {
+ * picture follows. Loading, it is the app's own picture before the camera's
+ * first frame: the preview starting, or, live, the recording's yet to come. */
+export function useStageCamera(
+  isFlippedAtFirst = false,
+  isLoading = false,
+  isLive = false,
+) {
   const [isCameraFlipped, setIsCameraFlipped] = useState(isFlippedAtFirst);
   return {
-    cameraPreview: createElement(SamplePicture, { isFlipped: isCameraFlipped }),
+    cameraPreview: isLoading
+      ? createElement(CameraThumbnail, {
+          canvasRef: null,
+          // Filling the island's picture box, as `use-island-inputs.ts` does.
+          className: "size-full rounded-none",
+          frameSize: null,
+          hasFrame: false,
+          isStarting: !isLive,
+        })
+      : createElement(SamplePicture, { isFlipped: isCameraFlipped }),
     isCameraFlipped,
     onCameraFlipChange: setIsCameraFlipped,
   };

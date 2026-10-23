@@ -8,8 +8,11 @@ import { withoutIsolates } from "../../i18n/testing";
 import { formatBytes } from "./duration";
 
 // Tests run in the source language, en-US.
-const size = (bytes: number, base: number, fixedDecimals = false) =>
-  withoutIsolates(formatBytes(bytes, { base, fixedDecimals }));
+const size = (
+  bytes: number,
+  base: number,
+  options: { decimals?: number; smallestUnit?: "megabyte" } = {},
+) => withoutIsolates(formatBytes(bytes, { base, ...options }));
 
 describe("formatBytes", () => {
   it("reads as Finder shows it on macOS", () => {
@@ -31,9 +34,16 @@ describe("formatBytes", () => {
   });
 
   it("keeps trailing zeros when the decimals are fixed", () => {
-    expect(size(67_000_000, 1000, true)).toBe("67.0 MB");
-    expect(size(999_996_000, 1000, true)).toBe("1.00 GB");
-    expect(size(75_312, 1000, true)).toBe("75 KB");
+    expect(size(67_000_000, 1000, { decimals: 1 })).toBe("67.0 MB");
+    expect(size(2_412_000_000, 1000, { decimals: 1 })).toBe("2.4 GB");
+    expect(size(999_960_000, 1000, { decimals: 1 })).toBe("1.0 GB");
+  });
+
+  it("writes nothing smaller than the smallest unit", () => {
+    const recorded = { decimals: 1, smallestUnit: "megabyte" } as const;
+    expect(size(100_000, 1000, recorded)).toBe("0.1 MB");
+    expect(size(30_000, 1000, recorded)).toBe("0.0 MB");
+    expect(size(512, 1000, recorded)).toBe("0.0 MB");
   });
 
   it("says when there is no size", () => {

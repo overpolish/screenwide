@@ -6,3 +6,5 @@
 
 # Records the sound of every app, rather than chosen ones.
 recording-inputs-all-audio = All audio
+# Read out while the camera's preview picture is on its way.
+recording-inputs-camera-starting = Starting camera

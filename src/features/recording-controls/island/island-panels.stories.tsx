@@ -34,6 +34,10 @@ export const CameraFlipped: Story = {
   args: { initialPanel: "camera", isCameraFlipped: true },
 };
 
+export const CameraLoading: Story = {
+  args: { initialPanel: "camera", isCameraLoading: true },
+};
+
 export const SystemAudioApps: Story = {
   args: {
     initialPanel: "systemAudio",

@@ -73,6 +73,8 @@ export type IslandStageProps = Pick<
   initialPhase?: IslandPhase;
   /** The camera mirrored; Flip on the camera's picture changes it. */
   isCameraFlipped?: boolean;
+  /** The camera started but not yet sending its picture. */
+  isCameraLoading?: boolean;
   microphone?: Partial<IslandInput>;
   /** Microphone level, 0 to 1. */
   microphoneLevel?: number;
@@ -98,7 +100,11 @@ export function IslandStage(props: IslandStageProps) {
   const [display, setDisplay] = useState(1);
   const [chosenWindow, setChosenWindow] = useState(props.chosenWindow);
   const [moment, setMoment] = useState(props.moment ?? null);
-  const camera = useStageCamera(props.isCameraFlipped);
+  const camera = useStageCamera(
+    props.isCameraFlipped,
+    props.isCameraLoading,
+    phase === "recording" || phase === "paused",
+  );
   const [count, setCount] = useState(3);
   // A story that opens on Starting holds it there to be looked at; pressing
   // Record plays it through as the recording would.

@@ -9,7 +9,9 @@ use frames::crop_frame;
 pub(super) use frames::snapshot_frame;
 pub(super) use media_types::attributes;
 use media_types::{encoder_config, video_type};
+use timeline::announce_start;
 
+use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc, OnceLock};
 use std::time::{Duration, Instant};
@@ -185,6 +187,22 @@ pub(super) fn run(
             Err(mpsc::RecvTimeoutError::Disconnected) => return,
           }
         }
+        // A frame held from before the shared zero starts the recording as
+        // soon as another track sets it, if nothing newer comes first.
+        None if !announced && writer.holds_unstarted_frame() => {
+          match commands.recv_timeout(cadence) {
+            Ok(command) => Some(command),
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+              let started = writer.start_held();
+              match announce_start(&writer, started, &first_frame, &mut next_tick) {
+                ControlFlow::Continue(now) => announced = now,
+                ControlFlow::Break(()) => return,
+              }
+              None
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => return,
+          }
+        }
         None => match commands.recv() {
           Ok(command) => Some(command),
           Err(_) => return,
@@ -212,16 +230,11 @@ pub(super) fn run(
             }
           }
         }
-        if writer.frame(frame) && !announced {
-          announced = true;
-          let _ = first_frame.send(Ok(()));
-          if writer.config.wall_timestamped_frames {
-            next_tick = Some(Instant::now() + cadence);
-          }
-        } else if !announced {
-          if let Some(error) = writer.failed.clone() {
-            let _ = first_frame.send(Err(error));
-            return;
+        let started = writer.frame(frame);
+        if !announced {
+          match announce_start(&writer, started, &first_frame, &mut next_tick) {
+            ControlFlow::Continue(now) => announced = now,
+            ControlFlow::Break(()) => return,
           }
         }
       }

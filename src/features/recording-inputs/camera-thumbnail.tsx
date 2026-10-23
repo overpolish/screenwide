@@ -4,7 +4,9 @@
 import { Camera } from "lucide-react";
 import { Ref } from "react";
 
+import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
+import { CircularProgress } from "../../primitives/circular-progress/circular-progress";
 
 import {
   CameraPreviewDimensions,
@@ -30,11 +32,15 @@ type CameraThumbnailProps = {
    * stream itself is not flipped; the recording is, so the stage shows what
    * will be kept. */
   isFlipped?: boolean;
+  /** The camera is on its way: a spinner stands in for its picture rather
+   * than the glyph, which then stands for a camera with nothing to show. */
+  isStarting?: boolean;
 };
 
 /**
  * A live camera preview at thumbnail size: the frame fitted whole into a stage
- * of the camera's own shape, with a glyph standing in until it arrives.
+ * of the camera's own shape, with a spinner or a glyph standing in until it
+ * arrives.
  */
 export function CameraThumbnail({
   "aria-label": ariaLabel,
@@ -44,6 +50,7 @@ export function CameraThumbnail({
   hasFrame,
   isDimmed = false,
   isFlipped = false,
+  isStarting = false,
 }: CameraThumbnailProps) {
   return (
     <span
@@ -71,7 +78,12 @@ export function CameraThumbnail({
         hidden={!hasFrame}
         ref={canvasRef}
       />
-      {hasFrame ? null : (
+      {hasFrame ? null : isStarting ? (
+        <CircularProgress
+          aria-label={t("recording-inputs-camera-starting")}
+          isIndeterminate
+        />
+      ) : (
         // Sized from the stage rather than from the icon scale, so it fits
         // whatever box the thumbnail is drawn in without an ancestor's glyph
         // sizing overflowing a small one.

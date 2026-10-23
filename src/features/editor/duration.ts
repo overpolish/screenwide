@@ -83,28 +83,41 @@ const sizeBase = () => (isWindows() ? 1024 : 1000);
 
 type FormatBytesOptions = {
   base?: number;
-  /** Keeps trailing zeros, so a size that is still growing changes width
-   * only when it gains a digit or a unit: 67.0 MB, not 67 MB. */
-  fixedDecimals?: boolean;
+  /** Always this many decimals, trailing zeros kept, so a size that is still
+   * growing changes width only when it gains a digit or a unit: 67.0 MB, not
+   * 67 MB. Without it, Finder's decimals. */
+  decimals?: number;
+  /** The smallest unit written, so a growing size does not hop between
+   * units: 100 KB as 0.1 MB. */
+  smallestUnit?: (typeof SIZE_UNITS)[number];
 };
 
 export const formatBytes = (
   bytes: number,
-  { base = sizeBase(), fixedDecimals = false }: FormatBytesOptions = {},
+  {
+    base = sizeBase(),
+    decimals,
+    smallestUnit = "byte",
+  }: FormatBytesOptions = {},
 ) => {
   if (bytes <= 0) return t("format-size-unknown");
+  const largest = SIZE_UNITS.length - 1;
   let order = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(base)),
-    SIZE_UNITS.length - 1,
+    Math.max(
+      Math.floor(Math.log(bytes) / Math.log(base)),
+      SIZE_UNITS.indexOf(smallestUnit),
+    ),
+    largest,
   );
+  const places = (unit: number) => decimals ?? SIZE_DECIMALS[unit];
   // A size just short of the next unit can round up to it, as 999,999 bytes
   // does to 1,000 KB; it reads as the next unit instead.
   const rounded = (unit: number) =>
-    Number((bytes / base ** unit).toFixed(SIZE_DECIMALS[unit]));
-  if (rounded(order) >= base && order < SIZE_UNITS.length - 1) order += 1;
+    Number((bytes / base ** unit).toFixed(places(unit)));
+  if (rounded(order) >= base && order < largest) order += 1;
   const size = new Intl.NumberFormat(appLocale().formatLocale, {
-    maximumFractionDigits: SIZE_DECIMALS[order],
-    minimumFractionDigits: fixedDecimals ? SIZE_DECIMALS[order] : 0,
+    maximumFractionDigits: places(order),
+    minimumFractionDigits: decimals ?? 0,
   }).format(rounded(order));
   return t("format-size", { size, unit: SIZE_UNITS[order] });
 };

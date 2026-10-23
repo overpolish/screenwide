@@ -18,6 +18,8 @@ use tauri::{AppHandle, Emitter, WebviewWindow};
 mod backdrop;
 #[cfg(target_os = "macos")]
 mod clicks_macos;
+#[cfg(target_os = "windows")]
+mod clicks_windows;
 mod hover;
 mod raise;
 use backdrop::Backdrops;
@@ -169,6 +171,8 @@ pub async fn start_window_pick(
   announce(&app, generation, hover);
   #[cfg(target_os = "macos")]
   clicks_macos::catch(&app);
+  #[cfg(target_os = "windows")]
+  clicks_windows::catch(&app);
   follow(app, generation);
   Ok(())
 }
@@ -217,6 +221,8 @@ fn end(app: &AppHandle, chosen: bool) {
   };
   #[cfg(target_os = "macos")]
   clicks_macos::release(app);
+  #[cfg(target_os = "windows")]
+  clicks_windows::release(app);
   let _ = app.emit(ENDED_EVENT, ());
   let chosen = chosen
     .then_some(state.hovered)

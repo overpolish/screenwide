@@ -49,8 +49,8 @@ pub(super) fn prepare_windows(
 }
 
 /// Puts the recording's windows back. The island is left out: whether it goes
-/// depends on where the recording ends up (`hide_island`,
-/// `show_recording_ui`).
+/// depends on where the recording ends up (the Editor tucks it away as it
+/// opens; `show_recording_ui` brings the controls back).
 pub(super) fn restore_windows(app: &AppHandle) {
   if app_windows::is_region_selector_visible(app) {
     // Interactivity is deliberately not touched here. The overlay is about to
@@ -73,13 +73,5 @@ pub(super) fn restore_windows(app: &AppHandle) {
 pub(super) fn show_recording_ui(app: &AppHandle) {
   if let Err(error) = app_windows::show_recording_ui(app) {
     eprintln!("Could not restore the recording controls: {error}");
-  }
-}
-
-/// The recording is finished and goes to the Editor, so the island that
-/// showed it goes.
-pub(super) fn hide_island(app: &AppHandle) {
-  if let Err(error) = app_windows::island::hide(app) {
-    eprintln!("Could not put the island away: {error}");
   }
 }

@@ -108,12 +108,23 @@ function ConfidenceMeter({
   );
 }
 
-/** The camera being recorded, small and round. */
-function CameraConfidence({ preview }: { preview: ReactNode }) {
+/** The camera being recorded, small and round. Its picture fills its whole
+ * control where the glyphs leave room round theirs, so straight after the
+ * dot it keeps the distance a glyph's room gives. */
+function CameraConfidence({
+  followsDot,
+  preview,
+}: {
+  followsDot: boolean;
+  preview: ReactNode;
+}) {
   return (
     <span
       aria-label={t("recording-controls-camera-preview")}
-      className="flex size-island-control shrink-0 overflow-hidden rounded-full bg-fill"
+      className={cn(
+        "flex size-island-control shrink-0 overflow-hidden rounded-full bg-fill",
+        followsDot && "ms-2",
+      )}
       role="img"
     >
       {preview}
@@ -122,12 +133,13 @@ function CameraConfidence({ preview }: { preview: ReactNode }) {
 }
 
 /** How much is on disk so far: a spinner until it is first measured, then
- * the size, updating in place so it never pulls the eye from the time. */
+ * the size, updating in place so it never pulls the eye from the time. It
+ * starts in megabytes, as kilobytes would change unit within seconds. */
 function RecordedSize({ bytes }: { bytes: number | null }) {
   return (
     <span className="flex text-label whitespace-nowrap text-fg-tertiary tabular-nums">
       {bytes !== null && bytes > 0 ? (
-        formatBytes(bytes, { fixedDecimals: true })
+        formatBytes(bytes, { decimals: 1, smallestUnit: "megabyte" })
       ) : (
         <CircularProgress
           aria-label={t("recording-controls-measuring-size")}
@@ -227,7 +239,10 @@ export function RecordingRow({
                 />
               ) : null}
               {props.camera.isOn ? (
-                <CameraConfidence preview={props.cameraPreview} />
+                <CameraConfidence
+                  followsDot={!props.microphone.isOn && !(hasNotch && size)}
+                  preview={props.cameraPreview}
+                />
               ) : null}
               {props.systemAudio.isOn ? (
                 <ConfidenceMeter

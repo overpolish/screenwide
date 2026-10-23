@@ -45,5 +45,5 @@ pub(crate) use state::{
   restore_normal_region_scene, set_allow_drawing, set_aspect, set_backdrops, set_capture_affinity,
   set_committed, set_desktop_presented, set_input_enabled, set_magnifier_source, set_monitor,
   set_ocr, set_ocr_cancel_visible, set_ruler_transient_chrome, set_show_frame, set_show_handles,
-  set_snapshot, set_snapshot_composited, set_snapshot_presented,
+  set_snapshot, set_snapshot_composited, set_snapshot_presented, take_presses,
 };

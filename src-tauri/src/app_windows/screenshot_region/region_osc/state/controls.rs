@@ -125,9 +125,12 @@ pub(crate) fn set_input_enabled(window: &WebviewWindow, enabled: bool) -> bool {
     return false;
   };
   // Keep native style changes outside the SurfaceSet mutex.
-  surfaces
-    .iter()
-    .all(|(hwnd, is_root)| host().set_pointer_passthrough(*hwnd, *is_root, !enabled))
+  let Some(context) = context_arc(window) else {
+    return false;
+  };
+  surfaces.iter().all(|(hwnd, is_root)| {
+    host().set_pointer_passthrough(*hwnd, *is_root, surface_passthrough(&context, enabled))
+  })
 }
 
 pub(super) fn gesture_after_input_update(active: bool, enabled: bool) -> bool {

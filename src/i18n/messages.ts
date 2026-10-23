@@ -866,6 +866,7 @@ export type Messages = {
   "recording-controls-system-audio": null;
   "recording-controls-system-audio-level": null;
   "recording-inputs-all-audio": null;
+  "recording-inputs-camera-starting": null;
   "screenshots-scrolling-cancel-hint": null;
   "screenshots-scrolling-capturing": null;
   "screenshots-scrolling-finishing": null;

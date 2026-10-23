@@ -70,6 +70,42 @@ impl Writer {
     } else {
       frame
     };
+    self.place(frame)
+  }
+
+  /// Whether this writer holds a frame from before the shared zero, which
+  /// another track has yet to set.
+  pub(super) fn holds_unstarted_frame(&self) -> bool {
+    !self.timeline.has_started() && !self.timeline.is_paused() && self.tail.is_some()
+  }
+
+  /// Starts the timeline on the frame held from before the shared zero, once
+  /// another track has set it, reporting whether that frame was appended. A
+  /// screen that has not changed since sends nothing newer, so the recording
+  /// would otherwise never start.
+  pub(super) fn start_held(&mut self) -> bool {
+    if !self.holds_unstarted_frame() {
+      return false;
+    }
+    let Some(origin) = self.config.timeline_origin.get().copied() else {
+      return false;
+    };
+    let Some(mut frame) = self.tail.take() else {
+      return false;
+    };
+    // Still what the screen shows at the shared zero, so it is placed there.
+    if frame.wall < origin {
+      let advance_100ns = (origin - frame.wall).as_nanos() / NANOS_PER_100NS as u128;
+      frame.source_100ns = frame
+        .source_100ns
+        .saturating_add(i64::try_from(advance_100ns).unwrap_or(i64::MAX));
+      frame.wall = origin;
+    }
+    self.place(frame)
+  }
+
+  /// Puts a frame, already cropped or cached, on the timeline.
+  fn place(&mut self, frame: Frame) -> bool {
     if self.timeline.is_paused() {
       self.tail = Some(frame);
       return false;
@@ -81,9 +117,8 @@ impl Writer {
         let _ = self.config.timeline_origin.set(frame.wall);
       }
       let Some(origin) = self.config.timeline_origin.get().copied() else {
-        // A secondary camera can become ready before the primary screen. Its
-        // warm frames are deliberately discarded until the primary track
-        // establishes the shared zero used by preview and export.
+        // The screen beside a camera can capture before the camera sets the
+        // shared zero. Its frame waits for it (`start_held`).
         self.tail = Some(frame);
         return false;
       };
@@ -151,4 +186,26 @@ impl Writer {
       width: self.config.width,
     })
   }
+}
+
+/// Tells the start how its first frame went: in, once one has started the
+/// recording, or failed. A window's fixed-rate clock starts with it.
+pub(super) fn announce_start(
+  writer: &Writer,
+  started: bool,
+  first_frame: &mpsc::Sender<Result<(), String>>,
+  next_tick: &mut Option<Instant>,
+) -> ControlFlow<(), bool> {
+  if started {
+    let _ = first_frame.send(Ok(()));
+    if writer.config.wall_timestamped_frames {
+      *next_tick = Some(Instant::now() + frame_cadence(writer.config.fps));
+    }
+    return ControlFlow::Continue(true);
+  }
+  if let Some(error) = writer.failed.clone() {
+    let _ = first_frame.send(Err(error));
+    return ControlFlow::Break(());
+  }
+  ControlFlow::Continue(false)
 }

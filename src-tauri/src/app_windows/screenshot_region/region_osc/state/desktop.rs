@@ -189,7 +189,7 @@ pub(super) fn sync_peers(window: &WebviewWindow, binding: &DesktopBinding) {
   }
   for (hwnd, input_enabled) in adopted {
     register_surface(hwnd, &context);
-    host().set_pointer_passthrough(hwnd, false, !input_enabled);
+    host().set_pointer_passthrough(hwnd, false, surface_passthrough(&context, input_enabled));
   }
 }
 

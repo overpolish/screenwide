@@ -38,8 +38,8 @@ const STEPS: Record<string, number> = {
   Tab: 1,
 };
 
-/** Picks the window under the pointer; over none, picking goes on. On
- * macOS Rust has caught the press already, so this one finds the pick over. */
+/** Picks the window the pick is on, for Return; over none, picking goes on.
+ * A press never reaches the page: Rust catches it on the overlay and picks. */
 const choose = () => {
   void pickWindow().catch((error: unknown) => {
     console.error("Could not pick the window", error);
@@ -50,8 +50,8 @@ const choose = () => {
  * Picking a window by clicking it, on the region overlay: while picking, the
  * window under the pointer, outlined as a region is but with nothing to
  * edit, on the display it is on. The overlay takes the keyboard, so Tab and
- * the arrows move the pick and Return makes it; a press on a window picks it.
- * Escape is the recording controls', which end the pick.
+ * the arrows move the pick and Return makes it; a press on a window picks it
+ * in Rust. Escape is the recording controls', which end the pick.
  */
 export function useWindowPickOverlay() {
   const [pick, setPick] = useState<Pick | null>(null);
@@ -113,10 +113,8 @@ export function useWindowPickOverlay() {
       void stepWindowPick(event.shiftKey ? -step : step);
     };
     window.addEventListener("keydown", onKey);
-    window.addEventListener("pointerdown", choose);
     return () => {
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("pointerdown", choose);
     };
   }, [isActive]);
 

@@ -32,10 +32,8 @@ pub fn manage_transient_popover_dismissal(app: &AppHandle) {
       EventType::MouseMove { x, y } => {
         position = (x, y);
       }
-      EventType::ButtonPress(Button::Left) => {
-        if options::is_standalone_listbox_open() {
-          let _ = dismiss_tx.send(position);
-        }
+      EventType::ButtonPress(Button::Left) if options::is_standalone_listbox_open() => {
+        let _ = dismiss_tx.send(position);
       }
       _ => {}
     });

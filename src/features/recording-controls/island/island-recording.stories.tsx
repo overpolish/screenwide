@@ -24,6 +24,22 @@ export const ConfidenceChecks: Story = {
   args: { hasConfidenceChecks: true, initialPhase: "recording" },
 };
 
+export const CameraBesideTheDot: Story = {
+  args: {
+    hasConfidenceChecks: true,
+    initialPhase: "recording",
+    microphone: { isOn: false },
+  },
+};
+
+export const CameraLoading: Story = {
+  args: {
+    hasConfidenceChecks: true,
+    initialPhase: "recording",
+    isCameraLoading: true,
+  },
+};
+
 export const MomentInProgress: Story = {
   args: {
     initialPhase: "recording",

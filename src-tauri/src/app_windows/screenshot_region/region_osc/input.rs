@@ -12,6 +12,8 @@ mod keyboard;
 mod ruler_input;
 use cursor::{apply_cursor, set_cursor};
 use dispatch::{animation_frame, apply_result_cursor, dispatch, process, ruler_timer};
+#[cfg(target_os = "windows")]
+pub(crate) use events::take_press;
 pub(crate) use events::{
   alt_changed, cursor_request, display_changed, hit_test, key_down, key_up, pan_begin, pan_end,
   pointer_cancelled, pointer_down, pointer_moved, pointer_up, right_click, timer, wheel,

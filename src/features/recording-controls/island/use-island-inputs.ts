@@ -161,6 +161,7 @@ export function useIslandInputs({
         frameSize: cameraPreview.frameSize ?? selectedCameraMode,
         hasFrame: cameraPreview.hasFrame,
         isFlipped: isCameraFlipped,
+        isStarting: cameraPreview.isStarting,
       });
 
   return {

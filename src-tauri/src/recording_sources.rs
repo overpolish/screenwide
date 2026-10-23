@@ -16,7 +16,6 @@ use std::{
 };
 
 use image::{DynamicImage, RgbaImage};
-use rayon::prelude::*;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use ts_rs::TS;
