@@ -11,7 +11,6 @@ import { SamplePicture } from "./island-stage-picture";
 import type {
   IslandInput,
   IslandInputKind,
-  IslandPhase,
   IslandReplay,
 } from "./island-types";
 
@@ -75,27 +74,22 @@ export function useStageCamera(
   };
 }
 
-/** The stage's microphone, as a story names its problem: missing, or silent,
- * which hears nothing and says so once recording. The levels the inputs
- * report follow, nothing from an input that is off or a silent microphone. */
+/** The stage's microphone, as a story names its problem: missing, as the
+ * app finds before recording. The levels the inputs report follow, nothing
+ * from an input that is off. */
 export function stageMicrophone({
   inputs,
-  phase,
   problem,
 }: {
   inputs: Record<IslandInputKind, IslandInput>;
-  phase: IslandPhase;
-  problem?: "missing" | "silent";
+  problem?: "missing";
 }) {
-  const isSilent = problem === "silent";
   return {
     level: (kind: "microphone" | "systemAudio", value = 0) =>
-      inputs[kind].isOn && !(kind === "microphone" && isSilent) ? value : 0,
+      inputs[kind].isOn ? value : 0,
     warning:
       problem === "missing"
         ? t("recording-controls-microphone-missing")
-        : isSilent && phase !== "idle"
-          ? t("recording-controls-island-microphone-silent")
-          : inputs.microphone.warning,
+        : inputs.microphone.warning,
   };
 }

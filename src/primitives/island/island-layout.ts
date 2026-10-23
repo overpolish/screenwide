@@ -45,11 +45,14 @@ export function islandLayout({
       : anchor === "end"
         ? spare
         : spare / 2;
-  // What the section holds rides at the box's start, and is centred only in
-  // a merged box wider than itself, by an amount that moves on the same
-  // curve. Centring it by layout would shift it the moment a part of another
-  // width came in, before the box had begun to change.
-  const inset = isMerged ? Math.max(0, (sectionWidth - held.width) / 2) : 0;
+  // What the section holds rides at the box's start, and in a merged box
+  // wider than itself sits where it is anchored, by an amount that moves on
+  // the same curve: at the start or end, or centred. Placing it by layout
+  // would shift it the moment a part of another width came in, before the
+  // box had begun to change. Anchored to a side, it stays put as the row
+  // grows from the other side round a notch.
+  const slack = isMerged ? Math.max(0, sectionWidth - held.width) : 0;
+  const inset = anchor === "start" ? 0 : anchor === "end" ? slack : slack / 2;
   // The section is placed from the island's middle, which stays still as
   // the row grows out to both sides. Closed, it is a notch-wide box there;
   // it opens out of the middle to its place and folds back into it.

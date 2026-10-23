@@ -15,28 +15,30 @@ const SWAP_WINDOW_MS = 120;
 
 // When one part is swapped for another and the section's box moves with it,
 // as when the row narrows round a tool that drops a control and the island
-// closes in, what the section holds is not carried along: the part going
-// stays where it was on the screen while it blurs away, the part coming is
-// put where it will rest while it comes into focus, and the black glides
-// round both. Where the content sits on the screen is the island's heading
-// (where it is going sideways under a notch, which `sectionX` holds the
-// section to), plus the box's place from the island's middle, plus the
-// offset made here, so the offset is read every frame against both and the
-// sum stays put. It hands from the old place to the new as the part going
+// closes in from both sides, the parts swapping are not carried along: the
+// part going stays where it was while it blurs away, the part coming is put
+// where it will rest while it comes into focus, and the black glides round
+// both. Anything else in the section, such as a row of tools above the
+// parts, rides with the box as the island's row does. The hold is an offset
+// against the box's own glide, read every frame from the box's place, so the
+// sum stays put; it hands from the old place to the new as the part going
 // finishes leaving, and lets go when the box arrives. A move with no swap
 // behind it, such as the row growing for controls under the pointer,
-// carries what the section holds along as before.
+// carries everything along as before. Around a notch nothing is held: what
+// the section holds is already put where it will rest
+// (`island-section-settle.ts`).
 
 export function useSwapHold({
   boxStart,
-  heading,
+  isEnabled,
   isOpen,
   isOpening,
   target,
 }: {
   /** The box's place from the island's middle, as it is animated. */
   boxStart: MotionValue<string>;
-  heading: MotionValue<number>;
+  /** Off around a notch. */
+  isEnabled: boolean;
   isOpen: boolean;
   isOpening: boolean;
   /** Where the box is going. */
@@ -44,25 +46,23 @@ export function useSwapHold({
 }) {
   const swappedAtRef = useRef(Number.NEGATIVE_INFINITY);
   const previousRef = useRef(target);
-  /** Where the content is held on the screen, from the island's resting
-   * middle; none while it rides with the box. */
+  /** Where the parts are held, from the island's middle; none while they
+   * ride with the box. */
   const holdAt = useMotionValue(Number.NaN);
   const offset = useTransform(() => {
     const at = holdAt.get();
-    return px(
-      Number.isNaN(at) ? 0 : at - heading.get() - parseFloat(boxStart.get()),
-    );
+    return px(Number.isNaN(at) ? 0 : at - parseFloat(boxStart.get()));
   });
 
   useLayoutEffect(() => {
     const from = previousRef.current;
     previousRef.current = target;
     const isSwap = performance.now() - swappedAtRef.current < SWAP_WINDOW_MS;
-    if (from === target || !isOpen || isOpening || !isSwap) return;
-    holdAt.set(heading.get() + parseFloat(boxStart.get()));
-    // Read when it is due: by then the island knows where it is heading.
+    if (from === target || !isEnabled || !isOpen || isOpening || !isSwap)
+      return;
+    holdAt.set(parseFloat(boxStart.get()));
     const handOver = window.setTimeout(() => {
-      holdAt.set(heading.get() + target);
+      holdAt.set(target);
     }, motionDurations.state * 1000);
     const letGo = window.setTimeout(() => {
       holdAt.set(Number.NaN);
@@ -72,12 +72,10 @@ export function useSwapHold({
       window.clearTimeout(letGo);
       holdAt.set(Number.NaN);
     };
-  }, [boxStart, heading, holdAt, isOpen, isOpening, target]);
+  }, [boxStart, holdAt, isEnabled, isOpen, isOpening, target]);
 
   const noteSwap = useCallback(() => {
     swappedAtRef.current = performance.now();
   }, []);
-  const context = useMemo(() => ({ noteSwap }), [noteSwap]);
-
-  return { context, offset };
+  return useMemo(() => ({ noteSwap, offset }), [noteSwap, offset]);
 }

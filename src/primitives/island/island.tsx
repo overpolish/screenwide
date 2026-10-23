@@ -10,10 +10,12 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLocale } from "react-aria";
 import { Toolbar } from "react-aria-components";
 
 import { motionDurations } from "../../lib/motion";
 
+import { IslandBelow } from "./island-below";
 import { IslandContext } from "./island-context";
 import { IslandDrawing } from "./island-drawing";
 import {
@@ -22,7 +24,6 @@ import {
   islandCssVariables,
   type IslandNotch,
 } from "./island-geometry";
-import { islandLayout } from "./island-layout";
 import { focusIn, glide, HOVER_LINGER_MS } from "./island-motion";
 import { useOpening } from "./island-opening";
 import {
@@ -33,6 +34,7 @@ import {
 import { useRowOffset } from "./island-row-offset";
 import { IslandSection } from "./island-section";
 import { useSize } from "./island-size";
+import { layOutIsland } from "./island-stack-layout";
 
 // A shape at the top of the screen in the notch's black: a row of controls,
 // and beneath it a section only as wide as what it holds, hung under the
@@ -58,6 +60,12 @@ export type IslandProps = {
   row: ReactNode;
   /** Where under the row the section hangs. */
   anchor?: IslandAnchor;
+  /** A second line under the row, in the row's black, centred under the
+   * notch whatever the row does beside it; the section hangs under it
+   * rather than under the row (`island-stack-layout.ts`). A row growing on
+   * one side widens the island on that side alone, and nothing under it
+   * moves. */
+  below?: ReactNode;
   /** Whether it is out; hidden, it is tucked into the notch, or gone. */
   isShown?: boolean;
   /** The notch of the screen the island is on, measured; leave it out on a
@@ -79,6 +87,7 @@ export type IslandProps = {
 export function Island({
   anchor = "center",
   "aria-label": label,
+  below,
   isShown = true,
   notch = null,
   onHidden,
@@ -91,8 +100,10 @@ export function Island({
   const [sectionElement, setSectionElement] = useState<HTMLDivElement | null>(
     null,
   );
+  const [belowElement, setBelowElement] = useState<HTMLDivElement | null>(null);
   const rowSize = useSize(rowElement);
   const sectionSize = useSize(sectionElement);
+  const belowSize = useSize(belowElement);
   const [shift, setShift] = useState(0);
 
   const closeRef = useRef(0);
@@ -115,11 +126,17 @@ export function Island({
     [isShown, notch],
   );
 
-  const layout = islandLayout({
+  const isStacked = isShown && Boolean(below);
+  const rowShift = isShown && notch ? shift : 0;
+  const { direction } = useLocale();
+  const layout = layOutIsland({
     anchor,
+    below: isStacked ? (belowSize ?? { height: 0, width: 0 }) : null,
+    direction,
     hasSection: Boolean(section),
     isShown,
     notch,
+    rowShift,
     rowSize,
     sectionSize,
   });
@@ -129,14 +146,14 @@ export function Island({
   const isFromMiddle = !isShown || isComing;
   const { finish, isOpening } = useOpening(isOpen);
 
-  const { heading, islandX, rowLayerRef, rowX, sectionX, shapeWidth } =
-    useRowOffset({
-      hasNotch: notch !== null,
-      holdsContent: !isShown,
-      rowElement,
-      shiftTarget: isShown && notch ? shift : 0,
-      width,
-    });
+  const { islandX, rowLayerRef, rowX, sectionX, shapeWidth } = useRowOffset({
+    hasNotch: notch !== null,
+    holdsContent: !isShown,
+    rowElement,
+    rowTarget: rowShift,
+    shiftTarget: layout.islandShift,
+    width,
+  });
 
   // The parts are laid out and animated as boxes that paint nothing; the
   // black is their outline, drawn from the same animated values.
@@ -243,14 +260,25 @@ export function Island({
                 </AnimatePresence>
               </IslandContext>
             </motion.div>
+            {below ? (
+              <IslandBelow
+                islandX={islandX}
+                isShown={isStacked}
+                onElement={setBelowElement}
+                top={rowSize?.height ?? 0}
+                width={belowSize?.width}
+              >
+                {below}
+              </IslandBelow>
+            ) : null}
           </motion.div>
 
           <IslandSection
-            heading={heading}
             isFromMiddle={isFromMiddle}
             isOpening={isOpening}
             isShown={isShown}
             layout={layout}
+            movesSideways={notch !== null && !isStacked}
             onElement={setSectionElement}
             onOpened={finish}
             sectionX={sectionX}

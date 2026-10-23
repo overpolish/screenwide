@@ -10,29 +10,12 @@ import { PREVIEW_NOTCH } from "../../../storybook/preview-notch";
 import { StoryNotch } from "../../../storybook/story-notch";
 
 import { AnnotateIsland, type AnnotateIslandProps } from "./annotate-island";
+import {
+  PREVIEW_ANNOTATE_SETTINGS as settings,
+  PREVIEW_SAVED_COLORS,
+} from "./annotate-preview";
 
-import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-
-const settings: AnnotateSettings = {
-  defaultColor: "#ffcc00",
-  defaultCounterAngle: 0,
-  defaultCounterSize: 36,
-  defaultHead: "end",
-  defaultShape: "arrow",
-  defaultWidth: 12,
-  enabled: true,
-  highlightHandDrawn: false,
-  highlightManual: false,
-  highlightTint: false,
-  keepAnnotationsBetweenSessions: false,
-  shapeHandDrawn: false,
-  shapeRadius: 0,
-  spotlightBlur: true,
-  spotlightRadius: 25,
-  spotlightSoftness: 10,
-  toolbarPosition: null,
-};
 
 /** The island at the top of the canvas, under the notch when there is one.
  * Choices are kept by the story, so every one can be tried. */
@@ -68,7 +51,7 @@ const meta = {
     onClear: fn(),
     onDone: fn(),
     onUndo: fn(),
-    savedColors: ["#2ec4b6", "#8b5e34"],
+    savedColors: PREVIEW_SAVED_COLORS,
     settings,
   },
   component: AnnotateIsland,

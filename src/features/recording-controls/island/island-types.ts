@@ -3,7 +3,10 @@
 
 import type { ReactNode } from "react";
 
-import type { IslandNotch } from "../../../primitives/island/island-geometry";
+import type {
+  IslandAnchor,
+  IslandNotch,
+} from "../../../primitives/island/island-geometry";
 import type { IslandPart } from "../../../primitives/island/island-outline-sync";
 import type { ScreenshotAction, ScreenshotState } from "../types";
 
@@ -92,6 +95,11 @@ export type RecordingIslandProps = {
   phase: IslandPhase;
   selectedDisplayId: number;
   systemAudio: IslandInput;
+  /** The annotate tools, while annotating as it records: a line laid under
+   * the recording's row in its black, which stays one row, and what hangs
+   * from the line where it is anchored. Whoever drives the island lays them
+   * out (`useAnnotateRows`); shown only while recording or paused. */
+  annotate?: { anchor: IslandAnchor; options: ReactNode; tools: ReactNode };
   /** The live camera, drawn by whoever drives the island. */
   cameraPreview?: ReactNode;
   /** The area dragged out in the Region mode; none until one is. */

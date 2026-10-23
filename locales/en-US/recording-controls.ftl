@@ -95,7 +95,6 @@ recording-controls-island-input-options = { $input } options
 recording-controls-island-camera-locked = Screenwide can’t use your camera.
 recording-controls-island-microphone-locked = Screenwide can’t use your microphone.
 recording-controls-island-screen-locked = Screenwide needs permission to record your screen.
-recording-controls-island-microphone-silent = Your microphone hears nothing.
 recording-controls-island-choose-another = Choose another
 recording-controls-island-elapsed = Recording for { $time }
 recording-controls-island-paused = Paused at { $time }

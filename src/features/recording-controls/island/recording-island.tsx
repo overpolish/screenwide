@@ -38,7 +38,8 @@ const ANCHORS: Record<IslandPanel, IslandAnchor> = {
 // other choice opens in its place and every way of closing it steps back to
 // what will be recorded; before recording the island is never just the row.
 // Recording, it shows the recording in the same place, its controls showing
-// while the pointer is on it.
+// while the pointer is on it, and while annotating the annotate tools hang
+// under it as rows of their own.
 
 export function RecordingIsland(props: RecordingIslandProps) {
   const { initialPanel = "source", isShown = true, notch, phase } = props;
@@ -86,6 +87,7 @@ export function RecordingIsland(props: RecordingIslandProps) {
 
   let row: ReactNode = null;
   let section: ReactNode = null;
+  let below: ReactNode = null;
   let anchor: IslandAnchor = "center";
   if (phase === "idle") {
     row = (
@@ -146,17 +148,20 @@ export function RecordingIsland(props: RecordingIslandProps) {
     row = <IslandRow end={<Finishing />} />;
   } else if (isLive) {
     row = <RecordingRow props={props} showsControls={showsControls} />;
-    // A microphone gone quiet is said under the row.
-    section =
-      props.microphone.isOn && props.microphone.warning ? (
-        <IslandWarning message={props.microphone.warning} />
-      ) : null;
+    if (props.annotate) {
+      // The annotate tools lie in the row's black under the recording's own
+      // row, and their options hang from them as on the annotate island.
+      below = props.annotate.tools;
+      section = props.annotate.options;
+      anchor = props.annotate.anchor;
+    }
   }
 
   return (
     <Island
       anchor={anchor}
       aria-label={t("recording-controls-island")}
+      below={below}
       isShown={isShown}
       notch={notch}
       onHidden={props.onHidden}

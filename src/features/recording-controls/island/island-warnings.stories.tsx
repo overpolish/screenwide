@@ -30,7 +30,3 @@ export const NoScreenMissingMicrophone: Story = {
 export const CameraLocked: Story = { args: { camera: { isLocked: true } } };
 
 export const ScreenLocked: Story = { args: { isScreenLocked: true } };
-
-export const SilentMicrophone: Story = {
-  args: { initialPhase: "recording", microphoneProblem: "silent" },
-};

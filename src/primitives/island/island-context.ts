@@ -4,6 +4,7 @@
 import { createContext } from "react";
 
 import type { IslandNotch } from "./island-geometry";
+import type { MotionValue } from "motion/react";
 
 /** What the island tells the row it holds: the notch it has to leave room
  * for, if any; how to ask it to move sideways, in px, so the gap left for
@@ -20,8 +21,14 @@ export const IslandContext = createContext<{
 });
 
 /** What the section tells the parts it swaps between: a part coming in calls
- * `noteSwap` as it mounts, so a move of the section's box that follows the
- * swap holds what it holds still rather than carrying it along. */
-export const IslandSectionContext = createContext<{ noteSwap: () => void }>({
+ * `noteSwap` as it mounts, and a move of the section's box that follows the
+ * swap holds the parts swapping still, by `offset`, rather than carrying
+ * them along; whatever else the section holds rides with the box. None
+ * outside a section. */
+export const IslandSectionContext = createContext<{
+  noteSwap: () => void;
+  offset: MotionValue<string> | null;
+}>({
   noteSwap: () => undefined,
+  offset: null,
 });

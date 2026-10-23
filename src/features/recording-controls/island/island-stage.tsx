@@ -41,6 +41,7 @@ import type {
 
 export type IslandStageProps = Pick<
   RecordingIslandProps,
+  | "annotate"
   | "notch"
   | "isScreenLocked"
   | "isShown"
@@ -79,7 +80,7 @@ export type IslandStageProps = Pick<
   /** Microphone level, 0 to 1. */
   microphoneLevel?: number;
   /** Something wrong with the microphone, named; the stage words it. */
-  microphoneProblem?: "missing" | "silent";
+  microphoneProblem?: "missing";
   /** A moment placed by its shortcut; a voice note's time runs on while the
    * stage records. */
   moment?: IslandMoment;
@@ -193,7 +194,6 @@ export function IslandStage(props: IslandStageProps) {
 
   const { level, warning: microphoneWarning } = stageMicrophone({
     inputs,
-    phase,
     problem: props.microphoneProblem,
   });
 
@@ -205,6 +205,7 @@ export function IslandStage(props: IslandStageProps) {
       >
         <RecordingIsland
           {...camera}
+          annotate={props.annotate}
           camera={inputs.camera}
           chosenRegion={props.chosenRegion}
           chosenWindow={chosenWindow}

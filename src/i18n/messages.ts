@@ -834,7 +834,6 @@ export type Messages = {
   "recording-controls-island-elapsed": { time: string | number };
   "recording-controls-island-input-options": { input: string | number };
   "recording-controls-island-microphone-locked": null;
-  "recording-controls-island-microphone-silent": null;
   "recording-controls-island-mode-none": null;
   "recording-controls-island-no-screen": { inputs: string | number };
   "recording-controls-island-paused": { time: string | number };

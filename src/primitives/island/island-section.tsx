@@ -9,6 +9,7 @@ import { motionDurations } from "../../lib/motion";
 import { IslandSectionContext } from "./island-context";
 import { px } from "./island-geometry";
 import { focusIn, glide } from "./island-motion";
+import { useSectionSettle } from "./island-section-settle";
 import { useSwapHold } from "./island-swap-hold";
 
 import type { islandLayout } from "./island-layout";
@@ -20,20 +21,17 @@ import type { IslandShapeValues } from "./island-outline-sync";
  * animated by. */
 export function IslandSection({
   children,
-  heading,
   isFromMiddle,
   isOpening,
   isShown,
   layout,
+  movesSideways,
   onElement,
   onOpened,
   sectionX,
   values,
 }: {
   children: ReactNode;
-  /** Where the island is going sideways under a notch, set at once while the
-   * island glides to it, which `sectionX` holds what hangs against. */
-  heading: MotionValue<number>;
   /** The island coming out of the notch or going back in, which a section
    * opens out of and folds into the middle with. */
   isFromMiddle: boolean;
@@ -41,6 +39,12 @@ export function IslandSection({
   isOpening: boolean;
   isShown: boolean;
   layout: ReturnType<typeof islandLayout>;
+  /** Whether the island moves sideways to balance its row round a notch.
+   * Then what hangs is held against the move (`sectionX`) and put where it
+   * will rest at once (`island-section-settle.ts`); otherwise it rides with
+   * its box, easing along, and parts swapped are held in place
+   * (`island-swap-hold.ts`). */
+  movesSideways: boolean;
   /** The element holding what hangs, to be measured. */
   onElement: (element: HTMLDivElement | null) => void;
   /** The section has finished growing or folding. */
@@ -93,9 +97,14 @@ export function IslandSection({
       : { delay: motionDurations.travel, duration: 0 };
   const swapHold = useSwapHold({
     boxStart: values.start,
-    heading,
+    isEnabled: !movesSideways,
     isOpen,
     isOpening,
+    target: sectionStart,
+  });
+  const settle = useSectionSettle({
+    boxStart: values.start,
+    isActive: movesSideways && isOpen && !isOpening,
     target: sectionStart,
   });
 
@@ -156,14 +165,17 @@ export function IslandSection({
             }}
             className="absolute top-0"
             initial={false}
-            style={{ marginInlineStart: swapHold.offset, x: sectionX }}
+            style={{
+              marginInlineStart: settle,
+              x: movesSideways ? sectionX : 0,
+            }}
             transition={
               isPlacedAtOnce
                 ? { ...glide, insetInlineStart: { duration: 0 } }
                 : glide
             }
           >
-            <IslandSectionContext value={swapHold.context}>
+            <IslandSectionContext value={swapHold}>
               <AnimatePresence initial={false}>
                 {isShown && children ? (
                   <motion.div

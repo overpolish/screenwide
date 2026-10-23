@@ -24,6 +24,7 @@ export function useRowOffset({
   hasNotch,
   holdsContent,
   rowElement,
+  rowTarget,
   shiftTarget,
   width,
 }: {
@@ -32,14 +33,15 @@ export function useRowOffset({
    * moves, as it fades, rather than leaping to where the island is going. */
   holdsContent: boolean;
   rowElement: HTMLElement | null;
+  /** Where the row should sit, in px from centre: under a notch, where its
+   * gap is under the notch. The island sits there too unless it is wider
+   * than the row and grows from one side of it (`shiftTarget`). */
+  rowTarget: number;
   /** Where the island should sit, in px from centre. */
   shiftTarget: number;
   /** How wide the row's black should be, in px. */
   width: number;
 }): {
-  /** Where the island is going sideways, in px from centre: set at once as
-   * the shift changes, while `islandX` glides to it. */
-  heading: MotionValue<number>;
   islandX: MotionValue<number>;
   rowLayerRef: React.RefObject<HTMLDivElement | null>;
   rowX: MotionValue<number>;
@@ -51,6 +53,7 @@ export function useRowOffset({
   const islandX = useMotionValue(shiftTarget);
   const shapeWidth = useMotionValue(width);
   const heading = useMotionValue(shiftTarget);
+  const rowHeading = useMotionValue(rowTarget);
   const recentring = useMotionValue(0);
   // A plain value kept current from its parts as each changes, not a derived
   // one: a derived value is worked out lazily, and Motion would draw its
@@ -63,9 +66,9 @@ export function useRowOffset({
   useLayoutEffect(() => {
     const update = () => {
       sectionX.set(heading.get() - islandX.get());
-      rowX.set(sectionX.get() + recentring.get());
+      rowX.set(rowHeading.get() - islandX.get() + recentring.get());
     };
-    const stops = [heading, islandX, recentring].map((part) =>
+    const stops = [heading, islandX, recentring, rowHeading].map((part) =>
       part.on("change", update),
     );
     return () => {
@@ -73,17 +76,20 @@ export function useRowOffset({
         stop();
       });
     };
-  }, [heading, islandX, recentring, rowX, sectionX]);
+  }, [heading, islandX, recentring, rowHeading, rowX, sectionX]);
 
   // The shift and the black's width start together on one curve: an edge
   // that should stay put is their sum, and started apart they would rock it.
   useLayoutEffect(() => {
-    if (!holdsContent) heading.set(shiftTarget);
+    if (!holdsContent) {
+      heading.set(shiftTarget);
+      rowHeading.set(rowTarget);
+    }
     const settling = animate(islandX, shiftTarget, glide);
     const widening = animate(shapeWidth, width, glide);
     placeRow(
       rowLayerRef.current,
-      heading.get() - islandX.get() + recentring.get(),
+      rowHeading.get() - islandX.get() + recentring.get(),
     );
     return () => {
       settling.stop();
@@ -94,6 +100,8 @@ export function useRowOffset({
     holdsContent,
     islandX,
     recentring,
+    rowHeading,
+    rowTarget,
     shapeWidth,
     shiftTarget,
     width,
@@ -111,9 +119,9 @@ export function useRowOffset({
     animate(recentring, 0, glide);
     placeRow(
       rowLayerRef.current,
-      heading.get() - islandX.get() + recentring.get(),
+      rowHeading.get() - islandX.get() + recentring.get(),
     );
   });
 
-  return { heading, islandX, rowLayerRef, rowX, sectionX, shapeWidth };
+  return { islandX, rowLayerRef, rowX, sectionX, shapeWidth };
 }

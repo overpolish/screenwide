@@ -34,7 +34,7 @@ export function IslandCrossfade({
   children: ReactNode;
   ref?: Ref<HTMLDivElement>;
 }) {
-  const { noteSwap } = use(IslandSectionContext);
+  const { noteSwap, offset } = use(IslandSectionContext);
   useLayoutEffect(() => {
     noteSwap();
   }, [noteSwap]);
@@ -44,6 +44,7 @@ export function IslandCrossfade({
       exit={{ ...focusIn.exit, transition: leaving }}
       initial={reveal.initial}
       ref={ref}
+      style={offset ? { marginInlineStart: offset } : undefined}
       transition={{ ...reveal.transition, delay: leaving.duration }}
     >
       {children}
