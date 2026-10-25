@@ -30,7 +30,7 @@ const isModelSeed = (value: unknown): value is TranscriptionPreviewSeed =>
   "status" in value &&
   "progress" in value;
 
-function createPreviewApi(
+export function createPreviewApi(
   modelSeed?: TranscriptionPreviewSeed,
 ): ContextType<typeof SettingsApiContext> {
   let general: GeneralSettings = {
