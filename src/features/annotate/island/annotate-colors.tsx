@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { ColorGrid } from "../../../composites/color-grid/color-grid";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
-import { AnnotationColorGrid } from "../../annotations/annotation-color-grid";
 
 import type { SectionProps } from "./section-props";
 
@@ -28,13 +28,12 @@ export function AnnotateColors({
         constrainHeight
         rootClassName="-my-inset-sm max-h-34"
       >
-        <AnnotationColorGrid
+        <ColorGrid
           columns={10}
           onChange={(defaultColor) => {
             onChange({ defaultColor });
           }}
           savedColors={savedColors}
-          size="sm"
           value={settings.defaultColor}
         />
       </ScrollArea>

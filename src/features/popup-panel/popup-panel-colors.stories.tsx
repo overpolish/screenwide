@@ -13,7 +13,7 @@ const meta = {
     id: "caption-color:accent",
   },
   component: PopupPanelColors,
-  decorators: [featureStage({ width: 340 })],
+  decorators: [featureStage({ width: 266 })],
   parameters: { layout: "fullscreen" },
   title: "Features/Popup Panel/Colours",
 } satisfies Meta<typeof PopupPanelColors>;

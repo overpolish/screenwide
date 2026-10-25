@@ -4,7 +4,7 @@
 import {
   withAnnotationColor,
   withoutAnnotationColor,
-} from "../../../annotations/palette";
+} from "../../../../composites/color-grid/palette";
 import {
   applyAnnotationAngle,
   applyAnnotationAnimated,

@@ -25,8 +25,9 @@ export type SavedColors = {
   onSave: (color: string) => void;
 };
 
-/** The colour grid's own width: the palette's row, with its padding. */
-const GRID_SIZE = { height: 120, width: 340 };
+/** The colour grid's own size: two rows of ten small swatches, with the
+ * panel's inset. */
+const GRID_SIZE = { height: 58, width: 266 };
 
 /** One of the style's colours as a well beside its name: a press opens the
  * colour grid under it, which stays open to try one colour after another. */

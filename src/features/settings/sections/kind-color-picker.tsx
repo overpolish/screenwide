@@ -11,8 +11,9 @@ import { usePopupPanelPicker } from "../../popup-panel/use-popup-panel-picker";
  * Colours panel reports. */
 const kindColor = (color: string) => color.slice(0, 7).toLowerCase();
 
-/** The colour grid's own size: the palette's row, with its padding. */
-const GRID_SIZE = { height: 120, width: 340 };
+/** The colour grid's own size: two rows of ten small swatches, with the
+ * panel's inset. */
+const GRID_SIZE = { height: 58, width: 266 };
 
 /** How long the colour rests before it is kept: a drag in the Colours panel
  * reports every step, and each is shown at once, but only where it settles

@@ -3,7 +3,7 @@
 
 import { useRef } from "react";
 
-import { AnnotationColorGrid } from "../annotations/annotation-color-grid";
+import { ColorGrid } from "../../composites/color-grid/color-grid";
 
 import { useFittedPanel } from "./use-fitted-panel";
 import { reportPopupPanelPick } from "./use-popup-panel-picker";
@@ -30,8 +30,8 @@ export function PopupPanelColors({
   };
 
   return (
-    <div className="w-full p-control-inset" ref={contentRef}>
-      <AnnotationColorGrid
+    <div className="w-full p-inset-sm" ref={contentRef}>
+      <ColorGrid
         offersCustom
         onChange={pick}
         onRemoveColor={(color) => {

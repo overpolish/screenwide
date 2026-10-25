@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { ColorGrid } from "../../../../composites/color-grid/color-grid";
 import { t } from "../../../../i18n/i18n";
-import { AnnotationColorGrid } from "../../../annotations/annotation-color-grid";
 import { ANNOTATION_KINDS } from "../../annotations/annotation-kinds";
 import { EditorKind } from "../../types";
 import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
@@ -256,7 +256,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       {/* The swatches say what they are, so the row carries no heading; it
           keeps the section gap its labelled neighbours sit on. */}
       {showsColor ? (
-        <AnnotationColorGrid
+        <ColorGrid
           isDisabled={isLocked}
           offersCustom
           onChange={(next) => {
