@@ -16,6 +16,8 @@ mod interaction;
 mod macos;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod native_overlay;
+#[cfg(target_os = "macos")]
+pub(crate) mod preview;
 mod qr;
 pub(crate) mod qr_details;
 pub(crate) mod snapshot;

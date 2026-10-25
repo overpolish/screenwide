@@ -9,7 +9,7 @@ import { SettingsGroup } from "../../../../features/settings/settings-group";
 import { isMacHost } from "../../../../lib/platform";
 import { Switch } from "../../../../primitives/switch/switch";
 import { GlideArt } from "../preview/glide-art";
-import { AnnotateArt, OcrArt, RulerArt } from "../preview/tool-art";
+import { NativeToolScreen } from "../preview/native-tool-screen";
 
 import { Pane } from "./pane";
 
@@ -146,7 +146,10 @@ export function ToolsPane({ settings }: { settings: ExploredSettings }) {
         </ToolGroup>
       ) : null}
       {ruler ? (
-        <ToolGroup art={<RulerArt isOn={ruler.enabled} />} title="Ruler">
+        <ToolGroup
+          art={<NativeToolScreen isOn={ruler.enabled} tool="ruler" />}
+          title="Ruler"
+        >
           <SwitchRow
             description="Sizes and distances in pixels, anywhere on screen."
             isSelected={ruler.enabled}
@@ -160,10 +163,13 @@ export function ToolsPane({ settings }: { settings: ExploredSettings }) {
       {annotate ? (
         <ToolGroup
           art={
-            <AnnotateArt
-              color={annotate.defaultColor}
-              isKept={annotate.keepAnnotationsBetweenSessions}
+            <NativeToolScreen
               isOn={annotate.enabled}
+              look={{
+                color: annotate.defaultColor,
+                keep: annotate.keepAnnotationsBetweenSessions,
+              }}
+              tool="annotate"
             />
           }
           title="Annotate"
@@ -188,7 +194,10 @@ export function ToolsPane({ settings }: { settings: ExploredSettings }) {
         </ToolGroup>
       ) : null}
       {ocr ? (
-        <ToolGroup art={<OcrArt isOn={ocr.enabled} />} title="OCR">
+        <ToolGroup
+          art={<NativeToolScreen isOn={ocr.enabled} tool="textRecognition" />}
+          title="OCR"
+        >
           <SwitchRow
             description="Copy text from anything on screen, even pictures."
             isSelected={ocr.enabled}

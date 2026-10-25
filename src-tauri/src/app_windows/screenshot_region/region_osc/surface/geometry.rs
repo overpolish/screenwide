@@ -12,10 +12,14 @@ impl Surface {
     matches!(self.kind, Kind::Root { .. })
   }
 
+  pub(crate) fn is_preview(&self) -> bool {
+    matches!(self.kind, Kind::Preview { .. })
+  }
+
   /// The peer's monitor rectangle in physical pixels, for diffing a rebuild.
   pub(crate) fn peer_geometry(&self) -> Option<(Rect, f64)> {
     match self.kind {
-      Kind::Root { .. } => None,
+      Kind::Root { .. } | Kind::Preview { .. } => None,
       Kind::Peer { bounds, scale } => Some((bounds, scale)),
     }
   }
@@ -24,7 +28,7 @@ impl Surface {
   pub(super) fn scale(&self) -> f64 {
     match self.kind {
       Kind::Root { host } => super::host().scale(host),
-      Kind::Peer { scale, .. } => scale,
+      Kind::Peer { scale, .. } | Kind::Preview { scale, .. } => scale,
     }
   }
 
@@ -33,13 +37,16 @@ impl Surface {
   fn covered_window(&self) -> WindowId {
     match self.kind {
       Kind::Root { host } => host,
-      Kind::Peer { .. } => self.hwnd,
+      Kind::Peer { .. } | Kind::Preview { .. } => self.hwnd,
     }
   }
 
   /// Client size in physical pixels.
   pub(super) fn client_size(&self) -> (u32, u32) {
-    super::host().client_size(self.covered_window())
+    match self.kind {
+      Kind::Preview { size, .. } => size,
+      _ => super::host().client_size(self.covered_window()),
+    }
   }
 
   /// Converts a client-space physical point to surface-local logical points.

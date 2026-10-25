@@ -79,6 +79,11 @@ export function ScrollArea({
             )}px), transparent 100%)`;
       viewport.style.setProperty("mask-image", mask);
       viewport.style.setProperty("-webkit-mask-image", mask);
+      // What draws natively under the page sees no CSS mask, so the fade is
+      // also given in physical terms: px before (top or left) and after.
+      viewport.dataset.fadeAxis = horizontal ? "horizontal" : "vertical";
+      viewport.dataset.fadeBefore = String(rtl ? fade.end : fade.start);
+      viewport.dataset.fadeAfter = String(rtl ? fade.start : fade.end);
     },
     [edgeEffect, horizontal],
   );

@@ -17,10 +17,16 @@ use std::time::{Duration, Instant};
 use screenwide_annotations::AnnotationKind;
 use screenwide_annotations::{Annotation, AnnotationPoint};
 
+use super::settings::AnnotateSettings;
+
 mod keys;
+#[cfg(target_os = "macos")]
+mod sketch;
 mod stroke;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use keys::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z, TOOL_KEYS};
+#[cfg(target_os = "macos")]
+pub(super) use sketch::Sketch;
 use stroke::{pen_down, Stroke};
 
 /// The modifier bits the native overlay sends. Windows reports Ctrl as
@@ -55,12 +61,14 @@ fn drawing() -> MutexGuard<'static, Option<Stroke>> {
 }
 
 /// What a press starts: the tool in hand, what a counter dropped by it would
-/// be numbered and aimed at, and whether a highlight is laid by hand.
+/// be numbered and aimed at, whether a highlight is laid by hand, and the
+/// settings the stroke is dressed in when it is done.
 struct Tool {
   shape: AnnotationKind,
   value: u32,
   angle: f64,
   manual: bool,
+  settings: AnnotateSettings,
 }
 
 /// One pointer step, and the annotation it completed with the moment its stroke
@@ -112,7 +120,10 @@ fn step(
       // A click that never travelled is not an arrow. Otherwise every stray
       // click while the overlay is up would leave a dot on screen, and a clip
       // in the recording. A counter is dropped by that very click.
-      let drawn = stroke.is_drawn().then(|| stroke.annotation()).flatten()?;
+      let drawn = stroke
+        .is_drawn()
+        .then(|| stroke.annotation(&tool.settings))
+        .flatten()?;
       Some((drawn, stroke.started_at))
     }
   }
@@ -125,7 +136,7 @@ pub(super) fn in_progress() -> Option<Annotation> {
   drawing
     .as_ref()
     .filter(|stroke| stroke.is_drawn())?
-    .annotation()
+    .annotation(&super::settings::current())
 }
 
 /// Whether a focus that blurs is on screen or in hand: what the overlays
@@ -174,6 +185,7 @@ pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64
     },
     angle: settings.default_counter_angle,
     manual: settings.highlight_manual != (modifiers & MODIFIER_OPTION != 0),
+    settings,
   };
   let point = AnnotationPoint { x, y };
   if phase != PHASE_DOWN && phase != PHASE_DRAG {

@@ -35,6 +35,8 @@ mod startup;
 #[cfg(debug_assertions)]
 mod storybook_native;
 mod text_recognition;
+#[cfg(target_os = "macos")]
+mod tool_preview;
 mod tooltip_window;
 mod transcription;
 #[cfg(desktop)]

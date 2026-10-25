@@ -11,9 +11,13 @@ pub(super) fn pull_ruler(context: &Context) -> Option<RulerData> {
     return None;
   }
   let app = context.runtime.window.app_handle();
-  let state = app.state::<crate::ruler::RulerState>();
+  Some(ruler_data(&app.state::<crate::ruler::RulerState>()))
+}
+
+/// Every dataset a frame draws, read off `state`.
+pub(crate) fn ruler_data(state: &crate::ruler::RulerState) -> RulerData {
   let (centerlines, inner_objects) = state.center_aids();
-  Some(RulerData {
+  RulerData {
     measurements: state.measurements().iter().map(Into::into).collect(),
     viewports: state.viewports().iter().map(Into::into).collect(),
     probes: state.probes().iter().map(Into::into).collect(),
@@ -22,7 +26,14 @@ pub(super) fn pull_ruler(context: &Context) -> Option<RulerData> {
     radii: state.radii().iter().map(Into::into).collect(),
     centerlines: centerlines.iter().map(Into::into).collect(),
     inner_objects: inner_objects.iter().map(Into::into).collect(),
-  })
+  }
+}
+
+/// The timers a ruler result asks for once it is on the surfaces.
+pub(crate) struct RulerApplied {
+  pub animating: bool,
+  pub copied: bool,
+  pub tolerance_started: bool,
 }
 
 /// Port of `screenwide_region_osc_apply_ruler_result`:
@@ -35,30 +46,63 @@ pub(crate) fn apply_ruler_result(context: &Context, result: &OscResult) -> bool 
   let Some(data) = pull_ruler(context) else {
     return false;
   };
+  let Ok(mut set) = context.surfaces.lock() else {
+    return false;
+  };
+  let hwnd = set.root_hwnd();
+  let applied = apply_ruler_data(set.all_mut().collect(), &data, result);
+  drop(set);
+
+  if applied.animating {
+    host().set_timer(hwnd, input::RULER_SETTLE_TIMER, 16);
+  }
+  if applied.copied {
+    host().set_timer(
+      hwnd,
+      input::RULER_COPIED_TIMER,
+      ruler::EXPIRY.as_millis() as u32,
+    );
+  }
+  if applied.tolerance_started {
+    host().set_timer(
+      hwnd,
+      input::RULER_TOLERANCE_TIMER,
+      ruler::EXPIRY.as_millis() as u32,
+    );
+  }
+  true
+}
+
+/// Mirrors a ruler result onto `surfaces`, the root first, and redraws them.
+pub(crate) fn apply_ruler_data(
+  mut surfaces: Vec<&mut Surface>,
+  data: &RulerData,
+  result: &OscResult,
+) -> RulerApplied {
   let now = Instant::now();
   let crosshair = result.ruler_flags & 2 != 0;
   let copied = result.ruler_flags & 4 != 0;
   let interaction_active = result.ruler_flags & 64 != 0;
   let tolerance_requested = result.ruler_flags & 8 != 0;
   let tolerance_mode = (result.ruler_flags >> 4) & 3;
-  let (hover_key, hover_opacity) = ruler::hovered_artifact_key(&data);
-  let animating = ruler::animation_active(&data, result.ruler_flags);
-  let Ok(mut set) = context.surfaces.lock() else {
-    return false;
+  let (hover_key, hover_opacity) = ruler::hovered_artifact_key(data);
+  let animating = ruler::animation_active(data, result.ruler_flags);
+  let (tolerance_started, hover_started) = match surfaces.first() {
+    Some(root) => {
+      let tolerance_started = tolerance_requested
+        && (!root.ruler.tolerance_visible || root.ruler.tolerance_mode != tolerance_mode);
+      let hover_started = if root.ruler.hovered_artifact_key() != hover_key {
+        now
+      } else {
+        root.ruler.hover_started()
+      };
+      (tolerance_started, hover_started)
+    }
+    None => (false, now),
   };
-  let root = set.root_mut();
-  let tolerance_started = tolerance_requested
-    && (!root.ruler.tolerance_visible || root.ruler.tolerance_mode != tolerance_mode);
-  let hover_changed = root.ruler.hovered_artifact_key() != hover_key;
-  let hover_started = if hover_changed {
-    now
-  } else {
-    root.ruler.hover_started()
-  };
-  let hwnd = set.root_hwnd();
 
   let mut world = Vec::new();
-  for surface in set.all_mut() {
+  for surface in surfaces.iter_mut() {
     let viewport = data
       .viewports
       .iter()
@@ -91,15 +135,15 @@ pub(crate) fn apply_ruler_result(context: &Context, result: &OscResult) -> bool 
     surface
       .ruler
       .set_hover(hover_key, hover_opacity, hover_started);
-    surface.ruler.replace_data(&data, viewport_changed);
+    surface.ruler.replace_data(data, viewport_changed);
     surface.ruler.set_copied(copied, now);
     let bounds = surface.logical_size();
     world.push(surface.ruler.visible_world_rect(offset, bounds));
   }
   // Which display owns a label can only be answered with every viewport in
   // hand, so the four pools are assigned here rather than per surface.
-  let owned = ruler::assign_labels(&world, &data);
-  for (index, surface) in set.all_mut().enumerate() {
+  let owned = ruler::assign_labels(&world, data);
+  for (index, surface) in surfaces.iter_mut().enumerate() {
     surface
       .ruler
       .set_labels(owned.get(index).cloned().unwrap_or_default());
@@ -108,26 +152,11 @@ pub(crate) fn apply_ruler_result(context: &Context, result: &OscResult) -> bool 
     // a separate layer.
     surface.draw();
   }
-  drop(set);
-
-  if animating {
-    host().set_timer(hwnd, input::RULER_SETTLE_TIMER, 16);
+  RulerApplied {
+    animating,
+    copied,
+    tolerance_started,
   }
-  if copied {
-    host().set_timer(
-      hwnd,
-      input::RULER_COPIED_TIMER,
-      ruler::EXPIRY.as_millis() as u32,
-    );
-  }
-  if tolerance_started {
-    host().set_timer(
-      hwnd,
-      input::RULER_TOLERANCE_TIMER,
-      ruler::EXPIRY.as_millis() as u32,
-    );
-  }
-  true
 }
 
 /// The 16ms settle frame macOS scheduled with `dispatch_after`

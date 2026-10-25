@@ -64,7 +64,7 @@ function ZoomToolbar({
 const meta = {
   component: ZoomToolbar,
   parameters: { layout: "centered" },
-  title: "Features/Editor/Timeline/Timeline Toolbar",
+  title: "Legacy/Editor/Timeline/Timeline Toolbar",
 } satisfies Meta<typeof ZoomToolbar>;
 
 export default meta;

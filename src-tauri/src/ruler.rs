@@ -12,6 +12,8 @@ pub(crate) mod input;
 pub(crate) use crate::osc::keyboard_windows::alt_pressed as windows_alt_pressed;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod native_overlay;
+#[cfg(target_os = "macos")]
+pub(crate) mod preview;
 pub(crate) mod probe;
 pub(crate) mod radius;
 pub(crate) mod render;

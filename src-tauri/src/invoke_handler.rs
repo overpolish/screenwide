@@ -188,6 +188,18 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     text_recognition::copy_recognition_content,
     text_recognition::get_qr_details,
     text_recognition::start_text_recognition,
+    #[cfg(target_os = "macos")]
+    tool_preview::close_tool_preview,
+    #[cfg(target_os = "macos")]
+    tool_preview::close_tool_previews,
+    #[cfg(target_os = "macos")]
+    tool_preview::open_tool_preview,
+    #[cfg(target_os = "macos")]
+    tool_preview::place_tool_preview,
+    #[cfg(target_os = "macos")]
+    tool_preview::set_tool_preview_look,
+    #[cfg(target_os = "macos")]
+    tool_preview::tool_preview_input,
     tooltip_window::fit_tooltip,
     tooltip_window::get_tooltip,
     tooltip_window::hide_tooltip,

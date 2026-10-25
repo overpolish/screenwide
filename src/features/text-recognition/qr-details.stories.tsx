@@ -23,7 +23,7 @@ const meta = {
   component: QrDetails,
   decorators: [featureStage({ height: 360, width: 480 })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Text Recognition/QR Details",
+  title: "Legacy/Text Recognition/QR Details",
 } satisfies Meta<typeof QrDetails>;
 
 export default meta;

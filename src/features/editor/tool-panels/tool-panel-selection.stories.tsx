@@ -22,7 +22,7 @@ const meta = {
   component: ToolPanel,
   decorators: [featureStage({ width: toolPanelWidth })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Editor/Tool Panels/Selection",
+  title: "Legacy/Editor/Tool Panels/Selection",
 } satisfies Meta<typeof ToolPanel>;
 
 export default meta;

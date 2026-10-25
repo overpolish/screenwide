@@ -12,7 +12,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   ...settingsWindowMeta,
   args: { initialSection: "general" },
-  title: "Features/Settings/General",
+  title: "Legacy/Settings/General",
 } satisfies Meta<typeof SettingsWindow>;
 
 export default meta;

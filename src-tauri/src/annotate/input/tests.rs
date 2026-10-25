@@ -19,6 +19,7 @@ fn arrow_tool() -> Tool {
     value: 0,
     angle: 0.0,
     manual: false,
+    settings: super::super::settings::current(),
   }
 }
 
@@ -28,6 +29,7 @@ fn counter_tool(value: u32, angle: f64) -> Tool {
     value,
     angle,
     manual: false,
+    settings: super::super::settings::current(),
   }
 }
 
@@ -37,6 +39,7 @@ fn pen_tool() -> Tool {
     value: 0,
     angle: 0.0,
     manual: false,
+    settings: super::super::settings::current(),
   }
 }
 
@@ -240,6 +243,7 @@ fn the_focus_draws_a_focus_or_a_spotlight_by_its_look() {
       value: 0,
       angle: 0.0,
       manual: false,
+      settings: settings.clone(),
     };
     let mut drawing = None;
     let at = Instant::now();

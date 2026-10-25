@@ -93,19 +93,40 @@ impl Surface {
     match self.kind {
       Kind::Root { .. } => host().raise(self.hwnd, self.client_size()),
       Kind::Peer { bounds, .. } => host().place_peer(self.hwnd, bounds),
+      Kind::Preview { .. } => {}
+    }
+  }
+
+  /// Shows or hides the surface's window. A preview has none: its owner
+  /// places the drawable.
+  pub(super) fn show_window(&self, visible: bool) {
+    if !self.is_preview() {
+      host().show(self.hwnd, visible);
     }
   }
 
   /// Drives the 16ms animation frames macOS scheduled with `dispatch_after`.
+  /// A preview's owner drives its own frames and reads [`Self::is_animating`].
   pub(super) fn set_animating(&mut self, animating: bool) {
     if self.animating == animating {
       return;
     }
     self.animating = animating;
+    if self.is_preview() {
+      return;
+    }
     if animating {
       host().set_timer(self.hwnd, input::ANIMATION_TIMER, 16);
     } else {
       host().kill_timer(self.hwnd, input::ANIMATION_TIMER);
     }
+  }
+
+  #[cfg_attr(
+    target_os = "windows",
+    expect(dead_code, reason = "tool previews have a macOS host only")
+  )]
+  pub(crate) fn is_animating(&self) -> bool {
+    self.animating
   }
 }

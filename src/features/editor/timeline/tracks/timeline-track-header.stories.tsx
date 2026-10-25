@@ -71,7 +71,7 @@ function TrackHeaders({ isSelected = true }: { isSelected?: boolean }) {
 const meta = {
   component: TrackHeaders,
   parameters: { layout: "centered" },
-  title: "Features/Editor/Timeline/Timeline Header",
+  title: "Legacy/Editor/Timeline/Timeline Header",
 } satisfies Meta<typeof TrackHeaders>;
 
 export default meta;

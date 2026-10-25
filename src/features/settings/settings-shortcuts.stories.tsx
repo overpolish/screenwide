@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   ...settingsWindowMeta,
   args: { initialSection: "hotkeys" },
-  title: "Features/Settings/Shortcuts",
+  title: "Legacy/Settings/Shortcuts",
 } satisfies Meta<typeof SettingsWindow>;
 
 export default meta;

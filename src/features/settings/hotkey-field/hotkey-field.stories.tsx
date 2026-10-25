@@ -58,7 +58,7 @@ const meta = {
       />
     );
   },
-  title: "Features/Settings/Hotkey Field",
+  title: "Legacy/Settings/Hotkey Field",
 } satisfies Meta<typeof HotkeyField>;
 
 export default meta;

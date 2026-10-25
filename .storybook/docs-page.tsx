@@ -15,9 +15,9 @@ import {
 // props are its wiring (callbacks, state from the backend), not an API to
 // choose from, and its stories already show the states that matter.
 export function DocsPage() {
-  const isFeature = useOf("meta", ["meta"]).preparedMeta.title.startsWith(
-    "Features/",
-  );
+  const { title } = useOf("meta", ["meta"]).preparedMeta;
+  const isFeature =
+    title.startsWith("Features/") || title.startsWith("Legacy/");
   return (
     <>
       <Title />

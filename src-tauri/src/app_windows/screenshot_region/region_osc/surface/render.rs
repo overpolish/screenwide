@@ -61,10 +61,11 @@ impl Surface {
     self.cutout.head_for(cut, now);
     let cutout = self.cutout.opacity(now);
     let showing = self.visible || (self.window_highlight && cutout > 0.0);
-    if !should_show(self.is_root(), showing, self.desktop_presented) || width == 0 || height == 0 {
+    let owns_frame = self.is_root() || self.is_preview();
+    if !should_show(owns_frame, showing, self.desktop_presented) || width == 0 || height == 0 {
       if self.shown {
         self.shown = false;
-        host().show(self.hwnd, false);
+        self.show_window(false);
       }
       self.release_drawables();
       self.set_animating(false);
@@ -76,7 +77,7 @@ impl Surface {
     if !self.shown || self.window_size != (width, height) {
       self.shown = true;
       self.window_size = (width, height);
-      host().show(self.hwnd, true);
+      self.show_window(true);
       self.raise();
     }
 

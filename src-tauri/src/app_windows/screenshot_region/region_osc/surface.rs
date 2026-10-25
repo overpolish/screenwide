@@ -74,6 +74,14 @@ enum Kind {
   /// One non-anchor display: a top-level popup covering its monitor. Its scale
   /// comes from the binding because a peer may sit on a different-DPI monitor.
   Peer { bounds: Rect, scale: f64 },
+  /// A tool shown at work inside another window, such as a Settings
+  /// picture. Its owner places the drawable and drives its frames, so the
+  /// surface has no window of its own to show, raise or time.
+  #[cfg_attr(
+    target_os = "windows",
+    expect(dead_code, reason = "tool previews have a macOS host only")
+  )]
+  Preview { size: (u32, u32), scale: f64 },
 }
 
 pub(crate) struct Surface {
@@ -131,6 +139,9 @@ pub(crate) struct Surface {
 
 impl Drop for Surface {
   fn drop(&mut self) {
+    if self.is_preview() {
+      return;
+    }
     if self.animating {
       host().kill_timer(self.hwnd, input::ANIMATION_TIMER);
     }

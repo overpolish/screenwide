@@ -152,7 +152,7 @@ const meta = {
     })),
   ],
   parameters: { layout: "fullscreen" },
-  title: "Features/Editor/Export/Export Window",
+  title: "Legacy/Editor/Export/Export Window",
 } satisfies Meta<typeof EditorExportPreview>;
 
 export default meta;

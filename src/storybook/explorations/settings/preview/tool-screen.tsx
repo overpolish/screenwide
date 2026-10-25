@@ -6,9 +6,12 @@ import { type ReactNode } from "react";
 import { PREVIEW_DISPLAYS } from "../../../../features/recording-controls/island/island-preview";
 import { cn } from "../../../../lib/styling";
 
-// The screen each tool is shown at work on, above its rows in Tools. With
-// the tool off, the picture is the same screen with the tool's work gone and
-// its colour drained, so turning one off shows what goes with it.
+import { PICTURE } from "./scene-kit";
+
+// The miniature screen Glide is shown at work on, above its rows in Tools,
+// as tall as the other tools' pictures. With Glide off, the picture is the
+// same screen with its work gone and its colour drained, so turning it off
+// shows what goes with it.
 
 export function ToolScreen({
   children,
@@ -20,9 +23,10 @@ export function ToolScreen({
   return (
     <div
       aria-hidden
-      className="relative h-28 overflow-hidden rounded-control bg-recess"
+      className="relative overflow-hidden rounded-control bg-recess"
       dir="ltr"
       inert
+      style={{ height: PICTURE.height }}
     >
       <img
         alt=""

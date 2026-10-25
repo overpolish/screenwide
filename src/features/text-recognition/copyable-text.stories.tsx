@@ -27,7 +27,7 @@ const meta = {
     controls: { include: ["value"] },
     layout: "centered",
   },
-  title: "Features/Text Recognition/Copyable Text",
+  title: "Legacy/Text Recognition/Copyable Text",
 } satisfies Meta<typeof CopyableText>;
 
 export default meta;

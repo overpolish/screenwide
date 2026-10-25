@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   ...settingsWindowMeta,
   args: { initialQuery: "recording" },
-  title: "Features/Settings/Search",
+  title: "Legacy/Settings/Search",
 } satisfies Meta<typeof SettingsWindow>;
 
 export default meta;

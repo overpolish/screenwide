@@ -18,6 +18,20 @@ impl Surface {
     Self::new(gpu, Kind::Peer { bounds, scale }, hwnd, display_id)
   }
 
+  /// A surface drawing into `chain`, which its owner places and sizes.
+  #[cfg_attr(
+    target_os = "windows",
+    expect(dead_code, reason = "tool previews have a macOS host only")
+  )]
+  pub(crate) fn preview(
+    gpu: Arc<Gpu>,
+    chain: Box<dyn RegionDrawable>,
+    size: (u32, u32),
+    scale: f64,
+  ) -> Self {
+    Self::with_chain(gpu, Kind::Preview { size, scale }, WindowId(0), 0, chain)
+  }
+
   pub(super) fn new(
     gpu: Arc<Gpu>,
     kind: Kind,
@@ -25,7 +39,17 @@ impl Surface {
     display_id: u32,
   ) -> Result<Self, String> {
     let chain = host().create_drawable(gpu.device(), hwnd)?;
-    Ok(Self {
+    Ok(Self::with_chain(gpu, kind, hwnd, display_id, chain))
+  }
+
+  fn with_chain(
+    gpu: Arc<Gpu>,
+    kind: Kind,
+    hwnd: WindowId,
+    display_id: u32,
+    chain: Box<dyn RegionDrawable>,
+  ) -> Self {
+    Self {
       gpu,
       kind,
       hwnd,
@@ -62,6 +86,6 @@ impl Surface {
       drawing: false,
       pending: false,
       drawables_released: false,
-    })
+    }
   }
 }

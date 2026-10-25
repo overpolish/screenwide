@@ -95,7 +95,7 @@ function ItemLanePreview({
 const meta = {
   component: ItemLanePreview,
   parameters: { layout: "centered" },
-  title: "Features/Editor/Timeline/Timeline Item Lane",
+  title: "Legacy/Editor/Timeline/Timeline Item Lane",
 } satisfies Meta<typeof ItemLanePreview>;
 
 export default meta;

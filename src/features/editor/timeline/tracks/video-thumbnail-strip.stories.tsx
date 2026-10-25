@@ -33,7 +33,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "centered" },
-  title: "Features/Editor/Timeline/Video Thumbnail Strip",
+  title: "Legacy/Editor/Timeline/Video Thumbnail Strip",
 } satisfies Meta<typeof VideoThumbnailStrip>;
 
 export default meta;

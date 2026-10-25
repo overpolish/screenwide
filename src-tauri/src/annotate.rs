@@ -35,6 +35,8 @@ use self::windows::native_overlay;
 mod opening;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod overlay;
+#[cfg(target_os = "macos")]
+pub(crate) mod preview;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod screenshot;
 mod screenshot_mode;

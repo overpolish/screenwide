@@ -17,6 +17,8 @@ use screenwide_annotations::{
   Annotation, AnnotationKind, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
 
+use super::super::settings::AnnotateSettings;
+
 /// A screen point, in the desktop points the overlay draws in: how far the
 /// pen moves before it keeps another point, and how far a resting hand is
 /// measured in.
@@ -53,17 +55,17 @@ pub(super) struct Stroke {
 }
 
 impl Stroke {
-  /// The dress the stroke is drawn in. An arrow's stroke and a counter's disc
-  /// are different measurements of different things, so the width comes from
-  /// the setting that belongs to the shape; a highlight has one marker, and a
-  /// shape's pen is an arrow's. A highlight and a shape are each drawn by
-  /// hand by their own choice. The focus has its own corners, blurred or
-  /// dimmed, and its dimmed look (a spotlight) its own fade. The pen wears an
-  /// arrow's colour and weight and nothing else, as a fresh stroke in the
-  /// editor does. The overlay offers no text, redaction or magnifier tool,
-  /// and its settings refuse all three, so none ever reaches here.
-  pub(super) fn style(&self) -> AnnotationStyle {
-    let settings = super::super::settings::current();
+  /// The dress the stroke is drawn in, from `settings`. An arrow's stroke and
+  /// a counter's disc are different measurements of different things, so the
+  /// width comes from the setting that belongs to the shape; a highlight has
+  /// one marker, and a shape's pen is an arrow's. A highlight and a shape are
+  /// each drawn by hand by their own choice. The focus has its own corners,
+  /// blurred or dimmed, and its dimmed look (a spotlight) its own fade. The
+  /// pen wears an arrow's colour and weight and nothing else, as a fresh
+  /// stroke in the editor does. The overlay offers no text, redaction or
+  /// magnifier tool, and its settings refuse all three, so none ever reaches
+  /// here.
+  pub(super) fn style(&self, settings: &AnnotateSettings) -> AnnotationStyle {
     let shape = self.shape == AnnotationKind::Shape;
     if self.shape == AnnotationKind::Focus {
       return AnnotationStyle {
@@ -80,7 +82,7 @@ impl Stroke {
     }
     if self.shape == AnnotationKind::Draw {
       return AnnotationStyle {
-        color: settings.default_color,
+        color: settings.default_color.clone(),
         width: settings.default_width,
         ..default_draw_style()
       };
@@ -88,7 +90,7 @@ impl Stroke {
     AnnotationStyle {
       align: Default::default(),
       blur: false,
-      color: settings.default_color,
+      color: settings.default_color.clone(),
       head: settings.default_head,
       hand_drawn: if shape {
         settings.shape_hand_drawn
@@ -125,8 +127,8 @@ impl Stroke {
   /// A counter sits where the pointer is rather than where the press landed:
   /// it is dropped whole, and the same drag carries it, exactly as a fresh
   /// counter in the editor is carried.
-  pub(super) fn annotation(&self) -> Option<Annotation> {
-    let style = self.style();
+  pub(super) fn annotation(&self, settings: &AnnotateSettings) -> Option<Annotation> {
+    let style = self.style(settings);
     match self.shape {
       AnnotationKind::Arrow => Some(new_arrow(
         self.id.clone(),

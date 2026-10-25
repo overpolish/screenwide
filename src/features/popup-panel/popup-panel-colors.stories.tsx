@@ -15,7 +15,7 @@ const meta = {
   component: PopupPanelColors,
   decorators: [featureStage({ width: 266 })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Popup Panel/Colours",
+  title: "Legacy/Popup Panel/Colours",
 } satisfies Meta<typeof PopupPanelColors>;
 
 export default meta;

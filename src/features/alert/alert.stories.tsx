@@ -17,7 +17,7 @@ const meta = {
   component: Alert,
   decorators: [featureStage({ width: 420 })],
   parameters: { layout: "fullscreen" },
-  title: "Features/Alert/Alert",
+  title: "Legacy/Alert/Alert",
 } satisfies Meta<typeof Alert>;
 
 export default meta;
