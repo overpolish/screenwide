@@ -24,7 +24,7 @@ mod locked;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use locked::present_locked;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-mod preview_cards;
+mod picker_cards;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod session;
 
@@ -46,17 +46,25 @@ const GLIDABLE_WINDOW_LABELS: &[WindowLabel] = &[
   WindowLabel::EditorScreenshot,
 ];
 
-/// Glide's preview has the same logical dimensions on both platforms. Windows
-/// reapplies them when a session begins because moving a hidden WebView between
-/// differently-scaled monitors can otherwise retain its previous physical
-/// extent.
+/// Room round the island inside its window, and round a picker card inside
+/// its, for the shadow each draws, in logical points (`ISLAND.shadowRoom`).
+/// Only what is inside it is kept in the work area: the room is transparent,
+/// so it may reach past the edge.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) const SHADOW_ROOM: f64 = 48.0;
+
+/// Glide's island window has the same logical dimensions on both platforms:
+/// the island at its largest, with the shadow room round it
+/// (`tauri.conf.json`). Windows reapplies them when a session begins because
+/// moving a hidden WebView between differently-scaled monitors can otherwise
+/// retain its previous physical extent.
 #[cfg(target_os = "windows")]
-const PREVIEW_WIDTH: f64 = 48.0;
+const ISLAND_WIDTH: f64 = 212.0;
 #[cfg(target_os = "windows")]
-const PREVIEW_HEIGHT: f64 = 32.0;
+const ISLAND_HEIGHT: f64 = 173.0;
 
 pub fn initialize(app: &AppHandle) -> Result<(), String> {
-  crate::app_windows::initialize_glide_preview(app).map_err(|error| error.to_string())?;
+  crate::app_windows::initialize_glide_island(app).map_err(|error| error.to_string())?;
   platform::start(app.clone())
 }
 
@@ -83,20 +91,20 @@ fn begin_logical(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(),
 
 #[cfg(target_os = "macos")]
 fn begin_logical_on_main(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(), String> {
-  crate::app_windows::position_glide_preview(app, x, y).map_err(|error| error.to_string())?;
+  crate::app_windows::position_glide_island(app, x, y).map_err(|error| error.to_string())?;
   emit(app, GlideInputEvent::Start { session_id })
 }
 
 #[cfg(target_os = "windows")]
 fn begin_physical(app: &AppHandle, session_id: u64, x: i32, y: i32) -> Result<(), String> {
-  place_preview_physical(app, x, y)?;
+  place_island_physical(app, x, y)?;
   emit(app, GlideInputEvent::Start { session_id })
 }
 
 /// Puts the still-hidden preview on the anchor without saying what it is about
 /// to show. A session's start and the lock feedback both begin here.
 #[cfg(target_os = "windows")]
-fn place_preview_physical(app: &AppHandle, x: i32, y: i32) -> Result<(), String> {
+fn place_island_physical(app: &AppHandle, x: i32, y: i32) -> Result<(), String> {
   let window = app
     .get_webview_window(WindowLabel::Glide.as_str())
     .ok_or_else(|| "The Glide preview window is unavailable".to_owned())?;
@@ -108,17 +116,17 @@ fn place_preview_physical(app: &AppHandle, x: i32, y: i32) -> Result<(), String>
     .set_position(PhysicalPosition::new(x, y))
     .map_err(|error| error.to_string())?;
   window
-    .set_size(LogicalSize::new(PREVIEW_WIDTH, PREVIEW_HEIGHT))
+    .set_size(LogicalSize::new(ISLAND_WIDTH, ISLAND_HEIGHT))
     .map_err(|error| error.to_string())?;
   let size = window.outer_size().map_err(|error| error.to_string())?;
-  let origin = preview_origin(app, PhysicalPosition::new(x, y), size)?;
+  let origin = island_origin(app, PhysicalPosition::new(x, y), size)?;
   window
     .set_position(origin)
     .map_err(|error| error.to_string())
 }
 
 #[cfg(target_os = "windows")]
-fn preview_origin(
+fn island_origin(
   app: &AppHandle,
   anchor: PhysicalPosition<i32>,
   size: PhysicalSize<u32>,
@@ -145,21 +153,36 @@ fn preview_origin(
     return Ok(centered);
   };
   let work = monitor.work_area();
-  Ok(contained_origin(centered, size, work.position, work.size))
+  let room = SHADOW_ROOM * monitor.scale_factor();
+  let (x, y) = contained_origin(
+    (f64::from(centered.x), f64::from(centered.y)),
+    (f64::from(size.width), f64::from(size.height)),
+    room,
+    (f64::from(work.position.x), f64::from(work.position.y)),
+    (f64::from(work.size.width), f64::from(work.size.height)),
+  );
+  Ok(PhysicalPosition::new(x.round() as i32, y.round() as i32))
 }
 
-#[cfg(target_os = "windows")]
-fn contained_origin(
-  origin: PhysicalPosition<i32>,
-  size: PhysicalSize<u32>,
-  work_origin: PhysicalPosition<i32>,
-  work_size: PhysicalSize<u32>,
-) -> PhysicalPosition<i32> {
-  let maximum_x = work_origin.x + work_size.width.saturating_sub(size.width) as i32;
-  let maximum_y = work_origin.y + work_size.height.saturating_sub(size.height) as i32;
-  PhysicalPosition::new(
-    origin.x.clamp(work_origin.x, maximum_x.max(work_origin.x)),
-    origin.y.clamp(work_origin.y, maximum_y.max(work_origin.y)),
+/// Where a preview window of `size` goes, from `origin`, so what it holds
+/// inside `room` stays within `area`; the transparent room may reach past it.
+/// All in one unit, whichever the platform places windows in.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) fn contained_origin(
+  origin: (f64, f64),
+  size: (f64, f64),
+  room: f64,
+  area_origin: (f64, f64),
+  area_size: (f64, f64),
+) -> (f64, f64) {
+  let contain = |start: f64, extent: f64, area_start: f64, area_extent: f64| {
+    let minimum = area_start - room;
+    let maximum = area_start + area_extent - extent + room;
+    start.clamp(minimum, maximum.max(minimum))
+  };
+  (
+    contain(origin.0, size.0, area_origin.0, area_size.0),
+    contain(origin.1, size.1, area_origin.1, area_size.1),
   )
 }
 
@@ -172,7 +195,7 @@ fn finish(app: &AppHandle, anchor_x: f64, anchor_y: f64, cancelled: bool) {
       cancelled,
     },
   );
-  crate::app_windows::defer_hide_glide_preview(app);
+  crate::app_windows::defer_hide_glide_island(app);
 }
 
 /// The cursor returns this far into the fade, so its arrival overlaps the
@@ -231,9 +254,9 @@ fn finish_with_fade(
     );
     run_once(&faded);
   });
-  if let Err(error) = crate::app_windows::fade_glide_preview(app, completion) {
+  if let Err(error) = crate::app_windows::fade_glide_island(app, completion) {
     eprintln!("Could not fade Glide out: {error}");
-    crate::app_windows::defer_hide_glide_preview(app);
+    crate::app_windows::defer_hide_glide_island(app);
     run_once(&on_restore);
     let _ = emit(
       app,
@@ -259,5 +282,5 @@ fn run_once(completion: &std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>) {
 #[cfg(test)]
 mod input_event_tests;
 
-#[cfg(all(test, target_os = "windows"))]
-mod windows_preview_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod island_placement_tests;

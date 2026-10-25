@@ -9,8 +9,9 @@ pub(super) fn publish(app: &AppHandle, s: &mut Session, phase: &'static str) {
   let mut cards = Vec::new();
   for group in &s.snapshot.groups {
     for desktop in group.desktops.iter().filter(|desktop| desktop.regular) {
-      cards.push(preview_cards::Preview {
+      cards.push(picker_cards::PickerCard {
         session_id: s.id,
+        kind: picker_cards::PickerKind::Spaces,
         desktop: desktop.id.clone(),
         selected: desktop.id == selected,
         origin: desktop.id == source,
@@ -29,10 +30,8 @@ pub(super) fn publish(app: &AppHandle, s: &mut Session, phase: &'static str) {
     super::super::cursor::hide_cursor();
     s.revealed = true;
   }
-  let offsets = (0..count)
-    .map(|index| (index as f64 * 56.0, 0.0))
-    .collect::<Vec<_>>();
-  preview_cards::show_arranged(
+  let offsets = picker_cards::row(count);
+  picker_cards::show_arranged(
     app,
     cards,
     Anchor::Physical(f64::from(s.anchor.x), f64::from(s.anchor.y)),

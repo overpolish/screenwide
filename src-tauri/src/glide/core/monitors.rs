@@ -11,6 +11,14 @@ pub(crate) struct Monitor {
   pub layout: GlideFrame,
   pub work: GlideFrame,
 }
+
+/// A picker card's size in logical points: one screen in an island of its own
+/// (`GlidePickerCard`), shared by the display and Spaces pickers.
+pub(crate) const CARD: (f64, f64) = (58.0, 40.0);
+
+/// Between neighbouring picker cards, in logical points.
+pub(crate) const CARD_GAP: f64 = 8.0;
+
 fn center(frame: GlideFrame) -> (f64, f64) {
   (frame.x + frame.width / 2.0, frame.y + frame.height / 2.0)
 }
@@ -48,9 +56,9 @@ pub(crate) fn neighbour(
     .map(|(index, _)| index)
 }
 
-/// Uniform 48×32 previews retain relative centre positions, scaled just enough
-/// to leave an 8px gap between every pair. Display sizes never size the tiles.
-pub(crate) fn preview_offsets(monitors: &[Monitor]) -> Vec<(f64, f64)> {
+/// Uniform cards retain relative centre positions, scaled just enough to leave
+/// `CARD_GAP` between every pair. Display sizes never size the cards.
+pub(crate) fn card_offsets(monitors: &[Monitor]) -> Vec<(f64, f64)> {
   let centers: Vec<_> = monitors
     .iter()
     .map(|monitor| center(monitor.layout))
@@ -61,7 +69,7 @@ pub(crate) fn preview_offsets(monitors: &[Monitor]) -> Vec<(f64, f64)> {
       let dx = (cx - x).abs();
       let dy = (cy - y).abs();
       if dx + dy >= 1.0 {
-        scale = scale.max((56.0 / dx).min(40.0 / dy));
+        scale = scale.max(((CARD.0 + CARD_GAP) / dx).min((CARD.1 + CARD_GAP) / dy));
       }
     }
   }
@@ -129,11 +137,14 @@ mod tests {
     assert_eq!(neighbour(&monitors, 0, (-1, -1)), Some(2));
     assert_eq!(neighbour(&monitors, 0, (0, -1)), Some(3));
     assert_eq!(neighbour(&monitors, 0, (1, 0)), None);
-    let positions = preview_offsets(&monitors);
+    let positions = card_offsets(&monitors);
     assert!(positions[2].0 < positions[0].0 && positions[2].1 < positions[0].1);
     for (i, (x, y)) in positions.iter().enumerate() {
       for (cx, cy) in positions.iter().skip(i + 1) {
-        assert!((cx - x).abs() >= 56.0 - 0.001 || (cy - y).abs() >= 40.0 - 0.001);
+        assert!(
+          (cx - x).abs() >= CARD.0 + CARD_GAP - 0.001
+            || (cy - y).abs() >= CARD.1 + CARD_GAP - 0.001
+        );
       }
     }
   }
@@ -144,7 +155,7 @@ mod tests {
     let displays = vec![screen(0.0, 0.0), above];
     assert_eq!(neighbour(&displays, 0, (0, -1)), Some(1));
     assert_eq!(neighbour(&displays, 0, (1, 0)), None);
-    let offsets = preview_offsets(&displays);
+    let offsets = card_offsets(&displays);
     assert_eq!(offsets[0].0, offsets[1].0);
     assert!(offsets[1].1 < offsets[0].1);
   }
@@ -153,7 +164,7 @@ mod tests {
   fn singleton_display_stays_as_one_source_preview_without_destination() {
     let displays = vec![screen(0.0, 0.0)];
     assert_eq!(neighbour(&displays, 0, (1, 0)), None);
-    assert_eq!(preview_offsets(&displays), vec![(0.0, 0.0)]);
+    assert_eq!(card_offsets(&displays), vec![(0.0, 0.0)]);
   }
   #[test]
   fn preserves_large_windows_and_clamps_their_destination_travel() {

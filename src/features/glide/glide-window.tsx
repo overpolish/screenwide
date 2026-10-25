@@ -10,7 +10,9 @@ import {
   type GlideDetection,
 } from "./detection/glide-detection";
 import { type GlideRegion, sameRegion } from "./detection/glide-regions";
-import { type GlideFit, GlidePreview } from "./glide-preview";
+import { type GlideFit } from "./glide-geometry";
+import { GlideIsland } from "./island/glide-island";
+import { type GlideIslandPhase } from "./island/glide-island-types";
 
 type GlideInputEvent =
   | { detection: GlideDetection; type: "detection" }
@@ -27,9 +29,7 @@ type GlideFitEvent = GlideFit & { sessionId: number };
 export function GlideWindow() {
   const [fit, setFit] = useState<GlideFit | null>(null);
   const [iconSrc, setIconSrc] = useState<null | string>(null);
-  // No session is running behind this one: it is the whole of what the native
-  // side had to say about a window it cannot place.
-  const [locked, setLocked] = useState(false);
+  const [phase, setPhase] = useState<GlideIslandPhase>("idle");
   const [pending, setPending] = useState<GlideAction | null>(null);
   const [readyPulse, setReadyPulse] = useState(0);
   const [region, setRegion] = useState<GlideRegion | null>(null);
@@ -56,7 +56,6 @@ export function GlideWindow() {
       moved = null;
       setFit(null);
       setIconSrc(null);
-      setLocked(false);
       setPending(null);
       setRegion(null);
     };
@@ -64,19 +63,21 @@ export function GlideWindow() {
       if (payload.type === "start") {
         sessionId = payload.sessionId;
         clear();
+        setPhase("gliding");
         return;
       }
-      // The lock replaces everything a session would have shown, so it is set
-      // after the clear rather than alongside it.
+      // No session runs behind the lock: it is the whole of what the native
+      // side has to say about a window it cannot place.
       if (payload.type === "locked") {
         sessionId = payload.sessionId;
         clear();
-        setLocked(true);
+        setPhase("locked");
         return;
       }
       if (payload.type === "end") {
         sessionId = null;
         clear();
+        setPhase("idle");
         return;
       }
 
@@ -138,12 +139,12 @@ export function GlideWindow() {
   }, []);
 
   return (
-    <main className="flex h-screen w-screen items-center justify-center">
-      <GlidePreview
+    <main className="flex size-full items-center justify-center">
+      <GlideIsland
         fit={fit}
         iconSrc={iconSrc}
-        locked={locked}
         pending={pending}
+        phase={phase}
         pulse={readyPulse}
         region={region}
       />

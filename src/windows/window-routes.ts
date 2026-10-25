@@ -30,9 +30,9 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     import("../features/glide/glide-window").then(
       (module) => module.GlideWindow,
     ),
-  "/glide-space": () =>
-    import("../features/glide/glide-spaces-preview").then(
-      (module) => module.GlideSpaceWindow,
+  "/glide-picker": () =>
+    import("../features/glide/picker/glide-picker-window").then(
+      (module) => module.GlidePickerWindow,
     ),
   "/island": () =>
     import("./island-entry").then((module) => module.IslandEntry),

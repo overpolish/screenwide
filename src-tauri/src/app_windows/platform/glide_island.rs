@@ -21,14 +21,14 @@ use tauri::Manager;
 #[cfg(target_os = "macos")]
 const FADE_OUT_SECONDS: f64 = 0.16;
 
-pub fn initialize_glide_preview(window: &WebviewWindow) -> tauri::Result<()> {
+/// A Glide window: the island, or a picker card. Each draws its own black and
+/// shadow, so the window has neither the system's material nor its shadow,
+/// and its corners are left square.
+pub fn initialize_glide_window(window: &WebviewWindow) -> tauri::Result<()> {
   #[cfg(target_os = "windows")]
-  {
-    super::initialize_overlay(window)?;
-    super::round_corners(window)?;
-  }
+  super::initialize_overlay(window)?;
   #[cfg(target_os = "macos")]
-  super::ensure_recording_panel(window)?;
+  super::island_panel(window)?;
   window.set_ignore_cursor_events(true)?;
   crate::app_windows::hide(window)
 }
@@ -100,7 +100,7 @@ pub fn fade_out(window: &WebviewWindow, completion: Box<dyn FnOnce() + Send>) ->
   let completion = Arc::new(Mutex::new(Some(completion)));
   let fallback = completion.clone();
   std::thread::Builder::new()
-    .name("glide-preview-fade".to_owned())
+    .name("glide-fade".to_owned())
     .spawn(move || {
       const STEPS: u32 = 8;
       for step in (0..STEPS).rev() {

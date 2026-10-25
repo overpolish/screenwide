@@ -6,7 +6,7 @@ use crate::glide::core::{
   desktop_selection,
   desktops::{self, Snapshot},
 };
-use crate::glide::preview_cards::{self, Anchor};
+use crate::glide::picker_cards::{self, Anchor};
 use std::{
   path::PathBuf,
   sync::{
@@ -45,7 +45,7 @@ pub(super) fn begin(
 ) -> bool {
   if super::navigation::cancelled()
     || super::deliberate::blocks_sessions()
-    || preview_cards::is_dismissing()
+    || picker_cards::is_dismissing()
   {
     return false;
   }
@@ -210,7 +210,7 @@ pub(super) fn end(app: &AppHandle, cancelled: bool) {
   {
     COMMITTED_UNTIL_RELEASE.store(true, Ordering::Release);
   }
-  preview_cards::dismiss(app, cancelled);
+  picker_cards::dismiss(app, cancelled);
   if s.revealed {
     if cancelled
       || s

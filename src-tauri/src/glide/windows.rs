@@ -74,7 +74,7 @@ pub(super) fn set_icon(session_id: u64, path: Option<std::path::PathBuf>) {
   session::set_icon(session_id, path.clone());
   spaces::set_icon(session_id, path.clone());
   if let Some(app) = APP.get() {
-    crate::glide::preview_cards::set_icon(app, session_id, path);
+    crate::glide::picker_cards::set_icon(app, session_id, path);
   }
 }
 
@@ -93,7 +93,7 @@ fn preload_cards(app: &AppHandle) {
       } else {
         0
       };
-      crate::glide::preview_cards::preload(&app, monitors.max(desktops));
+      crate::glide::picker_cards::preload(&app, monitors.max(desktops));
     });
 }
 

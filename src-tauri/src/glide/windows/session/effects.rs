@@ -27,13 +27,14 @@ pub(super) fn update_monitor(app: &AppHandle, id: u64, direction: Option<(i8, i8
       }
       let hide = !session.revealed;
       session.revealed = true;
-      let offsets = crate::glide::core::monitors::preview_offsets(&selection.displays);
+      let offsets = crate::glide::core::monitors::card_offsets(&selection.displays);
       let cards = selection
         .displays
         .iter()
         .enumerate()
-        .map(|(index, monitor)| preview_cards::Preview {
+        .map(|(index, monitor)| picker_cards::PickerCard {
           session_id: id,
+          kind: picker_cards::PickerKind::Displays,
           desktop: monitor.id.clone(),
           selected: index == selection.selected,
           origin: index == selection.source,
@@ -51,10 +52,10 @@ pub(super) fn update_monitor(app: &AppHandle, id: u64, direction: Option<(i8, i8
   if hide {
     cursor::hide_cursor();
   }
-  preview_cards::show_arranged(
+  picker_cards::show_arranged(
     app,
     cards,
-    preview_cards::Anchor::Physical(f64::from(anchor.x), f64::from(anchor.y)),
+    picker_cards::Anchor::Physical(f64::from(anchor.x), f64::from(anchor.y)),
     &offsets,
   );
   // Reconcile after show_arranged installs the cards. Keep the session lock
@@ -62,7 +63,7 @@ pub(super) fn update_monitor(app: &AppHandle, id: u64, direction: Option<(i8, i8
   // between the read and setter and then be overwritten by stale None.
   if let Ok(state) = STATE.lock() {
     if let Some(session) = state.as_ref().filter(|session| session.id == id) {
-      preview_cards::set_icon(app, id, session.extra.icon_path.clone());
+      picker_cards::set_icon(app, id, session.extra.icon_path.clone());
     }
   }
 }

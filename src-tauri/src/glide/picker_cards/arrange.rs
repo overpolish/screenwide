@@ -7,8 +7,20 @@
 
 use tauri::{AppHandle, Monitor, PhysicalPosition, PhysicalSize, Position, Size};
 
-/// A card's size in logical points, the size of the ordinary preview.
-const CARD: (f64, f64) = (48.0, 32.0);
+use crate::glide::core::monitors::{CARD, CARD_GAP};
+use crate::glide::SHADOW_ROOM;
+
+/// Offsets for `count` cards in a row, a gap apart: the Spaces picker.
+pub(crate) fn row(count: usize) -> Vec<(f64, f64)> {
+  (0..count)
+    .map(|index| (index as f64 * (CARD.0 + CARD_GAP), 0.0))
+    .collect()
+}
+
+/// A card's window, in logical points: the card with its shadow room round
+/// it. Neighbouring windows overlap by the room, harmlessly, since they ignore
+/// the pointer.
+pub(super) const WINDOW: (f64, f64) = (CARD.0 + SHADOW_ROOM * 2.0, CARD.1 + SHADOW_ROOM * 2.0);
 
 /// Where a gesture is anchored, in the units its platform reports.
 #[derive(Clone, Copy, Debug)]
@@ -52,7 +64,8 @@ fn monitor_at(app: &AppHandle, anchor: Anchor) -> Option<(Monitor, (f64, f64))> 
 }
 
 /// One placement per offset, the offsets in logical points from the
-/// arrangement's corner.
+/// arrangement's corner to each card. The cards are centred on the anchor and
+/// kept in the work area; their windows reach past them by the shadow room.
 pub(super) fn place(app: &AppHandle, anchor: Anchor, offsets: &[(f64, f64)]) -> Vec<Placement> {
   let found = monitor_at(app, anchor);
   let scale = found
@@ -75,15 +88,15 @@ pub(super) fn place(app: &AppHandle, anchor: Anchor, offsets: &[(f64, f64)]) -> 
     top = top.clamp(work_y, (work_y + work_height - height).max(work_y));
   }
   let size = PhysicalSize::new(
-    (CARD.0 * scale).round() as u32,
-    (CARD.1 * scale).round() as u32,
+    (WINDOW.0 * scale).round() as u32,
+    (WINDOW.1 * scale).round() as u32,
   );
   offsets
     .iter()
     .map(|(offset_x, offset_y)| Placement {
       position: Position::Physical(PhysicalPosition::new(
-        (left + offset_x * scale).round() as i32,
-        (top + offset_y * scale).round() as i32,
+        (left + (offset_x - SHADOW_ROOM) * scale).round() as i32,
+        (top + (offset_y - SHADOW_ROOM) * scale).round() as i32,
       )),
       size: Size::Physical(size),
     })

@@ -6,7 +6,7 @@ use crate::glide::core::{
   desktop_selection,
   desktops::{self, DesktopAdapter},
 };
-use crate::glide::preview_cards;
+use crate::glide::picker_cards;
 use std::sync::atomic::Ordering;
 use tauri::AppHandle;
 
@@ -160,7 +160,7 @@ pub(super) fn commit(app: &AppHandle) {
     return;
   };
   // Commit ends preview presentation; the native carry keeps cursor ownership.
-  preview_cards::dismiss(app, false);
+  picker_cards::dismiss(app, false);
   let worker_app = app.clone();
   let result = std::thread::Builder::new()
     .name("glide-space-carry".into())

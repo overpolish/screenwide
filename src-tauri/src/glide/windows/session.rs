@@ -13,7 +13,7 @@ use windows::Win32::{Foundation::POINT, UI::WindowsAndMessaging::GetCursorPos};
 use super::monitors;
 use super::{cursor, input_kind::InputKind, native_settings, target::WindowTarget, tween};
 use crate::glide::core::GlideFrame;
-use crate::glide::preview_cards;
+use crate::glide::picker_cards;
 use crate::glide::region_rect::{PlacedRegion, RegionGravity};
 use crate::glide::session::{self as shared, GlidePlatform, Point, Session};
 
@@ -69,7 +69,7 @@ impl GlidePlatform for WindowsGlide {
     !settings.enabled
       || super::navigation::cancelled()
       || super::deliberate::blocks_sessions()
-      || preview_cards::is_dismissing()
+      || picker_cards::is_dismissing()
       || crate::shortcuts::is_capturing()
       || native_settings::is_down(settings.spaces_modifier)
       || super::spaces::active_input().is_some()
@@ -149,7 +149,7 @@ impl GlidePlatform for WindowsGlide {
   }
 
   fn show_preview(app: &AppHandle, _id: u64, input: InputKind) -> Result<(), String> {
-    crate::app_windows::show_glide_preview(app, input == InputKind::Mouse)
+    crate::app_windows::show_glide_island(app, input == InputKind::Mouse)
       .map_err(|error| error.to_string())
   }
 
@@ -180,7 +180,7 @@ impl GlidePlatform for WindowsGlide {
         session.moved = true;
       }
     }
-    preview_cards::dismiss(app, cancelled);
+    picker_cards::dismiss(app, cancelled);
     true
   }
 
@@ -206,7 +206,7 @@ impl GlidePlatform for WindowsGlide {
   }
 
   fn after_fade(_app: &AppHandle, _id: u64, completion: crate::glide::BusyLease) {
-    preview_cards::after_dismissed(Box::new(move || drop(completion)));
+    picker_cards::after_dismissed(Box::new(move || drop(completion)));
   }
 }
 

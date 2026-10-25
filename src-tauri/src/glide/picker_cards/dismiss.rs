@@ -32,8 +32,7 @@ pub(crate) fn dismiss(app: &AppHandle, cancelled: bool) {
     for window in windows {
       if cancelled {
         let _ = crate::app_windows::platform::hide(&window);
-      } else if crate::app_windows::platform::fade_glide_preview(&window, Box::new(faded)).is_err()
-      {
+      } else if crate::app_windows::platform::fade_glide_window(&window, Box::new(faded)).is_err() {
         let _ = crate::app_windows::platform::hide(&window);
         faded();
       }

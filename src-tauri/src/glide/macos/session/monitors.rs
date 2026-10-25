@@ -8,8 +8,8 @@ use crate::glide::{
     monitors::{self, Monitor},
     GlideFrame,
   },
+  picker_cards::{self, PickerCard},
   platform::cursor,
-  preview_cards::{self, Preview},
 };
 use core_graphics::geometry::CGPoint;
 use std::path::PathBuf;
@@ -22,7 +22,7 @@ pub(crate) struct Selection {
   pub active: bool,
   pub armed: bool,
   icon_path: Option<PathBuf>,
-  preview_phase: &'static str,
+  card_phase: &'static str,
 }
 
 fn snapshot(app: &AppHandle) -> Vec<Monitor> {
@@ -87,7 +87,7 @@ pub(super) fn capture(app: &AppHandle, point: CGPoint) -> Option<Selection> {
     active: false,
     armed: false,
     icon_path: None,
-    preview_phase: "idle",
+    card_phase: "idle",
   })
 }
 
@@ -105,12 +105,12 @@ pub(super) fn update(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bo
     };
     if ready {
       selection.active = true;
-      selection.preview_phase = "ready";
+      selection.card_phase = "ready";
     }
     if let Some(direction) = step {
       selection.active = true;
       selection.armed = false;
-      selection.preview_phase = "settling";
+      selection.card_phase = "settling";
       if let Some(next) = monitors::neighbour(&selection.displays, selection.selected, direction) {
         selection.selected = next;
       }
@@ -128,7 +128,7 @@ use arming::publish;
 pub(super) use arming::{arm_preview, claim_armed, current_id, is_armed};
 
 /// Keeps the icon for the cards the picker shows from now on; the cards up
-/// already take it from `preview_cards::set_icon`.
+/// already take it from `picker_cards::set_icon`.
 pub(in crate::glide::macos) fn set_icon(id: u64, path: Option<PathBuf>) {
   let Some(state) = STATE.get() else {
     return;

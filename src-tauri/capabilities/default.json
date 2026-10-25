@@ -9,7 +9,7 @@
     "export-recording",
     "export-screenshot",
     "glide",
-    "glide-space-*",
+    "glide-picker-*",
     "island",
     "region-selector",
     "projects",

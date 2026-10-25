@@ -21,13 +21,22 @@ use std::{
 };
 use tauri::{AppHandle, Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuilder};
 
-pub(crate) use arrange::Anchor;
+pub(crate) use arrange::{row, Anchor};
 pub(crate) use dismiss::{after_dismissed, dismiss, is_dismissing};
+
+/// What the cards stand for, which names the pick for assistive technology.
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum PickerKind {
+  Displays,
+  Spaces,
+}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct Preview {
+pub(crate) struct PickerCard {
   pub session_id: u64,
+  pub kind: PickerKind,
   pub desktop: String,
   pub selected: bool,
   pub origin: bool,
@@ -41,7 +50,7 @@ pub(crate) struct Preview {
 struct Pool {
   /// The cards whose webviews have loaded.
   ready: HashSet<String>,
-  previews: Vec<Preview>,
+  previews: Vec<PickerCard>,
   active: bool,
   /// Cards still fading out after a commit.
   fading: usize,
@@ -60,7 +69,7 @@ static GENERATION: AtomicU64 = AtomicU64::new(0);
 static POSITIONED: AtomicU64 = AtomicU64::new(0);
 static INIT: Once = Once::new();
 
-const PREFIX: &str = "glide-space-";
+const PREFIX: &str = "glide-picker-";
 
 fn label(index: usize) -> String {
   format!("{PREFIX}{index}")
@@ -73,7 +82,7 @@ fn pool() -> MutexGuard<'static, Pool> {
 fn initialize(app: &AppHandle) {
   INIT.call_once(|| {
     let handle = app.clone();
-    app.listen("glide://space-ready", move |event| {
+    app.listen("glide://picker-ready", move |event| {
       #[derive(serde::Deserialize)]
       struct Ready {
         label: String,
@@ -128,13 +137,16 @@ fn ensure(app: &AppHandle, index: usize) -> tauri::Result<tauri::WebviewWindow> 
     .config(app)
     .ok_or(tauri::Error::WindowNotFound)?;
   config.label = name;
-  config.url = WebviewUrl::App("/glide-space".into());
+  config.url = WebviewUrl::App("/glide-picker".into());
   config.visible = false;
   config.focus = false;
+  // A card is drawn as the Glide island is, in its own black and shadow, so it
+  // shares the Glide window's transparent, shadowless configuration.
+  (config.width, config.height) = arrange::WINDOW;
   let window = WebviewWindowBuilder::from_config(app, &config)?
     .initialization_script(screenwide_accent::initialization_script())
     .build()?;
-  crate::app_windows::platform::initialize_glide_preview(&window)?;
+  crate::app_windows::platform::initialize_glide_window(&window)?;
   Ok(window)
 }
 
@@ -142,7 +154,7 @@ fn ensure(app: &AppHandle, index: usize) -> tauri::Result<tauri::WebviewWindow> 
 /// points from the arrangement's corner.
 pub(crate) fn show_arranged(
   app: &AppHandle,
-  mut previews: Vec<Preview>,
+  mut previews: Vec<PickerCard>,
   anchor: Anchor,
   offsets: &[(f64, f64)],
 ) {
@@ -209,7 +221,7 @@ fn hide_surplus(app: &AppHandle, count: usize) {
 
 /// Sends every card of `preview`'s session its state and shows them all,
 /// once they are placed and every one of them has loaded.
-fn render(app: &AppHandle, preview: Preview) {
+fn render(app: &AppHandle, preview: PickerCard) {
   let main = app.clone();
   let _ = app.run_on_main_thread(move || {
     let session = {
@@ -234,7 +246,7 @@ fn render(app: &AppHandle, preview: Preview) {
     };
     for item in &session {
       if let Some(window) = main.get_webview_window(&label(item.index)) {
-        if let Err(error) = main.emit_to(window.label(), "glide://space-preview", item) {
+        if let Err(error) = main.emit_to(window.label(), "glide://picker-card", item) {
           eprintln!("Could not emit Glide preview: {error}");
         }
       }

@@ -96,30 +96,31 @@ pub(super) fn publish(app: &AppHandle, id: u64) {
         .displays
         .iter()
         .enumerate()
-        .map(|(index, monitor)| Preview {
+        .map(|(index, monitor)| PickerCard {
           session_id: id,
+          kind: picker_cards::PickerKind::Displays,
           desktop: monitor.id.clone(),
           selected: selection.selected == index,
           origin: selection.source == index,
           index,
           count: selection.displays.len(),
-          phase: selection.preview_phase,
+          phase: selection.card_phase,
           icon_path: selection.icon_path.clone(),
         })
         .collect::<Vec<_>>();
       Some((
         session.anchor,
         previews,
-        monitors::preview_offsets(&selection.displays),
+        monitors::card_offsets(&selection.displays),
       ))
     }) else {
       return;
     };
-    let _ = crate::app_windows::hide_glide_preview(&main);
-    preview_cards::show_arranged(
+    let _ = crate::app_windows::hide_glide_island(&main);
+    picker_cards::show_arranged(
       &main,
       previews,
-      preview_cards::Anchor::Logical(anchor.0, anchor.1),
+      picker_cards::Anchor::Logical(anchor.0, anchor.1),
       &offsets,
     );
   });

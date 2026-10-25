@@ -679,6 +679,8 @@ export type Messages = {
   "glide-locked": null;
   "glide-minimize": null;
   "glide-no-destination": null;
+  "glide-picker-display": { count: string | number; index: string | number };
+  "glide-picker-space": { count: string | number; index: string | number };
   "glide-region-bottom-half": null;
   "glide-region-full-screen": null;
   "glide-region-left-half": null;

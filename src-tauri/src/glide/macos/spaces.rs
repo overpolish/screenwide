@@ -37,7 +37,7 @@ pub(super) fn preload(app: &tauri::AppHandle) {
       let monitors = app
         .available_monitors()
         .map_or(0, |monitors| monitors.len());
-      crate::glide::preview_cards::preload(&app, spaces.max(monitors));
+      crate::glide::picker_cards::preload(&app, spaces.max(monitors));
     });
   if let Err(error) = result {
     eprintln!("Could not start Glide Space preload: {error}");
@@ -71,7 +71,7 @@ struct Session {
   snapshot: Option<Snapshot>,
   selected: Option<String>,
   icon_path: Option<std::path::PathBuf>,
-  preview_phase: &'static str,
+  card_phase: &'static str,
   buffered: (f64, f64),
   moving: bool,
   ending: bool,
@@ -91,5 +91,5 @@ pub(in crate::glide) fn set_icon(
 ) {
   super::session::monitors::set_icon(id, path.clone());
   presentation::set_icon(id, path.clone());
-  crate::glide::preview_cards::set_icon(app, id, path);
+  crate::glide::picker_cards::set_icon(app, id, path);
 }

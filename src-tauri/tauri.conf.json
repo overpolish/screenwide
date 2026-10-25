@@ -195,22 +195,17 @@
         "label": "glide",
         "title": "Screenwide Glide",
         "url": "/glide",
-        "width": 48,
-        "height": 32,
+        "width": 212,
+        "height": 173,
         "acceptFirstMouse": false,
         "alwaysOnTop": true,
         "decorations": false,
         "focus": false,
         "resizable": false,
-        "shadow": true,
+        "shadow": false,
         "skipTaskbar": true,
         "transparent": true,
-        "visible": false,
-        "windowEffects": {
-          "effects": ["underWindowBackground", "mica"],
-          "radius": 10,
-          "state": "active"
-        }
+        "visible": false
       },
       {
         "label": "region-selector",

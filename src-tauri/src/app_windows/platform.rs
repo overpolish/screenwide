@@ -23,7 +23,7 @@ use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
 
 #[cfg(target_os = "windows")]
 pub use self::windows::band_guard::initialize as initialize_band_guard;
-mod glide_preview;
+mod glide_island;
 #[cfg(target_os = "macos")]
 pub use self::macos::capture_exclusion::{exclude_from_capture, set_window_capture_affinity};
 #[cfg(target_os = "macos")]
@@ -34,8 +34,8 @@ pub use self::macos::presentation::{
 pub(crate) use self::macos::webview::webview_view;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub use glide_preview::fade_out as fade_glide_preview;
-pub use glide_preview::{initialize_glide_preview, show_glide};
+pub use glide_island::fade_out as fade_glide_window;
+pub use glide_island::{initialize_glide_window, show_glide};
 
 #[cfg(target_os = "macos")]
 use core_graphics::display::CGDisplay;

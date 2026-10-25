@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-mod glide_preview_control;
-pub use glide_preview_control::defer_hide_glide_preview;
-pub(crate) use glide_preview_control::fade_glide_preview;
+mod glide_island_control;
+pub use glide_island_control::defer_hide_glide_island;
+pub(crate) use glide_island_control::fade_glide_island;
 #[cfg(target_os = "macos")]
-pub use glide_preview_control::hide_glide_preview;
-pub use glide_preview_control::initialize_glide_preview;
+pub use glide_island_control::hide_glide_island;
+pub use glide_island_control::initialize_glide_island;
 #[cfg(target_os = "macos")]
-pub(crate) use glide_preview_control::position_glide_preview;
-pub use glide_preview_control::show_glide_preview;
+pub(crate) use glide_island_control::position_glide_island;
+pub use glide_island_control::show_glide_island;
 
 mod recording_ui;
 pub use recording_ui::hide_recording_ui;

@@ -4,8 +4,8 @@
 use super::SESSION;
 use crate::glide::{
   core::desktops::Snapshot,
+  picker_cards::{self, Anchor, PickerCard, PickerKind},
   platform::cursor,
-  preview_cards::{self, Anchor, Preview},
 };
 use std::path::PathBuf;
 use tauri::AppHandle;
@@ -45,7 +45,7 @@ pub(super) fn publish(
       }
       session.revealed = true;
     }
-    session.preview_phase = phase;
+    session.card_phase = phase;
     let origin = session
       .snapshot
       .as_ref()
@@ -60,8 +60,9 @@ pub(super) fn publish(
   let previews = desktops
     .iter()
     .enumerate()
-    .map(|(index, desktop)| Preview {
+    .map(|(index, desktop)| PickerCard {
       session_id: id,
+      kind: PickerKind::Spaces,
       desktop: desktop.id.clone(),
       selected: desktop.id == active,
       origin: origin.as_deref() == Some(desktop.id.as_str()),
@@ -80,10 +81,8 @@ pub(super) fn publish(
     }) {
       return;
     }
-    let offsets: Vec<_> = (0..previews.len())
-      .map(|index| (index as f64 * 56.0, 0.0))
-      .collect();
-    preview_cards::show_arranged(
+    let offsets = picker_cards::row(previews.len());
+    picker_cards::show_arranged(
       &main,
       previews,
       Anchor::Logical(anchor.x, anchor.y),
@@ -93,7 +92,7 @@ pub(super) fn publish(
 }
 
 /// Keeps the icon for the cards Spaces shows from now on; the cards up
-/// already take it from `preview_cards::set_icon`.
+/// already take it from `picker_cards::set_icon`.
 pub(super) fn set_icon(id: u64, path: Option<PathBuf>) {
   if let Ok(mut state) = SESSION.lock() {
     if let Some(session) = state

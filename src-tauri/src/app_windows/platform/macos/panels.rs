@@ -184,7 +184,7 @@ pub(in super::super) fn recording_panel_level(window: &WebviewWindow) -> Option<
     // above the region selector it is used beside; the pop-ups go over it.
     "island" => Some(28),
     label if label == "standalone-listbox" || label.starts_with("tool-panel-") => Some(31),
-    label if label == "glide" || label.starts_with("glide-space-") => Some(34),
+    label if label == "glide" || label.starts_with("glide-picker-") => Some(34),
     _ => None,
   }
 }

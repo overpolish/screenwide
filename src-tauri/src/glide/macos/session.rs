@@ -115,7 +115,7 @@ impl GlidePlatform for MacGlide {
       // The cursor is still pinned from the last session: its release has
       // not landed, and every event still reports the old anchor.
       || is_cursor_pinned()
-      || crate::glide::preview_cards::is_dismissing()
+      || crate::glide::picker_cards::is_dismissing()
   }
 
   fn target_at(app: &AppHandle, anchor: Point) -> Option<(WindowTarget, GlideFrame, Option<u32>)> {
@@ -189,7 +189,7 @@ impl GlidePlatform for MacGlide {
         .unwrap_or(false);
         if active {
           if let Err(error) =
-            crate::app_windows::show_glide_preview(&main_app, input == InputKind::Mouse)
+            crate::app_windows::show_glide_island(&main_app, input == InputKind::Mouse)
           {
             eprintln!("Could not present Glide: {error}");
           }
@@ -237,7 +237,7 @@ impl GlidePlatform for MacGlide {
       .as_ref()
       .is_some_and(|selection| selection.active);
     if showing {
-      crate::glide::preview_cards::dismiss(app, cancelled);
+      crate::glide::picker_cards::dismiss(app, cancelled);
       if !cancelled {
         monitors::commit(app, session);
       }
@@ -258,7 +258,7 @@ impl GlidePlatform for MacGlide {
   }
 
   fn after_fade(_app: &AppHandle, _id: u64, completion: crate::glide::BusyLease) {
-    crate::glide::preview_cards::after_dismissed(Box::new(move || {
+    crate::glide::picker_cards::after_dismissed(Box::new(move || {
       let _completion = completion;
       Self::with_state(|state| state.fading = None);
     }));
