@@ -28,7 +28,9 @@ struct OscGpu {
   magnifier_flags: vec4<u32>, // edges bitmask, active
   // macOS masked its floating control surfaces with the material view's
   // corner radius; without one, the plate owns its radius and outline.
-  chrome: vec4<f32>, // .x: radius; .y: material emphasis
+  // .x: radius px; .y: material emphasis; .z: a Ruler label's shadow room
+  // px; .w: how far a Ruler label has faded, 0 shown.
+  chrome: vec4<f32>,
   chrome_outline: vec4<f32>, // plate outline; alpha 0 means no outline
   chrome_backdrop: vec4<f32>, // viewport width/height, source texel width/height
   chrome_source: vec4<f32>, // snapshot UV x/y/width/height after pan/zoom
@@ -71,6 +73,12 @@ struct VertexOut {
 // The magnifier lens. Crop corners already own 45.
 const LENS_KIND: u32 = 49u;
 const WINDOW_BACKDROP_KIND: u32 = 64u;
+// The Ruler's label shadow, the dark edge under its hairlines, the second
+// line of its callout and the tint inside a measured box.
+const RULER_LABEL_SHADOW_KIND: u32 = 65u;
+const RULER_CASING_KIND: u32 = 66u;
+const RULER_SECONDARY_READOUT_KIND: u32 = 67u;
+const RULER_MEASUREMENT_FILL_KIND: u32 = 68u;
 
 // Positions arrive in NDC: the vertex builder does the pixel-to-clip mapping
 // on the CPU, so there is no transform here.
@@ -178,6 +186,11 @@ fn lens(position: vec2<f32>) -> vec4<f32> {
   return color;
 }
 
+// How much of a segment shows: a Ruler label fading in, whole otherwise.
+fn segment_opacity() -> f32 {
+  return 1.0 - saturate(osc.chrome.w);
+}
+
 fn chrome_plate(uv: vec2<f32>, position: vec2<f32>) -> vec4<f32> {
   let dimensions = quad_pixels(uv);
   let half_size = dimensions * 0.5;
@@ -200,8 +213,68 @@ fn chrome_plate(uv: vec2<f32>, position: vec2<f32>) -> vec4<f32> {
   let control = osc.action_fills[0];
   var color = vec4<f32>(mix(material.rgb, control.rgb, control.a), 1.0);
   color = mix(color, osc.chrome_outline, outline_mix * osc.chrome_outline.a);
-  color.a *= coverage;
+  color.a *= coverage * segment_opacity();
   return color;
+}
+
+// One blurred layer of a rounded box's shadow: Gaussian falloff across the
+// edge, `sigma` px wide, which is what a CSS `drop-shadow` blur of twice
+// that draws. `tanh` stands in for `erf` closely enough at these sizes.
+fn shadow_layer(offset: vec2<f32>, half_size: vec2<f32>, radius: f32, sigma: f32) -> f32 {
+  let distance = rounded_distance(offset, half_size, radius);
+  return 0.5 - 0.5 * tanh(distance / max(sigma, 0.0001) * 0.8);
+}
+
+// A Ruler label's shadow: the island's own two layers, `--island-shadow`, a
+// close contact shadow and a soft wide one. The quad is the plate grown by
+// `chrome.z` px on every side, a room of `RULER_SHADOW_ROOM` points, so the
+// points the token is given in are read back from it. The plate it sits
+// under is opaque, so the shadow is drawn whole rather than cut out.
+const RULER_SHADOW_ROOM: f32 = 52.0;
+
+// Interleaved gradient noise in 0..1 for a pixel: a fixed, even scatter
+// with no visible pattern, cheap enough to run per fragment.
+fn dither_noise(pixel: vec2<f32>) -> f32 {
+  return fract(52.9829189 * fract(dot(pixel, vec2<f32>(0.06711056, 0.00583715))));
+}
+
+// How bright the frozen desktop is under a pixel, which is what a shadow over
+// it darkens; mid-grey where no desktop is drawn.
+fn backdrop_level(pixel: vec2<f32>) -> f32 {
+  if (osc.chrome_backdrop.z <= 0.0 || osc.chrome_backdrop.w <= 0.0) {
+    return 0.5;
+  }
+  let screen_uv = pixel / max(osc.chrome_backdrop.xy, vec2<f32>(1.0));
+  let uv = osc.chrome_source.xy + screen_uv * osc.chrome_source.zw;
+  let backdrop = textureSampleLevel(snapshot, linear_sampler, uv, 0.0).rgb;
+  return max(backdrop.r, max(backdrop.g, backdrop.b));
+}
+
+fn chrome_shadow(uv: vec2<f32>, position: vec2<f32>) -> vec4<f32> {
+  let dimensions = quad_pixels(uv);
+  let room = osc.chrome.z;
+  let point = room / RULER_SHADOW_ROOM;
+  let half_size = max(dimensions * 0.5 - room, vec2<f32>(0.0));
+  let radius = min(osc.chrome.x, min(half_size.x, half_size.y));
+  let local = (uv - 0.5) * dimensions;
+  // `drop-shadow(0 1px 3px 25%)` and `drop-shadow(0 10px 28px 35%)`: a CSS
+  // blur is twice the Gaussian's sigma.
+  let near = shadow_layer(local - vec2<f32>(0.0, point), half_size, radius, point * 1.5) * 0.25;
+  let far = shadow_layer(local - vec2<f32>(0.0, point * 10.0), half_size, radius,
+      point * 14.0) * 0.35;
+  let alpha = (1.0 - (1.0 - near) * (1.0 - far)) * segment_opacity();
+  if (alpha <= 0.002) {
+    discard;
+  }
+  // The wide layer darkens the desktop by less than one 8-bit step over
+  // many pixels, which shows as rings over a dark desktop: over a level of
+  // 30, a 35% shadow has only ten steps to fall across. Noise of one output
+  // step scatters them into grain too fine to see. A step of output is a
+  // step of alpha divided by the level shadowed, so the noise is scaled by
+  // the frozen desktop under the pixel; a lighter desktop takes less.
+  let level = max(backdrop_level(position), 4.0 / 255.0);
+  let dithered = alpha + (dither_noise(position) - 0.5) / (255.0 * level);
+  return vec4<f32>(0.0, 0.0, 0.0, saturate(dithered));
 }
 
 fn ruler_ring(kind: u32, uv: vec2<f32>) -> vec4<f32> {
@@ -265,18 +338,27 @@ fn label_color(sampled: vec4<f32>, opacity: f32) -> vec4<f32> {
   return vec4<f32>(sampled.rgb / sampled.a, sampled.a * opacity);
 }
 
+// The picked colour in the callout, drawn as the annotate island draws its
+// colour: a circle `--spacing-icon` across with `swatchEdge`, a 1pt ring of
+// `--color-divider` (the dark ink at 8%) inside its edge, so a black pick
+// still shows on the black callout. The swatch is that 16pt, so a point is
+// a sixteenth of it.
 fn picked_swatch(uv: vec2<f32>) -> vec4<f32> {
   let dimensions = quad_pixels(uv);
   let half_size = dimensions * 0.5;
-  let radius = min(4.0, min(half_size.x, half_size.y));
+  let radius = min(half_size.x, half_size.y);
   let distance = rounded_distance((uv - 0.5) * dimensions, half_size, radius);
   let aa = max(fwidth(distance), 0.0001);
   let coverage = clamp(0.5 - distance / aa, 0.0, 1.0);
   if (coverage <= 0.0) {
     discard;
   }
-  var color = osc.ruler_sample;
-  color.a *= coverage * (1.0 - osc.ruler_animation.x) * (1.0 - osc.ruler_animation.w);
+  let point = dimensions.x / 16.0;
+  let ring = clamp(0.5 + (distance + point) / aa, 0.0, 1.0) * 0.08;
+  let divider = vec3<f32>(251.0, 247.0, 246.0) / 255.0;
+  var color = vec4<f32>(mix(osc.ruler_sample.rgb, divider, ring), osc.ruler_sample.a);
+  color.a *= coverage * (1.0 - osc.ruler_animation.x) * (1.0 - osc.ruler_animation.w) *
+      segment_opacity();
   return color;
 }
 
@@ -638,6 +720,9 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
     // the surface owned the radius; this one owns its own.
     return chrome_plate(uv, input.position.xy);
   }
+  if (kind == RULER_LABEL_SHADOW_KIND) {
+    return chrome_shadow(uv, input.position.xy);
+  }
   if (kind == 47u) {
     // Chrome text: the texture carries white coverage and the tint is the
     // portable control foreground.
@@ -661,11 +746,28 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   }
   if (kind == 37u) {
     let sampled = textureSampleLevel(secondary_label, linear_sampler, uv, 0.0);
-    return label_color(sampled, osc.ruler_animation.w);
+    return label_color(sampled, osc.ruler_animation.w * segment_opacity());
   }
   if (kind == 11u || kind == 48u) {
     let sampled = textureSampleLevel(label, linear_sampler, uv, 0.0);
-    return label_color(sampled, select(1.0, 1.0 - osc.ruler_animation.w, kind == 48u));
+    let shown = select(1.0, 1.0 - osc.ruler_animation.w, kind == 48u);
+    return label_color(sampled, shown * segment_opacity());
+  }
+  if (kind == RULER_SECONDARY_READOUT_KIND) {
+    // The callout's second line, at the secondary ink over the label ink the
+    // atlas carries (`--alpha-fg-secondary` over `--alpha-fg`, dark).
+    let sampled = textureSampleLevel(label, linear_sampler, uv, 0.0);
+    return label_color(sampled, 0.75 * (1.0 - osc.ruler_animation.w) * segment_opacity());
+  }
+  if (kind == RULER_CASING_KIND) {
+    // A soft dark edge under a ruler hairline, so it holds on light or busy
+    // content without weighing on dark.
+    return vec4<f32>(0.0, 0.0, 0.0, 0.2);
+  }
+  if (kind == RULER_MEASUREMENT_FILL_KIND) {
+    var color = osc.ruler_colors[0];
+    color.a *= 0.08;
+    return color;
   }
   if (kind == 15u) {
     return label_color(textureSampleLevel(secondary_label, linear_sampler, uv, 0.0), 1.0);
@@ -707,7 +809,7 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   }
   if (kind == 30u) {
     var color = osc.action_fills[1];
-    color.a *= osc.ruler_animation.x * (1.0 - osc.ruler_animation.w);
+    color.a *= osc.ruler_animation.x * (1.0 - osc.ruler_animation.w) * segment_opacity();
     return color;
   }
   if (kind >= 22u && kind <= 26u) {

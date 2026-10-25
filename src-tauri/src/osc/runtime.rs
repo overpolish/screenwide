@@ -175,7 +175,9 @@ impl OscRuntime {
     if let Some(text) = copy {
       let _ = self.window.app_handle().clipboard().write_text(text);
     }
-    crate::ruler::visual_result(state, visual, cursor, handle)
+    let result = crate::ruler::visual_result(state, visual, cursor, handle);
+    crate::ruler::island::sync(self.window.app_handle());
+    result
   }
 
   pub(crate) fn ruler_viewport_input(

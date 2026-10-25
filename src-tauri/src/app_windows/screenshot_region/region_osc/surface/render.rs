@@ -250,7 +250,6 @@ impl Surface {
       self.display_id,
       self.desktop_offset,
       scale,
-      light,
       now,
     );
     if let Some(base) = Segment::base(0, chrome_start) {

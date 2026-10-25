@@ -83,7 +83,7 @@ impl TextCache {
       return Some(Arc::clone(cached));
     }
     let ink = if !baked_ink {
-      [1.0, 1.0, 1.0]
+      COVERAGE_INK
     } else if light_mode {
       LIGHT_INK
     } else {

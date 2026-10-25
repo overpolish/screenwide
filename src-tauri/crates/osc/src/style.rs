@@ -23,8 +23,9 @@ pub struct OverlayPalette {
   pub shade: [f32; 4],
 }
 
-/// Shared ruler crosshair token. The callout itself resolves through the OSC
-/// neutral control tokens so it cannot drift from native buttons.
+/// Shared ruler line token: the emphasis colour for what the Ruler measures
+/// and `--color-info` for guides. The labels and the callout draw in the
+/// island's black (`RULER_LABEL_FILLS`), so nothing here tints them.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RulerPalette {
@@ -45,18 +46,51 @@ pub extern "C" fn screenwide_osc_overlay_palette() -> OverlayPalette {
   overlay_palette()
 }
 
+/// A status token from `src/styles/colors.css` in sRGB, light then dark:
+/// the OKLCH values resolved once, since the shader has no colour space to
+/// mix them in.
+const fn token(light_appearance: bool, light: [u8; 3], dark: [u8; 3]) -> [f32; 4] {
+  let [red, green, blue] = if light_appearance { light } else { dark };
+  [
+    red as f32 / 255.0,
+    green as f32 / 255.0,
+    blue as f32 / 255.0,
+    1.0,
+  ]
+}
+
+/// `--color-info`: `oklch(58% 0.17 250)` light, `oklch(74% 0.13 250)` dark.
+const fn info(light_appearance: bool) -> [f32; 4] {
+  token(light_appearance, [0, 124, 217], [103, 176, 249])
+}
+
+/// `--color-success`: `oklch(60% 0.16 150)` light, `oklch(76% 0.15 150)` dark.
+const fn success(light_appearance: bool) -> [f32; 4] {
+  token(light_appearance, [19, 153, 72], [97, 203, 124])
+}
+
+/// `--color-error`: `oklch(58% 0.21 25)` light, `oklch(70% 0.19 25)` dark.
+const fn error(light_appearance: bool) -> [f32; 4] {
+  token(light_appearance, [219, 43, 51], [255, 100, 95])
+}
+
 pub fn ruler_palette(light_appearance: bool) -> RulerPalette {
   let [red, green, blue] = screenwide_accent::accent_rgb();
-  let info = if light_appearance {
-    [0.0, 136.0 / 255.0, 1.0, 1.0]
-  } else {
-    [0.0, 145.0 / 255.0, 1.0, 1.0]
-  };
   RulerPalette {
     primary: [red, green, blue, 1.0],
-    info,
+    info: info(light_appearance),
   }
 }
+
+/// The Ruler's labels and callout: the island's black (`--color-island`)
+/// with the dark appearance's ink on it (`--color-fg`, `oklch(98% 0.005 47.6)`
+/// at 88%), in either appearance, so they read as the island does over
+/// whatever the desktop shows. Like the island they carry no outline; their
+/// shadow is their edge.
+pub const RULER_LABEL_FILLS: [[f32; 4]; 2] = [
+  [0.0, 0.0, 0.0, 1.0],
+  [251.0 / 255.0, 247.0 / 255.0, 246.0 / 255.0, 0.88],
+];
 
 #[no_mangle]
 pub extern "C" fn screenwide_osc_ruler_palette(light_mode: u32) -> RulerPalette {
@@ -142,26 +176,18 @@ pub extern "C" fn screenwide_osc_ocr_palette(light_mode: u32) -> OcrPalette {
 /// `--color-success` and removed with the room in `--color-error`, per
 /// appearance.
 pub fn picked_palette(light_appearance: bool) -> [[f32; 4]; 2] {
-  if light_appearance {
-    [
-      [52.0 / 255.0, 199.0 / 255.0, 89.0 / 255.0, 1.0],
-      [1.0, 56.0 / 255.0, 60.0 / 255.0, 1.0],
-    ]
-  } else {
-    [
-      [48.0 / 255.0, 209.0 / 255.0, 88.0 / 255.0, 1.0],
-      [1.0, 66.0 / 255.0, 69.0 / 255.0, 1.0],
-    ]
-  }
+  [success(light_appearance), error(light_appearance)]
 }
 
 /// The rotation gizmo's rings, in the colours every 3D tool gives its axes: X
-/// in `--color-error`'s red, Y in `--color-success`'s green and Z in the
-/// ruler's info blue, per appearance.
+/// in `--color-error`'s red, Y in `--color-success`'s green and Z in
+/// `--color-info`'s blue, per appearance.
 pub fn turn_palette(light_appearance: bool) -> [[f32; 4]; 3] {
-  let [green, red] = picked_palette(light_appearance);
-  let blue = ruler_palette(light_appearance).info;
-  [red, green, blue]
+  [
+    error(light_appearance),
+    success(light_appearance),
+    info(light_appearance),
+  ]
 }
 
 #[cfg(test)]
@@ -216,16 +242,5 @@ mod tests {
       dark.status_error_foreground,
       [1.0, 66.0 / 255.0, 69.0 / 255.0, 1.0]
     );
-  }
-
-  #[test]
-  fn ruler_crosshair_follows_the_system_accent_and_the_info_token() {
-    let [red, green, blue] = screenwide_accent::accent_rgb();
-    let light = ruler_palette(true);
-    let dark = ruler_palette(false);
-    assert_eq!(light.primary, [red, green, blue, 1.0]);
-    assert_eq!(dark.primary, [red, green, blue, 1.0]);
-    assert_eq!(light.info, [0.0, 136.0 / 255.0, 1.0, 1.0]);
-    assert_eq!(dark.info, [0.0, 145.0 / 255.0, 1.0, 1.0]);
   }
 }

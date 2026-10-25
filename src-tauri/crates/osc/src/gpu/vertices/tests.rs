@@ -289,31 +289,38 @@ fn selection_and_crop_share_identical_handle_primitives() {
   );
 }
 
+/// The horizontal reach, in points, of the box's hairlines.
+fn hairline_span(vertices: &[Vertex]) -> (f64, f64) {
+  vertices
+    .as_chunks::<6>()
+    .0
+    .iter()
+    .filter(|quad| quad[0].kind == 28)
+    .flatten()
+    .map(|vertex| (f64::from(vertex.position[0]) + 1.0) * 0.5 * VIEW.width)
+    .fold((f64::MAX, f64::MIN), |(low, high), x| {
+      (low.min(x), high.max(x))
+    })
+}
+
 #[test]
-fn ruler_box_pairs_a_halo_with_four_hairlines() {
-  let mut out = Vec::new();
+fn a_measured_box_runs_its_hairlines_past_the_corners_unless_it_is_flat() {
+  let mut boxed = Vec::new();
   add_ruler_box(
-    &mut out,
+    &mut boxed,
     VIEW,
     Rect::from_xywh(20.0, 20.0, 60.0, 40.0),
     2.0,
     false,
     0.0,
+    4.0,
   );
-  assert_eq!(quad_kinds(&out), vec![35, 28, 28, 28, 28]);
+  // Hairlines snap to pixel centres, so the ends land within a pixel.
+  let (left, right) = hairline_span(&boxed);
+  assert!((left - 16.0).abs() <= 1.0, "{left}");
+  assert!((right - 84.0).abs() <= 1.0, "{right}");
 
-  let mut hovered = Vec::new();
-  add_ruler_box(
-    &mut hovered,
-    VIEW,
-    Rect::from_xywh(20.0, 20.0, 60.0, 40.0),
-    2.0,
-    true,
-    6.0,
-  );
-  assert_eq!(quad_kinds(&hovered)[0], 34);
-
-  // A frame with no interior height drops the two vertical hairlines.
+  // A length keeps to its ends: an overshoot would read as part of it.
   let mut flat = Vec::new();
   add_ruler_box(
     &mut flat,
@@ -322,8 +329,10 @@ fn ruler_box_pairs_a_halo_with_four_hairlines() {
     2.0,
     false,
     0.0,
+    4.0,
   );
-  assert_eq!(quad_kinds(&flat), vec![35, 28, 28]);
+  let (left, right) = hairline_span(&flat);
+  assert!(left > 19.0 && right < 81.0, "{left} {right}");
 }
 
 #[test]

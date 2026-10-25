@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::assignment::{contains, has_label_anchor};
+use super::tokens::{CONTROL_HEIGHT, INLINE, INSET, SEPARATE};
 use super::*;
+
+/// Under this many points on a side a measured box is a length, which its
+/// text reports alone (`measurement_text`).
+const FLAT: f64 = 8.0;
 
 /// Port of `layout` (`:624-652`): the loupe follows the pointer, flips to the
 /// other side when it would leave the surface and is clamped inside the inset.
@@ -21,14 +26,10 @@ pub(crate) fn loupe_origin(point: Point, width: f64, height: f64, view: Size, in
   }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn measurement_label_rect(
   ruler: &Ruler,
   measurement: MeasurementPacket,
   text_width: f64,
-  value: ControlMetrics,
-  control: f64,
-  inset: f64,
   view: Size,
   offset: Point,
 ) -> Rect {
@@ -45,10 +46,10 @@ pub(super) fn measurement_label_rect(
     measurement.height,
     offset,
   );
-  let width = value.padding_x * 2.0 + text_width;
-  let height = value.height;
-  let horizontal = global.size.height < inset;
-  let vertical = global.size.width < inset;
+  let width = INSET * 2.0 + text_width;
+  let height = CONTROL_HEIGHT;
+  let horizontal = global.size.height < FLAT;
+  let vertical = global.size.width < FLAT;
   let mut left = frame.origin.x + frame.size.width * 0.5 - width * 0.5;
   let mut top = frame.origin.y + frame.size.height * 0.5 - height * 0.5;
   if has_label_anchor(measurement.label_anchor_x, measurement.label_anchor_y) {
@@ -63,31 +64,27 @@ pub(super) fn measurement_label_rect(
     top = anchor.y - height * 0.5;
   } else if !horizontal
     && !vertical
-    && (frame.size.width < width + inset * 2.0 || frame.size.height < height + inset * 2.0)
+    && (frame.size.width < width + INSET * 2.0 || frame.size.height < height + INSET * 2.0)
   {
-    top = frame.origin.y - height - control;
+    top = frame.origin.y - height - INLINE;
   } else if horizontal {
-    top = frame.bottom() + control;
+    top = frame.bottom() + INLINE;
   } else if vertical {
-    left = frame.right() + control;
+    left = frame.right() + INLINE;
   }
-  clamp_label(left, top, width, height, view, inset)
+  clamp_label(left, top, width, height, view, SEPARATE)
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn probe_label_rect(
   ruler: &Ruler,
   probe: ProbePacket,
   radius: Option<RadiusPacket>,
   text_width: f64,
-  value: ControlMetrics,
-  control: f64,
-  inset: f64,
   view: Size,
   offset: Point,
 ) -> Rect {
-  let width = value.padding_x * 2.0 + text_width;
-  let height = value.height;
+  let width = INSET * 2.0 + text_width;
+  let height = CONTROL_HEIGHT;
   let (start, end, position) = ruler.project_probe(probe, offset);
   let mut left = if probe.axis == 1 {
     (start + end - width) * 0.5
@@ -110,8 +107,8 @@ pub(super) fn probe_label_rect(
       },
       offset,
     );
-    left = corner.x + if right { control } else { -width - control };
-    top = corner.y + if bottom { control } else { -height - control };
+    left = corner.x + if right { INLINE } else { -width - INLINE };
+    top = corner.y + if bottom { INLINE } else { -height - INLINE };
   } else if anchored {
     let anchor = ruler.project_point(
       Point {
@@ -123,7 +120,7 @@ pub(super) fn probe_label_rect(
     left = anchor.x - width * 0.5;
     top = anchor.y - height * 0.5;
   }
-  clamp_label(left, top, width, height, view, inset)
+  clamp_label(left, top, width, height, view, SEPARATE)
 }
 
 pub(super) fn clamp_label(
@@ -163,14 +160,14 @@ pub(crate) fn label_hit(rects: &[LabelRect], point: Point) -> Option<LabelHit> {
   None
 }
 
-#[allow(clippy::too_many_arguments)]
+/// A label's draw call: its own fills, chrome row and textures. No outline,
+/// as the island has none.
 pub(super) fn push_segment(
   segments: &mut Vec<Segment>,
   out: &[Vertex],
   start: usize,
   action_fills: [[f32; 4]; 2],
-  radius: f64,
-  outline: [f32; 4],
+  chrome: [f32; 4],
   label: Option<wgpu::TextureView>,
   secondary: Option<wgpu::TextureView>,
 ) {
@@ -181,8 +178,8 @@ pub(super) fn push_segment(
     start: start as u32,
     count: (out.len() - start) as u32,
     action_fills,
-    chrome: [radius as f32, 0.0, 0.0, 0.0],
-    chrome_outline: outline,
+    chrome,
+    chrome_outline: [0.0; 4],
     label,
     secondary,
   });

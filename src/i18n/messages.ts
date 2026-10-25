@@ -871,6 +871,23 @@ export type Messages = {
   "recording-controls-system-audio-level": null;
   "recording-inputs-all-audio": null;
   "recording-inputs-camera-starting": null;
+  "ruler-island-centerlines": null;
+  "ruler-island-close": null;
+  "ruler-island-copy": null;
+  "ruler-island-crosshair": null;
+  "ruler-island-edges": null;
+  "ruler-island-guide-hint": null;
+  "ruler-island-horizontal-guide": null;
+  "ruler-island-measure": null;
+  "ruler-island-measure-hint": {
+    horizontal: string | number;
+    vertical: string | number;
+  };
+  "ruler-island-radius": null;
+  "ruler-island-radius-hint": null;
+  "ruler-island-tools": null;
+  "ruler-island-undo": null;
+  "ruler-island-vertical-guide": null;
   "screenshots-scrolling-cancel-hint": null;
   "screenshots-scrolling-capturing": null;
   "screenshots-scrolling-finishing": null;

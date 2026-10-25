@@ -69,6 +69,7 @@ pub struct RulerState(Mutex<Session>);
 mod artifact_accessors;
 mod box_analysis;
 mod gesture_modes;
+mod island_view;
 mod labels_viewport;
 mod lifecycle;
 mod mutation_history;

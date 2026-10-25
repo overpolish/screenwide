@@ -44,12 +44,36 @@ const GUTTER: i32 = 1;
 /// 2x2 box gives a pixel only five coverage levels, which shows as jagged
 /// edges on 14px text; 4x4 gives seventeen, close to a real rasteriser's.
 pub(crate) const SUPERSAMPLE: i32 = 4;
-/// macOS baked near-black glyphs in light mode and white in dark mode.
-/// The label tier from `src/index.css`: pure black or pure white, carried at
-/// `LABEL_ALPHA`, the same colour the control foreground resolves to.
-const LIGHT_INK: [f32; 3] = [0.0, 0.0, 0.0];
-const DARK_INK: [f32; 3] = [1.0, 1.0, 1.0];
-const LABEL_ALPHA: f32 = 0.85;
+/// The ink a label is baked in, with the strength its text and its units
+/// take, so the shader can draw it as it is.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct Ink {
+  pub rgb: [f32; 3],
+  pub alpha: f32,
+  /// A unit's strength, such as the `px` after a readout's figures.
+  pub secondary: f32,
+}
+
+/// `--color-fg` and `--color-fg-secondary` from `src/styles/colors.css`: the
+/// warm ink, `oklch(18% 0.01 47.6)` at 82% and 60% in light and
+/// `oklch(98% 0.005 47.6)` at 88% and 66% in dark, resolved to sRGB.
+const LIGHT_INK: Ink = Ink {
+  rgb: [21.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0],
+  alpha: 0.82,
+  secondary: 0.60,
+};
+const DARK_INK: Ink = Ink {
+  rgb: [251.0 / 255.0, 247.0 / 255.0, 246.0 / 255.0],
+  alpha: 0.88,
+  secondary: 0.66,
+};
+/// White coverage for a label the chrome tints when it draws it, at the
+/// strength it has always carried.
+const COVERAGE_INK: Ink = Ink {
+  rgb: [1.0, 1.0, 1.0],
+  alpha: 0.85,
+  secondary: 0.85,
+};
 
 /// Position of `glyph` in the atlas, or `None` for a character the atlas has
 /// no cell for. The ruler assembles every readout out of these cells; the OCR

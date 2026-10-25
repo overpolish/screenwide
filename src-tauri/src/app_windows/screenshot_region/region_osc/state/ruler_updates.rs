@@ -233,6 +233,20 @@ pub(crate) fn refresh_ruler_pointer(window: &WebviewWindow) -> bool {
   apply_ruler_result(&context, &result)
 }
 
+/// Sends `phase` to the Ruler on `window` as its key would, for a press that
+/// comes from somewhere other than the keyboard, such as the island.
+/// Answers whether the Ruler took it.
+pub(crate) fn ruler_phase(window: &WebviewWindow, phase: u32) -> bool {
+  let Some(context) = context_arc(window) else {
+    return false;
+  };
+  let result = dispatch_input(&context, phase, Point::default(), 0);
+  if result.status == 255 {
+    return false;
+  }
+  apply_ruler_result(&context, &result)
+}
+
 /// Port of `screenwide_region_osc_ruler_set_transient_chrome`
 ///: hides the loupe and the live probes while a
 /// screenshot is being taken through the frozen desktop.

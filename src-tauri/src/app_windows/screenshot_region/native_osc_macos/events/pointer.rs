@@ -6,13 +6,22 @@
 
 use std::cell::Cell;
 
-use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSEventType};
+use objc2_app_kit::{NSCursor, NSEvent, NSEventModifierFlags, NSEventType};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 
 use super::super::super::region_osc::host::{ScreenPoint, WindowId};
 use super::super::super::region_osc::input::{self as engine, modifier_bits};
 use super::super::{geometry, windows};
 use super::CAPTURED;
+
+unsafe extern "C" {
+  /// `src/ruler/cursor_guard_macos.m`: whether the pointer is over the window
+  /// the overlay leaves the pointer to, where that window takes clicks.
+  fn screenwide_cursor_guard_over_exempt_window() -> objc2::runtime::Bool;
+  /// The same file: hands key status to that window while the pointer is
+  /// over it, so its page follows the pointer, and back as it leaves.
+  fn screenwide_cursor_guard_follow_pointer();
+}
 
 /// The overlay `event` happened over, and the point in its client pixels.
 fn overlay_under(event: &NSEvent) -> Option<(WindowId, (f64, f64))> {
@@ -91,6 +100,9 @@ fn modifiers(event: &NSEvent, double: bool) -> u8 {
 /// Hands a pointer `event` to the overlay it is over or held by. Answers
 /// whether it was the engine's.
 pub(super) fn handle(event: &NSEvent, kind: NSEventType) -> bool {
+  if kind == NSEventType::MouseMoved {
+    unsafe { screenwide_cursor_guard_follow_pointer() };
+  }
   let captured = CAPTURED.with(Cell::get);
   let held = matches!(
     kind,
@@ -105,6 +117,13 @@ pub(super) fn handle(event: &NSEvent, kind: NSEventType) -> bool {
       None => return false,
     },
     None => {
+      // The overlay is the key window, so it is sent every pointer move
+      // wherever the pointer is. Over the island the move is the island's,
+      // and the pointer an arrow over its controls, not the crosshair.
+      if unsafe { screenwide_cursor_guard_over_exempt_window() }.as_bool() {
+        NSCursor::arrowCursor().set();
+        return false;
+      }
       let Some(found) = overlay_under(event) else {
         return false;
       };

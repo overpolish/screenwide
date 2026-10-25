@@ -10,8 +10,10 @@
  * either side of it and its height. Leave it out on a screen without one. */
 export type IslandNotch = { height: number; width: number };
 
-/** Where under the row a section hangs. */
-export type IslandAnchor = "center" | "end" | "start";
+/** Where under the row a section hangs: at its start, end or middle, or,
+ * as a number, centred under that many px from the row's start, as under
+ * the one control a small part belongs to. */
+export type IslandAnchor = "center" | "end" | "start" | number;
 
 export const ISLAND = {
   /** The curved inner corner where the section meets the row. */

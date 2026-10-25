@@ -78,3 +78,32 @@ void screenwide_set_region_expected_cursor(NSCursor *cursor) {
 void screenwide_set_cursor_guard_exempt_window(NSWindow *window) {
   cursor_guard_exempt_window = window;
 }
+
+/// The window that was key when the pointer came onto the exempt window,
+/// which it is given back to when the pointer leaves.
+static __weak NSWindow *exempt_handed_from = nil;
+
+/// Lets the exempt window's page follow the pointer while it is over it.
+/// WebKit updates hover only in a key window, and pointer moves go to the
+/// key window, which is the tool's overlay, so the page would otherwise
+/// never see the pointer cross it, and a control it last saw under the
+/// pointer would keep its hover. The exempt window takes key status as the
+/// pointer comes onto it and gives it back as the pointer leaves; it leaves
+/// past a margin round the window's parts, inside the window, so the page
+/// sees the pointer go before the overlay is key again. The tool's keys
+/// still reach it either way: its event monitor sees every key the
+/// application is sent. Main thread only.
+void screenwide_cursor_guard_follow_pointer(void) {
+  NSWindow *exempt = cursor_guard_exempt_window;
+  if (exempt == nil)
+    return;
+  BOOL over = pointerOverExemptWindow();
+  if (over && !exempt.isKeyWindow) {
+    exempt_handed_from = NSApp.keyWindow;
+    [exempt makeKeyWindow];
+  } else if (!over && exempt.isKeyWindow) {
+    NSWindow *previous = exempt_handed_from;
+    exempt_handed_from = nil;
+    [previous makeKeyWindow];
+  }
+}

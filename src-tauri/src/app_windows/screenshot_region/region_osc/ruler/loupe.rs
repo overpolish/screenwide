@@ -1,12 +1,21 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::chrome::{add_shadowed_plate, label_chrome, PILL};
+use super::tokens::{CALLOUT_HEIGHT, CAPTION_LINE, CAPTION_SIZE, ICON, INLINE, INSET, SEPARATE};
 use super::*;
+use screenwide_osc::style::RULER_LABEL_FILLS;
+
+/// The hex digits and letters, whose widest advance sets the hex line's
+/// width, so the callout keeps one width as the colour under it changes.
+const HEX_DIGITS: &str = "0123456789ABCDEF";
 
 impl Ruler {
-  /// The cursor readout: a rounded plate, the
-  /// picked-pixel swatch, its `#RRGGBB` hex, an optional `W × H px` row from
-  /// the two live probes, the animated checkmark and the tolerance notice.
+  /// The cursor readout, on the labels' black: the picked colour's swatch,
+  /// and beside it the `W × H px` of the two live probes over the colour's
+  /// `#RRGGBB` in the secondary ink, or the hex alone with no probes. The
+  /// swatch turns to a check when the colour is copied, and a tolerance
+  /// change shows its name over the whole callout for a moment.
   #[allow(clippy::too_many_arguments)]
   pub(super) fn add_loupe(
     &mut self,
@@ -16,14 +25,9 @@ impl Ruler {
     view: Size,
     display_id: u32,
     scale: f64,
-    light_mode: bool,
     now: Instant,
     atlas: &super::super::text::TextTexture,
     cells: &AtlasMetrics,
-    fills: [[f32; 4]; 2],
-    value: ControlMetrics,
-    control: f64,
-    inset: f64,
   ) {
     if !self.transient_chrome
       || self.interaction_active
@@ -39,52 +43,40 @@ impl Ruler {
           device,
           &tolerance_text(self.tolerance_mode),
           scale,
-          light_mode,
-          value.font_size,
-          value.line_height,
+          false,
+          CAPTION_SIZE,
+          CAPTION_LINE,
         )
       })
       .flatten();
 
     let colour = hex_text(self.color);
     let dimensions = probe_dimensions_text(&self.data.probes, display_id);
-    // A ToggleMenuButton at its capture size: the swatch in the leading glyph
-    // slot, then the dimensions over the hex on the readout tier. The glyph
-    // slot carries the control's side inset outside the swatch and half the
-    // icon-to-label gap inside it; the text takes the other half and the side
-    // inset closes the right edge. The hex is seven cells of one pitch, so
-    // only the dimensions change the width, and the callout follows the
-    // pointer anyway.
-    // Proportional, as the dimensions line and the macOS readout are: a
-    // fixed pitch made the hex read as tabular digits in a monospaced face.
-    let colour_width = cells.text_width(&colour);
+    let hex_width = steady_hex_width(cells);
     let dimensions_width = dimensions
       .as_ref()
       .map_or(0.0, |text| cells.text_width(text));
-    let text_offset = inset + value.icon_size + control + control;
-    let width = text_offset + colour_width.max(dimensions_width) + inset;
-    let height = value.callout_height;
-    let origin = loupe_origin(self.point, width, height, view, inset);
+    let height = CALLOUT_HEIGHT;
+    // A pill with the swatch at its start, the size and circle of the
+    // annotate island's colour, as far in from the edge as from the top.
+    let edge = (height - ICON) * 0.5;
+    let text_offset = edge + ICON + INLINE;
+    let width = text_offset + hex_width.max(dimensions_width) + INSET;
+    let origin = loupe_origin(self.point, width, height, view, SEPARATE);
     let plate = Rect::from_xywh(origin.x, origin.y, width, height);
 
     let start = out.len();
-    renderer::add_plate(out, view, renderer::pixel_aligned_rect(plate, scale));
-    let icon_top = (height - value.icon_size) * 0.5;
-    let swatch = Rect::from_xywh(
-      origin.x + inset,
-      origin.y + icon_top,
-      value.icon_size,
-      value.icon_size,
-    );
+    add_shadowed_plate(out, view, plate, scale);
+    let swatch = Rect::from_xywh(origin.x + edge, origin.y + edge, ICON, ICON);
     renderer::add_pixel_aligned_quad(out, view, swatch, scale, 29);
 
     // The lines stack with no gap between them, and the block they make is
-    // centred in the taller control.
+    // centred in the taller callout.
     let text_left = origin.x + text_offset;
     let line_height = atlas.size.height;
     let lines = if dimensions.is_some() { 2.0 } else { 1.0 };
     let mut text_top = origin.y + (height - line_height * lines) * 0.5;
-    if let Some(dimensions) = dimensions.as_ref() {
+    let colour_kind = if let Some(dimensions) = dimensions.as_ref() {
       add_atlas_text(
         out,
         view,
@@ -98,7 +90,10 @@ impl Ruler {
         48,
       );
       text_top += line_height;
-    }
+      67
+    } else {
+      48
+    };
     add_atlas_text(
       out,
       view,
@@ -109,7 +104,7 @@ impl Ruler {
       line_height,
       0.0,
       scale,
-      48,
+      colour_kind,
     );
 
     // Matches CheckOnClick: scale and fade in, then only fade on expiry.
@@ -163,15 +158,20 @@ impl Ruler {
       segments,
       out,
       start,
-      fills,
-      value.callout_radius,
-      control_stroke(if light_mode {
-        Appearance::Light
-      } else {
-        Appearance::Dark
-      }),
+      RULER_LABEL_FILLS,
+      label_chrome(PILL, scale, 1.0),
       Some(atlas.view.clone()),
       secondary,
     );
   }
+}
+
+/// `#` and six of the widest hex glyph: the hex line's width for any colour.
+fn steady_hex_width(cells: &AtlasMetrics) -> f64 {
+  let widest = HEX_DIGITS
+    .chars()
+    .filter_map(super::super::text::glyph_index)
+    .map(|index| cells.advance(index))
+    .fold(0.0_f64, f64::max);
+  cells.text_width("#") + widest * 6.0
 }

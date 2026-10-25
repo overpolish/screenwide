@@ -83,8 +83,10 @@ function stackUnderRow({
   // start is the right-hand edge.
   const held = layout.held.width;
   const lineStart = isRtl ? below.width / 2 : -below.width / 2;
+  // A section under one control is centred under the line, as the line has
+  // no controls of its own.
   const physicalAnchor =
-    anchor === "center"
+    anchor === "center" || typeof anchor === "number"
       ? "center"
       : (anchor === "start") !== isRtl
         ? "left"

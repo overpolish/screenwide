@@ -44,7 +44,9 @@ export function islandLayout({
       ? 0
       : anchor === "end"
         ? spare
-        : spare / 2;
+        : anchor === "center"
+          ? spare / 2
+          : underControl(anchor - held.width / 2, spare);
   // What the section holds rides at the box's start, and in a merged box
   // wider than itself sits where it is anchored, by an amount that moves on
   // the same curve: at the start or end, or centred. Placing it by layout
@@ -52,7 +54,14 @@ export function islandLayout({
   // box had begun to change. Anchored to a side, it stays put as the row
   // grows from the other side round a notch.
   const slack = isMerged ? Math.max(0, sectionWidth - held.width) : 0;
-  const inset = anchor === "start" ? 0 : anchor === "end" ? slack : slack / 2;
+  const inset =
+    anchor === "start"
+      ? 0
+      : anchor === "end"
+        ? slack
+        : anchor === "center"
+          ? slack / 2
+          : Math.min(Math.max(anchor - held.width / 2, 0), slack);
   // The section is placed from the island's middle, which stays still as
   // the row grows out to both sides. Closed, it is a notch-wide box there;
   // it opens out of the middle to its place and folds back into it.
@@ -88,4 +97,14 @@ export function islandLayout({
         ? openWidth
         : rowOpen.width,
   };
+}
+
+/** Where a section centred under a control starts, `start` px in from the
+ * row's start with `spare` px of row beside it: kept within the row, and
+ * flush with an end it would leave only a sliver of row beside. */
+function underControl(start: number, spare: number) {
+  const within = Math.min(Math.max(start, 0), spare);
+  if (within < ISLAND.minStep) return 0;
+  if (spare - within < ISLAND.minStep) return spare;
+  return within;
 }

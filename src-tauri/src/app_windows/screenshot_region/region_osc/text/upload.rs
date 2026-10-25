@@ -5,13 +5,13 @@ use super::*;
 
 /// Coverage becomes premultiplied RGBA: the shader divides by alpha again, so
 /// the ink colour survives the round trip unchanged.
-pub(super) fn premultiply(coverage: &[u8], ink: [f32; 3]) -> Vec<u8> {
+pub(super) fn premultiply(coverage: &[u8], ink: Ink) -> Vec<u8> {
   let mut rgba = vec![0_u8; coverage.len() * 4];
   for (pixel, coverage) in rgba.chunks_exact_mut(4).zip(coverage) {
-    let alpha = f32::from(*coverage) * LABEL_ALPHA;
-    pixel[0] = (ink[0] * alpha).round() as u8;
-    pixel[1] = (ink[1] * alpha).round() as u8;
-    pixel[2] = (ink[2] * alpha).round() as u8;
+    let alpha = f32::from(*coverage) * ink.alpha;
+    pixel[0] = (ink.rgb[0] * alpha).round() as u8;
+    pixel[1] = (ink.rgb[1] * alpha).round() as u8;
+    pixel[2] = (ink.rgb[2] * alpha).round() as u8;
     pixel[3] = alpha.round() as u8;
   }
   rgba
@@ -23,7 +23,7 @@ pub(super) fn build_label(
   scale: f64,
   font_size: f64,
   line_height: f64,
-  ink: [f32; 3],
+  ink: Ink,
   mono: bool,
 ) -> Option<TextTexture> {
   if text.is_empty() || scale <= 0.0 {

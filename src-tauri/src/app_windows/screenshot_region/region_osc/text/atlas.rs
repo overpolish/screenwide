@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{
-  atlas_uv, glyph_count, glyph_index, premultiply, text_context, upload, AtlasMetrics, TextTexture,
-  ATLAS_CELLS, GUTTER, HEX_GLYPHS, LABEL_ALPHA, LIGHT_INK, SUPERSAMPLE,
+  atlas_uv, glyph_count, glyph_index, premultiply, text_context, upload, AtlasMetrics, Ink,
+  TextTexture, ATLAS_CELLS, GUTTER, HEX_GLYPHS, SUPERSAMPLE,
 };
 use screenwide_gpu::Gpu;
 use screenwide_osc::geometry::Size;
@@ -13,7 +13,7 @@ pub(super) fn build_atlas(
   scale: f64,
   font_size: f64,
   line_height: f64,
-  ink: [f32; 3],
+  ink: Ink,
 ) -> Option<TextTexture> {
   if scale <= 0.0 {
     return None;
@@ -59,12 +59,12 @@ pub(super) fn build_atlas(
     })
     .collect::<Vec<_>>();
   let mut coverage = context.coverage((pixel_width, pixel_height), &runs)?;
-  // NumberField's unit decoration: content-fg-secondary, light / dark.
-  let unit_alpha = if ink == LIGHT_INK { 0.50 } else { 0.55 };
+  // A unit takes the secondary strength of the ink its figures are in.
+  let unit = ink.secondary / ink.alpha;
   for (offset, coverage) in coverage.iter_mut().enumerate() {
     let cell = (offset % pixel_width as usize) / cell_pixel_width as usize;
     if cell == glyph_index('p')? || cell == glyph_index('x')? {
-      *coverage = (f32::from(*coverage) * unit_alpha / LABEL_ALPHA).round() as u8;
+      *coverage = (f32::from(*coverage) * unit).round() as u8;
     }
   }
   drop(context);

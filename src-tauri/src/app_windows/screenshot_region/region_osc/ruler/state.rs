@@ -99,8 +99,41 @@ impl Ruler {
     change
   }
 
+  /// Takes this surface's labels, noting when each one it did not have
+  /// before arrived, so it can come in rather than appear.
   pub(crate) fn set_labels(&mut self, labels: Vec<LabelItem>) {
+    let now = Instant::now();
+    let keys = labels.iter().map(label_key).collect::<Vec<_>>();
+    self.label_intros.retain(|(key, _)| keys.contains(key));
+    for key in keys {
+      if !self.label_intros.iter().any(|(known, _)| *known == key) {
+        self.label_intros.push((key, now));
+      }
+    }
     self.labels = labels;
+  }
+
+  /// How far the label of `kind` and `id` has come in, eased, from 0 as it
+  /// arrives to 1 once it is whole.
+  pub(super) fn label_intro(&self, kind: u8, id: u64, now: Instant) -> f64 {
+    self
+      .label_intros
+      .iter()
+      .find(|(key, _)| *key == (kind, id))
+      .map_or(1.0, |(_, arrived)| {
+        ease(
+          (now.saturating_duration_since(*arrived).as_secs_f64()
+            / ANIMATION_DURATION.as_secs_f64())
+          .clamp(0.0, 1.0),
+        )
+      })
+  }
+
+  fn label_arriving(&self, now: Instant) -> bool {
+    self
+      .label_intros
+      .iter()
+      .any(|(_, arrived)| now.saturating_duration_since(*arrived) < ANIMATION_DURATION)
   }
 
   /// This surface's window onto the desktop plane, which is what decides which
@@ -132,6 +165,7 @@ impl Ruler {
     self.visible
       && (self.copied.running(now)
         || self.tolerance.running(now)
+        || self.label_arriving(now)
         || (self.hovered_artifact_key != 0 && self.hover_progress(now) < 1.0))
   }
 
@@ -139,12 +173,13 @@ impl Ruler {
   /// Windows builder grows a `Vec`, so this exists to keep the budget honest
   /// and to reserve in one step.
   pub(crate) fn vertex_capacity(&self) -> usize {
-    let crosshair = usize::from(self.visible && self.crosshair) * 12;
+    // Every hairline is two quads, its casing and itself.
+    let crosshair = usize::from(self.visible && self.crosshair) * 24;
     crosshair
       + self.data.measurements.len() * 48
-      + self.data.probes.len() * 24
-      + self.data.guides.len() * 12
-      + self.data.guide_gaps.len() * 24
+      + self.data.probes.len() * 48
+      + self.data.guides.len() * 24
+      + self.data.guide_gaps.len() * 48
       + self.data.radii.len() * 12
       + self.data.centerlines.len() * 12
       + self.data.inner_objects.len() * 36
@@ -157,5 +192,16 @@ impl Ruler {
       return None;
     }
     label_hit(&self.label_rects, point)
+  }
+}
+
+/// A label's identity across results: its kind, as `LabelRect::kind` numbers
+/// them, and its artifact.
+fn label_key(item: &LabelItem) -> (u8, u64) {
+  match item {
+    LabelItem::Measurement(measurement) => (1, measurement.id),
+    LabelItem::Probe(probe) => (2, probe.id),
+    LabelItem::GuideGap(probe) => (3, probe.id),
+    LabelItem::Radius(radius) => (4, radius.id),
   }
 }

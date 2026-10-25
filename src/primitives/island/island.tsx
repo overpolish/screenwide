@@ -15,6 +15,7 @@ import { Toolbar } from "react-aria-components";
 
 import { motionDurations } from "../../lib/motion";
 
+import { useControlAnchor } from "./island-anchor";
 import { IslandBelow } from "./island-below";
 import { IslandContext } from "./island-context";
 import { IslandDrawing } from "./island-drawing";
@@ -60,6 +61,9 @@ export type IslandProps = {
   row: ReactNode;
   /** Where under the row the section hangs. */
   anchor?: IslandAnchor;
+  /** A control in the row to hang the section centred under, in place of
+   * `anchor`, for a small part that belongs to that control alone. */
+  anchorControl?: HTMLElement | null;
   /** A second line under the row, in the row's black, centred under the
    * notch whatever the row does beside it; the section hangs under it
    * rather than under the row (`island-stack-layout.ts`). A row growing on
@@ -86,6 +90,7 @@ export type IslandProps = {
 
 export function Island({
   anchor = "center",
+  anchorControl,
   "aria-label": label,
   below,
   isShown = true,
@@ -129,8 +134,9 @@ export function Island({
   const isStacked = isShown && Boolean(below);
   const rowShift = isShown && notch ? shift : 0;
   const { direction } = useLocale();
+  const controlAnchor = useControlAnchor(anchorControl, rowElement, direction);
   const layout = layOutIsland({
-    anchor,
+    anchor: controlAnchor ?? anchor,
     below: isStacked ? (belowSize ?? { height: 0, width: 0 }) : null,
     direction,
     hasSection: Boolean(section),

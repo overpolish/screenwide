@@ -3,6 +3,10 @@
 
 use super::*;
 
+/// How far a probe's end ticks reach either side of its line, and a measured
+/// box's hairlines run on past its corners, in points.
+const TICK: f64 = 4.0;
+
 impl Ruler {
   /// Port of `screenwide_region_osc_ruler_add_vertices` (`:1797-2015`), in its
   /// exact order: crosshair, probes, guides, gaps, radii, centerlines, inner
@@ -20,7 +24,7 @@ impl Ruler {
       return;
     }
     out.reserve(self.vertex_capacity());
-    let (tick, _) = spacing();
+    let tick = TICK;
     let hover_width = self.hover_width(now);
     let zoom = self.zoom();
 
@@ -28,22 +32,22 @@ impl Ruler {
       let x = renderer::snap(self.point.x, scale);
       let y = renderer::snap(self.point.y, scale);
       if x >= 0.0 && x <= view.width {
-        renderer::add_line(
+        add_hairline(
           out,
           view,
           Point { x, y: 0.0 },
           Point { x, y: view.height },
-          1.0 / scale,
+          scale,
           28,
         );
       }
       if y >= 0.0 && y <= view.height {
-        renderer::add_line(
+        add_hairline(
           out,
           view,
           Point { x: 0.0, y },
           Point { x: view.width, y },
-          1.0 / scale,
+          scale,
           28,
         );
       }
@@ -67,14 +71,14 @@ impl Ruler {
       if probe.padding[0] != 0 {
         renderer::add_line(out, view, along(start), along(end), hover_width, 32);
       }
-      renderer::add_line(out, view, along(start), along(end), 1.0 / scale, 28);
+      add_hairline(out, view, along(start), along(end), scale, 28);
       for edge in [start, end] {
-        renderer::add_line(
+        add_hairline(
           out,
           view,
           axis_point(probe.axis, edge, position - tick),
           axis_point(probe.axis, edge, position + tick),
-          1.0 / scale,
+          scale,
           28,
         );
       }
@@ -94,7 +98,7 @@ impl Ruler {
           if guide.padding[0] != 0 {
             renderer::add_line(out, view, from, to, hover_width, 38);
           }
-          renderer::add_line(out, view, from, to, 1.0 / scale, 36);
+          add_hairline(out, view, from, to, scale, 36);
         }
       } else if guide.axis == 2 {
         let y = renderer::snap(
@@ -106,7 +110,7 @@ impl Ruler {
           if guide.padding[0] != 0 {
             renderer::add_line(out, view, from, to, hover_width, 38);
           }
-          renderer::add_line(out, view, from, to, 1.0 / scale, 36);
+          add_hairline(out, view, from, to, scale, 36);
         }
       }
     }
@@ -129,14 +133,14 @@ impl Ruler {
       if gap.padding[0] != 0 {
         renderer::add_line(out, view, along(start), along(end), hover_width, 38);
       }
-      renderer::add_line(out, view, along(start), along(end), 1.0 / scale, 36);
+      add_hairline(out, view, along(start), along(end), scale, 36);
       for edge in [start, end] {
-        renderer::add_line(
+        add_hairline(
           out,
           view,
           axis_point(gap.axis, edge, position - tick),
           axis_point(gap.axis, edge, position + tick),
-          1.0 / scale,
+          scale,
           36,
         );
       }
@@ -255,7 +259,15 @@ impl Ruler {
         scale,
         measurement.padding[0] != 0,
         hover_width,
+        tick,
       );
     }
   }
+}
+
+/// A one-pixel ruler line of `kind` over a soft dark casing three pixels
+/// wide, so the line holds on light and busy content.
+fn add_hairline(out: &mut Vec<Vertex>, view: Size, from: Point, to: Point, scale: f64, kind: u32) {
+  renderer::add_line(out, view, from, to, 3.0 / scale, 66);
+  renderer::add_line(out, view, from, to, 1.0 / scale, kind);
 }

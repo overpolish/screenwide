@@ -8,6 +8,7 @@ use crate::{app_windows::WindowLabel, capture_overlays, screenshots};
 mod adapter;
 pub(crate) mod centerlines;
 pub(crate) mod input;
+pub(crate) mod island;
 #[cfg(target_os = "windows")]
 pub(crate) use crate::osc::keyboard_windows::alt_pressed as windows_alt_pressed;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -39,6 +40,7 @@ fn close_ruler_windows(app: &AppHandle) {
 
 pub fn dismiss(app: &AppHandle) {
   screenshot_mode::reset();
+  island::withdraw(app);
   let had_windows = !ruler_windows(app).is_empty();
   close_ruler_windows(app);
   #[cfg(target_os = "macos")]
@@ -78,7 +80,15 @@ pub(crate) fn restart_after_topology_change(app: &AppHandle) {
 
 #[tauri::command]
 pub async fn set_ruler_screenshot_mode(app: AppHandle, active: bool) -> Result<(), String> {
-  screenshot_mode::set(&app, active).await
+  // Out of the picture before the shutter, and back once it has closed.
+  if active {
+    island::set_screenshot_mode(&app, true);
+  }
+  let result = screenshot_mode::set(&app, active).await;
+  if !active {
+    island::set_screenshot_mode(&app, false);
+  }
+  result
 }
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
@@ -104,13 +114,22 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
 
 async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   let monitors = capture_overlays::monitor_layout(app)?;
+  // The island stays on screen and changes into the Ruler's tools over the
+  // frozen desktop, so it is kept out of the desktop it is frozen from.
+  island::keep_out_of_captures(app, true).await;
   let mut snapshots = Vec::with_capacity(monitors.len());
+  let mut captured = Ok(());
   for (monitor_id, _, _) in &monitors {
-    snapshots.push((
-      *monitor_id,
-      screenshots::capture_overlay_snapshot(*monitor_id).await?,
-    ));
+    match screenshots::capture_overlay_snapshot(*monitor_id).await {
+      Ok(snapshot) => snapshots.push((*monitor_id, snapshot)),
+      Err(error) => {
+        captured = Err(error);
+        break;
+      }
+    }
   }
+  island::keep_out_of_captures(app, false).await;
+  captured?;
   if !app.state::<RulerState>().is_current(generation) {
     return Ok(());
   }
@@ -150,6 +169,7 @@ async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   adapter::present(&window)?;
   capture_overlays::emit_lifecycle(app, true);
   crate::app_windows::sync_recording_ui_escape(app, true);
+  island::present(app);
   // Probes and the loupe need only the gradients `install` computed, so the
   // element boxes for snapping, radius and centre lines follow off-screen.
   let app = app.clone();

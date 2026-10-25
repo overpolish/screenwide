@@ -34,13 +34,7 @@ use crate::ruler::render::{
   CenterlinePacket, GuideGapPacket, GuidePacket, InnerObjectPacket, MeasurementPacket, ProbePacket,
   RadiusPacket, ViewportPacket,
 };
-use screenwide_osc::{
-  controls::{
-    control_metrics, control_stroke, control_visual, Appearance, ControlColor, ControlKind,
-    ControlMetrics, ControlSize, ControlStyle, Interaction,
-  },
-  geometry::{Point, Rect, Size},
-};
+use screenwide_osc::geometry::{Point, Rect, Size};
 
 /// Every ruler transition - the copied checkmark, the hover pulse and the
 /// tolerance notice - runs over this window.
@@ -53,32 +47,7 @@ const HOVER_ALPHA: f64 = 0.24;
 const HOVER_WIDTH_MIN: f64 = 3.0;
 const HOVER_WIDTH_MAX: f64 = 8.0;
 
-/// `screenwide_osc_control_spacing`, reached through the `#[no_mangle]` export
-/// because `osc::controls::style` is a private module of the frozen portable
-/// tree - the same route the icon atlas takes in `surface.rs`.
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct NativeControlSpacing {
-  tight: f64,
-  control: f64,
-  control_inset: f64,
-  section: f64,
-  layout: f64,
-  window_inset: f64,
-}
-
-extern "C" {
-  fn screenwide_osc_control_spacing() -> NativeControlSpacing;
-}
-
-fn spacing() -> (f64, f64) {
-  let value = unsafe { screenwide_osc_control_spacing() };
-  (value.control, value.control_inset)
-}
-
-fn metrics() -> ControlMetrics {
-  control_metrics(ControlKind::Button, ControlSize::Regular)
-}
+mod tokens;
 
 /// The eight datasets a ruler-flagged result pulls from the document. macOS
 /// stored each as an `NSData` blob per surface; the Rust twin keeps the packet
@@ -154,6 +123,9 @@ pub(crate) struct Ruler {
   data: RulerData,
   labels: Vec<LabelItem>,
   label_rects: Vec<LabelRect>,
+  /// When each of `labels` arrived, by `(kind, id)`, while it may still be
+  /// coming in.
+  label_intros: Vec<((u8, u64), Instant)>,
   copied: Animation,
   tolerance: Animation,
   text: TextCache,
@@ -178,6 +150,7 @@ impl Default for Ruler {
       data: RulerData::default(),
       labels: Vec::new(),
       label_rects: Vec::new(),
+      label_intros: Vec::new(),
       copied: Animation::default(),
       tolerance: Animation::default(),
       text: TextCache::default(),
