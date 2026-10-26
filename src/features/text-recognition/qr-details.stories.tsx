@@ -1,18 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type Meta, type StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
 
 import { featureStage } from "../../storybook/feature-story-stage";
 
 import { QrDetails } from "./qr-details";
 
+import type { Meta, StoryObj } from "@storybook/react-vite";
+
 const meta = {
   args: {
     content: "https://screenwide.app",
-    onAction: () => undefined,
-    onClose: () => undefined,
-    onCopy: () => undefined,
+    onAction: fn(),
+    onClose: fn(),
+    onCopy: fn(),
     payload: {
       action: "link",
       kind: "action",
@@ -21,9 +23,13 @@ const meta = {
     },
   },
   component: QrDetails,
+  // Built in Rust at 480 by 360pt.
   decorators: [featureStage({ height: 360, width: 480 })],
-  parameters: { layout: "fullscreen" },
-  title: "Legacy/Text Recognition/QR Details",
+  parameters: {
+    controls: { include: ["content", "error"] },
+    layout: "fullscreen",
+  },
+  title: "Features/Text Recognition/QR Details",
 } satisfies Meta<typeof QrDetails>;
 
 export default meta;

@@ -1,33 +1,34 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where the island meets each platform while the Ruler is up: how it stands
-//! above the overlay, keeps the pointer an arrow, and stays out of the
-//! desktop the Ruler freezes.
+//! The island over a capture overlay that shows its tools there, the Ruler
+//! or Text Recognition: how it stands above the overlay, keeps the pointer
+//! an arrow, and stays out of the desktop the overlay freezes.
 
-use tauri::AppHandle;
+use tauri::{AppHandle, WebviewWindow};
 
-use crate::app_windows;
+use super::island;
 
+/// Stands the island over `overlay`, the window the tool draws in, or lets
+/// it go back to its own level with none.
+///
 /// Windows has no window levels, and a press on the overlay raises it over
-/// every other topmost window, so the island stands above it by being owned
-/// by the Ruler's window: an owned window always stands above its owner.
-#[cfg(target_os = "windows")]
-pub(super) fn own_by_ruler(app: &AppHandle, owned: bool) {
-  let Some(island) = app_windows::island::window(app) else {
-    return;
-  };
-  let owner = if owned {
-    super::super::ruler_windows(app).into_iter().next()
-  } else {
-    None
-  };
-  if owned && owner.is_none() {
-    return;
+/// every other topmost window, so there the island stands above it by being
+/// owned by it: an owned window always stands above its owner. Call it once
+/// the overlay is presented, and with none before the overlay closes, as a
+/// window takes the windows it owns with it when it is destroyed.
+pub(crate) fn stand_over(app: &AppHandle, overlay: Option<&WebviewWindow>) {
+  if let Err(error) = island::set_above_overlays(app, overlay.is_some()) {
+    eprintln!("Could not change the island's level: {error}");
   }
-  if let Err(error) = app_windows::platform::set_owner(&island, owner.as_ref()) {
-    eprintln!("Could not set the island's owner: {error}");
+  #[cfg(target_os = "windows")]
+  if let Some(window) = island::window(app) {
+    if let Err(error) = super::platform::set_owner(&window, overlay) {
+      eprintln!("Could not set the island's owner: {error}");
+    }
   }
+  #[cfg(target_os = "macos")]
+  exempt_from_crosshair(app, overlay.is_some());
 }
 
 #[cfg(target_os = "macos")]
@@ -38,37 +39,37 @@ unsafe extern "C" {
 }
 
 /// The island is chrome rather than desktop, so over it the pointer is the
-/// arrow its controls are pressed with, not the Ruler's crosshair. The
+/// arrow its controls are pressed with, not the overlay's crosshair. The
 /// overlay is the key window and is sent every pointer move, wherever the
 /// pointer is, so it is told which window to leave the pointer to.
 #[cfg(target_os = "macos")]
-pub(super) fn exempt_from_crosshair(app: &AppHandle, exempt: bool) {
-  let island = exempt.then(|| app_windows::island::window(app)).flatten();
+fn exempt_from_crosshair(app: &AppHandle, exempt: bool) {
+  let window = exempt.then(|| island::window(app)).flatten();
   let result = app.run_on_main_thread(move || {
-    let window = island
+    let native = window
       .as_ref()
-      .and_then(|island| island.ns_window().ok())
+      .and_then(|window| window.ns_window().ok())
       .unwrap_or(std::ptr::null_mut());
-    unsafe { screenwide_set_cursor_guard_exempt_window(window) };
+    unsafe { screenwide_set_cursor_guard_exempt_window(native) };
   });
   if let Err(error) = result {
     eprintln!("Could not reach the main thread to exempt the island: {error}");
   }
 }
 
-/// Keeps the island out of captures while the Ruler freezes the desktop, or
+/// Keeps the island out of captures while a tool freezes the desktop, or
 /// lets them see it again. The island stays on screen and changes into the
-/// Ruler's tools over the frozen desktop; frozen into it as well, its old
-/// shape would show round the new one.
-pub(in crate::ruler) async fn keep_out_of_captures(app: &AppHandle, kept_out: bool) {
-  let Some(island) = app_windows::island::window(app) else {
+/// tool's over the frozen desktop; frozen into it as well, its old shape
+/// would show round the new one.
+pub(crate) async fn keep_out_of_captures(app: &AppHandle, kept_out: bool) {
+  let Some(window) = island::window(app) else {
     return;
   };
   #[cfg(target_os = "macos")]
   {
     // The island is left visible to captures on macOS, where a recording
     // keeps it out by owning process instead.
-    if let Err(error) = app_windows::set_window_capture_affinity(&island, !kept_out) {
+    if let Err(error) = super::set_window_capture_affinity(&window, !kept_out) {
       eprintln!("Could not change the island's capture affinity: {error}");
       return;
     }
@@ -87,9 +88,9 @@ pub(in crate::ruler) async fn keep_out_of_captures(app: &AppHandle, kept_out: bo
   #[cfg(target_os = "windows")]
   {
     let result = if kept_out {
-      app_windows::set_window_capture_affinity(&island, false)
+      super::set_window_capture_affinity(&window, false)
     } else {
-      app_windows::apply_capture_policy(app)
+      super::apply_capture_policy(app)
     };
     if let Err(error) = result {
       eprintln!("Could not change the island's capture affinity: {error}");
@@ -102,5 +103,5 @@ pub(in crate::ruler) async fn keep_out_of_captures(app: &AppHandle, kept_out: bo
     }
   }
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  let _ = (island, kept_out);
+  let _ = (window, kept_out);
 }

@@ -27,12 +27,17 @@ pub use recording_ui::{__cmd__toggle_recording_ui, __tauri_command_name_toggle_r
 pub(crate) mod island;
 #[cfg(target_os = "macos")]
 mod island_macos;
+pub(crate) mod island_overlay;
+pub(crate) mod island_placement;
 #[cfg(target_os = "windows")]
 mod island_windows;
 pub use island::{__cmd__finish_hiding_island, __tauri_command_name_finish_hiding_island};
 pub use island::{__cmd__island_presence, __tauri_command_name_island_presence};
+pub use island::{__cmd__island_ready_to_move, __tauri_command_name_island_ready_to_move};
 pub use island::{__cmd__set_island_hit_area, __tauri_command_name_set_island_hit_area};
-pub use island::{finish_hiding_island, island_presence, set_island_hit_area};
+pub use island::{
+  finish_hiding_island, island_presence, island_ready_to_move, set_island_hit_area,
+};
 
 mod labels;
 pub use labels::WindowLabel;

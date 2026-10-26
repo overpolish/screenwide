@@ -86,11 +86,6 @@ impl OscRuntime {
     if self.purpose == Purpose::TextRecognition && input_phase == InputPhase::Down {
       crate::text_recognition::qr_details::hide_without_resume(self.window.app_handle());
     }
-    if self.purpose == Purpose::TextRecognition {
-      if let Some(result) = crate::text_recognition::dispatch_control(&self.window, input_phase) {
-        return result;
-      }
-    }
     if self.purpose == Purpose::TextRecognition && self.completed.load(Ordering::Acquire) {
       if input_phase == InputPhase::Down {
         crate::text_recognition::native_text_interaction_started(&self.window);

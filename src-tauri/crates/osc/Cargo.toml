@@ -18,7 +18,6 @@ test-support = []
 
 [dependencies]
 bytemuck.workspace = true
-image.workspace = true
 screenwide-accent.workspace = true
 screenwide-gpu.workspace = true
 screenwide-scenes.workspace = true

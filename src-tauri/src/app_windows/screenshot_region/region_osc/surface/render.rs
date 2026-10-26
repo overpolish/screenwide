@@ -219,7 +219,7 @@ impl Surface {
     // run rather than a chrome draw call of their own.
     self
       .ocr
-      .add_world_vertices(&mut vertices, view, region, scale);
+      .add_world_vertices(&mut vertices, view, region, scale, now);
     self.ruler.add_world_vertices(
       &mut vertices,
       view,
@@ -229,19 +229,8 @@ impl Surface {
       now,
     );
     let chrome_start = vertices.len();
-    // macOS drew every control into its own material surface; folding them in
-    // here costs one draw call per control, because each carries its own fill
-    // and foreground in the constant buffer.
-    self.ocr.add_chrome_vertices(
-      self.gpu.device(),
-      &mut vertices,
-      &mut segments,
-      view,
-      region,
-      scale,
-      light,
-    );
-    // Ruler labels and the loupe fold in the same way, one segment each.
+    // Ruler labels and the loupe are chrome: one draw call each, because each
+    // carries its own fill and foreground in the constant buffer.
     self.ruler.add_chrome_vertices(
       self.gpu.device(),
       &mut vertices,
@@ -262,9 +251,8 @@ impl Surface {
     segments.extend(Segment::base(lens_start, vertices.len()));
     let result = self.submit(&vertices, &segments, &constants, (width, height));
     self.vertices = vertices;
-    // Control transitions, the confirm crossfade and every ruler transition
-    // are time based, so a frame is retimed while one is running
-    //.
+    // The reading sheen and every ruler transition are time based, so a
+    // frame is retimed while one is running.
     self.set_animating(
       self.ocr.is_animating() || self.ruler.is_animating(now) || self.cutout.is_fading(now),
     );

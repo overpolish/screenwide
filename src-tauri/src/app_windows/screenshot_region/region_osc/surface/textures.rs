@@ -1,22 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pub(super) fn upload_icons(gpu: &screenwide_gpu::Gpu) -> Result<wgpu::TextureView, String> {
-  let atlas = screenwide_osc::controls::icon_atlas();
-  let expected = atlas.width as usize * atlas.height as usize;
-  if atlas.pixels().len() < expected || expected == 0 {
-    return Err("the shared OSC icon atlas is empty".to_owned());
-  }
-  Ok(upload_texture(
-    gpu,
-    &atlas.pixels()[..expected],
-    atlas.width,
-    atlas.height,
-    wgpu::TextureFormat::R8Unorm,
-    1,
-  ))
-}
-
 /// The format every RGBA picture the overlay draws is uploaded in.
 pub(super) const RGBA: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 

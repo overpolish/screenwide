@@ -45,17 +45,15 @@ fn constants_match_the_shader_register_packing() {
 }
 
 #[test]
-fn chrome_plates_and_labels_use_the_appended_kinds() {
+fn chrome_plates_use_their_appended_kind_and_skip_empty_rects() {
   let mut out = Vec::new();
   add_plate(&mut out, VIEW, Rect::from_xywh(10.0, 10.0, 80.0, 24.0));
-  add_label(&mut out, VIEW, Rect::from_xywh(20.0, 14.0, 40.0, 16.0));
-  assert_eq!(quad_kinds(&out), vec![46, 47]);
+  assert_eq!(quad_kinds(&out), vec![46]);
 
   // A degenerate rect emits nothing rather than a zero-area quad the SDF
   // would have to divide through.
   let mut empty = Vec::new();
   add_plate(&mut empty, VIEW, Rect::from_xywh(0.0, 0.0, 0.0, 24.0));
-  add_label(&mut empty, VIEW, Rect::from_xywh(0.0, 0.0, 40.0, 0.0));
   assert!(empty.is_empty());
 }
 
@@ -396,16 +394,6 @@ fn crop_shade_skips_empty_bands_and_keeps_handles_optional() {
     quad_kinds(&full),
     vec![6, 6, 6, 6, 8, 8, 10, 10, 3, 16, 3, 16, 3, 16, 3, 16]
   );
-}
-
-#[test]
-fn icons_offset_the_atlas_cell_by_twenty_one() {
-  let mut out = Vec::new();
-  add_icon(&mut out, VIEW, 0, 0.0, 0.0, 16.0);
-  assert!(out.is_empty());
-
-  add_icon(&mut out, VIEW, 3, 10.0, 10.0, 16.0);
-  assert_eq!(quad_kinds(&out), vec![24]);
 }
 
 #[test]

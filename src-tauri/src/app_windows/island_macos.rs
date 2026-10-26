@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The island's window on macOS: placed at the very top of its screen, so
-//! the island can sit in the menu bar under the notch, and
+//! the island can sit in the menu bar under the notch, or by a box, and
 //! letting clicks through everywhere but the island. Two event monitors
 //! answer the pointer moving at once, a global one for while it is over other
 //! apps and a local one for while it is over Screenwide's windows, and its
@@ -26,6 +26,7 @@ use tauri::{AppHandle, Manager};
 use tauri_nspanel::PanelHandle;
 
 use super::island::{self, IslandNotch, WINDOW_SIZE};
+use super::island_placement::{self, IslandPlacement, IslandShown};
 use super::{platform, webview_visibility, WindowLabel};
 
 /// How often the pointer is looked for while it is on the island, quickly
@@ -97,6 +98,9 @@ fn display_id(screen: &NSScreen) -> Option<u32> {
 
 /// The display the island belongs on now.
 pub(super) fn target_display(app: &AppHandle) -> Option<u32> {
+  if let IslandPlacement::ByBox { display, .. } = island_placement::current() {
+    return Some(display);
+  }
   let preferred = island::preferred_display(app);
   dispatch2::run_on_main(move |mtm| {
     island_screen(mtm, preferred)
@@ -170,26 +174,44 @@ pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
   let panel = platform::island_panel(&window)?;
   apply_level(app)?;
   let preferred = island::preferred_display(app);
+  let placement = island_placement::current();
   let app = app.clone();
   window.clone().run_on_main_thread(move || {
     let Some(mtm) = MainThreadMarker::new() else {
       return;
     };
-    let Some(screen) = island_screen(mtm, preferred) else {
+    let by_box = match placement {
+      IslandPlacement::ByBox { display, rect } => Some((display, rect)),
+      IslandPlacement::Top => None,
+    };
+    let Some(screen) = island_screen(mtm, by_box.map_or(preferred, |(display, _)| Some(display)))
+    else {
       return;
     };
     island::set_placed_display(display_id(&screen));
     let bounds = screen.frame();
-    let (width, height) = WINDOW_SIZE;
+    let (local, shown) = match by_box {
+      Some((_, rect)) => {
+        let (local, anchor) =
+          island_placement::box_frame(bounds.size.width, bounds.size.height, WINDOW_SIZE.1, rect);
+        (local, IslandShown::by_box(anchor))
+      }
+      None => (
+        island_placement::top_frame(bounds.size.width),
+        IslandShown::under(notch_of(&screen)),
+      ),
+    };
+    // AppKit measures up from the screen's bottom; the window is placed down
+    // from its top.
     let frame = NSRect::new(
       NSPoint::new(
-        bounds.origin.x + (bounds.size.width - width) / 2.0,
-        bounds.origin.y + bounds.size.height - height,
+        bounds.origin.x + local.x,
+        bounds.origin.y + bounds.size.height - local.y - local.height,
       ),
-      NSSize::new(width, height),
+      NSSize::new(local.width, local.height),
     );
     panel.as_panel().setFrame_display(frame, false);
-    island::announce_shown(&app, notch_of(&screen));
+    island::announce(&app, shown);
 
     // Shown as the other recording panels are, without taking the keyboard
     // from the app in front (`platform::show`), but passing clicks through

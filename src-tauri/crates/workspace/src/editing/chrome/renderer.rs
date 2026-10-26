@@ -61,7 +61,6 @@ impl ChromeRenderer {
         },
         texture(1),
         texture(2),
-        texture(3),
         texture(4),
         texture(5),
         wgpu::BindGroupEntry {

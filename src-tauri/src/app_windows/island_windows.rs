@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The island's window on Windows: at the top of the work area of its
-//! monitor, with no notch to sit under, and letting clicks through
-//! everywhere but the island. Windows tells a window nothing of the pointer
+//! monitor, with no notch to sit under, or by a box, and letting clicks
+//! through everywhere but the island. Windows tells a window nothing of the pointer
 //! moving over other apps without a system-wide hook, so while the island is
 //! up the pointer's position is read at a steady rate, a cheap call, and
 //! click-through changes only when the pointer crosses the island's edge.
@@ -15,6 +15,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewWindow};
 
 use super::island::{self, WINDOW_SIZE};
+use super::island_placement::{self, IslandPlacement, IslandShown};
 use super::{platform, WindowLabel};
 
 /// How often the pointer is looked for while the island is up.
@@ -107,27 +108,71 @@ fn island_monitor(app: &AppHandle) -> tauri::Result<Option<(Option<u32>, tauri::
   Ok(Some((id, primary)))
 }
 
+/// The monitor of the display a box is on.
+fn box_monitor(app: &AppHandle, display: u32) -> Option<tauri::Monitor> {
+  crate::monitor_topology::snapshot(app)
+    .unwrap_or_default()
+    .into_iter()
+    .find(|candidate| candidate.id == display)
+    .map(|candidate| candidate.native)
+}
+
 /// The display the island belongs on now.
 pub(super) fn target_display(app: &AppHandle) -> Option<u32> {
+  if let IslandPlacement::ByBox { display, .. } = island_placement::current() {
+    return Some(display);
+  }
   island_monitor(app).ok().flatten().and_then(|(id, _)| id)
 }
 
 pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
   let window = window(app)?;
-  let Some((display, monitor)) = island_monitor(app)? else {
-    return Err(tauri::Error::WindowNotFound);
+  let by_box = match island_placement::current() {
+    IslandPlacement::ByBox { display, rect } => {
+      box_monitor(app, display).map(|monitor| (display, rect, monitor))
+    }
+    IslandPlacement::Top => None,
   };
-  island::set_placed_display(display);
-  let scale = monitor.scale_factor();
-  let area = monitor.work_area();
-  let size = PhysicalSize::new(
-    (WINDOW_SIZE.0 * scale).round() as u32,
-    (WINDOW_SIZE.1 * scale).round() as u32,
-  );
-  let position = PhysicalPosition::new(
-    area.position.x + (area.size.width as i32 - size.width as i32) / 2,
-    area.position.y,
-  );
+  let (position, size, scale, shown) = if let Some((display, rect, monitor)) = by_box {
+    island::set_placed_display(Some(display));
+    let scale = monitor.scale_factor();
+    let origin = monitor.position();
+    let extent = monitor.size();
+    let (local, anchor) = island_placement::box_frame(
+      f64::from(extent.width) / scale,
+      f64::from(extent.height) / scale,
+      WINDOW_SIZE.1,
+      rect,
+    );
+    (
+      PhysicalPosition::new(
+        origin.x + (local.x * scale).round() as i32,
+        origin.y + (local.y * scale).round() as i32,
+      ),
+      PhysicalSize::new(
+        (local.width * scale).round() as u32,
+        (local.height * scale).round() as u32,
+      ),
+      scale,
+      IslandShown::by_box(anchor),
+    )
+  } else {
+    let Some((display, monitor)) = island_monitor(app)? else {
+      return Err(tauri::Error::WindowNotFound);
+    };
+    island::set_placed_display(display);
+    let scale = monitor.scale_factor();
+    let area = monitor.work_area();
+    let size = PhysicalSize::new(
+      (WINDOW_SIZE.0 * scale).round() as u32,
+      (WINDOW_SIZE.1 * scale).round() as u32,
+    );
+    let position = PhysicalPosition::new(
+      area.position.x + (area.size.width as i32 - size.width as i32) / 2,
+      area.position.y,
+    );
+    (position, size, scale, IslandShown::default())
+  };
   // Moved first, so a change of scale on the way does not resize it after.
   window.set_position(position)?;
   window.set_size(size)?;
@@ -136,7 +181,7 @@ pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
   HIDING.store(false, Ordering::Relaxed);
   OVER.store(false, Ordering::Relaxed);
   platform::set_pointer_passthrough(&window, true)?;
-  island::announce_shown(app, None);
+  island::announce(app, shown);
   platform::show(&window, 1.0)?;
   apply_level(app)?;
   watch(app.clone());

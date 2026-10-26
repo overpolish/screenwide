@@ -143,20 +143,10 @@ impl TextRecognitionState {
       }
     })
   }
-
-  pub(super) fn all_text(&self) -> Option<String> {
-    let session = self
-      .0
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    session
-      .text
-      .as_ref()
-      .map(|model| model.all_text().to_owned())
-      .filter(|text| !text.is_empty())
-  }
 }
 
+/// Copies the selected text, or all of it when `fallback_all` and nothing is
+/// selected, and closes Text Recognition.
 pub(crate) fn copy_selection_and_dismiss(
   app: &AppHandle,
   paragraph: bool,
@@ -166,19 +156,6 @@ pub(crate) fn copy_selection_and_dismiss(
     .state::<TextRecognitionState>()
     .selection_text(fallback_all, paragraph)
     .ok_or_else(|| "No recognized text is selected".to_owned())?;
-  app
-    .clipboard()
-    .write_text(text)
-    .map_err(|error| error.to_string())?;
-  super::dismiss(app);
-  Ok(())
-}
-
-pub(crate) fn copy_all_and_dismiss(app: &AppHandle) -> Result<(), String> {
-  let text = app
-    .state::<TextRecognitionState>()
-    .all_text()
-    .ok_or_else(|| "No recognized text is available".to_owned())?;
   app
     .clipboard()
     .write_text(text)

@@ -108,20 +108,12 @@ pub struct OcrPalette {
   pub error_outline: [f32; 4],
   pub selection_fill: [f32; 4],
   pub selection_outline: [f32; 4],
-  pub loading_fill: [f32; 4],
-  pub loading_foreground: [f32; 4],
-  pub status_error_fill: [f32; 4],
-  pub status_error_foreground: [f32; 4],
 }
 
-const _: () = assert!(std::mem::size_of::<OcrPalette>() == 192);
+const _: () = assert!(std::mem::size_of::<OcrPalette>() == 128);
 
 const NEUTRAL_800: f32 = 38.0 / 255.0;
 const WHITE: f32 = 1.0;
-/// `--alpha-content-fg`, the label tier every OSC readout is drawn at.
-const CONTENT_ALPHA: f32 = 0.85;
-/// A status surface that leaves its material backing untinted.
-const TRANSPARENT: [f32; 4] = [0.0; 4];
 
 pub const fn control_palette(light_appearance: bool) -> ControlPalette {
   let _ = light_appearance;
@@ -136,34 +128,25 @@ pub extern "C" fn screenwide_osc_control_palette(light_mode: u32) -> ControlPale
   control_palette(light_mode != 0)
 }
 
-/// OCR highlights follow the system accent, the way every other OSC accent
-/// surface does, and the error tier is `--color-error` per appearance. The
-/// status pill no longer carries a coloured fill: its material surface is the
-/// backing, so the loading and error fills are transparent and only the two
-/// foregrounds resolve to a colour.
+/// OCR highlights in `--color-emphasis`, the colour of where you are, and
+/// unreadable QR codes in `--color-error`. Recognised text is a faint wash
+/// and selected text a stronger one, as text selection is, neither with a
+/// border: its outline is its fill. QR codes, which a click opens, carry an
+/// outline, as does the area read.
 pub fn ocr_palette(light_appearance: bool) -> OcrPalette {
   let [red, green, blue] = screenwide_accent::accent_rgb();
-  let error = if light_appearance {
-    [1.0, 56.0 / 255.0, 60.0 / 255.0]
-  } else {
-    [1.0, 66.0 / 255.0, 69.0 / 255.0]
-  };
-  // The label tier from `src/index.css`: pure black in light, pure white in
-  // dark, both at 85%.
-  let label = if light_appearance { 0.0 } else { 1.0 };
+  let [error_red, error_green, error_blue, _] = error(light_appearance);
+  let line = [red, green, blue, 0.14];
+  let selection = [red, green, blue, 0.40];
   OcrPalette {
-    primary_fill: [red, green, blue, 0.15],
-    primary_outline: [red, green, blue, 0.50],
-    qr_fill: [red, green, blue, 0.25],
-    qr_outline: [red, green, blue, 0.80],
-    error_fill: [error[0], error[1], error[2], 0.20],
-    error_outline: [error[0], error[1], error[2], 0.80],
-    selection_fill: [red, green, blue, 0.45],
-    selection_outline: [red, green, blue, 0.95],
-    loading_fill: TRANSPARENT,
-    loading_foreground: [label, label, label, CONTENT_ALPHA],
-    status_error_fill: TRANSPARENT,
-    status_error_foreground: [error[0], error[1], error[2], 1.0],
+    primary_fill: line,
+    primary_outline: line,
+    qr_fill: [red, green, blue, 0.16],
+    qr_outline: [red, green, blue, 0.9],
+    error_fill: [error_red, error_green, error_blue, 0.16],
+    error_outline: [error_red, error_green, error_blue, 0.9],
+    selection_fill: selection,
+    selection_outline: selection,
   }
 }
 
@@ -210,37 +193,16 @@ mod tests {
   }
 
   #[test]
-  fn ocr_highlights_follow_the_accent_and_the_status_pill_carries_no_fill() {
+  fn ocr_text_is_tinted_without_a_border_and_only_qr_codes_are_outlined() {
     let [red, green, blue] = screenwide_accent::accent_rgb();
     for light_appearance in [true, false] {
       let palette = ocr_palette(light_appearance);
-      assert_eq!(palette.primary_fill, [red, green, blue, 0.15]);
-      assert_eq!(palette.primary_outline, [red, green, blue, 0.50]);
-      assert_eq!(palette.qr_fill, [red, green, blue, 0.25]);
-      assert_eq!(palette.qr_outline, [red, green, blue, 0.80]);
-      assert_eq!(palette.selection_fill, [red, green, blue, 0.45]);
-      assert_eq!(palette.selection_outline, [red, green, blue, 0.95]);
-      // The pill is a bare material surface, so neither status state tints it.
-      assert_eq!(palette.loading_fill, [0.0; 4]);
-      assert_eq!(palette.status_error_fill, [0.0; 4]);
+      assert_eq!(palette.primary_fill, palette.primary_outline);
+      assert_eq!(palette.selection_fill, palette.selection_outline);
+      assert!(palette.selection_fill[3] > palette.primary_fill[3]);
+      assert_eq!(palette.qr_outline, [red, green, blue, 0.9]);
+      let [red, green, blue, _] = error(light_appearance);
+      assert_eq!(palette.error_outline, [red, green, blue, 0.9]);
     }
-
-    let light = ocr_palette(true);
-    assert_eq!(light.error_fill, [1.0, 56.0 / 255.0, 60.0 / 255.0, 0.20]);
-    assert_eq!(light.error_outline, [1.0, 56.0 / 255.0, 60.0 / 255.0, 0.80]);
-    assert_eq!(light.loading_foreground, [0.0, 0.0, 0.0, 0.85]);
-    assert_eq!(
-      light.status_error_foreground,
-      [1.0, 56.0 / 255.0, 60.0 / 255.0, 1.0]
-    );
-
-    let dark = ocr_palette(false);
-    assert_eq!(dark.error_fill, [1.0, 66.0 / 255.0, 69.0 / 255.0, 0.20]);
-    assert_eq!(dark.error_outline, [1.0, 66.0 / 255.0, 69.0 / 255.0, 0.80]);
-    assert_eq!(dark.loading_foreground, [1.0, 1.0, 1.0, 0.85]);
-    assert_eq!(
-      dark.status_error_foreground,
-      [1.0, 66.0 / 255.0, 69.0 / 255.0, 1.0]
-    );
   }
 }

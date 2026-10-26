@@ -1,7 +1,27 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-### Text recognition, and the window describing a QR code found on screen.
+### Text recognition: its tools on the island, and the window describing a QR code found on screen.
+
+## The island while text recognition is up
+
+text-recognition-island = Text recognition
+text-recognition-island-choosing = Drag over text or a QR code
+text-recognition-island-failed = Could not read that area. Try another.
+text-recognition-island-reading = Finding text and QR codes
+# Names the spinner beside the line above, for assistive technology.
+text-recognition-island-reading-label = Reading the area
+# Copies the selected text; shown while some is selected.
+text-recognition-island-copy = Copy
+# Copies everything found; shown while nothing is selected.
+text-recognition-island-copy-all = Copy all
+# Copies the selected text, or all of it, joined into one paragraph.
+text-recognition-island-copy-paragraph = Copy as paragraph
+# Shown when only QR codes were found.
+text-recognition-island-qr-hint = Click a QR code to see what it holds
+text-recognition-island-nothing-found = No text or QR codes found
+text-recognition-island-select-another = Select another area
+text-recognition-island-close = Close text recognition
 
 ## What a QR code holds, shown as the window title
 

@@ -18,7 +18,6 @@ import {
   type WindowDetails,
   type WindowPickHover,
 } from "../../recording-sources/types";
-import { cancelTextRecognition } from "../../text-recognition/api";
 import { useRecordingStore } from "../store";
 import { RecordingError } from "../types";
 
@@ -139,9 +138,6 @@ export function useRecordingUiSession() {
   });
   useTauriEvent("recording-ui://dismiss-requested", () => {
     void hideRecordingUi();
-  });
-  useTauriEvent("text-recognition://dismiss-requested", () => {
-    void cancelTextRecognition();
   });
   useTauriEvent("window-pick://hovered", (payload) => {
     isPicking = true;

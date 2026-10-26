@@ -170,7 +170,6 @@ pub(crate) fn cursor_request(window: WindowId) -> bool {
 pub(crate) fn timer(window: WindowId, id: usize) {
   match id {
     ANIMATION_TIMER => animation_frame(window),
-    CONFIRM_TIMER => confirm_expired(window),
     RULER_SETTLE_TIMER | RULER_COPIED_TIMER | RULER_TOLERANCE_TIMER => ruler_timer(window, id),
     _ => {}
   }

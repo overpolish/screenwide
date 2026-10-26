@@ -6,6 +6,7 @@ import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
 import { Alert } from "../../primitives/alert/alert";
 import { Button } from "../../primitives/button/button";
+import { Text } from "../../primitives/text/text";
 
 import { CopyableText } from "./copyable-text";
 
@@ -28,6 +29,9 @@ const description = (payload: QrPayload) => {
   return t("text-recognition-qr-information-description");
 };
 
+// What a QR code found on screen holds, titled by what it is: a line on what
+// can be done with it, why not when it cannot be used, the content to read
+// and copy, and the action it offers as the window's one primary button.
 export function QrDetails({
   content,
   error,
@@ -43,8 +47,8 @@ export function QrDetails({
     <WindowShell
       header={<WindowHeader onClose={onClose} title={payload.label} />}
     >
-      <div className="gap-section px-window-inset pb-window-inset flex min-h-0 grow flex-col">
-        <p className="text-body text-fg">{description(payload)}</p>
+      <div className="flex min-h-0 grow flex-col gap-separate px-inset pb-inset">
+        <Text className="text-fg-secondary">{description(payload)}</Text>
         {status ? (
           <Alert color="error" role="alert">
             {status}
@@ -60,7 +64,7 @@ export function QrDetails({
         />
 
         {payload.kind === "action" && onAction ? (
-          <footer className="flex items-center justify-end">
+          <footer className="flex items-center justify-end gap-separate">
             <Button color="primary" onPress={onAction}>
               {payload.label}
             </Button>

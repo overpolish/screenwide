@@ -89,6 +89,40 @@ export function IslandPrimaryButton({
   );
 }
 
+/** A command the island names in words, where an icon alone would not say
+ * what it does: a pill of the circles' height, in the primary colour for the
+ * action the island is out for, raised for the others. Its label is its
+ * name, so it takes no `aria-label`. */
+export function IslandTextButton({
+  children,
+  className,
+  color = "neutral",
+  isDisabled,
+  onPress,
+  ref,
+}: Omit<ButtonProps, "aria-label"> & {
+  /** The action the island is out for, or another beside it. */
+  color?: "neutral" | "primary";
+}) {
+  return (
+    <button
+      className={cn(
+        "flex h-island-control shrink-0 items-center justify-center rounded-full px-inset text-label whitespace-nowrap transition-[background-color,opacity] disabled:opacity-40",
+        color === "primary"
+          ? "bg-primary text-on-primary primary-raised hover:bg-primary-hover active:bg-primary-pressed active:primary-raised-pressed"
+          : "text-fg control-raised hover:control-raised-hover active:control-raised-pressed",
+        className,
+      )}
+      disabled={isDisabled}
+      onClick={onPress}
+      ref={ref}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
 /** A control with choices behind it: a small chevron just clear of it opens
  * them, plain on the black, so it reads as belonging to the control before
  * it and not to the one after. */

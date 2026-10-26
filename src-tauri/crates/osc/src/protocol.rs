@@ -24,11 +24,6 @@ pub enum InputPhase {
   Cancel = 5,
   OcrSelectAll = 6,
   OcrCopy = 7,
-  OcrCancel = 8,
-  OcrCopyAll = 9,
-  OcrCopyParagraph = 10,
-  OcrReset = 11,
-  OcrClose = 12,
   RulerToggleCrosshair = 13,
   RulerCopyColour = 14,
   RulerAnimationFrame = 15,
@@ -62,11 +57,6 @@ impl InputPhase {
       5 => Self::Cancel,
       6 => Self::OcrSelectAll,
       7 => Self::OcrCopy,
-      8 => Self::OcrCancel,
-      9 => Self::OcrCopyAll,
-      10 => Self::OcrCopyParagraph,
-      11 => Self::OcrReset,
-      12 => Self::OcrClose,
       13 => Self::RulerToggleCrosshair,
       14 => Self::RulerCopyColour,
       15 => Self::RulerAnimationFrame,
@@ -172,11 +162,15 @@ mod tests {
 
   #[test]
   fn every_wire_phase_round_trips_through_the_shared_decoder() {
-    for raw in 1..=33 {
+    // 8 to 12 are unassigned, so the phases after them keep their numbers.
+    for raw in (1..=7).chain(13..=33) {
       assert_eq!(
         InputPhase::from_raw(raw).map(|phase| phase as u32),
         Some(raw)
       );
+    }
+    for unassigned in 8..=12 {
+      assert_eq!(InputPhase::from_raw(unassigned), None);
     }
     assert_eq!(InputPhase::from_raw(0), None);
     assert_eq!(InputPhase::from_raw(34), None);

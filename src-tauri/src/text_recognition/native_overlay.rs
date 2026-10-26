@@ -90,7 +90,7 @@ fn close_windows(windows: Vec<tauri::WebviewWindow>) {
   native_region::release_keyboard(native_region::KeyboardOwner::TextRecognition);
   for window in windows {
     let _ = native_region::set_input_enabled(&window, false);
-    let _ = native_region::set_ocr(&window, VisualPhase::Idle as u32, &[], "");
+    let _ = native_region::set_ocr(&window, VisualPhase::Idle as u32, &[]);
     let _ = native_region::set_snapshot_presented(&window, false);
     let _ = native_region::clear_region(&window);
     let _ = native_region::set_desktop_presented(&window, false);
@@ -131,8 +131,7 @@ pub(super) fn render_window(window: &tauri::WebviewWindow, packet: RenderPacket)
 /// The final leg into the compositor: geometry, then frame, reset, input and
 /// the cursor claim.
 fn apply_packet(window: &tauri::WebviewWindow, packet: RenderPacket) -> bool {
-  let message = packet.message.replace('\0', " ");
-  if !native_region::set_ocr(window, packet.phase as u32, &packet.rects, &message) {
+  if !native_region::set_ocr(window, packet.phase as u32, &packet.rects) {
     return false;
   }
   let presentation = packet.presentation;
@@ -141,6 +140,8 @@ fn apply_packet(window: &tauri::WebviewWindow, packet: RenderPacket) -> bool {
   }
   if presentation.reset {
     let _ = native_region::reset_text_recognition_input(window);
+    // The whole desktop shaded again, as when the overlay came up.
+    let _ = native_region::present_region(window, None);
   }
   if let Some(input) = presentation.input {
     let _ = native_region::set_input_enabled(window, input);

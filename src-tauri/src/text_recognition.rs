@@ -8,10 +8,11 @@ use tauri::{AppHandle, Manager, WebviewUrl};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use ts_rs::TS;
 
-use crate::{app_windows::WindowLabel, capture_overlays, screenshots};
+use crate::{app_windows::WindowLabel, capture_overlays};
 mod adapter;
 mod input;
 mod interaction;
+pub(crate) mod island;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -22,17 +23,16 @@ mod qr;
 pub(crate) mod qr_details;
 pub(crate) mod snapshot;
 mod text_selection;
-pub(crate) mod toolbar;
 pub(crate) mod visual;
 #[cfg(target_os = "windows")]
 mod windows;
 
 pub(crate) use input::{
-  dispatch_control, dispatch_text_input as native_text_input,
-  selection_finished as native_selection_finished, selection_started as native_selection_started,
+  dispatch_text_input as native_text_input, selection_finished as native_selection_finished,
+  selection_started as native_selection_started,
   text_interaction_started as native_text_interaction_started,
 };
-pub(crate) use interaction::{copy_all_and_dismiss, copy_selection_and_dismiss};
+use interaction::copy_selection_and_dismiss;
 pub use snapshot::TextRecognitionState;
 mod recognition_worker;
 pub(crate) mod settings;
@@ -121,6 +121,8 @@ fn close_recognition_windows(app: &AppHandle, except: Option<&str>) {
 
 pub fn dismiss(app: &AppHandle) {
   qr_details::hide_without_resume(app);
+  // Before the overlay closes: on Windows the island is owned by it.
+  island::withdraw(app);
   let had_windows = !recognition_windows(app).is_empty();
   close_recognition_windows(app, None);
   #[cfg(target_os = "macos")]
@@ -156,11 +158,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
 
 async fn start_session(app: &AppHandle, generation: u64) -> Result<(), String> {
   let monitors = capture_overlays::monitor_layout(app)?;
-  let mut snapshots = Vec::with_capacity(monitors.len());
-  for (monitor_id, scale, _) in &monitors {
-    let image = screenshots::capture_text_recognition_snapshot(*monitor_id).await?;
-    snapshots.push((*monitor_id, *scale, image));
-  }
+  let snapshots = snapshot::freeze(app, &monitors).await?;
   let native_snapshots = snapshots
     .iter()
     .map(|(id, _, image)| (*id, image.clone()))
@@ -215,6 +213,7 @@ async fn start_session(app: &AppHandle, generation: u64) -> Result<(), String> {
 
   capture_overlays::emit_lifecycle(app, true);
   crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
+  island::present(app, &window);
 
   Ok(())
 }

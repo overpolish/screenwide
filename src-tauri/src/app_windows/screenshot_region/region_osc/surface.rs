@@ -19,15 +19,16 @@ mod textures;
 use screenwide_gpu::surface::Frame;
 use screenwide_osc::gpu::vertices::{bind_group_layout, pipeline, sampler, shader_module};
 pub(super) use textures::upload_rgba;
-use textures::{upload_icons, upload_rgba_with_levels, RGBA};
+use textures::{upload_rgba_with_levels, RGBA};
 
 use std::sync::Arc;
 
 use super::host::{host, RegionDrawable, ScreenPoint, WindowId};
 use super::input;
-use super::ocr::{self, Segment};
+use super::ocr;
 use super::renderer::{self, RenderConstants, Vertex};
 use super::ruler;
+use super::segment::Segment;
 use screenwide_osc::geometry::{Point, Rect, Size};
 
 /// The lens anchor and dragged-edge bitmask. The sampling window and box size
@@ -55,8 +56,6 @@ pub(crate) struct Gpu {
   /// Every texture slot is bound each draw; unused ones read one transparent
   /// texel.
   placeholder: wgpu::TextureView,
-  /// The shared control-icon atlas, bound for every frame.
-  icons: wgpu::TextureView,
   /// Makes the picking backdrop's levels, which its blur reads.
   mips: screenwide_gpu::mips::Mips,
 }
@@ -145,7 +144,6 @@ impl Drop for Surface {
     if self.animating {
       host().kill_timer(self.hwnd, input::ANIMATION_TIMER);
     }
-    host().kill_timer(self.hwnd, input::CONFIRM_TIMER);
     host().destroy_window(self.hwnd);
   }
 }

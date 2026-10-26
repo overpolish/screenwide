@@ -23,8 +23,7 @@ use super::RulerState;
 use crate::app_windows::{self, WindowLabel};
 
 pub(crate) mod commands;
-mod platform;
-pub(super) use platform::keep_out_of_captures;
+pub(super) use app_windows::island_overlay::keep_out_of_captures;
 
 const EVENT: &str = "ruler://island";
 
@@ -112,13 +111,8 @@ pub(super) fn present(app: &AppHandle) {
   };
   *shown() = Some(state);
   let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, Some(state));
-  if let Err(error) = app_windows::island::set_above_overlays(app, true) {
-    eprintln!("Could not raise the island over the Ruler: {error}");
-  }
-  #[cfg(target_os = "windows")]
-  platform::own_by_ruler(app, true);
-  #[cfg(target_os = "macos")]
-  platform::exempt_from_crosshair(app, true);
+  let overlay = super::ruler_windows(app).into_iter().next();
+  app_windows::island_overlay::stand_over(app, overlay.as_ref());
   if let Err(error) = app_windows::island::show(app) {
     eprintln!("Could not show the island for the Ruler: {error}");
   }
@@ -135,15 +129,8 @@ pub(super) fn withdraw(app: &AppHandle) {
     EVENT,
     None::<RulerIslandState>,
   );
-  // Released before the Ruler's window closes: a window takes the windows it
-  // owns with it when it is destroyed.
-  #[cfg(target_os = "windows")]
-  platform::own_by_ruler(app, false);
-  #[cfg(target_os = "macos")]
-  platform::exempt_from_crosshair(app, false);
-  if let Err(error) = app_windows::island::set_above_overlays(app, false) {
-    eprintln!("Could not return the island to its level: {error}");
-  }
+  // Released before the Ruler's window closes.
+  app_windows::island_overlay::stand_over(app, None);
   if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
     if let Err(error) = app_windows::island::hide(app) {
       eprintln!("Could not hide the island after the Ruler: {error}");

@@ -5,9 +5,9 @@
 //! arcs, centerlines, inner objects, measurement boxes, the pooled floating
 //! labels and the cursor-readout loupe.
 //!
-//! All of it draws into the surface's one drawable the way the OCR chrome
-//! does: a label is a run of quads plus a
-//! [`Segment`] carrying its own fill, foreground and label texture, and the
+//! All of it draws into the surface's one drawable: a label is a run of
+//! quads plus a [`Segment`] carrying its own fill, foreground and label
+//! texture, and the
 //! rectangles this file lays out are also the only hit-test source there is.
 //!
 //! All analysis, gestures, viewports, artifacts and history stay in the
@@ -27,8 +27,8 @@ use std::time::{Duration, Instant};
 
 use screenwide_gpu::Gpu;
 
-use super::ocr::Segment;
 use super::renderer::{self, Vertex};
+use super::segment::Segment;
 use super::text::{AtlasMetrics, TextCache};
 use crate::ruler::render::{
   CenterlinePacket, GuideGapPacket, GuidePacket, InnerObjectPacket, MeasurementPacket, ProbePacket,

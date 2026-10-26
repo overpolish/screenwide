@@ -11,10 +11,6 @@ impl Gpu {
     let layout = bind_group_layout(device);
     let pipeline = pipeline(device, &layout, &module);
     let placeholder = upload_rgba(shared, &[0_u8; 4], 1, 1);
-    let icons = upload_icons(shared).unwrap_or_else(|error| {
-      eprintln!("The Windows region OSC could not upload the icon atlas: {error}");
-      placeholder.clone()
-    });
     Ok(Arc::new(Self {
       shared,
       layout,
@@ -22,7 +18,6 @@ impl Gpu {
       linear_sampler: sampler(device, wgpu::FilterMode::Linear),
       point_sampler: sampler(device, wgpu::FilterMode::Nearest),
       placeholder,
-      icons,
       mips: screenwide_gpu::mips::Mips::new(device, RGBA),
     }))
   }
@@ -58,7 +53,6 @@ impl Gpu {
           },
           view(1, label),
           view(2, secondary),
-          view(3, &self.icons),
           view(4, snapshot),
           view(5, magnifier),
           wgpu::BindGroupEntry {

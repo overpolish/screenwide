@@ -20,56 +20,22 @@ pub(crate) fn set_snapshot(
   .unwrap_or(false)
 }
 
-/// Port of `screenwide_region_osc_set_ocr`. Every surface
-/// keeps the share of the highlights that lands on it, and the surface showing
-/// most of the selection hosts the status pill or the ready toolbar.
-pub(crate) fn set_ocr(
-  window: &WebviewWindow,
-  phase: u32,
-  rects: &[OcrRectPacket],
-  message: &str,
-) -> bool {
+/// Every surface keeps the share of the highlights that lands on it.
+pub(crate) fn set_ocr(window: &WebviewWindow, phase: u32, rects: &[OcrRectPacket]) -> bool {
   if phase > 3 {
-    eprintln!("The Windows region OSC refused an unknown OCR phase: {phase}");
+    eprintln!("The region OSC refused an unknown OCR phase: {phase}");
     return false;
   }
   with_surfaces(window, |set| {
-    let mut areas = Vec::new();
     for surface in set.all_mut() {
       let bounds = surface.logical_size();
       let offset = surface.desktop_offset();
-      let local = surface.local_rect(surface.region);
-      surface.ocr.apply(phase, rects, message, offset, bounds);
-      areas.push(super::super::ocr::overlap_area(local, bounds));
-    }
-    let target = areas
-      .iter()
-      .copied()
-      .enumerate()
-      .filter(|(_, area)| *area > 0.0)
-      .max_by(|left, right| left.1.total_cmp(&right.1))
-      .map(|(index, _)| index);
-    for (index, surface) in set.all_mut().enumerate() {
-      surface.ocr.set_target(target == Some(index));
+      surface.ocr.apply(phase, rects, offset, bounds);
       surface.draw();
     }
     true
   })
   .unwrap_or(false)
-}
-
-#[expect(
-  dead_code,
-  reason = "kept as the Windows counterpart of the reusable OCR cancel control API"
-)]
-pub(crate) fn set_ocr_cancel_visible(window: &WebviewWindow, visible: bool) -> bool {
-  with_surfaces(window, |set| {
-    for surface in set.all_mut() {
-      surface.ocr.set_cancel_visible(visible);
-      surface.draw();
-    }
-  })
-  .is_some()
 }
 
 /// Port of `ocr::reset_input`: the next press

@@ -39,16 +39,12 @@ use screenwide_osc::{
 /// 16ms control-transition frames - the Win32 form of the self-rescheduling
 /// `dispatch_after` chains the macOS chrome used.
 pub(crate) const ANIMATION_TIMER: usize = 1;
-/// The armed close button's two-second expiry.
-pub(crate) const CONFIRM_TIMER: usize = 2;
 /// The ruler's one-shot settle frame (`InputPhase::RulerAnimationFrame`).
 pub(crate) const RULER_SETTLE_TIMER: usize = 3;
 /// The copied checkmark's 900ms expiry.
 pub(crate) const RULER_COPIED_TIMER: usize = 4;
 /// The tolerance notice's 900ms expiry.
 pub(crate) const RULER_TOLERANCE_TIMER: usize = 5;
-const CONFIRM_TIMEOUT_MS: u32 = 2000;
-const CONFIRM_RETRY_MS: u32 = 16;
 
 /// One wheel notch's zoom factor, `exp(0.1)`. macOS derived it from
 /// `exp(scrollingDeltaY * 0.01)` over a ten-point line scroll.
@@ -157,25 +153,6 @@ pub(crate) fn modifier_bits(shift: bool, control: bool, double_click: bool, alt:
 /// Ctrl remains an explicit zoom override for either input source.
 fn vertical_wheel_zooms(notches: f64, notched: bool, control: bool) -> bool {
   control || (notches != 0.0 && notched)
-}
-
-fn confirm_expired(hwnd: WindowId) {
-  host().kill_timer(hwnd, CONFIRM_TIMER);
-  let Some(context) = state::context_for_surface(hwnd) else {
-    return;
-  };
-  let Ok(mut set) = context.surfaces.lock() else {
-    return;
-  };
-  if let Some(surface) = set.find_mut(hwnd) {
-    let outcome = surface.ocr.expire_confirm();
-    if outcome.redraw {
-      surface.draw();
-    }
-    if outcome.arm_confirm {
-      host().set_timer(hwnd, CONFIRM_TIMER, CONFIRM_RETRY_MS);
-    }
-  }
 }
 
 /// `updateMagnifier`: only a live resize with a handle and

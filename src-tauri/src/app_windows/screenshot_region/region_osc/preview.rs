@@ -15,7 +15,6 @@ use screenwide_osc::geometry::Rect;
 use screenwide_osc::protocol::OscResult;
 
 use super::host::RegionDrawable;
-use super::ocr::overlap_area;
 use super::state::{apply_ruler_data, ruler_data};
 use super::surface::{Gpu, Surface};
 use crate::ruler::RulerState;
@@ -108,12 +107,9 @@ impl PreviewSurface {
     let surface = &mut self.surface;
     let bounds = surface.logical_size();
     let offset = surface.desktop_offset();
-    let local = surface.local_rect(surface.region);
-    let message = packet.message.replace('\0', " ");
     surface
       .ocr
-      .apply(packet.phase as u32, &packet.rects, &message, offset, bounds);
-    surface.ocr.set_target(overlap_area(local, bounds) > 0.0);
+      .apply(packet.phase as u32, &packet.rects, offset, bounds);
     if let Some(frame) = packet.presentation.frame {
       surface.show_frame = frame;
     }
@@ -124,8 +120,8 @@ impl PreviewSurface {
     self.surface.draw();
   }
 
-  /// Whether a transition on the surface itself, such as a control's, is
-  /// running.
+  /// Whether a transition on the surface itself, such as the reading sheen,
+  /// is running.
   pub(crate) fn is_animating(&self) -> bool {
     self.surface.is_animating()
   }

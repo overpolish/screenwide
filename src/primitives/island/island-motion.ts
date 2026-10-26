@@ -39,6 +39,16 @@ export const reveal = {
   },
 } as const;
 
+/** How the island's opacity changes: under a notch it is whole at once, out
+ * or tucked away, even when it was laid out without one and the notch came
+ * after, as it is then hidden by the notch itself; elsewhere it fades in as
+ * it comes out, and out once it has shrunk away. */
+export const fade = (isShown: boolean, hasNotch: boolean) => {
+  if (hasNotch) return { duration: 0 };
+  if (isShown) return { duration: motionDurations.state };
+  return { delay: motionDurations.travel, duration: motionDurations.travel };
+};
+
 /** How long the island stays open after the pointer leaves, in ms, so a
  * slip, or the island moving as it changes shape, does not slam it shut. */
 export const HOVER_LINGER_MS = 350;

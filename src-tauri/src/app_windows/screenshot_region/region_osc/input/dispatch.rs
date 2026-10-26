@@ -28,11 +28,7 @@ pub(super) fn process(
   y: f64,
   modifiers: u8,
 ) {
-  // Step 3: the OCR chrome is offered the event before anything else, and a
-  // consumed event never reaches the region gesture. The command it activates
-  // is dispatched after the surface lock is released, because the runtime
-  // reaches back into the compositor through `set_ocr`.
-  let Some((point, desktop_point)) = ocr_control_step(context, hwnd, phase, x, y) else {
+  let Some((point, desktop_point)) = surface_points(context, hwnd, x, y) else {
     return;
   };
   // Steps 4 and 5: the ruler's floating labels are offered the event before
@@ -52,13 +48,6 @@ pub(super) fn process(
   if (phase == PHASE_DRAG || phase == PHASE_UP) && !surface.gesture_active {
     surface.release_pointer();
     return;
-  }
-  // Step 7: a press dismisses the cancel button before the region sees it.
-  if phase == PHASE_DOWN && set.all_mut().any(|surface| surface.ocr.cancel_visible) {
-    for surface in set.all_mut() {
-      surface.ocr.set_cancel_visible(false);
-      surface.draw();
-    }
   }
   let Some(surface) = set.find_mut(hwnd) else {
     return;
@@ -135,49 +124,22 @@ pub(super) fn process(
   }
 }
 
-/// Runs the OCR chrome's share of `processInput`. Returns the surface-local
-/// and desktop points when the event should continue to the region gesture,
-/// and `None` when the chrome consumed it or the surface takes no input.
-pub(super) fn ocr_control_step(
+/// The event's surface-local and desktop points, or `None` when the surface
+/// takes no input.
+pub(super) fn surface_points(
   context: &Context,
   hwnd: WindowId,
-  phase: u32,
   x: f64,
   y: f64,
 ) -> Option<(Point, Point)> {
-  let (points, dispatch) = {
-    let mut set = context.surfaces.lock().ok()?;
-    let surface = set.find_mut(hwnd)?;
-    if !surface.input_enabled {
-      return None;
-    }
-    let point = surface.logical_point(x, y);
-    // The controller and every semantic event live in the desktop plane.
-    let desktop_point = surface.desktop_point(point);
-    let outcome = surface.ocr.control_input(point, phase);
-    if outcome.redraw {
-      surface.draw();
-    }
-    if outcome.consumed {
-      // macOS set the pointing-hand cursor for the duration of the hover.
-      surface.cursor = CursorShape::Hand;
-      set_cursor(CursorShape::Hand);
-    }
-    if outcome.arm_confirm {
-      host().set_timer(hwnd, CONFIRM_TIMER, CONFIRM_TIMEOUT_MS);
-    }
-    if outcome.disarm_confirm {
-      host().kill_timer(hwnd, CONFIRM_TIMER);
-    }
-    (
-      (!outcome.consumed).then_some((point, desktop_point)),
-      outcome.dispatch,
-    )
-  };
-  if let Some(phase) = dispatch {
-    state::dispatch_input(context, phase, Point::default(), 0);
+  let mut set = context.surfaces.lock().ok()?;
+  let surface = set.find_mut(hwnd)?;
+  if !surface.input_enabled {
+    return None;
   }
-  points
+  let point = surface.logical_point(x, y);
+  // The controller and every semantic event live in the desktop plane.
+  Some((point, surface.desktop_point(point)))
 }
 
 pub(super) fn animation_frame(hwnd: WindowId) {

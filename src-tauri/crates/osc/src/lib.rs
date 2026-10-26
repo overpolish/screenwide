@@ -6,7 +6,6 @@
 //! duplicating geometry or pointer semantics. The app hosts them: binding
 //! windows, routing native input to its features, and owning the cursor.
 pub mod controller;
-pub mod controls;
 pub mod cursor;
 pub mod desktop;
 pub mod geometry;

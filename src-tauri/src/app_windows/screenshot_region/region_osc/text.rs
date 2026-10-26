@@ -67,17 +67,9 @@ const DARK_INK: Ink = Ink {
   alpha: 0.88,
   secondary: 0.66,
 };
-/// White coverage for a label the chrome tints when it draws it, at the
-/// strength it has always carried.
-const COVERAGE_INK: Ink = Ink {
-  rgb: [1.0, 1.0, 1.0],
-  alpha: 0.85,
-  secondary: 0.85,
-};
 
 /// Position of `glyph` in the atlas, or `None` for a character the atlas has
-/// no cell for. The ruler assembles every readout out of these cells; the OCR
-/// chrome only needs whole-string labels.
+/// no cell for. The ruler assembles every readout out of these cells.
 pub(crate) fn glyph_index(glyph: char) -> Option<usize> {
   HEX_GLYPHS.chars().position(|candidate| candidate == glyph)
 }
@@ -164,9 +156,6 @@ struct LabelKey {
   text: String,
   font_size: u32,
   line_height: u32,
-  /// Monospace with the ink baked in, the way the atlas is drawn. Chrome
-  /// labels are proportional white coverage tinted at draw time instead.
-  baked_ink: bool,
 }
 
 /// Per-surface texture cache. macOS re-rasterised only when the backing scale

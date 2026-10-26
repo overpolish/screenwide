@@ -13,8 +13,6 @@ import {
 import { useLocale } from "react-aria";
 import { Toolbar } from "react-aria-components";
 
-import { motionDurations } from "../../lib/motion";
-
 import { useControlAnchor } from "./island-anchor";
 import { IslandBelow } from "./island-below";
 import { IslandContext } from "./island-context";
@@ -25,7 +23,7 @@ import {
   islandCssVariables,
   type IslandNotch,
 } from "./island-geometry";
-import { focusIn, glide, HOVER_LINGER_MS } from "./island-motion";
+import { fade, focusIn, glide, HOVER_LINGER_MS } from "./island-motion";
 import { useOpening } from "./island-opening";
 import {
   type IslandPart,
@@ -231,13 +229,7 @@ export function Island({
             }}
             transition={{
               ...glide,
-              // Hidden without a notch, it fades once it has shrunk.
-              opacity: isShown
-                ? { duration: motionDurations.state }
-                : {
-                    delay: motionDurations.travel,
-                    duration: motionDurations.travel,
-                  },
+              opacity: fade(isShown, notch !== null),
             }}
           >
             <motion.div

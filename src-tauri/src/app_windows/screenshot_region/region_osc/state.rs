@@ -19,8 +19,8 @@ pub(crate) use attachment::{
 };
 use attachment::{context_arc, with_surfaces};
 pub(crate) use content::{
-  reset_text_recognition_input, set_backdrops, set_ocr, set_ocr_cancel_visible, set_snapshot,
-  set_snapshot_composited, set_snapshot_presented,
+  reset_text_recognition_input, set_backdrops, set_ocr, set_snapshot, set_snapshot_composited,
+  set_snapshot_presented,
 };
 use controls::set_exclusion_rect;
 pub(crate) use controls::{
@@ -283,7 +283,6 @@ pub(crate) fn dispatch_input(
     .unwrap_or_else(|_| crate::osc::runtime::invalid_result())
 }
 
-/// Port of `screenwide_region_osc_ocr_set_cancel_visible`.
 #[cfg(test)]
 mod tests;
 

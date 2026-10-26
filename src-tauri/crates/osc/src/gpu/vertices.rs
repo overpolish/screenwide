@@ -111,7 +111,7 @@ use pixel::rect_corners;
 mod ruler;
 mod selection;
 
-pub use chrome::{add_icon, add_label, add_plate};
+pub use chrome::add_plate;
 pub use pixel::{add_pixel_aligned_quad, add_pixel_aligned_texture_quad, pixel_aligned_rect};
 pub use ruler::{add_ruler_arc, add_ruler_box};
 pub use selection::{

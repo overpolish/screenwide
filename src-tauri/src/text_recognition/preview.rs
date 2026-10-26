@@ -135,9 +135,7 @@ impl OcrPreview {
     self.stage = Stage::Reading(generation, receiver);
     vec![
       OcrFrame::Region(region),
-      OcrFrame::Packet(RenderPacket::loading(screenwide_i18n::t!(
-        "overlay-ocr-finding"
-      ))),
+      OcrFrame::Packet(RenderPacket::loading()),
     ]
   }
 
@@ -166,8 +164,9 @@ impl OcrPreview {
         RenderPacket::ready(&snapshot)
       }
       Err(error) => {
+        eprintln!("The OCR preview could not read its area: {error}");
         self.stage = Stage::Choosing(None);
-        RenderPacket::error(error)
+        RenderPacket::choosing()
       }
     })
   }

@@ -51,7 +51,6 @@ struct OscGpu {
 @group(0) @binding(0) var<uniform> osc: OscGpu;
 @group(0) @binding(1) var label: texture_2d<f32>;
 @group(0) @binding(2) var secondary_label: texture_2d<f32>;
-@group(0) @binding(3) var icons: texture_2d<f32>;
 @group(0) @binding(4) var snapshot: texture_2d<f32>;
 @group(0) @binding(5) var magnifier_texture: texture_2d<f32>;
 @group(0) @binding(6) var linear_sampler: sampler;
@@ -79,6 +78,10 @@ const RULER_LABEL_SHADOW_KIND: u32 = 65u;
 const RULER_CASING_KIND: u32 = 66u;
 const RULER_SECONDARY_READOUT_KIND: u32 = 67u;
 const RULER_MEASUREMENT_FILL_KIND: u32 = 68u;
+// Text Recognition's sheen over the area it reads, and how far its band
+// leans: across per unit down, in band widths.
+const OCR_SWEEP_KIND: u32 = 69u;
+const OCR_SWEEP_SLANT: f32 = 0.35;
 
 // Positions arrive in NDC: the vertex builder does the pixel-to-clip mapping
 // on the CPU, so there is no transform here.
@@ -362,18 +365,6 @@ fn picked_swatch(uv: vec2<f32>) -> vec4<f32> {
   return color;
 }
 
-fn icon(kind: u32, uv: vec2<f32>) -> vec4<f32> {
-  let cell = f32(kind - 21u);
-  let atlas_uv = vec2<f32>((cell + uv.x) / 6.0, uv.y);
-  let coverage = textureSampleLevel(icons, linear_sampler, atlas_uv, 0.0).r;
-  if (coverage <= 0.002) {
-    discard;
-  }
-  var color = osc.action_fills[1];
-  color.a *= coverage;
-  return color;
-}
-
 fn crop_corner(uv: vec2<f32>) -> vec4<f32> {
   // uv is the distance from the arc centre in radii, so what lies outside the
   // arc is what the rounded layer will not keep.
@@ -386,6 +377,21 @@ fn crop_corner(uv: vec2<f32>) -> vec4<f32> {
   var color = osc.overlay_shade;
   color.a *= outside;
   return color;
+}
+
+// The sheen that passes over the area while it is read. The quad covers the
+// area; its uv is measured in band widths from where the band's centre line
+// crosses the area's middle (`ocr/sweep.rs`), so the band keeps its width
+// and its slant whatever the area's shape. The light is the emphasis colour
+// let halfway towards white, so it shows over light and dark content alike.
+fn ocr_sweep(uv: vec2<f32>) -> vec4<f32> {
+  let across = uv.x + OCR_SWEEP_SLANT * uv.y;
+  let light = exp(-across * across * 6.0);
+  if (light <= 0.002) {
+    discard;
+  }
+  let emphasis = osc.ocr_colors[3].rgb;
+  return vec4<f32>(mix(vec3<f32>(1.0), emphasis, 0.5), 0.3 * light);
 }
 
 fn ocr_box(kind: u32, uv: vec2<f32>) -> vec4<f32> {
@@ -723,17 +729,6 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   if (kind == RULER_LABEL_SHADOW_KIND) {
     return chrome_shadow(uv, input.position.xy);
   }
-  if (kind == 47u) {
-    // Chrome text: the texture carries white coverage and the tint is the
-    // portable control foreground.
-    let coverage = textureSampleLevel(label, linear_sampler, uv, 0.0).a;
-    if (coverage <= 0.002) {
-      discard;
-    }
-    var color = osc.action_fills[1];
-    color.a *= coverage;
-    return color;
-  }
   if (kind == 34u || kind == 35u) {
     return ruler_ring(kind, uv);
   }
@@ -812,9 +807,6 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
     color.a *= osc.ruler_animation.x * (1.0 - osc.ruler_animation.w) * segment_opacity();
     return color;
   }
-  if (kind >= 22u && kind <= 26u) {
-    return icon(kind, uv);
-  }
   if (kind >= 12u && kind <= 14u) {
     // Material-backed OSC controls have one semantic radius owner: their
     // native surface. A rectangular fill keeps a second, height-derived
@@ -829,6 +821,9 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   }
   if (kind >= 17u && kind <= 20u) {
     return ocr_box(kind, uv);
+  }
+  if (kind == OCR_SWEEP_KIND) {
+    return ocr_sweep(uv);
   }
   if (kind >= 7u && kind <= 10u) {
     return marquee(kind, uv);

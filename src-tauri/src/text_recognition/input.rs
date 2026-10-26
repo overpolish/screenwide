@@ -13,58 +13,6 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use super::interaction::TextAction;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum OcrControlAction {
-  Cancel,
-  CopyAll,
-  CopyParagraph,
-  Reset,
-  Close,
-}
-
-pub(crate) fn control_action(phase: InputPhase) -> Option<OcrControlAction> {
-  Some(match phase {
-    InputPhase::OcrCancel => OcrControlAction::Cancel,
-    InputPhase::OcrCopyAll => OcrControlAction::CopyAll,
-    InputPhase::OcrCopyParagraph => OcrControlAction::CopyParagraph,
-    InputPhase::OcrReset => OcrControlAction::Reset,
-    InputPhase::OcrClose => OcrControlAction::Close,
-    _ => return None,
-  })
-}
-
-pub(crate) fn dispatch_control(
-  window: &tauri::WebviewWindow,
-  phase: InputPhase,
-) -> Option<OscResult> {
-  let action = control_action(phase)?;
-  let app = window.app_handle().clone();
-  super::qr_details::hide_without_resume(&app);
-  match action {
-    OcrControlAction::Cancel | OcrControlAction::Close => {
-      tauri::async_runtime::spawn(async move { super::dismiss(&app) });
-    }
-    OcrControlAction::CopyAll => {
-      tauri::async_runtime::spawn(async move {
-        let _ = super::copy_all_and_dismiss(&app);
-      });
-    }
-    OcrControlAction::CopyParagraph => {
-      tauri::async_runtime::spawn(async move {
-        let _ = super::copy_selection_and_dismiss(&app, true, true);
-      });
-    }
-    OcrControlAction::Reset => {
-      tauri::async_runtime::spawn(async move {
-        if let Err(error) = super::start(&app).await {
-          eprintln!("Could not reset text recognition: {error}");
-        }
-      });
-    }
-  }
-  Some(OscResult::default())
-}
-
 pub(crate) fn text_action(phase: InputPhase, modifiers: InputModifiers) -> Option<TextAction> {
   Some(match phase {
     InputPhase::Hover => TextAction::Hover,
@@ -97,11 +45,9 @@ pub(crate) fn selection_finished(
   monitor_id: u32,
   region: Rect,
 ) {
-  super::adapter::render_window(
-    &window,
-    super::visual::RenderPacket::loading(screenwide_i18n::t!("overlay-ocr-finding")),
-  );
+  super::adapter::render_window(&window, super::visual::RenderPacket::loading());
   let app = window.app_handle().clone();
+  super::island::reading(&app, &binding, region);
   tauri::async_runtime::spawn(async move {
     let capture_app = app.clone();
     let displays = binding.displays.clone();
@@ -151,6 +97,7 @@ pub(crate) fn dispatch_text_input(
   };
   if let Some(snapshot) = update.snapshot {
     super::adapter::render_window(window, super::visual::RenderPacket::ready(&snapshot));
+    super::island::sync_ready(app);
   }
   if let Some(text) = update.copy_text {
     let app = app.clone();

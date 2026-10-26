@@ -4,6 +4,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type { RecognizedQrCode } from "../../bindings/RecognizedQrCode";
+import type { TextRecognitionIslandAction } from "../../bindings/TextRecognitionIslandAction";
+import type { TextRecognitionIslandState } from "../../bindings/TextRecognitionIslandState";
 export type { RecognizedQrCode };
 
 export const cancelTextRecognition = () =>
@@ -18,3 +20,10 @@ export const copyRecognitionContent = (text: string) =>
 export const getQrDetails = () => invoke<RecognizedQrCode>("get_qr_details");
 
 export const closeQrDetails = () => invoke<null>("close_qr_details");
+
+export const getTextRecognitionIslandState = () =>
+  invoke<TextRecognitionIslandState | null>("text_recognition_island_state");
+
+export const runTextRecognitionIslandAction = (
+  action: TextRecognitionIslandAction,
+) => invoke<null>("text_recognition_island_action", { action });

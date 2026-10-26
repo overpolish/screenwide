@@ -139,8 +139,9 @@ pub fn shader_module(device: &wgpu::Device) -> wgpu::ShaderModule {
 }
 
 /// The constants block, read at a dynamic offset one `RenderConstants` wide,
-/// then the label, secondary label, icon atlas, frozen desktop and magnifier
-/// source textures, then the linear and point samplers.
+/// then the label, secondary label, frozen desktop and magnifier source
+/// textures, then the linear and point samplers. Binding 3 is unassigned, so
+/// the bindings after it keep their numbers.
 pub fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
   let texture = |binding| wgpu::BindGroupLayoutEntry {
     binding,
@@ -173,7 +174,6 @@ pub fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
       },
       texture(1),
       texture(2),
-      texture(3),
       texture(4),
       texture(5),
       sampler(6),

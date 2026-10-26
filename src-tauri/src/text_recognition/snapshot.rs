@@ -106,6 +106,21 @@ impl TextRecognitionState {
       .map(|image| (session.generation, image))
   }
 
+  /// Drops the area and what was read in it, keeping the frozen displays,
+  /// so another area can be drawn over them. A reading still under way is
+  /// left stale by the new generation.
+  pub(super) fn clear_selection(&self) {
+    let mut session = self
+      .0
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    session.generation = session.generation.wrapping_add(1);
+    session.selected = None;
+    session.selection = None;
+    session.text = None;
+    session.pressed_qr = None;
+  }
+
   pub(super) fn select_desktop_region(
     &self,
     displays: &[OscDesktopDisplay],
@@ -186,6 +201,29 @@ impl TextRecognitionState {
       .generation
       == generation
   }
+}
+
+/// Captures every display for a session, with its scale. The island stays
+/// on screen and changes into Text Recognition's over the frozen desktop, so
+/// it is kept out of the desktop it is frozen from.
+pub(super) async fn freeze(
+  app: &tauri::AppHandle,
+  monitors: &[(u32, f64, tauri::Monitor)],
+) -> Result<Vec<(u32, f64, CapturedImage)>, String> {
+  crate::app_windows::island_overlay::keep_out_of_captures(app, true).await;
+  let mut snapshots = Vec::with_capacity(monitors.len());
+  let mut captured = Ok(());
+  for (monitor_id, scale, _) in monitors {
+    match screenshots::capture_text_recognition_snapshot(*monitor_id).await {
+      Ok(image) => snapshots.push((*monitor_id, *scale, image)),
+      Err(error) => {
+        captured = Err(error);
+        break;
+      }
+    }
+  }
+  crate::app_windows::island_overlay::keep_out_of_captures(app, false).await;
+  captured.map(|()| snapshots)
 }
 
 fn crop_pixels(image: &CapturedImage, rect: PixelRect) -> Result<CapturedImage, String> {

@@ -28,10 +28,22 @@ pub(super) fn show_ready(app: &tauri::AppHandle, generation: u64) {
     return;
   };
   render(app, super::visual::RenderPacket::ready(&snapshot));
+  super::island::sync_ready(app);
 }
 
+/// Reading failed. The detail is the log's; the island says so in words.
 pub(super) fn show_error(app: &tauri::AppHandle, message: &str) {
-  render(app, super::visual::RenderPacket::error(message));
+  eprintln!("Text recognition failed: {message}");
+  render(app, super::visual::RenderPacket::choosing());
+  super::island::choosing(app, true);
+}
+
+/// Another area is to be read: drawn over the desktop already frozen, so
+/// the screen is not captured again.
+pub(super) fn choose_again(app: &tauri::AppHandle) {
+  app.state::<super::TextRecognitionState>().clear_selection();
+  render(app, super::visual::RenderPacket::choosing());
+  super::island::choosing(app, false);
 }
 
 #[cfg(test)]

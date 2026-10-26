@@ -15,7 +15,6 @@ pub enum VisualPhase {
   Idle = 0,
   Loading = 1,
   Ready = 2,
-  Error = 3,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -75,15 +74,13 @@ pub(crate) struct SurfacePresentation {
 pub(crate) struct RenderPacket {
   pub phase: VisualPhase,
   pub rects: Vec<OcrRectPacket>,
-  pub message: String,
   pub presentation: SurfacePresentation,
 }
 
 impl RenderPacket {
-  pub(crate) fn loading(message: impl Into<String>) -> Self {
+  pub(crate) fn loading() -> Self {
     Self {
       phase: VisualPhase::Loading,
-      message: message.into(),
       presentation: SurfacePresentation {
         frame: Some(false),
         input: Some(false),
@@ -102,14 +99,14 @@ impl RenderPacket {
         input: Some(true),
         ..Default::default()
       },
-      ..Default::default()
     }
   }
 
-  pub(crate) fn error(message: impl Into<String>) -> Self {
+  /// Back to drawing an area over the same frozen desktop, after reading one
+  /// failed or to read another: the selection and what was found are dropped.
+  pub(crate) fn choosing() -> Self {
     Self {
-      phase: VisualPhase::Error,
-      message: message.into(),
+      phase: VisualPhase::Idle,
       presentation: SurfacePresentation {
         frame: Some(true),
         input: Some(true),
@@ -222,7 +219,7 @@ mod tests {
   }
 
   #[test]
-  fn ready_and_error_packets_share_geometry_and_presentation_policy() {
+  fn ready_and_choosing_packets_share_geometry_and_presentation_policy() {
     let snapshot = VisualSnapshot {
       selection: Rect::from_xywh(0.0, 0.0, 100.0, 100.0),
       rects: vec![VisualRect {
@@ -238,12 +235,12 @@ mod tests {
     assert_eq!(ready.presentation.frame, Some(false));
     assert!(!ready.presentation.claim_crosshair);
 
-    let error = RenderPacket::error("failed");
-    assert_eq!(error.phase, VisualPhase::Error);
-    assert_eq!(error.message, "failed");
-    assert_eq!(error.presentation.frame, Some(true));
-    assert_eq!(error.presentation.input, Some(true));
-    assert!(error.presentation.reset);
-    assert!(error.presentation.claim_crosshair);
+    let choosing = RenderPacket::choosing();
+    assert_eq!(choosing.phase, VisualPhase::Idle);
+    assert!(choosing.rects.is_empty());
+    assert_eq!(choosing.presentation.frame, Some(true));
+    assert_eq!(choosing.presentation.input, Some(true));
+    assert!(choosing.presentation.reset);
+    assert!(choosing.presentation.claim_crosshair);
   }
 }
