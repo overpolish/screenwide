@@ -5,19 +5,21 @@ import { Ellipsis } from "lucide-react";
 import { useState } from "react";
 import { useDateFormatter } from "react-aria";
 
-import { EditableTitle } from "../../composites/editable-title/editable-title";
-import { t } from "../../i18n/i18n";
-import { cn } from "../../lib/styling";
-import { IconButton } from "../../primitives/button/icon-button";
+import { EditableTitle } from "../../../composites/editable-title/editable-title";
+import { t } from "../../../i18n/i18n";
+import { cn } from "../../../lib/styling";
+import { IconButton } from "../../../primitives/button/icon-button";
+import { Text } from "../../../primitives/text/text";
+import { formatBytes } from "../../editor/duration";
 import {
   boundsAnchor,
   PopupMenuAnchor,
   pointerAnchor,
-} from "../popup-panel/use-popup-menu";
+} from "../../popup-panel/use-popup-menu";
 
 import { ProjectCardPreview } from "./project-card-preview";
 
-import type { ProjectSummary, ScrubStrip } from "./types";
+import type { ProjectSummary, ScrubStrip } from "../types";
 
 export type ProjectCardProps = {
   isSelected: boolean;
@@ -45,10 +47,28 @@ export type ProjectCardProps = {
   scrubStrip?: ScrubStrip | null;
 };
 
+/** When it was last edited, as short as still tells it apart: the time for
+ * today's, the day for this year's, the full date before that. The date
+ * groups above the cards already say roughly when. */
+function useEditedAt() {
+  const time = useDateFormatter({ timeStyle: "short" });
+  const day = useDateFormatter({ day: "numeric", month: "short" });
+  const date = useDateFormatter({ dateStyle: "medium" });
+  return (modifiedMs: number) => {
+    const edited = new Date(modifiedMs);
+    const now = new Date();
+    if (edited.toDateString() === now.toDateString())
+      return time.format(edited);
+    return edited.getFullYear() === now.getFullYear()
+      ? day.format(edited)
+      : date.format(edited);
+  };
+}
+
 /**
- * One project: its picture, its name, and when it was last edited. Its
- * actions are in a menu, opened from the More button or a right click, the
- * way Finder offers them.
+ * One project: its picture, its name, and when it was last edited with the
+ * disk it takes. Its actions are in a menu, opened from the More button that
+ * comes up under the pointer or a right click, the way Finder offers them.
  */
 export function ProjectCard({
   footnote,
@@ -67,18 +87,24 @@ export function ProjectCard({
   // A refused rename leaves the field showing what was typed; remounting it
   // puts the project's own name back.
   const [refusals, setRefusals] = useState(0);
-  const editedAt = useDateFormatter({
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  const editedAt = useEditedAt();
+  const details =
+    footnote ??
+    (!project.available
+      ? t("project-browser-unavailable")
+      : project.modifiedMs === null
+        ? null
+        : project.sizeBytes === null
+          ? editedAt(project.modifiedMs)
+          : t("project-browser-card-details", {
+              date: editedAt(project.modifiedMs),
+              size: formatBytes(project.sizeBytes),
+            }));
   return (
     <article
       aria-label={project.title}
       className={cn(
-        "group/card gap-control rounded-panel bg-layer p-control flex min-w-0 flex-col inset-ring",
-        isSelected
-          ? "inset-ring-2 inset-ring-primary"
-          : "inset-ring-layer-stroke",
+        "group/card flex min-w-0 flex-col gap-inline",
         !project.available && "opacity-60",
       )}
       onContextMenu={(event) => {
@@ -104,9 +130,9 @@ export function ProjectCard({
         scrubStrip={scrubStrip}
         thumbnail={thumbnail}
       />
-      <div className="gap-control flex items-center">
-        <div className="px-control flex min-w-0 grow flex-col">
-          <h3 className="text-body text-fg" title={project.title}>
+      <div className="flex min-w-0 items-start gap-inline ps-0.5">
+        <div className="flex min-w-0 grow flex-col">
+          <Text as="h3" title={project.title} variant="body">
             {project.available && onRename ? (
               <EditableTitle
                 className="truncate focus:text-clip"
@@ -124,24 +150,22 @@ export function ProjectCard({
                 {project.title}
               </span>
             )}
-          </h3>
-          <p className="text-caption text-fg-secondary truncate">
-            {footnote ??
-              (!project.available
-                ? t("project-browser-unavailable")
-                : project.modifiedMs === null
-                  ? null
-                  : editedAt.format(new Date(project.modifiedMs)))}
-          </p>
+          </Text>
+          <Text className="truncate tabular-nums" variant="caption">
+            {details}
+          </Text>
         </div>
+        {/* Out of the way until the card is pointed at or the button is
+            reached from the keyboard; a right click opens the same menu. */}
         <IconButton
           aria-label={t("project-browser-more-actions", {
             title: project.title,
           })}
-          className="shrink-0"
+          className="shrink-0 opacity-0 transition-opacity group-hover/card:opacity-100 data-[focus-visible]:opacity-100"
           onPress={(event) => {
             onMenu(boundsAnchor(event.target.getBoundingClientRect()));
           }}
+          variant="ghost"
         >
           <Ellipsis />
         </IconButton>

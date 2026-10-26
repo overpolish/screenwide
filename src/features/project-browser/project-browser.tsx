@@ -1,14 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Clock,
-  Folder,
-  FolderOpen,
-  FolderRoot,
-  HardDrive,
-  Trash2,
-} from "lucide-react";
+import { Clock, Folder, FolderRoot, HardDrive, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
@@ -18,23 +11,21 @@ import { t } from "../../i18n/i18n";
 import { Button } from "../../primitives/button/button";
 import { SearchField } from "../../primitives/input-fields/search-field";
 
-import {
-  ProjectBrowserNotices,
-  type CopyingProjects,
-  type DeletedProjects,
-} from "./project-browser-notices";
-import { ProjectListPane } from "./project-list-pane";
+import { ProjectListPane } from "./list/project-list-pane";
+import { ListMessage } from "./list/project-list-placeholders";
 import {
   DELETED,
   locationGlyph,
   RECENT,
+  type CopyingProjects,
+  type DeletedProjects,
   type ProjectLocation,
   type ProjectSummary,
   type ScrubStrip,
 } from "./types";
 import { useLocationMenu } from "./use-location-menu";
 
-import type { KindFilter } from "./project-list";
+import type { KindFilter } from "./list/project-list";
 
 const locationGlyphs = {
   folder: Folder,
@@ -73,7 +64,7 @@ export type ProjectBrowserProps = {
   thumbnails: Record<string, string | null>;
   /** A move or duplicate under way, while it copies. */
   copying?: CopyingProjects | null;
-  /** Shown while the last delete can still be undone from its notice. */
+  /** Shown while the last delete can still be undone from the island. */
   deleted?: DeletedProjects | null;
   /** Absent while projects cannot be duplicated, and then not offered. */
   onDuplicate?: (files: string[]) => void;
@@ -88,37 +79,14 @@ export type ProjectBrowserProps = {
   scrubStrips?: Record<string, ScrubStrip | null>;
 };
 
-function EmptyState({
-  location,
-  selected,
-}: {
-  location: ProjectLocation | undefined;
-  selected: string;
-}) {
-  return (
-    <div className="gap-control pe-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
-      <p className="text-heading text-fg">
-        {selected === DELETED
-          ? t("project-browser-empty-deleted-title")
-          : t("project-browser-empty-title")}
-      </p>
-      <p className="text-body text-fg-secondary">
-        {selected === DELETED
-          ? t("project-browser-empty-deleted")
-          : location
-            ? t("project-browser-empty-location")
-            : t("project-browser-empty-recent")}
-      </p>
-    </div>
-  );
-}
-
 /**
  * The projects the app knows: the recent ones, wherever they are, the ones
  * in the projects folder and any folder added to the sidebar, and the ones
- * deleted in the last 30 days. A folder in the sidebar is opened or taken
- * off it from its right-click menu. The search and the kind filter hold
- * across folders; the choice of projects does not.
+ * deleted in the last 30 days. Laid out as Settings is: the search and the
+ * sources down the side, the source's name as the window's title. A folder
+ * in the sidebar is opened or taken off it from its right-click menu. The
+ * search and the kind filter hold across sources; the choice of projects
+ * does not.
  */
 export function ProjectBrowser({
   copying,
@@ -156,34 +124,60 @@ export function ProjectBrowser({
     onOpen: onOpenLocation,
     onRemove: onRemoveLocation,
   });
+  const title =
+    selected === DELETED
+      ? t("project-browser-recently-deleted")
+      : (location?.name ?? t("project-browser-recent"));
+
+  const empty =
+    selected === DELETED ? (
+      <ListMessage
+        glyph={<Trash2 />}
+        text={t("project-browser-empty-deleted")}
+        title={t("project-browser-empty-deleted-title")}
+      />
+    ) : location ? (
+      <ListMessage
+        glyph={<Folder />}
+        text={t("project-browser-empty-location")}
+        title={t("project-browser-empty-title")}
+      />
+    ) : (
+      <ListMessage
+        action={
+          <Button onPress={onOpenFile}>{t("project-browser-open-file")}</Button>
+        }
+        glyph={<Clock />}
+        text={t("project-browser-empty-recent")}
+        title={t("project-browser-empty-title")}
+      />
+    );
 
   return (
     <WindowShell
       header={
         <WindowHeader
           actions={
-            <div className="flex items-center gap-inline">
-              <SearchField
-                aria-label={t("project-browser-search-label")}
-                className="w-48"
-                onChange={setQuery}
-                placeholder={t("project-browser-search-placeholder")}
-                value={query}
-              />
-              <Button onPress={onOpenFile} variant="ghost">
-                <FolderOpen />
-                {t("project-browser-open-file")}
-              </Button>
-            </div>
+            <Button onPress={onOpenFile} variant="ghost">
+              {t("project-browser-open-file")}
+            </Button>
           }
           onClose={onClose}
           onMinimize={onMinimize}
-          title={t("project-browser-title")}
+          title={title}
         />
       }
     >
-      <div className="gap-layout ps-window-inset flex min-h-0 grow">
-        <div className="gap-section pb-window-inset flex shrink-0 flex-col">
+      {/* Only the sidebar keeps the window inset; the projects run to the
+          window's end and bottom edges so the scroll fade lands there. */}
+      <div className="flex min-h-0 grow gap-group ps-inset">
+        <div className="flex shrink-0 flex-col gap-separate pb-inset">
+          <SearchField
+            aria-label={t("project-browser-search-label")}
+            onChange={setQuery}
+            placeholder={t("project-browser-search-placeholder")}
+            value={query}
+          />
           <SidebarNav
             aria-label={t("project-browser-locations")}
             className="grow"
@@ -229,44 +223,35 @@ export function ProjectBrowser({
             {t("project-browser-add-location")}
           </Button>
         </div>
-        <div className="gap-section flex min-h-0 min-w-0 grow flex-col">
-          {projects?.length === 0 ? (
-            <EmptyState location={location} selected={selected} />
-          ) : projects ? (
-            <ProjectListPane
-              actions={
-                selected === DELETED
-                  ? { onEmpty, onRestore, onTrash }
-                  : {
-                      onDelete,
-                      onDuplicate,
-                      onForget: selected === RECENT ? onForget : undefined,
-                      onMove,
-                      onReveal,
-                    }
-              }
-              key={selected}
-              kind={kind}
-              locations={locations}
-              onKindChange={setKind}
-              onOpen={onOpen}
-              onRename={onRename}
-              onRequestScrubStrip={onRequestScrubStrip}
-              projects={projects}
-              query={query}
-              scrubStrips={scrubStrips}
-              thumbnails={thumbnails}
-            />
-          ) : (
-            <div className="grow" />
-          )}
-          <ProjectBrowserNotices
-            copying={copying ?? null}
-            deleted={deleted ?? null}
-            error={error}
-            onUndoDelete={onUndoDelete}
-          />
-        </div>
+        <ProjectListPane
+          actions={
+            selected === DELETED
+              ? { onEmpty, onRestore, onTrash }
+              : {
+                  onDelete,
+                  onDuplicate,
+                  onForget: selected === RECENT ? onForget : undefined,
+                  onMove,
+                  onReveal,
+                }
+          }
+          copying={copying ?? null}
+          deleted={deleted ?? null}
+          empty={empty}
+          error={error}
+          key={selected}
+          kind={kind}
+          locations={locations}
+          onKindChange={setKind}
+          onOpen={onOpen}
+          onRename={onRename}
+          onRequestScrubStrip={onRequestScrubStrip}
+          onUndoDelete={onUndoDelete}
+          projects={projects}
+          query={query}
+          scrubStrips={scrubStrips}
+          thumbnails={thumbnails}
+        />
       </div>
     </WindowShell>
   );

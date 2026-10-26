@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { platformArg, t } from "../../i18n/i18n";
-import { PopupPanelItem } from "../popup-panel/store";
-import { PopupMenuAnchor, usePopupMenu } from "../popup-panel/use-popup-menu";
-
-import { locationGlyph, type ProjectLocation } from "./types";
+import { platformArg, t } from "../../../i18n/i18n";
+import { PopupPanelItem } from "../../popup-panel/store";
+import {
+  PopupMenuAnchor,
+  usePopupMenu,
+} from "../../popup-panel/use-popup-menu";
+import { locationGlyph, type ProjectLocation } from "../types";
 
 /** The projects a menu acts on travel in its id as JSON, so a pick names
  * them even after the choice in the window has moved on. */
@@ -40,9 +42,9 @@ const isIn = (file: string, location: string) =>
 
 /**
  * The actions on a project, opened from its card's More button or a right
- * click, and the move offered for a choice of several from the selection's
+ * click, and the move offered for a choice of several from the island's
  * Move To button. A card's menu acts on that card alone, chosen or not:
- * actions on the choice are the toolbar's, which shows what they will touch.
+ * actions on the choice are the island's, which shows what they will touch.
  * A missing project offers only what can still be done to it: taking it off
  * Recent.
  */

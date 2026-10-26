@@ -3,9 +3,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** How long the notice offers to undo a delete. Recently Deleted keeps the
- * projects for much longer; this is only the shortcut back. */
-const UNDO_WINDOW_MS = 8_000;
+/** How long the island offers to undo a delete, which it counts down.
+ * Recently Deleted keeps the projects for much longer; this is only the
+ * shortcut back. */
+export const UNDO_WINDOW_MS = 8_000;
 
 type LastDelete = { files: string[]; title: string };
 

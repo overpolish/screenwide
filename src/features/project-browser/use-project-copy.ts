@@ -6,11 +6,11 @@ import { useEffect, useState } from "react";
 
 import { COPY_PROGRESS_EVENT } from "./api";
 
-import type { CopyingProjects } from "./project-browser-notices";
+import type { CopyingProjects } from "./types";
 import type { CopyProgress } from "../../bindings/CopyProgress";
 
 /**
- * The move or duplicate under way, as the notice shows it: what it is, and
+ * The move or duplicate under way, as the island shows it: what it is, and
  * how far the copy has got by the progress the app reports. One at a time;
  * the browser offers neither while one runs.
  */

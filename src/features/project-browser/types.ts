@@ -21,6 +21,21 @@ export type {
  * with the file as an address the webview can load. */
 export type ScrubStrip = Omit<ScrubStripFile, "path"> & { src: string };
 
+/** The last delete, named for the island that offers to undo it. */
+export type DeletedProjects = { count: number; title: string };
+
+/** Projects being moved or duplicated, and how far the copy has got. */
+export type CopyingProjects = {
+  count: number;
+  /** The location's name, for a move. */
+  destination: string | null;
+  /** From 0 to 1. */
+  fraction: number;
+  kind: "duplicate" | "move";
+  /** The project's name, for a single one. */
+  title: string;
+};
+
 /** How a location is drawn, in the sidebar and in Move To: the projects
  * folder as the root it is, a folder on another drive as that drive, and
  * any other folder as a folder. */

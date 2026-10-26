@@ -737,6 +737,10 @@ export type Messages = {
   "project-browser-add-location-dialog": null;
   "project-browser-badge-replay": null;
   "project-browser-badge-screenshot": null;
+  "project-browser-card-details": {
+    date: string | number;
+    size: string | number;
+  };
   "project-browser-days-left": { days: number };
   "project-browser-delete": null;
   "project-browser-deleted": { count: number; title: string | number };
@@ -755,12 +759,14 @@ export type Messages = {
   "project-browser-group-today": null;
   "project-browser-group-unknown": null;
   "project-browser-group-yesterday": null;
+  "project-browser-island": null;
   "project-browser-kind": null;
   "project-browser-kind-all": null;
   "project-browser-kind-audio": null;
   "project-browser-kind-camera": null;
   "project-browser-kind-screen": null;
   "project-browser-kind-screenshot": null;
+  "project-browser-loading": null;
   "project-browser-location-actions": null;
   "project-browser-locations": null;
   "project-browser-more-actions": { title: string | number };
@@ -793,7 +799,7 @@ export type Messages = {
   "project-browser-select-project": { title: string | number };
   "project-browser-selected-count": { count: string | number };
   "project-browser-show-in-file-manager": { platform: string | number };
-  "project-browser-title": null;
+  "project-browser-summary": { count: number; size: string | number };
   "project-browser-track-camera": null;
   "project-browser-track-microphone": null;
   "project-browser-track-screen": null;

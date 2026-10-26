@@ -1,62 +1,87 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef, useState } from "react";
+import { SearchX } from "lucide-react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
-import { t } from "../../i18n/i18n";
-import { isWindows } from "../../lib/platform";
-import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
-import { ownsTextEditingKeys } from "../editor/shortcuts/keyboard-target";
+import { t } from "../../../i18n/i18n";
+import { isWindows } from "../../../lib/platform";
+import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
+import { ownsTextEditingKeys } from "../../editor/shortcuts/keyboard-target";
+import { ProjectCard } from "../card/project-card";
+import { ProjectsIsland } from "../island/projects-island";
+import { SelectionActions } from "../island/selection-actions";
 
-import { ProjectCard } from "./project-card";
+import { ProjectGrid } from "./project-grid";
 import {
   filterProjects,
   groupByDate,
   timeLeft,
   type KindFilter,
 } from "./project-list";
-import { ListActions, SelectionActions } from "./project-list-actions";
+import { ListMessage, LoadingGrid } from "./project-list-placeholders";
 import { ProjectListToolbar } from "./project-list-toolbar";
 import { useProjectMenu, type ProjectActions } from "./use-project-menu";
 import { useProjectSelection } from "./use-project-selection";
 
-import type { ProjectLocation, ProjectSummary, ScrubStrip } from "./types";
+import type {
+  CopyingProjects,
+  DeletedProjects,
+  ProjectLocation,
+  ProjectSummary,
+  ScrubStrip,
+} from "../types";
 
 export type ProjectListPaneProps = {
   actions: ProjectActions;
+  copying: CopyingProjects | null;
+  deleted: DeletedProjects | null;
+  /** In place of the list when the source holds no projects at all. */
+  empty: ReactNode;
+  error: string | null;
   kind: KindFilter;
   locations: readonly ProjectLocation[];
   onKindChange: (kind: KindFilter) => void;
   onOpen: (file: string) => void;
   onRename: (file: string, title: string) => Promise<void>;
-  projects: readonly ProjectSummary[];
+  /** Null while the source is being read. */
+  projects: readonly ProjectSummary[] | null;
   query: string;
   thumbnails: Record<string, string | null>;
   onRequestScrubStrip?: (file: string) => void;
+  onUndoDelete?: () => void;
   scrubStrips?: Record<string, ScrubStrip | null>;
 };
+
+const NONE: readonly ProjectSummary[] = [];
 
 /**
  * One source's projects: filtered by kind and the search, grouped by when
  * they were last edited unless a search is under way, and chosen and acted
- * on one at a time or together. Mounted per source, so a choice made in one
- * folder never carries into another. Recently Deleted lists them newest
- * first, ungrouped, and they cannot be opened or renamed there: only
- * restored or sent on.
+ * on one at a time or together from the island. Mounted per source, so a
+ * choice made in one folder never carries into another. Recently Deleted
+ * lists them newest first, ungrouped, and they cannot be opened or renamed
+ * there: only restored or sent on.
  */
 export function ProjectListPane({
   actions,
+  copying,
+  deleted,
+  empty,
+  error,
   kind,
   locations,
   onKindChange,
   onOpen,
   onRename,
   onRequestScrubStrip,
-  projects,
+  onUndoDelete,
+  projects: read,
   query,
   scrubStrips,
   thumbnails,
 }: ProjectListPaneProps) {
+  const projects = read ?? NONE;
   // Read when the source is opened, which remounts the pane, rather than on
   // every render; a window left open past midnight regroups on the next.
   const [today] = useState(() => new Date());
@@ -76,10 +101,10 @@ export function ProjectListPane({
       ? groupByDate(listed, today)
       : [{ label: null, projects: listed }];
   const shown = groups.flatMap((group) => group.projects);
-  const selection = useProjectSelection(
-    shown.filter(({ available }) => available).map(({ file }) => file),
-  );
+  const choosable = shown.filter(({ available }) => available);
+  const selection = useProjectSelection(choosable.map(({ file }) => file));
   const selected = shown.filter(({ file }) => selection.selected.has(file));
+  const selectedFiles = selected.map(({ file }) => file);
   const menu = useProjectMenu(locations, actions);
 
   const keysRef = useRef<(event: KeyboardEvent) => void>(() => undefined);
@@ -100,7 +125,7 @@ export function ProjectListPane({
           : event.metaKey && event.key === "Backspace")
       ) {
         event.preventDefault();
-        actions.onDelete(selected.map(({ file }) => file));
+        actions.onDelete(selectedFiles);
       }
     };
   });
@@ -114,56 +139,35 @@ export function ProjectListPane({
     };
   }, []);
 
-  const selectedFiles = selected.map(({ file }) => file);
   return (
-    <div className="gap-section flex min-h-0 min-w-0 grow flex-col">
-      <ProjectListToolbar
-        kind={shownKind}
-        kindsPresent={kindsPresent}
-        listActions={
-          <ListActions actions={actions} isEmpty={projects.length === 0} />
-        }
-        listed={listed}
-        onClearSelection={selection.clear}
-        onKindChange={onKindChange}
-        onSelectAll={selection.selectAll}
-        selectableCount={shown.filter(({ available }) => available).length}
-        selected={selected}
-        selectionActions={
-          <SelectionActions
-            actions={actions}
-            files={selectedFiles}
-            onMoveMenu={(anchor) =>
-              void menu.openMoveMenu(selectedFiles, anchor)
-            }
-          />
-        }
-      />
-      {listed.length === 0 ? (
-        <div className="gap-control pe-window-inset pb-window-inset flex grow flex-col items-center justify-center text-center">
-          <p className="text-heading text-fg">
-            {t("project-browser-no-results-title")}
-          </p>
-          <p className="text-body text-fg-secondary">
-            {t("project-browser-no-results", { query: query.trim() })}
-          </p>
-        </div>
+    // Clipped, not hidden: the island's drawing runs far below it, and a
+    // hidden overflow can still be scrolled to by focus.
+    <div className="relative flex min-h-0 min-w-0 grow flex-col gap-separate overflow-clip">
+      {read === null ? (
+        <LoadingGrid />
+      ) : projects.length === 0 ? (
+        empty
       ) : (
-        <ScrollArea inWindowCorner rootClassName="min-h-0 min-w-0 grow">
-          <div className="gap-layout pe-window-inset pb-window-inset flex flex-col">
-            {groups.map((group) => (
-              <section
-                aria-label={group.label ?? t("project-browser-search-results")}
-                className="gap-control flex flex-col"
-                key={group.label ?? "results"}
-              >
-                {group.label ? (
-                  <h2 className="text-heading text-fg-secondary px-control">
-                    {group.label}
-                  </h2>
-                ) : null}
-                <div className="gap-section grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
-                  {group.projects.map((project) => (
+        <>
+          <ProjectListToolbar
+            kind={shownKind}
+            kindsPresent={kindsPresent}
+            listed={listed}
+            onEmpty={"onEmpty" in actions ? actions.onEmpty : undefined}
+            onKindChange={onKindChange}
+          />
+          {listed.length === 0 ? (
+            <ListMessage
+              glyph={<SearchX />}
+              text={t("project-browser-no-results", { query: query.trim() })}
+              title={t("project-browser-no-results-title")}
+            />
+          ) : (
+            <ScrollArea inWindowCorner rootClassName="min-h-0 min-w-0 grow">
+              {/* Room above the first row for a card to lift into. */}
+              <div className="pt-1">
+                <ProjectGrid groups={groups}>
+                  {(project) => (
                     <ProjectCard
                       footnote={
                         project.expiresMs === null
@@ -172,7 +176,6 @@ export function ProjectListPane({
                       }
                       isSelected={selection.selected.has(project.file)}
                       isSelectionMode={selected.length > 0}
-                      key={project.file}
                       onExtendSelection={() => {
                         selection.extendTo(project.file);
                       }}
@@ -205,13 +208,42 @@ export function ProjectListPane({
                       scrubStrip={scrubStrips?.[project.file]}
                       thumbnail={thumbnails[project.file] ?? null}
                     />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </ScrollArea>
+                  )}
+                </ProjectGrid>
+              </div>
+            </ScrollArea>
+          )}
+        </>
       )}
+      <ProjectsIsland
+        copying={copying}
+        deleted={deleted}
+        error={error}
+        onUndoDelete={onUndoDelete}
+        selection={
+          selected.length > 0
+            ? {
+                actions: (
+                  <SelectionActions
+                    actions={actions}
+                    files={selectedFiles}
+                    onMoveMenu={(anchor) =>
+                      void menu.openMoveMenu(selectedFiles, anchor)
+                    }
+                  />
+                ),
+                bytes: selected.reduce(
+                  (total, { sizeBytes }) => total + (sizeBytes ?? 0),
+                  0,
+                ),
+                count: selected.length,
+                isAll: selected.length === choosable.length,
+                onClear: selection.clear,
+                onSelectAll: selection.selectAll,
+              }
+            : null
+        }
+      />
     </div>
   );
 }

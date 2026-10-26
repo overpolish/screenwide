@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { appLocale, t } from "../../i18n/i18n";
+import { appLocale, t } from "../../../i18n/i18n";
 
-import type { ProjectKind, ProjectSummary } from "./types";
+import type { ProjectKind, ProjectSummary } from "../types";
 
 export type KindFilter = "all" | ProjectKind;
 

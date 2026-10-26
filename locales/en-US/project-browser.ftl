@@ -3,7 +3,6 @@
 
 ### The project browser: the window listing recordings and screenshots.
 
-project-browser-title = Projects
 project-browser-search-label = Search projects
 project-browser-search-placeholder = Search
 project-browser-open-file = Open File
@@ -37,8 +36,6 @@ project-browser-no-results = No project names contain “{ $query }”.
 
 ## Toolbar above the projects
 
-project-browser-select-all = Select all
-project-browser-deselect-all = Deselect all
 # The filter choosing which kind of project is listed.
 project-browser-kind = Kind
 project-browser-kind-all = All
@@ -46,12 +43,18 @@ project-browser-kind-screen = Screen
 project-browser-kind-camera = Camera
 project-browser-kind-audio = Audio
 project-browser-kind-screenshot = Screenshots
-project-browser-selected-count = { $count } selected
 project-browser-project-count =
     { $count ->
         [one] { $count } project
        *[other] { $count } projects
     }
+# How many projects are listed, and the disk they take ($size, such as "1.2 GB").
+project-browser-summary =
+    { $count ->
+        [one] { $count } project · { $size }
+       *[other] { $count } projects · { $size }
+    }
+project-browser-loading = Loading projects
 
 ## Project list
 
@@ -78,6 +81,9 @@ project-browser-project-name = Project name
 # A rename to a name no file can have, such as one made only of dots.
 project-browser-name-unusable = That name cannot be used
 project-browser-unavailable = Not available
+# Under a card's name: when it was last edited ($date, a time for today's) and
+# the disk it takes ($size, such as "148 MB").
+project-browser-card-details = { $date } · { $size }
 project-browser-badge-screenshot = Screenshot
 project-browser-badge-replay = Replay
 # What a recording holds, read out after "Open <name>" in a list.
@@ -110,10 +116,17 @@ project-browser-show-in-file-manager =
 project-browser-remove-from-recent = Remove from Recent
 # Sends everything in Recently Deleted on to the Trash, after a confirmation.
 project-browser-empty-recently-deleted = Empty
-project-browser-empty-recently-deleted-confirm = Confirm emptying Recently Deleted
+# The same button once pressed, asking for a second press. Short: the button
+# keeps the width of the longer of the two labels.
+project-browser-empty-recently-deleted-confirm = Empty Now
 
-## Notices below the projects
+## The island at the foot of the window: the choice of projects, and what is
+## passing, such as a copy under way or a delete that can be undone
 
+project-browser-island = Selection and progress
+project-browser-selected-count = { $count } selected
+project-browser-select-all = Select All
+project-browser-deselect-all = Deselect all
 # [1] names the single project as $title; the other variants count them.
 project-browser-duplicating =
     { $count ->

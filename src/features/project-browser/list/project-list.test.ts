@@ -3,11 +3,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { withoutIsolates as plain } from "../../i18n/testing";
+import { withoutIsolates as plain } from "../../../i18n/testing";
 
 import { filterProjects, groupByDate, timeLeft } from "./project-list";
 
-import type { ProjectSummary } from "./types";
+import type { ProjectSummary } from "../types";
 
 const project = (
   title: string,
