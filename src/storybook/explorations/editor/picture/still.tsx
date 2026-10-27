@@ -3,8 +3,10 @@
 
 import { cn } from "../../../../lib/styling";
 import { boxStyle, elementById } from "../../ideas/ideas-data";
-import { MockApp } from "../../ideas/mock-app";
 import { H, W } from "../../ideas/point-geometry";
+import { type Recording } from "../recording";
+
+import { ScreenContent } from "./screen-content";
 
 // The recorded screen at a small size: drawn at its full size and scaled, so
 // its type and corners shrink with it. `element` outlines what a moment is
@@ -13,8 +15,12 @@ import { H, W } from "../../ideas/point-geometry";
 export function Still({
   className,
   element,
+  recording,
+  seconds,
   width,
 }: {
+  recording: Recording;
+  seconds: number;
   width: number;
   className?: string;
   element?: string;
@@ -33,14 +39,19 @@ export function Still({
           width: W,
         }}
       >
-        <MockApp className="size-full">
+        <ScreenContent
+          className="size-full"
+          isThumbnail
+          recording={recording}
+          seconds={seconds}
+        >
           {target ? (
             <span
               className="absolute rounded-[8px] outline-4 outline-offset-4 outline-emphasis outline-solid"
               style={boxStyle(target)}
             />
           ) : null}
-        </MockApp>
+        </ScreenContent>
       </div>
     </div>
   );

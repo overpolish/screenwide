@@ -8,7 +8,7 @@ import { IconButton } from "../../../primitives/button/icon-button";
 import { Toolbar } from "../../../primitives/toolbar/toolbar";
 import { PROJECT_NAME } from "../shared/mock-data";
 
-import { type EditorKind } from "./model/use-editor";
+import { type Editor } from "./model/use-editor";
 
 // The window's own bar: the name after the window buttons, then history and
 // what leaves the editor. Delete is the selection's, so it sits on the
@@ -16,7 +16,8 @@ import { type EditorKind } from "./model/use-editor";
 // leading icon; Export is the one thing the window is for, so it alone is
 // primary. A screenshot is copied as often as it is saved, so Copy sits
 // beside it.
-export function TitleBar({ kind }: { kind: EditorKind }) {
+export function TitleBar({ editor }: { editor: Editor }) {
+  const { kind } = editor;
   return (
     <header className="flex h-12 shrink-0 items-center gap-separate ps-traffic-lights pe-inset">
       <span className="min-w-0 truncate text-heading" dir="auto">
@@ -25,10 +26,20 @@ export function TitleBar({ kind }: { kind: EditorKind }) {
           : PROJECT_NAME}
       </span>
       <Toolbar aria-label="History" className="ms-auto">
-        <IconButton aria-label="Undo" variant="ghost">
+        <IconButton
+          aria-label="Undo"
+          isDisabled={!editor.canUndo}
+          onPress={editor.undo}
+          variant="ghost"
+        >
           <Undo2 />
         </IconButton>
-        <IconButton aria-label="Redo" isDisabled variant="ghost">
+        <IconButton
+          aria-label="Redo"
+          isDisabled={!editor.canRedo}
+          onPress={editor.redo}
+          variant="ghost"
+        >
           <Redo2 />
         </IconButton>
       </Toolbar>

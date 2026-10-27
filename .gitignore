@@ -12,6 +12,8 @@ dist
 dist-ssr
 storybook-static
 *.local
+# Your own recordings, for the editor exploration's Your Recording story.
+src/storybook/explorations/editor/recordings/local/
 
 # Editor directories and files
 .vscode/*

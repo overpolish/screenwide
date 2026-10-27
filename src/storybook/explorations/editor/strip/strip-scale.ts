@@ -1,94 +1,41 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RECORDING_S } from "../editor-data";
 import { type TimeMap } from "../model/timeline-model";
 
-// Where a moment falls along the strip, as a fraction of its width. The
-// edited time comes from the time map (cuts and squeeze). Still time is
-// drawn at a fraction of its length, so the beats, where the work happened,
-// have room for their pictures even in a recording that is mostly waiting;
-// its springs say it is packed. The lens then swells time under the pointer
-// the way the Dock swells icons. There is no zoom: the lens is the zoom.
+// Where a moment falls along the strip, as a fraction of its width: to
+// scale, in the edited recording's time, as it plays. A second is the same
+// width everywhere, so the playhead crosses the strip at an even pace and
+// what is squeezed is drawn as short as it plays. The strip shows the part
+// of the recording in view (`use-view.ts`); the overview under it shows the
+// whole, at the same scale.
 
-/** How much of its length still time is drawn at. */
-const STILL_WEIGHT = 0.3;
-
-/** How much the lens magnifies at its focus, less one: 3 is four times.
- * Gentle enough that what is aimed at moves slowly under the pointer. */
-const DISTORTION = 3;
-
-/** Where the lens is, in recorded seconds, and how far it has swelled. */
-export type Lens = { focus: number; strength: number };
+/** The part of the edited recording in view, as shares of its length. */
+export type View = { end: number; start: number };
 
 export type StripScale = {
   /** The recorded moment under a fraction of the strip's width. */
   toSeconds: (x: number) => number;
-  /** Fraction of the strip's width, 0 to 1, for a recorded moment. */
+  /** Fraction of the strip's width for a recorded moment: 0 to 1 where it
+   * is in view, past them where it is not. */
   toX: (seconds: number) => number;
 };
 
 export function stripScale({
-  lens,
   map,
-  range = [0, RECORDING_S],
+  view,
 }: {
   map: TimeMap;
-  lens?: Lens;
-  range?: readonly [number, number];
+  view: View;
 }): StripScale {
-  // Display units: each piece's edited length, still pieces weighted down.
-  const { pieces } = map;
-  const lengths = pieces.map(
-    (piece) =>
-      (map.toTime(piece.end) - map.toTime(piece.start)) *
-      (piece.beat || piece.isSpeech ? 1 : STILL_WEIGHT),
-  );
-  const starts = lengths.reduce<number[]>(
-    (all, value, index) => [...all, all[index] + value],
-    [0],
-  );
-  const display = (seconds: number) => {
-    const index = pieces.findIndex((piece) => seconds < piece.end);
-    if (index < 0) return starts[pieces.length];
-    const piece = pieces[index];
-    const into = Math.max(0, seconds - piece.start) / (piece.end - piece.start);
-    return starts[index] + into * lengths[index];
-  };
-  const from = display(range[0]);
-  const span = Math.max(display(range[1]) - from, 1e-6);
-  const fraction = (seconds: number) => (display(seconds) - from) / span;
-  const original = (u: number) => {
-    const target = from + u * span;
-    const index = pieces.findIndex(
-      (_, at) => lengths[at] > 0 && target < starts[at] + lengths[at],
-    );
-    if (index < 0) return range[1];
-    const piece = pieces[index];
-    const into = (target - starts[index]) / lengths[index];
-    return piece.start + into * (piece.end - piece.start);
-  };
-  if (!lens || lens.strength < 0.01) {
-    return {
-      toSeconds: (x) => original(Math.min(Math.max(x, 0), 1)),
-      toX: fraction,
-    };
-  }
-  // Sarkar and Brown's graphical fisheye: the focus stays where it is, so
-  // the moment under the pointer stays under it, and the strip stretches on
-  // either side of it toward the ends, which stay put. Both directions have
-  // an exact formula, so scrubbing reads the same lens it sees.
-  const d = DISTORTION * lens.strength;
-  const p = Math.min(Math.max(fraction(lens.focus), 0), 1);
-  const grow = (t: number) => ((d + 1) * t) / (d * t + 1);
-  const shrink = (y: number) => y / (d + 1 - d * y);
-  const side = (value: number, bend: (t: number) => number) =>
-    value >= p
-      ? p + (1 - p) * bend((value - p) / Math.max(1 - p, 1e-6))
-      : p - p * bend((p - value) / Math.max(p, 1e-6));
+  const length = Math.max(map.duration, 1e-6);
+  const span = Math.max(view.end - view.start, 1e-6);
   return {
-    toSeconds: (x) => original(side(Math.min(Math.max(x, 0), 1), shrink)),
-    toX: (seconds) => side(Math.min(Math.max(fraction(seconds), 0), 1), grow),
+    toSeconds: (x) =>
+      map.toOriginal(
+        (view.start + Math.min(Math.max(x, 0), 1) * span) * length,
+      ),
+    toX: (seconds) => (map.toTime(seconds) / length - view.start) / span,
   };
 }
 

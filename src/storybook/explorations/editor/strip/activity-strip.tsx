@@ -1,35 +1,41 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { animate, type AnimationPlaybackControls } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { ACTIONS, RECORDING_S, STEPS, stepAt } from "../editor-data";
+import { cn } from "../../../../lib/styling";
+import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
+import { captionLines, focusOf, isOverlayHidden } from "../model/strip-items";
 import { type Editor } from "../model/use-editor";
+import { beatAt } from "../recording";
 
 import { MarkRail, type Snap } from "./mark-rail";
-import { BeatBlock, Seams, Stills, VoiceRow } from "./strip-beats";
-import { Chapters, LensPreview, Playhead, SceneRail } from "./strip-rails";
-import { type Lens, stripScale, type StripScale } from "./strip-scale";
+import { Overview } from "./overview";
+import { Pauses } from "./pauses";
+import { Blade, RangeBand } from "./range-cut";
+import { SceneRail } from "./scene-rail";
+import { BeatBlock, Seams, VoiceRow } from "./strip-beats";
+import { MomentPreview, Playhead } from "./strip-rails";
+import { placed, stripScale, type View } from "./strip-scale";
+import { useRangeCut } from "./use-range-cut";
+import { useScrollView } from "./use-scroll-view";
+import { useView } from "./use-view";
 
-// The timeline as one strip of what happened. Its length is the edited
-// recording's, against the full recording's width, so squeezing or cutting
-// visibly shortens it.
+// The timeline as one strip of what happened, to scale, showing the part of
+// the recording in view; the overview under it shows the whole. Along its
+// top are the scenes, over the beats the annotations, and under them what
+// was done, each beat as the screen at that moment, with the pauses between
+// as springs.
 //
-// The lens swells time under a slow pointer and flattens under a fast one,
-// so it helps when aiming and stays out of the way when travelling; the
-// moment under the pointer stays under it. Anything pressed freezes the lens
-// until it is let go, so nothing moves while it is held. Pressing a beat
-// selects it; scrubbing is from the step names along the top or the
-// playhead's knob; pressing the empty strip moves the playhead there.
+// Pressing a beat, a pause, a scene or an annotation selects it, and nothing
+// else moves; pressing the empty strip moves the playhead there; dragging
+// the playhead's knob scrubs. Hovering only shows the moment under the
+// pointer.
 
-/** Pointer speed, in px per ms, past which the lens flattens and follows. */
-const FAST = 0.6;
-/** While aiming, how far the pointer may stray from the lens's middle, in
- * px, before the lens is drawn after it. */
-const LEASH_PX = 56;
 /** How close, in px, an annotation's end must come to an event to snap. */
 const SNAP_PX = 8;
+/** The whole recording: the track inside the scroll area draws it all. */
+const WHOLE: View = { end: 1, start: 0 };
 
 function useWidth() {
   const ref = useRef<HTMLDivElement>(null);
@@ -48,118 +54,59 @@ function useWidth() {
   return { ref, width };
 }
 
-/** The lens: where it is and how strong, moved by the pointer's speed, and
- * held still while anything on the strip is pressed. */
-function useLens() {
-  const [lens, setLens] = useState<Lens>({ focus: 0, strength: 0 });
-  const motionRef = useRef<{
-    controls: AnimationPlaybackControls | null;
-    focus: number;
-    last: { t: number; x: number } | null;
-    strength: number;
-    target: number;
-  }>({ controls: null, focus: 0, last: null, strength: 0, target: 0 });
-  const isHeldRef = useRef(false);
-  useEffect(() => {
-    const release = () => {
-      isHeldRef.current = false;
-    };
-    window.addEventListener("pointerup", release);
-    return () => {
-      window.removeEventListener("pointerup", release);
-    };
-  }, []);
-  const swell = (target: number) => {
-    const state = motionRef.current;
-    if (state.target === target) return;
-    state.target = target;
-    state.controls?.stop();
-    state.controls = animate(state.strength, target, {
-      duration: 0.22,
-      onUpdate: (strength) => {
-        state.strength = strength;
-        setLens((now) => ({ ...now, strength }));
-      },
-    });
-  };
-  return {
-    /** Scrubbing travels, so it reads a flat strip; the lens forms again
-     * where the pointer is once it is let go and moves. */
-    flatten: () => {
-      const state = motionRef.current;
-      state.controls?.stop();
-      state.strength = 0;
-      state.target = 0;
-      isHeldRef.current = true;
-      setLens((now) => ({ ...now, strength: 0 }));
-    },
-    hold: () => {
-      isHeldRef.current = true;
-    },
-    leave: () => {
-      motionRef.current.last = null;
-      if (!isHeldRef.current) swell(0);
-    },
-    lens,
-    // Travelling fast, the lens flattens and follows. Slowing, it forms where
-    // the pointer is (its middle stays put, so nothing jumps) and then holds
-    // still: the pointer moves over a magnified strip that is not moving, so
-    // aiming is four times finer. Strayed past the leash, it is drawn along.
-    move: (
-      event: React.PointerEvent,
-      { flat, width, x }: { flat: StripScale; width: number; x: number },
-    ) => {
-      if (isHeldRef.current) return;
-      const state = motionRef.current;
-      const now = event.timeStamp;
-      const speed = state.last
-        ? Math.abs(event.clientX - state.last.x) /
-          Math.max(now - state.last.t, 1)
-        : 0;
-      state.last = { t: now, x: event.clientX };
-      const isFast = speed > FAST;
-      const isForming = state.target === 0;
-      const stray = (x - flat.toX(state.focus)) * width;
-      if (isFast || isForming) state.focus = flat.toSeconds(x);
-      else if (Math.abs(stray) > LEASH_PX)
-        state.focus = flat.toSeconds(x - (Math.sign(stray) * LEASH_PX) / width);
-      const { focus } = state;
-      setLens((current) => ({ ...current, focus }));
-      swell(isFast ? 0 : 1);
-    },
-  };
-}
-
 export function ActivityStrip({ editor }: { editor: Editor }) {
-  const area = useWidth();
-  const track = useWidth();
-  const { flatten, hold, leave, lens, move } = useLens();
-  const gripRef = useRef<{ squeeze: number; x: number } | null>(null);
+  const frame = useWidth();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const { map, selection } = editor;
+  const controls = useView({ duration: map.duration, width: frame.width });
+  const { onInitialized, trackWidth } = useScrollView(controls, frame.width);
+  // Along the track, which is the whole recording; and across the part in
+  // view, for what is drawn over the scroll area rather than in it.
+  const scale = stripScale({ map, view: WHOLE });
+  const viewScale = stripScale({ map, view: controls.view });
   const [isGripping, setIsGripping] = useState(false);
-  const { map } = editor;
+  const [hoverX, setHoverX] = useState<number | null>(null);
+  // Pressed on the empty strip, and held: the playhead follows the pointer.
+  const isScrubbingRef = useRef(false);
+  const share = (seconds: number) =>
+    map.toTime(seconds) / Math.max(map.duration, 1e-6);
 
-  const flat = stripScale({ map });
-  const scale = stripScale({
-    lens: isGripping ? undefined : lens,
-    map,
+  // What is chosen is brought into view if it is out of it, and the
+  // playhead is followed while it plays. Only a new choice moves the view,
+  // never an edit to what is chosen, so the effects read the rest through
+  // a ref.
+  const focus = focusOf(editor, selection);
+  const latestRef = useRef({ controls, focus, share });
+  useEffect(() => {
+    latestRef.current = { controls, focus, share };
   });
-  const fractionOf = (event: React.PointerEvent) => {
-    const box = track.ref.current?.getBoundingClientRect();
-    return box ? (event.clientX - box.left) / box.width : 0;
+  useEffect(() => {
+    const latest = latestRef.current;
+    if (latest.focus === null) return;
+    const middle =
+      (latest.share(latest.focus.start) + latest.share(latest.focus.end)) / 2;
+    latest.controls.reveal(middle, middle);
+  }, [selection]);
+  useEffect(() => {
+    if (!editor.isPlaying) return;
+    const latest = latestRef.current;
+    const now = latest.share(editor.playhead);
+    latest.controls.reveal(now, now);
+  }, [editor.playhead, editor.isPlaying]);
+
+  const fractionOf = (event: React.PointerEvent | React.MouseEvent) => {
+    const box = trackRef.current?.getBoundingClientRect();
+    return box && box.width > 0 ? (event.clientX - box.left) / box.width : 0;
   };
   const secondsAt = (event: React.PointerEvent) =>
     scale.toSeconds(fractionOf(event));
   const scrub = (event: React.PointerEvent) => {
     editor.seek(secondsAt(event));
   };
-  const scrubFlat = (event: React.PointerEvent) => {
-    if (event.type === "pointerdown") flatten();
-    editor.seek(flat.toSeconds(fractionOf(event)));
-  };
+  const range = useRangeCut({ editor, fractionOf, secondsAt });
   const events = [
-    ...STEPS.flatMap(({ end, start }) => [start, end]),
     ...editor.beats.flatMap(({ end, start }) => [start, end]),
-    ...ACTIONS.map(({ at }) => at),
+    ...editor.recording.actions.map(({ at: moment }) => moment),
     editor.playhead,
   ];
   const snap: Snap = (seconds) => {
@@ -167,134 +114,179 @@ export function ActivityStrip({ editor }: { editor: Editor }) {
       Math.abs(event - seconds) < Math.abs(best - seconds) ? event : best,
     );
     const isSnapped =
-      Math.abs(scale.toX(near) - scale.toX(seconds)) * track.width < SNAP_PX;
+      Math.abs(scale.toX(near) - scale.toX(seconds)) * trackWidth < SNAP_PX;
     return { isSnapped, seconds: isSnapped ? near : seconds };
   };
-  const selectedBeat =
-    editor.selection?.kind === "beat" ? editor.selection.id : undefined;
+  const selectedBeat = selection?.kind === "beat" ? selection.id : undefined;
+  const hasScenes = editor.kind === "recording";
 
   return (
-    <div className="relative min-w-0 grow pe-5" ref={area.ref}>
-      <div
-        className="relative touch-none pt-5 pb-1"
-        dir="ltr"
-        onPointerDown={(event) => {
-          scrub(event);
-        }}
-        onPointerDownCapture={hold}
-        onPointerLeave={leave}
-        onPointerMove={(event) => {
-          move(event, { flat, width: track.width, x: fractionOf(event) });
-        }}
-        ref={track.ref}
-        style={{ width: `${String((map.duration / RECORDING_S) * 100)}%` }}
-      >
-        <Chapters scale={scale} />
-        {/* The step names double as the ruler: drag along them to scrub. */}
-        <div
-          className="absolute inset-x-0 top-0 z-10 h-5 cursor-ew-resize"
-          onPointerDown={(event) => {
-            event.stopPropagation();
-            event.currentTarget.setPointerCapture(event.pointerId);
-            scrubFlat(event);
-          }}
-          onPointerMove={(event) => {
-            if (event.currentTarget.hasPointerCapture(event.pointerId))
-              scrubFlat(event);
-          }}
-        />
-        {editor.mode === "scene" ? (
-          <div className="flex h-6 flex-col justify-center">
-            <SceneRail
-              current={stepAt(editor.playhead)}
-              scale={scale}
-              scenes={editor.scenes}
-            />
-          </div>
-        ) : (
-          <MarkRail
-            marks={editor.kind === "recording" ? editor.marks : []}
-            onRetime={editor.retimeMark}
-            onSelect={(id) => {
-              editor.select({ id, kind: "mark" });
+    <div className="relative min-w-0 grow pe-5">
+      <div className="relative" dir="ltr" ref={frame.ref}>
+        <ScrollArea
+          className="px-2"
+          dir="ltr"
+          onInitialized={onInitialized}
+          orientation="horizontal"
+          scrollbarHidden
+        >
+          <div
+            // The playhead's knob has a band of its own along the top,
+            // above the scenes, so it is never taken for part of one.
+            className={cn(
+              "relative touch-none pb-1",
+              hasScenes ? "pt-8" : "pt-3",
+            )}
+            onClickCapture={range.handlers.onClickCapture}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              isScrubbingRef.current = true;
+              editor.seek(secondsAt(event));
+              // A selection and a mode never stand together, so letting the
+              // selection go here leaves an open mode alone.
+              if (selection) editor.select(null);
             }}
-            scale={scale}
-            secondsAt={secondsAt}
-            selected={
-              editor.selection?.kind === "mark"
-                ? editor.selection.id
-                : undefined
-            }
-            snap={snap}
-            width={track.width}
-          />
-        )}
-        <div className="relative h-11">
-          <Stills pieces={map.pieces} scale={scale} width={track.width} />
-          {editor.beats.map((beat) => (
-            <BeatBlock
-              beat={beat}
-              isSelected={beat.id === selectedBeat}
-              key={beat.id}
-              onPress={() => {
-                editor.select({ id: beat.id, kind: "beat" });
-                editor.seek(
-                  beat.kind === "action" ? beat.action.at : beat.start,
-                );
+            onPointerDownCapture={range.handlers.onPointerDownCapture}
+            onPointerLeave={() => {
+              setHoverX(null);
+              range.handlers.onPointerLeave();
+            }}
+            onPointerMove={(event) => {
+              if (isScrubbingRef.current) {
+                editor.seek(secondsAt(event));
+                return;
+              }
+              // Dragging, the frame would cover what is being dragged; over a
+              // beat or a pause, the strip already shows it.
+              const isOnItem = (event.target as Element).closest(
+                "button, [role='button']",
+              );
+              setHoverX(event.buttons || isOnItem ? null : fractionOf(event));
+            }}
+            onPointerMoveCapture={range.handlers.onPointerMoveCapture}
+            onPointerUp={() => {
+              isScrubbingRef.current = false;
+            }}
+            onPointerUpCapture={range.handlers.onPointerUpCapture}
+            ref={trackRef}
+            style={{ width: trackWidth }}
+          >
+            {focus === null ? null : (
+              // Spans what is chosen as drawn, so the island stands over its
+              // middle, wherever a squeeze or a trim leaves that.
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-0"
+                data-island-anchor="selection"
+                style={placed(scale, focus.start, focus.end)}
+              />
+            )}
+            {hasScenes ? (
+              <div className="absolute inset-x-0 top-3 z-10">
+                <SceneRail
+                  duration={editor.recording.duration}
+                  onDraw={editor.drawScene}
+                  onRetime={editor.retimeScene}
+                  onSelect={(id) => {
+                    editor.select({ id, kind: "scene" });
+                  }}
+                  scale={scale}
+                  scenes={editor.scenes}
+                  secondsAt={secondsAt}
+                  selected={
+                    selection?.kind === "scene" ? selection.id : undefined
+                  }
+                  width={trackWidth}
+                />
+              </div>
+            ) : null}
+            <MarkRail
+              marks={editor.kind === "recording" ? editor.marks : []}
+              onRetime={editor.retimeMark}
+              onSelect={(id) => {
+                editor.select({ id, kind: "mark" });
               }}
               scale={scale}
-              width={track.width}
+              secondsAt={secondsAt}
+              selected={selection?.kind === "mark" ? selection.id : undefined}
+              snap={snap}
+              width={trackWidth}
             />
-          ))}
-          <Seams cuts={editor.cuts} onRestore={editor.restore} scale={scale} />
-        </div>
-        {editor.isVoiced && editor.kind === "recording" ? (
-          <div className="mt-1">
-            <VoiceRow scale={scale} width={track.width} />
+            <div className="relative h-11">
+              <Pauses editor={editor} scale={scale} width={trackWidth} />
+              {editor.beats.map((beat) => (
+                <BeatBlock
+                  beat={beat}
+                  isHidden={isOverlayHidden(editor, beat)}
+                  isSelected={beat.id === selectedBeat}
+                  key={beat.id}
+                  onPress={() => {
+                    editor.select({ id: beat.id, kind: "beat" });
+                    editor.seek(beatAt(beat));
+                  }}
+                  recording={editor.recording}
+                  scale={scale}
+                  width={trackWidth}
+                />
+              ))}
+              <Seams
+                cuts={editor.cuts}
+                onRestore={editor.restore}
+                scale={scale}
+              />
+              {range.draft ? (
+                <RangeBand scale={scale} stretch={range.draft} />
+              ) : selection?.kind === "range" ? (
+                <RangeBand scale={scale} stretch={selection} />
+              ) : null}
+            </div>
+            {editor.isVoiced && editor.kind === "recording" ? (
+              <div className="mt-1">
+                <VoiceRow
+                  isHidden={!editor.effects.captions}
+                  isOpen={editor.mode === "captions"}
+                  lines={captionLines(editor)}
+                  // The playhead goes to the line, so the caption being
+                  // styled is on the picture.
+                  onPress={(line) => {
+                    editor.seek(line.start);
+                    editor.setMode("captions", line);
+                  }}
+                  recording={editor.recording}
+                  scale={scale}
+                  width={trackWidth}
+                />
+              </div>
+            ) : null}
+            {/* Over the scenes, which its line crosses, but pressed only by
+              its knob. */}
+            <span className="pointer-events-none absolute inset-x-0 top-1.5 bottom-0 z-20">
+              <Playhead
+                onScrub={scrub}
+                scale={scale}
+                seconds={editor.playhead}
+              />
+            </span>
+            {range.bladeX === null ? null : <Blade x={range.bladeX} />}
+          </div>
+        </ScrollArea>
+        {/* Over the scroll area, which clips what rises above it. With
+            something chosen, the island stands over the strip, and the
+            frame would cover it. */}
+        {hoverX !== null &&
+        !isGripping &&
+        !selection &&
+        range.bladeX === null ? (
+          <div className="pointer-events-none absolute inset-x-2 top-0">
+            <MomentPreview
+              recording={editor.recording}
+              scale={viewScale}
+              seconds={scale.toSeconds(hoverX)}
+            />
           </div>
         ) : null}
-        <span className="pointer-events-none absolute inset-x-0 top-5 bottom-0">
-          <Playhead
-            onScrub={scrubFlat}
-            scale={scale}
-            seconds={editor.playhead}
-          />
-        </span>
-        {lens.strength > 0.6 && !isGripping ? (
-          <LensPreview scale={scale} seconds={lens.focus} />
-        ) : null}
-        {/* The end is the strip's length: drag it in to squeeze. */}
-        <button
-          aria-label="Squeeze"
-          className="absolute -end-4 top-5 bottom-0 flex w-4 cursor-ew-resize items-center justify-center"
-          onDoubleClick={() => {
-            editor.setSqueeze(0);
-          }}
-          onPointerDown={(event) => {
-            event.stopPropagation();
-            event.currentTarget.setPointerCapture(event.pointerId);
-            gripRef.current = { squeeze: editor.squeeze, x: event.clientX };
-            setIsGripping(true);
-          }}
-          onPointerMove={(event) => {
-            const grip = gripRef.current;
-            if (!grip || area.width === 0) return;
-            const seconds =
-              ((grip.x - event.clientX) / area.width) * RECORDING_S;
-            editor.setSqueeze(
-              Math.min(Math.max(grip.squeeze + seconds, 0), map.maxSqueeze),
-            );
-          }}
-          onPointerUp={() => {
-            gripRef.current = null;
-            setIsGripping(false);
-          }}
-          title="Drag in to squeeze the still time; double-click to undo"
-          type="button"
-        >
-          <span className="h-10 w-1.5 rounded-full bg-fg-secondary" />
-        </button>
       </div>
+      <Overview controls={controls} editor={editor} onGrip={setIsGripping} />
     </div>
   );
 }

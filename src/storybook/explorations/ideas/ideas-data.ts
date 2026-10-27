@@ -156,7 +156,7 @@ export type Action = {
   label: string;
   /** The element the action happened on, when it had one. */
   element?: string;
-  /** How long it lasted, for idle stretches. */
+  /** How long it lasted: an idle stretch, or a run of typing. */
   seconds?: number;
 };
 

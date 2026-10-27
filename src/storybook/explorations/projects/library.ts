@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { STEPS as WALKTHROUGH_STEPS } from "../editor/editor-data";
 import {
   ACTIONS,
   elementById,
@@ -32,9 +31,17 @@ const walkthrough: Project = {
   location: "Screenwide",
   look: "walkthrough",
   size: 148 * MB,
-  steps: WALKTHROUGH_STEPS.map(({ element, end, start, title }) => ({
+  // The browser still reads a project as named steps; the editor no
+  // longer has them, as they cannot be found in a recording.
+  steps: [
+    { element: "new", end: 11.5, start: 0, title: "Start a project" },
+    { element: "name", end: 17.5, start: 11.5, title: "Name it" },
+    { element: "create", end: 30, start: 17.5, title: "Pick and create" },
+    { end: 36, start: 30, title: "Save" },
+    { element: "share", end: RECORDING_S, start: 36, title: "Share it" },
+  ].map(({ element, end, start, title }) => ({
     end,
-    focus: elementById(element)?.box,
+    focus: element ? elementById(element)?.box : undefined,
     start,
     title,
   })),

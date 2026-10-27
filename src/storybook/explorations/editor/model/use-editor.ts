@@ -1,27 +1,31 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { type Mark, SEEDED } from "../../ideas/look-pens-model";
-import { type LookId, type Pen } from "../../ideas/looks";
-import { appearsAt } from "../../ideas/point-geometry";
+import { type Mark } from "../../ideas/look-pens-model";
+import { type Pen } from "../../ideas/looks";
+import { type Backdrop, MARK_S, type ScenePreset } from "../editor-data";
+import { type Recording } from "../recording";
+
+import { type AnnotationStyle } from "./annotation-style";
+import { beatsOf } from "./holds";
 import {
-  ACTION_BEATS,
-  DEFAULT_SCENES,
-  type Layout,
-  RECORDING_S,
-  SEEDED_TIMES,
-  SPEECH_BEATS,
-  STEPS,
-  stepAt,
-  type Backdrop,
-} from "../editor-data";
-
-import { type Cut, timeMap } from "./timeline-model";
+  matchedTo,
+  retimed,
+  seededMarks,
+  timedMark,
+  type TimedMark,
+} from "./marks";
+import { useHistory } from "./use-history";
+import { useOverlays } from "./use-overlays";
+import { usePenStyles } from "./use-pen-styles";
+import { usePlayback } from "./use-playback";
+import { useScenes } from "./use-scenes";
+import { useTiming } from "./use-timing";
 
 // Everything the mock editor remembers, and the few things it does with it.
-// The panel in the corner is not stored: it follows from the tool in hand,
+// The island is not stored: it follows from the tool in hand,
 // the selection and the mode opened, so it can never disagree with them.
 
 export type EditorKind = "audio" | "recording" | "screenshot";
@@ -29,32 +33,31 @@ export type Tool = Pen | "select";
 export type Selection =
   | { id: number; kind: "mark" }
   | { id: string; kind: "beat" }
-  | { index: number; kind: "step" }
+  | { id: string; kind: "scene" }
+  | { id: string; kind: "pause" }
+  /** A stretch drawn across the strip with ⌥ held, to cut. */
+  | { end: number; kind: "range"; start: number }
   | null;
-export type Mode = "captions" | "cursor" | "frame" | "look" | "scene" | null;
-export type TimedMark = Mark & { end: number; start: number };
-export type Effects = { captions: boolean; ripple: boolean };
-export type View = "board" | "strip";
-
-const SEEDED_MARKS: TimedMark[] = SEEDED.map((mark) => ({
-  ...mark,
-  ...SEEDED_TIMES[mark.id],
-}));
+export type Mode =
+  "captions" | "cursor" | "frame" | "keyboard" | "scene" | null;
+/** What is drawn over the whole recording, each shown or hidden. */
+export type Effects = { captions: boolean; keys: boolean; ripple: boolean };
 
 export type EditorStart = {
   mode?: Mode;
   playhead?: number;
   selection?: Selection;
-  view?: View;
 };
 
 export function useEditor({
   isVoiced,
   kind,
+  recording,
   start = {},
 }: {
   isVoiced: boolean;
   kind: EditorKind;
+  recording: Recording;
   start?: EditorStart;
 }) {
   const [playhead, setPlayhead] = useState(start.playhead ?? 20);
@@ -63,65 +66,66 @@ export function useEditor({
     start.selection ?? null,
   );
   const [tool, setTool] = useState<Tool>("select");
+  // The scissors on the strip, on until turned off or stepped back from.
+  // Turned off, they take the stretch they drew with them.
+  const [isCutting, setIsCutting] = useState(false);
+  const setCutting = (on: boolean) => {
+    setIsCutting(on);
+    if (!on)
+      setSelection((current) => (current?.kind === "range" ? null : current));
+  };
   const [mode, setMode] = useState<Mode>(start.mode ?? null);
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const [marks, setMarks] = useState<TimedMark[]>(SEEDED_MARKS);
-  const [cuts, setCuts] = useState<Cut[]>([]);
-  const [squeeze, setSqueeze] = useState(0);
-  const [scenes, setScenes] = useState<Layout[]>(DEFAULT_SCENES);
-  const [view, setView] = useState<View>(start.view ?? "strip");
-  const [openStep, setOpenStep] = useState<number | null>(null);
-  const [lookId, setLookId] = useState<LookId>("product");
+  // Opened from something on the strip, such as a caption, a mode's island
+  // stands over it rather than by the toolbar.
+  const [modeFrom, setModeFrom] = useState<{ end: number; start: number }>();
+  const [marks, setMarks] = useState<TimedMark[]>(() => seededMarks(recording));
+  const sceneClips = useScenes(recording);
+  const styles = usePenStyles();
+  const overlays = useOverlays();
   const [backdrop, setBackdrop] = useState<Backdrop>("none");
   const [effects, setEffects] = useState<Effects>({
     captions: isVoiced,
+    keys: true,
     ripple: true,
   });
 
   const beats = useMemo(
-    () =>
-      kind === "audio"
-        ? SPEECH_BEATS
-        : kind === "recording"
-          ? ACTION_BEATS
-          : [],
-    [kind],
+    () => beatsOf(recording, { isVoiced, kind }),
+    [isVoiced, kind, recording],
   );
-  const map = useMemo(
-    () => timeMap({ beats, cuts, isVoiced, squeeze }),
-    [beats, cuts, isVoiced, squeeze],
+  const timing = useTiming({ beats, isVoiced, recording });
+  const { map } = timing;
+  // What undo takes back: the timing, the annotations and the scenes. Not
+  // the selection, the playhead or the tool, which are where the user is,
+  // not what they made.
+  const doc = useMemo(
+    () => ({
+      cuts: timing.cuts,
+      marks,
+      scenes: sceneClips.scenes,
+      settings: timing.settings,
+      squeeze: timing.squeeze,
+    }),
+    [marks, sceneClips.scenes, timing.cuts, timing.settings, timing.squeeze],
   );
+  const history = useHistory(doc, (past) => {
+    timing.restoreTiming(past);
+    setMarks(past.marks);
+    sceneClips.setScenes(past.scenes);
+  });
 
-  // Playing advances the edited time, so a squeezed pause passes quickly and
-  // a cut is skipped, as the export will play it.
-  const playheadRef = useRef(playhead);
-  useEffect(() => {
-    playheadRef.current = playhead;
-  }, [playhead]);
-  useEffect(() => {
-    if (!isPlaying) return;
-    let last = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      const time = map.toTime(playheadRef.current) + (now - last) / 1000;
-      last = now;
-      if (time >= map.duration - 0.01) {
-        setPlayhead(map.toOriginal(map.duration - 0.01));
-        setIsPlaying(false);
-        return;
-      }
-      playheadRef.current = map.toOriginal(time);
-      setPlayhead(playheadRef.current);
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [isPlaying, map]);
+  usePlayback({
+    isPlaying,
+    map,
+    onEnd: () => {
+      setIsPlaying(false);
+    },
+    onPlayhead: setPlayhead,
+    playhead,
+  });
 
   const seek = (seconds: number) => {
-    setPlayhead(Math.min(Math.max(seconds, 0), RECORDING_S - 0.01));
+    setPlayhead(Math.min(Math.max(seconds, 0), recording.duration - 0.01));
   };
 
   const togglePlay = () => {
@@ -131,12 +135,17 @@ export function useEditor({
 
   const select = (next: Selection) => {
     setSelection(next);
-    setIsMoreOpen(false);
     setMode(null);
     if (next?.kind === "mark") {
       const mark = marks.find(({ id }) => id === next.id);
       if (mark && (playhead < mark.start || playhead >= mark.end))
         seek(mark.start);
+    }
+    // A scene chosen is shown from its start, so it is seen as it plays.
+    if (next?.kind === "scene") {
+      const clip = sceneClips.scenes.find(({ id }) => id === next.id);
+      if (clip && (playhead < clip.start || playhead >= clip.end))
+        seek(clip.start);
     }
   };
 
@@ -149,39 +158,39 @@ export function useEditor({
   // A new mark shows from the moment its element was used, so placing it
   // moves the playhead there: the mark stays in view, timed by the action.
   const place = (mark: Mark) => {
-    const action = appearsAt(mark.element);
+    // The use of its element nearest the playhead: a long recording uses
+    // the same control many times.
+    const action = recording.actions
+      .filter(({ element }) => element === mark.element.id)
+      .reduce<Recording["actions"][number] | undefined>(
+        (best, item) =>
+          !best || Math.abs(item.at - playhead) < Math.abs(best.at - playhead)
+            ? item
+            : best,
+        undefined,
+      );
     const from = action ? action.at : playhead;
-    const step = STEPS[stepAt(from)];
-    const timed = { ...mark, end: step.end, start: from };
+    const timed = timedMark(
+      mark,
+      { end: Math.min(recording.duration, from + MARK_S), start: from },
+      styles.penStyles[mark.pen],
+    );
     setMarks((current) => [...current, timed]);
     setTool("select");
     setSelection({ id: mark.id, kind: "mark" });
     seek(from);
   };
 
-  const updateMark = (change: Partial<Mark>) => {
+  /** Restyles the chosen annotation, and it alone. */
+  const updateMark = (change: Partial<AnnotationStyle>) => {
     if (selection?.kind !== "mark") return;
     setMarks((current) =>
       current.map((mark) =>
-        mark.id === selection.id ? { ...mark, ...change } : mark,
+        mark.id === selection.id
+          ? { ...mark, style: { ...mark.style, ...change } }
+          : mark,
       ),
     );
-  };
-
-  /** Moves when a mark shows, from the timeline; it keeps a sliver at
-   * least, so a handle cannot be dragged past the other. */
-  const retimeMark = (id: number, start: number, end: number) => {
-    const from = Math.max(0, Math.min(start, end - 0.3));
-    const to = Math.min(RECORDING_S, Math.max(end, from + 0.3));
-    setMarks((current) =>
-      current.map((mark) =>
-        mark.id === id ? { ...mark, end: to, start: from } : mark,
-      ),
-    );
-  };
-
-  const cut = (next: Cut) => {
-    setCuts((current) => [...current.filter(({ id }) => id !== next.id), next]);
   };
 
   const remove = () => {
@@ -190,81 +199,97 @@ export function useEditor({
       setMarks((current) => current.filter(({ id }) => id !== selection.id));
     if (selection.kind === "beat") {
       const beat = beats.find(({ id }) => id === selection.id);
-      if (beat) cut({ end: beat.end, id: beat.id, start: beat.start });
+      if (beat) timing.cut({ end: beat.end, id: beat.id, start: beat.start });
     }
-    if (selection.kind === "step") {
-      const step = STEPS[selection.index];
-      cut({
-        end: step.end,
-        id: `step-${String(selection.index)}`,
-        start: step.start,
-      });
-      setOpenStep(null);
+    if (selection.kind === "scene") sceneClips.removeScene(selection.id);
+    if (selection.kind === "pause") {
+      const pause = map.pauses.find(({ id }) => id === selection.id);
+      if (pause)
+        timing.cut({ end: pause.end, id: pause.id, start: pause.start });
+    }
+    if (selection.kind === "range") {
+      timing.cutRange(selection.start, selection.end);
     }
     setSelection(null);
   };
 
-  const restore = (id: string) => {
-    setCuts((current) => current.filter((item) => item.id !== id));
-  };
-
-  /** Steps back one level: the pen, then More, then a mode, then the
+  /** Steps back one level: the scissors, the pen, then a mode, then the
    * selection. */
   const back = () => {
-    if (tool !== "select") setTool("select");
-    else if (isMoreOpen) setIsMoreOpen(false);
+    if (isCutting) setCutting(false);
+    else if (tool !== "select") setTool("select");
     else if (mode) setMode(null);
-    else if (openStep !== null) setOpenStep(null);
     else setSelection(null);
   };
-
   return {
+    ...styles,
+    ...timing,
+    ...overlays,
+    /** Adds a scene at the playhead, or gives the one there `preset`, and
+     * chooses it. */
+    addScene: (preset: ScenePreset) => {
+      const id = sceneClips.addScene(preset, playhead, beats);
+      setSelection({ id, kind: "scene" });
+      setMode(null);
+    },
     back,
     backdrop,
     beats,
-    cuts,
+    canRedo: history.canRedo,
+    canUndo: history.canUndo,
+    /** Adds a zoom drawn along the scene rail, and chooses it. */
+    drawScene: (from: number, to: number) => {
+      const id = sceneClips.drawScene(from, to);
+      if (id) setSelection({ id, kind: "scene" });
+    },
     effects,
-    isMoreOpen,
+    isCutting,
     isPlaying,
     isVoiced,
     kind,
-    lookId,
     map,
     marks,
+    /** Draws every annotation of the chosen one's kind as it is drawn. */
+    matchAll: () => {
+      const chosen = marks.find(
+        ({ id }) => selection?.kind === "mark" && id === selection.id,
+      );
+      if (chosen) setMarks((current) => matchedTo(current, chosen));
+    },
     mode,
-    openStep,
+    modeFrom,
     pickTool,
     place,
     playhead,
+    recording,
+    redo: history.redo,
     remove,
-    restore,
-    retimeMark,
-    scenes,
+    retimeMark: (id: number, start: number, end: number) => {
+      setMarks((current) =>
+        retimed(current, { duration: recording.duration, end, id, start }),
+      );
+    },
+    retimeScene: sceneClips.retimeScene,
+    scenes: sceneClips.scenes,
     seek,
     select,
     selection,
     setBackdrop,
+    setCutting,
     setEffects,
-    setIsMoreOpen,
-    setLookId,
-    setMode: (next: Mode) => {
+    /** Opens a mode, from the toolbar or, given `from`, from that stretch
+     * of the strip. */
+    setMode: (next: Mode, from?: { end: number; start: number }) => {
       setMode(next);
+      setModeFrom(from);
       setSelection(null);
       setTool("select");
     },
-    setOpenStep,
-    setScene: (index: number, layout: Layout) => {
-      setScenes((current) =>
-        current.map((item, at) => (at === index ? layout : item)),
-      );
-    },
-    setSqueeze,
-    setView,
-    squeeze,
     togglePlay,
     tool,
+    undo: history.undo,
     updateMark,
-    view,
+    updateScene: sceneClips.updateScene,
   };
 }
 

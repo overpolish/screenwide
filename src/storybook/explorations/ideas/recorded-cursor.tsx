@@ -2,18 +2,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { clickAt, cursorAt } from "./cursor-path";
+import { ACTIONS, type Action } from "./ideas-data";
 
 // The recording's own pointer, with a ripple where it clicked unless the
 // clicks are not shown.
 export function RecordedCursor({
+  actions = ACTIONS,
   hasRipple = true,
   seconds,
 }: {
   seconds: number;
+  /** What was done in the recording shown, when it is not the ideas' own. */
+  actions?: Action[];
   hasRipple?: boolean;
 }) {
-  const { x, y } = cursorAt(seconds);
-  const ripple = hasRipple ? clickAt(seconds) : null;
+  const { x, y } = cursorAt(seconds, actions);
+  const ripple = hasRipple ? clickAt(seconds, actions) : null;
   return (
     <span
       className="pointer-events-none absolute"

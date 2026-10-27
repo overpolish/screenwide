@@ -2,70 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { cn } from "../../../../lib/styling";
-import { clock } from "../../ideas/ideas-data";
 import { PanelWindow } from "../../shared/panel-window";
-import { ACTIONS, type Layout, LAYOUTS, STEPS } from "../editor-data";
 import { Still } from "../picture/still";
+import { type Recording } from "../recording";
 
-import { at, placed, type StripScale } from "./strip-scale";
+import { at, type StripScale } from "./strip-scale";
 
-// The thin rails and marks over the beats: where each step starts, the scene
-// rail while Scene is open, the playhead, and the frame under the lens. What
-// is not being worked on stays out of the way instead of taking a lane.
-
-export function Chapters({ scale }: { scale: StripScale }) {
-  return (
-    <div className="pointer-events-none absolute inset-0" dir="ltr">
-      {STEPS.map((step) => (
-        <span
-          className="absolute inset-y-0"
-          key={step.start}
-          style={at(scale, step.start)}
-        >
-          <span className="absolute top-0 ps-1.5 text-caption whitespace-nowrap text-fg-tertiary">
-            {step.title}
-          </span>
-          {step.start > 0 ? (
-            <span className="absolute inset-y-0 start-0 w-px bg-divider" />
-          ) : null}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-const LAYOUT_NAMES = Object.fromEntries(
-  LAYOUTS.map(({ id, label }) => [id, label]),
-);
-
-export function SceneRail({
-  current,
-  scale,
-  scenes,
-}: {
-  current: number;
-  scale: StripScale;
-  scenes: Layout[];
-}) {
-  return (
-    <div className="relative h-4" dir="ltr">
-      {STEPS.map((step, index) => (
-        <span
-          className={cn(
-            "absolute inset-y-0 flex items-center overflow-hidden rounded-[5px] border-x border-recess px-1.5 text-caption whitespace-nowrap",
-            index === current
-              ? "bg-primary text-on-primary"
-              : "bg-fill text-fg-secondary",
-          )}
-          key={step.start}
-          style={placed(scale, step.start, step.end)}
-        >
-          {LAYOUT_NAMES[scenes[index]]}
-        </span>
-      ))}
-    </div>
-  );
-}
+// The playhead, and the frame under the pointer: thin marks over the
+// beats, so what is not being worked on stays out of the way instead of
+// taking a lane. Scenes have their own rail (`scene-rail.tsx`).
 
 /** Where you are. Given `onScrub`, its knob can be dragged; its hit area is
  * larger than the dot drawn. */
@@ -80,7 +25,7 @@ export function Playhead({
 }) {
   return (
     <span
-      className="pointer-events-none absolute inset-y-0 z-10 w-0.5 -translate-x-1/2 bg-emphasis"
+      className="pointer-events-none absolute inset-y-0 z-10 w-0.5 -translate-x-1/2 bg-primary"
       style={at(scale, seconds)}
     >
       <span
@@ -99,38 +44,37 @@ export function Playhead({
             onScrub(event);
         }}
       >
-        <span className="size-2.5 rounded-full bg-emphasis" />
+        <span className="size-3 rounded-full bg-primary primary-raised" />
       </span>
     </span>
   );
 }
 
-/** The frame under the lens, above the strip. A native panel in the app, as
- * nothing floats in the page. */
-export function LensPreview({
+/** The frame under the pointer, above the strip. A native panel in the
+ * app, as nothing floats in the page. */
+export function MomentPreview({
+  recording,
   scale,
   seconds,
 }: {
+  recording: Recording;
   scale: StripScale;
   seconds: number;
 }) {
-  const near = ACTIONS.reduce((best, action) =>
-    Math.abs(action.at - seconds) < Math.abs(best.at - seconds) ? action : best,
-  );
+  const near = recording.actions.find(({ at }) => Math.abs(at - seconds) < 1.5);
   return (
     <div
       className="pointer-events-none absolute bottom-full z-30 mb-3 -translate-x-1/2"
       style={at(scale, seconds)}
     >
-      <PanelWindow className="items-center gap-1 p-1.5">
+      <PanelWindow className="p-1.5">
         <Still
           className="rounded-sm"
-          element={Math.abs(near.at - seconds) < 1.5 ? near.element : undefined}
+          element={near?.element}
+          recording={recording}
+          seconds={seconds}
           width={176}
         />
-        <span className="text-caption text-fg tabular-nums">
-          {clock(seconds)}
-        </span>
       </PanelWindow>
     </div>
   );
