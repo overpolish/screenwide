@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Hourglass, Pin, Scissors, Trash2 } from "lucide-react";
+import { Scissors, Trash2 } from "lucide-react";
 import { type ReactNode } from "react";
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
@@ -12,20 +12,16 @@ import { type Pen } from "../../ideas/looks";
 import { presetLabel } from "../editor-data";
 import { type AnnotationStyle, PEN_NAMES } from "../model/annotation-style";
 import { type TimedMark } from "../model/marks";
-import { DEAD_AIR_S } from "../model/timeline-model";
 import { type Editor } from "../model/use-editor";
 import { beatTitle } from "../recording";
 
 import { type IslandContent } from "./island-parts";
+import { lullContent } from "./lull-content";
 import { MarkActions, MarkSection } from "./mark-sections";
 import { modeContent } from "./mode-content";
 import { MomentPlay, MomentSection } from "./moment-section";
 import { type Expanded } from "./overlay-parts";
-import {
-  BeatActions,
-  PauseSection,
-  SceneClipSection,
-} from "./selection-sections";
+import { BeatActions, SceneClipSection } from "./selection-sections";
 import { ColorButton, ColorOptions, PenOptions } from "./style-controls";
 
 // What the island holds for whatever is in hand: a row saying what it is,
@@ -165,42 +161,7 @@ function selectionContent(
       title: <IslandRowTitle title={presetLabel(clip.preset)} />,
     };
   }
-  if (selection?.kind === "pause") {
-    const pause = editor.map.pauses.find(({ id }) => id === selection.id);
-    if (!pause) return null;
-    const isKept =
-      (editor.settings[pause.id] as Editor["settings"][string] | undefined)
-        ?.kind === "keep";
-    return {
-      actions: (
-        <ConfirmActionButton
-          confirmLabel="Confirm Cut"
-          icon={<Scissors aria-hidden />}
-          label="Cut the pause"
-          onConfirm={editor.remove}
-          variant="ghost"
-        />
-      ),
-      from: { kind: "strip" },
-      key: pause.id,
-      section: {
-        key: pause.id,
-        node: <PauseSection editor={editor} id={pause.id} />,
-      },
-      title: (
-        <IslandRowTitle
-          glyph={
-            isKept ? (
-              <Pin aria-hidden className="size-icon" />
-            ) : (
-              <Hourglass aria-hidden className="size-icon" />
-            )
-          }
-          title={pause.still > DEAD_AIR_S ? "Dead air" : "Pause"}
-        />
-      ),
-    };
-  }
+  if (selection?.kind === "pause") return lullContent(editor, selection.id);
   if (selection?.kind === "range") {
     // Drawn with ⌥ held, it was drawn to be cut: one press, which undo
     // takes back, rather than a confirmation.

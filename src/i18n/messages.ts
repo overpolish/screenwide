@@ -247,6 +247,17 @@ export type Messages = {
   "editor-export-subtitles-srt": null;
   "editor-export-subtitles-vtt": null;
   "editor-export-unavailable": null;
+  "editor-island-label": null;
+  "editor-island-lull": null;
+  "editor-island-lull-confirm-cut": null;
+  "editor-island-lull-cut": null;
+  "editor-island-lull-hint": { key: string | number };
+  "editor-island-lull-keep": null;
+  "editor-island-lull-plays": null;
+  "editor-island-lull-retimed-faster": { speed: string | number };
+  "editor-island-lull-retimed-slower": { speed: string | number };
+  "editor-island-lull-squeeze": null;
+  "editor-island-lull-trim-to-breath": null;
   "editor-lane-arrow": { number: string | number };
   "editor-lane-counter": { number: string | number };
   "editor-lane-drawing": { number: string | number };

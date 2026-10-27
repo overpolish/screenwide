@@ -4,7 +4,6 @@
 import { AnimatePresence, animate, motion } from "motion/react";
 import {
   type ReactNode,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -25,7 +24,8 @@ import {
   islandCssVariables,
   type IslandNotch,
 } from "./island-geometry";
-import { fade, focusIn, glide, HOVER_LINGER_MS } from "./island-motion";
+import { useIslandHover } from "./island-hover";
+import { fade, focusIn, glide } from "./island-motion";
 import { useOpening } from "./island-opening";
 import {
   type IslandPart,
@@ -111,13 +111,7 @@ export function Island({
   const belowSize = useSize(belowElement);
   const [shift, setShift] = useState(0);
 
-  const closeRef = useRef(0);
-  useEffect(
-    () => () => {
-      window.clearTimeout(closeRef.current);
-    },
-    [],
-  );
+  const hover = useIslandHover(onHoverChange);
 
   // From the moment the island is shown or hidden until its row has settled.
   const [wasShown, setWasShown] = useState(isShown);
@@ -178,7 +172,9 @@ export function Island({
   }, [flare, radius, top, values]);
   const rowPathRef = useRef<SVGPathElement>(null);
   const shapePathRef = useRef<SVGPathElement>(null);
+  const clipRef = useRef<HTMLDivElement>(null);
   useIslandOutline({
+    clipRef,
     onShapeChange,
     rowPathRef,
     shapePathRef,
@@ -193,16 +189,8 @@ export function Island({
     // on the island exactly where the island is seen.
     <div className="flex justify-center">
       <motion.div
+        {...hover}
         className="w-fit"
-        onPointerEnter={() => {
-          window.clearTimeout(closeRef.current);
-          onHoverChange?.(true);
-        }}
-        onPointerLeave={() => {
-          closeRef.current = window.setTimeout(() => {
-            onHoverChange?.(false);
-          }, HOVER_LINGER_MS);
-        }}
         style={{ ...islandCssVariables, x: islandX }}
       >
         {/* The black is the notch's whatever the theme, so what it holds is
@@ -214,79 +202,86 @@ export function Island({
               rowPathRef={rowPathRef}
               shapePathRef={shapePathRef}
             />
-            <motion.div
-              animate={{
-                height: rowTarget.height,
-                opacity: isShown || notch ? 1 : 0,
-              }}
-              className="relative overflow-hidden"
-              initial={false}
-              onAnimationComplete={() => {
-                setIsComing(false);
-                if (!isShown) onHidden?.();
-              }}
-              style={{
-                height: values.row.height,
-                opacity: values.row.opacity,
-                width: shapeWidth,
-              }}
-              transition={{
-                ...glide,
-                opacity: fade(isShown, notch !== null),
-              }}
-            >
-              <motion.div
-                className="absolute inset-x-0 top-0 flex justify-center"
-                ref={rowLayerRef}
-                style={{ x: rowX }}
-              >
-                {/* Round the presence, not in it: a row on its way out still
-                  hears the island, and folds into the notch as it goes. */}
-                <IslandContext value={context}>
-                  <AnimatePresence initial={false}>
-                    {isShown ? (
-                      <motion.div
-                        key="row"
-                        {...focusIn}
-                        className="flex w-max"
-                        initial={false}
-                        ref={setRowElement}
-                        style={{ padding: ISLAND.rowInset }}
-                      >
-                        <Toolbar aria-label={label} className="flex">
-                          {row}
-                        </Toolbar>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                </IslandContext>
-              </motion.div>
-              {below ? (
-                <IslandBelow
-                  islandX={islandX}
-                  isShown={isStacked}
-                  onElement={setBelowElement}
-                  top={rowSize?.height ?? 0}
-                  width={belowSize?.width}
+            {/* What it holds is clipped to the black (`useIslandOutline`),
+                which is drawn from the row's start: in a right-to-left page
+                the clip is mirrored as the black is, and what it holds is
+                mirrored back. */}
+            <div className="relative rtl:-scale-x-100" ref={clipRef}>
+              <div className="relative rtl:-scale-x-100">
+                <motion.div
+                  animate={{
+                    height: rowTarget.height,
+                    opacity: isShown || notch ? 1 : 0,
+                  }}
+                  className="relative overflow-hidden"
+                  initial={false}
+                  onAnimationComplete={() => {
+                    setIsComing(false);
+                    if (!isShown) onHidden?.();
+                  }}
+                  style={{
+                    height: values.row.height,
+                    opacity: values.row.opacity,
+                    width: shapeWidth,
+                  }}
+                  transition={{
+                    ...glide,
+                    opacity: fade(isShown, notch !== null),
+                  }}
                 >
-                  {below}
-                </IslandBelow>
-              ) : null}
-            </motion.div>
-
-            <IslandSection
-              isFromMiddle={isFromMiddle}
-              isOpening={isOpening}
-              isShown={isShown}
-              layout={layout}
-              movesSideways={notch !== null && !isStacked}
-              onElement={setSectionElement}
-              onOpened={finish}
-              sectionX={sectionX}
-              values={values.section}
-            >
-              {section}
-            </IslandSection>
+                  <motion.div
+                    className="absolute inset-x-0 top-0 flex justify-center"
+                    ref={rowLayerRef}
+                    style={{ x: rowX }}
+                  >
+                    {/* Round the presence, not in it: a row on its way out still
+                  hears the island, and folds into the notch as it goes. */}
+                    <IslandContext value={context}>
+                      <AnimatePresence initial={false}>
+                        {isShown ? (
+                          <motion.div
+                            key="row"
+                            {...focusIn}
+                            className="flex w-max"
+                            initial={false}
+                            ref={setRowElement}
+                            style={{ padding: ISLAND.rowInset }}
+                          >
+                            <Toolbar aria-label={label} className="flex">
+                              {row}
+                            </Toolbar>
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </IslandContext>
+                  </motion.div>
+                  {below ? (
+                    <IslandBelow
+                      islandX={islandX}
+                      isShown={isStacked}
+                      onElement={setBelowElement}
+                      top={rowSize?.height ?? 0}
+                      width={belowSize?.width}
+                    >
+                      {below}
+                    </IslandBelow>
+                  ) : null}
+                </motion.div>
+                <IslandSection
+                  isFromMiddle={isFromMiddle}
+                  isOpening={isOpening}
+                  isShown={isShown}
+                  layout={layout}
+                  movesSideways={notch !== null && !isStacked}
+                  onElement={setSectionElement}
+                  onOpened={finish}
+                  sectionX={sectionX}
+                  values={values.section}
+                >
+                  {section}
+                </IslandSection>
+              </div>
+            </div>
           </SkinContext>
         </div>
       </motion.div>

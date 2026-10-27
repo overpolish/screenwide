@@ -76,9 +76,13 @@ const read = (value: MotionValue<number> | MotionValue<string>) =>
 
 /** Draws the outline into `shape`, and, while the section fades on its own
  * as the island comes out or goes away, the row alone into `row` beneath it:
- * one path cannot fade only part of itself. Tells `onShapeChange` where the
- * row and the section are, as they move, and nothing while they rest. */
+ * one path cannot fade only part of itself. Clips `clip` to the outline, so
+ * nothing the island holds shows outside the black while it changes shape:
+ * what hangs is laid out at its full size at once and only revealed as the
+ * black grows round it. Tells `onShapeChange` where the row and the section
+ * are, as they move, and nothing while they rest. */
 export function useIslandOutline({
+  clipRef,
   onShapeChange,
   rowPathRef,
   shapePathRef,
@@ -86,6 +90,9 @@ export function useIslandOutline({
   width,
   x,
 }: {
+  /** Laid out as the outline is drawn, from the row's start: in a
+   * right-to-left page it is mirrored as the outline is. */
+  clipRef: RefObject<HTMLElement | null>;
   rowPathRef: RefObject<SVGPathElement | null>;
   shapePathRef: RefObject<SVGPathElement | null>;
   values: IslandShapeValues;
@@ -169,7 +176,10 @@ export function useIslandOutline({
             }
           : null;
       const isWhole = !section || sectionOpacity >= 0.999;
-      shape.setAttribute("d", islandOutline({ row, section }));
+      const outline = islandOutline({ row, section });
+      shape.setAttribute("d", outline);
+      if (clipRef.current)
+        clipRef.current.style.clipPath = `path("${outline}")`;
       shape.style.opacity = String(
         isWhole ? rowOpacity : rowOpacity * sectionOpacity,
       );
@@ -178,8 +188,15 @@ export function useIslandOutline({
         isWhole ? "" : islandOutline({ row, section: null }),
       );
       under.style.opacity = String(rowOpacity);
-      if (shape.ownerSVGElement) {
-        report({ row, rowOpacity, section, svg: shape.ownerSVGElement });
+      const svg = shape.ownerSVGElement;
+      if (svg) {
+        // The box is as tall as the outline, with the shadow's room round
+        // it, so an empty box below the island never adds to the page's
+        // scrolling, as it would in Storybook's Docs.
+        svg.style.height = `${String(
+          row.height + (section?.height ?? 0) + ISLAND.shadowRoom * 2,
+        )}px`;
+        report({ row, rowOpacity, section, svg });
       }
     };
     let isQueued = false;
@@ -209,5 +226,5 @@ export function useIslandOutline({
       });
       cancelFrame(render);
     };
-  }, [rowPathRef, shapePathRef, values, width, x]);
+  }, [clipRef, rowPathRef, shapePathRef, values, width, x]);
 }
