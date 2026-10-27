@@ -15,6 +15,8 @@ import {
   motionEasings,
 } from "../../lib/motion";
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
+import { IslandFill } from "../island/island-fill";
+import { useSkin } from "../skin/skin";
 
 // A segment shows what its item gives: its icon, its label, or both, so a
 // group can mix them. One with no label shows its icon alone and is named by
@@ -68,6 +70,18 @@ const segmentClassName = [
 const knobClassName =
   "absolute inset-0 transform-gpu rounded-[inherit] bg-primary primary-raised backface-hidden will-change-transform";
 
+// On the island the segments are its circles, with no track: each has the
+// island's fill, which is its hover and its choice, so a circle chosen under
+// the pointer keeps the fill it already showed, one chosen from the keyboard
+// grows its own, and the one left behind shrinks away.
+const islandSegmentClassName = [
+  "group relative isolate flex size-island-control shrink-0 cursor-default items-center justify-center rounded-full text-label outline-none select-none",
+  "data-[disabled]:opacity-40",
+  "[&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
+  focusStyles,
+  elementFocusVisible,
+];
+
 /** One segment chosen, the way a picker's is; or any of them on together,
  * the way a set of independent options is. */
 type PillGroupSelection =
@@ -100,6 +114,7 @@ export function PillGroup({
   /** Applies shared geometry overrides to every item. */
   itemClassName?: string;
 }) {
+  const isIsland = useSkin() === "island";
   const isMultiple = selection.selectionMode === "multiple";
   const selectionId = useId();
   const prefersReducedMotion = useReducedMotion();
@@ -133,7 +148,7 @@ export function PillGroup({
   return (
     <ToggleButtonGroup
       aria-label={ariaLabel}
-      className={cn(trackClassName, className)}
+      className={cn(isIsland ? "flex gap-1" : trackClassName, className)}
       disallowEmptySelection={!isMultiple}
       isDisabled={isDisabled}
       onSelectionChange={(keys) => {
@@ -166,9 +181,14 @@ export function PillGroup({
           <ToggleButton
             aria-label={item.ariaLabel ?? item.label}
             className={cn(
-              segmentClassName,
-              // A segment showing only its icon is a square the track's height.
-              item.label === undefined ? "aspect-square" : "px-inset",
+              isIsland
+                ? islandSegmentClassName
+                : [
+                    segmentClassName,
+                    // A segment showing only its icon is a square the
+                    // track's height.
+                    item.label === undefined ? "aspect-square" : "px-inset",
+                  ],
               itemClassName,
             )}
             id={item.id}
@@ -185,29 +205,37 @@ export function PillGroup({
             }}
             style={{ transitionDuration }}
           >
-            {({ isSelected }) => (
-              <>
-                <AnimatePresence initial={false}>
-                  {isSelected ? (
-                    <motion.span
-                      aria-hidden="true"
-                      className={knobClassName}
-                      key="knob"
-                      layoutId={layoutId}
-                      {...knobPresence}
-                    />
-                  ) : null}
-                </AnimatePresence>
-                {/* Above the knob in every segment, not just its own: while
-                    the knob slides it is drawn from the segment it is moving
-                    to, which comes later in the page than the ones it
-                    crosses, and would otherwise cover their text. */}
-                <span className="relative z-10 flex min-w-0 items-center justify-center gap-inline whitespace-nowrap">
-                  {item.icon}
-                  {label}
-                </span>
-              </>
-            )}
+            {({ isHovered, isSelected }) =>
+              isIsland ? (
+                <>
+                  <IslandFill isChosen={isSelected} isHovered={isHovered} />
+                  {item.icon ?? label}
+                </>
+              ) : (
+                <>
+                  <AnimatePresence initial={false}>
+                    {isSelected ? (
+                      <motion.span
+                        aria-hidden="true"
+                        className={knobClassName}
+                        key="knob"
+                        layoutId={layoutId}
+                        {...knobPresence}
+                      />
+                    ) : null}
+                  </AnimatePresence>
+                  {/* Above the knob in every segment, not just its own:
+                      while the knob slides it is drawn from the segment it
+                      is moving to, which comes later in the page than the
+                      ones it crosses, and would otherwise cover their
+                      text. */}
+                  <span className="relative z-10 flex min-w-0 items-center justify-center gap-inline whitespace-nowrap">
+                    {item.icon}
+                    {label}
+                  </span>
+                </>
+              )
+            }
           </ToggleButton>
         );
       })}

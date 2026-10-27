@@ -8,18 +8,27 @@ import {
 } from "react-aria-components";
 
 import { tv } from "../../lib/variants";
+import { useSkin } from "../skin/skin";
 
 // An item draws only its highlight, a translucent fill over the panel's
 // material with the text unchanged. As in a native menu the highlight is the
 // focus indicator: it follows the pointer and the keyboard alike, so there
 // is no separate ring. Its corners are the part radius, so they run parallel
-// to the panel's own corner, a tight inset out.
+// to the panel's own corner, a tight inset out. On the island the last item
+// sits in the section's bottom corners, so its own follow them, concentric.
 const listBoxItemVariants = tv({
   base: [
     "relative flex h-control-height shrink-0 cursor-default items-center gap-inline truncate rounded-part px-inset-sm text-body text-fg outline-none",
     "data-[focus-visible]:bg-fill data-[hovered]:bg-fill data-[pressed]:bg-fill-strong",
     "transition-opacity data-[disabled]:opacity-40",
   ],
+  defaultVariants: { skin: "window" },
+  variants: {
+    skin: {
+      island: "last:rounded-b-(--island-list-radius)",
+      window: "",
+    },
+  },
 });
 
 type ListBoxItemProps = AriaListBoxItemProps & {
@@ -41,7 +50,10 @@ export const ListBoxItem = ({
   ...props
 }: ListBoxItemProps) => {
   return (
-    <AriaListBoxItem {...props} className={listBoxItemVariants({ className })}>
+    <AriaListBoxItem
+      {...props}
+      className={listBoxItemVariants({ className, skin: useSkin() })}
+    >
       {({ isSelected }) =>
         showsSelection ? (
           <>

@@ -12,12 +12,10 @@ import { Fragment, type ReactNode } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
+import { Button } from "../../../primitives/button/button";
+import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { Island, type IslandProps } from "../../../primitives/island/island";
-import {
-  IslandButton,
-  IslandTextButton,
-} from "../../../primitives/island/island-controls";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { Text } from "../../../primitives/text/text";
 
@@ -74,7 +72,7 @@ function Status({
 
 function Close({ onAction }: Pick<TextRecognitionIslandProps, "onAction">) {
   return (
-    <IslandButton
+    <IconButton
       aria-label={t("text-recognition-island-close")}
       className="text-fg-secondary enabled:hover:text-fg"
       onPress={() => {
@@ -82,7 +80,7 @@ function Close({ onAction }: Pick<TextRecognitionIslandProps, "onAction">) {
       }}
     >
       <X aria-hidden className="size-icon" />
-    </IslandButton>
+    </IconButton>
   );
 }
 
@@ -91,14 +89,14 @@ function SelectAnother({
   onAction,
 }: Pick<TextRecognitionIslandProps, "onAction">) {
   return (
-    <IslandButton
+    <IconButton
       aria-label={t("text-recognition-island-select-another")}
       onPress={() => {
         onAction("selectAnotherArea");
       }}
     >
       <SquareDashedMousePointer aria-hidden className="size-icon" />
-    </IslandButton>
+    </IconButton>
   );
 }
 
@@ -111,7 +109,7 @@ function Found({
   if (state.lines > 0) {
     return (
       <span className="flex items-center gap-1">
-        <IslandTextButton
+        <Button
           color="primary"
           onPress={() => {
             onAction("copy");
@@ -120,14 +118,14 @@ function Found({
           {state.selected
             ? t("text-recognition-island-copy")
             : t("text-recognition-island-copy-all")}
-        </IslandTextButton>
-        <IslandTextButton
+        </Button>
+        <Button
           onPress={() => {
             onAction("copyParagraph");
           }}
         >
           {t("text-recognition-island-copy-paragraph")}
-        </IslandTextButton>
+        </Button>
       </span>
     );
   }

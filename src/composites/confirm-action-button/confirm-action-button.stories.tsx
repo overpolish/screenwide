@@ -4,6 +4,7 @@
 import { Trash2 } from "lucide-react";
 import { fn } from "storybook/test";
 
+import { onIsland } from "../../storybook/on-island";
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { ConfirmActionButton } from "./confirm-action-button";
@@ -88,3 +89,5 @@ export const Disabled: Story = {
   parameters: { controls: { disable: true } },
   render: ({ onConfirm }) => <StateGrid isDisabled onConfirm={onConfirm} />,
 };
+
+export const Island: Story = { ...States, decorators: [onIsland()] };

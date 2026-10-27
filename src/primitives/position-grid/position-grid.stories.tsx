@@ -4,6 +4,8 @@
 import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
 
+import { onIsland } from "../../storybook/on-island";
+
 import { PositionGrid } from "./position-grid";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -63,3 +65,5 @@ export const Disabled: Story = {
   args: { isDisabled: true },
   parameters: { controls: { disable: true } },
 };
+
+export const Island: Story = { decorators: [onIsland()] };

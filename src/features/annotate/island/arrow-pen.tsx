@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { IslandChoice } from "../../../primitives/island/island-choice";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { headChoice } from "../../annotations/annotation-choices";
 
 import { ArrowHeadGlyph } from "./arrow-head-glyph";
@@ -19,22 +19,22 @@ export function ArrowPen({ onChange, ref, settings }: SectionProps) {
     <IslandCrossfade ref={ref}>
       <div className="flex gap-separate">
         <PenWeights onChange={onChange} settings={settings} />
-        <IslandChoice
+        <PillGroup
+          aria-label={headChoice.label()}
           items={headChoice.items().map((item) => ({
-            content: (
+            ariaLabel: item.label ?? item.ariaLabel,
+            icon: (
               <ArrowHeadGlyph
                 className="size-icon-lg"
                 head={item.id as AnnotationHead}
               />
             ),
             id: item.id,
-            label: item.label ?? item.ariaLabel,
           }))}
-          label={headChoice.label()}
-          onChange={(id) => {
+          onSelectionChange={(id) => {
             onChange({ defaultHead: headChoice.pick(id) });
           }}
-          value={headChoice.select(settings.defaultHead)}
+          selected={headChoice.select(settings.defaultHead)}
         />
       </div>
     </IslandCrossfade>

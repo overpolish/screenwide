@@ -14,16 +14,16 @@ import { type ReactNode, useState } from "react";
 
 import { PREVIEW_NOTCH } from "../../storybook/preview-notch";
 import { StoryNotch } from "../../storybook/story-notch";
+import { Alert } from "../alert/alert";
+import { Button } from "../button/button";
+import { IconButton, IconToggleButton } from "../button/icon-button";
+import { ListBox } from "../listbox/listbox";
+import { ListBoxItem } from "../listbox-item/listbox-item";
+import { PillGroup } from "../pill-group/pill-group";
 
 import { Island } from "./island";
-import {
-  IslandButton,
-  IslandListRow,
-  IslandOptions,
-  IslandPrimaryButton,
-  IslandWarning,
-} from "./island-controls";
 import { IslandRow } from "./island-row";
+import { IslandOptions } from "./options/island-options";
 
 import type { IslandAnchor } from "./island-geometry";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -56,53 +56,51 @@ function IslandDemo({
     clear: {
       anchor: "end",
       content: (
-        <div className="flex flex-col">
+        <ListBox
+          aria-label="Clear"
+          onAction={() => {
+            setPart(null);
+          }}
+        >
           {["Clear this screen", "Clear every screen"].map((label) => (
-            <IslandListRow
-              key={label}
-              onPress={() => {
-                setPart(null);
-              }}
-            >
-              <span className="flex text-fg-secondary">
-                <Trash2 aria-hidden className="size-icon" />
+            <ListBoxItem id={label} key={label} showsSelection={false}>
+              <span className="flex items-center gap-inline">
+                <span className="flex text-fg-secondary">
+                  <Trash2 aria-hidden className="size-icon" />
+                </span>
+                {label}
               </span>
-              {label}
-            </IslandListRow>
+            </ListBoxItem>
           ))}
-        </div>
+        </ListBox>
       ),
     },
     colour: {
       anchor: "start",
       content: (
-        <div className="flex gap-inline">
-          {COLOURS.map((swatch) => (
-            <IslandButton
-              aria-label={swatch}
-              aria-pressed={swatch === colour}
-              isOpen={swatch === colour}
-              key={swatch}
-              onPress={() => {
-                setColour(swatch);
-              }}
-            >
+        <PillGroup
+          aria-label="Colour"
+          items={COLOURS.map((swatch) => ({
+            ariaLabel: swatch,
+            icon: (
               <span
                 className="size-icon rounded-full"
                 style={{ backgroundColor: swatch }}
               />
-            </IslandButton>
-          ))}
-        </div>
+            ),
+            id: swatch,
+          }))}
+          onSelectionChange={setColour}
+          selected={colour}
+        />
       ),
     },
     warning: {
       anchor: "center",
       content: (
-        <IslandWarning
-          action="Allow"
-          message="Screenwide needs permission to draw over other apps."
-        />
+        <Alert action={<Button>Allow</Button>} color="error">
+          Screenwide needs permission to draw over other apps.
+        </Alert>
       ),
     },
   };
@@ -119,9 +117,9 @@ function IslandDemo({
             <IslandRow
               end={
                 <>
-                  <IslandButton aria-label="Undo">
+                  <IconButton aria-label="Undo">
                     <Undo2 aria-hidden className="size-icon" />
-                  </IslandButton>
+                  </IconButton>
                   <IslandOptions
                     isOpen={part === "clear"}
                     label="Clear options"
@@ -129,18 +127,20 @@ function IslandDemo({
                       toggle("clear");
                     }}
                   >
-                    <IslandButton aria-label="Erase">
+                    <IconButton aria-label="Erase">
                       <Eraser aria-hidden className="size-icon" />
-                    </IslandButton>
+                    </IconButton>
                   </IslandOptions>
-                  <IslandPrimaryButton
+                  <Button
                     aria-label="Done"
+                    className="w-12 px-0"
+                    color="primary"
                     onPress={() => {
                       toggle("warning");
                     }}
                   >
                     <Check aria-hidden className="size-icon" />
-                  </IslandPrimaryButton>
+                  </Button>
                 </>
               }
               start={
@@ -155,29 +155,27 @@ function IslandDemo({
                           toggle("colour");
                         }}
                       >
-                        <IslandButton
+                        <IconToggleButton
                           aria-label={label}
-                          aria-pressed={tool === label}
-                          isOpen={tool === label}
-                          onPress={() => {
+                          isSelected={tool === label}
+                          onChange={() => {
                             setTool(label);
                           }}
                         >
                           <Icon aria-hidden className="size-icon" />
-                        </IslandButton>
+                        </IconToggleButton>
                       </IslandOptions>
                     ) : (
-                      <IslandButton
+                      <IconToggleButton
                         aria-label={label}
-                        aria-pressed={tool === label}
-                        isOpen={tool === label}
+                        isSelected={tool === label}
                         key={label}
-                        onPress={() => {
+                        onChange={() => {
                           setTool(label);
                         }}
                       >
                         <Icon aria-hidden className="size-icon" />
-                      </IslandButton>
+                      </IconToggleButton>
                     ),
                   )}
                 </>
@@ -207,7 +205,7 @@ const meta = {
     layout: "centered",
     notch: true,
   },
-  title: "Primitives/Island",
+  title: "Primitives/Island/Shape",
 } satisfies Meta<typeof IslandDemo>;
 
 export default meta;

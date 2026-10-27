@@ -4,12 +4,12 @@
 import { useState } from "react";
 
 import { cn } from "../../../../lib/styling";
-import { IslandChoice } from "../../../../primitives/island/island-choice";
-import { IslandButton } from "../../../../primitives/island/island-controls";
-import { BACKDROPS, SCENE_PRESETS } from "../editor-data";
+import { IconButton } from "../../../../primitives/button/icon-button";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
+import { type Backdrop, BACKDROPS, SCENE_PRESETS } from "../editor-data";
 import { type Editor } from "../model/use-editor";
 
-import { CheckRow, SectionLine } from "./island-parts";
+import { CheckList, SectionLine } from "./island-parts";
 import { PresetDrawing } from "./preset-choice";
 
 // What the island holds for a mode picked from the toolbar. Each acts on
@@ -18,9 +18,11 @@ import { PresetDrawing } from "./preset-choice";
 export function FrameSection({ editor }: { editor: Editor }) {
   return (
     <SectionLine label="Background">
-      <IslandChoice
+      <PillGroup
+        aria-label="Background"
         items={BACKDROPS.map(({ background, id, label }) => ({
-          content: (
+          ariaLabel: label,
+          icon: (
             <span
               className={cn(
                 "size-5 rounded-full",
@@ -32,11 +34,11 @@ export function FrameSection({ editor }: { editor: Editor }) {
             />
           ),
           id,
-          label,
         }))}
-        label="Background"
-        onChange={editor.setBackdrop}
-        value={editor.backdrop}
+        onSelectionChange={(id) => {
+          editor.setBackdrop(id as Backdrop);
+        }}
+        selected={editor.backdrop}
       />
     </SectionLine>
   );
@@ -45,26 +47,26 @@ export function FrameSection({ editor }: { editor: Editor }) {
 export function PointerSection({ editor }: { editor: Editor }) {
   const [isSmooth, setIsSmooth] = useState(true);
   return (
-    <div className="flex w-52 flex-col">
-      <CheckRow
-        isChosen={editor.effects.ripple}
-        onPress={() => {
-          editor.setEffects({
-            ...editor.effects,
-            ripple: !editor.effects.ripple,
-          });
+    <div className="w-52">
+      <CheckList
+        aria-label="Pointer"
+        items={[
+          { id: "ripple", label: "Show clicks" },
+          { id: "smooth", label: "Smooth movement" },
+        ]}
+        onToggle={(id) => {
+          if (id === "ripple")
+            editor.setEffects({
+              ...editor.effects,
+              ripple: !editor.effects.ripple,
+            });
+          else setIsSmooth(!isSmooth);
         }}
-      >
-        Show clicks
-      </CheckRow>
-      <CheckRow
-        isChosen={isSmooth}
-        onPress={() => {
-          setIsSmooth(!isSmooth);
-        }}
-      >
-        Smooth movement
-      </CheckRow>
+        selected={[
+          ...(editor.effects.ripple ? ["ripple"] : []),
+          ...(isSmooth ? ["smooth"] : []),
+        ]}
+      />
     </div>
   );
 }
@@ -75,7 +77,7 @@ export function SceneSection({ editor }: { editor: Editor }) {
   return (
     <div className="flex gap-1">
       {SCENE_PRESETS.map(({ id, label }) => (
-        <IslandButton
+        <IconButton
           aria-label={`Add ${label}`}
           key={id}
           onPress={() => {
@@ -83,7 +85,7 @@ export function SceneSection({ editor }: { editor: Editor }) {
           }}
         >
           <PresetDrawing id={id} />
-        </IslandButton>
+        </IconButton>
       ))}
     </div>
   );

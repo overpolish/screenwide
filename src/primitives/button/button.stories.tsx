@@ -5,6 +5,7 @@ import { ClipboardCopy, Upload } from "lucide-react";
 import { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
+import { onIsland } from "../../storybook/on-island";
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { Button } from "./button";
@@ -89,6 +90,8 @@ export const Disabled: Story = {
     </LookGrid>
   ),
 };
+
+export const Island: Story = { ...Variants, decorators: [onIsland()] };
 
 // A window toolbar is the one place a text button carries an icon.
 export const WithIcon: Story = {

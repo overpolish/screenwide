@@ -44,7 +44,7 @@ export const DEFAULT_STYLE: AnnotationStyle = {
 
 /** What each pen's style is made of, so making every annotation of a kind
  * match one copies only what that kind draws with. */
-export const STYLE_OF: Record<Pen, (keyof AnnotationStyle)[]> = {
+const STYLE_OF: Record<Pen, (keyof AnnotationStyle)[]> = {
   arrow: ["color", "head", "width"],
   counter: ["color", "counterAngle", "counterSize"],
   focus: ["focusDims", "focusRadius"],

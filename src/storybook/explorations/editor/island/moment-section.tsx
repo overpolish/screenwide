@@ -5,7 +5,7 @@ import { Pause, Play } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { cn } from "../../../../lib/styling";
-import { IslandButton } from "../../../../primitives/island/island-controls";
+import { IconButton } from "../../../../primitives/button/icon-button";
 import { type Editor } from "../model/use-editor";
 import { type Beat } from "../recording";
 
@@ -28,7 +28,7 @@ export function MomentPlay({ beat, editor }: { beat: Beat; editor: Editor }) {
   }, [beat.end, editor]);
   const Icon = isPlayingMoment ? Pause : Play;
   return (
-    <IslandButton
+    <IconButton
       aria-label={isPlayingMoment ? "Pause" : "Play the moment"}
       onPress={() => {
         if (editor.isPlaying) {
@@ -41,7 +41,7 @@ export function MomentPlay({ beat, editor }: { beat: Beat; editor: Editor }) {
       }}
     >
       <Icon aria-hidden className="size-icon" />
-    </IslandButton>
+    </IconButton>
   );
 }
 

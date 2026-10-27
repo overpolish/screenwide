@@ -10,10 +10,11 @@ import {
 } from "lucide-react";
 import { type ReactNode } from "react";
 
+import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { BACKDROPS } from "../editor-data";
 import { type Editor, type Mode } from "../model/use-editor";
 
-import { type IslandContent, RowTitle } from "./island-parts";
+import { type IslandContent } from "./island-parts";
 import { FrameSection, PointerSection, SceneSection } from "./mode-sections";
 import { captionParts, keysParts } from "./overlay-options";
 import { type Expanded, overlayParts } from "./overlay-parts";
@@ -111,6 +112,6 @@ export function modeContent(
     from: editor.modeFrom ? { kind: "strip" } : { kind: "tool", tool: mode },
     key: mode,
     section,
-    title: <RowTitle glyph={glyph} note={note} title={title} />,
+    title: <IslandRowTitle glyph={glyph} note={note} title={title} />,
   };
 }

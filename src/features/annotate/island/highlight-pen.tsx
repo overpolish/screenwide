@@ -3,9 +3,9 @@
 
 import { t } from "../../../i18n/i18n";
 import { splitAtPlaceable } from "../../../i18n/split-at-placeable";
-import { IslandChoice } from "../../../primitives/island/island-choice";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 import { Keyboard } from "../../../primitives/keyboard/keyboard";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { strokeChoice } from "../../annotations/annotation-choices";
 
 import { StrokeGlyph } from "./highlight-stroke-glyph";
@@ -32,17 +32,17 @@ export function HighlightPen({ onChange, ref, settings }: SectionProps) {
   return (
     <IslandCrossfade ref={ref}>
       <div className="flex items-center gap-separate">
-        <IslandChoice
+        <PillGroup
+          aria-label={strokeChoice.label()}
           items={strokeChoice.items().map((item) => ({
-            content: <StrokeGlyph isHandDrawn={strokeChoice.pick(item.id)} />,
+            ariaLabel: item.label ?? item.ariaLabel,
+            icon: <StrokeGlyph isHandDrawn={strokeChoice.pick(item.id)} />,
             id: item.id,
-            label: item.label ?? item.ariaLabel,
           }))}
-          label={strokeChoice.label()}
-          onChange={(id) => {
+          onSelectionChange={(id) => {
             onChange({ highlightHandDrawn: strokeChoice.pick(id) });
           }}
-          value={strokeChoice.select(settings.highlightHandDrawn)}
+          selected={strokeChoice.select(settings.highlightHandDrawn)}
         />
         <SectionHint>
           {before}

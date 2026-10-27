@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { IslandChoice } from "../../../primitives/island/island-choice";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { strokeChoice } from "../../annotations/annotation-choices";
 
 import { CornerChoice } from "./corner-choice";
@@ -24,19 +24,17 @@ export function ShapePen({ onChange, ref, settings }: SectionProps) {
           }}
           value={settings.shapeRadius}
         />
-        <IslandChoice
+        <PillGroup
+          aria-label={strokeChoice.label()}
           items={strokeChoice.items().map((item) => ({
-            content: (
-              <ShapeStrokeGlyph isHandDrawn={strokeChoice.pick(item.id)} />
-            ),
+            ariaLabel: item.label ?? item.ariaLabel,
+            icon: <ShapeStrokeGlyph isHandDrawn={strokeChoice.pick(item.id)} />,
             id: item.id,
-            label: item.label ?? item.ariaLabel,
           }))}
-          label={strokeChoice.label()}
-          onChange={(id) => {
+          onSelectionChange={(id) => {
             onChange({ shapeHandDrawn: strokeChoice.pick(id) });
           }}
-          value={strokeChoice.select(settings.shapeHandDrawn)}
+          selected={strokeChoice.select(settings.shapeHandDrawn)}
         />
       </div>
     </IslandCrossfade>

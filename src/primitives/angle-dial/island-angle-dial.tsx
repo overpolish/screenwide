@@ -6,20 +6,16 @@ import { type ReactNode, type WheelEvent, useRef, useState } from "react";
 
 import { motionDurationCss } from "../../lib/motion";
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
-import { signedAngle, wrapAngle } from "../angle-dial/angle-geometry";
-import {
-  type DialSteps,
-  EIGHTH_TURN,
-  useAngleDial,
-} from "../angle-dial/use-angle-dial";
+import { IslandFill } from "../island/island-fill";
 
-import { IslandFill } from "./island-fill";
+import { signedAngle, wrapAngle } from "./angle-geometry";
+import { type DialSteps, EIGHTH_TURN, useAngleDial } from "./use-angle-dial";
 
-// One of the island's circles that turns: what it holds is drawn pointing at
-// twelve o'clock and turned to the value, so the circle shows the aim it
-// sets. A drag aims it at the pointer, a scroll or an arrow key turns it an
-// eighth of a turn; it rests on the eighths, marked round its edge, and Shift
-// frees a drag or an arrow to the degree. Built on the angle dial's slider.
+// The angle dial in the island's skin: one of the island's circles, holding
+// a glyph drawn pointing at twelve o'clock and turned to the value, so the
+// circle shows the aim it sets. A drag aims it at the pointer, a scroll or an
+// arrow key turns it an eighth of a turn; it rests on the eighths, marked
+// round its edge, and Shift frees a drag or an arrow to the degree.
 //
 // The turn eases to each new aim the short way round, so a step across
 // twelve o'clock does not spin the glyph back through the whole turn.
@@ -37,21 +33,21 @@ const WHEEL_LINE = 16;
 
 const MARKS = Array.from({ length: 8 }, (_, index) => index * EIGHTH_TURN);
 
-export function IslandDial({
+export function IslandAngleDial({
   "aria-label": label,
   children,
+  isDisabled,
   onChange,
   value,
 }: {
   "aria-label": string;
-  /** The glyph, pointing at twelve o'clock. */
   children: ReactNode;
+  isDisabled: boolean;
   onChange: (degrees: number) => void;
-  /** Degrees clockwise from twelve o'clock. */
   value: number;
 }) {
   const { dialProps, isDragging, isHovered } = useAngleDial({
-    isDisabled: false,
+    isDisabled,
     label,
     onChange,
     steps: STEPS,

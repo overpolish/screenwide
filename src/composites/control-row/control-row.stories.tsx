@@ -5,7 +5,9 @@ import { Disc } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "../../primitives/badge/badge";
+import { PillGroup } from "../../primitives/pill-group/pill-group";
 import { Switch } from "../../primitives/switch/switch";
+import { onIsland } from "../../storybook/on-island";
 
 import { ControlRow } from "./control-row";
 
@@ -69,6 +71,24 @@ export const WithLeading: Story = {
       }
     />
   ),
+};
+
+// A line of the island's section: its name a caption, its control a circle
+// set.
+export const Island: Story = {
+  args: {
+    children: () => (
+      <PillGroup
+        aria-label="Size"
+        items={["S", "M", "L"].map((size) => ({ id: size, label: size }))}
+        onSelectionChange={() => undefined}
+        selected="M"
+      />
+    ),
+    description: undefined,
+    title: "Size",
+  },
+  decorators: [onIsland("16rem")],
 };
 
 export const WithAccessory: Story = {

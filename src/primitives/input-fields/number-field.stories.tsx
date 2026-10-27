@@ -5,6 +5,7 @@ import { Ruler } from "lucide-react";
 import { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
+import { onIsland } from "../../storybook/on-island";
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { NumberField } from "./number-field";
@@ -107,3 +108,5 @@ export const Disabled: Story = {
   parameters: { controls: { disable: true } },
   render: ({ onChange }) => <StateGrid isDisabled onChange={onChange} />,
 };
+
+export const Island: Story = { ...States, decorators: [onIsland()] };

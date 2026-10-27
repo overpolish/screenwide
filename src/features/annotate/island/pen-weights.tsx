@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../i18n/i18n";
-import { IslandChoice } from "../../../primitives/island/island-choice";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { annotationSizeLabel } from "../../annotations/annotation-text";
 import { ANNOTATION_WIDTHS } from "../../annotations/widths";
 
@@ -15,17 +15,17 @@ import type { SectionProps } from "./section-props";
  * shape, so a weight chosen for either is the other's too. */
 export function PenWeights({ onChange, settings }: Omit<SectionProps, "ref">) {
   return (
-    <IslandChoice
+    <PillGroup
+      aria-label={annotationSizeLabel("width")}
       items={ANNOTATION_WIDTHS.map((points) => ({
-        content: <SizeDot diameter={points / 2 + 2} />,
+        ariaLabel: t("annotate-island-points", { points }),
+        icon: <SizeDot diameter={points / 2 + 2} />,
         id: String(points),
-        label: t("annotate-island-points", { points }),
       }))}
-      label={annotationSizeLabel("width")}
-      onChange={(id) => {
+      onSelectionChange={(id) => {
         onChange({ defaultWidth: Number(id) });
       }}
-      value={String(settings.defaultWidth)}
+      selected={String(settings.defaultWidth)}
     />
   );
 }

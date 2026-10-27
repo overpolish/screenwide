@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../i18n/i18n";
-import { IslandChoice } from "../../../primitives/island/island-choice";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
 
 import { CornerChoice } from "./corner-choice";
 import { FocusLookGlyph } from "./focus-glyphs";
@@ -30,17 +30,17 @@ export function FocusPen({ onChange, ref, settings }: SectionProps) {
           }}
           value={settings.focusRadius}
         />
-        <IslandChoice
+        <PillGroup
+          aria-label={t("annotation-outside")}
           items={LOOKS.map(({ id, label }) => ({
-            content: <FocusLookGlyph look={id} />,
+            ariaLabel: label(),
+            icon: <FocusLookGlyph look={id} />,
             id,
-            label: label(),
           }))}
-          label={t("annotation-outside")}
-          onChange={(id) => {
+          onSelectionChange={(id) => {
             onChange({ focusDims: id === "dim" });
           }}
-          value={settings.focusDims ? "dim" : "blur"}
+          selected={settings.focusDims ? "dim" : "blur"}
         />
       </div>
     </IslandCrossfade>

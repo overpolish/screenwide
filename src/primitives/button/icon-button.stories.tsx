@@ -5,6 +5,7 @@ import { DoorOpen } from "lucide-react";
 import { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
+import { onIsland } from "../../storybook/on-island";
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { IconButton } from "./icon-button";
@@ -89,3 +90,5 @@ export const Disabled: Story = {
   parameters: { controls: { disable: true } },
   render: ({ onPress }) => <LookGrid isDisabled onPress={onPress} />,
 };
+
+export const Island: Story = { ...Variants, decorators: [onIsland()] };

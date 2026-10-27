@@ -3,16 +3,17 @@
 
 import { Scissors } from "lucide-react";
 
-import { IslandChoice } from "../../../../primitives/island/island-choice";
-import { IslandListRow } from "../../../../primitives/island/island-controls";
+import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
+import { ListBox } from "../../../../primitives/listbox/listbox";
+import { ListBoxItem } from "../../../../primitives/listbox-item/listbox-item";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { Text } from "../../../../primitives/text/text";
 import { type SceneClip, ZOOMS } from "../editor-data";
 import { ownLength, speedLabel, speedOf } from "../model/speed";
 import { DEAD_AIR_S } from "../model/timeline-model";
 import { type Editor } from "../model/use-editor";
 
-import { IslandConfirmButton } from "./island-confirm-button";
-import { CheckRow, SectionLine } from "./island-parts";
+import { CheckList, SectionLine } from "./island-parts";
 import { PresetChoice } from "./preset-choice";
 
 // What the island holds for a beat, a scene or a pause on the strip: the
@@ -21,13 +22,13 @@ import { PresetChoice } from "./preset-choice";
 
 export function BeatActions({ editor }: { editor: Editor }) {
   return (
-    <IslandConfirmButton
+    <ConfirmActionButton
       confirmLabel="Confirm Cut"
+      icon={<Scissors aria-hidden />}
       label="Cut it and its time"
       onConfirm={editor.remove}
-    >
-      <Scissors aria-hidden className="size-icon" />
-    </IslandConfirmButton>
+      variant="ghost"
+    />
   );
 }
 
@@ -48,19 +49,19 @@ export function SceneClipSection({
       />
       {clip.preset === "zoom" ? (
         <SectionLine label="How far in">
-          <IslandChoice
+          <PillGroup
+            aria-label="How far in"
             items={ZOOMS.map((zoom) => ({
-              content: (
+              ariaLabel: `${String(zoom)} times`,
+              icon: (
                 <span className="text-label tabular-nums">{`${String(zoom)}×`}</span>
               ),
               id: String(zoom),
-              label: `${String(zoom)} times`,
             }))}
-            label="How far in"
-            onChange={(id) => {
+            onSelectionChange={(id) => {
               editor.updateScene(clip.id, { zoom: Number(id) });
             }}
-            value={String(clip.zoom)}
+            selected={String(clip.zoom)}
           />
         </SectionLine>
       ) : null}
@@ -78,42 +79,49 @@ export function PauseSection({ editor, id }: { editor: Editor; id: string }) {
   ).length;
   return (
     <div className="flex w-56 flex-col">
-      <CheckRow
-        isChosen={!setting}
-        onPress={() => {
-          editor.setPause(id, null);
+      {/* How it plays: one of these, the last only once its end has been
+          dragged to a speed of its own. */}
+      <CheckList
+        aria-label="How it plays"
+        items={[
+          { id: "squeeze", label: "Squeeze with the rest" },
+          { id: "keep", label: "Keep as recorded" },
+          ...(own === null
+            ? []
+            : [
+                {
+                  id: "own",
+                  label: retimedLabel(
+                    pause.end - pause.start,
+                    ownLength(pause, own, editor.recording.look),
+                  ),
+                },
+              ]),
+        ]}
+        onToggle={(choice) => {
+          if (choice === "squeeze") editor.setPause(id, null);
+          if (choice === "keep") editor.setPause(id, { kind: "keep" });
+        }}
+        selected={[
+          setting?.kind === "own" ? "own" : (setting?.kind ?? "squeeze"),
+        ]}
+      />
+      <ListBox
+        aria-label="Trim"
+        onAction={(action) => {
+          if (action === "breath") editor.trimToBreath(id);
+          else editor.trimDeadAir();
         }}
       >
-        Squeeze with the rest
-      </CheckRow>
-      <CheckRow
-        isChosen={setting?.kind === "keep"}
-        onPress={() => {
-          editor.setPause(id, { kind: "keep" });
-        }}
-      >
-        Keep as recorded
-      </CheckRow>
-      {own === null ? null : (
-        <CheckRow isChosen onPress={() => undefined}>
-          {retimedLabel(
-            pause.end - pause.start,
-            ownLength(pause, own, editor.recording.look),
-          )}
-        </CheckRow>
-      )}
-      <IslandListRow
-        onPress={() => {
-          editor.trimToBreath(id);
-        }}
-      >
-        Trim to a breath
-      </IslandListRow>
-      {pause.still > DEAD_AIR_S && deadAir > 1 ? (
-        <IslandListRow onPress={editor.trimDeadAir}>
-          {`Trim all ${String(deadAir)} dead air pauses`}
-        </IslandListRow>
-      ) : null}
+        <ListBoxItem id="breath" showsSelection={false}>
+          Trim to a breath
+        </ListBoxItem>
+        {pause.still > DEAD_AIR_S && deadAir > 1 ? (
+          <ListBoxItem id="dead-air" showsSelection={false}>
+            {`Trim all ${String(deadAir)} dead air pauses`}
+          </ListBoxItem>
+        ) : null}
+      </ListBox>
       <Text
         as="p"
         className="px-inset-sm pt-1 text-fg-secondary"

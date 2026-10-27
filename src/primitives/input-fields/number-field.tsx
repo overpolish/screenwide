@@ -16,6 +16,7 @@ import { isMacHost } from "../../lib/platform";
 import { tv } from "../../lib/variants";
 import { fieldVariants } from "../field/field-variants";
 import { focusFieldInput } from "../field/focus-field-input";
+import { useSkin } from "../skin/skin";
 
 import { useNumberFieldScrub } from "./use-number-field-scrub";
 
@@ -61,6 +62,7 @@ export const NumberField = ({
   value,
   ...props
 }: NumberFieldProps) => {
+  const skin = useSkin();
   // A disabled field neither scrubs nor advertises it with the cursor.
   const nativeScrubbing = isTauri() && !props.isDisabled;
   const nativeSelectionRepaint = nativeScrubbing && isMacHost;
@@ -165,7 +167,9 @@ export const NumberField = ({
     inputWrapper,
     label: _label,
     section,
-  } = numberFieldVariants({ material });
+  } = numberFieldVariants({
+    material: skin === "island" ? "island" : material,
+  });
 
   return (
     <AriaNumberField

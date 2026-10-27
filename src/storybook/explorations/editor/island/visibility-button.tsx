@@ -3,7 +3,7 @@
 
 import { Eye, EyeOff } from "lucide-react";
 
-import { IslandButton } from "../../../../primitives/island/island-controls";
+import { IconToggleButton } from "../../../../primitives/button/icon-button";
 
 /** Whether an overlay over the whole recording shows, as an eye: open while
  * it shows, struck through while it is hidden. */
@@ -16,10 +16,14 @@ export function VisibilityButton({
   label: string;
   onToggle: () => void;
 }) {
-  const Icon = isShown ? Eye : EyeOff;
   return (
-    <IslandButton aria-label={label} aria-pressed={isShown} onPress={onToggle}>
-      <Icon aria-hidden className="size-icon" />
-    </IslandButton>
+    <IconToggleButton
+      aria-label={label}
+      isSelected={isShown}
+      off={<EyeOff aria-hidden className="size-icon" />}
+      onChange={onToggle}
+    >
+      <Eye aria-hidden className="size-icon" />
+    </IconToggleButton>
   );
 }

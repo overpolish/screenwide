@@ -12,7 +12,10 @@ import {
 import { type Ref } from "react";
 
 import { t } from "../../../i18n/i18n";
-import { IslandButton } from "../../../primitives/island/island-controls";
+import {
+  IconButton,
+  IconToggleButton,
+} from "../../../primitives/button/icon-button";
 
 import { RULER_TOOLS, type RulerStampKeys } from "./ruler-island-tools";
 
@@ -48,18 +51,17 @@ export function RulerToolButtons({
   tool: RulerTool;
 }) {
   return RULER_TOOLS.map(({ icon: Icon, id, name }) => (
-    <IslandButton
+    <IconToggleButton
       aria-label={name()}
-      aria-pressed={id === tool}
-      isOpen={id === tool}
+      isSelected={id === tool}
       key={id}
-      onPress={() => {
+      onChange={() => {
         if (id !== tool) onTool(id);
         onPick();
       }}
     >
       <Icon aria-hidden className="size-icon" />
-    </IslandButton>
+    </IconToggleButton>
   ));
 }
 
@@ -80,56 +82,60 @@ export function RulerActions({
 }) {
   return (
     <>
-      <IslandButton
+      <IconButton
         aria-expanded={showsEdges}
         aria-label={t("ruler-island-edges")}
-        isOpen={showsEdges}
         onPress={onToggleEdges}
         ref={edgesRef}
+        variant="ghost"
       >
         <ScanSearch aria-hidden className="size-icon" />
-      </IslandButton>
-      <IslandButton
+      </IconButton>
+      <IconToggleButton
         aria-label={t("ruler-island-centerlines")}
-        aria-pressed={state.centerlines}
-        isOpen={state.centerlines}
-        onPress={() => {
+        isSelected={state.centerlines}
+        onChange={() => {
           onAction("toggleCenterlines");
         }}
       >
         <SquareCenterlineDashedVertical aria-hidden className="size-icon" />
-      </IslandButton>
-      <IslandButton
+      </IconToggleButton>
+      <IconToggleButton
         aria-label={t("ruler-island-crosshair")}
-        aria-pressed={state.crosshair}
-        isOpen={state.crosshair}
-        onPress={() => {
+        isSelected={state.crosshair}
+        onChange={() => {
           onAction("toggleCrosshair");
         }}
       >
         <Crosshair aria-hidden className="size-icon" />
-      </IslandButton>
-      <IslandButton
+      </IconToggleButton>
+      <IconButton
         aria-label={t("ruler-island-undo")}
         isDisabled={!state.canUndo}
         onPress={() => {
           onAction("undo");
         }}
+        variant="ghost"
       >
         <Undo2 aria-hidden className="size-icon rtl:-scale-x-100" />
-      </IslandButton>
-      <IslandButton
+      </IconButton>
+      <IconButton
         aria-label={t("ruler-island-copy")}
         isDisabled={!state.canCopy}
         onPress={() => {
           onAction("copyMeasurement");
         }}
+        variant="ghost"
       >
         <Copy aria-hidden className="size-icon" />
-      </IslandButton>
-      <IslandButton aria-label={t("ruler-island-close")} onPress={onClose}>
+      </IconButton>
+      <IconButton
+        aria-label={t("ruler-island-close")}
+        onPress={onClose}
+        variant="ghost"
+      >
         <X aria-hidden className="size-icon" />
-      </IslandButton>
+      </IconButton>
     </>
   );
 }

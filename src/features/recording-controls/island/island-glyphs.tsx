@@ -12,11 +12,9 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { t } from "../../../i18n/i18n";
 import { motionDurations, motionEasings } from "../../../lib/motion";
+import { IconButton } from "../../../primitives/button/icon-button";
 import { IconSwap } from "../../../primitives/icon-swap/icon-swap";
-import {
-  IslandButton,
-  IslandOptions,
-} from "../../../primitives/island/island-controls";
+import { IslandOptions } from "../../../primitives/island/options/island-options";
 
 import { INPUT_GLYPHS, inputName } from "./island-names";
 
@@ -67,11 +65,14 @@ export function InputGlyph({
       })}
       onOpen={onOpen}
     >
-      <IslandButton
+      {/* Pressed, it turns the input on or off, which its glyph says; it
+          fills while the input's choices are open under it. */}
+      <IconButton
+        aria-expanded={isOpen}
         aria-label={inputName(kind)}
         aria-pressed={input.isOn}
-        isOpen={isOpen}
         onPress={onToggle}
+        variant="ghost"
       >
         <IconSwap swapKey={input.isOn ? "on" : "off"}>
           {input.isOn ? (
@@ -83,7 +84,7 @@ export function InputGlyph({
           )}
         </IconSwap>
         <ProblemDot isShown={hasProblem} />
-      </IslandButton>
+      </IconButton>
     </IslandOptions>
   );
 }
@@ -181,11 +182,12 @@ export function SourceChip({
   picture?: { id: string; kind: "app" | "display"; src: string };
 }) {
   return (
-    <IslandButton
+    <IconButton
       aria-expanded={isOpen}
       aria-label={t("recording-controls-island-source")}
-      isRaised
+      className="overflow-hidden"
       onPress={onPress}
+      variant="solid"
     >
       <IconSwap swapKey={picture ? `${picture.kind} ${picture.id}` : mode}>
         {picture ? (
@@ -204,6 +206,6 @@ export function SourceChip({
         )}
       </IconSwap>
       <ProblemDot isShown={hasProblem} />
-    </IslandButton>
+    </IconButton>
   );
 }

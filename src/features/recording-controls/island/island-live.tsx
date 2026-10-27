@@ -7,11 +7,9 @@ import { motion, PresenceContext, useReducedMotion } from "motion/react";
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
+import { Button } from "../../../primitives/button/button";
+import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
-import {
-  IslandButton,
-  IslandPrimaryButton,
-} from "../../../primitives/island/island-controls";
 import { Text } from "../../../primitives/text/text";
 
 // The island while it records: a countdown that can be pressed to cancel,
@@ -131,7 +129,7 @@ export function LiveControls({
 }) {
   return (
     <span className="flex items-center gap-1">
-      <IslandButton
+      <IconButton
         aria-label={
           isPaused
             ? t("recording-controls-resume")
@@ -139,30 +137,33 @@ export function LiveControls({
         }
         className={LIVE}
         onPress={isPaused ? onResume : onPause}
+        variant="ghost"
       >
         {isPaused ? (
           <Play aria-hidden className="size-icon" />
         ) : (
           <Pause aria-hidden className="size-icon" />
         )}
-      </IslandButton>
+      </IconButton>
       {/* Discarding sits beside stopping, so it asks twice: the bin gives
           way to a check, and only that discards. */}
       <ConfirmActionButton
-        className="size-island-control rounded-full"
         confirmLabel={t("recording-controls-confirm-discard")}
         icon={<Trash2 />}
         label={t("recording-controls-discard")}
         onConfirm={onDiscard}
         variant="ghost"
       />
-      {/* Stop is Record's own button, so the pair reads as one action. */}
-      <IslandPrimaryButton
+      {/* Stop is Record's own button, so the pair reads as one action: the
+          primary pill, a little wider than the circles round it. */}
+      <Button
         aria-label={t("recording-controls-stop")}
+        className="w-12 px-0"
+        color="primary"
         onPress={onStop}
       >
         <Square aria-hidden className="size-icon" />
-      </IslandPrimaryButton>
+      </Button>
     </span>
   );
 }
@@ -184,13 +185,14 @@ export function Starting({ onCancel }: { onCancel?: () => void }) {
       <Text as="span" role="status" variant="label">
         {t("recording-controls-starting")}
       </Text>
-      <IslandButton
+      <IconButton
         aria-label={t("recording-controls-cancel-starting")}
         className={LIVE}
         onPress={onCancel}
+        variant="ghost"
       >
         <X aria-hidden className="size-icon" />
-      </IslandButton>
+      </IconButton>
     </span>
   );
 }

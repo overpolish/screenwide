@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../i18n/i18n";
-import { IslandChoice } from "../../../primitives/island/island-choice";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
 
 import { CornerGlyph } from "./shape-glyphs";
 
@@ -28,17 +28,17 @@ export function CornerChoice({
   value: number;
 }) {
   return (
-    <IslandChoice
+    <PillGroup
+      aria-label={t("annotation-radius")}
       items={CORNERS.map(({ id, label, radius }) => ({
-        content: <CornerGlyph radius={radius} />,
+        ariaLabel: label(),
+        icon: <CornerGlyph radius={radius} />,
         id,
-        label: label(),
       }))}
-      label={t("annotation-radius")}
-      onChange={(id) => {
+      onSelectionChange={(id) => {
         onChange(Number(id));
       }}
-      value={String(value)}
+      selected={String(value)}
     />
   );
 }

@@ -13,6 +13,13 @@ export const buttonVariants = tv({
   ],
   compoundVariants: [
     {
+      // On the island a ghost control draws no fill of its own: the
+      // island's fill grows in under the pointer instead (`IslandFill`).
+      class: "data-[hovered]:bg-transparent data-[pressed]:bg-transparent",
+      skin: "island",
+      variant: "ghost",
+    },
+    {
       class:
         "control-raised text-fg data-[hovered]:control-raised-hover data-[pressed]:control-raised-pressed",
       color: "neutral",
@@ -29,6 +36,7 @@ export const buttonVariants = tv({
   defaultVariants: {
     color: "neutral",
     isDisabled: false,
+    skin: "window",
     variant: "solid",
   },
   variants: {
@@ -43,6 +51,13 @@ export const buttonVariants = tv({
     isDisabled: {
       false: "",
       true: "opacity-40",
+    },
+    // The island's controls are a size up from a window's, and round: a
+    // pill for words, a circle for an icon. A pill's words stay on one line,
+    // since the island grows to fit its row rather than wrapping it.
+    skin: {
+      island: "isolate h-island-control rounded-full whitespace-nowrap",
+      window: "",
     },
     variant: {
       // No material of its own, for an action that should not compete:

@@ -22,7 +22,7 @@ import { type SceneClip, type ScenePreset } from "./editor-data";
 // and a beat on the strip. Between beats is give, springs: what moves gives
 // a little, what is still gives most. Recordings in `recordings/`.
 
-export type Span = { end: number; start: number };
+type Span = { end: number; start: number };
 export type SpokenLine = Span & { text: string };
 
 /** What the picture is, which says how fast its springs can play before

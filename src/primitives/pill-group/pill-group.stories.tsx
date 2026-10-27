@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Camera, Volume2 } from "lucide-react";
+import { Camera, Mic, Volume2 } from "lucide-react";
 import { type ComponentProps, useState } from "react";
 import { fn } from "storybook/test";
+
+import { onIsland } from "../../storybook/on-island";
 
 import { PillGroup, type PillGroupItem } from "./pill-group";
 
@@ -90,4 +92,18 @@ export const DisabledSegment: Story = {
 export const Disabled: Story = {
   args: { isDisabled: true },
   parameters: { controls: { disable: true } },
+};
+
+// On the island the segments are circles, so each item shows its icon, or a
+// label short enough to fit one where it has none.
+export const Island: Story = {
+  args: {
+    items: [
+      { ariaLabel: "System audio", icon: <Volume2 />, id: "system" },
+      { ariaLabel: "Microphone", icon: <Mic />, id: "microphone" },
+      { ariaLabel: "Camera", icon: <Camera />, id: "camera" },
+      { id: "all", label: "All" },
+    ],
+  },
+  decorators: [onIsland()],
 };

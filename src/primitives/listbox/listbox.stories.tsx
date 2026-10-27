@@ -3,6 +3,7 @@
 
 import { fn } from "storybook/test";
 
+import { onIsland } from "../../storybook/on-island";
 import { ListBoxItem } from "../listbox-item/listbox-item";
 
 import { ListBox } from "./listbox";
@@ -80,4 +81,11 @@ export const LongValue: Story = {
     defaultSelectedKeys: ["long"],
   },
   parameters: { controls: { disable: true } },
+};
+
+// In the island's section, which already insets it, so it takes the
+// section's width.
+export const Island: Story = {
+  args: { className: undefined },
+  decorators: [onIsland("14rem")],
 };

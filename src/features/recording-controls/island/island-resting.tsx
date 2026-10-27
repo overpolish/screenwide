@@ -5,13 +5,11 @@ import { Check, Circle, ImageDown, OctagonAlert } from "lucide-react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
+import { Button } from "../../../primitives/button/button";
+import { IconButton } from "../../../primitives/button/icon-button";
 import { IconSwap } from "../../../primitives/icon-swap/icon-swap";
-import {
-  IslandButton,
-  IslandOptions,
-  IslandPrimaryButton,
-} from "../../../primitives/island/island-controls";
 import { IslandRow } from "../../../primitives/island/island-row";
+import { IslandOptions } from "../../../primitives/island/options/island-options";
 
 import { InputGlyph, SourceChip } from "./island-glyphs";
 import { INPUTS } from "./island-names";
@@ -56,14 +54,18 @@ export function RestingRow({
             src: props.chosenWindow.icon,
           }
         : undefined;
+  // Record is the island's one primary action: the primary pill, a little
+  // wider than the circles round it.
   const record = (
-    <IslandPrimaryButton
+    <Button
       aria-label={t("recording-controls-record")}
+      className="w-12 px-0"
+      color="primary"
       isDisabled={!canRecord(props)}
       onPress={props.onRecord}
     >
       <Circle aria-hidden className="size-icon" />
-    </IslandPrimaryButton>
+    </Button>
   );
   return (
     <IslandRow
@@ -77,13 +79,14 @@ export function RestingRow({
               toggle("screenshot");
             }}
           >
-            <IslandButton
+            <IconButton
               aria-label={t("recording-controls-screenshot")}
               className={cn(
                 props.screenshotState === "pending" && "text-fg-secondary",
               )}
               isDisabled={!canScreenshot(props)}
               onPress={() => props.onScreenshot?.("save")}
+              variant="ghost"
             >
               {/* Status is carried by the glyph alone, as in the recording
                   bar, and the glyphs crossfade as it changes. */}
@@ -113,7 +116,7 @@ export function RestingRow({
                   />
                 )}
               </IconSwap>
-            </IslandButton>
+            </IconButton>
           </IslandOptions>
           {/* Record's options are the replay buffer's, so where it cannot
               run Record stands alone. */}

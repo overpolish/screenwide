@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { ArrowUp } from "lucide-react";
 import { ComponentProps, useState } from "react";
 import { fn } from "storybook/test";
 
+import { onIsland } from "../../storybook/on-island";
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { AngleDial } from "./angle-dial";
@@ -85,4 +87,25 @@ export const Colors: Story = {
       ))}
     </StoryGrid>
   ),
+};
+
+// On the island the dial turns what it is given, here an arrow, an eighth of
+// a turn at a time.
+export const Island: Story = {
+  decorators: [onIsland()],
+  render: function Render(args) {
+    const [value, setValue] = useState(args.value);
+    return (
+      <AngleDial
+        {...args}
+        onChange={(next) => {
+          args.onChange(next);
+          setValue(next);
+        }}
+        value={value}
+      >
+        <ArrowUp aria-hidden className="size-icon" />
+      </AngleDial>
+    );
+  },
 };

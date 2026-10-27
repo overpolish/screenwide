@@ -6,12 +6,10 @@ import { type ReactNode } from "react";
 import { useNumberFormatter } from "react-aria";
 
 import { t } from "../../../i18n/i18n";
+import { Button } from "../../../primitives/button/button";
+import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { Island } from "../../../primitives/island/island";
-import {
-  IslandButton,
-  IslandTextButton,
-} from "../../../primitives/island/island-controls";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../../editor/duration";
@@ -80,18 +78,18 @@ function SelectionRow({ selection }: { selection: IslandSelection }) {
       end={
         <span className="flex items-center gap-1">
           {selection.isAll ? null : (
-            <IslandTextButton onPress={selection.onSelectAll}>
+            <Button onPress={selection.onSelectAll}>
               {t("project-browser-select-all")}
-            </IslandTextButton>
+            </Button>
           )}
           {selection.actions}
-          <IslandButton
+          <IconButton
             aria-label={t("project-browser-deselect-all")}
             className="text-fg-secondary enabled:hover:text-fg"
             onPress={selection.onClear}
           >
             <X aria-hidden className="size-icon" />
-          </IslandButton>
+          </IconButton>
         </span>
       }
       start={
@@ -185,9 +183,9 @@ export function ProjectsIsland({
   }
   const undo =
     notice?.key === "deleted" && onUndoDelete ? (
-      <IslandTextButton color="primary" onPress={onUndoDelete}>
+      <Button color="primary" onPress={onUndoDelete}>
         {t("project-browser-undo")}
-      </IslandTextButton>
+      </Button>
     ) : null;
 
   const row = selection ? (

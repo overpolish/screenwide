@@ -3,12 +3,12 @@
 
 import { Trash2 } from "lucide-react";
 
-import { IslandTextButton } from "../../../../primitives/island/island-controls";
+import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
+import { Button } from "../../../../primitives/button/button";
 import { aimedAngle, PEN_NAMES } from "../model/annotation-style";
 import { type TimedMark } from "../model/marks";
 import { type Editor } from "../model/use-editor";
 
-import { IslandConfirmButton } from "./island-confirm-button";
 import { PenOptions } from "./style-controls";
 
 // What the island holds for a selected annotation: the live overlay's own
@@ -18,13 +18,13 @@ import { PenOptions } from "./style-controls";
 
 export function MarkActions({ editor }: { editor: Editor }) {
   return (
-    <IslandConfirmButton
+    <ConfirmActionButton
       confirmLabel="Confirm Delete"
+      icon={<Trash2 aria-hidden />}
       label="Delete"
       onConfirm={editor.remove}
-    >
-      <Trash2 aria-hidden className="size-icon" />
-    </IslandConfirmButton>
+      variant="ghost"
+    />
   );
 }
 
@@ -44,9 +44,9 @@ export function MarkSection({
         style={mark.style}
       />
       <div className="flex justify-end">
-        <IslandTextButton onPress={editor.matchAll}>
+        <Button onPress={editor.matchAll}>
           {`Apply to All ${PEN_NAMES[mark.pen].many}`}
-        </IslandTextButton>
+        </Button>
       </div>
     </div>
   );

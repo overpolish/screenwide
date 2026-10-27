@@ -6,9 +6,7 @@ import {
   Asterisk,
   Grid3x3,
   LayoutTemplate,
-  Minus,
   Moon,
-  Plus,
   Scaling,
   Sparkles,
   Sun,
@@ -20,13 +18,14 @@ import { type KeyboardEffectAnimation } from "../../../../bindings/KeyboardEffec
 import { type OverlaySize } from "../../../../bindings/OverlaySize";
 import { type TextSize } from "../../../../bindings/TextSize";
 import { CAPTION_WORDS } from "../../../../features/editor/recording/captions/recording-captions";
-import { IslandChoice } from "../../../../primitives/island/island-choice";
-import { IslandButton } from "../../../../primitives/island/island-controls";
+import { placementOptions } from "../../../../features/editor/tool-panels/placement-options";
+import { NumberField } from "../../../../primitives/input-fields/number-field";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
+import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
 import { type Editor } from "../model/use-editor";
 
-import { CheckRow, SectionLine } from "./island-parts";
+import { CheckList, SectionLine } from "./island-parts";
 import { type OverlayPart } from "./overlay-parts";
-import { PlacementChoice } from "./placement-choice";
 import { TemplateChoice } from "./template-choice";
 
 // The captions' and the shortcuts' options, in the groups the app's panels
@@ -66,23 +65,11 @@ const ANIMATIONS: { id: KeyboardEffectAnimation; name: string }[] = [
 
 export function captionParts(editor: Editor): OverlayPart[] {
   const { captions, setCaptions } = editor;
-  const words = (
-    [
-      ["holdUntilNext", "Hold until next caption"],
-      ["hidePunctuation", "Hide punctuation"],
-      ["hideFillers", "Hide filler words"],
-    ] as const
-  ).map(([key, name]) => (
-    <CheckRow
-      isChosen={captions[key]}
-      key={key}
-      onPress={() => {
-        setCaptions({ [key]: !captions[key] });
-      }}
-    >
-      {name}
-    </CheckRow>
-  ));
+  const words = [
+    { id: "holdUntilNext", label: "Hold until next caption" },
+    { id: "hidePunctuation", label: "Hide punctuation" },
+    { id: "hideFillers", label: "Hide filler words" },
+  ] as const;
   return [
     {
       icon: LayoutTemplate,
@@ -101,7 +88,21 @@ export function captionParts(editor: Editor): OverlayPart[] {
       icon: WholeWord,
       id: "words",
       label: "Words",
-      node: <div className="flex w-56 flex-col">{words}</div>,
+      node: (
+        <div className="w-56">
+          <CheckList
+            aria-label="Words"
+            items={[...words]}
+            onToggle={(id) => {
+              const key = id as (typeof words)[number]["id"];
+              setCaptions({ [key]: !captions[key] });
+            }}
+            selected={words
+              .filter(({ id }) => captions[id])
+              .map(({ id }) => id)}
+          />
+        </div>
+      ),
     },
     {
       icon: ALargeSmall,
@@ -110,63 +111,53 @@ export function captionParts(editor: Editor): OverlayPart[] {
       node: (
         <div className="flex w-56 flex-col gap-2">
           <SectionLine label="Size">
-            <IslandChoice
+            <PillGroup
+              aria-label="Size"
               items={TEXT_SIZES.map(({ id, name, short }) => ({
-                content: label(short),
+                ariaLabel: name,
+                icon: label(short),
                 id,
-                label: name,
               }))}
-              label="Size"
-              onChange={(size) => {
-                setCaptions({ size });
+              onSelectionChange={(size) => {
+                setCaptions({ size: size as TextSize });
               }}
-              value={captions.size}
+              selected={captions.size}
             />
           </SectionLine>
           <SectionLine label="Max words">
-            <IslandButton
-              aria-label="Fewer words"
-              isDisabled={captions.maxWords <= CAPTION_WORDS.minimum}
-              onPress={() => {
-                setCaptions({ maxWords: captions.maxWords - 1 });
+            <NumberField
+              aria-label="Max words"
+              className="w-16"
+              maxValue={CAPTION_WORDS.maximum}
+              minValue={CAPTION_WORDS.minimum}
+              onChange={(maxWords) => {
+                setCaptions({ maxWords });
               }}
-            >
-              <Minus aria-hidden className="size-icon" />
-            </IslandButton>
-            <span className="w-6 text-center text-label tabular-nums">
-              {captions.maxWords}
-            </span>
-            <IslandButton
-              aria-label="More words"
-              isDisabled={captions.maxWords >= CAPTION_WORDS.maximum}
-              onPress={() => {
-                setCaptions({ maxWords: captions.maxWords + 1 });
-              }}
-            >
-              <Plus aria-hidden className="size-icon" />
-            </IslandButton>
-          </SectionLine>
-          <SectionLine label="Lines">
-            <IslandChoice
-              items={[
-                { content: label("1"), id: "one" as const, label: "One" },
-                { content: label("2"), id: "two" as const, label: "Two" },
-              ]}
-              label="Lines"
-              onChange={(lines) => {
-                setCaptions({ lines });
-              }}
-              value={captions.lines}
+              step={1}
+              value={captions.maxWords}
             />
           </SectionLine>
-          <CheckRow
-            isChosen={captions.allCaps}
-            onPress={() => {
+          <SectionLine label="Lines">
+            <PillGroup
+              aria-label="Lines"
+              items={[
+                { ariaLabel: "One", icon: label("1"), id: "one" },
+                { ariaLabel: "Two", icon: label("2"), id: "two" },
+              ]}
+              onSelectionChange={(lines) => {
+                setCaptions({ lines: lines as "one" | "two" });
+              }}
+              selected={captions.lines}
+            />
+          </SectionLine>
+          <CheckList
+            aria-label="Case"
+            items={[{ id: "allCaps", label: "All caps" }]}
+            onToggle={() => {
               setCaptions({ allCaps: !captions.allCaps });
             }}
-          >
-            All caps
-          </CheckRow>
+            selected={captions.allCaps ? ["allCaps"] : []}
+          />
         </div>
       ),
     },
@@ -175,18 +166,20 @@ export function captionParts(editor: Editor): OverlayPart[] {
       id: "profanity",
       label: "Profanity",
       node: (
-        <div className="flex w-48 flex-col">
-          {PROFANITY.map(({ id, name }) => (
-            <CheckRow
-              isChosen={captions.profanity === id}
-              key={name}
-              onPress={() => {
-                setCaptions({ profanity: id });
-              }}
-            >
-              {name}
-            </CheckRow>
-          ))}
+        <div className="w-48">
+          <CheckList
+            aria-label="Profanity"
+            items={PROFANITY.map(({ id, name }) => ({
+              id: id ?? "said",
+              label: name,
+            }))}
+            onToggle={(id) => {
+              setCaptions({
+                profanity: id === "said" ? null : (id as CaptionProfanity),
+              });
+            }}
+            selected={[captions.profanity ?? "said"]}
+          />
         </div>
       ),
     },
@@ -195,8 +188,9 @@ export function captionParts(editor: Editor): OverlayPart[] {
       id: "position",
       label: "Position",
       node: (
-        <PlacementChoice
-          label="Caption position"
+        <PositionGrid
+          aria-label="Caption position"
+          items={placementOptions()}
           onChange={(position) => {
             setCaptions({ position });
           }}
@@ -216,24 +210,24 @@ export function keysParts(editor: Editor): OverlayPart[] {
       label: "Appearance",
       node: (
         <SectionLine label="Appearance">
-          <IslandChoice
+          <PillGroup
+            aria-label="Appearance"
             items={[
               {
-                content: <Sun aria-hidden className="size-icon" />,
-                id: "light" as const,
-                label: "Light",
+                ariaLabel: "Light",
+                icon: <Sun aria-hidden className="size-icon" />,
+                id: "light",
               },
               {
-                content: <Moon aria-hidden className="size-icon" />,
-                id: "dark" as const,
-                label: "Dark",
+                ariaLabel: "Dark",
+                icon: <Moon aria-hidden className="size-icon" />,
+                id: "dark",
               },
             ]}
-            label="Appearance"
-            onChange={(appearance) => {
-              setKeys({ appearance });
+            onSelectionChange={(appearance) => {
+              setKeys({ appearance: appearance as "dark" | "light" });
             }}
-            value={keys.appearance}
+            selected={keys.appearance}
           />
         </SectionLine>
       ),
@@ -243,18 +237,15 @@ export function keysParts(editor: Editor): OverlayPart[] {
       id: "animation",
       label: "Animation",
       node: (
-        <div className="flex w-40 flex-col">
-          {ANIMATIONS.map(({ id, name }) => (
-            <CheckRow
-              isChosen={keys.animation === id}
-              key={id}
-              onPress={() => {
-                setKeys({ animation: id });
-              }}
-            >
-              {name}
-            </CheckRow>
-          ))}
+        <div className="w-40">
+          <CheckList
+            aria-label="Animation"
+            items={ANIMATIONS.map(({ id, name }) => ({ id, label: name }))}
+            onToggle={(id) => {
+              setKeys({ animation: id as KeyboardEffectAnimation });
+            }}
+            selected={[keys.animation]}
+          />
         </div>
       ),
     },
@@ -263,18 +254,15 @@ export function keysParts(editor: Editor): OverlayPart[] {
       id: "size",
       label: "Size",
       node: (
-        <div className="flex w-48 flex-col">
-          {KEY_SIZES.map(({ id, name }) => (
-            <CheckRow
-              isChosen={keys.size === id}
-              key={id}
-              onPress={() => {
-                setKeys({ size: id });
-              }}
-            >
-              {name}
-            </CheckRow>
-          ))}
+        <div className="w-48">
+          <CheckList
+            aria-label="Size"
+            items={KEY_SIZES.map(({ id, name }) => ({ id, label: name }))}
+            onToggle={(id) => {
+              setKeys({ size: id as OverlaySize });
+            }}
+            selected={[keys.size]}
+          />
         </div>
       ),
     },
@@ -283,8 +271,9 @@ export function keysParts(editor: Editor): OverlayPart[] {
       id: "position",
       label: "Position",
       node: (
-        <PlacementChoice
-          label="Shortcut position"
+        <PositionGrid
+          aria-label="Shortcut position"
+          items={placementOptions()}
           onChange={(position) => {
             setKeys({ position });
           }}

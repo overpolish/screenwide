@@ -5,7 +5,8 @@ import { Clipboard, Clock, ImageDown, ScrollText } from "lucide-react";
 
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
-import { IslandListRow } from "../../../primitives/island/island-controls";
+import { ListBox } from "../../../primitives/listbox/listbox";
+import { ListBoxItem } from "../../../primitives/listbox-item/listbox-item";
 import { Switch } from "../../../primitives/switch/switch";
 
 import type { ScreenshotAction } from "../types";
@@ -53,21 +54,24 @@ export function ScreenshotPanel({
       : []),
   ];
   return (
-    <div className="flex flex-col">
-      {items.map(({ action, icon: Icon, label }) => (
-        <IslandListRow
-          key={action}
-          onPress={() => {
-            onScreenshot(action);
-          }}
-        >
-          <span className="flex text-fg-secondary">
-            <Icon aria-hidden className="size-icon" />
+    <ListBox
+      aria-label={t("recording-controls-screenshot-options")}
+      items={items}
+      onAction={(action) => {
+        onScreenshot(action as (typeof items)[number]["action"]);
+      }}
+    >
+      {({ action, icon: Icon, label }) => (
+        <ListBoxItem id={action} showsSelection={false} textValue={label}>
+          <span className="flex items-center gap-inline">
+            <span className="flex text-fg-secondary">
+              <Icon aria-hidden className="size-icon" />
+            </span>
+            {label}
           </span>
-          {label}
-        </IslandListRow>
-      ))}
-    </div>
+        </ListBoxItem>
+      )}
+    </ListBox>
   );
 }
 

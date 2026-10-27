@@ -4,6 +4,7 @@
 import { useId, type ReactNode } from "react";
 
 import { cn } from "../../lib/styling";
+import { useSkin } from "../../primitives/skin/skin";
 import { Text } from "../../primitives/text/text";
 
 export type ControlRowControlProps = {
@@ -30,7 +31,9 @@ export type ControlRowProps = {
 // control's height, so a row reads the same whether or not it has a note.
 // The note is set back, in the caption type and a quieter colour, so it reads
 // as a note rather than a second name. The parent owns the space between
-// rows; the row itself is not pressable.
+// rows; the row itself is not pressable. On the island, where a section holds
+// a few short rows under the row that names them, the name is a caption set
+// back, and the row is an island control's height.
 export function ControlRow({
   children,
   className,
@@ -40,6 +43,7 @@ export function ControlRow({
   title,
   titleAccessory,
 }: ControlRowProps) {
+  const isIsland = useSkin() === "island";
   const id = useId();
   const titleId = `${id}-title`;
   const descriptionId = description ? `${id}-description` : undefined;
@@ -47,7 +51,8 @@ export function ControlRow({
   return (
     <div
       className={cn(
-        "flex min-h-control-height items-center gap-separate",
+        "flex items-center gap-separate",
+        isIsland ? "min-h-island-control" : "min-h-control-height",
         className,
       )}
       // Lets a search result find the row it names.
@@ -58,7 +63,11 @@ export function ControlRow({
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-inline">
-          <Text className="break-words" id={titleId}>
+          <Text
+            className={cn("break-words", isIsland && "ps-1 text-fg-secondary")}
+            id={titleId}
+            variant={isIsland ? "caption" : "body"}
+          >
             {title}
           </Text>
           {titleAccessory}

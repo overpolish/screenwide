@@ -6,6 +6,7 @@ import { ComponentProps } from "react";
 import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
 
+import { onIsland } from "../../storybook/on-island";
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 
 import { IconToggleButton } from "./icon-button";
@@ -112,3 +113,5 @@ export const Disabled: Story = {
   parameters: { controls: { disable: true } },
   render: ({ onChange }) => <VariantGrid isDisabled onChange={onChange} />,
 };
+
+export const Island: Story = { ...Variants, decorators: [onIsland()] };

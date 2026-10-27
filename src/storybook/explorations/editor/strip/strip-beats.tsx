@@ -64,10 +64,9 @@ export function BeatBlock({
       : beat.kind === "cue"
         ? CUE_ICONS[beat.cue]
         : null;
-  // A flagged moment and a line said are drawn over the picture at that
-  // moment, so what each is about can be seen along the strip.
+  // A flagged moment is drawn as the picture at that moment, so the moments
+  // worth keeping read apart from what was merely done.
   const isMoment = beat.kind === "cue" && beat.cue === "moment";
-  const isPictured = isMoment || beat.kind === "speech";
   return (
     // The button reaches past a narrow block, so a beat a few pixels wide is
     // still easy to press; the block is drawn at its own width inside it.
@@ -88,7 +87,7 @@ export function BeatBlock({
           // Padding would hold a narrow block wider than its time, over
           // its neighbours; too narrow for its icon, it is drawn bare.
           px >= ICON_PX && "px-1",
-          isPictured
+          isMoment
             ? cn(
                 "bg-black text-white",
                 // Chosen, it is ringed clear of its picture, which may be as
@@ -105,25 +104,23 @@ export function BeatBlock({
         )}
         style={{ insetInlineEnd: pad, insetInlineStart: pad }}
       >
-        {isPictured ? (
-          <Still
-            className="absolute start-1/2 top-1/2 -translate-1/2"
-            recording={recording}
-            seconds={beatAt(beat)}
-            width={Math.max(px, MOMENT_STILL_PX)}
-          />
-        ) : null}
         {isMoment ? (
-          px >= ICON_PX ? (
-            <span className="relative mb-auto flex size-4 items-center justify-center rounded-[4px] bg-black/60">
-              <Flag aria-hidden className="size-3" />
-            </span>
-          ) : null
+          <>
+            <Still
+              className="absolute start-1/2 top-1/2 -translate-1/2"
+              recording={recording}
+              seconds={beatAt(beat)}
+              width={Math.max(px, MOMENT_STILL_PX)}
+            />
+            {px >= ICON_PX ? (
+              <span className="relative mb-auto flex size-4 items-center justify-center rounded-[4px] bg-black/60">
+                <Flag aria-hidden className="size-3" />
+              </span>
+            ) : null}
+          </>
         ) : beat.kind === "speech" ? (
           <>
-            {/* Dimmed under the words and their wave, which read on it. */}
-            <span className="absolute inset-0 bg-black/60" />
-            <span className="absolute inset-x-1 bottom-1 flex h-3.5 opacity-60">
+            <span className="absolute inset-x-1 bottom-1 flex h-3.5 opacity-40">
               <Waveform
                 bars={Math.max(8, Math.round(px / 3))}
                 seed={beat.start}

@@ -32,6 +32,7 @@ const markClassName =
 // up and down move it a row, where a group of radios would otherwise step
 // through them in order.
 export function PositionGrid<T extends string>({
+  "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   isDisabled,
   items,
@@ -42,6 +43,8 @@ export function PositionGrid<T extends string>({
   items: readonly PositionGridItem<T>[];
   onChange: (id: T) => void;
   value: T;
+  /** Its name, where no visible label names it. */
+  "aria-label"?: string;
   "aria-labelledby"?: string;
   isDisabled?: boolean;
 }) {
@@ -73,6 +76,7 @@ export function PositionGrid<T extends string>({
   return (
     <div dir="ltr" onKeyDownCapture={moveRow} ref={frameRef}>
       <RadioGroup
+        aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         className="grid w-fit grid-cols-3 gap-0.5 rounded-control bg-fill p-0.5 transition-opacity data-[disabled]:opacity-40"
         isDisabled={isDisabled}

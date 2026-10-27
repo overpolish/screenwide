@@ -4,7 +4,7 @@
 import { type LucideIcon } from "lucide-react";
 import { type ReactNode } from "react";
 
-import { IslandButton } from "../../../../primitives/island/island-controls";
+import { IconButton } from "../../../../primitives/button/icon-button";
 
 import { type IslandContent } from "./island-parts";
 import { VisibilityButton } from "./visibility-button";
@@ -51,17 +51,16 @@ export function overlayParts({
         {parts.map((part) => {
           const isOpen = open === part;
           return (
-            <IslandButton
+            <IconButton
               aria-expanded={isOpen}
               aria-label={part.label}
-              isOpen={isOpen}
               key={part.id}
               onPress={() => {
                 expanded.toggle(partKey(part));
               }}
             >
               <part.icon aria-hidden className="size-icon" />
-            </IslandButton>
+            </IconButton>
           );
         })}
         <VisibilityButton

@@ -8,7 +8,10 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
-import { IslandButton } from "../../../primitives/island/island-controls";
+import {
+  IconButton,
+  IconToggleButton,
+} from "../../../primitives/button/icon-button";
 import { focusIn } from "../../../primitives/island/island-motion";
 import { swatchEdge } from "../../../primitives/swatch/swatch-styles";
 import { annotationToolName } from "../../annotations/annotation-text";
@@ -36,18 +39,17 @@ export function AnnotateToolButtons({
   settings: AnnotateSettings;
 }) {
   return ISLAND_TOOLS.map(({ icon: Icon, id, name }) => (
-    <IslandButton
+    <IconToggleButton
       aria-label={name?.() ?? annotationToolName(id)}
-      aria-pressed={id === settings.defaultShape}
-      isOpen={id === settings.defaultShape}
+      isSelected={id === settings.defaultShape}
       key={id}
-      onPress={() => {
+      onChange={() => {
         if (id !== settings.defaultShape) onChange({ defaultShape: id });
         onPick();
       }}
     >
       <Icon aria-hidden className="size-icon" />
-    </IslandButton>
+    </IconToggleButton>
   ));
 }
 
@@ -78,29 +80,41 @@ export function AnnotateActions({
             className="flex"
             initial={focusIn.exit}
           >
-            <IslandButton
+            <IconButton
               aria-expanded={showsColors}
               aria-label={t("annotation-color")}
-              isOpen={showsColors}
               onPress={onToggleColors}
+              variant="ghost"
             >
               <span
                 className={cn("size-icon rounded-full", swatchEdge)}
                 style={{ backgroundColor: settings.defaultColor }}
               />
-            </IslandButton>
+            </IconButton>
           </motion.span>
         ) : null}
       </AnimatePresence>
-      <IslandButton aria-label={t("annotate-undo-label")} onPress={onUndo}>
+      <IconButton
+        aria-label={t("annotate-undo-label")}
+        onPress={onUndo}
+        variant="ghost"
+      >
         <Undo2 aria-hidden className="size-icon rtl:-scale-x-100" />
-      </IslandButton>
-      <IslandButton aria-label={t("annotate-clear-label")} onPress={onClear}>
+      </IconButton>
+      <IconButton
+        aria-label={t("annotate-clear-label")}
+        onPress={onClear}
+        variant="ghost"
+      >
         <Eraser aria-hidden className="size-icon" />
-      </IslandButton>
-      <IslandButton aria-label={t("annotate-close-label")} onPress={onDone}>
+      </IconButton>
+      <IconButton
+        aria-label={t("annotate-close-label")}
+        onPress={onDone}
+        variant="ghost"
+      >
         <X aria-hidden className="size-icon" />
-      </IslandButton>
+      </IconButton>
     </>
   );
 }

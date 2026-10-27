@@ -1,9 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { type ReactNode } from "react";
+
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
+import { useSkin } from "../skin/skin";
 
 import { wrapAngle } from "./angle-geometry";
+import { IslandAngleDial } from "./island-angle-dial";
 import { type DialSteps, EIGHTH_TURN, useAngleDial } from "./use-angle-dial";
 
 /** A degree at a time, as fine as the dial can be read; held Shift snaps a
@@ -46,19 +50,41 @@ export type AngleDialProps = {
   onChange: (degrees: number) => void;
   /** Angle in degrees. */
   value: number;
+  /** On the island, what turns in place of the notch, drawn pointing at
+   * twelve o'clock. */
+  children?: ReactNode;
   className?: string;
   color?: keyof typeof notchColors;
   isDisabled?: boolean;
 };
 
-export function AngleDial({
+export function AngleDial({ children, ...props }: AngleDialProps) {
+  return useSkin() === "island" ? (
+    <IslandAngleDial
+      aria-label={props["aria-label"]}
+      isDisabled={props.isDisabled ?? false}
+      onChange={props.onChange}
+      value={props.value}
+    >
+      {children ?? (
+        <span className="relative size-4">
+          <span className="absolute top-0 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-fg" />
+        </span>
+      )}
+    </IslandAngleDial>
+  ) : (
+    <WindowAngleDial {...props} />
+  );
+}
+
+function WindowAngleDial({
   "aria-label": label,
   className,
   color = "neutral",
   isDisabled = false,
   onChange,
   value,
-}: AngleDialProps) {
+}: Omit<AngleDialProps, "children">) {
   const { dialProps, notchRef } = useAngleDial({
     isDisabled,
     label,

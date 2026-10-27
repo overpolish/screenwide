@@ -1,41 +1,45 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowUp } from "lucide-react";
 import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
 
-import { IslandDial } from "./island-dial";
+import { onIsland } from "../../storybook/on-island";
+
+import { TileChoice } from "./tile-choice";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
+const items = ["Box", "Clean", "Editorial", "Flip", "Glow", "Highlight"].map(
+  (name) => ({ id: name.toLowerCase(), label: name }),
+);
+
 const meta = {
   argTypes: {
-    value: { control: { max: 359, min: 0, step: 1, type: "range" } },
+    value: {
+      control: "inline-radio",
+      options: items.map(({ id }) => id),
+    },
   },
   args: {
-    "aria-label": "Aim",
-    children: <ArrowUp className="size-icon" />,
+    "aria-label": "Caption template",
+    items,
     onChange: fn(),
-    value: 45,
+    value: "box",
   },
-  component: IslandDial,
+  component: TileChoice,
   decorators: [
-    // On the island's black, which is always drawn dark.
     (Story) => (
-      <div className="dark rounded-full bg-island p-1 text-fg">
+      <div className="w-72">
         <Story />
       </div>
     ),
   ],
-  parameters: {
-    controls: { include: ["value"] },
-    layout: "centered",
-  },
+  parameters: { controls: { include: ["value"] }, layout: "centered" },
   render: function Render(args) {
     const [, updateArgs] = useArgs();
     return (
-      <IslandDial
+      <TileChoice
         {...args}
         onChange={(value) => {
           args.onChange(value);
@@ -44,10 +48,12 @@ const meta = {
       />
     );
   },
-  title: "Primitives/Island Dial",
-} satisfies Meta<typeof IslandDial>;
+  title: "Primitives/Tile Choice",
+} satisfies Meta<typeof TileChoice<string>>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const Island: Story = { decorators: [onIsland()] };

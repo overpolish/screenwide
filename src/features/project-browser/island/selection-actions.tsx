@@ -4,7 +4,7 @@
 import { useRef } from "react";
 
 import { platformArg, t } from "../../../i18n/i18n";
-import { IslandTextButton } from "../../../primitives/island/island-controls";
+import { Button } from "../../../primitives/button/button";
 import {
   boundsAnchor,
   type PopupMenuAnchor,
@@ -29,28 +29,28 @@ export function SelectionActions({
   if ("onRestore" in actions)
     return (
       <>
-        <IslandTextButton
+        <Button
           color="primary"
           onPress={() => {
             actions.onRestore(files);
           }}
         >
           {t("project-browser-restore")}
-        </IslandTextButton>
-        <IslandTextButton
+        </Button>
+        <Button
           onPress={() => {
             actions.onTrash(files);
           }}
         >
           {t("project-browser-move-to-trash", { platform: platformArg() })}
-        </IslandTextButton>
+        </Button>
       </>
     );
   const { onDuplicate, onMove } = actions;
   return (
     <>
       {onMove ? (
-        <IslandTextButton
+        <Button
           onPress={() => {
             const button = moveRef.current;
             if (button)
@@ -59,24 +59,24 @@ export function SelectionActions({
           ref={moveRef}
         >
           {t("project-browser-move-to")}
-        </IslandTextButton>
+        </Button>
       ) : null}
       {onDuplicate ? (
-        <IslandTextButton
+        <Button
           onPress={() => {
             onDuplicate(files);
           }}
         >
           {t("project-browser-duplicate")}
-        </IslandTextButton>
+        </Button>
       ) : null}
-      <IslandTextButton
+      <Button
         onPress={() => {
           actions.onDelete(files);
         }}
       >
         {t("project-browser-delete")}
-      </IslandTextButton>
+      </Button>
     </>
   );
 }

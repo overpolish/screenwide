@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../i18n/i18n";
-import { IslandChoice } from "../../../primitives/island/island-choice";
+import { AngleDial } from "../../../primitives/angle-dial/angle-dial";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
-import { IslandDial } from "../../../primitives/island/island-dial";
+import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import {
   dialDegrees,
   radiansFromDial,
@@ -24,19 +24,19 @@ export function CounterPen({ onChange, ref, settings }: SectionProps) {
   return (
     <IslandCrossfade ref={ref}>
       <div className="flex gap-separate">
-        <IslandChoice
+        <PillGroup
+          aria-label={annotationSizeLabel("size")}
           items={annotationSizes("counter").map((points) => ({
-            content: <SizeDot diameter={points / 4} />,
+            ariaLabel: t("annotate-island-points", { points }),
+            icon: <SizeDot diameter={points / 4} />,
             id: String(points),
-            label: t("annotate-island-points", { points }),
           }))}
-          label={annotationSizeLabel("size")}
-          onChange={(id) => {
+          onSelectionChange={(id) => {
             onChange({ defaultCounterSize: Number(id) });
           }}
-          value={String(settings.defaultCounterSize)}
+          selected={String(settings.defaultCounterSize)}
         />
-        <IslandDial
+        <AngleDial
           aria-label={t("annotation-angle")}
           onChange={(degrees) => {
             onChange({ defaultCounterAngle: radiansFromDial(degrees) });
@@ -44,7 +44,7 @@ export function CounterPen({ onChange, ref, settings }: SectionProps) {
           value={dialDegrees(settings.defaultCounterAngle)}
         >
           <CounterPinIcon className="size-icon" />
-        </IslandDial>
+        </AngleDial>
       </div>
     </IslandCrossfade>
   );

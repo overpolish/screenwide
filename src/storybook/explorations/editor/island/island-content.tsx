@@ -4,10 +4,10 @@
 import { Hourglass, Pin, Scissors, Trash2 } from "lucide-react";
 import { type ReactNode } from "react";
 
-import {
-  IslandButton,
-  IslandTextButton,
-} from "../../../../primitives/island/island-controls";
+import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
+import { Button } from "../../../../primitives/button/button";
+import { IconButton } from "../../../../primitives/button/icon-button";
+import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { type Pen } from "../../ideas/looks";
 import { presetLabel } from "../editor-data";
 import { type AnnotationStyle, PEN_NAMES } from "../model/annotation-style";
@@ -16,8 +16,7 @@ import { DEAD_AIR_S } from "../model/timeline-model";
 import { type Editor } from "../model/use-editor";
 import { beatTitle } from "../recording";
 
-import { IslandConfirmButton } from "./island-confirm-button";
-import { type IslandContent, RowTitle } from "./island-parts";
+import { type IslandContent } from "./island-parts";
 import { MarkActions, MarkSection } from "./mark-sections";
 import { modeContent } from "./mode-content";
 import { MomentPlay, MomentSection } from "./moment-section";
@@ -119,7 +118,7 @@ function selectionContent(
       from: { kind: "strip" },
       key,
       section,
-      title: <RowTitle title={markName(mark)} />,
+      title: <IslandRowTitle title={markName(mark)} />,
     };
   }
   if (selection?.kind === "beat") {
@@ -141,7 +140,7 @@ function selectionContent(
             node: <MomentSection beat={beat} editor={editor} />,
           }
         : undefined,
-      title: <RowTitle title={beatTitle(beat)} />,
+      title: <IslandRowTitle title={beatTitle(beat)} />,
     };
   }
   if (selection?.kind === "scene") {
@@ -149,13 +148,13 @@ function selectionContent(
     if (!clip) return null;
     return {
       actions: (
-        <IslandConfirmButton
+        <ConfirmActionButton
           confirmLabel="Confirm Delete"
+          icon={<Trash2 aria-hidden />}
           label="Delete the scene"
           onConfirm={editor.remove}
-        >
-          <Trash2 aria-hidden className="size-icon" />
-        </IslandConfirmButton>
+          variant="ghost"
+        />
       ),
       from: { kind: "strip" },
       key: clip.id,
@@ -163,7 +162,7 @@ function selectionContent(
         key: clip.id,
         node: <SceneClipSection clip={clip} editor={editor} />,
       },
-      title: <RowTitle title={presetLabel(clip.preset)} />,
+      title: <IslandRowTitle title={presetLabel(clip.preset)} />,
     };
   }
   if (selection?.kind === "pause") {
@@ -174,13 +173,13 @@ function selectionContent(
         ?.kind === "keep";
     return {
       actions: (
-        <IslandConfirmButton
+        <ConfirmActionButton
           confirmLabel="Confirm Cut"
+          icon={<Scissors aria-hidden />}
           label="Cut the pause"
           onConfirm={editor.remove}
-        >
-          <Scissors aria-hidden className="size-icon" />
-        </IslandConfirmButton>
+          variant="ghost"
+        />
       ),
       from: { kind: "strip" },
       key: pause.id,
@@ -189,7 +188,7 @@ function selectionContent(
         node: <PauseSection editor={editor} id={pause.id} />,
       },
       title: (
-        <RowTitle
+        <IslandRowTitle
           glyph={
             isKept ? (
               <Pin aria-hidden className="size-icon" />
@@ -207,13 +206,13 @@ function selectionContent(
     // takes back, rather than a confirmation.
     return {
       actions: (
-        <IslandButton aria-label="Cut it and its time" onPress={editor.remove}>
+        <IconButton aria-label="Cut it and its time" onPress={editor.remove}>
           <Scissors aria-hidden className="size-icon" />
-        </IslandButton>
+        </IconButton>
       ),
       from: { kind: "strip" },
       key: `range-${String(selection.start)}`,
-      title: <RowTitle title="Stretch" />,
+      title: <IslandRowTitle title="Stretch" />,
     };
   }
   return null;
@@ -250,20 +249,20 @@ export function contentOf(
       actions: (
         <>
           {colorButton}
-          <IslandTextButton
+          <Button
             color="primary"
             onPress={() => {
               editor.pickTool("select");
             }}
           >
             Done
-          </IslandTextButton>
+          </Button>
         </>
       ),
       from: { kind: "tool", tool },
       key,
       section,
-      title: <RowTitle note={HINTS[tool]} title={PEN_NAMES[tool].one} />,
+      title: <IslandRowTitle note={HINTS[tool]} title={PEN_NAMES[tool].one} />,
     };
   }
   return selectionContent(editor, expanded) ?? modeContent(editor, expanded);

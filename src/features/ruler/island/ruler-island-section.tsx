@@ -1,16 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check } from "lucide-react";
 import { type Ref } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { splitAtPlaceables } from "../../../i18n/split-at-placeable";
 import { hotkeyKeys } from "../../../lib/hotkey";
-import { cn } from "../../../lib/styling";
-import { IslandListRow } from "../../../primitives/island/island-controls";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 import { Keyboard, Shortcut } from "../../../primitives/keyboard/keyboard";
+import { ListBox } from "../../../primitives/listbox/listbox";
+import { ListBoxItem } from "../../../primitives/listbox-item/listbox-item";
 import { Text } from "../../../primitives/text/text";
 
 import {
@@ -39,23 +38,22 @@ export function RulerSectionBody({
   return (
     <IslandCrossfade ref={ref}>
       {section === "edges" ? (
-        <div className="flex flex-col">
+        <ListBox
+          aria-label={t("ruler-island-edges")}
+          disallowEmptySelection
+          onSelectionChange={(keys) => {
+            for (const key of keys)
+              if (key !== tolerance) onTolerance(key as RulerTolerance);
+          }}
+          selectedKeys={[tolerance]}
+          selectionMode="single"
+        >
           {RULER_TOLERANCES.map(({ id, name }) => (
-            <IslandListRow
-              isChosen={id === tolerance}
-              key={id}
-              onPress={() => {
-                if (id !== tolerance) onTolerance(id);
-              }}
-            >
-              <span className="grow">{name()}</span>
-              <Check
-                aria-hidden
-                className={cn("size-icon", id !== tolerance && "invisible")}
-              />
-            </IslandListRow>
+            <ListBoxItem id={id} key={id} textValue={name()}>
+              {name()}
+            </ListBoxItem>
           ))}
-        </div>
+        </ListBox>
       ) : (
         // The note sits the small inset in from the section's edges, as the
         // circles' glyphs do from theirs.

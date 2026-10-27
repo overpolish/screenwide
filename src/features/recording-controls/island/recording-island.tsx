@@ -6,8 +6,9 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { motionDurations, motionEasings } from "../../../lib/motion";
+import { Alert } from "../../../primitives/alert/alert";
+import { Button } from "../../../primitives/button/button";
 import { Island } from "../../../primitives/island/island";
-import { IslandWarning } from "../../../primitives/island/island-controls";
 import { IslandRow } from "../../../primitives/island/island-row";
 
 import { Countdown, Finishing, Starting } from "./island-live";
@@ -108,11 +109,29 @@ export function RecordingIsland(props: RecordingIslandProps) {
             wraps instead of widening the island. */}
         <AnimatePresence initial={false} mode="popLayout">
           {warning && panel === "source" ? (
-            <IslandWarning
+            <motion.div
+              animate={{ opacity: 1 }}
               className="w-0 min-w-full"
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
               key="warning"
-              {...warning}
-            />
+              role="status"
+              transition={{
+                duration: motionDurations.state,
+                ease: motionEasings.out,
+              }}
+            >
+              <Alert
+                action={
+                  warning.action ? (
+                    <Button onPress={warning.onAction}>{warning.action}</Button>
+                  ) : undefined
+                }
+                color="error"
+              >
+                {warning.message}
+              </Alert>
+            </motion.div>
           ) : null}
         </AnimatePresence>
         <motion.div

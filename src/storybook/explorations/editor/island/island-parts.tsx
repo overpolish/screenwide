@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check } from "lucide-react";
 import { type ReactNode } from "react";
 
-import { IslandListRow } from "../../../../primitives/island/island-controls";
-import { Text } from "../../../../primitives/text/text";
+import { ControlRow } from "../../../../composites/control-row/control-row";
+import { ListBox } from "../../../../primitives/listbox/listbox";
+import { ListBoxItem } from "../../../../primitives/listbox-item/listbox-item";
 
-// What the editor's island is made of besides the island's own controls:
-// the row's title, and the labelled lines a section is built from.
+// What the editor's island is made of besides the components it skins: what
+// it holds, a labelled line of a section, and a list of ticked rows.
 
 export type IslandContent = {
   /** What it came from, which says where the island opens: beside the
@@ -16,7 +16,8 @@ export type IslandContent = {
    * chosen, an annotation over its bar wherever it was chosen. */
   from: { kind: "strip" } | { kind: "tool"; tool: string };
   key: string;
-  /** The row's start, usually a `RowTitle`, kept to the island's start. */
+  /** The row's start, usually an `IslandRowTitle`, kept to the island's
+   * start. */
   title: ReactNode;
   /** The row's end: what can be done to what is in hand. */
   actions?: ReactNode;
@@ -25,45 +26,7 @@ export type IslandContent = {
   section?: { key: string; node: ReactNode; anchor?: "end" | "start" };
 };
 
-/** What is in hand, said in the row: a glyph where it has one, its name,
- * and a line of when or how long under it. */
-export function RowTitle({
-  glyph,
-  note,
-  title,
-}: {
-  title: string;
-  glyph?: ReactNode;
-  note?: string;
-}) {
-  return (
-    <span className="flex min-w-0 items-center gap-1 pe-2">
-      {glyph ? (
-        <span className="flex size-island-control shrink-0 items-center justify-center text-fg-secondary">
-          {glyph}
-        </span>
-      ) : (
-        <span aria-hidden className="w-2" />
-      )}
-      <span className="flex min-w-0 flex-col">
-        <Text as="span" className="max-w-72 truncate" variant="label">
-          {title}
-        </Text>
-        {note ? (
-          <Text
-            as="span"
-            className="max-w-72 truncate text-fg-secondary"
-            variant="caption"
-          >
-            {note}
-          </Text>
-        ) : null}
-      </span>
-    </span>
-  );
-}
-
-/** A labelled line of a section: its name, then its circles. */
+/** A labelled line of a section: its name, then its controls. */
 export function SectionLine({
   children,
   label,
@@ -71,33 +34,42 @@ export function SectionLine({
   children: ReactNode;
   label: string;
 }) {
-  return (
-    <div className="flex items-center justify-between gap-separate">
-      <Text as="span" className="ps-1 text-fg-secondary" variant="caption">
-        {label}
-      </Text>
-      <div className="flex items-center gap-1">{children}</div>
-    </div>
-  );
+  return <ControlRow title={label}>{() => children}</ControlRow>;
 }
 
-/** A row of a list in a section, ticked when it is the one chosen or on. */
-export function CheckRow({
-  children,
-  isChosen,
-  onPress,
+/** Rows ticked while chosen or on. A press reads which row it was, from
+ * what the list would have changed, so one list serves a set of switches
+ * and a choice of one alike: the owner says what the press does. */
+export function CheckList({
+  "aria-label": label,
+  items,
+  onToggle,
+  selected,
 }: {
-  children: ReactNode;
-  isChosen: boolean;
-  onPress: () => void;
+  "aria-label": string;
+  items: { id: string; label: string }[];
+  onToggle: (id: string) => void;
+  selected: string[];
 }) {
   return (
-    <IslandListRow isChosen={isChosen} onPress={onPress}>
-      <span className="flex grow items-center gap-inline">{children}</span>
-      <Check
-        aria-hidden
-        className={isChosen ? "size-icon" : "size-icon opacity-0"}
-      />
-    </IslandListRow>
+    <ListBox
+      aria-label={label}
+      onSelectionChange={(keys) => {
+        if (keys === "all") return;
+        const pressed = items.find(
+          ({ id }) => keys.has(id) !== selected.includes(id),
+        );
+        if (pressed) onToggle(pressed.id);
+      }}
+      selectedKeys={selected}
+      selectionBehavior="toggle"
+      selectionMode="multiple"
+    >
+      {items.map((item) => (
+        <ListBoxItem id={item.id} key={item.id} textValue={item.label}>
+          {item.label}
+        </ListBoxItem>
+      ))}
+    </ListBox>
   );
 }

@@ -9,6 +9,7 @@ import {
 
 import { t } from "../../i18n/i18n";
 import { tv } from "../../lib/variants";
+import { useSkin } from "../skin/skin";
 import { Text } from "../text/text";
 
 // A list lives in a native panel window, which supplies the material, so it
@@ -16,9 +17,18 @@ import { Text } from "../text/text";
 // tight inset and lets its items touch, so the highlight of neighbouring
 // items runs on as one. An empty list says so in a row drawn as a disabled
 // item is, its words centred in the list, since there is no column of labels
-// for them to line up with.
+// for them to line up with. On the island it sits in a section, which is
+// already inset, so it takes the section's width and adds no inset of its
+// own.
 const listBoxVariants = tv({
-  base: "flex w-(--trigger-width) scroll-py-5 flex-col overflow-auto p-inset-sm text-fg outline-none",
+  base: "flex scroll-py-5 flex-col overflow-auto text-fg outline-none",
+  defaultVariants: { skin: "window" },
+  variants: {
+    skin: {
+      island: "w-full",
+      window: "w-(--trigger-width) p-inset-sm",
+    },
+  },
 });
 
 type ListBoxProps<T extends object> = AriaListBoxProps<T> & {
@@ -44,7 +54,7 @@ export const ListBox = <T extends object>({
         </Text>
       )}
       {...props}
-      className={listBoxVariants({ className })}
+      className={listBoxVariants({ className, skin: useSkin() })}
     >
       {children}
     </AriaListBox>

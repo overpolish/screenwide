@@ -3,6 +3,7 @@
 
 import { ComponentProps } from "react";
 
+import { onIsland } from "../../storybook/on-island";
 import { StoryGrid, StoryGridRow } from "../../storybook/story-grid";
 import { Button } from "../button/button";
 
@@ -76,4 +77,14 @@ export const Colors: Story = {
       ))}
     </StoryGrid>
   ),
+};
+
+// A line of the island's black, the island being its box.
+export const Island: Story = {
+  args: {
+    action: <Button>Allow</Button>,
+    children: "Screenwide needs permission to draw over other apps.",
+    color: "error",
+  },
+  decorators: [onIsland("24rem")],
 };

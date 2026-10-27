@@ -13,7 +13,7 @@ import { type ViewControls } from "./use-view";
 
 /** Room at each end of the track, in px, so a knob at the very start or
  * end of the recording is drawn whole inside the scroll area. */
-export const TRACK_INSET_PX = 8;
+const TRACK_INSET_PX = 8;
 /** How much a pinch, or a wheel step with ⌘ or Ctrl, zooms per pixel. */
 const ZOOM_PER_PX = 0.01;
 

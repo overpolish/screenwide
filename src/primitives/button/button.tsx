@@ -6,6 +6,8 @@ import { Ref } from "react";
 import { AriaButtonProps, HoverEvents } from "react-aria";
 import { Button as AriaButton } from "react-aria-components";
 
+import { useSkin } from "../skin/skin";
+
 import { buttonVariants } from "./button-variants";
 
 // The primary action is always filled, so a ghost button has no colour.
@@ -31,6 +33,7 @@ export const Button = ({
   variant,
   ...props
 }: ButtonProps) => {
+  const skin = useSkin();
   return (
     <MotionAriaButton
       {...props}
@@ -38,6 +41,7 @@ export const Button = ({
         className,
         color,
         isDisabled: props.isDisabled,
+        skin,
         variant,
       })}
     >

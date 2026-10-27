@@ -9,7 +9,7 @@ import { type Pause } from "./timeline-model";
 
 /** The slowest give plays, and the fastest the app's player plays
  * (`validate_playback_rate`, 0.25× to 4×). */
-export const SLOWEST = 0.5;
+const SLOWEST = 0.5;
 const FASTEST = 4;
 
 /** How fast give plays at most, by what the picture is: a still screen or

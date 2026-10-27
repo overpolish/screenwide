@@ -1,13 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, TrianglesCenterlineDashedVertical } from "lucide-react";
+import { TrianglesCenterlineDashedVertical } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import { useCollator } from "react-aria";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
-import { IslandListRow } from "../../../primitives/island/island-controls";
+import { ListBox } from "../../../primitives/listbox/listbox";
+import { ListBoxItem } from "../../../primitives/listbox-item/listbox-item";
 import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
 import { Switch } from "../../../primitives/switch/switch";
 import { Text } from "../../../primitives/text/text";
@@ -24,7 +25,7 @@ import type { IslandInput, IslandInputKind } from "./island-types";
  * `scrollIntoView` would also scroll the island's clipping boxes, which can
  * be scrolled though they show no scrollbar. */
 function revealChosen(viewport: HTMLElement) {
-  const chosen = viewport.querySelector<HTMLElement>('[aria-pressed="true"]');
+  const chosen = viewport.querySelector<HTMLElement>('[aria-selected="true"]');
   if (!chosen) return;
   const offset =
     chosen.getBoundingClientRect().top -
@@ -179,7 +180,6 @@ export function DevicePanel({
       {/* About six devices show; more scroll, so a long list never pushes
           the island down the screen. */}
       <ScrollArea
-        className="flex flex-col"
         constrainHeight
         onInitialized={revealChosen}
         rootClassName={cn(
@@ -187,45 +187,55 @@ export function DevicePanel({
           !input.isOn && "opacity-50",
         )}
       >
-        {devices.map((device) => {
-          const isChosen = input.selectedIds.includes(device.id);
-          return (
-            <IslandListRow
-              isChosen={isChosen}
+        {/* Chosen by the island's own rule rather than the list's: the
+            camera and microphone take one, system audio the mix or any
+            number of apps. So a press reads which device it was, from what
+            the list would have changed, and the rule picks the next set. */}
+        <ListBox
+          aria-label={inputName(kind)}
+          onSelectionChange={(keys) => {
+            if (keys === "all") return;
+            const pressed = devices.find(
+              ({ id }) => keys.has(id) !== input.selectedIds.includes(id),
+            );
+            if (pressed) onDeviceChange(nextChoice(kind, input, pressed.id));
+          }}
+          selectedKeys={input.selectedIds}
+          selectionBehavior="toggle"
+          selectionMode="multiple"
+        >
+          {devices.map((device) => (
+            <ListBoxItem
+              id={device.id}
               key={device.id}
-              onPress={() => {
-                onDeviceChange(nextChoice(kind, input, device.id));
-              }}
+              textValue={device.label}
             >
-              <span className="flex w-icon shrink-0 justify-center">
-                {isChosen ? (
-                  <Check aria-hidden className="size-icon-sm" />
+              <span className="flex min-w-0 items-center gap-inline">
+                {/* Apps show their icons; the whole mix, which has none,
+                    shows the input's own glyph in their place. */}
+                {hasIcons ? (
+                  device.icon ? (
+                    <img
+                      alt=""
+                      className="size-icon shrink-0"
+                      draggable={false}
+                      src={device.icon}
+                    />
+                  ) : (
+                    <span className="flex shrink-0 text-fg-secondary">
+                      <Glyph aria-hidden className="size-icon" />
+                    </span>
+                  )
                 ) : null}
+                {/* The scrollbar is drawn over the list, so the name keeps
+                    clear of it; the row's highlight still runs to the edge. */}
+                <span className="truncate pe-inset" dir="auto">
+                  {device.label}
+                </span>
               </span>
-              {/* Apps show their icons; the whole mix, which has none,
-                  shows the input's own glyph in their place. */}
-              {hasIcons ? (
-                device.icon ? (
-                  <img
-                    alt=""
-                    className="size-icon shrink-0"
-                    draggable={false}
-                    src={device.icon}
-                  />
-                ) : (
-                  <span className="flex shrink-0 text-fg-secondary">
-                    <Glyph aria-hidden className="size-icon" />
-                  </span>
-                )
-              ) : null}
-              {/* The scrollbar is drawn over the list, so the name keeps
-                  clear of it; the row's highlight still runs to the edge. */}
-              <span className="truncate pe-inset" dir="auto">
-                {device.label}
-              </span>
-            </IslandListRow>
-          );
-        })}
+            </ListBoxItem>
+          ))}
+        </ListBox>
       </ScrollArea>
     </div>
   );

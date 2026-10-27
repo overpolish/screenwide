@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { IslandChoice } from "../../../../primitives/island/island-choice";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { type ScenePreset, SCENE_PRESETS } from "../editor-data";
 
 // A scene's arrangement, as circles: each draws what it does to the frame,
@@ -93,15 +93,17 @@ export function PresetChoice({
   value: ScenePreset;
 }) {
   return (
-    <IslandChoice
+    <PillGroup
+      aria-label="Scene"
       items={SCENE_PRESETS.map(({ id, label }) => ({
-        content: <PresetDrawing id={id} />,
+        ariaLabel: label,
+        icon: <PresetDrawing id={id} />,
         id,
-        label,
       }))}
-      label="Scene"
-      onChange={onChange}
-      value={value}
+      onSelectionChange={(id) => {
+        onChange(id as ScenePreset);
+      }}
+      selected={value}
     />
   );
 }

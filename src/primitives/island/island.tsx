@@ -13,6 +13,8 @@ import {
 import { useLocale } from "react-aria";
 import { Toolbar } from "react-aria-components";
 
+import { SkinContext } from "../skin/skin";
+
 import { useControlAnchor } from "./island-anchor";
 import { IslandBelow } from "./island-below";
 import { IslandContext } from "./island-context";
@@ -204,86 +206,88 @@ export function Island({
         style={{ ...islandCssVariables, x: islandX }}
       >
         {/* The black is the notch's whatever the theme, so what it holds is
-            always drawn dark. */}
+            always drawn dark, and in the island's dress. */}
         <div aria-hidden={!isShown} className="dark relative text-fg">
-          <IslandDrawing
-            isShown={isShown}
-            rowPathRef={rowPathRef}
-            shapePathRef={shapePathRef}
-          />
-          <motion.div
-            animate={{
-              height: rowTarget.height,
-              opacity: isShown || notch ? 1 : 0,
-            }}
-            className="relative overflow-hidden"
-            initial={false}
-            onAnimationComplete={() => {
-              setIsComing(false);
-              if (!isShown) onHidden?.();
-            }}
-            style={{
-              height: values.row.height,
-              opacity: values.row.opacity,
-              width: shapeWidth,
-            }}
-            transition={{
-              ...glide,
-              opacity: fade(isShown, notch !== null),
-            }}
-          >
+          <SkinContext value="island">
+            <IslandDrawing
+              isShown={isShown}
+              rowPathRef={rowPathRef}
+              shapePathRef={shapePathRef}
+            />
             <motion.div
-              className="absolute inset-x-0 top-0 flex justify-center"
-              ref={rowLayerRef}
-              style={{ x: rowX }}
+              animate={{
+                height: rowTarget.height,
+                opacity: isShown || notch ? 1 : 0,
+              }}
+              className="relative overflow-hidden"
+              initial={false}
+              onAnimationComplete={() => {
+                setIsComing(false);
+                if (!isShown) onHidden?.();
+              }}
+              style={{
+                height: values.row.height,
+                opacity: values.row.opacity,
+                width: shapeWidth,
+              }}
+              transition={{
+                ...glide,
+                opacity: fade(isShown, notch !== null),
+              }}
             >
-              {/* Round the presence, not in it: a row on its way out still
-                  hears the island, and folds into the notch as it goes. */}
-              <IslandContext value={context}>
-                <AnimatePresence initial={false}>
-                  {isShown ? (
-                    <motion.div
-                      key="row"
-                      {...focusIn}
-                      className="flex w-max"
-                      initial={false}
-                      ref={setRowElement}
-                      style={{ padding: ISLAND.rowInset }}
-                    >
-                      <Toolbar aria-label={label} className="flex">
-                        {row}
-                      </Toolbar>
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
-              </IslandContext>
-            </motion.div>
-            {below ? (
-              <IslandBelow
-                islandX={islandX}
-                isShown={isStacked}
-                onElement={setBelowElement}
-                top={rowSize?.height ?? 0}
-                width={belowSize?.width}
+              <motion.div
+                className="absolute inset-x-0 top-0 flex justify-center"
+                ref={rowLayerRef}
+                style={{ x: rowX }}
               >
-                {below}
-              </IslandBelow>
-            ) : null}
-          </motion.div>
+                {/* Round the presence, not in it: a row on its way out still
+                  hears the island, and folds into the notch as it goes. */}
+                <IslandContext value={context}>
+                  <AnimatePresence initial={false}>
+                    {isShown ? (
+                      <motion.div
+                        key="row"
+                        {...focusIn}
+                        className="flex w-max"
+                        initial={false}
+                        ref={setRowElement}
+                        style={{ padding: ISLAND.rowInset }}
+                      >
+                        <Toolbar aria-label={label} className="flex">
+                          {row}
+                        </Toolbar>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </IslandContext>
+              </motion.div>
+              {below ? (
+                <IslandBelow
+                  islandX={islandX}
+                  isShown={isStacked}
+                  onElement={setBelowElement}
+                  top={rowSize?.height ?? 0}
+                  width={belowSize?.width}
+                >
+                  {below}
+                </IslandBelow>
+              ) : null}
+            </motion.div>
 
-          <IslandSection
-            isFromMiddle={isFromMiddle}
-            isOpening={isOpening}
-            isShown={isShown}
-            layout={layout}
-            movesSideways={notch !== null && !isStacked}
-            onElement={setSectionElement}
-            onOpened={finish}
-            sectionX={sectionX}
-            values={values.section}
-          >
-            {section}
-          </IslandSection>
+            <IslandSection
+              isFromMiddle={isFromMiddle}
+              isOpening={isOpening}
+              isShown={isShown}
+              layout={layout}
+              movesSideways={notch !== null && !isStacked}
+              onElement={setSectionElement}
+              onOpened={finish}
+              sectionX={sectionX}
+              values={values.section}
+            >
+              {section}
+            </IslandSection>
+          </SkinContext>
         </div>
       </motion.div>
     </div>

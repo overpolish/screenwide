@@ -14,9 +14,9 @@ import {
   ANNOTATION_WIDTHS,
 } from "../../../../features/annotations/widths";
 import { cn } from "../../../../lib/styling";
-import { IslandChoice } from "../../../../primitives/island/island-choice";
-import { IslandButton } from "../../../../primitives/island/island-controls";
-import { IslandDial } from "../../../../primitives/island/island-dial";
+import { AngleDial } from "../../../../primitives/angle-dial/angle-dial";
+import { IconButton } from "../../../../primitives/button/icon-button";
+import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { swatchEdge } from "../../../../primitives/swatch/swatch-styles";
 import { type Pen } from "../../ideas/looks";
@@ -42,17 +42,12 @@ export function ColorButton({
   onPress: () => void;
 }) {
   return (
-    <IslandButton
-      aria-expanded={isOpen}
-      aria-label="Colour"
-      isOpen={isOpen}
-      onPress={onPress}
-    >
+    <IconButton aria-expanded={isOpen} aria-label="Colour" onPress={onPress}>
       <span
         className={cn("size-icon rounded-full", swatchEdge)}
         style={{ backgroundColor: color }}
       />
-    </IslandButton>
+    </IconButton>
   );
 }
 
@@ -102,51 +97,51 @@ export function PenOptions({
     <div className="flex gap-separate">
       {pen === "arrow" ? (
         <>
-          <IslandChoice
+          <PillGroup
+            aria-label="Width"
             items={ANNOTATION_WIDTHS.map((points) => ({
-              content: <SizeDot diameter={points / 2 + 2} />,
+              ariaLabel: `${String(points)} pt`,
+              icon: <SizeDot diameter={points / 2 + 2} />,
               id: String(points),
-              label: `${String(points)} pt`,
             }))}
-            label="Width"
-            onChange={(id) => {
+            onSelectionChange={(id) => {
               onChange({ width: Number(id) });
             }}
-            value={String(style.width)}
+            selected={String(style.width)}
           />
-          <IslandChoice
+          <PillGroup
+            aria-label={headChoice.label()}
             items={headChoice.items().map((item) => ({
-              content: (
+              ariaLabel: item.label ?? item.ariaLabel,
+              icon: (
                 <ArrowHeadGlyph
                   className="size-icon-lg"
                   head={item.id as AnnotationHead}
                 />
               ),
               id: item.id,
-              label: item.label ?? item.ariaLabel,
             }))}
-            label={headChoice.label()}
-            onChange={(id) => {
+            onSelectionChange={(id) => {
               onChange({ head: headChoice.pick(id) });
             }}
-            value={headChoice.select(style.head)}
+            selected={headChoice.select(style.head)}
           />
         </>
       ) : pen === "counter" ? (
         <>
-          <IslandChoice
+          <PillGroup
+            aria-label="Size"
             items={ANNOTATION_COUNTER_SIZES.map((points) => ({
-              content: <SizeDot diameter={points / 4} />,
+              ariaLabel: `${String(points)} pt`,
+              icon: <SizeDot diameter={points / 4} />,
               id: String(points),
-              label: `${String(points)} pt`,
             }))}
-            label="Size"
-            onChange={(id) => {
+            onSelectionChange={(id) => {
               onChange({ counterSize: Number(id) });
             }}
-            value={String(style.counterSize)}
+            selected={String(style.counterSize)}
           />
-          <IslandDial
+          <AngleDial
             aria-label="Where its tail points"
             onChange={(counterAngle) => {
               onChange({ counterAngle });
@@ -154,7 +149,7 @@ export function PenOptions({
             value={style.counterAngle ?? aimed}
           >
             <CounterPinIcon className="size-icon" />
-          </IslandDial>
+          </AngleDial>
         </>
       ) : (
         <>
@@ -164,17 +159,17 @@ export function PenOptions({
             }}
             value={style.focusRadius}
           />
-          <IslandChoice
+          <PillGroup
+            aria-label="Outside"
             items={(["blur", "dim"] as const).map((look) => ({
-              content: <FocusLookGlyph look={look} />,
+              ariaLabel: look === "blur" ? "Blur" : "Dim",
+              icon: <FocusLookGlyph look={look} />,
               id: look,
-              label: look === "blur" ? "Blur" : "Dim",
             }))}
-            label="Outside"
-            onChange={(look) => {
+            onSelectionChange={(look) => {
               onChange({ focusDims: look === "dim" });
             }}
-            value={style.focusDims ? "dim" : "blur"}
+            selected={style.focusDims ? "dim" : "blur"}
           />
         </>
       )}

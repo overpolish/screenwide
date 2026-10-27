@@ -43,6 +43,12 @@ export const fieldVariants = tv({
   variants: {
     centered: { true: { input: "text-center" } },
     material: {
+      // On the island's black: the fill a pill of the island's size, as
+      // its other controls are round.
+      island: {
+        field: "h-island-control rounded-full bg-fill focus-within:ring-3",
+        inputWrapper: "px-inset-sm",
+      },
       quiet: {
         field:
           "data-[hovered]:control-sunken focus-within:ring-3 focus-within:control-sunken",
