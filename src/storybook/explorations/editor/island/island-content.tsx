@@ -1,27 +1,26 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Scissors, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { type ReactNode } from "react";
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
+import { rangeIsland } from "../../../../features/editor/island/range/range-island";
 import { Button } from "../../../../primitives/button/button";
-import { IconButton } from "../../../../primitives/button/icon-button";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { type Pen } from "../../ideas/looks";
 import { presetLabel } from "../editor-data";
 import { type AnnotationStyle, PEN_NAMES } from "../model/annotation-style";
 import { type TimedMark } from "../model/marks";
 import { type Editor } from "../model/use-editor";
-import { beatTitle } from "../recording";
 
+import { beatContent } from "./beat-content";
 import { type IslandContent } from "./island-parts";
 import { lullContent } from "./lull-content";
 import { MarkActions, MarkSection } from "./mark-sections";
 import { modeContent } from "./mode-content";
-import { MomentPlay, MomentSection } from "./moment-section";
 import { type Expanded } from "./overlay-parts";
-import { BeatActions, SceneClipSection } from "./selection-sections";
+import { SceneClipSection } from "./selection-sections";
 import { ColorButton, ColorOptions, PenOptions } from "./style-controls";
 
 // What the island holds for whatever is in hand: a row saying what it is,
@@ -119,25 +118,7 @@ function selectionContent(
   }
   if (selection?.kind === "beat") {
     const beat = editor.beats.find(({ id }) => id === selection.id);
-    if (!beat) return null;
-    const isMoment = beat.kind === "cue" && beat.cue === "moment";
-    return {
-      actions: (
-        <>
-          {isMoment ? <MomentPlay beat={beat} editor={editor} /> : null}
-          <BeatActions editor={editor} key={beat.id} />
-        </>
-      ),
-      from: { kind: "strip" },
-      key: `beat-${beat.id}`,
-      section: isMoment
-        ? {
-            key: `beat-${beat.id}-words`,
-            node: <MomentSection beat={beat} editor={editor} />,
-          }
-        : undefined,
-      title: <IslandRowTitle title={beatTitle(beat)} />,
-    };
+    return beat ? beatContent(editor, beat) : null;
   }
   if (selection?.kind === "scene") {
     const clip = editor.scenes.find(({ id }) => id === selection.id);
@@ -163,18 +144,11 @@ function selectionContent(
   }
   if (selection?.kind === "pause") return lullContent(editor, selection.id);
   if (selection?.kind === "range") {
-    // Drawn with ⌥ held, it was drawn to be cut: one press, which undo
-    // takes back, rather than a confirmation.
-    return {
-      actions: (
-        <IconButton aria-label="Cut it and its time" onPress={editor.remove}>
-          <Scissors aria-hidden className="size-icon" />
-        </IconButton>
-      ),
-      from: { kind: "strip" },
-      key: `range-${String(selection.start)}`,
-      title: <IslandRowTitle title="Stretch" />,
-    };
+    const { actions, key, title } = rangeIsland({
+      id: String(selection.start),
+      onCut: editor.remove,
+    });
+    return { actions, from: { kind: "strip" }, key, title };
   }
   return null;
 }

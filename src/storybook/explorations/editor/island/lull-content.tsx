@@ -36,11 +36,21 @@ export function lullContent(editor: Editor, id: string): IslandContent | null {
         ? { kind: "retimed", speed }
         : { kind: setting ? "keep" : "squeeze" },
   });
+  // The exploration's island has no second line in the row's black, so the
+  // choices and the hint hang together beneath it.
   return {
     actions: content.actions,
     from: { kind: "strip" },
     key: content.key,
-    section: { key: content.key, node: content.section },
+    section: {
+      key: content.key,
+      node: (
+        <div className="flex flex-col gap-separate">
+          {content.below}
+          {content.section}
+        </div>
+      ),
+    },
     title: content.title,
   };
 }

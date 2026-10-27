@@ -14,12 +14,12 @@ import { Text } from "../../../../primitives/text/text";
 
 import type { LullIslandProps } from "./lull-island";
 
-// What hangs under a lull's row: how it plays, its trim, and the key that
-// turns dragging its end from a retime into a trim. How it plays is a
-// choice, so it is a list with a tick; a trim is done at once, so it is a
-// button.
+// A lull's choices, on the line under its row: how it plays, and its trim.
+// How it plays is a choice, so it is a list with a tick; a trim is done at
+// once, so it is a button. Beneath them hangs the key that turns dragging
+// its end from a retime into a trim, a part only as wide as it says.
 
-export function LullSection({
+export function LullChoices({
   onPlayChange,
   onTrimToBreath,
   play,
@@ -39,7 +39,10 @@ export function LullSection({
             speed: speed.format(play.speed),
           });
   return (
-    <div className="flex w-56 flex-col gap-separate">
+    // Inset as the row's content is, with room beneath before the hint; as
+    // wide as a moment's player, so the hint hangs as a part of its own
+    // rather than a sliver short of the island's width.
+    <div className="flex w-64 flex-col gap-separate px-1 pb-inset-sm">
       <ListBox
         aria-label={t("editor-island-lull-plays")}
         disallowEmptySelection
@@ -62,25 +65,23 @@ export function LullSection({
       <Button className="w-full" onPress={onTrimToBreath}>
         {t("editor-island-lull-trim-to-breath")}
       </Button>
-      <Text as="p" className="px-inset-sm text-fg-secondary" variant="caption">
-        <TrimHint />
-      </Text>
     </div>
   );
 }
 
 /** The key that, held while dragging the lull's end, trims it rather than
  * retiming it, drawn as a keycap wherever the language puts it: ⌥ on a
- * Mac, Alt on Windows. */
-function TrimHint() {
+ * Mac, Alt on Windows. Room at its sides keeps the small part it hangs as
+ * from sitting tight round the words. */
+export function LullHint() {
   const [before, after] = splitAtPlaceable((key) =>
     t("editor-island-lull-hint", { key }),
   );
   return (
-    <>
+    <Text as="p" className="px-inset-sm text-fg-secondary" variant="caption">
       {before}
       <Keyboard className="align-middle">{hotkeyKeys("AltLeft")[0]}</Keyboard>
       {after}
-    </>
+    </Text>
   );
 }

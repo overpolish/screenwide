@@ -15,7 +15,8 @@ export function IslandRowTitle({
   note,
   title,
 }: {
-  title: string;
+  /** Words, or words with parts such as keycaps set in them. */
+  title: ReactNode;
   glyph?: ReactNode;
   note?: string;
 }) {

@@ -1,9 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Scissors } from "lucide-react";
-
-import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { type SceneClip, ZOOMS } from "../editor-data";
 import { type Editor } from "../model/use-editor";
@@ -11,21 +8,8 @@ import { type Editor } from "../model/use-editor";
 import { SectionLine } from "./island-parts";
 import { PresetChoice } from "./preset-choice";
 
-// What the island holds for a beat, a scene or a pause on the strip: the
-// actions that sit in its row, and the choices that hang beneath it. How a
-// beat is framed is the scene over it, not a setting of the beat's.
-
-export function BeatActions({ editor }: { editor: Editor }) {
-  return (
-    <ConfirmActionButton
-      confirmLabel="Confirm Cut"
-      icon={<Scissors aria-hidden />}
-      label="Cut it and its time"
-      onConfirm={editor.remove}
-      variant="ghost"
-    />
-  );
-}
+// What the island holds for a scene on the strip: the choices that hang
+// beneath its row.
 
 export function SceneClipSection({
   clip,

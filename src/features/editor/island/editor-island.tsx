@@ -26,7 +26,13 @@ export type EditorIslandContent = {
   actions?: ReactNode;
   /** Where under the row the section hangs. */
   anchor?: IslandAnchor;
+  /** A second line in the row's black, under the row, which the section
+   * hangs from in its place. */
+  below?: ReactNode;
   section?: ReactNode;
+  /** Changes when the section changes into something else while the same
+   * thing stays in hand, so it crossfades as the black reshapes. */
+  sectionKey?: string;
 };
 
 export type EditorIslandProps = Pick<
@@ -37,21 +43,34 @@ export type EditorIslandProps = Pick<
 };
 
 export function EditorIsland({ content, ...island }: EditorIslandProps) {
-  // The row is as wide as the section under it, so its title keeps to the
+  // The row is as wide as what is under it, so its title keeps to the
   // island's start and its actions to its end, rather than both being
-  // centred over a wider section.
+  // centred over something wider: the second line where there is one,
+  // which the section then hangs from at its own width; otherwise the
+  // section.
+  const [belowElement, setBelowElement] = useState<HTMLDivElement | null>(null);
   const [sectionElement, setSectionElement] = useState<HTMLDivElement | null>(
     null,
   );
+  const belowWidth = useSize(belowElement)?.width ?? 0;
   const sectionWidth = useSize(sectionElement)?.width ?? 0;
-  const rowWidth = content.section
-    ? sectionWidth + (ISLAND.sectionInset - ISLAND.rowInset) * 2
-    : 0;
+  const rowWidth = content.below
+    ? belowWidth
+    : content.section
+      ? sectionWidth + (ISLAND.sectionInset - ISLAND.rowInset) * 2
+      : 0;
   return (
     <Island
       {...island}
       anchor={content.anchor}
       aria-label={t("editor-island-label")}
+      below={
+        content.below ? (
+          <div key={content.key} ref={setBelowElement}>
+            {content.below}
+          </div>
+        ) : undefined
+      }
       row={
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div
@@ -78,7 +97,7 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
       section={
         content.section ? (
           <AnimatePresence initial={false} mode="popLayout">
-            <IslandCrossfade key={content.key}>
+            <IslandCrossfade key={content.sectionKey ?? content.key}>
               <div ref={setSectionElement}>{content.section}</div>
             </IslandCrossfade>
           </AnimatePresence>

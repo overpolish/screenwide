@@ -159,7 +159,7 @@ export const Shortcut = ({
         child === "+" ? (
           <Plus
             aria-hidden
-            className="size-icon-xs shrink-0 transform-gpu text-fg-tertiary"
+            className="size-icon-xs shrink-0 transform-gpu text-fg-secondary"
             key={`separator-${index.toString()}`}
           />
         ) : (

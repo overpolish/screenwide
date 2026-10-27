@@ -8,7 +8,7 @@ import { t } from "../../../../i18n/i18n";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { SpringIcon } from "../../glyphs/spring-icon";
 
-import { LullSection } from "./lull-section";
+import { LullChoices, LullHint } from "./lull-parts";
 
 import type { EditorIslandContent } from "../editor-island";
 
@@ -43,8 +43,12 @@ export function lullIsland(props: LullIslandProps): EditorIslandContent {
         variant="ghost"
       />
     ),
+    // Hung from the start, as the recording and annotate islands hang their
+    // parts.
+    anchor: "start",
+    below: <LullChoices {...props} />,
     key: `lull-${props.id}`,
-    section: <LullSection {...props} />,
+    section: <LullHint />,
     title: (
       <IslandRowTitle
         glyph={playGlyph(props.play)}
