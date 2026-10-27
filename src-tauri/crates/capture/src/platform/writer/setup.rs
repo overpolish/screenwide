@@ -116,6 +116,7 @@ impl Writer {
       on_failure,
       origin_source_ns: None,
       origin_wall: None,
+      picture: Self::picture_tap(&path),
       path,
       pending_microphone: VecDeque::new(),
       pending_system_audio: VecDeque::new(),

@@ -3,6 +3,7 @@
 
 mod container;
 mod finish;
+mod picture;
 mod samples;
 
 mod setup;
@@ -69,6 +70,9 @@ pub(super) struct Writer {
   pub(super) path: PathBuf,
   pending_microphone: VecDeque<MicrophoneBuffer>,
   pending_system_audio: VecDeque<AudioSample>,
+  /// The picture's readings, taken as frames are written; none if they
+  /// could not be started.
+  picture: Option<screenwide_activity::PictureTap>,
   primary_video: bool,
   rejection_streak: u64,
   source: VideoSource,

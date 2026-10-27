@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-activity"
+description = "What happens over a recording, read from its picture: how much changes, and how much of it is new"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+screenwide-sidecar.workspace = true
+serde.workspace = true
+serde_json.workspace = true

@@ -9,9 +9,11 @@ impl Writer {
     Ok(Self {
       base: Instant::now(),
       frame_duration_100ns: 10_000_000_i64 / i64::from(config.fps.max(1)),
+      picture: Self::picture_tap(&config.path),
       config,
       failed: None,
       last_appended_ns: None,
+      picture_shrink: None,
       sink,
       tail: None,
       timeline: Timeline::default(),
@@ -32,6 +34,7 @@ impl Writer {
     {
       Ok(()) => {
         self.last_appended_ns = Some(pts_ns);
+        self.read_picture(frame, pts_ns);
         true
       }
       Err(error) => {
@@ -171,6 +174,7 @@ impl Writer {
     }
     self.sink.finish()?;
     let end_ns = self.last_appended_ns.unwrap_or_default();
+    self.finish_picture(end_ns);
     Ok(FinalizeInfo {
       annotation_clips: Vec::new(),
       camera: None,

@@ -81,6 +81,7 @@ impl Writer {
       .end_session_at_src_time(nanos(end_ns))
       .map_err(|error| error.to_string())?;
     self.writer.finish_writing();
+    self.finish_picture(end_ns);
 
     if self.writer.status() != av::AssetWriterStatus::Completed {
       return Err(asset_writer_error(

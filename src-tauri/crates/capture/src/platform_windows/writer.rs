@@ -3,6 +3,7 @@
 
 mod frames;
 mod media_types;
+mod picture;
 mod sink;
 mod timeline;
 use frames::crop_frame;
@@ -124,6 +125,10 @@ struct Writer {
   failed: Option<String>,
   frame_duration_100ns: i64,
   last_appended_ns: Option<i64>,
+  /// The picture's readings, taken as frames are written; none if they
+  /// could not be started.
+  picture: Option<screenwide_activity::PictureTap>,
+  picture_shrink: Option<picture::PictureShrink>,
   sink: Sink,
   tail: Option<Frame>,
   timeline: Timeline,

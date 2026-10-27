@@ -5503,6 +5503,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "screenwide-activity"
+version = "0.1.0"
+dependencies = [
+ "screenwide-sidecar",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "screenwide-annotations"
 version = "0.1.0"
 dependencies = [
@@ -5533,6 +5542,7 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "rayon",
+ "screenwide-activity",
  "screenwide-annotations",
  "screenwide-gpu",
  "screenwide-osc",

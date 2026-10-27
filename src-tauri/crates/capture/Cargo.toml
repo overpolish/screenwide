@@ -17,6 +17,7 @@ bytemuck.workspace = true
 cpal.workspace = true
 image.workspace = true
 rayon.workspace = true
+screenwide-activity.workspace = true
 screenwide-annotations.workspace = true
 screenwide-gpu.workspace = true
 screenwide-osc.workspace = true

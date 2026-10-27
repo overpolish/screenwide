@@ -25,6 +25,7 @@ edition = "2021"
 
 [workspace.dependencies]
 screenwide-accent = { path = "crates/accent" }
+screenwide-activity = { path = "crates/activity" }
 screenwide-annotations = { path = "crates/annotations" }
 screenwide-capture = { path = "crates/capture" }
 screenwide-compositor = { path = "crates/compositor" }

@@ -140,6 +140,7 @@ impl Writer {
         self.stats.appended.fetch_add(1, Ordering::Relaxed);
         self.rejection_streak = 0;
         self.last_appended_ns = Some(pts_ns);
+        self.read_picture(frame, pts_ns);
         true
       }
       Ok(false) => {
