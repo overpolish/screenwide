@@ -82,20 +82,25 @@ export function IslandSection({
   // A section opens out of the middle, and folds back into it, only as the
   // island comes out of the notch or goes back in. While the island is out,
   // a section opens where it hangs, growing down from under what opened it,
-  // and folds up there again; its last place is kept for that.
+  // and folds up there again; its last place is kept for that, and how far
+  // it was stretched, so it folds at the width it was shown at rather than
+  // dropping to its own the moment it starts.
   const [lastPlace, setLastPlace] = useState({
     inset,
     start: sectionStart,
+    stretch,
     width: sectionWidth,
   });
   if (
     isOpen &&
     (lastPlace.inset !== inset ||
       lastPlace.start !== sectionStart ||
+      lastPlace.stretch !== stretch ||
       lastPlace.width !== sectionWidth)
   ) {
-    setLastPlace({ inset, start: sectionStart, width: sectionWidth });
+    setLastPlace({ inset, start: sectionStart, stretch, width: sectionWidth });
   }
+  const heldStretch = isOpen ? stretch : lastPlace.stretch;
   // Opening in place, the box and what it holds are put straight where they
   // hang; only its height grows. The outline grows with it, carrying the
   // row's corner down on a side that meets the row's end.
@@ -176,7 +181,10 @@ export function IslandSection({
                 ? {}
                 : {
                     insetInlineStart: !isOpen
-                      ? px(isFromMiddle ? inPlace : lastPlace.inset)
+                      ? px(
+                          (isFromMiddle ? inPlace : lastPlace.inset) -
+                            heldStretch,
+                        )
                       : isOpening && isFromMiddle
                         ? [px(inPlace - stretch), px(inset - stretch)]
                         : px(inset - stretch),
@@ -202,6 +210,10 @@ export function IslandSection({
                     justifyContent: "flex-end",
                   }
                 : {}),
+              // Folding, at the width it was stretched to. Held here, since
+              // what it holds leaves with the props it had while pinned, a
+              // share of this box rather than a width of its own.
+              ...(!isOpen && heldStretch > 0 ? { width: lastPlace.width } : {}),
             }}
             transition={
               isPlacedAtOnce
