@@ -5,23 +5,27 @@ import { fn } from "storybook/test";
 
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { EditorIslandStage } from "../editor-island-stage";
+import {
+  editorIslandStoryMeta,
+  type EditorIslandStoryProps,
+} from "../editor-island-story-meta";
 
 import { rangeIsland, type RangeIslandProps } from "./range-island";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-function RangeIsland(props: RangeIslandProps) {
-  return <EditorIslandStage content={rangeIsland(props)} />;
+function RangeIsland({
+  isShown,
+  ...props
+}: RangeIslandProps & EditorIslandStoryProps) {
+  return <EditorIslandStage content={rangeIsland(props)} isShown={isShown} />;
 }
 
 const meta = {
-  args: { id: "range", onCut: fn() },
+  ...editorIslandStoryMeta,
+  args: { id: "range", isShown: true, onCut: fn() },
   component: RangeIsland,
   decorators: [featureStage({ height: 160, width: 480 })],
-  parameters: {
-    controls: { disable: true },
-    layout: "fullscreen",
-  },
   title: "Features/Editor/Island/Range",
 } satisfies Meta<typeof RangeIsland>;
 

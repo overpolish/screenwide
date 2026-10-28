@@ -72,3 +72,84 @@ editor-island-moment-download = Download
 editor-island-moment-downloading = Downloading model
 # Names the download's progress bar for assistive technology.
 editor-island-moment-downloading-label = Downloading the transcription model
+
+## A scene on the strip: how a stretch of the recording is framed
+
+editor-island-scene = Scene
+# Names the choice of which group of the scene's options shows beneath its row, for assistive technology.
+editor-island-scene-groups = Scene options
+# The groups of the scene's options, one shown beneath its row at a time.
+editor-island-scene-layout = Layout
+editor-island-scene-camera = Camera
+editor-island-scene-screen = Screen
+# Put one of a pane's figures back: its zoom to the whole picture, its position to the middle, its radius to the recording's own.
+editor-island-scene-reset-zoom = Reset zoom
+editor-island-scene-reset-radius = Reset radius
+editor-island-scene-reset-position = Reset position
+editor-island-scene-delete = Delete the scene
+editor-island-scene-confirm-delete = Confirm deleting
+# The scene's layout places the camera, which is left out of the video when the camera is exported as its own file; choosing a layout without the camera brings the scene back.
+editor-island-scene-paused = This scene requires the camera.
+# Names the choice of layouts for assistive technology.
+editor-island-scene-layouts = Layouts
+# A layout of the user's own, made by moving the panes by hand on the picture.
+editor-island-scene-custom = Custom
+editor-island-scene-side-by-side = Side by side
+editor-island-scene-stacked = Stacked
+editor-island-scene-picture-in-picture = Picture in picture
+editor-island-scene-camera-only = Camera only
+editor-island-scene-screen-only = Screen only
+# Where the camera sits against the screen in a pair: on one side of the video or the other, or above or below.
+editor-island-scene-camera-place = Camera
+editor-island-scene-left = Left
+editor-island-scene-right = Right
+editor-island-scene-top = Top
+editor-island-scene-bottom = Bottom
+# How large the camera is against the screen in a pair.
+editor-island-scene-camera-size = Camera size
+# Trades a custom layout's screen and camera, each taking the other's place.
+editor-island-scene-swap = Swap
+# The corner of the screen the camera sits over.
+editor-island-scene-corner = Corner
+editor-island-scene-top-left = Top left
+editor-island-scene-top-right = Top right
+editor-island-scene-bottom-left = Bottom left
+editor-island-scene-bottom-right = Bottom right
+editor-island-scene-size = Size
+editor-island-scene-small = Small
+editor-island-scene-large = Large
+# Saves a custom layout to use again in any recording; it then sits with the layouts.
+editor-island-scene-save-layout = Save layout
+editor-island-scene-remove-layout = Remove layout
+editor-island-scene-confirm-remove-layout = Confirm removing
+# A saved layout's tile. Saved layouts have no names of their own, so they are numbered in the order they sit.
+editor-island-scene-saved-layout = Saved { $number }
+# Keeps the camera on the speaker's face as they move.
+editor-island-scene-follow-face = Follow face
+# Names the spinner beside Follow face for assistive technology, while the camera looks for the speaker's face.
+editor-island-scene-finding-face = Finding your face
+# Puts the followed face back in the middle of the camera's box.
+editor-island-scene-recenter = Recenter
+editor-island-scene-zoom = Zoom
+# How round the pane's corners are.
+editor-island-scene-radius = Radius
+# Which part of the pane's picture sits in the middle of its box.
+editor-island-scene-position = Position
+editor-island-scene-position-x = Horizontal position
+editor-island-scene-position-y = Vertical position
+# The axes the two position fields are for.
+editor-island-scene-x = X
+editor-island-scene-y = Y
+# The screen turned in depth.
+editor-island-scene-rotation = Rotation
+editor-island-scene-rotation-x = X rotation
+editor-island-scene-rotation-y = Y rotation
+editor-island-scene-rotation-z = Z rotation
+editor-island-scene-reset-rotation = Reset rotation
+# Hangs under the row while no scene is in hand. The scene line runs along the timeline strip.
+editor-island-scene-hint = Drag along the scene line to add a scene.
+editor-island-scene-auto-zoom = Auto zoom
+editor-island-scene-clear-auto-zooms = Clear all
+editor-island-scene-confirm-clear-auto-zooms = Confirm clearing
+# Plans the zooms again, replacing the planned zooms.
+editor-island-scene-regenerate-auto-zooms = Regenerate

@@ -6,18 +6,21 @@ import { useNumberFormatter } from "react-aria";
 import { t } from "../../../../i18n/i18n";
 import { splitAtPlaceable } from "../../../../i18n/split-at-placeable";
 import { hotkeyKeys } from "../../../../lib/hotkey";
+import { cn } from "../../../../lib/styling";
 import { Button } from "../../../../primitives/button/button";
 import { Keyboard } from "../../../../primitives/keyboard/keyboard";
 import { ListBox } from "../../../../primitives/listbox/listbox";
 import { ListBoxItem } from "../../../../primitives/listbox-item/listbox-item";
 import { Text } from "../../../../primitives/text/text";
+import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
 
 import type { LullIslandProps } from "./lull-island";
 
 // A lull's choices, on the line under its row: how it plays, and its trim.
 // How it plays is a choice, so it is a list with a tick; a trim is done at
-// once, so it is a button. Beneath them hangs the key that turns dragging
-// its end from a retime into a trim, a part only as wide as it says.
+// once, so it is a one-shot action at the end of its own row. Beneath them
+// hangs the key that turns dragging its end from a retime into a trim, a
+// part only as wide as it says.
 
 export function LullChoices({
   onPlayChange,
@@ -39,10 +42,15 @@ export function LullChoices({
             speed: speed.format(play.speed),
           });
   return (
-    // Inset as the row's content is, with room beneath before the hint; as
-    // wide as a moment's player, so the hint hangs as a part of its own
-    // rather than a sliver short of the island's width.
-    <div className="flex w-64 flex-col gap-separate px-1 pb-inset-sm">
+    // Inset as the row's content is, with room beneath before the hint; at
+    // the width the editor island's parts share, so the hint hangs as a
+    // part of its own rather than a sliver short of the island's width.
+    <div
+      className={cn(
+        "flex flex-col gap-separate px-1 pb-inset-sm",
+        EDITOR_ISLAND_WIDTH.line,
+      )}
+    >
       <ListBox
         aria-label={t("editor-island-lull-plays")}
         disallowEmptySelection
@@ -62,9 +70,11 @@ export function LullChoices({
           <ListBoxItem id="retimed">{retimed}</ListBoxItem>
         )}
       </ListBox>
-      <Button className="w-full" onPress={onTrimToBreath}>
-        {t("editor-island-lull-trim-to-breath")}
-      </Button>
+      <div className="flex justify-end">
+        <Button onPress={onTrimToBreath}>
+          {t("editor-island-lull-trim-to-breath")}
+        </Button>
+      </div>
     </div>
   );
 }

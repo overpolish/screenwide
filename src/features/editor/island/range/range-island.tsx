@@ -25,7 +25,7 @@ export function rangeIsland({
     actions: (
       <ConfirmActionButton
         confirmLabel={t("editor-island-range-confirm-cut")}
-        icon={<Scissors aria-hidden />}
+        icon={<Scissors />}
         label={t("editor-island-range-cut")}
         onConfirm={onCut}
         variant="ghost"

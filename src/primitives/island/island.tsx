@@ -107,7 +107,8 @@ export function Island({
   );
   const [belowElement, setBelowElement] = useState<HTMLDivElement | null>(null);
   const rowSize = useSize(rowElement);
-  const sectionSize = useSize(sectionElement);
+  // What the section needs, not the box's width it may be stretched to.
+  const sectionSize = useSize(sectionElement, { isNatural: true });
   const belowSize = useSize(belowElement);
   const [shift, setShift] = useState(0);
 

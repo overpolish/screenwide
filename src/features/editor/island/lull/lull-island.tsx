@@ -37,7 +37,7 @@ export function lullIsland(props: LullIslandProps): EditorIslandContent {
     actions: (
       <ConfirmActionButton
         confirmLabel={t("editor-island-lull-confirm-cut")}
-        icon={<Scissors aria-hidden />}
+        icon={<Scissors />}
         label={t("editor-island-lull-cut")}
         onConfirm={props.onCut}
         variant="ghost"

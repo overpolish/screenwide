@@ -38,6 +38,7 @@ export function CounterPen({ onChange, ref, settings }: SectionProps) {
         />
         <AngleDial
           aria-label={t("annotation-angle")}
+          isStepped
           onChange={(degrees) => {
             onChange({ defaultCounterAngle: radiansFromDial(degrees) });
           }}

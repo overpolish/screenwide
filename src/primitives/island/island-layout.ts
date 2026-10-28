@@ -84,6 +84,9 @@ export function islandLayout({
     // from the same moment, so their sum stays put.
     inPlace: sectionStart + inset + closed / 2,
     inset,
+    /** Hung from the row's end, so what it holds keeps to the box's end
+     * while the box changes width (`island-section.tsx`). */
+    isEndAnchored: anchor === "end",
     isOpen,
     radius,
     rowTarget: isShown ? rowOpen : hidden,

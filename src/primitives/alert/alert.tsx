@@ -68,7 +68,6 @@ export function Alert({
   ...props
 }: AlertProps) {
   const { action, base, content, icon, lead } = alertVariants({
-    className,
     color,
     skin: useSkin(),
   });
@@ -77,7 +76,8 @@ export function Alert({
   // Body copy throughout, so the icon and action slots, a line of it tall,
   // centre on the message's first line.
   return (
-    <Text {...props} as="div" className={base()}>
+    // A slotted variant takes a caller's class on the slot it styles.
+    <Text {...props} as="div" className={base({ className })}>
       <div className={lead()}>
         {customIcon === false ? null : (
           <span aria-hidden="true" className={icon()}>

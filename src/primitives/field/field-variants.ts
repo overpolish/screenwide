@@ -43,11 +43,17 @@ export const fieldVariants = tv({
   variants: {
     centered: { true: { input: "text-center" } },
     material: {
-      // On the island's black: the fill a pill of the island's size, as
-      // its other controls are round.
+      // On the island's black, quiet as its buttons are: a pill of the
+      // island's size with no fill at rest, the value in the island's label
+      // size, and the island's fill under the pointer and while typed into.
+      // Like the island's buttons it rings only when reached by keyboard,
+      // not when clicked into.
       island: {
-        field: "h-island-control rounded-full bg-fill focus-within:ring-3",
+        field:
+          "h-island-control rounded-full transition-colors data-[hovered]:bg-fill focus-within:bg-fill data-[focus-visible]:ring-3",
+        input: "text-label",
         inputWrapper: "px-inset-sm",
+        section: "text-label",
       },
       quiet: {
         field:

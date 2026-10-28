@@ -6,18 +6,27 @@ import { fn } from "storybook/test";
 
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { EditorIslandStage } from "../editor-island-stage";
+import {
+  editorIslandStoryMeta,
+  type EditorIslandStoryProps,
+} from "../editor-island-story-meta";
 
 import { lullIsland, type LullIslandProps } from "./lull-island";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-function LullIsland(props: LullIslandProps) {
-  return <EditorIslandStage content={lullIsland(props)} />;
+function LullIsland({
+  isShown,
+  ...props
+}: LullIslandProps & EditorIslandStoryProps) {
+  return <EditorIslandStage content={lullIsland(props)} isShown={isShown} />;
 }
 
 const meta = {
+  ...editorIslandStoryMeta,
   args: {
     id: "lull",
+    isShown: true,
     onCut: fn(),
     onPlayChange: fn(),
     onTrimToBreath: fn(),
@@ -25,10 +34,6 @@ const meta = {
   },
   component: LullIsland,
   decorators: [featureStage({ height: 320, width: 480 })],
-  parameters: {
-    controls: { disable: true },
-    layout: "fullscreen",
-  },
   // Choosing how the lull plays changes the story's args, so the glyph and
   // the tick follow, and a retimed lull loses its third choice once another
   // is chosen.

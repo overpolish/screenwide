@@ -143,6 +143,7 @@ export function PenOptions({
           />
           <AngleDial
             aria-label="Where its tail points"
+            isStepped
             onChange={(counterAngle) => {
               onChange({ counterAngle });
             }}

@@ -59,11 +59,26 @@ export function IslandSection({
     held,
     inPlace,
     inset,
+    isEndAnchored,
     isOpen,
     rowTarget,
     sectionStart,
     sectionWidth,
   } = layout;
+  // Hung from the end, what the section holds keeps to the box's end by
+  // layout, with no measuring between, and is held to the box's width as it
+  // glides: a part that grows or shrinks in place moves with the black's
+  // other side, its rows taking the change from the room before their
+  // controls, rather than running past the end until the box catches up or
+  // jumping ahead of it. A section the row's width leaves only a sliver
+  // beside is merged to the row's width, and its rows then span it, names
+  // at the start and controls at the end. The island measures it without
+  // the hold (`useSize`'s `isNatural`). Not while opening, folding or held
+  // round a notch, which place it themselves; but while it opens it is
+  // already stretched across the box and placed from the box's start, so it
+  // lies exactly as it will once held and nothing moves at the hand-over.
+  const isEndPinned = isEndAnchored && isOpen && !isOpening && !movesSideways;
+  const stretch = isEndAnchored && isOpen ? sectionWidth - held.width : 0;
   // A section opens out of the middle, and folds back into it, only as the
   // island comes out of the notch or goes back in. While the island is out,
   // a section opens where it hangs, growing down from under what opened it,
@@ -156,18 +171,37 @@ export function IslandSection({
           transition={{ ...glide, opacity: opacityTransition }}
         >
           <motion.div
-            animate={{
-              insetInlineStart: !isOpen
-                ? px(isFromMiddle ? inPlace : lastPlace.inset)
-                : isOpening && isFromMiddle
-                  ? [px(inPlace), px(inset)]
-                  : px(inset),
-            }}
+            animate={
+              isEndPinned
+                ? {}
+                : {
+                    insetInlineStart: !isOpen
+                      ? px(isFromMiddle ? inPlace : lastPlace.inset)
+                      : isOpening && isFromMiddle
+                        ? [px(inPlace - stretch), px(inset - stretch)]
+                        : px(inset - stretch),
+                  }
+            }
             className="absolute top-0"
             initial={false}
             style={{
               marginInlineStart: settle,
               x: movesSideways ? sectionX : 0,
+              // Spanning the box, its content set at the end, so content
+              // wider than the box overflows at the start, where the black
+              // reveals it. Set at the top rather than stretched down, so
+              // its height stays its content's: a stretched item's height
+              // counts as fixed, and a scroll area inside sizing itself to
+              // it would be cut short.
+              ...(isEndPinned
+                ? {
+                    alignItems: "flex-start",
+                    display: "flex",
+                    insetInlineEnd: 0,
+                    insetInlineStart: 0,
+                    justifyContent: "flex-end",
+                  }
+                : {}),
             }}
             transition={
               isPlacedAtOnce
@@ -184,9 +218,16 @@ export function IslandSection({
                     // Positioned, so a part swapped out is lifted from the
                     // flow (`popLayout`) and only the incoming one is
                     // measured.
-                    className="relative flex w-max flex-col gap-inline px-(--island-section-inset) pt-inset-sm pb-(--island-section-inset)"
+                    className="relative flex w-max shrink-0 flex-col gap-inline px-(--island-section-inset) pt-inset-sm pb-(--island-section-inset)"
                     initial={false}
                     ref={onElement}
+                    style={
+                      isEndPinned
+                        ? { maxWidth: "100%", minWidth: "100%" }
+                        : stretch > 0
+                          ? { minWidth: px(sectionWidth) }
+                          : undefined
+                    }
                   >
                     {children}
                   </motion.div>

@@ -6,6 +6,10 @@ import { fn } from "storybook/test";
 
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { EditorIslandStage } from "../editor-island-stage";
+import {
+  editorIslandStoryMeta,
+  type EditorIslandStoryProps,
+} from "../editor-island-story-meta";
 
 import {
   momentIsland,
@@ -28,16 +32,23 @@ const note: MomentNote = {
   },
 };
 
-function MomentIsland(props: MomentIslandProps) {
-  return <EditorIslandStage content={momentIsland(props)} />;
+function MomentIsland({
+  isShown,
+  ...props
+}: MomentIslandProps & EditorIslandStoryProps) {
+  return <EditorIslandStage content={momentIsland(props)} isShown={isShown} />;
 }
 
 const meta = {
-  // A kind's colour is any the user picks in Settings, not one of a set.
-  argTypes: { color: { control: "color" } },
+  argTypes: {
+    ...editorIslandStoryMeta.argTypes,
+    // A kind's colour is any the user picks in Settings, not one of a set.
+    color: { control: "color" },
+  },
   args: {
     color: "#0088ff",
     id: "moment",
+    isShown: true,
     name: "Notable",
     note,
     onCut: fn(),
@@ -47,8 +58,8 @@ const meta = {
   component: MomentIsland,
   decorators: [featureStage({ height: 360, width: 480 })],
   parameters: {
-    controls: { include: ["color", "name"] },
-    layout: "fullscreen",
+    ...editorIslandStoryMeta.parameters,
+    controls: { include: ["isShown", "color", "name"] },
   },
   // Play and pause turn the button over, so the story can be tried; outside
   // the app there is no note to hear.

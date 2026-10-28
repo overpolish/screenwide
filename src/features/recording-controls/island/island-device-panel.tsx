@@ -5,6 +5,7 @@ import { TrianglesCenterlineDashedVertical } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import { useCollator } from "react-aria";
 
+import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { ListBox } from "../../../primitives/listbox/listbox";
@@ -135,14 +136,15 @@ export function DevicePanel({
         kind === "camera" ? "w-[320px]" : "w-max max-w-[320px]",
       )}
     >
-      <div className="flex items-center justify-between gap-separate px-inset-sm">
-        <Text variant="label">{inputName(kind)}</Text>
-        <Switch
-          aria-label={inputName(kind)}
-          isSelected={input.isOn}
-          onChange={onToggle}
-        />
-      </div>
+      <ControlRow title={inputName(kind)}>
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isSelected={input.isOn}
+            onChange={onToggle}
+          />
+        )}
+      </ControlRow>
       {kind === "camera" && input.isOn ? (
         <CameraFrame
           aspectRatio={
@@ -156,11 +158,12 @@ export function DevicePanel({
         </CameraFrame>
       ) : null}
       {/* Off, the level bar stays and is disabled with the devices, so the
-          part keeps its shape when the input is switched. */}
+          part keeps its shape when the input is switched. It spans the part
+          as the switch and the devices do. */}
       {kind !== "camera" ? (
         <span
           className={cn(
-            "mx-inset-sm h-1 overflow-hidden rounded-full bg-fill-strong transition-opacity",
+            "h-1 overflow-hidden rounded-full bg-fill-strong transition-opacity",
             !input.isOn && "opacity-50",
           )}
         >

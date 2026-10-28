@@ -33,7 +33,10 @@ export type ControlRowProps = {
 // as a note rather than a second name. The parent owns the space between
 // rows; the row itself is not pressable. On the island, where a section holds
 // a few short rows under the row that names them, the name is a caption set
-// back, and the row is an island control's height.
+// back the small inset, as the island's notes are from its edges, on one
+// line, so a row squeezed for a moment as the island's black glides runs its
+// name into the space before the control rather than wrapping it; the row is
+// an island control's height.
 export function ControlRow({
   children,
   className,
@@ -64,7 +67,11 @@ export function ControlRow({
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-inline">
           <Text
-            className={cn("break-words", isIsland && "ps-1 text-fg-secondary")}
+            className={
+              isIsland
+                ? "ps-inset-sm whitespace-nowrap text-fg-secondary"
+                : "break-words"
+            }
             id={titleId}
             variant={isIsland ? "caption" : "body"}
           >

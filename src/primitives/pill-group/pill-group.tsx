@@ -73,9 +73,10 @@ const knobClassName =
 // On the island the segments are its circles, with no track: each has the
 // island's fill, which is its hover and its choice, so a circle chosen under
 // the pointer keeps the fill it already showed, one chosen from the keyboard
-// grows its own, and the one left behind shrinks away.
+// grows its own, and the one left behind shrinks away. A segment with a
+// label is a pill the circle's height, as wide as its label.
 const islandSegmentClassName = [
-  "group relative isolate flex size-island-control shrink-0 cursor-default items-center justify-center rounded-full text-label outline-none select-none",
+  "group relative isolate flex h-island-control min-w-island-control shrink-0 cursor-default items-center justify-center rounded-full text-label outline-none select-none",
   "data-[disabled]:opacity-40",
   "[&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
   focusStyles,
@@ -182,7 +183,10 @@ export function PillGroup({
             aria-label={item.ariaLabel ?? item.label}
             className={cn(
               isIsland
-                ? islandSegmentClassName
+                ? [
+                    islandSegmentClassName,
+                    item.label === undefined ? "w-island-control" : "px-inset",
+                  ]
                 : [
                     segmentClassName,
                     // A segment showing only its icon is a square the

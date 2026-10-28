@@ -10,8 +10,6 @@ import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
 
 export type PositionGridItem<T extends string> = { id: T; label: string };
 
-const COLUMNS = 3;
-
 // Drawn as the segmented control is, since it is the same kind of choice:
 // cells on a plate on the fill, inset by 2px, the chosen cell filled in the
 // primary colour on a fill that slides between them. A cell is 28 by 16, a
@@ -26,26 +24,30 @@ const cellClassName = [
 const markClassName =
   "relative z-10 h-1 w-1 rounded-full bg-fg-tertiary transition-[width,background-color] group-data-[hovered]:bg-fg-secondary group-data-[selected]:w-4 group-data-[selected]:bg-on-primary";
 
-// One of nine places on a picture, picked by clicking where it is. The
-// picture keeps its own left and right in every language, so the grid is
-// laid out left to right. A radio group, so the arrow keys move the choice;
-// up and down move it a row, where a group of radios would otherwise step
-// through them in order.
+// One of nine places on a picture, or of its four corners, picked by
+// clicking where it is. The picture keeps its own left and right in every
+// language, so the grid is laid out left to right. A radio group, so the
+// arrow keys move the choice; up and down move it a row, where a group of
+// radios would otherwise step through them in order.
 export function PositionGrid<T extends string>({
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
+  columns = 3,
   isDisabled,
   items,
   onChange,
   value,
 }: {
-  /** The nine places in reading order, the top row first. */
+  /** The places in reading order, the top row first: nine, or four with
+   * two `columns`. */
   items: readonly PositionGridItem<T>[];
   onChange: (id: T) => void;
   value: T;
   /** Its name, where no visible label names it. */
   "aria-label"?: string;
   "aria-labelledby"?: string;
+  /** Places to a row: three for nine places, two for the corners. */
+  columns?: 2 | 3;
   isDisabled?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -59,9 +61,9 @@ export function PositionGrid<T extends string>({
   const moveRow = (event: KeyboardEvent) => {
     const step =
       event.key === "ArrowUp"
-        ? -COLUMNS
+        ? -columns
         : event.key === "ArrowDown"
-          ? COLUMNS
+          ? columns
           : 0;
     if (step === 0) return;
     // Taken before the radios step through in order, and kept from them.
@@ -78,7 +80,10 @@ export function PositionGrid<T extends string>({
       <RadioGroup
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
-        className="grid w-fit grid-cols-3 gap-0.5 rounded-control bg-fill p-0.5 transition-opacity data-[disabled]:opacity-40"
+        className={cn(
+          "grid w-fit gap-0.5 rounded-control bg-fill p-0.5 transition-opacity data-[disabled]:opacity-40",
+          columns === 2 ? "grid-cols-2" : "grid-cols-3",
+        )}
         isDisabled={isDisabled}
         onChange={(id) => {
           onChange(id as T);

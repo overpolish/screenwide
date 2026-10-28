@@ -68,17 +68,6 @@ function stackUnderRow({
   const row = layout.rowTarget;
   const rowLeft = rowShift - row.width / 2;
   const rowRight = rowShift + row.width / 2;
-  const left = Math.min(rowLeft, -below.width / 2);
-  const right = Math.max(rowRight, below.width / 2);
-  const middle = (left + right) / 2;
-  const stacked = {
-    ...layout,
-    islandShift: middle,
-    rowTarget: { height: row.height + below.height, width: right - left },
-    width: right - left,
-  };
-  if (!layout.isOpen) return stacked;
-
   // The line's start and end on the screen: in a right-to-left layout its
   // start is the right-hand edge.
   const held = layout.held.width;
@@ -98,6 +87,28 @@ function stackUnderRow({
         ? Math.max(lineStart, -lineStart) - held
         : -held / 2;
   const heldRight = heldLeft + held;
+  // A section wider than the row and its line widens the black with it on
+  // the side it runs past, as a section wider than a row of its own does;
+  // it is never cut to the black.
+  const left = Math.min(
+    rowLeft,
+    -below.width / 2,
+    layout.isOpen ? heldLeft : Number.POSITIVE_INFINITY,
+  );
+  const right = Math.max(
+    rowRight,
+    below.width / 2,
+    layout.isOpen ? heldRight : Number.NEGATIVE_INFINITY,
+  );
+  const middle = (left + right) / 2;
+  const stacked = {
+    ...layout,
+    islandShift: middle,
+    rowTarget: { height: row.height + below.height, width: right - left },
+    width: right - left,
+  };
+  if (!layout.isOpen) return stacked;
+
   const boxLeft = heldLeft - left < ISLAND.minStep ? left : heldLeft;
   const boxRight = right - heldRight < ISLAND.minStep ? right : heldRight;
   // Along the line of the text, from the island's middle and from the box's

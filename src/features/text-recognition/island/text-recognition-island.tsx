@@ -11,13 +11,12 @@ import {
 import { Fragment, type ReactNode } from "react";
 
 import { t } from "../../../i18n/i18n";
-import { cn } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { Island, type IslandProps } from "../../../primitives/island/island";
 import { IslandRow } from "../../../primitives/island/island-row";
-import { Text } from "../../../primitives/text/text";
+import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
 
 import type { TextRecognitionIslandAction } from "../../../bindings/TextRecognitionIslandAction";
 import type { TextRecognitionIslandState } from "../../../bindings/TextRecognitionIslandState";
@@ -37,36 +36,22 @@ export type TextRecognitionIslandProps = Pick<
   showing?: number;
 };
 
-/** A line of what is going on, its glyph in a slot the size of a control so
- * it stands as far from the island's end as a control would. */
+/** What is going on, said as the island's row titles say what is in hand;
+ * the words are announced as they change. */
 function Status({
   children,
   glyph,
   isError = false,
 }: {
-  children: ReactNode;
+  children: string;
   glyph: ReactNode;
   isError?: boolean;
 }) {
   return (
-    <span className="flex items-center gap-1 pe-2">
-      <span
-        className={cn(
-          "flex size-island-control shrink-0 items-center justify-center",
-          isError ? "text-error" : "text-fg-secondary",
-        )}
-      >
-        {glyph}
-      </span>
-      <Text
-        as="span"
-        className="whitespace-nowrap"
-        role="status"
-        variant="label"
-      >
-        {children}
-      </Text>
-    </span>
+    <IslandRowTitle
+      glyph={isError ? <span className="flex text-error">{glyph}</span> : glyph}
+      title={<span role="status">{children}</span>}
+    />
   );
 }
 
@@ -131,13 +116,13 @@ function Found({
   }
   if (state.qrCodes > 0) {
     return (
-      <Status glyph={<QrCode aria-hidden className="size-icon" />}>
+      <Status glyph={<QrCode aria-hidden />}>
         {t("text-recognition-island-qr-hint")}
       </Status>
     );
   }
   return (
-    <Status glyph={<ScanText aria-hidden className="size-icon" />}>
+    <Status glyph={<ScanText aria-hidden />}>
       {t("text-recognition-island-nothing-found")}
     </Status>
   );
@@ -151,14 +136,11 @@ function row({ onAction, state }: TextRecognitionIslandProps) {
           end={<Close onAction={onAction} />}
           start={
             state.failed ? (
-              <Status
-                glyph={<AlertCircle aria-hidden className="size-icon" />}
-                isError
-              >
+              <Status glyph={<AlertCircle aria-hidden />} isError>
                 {t("text-recognition-island-failed")}
               </Status>
             ) : (
-              <Status glyph={<ScanText aria-hidden className="size-icon" />}>
+              <Status glyph={<ScanText aria-hidden />}>
                 {t("text-recognition-island-choosing")}
               </Status>
             )

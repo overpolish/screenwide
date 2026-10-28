@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
+import { cn } from "../../../../lib/styling";
 import { Button } from "../../../../primitives/button/button";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
 import { ProgressBar } from "../../../../primitives/progress-bar/progress-bar";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { Text } from "../../../../primitives/text/text";
+import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
 
 import type { MomentTranscript } from "./moment-island";
 
@@ -38,9 +40,15 @@ export function MomentTranscriptLine({
   transcript: MomentTranscript;
 }) {
   switch (transcript.status) {
+    // What was said keeps to the island's text column, the small inset in
+    // from the part's edges, as its notes do.
     case "ready":
       return transcript.text.trim() ? (
-        <ScrollArea constrainHeight rootClassName="max-h-32 w-60">
+        <ScrollArea
+          className="px-inset-sm"
+          constrainHeight
+          rootClassName={cn("max-h-32", EDITOR_ISLAND_WIDTH.part)}
+        >
           <Text as="p" className="select-text" variant="body">
             {transcript.text}
           </Text>
@@ -61,14 +69,24 @@ export function MomentTranscriptLine({
     // the end.
     case "noModel":
       return transcript.download === null ? (
-        <div className="flex w-60 items-center justify-between gap-separate ps-inset-sm">
+        <div
+          className={cn(
+            "flex items-center justify-between gap-separate ps-inset-sm",
+            EDITOR_ISLAND_WIDTH.part,
+          )}
+        >
           <Note>{t("editor-island-moment-no-model")}</Note>
           <Button onPress={onDownloadModel}>
             {t("editor-island-moment-download")}
           </Button>
         </div>
       ) : (
-        <div className="flex w-60 items-center justify-between gap-separate px-inset-sm">
+        <div
+          className={cn(
+            "flex items-center justify-between gap-separate px-inset-sm",
+            EDITOR_ISLAND_WIDTH.part,
+          )}
+        >
           <Note>{t("editor-island-moment-downloading")}</Note>
           <ProgressBar
             aria-label={t("editor-island-moment-downloading-label")}

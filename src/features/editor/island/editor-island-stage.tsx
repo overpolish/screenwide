@@ -10,13 +10,15 @@ import { EditorIsland, type EditorIslandContent } from "./editor-island";
  * and the picture it reads. */
 export function EditorIslandStage({
   content,
+  isShown = true,
 }: {
   content: EditorIslandContent;
+  isShown?: boolean;
 }) {
   return (
     <div className="relative size-full" dir="ltr">
       <div className="absolute inset-x-0" style={{ top: ISLAND.screenGap }}>
-        <EditorIsland content={content} />
+        <EditorIsland content={content} isShown={isShown} />
       </div>
     </div>
   );

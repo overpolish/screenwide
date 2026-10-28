@@ -3,6 +3,7 @@
 
 import { isTauri } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNumberFormatter } from "react-aria";
 import {
   Group,
   Input,
@@ -12,6 +13,7 @@ import {
 } from "react-aria-components";
 import { VariantProps } from "tailwind-variants";
 
+import { motionDurations } from "../../lib/motion";
 import { isMacHost } from "../../lib/platform";
 import { tv } from "../../lib/variants";
 import { fieldVariants } from "../field/field-variants";
@@ -63,6 +65,7 @@ export const NumberField = ({
   ...props
 }: NumberFieldProps) => {
   const skin = useSkin();
+  const isIsland = skin === "island";
   // A disabled field neither scrubs nor advertises it with the cursor.
   const nativeScrubbing = isTauri() && !props.isDisabled;
   const nativeSelectionRepaint = nativeScrubbing && isMacHost;
@@ -70,6 +73,13 @@ export const NumberField = ({
   const resolvedValue = value ?? uncontrolledValue;
   const valueRef = useRef(resolvedValue);
   const groupRef = useRef<HTMLDivElement>(null);
+  // On the island a field hugs the value it shows, as text does, so it sits
+  // as close to its neighbours as the island's other controls: the value as
+  // React Aria formats it, or what is being typed until it is committed.
+  // Elsewhere it fills the width it is given.
+  const formatter = useNumberFormatter(props.formatOptions);
+  const [typedLength, setTypedLength] = useState<number | null>(null);
+  const shownLength = typedLength ?? formatter.format(resolvedValue).length;
   /** The typed commit as of this render, so the listener below subscribes
    * once rather than on every change of the handler's identity. */
   const commitTypedRef = useRef<(value: number) => void>(() => undefined);
@@ -203,6 +213,7 @@ export const NumberField = ({
               className: nativeScrubbing && "cursor-ns-resize",
             })}
             onBlur={(event) => {
+              setTypedLength(null);
               const input = event.currentTarget;
               window.requestAnimationFrame(() => {
                 if (document.activeElement === input) return;
@@ -221,6 +232,13 @@ export const NumberField = ({
                 }
               });
             }}
+            onInput={
+              isIsland
+                ? (event) => {
+                    setTypedLength(event.currentTarget.value.length);
+                  }
+                : undefined
+            }
             onKeyDown={(event) => {
               if (event.key !== "Enter" && event.key !== "Escape") return;
               event.preventDefault();
@@ -228,6 +246,23 @@ export const NumberField = ({
               event.currentTarget.blur();
             }}
             placeholder={placeholder}
+            // A pixel past the figures, which a text input keeps for its
+            // caret. A value set from outside, such as a reset, or one
+            // committed once typed, eases to its width as the island's black
+            // glides round it (`island-section.tsx`), so the controls beside
+            // it slide rather than jump; while typing it keeps up at once,
+            // so the figures are never cut off.
+            style={
+              isIsland
+                ? {
+                    transition:
+                      typedLength === null
+                        ? `width ${String(motionDurations.travel)}s ease-out`
+                        : undefined,
+                    width: `calc(${String(Math.max(shownLength, 1))}ch + 1px)`,
+                  }
+                : undefined
+            }
           />
 
           {rightSection != null && (

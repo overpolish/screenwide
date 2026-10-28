@@ -87,10 +87,7 @@ export function RecordPanel({
 }) {
   if (!replay) return null;
   return (
-    <ControlRow
-      className="px-inset-sm"
-      title={t("recording-controls-island-replay")}
-    >
+    <ControlRow title={t("recording-controls-island-replay")}>
       {(controlProps) => (
         <Switch
           {...controlProps}

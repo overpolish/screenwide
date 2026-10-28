@@ -40,7 +40,7 @@ export function beatIsland({
     actions: (
       <ConfirmActionButton
         confirmLabel={t("editor-island-beat-confirm-cut")}
-        icon={<Scissors aria-hidden />}
+        icon={<Scissors />}
         label={t("editor-island-beat-cut")}
         onConfirm={onCut}
         variant="ghost"

@@ -14,20 +14,18 @@ import { type DialSteps, EIGHTH_TURN, useAngleDial } from "./use-angle-dial";
 // The angle dial in the island's skin: one of the island's circles, holding
 // a glyph drawn pointing at twelve o'clock and turned to the value, so the
 // circle shows the aim it sets. A drag aims it at the pointer, a scroll or an
-// arrow key turns it an eighth of a turn; it rests on the eighths, marked
-// round its edge, and Shift frees a drag or an arrow to the degree.
+// arrow key turns it. Stepped, it rests on the eighths, marked round its
+// edge, and a scroll turns an eighth; free, it turns to the degree as a
+// window's dial does, and a scroll turns it a degree at a time.
 //
 // The turn eases to each new aim the short way round, so a step across
 // twelve o'clock does not spin the glyph back through the whole turn.
 
-const STEPS: DialSteps = {
-  drag: { plain: EIGHTH_TURN, shifted: 1 },
-  key: { plain: EIGHTH_TURN, shifted: 1 },
-};
-
 /** How far a scroll travels, in px, to turn an eighth: enough that a
  * trackpad's flick turns once or twice rather than spinning. */
 const WHEEL_STEP = 30;
+/** How far a scroll travels, in px, to turn a free dial a degree. */
+const WHEEL_DEGREE = 3;
 /** A line's worth of scroll, in px, for a wheel that reports lines. */
 const WHEEL_LINE = 16;
 
@@ -37,20 +35,24 @@ export function IslandAngleDial({
   "aria-label": label,
   children,
   isDisabled,
+  isStepped,
   onChange,
+  steps,
   value,
 }: {
   "aria-label": string;
   children: ReactNode;
   isDisabled: boolean;
+  isStepped: boolean;
   onChange: (degrees: number) => void;
+  steps: DialSteps;
   value: number;
 }) {
   const { dialProps, isDragging, isHovered } = useAngleDial({
     isDisabled,
     label,
     onChange,
-    steps: STEPS,
+    steps,
     value,
   });
   const transitionDuration = useReducedMotion()
@@ -70,10 +72,11 @@ export function IslandAngleDial({
   const turnByWheel = (event: WheelEvent) => {
     scrolledRef.current +=
       event.deltaMode === 1 ? event.deltaY * WHEEL_LINE : event.deltaY;
-    if (Math.abs(scrolledRef.current) < WHEEL_STEP) return;
-    const by = scrolledRef.current > 0 ? EIGHTH_TURN : -EIGHTH_TURN;
-    scrolledRef.current = 0;
-    onChange(wrapAngle(value + by));
+    const travel = isStepped ? WHEEL_STEP : WHEEL_DEGREE;
+    if (Math.abs(scrolledRef.current) < travel) return;
+    const turns = Math.trunc(scrolledRef.current / travel);
+    scrolledRef.current -= turns * travel;
+    onChange(wrapAngle(value + turns * (isStepped ? EIGHTH_TURN : 1)));
   };
 
   return (
@@ -87,16 +90,25 @@ export function IslandAngleDial({
       onWheel={turnByWheel}
     >
       <IslandFill isChosen={isDragging} isHovered={isHovered} />
-      {MARKS.map((mark) => (
+      {isStepped ? (
+        MARKS.map((mark) => (
+          <span
+            aria-hidden
+            className="absolute inset-0.5"
+            key={mark}
+            style={{ rotate: `${String(mark)}deg` }}
+          >
+            <span className="absolute start-1/2 top-0 size-0.5 -translate-x-1/2 rounded-full bg-fg-tertiary rtl:translate-x-1/2" />
+          </span>
+        ))
+      ) : (
+        // With no steps to mark, a faint ring says it turns, in the
+        // island's stronger fill so it sits back from the dot.
         <span
           aria-hidden
-          className="absolute inset-0.5"
-          key={mark}
-          style={{ rotate: `${String(mark)}deg` }}
-        >
-          <span className="absolute start-1/2 top-0 size-0.5 -translate-x-1/2 rounded-full bg-fg-tertiary rtl:translate-x-1/2" />
-        </span>
-      ))}
+          className="absolute inset-0.5 rounded-full border border-fill-strong"
+        />
+      )}
       <span
         aria-hidden
         className="flex transform-gpu transition-[rotate] ease-out"

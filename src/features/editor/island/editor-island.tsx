@@ -7,10 +7,7 @@ import { type ReactNode, useState } from "react";
 import { t } from "../../../i18n/i18n";
 import { Island, type IslandProps } from "../../../primitives/island/island";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
-import {
-  ISLAND,
-  type IslandAnchor,
-} from "../../../primitives/island/island-geometry";
+import { type IslandAnchor } from "../../../primitives/island/island-geometry";
 import { focusIn, reveal } from "../../../primitives/island/island-motion";
 import { useSize } from "../../../primitives/island/island-size";
 
@@ -43,22 +40,18 @@ export type EditorIslandProps = Pick<
 };
 
 export function EditorIsland({ content, ...island }: EditorIslandProps) {
-  // The row is as wide as what is under it, so its title keeps to the
-  // island's start and its actions to its end, rather than both being
-  // centred over something wider: the second line where there is one,
-  // which the section then hangs from at its own width; otherwise the
-  // section.
+  // The row keeps its own width as sections change beneath it, so its title
+  // and actions stay put while the black reshapes round a section; a
+  // section is made to fit under it. Only a second line, which is part of
+  // the row's black, widens it, so the title keeps to the island's start
+  // and the actions to its end rather than both centring over the line.
+  // The line, centred under the row, is at least the row's own width too,
+  // so the two are always one width and the line starts where the row does.
+  const [rowElement, setRowElement] = useState<HTMLDivElement | null>(null);
   const [belowElement, setBelowElement] = useState<HTMLDivElement | null>(null);
-  const [sectionElement, setSectionElement] = useState<HTMLDivElement | null>(
-    null,
-  );
+  const rowNaturalWidth = useSize(rowElement, { isNatural: true })?.width ?? 0;
   const belowWidth = useSize(belowElement)?.width ?? 0;
-  const sectionWidth = useSize(sectionElement)?.width ?? 0;
-  const rowWidth = content.below
-    ? belowWidth
-    : content.section
-      ? sectionWidth + (ISLAND.sectionInset - ISLAND.rowInset) * 2
-      : 0;
+  const rowWidth = content.below ? belowWidth : 0;
   return (
     <Island
       {...island}
@@ -66,7 +59,11 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
       aria-label={t("editor-island-label")}
       below={
         content.below ? (
-          <div key={content.key} ref={setBelowElement}>
+          <div
+            key={content.key}
+            ref={setBelowElement}
+            style={{ minWidth: rowNaturalWidth }}
+          >
             {content.below}
           </div>
         ) : undefined
@@ -82,6 +79,7 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
           >
             <div
               className="flex h-10 items-center justify-between gap-separate px-1"
+              ref={setRowElement}
               style={{ minWidth: rowWidth }}
             >
               <div className="flex min-w-0 items-center">{content.title}</div>
@@ -98,7 +96,7 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
         content.section ? (
           <AnimatePresence initial={false} mode="popLayout">
             <IslandCrossfade key={content.sectionKey ?? content.key}>
-              <div ref={setSectionElement}>{content.section}</div>
+              <div>{content.section}</div>
             </IslandCrossfade>
           </AnimatePresence>
         ) : undefined

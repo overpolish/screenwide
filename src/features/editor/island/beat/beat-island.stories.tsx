@@ -5,27 +5,32 @@ import { fn } from "storybook/test";
 
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { EditorIslandStage } from "../editor-island-stage";
+import {
+  editorIslandStoryMeta,
+  type EditorIslandStoryProps,
+} from "../editor-island-story-meta";
 
 import { beatIsland, type BeatIslandProps } from "./beat-island";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-function BeatIsland(props: BeatIslandProps) {
-  return <EditorIslandStage content={beatIsland(props)} />;
+function BeatIsland({
+  isShown,
+  ...props
+}: BeatIslandProps & EditorIslandStoryProps) {
+  return <EditorIslandStage content={beatIsland(props)} isShown={isShown} />;
 }
 
 const meta = {
+  ...editorIslandStoryMeta,
   args: {
     beat: { kind: "click", label: "New Project" },
     id: "beat",
+    isShown: true,
     onCut: fn(),
   },
   component: BeatIsland,
   decorators: [featureStage({ height: 160, width: 520 })],
-  parameters: {
-    controls: { disable: true },
-    layout: "fullscreen",
-  },
   title: "Features/Editor/Island/Beat",
 } satisfies Meta<typeof BeatIsland>;
 

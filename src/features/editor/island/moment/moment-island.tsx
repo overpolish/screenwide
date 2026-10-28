@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Flag, Scissors } from "lucide-react";
+import { type CSSProperties } from "react";
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
@@ -56,7 +57,7 @@ export function momentIsland(props: MomentIslandProps): EditorIslandContent {
     actions: (
       <ConfirmActionButton
         confirmLabel={t("editor-island-moment-confirm-cut")}
-        icon={<Scissors aria-hidden />}
+        icon={<Scissors />}
         label={t("editor-island-moment-cut")}
         onConfirm={props.onCut}
         variant="ghost"
@@ -81,7 +82,13 @@ export function momentIsland(props: MomentIslandProps): EditorIslandContent {
       : undefined,
     title: (
       <IslandRowTitle
-        glyph={<Flag style={{ color: props.color }} />}
+        glyph={
+          // The kind's own colour, drawn whole rather than at the title
+          // glyph's alpha, as the recording island draws it.
+          <Flag
+            style={{ "--icon-alpha": 1, color: props.color } as CSSProperties}
+          />
+        }
         title={props.name}
       />
     ),

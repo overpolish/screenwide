@@ -89,8 +89,8 @@ export const Colors: Story = {
   ),
 };
 
-// On the island the dial turns what it is given, here an arrow, an eighth of
-// a turn at a time.
+// On the island the dial turns what it is given, here an arrow, to the
+// degree; with isStepped it rests on the eighths, marked round its edge.
 export const Island: Story = {
   decorators: [onIsland()],
   render: function Render(args) {
