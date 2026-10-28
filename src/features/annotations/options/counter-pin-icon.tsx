@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /** A counter as a filled pin pointing at twelve o'clock, its disc centred in
- * the box so it turns about the disc as the counter does. Lucide's
- * `MapPinPlusInside` outline, the counter tool's icon and the renderer's own
- * counter shape, turned half a turn and lifted two units, without its plus:
- * the plus names the tool, and here the pin only aims. */
+ * the box so it turns about the disc as the counter does. The counter tool's
+ * pin outline, Lucide's `MapPinPlusInside` and the renderer's own counter
+ * shape, turned half a turn and lifted two units, without its 1: the 1 names
+ * the tool, and here the pin only aims. */
 export function CounterPinIcon({ className }: { className?: string }) {
   return (
     <svg

@@ -42,24 +42,3 @@ export function CornerGlyph({ radius }: { radius: number }) {
     </Glyph>
   );
 }
-
-/** Clean, the box drawn in one closed lap. By hand, the renderer's stray
- * (`outline/geometry.rs`): the box sits a touch off square, its sides bow a
- * little, and from its start by the top-left corner the pen goes once round
- * and runs on past where it began, lifting as it goes, so the run past is
- * drawn finer and crosses back over the first pass. Deeper than the
- * renderer's stray, so it reads at this size. */
-export function ShapeStrokeGlyph({ isHandDrawn }: { isHandDrawn: boolean }) {
-  return (
-    <Glyph>
-      {isHandDrawn ? (
-        <g transform="rotate(-3 12 12)">
-          <path d="M7.5 5.6C11 5.1 15 4.9 18.2 4.9C19.1 4.9 19.4 5.5 19.4 6.4C19.6 10 19.6 14.5 19.2 17.9C19.1 18.8 18.5 19.2 17.6 19.2C13.5 19.5 9.5 19.6 6.3 19.3C5.3 19.2 4.8 18.6 4.8 17.6C4.5 13.5 4.6 9.5 4.9 6.3C5 4.8 6 4.2 7.5 4.2" />
-          <path d="M7.5 4.2C9.2 4.2 10.8 4.6 12.4 5.3" strokeWidth={1.25} />
-        </g>
-      ) : (
-        <rect height={BOX.side} rx={2} width={BOX.side} x={BOX.at} y={BOX.at} />
-      )}
-    </Glyph>
-  );
-}

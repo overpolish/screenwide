@@ -35,8 +35,11 @@ type IconButtonProps = AriaButtonProps &
     slot?: string | null;
   };
 
-type IconToggleButtonProps = AriaToggleButtonProps &
-  MotionProps & {
+type IconToggleButtonProps = Omit<AriaToggleButtonProps, "children"> &
+  Omit<MotionProps, "children"> & {
+    /** A glyph, or one drawn from whether it is on, which then shows its
+     * state itself: the button neither fills nor swaps it. */
+    children: ReactNode | ((state: { isSelected: boolean }) => ReactNode);
     className?: string;
     /** The glyph shown while off. Without one, being on fills the button. */
     off?: ReactNode;
@@ -101,13 +104,14 @@ export const IconToggleButton = ({
 }: IconToggleButtonProps) => {
   const skin = useSkin();
   const isIsland = skin === "island";
+  const drawsState = typeof children === "function";
   return (
     <MotionAriaToggleButton
       {...props}
       className={({ isSelected }) =>
         cn(
           buttonVariants(
-            off == null && isSelected && !isIsland
+            off == null && !drawsState && isSelected && !isIsland
               ? { color: "primary", isDisabled: props.isDisabled, skin }
               : { isDisabled: props.isDisabled, skin, variant },
           ),
@@ -119,9 +123,11 @@ export const IconToggleButton = ({
       {({ isSelected }) => (
         <>
           {isIsland && variant === "ghost" ? (
-            <IslandFill isChosen={off == null && isSelected} />
+            <IslandFill isChosen={off == null && !drawsState && isSelected} />
           ) : null}
-          {off == null ? (
+          {typeof children === "function" ? (
+            children({ isSelected })
+          ) : off == null ? (
             children
           ) : (
             <>

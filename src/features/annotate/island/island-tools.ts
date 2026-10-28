@@ -3,13 +3,12 @@
 
 import type { ComponentType } from "react";
 
-import { Focus } from "lucide-react";
-
 import { t } from "../../../i18n/i18n";
 import {
   ArrowToolIcon,
   CounterToolIcon,
   DrawToolIcon,
+  FocusToolIcon,
   HighlightToolIcon,
   ShapeToolIcon,
 } from "../../annotations/annotation-tool-icons";
@@ -44,7 +43,7 @@ export const ISLAND_TOOLS: {
   { icon: ShapeToolIcon, id: "shape", pen: ShapePen },
   {
     hasNoColor: true,
-    icon: Focus,
+    icon: FocusToolIcon,
     id: "focus",
     name: () => t("annotate-island-focus-name"),
     pen: FocusPen,

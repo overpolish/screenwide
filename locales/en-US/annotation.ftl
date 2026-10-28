@@ -61,13 +61,24 @@ annotation-angle = Angle
 annotation-angle-value = Angle value
 annotation-radius = Radius
 annotation-randomise = Randomise
-# Whether what lies outside a spotlight stays sharp or is blurred.
-annotation-outside = Outside
+# How wide a blurred redaction's blur spreads, in steps from lightest to strongest.
+annotation-blur-strength = Strength
+# One of a blur's steps, named by its place from the lightest and how many there are.
+annotation-blur-strength-step = Strength { $strength } of { $count }
+# A toggle: whether an image casts a shadow onto the picture under it.
+annotation-shadow-drop = Drop shadow
+# A toggle: whether a recording gives a placed image a slight, slow turn and drift. Each time it is turned on the sway is new.
+annotation-sway-on = Sway
+# A toggle: whether a recording loops a moving image for its whole clip rather than playing it through once.
+annotation-playback-loop = Loop
+# Whether what lies outside a spotlight is blurred.
 annotation-outside-blur = Blur
 # Whether a highlight fits itself to the text under it or is laid by hand.
 annotation-fit = Fit
 annotation-fit-auto = Auto
 annotation-fit-manual = Manual
+# A toggle: whether a highlight covers the box dragged rather than fitting the text under it.
+annotation-fit-box = Cover the box
 # Which ends of an arrow carry a head.
 annotation-head = Head
 annotation-head-none = None
@@ -77,8 +88,7 @@ annotation-head-both = Both
 annotation-ink = Ink
 annotation-ink-recolor = Recolor
 annotation-ink-tint = Tint
-annotation-stroke = Stroke
-annotation-stroke-clean = Clean
+# A toggle: whether a highlight or a shape is drawn by hand rather than clean. Each time it is turned on the wobble is new.
 annotation-stroke-hand-drawn = Hand-drawn
 annotation-redaction = Redaction
 annotation-redaction-erase = Erase
@@ -91,3 +101,5 @@ annotation-redaction-shuffle-blur = Shuffle blur
 annotation-pixelation = Pixelation
 annotation-pixelation-secure = Secure
 annotation-pixelation-classic = Classic
+# A toggle: whether a pixelated redaction uses classic pixelation, only a look, rather than secure.
+annotation-pixelation-classic-on = Classic pixelation

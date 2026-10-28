@@ -25,7 +25,6 @@ export type Messages = {
   "annotate-island-corners-rounded": null;
   "annotate-island-corners-square": null;
   "annotate-island-draw-hint": null;
-  "annotate-island-focus-blur": null;
   "annotate-island-focus-dim": null;
   "annotate-island-focus-name": null;
   "annotate-island-highlight-box-hint": { key: string | number };
@@ -39,6 +38,11 @@ export type Messages = {
   "annotation-alignment": null;
   "annotation-angle": null;
   "annotation-angle-value": null;
+  "annotation-blur-strength": null;
+  "annotation-blur-strength-step": {
+    count: string | number;
+    strength: string | number;
+  };
   "annotation-color": null;
   "annotation-color-black": null;
   "annotation-color-blue": null;
@@ -51,6 +55,7 @@ export type Messages = {
   "annotation-custom-color": null;
   "annotation-fit": null;
   "annotation-fit-auto": null;
+  "annotation-fit-box": null;
   "annotation-fit-manual": null;
   "annotation-head": null;
   "annotation-head-both": null;
@@ -59,11 +64,12 @@ export type Messages = {
   "annotation-ink": null;
   "annotation-ink-recolor": null;
   "annotation-ink-tint": null;
-  "annotation-outside": null;
   "annotation-outside-blur": null;
   "annotation-pixelation": null;
   "annotation-pixelation-classic": null;
+  "annotation-pixelation-classic-on": null;
   "annotation-pixelation-secure": null;
+  "annotation-playback-loop": null;
   "annotation-radius": null;
   "annotation-randomise": null;
   "annotation-redaction": null;
@@ -74,13 +80,13 @@ export type Messages = {
   "annotation-redaction-shuffle-blur": null;
   "annotation-redaction-shuffle-pixelation": null;
   "annotation-saved-color-armed": { color: string | number };
+  "annotation-shadow-drop": null;
   "annotation-size-block": null;
   "annotation-size-height": null;
   "annotation-size-size": null;
   "annotation-size-width": null;
-  "annotation-stroke": null;
-  "annotation-stroke-clean": null;
   "annotation-stroke-hand-drawn": null;
+  "annotation-sway-on": null;
   "annotation-tool-arrow": null;
   "annotation-tool-arrow-name": null;
   "annotation-tool-counter": null;
@@ -247,6 +253,11 @@ export type Messages = {
   "editor-export-subtitles-srt": null;
   "editor-export-subtitles-vtt": null;
   "editor-export-unavailable": null;
+  "editor-island-annotation-animate": null;
+  "editor-island-annotation-confirm-delete": null;
+  "editor-island-annotation-delete": null;
+  "editor-island-arrow": null;
+  "editor-island-arrow-reverse": null;
   "editor-island-beat-click": { label: string | number };
   "editor-island-beat-confirm-cut": null;
   "editor-island-beat-cut": null;
@@ -256,6 +267,13 @@ export type Messages = {
   "editor-island-beat-speech": { line: string | number };
   "editor-island-beat-switch": { app: string | number };
   "editor-island-beat-type": { label: string | number };
+  "editor-island-counter": null;
+  "editor-island-drawing": null;
+  "editor-island-focus": null;
+  "editor-island-highlight": null;
+  "editor-island-image": null;
+  "editor-island-image-flip": null;
+  "editor-island-image-replace": null;
   "editor-island-label": null;
   "editor-island-lull": null;
   "editor-island-lull-confirm-cut": null;
@@ -267,6 +285,7 @@ export type Messages = {
   "editor-island-lull-retimed-slower": { speed: string | number };
   "editor-island-lull-squeeze": null;
   "editor-island-lull-trim-to-breath": null;
+  "editor-island-magnifier": null;
   "editor-island-moment-confirm-cut": null;
   "editor-island-moment-cut": null;
   "editor-island-moment-download": null;
@@ -283,6 +302,13 @@ export type Messages = {
   "editor-island-range": null;
   "editor-island-range-confirm-cut": null;
   "editor-island-range-cut": null;
+  "editor-island-redaction": null;
+  "editor-island-redaction-not-secure": null;
+  "editor-island-reset-rotation": null;
+  "editor-island-rotation": null;
+  "editor-island-rotation-x": null;
+  "editor-island-rotation-y": null;
+  "editor-island-rotation-z": null;
   "editor-island-scene": null;
   "editor-island-scene-auto-zoom": null;
   "editor-island-scene-bottom": null;
@@ -318,13 +344,8 @@ export type Messages = {
   "editor-island-scene-remove-layout": null;
   "editor-island-scene-reset-position": null;
   "editor-island-scene-reset-radius": null;
-  "editor-island-scene-reset-rotation": null;
   "editor-island-scene-reset-zoom": null;
   "editor-island-scene-right": null;
-  "editor-island-scene-rotation": null;
-  "editor-island-scene-rotation-x": null;
-  "editor-island-scene-rotation-y": null;
-  "editor-island-scene-rotation-z": null;
   "editor-island-scene-save-layout": null;
   "editor-island-scene-saved-layout": { number: string | number };
   "editor-island-scene-screen": null;
@@ -340,6 +361,28 @@ export type Messages = {
   "editor-island-scene-x": null;
   "editor-island-scene-y": null;
   "editor-island-scene-zoom": null;
+  "editor-island-shape": null;
+  "editor-island-text": null;
+  "editor-island-text-accent-font-current": { font: string | number };
+  "editor-island-text-color-role": null;
+  "editor-island-text-font-current": { font: string | number };
+  "editor-island-text-font-families": null;
+  "editor-island-text-font-search": null;
+  "editor-island-text-font-style-detail": {
+    style: string | number;
+    weight: string | number;
+  };
+  "editor-island-text-font-value": {
+    family: string | number;
+    style: string | number;
+  };
+  "editor-island-text-font-weight": null;
+  "editor-island-text-italic": null;
+  "editor-island-text-outline": null;
+  "editor-island-text-template": null;
+  "editor-island-text-template-current": { name: string | number };
+  "editor-island-text-word-by-word": null;
+  "editor-island-text-words": null;
   "editor-lane-arrow": { number: string | number };
   "editor-lane-counter": { number: string | number };
   "editor-lane-drawing": { number: string | number };

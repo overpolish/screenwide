@@ -117,6 +117,26 @@ function closeTop({ flare }: IslandOutlineShape["row"]) {
   return flare > 0.01 ? [`V${n(flare)}`, hollow(flare, -flare, 0), "Z"] : ["Z"];
 }
 
+/** The curves of a side where the section reaches `out` px past the row's
+ * end: the join out of the row's side, the section's corner over the
+ * reach, and its corner at the bottom (`corner`, as a side that meets the
+ * row's end would have it). Each is held to the room it has, so as the
+ * reach closes to nothing they shrink to nothing with it and the side runs
+ * straight down, as a meeting side does. */
+function reachRadii(
+  out: number,
+  shown: number,
+  { corner, row }: { corner: number; row: IslandOutlineShape["row"] },
+) {
+  const join = Math.min(
+    ISLAND.fillet,
+    out / 2,
+    Math.max(0, row.height - row.top),
+  );
+  const top = Math.min(ISLAND.sectionRadius, out - join, shown / 2);
+  return { bottom: Math.min(corner, shown - top), join, top };
+}
+
 export function islandOutline({ row, section }: IslandOutlineShape): string {
   const { height, width } = row;
   const shown = section ? section.height : 0;
@@ -131,11 +151,14 @@ export function islandOutline({ row, section }: IslandOutlineShape): string {
       ...closeTop(row),
     ].join(" ");
   }
-  const start = Math.max(0, section.start);
-  const end = Math.min(width, section.start + section.width);
+  const start = section.start;
+  const end = section.start + section.width;
   const bottom = height + shown;
-  const startSide = sideRadii(start, shown, row);
-  const endSide = sideRadii(width - end, shown, row);
+  // How far the section reaches past the row's ends, if it does.
+  const startOut = Math.max(0, -start);
+  const endOut = Math.max(0, end - width);
+  const startSide = sideRadii(Math.max(0, start), shown, row);
+  const endSide = sideRadii(width - Math.min(width, end), shown, row);
   // A narrow section cannot hold both its corners at full size.
   const room = (end - start) / 2;
   const startCorner = Math.min(startSide.corner, room);
@@ -143,7 +166,17 @@ export function islandOutline({ row, section }: IslandOutlineShape): string {
 
   const path = topEdge(row);
   // Down the end side.
-  if (endSide.isMeeting) {
+  if (endOut > 0) {
+    const reach = reachRadii(endOut, shown, { corner: endCorner, row });
+    path.push(
+      `V${n(height - reach.join)}`,
+      hollow(reach.join, width + reach.join, height),
+      `H${n(end - reach.top)}`,
+      round(reach.top, end, height + reach.top),
+      `V${n(bottom - reach.bottom)}`,
+      round(reach.bottom, end - reach.bottom, bottom),
+    );
+  } else if (endSide.isMeeting) {
     path.push(
       `V${n(bottom - endCorner)}`,
       round(endCorner, width - endCorner, bottom),
@@ -163,7 +196,17 @@ export function islandOutline({ row, section }: IslandOutlineShape): string {
     );
   }
   // Along the bottom and up the start side.
-  if (startSide.isMeeting) {
+  if (startOut > 0) {
+    const reach = reachRadii(startOut, shown, { corner: startCorner, row });
+    path.push(
+      `H${n(start + reach.bottom)}`,
+      round(reach.bottom, start, bottom - reach.bottom),
+      `V${n(height + reach.top)}`,
+      round(reach.top, start + reach.top, height),
+      `H${n(-reach.join)}`,
+      hollow(reach.join, 0, height - reach.join),
+    );
+  } else if (startSide.isMeeting) {
     path.push(
       `H${n(startCorner)}`,
       round(startCorner, 0, bottom - startCorner),

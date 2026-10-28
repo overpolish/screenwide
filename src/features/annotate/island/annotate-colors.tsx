@@ -1,20 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ColorGrid } from "../../../composites/color-grid/color-grid";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
-import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
+import { AnnotationColors } from "../../annotations/options/annotation-colors";
 
 import type { SectionProps } from "./section-props";
 
-/** The colours every tool draws in, as the editor offers them: the same grid
- * of swatches, ten to a row. Past five rows they scroll, so a long list of
- * colours of your own never pushes the island far down the screen. The
- * scrolled box holds the grid in the small inset, so a chosen swatch's
- * outline at its edge is not cut off; above and below it reaches past the
- * grid by as much, so the rows keep the section's own inset. Not at the
- * sides: the island takes the box's width as the section's, and a box
- * narrower than its grid is cut off. */
+/** The colours the next annotation is drawn in, every tool's alike. */
 export function AnnotateColors({
   onChange,
   ref,
@@ -23,20 +15,13 @@ export function AnnotateColors({
 }: SectionProps & { savedColors?: string[] }) {
   return (
     <IslandCrossfade ref={ref}>
-      <ScrollArea
-        className="p-inset-sm"
-        constrainHeight
-        rootClassName="-my-inset-sm max-h-34"
-      >
-        <ColorGrid
-          columns={10}
-          onChange={(defaultColor) => {
-            onChange({ defaultColor });
-          }}
-          savedColors={savedColors}
-          value={settings.defaultColor}
-        />
-      </ScrollArea>
+      <AnnotationColors
+        onChange={(defaultColor) => {
+          onChange({ defaultColor });
+        }}
+        savedColors={savedColors}
+        value={settings.defaultColor}
+      />
     </IslandCrossfade>
   );
 }

@@ -109,11 +109,13 @@ export function useIslandOutline({
   useLayoutEffect(() => {
     let reported: IslandPart[] = [];
     const report = ({
+      extent,
       row,
       rowOpacity,
       section,
       svg,
     }: {
+      extent: { end: number; start: number };
       row: { height: number; width: number };
       rowOpacity: number;
       section: { height: number; start: number; width: number } | null;
@@ -122,19 +124,22 @@ export function useIslandOutline({
       const onShape = onShapeChangeRef.current;
       if (!onShape) return;
       // The outline is drawn from the row's start, so in a right-to-left
-      // page its parts are measured from the other side. Its box has room
-      // round it for the shadow.
+      // page its parts are measured from the other side. Its box spans the
+      // outline, with room round it for the shadow.
       const room = ISLAND.shadowRoom;
       const outer = svg.getBoundingClientRect();
-      const box = { left: outer.left + room, top: outer.top + room };
       const isRtl = getComputedStyle(svg).direction === "rtl";
+      const rowLeft = isRtl
+        ? outer.left + room + extent.end - row.width
+        : outer.left + room - extent.start;
+      const top = outer.top + room;
       const parts: IslandPart[] = [];
       if (rowOpacity > 0.01) {
         parts.push({
           height: row.height,
           width: row.width,
-          x: box.left,
-          y: box.top,
+          x: rowLeft,
+          y: top,
         });
       }
       if (section) {
@@ -142,9 +147,9 @@ export function useIslandOutline({
           height: section.height,
           width: section.width,
           x:
-            box.left +
+            rowLeft +
             (isRtl ? row.width - section.start - section.width : section.start),
-          y: box.top + row.height,
+          y: top + row.height,
         });
       }
       if (sameParts(parts, reported)) return;
@@ -190,13 +195,26 @@ export function useIslandOutline({
       under.style.opacity = String(rowOpacity);
       const svg = shape.ownerSVGElement;
       if (svg) {
-        // The box is as tall as the outline, with the shadow's room round
-        // it, so an empty box below the island never adds to the page's
-        // scrolling, as it would in Storybook's Docs.
+        // The box spans the outline, with the shadow's room round it, and
+        // no further: a section reaching past the row is inside it, so its
+        // shadow is painted, and cleared, as the rest is; and an empty box
+        // below the island never adds to the page's scrolling, as it would
+        // in Storybook's Docs.
+        const room = ISLAND.shadowRoom;
+        const extent = {
+          end: Math.max(rowWidth, section ? section.start + section.width : 0),
+          start: Math.min(0, section?.start ?? 0),
+        };
         svg.style.height = `${String(
-          row.height + (section?.height ?? 0) + ISLAND.shadowRoom * 2,
+          row.height + (section?.height ?? 0) + room * 2,
         )}px`;
-        report({ row, rowOpacity, section, svg });
+        svg.style.width = `${String(extent.end - extent.start + room * 2)}px`;
+        svg.style.insetInlineStart = `${String(extent.start - room)}px`;
+        shape.parentElement?.setAttribute(
+          "transform",
+          `translate(${String(room - extent.start)} ${String(room)})`,
+        );
+        report({ extent, row, rowOpacity, section, svg });
       }
     };
     let isQueued = false;

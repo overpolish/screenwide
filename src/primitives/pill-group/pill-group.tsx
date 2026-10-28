@@ -145,6 +145,16 @@ export function PillGroup({
         },
       }
     : { transition: knobTransition };
+  // On the island a pill that comes or goes once the group is there grows
+  // into its place and folds out of it, its neighbours moving with it,
+  // rather than appearing or leaving at once.
+  const pillOff = { filter: "blur(4px)", opacity: 0, width: 0 };
+  const pillPresence = {
+    animate: { filter: "blur(0px)", opacity: 1, width: "auto" },
+    exit: pillOff,
+    initial: pillOff,
+    transition: knobTransition,
+  };
 
   return (
     <ToggleButtonGroup
@@ -157,8 +167,11 @@ export function PillGroup({
           selection.onSelectionChange([...keys].map(String));
           return;
         }
+        // React Aria reports a press on the chosen segment as a change to
+        // the same selection; passing it on would make a no-op edit.
         const id = selectedId(keys);
-        if (id !== null) selection.onSelectionChange(id);
+        if (id !== null && id !== selection.selected)
+          selection.onSelectionChange(id);
       }}
       selectedKeys={
         new Set(
@@ -169,80 +182,91 @@ export function PillGroup({
       }
       selectionMode={isMultiple ? "multiple" : "single"}
     >
-      {items.map((item) => {
-        const isItemDisabled = disabledIds?.includes(item.id) ?? false;
-        const label =
-          item.label !== undefined && item.labelClassName ? (
-            <span className={item.labelClassName}>{item.label}</span>
-          ) : (
-            item.label
-          );
+      <AnimatePresence initial={false}>
+        {items.map((item) => {
+          const isItemDisabled = disabledIds?.includes(item.id) ?? false;
+          const label =
+            item.label !== undefined && item.labelClassName ? (
+              <span className={item.labelClassName}>{item.label}</span>
+            ) : (
+              item.label
+            );
 
-        return (
-          <ToggleButton
-            aria-label={item.ariaLabel ?? item.label}
-            className={cn(
-              isIsland
-                ? [
-                    islandSegmentClassName,
-                    item.label === undefined ? "w-island-control" : "px-inset",
-                  ]
-                : [
-                    segmentClassName,
-                    // A segment showing only its icon is a square the
-                    // track's height.
-                    item.label === undefined ? "aspect-square" : "px-inset",
-                  ],
-              itemClassName,
-            )}
-            id={item.id}
-            isDisabled={isItemDisabled}
-            key={item.id}
-            // The toggle runs before this, so a listener sees the new
-            // selection; `disallowEmptySelection` keeps the selected segment
-            // put, so its press only opens the source list.
-            onPress={(event) => {
-              item.onPress?.(
-                event.target.getBoundingClientRect(),
-                ["keyboard", "virtual"].includes(event.pointerType),
-              );
-            }}
-            style={{ transitionDuration }}
-          >
-            {({ isHovered, isSelected }) =>
-              isIsland ? (
-                <>
-                  <IslandFill isChosen={isSelected} isHovered={isHovered} />
-                  {item.icon ?? label}
-                </>
-              ) : (
-                <>
-                  <AnimatePresence initial={false}>
-                    {isSelected ? (
-                      <motion.span
-                        aria-hidden="true"
-                        className={knobClassName}
-                        key="knob"
-                        layoutId={layoutId}
-                        {...knobPresence}
-                      />
-                    ) : null}
-                  </AnimatePresence>
-                  {/* Above the knob in every segment, not just its own:
+          const button = (
+            <ToggleButton
+              aria-label={item.ariaLabel ?? item.label}
+              className={cn(
+                isIsland
+                  ? [
+                      islandSegmentClassName,
+                      item.label === undefined
+                        ? "w-island-control"
+                        : "px-inset",
+                    ]
+                  : [
+                      segmentClassName,
+                      // A segment showing only its icon is a square the
+                      // track's height.
+                      item.label === undefined ? "aspect-square" : "px-inset",
+                    ],
+                itemClassName,
+              )}
+              id={item.id}
+              isDisabled={isItemDisabled}
+              key={item.id}
+              // The toggle runs before this, so a listener sees the new
+              // selection; `disallowEmptySelection` keeps the selected segment
+              // put, so its press only opens the source list.
+              onPress={(event) => {
+                item.onPress?.(
+                  event.target.getBoundingClientRect(),
+                  ["keyboard", "virtual"].includes(event.pointerType),
+                );
+              }}
+              style={{ transitionDuration }}
+            >
+              {({ isHovered, isSelected }) =>
+                isIsland ? (
+                  <>
+                    <IslandFill isChosen={isSelected} isHovered={isHovered} />
+                    {item.icon ?? label}
+                  </>
+                ) : (
+                  <>
+                    <AnimatePresence initial={false}>
+                      {isSelected ? (
+                        <motion.span
+                          aria-hidden="true"
+                          className={knobClassName}
+                          key="knob"
+                          layoutId={layoutId}
+                          {...knobPresence}
+                        />
+                      ) : null}
+                    </AnimatePresence>
+                    {/* Above the knob in every segment, not just its own:
                       while the knob slides it is drawn from the segment it
                       is moving to, which comes later in the page than the
                       ones it crosses, and would otherwise cover their
                       text. */}
-                  <span className="relative z-10 flex min-w-0 items-center justify-center gap-inline whitespace-nowrap">
-                    {item.icon}
-                    {label}
-                  </span>
-                </>
-              )
-            }
-          </ToggleButton>
-        );
-      })}
+                    <span className="relative z-10 flex min-w-0 items-center justify-center gap-inline whitespace-nowrap">
+                      {item.icon}
+                      {label}
+                    </span>
+                  </>
+                )
+              }
+            </ToggleButton>
+          );
+          return isIsland ? (
+            <motion.div className="flex" key={item.id} {...pillPresence}>
+              {button}
+            </motion.div>
+          ) : (
+            button
+          );
+        })}
+      </AnimatePresence>
     </ToggleButtonGroup>
   );
 }

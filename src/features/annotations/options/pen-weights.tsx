@@ -3,17 +3,22 @@
 
 import { t } from "../../../i18n/i18n";
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
-import { annotationSizeLabel } from "../../annotations/annotation-text";
-import { ANNOTATION_WIDTHS } from "../../annotations/widths";
+import { annotationSizeLabel } from "../annotation-text";
+import { ANNOTATION_WIDTHS } from "../widths";
 
 import { SizeDot } from "./size-dot";
 
-import type { SectionProps } from "./section-props";
-
 /** The pen's weights as dots, each as wide as its stroke in proportion, the
- * thinnest at the smallest dot that reads. One pen draws the arrow and the
- * shape, so a weight chosen for either is the other's too. */
-export function PenWeights({ onChange, settings }: Omit<SectionProps, "ref">) {
+ * thinnest at the smallest dot that reads. One pen draws the arrow, the
+ * shape and a freehand stroke, so a weight looks the same for each. */
+export function PenWeights({
+  onChange,
+  value,
+}: {
+  onChange: (points: number) => void;
+  /** The stroke's width in points. */
+  value: number;
+}) {
   return (
     <PillGroup
       aria-label={annotationSizeLabel("width")}
@@ -23,9 +28,9 @@ export function PenWeights({ onChange, settings }: Omit<SectionProps, "ref">) {
         id: String(points),
       }))}
       onSelectionChange={(id) => {
-        onChange({ defaultWidth: Number(id) });
+        onChange(Number(id));
       }}
-      selected={String(settings.defaultWidth)}
+      selected={String(value)}
     />
   );
 }

@@ -1,22 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RotateCcw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode } from "react";
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
-import { AngleDial } from "../../../../primitives/angle-dial/angle-dial";
 import { Button } from "../../../../primitives/button/button";
-import { IconButton } from "../../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
 import { NumberField } from "../../../../primitives/input-fields/number-field";
 import { focusIn } from "../../../../primitives/island/island-motion";
 import { Switch } from "../../../../primitives/switch/switch";
+import { IslandFigure } from "../island-figure";
+import { IslandRotation } from "../island-rotation";
 
 import type { SceneFramingProps, ScenePane } from "./scene-framing";
-import type { SceneRotation } from "../../../../bindings/SceneRotation";
 
 // A pane's group: exact figures for what is mostly done by hand on the
 // picture (how far it zooms in, how round its corners are, which part of it
@@ -27,70 +24,6 @@ import type { SceneRotation } from "../../../../bindings/SceneRotation";
 const MAX_ZOOM_PERCENT = 800;
 
 const percent = (share: number) => Math.round(share * 100);
-
-const AXES = [
-  { axis: "x", color: "red", label: () => t("editor-island-scene-rotation-x") },
-  {
-    axis: "y",
-    color: "green",
-    label: () => t("editor-island-scene-rotation-y"),
-  },
-  {
-    axis: "z",
-    color: "blue",
-    label: () => t("editor-island-scene-rotation-z"),
-  },
-] as const;
-
-/** A figure, after its reset while there is anything to put back. The
- * reset's place is kept while it is gone, so it comes into focus there, as
- * the island's parts do, without the row, the group or the island's outline
- * changing width round it. */
-function Figure({
-  children,
-  controlProps,
-  isDefault,
-  onReset,
-  resetLabel,
-}: {
-  children: ReactNode;
-  controlProps: object;
-  isDefault: boolean;
-  onReset: () => void;
-  resetLabel: string;
-}) {
-  return (
-    <div
-      {...controlProps}
-      className="flex items-center gap-inline"
-      role="group"
-    >
-      <span className="flex size-island-control">
-        <AnimatePresence initial={false}>
-          {isDefault ? null : (
-            <motion.span
-              animate={focusIn.animate}
-              className="flex"
-              exit={focusIn.exit}
-              initial={focusIn.exit}
-              key="reset"
-              transition={focusIn.transition}
-            >
-              <IconButton
-                aria-label={resetLabel}
-                className="text-fg-secondary enabled:hover:text-fg"
-                onPress={onReset}
-              >
-                <RotateCcw aria-hidden className="size-icon" />
-              </IconButton>
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </span>
-      {children}
-    </div>
-  );
-}
 
 export function ScenePaneGroup(
   props: SceneFramingProps & { pane: "camera" | "screen" },
@@ -106,7 +39,7 @@ export function ScenePaneGroup(
     <div className="flex flex-col gap-inline">
       <ControlRow title={t("editor-island-scene-zoom")}>
         {(controlProps) => (
-          <Figure
+          <IslandFigure
             controlProps={controlProps}
             isDefault={framing.zoom === 1}
             onReset={() => {
@@ -125,12 +58,12 @@ export function ScenePaneGroup(
               step={10}
               value={percent(framing.zoom)}
             />
-          </Figure>
+          </IslandFigure>
         )}
       </ControlRow>
       <ControlRow title={t("editor-island-scene-radius")}>
         {(controlProps) => (
-          <Figure
+          <IslandFigure
             controlProps={controlProps}
             isDefault={!framing.hasOwnRadius}
             onReset={() => {
@@ -149,12 +82,12 @@ export function ScenePaneGroup(
               step={1}
               value={framing.radius}
             />
-          </Figure>
+          </IslandFigure>
         )}
       </ControlRow>
       <ControlRow title={t("editor-island-scene-position")}>
         {(controlProps) => (
-          <Figure
+          <IslandFigure
             controlProps={controlProps}
             isDefault={framing.focusX === 0.5 && framing.focusY === 0.5}
             onReset={() => {
@@ -186,19 +119,14 @@ export function ScenePaneGroup(
               step={1}
               value={percent(framing.focusY)}
             />
-          </Figure>
+          </IslandFigure>
         )}
       </ControlRow>
       {pane === "screen" && screen ? (
-        <ControlRow title={t("editor-island-scene-rotation")}>
-          {(controlProps) => (
-            <Rotation
-              controlProps={controlProps}
-              onChange={props.onRotationChange}
-              rotation={screen.rotation}
-            />
-          )}
-        </ControlRow>
+        <IslandRotation
+          onChange={props.onRotationChange}
+          rotation={screen.rotation}
+        />
       ) : null}
       {pane === "camera" && camera ? (
         <ControlRow title={t("editor-island-scene-follow-face")}>
@@ -244,40 +172,5 @@ export function ScenePaneGroup(
         </div>
       ) : null}
     </div>
-  );
-}
-
-/** The screen turned about each axis, a dial for each in the colour that
- * names it, after the reset that stands it upright again. */
-function Rotation({
-  controlProps,
-  onChange,
-  rotation,
-}: {
-  controlProps: object;
-  onChange: (rotation: SceneRotation) => void;
-  rotation: SceneRotation;
-}) {
-  return (
-    <Figure
-      controlProps={controlProps}
-      isDefault={rotation.x === 0 && rotation.y === 0 && rotation.z === 0}
-      onReset={() => {
-        onChange({ x: 0, y: 0, z: 0 });
-      }}
-      resetLabel={t("editor-island-scene-reset-rotation")}
-    >
-      {AXES.map(({ axis, color, label }) => (
-        <AngleDial
-          aria-label={label()}
-          color={color}
-          key={axis}
-          onChange={(degrees) => {
-            onChange({ ...rotation, [axis]: degrees });
-          }}
-          value={rotation[axis]}
-        />
-      ))}
-    </Figure>
   );
 }

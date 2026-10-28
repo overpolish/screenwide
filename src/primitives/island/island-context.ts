@@ -32,3 +32,10 @@ export const IslandSectionContext = createContext<{
   noteSwap: () => undefined,
   offset: null,
 });
+
+/** How the section's aside (`IslandAside`) hands the island its element,
+ * which the island measures with the section, in the same pass, so the two
+ * never disagree for a frame; nothing outside an island. */
+export const IslandAsideContext = createContext<
+  (element: HTMLDivElement | null) => void
+>(() => undefined);

@@ -3,8 +3,8 @@
 
 import { t } from "../../../i18n/i18n";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
+import { PenWeights } from "../../annotations/options/pen-weights";
 
-import { PenWeights } from "./pen-weights";
 import { SectionHint } from "./section-hint";
 
 import type { SectionProps } from "./section-props";
@@ -18,7 +18,12 @@ export function DrawPen({ onChange, ref, settings }: SectionProps) {
   return (
     <IslandCrossfade ref={ref}>
       <div className="flex items-center gap-separate">
-        <PenWeights onChange={onChange} settings={settings} />
+        <PenWeights
+          onChange={(defaultWidth) => {
+            onChange({ defaultWidth });
+          }}
+          value={settings.defaultWidth}
+        />
         <SectionHint>{t("annotate-island-draw-hint")}</SectionHint>
       </div>
     </IslandCrossfade>

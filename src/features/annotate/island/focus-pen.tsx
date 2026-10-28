@@ -1,25 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { t } from "../../../i18n/i18n";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
-import { PillGroup } from "../../../primitives/pill-group/pill-group";
-
-import { CornerChoice } from "./corner-choice";
-import { FocusLookGlyph } from "./focus-glyphs";
+import { CornerChoice } from "../../annotations/options/corner-choice";
+import { DimToggle } from "../../annotations/options/dim-toggle";
 
 import type { SectionProps } from "./section-props";
 
-const LOOKS = [
-  { id: "blur", label: () => t("annotate-island-focus-blur") },
-  { id: "dim", label: () => t("annotate-island-focus-dim") },
-] as const;
-
 /** The focus's pen: its corners, then how it treats what lies around its
- * box, blurred as a camera's depth of field or dimmed as a spotlight's shade.
- * One tool for both, as both point at one box: the blur is the look, and the
- * dim keeps whatever moves behind the overlay live, where a blur can only
- * soften a still of the screen. Blurred draws a focus, dimmed a spotlight. */
+ * box. One tool for both looks, as both point at one box: the blur is the
+ * look, and the dim keeps whatever moves behind the overlay live, where a
+ * blur can only soften a still of the screen. */
 export function FocusPen({ onChange, ref, settings }: SectionProps) {
   return (
     <IslandCrossfade ref={ref}>
@@ -30,17 +21,11 @@ export function FocusPen({ onChange, ref, settings }: SectionProps) {
           }}
           value={settings.focusRadius}
         />
-        <PillGroup
-          aria-label={t("annotation-outside")}
-          items={LOOKS.map(({ id, label }) => ({
-            ariaLabel: label(),
-            icon: <FocusLookGlyph look={id} />,
-            id,
-          }))}
-          onSelectionChange={(id) => {
-            onChange({ focusDims: id === "dim" });
+        <DimToggle
+          dims={settings.focusDims}
+          onChange={(focusDims) => {
+            onChange({ focusDims });
           }}
-          selected={settings.focusDims ? "dim" : "blur"}
         />
       </div>
     </IslandCrossfade>

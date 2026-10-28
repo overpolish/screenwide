@@ -140,12 +140,12 @@ editor-island-scene-position-y = Vertical position
 # The axes the two position fields are for.
 editor-island-scene-x = X
 editor-island-scene-y = Y
-# The screen turned in depth.
-editor-island-scene-rotation = Rotation
-editor-island-scene-rotation-x = X rotation
-editor-island-scene-rotation-y = Y rotation
-editor-island-scene-rotation-z = Z rotation
-editor-island-scene-reset-rotation = Reset rotation
+# Something on the picture turned in depth and flat: the screen in a scene, or a placed image.
+editor-island-rotation = Rotation
+editor-island-rotation-x = X rotation
+editor-island-rotation-y = Y rotation
+editor-island-rotation-z = Z rotation
+editor-island-reset-rotation = Reset rotation
 # Hangs under the row while no scene is in hand. The scene line runs along the timeline strip.
 editor-island-scene-hint = Drag along the scene line to add a scene.
 editor-island-scene-auto-zoom = Auto zoom
@@ -153,3 +153,57 @@ editor-island-scene-clear-auto-zooms = Clear all
 editor-island-scene-confirm-clear-auto-zooms = Confirm clearing
 # Plans the zooms again, replacing the planned zooms.
 editor-island-scene-regenerate-auto-zooms = Regenerate
+
+## An annotation drawn on the picture, in hand
+
+editor-island-annotation-delete = Delete the annotation
+editor-island-annotation-confirm-delete = Confirm deleting
+# Whether the annotation draws itself in as its bar on the strip begins, rather than appearing whole.
+editor-island-annotation-animate = Animate
+editor-island-arrow = Arrow
+# Turns the arrow round, so its head points the other way.
+editor-island-arrow-reverse = Reverse
+editor-island-counter = Counter
+# A freehand stroke drawn on the picture.
+editor-island-drawing = Drawing
+editor-island-focus = Focus
+editor-island-highlight = Highlight
+# A picture placed on the picture, from a file.
+editor-island-image = Image
+# Gives the image another picture, keeping its place, size and turn.
+editor-island-image-replace = Replace
+# Mirrors the image across its upright axis.
+editor-island-image-flip = Flip
+# A loupe that shows part of the picture larger.
+editor-island-magnifier = Magnifier
+# A box that hides what is under it, by erasing, filling, pixelating or blurring it.
+editor-island-redaction = Redaction
+# Under a redaction whose settings leave what it covers recoverable or briefly visible: a blur, classic pixelation, or drawing in, which shows what it covers until it arrives.
+editor-island-redaction-not-secure = These settings aren't secure.
+editor-island-shape = Shape
+# A text placed on the picture.
+editor-island-text = Text
+# The grid of templates a text can take its look from, opened from its template line.
+editor-island-text-template = Templates
+# The line naming the template in use, which opens the templates; read by assistive technology.
+editor-island-text-template-current = Template: { $name }
+# A face as its line shows it: its family and its style, such as "Inter Semibold".
+editor-island-text-font-value = { $family } { $style }
+# The lines naming the faces in use, which open the font lists; read by assistive technology.
+editor-island-text-font-current = Font: { $font }
+editor-island-text-accent-font-current = Accent font: { $font }
+editor-island-text-font-search = Find a font
+editor-island-text-font-families = Font families
+editor-island-text-font-weight = Weight
+# A weight named like another, told apart by its number, such as "Bold 700".
+editor-island-text-font-style-detail = { $style } { $weight }
+# A toggle: whether a text is set in its family's italic.
+editor-island-text-italic = Italic
+# The text's words, any of which can be set apart in the template's accent or highlight.
+editor-island-text-words = Words set apart
+# A toggle: whether a text with no box is outlined.
+editor-island-text-outline = Outline
+# A toggle: whether a moving text's words come on one after another rather than together.
+editor-island-text-word-by-word = Word by word
+# Which of a text's colours the grid below sets: its type, its box, its accent and so on.
+editor-island-text-color-role = Colour for

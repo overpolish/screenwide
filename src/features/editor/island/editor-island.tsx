@@ -72,15 +72,19 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div
             animate={reveal.animate}
+            className="grow"
             exit={focusIn.exit}
             initial={reveal.initial}
             key={content.key}
             transition={reveal.transition}
           >
             <div
-              className="flex h-10 items-center justify-between gap-separate px-1"
+              className="flex h-10 w-max items-center justify-between gap-separate px-1"
               ref={setRowElement}
-              style={{ minWidth: rowWidth }}
+              // Across the island where it is wider, and at least the line
+              // under it; both left out when its own width is read, which is
+              // then its content's (`w-max`).
+              style={{ minWidth: `max(${String(rowWidth)}px, 100%)` }}
             >
               <div className="flex min-w-0 items-center">{content.title}</div>
               {content.actions ? (
@@ -92,6 +96,9 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
           </motion.div>
         </AnimatePresence>
       }
+      // Its title keeps to the island's start and its actions to its end
+      // when what hangs under the row is wider than it.
+      rowFillsWidth
       section={
         content.section ? (
           <AnimatePresence initial={false} mode="popLayout">

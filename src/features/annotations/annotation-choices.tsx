@@ -107,11 +107,3 @@ export const fitChoice = either(
   { id: "auto", label: () => t("annotation-fit-auto") },
   { id: "manual", label: () => t("annotation-fit-manual") },
 );
-
-/** Whether a highlight or a shape is drawn clean or as a pen stroke by
- * hand. True is hand-drawn. */
-export const strokeChoice = either(
-  () => t("annotation-stroke"),
-  { id: "clean", label: () => t("annotation-stroke-clean") },
-  { id: "hand", label: () => t("annotation-stroke-hand-drawn") },
-);

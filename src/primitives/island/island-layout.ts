@@ -13,6 +13,7 @@ export function islandLayout({
   hasSection,
   isShown,
   notch,
+  reach = 0,
   rowSize,
   sectionSize,
 }: {
@@ -22,6 +23,10 @@ export function islandLayout({
   notch: IslandNotch | null;
   rowSize: Size | null;
   sectionSize: Size | null;
+  /** How much of the section's width is its aside (`IslandAside`), which
+   * reaches past the row rather than widening it: at the start where the
+   * section hangs from the end, at the end elsewhere. */
+  reach?: number;
 }) {
   const hidden = notch ?? ISLAND.speck;
   // Laid out at the row's measured size, which is kept while hidden, so a
@@ -29,16 +34,18 @@ export function islandLayout({
   const rowOpen = rowSize ?? hidden;
   const isOpen = isShown && hasSection && sectionSize !== null;
   const held = sectionSize ?? { height: 0, width: 0 };
+  // The row is fitted to the section without its aside, so the aside opens
+  // past the row and nothing already there moves.
+  const aside = Math.min(Math.max(reach, 0), held.width);
+  const body = held.width - aside;
   // A section that would leave only a sliver of row beside it takes the
   // row's width instead, and one wider than the row widens the row with it.
-  const spare = rowOpen.width - held.width;
+  const spare = rowOpen.width - body;
   const isMerged =
     anchor === "center" ? spare / 2 < ISLAND.minStep : spare < ISLAND.minStep;
-  const openWidth = isMerged
-    ? Math.max(rowOpen.width, held.width)
-    : rowOpen.width;
-  const sectionWidth = isMerged ? openWidth : held.width;
-  const offset = isMerged
+  const openWidth = isMerged ? Math.max(rowOpen.width, body) : rowOpen.width;
+  const sectionWidth = (isMerged ? openWidth : body) + aside;
+  const bodyOffset = isMerged
     ? 0
     : anchor === "start"
       ? 0
@@ -46,7 +53,8 @@ export function islandLayout({
         ? spare
         : anchor === "center"
           ? spare / 2
-          : underControl(anchor - held.width / 2, spare);
+          : underControl(anchor - body / 2, spare);
+  const offset = anchor === "end" ? bodyOffset - aside : bodyOffset;
   // What the section holds rides at the box's start, and in a merged box
   // wider than itself sits where it is anchored, by an amount that moves on
   // the same curve: at the start or end, or centred. Placing it by layout

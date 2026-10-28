@@ -3,12 +3,12 @@
 
 import { type AnnotationHead } from "../../../../bindings/AnnotationHead";
 import { ColorGrid } from "../../../../composites/color-grid/color-grid";
-import { ArrowHeadGlyph } from "../../../../features/annotate/island/arrow-head-glyph";
-import { CornerChoice } from "../../../../features/annotate/island/corner-choice";
-import { CounterPinIcon } from "../../../../features/annotate/island/counter-pin-icon";
-import { FocusLookGlyph } from "../../../../features/annotate/island/focus-glyphs";
-import { SizeDot } from "../../../../features/annotate/island/size-dot";
 import { headChoice } from "../../../../features/annotations/annotation-choices";
+import { ArrowHeadGlyph } from "../../../../features/annotations/options/arrow-head-glyph";
+import { CornerChoice } from "../../../../features/annotations/options/corner-choice";
+import { CounterPinIcon } from "../../../../features/annotations/options/counter-pin-icon";
+import { FocusLookGlyph } from "../../../../features/annotations/options/focus-glyphs";
+import { SizeDot } from "../../../../features/annotations/options/size-dot";
 import {
   ANNOTATION_COUNTER_SIZES,
   ANNOTATION_WIDTHS,
@@ -164,7 +164,7 @@ export function PenOptions({
             aria-label="Outside"
             items={(["blur", "dim"] as const).map((look) => ({
               ariaLabel: look === "blur" ? "Blur" : "Dim",
-              icon: <FocusLookGlyph look={look} />,
+              icon: <FocusLookGlyph dims={look === "dim"} />,
               id: look,
             }))}
             onSelectionChange={(look) => {

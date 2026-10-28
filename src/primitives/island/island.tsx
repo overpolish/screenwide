@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence, animate, motion } from "motion/react";
+import { animate, motion } from "motion/react";
 import {
   type ReactNode,
   useLayoutEffect,
@@ -10,28 +10,27 @@ import {
   useState,
 } from "react";
 import { useLocale } from "react-aria";
-import { Toolbar } from "react-aria-components";
 
 import { SkinContext } from "../skin/skin";
 
 import { useControlAnchor } from "./island-anchor";
 import { IslandBelow } from "./island-below";
-import { IslandContext } from "./island-context";
+import { IslandAsideContext, IslandContext } from "./island-context";
 import { IslandDrawing } from "./island-drawing";
 import {
-  ISLAND,
   type IslandAnchor,
   islandCssVariables,
   type IslandNotch,
 } from "./island-geometry";
 import { useIslandHover } from "./island-hover";
-import { fade, focusIn, glide } from "./island-motion";
+import { fade, glide } from "./island-motion";
 import { useOpening } from "./island-opening";
 import {
   type IslandPart,
   useIslandOutline,
   useIslandShapeValues,
 } from "./island-outline-sync";
+import { IslandRowBox } from "./island-row-box";
 import { useRowOffset } from "./island-row-offset";
 import { IslandSection } from "./island-section";
 import { useSize } from "./island-size";
@@ -84,6 +83,11 @@ export type IslandProps = {
   /** Where the row and what hangs from it are, in the page, as they move:
    * for a window that lets clicks through everywhere but the island. */
   onShapeChange?: (parts: IslandPart[]) => void;
+  /** The row spans the island where what hangs under it is wider, so its
+   * parts keep to the island's ends rather than centring over the black,
+   * stretching with the black as it glides. Not under a notch, where the
+   * row keeps its gap under the notch. */
+  rowFillsWidth?: boolean;
   /** What hangs beneath the row, if anything. */
   section?: ReactNode;
 };
@@ -99,6 +103,7 @@ export function Island({
   onHoverChange,
   onShapeChange,
   row,
+  rowFillsWidth = false,
   section,
 }: IslandProps) {
   const [rowElement, setRowElement] = useState<HTMLDivElement | null>(null);
@@ -106,10 +111,16 @@ export function Island({
     null,
   );
   const [belowElement, setBelowElement] = useState<HTMLDivElement | null>(null);
-  const rowSize = useSize(rowElement);
+  const [aside, setAside] = useState<HTMLDivElement | null>(null);
+  const fillsWidth = rowFillsWidth && notch === null;
+  // What the row needs, not the island's width it may be stretched to.
+  const rowSize = useSize(rowElement, { isNatural: fillsWidth });
   // What the section needs, not the box's width it may be stretched to.
   const sectionSize = useSize(sectionElement, { isNatural: true });
   const belowSize = useSize(belowElement);
+  // Its last size outlives it, so a section without one reaches nowhere.
+  const asideSize = useSize(aside);
+  const reach = aside ? (asideSize?.width ?? 0) : 0;
   const [shift, setShift] = useState(0);
 
   const hover = useIslandHover(onHoverChange);
@@ -137,6 +148,7 @@ export function Island({
     hasSection: Boolean(section),
     isShown,
     notch,
+    reach,
     rowShift,
     rowSize,
     sectionSize,
@@ -148,6 +160,7 @@ export function Island({
   const { finish, isOpening } = useOpening(isOpen);
 
   const { islandX, rowLayerRef, rowX, sectionX, shapeWidth } = useRowOffset({
+    fillsWidth,
     hasNotch: notch !== null,
     holdsContent: !isShown,
     rowElement,
@@ -238,22 +251,14 @@ export function Island({
                     {/* Round the presence, not in it: a row on its way out still
                   hears the island, and folds into the notch as it goes. */}
                     <IslandContext value={context}>
-                      <AnimatePresence initial={false}>
-                        {isShown ? (
-                          <motion.div
-                            key="row"
-                            {...focusIn}
-                            className="flex w-max"
-                            initial={false}
-                            ref={setRowElement}
-                            style={{ padding: ISLAND.rowInset }}
-                          >
-                            <Toolbar aria-label={label} className="flex">
-                              {row}
-                            </Toolbar>
-                          </motion.div>
-                        ) : null}
-                      </AnimatePresence>
+                      <IslandRowBox
+                        fillsWidth={fillsWidth}
+                        isShown={isShown}
+                        label={label}
+                        onElement={setRowElement}
+                      >
+                        {row}
+                      </IslandRowBox>
                     </IslandContext>
                   </motion.div>
                   {below ? (
@@ -268,19 +273,21 @@ export function Island({
                     </IslandBelow>
                   ) : null}
                 </motion.div>
-                <IslandSection
-                  isFromMiddle={isFromMiddle}
-                  isOpening={isOpening}
-                  isShown={isShown}
-                  layout={layout}
-                  movesSideways={notch !== null && !isStacked}
-                  onElement={setSectionElement}
-                  onOpened={finish}
-                  sectionX={sectionX}
-                  values={values.section}
-                >
-                  {section}
-                </IslandSection>
+                <IslandAsideContext value={setAside}>
+                  <IslandSection
+                    isFromMiddle={isFromMiddle}
+                    isOpening={isOpening}
+                    isShown={isShown}
+                    layout={layout}
+                    movesSideways={notch !== null && !isStacked}
+                    onElement={setSectionElement}
+                    onOpened={finish}
+                    sectionX={sectionX}
+                    values={values.section}
+                  >
+                    {section}
+                  </IslandSection>
+                </IslandAsideContext>
               </div>
             </div>
           </SkinContext>

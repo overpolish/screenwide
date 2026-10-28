@@ -22,9 +22,12 @@ import { useSkin } from "../skin/skin";
 // with its name unchanged; on the island, the island's stronger fill.
 // Whatever holds it scrolls it when there are more rows than room.
 
-/** The tallest a picture grows, in pixels: a little over a wide picture's
- * height in a third of an island. */
+/** The tallest a picture grows in three columns, in pixels: a little over a
+ * wide picture's height in a third of an island. Fewer columns raise it in
+ * proportion, so a wider tile's picture fills it. */
 const PICTURE_MAX_HEIGHT = 64;
+
+const COLUMNS = { 2: "grid-cols-2", 3: "grid-cols-3" } as const;
 
 export type TileChoiceItem<Id extends string> = {
   id: Id;
@@ -35,6 +38,7 @@ export type TileChoiceItem<Id extends string> = {
 
 export function TileChoice<Id extends string>({
   "aria-label": label,
+  columns = 3,
   items,
   onChange,
   pictureAspect = 16 / 9,
@@ -45,6 +49,8 @@ export function TileChoice<Id extends string>({
   items: TileChoiceItem<Id>[];
   onChange: (id: Id) => void;
   value: Id;
+  /** Tiles to a row: fewer make each tile, and its picture, larger. */
+  columns?: 2 | 3;
   /** The pictures' width over their height, the same for every tile. */
   pictureAspect?: number;
   /** Whether each tile shows its name under its picture; it is the tile's
@@ -52,10 +58,11 @@ export function TileChoice<Id extends string>({
   showsLabels?: boolean;
 }) {
   const isIsland = useSkin() === "island";
+  const pictureMaxHeight = (PICTURE_MAX_HEIGHT * 3) / columns;
   return (
     <ToggleButtonGroup
       aria-label={label}
-      className="grid grid-cols-3 gap-1"
+      className={cn("grid gap-1", COLUMNS[columns])}
       disallowEmptySelection
       onSelectionChange={(keys) => {
         for (const key of keys) onChange(key as Id);
@@ -82,7 +89,7 @@ export function TileChoice<Id extends string>({
             className="mx-auto block max-w-full overflow-hidden rounded-sm bg-fill"
             style={{
               aspectRatio: pictureAspect,
-              width: `min(100%, ${String(PICTURE_MAX_HEIGHT * pictureAspect)}px)`,
+              width: `min(100%, ${String(pictureMaxHeight * pictureAspect)}px)`,
             }}
           >
             {item.picture}

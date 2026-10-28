@@ -10,6 +10,7 @@ import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
 import { ListBox } from "../../../primitives/listbox/listbox";
 import { ListBoxItem } from "../../../primitives/listbox-item/listbox-item";
+import { revealChosen } from "../../../primitives/scroll-area/reveal-chosen";
 import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
 import { Switch } from "../../../primitives/switch/switch";
 import { Text } from "../../../primitives/text/text";
@@ -21,20 +22,6 @@ import type { IslandInput, IslandInputKind } from "./island-types";
 // The part an input grows into: its switch, its level or its picture, and
 // the devices to record from. The camera and microphone record one; system
 // audio records the whole mix, or any number of apps on their own.
-
-/** Centres the chosen device in its list's viewport. Only the list moves:
- * `scrollIntoView` would also scroll the island's clipping boxes, which can
- * be scrolled though they show no scrollbar. */
-function revealChosen(viewport: HTMLElement) {
-  const chosen = viewport.querySelector<HTMLElement>('[aria-selected="true"]');
-  if (!chosen) return;
-  const offset =
-    chosen.getBoundingClientRect().top -
-    viewport.getBoundingClientRect().top +
-    viewport.scrollTop;
-  viewport.scrollTop =
-    offset - (viewport.clientHeight - chosen.offsetHeight) / 2;
-}
 
 /** The largest the camera's picture is drawn, in px: the part's width, and
  * a height that keeps the island on the screen for a portrait camera. */

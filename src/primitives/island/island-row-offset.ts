@@ -21,6 +21,7 @@ function placeRow(layer: HTMLElement | null, offset: number) {
 }
 
 export function useRowOffset({
+  fillsWidth,
   hasNotch,
   holdsContent,
   rowElement,
@@ -28,6 +29,9 @@ export function useRowOffset({
   shiftTarget,
   width,
 }: {
+  /** The row spans the island, its parts at the black's ends, so there is
+   * no centre for what it holds to ease to. */
+  fillsWidth: boolean;
   hasNotch: boolean;
   /** Tucking away: what the island holds keeps its place while the island
    * moves, as it fades, rather than leaping to where the island is going. */
@@ -114,7 +118,7 @@ export function useRowOffset({
     const previous = rowWidthRef.current;
     rowWidthRef.current = next ?? null;
     if (next === undefined || previous === null || next === previous) return;
-    if (hasNotch) return;
+    if (hasNotch || fillsWidth) return;
     recentring.set(recentring.get() + (next - previous) / 2);
     animate(recentring, 0, glide);
     placeRow(
