@@ -36,12 +36,49 @@ editor-island-sound-reset-volume = Reset { $track } volume
 
 ## The recording's script, what was said as a whole
 
-# The island for the recording's script, open beside the Captions island.
+# The island for the recording's script, open beside the Captions island or on its own.
 editor-island-script = Script
-# Under the script while it is open with the captions: how to edit it.
-editor-island-script-captions-hint = Double-click a word to edit it. Right-click for breaks, hiding and key words.
+# Under the script while it is open with the captions: how to edit it. $key is drawn as a keycap: Command on macOS, Ctrl on Windows.
+editor-island-script-captions-hint = Hold { $key } and click or drag to hide or show words. Right-click for breaks and key words.
 # Takes back every edit made in the script: breaks, hidden or shown words and key words placed by hand, and spelling fixes, which go back to what was heard.
 editor-island-script-reset = Reset caption edits
+# The search at the end of the script's row: its placeholder and accessible name.
+editor-island-script-search = Search script
+# The toggle beside the search that opens Replace under it.
+editor-island-script-replace = Replace
+# The text field for what every match of the search is replaced with.
+editor-island-script-replace-with = Replace with
+# Replaces every match of the search, as one undo step.
+editor-island-script-replace-all = Replace all
+# Under the script on its own: how to edit it. $key is drawn as a keycap: Command on macOS, Ctrl on Windows.
+editor-island-script-transcript-hint = Hold { $key } and click or drag to remove or restore words.
+# Cuts the pauses long enough to cut. $count is how many it would cut, 0 before the recording has been listened through for them.
+editor-island-script-remove-pauses =
+    { $count ->
+        [0] Remove pauses
+        [one] Remove 1 pause
+       *[other] Remove { $count } pauses
+    }
+# Cuts every filler word, such as "um". $count is how many there are.
+editor-island-script-remove-fillers =
+    { $count ->
+        [one] Remove 1 filler
+       *[other] Remove { $count } fillers
+    }
+# Cuts every word marked as profanity. $count is how many there are.
+editor-island-script-remove-profanity =
+    { $count ->
+        [one] Remove 1 profane word
+       *[other] Remove { $count } profane words
+    }
+# While the recording is listened through for the pauses to cut.
+editor-island-script-finding-pauses = Finding pauses
+# After Remove pauses found none long enough to cut.
+editor-island-script-no-pauses = No long pauses found.
+# Transcribes the recording again, replacing its words.
+editor-island-script-transcribe-again = Transcribe again
+# Brings back every word and pause cut in the script.
+editor-island-script-restore-all = Restore all
 
 ## The recording's captions, all of them at once
 
@@ -93,9 +130,6 @@ editor-island-captions-restore =
 editor-island-captions-reset = Reset to default
 # Makes new captions start looking, laid out and saying things as these do.
 editor-island-captions-set-default = Set as default
-editor-island-captions-transcribing = Transcribing
-editor-island-captions-transcribe-failed = Could not transcribe the recording.
-editor-island-captions-no-speech = No words detected.
 
 ## Several annotations chosen at once, with the marquee
 
@@ -148,8 +182,13 @@ editor-island-moment-no-speech = Nothing was said in this note
 editor-island-moment-transcribe-failed = Could not transcribe this note
 editor-island-moment-transcribing = Transcribing
 editor-island-moment-waiting = Waiting to transcribe
-# The tool a missing transcription model is for, beside the model's size and its download, on the Moment and Captions islands.
+# The tool a missing transcription model is for, beside the model's size and its download, on the Moment, Captions and Script islands.
 editor-island-transcription = Transcription
+# While the recording is transcribed, on the Captions and Script islands.
+editor-island-transcribing = Transcribing
+editor-island-transcribe-failed = Could not transcribe the recording.
+# Transcribing heard nothing: there are no words to caption or show.
+editor-island-no-speech = No words detected.
 
 ## A scene on the strip: how a stretch of the recording is framed
 

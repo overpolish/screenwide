@@ -9,18 +9,19 @@ import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { type AnnotationColorProps } from "../annotation/annotation-island-parts";
 import { WordByWordToggle } from "../annotation/text/text-toggles";
 import { IslandRowPresence } from "../island-row-presence";
+import { islandTranscriptKey } from "../island-transcript";
+import { IslandTranscriptLine } from "../island-transcript-line";
 import { ShowGlyph } from "../keyboard/keyboard-glyphs";
 
 import { CaptionsSection } from "./captions-section";
-import { CaptionsTranscriptLine } from "./captions-transcript-line";
 
 import type { CaptionSettings } from "../../../../bindings/CaptionSettings";
 import type { FontFamily } from "../../../../bindings/FontFamily";
 import type { TextLayout } from "../../../../bindings/TextLayout";
 import type { TextStyle } from "../../../../bindings/TextStyle";
 import type { TextTemplates } from "../../recording/captions/use-text-templates";
-import type { ToolPanelModel } from "../../tool-panels/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
+import type { IslandTranscript } from "../island-transcript";
 
 // The recording's captions, all of them at once, as a text placed by hand
 // is dressed: the same template, faces and colours, laid out the same way,
@@ -37,14 +38,6 @@ import type { EditorIslandContent } from "../editor-island";
 // it as the default for new captions. Captions are made of the
 // transcript's words, so until there is one the section says how it is
 // coming, or offers the model it needs.
-
-/** Where the transcript the captions are made of stands. */
-export type CaptionsTranscript =
-  | { model: ToolPanelModel; status: "noModel" }
-  | { progress: number; status: "transcribing" }
-  | { status: "failed" }
-  | { status: "noSpeech" }
-  | { status: "ready" };
 
 export type CaptionsIslandProps = AnnotationColorProps & {
   /** Whether Reset has anything to put back. */
@@ -76,7 +69,7 @@ export type CaptionsIslandProps = AnnotationColorProps & {
   /** What the captions say and when, whatever their look. */
   settings: CaptionSettings;
   templates: TextTemplates;
-  transcript: CaptionsTranscript;
+  transcript: IslandTranscript;
   /** Families beyond the system's, for a story. */
   families?: FontFamily[];
 };
@@ -110,18 +103,14 @@ export function captionsIsland(
     key: "captions",
     section:
       transcript.status !== "ready" ? (
-        <CaptionsTranscriptLine
+        <IslandTranscriptLine
           onDownloadModel={props.onDownloadModel}
           transcript={transcript}
         />
       ) : props.enabled ? (
         <CaptionsSection {...props} />
       ) : undefined,
-    sectionKey:
-      transcript.status === "noModel" &&
-      transcript.model.status === "downloading"
-        ? "downloading"
-        : transcript.status,
+    sectionKey: islandTranscriptKey(transcript),
     title: (
       <IslandRowTitle
         glyph={<Captions aria-hidden className="size-icon" />}

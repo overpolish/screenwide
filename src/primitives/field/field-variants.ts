@@ -47,14 +47,12 @@ export const fieldVariants = tv({
       // island's size with no fill at rest, the value in the island's label
       // size, and the island's fill under the pointer and while typed into.
       // Like the island's buttons it rings only when reached by keyboard,
-      // not when clicked into. A number's input there hugs its figures, or
-      // keeps room for them, so the figures are set at the end, beside their
-      // unit.
+      // not when clicked into.
       island: {
         field:
           "h-island-control rounded-full transition-colors data-[hovered]:bg-fill focus-within:bg-fill data-[focus-visible]:ring-3",
         input: "text-label",
-        inputWrapper: "justify-end px-inset-sm",
+        inputWrapper: "px-inset-sm",
         section: "text-label",
       },
       quiet: {

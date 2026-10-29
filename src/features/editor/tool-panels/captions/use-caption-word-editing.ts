@@ -22,6 +22,7 @@ import {
   useCaptionMenu,
 } from "./use-caption-menu";
 
+import type { CaptionPaint } from "./use-caption-paint";
 import type { RecordingCaptions } from "../../../../bindings/RecordingCaptions";
 import type { TranscriptMark } from "../transcript/use-transcript-marks";
 
@@ -32,7 +33,8 @@ import type { TranscriptMark } from "../transcript/use-transcript-marks";
  * and so `onCorrect`'s; and, as the captions' own edits, which undo with
  * them, a break placed or taken away in the gap before it, the word hidden
  * or shown, and made its caption's key word or kept plain. Pressed Return
- * edits it, Backspace hides or shows it, and a right click or the menu key
+ * edits it, Backspace or Command-click hides or shows it, Command-drag
+ * hides or shows every word it reaches, and a right click or the menu key
  * opens the app's own menu of the rest. What it returns is the text view's
  * part (`CaptionTextView`).
  */
@@ -84,6 +86,25 @@ export function useCaptionWordEditing({
     };
     return canBreakIn(gap) ? text.words[word].gap : null;
   };
+  /** `choices` with the word at `index` hidden or shown. A word stays left
+   * to the rules wherever they already do as asked, so the edit keeps only
+   * the choices that change something. */
+  const withShown = (
+    from: typeof choices,
+    index: number,
+    hide: boolean,
+  ): typeof choices => {
+    if (!text) return from;
+    const ruledOut = isRuledOut(index);
+    const kind = hide
+      ? ruledOut
+        ? null
+        : "hidden"
+      : ruledOut
+        ? "shown"
+        : null;
+    return withChoice(from, { durationMs, word: text.words[index] }, kind);
+  };
   const act = (action: CaptionMenuAction, index: number) => {
     if (!text || isDisabled) return;
     if (action === "edit") {
@@ -97,20 +118,7 @@ export function useCaptionWordEditing({
       return;
     }
     if (action === "hide" || action === "show") {
-      // A word stays left to the rules wherever they already do as asked,
-      // so the edit keeps only the choices that change something.
-      const ruledOut = isRuledOut(index);
-      const kind =
-        action === "hide"
-          ? ruledOut
-            ? null
-            : "hidden"
-          : ruledOut
-            ? "shown"
-            : null;
-      onChange({
-        wordChoices: withChoice(choices, { durationMs, word }, kind),
-      });
+      onChange({ wordChoices: withShown(choices, index, action === "hide") });
       return;
     }
     if (action === "make-key-word" || action === "not-key-word") {
@@ -131,6 +139,15 @@ export function useCaptionWordEditing({
     onChange({ breaks: withBreak(breaks, gap, kind) });
   };
   const openMenu = useCaptionMenu(act);
+  /** Hides from the captions, or shows, every word a Command-drag reached
+   * that is not so already, as one step of the edit history. */
+  const paint = ({ first, hide, last }: CaptionPaint) => {
+    if (!text || isDisabled || !text.isMarked) return;
+    let next = choices;
+    for (let index = first; index <= last; index++)
+      if (isShown(index) === hide) next = withShown(next, index, hide);
+    if (next !== choices) onChange({ wordChoices: next });
+  };
 
   return {
     editing,
@@ -177,6 +194,7 @@ export function useCaptionWordEditing({
             });
       if (items.length > 0) void openMenu(word, boundsAnchor(bounds), items);
     },
+    onPaint: paint,
     /** Takes away every break, choice and key word placed by hand. */
     reset: () => {
       onChange({ breaks: [], emphasisChoices: [], wordChoices: [] });

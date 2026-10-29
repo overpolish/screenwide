@@ -8,7 +8,6 @@ import { type ReactNode } from "react";
 import { useTileMotion } from "../../../../composites/color-grid/tile-motion";
 import { t } from "../../../../i18n/i18n";
 import { IconButton } from "../../../../primitives/button/icon-button";
-import { TooltipTrigger } from "../../../../primitives/tooltip/tooltip-trigger";
 import { ColorPickerSwatch } from "../../tool-panels/frame/background/color-picker-swatch";
 import { MeshPaletteColor } from "../../tool-panels/frame/background/mesh-palette-color";
 import { useBackgroundEdit } from "../../tool-panels/frame/background/use-background-edit";
@@ -108,14 +107,12 @@ export function FrameBackgroundEditor({
           </AnimatePresence>
         </div>
       </div>
-      <TooltipTrigger tooltip={{ label: t("editor-island-frame-randomise") }}>
-        <IconButton
-          aria-label={t("editor-island-frame-randomise")}
-          onPress={edit.randomise}
-        >
-          <Dices />
-        </IconButton>
-      </TooltipTrigger>
+      <IconButton
+        aria-label={t("editor-island-frame-randomise")}
+        onPress={edit.randomise}
+      >
+        <Dices />
+      </IconButton>
     </div>
   );
 }

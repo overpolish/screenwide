@@ -18,7 +18,7 @@ export function TranscriptPauseChip({ durationMs }: { durationMs: number }) {
     <>
       <AudioLinesOff
         aria-hidden
-        className="me-control inline size-icon-mini align-[-0.1em]"
+        className="me-inline inline size-icon-xs align-[-0.1em]"
       />
       {seconds.format(durationMs / 1_000)}
     </>

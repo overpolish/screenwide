@@ -1,18 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Search, X } from "lucide-react";
-import { AnimatePresence } from "motion/react";
+import { Search } from "lucide-react";
 import {
   Input,
   SearchField as AriaSearchField,
   type SearchFieldProps as AriaSearchFieldProps,
 } from "react-aria-components";
 
-import { cn } from "../../lib/styling";
-import { IconButton } from "../button/icon-button";
+import { FieldClearButton } from "../field/field-clear-button";
 import { fieldVariants } from "../field/field-variants";
 import { focusFieldInput } from "../field/focus-field-input";
+import { useSkin } from "../skin/skin";
 
 export type SearchFieldProps = Omit<
   AriaSearchFieldProps,
@@ -24,17 +23,17 @@ export type SearchFieldProps = Omit<
 };
 
 // The shared field with a magnifier before the text and, once something is
-// typed, a clear button at its end. React Aria makes it a search box: Escape
-// clears it, Enter submits it, and any button in it is its clear button,
-// named for that. The clear button sits in the field's end corner at the
-// field's height, a quiet glyph that comes up under the pointer, and takes
-// over the end padding while it shows.
+// typed, a clear button at its end (`FieldClearButton`). React Aria makes it
+// a search box: Escape clears it, Enter submits it, and any button in it is
+// its clear button, named for that.
 export function SearchField({
   className,
   placeholder,
   ...props
 }: SearchFieldProps) {
-  const { base, field, input, inputWrapper, section } = fieldVariants();
+  const { base, field, input, inputWrapper, section } = fieldVariants({
+    material: useSkin() === "island" ? "island" : "sunken",
+  });
 
   return (
     <AriaSearchField {...props} className={base({ className })}>
@@ -51,23 +50,7 @@ export function SearchField({
               placeholder={placeholder}
             />
           </div>
-          <AnimatePresence>
-            {isEmpty ? null : (
-              <IconButton
-                animate={{ opacity: 1 }}
-                className={cn(
-                  "shrink-0 text-fg-tertiary data-[hovered]:text-fg",
-                  "[&_svg.lucide]:size-icon-sm",
-                )}
-                exit={{ opacity: 0, scale: 0 }}
-                initial={{ opacity: 0 }}
-                isDisabled={isDisabled}
-                variant="ghost"
-              >
-                <X />
-              </IconButton>
-            )}
-          </AnimatePresence>
+          <FieldClearButton isDisabled={isDisabled} isShown={!isEmpty} />
         </div>
       )}
     </AriaSearchField>

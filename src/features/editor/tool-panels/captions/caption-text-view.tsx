@@ -16,9 +16,15 @@ import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { EditStart } from "../transcript/transcript-edit-span";
 import { usePlayingWord } from "../transcript/use-playing-word";
 
-import { captionSaidAt, captionSeekMs, CaptionText } from "./caption-text";
+import {
+  captionSaidAt,
+  captionSeekMs,
+  CaptionText,
+  CaptionTextWord,
+} from "./caption-text";
 import { beforeCaptionWord, captionWordClass } from "./caption-text-words";
 import { CaptionWordEditSpan } from "./caption-word-edit-span";
+import { CaptionPaint, useCaptionPaint } from "./use-caption-paint";
 
 import type { TranscriptMark } from "../transcript/use-transcript-marks";
 
@@ -41,10 +47,12 @@ const partsOf = (root: HTMLElement | null, caption: number) => [
  * one caption ends and the next begins and in another colour where that was
  * placed by hand, the caption being said tinted and kept in view, and the
  * one under the pointer filled. A press seeks to the word's caption, as
- * `captionSeekMs` says, and a double-click edits the word in place. The
- * arrows move between words, Return edits, Backspace hides or shows a word,
- * and the menu key or a right click opens what else it can do; a right
- * click on a break or a space asks only about that gap.
+ * `captionSeekMs` says, and a double-click edits the word in place;
+ * Command-click hides or shows a word, and Command-drag every word it
+ * reaches (`useCaptionPaint`). The arrows move between words, Return
+ * edits, Backspace hides or shows a word, and the menu key or a right
+ * click opens what else it can do; a right click on a break or a space
+ * asks only about that gap.
  */
 export function CaptionTextView({
   className,
@@ -55,6 +63,7 @@ export function CaptionTextView({
   onEditStart,
   onHideToggle,
   onMenu,
+  onPaint,
   onSeek,
   playheadMs,
   rootClassName,
@@ -70,6 +79,7 @@ export function CaptionTextView({
   onHideToggle: (word: number) => void;
   /** `word` is the word clicked, or the one after the gap clicked. */
   onMenu: (word: number, bounds: DOMRect, part: CaptionTextPart) => void;
+  onPaint: (paint: CaptionPaint) => void;
   onSeek: (ms: number) => void;
   playheadMs: number;
   text: CaptionText;
@@ -83,6 +93,16 @@ export function CaptionTextView({
   const rootRef = useRef<HTMLDivElement>(null);
   const hoveredRef = useRef<number | null>(null);
   const [active, setActive] = useState(0);
+  const { onPointerDown, painted } = useCaptionPaint({
+    isEnabled: !isDisabled && !editing && text.isMarked,
+    isHidden: (word) => text.words[word].caption === null,
+    onPaint,
+  });
+  /** `word` as a Command-drag under way will leave it. */
+  const shown = (word: CaptionTextWord, index: number) =>
+    painted && painted.first <= index && index <= painted.last
+      ? { ...word, caption: painted.hide ? null : (word.caption ?? -1) }
+      : word;
   const focused = Math.min(active, text.words.length - 1);
   const playing = text.isMarked
     ? captionSaidAt(text.captions, playheadMs)
@@ -166,7 +186,9 @@ export function CaptionTextView({
         dir="auto"
         onClick={(event) => {
           const word = wordAt(event);
-          if (word === null || editing) return;
+          // A Command-click hides or shows the word instead.
+          if (word === null || editing || event.metaKey || event.ctrlKey)
+            return;
           setActive(word);
           const seek = captionSeekMs(text, word, playheadMs);
           if (seek !== null) onSeek(seek);
@@ -195,6 +217,7 @@ export function CaptionTextView({
           });
         }}
         onKeyDown={onKeyDown}
+        onPointerDown={onPointerDown}
         onPointerLeave={() => {
           hover(null);
         }}
@@ -246,7 +269,7 @@ export function CaptionTextView({
                     <span
                       aria-selected={index === focused}
                       className={captionWordClass(
-                        word,
+                        shown(word, index),
                         text.isMarked,
                         marks.get(index),
                       )}

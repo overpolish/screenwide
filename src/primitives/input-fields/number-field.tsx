@@ -208,7 +208,10 @@ export const NumberField = ({
         onPointerDown={nativeScrubbing ? handlePointerDown : undefined}
         ref={groupRef}
       >
-        <div className={inputWrapper()}>
+        {/* On the island the input hugs its figures, or keeps room for
+            them (`reservedLength`), so they are set at the end, beside
+            their unit. */}
+        <div className={inputWrapper({ className: isIsland && "justify-end" })}>
           {leftSection != null && (
             <span className={section()}>{leftSection}</span>
           )}

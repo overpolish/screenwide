@@ -8,6 +8,8 @@ controls-no-content = No Content
 controls-sidebar-collapse = Collapse sidebar
 controls-sidebar-expand = Expand sidebar
 controls-document-name = Document name
+# The button at the end of a text field that empties it.
+controls-field-clear = Clear
 # Said aloud after a copy button copies.
 controls-copied = Copied
 # A field showing a chosen folder, pressed to choose another. $label names what the folder is for; $path is the folder's full path.

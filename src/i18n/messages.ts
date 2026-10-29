@@ -147,6 +147,7 @@ export type Messages = {
   "controls-audio-meter-value": { decibels: string | number };
   "controls-copied": null;
   "controls-document-name": null;
+  "controls-field-clear": null;
   "controls-key-alt": null;
   "controls-key-backspace": null;
   "controls-key-command": null;
@@ -281,7 +282,6 @@ export type Messages = {
   "editor-island-captions-lines": null;
   "editor-island-captions-max": null;
   "editor-island-captions-max-words": null;
-  "editor-island-captions-no-speech": null;
   "editor-island-captions-one-line": null;
   "editor-island-captions-position": null;
   "editor-island-captions-reset": null;
@@ -293,8 +293,6 @@ export type Messages = {
   "editor-island-captions-size-large": null;
   "editor-island-captions-size-medium": null;
   "editor-island-captions-size-small": null;
-  "editor-island-captions-transcribe-failed": null;
-  "editor-island-captions-transcribing": null;
   "editor-island-captions-two-lines": null;
   "editor-island-captions-words-unit": { count: number };
   "editor-island-corners-in-scene": null;
@@ -346,6 +344,7 @@ export type Messages = {
   "editor-island-moment-transcribe-failed": null;
   "editor-island-moment-transcribing": null;
   "editor-island-moment-waiting": null;
+  "editor-island-no-speech": null;
   "editor-island-range": null;
   "editor-island-range-confirm-cut": null;
   "editor-island-range-cut": null;
@@ -413,8 +412,20 @@ export type Messages = {
   "editor-island-screen-recenter": null;
   "editor-island-screenshot": null;
   "editor-island-script": null;
-  "editor-island-script-captions-hint": null;
+  "editor-island-script-captions-hint": { key: string | number };
+  "editor-island-script-finding-pauses": null;
+  "editor-island-script-no-pauses": null;
+  "editor-island-script-remove-fillers": { count: number };
+  "editor-island-script-remove-pauses": { count: number };
+  "editor-island-script-remove-profanity": { count: number };
+  "editor-island-script-replace": null;
+  "editor-island-script-replace-all": null;
+  "editor-island-script-replace-with": null;
   "editor-island-script-reset": null;
+  "editor-island-script-restore-all": null;
+  "editor-island-script-search": null;
+  "editor-island-script-transcribe-again": null;
+  "editor-island-script-transcript-hint": { key: string | number };
   "editor-island-shape": null;
   "editor-island-sound": null;
   "editor-island-sound-reset-volume": { track: string | number };
@@ -440,6 +451,8 @@ export type Messages = {
   "editor-island-text-template-current": { name: string | number };
   "editor-island-text-word-by-word": null;
   "editor-island-text-words": null;
+  "editor-island-transcribe-failed": null;
+  "editor-island-transcribing": null;
   "editor-island-transcription": null;
   "editor-lane-arrow": { number: string | number };
   "editor-lane-counter": { number: string | number };

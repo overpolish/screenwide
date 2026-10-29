@@ -192,7 +192,7 @@ export function PopupPanelList({
               >
                 {group.section ? (
                   <Header>
-                    <span className="text-heading text-fg-secondary px-control-inset py-control block">
+                    <span className="block px-inset-sm pt-separate pb-inline text-caption text-fg-secondary">
                       {group.section}
                     </span>
                   </Header>

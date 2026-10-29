@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { t } from "../../../../i18n/i18n";
+import { cn } from "../../../../lib/styling";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 
 import { TranscriptDropCaret } from "./transcript-drop-caret";
@@ -62,9 +63,14 @@ export type TranscriptTextProps = {
   preview: { isActive: boolean; units: ReadonlySet<number> };
   selection: WordRange | null;
   units: readonly TranscriptUnit[];
+  /** The text's inset within the box, over the panel's own. */
+  className?: string;
   /** Move the units in `span` to stand before unit `before`, the unit count
    * for after the last. Without it, chosen words are not dragged. */
   onMove?: (span: WordSelection, before: number) => void;
+  /** The scrolling box's size and fill, over the panel's own: a box of the
+   * panel's fill, scrolling past 16 rem. */
+  rootClassName?: string;
 };
 
 /**
@@ -208,7 +214,10 @@ export function TranscriptText(props: TranscriptTextProps) {
   return (
     <ScrollArea
       constrainHeight
-      rootClassName="max-h-64 rounded-control bg-fill-tertiary"
+      rootClassName={cn(
+        "max-h-64 rounded-control bg-fill",
+        props.rootClassName,
+      )}
     >
       <div
         {...handlers}
@@ -218,7 +227,10 @@ export function TranscriptText(props: TranscriptTextProps) {
         aria-disabled={isDisabled || undefined}
         aria-label={t("editor-panels-transcript")}
         aria-multiselectable
-        className="relative flex cursor-default flex-col gap-section p-control-inset text-body text-content-fg outline-none select-none"
+        className={cn(
+          "relative flex cursor-default flex-col gap-separate p-inset-sm text-body text-fg outline-none select-none",
+          props.className,
+        )}
         data-owns-text-keys
         onTouchMove={markScrolled}
         onWheel={markScrolled}

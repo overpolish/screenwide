@@ -119,30 +119,35 @@ const silentWav = () => {
   return view.buffer;
 };
 
-/** The text of each word `find_transcript_marks` was asked about. */
-const askedWords = (payload: unknown): string[] =>
+/** Each word `find_transcript_marks` was asked about: its text, and
+ * whether the edit has removed it. */
+const askedWords = (payload: unknown): { removed: boolean; text: string }[] =>
   payload &&
   typeof payload === "object" &&
   "words" in payload &&
   Array.isArray(payload.words)
     ? payload.words.map((word: unknown) =>
-        word &&
-        typeof word === "object" &&
-        "text" in word &&
-        typeof word.text === "string"
-          ? word.text
-          : "",
+        word && typeof word === "object"
+          ? {
+              removed: "removed" in word && word.removed === true,
+              text:
+                "text" in word && typeof word.text === "string"
+                  ? word.text
+                  : "",
+            }
+          : { removed: false, text: "" },
       )
     : [];
 
 /** The fillers and profanity among the words asked about, by the sample
- * transcript's own few, found by their words alone as the lists would. */
+ * transcript's own few, found by their words alone as the lists would. Words
+ * already removed are left out, as the app's own finding leaves them. */
 const storyTranscriptMarks = (payload: unknown) => {
   const words = askedWords(payload);
   const found = (list: readonly string[]) =>
-    words.flatMap((text, index) => {
+    words.flatMap(({ removed, text }, index) => {
       const folded = text.toLowerCase().replace(/[^\p{L}']/gu, "");
-      return list.includes(folded)
+      return !removed && list.includes(folded)
         ? [{ first: index, folded, last: index }]
         : [];
     });

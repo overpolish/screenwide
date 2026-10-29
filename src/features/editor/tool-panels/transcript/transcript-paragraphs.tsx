@@ -80,7 +80,7 @@ export function transcriptParagraphElements({
                   isFound &&
                     found.owners[index - 1] === found.owners[index] &&
                     "bg-warning/35",
-                  isChosen && isWithin(chosen, index - 1) && "bg-primary-tint",
+                  isChosen && isWithin(chosen, index - 1) && "bg-selected",
                 )}
               >
                 {" "}

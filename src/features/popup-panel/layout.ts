@@ -18,8 +18,9 @@ const compactItemHeight = 24;
 const itemGap = 0;
 const listboxPadding = 8;
 const focusSafeInset = 4;
-/** A section header is one line of `text-section` inside `py-control`. */
-const sectionHeaderHeight = 22;
+/** A section header is one 14 px line of `text-caption` under
+ * `pt-separate` and over `pb-inline` (`popup-panel-list.tsx`). */
+const sectionHeaderHeight = 32;
 
 /** `sectionCount` counts the headers drawn above the items, so a grouped
  * panel opens at the height it will settle at rather than growing on show.

@@ -3,12 +3,13 @@
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { Text } from "../../../../primitives/text/text";
 import { CaptionTextWord } from "../../tool-panels/captions/caption-text";
 import { CaptionTextView } from "../../tool-panels/captions/caption-text-view";
 import { useCaptionWordEditing } from "../../tool-panels/captions/use-caption-word-editing";
 
-import type { ScriptIslandProps } from "./script-island";
+import { ScriptHint } from "./script-transcript-parts";
+
+import type { ScriptCaptionsProps } from "./script-island-props";
 
 /** The script as the captions break it: every word the timeline plays, a
  * mark wherever one caption ends and the next begins, in another colour
@@ -26,7 +27,7 @@ export function ScriptCaptions({
   onSeek,
   playheadMs,
   text,
-}: ScriptIslandProps) {
+}: ScriptCaptionsProps) {
   const correction = (word: CaptionTextWord, corrected: string) => ({
     endMs: word.endMs,
     startMs: word.startMs,
@@ -56,9 +57,9 @@ export function ScriptCaptions({
         rootClassName="max-h-[26rem] rounded-none bg-transparent"
         text={text}
       />
-      <Text as="p" className="px-inset-sm text-fg-secondary" variant="caption">
-        {t("editor-island-script-captions-hint")}
-      </Text>
+      <ScriptHint
+        message={(key) => t("editor-island-script-captions-hint", { key })}
+      />
       <div className="flex justify-end">
         <Button
           isDisabled={!hasPlaced && corrected.length === 0}
