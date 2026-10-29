@@ -63,7 +63,7 @@ export function PopupPanelSearchList({
   }, [chosen, content.items]);
 
   return (
-    <div className="window-surface rounded-window windows:inset-ring windows:inset-ring-popover-stroke flex h-dvh flex-col gap-tight overflow-hidden p-tight">
+    <div className="flex h-dvh flex-col gap-inline overflow-hidden p-inset-sm">
       <Autocomplete filter={contains}>
         <SearchField
           aria-label={searchLabel}

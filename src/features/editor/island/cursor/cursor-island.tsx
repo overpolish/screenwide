@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { MousePointer2 } from "lucide-react";
+import { MousePointerClick } from "lucide-react";
 import { type ReactNode } from "react";
 
 import { t } from "../../../../i18n/i18n";
@@ -113,7 +113,7 @@ export function cursorIsland(props: CursorIslandProps): EditorIslandContent {
     ),
     title: (
       <IslandRowTitle
-        glyph={<MousePointer2 aria-hidden className="size-icon" />}
+        glyph={<MousePointerClick aria-hidden className="size-icon" />}
         title={t("editor-panels-cursor")}
       />
     ),

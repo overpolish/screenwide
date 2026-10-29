@@ -17,6 +17,12 @@ editor-pointer-tools = Pointer tools
 editor-canvas-tools = Canvas tools
 editor-toolbar-more-tools = More tools
 editor-toolbar-more-annotation-tools = More annotation tools
+# Names the editor's tool column, Select and the pens, for assistive technology.
+editor-toolbar-tools = Tools
+# Names the editor's modes in its tool column, each opening an island for the whole recording, for assistive technology.
+editor-toolbar-modes = Modes
+# The mode that opens the script on its own, to cut the recording by its words.
+editor-toolbar-transcript = Transcript
 editor-tool-select = Select
 editor-tool-select-name = Select screenshot
 editor-tool-select-clip-name = Select recording clip

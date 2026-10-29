@@ -12,13 +12,13 @@ import {
   defaultCameraOverlay,
 } from "../export/recording-export-settings";
 import { PreviewFitProvider } from "../preview/preview-fit";
+import { EditorTitleBar } from "../title-bar/editor-title-bar";
 import { ToolPanelPlacement } from "../tool-panels/tool-panel-placement";
 import { useEditorToolPanels } from "../tool-panels/use-editor-tool-panels";
 import { currentEditorKind } from "../window-kind";
 
 import { EditorPanelProps } from "./editor-panel-props";
 import { ScreenshotSection } from "./editor-preview-section";
-import { EditorTitlebar } from "./editor-titlebar";
 import { EditorToolbarProvider } from "./editor-toolbar-provider";
 import { RecordingSection } from "./recording-section";
 import { useEditorSheets } from "./use-editor-sheets";
@@ -201,7 +201,7 @@ export function EditorPanel({
         <WindowShell
           className="relative"
           header={
-            <EditorTitlebar
+            <EditorTitleBar
               artifact={artifact}
               canExport={canExport}
               isSaving={isSaving}

@@ -13,7 +13,7 @@ import { tv } from "../../lib/variants";
 import { useSkin } from "../skin/skin";
 
 // An item draws only its highlight, a translucent fill over the panel's
-// material with the text unchanged. As in a native menu the highlight is the
+// black with the text unchanged. As in a native menu the highlight is the
 // focus indicator: it follows the pointer and the keyboard alike, so there
 // is no separate ring. Its corners are the part radius, so they run parallel
 // to the panel's own corner, a tight inset out. On the island the last item

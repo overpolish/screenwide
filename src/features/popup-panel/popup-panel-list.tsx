@@ -83,7 +83,7 @@ export function PopupPanelList({
   if (content.items.length === 0) {
     return (
       <div
-        className="window-surface rounded-window px-section flex h-full min-h-16 w-full items-center justify-center overflow-hidden text-center text-xs text-muted"
+        className="flex h-full min-h-16 w-full items-center justify-center overflow-hidden px-inset text-center text-caption text-fg-secondary"
         ref={listboxRef}
       >
         {t("popup-panel-empty")}
@@ -170,8 +170,8 @@ export function PopupPanelList({
     <ScrollArea
       inWindowCorner
       key={activeId}
-      // The scrollbar keeps out of the rounded corners.
-      rootClassName="window-surface rounded-window windows:inset-ring windows:inset-ring-popover-stroke"
+      // The scrollbar keeps out of the host's rounded corners.
+      rootClassName="rounded-panel"
     >
       <ListBox
         aria-label={label}

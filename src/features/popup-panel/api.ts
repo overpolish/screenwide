@@ -4,8 +4,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 
-import type { Skin } from "../../primitives/skin/skin";
-
 /** The trigger's bounds in logical px, relative to the parent window's
  * content, the way `offset` is expressed. Rust excludes a press inside it
  * from outside dismissal so the trigger can toggle the panel on mouse-up. */
@@ -30,9 +28,6 @@ type ShowPopupPanelOptions = {
   /** Which panel window to show this in. Omitted means the shared listbox
    * every pop-up button borrows; an editor names its own tool panel. */
   panel?: string;
-  /** What the opener is drawn on. A panel opened from the island is drawn
-   * in its black, so the window takes away the material under it. */
-  skin?: Skin;
   /** A panel the user works alongside, which an outside press must not take
    * away. It closes on Escape, on its own trigger, or with its parent
    * window. */
@@ -60,7 +55,6 @@ export const showPopupPanel = ({
   panel,
   parentWindowLabel,
   size,
-  skin = "window",
   sticky = false,
   triggerId,
 }: ShowPopupPanelOptions) =>
@@ -68,7 +62,6 @@ export const showPopupPanel = ({
     anchor: anchor ?? null,
     fitted,
     focusContents,
-    material: skin === "window",
     offset,
     // The page's own height says where it begins in its window.
     pageHeight: window.innerHeight,

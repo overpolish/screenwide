@@ -15,6 +15,9 @@ editor-timeline-range-speed = Range playback speed
 editor-timeline-segment-speed = Segment playback speed
 editor-timeline-play-preview = Play preview
 editor-timeline-pause-preview = Pause preview
+# The transport's toggle that turns a drag across the strip into a stretch to cut; holding Option (Alt on Windows) does the same for one drag.
+editor-timeline-cut = Cut
+editor-timeline-cut-name = Cut a stretch of the recording
 editor-timeline-copy-frame = Copy Frame
 editor-timeline-copy-frame-label = Copy current frame
 editor-timeline-preparing-audio = Preparing audio tracks

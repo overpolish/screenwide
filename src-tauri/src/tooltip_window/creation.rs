@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::utils::config::WindowEffectsConfig;
-use tauri::window::{Effect, EffectState};
 use tauri::{AppHandle, WebviewUrl, WebviewWindow};
 
 #[cfg(target_os = "windows")]
@@ -12,12 +10,11 @@ use crate::app_windows::{platform, WindowLabel};
 
 use super::{INITIAL_HEIGHT, MAX_WIDTH};
 
+/// The tooltip is drawn in the island's black by its page, as a menu opened
+/// from an island is, so the window carries no material under it and no
+/// shadow: AppKit draws that with a light rim, which reads as a border on
+/// the black.
 pub(super) fn build(app: &AppHandle) -> tauri::Result<WebviewWindow> {
-  let effect = if cfg!(target_os = "windows") {
-    Effect::Mica
-  } else {
-    Effect::UnderWindowBackground
-  };
   let window = crate::app_windows::webview_window(
     app,
     WindowLabel::Tooltip.as_str(),
@@ -30,16 +27,10 @@ pub(super) fn build(app: &AppHandle) -> tauri::Result<WebviewWindow> {
   .minimizable(false)
   .maximizable(false)
   .resizable(false)
-  .shadow(true)
+  .shadow(false)
   .skip_taskbar(true)
   .transparent(true)
   .visible(false)
-  .effects(WindowEffectsConfig {
-    color: None,
-    effects: vec![effect],
-    radius: Some(8.0),
-    state: Some(EffectState::Active),
-  })
   .build()?;
 
   platform::initialize_tooltip(&window)?;

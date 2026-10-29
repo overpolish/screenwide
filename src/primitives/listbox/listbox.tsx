@@ -14,14 +14,14 @@ import { Text } from "../text/text";
 
 import { useListMotion } from "./use-list-motion";
 
-// A list lives in a native panel window, which supplies the material, so it
-// draws no surface of its own. As in a native menu it pads the panel by the
-// tight inset and lets its items touch, so the highlight of neighbouring
-// items runs on as one. An empty list says so in a row drawn as a disabled
-// item is, its words centred in the list, since there is no column of labels
-// for them to line up with. On the island it sits in a section, which is
-// already inset, so it takes the section's width and adds no inset of its
-// own. Items that come and go do so on the island's curve
+// A list lives in a native panel window, whose host paints the island's
+// black, so it draws no surface of its own. As in a native menu it pads the
+// panel by the tight inset and lets its items touch, so the highlight of
+// neighbouring items runs on as one. An empty list says so in a row drawn as
+// a disabled item is, its words centred in the list, since there is no
+// column of labels for them to line up with. On the island it sits in a
+// section, which is already inset, so it takes the section's width and adds
+// no inset of its own. Items that come and go do so on the island's curve
 // (`use-list-motion.ts`).
 const listBoxVariants = tv({
   base: "flex scroll-py-5 flex-col overflow-auto text-fg outline-none",

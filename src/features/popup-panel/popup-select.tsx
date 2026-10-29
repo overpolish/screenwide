@@ -11,7 +11,6 @@ import { ReactNode, useEffect, useRef } from "react";
 import { Badge } from "../../primitives/badge/badge";
 import { ListBoxItem } from "../../primitives/listbox-item/listbox-item";
 import { Select } from "../../primitives/select/select";
-import { useSkin } from "../../primitives/skin/skin";
 
 import { hidePopupPanel, panelStartX, showPopupPanel } from "./api";
 import { initialPopupPanelHeight, searchablePopupPanelHeight } from "./layout";
@@ -71,7 +70,6 @@ export function PopupSelect({
   const close = usePopupPanelStore((state) => state.close);
   const open = usePopupPanelStore((state) => state.open);
   const handledEventRef = useRef(lastSelection?.eventId ?? null);
-  const skin = useSkin();
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
@@ -114,7 +112,6 @@ export function PopupSelect({
       focusContents,
       id,
       label,
-      skin,
     });
     const width = Math.max(bounds.width, minimumListWidth);
     await showPopupPanel({
@@ -131,7 +128,6 @@ export function PopupSelect({
       ),
       parentWindowLabel: getCurrentWindow().label,
       size: new LogicalSize(width, height),
-      skin,
       triggerId: id,
     });
   };

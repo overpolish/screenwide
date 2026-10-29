@@ -10,7 +10,6 @@ import type {
   PopupPanelColorsContent,
 } from "./picker-content";
 import type { PopupPanelIcon } from "./popup-panel-item-glyph";
-import type { Skin } from "../../primitives/skin/skin";
 import type { NoteTranscript } from "../editor/timeline/moments/recording-moments";
 
 type PopupPanelMode = "menu" | "select";
@@ -118,9 +117,6 @@ export type OpenPopupPanel = {
   /** Names a list of choices for assistive technology. A tool panel is the
    * tool in hand and carries no chrome of its own to name. */
   label?: string;
-  /** What the opener is drawn on, which the panel is drawn on too: the
-   * island's black, or the window's material when omitted. */
-  skin?: Skin;
 };
 
 /** Something done to a value a panel offers rather than a pick of it: a

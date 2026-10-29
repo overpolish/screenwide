@@ -11,7 +11,7 @@ import { Button } from "../../../primitives/button/button";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorArtifact } from "../types";
 
-export function EditorTitlebar({
+export function EditorTitleBar({
   artifact,
   canExport,
   isSaving,

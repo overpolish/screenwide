@@ -796,6 +796,8 @@ export type Messages = {
   "editor-timeline-captions": null;
   "editor-timeline-copy-frame": null;
   "editor-timeline-copy-frame-label": null;
+  "editor-timeline-cut": null;
+  "editor-timeline-cut-name": null;
   "editor-timeline-download": null;
   "editor-timeline-downloading-model": null;
   "editor-timeline-downloading-model-label": null;
@@ -876,8 +878,11 @@ export type Messages = {
   "editor-tool-select": null;
   "editor-tool-select-clip-name": null;
   "editor-tool-select-name": null;
+  "editor-toolbar-modes": null;
   "editor-toolbar-more-annotation-tools": null;
   "editor-toolbar-more-tools": null;
+  "editor-toolbar-tools": null;
+  "editor-toolbar-transcript": null;
   "editor-zoom": null;
   "format-size": { size: string | number; unit: string | number };
   "format-size-unknown": null;

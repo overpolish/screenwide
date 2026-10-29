@@ -11,7 +11,7 @@ import { ListBox } from "./listbox";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 // A list is drawn in a native panel, so it is shown bare here; in the native
-// Storybook it sits on the panel's own material.
+// Storybook it sits on the panel's island black.
 const flavours = ["Chocolate", "Strawberry", "Vanilla", "Pistachio"];
 
 const meta = {

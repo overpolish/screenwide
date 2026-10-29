@@ -8,7 +8,6 @@ use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
-use crate::app_windows::options::panel_material;
 use crate::app_windows::{webview_window, WindowLabel};
 
 const PREVIEW_LABEL: &str = "storybook-native";
@@ -73,11 +72,10 @@ fn create_menu_window(app: &AppHandle, preview_url: &url::Url) -> Result<(), Box
     .decorations(false)
     .focused(false)
     .resizable(false)
-    .shadow(true)
+    .shadow(false)
     .skip_taskbar(true)
     .transparent(true)
     .visible(false)
-    .effects(panel_material())
     .build()?;
   Ok(())
 }

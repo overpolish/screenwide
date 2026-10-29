@@ -55,17 +55,16 @@ export function PopupPanelWindow() {
 
   if (!active) return null;
 
-  // A panel opened from the island is drawn as part of it, in its black and
-  // its dark dress, over no material (`show_standalone_listbox`); its
-  // corner sits a tight inset out from its items', as the material's does.
-  // Over the island's black it would vanish, so it takes the faint ring the
-  // island's angle dial draws, inset so the window still fits its contents.
-  return active.skin === "island" ? (
+  // Every panel is drawn in the island's black and its dark dress, over no
+  // material or shadow (`tauri.conf.json`), so menus, lists and panels read
+  // the same wherever they open. Its corner sits a tight inset out from its
+  // items'. Over the island's black it would vanish, so it takes the faint
+  // ring the island's angle dial draws, inset so the window still fits its
+  // contents.
+  return (
     <div className="dark size-full overflow-hidden rounded-panel bg-island text-fg inset-ring inset-ring-fill-strong">
       <PanelContents active={active} panel={panel} />
     </div>
-  ) : (
-    <PanelContents active={active} panel={panel} />
   );
 }
 
