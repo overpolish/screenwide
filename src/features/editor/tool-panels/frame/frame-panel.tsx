@@ -12,7 +12,6 @@ import { useToolPanelSnapshot } from "../use-tool-panel-snapshot";
 
 import { presetName } from "./background/background";
 import { BackgroundPicker } from "./background/background-picker";
-import { useBackgroundPresetMenu } from "./use-background-preset-menu";
 import { useBuiltInBackgroundPresets } from "./use-background-presets";
 
 /**
@@ -30,9 +29,6 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
   const { background, backgroundPresets, frame, isLocked } = snapshot;
   const presets = useBuiltInBackgroundPresets();
-  const showPresetMenu = useBackgroundPresetMenu((id) => {
-    change({ removePreset: id });
-  });
 
   if (!frame) return null;
 
@@ -83,8 +79,8 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
             change({ background: next });
           }}
           onPickImage={browseBackgroundImage}
-          onPresetMenu={(id, anchor) => {
-            void showPresetMenu(id, anchor);
+          onRemovePreset={(id) => {
+            change({ removePreset: id });
           }}
           onSavePreset={(saved) => {
             change({

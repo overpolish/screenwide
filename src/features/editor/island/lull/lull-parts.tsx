@@ -13,7 +13,6 @@ import { Keyboard } from "../../../../primitives/keyboard/keyboard";
 import { ListBox } from "../../../../primitives/listbox/listbox";
 import { ListBoxItem } from "../../../../primitives/listbox-item/listbox-item";
 import { Text } from "../../../../primitives/text/text";
-import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
 
 import type { LullIslandProps } from "./lull-island";
 
@@ -22,6 +21,11 @@ import type { LullIslandProps } from "./lull-island";
 // once, so it is a one-shot action at the end of its own row. At the
 // island's foot, the key that turns dragging its end from a retime into a
 // trim.
+
+/** The lull island's width, set by its line: a black 260 px wide, which
+ * holds the longest way it plays, so a retime coming or going leaves the
+ * island as it is. */
+const LULL_LINE_WIDTH = "w-63";
 
 export function LullChoices({
   onPlayChange,
@@ -43,13 +47,13 @@ export function LullChoices({
             speed: speed.format(play.speed),
           });
   return (
-    // Inset as the row's content is, with room beneath before the hint; at
-    // the width the editor island's parts share. A retime coming or going
-    // moves the trim with the black (`IslandFlow`).
+    // Inset as the row's content is, with room beneath before the hint, at
+    // the island's width. A retime coming or going moves the trim with the
+    // black (`IslandFlow`).
     <IslandFlow
       className={cn(
         "flex flex-col gap-separate px-1 pb-inset-sm",
-        EDITOR_ISLAND_WIDTH.line,
+        LULL_LINE_WIDTH,
       )}
     >
       <ListBox

@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useState } from "react";
-
 import { ColorButton } from "../../../../../composites/color-button/color-button";
 import { ControlRow } from "../../../../../composites/control-row/control-row";
 import { t } from "../../../../../i18n/i18n";
@@ -11,45 +9,13 @@ import { useColorPicker } from "../../../../../primitives/input-fields/use-color
 import { PillGroup } from "../../../../../primitives/pill-group/pill-group";
 
 import { Background } from "./background";
-import {
-  backgroundGenerator,
-  DEFAULT_GENERATOR_ID,
-} from "./background-generators";
-import {
-  randomMeshBackground,
-  randomizeMeshBackground,
-} from "./background-random";
 import { MeshPalette } from "./mesh-palette";
+import { useBackgroundEdit } from "./use-background-edit";
 
 const backgroundKinds = () => [
   { id: "solid", label: t("background-kind-solid") },
   { id: "mesh", label: t("background-kind-mesh") },
 ];
-
-const DEFAULT_SOLID = "#171717";
-
-/**
- * The palette a generator reads, whatever the mesh arrived with.
- *
- * A generator takes three colours or four, and a mesh can change hands
- * between them, so a palette that is the wrong length is cut down, or filled
- * out from the generator's own colours, rather than shown at a length the
- * picture will not use.
- */
-const generatorPalette = (colors: string[], generatorId: string) => {
-  const { colorCount, defaultColors, id } = backgroundGenerator(generatorId);
-  // The composition generator makes its own count: a blob per colour past the
-  // first, and as many as it rolled. Its count is a floor rather than a rule,
-  // so a mesh of five is still shown as five.
-  const length =
-    id === DEFAULT_GENERATOR_ID
-      ? Math.max(colorCount, colors.length)
-      : colorCount;
-  return Array.from(
-    { length },
-    (_, index) => colors[index] ?? defaultColors[index],
-  );
-};
 
 /**
  * A background built by hand, and saved under a name if it is worth keeping.
@@ -68,25 +34,11 @@ export function BackgroundEditor({
   value: Background;
   isDisabled?: boolean;
 }) {
-  const [lastMesh, setLastMesh] = useState<Extract<
-    Background,
-    { kind: "mesh" }
-  > | null>(value.kind === "mesh" ? value : null);
-  const solidColor = value.kind === "solid" ? value.color : DEFAULT_SOLID;
-  const mesh = value.kind === "mesh" ? value : lastMesh;
-  const palette = mesh ? generatorPalette(mesh.colors, mesh.generator) : [];
-  const kind = value.kind === "mesh" ? "mesh" : "solid";
-
-  const solidPicker = useColorPicker((color) => {
-    onChange({ color, kind: "solid" });
-  });
-  const changeMesh = (next: Extract<Background, { kind: "mesh" }>) => {
-    setLastMesh(next);
-    onChange(next);
-  };
+  const edit = useBackgroundEdit({ onChange, value });
+  const solidPicker = useColorPicker(edit.setSolid);
 
   return (
-    <div className="flex flex-col gap-control-inset">
+    <div className="flex flex-col gap-separate">
       <ControlRow title={t("background-type")}>
         {(controlProps) => (
           <div {...controlProps} role="group">
@@ -98,29 +50,21 @@ export function BackgroundEditor({
                   ? {
                       ...item,
                       onPress: () => {
-                        if (kind === "mesh" && mesh) {
-                          changeMesh(randomizeMeshBackground(mesh));
-                        }
+                        if (edit.kind === "mesh") edit.reroll();
                       },
                     }
                   : item,
               )}
-              onSelectionChange={(nextKind) => {
-                if (nextKind === "solid") {
-                  onChange({ color: solidColor, kind: "solid" });
-                  return;
-                }
-                changeMesh(
-                  mesh ? randomizeMeshBackground(mesh) : randomMeshBackground(),
-                );
+              onSelectionChange={(kind) => {
+                edit.setKind(kind === "mesh" ? "mesh" : "solid");
               }}
-              selected={kind}
+              selected={edit.kind}
             />
           </div>
         )}
       </ControlRow>
 
-      {kind === "solid" || !mesh ? (
+      {edit.kind === "solid" || !edit.mesh ? (
         <ControlRow title={t("background-color")}>
           {(controlProps) => (
             <div {...controlProps} role="group">
@@ -128,24 +72,20 @@ export function BackgroundEditor({
                 aria-label={t("background-color-label")}
                 isDisabled={isDisabled}
                 onPress={(event) => {
-                  solidPicker.open(solidColor, event.target);
+                  solidPicker.open(edit.solidColor, event.target);
                 }}
-                value={solidColor}
+                value={edit.solidColor}
               />
             </div>
           )}
         </ControlRow>
       ) : (
         <MeshPalette
-          colors={palette}
+          colors={edit.palette}
           isDisabled={isDisabled}
-          locked={palette.map((_, index) => mesh.lockedColors[index] ?? false)}
-          onChange={(colors) => {
-            changeMesh({ ...mesh, colors });
-          }}
-          onLockedChange={(lockedColors) => {
-            changeMesh({ ...mesh, lockedColors });
-          }}
+          locked={edit.locked}
+          onChange={edit.setColors}
+          onLockedChange={edit.setLocked}
         />
       )}
 

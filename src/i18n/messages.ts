@@ -134,6 +134,7 @@ export type Messages = {
   "background-palette-new": null;
   "background-palette-shades": null;
   "background-save-preset": null;
+  "background-saved-armed": { name: string | number };
   "background-solid-blue": null;
   "background-solid-graphite": null;
   "background-solid-midnight": null;
@@ -268,8 +269,21 @@ export type Messages = {
   "editor-island-beat-switch": { app: string | number };
   "editor-island-beat-type": { label: string | number };
   "editor-island-counter": null;
+  "editor-island-crop-aspect": null;
+  "editor-island-crop-free": null;
+  "editor-island-crop-original": null;
+  "editor-island-crop-ratio": {
+    height: string | number;
+    width: string | number;
+  };
+  "editor-island-crop-ratio-name": {
+    height: string | number;
+    width: string | number;
+  };
   "editor-island-drawing": null;
   "editor-island-focus": null;
+  "editor-island-frame-original-size": null;
+  "editor-island-frame-randomise": null;
   "editor-island-highlight": null;
   "editor-island-image": null;
   "editor-island-image-flip": null;
@@ -402,7 +416,6 @@ export type Messages = {
   "editor-panels-auto-volume": null;
   "editor-panels-auto-volume-measuring": null;
   "editor-panels-auto-zoom": null;
-  "editor-panels-background-actions": null;
   "editor-panels-camera": null;
   "editor-panels-camera-background": null;
   "editor-panels-camera-background-blur": null;
@@ -537,7 +550,6 @@ export type Messages = {
   "editor-panels-remove-background": null;
   "editor-panels-remove-background-description": null;
   "editor-panels-remove-background-working": null;
-  "editor-panels-remove-preset": null;
   "editor-panels-remove-template": null;
   "editor-panels-replace": null;
   "editor-panels-replace-camera-picture": null;

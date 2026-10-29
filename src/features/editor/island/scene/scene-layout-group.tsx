@@ -24,7 +24,6 @@ import {
   type ScenePreset,
 } from "../../glyphs/scene-layout-drawing";
 import { SceneLayoutGlyph } from "../../glyphs/scene-layout-glyph";
-import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
 
 import {
   layoutOptionsKind,
@@ -33,6 +32,7 @@ import {
 } from "./scene-framing";
 import { SceneLayoutOptions } from "./scene-layout-options";
 import { presetName } from "./scene-names";
+import { SCENE_ISLAND_WIDTH } from "./scene-width";
 
 // The layout group: how the scene lays out its panes, as tiles drawn large
 // on the video's shape, and under them the choices of the one in use. The
@@ -171,7 +171,7 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
       .map(({ id, label, picture }) => ({ id, label, picture })),
   ];
   return (
-    // At least the width the editor island's parts share, which fits within
+    // At least the island's width, which fits within
     // the narrowest scene row, so the row's title and buttons stay put as
     // the groups change under it, and across the whole section once it is
     // stretched to the island's box. The tiles and the options of the one
@@ -180,7 +180,7 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
     <IslandFlow
       className={cn(
         "flex min-w-full flex-col gap-separate",
-        EDITOR_ISLAND_WIDTH.part,
+        SCENE_ISLAND_WIDTH.part,
       )}
     >
       <ScrollingTiles>

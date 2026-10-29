@@ -51,10 +51,8 @@ function PickerHarness({ initial }: { initial: Background }) {
           fn()("pick image");
           return Promise.resolve("/screenwide/story-background.jpg");
         }}
-        onPresetMenu={(id) => {
-          // The app answers a right click with the pop-up panel, which a
-          // story has no window for, so it removes the preset outright.
-          fn()("preset menu", id);
+        onRemovePreset={(id) => {
+          fn()("remove preset", id);
           setSaved((current) => current.filter((preset) => preset.id !== id));
         }}
         onSavePreset={(background) => {
@@ -127,8 +125,8 @@ export const Image: Story = {
   },
 };
 
-/** Backgrounds saved from earlier canvases sit after the built-in ones, and
- * offer removal on a right click, through the app's own pop-up menu. */
+/** Backgrounds kept from earlier canvases sit after the built-in ones; two
+ * right clicks on one forget it. */
 export const WithSavedPresets: Story = {
   args: { initial: savedPresets[0].background },
 };

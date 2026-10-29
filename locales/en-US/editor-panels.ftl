@@ -300,11 +300,6 @@ editor-panels-captions-profanity-fully = Fully
 # Profanity left out of the caption.
 editor-panels-captions-profanity-hidden = Hidden
 
-## Frame and background
-
-editor-panels-remove-preset = Remove Preset
-editor-panels-background-actions = Background actions
-
 ## Scenes: how the screen and camera are laid out over time
 
 editor-panels-scene = Scene

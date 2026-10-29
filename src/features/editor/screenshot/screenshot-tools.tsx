@@ -1,17 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Crop,
-  MousePointer2,
-  ScanSquare,
-  SquareDashedMousePointer,
-} from "lucide-react";
+import { Crop, MousePointer2, SquareDashedMousePointer } from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { Toolbar } from "../../../primitives/toolbar/toolbar";
 import { ToolbarTool } from "../../../primitives/toolbar/toolbar-tool";
+import { FrameToolIcon } from "../glyphs/frame-tool-icon";
 import { AnnotationToolStrip } from "../toolbar/annotation-tool-strip";
 
 import type { AnnotationKind } from "../../annotations/types";
@@ -122,7 +118,7 @@ export function useScreenshotTools({
             onChange={chooseCanvasTool}
             shortcut="F"
           >
-            <ScanSquare />
+            <FrameToolIcon />
           </ToolbarTool>
           <ToolbarTool
             aria-label={t("editor-tool-crop-name")}

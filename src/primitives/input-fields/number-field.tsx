@@ -45,6 +45,10 @@ export type NumberFieldProps = AriaNumberFieldProps &
      * numeric entry only: a formatted field would need a parse of its own. */
     onTypedChange?: (value: number) => void;
     placeholder?: string;
+    /** On the island, the characters the field keeps room for, so a value
+     * typed or set within them leaves its width, and its neighbours, where
+     * they are. Its figures sit at the end. */
+    reservedLength?: number;
     rightSection?: React.ReactNode;
   };
 
@@ -59,6 +63,7 @@ export const NumberField = ({
   onChange,
   onTypedChange,
   placeholder,
+  reservedLength = 1,
   rightSection,
   step,
   value,
@@ -259,7 +264,7 @@ export const NumberField = ({
                       typedLength === null
                         ? `width ${String(motionDurations.travel)}s ease-out`
                         : undefined,
-                    width: `calc(${String(Math.max(shownLength, 1))}ch + 1px)`,
+                    width: `calc(${String(Math.max(shownLength, reservedLength))}ch + 1px)`,
                   }
                 : undefined
             }

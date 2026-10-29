@@ -7,9 +7,9 @@ import { IslandFlow } from "../../../../../primitives/island/island-flow";
 import { titleTemplates } from "../../../tool-panels/annotation/text/text-look";
 import { useFontChoices } from "../../../tool-panels/text-style/text-fonts";
 import { useTemplatePreviews } from "../../../tool-panels/text-style/use-template-previews";
+import { IslandPickerColumn } from "../../island-picker-column";
 
 import { TextFontLine, TextFontPanel } from "./text-font-picker";
-import { TextPickerColumn } from "./text-picker-line";
 import { TextTemplateLine, TextTemplateTiles } from "./text-template-picker";
 
 import type { FontFamily } from "../../../../../bindings/FontFamily";
@@ -131,7 +131,7 @@ export function TextLookPickers({
         </IslandFlow>
         {children}
       </IslandFlow>
-      <TextPickerColumn
+      <IslandPickerColumn
         content={content}
         contentKey={shown ?? ""}
         id={columnId}

@@ -5,17 +5,34 @@ import { useEffect, useRef, useState } from "react";
 
 import { DEFAULT_CONFIRM_TIMEOUT_MS } from "../confirm-action-button/use-confirm-action";
 
+import type { ToggleButtonProps } from "react-aria-components";
+
+type KeyDown = NonNullable<ToggleButtonProps["onKeyDown"]>;
+
+/** The tile beside `tile` in its group, after it or else before it, which
+ * takes the focus from a tile about to go. */
+const neighbour = (tile: EventTarget) => {
+  if (!(tile instanceof HTMLElement)) return null;
+  const group = tile.closest('[role="radiogroup"], [role="toolbar"]');
+  if (!group) return null;
+  const tiles = [...group.querySelectorAll<HTMLElement>("button")];
+  const at = tiles.indexOf(tile);
+  if (at + 1 < tiles.length) return tiles[at + 1];
+  return at > 0 ? tiles[at - 1] : null;
+};
+
 /**
- * Removal by two right clicks on the same colour: the first arms it, the
- * second removes it.
+ * Removal by two right clicks on the same tile, or two presses of Backspace
+ * or Delete while it has the focus: the first arms it, the second removes
+ * it.
  *
  * The rules are `useConfirmAction`'s, which is built around a button's own
- * press and focus rather than a right click on one tile of many: the armed
- * window lapses, Escape and leaving the tile disarm it, and arming another
- * colour disarms the first. A removal cannot be undone, so one stray right
- * click must not be enough.
+ * press and focus rather than one tile of many: the armed window lapses,
+ * Escape, leaving the tile or moving the focus off it disarm it, and arming
+ * another tile disarms the first. A removal cannot be undone, so one stray
+ * click or key must not be enough.
  */
-export function useArmedRemoval(onRemove: (color: string) => void) {
+export function useArmedRemoval(onRemove: (id: string) => void) {
   const [armed, setArmed] = useState<string | null>(null);
   const timerRef = useRef<number | undefined>(undefined);
 
@@ -26,7 +43,7 @@ export function useArmedRemoval(onRemove: (color: string) => void) {
 
   useEffect(() => {
     if (armed === null) return;
-    // Captured, so an armed colour takes Escape before the editor's own
+    // Captured, so an armed tile takes Escape before the editor's own
     // Escape clears a selection or puts a tool down.
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -48,21 +65,38 @@ export function useArmedRemoval(onRemove: (color: string) => void) {
     [],
   );
 
+  /** A right click on `id`: arms it, or removes it when it is armed. */
+  const secondary = (id: string) => {
+    window.clearTimeout(timerRef.current);
+    if (armed === id) {
+      setArmed(null);
+      onRemove(id);
+      return;
+    }
+    setArmed(id);
+    timerRef.current = window.setTimeout(() => {
+      setArmed(null);
+    }, DEFAULT_CONFIRM_TIMEOUT_MS);
+  };
+
   return {
     armed,
     disarm,
-    /** A right click on `color`: arms it, or removes it when it is armed. */
-    secondary: (color: string) => {
-      window.clearTimeout(timerRef.current);
-      if (armed === color) {
-        setArmed(null);
-        onRemove(color);
-        return;
-      }
-      setArmed(color);
-      timerRef.current = window.setTimeout(() => {
-        setArmed(null);
-      }, DEFAULT_CONFIRM_TIMEOUT_MS);
-    },
+    /** The keys on a focused tile: Backspace or Delete as a right click.
+     * The focus moves to the tile beside one removed, so it is not lost. */
+    keyboard: (id: string): { onBlur: () => void; onKeyDown: KeyDown } => ({
+      onBlur: disarm,
+      onKeyDown: (event) => {
+        if (event.key !== "Backspace" && event.key !== "Delete") {
+          event.continuePropagation();
+          return;
+        }
+        event.preventDefault();
+        const next = armed === id ? neighbour(event.target) : null;
+        secondary(id);
+        next?.focus();
+      },
+    }),
+    secondary,
   };
 }

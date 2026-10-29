@@ -5,7 +5,8 @@ import { ConfirmActionButton } from "../../../../composites/confirm-action-butto
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
 import { Button } from "../../../../primitives/button/button";
-import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
+
+import { SCENE_ISLAND_WIDTH } from "./scene-width";
 
 // The zooms planned from where the cursor clicks and the keys type: planned
 // again in place of the last plan, or all taken away, which asks twice. A
@@ -22,15 +23,15 @@ export function SceneAutoZoomGroup({
   onRegenerate: () => void;
 }) {
   return (
-    // At least the width the editor island's parts share, as the layout
-    // group is, and across the whole section once it is stretched to the
-    // island's box. One-shot actions, at the end of their row and as wide
-    // as their labels; Clear all holds the width of its confirmation too,
-    // so arming it never moves Regenerate.
+    // At least the island's width, as the layout group is, and across the
+    // whole section once it is stretched to the island's box. One-shot
+    // actions, at the end of their row and as wide as their labels; Clear
+    // all holds the width of its confirmation too, so arming it never
+    // moves Regenerate.
     <div
       className={cn(
         "flex min-w-full justify-end gap-separate",
-        EDITOR_ISLAND_WIDTH.part,
+        SCENE_ISLAND_WIDTH.part,
       )}
     >
       <ConfirmActionButton

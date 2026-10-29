@@ -8,7 +8,8 @@ import { CircularProgress } from "../../../../primitives/circular-progress/circu
 import { ProgressBar } from "../../../../primitives/progress-bar/progress-bar";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { Text } from "../../../../primitives/text/text";
-import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
+
+import { MOMENT_ISLAND_WIDTH } from "./moment-width";
 
 import type { MomentTranscript } from "./moment-island";
 
@@ -45,7 +46,7 @@ export function MomentTranscriptLine({
         <ScrollArea
           className="px-inset-sm"
           constrainHeight
-          rootClassName={cn("max-h-32", EDITOR_ISLAND_WIDTH.part)}
+          rootClassName={cn("max-h-32", MOMENT_ISLAND_WIDTH.part)}
         >
           <Text as="p" className="select-text" variant="body">
             {transcript.text}
@@ -70,7 +71,7 @@ export function MomentTranscriptLine({
         <div
           className={cn(
             "flex items-center justify-between gap-separate ps-inset-sm",
-            EDITOR_ISLAND_WIDTH.part,
+            MOMENT_ISLAND_WIDTH.part,
           )}
         >
           <Note>{t("editor-island-moment-no-model")}</Note>
@@ -82,7 +83,7 @@ export function MomentTranscriptLine({
         <div
           className={cn(
             "flex items-center justify-between gap-separate px-inset-sm",
-            EDITOR_ISLAND_WIDTH.part,
+            MOMENT_ISLAND_WIDTH.part,
           )}
         >
           <Note>{t("editor-island-moment-downloading")}</Note>

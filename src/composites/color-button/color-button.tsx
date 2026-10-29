@@ -9,7 +9,10 @@ import {
 
 import { cn } from "../../lib/styling";
 import { Button } from "../../primitives/button/button";
-import { swatchStyles } from "../../primitives/swatch/swatch-styles";
+import {
+  swatchStyles,
+  type SwatchSize,
+} from "../../primitives/swatch/swatch-styles";
 
 // Without a label the button is the colour itself, on Swatch's circle; with
 // one it is a neutral button with the colour beside its name.
@@ -21,6 +24,8 @@ type ColorButtonProps = {
   "aria-expanded"?: boolean;
   isDisabled?: boolean;
   ref?: Ref<HTMLButtonElement>;
+  /** The swatch-only form's size, as a swatch's. */
+  size?: SwatchSize;
 } & (
   | {
       /** Leave out, giving `aria-label`, for the swatch-only form. */
@@ -37,6 +42,7 @@ export function ColorButton({
   label,
   onPress,
   ref,
+  size,
   value,
 }: ColorButtonProps) {
   if (label === undefined)
@@ -44,7 +50,7 @@ export function ColorButton({
       <AriaButton
         aria-expanded={isExpanded}
         aria-label={ariaLabel}
-        className={swatchStyles(true)}
+        className={swatchStyles(true, size)}
         isDisabled={isDisabled}
         onPress={onPress}
         ref={ref}

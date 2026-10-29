@@ -5,7 +5,10 @@
 
 background-label = Background
 background-image = Image
+# The tile for a background built by hand. While it shows one not kept yet, a right click keeps it as a tile of its own.
 background-custom = Custom
+# A kept background's tile after one right click or Delete: a second one forgets it. $name is the tile's name.
+background-saved-armed = Right-click or press Delete again to remove { $name }
 background-type = Type
 background-type-label = Background type
 background-kind-solid = Solid

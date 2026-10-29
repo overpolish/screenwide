@@ -11,29 +11,44 @@ import { CornerGlyph } from "./shape-glyphs";
  * softened, and rounded all the way, which is a circle. Presets rather than
  * a scale: three looks to pick between read at a glance, where a percentage
  * has to be tried to be seen. */
-const CORNERS = [
-  { id: "0", label: () => t("annotate-island-corners-square"), radius: 0 },
-  { id: "25", label: () => t("annotate-island-corners-rounded"), radius: 25 },
-  { id: "50", label: () => t("annotate-island-corners-round"), radius: 50 },
+const ANNOTATION_CORNERS = [
+  { glyph: 0, radius: 0 },
+  { glyph: 25, radius: 25 },
+  { glyph: 50, radius: 50 },
+] as const;
+
+/** The three looks' names, square to round. */
+const LOOKS = [
+  () => t("annotate-island-corners-square"),
+  () => t("annotate-island-corners-rounded"),
+  () => t("annotate-island-corners-round"),
 ];
 
-/** How round a shape's or a focus's corners are. A radius set to another
- * value elsewhere leaves no preset chosen until one is picked. */
+/** A preset: its radius, and the radius its glyph is drawn with, so three
+ * presets close together still read apart at a glyph's size. */
+type Corner = { readonly glyph: number; readonly radius: number };
+
+/** How round a box's corners are. A radius set to another value elsewhere
+ * leaves no preset chosen until one is picked. `corners` are the three
+ * looks, square to round, for a box that wants other radii than a shape's,
+ * such as a whole picture, which a quarter would round too far. */
 export function CornerChoice({
+  corners = ANNOTATION_CORNERS,
   onChange,
   value,
 }: {
   onChange: (radius: number) => void;
   /** Percent of the box's shorter side. */
   value: number;
+  corners?: readonly [Corner, Corner, Corner];
 }) {
   return (
     <PillGroup
       aria-label={t("annotation-radius")}
-      items={CORNERS.map(({ id, label, radius }) => ({
-        ariaLabel: label(),
-        icon: <CornerGlyph radius={radius} />,
-        id,
+      items={corners.map(({ glyph, radius }, index) => ({
+        ariaLabel: LOOKS[index](),
+        icon: <CornerGlyph radius={glyph} />,
+        id: String(radius),
       }))}
       onSelectionChange={(id) => {
         onChange(Number(id));

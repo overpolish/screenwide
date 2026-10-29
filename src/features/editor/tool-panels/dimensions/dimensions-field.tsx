@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { t } from "../../../../i18n/i18n";
 import { IconToggleButton } from "../../../../primitives/button/icon-button";
 import { NumberField } from "../../../../primitives/input-fields/number-field";
+import { useSkin } from "../../../../primitives/skin/skin";
 
 import {
   AspectRatioParts,
@@ -31,6 +32,12 @@ type DimensionsFieldProps = {
 // ratio: while it is on, editing one side moves the other. It is a row's
 // control, named by the row it sits in. It starts with the ratio kept, as a
 // picture is usually resized whole.
+
+/** The figures a side keeps room for on the island, "99,999" as grouped:
+ * any size a picture takes. The island is as wide as this line, so a field
+ * that grew with each figure typed would move the whole island. */
+const ISLAND_FIGURES = 6;
+
 export function DimensionsField({
   height,
   isDisabled,
@@ -38,6 +45,12 @@ export function DimensionsField({
   width,
 }: DimensionsFieldProps) {
   const [linked, setLinked] = useState(true);
+  // In a window's rows the two fields are one width, lined up; on the island
+  // each keeps room for a picture's largest side, so the line, and the
+  // island sized to it, stay still while a size is typed.
+  const isIsland = useSkin() === "island";
+  const fieldWidth = isIsland ? undefined : "w-24";
+  const reservedLength = isIsland ? ISLAND_FIGURES : undefined;
   // The size this field last asked for, so the answer coming back is not
   // taken as a new ratio to keep.
   const requestedRef = useRef<{ height: number; width: number } | null>(null);
@@ -105,11 +118,12 @@ export function DimensionsField({
     <div className="flex items-center gap-inline">
       <NumberField
         aria-label={t("editor-panels-width")}
-        className="w-24"
+        className={fieldWidth}
         isDisabled={isDisabled}
         onChange={(value) => {
           change(value, "width");
         }}
+        reservedLength={reservedLength}
         rightSection="px"
         value={width}
       />
@@ -124,11 +138,12 @@ export function DimensionsField({
       </IconToggleButton>
       <NumberField
         aria-label={t("editor-panels-height")}
-        className="w-24"
+        className={fieldWidth}
         isDisabled={isDisabled}
         onChange={(value) => {
           change(value, "height");
         }}
+        reservedLength={reservedLength}
         rightSection="px"
         value={height}
       />

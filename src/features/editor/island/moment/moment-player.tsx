@@ -8,7 +8,8 @@ import { cn } from "../../../../lib/styling";
 import { IconButton } from "../../../../primitives/button/icon-button";
 import { IconSwap } from "../../../../primitives/icon-swap/icon-swap";
 import { Waveform } from "../../waveform/waveform";
-import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
+
+import { MOMENT_ISLAND_WIDTH } from "./moment-width";
 
 import type { MomentIslandProps, MomentNote } from "./moment-island";
 
@@ -29,7 +30,7 @@ export function MomentPlayer({
     <div
       className={cn(
         "flex items-center gap-inline px-1 pb-inset-sm",
-        EDITOR_ISLAND_WIDTH.line,
+        MOMENT_ISLAND_WIDTH.line,
       )}
     >
       <IconButton

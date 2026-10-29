@@ -7,7 +7,6 @@ import { Alert } from "../../../../primitives/alert/alert";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { Text } from "../../../../primitives/text/text";
 import { SceneLayoutGlyph } from "../../glyphs/scene-layout-glyph";
-import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
 
 import { SceneActions, type SceneToolGroup } from "./scene-actions";
 import { SceneAutoZoomGroup } from "./scene-auto-zoom-group";
@@ -18,6 +17,7 @@ import {
 } from "./scene-framing";
 import { SceneLayoutGroup } from "./scene-layout-group";
 import { ScenePaneGroup } from "./scene-pane-group";
+import { SCENE_ISLAND_WIDTH } from "./scene-width";
 
 import type { EditorIslandContent } from "../editor-island";
 
@@ -76,15 +76,15 @@ export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
       />
     ),
     anchor: "end",
-    // A line sits in the row's black, at the width the editor island's
-    // parts share, so the black keeps one width whichever group is open,
-    // while staying within the row's own width where the row is wider. Its
+    // A line sits in the row's black, at the island's width, so the black
+    // keeps one width whichever group is open, while staying within the
+    // row's own width where the row is wider. Its
     // words start on the island's text column, with the rows' names below
     // and the title's glyph above. A paused scene says so as the island's
     // alerts do; with no scene in hand, a note says how to add one.
     below: scene?.isPaused ? (
       <Alert
-        className={cn(EDITOR_ISLAND_WIDTH.line, "px-inset pb-inset-sm")}
+        className={cn(SCENE_ISLAND_WIDTH.line, "px-inset pb-inset-sm")}
         role="status"
       >
         {t("editor-island-scene-paused")}
@@ -93,7 +93,7 @@ export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
       <Text
         as="p"
         className={cn(
-          EDITOR_ISLAND_WIDTH.line,
+          SCENE_ISLAND_WIDTH.line,
           "px-inset pb-inset-sm text-fg-secondary",
         )}
         variant="caption"

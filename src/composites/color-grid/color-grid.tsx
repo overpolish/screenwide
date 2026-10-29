@@ -8,11 +8,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ToggleButtonGroup } from "react-aria-components";
 
 import { t } from "../../i18n/i18n";
-import {
-  motionDurationCss,
-  motionDurations,
-  motionEasings,
-} from "../../lib/motion";
+import { motionDurationCss } from "../../lib/motion";
 import { cn } from "../../lib/styling";
 import { IconSwap } from "../../primitives/icon-swap/icon-swap";
 import {
@@ -27,13 +23,14 @@ import {
   isLight,
   sameAnnotationColor,
 } from "./palette";
+import { useTileMotion } from "./tile-motion";
 import { useArmedRemoval } from "./use-armed-removal";
 
 // A glyph over a swatch, in the appearance that reads on `color`; with no
 // colour under it, the window's own. Its ink eases with the swatch's paint,
 // so the Custom tile's glyph turns as the tile empties when its colour is
-// kept.
-function TileGlyph({
+// kept. Shared with the background tiles, which arm a kept tile with it.
+export function TileGlyph({
   children,
   color,
 }: {
@@ -63,10 +60,7 @@ function TileGlyph({
 // last tried. Forgetting a kept colour takes two right clicks because it
 // cannot be undone.
 //
-// Tiles kept or forgotten come and go the way the recording island's and
-// Glide's glyphs do, out of a blur from a smaller size, while the tiles after
-// them slide to their new places; the outgoing tile is lifted from the flow
-// so the rest move at once.
+// Tiles kept or forgotten come and go as `useTileMotion` moves them.
 //
 // Swatches are the small size everywhere: a grid is a row of many, where the
 // control's height would crowd.
@@ -96,7 +90,6 @@ export function ColorGrid({
   const systemPanel = usesSystemColorPanel();
   const colorPanel = useColorPanel({ onChange });
   const removal = useArmedRemoval((color) => onRemoveColor?.(color));
-  const reducedMotion = useReducedMotion() ?? false;
   const armed = isDisabled ? null : removal.armed;
   const saved = savedColors.filter((kept) => !isAnnotationSwatch(kept));
   const chosen =
@@ -107,14 +100,7 @@ export function ColorGrid({
   const count =
     ANNOTATION_SWATCHES.length + saved.length + (offersCustom ? 1 : 0);
 
-  const ease = { duration: motionDurations.travel, ease: motionEasings.out };
-  const slide = {
-    layout: "position",
-    transition: { ...ease, layout: reducedMotion ? { duration: 0 } : ease },
-  } as const;
-  const away = reducedMotion
-    ? { opacity: 0 }
-    : { filter: "blur(2px)", opacity: 0, scale: 0.6 };
+  const { away, shown, slide } = useTileMotion();
 
   return (
     <ToggleButtonGroup
@@ -154,7 +140,7 @@ export function ColorGrid({
       <AnimatePresence initial={false} mode="popLayout">
         {saved.map((kept) => (
           <motion.span
-            animate={{ filter: "blur(0px)", opacity: 1, scale: 1 }}
+            animate={shown}
             className="flex"
             exit={away}
             initial={away}
@@ -177,6 +163,7 @@ export function ColorGrid({
                 if (!isDisabled && onRemoveColor) removal.secondary(kept);
               }}
               onHoverEnd={removal.disarm}
+              {...(isDisabled || !onRemoveColor ? {} : removal.keyboard(kept))}
               onPress={() => {
                 removal.disarm();
                 onChange(kept);

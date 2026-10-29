@@ -28,11 +28,12 @@ const randomSeed = () => Math.floor(random(1, 65_535));
  * painter is drawing it. */
 const randomWarp = () => random(5, 14);
 
+/** One of the palette moods, each as likely as the others. */
+export const randomPaletteMode = (): PaletteMode =>
+  paletteModes[Math.floor(Math.random() * paletteModes.length)];
+
 const randomPalette = (colorCount: number) =>
-  generatePalette(
-    paletteModes[Math.floor(Math.random() * paletteModes.length)],
-    colorCount,
-  );
+  generatePalette(randomPaletteMode(), colorCount);
 
 /**
  * A fresh mesh: a palette, a blob for every colour past the first, and the

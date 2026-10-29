@@ -3,7 +3,7 @@
 
 import { useReducedMotion } from "motion/react";
 import { CSSProperties, MouseEventHandler, ReactNode } from "react";
-import { ToggleButton } from "react-aria-components";
+import { ToggleButton, type ToggleButtonProps } from "react-aria-components";
 
 import { motionDurationCss } from "../../lib/motion";
 import { cn } from "../../lib/styling";
@@ -20,8 +20,10 @@ type SwatchProps = {
   id?: string;
   isDisabled?: boolean;
   isSelected?: boolean;
+  onBlur?: ToggleButtonProps["onBlur"];
   onContextMenu?: MouseEventHandler<HTMLDivElement>;
   onHoverEnd?: () => void;
+  onKeyDown?: ToggleButtonProps["onKeyDown"];
   onPress?: () => void;
   size?: SwatchSize;
   /** Paint beyond a plain colour, such as an image. */
@@ -40,8 +42,10 @@ export function Swatch({
   id,
   isDisabled,
   isSelected,
+  onBlur,
   onContextMenu,
   onHoverEnd,
+  onKeyDown,
   onPress,
   size = "md",
   style,
@@ -61,8 +65,10 @@ export function Swatch({
       id={id}
       isDisabled={isDisabled}
       isSelected={isSelected}
+      onBlur={onBlur}
       onContextMenu={onContextMenu}
       onHoverEnd={onHoverEnd}
+      onKeyDown={onKeyDown}
       onPress={onPress}
       style={{
         transitionDuration,

@@ -207,3 +207,17 @@ editor-island-text-outline = Outline
 editor-island-text-word-by-word = Word by word
 # Which of a text's colours the grid below sets: its type, its box, its accent and so on.
 editor-island-text-color-role = Colour for
+# The shape a crop keeps as its handles are dragged.
+editor-island-crop-aspect = Aspect ratio
+# A crop with no shape kept: its handles drag freely.
+editor-island-crop-free = Free
+# A crop that keeps the shape of the whole capture.
+editor-island-crop-original = Original
+# An aspect ratio as it is written, such as "16:9".
+editor-island-crop-ratio = { $width }:{ $height }
+# An aspect ratio as it is spoken, such as "16 by 9".
+editor-island-crop-ratio-name = { $width } by { $height }
+# A dice that makes a frame's background again: a new colour, or new colours for a mesh's unlocked ones, in a mood picked at random.
+editor-island-frame-randomise = Randomise
+# Puts the frame's size back to the size of what was captured, leaving its background and corners as they are.
+editor-island-frame-original-size = Original size

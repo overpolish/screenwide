@@ -1,16 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Crop,
-  MousePointer2,
-  ScanSquare,
-  SquareDashedMousePointer,
-} from "lucide-react";
+import { Crop, MousePointer2, SquareDashedMousePointer } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
 import { Toolbar } from "../../../../primitives/toolbar/toolbar";
 import { ToolbarTool } from "../../../../primitives/toolbar/toolbar-tool";
+import { FrameToolIcon } from "../../glyphs/frame-tool-icon";
 import { SceneToolToggle } from "../../tool-panels/scene/scene-tool-toggle";
 import { AnnotationToolStrip } from "../../toolbar/annotation-tool-strip";
 
@@ -84,7 +80,7 @@ export function RecordingCanvasTools({
           }}
           shortcut="F"
         >
-          <ScanSquare />
+          <FrameToolIcon />
         </ToolbarTool>
         {hasScenes ? (
           <SceneToolToggle
