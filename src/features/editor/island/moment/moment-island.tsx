@@ -52,7 +52,6 @@ export type MomentIslandProps = {
 };
 
 export function momentIsland(props: MomentIslandProps): EditorIslandContent {
-  const status = props.note?.transcript.status;
   return {
     actions: (
       <ConfirmActionButton
@@ -63,12 +62,9 @@ export function momentIsland(props: MomentIslandProps): EditorIslandContent {
         variant="ghost"
       />
     ),
-    // While what was said is being worked out, its line is centred; a note
-    // with nothing to show hangs its line from the start, as the recording
-    // and annotate islands hang their parts. Needing a model spans the
-    // island, as what was said will.
-    anchor:
-      status === "queued" || status === "transcribing" ? "center" : "start",
+    // Every note keeps to the start, on the island's text column, at the
+    // foot of the block; needing a model spans it, as what was said will.
+    anchor: "start",
     below: props.note ? <MomentPlayer {...props} note={props.note} /> : null,
     key: `moment-${props.id}`,
     section: props.note ? (
@@ -77,8 +73,10 @@ export function momentIsland(props: MomentIslandProps): EditorIslandContent {
         transcript={props.note.transcript}
       />
     ) : null,
+    // Asking for the model gives way to its progress as the download
+    // starts, as one stage of the transcript does to the next.
     sectionKey: props.note
-      ? `moment-${props.id}-${props.note.transcript.status}`
+      ? `moment-${props.id}-${transcriptStage(props.note.transcript)}`
       : undefined,
     title: (
       <IslandRowTitle
@@ -93,4 +91,10 @@ export function momentIsland(props: MomentIslandProps): EditorIslandContent {
       />
     ),
   };
+}
+
+function transcriptStage(transcript: MomentTranscript) {
+  return transcript.status === "noModel" && transcript.download !== null
+    ? "downloading"
+    : transcript.status;
 }

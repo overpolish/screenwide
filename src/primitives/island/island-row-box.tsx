@@ -12,7 +12,12 @@ import { focusIn } from "./island-motion";
 // Never narrower than its content, so the width read for it is what it
 // needs, whatever the layer it sits in is at that moment. Where it fills the
 // island it spans the row's layer, which spans the black as it glides; the
-// span is left out when its width is read (`useSize`'s `isNatural`).
+// span is left out when its width is read (`useSize`'s `isNatural`). Once
+// the island is out, a filling row is also held to the black's width
+// (`--island-row-hold`, set on the layer so a row on its way out reads the
+// current value): a part arriving in it then makes room by squeezing what
+// gives way (`IslandRowPresence`) as the black opens, rather than pushing
+// both ends past the black in one frame.
 
 export function IslandRowBox({
   children,
@@ -38,12 +43,14 @@ export function IslandRowBox({
           ref={onElement}
           style={{
             padding: ISLAND.rowInset,
-            ...(fillsWidth ? { minWidth: "100%" } : {}),
+            ...(fillsWidth
+              ? { maxWidth: "var(--island-row-hold, none)", minWidth: "100%" }
+              : {}),
           }}
         >
           <Toolbar
             aria-label={label}
-            className={fillsWidth ? "flex grow" : "flex"}
+            className={fillsWidth ? "flex min-w-0 grow" : "flex"}
           >
             {children}
           </Toolbar>

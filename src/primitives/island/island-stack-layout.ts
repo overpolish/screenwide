@@ -29,6 +29,7 @@ export function layOutIsland({
         direction,
         layout,
         rowShift,
+        spansRow: parts.spansRow ?? false,
       })
     : { ...layout, islandShift: rowShift };
 }
@@ -55,6 +56,7 @@ function stackUnderRow({
   direction,
   layout,
   rowShift,
+  spansRow,
 }: {
   anchor: IslandAnchor;
   below: Size;
@@ -63,6 +65,8 @@ function stackUnderRow({
   /** Where the row's middle sits from the notch's, in px across the screen,
    * so that its gap is under the notch. */
   rowShift: number;
+  /** The section takes the black's whole width (`islandLayout`). */
+  spansRow: boolean;
 }): Layout & { islandShift: number } {
   const isRtl = direction === "rtl";
   const row = layout.rowTarget;
@@ -109,8 +113,10 @@ function stackUnderRow({
   };
   if (!layout.isOpen) return stacked;
 
-  const boxLeft = heldLeft - left < ISLAND.minStep ? left : heldLeft;
-  const boxRight = right - heldRight < ISLAND.minStep ? right : heldRight;
+  const boxLeft =
+    spansRow || heldLeft - left < ISLAND.minStep ? left : heldLeft;
+  const boxRight =
+    spansRow || right - heldRight < ISLAND.minStep ? right : heldRight;
   // Along the line of the text, from the island's middle and from the box's
   // start.
   const sectionStart = isRtl ? middle - boxRight : boxLeft - middle;

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { MousePointer } from "lucide-react";
+import { MousePointer2 } from "lucide-react";
 import { useRef } from "react";
 
 import { t } from "../../../../i18n/i18n";
@@ -37,7 +37,7 @@ export function CursorToolToggle({ onDismiss }: { onDismiss: () => void }) {
         }}
         shortcut="Shift+C"
       >
-        <MousePointer />
+        <MousePointer2 />
       </ToolbarTool>
     </span>
   );

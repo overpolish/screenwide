@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { AnimatePresence, motion, type MotionValue } from "motion/react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode } from "react";
 
 import { motionDurations } from "../../lib/motion";
 
 import { IslandSectionContext } from "./island-context";
 import { px } from "./island-geometry";
 import { focusIn, glide } from "./island-motion";
+import { useSectionPlace } from "./island-section-place";
 import { useSectionSettle } from "./island-section-settle";
 import { useSwapHold } from "./island-swap-hold";
 
@@ -28,6 +29,7 @@ export function IslandSection({
   movesSideways,
   onElement,
   onOpened,
+  rowWidth,
   sectionX,
   values,
 }: {
@@ -49,13 +51,14 @@ export function IslandSection({
   onElement: (element: HTMLDivElement | null) => void;
   /** The section has finished growing or folding. */
   onOpened: () => void;
+  /** The row's width as it is drawn, moving as it grows or shrinks. */
+  rowWidth: MotionValue<number>;
   /** Holds what hangs still while the island moves sideways under the
    * notch. */
   sectionX: MotionValue<number>;
   values: IslandShapeValues["section"];
 }) {
   const {
-    closed,
     held,
     inPlace,
     inset,
@@ -79,32 +82,23 @@ export function IslandSection({
   // lies exactly as it will once held and nothing moves at the hand-over.
   const isEndPinned = isEndAnchored && isOpen && !isOpening && !movesSideways;
   const stretch = isEndAnchored && isOpen ? sectionWidth - held.width : 0;
-  // A section opens out of the middle, and folds back into it, only as the
-  // island comes out of the notch or goes back in. While the island is out,
-  // a section opens where it hangs, growing down from under what opened it,
-  // and folds up there again; its last place is kept for that, and how far
-  // it was stretched, so it folds at the width it was shown at rather than
-  // dropping to its own the moment it starts.
-  const [lastPlace, setLastPlace] = useState({
-    inset,
-    start: sectionStart,
+  const {
+    foldStart,
+    followsRow,
+    heldStretch,
+    holdOffset,
+    isHolding,
+    isOpeningInPlace,
+    lastPlace,
+    openFrom,
+  } = useSectionPlace({
+    isFromMiddle,
+    isOpening,
+    layout,
+    rowWidth,
     stretch,
-    width: sectionWidth,
+    values,
   });
-  if (
-    isOpen &&
-    (lastPlace.inset !== inset ||
-      lastPlace.start !== sectionStart ||
-      lastPlace.stretch !== stretch ||
-      lastPlace.width !== sectionWidth)
-  ) {
-    setLastPlace({ inset, start: sectionStart, stretch, width: sectionWidth });
-  }
-  const heldStretch = isOpen ? stretch : lastPlace.stretch;
-  // Opening in place, the box and what it holds are put straight where they
-  // hang; only its height grows. The outline grows with it, carrying the
-  // row's corner down on a side that meets the row's end.
-  const isPlacedAtOnce = isOpening && !isFromMiddle;
 
   // In place, the section is there at once and gone once folded; out of the
   // middle it fades.
@@ -131,21 +125,8 @@ export function IslandSection({
   return (
     <div className="absolute start-1/2 top-0">
       <motion.div
-        animate={{
-          insetInlineStart: px(
-            isOpen
-              ? sectionStart
-              : isFromMiddle
-                ? -closed / 2
-                : lastPlace.start,
-          ),
-          top: rowTarget.height,
-          width: isOpen
-            ? sectionWidth
-            : isFromMiddle
-              ? closed
-              : lastPlace.width,
-        }}
+        // Its start and width are moved by `useSectionPlace`.
+        animate={{ top: rowTarget.height }}
         className="absolute"
         initial={false}
         style={{
@@ -153,15 +134,7 @@ export function IslandSection({
           top: values.top,
           width: values.width,
         }}
-        transition={
-          isPlacedAtOnce
-            ? {
-                ...glide,
-                insetInlineStart: { duration: 0 },
-                width: { duration: 0 },
-              }
-            : glide
-        }
+        transition={glide}
       >
         <motion.div
           animate={{
@@ -180,20 +153,31 @@ export function IslandSection({
               isEndPinned
                 ? {}
                 : {
-                    insetInlineStart: !isOpen
-                      ? px(
-                          (isFromMiddle ? inPlace : lastPlace.inset) -
-                            heldStretch,
-                        )
-                      : isOpening && isFromMiddle
-                        ? [px(inPlace - stretch), px(inset - stretch)]
-                        : px(inset - stretch),
+                    insetInlineStart: followsRow
+                      ? px(inset - stretch)
+                      : !isOpen
+                        ? px(
+                            (isFromMiddle
+                              ? inPlace
+                              : lastPlace.inset + lastPlace.start - foldStart) -
+                              heldStretch,
+                          )
+                        : isOpening && isFromMiddle
+                          ? [px(inPlace - stretch), px(inset - stretch)]
+                          : isOpeningInPlace && openFrom !== null
+                            ? [
+                                px(inset - stretch + sectionStart - openFrom),
+                                px(inset - stretch),
+                              ]
+                            : px(inset - stretch),
                   }
             }
             className="absolute top-0"
             initial={false}
             style={{
-              marginInlineStart: settle,
+              // Held where it will rest while the box opens or folds in
+              // place (`useSectionPlace`), its own place set at once.
+              marginInlineStart: isHolding ? holdOffset : settle,
               x: movesSideways ? sectionX : 0,
               // Spanning the box, its content set at the end, so content
               // wider than the box overflows at the start, where the black
@@ -215,11 +199,7 @@ export function IslandSection({
               // share of this box rather than a width of its own.
               ...(!isOpen && heldStretch > 0 ? { width: lastPlace.width } : {}),
             }}
-            transition={
-              isPlacedAtOnce
-                ? { ...glide, insetInlineStart: { duration: 0 } }
-                : glide
-            }
+            transition={isHolding ? { duration: 0 } : glide}
           >
             <IslandSectionContext value={swapHold}>
               <AnimatePresence initial={false}>

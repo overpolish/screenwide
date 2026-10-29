@@ -8,6 +8,7 @@ import { splitAtPlaceable } from "../../../../i18n/split-at-placeable";
 import { hotkeyKeys } from "../../../../lib/hotkey";
 import { cn } from "../../../../lib/styling";
 import { Button } from "../../../../primitives/button/button";
+import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { Keyboard } from "../../../../primitives/keyboard/keyboard";
 import { ListBox } from "../../../../primitives/listbox/listbox";
 import { ListBoxItem } from "../../../../primitives/listbox-item/listbox-item";
@@ -18,9 +19,9 @@ import type { LullIslandProps } from "./lull-island";
 
 // A lull's choices, on the line under its row: how it plays, and its trim.
 // How it plays is a choice, so it is a list with a tick; a trim is done at
-// once, so it is a one-shot action at the end of its own row. Beneath them
-// hangs the key that turns dragging its end from a retime into a trim, a
-// part only as wide as it says.
+// once, so it is a one-shot action at the end of its own row. At the
+// island's foot, the key that turns dragging its end from a retime into a
+// trim.
 
 export function LullChoices({
   onPlayChange,
@@ -43,9 +44,9 @@ export function LullChoices({
           });
   return (
     // Inset as the row's content is, with room beneath before the hint; at
-    // the width the editor island's parts share, so the hint hangs as a
-    // part of its own rather than a sliver short of the island's width.
-    <div
+    // the width the editor island's parts share. A retime coming or going
+    // moves the trim with the black (`IslandFlow`).
+    <IslandFlow
       className={cn(
         "flex flex-col gap-separate px-1 pb-inset-sm",
         EDITOR_ISLAND_WIDTH.line,
@@ -75,14 +76,13 @@ export function LullChoices({
           {t("editor-island-lull-trim-to-breath")}
         </Button>
       </div>
-    </div>
+    </IslandFlow>
   );
 }
 
 /** The key that, held while dragging the lull's end, trims it rather than
  * retiming it, drawn as a keycap wherever the language puts it: ⌥ on a
- * Mac, Alt on Windows. Room at its sides keeps the small part it hangs as
- * from sitting tight round the words. */
+ * Mac, Alt on Windows. A note, on the island's text column. */
 export function LullHint() {
   const [before, after] = splitAtPlaceable((key) =>
     t("editor-island-lull-hint", { key }),

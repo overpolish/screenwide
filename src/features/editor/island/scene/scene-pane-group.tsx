@@ -8,6 +8,7 @@ import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
 import { NumberField } from "../../../../primitives/input-fields/number-field";
+import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { focusIn } from "../../../../primitives/island/island-motion";
 import { Switch } from "../../../../primitives/switch/switch";
 import { IslandFigure } from "../island-figure";
@@ -36,7 +37,7 @@ export function ScenePaneGroup(
   return (
     // As wide as its rows need. Rows sit as close as the island's own
     // parts do.
-    <div className="flex flex-col gap-inline">
+    <IslandFlow className="flex flex-col gap-inline">
       <ControlRow title={t("editor-island-scene-zoom")}>
         {(controlProps) => (
           <IslandFigure
@@ -171,6 +172,6 @@ export function ScenePaneGroup(
           </Button>
         </div>
       ) : null}
-    </div>
+    </IslandFlow>
   );
 }

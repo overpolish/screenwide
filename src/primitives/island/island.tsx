@@ -1,14 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { animate, motion } from "motion/react";
-import {
-  type ReactNode,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { motion } from "motion/react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import { useLocale } from "react-aria";
 
 import { SkinContext } from "../skin/skin";
@@ -90,6 +84,9 @@ export type IslandProps = {
   rowFillsWidth?: boolean;
   /** What hangs beneath the row, if anything. */
   section?: ReactNode;
+  /** Every section takes at least the row's width, so the island is one
+   * block rather than a row with parts hanging off it. */
+  sectionSpansRow?: boolean;
 };
 
 export function Island({
@@ -105,6 +102,7 @@ export function Island({
   row,
   rowFillsWidth = false,
   section,
+  sectionSpansRow = false,
 }: IslandProps) {
   const [rowElement, setRowElement] = useState<HTMLDivElement | null>(null);
   const [sectionElement, setSectionElement] = useState<HTMLDivElement | null>(
@@ -152,6 +150,7 @@ export function Island({
     rowShift,
     rowSize,
     sectionSize,
+    spansRow: sectionSpansRow,
   });
   const { flare, isOpen, radius, rowTarget, top, width } = layout;
   // A section opens out of the middle, and folds back into it, only as the
@@ -172,18 +171,6 @@ export function Island({
   // The parts are laid out and animated as boxes that paint nothing; the
   // black is their outline, drawn from the same animated values.
   const values = useIslandShapeValues({ flare, radius, top });
-  useLayoutEffect(() => {
-    const corners = [
-      animate(values.flare, flare, glide),
-      animate(values.radius, radius, glide),
-      animate(values.top, top, glide),
-    ];
-    return () => {
-      corners.forEach((corner) => {
-        corner.stop();
-      });
-    };
-  }, [flare, radius, top, values]);
   const rowPathRef = useRef<SVGPathElement>(null);
   const shapePathRef = useRef<SVGPathElement>(null);
   const clipRef = useRef<HTMLDivElement>(null);
@@ -246,7 +233,14 @@ export function Island({
                   <motion.div
                     className="absolute inset-x-0 top-0 flex justify-center"
                     ref={rowLayerRef}
-                    style={{ x: rowX }}
+                    style={{
+                      x: rowX,
+                      // Only once out: coming out, the row is laid out in its
+                      // place and revealed as the black opens round it.
+                      ...(fillsWidth && isShown && !isComing
+                        ? { "--island-row-hold": "100%" }
+                        : {}),
+                    }}
                   >
                     {/* Round the presence, not in it: a row on its way out still
                   hears the island, and folds into the notch as it goes. */}
@@ -261,17 +255,18 @@ export function Island({
                       </IslandRowBox>
                     </IslandContext>
                   </motion.div>
-                  {below ? (
-                    <IslandBelow
-                      islandX={islandX}
-                      isShown={isStacked}
-                      onElement={setBelowElement}
-                      top={rowSize?.height ?? 0}
-                      width={belowSize?.width}
-                    >
-                      {below}
-                    </IslandBelow>
-                  ) : null}
+                  {/* Kept while there is no line, so one going away folds
+                      into the row with what it held rather than vanishing
+                      from an island still its height. */}
+                  <IslandBelow
+                    islandX={islandX}
+                    isShown={isStacked}
+                    onElement={setBelowElement}
+                    top={rowSize?.height ?? 0}
+                    width={belowSize?.width}
+                  >
+                    {below}
+                  </IslandBelow>
                 </motion.div>
                 <IslandAsideContext value={setAside}>
                   <IslandSection
@@ -282,6 +277,7 @@ export function Island({
                     movesSideways={notch !== null && !isStacked}
                     onElement={setSectionElement}
                     onOpened={finish}
+                    rowWidth={shapeWidth}
                     sectionX={sectionX}
                     values={values.section}
                   >

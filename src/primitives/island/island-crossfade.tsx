@@ -4,17 +4,8 @@
 import { motion } from "motion/react";
 import { type ReactNode, type Ref, use, useLayoutEffect } from "react";
 
-import { motionDurations, motionEasings } from "../../lib/motion";
-
 import { IslandSectionContext } from "./island-context";
-import { focusIn, reveal } from "./island-motion";
-
-/** How the part leaving goes: blurred away before the black has finished
- * changing shape round it. */
-const leaving = {
-  duration: motionDurations.state,
-  ease: motionEasings.out,
-} as const;
+import { arrive, focusIn, leave, reveal } from "./island-motion";
 
 /** One of the parts a section swaps between. The part leaving blurs away
  * where it was; the part arriving comes into focus where it will rest once
@@ -41,11 +32,11 @@ export function IslandCrossfade({
   return (
     <motion.div
       animate={reveal.animate}
-      exit={{ ...focusIn.exit, transition: leaving }}
+      exit={{ ...focusIn.exit, transition: leave }}
       initial={reveal.initial}
       ref={ref}
       style={offset ? { marginInlineStart: offset } : undefined}
-      transition={{ ...reveal.transition, delay: leaving.duration }}
+      transition={arrive}
     >
       {children}
     </motion.div>

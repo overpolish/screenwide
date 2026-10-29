@@ -7,6 +7,7 @@ import { type ReactNode } from "react";
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
 import { IconToggleButton } from "../../../../primitives/button/icon-button";
+import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { AnnotationColors } from "../../../annotations/options/annotation-colors";
 import { DrawInIcon } from "../../glyphs/draw-in-icon";
 
@@ -19,12 +20,14 @@ import { DrawInIcon } from "../../glyphs/draw-in-icon";
 /** A line of an annotation's controls under its row. Several are spread
  * across it, the first at its start and the last at its end, as the rows
  * below keep theirs; one alone is centred, where at the start it would
- * leave the rest of the line empty beside it. */
+ * leave the rest of the line empty beside it. A control that comes and
+ * goes with a choice elsewhere comes into focus or blurs away in its place
+ * while the others glide to theirs (`IslandFlow`). */
 export function AnnotationLine({ children }: { children: ReactNode }) {
   return (
-    <div className="flex justify-between gap-separate has-[>:only-child]:justify-center">
+    <IslandFlow className="flex justify-between gap-separate has-[>:only-child]:justify-center">
       {children}
-    </div>
+    </IslandFlow>
   );
 }
 

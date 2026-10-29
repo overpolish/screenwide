@@ -2,26 +2,34 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { Island, type IslandProps } from "../../../primitives/island/island";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 import { type IslandAnchor } from "../../../primitives/island/island-geometry";
-import { focusIn, reveal } from "../../../primitives/island/island-motion";
+import {
+  focusIn,
+  leave,
+  reveal,
+} from "../../../primitives/island/island-motion";
 import { useSize } from "../../../primitives/island/island-size";
 
 // The editor's one island, for whatever is in hand: a row saying what it is,
-// its actions at the row's end, and its choices hanging beneath. Choosing
-// something else changes what it holds in place: the row clears into the
-// new one and the section crossfades, while the black reshapes round them.
+// its actions at the row's end, and its choices beneath. It is one block, an
+// inspector: what is beneath always spans the row, a note included, which
+// sits at the block's foot; only a column of choices too many to hold
+// inline opens beside it (`IslandAside`). Choosing something else changes
+// what it holds in place: the row and the line under it clear into the new
+// ones and the section crossfades, while the black reshapes round them.
 
 export type EditorIslandContent = {
   /** Which thing is in hand; a new key brings in a new row and section. */
   key: string;
   title: ReactNode;
   actions?: ReactNode;
-  /** Where under the row the section hangs. */
+  /** Which side of the block the section's content keeps to, and so which
+   * side a column of choices opens past. */
   anchor?: IslandAnchor;
   /** A second line in the row's black, under the row, which the section
    * hangs from in its place. */
@@ -39,6 +47,11 @@ export type EditorIslandProps = Pick<
   content: EditorIslandContent;
 };
 
+/** The row and line leaving go quickly, as a section's part does
+ * (`IslandCrossfade`), so the two never read as laid over each other while
+ * the new ones are revealed a beat after the black begins to move. */
+const leaving = { ...focusIn.exit, transition: leave };
+
 export function EditorIsland({ content, ...island }: EditorIslandProps) {
   // The row keeps its own width as sections change beneath it, so its title
   // and actions stay put while the black reshapes round a section; a
@@ -49,9 +62,20 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
   // so the two are always one width and the line starts where the row does.
   const [rowElement, setRowElement] = useState<HTMLDivElement | null>(null);
   const [belowElement, setBelowElement] = useState<HTMLDivElement | null>(null);
+  const rowRef = useMemo(() => latest(setRowElement), []);
+  const belowRef = useMemo(() => latest(setBelowElement), []);
   const rowNaturalWidth = useSize(rowElement, { isNatural: true })?.width ?? 0;
   const belowWidth = useSize(belowElement)?.width ?? 0;
   const rowWidth = content.below ? belowWidth : 0;
+  // A line arriving under a row that had none is revealed as a new row is;
+  // one there from the start is laid out with the island as it comes out.
+  const hasBelow = Boolean(content.below);
+  const [hadBelow, setHadBelow] = useState(hasBelow);
+  const [belowArrives, setBelowArrives] = useState(false);
+  if (hadBelow !== hasBelow) {
+    setHadBelow(hasBelow);
+    setBelowArrives(hasBelow);
+  }
   return (
     <Island
       {...island}
@@ -59,36 +83,43 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
       aria-label={t("editor-island-label")}
       below={
         content.below ? (
-          <div
-            key={content.key}
-            ref={setBelowElement}
-            style={{ minWidth: rowNaturalWidth }}
-          >
-            {content.below}
-          </div>
+          <AnimatePresence initial={belowArrives} mode="popLayout">
+            <motion.div
+              animate={reveal.animate}
+              exit={leaving}
+              initial={reveal.initial}
+              key={content.key}
+              ref={belowRef}
+              style={{ minWidth: rowNaturalWidth }}
+              transition={reveal.transition}
+            >
+              {content.below}
+            </motion.div>
+          </AnimatePresence>
         ) : undefined
       }
       row={
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div
             animate={reveal.animate}
-            className="grow"
-            exit={focusIn.exit}
+            className="min-w-0 grow"
+            exit={leaving}
             initial={reveal.initial}
             key={content.key}
             transition={reveal.transition}
           >
             <div
-              className="flex h-10 w-max items-center justify-between gap-separate px-1"
-              ref={setRowElement}
+              className="flex h-10 w-max max-w-full items-center justify-between gap-separate px-1"
+              ref={rowRef}
               // Across the island where it is wider, and at least the line
               // under it; both left out when its own width is read, which is
-              // then its content's (`w-max`).
+              // then its content's (`w-max`). Held to the black as a part
+              // arrives, only that part gives way (`IslandRowPresence`).
               style={{ minWidth: `max(${String(rowWidth)}px, 100%)` }}
             >
-              <div className="flex min-w-0 items-center">{content.title}</div>
+              <div className="flex shrink-0 items-center">{content.title}</div>
               {content.actions ? (
-                <div className="flex shrink-0 items-center gap-separate">
+                <div className="flex min-w-0 items-center gap-separate *:shrink-0">
                   {content.actions}
                 </div>
               ) : null}
@@ -108,6 +139,20 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
           </AnimatePresence>
         ) : undefined
       }
+      sectionSpansRow
     />
   );
+}
+
+/** A ref for the element of a part that is swapped as what is in hand
+ * changes: the part leaving is let go only while it is still the one held,
+ * so its going, after the new one has arrived, never leaves none held. */
+function latest<T>(set: (update: (current: T | null) => T | null) => void) {
+  return (element: T | null) => {
+    if (!element) return;
+    set(() => element);
+    return () => {
+      set((current) => (current === element ? null : current));
+    };
+  };
 }

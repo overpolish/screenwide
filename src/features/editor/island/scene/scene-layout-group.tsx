@@ -11,6 +11,7 @@ import {
 
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
+import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import {
   TileChoice,
@@ -25,7 +26,11 @@ import {
 import { SceneLayoutGlyph } from "../../glyphs/scene-layout-glyph";
 import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
 
-import { sceneShape, type SceneFramingProps } from "./scene-framing";
+import {
+  layoutOptionsKind,
+  sceneShape,
+  type SceneFramingProps,
+} from "./scene-framing";
 import { SceneLayoutOptions } from "./scene-layout-options";
 import { presetName } from "./scene-names";
 
@@ -122,6 +127,7 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
   const { canPlaceCamera, layout, onLayoutChange, savedLayouts, variant } =
     props;
   const shape = sceneShape(props);
+  const optionsKind = layoutOptionsKind(props);
   const chosen =
     layout.kind === "preset"
       ? layout.preset
@@ -171,7 +177,7 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
     // stretched to the island's box. The tiles and the options of the one
     // chosen stand apart; the options' own rows sit as close as the
     // island's parts do.
-    <div
+    <IslandFlow
       className={cn(
         "flex min-w-full flex-col gap-separate",
         EDITOR_ISLAND_WIDTH.part,
@@ -194,7 +200,9 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
           value={chosen}
         />
       </ScrollingTiles>
-      <SceneLayoutOptions {...props} />
-    </div>
+      {optionsKind === null ? null : (
+        <SceneLayoutOptions key={optionsKind} {...props} />
+      )}
+    </IslandFlow>
   );
 }

@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 
+import { IslandFlow } from "../../../../../primitives/island/island-flow";
 import { titleTemplates } from "../../../tool-panels/annotation/text/text-look";
 import { useFontChoices } from "../../../tool-panels/text-style/text-fonts";
 import { useTemplatePreviews } from "../../../tool-panels/text-style/use-template-previews";
@@ -96,8 +97,10 @@ export function TextLookPickers({
        * them. Not stretched down either (`self-start`): a stretched item's
        * height counts as fixed, and a scroll area inside sizing itself to
        * its parent, as the colour grid's does, would be cut short. The
-       * column is what stretches, to the controls' height. */}
-      <div className="flex shrink-0 flex-col gap-separate self-start">
+       * column is what stretches, to the controls' height. Lines that come
+       * and go with the template do so in place, and the lines under them
+       * glide to their places (`IslandFlow`). */}
+      <IslandFlow className="flex shrink-0 flex-col gap-separate self-start">
         <TextTemplateLine
           clip={clips[styles.findIndex((s) => s.template === look.template)]}
           controls={columnId}
@@ -107,7 +110,7 @@ export function TextLookPickers({
           selected={look.template}
         />
         {placement}
-        <div className="flex flex-col gap-inline">
+        <IslandFlow className="flex flex-col gap-inline">
           <TextFontLine
             choices={choices}
             controls={columnId}
@@ -125,9 +128,9 @@ export function TextLookPickers({
               onPress={pressed("accent")}
             />
           ) : null}
-        </div>
+        </IslandFlow>
         {children}
-      </div>
+      </IslandFlow>
       <TextPickerColumn
         content={content}
         contentKey={shown ?? ""}

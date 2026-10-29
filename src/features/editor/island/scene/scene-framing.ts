@@ -101,3 +101,16 @@ export function framingGroups(props: SceneFramingProps): SceneGroup[] {
     ...(props.screen ? (["screen"] as const) : []),
   ];
 }
+
+/** Which choices a layout has under its tiles, so a change of layout that
+ * changes them swaps one set for the other; null where it has none. A
+ * pair's are told apart by its preset, since a stacked pair names its
+ * places differently. */
+export function layoutOptionsKind({ layout }: SceneFramingProps) {
+  if (layout.kind !== "preset") return layout.kind;
+  return layout.preset === "picture-in-picture" ||
+    layout.preset === "split-two-thirds" ||
+    layout.preset === "stacked"
+    ? layout.preset
+    : null;
+}

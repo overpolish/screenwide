@@ -16,6 +16,7 @@ export function islandLayout({
   reach = 0,
   rowSize,
   sectionSize,
+  spansRow = false,
 }: {
   anchor: IslandAnchor;
   hasSection: boolean;
@@ -27,6 +28,9 @@ export function islandLayout({
    * reaches past the row rather than widening it: at the start where the
    * section hangs from the end, at the end elsewhere. */
   reach?: number;
+  /** Every section takes at least the row's width, so the island is one
+   * block whatever it holds, rather than a narrower section hanging off. */
+  spansRow?: boolean;
 }) {
   const hidden = notch ?? ISLAND.speck;
   // Laid out at the row's measured size, which is kept while hidden, so a
@@ -39,10 +43,12 @@ export function islandLayout({
   const aside = Math.min(Math.max(reach, 0), held.width);
   const body = held.width - aside;
   // A section that would leave only a sliver of row beside it takes the
-  // row's width instead, and one wider than the row widens the row with it.
+  // row's width instead, as any narrower section does where the island is
+  // one block, and one wider than the row widens the row with it.
   const spare = rowOpen.width - body;
   const isMerged =
-    anchor === "center" ? spare / 2 < ISLAND.minStep : spare < ISLAND.minStep;
+    spansRow ||
+    (anchor === "center" ? spare / 2 < ISLAND.minStep : spare < ISLAND.minStep);
   const openWidth = isMerged ? Math.max(rowOpen.width, body) : rowOpen.width;
   const sectionWidth = (isMerged ? openWidth : body) + aside;
   const bodyOffset = isMerged

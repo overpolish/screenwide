@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Ref } from "react";
+import { Ref, useCallback, useState } from "react";
 import {
   ListBox as AriaListBox,
   ListBoxProps as AriaListBoxProps,
@@ -12,6 +12,8 @@ import { tv } from "../../lib/variants";
 import { useSkin } from "../skin/skin";
 import { Text } from "../text/text";
 
+import { useListMotion } from "./use-list-motion";
+
 // A list lives in a native panel window, which supplies the material, so it
 // draws no surface of its own. As in a native menu it pads the panel by the
 // tight inset and lets its items touch, so the highlight of neighbouring
@@ -19,7 +21,8 @@ import { Text } from "../text/text";
 // item is, its words centred in the list, since there is no column of labels
 // for them to line up with. On the island it sits in a section, which is
 // already inset, so it takes the section's width and adds no inset of its
-// own.
+// own. Items that come and go do so on the island's curve
+// (`use-list-motion.ts`).
 const listBoxVariants = tv({
   base: "flex scroll-py-5 flex-col overflow-auto text-fg outline-none",
   defaultVariants: { skin: "window" },
@@ -42,9 +45,20 @@ export const ListBox = <T extends object>({
   ref,
   ...props
 }: ListBoxProps<T>) => {
+  const [list, setList] = useState<HTMLDivElement | null>(null);
+  useListMotion(list);
+  // The list is watched as well as handed to whoever asked for it.
+  const listRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      setList(element);
+      if (typeof ref === "function") return ref(element);
+      if (ref) ref.current = element;
+    },
+    [ref],
+  );
   return (
     <AriaListBox
-      ref={ref}
+      ref={listRef}
       renderEmptyState={() => (
         <Text
           as="span"

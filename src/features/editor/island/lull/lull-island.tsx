@@ -43,8 +43,7 @@ export function lullIsland(props: LullIslandProps): EditorIslandContent {
         variant="ghost"
       />
     ),
-    // Hung from the start, as the recording and annotate islands hang their
-    // parts.
+    // Its note keeps to the start, on the island's text column.
     anchor: "start",
     below: <LullChoices {...props} />,
     key: `lull-${props.id}`,
@@ -52,6 +51,7 @@ export function lullIsland(props: LullIslandProps): EditorIslandContent {
     title: (
       <IslandRowTitle
         glyph={playGlyph(props.play)}
+        glyphKey={playGlyphKey(props.play)}
         title={t("editor-island-lull")}
       />
     ),
@@ -62,12 +62,19 @@ export function lullIsland(props: LullIslandProps): EditorIslandContent {
  * rest, a pin when kept as recorded, and with a speed of its own, which way
  * that goes. */
 function playGlyph(play: LullPlay) {
-  switch (play.kind) {
+  switch (playGlyphKey(play)) {
     case "keep":
       return <Pin />;
     case "squeeze":
       return <SpringIcon />;
-    case "retimed":
-      return play.speed > 1 ? <FastForward /> : <Snail />;
+    case "faster":
+      return <FastForward />;
+    case "slower":
+      return <Snail />;
   }
+}
+
+function playGlyphKey(play: LullPlay) {
+  if (play.kind !== "retimed") return play.kind;
+  return play.speed > 1 ? "faster" : "slower";
 }

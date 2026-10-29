@@ -12,12 +12,10 @@ import { EDITOR_ISLAND_WIDTH } from "../editor-island-width";
 
 import type { MomentTranscript } from "./moment-island";
 
-// Under a voice note's player, hanging as its own part: what was said, as
-// wide as the island once it is known; until then a short line as wide as
-// itself, centred, saying it is being worked out, that it could not be, or
-// that a model is needed first, fetched from right here rather than from
-// Settings. The part grows as the words arrive, the black reshaping round
-// it.
+// Under a voice note's player, at the foot of the island: what was said
+// once it is known; until then a short line saying it is being worked out,
+// that it could not be, or that a model is needed first, fetched from right
+// here rather than from Settings. The black grows as the words arrive.
 
 /** A short line about the transcript. */
 function Note({ children }: { children: string }) {
@@ -28,8 +26,8 @@ function Note({ children }: { children: string }) {
   );
 }
 
-/** A short line hanging on its own, with room at its sides so the small
- * part it makes is not tight round the words. */
+/** A short line on the island's text column, the small inset in from the
+ * section's. */
 const SHORT_LINE = "flex items-center gap-inline px-inset-sm";
 
 export function MomentTranscriptLine({

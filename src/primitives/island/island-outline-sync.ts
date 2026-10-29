@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  animate,
   cancelFrame,
   frame,
   type MotionValue,
@@ -10,6 +11,7 @@ import {
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 
 import { ISLAND } from "./island-geometry";
+import { glide } from "./island-motion";
 import { islandOutline } from "./island-outline";
 
 // The values the island's parts are animated by, and the drawing of its
@@ -43,13 +45,25 @@ const createShapeValues = (corners: {
   top: motionValue(corners.top),
 });
 
-/** The island's shape values, made once, starting from its first corners. */
+/** The island's shape values, made once, starting from its first corners,
+ * and its corners glided to `corners` as they change. */
 export function useIslandShapeValues(corners: {
   flare: number;
   radius: number;
   top: number;
 }) {
   const [values] = useState(() => createShapeValues(corners));
+  const { flare, radius, top } = corners;
+  useLayoutEffect(() => {
+    const gliding = [
+      animate(values.flare, flare, glide),
+      animate(values.radius, radius, glide),
+      animate(values.top, top, glide),
+    ];
+    return () => {
+      for (const corner of gliding) corner.stop();
+    };
+  }, [flare, radius, top, values]);
   return values;
 }
 

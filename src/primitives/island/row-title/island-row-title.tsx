@@ -1,30 +1,49 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type ReactNode } from "react";
 
 import { Text } from "../../text/text";
+import { focusIn } from "../island-motion";
 
 // What is in hand, said at the start of the island's row: a glyph in a
 // circle's room where it has one, its name, and a line under it of when or
 // how long. Without a glyph it keeps a little room instead, so the name
-// clears the row's rounded end.
+// clears the row's rounded end. A glyph that changes with what is in hand
+// (`glyphKey`) gives way to the next in its place, one blurring away as the
+// other comes into focus, as the island's parts do.
 
 export function IslandRowTitle({
   glyph,
+  glyphKey,
   note,
   title,
 }: {
   /** Words, or words with parts such as keycaps set in them. */
   title: ReactNode;
   glyph?: ReactNode;
+  /** Names the glyph shown, where it changes while the title stays. */
+  glyphKey?: string;
   note?: string;
 }) {
+  const reduce = useReducedMotion();
   return (
     <span className="flex min-w-0 items-center gap-1 pe-2">
       {glyph ? (
-        <span className="flex size-island-control shrink-0 items-center justify-center text-fg-secondary [&_svg]:size-icon">
-          {glyph}
+        <span className="grid size-island-control shrink-0 place-items-center text-fg-secondary [&_svg]:size-icon">
+          <AnimatePresence initial={false}>
+            <motion.span
+              animate={focusIn.animate}
+              className="col-start-1 row-start-1 flex"
+              exit={focusIn.exit}
+              initial={focusIn.exit}
+              key={glyphKey}
+              transition={reduce ? { duration: 0 } : focusIn.transition}
+            >
+              {glyph}
+            </motion.span>
+          </AnimatePresence>
         </span>
       ) : (
         <span aria-hidden className="w-2" />

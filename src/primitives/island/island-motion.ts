@@ -39,6 +39,22 @@ export const reveal = {
   },
 } as const;
 
+/** How a part leaving goes as another takes its place or the parts round
+ * it close up: blurred away before the black has finished changing shape
+ * round it. */
+export const leave = {
+  duration: motionDurations.state,
+  ease: motionEasings.out,
+} as const;
+
+/** How a part arriving in another's place, or where the parts round it make
+ * room, is revealed: once the one leaving has gone and what moves has
+ * mostly moved, so the two never read as laid over each other. */
+export const arrive = {
+  ...reveal.transition,
+  delay: leave.duration,
+} as const;
+
 /** How the island's opacity changes: under a notch it is whole at once, out
  * or tucked away, even when it was laid out without one and the notch came
  * after, as it is then hidden by the notch itself; elsewhere it fades in as

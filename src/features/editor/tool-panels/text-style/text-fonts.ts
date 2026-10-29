@@ -112,7 +112,8 @@ function useFontFamilies() {
 }
 
 /** Every family a picker offers, the app's own Inter first; with `extra`,
- * families a story offers where there is no system to ask. */
+ * families a story offers where there is no system to ask, less those the
+ * system has after all, as each family is offered once. */
 export function useFontChoices(
   extra: FontFamily[] = NO_FAMILIES,
 ): FontChoice[] {
@@ -127,7 +128,12 @@ export function useFontChoices(
         name: builtIn,
         weights: BUILT_IN_WEIGHTS,
       },
-      ...[...installed, ...extra].map((family) => ({
+      ...[
+        ...installed,
+        ...extra.filter(
+          ({ name }) => !installed.some((family) => family.name === name),
+        ),
+      ].map((family) => ({
         family: family.name,
         id: family.name,
         ...family,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { RotateCcw } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type ReactNode } from "react";
 
 import { IconButton } from "../../../primitives/button/icon-button";
@@ -25,6 +25,7 @@ export function IslandFigure({
   onReset: () => void;
   resetLabel: string;
 }) {
+  const reduce = useReducedMotion();
   return (
     <div
       {...controlProps}
@@ -40,7 +41,7 @@ export function IslandFigure({
               exit={focusIn.exit}
               initial={focusIn.exit}
               key="reset"
-              transition={focusIn.transition}
+              transition={reduce ? { duration: 0 } : focusIn.transition}
             >
               <IconButton
                 aria-label={resetLabel}

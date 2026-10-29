@@ -10,7 +10,6 @@ import {
   Highlighter,
   Image,
   Pencil,
-  ScanSearch,
   Square,
   Type,
 } from "lucide-react";
@@ -50,5 +49,29 @@ export const ShapeToolIcon = Square;
 export const SpotlightToolIcon = Flashlight;
 export const FocusToolIcon = Focus;
 export const DrawToolIcon = Pencil;
-export const MagnifyToolIcon = ScanSearch;
+/** What a magnifier draws: an area, and a lens over its corner showing that
+ * corner larger. Built to Lucide's design principles
+ * (https://lucide.dev/contribute/icons/design-principles): the lens is the
+ * library's own badge circle (as `calendar-clock`'s), the area a rounded
+ * square of the 2-unit radius its size takes, stopping 2 units clear of the
+ * lens as Lucide's badged icons do (10 from its centre), with round caps.
+ * Inside the lens the corner is drawn again larger, at (17, 17) with the
+ * same radius, its sides running out to the lens as `globe`'s lines meet
+ * its circle. Unlike Focus, a point in a scanner's brackets, nothing here
+ * is a bracket. */
+export const MagnifyToolIcon = createLucideIcon({
+  name: "magnify",
+  node: [
+    [
+      "path",
+      {
+        d: "M6 13H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2",
+        key: "area",
+      },
+    ],
+    ["circle", { cx: "16", cy: "16", key: "lens", r: "6" }],
+    ["path", { d: "M10.084 17H15a2 2 0 0 0 2-2v-4.916", key: "enlarged" }],
+  ],
+  size: 24,
+});
 export const ImageToolIcon = Image;
