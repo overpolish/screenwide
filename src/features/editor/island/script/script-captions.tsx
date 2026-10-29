@@ -3,11 +3,10 @@
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
+import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
 import { CaptionTextWord } from "../../tool-panels/captions/caption-text";
 import { CaptionTextView } from "../../tool-panels/captions/caption-text-view";
 import { useCaptionWordEditing } from "../../tool-panels/captions/use-caption-word-editing";
-
-import { ScriptHint } from "./script-transcript-parts";
 
 import type { ScriptCaptionsProps } from "./script-island-props";
 
@@ -57,7 +56,8 @@ export function ScriptCaptions({
         rootClassName="max-h-[26rem] rounded-none bg-transparent"
         text={text}
       />
-      <ScriptHint
+      <IslandKeyHint
+        binding="CommandOrControl"
         message={(key) => t("editor-island-script-captions-hint", { key })}
       />
       <div className="flex justify-end">

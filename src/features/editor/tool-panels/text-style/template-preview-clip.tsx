@@ -53,7 +53,7 @@ export function TemplatePreviewClipView({
       aria-hidden
       // Until its still is drawn, the tile pulses where it will play.
       className={cn(
-        "block aspect-video w-full rounded-control bg-fill-secondary bg-cover bg-no-repeat",
+        "block aspect-video w-full rounded-control bg-fill bg-cover bg-no-repeat",
         !clip && "animate-pulse motion-reduce:animate-none",
       )}
       style={shown ? { backgroundImage: `url("${shown}")` } : undefined}

@@ -14,10 +14,10 @@ import type { Meta } from "@storybook/react-vite";
 
 // What every island story shares: the stage, its events, and the notch from
 // the toolbar, so one switch shows every story with and without it. Each
-// story sets the state it shows; Controls offer the inputs' levels, to try
-// the meters at any level, and the countdown, confidence checks and size
-// settings, to try the island each way. The native preview has no toolbar
-// and lays out for the notch.
+// story sets the state it shows; Controls offer whether it is shown, the
+// inputs' levels, to try the meters at any level, and the countdown,
+// confidence checks and size settings, to try the island each way. The
+// native preview has no toolbar and lays out for the notch.
 
 const level = {
   control: { max: 1, min: 0, step: 0.01, type: "range" },
@@ -33,6 +33,7 @@ export const islandMeta = {
   argTypes: {
     hasConfidenceChecks: setting(false),
     hasCountdown: setting(true),
+    isShown: { table: { defaultValue: { summary: "true" } } },
     microphoneLevel: { ...level, table: { defaultValue: { summary: "0.6" } } },
     showsSize: setting(false),
     systemAudioLevel: {
@@ -46,6 +47,7 @@ export const islandMeta = {
     initialMode: "screen",
     initialPhase: "idle",
     isScreenLocked: false,
+    isShown: true,
     microphoneLevel: 0.6,
     onCancelWindowPick: fn(),
     onChooseWindow: fn(),
@@ -74,6 +76,7 @@ export const islandMeta = {
       include: [
         "hasConfidenceChecks",
         "hasCountdown",
+        "isShown",
         "microphoneLevel",
         "showsSize",
         "systemAudioLevel",

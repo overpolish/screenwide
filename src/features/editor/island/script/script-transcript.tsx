@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
 import { Text } from "../../../../primitives/text/text";
 import { pausesCutBy } from "../../tool-panels/transcript/transcript-pauses";
 import { isHeardInOrder } from "../../tool-panels/transcript/transcript-playback-order";
@@ -17,11 +18,7 @@ import { FillerGlyph, ProfanityGlyph } from "../captions/caption-glyphs";
 import { IslandWorkLine } from "../island-work-line";
 
 import { clearScriptSearch, useScriptSearch } from "./script-search";
-import {
-  ScriptRemoveChip,
-  ScriptReplaceLine,
-  ScriptHint,
-} from "./script-transcript-parts";
+import { ScriptRemoveChip, ScriptReplaceLine } from "./script-transcript-parts";
 
 import type { ScriptTranscriptProps } from "./script-island-props";
 
@@ -110,7 +107,8 @@ export function ScriptTranscript({
           className="px-inset-sm py-0"
           rootClassName="max-h-[26rem] rounded-none bg-transparent"
         />
-        <ScriptHint
+        <IslandKeyHint
+          binding="CommandOrControl"
           key="hint"
           message={(key) => t("editor-island-script-transcript-hint", { key })}
         />

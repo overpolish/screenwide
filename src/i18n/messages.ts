@@ -271,6 +271,7 @@ export type Messages = {
   "editor-island-beat-type": { label: string | number };
   "editor-island-camera": null;
   "editor-island-camera-in-scene": null;
+  "editor-island-camera-objects-hint": { key: string | number };
   "editor-island-captions": null;
   "editor-island-captions-accent-size": null;
   "editor-island-captions-all-caps": null;
@@ -308,6 +309,7 @@ export type Messages = {
     height: string | number;
     width: string | number;
   };
+  "editor-island-cursor-reset": null;
   "editor-island-drawing": null;
   "editor-island-finding-face": null;
   "editor-island-focus": null;
@@ -342,7 +344,6 @@ export type Messages = {
   "editor-island-moment-pause": null;
   "editor-island-moment-play": null;
   "editor-island-moment-transcribe-failed": null;
-  "editor-island-moment-transcribing": null;
   "editor-island-moment-waiting": null;
   "editor-island-no-speech": null;
   "editor-island-range": null;

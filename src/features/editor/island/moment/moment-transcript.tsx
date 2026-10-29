@@ -85,13 +85,13 @@ export function MomentTranscriptLine({
       return (
         <div className={SHORT_LINE}>
           <CircularProgress
-            aria-label={t("editor-island-moment-transcribing")}
+            aria-label={t("editor-island-transcribing")}
             isIndeterminate
             size="small"
           />
           <Note>
             {transcript.status === "transcribing"
-              ? t("editor-island-moment-transcribing")
+              ? t("editor-island-transcribing")
               : t("editor-island-moment-waiting")}
           </Note>
         </div>

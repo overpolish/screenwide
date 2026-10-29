@@ -3,11 +3,11 @@
 
 import { Video } from "lucide-react";
 
-import { platformArg, t } from "../../../../i18n/i18n";
+import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
-import { Text } from "../../../../primitives/text/text";
 import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
@@ -175,16 +175,11 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
           )
         ) : null}
         {objects?.isPicking ? (
-          <Text
-            as="p"
-            className="px-inset-sm text-fg-secondary"
+          <IslandKeyHint
+            binding="Alt"
             key="objects-hint"
-            variant="caption"
-          >
-            {t("editor-panels-camera-objects-hint", {
-              platform: platformArg(),
-            })}
-          </Text>
+            message={(key) => t("editor-island-camera-objects-hint", { key })}
+          />
         ) : null}
         {objects?.working ? (
           <IslandWorkLine

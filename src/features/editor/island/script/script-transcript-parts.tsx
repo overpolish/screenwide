@@ -5,13 +5,9 @@ import { ReplaceAll } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
-import { splitAtPlaceable } from "../../../../i18n/split-at-placeable";
-import { hotkeyKeys } from "../../../../lib/hotkey";
 import { Button } from "../../../../primitives/button/button";
 import { TextField } from "../../../../primitives/input-fields/text-field";
 import { IslandFill } from "../../../../primitives/island/island-fill";
-import { Keyboard } from "../../../../primitives/keyboard/keyboard";
-import { Text } from "../../../../primitives/text/text";
 
 /**
  * A Remove drawn small: what it takes as a glyph, struck through while it
@@ -67,24 +63,6 @@ export function ScriptRemoveChip({
         {count}
       </span>
     </Button>
-  );
-}
-
-/** How to edit the script's words, with the modifier a click takes drawn
- * as a key: Command on macOS, Ctrl on Windows. `message` is the mode's
- * hint, given the key's placeable. */
-export function ScriptHint({ message }: { message: (key: string) => string }) {
-  const [before, after] = splitAtPlaceable(message);
-  return (
-    <Text as="p" className="px-inset-sm text-fg-secondary" variant="caption">
-      {before}
-      {hotkeyKeys("CommandOrControl").map((key) => (
-        <Keyboard className="align-middle" key={key}>
-          {key}
-        </Keyboard>
-      ))}
-      {after}
-    </Text>
   );
 }
 

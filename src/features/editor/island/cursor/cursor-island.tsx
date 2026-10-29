@@ -106,7 +106,7 @@ export function cursorIsland(props: CursorIslandProps): EditorIslandContent {
               onChange(DEFAULT_CURSOR_EFFECTS);
             }}
           >
-            {t("editor-panels-reset")}
+            {t("editor-island-cursor-reset")}
           </Button>
         </div>
       </div>

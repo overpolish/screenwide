@@ -4,15 +4,11 @@
 import { useNumberFormatter } from "react-aria";
 
 import { t } from "../../../../i18n/i18n";
-import { splitAtPlaceable } from "../../../../i18n/split-at-placeable";
-import { hotkeyKeys } from "../../../../lib/hotkey";
 import { cn } from "../../../../lib/styling";
 import { Button } from "../../../../primitives/button/button";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
-import { Keyboard } from "../../../../primitives/keyboard/keyboard";
 import { ListBox } from "../../../../primitives/listbox/listbox";
 import { ListBoxItem } from "../../../../primitives/listbox-item/listbox-item";
-import { Text } from "../../../../primitives/text/text";
 
 import type { LullIslandProps } from "./lull-island";
 
@@ -81,21 +77,5 @@ export function LullChoices({
         </Button>
       </div>
     </IslandFlow>
-  );
-}
-
-/** The key that, held while dragging the lull's end, trims it rather than
- * retiming it, drawn as a keycap wherever the language puts it: ⌥ on a
- * Mac, Alt on Windows. A note, on the island's text column. */
-export function LullHint() {
-  const [before, after] = splitAtPlaceable((key) =>
-    t("editor-island-lull-hint", { key }),
-  );
-  return (
-    <Text as="p" className="px-inset-sm text-fg-secondary" variant="caption">
-      {before}
-      <Keyboard className="align-middle">{hotkeyKeys("AltLeft")[0]}</Keyboard>
-      {after}
-    </Text>
   );
 }

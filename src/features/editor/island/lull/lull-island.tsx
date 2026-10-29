@@ -5,10 +5,11 @@ import { FastForward, Pin, Scissors, Snail } from "lucide-react";
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
+import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { SpringIcon } from "../../glyphs/spring-icon";
 
-import { LullChoices, LullHint } from "./lull-parts";
+import { LullChoices } from "./lull-parts";
 
 import type { EditorIslandContent } from "../editor-island";
 
@@ -47,7 +48,13 @@ export function lullIsland(props: LullIslandProps): EditorIslandContent {
     anchor: "start",
     below: <LullChoices {...props} />,
     key: `lull-${props.id}`,
-    section: <LullHint />,
+    // The key that turns dragging the lull's end from a retime into a trim.
+    section: (
+      <IslandKeyHint
+        binding="Alt"
+        message={(key) => t("editor-island-lull-hint", { key })}
+      />
+    ),
     title: (
       <IslandRowTitle
         glyph={playGlyph(props.play)}

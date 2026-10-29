@@ -15,10 +15,10 @@ recording-controls-mode-region = Region
 
 recording-controls-screenshot = Screenshot
 recording-controls-screenshot-options = Screenshot options
-recording-controls-save-screenshot = Save Screenshot
-recording-controls-copy-screenshot = Copy to Clipboard
-recording-controls-delayed-screenshot = Delayed Screenshot
-recording-controls-scrolling-screenshot = Capture Scrolling Region
+recording-controls-save-screenshot = Save screenshot
+recording-controls-copy-screenshot = Copy to clipboard
+recording-controls-delayed-screenshot = Delayed screenshot
+recording-controls-scrolling-screenshot = Capture scrolling region
 recording-controls-record = Record
 recording-controls-open-permissions = Open permissions
 # The island's switch for the replay buffer, in its recording options.
@@ -28,10 +28,10 @@ recording-controls-island-replay = Replay buffer
 
 recording-controls-camera = Camera
 recording-controls-microphone = Microphone
-recording-controls-system-audio = System Audio
+recording-controls-system-audio = System audio
 recording-controls-microphone-level = Microphone level
 recording-controls-system-audio-level = System audio level
-recording-controls-flip = Flip Horizontally
+recording-controls-flip = Flip horizontally
 recording-controls-camera-missing = This camera is no longer connected
 recording-controls-camera-mode-missing = This camera no longer offers { $size } at { $fps } fps
 recording-controls-microphone-missing = This microphone is no longer connected
@@ -66,7 +66,7 @@ recording-controls-island-source = Choose what to record
 recording-controls-island-pick-window = Click a window to record it.
 recording-controls-island-pick-region = Select a region of the screen to record.
 # Beside the window picked to be recorded; picks another on the screen.
-recording-controls-island-change-window = Change Window
+recording-controls-island-change-window = Change window
 # Beside the region selected to be recorded; selects another on the screen.
 # The size of the area to be recorded, in pixels.
 recording-controls-island-region-size = { $width } × { $height }
@@ -77,8 +77,8 @@ recording-controls-island-region-displays =
        *[other] Across { $count } displays
     }
 # The island's mode that records no screen, only the inputs that are on.
-recording-controls-island-mode-none = No Screen
-# In the No Screen mode, what will be recorded, from the inputs that are on;
+recording-controls-island-mode-none = No screen
+# In the No screen mode, what will be recorded, from the inputs that are on;
 # with none on, what to do instead.
 recording-controls-island-no-screen =
     { $inputs ->
@@ -98,7 +98,7 @@ recording-controls-island-screen-locked = Screenwide needs permission to record 
 recording-controls-island-choose-another = Choose another
 recording-controls-island-elapsed = Recording for { $time }
 recording-controls-island-paused = Paused at { $time }
-recording-controls-island-choose-window = Choose a Window
+recording-controls-island-choose-window = Choose a window
 # Stops picking a window by clicking it, keeping the one chosen before.
 recording-controls-island-cancel-pick = Cancel
 recording-controls-island-record-options = Recording options

@@ -34,6 +34,11 @@ editor-island-sound-volume = { $track } volume
 # Puts a track back at the level it was recorded at. $track is the track's name, such as Microphone.
 editor-island-sound-reset-volume = Reset { $track } volume
 
+## The recording's cursor, for the whole recording
+
+# Puts the cursor's size and effects back as they first were.
+editor-island-cursor-reset = Reset cursor
+
 ## The recording's script, what was said as a whole
 
 # The island for the recording's script, open beside the Captions island or on its own.
@@ -178,13 +183,12 @@ editor-island-moment-play = Play voice note
 editor-island-moment-pause = Pause voice note
 # Names the note's waveform for assistive technology. $moment is the moment's kind, such as Notable.
 editor-island-moment-note = { $moment } voice note
-editor-island-moment-no-speech = Nothing was said in this note
-editor-island-moment-transcribe-failed = Could not transcribe this note
-editor-island-moment-transcribing = Transcribing
+editor-island-moment-no-speech = Nothing was said in this note.
+editor-island-moment-transcribe-failed = Could not transcribe this note.
 editor-island-moment-waiting = Waiting to transcribe
 # The tool a missing transcription model is for, beside the model's size and its download, on the Moment, Captions and Script islands.
 editor-island-transcription = Transcription
-# While the recording is transcribed, on the Captions and Script islands.
+# While the recording or a voice note is transcribed, on the Captions, Script and Moment islands.
 editor-island-transcribing = Transcribing
 editor-island-transcribe-failed = Could not transcribe the recording.
 # Transcribing heard nothing: there are no words to caption or show.
@@ -350,6 +354,8 @@ editor-island-screen-inset-large = Large
 editor-island-screen-recenter = Recenter
 # The island for the camera, for the whole recording: its crop, its effects, its corners, its shadow and whether it follows the face.
 editor-island-camera = Camera
+# Shown while picking objects on the preview, where a drag paints a line over an object. $key is the key held to remove instead, drawn as a keycap: Option on a Mac, Alt on Windows.
+editor-island-camera-objects-hint = Click or paint to keep. Hold { $key } to remove.
 # At the foot of the Screen island while the playhead is in a scene, which can round the screen its own way.
 editor-island-corners-in-scene = Corners apply to this scene only.
 # At the foot of the Camera island while the playhead is in a scene, which can round the camera and have it follow the face its own way.

@@ -104,7 +104,7 @@ project-browser-move-to-trash =
        *[other] Move to Trash
     }
 # A button and a menu section listing the folders to move projects to.
-project-browser-move-to = Move To
+project-browser-move-to = Move to
 project-browser-delete = Delete
 project-browser-duplicate = Duplicate
 # $platform is windows or macos: the file manager is Explorer or Finder.
@@ -125,7 +125,7 @@ project-browser-empty-recently-deleted-confirm = Empty Now
 
 project-browser-island = Selection and progress
 project-browser-selected-count = { $count } selected
-project-browser-select-all = Select All
+project-browser-select-all = Select all
 project-browser-deselect-all = Deselect all
 # [1] names the single project as $title; the other variants count them.
 project-browser-duplicating =
