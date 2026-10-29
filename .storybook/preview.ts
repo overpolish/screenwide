@@ -3,12 +3,15 @@
 
 import { withThemeByClassName } from "@storybook/addon-themes";
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 import { I18nProvider } from "react-aria-components";
 import { themes } from "storybook/theming";
 
 import { sampleCaptions } from "../src/features/editor/tool-panels/captions/caption-text-fixtures";
 import { sampleTranscriptWords } from "../src/features/editor/tool-panels/transcript/transcript-panel-fixtures";
+import { openPopupPanels } from "../src/features/popup-panel/api";
+import { PopupPanelSync } from "../src/features/popup-panel/popup-panel-sync";
+import { usePopupPanelStore } from "../src/features/popup-panel/store";
 import {
   appDirection,
   applyDirection,
@@ -20,9 +23,11 @@ import {
   PSEUDO,
   PSEUDO_BIDI,
 } from "../src/i18n/i18n";
+import { installInactiveWindowHoverBridge } from "../src/lib/inactive-window-hover";
 import { installKeyboardNavigationModality } from "../src/lib/keyboard-navigation-modality";
 import { isWindowsHost, stampPlatform } from "../src/lib/platform";
 import { synchronizeSystemAccent } from "../src/lib/system-accent";
+import { StandaloneListboxEntry } from "../src/windows/standalone-listbox-entry";
 
 import { DocsPage } from "./docs-page";
 
@@ -33,6 +38,13 @@ import "./styles.css";
 
 const isNativePreview =
   new URLSearchParams(window.location.search).get("screenwide-native") === "1";
+
+// The native preview has none of the app's windows, so Rust opens its menu
+// window on this same page, marked: that page is the menu window, not the
+// story (`storybook_native.rs`).
+const isNativeMenuWindow =
+  isNativePreview &&
+  new URLSearchParams(window.location.search).get("screenwide-panel") === "1";
 
 // The app stamps `data-platform` in `main.tsx` for what the OS dictates:
 // shortcut labels and the traffic-light inset. The look is the same on both,
@@ -65,6 +77,21 @@ if (isNativePreview) {
   stampPlatform(hostPlatform);
   // The native preview runs inside the app shell, so the OS accent is real.
   synchronizeSystemAccent();
+}
+
+if (isNativeMenuWindow) {
+  document.documentElement.classList.add("screenwide-native-menu");
+  // The menu window never takes key status, so the pointer reaches it
+  // through Rust, as it does the app's (`main.tsx`).
+  installInactiveWindowHoverBridge();
+} else if (isNativePreview) {
+  // The panels' store outlives a launch in local storage. The app's island
+  // clears it as the app starts (`popup-panel-sync.tsx`); the preview has no
+  // island, so its story does, or a menu left open last time would make the
+  // next right click on the same word close it rather than open it.
+  void openPopupPanels().then((panels) => {
+    usePopupPanelStore.getState().keepOnly(panels);
+  });
 }
 
 /** A quarter second of silence as a WAV file, so a voice note decodes and
@@ -325,9 +352,16 @@ const withLocale: Decorator = (Story, { globals }) => {
 
 export const loaders = [loadStoryLocale];
 
+// A story opens menus in the menu window as its app window would, which
+// keeps the shared panel store in step with it.
+const withNativeMenus: Decorator = (Story) =>
+  isNativeMenuWindow
+    ? createElement(StandaloneListboxEntry)
+    : createElement(Fragment, null, createElement(PopupPanelSync), Story());
+
 export const decorators = (
   isNativePreview
-    ? [withLocale]
+    ? [withNativeMenus, withLocale]
     : [
         withLocale,
         withThemeByClassName({

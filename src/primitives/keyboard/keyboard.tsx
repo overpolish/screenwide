@@ -33,14 +33,15 @@ import { keyLabel } from "./key-label";
 // icon, whose thinner stroke matches the caption's weight; `kbd` inherits
 // the monospace family from the browser reset, so the sans family is set
 // explicitly. A keycap is a small part, drawn as a badge is: that text on
-// the faint fill, flat, as shortcut hints are. The plain variant is the same
-// key without the fill, for a shortcut inside a control or a menu row, where
-// a fill would read as a second control.
+// the faint fill, flat, as shortcut hints are. The plain variant is the key
+// without the fill, for a shortcut inside a control or a menu row, where a
+// fill would read as a second control; it sits beside the row's label and
+// glyph, so it takes their sizes, as a Mac menu sets its keys.
 const keyClassName =
   "inline-flex items-center justify-center gap-inline font-sans text-caption text-fg-secondary tabular-nums [&_svg]:size-icon-xs [&_svg]:shrink-0 [&_svg]:transform-gpu";
 const keyboardClassName = {
   keycap: "h-part-height min-w-part-height rounded-part bg-fill px-inset-sm",
-  plain: "",
+  plain: "text-body [&_svg]:size-icon-sm",
 };
 
 // A Mac menu draws its modifiers and named keys as symbols; Windows spells

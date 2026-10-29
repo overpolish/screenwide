@@ -30,19 +30,11 @@ export const itemFontStyle = (
 // A menu's glyph at the platform's size. macOS 26 draws a menu item's SF
 // Symbol at 13pt in the small scale (trash in a 13 by 14 box), which Lucide
 // matches at 14px; WinUI flyouts and Explorer menus use 16px icons.
-const glyphClassName = "size-icon-small shrink-0 windows:size-icon";
+const glyphClassName = "size-icon-sm shrink-0 windows:size-icon";
 
-// Keys as the platform's menus set them: bare, in the secondary label colour.
-// A macOS menu turns them white with the label under the highlight and dims
-// them with a disabled item. A Fluent flyout keeps them secondary through
-// hover and press, a step smaller than the label, joined by plus signs.
-const shortcutClassName = [
-  "ms-auto gap-tight text-content-fg-secondary",
-  "group-data-[hovered]:text-primary-fg group-data-[focus-visible]:text-primary-fg group-data-[pressed]:text-primary-fg",
-  "group-data-[disabled]:text-control-fg-disabled",
-  "windows:gap-0 windows:text-subheadline",
-  "windows:group-data-[hovered]:text-content-fg-secondary windows:group-data-[focus-visible]:text-content-fg-secondary windows:group-data-[pressed]:text-content-fg-secondary",
-].join(" ");
+// Keys sit bare at the row's end, as the platforms' menus set them; the
+// plain key brings their size and secondary colour.
+const shortcutClassName = "ms-auto";
 
 const shortcutKeys = (shortcut: string) =>
   hotkeyKeys(shortcut).flatMap((key, index) => {
@@ -78,7 +70,7 @@ export const renderPopupPanelItem = (
     showsSelection={showsSelection}
     textValue={item.label}
   >
-    <span className="flex w-full min-w-0 items-center gap-control-inset">
+    <span className="flex w-full min-w-0 items-center gap-inline">
       {item.iconPath ? (
         <img
           alt=""

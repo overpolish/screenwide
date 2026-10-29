@@ -9,6 +9,7 @@ import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
 import { Switch } from "../../../../primitives/switch/switch";
 import {
+  handLayout,
   isEmptyLayout,
   isSameLayout,
   layoutOf,
@@ -35,9 +36,10 @@ const lineOptions = (): { id: TextLines; label: string }[] => [
  * The Layout tab: how large the type and its key word are, a step from the
  * template's own sizes, where on the picture the type sits, its case, and
  * how many words and lines a caption holds. A template brings all of them;
- * one changed here is kept as it is when another template is chosen, and
- * the rest follow the template. Reset lets every one follow the template
- * again; Set as default keeps the ones changed for new captions.
+ * one changed here is kept as it is when another template is chosen, unless
+ * it was set back to the template's own value, and the rest follow the
+ * template. Reset lets every one follow the template again; Set as default
+ * keeps the ones changed for new captions.
  */
 export function CaptionLayoutTab({
   isDisabled,
@@ -54,12 +56,15 @@ export function CaptionLayoutTab({
   style: TextStyle;
   templates: TextTemplates;
 }) {
-  const set = (change: TextLayout) => {
-    onChange({ layout: { ...layout, ...change }, style: change });
-  };
   const template = templates.styles.find(
     (each) => each.template === style.template,
   );
+  const set = (change: TextLayout) => {
+    onChange({
+      layout: handLayout({ ...layout, ...change }, template),
+      style: change,
+    });
+  };
 
   return (
     <>

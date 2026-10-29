@@ -6,6 +6,8 @@ import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
+import { useSkin } from "../../primitives/skin/skin";
+
 import { hidePopupPanel, panelStartX, showPopupPanel } from "./api";
 import { initialPopupPanelHeight } from "./layout";
 import {
@@ -96,6 +98,7 @@ export function usePopupMenu({
   const lastSelection = usePopupPanelStore((state) => state.lastSelection);
   const close = usePopupPanelStore((state) => state.close);
   const open = usePopupPanelStore((state) => state.open);
+  const skin = useSkin();
   const handledEventRef = useRef(lastSelection?.eventId ?? null);
   const selectRef = useRef(onSelect);
 
@@ -163,6 +166,7 @@ export function usePopupMenu({
       focusContents: false,
       id,
       label,
+      skin,
     });
     await showPopupPanel({
       anchor,
@@ -182,6 +186,7 @@ export function usePopupMenu({
           showsAllItems,
         ),
       ),
+      skin,
       triggerId: id,
     });
   };

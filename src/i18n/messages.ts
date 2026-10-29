@@ -412,6 +412,9 @@ export type Messages = {
   "editor-island-screen-inset-tight": null;
   "editor-island-screen-recenter": null;
   "editor-island-screenshot": null;
+  "editor-island-script": null;
+  "editor-island-script-captions-hint": null;
+  "editor-island-script-reset": null;
   "editor-island-shape": null;
   "editor-island-sound": null;
   "editor-island-sound-reset-volume": { track: string | number };

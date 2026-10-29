@@ -6,6 +6,8 @@ import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
+import { useSkin } from "../../primitives/skin/skin";
+
 import { hidePopupPanel, panelStartX, showPopupPanel } from "./api";
 import {
   activePopupPanel,
@@ -76,6 +78,7 @@ export function usePopupPanelPicker({
   );
   const lastSelection = usePopupPanelStore((state) => state.lastSelection);
   const handledEventRef = useRef(lastSelection?.eventId ?? null);
+  const skin = useSkin();
   const pickRef = useRef(onPick);
   const actionRef = useRef(onAction);
   useEffect(() => {
@@ -130,7 +133,7 @@ export function usePopupPanelPicker({
     const bounds = trigger.getBoundingClientRect();
     usePopupPanelStore
       .getState()
-      .open(SHARED_POPUP_PANEL, { content, focusContents, id, label });
+      .open(SHARED_POPUP_PANEL, { content, focusContents, id, label, skin });
     await showPopupPanel({
       anchor: boundsAnchor(bounds),
       fitted: true,
@@ -141,6 +144,7 @@ export function usePopupPanelPicker({
       ),
       parentWindowLabel: getCurrentWindow().label,
       size: new LogicalSize(size.width, size.height),
+      skin,
       triggerId: id,
     });
   };

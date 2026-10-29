@@ -5,7 +5,6 @@ import {
   Fragment,
   KeyboardEvent,
   MouseEvent,
-  ReactNode,
   useId,
   useRef,
   useState,
@@ -14,23 +13,20 @@ import {
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
-import {
-  EditStart,
-  TranscriptEditSpan,
-} from "../transcript/transcript-edit-span";
+import { EditStart } from "../transcript/transcript-edit-span";
 import { usePlayingWord } from "../transcript/use-playing-word";
 
-import {
-  captionSaidAt,
-  captionSeekMs,
-  CaptionText,
-  CaptionTextWord,
-} from "./caption-text";
+import { captionSaidAt, captionSeekMs, CaptionText } from "./caption-text";
+import { beforeCaptionWord, captionWordClass } from "./caption-text-words";
+import { CaptionWordEditSpan } from "./caption-word-edit-span";
 
 import type { TranscriptMark } from "../transcript/use-transcript-marks";
 
 /** A word being edited in place, and how its edit began. */
 export type CaptionWordEdit = { start: EditStart; word: number };
+
+/** What a right click landed on: a word, or the break or space before it. */
+export type CaptionTextPart = "gap" | "word";
 
 /** The parts of a caption's line within `root`: its words and the spaces
  * between them, in every paragraph it reaches. */
@@ -40,65 +36,6 @@ const partsOf = (root: HTMLElement | null, caption: number) => [
   ) ?? []),
 ];
 
-// A caption's words and the spaces between take a quiet fill while the
-// pointer is over any of them, and the accent's tint while it is said.
-// Words the captions leave out read faded and struck through, as cut words
-// do in the transcript; fillers and profanity they keep take the warning and
-// error colours the Transcript panel marks them in, words corrected by hand
-// its quiet underline, and a caption's key word reads bold. The word the
-// keys are on takes the focus ring while the text has focus.
-const CAPTION_PART =
-  "data-hovered:bg-fill-secondary data-current:bg-primary-tint";
-const wordClass = (
-  word: CaptionTextWord,
-  isMarked: boolean,
-  mark: TranscriptMark | undefined,
-) =>
-  cn(
-    "group-focus-visible:aria-selected:ring-2 group-focus-visible:aria-selected:ring-focus-ring",
-    isMarked && word.caption === null
-      ? "text-content-fg-tertiary line-through"
-      : cn(
-          CAPTION_PART,
-          mark === "filler" && "text-warning",
-          mark === "profanity" && "text-error",
-          word.corrected &&
-            "underline decoration-content-fg-tertiary underline-offset-4",
-          word.isKeyWord && "font-semibold",
-        ),
-  );
-
-/** What sits before a word: nothing for a paragraph's first, the mark of a
- * break, or a space, carried in its caption's colour where it runs on. */
-const before = (
-  word: CaptionTextWord,
-  isFirst: boolean,
-  prior: CaptionTextWord | undefined,
-): ReactNode => {
-  if (word.gap === "split" || word.gap === "join")
-    return (
-      // A no-break space ties the mark to the words before it, so a wrapped
-      // line ends on it rather than opening with it.
-      <span aria-hidden className="text-accent-heading">
-        {word.gap === "split" ? "\u00a0| " : "\u00a0\u203f "}
-      </span>
-    );
-  if (isFirst) return null;
-  if (word.gap === "break")
-    return (
-      <span aria-hidden className="text-content-fg-tertiary">
-        {"\u00a0| "}
-      </span>
-    );
-  return word.caption !== null && word.caption === prior?.caption ? (
-    <span className={CAPTION_PART} data-caption={word.caption}>
-      {" "}
-    </span>
-  ) : (
-    " "
-  );
-};
-
 /**
  * The transcript as the captions break it: its paragraphs, a mark wherever
  * one caption ends and the next begins and in another colour where that was
@@ -106,9 +43,11 @@ const before = (
  * one under the pointer filled. A press seeks to the word's caption, as
  * `captionSeekMs` says, and a double-click edits the word in place. The
  * arrows move between words, Return edits, Backspace hides or shows a word,
- * and the menu key or a right click opens what else it can do.
+ * and the menu key or a right click opens what else it can do; a right
+ * click on a break or a space asks only about that gap.
  */
 export function CaptionTextView({
+  className,
   editing,
   isDisabled,
   marks,
@@ -118,6 +57,7 @@ export function CaptionTextView({
   onMenu,
   onSeek,
   playheadMs,
+  rootClassName,
   text,
 }: {
   /** The word being edited in place and how its edit began, if one is. */
@@ -128,10 +68,16 @@ export function CaptionTextView({
   onEditEnd: (word: number, typed: string | null) => void;
   onEditStart: (edit: CaptionWordEdit) => void;
   onHideToggle: (word: number) => void;
-  onMenu: (word: number, bounds: DOMRect) => void;
+  /** `word` is the word clicked, or the one after the gap clicked. */
+  onMenu: (word: number, bounds: DOMRect, part: CaptionTextPart) => void;
   onSeek: (ms: number) => void;
   playheadMs: number;
   text: CaptionText;
+  /** The text's inset within the box, over the panel's own. */
+  className?: string;
+  /** The scrolling box's size and fill, over the panel's own: a box of
+   * the panel's fill, scrolling past 16 rem. */
+  rootClassName?: string;
 }) {
   const id = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -156,12 +102,14 @@ export function CaptionTextView({
       for (const part of partsOf(rootRef.current, caption))
         part.toggleAttribute("data-hovered", true);
   };
-  const wordAt = (event: MouseEvent) => {
-    const word = (event.target as HTMLElement).closest<HTMLElement>(
-      "[data-word]",
-    )?.dataset.word;
-    return word === undefined ? null : Number(word);
+  /** The word, or the gap before it (`data-gap`), the event is over. */
+  const indexAt = (event: MouseEvent, part: CaptionTextPart) => {
+    const index = (event.target as HTMLElement).closest<HTMLElement>(
+      `[data-${part}]`,
+    )?.dataset[part];
+    return index === undefined ? null : Number(index);
   };
+  const wordAt = (event: MouseEvent) => indexAt(event, "word");
   const boundsOf = (index: number) =>
     document.getElementById(wordId(index))?.getBoundingClientRect() ?? null;
   const moveTo = (index: number) => {
@@ -195,7 +143,7 @@ export function CaptionTextView({
       (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey))
     ) {
       const bounds = boundsOf(focused);
-      if (bounds) onMenu(focused, bounds);
+      if (bounds) onMenu(focused, bounds, "word");
     } else return;
     event.preventDefault();
   };
@@ -203,14 +151,17 @@ export function CaptionTextView({
   return (
     <ScrollArea
       constrainHeight
-      rootClassName="max-h-64 rounded-control bg-fill-tertiary"
+      rootClassName={cn("max-h-64 rounded-control bg-fill", rootClassName)}
     >
       <div
         aria-activedescendant={
           text.words.length > 0 ? wordId(focused) : undefined
         }
         aria-label={t("editor-panels-captions-text")}
-        className="group flex cursor-default flex-col gap-section p-control-inset text-body text-content-fg outline-none select-none"
+        className={cn(
+          "group flex cursor-default flex-col gap-separate p-inset-sm text-body text-fg outline-none select-none",
+          className,
+        )}
         data-owns-text-keys
         dir="auto"
         onClick={(event) => {
@@ -222,10 +173,17 @@ export function CaptionTextView({
         }}
         onContextMenu={(event) => {
           event.preventDefault();
+          if (isDisabled || editing) return;
           const word = wordAt(event);
-          if (word === null || isDisabled || editing) return;
-          setActive(word);
-          onMenu(word, new DOMRect(event.clientX, event.clientY, 1, 1));
+          const gap = word === null ? indexAt(event, "gap") : null;
+          const index = word ?? gap;
+          if (index === null) return;
+          setActive(index);
+          onMenu(
+            index,
+            new DOMRect(event.clientX, event.clientY, 1, 1),
+            word === null ? "gap" : "word",
+          );
         }}
         onDoubleClick={(event) => {
           const word = wordAt(event);
@@ -257,15 +215,29 @@ export function CaptionTextView({
               const index = start + offset;
               return (
                 <Fragment key={index}>
-                  {before(word, offset === 0, text.words[index - 1])}
+                  {beforeCaptionWord(
+                    word,
+                    index,
+                    offset === 0 ? null : text.words[index - 1],
+                  )}
                   {editing?.word === index ? (
-                    <TranscriptEditSpan
-                      className="outline-none select-text"
+                    // The word is edited without its punctuation, which
+                    // stays either side of it (`captionWordParts`).
+                    <CaptionWordEditSpan
                       id={wordId(index)}
                       index={index}
                       onFinish={(typed) => {
-                        rootRef.current?.focus({ preventScroll: true });
                         onEditEnd(index, typed);
+                        // Focus comes back to the text only where the edit
+                        // left it nowhere, as Enter and Escape do. A press
+                        // that ended it has already put focus where it
+                        // pressed: taking it back by script would carry the
+                        // edit's focus ring over, which a press never shows.
+                        requestAnimationFrame(() => {
+                          const active = document.activeElement;
+                          if (active === null || active === document.body)
+                            rootRef.current?.focus({ preventScroll: true });
+                        });
                       }}
                       start={editing.start}
                       text={word.text}
@@ -273,7 +245,7 @@ export function CaptionTextView({
                   ) : (
                     <span
                       aria-selected={index === focused}
-                      className={wordClass(
+                      className={captionWordClass(
                         word,
                         text.isMarked,
                         marks.get(index),

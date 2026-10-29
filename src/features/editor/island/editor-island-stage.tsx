@@ -23,3 +23,28 @@ export function EditorIslandStage({
     </div>
   );
 }
+
+/** Two editor islands open together, one at each side of the canvas with
+ * the picture between them, as a mode that needs both opens them: the
+ * first at the start, the second at the end, each hung at the top. */
+export function EditorIslandPairStage({
+  end,
+  isShown = true,
+  start,
+}: {
+  end: EditorIslandContent;
+  start: EditorIslandContent;
+  isShown?: boolean;
+}) {
+  return (
+    <div className="relative size-full" dir="ltr">
+      <div
+        className="absolute inset-x-0 flex items-start justify-between px-6"
+        style={{ top: ISLAND.screenGap }}
+      >
+        <EditorIsland content={start} isShown={isShown} />
+        <EditorIsland content={end} isShown={isShown} />
+      </div>
+    </div>
+  );
+}

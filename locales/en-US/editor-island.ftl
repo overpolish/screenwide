@@ -34,6 +34,15 @@ editor-island-sound-volume = { $track } volume
 # Puts a track back at the level it was recorded at. $track is the track's name, such as Microphone.
 editor-island-sound-reset-volume = Reset { $track } volume
 
+## The recording's script, what was said as a whole
+
+# The island for the recording's script, open beside the Captions island.
+editor-island-script = Script
+# Under the script while it is open with the captions: how to edit it.
+editor-island-script-captions-hint = Double-click a word to edit it. Right-click for breaks, hiding and key words.
+# Takes back every edit made in the script: breaks, hidden or shown words and key words placed by hand, and spelling fixes, which go back to what was heard.
+editor-island-script-reset = Reset caption edits
+
 ## The recording's captions, all of them at once
 
 # The island for the recording's captions: their look, their layout and what they say.

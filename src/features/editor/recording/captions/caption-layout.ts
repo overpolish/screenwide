@@ -39,6 +39,24 @@ export const withLayout = (
   ),
 });
 
+/** The options in `layout` the template does not already give: one set to
+ * the template's own value is not kept, so it follows the next template
+ * chosen as an untouched one does. Without the template there is nothing to
+ * compare with, so `layout` stays as it is. */
+export const handLayout = (
+  layout: TextLayout,
+  template: TextStyle | undefined,
+): TextLayout =>
+  template
+    ? Object.fromEntries(
+        LAYOUT_KEYS.flatMap((key) =>
+          layout[key] === undefined || layout[key] === template[key]
+            ? []
+            : [[key, layout[key]]],
+        ),
+      )
+    : layout;
+
 /** Whether `a` and `b` set the same options to the same values. */
 export const isSameLayout = (a: TextLayout, b: TextLayout) =>
   LAYOUT_KEYS.every((key) => a[key] === b[key]);

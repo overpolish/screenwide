@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { storyTextStyle } from "../../tool-panels/text-style/text-template-fixtures";
 
-import { withLayout } from "./caption-layout";
+import { handLayout, withLayout } from "./caption-layout";
 import {
   CaptionDefaults,
   DEFAULT_CAPTION_SETTINGS,
@@ -72,5 +72,22 @@ describe("withLayout", () => {
       sizePercent: pop.sizePercent,
       template: "pop",
     });
+  });
+});
+
+describe("handLayout", () => {
+  // The next template chosen, holding more words than the one left.
+  const next = { ...pop, maxWords: box.maxWords + 2 };
+
+  it("lets an option set back to the template's own follow the next template", () => {
+    const layout = handLayout({ maxWords: box.maxWords }, box);
+    expect(withLayout(layout, next).maxWords).toBe(next.maxWords);
+  });
+
+  it("keeps an option that differs from the template's own", () => {
+    const maxWords = box.maxWords + 5;
+    expect(withLayout(handLayout({ maxWords }, box), next).maxWords).toBe(
+      maxWords,
+    );
   });
 });

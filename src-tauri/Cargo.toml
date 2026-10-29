@@ -277,6 +277,9 @@ objc2-app-kit.workspace = true
 objc2-foundation.workspace = true
 objc2-quartz-core.workspace = true
 plist = "1"
+# Tauri applies a window's material but cannot take it away on macOS; a
+# panel drawn in the island's black clears it with the crate Tauri uses.
+window-vibrancy = "0.6"
 
 [dev-dependencies]
 screenwide-annotations = { workspace = true, features = ["test-support"] }

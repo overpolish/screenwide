@@ -27,40 +27,13 @@ export type CaptionMenuAction =
   | "show"
   | "split";
 
-/** What the menu offers for a word: editing it, and putting back what was
- * heard where it was corrected; what can change in the gap before it, where
- * the two words were said one after the other; whether it shows; and,
- * where the captions set a key word apart, whether it is one. */
-export const captionMenuItems = ({
-  gap,
-  isCorrected,
-  isKeyWord,
-  isShown,
-}: {
-  /** Null where no break can be placed before the word. */
-  gap: CaptionGap | null;
-  isCorrected: boolean;
-  /** Null where the captions set no key word apart, or the word is not
-   * shown. */
-  isKeyWord: boolean | null;
-  isShown: boolean;
-}): (PopupPanelItem & { id: CaptionMenuAction })[] => [
-  {
-    icon: "edit" as const,
-    id: "edit" as const,
-    label: t("editor-panels-transcript-edit"),
-    shortcut: "Enter",
-  },
-  ...(isCorrected
-    ? [
-        {
-          icon: "spelling" as const,
-          id: "restore-spelling" as const,
-          label: t("editor-panels-transcript-restore-spelling"),
-        },
-      ]
-    : []),
-  ...(gap === "split"
+/** What can change in the gap before a word, where the two words were said
+ * one after the other: a break placed there, or one taken away. Nothing
+ * where no break can be placed (null). */
+export const gapMenuItems = (
+  gap: CaptionGap | null,
+): (PopupPanelItem & { id: CaptionMenuAction })[] =>
+  gap === "split"
     ? [
         {
           icon: "remove" as const,
@@ -92,7 +65,42 @@ export const captionMenuItems = ({
                 label: t("editor-panels-captions-split"),
               },
             ]
-          : []),
+          : [];
+
+/** What the menu offers for a word: editing it, and putting back what was
+ * heard where it was corrected; what can change in the gap before it;
+ * whether it shows; and, where the captions set a key word apart, whether
+ * it is one. */
+export const captionMenuItems = ({
+  gap,
+  isCorrected,
+  isKeyWord,
+  isShown,
+}: {
+  /** Null where no break can be placed before the word. */
+  gap: CaptionGap | null;
+  isCorrected: boolean;
+  /** Null where the captions set no key word apart, or the word is not
+   * shown. */
+  isKeyWord: boolean | null;
+  isShown: boolean;
+}): (PopupPanelItem & { id: CaptionMenuAction })[] => [
+  {
+    icon: "edit" as const,
+    id: "edit" as const,
+    label: t("editor-panels-transcript-edit"),
+    shortcut: "Enter",
+  },
+  ...(isCorrected
+    ? [
+        {
+          icon: "spelling" as const,
+          id: "restore-spelling" as const,
+          label: t("editor-panels-transcript-restore-spelling"),
+        },
+      ]
+    : []),
+  ...gapMenuItems(gap),
   isShown
     ? {
         icon: "hide" as const,

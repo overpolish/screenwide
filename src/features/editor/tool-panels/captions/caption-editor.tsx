@@ -1,15 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { boundsAnchor } from "../../../popup-panel/use-popup-menu";
 import { CaptionsPatch } from "../../recording/captions/recording-captions";
 import { ToolPanelTranscript } from "../tool-panel-transcript";
 import { useTranscriptChannel } from "../transcript/transcript-channel";
-import { normalizeText } from "../transcript/transcript-units";
 import { TranscriptWord } from "../transcript/transcript-words";
 import { usePendingCorrections } from "../transcript/use-pending-corrections";
 import {
@@ -19,14 +17,9 @@ import {
 import { useTranscriptMarks } from "../transcript/use-transcript-marks";
 
 import { captionText, CaptionTextWord } from "./caption-text";
-import { CaptionTextView, CaptionWordEdit } from "./caption-text-view";
-import { canBreakIn, withBreak, withChoice } from "./caption-word-choices";
+import { CaptionTextView } from "./caption-text-view";
 import { useCaptionList } from "./use-caption-list";
-import {
-  CaptionMenuAction,
-  captionMenuItems,
-  useCaptionMenu,
-} from "./use-caption-menu";
+import { useCaptionWordEditing } from "./use-caption-word-editing";
 
 import type { RecordingCaptions } from "../../../../bindings/RecordingCaptions";
 import type { TranscriptCorrection } from "../tool-panel-transcript";
@@ -63,7 +56,6 @@ export function CaptionEditor({
   const language = useTranscriptChannel((state) => state.language);
   const playheadMs = useTranscriptChannel((state) => state.playheadMs);
   const made = useCaptionList(transcript.artifactId);
-  const [editing, setEditing] = useState<CaptionWordEdit | null>(null);
   // A correction shows as soon as it is typed, before the editor answers.
   const pending = usePendingCorrections(
     words ?? NOTHING_HEARD,
@@ -71,9 +63,6 @@ export function CaptionEditor({
   );
   const corrections = pending.corrections;
   const { durationMs, played, removed } = transcript;
-  const breaks = captions.breaks ?? [];
-  const choices = captions.wordChoices ?? [];
-  const emphasis = captions.emphasisChoices ?? [];
   const keyWords = captions.style.accent === "word";
   const text = useMemo(
     () =>
@@ -104,29 +93,6 @@ export function CaptionEditor({
     language,
     transcript.allowedWords,
   );
-  const { settings } = captions;
-
-  /** Whether the rules alone leave `word` out of the captions. */
-  const isRuledOut = (word: number) => {
-    const mark = marks.get(word);
-    return (
-      (mark === "filler" && settings.hideFillers) ||
-      (mark === "profanity" &&
-        settings.censorProfanity &&
-        settings.profanity === "remove")
-    );
-  };
-  const isShown = (word: number) =>
-    text !== null && text.words[word].caption !== null;
-  const gapBefore = (word: number) => {
-    if (!text || word === 0 || !isShown(word)) return null;
-    const gap = {
-      after: text.words[word],
-      before: text.words[word - 1],
-      durationMs,
-    };
-    return canBreakIn(gap) ? text.words[word].gap : null;
-  };
   /** Puts `corrected` in for `word` in the transcript, shown here at once. */
   const correct = (word: CaptionTextWord, corrected: string) => {
     const correction = {
@@ -137,91 +103,23 @@ export function CaptionEditor({
     pending.add(correction);
     onCorrect(correction);
   };
-  const act = (action: CaptionMenuAction, index: number) => {
-    if (!text || isDisabled) return;
-    if (action === "edit") {
-      setEditing({ start: { point: null }, word: index });
-      return;
-    }
-    const word = text.words[index];
-    // Back to what was heard, which the transcript keeps as no correction.
-    if (action === "restore-spelling") {
-      correct(word, word.heard);
-      return;
-    }
-    if (action === "hide" || action === "show") {
-      // A word stays left to the rules wherever they already do as asked,
-      // so the edit keeps only the choices that change something.
-      const ruledOut = isRuledOut(index);
-      const kind =
-        action === "hide"
-          ? ruledOut
-            ? null
-            : "hidden"
-          : ruledOut
-            ? "shown"
-            : null;
-      onChange({
-        wordChoices: withChoice(choices, { durationMs, word }, kind),
-      });
-      return;
-    }
-    if (action === "make-key-word" || action === "not-key-word") {
-      // Kept plain by hand rather than left to the rule, which would pick
-      // the word again were it its caption's longest.
-      onChange({
-        emphasisChoices: withChoice(
-          emphasis,
-          { durationMs, word },
-          action === "make-key-word" ? "emphasized" : "plain",
-        ),
-      });
-      return;
-    }
-    if (index === 0) return;
-    const gap = { after: word, before: text.words[index - 1], durationMs };
-    const kind = action === "clear-break" ? null : action;
-    onChange({ breaks: withBreak(breaks, gap, kind) });
-  };
-  const openMenu = useCaptionMenu(act);
+  const { hasPlaced, reset, ...wordEditing } = useCaptionWordEditing({
+    captions,
+    durationMs,
+    isDisabled,
+    marks,
+    onChange,
+    onCorrect: correct,
+    text,
+  });
 
   if (!text) return null;
   return (
     <div className="flex flex-col gap-control">
       <CaptionTextView
-        editing={editing}
+        {...wordEditing}
         isDisabled={isDisabled}
         marks={marks}
-        onEditEnd={(index, typed) => {
-          setEditing(null);
-          if (typed === null) return;
-          const word = text.words[index];
-          const corrected = normalizeText(typed);
-          // Nothing left is the word taken out of the captions, as Backspace
-          // takes it; the recording keeps it.
-          if (corrected === "") {
-            if (text.isMarked && isShown(index)) act("hide", index);
-            return;
-          }
-          if (corrected !== normalizeText(word.text)) correct(word, corrected);
-        }}
-        onEditStart={setEditing}
-        onHideToggle={(word) => {
-          act(isShown(word) ? "hide" : "show", word);
-        }}
-        onMenu={(word, bounds) => {
-          void openMenu(
-            word,
-            boundsAnchor(bounds),
-            captionMenuItems({
-              gap: gapBefore(word),
-              isCorrected: text.words[word].corrected,
-              isKeyWord:
-                keyWords && isShown(word) ? text.words[word].isKeyWord : null,
-              isShown: isShown(word),
-            }),
-          );
-        }}
         onSeek={onSeek}
         playheadMs={playheadMs}
         text={text}
@@ -229,17 +127,7 @@ export function CaptionEditor({
       {/* Spelling is the transcript's, shared with the Transcript panel,
        * so only what was placed here goes. */}
       <div className="flex justify-end">
-        <Button
-          isDisabled={
-            isDisabled ||
-            (breaks.length === 0 &&
-              choices.length === 0 &&
-              emphasis.length === 0)
-          }
-          onPress={() => {
-            onChange({ breaks: [], emphasisChoices: [], wordChoices: [] });
-          }}
-        >
+        <Button isDisabled={isDisabled || !hasPlaced} onPress={reset}>
           {t("editor-panels-captions-reset-text")}
         </Button>
       </div>

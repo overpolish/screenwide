@@ -27,6 +27,8 @@ use super::{platform, transient_popover::TransientPopover, WindowLabel};
 mod attachment;
 pub(crate) mod dismissal;
 pub(crate) mod lifecycle;
+mod material;
+pub(crate) use material::panel_material;
 pub(crate) mod placement;
 use attachment::{attach_to_parent, detach_from_parent};
 #[cfg(any(test, target_os = "windows"))]
@@ -110,6 +112,8 @@ pub fn show_standalone_listbox(
   panel: Option<String>,
   fitted: Option<bool>,
   page_height: Option<f64>,
+  // False for a panel the page draws in the island's black.
+  material: Option<bool>,
 ) -> tauri::Result<()> {
   let panel = panel_label(panel);
   let _lifecycle = STANDALONE_LISTBOX.lock();
@@ -186,6 +190,7 @@ pub fn show_standalone_listbox(
   } else {
     1.0
   };
+  material::set(&window, &panel, material.unwrap_or(true))?;
   platform::show(&window, opacity)?;
   // A menu floats over every application; an attached panel keeps the
   // ordinary level it was just given, so it travels with its parent.

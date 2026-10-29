@@ -17,6 +17,28 @@ html.screenwide-native-preview body {
   background: transparent;
 }
 
+/* The menu window's page is the app's panel page, which fills its window
+   edge to edge, not a story laid out on the canvas. The second class outranks
+   the scrolling rules below. */
+html.screenwide-native-preview.screenwide-native-menu,
+html.screenwide-native-preview.screenwide-native-menu body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.screenwide-native-preview.screenwide-native-menu body {
+  display: block;
+  padding: 0;
+}
+
+html.screenwide-native-preview.screenwide-native-menu #storybook-root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* The application shell cannot scroll, but a story taller or wider than the
    canvas must, in every layout. A centred story stays centred while it fits,
    since Storybook centres it with auto margins. */
