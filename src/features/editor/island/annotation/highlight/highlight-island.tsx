@@ -38,9 +38,10 @@ export type HighlightIslandProps = AnnotationColorProps & {
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
   id: string;
-  onDelete: () => void;
   onStyleChange: (style: Partial<HighlightStyle>) => void;
   style: HighlightStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 export function highlightIsland(

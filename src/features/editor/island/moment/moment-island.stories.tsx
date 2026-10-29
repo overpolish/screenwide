@@ -140,14 +140,33 @@ export const Failed: Story = {
   args: { note: { ...note, transcript: { status: "failed" } } },
 };
 
+// The transcription model, about the size the app's default one is.
+const MODEL_BYTES = 874_000_000;
+
 export const NoModel: Story = {
   args: {
-    note: { ...note, transcript: { download: null, status: "noModel" } },
+    note: {
+      ...note,
+      transcript: {
+        model: { progress: 0, sizeBytes: MODEL_BYTES, status: "available" },
+        status: "noModel",
+      },
+    },
   },
 };
 
 export const Downloading: Story = {
   args: {
-    note: { ...note, transcript: { download: 0.35, status: "noModel" } },
+    note: {
+      ...note,
+      transcript: {
+        model: {
+          progress: 0.35,
+          sizeBytes: MODEL_BYTES,
+          status: "downloading",
+        },
+        status: "noModel",
+      },
+    },
   },
 };

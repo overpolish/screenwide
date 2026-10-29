@@ -27,10 +27,8 @@ type SceneLayout =
   | { kind: "preset"; preset: ScenePreset };
 
 /** A pane's framing, and how round its corners are, in percent of its
- * shorter side; `hasOwnRadius` where it sets one rather than taking the
- * recording's. */
+ * shorter side. */
 export type ScenePane = SceneFraming & {
-  hasOwnRadius: boolean;
   radius: number;
 };
 
@@ -38,15 +36,13 @@ export type ScenePane = SceneFraming & {
 export type SceneGroup = "camera" | "layout" | "screen";
 
 export type SceneFramingProps = {
-  /** The camera's framing, where the layout places the camera; it follows
-   * the face when `followFace`, and `isFindingFace` while it looks. */
-  camera: (ScenePane & { followFace: boolean; isFindingFace: boolean }) | null;
+  /** The camera's framing, where the layout places the camera. */
+  camera: ScenePane | null;
   /** Whether a layout with the camera can be chosen: the recording has a
    * camera, and it is in the video. */
   canPlaceCamera: boolean;
   layout: SceneLayout;
   onCameraChange: (pane: Partial<ScenePane>) => void;
-  onFollowFaceChange: (followFace: boolean) => void;
   /** Chooses a preset or a saved layout; a layout becomes custom only by
    * moving a pane by hand. */
   onLayoutChange: (
@@ -54,12 +50,8 @@ export type SceneFramingProps = {
       { id: string; kind: "saved" } | { kind: "preset"; preset: ScenePreset },
   ) => void;
   /** Puts one of a pane's figures back: its zoom to the whole picture, its
-   * position to the middle, its radius to the recording's. */
-  onPaneReset: (
-    pane: "camera" | "screen",
-    figure: "position" | "radius" | "zoom",
-  ) => void;
-  onRecenter: () => void;
+   * position to the middle. */
+  onPaneReset: (pane: "camera" | "screen", figure: "position" | "zoom") => void;
   onRemoveSavedLayout: (id: string) => void;
   onRotationChange: (rotation: SceneRotation) => void;
   /** Saves a custom layout to use again (the app's scene templates). */

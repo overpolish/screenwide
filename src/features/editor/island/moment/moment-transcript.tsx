@@ -3,11 +3,11 @@
 
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
-import { Button } from "../../../../primitives/button/button";
+import { Alert } from "../../../../primitives/alert/alert";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
-import { ProgressBar } from "../../../../primitives/progress-bar/progress-bar";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { Text } from "../../../../primitives/text/text";
+import { IslandModelLine } from "../island-model-line";
 
 import { MOMENT_ISLAND_WIDTH } from "./moment-width";
 
@@ -15,8 +15,9 @@ import type { MomentTranscript } from "./moment-island";
 
 // Under a voice note's player, at the foot of the island: what was said
 // once it is known; until then a short line saying it is being worked out,
-// that it could not be, or that a model is needed first, fetched from right
-// here rather than from Settings. The black grows as the words arrive.
+// an alert that it could not be, as the islands' failures are, or the
+// model it needs first, fetched from right here as every island's models
+// are. The black grows as the words arrive.
 
 /** A short line about the transcript. */
 function Note({ children }: { children: string }) {
@@ -59,38 +60,23 @@ export function MomentTranscriptLine({
       );
     case "failed":
       return (
-        <div className={SHORT_LINE}>
-          <Note>{t("editor-island-moment-transcribe-failed")}</Note>
-        </div>
+        <Alert
+          className={cn("px-inset-sm", MOMENT_ISLAND_WIDTH.part)}
+          color="error"
+          role="status"
+        >
+          {t("editor-island-moment-transcribe-failed")}
+        </Alert>
       );
     // Needing a model is a line across the island, as what was said will
-    // be: what is needed at the start, and the download or its progress at
-    // the end.
+    // be.
     case "noModel":
-      return transcript.download === null ? (
-        <div
-          className={cn(
-            "flex items-center justify-between gap-separate ps-inset-sm",
-            MOMENT_ISLAND_WIDTH.part,
-          )}
-        >
-          <Note>{t("editor-island-moment-no-model")}</Note>
-          <Button onPress={onDownloadModel}>
-            {t("editor-island-moment-download")}
-          </Button>
-        </div>
-      ) : (
-        <div
-          className={cn(
-            "flex items-center justify-between gap-separate px-inset-sm",
-            MOMENT_ISLAND_WIDTH.part,
-          )}
-        >
-          <Note>{t("editor-island-moment-downloading")}</Note>
-          <ProgressBar
-            aria-label={t("editor-island-moment-downloading-label")}
-            className="w-24"
-            value={transcript.download * 100}
+      return (
+        <div className={MOMENT_ISLAND_WIDTH.part}>
+          <IslandModelLine
+            model={transcript.model}
+            onDownload={onDownloadModel}
+            title={t("editor-island-transcription")}
           />
         </div>
       );

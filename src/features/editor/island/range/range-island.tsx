@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Scissors } from "lucide-react";
+import { MoveHorizontal, Scissors } from "lucide-react";
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
@@ -32,6 +32,11 @@ export function rangeIsland({
       />
     ),
     key: `range-${id}`,
-    title: <IslandRowTitle title={t("editor-island-range")} />,
+    title: (
+      <IslandRowTitle
+        glyph={<MoveHorizontal aria-hidden className="size-icon" />}
+        title={t("editor-island-range")}
+      />
+    ),
   };
 }

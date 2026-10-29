@@ -2,22 +2,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
-import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
+import { AnnotationLine } from "../annotation/annotation-island-parts";
 
 import { cornerName } from "./scene-names";
+import { CornerCameraGlyph, PairGlyph } from "./scene-option-glyphs";
 
 import type { SceneFramingProps } from "./scene-framing";
 import type { SceneCorner } from "../../../../bindings/SceneCorner";
 
 // The choices of the layout in use, under its tiles: a pair's camera place
 // and size, a picture in picture's corner and size, a custom layout's swap
-// and saving it to use again, a saved layout's removal. They are words
-// rather than drawings, since the chosen tile above redraws with each one
-// and a drawing small enough for a row could not be read on a tall video.
+// and saving it to use again, a saved layout's removal. A place or a size
+// is a choice between looks, so it is drawn rather than named, on one line
+// as the other islands' looks are; the names are for assistive technology.
 // Left, right, top and bottom are the video's own, so they keep their order
 // in every language.
 
@@ -28,10 +29,12 @@ const CORNERS: SceneCorner[] = [
   "bottom-right",
 ];
 
-const smallOrLarge = () => [
-  { id: "small", label: t("editor-island-scene-small") },
-  { id: "large", label: t("editor-island-scene-large") },
-];
+const SIZES = ["small", "large"] as const;
+
+const sizeName = (size: (typeof SIZES)[number]) =>
+  size === "small"
+    ? t("editor-island-scene-small")
+    : t("editor-island-scene-large");
 
 export function SceneLayoutOptions({
   layout,
@@ -69,85 +72,93 @@ export function SceneLayoutOptions({
     );
   }
   if (layout.preset === "picture-in-picture") {
+    const corner = variant.corner ?? "bottom-right";
     return (
-      <div className="flex flex-col gap-inline">
-        <ControlRow title={t("editor-island-scene-corner")}>
-          {(controlProps) => (
-            <PositionGrid
-              {...controlProps}
-              columns={2}
-              items={CORNERS.map((corner) => ({
-                id: corner,
-                label: cornerName(corner),
-              }))}
-              onChange={(corner) => {
-                onVariantChange({ corner });
-              }}
-              value={variant.corner ?? "bottom-right"}
-            />
-          )}
-        </ControlRow>
-        <ControlRow title={t("editor-island-scene-size")}>
-          {() => (
-            <PillGroup
-              aria-label={t("editor-island-scene-size")}
-              items={smallOrLarge()}
-              onSelectionChange={(size) => {
-                onVariantChange({ size: size === "small" ? "small" : "large" });
-              }}
-              selected={variant.size ?? "large"}
-            />
-          )}
-        </ControlRow>
-      </div>
+      <AnnotationLine>
+        <PositionGrid
+          aria-label={t("editor-island-scene-corner")}
+          columns={2}
+          items={CORNERS.map((id) => ({ id, label: cornerName(id) }))}
+          onChange={(chosen) => {
+            onVariantChange({ corner: chosen });
+          }}
+          value={corner}
+        />
+        <PillGroup
+          aria-label={t("editor-island-scene-size")}
+          items={SIZES.map((size) => ({
+            ariaLabel: sizeName(size),
+            icon: <CornerCameraGlyph corner={corner} size={size} />,
+            id: size,
+          }))}
+          onSelectionChange={(size) => {
+            onVariantChange({ size: size === "small" ? "small" : "large" });
+          }}
+          selected={variant.size ?? "large"}
+        />
+      </AnnotationLine>
     );
   }
   if (layout.preset === "split-two-thirds" || layout.preset === "stacked") {
     const isStacked = layout.preset === "stacked";
+    const isFirst = variant.swap === true;
+    const isLarge = variant.cameraSize === "two-thirds";
     return (
-      <div className="flex flex-col gap-inline">
-        <ControlRow title={t("editor-island-scene-camera-place")}>
-          {() => (
-            <div dir="ltr">
-              <PillGroup
-                aria-label={t("editor-island-scene-camera-place")}
-                items={[
-                  {
-                    id: "before",
-                    label: isStacked
-                      ? t("editor-island-scene-top")
-                      : t("editor-island-scene-left"),
-                  },
-                  {
-                    id: "after",
-                    label: isStacked
-                      ? t("editor-island-scene-bottom")
-                      : t("editor-island-scene-right"),
-                  },
-                ]}
-                onSelectionChange={(place) => {
-                  onVariantChange({ swap: place === "before" });
-                }}
-                selected={variant.swap ? "before" : "after"}
+      <AnnotationLine>
+        <div dir="ltr">
+          <PillGroup
+            aria-label={t("editor-island-scene-camera-place")}
+            items={[
+              {
+                ariaLabel: isStacked
+                  ? t("editor-island-scene-top")
+                  : t("editor-island-scene-left"),
+                icon: (
+                  <PairGlyph isFirst isLarge={isLarge} isStacked={isStacked} />
+                ),
+                id: "before",
+              },
+              {
+                ariaLabel: isStacked
+                  ? t("editor-island-scene-bottom")
+                  : t("editor-island-scene-right"),
+                icon: (
+                  <PairGlyph
+                    isFirst={false}
+                    isLarge={isLarge}
+                    isStacked={isStacked}
+                  />
+                ),
+                id: "after",
+              },
+            ]}
+            onSelectionChange={(place) => {
+              onVariantChange({ swap: place === "before" });
+            }}
+            selected={isFirst ? "before" : "after"}
+          />
+        </div>
+        <PillGroup
+          aria-label={t("editor-island-scene-camera-size")}
+          items={SIZES.map((size) => ({
+            ariaLabel: sizeName(size),
+            icon: (
+              <PairGlyph
+                isFirst={isFirst}
+                isLarge={size === "large"}
+                isStacked={isStacked}
               />
-            </div>
-          )}
-        </ControlRow>
-        <ControlRow title={t("editor-island-scene-camera-size")}>
-          {() => (
-            <PillGroup
-              aria-label={t("editor-island-scene-camera-size")}
-              items={smallOrLarge()}
-              onSelectionChange={(size) => {
-                onVariantChange({
-                  cameraSize: size === "large" ? "two-thirds" : "third",
-                });
-              }}
-              selected={variant.cameraSize === "two-thirds" ? "large" : "small"}
-            />
-          )}
-        </ControlRow>
-      </div>
+            ),
+            id: size,
+          }))}
+          onSelectionChange={(size) => {
+            onVariantChange({
+              cameraSize: size === "large" ? "two-thirds" : "third",
+            });
+          }}
+          selected={isLarge ? "large" : "small"}
+        />
+      </AnnotationLine>
     );
   }
   return null;

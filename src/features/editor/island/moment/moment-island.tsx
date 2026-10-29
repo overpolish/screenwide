@@ -11,6 +11,7 @@ import { IslandRowTitle } from "../../../../primitives/island/row-title/island-r
 import { MomentPlayer } from "./moment-player";
 import { MomentTranscriptLine } from "./moment-transcript";
 
+import type { ToolPanelModel } from "../../tool-panels/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
 
 // A moment flagged while recording, in hand: its kind, in the kind's
@@ -19,11 +20,11 @@ import type { EditorIslandContent } from "../editor-island";
 // and what was said in it under that. A moment is flagged for what
 // happened in it, so it is heard and read before it is kept or cut.
 
-/** What was said in a voice note, as far as transcription has got. With no
- * model to transcribe with, `download` is how far one has come down, from
- * 0 to 1, or null before it is asked for. */
+/** What was said in a voice note, as far as transcription has got; with no
+ * model to transcribe with, the model it needs and how far it has come
+ * down. */
 export type MomentTranscript =
-  | { download: number | null; status: "noModel" }
+  | { model: ToolPanelModel; status: "noModel" }
   | { status: "failed" }
   | { status: "queued" }
   | { status: "ready"; text: string }
@@ -94,7 +95,8 @@ export function momentIsland(props: MomentIslandProps): EditorIslandContent {
 }
 
 function transcriptStage(transcript: MomentTranscript) {
-  return transcript.status === "noModel" && transcript.download !== null
+  return transcript.status === "noModel" &&
+    transcript.model.status === "downloading"
     ? "downloading"
     : transcript.status;
 }

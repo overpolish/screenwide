@@ -35,9 +35,10 @@ export type DrawingIslandProps = AnnotationColorProps & {
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
   id: string;
-  onDelete: () => void;
   onStyleChange: (style: Partial<DrawingStyle>) => void;
   style: DrawingStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 export function drawingIsland(props: DrawingIslandProps): EditorIslandContent {

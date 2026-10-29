@@ -4,7 +4,6 @@
 import { type ReactNode, useId, useState } from "react";
 
 import { IslandFlow } from "../../../../../primitives/island/island-flow";
-import { titleTemplates } from "../../../tool-panels/annotation/text/text-look";
 import { useFontChoices } from "../../../tool-panels/text-style/text-fonts";
 import { useTemplatePreviews } from "../../../tool-panels/text-style/use-template-previews";
 import { IslandPickerColumn } from "../../island-picker-column";
@@ -27,8 +26,9 @@ type Picker = "accent" | "font" | "template";
  * first, since it decides which of the lines under it there are; then how
  * the text is placed (`placement`); then its faces, the accent's offered
  * only where the template sets words apart in an accent; then the rest of
- * the section (`children`). The templates are those a text placed by hand
- * is offered, each as it would take it up. */
+ * the section (`children`). `templates` are the ones offered, each as
+ * choosing it would set the look: a text placed by hand is offered fewer
+ * than the captions are. */
 export function TextLookPickers({
   children,
   families,
@@ -54,7 +54,7 @@ export function TextLookPickers({
   const columnId = useId();
   const [open, setOpen] = useState<Picker | null>(null);
   const choices = useFontChoices(families);
-  const { styles } = titleTemplates(templates);
+  const { styles } = templates;
   const clips = useTemplatePreviews(styles);
   const hasAccent = look.accent !== "none";
   // An accent's face can't stay open once the template has no accent.

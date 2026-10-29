@@ -26,7 +26,7 @@ export function SceneAutoZoomGroup({
     // At least the island's width, as the layout group is, and across the
     // whole section once it is stretched to the island's box. One-shot
     // actions, at the end of their row and as wide as their labels; Clear
-    // all holds the width of its confirmation too, so arming it never
+    // zooms holds the width of its confirmation too, so arming it never
     // moves Regenerate.
     <div
       className={cn(

@@ -12,8 +12,18 @@ import { Text } from "../text/text";
 // An inline notice: the translucent fill on the window's material, the
 // message in the text colour, and an icon that carries the meaning. A status
 // colours the icon alone; the box and the text are never tinted. On the
-// island it is a line of the island's black, the box being the island.
+// island it is a line of the island's black, the box being the island, and
+// speaks as the island's hints do: a caption, set back, centred under the
+// parts it is about. One with an action keeps to the start, so the message
+// and its answer read across the line.
 const alertVariants = tv({
+  compoundVariants: [
+    {
+      class: { base: "justify-center text-center", lead: "grow-0" },
+      hasAction: false,
+      skin: "island",
+    },
+  ],
   defaultVariants: {
     color: "neutral",
     skin: "window",
@@ -37,9 +47,14 @@ const alertVariants = tv({
         icon: "text-fg-secondary",
       },
     },
+    hasAction: {
+      false: {},
+      true: {},
+    },
     skin: {
       island: {
-        base: "items-center gap-inline rounded-none bg-transparent p-0",
+        base: "items-center gap-inline rounded-none bg-transparent p-0 text-caption text-fg-secondary",
+        icon: "[&>svg]:size-icon-sm",
       },
       window: {},
     },
@@ -52,7 +67,7 @@ const defaultIcons = {
 };
 
 type AlertProps = Omit<ComponentProps<"div">, "color"> &
-  Omit<VariantProps<typeof alertVariants>, "skin"> & {
+  Omit<VariantProps<typeof alertVariants>, "hasAction" | "skin"> & {
     /** A control that answers the notice, such as Undo. */
     action?: ReactNode;
     /** Replaces the default icon; `false` hides it. */
@@ -69,12 +84,13 @@ export function Alert({
 }: AlertProps) {
   const { action, base, content, icon, lead } = alertVariants({
     color,
+    hasAction: Boolean(actionContent),
     skin: useSkin(),
   });
   const DefaultIcon = defaultIcons[color];
 
-  // Body copy throughout, so the icon and action slots, a line of it tall,
-  // centre on the message's first line.
+  // The icon and action slots, a line of the copy tall, centre on the
+  // message's first line.
   return (
     // A slotted variant takes a caller's class on the slot it styles.
     <Text {...props} as="div" className={base({ className })}>

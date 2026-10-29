@@ -58,12 +58,13 @@ export type RedactionIslandProps = AnnotationColorProps & {
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
   id: string;
-  onDelete: () => void;
   /** Lays a pixelation's blocks out again, or nudges a blur's cells:
    * Pixelate or Blur pressed while it is already the mode. */
   onShuffle: () => void;
   onStyleChange: (style: Partial<RedactionStyle>) => void;
   style: RedactionStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 const isPixelated = (

@@ -21,14 +21,15 @@ import type { EditorIslandContent } from "../../editor-island";
 
 // A picture placed on the picture, in hand. Its row ends with whether it
 // pops in, which only a recording has a clip for, and deleting it. Under
-// the row, how it is turned, in depth and flat, as the screen in a scene
-// is; then one line with its corners at the start and its toggles at the
+// the row, one line with its corners at the start and its toggles at the
 // end: whether it casts a shadow, and in a recording only whether it sways,
 // a sway of its own each time that is turned on, and, for a moving
 // picture, whether it loops, after the shadow so their coming and going
-// moves nothing else. Giving it another picture and mirroring it are
-// one-shot actions, at the end in their own row. The frame a moving
-// picture starts on is not offered: it starts on its first.
+// moves nothing else. Then how it is turned, in depth and flat, as the
+// screen in a scene is: its shape before its placement, as every island
+// orders them. Giving it another picture and mirroring it are one-shot
+// actions, at the end in their own row. The frame a moving picture starts
+// on is not offered: it starts on its first.
 
 type ImageStyle = {
   hasShadow: boolean;
@@ -48,13 +49,14 @@ export type ImageIslandProps = {
   id: string;
   /** Whether the picture moves, as an animated GIF does. */
   isMoving: boolean;
-  onDelete: () => void;
   /** Mirrors the picture across its upright axis. */
   onFlip: () => void;
   /** Gives it another picture, keeping its place, size and turn. */
   onReplace: () => void;
   onStyleChange: (style: Partial<ImageStyle>) => void;
   style: ImageStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 export function imageIsland(props: ImageIslandProps): EditorIslandContent {
@@ -77,12 +79,6 @@ export function imageIsland(props: ImageIslandProps): EditorIslandContent {
     key: `image-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <IslandRotation
-          onChange={(rotation) => {
-            onStyleChange({ rotation });
-          }}
-          rotation={style.rotation}
-        />
         <AnnotationLine>
           <CornerChoice
             onChange={(radius) => {
@@ -115,6 +111,12 @@ export function imageIsland(props: ImageIslandProps): EditorIslandContent {
             ) : null}
           </div>
         </AnnotationLine>
+        <IslandRotation
+          onChange={(rotation) => {
+            onStyleChange({ rotation });
+          }}
+          rotation={style.rotation}
+        />
         <div className="flex justify-end gap-separate">
           <Button onPress={props.onReplace}>
             {t("editor-island-image-replace")}

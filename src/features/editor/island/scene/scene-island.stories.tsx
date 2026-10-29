@@ -104,28 +104,12 @@ export const ManySavedLayouts: Story = {
 
 export const Camera: Story = { args: { group: "camera" } };
 
-export const FindingFace: Story = {
-  args: {
-    camera: {
-      focusX: 0.5,
-      focusY: 0.4,
-      followFace: true,
-      hasOwnRadius: false,
-      isFindingFace: true,
-      radius: 50,
-      zoom: 1.6,
-    },
-    group: "camera",
-  },
-};
-
 export const Screen: Story = {
   args: {
     group: "screen",
     screen: {
       focusX: 0.4,
       focusY: 0.5,
-      hasOwnRadius: true,
       radius: 12,
       rotation: { x: 0, y: -20, z: 0 },
       zoom: 2,

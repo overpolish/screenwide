@@ -33,9 +33,10 @@ export type MagnifierIslandProps = {
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
   id: string;
-  onDelete: () => void;
   onStyleChange: (style: Partial<MagnifierStyle>) => void;
   style: MagnifierStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 export function magnifierIsland(

@@ -38,9 +38,10 @@ export type FocusIslandProps = {
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
   id: string;
-  onDelete: () => void;
   onStyleChange: (style: Partial<FocusStyle>) => void;
   style: FocusStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 export function focusIsland(props: FocusIslandProps): EditorIslandContent {

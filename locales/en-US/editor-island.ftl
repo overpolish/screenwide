@@ -25,6 +25,80 @@ editor-island-lull-trim-to-breath = Trim to a breath
 # The lull's note: dragging its end retimes it, and the key held through that drag trims it instead. $key is the key, drawn as a keycap: Option on a Mac, Alt on Windows.
 editor-island-lull-hint = Hold { $key } and drag to trim.
 
+## The recording's sound, every track at once
+
+# The island for the recording's sound: each track's volume, and the microphone's tools.
+editor-island-sound = Sound
+# Names a track's volume field for assistive technology. $track is the track's name, such as Microphone.
+editor-island-sound-volume = { $track } volume
+# Puts a track back at the level it was recorded at. $track is the track's name, such as Microphone.
+editor-island-sound-reset-volume = Reset { $track } volume
+
+## The recording's captions, all of them at once
+
+# The island for the recording's captions: their look, their layout and what they say.
+editor-island-captions = Captions
+# A toggle in the island's row: whether the captions are drawn over the recording.
+editor-island-captions-show = Show captions
+# Names the type size choice for assistive technology: a step from the template's own size.
+editor-island-captions-size = Size
+# Names the key word's size choice, shown where the template sets one word apart.
+editor-island-captions-accent-size = Key word size
+editor-island-captions-size-small = Small
+editor-island-captions-size-medium = Medium
+editor-island-captions-size-large = Large
+editor-island-captions-size-extra-large = Extra large
+# A toggle: whether the captions are set in capitals whatever was said.
+editor-island-captions-all-caps = All caps
+# Names the grid of places on the picture the captions can sit.
+editor-island-captions-position = Position
+# How many lines one caption may take, where its words are set in lines.
+editor-island-captions-lines = Lines
+editor-island-captions-one-line = One line
+editor-island-captions-two-lines = Two lines
+# Names the field for the most words one caption holds, across its lines, for assistive technology.
+editor-island-captions-max-words = Max words
+# Before the most words one caption holds, as the field reads: Max 8 words.
+editor-island-captions-max = Max
+# After the most words one caption holds, as the field reads: Max 8 words. $count is the number.
+editor-island-captions-words-unit =
+    { $count ->
+        [one] word
+       *[other] words
+    }
+# A toggle: a caption stays up until the next one starts, through any silence short of a stretch with nothing said.
+editor-island-captions-hold-until-next = Hold until next caption
+editor-island-captions-hide-punctuation = Hide punctuation
+editor-island-captions-hide-fillers = Hide filler words
+# A toggle: whether a word found to be profanity is starred out of the captions.
+editor-island-captions-censor-profanity = Censor profanity
+# The filler word the Hide filler words toggle draws, struck through while it is on: the language's most common one, as short as it can be.
+editor-island-captions-filler-sample = um
+# Brings back the captions taken out of the video. $count is how many there are.
+editor-island-captions-restore =
+    { $count ->
+        [one] Restore 1 caption
+       *[other] Restore { $count } captions
+    }
+# Puts the captions' look, layout and rules back as last set as the default.
+editor-island-captions-reset = Reset to default
+# Makes new captions start looking, laid out and saying things as these do.
+editor-island-captions-set-default = Set as default
+editor-island-captions-transcribing = Transcribing
+editor-island-captions-transcribe-failed = Could not transcribe the recording.
+editor-island-captions-no-speech = No words detected.
+
+## Several annotations chosen at once, with the marquee
+
+# $count is how many annotations are chosen.
+editor-island-marquee =
+    { $count ->
+        [one] 1 annotation
+       *[other] { $count } annotations
+    }
+editor-island-marquee-delete = Delete the annotations
+editor-island-marquee-confirm-delete = Confirm deleting
+
 ## A range drawn across the strip
 
 editor-island-range = Range
@@ -65,13 +139,8 @@ editor-island-moment-no-speech = Nothing was said in this note
 editor-island-moment-transcribe-failed = Could not transcribe this note
 editor-island-moment-transcribing = Transcribing
 editor-island-moment-waiting = Waiting to transcribe
-# No transcription model is on this computer yet, so the note cannot be transcribed.
-editor-island-moment-no-model = No model downloaded
-# Downloads the transcription model.
-editor-island-moment-download = Download
-editor-island-moment-downloading = Downloading model
-# Names the download's progress bar for assistive technology.
-editor-island-moment-downloading-label = Downloading the transcription model
+# The tool a missing transcription model is for, beside the model's size and its download, on the Moment and Captions islands.
+editor-island-transcription = Transcription
 
 ## A scene on the strip: how a stretch of the recording is framed
 
@@ -82,9 +151,8 @@ editor-island-scene-groups = Scene options
 editor-island-scene-layout = Layout
 editor-island-scene-camera = Camera
 editor-island-scene-screen = Screen
-# Put one of a pane's figures back: its zoom to the whole picture, its position to the middle, its radius to the recording's own.
+# Put one of a pane's figures back: its zoom to the whole picture, its position to the middle.
 editor-island-scene-reset-zoom = Reset zoom
-editor-island-scene-reset-radius = Reset radius
 editor-island-scene-reset-position = Reset position
 editor-island-scene-delete = Delete the scene
 editor-island-scene-confirm-delete = Confirm deleting
@@ -124,15 +192,11 @@ editor-island-scene-remove-layout = Remove layout
 editor-island-scene-confirm-remove-layout = Confirm removing
 # A saved layout's tile. Saved layouts have no names of their own, so they are numbered in the order they sit.
 editor-island-scene-saved-layout = Saved { $number }
-# Keeps the camera on the speaker's face as they move.
-editor-island-scene-follow-face = Follow face
+# Keeps the camera on the speaker's face as they move, for the whole recording or, with the playhead in a scene, for that scene.
+editor-island-follow-face = Follow face
 # Names the spinner beside Follow face for assistive technology, while the camera looks for the speaker's face.
-editor-island-scene-finding-face = Finding your face
-# Puts the followed face back in the middle of the camera's box.
-editor-island-scene-recenter = Recenter
+editor-island-finding-face = Finding your face
 editor-island-scene-zoom = Zoom
-# How round the pane's corners are.
-editor-island-scene-radius = Radius
 # Which part of the pane's picture sits in the middle of its box.
 editor-island-scene-position = Position
 editor-island-scene-position-x = Horizontal position
@@ -146,10 +210,11 @@ editor-island-rotation-x = X rotation
 editor-island-rotation-y = Y rotation
 editor-island-rotation-z = Z rotation
 editor-island-reset-rotation = Reset rotation
-# Hangs under the row while no scene is in hand. The scene line runs along the timeline strip.
+# At the Scene island's foot while no scene is in hand. The scene line runs along the timeline strip.
 editor-island-scene-hint = Drag along the scene line to add a scene.
 editor-island-scene-auto-zoom = Auto zoom
-editor-island-scene-clear-auto-zooms = Clear all
+# Removes every planned zoom; a zoom changed by hand stays.
+editor-island-scene-clear-auto-zooms = Clear zooms
 editor-island-scene-confirm-clear-auto-zooms = Confirm clearing
 # Plans the zooms again, replacing the planned zooms.
 editor-island-scene-regenerate-auto-zooms = Regenerate
@@ -207,7 +272,11 @@ editor-island-text-outline = Outline
 editor-island-text-word-by-word = Word by word
 # Which of a text's colours the grid below sets: its type, its box, its accent and so on.
 editor-island-text-color-role = Colour for
-# The shape a crop keeps as its handles are dragged.
+# The island for the screen of a recording: the shape it is cropped to, how far its edges are extended, its own corners and its shadow.
+editor-island-screen = Screen
+# The same island for a screenshot, which is what was captured.
+editor-island-screenshot = Screenshot
+# The shape a crop keeps as its handles are dragged, on the Screen and Camera islands.
 editor-island-crop-aspect = Aspect ratio
 # A crop with no shape kept: its handles drag freely.
 editor-island-crop-free = Free
@@ -217,6 +286,26 @@ editor-island-crop-original = Original
 editor-island-crop-ratio = { $width }:{ $height }
 # An aspect ratio as it is spoken, such as "16 by 9".
 editor-island-crop-ratio-name = { $width } by { $height }
+# Gives a layer's whole capture back, free of any crop, on the Screen and Camera islands.
+editor-island-reset-crop = Reset crop
+# Downloads the model a tool needs, on any island whose tool needs one.
+editor-island-model-download = Download
+# Names a model's download progress bar for assistive technology.
+editor-island-model-downloading = Downloading model
+# How far the screen's edges are extended, filled with the colour found behind its content: not at all, or by a little, more or a lot.
+editor-island-screen-inset = Inset
+editor-island-screen-inset-none = None
+editor-island-screen-inset-tight = Tight
+editor-island-screen-inset-medium = Medium
+editor-island-screen-inset-large = Large
+# Puts what was captured back in the middle of its box, after a crop or an inset moved it off centre.
+editor-island-screen-recenter = Recenter
+# The island for the camera, for the whole recording: its crop, its effects, its corners, its shadow and whether it follows the face.
+editor-island-camera = Camera
+# At the foot of the Screen island while the playhead is in a scene, which can round the screen its own way.
+editor-island-corners-in-scene = Corners apply to this scene only.
+# At the foot of the Camera island while the playhead is in a scene, which can round the camera and have it follow the face its own way.
+editor-island-camera-in-scene = Corners and Follow face apply to this scene only.
 # A dice that makes a frame's background again: a new colour, or new colours for a mesh's unlocked ones, in a mood picked at random.
 editor-island-frame-randomise = Randomise
 # Puts the frame's size back to the size of what was captured, leaving its background and corners as they are.

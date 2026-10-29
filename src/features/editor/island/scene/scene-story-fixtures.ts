@@ -70,19 +70,14 @@ export const FRAMING_ARGS = {
   camera: {
     focusX: 0.5,
     focusY: 0.5,
-    followFace: false,
-    hasOwnRadius: false,
-    isFindingFace: false,
     radius: 50,
     zoom: 1,
   },
   canPlaceCamera: true,
   layout: { kind: "preset", preset: "split-two-thirds" },
   onCameraChange: fn(),
-  onFollowFaceChange: fn(),
   onLayoutChange: fn(),
   onPaneReset: fn(),
-  onRecenter: fn(),
   onRemoveSavedLayout: fn(),
   onRotationChange: fn(),
   onSaveLayout: fn(),
@@ -93,7 +88,6 @@ export const FRAMING_ARGS = {
   screen: {
     focusX: 0.5,
     focusY: 0.5,
-    hasOwnRadius: false,
     radius: 12,
     rotation: { x: 0, y: 0, z: 0 },
     zoom: 1,
@@ -102,25 +96,18 @@ export const FRAMING_ARGS = {
   video: WIDE_VIDEO,
 } satisfies SceneFramingProps;
 
-// A radius typed in is the pane's own; a reset gives the figure back.
 const changed = <Pane extends ScenePane>(
   pane: Pane,
   patch: Partial<ScenePane>,
-): Pane => ({
-  ...pane,
-  ...patch,
-  ...(patch.radius === undefined ? {} : { hasOwnRadius: true }),
-});
+): Pane => ({ ...pane, ...patch });
 
 const reset = <Pane extends ScenePane>(
   pane: Pane,
-  figure: "position" | "radius" | "zoom",
+  figure: "position" | "zoom",
 ): Pane =>
   figure === "zoom"
     ? { ...pane, zoom: 1 }
-    : figure === "position"
-      ? { ...pane, focusX: 0.5, focusY: 0.5 }
-      : { ...pane, hasOwnRadius: false };
+    : { ...pane, focusX: 0.5, focusY: 0.5 };
 
 /** The framing's handlers for a story's render: each logs through the arg
  * and writes its change back with `updateArgs`. */
@@ -133,10 +120,6 @@ export function framingHandlers(
     onCameraChange: (pane) => {
       args.onCameraChange(pane);
       if (camera) updateArgs({ camera: changed(camera, pane) });
-    },
-    onFollowFaceChange: (followFace) => {
-      args.onFollowFaceChange(followFace);
-      if (camera) updateArgs({ camera: { ...camera, followFace } });
     },
     onLayoutChange: (layout) => {
       args.onLayoutChange(layout);

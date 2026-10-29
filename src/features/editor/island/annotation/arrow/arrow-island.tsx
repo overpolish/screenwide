@@ -37,11 +37,12 @@ export type ArrowIslandProps = AnnotationColorProps & {
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
   id: string;
-  onDelete: () => void;
   /** Turns it round, so its head points the other way. */
   onReverse: () => void;
   onStyleChange: (style: Partial<ArrowStyle>) => void;
   style: ArrowStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 export function arrowIsland(props: ArrowIslandProps): EditorIslandContent {

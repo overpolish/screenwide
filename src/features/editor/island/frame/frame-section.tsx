@@ -9,20 +9,11 @@ import { DimensionsField } from "../../tool-panels/dimensions/dimensions-field";
 import { BackgroundTiles } from "../../tool-panels/frame/background/background-tiles";
 import { useBackgroundChoice } from "../../tool-panels/frame/background/use-background-choice";
 import { AnnotationLine } from "../annotation/annotation-island-parts";
+import { PICTURE_CORNERS } from "../picture-corners";
 
 import { FrameBackgroundEditor } from "./frame-background-editor";
 
 import type { FrameIslandProps } from "./frame-island";
-
-/** The corners a whole picture is offered: square, a soft rounding, and a
- * rounder one. A shape's quarter or half would round a picture into a
- * capsule; the glyphs are drawn rounder than the radii so the three read
- * apart at a glyph's size. */
-const FRAME_CORNERS = [
-  { glyph: 0, radius: 0 },
-  { glyph: 12, radius: 4 },
-  { glyph: 25, radius: 12 },
-] as const;
 
 /** Under the Frame island's row: the finished picture's size, with its
  * corners beside it for a screenshot, what it sits on, its colours while
@@ -49,7 +40,7 @@ export function FrameSection(props: FrameIslandProps) {
         </div>
         {props.radius === undefined ? null : (
           <CornerChoice
-            corners={FRAME_CORNERS}
+            corners={PICTURE_CORNERS}
             onChange={(radius) => {
               props.onRadiusChange?.(radius);
             }}

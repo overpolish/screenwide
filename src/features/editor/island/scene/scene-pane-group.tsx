@@ -1,26 +1,24 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence, motion } from "motion/react";
-
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
-import { Button } from "../../../../primitives/button/button";
-import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
 import { NumberField } from "../../../../primitives/input-fields/number-field";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
-import { focusIn } from "../../../../primitives/island/island-motion";
-import { Switch } from "../../../../primitives/switch/switch";
 import { IslandFigure } from "../island-figure";
 import { IslandRotation } from "../island-rotation";
 
 import type { SceneFramingProps, ScenePane } from "./scene-framing";
 
-// A pane's group: exact figures for what is mostly done by hand on the
-// picture (how far it zooms in, how round its corners are, which part of it
-// sits in the middle of its box), with the camera's face following and the
-// screen's turn in depth. A figure off its own default shows a reset at its
-// start, which goes again once it is back.
+// A pane's group: where it sits in its box, which is a scene's own. Exact
+// figures for what is mostly done by hand on the picture (how far it zooms
+// in, which part of it sits in the middle of its box) and the screen's turn
+// in depth, named, since a bare figure does not say what it measures. A
+// figure off its default shows a reset at its start, which goes again once
+// it is back; while the camera follows the face, the middle of its box is
+// the face, so Position's reset centres the face. A pane's corners and the
+// camera following the face are its layer's, set on the Screen and Camera
+// islands, which edit a scene's own while the playhead is in it.
 
 const MAX_ZOOM_PERCENT = 800;
 
@@ -35,8 +33,8 @@ export function ScenePaneGroup(
   if (!framing) return null;
   const change = pane === "camera" ? onCameraChange : onScreenChange;
   return (
-    // As wide as its rows need. Rows sit as close as the island's own
-    // parts do.
+    // As wide as its rows need. Rows sit as close as the island's own parts
+    // do.
     <IslandFlow className="flex flex-col gap-inline">
       <ControlRow title={t("editor-island-scene-zoom")}>
         {(controlProps) => (
@@ -58,30 +56,6 @@ export function ScenePaneGroup(
               rightSection="%"
               step={10}
               value={percent(framing.zoom)}
-            />
-          </IslandFigure>
-        )}
-      </ControlRow>
-      <ControlRow title={t("editor-island-scene-radius")}>
-        {(controlProps) => (
-          <IslandFigure
-            controlProps={controlProps}
-            isDefault={!framing.hasOwnRadius}
-            onReset={() => {
-              onPaneReset(pane, "radius");
-            }}
-            resetLabel={t("editor-island-scene-reset-radius")}
-          >
-            <NumberField
-              aria-label={t("editor-island-scene-radius")}
-              maxValue={50}
-              minValue={0}
-              onChange={(radius) => {
-                change({ radius });
-              }}
-              rightSection="%"
-              step={1}
-              value={framing.radius}
             />
           </IslandFigure>
         )}
@@ -128,49 +102,6 @@ export function ScenePaneGroup(
           onChange={props.onRotationChange}
           rotation={screen.rotation}
         />
-      ) : null}
-      {pane === "camera" && camera ? (
-        <ControlRow title={t("editor-island-scene-follow-face")}>
-          {(controlProps) => (
-            <>
-              {/* While the camera looks for the face, a spinner beside the
-                  switch that turned it on, coming into focus as the
-                  island's parts do. */}
-              <AnimatePresence initial={false}>
-                {camera.followFace && camera.isFindingFace ? (
-                  <motion.span
-                    animate={focusIn.animate}
-                    className="flex"
-                    exit={focusIn.exit}
-                    initial={focusIn.exit}
-                    key="finding"
-                    transition={focusIn.transition}
-                  >
-                    <CircularProgress
-                      aria-label={t("editor-island-scene-finding-face")}
-                      isIndeterminate
-                      size="small"
-                    />
-                  </motion.span>
-                ) : null}
-              </AnimatePresence>
-              <Switch
-                {...controlProps}
-                isSelected={camera.followFace}
-                onChange={props.onFollowFaceChange}
-              />
-            </>
-          )}
-        </ControlRow>
-      ) : null}
-      {/* A one-shot action, at the end of its own row and as wide as its
-          label, as the layout group's are. */}
-      {pane === "camera" && camera?.followFace ? (
-        <div className="flex justify-end">
-          <Button onPress={props.onRecenter}>
-            {t("editor-island-scene-recenter")}
-          </Button>
-        </div>
       ) : null}
     </IslandFlow>
   );

@@ -7,8 +7,15 @@ import { annotationSizeLabel } from "../../../../annotations/annotation-text";
 import { annotationSizes } from "../../../../annotations/widths";
 
 /** A type size as a capital A, drawn larger for each step, as the weights
- * are dots growing. */
-function SizeGlyph({ step }: { step: number }) {
+ * are dots growing; `isItalic` leans it, for a key word's size beside the
+ * type's. */
+export function SizeGlyph({
+  isItalic = false,
+  step,
+}: {
+  step: number;
+  isItalic?: boolean;
+}) {
   const side = 8 + step * 2;
   return (
     <svg
@@ -21,7 +28,12 @@ function SizeGlyph({ step }: { step: number }) {
       style={{ height: side, width: side }}
       viewBox="0 0 24 24"
     >
-      <path d="M5 21 12 3l7 18M8 14h8" />
+      {/* Leant about its middle, so it keeps its place beside the
+          upright ones. */}
+      <path
+        d="M5 21 12 3l7 18M8 14h8"
+        transform={isItalic ? "translate(2.55 0) skewX(-12)" : undefined}
+      />
     </svg>
   );
 }

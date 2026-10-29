@@ -6,6 +6,7 @@ import { IslandRowTitle } from "../../../../../primitives/island/row-title/islan
 import { PillGroup } from "../../../../../primitives/pill-group/pill-group";
 import { alignChoice } from "../../../../annotations/annotation-choices";
 import { TextToolIcon } from "../../../../annotations/annotation-tool-icons";
+import { titleTemplates } from "../../../tool-panels/annotation/text/text-look";
 import {
   setsWordsApart,
   textWordLines,
@@ -58,7 +59,6 @@ export type TextIslandProps = AnnotationColorProps & {
   emphasis: TextSpan[];
   id: string;
   look: TextStyle;
-  onDelete: () => void;
   onEmphasisChange: (emphasis: TextSpan[]) => void;
   onLookChange: (patch: Partial<TextStyle>) => void;
   onStyleChange: (style: Partial<TextPlacement>) => void;
@@ -68,6 +68,8 @@ export type TextIslandProps = AnnotationColorProps & {
   text: string;
   /** Families beyond the system's, for a story. */
   families?: FontFamily[];
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
   /** An edit made over a stroke, such as words set apart in one drag,
    * ends: everything since its start is one change, to undo as one. */
   onEditGestureEnd?: () => void;
@@ -137,7 +139,7 @@ export function textIsland(props: TextIslandProps): EditorIslandContent {
           </AnnotationLine>
         }
         still={!canAnimate}
-        templates={props.templates}
+        templates={titleTemplates(props.templates)}
       >
         {setsApart ? (
           <TextWordsChoice

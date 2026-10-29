@@ -20,12 +20,14 @@ import { DrawInIcon } from "../../glyphs/draw-in-icon";
 /** A line of an annotation's controls under its row. Several are spread
  * across it, the first at its start and the last at its end, as the rows
  * below keep theirs; one alone is centred, where at the start it would
- * leave the rest of the line empty beside it. A control that comes and
- * goes with a choice elsewhere comes into focus or blurs away in its place
- * while the others glide to theirs (`IslandFlow`). */
+ * leave the rest of the line empty beside it. Controls of different
+ * heights, such as a position grid beside a pair of pills, centre on one
+ * another. A control that comes and goes with a choice elsewhere comes
+ * into focus or blurs away in its place while the others glide to theirs
+ * (`IslandFlow`). */
 export function AnnotationLine({ children }: { children: ReactNode }) {
   return (
-    <IslandFlow className="flex justify-between gap-separate has-[>:only-child]:justify-center">
+    <IslandFlow className="flex items-center justify-between gap-separate has-[>:only-child]:justify-center">
       {children}
     </IslandFlow>
   );
@@ -59,7 +61,11 @@ export function AnnotationColorChoice({
   );
 }
 
-export function AnnotationDelete({ onDelete }: { onDelete: () => void }) {
+/** Deleting the annotation in hand, which asks twice; none for a pen taken
+ * up with nothing chosen, whose island shows the style the next one is
+ * drawn in. */
+export function AnnotationDelete({ onDelete }: { onDelete?: () => void }) {
+  if (!onDelete) return null;
   return (
     <ConfirmActionButton
       confirmLabel={t("editor-island-annotation-confirm-delete")}

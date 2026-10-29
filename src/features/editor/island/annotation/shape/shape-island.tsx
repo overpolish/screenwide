@@ -38,9 +38,10 @@ export type ShapeIslandProps = AnnotationColorProps & {
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
   id: string;
-  onDelete: () => void;
   onStyleChange: (style: Partial<ShapeStyle>) => void;
   style: ShapeStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {

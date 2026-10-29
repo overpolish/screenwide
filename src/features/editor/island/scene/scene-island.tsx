@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
-import { cn } from "../../../../lib/styling";
 import { Alert } from "../../../../primitives/alert/alert";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { Text } from "../../../../primitives/text/text";
@@ -17,7 +16,6 @@ import {
 } from "./scene-framing";
 import { SceneLayoutGroup } from "./scene-layout-group";
 import { ScenePaneGroup } from "./scene-pane-group";
-import { SCENE_ISLAND_WIDTH } from "./scene-width";
 
 import type { EditorIslandContent } from "../editor-island";
 
@@ -30,7 +28,9 @@ import type { EditorIslandContent } from "../editor-island";
 // Nothing here adds a scene: one is drawn along the strip's scene line and
 // set up once in hand, which the row's note says while none is. Moving,
 // zooming and rounding a pane is done on the picture; the groups hold the
-// choices, and exact figures for the framing.
+// choices, and exact figures for the framing. A pane's corners, and whether
+// the camera follows the face, belong to its layer and are set on the
+// Screen and Camera islands.
 
 export type SceneIslandProps = SceneFramingProps & {
   /** The planned zooms, where the recording has the cursor and keys to plan
@@ -76,44 +76,39 @@ export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
       />
     ),
     anchor: "end",
-    // A line sits in the row's black, at the island's width, so the black
-    // keeps one width whichever group is open, while staying within the
-    // row's own width where the row is wider. Its
-    // words start on the island's text column, with the rows' names below
-    // and the title's glyph above. A paused scene says so as the island's
-    // alerts do; with no scene in hand, a note says how to add one.
-    below: scene?.isPaused ? (
-      <Alert
-        className={cn(SCENE_ISLAND_WIDTH.line, "px-inset pb-inset-sm")}
-        role="status"
-      >
-        {t("editor-island-scene-paused")}
-      </Alert>
-    ) : scene === null ? (
-      <Text
-        as="p"
-        className={cn(
-          SCENE_ISLAND_WIDTH.line,
-          "px-inset pb-inset-sm text-fg-secondary",
-        )}
-        variant="caption"
-      >
-        {t("editor-island-scene-hint")}
-      </Text>
-    ) : null,
     key: scene ? `scene-${scene.id}` : "scene",
-    section:
-      open === "layout" ? (
-        <SceneLayoutGroup {...props} />
-      ) : open === "autoZoom" ? (
-        <SceneAutoZoomGroup
-          hasAutoZooms={autoZoom?.hasAutoZooms ?? false}
-          onClear={props.onClearAutoZooms}
-          onRegenerate={props.onRegenerateAutoZooms}
-        />
-      ) : open === null ? null : (
-        <ScenePaneGroup {...props} pane={open} />
-      ),
+    // The open group, then at the island's foot what a note has to say: a
+    // paused scene says so as the island's alerts do, centred; with no scene
+    // in hand, a note on the island's text column says how to add one. Each
+    // takes the width the group sets, so its words wrap to it.
+    section: (
+      <div className="flex flex-col gap-separate">
+        {open === "layout" ? (
+          <SceneLayoutGroup {...props} />
+        ) : open === "autoZoom" ? (
+          <SceneAutoZoomGroup
+            hasAutoZooms={autoZoom?.hasAutoZooms ?? false}
+            onClear={props.onClearAutoZooms}
+            onRegenerate={props.onRegenerateAutoZooms}
+          />
+        ) : open === null ? null : (
+          <ScenePaneGroup {...props} pane={open} />
+        )}
+        {scene?.isPaused ? (
+          <Alert className="w-0 min-w-full px-inset-sm" role="status">
+            {t("editor-island-scene-paused")}
+          </Alert>
+        ) : scene === null ? (
+          <Text
+            as="p"
+            className="w-0 min-w-full px-inset-sm text-fg-secondary"
+            variant="caption"
+          >
+            {t("editor-island-scene-hint")}
+          </Text>
+        ) : null}
+      </div>
+    ),
     sectionKey: open ?? undefined,
     title: (
       <IslandRowTitle

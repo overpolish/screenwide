@@ -39,9 +39,10 @@ export type CounterIslandProps = AnnotationColorProps & {
    * being one instant, cannot. */
   canAnimate: boolean;
   id: string;
-  onDelete: () => void;
   onStyleChange: (style: Partial<CounterStyle>) => void;
   style: CounterStyle;
+  /** Left out for the pen in hand with nothing chosen. */
+  onDelete?: () => void;
 };
 
 export function counterIsland(props: CounterIslandProps): EditorIslandContent {
