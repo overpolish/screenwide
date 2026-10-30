@@ -29,7 +29,7 @@ const meta = {
     controls: { include: ["content", "error"] },
     layout: "fullscreen",
   },
-  title: "Features/Text Recognition/QR Details",
+  title: "Legacy/Text Recognition/QR Details",
 } satisfies Meta<typeof QrDetails>;
 
 export default meta;

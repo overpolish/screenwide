@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   ...annotateIslandMeta,
   args: { ...annotateIslandMeta.args, initialSection: "colors" },
-  title: "Features/Annotate Island/Colours",
+  title: "Features/Annotate/Island/Colours",
 } satisfies Meta<typeof AnnotateIsland>;
 
 export default meta;

@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...glideIslandMeta,
-  title: "Features/Glide Island/Ending",
+  title: "Features/Glide/Island/Ending",
 } satisfies Meta<typeof GlideIslandStage>;
 
 export default meta;

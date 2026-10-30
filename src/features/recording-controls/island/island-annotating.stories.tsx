@@ -51,7 +51,7 @@ const meta = {
   ...islandMeta,
   args: { ...islandMeta.args, initialPhase: "recording" },
   render: (args) => <AnnotatingStage {...args} />,
-  title: "Features/Recording Island/Annotating",
+  title: "Features/Recording Controls/Island/Annotating",
 } satisfies Meta<typeof IslandStage>;
 
 export default meta;

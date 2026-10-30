@@ -24,7 +24,7 @@ const meta = {
   component: GlidePickerStage,
   decorators: [featureStage({ height: 280, width: 640 })],
   parameters: { controls: { include: ["hasIcon"] }, layout: "fullscreen" },
-  title: "Features/Glide Island/Picker",
+  title: "Features/Glide/Picker",
 } satisfies Meta<typeof GlidePickerStage>;
 
 export default meta;

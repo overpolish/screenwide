@@ -8,7 +8,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...islandMeta,
-  title: "Features/Recording Island/Panels",
+  title: "Features/Recording Controls/Island/Panels",
 } satisfies Meta<typeof IslandStage>;
 
 export default meta;

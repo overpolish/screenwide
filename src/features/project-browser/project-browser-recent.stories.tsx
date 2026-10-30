@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...projectBrowserMeta,
-  title: "Features/Project Browser/Recent",
+  title: "Legacy/Project Browser/Recent",
 } satisfies Meta<typeof ProjectBrowser>;
 
 export default meta;

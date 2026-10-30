@@ -13,7 +13,7 @@ const meta = {
     ...glideIslandMeta.parameters,
     stage: { height: 240, width: 640 },
   },
-  title: "Features/Glide Island/Regions",
+  title: "Features/Glide/Island/Regions",
 } satisfies Meta<typeof GlideIslandStage>;
 
 export default meta;

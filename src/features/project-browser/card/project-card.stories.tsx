@@ -37,7 +37,7 @@ const meta = {
       <ProjectCard {...args} />
     </div>
   ),
-  title: "Features/Project Browser/Card",
+  title: "Legacy/Project Browser/Card",
 } satisfies Meta<typeof ProjectCard>;
 
 export default meta;

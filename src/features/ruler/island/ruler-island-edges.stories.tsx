@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   ...rulerIslandMeta,
   args: { ...rulerIslandMeta.args, initialShowsEdges: true },
-  title: "Features/Ruler Island/Edges",
+  title: "Features/Ruler/Island/Edges",
 } satisfies Meta<typeof RulerIsland>;
 
 export default meta;

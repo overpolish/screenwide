@@ -11,7 +11,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...projectBrowserMeta,
-  title: "Features/Project Browser/Island",
+  title: "Legacy/Project Browser/Island",
 } satisfies Meta<typeof ProjectBrowser>;
 
 export default meta;

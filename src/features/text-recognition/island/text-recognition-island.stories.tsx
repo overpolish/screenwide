@@ -63,7 +63,7 @@ const meta = {
         </div>
       </div>
     ),
-  title: "Features/Text Recognition Island/Phases",
+  title: "Features/Text Recognition/Island/Phases",
 } satisfies Meta<typeof TextRecognitionIsland>;
 
 export default meta;

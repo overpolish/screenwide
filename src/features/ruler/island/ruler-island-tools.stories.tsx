@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...rulerIslandMeta,
-  title: "Features/Ruler Island/Tools",
+  title: "Features/Ruler/Island/Tools",
 } satisfies Meta<typeof RulerIsland>;
 
 export default meta;

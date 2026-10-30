@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...annotateIslandMeta,
-  title: "Features/Annotate Island/Tools",
+  title: "Features/Annotate/Island/Tools",
 } satisfies Meta<typeof AnnotateIsland>;
 
 export default meta;

@@ -19,7 +19,7 @@ const meta = {
       ),
     },
   },
-  title: "Features/Recording Island/Appearing",
+  title: "Features/Recording Controls/Island/Appearing",
 } satisfies Meta<typeof IslandStage>;
 
 export default meta;
