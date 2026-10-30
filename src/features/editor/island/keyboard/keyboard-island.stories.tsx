@@ -31,6 +31,7 @@ const meta = {
     canRestoreShortcuts: false,
     isShown: true,
     onChange: fn(),
+    onDeleteChosen: fn(),
     onRestoreShortcuts: fn(),
     settings: DEFAULT_KEYBOARD_EFFECTS,
   },
@@ -45,6 +46,10 @@ const meta = {
         onChange={(patch) => {
           args.onChange(patch);
           updateArgs({ settings: { ...args.settings, ...patch } });
+        }}
+        onDeleteChosen={() => {
+          args.onDeleteChosen?.();
+          updateArgs({ canRestoreShortcuts: true, chosen: 0 });
         }}
         onRestoreShortcuts={() => {
           args.onRestoreShortcuts();
@@ -68,3 +73,6 @@ export const Hidden: Story = {
 
 // Some shortcuts deleted, with the way to bring them back.
 export const DeletedShortcuts: Story = { args: { canRestoreShortcuts: true } };
+
+// Two shortcuts chosen on the strip, with deleting them at the row's end.
+export const ShortcutsChosen: Story = { args: { chosen: 2 } };

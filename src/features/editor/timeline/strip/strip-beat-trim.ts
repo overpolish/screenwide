@@ -48,7 +48,6 @@ export function beatTrimOf({
   captions,
   cuts,
   map,
-  onChoose,
   onTrim,
   width,
 }: {
@@ -56,8 +55,6 @@ export function beatTrimOf({
   captions: TimelineCaption[] | null;
   cuts: TimelineCut[];
   map: TimeMap;
-  /** Told the beat taken hold of by an end, to choose it. */
-  onChoose: (id: string) => void;
   onTrim: (id: string, edge: "end" | "start", at: number) => void;
   /** The track's width, in px. */
   width: number;
@@ -67,9 +64,6 @@ export function beatTrimOf({
   const pxPerSecond = width / Math.max(map.duration, 1e-6);
   return {
     kept: keptOf(beat.span, cuts),
-    onChoose: () => {
-      onChoose(beat.id);
-    },
     onTrim: (edge, at) => {
       onTrim(beat.id, edge, at);
     },

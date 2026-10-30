@@ -320,6 +320,8 @@ export type Messages = {
   "editor-island-image": null;
   "editor-island-image-flip": null;
   "editor-island-image-replace": null;
+  "editor-island-keyboard-confirm-delete": null;
+  "editor-island-keyboard-delete": { count: number };
   "editor-island-label": null;
   "editor-island-lull": null;
   "editor-island-lull-confirm-cut": null;
@@ -839,6 +841,7 @@ export type Messages = {
   "editor-timeline-range-name": null;
   "editor-timeline-range-speed": null;
   "editor-timeline-rate": { rate: string | number };
+  "editor-timeline-remove-split": null;
   "editor-timeline-resize": null;
   "editor-timeline-restore-cut": { duration: string | number };
   "editor-timeline-restore-cut-at": {
@@ -853,6 +856,7 @@ export type Messages = {
   "editor-timeline-segment": { number: string | number };
   "editor-timeline-segment-speed": null;
   "editor-timeline-select-range": null;
+  "editor-timeline-shortcut": { keys: string | number };
   "editor-timeline-shortcuts": null;
   "editor-timeline-snap": null;
   "editor-timeline-snap-name": null;

@@ -181,9 +181,6 @@ export function StripBeatRow({
             captions,
             cuts,
             map,
-            onChoose: (id) => {
-              onSelect({ id, kind: "beat" });
-            },
             onTrim: onBeatTrim,
             width,
           })}

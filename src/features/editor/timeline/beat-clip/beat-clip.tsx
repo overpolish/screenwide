@@ -138,7 +138,9 @@ export function BeatClip({
               <Picture aspect={pictureAspect} thumbnail={thumbnail} />
             ) : null}
             {hasGlyph ? <BeatGlyph beat={beat} /> : null}
-            {px > TITLE_PX ? (
+            {/* The keys are drawn in the shortcut lane over the beats, so a
+                shortcut is not written twice. */}
+            {px > TITLE_PX && beat.kind !== "keys" ? (
               <span className="truncate" dir="auto">
                 {/* The flag already says it is a moment; its name says
                     which kind. Assistive technology hears "… moment". */}
@@ -148,14 +150,8 @@ export function BeatClip({
           </>
         )}
       </span>
-      {trim ? (
-        <BeatTrimHandles
-          {...trim}
-          isSelected={isSelected}
-          pad={pad}
-          px={px}
-          span={span}
-        />
+      {isSelected && trim ? (
+        <BeatTrimHandles {...trim} pad={pad} span={span} />
       ) : null}
     </button>
   );

@@ -6,32 +6,22 @@ import { useRef } from "react";
 import { cn } from "../../../../lib/styling";
 import { type Span } from "../timeline-scale";
 
-// A beat's ends. Each end is a narrow zone just inside the beat: over it the
-// pointer turns to resize and that end's handle shows, and pressing there
-// chooses the beat and takes hold of the end at once, as an annotation bar
-// is chosen and taken hold of in one press. Chosen, both handles show.
-// Dragged in, an end trims the beat as it goes: what it passes is cut, with
-// a seam to put it back, and the strip closes up behind it. Dragged out, it
-// brings back what an earlier trim cut, as far as the beat was recorded and
-// no further, since the time beside it is the lull's. How far it trims
-// follows how far the pointer has gone, so the start, which stays where the
-// beat begins as the beat shortens behind it, trims as surely as the end.
-// The zones lie inside the beat, so a narrow lull beside it is still there
-// to press; a beat too narrow to spare them keeps its whole width for
-// choosing and moving until it is chosen.
+// A chosen beat's ends. Each handle sits on the beat's edge, and is pressed
+// across its whole width: the half past the edge reaches over the lull
+// beside it, as the chosen beat is what its edge belongs to. Dragged in, an
+// end trims the beat as it goes: what it passes is cut, with a seam to put
+// it back, and the strip closes up behind it. Dragged out, it brings back
+// what an earlier trim cut, as far as the beat was recorded and no further,
+// since the time beside it is the lull's. How far it trims follows how far
+// the pointer has gone, so the start, which stays where the beat begins as
+// the beat shortens behind it, trims as surely as the end.
 
 /** The shortest a beat is trimmed to, in seconds. */
 const LEAST_S = 0.2;
-/** How far in from each end, in px, a press takes hold of that end. */
-const ZONE_PX = 6;
-/** The narrowest a beat has its end zones at, in px, unless chosen. */
-const ZONED_PX = 24;
 
 export type BeatTrim = {
   /** The part of the beat that plays now, inside its recorded span. */
   kept: Span;
-  /** Told an end taken hold of, so the beat is chosen as it is trimmed. */
-  onChoose: () => void;
   /** Told an end trimmed to, or brought back to, a recorded moment, as it
    * is dragged. */
   onTrim: (edge: "end" | "start", at: number) => void;
@@ -45,21 +35,15 @@ export type BeatTrim = {
 type Edge = "end" | "start";
 
 export function BeatTrimHandles({
-  isSelected,
   kept,
-  onChoose,
   onTrim,
   pad,
-  px,
   pxPerSecond,
   snap = (seconds) => seconds,
   span,
 }: BeatTrim & {
-  isSelected: boolean;
   /** How far the beat's block sits inside its button, in px. */
   pad: number;
-  /** How wide the beat is drawn, in px. */
-  px: number;
   /** The beat as it was recorded. */
   span: Span;
 }) {
@@ -72,14 +56,15 @@ export function BeatTrimHandles({
     other: number;
     x: number;
   } | null>(null);
-  if (!isSelected && px < ZONED_PX) return null;
 
   return (["start", "end"] as const).map((edge) => (
     <span
       aria-hidden
+      // Over the seam a trim leaves at this end and the lull beside it, so
+      // the end can still be taken hold of to bring it back.
       className={cn(
-        "group/edge absolute inset-y-0 z-20 cursor-ew-resize touch-none",
-        edge === "start" ? "start-0" : "end-0",
+        "absolute top-1/2 z-20 flex h-7 w-3 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center",
+        edge === "start" ? "-translate-x-1/2" : "translate-x-1/2",
       )}
       key={edge}
       // The click that ends a trim does not press the beat as well.
@@ -89,7 +74,6 @@ export function BeatTrimHandles({
       onPointerDown={(event) => {
         event.stopPropagation();
         event.currentTarget.setPointerCapture(event.pointerId);
-        if (!isSelected) onChoose();
         const at = edge === "start" ? kept.start : kept.end;
         heldRef.current = {
           at,
@@ -114,22 +98,11 @@ export function BeatTrimHandles({
       onPointerUp={() => {
         heldRef.current = null;
       }}
-      // Over the seam a trim leaves at this end, so the end can still be
-      // taken hold of to bring it back.
       style={{
         [edge === "start" ? "insetInlineStart" : "insetInlineEnd"]: pad,
-        width: ZONE_PX,
       }}
     >
-      <span
-        className={cn(
-          "pointer-events-none absolute top-1/2 h-5 w-1.5 -translate-y-1/2 rounded-full bg-on-primary ring-2 ring-primary transition-opacity",
-          edge === "start"
-            ? "start-0 -translate-x-1/2"
-            : "end-0 translate-x-1/2",
-          !isSelected && "opacity-0 group-hover/edge:opacity-100",
-        )}
-      />
+      <span className="h-5 w-1.5 rounded-full bg-on-primary ring-2 ring-primary" />
     </span>
   ));
 }

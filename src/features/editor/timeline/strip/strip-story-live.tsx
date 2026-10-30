@@ -13,13 +13,14 @@ import { type StripSelection } from "./strip-selection";
 import { type LiveLull, useStoryContent } from "./strip-story-content";
 import { type StoryRecording } from "./strip-story-fixtures";
 import { jumpsOf, playedTime } from "./strip-story-order";
-import { TimelineStrip, type TimelineStripProps } from "./timeline-strip";
+import { TimelineStrip } from "./timeline-strip";
+import { type TimelineStripProps } from "./timeline-strip-props";
 import { useAltKey } from "./use-alt-key";
 
 // The strip over a story recording, kept as the editor would keep it: what
 // is chosen, the playhead, the squeeze, each lull's play and trim, the
-// scenes, the annotations and the order it plays in. Drags are logged to
-// Actions once they rest.
+// scenes, the annotations, the shortcuts, the splits and the order it plays
+// in. Drags are logged to Actions once they rest.
 //
 // A lull plays at one speed throughout. Squeezed, it is hurried by the same
 // share of what it can give as every other: up to four times as fast, or
@@ -34,21 +35,26 @@ export type LiveStripProps = Pick<
   | "onAnnotationRestack"
   | "onAnnotationRetime"
   | "onCaptionPress"
+  | "onDeleteShortcuts"
   | "onLullPlayChange"
   | "onBeatTrim"
   | "onLullTrim"
   | "onMove"
   | "onPutBack"
+  | "onRemoveSplit"
   | "onRestore"
   | "onSceneDraw"
   | "onSceneRetime"
   | "onSeek"
   | "onSelect"
+  | "onSplit"
   | "onSqueezeChange"
 > & {
   /** Whether ⌥ is held, besides the key itself. */
   isAltHeld: boolean;
   isCaptionsHidden: boolean;
+  /** Whether the Cut tool is on. */
+  isCutting: boolean;
   isPlaying: boolean;
   /** Stretches moved before the story opens, each to play before a
    * recorded moment, or at the end for null. */
@@ -134,6 +140,7 @@ export function LiveStrip(props: LiveStripProps) {
       {...content}
       isAltHeld={props.isAltHeld || altKey}
       isCaptionsHidden={props.isCaptionsHidden}
+      isCutting={props.isCutting}
       isPlaying={props.isPlaying}
       jumps={jumpsOf(content.order)}
       lulls={lulls}
@@ -152,6 +159,10 @@ export function LiveStrip(props: LiveStripProps) {
         edit.trimBeat(id, edge, at);
       }}
       onCaptionPress={props.onCaptionPress}
+      onDeleteShortcuts={(ids) => {
+        props.onDeleteShortcuts(ids);
+        edit.deleteShortcuts(ids);
+      }}
       onLullPlayChange={(id, play) => {
         log.lull(id, play);
         edit.setPlay(id, play);
@@ -167,6 +178,10 @@ export function LiveStrip(props: LiveStripProps) {
       onPutBack={(at) => {
         props.onPutBack(at);
         edit.putBack(at);
+      }}
+      onRemoveSplit={(at) => {
+        props.onRemoveSplit(at);
+        edit.removeSplit(at);
       }}
       onRestore={(ids) => {
         props.onRestore(ids);
@@ -192,6 +207,10 @@ export function LiveStrip(props: LiveStripProps) {
       onSelect={(next) => {
         props.onSelect(next);
         setSelection(next);
+      }}
+      onSplit={(at) => {
+        props.onSplit(at);
+        edit.split(at);
       }}
       onSqueezeChange={(next) => {
         log.squeeze(next);

@@ -4,9 +4,9 @@
 import { type TimelineCut } from "../cut-seams/cut-seams";
 import { type Span, type TimelineScale, type TimeMap } from "../timeline-scale";
 
-// Where moved stretches can land: only between beats or at a cut, so to
-// put something inside a beat, cut there first; or back where they came
-// from, which moves nothing.
+// Where moved stretches can land: only between beats, at a cut, or at a
+// split, so to put something inside a beat, split or cut there first; or
+// back where they came from, which moves nothing.
 
 /** A place a stretch can land: where on the strip, as a share of its width,
  * and in played seconds, and the recorded moment it would then play
@@ -19,20 +19,23 @@ export type DropTarget = {
 };
 
 /** Every place a stretch can land: where `spans` are now, which keeps them
- * there, then either side of each beat and at each cut, leaving out those
- * on or inside any of `spans`. */
+ * there, then either side of each beat, at each cut and at each split,
+ * leaving out those on or inside any of `spans`. */
 export function dropTargets({
   beats,
   cuts,
   map,
   scale,
   spans,
+  splits,
 }: {
   beats: Span[];
   cuts: TimelineCut[];
   map: TimeMap;
   scale: TimelineScale;
   spans: Span[];
+  /** The recorded moments the recording is split at. */
+  splits: number[];
 }): DropTarget[] {
   // What plays straight after the place `played` seconds in.
   const next = (played: number) =>
@@ -51,6 +54,7 @@ export function dropTargets({
       const played = map.toPlayed(start);
       return at(played, next(played));
     }),
+    ...splits.map((split) => at(map.toPlayed(split), split)),
   ];
   const isMoved = (x: number) =>
     spans.some(

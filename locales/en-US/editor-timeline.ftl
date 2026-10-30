@@ -112,3 +112,7 @@ editor-timeline-view = Part in view
 editor-timeline-squeeze = Squeeze the lulls
 # A mark where the recording no longer plays in the order it was recorded, after a stretch was moved; pressed, it puts the stretch back.
 editor-timeline-put-back = Put back where it was recorded
+# A shortcut pressed while recording, drawn over the picture where it was pressed. $keys are its keys, joined with +, such as Command+S.
+editor-timeline-shortcut = Shortcut { $keys }
+# A mark where the recording is split, so something moved can land there; pressed, it takes the split away.
+editor-timeline-remove-split = Remove the split

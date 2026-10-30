@@ -9,6 +9,7 @@ import { storyCaption } from "../caption-lane/caption-story-fixtures";
 import { type TimelineCut } from "../cut-seams/cut-seams";
 import { type TimelineScene } from "../scene-rail/scene-clip";
 import { storyScene } from "../scene-rail/scene-story-fixtures";
+import { type TimelineShortcut } from "../shortcut-lane/shortcut-chip";
 import { type Span } from "../timeline-scale";
 import { storyFrame, storyPeaks } from "../timeline-story-fixtures";
 
@@ -38,6 +39,8 @@ export type StoryRecording = {
   duration: number;
   lulls: StoryLull[];
   scenes: TimelineScene[];
+  /** The shortcuts pressed, each shown for a moment from its press. */
+  shortcuts: TimelineShortcut[];
 };
 
 /** The same run of numbers from 0 to 1 for the same seed. */
@@ -53,6 +56,9 @@ function numbers(seed: number) {
 
 /** How long, in seconds, the recording waits before its first beat. */
 const LEAD_S = 4;
+
+/** How long, in seconds, a shortcut's keys show on the picture. */
+const SHORTCUT_S = 1.5;
 
 const LINES = [
   "Let's set up a project from a template.",
@@ -211,5 +217,17 @@ export function storyRecording({
         start: share(0.6),
       }),
     ],
+    shortcuts: beats.flatMap(({ beat, id, span }) =>
+      beat.kind === "keys"
+        ? [
+            {
+              end: Math.min(span.start + SHORTCUT_S, recorded),
+              id: `shortcut-${id}`,
+              keys: beat.keys,
+              start: span.start,
+            },
+          ]
+        : [],
+    ),
   };
 }

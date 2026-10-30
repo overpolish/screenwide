@@ -35,6 +35,7 @@ export function useStripReorder({
   fractionOf,
   map,
   onMove,
+  splits,
   width,
 }: {
   beats: Span[];
@@ -44,6 +45,8 @@ export function useStripReorder({
   /** Told stretches moved, in the order they play, to play together
    * before a recorded moment, or at the end for null. */
   onMove: (spans: Span[], before: number | null) => void;
+  /** The recorded moments the recording is split at. */
+  splits: number[];
   /** The track's width, in px. */
   width: number;
 }) {
@@ -83,7 +86,7 @@ export function useStripReorder({
     const from = fractionOf(event);
     // Measured once: the strip under the drag stays as it was until it is
     // let go.
-    const targets = dropTargets({ beats, cuts, map, scale, spans });
+    const targets = dropTargets({ beats, cuts, map, scale, spans, splits });
     // Where the strip shows it landing, and where its room opens there;
     // and a new place the pointer is over, waiting for it to rest.
     let target: DropTarget | null = null;

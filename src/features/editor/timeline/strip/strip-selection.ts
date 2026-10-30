@@ -7,14 +7,15 @@ import { type Span } from "../timeline-scale";
 export type StripItem = { id: string; kind: "beat" | "lull" };
 
 /** What is chosen on the strip: one of its parts, several beats and lulls
- * gathered with Shift, or a stretch the scissors drew, in recorded seconds.
- */
+ * gathered with Shift, shortcuts, one or gathered, or a stretch the
+ * scissors drew, in recorded seconds. */
 export type StripSelection =
   | { id: string; kind: "annotation" | "beat" | "lull" | "scene" }
+  | { ids: string[]; kind: "shortcuts" }
   | { items: StripItem[]; kind: "items" }
   | (Span & { kind: "range" });
 
-type Part = Exclude<StripSelection["kind"], "items" | "range">;
+type Part = Exclude<StripSelection["kind"], "items" | "range" | "shortcuts">;
 
 /** The stretch a selection covers, found among the parts that have one;
  * several items cover from the first one's start to the last one's end. */
@@ -24,6 +25,8 @@ export function selectionSpan(
 ): Span | null {
   if (!selection) return null;
   if (selection.kind === "range") return selection;
+  // Pressed where they are, shortcuts are in view already.
+  if (selection.kind === "shortcuts") return null;
   const spanOf = (kind: Part, id: string) =>
     parts[kind].find((part) => part.id === id)?.span;
   if (selection.kind !== "items")

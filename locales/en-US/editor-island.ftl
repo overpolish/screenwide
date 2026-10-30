@@ -34,6 +34,16 @@ editor-island-sound-volume = { $track } volume
 # Puts a track back at the level it was recorded at. $track is the track's name, such as Microphone.
 editor-island-sound-reset-volume = Reset { $track } volume
 
+## The recording's shortcuts, every one at once
+
+# Deletes the shortcuts chosen on the strip. $count is how many are chosen.
+editor-island-keyboard-delete =
+    { $count ->
+        [one] Delete the shortcut
+       *[other] Delete { $count } shortcuts
+    }
+editor-island-keyboard-confirm-delete = Confirm deleting
+
 ## The recording's cursor, for the whole recording
 
 # Puts the cursor's size and effects back as they first were.

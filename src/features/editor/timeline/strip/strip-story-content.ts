@@ -8,6 +8,7 @@ import { type TimelineCaption } from "../caption-lane/caption-line";
 import { type TimelineCut } from "../cut-seams/cut-seams";
 import { type TimelineScene } from "../scene-rail/scene-clip";
 import { keptScene, sceneDrawn } from "../scene-rail/scene-story-fixtures";
+import { type TimelineShortcut } from "../shortcut-lane/shortcut-chip";
 import { type Span } from "../timeline-scale";
 
 import { type StripBeat } from "./strip-beat-row";
@@ -30,9 +31,10 @@ import {
 import type { LullPlay } from "../../island/lull/lull-island";
 
 // What the strip's stories edit, kept as the editor keeps it: the beats,
-// lulls, cuts, scenes, annotations and captions, all in recorded time, and
-// the order the recording plays in. A move splits whatever runs across the
-// stretch's new edges, each part after the first taking an id of its own.
+// lulls, cuts, splits, scenes, annotations, shortcuts and captions, all in
+// recorded time, and the order the recording plays in. A move splits
+// whatever runs across the stretch's new edges, each part after the first
+// taking an id of its own.
 
 /** A lull kept, with the end it was recorded with, so a trim can be put
  * back. */
@@ -46,6 +48,8 @@ type Content = {
   lulls: LiveLull[];
   order: PlayOrder;
   scenes: TimelineScene[];
+  shortcuts: TimelineShortcut[];
+  splits: number[];
 };
 
 const own = <T extends Span>(item: T) => item;
@@ -89,6 +93,7 @@ function relaid(content: Content): Content {
       spanOf: (each) => each.span,
     }),
     scenes: rejoinSpans(content.scenes, order),
+    shortcuts: rejoinSpans(content.shortcuts, order),
   });
 }
 
@@ -121,6 +126,8 @@ function split(content: Content): Content {
     }),
     order: content.order,
     scenes: splitSpans(content.scenes, edges),
+    shortcuts: splitSpans(content.shortcuts, edges),
+    splits: content.splits,
   };
 }
 
@@ -140,6 +147,7 @@ export function useStoryContent(
           recordedEnd: lull.span.end,
         })),
         order: [{ end: recording.duration, start: 0 }],
+        splits: [],
       },
     ),
   );
@@ -150,6 +158,11 @@ export function useStoryContent(
 
   return {
     content,
+    deleteShortcuts: (ids: string[]) => {
+      change(({ shortcuts }) => ({
+        shortcuts: shortcuts.filter(({ id }) => !ids.includes(id)),
+      }));
+    },
     /** Draws a scene, and gives it, or null for a drag too short. */
     drawScene: (from: number, to: number) => {
       const drawn = sceneDrawn(rail, from, to);
@@ -178,6 +191,11 @@ export function useStoryContent(
       setContent((current) =>
         relaid({ ...current, order: putBack(current.order, at) }),
       );
+    },
+    removeSplit: (at: number) => {
+      change(({ splits }) => ({
+        splits: splits.filter((each) => each !== at),
+      }));
     },
     restack: (lanes: Record<string, number>) => {
       change(({ annotations }) => ({
@@ -212,6 +230,12 @@ export function useStoryContent(
       change(({ lulls }) => ({
         lulls: lulls.map((lull) => (lull.id === id ? { ...lull, play } : lull)),
       }));
+    },
+    /** Splits the recording at `at`, where something moved can land. */
+    split: (at: number) => {
+      change(({ splits }) =>
+        splits.includes(at) ? {} : { splits: [...splits, at] },
+      );
     },
     /** Trims the lull `id` to end at `end`; what is trimmed is cut, with a
      * seam to put it back. */

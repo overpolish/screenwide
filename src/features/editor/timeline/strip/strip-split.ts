@@ -5,6 +5,7 @@ import { type TimelineAnnotation } from "../annotation-lane/annotation-lane";
 import { type TimelineCaption } from "../caption-lane/caption-line";
 import { type TimelineCut } from "../cut-seams/cut-seams";
 import { type TimelineScene } from "../scene-rail/scene-clip";
+import { type TimelineShortcut } from "../shortcut-lane/shortcut-chip";
 import { type Span } from "../timeline-scale";
 
 import { type StripBeat, type StripLull } from "./strip-beat-row";
@@ -90,6 +91,7 @@ type StripParts = {
   cuts: TimelineCut[];
   lulls: StripLull[];
   scenes: TimelineScene[];
+  shortcuts: TimelineShortcut[];
 };
 
 /** Everything the strip draws, split at `edges`. */
@@ -123,5 +125,6 @@ export function splitParts<T extends StripParts>(parts: T, edges: number[]): T {
       spanOf: (each) => each.span,
     }),
     scenes: splitSpans(parts.scenes, edges),
+    shortcuts: splitSpans(parts.shortcuts, edges),
   };
 }
