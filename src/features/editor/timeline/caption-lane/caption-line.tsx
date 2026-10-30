@@ -6,16 +6,18 @@ import { placed, type Span, type TimelineScale } from "../timeline-scale";
 
 // One line said, a caption. Where it has room, its words spread out along
 // it, each at the moment it is said; with less, it shows its text cut short,
-// and with less still, nothing. Pressed, it opens the captions on it. The
-// captions are one setting for the whole recording, so a line has no state
-// of its own beyond whether they are hidden from the picture, when it is
-// drawn as an outline, still there to press and show them again.
+// down to a word's first letters; narrower still, it is a bare pill.
+// Pressed, it opens the captions on it. The captions are one setting for the
+// whole recording, so a line has no state of its own beyond whether they are
+// hidden from the picture, when it is drawn as an outline, still there to
+// press and show them again.
 
 /** A line's least width, in px, for each letter of it to spread its words
  * out along it. */
 const SPREAD_PX_PER_LETTER = 14;
-/** The narrowest a line shows its text at, in px. */
-const TEXT_PX = 90;
+/** The narrowest a line shows its text at, in px: room inside its padding
+ * for a couple of letters and the ellipsis, which says there is more. */
+const TEXT_PX = 36;
 
 export type TimelineCaption = Span & {
   text: string;
@@ -41,7 +43,7 @@ export function CaptionLine({
   width,
 }: CaptionLineProps) {
   const from = scale.toX(line.start);
-  const length = scale.toX(line.end) - from;
+  const length = scale.toX(line.end, true) - from;
   const px = length * width;
   const isSpread = px > line.text.length * SPREAD_PX_PER_LETTER;
   return (
@@ -69,7 +71,7 @@ export function CaptionLine({
           {line.words.map(({ at, word }, index) => {
             const next = line.words[index + 1]?.at ?? line.end;
             const share = (seconds: number) =>
-              (scale.toX(seconds) - from) / length;
+              (scale.toX(seconds, seconds === line.end) - from) / length;
             return (
               <span
                 className="absolute inset-y-0 flex items-center"

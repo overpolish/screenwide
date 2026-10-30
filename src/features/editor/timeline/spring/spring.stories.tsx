@@ -42,8 +42,8 @@ function LiveSpring(props: StoryProps) {
   ]);
   const width = map.duration * PX_PER_S;
   return (
-    // Room above for the badge, which stands over the lull.
-    <div className="relative mt-6 h-11" dir="ltr" style={{ width }}>
+    // A little room above for the badge, which sits on the box's top edge.
+    <div className="relative mt-1 h-11" dir="ltr" style={{ width }}>
       <Spring
         {...state}
         onPlayChange={(play) => {
@@ -59,8 +59,8 @@ function LiveSpring(props: StoryProps) {
                   : SQUEEZED_S,
           });
         }}
-        onPress={() => {
-          props.onPress();
+        onPress={(event) => {
+          props.onPress(event);
           setState({ ...state, isSelected: true });
         }}
         onTrim={(end) => {

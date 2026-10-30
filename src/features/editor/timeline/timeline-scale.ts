@@ -14,10 +14,13 @@ export type Span = { end: number; start: number };
 export type View = { end: number; start: number };
 
 /** How the recording's time maps to the time it plays in: `duration` is
- * how long the edited recording plays. */
+ * how long the edited recording plays. Reordered, a recorded moment can be
+ * where one stretch ends and, played elsewhere, where another starts; asked
+ * for an `isEnd`, the map places the moment as the end of what stops there.
+ */
 export type TimeMap = {
   duration: number;
-  toPlayed: (recorded: number) => number;
+  toPlayed: (recorded: number, isEnd?: boolean) => number;
   toRecorded: (played: number) => number;
 };
 
@@ -25,8 +28,9 @@ export type TimelineScale = {
   /** The recorded moment under a fraction of the strip's width. */
   toSeconds: (x: number) => number;
   /** Fraction of the strip's width for a recorded moment: 0 to 1 where it
-   * is in view, past them where it is not. */
-  toX: (seconds: number) => number;
+   * is in view, past them where it is not; `isEnd` places it as the end of
+   * what stops there. */
+  toX: (seconds: number, isEnd?: boolean) => number;
 };
 
 /** The whole recording, as a view. */
@@ -47,7 +51,8 @@ export function timelineScale(map: TimeMap, view: View = WHOLE): TimelineScale {
       map.toRecorded(
         (view.start + Math.min(Math.max(x, 0), 1) * span) * length,
       ),
-    toX: (seconds) => (map.toPlayed(seconds) / length - view.start) / span,
+    toX: (seconds, isEnd) =>
+      (map.toPlayed(seconds, isEnd) / length - view.start) / span,
   };
 }
 
@@ -66,7 +71,10 @@ const MIN_HIT_PX = 24;
  * each side, and `px` its drawn width. */
 export const reach = (scale: TimelineScale, span: Span, width: number) => {
   const x = scale.toX(span.start) * width;
-  const px = Math.max(0, (scale.toX(span.end) - scale.toX(span.start)) * width);
+  const px = Math.max(
+    0,
+    (scale.toX(span.end, true) - scale.toX(span.start)) * width,
+  );
   const pad = Math.max(0, (MIN_HIT_PX - px) / 2);
   return {
     pad,
@@ -80,7 +88,7 @@ const percent = (share: number) => `${String(share * 100)}%`;
 /** A span's place along the strip, as a style. */
 export const placed = (scale: TimelineScale, start: number, end: number) => ({
   insetInlineStart: percent(scale.toX(start)),
-  width: percent(Math.max(0, scale.toX(end) - scale.toX(start))),
+  width: percent(Math.max(0, scale.toX(end, true) - scale.toX(start))),
 });
 
 /** A moment's place along the strip, as a style. */

@@ -69,10 +69,18 @@ export function AnnotationLane({
 }: AnnotationLaneProps) {
   const reducedMotion = useReducedMotion() ?? false;
   const [held, setHeld] = useState<Held | null>(null);
+  // Lanes are about what shows at once as it plays, so they are packed on
+  // where the bars are drawn, which a reordered recording no longer keeps in
+  // recorded order.
+  const drawnSpan = (span: Span) => ({
+    end: scale.toX(span.end, true),
+    start: scale.toX(span.start),
+  });
+  const drawn = annotations.map((each) => ({ ...each, ...drawnSpan(each) }));
   // The lanes risen, as the strip shows them with nothing held; held, where
   // every bar goes if it is let go now.
-  const settled = packLanes(annotations);
-  const lanes = held ? heldLanes(annotations, held) : settled;
+  const settled = packLanes(drawn);
+  const lanes = held ? heldLanes(drawn, held) : settled;
   const laneOf = (annotation: TimelineAnnotation) => lanes[annotation.id];
   const shownCount = Math.max(
     1,
@@ -127,9 +135,9 @@ export function AnnotationLane({
               if (hold) {
                 setHeld((current) =>
                   holdStep({
-                    annotations,
+                    annotations: drawn,
                     current,
-                    hold,
+                    hold: { ...hold, span: drawnSpan(hold.span) },
                     id: annotation.id,
                     shown: settled,
                   }),

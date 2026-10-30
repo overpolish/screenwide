@@ -55,7 +55,8 @@ export function storyPeaks(seed: number, count = 96) {
 }
 
 /** A recording `duration` seconds long in which each lull plays in its
- * `plays` seconds instead of its own length, evenly through it. */
+ * `plays` seconds instead of its own length, evenly through it; a cut is a
+ * lull that plays in none. */
 export function squeezedTime(
   duration: number,
   lulls: { end: number; plays: number; start: number }[],
@@ -80,10 +81,13 @@ export function squeezedTime(
       for (const lull of sorted) {
         const from = toPlayed(lull.start);
         if (played <= from) break;
-        const through = Math.min(played - from, lull.plays);
+        const length = lull.end - lull.start;
+        const through = played - from;
+        // Past its end, the whole of what it saves; a cut is always past.
         recorded +=
-          (through / Math.max(lull.plays, 1e-6)) * (lull.end - lull.start) -
-          through;
+          through >= lull.plays
+            ? length - lull.plays
+            : (through / lull.plays) * length - through;
       }
       return recorded;
     },

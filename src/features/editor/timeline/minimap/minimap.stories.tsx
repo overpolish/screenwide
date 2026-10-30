@@ -30,7 +30,6 @@ const BEATS = STORY_BEATS.map((beat, index) => ({
 }));
 
 type StoryProps = {
-  onGrip: (isGripping: boolean) => void;
   onSqueezeChange: (squeeze: number) => void;
   onViewChange: (view: View) => void;
   /** Where the playhead is, as a share of the edited recording. */
@@ -59,7 +58,6 @@ function LiveMinimap({ playheadAt, ...props }: StoryProps) {
         beats={BEATS}
         map={map}
         maxSqueeze={STORY_MAX_SQUEEZE}
-        onGrip={props.onGrip}
         onSqueezeChange={(next) => {
           logSqueeze(next);
           setSqueeze(next);
@@ -85,7 +83,6 @@ const meta = {
     },
   },
   args: {
-    onGrip: fn(),
     onSqueezeChange: fn(),
     onViewChange: fn(),
     playheadAt: 0.2,

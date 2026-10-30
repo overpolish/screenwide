@@ -31,3 +31,57 @@ export const storyScene = (
   id,
   name: presetName(preset),
 });
+
+/** The scenes on a rail, and the recording's length they keep inside. */
+type Rail = { duration: number; scenes: TimelineScene[] };
+
+/** The room between the neighbours of a moment, leaving out `except`. */
+function roomAt({ duration, scenes }: Rail, moment: number, except?: string) {
+  const others = scenes.filter((other) => other.id !== except);
+  return {
+    from: Math.max(
+      0,
+      ...others.filter(({ end }) => end <= moment).map(({ end }) => end),
+    ),
+    to: Math.min(
+      duration,
+      ...others
+        .filter(({ start }) => start >= moment)
+        .map(({ start }) => start),
+    ),
+  };
+}
+
+/** The scene a drag from `from` to `to` draws, fitted between its
+ * neighbours as the editor fits it, or null for a drag too short. */
+export function sceneDrawn(rail: Rail, from: number, to: number) {
+  const start = Math.min(from, to);
+  const end = Math.max(from, to);
+  if (end - start < 1) return null;
+  const room = roomAt(rail, from);
+  return storyScene(
+    `scene-${String(rail.scenes.length + 1)}`,
+    "picture-in-picture",
+    {
+      end: Math.min(end, room.to),
+      start: Math.max(start, room.from),
+    },
+  );
+}
+
+/** The rail's scenes with `id` retimed to `span`, kept a second long at
+ * least and between its neighbours, as the editor keeps it. */
+export function keptScene(rail: Rail, id: string, { end, start }: Span) {
+  const own = rail.scenes.find((scene) => scene.id === id);
+  if (!own) return rail.scenes;
+  const room = roomAt(rail, (own.start + own.end) / 2, id);
+  return rail.scenes.map((scene) =>
+    scene.id === id
+      ? {
+          ...scene,
+          end: Math.min(Math.max(end, start + 1), room.to),
+          start: Math.max(Math.min(start, end - 1), room.from),
+        }
+      : scene,
+  );
+}

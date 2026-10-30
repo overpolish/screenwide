@@ -29,6 +29,9 @@ export function SpringEnd({
         "absolute -end-2 top-1/2 flex h-7 w-4 -translate-y-1/2 touch-none items-center justify-center",
         isAltHeld ? "cursor-col-resize" : "cursor-ew-resize",
       )}
+      // So the scissors' range drag on the strip leaves a press here to the
+      // lull's own trim.
+      data-lull-end
       onDoubleClick={(event) => {
         event.stopPropagation();
       }}

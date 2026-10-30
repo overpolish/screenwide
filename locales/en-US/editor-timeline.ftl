@@ -110,3 +110,5 @@ editor-timeline-annotation = { $tool } annotation
 editor-timeline-view = Part in view
 # The overview's end, dragged in to play every lull faster.
 editor-timeline-squeeze = Squeeze the lulls
+# A mark where the recording no longer plays in the order it was recorded, after a stretch was moved; pressed, it puts the stretch back.
+editor-timeline-put-back = Put back where it was recorded

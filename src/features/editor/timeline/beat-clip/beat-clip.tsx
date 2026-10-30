@@ -5,17 +5,19 @@ import { isLight } from "../../../../composites/color-grid/palette";
 import { cn } from "../../../../lib/styling";
 import { BEAT_GLYPHS } from "../../glyphs/beat-glyphs";
 import { Waveform } from "../../waveform/waveform";
+import { LIFTED } from "../lifted";
 import { reach, type Span, type TimelineScale } from "../timeline-scale";
 
 import { beatLabel, type TimelineBeat } from "./beat-label";
+import { type BeatTrim, BeatTrimHandles } from "./beat-trim";
 
 // A beat: something that holds its time, done, said, flagged, loud or newly
 // shown. Done or newly shown, it is drawn as the screen at that moment with
 // what happened on it, so a recording with no voice is read by its
 // pictures; flagged, the same, its flag in its kind's colour, so moments
-// read apart from what was merely done; said or loud, as its sound, with a
-// line's words over it. What it shows grows with its width: bare, then its
-// glyph, its picture, and last its title.
+// read apart from what was merely done; said or loud, as its sound, the
+// words said left to the captions under the beats. What it shows grows with
+// its width: bare, then its glyph, its picture, and last its title.
 
 /** The narrowest a beat carries its glyph at, in px: the glyph and padding. */
 const GLYPH_PX = 18;
@@ -27,7 +29,8 @@ const TITLE_PX = 170;
 export type BeatClipProps = {
   beat: TimelineBeat;
   isSelected: boolean;
-  onPress: () => void;
+  /** Told a press, whose event says whether Shift extends the choice. */
+  onPress: (event: React.MouseEvent) => void;
   /** The recording's shape, width over height, which its pictures keep.
    * Known before any picture is read, so a picture's place is held at its
    * size while it loads and nothing moves when it arrives. */
@@ -39,23 +42,33 @@ export type BeatClipProps = {
   /** Whether what it draws over the picture, such as a shortcut's keys, is
    * hidden: it is drawn as an outline, still there to press. */
   isHidden?: boolean;
+  /** Whether it is lifted to be moved, carried with the pointer. */
+  isLifted?: boolean;
+  /** Told a press on it, which may go on to drag it to play elsewhere. */
+  onGrab?: (event: React.PointerEvent) => void;
   /** The beat's sound, as peaks from 0 to 1: a line's voice, or the noise
    * that made a moment loud. */
   peaks?: number[];
   /** The screen at the beat, or null while it is read from the video. */
   thumbnail?: string | null;
+  /** What trims it, given once it can be trimmed; its handles show while
+   * it is chosen. */
+  trim?: BeatTrim;
 };
 
 export function BeatClip({
   beat,
   isHidden = false,
+  isLifted = false,
   isSelected,
+  onGrab,
   onPress,
   peaks,
   pictureAspect,
   scale,
   span,
   thumbnail = null,
+  trim,
   width,
 }: BeatClipProps) {
   const { pad, px, style } = reach(scale, span, width);
@@ -71,10 +84,14 @@ export function BeatClip({
     <button
       aria-label={label}
       aria-pressed={isSelected}
-      className="group absolute inset-y-0 cursor-default outline-none"
+      className={cn(
+        "group absolute inset-y-0 cursor-default outline-none",
+        isLifted && LIFTED,
+      )}
       onClick={onPress}
       onPointerDown={(event) => {
         event.stopPropagation();
+        onGrab?.(event);
       }}
       style={style}
       type="button"
@@ -99,19 +116,21 @@ export function BeatClip({
       >
         {beat.kind === "speech" || beat.kind === "sound" ? (
           <>
-            {peaks ? <BeatSound label={label} peaks={peaks} px={px} /> : null}
-            {beat.kind === "speech" ? (
-              <span className="relative mb-auto truncate pt-1" dir="auto">
-                {beat.line}
-              </span>
-            ) : (
-              <span className="relative mb-auto flex items-center gap-1.5 pt-1">
-                {hasGlyph ? <BeatGlyph beat={beat} /> : null}
-                {px > TITLE_PX ? (
-                  <span className="truncate">{label}</span>
-                ) : null}
-              </span>
-            )}
+            {peaks ? (
+              <BeatSound
+                label={label}
+                peaks={keptPeaks(peaks, span, trim?.kept ?? span)}
+                px={px}
+              />
+            ) : null}
+            <span className="relative mb-auto flex items-center gap-1.5 pt-1">
+              {hasGlyph ? <BeatGlyph beat={beat} /> : null}
+              {/* What is said is read in the captions under the beats,
+                  word by word, so a line is not written twice. */}
+              {beat.kind === "sound" && px > TITLE_PX ? (
+                <span className="truncate">{label}</span>
+              ) : null}
+            </span>
           </>
         ) : (
           <>
@@ -129,6 +148,15 @@ export function BeatClip({
           </>
         )}
       </span>
+      {trim ? (
+        <BeatTrimHandles
+          {...trim}
+          isSelected={isSelected}
+          pad={pad}
+          px={px}
+          span={span}
+        />
+      ) : null}
     </button>
   );
 }
@@ -162,6 +190,16 @@ function Picture({
       style={style}
     />
   );
+}
+
+/** The peaks of the part of `span` that plays, `kept`: a trim takes the
+ * sound off the beat's end rather than squeezing all of it into what is
+ * left, which would read as the beat played faster. */
+function keptPeaks(peaks: number[], span: Span, kept: Span) {
+  const length = Math.max(span.end - span.start, 1e-6);
+  const from = Math.floor(((kept.start - span.start) / length) * peaks.length);
+  const to = Math.ceil(((kept.end - span.start) / length) * peaks.length);
+  return peaks.slice(from, Math.max(to, from + 1));
 }
 
 /** The beat's sound along its foot, as bars. */

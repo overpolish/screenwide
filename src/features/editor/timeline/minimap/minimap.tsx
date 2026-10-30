@@ -37,8 +37,6 @@ export type MinimapProps = {
   map: TimeMap;
   /** The most the lulls can be squeezed by, in seconds. */
   maxSqueeze: number;
-  /** Told whether the squeeze is held, while it changes the whole strip. */
-  onGrip: (isGripping: boolean) => void;
   /** Told how many seconds the lulls are squeezed by: 0 plays them as
    * recorded. */
   onSqueezeChange: (squeeze: number) => void;
@@ -58,7 +56,6 @@ export function Minimap({
   beats,
   map,
   maxSqueeze,
-  onGrip,
   onSqueezeChange,
   onViewChange,
   playhead,
@@ -134,7 +131,7 @@ export function Minimap({
           style={{
             backgroundColor: beat.color,
             insetInlineStart: share(scale.toX(beat.start)),
-            width: share(scale.toX(beat.end) - scale.toX(beat.start)),
+            width: share(scale.toX(beat.end, true) - scale.toX(beat.start)),
           }}
         />
       ))}
@@ -179,7 +176,6 @@ export function Minimap({
           const width =
             ref.current?.parentElement?.getBoundingClientRect().width ?? 0;
           gripRef.current = { squeeze, width, x: event.clientX };
-          onGrip(true);
         }}
         onPointerMove={(event) => {
           const grip = gripRef.current;
@@ -191,7 +187,6 @@ export function Minimap({
         }}
         onPointerUp={() => {
           gripRef.current = null;
-          onGrip(false);
         }}
         type="button"
       >
