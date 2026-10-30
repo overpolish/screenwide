@@ -21,8 +21,11 @@ export function StoryGrid({
 }) {
   const count = typeof columns === "number" ? columns : columns.length;
   return (
+    // Centred at the columns' own widths: in a stage wider than the grid,
+    // stretched columns would leave the cells hard against their labels'
+    // far side and the grid off centre.
     <div
-      className="grid items-center justify-items-start gap-3"
+      className="grid items-center justify-center justify-items-start gap-3"
       style={{ gridTemplateColumns: `auto repeat(${String(count)}, auto)` }}
     >
       {typeof columns === "number" ? null : (

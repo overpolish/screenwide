@@ -22,7 +22,7 @@ import type { EditorIslandContent } from "../editor-island";
 /** How a lull plays. A retimed lull's `speed` is how many times as fast as
  * recorded, and never 1: a drag that ends at the recorded length keeps it
  * as recorded instead. */
-type LullPlay =
+export type LullPlay =
   { kind: "keep" } | { kind: "retimed"; speed: number } | { kind: "squeeze" };
 
 export type LullIslandProps = {

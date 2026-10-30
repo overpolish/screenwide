@@ -786,6 +786,7 @@ export type Messages = {
   "editor-scene-stacked": null;
   "editor-scene-zoom": null;
   "editor-screenshot-preview": null;
+  "editor-timeline-annotation": { tool: string | number };
   "editor-timeline-annotations": null;
   "editor-timeline-audio-track": { number: string | number };
   "editor-timeline-audio-visualizer": null;
@@ -809,7 +810,9 @@ export type Messages = {
   };
   "editor-timeline-label": null;
   "editor-timeline-level": null;
+  "editor-timeline-lull": { duration: string | number };
   "editor-timeline-microphone": null;
+  "editor-timeline-moment": { moment: string | number };
   "editor-timeline-no-model": null;
   "editor-timeline-no-speech": null;
   "editor-timeline-note": { moment: string | number };
@@ -843,6 +846,8 @@ export type Messages = {
   };
   "editor-timeline-restore-order": null;
   "editor-timeline-restore-order-confirm": null;
+  "editor-timeline-scene": { layout: string | number };
+  "editor-timeline-scene-new": null;
   "editor-timeline-scenes": null;
   "editor-timeline-segment": { number: string | number };
   "editor-timeline-segment-speed": null;
@@ -851,6 +856,7 @@ export type Messages = {
   "editor-timeline-snap": null;
   "editor-timeline-snap-name": null;
   "editor-timeline-speed": null;
+  "editor-timeline-squeeze": null;
   "editor-timeline-system-audio": null;
   "editor-timeline-track-exclude": { track: string | number };
   "editor-timeline-track-include": { track: string | number };
@@ -863,6 +869,7 @@ export type Messages = {
   "editor-timeline-transcribe-failed": null;
   "editor-timeline-transcribe-waiting": null;
   "editor-timeline-transcribing": null;
+  "editor-timeline-view": null;
   "editor-timeline-zoom-in": null;
   "editor-timeline-zoom-in-label": null;
   "editor-timeline-zoom-out": null;

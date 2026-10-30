@@ -93,3 +93,20 @@ editor-timeline-no-model = No model downloaded
 editor-timeline-download = Download
 editor-timeline-downloading-model = Downloading model
 editor-timeline-downloading-model-label = Downloading the transcription model
+
+## The strip: the recording drawn to scale as beats and the lulls between them, with its scenes, annotations and captions.
+
+# A lull, a stretch with nothing worth watching at full speed. $duration is its recorded length, such as 3.2 sec.
+editor-timeline-lull = Lull, { $duration }
+# A moment flagged while recording. $moment is its kind's name, which the user chooses, such as Notable.
+editor-timeline-moment = { $moment } moment
+# $layout names the scene's layout, such as Side by side.
+editor-timeline-scene = Scene, { $layout }
+# Shown where dragging along the scene line would draw a scene.
+editor-timeline-scene-new = New scene
+# $tool names the annotation's tool, such as Arrow.
+editor-timeline-annotation = { $tool } annotation
+# The window on the overview round the part of the recording the strip shows.
+editor-timeline-view = Part in view
+# The overview's end, dragged in to play every lull faster.
+editor-timeline-squeeze = Squeeze the lulls

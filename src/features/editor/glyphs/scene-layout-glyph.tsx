@@ -39,16 +39,20 @@ const percent = (share: number) => `${String(share * 100)}%`;
  * room for one, so the sides read at a glance, and laid over one another so
  * an overlap shows without an outline. Small enough for a row's glyph, in a
  * faint frame like the island's angle dial's ring, its panes stronger to
- * read at that size; or filling what holds it, as a tile's picture, whose
- * own fill is the frame. When the layout changes, each pane glides to its
- * new place and size, and one the layout adds or hides fades in or out
- * where it sits. */
+ * read at that size, or without the frame where what holds it already
+ * bounds it, such as a scene on the timeline; or filling what holds it, as
+ * a tile's picture, whose own fill is the frame. When the layout changes,
+ * each pane glides to its new place and size, and one the layout adds or
+ * hides fades in or out where it sits. */
 export function SceneLayoutGlyph({
   drawing,
   isFilling = false,
+  isFramed = true,
 }: {
   drawing: SceneDrawing;
   isFilling?: boolean;
+  /** Whether the small glyph draws its faint frame round the video. */
+  isFramed?: boolean;
 }) {
   const reducedMotion = useReducedMotion() ?? false;
   const transition = {
@@ -69,7 +73,7 @@ export function SceneLayoutGlyph({
       dir="ltr"
       style={isFilling ? { height: "100%", width: "100%" } : small}
     >
-      {isFilling ? null : (
+      {isFilling || !isFramed ? null : (
         <span
           className="absolute inset-0 border border-fill-strong"
           style={{ borderRadius: small.height * 0.2 }}
