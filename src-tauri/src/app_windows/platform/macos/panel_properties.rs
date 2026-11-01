@@ -3,18 +3,27 @@
 
 use super::super::*;
 
-/// Drops a panel to the ordinary window level, so one attached to a parent
-/// window sits with it in the window order instead of floating over every
-/// other application. `restore_recording_level` puts the floating level back.
+/// Makes a panel an ordinary window, as one attached to a parent window has
+/// to be: at the ordinary level, so it sits with its parent in the window
+/// order instead of floating over every other application, and managed in
+/// Spaces, so AppKit moves it with its parent. A panel that joins every
+/// Space stays put through a Spaces swipe while its parent slides away, and
+/// only vanishes once AppKit orders the stray child out after the swipe.
+/// `restore_recording_level` puts the floating level and Spaces back.
 pub fn set_normal_level(window: &WebviewWindow) -> tauri::Result<()> {
-  set_level(window, PanelLevel::Normal.value())
+  set_level(window, PanelLevel::Normal.value())?;
+  set_collection_behavior(
+    window,
+    CollectionBehavior::new().managed().full_screen_auxiliary(),
+  )
 }
 
 pub fn restore_recording_level(window: &WebviewWindow) -> tauri::Result<()> {
   let Some(level) = recording_panel_level(window) else {
     return Ok(());
   };
-  set_level(window, PanelLevel::Custom(level).value())
+  set_level(window, PanelLevel::Custom(level).value())?;
+  set_collection_behavior(window, recording_collection_behavior())
 }
 
 /// Raises a floating panel over the capture overlays, or puts the ordinary
@@ -37,6 +46,17 @@ fn set_level(window: &WebviewWindow, level: i64) -> tauri::Result<()> {
   window
     .app_handle()
     .run_on_main_thread(move || panel.set_level(level))
+}
+
+fn set_collection_behavior(
+  window: &WebviewWindow,
+  behavior: CollectionBehavior,
+) -> tauri::Result<()> {
+  let panel = ensure_recording_panel(window)?;
+  let behavior = behavior.into();
+  window
+    .app_handle()
+    .run_on_main_thread(move || panel.set_collection_behavior(behavior))
 }
 
 pub fn set_opacity(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {

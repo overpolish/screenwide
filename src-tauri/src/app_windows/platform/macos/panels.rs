@@ -150,13 +150,7 @@ pub(in super::super) fn configure_panel<T: tauri_nspanel::FromWindow<tauri::Wry>
   panel.set_level(PanelLevel::Custom(level).value());
   panel.set_style_mask(StyleMask::empty().nonactivating_panel().into());
   super::super::super::panel_presentation_macos::disable_order_animation(panel.as_panel());
-  panel.set_collection_behavior(
-    CollectionBehavior::new()
-      .full_screen_auxiliary()
-      .can_join_all_spaces()
-      .transient()
-      .into(),
-  );
+  panel.set_collection_behavior(recording_collection_behavior().into());
   panel.set_hides_on_deactivate(false);
   panel.set_works_when_modal(true);
   panel.set_accepts_mouse_moved_events(true);
@@ -164,6 +158,16 @@ pub(in super::super) fn configure_panel<T: tauri_nspanel::FromWindow<tauri::Wry>
   panel.hide();
 
   Ok(())
+}
+
+/// How a floating panel stands in Spaces: on every one, over full-screen
+/// apps too, and out of Mission Control's way.
+#[cfg(target_os = "macos")]
+pub(in super::super) fn recording_collection_behavior() -> CollectionBehavior {
+  CollectionBehavior::new()
+    .full_screen_auxiliary()
+    .can_join_all_spaces()
+    .transient()
 }
 
 #[cfg(target_os = "macos")]
