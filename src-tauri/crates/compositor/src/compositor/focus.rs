@@ -6,9 +6,11 @@
 //!
 //! A focused frame is drawn in three passes. The canvas pass draws what lies
 //! under the topmost focus - the background and, in the order the panes are
-//! drawn, everything before the focus - into the first level of a chain the
-//! size of the target. The levels below it are made from it, and the gather
-//! lays the frame into the target, each pixel read from the level whose
+//! drawn, everything before the focus - into the first level of a chain
+//! about the size of the target, the canvas started on a whole coarsest
+//! texel so the levels are anchored to the picture rather than the view.
+//! The levels below it are made from it, and the gather lays the frame
+//! into the target, each pixel read from the level whose
 //! texels average about as wide as its blur, so however wide the blur grows
 //! it costs the same disc of samples. Last the canvas pass draws what lies
 //! over the focus - everything after it, the captions, the shortcut strip -

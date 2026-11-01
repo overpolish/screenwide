@@ -49,7 +49,8 @@ export type BeatClipProps = {
   /** The beat's sound, as peaks from 0 to 1: a line's voice, or the noise
    * that made a moment loud. */
   peaks?: number[];
-  /** The screen at the beat, or null while it is read from the video. */
+  /** The screen at the beat, or null while it is read from the video;
+   * none where the screen is not in the export. */
   thumbnail?: string | null;
   /** What trims it, given once it can be trimmed; its handles show while
    * it is chosen. */
@@ -67,7 +68,7 @@ export function BeatClip({
   pictureAspect,
   scale,
   span,
-  thumbnail = null,
+  thumbnail,
   trim,
   width,
 }: BeatClipProps) {
@@ -88,6 +89,8 @@ export function BeatClip({
         "group absolute inset-y-0 cursor-default outline-none",
         isLifted && LIFTED,
       )}
+      // Chosen, its island stands over it (`use-editor-island-window.ts`).
+      data-strip-island={isSelected ? "" : undefined}
       onClick={onPress}
       onPointerDown={(event) => {
         event.stopPropagation();
@@ -134,7 +137,7 @@ export function BeatClip({
           </>
         ) : (
           <>
-            {px > THUMBNAIL_PX ? (
+            {px > THUMBNAIL_PX && thumbnail !== undefined ? (
               <Picture aspect={pictureAspect} thumbnail={thumbnail} />
             ) : null}
             {hasGlyph ? <BeatGlyph beat={beat} /> : null}

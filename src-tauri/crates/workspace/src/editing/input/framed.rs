@@ -14,8 +14,9 @@ use super::*;
 /// framing's own limits.
 const SCALE_LIMIT: f64 = 8.0;
 
-/// The shortest a framed crop window's side may be pulled, in display points.
-const CROP_MINIMUM_POINTS: f64 = 36.0;
+/// The shortest a crop window's side may be pulled while it keeps its shape,
+/// in display points.
+pub(super) const CROP_MINIMUM_POINTS: f64 = 36.0;
 
 /// Records the drag `delta`, as shares of `pane`, as the gesture's report: a
 /// framed crop window's new place in `selection`, reported as its corner's

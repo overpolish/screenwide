@@ -7,7 +7,7 @@ use super::super::ScreenshotWorkspaceOutputSettings;
 use super::payloads::{ScreenshotSelectionOverlay, ScreenshotSurfacePane};
 use super::state::{PreviewManager, ScreenshotPreviewState};
 use screenwide_compositor::workspace_editor::WorldRect;
-use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
 
 // Async so Tauri dispatches it off the main thread: this command blocks on a
 // DirectComposition commit, and the main thread pumps the Win32 messages that
@@ -29,12 +29,14 @@ pub async fn layout_screenshot_preview_surface(
   // The look the next fresh text box is dressed in: whatever the last text
   // was dressed in. Absent until one has been.
   annotation_text_look: Option<screenwide_text::TextStyle>,
+  // How many times the next fresh lens enlarges: whatever the last lens was
+  // set to. Absent until one has been.
+  annotation_zoom: Option<f64>,
   // `annotation_tool` is the tool in hand, when one is. "select" hit-tests
   // the arrows already on the layer and lets every other press fall through
   // to it; "arrow" also draws a new one on empty picture.
   annotation_tool: Option<String>,
   backdrop: Option<[f64; 4]>,
-  fit_width: Option<f64>,
   interaction_output: ScreenshotWorkspaceOutputSettings,
   // The native interaction view sits above the webview, so it swallows clicks
   // on DOM controls painted over the viewport (the save overlay's Cancel
@@ -49,6 +51,8 @@ pub async fn layout_screenshot_preview_surface(
   selection_targets: Option<Vec<ScreenshotSelectionOverlay>>,
   session_id: u64,
   viewport: PreviewSurfaceRect,
+  // How round the viewport's corners are where it meets the chrome.
+  viewport_corners: PreviewSurfaceCorners,
 ) -> Result<(), String> {
   let scale = if scale.is_finite() && scale > 0.0 {
     scale
@@ -61,6 +65,7 @@ pub async fn layout_screenshot_preview_surface(
     &annotation_counter_angle,
     &annotation_image,
     &annotation_text_look,
+    &annotation_zoom,
     &annotation_tool,
     &selected_annotation_ids,
   );
@@ -130,6 +135,7 @@ pub async fn layout_screenshot_preview_surface(
         angle: annotation_counter_angle,
         image: annotation_image,
         look: annotation_text_look,
+        zoom: annotation_zoom,
       },
       annotation_tool.as_deref(),
       selection.as_ref().map(|overlay| overlay.pane_index),
@@ -203,10 +209,12 @@ pub async fn layout_screenshot_preview_surface(
   // pure pan) applies its frames at once, or they would never land.
   surface.set_scale(scale);
   surface.begin_layout();
-  // Open before viewport and pane geometry so a fit reset cannot publish an
-  // intermediate transform against the previous layout.
-  let batch = (will_present || fit_width.is_some()).then(|| surface.present_batch());
-  surface.set_viewport(viewport, backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]));
+  let batch = will_present.then(|| surface.present_batch());
+  surface.set_viewport(
+    viewport,
+    viewport_corners,
+    backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]),
+  );
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
     let pane_rects = panes
@@ -225,10 +233,6 @@ pub async fn layout_screenshot_preview_surface(
   // Open the batch before `finish_layout` so the hides, the deferred pane
   // frames and the fresh layer presents all land in one commit - on Windows
   // that is also the invoke's single compositor wait.
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  if let Some(fit_width) = fit_width {
-    surface.reset_editor_view(Some(fit_width));
-  }
   surface.finish_layout();
   if will_present {
     // Source refresh and structural layout are separate IPC calls. Snapshot

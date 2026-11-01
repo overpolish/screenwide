@@ -7,7 +7,6 @@ import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline
 import {
   recordingTimelineSilenceSummary,
   removeRecordingTimelineSilences,
-  restoreRecordingTimelineSilences,
 } from "../../timeline/editing/recording-timeline-silences";
 import { ToolPanelMicrophone } from "../../tool-panels/tool-panel-store";
 import { EditorArtifact } from "../../types";
@@ -51,8 +50,6 @@ export type MicrophoneTools = {
   reduceNoise: (enabled: boolean) => void;
   /** Cut the long pauses out, as one step of the edit history. */
   removeSilences: () => void;
-  /** Bring back every pause Remove cut, as one step of the edit history. */
-  restoreSilences: () => void;
 };
 
 /** How far each tool has got, 0 to 1, for the recording it is working on;
@@ -282,10 +279,6 @@ export function useMicrophoneTools({
           console.error("Could not find the pauses to cut", cause);
           setSilences(null);
         });
-    },
-    restoreSilences: () => {
-      const next = restoreRecordingTimelineSilences(edit);
-      if (next !== edit) commit(next);
     },
   };
 }

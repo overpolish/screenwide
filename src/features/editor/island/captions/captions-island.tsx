@@ -9,8 +9,6 @@ import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { type AnnotationColorProps } from "../annotation/annotation-island-parts";
 import { WordByWordToggle } from "../annotation/text/text-toggles";
 import { IslandRowPresence } from "../island-row-presence";
-import { islandTranscriptKey } from "../island-transcript";
-import { IslandTranscriptLine } from "../island-transcript-line";
 import { ShowGlyph } from "../keyboard/keyboard-glyphs";
 
 import { CaptionsSection } from "./captions-section";
@@ -36,8 +34,9 @@ import type { IslandTranscript } from "../island-transcript";
 // profanity shows; the colours; then bringing back the captions taken out
 // of the video, putting the look back as last set as default, and setting
 // it as the default for new captions. Captions are made of the
-// transcript's words, so until there is one the section says how it is
-// coming, or offers the model it needs.
+// transcript's words, so until they are in it is only its row: the Script
+// island out with it says how the transcript is coming, or offers the
+// model it needs, as it does in the Transcript mode.
 
 export type CaptionsIslandProps = AnnotationColorProps & {
   /** Whether Reset has anything to put back. */
@@ -50,7 +49,6 @@ export type CaptionsIslandProps = AnnotationColorProps & {
   hiddenCount: number;
   /** Their look, the layout options among it. */
   look: TextStyle;
-  onDownloadModel: () => void;
   onEnabledChange: (enabled: boolean) => void;
   /** A layout option set by hand, which another template keeps. */
   onLayoutChange: (layout: TextLayout) => void;
@@ -102,15 +100,7 @@ export function captionsIsland(
     anchor: "start",
     key: "captions",
     section:
-      transcript.status !== "ready" ? (
-        <IslandTranscriptLine
-          onDownloadModel={props.onDownloadModel}
-          transcript={transcript}
-        />
-      ) : props.enabled ? (
-        <CaptionsSection {...props} />
-      ) : undefined,
-    sectionKey: islandTranscriptKey(transcript),
+      isReady && props.enabled ? <CaptionsSection {...props} /> : undefined,
     title: (
       <IslandRowTitle
         glyph={<Captions aria-hidden className="size-icon" />}

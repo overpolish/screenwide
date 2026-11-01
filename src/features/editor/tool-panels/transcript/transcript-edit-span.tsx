@@ -69,7 +69,7 @@ export function TranscriptEditSpan({
 
   return (
     <span
-      aria-label={t("editor-panels-transcript-editing")}
+      aria-label={t("editor-island-transcript-editing")}
       className={className}
       contentEditable
       data-unit={index}

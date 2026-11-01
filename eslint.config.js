@@ -170,8 +170,6 @@ export default defineConfig([
       "**/*-fixtures.ts",
       "**/*-preview.ts",
       "src/storybook/**",
-      // Sample tracks for the timeline stories.
-      "src/features/editor/timeline/tracks/recording-track-lanes-preview.tsx",
     ],
     plugins: { screenwide },
     rules: {
@@ -184,20 +182,15 @@ export default defineConfig([
     ignores: [
       "**/*.test.{ts,tsx}",
       // Left to right in every language, so physical sides are right there.
-      // Each part's root carries `dir="ltr"`. The timeline and its lanes,
-      // where time runs left to right:
+      // Each part's root carries `dir="ltr"`. The timeline, where time runs
+      // left to right:
       "src/features/editor/timeline/**",
-      "src/features/editor/recording/annotations/recording-annotation-clip-body.tsx",
-      "src/features/editor/recording/annotations/recording-annotation-clip-edges.tsx",
-      "src/features/editor/recording/annotations/recording-annotation-lane.tsx",
-      "src/features/editor/recording/annotations/recording-annotation-pin-overlay.tsx",
       // The picture being edited:
       "src/features/editor/preview/**",
       "src/features/editor/recording/preview/**",
       // Screen geometry and angles:
       "src/features/glide/glide-preview.tsx",
       "src/features/recording-sources/monitor-selector.tsx",
-      "src/features/editor/tool-panels/scene/scene-preset-tile.tsx",
       "src/primitives/angle-dial/**",
     ],
     plugins: { screenwide },

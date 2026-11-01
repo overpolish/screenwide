@@ -4,7 +4,6 @@
 import { Video } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
-import { Button } from "../../../../primitives/button/button";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
@@ -12,7 +11,6 @@ import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
 import { AnnotationLine } from "../annotation/annotation-island-parts";
-import { type CropAspect, CropAspectChoice } from "../crop-aspect-choice";
 import { FollowFaceToggle } from "../follow-face-toggle";
 import { IslandModelLine } from "../island-model-line";
 import { IslandWorkLine } from "../island-work-line";
@@ -26,24 +24,21 @@ import type { ToolPanelCameraEffects } from "../../tool-panels/tool-panel-select
 import type { EditorIslandContent } from "../editor-island";
 
 // The camera, for the whole recording, as the Screen island is the
-// screen's. First the shape its crop keeps, as the Screen island offers
-// the screen's; how much it keeps is dragged on the picture. Then one line
-// of animated toggles and presets, in the order the camera's settings are
-// read: what changes the camera's picture (Enhance, then taking the room
-// away), its corners, its shadow, then whether it follows the face, which
-// holds the face in the middle of the crop. Then what taking the room away
-// brings: what goes behind the person, drawn as each looks, with choosing
-// another picture at that line's end, and objects put right where the
-// cutout has them wrong. A tool whose model is not on this
-// computer yet offers the download in its place, and a tool at work shows
-// how far it has got, each on a line that comes and goes as the others
-// glide (`IslandFlow`). Over a scene, which may round the camera and have
-// it follow the face its own way, the corners and the following are that
-// scene's, and a note at the island's foot says so. Last, giving the whole
-// camera back.
+// screen's; its crop is the Crop tool's. One line of animated toggles and
+// presets, in the order the camera's settings are read: what changes the
+// camera's picture (Enhance, then taking the room away), its corners, its
+// shadow, then whether it follows the face, which holds the face in the
+// middle of the crop. Then what taking the room away brings: what goes
+// behind the person, drawn as each looks, with choosing another picture at
+// that line's end, and objects put right where the cutout has them wrong.
+// A tool whose model is not on this computer yet offers the download in
+// its place, and a tool at work shows how far it has got, each on a line
+// that comes and goes as the others glide (`IslandFlow`). Over a scene,
+// which may round the camera and have it follow the face its own way, the
+// corners and the following are that scene's, and a note at the island's
+// foot says so.
 
 export type CameraIslandProps = {
-  aspect: CropAspect;
   effects: ToolPanelCameraEffects;
   /** Whether the camera follows the face, the scene's own while
    * `isInScene`; outside every scene, and in a scene that does not say
@@ -56,7 +51,6 @@ export type CameraIslandProps = {
   /** Whether the playhead is in a scene, whose own corners and following
    * of the face `radius`, `followFace` and their handlers then are. */
   isInScene: boolean;
-  onAspectChange: (aspect: CropAspect) => void;
   onBackgroundChange: (
     background: ToolPanelCameraEffects["background"],
   ) => void;
@@ -70,8 +64,6 @@ export type CameraIslandProps = {
   onPickObjects: (isPicking: boolean) => void;
   onRadiusChange: (radius: number) => void;
   onRemoveObject: (id: number) => void;
-  /** Gives the whole camera back, free of any crop. */
-  onReset: () => void;
   onShadowChange: (hasShadow: boolean) => void;
   /** Goes to where an object was picked, choosing it. */
   onShowObject: (id: number) => void;
@@ -89,24 +81,18 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
     key: "camera",
     section: (
       <IslandFlow className="flex flex-col gap-separate">
-        <AnnotationLine key="aspect">
-          <CropAspectChoice
-            onChange={props.onAspectChange}
-            value={props.aspect}
-          />
-        </AnnotationLine>
         <AnnotationLine key="looks">
           <OptionToggle
             glyph={(isOn) => <EnhanceGlyph isEnhanced={isOn} />}
             isOn={effects.enhance}
-            label={t("editor-panels-enhance")}
+            label={t("editor-island-enhance")}
             onChange={props.onEnhanceChange}
           />
           {hasBackgroundModel ? (
             <OptionToggle
               glyph={(isOn) => <RemoveBackgroundGlyph isRemoved={isOn} />}
               isOn={isRemoved}
-              label={t("editor-panels-remove-background")}
+              label={t("editor-island-remove-background")}
               onChange={(remove) => {
                 props.onBackgroundChange(remove ? "transparent" : "kept");
               }}
@@ -128,7 +114,7 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
         {effects.working.colour ? (
           <IslandWorkLine
             key="enhance-work"
-            label={t("editor-panels-enhance-working")}
+            label={t("editor-island-enhance-working")}
             value={effects.progress.colour}
           />
         ) : null}
@@ -137,13 +123,13 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
             key="background-model"
             model={effects.model}
             onDownload={props.onDownloadBackgroundModel}
-            title={t("editor-panels-remove-background")}
+            title={t("editor-island-remove-background")}
           />
         ) : null}
         {effects.working.background ? (
           <IslandWorkLine
             key="background-work"
-            label={t("editor-panels-remove-background-working")}
+            label={t("editor-island-remove-background-working")}
             value={effects.progress.background}
           />
         ) : null}
@@ -170,7 +156,7 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
               key="objects-model"
               model={objects.model}
               onDownload={props.onDownloadObjectsModel}
-              title={t("editor-panels-camera-objects")}
+              title={t("editor-island-camera-objects")}
             />
           )
         ) : null}
@@ -184,18 +170,13 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
         {objects?.working ? (
           <IslandWorkLine
             key="objects-work"
-            label={t("editor-panels-camera-objects-working")}
+            label={t("editor-island-camera-objects-working")}
             value={objects.progress}
           />
         ) : null}
         {props.isInScene ? (
           <SceneOnlyNote key="scene-note" layer="camera" />
         ) : null}
-        <div className="flex justify-end" key="actions">
-          <Button onPress={props.onReset}>
-            {t("editor-island-reset-crop")}
-          </Button>
-        </div>
       </IslandFlow>
     ),
     title: (

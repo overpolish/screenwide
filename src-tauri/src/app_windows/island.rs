@@ -27,7 +27,7 @@ mod hit_area;
 pub use hit_area::{
   __cmd__set_island_hit_area, __tauri_command_name_set_island_hit_area, set_island_hit_area,
 };
-pub(super) use hit_area::{is_on_island, rects};
+pub(super) use hit_area::{is_on_island, rects, IslandRect};
 mod moving;
 pub use moving::{
   __cmd__island_ready_to_move, __tauri_command_name_island_ready_to_move, island_ready_to_move,

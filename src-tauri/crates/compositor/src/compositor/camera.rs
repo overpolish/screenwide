@@ -76,11 +76,13 @@ impl CameraComposition {
       image_width: width,
       image_x: 0.0,
       image_y: 0.0,
+      inset: None,
       radius_percent: 0.0,
       recenter_inset_color: None,
       scene_motion: None,
       scene_opacity: None,
       scene_camera_front: None,
+      scene_window: None,
       rotation: None,
       source_crop: NormalizedSourceRect {
         height: 1.0,

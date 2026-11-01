@@ -77,6 +77,7 @@ pub async fn set_recording_preview_annotations(
   counter_angle: Option<f64>,
   image: Option<screenwide_annotations::image::ImageArt>,
   text_look: Option<screenwide_text::TextStyle>,
+  zoom: Option<f64>,
 ) -> Result<(), String> {
   let mut clips = clips;
   validate_clips(&clips)?;
@@ -124,6 +125,7 @@ pub async fn set_recording_preview_annotations(
     angle: counter_angle,
     image,
     look: text_look,
+    zoom,
   };
   manager.publish_annotation_handles();
   #[cfg(any(target_os = "macos", target_os = "windows"))]

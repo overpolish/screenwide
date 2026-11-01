@@ -137,7 +137,8 @@ pub(super) fn pipelines(
   )
 }
 
-/// One slot's chain of levels, the size of the target.
+/// One slot's chain of levels, the size of the target or, for a placed
+/// canvas, a little past it (`FocusPlan::chain_size`).
 pub(super) struct Chain {
   pub(super) size: (u32, u32),
   pub(super) texture: wgpu::Texture,

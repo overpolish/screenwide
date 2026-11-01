@@ -10,10 +10,9 @@ import { AnnotationAlign, AnnotationHead } from "./types";
 
 // One way an annotation can be dressed, offered as a segmented choice: its
 // name, its segments, and how the value the annotation stores maps to a
-// segment and back. Several store a boolean or a number rather than the
-// segment's id, so the mapping lives with the choice and not at each place
-// the choice is offered. The labels are read when the choice is drawn, so
-// they follow the app's language.
+// segment and back, so the mapping lives with the choice and not at each
+// place the choice is offered. The labels are read when the choice is drawn,
+// so they follow the app's language.
 export type AnnotationChoiceDefinition<Value> = {
   items: () => PillGroupItem[];
   label: () => string;
@@ -30,22 +29,6 @@ const named = <Value extends string>(
   label,
   pick: (id) => id as Value,
   select: (value) => value,
-});
-
-// A choice between two segments stored as a boolean: `on` is the segment
-// for true.
-const either = (
-  label: () => string,
-  off: { id: string; label: () => string },
-  on: { id: string; label: () => string },
-): AnnotationChoiceDefinition<boolean> => ({
-  items: () => [
-    { id: off.id, label: off.label() },
-    { id: on.id, label: on.label() },
-  ],
-  label,
-  pick: (id) => id === on.id,
-  select: (value) => (value ? on.id : off.id),
 });
 
 /** Which ends of an arrow carry a head. */
@@ -78,32 +61,4 @@ export const alignChoice = named<AnnotationAlign>(
       id: "right",
     },
   ],
-);
-
-/** Which pixelation a pixelated redaction draws: secure blocks laid out by
- * its seed, or classic blocks that each show the average under them. */
-export const pixelationChoice = named<"pixelate" | "pixelateClassic">(
-  () => t("annotation-pixelation"),
-  () => [
-    { id: "pixelate", label: t("annotation-pixelation-secure") },
-    { id: "pixelateClassic", label: t("annotation-pixelation-classic") },
-  ],
-);
-
-/** Whether a highlight recolours the page it reads, turning the page into
- * its colour and the text into ink that reads on it, or tints what it covers
- * the way a felt marker does, for content the recolouring misreads. True is
- * tint. */
-export const inkChoice = either(
-  () => t("annotation-ink"),
-  { id: "recolor", label: () => t("annotation-ink-recolor") },
-  { id: "tint", label: () => t("annotation-ink-tint") },
-);
-
-/** Whether a highlight fits itself to the text under it or is laid by hand
- * over the box its drag spans. True is by hand. */
-export const fitChoice = either(
-  () => t("annotation-fit"),
-  { id: "auto", label: () => t("annotation-fit-auto") },
-  { id: "manual", label: () => t("annotation-fit-manual") },
 );

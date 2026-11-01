@@ -8,13 +8,17 @@ use super::picking::item_grips;
 use super::*;
 use screenwide_annotations::gesture::{MODE_HIGHLIGHT, MODE_MARQUEE, MODE_TEXT};
 
-/// The chosen arrow's three grips, in device pixels, for the chrome to draw.
-/// Empty when no arrow is chosen or the arrow tool has no say, which is what
-/// leaves the layer's own chrome standing.
+/// The chosen arrow's grips, in device pixels, where they show through the
+/// lenses over it, for the chrome to draw. Empty when no arrow is chosen or
+/// the arrow tool has no say, which is what leaves the layer's own chrome
+/// standing.
 pub(crate) fn selected_grips(state: &SurfaceState, scale: f64) -> Vec<[f32; 2]> {
   if state.annotation.mode == MODE_NONE {
     return Vec::new();
   }
+  let Ok(index) = usize::try_from(state.annotation.selected) else {
+    return Vec::new();
+  };
   let Some(item) = selected_item(state).copied() else {
     return Vec::new();
   };
@@ -23,18 +27,23 @@ pub(crate) fn selected_grips(state: &SurfaceState, scale: f64) -> Vec<[f32; 2]> 
   };
   item_grips(image, &item)
     .into_iter()
-    .map(|(x, y)| [(x * scale) as f32, (y * scale) as f32])
+    .map(|grip| {
+      let ((x, y), _) = super::magnify_chrome::grip_shown(state, index, grip);
+      [(x * scale) as f32, (y * scale) as f32]
+    })
     .collect()
 }
 
 /// Whether the arrow chrome is what is on screen. A drawing tool and the
 /// marquee always draw their own chrome; the select tool only once it is
-/// holding an arrow or a group, so an ordinary layer selection is untouched.
-/// The twin of `annotation_owns_chrome`.
+/// holding an arrow or a group, so an ordinary layer selection is untouched,
+/// or while it is held under the shortcut modifier and nothing is pressed
+/// yet. The twin of `annotation_owns_chrome`.
 pub(crate) fn owns_chrome(state: &SurfaceState) -> bool {
   drawing_kind(state.annotation.mode).is_some()
     || state.annotation.mode == MODE_MARQUEE
-    || (state.annotation.mode != MODE_NONE && (state.annotation.selected >= 0 || has_group(state)))
+    || (state.annotation.mode != MODE_NONE
+      && (state.annotation.selected >= 0 || has_group(state) || state.select_held))
 }
 
 /// The cursor the arrow tool asks for over `point`, or `None` when the
@@ -58,12 +67,6 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<Curs
   };
   if let Some(cursor) = resize.and_then(super::redact_chrome::grip_cursor) {
     return Some(cursor);
-  }
-  // A magnifier's loupe grip sizes the loupe from the middle of its right side.
-  let magnifier =
-    selected_item(state).is_some_and(|item| item.shape_kind() == AnnotationKind::Magnify);
-  if handle == Some(HANDLE_TAIL) && magnifier {
-    return Some(CursorKind::ResizeHorizontal);
   }
   if handle.is_some() || shaft_at_point(state, point).is_some() {
     return Some(CursorKind::Arrow);

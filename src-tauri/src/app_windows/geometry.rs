@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use tauri::{
-  AppHandle, LogicalPosition, LogicalSize, Monitor, PhysicalPosition, PhysicalSize, WebviewWindow,
+  AppHandle, LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize, WebviewWindow,
 };
 
 /// Where a window's page begins on screen, in logical pixels: the origin that
@@ -59,29 +59,6 @@ pub(super) fn window_is_on_a_monitor(
       window_size,
     ) > 0
   }))
-}
-
-/// The monitor a window sits on most, for containment purposes.
-pub(super) fn monitor_with_most_overlap(
-  app: &AppHandle,
-  window: &WebviewWindow,
-) -> tauri::Result<Option<Monitor>> {
-  let window_position = window.outer_position()?;
-  let window_size = window.outer_size()?;
-  let monitors = app.available_monitors()?;
-  let target = monitors
-    .iter()
-    .max_by_key(|monitor| {
-      overlap_area(
-        *monitor.position(),
-        *monitor.size(),
-        window_position,
-        window_size,
-      )
-    })
-    .or_else(|| monitors.first());
-
-  Ok(target.cloned())
 }
 
 pub(crate) fn centered_logical_position(

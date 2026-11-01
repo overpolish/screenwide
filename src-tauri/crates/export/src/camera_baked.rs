@@ -11,8 +11,8 @@
 //! the camera: it is carried from the camera's pixels, through where the
 //! camera image sits on the canvas, into the screen's pixels, and is never
 //! clipped to the camera's frame, so an arrow can reach from the camera into
-//! the screen, and a magnifier's loupe can sit beside the camera while it
-//! shows the camera enlarged. A redaction is applied to the picture before
+//! the screen, and a lens can sit across the camera's edge while it shows
+//! the camera enlarged. A redaction is applied to the picture before
 //! any mark is drawn, on the screen as here, so a mark is never under one
 //! whatever their order; a highlight drawn into the camera's picture is under
 //! the camera's marks the same way.
@@ -236,8 +236,7 @@ mod tests {
     magnifier.shape = AnnotationShape::Magnify {
       start: point(0.0, 0.0),
       end: point(10.0, 10.0),
-      loupe: point(50.0, 50.0),
-      size: 40.0,
+      zoom: 2.0,
     };
     let camera = [
       arrow("under"),

@@ -18,6 +18,18 @@ const longLull = recording.lulls.find(
   ({ moving, span }) => span.end - span.start > 6 && !moving,
 );
 
+const MANY_KINDS = [
+  "arrow",
+  "highlight",
+  "counter",
+  "text",
+  "focus",
+  "redact",
+  "spotlight",
+  "magnify",
+  "shape",
+] as const;
+
 /** The strip as Controls set it; they start it afresh. */
 const Live = (props: LiveStripProps) => (
   <LiveStrip
@@ -32,9 +44,12 @@ const meta = {
   },
   args: {
     isAltHeld: false,
+    isAnnotationsHidden: false,
     isCaptionsHidden: false,
     isCutting: false,
     isPlaying: false,
+    isScreenShown: true,
+    isShortcutsHidden: false,
     moves: [],
     onAnnotationRestack: fn(),
     onAnnotationRetime: fn(),
@@ -63,9 +78,12 @@ const meta = {
     controls: {
       include: [
         "isAltHeld",
+        "isAnnotationsHidden",
         "isCaptionsHidden",
         "isCutting",
         "isPlaying",
+        "isScreenShown",
+        "isShortcutsHidden",
         "squeeze",
       ],
     },
@@ -79,9 +97,17 @@ type Story = StoryObj<typeof meta>;
 // A minute and a half, opened on its first minute or so.
 export const Default: Story = {};
 
-// Short enough to fit whole as it opens.
+// Short enough to fit whole as it opens, with nothing squeezed: the strip
+// ends where the recording does, the squeeze's handle right there.
 export const Short: Story = {
-  args: { recording: storyRecording({ duration: 24 }) },
+  args: { recording: storyRecording({ duration: 24 }), squeeze: 0 },
+};
+
+// Squeezed as far as it goes: what the squeeze took is hatched past the
+// end, where the recording would still run, and the handle is where the
+// hatch begins.
+export const Squeezed: Story = {
+  args: { recording: storyRecording({ duration: 24 }), squeeze: 1 },
 };
 
 // The fourth beat moved to play after the ninth: a mark at the foot of the
@@ -138,8 +164,36 @@ export const Cuts: Story = {
   args: { recording: storyRecording({ duration: 90, isCut: true }) },
 };
 
+// Short enough to fit whole, cut twice and squeezed halfway: the band past
+// the end holds what was squeezed, then what was deleted, each saying how
+// much. Restoring a cut or squeezing glides the strip and the band
+// together.
+export const CutAndSqueezed: Story = {
+  args: { recording: storyRecording({ duration: 60, isCut: true }) },
+};
+
 export const CrowdedAnnotations: Story = {
   args: { recording: storyRecording({ duration: 90, isCrowded: true }) },
+};
+
+// Twenty annotations over the same stretch: the lanes grow to four and
+// scroll past them, and the rest of the strip stays put.
+export const ManyAnnotations: Story = {
+  args: {
+    recording: {
+      ...recording,
+      annotations: Array.from({ length: 20 }, (_, index) => {
+        const start = 20 + (index % 5);
+        return {
+          end: start + 12,
+          id: `annotation-${String(index)}`,
+          kind: MANY_KINDS[index % MANY_KINDS.length],
+          lane: index,
+          start,
+        };
+      }),
+    },
+  },
 };
 
 // Nothing said, so there is no caption lane.

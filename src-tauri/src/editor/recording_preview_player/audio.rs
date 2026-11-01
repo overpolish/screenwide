@@ -115,7 +115,6 @@ pub(super) fn spawn(
   selected_audio: Arc<RwLock<Vec<usize>>>,
   audio_volumes: Arc<RwLock<Vec<AudioTrackVolume>>>,
   ranges: &[RecordingPreviewPlaybackRange],
-  playback_rate: f64,
   cancelled: Arc<AtomicBool>,
   child: Arc<Mutex<Option<Child>>>,
 ) -> Result<AudioPlayback, String> {
@@ -133,7 +132,7 @@ pub(super) fn spawn(
   )?;
   let mut process = screenwide_sidecar::ffmpeg_command();
   process
-    .args(args(sources, &channels, ranges, &config, playback_rate))
+    .args(args(sources, &channels, ranges, &config))
     .stdout(Stdio::piped())
     .stderr(Stdio::null());
   let mut process = process

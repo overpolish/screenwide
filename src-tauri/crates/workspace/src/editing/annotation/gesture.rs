@@ -13,8 +13,10 @@
 //! therefore resolves its samples under the lock, drops it, and only then
 //! reports them, exactly as the selection path in `input/down.rs` does.
 
+use super::super::turn::selected_layer_point;
 use super::*;
 use screenwide_annotations::handles::HANDLE_FLAG_GROUPED;
+use screenwide_annotations::magnify::lens::LensView;
 
 /// Resolving pointer samples and reporting them to the manager.
 mod sample;
@@ -23,10 +25,14 @@ use sample::{report, resolve, Sample};
 /// Presses that change the choice: a group carry, a toggle and a marquee.
 mod group;
 
-/// Takes the press if the arrow chrome owns it. `false` lets it carry on to
-/// the layer underneath, exactly as `annotation_mouse_down` returning `NO`
-/// does on macOS.
-pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
+/// Choosing an annotation, by a press or before a menu.
+mod choose;
+use choose::choose;
+pub(crate) use choose::choose_at;
+
+/// Takes the press at `display` if the arrow chrome owns it; `false` lets it carry on to the
+/// layer underneath, exactly as `annotation_mouse_down` returning `NO` does on macOS.
+pub(crate) fn down(inner: &SurfaceInner, display: (f64, f64)) -> bool {
   let mut samples = Vec::new();
   let mut taken_layer = None;
   let taken = {
@@ -36,13 +42,17 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
     if state.annotation.mode == MODE_NONE {
       return false;
     }
-    let handle = handle_at_point(&state, point);
-    let shaft = match handle {
+    let mut point = selected_layer_point(&state, display);
+    // A grip or an annotation seen through lenses is taken where it shows,
+    // and the press is read back through them from then on.
+    let grip = grip_pick(&state, point);
+    let handle = grip.map(|(handle, _)| handle);
+    let picked = match grip {
       Some(_) => None,
-      None => shaft_at_point(&state, point),
+      None => pick_at_point(&state, point),
     };
-    // Read before the match: the arms take the state by mutable reference,
-    // which a borrow held by the scrutinee would forbid.
+    let shaft = picked.map(|(shaft, _)| shaft);
+    // Read first: the arms take the state mutably, which a borrow held by the scrutinee forbids.
     let drawing = drawing_kind(state.annotation.mode);
     let empty = handle.is_none() && shaft.is_none();
     let placing_image = empty && drawing == Some(AnnotationKind::Image);
@@ -54,9 +64,10 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       report(inner, sample.as_slice());
       return true;
     }
-    // A fresh annotation joins the picture under the press, or the nearest.
+    // A fresh annotation joins the picture under the press, or the nearest, read on that picture.
     if empty && drawing.is_some() {
-      taken_layer = take_drawing_layer(inner, &mut state, point);
+      taken_layer = take_drawing_layer(inner, &mut state, display);
+      point = selected_layer_point(&state, display);
     }
     match (handle, shaft) {
       (None, None) if drawing.is_none() && group::arm_empty(&mut state, point) => true,
@@ -117,9 +128,9 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
           | AnnotationKind::Magnify,
         ) => {
           // Empty picture: a new arrow, redaction, highlight, shape,
-          // spotlight, stroke or magnifier's zoom area, once the press
-          // proves to be a drag. The end grip is the one the drag carries,
-          // so it grows from where it started towards the pointer.
+          // spotlight, stroke or lens, once the press proves to be a drag.
+          // The end grip is the one the drag carries, so it grows from
+          // where it started towards the pointer.
           state.annotation.drag = Some(Drag::pending(TARGET_NEW, 0, HANDLE_END, point));
           true
         }
@@ -130,24 +141,25 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       // history for it.
       (Some(handle), _) => {
         let index = state.annotation.selected.max(0) as u32;
-        state.annotation.drag = Some(Drag::pending(TARGET_EXISTING, index, handle, point));
+        let view = grip.map_or(LensView::IDENTITY, |(_, view)| view);
+        state.annotation.drag =
+          Some(Drag::pending(TARGET_EXISTING, index, handle, point).seen_through(view));
         true
       }
       (None, Some(shaft)) => {
-        let on_loupe = state.annotation.handles.get(shaft).is_some_and(|item| {
-          item.shape_kind() == AnnotationKind::Magnify
-            && super::picking::item_image_frame(&state, shaft as i32)
-              .is_some_and(|image| super::magnify_chrome::on_loupe(image, item, point))
-        });
-        let handle = if on_loupe { HANDLE_MIDDLE } else { HANDLE_BODY };
+        point = display_on_item_layer(&state, shaft, display).unwrap_or(point);
+        let view = picked.map_or(LensView::IDENTITY, |(_, view)| view);
         // One of several chosen together carries them all, and the toggle
         // modifier waits for the release to add or remove the annotation.
         // Otherwise choosing an arrow is complete on the press: the manager
-        // commits the choice and the chrome moves to it. A press inside a
-        // magnifier's loupe carries the loupe on its own.
-        if !group::arm_shaft(&mut state, shaft, handle, point) {
-          state.annotation.drag = Some(Drag::pending(TARGET_EXISTING, shaft as u32, handle, point));
-          samples.extend(choose(&mut state, shaft, point));
+        // commits the choice and the chrome moves to it.
+        if group::arm_shaft(&mut state, shaft, HANDLE_BODY, point) {
+          state.annotation.drag = state.annotation.drag.map(|drag| drag.seen_through(view));
+        } else {
+          let drag =
+            Drag::pending(TARGET_EXISTING, shaft as u32, HANDLE_BODY, point).seen_through(view);
+          state.annotation.drag = Some(drag);
+          samples.extend(choose(&mut state, shaft, drag.beneath(point)));
         }
         true
       }
@@ -162,61 +174,16 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
   taken
 }
 
-/// Chooses the annotation at `shaft` in the published list, as a press on it
-/// does: its layer becomes the selection and the manager commits the choice.
-fn choose(state: &mut SurfaceState, shaft: usize, point: (f64, f64)) -> Option<Sample> {
-  state.annotation.selected = shaft as i32;
-  if let Some(target) = state
-    .annotation
-    .handles
-    .get(shaft)
-    .and_then(|item| layer_selection(state, item.layer_id))
-  {
-    state.selection = Some(target);
-  }
-  resolve(
-    state,
-    SelectionGesturePhase::Begin,
-    TARGET_SELECT,
-    shaft as u32,
-    HANDLE_BODY,
-    point,
-  )
-}
-
-/// Chooses the annotation under a right press, as a left press on it does, so
-/// the menu opened there acts on it. One of several chosen together keeps the
-/// group, so the menu acts on all of them. Its place in the published list,
-/// or `None` when the press is not on one.
-pub(crate) fn choose_at(inner: &SurfaceInner, point: (f64, f64)) -> Option<usize> {
-  let (shaft, sample) = {
-    let mut state = inner.state.lock().ok()?;
-    if state.annotation.mode == MODE_NONE {
-      return None;
-    }
-    let shaft = shaft_at_point(&state, point)?;
-    let grouped = state
-      .annotation
-      .handles
-      .get(shaft)
-      .is_some_and(|item| item.flags & HANDLE_FLAG_GROUPED != 0);
-    if grouped {
-      return Some(shaft);
-    }
-    (shaft, choose(&mut state, shaft, point))
-  };
-  report(inner, sample.as_slice());
-  Some(shaft)
-}
-
 /// One sample of the drag in hand: a group carry and a marquee band are
-/// measured on their layer, anything else on the annotation it holds.
+/// measured on their layer, anything else on the annotation it holds. Either
+/// is read through the lenses the press was taken through.
 fn drag_sample(
   state: &mut SurfaceState,
   drag: Drag,
   phase: SelectionGesturePhase,
   point: (f64, f64),
 ) -> Option<Sample> {
+  let point = drag.beneath(point);
   group::layer_sample(state, drag, phase, point).unwrap_or_else(|| {
     resolve(
       state,

@@ -42,7 +42,7 @@ export function restoreRecordingTimelineOrder(
 }
 
 /** Whether any segment plays before one recorded earlier. */
-export const isRecordingTimelineReordered = (edit: RecordingTimelineEdit) =>
+const isRecordingTimelineReordered = (edit: RecordingTimelineEdit) =>
   edit.segments.some(
     (segment, index) =>
       index > 0 && segment.sourceStart < edit.segments[index - 1].sourceStart,

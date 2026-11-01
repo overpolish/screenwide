@@ -61,11 +61,14 @@ export const unpinnedClip = ({
   ...clip
 }: RecordingAnnotationClip): RecordingAnnotationClip => clip;
 
-/** How many places `pin` was put by hand besides the one it was made on. */
+/** The moments, in source ms, `pin` was put by hand besides the one it was
+ * made on. */
 export const pinCorrections = (pin: RecordingAnnotationPin) =>
-  pin.keyframes.filter(
-    (keyframe) => Math.abs(keyframe.ms - pin.pinnedMs) > KEYFRAME_SLACK_MS,
-  ).length;
+  pin.keyframes
+    .filter(
+      (keyframe) => Math.abs(keyframe.ms - pin.pinnedMs) > KEYFRAME_SLACK_MS,
+    )
+    .map((keyframe) => keyframe.ms);
 
 /** `pin` with every correction taken away, keeping the keyframe it was made
  * on. */
@@ -76,18 +79,6 @@ export const clearedPinCorrections = (
     (keyframe) => Math.abs(keyframe.ms - pin.pinnedMs) <= KEYFRAME_SLACK_MS,
   ),
   pinnedMs: pin.pinnedMs,
-});
-
-/** `pin` moved `deltaMs` later, as its clip is. */
-export const shiftedPin = (
-  pin: RecordingAnnotationPin,
-  deltaMs: number,
-): RecordingAnnotationPin => ({
-  keyframes: pin.keyframes.map((keyframe) => ({
-    ...keyframe,
-    ms: Math.max(0, Math.round(keyframe.ms + deltaMs)),
-  })),
-  pinnedMs: Math.max(0, Math.round(pin.pinnedMs + deltaMs)),
 });
 
 /** `pin` without its keyframe at `ms`. The last keyframe is the pin itself

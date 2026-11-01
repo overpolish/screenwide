@@ -3,16 +3,18 @@
 
 //! Moving an open panel with the window it hangs off.
 
-use tauri::{AppHandle, LogicalPosition, Manager};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager};
 
 use super::{context_for, panel_label, STANDALONE_LISTBOX};
 
 /// Re-places an open panel against its parent's content without touching its
-/// attachment, level or visibility.
+/// attachment, level or visibility, and resizes it where `size` is given.
 ///
 /// A sticky panel is placed against the preview rather than the window frame,
-/// so an editor resize moves the corner it hangs from. Re-showing it would
-/// re-attach and re-order the window for a change that is only a position.
+/// so an editor resize moves the corner it hangs from, and a panel covering
+/// the preview, as the editor's island does, takes its new size too.
+/// Re-showing it would re-attach and re-order the window for a change that is
+/// only a position and a size.
 // Keep this command synchronous so Tauri runs it on the main thread, like
 // show/hide. An async worker can hold STANDALONE_LISTBOX while a window query
 // waits for the main thread, which may itself be opening a panel and waiting
@@ -23,6 +25,7 @@ pub fn move_standalone_listbox(
   parent_window_label: String,
   offset: LogicalPosition<f64>,
   panel: Option<String>,
+  size: Option<LogicalSize<f64>>,
   // Windows places against the work area, not the page.
   #[cfg_attr(target_os = "windows", allow(unused_variables))] page_height: Option<f64>,
 ) -> tauri::Result<()> {
@@ -46,7 +49,7 @@ pub fn move_standalone_listbox(
     } else {
       super::placement_windows::PlacementPolicy::WorkArea
     };
-    super::placement_windows::place(&app, &parent, &window, offset, None, policy)?;
+    super::placement_windows::place(&app, &parent, &window, offset, size, policy)?;
     if let Some(context) = super::standalone_listbox_contexts().get_mut(&panel) {
       context.offset = offset;
     }
@@ -56,9 +59,17 @@ pub fn move_standalone_listbox(
   {
     // The offset is relative to where the page begins, below any title bar.
     let parent_position = super::super::geometry::page_origin(&parent, page_height)?;
-    let size = window
-      .outer_size()?
-      .to_logical::<f64>(window.scale_factor()?);
+    if let Some(size) = size {
+      window.set_size(size)?;
+    }
+    let size = size.map_or_else(
+      || {
+        window
+          .scale_factor()
+          .and_then(|scale| Ok(window.outer_size()?.to_logical::<f64>(scale)))
+      },
+      Ok,
+    )?;
     let mut position =
       LogicalPosition::new(parent_position.x + offset.x, parent_position.y + offset.y);
     if let Some(monitor) = parent.current_monitor()?.or(app.primary_monitor()?) {

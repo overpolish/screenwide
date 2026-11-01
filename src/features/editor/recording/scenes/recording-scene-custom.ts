@@ -20,7 +20,15 @@ import {
 /** The furthest a box may grow and shrink, as shares of the canvas. The twins
  * of the limits in `src-tauri/src/editor/scenes/model.rs`. */
 const MAX_BOX_SHARE = 4;
-const MIN_BOX_SHARE = 0.02;
+export const MIN_BOX_SHARE = 0.02;
+
+/** How far a select gesture may scale `box`: as far as keeps it between the
+ * smallest and largest a box may be. */
+const heldScale = (box: SceneBox, scale: number) => {
+  const low = MIN_BOX_SHARE / Math.max(Math.min(box.width, box.height), 1e-9);
+  const high = MAX_BOX_SHARE / Math.max(Math.max(box.width, box.height), 1e-9);
+  return Math.min(high, Math.max(low, scale));
+};
 
 /**
  * The box a select gesture leaves: its corner moved `delta` shares of the
@@ -32,9 +40,7 @@ export const movedSceneBox = (
   box: SceneBox,
   { delta, scale }: { delta: { x: number; y: number }; scale: number },
 ): SceneBox => {
-  const low = MIN_BOX_SHARE / Math.max(Math.min(box.width, box.height), 1e-9);
-  const high = MAX_BOX_SHARE / Math.max(Math.max(box.width, box.height), 1e-9);
-  const held = Math.min(high, Math.max(low, scale));
+  const held = heldScale(box, scale);
   const width = box.width * held;
   const height = box.height * held;
   return {
@@ -43,6 +49,32 @@ export const movedSceneBox = (
     x: Math.min(1 - width / 2, Math.max(-width / 2, box.x + delta.x)),
     y: Math.min(1 - height / 2, Math.max(-height / 2, box.y + delta.y)),
   };
+};
+
+/**
+ * `movedSceneBox` by a gesture on the box padded outwards by `pad` shares of
+ * the canvas on each side, where a scene's inset draws the handles. The
+ * padding scales with the box, so the box's corner travels the padding's
+ * growth further than the padded corner the gesture reports. The twin of
+ * `SceneBox::moved_padded`.
+ */
+export const movedPaddedSceneBox = (
+  box: SceneBox,
+  {
+    delta,
+    pad,
+    scale,
+  }: {
+    delta: { x: number; y: number };
+    pad: { x: number; y: number };
+    scale: number;
+  },
+): SceneBox => {
+  const grown = heldScale(box, scale) - 1;
+  return movedSceneBox(box, {
+    delta: { x: delta.x + pad.x * grown, y: delta.y + pad.y * grown },
+    scale,
+  });
 };
 
 /**

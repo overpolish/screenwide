@@ -11,6 +11,7 @@ import {
   useAnnotationDefaults,
   useAnnotationImageDefault,
   useAnnotationTextLookDefault,
+  useAnnotationZoomDefault,
 } from "../../annotations/annotation-defaults";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { recordingTimelinePlaybackRanges } from "../../timeline/recording-timeline-playback";
@@ -28,7 +29,8 @@ import { RecordingAnnotationClip } from "./recording-annotations";
  * A fresh annotation's dress and whether it animates both travel with the
  * clips the native tool draws from; animation is the annotation's own
  * property, so it rides beside the style rather than inside it, and so do
- * where a fresh counter's tail points and the picture a fresh image shows.
+ * where a fresh counter's tail points, the zoom a fresh lens is drawn at and
+ * the picture a fresh image shows.
  * The dress is the tool's own: a disc and a stroke are different
  * measurements, so the size the counter tool sends is the one counters were
  * last drawn at.
@@ -55,6 +57,7 @@ export function useRecordingAnnotationSync({
   const counterAngle = useAnnotationAngleDefault();
   const image = useAnnotationImageDefault();
   const textLook = useAnnotationTextLookDefault();
+  const zoom = useAnnotationZoomDefault();
   useEffect(() => {
     if (sessionId === null) return;
     void invoke("set_recording_preview_annotations", {
@@ -68,6 +71,7 @@ export function useRecordingAnnotationSync({
       selectedIds: [...selectedIds],
       sessionId,
       textLook,
+      zoom,
     }).catch((cause: unknown) => {
       console.error("Could not update recording annotations", cause);
     });
@@ -83,5 +87,6 @@ export function useRecordingAnnotationSync({
     sourceDurationMs,
     textLook,
     trackId,
+    zoom,
   ]);
 }

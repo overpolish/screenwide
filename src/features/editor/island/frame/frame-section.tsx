@@ -31,7 +31,7 @@ export function FrameSection(props: FrameIslandProps) {
   return (
     <IslandFlow className="flex flex-col gap-separate">
       <AnnotationLine key="size">
-        <div aria-label={t("editor-panels-size")} role="group">
+        <div aria-label={t("editor-island-size")} role="group">
           <DimensionsField
             height={props.height}
             onChange={props.onSizeChange}

@@ -33,7 +33,7 @@ function PickMark({ pick }: { pick: Pick }) {
       {pick.following === null ? null : (
         <span className="absolute inset-0 flex items-center justify-center">
           <CircularProgress
-            aria-label={t("editor-panels-camera-object-following")}
+            aria-label={t("editor-island-camera-object-following")}
             size="small"
             value={pick.following * 100}
           />
@@ -97,7 +97,7 @@ export function CameraObjectsLine({
   }, [chosen]);
   const { away, shown, slide } = useTileMotion();
   return (
-    <ControlRow title={t("editor-panels-camera-objects")}>
+    <ControlRow title={t("editor-island-camera-objects")}>
       {(controlProps) => (
         <div {...controlProps} className="min-w-0" role="group">
           {/* The strip, the bin and Pick each come and go as objects are
@@ -129,8 +129,8 @@ export function CameraObjectsLine({
                         <IconToggleButton
                           aria-label={
                             pick.keep
-                              ? t("editor-panels-camera-object-kept")
-                              : t("editor-panels-camera-object-removed")
+                              ? t("editor-island-camera-object-kept")
+                              : t("editor-island-camera-object-removed")
                           }
                           data-object={pick.id}
                           isSelected={pick.id === chosen}
@@ -148,10 +148,10 @@ export function CameraObjectsLine({
             ) : null}
             {chosen === null ? null : (
               <ConfirmActionButton
-                confirmLabel={t("editor-panels-camera-object-confirm-remove")}
+                confirmLabel={t("editor-island-camera-object-confirm-remove")}
                 icon={<Trash2 aria-hidden />}
                 key="bin"
-                label={t("editor-panels-camera-object-remove")}
+                label={t("editor-island-camera-object-remove")}
                 onConfirm={() => {
                   onRemove(chosen);
                 }}
@@ -165,8 +165,8 @@ export function CameraObjectsLine({
               }}
             >
               {isPicking
-                ? t("editor-panels-camera-objects-done")
-                : t("editor-panels-camera-objects-pick")}
+                ? t("editor-island-camera-objects-done")
+                : t("editor-island-camera-objects-pick")}
             </Button>
           </IslandFlow>
         </div>

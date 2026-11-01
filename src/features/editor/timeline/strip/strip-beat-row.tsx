@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { cn } from "../../../../lib/styling";
 import { BeatClip } from "../beat-clip/beat-clip";
 import { type TimelineBeat } from "../beat-clip/beat-label";
 import { type TimelineCaption } from "../caption-lane/caption-line";
@@ -34,7 +35,8 @@ export type StripBeat = {
   isHidden?: boolean;
   /** Its sound, as peaks from 0 to 1. */
   peaks?: number[];
-  /** The screen at the beat, or null while it is read from the video. */
+  /** The screen at the beat, or null while it is read from the video;
+   * none where the screen is not in the export. */
   thumbnail?: string | null;
 };
 
@@ -74,18 +76,22 @@ export type StripBeatRowProps = {
   onLullTrim: (id: string, end: number) => void;
   /** Told the cuts a seam puts back. */
   onRestore: (ids: string[]) => void;
-  onSeek: (seconds: number) => void;
-  onSelect: (selection: StripSelection | null) => void;
+  /** Told what is chosen; `isGathered` where Shift took it in or left it
+   * out, which leaves the playhead where it is. */
+  onSelect: (selection: StripSelection | null, isGathered?: boolean) => void;
   pictureAspect: number;
   scale: TimelineScale;
   selection: StripSelection | null;
   /** The track's width, in px. */
   width: number;
+  /** Classes for the row, whose children are the beats and lulls. */
+  className?: string;
 };
 
 export function StripBeatRow({
   beats,
   captions,
+  className,
   cuts,
   draft,
   isAltHeld,
@@ -97,7 +103,6 @@ export function StripBeatRow({
   onLullPlayChange,
   onLullTrim,
   onRestore,
-  onSeek,
   onSelect,
   pictureAspect,
   scale,
@@ -107,11 +112,9 @@ export function StripBeatRow({
   const chosenRange = selection?.kind === "range" ? selection : null;
   const spanOf = ({ id, kind }: StripItem) =>
     (kind === "beat" ? beats : lulls).find((each) => each.id === id)?.span;
-  /** Chooses an item, or with Shift takes it in or leaves it out; true if
-   * Shift was held. */
+  /** Chooses an item, or with Shift takes it in or leaves it out. */
   const choose = (event: React.MouseEvent, item: StripItem) => {
-    onSelect(event.shiftKey ? toggled(selection, item) : item);
-    return event.shiftKey;
+    onSelect(event.shiftKey ? toggled(selection, item) : item, event.shiftKey);
   };
   const isLifted = (span: Span) =>
     lifted?.some(
@@ -127,7 +130,7 @@ export function StripBeatRow({
     );
   };
   return (
-    <div className="relative h-11">
+    <div className={cn("relative h-11", className)}>
       {lulls.map((lull) => (
         <Spring
           isAltHeld={isAltHeld}
@@ -165,11 +168,8 @@ export function StripBeatRow({
           onGrab={(event) => {
             grab(event, { id: beat.id, kind: "beat" }, beat.span);
           }}
-          // The playhead goes to the beat, so the picture shows it; with
-          // Shift, it stays where it is.
           onPress={(event) => {
-            if (!choose(event, { id: beat.id, kind: "beat" }))
-              onSeek(beat.span.start);
+            choose(event, { id: beat.id, kind: "beat" });
           }}
           peaks={beat.peaks}
           pictureAspect={pictureAspect}

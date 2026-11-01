@@ -29,14 +29,19 @@ impl PreviewPlayerManager {
       .preview_surface
       .as_ref()
       .ok_or_else(|| "The recording preview surface is unavailable".to_owned())?;
-    let composition = sources
+    let mut composition = sources
       .composition_settings
       .as_ref()
       .ok_or_else(|| "The recording preview composition is unavailable".to_owned())?
       .read()
       .map_err(|_| "The recording preview composition is unavailable".to_owned())?
       .clone();
-    let composition = self.arranged_composition(&composition);
+    let placed = sources.arrange_scene(&mut composition, self.position_ms, 0.0);
+    if let Some(selection) =
+      sources.selection_for_frame(&composition, placed, (self.position_ms, 0.0))
+    {
+      surface.set_selection(Some(selection));
+    }
     let baked = composition.bake_camera && sources.camera_path.is_some();
     let mut panes = vec![(0, &composition.recording_output.primary)];
     if !baked && sources.camera_path.is_some() {

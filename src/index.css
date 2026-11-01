@@ -79,6 +79,20 @@
    pinned `dir="ltr"` in a right-to-left window: the timeline and the picture. */
 @custom-variant rtl (&:where(:dir(rtl)));
 @custom-variant ltr (&:where(:dir(ltr)));
+/* Hover as Tailwind has it, but not while the pointer is over the native
+   picture (`data-pointer-away`, `usePointerAway`). The picture lies over the
+   page, and WebKit drops the move that carries the pointer onto it, so the
+   element the pointer left would stay hovered until the pointer came back. */
+@custom-variant hover {
+  @media (hover: hover) {
+    &:hover:not(:root[data-pointer-away] *) {
+      @slot;
+    }
+  }
+}
+/* The same for what the page draws where it last saw the pointer, such as
+   the scene rail's ghost: hidden while the pointer is over the picture. */
+@custom-variant pointer-away (&:is(:root[data-pointer-away] *));
 
 @keyframes ocr-shine {
   to {

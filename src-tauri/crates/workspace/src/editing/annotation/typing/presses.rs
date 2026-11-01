@@ -54,7 +54,6 @@ pub(crate) fn caption_target_at(
   let caption = PreviewSelection {
     pane_index: 0,
     layer_id: CAPTIONS_LAYER_ID,
-    radius_disabled: 1,
     width: 1.0,
     height: 1.0,
     ..PreviewSelection::default()

@@ -4,8 +4,8 @@
 use super::arrow::bend::curve_midpoint;
 use super::counter::new_counter;
 use super::gesture::{
-  annotation_mode, drawing_kind, drawing_layer, next_annotation_id, AnnotationDragOrigin,
-  AnnotationHandle, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
+  annotation_mode, drawing_kind, drawing_layer, hidden_by_layer_above, next_annotation_id,
+  AnnotationDragOrigin, AnnotationHandle, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
 };
 use crate::{
   Annotation, AnnotationHead, AnnotationKind, AnnotationPoint, AnnotationShape, AnnotationStyle,
@@ -394,6 +394,16 @@ fn fresh_ids_do_not_repeat() {
   assert_ne!(next_annotation_id(), next_annotation_id());
 }
 
+/// `layers` with one press read the same on every picture, none turned.
+fn pressed(
+  layers: &[(u32, [f64; 4])],
+  point: (f64, f64),
+) -> impl DoubleEndedIterator<Item = (u32, [f64; 4], (f64, f64))> + '_ {
+  layers
+    .iter()
+    .map(move |&(layer, rect)| (layer, rect, point))
+}
+
 #[test]
 fn a_fresh_annotation_joins_the_topmost_picture_under_the_press() {
   // Two overlapping pictures, back to front, and the canvas frame over all.
@@ -402,8 +412,8 @@ fn a_fresh_annotation_joins_the_topmost_picture_under_the_press() {
     (1, [50.0, 50.0, 100.0, 100.0]),
     (u32::MAX, [0.0, 0.0, 300.0, 300.0]),
   ];
-  assert_eq!(drawing_layer(layers.into_iter(), (75.0, 75.0)), Some(1));
-  assert_eq!(drawing_layer(layers.into_iter(), (20.0, 20.0)), Some(0));
+  assert_eq!(drawing_layer(pressed(&layers, (75.0, 75.0))), Some(1));
+  assert_eq!(drawing_layer(pressed(&layers, (20.0, 20.0))), Some(0));
 }
 
 #[test]
@@ -414,11 +424,55 @@ fn a_fresh_annotation_on_the_frame_joins_the_nearest_picture() {
     (1, [200.0, 0.0, 100.0, 100.0]),
     (u32::MAX, [-50.0, -50.0, 400.0, 200.0]),
   ];
-  assert_eq!(drawing_layer(layers.into_iter(), (130.0, 50.0)), Some(0));
-  assert_eq!(drawing_layer(layers.into_iter(), (170.0, 50.0)), Some(1));
-  assert_eq!(drawing_layer(layers.into_iter(), (-40.0, -40.0)), Some(0));
+  assert_eq!(drawing_layer(pressed(&layers, (130.0, 50.0))), Some(0));
+  assert_eq!(drawing_layer(pressed(&layers, (170.0, 50.0))), Some(1));
+  assert_eq!(drawing_layer(pressed(&layers, (-40.0, -40.0))), Some(0));
   // Equally near both: the topmost takes it.
-  assert_eq!(drawing_layer(layers.into_iter(), (150.0, 50.0)), Some(1));
+  assert_eq!(drawing_layer(pressed(&layers, (150.0, 50.0))), Some(1));
   // With only the frame laid out, no picture takes it.
-  assert_eq!(drawing_layer(layers[2..].iter().copied(), (0.0, 0.0)), None);
+  assert_eq!(drawing_layer(pressed(&layers[2..], (0.0, 0.0))), None);
+}
+
+#[test]
+fn a_press_on_an_upright_picture_over_a_turned_one_joins_the_upright_one() {
+  // The back picture is turned: the press lands on it somewhere else than on
+  // the screen. Read in the back picture's space alone, the press would miss
+  // the front picture it lies on, and the annotation would be drawn under it.
+  let layers = [
+    (0, [0.0, 0.0, 400.0, 300.0], (40.0, 20.0)),
+    (1, [100.0, 100.0, 100.0, 100.0], (150.0, 150.0)),
+  ];
+  assert_eq!(drawing_layer(layers.into_iter()), Some(1));
+}
+
+#[test]
+fn an_annotation_under_a_picture_in_front_is_hidden_there() {
+  // The screen fills the canvas, a rounded camera stands in front of it, and
+  // the canvas frame covers both.
+  let layers = |press: (f64, f64)| {
+    [
+      (0, [0.0, 0.0, 400.0, 300.0], 0.0, press),
+      (1, [300.0, 200.0, 100.0, 100.0], 50.0, press),
+      (u32::MAX, [-50.0, -50.0, 500.0, 400.0], 0.0, press),
+    ]
+    .into_iter()
+  };
+  // On the camera, the screen's annotation is hidden, the camera's is not.
+  assert!(hidden_by_layer_above(layers((350.0, 250.0)), 0));
+  assert!(!hidden_by_layer_above(layers((350.0, 250.0)), 1));
+  // Beside the camera, and in its round corner, the screen shows.
+  assert!(!hidden_by_layer_above(layers((100.0, 100.0)), 0));
+  assert!(!hidden_by_layer_above(layers((305.0, 205.0)), 0));
+  // A layer not laid out is hidden by nothing.
+  assert!(!hidden_by_layer_above(layers((350.0, 250.0)), 7));
+}
+
+#[test]
+fn a_turned_picture_in_front_hides_where_its_turn_draws_it() {
+  // The front picture is read at the press as it lands on it upright.
+  let layers = [
+    (0, [0.0, 0.0, 400.0, 300.0], 0.0, (150.0, 150.0)),
+    (1, [100.0, 100.0, 100.0, 100.0], 0.0, (500.0, 500.0)),
+  ];
+  assert!(!hidden_by_layer_above(layers.into_iter(), 0));
 }

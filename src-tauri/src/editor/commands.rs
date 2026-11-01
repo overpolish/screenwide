@@ -158,16 +158,6 @@ pub fn delete_open_project(app: AppHandle, window: tauri::WebviewWindow) -> Resu
 }
 
 #[tauri::command]
-pub fn set_screenshot_radius(app: AppHandle, radius_percent: f64) -> Result<(), String> {
-  remember_screenshot_radius(&app, radius_percent).map(|_| ())
-}
-
-#[tauri::command]
-pub fn set_screenshot_background_radius(app: AppHandle, radius_percent: f64) -> Result<(), String> {
-  remember_screenshot_background_radius(&app, radius_percent).map(|_| ())
-}
-
-#[tauri::command]
 pub async fn browse_export_directory(
   app: AppHandle,
   window: tauri::WebviewWindow,

@@ -3,14 +3,9 @@
 
 import { create } from "zustand";
 
-import { EditorKind } from "../editor/types";
-
-import type {
-  PopupPanelTextTemplatesContent,
-  PopupPanelColorsContent,
-} from "./picker-content";
+import type { PopupPanelColorsContent } from "./picker-content";
 import type { PopupPanelIcon } from "./popup-panel-item-glyph";
-import type { NoteTranscript } from "../editor/timeline/moments/recording-moments";
+import type { PopupPanelIslandContent } from "../editor/island/host/editor-island-kind";
 
 type PopupPanelMode = "menu" | "select";
 
@@ -40,20 +35,6 @@ export type PopupPanelItem = {
   togglesInPlace?: boolean;
 };
 
-/** The editor tools that own a panel, with room for the background, camera and
- * audio panels that follow. "annotation" is the one that belongs to what is
- * selected rather than to a tool: it dresses the arrow or counter in hand. */
-export type ToolPanelKind =
-  | "annotation"
-  | "captions"
-  | "crop"
-  | "cursor"
-  | "frame"
-  | "keyboard"
-  | "scene"
-  | "selection"
-  | "transcript";
-
 /** A list of choices: the panel as it has always been. */
 export type PopupPanelListContent = {
   items: PopupPanelItem[];
@@ -72,50 +53,21 @@ export type PopupPanelListContent = {
   showsAllItems?: boolean;
 };
 
-/** An editor tool's own controls, rendered by the workspace that owns them
- * and kept open while the user works in the editor. */
-export type PopupPanelToolContent = {
-  kind: "tool";
-  tool: ToolPanelKind;
-  workspace: EditorKind;
-};
-
-/** A moment's voice note, to play, drawn from what the editor read of it.
- * The panel fetches the sound itself. */
-export type PopupPanelNoteContent = {
-  artifactId: number;
-  /** `#rrggbb`, the moment's kind's. */
-  color: string;
-  durationMs: number;
-  kind: "note";
-  /** Which moment it is, counting from zero in the order they were placed. */
-  moment: number;
-  name: string;
-  /** What was said, as far as transcription has got; null before anything
-   * is known of it. */
-  transcript: NoteTranscript | null;
-  /** Peak levels from 0 to 1. */
-  waveform: number[];
-};
-
 export type PopupPanelContent =
-  | PopupPanelTextTemplatesContent
-  | PopupPanelColorsContent
-  | PopupPanelListContent
-  | PopupPanelNoteContent
-  | PopupPanelToolContent;
+  PopupPanelColorsContent | PopupPanelIslandContent | PopupPanelListContent;
 
 /** The one panel window every pop-up button borrows. A caller that names no
  * panel means this one. */
 export const SHARED_POPUP_PANEL = "standalone-listbox";
 
 export type OpenPopupPanel = {
-  /** What the panel window draws: a list of choices, or a tool's controls. */
+  /** What the panel window draws: a list of choices, a picker, or the
+   * editor's island. */
   content: PopupPanelContent;
   focusContents: boolean;
   id: string;
-  /** Names a list of choices for assistive technology. A tool panel is the
-   * tool in hand and carries no chrome of its own to name. */
+  /** Names a list of choices for assistive technology. The island carries
+   * no chrome of its own to name. */
   label?: string;
 };
 
@@ -137,7 +89,7 @@ type PopupPanelSelection = {
 
 type PopupPanelStore = {
   /** What each panel window is showing, keyed by its window label. The
-   * editors have one each, so a tool in hand in one workspace cannot take the
+   * editors have one each, so the island in one workspace cannot take the
    * other's panel away, and neither disturbs the shared listbox. */
   active: Record<string, OpenPopupPanel | null>;
   close: (panel: string) => void;
@@ -170,7 +122,7 @@ export const activePopupPanel = (
  * only ever writes the panel it changes. Every window runs in a process of
  * its own and reads the others' writes a moment late; writing the whole map
  * from such a copy put back stale entries for the panels it did not touch,
- * which emptied a tool panel, or swapped it, at a pick in a pop-up. */
+ * which emptied an editor's panel, or swapped it, at a pick in a pop-up. */
 const PANEL_KEY_PREFIX = "screenwide-popup-panel:";
 const SELECTION_KEY = "screenwide-popup-panel-selection";
 /** Where every panel was once kept together, cleared away on load. */

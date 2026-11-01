@@ -72,7 +72,7 @@ pub(super) fn travelled(state: &mut SurfaceState, drag: Drag, samples: &mut Vec<
       .retargeted(TARGET_GROUP, HANDLE_BODY)
       .with_press(Press::Group, item.layer_id),
     _ => {
-      samples.extend(super::choose(state, index, drag.origin));
+      samples.extend(super::choose(state, index, drag.beneath(drag.origin)));
       drag.with_press(Press::Ordinary, -1)
     }
   }

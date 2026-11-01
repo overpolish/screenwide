@@ -3,9 +3,10 @@
 
 import { Dispatch, RefObject, SetStateAction, useMemo, useRef } from "react";
 
-import { useAnnotationDraft } from "../../annotations/annotation-draft";
-import { useRegisterPreviewFit } from "../../preview/preview-fit-context";
-import { usePreviewZoom } from "../../preview/use-preview-zoom";
+import {
+  recordingBetween,
+  useTweenedOutput,
+} from "../../preview/use-tweened-output";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -15,11 +16,7 @@ import { useRecordingTimelineBlade } from "../../timeline/editing/use-recording-
 import { useRecordingTrimPreview } from "../../timeline/editing/use-recording-trim-preview";
 import { Playhead } from "../../timeline/scrub-playhead";
 import { useRecordingTimelineThumbnails } from "../../timeline/tracks/use-recording-timeline-thumbnails";
-import {
-  EditorToolId,
-  isAnnotationTool,
-} from "../../tool-panels/tool-registry";
-import { useToolPanelFollowsTool } from "../../tool-panels/use-tool-panel-follows-tool";
+import { isAnnotationTool } from "../../tool-panels/tool-registry";
 import { RecordingVideoTrackId } from "../../types";
 import { useRecordingAnnotations } from "../annotations/use-recording-annotations";
 import { useRecordingScenes } from "../scenes/use-recording-scenes";
@@ -27,7 +24,7 @@ import { useSceneReframeDisplay } from "../scenes/use-scene-reframe-display";
 import { useRecordingPreviewPlayer } from "../use-recording-preview-player";
 
 import { isOverlayLayer, OverlayLayerId } from "./overlay-layers";
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { usePausedPreviewPosition } from "./use-paused-preview-position";
 import { useRecordingCropPreview } from "./use-recording-crop-preview";
 import { useRecordingPreviewPanes } from "./use-recording-preview-panes";
@@ -35,10 +32,6 @@ import { useRecordingPreviewSelection } from "./use-recording-preview-selection"
 import { useRecordingRecenter } from "./use-recording-recenter";
 
 import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
-
-/** The toolbar's own name for a tool, in the registry's vocabulary. */
-const recordingToolId = (tool: RecordingCanvasTool): EditorToolId | null =>
-  tool === "canvas" ? "frame" : tool;
 
 /** Playback and the timeline under it: the native player, the annotations on
  * the clip, the recentre analysis, and the pane layout the picture is drawn
@@ -56,13 +49,11 @@ export function useRecordingPreviewTransport(
     previewPlayingRef,
     previewPositionMs,
     recenterRefreshRef,
-    reportZoom,
     screenCanvasRef,
     selectedStreamIndices,
     selectedVideoTracks,
     selection,
     setPreviewPositionMs,
-    zoomRequest,
   }: {
     activeVideoTrack: RecordingVideoTrackId | null;
     cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
@@ -77,16 +68,14 @@ export function useRecordingPreviewTransport(
     previewPlayingRef: RefObject<boolean>;
     previewPositionMs: number;
     recenterRefreshRef: RefObject<
-      (crop: ScreenshotOutputSettings["sourceCrop"]) => void
+      (crop: ScreenshotOutputSettings["sourceCrop"]) => Promise<void>
     >;
-    reportZoom: ReturnType<typeof usePreviewZoom>["reportZoom"];
     screenCanvasRef: RefObject<HTMLCanvasElement | null>;
     selectedStreamIndices: number[];
     /** The video tracks turned on, which leave out one the user turned off. */
     selectedVideoTracks: Set<RecordingVideoTrackId>;
     selection: ReturnType<typeof useRecordingPreviewSelection>;
     setPreviewPositionMs: Dispatch<SetStateAction<number>>;
-    zoomRequest: ReturnType<typeof usePreviewZoom>["zoomRequest"];
   },
 ) {
   const {
@@ -137,6 +126,19 @@ export function useRecordingPreviewTransport(
       previewSourceDimensions,
       selection,
     });
+  // A setting chosen on an island is drawn as the picture moving to it, the
+  // camera drawn into it moving with the screen.
+  const drawn = useTweenedOutput(
+    useMemo(
+      () => ({
+        cameraOverlay: previewCameraOverlay,
+        recordingOutput: previewRecordingOutput,
+      }),
+      [previewCameraOverlay, previewRecordingOutput],
+    ),
+    { part: "picture", workspace: "recording" },
+    recordingBetween,
+  );
   // The tool the annotation chrome is drawn from. A camera saved as a
   // separate file is not drawn at all, so selecting it puts the tool down; a
   // camera drawn into the video carries annotations of its own, as the
@@ -156,7 +158,7 @@ export function useRecordingPreviewTransport(
     audioTrackVolumes,
     bakeCamera,
     cameraCanvasRef,
-    cameraOverlay: previewCameraOverlay,
+    cameraOverlay: drawn.cameraOverlay,
     cursorEffects,
     enabledStreamIndices: selectedStreamIndices,
     isEditorSuspended,
@@ -170,7 +172,13 @@ export function useRecordingPreviewTransport(
       if (!previewPlayingRef.current) setPreviewPositionMs(positionMs);
     },
     onSelectionChange: (paneIndex) => {
-      if (paneIndex === null) return;
+      // A click on nothing with Select in hand lets the track go, and with it
+      // the Screen or Camera mode it opened.
+      if (paneIndex === null) {
+        if (canvasTool === "select" && activeVideoTrack !== null)
+          onSelectedTrackChange?.(null);
+        return;
+      }
       // An overlay takes its size and place from its tool, so a press on it
       // chooses it and opens that tool rather than taking up a pane.
       if (isOverlayLayer(paneIndex)) {
@@ -183,14 +191,12 @@ export function useRecordingPreviewTransport(
       if (composedVideoTracks.has(trackId)) onSelectedTrackChange?.(trackId);
     },
     onSelectionGesture: selection.applyGesture,
-    onZoomChange: reportZoom,
-    recordingOutput: previewRecordingOutput,
+    recordingOutput: drawn.recordingOutput,
     screenCanvasRef,
     selection: selection.selectionOverlay,
     selectionTargets: selection.selectionTargets,
     sourceDurationMs: durationMs,
     timelineEdit: recordingTimelineEdit,
-    zoomRequest,
   });
   const annotationEdit = useMemo(
     () => recordingTimelineEdit ?? createRecordingTimelineEdit(artifactId),
@@ -209,6 +215,7 @@ export function useRecordingPreviewTransport(
       timelineBlade.blade.selectSegment(null);
       onSelectedTrackChange?.(track);
     },
+    playhead,
     screenCaptureScale: props.screenCaptureScale ?? 1,
     sessionId: player.sessionId,
     shownTracks: selectedVideoTracks,
@@ -237,13 +244,6 @@ export function useRecordingPreviewTransport(
     sourceDurationMs: durationMs,
   });
   useSceneReframeDisplay(player.sessionId, selection);
-  useToolPanelFollowsTool(
-    "recording",
-    recordingToolId(canvasTool),
-    annotations.hasSelection,
-  );
-  useAnnotationDraft("recording", recordingToolId(canvasTool));
-  useRegisterPreviewFit(player);
   previewPlayingRef.current = player.isPlaying;
   usePausedPreviewPosition(player, previewPositionMs, setPreviewPositionMs);
   recenterRefreshRef.current = useRecordingRecenter({

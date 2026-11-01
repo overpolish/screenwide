@@ -7,6 +7,7 @@ import { fn } from "storybook/test";
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { useRestingAction } from "../../../../storybook/use-resting-action";
 import { createPlayhead } from "../scrub-playhead";
+import { type ScrubPhase } from "../timeline-seek";
 import { STORY_TRACK_PX } from "../timeline-story-fixtures";
 
 import { TimelinePlayhead } from "./timeline-playhead";
@@ -21,7 +22,7 @@ function StoryPlayhead({
 }: {
   /** Where the playhead starts, as a share of the recording. */
   at: number;
-  onScrub: (event: React.PointerEvent) => void;
+  onScrub: (event: React.PointerEvent, phase: ScrubPhase) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [playhead] = useState(createPlayhead);
@@ -33,8 +34,8 @@ function StoryPlayhead({
     <div className="pt-4" style={{ width: STORY_TRACK_PX }}>
       <div className="relative h-24" ref={ref}>
         <TimelinePlayhead
-          onScrub={(event) => {
-            logScrub(event);
+          onScrub={(event, phase) => {
+            logScrub(event, phase);
             const box = ref.current?.getBoundingClientRect();
             if (!box) return;
             const share = Math.min(

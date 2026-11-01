@@ -16,7 +16,6 @@ pub(super) fn apply(
   gesture: &mut EditorGesture,
   selection: &mut PreviewSelection,
   sample: MoveSample,
-  zoom: &mut Option<f64>,
 ) {
   let MoveSample {
     pane,
@@ -155,7 +154,6 @@ pub(super) fn apply(
         }
         rebase_workspace_fit(state, &start_state);
         state.frame_resize = Some(start_state);
-        *zoom = Some(state.workspace_transform.zoom);
       }
       if let Some(fit) = state.move_auto_fit.as_mut() {
         fit.active = true;

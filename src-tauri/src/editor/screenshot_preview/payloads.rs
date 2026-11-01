@@ -17,6 +17,9 @@ pub struct ScreenshotSurfacePane {
 pub struct ScreenshotSelectionOverlay {
   #[serde(default)]
   pub(super) crop_mode: bool,
+  /// Whether the crop keeps its shape as its handles are pulled.
+  #[serde(default)]
+  pub(super) crop_keeps_shape: bool,
   #[serde(default)]
   pub(super) image: Option<PreviewSurfaceRect>,
   pub(super) layer_id: Option<u32>,
@@ -41,6 +44,7 @@ impl ScreenshotSelectionOverlay {
       recenter_x: self.recenter_bounds.map_or(0.0, |bounds| bounds.x),
       recenter_y: self.recenter_bounds.map_or(0.0, |bounds| bounds.y),
       crop_mode: u32::from(self.crop_mode),
+      crop_keeps_shape: u32::from(self.crop_keeps_shape),
       image_height: self.image.map_or(0.0, |image| image.height),
       image_width: self.image.map_or(0.0, |image| image.width),
       image_x: self.image.map_or(0.0, |image| image.x),
@@ -56,13 +60,6 @@ impl ScreenshotSelectionOverlay {
     }
     .turned_by(self.rotation)
   }
-}
-
-#[derive(Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct ScreenshotPreviewTransformEvent {
-  pub(super) session_id: u64,
-  pub(super) zoom_percent: f64,
 }
 
 #[derive(Clone, serde::Serialize, ts_rs::TS)]

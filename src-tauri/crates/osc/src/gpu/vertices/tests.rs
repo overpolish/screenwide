@@ -247,8 +247,6 @@ fn selection_emits_the_frame_passes_then_eight_handles() {
     VIEW,
     Rect::from_xywh(40.0, 30.0, 200.0, 100.0),
     2.0,
-    0.0,
-    false,
   );
 
   assert_eq!(out.len(), 96);
@@ -256,25 +254,13 @@ fn selection_emits_the_frame_passes_then_eight_handles() {
     quad_kinds(&out),
     vec![2, 2, 2, 2, 0, 0, 0, 0, 3, 16, 3, 16, 3, 16, 3, 16]
   );
-
-  let mut rounded = Vec::new();
-  add_selection(
-    &mut rounded,
-    VIEW,
-    Rect::from_xywh(40.0, 30.0, 200.0, 100.0),
-    2.0,
-    50.0,
-    true,
-  );
-  assert_eq!(rounded.len(), 102);
-  assert_eq!(quad_kinds(&rounded).last(), Some(&3));
 }
 
 #[test]
 fn selection_and_crop_share_identical_handle_primitives() {
   let frame = Rect::from_xywh(40.0, 30.0, 200.0, 100.0);
   let mut selection = Vec::new();
-  add_selection(&mut selection, VIEW, frame, 2.0, 0.0, false);
+  add_selection(&mut selection, VIEW, frame, 2.0);
   let mut crop = Vec::new();
   // Image equal to crop emits no shade, leaving four marquee quads followed
   // by the same shared handle run Export and Region both consume.

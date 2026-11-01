@@ -117,7 +117,7 @@ export function DimensionsField({
   return (
     <div className="flex items-center gap-inline">
       <NumberField
-        aria-label={t("editor-panels-width")}
+        aria-label={t("editor-island-width")}
         className={fieldWidth}
         isDisabled={isDisabled}
         onChange={(value) => {
@@ -128,7 +128,7 @@ export function DimensionsField({
         value={width}
       />
       <IconToggleButton
-        aria-label={t("editor-panels-keep-aspect-ratio")}
+        aria-label={t("editor-island-keep-aspect-ratio")}
         isDisabled={isDisabled}
         isSelected={linked}
         off={<Unlink />}
@@ -137,7 +137,7 @@ export function DimensionsField({
         <Link />
       </IconToggleButton>
       <NumberField
-        aria-label={t("editor-panels-height")}
+        aria-label={t("editor-island-height")}
         className={fieldWidth}
         isDisabled={isDisabled}
         onChange={(value) => {

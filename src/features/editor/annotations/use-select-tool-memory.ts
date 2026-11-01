@@ -7,10 +7,11 @@ import { useRef } from "react";
  * The annotations in hand when the select tool is put down, chosen again
  * when it is taken back up, so turning it off and on again does not hand the
  * choice to the layer underneath. Nothing is put back over a choice made in
- * the meantime.
+ * the meantime, nor after a mode taken up in between let the choice go.
  *
- * Answers the call each tool change makes, with the tool it leaves and the
- * one it takes up.
+ * Answers the call each tool change makes, with the tool it leaves, the one
+ * it takes up, and whether that one is a mode, which lets go of what was
+ * chosen for good.
  */
 export function useSelectToolMemory(
   selectedIds: ReadonlySet<string>,
@@ -19,7 +20,11 @@ export function useSelectToolMemory(
   const rememberedRef = useRef<readonly string[]>([]);
   const selectedRef = useRef(selectedIds);
   selectedRef.current = selectedIds;
-  return (from: string | null, to: string | null) => {
+  return (from: string | null, to: string | null, isMode = false) => {
+    if (isMode) {
+      rememberedRef.current = [];
+      return;
+    }
     if (from === "select" && to !== "select") {
       rememberedRef.current = [...selectedRef.current];
       return;

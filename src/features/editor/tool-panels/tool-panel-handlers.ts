@@ -20,10 +20,11 @@ import {
 import { CursorEffectSettings, KeyboardEffectSettings } from "../types";
 
 import { Background, BackgroundPreset } from "./frame/background/background";
-import { SelectionPlacementPatch } from "./selection-placement";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
+import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
+import type { CropAspect } from "../island/crop-aspect-choice";
 
 /**
  * What a tool panel can ask for. Each one is an editor handler that already
@@ -47,9 +48,14 @@ export type ToolPanelHandlers = {
   onAnnotationImagePlayChange?: (play: ImagePlayChange) => void;
   /** Sway the chosen image over its clip, or stand it still. */
   onAnnotationImageSwayChange?: (sway: boolean) => void;
+  /** Turn the chosen focus into a spotlight, or the spotlight into a focus. */
+  onAnnotationKindChange?: (kind: "focus" | "spotlight") => void;
   /** Turn the chosen annotation round, through the same commit path the drag on
    * the picture uses. */
   onAnnotationLookChange?: (look: TextStyle) => void;
+  /** Pin the chosen annotation to its content, let it go, say its content
+   * is out of view or back at the playhead, or take its corrections away. */
+  onAnnotationPin?: (action: AnnotationPinAction) => void;
   onAnnotationReverse?: () => void;
   /** Turn the chosen image, a field at a time, in degrees about each axis. */
   onAnnotationRotationChange?: (rotation: Partial<SceneRotation>) => void;
@@ -60,11 +66,10 @@ export type ToolPanelHandlers = {
   /** Dress the chosen annotation, a field at a time, through the same commit
    * path the drag on the picture uses. */
   onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;
+  /** Set how many times the chosen lens, or the next one, enlarges. */
+  onAnnotationZoomChange?: (zoom: number) => void;
   /** Delete every chosen annotation, in one edit. */
   onAnnotationsDelete?: () => void;
-  /** Play the selected audio track this much louder or quieter than it was
-   * recorded, in decibels. */
-  onAudioVolumeChange?: (decibels: number) => void;
   /** Bring the selected microphone to a steady loudness, or play it as
    * recorded. */
   onAutoVolumeChange?: (enabled: boolean) => void;
@@ -72,9 +77,6 @@ export type ToolPanelHandlers = {
   onBackgroundChange?: (background: Background) => void;
   onBackgroundPresetRemove?: (id: string) => void;
   onBackgroundPresetSave?: (preset: BackgroundPreset) => void;
-  /** Draw the camera into the screen's picture, or carry it as a track of its
-   * own. The placement of each is carried across the change. */
-  onBakeCameraChange?: (bake: boolean) => void;
   /** Ask for a picture to put behind the person on camera. */
   onCameraBackgroundChoose?: () => void;
   /** Download the model taking the camera's background away needs. */
@@ -94,13 +96,13 @@ export type ToolPanelHandlers = {
   onCaptionDefaultsChange?: (patch: CaptionDefaultsPatch) => void;
   /** Show the captions or set them otherwise, as one edit. */
   onCaptionsChange?: (patch: CaptionsPatch) => void;
+  /** Delete the shortcuts chosen in the strip's shortcut lane. */
+  onChosenShortcutsDelete?: () => void;
+  /** Give the crop a shape to keep, or let it go free. */
+  onCropAspectChange?: (aspect: CropAspect) => void;
   /** Show the whole source again, the committed crop taken away. */
   onCropReset?: () => void;
-  /** Cut a crop of the size a field asked for, in source pixels. */
-  onCropSizeChange?: (size: { height?: number; width?: number }) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
-  /** Take every stroke off the picture being edited. */
-  onDrawingsClear?: () => void;
   /** Round the output canvas corners by this share of its shorter side. */
   onFrameRadiusChange?: (radius: number) => void;
   onFrameReset?: () => void;
@@ -110,6 +112,11 @@ export type ToolPanelHandlers = {
   onKeyboardEffectsChange?: (settings: Partial<KeyboardEffectSettings>) => void;
   /** Bring back every shortcut deleted from the timeline. */
   onKeyboardShortcutsRestore?: () => void;
+  /** Have the lull chosen on the strip squeeze with the rest, or keep it
+   * as recorded. */
+  onLullPlayChange?: (play: "keep" | "squeeze") => void;
+  /** Trim the lull chosen on the strip to a breath. */
+  onLullTrimToBreath?: () => void;
   /** Take the room's steady noise out of the selected microphone, or put it
    * back. */
   onReduceNoiseChange?: (reduce: boolean) => void;
@@ -118,9 +125,6 @@ export type ToolPanelHandlers = {
   /** Take every auto zoom off the timeline, the scenes of your own left as
    * they are. */
   onSceneAutoZoomsClear?: () => void;
-  /** Make the scene under the playhead custom, or add a custom scene there
-   * where there is none. */
-  onSceneCustomize?: () => void;
   /** Delete the scene under the playhead. */
   onSceneDelete?: () => void;
   /** Have the camera in the scene under the playhead follow the face, or
@@ -128,9 +132,13 @@ export type ToolPanelHandlers = {
   onSceneFollowFaceChange?: (follow: boolean) => void;
   /** Zoom the scene under the playhead into its selected pane, or move the
    * part of the pane it shows. */
-  onSceneFramingChange?: (framing: Partial<SceneFraming>) => void;
-  /** Show the whole screen and camera again in the scene under the playhead. */
-  onSceneFramingReset?: () => void;
+  onSceneFramingChange?: (
+    framing: Partial<SceneFraming>,
+    pane?: "camera" | "screen",
+  ) => void;
+  /** Pad the screen in the scene under the playhead by this share of its
+   * box's shorter side. */
+  onSceneInsetChange?: (inset: number) => void;
   /** Trade the panes of the custom scene under the playhead. */
   onScenePanesSwap?: () => void;
   /** Give the scene under the playhead this preset, or add a scene there
@@ -138,6 +146,9 @@ export type ToolPanelHandlers = {
   onScenePresetChoose?: (preset: RecordingScenePreset) => void;
   /** Round the selected pane's corners in the scene under the playhead. */
   onSceneRadiusChange?: (radius: number) => void;
+  /** Crop the screen in the scene under the playhead to its content, in the
+   * middle of its box. */
+  onSceneRecenter?: () => void;
   /** Turn the screen in depth in the scene under the playhead, a field at a
    * time. */
   onSceneRotationChange?: (rotation: Partial<SceneRotation>) => void;
@@ -156,20 +167,14 @@ export type ToolPanelHandlers = {
   onSelectionFollowFaceChange?: (follow: boolean) => void;
   /** Pad the selected layer by this many output pixels on each side. */
   onSelectionInsetChange?: (inset: number) => void;
-  /** Place the selection at the size and position a field asked for. */
-  onSelectionPlacementChange?: (placement: SelectionPlacementPatch) => void;
   /** Round the selected layer's corners by this share of its shorter side. */
   onSelectionRadiusChange?: (radius: number) => void;
   /** Put the layer's content in the middle of its padded frame. */
   onSelectionRecenter?: () => void;
-  onSelectionReset?: () => void;
   /** Turn the selected layer in depth, a field at a time. */
   onSelectionRotationChange?: (rotation: Partial<SceneRotation>) => void;
-  /** Cut the long pauses out of the selected microphone's recording where
-   * nothing happens on screen. */
-  onSilencesRemove?: () => void;
-  /** Bring back every pause Remove cut that is still cut. */
-  onSilencesRestore?: () => void;
+  /** Cut what is chosen on the strip, and its time with it. */
+  onStripItemCut?: () => void;
   /** Move the singing in the system audio out of the selected microphone's
    * way while it speaks, or let the system audio make way as a whole. */
   onStudioDuckingChange?: (enabled: boolean) => void;
@@ -180,6 +185,12 @@ export type ToolPanelHandlers = {
   onStudioSoundChange?: (enabled: boolean) => void;
   /** Download the model Studio sound rebuilds the microphone with. */
   onStudioSoundDownload?: () => void;
+  /** Hold the recorded track `trackId` in the export and the preview, or
+   * leave it out. */
+  onTrackEnabledChange?: (trackId: string, isEnabled: boolean) => void;
+  /** Play the audio track `trackId` this much louder or quieter than it was
+   * recorded, in decibels. */
+  onTrackVolumeChange?: (trackId: string, decibels: number) => void;
   /** Do what the Transcript panel asks. */
   onTranscriptRequest?: (request: TranscriptRequest) => void;
   /** Clean up the selected microphone's voice, or put it back as it was. */

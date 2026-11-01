@@ -116,8 +116,8 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     .filter(|digits| digits.chars().all(|digit| digit.is_ascii_hexdigit()))
     .ok_or_else(|| "That is not an annotation colour".to_owned())?;
   // The overlay's annotations cannot be picked up again, so a text box could
-  // never be typed into there, nor a magnifier's zoom area moved onto what
-  // it is meant to enlarge. A redaction drawn on the live desktop hides
+  // never be typed into there, nor a lens moved over what it is meant to
+  // enlarge. A redaction drawn on the live desktop hides
   // nothing from the screen it covers, so the overlay offers none. An image
   // is chosen and placed in the editor alone.
   if matches!(

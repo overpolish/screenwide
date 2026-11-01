@@ -66,7 +66,6 @@ pub fn fit_canvas_to_layers(
       image_x: (layer.image_x * width - left) / next_width_f,
       image_y: (layer.image_y * height - top) / next_height_f,
       image_width: layer.image_width * width / next_width_f,
-      radius_percent: layer.radius_percent,
     })
     .collect();
   ((next_width, next_height), layers)
@@ -76,7 +75,6 @@ pub fn fit_canvas_to_layers(
 pub enum GestureOperation {
   Move = 0,
   Resize = 1,
-  Radius = 2,
 }
 
 /// The complete editable geometry of a visual layer, normalized to its frame.
@@ -90,7 +88,6 @@ pub struct LayerGeometry {
   pub image_width: f64,
   pub image_x: f64,
   pub image_y: f64,
-  pub radius_percent: f64,
 }
 
 /// Applies one native pointer update to an immutable layer snapshot. `delta`
@@ -133,7 +130,6 @@ pub fn apply_layer_gesture(
       next.image_y = transform(start.image_y, start.crop.y, next_y);
       next.image_width = start.image_width * scale;
     }
-    GestureOperation::Radius => next.radius_percent = scale.clamp(0.0, 50.0),
   }
   next
 }

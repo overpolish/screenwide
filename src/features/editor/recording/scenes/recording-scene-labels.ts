@@ -3,7 +3,7 @@
 
 import { t } from "../../../../i18n/i18n";
 
-import { ArrangedScenePreset, RecordingSceneClip } from "./recording-scenes";
+import { ArrangedScenePreset } from "./recording-scenes";
 
 /** What the lane and the Scene panel call a scene made custom. */
 export const sceneCustomLabel = () => t("editor-scene-custom");
@@ -33,13 +33,3 @@ export const RECORDING_SCENE_PRESETS: ArrangedScenePreset[] = [
   "camera-only",
   "screen-only",
 ];
-
-/** What the lane calls `clip`. A scene kept in the recording's own boxes
- * that zooms into the screen reads as the zoom it is. */
-export const recordingSceneLabel = (clip: RecordingSceneClip) => {
-  if (clip.preset === "full" && (clip.screen?.zoom ?? 1) > 1)
-    return t("editor-scene-zoom");
-  return clip.boxes || clip.preset === "full"
-    ? sceneCustomLabel()
-    : scenePresetLabel(clip.preset);
-};

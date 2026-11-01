@@ -3,11 +3,15 @@
 
 use super::*;
 
-pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: f64) {
+/// A press the layers get. Answers whether it took hold of something: a
+/// layer or one of its grips, rather than drawing a crop or panning.
+pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: f64) -> bool {
   let point = (x / scale, y / scale);
   let mut selected = None;
   let mut began = None;
+  let mut took = false;
   if let Ok(mut state) = inner.state.lock() {
+    took = true;
     state.last_pointer = point;
     let shared = shared_selection_hit(inner, &state, point);
     let inactive_frame_target = shared
@@ -18,7 +22,6 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
           })
       })
       .map(|hit| hit.0);
-    let radius = shared.filter(|(_, handle)| *handle == 9).map(|hit| hit.0);
     let handle = shared
       .filter(|(_, handle)| (1..=8).contains(handle))
       .map(|(selection, handle)| (selection, shared_handle_edges(handle)));
@@ -47,34 +50,6 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       state.gesture = None;
       clear_selection_snap_guides(&mut state);
       selected = Some(Some(target.pane_index));
-      draw_selection(inner, &state);
-    } else if let Some(selection) = radius {
-      let changed = state.selection.is_none_or(|current| {
-        current.pane_index != selection.pane_index || current.layer_id != selection.layer_id
-      });
-      state.selection = Some(selection);
-      let gesture = EditorGesture {
-        edges: 0,
-        last_delta: (0.0, 0.0),
-        last_scale: selection.radius_percent,
-        operation: if selection.layer_id == FRAME_LAYER_ID {
-          SelectionGestureOperation::FrameRadius
-        } else {
-          SelectionGestureOperation::Radius
-        },
-        pane_start: selection_pane_rect(&state, selection),
-        pointer_start: point,
-        selection_start: selection,
-      };
-      state.gesture = Some(ActiveGesture::Selection(gesture));
-      if changed {
-        selected = Some(Some(if selection.layer_id == FRAME_LAYER_ID {
-          selection.pane_index
-        } else {
-          selection.layer_id
-        }));
-      }
-      began = Some(gesture);
       draw_selection(inner, &state);
     } else if let Some((selection, edges)) = handle {
       let changed = state.selection.is_none_or(|current| {
@@ -197,11 +172,13 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       // A press on nothing while cropping draws a new crop window. It
       // begins only once the press becomes a drag, from `pointer_move`.
       state.gesture = Some(ActiveGesture::Selection(gesture));
+      took = false;
     } else {
       state.gesture = Some(ActiveGesture::Pan {
         pointer_start: point,
         transform_start: state.workspace_transform,
       });
+      took = false;
       draw_selection(inner, &state);
     }
   }
@@ -212,4 +189,5 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
     emit_gesture(inner, SelectionGesturePhase::Begin, gesture);
   }
   refresh_cursor_for(inner);
+  took
 }

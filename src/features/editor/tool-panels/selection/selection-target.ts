@@ -14,11 +14,15 @@ import {
   CameraOverlaySettings,
   EditorArtifact,
   recordingAudioStreamIndex,
+  recordingAudioTrackId,
   RecordingTrackId,
   RecordingVideoTrackId,
 } from "../../types";
 import { bakedCameraSelectionTarget } from "../camera/baked-camera-target";
-import { ToolPanelAudioSelection } from "../tool-panel-store";
+import {
+  ToolPanelAudioSelection,
+  ToolPanelSoundTrack,
+} from "../tool-panel-store";
 
 import {
   EditorSelectionTarget,
@@ -82,8 +86,8 @@ const recordingSelectionTarget = (
     kind: track,
     label:
       track === "primary"
-        ? t("editor-panels-screen")
-        : t("editor-panels-camera"),
+        ? t("editor-island-screen")
+        : t("editor-island-camera"),
     settings: output[track],
     source,
     turns: track === "primary",
@@ -112,8 +116,8 @@ const screenshotSelectionTarget = (
     kind: "layer",
     label:
       artifact.items.length > 1
-        ? t("editor-panels-layer", { number: index + 1 })
-        : t("editor-panels-screenshot"),
+        ? t("editor-island-layer", { number: index + 1 })
+        : t("editor-island-screenshot"),
     settings: screenshotWorkspaceItemOutput(output, item.id),
     source: { height: item.height, width: item.width },
     turns: true,
@@ -121,42 +125,25 @@ const screenshotSelectionTarget = (
   });
 };
 
-/**
- * The one audio track the selection panel acts on: what to show for it, and
- * the editor's own way of changing how loud it is played.
- *
- * An audio track is heard rather than placed, so it is kept apart from the
- * placed layers rather than given no-op placements of its own.
- */
-export type EditorAudioSelectionTarget = {
-  /** Play the track this much louder or quieter than it was recorded. */
-  applyVolume: (decibels: number) => void;
-  /** The speech tools, where the track is the microphone. */
-  microphone: MicrophoneTools | null;
-  selection: ToolPanelAudioSelection;
-};
-
-type AudioSelectionTargetInputs = {
+type AudioInputs = {
   artifact: EditorArtifact | null;
   audioTrackVolumes: AudioTrackVolume[];
-  selectedTrack: string | null;
   microphone?: MicrophoneTools | null;
-  onSelectedTrackVolumeChange?: (decibels: number) => void;
 };
 
 /**
  * The selected audio track, where an audio track is what is selected.
  *
- * The level is the one the editor holds for this stream, and no entry means
- * the track is played at the level it was recorded at.
+ * An audio track is heard rather than placed, so it is kept apart from the
+ * placed layers rather than given no-op placements of its own.
  */
-export const editorAudioSelectionTarget = ({
+export const editorAudioSelection = ({
   artifact,
-  audioTrackVolumes,
   microphone,
-  onSelectedTrackVolumeChange,
   selectedTrack,
-}: AudioSelectionTargetInputs): EditorAudioSelectionTarget | null => {
+}: Pick<AudioInputs, "artifact" | "microphone"> & {
+  selectedTrack: string | null;
+}): ToolPanelAudioSelection | null => {
   if (artifact?.kind !== "recording") return null;
   // The selection travels as a plain string across the bridge, so the track
   // id is read back the way the editor writes it.
@@ -168,22 +155,36 @@ export const editorAudioSelectionTarget = ({
     (audio) => audio.streamIndex === streamIndex,
   );
   if (!track) return null;
-  const tools = track.kind === "microphone" ? (microphone ?? null) : null;
   return {
-    applyVolume: (decibels) => {
-      onSelectedTrackVolumeChange?.(decibels);
-    },
-    microphone: tools,
-    selection: {
-      decibels:
-        audioTrackVolumes.find((volume) => volume.streamIndex === streamIndex)
-          ?.decibels ?? 0,
-      kind: "audio",
-      label: track.label || t("editor-panels-audio"),
-      ...(tools ? { microphone: tools.microphone } : {}),
-    },
+    kind: "audio",
+    label: track.label || t("editor-island-audio"),
+    ...(track.kind === "microphone" && microphone
+      ? { microphone: microphone.microphone }
+      : {}),
   };
 };
+
+/** Every audio track of the recording, as the Sound island holds them at
+ * once: each at the level the editor holds for its stream, and the
+ * microphone with its speech tools. */
+export const editorSoundTracks = ({
+  artifact,
+  audioTrackVolumes,
+  microphone,
+}: AudioInputs): ToolPanelSoundTrack[] =>
+  artifact?.kind === "recording"
+    ? artifact.audioTracks.map((track) => ({
+        decibels:
+          audioTrackVolumes.find(
+            (volume) => volume.streamIndex === track.streamIndex,
+          )?.decibels ?? 0,
+        id: recordingAudioTrackId(track.streamIndex),
+        label: track.label || t("editor-island-audio"),
+        ...(track.kind === "microphone" && microphone
+          ? { microphone: microphone.microphone }
+          : {}),
+      }))
+    : [];
 
 export const editorSelectionTarget = (
   inputs: SelectionTargetInputs,

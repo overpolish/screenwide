@@ -70,11 +70,11 @@ const isDownloaded = (model: ToolPanelModel | null) =>
   model?.status === "downloaded";
 
 const TOOL_NAMES: Record<SoundTool, () => string> = {
-  autoVolume: () => t("editor-panels-auto-volume"),
-  reduceNoise: () => t("editor-panels-reduce-noise"),
-  studioDucking: () => t("editor-panels-studio-ducking"),
-  studioSound: () => t("editor-panels-studio-sound"),
-  vocalCleanup: () => t("editor-panels-vocal-cleanup"),
+  autoVolume: () => t("editor-island-auto-volume"),
+  reduceNoise: () => t("editor-island-reduce-noise"),
+  studioDucking: () => t("editor-island-studio-ducking"),
+  studioSound: () => t("editor-island-studio-sound"),
+  vocalCleanup: () => t("editor-island-vocal-cleanup"),
 };
 
 export function soundIsland(props: SoundIslandProps): EditorIslandContent {
@@ -171,7 +171,7 @@ function microphoneParts(
         key={`${trackId}-studio-model`}
         model={microphone.studioModel}
         onDownload={props.onDownloadStudioSound}
-        title={t("editor-panels-studio-sound")}
+        title={t("editor-island-studio-sound")}
       />
     ) : null,
     shownDucking && !isDownloaded(shownDucking.model) ? (
@@ -179,41 +179,41 @@ function microphoneParts(
         key={`${trackId}-ducking-model`}
         model={shownDucking.model}
         onDownload={props.onDownloadStudioDucking}
-        title={t("editor-panels-studio-ducking")}
+        title={t("editor-island-studio-ducking")}
       />
     ) : null,
     microphone.studio === "cleaning"
       ? work(
           "studio-work",
-          t("editor-panels-studio-sound-working"),
+          t("editor-island-studio-sound-working"),
           microphone.studioProgress,
         )
       : null,
     !isStudio && microphone.noise === "cleaning"
       ? work(
           "noise-work",
-          t("editor-panels-noise-cleaning"),
+          t("editor-island-noise-cleaning"),
           microphone.noiseProgress,
         )
       : null,
     !isStudio && microphone.voice === "cleaning"
       ? work(
           "voice-work",
-          t("editor-panels-voice-cleaning"),
+          t("editor-island-voice-cleaning"),
           microphone.voiceProgress,
         )
       : null,
     microphone.autoVolume === "cleaning"
       ? work(
           "volume-work",
-          t("editor-panels-auto-volume-measuring"),
+          t("editor-island-auto-volume-measuring"),
           microphone.autoVolumeProgress,
         )
       : null,
     shownDucking?.state === "cleaning"
       ? work(
           "ducking-work",
-          t("editor-panels-studio-ducking-working"),
+          t("editor-island-studio-ducking-working"),
           shownDucking.progress,
         )
       : null,

@@ -35,14 +35,6 @@ export const deleteOpenProject = async () => {
   await invoke<null>("delete_open_project");
 };
 
-export const setScreenshotRadius = async (radiusPercent: number) => {
-  await invoke<null>("set_screenshot_radius", { radiusPercent });
-};
-
-export const setScreenshotBackgroundRadius = async (radiusPercent: number) => {
-  await invoke<null>("set_screenshot_background_radius", { radiusPercent });
-};
-
 export const cancelExportJob = () => invoke<boolean>("cancel_export_job");
 
 export const browseExportDirectory = () =>

@@ -144,6 +144,7 @@ fn clips(signals: &Signals, duration_ms: u64) -> Vec<RecordingSceneClip> {
       camera: None,
       boxes: None,
       radius: None,
+      inset: None,
       rotation: None,
       variant: None,
       follow_face: None,

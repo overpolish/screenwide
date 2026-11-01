@@ -14,6 +14,10 @@ import {
   translateSourceRect,
 } from "./screenshot-geometry";
 import {
+  insetScreenshotPadding,
+  screenshotInsetShare,
+} from "./screenshot-inset";
+import {
   ScreenshotOutputSettings,
   ScreenshotWorkspaceOutputSettings,
   screenshotLayout,
@@ -116,12 +120,17 @@ export const applyScreenshotCropGesture = ({
   return withScreenshotSourceCrop(settings, next);
 };
 
-/** Rebase the outer inset frame by the crop committed on each source edge. */
+/** Rebase the outer inset frame on the crop committed: a padded layer is
+ * padded again by the same share of its new picture, so the padding keeps
+ * its proportion to it; an unpadded one moves each edge of its frame with
+ * the crop's. */
 export const commitScreenshotCrop = (
   before: ScreenshotOutputSettings,
   after: ScreenshotOutputSettings,
   source: { height: number; width: number },
 ): ScreenshotOutputSettings => {
+  const share = screenshotInsetShare(before, source);
+  if (share > 0) return insetScreenshotPadding(after, source, share);
   const previous = screenshotLayout(source, before);
   const next = screenshotLayout(source, after);
   const left = previous.crop.x + next.sourceCrop.x - previous.sourceCrop.x;
@@ -146,6 +155,7 @@ export const commitScreenshotCrop = (
     cropWidth: right - left,
     cropX: left,
     cropY: top,
+    inset: 0,
   };
 };
 

@@ -89,3 +89,25 @@ export function selectedPaneFraming({
     pane: "screen",
   };
 }
+
+/** `clip`'s `pane` as the Scene island's zoom and position reach it, or
+ * null where the scene does not show it. */
+export function scenePaneFraming({
+  camera,
+  clip,
+  output,
+  pane,
+}: {
+  camera: SceneCamera | null;
+  clip: RecordingSceneClip;
+  output: ScreenshotOutputSettings;
+  pane: ScenePaneFraming["pane"];
+}): ScenePaneFraming | null {
+  const found = selectedPaneFraming({
+    camera,
+    clip,
+    output,
+    selectsCamera: pane === "camera",
+  });
+  return found?.pane === pane ? found : null;
+}

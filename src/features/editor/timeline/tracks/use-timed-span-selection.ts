@@ -23,23 +23,6 @@ export type TimedSpanSelection = {
   onSelectSwept: (ids: string[], additive: boolean) => void;
 };
 
-/** `selection`'s choosing, each choice made after `letGo` has let go of
- * what else was chosen, so Delete only ever takes away one kind of thing. A
- * band that sweeps up nothing lets nothing go. */
-export const lettingGoFirst = (
-  selection: Pick<TimedSpanSelection, "onSelect" | "onSelectSwept">,
-  letGo: () => void,
-): Pick<TimedSpanSelection, "onSelect" | "onSelectSwept"> => ({
-  onSelect: (id, toggle) => {
-    letGo();
-    selection.onSelect(id, toggle);
-  },
-  onSelectSwept: (ids, additive) => {
-    if (ids.length > 0) letGo();
-    selection.onSelectSwept(ids, additive);
-  },
-});
-
 /**
  * The span clips chosen in their lane, which Delete takes away together as
  * one step and Escape lets go. A chosen clip that leaves the recording,
@@ -86,6 +69,7 @@ export function useTimedSpanSelection<Clip extends TimedSpanClip>({
   useEditorWindowShortcuts({
     onDelete: ids.size > 0 ? deleteSelected : undefined,
     onDeselect: ids.size > 0 ? onClear : undefined,
+    onDeselectAll: ids.size > 0 ? onClear : undefined,
   });
   const choose = (next: ReadonlySet<string>) => {
     setIds(next);

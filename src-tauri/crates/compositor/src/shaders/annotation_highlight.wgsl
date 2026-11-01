@@ -155,6 +155,18 @@ fn highlight_fetch(q: vec2<f32>) -> vec3<f32> {
   return annotation_magnify_fetch(texel).rgb;
 }
 
+/// Whether canvas point `q` lies past the picture the crop leaves, where
+/// there is one. There the edge `highlight_fetch` carries on is no page to
+/// recolour, and read as one it drew stripes of the edge's pixels.
+fn highlight_past_picture(q: vec2<f32>) -> bool {
+  let at = annotation_magnify_placement();
+  if (any(at.image.zw <= vec2<f32>(0.0)) || any(at.size < vec2<f32>(1.0))) {
+    return false;
+  }
+  let texel = floor((q - at.image.xy) * at.size / at.image.zw);
+  return any(texel < at.texels.xy) || any(texel > at.texels.zw);
+}
+
 /// Whether `rgb` stands out from `page` towards the ink by at least half of
 /// `own`, eased in from three tenths of it.
 fn highlight_inked(rgb: vec3<f32>, page: f32, toward: f32, own: f32) -> f32 {
@@ -317,6 +329,10 @@ fn highlight_ink_pixel(lit: vec3<f32>, colour: vec3<f32>, page: f32, toward: f32
 fn highlight_recolour(base: vec3<f32>, colour: vec3<f32>, tone: vec2<f32>,
                       canvas_point: vec2<f32>, rows: vec2<f32>, fills: bool,
                       footprint: f32) -> vec3<f32> {
+  // Past the picture's edge the band is drawn plain, in its colour.
+  if (highlight_past_picture(canvas_point)) {
+    return colour;
+  }
   var span = tone.y - tone.x;
   // No page was read under it - a photo, a gradient, a box laid by hand - so
   // there is nothing to map from, and the highlight tints what is there.
@@ -349,8 +365,10 @@ fn highlight_recolour(base: vec3<f32>, colour: vec3<f32>, tone: vec2<f32>,
     for (var row = 0u; row < taps; row++) {
       for (var column = 0u; column < taps; column++) {
         let offset = ((vec2<f32>(f32(column), f32(row)) + 0.5) / f32(taps) - 0.5) * footprint;
-        let lit = highlight_light(highlight_fetch(canvas_point + offset));
-        light += highlight_ink_pixel(lit, colour, page, toward, full);
+        let probe = canvas_point + offset;
+        let lit = highlight_light(highlight_fetch(probe));
+        light += select(highlight_ink_pixel(lit, colour, page, toward, full),
+                        highlight_light(colour), highlight_past_picture(probe));
       }
     }
     light /= f32(taps * taps);

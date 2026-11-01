@@ -18,7 +18,7 @@ use std::{
   thread::JoinHandle,
 };
 
-use super::{effective_rate, platform, RunContext};
+use super::{platform, RunContext};
 use crate::editor::recording_preview_player::video::VideoFrame;
 use crate::editor::recording_preview_player::{PlayerSources, RecordingPreviewPlaybackRange};
 
@@ -26,7 +26,6 @@ use crate::editor::recording_preview_player::{PlayerSources, RecordingPreviewPla
 pub(super) struct VideoSource {
   sources: PlayerSources,
   playback_factors: Vec<f64>,
-  playback_rate: f64,
 }
 
 impl VideoSource {
@@ -34,7 +33,6 @@ impl VideoSource {
     Arc::new(Self {
       sources: context.sources.clone(),
       playback_factors: context.playback_factors.clone(),
-      playback_rate: context.playback_rate,
     })
   }
 
@@ -47,7 +45,7 @@ impl VideoSource {
       &self.sources,
       &self.playback_factors,
       range.source_start_ms,
-      effective_rate(range, self.playback_rate),
+      range.playback_rate,
       Arc::clone(&cancelled),
       sender,
     )?;

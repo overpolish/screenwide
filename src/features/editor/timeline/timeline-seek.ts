@@ -7,5 +7,3 @@ export type SeekHandler = (
   phase: ScrubPhase,
   annotationClips?: RecordingAnnotationClip[],
 ) => void;
-export const seekSelectionVisible = (phase: ScrubPhase) =>
-  phase === "move" ? undefined : phase === "end";

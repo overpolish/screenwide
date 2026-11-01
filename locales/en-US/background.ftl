@@ -9,13 +9,8 @@ background-image = Image
 background-custom = Custom
 # A kept background's tile after one right click or Delete: a second one forgets it. $name is the tile's name.
 background-saved-armed = Right-click or press Delete again to remove { $name }
-background-type = Type
-background-type-label = Background type
-background-kind-solid = Solid
 background-kind-mesh = Mesh
 background-color = Colour
-background-color-label = Background colour
-background-save-preset = Save Preset
 
 ## A mesh's colours: each can be picked or locked, and the rest made again in a mood
 
@@ -24,12 +19,6 @@ background-colors = Colours
 background-palette-color = Colour { $index }
 # A small toggle on each colour's corner; while it is on, a new palette keeps that colour. $index counts the colours from 1.
 background-palette-lock = Lock colour { $index }
-# Names the row of mood buttons, each of which makes a new palette in its mood.
-background-palette-new = New palette
-background-palette-bright = Bright
-background-palette-muted = Muted
-background-palette-shades = Shades
-background-palette-mixed = Mixed
 
 ## Gradient styles the app paints
 

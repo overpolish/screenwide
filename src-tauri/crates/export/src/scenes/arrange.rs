@@ -140,10 +140,20 @@ pub fn arrange_following(
   // they keep their place and size on what they point at.
   output.capture_scale = output.size_scale() * placed.image.2 / base.placement.image.2;
   (output.image_x, output.image_y, output.image_width) = placed.image;
-  output.crop_x = placed.screen.x;
-  output.crop_y = placed.screen.y;
-  output.crop_width = placed.screen.width;
-  output.crop_height = placed.screen.height;
+  // A scene that pads its screen grows the crop outwards past its box, the
+  // picture shown only in the box and the rest filled with the inset colour,
+  // as the recording's own inset pads its crop.
+  let inset = placed.inset.max(0.0);
+  output.crop_x = placed.screen.x - inset;
+  output.crop_y = placed.screen.y - inset;
+  output.crop_width = placed.screen.width + inset * 2.0;
+  output.crop_height = placed.screen.height + inset * 2.0;
+  output.scene_window = (inset > 0.0).then_some([
+    placed.screen.x,
+    placed.screen.y,
+    placed.screen.width,
+    placed.screen.height,
+  ]);
   output.radius_percent = placed.radius.0;
   output.scene_opacity = Some([placed.opacity.0 as f32, placed.opacity.1 as f32]);
   output.scene_camera_front = Some(placed.camera_front as f32);

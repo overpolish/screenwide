@@ -11,14 +11,16 @@ use screenwide_scenes::{validate_clips, FacePath, RecordingSceneClip};
 
 /// The scenes the preview draws: the recording's clips, the timeline they
 /// are timed on, where the face is over the camera for the clips that
-/// follow it, and the pane of the one under the playhead the crop tool is
-/// reframing, drawn unzoomed so the crop window shows what it picks from.
+/// follow it, the pane of the one under the playhead the crop tool is
+/// reframing, drawn unzoomed so the crop window shows what it picks from,
+/// and the selection drawn over the pane a scene places.
 #[derive(Clone, Default)]
 pub(super) struct PreviewScenes {
   pub(super) clips: Arc<RwLock<Vec<RecordingSceneClip>>>,
   pub(super) ranges: Arc<RwLock<Vec<TimelineRange>>>,
   pub(super) face_path: Arc<RwLock<Option<Arc<FacePath>>>>,
   pub(super) crop: Arc<RwLock<SceneCrop>>,
+  pub(super) selection: Arc<Mutex<super::scene_selection::DrawnSelection>>,
 }
 
 impl PreviewScenes {
@@ -32,6 +34,7 @@ impl PreviewScenes {
       ranges: Arc::new(RwLock::new(ranges)),
       face_path: Arc::new(RwLock::new(face_path)),
       crop: Arc::default(),
+      selection: Arc::default(),
     }
   }
 

@@ -45,6 +45,7 @@ pub(crate) mod recenter;
 mod scene_pane_gesture;
 pub(crate) mod scene_preview;
 pub(crate) mod scene_reframe;
+mod scene_selection;
 mod selection_gesture;
 mod selection_preview;
 mod sources;
@@ -146,13 +147,6 @@ impl From<&PlayerSources> for RecordingPreviewPlayerInfo {
   }
 }
 
-#[derive(Clone, Copy, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct RecordingPreviewTransformEvent {
-  session_id: u64,
-  zoom_percent: f64,
-}
-
 #[derive(Clone, Debug, Serialize)]
 #[serde(
   rename_all = "camelCase",
@@ -230,7 +224,6 @@ struct PreviewPlayerManager {
   latest_seek_request: u64,
   pane_target_sizes: Vec<(u32, u32)>,
   playback_end_ms: Option<u64>,
-  playback_rate: f64,
   playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   position_ms: u64,
   /// The next still seek came from a scrub gesture in progress, so the

@@ -3,17 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { RecordingAnnotationClip } from "../recording/annotations/recording-annotations";
-
-import {
-  createRecordingTimelineEdit,
-  cutRecordingTimeline,
-  deleteRecordingTimelineRange,
-} from "./editing/recording-timeline-edit";
 import {
   nearestTimelineSnapTarget,
-  timelineSnapRangeShift,
-  timelineSnapTargets,
   TimelineSnapGesture,
 } from "./timeline-snap";
 
@@ -24,36 +15,6 @@ const gesture = (targets: number[], snapping = true): TimelineSnapGesture => ({
   threshold: 0.05,
 });
 
-const clip = (
-  id: string,
-  startMs: number,
-  endMs: number,
-): RecordingAnnotationClip => ({
-  annotation: {
-    animated: true,
-    id,
-    shape: { angle: 0, center: { x: 10, y: 10 }, kind: "counter", value: 1 },
-    style: {
-      align: "left",
-      blur: false,
-      color: "#ffcc00",
-      handDrawn: false,
-      head: "none",
-      manual: false,
-      radius: 0,
-      redaction: "erase",
-      shadow: false,
-      softness: 0,
-      strength: 0,
-      tint: false,
-      width: 56,
-    },
-  },
-  endMs,
-  startMs,
-  trackId: "primary",
-});
-
 describe("nearestTimelineSnapTarget", () => {
   it("takes the closest target within reach and none beyond it", () => {
     expect(nearestTimelineSnapTarget(gesture([0.2, 0.3]), 0.27)).toBe(0.3);
@@ -62,72 +23,5 @@ describe("nearestTimelineSnapTarget", () => {
 
   it("holds nothing while snapping is inverted off", () => {
     expect(nearestTimelineSnapTarget(gesture([0.2], false), 0.2)).toBeNull();
-  });
-});
-
-describe("timelineSnapRangeShift", () => {
-  it("shifts by whichever end is nearer a target", () => {
-    const shifted = timelineSnapRangeShift(gesture([0.1, 0.52]), 0.13, 0.5);
-    expect(shifted?.target).toBe(0.52);
-    expect(shifted?.shift).toBeCloseTo(0.02);
-  });
-
-  it("leaves a range alone when neither end is within reach", () => {
-    expect(timelineSnapRangeShift(gesture([0.8]), 0.1, 0.3)).toBeNull();
-  });
-});
-
-describe("timelineSnapTargets", () => {
-  const edit = cutRecordingTimeline(createRecordingTimelineEdit(1), 0.5);
-  const base = {
-    annotationClips: [clip("a", 1_000, 2_000), clip("b", 6_000, 7_000)],
-    edit,
-    hiddenKeyboardFragmentIds: new Set<string>(),
-    hiddenKeyboardItemIds: new Set<number>(),
-    keyboardItems: [{ endMs: 4_000, id: 7, label: "⌘C", startMs: 3_000 }],
-    playheadOutput: 0.25,
-    sourceDurationMs: 10_000,
-  };
-
-  const outputs = (
-    overrides: Partial<Parameters<typeof timelineSnapTargets>[0]> = {},
-  ) =>
-    timelineSnapTargets({ ...base, ...overrides }).map(({ output }) => output);
-
-  it("gathers segment edges, other annotations, badges and the playhead", () => {
-    const targets = outputs({ excludeAnnotationIds: new Set(["a"]) });
-    expect(targets).toEqual(
-      expect.arrayContaining([0, 0.5, 1, 0.6, 0.7, 0.3, 0.4, 0.25]),
-    );
-    expect(targets).not.toContain(0.1);
-    expect(targets).not.toContain(0.2);
-  });
-
-  it("leaves out badges the lane hides", () => {
-    expect(outputs({ hiddenKeyboardItemIds: new Set([7]) })).not.toContain(0.3);
-    expect(
-      outputs({ hiddenKeyboardFragmentIds: new Set(["7:0"]) }),
-    ).not.toContain(0.4);
-  });
-
-  it("places an annotation's edges where they play, with the moment there", () => {
-    // The first half cut away: the 5 s video plays the recording's 5-10 s.
-    const cut = deleteRecordingTimelineRange(
-      createRecordingTimelineEdit(1),
-      0,
-      0.5,
-    );
-    const targets = timelineSnapTargets({
-      ...base,
-      annotationClips: [clip("a", 1_000, 2_000)],
-      edit: cut,
-      keyboardItems: [],
-    });
-    expect(targets).toEqual(
-      expect.arrayContaining([
-        { output: 0.2, source: 0.6 },
-        { output: 0.4, source: 0.7 },
-      ]),
-    );
   });
 });

@@ -3,35 +3,38 @@
 
 import { t } from "../../../../i18n/i18n";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
+import { INSET_LOOKS } from "../../screenshot/screenshot-inset";
 
 // How far the picture's edges are extended, as four looks rather than a
 // figure: a padding is judged by eye against the picture, and a share of
 // the picture's shorter side looks the same at any size where pixels would
-// not.
+// not. The padding is kept as that share, so each look is one share exactly.
+
+const [NONE, TIGHT, MEDIUM, LARGE] = INSET_LOOKS;
 
 const INSETS = [
   {
     id: "none",
     label: () => t("editor-island-screen-inset-none"),
-    share: 0,
+    share: NONE,
     stroke: 0,
   },
   {
     id: "tight",
     label: () => t("editor-island-screen-inset-tight"),
-    share: 0.03,
+    share: TIGHT,
     stroke: 1.5,
   },
   {
     id: "medium",
     label: () => t("editor-island-screen-inset-medium"),
-    share: 0.06,
+    share: MEDIUM,
     stroke: 2.5,
   },
   {
     id: "large",
     label: () => t("editor-island-screen-inset-large"),
-    share: 0.1,
+    share: LARGE,
     stroke: 3.5,
   },
 ] as const;
@@ -76,17 +79,12 @@ function InsetGlyph({ stroke }: { stroke: number }) {
  * elsewhere leaves none chosen until one is picked. */
 export function ScreenInsetChoice({
   inset,
-  insetMaximum,
   onChange,
 }: {
-  /** In output pixels. */
+  /** A share of the picture's shorter side. */
   inset: number;
-  /** The picture's shorter side, in output pixels, which the looks are
-   * shares of. */
-  insetMaximum: number;
   onChange: (inset: number) => void;
 }) {
-  const pixels = (share: number) => Math.round(share * insetMaximum);
   return (
     <PillGroup
       aria-label={t("editor-island-screen-inset")}
@@ -97,9 +95,9 @@ export function ScreenInsetChoice({
       }))}
       onSelectionChange={(id) => {
         const chosen = INSETS.find((look) => look.id === id);
-        if (chosen) onChange(pixels(chosen.share));
+        if (chosen) onChange(chosen.share);
       }}
-      selected={INSETS.find(({ share }) => pixels(share) === inset)?.id ?? ""}
+      selected={INSETS.find(({ share }) => share === inset)?.id ?? ""}
     />
   );
 }

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Pin } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useRef } from "react";
 
@@ -13,6 +14,11 @@ import { ANNOTATION_TOOLS } from "../../tool-panels/tool-registry";
 import { reach, type Span, type TimelineScale } from "../timeline-scale";
 
 import {
+  AnnotationBarPin,
+  AnnotationBarUnsure,
+  type TimelineAnnotationPin,
+} from "./annotation-bar-pin";
+import {
   type AnnotationBarPart,
   type BarHold,
   type Snap,
@@ -22,22 +28,27 @@ import {
 import type { AnnotationKind } from "../../../../bindings/AnnotationKind";
 
 // One annotation across the time it shows: a hairline with the badge of the
-// tool that drew it in its middle, however short it is. Chosen, the line
-// thickens and grows a handle at each end. The hit area is taller and wider
-// than the line drawn, so a short annotation is still easy to take hold of.
-// It is placed in a strip `width` px wide, which it measures the pointer
-// against while held (`use-annotation-bar-drag.ts`), and glides to a new
-// `top` unless it is being carried there.
+// tool that drew it in its middle, however short it is, a pin beside the
+// tool's glyph where it follows its content (`annotation-bar-pin.tsx`).
+// Chosen, the line thickens and grows a handle at each end. The hit area is
+// taller and wider than the line drawn, so a short annotation is still easy
+// to take hold of. It is placed in a strip `width` px wide, which it
+// measures the pointer against while held (`use-annotation-bar-drag.ts`),
+// and glides to a new `top` unless it is being carried there.
 
 /** A bar's height, in px: a badge's, with a little room. */
 export const ANNOTATION_BAR_PX = 20;
 
-/** The line stops short of the badge in its middle, by the badge's width
- * with a little air, so the badge's own fill never shows the line through. */
-const GAP_UNDER_BADGE = `linear-gradient(to right, #000 calc(50% - 12px), transparent calc(50% - 12px), transparent calc(50% + 12px), #000 calc(50% + 12px))`;
-/** How far, in px, a chosen bar's handles stand from its middle at least:
- * clear of the badge, so a bar shorter than that still shows its tool. */
-const HANDLE_CLEAR_PX = 19;
+/** The line stops short of the badge in its middle, by half the badge's
+ * width, in px, with a little air, so the badge's own fill never shows the
+ * line through: wider with a pin beside the tool's glyph. */
+const gapUnderBadge = (half: number) =>
+  `linear-gradient(to right, #000 calc(50% - ${String(half)}px), transparent calc(50% - ${String(half)}px), transparent calc(50% + ${String(half)}px), #000 calc(50% + ${String(half)}px))`;
+const BADGE_HALF_PX = 12;
+const PINNED_BADGE_HALF_PX = 20;
+/** How far past the badge's half, in px, a chosen bar's handles stand at
+ * least, so a bar shorter than that still shows its tool. */
+const HANDLE_CLEAR_PX = 7;
 
 export type AnnotationBarProps = {
   isSelected: boolean;
@@ -54,6 +65,8 @@ export type AnnotationBarProps = {
   /** Told each move of a drag, and null when it is let go; without it, the
    * bar only moves in time. */
   onHold?: (hold: BarHold | null) => void;
+  /** Its pin, where it follows the content under it. */
+  pin?: TimelineAnnotationPin;
   /** Where a dragged end settles while ⌘ (Ctrl on Windows) is held;
    * without it, ends go where they are let go. */
   snap?: Snap;
@@ -68,6 +81,7 @@ export function AnnotationBar({
   onHold,
   onRetime,
   onSelect,
+  pin,
   scale,
   snap,
   span,
@@ -76,7 +90,7 @@ export function AnnotationBar({
 }: AnnotationBarProps) {
   const ref = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion() ?? false;
-  const { drag, grab, guide, release } = useAnnotationBarDrag({
+  const { drag, grab, release } = useAnnotationBarDrag({
     isSelected,
     onHold,
     onRetime,
@@ -86,8 +100,10 @@ export function AnnotationBar({
     span,
   });
   const { pad, px, style } = reach(scale, span, width);
+  const badgeHalf = pin ? PINNED_BADGE_HALF_PX : BADGE_HALF_PX;
+  const lineMask = gapUnderBadge(badgeHalf);
   // Each handle at its end, or clear of the badge where the bar is shorter.
-  const handleReach = Math.max(px / 2, HANDLE_CLEAR_PX);
+  const handleReach = Math.max(px / 2, badgeHalf + HANDLE_CLEAR_PX);
   const take = (
     event: React.PointerEvent<HTMLElement>,
     part: AnnotationBarPart,
@@ -99,9 +115,13 @@ export function AnnotationBar({
   return (
     <motion.div
       animate={{ top }}
-      aria-label={t("editor-timeline-annotation", {
-        tool: annotationToolLabel(kind),
-      })}
+      aria-label={
+        pin
+          ? t("editor-timeline-annotation-pinned", {
+              tool: annotationToolLabel(kind),
+            })
+          : t("editor-timeline-annotation", { tool: annotationToolLabel(kind) })
+      }
       aria-pressed={isSelected}
       className={cn(
         "group absolute cursor-grab touch-none active:cursor-grabbing",
@@ -120,13 +140,23 @@ export function AnnotationBar({
       ref={ref}
       role="button"
       style={{ ...style, height: ANNOTATION_BAR_PX }}
-      tabIndex={-1}
       transition={
         isLifted || reducedMotion
           ? { duration: 0 }
           : { duration: motionDurations.travel, ease: motionEasings.out }
       }
     >
+      {pin ? (
+        <AnnotationBarPin
+          isSelected={isSelected}
+          mask={lineMask}
+          pad={pad}
+          pin={pin}
+          scale={scale}
+          span={span}
+          width={width}
+        />
+      ) : null}
       <span
         className={cn(
           "absolute top-1/2 -translate-y-1/2 rounded-full transition-[height,background-color]",
@@ -137,9 +167,20 @@ export function AnnotationBar({
         style={{
           insetInlineEnd: pad,
           insetInlineStart: pad,
-          maskImage: GAP_UNDER_BADGE,
+          maskImage: lineMask,
         }}
       />
+      {pin ? (
+        <AnnotationBarUnsure
+          isSelected={isSelected}
+          mask={lineMask}
+          pad={pad}
+          pin={pin}
+          scale={scale}
+          span={span}
+          width={width}
+        />
+      ) : null}
       <span
         aria-hidden
         className="absolute start-1/2 top-1/2 flex -translate-1/2"
@@ -153,6 +194,7 @@ export function AnnotationBar({
           )}
         >
           <ToolGlyph kind={kind} />
+          {pin ? <Pin /> : null}
         </Badge>
       </span>
       {isSelected
@@ -172,16 +214,6 @@ export function AnnotationBar({
             </span>
           ))
         : null}
-      {guide === null ? null : (
-        // Down through the beats under the lane, to the event an end holds to.
-        <span
-          className="pointer-events-none absolute top-0 h-24 w-px -translate-x-1/2 border-s border-dashed border-fg-secondary"
-          style={{
-            insetInlineStart:
-              pad + (scale.toX(guide) - scale.toX(span.start)) * width,
-          }}
-        />
-      )}
     </motion.div>
   );
 }

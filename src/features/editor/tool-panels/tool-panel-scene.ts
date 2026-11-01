@@ -10,6 +10,16 @@ import {
 
 import { SchematicComposition } from "./scene/scene-schematic";
 
+/** A pane of the scene under the playhead: what part of it the scene
+ * shows, how round its corners are, in percent of its shorter side, and how
+ * far it is padded, as a share of its box's shorter side (the screen's
+ * alone; the camera is never padded). */
+export type ToolPanelScenePane = {
+  framing: SceneFraming;
+  inset: number;
+  radius: number;
+};
+
 /**
  * What the Scene panel shows: the scene under the playhead, which is the one
  * a press changes, or none, where a press adds one there.
@@ -42,6 +52,12 @@ export type ToolPanelScene = {
   /** Whether the camera is drawn into the screen's video, without which the
    * scenes that place it stand idle. */
   isBaked: boolean;
+  /** Each pane the scene under the playhead shows, null where it hides that
+   * pane or there is no scene: the Scene island frames either. */
+  panes: {
+    camera: ToolPanelScenePane | null;
+    screen: ToolPanelScenePane | null;
+  };
   preset: RecordingScenePreset | null;
   /** The selected pane's corner radius in the scene under the playhead, in
    * percent of its shorter side, null where there is no scene. */
@@ -49,6 +65,8 @@ export type ToolPanelScene = {
   /** How the scene under the playhead turns the screen, in degrees about
    * each axis, whichever pane is selected; null where there is no scene. */
   rotation: SceneRotation | null;
+  /** The scene under the playhead's own id, null where there is none. */
+  sceneId: string | null;
   /** The screen's visible width over its height. */
   screenAspect: number;
   /** The options of the scene under the playhead's preset, null where there

@@ -37,7 +37,7 @@ export function ScrollingCaptureOverlay({
 
   return (
     // What is happening, the bar, and the key that stops it.
-    <main className="window-surface flex h-full w-full items-center overflow-hidden rounded-window p-section text-content-fg">
+    <main className="flex h-full w-full items-center overflow-hidden rounded-window p-inset text-fg">
       <ProgressPanel
         label={label}
         progress={null}

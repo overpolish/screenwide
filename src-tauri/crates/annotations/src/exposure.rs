@@ -75,17 +75,23 @@ pub fn annotation_travel(
       let down = ((c[0] - a[0]) * scale[0]).hypot((c[1] - a[1]) * scale[1]);
       across.hypot(down) * (reveal.scale - previous[2]).abs()
     }
+    // A lens grows out of its middle as its zoom rises, so neither its rim
+    // nor what it shows moves further than its corners sit from its middle:
+    // half its diagonal, `a` and `c` being its box's corners.
+    AnnotationKind::Magnify => {
+      let across = ((c[0] - a[0]) * scale[0]).abs();
+      let down = ((c[1] - a[1]) * scale[1]).abs();
+      0.5 * across.hypot(down) * (reveal.scale - previous[2]).abs()
+    }
     // A redaction never moves over a clip: it is whole for as long as it is
     // shown, and a spotlight only fades. A highlight's bands and a stroke's
     // line are not in their records' points, so `highlight_travel` measures
-    // both from the sweep each record keeps, and a magnifier's loupe size
-    // rides beside its points, so `magnify_travel` measures it.
+    // both from the sweep each record keeps.
     AnnotationKind::Redact
     | AnnotationKind::Highlight
     | AnnotationKind::Spotlight
     | AnnotationKind::Focus
-    | AnnotationKind::Draw
-    | AnnotationKind::Magnify => 0.0,
+    | AnnotationKind::Draw => 0.0,
   }
 }
 
@@ -109,34 +115,6 @@ pub fn highlight_travel(
     .abs()
     .max((reveal.high - previous[1]).abs());
   sweep.max(0.0) * reach * moved
-}
-
-/// How far a magnifier's loupe moves between the shutter opening and now, in
-/// the pixels it is drawn in. Its centre travels from the zoom area's to its
-/// own and its half size grows from the zoom area's to its whole, both in
-/// step with the reveal's `scale`, so no point of its rim covers more than
-/// the two together. `start` and `end` are the zoom area's corners, `loupe`
-/// the loupe's centre and `size` its longer side, all in the space `scale`
-/// carries into those pixels.
-pub fn magnify_travel(
-  [start, loupe, end]: [[f32; 2]; 3],
-  size: f32,
-  scale: [f32; 2],
-  reveal: AnnotationReveal,
-) -> f32 {
-  let moved = (reveal.scale - reveal.previous[2]).abs();
-  let half = [
-    (end[0] - start[0]).abs() * 0.5,
-    (end[1] - start[1]).abs() * 0.5,
-  ];
-  let longest = half[0].max(half[1]) * 2.0;
-  if !(moved > 0.0 && longest > 0.0 && size.is_finite()) {
-    return 0.0;
-  }
-  let way = ((loupe[0] - (start[0] + end[0]) * 0.5) * scale[0])
-    .hypot((loupe[1] - (start[1] + end[1]) * 0.5) * scale[1]);
-  let growth = (size / longest - 1.0).abs() * (half[0] * scale[0]).hypot(half[1] * scale[1]);
-  moved * (way + growth)
 }
 
 #[cfg(test)]
@@ -225,24 +203,25 @@ mod tests {
   }
 
   #[test]
-  fn a_travelling_loupe_covers_its_way_and_its_growth() {
-    // Half-way out of a zoom area 100 across at (100, 100), towards a loupe
-    // twice its size 500 away: half of the way, and half of the corner's
-    // reach from 50 to 100 along the diagonal.
+  fn a_settling_lens_covers_its_corners_reach() {
+    // Half-way in, a lens 100 across sweeps half of its half diagonal.
     let reveal = AnnotationReveal {
       scale: 0.75,
       previous: [0.0, 1.0, 0.25, 0.25],
       ..AnnotationReveal::WHOLE
     };
-    let points = [[50.0, 50.0], [500.0, 400.0], [150.0, 150.0]];
-    let travel = magnify_travel(points, 200.0, [1.0, 1.0], reveal);
-    assert!(
-      (travel - 0.5 * (500.0 + 50.0 * 2f32.sqrt())).abs() < 1e-3,
-      "{travel}"
-    );
-    assert_eq!(
-      magnify_travel(points, 200.0, [1.0, 1.0], AnnotationReveal::WHOLE),
-      0.0
-    );
+    let travel = |reveal| {
+      annotation_travel(
+        AnnotationKind::Magnify,
+        [50.0, 50.0],
+        [100.0, 100.0],
+        [150.0, 150.0],
+        [1.0, 1.0],
+        8.0,
+        reveal,
+      )
+    };
+    assert!((travel(reveal) - 25.0 * 2f32.sqrt()).abs() < 1e-3);
+    assert_eq!(travel(AnnotationReveal::WHOLE), 0.0);
   }
 }

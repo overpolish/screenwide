@@ -11,7 +11,6 @@ import {
 
 import type { SceneBoxes } from "../../../../bindings/SceneBoxes";
 import type { SceneFraming } from "../../../../bindings/SceneFraming";
-import type { SceneRotation } from "../../../../bindings/SceneRotation";
 import type { SceneVariant } from "../../../../bindings/SceneVariant";
 
 // How a stretch of the recording is framed, which a scene sets over its
@@ -53,7 +52,6 @@ export type SceneFramingProps = {
    * position to the middle. */
   onPaneReset: (pane: "camera" | "screen", figure: "position" | "zoom") => void;
   onRemoveSavedLayout: (id: string) => void;
-  onRotationChange: (rotation: SceneRotation) => void;
   /** Saves a custom layout to use again (the app's scene templates). */
   onSaveLayout: () => void;
   onScreenChange: (pane: Partial<ScenePane>) => void;
@@ -64,11 +62,12 @@ export type SceneFramingProps = {
    * they fit this video. */
   savedLayouts: { boxes: SceneBoxes; id: string }[];
   /** The screen's framing, where the layout shows the screen. */
-  screen: (ScenePane & { rotation: SceneRotation }) | null;
+  screen: ScenePane | null;
   variant: SceneVariant;
-  /** The video's shape and its sources', each width over height, and where
-   * the recording itself puts the screen, as shares of the video, which
-   * the drawings of the layouts are drawn on. */
+  /** The video's shape and its sources', each width over height, where the
+   * recording itself puts the screen, as shares of the video, and how the
+   * scene turns the screen, which the drawings of the layouts are drawn
+   * on. */
   video: Omit<SceneShape, "cameraRadius">;
 };
 

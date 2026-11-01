@@ -161,9 +161,6 @@ export function ProjectCard({
                 </motion.span>
               ) : null}
             </AnimatePresence>
-            {corner ? (
-              <span className="absolute end-2 top-2 flex">{corner}</span>
-            ) : null}
             {said ? (
               <span className="absolute inset-x-2 bottom-2 flex justify-center">
                 <PictureCaption className="line-clamp-1 text-center">
@@ -173,6 +170,11 @@ export function ProjectCard({
             ) : null}
           </motion.button>
         )}
+        {/* Beside the picture's button rather than in it: the corner may be
+            a button of its own, which a button cannot hold. */}
+        {corner && !isPeeked ? (
+          <span className="absolute end-2 top-2 flex">{corner}</span>
+        ) : null}
       </div>
       <ActivityRail
         at={isAiming ? at : null}

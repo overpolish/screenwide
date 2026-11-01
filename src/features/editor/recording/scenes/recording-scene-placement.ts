@@ -22,14 +22,16 @@ export type Picture = { width: number; x: number; y: number };
  * camera's box and the camera picture behind it by its centre and width;
  * each pane's corner radius in percent of its box's shorter side; how
  * opaque each pane is drawn, zero for a pane the scene hides; how far the
- * camera is drawn in front of the screen, one in front and zero behind; and
- * how the screen is turned in depth about its box's middle. The twin of
+ * camera is drawn in front of the screen, one in front and zero behind;
+ * how the screen is turned in depth about its box's middle; and how far the
+ * scene pads the screen's box outwards, in output pixels. The twin of
  * `Placement` in `src-tauri/crates/scenes/src/placement.rs`. */
 export type Placement = {
   camera: Picture;
   cameraFront: number;
   frame: SceneRect;
   image: Picture;
+  inset: number;
   opacity: { camera: number; screen: number };
   radius: { camera: number; screen: number };
   rotation: SceneRotation;
@@ -60,6 +62,8 @@ export const basePlacement = (
     ? drawnCameraFrame(camera.overlay, camera.aspect)
     : { height: 0, width: 0, x: 0, y: 0 },
   image: { width: output.imageWidth, x: output.imageX, y: output.imageY },
+  // The recording's own inset is already its crop's padding.
+  inset: 0,
   opacity: { camera: 1, screen: 1 },
   radius: {
     camera: camera?.overlay.radiusPercent ?? 0,
@@ -170,6 +174,9 @@ export const targeting =
       cameraFront: clip.boxes?.cameraBehind ? 0 : 1,
       frame,
       image,
+      // The scene pads its box outwards, as the recording's inset pads its
+      // crop, by a share of the box's shorter side.
+      inset: (clip.inset ?? 0) * Math.min(screen.width, screen.height),
       opacity: {
         camera: shown.camera ? 1 : 0,
         screen: shown.screen ? 1 : 0,

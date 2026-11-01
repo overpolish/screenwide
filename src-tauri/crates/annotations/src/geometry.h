@@ -61,13 +61,12 @@ void screenwide_text_prepare(float p0x, float p0y, float p1x, float p1y,
                              AnnotationReveal reveal,
                              AnnotationArrowGeometry *out);
 
-/// A magnifier's draw geometry: its zoom area from `p0` to `p2` and its loupe
-/// centred on `p1`, `size` along its longer side, rounded by `radius` percent
-/// of the shorter side, its rim `width` wide. The record reads back as
-/// `magnify/geometry.rs` describes.
-void screenwide_magnify_prepare(float p0x, float p0y, float p1x, float p1y,
-                                float p2x, float p2y, float size, float radius,
-                                float width, AnnotationReveal reveal,
+/// A lens's draw geometry: its box from `p0` to `p2`, enlarging `zoom`
+/// times, rounded by `radius` percent of its shorter side, `width` wide. The
+/// record reads back as `magnify/geometry.rs` describes.
+void screenwide_magnify_prepare(float p0x, float p0y, float p2x, float p2y,
+                                float zoom, float radius, float width,
+                                AnnotationReveal reveal,
                                 AnnotationArrowGeometry *out);
 
 /// An image's draw geometry: its middle at `center` and the middles of its
@@ -77,11 +76,6 @@ void screenwide_magnify_prepare(float p0x, float p0y, float p1x, float p1y,
 void screenwide_image_prepare(float center_x, float center_y, float right_x,
                               float right_y, float bottom_x, float bottom_y,
                               float tilt_x, float tilt_y, AnnotationArrowGeometry *out);
-
-/// Which part of a prepared magnifier a point is on: 1 for the loupe, 2 for
-/// the zoom area, 0 for neither.
-uint32_t screenwide_magnify_part(float px, float py,
-                                 const AnnotationArrowGeometry *geometry);
 
 /// How far a point falls from a prepared annotation's drawn shape, in the
 /// space it was prepared in. Zero anywhere the annotation is painted, which
@@ -111,22 +105,20 @@ float screenwide_highlight_distance(float px, float py, float start_x, float sta
 
 /// An image's own selection frame, in the display points its middle and half
 /// extents are given in, as `image/frame.rs` places it: its four corners
-/// clockwise from the picture's own top-left, then its nine grips - the
-/// frame's eight, clockwise from that corner, and its radius dot - with the
-/// handle each reports.
+/// clockwise from the picture's own top-left, then its eight grips,
+/// clockwise from that corner, with the handle each reports.
 typedef struct {
   AnnotationVector corners[4];
-  AnnotationVector grips[9];
-  uint32_t handles[9];
+  AnnotationVector grips[8];
+  uint32_t handles[8];
 } AnnotationImageFrame;
-_Static_assert(sizeof(AnnotationImageFrame) == 140, "Image frame ABI");
+_Static_assert(sizeof(AnnotationImageFrame) == 128, "Image frame ABI");
 
 /// The frame of an image whose middle is at `center`, turned `angle` radians
-/// clockwise, tilted `tilt_x` and `tilt_y` degrees in depth and rounded
-/// `radius` percent of its shorter side.
+/// clockwise and tilted `tilt_x` and `tilt_y` degrees in depth.
 void screenwide_image_frame(float center_x, float center_y, float half_width,
                             float half_height, float angle, float tilt_x,
-                            float tilt_y, float radius, AnnotationImageFrame *out);
+                            float tilt_y, AnnotationImageFrame *out);
 
 /// The upright sides whose resize cursor runs the way a grip moving `sides`
 /// of an image turned `angle` does on screen.

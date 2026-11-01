@@ -10,10 +10,8 @@
 
 use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
-use screenwide_annotations::gesture::{drawing_layer, MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
-use screenwide_annotations::highlight::geometry::HighlightFlow;
-use screenwide_annotations::text::geometry::HEAD_TAIL;
-use screenwide_annotations::AnnotationPoint;
+use screenwide_annotations::gesture::{drawing_layer, hidden_by_layer_above};
+use screenwide_annotations::magnify::lens::{pick_through, LensView};
 
 /// An annotation belongs to its image, independently of the selected layer. The
 /// twin of `annotation_layer_selection`.
@@ -62,22 +60,43 @@ pub(super) fn image_frame(state: &SurfaceState) -> Option<PreviewSurfaceRect> {
   item_image_frame(state, state.annotation.selected)
 }
 
-/// Puts the picture a drawing press joins in hand, as a press with the select
-/// tool would, so the fresh annotation joins it and the panel and the chrome
-/// follow: the topmost laid-out picture under `point`, or the nearest one off
-/// every picture, by the rule [`drawing_layer`] keeps. With no picture laid
-/// out the selected layer keeps the annotation. Answers the layer to report
-/// where the choice changed.
+/// Every laid-out picture, back to front, with its upright image rect and
+/// `display` as it lands on it standing upright, for [`drawing_layer`]. Each
+/// picture is read in its own space: a turned picture is pressed where its
+/// turn draws it, and the picture over it, upright, where it stands.
+pub(in super::super) fn drawing_pictures(
+  state: &SurfaceState,
+  display: (f64, f64),
+) -> Vec<(u32, [f64; 4], (f64, f64))> {
+  state
+    .selection_targets
+    .iter()
+    .filter_map(|target| {
+      let selection = layer_selection(state, target.layer_id as i32)?;
+      let rect = layer_image_rect(state, target.layer_id as i32)?;
+      let point = super::super::turn::unturned_point(state, selection, display);
+      Some((
+        target.layer_id,
+        [rect.x, rect.y, rect.width, rect.height],
+        point,
+      ))
+    })
+    .collect()
+}
+
+/// Puts the picture a drawing press at `display` joins in hand, as a press
+/// with the select tool would, so the fresh annotation joins it and the panel
+/// and the chrome follow: the topmost laid-out picture under the press, or
+/// the nearest one off every picture, by the rule [`drawing_layer`] keeps.
+/// With no picture laid out the selected layer keeps the annotation. Answers
+/// the layer to report where the choice changed.
 pub(in super::super) fn take_drawing_layer(
   inner: &SurfaceInner,
   state: &mut SurfaceState,
-  point: (f64, f64),
+  display: (f64, f64),
 ) -> Option<u32> {
-  let pictures = state.selection_targets.iter().filter_map(|target| {
-    let rect = layer_image_rect(state, target.layer_id as i32)?;
-    Some((target.layer_id, [rect.x, rect.y, rect.width, rect.height]))
-  });
-  let target = layer_selection(state, drawing_layer(pictures, point)? as i32)?;
+  let layer = drawing_layer(drawing_pictures(state, display).into_iter())?;
+  let target = layer_selection(state, layer as i32)?;
   if state.selection.is_some_and(|current| {
     current.pane_index == target.pane_index && current.layer_id == target.layer_id
   }) {
@@ -100,122 +119,33 @@ pub(super) fn display_point(image: PreviewSurfaceRect, x: f64, y: f64) -> (f64, 
   (image.x + image.width * x, image.y + image.height * y)
 }
 
-/// The grip of one arrow under `point`, in display points. Pure so the hit
-/// box can be tested without a composition device.
-fn grip_at_point(
-  image: PreviewSurfaceRect,
-  item: &NativeAnnotationHandles,
-  point: (f64, f64),
-) -> Option<u32> {
-  if item.shape_kind() == AnnotationKind::Image {
-    return super::image_chrome::grip_at(image, item, point);
-  }
-  if super::redact_chrome::is_box(item.shape_kind()) {
-    return super::redact_chrome::grip_at(image, item, point);
-  }
-  let found = item_grips(image, item)
-    .iter()
-    .position(|grip| {
-      (point.0 - grip.0).abs() <= HANDLE_HIT && (point.1 - grip.1).abs() <= HANDLE_HIT
-    })
-    .map(|index| index as u32)?;
-  Some(match item.shape_kind() {
-    // A counter and a text box have one grip - the tip of the tail or the
-    // pointer - rather than an arrow's three, so the grip it reports is the
-    // tail rather than the start.
-    AnnotationKind::Counter | AnnotationKind::Text => HANDLE_TAIL,
-    // A highlight's two grips are the selection's start and end.
-    AnnotationKind::Highlight if found == 0 => 0,
-    AnnotationKind::Highlight => 2,
-    AnnotationKind::Arrow
-    | AnnotationKind::Redact
-    | AnnotationKind::Shape
-    | AnnotationKind::Spotlight
-    | AnnotationKind::Focus
-    | AnnotationKind::Draw
-    | AnnotationKind::Magnify
-    | AnnotationKind::Image => found,
-  })
-}
+/// The grips an annotation is held by, read where they show.
+mod grips;
+pub(super) use grips::{grip_seen, highlight_flow, item_grips};
 
-/// A highlight's flow of bands in display points, from the grips it was
-/// published with.
-pub(super) fn highlight_flow(
-  image: PreviewSurfaceRect,
-  item: &NativeAnnotationHandles,
-) -> HighlightFlow {
-  screenwide_annotations::highlight::handles::flow(item, |x, y| {
-    let (x, y) = display_point(image, x, y);
-    [x as f32, y as f32]
-  })
-}
-
-/// The grips one annotation shows as discs, in display points: an arrow's
-/// three, the tip of a counter's tail or of a text box's pointer where its
-/// look draws one, and a magnifier's loupe grip. A redaction's, a shape's
-/// and a spotlight's, and a
-/// magnifier's zoom area's, are the selection box's own, which
-/// `redact_chrome` draws and hits, and an image's frame is its own, which
-/// `image_chrome` does. The tail is placed here
-/// rather than sent because a normalised offset is a different length in
-/// each axis on a picture that is not square, while display points are
-/// isotropic.
-pub(super) fn item_grips(
-  image: PreviewSurfaceRect,
-  item: &NativeAnnotationHandles,
-) -> Vec<(f64, f64)> {
-  let centre = display_point(image, item.start_x, item.start_y);
-  match item.shape_kind() {
-    AnnotationKind::Counter => {
-      let radius = item.width * image.width / 2.0;
-      let tip = screenwide_annotations::counter::silhouette::counter_tail_tip(
-        AnnotationPoint {
-          x: centre.0,
-          y: centre.1,
-        },
-        radius,
-        item.start_head,
-      );
-      vec![(tip.x, tip.y)]
-    }
-    // The pointer's tip, drawn out of the box or tucked into it where it was
-    // left; none where the look draws no pointer.
-    AnnotationKind::Text if item.start_head as u32 & HEAD_TAIL == 0 => Vec::new(),
-    AnnotationKind::Text => {
-      let geometry = text_geometry(image, item);
-      vec![(f64::from(geometry.c[0]), f64::from(geometry.c[1]))]
-    }
-    // An image's grips are its frame's, which its chrome draws itself.
-    AnnotationKind::Redact
-    | AnnotationKind::Shape
-    | AnnotationKind::Spotlight
-    | AnnotationKind::Focus
-    | AnnotationKind::Draw
-    | AnnotationKind::Image => Vec::new(),
-    AnnotationKind::Magnify => vec![super::magnify_chrome::loupe_grip(image, item)],
-    AnnotationKind::Highlight => {
-      let flow = highlight_flow(image, item);
-      [flow.start_grip(), flow.end_grip()]
-        .map(|[x, y]| (f64::from(x), f64::from(y)))
-        .to_vec()
-    }
-    AnnotationKind::Arrow => vec![
-      centre,
-      display_point(image, item.middle_x, item.middle_y),
-      display_point(image, item.end_x, item.end_y),
-    ],
-  }
-}
-
-/// The chosen arrow's grip under `point`. The pen holds nothing, so it offers
-/// none.
+/// The chosen annotation's grip under `point`, read on the selected layer.
 pub(super) fn handle_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<u32> {
-  if state.annotation.mode == MODE_DRAW {
-    return None;
-  }
-  let item = *selected_item(state)?;
-  grip_at_point(image_frame(state)?, &item, point)
+  grip_pick(state, point).map(|(handle, _)| handle)
 }
+
+/// The chosen annotation's grip under `point`, where it shows: through the
+/// lenses over it, which a drag of it is read back through.
+pub(super) fn grip_pick(state: &SurfaceState, point: (f64, f64)) -> Option<(u32, LensView)> {
+  let index = usize::try_from(state.annotation.selected).ok()?;
+  let item = *selected_item(state)?;
+  super::magnify_chrome::grip_through(
+    state,
+    index,
+    image_frame(state)?,
+    &item,
+    point_on_item_layer(state, &item, point),
+  )
+}
+
+/// A press read on the layer an annotation belongs to.
+mod item_layer;
+pub(super) use item_layer::display_on_item_layer;
+use item_layer::{drawn_pictures, point_on_item_layer};
 
 /// The topmost arrow whose drawn shape `point` lands on. There is no
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
@@ -224,44 +154,61 @@ pub(super) fn handle_at_point(state: &SurfaceState, point: (f64, f64)) -> Option
 /// call, and what is drawn wins over an inside, whatever the stacking: a
 /// press on an annotation seen through a shape in front picks that
 /// annotation, and only a press on nothing drawn falls to the inside it
-/// lands in.
+/// lands in. An annotation a picture in front hides at the press is not
+/// seen there, so it is not picked: the press falls to the picture in front.
 ///
-/// The pen picks nothing up, so every press under it draws. A stroke is picked
-/// by the select tool alone: another drawing tool that chose one would hand
-/// over to the pen, which never holds one. The twin of
-/// `annotation_shaft_at_point`.
+/// Every tool picks every kind, the pen and its strokes included: a press on
+/// an annotation takes hold of it whatever is in hand, and only a press on
+/// nothing drawn draws. The twin of `annotation_shaft_at_point`.
 pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<usize> {
-  let mode = state.annotation.mode;
-  if mode == MODE_DRAW {
-    return None;
-  }
+  pick_at_point(state, point).map(|(index, _)| index)
+}
+
+/// What [`shaft_at_point`] picks, and the lenses it is seen through there,
+/// which a press on it is read back through. A lens is pressed through: what
+/// it shows drawn at the press is picked where it shows, and only a press on
+/// nothing drawn there takes the lens (`magnify::lens::pick_through`).
+pub(super) fn pick_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<(usize, LensView)> {
   let chrome = super::redact_chrome::grabs_inside;
-  let pick = |insides: bool| {
-    state
-      .annotation
-      .handles
-      .iter()
-      .enumerate()
-      .rev()
-      .filter(|(_, item)| {
-        item.shape_kind() != AnnotationKind::Draw || matches!(mode, MODE_SELECT | MODE_MARQUEE)
-      })
-      .filter(|(index, item)| !insides || chrome(state, *index, item))
-      .find(|(_, item)| {
-        layer_image_rect(state, item.layer_id).is_some_and(|image| {
-          let distance = if item.shape_kind() == AnnotationKind::Draw {
-            draw_distance(state, image, item, point, insides)
-          } else if insides {
-            super::redact_chrome::shape_body_distance(image, item, point)
-          } else {
-            arrow_distance(image, item, point)
-          };
-          distance <= 0.0
-        })
-      })
-      .map(|(index, _)| index)
+  let pictures = drawn_pictures(state, point);
+  let seen = |layer: i32| {
+    u32::try_from(layer).map_or(true, |layer| {
+      !hidden_by_layer_above(pictures.iter().copied(), layer)
+    })
   };
-  pick(false).or_else(|| pick(true))
+  let handles = &state.annotation.handles;
+  let on_item = |index: usize| {
+    let (x, y) = point_on_item_layer(state, &handles[index], point);
+    [x, y]
+  };
+  pick_through(
+    handles.len(),
+    on_item,
+    |index| {
+      seen(handles[index].layer_id)
+        .then(|| super::magnify_chrome::lens_of(state, index))
+        .flatten()
+    },
+    |lens, index| super::magnify_chrome::under(state, lens, index),
+    |index, [x, y], insides| {
+      let item = &handles[index];
+      if insides && !chrome(state, index, item) {
+        return false;
+      }
+      let drawn = layer_image_rect(state, item.layer_id).is_some_and(|image| {
+        let distance = if item.shape_kind() == AnnotationKind::Draw {
+          draw_distance(state, image, item, (x, y), insides)
+        } else if insides {
+          super::redact_chrome::shape_body_distance(image, item, (x, y))
+        } else {
+          arrow_distance(image, item, (x, y))
+        };
+        distance <= 0.0
+      });
+      drawn && seen(item.layer_id)
+    },
+  )
+  .map(|pick| (pick.index, pick.view))
 }
 
 #[cfg(test)]

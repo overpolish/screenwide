@@ -18,7 +18,6 @@ pub async fn layout_recording_preview_surface(
     backdrop,
     bake_camera,
     camera_overlay,
-    fit_width,
     native_editor,
     panes,
     recording_output,
@@ -28,6 +27,7 @@ pub async fn layout_recording_preview_surface(
     selection_targets,
     session_id,
     viewport,
+    viewport_corners,
   } = layout;
   let mut manager = state
     .0
@@ -199,7 +199,13 @@ pub async fn layout_recording_preview_surface(
   // Hold the pane size while a new composed or live frame is on its way.
   let defer_resize = needs_decoder_still || redraw_still || manager.is_playing;
   surface.set_scale(scale);
+  // A pane a scene places is outlined where the frame on screen has it,
+  // which the playhead this selection was worked out from may be past.
   let selection = selection.map(RecordingPreviewSelection::into_native);
+  let selection = match manager.sources.as_ref() {
+    Some(sources) => sources.selection_for_layout(selection, manager.position_ms),
+    None => selection,
+  };
   let selection_targets = selection_targets.map(|targets| {
     targets
       .into_iter()
@@ -212,7 +218,7 @@ pub async fn layout_recording_preview_surface(
   // has to be in place first. The batch coalesces both into one draw, so
   // putting the tool down cannot paint the standing selection with the tool
   // already gone either.
-  let layout_batch = (redraw_still || fit_width.is_some()).then(|| surface.present_batch());
+  let layout_batch = redraw_still.then(|| surface.present_batch());
   let chrome_batch = surface.present_batch();
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   manager.publish_annotation_handles();
@@ -222,7 +228,11 @@ pub async fn layout_recording_preview_surface(
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor);
   surface.begin_layout();
-  surface.set_viewport(viewport, backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]));
+  surface.set_viewport(
+    viewport,
+    viewport_corners,
+    backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]),
+  );
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   {
     if !panes.is_empty() {
@@ -238,15 +248,11 @@ pub async fn layout_recording_preview_surface(
   for pane in panes {
     surface.layout(pane.index, pane.rect, defer_resize);
   }
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  if let Some(fit_width) = fit_width {
-    surface.reset_editor_view(Some(fit_width));
-  }
   // One commit for the whole invoke: with the batch already open,
   // `finish_layout` leaves its commit to the flush after the redraw, so the
   // pane geometry and the re-composed still cost a single compositor wait.
-  // The decoder path keeps the batch closed unless a fit reset must be folded
-  // into this layout; its present arrives later and finds the geometry parked.
+  // The decoder path keeps the batch closed; its present arrives later and
+  // finds the geometry parked.
   surface.finish_layout();
   let redraw_failed = redraw_still && !manager.redraw_layout_still(bake_changed);
   drop(layout_batch);

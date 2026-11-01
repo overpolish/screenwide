@@ -10,8 +10,8 @@ use crate::{AnnotationKind, AnnotationPoint};
 /// A redaction reads the arrow's slots as its box: `start` is the top-left
 /// corner and `end` the bottom-right, both normalised over the source, and
 /// `middle` the centre. The native side places the eight grips of the layer
-/// selection's own box from those, and its radius dot from `start_head`, the
-/// corner radius as a percentage of the box's shorter side.
+/// selection's own box from those; `start_head` carries the corner radius as
+/// a percentage of the box's shorter side.
 pub(crate) fn grips(
   start: AnnotationPoint,
   end: AnnotationPoint,

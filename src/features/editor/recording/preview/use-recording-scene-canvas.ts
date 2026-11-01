@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { Arrangement } from "../../annotations/annotation-order";
 import { RecordingVideoTrackId } from "../../types";
@@ -45,4 +45,35 @@ export function useRecordingSceneCanvas({
         : undefined,
     paneMenu: { arrange: scenes.controls.arrangePane, clip: orderedScene },
   };
+}
+
+/** The scenes chosen belong to the Scene mode they take up: putting the mode
+ * away lets them go, and once the scene chosen leaves the recording, deleted
+ * by its key or its island, the mode is put away by `putAway`, with nothing
+ * left for it to stand over. */
+export function useSceneModeChoice({
+  isSceneInHand,
+  putAway,
+  scenes,
+}: {
+  isSceneInHand: boolean;
+  putAway: () => void;
+  scenes: Pick<RecordingScenes, "clips" | "selection">;
+}) {
+  const chosenRef = useRef<ReadonlySet<string>>(new Set());
+  const chosen = scenes.selection.ids;
+  const { clips } = scenes;
+  useEffect(() => {
+    const wasChosen = chosenRef.current;
+    chosenRef.current = chosen;
+    const isGone = [...wasChosen].some(
+      (id) => !clips.some((clip) => clip.id === id),
+    );
+    if (isGone && isSceneInHand) putAway();
+    // eslint-disable-next-line @eslint-react/exhaustive-deps -- only a change to the scenes or the choice can take the chosen one away; `putAway` is remade each render.
+  }, [chosen, clips]);
+  const letGo = scenes.selection.onClear;
+  useEffect(() => {
+    if (!isSceneInHand) letGo();
+  }, [isSceneInHand, letGo]);
 }

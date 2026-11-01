@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! An image's own selection frame, in display points: the box drawn along
-//! the turned picture's four sides, its eight grips and its radius dot, and
-//! the resize cursor each grip shows. Both platforms' chrome reads it - the
-//! macOS one through `geometry.h` - so they place, draw and pick one frame.
+//! the turned picture's four sides, its eight grips, and the resize cursor
+//! each grip shows. Both platforms' chrome reads it - the macOS one through
+//! `geometry.h` - so they place, draw and pick one frame.
 //!
 //! A grip reports the picture's own sides it moves, whatever the turn, so
 //! the gesture reads it in the picture's own frame. Mirroring leaves the
@@ -13,10 +13,8 @@
 use super::model::axes;
 use super::tilt::placed;
 use super::ImageTilt;
-use crate::box_gesture::{
-  EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP, RADIUS_INSET_POINTS, RADIUS_TRAVEL,
-};
-use crate::gesture::{BOX_HANDLES, RADIUS_HANDLE};
+use crate::box_gesture::{EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP};
+use crate::gesture::BOX_HANDLES;
 use crate::AnnotationPoint;
 
 /// The eight grips, clockwise from the picture's own top-left corner as the
@@ -69,29 +67,9 @@ impl ImageFrame {
     ]
   }
 
-  /// Where the radius dot sits: in from the picture's own top-left corner
-  /// along its diagonal, further in the rounder its corners are, as a box's
-  /// dot sits in from its corner. The twin of the gesture's reading, which
-  /// turns a dragged dot back into a radius.
-  pub fn radius_dot(&self, radius_percent: f64) -> AnnotationPoint {
-    let shortest = (self.half_width.min(self.half_height) * 2.0).max(0.0);
-    let inset =
-      shortest * radius_percent.clamp(0.0, 50.0) / 100.0 * RADIUS_TRAVEL + RADIUS_INSET_POINTS;
-    self.placed(AnnotationPoint {
-      x: inset - self.half_width,
-      y: inset - self.half_height,
-    })
-  }
-
-  /// Every grip with the handle it reports: the eight of the frame, then
-  /// the radius dot. The frame's come first, so on a picture too small to
-  /// keep them apart a corner wins over the dot.
-  pub fn grips(&self, radius_percent: f64) -> [(AnnotationPoint, u32); 9] {
-    let mut grips = [(self.radius_dot(radius_percent), RADIUS_HANDLE); 9];
-    for (slot, sides) in GRIP_SIDES.into_iter().enumerate() {
-      grips[slot] = (self.grip(sides), BOX_HANDLES + sides);
-    }
-    grips
+  /// Every grip with the handle it reports: the eight of the frame.
+  pub fn grips(&self) -> [(AnnotationPoint, u32); 8] {
+    GRIP_SIDES.map(|sides| (self.grip(sides), BOX_HANDLES + sides))
   }
 
   /// The grip that moves `sides`: a corner, or the middle of a side.
@@ -144,16 +122,16 @@ pub fn cursor_sides(sides: u32, angle: f64) -> u32 {
 #[repr(C)]
 pub struct ImageFrameRecord {
   corners: [[f32; 2]; 4],
-  grips: [[f32; 2]; 9],
-  handles: [u32; 9],
+  grips: [[f32; 2]; 8],
+  handles: [u32; 8],
 }
 
 #[cfg(target_os = "macos")]
-const _: () = assert!(std::mem::size_of::<ImageFrameRecord>() == 140);
+const _: () = assert!(std::mem::size_of::<ImageFrameRecord>() == 128);
 
 /// An image's own frame and grips, in the display points its middle and
-/// half extents are given in, turned `angle` radians clockwise, tilted
-/// `tilt_x` and `tilt_y` degrees in depth, and rounded `radius` percent.
+/// half extents are given in, turned `angle` radians clockwise and tilted
+/// `tilt_x` and `tilt_y` degrees in depth.
 ///
 /// # Safety
 /// `out` must point at one writable [`ImageFrameRecord`].
@@ -168,7 +146,6 @@ pub unsafe extern "C" fn screenwide_image_frame(
   angle: f32,
   tilt_x: f32,
   tilt_y: f32,
-  radius: f32,
   out: *mut ImageFrameRecord,
 ) {
   let Some(out) = (unsafe { out.as_mut() }) else {
@@ -189,7 +166,7 @@ pub unsafe extern "C" fn screenwide_image_frame(
   };
   let pair = |point: AnnotationPoint| [point.x as f32, point.y as f32];
   out.corners = frame.corners().map(pair);
-  for (slot, (grip, handle)) in frame.grips(f64::from(radius)).into_iter().enumerate() {
+  for (slot, (grip, handle)) in frame.grips().into_iter().enumerate() {
     out.grips[slot] = pair(grip);
     out.handles[slot] = handle;
   }
@@ -226,7 +203,7 @@ mod tests {
     let corners = frame(0.0).corners();
     assert!(close(corners[0], (60.0, 30.0)));
     assert!(close(corners[2], (140.0, 70.0)));
-    let grips = frame(0.0).grips(0.0);
+    let grips = frame(0.0).grips();
     assert_eq!(grips[1].1, BOX_HANDLES + EDGE_TOP);
     assert!(close(grips[1].0, (100.0, 30.0)));
     assert!(close(grips[3].0, (140.0, 50.0)));
@@ -235,27 +212,11 @@ mod tests {
   #[test]
   fn a_turned_frame_turns_its_grips_and_keeps_their_sides() {
     // A quarter turn clockwise: the picture's own top now faces right.
-    let grips = frame(FRAC_PI_2).grips(0.0);
+    let grips = frame(FRAC_PI_2).grips();
     assert_eq!(grips[1].1, BOX_HANDLES + EDGE_TOP);
     assert!(close(grips[1].0, (120.0, 50.0)));
     // Its own top-left corner is now at the top right.
     assert!(close(grips[0].0, (120.0, 10.0)));
-  }
-
-  #[test]
-  fn the_radius_dot_walks_in_along_the_picture_s_own_diagonal() {
-    let square = |angle| ImageFrame {
-      half_height: 40.0,
-      ..frame(angle)
-    };
-    // No radius: the inset alone, in from the top-left corner.
-    assert!(close(square(0.0).radius_dot(0.0), (70.0, 20.0)));
-    // The whole radius: half the shorter side's travel further in.
-    assert!(close(square(0.0).radius_dot(50.0), (92.0, 42.0)));
-    assert!(close(square(0.0).radius_dot(80.0), (92.0, 42.0)));
-    // Turned, it stays in its own corner.
-    let turned = square(FRAC_PI_2).radius_dot(0.0);
-    assert!(close(turned, (130.0, 20.0)));
   }
 
   #[test]

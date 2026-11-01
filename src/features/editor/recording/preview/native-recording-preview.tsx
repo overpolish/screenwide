@@ -1,37 +1,43 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { useAnnotationDraft } from "../../annotations/annotation-draft";
 import { useToolFollowsAnnotation } from "../../annotations/use-tool-follows-annotation";
-import { PreviewZoomField } from "../../preview/preview-readouts";
-import { usePreviewZoom } from "../../preview/use-preview-zoom";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
   defaultRecordingOutput,
 } from "../../screenshot/screenshot-output";
-import { RecordingPreviewTimelineBand } from "../../timeline/recording-preview-timeline-band";
+import { useSelectHold } from "../../shortcuts/use-select-hold";
+import { RecordingStripBand } from "../../timeline/recording-strip/recording-strip-band";
 import { createPlayhead } from "../../timeline/scrub-playhead";
 import { useRecordingPreviewTracks } from "../../timeline/tracks/use-recording-preview-tracks";
-import { useRecordingTrackSelection } from "../../timeline/tracks/use-recording-track-selection";
-import { useCanvasTool } from "../../tool-panels/use-canvas-tool";
-import { RecordingVideoTrackId } from "../../types";
+import { usePublishEditorModes } from "../../title-bar/editor-title-modes";
+import { drawingToolKind } from "../../tool-panels/tool-registry";
+import { EditorToolColumn } from "../../toolbar/editor-tool-column";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCopyRecordingFrame } from "../use-copy-recording-frame";
 import { useProjectStill } from "../use-project-still";
 
-import { OverlayLayerId } from "./overlay-layers";
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { CAPTIONS_LAYER_ID, OverlayLayerId } from "./overlay-layers";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { resolveScrubPreviewProps } from "./recording-preview-props";
 import { RecordingPreviewStage } from "./recording-preview-stage";
+import { useOfferedModes } from "./use-offered-modes";
 import { useRecordingCanvasContextMenu } from "./use-recording-canvas-context-menu";
+import { useRecordingColumn } from "./use-recording-column";
+import { useRecordingIsland } from "./use-recording-island";
 import { useRecordingPreviewCanvasTool } from "./use-recording-preview-canvas-tool";
 import { useRecordingPreviewSelection } from "./use-recording-preview-selection";
 import { useRecordingPreviewShortcuts } from "./use-recording-preview-shortcuts";
 import { useRecordingPreviewTransport } from "./use-recording-preview-transport";
-import { useRecordingSceneCanvas } from "./use-recording-scene-canvas";
-import { useRecordingToolbar } from "./use-recording-toolbar";
+import {
+  useRecordingSceneCanvas,
+  useSceneModeChoice,
+} from "./use-recording-scene-canvas";
+import { useRecordingStripBand } from "./use-recording-strip-band";
 
 import type { ScrubPreviewProps } from "./scrub-preview";
 
@@ -43,12 +49,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     artifactId,
     bakeCamera,
     hasAnnotations,
-    hasCursorData,
-    hasKeyboardData,
-    hasMicrophone,
     isSheetOpen,
-    onEnabledTracksChange,
-    onEnabledVideoTracksChange,
     onSelectedTrackChange,
     previewOutputDimensions,
     recordingOutput,
@@ -57,17 +58,23 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   const screenCanvasRef = useRef<HTMLCanvasElement>(null);
   const cameraCanvasRef = useRef<HTMLCanvasElement>(null);
   const recenterRefreshRef = useRef<
-    (crop: ScreenshotOutputSettings["sourceCrop"]) => void
-  >(() => undefined);
+    (crop: ScreenshotOutputSettings["sourceCrop"]) => Promise<void>
+  >(() => Promise.resolve());
   const editGesture = useEditorEditGesture();
-  // The timeline band, which knows what shows at the playhead, sets it.
+  // The strip under the picture, which knows what shows at the playhead,
+  // sets it.
   const pressOverlayRef = useRef((_layerId: OverlayLayerId) => undefined);
   const [playhead] = useState(createPlayhead);
-  const { reportZoom, requestZoom, zoomPercent, zoomRequest } =
-    usePreviewZoom();
-  const [canvasTool, setCanvasTool] = useCanvasTool<
-    Exclude<RecordingCanvasTool, null>
-  >("recording", "select");
+  const [canvasTool, setCanvasTool] = useState<RecordingCanvasTool>("select");
+  // ⌘ (Ctrl) held over a pen puts Select on the picture until it is let go;
+  // a press under it that takes hold of something puts Select in hand.
+  const isSelectHeld = useSelectHold({
+    canHold: drawingToolKind(canvasTool) !== null && !isSheetOpen,
+    onTook: () => {
+      setCanvasTool("select");
+    },
+  });
+  const pictureTool = isSelectHeld ? "select" : canvasTool;
   // A canvas resize runs at pointer rate; committing every move to the export
   // window's state re-renders the inspector, lanes and timeline and starves
   // the native pane's layout loop. The gesture renders from this draft and
@@ -92,7 +99,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     audioVolumeByStream,
     composedVideoTracks,
     enabledTracks,
-    isCameraSeparate,
     selectedStreamIndices,
     selectedVideoTracks,
   } = useRecordingPreviewTracks(props);
@@ -103,7 +109,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   const selection = useRecordingPreviewSelection(props, {
     activeVideoTrack,
     canPreviewBakedCamera,
-    canvasTool,
+    canvasTool: pictureTool,
     editGesture,
     effectiveRecordingOutput,
     previewPositionMs,
@@ -114,7 +120,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   const transport = useRecordingPreviewTransport(props, {
     activeVideoTrack,
     cameraCanvasRef,
-    canvasTool,
+    canvasTool: pictureTool,
     composedVideoTracks,
     effectiveRecordingOutput,
     playhead,
@@ -122,13 +128,11 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     previewPlayingRef,
     previewPositionMs,
     recenterRefreshRef,
-    reportZoom,
     screenCanvasRef,
     selectedStreamIndices,
     selectedVideoTracks,
     selection,
     setPreviewPositionMs,
-    zoomRequest,
   });
   const {
     annotations,
@@ -168,7 +172,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     },
     sceneCanvas.paneMenu,
   );
-  const { changeCanvasTool, isCropping, leaveCropTool, toggleTool } =
+  const { changeCanvasTool, isCropping, toggleTool } =
     useRecordingPreviewCanvasTool({
       activeVideoTrack,
       annotations,
@@ -180,75 +184,84 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
       onSelectedTrackChange,
       setCanvasTool,
     });
-  // Both drawing tools pick up either shape, so the tool follows the annotation
-  // that was chosen with it: the panel and the next press never disagree.
+  // Choosing an annotation, with a pen or with Select, takes up its pen,
+  // whose island shows it.
   useToolFollowsAnnotation(
     annotations.selectedKind,
     canvasTool,
     changeCanvasTool,
   );
-
-  // Keep the transport zoom control stable between zoom changes.
-  const zoomControl = useMemo(
-    () => <PreviewZoomField onChange={requestZoom} zoomPercent={zoomPercent} />,
-    [requestZoom, zoomPercent],
-  );
-
-  const { openOverlayTool, panelToggles } = useRecordingToolbar({
-    canEditActiveTrack,
-    canResizeActiveTrack,
+  const column = useRecordingColumn({
+    activeVideoTrack,
+    annotations,
     canvasTool,
     changeCanvasTool,
-    hasAnnotations,
-    hasCursorData,
-    hasKeyboardData,
-    hasMicrophone,
-    hasScenes: transport.scenes.isAvailable,
-    hasVisiblePanes,
+    onSelectedTrackChange,
   });
+  const { hasTrackChoice, kind, offered, parts } = useOfferedModes(
+    props,
+    column,
+    { enabledTracks, selectedVideoTracks },
+  );
+  // What a pen's island shows while nothing is chosen: the dress its next
+  // annotation is drawn in.
+  useAnnotationDraft(
+    "recording",
+    canvasTool === "canvas" ? "frame" : canvasTool,
+  );
+  // The scenes chosen go with the Scene mode, and the mode with them.
+  useSceneModeChoice({
+    isSceneInHand: canvasTool === "scene",
+    putAway: column.backToSelect,
+    scenes: transport.scenes,
+  });
+  // A chosen overlay opens its mode.
+  const openOverlayTool = (layerId: OverlayLayerId) => {
+    column.openMode(layerId === CAPTIONS_LAYER_ID ? "captions" : "keyboard");
+  };
   useEffect(() => {
     playhead.publish(0, 0);
   }, [artifactId, playhead]);
 
   useRecordingPreviewShortcuts({
-    ...panelToggles,
     annotations,
     arrangeScenePane: sceneCanvas.arrangeSelectedPane,
+    backToSelect: column.backToSelect,
     canEditActiveTrack,
     canResizeActiveTrack,
     canvasTool,
     changeCanvasTool,
     hasAnnotations,
     hasSceneSelection: transport.scenes.selection.ids.size > 0,
-    hasScenes: transport.scenes.isAvailable,
     hasVisiblePanes,
     isCropping,
     layout,
-    leaveCropTool,
     nudgeActiveTrack: selection.nudgeActiveTrack,
+    offered,
+    ownsEscape: column.ownsEscape,
     player,
     step: transport.timelineBlade.step,
+    toggleCrop: column.toggleCrop,
+    toggleMode: column.toggleMode,
     toggleTool,
   });
-  const changeEnabledTracks = useCallback(
-    (tracks: Set<number>) => {
-      onEnabledTracksChange?.([...tracks]);
-    },
-    [onEnabledTracksChange],
-  );
-  const changeEnabledVideoTracks = useCallback(
-    (tracks: Set<RecordingVideoTrackId>) => {
-      onEnabledVideoTracksChange?.([...tracks]);
-    },
-    [onEnabledVideoTracksChange],
-  );
-  const changeSelectedTrack = useRecordingTrackSelection({
-    clearAnnotations: clearAnnotationRef,
-    clearOverlays: selection.clearOverlaySelection,
-    onSelectedTrackChange,
-    setTool: changeCanvasTool,
+  const band = useRecordingStripBand(props, {
+    changeCanvasTool,
+    openOverlayTool,
+    playhead,
+    pressOverlayRef,
+    selection,
+    transport,
   });
-  const { copyCurrentFrame, copyError } = useCopyRecordingFrame(props, {
+  const island = useRecordingIsland({ column, strip: band });
+  usePublishEditorModes({
+    kind,
+    mode: column.mode,
+    onModeChange: column.onModeChange,
+    parts,
+    tracks: layout && hasTrackChoice ? island.tracks : null,
+  });
+  const { copyError } = useCopyRecordingFrame(props, {
     annotationClips: annotations.clips,
     getPositionMs: player.getPositionMs,
     recordingOutput: effectiveRecordingOutput,
@@ -259,40 +272,27 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   });
 
   return (
-    <div className="flex min-h-0 grow flex-col">
-      <RecordingPreviewStage
-        {...props}
-        {...transport}
-        activeRecordingOutput={activeRecordingOutput}
-        audioVolumeByStream={audioVolumeByStream}
-        canPreviewBakedCamera={canPreviewBakedCamera}
-        canvasTool={canvasTool}
-        copyError={copyError}
-        enabledTracks={enabledTracks}
-        screenCanvasRef={screenCanvasRef}
-      />
-
-      {layout ? (
-        <RecordingPreviewTimelineBand
+    <div className="flex min-h-0 grow flex-col gap-separate">
+      <div className="flex min-h-0 min-w-0 grow gap-inline">
+        <EditorToolColumn
+          {...column.column}
+          kind={kind}
+          tool={isSelectHeld ? "select" : column.column.tool}
+        />
+        <RecordingPreviewStage
           {...props}
           {...transport}
+          activeRecordingOutput={activeRecordingOutput}
           audioVolumeByStream={audioVolumeByStream}
-          captionSelection={selection.captionSelection}
-          changeCanvasTool={changeCanvasTool}
-          changeEnabledTracks={changeEnabledTracks}
-          changeEnabledVideoTracks={changeEnabledVideoTracks}
-          changeSelectedTrack={changeSelectedTrack}
-          copyCurrentFrame={copyCurrentFrame}
+          canPreviewBakedCamera={canPreviewBakedCamera}
+          canvasTool={pictureTool}
+          copyError={copyError}
           enabledTracks={enabledTracks}
-          isCameraSeparate={isCameraSeparate}
-          keyboardTimeline={selection.keyboardTimeline}
-          layout={layout}
-          openOverlayTool={openOverlayTool}
-          playhead={playhead}
-          pressOverlayRef={pressOverlayRef}
-          selectedVideoTracks={selectedVideoTracks}
-          zoomControl={zoomControl}
+          screenCanvasRef={screenCanvasRef}
         />
+      </div>
+      {layout ? (
+        <RecordingStripBand strip={band.strip} transport={band.transport} />
       ) : null}
     </div>
   );

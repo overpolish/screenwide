@@ -7,24 +7,13 @@ import { RefObject, useEffect, useRef } from "react";
 import {
   layoutRecordingPreviewSurface,
   setRecordingPreviewEditorSuspended,
-  setRecordingPreviewZoom,
 } from "../api";
 import {
-  applyBackdropMask,
   clearBackdropMasks,
   effectiveBackdrop,
-  Hole,
+  updatePreviewBackdropMasks,
+  viewportCorners,
 } from "../preview/preview-backdrop";
-import {
-  resetRecordingPreviewView,
-  setRecordingPreviewFitBasis,
-} from "../preview/preview-view-api";
-import { PreviewZoomRequest } from "../preview/preview-zoom-state";
-import {
-  ResizeFit,
-  resizeFitWidth,
-  useNativePreviewFit,
-} from "../preview/use-native-preview-fit";
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../types";
 
@@ -50,10 +39,8 @@ export type RecordingSelectionGestureEvent = {
     | "cropDraw"
     | "cropMove"
     | "cropResize"
-    | "frameRadius"
     | "frameResize"
     | "move"
-    | "radius"
     | "resize"
     /** A ring of the rotation gizmo: every sample carries the turn it
      * reaches, in degrees, about X in `deltaX`, Y in `deltaY` and Z in
@@ -70,6 +57,8 @@ export type RecordingPreviewSelection = {
   paneIndex: number;
   radiusPercent: number;
   rect: { height: number; width: number; x: number; y: number };
+  /** The crop window keeps its shape as its handles are dragged. */
+  cropKeepsShape?: boolean;
   cropMode?: boolean;
   /** A scene fixes where this pane sits: a move pans its picture and a
    * resize zooms it, and the outline stays put. */
@@ -101,14 +90,12 @@ export function useRecordingPreviewSurface({
   onError,
   onSelectionChange,
   onSelectionGesture,
-  onZoomChange,
   recordingOutput,
   screenCanvasRef,
   selection,
   selectionTargets,
   sessionIdRef,
   startedRef,
-  zoomRequest,
 }: {
   bakeCamera: boolean;
   cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
@@ -138,10 +125,8 @@ export function useRecordingPreviewSurface({
   nativeEditorOwnsLayout?: boolean;
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: RecordingSelectionGestureEvent) => void;
-  onZoomChange?: (zoomPercent: number) => void;
   selection?: RecordingPreviewSelection | null;
   selectionTargets?: RecordingPreviewSelection[] | null;
-  zoomRequest?: PreviewZoomRequest;
 }) {
   const compositionRef = useRef({ bakeCamera, cameraOverlay, recordingOutput });
   const selectionRef = useRef(selection);
@@ -157,36 +142,7 @@ export function useRecordingPreviewSurface({
   const selectionGestureActiveRef = useRef(false);
   const layoutRequestIdRef = useRef(0);
   const measureRef = useRef<() => void>(() => undefined);
-  const layoutRef = useRef<Promise<unknown>>(Promise.resolve());
-  const resizeFitRef = useRef<ResizeFit | null>(null);
-  const lastZoomRequestRef = useRef<PreviewZoomRequest | undefined>(undefined);
   compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
-
-  useEffect(() => {
-    if (!isEnabled || !nativeEditorOwnsLayout) return;
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-    void listen<{ sessionId: number; zoomPercent: number }>(
-      "recording-preview://transform",
-      (event) => {
-        if (
-          !disposed &&
-          event.payload.sessionId === sessionIdRef.current &&
-          Number.isFinite(event.payload.zoomPercent)
-        ) {
-          const roundedZoom = Math.round(event.payload.zoomPercent);
-          onZoomChange?.(roundedZoom);
-        }
-      },
-    ).then((cleanup) => {
-      if (disposed) cleanup();
-      else unlisten = cleanup;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [isEnabled, nativeEditorOwnsLayout, onZoomChange, sessionIdRef]);
 
   useEffect(() => {
     if (!isEnabled || !nativeEditorOwnsLayout || !startedRef.current) return;
@@ -203,35 +159,6 @@ export function useRecordingPreviewSurface({
     onError,
     sessionIdRef,
     startedRef,
-  ]);
-
-  useEffect(() => {
-    if (
-      !isEnabled ||
-      !nativeEditorOwnsLayout ||
-      isEditorSuspended ||
-      zoomRequest === undefined ||
-      !startedRef.current
-    )
-      return;
-    // Reports never create requests. Consume each explicit request once,
-    // including across rerenders caused by newer native transform events.
-    if (zoomRequest === lastZoomRequestRef.current) return;
-    lastZoomRequestRef.current = zoomRequest;
-    void setRecordingPreviewZoom(
-      sessionIdRef.current,
-      zoomRequest.percent,
-    ).catch((cause: unknown) => {
-      onError(String(cause));
-    });
-  }, [
-    isEditorSuspended,
-    isEnabled,
-    nativeEditorOwnsLayout,
-    onError,
-    sessionIdRef,
-    startedRef,
-    zoomRequest,
   ]);
 
   useEffect(() => {
@@ -267,7 +194,7 @@ export function useRecordingPreviewSurface({
         !Number.isFinite(payload.deltaX) ||
         !Number.isFinite(payload.deltaY) ||
         !Number.isInteger(payload.edges) ||
-        ![0, 1, 2, 3, 4, 5, 6, 7, 8, 9].includes(payload.operation) ||
+        ![0, 1, 2, 3, 4, 5, 6].includes(payload.operation) ||
         !Number.isInteger(payload.paneIndex) ||
         !Number.isFinite(payload.scale) ||
         !["begin", "update", "end", "cancel"].includes(payload.phase)
@@ -280,7 +207,7 @@ export function useRecordingPreviewSurface({
       // A turn, like a move or a resize, is drawn natively at pointer rate.
       if (payload.phase === "begin")
         selectionGestureActiveRef.current =
-          payload.operation < 5 || payload.operation === 8;
+          payload.operation < 3 || payload.operation === 6;
       else if (payload.phase === "end" || payload.phase === "cancel")
         selectionGestureActiveRef.current = false;
       onSelectionGestureRef.current?.({
@@ -291,9 +218,7 @@ export function useRecordingPreviewSurface({
         operation: [
           "move",
           "resize",
-          "radius",
           "frameResize",
-          "frameRadius",
           "cropMove",
           "cropResize",
           "cropDraw",
@@ -337,7 +262,7 @@ export function useRecordingPreviewSurface({
     const queueLayout = (
       value: Parameters<typeof layoutRecordingPreviewSurface>[0],
     ) => {
-      const nextLayout = JSON.stringify([value, resizeFitRef.current]);
+      const nextLayout = JSON.stringify(value);
       if (nextLayout === lastLayout) return;
       lastLayout = nextLayout;
       const requestId = ++layoutRequestIdRef.current;
@@ -349,7 +274,7 @@ export function useRecordingPreviewSurface({
       const next = pendingLayout;
       pendingLayout = null;
       inFlight = true;
-      layoutRef.current = layoutRecordingPreviewSurface(next)
+      void layoutRecordingPreviewSurface(next)
         .catch((cause: unknown) => {
           if (!disposed) onError(String(cause));
         })
@@ -391,6 +316,12 @@ export function useRecordingPreviewSurface({
             selection: null,
             sessionId: sessionIdRef.current,
             viewport: { height: 0, width: 0, x: 0, y: 0 },
+            viewportCorners: {
+              bottomLeft: 0,
+              bottomRight: 0,
+              topLeft: 0,
+              topRight: 0,
+            },
           });
           return;
         }
@@ -420,32 +351,8 @@ export function useRecordingPreviewSurface({
           // process on its own schedule. During a canvas resize that hole would
           // land a display tick before or after the native pane and shimmer
           // along its edge.
-          const holes: Hole[] =
-            viewportRect.width >= 1 && viewportRect.height >= 1
-              ? [
-                  {
-                    height: Math.round(viewportRect.height * 100) / 100,
-                    width: Math.round(viewportRect.width * 100) / 100,
-                    x: 0,
-                    y: 0,
-                  },
-                ]
-              : [];
-          for (const element of document.querySelectorAll<HTMLElement>(
-            "[data-preview-backdrop]",
-          )) {
-            const elementRect = element.getBoundingClientRect();
-            applyBackdropMask(
-              element,
-              holes.map((hole) => ({
-                ...hole,
-                x:
-                  Math.round((viewportRect.left - elementRect.left) * 100) /
-                  100,
-                y: Math.round((viewportRect.top - elementRect.top) * 100) / 100,
-              })),
-            );
-          }
+          const corners = viewportCorners(viewport);
+          updatePreviewBackdropMasks(viewportRect, corners);
           const viewportSurface = {
             height: viewportRect.height,
             width: viewportRect.width,
@@ -460,11 +367,6 @@ export function useRecordingPreviewSurface({
             annotationTool: annotationToolRef.current,
             backdrop: effectiveBackdrop(),
             ...compositionRef.current,
-            fitWidth: resizeFitWidth(
-              resizeFitRef.current,
-              viewportRect.width,
-              sessionIdRef.current,
-            ),
             nativeEditor: nativeEditorActive,
             panes,
             requestId: 0,
@@ -473,6 +375,7 @@ export function useRecordingPreviewSurface({
             selectionTargets: selectionTargetsRef.current,
             sessionId: sessionIdRef.current,
             viewport: viewportSurface,
+            viewportCorners: corners,
           });
         }
       }
@@ -601,17 +504,4 @@ export function useRecordingPreviewSurface({
     selection,
     selectionTargets,
   ]);
-
-  const { fitDuringResize, fitPreview, setFitBasis } = useNativePreviewFit({
-    layoutRef,
-    measureRef,
-    onError,
-    reset: resetRecordingPreviewView,
-    resizeFitRef,
-    sessionIdRef,
-    setBasis: setRecordingPreviewFitBasis,
-    startedRef,
-  });
-
-  return { fitDuringResize, fitPreview, setFitBasis };
 }

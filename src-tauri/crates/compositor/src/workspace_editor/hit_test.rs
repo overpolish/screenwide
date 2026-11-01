@@ -32,13 +32,6 @@ pub fn hit_test_display(
       return Some(DisplayHit::new(target.id, handle));
     }
   }
-  if let Some((_, target)) = order.iter().rev().find(|(_, target)| {
-    target.selected != 0
-      && target.radius_enabled != 0
-      && radius_hit(target.rect, target.radius_percent, point, radius)
-  }) {
-    return Some(DisplayHit::new(target.id, DisplayHandle::Radius));
-  }
   order
     .iter()
     .rev()
@@ -80,9 +73,4 @@ fn edge_handle(rect: DisplayRect, point: (f64, f64), size: f64) -> Option<Displa
     .into_iter()
     .find(|(x, y, _)| (point.0 - x).abs() <= size && (point.1 - y).abs() <= size)
     .map(|(_, _, handle)| handle)
-}
-
-fn radius_hit(rect: DisplayRect, percent: f64, point: (f64, f64), size: f64) -> bool {
-  let offset = rect.width.min(rect.height) * percent.clamp(0.0, 50.0) / 100.0 * 0.55 + 10.0;
-  (point.0 - rect.x - offset).abs() <= size && (point.1 - rect.y - offset).abs() <= size
 }

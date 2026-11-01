@@ -7,6 +7,9 @@ export const motionDurations = {
   /** Many things moving at once to new places, slow enough to follow
    * which went where, such as a timeline making room for what is moved. */
   rearrange: 0.4,
+  /** The picture taking a setting chosen on an island, such as its padding
+   * or corners, so the change is seen rather than jumped to. */
+  reshape: 0.28,
   state: 0.12,
   travel: 0.22,
 } as const;

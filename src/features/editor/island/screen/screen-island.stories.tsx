@@ -25,11 +25,6 @@ function ScreenIsland({
 const meta = {
   ...editorIslandStoryMeta,
   argTypes: {
-    aspect: {
-      control: "inline-radio",
-      options: ["free", "original", "1:1", "4:3", "16:9", "9:16"],
-      table: { defaultValue: { summary: "free" } },
-    },
     capture: {
       control: "inline-radio",
       options: ["recording", "screenshot"],
@@ -37,33 +32,25 @@ const meta = {
     },
   },
   args: {
-    aspect: "free",
     capture: "recording",
     hasShadow: true,
     inset: 0,
-    insetMaximum: 1080,
     isInScene: false,
     isShown: true,
-    onAspectChange: fn(),
     onInsetChange: fn(),
     onRadiusChange: fn(),
     onRecenter: fn(),
-    onReset: fn(),
     onShadowChange: fn(),
     radius: 4,
   },
   component: ScreenIsland,
-  decorators: [featureStage({ height: 260, width: 520 })],
+  decorators: [featureStage({ height: 220, width: 520 })],
   // Every choice changes the story's picture, as it would the capture's.
   render: function Render(args) {
     const [, updateArgs] = useArgs<ScreenIslandProps>();
     return (
       <ScreenIsland
         {...args}
-        onAspectChange={(aspect) => {
-          args.onAspectChange(aspect);
-          updateArgs({ aspect });
-        }}
         onInsetChange={(inset) => {
           args.onInsetChange(inset);
           updateArgs({ inset });
@@ -71,10 +58,6 @@ const meta = {
         onRadiusChange={(radius) => {
           args.onRadiusChange(radius);
           updateArgs({ radius });
-        }}
-        onReset={() => {
-          args.onReset();
-          updateArgs({ aspect: "free" });
         }}
         onShadowChange={(hasShadow) => {
           args.onShadowChange(hasShadow);
@@ -91,5 +74,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-// Over a scene, the corners are the scene's own; the note says so.
+// Over a scene, the inset, corners, turn and Recenter are the scene's own;
+// the note says so.
 export const InScene: Story = { args: { isInScene: true } };

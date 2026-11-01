@@ -26,7 +26,7 @@ export type AlertProps = {
 export function Alert({ contentRef, message, onDismiss, title }: AlertProps) {
   return (
     <WindowShell height="content" ref={contentRef}>
-      <div className="flex flex-col gap-section p-window-inset" role="alert">
+      <div className="flex flex-col gap-separate p-inset" role="alert">
         <p className="text-heading text-fg">{title}</p>
         <p className="text-body text-fg select-text">{message}</p>
         <div className="flex justify-end">

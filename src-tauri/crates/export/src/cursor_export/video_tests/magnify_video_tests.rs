@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Magnifiers through the real video export: the loupe reads the frame's own
-//! planes, after its redactions.
+//! Lenses through the real video export: the lens reads the frame as
+//! composed, after its redactions.
 
 use super::*;
 use screenwide_annotations::magnify::model::new_magnify;
@@ -56,18 +56,17 @@ fn clip(annotation: Annotation) -> RecordingAnnotationClip {
   }
 }
 
-/// A clear loupe 80 across at (80, 90), enlarging twice the zoom area on the
-/// bright half at (240, 90).
-fn loupe() -> Annotation {
-  let mut annotation = new_magnify("magnify".to_owned(), point(240.0, 90.0), None);
+/// A clear square lens 80 across centred at `centre`, enlarging twice.
+fn lens(centre: AnnotationPoint) -> Annotation {
+  let mut annotation = new_magnify("magnify".to_owned(), centre, None, None);
   annotation.shape = AnnotationShape::Magnify {
-    start: point(220.0, 70.0),
-    end: point(260.0, 110.0),
-    loupe: point(80.0, 90.0),
-    size: 80.0,
+    start: point(centre.x - 40.0, centre.y - 40.0),
+    end: point(centre.x + 40.0, centre.y + 40.0),
+    zoom: 2.0,
   };
-  // Every exported clip carries a usable width, so the rim is a fine one; it
-  // stays well clear of the middle the tests read.
+  annotation.style.radius = 0.0;
+  // Every exported clip carries a usable width; the glass's rim stays well
+  // clear of what the tests read.
   annotation.style.width = 2.0;
   annotation.style.shadow = false;
   annotation
@@ -171,16 +170,24 @@ fn level(path: &Path, [x0, y0, x1, y1]: [u32; 4]) -> f64 {
 }
 
 #[test]
-fn an_exported_loupe_shows_the_frame_under_its_zoom_area_and_not_what_is_redacted() {
+fn an_exported_lens_shows_the_frame_under_it_and_not_what_is_redacted() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-magnify-video-{}", std::process::id()));
   std::fs::create_dir_all(&directory).unwrap();
   let source = recording(&directory);
-  let inside = [64, 74, 96, 106];
-  // Over the dark half, the loupe shows the bright half its zoom area covers.
-  let magnified = exported(&source, &directory.join("magnified.mp4"), &[clip(loupe())]);
-  assert!(level(&magnified, inside) > 200.0);
-  // A redaction over the zoom area is what the loupe enlarges, not what it
+  // Across the halves' edge, the lens shows the dark half enlarged on its
+  // left and the bright half on its right: (124, 90) shows (142, 90), and
+  // (196, 90) shows (178, 90).
+  let magnified = exported(
+    &source,
+    &directory.join("magnified.mp4"),
+    &[clip(lens(point(160.0, 90.0)))],
+  );
+  // The glass lifts what it shows a little, so dark is read against the
+  // bright half rather than the bare frame's level.
+  assert!(level(&magnified, [120, 84, 128, 96]) < 80.0);
+  assert!(level(&magnified, [192, 84, 200, 96]) > 200.0);
+  // A redaction under the lens is what the lens enlarges, not what it
   // hides.
   let mut cover = new_redact("redact".to_owned(), point(200.0, 50.0), None);
   cover.shape = AnnotationShape::Redact {
@@ -193,8 +200,8 @@ fn an_exported_loupe_shows_the_frame_under_its_zoom_area_and_not_what_is_redacte
   let redacted = exported(
     &source,
     &directory.join("redacted.mp4"),
-    &[clip(cover), clip(loupe())],
+    &[clip(cover), clip(lens(point(240.0, 90.0)))],
   );
-  assert!(level(&redacted, inside) < 40.0);
+  assert!(level(&redacted, [224, 74, 256, 106]) < 40.0);
   std::fs::remove_dir_all(directory).unwrap();
 }

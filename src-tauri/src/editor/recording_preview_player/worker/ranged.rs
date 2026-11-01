@@ -31,7 +31,6 @@ pub(super) struct RunContext {
   pub event_channel: Channel<RecordingPreviewPlayerEvent>,
   pub playback_end_ms: Option<u64>,
   pub playback_factors: Vec<f64>,
-  pub playback_rate: f64,
   pub playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pub position_ms: Arc<AtomicU64>,
   pub selected_audio: Arc<RwLock<Vec<usize>>>,
@@ -41,10 +40,6 @@ pub(super) struct RunContext {
 
 fn output_duration_ms(source_duration_ms: u64, playback_rate: f64) -> u64 {
   ((source_duration_ms as f64) / playback_rate).ceil() as u64
-}
-
-fn effective_rate(range: RecordingPreviewPlaybackRange, global_rate: f64) -> f64 {
-  range.playback_rate * global_rate
 }
 
 fn source_elapsed_ms(output_elapsed_ms: u64, playback_rate: f64) -> u64 {
@@ -90,7 +85,6 @@ fn start(
       Arc::clone(&context.selected_audio),
       Arc::clone(&context.audio_volumes),
       ranges,
-      context.playback_rate,
       Arc::clone(&context.cancelled),
       Arc::clone(&context.audio_child),
     )
@@ -161,7 +155,7 @@ pub(super) fn run(context: RunContext) {
   let mut late_frames = LateFrames::default();
 
   for (range_index, range) in ranges.iter().copied().enumerate() {
-    let rate = effective_rate(range, context.playback_rate);
+    let rate = range.playback_rate;
     let output_end_ms = output_offset_ms + output_duration_ms(range.duration_ms(), rate);
     while !context.cancelled.load(Ordering::Acquire) {
       let frame = match current_video.frames.recv_timeout(Duration::from_millis(16)) {
@@ -192,12 +186,12 @@ pub(super) fn run(context: RunContext) {
       if !context.sources.presents_video() {
         present_audio_position(&context.sources, current);
       }
-      if context.sources.presents_video() && !platform::send_frame(&context.sources, frame.payload)
-      {
-        failed = true;
-        break;
+      // A frame the workspace cannot take, as the source's last sample can
+      // be, leaves the picture it holds; playback goes on to its end, which
+      // the frontend is told of.
+      if context.sources.presents_video() && platform::send_frame(&context.sources, frame.payload) {
+        late_frames.drew();
       }
-      late_frames.drew();
       let _ = context
         .event_channel
         .send(RecordingPreviewPlayerEvent::Position {

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { t } from "../../../../i18n/i18n";
 import {
   SceneChoice,
   SceneSpanTarget,
@@ -14,8 +13,6 @@ import {
   TranscriptRange,
 } from "../tool-panel-transcript";
 
-import { TranscriptEditor } from "./transcript-editor";
-import { TranscriptSetup } from "./transcript-setup";
 import { TranscriptWord } from "./transcript-words";
 
 export type TranscriptPanelViewProps = {
@@ -65,34 +62,3 @@ export type TranscriptPanelViewProps = {
   /** Null until the transcript has been read. */
   words: readonly TranscriptWord[] | null;
 };
-
-/**
- * The Transcript tool's panel: the recording's microphone as words, edited
- * in place. Before there are words, the one step that gets them: the
- * model's download, then transcribing, which can be cancelled. Nothing
- * until the editor has said where the transcript is.
- */
-export function TranscriptPanelView(props: TranscriptPanelViewProps) {
-  const { isLocked, transcript } = props;
-  if (!transcript?.model) return null;
-
-  if (transcript.model.status === "downloaded" && transcript.status === "ready")
-    return props.words ? (
-      <TranscriptEditor
-        {...props}
-        transcript={transcript}
-        words={props.words}
-      />
-    ) : null;
-
-  return (
-    <TranscriptSetup
-      description={t("editor-panels-transcript-description")}
-      isLocked={isLocked}
-      onCancel={props.onCancel}
-      onDownload={props.onDownload}
-      onTranscribe={props.onTranscribe}
-      transcript={transcript}
-    />
-  );
-}

@@ -5,9 +5,26 @@
 //! selection outlines, the gestures it reports, the pointer and typing input
 //! a platform hands in and the cursor it is asked to show.
 
-pub type TransformCallback = Box<dyn FnMut(f64) + Send + 'static>;
 pub type SelectionCallback = Box<dyn FnMut(Option<u32>) + Send + 'static>;
-pub type PointerDownCallback = Box<dyn FnMut() + Send + 'static>;
+pub type PointerPressCallback = Box<dyn FnMut(PointerPress) + Send + 'static>;
+
+/// A press on the picture as the editor above hears of it, and the pointer
+/// coming onto the picture.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PointerPress {
+  /// A button went down. `took` says whether the press took hold of
+  /// something already there (a layer, an annotation, a grip or a ring)
+  /// rather than drawing, panning or drawing a band.
+  Down { took: bool },
+  /// The press was let go or cancelled.
+  Up,
+  /// The pointer came onto the picture from the page around it. A platform
+  /// whose page never hears the pointer leave (WebKit under the macOS
+  /// picture) sends it, so the page can stop showing what it last saw
+  /// under the pointer as hovered.
+  Arrived,
+}
+
 /// A right press on a video layer or an annotation in the native canvas: the
 /// pane it landed on, the annotation's place in the published list when it
 /// landed on one, and the point, in logical px from the top-left of the
@@ -27,20 +44,18 @@ pub enum SelectionGesturePhase {
 pub enum SelectionGestureOperation {
   Move = 0,
   Resize = 1,
-  Radius = 2,
-  FrameResize = 3,
-  FrameRadius = 4,
-  CropMove = 5,
-  CropResize = 6,
+  FrameResize = 2,
+  CropMove = 3,
+  CropResize = 4,
   /// A new crop window drawn from a press outside the current one. Begin
   /// carries the anchor's offset from the crop's origin; later samples carry
   /// the far corner's offset from the anchor, or the half extents when the
   /// centered edge bit is set.
-  CropDraw = 7,
+  CropDraw = 5,
   /// A ring of the rotation gizmo dragged round. Every sample carries the
   /// turn it reaches, in degrees: about X in the X delta, about Y in the Y
   /// delta and about Z in the scale.
-  Rotate = 8,
+  Rotate = 6,
 }
 
 impl SelectionGestureOperation {
@@ -99,7 +114,7 @@ pub const FRAMED_FREE: u32 = 2;
 /// normalized to its pane so the native surface can apply the same pan/zoom
 /// transform as the media without knowing frontend output sizes.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct PreviewSelection {
   pub pane_index: u32,
   /// Logical editable layer. This is independent of the physical pane: a
@@ -107,8 +122,11 @@ pub struct PreviewSelection {
   pub layer_id: u32,
   /// Non-zero when this rectangle is a crop window over an independent image.
   pub crop_mode: u32,
-  /// Non-zero when this selection has no corner-radius gesture or OSC.
-  pub radius_disabled: u32,
+  /// Non-zero when a crop window keeps its shape as its handles are pulled,
+  /// as a crop given a ratio of width to height does. Such a crop is only
+  /// resized and moved: a press outside it draws no new one, which would be
+  /// free of any shape.
+  pub crop_keeps_shape: u32,
   /// Where a scene places this rectangle: zero outside every scene,
   /// [`FRAMED_FIXED`] where the scene fixes it, and [`FRAMED_FREE`] where the
   /// scene places it but leaves it free to move and resize.

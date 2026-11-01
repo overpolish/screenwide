@@ -35,6 +35,7 @@ impl Gpu {
       .map_err(|error| format!("The Windows selection visual could not be attached: {error}"))?;
     let audio_ribbon = audio_ribbon::AudioRibbon::new(shared, &composition, &root)?;
     let selection = selection::SelectionOverlay::new(shared, &composition, &editor_root)?;
+    let viewport_clip = viewport_clip::ViewportClip::new(&composition, &root, &editor_root)?;
     unsafe { composition.Commit() }
       .map_err(|error| format!("The Windows preview compositor could not start: {error}"))?;
     Ok(Self {
@@ -46,6 +47,7 @@ impl Gpu {
       _editor_target: editor_target,
       _target: target,
       workspace,
+      viewport_clip,
     })
   }
 }

@@ -35,6 +35,8 @@ pub(super) struct FocusConstants {
   inverse: [[f32; 4]; 3],
   shape: [f32; 4],
   edge: [f32; 4],
+  /// Where a target pixel lies in the chain: `xy` added to it.
+  chain: [f32; 4],
 }
 
 /// One focused frame's blur.
@@ -44,6 +46,12 @@ pub(in super::super) struct FocusPlan {
   cut: u32,
   /// Whether the focus lies in the run above the camera.
   above_camera: bool,
+  /// How far into the chain the target lies, in whole texels: enough to
+  /// start the canvas on a multiple of the coarsest level's texel, so the
+  /// levels average the same pixels of the picture however it is panned.
+  /// Laid in the target's own grid instead, a pan of one pixel changes what
+  /// every coarse texel averages, and the blur shimmers as the view moves.
+  shift: [u32; 2],
 }
 
 impl FocusPlan {
@@ -54,6 +62,10 @@ impl FocusPlan {
       return None;
     }
     let [width, height, source_width, source_height] = values.output_source;
+    // The canvas's corner in the target, carried to a multiple of the grid;
+    // a canvas drawn from the target's corner needs no shift.
+    let grid = screenwide_gpu::mips::COARSEST_TEXEL as f32;
+    let shift = [0, 1].map(|axis| (-values.placement[axis].floor()).rem_euclid(grid) as u32);
     let shorter = width.min(height).max(1.0);
     let [ix, iy, iw, ih] = values.image_rect;
     let row = |index: usize| {
@@ -108,11 +120,28 @@ impl FocusPlan {
           // How opaque what lies past the canvas's edge is laid, sharp.
           values.overflow[0],
         ],
+        chain: [shift[0] as f32, shift[1] as f32, 0.0, 0.0],
       },
       regions,
       cut: prepared.focus_cut,
       above_camera: prepared.focus_above_camera,
+      shift,
     })
+  }
+
+  /// The chain a target `frame` texels wide is drawn into: a placed canvas
+  /// moves through the target, so its chain is the target and the shift
+  /// past it, held to whole coarse texels so its size stays put as the view
+  /// pans and every level halves the one above exactly. A canvas drawn
+  /// from the target's corner, as an export is, is drawn in the target's
+  /// own size.
+  pub(in super::super) fn chain_size(frame: (u32, u32), placed: bool) -> (u32, u32) {
+    if !placed {
+      return frame;
+    }
+    let grid = screenwide_gpu::mips::COARSEST_TEXEL;
+    let fit = |side: u32| (side + grid).div_ceil(grid) * grid;
+    (fit(frame.0), fit(frame.1))
   }
 
   /// `values` for the canvas pass that draws what lies under the focus (`0`)
@@ -124,6 +153,14 @@ impl FocusPlan {
       f32::from(u8::from(self.above_camera)),
       0.0,
     ];
+    // What lies under the focus is drawn into the chain, the target shifted;
+    // a lens there still reads the layers under it where the target has them.
+    if part == 0 {
+      values.placement[0] += self.shift[0] as f32;
+      values.placement[1] += self.shift[1] as f32;
+      values.overflow[2] = self.shift[0] as f32;
+      values.overflow[3] = self.shift[1] as f32;
+    }
     values
   }
 

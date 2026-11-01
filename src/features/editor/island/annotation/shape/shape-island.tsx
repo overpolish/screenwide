@@ -14,6 +14,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import type { EditorIslandContent } from "../../editor-island";
 
@@ -33,22 +38,24 @@ type ShapeStyle = {
   width: number;
 };
 
-export type ShapeIslandProps = AnnotationColorProps & {
-  /** Whether it can draw itself in: a recording's annotations can, a
-   * screenshot's, being one instant, cannot. */
-  canAnimate: boolean;
-  id: string;
-  onStyleChange: (style: Partial<ShapeStyle>) => void;
-  style: ShapeStyle;
-  /** Left out for the pen in hand with nothing chosen. */
-  onDelete?: () => void;
-};
+export type ShapeIslandProps = AnnotationColorProps &
+  AnnotationPinProps & {
+    /** Whether it can draw itself in: a recording's annotations can, a
+     * screenshot's, being one instant, cannot. */
+    canAnimate: boolean;
+    id: string;
+    onStyleChange: (style: Partial<ShapeStyle>) => void;
+    style: ShapeStyle;
+    /** Left out for the pen in hand with nothing chosen. */
+    onDelete?: () => void;
+  };
 
 export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {
   const { canAnimate, id, onDelete, onStyleChange, style } = props;
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -94,6 +101,7 @@ export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </div>
     ),
     title: (

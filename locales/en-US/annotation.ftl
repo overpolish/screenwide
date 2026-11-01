@@ -36,6 +36,8 @@ annotation-size-width = Width
 annotation-size-size = Size
 annotation-size-height = Height
 annotation-size-block = Block size
+# How many times a magnifier enlarges what is under it.
+annotation-size-zoom = Zoom
 
 ## Colours
 
@@ -58,9 +60,7 @@ annotation-align-left = Left
 annotation-align-center = Centre
 annotation-align-right = Right
 annotation-angle = Angle
-annotation-angle-value = Angle value
 annotation-radius = Radius
-annotation-randomise = Randomise
 # How wide a blurred redaction's blur spreads, in steps from lightest to strongest.
 annotation-blur-strength = Strength
 # One of a blur's steps, named by its place from the lightest and how many there are.
@@ -71,12 +71,6 @@ annotation-shadow-drop = Drop shadow
 annotation-sway-on = Sway
 # A toggle: whether a recording loops a moving image for its whole clip rather than playing it through once.
 annotation-playback-loop = Loop
-# Whether what lies outside a spotlight is blurred.
-annotation-outside-blur = Blur
-# Whether a highlight fits itself to the text under it or is laid by hand.
-annotation-fit = Fit
-annotation-fit-auto = Auto
-annotation-fit-manual = Manual
 # A toggle: whether a highlight covers the box dragged rather than fitting the text under it.
 annotation-fit-box = Cover the box
 # Which ends of an arrow carry a head.
@@ -84,10 +78,6 @@ annotation-head = Head
 annotation-head-none = None
 annotation-head-end = End
 annotation-head-both = Both
-# Whether a highlight recolours the text it covers or tints it like a marker.
-annotation-ink = Ink
-annotation-ink-recolor = Recolor
-annotation-ink-tint = Tint
 # A toggle: whether a highlight or a shape is drawn by hand rather than clean. Each time it is turned on the wobble is new.
 annotation-stroke-hand-drawn = Hand-drawn
 annotation-redaction = Redaction
@@ -97,9 +87,5 @@ annotation-redaction-pixelate = Pixelate
 annotation-redaction-blur = Blur
 annotation-redaction-shuffle-pixelation = Shuffle pixelation
 annotation-redaction-shuffle-blur = Shuffle blur
-# Secure pixelation lays its blocks out at random; classic averages each one.
-annotation-pixelation = Pixelation
-annotation-pixelation-secure = Secure
-annotation-pixelation-classic = Classic
 # A toggle: whether a pixelated redaction uses classic pixelation, only a look, rather than secure.
 annotation-pixelation-classic-on = Classic pixelation

@@ -18,6 +18,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import { TextColors } from "./text-colors";
 import { TextLookPickers } from "./text-look-pickers";
@@ -50,32 +55,33 @@ type TextPlacement = {
   size: number;
 };
 
-export type TextIslandProps = AnnotationColorProps & {
-  /** Whether it can grow in and its words come on one by one: a
-   * recording's annotations can, a screenshot's, being one instant,
-   * cannot. */
-  canAnimate: boolean;
-  /** The words set apart, by the bytes they take in the text. */
-  emphasis: TextSpan[];
-  id: string;
-  look: TextStyle;
-  onEmphasisChange: (emphasis: TextSpan[]) => void;
-  onLookChange: (patch: Partial<TextStyle>) => void;
-  onStyleChange: (style: Partial<TextPlacement>) => void;
-  style: TextPlacement;
-  templates: TextTemplates;
-  /** What it says. */
-  text: string;
-  /** Families beyond the system's, for a story. */
-  families?: FontFamily[];
-  /** Left out for the pen in hand with nothing chosen. */
-  onDelete?: () => void;
-  /** An edit made over a stroke, such as words set apart in one drag,
-   * ends: everything since its start is one change, to undo as one. */
-  onEditGestureEnd?: () => void;
-  /** An edit made over a stroke begins. */
-  onEditGestureStart?: () => void;
-};
+export type TextIslandProps = AnnotationColorProps &
+  AnnotationPinProps & {
+    /** Whether it can grow in and its words come on one by one: a
+     * recording's annotations can, a screenshot's, being one instant,
+     * cannot. */
+    canAnimate: boolean;
+    /** The words set apart, by the bytes they take in the text. */
+    emphasis: TextSpan[];
+    id: string;
+    look: TextStyle;
+    onEmphasisChange: (emphasis: TextSpan[]) => void;
+    onLookChange: (patch: Partial<TextStyle>) => void;
+    onStyleChange: (style: Partial<TextPlacement>) => void;
+    style: TextPlacement;
+    templates: TextTemplates;
+    /** What it says. */
+    text: string;
+    /** Families beyond the system's, for a story. */
+    families?: FontFamily[];
+    /** Left out for the pen in hand with nothing chosen. */
+    onDelete?: () => void;
+    /** An edit made over a stroke, such as words set apart in one drag,
+     * ends: everything since its start is one change, to undo as one. */
+    onEditGestureEnd?: () => void;
+    /** An edit made over a stroke begins. */
+    onEditGestureStart?: () => void;
+  };
 
 export function textIsland(props: TextIslandProps): EditorIslandContent {
   const { canAnimate, id, look, onLookChange, onStyleChange, style } = props;
@@ -85,6 +91,7 @@ export function textIsland(props: TextIslandProps): EditorIslandContent {
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <>
             <WordByWordToggle
@@ -157,6 +164,7 @@ export function textIsland(props: TextIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </TextLookPickers>
     ),
     title: (

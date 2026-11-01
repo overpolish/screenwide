@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { movedSceneBox } from "./recording-scene-custom";
+import { movedPaddedSceneBox } from "./recording-scene-custom";
 import {
   framingFromWindow,
   reframed,
@@ -27,18 +27,34 @@ export type ScenePane = {
 export type PaneName = "camera" | "screen";
 
 /** A custom scene's box for `paneName` moved or resized by `event`, whose
- * travel is in shares of the canvas, as the boxes are. */
+ * travel is in shares of the `canvas` of output pixels, as the boxes are. The
+ * screen's travel is measured on its box padded by the scene's inset, where
+ * its handles are drawn. */
 export const boxEdit =
-  (boxes: SceneBoxes, paneName: PaneName) =>
+  (
+    boxes: SceneBoxes,
+    paneName: PaneName,
+    canvas: { height: number; width: number },
+  ) =>
   (clip: RecordingSceneClip, event: RecordingSelectionGestureEvent) => {
     const box = boxes[paneName];
     if (!box) return null;
+    // The scene's inset pads the screen by a share of its box's shorter side.
+    const inset =
+      paneName === "screen"
+        ? (clip.inset ?? 0) *
+          Math.min(box.width * canvas.width, box.height * canvas.height)
+        : 0;
     return {
       ...clip,
       boxes: {
         ...boxes,
-        [paneName]: movedSceneBox(box, {
+        [paneName]: movedPaddedSceneBox(box, {
           delta: { x: event.deltaX, y: event.deltaY },
+          pad: {
+            x: inset / Math.max(1, canvas.width),
+            y: inset / Math.max(1, canvas.height),
+          },
           scale: event.operation === "resize" ? event.scale : 1,
         }),
       },

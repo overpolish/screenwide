@@ -3,10 +3,9 @@
 
 import { describe, expect, it } from "vitest";
 
+import { scaleScreenshotWorkspaceCanvas } from "./screenshot-canvas-scale";
 import {
   defaultScreenshotOutput,
-  resizeScreenshotCanvas,
-  resizeScreenshotWorkspaceCanvas,
   resizeScreenshotWorkspaceCanvasEdges,
   ScreenshotWorkspaceOutputSettings,
 } from "./screenshot-output";
@@ -49,38 +48,34 @@ const workspace = (): ScreenshotWorkspaceOutputSettings => ({
 });
 
 describe("resizing the canvas", () => {
-  it("leaves a single output's layer exactly where it was", () => {
-    const settings = layer(100, 50);
-    const resized = resizeScreenshotCanvas({
-      height: 2_000,
-      settings,
-      width: 3_000,
-    });
-
-    expect(resized.width).toBe(3_000);
-    expect(resized.height).toBe(2_000);
-    expect(placement(resized)).toStrictEqual(placement(settings));
-  });
-
-  it("leaves every workspace layer exactly where it was", () => {
+  it("scales every workspace layer with its dimensions", () => {
     const settings = workspace();
-    const resized = resizeScreenshotWorkspaceCanvas({
-      height: 2_000,
+    const resized = scaleScreenshotWorkspaceCanvas({
+      height: 1_800,
       settings,
-      width: 3_000,
+      width: 3_200,
     });
 
-    expect(resized.width).toBe(3_000);
-    expect(resized.height).toBe(2_000);
+    expect(resized.width).toBe(3_200);
+    expect(resized.height).toBe(1_800);
     for (const [index, item] of resized.items.entries()) {
-      expect(item.output.width).toBe(3_000);
-      expect(item.output.height).toBe(2_000);
-      expect(placement(item.output)).toStrictEqual(
-        placement(settings.items[index].output),
-      );
+      const was = settings.items[index].output;
+      expect(item.output.width).toBe(3_200);
+      expect(item.output.height).toBe(1_800);
+      expect(placement(item.output)).toStrictEqual({
+        cropHeight: was.cropHeight * 2,
+        cropWidth: was.cropWidth * 2,
+        cropX: was.cropX * 2,
+        cropY: was.cropY * 2,
+        imageWidth: was.imageWidth * 2,
+        imageX: was.imageX * 2,
+        imageY: was.imageY * 2,
+      });
     }
   });
+});
 
+describe("dragging the canvas's edges", () => {
   it("is the identity for layers when a frame drag grows then shrinks back", () => {
     const settings = workspace();
     // The far edges of both axes, dragged out by half the canvas and back.

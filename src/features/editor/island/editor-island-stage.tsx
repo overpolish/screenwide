@@ -24,9 +24,10 @@ export function EditorIslandStage({
   );
 }
 
-/** Two editor islands open together, one at each side of the canvas with
- * the picture between them, as a mode that needs both opens them: the
- * first at the start, the second at the end, each hung at the top. */
+/** Two editor islands open together, as the Captions mode opens them, at
+ * the picture's opposite top corners: `end` in the end one, where every
+ * island stands, and `start`, the Script island, in the start one, as
+ * `EditorIslandPanel` places them. */
 export function EditorIslandPairStage({
   end,
   isShown = true,
@@ -39,7 +40,7 @@ export function EditorIslandPairStage({
   return (
     <div className="relative size-full" dir="ltr">
       <div
-        className="absolute inset-x-0 flex items-start justify-between px-6"
+        className="absolute inset-x-0 flex items-start justify-between gap-3 px-3"
         style={{ top: ISLAND.screenGap }}
       >
         <EditorIsland content={start} isShown={isShown} />

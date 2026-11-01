@@ -3,7 +3,6 @@
 
 import { t } from "../../../i18n/i18n";
 import { Alert } from "../../../primitives/alert/alert";
-import { Text } from "../../../primitives/text/text";
 
 import { IslandModelLine } from "./island-model-line";
 import { IslandWorkLine } from "./island-work-line";
@@ -11,9 +10,10 @@ import { IslandWorkLine } from "./island-work-line";
 import type { IslandTranscript } from "./island-transcript";
 
 /** Until there is a transcript: the model it needs, fetched from right here
- * as every island's models are; how far transcribing has got; an alert that
- * it could not be made, as the islands' failures are; or a note that
- * nothing was said. */
+ * as every island's models are; how far transcribing has got; or an alert
+ * that it could not be made, as the islands' failures are. A transcript that
+ * heard nothing has no island: the title bar no longer offers Captions or
+ * Transcript. */
 export function IslandTranscriptLine({
   onDownloadModel,
   transcript,
@@ -42,16 +42,6 @@ export function IslandTranscriptLine({
         <Alert className="px-inset-sm" color="error" role="status">
           {t("editor-island-transcribe-failed")}
         </Alert>
-      );
-    case "noSpeech":
-      return (
-        <Text
-          as="p"
-          className="px-inset-sm text-fg-secondary"
-          variant="caption"
-        >
-          {t("editor-island-no-speech")}
-        </Text>
       );
   }
 }

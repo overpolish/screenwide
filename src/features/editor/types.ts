@@ -8,8 +8,6 @@ import type { EditorArtifact } from "../../bindings/EditorArtifact";
 import type { EditorKind } from "../../bindings/EditorKind";
 import type { EditorSnapshot } from "../../bindings/EditorSnapshot";
 import type { EditorSnapshots } from "../../bindings/EditorSnapshots";
-import type { KeyboardEffectAnimation } from "../../bindings/KeyboardEffectAnimation";
-import type { KeyboardEffectAppearance } from "../../bindings/KeyboardEffectAppearance";
 import type { KeyboardEffectSettings } from "../../bindings/KeyboardEffectSettings";
 import type { PreparedAudioTrack } from "../../bindings/PreparedAudioTrack";
 import type { RecordingExportChoices } from "../../bindings/RecordingExportChoices";
@@ -27,8 +25,6 @@ export type {
   EditorKind,
   EditorSnapshot,
   EditorSnapshots,
-  KeyboardEffectAnimation,
-  KeyboardEffectAppearance,
   KeyboardEffectSettings,
   PreparedAudioTrack,
   RecordingExportChoices,

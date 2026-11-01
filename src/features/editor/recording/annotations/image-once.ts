@@ -8,7 +8,7 @@ import type { RecordingAnnotationClip } from "./recording-annotations";
  * played once, which leaves as its run ends - with Animate on, leaving while
  * the run is still playing. Null for every clip whose length is its own.
  */
-export const heldLengthMs = (clip: RecordingAnnotationClip) => {
+const heldLengthMs = (clip: RecordingAnnotationClip) => {
   const shape = clip.annotation.shape;
   return shape.kind === "image" && shape.play?.once
     ? Math.max(1, Math.round(shape.play.cycleMs))

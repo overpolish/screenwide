@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { isWindowsHost } from "../../lib/platform";
-
 export const popupPanelMaxHeight = 150;
 export const emptyPopupPanelHeight = 64;
 /** A list found by typing opens at one height whatever it holds, so the
@@ -40,18 +38,6 @@ export const initialPopupPanelHeight = (
   return showsAllItems ? height : Math.min(height, popupPanelMaxHeight);
 };
 
-/** Tool panels are one fixed width, wide enough for a labelled slider row,
- * and for a microphone's longest silence summary beside its two buttons in
- * Fluent's larger type, and narrow enough to sit over a preview without
- * covering it. */
-export const toolPanelWidth = 368;
-
 /** `--spacing-section` in logical px. A panel is placed and clamped in window
  * and screen coordinates, where the CSS token cannot be read. */
 export const popupPanelSpacing = 12;
-
-/** Windows tool panels use the `--spacing-window-inset` right edge token. */
-export const toolPanelSpacing = isWindowsHost ? 14 : popupPanelSpacing;
-
-/** What a tool panel opens at before its own content is measured. */
-export const initialToolPanelHeight = 200;

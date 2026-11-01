@@ -22,6 +22,8 @@ pub struct FreshAnnotation {
   /// The look a fresh text box is dressed in, colours and all; absent until
   /// one has been chosen.
   pub look: Option<screenwide_text::TextStyle>,
+  /// How many times a fresh lens enlarges; absent until one has been chosen.
+  pub zoom: Option<f64>,
 }
 
 impl FreshAnnotation {
@@ -32,6 +34,7 @@ impl FreshAnnotation {
       angle: self.angle,
       image: self.image.as_ref().map(|art| art.fitted(source)),
       look: self.look.clone(),
+      zoom: self.zoom,
     }
   }
 }
@@ -129,12 +132,6 @@ impl AnnotationEdit {
   /// each sample, since a pinch may zoom part way through a drag.
   pub fn set_source_per_point(&mut self, source_per_point: Option<f64>) {
     self.origin.source_per_point = source_per_point.unwrap_or(0.0);
-  }
-
-  /// The picture's size in source pixels, which a fresh magnifier sets its
-  /// loupe inside.
-  pub fn set_source_size(&mut self, source_size: (u32, u32)) {
-    self.origin.source_size = source_size;
   }
 
   /// The pixels a highlight selects from, for the samples still to come.

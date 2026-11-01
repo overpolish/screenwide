@@ -56,10 +56,12 @@ export function timelineScale(map: TimeMap, view: View = WHOLE): TimelineScale {
   };
 }
 
-/** `view` kept whole and inside the recording, no narrower than `least`. */
-export function clampView(view: View, least: number): View {
-  const span = Math.min(Math.max(view.end - view.start, least), 1);
-  const start = Math.min(Math.max(view.start, 0), 1 - span);
+/** `view` kept whole and inside the recording, no narrower than `least`.
+ * `extent` is where the view may end, as a share of the recording: past 1
+ * where the strip runs on into the time the squeeze took. */
+export function clampView(view: View, least: number, extent = 1): View {
+  const span = Math.min(Math.max(view.end - view.start, least), extent);
+  const start = Math.min(Math.max(view.start, 0), extent - span);
   return { end: start + span, start };
 }
 

@@ -11,6 +11,8 @@ annotate-close-label = Close the annotate overlay
 
 # The island: a size it offers to choose, an arrow's stroke or a counter's disc, in points.
 annotate-island-points = { $points } pt
+# The island: a zoom it offers a magnifier, how many times it enlarges what is under it, such as 2×.
+annotate-island-zoom = { $zoom }×
 # The island's note under the highlight tool: the key that, held through a drag, lays the highlight the other way, over the box dragged or fitted to text. $key is the key, drawn as a keycap.
 annotate-island-highlight-fit-hint = Hold { $key } to highlight a box instead.
 annotate-island-highlight-box-hint = Hold { $key } to fit the highlight to text instead.

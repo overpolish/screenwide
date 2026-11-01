@@ -40,7 +40,7 @@ export type AnnotationTool = AnnotationKind | "marquee" | "select";
  * yellow when the arrows turn red, and is the only kind drawn by hand. So
  * does a spotlight, which is no colour at all, and whose corners and fade
  * are its own rather than a shape's. A magnifier keeps its own as well: its
- * rim frames a picture rather than marking it out, and its zoom, cone and
+ * outline frames a picture rather than marking it out, and its zoom, cone and
  * shadow mean nothing to any other kind. An image keeps its own: its
  * corners round a picture rather than a box, and it has no colour to share.
  */
@@ -85,6 +85,11 @@ let lastImage: ImageArt | null = null;
  * one is drawn in it. The text's own property too.
  */
 let lastTextLook: TextStyle | null = null;
+/**
+ * And how many times the last lens enlarged, so the next one is drawn at
+ * that zoom. The lens's own property too.
+ */
+let lastZoom: number | null = null;
 const listeners = new Set<() => void>();
 
 const subscribe = (listener: () => void) => {
@@ -157,6 +162,13 @@ export const rememberAnnotationTextLook = (look: TextStyle) => {
   for (const listener of listeners) listener();
 };
 
+/** Remember how many times the last lens was set to enlarge. */
+export const rememberAnnotationZoom = (zoom: number) => {
+  if (lastZoom === zoom || !Number.isFinite(zoom) || zoom <= 0) return;
+  lastZoom = zoom;
+  for (const listener of listeners) listener();
+};
+
 /** Remember whether the last annotation edit animated. */
 export const rememberAnnotationAnimated = (animated: boolean) => {
   if (lastAnimated === animated) return;
@@ -188,7 +200,7 @@ const SPOTLIGHT_RADIUS = 12;
  * The dress a tool draws in before anything has been settled on: the palette's
  * yellow, or black for a redaction's fill and a spotlight's shade, at the
  * tool's own first size, with an arrow's head at its end. A magnifier starts
- * round, white-rimmed and shadowed.
+ * round, outlined in white and shadowed.
  * The twins of `default_arrow_style`, `default_counter_style`,
  * `default_text_style`, `default_redact_style`, `default_highlight_style`,
  * `default_shape_style`, `default_spotlight_style`, `default_magnify_style`
@@ -259,3 +271,8 @@ export const useAnnotationImageDefault = () =>
  * and the Label look in the tool's colour stands. */
 export const useAnnotationTextLookDefault = () =>
   useSyncExternalStore(subscribe, () => lastTextLook);
+
+/** How many times a fresh lens enlarges, or null while none has been set
+ * and the tool's own default - twice - stands. */
+export const useAnnotationZoomDefault = () =>
+  useSyncExternalStore(subscribe, () => lastZoom);

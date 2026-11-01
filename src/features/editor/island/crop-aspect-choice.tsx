@@ -4,9 +4,10 @@
 import { t } from "../../../i18n/i18n";
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
 
-/** The shape a crop keeps: none, the whole capture's, or a ratio of width to
- * height. */
-export type CropAspect = "16:9" | "1:1" | "4:3" | "9:16" | "free" | "original";
+/** The shape a crop keeps: none, the whole capture's, a ratio of width to
+ * height, or, locked, the shape a free crop had when it was locked. */
+export type CropAspect =
+  "16:9" | "1:1" | "4:3" | "9:16" | "free" | "locked" | "original";
 
 /** The ratios offered, widest first after the square, as width to height. */
 const RATIOS = [
@@ -18,19 +19,28 @@ const RATIOS = [
 
 /** The shape a layer's crop keeps as its handles are dragged on the picture,
  * the screen's or the camera's alike. How much it keeps is dragged, where a
- * size can be seen rather than read as a number. */
+ * size can be seen rather than read as a number. A free crop once drawn
+ * (`canLock`) can be locked to the shape it has, which then keeps it as a
+ * ratio would: Locked joins the shapes after Free while there is a free
+ * crop to lock, or while one is locked. */
 export function CropAspectChoice({
+  canLock,
   onChange,
   value,
 }: {
+  canLock: boolean;
   onChange: (aspect: CropAspect) => void;
   value: CropAspect;
 }) {
+  const offersLock = canLock || value === "locked";
   return (
     <PillGroup
       aria-label={t("editor-island-crop-aspect")}
       items={[
         { id: "free", label: t("editor-island-crop-free") },
+        ...(offersLock
+          ? [{ id: "locked", label: t("editor-island-crop-locked") }]
+          : []),
         { id: "original", label: t("editor-island-crop-original") },
         ...RATIOS.map(({ height, id, width }) => ({
           ariaLabel: t("editor-island-crop-ratio-name", { height, width }),

@@ -6,7 +6,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
 /** A stretch of source time, `[start, end)` in milliseconds. */
-export type RecordingPinStretch = [number, number];
+type RecordingPinStretch = [number, number];
 
 /**
  * How a pinned annotation's path is coming along, as the native tracker

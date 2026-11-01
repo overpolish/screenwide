@@ -314,3 +314,73 @@ fn the_canvas_keeps_its_rounded_corners_sharp_under_a_focus() {
     "the corner is cut cleanly, not blurred: {alpha:?}"
   );
 }
+
+/// The canvas zoomed four times into a 1920 by 1080 view with its corner at
+/// `corner`, over a screen of vertical stripes about as wide as the blur,
+/// focused on the screen's top-left corner, read back.
+fn drawn_placed(corner: [f32; 2]) -> Vec<u8> {
+  let compositor = compositor();
+  let source = compositor
+    .screenshot_source(&CapturedImage {
+      width: 400,
+      height: 300,
+      rgba: (0..400 * 300)
+        .flat_map(|index| match index % 400 / 7 % 2 {
+          0 => [255, 255, 255, 255],
+          _ => [0, 0, 0, 255],
+        })
+        .collect(),
+    })
+    .expect("the source uploads");
+  let settings = settings();
+  let prepared = prepared_arrows(&[focus()], (400, 300), &settings, None, None, None)
+    .expect("the annotations prepare");
+  let output = target();
+  compositor
+    .draw_layer(
+      &view(&output),
+      &source,
+      &settings,
+      &CanvasGeometry::of(source.size, &settings).expect("the canvas places"),
+      ComposedFrame {
+        cursor: None,
+        keyboard: None,
+        foreground_only: false,
+        seconds: 0.0,
+      },
+      None,
+      None,
+      &prepared,
+      LayerDraw {
+        placement: Some(LayerPlacement {
+          rect: [corner[0], corner[1], 1920.0 * 4.0, 1080.0 * 4.0],
+          target: (1920, 1080),
+        }),
+        clear: true,
+        redaction_slot: 0,
+        retained_source: true,
+      },
+    )
+    .expect("the canvas draws");
+  gpu().read_texture(&output).expect("the target reads back")
+}
+
+#[test]
+fn the_blur_moves_with_the_picture_as_the_view_pans() {
+  // The screen spans the view from (40, 60); row 700 is far past the box,
+  // wholly blurred, and read from the chain's coarsest levels.
+  let still = drawn_placed([-3000.0, -1500.0]);
+  for pan in [1.0, 5.0, 37.0] {
+    let panned = drawn_placed([-3000.0 - pan, -1500.0]);
+    let worst = (900..1300)
+      .map(|x| {
+        brightness_at(&still, (x, 700)).abs_diff(brightness_at(&panned, (x - pan as u32, 700)))
+      })
+      .max()
+      .unwrap_or(0);
+    assert!(
+      worst <= 2,
+      "panned {pan} pixels, the blur changed under the picture by {worst}"
+    );
+  }
+}

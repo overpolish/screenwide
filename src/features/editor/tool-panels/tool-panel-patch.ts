@@ -20,11 +20,12 @@ import {
 import { KeyboardEffectSettings } from "../types";
 
 import { BackgroundPreset } from "./frame/background/background";
-import { SelectionPlacementPatch } from "./selection-placement";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelSnapshot } from "./tool-panel-store";
 import type { TextStyle } from "../../../bindings/TextStyle";
+import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
+import type { CropAspect } from "../island/crop-aspect-choice";
 
 /** The settings a panel may ask the editor to change. */
 export type ToolPanelPatch = Partial<
@@ -52,8 +53,15 @@ export type ToolPanelPatch = Partial<
   /** Sway the chosen image over its clip, or stand it still. Turning it on
    * gives it a sway of its own; the dice gives it another. */
   annotationImageSway?: boolean;
+  /** Turn the chosen focus into a spotlight, or the spotlight into a focus:
+   * one pen with two looks, blurred and dimmed. */
+  annotationKind?: "focus" | "spotlight";
   /** Dress the chosen text in this look, which the next text wears too. */
   annotationLook?: TextStyle;
+  /** Pin the chosen annotation to its content, let it go, say its content
+   * is out of view or back at the playhead, or take its corrections away:
+   * the menu's Tracking actions. */
+  annotationPin?: AnnotationPinAction;
   /** Turn the chosen image, in degrees about each axis, a field at a time:
    * in depth about X and Y, flat about Z. */
   annotationRotation?: Partial<SceneRotation>;
@@ -61,17 +69,15 @@ export type ToolPanelPatch = Partial<
    * send the whole style back. Each one also becomes the next arrow's default.
    */
   annotationStyle?: Partial<AnnotationStyle>;
-  /** Play the selected audio track this much louder or quieter than it was
-   * recorded, in decibels. */
-  audioVolume?: number;
+  /** Set how many times the chosen lens enlarges, one of `LENS_ZOOMS`. The
+   * zoom is the lens's own shape rather than its dress, and the next lens is
+   * drawn at it too. */
+  annotationZoom?: number;
   /** Bring the selected microphone to a steady loudness, or play it as
    * recorded. */
   autoVolume?: boolean;
   /** Make the auto zooms again, the scenes of your own left as they are. */
   autoZoomScenes?: true;
-  /** Draw the camera into the screen's video, or save it as a file of its
-   * own. */
-  bakeCamera?: boolean;
   /** Change the camera's effects, a field at a time: what is behind the
    * person, and colour correction. */
   cameraEffects?: CameraEffectsChange;
@@ -88,15 +94,16 @@ export type ToolPanelPatch = Partial<
   /** Take every auto zoom off the timeline, the scenes of your own left as
    * they are. */
   clearAutoZooms?: true;
-  /** Take every stroke off the picture being edited. */
-  clearDrawings?: true;
-  /** Cut a crop of this size, in source pixels, keeping it where it sits. */
-  cropSize?: { height?: number; width?: number };
-  /** Make the scene under the playhead custom, its panes kept where it puts
-   * them now, or add a custom scene there where there is none. */
-  customizeScene?: true;
+  /** Give the crop a shape to keep as its handles are dragged, cutting it to
+   * that shape about its middle, or let it go free. */
+  cropAspect?: CropAspect;
+  /** Cut what is chosen on the strip, a beat, lull, moment or drawn range,
+   * or several beats and lulls, and its time with it. */
+  cutStripItem?: true;
   /** Delete every chosen annotation, in one edit. */
   deleteAnnotations?: true;
+  /** Delete the shortcuts chosen in the strip's shortcut lane. */
+  deleteChosenShortcuts?: true;
   /** Delete the scene under the playhead. */
   deleteScene?: true;
   /** Download the model taking the camera's background away needs. */
@@ -114,6 +121,9 @@ export type ToolPanelPatch = Partial<
   /** The shortcut settings every shortcut is drawn with, changed a field at a
    * time so a panel never has to send the whole group back. */
   keyboardEffects?: Partial<KeyboardEffectSettings>;
+  /** Have the lull chosen on the strip squeeze with the rest, or keep it
+   * as recorded. */
+  lullPlay?: "keep" | "squeeze";
   /** Start picking objects in the camera on the preview, or stop. */
   pickCameraObjects?: boolean;
   /** Put the selected layer's content in the middle of its padded frame. */
@@ -129,21 +139,12 @@ export type ToolPanelPatch = Partial<
   removePreset?: string;
   /** Forget a scene template, by its id. */
   removeSceneTemplate?: string;
-  /** Cut the long pauses out of the selected microphone's recording where
-   * nothing happens on screen. */
-  removeSilences?: true;
   /** Show the whole source again, the committed crop taken away. */
   resetCrop?: true;
   /** Put the canvas back to the source size, refitting what is in it. */
   resetFrame?: true;
-  /** Show the whole screen and camera again in the scene under the playhead. */
-  resetSceneFraming?: true;
-  /** Put the selection's size and position back to its source framing. */
-  resetSelection?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
-  /** Bring back every pause Remove cut that is still cut. */
-  restoreSilences?: true;
   /** Turn the chosen annotation round, so its head points the other way, or
    * mirror the chosen image. */
   reverseAnnotation?: true;
@@ -159,12 +160,20 @@ export type ToolPanelPatch = Partial<
   /** Zoom the scene under the playhead into its selected pane, or move the
    * part of the pane it shows, a field at a time. */
   sceneFraming?: Partial<SceneFraming>;
+  /** The pane `sceneFraming` reaches: the selected one where unset. */
+  sceneFramingPane?: "camera" | "screen";
+  /** Pad the screen in the scene under the playhead by this share of its
+   * box's shorter side on each side. */
+  sceneInset?: number;
   /** Give the scene under the playhead this preset, or add a scene there
    * with it where there is none. */
   scenePreset?: RecordingScenePreset;
   /** Round the selected pane's corners in the scene under the playhead by
    * this share of its shorter side, in percent. */
   sceneRadius?: number;
+  /** Crop the screen in the scene under the playhead to the content found
+   * in it, in the middle of where its box was. */
+  sceneRecenter?: true;
   /** Turn the screen in depth in the scene under the playhead, in degrees
    * about each axis, a field at a time. */
   sceneRotation?: Partial<SceneRotation>;
@@ -177,7 +186,6 @@ export type ToolPanelPatch = Partial<
   selectionFollowFace?: boolean;
   /** Pad the selected layer by this many output pixels on each side. */
   selectionInset?: number;
-  selectionOutput?: SelectionPlacementPatch;
   /** Round the selected layer's corners by this share of its shorter side. */
   selectionRadius?: number;
   /** Turn the selected layer in depth, in degrees about each axis, a field
@@ -198,8 +206,17 @@ export type ToolPanelPatch = Partial<
   /** Trade the panes of the custom scene under the playhead: each takes the
    * other's box and place in the order. */
   swapScenePanes?: true;
+  /** Hold the recorded track with this id in the export and the preview,
+   * or leave it out. */
+  trackEnabled?: { isEnabled: boolean; trackId: string };
+  /** Play the audio track with this id this much louder or quieter than it
+   * was recorded, in decibels, whichever track is selected. */
+  trackVolume?: { decibels: number; trackId: string };
   /** Something the Transcript panel asks for: never a setting it holds. */
   transcriptRequest?: TranscriptRequest;
+  /** Trim the lull chosen on the strip to a breath: all but its first
+   * moment is cut. */
+  trimLullToBreath?: true;
   /** Clean up the selected microphone's voice, or put it back as it was. */
   vocalCleanup?: boolean;
 };

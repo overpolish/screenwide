@@ -11,19 +11,6 @@ export type PreviewPaneFit = {
   pointsPerPixel: number;
 };
 
-/** Width the full-height canvas occupies at the preview's no-upscale fit. */
-export const previewFitWidth = (
-  width: number,
-  height: number,
-  viewportHeight: number,
-) =>
-  height > 0
-    ? Math.min(
-        width,
-        (Math.max(0, viewportHeight - PREVIEW_VIEWPORT_INSET) * width) / height,
-      ) + PREVIEW_VIEWPORT_INSET
-    : undefined;
-
 /**
  * Centres `natural` output pixels inside `viewport` points at 100% zoom.
  */

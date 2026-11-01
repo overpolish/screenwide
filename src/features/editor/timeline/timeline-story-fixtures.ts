@@ -115,7 +115,7 @@ export const STORY_BEATS: Span[] = [
 
 export const STORY_DURATION = 120;
 
-export const STORY_LULLS: Span[] = STORY_BEATS.slice(1).map((beat, index) => ({
+const STORY_LULLS: Span[] = STORY_BEATS.slice(1).map((beat, index) => ({
   end: beat.start,
   start: STORY_BEATS[index].end,
 }));

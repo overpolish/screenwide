@@ -21,16 +21,18 @@ import {
   useRecordingSceneGesture,
 } from "./use-recording-scene-gesture";
 
-import type { RecordingCanvasTool } from "../preview/recording-crop-toggle";
+import type { RecordingCanvasTool } from "../preview/recording-canvas-tool";
 import type { RecordingPreviewSelection } from "../use-recording-preview-surface";
 
 /**
  * The scene under the paused preview's playhead, as the preview edits it: the
  * arrangement its panes' outlines and hit areas are placed by, the gesture
- * that edits it, and the crop tool's window on each pane. A preset's pane
- * keeps its shape, the window laid over its unzoomed picture; a custom
- * scene's own boxes are cropped freely, the window over the picture where it
- * sits. The camera only takes part where it is drawn into the picture.
+ * that edits it, and the crop tool's window on each pane. The screen's crop
+ * is each scene's own and free: its box is the window, over the picture
+ * where it sits, a preset's made custom as it is cropped. A preset's camera
+ * keeps its box's shape, the window laid over its unzoomed picture; a custom
+ * scene's camera box is cropped freely as the screen is. The camera only
+ * takes part where it is drawn into the picture.
  */
 export function useScenePreviewEditing({
   cameraOverlay,
@@ -103,15 +105,7 @@ export function useScenePreviewEditing({
               : null,
           clipId: arrangement.clip.id,
           clips: edit.sceneClips,
-          screen: {
-            ...arrangement.screen,
-            box: {
-              height: arrangement.output.cropHeight,
-              width: arrangement.output.cropWidth,
-              x: arrangement.output.cropX,
-              y: arrangement.output.cropY,
-            },
-          },
+          screen: arrangement.screen,
         }
       : null;
   const gesture = useRecordingSceneGesture({
@@ -161,7 +155,7 @@ export function useScenePreviewEditing({
     target && canvasTool === "crop"
       ? {
           primary: cropWindow(target.screen, {
-            inPlace: Boolean(boxes),
+            inPlace: true,
             layerId: 0,
           }),
           ...(target.camera

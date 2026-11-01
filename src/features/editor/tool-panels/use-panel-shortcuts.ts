@@ -46,6 +46,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
     onDeselect: () => {
       forward("Escape");
     },
+    onDeselectAll: () => {
+      forward("KeyD", { ctrlKey: true });
+    },
     onExport: () => {
       forward("KeyE", { ctrlKey: true });
     },

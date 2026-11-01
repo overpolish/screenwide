@@ -1,15 +1,23 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { type CropAspect } from "../../island/crop-aspect-choice";
 import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { timedSpanClipAt } from "../../timeline/tracks/timed-span-clips";
 
 import { RecordingSceneControls } from "./recording-scene-channel";
 import { customRecordingSceneClip } from "./recording-scene-custom";
+import {
+  shapedCustomPane,
+  uncroppedCustomPane,
+} from "./recording-scene-custom-crop";
 import { framingWithin } from "./recording-scene-framing";
 import { arrangedScenePane, swappedScenePanes } from "./recording-scene-order";
-import { ScenePaneFraming } from "./recording-scene-pane-framing";
+import {
+  ScenePaneFraming,
+  scenePaneFraming,
+} from "./recording-scene-pane-framing";
 import { SceneCamera } from "./recording-scene-placement";
 import { SceneChoice } from "./recording-scene-span";
 import {
@@ -18,9 +26,11 @@ import {
 } from "./recording-scene-template";
 import {
   insertRecordingSceneClip,
+  MAX_SCENE_INSET,
   RECORDING_SCENE_MINIMUM_MS,
   RecordingSceneClip,
   rotatedSceneClip,
+  WHOLE_FRAMING,
 } from "./recording-scenes";
 
 /**
@@ -46,9 +56,16 @@ export function recordingSceneEdits({
   getTimelineMs: () => number;
   lengthMs: number;
   output: ScreenshotOutputSettings;
-  /** The pane of a clip the panel's zoom, position and radius reach. */
-  paneOf: (clip: RecordingSceneClip) => ScenePaneFraming | null;
-}): Omit<RecordingSceneControls, "autoZoom" | "clearAutoZooms"> {
+  /** The pane of a clip the panel's zoom, position and radius reach: the
+   * one named, else the selected one. */
+  paneOf: (
+    clip: RecordingSceneClip,
+    pane?: ScenePaneFraming["pane"],
+  ) => ScenePaneFraming | null;
+}): Omit<
+  RecordingSceneControls,
+  "autoZoom" | "clearAutoZooms" | "recenterScreen"
+> {
   const reframeCurrent = (
     reframe: (clip: RecordingSceneClip) => RecordingSceneClip,
   ) => {
@@ -59,6 +76,7 @@ export function recordingSceneEdits({
       );
   };
   const canvasAspect = output.width / Math.max(1, output.height);
+  const canvas = { height: output.height, width: output.width };
   // A preset chosen for a custom scene puts its panes back in the preset's
   // boxes. The variant stays, so a swapped pair stays swapped. Custom keeps
   // the panes where the scene puts them now.
@@ -100,6 +118,40 @@ export function recordingSceneEdits({
         clip.id === target.id ? arranged(clip, choice) : clip,
       ),
     );
+  };
+  // The crop is each scene's own: its screen's box and framing, cropped in
+  // place as a custom scene's is, a preset's made custom first, where the
+  // change alone moves nothing.
+  const cropScreen = (aspect: CropAspect) => {
+    reframeCurrent((clip) => {
+      const pane = scenePaneFraming({ camera, clip, output, pane: "screen" });
+      const shaped = pane ? shapedCustomPane(pane, { aspect, canvas }) : null;
+      const owned = shaped
+        ? customRecordingSceneClip({ camera, clip, output })
+        : clip;
+      return shaped && owned.boxes
+        ? {
+            ...owned,
+            boxes: { ...owned.boxes, screen: shaped.box },
+            screen: shaped.framing,
+          }
+        : clip;
+    });
+  };
+  // A preset's box is the picture's shape already, so its crop goes with
+  // the zoom; a custom scene's box grows back to the picture's shape.
+  const resetScreenCrop = () => {
+    reframeCurrent((clip) => {
+      if (!clip.boxes) return { ...clip, screen: WHOLE_FRAMING };
+      const pane = scenePaneFraming({ camera, clip, output, pane: "screen" });
+      if (!pane) return clip;
+      const whole = uncroppedCustomPane(pane, { canvas });
+      return {
+        ...clip,
+        boxes: { ...clip.boxes, screen: whole.box },
+        screen: whole.framing,
+      };
+    });
   };
   return {
     arrangePane: (pane, move) => {
@@ -151,28 +203,12 @@ export function recordingSceneEdits({
     chooseTemplate: (template) => {
       chooseAtPlayhead({ template, type: "template" });
     },
-    customize: () => {
-      chooseAtPlayhead({ type: "custom" });
-    },
+    cropScreen,
     remove: () => {
       const target = timedSpanClipAt(clips, getTimelineMs());
       if (target) commit(clips.filter((clip) => clip.id !== target.id));
     },
-    // A custom scene goes back to its preset's boxes as well, every pane to
-    // the recording's radius, and the screen upright. The variant is the
-    // layout, not a framing, so it stays.
-    resetFraming: () => {
-      reframeCurrent(
-        ({
-          boxes: _boxes,
-          camera: _camera,
-          radius: _radius,
-          rotation: _rotation,
-          screen: _screen,
-          ...clip
-        }) => clip,
-      );
-    },
+    resetScreenCrop,
     // Following starts with the face in the middle of the camera's box at
     // the zoom the camera has now; a drag or the Position fields then set
     // how far off the middle it sits. Stopping keeps that framing as it is.
@@ -195,9 +231,9 @@ export function recordingSceneEdits({
     },
     // The framing is held where the picture still fills its box, so a
     // position typed past the edge lands on the edge.
-    setFraming: (framing) => {
+    setFraming: (framing, paneName) => {
       reframeCurrent((clip) => {
-        const pane = paneOf(clip);
+        const pane = paneOf(clip, paneName);
         if (!pane) return clip;
         return {
           ...clip,
@@ -207,6 +243,15 @@ export function recordingSceneEdits({
             pane.aspect,
           ),
         };
+      });
+    },
+    // A scene pads its screen's box whatever lays it out, so a preset's
+    // stays a preset's.
+    setInset: (inset) => {
+      reframeCurrent((clip) => {
+        const { inset: _inset, ...rest } = clip;
+        const share = Math.min(MAX_SCENE_INSET, Math.max(0, inset));
+        return share > 0 ? { ...rest, inset: share } : rest;
       });
     },
     setRadius: (radius) => {

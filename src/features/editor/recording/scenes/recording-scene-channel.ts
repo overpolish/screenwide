@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
+import { type CropAspect } from "../../island/crop-aspect-choice";
 import { ToolPanelScene } from "../../tool-panels/tool-panel-scene";
 import { EditorKind } from "../../types";
 
@@ -42,18 +43,25 @@ export type RecordingSceneControls = {
   /** Take every auto zoom off the timeline; your own scenes stay as they
    * are. */
   clearAutoZooms: () => void;
-  /** Make the scene custom, its panes kept where it puts them now. */
-  customize: () => void;
+  /** Crop the scene's screen to `aspect`'s shape about its middle, the scene
+   * made custom where it is a preset's; a free crop changes nothing. */
+  cropScreen: (aspect: CropAspect) => void;
+  /** Crop the scene's screen to the content found in what it shows, in the
+   * middle of where its box was, the scene made custom where it is a
+   * preset's. */
+  recenterScreen: () => void;
   remove: () => void;
-  /** Show the whole screen and camera again, in the preset's own boxes, and
-   * the screen upright. */
-  resetFraming: () => void;
+  /** Take the scene's crop of the screen away. */
+  resetScreenCrop: () => void;
   /** Have the camera follow the face, which starts it in the middle of the
    * camera's box, or stop following it. */
   setFollowFace: (follow: boolean) => void;
-  /** Zoom into the selected pane, or move the part of it shown, a field at a
-   * time. */
-  setFraming: (framing: Partial<SceneFraming>) => void;
+  /** Zoom into `pane`, the selected pane where unset, or move the part of
+   * it shown, a field at a time. */
+  setFraming: (framing: Partial<SceneFraming>, pane?: ScenePane) => void;
+  /** Pad the scene's screen by this share of its box's shorter side on
+   * each side; none takes the padding away. */
+  setInset: (inset: number) => void;
   /** Round the selected pane's corners, in percent of its shorter side. */
   setRadius: (radius: number) => void;
   /** Turn the screen in depth, in degrees about each axis, a field at a
@@ -121,20 +129,26 @@ export function usePublishRecordingScene(
         clearAutoZooms: () => {
           controlsRef.current.clearAutoZooms();
         },
-        customize: () => {
-          controlsRef.current.customize();
+        cropScreen: (aspect) => {
+          controlsRef.current.cropScreen(aspect);
+        },
+        recenterScreen: () => {
+          controlsRef.current.recenterScreen();
         },
         remove: () => {
           controlsRef.current.remove();
         },
-        resetFraming: () => {
-          controlsRef.current.resetFraming();
+        resetScreenCrop: () => {
+          controlsRef.current.resetScreenCrop();
         },
         setFollowFace: (follow) => {
           controlsRef.current.setFollowFace(follow);
         },
-        setFraming: (framing) => {
-          controlsRef.current.setFraming(framing);
+        setFraming: (framing, pane) => {
+          controlsRef.current.setFraming(framing, pane);
+        },
+        setInset: (inset) => {
+          controlsRef.current.setInset(inset);
         },
         setRadius: (radius) => {
           controlsRef.current.setRadius(radius);

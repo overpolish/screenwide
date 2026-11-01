@@ -70,6 +70,9 @@
   --spacing-inset: 0.75rem;
   --spacing-inset-sm: 0.375rem;
   --spacing-traffic-lights: 5.5rem;
+  /* The export options' column beside the recording's preview, which takes
+     the rest of the window. */
+  --spacing-export-form: 28.25rem;
 
   /* Small marks (a swatch, a checkbox), small parts (a badge, a key, a
      chip), controls, and the panels and cards controls sit on. A part's

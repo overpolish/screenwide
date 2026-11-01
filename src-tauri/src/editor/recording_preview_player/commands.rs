@@ -137,7 +137,6 @@ pub async fn seek_recording_preview(
   position_ms: u64,
   request_id: u64,
   rough: bool,
-  selection_visible: Option<bool>,
   session_id: u64,
 ) -> Result<(), String> {
   // The request-id guard and the restart stay in one lock scope, so two
@@ -151,16 +150,6 @@ pub async fn seek_recording_preview(
     manager.require_session(session_id)?;
     if request_id < manager.latest_seek_request {
       return Ok(());
-    }
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    if let Some(visible) = selection_visible {
-      if let Some(surface) = manager
-        .sources
-        .as_ref()
-        .and_then(|sources| sources.preview_surface.as_ref())
-      {
-        surface.set_selection_visible(visible);
-      }
     }
     if let Some(mut clips) = annotation_clips {
       screenwide_annotations::timing::validate_clips(&clips)?;

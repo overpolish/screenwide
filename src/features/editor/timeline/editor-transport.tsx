@@ -16,7 +16,8 @@ import { ElapsedTime } from "./timeline-elapsed-time";
 
 // The strip's own controls, centred in the editor's left column under the
 // tools: play at the top, where the playhead is over how long the recording
-// is, and at the foot the scissors, beside the strip they cut.
+// is, and at the foot the scissors, beside the strip they cut. Tracks is in
+// the title bar with the modes (`EditorModeBar`).
 
 export type EditorTransportProps = {
   /** How long the recording plays, in the edited time: it shortens as
@@ -72,8 +73,8 @@ export function EditorTransport({
         </span>
         <span className="text-fg-tertiary">{formatDuration(durationMs)}</span>
       </span>
-      {/* Held, ⌥ draws a stretch to cut for one drag without the toggle. */}
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col items-center gap-inline">
+        {/* Held, ⌥ draws a stretch to cut for one drag without the toggle. */}
         <ToolbarTool
           aria-label={t("editor-timeline-cut-name")}
           isSelected={isCutting}

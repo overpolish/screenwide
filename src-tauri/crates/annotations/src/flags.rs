@@ -12,7 +12,7 @@
 // `p1` points at a surface timeline in the side buffer. `HAND_DRAWN` marks a
 // highlight drawn as a marker stroke rather than a clean band, and
 // `LAID_BY_HAND` one laid over a box, whose bands are strokes rather than
-// lines of text. `SHADOW` marks a magnifier whose loupe casts a shadow, an
+// lines of text. `SHADOW` marks a lens that casts a shadow, an
 // image that casts one, and a caption's word outlined in dark. `ONCE` marks
 // an image whose animation plays through once rather than looping, which
 // only the image atlas reads. `CAPTION` marks a text box drawn as a

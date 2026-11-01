@@ -79,12 +79,12 @@ export function useScreenshotRecenter({
         console.error("Could not detect screenshot content bounds", error);
       });
   };
-  const prepare = () => {
+  const prepare = (): Promise<void> => {
     if (!selectedItem || !selectedOutput || selectedOutput.recenterInsetColor)
-      return;
+      return Promise.resolve();
     const itemId = selectedItem.id;
     const key = analysisKey(itemId, selectedOutput.sourceCrop);
-    analyse(itemId, selectedOutput.sourceCrop)
+    return analyse(itemId, selectedOutput.sourceCrop)
       .then((analysis) => {
         if (!analysis || selectedRef.current.id !== itemId) return;
         const current = selectedRef.current.output;
@@ -104,13 +104,13 @@ export function useScreenshotRecenter({
         console.error("Could not detect screenshot inset colour", error);
       });
   };
-  const refresh = (crop: SourceRect) => {
+  const refresh = (crop: SourceRect): Promise<void> => {
     const itemId = selectedRef.current.id;
-    if (itemId === undefined) return;
+    if (itemId === undefined) return Promise.resolve();
     const analysisToken = Symbol();
     const key = analysisKey(itemId, crop);
     analysesRef.current.set(itemId, analysisToken);
-    analyse(itemId, crop, true)
+    return analyse(itemId, crop, true)
       .then((analysis) => {
         if (
           !analysis ||

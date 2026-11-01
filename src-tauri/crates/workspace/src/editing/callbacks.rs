@@ -3,18 +3,18 @@
 
 use super::*;
 
-pub(super) fn emit_transform(inner: &SurfaceInner, zoom: f64) {
-  if let Ok(mut callbacks) = inner.callbacks.lock() {
-    if let Some(callback) = callbacks.transform.as_mut() {
-      callback(zoom * 100.0);
-    }
-  }
-}
-
 pub(super) fn emit_selection(inner: &SurfaceInner, selection: Option<u32>) {
   if let Ok(mut callbacks) = inner.callbacks.lock() {
     if let Some(callback) = callbacks.selection.as_mut() {
       callback(selection);
+    }
+  }
+}
+
+pub(super) fn emit_press(inner: &SurfaceInner, press: PointerPress) {
+  if let Ok(mut callbacks) = inner.callbacks.lock() {
+    if let Some(callback) = callbacks.pointer_press.as_mut() {
+      callback(press);
     }
   }
 }
@@ -26,12 +26,9 @@ pub(super) fn emit_gesture(
 ) {
   if let Ok(mut callbacks) = inner.callbacks.lock() {
     if let Some(callback) = callbacks.gesture.as_mut() {
-      // Frame gestures address the pane, not the sentinel frame layer id,
+      // A frame resize addresses the pane, not the sentinel frame layer id,
       // matching the macOS surface's `emit_selection_gesture`.
-      let layer_id = if matches!(
-        gesture.operation,
-        SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius
-      ) {
+      let layer_id = if gesture.operation == SelectionGestureOperation::FrameResize {
         gesture.selection_start.pane_index
       } else {
         gesture.selection_start.layer_id
@@ -63,11 +60,6 @@ pub(super) fn refresh_cursor_for(inner: &SurfaceInner) {
         ) =>
       {
         CursorKind::Move
-      }
-      Some(ActiveGesture::Selection(gesture))
-        if gesture.operation == SelectionGestureOperation::Radius =>
-      {
-        CursorKind::ResizeNwse
       }
       Some(ActiveGesture::Selection(gesture))
         if gesture.operation == SelectionGestureOperation::CropDraw && gesture.edges == 0 =>

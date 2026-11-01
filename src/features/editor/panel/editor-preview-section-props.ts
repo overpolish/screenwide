@@ -24,14 +24,11 @@ export type ScreenshotSectionProps = {
   artifact: Extract<EditorArtifact, { kind: "screenshot" }>;
   isSaving?: boolean;
   isSheetOpen?: boolean;
-  onBackgroundRadiusChange?: (radiusPercent: number) => void;
-  onBackgroundRadiusChangeEnd?: () => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
   onOutputChange?: (
     settings: ScreenshotOutputSettings,
     itemId?: number,
   ) => void;
-  onRadiusChangeEnd?: () => void;
   onSelectedItemChange?: (itemId: number | null) => void;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
   selectedItemId?: number | null;

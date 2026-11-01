@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod crop_preview;
+mod settings;
 
 pub use crop_preview::CropPreviewRect;
+pub use settings::output_dimensions;
 
 use serde::{Deserialize, Serialize};
 
@@ -58,11 +60,8 @@ pub struct ScreenshotOutputSettings {
   /// settings blob written before placement moved into pixels.
   #[serde(default)]
   pub crop_height: f64,
-  /// While the crop tool is open the preview draws the whole uncropped source
-  /// flat as a ghost; this is the committed crop rectangle, in output pixels,
-  /// that the compositor draws over it with the real corner radius and drop
-  /// shadow. Only the crop-mode preview payload carries one - it is never
-  /// persisted and never reaches an export.
+  /// The committed crop, in output pixels, drawn over the uncropped ghost
+  /// while the crop tool is open; only in that preview, never saved.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub crop_preview: Option<CropPreviewRect>,
   #[serde(default)]
@@ -72,6 +71,12 @@ pub struct ScreenshotOutputSettings {
   #[serde(default)]
   pub crop_y: f64,
   pub drop_shadow: bool,
+  /// How strong the shadow is drawn, zero to one, while the preview fades it
+  /// in or out; only in that preview, never saved. Absent, a shadow is drawn
+  /// whole.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub drop_shadow_strength: Option<f64>,
   pub height: u32,
   /// The whole image's top left corner and width, in output pixels.
   #[serde(default)]
@@ -80,11 +85,15 @@ pub struct ScreenshotOutputSettings {
   pub image_x: f64,
   #[serde(default)]
   pub image_y: f64,
+  /// The padding as a share of the picture's shorter side, which the crop's
+  /// frame is grown by; absent where only the frame carried it (older saves).
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub inset: Option<f64>,
   #[serde(default, rename = "mode", skip_serializing)]
   pub legacy_mode: Option<String>,
-  /// How far a scene moved this layer while the frame's shutter was open,
-  /// which the compositor blurs it over. Set per drawn frame by the scene
-  /// arrangement; never sent by the webview or saved.
+  /// How far a scene moved this layer while the shutter was open, blurred
+  /// over; set per drawn frame, never sent or saved.
   #[serde(skip)]
   pub scene_motion: Option<screenwide_scenes::SceneMotion>,
   /// How opaque a scene draws the screen and the camera as it hides or shows
@@ -95,6 +104,16 @@ pub struct ScreenshotOutputSettings {
   pub scene_opacity: Option<[f32; 2]>,
   #[serde(skip)]
   pub scene_camera_front: Option<f32>,
+  /// Where a padding scene shows the picture in the crop, as left, top, width
+  /// and height in output pixels; set per drawn frame, never sent or saved.
+  #[serde(skip)]
+  pub scene_window: Option<[f64; 4]>,
+  /// How strong the camera drawn into this picture casts its shadow, zero to
+  /// one, which is the camera's own settings' to say: stamped from them with
+  /// the captures (`RecordingOutputSettings::stamp_captures`), never sent or
+  /// saved. Unset, a camera with a shadow casts it whole.
+  #[serde(skip)]
+  pub camera_shadow_strength: Option<f32>,
   pub mesh_colors: Vec<String>,
   /// Which picture the mesh background paints. Settings written before the
   /// ported generators existed carry none, and are the app's own blob mesh.
@@ -116,25 +135,6 @@ pub struct ScreenshotOutputSettings {
   pub rotation: Option<screenwide_scenes::SceneRotation>,
   pub source_crop: NormalizedSourceRect,
   pub width: u32,
-}
-
-impl ScreenshotOutputSettings {
-  /// Whether this carries a placement at all. Settings written before
-  /// placement was measured in output pixels deserialize without one, and are
-  /// discarded rather than converted.
-  pub fn has_placement(&self) -> bool {
-    self.crop_width > 0.0 && self.crop_height > 0.0 && self.image_width > 0.0
-  }
-}
-
-pub fn output_dimensions(settings: &ScreenshotOutputSettings) -> Result<(u32, u32), String> {
-  if settings.width < 64
-    || settings.height < 64
-    || u64::from(settings.width) * u64::from(settings.height) > MAX_OUTPUT_PIXELS
-  {
-    return Err("The screenshot output dimensions are not valid".to_owned());
-  }
-  Ok((settings.width, settings.height))
 }
 
 #[cfg(not(target_os = "macos"))]

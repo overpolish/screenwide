@@ -3,47 +3,56 @@
 
 import { ComponentProps, useMemo, useState } from "react";
 
-import {
-  EditorArtifact,
-  recordingAudioStreamIndex,
-  recordingAudioTrackId,
-  RecordingTrackId,
-} from "../types";
+import { recordingAudioTrackId, RecordingTrackId } from "../types";
 
 import { EditorPanel } from "./editor-panel";
 
+type Args = ComponentProps<typeof EditorPanel>;
+
+/** Keeps a change in the story's own state and still logs it through the
+ * story's arg. */
+const keep =
+  <Value,>(
+    arg: ((value: Value) => void) | undefined,
+    set: (value: Value) => void,
+  ) =>
+  (value: Value) => {
+    arg?.(value);
+    set(value);
+  };
+
 /** Renames only the story's own copy of the project. */
-function useStoryRename(artifact: EditorArtifact | null) {
-  const [title, setTitle] = useState(artifact?.suggestedFileStem ?? "");
+function useStoryRename(args: Args) {
+  const [title, setTitle] = useState(args.artifact?.suggestedFileStem ?? "");
   const renamed = useMemo(
-    () => (artifact ? { ...artifact, suggestedFileStem: title } : null),
-    [artifact, title],
+    () =>
+      args.artifact ? { ...args.artifact, suggestedFileStem: title } : null,
+    [args.artifact, title],
   );
-  return { artifact: renamed, onRenameProject: setTitle };
+  return {
+    artifact: renamed,
+    onRenameProject: keep(args.onRenameProject, setTitle),
+  };
 }
 
-export function ScreenshotStoryPanel(args: ComponentProps<typeof EditorPanel>) {
+export function ScreenshotStoryPanel(args: Args) {
   const [fileStem, setFileStem] = useState(args.fileStem);
-  const project = useStoryRename(args.artifact);
+  const project = useStoryRename(args);
   return (
     <EditorPanel
       {...args}
       artifact={project.artifact}
       fileStem={fileStem}
-      onCopy={() => undefined}
-      onFileStemChange={setFileStem}
+      onFileStemChange={keep(args.onFileStemChange, setFileStem)}
       onRenameProject={project.onRenameProject}
-      onSave={() => undefined}
     />
   );
 }
 
-export function AudioRecordingStoryPanel(
-  args: ComponentProps<typeof EditorPanel>,
-) {
+export function AudioRecordingStoryPanel(args: Args) {
   const [enabledTracks, setEnabledTracks] = useState([0, 1]);
   const [fileStem, setFileStem] = useState(args.fileStem);
-  const project = useStoryRename(args.artifact);
+  const project = useStoryRename(args);
   const [selectedTrack, setSelectedTrack] = useState<RecordingTrackId | null>(
     () => recordingAudioTrackId(0),
   );
@@ -61,13 +70,12 @@ export function AudioRecordingStoryPanel(
       enabledAudioTrackCount={enabledTracks.length}
       enabledStreamIndices={enabledTracks}
       fileStem={fileStem}
-      onEnabledTracksChange={setEnabledTracks}
-      onFileStemChange={setFileStem}
+      onEnabledTracksChange={keep(args.onEnabledTracksChange, setEnabledTracks)}
+      onFileStemChange={keep(args.onFileStemChange, setFileStem)}
       onRenameProject={project.onRenameProject}
-      onSelectedTrackChange={setSelectedTrack}
-      onSelectedTrackVolumeChange={(decibels) => {
-        const streamIndex = recordingAudioStreamIndex(selectedTrack);
-        if (streamIndex === null) return;
+      onSelectedTrackChange={keep(args.onSelectedTrackChange, setSelectedTrack)}
+      onTrackVolumeChange={(streamIndex, decibels) => {
+        args.onTrackVolumeChange?.(streamIndex, decibels);
         setVolumes((current) => ({ ...current, [streamIndex]: decibels }));
       }}
       selectedTrack={selectedTrack}
@@ -75,11 +83,10 @@ export function AudioRecordingStoryPanel(
   );
 }
 
-export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
+export function RecordingStoryPanel(args: Args) {
   const recording = args.artifact?.kind === "recording" ? args.artifact : null;
   const [fileStem, setFileStem] = useState(args.fileStem);
-  const project = useStoryRename(args.artifact);
-  const [bakeCamera, setBakeCamera] = useState(args.bakeCamera ?? false);
+  const project = useStoryRename(args);
   const [cameraCompression, setCameraCompression] = useState(
     args.cameraCompression ?? 0,
   );
@@ -117,7 +124,6 @@ export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
     <EditorPanel
       {...args}
       artifact={project.artifact}
-      bakeCamera={bakeCamera}
       cameraCompression={cameraCompression}
       cameraOverlay={cameraOverlay}
       cameraResolutionScalePercent={cameraResolution}
@@ -127,18 +133,29 @@ export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
       enabledStreamIndices={enabledAudio}
       enabledVideoTracks={enabledVideo}
       fileStem={fileStem}
-      onBakeCameraChange={setBakeCamera}
-      onCameraCompressionChange={setCameraCompression}
-      onCameraOverlayChange={setCameraOverlay}
-      onCameraResolutionScaleChange={setCameraResolution}
-      onCollapseAudioChange={setCollapseAudio}
-      onCompressionChange={setCompression}
-      onEnabledTracksChange={setEnabledAudio}
-      onEnabledVideoTracksChange={setEnabledVideo}
-      onFileStemChange={setFileStem}
+      onCameraCompressionChange={keep(
+        args.onCameraCompressionChange,
+        setCameraCompression,
+      )}
+      onCameraOverlayChange={keep(args.onCameraOverlayChange, setCameraOverlay)}
+      onCameraResolutionScaleChange={keep(
+        args.onCameraResolutionScaleChange,
+        setCameraResolution,
+      )}
+      onCollapseAudioChange={keep(args.onCollapseAudioChange, setCollapseAudio)}
+      onCompressionChange={keep(args.onCompressionChange, setCompression)}
+      onEnabledTracksChange={keep(args.onEnabledTracksChange, setEnabledAudio)}
+      onEnabledVideoTracksChange={keep(
+        args.onEnabledVideoTracksChange,
+        setEnabledVideo,
+      )}
+      onFileStemChange={keep(args.onFileStemChange, setFileStem)}
       onRenameProject={project.onRenameProject}
-      onResolutionScaleChange={setResolution}
-      onSelectedTrackChange={setSelectedTrack}
+      onResolutionScaleChange={keep(
+        args.onResolutionScaleChange,
+        setResolution,
+      )}
+      onSelectedTrackChange={keep(args.onSelectedTrackChange, setSelectedTrack)}
       resolutionScalePercent={resolution}
       selectedTrack={selectedTrack}
     />

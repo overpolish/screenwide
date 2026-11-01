@@ -88,9 +88,8 @@ use preferences::{
   load_cursor_effects, load_keyboard_effects, load_recording_choices, load_recording_output,
   load_screenshot_background_radius, load_screenshot_delete_project_after_export,
   load_screenshot_output, load_screenshot_radius, remember_completed_export,
-  remember_screenshot_background_radius, remember_screenshot_delete_project_after_export,
-  remember_screenshot_output, remember_screenshot_radius, CompletedRecordingExport,
-  RecordingExportChoices,
+  remember_screenshot_delete_project_after_export, remember_screenshot_output,
+  CompletedRecordingExport, RecordingExportChoices,
 };
 use recording_sidecar::{RecordingCursor, RecordingKeyboard};
 use save::{delivered_extension, scale_percent};

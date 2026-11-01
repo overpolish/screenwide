@@ -10,6 +10,7 @@ import {
   editorIslandStoryMeta,
   type EditorIslandStoryProps,
 } from "../../editor-island-story-meta";
+import { storyPinAfter } from "../annotation-pin-story-fixtures";
 
 import { focusIsland, type FocusIslandProps } from "./focus-island";
 
@@ -29,7 +30,9 @@ const meta = {
     id: "focus",
     isShown: true,
     onDelete: fn(),
+    onPinAction: fn(),
     onStyleChange: fn(),
+    pin: null,
     style: { dims: false, isAnimated: true, radius: 25 },
   },
   component: FocusIsland,
@@ -40,6 +43,10 @@ const meta = {
     return (
       <FocusIsland
         {...args}
+        onPinAction={(action) => {
+          args.onPinAction?.(action);
+          updateArgs({ pin: storyPinAfter(args.pin, action) });
+        }}
         onStyleChange={(style) => {
           args.onStyleChange(style);
           updateArgs({ style: { ...args.style, ...style } });
@@ -56,4 +63,6 @@ type Story = StoryObj<typeof meta>;
 export const Recording: Story = {};
 
 // A screenshot is one instant, so there is nothing to deepen in over.
-export const Screenshot: Story = { args: { canAnimate: false } };
+export const Screenshot: Story = {
+  args: { canAnimate: false, pin: undefined },
+};

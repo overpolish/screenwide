@@ -128,7 +128,7 @@ pub struct AnnotationStyle {
   /// box's shorter side from 0 to 50; the other kinds carry zero.
   #[serde(default)]
   pub softness: f64,
-  /// Whether a magnifier's loupe casts a shadow onto the picture; the other
+  /// Whether a lens casts a shadow onto the picture; the other
   /// kinds carry `false`.
   #[serde(default)]
   pub shadow: bool,

@@ -168,12 +168,27 @@ if (!isNativePreview) {
       switch (command) {
         // Caption previews are drawn by the native compositor, which a
         // browser story cannot reach; tiles show their names alone.
+        case "get_recording_camera_picks":
         case "get_recording_keyboard_timeline":
         case "get_recording_moments":
         case "make_recording_captions":
         case "open_standalone_listboxes":
         case "render_caption_previews":
           return [];
+        // A recording with nothing read from its cursor, keys or picture.
+        case "get_recording_activity":
+          return { clicks: [], picture: [], typing: [] };
+        // A camera as recorded, with no effects made or being made.
+        case "get_recording_camera_effects":
+          return {
+            canPickObjects: false,
+            enhance: false,
+            pending: [],
+            pictures: [],
+          };
+        // No transcription model set up, as on a fresh install.
+        case "get_transcription_state":
+          return { language: "system", models: [], systemLanguage: "en" };
         case "installed_font_families": {
           const every = [100, 200, 300, 400, 500, 600, 700, 800, 900];
           // The app's own families, as the editor lists them, among a few

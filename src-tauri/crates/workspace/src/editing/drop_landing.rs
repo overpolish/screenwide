@@ -5,7 +5,7 @@
 //! drop; which picture it lands on is read as a press with the image tool
 //! would read it.
 
-use super::annotation::{layer_image_rect, take_drawing_layer};
+use super::annotation::{drawing_pictures, take_drawing_layer};
 use super::*;
 use screenwide_annotations::gesture::drawing_layer;
 
@@ -31,27 +31,17 @@ impl WorkspaceEditor {
     let (at, taken) = {
       let mut state = inner.state.lock().ok()?;
       let scale = state.scale.max(0.1);
-      // On the layer standing upright, as a press with the image tool reads it.
-      let point = turn::selected_layer_point(&state, (client.0 / scale, client.1 / scale));
-      let pictures: Vec<_> = state
-        .selection_targets
-        .iter()
-        .filter_map(|target| {
-          let rect = layer_image_rect(&state, target.layer_id as i32)?;
-          Some((target.layer_id, [rect.x, rect.y, rect.width, rect.height]))
-        })
-        .collect();
-      let at = drawing_layer(pictures.into_iter(), point).and_then(|layer| {
-        let image = layer_image_rect(&state, layer as i32)?;
-        (image.width > 0.0 && image.height > 0.0).then(|| {
-          (
-            layer,
-            (point.0 - image.x) / image.width,
-            (point.1 - image.y) / image.height,
-          )
-        })
+      // On each picture standing upright, as a press with the image tool
+      // reads it.
+      let display = (client.0 / scale, client.1 / scale);
+      let pictures = drawing_pictures(&state, display);
+      let at = drawing_layer(pictures.iter().copied()).and_then(|layer| {
+        let &(_, [x, y, width, height], point) =
+          pictures.iter().find(|(picture, ..)| *picture == layer)?;
+        (width > 0.0 && height > 0.0)
+          .then(|| (layer, (point.0 - x) / width, (point.1 - y) / height))
       });
-      (at, take_drawing_layer(inner, &mut state, point))
+      (at, take_drawing_layer(inner, &mut state, display))
     };
     if let Some(layer) = taken {
       emit_selection(inner, Some(layer));

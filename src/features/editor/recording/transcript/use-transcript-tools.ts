@@ -32,7 +32,7 @@ import {
   playedRecordingStretches,
   TranscriptEditRequest,
 } from "./transcript-edit-requests";
-import { useTranscriptRevision } from "./transcript-revision";
+import { usePublishTranscriptRevision } from "./transcript-revision";
 import { useTranscriptPlayheadToPanel } from "./use-transcript-playhead-to-panel";
 
 import type {
@@ -178,10 +178,7 @@ export function useTranscriptTools({
   useTranscriptPlayheadToPanel(preview, workspace);
 
   // What is made of the words elsewhere in the window follows them.
-  const isReady = status === "ready";
-  useEffect(() => {
-    useTranscriptRevision.setState({ artifactId, isReady, revision });
-  }, [artifactId, isReady, revision]);
+  usePublishTranscriptRevision({ artifactId, revision, status, words });
 
   /** One edit to the timeline, committed as one step of the edit history. */
   const commit = (
@@ -239,7 +236,7 @@ export function useTranscriptTools({
             // Stopping on purpose is not a failure to tell anyone about.
             if (cancelledRef.current) return;
             console.error("Could not transcribe the recording", cause);
-            setError(t("editor-panels-transcript-failed"));
+            setError(t("editor-island-transcript-failed"));
           });
         break;
       case "cancel":

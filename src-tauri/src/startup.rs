@@ -67,8 +67,8 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   app_windows::initialize_predefined_windows(app.handle())?;
   app_windows::initialize_topology_management(app.handle());
   editor::initialize(app.handle());
-  // The Captions panel's fonts and template previews take a moment to
-  // ready; done in the background now, the panel has them when it opens.
+  // The text pickers' fonts and template previews take a moment to ready;
+  // done in the background now, the pickers have them when they open.
   editor::text_templates::warm(app.handle());
   crate::shortcuts::initialize(app.handle());
   screenwide_accent::initialize(app.handle());

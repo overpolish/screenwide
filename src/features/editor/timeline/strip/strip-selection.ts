@@ -17,12 +17,16 @@ export type StripSelection =
 
 type Part = Exclude<StripSelection["kind"], "items" | "range" | "shortcuts">;
 
+/** A stretch, and where choosing it brings the playhead in recorded seconds
+ * where that is not its start (a scene once it has arrived). */
+type Landing = Span & { landsAt?: number };
+
 /** The stretch a selection covers, found among the parts that have one;
  * several items cover from the first one's start to the last one's end. */
 export function selectionSpan(
   selection: StripSelection | null,
-  parts: Record<Part, { id: string; span: Span }[]>,
-): Span | null {
+  parts: Record<Part, { id: string; span: Landing }[]>,
+): Landing | null {
   if (!selection) return null;
   if (selection.kind === "range") return selection;
   // Pressed where they are, shortcuts are in view already.
@@ -40,6 +44,15 @@ export function selectionSpan(
     start: Math.min(...spans.map(({ start }) => start)),
   };
 }
+
+/** How far before a part's start, in seconds, the playhead still stands
+ * at it: a seek lands on the frame nearest, which may fall just short. */
+const SAME_MOMENT_S = 1e-3;
+
+/** Whether the playhead, at `at` in recorded seconds, stands outside
+ * `span`, so choosing the part brings it to the part's start. */
+export const isPlayheadOutside = (at: number, span: Span) =>
+  at < span.start - SAME_MOMENT_S || at >= span.end;
 
 /** The beats and lulls `selection` chooses. */
 export const chosenItems = (selection: StripSelection | null): StripItem[] =>

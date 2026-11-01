@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The compositor's magnifier, through a real GPU dispatch: what its loupe
-//! shows of the picture, and how.
+//! The compositor's lens, through a real GPU dispatch: what it shows of the
+//! picture under it, and how.
 
 use screenwide_annotations::magnify::model::new_magnify;
 use screenwide_annotations::redact::model::new_redact;
@@ -14,22 +14,19 @@ fn point(x: f64, y: f64) -> AnnotationPoint {
   AnnotationPoint { x, y }
 }
 
-/// A clear loupe 80 across centred at (220, 100), enlarging `zoom` times the
-/// zoom area centred at (60, 100), with no rim or shadow to draw over it.
-fn loupe(zoom: f64) -> Annotation {
-  magnifier(point(60.0, 100.0), point(220.0, 100.0), zoom)
+/// A clear square lens 80 across centred at (220, 100), enlarging `zoom`
+/// times, with no shadow to fall over what it shows.
+fn lens(zoom: f64) -> Annotation {
+  lens_at(point(220.0, 100.0), zoom)
 }
 
-/// A clear loupe 80 across centred at `loupe`, enlarging `zoom` times the
-/// zoom area centred at `area`.
-fn magnifier(area: AnnotationPoint, loupe: AnnotationPoint, zoom: f64) -> Annotation {
-  let half = 40.0 / zoom;
-  let mut annotation = new_magnify("magnify".to_owned(), area, None);
+/// A clear square lens 80 across centred at `centre`, enlarging `zoom` times.
+fn lens_at(centre: AnnotationPoint, zoom: f64) -> Annotation {
+  let mut annotation = new_magnify("magnify".to_owned(), centre, None, None);
   annotation.shape = AnnotationShape::Magnify {
-    start: point(area.x - half, area.y - half),
-    end: point(area.x + half, area.y + half),
-    loupe,
-    size: 80.0,
+    start: point(centre.x - 40.0, centre.y - 40.0),
+    end: point(centre.x + 40.0, centre.y + 40.0),
+    zoom,
   };
   annotation.style.radius = 0.0;
   annotation.style.width = 0.0;
@@ -80,9 +77,13 @@ fn red(rgba: &[u8], x: u32, y: u32) -> u8 {
   rgba[((y * SIZE.0 + x) * 4) as usize]
 }
 
+fn blue(rgba: &[u8], x: u32, y: u32) -> u8 {
+  rgba[((y * SIZE.0 + x) * 4 + 2) as usize]
+}
+
 #[test]
 fn an_enlarged_pixel_is_drawn_as_a_crisp_square() {
-  let drawn = composed(stripes(), vec![loupe(4.0)]);
+  let drawn = composed(stripes(), vec![lens(4.0)]);
   // Four times over, each source column is four output columns wide, and
   // only the one pixel across each edge may fall between black and white.
   let row: Vec<u8> = (200..240).map(|x| red(&drawn, x, 100)).collect();
@@ -100,12 +101,12 @@ fn an_enlarged_pixel_is_drawn_as_a_crisp_square() {
   assert!((8..=12).contains(&runs), "{row:?}");
 }
 
-/// A bright square in the middle of the zoom area, on a dark picture.
-fn lit_zoom_area() -> Vec<u8> {
+/// A bright square 20 across under the lens's middle, on a dark picture.
+fn lit_middle() -> Vec<u8> {
   (0..SIZE.1)
     .flat_map(|y| {
       (0..SIZE.0).flat_map(move |x| {
-        let lit = (50..70).contains(&x) && (90..110).contains(&y);
+        let lit = (210..230).contains(&x) && (90..110).contains(&y);
         if lit {
           [255; 4]
         } else {
@@ -117,55 +118,87 @@ fn lit_zoom_area() -> Vec<u8> {
 }
 
 #[test]
-fn the_loupe_shows_what_its_zoom_area_covers() {
-  let drawn = composed(lit_zoom_area(), vec![loupe(2.0)]);
-  // Twice over, the zoom area's 20 lit pixels fill the loupe's middle 40.
+fn the_lens_shows_what_lies_under_its_middle_enlarged() {
+  let drawn = composed(lit_middle(), vec![lens(2.0)]);
+  // Twice over, the 20 lit pixels under its middle fill its middle 40.
   assert!(red(&drawn, 220, 100) > 240);
   assert!(red(&drawn, 205, 85) > 240);
   assert!(red(&drawn, 190, 70) < 40);
+  // Off the lens, the picture is as it was.
+  assert!(red(&drawn, 120, 100) < 40);
 }
 
 #[test]
-fn a_loupe_flying_out_smears_its_picture_along_its_way() {
-  // While the shutter was open the loupe went from half-way out of its zoom
-  // area to its place, and its lit middle passed over (150, 110) on the way,
-  // clear of the line joining the two.
-  let mut flying = loupe(2.0);
-  flying.reveal = screenwide_annotations::reveal::AnnotationReveal {
+fn the_glass_catches_the_light_along_its_rim() {
+  let drawn = composed(lit_middle(), vec![lens(2.0)]);
+  // The lens's top edge faces the light: its outermost row is lit well
+  // above the dark picture it shows, a row further in is not.
+  assert!(red(&drawn, 200, 60) > 80, "{}", red(&drawn, 200, 60));
+  assert!(red(&drawn, 200, 64) < 40, "{}", red(&drawn, 200, 64));
+}
+
+#[test]
+fn a_lens_setting_off_is_flat() {
+  // Not yet settled, the lens enlarges nothing and no glass bends what it
+  // shows, so it lifts off the picture without a jump.
+  let mut resting = lens(2.0);
+  resting.reveal = screenwide_annotations::reveal::AnnotationReveal {
+    scale: 0.0,
+    opacity: 0.0,
+    previous: [0.0, 1.0, 0.0, 0.0],
+    ..screenwide_annotations::reveal::AnnotationReveal::WHOLE
+  };
+  let plain = composed(lit_middle(), vec![]);
+  let drawn = composed(lit_middle(), vec![resting]);
+  let most = plain
+    .iter()
+    .zip(&drawn)
+    .map(|(a, b)| a.abs_diff(*b))
+    .max()
+    .unwrap();
+  assert!(most <= 2, "{most}");
+}
+
+#[test]
+fn a_settling_lens_smears_what_it_shows_as_it_grows() {
+  // While the shutter was open the lens grew from half way: (238, 100) was
+  // off the smaller lens, dark, and is lit once it has grown and enlarged.
+  let mut settling = lens(2.0);
+  settling.reveal = screenwide_annotations::reveal::AnnotationReveal {
     previous: [0.0, 1.0, 0.5, 1.0],
     ..screenwide_annotations::reveal::AnnotationReveal::WHOLE
   };
-  let smeared = red(&composed(lit_zoom_area(), vec![flying]), 150, 110);
+  let smeared = red(&composed(lit_middle(), vec![settling]), 238, 100);
   assert!(
     smeared > 40 && smeared < 200,
-    "part-lit along the way, not {smeared}"
+    "part-lit as it grew, not {smeared}"
   );
-  let still = red(&composed(lit_zoom_area(), vec![loupe(2.0)]), 150, 110);
-  assert!(still < 40, "a loupe at rest leaves it dark, not {still}");
+  let still = red(&composed(lit_middle(), vec![lens(2.0)]), 238, 100);
+  assert!(still > 240, "a settled lens shows it lit, not {still}");
 }
 
 #[test]
-fn a_redaction_under_the_zoom_area_stays_hidden_in_the_loupe() {
+fn a_redaction_under_the_lens_stays_hidden_in_it() {
   let secret: Vec<u8> = [255; 4].repeat(SIZE.0 as usize * SIZE.1 as usize);
-  let mut cover = new_redact("redact".to_owned(), point(30.0, 70.0), None);
+  let mut cover = new_redact("redact".to_owned(), point(190.0, 70.0), None);
   cover.shape = AnnotationShape::Redact {
-    start: point(30.0, 70.0),
-    end: point(90.0, 130.0),
+    start: point(190.0, 70.0),
+    end: point(250.0, 130.0),
     seed: 1,
   };
   cover.style.redaction = AnnotationRedaction::Color;
   cover.style.color = "#000000".to_owned();
-  let drawn = composed(secret, vec![cover, loupe(2.0)]);
+  let drawn = composed(secret, vec![cover, lens(2.0)]);
   assert!(red(&drawn, 220, 100) < 10);
 }
 
 #[test]
-fn a_loupe_shows_nothing_the_crop_cut_away() {
-  // Dark on the left, bright on the right, and the crop keeps only the left.
+fn a_lens_shows_nothing_the_crop_cut_away() {
+  // Dark on the left, bright on the right, and the crop keeps only the left,
+  // laid on a black canvas.
   let source: Vec<u8> = (0..SIZE.1)
     .flat_map(|_| (0..SIZE.0).flat_map(|x| if x < 160 { [20, 20, 20, 255] } else { [255; 4] }))
     .collect();
-  let annotation = magnifier(point(160.0, 100.0), point(80.0, 100.0), 2.0);
   let source = screenwide_imaging::CapturedImage {
     rgba: source,
     width: SIZE.0,
@@ -181,16 +214,16 @@ fn a_loupe_shows_nothing_the_crop_cut_away() {
   settings.image_width = f64::from(SIZE.0);
   settings.image_x = 0.0;
   settings.image_y = 0.0;
-  settings.annotations = vec![annotation];
+  // The lens straddles the crop's edge: its right half would show what lies
+  // past it.
+  settings.annotations = vec![lens_at(point(150.0, 100.0), 2.0)];
   let drawn = screenwide_compositor::compositor::still_overlay::compose_output_layers(
     &source, &settings, 0.0, false, None, None, None, None, false, false,
   )
   .unwrap();
-  // The zoom area straddles the crop's edge; the loupe's right half, which would
-  // show what lies past it, carries the edge on instead.
   let at = |x: u32, y: u32| drawn.rgba[((y * drawn.width + x) * 4) as usize];
-  assert!(at(110, 100) < 40, "{}", at(110, 100));
-  assert!(at(60, 100) < 40);
+  assert!(at(180, 100) < 40, "{}", at(180, 100));
+  assert!(at(130, 100) < 40, "{}", at(130, 100));
 }
 
 /// A blue arrow along y = `y` from x = `from` to `to`.
@@ -216,52 +249,29 @@ fn spotlight(blur: bool) -> Annotation {
 }
 
 #[test]
-fn a_loupe_covers_the_marks_below_it_and_not_those_above() {
-  // The arrow crosses the loupe's lit middle at (220, 100).
-  let below = composed(
-    lit_zoom_area(),
-    vec![blue_arrow(180.0, 300.0, 100.0), loupe(2.0)],
-  );
-  assert!(red(&below, 220, 100) > 240, "{}", red(&below, 220, 100));
-  let above = composed(
-    lit_zoom_area(),
-    vec![loupe(2.0), blue_arrow(180.0, 300.0, 100.0)],
-  );
-  assert!(red(&above, 220, 100) < 40, "{}", red(&above, 220, 100));
-}
-
-#[test]
-fn a_loupe_enlarges_the_marks_below_it_and_not_those_above() {
-  // The arrow crosses the zoom area's lit middle at (60, 100), which the
-  // loupe shows at (220, 100).
-  let at = |rgba: &[u8]| {
-    (
-      red(rgba, 220, 100),
-      rgba[((100 * SIZE.0 + 220) * 4 + 2) as usize],
-    )
-  };
-  let below = composed(
-    lit_zoom_area(),
-    vec![blue_arrow(30.0, 90.0, 100.0), loupe(2.0)],
-  );
-  let (red_below, blue_below) = at(&below);
+fn a_lens_enlarges_the_marks_below_it_and_not_those_above() {
+  // The arrow runs through the lens's lit middle along y = 100, 8 wide: the
+  // lens shows it twice as wide, so (220, 105) lies on it only below.
+  let arrow = || blue_arrow(180.0, 300.0, 100.0);
+  let below = composed(lit_middle(), vec![arrow(), lens(2.0)]);
   assert!(
-    red_below < 40 && blue_below > 200,
-    "{red_below} {blue_below}"
+    red(&below, 220, 105) < 40 && blue(&below, 220, 105) > 200,
+    "{} {}",
+    red(&below, 220, 105),
+    blue(&below, 220, 105)
   );
-  let above = composed(
-    lit_zoom_area(),
-    vec![loupe(2.0), blue_arrow(30.0, 90.0, 100.0)],
-  );
-  assert!(red(&above, 220, 100) > 240, "{}", red(&above, 220, 100));
+  let above = composed(lit_middle(), vec![lens(2.0), arrow()]);
+  assert!(red(&above, 220, 105) > 240, "{}", red(&above, 220, 105));
+  // Over the lens, the arrow is drawn as it is.
+  assert!(blue(&above, 220, 100) > 200);
 }
 
 #[test]
 fn a_spotlight_shades_the_marks_below_it_and_not_those_above() {
   let blue = |rgba: &[u8]| rgba[((170 * SIZE.0 + 240) * 4 + 2) as usize];
   let arrow = || blue_arrow(180.0, 300.0, 170.0);
-  let below = composed(lit_zoom_area(), vec![arrow(), spotlight(false)]);
-  let above = composed(lit_zoom_area(), vec![spotlight(false), arrow()]);
+  let below = composed(lit_middle(), vec![arrow(), spotlight(false)]);
+  let above = composed(lit_middle(), vec![spotlight(false), arrow()]);
   assert!(blue(&above) > 240, "{}", blue(&above));
   assert!(blue(&below) < 200, "{}", blue(&below));
 }
@@ -277,9 +287,9 @@ fn a_blurring_spotlight_softens_the_marks_below_it_and_not_those_above() {
   };
   let arrow = || blue_arrow(180.0, 300.0, 170.0);
   let difference = |blur_layers: Vec<Annotation>, shade_layers: Vec<Annotation>| {
-    across(&composed(lit_zoom_area(), blur_layers))
+    across(&composed(lit_middle(), blur_layers))
       .iter()
-      .zip(across(&composed(lit_zoom_area(), shade_layers)))
+      .zip(across(&composed(lit_middle(), shade_layers)))
       .map(|(blurred, shaded)| (blurred - shaded).abs())
       .max()
       .unwrap()

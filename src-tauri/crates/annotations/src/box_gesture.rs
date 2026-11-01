@@ -23,8 +23,8 @@ pub(crate) const EDGE_TOP: u32 = 1 << 2;
 pub(crate) const EDGE_BOTTOM: u32 = 1 << 3;
 
 /// Move one grip of a box to `point`. An edge or corner grip resizes the
-/// box, with Shift holding a corner to the box's own proportions; the radius
-/// dot rounds its corners; the body carries the whole box.
+/// box, with Shift holding a corner to the box's own proportions; the body
+/// carries the whole box.
 pub(crate) fn drag(
   annotation: &mut Annotation,
   handle: AnnotationHandle,
@@ -39,35 +39,10 @@ pub(crate) fn drag(
   let from = redact_box(from_start, from_end);
   let (bounds, result) = match handle {
     AnnotationHandle::Edges(edges) => resize(from, edges, point, shift, snap),
-    AnnotationHandle::Radius => {
-      annotation.style.radius = radius_at(from, point, origin.source_per_point);
-      return SnapResult::default();
-    }
     _ => carry(from, point, origin.point, snap),
   };
   write(annotation, bounds);
   result
-}
-
-/// The screen points the radius dot sits in from the box's corner at no
-/// radius, and how far further in it moves per point of radius: the layer
-/// selection's own placing, which the native chrome draws the dot by.
-pub(crate) const RADIUS_INSET_POINTS: f64 = 10.0;
-pub(crate) const RADIUS_TRAVEL: f64 = 0.55;
-
-/// The corner radius, as a percentage of the box's shorter side, that puts
-/// the dot under `point`, read along the diagonal the way the layer
-/// selection reads its own. `source_per_point` turns the dot's inset in
-/// screen points into source pixels; zero where it is unknown.
-pub(crate) fn radius_at(bounds: SnapBox, point: AnnotationPoint, source_per_point: f64) -> f64 {
-  let shortest = bounds.width.min(bounds.height);
-  if shortest.is_nan() || shortest <= 0.0 {
-    return 0.0;
-  }
-  let along = ((point.x - bounds.x) + (point.y - bounds.y)) / 2.0;
-  let inset = RADIUS_INSET_POINTS * source_per_point.max(0.0);
-  let radius = (along - inset) / RADIUS_TRAVEL;
-  (radius * 100.0 / shortest).clamp(0.0, 50.0)
 }
 
 /// Pull a fresh box out from where the press landed: the press is one
@@ -91,7 +66,7 @@ pub(crate) fn drag_new(
 }
 
 /// The two corners a boxed shape is held by, or `None` for a shape that is
-/// not a box. A magnifier is held by its loupe.
+/// not a box.
 fn held_corners(shape: &AnnotationShape) -> Option<(AnnotationPoint, AnnotationPoint)> {
   match shape {
     AnnotationShape::Redact { start, end, .. }

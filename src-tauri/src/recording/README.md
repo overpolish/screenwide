@@ -99,6 +99,17 @@ flowchart LR
 - Cursor files use global logical coordinates and include the captured source bounds. The macOS part only translates native events and cursor styles into the shared format.
 - macOS stops every ScreenCaptureKit stream when the Mac locks or sleeps. `platform/stream_recovery.rs` keeps each stream's recipe and rebuilds and restarts a stopped one about once a second until it runs again, so video resumes after unlock on the same timeline. The time on the lock screen holds the last frame.
 
+### Window capture badge
+
+A window recorded on its own (`sc::ContentFilter::with_desktop_independent_window` in `crates/capture/src/platform/startup/video_source.rs`) carries a badge: from a live stream macOS draws a purple pill with a screen-sharing glyph over the window's traffic lights, opaque, in every frame. Stills from `SCScreenshotManager` and display captures do not have it. Seen on macOS 27.0.1.
+
+Planned, after the legacy migration: patch the badge with real pixels. A second, small display stream covers the window's traffic-light corner, following the window as it moves, and the compositor lays that corner over the badge, as `platform/desktop_compositor.rs` already joins several capture pieces into one picture. The window keeps its own stream, so it is still recorded whole when covered, behind other windows or partly off screen; only the corner shows what lies over it on screen. It relies on the badge staying in that corner.
+
+Rejected:
+
+- Painting over the badge in a shader. The badge is opaque, so what is under it (the traffic lights in their state, and a titlebar or sidebar material that shows the desktop through it) is not in the frame and could only be guessed.
+- Recordly's fix (PR #877 in webadderallorg/Recordly, v1.4.0): record the display and crop each frame to the window's Accessibility frame. It records whatever covers the window, loses what is off screen or behind other windows, and leaves resizing and moving across displays to the app.
+
 ## Sleep
 
 `recording/sleep.rs` decides what capture does when the computer sleeps, on every platform; `sleep/platform_*.rs` only report the moment (NSWorkspace notifications on macOS, the power manager's suspend and resume callback on Windows). A running recording is paused as if the user had pressed Pause and stays paused after the wake; a recording still counting down is discarded. The replay buffer turns off and, once the computer wakes, back on with the settings it had (`replay/sleep.rs`). Locking without sleeping changes nothing.

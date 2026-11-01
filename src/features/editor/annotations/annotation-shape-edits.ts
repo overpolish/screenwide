@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationShape } from "./annotations";
+import { firstAnnotationDress } from "./annotation-defaults";
+import { Annotation, AnnotationShape, AnnotationStyle } from "./annotations";
+import { relaidHighlight } from "./highlight-strokes";
 
 /** A fresh seed from the browser's secure generator, as a fresh redaction's
  * comes from the system's. */
@@ -36,6 +38,16 @@ export const shuffledShape = (shape: AnnotationShape, seed: number) =>
       ? { ...shape, sway: seed }
       : null;
 
+/** The shape `annotation` takes dressed in `next`: a highlight switched to
+ * manual is laid out again, and turned hand-drawn, a stroke is drawn from a
+ * fresh seed, so each time it wobbles its own way. */
+export const dressedShape = (annotation: Annotation, next: AnnotationStyle) => {
+  const relaid = relaidHighlight(annotation, next) ?? annotation.shape;
+  return next.handDrawn && !annotation.style.handDrawn
+    ? (shuffledShape(relaid, freshSeed()) ?? relaid)
+    : relaid;
+};
+
 /**
  * An image that sways from `seed`, or with none, one that stands still and
  * keeps nothing of how it swayed. Null for anything but an image.
@@ -44,4 +56,27 @@ export const swayedShape = (shape: AnnotationShape, seed: number | null) => {
   if (shape.kind !== "image") return null;
   const { sway: _sway, ...still } = shape;
   return seed === null ? still : { ...still, sway: seed };
+};
+
+/**
+ * The annotation in the other of a focus's two looks, blurred and dimmed,
+ * or null where it is neither or already in `kind`. It keeps its box and its
+ * corners and takes the other look's own first dress for the rest, its
+ * shade, its edge and its blur.
+ */
+export const relookedFocus = (
+  annotation: Annotation,
+  kind: "focus" | "spotlight",
+): Annotation | null => {
+  const { shape, style } = annotation;
+  if (
+    shape.kind === kind ||
+    (shape.kind !== "focus" && shape.kind !== "spotlight")
+  )
+    return null;
+  return {
+    ...annotation,
+    shape: { end: shape.end, kind, start: shape.start },
+    style: { ...firstAnnotationDress(kind), radius: style.radius },
+  };
 };

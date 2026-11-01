@@ -76,7 +76,7 @@ export function UpdatePrompt({
         />
       }
     >
-      <div className="flex min-h-0 grow flex-col gap-section px-window-inset pb-window-inset">
+      <div className="flex min-h-0 grow flex-col gap-separate px-inset pb-inset">
         {busy ? (
           <ProgressPanel
             label={t("updates-downloading")}
@@ -89,12 +89,12 @@ export function UpdatePrompt({
             }
           />
         ) : (
-          <div className="flex flex-col gap-tight">
+          <div className="flex flex-col gap-0.5">
             <p className="text-body text-fg">
               {availabilityLine(currentVersion, updateVersion)}
             </p>
             {released ? (
-              <p className="text-body text-fg-secondary text-content-fg-secondary">
+              <p className="text-body text-fg-secondary">
                 {t("updates-released", {
                   date: dateFormatter.format(released),
                 })}
@@ -122,7 +122,7 @@ export function UpdatePrompt({
           <Alert color="error">{t("updates-failed", { error })}</Alert>
         ) : null}
 
-        <div className="flex shrink-0 items-center gap-control-inset">
+        <div className="flex shrink-0 items-center gap-separate">
           <Button
             className="me-auto"
             isDisabled={busy}

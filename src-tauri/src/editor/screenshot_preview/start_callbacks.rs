@@ -16,8 +16,8 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use super::super::preview_platform::RecordingPreviewSurface;
 use super::annotation_gesture::AnnotationCommit;
 use super::payloads::{
-  ScreenshotAnnotationChangeEvent, ScreenshotAnnotationHoverEvent, ScreenshotPreviewTransformEvent,
-  ScreenshotSelectionChangeEvent, ScreenshotSelectionGestureEvent,
+  ScreenshotAnnotationChangeEvent, ScreenshotAnnotationHoverEvent, ScreenshotSelectionChangeEvent,
+  ScreenshotSelectionGestureEvent,
 };
 use super::state::ScreenshotPreviewState;
 use screenwide_annotations::gesture::AnnotationGestureTarget;
@@ -72,16 +72,7 @@ pub(super) fn install(
   surface: &mut RecordingPreviewSurface,
   session_id: u64,
 ) {
-  let event_app = app.clone();
-  surface.enable_editor(Box::new(move |zoom_percent| {
-    let _ = event_app.emit(
-      "screenshot-preview://transform",
-      ScreenshotPreviewTransformEvent {
-        session_id,
-        zoom_percent,
-      },
-    );
-  }));
+  surface.enable_editor();
   surface.set_selection_snapping(true);
   let drop_app = app.clone();
   surface.set_image_drop_callback(Box::new(move |picture, at| {
@@ -97,13 +88,9 @@ pub(super) fn install(
       },
     );
   }));
-  let event_window = window.clone();
-  surface.set_pointer_down_callback(Box::new(move || {
-    let _ = event_window.emit(
-      super::super::preview_platform::NATIVE_POINTER_DOWN_EVENT,
-      (),
-    );
-  }));
+  surface.set_pointer_press_callback(super::super::preview_platform::pointer_press_callback(
+    window.clone(),
+  ));
   let event_app = app.clone();
   surface.set_selection_gesture_callback(Box::new(
     move |phase, pane_index, operation, edges, scale, delta_x, delta_y| {

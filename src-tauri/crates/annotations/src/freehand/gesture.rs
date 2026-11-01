@@ -67,7 +67,6 @@ pub(crate) fn drag(
   let before = redact_box(low, high);
   let (after, result) = match handle {
     AnnotationHandle::Edges(edges) => resize(before, edges, point, shift, snap),
-    AnnotationHandle::Radius => return SnapResult::default(),
     _ => carry(before, point, origin.point, snap),
   };
   if let AnnotationShape::Draw { points, .. } = &mut annotation.shape {

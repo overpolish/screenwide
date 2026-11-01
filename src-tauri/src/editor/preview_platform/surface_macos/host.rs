@@ -17,7 +17,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSPoint};
 use objc2_quartz_core::CATransaction;
 
-use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
 use screenwide_osc::gpu::magnifier::NativeMagnifier;
 use screenwide_osc::gpu::vertices::{RenderConstants, Vertex};
 use screenwide_workspace::backdrop::BackdropStyle;
@@ -145,6 +145,7 @@ impl Host for MacHost {
     &self,
     _frame: (i32, i32, i32, i32),
     rect: PreviewSurfaceRect,
+    corners: PreviewSurfaceCorners,
     scale: f64,
     backdrop: [f64; 4],
     active: bool,
@@ -162,6 +163,7 @@ impl Host for MacHost {
       &self.gpu.layers.chrome,
       Some((0.0, 0.0, rect.width, rect.height)),
     );
+    self.gpu.layers.round(corners);
     if let Ok(mut ribbon) = self.gpu.audio_ribbon.lock() {
       let _ = ribbon.set_viewport(rect, scale, backdrop);
     }
@@ -216,6 +218,12 @@ impl Host for MacHost {
       Some(mtm) => cursor::set(kind, mtm),
       None => self.views.later(move |_, mtm| cursor::set(kind, mtm)),
     }
+  }
+
+  fn hover_again(&self) {
+    // Always on a later turn: the engine asks while it is still settling
+    // the change, and the move comes straight back into it.
+    self.views.later(|views, _| views.editor.hover_again());
   }
 
   fn modifiers(&self) -> Modifiers {

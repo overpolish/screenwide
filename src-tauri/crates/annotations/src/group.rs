@@ -17,9 +17,9 @@ use super::{Annotation, AnnotationPoint, AnnotationShape};
 mod tests;
 
 /// The box round everything an annotation draws, in its source's pixels: the
-/// box it aligns by where it has one, the points it is placed by, a
-/// magnifier's loupe, and an arrow's stroke and heads either side of its line.
-/// `source_per_size` turns a style's size into source pixels.
+/// box it aligns by where it has one, the points it is placed by, and an
+/// arrow's stroke and heads either side of its line. `source_per_size` turns
+/// a style's size into source pixels.
 pub(crate) fn annotation_bounds(annotation: &Annotation, source_per_size: f64) -> Option<SnapBox> {
   let points = annotation.shape.points();
   let mut bounds = points
@@ -34,39 +34,14 @@ pub(crate) fn annotation_bounds(annotation: &Annotation, source_per_size: f64) -
   {
     bounds = union(bounds, field);
   }
-  match &annotation.shape {
-    AnnotationShape::Arrow { .. } => {
-      let reach = annotation.style.width.max(0.0) * source_per_size.max(0.0);
-      bounds = SnapBox {
-        x: bounds.x - reach,
-        y: bounds.y - reach,
-        width: bounds.width + reach * 2.0,
-        height: bounds.height + reach * 2.0,
-      };
-    }
-    AnnotationShape::Magnify {
-      start,
-      end,
-      loupe,
-      size,
-    } => {
-      // The loupe is the zoom area enlarged until its longer side is `size`.
-      let longest = super::magnify::model::longest(*start, *end);
-      if longest > 0.0 && *size > 0.0 {
-        let width = (end.x - start.x).abs() * size / longest;
-        let height = (end.y - start.y).abs() * size / longest;
-        bounds = union(
-          bounds,
-          SnapBox {
-            x: loupe.x - width / 2.0,
-            y: loupe.y - height / 2.0,
-            width,
-            height,
-          },
-        );
-      }
-    }
-    _ => {}
+  if let AnnotationShape::Arrow { .. } = &annotation.shape {
+    let reach = annotation.style.width.max(0.0) * source_per_size.max(0.0);
+    bounds = SnapBox {
+      x: bounds.x - reach,
+      y: bounds.y - reach,
+      width: bounds.width + reach * 2.0,
+      height: bounds.height + reach * 2.0,
+    };
   }
   [bounds.x, bounds.y, bounds.width, bounds.height]
     .iter()

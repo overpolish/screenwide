@@ -132,13 +132,7 @@ impl PreviewPlayerManager {
           }
           return result;
         }
-        if matches!(
-          operation,
-          SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius
-        ) {
-          if operation == SelectionGestureOperation::FrameRadius {
-            return Ok(());
-          }
+        if operation == SelectionGestureOperation::FrameResize {
           let Some(mut scene) = self.workspace_scene.clone() else {
             return Ok(());
           };
@@ -178,10 +172,9 @@ impl PreviewPlayerManager {
           let operation = match operation {
             SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
             SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
-            SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-            SelectionGestureOperation::FrameResize
-            | SelectionGestureOperation::FrameRadius
-            | SelectionGestureOperation::Rotate => return Ok(()),
+            SelectionGestureOperation::FrameResize | SelectionGestureOperation::Rotate => {
+              return Ok(())
+            }
             SelectionGestureOperation::CropMove
             | SelectionGestureOperation::CropResize
             | SelectionGestureOperation::CropDraw => {
@@ -240,10 +233,9 @@ impl PreviewPlayerManager {
         let operation = match operation {
           SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
           SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
-          SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-          SelectionGestureOperation::FrameResize
-          | SelectionGestureOperation::FrameRadius
-          | SelectionGestureOperation::Rotate => return Ok(()),
+          SelectionGestureOperation::FrameResize | SelectionGestureOperation::Rotate => {
+            return Ok(())
+          }
           SelectionGestureOperation::CropMove
           | SelectionGestureOperation::CropResize
           | SelectionGestureOperation::CropDraw => {

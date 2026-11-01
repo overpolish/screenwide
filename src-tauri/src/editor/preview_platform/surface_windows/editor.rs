@@ -93,6 +93,11 @@ impl EditorWindow {
     self.hwnd
   }
 
+  /// Has the resting pointer report a move again, on the window's thread.
+  pub(super) fn hover_again(&self) {
+    input::hover_again(self.hwnd);
+  }
+
   /// Hands the keyboard back to the webview, whose shortcuts own it
   /// whenever nothing is being typed.
   pub(super) fn focus_webview(&self) {

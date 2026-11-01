@@ -13,7 +13,7 @@ import { NativeAudioRibbon } from "../../timeline/audio/native-audio-ribbon";
 import { useRecordingPreviewTracks } from "../../timeline/tracks/use-recording-preview-tracks";
 
 import { NativeRecordingWorkspaceViewport } from "./native-recording-workspace-viewport";
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 import {
   bakedCameraWorkspace,
   recordingLayoutWorkspace,
@@ -28,9 +28,7 @@ import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
 function PreviewError({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <p className="text-caption text-fg-secondary px-window-inset pb-control-inset text-error">
-      {message}
-    </p>
+    <p className="px-inset pb-inset-sm text-caption text-error">{message}</p>
   );
 }
 
@@ -90,10 +88,11 @@ export function RecordingPreviewStage({
   const isSelecting = canvasTool === "select";
   const shownLayout =
     visibleLayout && visibleLayout.panes.length > 0 ? visibleLayout : null;
-  // Every arrangement shares one viewport element. Swapping One video for
-  // Separate files would otherwise mount a fresh viewport at zero size, and
-  // the native layout reads unsized markers as a recording with no video:
-  // it hides every pane until the new viewport has measured itself.
+  // Every arrangement, the audio ribbon too, shares one viewport element.
+  // Swapping One video for Separate files, or the screen for the ribbon,
+  // would otherwise mount a fresh viewport at zero size, and the native
+  // layout reads unsized markers as a recording with nothing to show: it
+  // hides the picture until the new viewport has measured itself.
   const workspace = !layout
     ? null
     : canPreviewBakedCamera && screenPane && cameraPane
@@ -126,26 +125,39 @@ export function RecordingPreviewStage({
           : null;
   return (
     <section className="relative flex min-h-0 min-w-0 grow flex-col">
-      <div className="flex min-h-0 grow items-stretch justify-center">
+      {/* The picture meets the tool column, the title bar and the strip on
+          rounded corners; the viewport takes them up, and the native
+          drawables are clipped to them. */}
+      <div className="flex min-h-0 grow items-stretch justify-center rounded-ss-panel rounded-es-panel">
         {!layout ? (
-          <div className="flex grow items-center justify-center gap-3 text-xs text-muted">
+          <div className="flex grow items-center justify-center gap-inline text-caption text-fg-secondary">
             <CircularProgress
               aria-label={t("editor-recording-preparing-recording")}
               isIndeterminate
             />
             {t("editor-recording-preparing-recording")}
           </div>
-        ) : workspace ? (
-          <div className="flex min-h-0 min-w-0 grow flex-col">
-            <NativeRecordingWorkspaceViewport {...workspace} />
-          </div>
         ) : (
-          <NativeAudioRibbon
-            artifactId={artifactId}
-            audioTracks={audioTracks}
-            enabledTracks={enabledTracks}
-            volumes={audioVolumeByStream}
-          />
+          <div className="flex min-h-0 min-w-0 grow flex-col rounded-[inherit]">
+            <NativeRecordingWorkspaceViewport
+              {...(workspace ?? {
+                ariaLabel: t("editor-timeline-audio-visualizer"),
+                audioOnly: true,
+                isBusy: false,
+                panes: [],
+                workspaceHeight: 0,
+                workspaceWidth: 0,
+              })}
+            />
+            {workspace ? null : (
+              <NativeAudioRibbon
+                artifactId={artifactId}
+                audioTracks={audioTracks}
+                enabledTracks={enabledTracks}
+                volumes={audioVolumeByStream}
+              />
+            )}
+          </div>
         )}
       </div>
 

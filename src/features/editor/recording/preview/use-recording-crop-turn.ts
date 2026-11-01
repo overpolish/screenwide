@@ -5,7 +5,7 @@ import { isTurned, SceneRotation, shareOfTurn } from "../../layer-rotation";
 import { useCropTurn } from "../../preview/use-crop-turn";
 import { RecordingSceneArrangement } from "../scenes/recording-scene-arrangement";
 
-import type { RecordingCanvasTool } from "./recording-crop-toggle";
+import type { RecordingCanvasTool } from "./recording-canvas-tool";
 import type { CropTurn } from "../../preview/use-crop-turn";
 import type { RecordingVideoTrackId } from "../../types";
 

@@ -10,6 +10,7 @@ import {
   editorIslandStoryMeta,
   type EditorIslandStoryProps,
 } from "../../editor-island-story-meta";
+import { storyPinAfter } from "../annotation-pin-story-fixtures";
 
 import { redactionIsland, type RedactionIslandProps } from "./redaction-island";
 
@@ -40,10 +41,12 @@ const meta = {
     id: "redaction",
     isShown: true,
     onDelete: fn(),
+    onPinAction: fn(),
     onRemoveColor: fn(),
     onSaveColor: fn(),
     onShuffle: fn(),
     onStyleChange: fn(),
+    pin: null,
     savedColors: [],
     style: STYLE,
   },
@@ -55,6 +58,10 @@ const meta = {
     return (
       <RedactionIsland
         {...args}
+        onPinAction={(action) => {
+          args.onPinAction?.(action);
+          updateArgs({ pin: storyPinAfter(args.pin, action) });
+        }}
         onRemoveColor={(color) => {
           args.onRemoveColor(color);
           updateArgs({
@@ -97,4 +104,6 @@ export const Erased: Story = {
 };
 
 // A screenshot is one instant, so there is nothing to ramp in over.
-export const Screenshot: Story = { args: { canAnimate: false } };
+export const Screenshot: Story = {
+  args: { canAnimate: false, pin: undefined },
+};

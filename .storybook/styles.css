@@ -85,9 +85,9 @@ body.sb-main-padded {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  border: 1px dashed var(--color-muted);
+  border: 1px dashed var(--color-fg-tertiary);
   border-radius: 8px;
-  color: var(--color-muted);
+  color: var(--color-fg-tertiary);
   font-size: 0.8125rem;
   text-align: center;
   pointer-events: none;

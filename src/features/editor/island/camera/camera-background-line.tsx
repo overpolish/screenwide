@@ -16,10 +16,10 @@ const BACKGROUNDS = ["transparent", "blurred", "image"] as const;
 
 const backgroundName = (background: (typeof BACKGROUNDS)[number]) =>
   background === "transparent"
-    ? t("editor-panels-camera-background-none")
+    ? t("editor-island-camera-background-none")
     : background === "blurred"
-      ? t("editor-panels-camera-background-blur")
-      : t("editor-panels-camera-background-picture");
+      ? t("editor-island-camera-background-blur")
+      : t("editor-island-camera-background-picture");
 
 /** What is behind the person once the room is taken away, a choice between
  * looks drawn as each looks: nothing, the room blurred, or a picture. With
@@ -40,7 +40,7 @@ export function CameraBackgroundLine({
   return (
     <AnnotationLine>
       <PillGroup
-        aria-label={t("editor-panels-camera-background")}
+        aria-label={t("editor-island-camera-background")}
         items={BACKGROUNDS.map((id) => ({
           ariaLabel: backgroundName(id),
           icon: <BackgroundGlyph background={id} />,
@@ -58,11 +58,11 @@ export function CameraBackgroundLine({
       />
       {background === "image" ? (
         <Button
-          aria-label={t("editor-panels-replace-camera-picture")}
+          aria-label={t("editor-island-replace-camera-picture")}
           key="replace"
           onPress={onChoosePicture}
         >
-          {t("editor-panels-replace")}
+          {t("editor-island-replace")}
         </Button>
       ) : null}
     </AnnotationLine>

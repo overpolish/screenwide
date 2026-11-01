@@ -15,14 +15,16 @@ import {
 } from "../../screenshot/screenshot-output";
 import { createRecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { useRecordingKeyboardTimelineEditing } from "../../timeline/keyboard/use-recording-keyboard-timeline-editing";
+import { useCropAspectStore } from "../../tool-panels/crop/crop-aspect-store";
 import { RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCaptionSelection } from "../captions/use-caption-selection";
 import { useScenePreviewEditing } from "../scenes/use-scene-preview-editing";
 
 import { overlayTargets } from "./overlay-layers";
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { scenePanePicks } from "./recording-scene-picks";
+import { withCropShape } from "./recording-selection";
 import {
   recordingVideoSelectionOverlay,
   recordingVideoSelectionTargets,
@@ -31,7 +33,10 @@ import { useRecordingCropTurn } from "./use-recording-crop-turn";
 import { useRecordingSelectionGesture } from "./use-recording-selection-gesture";
 import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 
-import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
+import type {
+  RecordingPreviewSelection,
+  RecordingSelectionGestureEvent,
+} from "../use-recording-preview-surface";
 import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
 
 /** What the preview has in hand: the video selection drawn over the panes,
@@ -57,7 +62,7 @@ export function useRecordingPreviewSelection(
     effectiveRecordingOutput: RecordingOutputSettings;
     previewPositionMs: number;
     recenterRefreshRef: RefObject<
-      (crop: ScreenshotOutputSettings["sourceCrop"]) => void
+      (crop: ScreenshotOutputSettings["sourceCrop"]) => Promise<void>
     >;
     selectedVideoTracks: Set<RecordingVideoTrackId>;
     setCanvasResizeDraft: Dispatch<
@@ -214,7 +219,12 @@ export function useRecordingPreviewSelection(
     screenRotation: turn.screenRotation,
     targets: videoSelectionTargets,
   });
-  const selectionOverlay = picks.overlay;
+  // A crop window keeps the shape chosen for its crop as its handles pull.
+  const cropAspects = useCropAspectStore((state) => state.aspects);
+  const sceneId = sceneArrangement?.clip.id ?? null;
+  const shaped = (selection: RecordingPreviewSelection) =>
+    withCropShape(selection, cropAspects, sceneId);
+  const selectionOverlay = picks.overlay && shaped(picks.overlay);
   // Last, so they are under the pointer before the panes they are drawn over.
   const selectionTargets =
     toolInHand === "select"
@@ -224,13 +234,11 @@ export function useRecordingPreviewSelection(
             keyboard: hasKeyboardData && keyboardEffects.bake,
           }),
         ]
-      : picks.targets;
+      : picks.targets?.map(shaped);
   const selectionGesture = useRecordingSelectionGesture({
     cameraOverlay,
     canPreviewBakedCamera,
-    // Inside a scene the crop tool draws the select tool's chrome, so the
-    // corner radius it offers is the select tool's gesture.
-    canvasTool: isFramed && canvasTool === "crop" ? "select" : canvasTool,
+    canvasTool,
     editGesture,
     effectiveRecordingOutput,
     onCameraOverlayChange,

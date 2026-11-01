@@ -1,35 +1,34 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! How a magnifier arrives and leaves over its clip.
+//! How a lens arrives and leaves over its clip.
 //!
-//! The loupe comes out of its zoom area: it starts as the zoom area itself,
-//! showing what it covers at its own size, and grows as it travels to its
-//! place, so the enlargement arrives with it; the rim, the line and the
-//! shadow fade in on the way. It leaves the same way back, into the zoom
-//! area.
+//! The lens settles onto the picture: it starts smaller and at no zoom,
+//! showing just what it covers, and grows as its zoom rises to its own, so
+//! the enlargement arrives with it; the glass and the shadow fade in on the
+//! way. It leaves the same way back.
 //!
-//! The window stays whole. `scale` is how far the loupe has travelled and
-//! `opacity` how present the rest is, on one curve, since a loupe that moved
-//! on one schedule and faded on another reads as two things happening. The
-//! state one exposure interval back rides along as `previous`, so the
-//! compositor smears a loupe that travelled through a frame over its way.
+//! The lens stays whole. `scale` is how far it has settled and `opacity` how
+//! present the glass is, on one curve, since a lens that grew on one schedule
+//! and faded on another reads as two things happening. The state one
+//! exposure interval back rides along as `previous`, so the compositor smears
+//! a lens that grew through a frame over its growth.
 
 use crate::counter::reveal::counter_presence;
 use crate::reveal::AnnotationReveal;
 
-/// How long a magnifier takes to arrive. The twin of
+/// How long a lens takes to arrive. The twin of
 /// `ANNOTATION_MAGNIFY_DRAW_IN_MS` in `src/features/editor/annotations/annotation-draw-in.ts`.
 pub(crate) const MAGNIFY_REVEAL_IN_MS: f32 = 450.0;
 
-/// How long it takes to go back into its zoom area.
+/// How long it takes to leave.
 pub(crate) const MAGNIFY_REVEAL_OUT_MS: f32 = 400.0;
 
 /// The most of a clip either phase may take, so a short clip still arrives
 /// before it leaves.
 const MAGNIFY_PHASE_SHARE: f32 = 1.0 / 3.0;
 
-/// The reveal a magnifier's clip is at, `elapsed_ms` into a clip lasting
+/// The reveal a lens's clip is at, `elapsed_ms` into a clip lasting
 /// `duration_ms`. `frame_ms` is the exposure interval in source time; a
 /// paused preview passes zero, and the shutter starts where it ends.
 pub(crate) fn magnify_reveal_window(

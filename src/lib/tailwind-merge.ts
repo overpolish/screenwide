@@ -28,6 +28,7 @@ const spacing = [
   "inset",
   "inset-sm",
   "traffic-lights",
+  "export-form",
 ];
 
 /**

@@ -177,7 +177,7 @@ export function CaptionTextView({
         aria-activedescendant={
           text.words.length > 0 ? wordId(focused) : undefined
         }
-        aria-label={t("editor-panels-captions-text")}
+        aria-label={t("editor-island-captions-text")}
         className={cn(
           "group flex cursor-default flex-col gap-separate p-inset-sm text-body text-fg outline-none select-none",
           className,

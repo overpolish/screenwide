@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A box's chrome - a redaction's, a shape's, a spotlight's or a magnifier's
-//! zoom area: the layer selection's own box, with its eight grips and its radius
-//! dot, around the chosen one. A hovered one wears the compositor's halo
-//! instead. An image wears a frame of its own, turned with it:
-//! `image_chrome`.
+//! A box's chrome - a redaction's, a shape's, a spotlight's or a lens's: the
+//! layer selection's own box, with its eight grips, around the chosen one,
+//! drawn where it shows through the lenses over it. A hovered one wears the
+//! compositor's halo instead. An image wears a frame of its own, turned with
+//! it: `image_chrome`.
 
 use super::*;
-use screenwide_annotations::gesture::{BOX_HANDLES, MODE_MARQUEE, MODE_SELECT, RADIUS_HANDLE};
+use screenwide_annotations::gesture::{BOX_HANDLES, MODE_MARQUEE, MODE_SELECT};
+use screenwide_annotations::magnify::lens::LensView;
 use screenwide_annotations::outline::geometry::{prepare_shape, shape_distance};
 use screenwide_annotations::redact::geometry::{prepare_redact, redact_distance};
 use screenwide_annotations::reveal::AnnotationReveal;
@@ -26,32 +27,38 @@ pub(super) fn is_box(kind: AnnotationKind) -> bool {
   )
 }
 
-/// Whether a box of `kind` has a radius dot: a stroke has no corners to
-/// round.
-fn has_radius(kind: AnnotationKind) -> bool {
-  kind != AnnotationKind::Draw
-}
-
 /// The box on screen, in display points, from the normalised corners Rust
-/// published.
-fn frame(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> PreviewSurfaceRect {
-  let left = image.x + image.width * item.start_x;
-  let top = image.y + image.height * item.start_y;
+/// published, where `view` shows it.
+fn frame(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+  view: LensView,
+) -> PreviewSurfaceRect {
+  let [left, top] = view.seen([
+    image.x + image.width * item.start_x,
+    image.y + image.height * item.start_y,
+  ]);
+  let [right, bottom] = view.seen([
+    image.x + image.width * item.end_x,
+    image.y + image.height * item.end_y,
+  ]);
   PreviewSurfaceRect {
     x: left,
     y: top,
-    width: image.x + image.width * item.end_x - left,
-    height: image.y + image.height * item.end_y - top,
+    width: right - left,
+    height: bottom - top,
   }
 }
 
 /// Every grip in display points with the handle it reports: the eight of
 /// the box, clockwise from its top-left corner as the selection chrome draws
 /// them, each carrying the sides it moves - 1 left, 2 right, 4 top, 8
-/// bottom - and then the radius dot, whose percentage rides in
-/// `start_head`. The box's grips come first, so on a box too small to keep
-/// them apart a corner wins over the dot.
-fn grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> [((f64, f64), u32); 9] {
+/// bottom.
+fn grips(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+  view: LensView,
+) -> [((f64, f64), u32); 8] {
   const BOX: [(usize, usize, u32); 8] = [
     (0, 0, 1 | 4),
     (1, 0, 4),
@@ -62,38 +69,30 @@ fn grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> [((f64, f
     (0, 2, 1 | 8),
     (0, 1, 1),
   ];
-  let frame = frame(image, item);
+  let frame = frame(image, item, view);
   let xs = [frame.x, frame.x + frame.width / 2.0, frame.x + frame.width];
   let ys = [
     frame.y,
     frame.y + frame.height / 2.0,
     frame.y + frame.height,
   ];
-  let mut grips = [((0.0, 0.0), RADIUS_HANDLE); 9];
-  for (slot, (x, y, edges)) in BOX.into_iter().enumerate() {
-    grips[slot] = ((xs[x], ys[y]), BOX_HANDLES + edges);
-  }
-  grips[8].0 = radius_point(frame, item.start_head);
-  grips
+  BOX.map(|(x, y, edges)| ((xs[x], ys[y]), BOX_HANDLES + edges))
 }
 
-/// The grip of a box under `point`, as the handle it reports. A magnifier's
-/// loupe grip comes after its zoom area's.
+/// The grip of a box under `point`, as the handle it reports, read where
+/// `view` shows the box.
 pub(super) fn grip_at(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
   point: (f64, f64),
+  view: LensView,
 ) -> Option<u32> {
   let near =
     |(x, y): (f64, f64)| (point.0 - x).abs() <= HANDLE_HIT && (point.1 - y).abs() <= HANDLE_HIT;
-  let tail = (item.shape_kind() == AnnotationKind::Magnify)
-    .then(|| super::magnify_chrome::loupe_grip(image, item));
-  grips(image, item)
+  grips(image, item, view)
     .into_iter()
-    .filter(|(_, handle)| *handle != RADIUS_HANDLE || has_radius(item.shape_kind()))
     .find(|(grip, _)| near(*grip))
     .map(|(_, handle)| handle)
-    .or_else(|| tail.filter(|grip| near(*grip)).map(|_| HANDLE_TAIL))
 }
 
 /// How far `point` is from a redaction's or a spotlight's rounded box, in
@@ -104,7 +103,7 @@ pub(super) fn distance(
   item: &NativeAnnotationHandles,
   point: (f64, f64),
 ) -> f32 {
-  let frame = frame(image, item);
+  let frame = frame(image, item, LensView::IDENTITY);
   let geometry = prepare_redact(
     [frame.x as f32, frame.y as f32],
     [
@@ -122,7 +121,7 @@ fn shape_geometry(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
 ) -> screenwide_annotations::geometry::ArrowGeometry {
-  let frame = frame(image, item);
+  let frame = frame(image, item, LensView::IDENTITY);
   prepare_shape(
     [frame.x as f32, frame.y as f32],
     [
@@ -179,12 +178,8 @@ pub(super) fn grabs_inside(
     || state.annotation.selected == index as i32)
 }
 
-/// The resize cursor a box's grip shows: its sides say which way, and
-/// the radius dot drags diagonally as the layer selection's does.
+/// The resize cursor a box's grip shows: its sides say which way.
 pub(super) fn grip_cursor(handle: u32) -> Option<CursorKind> {
-  if handle == RADIUS_HANDLE {
-    return Some(CursorKind::ResizeNwse);
-  }
   let edges = handle
     .checked_sub(BOX_HANDLES)
     .filter(|edges| *edges < 16)?;
@@ -196,23 +191,23 @@ pub(super) fn grip_cursor(handle: u32) -> Option<CursorKind> {
   })
 }
 
-/// The chosen redaction's, shape's, spotlight's or stroke's box in device
-/// pixels and its radius percentage, `None` for a stroke's, which has no
-/// radius dot, for the chrome to draw the way the layer selection draws its
-/// own. `None` when no box is chosen or the annotation tool has no say.
-pub(crate) fn selected_box(state: &SurfaceState, scale: f64) -> Option<([f32; 4], Option<f64>)> {
+/// The chosen redaction's, shape's, spotlight's, stroke's or lens's box in
+/// device pixels, where it shows through the lenses over it, for the chrome
+/// to draw the way the layer selection draws its own. `None` when no box is
+/// chosen or the annotation tool has no say.
+pub(crate) fn selected_box(state: &SurfaceState, scale: f64) -> Option<[f32; 4]> {
   if state.annotation.mode == MODE_NONE {
     return None;
   }
+  let index = usize::try_from(state.annotation.selected).ok()?;
   let item = selected_item(state)?;
   if !is_box(item.shape_kind()) {
     return None;
   }
-  let rect = frame(image_frame(state)?, item);
+  let image = image_frame(state)?;
+  let view = super::magnify_chrome::whole_view(state, index, image, item);
+  let rect = frame(image, item, view);
   let (x, right) = pixels::scaled_edges(rect.x, rect.width, scale);
   let (y, bottom) = pixels::scaled_edges(rect.y, rect.height, scale);
-  Some((
-    [x as f32, y as f32, (right - x) as f32, (bottom - y) as f32],
-    has_radius(item.shape_kind()).then_some(item.start_head),
-  ))
+  Some([x as f32, y as f32, (right - x) as f32, (bottom - y) as f32])
 }

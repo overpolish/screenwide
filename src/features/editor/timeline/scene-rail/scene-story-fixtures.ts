@@ -1,17 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../../i18n/i18n";
 import {
+  boxesDrawing,
   presetDrawing,
   type ScenePreset,
 } from "../../glyphs/scene-layout-drawing";
 import { presetName } from "../../island/scene/scene-names";
+import { CUSTOM, TURN } from "../../island/scene/scene-story-fixtures";
 import { type Span } from "../timeline-scale";
 
 import { type TimelineScene } from "./scene-clip";
 
 // Scenes behind the scene stories: a 16:10 screen and a round 16:9 camera
-// on a 16:9 video.
+// on a 16:9 video, laid out as the Scene island's stories lay them out.
 
 const SHAPE = {
   aspect: 16 / 9,
@@ -21,15 +24,32 @@ const SHAPE = {
   screenAspect: 16 / 10,
 };
 
+/** A layout a story scene takes: a preset, or the Scene island stories'
+ * custom boxes. */
+export type StoryLayout = ScenePreset | "custom";
+
 export const storyScene = (
   id: string,
-  preset: ScenePreset,
+  layout: StoryLayout,
   span: Span,
 ): TimelineScene => ({
   ...span,
-  drawing: presetDrawing(preset, {}, SHAPE),
+  drawing:
+    layout === "custom"
+      ? boxesDrawing(CUSTOM, SHAPE)
+      : presetDrawing(layout, {}, SHAPE),
   id,
-  name: presetName(preset),
+  name:
+    layout === "custom" ? t("editor-island-scene-custom") : presetName(layout),
+});
+
+/** `scene` with the screen turned in depth by the island stories' turn. */
+export const turnedStoryScene = (scene: TimelineScene): TimelineScene => ({
+  ...scene,
+  drawing: {
+    ...scene.drawing,
+    ...(scene.drawing.screen ? { rotation: TURN } : {}),
+  },
 });
 
 /** The scenes on a rail, and the recording's length they keep inside. */

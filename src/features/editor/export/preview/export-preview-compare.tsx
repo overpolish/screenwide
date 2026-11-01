@@ -170,7 +170,7 @@ export function ExportPreviewCompare({
     // The picture keeps its own left and right in every language.
     <div
       className={cn(
-        "relative overflow-hidden rounded-panel bg-fill-tertiary",
+        "relative overflow-hidden rounded-panel bg-recess",
         className,
       )}
       dir="ltr"
@@ -217,7 +217,7 @@ export function ExportPreviewCompare({
             <>
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-y-0 w-px -translate-x-1/2 bg-control-solid-fill"
+                className="pointer-events-none absolute inset-y-0 w-px -translate-x-1/2 bg-white"
                 style={{ insetInlineStart: `${split.toString()}%` }}
               />
               <Slider
@@ -234,7 +234,7 @@ export function ExportPreviewCompare({
           ) : null}
           <Badge
             className={cn(
-              "pointer-events-none absolute start-control top-control backdrop-blur-sm",
+              "pointer-events-none absolute start-inset-sm top-inset-sm backdrop-blur-sm",
               appearanceOver("topStart"),
             )}
           >
@@ -242,7 +242,7 @@ export function ExportPreviewCompare({
           </Badge>
           <Badge
             className={cn(
-              "pointer-events-none absolute end-control top-control backdrop-blur-sm",
+              "pointer-events-none absolute end-inset-sm top-inset-sm backdrop-blur-sm",
               appearanceOver("topEnd"),
             )}
             isShown={Boolean(exported)}
@@ -251,7 +251,7 @@ export function ExportPreviewCompare({
           </Badge>
           <Badge
             className={cn(
-              "pointer-events-none absolute end-control bottom-control backdrop-blur-sm",
+              "pointer-events-none absolute end-inset-sm bottom-inset-sm backdrop-blur-sm",
               appearanceOver("bottomEnd"),
             )}
             isShown={failed}
@@ -260,7 +260,7 @@ export function ExportPreviewCompare({
           </Badge>
         </>
       ) : failed ? (
-        <div className="absolute inset-0 flex items-center justify-center p-section">
+        <div className="absolute inset-0 flex items-center justify-center p-inset">
           <p className="text-body text-fg-secondary">
             {t("editor-export-preview-failed")}
           </p>

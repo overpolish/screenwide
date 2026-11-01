@@ -27,7 +27,7 @@ export const shownTextLook = (
 
 /** `look` as a text placed by hand takes it up: its words come on together
  * until Word by word is chosen, whatever the template does for captions. */
-export const asTitleLook = (look: TextStyle): TextStyle => ({
+const asTitleLook = (look: TextStyle): TextStyle => ({
   ...look,
   revealWords: false,
 });

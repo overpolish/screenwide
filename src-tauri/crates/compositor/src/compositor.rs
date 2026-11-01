@@ -25,8 +25,11 @@ pub mod cursor_placement;
 #[cfg(target_os = "windows")]
 mod d3d11_source;
 mod draw;
+mod draw_rows;
 mod focus;
 mod layer;
+mod lens_ground;
+mod lens_under;
 mod mark_blur;
 mod mips;
 mod pipeline;
@@ -136,6 +139,8 @@ pub struct Compositor {
   mark_blur: mark_blur::MarkBlur,
   mips: screenwide_gpu::mips::Mips,
   focus: focus::FocusBlur,
+  lens_ground: lens_ground::LensGround,
+  lens_under: lens_under::LensUnder,
   sampler: wgpu::Sampler,
   point_sampler: wgpu::Sampler,
 }
@@ -221,6 +226,8 @@ mod render_test_helpers;
 mod render_tests;
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod scene_turn_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod shadow_strength_tests;
 
 /// Where a baked camera sits in the frame being composed: its crop and its
 /// frame in output pixels, and the corner radius it is drawn with.

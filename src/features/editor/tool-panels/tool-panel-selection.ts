@@ -10,32 +10,24 @@ import { SceneRotation } from "../layer-rotation";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationKind } from "../../annotations/types";
+import type { AnnotationPinView } from "../island/annotation/annotation-pin";
 
 /**
- * What the selection panel shows for a placed layer: the selected layer, its
- * size and position in output pixels, and the source it was captured at, which
- * is what a reset puts it back to.
+ * What the selection panel shows for a placed layer: the selected layer and
+ * how it is dressed.
  */
 export type ToolPanelLayerSelection = {
   /** Whether this layer casts a shadow onto the canvas behind it. */
   dropShadow: boolean;
-  height: number;
-  /** How far the padded frame runs past the layer's own picture, in output
-   * pixels, on each side. */
+  /** How far the padded frame runs past the layer's own picture on each
+   * side, as a share of the picture's shorter side. */
   inset: number;
-  /** As far as the padding may be taken: the layer's shorter side. */
-  insetMaximum: number;
   /** Which of the workspace's layers this is, for wording that fits it. */
   kind: "camera" | "layer" | "primary";
   label: string;
   /** How rounded the layer's corners are, as a share of its shorter side,
    * 0 to 50. The same number the corner drag in the preview sets. */
   radius: number;
-  sourceHeight: number;
-  sourceWidth: number;
-  width: number;
-  x: number;
-  y: number;
   /** The camera's effects, offered for the camera. */
   cameraEffects?: ToolPanelCameraEffects;
   /** Whether the camera follows the face, offered for a camera drawn into
@@ -50,18 +42,26 @@ export type ToolPanelLayerSelection = {
  * What the selection panel shows for a recorded audio track.
  *
  * An audio track is neither placed nor drawn: it is heard, so what there is
- * to set for it is how loud it is played back, in decibels against the level
- * it was recorded at, and for a microphone how clean the speech in it is.
+ * to set for it is, for a microphone, how clean the speech in it is.
  */
 export type ToolPanelAudioSelection = {
-  /** How much the track is lifted or lowered, 0 being the recorded level. */
-  decibels: number;
   kind: "audio";
   /** The track's own name: "Microphone", "System audio", or "Audio" where the
    * recording did not say. */
   label: string;
   /** The speech tools, offered only for a microphone: other tracks have no
    * speech to find pauses in or noise to take out from under. */
+  microphone?: ToolPanelMicrophone;
+};
+
+/** A recorded audio track as the Sound island holds it, every one at once:
+ * how loud it plays, and for the microphone its speech tools. */
+export type ToolPanelSoundTrack = {
+  /** How much the track is lifted or lowered, 0 being the recorded level. */
+  decibels: number;
+  /** The track's id, as the editor selects it. */
+  id: string;
+  label: string;
   microphone?: ToolPanelMicrophone;
 };
 
@@ -117,8 +117,8 @@ export type ToolPanelCameraObjects = {
   working: boolean;
 };
 
-/** Where Remove silences stands for the recording's microphone. One state,
- * shown both in the microphone's Select panel and in the Transcript panel. */
+/** Where Remove silences stands for the recording's microphone, as the
+ * Script island's Remove pauses shows it. */
 export type ToolPanelSilences = {
   /** How many pauses Remove cut that are still cut. */
   count: number;
@@ -223,6 +223,10 @@ export type ToolPanelAnnotation = {
   /** The look a text is dressed in, or the next text will be once one has
    * been chosen. Absent on anything else. */
   look?: TextStyle;
+  /** How its pin stands at the playhead, or null while it is not pinned.
+   * Absent where it cannot be pinned: a screenshot's, the camera's, and the
+   * pen's next one. */
+  pin?: AnnotationPinView | null;
   /** How a placed image is turned, in degrees about each axis, as the
    * Rotation row's dials show it. Absent on anything else. */
   rotation?: SceneRotation;
@@ -230,4 +234,7 @@ export type ToolPanelAnnotation = {
   sway?: boolean;
   /** What a placed text says. Absent on anything else. */
   text?: string;
+  /** How many times a lens enlarges, or the next lens will. Absent on
+   * anything else. */
+  zoom?: number;
 };

@@ -75,6 +75,7 @@ export function useRecordingKeyboardTimelineEditing({
   useEditorWindowShortcuts({
     onDelete: onChange && selection.ids.size > 0 ? deleteSelected : undefined,
     onDeselect: selection.ids.size > 0 ? selection.onClear : undefined,
+    onDeselectAll: selection.ids.size > 0 ? selection.onClear : undefined,
   });
   return useMemo(
     () => ({

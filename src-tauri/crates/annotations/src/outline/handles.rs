@@ -10,9 +10,9 @@ use crate::{AnnotationKind, AnnotationPoint, AnnotationStyle};
 
 /// A shape reads the slots as a redaction does: `start` is the box's
 /// top-left corner and `end` its bottom-right, normalised over the source,
-/// `middle` its centre and `start_head` the corner radius, from which the
-/// native side places the eight grips of the layer selection's box and its
-/// radius dot. `end_head` carries the stroke's hand and `width` its pen, as a
+/// `middle` its centre and `start_head` the corner radius; the native side
+/// places the eight grips of the layer selection's box from its corners.
+/// `end_head` carries the stroke's hand and `width` its pen, as a
 /// share of the drawn width, so the chrome picks the stroke as it is drawn.
 pub(crate) fn grips(
   start: AnnotationPoint,

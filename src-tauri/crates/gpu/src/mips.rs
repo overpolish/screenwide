@@ -13,6 +13,10 @@ const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/mips.wgsl"));
 /// The most levels a picture keeps: the seventh averages 64 by 64 texels,
 /// past what any blur reads.
 const LEVELS: u32 = 7;
+/// How many texels of the first level the coarsest level's one averages: a
+/// picture whose levels must average the same texels wherever it is drawn
+/// starts on a multiple of it.
+pub const COARSEST_TEXEL: u32 = 1 << (LEVELS - 1);
 
 /// How many levels a picture of `size` keeps, none smaller than a texel.
 pub fn levels((width, height): (u32, u32)) -> u32 {

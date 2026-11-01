@@ -66,7 +66,6 @@ pub(crate) fn output_geometry(output: &ScreenshotOutputSettings) -> LayerGeometr
     image_width: output.image_width / width,
     image_x: output.image_x / width,
     image_y: output.image_y / height,
-    radius_percent: output.radius_percent,
   }
 }
 
@@ -83,7 +82,6 @@ pub(crate) fn apply_output_geometry(
   output.image_width = geometry.image_width * width;
   output.image_x = geometry.image_x * width;
   output.image_y = geometry.image_y * height;
-  output.radius_percent = geometry.radius_percent;
 }
 
 pub(crate) fn camera_geometry(camera: CameraOverlaySettings, canvas: (f64, f64)) -> LayerGeometry {
@@ -97,7 +95,6 @@ pub(crate) fn camera_geometry(camera: CameraOverlaySettings, canvas: (f64, f64))
     image_width: camera.camera_width / canvas.0,
     image_x: camera.camera_x / canvas.0,
     image_y: camera.camera_y / canvas.1,
-    radius_percent: camera.radius_percent,
   }
 }
 
@@ -113,7 +110,6 @@ pub(crate) fn apply_camera_geometry(
   camera.camera_width = geometry.image_width * canvas.0;
   camera.camera_x = geometry.image_x * canvas.0;
   camera.camera_y = geometry.image_y * canvas.1;
-  camera.radius_percent = geometry.radius_percent;
 }
 
 pub(crate) fn resize_screenshot_frame(

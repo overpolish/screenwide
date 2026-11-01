@@ -72,6 +72,7 @@ export const towardPlacement = (
     cameraFront: mixed(from.cameraFront, to.cameraFront, t),
     frame: mixedRect(from.frame, to.frame, t),
     image: mixedPicture(from.image, to.image, t),
+    inset: mixed(from.inset, to.inset, t),
     opacity: {
       camera: mixed(from.opacity.camera, to.opacity.camera, t),
       screen: mixed(from.opacity.screen, to.opacity.screen, t),
@@ -94,6 +95,7 @@ export const towardPlacement = (
     next.screen = held.box;
     next.image = held.picture;
     next.rotation = source.rotation;
+    next.inset = source.inset * screen.factor;
   }
   const camera = settling(from.opacity.camera, to.opacity.camera, t);
   if (camera) {

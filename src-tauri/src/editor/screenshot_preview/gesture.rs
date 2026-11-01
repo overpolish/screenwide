@@ -132,16 +132,6 @@ impl PreviewManager {
           #[cfg(not(any(target_os = "macos", target_os = "windows")))]
           return Ok(());
         }
-        if operation == SelectionGestureOperation::FrameRadius {
-          next.canvas.background_radius_percent = scale.clamp(0.0, 50.0);
-          self.output = Some(next);
-          if matches!(phase, SelectionGesturePhase::End) {
-            self.selection_gesture = None;
-          } else {
-            self.selection_gesture = Some(SelectionGestureOverride { snapshot });
-          }
-          return self.present_batch();
-        }
         let Some(start) = snapshot
           .items
           .get(pane_index as usize)
@@ -169,9 +159,8 @@ impl PreviewManager {
         let workspace_operation = match operation {
           SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
           SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
-          SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-          SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
-            unreachable!("frame gestures are handled before selecting an item")
+          SelectionGestureOperation::FrameResize => {
+            unreachable!("frame resizes are handled before selecting an item")
           }
           SelectionGestureOperation::CropMove
           | SelectionGestureOperation::CropResize

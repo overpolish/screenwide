@@ -9,8 +9,11 @@ use super::*;
 use crate::scene::RecordingWorkspaceLayer;
 
 impl WorkspaceEditor {
-  /// Presents a recording's layers, each in its own pane. `Ok(false)` means
-  /// layout has not made a layer's pane yet.
+  /// Presents a recording's layers, each in its own pane. A layer whose pane
+  /// the layout does not hold is a track left out of the picture, and is not
+  /// drawn: the camera turned off, or saved beside the screen as a file of
+  /// its own. `Ok(false)` means layout has made none of the layers' panes
+  /// yet.
   pub fn present_recording_workspace(
     &self,
     layers: &[RecordingWorkspaceLayer<'_>],
@@ -18,17 +21,26 @@ impl WorkspaceEditor {
     let Ok(mut state) = self.inner.state.lock() else {
       return Ok(false);
     };
-    if layers.iter().any(|layer| {
+    let laid_out = |layer: &&RecordingWorkspaceLayer<'_>| {
       state
         .panes
         .get(layer.pane_index as usize)
-        .is_none_or(Option::is_none)
-    }) {
+        .is_some_and(Option::is_some)
+    };
+    if !layers.iter().any(|layer| laid_out(&layer)) {
       return Ok(false);
     }
-    self.inner.host.scene().stage_recording(layers)?;
+    self
+      .inner
+      .host
+      .scene()
+      .stage_recording(layers.iter().filter(laid_out))?;
     for layer in layers {
-      let Some(pane) = state.panes[layer.pane_index as usize].as_mut() else {
+      let Some(pane) = state
+        .panes
+        .get_mut(layer.pane_index as usize)
+        .and_then(Option::as_mut)
+      else {
         continue;
       };
       let canvas = (layer.settings.width, layer.settings.height);

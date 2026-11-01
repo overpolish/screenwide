@@ -137,13 +137,14 @@ impl PlayerSources {
 
   /// A paused macOS still resolves its annotations up front, because its worker
   /// composes from settings rather than from the frame it is about to
-  /// present. The Windows path resolves them at present time instead.
+  /// present. The Windows path resolves them at present time instead. Answers
+  /// whether a scene placed it too.
   #[cfg(target_os = "macos")]
   pub(super) fn annotated_composition(
     &self,
     source_ms: u64,
     clips: &[RecordingAnnotationClip],
-  ) -> Option<PreviewCompositionSettings> {
+  ) -> Option<(PreviewCompositionSettings, bool)> {
     let mut composition = self.composition_settings.as_ref()?.read().ok()?.clone();
     let ranges = self
       .annotation_ranges
@@ -159,8 +160,8 @@ impl PlayerSources {
       &self.held_fills,
     );
     drop(ranges);
-    self.arrange_scene(&mut composition, source_ms, 0.0);
+    let placed = self.arrange_scene(&mut composition, source_ms, 0.0);
     carry_camera_annotations(&mut composition, self.annotation_pictures());
-    Some(composition)
+    Some((composition, placed))
   }
 }

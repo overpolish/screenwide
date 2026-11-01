@@ -84,7 +84,7 @@ export function EditableTitle({
       aria-multiline={false}
       autoCorrect="off"
       className={cn(
-        "pointer-events-auto block cursor-text select-text whitespace-nowrap text-start outline-none caret-content-fg focus:selection:bg-content-fg/25",
+        "pointer-events-auto block cursor-text select-text whitespace-nowrap text-start outline-none caret-fg focus:selection:bg-fg/25",
         focusStyles,
         elementFocusVisible,
         className,

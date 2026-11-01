@@ -4,6 +4,8 @@
 //! A press the annotation chrome has taken, before and after it becomes a
 //! drag.
 
+use screenwide_annotations::magnify::lens::LensView;
+
 /// A press has to travel this far before it draws an arrow rather than
 /// clearing the choice: a click and a very short drag are the same gesture to
 /// a hand, and neither should leave a stub behind.
@@ -39,6 +41,9 @@ pub(super) struct Drag {
   /// has begun and nothing has been edited.
   pending: bool,
   pub(super) begun: bool,
+  /// The lenses the press was taken through, which every sample of it is
+  /// read back through; none for a press on what it takes directly.
+  pub(super) view: LensView,
 }
 
 impl Drag {
@@ -53,6 +58,7 @@ impl Drag {
       layer: -1,
       pending: true,
       begun: false,
+      view: LensView::IDENTITY,
     }
   }
 
@@ -69,6 +75,7 @@ impl Drag {
       layer: -1,
       pending: false,
       begun: true,
+      view: LensView::IDENTITY,
     }
   }
 
@@ -88,6 +95,20 @@ impl Drag {
       handle,
       ..self
     }
+  }
+
+  /// The same press, taken through lenses: it and every sample after it are
+  /// read through `view`, so what it carries follows the pointer where the
+  /// lenses show it.
+  pub(super) fn seen_through(self, view: LensView) -> Self {
+    Self { view, ..self }
+  }
+
+  /// What the pointer at `point` lies over, read through the lenses the
+  /// press was taken through. The slop is still measured where the hand is.
+  pub(super) fn beneath(&self, point: (f64, f64)) -> (f64, f64) {
+    let [x, y] = self.view.beneath([point.0, point.1]);
+    (x, y)
   }
 
   /// Advances the drag by one pointer sample, reporting whether this sample

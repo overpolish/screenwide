@@ -3,13 +3,11 @@
 
 import { withScreenshotCountersNumbered } from "./screenshot-counters";
 import { fullSourceRect } from "./screenshot-geometry";
-import { screenshotLayout } from "./screenshot-layout";
 import {
   defaultScreenshotOutput,
   normalizedScreenshotOutput,
   ScreenshotOutputSettings,
   screenshotOutputTemplate,
-  screenshotSourceCrop,
   withScreenshotSourceCrop,
 } from "./screenshot-output-settings";
 import { withScreenshotSpotlightBlurShared } from "./screenshot-spotlight-blur";
@@ -161,48 +159,6 @@ const rebaseScreenshotCanvas = (
   imageY: settings.imageY - bounds.originY,
   width: Math.max(1, Math.round(bounds.width)),
 });
-
-/** Resize the output canvas, leaving every layer exactly where it is. */
-export const resizeScreenshotCanvas = ({
-  height,
-  settings,
-  width,
-}: {
-  height: number;
-  settings: ScreenshotOutputSettings;
-  width: number;
-}): ScreenshotOutputSettings => ({
-  ...settings,
-  height: Math.max(1, Math.round(height)),
-  width: Math.max(1, Math.round(width)),
-});
-
-/** Resize a workspace canvas, leaving every layer exactly where it is. */
-export const resizeScreenshotWorkspaceCanvas = ({
-  height,
-  settings,
-  width,
-}: {
-  height: number;
-  settings: ScreenshotWorkspaceOutputSettings;
-  width: number;
-}): ScreenshotWorkspaceOutputSettings => {
-  const nextWidth = Math.max(1, Math.round(width));
-  const nextHeight = Math.max(1, Math.round(height));
-  return {
-    ...settings,
-    height: nextHeight,
-    items: settings.items.map((item) => ({
-      ...item,
-      output: {
-        ...item.output,
-        height: nextHeight,
-        width: nextWidth,
-      },
-    })),
-    width: nextWidth,
-  };
-};
 
 /**
  * Resize a workspace canvas from a native frame-handle gesture.
@@ -397,36 +353,6 @@ export const resetScreenshotLayout = (
   );
 };
 
-/** Reset the selected item's scale and position while retaining its crop:
- * back to its real size, centred, as it was placed. */
-export const resetScreenshotTransform = (
-  settings: ScreenshotOutputSettings,
-  source: { height: number; width: number },
-): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
-  const current = screenshotLayout(source, settings);
-  // The crop's real size is its share of the source's own pixels.
-  const cropSource = screenshotSourceCrop(settings);
-  const target = naturalPlacement(
-    {
-      height: source.height * cropSource.height,
-      width: source.width * cropSource.width,
-    },
-    output,
-  );
-  const scale = target.width / Math.max(1, current.crop.width);
-  return {
-    ...settings,
-    cropHeight: target.height,
-    cropWidth: target.width,
-    cropX: target.x,
-    cropY: target.y,
-    imageWidth: current.image.width * scale,
-    imageX: target.x + (current.image.x - current.crop.x) * scale,
-    imageY: target.y + (current.image.y - current.crop.y) * scale,
-  };
-};
-
 export const defaultRecordingOutput = ({
   camera,
   primary,
@@ -480,7 +406,10 @@ export const restoredRecordingOutput = ({
  * A recording's own saved output, as it was left. Unlike the remembered
  * look, which was laid out for another recording and so is fitted again,
  * this was laid out for this very recording: its canvas size, crop and the
- * picture's size and position all stand.
+ * picture's size and position all stand, and so does the colour found
+ * behind its content, which fills its inset and its scenes' insets. Nothing
+ * reads it again on opening, so dropping it left the padding see-through in
+ * the preview while the last export had drawn it.
  */
 export const reopenedRecordingOutput = ({
   camera,
@@ -496,7 +425,6 @@ export const reopenedRecordingOutput = ({
     ...defaults[key],
     ...saved[key],
     backgroundRadiusPercent: 0,
-    recenterInsetColor: null,
   });
   return { camera: reopen("camera"), primary: reopen("primary") };
 };

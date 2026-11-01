@@ -35,14 +35,18 @@ fn identity_settings(
     crop_x: 0.0,
     crop_y: 0.0,
     drop_shadow: false,
+    drop_shadow_strength: None,
     height: image.height,
     image_width: width,
     image_x: 0.0,
     image_y: 0.0,
+    inset: None,
     legacy_mode: None,
     scene_motion: None,
     scene_opacity: None,
     scene_camera_front: None,
+    scene_window: None,
+    camera_shadow_strength: None,
     rotation: None,
     // Never painted on a solid canvas, but the compositor's colour table is
     // filled from these whatever the background is.

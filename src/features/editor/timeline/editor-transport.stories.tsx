@@ -30,9 +30,11 @@ const meta = {
     playhead: createPlayhead(),
   },
   component: EditorTransport,
-  decorators: [featureStage({ height: 280, width: 120 })],
+  decorators: [featureStage({ height: 320, width: 120 })],
   parameters: {
-    controls: { include: ["durationMs", "isCutting", "isPlaying"] },
+    controls: {
+      include: ["durationMs", "isCutting", "isPlaying"],
+    },
   },
   // Playing runs a clock that moves the playhead, as the preview would, and
   // stops at the end; the toggles land in the args.

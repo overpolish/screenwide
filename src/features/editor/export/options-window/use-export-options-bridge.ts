@@ -4,6 +4,7 @@
 import { useEffect, useRef } from "react";
 
 import { EditorKind } from "../../types";
+import { CameraOutput } from "../camera-output";
 import { ExportProgress, useExportProgressStore } from "../use-export-progress";
 
 import {
@@ -30,6 +31,7 @@ export type ExportOptionsSettings = Omit<
 export type ExportOptionsHandlers = {
   onBrowse?: () => void;
   onCameraCompressionChange?: (compression: number) => void;
+  onCameraOutputChange?: (output: CameraOutput) => void;
   onCameraResolutionScaleChange?: (scale: number) => void;
   onCancelSave?: () => void;
   onCollapseAudioChange?: (collapse: boolean) => void;
@@ -62,6 +64,7 @@ const applyPatch = (values: ExportOptionsPatch, on: ExportOptionsHandlers) => {
   if (values.cameraResolutionScalePercent !== undefined) {
     on.onCameraResolutionScaleChange?.(values.cameraResolutionScalePercent);
   }
+  if (values.cameraOutput) on.onCameraOutputChange?.(values.cameraOutput);
   if (values.collapseAudio !== undefined) {
     on.onCollapseAudioChange?.(values.collapseAudio);
   }

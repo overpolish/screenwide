@@ -194,14 +194,7 @@ pub fn add_group_frame(out: &mut Vec<Vertex>, view: Size, frame: Rect, scale: f6
   add_selection_frame(out, view, frame, scale, 2, 0, 3.0 / scale);
 }
 
-pub fn add_selection(
-  out: &mut Vec<Vertex>,
-  view: Size,
-  frame: Rect,
-  scale: f64,
-  radius_percent: f64,
-  radius_enabled: bool,
-) {
+pub fn add_selection(out: &mut Vec<Vertex>, view: Size, frame: Rect, scale: f64) {
   let min_x = snap(frame.origin.x, scale);
   let max_x = snap(frame.right(), scale);
   let min_y = snap(frame.origin.y, scale);
@@ -215,23 +208,6 @@ pub fn add_selection(
     handle_points(min_x, min_y, max_x, max_y, mid_x, mid_y),
     scale,
   );
-  if radius_enabled {
-    let offset = (max_x - min_x).min(max_y - min_y) * radius_percent / 100.0 * 0.55 + 10.0;
-    add_circle(
-      out,
-      view,
-      snap_handle_point(
-        Point {
-          x: min_x + offset,
-          y: min_y + offset,
-        },
-        scale,
-      ),
-      4.0 + 1.0 / scale,
-      1.0 / scale,
-      3,
-    );
-  }
 }
 
 mod crop;

@@ -10,7 +10,7 @@ use super::{
   FocusRegion, PreparedArrows, PreparedImage, PreparedType, PreviewArrow, PreviewSample,
   MAX_EXPOSURE_SAMPLES,
 };
-use screenwide_annotations::exposure::{annotation_travel, highlight_travel, magnify_travel};
+use screenwide_annotations::exposure::{annotation_travel, highlight_travel};
 use screenwide_annotations::native::{native_annotations, NativeAnnotations};
 use screenwide_annotations::redact::native::RedactSource;
 use screenwide_annotations::reveal::AnnotationReveal;
@@ -137,9 +137,8 @@ pub(super) fn placed_native(
         place(annotation.p1),
         place(annotation.p2),
       );
-      let shape = |reveal: AnnotationReveal| {
-        prepare_kind::prepared_geometry(annotation, [a, b, c], reveal, scale.0 as f32)
-      };
+      let shape =
+        |reveal: AnnotationReveal| prepare_kind::prepared_geometry(annotation, [a, b, c], reveal);
       let geometry = shape(annotation.reveal);
       let mut arrow = PreviewArrow::new(
         geometry,
@@ -155,9 +154,8 @@ pub(super) fn placed_native(
       arrow.data_count = annotation.data_count;
       // The points arrive placed already, so the axis scale travel is
       // measured in is the identity. A text box's travel reads its pointer
-      // and its block as they are held, which are never placed, a
-      // highlight's and a stroke's the sweep their records keep, and a
-      // magnifier's its loupe size, placed here as `prepared_geometry` does.
+      // and its block as they are held, which are never placed, and a
+      // highlight's and a stroke's the sweep their records keep.
       let identity = [1.0, 1.0];
       let (width, reveal) = (annotation.width, annotation.reveal);
       let travel = match annotation.shape_kind() {
@@ -173,12 +171,6 @@ pub(super) fn placed_native(
         AnnotationKind::Highlight | AnnotationKind::Draw => {
           highlight_travel(a, b, identity, annotation.params[2], reveal)
         }
-        AnnotationKind::Magnify => magnify_travel(
-          [a, b, c],
-          annotation.params[0] * scale.0 as f32,
-          identity,
-          reveal,
-        ),
         kind => annotation_travel(kind, a, b, c, identity, width, reveal),
       };
       let count = exposure_sample_count(travel, reveal.opacity - reveal.previous[3]);

@@ -3,26 +3,26 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { EditorIslandPanel } from "../editor/island/host/editor-island-panel";
 import { useTextTemplateFonts } from "../editor/recording/captions/use-text-template-fonts";
-import { MomentNotePanel } from "../editor/timeline/moments/moment-note-panel";
-import { TextTemplatePanel } from "../editor/tool-panels/text-style/text-template-panel";
-import { usePreloadedTemplatePreviews } from "../editor/tool-panels/text-style/use-template-previews";
 
 import { PopupPanelColors } from "./popup-panel-colors";
 import { PopupPanelList } from "./popup-panel-list";
-import { PopupPanelTool } from "./popup-panel-tool";
 import {
   activePopupPanel,
   OpenPopupPanel,
+  PopupPanelContent,
   SHARED_POPUP_PANEL,
   usePopupPanelStore,
 } from "./store";
+
+import type { PopupPanelIslandContent } from "../editor/island/host/editor-island-kind";
 
 let resolvedPanel: string | undefined;
 
 /**
  * Which panel window this is, read off its own label: the shared listbox, or
- * one of the editors' tool panels. They are the same page, so the window it
+ * one of the editors' island panels. They are the same page, so the window it
  * runs in is what says whose entry to show. Memoized because a window's label
  * never changes; outside the app - a story - it is the shared listbox.
  */
@@ -42,7 +42,7 @@ function currentPanelLabel(): string {
  * One panel window, showing whatever was last opened in it.
  *
  * It is a host and nothing more: what the panel holds - a list of choices or
- * an editor tool's controls - is decided by the window that opened it.
+ * a picker - is decided by the window that opened it.
  */
 export function PopupPanelWindow() {
   const panel = currentPanelLabel();
@@ -50,10 +50,13 @@ export function PopupPanelWindow() {
   // The font list names each family in its own type, those your templates
   // bring among them.
   useTextTemplateFonts();
-  // Only the shared panel window shows the templates.
-  usePreloadedTemplatePreviews(panel === SHARED_POPUP_PANEL);
 
   if (!active) return null;
+
+  // The island draws its own black, at its own shape, over a window as
+  // large as the picture it stands over.
+  if (active.content.kind === "island")
+    return <EditorIslandPanel content={active.content} />;
 
   // Every panel is drawn in the island's black and its dark dress, over no
   // material or shadow (`tauri.conf.json`), so menus, lists and panels read
@@ -63,43 +66,27 @@ export function PopupPanelWindow() {
   // contents.
   return (
     <div className="dark size-full overflow-hidden rounded-panel bg-island text-fg inset-ring inset-ring-fill-strong">
-      <PanelContents active={active} panel={panel} />
+      <PanelContents active={active} content={active.content} panel={panel} />
     </div>
   );
 }
 
 function PanelContents({
   active,
+  content,
   panel,
 }: {
   active: OpenPopupPanel;
+  content: Exclude<PopupPanelContent, PopupPanelIslandContent>;
   panel: string;
 }) {
-  if (active.content.kind === "tool") {
-    return <PopupPanelTool content={active.content} />;
-  }
-
-  if (active.content.kind === "note") {
-    return <MomentNotePanel content={active.content} />;
-  }
-
-  if (active.content.kind === "text-templates") {
-    return (
-      <TextTemplatePanel
-        content={active.content}
-        focusContents={active.focusContents}
-        id={active.id}
-      />
-    );
-  }
-
-  if (active.content.kind === "colors") {
-    return <PopupPanelColors content={active.content} id={active.id} />;
+  if (content.kind === "colors") {
+    return <PopupPanelColors content={content} id={active.id} />;
   }
 
   return (
     <PopupPanelList
-      content={active.content}
+      content={content}
       focusContents={active.focusContents}
       id={active.id}
       label={active.label ?? ""}

@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { cn } from "../../../../lib/styling";
 import { type Playhead } from "../scrub-playhead";
 import { type View, WHOLE } from "../timeline-scale";
+import { type ScrubPhase } from "../timeline-seek";
 
 // Where you are: a line down the strip in the primary, with a knob along the
 // top, in a band of its own above the scenes so it is never taken for part
@@ -20,8 +21,9 @@ export function TimelinePlayhead({
 }: {
   /** Where the playhead is, as its share of the edited recording. */
   playhead: Playhead;
-  /** Told each pointer event of a drag on the knob. */
-  onScrub?: (event: React.PointerEvent) => void;
+  /** Told each pointer event of a drag on the knob, and where in the
+   * scrub it falls. */
+  onScrub?: (event: React.PointerEvent, phase: ScrubPhase) => void;
   /** The part of the edited recording the strip under it draws. */
   view?: View;
 }) {
@@ -50,15 +52,23 @@ export function TimelinePlayhead({
           "absolute -top-3 start-1/2 flex size-6 -translate-x-1/2 items-center justify-center",
           onScrub && "pointer-events-auto cursor-ew-resize touch-none",
         )}
+        onPointerCancel={(event) => {
+          if (onScrub && event.currentTarget.hasPointerCapture(event.pointerId))
+            onScrub(event, "end");
+        }}
         onPointerDown={(event) => {
           if (!onScrub) return;
           event.stopPropagation();
           event.currentTarget.setPointerCapture(event.pointerId);
-          onScrub(event);
+          onScrub(event, "start");
         }}
         onPointerMove={(event) => {
           if (onScrub && event.currentTarget.hasPointerCapture(event.pointerId))
-            onScrub(event);
+            onScrub(event, "move");
+        }}
+        onPointerUp={(event) => {
+          if (onScrub && event.currentTarget.hasPointerCapture(event.pointerId))
+            onScrub(event, "end");
         }}
       >
         <span className="size-3 rounded-full bg-primary" />

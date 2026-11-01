@@ -5,6 +5,7 @@ import {
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
 } from "../../export/recording-export-settings";
+import { NOTHING_RECORDED } from "../../toolbar/editor-modes";
 
 import type { ScrubPreviewProps } from "./scrub-preview";
 
@@ -25,12 +26,12 @@ export type ResolvedScrubPreviewProps = ScrubPreviewProps &
       | "hasAnnotations"
       | "hasCursorData"
       | "hasKeyboardData"
-      | "hasMicrophone"
       | "isPreparingAudio"
       | "isPreparingPreview"
       | "isSaving"
       | "isSheetOpen"
       | "keyboardEffects"
+      | "recorded"
       | "selectedTrack"
     >
   >;
@@ -57,12 +58,12 @@ export function resolveScrubPreviewProps(
     hasAnnotations = true,
     hasCursorData = false,
     hasKeyboardData = false,
-    hasMicrophone = false,
     isPreparingAudio = false,
     isPreparingPreview = false,
     isSaving = false,
     isSheetOpen = false,
     keyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
+    recorded = NOTHING_RECORDED,
     selectedTrack = null,
   } = props;
   return {
@@ -76,12 +77,12 @@ export function resolveScrubPreviewProps(
     hasAnnotations,
     hasCursorData,
     hasKeyboardData,
-    hasMicrophone,
     isPreparingAudio,
     isPreparingPreview,
     isSaving,
     isSheetOpen,
     keyboardEffects,
+    recorded,
     selectedTrack,
   };
 }

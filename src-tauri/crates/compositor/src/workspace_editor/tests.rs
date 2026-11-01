@@ -10,8 +10,6 @@ fn target(id: u64, rect: DisplayRect, z_order: i32, selected: bool) -> DisplayTa
     z_order,
     selected: u8::from(selected),
     visible: 1,
-    radius_enabled: 1,
-    radius_percent: 20.0,
   }
 }
 
@@ -98,40 +96,6 @@ fn selected_resize_handle_wins_over_neighbouring_target() {
   assert_eq!((hit.target_id, hit.handle), (1, DisplayHandle::East as u8));
 }
 
-#[test]
-fn selected_radius_point_precedes_other_handles() {
-  let targets = [target(
-    7,
-    DisplayRect {
-      x: 0.0,
-      y: 0.0,
-      width: 100.0,
-      height: 100.0,
-    },
-    0,
-    true,
-  )];
-  let hit = hit_test_display(&targets, (21.0, 21.0), 8.0).unwrap();
-  assert_eq!(hit.handle, DisplayHandle::Radius as u8);
-}
-
-#[test]
-fn disabled_video_radius_falls_back_to_body_or_resize() {
-  let mut video = target(
-    3,
-    DisplayRect {
-      x: 0.0,
-      y: 0.0,
-      width: 100.0,
-      height: 100.0,
-    },
-    0,
-    true,
-  );
-  video.radius_enabled = 0;
-  let hit = hit_test_display(&[video], (21.0, 21.0), 8.0).unwrap();
-  assert_eq!(hit.handle, DisplayHandle::Body as u8);
-}
 fn r(x: f64, y: f64, width: f64, height: f64) -> WorldRect {
   WorldRect {
     x,
@@ -154,7 +118,6 @@ fn geometry(crop: NormalizedRect) -> LayerGeometry {
     image_width: crop.width,
     image_x: crop.x,
     image_y: crop.y,
-    radius_percent: 0.0,
   }
 }
 fn layer(id: u32, frame_id: u32, z_index: i32) -> WorkspaceLayer {
@@ -476,7 +439,6 @@ fn canvas_fit_preserves_absolute_layer_geometry() {
     image_width: 0.75,
     image_x: 0.5,
     image_y: 0.0,
-    radius_percent: 12.0,
   };
   let ((width, height), layers) = fit_canvas_to_layers((400, 200), &[layer]);
   assert_eq!((width, height), (400, 300));
@@ -485,7 +447,6 @@ fn canvas_fit_preserves_absolute_layer_geometry() {
   assert_eq!(fitted.image_x, 0.5);
   assert_eq!(fitted.image_y, 1.0 / 3.0);
   assert_eq!(fitted.image_width, 0.75);
-  assert_eq!(fitted.radius_percent, 12.0);
 }
 
 #[test]

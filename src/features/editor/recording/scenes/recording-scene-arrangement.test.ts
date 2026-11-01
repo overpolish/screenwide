@@ -5,7 +5,10 @@ import { describe, expect, it } from "vitest";
 
 import { defaultScreenshotOutput } from "../../screenshot/screenshot-output";
 
-import { arrangedRecordingScene } from "./recording-scene-arrangement";
+import {
+  arrangedRecordingScene,
+  sceneLandingMs,
+} from "./recording-scene-arrangement";
 import { reframed } from "./recording-scene-framing";
 import { recordingScenePanes } from "./recording-scene-geometry";
 import { RecordingSceneClip, SceneFraming } from "./recording-scenes";
@@ -252,5 +255,19 @@ describe("a scene's turn of the screen", () => {
     expect(halfway?.x).toBeCloseTo(10);
     expect(halfway?.y).toBeCloseTo(-15);
     expect(halfway?.z).toBeCloseTo(5);
+  });
+});
+
+describe("where choosing a scene lands", () => {
+  it("lands once the scene has arrived", () => {
+    expect(sceneLandingMs({ endMs: 10_000, startMs: 1_000 })).toBe(1_600);
+  });
+
+  it("lands at a short scene's middle", () => {
+    expect(sceneLandingMs({ endMs: 1_800, startMs: 1_000 })).toBe(1_400);
+  });
+
+  it("lands at the start of a scene starting the video", () => {
+    expect(sceneLandingMs({ endMs: 5_000, startMs: 0 })).toBe(0);
   });
 });

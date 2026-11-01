@@ -10,7 +10,6 @@ import {
 } from "../timeline/editing/recording-timeline-edit";
 import { moveRecordingTimelineSegment } from "../timeline/editing/recording-timeline-move";
 
-import { recordingAnnotationRows } from "./annotations/recording-annotation-layout";
 import { RecordingAnnotationClip } from "./annotations/recording-annotations";
 import {
   RecordingOverlayTimelines,
@@ -117,12 +116,6 @@ describe("retimeRecordingOverlays", () => {
       [0, 1_643],
       [11_190, 14_038],
     ]);
-    const { fragments } = recordingAnnotationRows(
-      after.annotationClips ?? [],
-      after,
-      14_038,
-    );
-    expect(fragments.every((fragment) => fragment.row === 0)).toBe(true);
   });
 
   it("shortens a clip for good where a cut takes its footage", () => {

@@ -3,6 +3,7 @@
 
 import { CaptionsPatch } from "../recording/captions/recording-captions";
 import { CaptionDefaultsPatch } from "../recording/captions/use-text-templates";
+import { MicrophoneTools } from "../recording/microphone/use-microphone-tools";
 import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import {
   CursorEffectSettings,
@@ -17,12 +18,16 @@ import { EditorFrameTarget, framePanelHandlers } from "./frame/frame-target";
 import { scenePanelHandlers } from "./scene/scene-panel-handlers";
 import { EditorSelectionTarget } from "./selection/placed-selection-target";
 import {
-  audioPanelHandlers,
+  microphonePanelHandlers,
   selectionPanelHandlers,
 } from "./selection/selection-panel-handlers";
-import { EditorAudioSelectionTarget } from "./selection/selection-target";
+import { stripPanelHandlers } from "./strip/strip-panel-handlers";
 import { ToolPanelHandlers } from "./tool-panel-handlers";
 import { TranscriptRequest } from "./tool-panel-transcript";
+import {
+  EditorTracksInputs,
+  tracksPanelHandlers,
+} from "./tracks/editor-tracks";
 
 /**
  * Everything the tool panels can ask for, answered against what the editor
@@ -31,39 +36,43 @@ import { TranscriptRequest } from "./tool-panel-transcript";
  */
 export type EditorToolPanelHandlerInputs = {
   annotationColors: string[];
-  audioTarget: EditorAudioSelectionTarget | null;
   backgroundPresets: BackgroundPreset[];
   cropTarget: EditorCropTarget | null;
   frameTarget: EditorFrameTarget | null;
   keyboardEffects: KeyboardEffectSettings;
+  /** The recording's microphone's speech tools, where it has one. */
+  microphone: MicrophoneTools | null;
   restoreShortcuts: () => void;
   saveSceneTemplates: (templates: SceneTemplate[]) => void;
   sceneTemplates: SceneTemplate[];
   selectionTarget: EditorSelectionTarget | null;
   setAnnotationColors: (colors: string[]) => void;
   setBackgroundPresets: (presets: BackgroundPreset[]) => void;
+  /** The recorded tracks the export holds, which the Tracks island
+   * switches. */
+  tracks: EditorTracksInputs;
   workspace: EditorKind;
-  onBakeCameraChange?: (bake: boolean) => void;
   onCaptionDefaultsChange?: (patch: CaptionDefaultsPatch) => void;
   onCaptionsChange?: (patch: CaptionsPatch) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
   onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
+  onTrackVolumeChange?: (trackId: string, decibels: number) => void;
   onTranscriptRequest?: (request: TranscriptRequest) => void;
 };
 
 /** The handlers the panels reach, each one the editor's own commit path. */
 export function editorToolPanelHandlers({
   annotationColors,
-  audioTarget,
   backgroundPresets,
   cropTarget,
   frameTarget,
   keyboardEffects,
-  onBakeCameraChange,
+  microphone,
   onCaptionDefaultsChange,
   onCaptionsChange,
   onCursorEffectsChange,
   onKeyboardEffectsChange,
+  onTrackVolumeChange,
   onTranscriptRequest,
   restoreShortcuts,
   saveSceneTemplates,
@@ -71,6 +80,7 @@ export function editorToolPanelHandlers({
   selectionTarget,
   setAnnotationColors,
   setBackgroundPresets,
+  tracks,
   workspace,
 }: EditorToolPanelHandlerInputs): ToolPanelHandlers {
   return {
@@ -90,7 +100,6 @@ export function editorToolPanelHandlers({
         preset,
       ]);
     },
-    onBakeCameraChange,
     onCaptionDefaultsChange,
     onCaptionsChange,
     onCursorEffectsChange,
@@ -98,7 +107,8 @@ export function editorToolPanelHandlers({
       onKeyboardEffectsChange?.({ ...keyboardEffects, ...settings });
     },
     onKeyboardShortcutsRestore: restoreShortcuts,
-    ...audioPanelHandlers(audioTarget),
+    ...microphonePanelHandlers(microphone),
+    onTrackVolumeChange,
     ...cropPanelHandlers(cropTarget),
     ...framePanelHandlers(frameTarget),
     ...selectionPanelHandlers(selectionTarget),
@@ -106,6 +116,8 @@ export function editorToolPanelHandlers({
       saveTemplates: saveSceneTemplates,
       sceneTemplates,
     }),
+    ...stripPanelHandlers(workspace),
+    ...tracksPanelHandlers(tracks),
     onTranscriptRequest,
   };
 }

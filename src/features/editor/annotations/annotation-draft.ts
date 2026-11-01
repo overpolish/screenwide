@@ -12,17 +12,20 @@ import {
   useAnnotationDefaults,
   useAnnotationImageDefault,
   useAnnotationTextLookDefault,
+  useAnnotationZoomDefault,
 } from "./annotation-defaults";
 import { ANNOTATION_KINDS } from "./annotation-kinds";
+import { NEW_LENS_ZOOM } from "./annotation-shape-parsers";
 
 /**
  * Publish the dress the drawing tool in hand draws its next annotation in, so
  * the panel can show and change it before anything is drawn: the dress last
  * settled on for that kind, or the tool's own first one. A counter carries the
- * aim its next one is dropped at, an image the picture its next one shows
- * once one has been chosen, a text the look its next one is dressed in once
- * one has been chosen, and whether the next one draws itself in rides
- * along - except for a kind that always arrives still.
+ * aim its next one is dropped at, a lens the zoom its next one is drawn at, an
+ * image the picture its next one shows once one has been chosen, a text the
+ * look its next one is dressed in once one has been chosen, and whether the
+ * next one draws itself in rides along - except for a kind that always
+ * arrives still.
  */
 export function useAnnotationDraft(workspace: EditorKind, tool: string | null) {
   const kind = drawingToolKind(tool);
@@ -31,6 +34,7 @@ export function useAnnotationDraft(workspace: EditorKind, tool: string | null) {
   const angle = useAnnotationAngleDefault();
   const image = useAnnotationImageDefault();
   const look = useAnnotationTextLookDefault();
+  const zoom = useAnnotationZoomDefault();
   usePublishAnnotationDraft(
     workspace,
     kind === null
@@ -43,6 +47,7 @@ export function useAnnotationDraft(workspace: EditorKind, tool: string | null) {
           style: remembered ?? firstAnnotationDress(kind),
           ...(kind === "counter" ? { angle: angle ?? 0 } : {}),
           ...(kind === "image" && image ? { image } : {}),
+          ...(kind === "magnify" ? { zoom: zoom ?? NEW_LENS_ZOOM } : {}),
           ...(kind === "text" && look ? { look } : {}),
         },
   );

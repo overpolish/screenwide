@@ -16,7 +16,6 @@ import {
   ImageToolIcon,
   TextToolIcon,
 } from "../../annotations/annotation-tool-icons";
-import { ToolPanelKind } from "../../popup-panel/store";
 
 import type { AnnotationKind } from "../../annotations/types";
 
@@ -37,11 +36,6 @@ export type EditorToolId =
 
 type ViewTool = {
   drawsOnLayer?: false;
-  /** The panel this tool opens, for the tools that have one. */
-  panel?: ToolPanelKind;
-  /** Opt in to a full-frame fit on selection and one-time window growth
-   * when opening a panel. Omitted tools overlay without changing the view. */
-  resetsView?: boolean;
   /** The unmodified letter that takes the tool up. */
   shortcut?: string;
 };
@@ -53,13 +47,11 @@ type DrawingTool = {
   drawsOnLayer: true;
   icon: LucideIcon;
   shortcut: string;
-  panel?: ToolPanelKind;
-  resetsView?: boolean;
 };
 
 /**
- * What the preview does when a tool is chosen, and - for the tools that draw
- * - what its toggle looks like.
+ * The letter that takes each tool up, and - for the tools that draw - what
+ * its toggle looks like.
  *
  * One table rather than a condition at each toolbar button, so a tool added
  * later states its behaviour in the same place as the rest. The glyph and the
@@ -69,87 +61,70 @@ type DrawingTool = {
  */
 const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   Record<Exclude<EditorToolId, AnnotationKind>, ViewTool> = {
-  // The drawing tools open the annotation panel: with nothing chosen it shows
-  // the dress the tool draws its next annotation in, and a chosen annotation
-  // takes it over. They change no layout, so there is nothing for a fit to
-  // reclaim and the zoom a drawing was aimed at survives being picked up.
   arrow: {
     drawsOnLayer: true,
     icon: ArrowToolIcon,
-    panel: "annotation",
     shortcut: "A",
   },
-  captions: { panel: "captions", resetsView: true },
+  captions: {},
   counter: {
     drawsOnLayer: true,
     icon: CounterToolIcon,
-    panel: "annotation",
     shortcut: "N",
   },
-  crop: { panel: "crop", resetsView: true, shortcut: "C" },
-  cursor: { panel: "cursor", resetsView: true },
+  crop: { shortcut: "C" },
+  cursor: {},
   draw: {
     drawsOnLayer: true,
     icon: DrawToolIcon,
-    panel: "annotation",
     shortcut: "D",
   },
   focus: {
     drawsOnLayer: true,
     icon: FocusToolIcon,
-    panel: "annotation",
     shortcut: "B",
   },
-  frame: { panel: "frame", resetsView: true, shortcut: "F" },
+  frame: { shortcut: "F" },
   highlight: {
     drawsOnLayer: true,
     icon: HighlightToolIcon,
-    panel: "annotation",
     shortcut: "H",
   },
   image: {
     drawsOnLayer: true,
     icon: ImageToolIcon,
-    panel: "annotation",
     shortcut: "I",
   },
-  keyboard: { panel: "keyboard", resetsView: true },
+  keyboard: {},
   magnify: {
     drawsOnLayer: true,
     icon: MagnifyToolIcon,
-    panel: "annotation",
     shortcut: "M",
   },
-  // The marquee chooses annotations rather than a layer, so it has no panel
-  // of its own: what it chooses brings up the annotation panel.
-  marquee: { resetsView: false, shortcut: "G" },
+  marquee: { shortcut: "G" },
   redact: {
     drawsOnLayer: true,
     icon: RedactToolIcon,
-    panel: "annotation",
     shortcut: "R",
   },
-  scene: { panel: "scene", resetsView: true, shortcut: "L" },
-  select: { panel: "selection", resetsView: false, shortcut: "V" },
+  scene: { shortcut: "L" },
+  select: { shortcut: "V" },
   shape: {
     drawsOnLayer: true,
     icon: ShapeToolIcon,
-    panel: "annotation",
     shortcut: "O",
   },
   spotlight: {
     drawsOnLayer: true,
     icon: SpotlightToolIcon,
-    panel: "annotation",
     shortcut: "S",
   },
   text: {
     drawsOnLayer: true,
     icon: TextToolIcon,
-    panel: "annotation",
     shortcut: "T",
   },
-  transcript: { panel: "transcript", resetsView: true },
+  transcript: {},
 };
 
 const editorToolIds = () => Object.keys(EDITOR_TOOLS) as EditorToolId[];
@@ -212,14 +187,3 @@ export const EDITOR_TOOL_SHORTCUTS = editorToolIds().flatMap((id) => {
  * belong to no tool. */
 export const editorToolForShortcut = (shortcut: string) =>
   EDITOR_TOOL_SHORTCUTS.find((tool) => tool.shortcut === shortcut)?.id ?? null;
-
-export const toolResetsView = (id: EditorToolId) =>
-  EDITOR_TOOLS[id].resetsView === true;
-
-export const toolPanel = (id: EditorToolId) => EDITOR_TOOLS[id].panel;
-
-/** The same view policy, asked of an open panel rather than of a tool. */
-export const panelResetsView = (panel: ToolPanelKind) =>
-  editorToolIds().some(
-    (id) => EDITOR_TOOLS[id].panel === panel && toolResetsView(id),
-  );

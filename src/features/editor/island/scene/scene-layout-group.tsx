@@ -68,26 +68,41 @@ const tilePicture = (drawing: SceneDrawing) => (
 );
 
 /** The tiles in a box that scrolls past two and a half rows, measured from
- * the first row, since a row's height follows the video's shape. The box
- * holds the tiles in a small inset, so a tile's focus ring at its edge is
- * not cut off, and reaches past them by as much on every side, so they keep
- * the group's width. A scroll area fills its parent, so it is widened by
- * both insets: a negative margin alone would only shift it towards the
- * start. The chosen tile is scrolled into view as the group opens. */
+ * the first row, since a row's height follows the video's shape. The tile
+ * measured is whichever is first now: the tiles change under a group kept
+ * open, the custom one going once a layout is chosen, and others coming and
+ * going from scene to scene, and one taken out measures nothing, which would
+ * close the box to a sliver. The box holds the tiles in a small inset, so a
+ * tile's focus ring at its edge is not cut off, and reaches past them by as
+ * much on every side, so they keep the group's width. A scroll area fills
+ * its parent, so it is widened by both insets: a negative margin alone would
+ * only shift it towards the start. The chosen tile is scrolled into view as
+ * the group opens. */
 function ScrollingTiles({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
   useLayoutEffect(() => {
-    const tile = ref.current?.querySelector("button");
-    if (!tile) return;
+    const box = ref.current;
+    if (!box) return;
+    let tile = box.querySelector("button");
+    // Told when the tile measured resizes or is taken out; a new first tile
+    // is watched instead, and answers at once with its own size.
     const observer = new ResizeObserver(() => {
+      const first = box.querySelector("button");
+      if (first !== tile) {
+        if (tile) observer.unobserve(tile);
+        tile = first;
+        if (tile) observer.observe(tile);
+        return;
+      }
+      if (!tile) return;
       setMaxHeight(
         SCROLL_INSET +
           tile.offsetHeight * VISIBLE_ROWS +
           TILE_GAP * Math.floor(VISIBLE_ROWS),
       );
     });
-    observer.observe(tile);
+    if (tile) observer.observe(tile);
     return () => {
       observer.disconnect();
     };

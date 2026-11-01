@@ -161,6 +161,20 @@ impl super::state::PreviewManager {
     })
   }
 
+  /// Where the annotation at `index` in pane `pane_index`'s list stands among
+  /// the published grips, which run through every layer in turn: the
+  /// inverse of [`Self::published_annotation`].
+  pub(super) fn published_index(&self, pane_index: u32, index: usize) -> Option<usize> {
+    let mut start = 0;
+    for (pane, annotations, ..) in self.published_panes() {
+      if pane == pane_index {
+        return (index < annotations.len()).then_some(start + index);
+      }
+      start += annotations.len();
+    }
+    None
+  }
+
   /// The annotation at `index` among the published grips, which is how the
   /// native chrome names one it halos or opens a menu on: its layer, its
   /// place in that layer's list, and the annotation.

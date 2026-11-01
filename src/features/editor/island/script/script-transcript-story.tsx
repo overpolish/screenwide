@@ -28,7 +28,11 @@ import {
   storySceneOffer,
 } from "../../tool-panels/transcript/transcript-panel-story-states";
 import { correctionsWith } from "../../tool-panels/transcript/transcript-units";
-import { EditorIslandStage } from "../editor-island-stage";
+import { type EditorIslandContent } from "../editor-island";
+import {
+  EditorIslandPairStage,
+  EditorIslandStage,
+} from "../editor-island-stage";
 
 import { scriptIsland } from "./script-island";
 
@@ -63,10 +67,13 @@ export type ScriptTranscriptStoryActions = Pick<
  * corrections and moves change the words, with undo and redo, and Space
  * plays through what is kept, in the order the moves leave, jumping the
  * cuts as the recording would. A filler is cut and a word corrected from
- * the start, to show both.
+ * the start, to show both. With `corner`, that island stands at the top end
+ * corner and the Script at the start, as the Captions mode opens them,
+ * here until the transcript's words are in.
  */
 export function ScriptTranscriptStory({
   actions,
+  corner,
   isLocked,
   isShown,
   transcript,
@@ -75,6 +82,7 @@ export function ScriptTranscriptStory({
   isLocked: boolean;
   isShown: boolean;
   transcript: ScriptTranscriptProps["transcript"];
+  corner?: EditorIslandContent;
 }) {
   const [history, setHistory] = useState<History>(() => ({
     future: [],
@@ -218,5 +226,9 @@ export function ScriptTranscriptStory({
     transcript,
     words,
   });
-  return <EditorIslandStage content={content} isShown={isShown} />;
+  return corner ? (
+    <EditorIslandPairStage end={corner} isShown={isShown} start={content} />
+  ) : (
+    <EditorIslandStage content={content} isShown={isShown} />
+  );
 }

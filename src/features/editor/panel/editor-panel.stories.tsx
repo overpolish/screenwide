@@ -1,11 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  type Decorator,
-  type Meta,
-  type StoryObj,
-} from "@storybook/react-vite";
+import { fn } from "storybook/test";
 
 import { featureStage } from "../../../storybook/feature-story-stage";
 import { EditorArtifact } from "../types";
@@ -21,6 +17,8 @@ import {
   screenshot,
   screenshotOutput,
 } from "./editor-story-fixtures";
+
+import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 
 const screenPreviewLayout = {
   height: 720,
@@ -100,15 +98,45 @@ const withGpuPreviewPlaceholder: Decorator = (Story, context) => {
   );
 };
 
+const events = {
+  onBakeCameraChange: fn(),
+  onBrowse: fn(),
+  onCameraCompressionChange: fn(),
+  onCameraOverlayChange: fn(),
+  onCameraResolutionScaleChange: fn(),
+  onCancel: fn(),
+  onCancelSave: fn(),
+  onCanvasResize: fn(),
+  onCollapseAudioChange: fn(),
+  onCompressionChange: fn(),
+  onCopy: fn(),
+  onCursorEffectsChange: fn(),
+  onDeleteProject: fn(),
+  onDeleteProjectAfterExportChange: fn(),
+  onEnabledTracksChange: fn(),
+  onEnabledVideoTracksChange: fn(),
+  onFileStemChange: fn(),
+  onKeyboardEffectsChange: fn(),
+  onMinimize: fn(),
+  onRecordingOutputChange: fn(),
+  onRecordingTimelineEditChange: fn(),
+  onRenameProject: fn(),
+  onResolutionScaleChange: fn(),
+  onSave: fn(),
+  onScreenshotOutputChange: fn(),
+  onSelectedScreenshotItemChange: fn(),
+  onSelectedTrackChange: fn(),
+  onSubtitlesChange: fn(),
+  onToggleMaximize: fn(),
+  onTrackVolumeChange: fn(),
+};
+
 const meta = {
   args: {
+    ...events,
     artifact: screenshot,
     directory: "/Users/dom/Desktop",
     fileStem: screenshot.suggestedFileStem,
-    onCancel: () => undefined,
-    onDeleteProject: () => undefined,
-    onMinimize: () => undefined,
-    onToggleMaximize: () => undefined,
     screenshotOutput: { ...screenshotOutput, items: [] },
   },
   component: EditorPanel,
@@ -122,15 +150,15 @@ const meta = {
     })),
   ],
   parameters: {
+    controls: { exclude: Object.keys(events) },
     layout: "fullscreen",
   },
-  title: "Legacy/Editor/Panel/Editor Panel",
+  title: "Features/Editor/Panel/Editor",
 } satisfies Meta<typeof EditorPanel>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The window before its snapshot arrives. */
 export const Opening: Story = {
   args: { artifact: null, fileStem: "" },
 };
@@ -173,19 +201,10 @@ export const Recording: Story = {
   render: (args) => <RecordingStoryPanel {...args} />,
 };
 
-/** The save runs in the export window now; the editor only stands down. */
 export const Saving: Story = {
   args: {
     ...Recording.args,
     isSaving: true,
-  },
-  render: (args) => <RecordingStoryPanel {...args} />,
-};
-
-export const WithError: Story = {
-  args: {
-    ...Recording.args,
-    error: "That file name cannot be used",
   },
   render: (args) => <RecordingStoryPanel {...args} />,
 };
@@ -198,15 +217,6 @@ export const LongProjectName: Story = {
       suggestedFileStem:
         "Screenwide recording with a deliberately long editable project name 2026-08-08",
     },
-  },
-  name: "Long Project Name",
-  render: (args) => <RecordingStoryPanel {...args} />,
-};
-
-export const RecordingWithCollapsedAudio: Story = {
-  args: {
-    ...Recording.args,
-    collapseAudio: true,
   },
   render: (args) => <RecordingStoryPanel {...args} />,
 };
@@ -240,7 +250,6 @@ export const CameraRecording: Story = {
   render: (args) => <RecordingStoryPanel {...args} />,
 };
 
-/** Audio-only capture has transport, waveforms and tracks, but no video controls. */
 export const AudioRecording: Story = {
   args: {
     ...Recording.args,
@@ -266,7 +275,6 @@ export const AudioRecording: Story = {
   render: (args) => <AudioRecordingStoryPanel {...args} />,
 };
 
-/** Screen and camera captures remain separate, synchronized preview panels. */
 export const RecordingWithCamera: Story = {
   args: {
     ...Recording.args,
@@ -287,22 +295,7 @@ export const RecordingWithCamera: Story = {
   },
   render: (args) => <RecordingStoryPanel {...args} />,
 };
-export const EstimatingCompressedSize: Story = {
-  args: {
-    ...Recording.args,
-    estimatedSizeBytes: 92_800_000,
-    isEstimatingSize: false,
-  },
-};
-export const RecordingWithoutCompressionSupport: Story = {
-  args: {
-    ...Recording.args,
-    artifact: { ...recording, canCompress: false },
-    compression: 0,
-    estimatedSizeBytes: recording.originalSizeBytes,
-  },
-};
-/** A recovered recording has only its file and name, not frames or duration. */
+
 export const RecoveredRecording: Story = {
   args: {
     artifact: {

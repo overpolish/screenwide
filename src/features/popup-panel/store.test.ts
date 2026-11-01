@@ -34,13 +34,13 @@ import {
 const RECORDING_PANEL = "tool-panel-recording";
 const SCREENSHOT_PANEL = "tool-panel-screenshot";
 
-const toolPanel = (
-  tool: "cursor" | "selection",
+const islandPanel = (
+  island: "cursor" | "frame",
   workspace: "recording" | "screenshot",
 ): OpenPopupPanel => ({
-  content: { kind: "tool", tool, workspace },
+  content: { island, kind: "island", workspace, x: 0 },
   focusContents: false,
-  id: `tool:${tool}`,
+  id: `island:${island}`,
 });
 
 const list = (id: string, selectedIds: string[]): OpenPopupPanel => ({
@@ -72,26 +72,24 @@ afterEach(() => {
 
 describe("usePopupPanelStore", () => {
   it("holds one open panel per window", () => {
-    open(RECORDING_PANEL, toolPanel("cursor", "recording"));
-    open(SCREENSHOT_PANEL, toolPanel("selection", "screenshot"));
+    open(RECORDING_PANEL, islandPanel("cursor", "recording"));
+    open(SCREENSHOT_PANEL, islandPanel("frame", "screenshot"));
     open(SHARED_POPUP_PANEL, list("camera", []));
 
     const state = usePopupPanelStore.getState();
-    expect(activePopupPanel(state, RECORDING_PANEL)?.id).toBe("tool:cursor");
-    expect(activePopupPanel(state, SCREENSHOT_PANEL)?.id).toBe(
-      "tool:selection",
-    );
+    expect(activePopupPanel(state, RECORDING_PANEL)?.id).toBe("island:cursor");
+    expect(activePopupPanel(state, SCREENSHOT_PANEL)?.id).toBe("island:frame");
     expect(activePopupPanel(state, SHARED_POPUP_PANEL)?.id).toBe("camera");
   });
 
   it("opening a panel in one workspace leaves the other's alone", () => {
-    open(RECORDING_PANEL, toolPanel("cursor", "recording"));
+    open(RECORDING_PANEL, islandPanel("cursor", "recording"));
     const before = activePopupPanel(
       usePopupPanelStore.getState(),
       RECORDING_PANEL,
     );
 
-    open(SCREENSHOT_PANEL, toolPanel("cursor", "screenshot"));
+    open(SCREENSHOT_PANEL, islandPanel("cursor", "screenshot"));
 
     expect(
       activePopupPanel(usePopupPanelStore.getState(), RECORDING_PANEL),
@@ -99,12 +97,17 @@ describe("usePopupPanelStore", () => {
     expect(
       activePopupPanel(usePopupPanelStore.getState(), SCREENSHOT_PANEL)
         ?.content,
-    ).toEqual({ kind: "tool", tool: "cursor", workspace: "screenshot" });
+    ).toEqual({
+      island: "cursor",
+      kind: "island",
+      workspace: "screenshot",
+      x: 0,
+    });
   });
 
   it("closes only the panel it is given", () => {
-    open(RECORDING_PANEL, toolPanel("cursor", "recording"));
-    open(SCREENSHOT_PANEL, toolPanel("cursor", "screenshot"));
+    open(RECORDING_PANEL, islandPanel("cursor", "recording"));
+    open(SCREENSHOT_PANEL, islandPanel("cursor", "screenshot"));
 
     usePopupPanelStore.getState().close(RECORDING_PANEL);
 
@@ -115,7 +118,7 @@ describe("usePopupPanelStore", () => {
 
   it("keeps a selection in the panel that reported it", () => {
     open(SHARED_POPUP_PANEL, list("camera", []));
-    open(RECORDING_PANEL, toolPanel("cursor", "recording"));
+    open(RECORDING_PANEL, islandPanel("cursor", "recording"));
 
     usePopupPanelStore.getState().select({
       id: "camera",
@@ -134,7 +137,7 @@ describe("usePopupPanelStore", () => {
       pressedId: "two",
       selectedIds: ["two"],
     });
-    expect(activePopupPanel(state, RECORDING_PANEL)?.id).toBe("tool:cursor");
+    expect(activePopupPanel(state, RECORDING_PANEL)?.id).toBe("island:cursor");
   });
 
   it("reports a selection made in a panel showing something else", () => {
@@ -157,7 +160,7 @@ describe("usePopupPanelStore", () => {
   });
 
   it("clears every panel at once on launch", () => {
-    open(RECORDING_PANEL, toolPanel("cursor", "recording"));
+    open(RECORDING_PANEL, islandPanel("cursor", "recording"));
     open(SHARED_POPUP_PANEL, list("camera", []));
 
     usePopupPanelStore.getState().closeAll();
@@ -167,9 +170,9 @@ describe("usePopupPanelStore", () => {
 
   it("never writes a panel from a stale copy while changing another", () => {
     // This window last saw the recording panel showing Cursor; another
-    // window has since swapped it to Selection, which has not arrived here.
-    open(RECORDING_PANEL, toolPanel("cursor", "recording"));
-    const swapped = toolPanel("selection", "recording");
+    // window has since swapped it to Frame, which has not arrived here.
+    open(RECORDING_PANEL, islandPanel("cursor", "recording"));
+    const swapped = islandPanel("frame", "recording");
     store.set(
       "screenwide-popup-panel:tool-panel-recording",
       JSON.stringify(swapped),
@@ -186,6 +189,6 @@ describe("usePopupPanelStore", () => {
     });
     expect(
       activePopupPanel(usePopupPanelStore.getState(), RECORDING_PANEL)?.id,
-    ).toBe("tool:selection");
+    ).toBe("island:frame");
   });
 });

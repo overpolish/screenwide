@@ -10,11 +10,13 @@ import {
   startRecordingPreviewPlayer,
   stopRecordingPreviewPlayer,
 } from "../api";
-import { PreviewZoomRequest } from "../preview/preview-zoom-state";
 import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
 import { recordingPreviewKeyboardDeletions as keyboardDeletionsFor } from "../timeline/keyboard/recording-keyboard-timeline-api";
-import { recordingTimelinePlaybackRangesFrom } from "../timeline/recording-timeline-playback";
-import { SeekHandler, seekSelectionVisible } from "../timeline/timeline-seek";
+import {
+  recordingTimelinePlaybackPosition,
+  recordingTimelinePlaybackRangesFrom,
+} from "../timeline/recording-timeline-playback";
+import { SeekHandler } from "../timeline/timeline-seek";
 import {
   AudioTrackVolume,
   CursorEffectSettings,
@@ -31,7 +33,7 @@ import {
   settleRecordingPreviewSettings,
 } from "./recording-preview-session-start";
 import { useRecordingPlaybackStatus } from "./use-recording-playback-status";
-import { useRecordingPreviewRate } from "./use-recording-preview-rate";
+import { useRecordingPreviewRanges } from "./use-recording-preview-ranges";
 import { useRecordingPreviewSettings } from "./use-recording-preview-settings";
 import {
   type RecordingPreviewSelection,
@@ -58,14 +60,12 @@ export function useRecordingPreviewPlayer({
   onPosition,
   onSelectionChange,
   onSelectionGesture,
-  onZoomChange,
   recordingOutput,
   screenCanvasRef,
   selection,
   selectionTargets,
   sourceDurationMs,
   timelineEdit,
-  zoomRequest,
 }: {
   artifactId: number;
   audioTrackVolumes: AudioTrackVolume[];
@@ -90,11 +90,9 @@ export function useRecordingPreviewPlayer({
     import("../annotations/annotation-defaults").AnnotationTool | null;
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: RecordingSelectionGestureEvent) => void;
-  onZoomChange?: (zoomPercent: number) => void;
   selection?: RecordingPreviewSelection | null;
   selectionTargets?: RecordingPreviewSelection[] | null;
   timelineEdit?: RecordingTimelineEdit | null;
-  zoomRequest?: PreviewZoomRequest;
 }) {
   const playbackStatus = useRecordingPlaybackStatus();
   const { isPlayingRef, updatePlaying } = playbackStatus;
@@ -157,22 +155,9 @@ export function useRecordingPreviewPlayer({
     keyboardEffects: keyboardEffectsRef.current,
     recordingOutput: compositionRef.current.recordingOutput,
   });
-  const {
-    playbackRangeFrom,
-    playbackRanges,
-    playbackRate,
-    playbackRateRef,
-    setPlaybackRate,
-  } = useRecordingPreviewRate({
-    isEnabled,
-    isPlayingRef,
-    positionRef,
-    sessionIdRef,
-    setError,
-    setIsPlaying: playbackStatus.setIsPlaying,
+  const { playbackRangeFrom, playbackRanges } = useRecordingPreviewRanges({
     timelineEditRef,
     timingRef,
-    wantsPlaybackRef,
   });
   // The same snapshot a session starts from: the refs hold this render's
   // props by now.
@@ -183,7 +168,7 @@ export function useRecordingPreviewPlayer({
     setError,
     startedRef,
   });
-  const previewFit = useRecordingPreviewSurface({
+  useRecordingPreviewSurface({
     annotationTool,
     bakeCamera,
     cameraCanvasRef,
@@ -197,14 +182,12 @@ export function useRecordingPreviewPlayer({
     onError: setError,
     onSelectionChange,
     onSelectionGesture,
-    onZoomChange,
     recordingOutput,
     screenCanvasRef,
     selection,
     selectionTargets,
     sessionIdRef,
     startedRef,
-    zoomRequest,
   });
   useEffect(() => {
     if (!isEnabled) return;
@@ -220,6 +203,9 @@ export function useRecordingPreviewPlayer({
     eventChannel.onmessage = (event) => {
       if (disposed) return;
       if (event.event === "error") {
+        // Native playback stops at an error, so the transport does too.
+        wantsPlaybackRef.current = false;
+        updatePlaying(false);
         setError(event.data.message);
         finishPreparing();
         return;
@@ -258,7 +244,6 @@ export function useRecordingPreviewPlayer({
               ranges,
               next.sourceStartMs,
             ),
-            playbackRate: playbackRateRef.current,
             startPositionMs: Math.round(next.sourceStartMs),
           },
         ).catch((cause: unknown) => {
@@ -288,7 +273,6 @@ export function useRecordingPreviewPlayer({
                 playbackRanges(),
                 event.data.positionMs,
               ),
-              playbackRate: playbackRateRef.current,
             },
           ).catch((cause: unknown) => {
             wantsPlaybackRef.current = false;
@@ -337,12 +321,10 @@ export function useRecordingPreviewPlayer({
           // Read live: the suspension can be lifted while the restart is still
           // in flight, and the captured value would leave native suspended.
           isEditorSuspended: editorSuspendedRef.current,
-          nativeEditorOwnsLayout,
           onError: (cause) => {
             if (!disposed) setError(String(cause));
           },
           sessionId,
-          zoomRequest,
         });
         settleRecordingPreviewSettings({
           initialKey: initialSettingsKey,
@@ -387,6 +369,10 @@ export function useRecordingPreviewPlayer({
     updatePlaying(true);
     void (async () => {
       try {
+        positionRef.current = recordingTimelinePlaybackPosition(
+          positionRef.current,
+          timingRef.current[0],
+        );
         const { index, ranges } = playbackRangeFrom(positionRef.current);
         const range = ranges[index];
         if (
@@ -408,7 +394,6 @@ export function useRecordingPreviewPlayer({
               playbackRanges(),
               positionRef.current,
             ),
-            playbackRate: playbackRateRef.current,
           },
         );
       } catch (cause) {
@@ -417,13 +402,7 @@ export function useRecordingPreviewPlayer({
         setError(String(cause));
       }
     })();
-  }, [
-    isEnabled,
-    playbackRangeFrom,
-    playbackRanges,
-    playbackRateRef,
-    updatePlaying,
-  ]);
+  }, [isEnabled, playbackRangeFrom, playbackRanges, updatePlaying]);
   const pauseSettled = useCallback(async () => {
     if (!isEnabled) return;
     resumeAfterSeekRef.current = false;
@@ -453,8 +432,8 @@ export function useRecordingPreviewPlayer({
     // The backend still pauses and resumes, without flashing paused chrome.
     if (!resumeAfterSeekRef.current) updatePlaying(false);
     const send: SeekHandler = (nextPosition, nextPhase, nextClips) => {
-      // Start/end also carry native OSC visibility, so only movement samples
-      // at the same playhead position are redundant.
+      // The end decodes the exact frame and settles the scrub, so only
+      // movement samples at the same playhead position are redundant.
       if (
         nextPosition === lastSentSeekRef.current &&
         nextPhase === "move" &&
@@ -473,7 +452,6 @@ export function useRecordingPreviewPlayer({
         positionMs: nextPosition,
         requestId,
         rough: nextPhase !== "end",
-        selectionVisible: seekSelectionVisible(nextPhase),
         sessionId: sessionIdRef.current,
       }).catch((cause: unknown) => {
         if (settleRequestRef.current === requestId) {
@@ -510,9 +488,6 @@ export function useRecordingPreviewPlayer({
   return {
     durationMs,
     error,
-    sessionId:
-      activeSessionId === sessionIdRef.current ? activeSessionId : null,
-    ...previewFit,
     framesPerSecond: timingRef.current[1],
     getPositionMs,
     isPlaying: playbackStatus.isPlaying,
@@ -521,8 +496,8 @@ export function useRecordingPreviewPlayer({
     pause,
     pauseSettled,
     play,
-    playbackRate,
     seek,
-    setPlaybackRate,
+    sessionId:
+      activeSessionId === sessionIdRef.current ? activeSessionId : null,
   };
 }

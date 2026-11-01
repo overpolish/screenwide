@@ -11,14 +11,16 @@ import {
   applyAnnotationReverse,
   applyAnnotationRotation,
   applyAnnotationShuffle,
+  applyAnnotationKind,
   applyAnnotationsDelete,
   applyAnnotationEmphasis,
   applyAnnotationImage,
   applyAnnotationLook,
+  applyAnnotationPin,
   applyAnnotationImagePlay,
   applyAnnotationStyle,
   applyAnnotationSway,
-  applyClearDrawings,
+  applyAnnotationZoom,
 } from "../../annotations/annotation-apply";
 import { EditorKind } from "../../types";
 import { ToolPanelHandlers } from "../tool-panel-handlers";
@@ -42,13 +44,15 @@ export const annotationPanelHandlers = (
   | "onAnnotationImageChange"
   | "onAnnotationImagePlayChange"
   | "onAnnotationImageSwayChange"
+  | "onAnnotationKindChange"
   | "onAnnotationLookChange"
+  | "onAnnotationPin"
   | "onAnnotationReverse"
   | "onAnnotationRotationChange"
   | "onAnnotationShuffle"
   | "onAnnotationsDelete"
   | "onAnnotationStyleChange"
-  | "onDrawingsClear"
+  | "onAnnotationZoomChange"
 > => ({
   onAnnotationAngleChange: (angle) => {
     applyAnnotationAngle(workspace, angle);
@@ -74,8 +78,14 @@ export const annotationPanelHandlers = (
   onAnnotationImageSwayChange: (sway) => {
     applyAnnotationSway(workspace, sway);
   },
+  onAnnotationKindChange: (kind) => {
+    applyAnnotationKind(workspace, kind);
+  },
   onAnnotationLookChange: (look) => {
     applyAnnotationLook(workspace, look);
+  },
+  onAnnotationPin: (action) => {
+    applyAnnotationPin(workspace, action);
   },
   onAnnotationReverse: () => {
     applyAnnotationReverse(workspace);
@@ -89,10 +99,10 @@ export const annotationPanelHandlers = (
   onAnnotationStyleChange: (style) => {
     applyAnnotationStyle(workspace, style);
   },
+  onAnnotationZoomChange: (zoom) => {
+    applyAnnotationZoom(workspace, zoom);
+  },
   onAnnotationsDelete: () => {
     applyAnnotationsDelete(workspace);
-  },
-  onDrawingsClear: () => {
-    applyClearDrawings(workspace);
   },
 });

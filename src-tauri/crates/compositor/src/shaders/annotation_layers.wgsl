@@ -2,20 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // The editor's annotations in document order, the first at the bottom, each
-// covering everything under it. A magnifier's loupe shows everything below
-// it enlarged. The spotlights' one shared shade lies where the topmost of
-// them sits: it darkens the picture and every mark below it, and their blur
-// softens those marks as it softens the picture, whose blur the source
-// already carries. The marks' blur is a Gaussian laid by
-// `compositor/mark_blur.rs` into `annotation_blur_layer`, which a pass of this
-// shader draws by stopping under the shade. A highlight recolours the pixel
-// as everything under it drew it but the highlights, so overlapping
-// highlights merge rather than one recolouring the other into its inverse.
-//
-// WGSL has no recursion, so what lies under a loupe is drawn by its own
-// pass, a level down: the canvas (`composite_annotation_layers`) draws its
-// loupes through `annotation_loupe_content`, which draws the loupes inside it
-// with the picture alone.
+// covering everything under it. A lens shows everything below it enlarged.
+// The spotlights' one shared shade lies where the topmost of them sits: it
+// darkens the picture and every mark below it, and their blur softens those
+// marks as it softens the picture, whose blur the source already carries.
+// The marks' blur is a Gaussian laid by `compositor/mark_blur.rs` into
+// `annotation_blur_layer`, which a pass of this shader draws by stopping
+// under the shade. A highlight recolours the pixel as everything under it
+// drew it but the highlights, so overlapping highlights merge rather than
+// one recolouring the other into its inverse. Each lens is drawn by
+// `annotation_lens.wgsl`, which shows what lies under it.
 
 /// A pixel as drawn so far, premultiplied, and the same drawn without the
 /// highlights once one has reached it, which is what a highlight recolours.
@@ -111,7 +107,7 @@ fn annotation_stack_shaded(stack_in: AnnotationStack, base: vec4<f32>, point: ve
 
 /// The cursor over `rgba` at `point`, as `[first, last)` treat it: lying on
 /// the picture, so darkened by the spotlights' shade and hidden by every
-/// loupe, but drawn over every mark. `[0, shade_last)` holds the spotlights
+/// lens, but drawn over every mark. `[0, shade_last)` holds the spotlights
 /// whose shade it lies under here, none where the shade is laid in a later
 /// run, which darkens it there. `pixel` is one drawn pixel there.
 fn annotation_stack_cursor(rgba: vec4<f32>, point: vec2<f32>, first: u32, last: u32,
@@ -123,54 +119,15 @@ fn annotation_stack_cursor(rgba: vec4<f32>, point: vec2<f32>, first: u32, last: 
   pointer = vec4<f32>(pointer.rgb * (1.0 - annotation_spotlight_dim *
       annotation_spotlight_cover(point, 0u, shade_last, feather, false)), pointer.a);
   var hidden = 0.0;
-  for (var loupe = annotation_next(point, first, last); loupe < last;
-       loupe = annotation_next(point, loupe + 1u, last)) {
+  for (var lens = annotation_next(point, first, last); lens < last;
+       lens = annotation_next(point, lens + 1u, last)) {
     if (annotation_kind_drawn(annotation_magnify_kind) &&
-        annotation_arrows[loupe].kind == annotation_magnify_kind) {
-      hidden = max(hidden, annotation_magnify_cover(annotation_arrows[loupe], point, feather));
+        annotation_arrows[lens].kind == annotation_magnify_kind) {
+      hidden = max(hidden, annotation_magnify_cover(annotation_arrows[lens], point, feather));
     }
   }
   pointer.a *= 1.0 - hidden;
   return vec4<f32>(mix(rgba.rgb, pointer.rgb, pointer.a), pointer.a + rgba.a * (1.0 - pointer.a));
-}
-
-/// What a loupe shows at canvas point `point` of its zoom area, premultiplied:
-/// the picture and `[first, last)`, everything below the magnifier, shaded and
-/// blurred as the canvas draws them, and the cursor where `cursor` says the
-/// layer carries it. A loupe over the camera shows the camera too, laid
-/// between the annotations under it and those over it as the canvas lays it.
-/// One loupe pixel spans `span` canvas pixels there, and `feather` is half of
-/// the smaller.
-fn annotation_loupe_content(point: vec2<f32>, span: vec2<f32>, first: u32, last: u32,
-                            feather: f32, number_atlas: AnnotationTextAtlas, cursor: bool)
-    -> vec4<f32> {
-  let picture = annotation_magnify_sample(point, span);
-  let base = vec4<f32>(picture.rgb * picture.a, picture.a);
-  let shade_at = annotation_shade_at(point, first, last);
-  let camera_at = annotation_camera_run();
-  var stack = AnnotationStack(base, base, false);
-  // The camera lies under the annotation at `camera_at`, so under the
-  // magnifier itself when that is the magnifier.
-  var camera_laid = camera_at > last;
-  for (var index = annotation_next(point, first, last); index < last;
-       index = annotation_next(point, index + 1u, last)) {
-    if (!camera_laid && index >= camera_at) {
-      stack = annotation_stack_camera(stack, point);
-      camera_laid = true;
-    }
-    if (index == shade_at) {
-      stack = annotation_stack_shaded(stack, base, point, first, index, last, feather);
-    }
-    stack = annotation_stack_draw(stack, annotation_arrows[index], point, feather, number_atlas,
-                                  cursor);
-  }
-  if (!camera_laid) {
-    stack = annotation_stack_camera(stack, point);
-  }
-  if (!cursor) {
-    return stack.rgba;
-  }
-  return annotation_stack_cursor(stack.rgba, point, first, last, last, feather, 2.0 * feather);
 }
 
 /// `stack` with the camera laid over it at `point`, both what is drawn and
@@ -180,62 +137,10 @@ fn annotation_stack_camera(stack: AnnotationStack, point: vec2<f32>) -> Annotati
                          annotation_camera_over(stack.bare, point), stack.highlighted);
 }
 
-/// What one placed loupe shows at `probe` of everything in `[0, last)`.
-fn annotation_loupe_at(shape: PreviewGeometry, probe: vec2<f32>, last: u32, feather: f32,
-                       number_atlas: AnnotationTextAtlas, cursor: bool) -> vec4<f32> {
-  if (annotation_magnify_inside(shape, probe, feather) <= 0.0) {
-    return vec4<f32>(0.0);
-  }
-  let shrink = annotation_magnify_shrink(shape);
-  return annotation_loupe_content(annotation_magnify_seen_at(shape, probe),
-                                  shrink * feather * 2.0, 0u, last,
-                                  feather * min(shrink.x, shrink.y), number_atlas, cursor);
-}
-
-/// Lays the magnifier at `index` over `stack`, its loupe showing everything
-/// below it. Under the camera, the loupe shows what the camera covers, the
-/// annotations under it too; over it, the camera as the canvas draws it. One
-/// that moved while the shutter was open is drawn whole at every exposure
-/// sample, as `annotation_magnify_layer` draws it.
-fn annotation_stack_magnifier(stack: AnnotationStack, index: u32, point: vec2<f32>,
-                              feather: f32, number_atlas: AnnotationTextAtlas, cursor: bool)
-    -> AnnotationStack {
-  let magnifier = annotation_arrows[index];
-  let color = annotation_color(magnifier);
-  let halo = max(magnifier.hover, 0.0);
-  let taps = max(magnifier.sample_count, 1u);
-  var rgba = vec4<f32>(0.0);
-  var bare = vec4<f32>(0.0);
-  for (var tap = 0u; tap < taps; tap++) {
-    var shape = magnifier.geometry;
-    var tint = color;
-    if (magnifier.sample_count > 0u) {
-      let sample = annotation_samples[magnifier.sample_first + tap];
-      shape = sample.geometry;
-      tint = vec4<f32>(color.rgb, color.a * sample.opacity);
-    }
-    let content = annotation_loupe_at(shape, point, index, feather, number_atlas, cursor);
-    let sides = select(1u, 2u, stack.highlighted);
-    for (var side = 0u; side < sides; side++) {
-      let drawn = annotation_magnify_draw(select(stack.rgba, stack.bare, side == 1u), shape,
-                                          tint, magnifier.flags, point, feather, halo, content);
-      if (side == 0u) {
-        rgba += drawn;
-      } else {
-        bare += drawn;
-      }
-    }
-    if (!stack.highlighted) {
-      bare = rgba;
-    }
-  }
-  return AnnotationStack(rgba / f32(taps), bare / f32(taps), stack.highlighted);
-}
-
 /// Draws the prepared annotations in `[first, last)` over `rgba_in`, in
 /// document order, and last the cursor where `cursor` says this layer carries
 /// it: over every mark, but lying on the picture, so the spotlights' shade
-/// darkens it, their blur softens it, and a loupe hides it. `base` is the
+/// darkens it, their blur softens it, and a lens hides it. `base` is the
 /// canvas at `canvas_point` before any annotation. The pass that draws the
 /// mark blur's layer stops under the shade the layer is for, and answers the
 /// pixel as drawn there.
@@ -263,8 +168,7 @@ fn composite_annotation_layers(rgba_in: vec4<f32>, base: vec4<f32>, canvas_point
     let annotation = annotation_arrows[index];
     if (annotation_kind_drawn(annotation_magnify_kind) &&
         annotation.kind == annotation_magnify_kind) {
-      stack = annotation_stack_magnifier(stack, index, canvas_point, feather, number_atlas,
-                                         cursor);
+      stack = annotation_stack_magnifier(stack, index, canvas_point, feather);
     } else {
       stack = annotation_stack_draw(stack, annotation, canvas_point, feather, number_atlas,
                                     cursor);

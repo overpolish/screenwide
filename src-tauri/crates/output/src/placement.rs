@@ -68,14 +68,19 @@ pub fn output_placement(
   let mut crop_y = settings.crop_y.round() as i32;
   let image_x = settings.image_x;
   let image_y = settings.image_y;
-  let source_crop_x = image_x + f64::from(image_width) * source_crop.x;
-  let source_crop_y = image_y + f64::from(image_height) * source_crop.y;
-  let source_crop_width = (f64::from(image_width) * source_crop.width)
-    .round()
-    .max(1.0) as u32;
-  let source_crop_height = (f64::from(image_height) * source_crop.height)
-    .round()
-    .max(1.0) as u32;
+  let source = [
+    image_x + f64::from(image_width) * source_crop.x,
+    image_y + f64::from(image_height) * source_crop.y,
+    f64::from(image_width) * source_crop.width,
+    f64::from(image_height) * source_crop.height,
+  ];
+  // A scene that pads its box shows the picture only in the window it
+  // padded; the rest of the crop is the inset colour.
+  let [source_crop_x, source_crop_y, source_width, source_height] = settings
+    .scene_window
+    .map_or(source, |window| windowed(source, window));
+  let source_crop_width = source_width.round().max(1.0) as u32;
+  let source_crop_height = source_height.round().max(1.0) as u32;
   // Preview scaling can round otherwise coincident frame/source edges apart.
   let image_left = image_x.round() as i32;
   let image_top = image_y.round() as i32;
@@ -107,4 +112,15 @@ pub fn output_placement(
     source_crop_x: source_crop_x.round() as i32,
     source_crop_y: source_crop_y.round() as i32,
   })
+}
+
+/// `source`, a left, top, width and height, cut to what of it lies inside
+/// `window`; a source wholly outside it keeps no width or height, at the
+/// window's nearest edge.
+fn windowed(source: [f64; 4], window: [f64; 4]) -> [f64; 4] {
+  let left = source[0].max(window[0]);
+  let top = source[1].max(window[1]);
+  let right = (source[0] + source[2]).min(window[0] + window[2]);
+  let bottom = (source[1] + source[3]).min(window[1] + window[3]);
+  [left, top, (right - left).max(0.0), (bottom - top).max(0.0)]
 }

@@ -53,9 +53,12 @@ pub struct RecordingWorkspaceLayer<'a> {
 
 impl WorkspaceScene {
   /// Stages a recording's layers, each its own pane's.
-  pub fn stage_recording(&self, layers: &[RecordingWorkspaceLayer<'_>]) -> Result<(), String> {
+  pub fn stage_recording<'a>(
+    &self,
+    layers: impl IntoIterator<Item = &'a RecordingWorkspaceLayer<'a>>,
+  ) -> Result<(), String> {
     let staged = layers
-      .iter()
+      .into_iter()
       .map(|layer| StagedLayer {
         pane_index: layer.pane_index,
         layer_id: layer.pane_index,

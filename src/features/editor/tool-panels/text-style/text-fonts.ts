@@ -59,26 +59,26 @@ const nearestWeight = (weights: number[], wanted: number) =>
 const weightName = (weight: number, italic: boolean) => {
   const names = italic
     ? [
-        () => t("editor-panels-text-weight-thin-italic"),
-        () => t("editor-panels-text-weight-extra-light-italic"),
-        () => t("editor-panels-text-weight-light-italic"),
-        () => t("editor-panels-text-weight-regular-italic"),
-        () => t("editor-panels-text-weight-medium-italic"),
-        () => t("editor-panels-text-weight-semibold-italic"),
-        () => t("editor-panels-text-weight-bold-italic"),
-        () => t("editor-panels-text-weight-extra-bold-italic"),
-        () => t("editor-panels-text-weight-black-italic"),
+        () => t("editor-island-text-weight-thin-italic"),
+        () => t("editor-island-text-weight-extra-light-italic"),
+        () => t("editor-island-text-weight-light-italic"),
+        () => t("editor-island-text-weight-regular-italic"),
+        () => t("editor-island-text-weight-medium-italic"),
+        () => t("editor-island-text-weight-semibold-italic"),
+        () => t("editor-island-text-weight-bold-italic"),
+        () => t("editor-island-text-weight-extra-bold-italic"),
+        () => t("editor-island-text-weight-black-italic"),
       ]
     : [
-        () => t("editor-panels-text-weight-thin"),
-        () => t("editor-panels-text-weight-extra-light"),
-        () => t("editor-panels-text-weight-light"),
-        () => t("editor-panels-text-weight-regular"),
-        () => t("editor-panels-text-weight-medium"),
-        () => t("editor-panels-text-weight-semibold"),
-        () => t("editor-panels-text-weight-bold"),
-        () => t("editor-panels-text-weight-extra-bold"),
-        () => t("editor-panels-text-weight-black"),
+        () => t("editor-island-text-weight-thin"),
+        () => t("editor-island-text-weight-extra-light"),
+        () => t("editor-island-text-weight-light"),
+        () => t("editor-island-text-weight-regular"),
+        () => t("editor-island-text-weight-medium"),
+        () => t("editor-island-text-weight-semibold"),
+        () => t("editor-island-text-weight-bold"),
+        () => t("editor-island-text-weight-extra-bold"),
+        () => t("editor-island-text-weight-black"),
       ];
   const hundred = Math.min(Math.max(Math.round(weight / 100), 1), 9);
   return names[hundred - 1]();
@@ -118,7 +118,7 @@ export function useFontChoices(
   extra: FontFamily[] = NO_FAMILIES,
 ): FontChoice[] {
   const installed = useFontFamilies();
-  const builtIn = t("editor-panels-text-font-built-in");
+  const builtIn = t("editor-island-text-font-built-in");
   return useMemo(
     () => [
       {

@@ -24,10 +24,13 @@ import { ToolPanelScene } from "./tool-panel-scene";
 import {
   ToolPanelAnnotation,
   ToolPanelSelection,
+  ToolPanelSoundTrack,
 } from "./tool-panel-selection";
+import { ToolPanelStripItem, ToolPanelTrack } from "./tool-panel-strip";
 import { ToolPanelTranscript } from "./tool-panel-transcript";
 
 import type { RecordingCaptions } from "../../../bindings/RecordingCaptions";
+import type { CropAspect } from "../island/crop-aspect-choice";
 
 /**
  * What the frame panel shows: the output canvas the workspace renders into,
@@ -42,31 +45,27 @@ export type {
   ToolPanelCameraObjects,
   ToolPanelLayerSelection,
   ToolPanelMicrophone,
-  ToolPanelModel,
+  ToolPanelSoundTrack,
 } from "./tool-panel-selection";
 
-/**
- * What the crop panel shows: the visible rectangle of the source, in source
- * pixels, and the whole source it is cut from - which is what a reset puts it
- * back to.
- */
+/** What the crop panel shows: the shape the crop keeps as its handles are
+ * dragged, and whether a free crop has been drawn whose shape can be
+ * locked. */
 export type ToolPanelCrop = {
-  height: number;
-  sourceHeight: number;
-  sourceWidth: number;
-  width: number;
+  aspect: CropAspect;
+  canLock: boolean;
 };
 
 /**
- * Everything the tool panels show that the editor window owns.
+ * Everything the islands show that the editor window owns.
  *
- * One snapshot per workspace, published by the editor and read by the panel
- * window. Later panels add their own fields here: the keyboard, camera, audio
- * and background settings each arrive as more keys, not another mirror.
+ * One snapshot per workspace, published by the editor and read by its island
+ * window. A new island's settings arrive as more keys here, not another
+ * mirror.
  */
 export type ToolPanelSnapshot = {
   /** The annotation the preview has in hand, or null while it has none. Unlike
-   * every other panel, the arrow panel follows this rather than a tool. */
+   * every other island, a pen's follows this rather than a tool. */
   annotation: ToolPanelAnnotation | null;
   /** Colours of your own the annotation tools were given, newest last. */
   annotationColors: string[];
@@ -80,8 +79,6 @@ export type ToolPanelSnapshot = {
   backgroundPresets: BackgroundPreset[];
   /** One video or separate files; null where there is no choice to make. */
   cameraOutput: CameraOutput | null;
-  /** Whether the picture being edited has any stroke to clear. */
-  canClearDrawings: boolean;
   /** Whether any shortcut deleted from the timeline can be brought back. */
   canRestoreShortcuts: boolean;
   /** Null until the workspace has a source to cut a crop out of. */
@@ -90,7 +87,6 @@ export type ToolPanelSnapshot = {
   /** Null until the workspace has an output canvas to size. */
   frame: ToolPanelFrame | null;
   hasCursorData: boolean;
-  hasKeyboardData: boolean;
   /** A save runs or a sheet stands over the editor: the panels stay up, and
    * every control in them is disabled. */
   isLocked: boolean;
@@ -106,10 +102,22 @@ export type ToolPanelSnapshot = {
   /** The recording's captions, with the defaults for whatever is unset,
    * where it has a microphone to caption; absent or null otherwise. */
   captions?: RecordingCaptions | null;
+  /** How many shortcuts are chosen in the strip's shortcut lane, for the
+   * Keyboard island to delete; absent or 0 where none are. */
+  chosenShortcuts?: number;
+  /** Every recorded audio track, for the Sound island; absent or empty
+   * where there is none. */
+  soundTracks?: ToolPanelSoundTrack[];
+  /** What is chosen on the recording's strip, where it has an island;
+   * absent or null otherwise. */
+  stripItem?: ToolPanelStripItem | null;
   /** The templates text and captions are dressed in, each with the default
    * saved for it, and which new captions start from; absent or null until
    * they are known. */
   textTemplates?: TextTemplates | null;
+  /** Every recorded track, video then audio, for the Tracks island; absent
+   * or empty where there is none. */
+  tracks?: ToolPanelTrack[];
   /** The recording's transcript, where it has a microphone to transcribe;
    * absent or null otherwise. */
   transcript?: ToolPanelTranscript | null;
@@ -133,14 +141,12 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   background: { color: "#171717", kind: "solid" },
   backgroundPresets: [],
   cameraOutput: null,
-  canClearDrawings: false,
   canRestoreShortcuts: false,
   captions: null,
   crop: null,
   cursorEffects: DEFAULT_CURSOR_EFFECTS,
   frame: null,
   hasCursorData: false,
-  hasKeyboardData: false,
   isLocked: false,
   keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
   scene: null,

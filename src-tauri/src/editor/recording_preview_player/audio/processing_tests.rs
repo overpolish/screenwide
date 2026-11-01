@@ -54,7 +54,6 @@ fn plays_a_processed_track_from_its_own_file_at_the_same_place() {
       playback_rate: 1.0,
     }],
     &config,
-    1.0,
   )
   .join(" ");
 

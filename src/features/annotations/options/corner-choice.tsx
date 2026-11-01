@@ -28,10 +28,12 @@ const LOOKS = [
  * presets close together still read apart at a glyph's size. */
 type Corner = { readonly glyph: number; readonly radius: number };
 
-/** How round a box's corners are. A radius set to another value elsewhere
- * leaves no preset chosen until one is picked. `corners` are the three
- * looks, square to round, for a box that wants other radii than a shape's,
- * such as a whole picture, which a quarter would round too far. */
+/** How round a box's corners are: the only way to set a radius, as nothing
+ * on the picture drags one. A radius at another value - one a saved project
+ * kept from when its corner could be dragged - leaves no preset chosen until
+ * one is picked. `corners` are the three looks, square to round, for a box
+ * that wants other radii than a shape's, such as a whole picture, which a
+ * quarter would round too far. */
 export function CornerChoice({
   corners = ANNOTATION_CORNERS,
   onChange,

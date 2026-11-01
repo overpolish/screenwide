@@ -21,7 +21,7 @@ pub(crate) enum PreviewBinding {
   Sampler,
 }
 
-pub(crate) const PREVIEW_BINDINGS: [PreviewBinding; 18] = {
+pub(crate) const PREVIEW_BINDINGS: [PreviewBinding; 20] = {
   use PreviewBinding::*;
   [
     Uniform,
@@ -41,6 +41,10 @@ pub(crate) const PREVIEW_BINDINGS: [PreviewBinding; 18] = {
     Storage,
     Texture,
     Texture,
+    Texture,
+    // The layers under a lens: `compositor/lens_under.rs`.
+    Texture,
+    // What each lens shows: `compositor/lens_ground.rs`.
     Texture,
   ]
 };

@@ -117,15 +117,16 @@ pub enum AnnotationShape {
     #[serde(default)]
     smooth: bool,
   },
-  /// A loupe showing a zoom area enlarged. `start` is the zoom area's
-  /// top-left corner and `end` its bottom-right, in source pixels; `loupe` is
-  /// the loupe's centre and `size` its longer side, the zoom area's shape
-  /// scaled up to that.
+  /// A lens magnifying what lies under it, `zoom` times about its own
+  /// middle. `start` is its box's top-left corner and `end` its
+  /// bottom-right, in source pixels. A document written when a magnifier was
+  /// a zoom area and a loupe beside it is read into a lens over that zoom
+  /// area by `magnify::model::stored_lens`.
+  #[serde(deserialize_with = "super::magnify::model::stored_lens")]
   Magnify {
     start: AnnotationPoint,
     end: AnnotationPoint,
-    loupe: AnnotationPoint,
-    size: f64,
+    zoom: f64,
   },
   /// A picture of your own laid over the source.
   /// `center` is its middle and `size` its longer side, in source pixels;

@@ -83,7 +83,7 @@ export function useCaptionCanvasMenu(
   const openRef = useRef<(menu: CaptionWordMenu) => void>(() => undefined);
   const openMenu = usePopupMenu({
     idPrefix: "caption-canvas:",
-    label: t("editor-panels-captions-actions"),
+    label: t("editor-island-captions-actions"),
     mode: "menu",
     onSelect: (itemId) => {
       actRef.current(itemId as CaptionMenuAction);

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { padWithInsetColor } from "../../recenter-inset-channel";
 import { recordingSceneControls } from "../../recording/scenes/recording-scene-channel";
 import {
   nextSceneTemplateName,
@@ -30,14 +31,14 @@ export const scenePanelHandlers = (
   ToolPanelHandlers,
   | "onSceneAutoZoom"
   | "onSceneAutoZoomsClear"
-  | "onSceneCustomize"
   | "onSceneDelete"
   | "onSceneFramingChange"
-  | "onSceneFramingReset"
   | "onSceneFollowFaceChange"
+  | "onSceneInsetChange"
   | "onScenePanesSwap"
   | "onScenePresetChoose"
   | "onSceneRadiusChange"
+  | "onSceneRecenter"
   | "onSceneRotationChange"
   | "onSceneTemplateChoose"
   | "onSceneTemplateRemove"
@@ -50,20 +51,23 @@ export const scenePanelHandlers = (
   onSceneAutoZoomsClear: () => {
     recordingSceneControls(workspace)?.clearAutoZooms();
   },
-  onSceneCustomize: () => {
-    recordingSceneControls(workspace)?.customize();
-  },
   onSceneDelete: () => {
     recordingSceneControls(workspace)?.remove();
   },
   onSceneFollowFaceChange: (follow) => {
     recordingSceneControls(workspace)?.setFollowFace(follow);
   },
-  onSceneFramingChange: (framing) => {
-    recordingSceneControls(workspace)?.setFraming(framing);
+  onSceneFramingChange: (framing, pane) => {
+    recordingSceneControls(workspace)?.setFraming(framing, pane);
   },
-  onSceneFramingReset: () => {
-    recordingSceneControls(workspace)?.resetFraming();
+  // The pad is filled with the colour behind the recording's content, so
+  // the first pad asks for that colour if none was read yet.
+  onSceneInsetChange: (inset) => {
+    const setInset = () => {
+      recordingSceneControls(workspace)?.setInset(inset);
+    };
+    if (inset > 0) padWithInsetColor(workspace, setInset);
+    else setInset();
   },
   onScenePanesSwap: () => {
     recordingSceneControls(workspace)?.swapPanes();
@@ -73,6 +77,11 @@ export const scenePanelHandlers = (
   },
   onSceneRadiusChange: (radius) => {
     recordingSceneControls(workspace)?.setRadius(radius);
+  },
+  onSceneRecenter: () => {
+    padWithInsetColor(workspace, () => {
+      recordingSceneControls(workspace)?.recenterScreen();
+    });
   },
   onSceneRotationChange: (rotation) => {
     recordingSceneControls(workspace)?.setRotation(rotation);

@@ -126,6 +126,8 @@ export function Spring({
         isSelected ? "z-10" : isNarrow && "z-[5]",
         isLifted && LIFTED,
       )}
+      // Chosen, its island stands over it (`use-editor-island-window.ts`).
+      data-strip-island={isSelected ? "" : undefined}
       onClick={onPress}
       onDoubleClick={() => {
         onPlayChange({ kind: play.kind === "keep" ? "squeeze" : "keep" });

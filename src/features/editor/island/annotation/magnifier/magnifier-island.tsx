@@ -10,25 +10,33 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
+
+import { LensZoomChoice } from "./lens-zoom-choice";
 
 import type { EditorIslandContent } from "../../editor-island";
 
-// A magnifier on the picture, in hand: a zoom area and the glass lens that
-// shows it larger. Its row ends with whether the lens grows out of its zoom
-// area as it arrives, which only a recording has a clip for, and deleting
-// it. Under the row, only the corners both round. The lens is glass: its
-// depth and its edge come from the material, refraction, highlight and its
-// own soft shadow, so neither a shadow nor a rim colour is offered; how big
-// it shows is how big the lens is dragged.
+// A lens on the picture, in hand: glass that shows what lies under its
+// middle larger. Its row ends with whether it grows in as it arrives, which
+// only a recording has a clip for, and deleting it. Under the row, how many
+// times it enlarges and then how round its corners are, as looks. The lens
+// is glass: its depth and its edge come from the material, refraction,
+// highlight and its own soft shadow, so neither a shadow nor a rim colour is
+// offered; how much it shows is how big the lens is dragged.
 
 type MagnifierStyle = {
   isAnimated: boolean;
-  /** How round the zoom area and the lens are, as a percentage of their
-   * shorter sides. */
+  /** How round the lens is, as a percentage of its shorter side. */
   radius: number;
+  /** How many times it enlarges. */
+  zoom: number;
 };
 
-export type MagnifierIslandProps = {
+export type MagnifierIslandProps = AnnotationPinProps & {
   /** Whether it can grow in: a recording's annotations can, a
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
@@ -46,6 +54,7 @@ export function magnifierIsland(
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -60,14 +69,23 @@ export function magnifierIsland(
     anchor: "end",
     key: `magnifier-${id}`,
     section: (
-      <AnnotationLine>
-        <CornerChoice
-          onChange={(radius) => {
-            onStyleChange({ radius });
-          }}
-          value={style.radius}
-        />
-      </AnnotationLine>
+      <div className="flex flex-col gap-separate">
+        <AnnotationLine>
+          <LensZoomChoice
+            onChange={(zoom) => {
+              onStyleChange({ zoom });
+            }}
+            value={style.zoom}
+          />
+          <CornerChoice
+            onChange={(radius) => {
+              onStyleChange({ radius });
+            }}
+            value={style.radius}
+          />
+        </AnnotationLine>
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+      </div>
     ),
     title: (
       <IslandRowTitle

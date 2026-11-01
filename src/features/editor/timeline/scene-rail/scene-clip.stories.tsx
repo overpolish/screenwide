@@ -8,7 +8,7 @@ import { StoryGrid, StoryGridRow } from "../../../../storybook/story-grid";
 import { recordedTime, timelineScale } from "../timeline-scale";
 
 import { SceneClip, type SceneClipProps } from "./scene-clip";
-import { storyScene } from "./scene-story-fixtures";
+import { storyScene, turnedStoryScene } from "./scene-story-fixtures";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
@@ -97,11 +97,13 @@ export const Widths: Story = {
   ),
 };
 
+// Every layout, drawn as the Scene island's tiles draw it, at rest, chosen,
+// and with the screen turned in depth.
 export const Layouts: Story = {
-  decorators: [featureStage({ width: 480 })],
+  decorators: [featureStage({ width: 720 })],
   parameters: { controls: { disable: true } },
   render: (args) => (
-    <StoryGrid columns={["Rest", "Selected"]}>
+    <StoryGrid columns={["Rest", "Selected", "Turned"]}>
       {(
         [
           "split-two-thirds",
@@ -109,17 +111,23 @@ export const Layouts: Story = {
           "picture-in-picture",
           "camera-only",
           "screen-only",
+          "custom",
         ] as const
-      ).map((preset) => {
-        const scene = storyScene(preset, preset, { end: 18, start: 0 });
+      ).map((layout) => {
+        const scene = storyScene(layout, layout, { end: 18, start: 0 });
+        const turned = turnedStoryScene(scene);
         return (
-          <StoryGridRow key={preset} label={scene.name}>
-            {[false, true].map((isSelected) => (
+          <StoryGridRow key={layout} label={scene.name}>
+            {[
+              { isSelected: false, key: "rest", scene },
+              { isSelected: true, key: "selected", scene },
+              { isSelected: false, key: "turned", scene: turned },
+            ].map((state) => (
               <Fitted
-                key={String(isSelected)}
+                key={state.key}
                 {...args}
-                isSelected={isSelected}
-                scene={scene}
+                isSelected={state.isSelected}
+                scene={state.scene}
                 seconds={18}
               />
             ))}

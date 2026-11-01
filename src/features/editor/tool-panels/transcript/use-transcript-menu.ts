@@ -42,14 +42,14 @@ const markItems = (marked: TranscriptMenuMark | null): PopupPanelItem[] => {
     {
       icon: "trash",
       id: "remove-same",
-      label: t("editor-panels-transcript-remove-same", { text: marked.text }),
+      label: t("editor-island-transcript-remove-same", { text: marked.text }),
     },
     {
       icon: "trash",
       id: "remove-kind",
       label: isFiller
-        ? t("editor-panels-transcript-remove-fillers")
-        : t("editor-panels-transcript-remove-profanity"),
+        ? t("editor-island-transcript-remove-fillers")
+        : t("editor-island-transcript-remove-profanity"),
     },
     ...(isFiller
       ? []
@@ -57,13 +57,13 @@ const markItems = (marked: TranscriptMenuMark | null): PopupPanelItem[] => {
           {
             icon: "allow" as const,
             id: "not-profanity",
-            label: t("editor-panels-transcript-not-profanity"),
+            label: t("editor-island-transcript-not-profanity"),
           },
         ]),
   ];
   const section = isFiller
-    ? t("editor-panels-transcript-fillers")
-    : t("editor-panels-transcript-profanity");
+    ? t("editor-island-transcript-fillers")
+    : t("editor-island-transcript-profanity");
   return items.map((item) => ({ ...item, section }));
 };
 
@@ -79,7 +79,7 @@ const items = (
         {
           icon: "edit" as const,
           id: "edit",
-          label: t("editor-panels-transcript-edit"),
+          label: t("editor-island-transcript-edit"),
           shortcut: "Enter",
         },
       ]
@@ -89,7 +89,7 @@ const items = (
         {
           icon: "trash" as const,
           id: "delete",
-          label: t("editor-panels-transcript-remove"),
+          label: t("editor-island-transcript-remove"),
           shortcut: "Backspace",
         },
       ]
@@ -99,7 +99,7 @@ const items = (
         {
           icon: "restore" as const,
           id: "restore",
-          label: t("editor-panels-transcript-restore"),
+          label: t("editor-island-transcript-restore"),
           shortcut: "Shift+Backspace",
         },
       ]
@@ -109,7 +109,7 @@ const items = (
         {
           icon: "spelling" as const,
           id: "spelling",
-          label: t("editor-panels-transcript-restore-spelling"),
+          label: t("editor-island-transcript-restore-spelling"),
         },
       ]
     : []),
@@ -122,8 +122,8 @@ const sceneItems = (scenes: TranscriptSceneMenu | null): PopupPanelItem[] => {
   if (!scenes) return [];
   const section =
     scenes.type === "add"
-      ? t("editor-panels-transcript-add-scene")
-      : t("editor-panels-transcript-change-scene");
+      ? t("editor-island-transcript-add-scene")
+      : t("editor-island-transcript-change-scene");
   return scenes.options.map((option) => ({
     icon: "scene",
     id: `${SCENE_PREFIX}${option.id}`,
@@ -143,7 +143,7 @@ export function useTranscriptMenu(
 ) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: t("editor-panels-transcript-actions"),
+    label: t("editor-island-transcript-actions"),
     mode: "menu",
     onSelect: (itemId, context) => {
       const [first, last] = context.split("-").map(Number);

@@ -36,14 +36,21 @@ it("chooses the annotations again when select is put down and taken back up", ()
 
 it("keeps them through other tools taken up in between", () => {
   Rendered("a")("select", "pen");
-  Rendered()("pen", "crop");
-  Rendered()("crop", "select");
+  Rendered()("pen", "marquee");
+  Rendered()("marquee", "select");
   expect(choose).toHaveBeenCalledExactlyOnceWith(["a"]);
 });
 
 it("never puts them back over a choice made in the meantime", () => {
   Rendered("a")("select", null);
   Rendered("b")(null, "select");
+  expect(choose).not.toHaveBeenCalled();
+});
+
+it("lets them go for good once a mode is taken up", () => {
+  Rendered("a")("select", "pen");
+  Rendered()("pen", "scene", true);
+  Rendered()("scene", "select");
   expect(choose).not.toHaveBeenCalled();
 });
 

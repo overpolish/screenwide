@@ -5,6 +5,9 @@ import { ISLAND, type IslandAnchor, type IslandNotch } from "./island-geometry";
 
 type Size = { height: number; width: number };
 
+/** What an island that shrinks to nothing shrinks to. */
+const NOTHING: Size = { height: 0, width: 0 };
+
 /** Where every part of the island goes, from what it holds: the row's and
  * section's measured sizes, where the section hangs, and the notch. Pure, so
  * the shape can be worked out the same way every render and animated to. */
@@ -16,6 +19,7 @@ export function islandLayout({
   reach = 0,
   rowSize,
   sectionSize,
+  shrinksToNothing = false,
   spansRow = false,
 }: {
   anchor: IslandAnchor;
@@ -28,11 +32,14 @@ export function islandLayout({
    * reaches past the row rather than widening it: at the start where the
    * section hangs from the end, at the end elsewhere. */
   reach?: number;
+  /** Hidden where there is no notch, it shrinks to nothing rather than to
+   * a speck. */
+  shrinksToNothing?: boolean;
   /** Every section takes at least the row's width, so the island is one
    * block whatever it holds, rather than a narrower section hanging off. */
   spansRow?: boolean;
 }) {
-  const hidden = notch ?? ISLAND.speck;
+  const hidden = notch ?? (shrinksToNothing ? NOTHING : ISLAND.speck);
   // Laid out at the row's measured size, which is kept while hidden, so a
   // section folds into and opens out of the same place.
   const rowOpen = rowSize ?? hidden;
@@ -87,7 +94,9 @@ export function islandLayout({
       : ISLAND.radius
     : notch
       ? ISLAND.hiddenNotchRadius
-      : ISLAND.hiddenRadius;
+      : shrinksToNothing
+        ? 0
+        : ISLAND.hiddenRadius;
   return {
     closed,
     /** Under a notch, how far the top flares out into the screen's edge. */

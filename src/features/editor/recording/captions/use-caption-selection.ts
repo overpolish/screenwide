@@ -40,6 +40,7 @@ export function useCaptionSelection({
   useEditorWindowShortcuts({
     onDelete: onChange && hasSelection ? deleteSelected : undefined,
     onDeselect: hasSelection ? selection.onClear : undefined,
+    onDeselectAll: hasSelection ? selection.onClear : undefined,
   });
   return selection;
 }

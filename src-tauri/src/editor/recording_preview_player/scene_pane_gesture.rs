@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The select gestures that edit the scene under the playhead pane by pane:
-//! a custom scene's boxes moved and resized, any scene's corner radii, and
-//! the screen turned with the rotation gizmo.
+//! a custom scene's boxes moved and resized, and the screen turned with the
+//! rotation gizmo.
 
 use super::{PreviewCompositionSettings, PreviewPlayerManager};
 use screenwide_export::scenes::camera_target;
 use screenwide_scenes::model::{SceneBox, SceneBoxes};
-use screenwide_scenes::{RecordingSceneClip, RecordingScenePreset, SceneRadius, SceneRotation};
+use screenwide_scenes::{RecordingSceneClip, RecordingScenePreset, SceneRotation};
 use screenwide_workspace::editing::SelectionGestureOperation;
 
 /// The index of the clip `timeline_ms` falls in.
@@ -25,13 +25,14 @@ fn clip_at(clips: &[RecordingSceneClip], timeline_ms: u64) -> Option<usize> {
 /// composition puts it in, which makes the scene custom as the panel's Custom
 /// does. `None` where the clip there is neither; `Some(None)` for a pane its
 /// boxes do not place, whose gestures stay the recording's own. `delta` is in
-/// shares of the canvas, as the boxes are.
+/// shares of the `canvas`, as the boxes are; the screen's is measured on its
+/// box padded by the scene's inset, where its handles are drawn.
 pub(super) fn custom_box_gesture(
   clips: &[RecordingSceneClip],
   timeline_ms: u64,
   (bake_camera, composition): (bool, Option<SceneBox>),
   layer_id: u32,
-  (delta, scale): ((f64, f64), f64),
+  (delta, scale, canvas): ((f64, f64), f64, (f64, f64)),
 ) -> Option<Option<Vec<RecordingSceneClip>>> {
   let index = clip_at(clips, timeline_ms)?;
   let clip = &clips[index];
@@ -49,35 +50,16 @@ pub(super) fn custom_box_gesture(
   let mut next = clips.to_vec();
   let target = next[index].boxes.insert(boxes);
   match (layer_id, boxes.camera) {
-    (0, _) => target.screen = boxes.screen.moved(delta, scale),
+    (0, _) => {
+      let screen = boxes.screen;
+      let inset =
+        clip.inset.unwrap_or(0.0) * (screen.width * canvas.0).min(screen.height * canvas.1);
+      target.screen = screen.moved_padded(delta, scale, (inset / canvas.0, inset / canvas.1));
+    }
     (1, Some(camera)) if bake_camera => target.camera = Some(camera.moved(delta, scale)),
     _ => return Some(None),
   }
   Some(Some(next))
-}
-
-/// A corner radius dragged on a pane of the scene `timeline_ms` into the
-/// edited video: the clips with that scene's radius for the pane set to
-/// `radius` percent, held to what a radius can be. `None` for a pane no scene
-/// places, the camera as a pane of its own, whose radius stays the
-/// recording's.
-pub(super) fn radius_gesture(
-  clips: &[RecordingSceneClip],
-  timeline_ms: u64,
-  bake_camera: bool,
-  layer_id: u32,
-  radius: f64,
-) -> Option<Vec<RecordingSceneClip>> {
-  let index = clip_at(clips, timeline_ms)?;
-  let mut next = clips.to_vec();
-  let held = Some(radius.clamp(0.0, 50.0));
-  let scene = next[index].radius.get_or_insert_with(SceneRadius::default);
-  match layer_id {
-    0 => scene.screen = held,
-    1 if bake_camera => scene.camera = held,
-    _ => return None,
-  }
-  Some(next)
 }
 
 /// The screen turned to `rotation` with the rotation gizmo `timeline_ms` into
@@ -108,9 +90,9 @@ impl PreviewPlayerManager {
   /// zooms, which reframes the camera of the clip under the playhead. A turn
   /// of the rotation gizmo turns the screen in any scene. `clips` are the
   /// clips as the gesture found them, which its deltas are measured from.
-  /// `None` outside every scene and for the gestures a scene leaves as they
-  /// are, a corner radius or the canvas's frame; `Some(None)` for a gesture a
-  /// scene leaves with nothing to do; else the clips the gesture leaves.
+  /// `None` outside every scene and for the canvas's frame, which a scene
+  /// leaves as it is; `Some(None)` for a gesture a scene leaves with nothing
+  /// to do; else the clips the gesture leaves.
   pub(super) fn scene_gesture(
     &self,
     snapshot: &PreviewCompositionSettings,
@@ -121,9 +103,7 @@ impl PreviewPlayerManager {
   ) -> Option<Option<Vec<RecordingSceneClip>>> {
     let scale = match operation {
       SelectionGestureOperation::Move => 1.0,
-      SelectionGestureOperation::Resize
-      | SelectionGestureOperation::Radius
-      | SelectionGestureOperation::Rotate => scale,
+      SelectionGestureOperation::Resize | SelectionGestureOperation::Rotate => scale,
       _ => return None,
     };
     let sources = self.sources.as_ref()?;
@@ -142,10 +122,6 @@ impl PreviewPlayerManager {
       };
       return Some(rotation_gesture(clips, timeline_ms, layer_id, rotation));
     }
-    // A radius gesture reports the radius it reaches as its scale.
-    if operation == SelectionGestureOperation::Radius {
-      return radius_gesture(clips, timeline_ms, snapshot.bake_camera, layer_id, scale).map(Some);
-    }
     let output = &snapshot.recording_output.primary;
     // The gesture's deltas are shares of the canvas it was made on.
     let canvas = crate::editor::preview_workspace_model::output_canvas(output);
@@ -160,7 +136,7 @@ impl PreviewPlayerManager {
       timeline_ms,
       (snapshot.bake_camera, composition),
       layer_id,
-      (delta, scale),
+      (delta, scale, canvas),
     ) {
       return next.map(Some);
     }

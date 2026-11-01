@@ -17,16 +17,12 @@ impl WorkspaceEditor {
     }
   }
 
-  pub fn enable_editor(&self, callback: TransformCallback) {
-    if let Ok(mut callbacks) = self.inner.callbacks.lock() {
-      callbacks.transform = Some(callback);
-    }
+  pub fn enable_editor(&self) {
     if let Ok(mut state) = self.inner.state.lock() {
       state.editor_active = true;
       state.frame_resize = None;
       state.frame_resize_committed = false;
       state.move_auto_fit = None;
-      state.panel_fit_width = 0.0;
       state.workspace_transform = WorkspaceTransform::default();
       state.workspace_natural_size = None;
       state.workspace_transforms.clear();
@@ -45,33 +41,17 @@ impl WorkspaceEditor {
     }
   }
 
-  pub fn set_editor_zoom(&self, zoom_percent: f64) {
-    let mut changed_zoom = None;
-    if let Ok(mut state) = self.inner.state.lock() {
-      let zoom = (zoom_percent / 100.0).clamp(0.1, maximum_editor_zoom(&state));
-      if (state.workspace_transform.zoom - zoom).abs() > 0.0001 {
-        let ratio = zoom / state.workspace_transform.zoom;
-        state.workspace_transform.pan_x *= ratio;
-        state.workspace_transform.pan_y *= ratio;
-        state.workspace_transform.zoom = zoom;
-        apply_workspace_transform(&self.inner, &mut state, false);
-        changed_zoom = Some(zoom);
-      }
-    }
-    if let Some(zoom) = changed_zoom {
-      emit_transform(&self.inner, zoom);
-    }
-  }
-
   pub fn set_selection_callback(&self, callback: SelectionCallback) {
     if let Ok(mut callbacks) = self.inner.callbacks.lock() {
       callbacks.selection = Some(callback);
     }
   }
 
-  pub fn set_pointer_down_callback(&self, callback: PointerDownCallback) {
+  /// Hears of every press on the picture as it goes down, with whether it
+  /// took hold of something, and as it is let go.
+  pub fn set_pointer_press_callback(&self, callback: PointerPressCallback) {
     if let Ok(mut callbacks) = self.inner.callbacks.lock() {
-      callbacks.pointer_down = Some(callback);
+      callbacks.pointer_press = Some(callback);
     }
   }
 
@@ -117,13 +97,6 @@ impl WorkspaceEditor {
     }
   }
 
-  pub fn set_selection_visible(&self, visible: bool) {
-    if let Ok(mut state) = self.inner.state.lock() {
-      state.selection_visible = visible;
-      draw_selection(&self.inner, &state);
-    }
-  }
-
   /// The layers a press can land on. `hit_testing` lets a press pick and move
   /// them, as the select tool's do; without it they only say which picture a
   /// fresh annotation is drawn on. With no layers there is nothing to pick.
@@ -145,6 +118,7 @@ fn place_viewport(inner: &SurfaceInner, state: &SurfaceState, active: bool) {
   inner.host.place_viewport(
     (x, y, right - x, bottom - y),
     state.viewport,
+    state.viewport_corners,
     state.scale,
     state.backdrop,
     active,

@@ -7,12 +7,16 @@ use windows::Win32::{
   Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM},
   Graphics::Gdi::ScreenToClient,
   UI::{
-    Input::KeyboardAndMouse::{GetKeyState, ReleaseCapture, SetCapture, VK_MENU},
+    Input::KeyboardAndMouse::{
+      GetAsyncKeyState, GetKeyState, ReleaseCapture, SetCapture, VK_CONTROL, VK_LBUTTON,
+      VK_MBUTTON, VK_MENU,
+    },
     WindowsAndMessaging::{
-      DefWindowProcW, GetAncestor, GetForegroundWindow, SetForegroundWindow, GA_ROOT, HTCLIENT,
-      MA_NOACTIVATE, WM_CANCELMODE, WM_CAPTURECHANGED, WM_DESTROY, WM_LBUTTONDBLCLK,
-      WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE,
-      WM_MOUSEWHEEL, WM_NCHITTEST, WM_RBUTTONDOWN, WM_SETCURSOR,
+      DefWindowProcW, GetAncestor, GetCursorPos, GetForegroundWindow, PostMessageW,
+      SetForegroundWindow, WindowFromPoint, GA_ROOT, HTCLIENT, MA_NOACTIVATE, WM_CANCELMODE,
+      WM_CAPTURECHANGED, WM_DESTROY, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
+      WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_NCHITTEST,
+      WM_RBUTTONDOWN, WM_SETCURSOR,
     },
   },
 };
@@ -25,6 +29,34 @@ const MK_MBUTTON_MASK: usize = 0x0010;
 
 fn option_pressed() -> bool {
   (unsafe { GetKeyState(VK_MENU.0 as i32) }) < 0
+}
+
+/// Whether `key` is down now, read from any thread.
+fn key_down(key: u16) -> bool {
+  (unsafe { GetAsyncKeyState(i32::from(key)) }) < 0
+}
+
+/// Has the pointer, where it rests over `hwnd`, report a move again on the
+/// window's own thread, so what lies under it is measured afresh after a
+/// change of tool. Nothing while a button is down or it rests elsewhere.
+pub(super) fn hover_again(hwnd: HWND) {
+  if key_down(VK_LBUTTON.0) || key_down(VK_MBUTTON.0) {
+    return;
+  }
+  let mut at = POINT::default();
+  if unsafe { GetCursorPos(&mut at) }.is_err() || unsafe { WindowFromPoint(at) } != hwnd {
+    return;
+  }
+  if !unsafe { ScreenToClient(hwnd, &mut at) }.as_bool() {
+    return;
+  }
+  let control = if key_down(VK_CONTROL.0) {
+    MK_CONTROL_MASK
+  } else {
+    0
+  };
+  let position = (at.x as u16 as isize) | ((at.y as u16 as isize) << 16);
+  let _ = unsafe { PostMessageW(Some(hwnd), WM_MOUSEMOVE, WPARAM(control), LPARAM(position)) };
 }
 
 fn point(lparam: LPARAM) -> (f64, f64) {

@@ -38,7 +38,7 @@ export const gapMenuItems = (
         {
           icon: "remove" as const,
           id: "clear-break" as const,
-          label: t("editor-panels-captions-clear-split"),
+          label: t("editor-island-captions-clear-split"),
         },
       ]
     : gap === "join"
@@ -46,7 +46,7 @@ export const gapMenuItems = (
           {
             icon: "remove" as const,
             id: "clear-break" as const,
-            label: t("editor-panels-captions-remove-join"),
+            label: t("editor-island-captions-remove-join"),
           },
         ]
       : gap === "break"
@@ -54,7 +54,7 @@ export const gapMenuItems = (
             {
               icon: "caption-join" as const,
               id: "join" as const,
-              label: t("editor-panels-captions-join"),
+              label: t("editor-island-captions-join"),
             },
           ]
         : gap === "none"
@@ -62,7 +62,7 @@ export const gapMenuItems = (
               {
                 icon: "caption-split" as const,
                 id: "split" as const,
-                label: t("editor-panels-captions-split"),
+                label: t("editor-island-captions-split"),
               },
             ]
           : [];
@@ -88,7 +88,7 @@ export const captionMenuItems = ({
   {
     icon: "edit" as const,
     id: "edit" as const,
-    label: t("editor-panels-transcript-edit"),
+    label: t("editor-island-transcript-edit"),
     shortcut: "Enter",
   },
   ...(isCorrected
@@ -96,7 +96,7 @@ export const captionMenuItems = ({
         {
           icon: "spelling" as const,
           id: "restore-spelling" as const,
-          label: t("editor-panels-transcript-restore-spelling"),
+          label: t("editor-island-transcript-restore-spelling"),
         },
       ]
     : []),
@@ -105,13 +105,13 @@ export const captionMenuItems = ({
     ? {
         icon: "hide" as const,
         id: "hide" as const,
-        label: t("editor-panels-captions-hide-word"),
+        label: t("editor-island-captions-hide-word"),
         shortcut: "Backspace",
       }
     : {
         icon: "show" as const,
         id: "show" as const,
-        label: t("editor-panels-captions-show-word"),
+        label: t("editor-island-captions-show-word"),
         shortcut: "Backspace",
       },
   ...(isKeyWord === null
@@ -121,12 +121,12 @@ export const captionMenuItems = ({
           ? {
               icon: "key-word" as const,
               id: "not-key-word" as const,
-              label: t("editor-panels-captions-not-key-word"),
+              label: t("editor-island-captions-not-key-word"),
             }
           : {
               icon: "key-word" as const,
               id: "make-key-word" as const,
-              label: t("editor-panels-captions-make-key-word"),
+              label: t("editor-island-captions-make-key-word"),
             },
       ]),
 ];
@@ -138,7 +138,7 @@ export function useCaptionMenu(
 ) {
   const openMenu = usePopupMenu({
     idPrefix: MENU_PREFIX,
-    label: t("editor-panels-captions-actions"),
+    label: t("editor-island-captions-actions"),
     mode: "menu",
     onSelect: (itemId, context) => {
       onAction(itemId as CaptionMenuAction, Number(context));

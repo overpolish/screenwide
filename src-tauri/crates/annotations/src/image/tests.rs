@@ -24,6 +24,7 @@ fn a_press_drops_the_chosen_picture_and_the_drag_carries_it() {
   let fresh = FreshAnnotation {
     angle: Some(1.0),
     look: None,
+    zoom: None,
     image: Some(super::ImageArt {
       asset: PICTURE.to_owned(),
       aspect: 0.5,
@@ -79,6 +80,7 @@ fn a_press_before_any_picture_is_chosen_places_nothing() {
     angle: None,
     image: None,
     look: None,
+    zoom: None,
   };
   let mut annotations = Vec::new();
   let edit = AnnotationEdit::begin(
@@ -140,6 +142,7 @@ fn a_picture_of_its_own_lands_at_its_own_size_or_the_largest_that_fits() {
   let art = |pixels: f64, aspect: f64| FreshAnnotation {
     angle: None,
     look: None,
+    zoom: None,
     image: Some(super::ImageArt {
       asset: PICTURE.to_owned(),
       aspect,
@@ -309,24 +312,6 @@ fn a_turned_image_s_corner_sizes_it_from_its_own_opposite_corner() {
     (center.x - -50.0).abs() < 1e-9 && (center.y - 50.0).abs() < 1e-9,
     "{center:?}"
   );
-}
-
-#[test]
-fn a_turned_image_s_radius_dot_reads_along_its_own_diagonal() {
-  use crate::gesture::AnnotationHandle;
-  // A quarter turn: the picture's own top-left corner is at the top right,
-  // and its diagonal runs in towards the bottom left.
-  let (mut image, origin) = turned(std::f64::consts::FRAC_PI_2, point(50.0, -50.0));
-  let at = |image: &mut crate::Annotation, x: f64, y: f64| {
-    super::gesture::drag(image, AnnotationHandle::Radius, point(x, y), &origin, None);
-    image.style.radius
-  };
-  // Half the shorter side's travel in: the whole radius.
-  assert!((at(&mut image, 50.0 - 27.5, -50.0 + 27.5) - 50.0).abs() < 1e-9);
-  assert!((at(&mut image, 50.0 - 11.0, -50.0 + 11.0) - 20.0).abs() < 1e-9);
-  // Outside the corner, none; past the middle, no more than the whole.
-  assert_eq!(at(&mut image, 60.0, -60.0), 0.0);
-  assert_eq!(at(&mut image, -40.0, 40.0), 50.0);
 }
 
 #[test]

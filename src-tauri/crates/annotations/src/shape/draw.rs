@@ -45,9 +45,7 @@ impl super::AnnotationShape {
       }
       Self::Focus { start, end } => super::super::focus::native::draw_points(*start, *end, style),
       Self::Draw { points, .. } => super::super::freehand::native::draw_points(points),
-      Self::Magnify {
-        start, end, loupe, ..
-      } => super::super::magnify::native::draw_points(*start, *end, *loupe),
+      Self::Magnify { start, end, .. } => super::super::magnify::native::draw_points(*start, *end),
       Self::Image {
         center,
         size,
@@ -192,15 +190,10 @@ impl super::AnnotationShape {
         image_width,
         paths,
       ),
-      Self::Magnify {
-        start,
-        end,
-        loupe,
-        size,
-      } => super::super::magnify::handles::grips(
+      Self::Magnify { start, end, zoom } => super::super::magnify::handles::grips(
         *start,
         *end,
-        (*loupe, *size),
+        *zoom,
         style,
         index,
         source,
@@ -219,7 +212,6 @@ impl super::AnnotationShape {
         *angle,
         tilt.unwrap_or_default(),
         *aspect,
-        style.radius,
         index,
         source,
       ),

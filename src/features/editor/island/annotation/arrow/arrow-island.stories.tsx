@@ -10,6 +10,14 @@ import {
   editorIslandStoryMeta,
   type EditorIslandStoryProps,
 } from "../../editor-island-story-meta";
+import {
+  PIN_FOLLOWING,
+  PIN_OUT_OF_VIEW,
+  PIN_TRACKING,
+  PIN_UNSURE,
+  PIN_WITH_CORRECTIONS,
+  storyPinAfter,
+} from "../annotation-pin-story-fixtures";
 
 import { arrowIsland, type ArrowIslandProps } from "./arrow-island";
 
@@ -29,10 +37,12 @@ const meta = {
     id: "arrow",
     isShown: true,
     onDelete: fn(),
+    onPinAction: fn(),
     onRemoveColor: fn(),
     onReverse: fn(),
     onSaveColor: fn(),
     onStyleChange: fn(),
+    pin: null,
     savedColors: [],
     style: { color: "#FFCC00", head: "end", isAnimated: true, width: 12 },
   },
@@ -44,6 +54,10 @@ const meta = {
     return (
       <ArrowIsland
         {...args}
+        onPinAction={(action) => {
+          args.onPinAction?.(action);
+          updateArgs({ pin: storyPinAfter(args.pin, action) });
+        }}
         onRemoveColor={(color) => {
           args.onRemoveColor(color);
           updateArgs({
@@ -70,5 +84,24 @@ type Story = StoryObj<typeof meta>;
 
 export const Recording: Story = {};
 
-// A screenshot is one instant, so there is nothing to draw in over.
-export const Screenshot: Story = { args: { canAnimate: false } };
+// A screenshot is one instant, so there is nothing to draw in over, and no
+// content moving under it to pin to.
+export const Screenshot: Story = {
+  args: { canAnimate: false, pin: undefined },
+};
+
+export const PinnedFollowing: Story = { args: { pin: PIN_FOLLOWING } };
+
+// Where the content is out of view at the playhead, it can be said back.
+export const PinnedOutOfView: Story = { args: { pin: PIN_OUT_OF_VIEW } };
+
+export const PinnedWithCorrections: Story = {
+  args: { pin: PIN_WITH_CORRECTIONS },
+};
+
+// Where the tracker lost the content at the playhead, the note warns, so the
+// place is checked; the answers still apply.
+export const PinnedUnsure: Story = { args: { pin: PIN_UNSURE } };
+
+// The path is still being worked out.
+export const PinnedTracking: Story = { args: { pin: PIN_TRACKING } };

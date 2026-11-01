@@ -38,11 +38,14 @@ pub trait Host: Any + Send + Sync {
   /// Lays the window's editing surface over the viewport: `frame` in
   /// physical pixels - x, y, width, height - from the window's content
   /// corner, and `rect` in logical points at `scale`. The backstop takes
-  /// `backdrop`'s place and colour; `active` shows the input surface.
+  /// `backdrop`'s place and colour; `active` shows the input surface. The
+  /// backstop, the workspace and the chrome are clipped to `corners`, in
+  /// logical points.
   fn place_viewport(
     &self,
     frame: (i32, i32, i32, i32),
     rect: screenwide_compositor::PreviewSurfaceRect,
+    corners: screenwide_compositor::PreviewSurfaceCorners,
     scale: f64,
     backdrop: [f64; 4],
     active: bool,
@@ -69,6 +72,11 @@ pub trait Host: Any + Send + Sync {
   fn commit(&self, wait: bool);
 
   fn set_cursor(&self, kind: CursorKind);
+
+  /// Has the pointer, where it rests over the input surface, report a move
+  /// again, so what lies under it is measured afresh after a change of tool
+  /// the pointer did not move for. Nothing while it rests elsewhere.
+  fn hover_again(&self);
 
   /// The modifiers held now.
   fn modifiers(&self) -> Modifiers;

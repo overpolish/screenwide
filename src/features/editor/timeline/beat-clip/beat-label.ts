@@ -15,9 +15,13 @@ export type TimelineBeat =
 export function beatLabel(beat: TimelineBeat) {
   switch (beat.kind) {
     case "click":
-      return t("editor-island-beat-click", { label: beat.label });
+      return beat.label === undefined
+        ? t("editor-island-beat-click-unnamed")
+        : t("editor-island-beat-click", { label: beat.label });
     case "type":
-      return t("editor-island-beat-type", { label: beat.label });
+      return beat.label === undefined
+        ? t("editor-island-beat-type-unnamed")
+        : t("editor-island-beat-type", { label: beat.label });
     case "keys":
       return t("editor-island-beat-press", { keys: beat.keys.join("+") });
     case "switch":

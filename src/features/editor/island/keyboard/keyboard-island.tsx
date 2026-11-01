@@ -65,7 +65,7 @@ export function keyboardIsland(
         <OptionToggle
           glyph={(isOn) => <ShowGlyph isShown={isOn} />}
           isOn={settings.bake}
-          label={t("editor-panels-keyboard-show")}
+          label={t("editor-island-keyboard-show")}
           onChange={(bake) => {
             onChange({ bake });
           }}
@@ -86,7 +86,7 @@ export function keyboardIsland(
       <IslandFlow className="flex flex-col gap-separate">
         <AnnotationLine>
           <OverlaySizeChoice
-            aria-label={t("editor-panels-size")}
+            aria-label={t("editor-island-size")}
             glyph={(side) => <KeycapSizeGlyph side={side} />}
             onChange={(size) => {
               onChange({ size });
@@ -96,7 +96,7 @@ export function keyboardIsland(
           <OptionToggle
             glyph={(isOn) => <AppearanceGlyph isLight={isOn} />}
             isOn={settings.appearance === "light"}
-            label={t("editor-panels-keyboard-light")}
+            label={t("editor-island-keyboard-light")}
             onChange={(isLight) => {
               onChange({ appearance: isLight ? "light" : "dark" });
             }}
@@ -104,7 +104,7 @@ export function keyboardIsland(
         </AnnotationLine>
         <AnnotationLine>
           <PositionGrid
-            aria-label={t("editor-panels-position")}
+            aria-label={t("editor-island-position")}
             items={placementOptions()}
             onChange={(position) => {
               onChange({ position });
@@ -115,7 +115,7 @@ export function keyboardIsland(
         {props.canRestoreShortcuts ? (
           <div className="flex justify-end">
             <Button onPress={props.onRestoreShortcuts}>
-              {t("editor-panels-keyboard-restore")}
+              {t("editor-island-keyboard-restore")}
             </Button>
           </div>
         ) : null}
@@ -124,7 +124,7 @@ export function keyboardIsland(
     title: (
       <IslandRowTitle
         glyph={<Keyboard aria-hidden className="size-icon" />}
-        title={t("editor-panels-keyboard")}
+        title={t("editor-island-keyboard")}
       />
     ),
   };

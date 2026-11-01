@@ -33,7 +33,6 @@ mod state;
 #[cfg(test)]
 mod tests;
 mod turn;
-mod view_fit;
 mod vocabulary;
 mod workspace_draw;
 mod workspace_editor;
@@ -57,7 +56,8 @@ use std::{
 };
 
 use annotation::handle_typing_input;
-use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for, resize_cursor};
+use batch::{begin_present_batch, end_present_batch};
+use callbacks::{emit_gesture, emit_press, emit_selection, refresh_cursor_for, resize_cursor};
 use geometry::{
   auto_fit_selection_bounds, display_selection, frame_resize_start, maximum_editor_zoom,
   pane_canvas_rect, set_pane_geometry,
@@ -70,16 +70,15 @@ use screenwide_compositor::workspace_editor::{
   NormalizedRect,
 };
 use screenwide_compositor::workspace_transform::WorkspaceTransform;
-use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
 use screenwide_imaging::CapturedImage;
 use screenwide_output::ScreenshotOutputSettings;
 use selection_draw::{draw_selection, redraw_stale_selection};
 use selection_hit::{
-  clear_selection_snap_guides, crop_press_draws, cursor_for_state, radius_point,
+  clear_selection_snap_guides, crop_draws_afresh, crop_press_draws, cursor_for_state,
   selection_pane_rect, selection_snap_targets, shared_handle_edges, shared_selection_hit,
 };
 use state::{ActiveGesture, CropDrawStart, EditorGesture, FrameResizeStart, MoveAutoFit};
-use view_fit::fit_basis_transform;
 use workspace_draw::{clear_workspace, draw_workspace, present_workspace};
 use workspace_layout::{
   apply_workspace_transform, aspect_fit_rect, rebase_workspace_fit, reflow_workspace_panes,

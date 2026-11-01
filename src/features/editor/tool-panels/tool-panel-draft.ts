@@ -4,7 +4,6 @@
 import { patchCaptions } from "../recording/captions/recording-captions";
 import { EditorKind } from "../types";
 
-import { SelectionPlacementPatch } from "./selection-placement";
 import { draftedLayer } from "./tool-panel-draft-layer";
 import { ToolPanelPatch } from "./tool-panel-patch";
 import { ToolPanelMicrophone, ToolPanelSnapshot } from "./tool-panel-store";
@@ -13,21 +12,6 @@ export type ToolPanelDraft = {
   seq: number;
   values: ToolPanelPatch;
   workspace: EditorKind;
-};
-
-/** Only the fields the panel is holding override the published placement, so a
- * drag in the preview keeps moving the rest of them under an open field. */
-const placedSelection = (
-  selection: ToolPanelSnapshot["selection"],
-  placement: SelectionPlacementPatch,
-) => {
-  if (!selection || selection.kind === "audio") return selection;
-  const next = { ...selection };
-  for (const key of ["height", "width", "x", "y"] as const) {
-    const value = placement[key];
-    if (value !== undefined) next[key] = value;
-  }
-  return next;
 };
 
 /** A microphone switch as the panel shows it once flipped to `enabled`:
@@ -41,8 +25,8 @@ const flippedSwitch = (
   return state === "on" ? "on" : "cleaning";
 };
 
-/** The same rule for the canvas and the crop: a width being typed does not pin
- * the height a drag on the picture is still moving. */
+/** A width being typed does not pin the height a drag on the picture is still
+ * moving. */
 const sized = <Value extends { height: number; width: number }>(
   value: Value | null,
   size: { height?: number; width?: number },
@@ -67,29 +51,33 @@ export function resolveToolPanelSnapshot(
     draft.seq <= (snapshot.acknowledgedSeq ?? 0)
   )
     return snapshot;
-  // A reset is an action rather than a value: nothing of it is shown locally,
-  // and the editor's answer arrives as the next published placement.
+  // An action rather than a value: nothing of it is shown locally, and the
+  // editor's answer arrives as the next published snapshot.
   const {
     annotationAngle,
     annotationAnimated,
     annotationEmphasis,
+    annotationImage: _annotationImage,
+    annotationImagePlay: _annotationImagePlay,
     annotationImageSway,
+    annotationKind: _annotationKind,
+    annotationLook: _annotationLook,
+    annotationPin: _annotationPin,
     annotationRotation,
     annotationStyle,
-    audioVolume,
+    annotationZoom,
     autoVolume,
     autoZoomScenes: _autoZoomScenes,
-    bakeCamera,
     cameraEffects,
     captionDefaults: _captionDefaults,
     captions,
     chooseCameraBackground: _chooseCameraBackground,
     chooseSceneTemplate: _chooseSceneTemplate,
     clearAutoZooms: _clearAutoZooms,
-    clearDrawings: _clearDrawings,
-    cropSize,
-    customizeScene: _customizeScene,
+    cropAspect,
+    cutStripItem: _cutStripItem,
     deleteAnnotations: _deleteAnnotations,
+    deleteChosenShortcuts: _deleteChosenShortcuts,
     deleteScene: _deleteScene,
     downloadCameraBackground: _downloadCameraBackground,
     downloadCameraObjects: _downloadCameraObjects,
@@ -98,6 +86,7 @@ export function resolveToolPanelSnapshot(
     frameRadius,
     frameSize,
     keyboardEffects,
+    lullPlay: _lullPlay,
     pickCameraObjects: _pickCameraObjects,
     recenterSelection: _recenterSelection,
     reduceNoise,
@@ -105,33 +94,36 @@ export function resolveToolPanelSnapshot(
     removeCameraObject: _removeCameraObject,
     removePreset: _removePreset,
     removeSceneTemplate: _removeSceneTemplate,
-    removeSilences: _removeSilences,
     resetCrop: _resetCrop,
     resetFrame: _resetFrame,
-    resetSceneFraming: _resetSceneFraming,
-    resetSelection: _resetSelection,
     restoreShortcuts: _restoreShortcuts,
-    restoreSilences: _restoreSilences,
+    reverseAnnotation: _reverseAnnotation,
     saveAnnotationColor: _saveAnnotationColor,
     savePreset: _savePreset,
     saveSceneTemplate: _saveSceneTemplate,
     sceneFollowFace,
     sceneFraming,
+    sceneFramingPane: _sceneFramingPane,
+    sceneInset,
     scenePreset,
     sceneRadius,
+    sceneRecenter: _sceneRecenter,
     sceneRotation,
     sceneVariant,
     selectionDropShadow,
     selectionFollowFace,
     selectionInset,
-    selectionOutput,
     selectionRadius,
     selectionRotation,
     showCameraObject: _showCameraObject,
+    shuffleAnnotation: _shuffleAnnotation,
     studioDucking,
     studioSound,
     swapScenePanes: _swapScenePanes,
+    trackEnabled: _trackEnabled,
+    trackVolume: _trackVolume,
     transcriptRequest: _transcriptRequest,
+    trimLullToBreath: _trimLullToBreath,
     vocalCleanup,
     ...values
   } = draft.values;
@@ -158,57 +150,53 @@ export function resolveToolPanelSnapshot(
       selectionRotation,
     },
   );
-  // A dragged volume is held as a dragged inset is: the knob stays where it
-  // was let go of until the editor answers with the level it committed. The
-  // microphone switches flip at once too.
-  const audio =
-    resolved.selection?.kind === "audio" ? resolved.selection : null;
+  // The microphone switches flip at once, on the selected track and on the
+  // Sound island's, which holds every track.
   const flipping =
     reduceNoise !== undefined ||
     vocalCleanup !== undefined ||
     autoVolume !== undefined ||
     studioSound !== undefined ||
     studioDucking !== undefined;
-  const microphone =
-    audio?.microphone && flipping
-      ? {
-          ...audio.microphone,
-          autoVolume: flippedSwitch(audio.microphone.autoVolume, autoVolume),
-          ducking: audio.microphone.ducking && {
-            ...audio.microphone.ducking,
-            state: flippedSwitch(audio.microphone.ducking.state, studioDucking),
-          },
-          noise: flippedSwitch(audio.microphone.noise, reduceNoise),
-          studio: flippedSwitch(audio.microphone.studio, studioSound),
-          voice: flippedSwitch(audio.microphone.voice, vocalCleanup),
-        }
-      : audio?.microphone;
+  const flipped = (microphone: ToolPanelMicrophone): ToolPanelMicrophone => ({
+    ...microphone,
+    autoVolume: flippedSwitch(microphone.autoVolume, autoVolume),
+    ducking: microphone.ducking && {
+      ...microphone.ducking,
+      state: flippedSwitch(microphone.ducking.state, studioDucking),
+    },
+    noise: flippedSwitch(microphone.noise, reduceNoise),
+    studio: flippedSwitch(microphone.studio, studioSound),
+    voice: flippedSwitch(microphone.voice, vocalCleanup),
+  });
+  const audio =
+    resolved.selection?.kind === "audio" ? resolved.selection : null;
   const heard =
-    audio && (audioVolume !== undefined || flipping)
-      ? {
-          ...audio,
-          decibels: audioVolume ?? audio.decibels,
-          microphone,
-        }
+    audio?.microphone && flipping
+      ? { ...audio, microphone: flipped(audio.microphone) }
       : null;
   const selection = layer ?? heard ?? resolved.selection;
-  // The output choice flips at once, and the placement the editor carries
-  // across arrives with its answer.
-  const cameraOutput: ToolPanelSnapshot["cameraOutput"] =
-    resolved.cameraOutput && bakeCamera !== undefined
-      ? bakeCamera
-        ? "combined"
-        : "separate"
-      : resolved.cameraOutput;
+  const soundTracks =
+    resolved.soundTracks && flipping
+      ? resolved.soundTracks.map((track) =>
+          track.microphone
+            ? { ...track, microphone: flipped(track.microphone) }
+            : track,
+        )
+      : resolved.soundTracks;
   // A colour being dragged in the system panel shows at once: the mirror
   // catches up an edit later, and the swatch must not blink back meanwhile.
-  // The Animate and Sway switches, the aim and the words chosen are held the
-  // same way, so none flicks back to the mirror's value between the edit and
-  // the commit.
-  const aimed =
+  // The Animate and Sway switches, the aim, the zoom and the words chosen are
+  // held the same way, so none flicks back to the mirror's value between the
+  // edit and the commit.
+  const turned =
     resolved.annotation && annotationAngle !== undefined
       ? { ...resolved.annotation, angle: annotationAngle }
       : resolved.annotation;
+  const aimed =
+    turned && annotationZoom !== undefined
+      ? { ...turned, zoom: annotationZoom }
+      : turned;
   const dialled =
     aimed?.rotation && annotationRotation
       ? { ...aimed, rotation: { ...aimed.rotation, ...annotationRotation } }
@@ -232,19 +220,22 @@ export function resolveToolPanelSnapshot(
   return {
     ...resolved,
     annotation,
-    cameraOutput,
     selection,
-    ...(cropSize ? { crop: sized(resolved.crop, cropSize) } : {}),
+    soundTracks,
+    ...(cropAspect && resolved.crop
+      ? { crop: { ...resolved.crop, aspect: cropAspect } }
+      : {}),
     ...(frameSize ? { frame: sized(resolved.frame, frameSize) } : {}),
     ...(frameRadius !== undefined && resolved.frame
       ? { frame: { ...resolved.frame, radius: frameRadius } }
       : {}),
-    // A scene chosen or reframed in the panel shows at once, the way the
-    // output choice flips, until the editor answers with the scene it changed.
+    // A scene chosen or reframed in the panel shows at once, until the editor
+    // answers with the scene it changed.
     ...(resolved.scene &&
     (scenePreset ||
       sceneFraming ||
       sceneFollowFace !== undefined ||
+      sceneInset !== undefined ||
       sceneRadius !== undefined ||
       sceneRotation ||
       sceneVariant)
@@ -256,6 +247,16 @@ export function resolveToolPanelSnapshot(
               resolved.scene.framing && sceneFraming
                 ? { ...resolved.scene.framing, ...sceneFraming }
                 : resolved.scene.framing,
+            panes:
+              sceneInset !== undefined && resolved.scene.panes.screen
+                ? {
+                    ...resolved.scene.panes,
+                    screen: {
+                      ...resolved.scene.panes.screen,
+                      inset: sceneInset,
+                    },
+                  }
+                : resolved.scene.panes,
             preset: scenePreset ?? resolved.scene.preset,
             radius:
               resolved.scene.radius === null
@@ -271,9 +272,6 @@ export function resolveToolPanelSnapshot(
                 : resolved.scene.variant,
           },
         }
-      : {}),
-    ...(selectionOutput
-      ? { selection: placedSelection(selection, selectionOutput) }
       : {}),
   };
 }

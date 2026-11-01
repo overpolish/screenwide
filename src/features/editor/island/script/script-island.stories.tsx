@@ -43,9 +43,9 @@ type ScriptStoryProps = EditorIslandStoryProps &
     captions: RecordingCaptions;
     /** Spelling put right in the transcript. */
     corrections: TranscriptCorrection[];
-    /** Whether it stands beside the Captions island, as the Captions mode
-     * opens the two. */
-    isBesideCaptions: boolean;
+    /** Whether the Captions island is out too, at the opposite corner, as
+     * the Captions mode opens the two. */
+    hasCaptions: boolean;
     /** Whether a save is running, so the script can be read and not
      * edited. */
     isLocked: boolean;
@@ -53,7 +53,7 @@ type ScriptStoryProps = EditorIslandStoryProps &
     isLong: boolean;
     /** Whether the captions have been made yet. */
     isMade: boolean;
-    /** Beside the captions, or on its own to cut. */
+    /** With the captions, or on its own to cut. */
     mode: "captions" | "transcript";
     onCaptionsChange: (patch: CaptionsPatch) => void;
     playheadMs: number;
@@ -67,8 +67,43 @@ const CAPTIONS: RecordingCaptions = {
   style: storyTextStyle("box"),
 };
 
+/** The Captions island out with the Script island in the Captions mode. */
+const pairedCaptions = ({
+  captions,
+  onCaptionsChange,
+  transcript,
+}: Pick<ScriptStoryProps, "captions" | "onCaptionsChange" | "transcript">) =>
+  captionsIsland({
+    canReset: false,
+    canSetDefault: false,
+    enabled: captions.enabled,
+    hiddenCount: 0,
+    look: captions.style,
+    onEnabledChange: (enabled) => {
+      onCaptionsChange({ enabled });
+    },
+    onLayoutChange: (layout) => {
+      onCaptionsChange({ style: { ...captions.style, ...layout } });
+    },
+    onLookChange: (look) => {
+      onCaptionsChange({ style: { ...captions.style, ...look } });
+    },
+    onRemoveColor: fn(),
+    onReset: fn(),
+    onRestoreHidden: fn(),
+    onSaveColor: fn(),
+    onSetDefault: fn(),
+    onSettingsChange: (settings) => {
+      onCaptionsChange({ settings: { ...captions.settings, ...settings } });
+    },
+    savedColors: [],
+    settings: captions.settings,
+    templates: STORY_TEXT_TEMPLATES,
+    transcript,
+  });
+
 function ScriptIsland({
-  isBesideCaptions,
+  hasCaptions,
   isLong,
   isMade,
   isShown = true,
@@ -79,6 +114,7 @@ function ScriptIsland({
     return (
       <ScriptTranscriptStory
         actions={props}
+        corner={hasCaptions ? pairedCaptions(props) : undefined}
         isLocked={props.isLocked}
         isShown={isShown}
         transcript={props.transcript}
@@ -92,45 +128,13 @@ function ScriptIsland({
     mode,
     text: storyScriptText(props.captions, props.corrections, { isMade, take }),
   });
-  if (!isBesideCaptions)
+  if (!hasCaptions)
     return <EditorIslandStage content={script} isShown={isShown} />;
-  const { captions } = props;
-  const change = (patch: CaptionsPatch) => {
-    props.onCaptionsChange(patch);
-  };
   return (
     <EditorIslandPairStage
-      end={script}
+      end={pairedCaptions(props)}
       isShown={isShown}
-      start={captionsIsland({
-        canReset: false,
-        canSetDefault: false,
-        enabled: captions.enabled,
-        hiddenCount: 0,
-        look: captions.style,
-        onDownloadModel: fn(),
-        onEnabledChange: (enabled) => {
-          change({ enabled });
-        },
-        onLayoutChange: (layout) => {
-          change({ style: { ...captions.style, ...layout } });
-        },
-        onLookChange: (look) => {
-          change({ style: { ...captions.style, ...look } });
-        },
-        onRemoveColor: fn(),
-        onReset: fn(),
-        onRestoreHidden: fn(),
-        onSaveColor: fn(),
-        onSetDefault: fn(),
-        onSettingsChange: (settings) => {
-          change({ settings: { ...captions.settings, ...settings } });
-        },
-        savedColors: [],
-        settings: captions.settings,
-        templates: STORY_TEXT_TEMPLATES,
-        transcript: { status: "ready" },
-      })}
+      start={script}
     />
   );
 }
@@ -140,7 +144,7 @@ const meta = {
   args: {
     captions: CAPTIONS,
     corrections: [],
-    isBesideCaptions: false,
+    hasCaptions: false,
     isLocked: false,
     isLong: false,
     isMade: true,
@@ -162,7 +166,7 @@ const meta = {
   component: ScriptIsland,
   decorators: [
     featureStage(({ args }) =>
-      args.isBesideCaptions
+      args.hasCaptions
         ? { height: 760, width: 1280 }
         : { height: args.mode === "transcript" ? 760 : 640, width: 520 },
     ),
@@ -217,9 +221,22 @@ type Story = StoryObj<typeof meta>;
 
 export const Captions: Story = {};
 
-// Beside the Captions island, as the Captions mode opens the two: a rule
-// turned on there, such as hiding filler words, shows in the script.
-export const BesideCaptions: Story = { args: { isBesideCaptions: true } };
+// With the Captions island, as the Captions mode opens the two at opposite
+// corners: a rule turned on there, such as hiding filler words, shows in
+// the script.
+export const WithCaptions: Story = { args: { hasCaptions: true } };
+
+// The pair before the transcript's words are in, here while transcribing:
+// the Script island says so as it does on its own, and the Captions island
+// is only its row, so moving between Transcript and Captions leaves the
+// Script as it was, where it was, as the Captions island comes out.
+export const WithCaptionsWhileTranscribing: Story = {
+  args: {
+    hasCaptions: true,
+    mode: "transcript",
+    transcript: { progress: 0.35, status: "transcribing" },
+  },
+};
 
 // A template that sets a key word apart: each caption's reads bold.
 export const KeyWords: Story = {

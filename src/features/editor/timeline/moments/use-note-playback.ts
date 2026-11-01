@@ -1,14 +1,35 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
 import { getRecordingMomentNote } from "./recording-moments";
 
 /** Told to the editor when a note starts, so the timeline stops playing
  * under it. */
-export const MOMENT_NOTE_PLAYING_EVENT = "moments://note-playing";
+const MOMENT_NOTE_PLAYING_EVENT = "moments://note-playing";
+
+/** Pauses the timeline whenever a voice note starts playing, so the two are
+ * never heard over each other. */
+export function usePauseForMomentNotes(pause: () => void) {
+  const pauseRef = useRef(pause);
+  pauseRef.current = pause;
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listen(MOMENT_NOTE_PLAYING_EVENT, () => {
+      pauseRef.current();
+    }).then((stop) => {
+      if (disposed) stop();
+      else unlisten = stop;
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+}
 
 type Playing = {
   source: AudioBufferSourceNode;
@@ -32,16 +53,26 @@ const heardAt = (context: AudioContext) => {
 /**
  * Plays the `moment`th moment's voice note and reports how far it is, from
  * 0 to 1, by what has reached the speakers rather than what has been sent.
+ * With `moment` null there is no note to play. Playing and progress are
+ * kept against the note they are for, so moving on to another note starts
+ * it from its beginning, not playing.
  */
-export function useNotePlayback(artifactId: number, moment: number) {
+export function useNotePlayback(artifactId: number, moment: number | null) {
+  const key =
+    moment === null ? null : `${String(artifactId)}:${String(moment)}`;
   const contextRef = useRef<AudioContext | null>(null);
   const bufferRef = useRef<AudioBuffer | null>(null);
   const playingRef = useRef<Playing | null>(null);
   const offsetRef = useRef(0);
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [playingKey, setPlayingKey] = useState<string | null>(null);
+  const [heard, setHeard] = useState<{ key: string; progress: number } | null>(
+    null,
+  );
+  const playing = key !== null && playingKey === key;
+  const progress = heard?.key === key ? heard.progress : 0;
 
   useEffect(() => {
+    if (moment === null) return;
     let cancelled = false;
     const context = new AudioContext();
     contextRef.current = context;
@@ -72,8 +103,8 @@ export function useNotePlayback(artifactId: number, moment: number) {
       const current = playingRef.current;
       const duration = bufferRef.current?.duration ?? 0;
       if (context && current && duration > 0) {
-        const heard = Math.max(0, heardAt(context) - current.startedAt);
-        setProgress(Math.min(1, heard / duration));
+        const since = Math.max(0, heardAt(context) - current.startedAt);
+        setHeard({ key, progress: Math.min(1, since / duration) });
       }
       frame = requestAnimationFrame(step);
     };
@@ -81,18 +112,18 @@ export function useNotePlayback(artifactId: number, moment: number) {
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [playing]);
+  }, [key, playing]);
 
   const toggle = async () => {
     const context = contextRef.current;
     const buffer = bufferRef.current;
-    if (!context || !buffer) return;
+    if (!context || !buffer || key === null) return;
     const current = playingRef.current;
     if (current) {
       offsetRef.current = Math.max(0, heardAt(context) - current.startedAt);
       playingRef.current = null;
       current.source.stop();
-      setPlaying(false);
+      setPlayingKey(null);
       return;
     }
     if (offsetRef.current >= buffer.duration) offsetRef.current = 0;
@@ -108,12 +139,12 @@ export function useNotePlayback(artifactId: number, moment: number) {
       if (playingRef.current !== next) return;
       playingRef.current = null;
       offsetRef.current = buffer.duration;
-      setProgress(1);
-      setPlaying(false);
+      setHeard({ key, progress: 1 });
+      setPlayingKey(null);
     });
     playingRef.current = next;
     source.start(0, offset);
-    setPlaying(true);
+    setPlayingKey(key);
   };
 
   return { playing, progress, toggle };

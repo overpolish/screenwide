@@ -46,23 +46,13 @@ export const mappedAnnotationShape = (
         end: map(shape.end),
         start: map(shape.start),
       };
-    case "magnify": {
-      const loupe = map(shape.loupe);
-      const edge = map({ x: shape.loupe.x + shape.size, y: shape.loupe.y });
-      return {
-        ...shape,
-        end: map(shape.end),
-        loupe,
-        size: Math.abs(edge.x - loupe.x),
-        start: map(shape.start),
-      };
-    }
     case "image": {
       const center = map(shape.center);
       const edge = map({ x: shape.center.x + shape.size, y: shape.center.y });
       return { ...shape, center, size: Math.abs(edge.x - center.x) };
     }
     case "redact":
+    case "magnify":
     case "shape":
     case "spotlight":
     case "focus":

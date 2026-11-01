@@ -76,52 +76,15 @@ const cameraTargetFor = ({
 };
 
 describe("baked camera selection", () => {
-  it("shows the overlay frame and the camera's own source", () => {
+  it("shows the overlay's corners", () => {
     const overlay = defaultCameraOverlay(recording);
     const { target } = cameraTargetFor();
 
     expect(target.selection).toMatchObject({
-      height: Math.round(overlay.frameHeight),
       kind: "camera",
       label: "Camera",
       radius: overlay.radiusPercent,
-      sourceHeight: 720,
-      sourceWidth: 1_280,
-      width: Math.round(overlay.frameWidth),
     });
-  });
-
-  it("resizes the overlay about the frame's centre", () => {
-    const settings = defaultCameraOverlay(recording);
-    const { overlay, target } = cameraTargetFor({ cameraOverlay: settings });
-
-    target.applyPlacement({ width: settings.frameWidth / 2 });
-
-    const next = overlay.mock.calls[0][0];
-    expect(next.frameWidth).toBeCloseTo(settings.frameWidth / 2);
-    expect(next.frameHeight).toBeCloseTo(settings.frameHeight / 2);
-    expect(next.frameX + next.frameWidth / 2).toBeCloseTo(
-      settings.frameX + settings.frameWidth / 2,
-    );
-    expect(next.frameY + next.frameHeight / 2).toBeCloseTo(
-      settings.frameY + settings.frameHeight / 2,
-    );
-    // The camera picture is carried by the same scale, so the crop window
-    // keeps showing the same part of it.
-    expect(next.cameraWidth).toBeCloseTo(settings.cameraWidth / 2);
-  });
-
-  it("puts the overlay back where a recording opens it", () => {
-    const moved = {
-      ...defaultCameraOverlay(recording),
-      frameX: 12,
-      frameY: 34,
-    };
-    const { overlay, target } = cameraTargetFor({ cameraOverlay: moved });
-
-    target.reset();
-
-    expect(overlay).toHaveBeenCalledWith(defaultCameraOverlay(recording));
   });
 
   it("rounds the overlay's corners and shadows the camera track's output", () => {

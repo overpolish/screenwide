@@ -9,7 +9,6 @@ pub(super) fn apply(
   gesture: &mut EditorGesture,
   point: (f64, f64),
   centered: bool,
-  zoom: &mut Option<f64>,
 ) {
   clear_selection_snap_guides(state);
   let start = gesture.pane_start;
@@ -87,7 +86,6 @@ pub(super) fn apply(
       }
     }
     rebase_workspace_fit(state, &start_state);
-    *zoom = Some(state.workspace_transform.zoom);
     state.frame_resize = Some(start_state);
   } else if let Some(pane) = state.panes.get_mut(selected).and_then(Option::as_mut) {
     pane.base_rect = resized;

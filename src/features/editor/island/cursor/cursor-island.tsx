@@ -66,7 +66,7 @@ export function cursorIsland(props: CursorIslandProps): EditorIslandContent {
       <div className="flex flex-col gap-separate">
         <AnnotationLine>
           <OverlaySizeChoice
-            aria-label={t("editor-panels-cursor-size")}
+            aria-label={t("editor-island-cursor-size")}
             glyph={(side) => <PointerSizeGlyph side={side} />}
             onChange={(size) => {
               onChange({ ...settings, size });
@@ -77,26 +77,26 @@ export function cursorIsland(props: CursorIslandProps): EditorIslandContent {
         <AnnotationLine>
           {toggle(
             "smoothMovement",
-            t("editor-panels-cursor-smooth"),
+            t("editor-island-cursor-smooth"),
             (isOn) => (
               <SmoothGlyph isSmooth={isOn} />
             ),
           )}
           {toggle(
             "motionBlur",
-            t("editor-panels-cursor-motion-blur"),
+            t("editor-island-cursor-motion-blur"),
             (isOn) => (
               <MotionBlurGlyph isBlurred={isOn} />
             ),
           )}
           {toggle(
             "clickAnimation",
-            t("editor-panels-cursor-click-animation"),
+            t("editor-island-cursor-click-animation"),
             (isOn) => (
               <ClickGlyph isAnimated={isOn} />
             ),
           )}
-          {toggle("clipAtVideoEdge", t("editor-panels-cursor-clip"), (isOn) => (
+          {toggle("clipAtVideoEdge", t("editor-island-cursor-clip"), (isOn) => (
             <KeepInsideGlyph isInside={isOn} />
           ))}
         </AnnotationLine>
@@ -114,7 +114,7 @@ export function cursorIsland(props: CursorIslandProps): EditorIslandContent {
     title: (
       <IslandRowTitle
         glyph={<MousePointerClick aria-hidden className="size-icon" />}
-        title={t("editor-panels-cursor")}
+        title={t("editor-island-cursor")}
       />
     ),
   };

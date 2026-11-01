@@ -6,7 +6,7 @@
 
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_SHIFT};
 
-use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
 use screenwide_osc::gpu::magnifier::NativeMagnifier;
 use screenwide_osc::gpu::vertices::{RenderConstants, Vertex};
 use screenwide_workspace::backdrop::BackdropStyle;
@@ -66,12 +66,17 @@ impl Host for WindowsHost {
     &self,
     (x, y, width, height): (i32, i32, i32, i32),
     rect: PreviewSurfaceRect,
+    corners: PreviewSurfaceCorners,
     scale: f64,
     backdrop: [f64; 4],
     active: bool,
   ) {
     self.editor.set_frame(x, y, width, height, active);
     self.gpu.backdrop.set_geometry(rect, scale);
+    self
+      .gpu
+      .viewport_clip
+      .set((x, y, width, height), corners, scale);
     if let Ok(mut ribbon) = self.gpu.audio_ribbon.lock() {
       let _ = ribbon.set_viewport(rect, scale, backdrop);
     }
@@ -106,6 +111,10 @@ impl Host for WindowsHost {
 
   fn set_cursor(&self, kind: CursorKind) {
     editor::EditorWindow::set_cursor(kind);
+  }
+
+  fn hover_again(&self) {
+    self.editor.hover_again();
   }
 
   fn modifiers(&self) -> Modifiers {

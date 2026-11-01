@@ -139,8 +139,8 @@ impl NativeAnnotationData {
     if let super::AnnotationShape::Draw { points, smooth } = &annotation.shape {
       super::freehand::native::fill(&mut record, &mut self.points, points, *smooth);
     }
-    if let super::AnnotationShape::Magnify { size, .. } = &annotation.shape {
-      super::magnify::native::fill(&mut record, *size, &annotation.style);
+    if let super::AnnotationShape::Magnify { zoom, .. } = &annotation.shape {
+      super::magnify::native::fill(&mut record, *zoom, &annotation.style);
     }
     if let super::AnnotationShape::Image {
       play,

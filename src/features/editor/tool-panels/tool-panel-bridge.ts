@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { askPictureTween, TWEENED_PATCH_KEYS } from "../preview/picture-tween";
 import { EditorKind } from "../types";
 
 import { ToolPanelHandlers } from "./tool-panel-handlers";
@@ -26,6 +27,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAnnotationAnimatedChange?.(values.annotationAnimated);
   if (values.annotationStyle !== undefined)
     on.onAnnotationStyleChange?.(values.annotationStyle);
+  if (values.annotationZoom !== undefined)
+    on.onAnnotationZoomChange?.(values.annotationZoom);
   if (values.annotationImage !== undefined)
     on.onAnnotationImageChange?.(values.annotationImage);
   if (values.annotationLook !== undefined)
@@ -38,16 +41,22 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAnnotationImageSwayChange?.(values.annotationImageSway);
   if (values.annotationRotation !== undefined)
     on.onAnnotationRotationChange?.(values.annotationRotation);
+  if (values.annotationKind !== undefined)
+    on.onAnnotationKindChange?.(values.annotationKind);
+  if (values.annotationPin !== undefined)
+    on.onAnnotationPin?.(values.annotationPin);
   if (values.reverseAnnotation) on.onAnnotationReverse?.();
   if (values.shuffleAnnotation) on.onAnnotationShuffle?.();
-  if (values.clearDrawings) on.onDrawingsClear?.();
   if (values.deleteAnnotations) on.onAnnotationsDelete?.();
   if (values.saveAnnotationColor !== undefined)
     on.onAnnotationColorSave?.(values.saveAnnotationColor);
   if (values.removeAnnotationColor !== undefined)
     on.onAnnotationColorRemove?.(values.removeAnnotationColor);
-  if (values.audioVolume !== undefined)
-    on.onAudioVolumeChange?.(values.audioVolume);
+  if (values.trackVolume !== undefined)
+    on.onTrackVolumeChange?.(
+      values.trackVolume.trackId,
+      values.trackVolume.decibels,
+    );
   if (values.reduceNoise !== undefined)
     on.onReduceNoiseChange?.(values.reduceNoise);
   if (values.vocalCleanup !== undefined)
@@ -60,10 +69,6 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.studioDucking !== undefined)
     on.onStudioDuckingChange?.(values.studioDucking);
   if (values.downloadStudioDucking) on.onStudioDuckingDownload?.();
-  if (values.removeSilences) on.onSilencesRemove?.();
-  if (values.restoreSilences) on.onSilencesRestore?.();
-  if (values.bakeCamera !== undefined)
-    on.onBakeCameraChange?.(values.bakeCamera);
   if (values.cameraEffects !== undefined)
     on.onCameraEffectsChange?.(values.cameraEffects);
   if (values.chooseCameraBackground) on.onCameraBackgroundChoose?.();
@@ -90,7 +95,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.frameRadius !== undefined)
     on.onFrameRadiusChange?.(values.frameRadius);
   if (values.resetFrame) on.onFrameReset?.();
-  if (values.cropSize !== undefined) on.onCropSizeChange?.(values.cropSize);
+  if (values.cropAspect !== undefined)
+    on.onCropAspectChange?.(values.cropAspect);
   if (values.resetCrop) on.onCropReset?.();
   if (values.selectionDropShadow !== undefined) {
     on.onSelectionDropShadowChange?.(values.selectionDropShadow);
@@ -101,9 +107,6 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.selectionInset !== undefined) {
     on.onSelectionInsetChange?.(values.selectionInset);
   }
-  if (values.selectionOutput !== undefined) {
-    on.onSelectionPlacementChange?.(values.selectionOutput);
-  }
   if (values.selectionRadius !== undefined) {
     on.onSelectionRadiusChange?.(values.selectionRadius);
   }
@@ -111,20 +114,22 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onSelectionRotationChange?.(values.selectionRotation);
   }
   if (values.recenterSelection) on.onSelectionRecenter?.();
-  if (values.resetSelection) on.onSelectionReset?.();
   if (values.keyboardEffects !== undefined) {
     on.onKeyboardEffectsChange?.(values.keyboardEffects);
   }
   if (values.restoreShortcuts) on.onKeyboardShortcutsRestore?.();
+  if (values.deleteChosenShortcuts) on.onChosenShortcutsDelete?.();
   if (values.scenePreset !== undefined)
     on.onScenePresetChoose?.(values.scenePreset);
-  if (values.customizeScene) on.onSceneCustomize?.();
   if (values.sceneFraming !== undefined)
-    on.onSceneFramingChange?.(values.sceneFraming);
+    on.onSceneFramingChange?.(values.sceneFraming, values.sceneFramingPane);
   if (values.sceneFollowFace !== undefined)
     on.onSceneFollowFaceChange?.(values.sceneFollowFace);
+  if (values.sceneInset !== undefined)
+    on.onSceneInsetChange?.(values.sceneInset);
   if (values.sceneRadius !== undefined)
     on.onSceneRadiusChange?.(values.sceneRadius);
+  if (values.sceneRecenter) on.onSceneRecenter?.();
   if (values.sceneRotation !== undefined)
     on.onSceneRotationChange?.(values.sceneRotation);
   if (values.sceneVariant) on.onSceneVariantChange?.(values.sceneVariant);
@@ -133,7 +138,6 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.saveSceneTemplate) on.onSceneTemplateSave?.();
   if (values.removeSceneTemplate !== undefined)
     on.onSceneTemplateRemove?.(values.removeSceneTemplate);
-  if (values.resetSceneFraming) on.onSceneFramingReset?.();
   if (values.autoZoomScenes) on.onSceneAutoZoom?.();
   if (values.clearAutoZooms) on.onSceneAutoZoomsClear?.();
   if (values.deleteScene) on.onSceneDelete?.();
@@ -143,6 +147,14 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.captions) on.onCaptionsChange?.(values.captions);
   if (values.captionDefaults)
     on.onCaptionDefaultsChange?.(values.captionDefaults);
+  if (values.cutStripItem) on.onStripItemCut?.();
+  if (values.lullPlay !== undefined) on.onLullPlayChange?.(values.lullPlay);
+  if (values.trimLullToBreath) on.onLullTrimToBreath?.();
+  if (values.trackEnabled !== undefined)
+    on.onTrackEnabledChange?.(
+      values.trackEnabled.trackId,
+      values.trackEnabled.isEnabled,
+    );
 };
 
 /**
@@ -221,7 +233,12 @@ export function useToolPanelBridge(
           }),
         );
       } else {
-        applyPatch(lastRequest.request.values, handlersRef.current);
+        // A setting chosen on an island is drawn as the picture moving to
+        // it (`picture-tween.ts`).
+        const values = lastRequest.request.values;
+        if (TWEENED_PATCH_KEYS.some((key) => values[key] !== undefined))
+          askPictureTween(workspace);
+        applyPatch(values, handlersRef.current);
       }
       // Batched with the editor's settings update, including no-op requests:
       // a request that changes nothing still has to be acknowledged, or the

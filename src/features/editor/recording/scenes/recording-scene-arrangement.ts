@@ -25,6 +25,16 @@ import {
  * too short for two of them gives each half of its length. */
 const TRANSITION_MS = 600;
 
+/** Where choosing `clip` brings the playhead, in output ms: once the scene
+ * has arrived, so the picture shows it settled rather than on its way. A
+ * clip too short for two arrivals lands at its middle, and one starting the
+ * video, which arrives at once, at its start. */
+export const sceneLandingMs = (clip: { endMs: number; startMs: number }) =>
+  clip.startMs <= 1
+    ? clip.startMs
+    : clip.startMs +
+      Math.max(0, Math.min(TRANSITION_MS, (clip.endMs - clip.startMs) / 2));
+
 export type RecordingSceneArrangement = {
   /** Whether the camera is drawn in front of the screen now; the nearer
    * order while a scene crosses it over. */
@@ -38,13 +48,16 @@ export type RecordingSceneArrangement = {
   clip: RecordingSceneClip;
   /** How opaque the scene draws each pane now, zero where it hides one. */
   opacity: { camera: number; screen: number };
+  /** The screen's output as the scene draws it, its crop padded outwards by
+   * the scene's inset as `arrange.rs` pads it, so the selection and the hit
+   * targets lie on the padded box the preview draws. */
   output: ScreenshotOutputSettings;
   /** How the scene turns the screen in depth now. */
   rotation: SceneRotation;
-  /** The part of the screen the clip shows, held where it fills its box, and
-   * the aspect of the crop it frames, which is the picture its focus and zoom
-   * are shares of. */
-  screen: { aspect: number; framing: SceneFraming };
+  /** The part of the screen the clip shows, held where it fills its box, the
+   * box itself without the scene's padding, and the aspect of the crop it
+   * frames, which is the picture its focus and zoom are shares of. */
+  screen: { aspect: number; box: SceneRect; framing: SceneFraming };
 };
 
 const easeInOutCubic = (value: number) =>
@@ -179,6 +192,9 @@ export function arrangedRecordingScene({
         ? WHOLE_FRAMING
         : cameraFramingOf(sceneCamera.overlay, sceneCamera.aspect)))
     : null;
+  // A scene that pads its screen grows the crop outwards past its box, as the
+  // recording's own inset pads its crop.
+  const inset = Math.max(0, placed.inset);
   return {
     cameraInFront: placed.cameraFront >= 0.5,
     cameraOverlay: sceneCamera
@@ -209,10 +225,10 @@ export function arrangedRecordingScene({
     opacity: placed.opacity,
     output: {
       ...output,
-      cropHeight: placed.screen.height,
-      cropWidth: placed.screen.width,
-      cropX: placed.screen.x,
-      cropY: placed.screen.y,
+      cropHeight: placed.screen.height + inset * 2,
+      cropWidth: placed.screen.width + inset * 2,
+      cropX: placed.screen.x - inset,
+      cropY: placed.screen.y - inset,
       imageWidth: placed.image.width,
       imageX: placed.image.x,
       imageY: placed.image.y,
@@ -221,6 +237,7 @@ export function arrangedRecordingScene({
     rotation: placed.rotation,
     screen: {
       aspect: output.cropWidth / output.cropHeight,
+      box: placed.screen,
       framing: framingWithin(
         clip.screen ?? WHOLE_FRAMING,
         target.screen,

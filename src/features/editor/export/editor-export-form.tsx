@@ -11,6 +11,7 @@ import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { formatBytes } from "../duration";
 
 import {
+  CameraOutputRow,
   CompressionSelect,
   ExportRow,
   SubtitlesRow,
@@ -43,6 +44,7 @@ export function EditorExportForm({
   isSaving,
   onBrowse,
   onCameraCompressionChange,
+  onCameraOutputChange,
   onCameraResolutionScaleChange,
   onCancel,
   onCollapseAudioChange,
@@ -82,8 +84,8 @@ export function EditorExportForm({
       : t("editor-export-unavailable");
 
   return (
-    <div className="flex flex-col gap-layout outline-none">
-      <div className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-section gap-y-section">
+    <div className="flex flex-col gap-group outline-none">
+      <div className="grid grid-cols-[max-content_minmax(0,1fr)] gap-separate">
         <ExportRow title={t("editor-export-file-name")}>
           {(props) => (
             <TextField
@@ -119,6 +121,13 @@ export function EditorExportForm({
             />
           )}
         </ExportRow>
+        {recording && cameraOutput ? (
+          <CameraOutputRow
+            isDisabled={isSaving}
+            onChange={onCameraOutputChange}
+            value={cameraOutput}
+          />
+        ) : null}
         {showResolution ? (
           <ExportRow title={t("editor-export-output-size")}>
             {(props) => (
@@ -241,9 +250,9 @@ export function EditorExportForm({
           )}
         </ExportRow>
       </div>
-      <div className="flex items-center justify-end gap-control-inset">
+      <div className="flex items-center justify-end gap-separate">
         {recording ? (
-          <p className="text-body text-fg-secondary me-auto flex items-center gap-control-inset tabular-nums text-content-fg-secondary">
+          <div className="text-body text-fg-secondary me-auto flex items-center gap-inline tabular-nums">
             {isEstimatingSize ? (
               <>
                 {t("editor-export-estimated-size-label")}
@@ -256,7 +265,7 @@ export function EditorExportForm({
             ) : (
               t("editor-export-estimated-size", { size: estimate })
             )}
-          </p>
+          </div>
         ) : null}
         <Button onPress={onCancel}>{t("editor-export-cancel")}</Button>
         <Button color="primary" isDisabled={!canExport} onPress={onExport}>

@@ -5,70 +5,46 @@ use super::*;
 mod cancel;
 mod context_menu;
 mod crop_draw;
+mod crop_resize;
 mod down;
 mod framed;
 mod pointer_move;
 mod up;
 mod view_motion;
 
+/// Hands one pointer event to the gesture it belongs to, and tells the editor
+/// above of every press going down and being let go.
 pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput) {
-  if matches!(
-    input,
-    PointerInput::Down { .. } | PointerInput::PanDown { .. } | PointerInput::ContextMenu { .. }
-  ) {
-    if let Ok(mut callbacks) = inner.callbacks.lock() {
-      if let Some(callback) = callbacks.pointer_down.as_mut() {
-        callback();
-      }
-    }
-  }
   // Gestures read the modifiers as of the event being handled, so either can
-  // be taken and let go part way through a drag.
-  let modifiers = inner.host.modifiers();
-  let scale = inner.state.lock().ok().map_or(1.0, |mut state| {
+  // be taken and let go part way through a drag. A shortcut modifier spent on
+  // holding Select reads as up until it is let go, and a press under the hold
+  // brings the layer's chrome back.
+  let mut modifiers = inner.host.modifiers();
+  let pressing = matches!(input, PointerInput::Down { .. });
+  let (scale, spent) = inner.state.lock().ok().map_or((1.0, false), |mut state| {
+    state.shortcut_spent &= modifiers.shortcut;
+    state.select_held &= !pressing;
+    let spent = state.shortcut_spent;
+    modifiers.shortcut &= !spent;
     state.modifiers = modifiers;
-    state.scale.max(0.1)
+    (state.scale.max(0.1), spent)
   });
   let logical = |x: f64, y: f64| (x / scale, y / scale);
   match input {
-    PointerInput::ContextMenu { x, y } => context_menu::open(inner, logical(x, y)),
+    PointerInput::ContextMenu { x, y } => {
+      // A right press holds nothing once its menu is up.
+      emit_press(inner, PointerPress::Down { took: false });
+      context_menu::open(inner, logical(x, y));
+      emit_press(inner, PointerPress::Up);
+    }
     PointerInput::Down {
       centered,
       x,
       y,
       snapping: _,
     } => {
-      // While objects are picked in the camera every press is theirs, Alt
-      // removing what it picks.
-      if object_picking::down(inner, logical(x, y), centered) {
-        refresh_cursor_for(inner);
-        return;
-      }
-      // A box being typed into sees the press first: in the box it places the
-      // caret, anywhere else it ends the typing and may carry on below.
-      if annotation::typing_press(inner, turn::layer_point(inner, logical(x, y)), false) {
-        refresh_cursor_for(inner);
-        return;
-      }
-      // The rotation gizmo's rings sit over the layer they turn.
-      if turn::down(inner, logical(x, y)) {
-        return;
-      }
-      // A turned layer's annotations are pressed where its turn draws them.
-      let layer = turn::layer_point(inner, logical(x, y));
-      // A press is never a hover: the halo goes out before anything moves.
-      annotation::update_hover(inner, layer, true);
-      // The arrow chrome gets the press first and keeps it if it lands on a
-      // grip, on a shaft, or on empty picture with the arrow tool in hand.
-      // Anything it declines belongs to the layer underneath.
-      if annotation::down(inner, layer) {
-        if let Ok(mut state) = inner.state.lock() {
-          state.last_pointer = logical(x, y);
-        }
-        refresh_cursor_for(inner);
-        return;
-      }
-      down::down(inner, scale, x, y);
+      let took = press(inner, scale, centered, x, y);
+      emit_press(inner, PointerPress::Down { took });
     }
     PointerInput::Move {
       centered,
@@ -97,6 +73,7 @@ pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput
         }
         return;
       }
+      let snapping = snapping && !spent;
       pointer_move::pointer_move(inner, scale, centered, x, y, pressed, snapping);
     }
     PointerInput::PanDown { x, y } => {
@@ -113,6 +90,7 @@ pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput
         }
       }
       refresh_cursor_for(inner);
+      emit_press(inner, PointerPress::Down { took: false });
     }
     PointerInput::PanUp { x, y } => {
       let point = logical(x, y);
@@ -125,37 +103,20 @@ pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput
           .host
           .set_cursor(cursor_for_state(inner, &state, point));
       }
+      emit_press(inner, PointerPress::Up);
     }
     PointerInput::Up { x, y } => {
-      if turn::up(inner, logical(x, y)) {
-        return;
-      }
-      if object_picking::up(inner, logical(x, y)) {
-        refresh_cursor_for(inner);
-        return;
-      }
-      let layer = turn::layer_point(inner, logical(x, y));
-      if annotation::typing_up(inner) || annotation::up(inner, layer) {
-        if let Ok(mut state) = inner.state.lock() {
-          state.last_pointer = logical(x, y);
-        }
-        // What now lies under the resting pointer - an annotation just placed
-        // or carried there - is haloed, so it can be deleted without the
-        // pointer moving first; the press had put the halo out.
-        annotation::update_hover(inner, layer, false);
-        refresh_cursor_for(inner);
-        return;
-      }
-      up::up(inner, scale, x, y);
+      release(inner, scale, x, y);
+      emit_press(inner, PointerPress::Up);
     }
     PointerInput::Cancel => {
-      if turn::cancel(inner) {
-        return;
+      if !turn::cancel(inner) {
+        if let Ok(mut state) = inner.state.lock() {
+          annotation::cancel(&mut state);
+        }
+        cancel::cancel(inner);
       }
-      if let Ok(mut state) = inner.state.lock() {
-        annotation::cancel(&mut state);
-      }
-      cancel::cancel(inner);
+      emit_press(inner, PointerPress::Up);
     }
     PointerInput::Wheel { x, y, delta } => {
       view_motion::zoom_at(inner, logical(x, y), (delta * 0.12).exp());
@@ -163,6 +124,7 @@ pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput
     PointerInput::Magnify { x, y, factor } => view_motion::zoom_at(inner, logical(x, y), factor),
     PointerInput::Scroll { dx, dy } => view_motion::pan_by(inner, dx, dy),
     PointerInput::DoubleClick { x, y } => {
+      emit_press(inner, PointerPress::Down { took: false });
       // A platform reports a double-click in place of its second press. Over
       // a text box or the caption it opens it for typing, and in what is typed
       // into it selects a word; only elsewhere does it fit the view.
@@ -178,18 +140,76 @@ pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput
         refresh_cursor_for(inner);
         return;
       }
-      // Back to the current fit basis: the space beside an open tool panel
-      // while one is up, the whole viewport otherwise.
-      let mut zoom = 1.0;
+      // Back to 100%, centred in the whole viewport.
       if let Ok(mut state) = inner.state.lock() {
-        let transform = fit_basis_transform(&state);
-        state.workspace_transform = transform;
-        zoom = transform.zoom;
+        state.workspace_transform = WorkspaceTransform::default();
         apply_workspace_transform(inner, &mut state, false);
       }
-      emit_transform(inner, zoom);
     }
   }
+}
+
+/// A press going down. Answers whether it took hold of something already
+/// there, rather than drawing, panning or picking.
+fn press(inner: &Arc<SurfaceInner>, scale: f64, centered: bool, x: f64, y: f64) -> bool {
+  let point = (x / scale, y / scale);
+  // While objects are picked in the camera every press is theirs, Alt
+  // removing what it picks.
+  if object_picking::down(inner, point, centered) {
+    refresh_cursor_for(inner);
+    return false;
+  }
+  // A box being typed into sees the press first: in the box it places the
+  // caret, anywhere else it ends the typing and may carry on below.
+  if annotation::typing_press(inner, turn::layer_point(inner, point), false) {
+    refresh_cursor_for(inner);
+    return false;
+  }
+  // The rotation gizmo's rings sit over the layer they turn.
+  if turn::down(inner, point) {
+    return true;
+  }
+  // A turned layer's annotations are pressed where its turn draws them.
+  let layer = turn::layer_point(inner, point);
+  // A press is never a hover: the halo goes out before anything moves.
+  annotation::update_hover(inner, layer, true);
+  // The arrow chrome gets the press first and keeps it if it lands on a
+  // grip, on a shaft, or on empty picture with the arrow tool in hand.
+  // Anything it declines belongs to the layer underneath.
+  if annotation::down(inner, point) {
+    let took = inner.state.lock().ok().is_some_and(|mut state| {
+      state.last_pointer = point;
+      annotation::holds_existing(&state)
+    });
+    refresh_cursor_for(inner);
+    return took;
+  }
+  down::down(inner, scale, x, y)
+}
+
+/// A press being let go.
+fn release(inner: &Arc<SurfaceInner>, scale: f64, x: f64, y: f64) {
+  let point = (x / scale, y / scale);
+  if turn::up(inner, point) {
+    return;
+  }
+  if object_picking::up(inner, point) {
+    refresh_cursor_for(inner);
+    return;
+  }
+  let layer = turn::layer_point(inner, point);
+  if annotation::typing_up(inner) || annotation::up(inner, layer) {
+    if let Ok(mut state) = inner.state.lock() {
+      state.last_pointer = point;
+    }
+    // What now lies under the resting pointer - an annotation just placed
+    // or carried there - is haloed, so it can be deleted without the
+    // pointer moving first; the press had put the halo out.
+    annotation::update_hover(inner, layer, false);
+    refresh_cursor_for(inner);
+    return;
+  }
+  up::up(inner, scale, x, y);
 }
 
 mod frame_resize;

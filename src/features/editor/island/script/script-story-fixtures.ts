@@ -98,7 +98,7 @@ const choiceOf = <K extends string>(
  * caption ending at its most words, a split or a sentence's pause, and
  * running on over a join; its longest word its key word where the template
  * sets one apart, but for words set apart or kept plain by hand. */
-export function makeStoryCaptions(
+function makeStoryCaptions(
   captions: RecordingCaptions,
   { durationMs, marks, words }: StoryTake,
 ): Caption[] {

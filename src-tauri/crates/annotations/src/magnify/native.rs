@@ -1,35 +1,33 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A magnifier's retained draw record.
+//! A lens's retained draw record.
 //!
-//! `p0` and `p2` are the zoom area's corners and `p1` the loupe's centre, all
-//! placed like any point, and `width` the rim's pen. `params` carries the
-//! loupe's longer side in source pixels, which the compositor scales as it
-//! places the points, and the corner radius as a percentage of the shorter
-//! side, which no placement touches. `flags` carries `SHADOW` where the loupe
-//! casts one.
+//! `p0` and `p2` are its box's corners, both placed like any point, and `p1`
+//! its centre, placed with them; `width` is the lens's width. `params`
+//! carries its zoom, which no placement touches, being a ratio, and the
+//! corner radius as a percentage of the shorter side. `flags` carries
+//! `SHADOW` where the lens casts one.
 
 use crate::flags::SHADOW;
 use crate::native::NativeAnnotation;
 use crate::{AnnotationPoint, AnnotationStyle};
 
-pub(crate) fn draw_points(
-  start: AnnotationPoint,
-  end: AnnotationPoint,
-  loupe: AnnotationPoint,
-) -> [[f32; 2]; 3] {
+pub(crate) fn draw_points(start: AnnotationPoint, end: AnnotationPoint) -> [[f32; 2]; 3] {
   [
     [start.x as f32, start.y as f32],
-    [loupe.x as f32, loupe.y as f32],
+    [
+      ((start.x + end.x) / 2.0) as f32,
+      ((start.y + end.y) / 2.0) as f32,
+    ],
     [end.x as f32, end.y as f32],
   ]
 }
 
-/// Writes what a magnifier's record carries beyond its points.
-pub(crate) fn fill(record: &mut NativeAnnotation, size: f64, style: &AnnotationStyle) {
+/// Writes what a lens's record carries beyond its points.
+pub(crate) fn fill(record: &mut NativeAnnotation, zoom: f64, style: &AnnotationStyle) {
   record.params = [
-    size as f32,
+    zoom as f32,
     crate::outline::native::radius(style) as f32,
     0.0,
   ];

@@ -20,7 +20,8 @@ import type { EditorIslandContent } from "../editor-island";
 export type BeatWhat =
   | { app: string; kind: "switch" }
   | { keys: string[]; kind: "keys" }
-  | { kind: "click" | "type"; label: string }
+  /** `label` names what was clicked or typed, where the recording knows. */
+  | { kind: "click" | "type"; label?: string }
   | { kind: "screen" }
   | { kind: "sound" }
   | { kind: "speech"; line: string };

@@ -75,13 +75,13 @@ pub(crate) fn hand_over_fonts() {
 }
 
 /// The font families installed on the system, read once: reading every
-/// family's members takes half a second, and the panel asks each time it
-/// opens. [`warm`] reads them at launch, so the panel never waits.
+/// family's members takes half a second, and the font picker asks each time
+/// it opens. [`warm`] reads them at launch, so the picker never waits.
 static SYSTEM_FAMILIES: LazyLock<Vec<InstalledFamily>> = LazyLock::new(system_families);
 
-/// Readies the Captions panel off the main thread, so it has everything the
-/// moment it opens: reads the font families, and draws each template's
-/// preview of [`launch_styles`].
+/// Readies the text and Captions islands' pickers off the main thread, so
+/// they have everything the moment they open: reads the font families, and
+/// draws each template's preview of [`launch_styles`].
 pub(crate) fn warm(app: &AppHandle) {
   // Read before anything asks for the templates, which takes a moment for
   // a few small files.
@@ -89,12 +89,12 @@ pub(crate) fn warm(app: &AppHandle) {
   let app = app.clone();
   std::thread::spawn(move || {
     LazyLock::force(&SYSTEM_FAMILIES);
-    let sample = screenwide_i18n::t!("editor-panels-text-sample");
+    let sample = screenwide_i18n::t!("editor-island-text-sample");
     super::template_previews::warm(&app, &launch_styles(&app), &sample);
   });
 }
 
-/// Every template as the panel shows it for new captions, the way
+/// Every template as the pickers show it for new captions, the way
 /// `useTextTemplates` and the tiles lay them out: its saved look, with
 /// the layout options kept for new captions.
 pub(crate) fn launch_styles(app: &AppHandle) -> Vec<TextStyle> {

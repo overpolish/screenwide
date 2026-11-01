@@ -4,13 +4,18 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef } from "react";
 
+import { useTweenedOutput } from "../../preview/use-tweened-output";
+import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import {
   RecordingTimelinePlaybackRange,
   recordingTimelinePlaybackRanges,
 } from "../../timeline/recording-timeline-playback";
+import { CameraOverlaySettings } from "../../types";
 
+import { sceneRadius } from "./recording-scene-panel-snapshot";
 import { RecordingSceneClip } from "./recording-scenes";
+import { sceneClipsBetween } from "./scene-clips-between";
 
 /** Scenes with the timeline they are timed on. */
 type TimedScenes = {
@@ -52,28 +57,41 @@ const sendScenes = (
 
 /**
  * Keeps the native preview drawing `clips`, timed on the timeline `edit`
- * lays out, which it arranges every frame the way the export does. A drag on
- * the lane shows its draft the same way while it lasts, without committing
- * it: the answer takes the draft, or null to go back to the committed clips.
+ * lays out, which it arranges every frame the way the export does. A scene's
+ * setting chosen on an island is drawn moving to it (`picture-tween.ts`),
+ * the corners of a pane a scene starts or stops rounding moving from or to
+ * the recording's own, which `look` holds. A drag on the lane shows its
+ * draft the same way while it lasts, without committing it: the answer
+ * takes the draft, or null to go back to the committed clips.
  */
 export function useScenePreviewSync({
   clips,
   edit,
+  look,
   sessionId,
   sourceDurationMs,
 }: {
   clips: RecordingSceneClip[];
   edit: RecordingTimelineEdit;
+  look: {
+    cameraOverlay: CameraOverlaySettings;
+    output: ScreenshotOutputSettings;
+  };
   sessionId: number | null;
   sourceDurationMs: number;
 }) {
   const queueRef = useRef<SendQueue>({ busy: false, next: null });
+  const drawnClips = useTweenedOutput(
+    clips,
+    { part: "scenes", workspace: "recording" },
+    sceneClipsBetween((clip, pane) => sceneRadius(clip, pane, look)),
+  );
   useEffect(() => {
     if (sessionId !== null)
       sendScenes(
         queueRef.current,
         {
-          clips,
+          clips: drawnClips,
           playbackRanges: recordingTimelinePlaybackRanges(
             edit,
             sourceDurationMs,
@@ -81,7 +99,7 @@ export function useScenePreviewSync({
         },
         sessionId,
       );
-  }, [clips, edit, sessionId, sourceDurationMs]);
+  }, [drawnClips, edit, sessionId, sourceDurationMs]);
   return (draft: RecordingSceneClip[] | null) => {
     if (sessionId !== null)
       sendScenes(

@@ -98,14 +98,8 @@ export function NativeRecordingWorkspaceViewport({
   return (
     <div
       aria-label={ariaLabel}
-      className={`relative flex min-h-0 grow overflow-hidden ${isSelecting ? "cursor-move" : ""}`}
+      className={`relative flex min-h-0 grow overflow-hidden rounded-[inherit] ${isSelecting ? "cursor-move" : ""}`}
       data-audio-ribbon-viewport={audioOnly ? "" : undefined}
-      data-preview-fit-width={
-        workspaceHeight > 0
-          ? (availableHeight * workspaceWidth) / workspaceHeight +
-            VIEWPORT_GUTTER * 2
-          : undefined
-      }
       data-recording-preview-viewport
       dir="ltr"
       ref={viewportRef}

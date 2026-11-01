@@ -225,7 +225,7 @@ export function TranscriptText(props: TranscriptTextProps) {
           focus !== undefined && !editing ? unitId(focus) : undefined
         }
         aria-disabled={isDisabled || undefined}
-        aria-label={t("editor-panels-transcript")}
+        aria-label={t("editor-island-transcript")}
         aria-multiselectable
         className={cn(
           "relative flex cursor-default flex-col gap-separate p-inset-sm text-body text-fg outline-none select-none",

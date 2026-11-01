@@ -17,6 +17,7 @@ vi.mock("./escape-focus", () => ({
   preserveEscapeFocus: () => () => undefined,
 }));
 vi.mock("./keyboard-target", () => ({
+  editsText: () => false,
   ownsActivationKeys: () => false,
   ownsArrowKeys: () => false,
   ownsPopupInteractionKeys: () => false,

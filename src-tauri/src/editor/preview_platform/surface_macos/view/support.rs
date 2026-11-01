@@ -97,7 +97,10 @@ impl EditorView {
     if let Some(old) = ivars.tracking.borrow_mut().take() {
       self.removeTrackingArea(&old);
     }
+    // Entering tells the page the pointer left it, which WebKit does not:
+    // see `mouseEntered:`.
     let options = NSTrackingAreaOptions::MouseMoved
+      | NSTrackingAreaOptions::MouseEnteredAndExited
       | NSTrackingAreaOptions::CursorUpdate
       | NSTrackingAreaOptions::ActiveAlways
       | NSTrackingAreaOptions::InVisibleRect;

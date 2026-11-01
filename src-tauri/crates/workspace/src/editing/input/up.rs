@@ -6,9 +6,11 @@ use super::*;
 pub(super) fn up(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: f64) {
   let point = (x / scale, y / scale);
   let mut ended = None;
+  let mut chose_nothing = false;
   if let Ok(mut state) = inner.state.lock() {
     state.last_pointer = point;
-    if let Some(ActiveGesture::Selection(gesture)) = state.gesture.take() {
+    let gesture = state.gesture.take();
+    if let Some(ActiveGesture::Selection(gesture)) = gesture {
       if gesture.operation == SelectionGestureOperation::FrameResize {
         state.frame_resize = None;
         // The committed layout that follows carries the canvas size the
@@ -25,8 +27,19 @@ pub(super) fn up(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: f6
         state.move_auto_fit = None;
       }
       ended = super::crop_draw::finish(&mut state, &gesture).then_some(gesture);
-    } else {
-      state.gesture = None;
+    } else if let Some(ActiveGesture::Pan { pointer_start, .. }) = gesture {
+      // A click on nothing, a press let go where it went down, chooses
+      // nothing: the editor lets the layer go and, with it, the layer's mode.
+      // A drag from nothing pans the view and keeps the choice. The frame's
+      // own selection belongs to the Frame tool, which a click never puts
+      // down, and a click beside the camera while its objects are picked
+      // keeps the camera.
+      chose_nothing = (point.0 - pointer_start.0).hypot(point.1 - pointer_start.1)
+        <= CLICK_SLOP_POINTS
+        && !state.object_picking.is_active()
+        && state
+          .selection
+          .is_some_and(|selection| selection.layer_id != FRAME_LAYER_ID);
     }
     clear_selection_snap_guides(&mut state);
     update_magnifier(&mut state);
@@ -39,4 +52,10 @@ pub(super) fn up(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: f6
   if let Some(gesture) = ended {
     emit_gesture(inner, SelectionGesturePhase::End, gesture);
   }
+  if chose_nothing {
+    emit_selection(inner, None);
+  }
 }
+
+/// How far a press may wander, in points, and still be a click.
+const CLICK_SLOP_POINTS: f64 = 3.0;

@@ -17,9 +17,11 @@ const VANISHED_SCALE: f64 = 0.25;
 /// shorter sides; how opaque each pane is drawn, zero for a pane the scene
 /// hides; and how far the camera is drawn in front of the screen, one in
 /// front and zero behind, between the two while a scene changes the order;
-/// and how the screen is turned in depth about its box's middle. The image
-/// and the picture only ever move and scale in their pane, so annotations
-/// and the cursor carried on them follow, turn included.
+/// how the screen is turned in depth about its box's middle; and how far the
+/// screen's box is padded outwards on every side, in output pixels, filled
+/// with the colour behind the content. The image and the picture only ever
+/// move and scale in their pane, so annotations and the cursor carried on
+/// them follow, turn included.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Placement {
   pub screen: Rect,
@@ -30,6 +32,7 @@ pub struct Placement {
   pub opacity: (f64, f64),
   pub camera_front: f64,
   pub rotation: SceneRotation,
+  pub inset: f64,
 }
 
 /// For a pane whose opacity goes from `from` to `to`, whether it vanishes,
@@ -87,6 +90,7 @@ impl Placement {
       ),
       camera_front: mix(self.camera_front, to.camera_front),
       rotation: self.rotation.toward(to.rotation, t),
+      inset: mix(self.inset, to.inset),
     };
     if let Some((vanishes, factor)) = settling(self.opacity.0, to.opacity.0, t) {
       let from = if vanishes { self } else { to };
@@ -95,6 +99,7 @@ impl Placement {
       next.screen = from.screen.scaled(factor);
       next.image = (x, y, from.image.2 * factor);
       next.rotation = from.rotation;
+      next.inset = from.inset * factor;
     }
     if let Some((vanishes, factor)) = settling(self.opacity.1, to.opacity.1, t) {
       let from = if vanishes { self } else { to };

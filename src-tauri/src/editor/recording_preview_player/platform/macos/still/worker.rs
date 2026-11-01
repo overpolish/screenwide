@@ -27,10 +27,11 @@ pub(super) fn show(
     .preview_surface
     .as_ref()
     .map(|surface| surface.present_batch());
-  let composition = sources.annotated_composition(
+  let arranged = sources.annotated_composition(
     frame_position(position_ms, sources.duration_ms),
     &annotation_clips,
   );
+  let composition = arranged.as_ref().map(|(composition, _)| composition);
   // Paused editing keeps one native-resolution source frame resident. Frame,
   // crop and OSC gestures then only rerun the GPU composition instead of
   // invalidating the decoder cache for every changing pane size. Live
@@ -111,7 +112,7 @@ pub(super) fn show(
     .read()
     .map(|settings| *settings)
     .unwrap_or_default();
-  let keyboard_dimensions = composition.as_ref().map_or(
+  let keyboard_dimensions = composition.map_or(
     (
       sources.playback_layout.panes[0].source_width,
       sources.playback_layout.panes[0].source_height,
@@ -131,7 +132,7 @@ pub(super) fn show(
   let Some(surface) = sources.preview_surface.as_ref() else {
     return;
   };
-  let presented = if let Some(composition) = &composition {
+  let presented = if let Some(composition) = composition {
     let screen_factor = pane_factor(&target_sizes, 0, composition.recording_output.primary.width);
     let mut screen_output = scaled_output(&composition.recording_output.primary, screen_factor);
     // Placeholder settings below the compositor's validation floor mean the
@@ -203,6 +204,13 @@ pub(super) fn show(
         camera,
         (camera_position_ms.unwrap_or(0), screen_position_ms),
       ));
+    }
+    // The chrome over a pane a scene places moves with the still it outlines,
+    // drawn with it in this batch.
+    if let Some(selection) = arranged.as_ref().and_then(|(composition, placed)| {
+      sources.selection_for_frame(composition, *placed, (screen_position_ms, 0.0))
+    }) {
+      surface.set_selection(Some(selection));
     }
     surface
       .present_recording_workspace(&layers)

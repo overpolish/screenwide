@@ -12,9 +12,7 @@ import {
   setRecordingPreviewCursorEffects,
   setRecordingPreviewEditorSuspended,
   setRecordingPreviewKeyboardEffects,
-  setRecordingPreviewZoom,
 } from "../api";
-import { PreviewZoomRequest } from "../preview/preview-zoom-state";
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import {
   RecordingPreviewKeyboardDeletions,
@@ -44,28 +42,20 @@ export const recordingPreviewSessionSettingsKey = (
 ) => JSON.stringify(settings);
 
 /**
- * Native comes up interactive at 100%, so a session that (re)starts while
- * React owns the workarea has to be told about the suspension, and one that
- * starts with the editor to itself has to be told the zoom. The two are
- * exclusive: React never drives the transform while suspended.
+ * Native comes up interactive, so a session that (re)starts while React owns
+ * the workarea has to be told about the suspension.
  */
 export const pushRecordingPreviewSessionState = ({
   isEditorSuspended,
-  nativeEditorOwnsLayout,
   onError,
   sessionId,
-  zoomRequest,
 }: {
   isEditorSuspended: boolean;
-  nativeEditorOwnsLayout: boolean;
   onError: (cause: unknown) => void;
   sessionId: number;
-  zoomRequest: PreviewZoomRequest | undefined;
 }) => {
   if (isEditorSuspended)
     void setRecordingPreviewEditorSuspended(sessionId, true).catch(onError);
-  else if (nativeEditorOwnsLayout && zoomRequest !== undefined)
-    void setRecordingPreviewZoom(sessionId, zoomRequest.percent).catch(onError);
 };
 
 /**

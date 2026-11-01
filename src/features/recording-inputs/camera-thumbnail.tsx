@@ -55,7 +55,7 @@ export function CameraThumbnail({
   return (
     <span
       className={cn(
-        "relative flex items-center justify-center overflow-hidden rounded-sm bg-fill-quaternary",
+        "relative flex items-center justify-center overflow-hidden rounded-sm bg-recess",
         className,
       )}
       style={{
@@ -88,7 +88,7 @@ export function CameraThumbnail({
         // whatever box the thumbnail is drawn in without an ancestor's glyph
         // sizing overflowing a small one.
         <Camera
-          className="absolute text-content-fg-tertiary"
+          className="absolute text-fg-tertiary"
           style={{ height: "auto", width: "50%" }}
         />
       )}

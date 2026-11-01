@@ -7,27 +7,17 @@ import {
   withRotation,
 } from "../../layer-rotation";
 import {
-  prepareRecenterInset,
+  padWithInsetColor,
   recenterWorkspaceContent,
 } from "../../recenter-inset-channel";
 import { CameraEffectsTool } from "../../recording/camera/use-camera-effects";
 import {
-  resetScreenshotTransform,
-  ScreenshotOutputSettings,
-} from "../../screenshot/screenshot-output";
-import {
   insetScreenshotPadding,
-  screenshotPaddingInset,
-} from "../../screenshot/screenshot-recenter";
+  screenshotInsetShare,
+} from "../../screenshot/screenshot-inset";
+import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { EditorKind } from "../../types";
-import {
-  SelectionPlacementPatch,
-  selectionPlacement,
-  withSelectionPlacement,
-} from "../selection-placement";
 import { ToolPanelLayerSelection } from "../tool-panel-store";
-
-const insetSliderMaximum = 1_000;
 
 /**
  * The one layer the selection panel acts on: what to show for it, and the
@@ -40,16 +30,13 @@ const insetSliderMaximum = 1_000;
 export type EditorSelectionTarget = {
   /** Cast the layer's shadow onto the canvas, or take it away. */
   applyDropShadow: (dropShadow: boolean) => void;
-  /** Pad the layer by this many output pixels on each side. */
+  /** Pad the layer by this share of its picture's shorter side on each
+   * side. */
   applyInset: (inset: number) => void;
-  /** Place the layer at the size and position a field asked for. */
-  applyPlacement: (placement: SelectionPlacementPatch) => void;
   /** Round the layer's corners by this share of its shorter side. */
   applyRadius: (radius: number) => void;
   /** Put the layer's content in the middle of its padded frame. */
   recenter: () => void;
-  /** Put the layer back to the framing its source arrived in. */
-  reset: () => void;
   selection: ToolPanelLayerSelection;
   /** Have the camera follow the face, or stop, where the layer is a camera
    * drawn into the screen's picture. */
@@ -97,16 +84,16 @@ export const placedSelectionTarget = ({
       apply({ ...settings, dropShadow });
     },
     applyInset: (inset) => {
-      apply(insetScreenshotPadding(settings, source, inset));
-      // The pad is filled with the colour detected behind the content, so the
-      // first pixel of padding asks for that colour if none was read yet. It
-      // is asked for after the padding is committed, so the colour lands on
-      // the padded layer rather than on the one before it.
+      const pad = () => {
+        apply(insetScreenshotPadding(settings, source, inset));
+      };
+      // The pad is filled with the colour detected behind the content, so
+      // the first pixel of padding asks for that colour if none was read
+      // yet, after the padding is committed so the colour lands on the
+      // padded layer rather than on the one before it.
       if (inset > 0 && !settings.recenterInsetColor && workspace)
-        prepareRecenterInset(workspace);
-    },
-    applyPlacement: (placement) => {
-      apply(withSelectionPlacement(settings, source, placement));
+        padWithInsetColor(workspace, pad);
+      else pad();
     },
     applyRadius: (radiusPercent) => {
       apply({ ...settings, radiusPercent });
@@ -121,27 +108,16 @@ export const placedSelectionTarget = ({
     recenter: () => {
       if (workspace) recenterWorkspaceContent(workspace);
     },
-    // The reset the Select tool has always had: the layer back to the framing
-    // its source arrived in, its crop kept.
-    reset: () => {
-      apply(resetScreenshotTransform(settings, source));
-    },
     selection: {
-      ...selectionPlacement(settings),
       dropShadow: settings.dropShadow,
-      inset: Math.round(screenshotPaddingInset(settings, source)),
-      // The padding is measured against the layer's own picture rather than
-      // its padded frame, so the range does not move as the knob is dragged.
-      // Keep the slider useful on small captures without making typed values
-      // depend on the source dimensions. Number entry remains unbounded by
-      // this soft slider range.
-      insetMaximum: insetSliderMaximum,
+      // A share of the layer's own picture, its source crop, rather than of
+      // its padded frame, so it does not move as the padding changes, and a
+      // large look is large whatever the layer's size.
+      inset: screenshotInsetShare(settings, source),
       kind,
       label,
       radius: settings.radiusPercent,
       ...(turns ? { rotation } : {}),
-      sourceHeight: source.height,
-      sourceWidth: source.width,
     },
   };
 };

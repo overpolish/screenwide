@@ -15,6 +15,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import type { SceneRotation } from "../../../../../bindings/SceneRotation";
 import type { EditorIslandContent } from "../../editor-island";
@@ -42,7 +47,7 @@ type ImageStyle = {
   sways: boolean;
 };
 
-export type ImageIslandProps = {
+export type ImageIslandProps = AnnotationPinProps & {
   /** Whether it can pop in, sway and play: a recording's annotations can,
    * a screenshot's, being one instant, cannot. */
   canAnimate: boolean;
@@ -64,6 +69,7 @@ export function imageIsland(props: ImageIslandProps): EditorIslandContent {
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -117,6 +123,7 @@ export function imageIsland(props: ImageIslandProps): EditorIslandContent {
           }}
           rotation={style.rotation}
         />
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
         <div className="flex justify-end gap-separate">
           <Button onPress={props.onReplace}>
             {t("editor-island-image-replace")}

@@ -9,7 +9,6 @@ use super::*;
 pub(crate) fn chrome(
   viewport_size: (u32, u32),
   frame: Option<[f32; 4]>,
-  radius_point: Option<[f32; 2]>,
   crop_image: Option<[f32; 4]>,
   // The selected layer's corner radius, as a percentage of the crop
   // rectangle's shorter side, so the shade rounds with the result.
@@ -73,31 +72,13 @@ pub(crate) fn chrome(
         crop_radius_percent,
       );
     } else if let Some(frame) = turned.frame {
-      let [a, b, c, d, dot] = frame.map(|[x, y]| Point {
+      let corners = frame.map(|[x, y]| Point {
         x: f64::from(x) / scale,
         y: f64::from(y) / scale,
       });
-      osc_gpu::add_turned_selection(&mut vertices, view, [a, b, c, d], Some(dot), scale);
+      osc_gpu::add_turned_selection(&mut vertices, view, corners, scale);
     } else {
-      let radius_percent = radius_point
-        .filter(|point| point[0].is_finite() && point[1].is_finite())
-        .map(|point| {
-          let shortest = logical_frame
-            .size
-            .width
-            .min(logical_frame.size.height)
-            .max(1.0);
-          (((f64::from(point[0] - frame[0]) / scale - 10.0) / (shortest * 0.55)) * 100.0)
-            .clamp(0.0, 50.0)
-        });
-      osc_gpu::add_selection(
-        &mut vertices,
-        view,
-        logical_frame,
-        scale,
-        radius_percent.unwrap_or_default(),
-        radius_percent.is_some(),
-      );
+      osc_gpu::add_selection(&mut vertices, view, logical_frame, scale);
     }
   }
   if let Some(rings) = turned.rings.as_ref().filter(|_| objects.is_none()) {

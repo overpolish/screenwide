@@ -9,10 +9,13 @@
 //! Layer properties are safe to set from any thread inside a transaction,
 //! which is how the engine's off-main-thread draws move them.
 
+use std::sync::Mutex;
+
 use objc2::rc::Retained;
 use objc2_app_kit::NSColor;
 use objc2_foundation::{NSPoint, NSRect, NSSize};
-use objc2_quartz_core::{CALayer, CAMetalLayer, CATransaction};
+use objc2_quartz_core::{CACornerMask, CALayer, CAMetalLayer, CATransaction};
+use screenwide_compositor::PreviewSurfaceCorners;
 
 pub(super) struct Layers {
   /// The root of the view below the webview.
@@ -23,6 +26,8 @@ pub(super) struct Layers {
   /// The root of the input view over the webview.
   pub(super) chrome_root: Retained<CALayer>,
   pub(super) chrome: Retained<CAMetalLayer>,
+  /// The corners the layers were last rounded to.
+  corners: Mutex<PreviewSurfaceCorners>,
 }
 
 // Core Animation layers may be changed from any thread inside a transaction,
@@ -62,6 +67,7 @@ impl Layers {
       ribbon,
       chrome_root,
       chrome,
+      corners: Mutex::new(PreviewSurfaceCorners::default()),
     };
     transaction(|| {
       let all: [&CALayer; 4] = [
@@ -96,6 +102,40 @@ impl Layers {
       color[3].clamp(0.0, 1.0),
     );
     transaction(|| self.backdrop.setBackgroundColor(Some(&color.CGColor())));
+  }
+
+  /// Rounds the corners of every layer laid over the viewport - the
+  /// backstop, the workspace with its checkerboard, the ribbon and the
+  /// chrome - so the picture meets the window's chrome on the curve the
+  /// webview's hole has. Core Animation takes one radius, which every
+  /// rounded corner shares.
+  pub(super) fn round(&self, corners: PreviewSurfaceCorners) {
+    match self.corners.lock() {
+      Ok(mut last) if *last != corners => *last = corners,
+      _ => return,
+    }
+    // The roots are flipped, so a layer's least y is its top.
+    let mut mask = CACornerMask::empty();
+    let mut radius: f64 = 0.0;
+    for (corner, flag) in [
+      (corners.top_left, CACornerMask::LayerMinXMinYCorner),
+      (corners.top_right, CACornerMask::LayerMaxXMinYCorner),
+      (corners.bottom_right, CACornerMask::LayerMaxXMaxYCorner),
+      (corners.bottom_left, CACornerMask::LayerMinXMaxYCorner),
+    ] {
+      if corner > 0.0 {
+        mask |= flag;
+        radius = radius.max(corner);
+      }
+    }
+    transaction(|| {
+      let all: [&CALayer; 4] = [&self.backdrop, &self.workspace, &self.ribbon, &self.chrome];
+      for layer in all {
+        layer.setCornerRadius(radius);
+        layer.setMaskedCorners(mask);
+        layer.setMasksToBounds(radius > 0.0);
+      }
+    });
   }
 }
 

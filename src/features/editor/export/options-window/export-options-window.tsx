@@ -199,6 +199,9 @@ export function ExportOptionsWindow() {
         onCameraCompressionChange: (cameraCompression) => {
           patch({ cameraCompression });
         },
+        onCameraOutputChange: (cameraOutput) => {
+          patch({ cameraOutput });
+        },
         onCameraResolutionScaleChange: (cameraResolutionScalePercent) => {
           patch({ cameraResolutionScalePercent });
         },

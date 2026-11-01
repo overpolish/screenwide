@@ -88,10 +88,8 @@ export type ScreenshotSelectionGestureEvent = {
     | "cropDraw"
     | "cropMove"
     | "cropResize"
-    | "frameRadius"
     | "frameResize"
     | "move"
-    | "radius"
     | "resize"
     | "rotate";
   paneIndex: number;

@@ -3,7 +3,7 @@
 
 //! AppKit's mouse and trackpad events as the engine's pointer input.
 
-use objc2_app_kit::{NSEvent, NSEventModifierFlags};
+use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSView};
 
 use super::EditorView;
 use screenwide_workspace::editing::PointerInput as Input;
@@ -94,4 +94,31 @@ pub(super) fn magnify(view: &EditorView, event: &NSEvent) {
     y,
     factor: 1.0 + event.magnification(),
   });
+}
+
+impl EditorView {
+  /// The pointer where it rests over the view, reported as a move, so what
+  /// lies under it is measured afresh after a change of tool. Nothing while a
+  /// button is down or the pointer rests elsewhere.
+  pub(in crate::editor::preview_platform::surface_macos) fn hover_again(&self) {
+    if self.isHidden() || NSEvent::pressedMouseButtons() != 0 {
+      return;
+    }
+    let Some(window) = self.window() else {
+      return;
+    };
+    let local = self.convertPoint_fromView(window.mouseLocationOutsideOfEventStream(), None);
+    if !NSView::mouse_inRect(self, local, self.bounds()) {
+      return;
+    }
+    let (x, y) = self.pixels(local);
+    let flags = NSEvent::modifierFlags_class();
+    self.pointer(Input::Move {
+      centered: flags.contains(NSEventModifierFlags::Option),
+      x,
+      y,
+      pressed: false,
+      snapping: flags.contains(NSEventModifierFlags::Command),
+    });
+  }
 }

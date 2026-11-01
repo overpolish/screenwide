@@ -7,7 +7,7 @@
 //! quads carried through a turn step along every side; a grip stays a round
 //! disc where its middle lands rather than squashing with the picture.
 
-use super::super::turn::{carried_box, carried_point, carried_rect, carried_segment};
+use super::super::turn::{carried_point, carried_rect, carried_segment};
 use super::*;
 use screenwide_scenes::rotation::Homography;
 
@@ -17,12 +17,12 @@ pub(crate) struct AnnotationChrome<'a> {
   /// The chosen annotation's grips, possibly none with a tool in hand and
   /// nothing chosen, plus the disc over a snapped tip.
   pub(crate) handles: &'a [[f32; 2]],
-  /// The chosen box annotation's box and its radius percentage, drawn as the
-  /// layer selection draws its own; a stroke's has no radius dot.
-  pub(crate) box_frame: Option<([f32; 4], Option<f64>)>,
+  /// The chosen box annotation's box, drawn as the layer selection draws its
+  /// own.
+  pub(crate) box_frame: Option<[f32; 4]>,
   /// The chosen image's own frame: its four corners, clockwise from the
-  /// picture's own top-left, then its radius dot.
-  pub(crate) image_frame: Option<[[f32; 2]; 5]>,
+  /// picture's own top-left.
+  pub(crate) image_frame: Option<[[f32; 2]; 4]>,
   /// The element an arrow's tip has snapped to, outlined a device pixel wide
   /// so the anchor it took reads as part of that element.
   pub(crate) bounds: Option<[f32; 4]>,
@@ -73,19 +73,12 @@ pub(super) fn add_upright(
   for bar in chrome.gaps {
     osc_gpu::add_pixel_aligned_quad(vertices, view, logical_rect(*bar, scale), scale, 5);
   }
-  if let Some((frame, radius_percent)) = chrome.box_frame {
-    osc_gpu::add_selection(
-      vertices,
-      view,
-      logical_rect(frame, scale),
-      scale,
-      radius_percent.unwrap_or(0.0),
-      radius_percent.is_some(),
-    );
+  if let Some(frame) = chrome.box_frame {
+    osc_gpu::add_selection(vertices, view, logical_rect(frame, scale), scale);
   }
   if let Some(frame) = chrome.image_frame {
-    let [a, b, c, d, dot] = frame.map(|point| logical_point(point, scale));
-    osc_gpu::add_turned_selection(vertices, view, [a, b, c, d], Some(dot), scale);
+    let corners = frame.map(|point| logical_point(point, scale));
+    osc_gpu::add_turned_selection(vertices, view, corners, scale);
   }
   for frame in chrome.group {
     osc_gpu::add_group_frame(vertices, view, logical_rect(*frame, scale), scale);
@@ -159,13 +152,13 @@ pub(super) fn add_turned(
       scale,
     );
   }
-  if let Some((frame, radius_percent)) = chrome.box_frame {
-    let (corners, dot) = carried_box(forward, logical_rect(frame, scale), radius_percent);
-    osc_gpu::add_turned_selection(vertices, view, corners, dot, scale);
+  if let Some(frame) = chrome.box_frame {
+    let corners = carried_rect(forward, logical_rect(frame, scale));
+    osc_gpu::add_turned_selection(vertices, view, corners, scale);
   }
   if let Some(frame) = chrome.image_frame {
-    let [a, b, c, d, dot] = frame.map(|point| carried_point(forward, logical_point(point, scale)));
-    osc_gpu::add_turned_selection(vertices, view, [a, b, c, d], Some(dot), scale);
+    let corners = frame.map(|point| carried_point(forward, logical_point(point, scale)));
+    osc_gpu::add_turned_selection(vertices, view, corners, scale);
   }
   for frame in chrome.group {
     let corners = carried_rect(forward, logical_rect(*frame, scale));

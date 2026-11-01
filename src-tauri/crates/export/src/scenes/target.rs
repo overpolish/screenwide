@@ -75,6 +75,8 @@ impl Base {
         opacity: (1.0, 1.0),
         camera_front: 1.0,
         rotation: output.rotation.unwrap_or_default(),
+        // The recording's own inset is already its crop's padding.
+        inset: 0.0,
       },
       canvas: (f64::from(output.width), f64::from(output.height)),
       camera_aspect: camera.map(|(_, aspect)| aspect),
@@ -204,6 +206,9 @@ impl Base {
       opacity: (opacity(shown.0), opacity(shown.1)),
       camera_front: clip.camera_front(),
       rotation: clip.rotation.unwrap_or_default(),
+      // The scene pads its box outwards, as the recording's inset pads its
+      // crop, by a share of the box's shorter side.
+      inset: clip.inset.unwrap_or(0.0) * screen.width.min(screen.height),
     })
   }
 }

@@ -7,7 +7,7 @@ import type { TranscriptRange } from "../tool-panel-transcript";
 import type { TranscriptWord } from "./transcript-words";
 
 /**
- * The transcript's words and the playhead, as the Transcript panel's window
+ * The transcript's words and the playhead, as the Script island's window
  * holds them. Kept apart from the tool panel mirror, which is republished
  * with every change of a setting: a long recording's words would travel with
  * each one, and the playhead moves on every frame while the recording plays.

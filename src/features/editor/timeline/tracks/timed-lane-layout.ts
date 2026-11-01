@@ -27,23 +27,6 @@ export type TimedLaneFragment<Item extends TimedLaneItem> =
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
 /**
- * Lays items timed on the edited video, `lengthMs` long, onto a lane: one
- * fragment each, as the timeline plays them.
- */
-export const layoutTimelineLaneItems = <Item extends TimedLaneItem>(
-  items: Item[],
-  lengthMs: number,
-): LaneFragment<Item>[] =>
-  lengthMs > 0
-    ? items.map((item) => ({
-        fragmentId: String(item.id),
-        item,
-        outputEnd: clamp(Math.max(item.startMs, item.endMs) / lengthMs),
-        outputStart: clamp(item.startMs / lengthMs),
-      }))
-    : [];
-
-/**
  * Lays source-time items onto the magnetic output timeline. A ranged item that
  * crosses a segment boundary becomes multiple independently addressable visual
  * fragments.
@@ -125,34 +108,6 @@ export type StackedLaneFragment<
   Fragment extends LaneFragment<Item> = TimedLaneFragment<Item>,
 > = Fragment & LaneStacking;
 
-/**
- * One sublane row's height in CSS pixels. Mirrors the `--spacing-control-height`
- * token (1.75rem, 28px), which every row in the timeline band is laid out to.
- * The lane's absolutely positioned fragments need the number in JS, so it is
- * kept here beside the stacking that produces rows.
- */
-export const TIMED_LANE_ROW_HEIGHT_PX = 28;
-
-/**
- * The breathing space a fragment leaves above and below itself inside its row,
- * so stacked sublanes read as separate bars rather than one block. Mirrors
- * `--spacing-control`. It is the inset within a row, NOT the gap between the
- * band's rows - `CONTROL_GAP_PX` in `timeline-band-metrics.ts` is that one, and
- * the two carrying the same number today is a coincidence, not a shared idea.
- */
-const TIMED_LANE_ROW_INSET_PX = 4;
-
-/**
- * Where one fragment sits in its lane, in CSS pixels: every timed lane places
- * its bars absolutely against the same row grid, so they all measure it here
- * rather than each repeating the arithmetic. Shortcuts and annotations use it
- * today; the captions and zoom lanes planned next are its other callers.
- */
-export const timedLaneFragmentBox = (row: number) => ({
-  height: TIMED_LANE_ROW_HEIGHT_PX - 2 * TIMED_LANE_ROW_INSET_PX,
-  top: row * TIMED_LANE_ROW_HEIGHT_PX + TIMED_LANE_ROW_INSET_PX,
-});
-
 const SEAM_EPSILON = 1e-9;
 
 /**
@@ -162,26 +117,6 @@ const SEAM_EPSILON = 1e-9;
  * dense run of keystrokes seen zoomed out cannot grow the lane without limit.
  */
 const MINIMUM_WIDTH_ROW_LIMIT = 4;
-
-/**
- * Converts a lane's minimum item width into the output-ratio span a fragment
- * of that width covers. Lane fragments are positioned against the zoomed
- * viewport content, which is the lane's own width times the zoom, so the span
- * a fixed pixel width claims shrinks as the timeline is zoomed in.
- */
-export const timedLaneMinimumSpan = ({
-  contentWidthPx,
-  minimumItemWidthPx,
-  zoom,
-}: {
-  contentWidthPx: number;
-  minimumItemWidthPx: number;
-  zoom: number;
-}) => {
-  const zoomedWidth = contentWidthPx * zoom;
-  if (zoomedWidth <= 0 || minimumItemWidthPx <= 0) return 0;
-  return Math.min(1, minimumItemWidthPx / zoomedWidth);
-};
 
 /**
  * Assigns overlapping fragments to stacked sublanes so simultaneous items

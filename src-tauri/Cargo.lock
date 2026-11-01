@@ -5435,6 +5435,7 @@ dependencies = [
  "rustls",
  "rxing",
  "screenwide-accent",
+ "screenwide-activity",
  "screenwide-annotations",
  "screenwide-capture",
  "screenwide-compositor",

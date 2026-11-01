@@ -6,7 +6,7 @@ import { createWorkspaceMirror } from "../../workspace-mirror";
 import type { ExportPreviewFrame } from "../../../../bindings/ExportPreviewFrame";
 
 /** The frame the export window compares, as the editor last made it. */
-export type ExportPreview = {
+type ExportPreview = {
   /** Whether the export has a picture to preview at all. */
   available: boolean;
   /** The frame as the export will write it. */

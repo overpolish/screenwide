@@ -24,9 +24,9 @@ const annotation_image_placeholder: vec4<f32> = vec4<f32>(0.5, 0.5, 0.5, 0.35);
 // magnifier's own. The twin of `SHADOW_SPREAD` in `images/shadow.rs`.
 const annotation_image_spread: f32 = 0.11;
 const annotation_image_lift: f32 = 0.35;
-// How dark a shadow is where its picture is solid: twice the magnifier's,
-// so it is as dark as the loupe's along the picture's edge, where the
-// blurred silhouette is half.
+// How dark a shadow is where its picture is solid: twice the lens's, so it
+// is as dark as the lens's along the picture's edge, where the blurred
+// silhouette is half.
 const annotation_image_shadow_strength: f32 = 0.28;
 // How far in front of a picture the eye sits, in lengths of its longer side:
 // the screen's own `EYE_DISTANCE` in `scenes/src/rotation.rs`, as

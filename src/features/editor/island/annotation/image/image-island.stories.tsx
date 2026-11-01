@@ -10,6 +10,7 @@ import {
   editorIslandStoryMeta,
   type EditorIslandStoryProps,
 } from "../../editor-island-story-meta";
+import { storyPinAfter } from "../annotation-pin-story-fixtures";
 
 import { imageIsland, type ImageIslandProps } from "./image-island";
 
@@ -31,8 +32,10 @@ const meta = {
     isShown: true,
     onDelete: fn(),
     onFlip: fn(),
+    onPinAction: fn(),
     onReplace: fn(),
     onStyleChange: fn(),
+    pin: null,
     style: {
       hasShadow: true,
       isAnimated: true,
@@ -50,6 +53,10 @@ const meta = {
     return (
       <ImageIsland
         {...args}
+        onPinAction={(action) => {
+          args.onPinAction?.(action);
+          updateArgs({ pin: storyPinAfter(args.pin, action) });
+        }}
         onStyleChange={(style) => {
           args.onStyleChange(style);
           updateArgs({ style: { ...args.style, ...style } });
@@ -69,4 +76,6 @@ export const Recording: Story = {};
 export const MovingPicture: Story = { args: { isMoving: true } };
 
 // A screenshot is one instant: nothing pops in, sways or plays.
-export const Screenshot: Story = { args: { canAnimate: false } };
+export const Screenshot: Story = {
+  args: { canAnimate: false, pin: undefined },
+};

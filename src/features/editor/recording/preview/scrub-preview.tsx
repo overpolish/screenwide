@@ -3,6 +3,7 @@
 
 import { RecordingOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { RecordedParts } from "../../toolbar/editor-modes";
 import {
   AudioTrackVolume,
   CameraOverlaySettings,
@@ -35,8 +36,6 @@ export type ScrubPreviewProps = {
   hasAnnotations?: boolean;
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
-  /** Whether the recording has a microphone track to transcribe. */
-  hasMicrophone?: boolean;
   isPreparingAudio?: boolean;
   isPreparingPreview?: boolean;
   isSaving?: boolean;
@@ -55,6 +54,9 @@ export type ScrubPreviewProps = {
   previewOutputDimensions?: Partial<
     Record<RecordingVideoTrackId, { height: number; width: number }>
   >;
+  /** What the recording was made with, which with the tracks in the
+   * export decides the modes the title bar offers. */
+  recorded?: RecordedParts;
   recordingOutput?: RecordingOutputSettings;
   recordingTimelineEdit?: RecordingTimelineEdit | null;
   /** Captured pixels per logical point of the screen, which a screen

@@ -56,10 +56,10 @@ static PREVIEWER: LazyLock<Result<Mutex<CaptionPreviewer>, String>> = LazyLock::
 });
 
 /// Draws each of `styles`' preview of the `sample` words, so it is only
-/// found when the panel asks. A preview drawn before is only found, and the
-/// drawing readies the previewer.
+/// found when a template picker asks. A preview drawn before is only found,
+/// and the drawing readies the previewer.
 pub(crate) fn warm(app: &AppHandle, styles: &[TextStyle], sample: &str) {
-  // A preview that cannot be drawn now is drawn when the panel asks.
+  // A preview that cannot be drawn now is drawn when a picker asks.
   let _ = previews(app, styles, sample);
 }
 
@@ -119,7 +119,7 @@ fn preview_clip(
     height: PREVIEW.height,
   };
   if clip.path.is_file() && clip.still.is_file() {
-    // Marked as used, so pruning keeps the clips the panel shows.
+    // Marked as used, so pruning keeps the clips the pickers show.
     if let Ok(file) = std::fs::File::options().append(true).open(&clip.path) {
       let _ = file.set_modified(std::time::SystemTime::now());
     }
@@ -169,8 +169,8 @@ fn save(path: &Path, bytes: &[u8]) -> Result<(), String> {
     .map_err(|error| format!("The template preview could not be saved: {error}"))
 }
 
-/// More clips than the panel ever shows at once, with room for the styles
-/// tried on the way to one: the oldest past this are let go.
+/// More clips than a template picker ever shows at once, with room for the
+/// styles tried on the way to one: the oldest past this are let go.
 const KEPT_PREVIEWS: usize = 60;
 
 /// Lets go of every clip in `directory` but the [`KEPT_PREVIEWS`] most
@@ -219,18 +219,4 @@ pub async fn render_template_previews(
   tauri::async_runtime::spawn_blocking(move || previews(&app, &styles, &sample))
     .await
     .map_err(|error| error.to_string())?
-}
-
-/// The previews launch draws, of every template as new captions would take
-/// it up, so the panel window can load them before the panel first opens.
-#[tauri::command]
-pub async fn launch_template_previews(
-  app: AppHandle,
-  sample: String,
-) -> Result<Vec<TemplatePreviewClip>, String> {
-  tauri::async_runtime::spawn_blocking(move || {
-    previews(&app, &super::text_templates::launch_styles(&app), &sample)
-  })
-  .await
-  .map_err(|error| error.to_string())?
 }

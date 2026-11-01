@@ -58,10 +58,11 @@ impl PreviewManager {
     });
     let chosen = vec![id];
     self.present_annotation_gesture(pane_index, &chosen);
-    // The published grips are this pane's list in order, so the box's place
-    // in it is its place in the grips.
-    if let Some(surface) = self.surface.as_ref() {
-      surface.begin_annotation_text(index, text, look, emphasis);
+    // The published grips run through every layer in turn, so the box's
+    // place in its own pane's list is offset by the layers before it.
+    let published = self.published_index(pane_index, index);
+    if let (Some(surface), Some(published)) = (self.surface.as_ref(), published) {
+      surface.begin_annotation_text(published, text, look, emphasis);
     }
     let mut commit = self.commit_for(pane_index, chosen)?;
     commit.text_edit = Some(TextEditPhase::Begin);

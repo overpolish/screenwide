@@ -6,7 +6,8 @@ import { t } from "../../i18n/i18n";
 import type { AnnotationKind } from "./types";
 
 /** What an annotation's size control measures. */
-export type AnnotationSizeMeasure = "blockSize" | "height" | "size" | "width";
+export type AnnotationSizeMeasure =
+  "blockSize" | "height" | "size" | "width" | "zoom";
 
 /** The name a drawing tool goes by, the same in the editor and the live
  * overlay so an annotation reads the same wherever it is drawn. */
@@ -76,5 +77,7 @@ export const annotationSizeLabel = (measure: AnnotationSizeMeasure) => {
       return t("annotation-size-size");
     case "width":
       return t("annotation-size-width");
+    case "zoom":
+      return t("annotation-size-zoom");
   }
 };

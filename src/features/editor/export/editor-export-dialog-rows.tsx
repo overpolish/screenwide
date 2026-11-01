@@ -8,6 +8,8 @@ import { cn } from "../../../lib/styling";
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
+import { CameraOutput } from "./camera-output";
+
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
 import type { ControlRowControlProps } from "../../../composites/control-row/control-row";
 
@@ -72,14 +74,14 @@ export function ExportRow({
         {title}
       </label>
       {layout === "trailing" ? (
-        <div className="flex min-h-control-height min-w-0 items-center justify-end gap-control-inset text-end">
+        <div className="flex min-h-control-height min-w-0 items-center justify-end gap-inline text-end">
           {descriptionText}
           <div className="flex shrink-0 items-center">{control}</div>
         </div>
       ) : (
         <div
           className={cn(
-            "flex min-w-0 flex-col gap-tight",
+            "flex min-w-0 flex-col gap-inline",
             layout === "end" && "items-end text-end",
           )}
         >
@@ -157,6 +159,39 @@ export function SubtitlesRow({
             if (chosen) onChange?.(chosen.id);
           }}
           selected={hasTranscript ? value : "none"}
+        />
+      )}
+    </ExportRow>
+  );
+}
+
+/** Whether the camera is drawn into the screen's video or saved beside it as
+ * a file of its own, which then takes its own size and compression. */
+export function CameraOutputRow({
+  isDisabled,
+  onChange,
+  value,
+}: {
+  value: CameraOutput;
+  isDisabled?: boolean;
+  onChange?: (output: CameraOutput) => void;
+}) {
+  const options: { id: CameraOutput; label: string }[] = [
+    { id: "combined", label: t("editor-export-camera-combined") },
+    { id: "separate", label: t("editor-export-camera-separate") },
+  ];
+  return (
+    <ExportRow layout="end" title={t("editor-export-camera")}>
+      {() => (
+        <PillGroup
+          aria-label={t("editor-export-camera")}
+          isDisabled={isDisabled}
+          items={options}
+          onSelectionChange={(id) => {
+            const chosen = options.find((option) => option.id === id);
+            if (chosen) onChange?.(chosen.id);
+          }}
+          selected={value}
         />
       )}
     </ExportRow>

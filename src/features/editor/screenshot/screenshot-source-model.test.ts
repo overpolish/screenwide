@@ -104,7 +104,7 @@ describe("Crop and padding composition", () => {
     expect(recentered.recenterInsetColor).toBe("#ffffff");
   });
 
-  it("preserves the configured inset when Recenter detects new content", () => {
+  it("keeps the inset's share when Recenter detects new content", () => {
     const source = { height: 1_000, width: 1_000 };
     const settings = withScreenshotSourceCrop(
       {
@@ -126,9 +126,9 @@ describe("Crop and padding composition", () => {
     });
     const layout = screenshotLayout(source, recentered);
 
-    expect((layout.crop.width - layout.sourceCrop.width) / 2).toBeCloseTo(100);
-    expect((layout.crop.height - layout.sourceCrop.height) / 2).toBeCloseTo(
-      100,
-    );
+    // A quarter of the 400 pixel picture's side, so a quarter of the 200
+    // pixel content's.
+    expect((layout.crop.width - layout.sourceCrop.width) / 2).toBeCloseTo(50);
+    expect((layout.crop.height - layout.sourceCrop.height) / 2).toBeCloseTo(50);
   });
 });

@@ -15,6 +15,7 @@ mod typing;
 use std::cell::{Cell, RefCell};
 use std::sync::Weak;
 
+use dispatch2::DispatchQueue;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObjectProtocol, ProtocolObject, Sel};
 use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
@@ -85,8 +86,12 @@ define_class!(
 
     #[unsafe(method(cursorUpdate:))]
     fn cursor_update(&self, _event: &NSEvent) {
+      // AppKit also sends this from inside a transaction flush, and the engine
+      // flushes while it holds its state lock (hiding the editor does), so
+      // refreshing here would wait on a lock this thread already holds. The
+      // next main-queue turn runs after that lock is let go.
       if let Some(engine) = self.engine() {
-        guard(|| engine.refresh_cursor());
+        DispatchQueue::main().exec_async(move || guard(|| engine.refresh_cursor()));
       }
     }
 
@@ -104,6 +109,23 @@ define_class!(
     fn mouse_moved(&self, event: &NSEvent) {
       pointer::moved(self, event, false);
     }
+
+    // WebKit drops a move that lands over this view, which lies over the
+    // webview, so a pointer carried straight from the page onto the picture
+    // never leaves the page as WebKit sees it, and what it last lay over
+    // stays hovered. The page is told instead, and stops hovering until it
+    // next sees the pointer move (`usePointerAway`).
+    #[unsafe(method(mouseEntered:))]
+    fn mouse_entered(&self, _event: &NSEvent) {
+      if let Some(engine) = self.engine() {
+        guard(|| engine.pointer_arrived());
+      }
+    }
+
+    // Leaving needs nothing: the page sees the pointer move as it comes back.
+    // Handled here so it is not passed up the responder chain to the webview.
+    #[unsafe(method(mouseExited:))]
+    fn mouse_exited(&self, _event: &NSEvent) {}
 
     #[unsafe(method(mouseUp:))]
     fn mouse_up(&self, event: &NSEvent) {

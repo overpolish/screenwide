@@ -41,7 +41,20 @@ pub(crate) fn close_all_standalone_listboxes(
 /// Puts away the panels that hang off a window being hidden, minimised or
 /// closed. A sticky panel outlives an outside press, so nothing else would
 /// take it with its parent.
+///
+/// Done on the main thread. Closing a panel holds the lifecycle lock while it
+/// detaches the panel from its parent, which needs the parent's native window;
+/// off the main thread that waits for the main thread, and the main thread can
+/// itself be waiting for the lock (a panel's own Hide command runs there), so a
+/// background caller (an export finishing hides the editor) would deadlock.
+/// The hop does not wait, so the caller never holds the lock across it.
 pub fn close_standalone_listbox_for_parent(app: &AppHandle, parent_window_label: &str) {
+  if std::thread::current().name() != Some("main") {
+    let handle = app.clone();
+    let parent = parent_window_label.to_owned();
+    let _ = app.run_on_main_thread(move || close_standalone_listbox_for_parent(&handle, &parent));
+    return;
+  }
   let belonging: Vec<String> = open_panel_labels()
     .into_iter()
     .filter(|panel| {
@@ -79,6 +92,7 @@ fn close_locked(app: &AppHandle, return_focus: bool, panel: &str) -> tauri::Resu
     entry.anchor = None;
     entry.attached_to = None;
   }
+  super::hit_area::forget(panel);
   synchronize_open_flag();
   let should_return_focus = return_focus && context.focus_contents;
   let focus_result = if should_return_focus {

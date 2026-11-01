@@ -4,6 +4,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 
 import { AnnotationStyle, ImageArt } from "./annotations/annotations";
+import { type ViewportCorners } from "./preview/preview-backdrop";
 import {
   normalizedCameraOverlay,
   normalizedKeyboardEffects,
@@ -36,6 +37,8 @@ type PreviewSelectionLayout = {
   paneIndex: number;
   radiusPercent: number;
   rect: { height: number; width: number; x: number; y: number };
+  /** The crop keeps its shape as its handles are dragged. */
+  cropKeepsShape?: boolean;
   cropMode?: boolean;
   image?: { height: number; width: number; x: number; y: number };
   layerId?: number;
@@ -100,21 +103,11 @@ export const startRecordingPreviewPlayer = ({
 export const pauseRecordingPreview = (sessionId: number) =>
   invoke<null>("pause_recording_preview", { sessionId });
 
-export const setRecordingPreviewZoom = (
-  sessionId: number,
-  zoomPercent: number,
-) =>
-  invoke<null>("set_recording_preview_zoom", {
-    sessionId,
-    zoomPercent,
-  });
-
 export const layoutRecordingPreviewSurface = ({
   annotationTool,
   backdrop,
   bakeCamera,
   cameraOverlay,
-  fitWidth,
   nativeEditor,
   panes,
   recordingOutput,
@@ -124,6 +117,7 @@ export const layoutRecordingPreviewSurface = ({
   selectionTargets,
   sessionId,
   viewport,
+  viewportCorners,
 }: {
   backdrop: [number, number, number, number];
   bakeCamera: boolean;
@@ -138,13 +132,14 @@ export const layoutRecordingPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
+  /** How round the viewport's corners are where it meets the chrome. */
+  viewportCorners: ViewportCorners;
   /** The annotation tool in hand, when one is. It rides with the layout so
    * the tool and the selection it has to agree with reach the native chrome
    * together: split across two commands, whichever lands first paints the
    * layer's frame for a frame. */
   annotationTool?:
     import("./annotations/annotation-defaults").AnnotationTool | null;
-  fitWidth?: number;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
@@ -157,7 +152,6 @@ export const layoutRecordingPreviewSurface = ({
         cameraOverlay,
         recordingOutput.primary,
       ),
-      fitWidth,
       nativeEditor,
       panes,
       recordingOutput: {
@@ -170,6 +164,7 @@ export const layoutRecordingPreviewSurface = ({
       selectionTargets: selectionTargets ?? null,
       sessionId,
       viewport,
+      viewportCorners,
     },
   });
 
@@ -178,7 +173,6 @@ export const seekRecordingPreview = ({
   positionMs,
   requestId,
   rough = false,
-  selectionVisible,
   sessionId,
 }: {
   positionMs: number;
@@ -186,7 +180,6 @@ export const seekRecordingPreview = ({
   sessionId: number;
   annotationClips?: RecordingTimelineEdit["annotationClips"];
   rough?: boolean;
-  selectionVisible?: boolean;
 }) =>
   invoke<null>("seek_recording_preview", {
     annotationClips,
@@ -195,7 +188,6 @@ export const seekRecordingPreview = ({
       : 0,
     requestId,
     rough,
-    selectionVisible,
     sessionId,
   });
 
@@ -270,8 +262,8 @@ export const layoutScreenshotPreviewSurface = ({
   annotationImage,
   annotationTextLook,
   annotationTool,
+  annotationZoom,
   backdrop,
-  fitWidth,
   interactionOutput,
   nativeEditor,
   output,
@@ -282,6 +274,7 @@ export const layoutScreenshotPreviewSurface = ({
   selectionTargets,
   sessionId,
   viewport,
+  viewportCorners,
 }: {
   backdrop: [number, number, number, number];
   interactionOutput: ScreenshotWorkspaceOutputSettings;
@@ -294,6 +287,8 @@ export const layoutScreenshotPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
+  /** How round the viewport's corners are where it meets the chrome. */
+  viewportCorners: ViewportCorners;
   /** Where a fresh counter's tail points, in radians clockwise from east:
    * whatever the last counter was turned to. */
   annotationCounterAngle?: number | null;
@@ -309,7 +304,9 @@ export const layoutScreenshotPreviewSurface = ({
    * the layer and lets every other press fall through to it; "arrow" and
    * "counter" also make a new annotation on empty picture. */
   annotationTool?: import("./annotations/annotation-defaults").AnnotationTool;
-  fitWidth?: number;
+  /** How many times a fresh lens enlarges: whatever the last lens was set
+   * to. */
+  annotationZoom?: number | null;
   /** Every annotation chosen on the selected layer. */
   selectedAnnotationIds?: readonly string[];
   selection?: PreviewSelectionLayout | null;
@@ -321,8 +318,8 @@ export const layoutScreenshotPreviewSurface = ({
     annotationImage: annotationImage ?? null,
     annotationTextLook: annotationTextLook ?? null,
     annotationTool: annotationTool ?? null,
+    annotationZoom: annotationZoom ?? null,
     backdrop,
-    fitWidth,
     interactionOutput: normalizedScreenshotWorkspaceOutput(interactionOutput),
     nativeEditor,
     output: normalizedScreenshotWorkspaceOutput(output),
@@ -333,6 +330,7 @@ export const layoutScreenshotPreviewSurface = ({
     selectionTargets: selectionTargets ?? null,
     sessionId,
     viewport,
+    viewportCorners,
   });
 
 export const refreshScreenshotPreviewSources = (
@@ -342,15 +340,6 @@ export const refreshScreenshotPreviewSources = (
   invoke<null>("refresh_screenshot_preview_sources", {
     artifactId,
     sessionId,
-  });
-
-export const setScreenshotPreviewZoom = (
-  sessionId: number,
-  zoomPercent: number,
-) =>
-  invoke<null>("set_screenshot_preview_zoom", {
-    sessionId,
-    zoomPercent,
   });
 
 export const stopScreenshotPreview = (sessionId: number) =>
@@ -473,8 +462,6 @@ export {
   cancelExportJob,
   copyEditorToClipboard,
   setExportDirectory,
-  setScreenshotBackgroundRadius,
-  setScreenshotRadius,
 } from "./editor-actions";
 
 export const setRecordingPreviewEditorSuspended = (
@@ -494,12 +481,3 @@ export const setScreenshotPreviewEditorSuspended = (
     sessionId,
     suspended,
   });
-
-/**
- * Widens an editor window by `delta` logical px so an opening tool panel costs
- * the preview none of its usable width. Resolves to whether it grew: the
- * display may have no room to its right, and the picture then fits smaller
- * instead.
- */
-export const growEditorForPanel = (label: string, delta: number) =>
-  invoke<boolean>("grow_editor_for_panel", { delta, label });

@@ -12,13 +12,8 @@ import { type TimelineShortcut } from "../shortcut-lane/shortcut-chip";
 import { type Span } from "../timeline-scale";
 
 import { type StripBeat } from "./strip-beat-row";
-import {
-  captionPart,
-  clipped,
-  partId,
-  splitAt,
-  splitSpans,
-} from "./strip-split";
+import { baseOf, partId } from "./strip-part";
+import { captionPart, clipped, splitAt, splitSpans } from "./strip-split";
 import { type StoryLull, type StoryRecording } from "./strip-story-fixtures";
 import {
   edgesOf,
@@ -53,8 +48,7 @@ type Content = {
 };
 
 const own = <T extends Span>(item: T) => item;
-/** What a part was split from: its id before the part's number. */
-const baseId = ({ id }: { id: string }) => id.split(":")[0];
+const baseId = ({ id }: { id: string }) => baseOf(id);
 /** Spans with ids, their parts made one again where they play together. */
 const rejoinSpans = <T extends Span & { id: string }>(
   items: T[],
@@ -158,6 +152,12 @@ export function useStoryContent(
 
   return {
     content,
+    /** Cuts `span`, as the strip's island does with what is chosen. */
+    cut: ({ end, start }: Span) => {
+      change(({ cuts }) => ({
+        cuts: [...cuts, { end, id: `cut-${String(start)}`, start }],
+      }));
+    },
     deleteShortcuts: (ids: string[]) => {
       change(({ shortcuts }) => ({
         shortcuts: shortcuts.filter(({ id }) => !ids.includes(id)),

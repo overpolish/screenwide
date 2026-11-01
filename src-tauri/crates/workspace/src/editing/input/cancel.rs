@@ -5,7 +5,6 @@ use super::*;
 
 pub(super) fn cancel(inner: &std::sync::Arc<SurfaceInner>) {
   let mut cancelled = None;
-  let mut cancelled_zoom = None;
   if let Ok(mut state) = inner.state.lock() {
     if let Some(ActiveGesture::Selection(gesture)) = state.gesture.take() {
       state.selection = Some(gesture.selection_start);
@@ -24,7 +23,6 @@ pub(super) fn cancel(inner: &std::sync::Arc<SurfaceInner>) {
           }
           state.workspace_transform = start.transform;
           state.workspace_natural_size = start.natural_size;
-          cancelled_zoom = Some(start.transform.zoom);
         } else if let Some(pane) = state
           .panes
           .get_mut(gesture.selection_start.pane_index as usize)
@@ -49,9 +47,6 @@ pub(super) fn cancel(inner: &std::sync::Arc<SurfaceInner>) {
       state.gesture = None;
       clear_selection_snap_guides(&mut state);
     }
-  }
-  if let Some(zoom) = cancelled_zoom {
-    emit_transform(inner, zoom);
   }
   if let Some(gesture) = cancelled {
     emit_gesture(inner, SelectionGesturePhase::Cancel, gesture);

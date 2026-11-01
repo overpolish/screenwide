@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { baseOf } from "../strip/strip-part";
 import { type Span } from "../timeline-scale";
 
 // The annotations' lanes, which are their stacking order: lane 0 is at the
@@ -91,29 +92,35 @@ export function steadySlot(
 /** Every annotation's lane, risen as high as it can go: just under the
  * lowest of the annotations it overlaps that are drawn in front of it. The
  * lanes given set that order; where two that overlap share one, the first
- * given is in front. */
+ * given is in front. An annotation drawn as parts, either side of a jump,
+ * is one: its parts keep one lane, the one its first part is given. */
 export function packLanes(annotations: Laned[]): Record<string, number> {
-  const byLane = annotations
-    .map((annotation, index) => ({ annotation, index }))
+  const clips = new Map<string, Laned[]>();
+  for (const annotation of annotations) {
+    const base = baseOf(annotation.id);
+    clips.set(base, [...(clips.get(base) ?? []), annotation]);
+  }
+  const byLane = [...clips.values()]
+    .map((parts, index) => ({ index, parts }))
     .sort(
       (first, second) =>
-        first.annotation.lane - second.annotation.lane ||
+        first.parts[0].lane - second.parts[0].lane ||
         first.index - second.index,
     )
-    .map(({ annotation }) => annotation);
+    .map(({ parts }) => parts);
   const packed: Record<string, number> = {};
-  byLane.forEach((annotation, index) => {
+  byLane.forEach((parts, index) => {
     let lane = 0;
     for (const front of byLane.slice(0, index))
-      if (overlaps(front, annotation))
-        lane = Math.max(lane, packed[front.id] + 1);
-    packed[annotation.id] = lane;
+      if (front.some((each) => parts.some((part) => overlaps(each, part))))
+        lane = Math.max(lane, packed[front[0].id] + 1);
+    for (const part of parts) packed[part.id] = lane;
   });
   return packed;
 }
 
 /** Every annotation's lane once `id` is moved into `slot`, risen as high
- * as each can go. */
+ * as each can go; the other parts of what `id` is a part of go with it. */
 export function restack(
   annotations: Laned[],
   id: string,
@@ -123,7 +130,7 @@ export function restack(
   // so it is numbered half way between until the lanes are packed.
   return packLanes(
     annotations.map((annotation) =>
-      annotation.id !== id
+      baseOf(annotation.id) !== baseOf(id)
         ? annotation
         : {
             ...annotation,

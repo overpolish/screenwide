@@ -14,9 +14,8 @@ import {
 import { withScreenshotSourceCrop } from "../../screenshot/screenshot-output-settings";
 import { EditorArtifact } from "../../types";
 
-import { audioPanelHandlers } from "./selection-panel-handlers";
 import {
-  editorAudioSelectionTarget,
+  editorAudioSelection,
   editorSelectionTarget,
 } from "./selection-target";
 
@@ -75,19 +74,21 @@ const croppedLayer = (settings: Partial<ScreenshotOutputSettings> = {}) =>
   );
 
 describe("selection padding", () => {
-  it("grows the frame past the picture by the same amount on every side", () => {
+  it("grows the frame past the picture by the same share on every side", () => {
     const settings = croppedLayer();
     const { apply, target } = targetFor(settings);
 
-    target.applyInset(40);
+    target.applyInset(0.1);
 
     const next = apply.mock.calls[0][0];
     expect(apply).toHaveBeenCalledOnce();
     expect(apply.mock.calls[0][1]).toBe(7);
-    expect(next.cropHeight).toBeCloseTo(680);
-    expect(next.cropWidth).toBeCloseTo(680);
-    expect(next.cropX).toBeCloseTo(160);
-    expect(next.cropY).toBeCloseTo(160);
+    // A tenth of the picture's 600 pixels on every side.
+    expect(next.cropHeight).toBeCloseTo(720);
+    expect(next.cropWidth).toBeCloseTo(720);
+    expect(next.cropX).toBeCloseTo(140);
+    expect(next.cropY).toBeCloseTo(140);
+    expect(next.inset).toBe(0.1);
     // The picture itself does not move: only the frame around it changes.
     expect(next.imageX).toBe(settings.imageX);
     expect(next.imageY).toBe(settings.imageY);
@@ -103,22 +104,22 @@ describe("selection padding", () => {
       ),
     );
 
-    target.applyInset(120);
+    target.applyInset(0.12);
 
     const next = apply.mock.calls[0][0];
-    expect(next.cropX).toBe(-120);
-    expect(next.cropY).toBe(-120);
-    expect(next.cropWidth).toBe(1_240);
-    expect(next.cropHeight).toBe(1_240);
+    expect(next.cropX).toBeCloseTo(-120);
+    expect(next.cropY).toBeCloseTo(-120);
+    expect(next.cropWidth).toBeCloseTo(1_240);
+    expect(next.cropHeight).toBeCloseTo(1_240);
   });
 
   it("measures each inset from the picture rather than from the last frame", () => {
     const first = targetFor(croppedLayer());
-    first.target.applyInset(30);
+    first.target.applyInset(0.05);
     const once = first.apply.mock.calls[0][0];
 
     const again = targetFor(once);
-    again.target.applyInset(30);
+    again.target.applyInset(0.05);
 
     expect(again.apply.mock.calls[0][0].cropWidth).toBe(once.cropWidth);
     expect(again.apply.mock.calls[0][0].cropX).toBe(once.cropX);
@@ -142,24 +143,17 @@ describe("selection padding", () => {
     expect(next.recenterInsetColor).toBe("#ffffff");
   });
 
-  it("shows the padding it has and the output bounds as its limit", () => {
-    const { target } = targetFor(
+  it("shows the padding as a share of the layer's own picture, however padded", () => {
+    const padded = targetFor(
       croppedLayer({ cropHeight: 700, cropWidth: 700, cropX: 150, cropY: 150 }),
-    );
+    ).target;
+    const shared = targetFor(croppedLayer({ inset: 0.06 })).target;
 
-    expect(target.selection.inset).toBe(50);
-    expect(target.selection.insetMaximum).toBe(1_000);
+    expect(padded.selection.inset).toBeCloseTo(50 / 600);
+    expect(shared.selection.inset).toBe(0.06);
   });
 
-  it("allows useful padding around a small source", () => {
-    const { target } = targetFor(
-      croppedLayer({ cropHeight: 40, cropWidth: 40, cropX: 480, cropY: 480 }),
-    );
-
-    expect(target.selection.insetMaximum).toBe(1_000);
-  });
-
-  it("keeps typed padding above the slider range visible", () => {
+  it("keeps padding wider than the picture visible", () => {
     const settings = withScreenshotSourceCrop(
       {
         ...defaultScreenshotOutput(source.width, source.height),
@@ -170,8 +164,7 @@ describe("selection padding", () => {
     );
     const { target } = targetFor(settings);
 
-    expect(target.selection.inset).toBe(1_500);
-    expect(target.selection.insetMaximum).toBe(1_000);
+    expect(target.selection.inset).toBeCloseTo(1_500 / 40);
   });
 });
 
@@ -202,68 +195,24 @@ const recording: EditorArtifact = {
 };
 
 describe("audio selection", () => {
-  it("names the track the recording named and starts at the recorded level", () => {
-    const target = editorAudioSelectionTarget({
-      artifact: recording,
-      audioTrackVolumes: [],
-      selectedTrack: "audio:1",
-    });
-
-    expect(target?.selection).toEqual({
-      decibels: 0,
-      kind: "audio",
-      label: "Microphone",
-    });
-  });
-
-  it("shows the level the editor holds for that stream", () => {
-    const target = editorAudioSelectionTarget({
-      artifact: recording,
-      audioTrackVolumes: [
-        { decibels: -12, streamIndex: 0 },
-        { decibels: 6, streamIndex: 1 },
-      ],
-      selectedTrack: "audio:0",
-    });
-
-    expect(target?.selection).toMatchObject({
-      decibels: -12,
-      label: "System audio",
-    });
+  it("names the track the recording named", () => {
+    for (const [selectedTrack, label] of [
+      ["audio:0", "System audio"],
+      ["audio:1", "Microphone"],
+    ])
+      expect(
+        editorAudioSelection({ artifact: recording, selectedTrack }),
+      ).toEqual({ kind: "audio", label });
   });
 
   it("is nothing at all where a video track or no track is selected", () => {
     for (const selectedTrack of ["primary", "camera", "audio:7", null]) {
       expect(
-        editorAudioSelectionTarget({
-          artifact: recording,
-          audioTrackVolumes: [],
-          selectedTrack,
-        }),
+        editorAudioSelection({ artifact: recording, selectedTrack }),
       ).toBeNull();
     }
     expect(
-      editorAudioSelectionTarget({
-        artifact,
-        audioTrackVolumes: [],
-        selectedTrack: "audio:0",
-      }),
+      editorAudioSelection({ artifact, selectedTrack: "audio:0" }),
     ).toBeNull();
-  });
-
-  it("sends a volume back out through the editor's own handler", () => {
-    const onSelectedTrackVolumeChange = vi.fn<(decibels: number) => void>();
-    const target = editorAudioSelectionTarget({
-      artifact: recording,
-      audioTrackVolumes: [{ decibels: 6, streamIndex: 1 }],
-      onSelectedTrackVolumeChange,
-      selectedTrack: "audio:1",
-    });
-
-    audioPanelHandlers(target).onAudioVolumeChange?.(-3);
-    // The reset is the same request at the recorded level.
-    audioPanelHandlers(target).onAudioVolumeChange?.(0);
-
-    expect(onSelectedTrackVolumeChange.mock.calls).toEqual([[-3], [0]]);
   });
 });

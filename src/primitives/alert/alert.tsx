@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Info, OctagonAlert } from "lucide-react";
+import { Info, OctagonAlert, TriangleAlert } from "lucide-react";
 import { ComponentProps, ReactNode } from "react";
 import { VariantProps } from "tailwind-variants";
 
@@ -46,6 +46,9 @@ const alertVariants = tv({
       neutral: {
         icon: "text-fg-secondary",
       },
+      warning: {
+        icon: "text-warning",
+      },
     },
     hasAction: {
       false: {},
@@ -64,6 +67,7 @@ const alertVariants = tv({
 const defaultIcons = {
   error: OctagonAlert,
   neutral: Info,
+  warning: TriangleAlert,
 };
 
 type AlertProps = Omit<ComponentProps<"div">, "color"> &

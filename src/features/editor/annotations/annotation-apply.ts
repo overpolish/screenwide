@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /**
- * The tool panel's edits, applied to the annotation a workspace has chosen,
+ * The pen island's edits, applied to the annotation a workspace has chosen,
  * or with none chosen, remembered as the dress the next one is drawn in.
  */
 
@@ -22,10 +22,12 @@ import {
   rememberAnnotationImage,
   rememberAnnotationStyle,
   rememberAnnotationTextLook,
+  rememberAnnotationZoom,
 } from "./annotation-defaults";
 import { AnnotationStyle, ImageArt, TextSpan } from "./annotations";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
+import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 
 /** Dress the chosen annotation, or with none chosen, the next one the tool in
  * hand draws. A no-op when the workspace has neither to dress. */
@@ -63,10 +65,29 @@ export const applyAnnotationAngle = (workspace: EditorKind, angle: number) => {
     rememberAnnotationAngle(angle);
 };
 
+/** Set how many times the chosen lens enlarges; with none chosen, the next
+ * lens's. */
+export const applyAnnotationZoom = (workspace: EditorKind, zoom: number) => {
+  const published = chosenAnnotation(workspace);
+  if (published) published.applyZoom(zoom);
+  else if (annotationDraft(workspace) !== undefined)
+    rememberAnnotationZoom(zoom);
+};
+
 /** Turn the chosen annotation round. A no-op with none chosen: there is
  * nothing drawn yet to turn. */
 export const applyAnnotationReverse = (workspace: EditorKind) => {
   chosenAnnotation(workspace)?.applyReverse();
+};
+
+/** Pin the chosen annotation to its content, let it go, say its content is
+ * out of view or back at the playhead, or take its corrections away. A
+ * no-op with none chosen, or one that cannot be pinned. */
+export const applyAnnotationPin = (
+  workspace: EditorKind,
+  action: AnnotationPinAction,
+) => {
+  chosenAnnotation(workspace)?.applyPin(action);
 };
 
 /** Turn the chosen image, a field at a time. A no-op with none chosen: a
@@ -109,15 +130,19 @@ export const applyAnnotationShuffle = (workspace: EditorKind) => {
   chosenAnnotation(workspace)?.applyShuffle();
 };
 
+/** Turn the chosen focus into a spotlight, or the spotlight into a focus. A
+ * no-op with none chosen: the pen in hand changes look by changing tool. */
+export const applyAnnotationKind = (
+  workspace: EditorKind,
+  kind: "focus" | "spotlight",
+) => {
+  chosenAnnotation(workspace)?.applyKind(kind);
+};
+
 /** Sway the chosen image over its clip, or stand it still. A no-op with
  * none chosen: a fresh image always stands still. */
 export const applyAnnotationSway = (workspace: EditorKind, sway: boolean) => {
   chosenAnnotation(workspace)?.applySway(sway);
-};
-
-/** Take every stroke off the picture this workspace edits, chosen or not. */
-export const applyClearDrawings = (workspace: EditorKind) => {
-  publishedAnnotations(workspace)?.applyClearDrawings();
 };
 
 /** Delete every annotation this workspace has chosen. */

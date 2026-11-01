@@ -18,11 +18,9 @@ pub use mode::*;
 
 /// Which grip of an annotation the pointer took hold of. An arrow has three
 /// grips and its shaft; a counter has one - the tail - and its disc; a text
-/// box has one - its pointer's tip - and its box; a redaction and a shape
-/// have the eight grips of a box, its radius dot and its body; a highlight
-/// has the selection's two ends and its bands; a magnifier has its zoom
-/// area's box grips and body, its loupe's inside - `Middle` - and the grip on
-/// the loupe's rim - `Tail` - which sets its size and so its zoom.
+/// box has one - its pointer's tip - and its box; a redaction, a shape and a
+/// lens have the eight grips of a box and its body; a highlight has the
+/// selection's two ends and its bands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AnnotationHandle {
   Start,
@@ -38,8 +36,6 @@ pub enum AnnotationHandle {
   /// A box's corner or edge grip: which of the box's sides it moves, as the
   /// `box_gesture::EDGE_*` bits.
   Edges(u32),
-  /// A box's radius dot, which rounds its corners.
-  Radius,
 }
 
 impl AnnotationHandle {
@@ -57,7 +53,6 @@ impl AnnotationHandle {
         let opposed = |pair: u32| edges & pair == pair;
         (edges != 0 && !opposed(0b0011) && !opposed(0b1100)).then_some(Self::Edges(edges))
       }
-      RADIUS_HANDLE => Some(Self::Radius),
       _ => None,
     }
   }
@@ -66,8 +61,6 @@ impl AnnotationHandle {
 /// Where the native `ScreenwideAnnotationHandleBox` grips start: a box grip
 /// reports this plus the bits of the sides it moves.
 pub const BOX_HANDLES: u32 = 16;
-/// The native `ScreenwideAnnotationHandleRadius`, past every box grip.
-pub const RADIUS_HANDLE: u32 = BOX_HANDLES + 16;
 
 /// What the gesture acts on: an annotation being drawn, or one already there.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -108,16 +101,19 @@ pub enum AnnotationGestureTarget {
 const FIRST_NON_PICTURE_LAYER: u32 = u32::MAX - 2;
 
 /// The layer a fresh annotation is drawn on, out of `layers` listed back to
-/// front with their pictures' rects as x, y, width and height: the topmost
-/// picture under the press, or off every picture - on the canvas frame - the
-/// picture nearest it, the topmost of any equally near. `None` only where no
-/// picture is laid out, leaving the annotation to the layer already selected.
+/// front with their pictures' rects as x, y, width and height and the press
+/// as it lands on each: the topmost picture under the press, or off every
+/// picture - on the canvas frame - the picture nearest it, the topmost of any
+/// equally near. `None` only where no picture is laid out, leaving the
+/// annotation to the layer already selected. The press is each picture's own
+/// because a turned picture is laid out standing upright and pressed where
+/// its turn draws it, so one point read in one picture's space misses the
+/// others.
 pub fn drawing_layer(
-  layers: impl DoubleEndedIterator<Item = (u32, [f64; 4])>,
-  (x, y): (f64, f64),
+  layers: impl DoubleEndedIterator<Item = (u32, [f64; 4], (f64, f64))>,
 ) -> Option<u32> {
   let mut nearest: Option<(u32, f64)> = None;
-  for (layer, [left, top, width, height]) in layers.rev() {
+  for (layer, [left, top, width, height], (x, y)) in layers.rev() {
     if layer >= FIRST_NON_PICTURE_LAYER {
       continue;
     }
@@ -132,6 +128,31 @@ pub fn drawing_layer(
     }
   }
   nearest.map(|(layer, _)| layer)
+}
+
+/// Whether a picture drawn in front of `layer` hides the press, out of
+/// `layers` listed back to front with the rects their pictures are drawn in
+/// as x, y, width and height, their corners' radius and the press as it
+/// lands on each, as [`drawing_layer`] takes them. An annotation is drawn
+/// with its own picture, so a picture in front hides it, and only what is
+/// seen is taken hold of: a press there falls to the picture in front.
+/// Neither the overlays nor the canvas frame hide anything.
+pub fn hidden_by_layer_above(
+  layers: impl Iterator<Item = (u32, [f64; 4], f64, (f64, f64))>,
+  layer: u32,
+) -> bool {
+  layers
+    .skip_while(|(each, ..)| *each != layer)
+    .skip(1)
+    .filter(|(each, ..)| *each < FIRST_NON_PICTURE_LAYER)
+    .any(|(_, [left, top, width, height], radius, (x, y))| {
+      let half = (width / 2.0, height / 2.0);
+      let radius = radius.clamp(0.0, half.0.min(half.1));
+      // How far past the corner's circle's centre the press stands.
+      let dx = ((x - (left + half.0)).abs() - (half.0 - radius)).max(0.0);
+      let dy = ((y - (top + half.1)).abs() - (half.1 - radius)).max(0.0);
+      x >= left && x <= left + width && y >= top && y <= top + height && dx.hypot(dy) <= radius
+    })
 }
 
 impl AnnotationGestureTarget {
@@ -190,8 +211,7 @@ impl AnnotationGestureTarget {
 ///
 /// `picture` is what a highlight selects from while it is drawn out or its
 /// ends are moved: the pixels under the gesture, where the workspace has
-/// them. `source_size` is the picture's size in source pixels, which a fresh
-/// magnifier sets its loupe inside; zero where it is unknown.
+/// them.
 #[derive(Clone, Debug)]
 pub(crate) struct AnnotationDragOrigin {
   pub(crate) bend: ArrowBend,
@@ -200,7 +220,6 @@ pub(crate) struct AnnotationDragOrigin {
   pub(crate) source_per_size: f64,
   pub(crate) source_per_point: f64,
   pub(crate) picture: Option<std::sync::Arc<super::highlight::picture::HighlightPicture>>,
-  pub(crate) source_size: (u32, u32),
 }
 
 impl AnnotationDragOrigin {
@@ -212,7 +231,6 @@ impl AnnotationDragOrigin {
       source_per_size: 0.0,
       source_per_point: 0.0,
       picture: None,
-      source_size: (0, 0),
     }
   }
 }

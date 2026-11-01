@@ -5,13 +5,15 @@ import { useEditableGeneralSettings } from "../../settings/use-general-settings"
 import {
   useAnnotationSelection,
   useAnnotationSelectionCount,
-  useCanClearDrawings,
 } from "../annotations/annotation-channel";
 import { CameraOutput, composedVideoTracks } from "../export/camera-output";
 import { useCaptionCanvasEdits } from "../recording/captions/use-caption-canvas-edits";
 import { useCaptionTools } from "../recording/captions/use-caption-tools";
 import { useMicrophoneTools } from "../recording/microphone/use-microphone-tools";
-import { useRecordingSceneSelection } from "../recording/scenes/recording-scene-channel";
+import {
+  recordingSceneControls,
+  useRecordingSceneSelection,
+} from "../recording/scenes/recording-scene-channel";
 import { useTranscriptTools } from "../recording/transcript/use-transcript-tools";
 import {
   RecordingOutputSettings,
@@ -20,6 +22,7 @@ import {
 } from "../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
 import { useRestoreRecordingKeyboardShortcuts } from "../timeline/keyboard/use-restore-recording-keyboard-shortcuts";
+import { useStripIslandChoice } from "../timeline/recording-strip/strip-island-channel";
 import {
   AudioTrackVolume,
   CameraOverlaySettings,
@@ -27,17 +30,24 @@ import {
   EditorArtifact,
   EditorKind,
   KeyboardEffectSettings,
+  recordingAudioStreamIndex,
+  RecordingTrackId,
   RecordingVideoTrackId,
 } from "../types";
 
+import { useCropAspectStore } from "./crop/crop-aspect-store";
 import { editorCropTarget } from "./crop/crop-target";
 import { editorToolPanelHandlers } from "./editor-tool-panel-handlers";
 import { BackgroundPreset } from "./frame/background/background";
 import { editorFrameTarget } from "./frame/frame-target";
-import { editorAudioSelectionTarget } from "./selection/selection-target";
+import {
+  editorAudioSelection,
+  editorSoundTracks,
+} from "./selection/selection-target";
 import { useLayerSelectionTarget } from "./selection/use-layer-selection-target";
 import { useToolPanelBridge } from "./tool-panel-bridge";
 import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
+import { editorTracks, TrackInclusion } from "./tracks/editor-tracks";
 
 type EditorToolPanelInputs = {
   artifact: EditorArtifact | null;
@@ -54,8 +64,8 @@ type EditorToolPanelInputs = {
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
   selectedTrack: string | null;
+  trackInclusion: TrackInclusion;
   workspace: EditorKind;
-  onBakeCameraChange?: (bake: boolean) => void;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
@@ -69,7 +79,9 @@ type EditorToolPanelInputs = {
     next: ScreenshotOutputSettings,
     itemId: number,
   ) => void;
-  onSelectedTrackVolumeChange?: (decibels: number) => void;
+  /** Plays the audio stream `streamIndex` this much louder or quieter than
+   * it was recorded, in decibels. */
+  onTrackVolumeChange?: (streamIndex: number, decibels: number) => void;
 };
 
 /**
@@ -89,7 +101,6 @@ export function useEditorToolPanels({
   enabledVideoTracks,
   isLocked,
   keyboardEffects,
-  onBakeCameraChange,
   onCameraOverlayChange,
   onCanvasResize,
   onCursorEffectsChange,
@@ -97,12 +108,13 @@ export function useEditorToolPanels({
   onRecordingOutputChange,
   onRecordingTimelineEditChange,
   onScreenshotOutputChange,
-  onSelectedTrackVolumeChange,
+  onTrackVolumeChange,
   recordingOutput,
   recordingTimelineEdit,
   screenshotOutput,
   selectedScreenshotItemId,
   selectedTrack,
+  trackInclusion,
   workspace,
 }: EditorToolPanelInputs) {
   // The saved backgrounds are a preference rather than a property of this
@@ -133,9 +145,8 @@ export function useEditorToolPanels({
     selectedScreenshotItemId,
     selectedTrack,
   });
-  // The microphone's speech tools, made once: Remove silences shows both in
-  // the microphone's Select panel and in the Transcript panel, and the two
-  // must share one state and one listen.
+  // The microphone's speech tools, made once: the Sound and Script islands
+  // share one state and one listen.
   const microphone = useMicrophoneTools({
     artifact,
     edit: recordingTimelineEdit,
@@ -143,23 +154,29 @@ export function useEditorToolPanels({
   });
   // An audio track is heard rather than placed, so it is its own selection,
   // with the speech tools where it is the microphone.
-  const audioTarget = editorAudioSelectionTarget({
+  const audioSelection = editorAudioSelection({
     artifact,
-    audioTrackVolumes,
     microphone,
-    onSelectedTrackVolumeChange,
     selectedTrack,
   });
+  // The scene under the playhead lives with the preview and reaches the
+  // panel through its own channel, as what is chosen on the strip does.
+  const scene = useRecordingSceneSelection(workspace);
+  const sceneControls = recordingSceneControls(workspace);
   // The source rectangle the crop panel cuts, and the workspace's own commit
-  // path for it: the selected recording track's output, or the selected
-  // screenshot layer's.
+  // path for it: the selected recording track's output, the screen's own
+  // crop in the scene under the playhead, or the selected screenshot layer's.
+  const cropAspects = useCropAspectStore((state) => state.aspects);
   const cropTarget = editorCropTarget({
     artifact,
+    aspects: cropAspects,
     bakeCamera,
     composedVideoTracks: composedTracks,
     onRecordingOutputChange,
     onScreenshotOutputChange,
     recordingOutput,
+    scene,
+    sceneControls,
     screenshotOutput,
     selectedScreenshotItemId,
     selectedTrack,
@@ -169,7 +186,9 @@ export function useEditorToolPanels({
   const frameTarget = editorFrameTarget({
     artifact,
     bakeCamera,
+    cameraOverlay,
     composedVideoTracks: composedTracks,
+    onCameraOverlayChange,
     onCanvasResize,
     onRecordingOutputChange,
     recordingOutput,
@@ -182,10 +201,8 @@ export function useEditorToolPanels({
   // through its own channel rather than through the workspace's settings.
   const annotation = useAnnotationSelection(workspace);
   const annotationCount = useAnnotationSelectionCount(workspace);
-  const canClearDrawings = useCanClearDrawings(workspace);
-  // The scene under the playhead lives with the preview, which knows where
-  // the playhead is; it reaches the panel through its own channel too.
-  const scene = useRecordingSceneSelection(workspace);
+  const strip = useStripIslandChoice(workspace);
+  const tracks = { ...trackInclusion, artifact, enabledVideoTracks };
   // Restoring every shortcut is an edit to the timeline the editor already
   // owns, so the panel asks for it here rather than through the preview.
   const shortcuts = useRestoreRecordingKeyboardShortcuts(
@@ -220,35 +237,47 @@ export function useEditorToolPanels({
         frameTarget?.background ?? DEFAULT_TOOL_PANEL_SNAPSHOT.background,
       backgroundPresets,
       cameraOutput,
-      canClearDrawings,
       canRestoreShortcuts: shortcuts.canRestore,
       captions: captions.snapshot,
+      chosenShortcuts: strip.shortcuts,
       crop: cropTarget?.snapshot ?? null,
       cursorEffects,
       frame: frameTarget?.snapshot ?? null,
       hasCursorData: artifact?.kind === "recording" && artifact.hasCursorData,
-      hasKeyboardData:
-        artifact?.kind === "recording" && artifact.hasKeyboardData,
       isLocked,
       keyboardEffects,
       scene,
       sceneTemplates,
-      selection: audioTarget?.selection ?? selectionTarget?.selection ?? null,
+      selection: audioSelection ?? selectionTarget?.selection ?? null,
+      soundTracks: editorSoundTracks({
+        artifact,
+        audioTrackVolumes,
+        microphone,
+      }),
+      stripItem: strip.item,
       textTemplates: captions.templates,
+      tracks: editorTracks(tracks),
       transcript: transcript.snapshot,
     },
     editorToolPanelHandlers({
       annotationColors,
-      audioTarget,
       backgroundPresets,
       cropTarget,
       frameTarget,
       keyboardEffects,
-      onBakeCameraChange,
+      microphone,
       onCaptionDefaultsChange: captions.changeDefaults,
       onCaptionsChange: captions.change,
       onCursorEffectsChange,
       onKeyboardEffectsChange,
+      // The Sound island names each track by its id, as the editor selects
+      // it, and the editor holds each stream's level.
+      onTrackVolumeChange: (trackId, decibels) => {
+        const streamIndex = recordingAudioStreamIndex(
+          trackId as RecordingTrackId,
+        );
+        if (streamIndex !== null) onTrackVolumeChange?.(streamIndex, decibels);
+      },
       onTranscriptRequest: transcript.handle,
       restoreShortcuts: shortcuts.restore,
       saveSceneTemplates: (templates) => {
@@ -260,6 +289,7 @@ export function useEditorToolPanels({
         applyGeneralSettings({ annotationColors: colors });
       },
       setBackgroundPresets,
+      tracks,
       workspace,
     }),
   );

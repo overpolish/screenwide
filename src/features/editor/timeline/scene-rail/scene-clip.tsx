@@ -25,6 +25,9 @@ export type TimelineScene = Span & {
   id: string;
   /** What its layout is called. */
   name: string;
+  /** Where choosing it brings the playhead, in recorded seconds: once it has
+   * arrived. Its start where not given. */
+  landsAt?: number;
 };
 
 export type SceneClipProps = {
@@ -72,9 +75,7 @@ export function SceneClip({
         )}
         style={{ insetInlineEnd: pad, insetInlineStart: pad }}
       >
-        {px >= GLYPH_PX ? (
-          <SceneLayoutGlyph drawing={scene.drawing} isFramed={false} />
-        ) : null}
+        {px >= GLYPH_PX ? <SceneLayoutGlyph drawing={scene.drawing} /> : null}
         {px >= NAME_PX ? <span className="truncate">{scene.name}</span> : null}
       </span>
       {isSelected

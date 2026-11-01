@@ -21,6 +21,8 @@ import {
 import { isPinnable, pinCorrections } from "./recording-annotation-pins";
 import { RecordingAnnotationClip } from "./recording-annotations";
 
+import type { AnnotationPinAction } from "../../island/annotation/annotation-pin";
+
 const MENU_WIDTH = 200;
 
 /** What a pinned annotation's menu can do, by annotation id. */
@@ -39,6 +41,31 @@ export type AnnotationClipPinning = {
   /** Puts the annotation back at the playhead where it was last shown. */
   onShowHere: (annotationId: string) => void;
 };
+
+// The Tracking section's items are named by the actions they do.
+const PIN_ACTIONS: Record<AnnotationPinAction, true> = {
+  clear: true,
+  hide: true,
+  pin: true,
+  show: true,
+  unpin: true,
+};
+const isPinAction = (id: string): id is AnnotationPinAction =>
+  id in PIN_ACTIONS;
+
+/** Does `action` to the pin of the annotation `id`, from its menu's
+ * Tracking section or its island alike. */
+export function actOnPin(
+  pinning: AnnotationClipPinning,
+  id: string,
+  action: AnnotationPinAction,
+) {
+  if (action === "pin" || action === "unpin")
+    pinning.onPinnedChange(id, action === "pin");
+  else if (action === "hide") pinning.onHideHere(id);
+  else if (action === "show") pinning.onShowHere(id);
+  else pinning.onClearCorrections(id);
+}
 
 /**
  * A right click on an annotation, on its clip or on the picture, or its clip's
@@ -90,11 +117,8 @@ export function useAnnotationClipMenu({
           placement: cameraPlacement,
         });
         if (next !== clips) onClipsChange(next);
-      } else if (itemId === "pin") pinning?.onPinnedChange(annotationId, true);
-      else if (itemId === "unpin") pinning?.onPinnedChange(annotationId, false);
-      else if (itemId === "hide") pinning?.onHideHere(annotationId);
-      else if (itemId === "show") pinning?.onShowHere(annotationId);
-      else if (itemId === "clear") pinning?.onClearCorrections(annotationId);
+      } else if (pinning && isPinAction(itemId))
+        actOnPin(pinning, annotationId, itemId);
     },
     width: MENU_WIDTH,
   });
@@ -112,7 +136,7 @@ export function useAnnotationClipMenu({
               ...(pinning.canShowHere(id)
                 ? [{ id: "show", label: t("editor-pin-show") }]
                 : []),
-              ...(pinCorrections(clip.pin) > 0
+              ...(pinCorrections(clip.pin).length > 0
                 ? [{ id: "clear", label: t("editor-pin-clear-corrections") }]
                 : []),
               { id: "unpin", label: t("editor-pin-unpin") },

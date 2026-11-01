@@ -78,6 +78,15 @@ fn annotation_magnify_fetch(texel: vec2<i32>) -> vec4<f32> {
   return textureLoad(annotate_underlay, texel, 0);
 }
 
+// What a lens would show, were one drawn here: the underlay, the desktop
+// itself, as it lies.
+fn annotation_lens_ground(point: vec2<f32>, span: vec2<f32>) -> vec4<f32> {
+  let size = vec2<i32>(textureDimensions(annotate_underlay));
+  let at = vec2<f32>(size) / max(overlay_target(), vec2<f32>(1.0)) * point;
+  let texel = clamp(vec2<i32>(floor(at)), vec2<i32>(0), max(size - 1, vec2<i32>(0)));
+  return textureLoad(annotate_underlay, texel, 0);
+}
+
 // Nor a cursor: the live desktop's own pointer is not drawn into the overlay.
 fn annotation_cursor_sample(probe: vec2<f32>) -> vec4<f32> {
   return vec4<f32>(0.0);

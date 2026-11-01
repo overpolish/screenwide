@@ -42,3 +42,15 @@ pub struct PreviewSurfaceRect {
   pub x: f64,
   pub y: f64,
 }
+
+/// How round the viewport's corners are, in webview points, where the picture
+/// meets the window's chrome: zero is square. The native drawables are clipped
+/// to the same curve as the webview's hole over them.
+#[derive(Clone, Copy, Default, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewSurfaceCorners {
+  pub top_left: f64,
+  pub top_right: f64,
+  pub bottom_right: f64,
+  pub bottom_left: f64,
+}

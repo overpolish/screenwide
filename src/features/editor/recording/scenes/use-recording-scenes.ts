@@ -3,7 +3,8 @@
 
 import { useEffect, useReducer, useRef } from "react";
 
-import { UPRIGHT_ROTATION } from "../../layer-rotation";
+import { type SceneDrawing } from "../../glyphs/scene-layout-drawing";
+import { screenshotLayout } from "../../screenshot/screenshot-layout";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import {
   createRecordingTimelineEdit,
@@ -32,9 +33,14 @@ import {
   RecordingSceneControls,
   usePublishRecordingScene,
 } from "./recording-scene-channel";
+import { sceneClipDrawing } from "./recording-scene-drawing";
 import { recordingSceneEdits } from "./recording-scene-edits";
-import { drawnCameraFrame } from "./recording-scene-framing";
-import { selectedPaneFraming } from "./recording-scene-pane-framing";
+import {
+  scenePaneFraming,
+  selectedPaneFraming,
+} from "./recording-scene-pane-framing";
+import { toolPanelSceneOf } from "./recording-scene-panel-snapshot";
+import { recenterSceneScreen } from "./recording-scene-recenter";
 import { RecordingSceneClip } from "./recording-scenes";
 import { useScenePreviewSync } from "./use-scene-preview-sync";
 
@@ -51,6 +57,8 @@ export type RecordingScenes = {
   controls: RecordingSceneControls;
   /** The scene under the playhead, null between scenes. */
   current: RecordingSceneClip | null;
+  /** How a scene's layout is drawn, as the Scene island draws it. */
+  drawingOf: (clip: RecordingSceneClip) => SceneDrawing;
   /** Whether the recording has a screen to arrange. */
   isAvailable: boolean;
   onClipsChange: (clips: RecordingSceneClip[]) => void;
@@ -170,12 +178,22 @@ export function useRecordingScenes({
     clips,
     timelineMsAt(isPlaying ? getPositionMs() : positionMs),
   );
-  const paneOf = (clip: RecordingSceneClip) =>
-    selectedPaneFraming({ camera: sceneCamera, clip, output, selectsCamera });
+  // The pane named, as the Scene island frames either; else the selected
+  // one, as the picture's drag reaches it.
+  const paneOf = (clip: RecordingSceneClip, pane?: "camera" | "screen") =>
+    pane
+      ? scenePaneFraming({ camera: sceneCamera, clip, output, pane })
+      : selectedPaneFraming({
+          camera: sceneCamera,
+          clip,
+          output,
+          selectsCamera,
+        });
   const currentPane = current ? paneOf(current) : null;
   const showDraft = useScenePreviewSync({
     clips,
     edit,
+    look: { cameraOverlay, output },
     sessionId,
     sourceDurationMs,
   });
@@ -183,24 +201,6 @@ export function useRecordingScenes({
     clips,
     commit,
     currentId: current?.id ?? null,
-  });
-  // A composition from before placement was measured in output pixels has no
-  // crop; the whole frame is its screen.
-  const crop =
-    output.cropWidth > 0 && output.cropHeight > 0
-      ? {
-          height: output.cropHeight,
-          width: output.cropWidth,
-          x: output.cropX,
-          y: output.cropY,
-        }
-      : { height: output.height, width: output.width, x: 0, y: 0 };
-  const screenAspect = crop.width / crop.height;
-  const share = (rect: typeof crop) => ({
-    height: rect.height / Math.max(1, output.height),
-    width: rect.width / Math.max(1, output.width),
-    x: rect.x / Math.max(1, output.width),
-    y: rect.y / Math.max(1, output.height),
   });
   const controls: RecordingSceneControls = {
     ...recordingSceneEdits({
@@ -240,47 +240,40 @@ export function useRecordingScenes({
     clearAutoZooms: () => {
       commitClips(withAutoZooms(editRef.current.sceneClips ?? EMPTY_CLIPS, []));
     },
+    recenterScreen: () => {
+      const positionMs = getPositionMs();
+      const target = timedSpanClipAt(clips, timelineMsAt(positionMs));
+      if (!target || !frames.primary) return;
+      recenterSceneScreen({
+        artifactId,
+        camera: sceneCamera,
+        clipId: target.id,
+        commit: (next) => {
+          const latest = editRef.current.sceneClips ?? EMPTY_CLIPS;
+          commitClips(ownEditedAutoZooms(latest, next));
+        },
+        latest: () => editRef.current.sceneClips ?? EMPTY_CLIPS,
+        layout: screenshotLayout(frames.primary, output),
+        output,
+        positionMs,
+        source: frames.primary,
+      });
+    },
   };
   usePublishRecordingScene(
     "recording",
     isAvailable
-      ? {
-          boxes: current?.boxes
-            ? {
-                camera: current.boxes.camera ?? null,
-                cameraBehind: current.boxes.cameraBehind ?? false,
-                screen: current.boxes.screen,
-              }
-            : null,
+      ? toolPanelSceneOf({
+          camera: sceneCamera,
           cameraAspect,
-          canvasAspect: output.width / Math.max(1, output.height),
-          composition: {
-            // Where the camera is drawn, which can differ from its stored box.
-            camera: sceneCamera
-              ? share(drawnCameraFrame(cameraOverlay, sceneCamera.aspect))
-              : null,
-            screen: share(crop),
-          },
-          followsFace: current?.followFace ?? cameraOverlay.followFace ?? false,
-          framing: currentPane?.framing ?? null,
-          framingPane: currentPane?.pane ?? "screen",
-          hasAutoZooms: clips.some((clip) => clip.auto),
+          cameraOverlay,
+          clips,
+          current,
+          currentPane,
           hasCamera,
-          hasSceneAtPlayhead: current !== null,
           isBaked,
-          preset: current?.preset ?? null,
-          // A pane the scene does not round keeps the recording's radius.
-          radius:
-            current && currentPane
-              ? (current.radius?.[currentPane.pane] ??
-                (currentPane.pane === "camera"
-                  ? cameraOverlay.radiusPercent
-                  : output.radiusPercent))
-              : null,
-          rotation: current ? (current.rotation ?? UPRIGHT_ROTATION) : null,
-          screenAspect,
-          variant: current ? (current.variant ?? {}) : null,
-        }
+          output,
+        })
       : null,
     controls,
   );
@@ -289,6 +282,13 @@ export function useRecordingScenes({
     clips,
     controls,
     current,
+    drawingOf: (clip) =>
+      sceneClipDrawing(clip, {
+        camera: sceneCamera,
+        cameraAspect,
+        cameraOverlay,
+        output,
+      }),
     isAvailable,
     onClipsChange: commit,
     onDraftChange: showDraft,

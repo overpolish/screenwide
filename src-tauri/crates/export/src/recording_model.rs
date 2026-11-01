@@ -68,10 +68,13 @@ pub struct RecordingOutputSettings {
 impl RecordingOutputSettings {
   /// Writes each pane's capture, primary then camera, from
   /// the editor's captures. The webview's settings never carry it, so
-  /// it is stamped before a composition is compared or used.
+  /// it is stamped before a composition is compared or used. The screen is
+  /// stamped with how strong the camera drawn into it casts its shadow as
+  /// well, which the camera's own settings say and the screen's draw.
   pub fn stamp_captures(&mut self, captures: [Capture; 2]) {
     self.primary.stamp_capture(captures[0]);
     self.camera.stamp_capture(captures[1]);
+    self.primary.camera_shadow_strength = Some(self.camera.shadow_strength());
   }
 }
 

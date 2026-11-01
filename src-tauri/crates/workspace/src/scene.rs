@@ -11,8 +11,8 @@
 
 mod draw;
 mod effects;
-// Windows drives Frame resizes and radius drags through React rather than
-// these native gestures.
+// Windows drives Frame resizes through React rather than these native
+// gestures.
 #[cfg_attr(target_os = "windows", allow(dead_code))]
 mod gestures;
 mod layers;

@@ -11,23 +11,23 @@ import type { TextTemplateId } from "../../../../bindings/TextTemplateId";
  * `named`, or its id where there is none. */
 export const textTemplateLabel = (template: TextTemplateId, named?: string) => {
   const bundled: Partial<Record<TextTemplateId, string>> = {
-    box: t("editor-panels-text-template-box"),
-    clean: t("editor-panels-text-template-clean"),
-    editorial: t("editor-panels-text-template-editorial"),
-    flip: t("editor-panels-text-template-flip"),
-    glow: t("editor-panels-text-template-glow"),
-    highlight: t("editor-panels-text-template-highlight"),
-    karaoke: t("editor-panels-text-template-karaoke"),
-    offset: t("editor-panels-text-template-offset"),
-    pop: t("editor-panels-text-template-pop"),
-    punch: t("editor-panels-text-template-punch"),
-    rise: t("editor-panels-text-template-rise"),
-    shadow: t("editor-panels-text-template-shadow"),
-    stack: t("editor-panels-text-template-stack"),
-    stagger: t("editor-panels-text-template-stagger"),
-    staircase: t("editor-panels-text-template-staircase"),
-    supersize: t("editor-panels-text-template-supersize"),
-    underline: t("editor-panels-text-template-underline"),
+    box: t("editor-island-text-template-box"),
+    clean: t("editor-island-text-template-clean"),
+    editorial: t("editor-island-text-template-editorial"),
+    flip: t("editor-island-text-template-flip"),
+    glow: t("editor-island-text-template-glow"),
+    highlight: t("editor-island-text-template-highlight"),
+    karaoke: t("editor-island-text-template-karaoke"),
+    offset: t("editor-island-text-template-offset"),
+    pop: t("editor-island-text-template-pop"),
+    punch: t("editor-island-text-template-punch"),
+    rise: t("editor-island-text-template-rise"),
+    shadow: t("editor-island-text-template-shadow"),
+    stack: t("editor-island-text-template-stack"),
+    stagger: t("editor-island-text-template-stagger"),
+    staircase: t("editor-island-text-template-staircase"),
+    supersize: t("editor-island-text-template-supersize"),
+    underline: t("editor-island-text-template-underline"),
   };
   return bundled[template] ?? named ?? template;
 };
@@ -105,10 +105,10 @@ export const offeredColors = (style: TextStyle): TextColorRole[] => [
 /** A colour's name, as its pill shows it. */
 export const styleColorLabel = (role: TextColorRole) =>
   ({
-    accent: t("editor-panels-text-color-accent"),
-    background: t("editor-panels-text-color-background"),
-    highlight: t("editor-panels-text-color-highlight"),
-    outline: t("editor-panels-text-color-outline"),
-    shadow: t("editor-panels-text-color-shadow"),
-    text: t("editor-panels-text-color-text"),
+    accent: t("editor-island-text-color-accent"),
+    background: t("editor-island-text-color-background"),
+    highlight: t("editor-island-text-color-highlight"),
+    outline: t("editor-island-text-color-outline"),
+    shadow: t("editor-island-text-color-shadow"),
+    text: t("editor-island-text-color-text"),
   })[role];

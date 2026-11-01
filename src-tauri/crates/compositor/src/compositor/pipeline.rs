@@ -60,6 +60,8 @@ impl Compositor {
       mark_blur: super::mark_blur::MarkBlur::new(gpu),
       mips: screenwide_gpu::mips::Mips::new(&gpu.device, FORMAT),
       focus: super::focus::FocusBlur::new(gpu),
+      lens_ground: super::lens_ground::LensGround::new(device),
+      lens_under: Default::default(),
       sampler: sampler(device, wgpu::FilterMode::Linear),
       point_sampler: sampler(device, wgpu::FilterMode::Nearest),
     })
@@ -112,4 +114,20 @@ pub(super) fn sampler(device: &wgpu::Device, filter: wgpu::FilterMode) -> wgpu::
     },
     ..Default::default()
   })
+}
+
+/// The bind group entry `binding` reading `view`.
+pub(super) fn texture(binding: u32, view: &wgpu::TextureView) -> wgpu::BindGroupEntry<'_> {
+  wgpu::BindGroupEntry {
+    binding,
+    resource: wgpu::BindingResource::TextureView(view),
+  }
+}
+
+/// The bind group entry `binding` reading all of `buffer`.
+pub(super) fn buffer(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
+  wgpu::BindGroupEntry {
+    binding,
+    resource: buffer.as_entire_binding(),
+  }
 }

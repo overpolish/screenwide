@@ -191,35 +191,4 @@ impl WorkspaceScene {
     }
     found
   }
-
-  /// The live corner radius of `pane`, as the export derives it: `frame`
-  /// rounds the canvas, a share of its shorter side, and otherwise the clip,
-  /// a share of the crop's shorter side.
-  pub fn update_selected_radius(&self, pane: u32, percent: f64, frame: bool) -> bool {
-    let Ok(mut state) = self.state() else {
-      return false;
-    };
-    if !percent.is_finite() {
-      return false;
-    }
-    let percent = percent.clamp(0.0, 50.0);
-    let mut found = false;
-    for layer in state
-      .layers
-      .iter_mut()
-      .filter(|layer| layer.pane_index == pane)
-    {
-      found = true;
-      let geometry = &mut layer.geometry;
-      if frame {
-        let shortest = f64::from(geometry.size.0.min(geometry.size.1));
-        geometry.background_radius = (shortest * percent / 100.0).round() as f32;
-      } else {
-        let placement = geometry.placement;
-        let shortest = f64::from(placement.crop_width.min(placement.crop_height));
-        geometry.radius = (shortest * percent / 100.0).round() as f32;
-      }
-    }
-    found
-  }
 }

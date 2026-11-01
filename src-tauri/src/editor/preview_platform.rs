@@ -41,7 +41,9 @@
 //!    platform picture (`LayerPicture`), and the surface draws the scene into
 //!    one drawable over the viewport, at its panes' boxes and over the
 //!    checkerboard, whenever a layout, a transform or a present changes it.
-//!    The scene does the whole output composition on the GPU.
+//!    The scene does the whole output composition on the GPU. The backstop,
+//!    the workspace and the chrome are clipped to the viewport's rounded
+//!    corners, which the webview's hole over them shares.
 //! 3. **A pane decoder and frame scrubber for stills and scrubbing**, plus (4)
 //!    the **playback video path** - both live in
 //!    [`super::recording_preview_player::platform`], which selects backends the
@@ -78,7 +80,43 @@ use self::surface_windows as surface;
 pub(crate) use audio_ribbon::{ribbon_still, BAR_PITCH_POINTS as RIBBON_BAR_PITCH_POINTS};
 pub(crate) use surface::RecordingPreviewSurface;
 
-pub(crate) const NATIVE_POINTER_DOWN_EVENT: &str = "preview://native-pointer-down";
+pub(crate) const NATIVE_POINTER_EVENT: &str = "preview://native-pointer";
+
+/// A press on the picture as the editor window hears of it: `down` as it
+/// goes down, `took` when it took hold of something already there, and
+/// `down: false` as it is let go.
+#[derive(Clone, Copy, serde::Serialize)]
+struct NativePointerEvent {
+  down: bool,
+  took: bool,
+}
+
+pub(crate) const POINTER_ARRIVED_EVENT: &str = "preview://pointer-arrived";
+
+/// Tells `window` of every press on its picture, which blurs the page's
+/// focus and lets the editor know a press is under way, and of the pointer
+/// coming onto the picture, which the page hears of no other way.
+pub(crate) fn pointer_press_callback(
+  window: tauri::WebviewWindow,
+) -> screenwide_workspace::editing::PointerPressCallback {
+  use screenwide_workspace::editing::PointerPress;
+  use tauri::Emitter;
+  Box::new(move |press| {
+    let event = match press {
+      PointerPress::Down { took } => NativePointerEvent { down: true, took },
+      PointerPress::Up => NativePointerEvent {
+        down: false,
+        took: false,
+      },
+      PointerPress::Arrived => {
+        let _ = window.emit(POINTER_ARRIVED_EVENT, ());
+        return;
+      }
+    };
+    let _ = window.emit(NATIVE_POINTER_EVENT, event);
+  })
+}
+
 pub(crate) const NATIVE_CONTEXT_MENU_EVENT: &str = "preview://context-menu";
 
 /// A picture dropped on the workspace, and where it landed: the layer under

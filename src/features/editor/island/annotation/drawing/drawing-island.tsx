@@ -12,6 +12,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import type { EditorIslandContent } from "../../editor-island";
 
@@ -30,22 +35,24 @@ type DrawingStyle = {
   width: number;
 };
 
-export type DrawingIslandProps = AnnotationColorProps & {
-  /** Whether it can draw itself in: a recording's annotations can, a
-   * screenshot's, being one instant, cannot. */
-  canAnimate: boolean;
-  id: string;
-  onStyleChange: (style: Partial<DrawingStyle>) => void;
-  style: DrawingStyle;
-  /** Left out for the pen in hand with nothing chosen. */
-  onDelete?: () => void;
-};
+export type DrawingIslandProps = AnnotationColorProps &
+  AnnotationPinProps & {
+    /** Whether it can draw itself in: a recording's annotations can, a
+     * screenshot's, being one instant, cannot. */
+    canAnimate: boolean;
+    id: string;
+    onStyleChange: (style: Partial<DrawingStyle>) => void;
+    style: DrawingStyle;
+    /** Left out for the pen in hand with nothing chosen. */
+    onDelete?: () => void;
+  };
 
 export function drawingIsland(props: DrawingIslandProps): EditorIslandContent {
   const { canAnimate, id, onDelete, onStyleChange, style } = props;
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -78,6 +85,7 @@ export function drawingIsland(props: DrawingIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </div>
     ),
     title: (

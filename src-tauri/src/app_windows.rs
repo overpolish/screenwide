@@ -76,7 +76,6 @@ pub(crate) mod options;
 pub(crate) mod overlay_surface;
 #[cfg(target_os = "macos")]
 pub(crate) mod panel_presentation_macos;
-pub(crate) mod panel_space;
 pub(crate) mod platform;
 mod popover_dismissal;
 pub(crate) mod region;

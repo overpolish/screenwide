@@ -40,9 +40,8 @@ pub fn normalised_point(point: AnnotationPoint, source: (u32, u32)) -> (f64, f64
 /// east, `end_head` is zero, and `width` is the disc's diameter as a share of
 /// the drawn width. Its one grip - the tail's tip - is placed from those by the
 /// native side, which works in isotropic display points. `kind` says which
-/// reading applies. An image's corner radius rides in `radius`, the one slot
-/// none of its others is free for, and its turn in depth in `tilt_x` and
-/// `tilt_y`, in degrees; every other kind leaves them zero. Layer identity,
+/// reading applies. An image's turn in depth rides in `tilt_x` and `tilt_y`,
+/// in degrees; every other kind leaves them zero. Layer identity,
 /// index and kind follow the ten geometry doubles, then the tilt, matching
 /// the C `ScreenwidePreviewAnnotation`.
 #[repr(C)]

@@ -16,9 +16,7 @@ const SELECTION_GESTURE_OPERATIONS: readonly ScreenshotSelectionGestureEvent["op
   [
     "move",
     "resize",
-    "radius",
     "frameResize",
-    "frameRadius",
     "cropMove",
     "cropResize",
     "cropDraw",
@@ -26,9 +24,8 @@ const SELECTION_GESTURE_OPERATIONS: readonly ScreenshotSelectionGestureEvent["op
   ];
 
 /**
- * Everything the native screenshot preview reports back: the view transform,
- * which layer it selected, a pointer gesture in flight, and a finished
- * annotation edit.
+ * Everything the native screenshot preview reports back: which layer it
+ * selected, a pointer gesture in flight, and a finished annotation edit.
  *
  * The handlers are taken as refs rather than values: each subscription lives
  * for the whole session, and re-subscribing on every render would drop events
@@ -40,7 +37,6 @@ export function useScreenshotPreviewEvents({
   onAnnotationHoverRef,
   onSelectionChangeRef,
   onSelectionGestureRef,
-  onZoomChangeRef,
   sessionIdRef,
 }: {
   isEnabled: boolean;
@@ -56,35 +52,8 @@ export function useScreenshotPreviewEvents({
   onSelectionGestureRef: RefObject<
     ((event: ScreenshotSelectionGestureEvent) => void) | undefined
   >;
-  onZoomChangeRef: RefObject<((zoomPercent: number) => void) | undefined>;
   sessionIdRef: RefObject<number>;
 }) {
-  useEffect(() => {
-    if (!isEnabled) return;
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-    void listen<{ sessionId: number; zoomPercent: number }>(
-      "screenshot-preview://transform",
-      (event) => {
-        if (
-          !disposed &&
-          event.payload.sessionId === sessionIdRef.current &&
-          Number.isFinite(event.payload.zoomPercent)
-        ) {
-          const roundedZoom = Math.round(event.payload.zoomPercent);
-          onZoomChangeRef.current?.(roundedZoom);
-        }
-      },
-    ).then((dispose) => {
-      if (disposed) dispose();
-      else unlisten = dispose;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [isEnabled, onZoomChangeRef, sessionIdRef]);
-
   useEffect(() => {
     if (!isEnabled) return;
     let disposed = false;

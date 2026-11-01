@@ -22,6 +22,7 @@ import type {
   AnnotationArrow,
   AnnotationCounter,
   AnnotationHighlight,
+  AnnotationPoint,
   AnnotationShape,
   AnnotationText,
   ImagePlay,
@@ -92,20 +93,67 @@ export const highlightShape = (value: unknown): Shape<"highlight"> | null => {
     : null;
 };
 
+/** The zooms a lens comes in. The twin of `MAGNIFY_ZOOMS` in
+ * `src-tauri/crates/annotations/src/magnify/model.rs`, which a Rust test holds
+ * to this line. */
+export const LENS_ZOOMS = [1.5, 2, 3, 4] as const;
+
+/** The zoom a fresh lens comes in. The twin of `NEW_MAGNIFY_ZOOM`. */
+export const NEW_LENS_ZOOM = 2;
+
+/** The look nearest `zoom`, measured as a ratio, since a zoom is a factor:
+ * 2.5× is nearer 3× than 2×. The twin of `nearest_zoom`. */
+export const nearestLensZoom = (zoom: number): number =>
+  Number.isFinite(zoom) && zoom > 0
+    ? LENS_ZOOMS.reduce((best, look) =>
+        Math.abs(Math.log(zoom / look)) < Math.abs(Math.log(zoom / best))
+          ? look
+          : best,
+      )
+    : NEW_LENS_ZOOM;
+
+/** The lens a magnifier from before the lens becomes: over its zoom area's
+ * centre, as big as its loupe was - the zoom area's shape `size` along its
+ * longer side - at the look nearest the zoom that size gave it. The twin of
+ * `lens_from_loupe`. */
+const lensFromLoupe = (
+  start: AnnotationPoint,
+  end: AnnotationPoint,
+  size: number,
+): Shape<"magnify"> => {
+  const longest = Math.max(
+    Math.abs(end.x - start.x),
+    Math.abs(end.y - start.y),
+  );
+  const scale =
+    longest > 0 && Number.isFinite(size) && size > 0 ? size / longest : 1;
+  const centre = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  const half = {
+    x: (Math.abs(end.x - start.x) / 2) * scale,
+    y: (Math.abs(end.y - start.y) / 2) * scale,
+  };
+  return {
+    end: { x: centre.x + half.x, y: centre.y + half.y },
+    kind: "magnify",
+    start: { x: centre.x - half.x, y: centre.y - half.y },
+    zoom: nearestLensZoom(scale),
+  };
+};
+
 export const magnifyShape = (value: unknown): Shape<"magnify"> | null => {
   const shape = (value ?? {}) as Record<string, unknown>;
   const start = annotationPoint(shape.start);
   const end = annotationPoint(shape.end);
-  const loupe = annotationPoint(shape.loupe);
-  const size = shape.size;
-  return start &&
-    end &&
-    loupe &&
-    typeof size === "number" &&
-    Number.isFinite(size) &&
-    size >= 0
-    ? { end, kind: "magnify", loupe, size, start }
-    : null;
+  if (!start || !end) return null;
+  const { size, zoom } = shape;
+  if (typeof zoom === "number") {
+    return Number.isFinite(zoom) && zoom > 0
+      ? { end, kind: "magnify", start, zoom }
+      : null;
+  }
+  return typeof size === "number"
+    ? lensFromLoupe(start, end, size)
+    : { end, kind: "magnify", start, zoom: NEW_LENS_ZOOM };
 };
 
 export const redactShape = (value: unknown): Shape<"redact"> | null => {

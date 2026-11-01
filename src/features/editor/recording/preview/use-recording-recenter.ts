@@ -11,8 +11,8 @@ import {
 } from "../../screenshot/screenshot-recenter";
 
 /**
- * The recording's content analysis, published for the crop panel's commit and
- * the Select panel's padding controls. Both read the frame under the
+ * The recording's content analysis, published for the crop's commit and the
+ * Screen island's inset presets and Recenter. Both read the frame under the
  * playhead, so the picture is parked before it is read.
  */
 export function useRecordingRecenter({
@@ -32,8 +32,9 @@ export function useRecordingRecenter({
 }) {
   const requestRef = useRef<symbol | null>(null);
   // The padding slider asks for the colour on every step until it lands, and
-  // each analysis reads the whole frame, so one is let run at a time.
-  const preparingRef = useRef(false);
+  // each analysis reads the whole frame, so one is let run at a time; a later
+  // ask waits on it, so its undo step holds the colour too.
+  const preparingRef = useRef<Promise<void> | null>(null);
   const currentRef = useRef({ output, source });
   currentRef.current = { output, source };
 
@@ -41,19 +42,20 @@ export function useRecordingRecenter({
     applyBounds: boolean,
     sourceCrop = currentRef.current.output.sourceCrop,
     refresh = false,
-  ) => {
+  ): Promise<void> => {
     const current = currentRef.current;
-    if (!current.source) return;
+    if (!current.source) return Promise.resolve();
     const preparing = !applyBounds && !refresh;
-    if (
-      preparing &&
-      (current.output.recenterInsetColor || preparingRef.current)
-    )
-      return;
+    if (preparing && current.output.recenterInsetColor)
+      return Promise.resolve();
+    if (preparing && preparingRef.current) return preparingRef.current;
     const request = Symbol();
     requestRef.current = request;
-    if (preparing) preparingRef.current = true;
-    void getRecordingRecenterAnalysis(artifactId, getPositionMs(), sourceCrop)
+    const read = getRecordingRecenterAnalysis(
+      artifactId,
+      getPositionMs(),
+      sourceCrop,
+    )
       .then((analysis) => {
         if (!analysis || requestRef.current !== request) return;
         const latest = currentRef.current;
@@ -85,20 +87,21 @@ export function useRecordingRecenter({
         );
       })
       .finally(() => {
-        if (preparing) preparingRef.current = false;
+        if (preparingRef.current === read) preparingRef.current = null;
       });
+    if (preparing) preparingRef.current = read;
+    return read;
   };
-  const refresh = (sourceCrop: ScreenshotOutputSettings["sourceCrop"]) => {
+  const refresh = (sourceCrop: ScreenshotOutputSettings["sourceCrop"]) =>
     analyse(false, sourceCrop, true);
-  };
   useRecenterInsetControls("recording", {
     begin: () => {
       pause();
-      analyse(true);
+      void analyse(true);
     },
     prepare: () => {
       pause();
-      analyse(false);
+      return analyse(false);
     },
     refresh,
   });

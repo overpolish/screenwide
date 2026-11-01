@@ -19,6 +19,7 @@ import {
   MANY_SAVED_LAYOUTS,
   SAVED_LAYOUT,
   TALL_VIDEO,
+  TURNED_VIDEO,
 } from "./scene-story-fixtures";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -84,6 +85,12 @@ export const PictureInPicture: Story = {
 // A 1080 by 1920 video: every layout is drawn on its shape.
 export const TallVideo: Story = { args: { video: TALL_VIDEO } };
 
+// The scene turns the screen in depth: every layout draws it turned, as the
+// picture does.
+export const Turned: Story = {
+  args: { layout: { boxes: CUSTOM, kind: "custom" }, video: TURNED_VIDEO },
+};
+
 export const CameraOnly: Story = {
   args: { layout: { kind: "preset", preset: "camera-only" }, screen: null },
 };
@@ -111,7 +118,6 @@ export const Screen: Story = {
       focusX: 0.4,
       focusY: 0.5,
       radius: 12,
-      rotation: { x: 0, y: -20, z: 0 },
       zoom: 2,
     },
   },

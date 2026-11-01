@@ -81,11 +81,6 @@ export function gesturedCameraOverlay({
       frameX: left,
       frameY: top,
     };
-  } else if (event.operation === "radius") {
-    next = {
-      ...start,
-      radiusPercent: Math.min(50, Math.max(0, event.scale)),
-    };
   } else if (event.operation === "resize") {
     next = scaledCameraOverlay(start, Math.min(8, Math.max(0, event.scale)), {
       x: frameX,
@@ -167,11 +162,6 @@ export function gesturedTrackOutput({
       y: event.deltaY,
       z: event.scale,
     });
-  } else if (event.operation === "radius") {
-    next = {
-      ...snapshot,
-      radiusPercent: Math.min(50, Math.max(0, event.scale)),
-    };
   } else if (event.operation === "resize") {
     const scale = Math.min(8, Math.max(0, event.scale));
     const transform = (

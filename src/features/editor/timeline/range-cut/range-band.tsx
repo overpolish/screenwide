@@ -30,6 +30,9 @@ export function RangeBand({
         onGrab ? "cursor-grab touch-none" : "pointer-events-none",
         isLifted && LIFTED,
       )}
+      // Chosen, as only a stretch that can be taken hold of is, its island
+      // stands over it (`use-editor-island-window.ts`).
+      data-strip-island={onGrab ? "" : undefined}
       dir="ltr"
       onPointerDown={
         onGrab &&

@@ -18,10 +18,10 @@ import type { ScreenshotSelectionGestureEvent } from "./screenshot-preview-event
 
 /**
  * Where one gesture frame leaves a screenshot layer, measured against the
- * `snapshot` the gesture began from: a crop, a corner radius, a turn, a
- * resize or a move. `anchor` is the Begin deltas, which a crop draw starts
- * from; `output` is the canvas's size, the crop's frame of reference; the
- * move travels the `workspace` canvas the gesture began on.
+ * `snapshot` the gesture began from: a crop, a turn, a resize or a move.
+ * `anchor` is the Begin deltas, which a crop draw starts from; `output` is
+ * the canvas's size, the crop's frame of reference; the move travels the
+ * `workspace` canvas the gesture began on.
  */
 export function gesturedScreenshotLayer({
   anchor,
@@ -51,11 +51,6 @@ export function gesturedScreenshotLayer({
       ? commitScreenshotCrop(snapshot, next, source)
       : next;
   }
-  if (event.operation === "radius")
-    return {
-      ...snapshot,
-      radiusPercent: Math.min(50, Math.max(0, event.scale)),
-    };
   // The gizmo reports the turn it reaches: about X and Y as its travel, about
   // Z as its scale.
   if (event.operation === "rotate")

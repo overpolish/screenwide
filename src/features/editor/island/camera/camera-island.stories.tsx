@@ -62,22 +62,13 @@ function CameraIsland({
 
 const meta = {
   ...editorIslandStoryMeta,
-  argTypes: {
-    aspect: {
-      control: "inline-radio",
-      options: ["free", "original", "1:1", "4:3", "16:9", "9:16"],
-      table: { defaultValue: { summary: "free" } },
-    },
-  },
   args: {
-    aspect: "free",
     effects: EFFECTS,
     followFace: false,
     hasShadow: false,
     isFindingFace: false,
     isInScene: false,
     isShown: true,
-    onAspectChange: fn(),
     onBackgroundChange: fn(),
     onChoosePicture: fn(),
     onDownloadBackgroundModel: fn(),
@@ -87,7 +78,6 @@ const meta = {
     onPickObjects: fn(),
     onRadiusChange: fn(),
     onRemoveObject: fn(),
-    onReset: fn(),
     onShadowChange: fn(),
     onShowObject: fn(),
     radius: 50,
@@ -107,10 +97,6 @@ const meta = {
     return (
       <CameraIsland
         {...args}
-        onAspectChange={(aspect) => {
-          args.onAspectChange(aspect);
-          updateArgs({ aspect });
-        }}
         onBackgroundChange={(background) => {
           args.onBackgroundChange(background);
           change({ background, objects: effects.objects ?? NO_OBJECTS });
@@ -152,10 +138,6 @@ const meta = {
               picks: objects.picks.filter((pick) => pick.id !== id),
             },
           });
-        }}
-        onReset={() => {
-          args.onReset();
-          updateArgs({ aspect: "free" });
         }}
         onShadowChange={(hasShadow) => {
           args.onShadowChange(hasShadow);

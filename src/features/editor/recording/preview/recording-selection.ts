@@ -7,14 +7,20 @@ import {
   screenshotOutputDimensions,
 } from "../../screenshot/screenshot-output";
 import { normalizedScreenshotSelection } from "../../screenshot/screenshot-selection";
+import {
+  keepsShape,
+  recordingCropAspectKey,
+} from "../../tool-panels/crop/crop-aspect-store";
 
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 
 import type { AnnotationKind } from "../../../annotations/types";
+import type { CropAspect } from "../../island/crop-aspect-choice";
+import type { RecordingPreviewSelection } from "../use-recording-preview-surface";
 
 type SelectionTool = Exclude<
   RecordingCanvasTool,
-  AnnotationKind | "canvas" | "marquee" | "scene" | null
+  AnnotationKind | "canvas" | "marquee" | "scene"
 >;
 
 /** Build the native OSC payload for an ordinary screen/camera output pane. */
@@ -45,3 +51,28 @@ export function normalizedRecordingSelection({
     rect: selection.rect,
   };
 }
+
+/** `selection`, where it is a crop window, told whether its handles keep
+ * its shape: as a screenshot's crop does, wherever a shape is chosen for it
+ * (`aspects`, by `recordingCropAspectKey`), the screen's over the scene
+ * `sceneId` by that scene's own. */
+export const withCropShape = (
+  selection: RecordingPreviewSelection,
+  aspects: Partial<Record<string, CropAspect>>,
+  sceneId: string | null,
+): RecordingPreviewSelection =>
+  selection.cropMode
+    ? {
+        ...selection,
+        cropKeepsShape: keepsShape(
+          aspects[
+            recordingCropAspectKey(
+              (selection.layerId ?? selection.paneIndex) === 1
+                ? "camera"
+                : "primary",
+              sceneId,
+            )
+          ],
+        ),
+      }
+    : selection;

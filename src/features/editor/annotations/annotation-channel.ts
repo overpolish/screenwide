@@ -10,6 +10,7 @@ import { EditorKind } from "../types";
 import { AnnotationStyle, ImageArt, ImagePlay, TextSpan } from "./annotations";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
+import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 
 /** What the panel changes about how a moving image plays. */
 export type ImagePlayChange = Partial<Pick<ImagePlay, "frame" | "once">>;
@@ -20,15 +21,14 @@ export type ImagePlayChange = Partial<Pick<ImagePlay, "frame" | "once">>;
  *
  * Which annotation is chosen is the preview's own business: the native tool
  * hit-tests it and reports it back, and the tool that did so keeps it. The
- * annotation panel arrives by another road entirely - the panel window, through
+ * pen's island arrives by another road entirely - the island window, through
  * the editor's bridge - and has to reach the same commit path the drag on the
- * picture uses, so each workspace leaves what it has in hand here for the panel
- * to find. This is the twin of `keyboard-shortcut-channel.ts`.
+ * picture uses, so each workspace leaves what it has in hand here for the
+ * island to find. This is the twin of `keyboard-shortcut-channel.ts`.
  */
 type PublishedAnnotation = {
   applyAngle: (angle: number) => void;
   applyAnimated: (animated: boolean) => void;
-  applyClearDrawings: () => void;
   /** Delete every chosen annotation, in one edit. */
   applyDelete: () => void;
   /** Set apart the chosen text's words `emphasis`, and no others. */
@@ -37,7 +37,11 @@ type PublishedAnnotation = {
   applyImage: (art: ImageArt) => void;
   /** Change how the chosen moving image plays. */
   applyImagePlay: (play: ImagePlayChange) => void;
+  /** Turn the chosen focus into a spotlight, or the spotlight into a focus. */
+  applyKind: (kind: "focus" | "spotlight") => void;
   applyLook: (look: TextStyle) => void;
+  /** Act on the chosen annotation's pin, where it can be pinned. */
+  applyPin: (action: AnnotationPinAction) => void;
   applyReverse: () => void;
   /** Turn the chosen image, a field at a time, in degrees about each axis. */
   applyRotation: (rotation: Partial<SceneRotation>) => void;
@@ -45,8 +49,8 @@ type PublishedAnnotation = {
   applyStyle: (style: Partial<AnnotationStyle>) => void;
   /** Sway the chosen image over its clip, or stand it still. */
   applySway: (sway: boolean) => void;
-  /** Whether the picture the workspace edits has any stroke to clear. */
-  canClearDrawings: boolean;
+  /** Set how many times the chosen lens enlarges. */
+  applyZoom: (zoom: number) => void;
   /** How many annotations are chosen; only one on its own is `selection`. */
   count: number;
   selection: ToolPanelAnnotation | null;
@@ -71,19 +75,15 @@ const subscribe = (listener: () => void) => {
 
 /**
  * Publish the annotation this workspace has in hand for as long as its preview
- * is mounted, and whether it has strokes to clear.
+ * is mounted, and how many are chosen.
  *
  * The selection is compared by value: the preview rebuilds it on every render,
  * and a panel that re-rendered on identity alone would never settle.
  */
 export function usePublishAnnotationSelection(
   workspace: EditorKind,
-  {
-    canClearDrawings,
-    count,
-    selection,
-  }: Pick<PublishedAnnotation, "canClearDrawings" | "count" | "selection">,
-  apply: Omit<PublishedAnnotation, "canClearDrawings" | "count" | "selection">,
+  { count, selection }: Pick<PublishedAnnotation, "count" | "selection">,
+  apply: Omit<PublishedAnnotation, "count" | "selection">,
 ) {
   const applyRef = useRef(apply);
   applyRef.current = apply;
@@ -95,9 +95,6 @@ export function usePublishAnnotationSelection(
       },
       applyAnimated: (animated) => {
         applyRef.current.applyAnimated(animated);
-      },
-      applyClearDrawings: () => {
-        applyRef.current.applyClearDrawings();
       },
       applyDelete: () => {
         applyRef.current.applyDelete();
@@ -111,8 +108,14 @@ export function usePublishAnnotationSelection(
       applyImagePlay: (play) => {
         applyRef.current.applyImagePlay(play);
       },
+      applyKind: (kind) => {
+        applyRef.current.applyKind(kind);
+      },
       applyLook: (look) => {
         applyRef.current.applyLook(look);
+      },
+      applyPin: (action) => {
+        applyRef.current.applyPin(action);
       },
       applyReverse: () => {
         applyRef.current.applyReverse();
@@ -129,7 +132,9 @@ export function usePublishAnnotationSelection(
       applySway: (sway) => {
         applyRef.current.applySway(sway);
       },
-      canClearDrawings,
+      applyZoom: (zoom) => {
+        applyRef.current.applyZoom(zoom);
+      },
       count,
       selection:
         serialized === null
@@ -143,7 +148,7 @@ export function usePublishAnnotationSelection(
       workspaces.delete(workspace);
       notify();
     };
-  }, [canClearDrawings, count, serialized, workspace]);
+  }, [count, serialized, workspace]);
 }
 
 /**
@@ -185,13 +190,6 @@ export const useAnnotationSelection = (workspace: EditorKind) =>
 /** How many annotations this workspace has chosen. */
 export const useAnnotationSelectionCount = (workspace: EditorKind) =>
   useSyncExternalStore(subscribe, () => workspaces.get(workspace)?.count ?? 0);
-
-/** Whether the picture this workspace edits has any stroke to clear. */
-export const useCanClearDrawings = (workspace: EditorKind) =>
-  useSyncExternalStore(
-    subscribe,
-    () => workspaces.get(workspace)?.canClearDrawings ?? false,
-  );
 
 /** The workspace's published edits when it has an annotation chosen. */
 export const chosenAnnotation = (workspace: EditorKind) => {

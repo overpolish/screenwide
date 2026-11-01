@@ -7,6 +7,10 @@ use serde::Serialize;
 use tauri::{ipc::Response, AppHandle, Manager};
 
 use super::{EditorArtifact, EditorState};
+
+/// The rest of what was recorded beside the picture: clicks, typing and the
+/// picture's own activity, for the timeline's beats.
+pub(crate) mod activity;
 use crate::transcription::notes::{self, NoteTranscript};
 
 /// How many levels a note's waveform is drawn from.

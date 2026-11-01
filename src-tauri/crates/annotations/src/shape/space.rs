@@ -28,10 +28,8 @@ impl super::AnnotationShape {
       Self::Redact { start, end, .. }
       | Self::Shape { start, end, .. }
       | Self::Spotlight { start, end }
-      | Self::Focus { start, end } => [*start, *end, *end],
-      Self::Magnify {
-        start, end, loupe, ..
-      } => [*start, *end, *loupe],
+      | Self::Focus { start, end }
+      | Self::Magnify { start, end, .. } => [*start, *end, *end],
       Self::Image {
         center,
         size,
@@ -78,12 +76,7 @@ impl super::AnnotationShape {
         start, end, bands, ..
       } => highlight::model::placed(*start, *end, bands),
       Self::Draw { points, .. } => freehand::model::placed(points),
-      Self::Magnify {
-        start,
-        end,
-        loupe,
-        size,
-      } => magnify::model::placed(*start, *end, *loupe, *size),
+      Self::Magnify { start, end, zoom } => magnify::model::placed(*start, *end, *zoom),
       Self::Image {
         center,
         size,
@@ -181,26 +174,12 @@ impl super::AnnotationShape {
         points: points.iter().map(|point| map(*point)).collect(),
         smooth: *smooth,
       },
-      Self::Magnify {
-        start,
-        end,
-        loupe,
-        size,
-      } => {
-        // A length rides through as far as the space it moves into
-        // stretches it; every such space keeps the picture's aspect.
-        let centre = map(*loupe);
-        let edge = map(AnnotationPoint {
-          x: loupe.x + size,
-          y: loupe.y,
-        });
-        Self::Magnify {
-          start: map(*start),
-          end: map(*end),
-          loupe: centre,
-          size: (edge.x - centre.x).abs(),
-        }
-      }
+      // A lens's zoom is a ratio, the same in every space.
+      Self::Magnify { start, end, zoom } => Self::Magnify {
+        start: map(*start),
+        end: map(*end),
+        zoom: *zoom,
+      },
       Self::Image {
         center,
         size,
@@ -213,9 +192,10 @@ impl super::AnnotationShape {
         sway,
         clock_ms,
       } => {
-        // Its size rides through as the magnifier's does; the turn, the
-        // tilt, the mirroring, how it plays and how it sways are the same in
-        // every space, the drift being a share of its size.
+        // A length rides through as far as the space it moves into
+        // stretches it, every such space keeping the picture's aspect; the
+        // turn, the tilt, the mirroring, how it plays and how it sways are
+        // the same in every space, the drift being a share of its size.
         let centre = map(*center);
         let edge = map(AnnotationPoint {
           x: center.x + size,

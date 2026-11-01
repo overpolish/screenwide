@@ -4,14 +4,21 @@
 use super::*;
 
 impl WorkspaceEditor {
-  pub fn set_viewport(&self, rect: PreviewSurfaceRect, backdrop: [f64; 4]) {
+  pub fn set_viewport(
+    &self,
+    rect: PreviewSurfaceRect,
+    corners: PreviewSurfaceCorners,
+    backdrop: [f64; 4],
+  ) {
     if let Ok(mut state) = self.inner.state.lock() {
       state.viewport = rect;
+      state.viewport_corners = corners;
       let (x, right) = pixels::scaled_edges(rect.x, rect.width, state.scale);
       let (y, bottom) = pixels::scaled_edges(rect.y, rect.height, state.scale);
       self.inner.host.place_viewport(
         (x, y, right - x, bottom - y),
         rect,
+        corners,
         state.scale,
         backdrop,
         state.editor_active,
@@ -110,7 +117,6 @@ impl WorkspaceEditor {
     defer_draw: bool,
     allow_upscale: bool,
   ) {
-    let mut restored_zoom = None;
     if let Ok(mut state) = self.inner.state.lock() {
       state.workspace_allows_upscale = allow_upscale;
       if state.frame_resize.is_some() {
@@ -127,9 +133,6 @@ impl WorkspaceEditor {
         state.workspace_transforms.insert(natural_size, transform);
       } else if state.workspace_natural_size != Some(natural_size) {
         if let Some(transform) = state.workspace_transforms.get(&natural_size).copied() {
-          if (state.workspace_transform.zoom - transform.zoom).abs() > 0.0001 {
-            restored_zoom = Some(transform.zoom);
-          }
           state.workspace_transform.zoom = transform.zoom;
           state.workspace_transform.pan_x = transform.pan_x;
           state.workspace_transform.pan_y = transform.pan_y;
@@ -139,9 +142,6 @@ impl WorkspaceEditor {
       for (index, rect) in panes {
         self.layout_pane(&mut state, *index, *rect, defer_draw);
       }
-    }
-    if let Some(zoom) = restored_zoom {
-      emit_transform(&self.inner, zoom);
     }
   }
 

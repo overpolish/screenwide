@@ -12,6 +12,7 @@ import {
 } from "./editor-tool-keys";
 import { preserveEscapeFocus } from "./escape-focus";
 import {
+  editsText,
   ownsActivationKeys,
   arrowsOnlyMoveFocus,
   ownsArrowKeys,
@@ -19,6 +20,10 @@ import {
   ownsTextEditingKeys,
 } from "./keyboard-target";
 import { sheetOwnsKey } from "./sheet-escape";
+import {
+  useWindowKeyListeners,
+  WindowKeyHandlers,
+} from "./use-window-key-listeners";
 
 /**
  * How many mounted hooks have claimed Escape for a tool that is in the middle
@@ -39,6 +44,7 @@ export function useEditorWindowShortcuts({
   onCutTimeline,
   onDelete,
   onDeselect,
+  onDeselectAll,
   onExport,
   onMarqueeTool,
   onNudge,
@@ -84,6 +90,7 @@ export function useEditorWindowShortcuts({
     };
   }, [ownsEscape]);
   const consumedKeysRef = useRef(new Set<string>());
+  const handlersRef = useRef<WindowKeyHandlers | null>(null);
   useEffect(preserveEscapeFocus, []);
 
   useEffect(() => {
@@ -97,9 +104,6 @@ export function useEditorWindowShortcuts({
     };
     const onKeyUp = (event: KeyboardEvent) => {
       if (consumedKeys.delete(event.code)) event.stopPropagation();
-    };
-    const onPointerDown = () => {
-      focusIntentRef.current = "pointer";
     };
     const toolKeys: EditorToolKeys = {
       onArrange,
@@ -165,10 +169,10 @@ export function useEditorWindowShortcuts({
 
       if (event.repeat || event.isComposing || event.altKey) return;
 
-      if (event.code === "Escape" && !ownsTextEditingKeys(event.target)) {
-        // A claimed Escape is the only one that runs: the hook that owns it
-        // takes the event, and the plain deselects elsewhere on the window
-        // let it through rather than racing it.
+      if (event.code === "Escape" && !editsText(event.target)) {
+        // Only text being typed into keeps Escape (chosen words leave it to
+        // put the mode away). A claimed Escape is the only one that runs: its
+        // owner takes it, and the plain deselects on the window let it through.
         if (onDeselect && (ownsEscape || escapeClaims === 0)) {
           consume(event);
           onDeselect();
@@ -202,7 +206,7 @@ export function useEditorWindowShortcuts({
       if (commandKey && !event.shiftKey) {
         const action = editorCommandKeyAction(
           event.code,
-          { onCopy, onCutTimeline, onExport, onPaste },
+          { onCopy, onCutTimeline, onDeselectAll, onExport, onPaste },
           ownsTextEditingKeys(event.target),
         );
         if (action) {
@@ -257,13 +261,9 @@ export function useEditorWindowShortcuts({
       }
     };
 
-    window.addEventListener("pointerdown", onPointerDown, true);
-    window.addEventListener("keydown", onKeyDown, true);
-    window.addEventListener("keyup", onKeyUp, true);
+    handlersRef.current = { onKeyDown, onKeyUp };
     return () => {
-      window.removeEventListener("pointerdown", onPointerDown, true);
-      window.removeEventListener("keydown", onKeyDown, true);
-      window.removeEventListener("keyup", onKeyUp, true);
+      handlersRef.current = null;
     };
   }, [
     onConfirm,
@@ -271,6 +271,7 @@ export function useEditorWindowShortcuts({
     onCutTimeline,
     onDelete,
     onDeselect,
+    onDeselectAll,
     onArrange,
     onExport,
     onMarqueeTool,
@@ -294,4 +295,5 @@ export function useEditorWindowShortcuts({
     onUndo,
     ownsEscape,
   ]);
+  useWindowKeyListeners(handlersRef, focusIntentRef);
 }

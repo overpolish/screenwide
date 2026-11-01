@@ -112,3 +112,30 @@ describe("renderOrder", () => {
     ]);
   });
 });
+
+// An annotation drawn either side of a jump, "across" and "across:1", under
+// one that overlaps only its first part.
+const annotations = [
+  { end: 4, id: "front", lane: 0, start: 2 },
+  { end: 4, id: "across", lane: 1, start: 3 },
+  { end: 7, id: "across:1", lane: 1, start: 6 },
+];
+
+describe("an annotation drawn as parts", () => {
+  it("keeps its parts in one lane", () => {
+    // Alone, the part after the jump would rise into the top lane.
+    expect(packLanes(annotations)).toEqual({
+      across: 1,
+      "across:1": 1,
+      front: 0,
+    });
+  });
+
+  it("moves its parts together", () => {
+    expect(restack(annotations, "across:1", { isNew: true, lane: 0 })).toEqual({
+      across: 0,
+      "across:1": 0,
+      front: 1,
+    });
+  });
+});

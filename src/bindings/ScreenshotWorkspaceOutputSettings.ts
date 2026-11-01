@@ -23,17 +23,25 @@ backgroundImagePath: string | null, backgroundType: string, backgroundRadiusPerc
  */
 cropHeight: number, 
 /**
- * While the crop tool is open the preview draws the whole uncropped source
- * flat as a ghost; this is the committed crop rectangle, in output pixels,
- * that the compositor draws over it with the real corner radius and drop
- * shadow. Only the crop-mode preview payload carries one - it is never
- * persisted and never reaches an export.
+ * The committed crop, in output pixels, drawn over the uncropped ghost
+ * while the crop tool is open; only in that preview, never saved.
  */
-cropPreview?: CropPreviewRect | null, cropWidth: number, cropX: number, cropY: number, dropShadow: boolean, height: number, 
+cropPreview?: CropPreviewRect | null, cropWidth: number, cropX: number, cropY: number, dropShadow: boolean, 
+/**
+ * How strong the shadow is drawn, zero to one, while the preview fades it
+ * in or out; only in that preview, never saved. Absent, a shadow is drawn
+ * whole.
+ */
+dropShadowStrength?: number, height: number, 
 /**
  * The whole image's top left corner and width, in output pixels.
  */
-imageWidth: number, imageX: number, imageY: number, mode?: string | null, meshColors: Array<string>, 
+imageWidth: number, imageX: number, imageY: number, 
+/**
+ * The padding as a share of the picture's shorter side, which the crop's
+ * frame is grown by; absent where only the frame carried it (older saves).
+ */
+inset?: number, mode?: string | null, meshColors: Array<string>, 
 /**
  * Which picture the mesh background paints. Settings written before the
  * ported generators existed carry none, and are the app's own blob mesh.

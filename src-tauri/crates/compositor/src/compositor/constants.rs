@@ -70,7 +70,8 @@ pub(super) struct Constants {
   pub(super) camera_motion_frame: [f32; 4],
   pub(super) camera_motion_crop: [f32; 4],
   /// How opaque the screen and the camera are drawn, which a scene fades as
-  /// it hides or shows them; the other two are unused.
+  /// it hides or shows them, then how strong each casts its shadow, zero to
+  /// one, which the preview fades as one is turned on or off.
   pub(super) scene_opacity: [f32; 4],
   /// What the pictures the screen and the camera are drawn from say of
   /// themselves: whether each is enlarged along its edges (FSR 1's EASU)

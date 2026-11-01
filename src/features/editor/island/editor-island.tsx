@@ -140,6 +140,9 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
         ) : undefined
       }
       sectionSpansRow
+      // It stands on the picture, so it shrinks away to nothing rather
+      // than to a speck left there a moment.
+      shrinksToNothing
     />
   );
 }

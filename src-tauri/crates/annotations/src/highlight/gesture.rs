@@ -92,7 +92,7 @@ pub(crate) fn drag(
       }
     }
     AnnotationHandle::Body | AnnotationHandle::Middle => carry(annotation, point, origin),
-    AnnotationHandle::Tail | AnnotationHandle::Edges(_) | AnnotationHandle::Radius => {}
+    AnnotationHandle::Tail | AnnotationHandle::Edges(_) => {}
   }
   SnapResult::default()
 }

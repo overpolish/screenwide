@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ClipboardCopy, Upload, Trash2 } from "lucide-react";
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { type ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { WindowHeader } from "../../../composites/window-header/window-header";
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
+import { useRecordingFrameCopy } from "../recording/use-copy-recording-frame";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorArtifact } from "../types";
 
@@ -15,6 +16,7 @@ export function EditorTitleBar({
   artifact,
   canExport,
   isSaving,
+  modes,
   onClose,
   onCopy,
   onDelete,
@@ -26,6 +28,8 @@ export function EditorTitleBar({
   artifact: EditorArtifact | null;
   canExport: boolean;
   isSaving?: boolean;
+  /** The editor's modes, centred in the bar (`EditorModeBar`). */
+  modes?: ReactNode;
   onClose?: () => void;
   onCopy?: () => void;
   /** Closes the editor and sets the project aside in Recently Deleted, for
@@ -58,8 +62,17 @@ export function EditorTitleBar({
     }
     if (canExportRef.current) onExportRef.current?.();
   }, []);
+  // A screenshot copies itself; a recording, the frame under the playhead,
+  // which only its preview can compose (`useCopyRecordingFrame`).
+  const copyFrame = useRecordingFrameCopy((state) => state.copy);
+  const copy =
+    artifact?.kind === "screenshot"
+      ? onCopy
+      : artifact?.kind === "recording" && copyFrame
+        ? () => void copyFrame()
+        : undefined;
   useEditorWindowShortcuts({
-    onCopy: artifact?.kind === "screenshot" && !isSaving ? onCopy : undefined,
+    onCopy: isSaving ? undefined : copy,
     onExport: canExport ? onShortcutExport : undefined,
   });
 
@@ -79,10 +92,12 @@ export function EditorTitleBar({
               variant="ghost"
             />
           ) : null}
-          {artifact?.kind === "screenshot" ? (
-            <Button isDisabled={isSaving} onPress={onCopy} variant="ghost">
+          {copy ? (
+            <Button isDisabled={isSaving} onPress={copy} variant="ghost">
               <ClipboardCopy />
-              {t("editor-copy")}
+              {artifact?.kind === "recording"
+                ? t("editor-copy-frame")
+                : t("editor-copy")}
             </Button>
           ) : null}
           <Button color="primary" isDisabled={!canExport} onPress={onExport}>
@@ -91,6 +106,7 @@ export function EditorTitleBar({
           </Button>
         </div>
       }
+      center={modes}
       onClose={onClose}
       onMinimize={onMinimize}
       onTitleChange={artifact && !isSaving ? onRename : undefined}

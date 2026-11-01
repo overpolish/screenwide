@@ -9,14 +9,17 @@ import {
   ScreenshotOutputSettings,
 } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
+import {
+  endGestureAfter,
+  type useEditorEditGesture,
+} from "../../use-editor-edit-history";
 
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 import {
   gesturedCameraOverlay,
   gesturedTrackOutput,
 } from "./recording-selection-gesture-geometry";
 
-import type { useEditorEditGesture } from "../../use-editor-edit-history";
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 
 const AUTO_FIT_MOVE_EDGE = 1 << 17;
@@ -48,7 +51,7 @@ export function useRecordingSelectionGesture({
     Record<RecordingVideoTrackId, { height: number; width: number }>
   >;
   recenterRefreshRef: RefObject<
-    (crop: ScreenshotOutputSettings["sourceCrop"]) => void
+    (crop: ScreenshotOutputSettings["sourceCrop"]) => Promise<void>
   >;
   selectedVideoTracks: ReadonlySet<RecordingVideoTrackId>;
   setCanvasResizeDraft: Dispatch<
@@ -79,8 +82,7 @@ export function useRecordingSelectionGesture({
         : event.paneIndex === 1
           ? "camera"
           : null;
-    const isFrameGesture =
-      event.operation === "frameResize" || event.operation === "frameRadius";
+    const isFrameGesture = event.operation === "frameResize";
     const isCropGesture = isCropOperation(event.operation);
     if (event.phase === "begin") {
       // A turn outside every scene turns the screen's own layer; the camera
@@ -126,11 +128,7 @@ export function useRecordingSelectionGesture({
         onCameraOverlayChange?.(active.cameraOverlaySnapshot);
       else if (active.outputSnapshot) {
         onRecordingOutputChange?.(active.trackId, active.outputSnapshot);
-        if (
-          active.operation === "frameRadius" ||
-          active.operation === "frameResize"
-        )
-          setCanvasResizeDraft(null);
+        if (active.operation === "frameResize") setCanvasResizeDraft(null);
       }
       selectionGestureRef.current = null;
       requestAnimationFrame(editGesture.endGesture);
@@ -146,17 +144,13 @@ export function useRecordingSelectionGesture({
       Math.abs(event.deltaY) > 1e-9 ||
       ((event.operation === "resize" || event.operation === "frameResize") &&
         Math.abs(event.scale - 1) > 1e-9) ||
-      ((event.operation === "radius" ||
-        event.operation === "frameRadius" ||
-        event.operation === "rotate") &&
+      (event.operation === "rotate" &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
     const differsFromLastUpdate =
       Math.abs(event.deltaX - active.lastDeltaX) > 1e-9 ||
       Math.abs(event.deltaY - active.lastDeltaY) > 1e-9 ||
       ((event.operation === "resize" ||
         event.operation === "frameResize" ||
-        event.operation === "radius" ||
-        event.operation === "frameRadius" ||
         event.operation === "rotate") &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
     // The final native transform can legitimately be the original snapshot
@@ -246,10 +240,7 @@ export function useRecordingSelectionGesture({
     if (!next) return;
     if (shouldApply) {
       onRecordingOutputChange?.(active.trackId, next);
-      if (
-        active.operation === "frameRadius" ||
-        active.operation === "frameResize"
-      ) {
+      if (active.operation === "frameResize") {
         setCanvasResizeDraft({
           ...effectiveRecordingOutput,
           [active.trackId]: next,
@@ -258,19 +249,18 @@ export function useRecordingSelectionGesture({
     }
     if (event.phase === "update") finaliseGestureFrame();
     if (event.phase === "end") {
-      if (isCropGesture && active.trackId === "primary")
-        recenterRefreshRef.current(next.sourceCrop);
+      // The inset colour behind the new crop is read from the picture and
+      // lands later; it belongs to the crop's undo step, not one of its own.
+      const refreshed =
+        isCropGesture && active.trackId === "primary"
+          ? recenterRefreshRef.current(next.sourceCrop)
+          : Promise.resolve();
       // Mouse-up is the authoritative native transform. Apply it once more,
       // then keep the history gesture open through React's commit so a late
       // pointer update cannot become a tiny second undo entry.
       selectionGestureRef.current = null;
-      requestAnimationFrame(() => {
-        if (
-          active.operation === "frameRadius" ||
-          active.operation === "frameResize"
-        )
-          setCanvasResizeDraft(null);
-        editGesture.endGesture();
+      endGestureAfter(editGesture, refreshed, () => {
+        if (active.operation === "frameResize") setCanvasResizeDraft(null);
       });
     }
   };

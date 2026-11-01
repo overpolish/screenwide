@@ -9,7 +9,6 @@ export type IslandTranscript =
   | { model: ToolPanelModel; status: "noModel" }
   | { progress: number; status: "transcribing" }
   | { status: "failed" }
-  | { status: "noSpeech" }
   | { status: "ready" };
 
 /** Changes when `IslandTranscriptLine` becomes another, so the section

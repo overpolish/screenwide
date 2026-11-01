@@ -13,11 +13,17 @@ import { EditableTitle } from "../editable-title/editable-title";
 
 // The same bar on both platforms: macOS draws its traffic lights over the
 // start, which the bar leaves free; Windows has none, so the bar ends in the
-// caption buttons, full height and square as the system draws them.
+// caption buttons, full height and square as the system draws them. A group
+// in the middle (the editor's modes) stands centred while the title and the
+// actions leave it room: the two grow alike from one width, the actions
+// never less than they need. Short of room, the title gives way.
 
 type WindowHeaderProps = {
   title: string;
   actions?: ReactNode;
+  /** Laid out between the title and the actions, centred where there is
+   * room: the editor's modes. */
+  center?: ReactNode;
   /** Off for a window the system places, such as a sheet. */
   isDraggable?: boolean;
   isMaximized?: boolean;
@@ -33,6 +39,7 @@ const captionButton = "h-full w-12 rounded-none";
 
 export function WindowHeader({
   actions,
+  center,
   isDraggable = true,
   isMaximized = false,
   onClose,
@@ -57,14 +64,19 @@ export function WindowHeader({
     >
       <Text
         as="h1"
-        className="pointer-events-none min-w-0 flex-1 truncate"
+        className={cn(
+          "pointer-events-none min-w-0 truncate",
+          center != null ? "grow basis-24" : "flex-1",
+        )}
         data-tauri-drag-region={isDraggable ? "" : undefined}
         dir="auto"
         variant="heading"
       >
         {onTitleChange ? (
           <EditableTitle
-            className="truncate focus:text-clip"
+            // Only as wide as the name, so the rest of the bar still moves
+            // the window; a long name truncates rather than taking it all.
+            className="w-fit max-w-[min(100%,28rem)] min-w-4 truncate focus:text-clip"
             label={t("controls-document-name")}
             onChange={onTitleChange}
             title={title}
@@ -73,8 +85,16 @@ export function WindowHeader({
           title
         )}
       </Text>
-      {actions ? (
-        <div className="flex shrink-0 items-center gap-inline">{actions}</div>
+      {center}
+      {actions || center != null ? (
+        <div
+          className={cn(
+            "flex items-center gap-inline",
+            center != null ? "min-w-max grow basis-24 justify-end" : "shrink-0",
+          )}
+        >
+          {actions}
+        </div>
       ) : null}
       {hasCaption ? (
         <div className="flex h-full shrink-0">

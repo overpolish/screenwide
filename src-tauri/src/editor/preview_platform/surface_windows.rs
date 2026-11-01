@@ -23,6 +23,7 @@ mod registry;
 mod resources;
 mod selection;
 mod thread_dispatch;
+mod viewport_clip;
 mod workspace_view;
 
 use std::{

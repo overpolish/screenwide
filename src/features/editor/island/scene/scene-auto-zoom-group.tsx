@@ -27,10 +27,11 @@ export function SceneAutoZoomGroup({
     // whole section once it is stretched to the island's box. One-shot
     // actions, at the end of their row and as wide as their labels; Clear
     // zooms holds the width of its confirmation too, so arming it never
-    // moves Regenerate.
+    // moves Regenerate. Labels too long for one row (a longer language)
+    // wrap onto a second rather than run out of the island.
     <div
       className={cn(
-        "flex min-w-full justify-end gap-separate",
+        "flex min-w-full flex-wrap justify-end gap-separate",
         SCENE_ISLAND_WIDTH.part,
       )}
     >

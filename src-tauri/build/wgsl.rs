@@ -16,6 +16,7 @@ const MODULES: &[(&str, &[&str])] = &[
       "crates/compositor/src/shaders/annotation_shape.wgsl",
       "crates/compositor/src/shaders/annotation_draw.wgsl",
       "crates/compositor/src/shaders/annotation_spotlight.wgsl",
+      "crates/compositor/src/shaders/annotation_glass.wgsl",
       "crates/compositor/src/shaders/annotation_magnify.wgsl",
       "crates/compositor/src/shaders/annotation_highlight.wgsl",
       "crates/compositor/src/shaders/focus_falloff.wgsl",

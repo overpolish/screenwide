@@ -32,11 +32,12 @@ import {
   useScreenshotPreviewSurface,
 } from "../screenshot/use-screenshot-preview-surface";
 import { drawingToolKind } from "../tool-panels/tool-registry";
-import { useEditorEditGesture } from "../use-editor-edit-history";
+import {
+  endGestureAfter,
+  useEditorEditGesture,
+} from "../use-editor-edit-history";
 
-import { useRegisterPreviewFit } from "./preview-fit-context";
 import { PreviewPaneFit } from "./preview-transform";
-import { PreviewZoomRequest } from "./preview-zoom-state";
 import { useCropTurn } from "./use-crop-turn";
 
 type PreviewViewportProps = {
@@ -49,6 +50,8 @@ type PreviewViewportProps = {
    * the layer; "arrow" and "counter" also make a new one on empty picture,
    * and the layer's own chrome stands down for as long as one is held. */
   annotationTool?: import("../annotations/annotation-defaults").AnnotationTool;
+  /** The crop in hand keeps its shape as its handles are dragged. */
+  cropKeepsShape?: boolean;
   isEditing?: boolean;
   isResizingCanvas?: boolean;
   isSaving?: boolean;
@@ -56,23 +59,18 @@ type PreviewViewportProps = {
   /** An export or confirm sheet is up: native input stands down under it. */
   isSheetOpen?: boolean;
   onAnnotationHover?: (annotationId: string | null) => void;
-  onBackgroundRadiusChange?: (radiusPercent: number) => void;
-  onBackgroundRadiusChangeEnd?: () => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
-  onCropChangeEnd?: (crop: SourceRect) => void;
-  onItemSelect?: (itemId: number) => void;
+  onCropChangeEnd?: (crop: SourceRect) => Promise<void>;
+  onItemSelect?: (itemId: number | null) => void;
   onOutputChange?: (
     settings: ScreenshotOutputSettings,
     itemId?: number,
   ) => void;
   onPaneFitChange?: (fit: PreviewPaneFit) => void;
-  onRadiusChangeEnd?: () => void;
   onSelectedAnnotationsChange?: (annotationIds: readonly string[]) => void;
-  onZoomChange?: (zoomPercent: number) => void;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
   selectedAnnotationIds?: readonly string[];
   selectedItemId?: number | null;
-  zoomRequest?: PreviewZoomRequest;
 };
 
 const AUTO_FIT_MOVE_EDGE = 1 << 17;
@@ -82,6 +80,7 @@ export function PreviewViewport({
   alt,
   annotationTool,
   artifactId,
+  cropKeepsShape = false,
   isEditing = false,
   isResizingCanvas = false,
   isSaving = false,
@@ -91,20 +90,15 @@ export function PreviewViewport({
   naturalHeight,
   naturalWidth,
   onAnnotationHover,
-  onBackgroundRadiusChange,
-  onBackgroundRadiusChangeEnd,
   onCanvasResize,
   onCropChangeEnd,
   onItemSelect,
   onOutputChange,
   onPaneFitChange,
-  onRadiusChangeEnd,
   onSelectedAnnotationsChange,
-  onZoomChange,
   screenshotOutput,
   selectedAnnotationIds,
   selectedItemId = null,
-  zoomRequest,
 }: PreviewViewportProps) {
   const nativeFrameRef = useRef<HTMLDivElement | null>(null);
   const selectionGestureRef = useRef<{
@@ -127,8 +121,6 @@ export function PreviewViewport({
     edges: number;
     lastDeltaX: number;
     lastDeltaY: number;
-    lastScale: number;
-    operation: "frameRadius" | "frameResize";
     snapshot: ScreenshotWorkspaceOutputSettings;
   } | null>(null);
   const editGesture = useEditorEditGesture();
@@ -175,31 +167,23 @@ export function PreviewViewport({
     workspaceOutput &&
     croppingScreenshotWorkspace(workspaceOutput, selectedItem, cropTurn);
   const frameGesture = (event: ScreenshotSelectionGestureEvent) => {
-    if (event.operation !== "frameResize" && event.operation !== "frameRadius")
-      return false;
+    if (event.operation !== "frameResize") return false;
     if (event.phase === "begin") {
       if (!isResizingCanvas || !workspaceOutput) return true;
       frameGestureRef.current = {
         edges: event.edges,
         lastDeltaX: 0,
         lastDeltaY: 0,
-        lastScale: event.scale,
-        operation: event.operation,
         snapshot: workspaceOutput,
       };
       editGesture.beginGesture();
       return true;
     }
     const active = frameGestureRef.current;
-    if (!active || active.operation !== event.operation) return true;
+    if (!active) return true;
     if (event.phase === "cancel") {
-      if (active.operation === "frameRadius") {
-        onBackgroundRadiusChange?.(active.snapshot.backgroundRadiusPercent);
-        onBackgroundRadiusChangeEnd?.();
-      } else {
-        onCanvasResize?.(active.snapshot);
-        setCanvasResizeDraft(null);
-      }
+      onCanvasResize?.(active.snapshot);
+      setCanvasResizeDraft(null);
       frameGestureRef.current = null;
       requestAnimationFrame(editGesture.endGesture);
       return true;
@@ -207,33 +191,26 @@ export function PreviewViewport({
     const differsFromLastUpdate =
       Math.abs(event.deltaX - active.lastDeltaX) > 1e-9 ||
       Math.abs(event.deltaY - active.lastDeltaY) > 1e-9 ||
-      Math.abs(event.scale - active.lastScale) > 1e-9 ||
       event.edges !== active.edges;
     if (event.phase === "update" || differsFromLastUpdate) {
-      if (active.operation === "frameRadius") {
-        onBackgroundRadiusChange?.(Math.min(50, Math.max(0, event.scale)));
-      } else {
-        const next = resizeScreenshotWorkspaceCanvasEdges({
-          deltaX: event.deltaX,
-          deltaY: event.deltaY,
-          edges: event.edges,
-          settings: active.snapshot,
-        });
-        setCanvasResizeDraft(next);
-        onCanvasResize?.(next);
-      }
+      const next = resizeScreenshotWorkspaceCanvasEdges({
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+        edges: event.edges,
+        settings: active.snapshot,
+      });
+      setCanvasResizeDraft(next);
+      onCanvasResize?.(next);
     }
     active.edges = event.edges;
     active.lastDeltaX = event.deltaX;
     active.lastDeltaY = event.deltaY;
-    active.lastScale = event.scale;
     if (event.phase === "end") {
       frameGestureRef.current = null;
       requestAnimationFrame(() => {
         setCanvasResizeDraft(null);
         editGesture.endGesture();
       });
-      if (active.operation === "frameRadius") onBackgroundRadiusChangeEnd?.();
     }
     return true;
   };
@@ -315,14 +292,13 @@ export function PreviewViewport({
         (Math.abs(event.scale - 1) > 1e-9 ||
           Math.abs(event.deltaX) > 1e-9 ||
           Math.abs(event.deltaY) > 1e-9)) ||
-      ((event.operation === "radius" || event.operation === "rotate") &&
+      (event.operation === "rotate" &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
     const differsFromLastUpdate =
       Math.abs(event.deltaX - active.lastDeltaX) > 1e-9 ||
       Math.abs(event.deltaY - active.lastDeltaY) > 1e-9 ||
       event.edges !== active.lastEdges ||
       ((event.operation === "resize" ||
-        event.operation === "radius" ||
         event.operation === "rotate" ||
         event.operation === "cropResize") &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
@@ -366,10 +342,13 @@ export function PreviewViewport({
     active.lastEdges = event.edges;
     if (event.phase === "update") finaliseGestureFrame();
     if (event.phase === "end") {
-      if (cropOperation) onCropChangeEnd?.(next.sourceCrop);
+      // The inset colour behind the new crop is read from the picture and
+      // lands later; it belongs to the crop's undo step, not one of its own.
+      const refreshed =
+        (cropOperation && onCropChangeEnd?.(next.sourceCrop)) ||
+        Promise.resolve();
       selectionGestureRef.current = null;
-      requestAnimationFrame(editGesture.endGesture);
-      if (event.operation === "radius") onRadiusChangeEnd?.();
+      endGestureAfter(editGesture, refreshed);
     }
     return;
   };
@@ -396,6 +375,7 @@ export function PreviewViewport({
           selectedItem &&
           selectedItemOutput
         ? {
+            cropKeepsShape: isCropShown && cropKeepsShape,
             cropMode: isCropShown,
             paneIndex: selectedItemIndex,
             radiusPercent: selectedItemOutput.radiusPercent,
@@ -417,41 +397,42 @@ export function PreviewViewport({
           cropMode: isCropShown,
         })
       : null;
-  const { fitDuringResize, fitPreview, setFitBasis } =
-    useScreenshotPreviewSurface({
-      annotationDefaults,
-      annotationTool,
-      artifactId,
-      canvasRef: nativeFrameRef,
-      interactionOutput: workspaceOutput,
-      isEditorSuspended: isSaving || isSheetOpen,
-      isEnabled: workspaceOutput !== undefined,
-      onAnnotationChange: annotationChange,
-      onAnnotationHover,
-      onPaneFitChange,
-      onSelectionChange: (paneIndex) => {
-        if (paneIndex === null) return;
-        const itemOutput = workspaceOutput?.items[paneIndex];
-        if (itemOutput) onItemSelect?.(itemOutput.id);
-      },
-      onSelectionGesture: selectionGesture,
-      onZoomChange,
-      output: previewOutput,
-      paneCount: orderedItems.length,
-      selectedAnnotationIds,
-      selection: selectionOverlay,
-      selectionTargets,
-      sourceKey: orderedItems
-        .map((item) => item.id)
-        .sort((first, second) => first - second)
-        .join(":"),
-      zoomRequest,
-    });
-  useRegisterPreviewFit({ fitDuringResize, fitPreview, setFitBasis });
+  useScreenshotPreviewSurface({
+    annotationDefaults,
+    annotationTool,
+    artifactId,
+    canvasRef: nativeFrameRef,
+    interactionOutput: workspaceOutput,
+    isEditorSuspended: isSaving || isSheetOpen,
+    isEnabled: workspaceOutput !== undefined,
+    onAnnotationChange: annotationChange,
+    onAnnotationHover,
+    onPaneFitChange,
+    onSelectionChange: (paneIndex) => {
+      // A click on nothing with Select in hand lets the layer go, and with it
+      // the Screenshot mode it opened.
+      if (paneIndex === null) {
+        if (isSelecting && selectedItemId !== null) onItemSelect?.(null);
+        return;
+      }
+      const itemOutput = workspaceOutput?.items[paneIndex];
+      if (itemOutput) onItemSelect?.(itemOutput.id);
+    },
+    onSelectionGesture: selectionGesture,
+    output: previewOutput,
+    paneCount: orderedItems.length,
+    selectedAnnotationIds,
+    selection: selectionOverlay,
+    selectionTargets,
+    sourceKey: orderedItems
+      .map((item) => item.id)
+      .sort((first, second) => first - second)
+      .join(":"),
+  });
   return (
     <div
       aria-label={alt}
-      className={`relative flex min-h-0 grow overflow-hidden ${isDrawingArrows ? "cursor-crosshair" : isSelecting ? "cursor-move" : "cursor-grab"}`}
+      className={`relative flex min-h-0 grow overflow-hidden rounded-[inherit] ${isDrawingArrows ? "cursor-crosshair" : isSelecting ? "cursor-move" : "cursor-grab"}`}
       data-recording-preview-viewport
       dir="ltr"
       ref={nativeFrameRef}

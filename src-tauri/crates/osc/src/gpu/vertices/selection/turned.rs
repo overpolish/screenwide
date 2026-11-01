@@ -80,16 +80,9 @@ pub fn add_soft_guide(
 }
 
 /// A turned picture's own frame: the selection's outline along its four
-/// sides, its corner discs, the pills on its sides lying along them, and its
-/// radius dot where it has one. `corners` run clockwise from the picture's
-/// own top-left.
-pub fn add_turned_selection(
-  out: &mut Vec<Vertex>,
-  view: Size,
-  corners: [Point; 4],
-  radius_dot: Option<Point>,
-  scale: f64,
-) {
+/// sides, its corner discs and the pills on its sides lying along them.
+/// `corners` run clockwise from the picture's own top-left.
+pub fn add_turned_selection(out: &mut Vec<Vertex>, view: Size, corners: [Point; 4], scale: f64) {
   add_turned_outline(out, view, corners, scale);
   let radius = 4.0 + 1.0 / scale;
   // A side's pill lies along it, the length and thickness of an upright one.
@@ -131,16 +124,6 @@ pub fn add_turned_selection(
       },
       thickness,
       16,
-    );
-  }
-  if let Some(radius_dot) = radius_dot {
-    add_circle(
-      out,
-      view,
-      snap_handle_point(radius_dot, scale),
-      radius,
-      1.0 / scale,
-      3,
     );
   }
 }

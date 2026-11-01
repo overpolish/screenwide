@@ -112,7 +112,8 @@ export function ActivityRail({
             )}
         </div>
       ))}
-      {hits.map((hit) => (
+      {/* Two finds in the same second are one dot. */}
+      {[...new Set(hits)].map((hit) => (
         <span
           className={cn(
             "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emphasis shadow-[0_0_8px_var(--color-emphasis)]",

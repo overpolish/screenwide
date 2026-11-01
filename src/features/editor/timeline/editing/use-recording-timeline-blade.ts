@@ -240,6 +240,15 @@ export function useRecordingTimelineBlade({
           ? selection.clearSelection
           : undefined
       : undefined,
+    onDeselectAll:
+      shortcutsEnabled &&
+      (selection.rangeSelection !== null ||
+        selection.selectedSegmentId !== null)
+        ? () => {
+            selection.clearRangeSelection();
+            selection.clearSelection();
+          }
+        : undefined,
     onToggleBladeTool: shortcutsEnabled ? selection.toggle : undefined,
     onToggleRangeTool: shortcutsEnabled ? selection.toggleRange : undefined,
     onToggleSnap: shortcutsEnabled ? selection.toggleSnap : undefined,

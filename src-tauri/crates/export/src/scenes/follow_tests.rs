@@ -43,6 +43,7 @@ fn clip(
     camera,
     boxes: None,
     radius: None,
+    inset: None,
     rotation: None,
     variant: None,
     follow_face,

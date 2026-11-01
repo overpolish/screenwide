@@ -1,18 +1,22 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 
 import { type Span, type TimelineScale } from "../timeline-scale";
 
 // What holding an annotation's bar does. A press chooses it and takes hold
 // at once. Dragged, the bar moves in time and, where it sits in a lane, up
 // and down through the lanes too, which the lane follows (`onHold`); a
-// chosen bar's end moves one side in time only. While ⌘ (Ctrl on Windows)
-// is held, an end, or either end of a bar moved whole, snaps to what is in
-// reach (`snap`). While Shift is held, the drag keeps to whichever way it
-// has gone further from where it was pressed. Either key pressed or let go
-// applies at once, without waiting for the pointer to move.
+// chosen bar's end moves one side in time only. Up and down is measured in
+// the lanes themselves, not on screen, so a bar stays under the pointer
+// while they scroll under it, and a scroll with the pointer still applies
+// as a move would. While ⌘ (Ctrl on Windows) is held, an end, or either end
+// of a bar moved whole, snaps to what is in reach (`snap`). While Shift is
+// held, the drag keeps to whichever way it has gone further from where it
+// was pressed. Either key pressed or let go applies at once, without
+// waiting for the pointer to move.
 
 /** How far, in px, a press moves before it is a drag, so a press that
  * only chooses the bar never nudges it. */
@@ -48,23 +52,33 @@ type Hold = Span & {
   grab: number;
   /** Whether the press has moved far enough to be a drag. */
   isDragging: boolean;
-  /** Where the pointer last was, for Shift to apply to between moves. */
-  last: { x: number; y: number };
+  /** Where the pointer last was, on screen, and the keys then held, for a
+   * key or a scroll to apply to between moves. */
+  last: { keys: DragKeys; x: number; y: number };
   part: AnnotationBarPart;
   release: () => void;
+  /** Where it was pressed: `x` on screen, `y` in the lanes. */
   x: number;
   y: number;
 };
 
-/** A drag in progress, as the lane needs it: where the pointer is up and
- * down against where it was pressed, whether the bar is carried up and
- * down with it or kept to its lane, and where in time it is going. */
+/** A drag in progress, as the lane needs it: where the pointer is in the
+ * lanes, in px from their top however they are scrolled, against where it
+ * was pressed, whether the bar is carried up and down with it or kept to
+ * its lane, where in time it is going, and the moment an end has snapped
+ * to, which the lane draws a guide down to. */
 export type BarHold = {
-  clientY: number;
+  guide: number | null;
   isLifted: boolean;
   span: Span;
   startY: number;
+  y: number;
 };
+
+/** Where `clientY` is in the lanes the bar is placed in, in px from their
+ * top, however far they are scrolled. */
+const laneY = (clientY: number, bar: Element) =>
+  clientY - (bar.parentElement?.getBoundingClientRect().top ?? 0);
 
 export function useAnnotationBarDrag({
   isSelected,
@@ -86,7 +100,6 @@ export function useAnnotationBarDrag({
   span: Span;
 }) {
   const holdRef = useRef<Hold | null>(null);
-  const [guide, setGuide] = useState<number | null>(null);
 
   /** The recorded moment under `clientX`, measured against the strip the
    * bar is placed in. */
@@ -103,12 +116,13 @@ export function useAnnotationBarDrag({
   };
 
   /** Moves the held bar for the pointer at `x`, `y`, as the keys held say. */
-  const apply = (x: number, y: number, { isShift, isSnap }: DragKeys) => {
+  const apply = (x: number, y: number, keys: DragKeys) => {
     const held = holdRef.current;
     if (!held) return;
-    held.last = { x, y };
+    held.last = { keys, x, y };
+    const pointerY = laneY(y, held.bar);
     const dx = x - held.x;
-    const dy = y - held.y;
+    const dy = pointerY - held.y;
     if (!held.isDragging && Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_PX)
       return;
     held.isDragging = true;
@@ -116,26 +130,26 @@ export function useAnnotationBarDrag({
     const lock =
       held.part !== "body"
         ? "time"
-        : isShift
+        : keys.isShift
           ? Math.abs(dx) >= Math.abs(dy)
             ? "time"
             : "lane"
           : null;
-    const { guide: snapped, span: next } =
+    const { guide, span: next } =
       lock === "lane"
         ? { guide: null, span: { end: held.end, start: held.start } }
-        : moveTo(held, pointer, isSnap ? snap : NO_SNAP);
-    setGuide(snapped);
+        : moveTo(held, pointer, keys.isSnap ? snap : NO_SNAP);
     onHold?.({
-      clientY: y,
+      guide,
       isLifted: held.part === "body" && lock !== "time",
       span: next,
       startY: held.y,
+      y: pointerY,
     });
     retime(next.start, next.end);
   };
-  // A key pressed or let go between moves applies through the latest
-  // render's handlers, as a move would.
+  // A key pressed or let go, or the lanes or the strip scrolled, between
+  // moves applies through the latest render's handlers, as a move would.
   const applyRef = useRef(apply);
   useEffect(() => {
     applyRef.current = apply;
@@ -153,22 +167,37 @@ export function useAnnotationBarDrag({
       if (!DRAG_KEYS.has(key.key) || !held?.isDragging) return;
       applyRef.current(held.last.x, held.last.y, keysOf(key));
     };
+    // A scroll does not bubble, but every one passes the window on its way
+    // down. The bar is drawn again at once, in the frame the lanes moved in.
+    const onScroll = () => {
+      const held = holdRef.current;
+      if (!held?.isDragging) return;
+      // eslint-disable-next-line @eslint-react/dom-no-flush-sync -- left to React, a scroll's render lands a frame or two after the lanes moved, and the carried bar slips from under the pointer while they scroll.
+      flushSync(() => {
+        applyRef.current(held.last.x, held.last.y, held.last.keys);
+      });
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
+    window.addEventListener("scroll", onScroll, {
+      capture: true,
+      passive: true,
+    });
     holdRef.current = {
       bar,
       end: span.end,
       grab: secondsAt(event.clientX, bar),
       isDragging: false,
-      last: { x: event.clientX, y: event.clientY },
+      last: { keys: keysOf(event), x: event.clientX, y: event.clientY },
       part,
       release: () => {
         window.removeEventListener("keydown", onKey);
         window.removeEventListener("keyup", onKey);
+        window.removeEventListener("scroll", onScroll, { capture: true });
       },
       start: span.start,
       x: event.clientX,
-      y: event.clientY,
+      y: laneY(event.clientY, bar),
     };
   };
 
@@ -179,7 +208,6 @@ export function useAnnotationBarDrag({
   const release = () => {
     const held = holdRef.current;
     holdRef.current = null;
-    setGuide(null);
     if (!held) return;
     held.release();
     if (held.isDragging) onHold?.(null);
@@ -193,7 +221,7 @@ export function useAnnotationBarDrag({
     [],
   );
 
-  return { drag, grab, guide, release };
+  return { drag, grab, release };
 }
 
 /** Where the held bar goes in time with the pointer at `pointer` seconds,

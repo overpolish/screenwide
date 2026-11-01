@@ -29,20 +29,14 @@ fn atempo(rate: f64) -> String {
   filters.join(",")
 }
 
-fn cut_fades(
-  range: RecordingPreviewPlaybackRange,
-  playback_rate: f64,
-  index: usize,
-  count: usize,
-) -> String {
+fn cut_fades(range: RecordingPreviewPlaybackRange, index: usize, count: usize) -> String {
   let mut fades = String::new();
   if index > 0 {
     fades.push_str(&format!(",afade=t=in:st=0:d={}", seconds(CUT_FADE_MS)));
   }
   if index + 1 < count {
-    let effective_rate = range.playback_rate * playback_rate;
-    let fade_start_ms =
-      ((range.duration_ms() as f64 / effective_rate).ceil() as u64).saturating_sub(CUT_FADE_MS);
+    let fade_start_ms = ((range.duration_ms() as f64 / range.playback_rate).ceil() as u64)
+      .saturating_sub(CUT_FADE_MS);
     fades.push_str(&format!(
       ",afade=t=out:st={}:d={}",
       seconds(fade_start_ms),
@@ -57,7 +51,6 @@ pub(super) fn args(
   channels: &[Channel],
   ranges: &[RecordingPreviewPlaybackRange],
   config: &StreamConfig,
-  playback_rate: f64,
 ) -> Vec<String> {
   // Every range is trimmed from one decode of the source, which therefore
   // starts at the range earliest in it: on a reordered timeline that need
@@ -111,9 +104,7 @@ pub(super) fn args(
   let retained = seconds(
     ranges
       .iter()
-      .map(|range| {
-        (range.duration_ms() as f64 / (range.playback_rate * playback_rate)).ceil() as u64
-      })
+      .map(|range| (range.duration_ms() as f64 / range.playback_rate).ceil() as u64)
       .sum(),
   );
   let mut merged_inputs = String::new();
@@ -133,8 +124,8 @@ pub(super) fn args(
       } else {
         format!("[track{track_position}source{range_index}]")
       };
-      let fades = cut_fades(*range, playback_rate, range_index, ranges.len());
-      let tempo = atempo(range.playback_rate * playback_rate);
+      let fades = cut_fades(*range, range_index, ranges.len());
+      let tempo = atempo(range.playback_rate);
       let tempo = if tempo.is_empty() {
         String::new()
       } else {

@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::background::background_constants;
+use super::draw_rows::{
+  camera_rows, crop_preview_shadow_sigma, cursor_rows, screen_shadow_sigma, source_flags,
+  LayerCamera,
+};
 use super::layer::crop_preview_rect;
 use super::scene_motion::scene_motion_rows;
 use super::scene_turn::scene_turn_rows;
@@ -15,7 +19,7 @@ impl Compositor {
     source: &SourceTexture,
     settings: &ScreenshotOutputSettings,
     composition: ComposedFrame,
-    camera: Option<(&SourceTexture, BakeGeometry, bool, bool)>,
+    camera: LayerCamera<'_>,
     magnifier: Option<CropMagnifier>,
     // Prepared annotations in canvas pixels, those under the camera first, with
     // their exposure samples and the drawn pixel scale their edges feather
@@ -55,7 +59,7 @@ impl Compositor {
     settings: &ScreenshotOutputSettings,
     geometry: &CanvasGeometry,
     composition: ComposedFrame,
-    camera: Option<(&SourceTexture, BakeGeometry, bool, bool)>,
+    camera: LayerCamera<'_>,
     magnifier: Option<CropMagnifier>,
     annotations: &PreparedArrows,
     layer: LayerDraw,
@@ -72,43 +76,22 @@ impl Compositor {
     let background = background_constants(settings)?;
     let (visible_left, visible_top, visible_right, visible_bottom) =
       foreground_bounds_f32(placement, settings.recenter_inset_color.is_some());
-    let visible_width = (visible_right - visible_left).max(0.0);
-    let visible_height = (visible_bottom - visible_top).max(0.0);
-    let shadow_margin = visible_left
-      .min(visible_top)
-      .min(width - visible_right)
-      .min(height - visible_bottom)
-      .max(0.0);
-    // A frame's shadow falls outside it, so it narrows to fit the canvas
-    // around the frame; a person cut out casts theirs inside the frame, with
-    // room around them however little canvas is left.
-    let shadow_sigma = (visible_width.min(visible_height) * 0.055).clamp(10.0, 110.0);
-    let shadow_sigma = if source.cut_out {
-      shadow_sigma
-    } else {
-      shadow_sigma.min(shadow_margin * 0.45)
-    };
+    let shadow_sigma = screen_shadow_sigma(
+      [visible_left, visible_top, visible_right, visible_bottom],
+      (width, height),
+      source.cut_out,
+    );
     // While the crop tool is open the ghost is the whole uncropped source, so
     // the rounding and the shadow move to the cropped layer drawn over it.
     let crop_preview = crop_preview_rect(settings).map(|rect| rect.map(|value| value as f32));
     let shadow = settings.drop_shadow
       && crop_preview.is_none()
-      && visible_width > 0.0
-      && visible_height > 0.0
+      && visible_right > visible_left
+      && visible_bottom > visible_top
       && shadow_sigma > 1.0;
-    let preview_shadow_sigma = crop_preview.filter(|_| settings.drop_shadow).map_or(
-      0.0,
-      |[x, y, rect_width, rect_height]| {
-        let margin = x
-          .min(y)
-          .min(width - (x + rect_width))
-          .min(height - (y + rect_height))
-          .max(0.0);
-        (rect_width.min(rect_height) * 0.055)
-          .clamp(10.0, 110.0)
-          .min(margin * 0.45)
-      },
-    );
+    let preview_shadow_sigma = crop_preview
+      .filter(|_| settings.drop_shadow)
+      .map_or(0.0, |rect| crop_preview_shadow_sigma(rect, (width, height)));
     // A chosen picture is filled to the canvas by the shader, from a texture
     // uploaded once per file. One that cannot be read leaves the flag clear
     // and the solid colour paints, so a background whose file has moved still
@@ -121,6 +104,9 @@ impl Compositor {
       self.cursor_artwork_constants(composition.cursor)?;
     let [scene_motion, scene_image_motion, camera_motion_frame, camera_motion_crop] =
       scene_motion_rows(settings, (width, height));
+    let [cursor_geometry, cursor_effects, cursor_blur] =
+      cursor_rows(composition.cursor, annotations.spotlight_blur);
+    let [camera_frame, camera_crop, camera_effects] = camera_rows(camera, settings);
     let values = Constants {
       output_source: [width, height, source.size.0 as f32, source.size.1 as f32],
       image_rect: [
@@ -176,49 +162,12 @@ impl Compositor {
         },
         0.0,
       ],
-      cursor_geometry: composition.cursor.map_or([0.0; 4], |cursor| {
-        [cursor.x, cursor.y, cursor.width, cursor.height]
-      }),
-      cursor_effects: composition.cursor.map_or([0.0; 4], |cursor| {
-        [cursor.opacity, 0.0, cursor.rotation_radians, cursor.scale]
-      }),
-      cursor_blur: {
-        let [deviation, strength] = annotations.spotlight_blur;
-        let delta = composition.cursor.map_or([0.0; 2], |cursor| {
-          [cursor.blur_delta_x, cursor.blur_delta_y]
-        });
-        [delta[0], delta[1], deviation, strength]
-      },
-      camera_frame: camera.map_or([0.0; 4], |(_, geometry, _, _)| {
-        [
-          geometry.frame_x as f32,
-          geometry.frame_y as f32,
-          geometry.frame_width as f32,
-          geometry.frame_height as f32,
-        ]
-      }),
-      camera_crop: camera.map_or([0.0; 4], |(_, geometry, _, _)| {
-        [
-          geometry.crop_x as f32,
-          geometry.crop_y as f32,
-          geometry.crop_width as f32,
-          geometry.crop_height as f32,
-        ]
-      }),
-      camera_effects: camera.map_or([0.0; 4], |(_, geometry, drop_shadow, camera_on_top)| {
-        let shortest = geometry.frame_width.min(geometry.frame_height) as f32;
-        let sigma = if drop_shadow {
-          (shortest * 0.055).clamp(3.0, 110.0)
-        } else {
-          0.0
-        };
-        // A scene's order, crossing over while it changes, overrides the
-        // composition's own.
-        let in_front = settings
-          .scene_camera_front
-          .unwrap_or(if camera_on_top { 1.0 } else { 0.0 });
-        [geometry.radius as f32, 1.0, sigma, in_front.clamp(0.0, 1.0)]
-      }),
+      cursor_geometry,
+      cursor_effects,
+      cursor_blur,
+      camera_frame,
+      camera_crop,
+      camera_effects,
       magnifier: magnifier.map_or([0.0; 4], |value| value.geometry),
       magnifier_options: magnifier.map_or([0.0; 4], |value| value.options),
       magnifier_bounds: magnifier.map_or([0.0, 0.0, 1.0, 1.0], |value| value.bounds),
@@ -264,21 +213,18 @@ impl Compositor {
       scene_image_motion,
       camera_motion_frame,
       camera_motion_crop,
+      // How opaque a scene draws the screen and the camera, then how strong
+      // each casts its shadow while the preview fades one in or out.
       scene_opacity: {
         let [screen, camera] = settings.scene_opacity.unwrap_or([1.0, 1.0]);
-        [screen, camera, 0.0, 0.0]
-      },
-      source_flags: {
-        let flag = |on: bool| f32::from(u8::from(on));
-        let camera =
-          |test: fn(&SourceTexture) -> bool| camera.is_some_and(|(camera, ..)| test(camera));
         [
-          flag(source.enhanced),
-          flag(camera(|camera| camera.enhanced)),
-          flag(source.cut_out),
-          flag(camera(|camera| camera.cut_out)),
+          screen,
+          camera,
+          settings.shadow_strength(),
+          settings.camera_shadow_strength.unwrap_or(1.0),
         ]
       },
+      source_flags: source_flags(source, camera),
       scene_turn: scene_turn_rows(settings, &placement, geometry.size),
       // Set in `submit` for the passes a focused frame takes.
       focus: [0.0; 4],

@@ -6,6 +6,7 @@ import { fn } from "storybook/test";
 
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { useRestingAction } from "../../../../storybook/use-resting-action";
+import { edgeSnap, stripSnapTargets } from "../strip/strip-snap";
 import { recordedTime, timelineScale } from "../timeline-scale";
 
 import { AnnotationLane, type AnnotationLaneProps } from "./annotation-lane";
@@ -17,7 +18,8 @@ const WIDTH = 640;
 const scale = timelineScale(recordedTime(64));
 
 /** The lane, keeping what is chosen, retimed and restacked as the editor
- * would; Controls start it afresh with what they set. */
+ * would, its ends snapping with ⌘ to the other annotations' as the strip's
+ * do; Controls start it afresh with what they set. */
 function LiveLane(args: AnnotationLaneProps) {
   const [annotations, setAnnotations] = useState(args.annotations);
   const [selected, setSelected] = useState(args.selected);
@@ -51,6 +53,14 @@ function LiveLane(args: AnnotationLaneProps) {
           setSelected(id);
         }}
         selected={selected}
+        snap={(except) =>
+          edgeSnap({
+            except,
+            scale,
+            targets: stripSnapTargets({ annotations }),
+            width: WIDTH,
+          })
+        }
       />
     </div>
   );
@@ -92,3 +102,49 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const Selected: Story = { args: { selected: "arrow" } };
+
+// Pinned annotations follow the content under them: hatched where it is out
+// of view and they are hidden, ticked where each was put right by hand, and
+// drawn in the warning colour where the tracker is unsure of the content.
+export const Pinned: Story = {
+  args: {
+    annotations: [
+      {
+        end: 34,
+        id: "arrow",
+        kind: "arrow",
+        lane: 0,
+        pin: {
+          corrections: [12, 31],
+          outOfView: [{ end: 26, start: 19 }],
+          unsure: [
+            { end: 10, start: 7 },
+            { end: 29, start: 26 },
+          ],
+        },
+        start: 6,
+      },
+      { end: 50, id: "highlight", kind: "highlight", lane: 0, start: 44 },
+      {
+        end: 62,
+        id: "focus",
+        kind: "focus",
+        lane: 1,
+        pin: {
+          corrections: [],
+          outOfView: [{ end: 62, start: 55 }],
+          unsure: [{ end: 47, start: 42 }],
+        },
+        start: 38,
+      },
+      {
+        end: 30,
+        id: "counter",
+        kind: "counter",
+        lane: 1,
+        pin: { corrections: [24], outOfView: [], unsure: [] },
+        start: 18,
+      },
+    ],
+  },
+};

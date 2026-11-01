@@ -4,5 +4,6 @@ node_modules
 pnpm-lock.yaml
 src-tauri/gen
 src-tauri/target
+src-tauri/transcriber/target
 src-tauri/vendor
 src/bindings

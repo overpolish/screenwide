@@ -47,7 +47,7 @@ radius: number, redaction: AnnotationRedaction,
  */
 softness: number, 
 /**
- * Whether a magnifier's loupe casts a shadow onto the picture; the other
+ * Whether a lens casts a shadow onto the picture; the other
  * kinds carry `false`.
  */
 shadow: boolean, 

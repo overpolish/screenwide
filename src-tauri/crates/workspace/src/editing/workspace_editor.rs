@@ -22,6 +22,11 @@ impl WorkspaceEditor {
     handle_editor_input(&self.inner, input);
   }
 
+  /// The pointer came onto the picture from the page around it.
+  pub fn pointer_arrived(&self) {
+    emit_press(&self.inner, PointerPress::Arrived);
+  }
+
   /// One key, typed unit or blink for the box being typed into.
   pub fn handle_typing(&self, input: TypingInput) {
     handle_typing_input(&self.inner, input);

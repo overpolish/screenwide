@@ -26,6 +26,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import type { AnnotationRedaction } from "../../../../../bindings/AnnotationRedaction";
 import type { EditorIslandContent } from "../../editor-island";
@@ -53,19 +58,20 @@ type RedactionStyle = {
   width: number;
 };
 
-export type RedactionIslandProps = AnnotationColorProps & {
-  /** Whether it can ramp in: a recording's annotations can, a
-   * screenshot's, being one instant, cannot. */
-  canAnimate: boolean;
-  id: string;
-  /** Lays a pixelation's blocks out again, or nudges a blur's cells:
-   * Pixelate or Blur pressed while it is already the mode. */
-  onShuffle: () => void;
-  onStyleChange: (style: Partial<RedactionStyle>) => void;
-  style: RedactionStyle;
-  /** Left out for the pen in hand with nothing chosen. */
-  onDelete?: () => void;
-};
+export type RedactionIslandProps = AnnotationColorProps &
+  AnnotationPinProps & {
+    /** Whether it can ramp in: a recording's annotations can, a
+     * screenshot's, being one instant, cannot. */
+    canAnimate: boolean;
+    id: string;
+    /** Lays a pixelation's blocks out again, or nudges a blur's cells:
+     * Pixelate or Blur pressed while it is already the mode. */
+    onShuffle: () => void;
+    onStyleChange: (style: Partial<RedactionStyle>) => void;
+    style: RedactionStyle;
+    /** Left out for the pen in hand with nothing chosen. */
+    onDelete?: () => void;
+  };
 
 const isPixelated = (
   redaction: AnnotationRedaction,
@@ -85,6 +91,7 @@ export function redactionIsland(
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -178,6 +185,7 @@ export function redactionIsland(
             {t("editor-island-redaction-not-secure")}
           </Alert>
         ) : null}
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </IslandFlow>
     ),
     title: (

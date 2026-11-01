@@ -36,30 +36,3 @@ export const scaledCameraOverlay = (
     frameY: frame.y,
   };
 };
-
-/**
- * Size the baked camera overlay to what a field asked for, keeping it where it
- * sits.
- *
- * The overlay is only ever scaled uniformly - the crop window and the camera
- * behind it together - so a size is read as a scale taken from whichever of
- * width or height was offered, and the frame keeps the centre it had.
- */
-export const withCameraOverlaySize = (
-  settings: CameraOverlaySettings,
-  size: { height?: number; width?: number },
-): CameraOverlaySettings => {
-  const requested =
-    size.width !== undefined && settings.frameWidth > 0
-      ? size.width / settings.frameWidth
-      : size.height !== undefined && settings.frameHeight > 0
-        ? size.height / settings.frameHeight
-        : 1;
-  const scale = Number.isFinite(requested) && requested > 0 ? requested : 1;
-  const centerX = settings.frameX + settings.frameWidth / 2;
-  const centerY = settings.frameY + settings.frameHeight / 2;
-  return scaledCameraOverlay(settings, scale, {
-    x: centerX - (settings.frameWidth * scale) / 2,
-    y: centerY - (settings.frameHeight * scale) / 2,
-  });
-};

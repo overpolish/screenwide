@@ -102,7 +102,7 @@ pub(super) fn aspect_fit_rect(rect: PreviewSurfaceRect, content: (u32, u32)) -> 
 /// `rebase_recording_workspace_fit`. `start` supplies the gesture's immutable
 /// transform, so `displayed` is where the panes actually are on screen; only
 /// the fit-relative zoom/pan representation changes, which is what makes the
-/// toolbar percentage follow the drag and the commit land without a jump.
+/// commit land without a jump.
 pub(super) fn rebase_workspace_fit(state: &mut SurfaceState, start: &FrameResizeStart) {
   let active = state
     .panes

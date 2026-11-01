@@ -52,3 +52,33 @@ fn a_mismatched_canvas_is_centred_in_its_box_and_a_matching_one_is_untouched() {
     (box_rect.x, box_rect.y, box_rect.width, box_rect.height)
   );
 }
+
+#[test]
+fn a_press_on_an_uncropped_body_draws_only_a_crop_that_can_be_drawn_afresh() {
+  let whole = PreviewSelection {
+    crop_mode: 1,
+    width: 1.0,
+    height: 1.0,
+    image_width: 1.0,
+    image_height: 1.0,
+    ..Default::default()
+  };
+  let pressed = |selection: PreviewSelection| {
+    let state = SurfaceState {
+      selection: Some(selection),
+      ..Default::default()
+    };
+    crop_press_draws(&state, Some((selection, 0)))
+  };
+  assert!(pressed(whole));
+  // A scene's fixed window and a crop given a shape are never drawn afresh,
+  // so the press is theirs to move rather than a pan of the whole view.
+  assert!(!pressed(PreviewSelection {
+    framed: FRAMED_FIXED,
+    ..whole
+  }));
+  assert!(!pressed(PreviewSelection {
+    crop_keeps_shape: 1,
+    ..whole
+  }));
+}

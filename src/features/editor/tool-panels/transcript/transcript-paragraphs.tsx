@@ -4,8 +4,9 @@
 import { Fragment } from "react";
 
 import { cn } from "../../../../lib/styling";
+import { CaptionWordEditSpan } from "../captions/caption-word-edit-span";
 
-import { EditStart, TranscriptEditSpan } from "./transcript-edit-span";
+import { EditStart } from "./transcript-edit-span";
 import { foundRanges, foundText } from "./transcript-found-text";
 import { TranscriptPauseChip } from "./transcript-pause-chip";
 import { TranscriptMatch } from "./transcript-search";
@@ -87,8 +88,9 @@ export function transcriptParagraphElements({
               </span>
             ) : null}
             {isEdited && editing ? (
-              <TranscriptEditSpan
-                className="outline-none select-text"
+              // The words are edited without the punctuation either side,
+              // which the edit keeps (`captionWordParts`).
+              <CaptionWordEditSpan
                 id={unitId(index)}
                 index={index}
                 onFinish={finishEdit}

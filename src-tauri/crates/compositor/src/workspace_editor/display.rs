@@ -10,8 +10,6 @@ use super::WorldRect;
 pub struct DisplayTarget {
   pub id: u64,
   pub rect: DisplayRect,
-  pub radius_enabled: u8,
-  pub radius_percent: f64,
   pub z_order: i32,
   pub selected: u8,
   pub visible: u8,
@@ -97,7 +95,6 @@ pub enum DisplayHandle {
   NorthWest = 6,
   SouthEast = 7,
   SouthWest = 8,
-  Radius = 9,
 }
 
 #[repr(C)]

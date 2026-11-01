@@ -12,33 +12,44 @@ pub struct PresentBatch<'a> {
 
 impl Drop for PresentBatch<'_> {
   fn drop(&mut self) {
-    let inner = &self.editor.inner;
-    if inner.batch_depth.fetch_sub(1, Ordering::AcqRel) != 1 {
-      return;
-    }
-    let Ok(mut state) = inner.state.lock() else {
-      return;
-    };
-    let mut selection_stale = false;
-    for pane in state.panes.iter_mut().flatten() {
-      selection_stale |= std::mem::take(&mut pane.selection_stale);
-    }
-    if state.workspace.pending {
-      draw_workspace(inner, &mut state);
-    }
-    if inner.selection_pending.swap(false, Ordering::AcqRel) || selection_stale {
-      draw_selection(inner, &state);
-    }
-    // Only a change to what is on screen needs committing, such as a
-    // viewport `finish_layout` left to this flush. Frames alone reach the
-    // screen through their drawables, and committing for them anyway would
-    // cost every arrow-drag sample a display tick of wait while the grips,
-    // which never commit, run ahead of the arrow. As in `finish_layout`, the
-    // commit is awaited: a backlog lets rapid drags visibly desynchronise the
-    // workspace from the DOM controls.
-    if inner.commit_pending.swap(false, Ordering::AcqRel) {
-      inner.host.commit(true);
-    }
+    end_present_batch(&self.editor.inner);
+  }
+}
+
+/// Opens a present batch the caller closes with `end_present_batch`, for a
+/// batch that has to open and close where no guard can be held.
+pub(super) fn begin_present_batch(inner: &SurfaceInner) {
+  inner.batch_depth.fetch_add(1, Ordering::AcqRel);
+}
+
+/// Closes a present batch; closing the outermost draws the workspace once,
+/// then the chrome over it, and commits what is left to commit.
+pub(super) fn end_present_batch(inner: &SurfaceInner) {
+  if inner.batch_depth.fetch_sub(1, Ordering::AcqRel) != 1 {
+    return;
+  }
+  let Ok(mut state) = inner.state.lock() else {
+    return;
+  };
+  let mut selection_stale = false;
+  for pane in state.panes.iter_mut().flatten() {
+    selection_stale |= std::mem::take(&mut pane.selection_stale);
+  }
+  if state.workspace.pending {
+    draw_workspace(inner, &mut state);
+  }
+  if inner.selection_pending.swap(false, Ordering::AcqRel) || selection_stale {
+    draw_selection(inner, &state);
+  }
+  // Only a change to what is on screen needs committing, such as a
+  // viewport `finish_layout` left to this flush. Frames alone reach the
+  // screen through their drawables, and committing for them anyway would
+  // cost every arrow-drag sample a display tick of wait while the grips,
+  // which never commit, run ahead of the arrow. As in `finish_layout`, the
+  // commit is awaited: a backlog lets rapid drags visibly desynchronise the
+  // workspace from the DOM controls.
+  if inner.commit_pending.swap(false, Ordering::AcqRel) {
+    inner.host.commit(true);
   }
 }
 
@@ -48,7 +59,7 @@ impl WorkspaceEditor {
   /// even when nothing was presented, so a deferred layout never strands the
   /// picture.
   pub fn present_batch(&self) -> PresentBatch<'_> {
-    self.inner.batch_depth.fetch_add(1, Ordering::AcqRel);
+    begin_present_batch(&self.inner);
     PresentBatch { editor: self }
   }
 }

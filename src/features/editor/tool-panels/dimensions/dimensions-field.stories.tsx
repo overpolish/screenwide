@@ -26,8 +26,8 @@ const meta = {
     controls: { include: ["height", "isDisabled", "width"] },
     layout: "centered",
   },
-  // Edits land in the args, as the panel's document would take them, so the
-  // kept ratio can be tried: change the width and the height follows.
+  // Edits land in the args, as the Frame island's canvas size takes them, so
+  // the kept ratio can be tried: change the width and the height follows.
   render: function Render(args) {
     const [, updateArgs] = useArgs();
     return (
@@ -40,7 +40,7 @@ const meta = {
       />
     );
   },
-  title: "Legacy/Editor/Tool Panels/Dimensions Field",
+  title: "Features/Editor/Tool Panels/Dimensions Field",
 } satisfies Meta<typeof DimensionsField>;
 
 export default meta;

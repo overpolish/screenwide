@@ -159,8 +159,7 @@ impl PinTarget {
           redaction: false,
         }
       }
-      // A magnifier follows what its zoom area covers, and keeps its size;
-      // the loupe goes where the zoom area goes.
+      // A lens follows what it covers as one region, and keeps its size.
       AnnotationShape::Magnify { start, end, .. } => Self {
         anchor: [0.5 * (start.x + end.x), 0.5 * (start.y + end.y)],
         region: [

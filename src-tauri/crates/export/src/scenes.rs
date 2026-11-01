@@ -18,6 +18,8 @@ mod follow_tests;
 #[cfg(test)]
 mod framing_tests;
 #[cfg(test)]
+mod inset_tests;
+#[cfg(test)]
 mod motion_tests;
 #[cfg(test)]
 mod preset_tests;

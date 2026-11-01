@@ -7,8 +7,6 @@ import { ANNOTATION_DRAW_IN_MS } from "../../annotations/annotation-draw-in";
 import { Annotation } from "../../annotations/annotations";
 import { createRecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 
-import { moveRecordingAnnotationClip } from "./recording-annotation-geometry";
-import { recordingAnnotationRows } from "./recording-annotation-layout";
 import {
   mergeRecordingAnnotationClips,
   recordingAnnotationClipAt,
@@ -172,88 +170,4 @@ it("keeps a short clip valid at the final source position", () => {
       sourcePositionMs: 20_000,
     }),
   ).toMatchObject({ endMs: 20000, startMs: 19_999 - ANNOTATION_DRAW_IN_MS });
-});
-
-it("puts the clip drawn in front on the row above one it overlaps, across a removed source range", () => {
-  const edit = {
-    ...createRecordingTimelineEdit(1),
-    segments: [
-      { id: 0, sourceEnd: 0.2, sourceStart: 0 },
-      { id: 1, playbackRate: 2, sourceEnd: 1, sourceStart: 0.3 },
-    ],
-  };
-  const first = {
-    annotation,
-    endMs: 31000,
-    startMs: 8000,
-    trackId: "primary" as const,
-  };
-  const second = {
-    ...first,
-    annotation: { ...annotation, id: "second" },
-    endMs: 48000,
-    startMs: 22000,
-  };
-  const rows = recordingAnnotationRows([first, second], edit, 120_000);
-  expect(rows.rowCount).toBe(2);
-  expect(rows.fragments).toHaveLength(2);
-  expect(rows.fragments.map((fragment) => fragment.row)).toEqual([1, 0]);
-  expect(
-    recordingAnnotationRows([second, first], edit, 120_000).fragments.map(
-      (fragment) => fragment.row,
-    ),
-  ).toEqual([1, 0]);
-  expect(rows.fragments[1]).toMatchObject({
-    continuedByNext: false,
-    continuesPrevious: false,
-  });
-});
-
-it("stacks every camera clip over the screen clips it overlaps, whatever the list order", () => {
-  const edit = createRecordingTimelineEdit(1);
-  const camera = {
-    annotation: { ...annotation, id: "camera" },
-    endMs: 30_000,
-    startMs: 0,
-    trackId: "camera" as const,
-  };
-  const screen = [
-    { ...camera, annotation, trackId: "primary" as const },
-    {
-      ...camera,
-      annotation: { ...annotation, id: "screen" },
-      trackId: "primary" as const,
-    },
-  ];
-  const rows = recordingAnnotationRows(
-    [camera, ...screen],
-    edit,
-    120_000,
-  ).fragments.map((fragment) => [fragment.item.annotation.id, fragment.row]);
-  expect(rows).toEqual([
-    [annotation.id, 2],
-    ["screen", 1],
-    ["camera", 0],
-  ]);
-});
-
-it("moves a clip no further than the end of the edited video", () => {
-  // Played twice as fast, the 20 s recording is a 10 s video.
-  const edit = {
-    ...createRecordingTimelineEdit(1),
-    segments: [{ id: 0, playbackRate: 2, sourceEnd: 1, sourceStart: 0 }],
-  };
-  const clip = {
-    annotation,
-    endMs: 7_000,
-    startMs: 4_000,
-    trackId: "primary" as const,
-  };
-  const moved = moveRecordingAnnotationClip({
-    clip,
-    deltaOutput: 0.5,
-    edit,
-    sourceDurationMs: 20_000,
-  });
-  expect([moved.startMs, moved.endMs]).toEqual([7_000, 10_000]);
 });

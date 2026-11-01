@@ -82,8 +82,8 @@ pub mod handles;
 pub mod highlight;
 /// The image tool's own half of the model: a picture laid over the source.
 pub mod image;
-/// The magnifier tool's own half of the model: a loupe showing a zoom area
-/// enlarged.
+/// The magnifier tool's own half of the model: a lens showing what lies
+/// under its middle enlarged.
 pub mod magnify;
 /// What a marquee band chooses.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]

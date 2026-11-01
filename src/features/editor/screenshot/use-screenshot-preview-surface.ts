@@ -7,31 +7,21 @@ import {
   useAnnotationAngleDefault,
   useAnnotationImageDefault,
   useAnnotationTextLookDefault,
+  useAnnotationZoomDefault,
 } from "../annotations/annotation-defaults";
 import { AnnotationStyle } from "../annotations/annotations";
 import {
   layoutScreenshotPreviewSurface,
   refreshScreenshotPreviewSources,
   setScreenshotPreviewEditorSuspended,
-  setScreenshotPreviewZoom,
   startScreenshotPreview,
   stopScreenshotPreview,
 } from "../api";
 import {
   updatePreviewBackdropMasks,
-  updatePreviewFitMetadata,
-} from "../preview/preview-fit-metadata";
+  viewportCorners,
+} from "../preview/preview-backdrop";
 import { fitPreviewPane, PreviewPaneFit } from "../preview/preview-transform";
-import {
-  resetScreenshotPreviewView,
-  setScreenshotPreviewFitBasis,
-} from "../preview/preview-view-api";
-import { PreviewZoomRequest } from "../preview/preview-zoom-state";
-import {
-  ResizeFit,
-  resizeFitWidth,
-  useNativePreviewFit,
-} from "../preview/use-native-preview-fit";
 import {
   clearBackdropMasks,
   effectiveBackdrop,
@@ -72,14 +62,12 @@ export function useScreenshotPreviewSurface({
   onPaneFitChange,
   onSelectionChange,
   onSelectionGesture,
-  onZoomChange,
   output,
   paneCount = 1,
   selectedAnnotationIds,
   selection,
   selectionTargets,
   sourceKey,
-  zoomRequest,
 }: {
   artifactId: number;
   canvasRef: RefObject<HTMLElement | null>;
@@ -110,7 +98,6 @@ export function useScreenshotPreviewSurface({
   onPaneFitChange?: (fit: PreviewPaneFit) => void;
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: ScreenshotSelectionGestureEvent) => void;
-  onZoomChange?: (zoomPercent: number) => void;
   output?: ScreenshotWorkspaceOutputSettings;
   paneCount?: number;
   selectedAnnotationIds?: readonly string[];
@@ -119,7 +106,6 @@ export function useScreenshotPreviewSurface({
     typeof layoutScreenshotPreviewSurface
   >[0]["selectionTargets"];
   sourceKey?: string;
-  zoomRequest?: PreviewZoomRequest;
 }) {
   const sessionIdRef = useRef(0);
   const startedRef = useRef(false);
@@ -129,9 +115,6 @@ export function useScreenshotPreviewSurface({
   interactionOutputRef.current = interactionOutput ?? output;
   const paneCountRef = useRef(paneCount);
   paneCountRef.current = paneCount;
-  const lastZoomRequestRef = useRef<PreviewZoomRequest | undefined>(undefined);
-  const onZoomChangeRef = useRef(onZoomChange);
-  onZoomChangeRef.current = onZoomChange;
   const onPaneFitChangeRef = useRef(onPaneFitChange);
   onPaneFitChangeRef.current = onPaneFitChange;
   const onSelectionGestureRef = useRef(onSelectionGesture);
@@ -155,6 +138,9 @@ export function useScreenshotPreviewSurface({
   const annotationTextLook = useAnnotationTextLookDefault();
   const annotationTextLookRef = useRef(annotationTextLook);
   annotationTextLookRef.current = annotationTextLook;
+  const annotationZoom = useAnnotationZoomDefault();
+  const annotationZoomRef = useRef(annotationZoom);
+  annotationZoomRef.current = annotationZoom;
   const selectedAnnotationIdsRef = useRef(selectedAnnotationIds);
   selectedAnnotationIdsRef.current = selectedAnnotationIds;
   // Compared by value: the choice is rebuilt as a new list every render.
@@ -166,8 +152,6 @@ export function useScreenshotPreviewSurface({
   const editorSuspendedRef = useRef(isEditorSuspended);
   editorSuspendedRef.current = isEditorSuspended;
   const measureRef = useRef<() => void>(() => undefined);
-  const layoutRef = useRef<Promise<unknown>>(Promise.resolve());
-  const resizeFitRef = useRef<ResizeFit | null>(null);
   const outputKey = JSON.stringify(output);
 
   useEffect(() => {
@@ -210,7 +194,6 @@ export function useScreenshotPreviewSurface({
     onAnnotationHoverRef,
     onSelectionChangeRef,
     onSelectionGestureRef,
-    onZoomChangeRef,
     sessionIdRef,
   });
 
@@ -221,25 +204,6 @@ export function useScreenshotPreviewSurface({
       isEditorSuspended,
     ).catch(() => undefined);
   }, [isEditorSuspended, isEnabled]);
-
-  useEffect(() => {
-    if (
-      !isEnabled ||
-      isEditorSuspended ||
-      !startedRef.current ||
-      zoomRequest === undefined ||
-      sessionIdRef.current === 0
-    )
-      return;
-    // Reports never create requests. Consume each explicit request once,
-    // including across rerenders caused by newer native transform events.
-    if (zoomRequest === lastZoomRequestRef.current) return;
-    lastZoomRequestRef.current = zoomRequest;
-    void setScreenshotPreviewZoom(
-      sessionIdRef.current,
-      zoomRequest.percent,
-    ).catch(() => undefined);
-  }, [isEditorSuspended, isEnabled, zoomRequest]);
 
   useEffect(() => {
     if (!isEnabled) return;
@@ -253,7 +217,7 @@ export function useScreenshotPreviewSurface({
       const next = pendingLayout;
       pendingLayout = null;
       inFlight = true;
-      layoutRef.current = layoutScreenshotPreviewSurface(next)
+      void layoutScreenshotPreviewSurface(next)
         .catch(() => undefined)
         .finally(() => {
           inFlight = false;
@@ -274,11 +238,6 @@ export function useScreenshotPreviewSurface({
           : marker.closest<HTMLElement>("[data-recording-preview-viewport]");
         if (viewport) {
           const viewportRect = viewport.getBoundingClientRect();
-          updatePreviewFitMetadata(
-            viewport,
-            currentOutput.width,
-            currentOutput.height,
-          );
           const scale = window.devicePixelRatio || 1;
           const fit = fitPreviewPane({
             natural: screenshotOutputDimensions(currentOutput),
@@ -287,7 +246,8 @@ export function useScreenshotPreviewSurface({
           });
           const pane = fit.pane;
           onPaneFitChangeRef.current?.(fit);
-          updatePreviewBackdropMasks(viewportRect);
+          const corners = viewportCorners(viewport);
+          updatePreviewBackdropMasks(viewportRect, corners);
           const viewportSurface = {
             height: viewportRect.height,
             width: viewportRect.width,
@@ -306,25 +266,21 @@ export function useScreenshotPreviewSurface({
             annotationImage: annotationImageRef.current,
             annotationTextLook: annotationTextLookRef.current,
             annotationTool: annotationToolRef.current,
+            annotationZoom: annotationZoomRef.current,
             backdrop,
             // A suspended editor stays enabled and keeps its transform;
             // only its input and chrome go away, and the suspend command
             // owns that.
-            fitWidth: resizeFitWidth(
-              resizeFitRef.current,
-              viewportRect.width,
-              sessionIdRef.current,
-            ),
             interactionOutput: interactionOutputRef.current,
             nativeEditor: true,
             output: currentOutput,
             pane,
-            resizeFit: resizeFitRef.current,
             scale,
             selectedAnnotationIds: selectedAnnotationIdsRef.current,
             selection: selectionRef.current,
             selectionTargets: selectionTargetsRef.current,
             sessionId: sessionIdRef.current,
+            viewportCorners: corners,
             viewportSurface,
           });
           if (nextLayout !== lastLayout) {
@@ -335,12 +291,8 @@ export function useScreenshotPreviewSurface({
               annotationImage: annotationImageRef.current,
               annotationTextLook: annotationTextLookRef.current,
               annotationTool: annotationToolRef.current,
+              annotationZoom: annotationZoomRef.current,
               backdrop,
-              fitWidth: resizeFitWidth(
-                resizeFitRef.current,
-                viewportRect.width,
-                sessionIdRef.current,
-              ),
               interactionOutput: interactionOutputRef.current ?? currentOutput,
               nativeEditor: true,
               output: currentOutput,
@@ -357,6 +309,7 @@ export function useScreenshotPreviewSurface({
               selectionTargets: selectionTargetsRef.current,
               sessionId: sessionIdRef.current,
               viewport: viewportSurface,
+              viewportCorners: corners,
             };
             flush();
           }
@@ -383,6 +336,7 @@ export function useScreenshotPreviewSurface({
     annotationTextLook,
     annotationDefaults,
     annotationTool,
+    annotationZoom,
     outputKey,
     paneCount,
     selectedAnnotationKey,
@@ -410,16 +364,4 @@ export function useScreenshotPreviewSurface({
     if (!isEnabled) return;
     return clearBackdropMasks;
   }, [isEnabled]);
-
-  const { fitDuringResize, fitPreview, setFitBasis } = useNativePreviewFit({
-    layoutRef,
-    measureRef,
-    reset: resetScreenshotPreviewView,
-    resizeFitRef,
-    sessionIdRef,
-    setBasis: setScreenshotPreviewFitBasis,
-    startedRef,
-  });
-
-  return { fitDuringResize, fitPreview, setFitBasis };
 }

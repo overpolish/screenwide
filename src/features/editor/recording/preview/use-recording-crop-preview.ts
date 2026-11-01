@@ -9,7 +9,7 @@ import { croppingScreenshotPreviewOutput } from "../../screenshot/screenshot-cro
 import { RecordingOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 
 import type { ScrubPreviewProps } from "./scrub-preview";
 import type { CropTurn } from "../../preview/use-crop-turn";

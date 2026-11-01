@@ -5,48 +5,30 @@ import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
 
 import { featureStage } from "../../../storybook/feature-story-stage";
-import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
 
 import {
   EditorToolColumn,
   type EditorToolColumnProps,
 } from "./editor-tool-column";
 
-import type { EditorKind } from "./editor-modes";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-
-const KINDS: EditorKind[] = ["recording", "screenshot", "audio"];
 
 /** The column's own width, with room for the stage to frame it. */
 const STAGE_WIDTH = 120;
 
 const meta = {
   argTypes: {
-    hasCamera: { table: { defaultValue: { summary: "true" } } },
+    isModeOpen: { table: { defaultValue: { summary: "false" } } },
     kind: {
       control: "inline-radio",
-      options: KINDS,
+      options: ["recording", "screenshot", "audio"],
       table: { defaultValue: { summary: "recording" } },
-    },
-    mode: {
-      control: "select",
-      options: [
-        null,
-        "frame",
-        "screen",
-        "camera",
-        "scene",
-        "cursor",
-        "keyboard",
-        "captions",
-        "transcript",
-        "sound",
-      ],
     },
     tool: {
       control: "select",
       options: [
         "select",
+        "crop",
         "image",
         "arrow",
         "text",
@@ -62,29 +44,23 @@ const meta = {
     },
   },
   args: {
-    hasCamera: true,
+    isModeOpen: false,
     kind: "recording",
-    mode: null,
-    onModeChange: fn(),
     onToolChange: fn(),
     tool: "select",
   },
   component: EditorToolColumn,
-  parameters: { controls: { include: ["hasCamera", "kind", "mode", "tool"] } },
-  // A tool or mode chosen lands in the args, as the editor keeps it: taking
-  // up a tool puts the open mode away.
+  parameters: { controls: { include: ["isModeOpen", "kind", "tool"] } },
+  // A tool chosen lands in the args, as the editor keeps it: taking up a
+  // tool puts the open mode away.
   render: function Render(args) {
     const [, updateArgs] = useArgs<EditorToolColumnProps>();
     return (
       <EditorToolColumn
         {...args}
-        onModeChange={(mode) => {
-          args.onModeChange(mode);
-          updateArgs({ mode });
-        }}
         onToolChange={(tool) => {
           args.onToolChange(tool);
-          updateArgs({ mode: null, tool });
+          updateArgs({ isModeOpen: false, tool });
         }}
       />
     );
@@ -96,23 +72,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  decorators: [featureStage({ height: 680, width: STAGE_WIDTH })],
+  decorators: [featureStage({ height: 520, width: STAGE_WIDTH })],
 };
 
 export const ShortWindow: Story = {
-  decorators: [featureStage({ height: 440, width: STAGE_WIDTH })],
-};
-
-export const Kinds: Story = {
-  decorators: [featureStage({ width: 240 })],
-  parameters: { controls: { disable: true } },
-  render: (args) => (
-    <StoryGrid>
-      {KINDS.map((kind) => (
-        <StoryGridRow key={kind} label={kind}>
-          <EditorToolColumn {...args} kind={kind} />
-        </StoryGridRow>
-      ))}
-    </StoryGrid>
-  ),
+  decorators: [featureStage({ height: 300, width: STAGE_WIDTH })],
 };

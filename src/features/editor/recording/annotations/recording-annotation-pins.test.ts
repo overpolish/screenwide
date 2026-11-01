@@ -11,7 +11,6 @@ import {
   RecordingTimelineEdit,
 } from "../../timeline/editing/recording-timeline-edit";
 
-import { moveRecordingAnnotationClip } from "./recording-annotation-geometry";
 import {
   clearedPinCorrections,
   pinnedClip,
@@ -101,19 +100,6 @@ describe("pinned recording annotations", () => {
       trackId: "primary",
     });
     expect(merged).toEqual([{ ...pinned, pin }]);
-  });
-
-  it("moves its keyframes with a moved clip", () => {
-    const moved = moveRecordingAnnotationClip({
-      clip: pinnedClip(clip, 5_000, on(whole)),
-      deltaOutput: 0.05,
-      edit: whole,
-      sourceDurationMs: 20_000,
-    });
-    expect(moved.pin).toEqual({
-      keyframes: [{ dx: 0, dy: 0, ms: 6_000 }],
-      pinnedMs: 6_000,
-    });
   });
 
   it("clears corrections down to the frame it was pinned on", () => {

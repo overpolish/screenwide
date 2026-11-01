@@ -1,14 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
-import {
-  launchTemplatePreviews,
-  renderTemplatePreviews,
-} from "../../recording/captions/captions-api";
+import { renderTemplatePreviews } from "../../recording/captions/captions-api";
 
 import type { TemplatePreviewClip } from "../../../../bindings/TemplatePreviewClip";
 import type { TextStyle } from "../../../../bindings/TextStyle";
@@ -34,7 +30,7 @@ export function useTemplatePreviews(styles: TextStyle[]) {
   const [last, setLast] = useState<readonly TemplatePreviewClip[]>([]);
   // Whether this picker has shown clips, after which a change waits.
   const hasShownRef = useRef(false);
-  const sample = t("editor-panels-text-sample");
+  const sample = t("editor-island-text-sample");
   const key = JSON.stringify(styles);
   useEffect(() => {
     let current = true;
@@ -64,38 +60,4 @@ export function useTemplatePreviews(styles: TextStyle[]) {
     (style, index): TemplatePreviewClip | undefined =>
       drawn.get(drawnKey(sample, style)) ?? last[index],
   );
-}
-
-/**
- * Loads every template's preview, as new captions would take it up, into
- * this window as it starts, where `isWanted`, so the template panel first
- * opens with them ready rather than loading them then. Each still and clip
- * is held for as long as the window runs, so the webview keeps it; a clip
- * decodes a frame at a time, so that costs little.
- */
-export function usePreloadedTemplatePreviews(isWanted: boolean) {
-  const heldRef = useRef<HTMLImageElement[]>([]);
-  const sample = t("editor-panels-text-sample");
-  useEffect(() => {
-    if (!isWanted) return;
-    let current = true;
-    void launchTemplatePreviews(sample)
-      .then((clips) => {
-        if (!current) return;
-        heldRef.current = clips
-          .flatMap((clip) => [clip.still, clip.path])
-          .map((path) => {
-            const image = new Image();
-            image.src = convertFileSrc(path);
-            void image.decode().catch(() => undefined);
-            return image;
-          });
-      })
-      // Loading ahead is only a head start: the panel loads what is missing.
-      .catch(() => undefined);
-    return () => {
-      current = false;
-      heldRef.current = [];
-    };
-  }, [isWanted, sample]);
 }

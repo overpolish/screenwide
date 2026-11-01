@@ -173,7 +173,7 @@ export function PopupSelect({
         placeholder={placeholder}
         renderValue={(item) =>
           item ? (
-            <span className="flex w-full items-center justify-between gap-control">
+            <span className="flex w-full items-center justify-between gap-inline">
               <span
                 className="truncate"
                 dir="auto"

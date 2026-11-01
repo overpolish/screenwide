@@ -60,7 +60,7 @@ export function ExportOptionsWindowView({
       <div className="relative">
         <div
           className={cn(
-            "flex gap-layout px-window-inset pb-window-inset",
+            "flex gap-group px-inset pb-inset",
             isSaving && progress !== undefined && "invisible",
           )}
         >
@@ -77,7 +77,7 @@ export function ExportOptionsWindowView({
           </div>
         </div>
         {isSaving && progress ? (
-          <div className="absolute inset-0 flex items-center px-window-inset pb-window-inset">
+          <div className="absolute inset-0 flex items-center px-inset pb-inset">
             <ExportProgress {...progress} />
           </div>
         ) : null}

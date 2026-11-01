@@ -3,6 +3,7 @@
 
 import { useMemo, useState } from "react";
 
+import { editedWordText } from "../captions/caption-word-parts";
 import { ToolPanelTranscript } from "../tool-panel-transcript";
 
 import {
@@ -171,20 +172,22 @@ export function useTranscriptEditing(
     marks: cleanup.marks,
     matches: search.matches,
     onCut: actions.delete,
+    /** `text` is what the edit left in place of the words, without the
+     * punctuation either side (`captionWordParts`), which it keeps. */
     onEditEnd: (span, text) => {
       setEditing(null);
       setSelection({ anchor: span.first, focus: span.first });
       if (text === null) return;
-      const typed = normalizeText(text);
       const shown = units
         .slice(span.first, span.last + 1)
         .map((unit) => unit.text)
         .join(" ");
-      // Nothing left is the words deleted: cut as they were heard.
-      if (typed === "") {
+      const corrected = editedWordText(shown, normalizeText(text));
+      // No letters left is the words deleted: cut as they were heard.
+      if (corrected === null) {
         actions.spelling(span);
         actions.delete(span);
-      } else if (typed !== normalizeText(shown)) correct(span, typed);
+      } else if (corrected !== normalizeText(shown)) correct(span, corrected);
     },
     onEditStart: actions.edit,
     onMenu: (span, point) => {

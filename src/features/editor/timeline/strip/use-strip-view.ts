@@ -25,7 +25,7 @@ const FEWEST_S = 3;
 const LEAD = 0.15;
 /** Room at each end of the track, in px, so the playhead's knob at the very
  * start or end of the recording is drawn whole. */
-export const TRACK_INSET_PX = 8;
+const TRACK_INSET_PX = 8;
 /** How much a pinch, or a wheel step with ⌘ or Ctrl, zooms per pixel. */
 const ZOOM_PER_PX = 0.01;
 
@@ -34,6 +34,7 @@ export function useStripView({
   focus,
   isPlaying,
   playhead,
+  takenOut,
   width,
 }: {
   /** The edited recording's length, in seconds. */
@@ -43,6 +44,9 @@ export function useStripView({
   focus: (View & { key: string }) | null;
   isPlaying: boolean;
   playhead: Playhead;
+  /** The seconds taken out of the recording, by cuts and the squeeze,
+   * which the strip runs on past the edited recording's end to show. */
+  takenOut: number;
   /** The scroll area's width, in px. */
   width: number;
 }) {
@@ -51,15 +55,25 @@ export function useStripView({
   // first shown, so a trim, a cut or a squeeze changing how long the
   // recording plays leaves a second as wide as it was: the strip never
   // rescales under the pointer, and a recording grown shorter than the view
-  // leaves room past its end rather than stretching to fill it.
+  // leaves room past its end rather than stretching to fill it. What cuts
+  // and the squeeze take out stays on the strip past the end, so the strip
+  // is always as long as the recording.
   const [chosen, setChosen] = useState<View | null>(null);
   if (chosen === null && width > 0)
-    setChosen({ end: Math.min(width / OPENING_PX_PER_S, duration), start: 0 });
-  const seconds = chosen ?? { end: duration, start: 0 };
+    setChosen({
+      end: Math.min(width / OPENING_PX_PER_S, duration + takenOut),
+      start: 0,
+    });
+  const seconds = chosen ?? { end: duration + takenOut, start: 0 };
   const length = Math.max(duration, 1e-6);
+  /** Where the strip ends, past the edited recording's end by what was
+   * taken out, as a share of the edited recording; never short of its end,
+   * so a recording with no length (a recovered one) still has a track. */
+  const extent = Math.max(1, (duration + Math.max(takenOut, 0)) / length);
   const view = clampView(
     { end: seconds.end / length, start: seconds.start / length },
     least,
+    extent,
   );
   const trackWidth =
     Math.max(0, width - TRACK_INSET_PX * 2) /
@@ -68,13 +82,13 @@ export function useStripView({
 
   // Wheel and scroll events arrive faster than renders; each builds on the
   // last view rather than the one rendered.
-  const latestRef = useRef({ least, length, trackWidth, view });
+  const latestRef = useRef({ extent, least, length, trackWidth, view });
   useLayoutEffect(() => {
-    latestRef.current = { least, length, trackWidth, view };
+    latestRef.current = { extent, least, length, trackWidth, view };
   });
   const set = (next: View) => {
-    const { least: fewest, length: playing } = latestRef.current;
-    const kept = clampView(next, fewest);
+    const { extent: end, least: fewest, length: playing } = latestRef.current;
+    const kept = clampView(next, fewest, end);
     latestRef.current.view = kept;
     setChosen({ end: kept.end * playing, start: kept.start * playing });
   };
@@ -88,7 +102,10 @@ export function useStripView({
   const zoomAt = (factor: number, at: number) => {
     const current = latestRef.current.view;
     const span = current.end - current.start;
-    const next = Math.min(Math.max(span * factor, latestRef.current.least), 1);
+    const next = Math.min(
+      Math.max(span * factor, latestRef.current.least),
+      latestRef.current.extent,
+    );
     const pivot = current.start + at * span;
     set({ end: pivot - at * next + next, start: pivot - at * next });
   };
@@ -159,5 +176,15 @@ export function useStripView({
     });
   }, [isPlaying, playhead]);
 
-  return { onInitialized: setViewport, set, trackWidth, view };
+  return {
+    /** How wide, in px, the room past the track's end for what was taken
+     * out is: as wide as it would play. */
+    bandWidth: trackWidth * (extent - 1),
+    onInitialized: setViewport,
+    /** How wide a second is drawn, in px. */
+    pxPerSecond: trackWidth / length,
+    set,
+    trackWidth,
+    view,
+  };
 }

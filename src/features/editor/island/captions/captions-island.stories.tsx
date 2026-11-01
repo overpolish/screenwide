@@ -37,9 +37,6 @@ const FAMILIES: FontFamily[] = [
   { italic: false, name: "Menlo", weights: [400, 700] },
 ];
 
-/** The transcription model, about the size the app's default one is. */
-const MODEL_BYTES = 874_000_000;
-
 const meta = {
   ...editorIslandStoryMeta,
   args: {
@@ -50,7 +47,6 @@ const meta = {
     hiddenCount: 0,
     isShown: true,
     look: storyTextStyle("box"),
-    onDownloadModel: fn(),
     onEnabledChange: fn(),
     onLayoutChange: fn(),
     onLookChange: fn(),
@@ -141,21 +137,8 @@ export const Hidden: Story = { args: { enabled: false } };
 // Captions taken out of the video, to bring back.
 export const CaptionsTakenOut: Story = { args: { hiddenCount: 2 } };
 
-export const NoModel: Story = {
-  args: {
-    transcript: {
-      model: { progress: 0, sizeBytes: MODEL_BYTES, status: "available" },
-      status: "noModel",
-    },
-  },
-};
-
-export const Transcribing: Story = {
+// Until the transcript's words are in, only its row: the Script island out
+// with it says how the transcript is coming.
+export const BeforeTheTranscript: Story = {
   args: { transcript: { progress: 0.4, status: "transcribing" } },
 };
-
-export const NothingSaid: Story = {
-  args: { transcript: { status: "noSpeech" } },
-};
-
-export const Failed: Story = { args: { transcript: { status: "failed" } } };

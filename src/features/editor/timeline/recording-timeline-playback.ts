@@ -15,6 +15,9 @@ export type RecordingTimelinePlaybackRange = {
 /**
  * Converts editor segments into the source ranges the native player needs.
  * Adjacent cuts remain one playback range; only deleted gaps cause a jump.
+ * Ranges are whole milliseconds, as the native side counts them: a segment
+ * edge is a share of the recording, which multiplied back out lands a hair
+ * off the millisecond it was made at.
  */
 export function recordingTimelinePlaybackRanges(
   edit: RecordingTimelineEdit | null | undefined,
@@ -27,8 +30,8 @@ export function recordingTimelinePlaybackRanges(
   }
   const ranges: RecordingTimelinePlaybackRange[] = [];
   for (const segment of edit.segments) {
-    const sourceStartMs = segment.sourceStart * sourceDurationMs;
-    const sourceEndMs = segment.sourceEnd * sourceDurationMs;
+    const sourceStartMs = Math.round(segment.sourceStart * sourceDurationMs);
+    const sourceEndMs = Math.round(segment.sourceEnd * sourceDurationMs);
     const playbackRate = segment.playbackRate ?? 1;
     if (
       ranges.length > 0 &&
@@ -54,6 +57,21 @@ export function recordingTimelinePlaybackRangeAt(
       sourcePositionMs >= range.sourceStartMs &&
       sourcePositionMs < range.sourceEndMs,
   );
+}
+
+/**
+ * Where playback from a playhead at `sourcePositionMs` goes on from. At the
+ * recording's end the playhead shows its last decodable millisecond, the
+ * still the native player can draw there, which leaves nothing to play: it
+ * counts as the end itself, past which playback starts over.
+ */
+export function recordingTimelinePlaybackPosition(
+  sourcePositionMs: number,
+  sourceDurationMs: number,
+) {
+  return sourceDurationMs > 0 && sourcePositionMs >= sourceDurationMs - 1
+    ? sourceDurationMs
+    : sourcePositionMs;
 }
 
 /**

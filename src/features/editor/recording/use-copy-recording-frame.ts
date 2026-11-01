@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { create } from "zustand";
 
 import { copyRecordingPreviewFrameToClipboard } from "../api";
 import { recordingTimelinePlaybackRanges } from "../timeline/recording-timeline-playback";
@@ -8,6 +9,13 @@ import { recordingTimelinePlaybackRanges } from "../timeline/recording-timeline-
 import { ResolvedScrubPreviewProps } from "./preview/recording-preview-props";
 
 type Payload = Parameters<typeof copyRecordingPreviewFrameToClipboard>[0];
+
+/** How to copy the frame under the open recording's playhead, for the
+ * title bar's Copy Frame, which stands outside the preview that owns the
+ * player; null while no recording preview is mounted. */
+export const useRecordingFrameCopy = create<{
+  copy: (() => Promise<unknown>) | null;
+}>(() => ({ copy: null }));
 
 /** Copies the frame under the playhead, composed as the preview draws it,
  * with the annotations timed on the timeline the edit lays out. */
@@ -53,11 +61,16 @@ export function useCopyRecordingFrame(
       artifactId,
       positionMs: getPositionMs(),
     }).catch((cause: unknown) => {
+      // Said under the picture, where the frame was copied from.
       setCopyError(cause instanceof Error ? cause.message : String(cause));
-      // Rethrown so the copy button knows the press failed and skips its check.
-      throw cause;
     });
   }, [artifactId, getPositionMs]);
+  useEffect(() => {
+    useRecordingFrameCopy.setState({ copy: copyCurrentFrame });
+    return () => {
+      useRecordingFrameCopy.setState({ copy: null });
+    };
+  }, [copyCurrentFrame]);
 
-  return { copyCurrentFrame, copyError };
+  return { copyError };
 }

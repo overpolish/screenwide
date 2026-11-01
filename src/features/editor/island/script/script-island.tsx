@@ -16,14 +16,15 @@ import type { EditorIslandContent } from "../editor-island";
 import type { ScriptIslandProps } from "./script-island-props";
 
 // The recording's script: what was said, as a whole, to read and put right
-// in one pass rather than a caption at a time. It stands at the editor's
-// end, the picture between it and any island it is open beside. With the
-// Captions island, it shows the script as the captions break it, and edits
-// their breaks, hidden words and key words. The Transcript mode opens it on
-// its own, to cut: words removed, restored and moved, pauses, fillers and
-// profanity cleared at once, and a search at the row's end that finds and
-// replaces. A word's spelling is the transcript's, so a correction made in
-// either shows wherever the script does.
+// in one pass rather than a caption at a time. It stands at the picture's
+// top start corner, opposite where every other island stands, in both the
+// Captions and Transcript modes, so moving between them never moves it.
+// With the Captions island, it shows the script as the captions break it,
+// and edits their breaks, hidden words and key words. The Transcript mode
+// opens it on its own, to cut: words removed, restored and moved, pauses,
+// fillers and profanity cleared at once, and a search at the row's end
+// that finds and replaces. A word's spelling is the transcript's, so a
+// correction made in either shows wherever the script does.
 const scriptTitle = () => (
   <IslandRowTitle
     glyph={<ScrollText aria-hidden className="size-icon" />}

@@ -65,7 +65,6 @@ fn own_turn(item: &NativeAnnotationHandles) -> SceneRotation {
 /// chosen alone, with the select or image tool in hand.
 pub(in super::super) fn gizmo(state: &SurfaceState) -> Option<ImageGizmo> {
   if !state.editor_active
-    || !state.selection_visible
     || !matches!(state.annotation.mode, MODE_SELECT | MODE_IMAGE)
     || has_group(state)
     || state.object_picking.is_active()

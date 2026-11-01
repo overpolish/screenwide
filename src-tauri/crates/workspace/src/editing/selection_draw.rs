@@ -35,31 +35,20 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     pixels::scaled_edges(state.viewport.x, state.viewport.width, scale);
   let (viewport_y, viewport_bottom) =
     pixels::scaled_edges(state.viewport.y, state.viewport.height, scale);
-  let display = (state.editor_active && state.selection_visible)
+  let frame = state
+    .editor_active
     .then(|| {
       state
         .selection
-        .and_then(|selection| display_selection(state, selection).map(|rect| (selection, rect)))
-        .map(|(selection, rect)| {
+        .and_then(|selection| display_selection(state, selection))
+        .map(|rect| {
           let (x, right) = pixels::scaled_edges(rect.x, rect.width, scale);
           let (y, bottom) = pixels::scaled_edges(rect.y, rect.height, scale);
-          let frame = [x as f32, y as f32, (right - x) as f32, (bottom - y) as f32];
-          let radius = if selection.crop_mode == 0 && selection.radius_disabled == 0 {
-            let radius = radius_point(rect, selection.radius_percent);
-            [
-              pixels::pixel_center(radius.0 * scale),
-              pixels::pixel_center(radius.1 * scale),
-            ]
-          } else {
-            [f32::NAN, f32::NAN]
-          };
-          (frame, radius)
+          [x as f32, y as f32, (right - x) as f32, (bottom - y) as f32]
         })
     })
     .flatten();
-  let frame = display.map(|value| value.0);
-  let radius = display.map(|value| value.1);
-  let crop_image = display.and_then(|_| {
+  let crop_image = frame.and_then(|_| {
     let selection = state.selection?;
     (selection.crop_mode != 0).then_some(())?;
     let image = state
@@ -82,22 +71,20 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   // Crop mode keeps the layer's own radius so the shade can round with it.
   let crop_radius_percent = state
     .selection
-    .filter(|selection| selection.crop_mode != 0 && selection.radius_disabled == 0)
+    .filter(|selection| selection.crop_mode != 0)
     .map_or(0.0, |selection| selection.radius_percent);
   // The arrow chrome, when it owns the screen: its grips, which may be none
   // at all with the arrow tool in hand and nothing chosen yet, plus the disc
   // over a snapped tip, which is drawn exactly like one of them. `None`
-  // leaves the layer's own chrome standing. Playback and a scrub hide every
-  // chrome, as nothing on screen can be taken hold of meanwhile.
+  // leaves the layer's own chrome standing.
   let snap = annotation::snap_chrome(state, scale);
-  let annotation_handles = (state.selection_visible && annotation::owns_chrome(state)).then(|| {
+  let annotation_handles = annotation::owns_chrome(state).then(|| {
     let mut grips = annotation::selected_grips(state, scale);
     grips.extend(snap.anchor);
     grips
   });
-  // A chosen redaction wears the layer selection's own box, grips and radius
-  // dot inside the annotation chrome, and a chosen image its own frame,
-  // turned with it.
+  // A chosen redaction wears the layer selection's own box and grips inside
+  // the annotation chrome, and a chosen image its own frame, turned with it.
   let annotation_parts = annotation_handles.is_some().then(|| {
     (
       annotation::selected_redaction(state, scale),
@@ -125,7 +112,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   let guides = if annotation_handles.is_some() {
     snap.guides
   } else {
-    display.and_then(|_| {
+    frame.and_then(|_| {
       let selection = state.selection?;
       let pane = state.panes.get(selection.pane_index as usize)?.as_ref()?;
       let pane = state.workspace_transform.apply(
@@ -162,10 +149,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       magnifier.box_size[1] as f32,
     ]
   });
-  let objects = state
-    .selection_visible
-    .then(|| object_picking::chrome(state))
-    .flatten();
+  let objects = object_picking::chrome(state);
   // A turned layer's frame and annotation chrome are drawn through its turn,
   // and the select tool's rings over it.
   let turned = turn::chrome(state, scale);
@@ -175,7 +159,6 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       (viewport_bottom - viewport_y).max(2) as u32,
     ),
     frame,
-    radius.filter(|point| point[0].is_finite() && point[1].is_finite()),
     crop_image,
     crop_radius_percent,
     guides,

@@ -161,9 +161,9 @@ export const ANNOTATION_KINDS: {
   },
   magnify: {
     ...ANNOTATION_SIZES.magnify,
-    // The loupe comes out of its zoom area and grows to its place as it
-    // arrives, and goes back into it as it leaves. Its rim is always an
-    // arrow's pen, and its zoom is how big its loupe is drawn.
+    // The lens grows from a smaller, flatter glass to its size and zoom as
+    // it arrives, and back as it leaves. Its rim is always an arrow's pen,
+    // and its zoom is its shape's own.
     animates: true,
     drawInMs: ANNOTATION_MAGNIFY_DRAW_IN_MS,
     hasAlign: false,

@@ -7,7 +7,7 @@ import { useSelectToolMemory } from "../annotations/use-select-tool-memory";
 import { toolDisagreesWithAnnotation } from "../annotations/use-tool-follows-annotation";
 import { isAnnotationTool } from "../tool-panels/tool-registry";
 
-import { ScreenshotTool } from "./screenshot-tools";
+import { ScreenshotTool } from "./screenshot-column";
 
 import type { AnnotationKind } from "../../annotations/types";
 
@@ -44,6 +44,12 @@ export function useScreenshotTool({
     )
       clearSelection();
     setActiveTool(resolved);
-    rememberSelection(toolRef.current, resolved);
+    // A mode (crop, canvas) lets the annotations in hand go, and putting it
+    // away does not bring them back.
+    rememberSelection(
+      toolRef.current,
+      resolved,
+      resolved === "canvas" || resolved === "crop",
+    );
   };
 }

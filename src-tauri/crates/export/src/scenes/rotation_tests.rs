@@ -22,6 +22,7 @@ fn turned(id: &str, start_ms: u64, end_ms: u64, rotation: SceneRotation) -> Reco
     camera: None,
     boxes: None,
     radius: None,
+    inset: None,
     rotation: Some(rotation),
     variant: None,
     follow_face: None,

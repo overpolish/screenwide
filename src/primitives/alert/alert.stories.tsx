@@ -13,6 +13,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const colors: NonNullable<ComponentProps<typeof Alert>["color"]>[] = [
   "neutral",
+  "warning",
   "error",
 ];
 

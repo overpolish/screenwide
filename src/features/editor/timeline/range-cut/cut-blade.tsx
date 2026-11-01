@@ -16,7 +16,7 @@ export function CutBlade({
   return (
     <span
       aria-hidden
-      className="pointer-events-none absolute top-1.5 bottom-0 z-30 w-0"
+      className="pointer-events-none absolute top-1.5 bottom-0 z-30 w-0 pointer-away:hidden"
       dir="ltr"
       style={{ insetInlineStart: `${String(x * 100)}%` }}
     >

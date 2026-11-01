@@ -14,6 +14,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import type { AnnotationHead } from "../../../../../bindings/AnnotationHead";
 import type { EditorIslandContent } from "../../editor-island";
@@ -32,24 +37,26 @@ type ArrowStyle = {
   width: number;
 };
 
-export type ArrowIslandProps = AnnotationColorProps & {
-  /** Whether it can draw itself in: a recording's annotations can, a
-   * screenshot's, being one instant, cannot. */
-  canAnimate: boolean;
-  id: string;
-  /** Turns it round, so its head points the other way. */
-  onReverse: () => void;
-  onStyleChange: (style: Partial<ArrowStyle>) => void;
-  style: ArrowStyle;
-  /** Left out for the pen in hand with nothing chosen. */
-  onDelete?: () => void;
-};
+export type ArrowIslandProps = AnnotationColorProps &
+  AnnotationPinProps & {
+    /** Whether it can draw itself in: a recording's annotations can, a
+     * screenshot's, being one instant, cannot. */
+    canAnimate: boolean;
+    id: string;
+    /** Turns it round, so its head points the other way. */
+    onReverse: () => void;
+    onStyleChange: (style: Partial<ArrowStyle>) => void;
+    style: ArrowStyle;
+    /** Left out for the pen in hand with nothing chosen. */
+    onDelete?: () => void;
+  };
 
 export function arrowIsland(props: ArrowIslandProps): EditorIslandContent {
   const { canAnimate, id, onDelete, onReverse, onStyleChange, style } = props;
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -88,6 +95,7 @@ export function arrowIsland(props: ArrowIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
         <div className="flex justify-end">
           <Button onPress={onReverse}>
             {t("editor-island-arrow-reverse")}

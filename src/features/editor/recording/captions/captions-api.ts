@@ -140,9 +140,3 @@ export const forgetFontFamilies = () => {
  * compositor: a clip that plays over and over, in order. */
 export const renderTemplatePreviews = (styles: TextStyle[], sample: string) =>
   invoke<TemplatePreviewClip[]>("render_template_previews", { sample, styles });
-
-/** Every template previewed as new captions would take it up, saying the
- * `sample` words: the clips launch draws, for loading before a panel
- * opens. */
-export const launchTemplatePreviews = (sample: string) =>
-  invoke<TemplatePreviewClip[]>("launch_template_previews", { sample });

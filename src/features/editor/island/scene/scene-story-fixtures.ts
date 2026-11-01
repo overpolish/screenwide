@@ -66,6 +66,12 @@ export const TALL_VIDEO = {
   screen: { height: 0.316, width: 0.9, x: 0.05, y: 0.342 },
 };
 
+/** A turn of the screen in depth, tipped back and swung to one side. */
+export const TURN = { x: -27.5, y: 27.7, z: -1.4 };
+
+/** The wide video, its scene turning the screen by `TURN`. */
+export const TURNED_VIDEO = { ...WIDE_VIDEO, rotation: TURN };
+
 export const FRAMING_ARGS = {
   camera: {
     focusX: 0.5,
@@ -79,7 +85,6 @@ export const FRAMING_ARGS = {
   onLayoutChange: fn(),
   onPaneReset: fn(),
   onRemoveSavedLayout: fn(),
-  onRotationChange: fn(),
   onSaveLayout: fn(),
   onScreenChange: fn(),
   onSwapPanes: fn(),
@@ -89,7 +94,6 @@ export const FRAMING_ARGS = {
     focusX: 0.5,
     focusY: 0.5,
     radius: 12,
-    rotation: { x: 0, y: 0, z: 0 },
     zoom: 1,
   },
   variant: {},
@@ -142,10 +146,6 @@ export function framingHandlers(
         updateArgs({ camera: reset(camera, figure) });
       if (pane === "screen" && screen)
         updateArgs({ screen: reset(screen, figure) });
-    },
-    onRotationChange: (rotation) => {
-      args.onRotationChange(rotation);
-      if (screen) updateArgs({ screen: { ...screen, rotation } });
     },
     onScreenChange: (pane) => {
       args.onScreenChange(pane);

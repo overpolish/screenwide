@@ -13,7 +13,6 @@ import {
   insertTimedSpanClip,
   timedSpanClipAt,
 } from "../../timeline/tracks/timed-span-clips";
-import { useTimedSpanSelection } from "../../timeline/tracks/use-timed-span-selection";
 
 import {
   CameraBackgroundControls,
@@ -23,40 +22,33 @@ import {
   CAMERA_BACKGROUND_RANGE_MINIMUM_MS,
   CameraBackgroundRange,
 } from "./camera-background-ranges";
-import { useCameraMattePending } from "./use-camera-matte-pending";
-
-import type { CameraBackgroundLane } from "../../timeline/tracks/camera-background-strip";
 
 const NO_RANGES: CameraBackgroundRange[] = [];
 /** How long a range added at the playhead lasts, where there is room. */
 const ADDED_RANGE_MS = 10_000;
 
 /**
- * The camera's background ranges and the edits the lane and the camera
- * panel make to them. The panel shows the range chosen in the lane, or the
- * one under the playhead, and adds one there where there is none: over the
- * whole video where the camera has no range yet. Every change is a timeline
- * edit, so it is saved with the recording and undone with the rest of it.
- * The lane fades the parts of the ranges whose matte is still being made.
+ * The camera's background ranges and the edits the camera island makes to
+ * them. The island shows the range under the playhead, and adds one there
+ * where there is none: over the whole video where the camera has no range
+ * yet. Every change is a timeline edit, so it is saved with the recording and
+ * undone with the rest of it.
  */
 export function useCameraBackgroundRanges({
-  artifactId,
   edit,
   getPositionMs,
   onEdit,
   playhead,
   sourceDurationMs,
 }: {
-  artifactId: number;
   edit: RecordingTimelineEdit;
   /** Where the playhead is now, in source time. */
   getPositionMs: () => number;
   onEdit: (edit: RecordingTimelineEdit) => void;
   playhead: Pick<Playhead, "subscribe">;
   sourceDurationMs: number;
-}): CameraBackgroundLane {
+}) {
   const ranges = edit.cameraBackgroundRanges ?? NO_RANGES;
-  const pending = useCameraMattePending(artifactId, edit);
   // An edit asked for while the panel holds an older render lands on the
   // latest one.
   const editRef = useRef(edit);
@@ -87,14 +79,7 @@ export function useCameraBackgroundRanges({
       cameraBackgroundRanges: next.length > 0 ? next : undefined,
     });
   };
-  const selection = useTimedSpanSelection({
-    clips: ranges,
-    commit,
-    currentId,
-  });
-  const chosenId = selection.ids.size === 1 ? [...selection.ids][0] : null;
-  const shown =
-    ranges.find((range) => range.id === (chosenId ?? currentId)) ?? null;
+  const shown = ranges.find((range) => range.id === currentId) ?? null;
   const controls: CameraBackgroundControls = {
     setBackground: (background) => {
       if (background === "kept") {
@@ -133,13 +118,4 @@ export function useCameraBackgroundRanges({
     { hasRanges: ranges.length > 0, range: shown },
     controls,
   );
-  return {
-    onChange: commit,
-    onClearSelection: selection.onClear,
-    onSelect: selection.onSelect,
-    onSelectSwept: selection.onSelectSwept,
-    pendingSpans: pending.length > 0 ? () => pending : undefined,
-    ranges,
-    selectedIds: selection.ids,
-  };
 }

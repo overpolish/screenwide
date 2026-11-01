@@ -10,8 +10,6 @@ import {
   copyEditorToClipboard,
   saveExport,
   setExportDirectory,
-  setScreenshotBackgroundRadius,
-  setScreenshotRadius,
 } from "./api";
 import {
   closeEditorWindow,
@@ -36,6 +34,7 @@ import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingExportEstimate } from "./export/use-recording-export-estimate";
 import { openProjectActions } from "./open-project-actions";
 import { EditorPanel } from "./panel/editor-panel";
+import { usePointerAway } from "./preview/use-pointer-away";
 import { recordingOutputForEdit } from "./recording/recording-output-edit";
 import {
   seededTrackChoices,
@@ -59,6 +58,10 @@ import {
 } from "./screenshot/screenshot-seed";
 import { useScreenshotProject } from "./screenshot/use-screenshot-project";
 import {
+  NATIVE_POINTER_EVENT,
+  type NativePointerEvent,
+} from "./shortcuts/use-select-hold";
+import {
   selectArtifact,
   selectDirectory,
   selectSnapshot,
@@ -67,7 +70,6 @@ import {
 import { useRecordingTimelineEditState } from "./timeline/editing/use-recording-timeline-edit-state";
 import {
   AudioTrackVolume,
-  recordingAudioStreamIndex,
   recordingAudioTrackId,
   RecordingTrackId,
   RecordingVideoTrackId,
@@ -136,7 +138,8 @@ export function EditorWindow() {
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     void getCurrentWindow()
-      .listen("preview://native-pointer-down", () => {
+      .listen<NativePointerEvent>(NATIVE_POINTER_EVENT, ({ payload }) => {
+        if (!payload.down) return;
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
         }
@@ -147,6 +150,7 @@ export function EditorWindow() {
       });
     return () => unlisten?.();
   }, []);
+  usePointerAway();
   const [trackSelection, setTrackSelection] = useState<{
     artifactId: number;
     streamIndices: number[];
@@ -163,8 +167,6 @@ export function EditorWindow() {
     artifactId: number;
     values: AudioTrackVolume[];
   } | null>(null);
-  const screenshotRadiusRef = useRef(0);
-  const screenshotBackgroundRadiusRef = useRef(0);
   const seenScreenshotItemIdsRef = useRef<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const openProject = openProjectActions(setError);
@@ -263,7 +265,6 @@ export function EditorWindow() {
               ? recordingAudioTrackId(artifact.audioTracks[0].streamIndex)
               : null
       : null;
-  const selectedStreamIndex = recordingAudioStreamIndex(selectedTrackId);
   const editState = useMemo<EditorEditState>(
     () => ({
       audioTrackVolumes,
@@ -314,9 +315,6 @@ export function EditorWindow() {
       setTimelineEdit(next.recordingTimelineEdit);
       setResolutionScalePercent(next.resolutionScalePercent);
       setRecordingOutput(recordingOutputForEdit(next.recordingOutput));
-      screenshotRadiusRef.current = next.screenshotOutput.radiusPercent;
-      screenshotBackgroundRadiusRef.current =
-        next.screenshotOutput.backgroundRadiusPercent;
       setScreenshotOutput(next.screenshotOutput);
       setTrackSelection(next.trackSelection);
       setVideoTrackSelection(next.videoTrackSelection);
@@ -412,8 +410,6 @@ export function EditorWindow() {
     setCameraResolutionScalePercent(seeded.cameraResolutionScalePercent);
     setResolutionScalePercent(seeded.resolutionScalePercent);
     setRecordingOutput(seededRecordingOutput);
-    screenshotRadiusRef.current = persistedScreenshotRadius;
-    screenshotBackgroundRadiusRef.current = persistedScreenshotBackgroundRadius;
     setScreenshotOutput(
       artifact?.kind === "screenshot" && artifact.projectWorkspace
         ? reopenedScreenshotWorkspace(artifact, artifact.projectWorkspace)
@@ -662,52 +658,30 @@ export function EditorWindow() {
             })
             .catch(report("save"));
         }}
-        onScreenshotBackgroundRadiusChange={(value) => {
-          screenshotBackgroundRadiusRef.current = value;
-          setScreenshotOutput((current) => ({
-            ...current,
-            backgroundRadiusPercent: value,
-          }));
-          setError(null);
-        }}
-        onScreenshotBackgroundRadiusChangeEnd={() => {
-          setScreenshotBackgroundRadius(
-            screenshotBackgroundRadiusRef.current,
-          ).catch(report("remember the screenshot background radius for"));
-        }}
         onScreenshotOutputChange={(settings, itemId) => {
           const targetItemId = itemId ?? selectedScreenshotItemId;
-          screenshotRadiusRef.current = settings.radiusPercent;
           setScreenshotOutput((current) =>
             withScreenshotWorkspaceItemOutput(current, settings, targetItemId),
           );
           setError(null);
-        }}
-        onScreenshotRadiusChangeEnd={() => {
-          setScreenshotRadius(screenshotRadiusRef.current).catch(
-            report("remember the screenshot radius for"),
-          );
         }}
         onSelectedScreenshotItemChange={setSelectedScreenshotItemId}
         onSelectedTrackChange={(trackId) => {
           if (artifactId === undefined) return;
           setSelectedTrack({ artifactId, trackId });
         }}
-        onSelectedTrackVolumeChange={(decibels) => {
-          if (artifactId === undefined || selectedStreamIndex === null) return;
+        onSubtitlesChange={setSubtitles}
+        onToggleMaximize={toggleEditorWindowMaximized}
+        onTrackVolumeChange={(streamIndex, decibels) => {
+          if (artifactId === undefined) return;
           const next = currentAudioTrackVolumes.filter(
-            (volume) => volume.streamIndex !== selectedStreamIndex,
+            (volume) => volume.streamIndex !== streamIndex,
           );
           if (decibels !== 0) {
-            next.push({
-              decibels: Math.round(decibels),
-              streamIndex: selectedStreamIndex,
-            });
+            next.push({ decibels: Math.round(decibels), streamIndex });
           }
           setAudioTrackVolumes({ artifactId, values: next });
         }}
-        onSubtitlesChange={setSubtitles}
-        onToggleMaximize={toggleEditorWindowMaximized}
         recordingOutput={recordingOutput}
         recordingPreviewError={recordingPreviewError}
         recordingPreviewTracks={recordingPreviewTracks}

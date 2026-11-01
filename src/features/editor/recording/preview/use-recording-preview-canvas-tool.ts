@@ -8,7 +8,7 @@ import { toolDisagreesWithAnnotation } from "../../annotations/use-tool-follows-
 import { drawingToolKind } from "../../tool-panels/tool-registry";
 import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
 
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 
 import type { AnnotationKind } from "../../../annotations/types";
 
@@ -53,6 +53,12 @@ export function useRecordingPreviewCanvasTool({
   );
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
+      // A mode (crop, frame, scene) lets the annotations in hand go, and
+      // putting it away does not bring them back.
+      const isMode =
+        drawingToolKind(next) === null &&
+        next !== "select" &&
+        next !== "marquee";
       if (drawingToolKind(next) !== null) {
         if (toolDisagreesWithAnnotation(next, selectedKindRef.current))
           clearAnnotationRef.current();
@@ -63,7 +69,7 @@ export function useRecordingPreviewCanvasTool({
       } else if (next !== "select" && next !== "marquee")
         clearAnnotationRef.current();
       setCanvasTool(next);
-      rememberSelection(canvasToolRef.current, next);
+      rememberSelection(canvasToolRef.current, next, isMode);
     },
     [
       setCanvasTool,
@@ -75,19 +81,22 @@ export function useRecordingPreviewCanvasTool({
       rememberSelection,
     ],
   );
-  // A canvas tool acts on the panes on screen. When the last video track is
-  // switched off there is nothing left for it to act on, so the tool is put
-  // down and its panel goes with it rather than staying up over the ribbon
-  // saying nothing is selected.
+  // A canvas tool acts on the panes on screen. When there are none - the
+  // last video track switched off, or the picture not laid out yet as the
+  // editor opens - there is nothing for it to act on, so it is put down and
+  // its panel goes with it rather than staying up over the ribbon saying
+  // nothing is selected. Put down, Select is in hand, as everywhere else:
+  // the native side reads no tool at all as a picture that picks nothing.
   useEffect(() => {
-    if (!hasVisiblePanes && canvasToolRef.current !== null) setCanvasTool(null);
+    if (!hasVisiblePanes && canvasToolRef.current !== "select")
+      setCanvasTool("select");
   }, [hasVisiblePanes, setCanvasTool]);
   // One toggle apiece, built from one function: picking up the tool already in
-  // hand puts it down. A new canvas tool joins the record rather than copying
-  // the body a fifth time.
+  // hand puts it down, which leaves Select in hand. A new canvas tool joins
+  // the record rather than copying the body a fifth time.
   const toggleTool = useMemo(() => {
     const toggle = (tool: RecordingCanvasTool) => () => {
-      changeCanvasTool(canvasToolRef.current === tool ? null : tool);
+      changeCanvasTool(canvasToolRef.current === tool ? "select" : tool);
     };
     return {
       arrow: toggle("arrow"),
@@ -109,12 +118,9 @@ export function useRecordingPreviewCanvasTool({
     };
   }, [changeCanvasTool]);
   // The crop tool is the one tool you are "in": Enter accepts what is framed
-  // and Escape backs out of it, and both simply put the tool down - the crop
-  // itself was committed as each handle was released. While it is in hand that
-  // Escape outranks the timeline's own deselects.
+  // and Escape backs out of it - the crop itself was committed as each handle
+  // was released. While it is in hand that Escape outranks the timeline's own
+  // deselects.
   const isCropping = canvasTool === "crop";
-  const leaveCropTool = useCallback(() => {
-    if (canvasToolRef.current === "crop") changeCanvasTool(null);
-  }, [changeCanvasTool]);
-  return { changeCanvasTool, isCropping, leaveCropTool, toggleTool };
+  return { changeCanvasTool, isCropping, toggleTool };
 }

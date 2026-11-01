@@ -21,6 +21,14 @@ pub struct SurfaceState {
   pub last_pointer: (f64, f64),
   /// The modifiers held as of the pointer event being handled.
   pub modifiers: Modifiers,
+  /// The shortcut modifier (Command, Ctrl on Windows) was held as Select came
+  /// into hand, so it is the editor's hold for Select rather than a toggle or
+  /// a snap: presses read it as up until it is let go.
+  pub(super) shortcut_spent: bool,
+  /// Select came into hand with the shortcut modifier down: the editor's hold
+  /// for Select. The layer's own chrome stays down until a press, so a
+  /// shortcut typed with the modifier (⌘Z) flashes nothing on the picture.
+  pub(super) select_held: bool,
   /// A live layer Move that may grow its canvas under Alt (the Metal
   /// backend's `selectionMoveTargetsStart` / `selectionMoveAutoFitActive`).
   /// `None` once the move ends or an Alt release commits the grown canvas.
@@ -28,13 +36,8 @@ pub struct SurfaceState {
   /// Objects picked in the camera, while they are.
   pub(super) object_picking: object_picking::ObjectPicking,
   pub panes: Vec<Option<Pane>>,
-  /// The width the double-click reset fits into: the space beside an open tool
-  /// panel while one holds the basis, 0 for the whole viewport. Only the fit
-  /// commands move it; a resize or a gesture never does.
-  pub panel_fit_width: f64,
   pub scale: f64,
   pub selection: Option<PreviewSelection>,
-  pub selection_visible: bool,
   pub selection_snapping_enabled: bool,
   pub(super) selection_snap_guide_x: Option<snapping::SnapGuide>,
   pub(super) selection_snap_guide_y: Option<snapping::SnapGuide>,
@@ -46,6 +49,8 @@ pub struct SurfaceState {
   /// The rotation gizmo's held ring and the ring the pointer rests on.
   pub(super) turn: turn::TurnState,
   pub viewport: PreviewSurfaceRect,
+  /// How round the viewport's corners are where it meets the chrome.
+  pub viewport_corners: PreviewSurfaceCorners,
   /// Recording marker layouts fill the viewport even above one point per
   /// output pixel; screenshot marker layouts stop at native size.
   pub workspace_allows_upscale: bool,
@@ -69,11 +74,11 @@ impl Default for SurfaceState {
       gesture: None,
       last_pointer: (0.0, 0.0),
       modifiers: Modifiers::default(),
+      shortcut_spent: false,
+      select_held: false,
       panes: Vec::new(),
-      panel_fit_width: 0.0,
       scale: 1.0,
       selection: None,
-      selection_visible: true,
       selection_snapping_enabled: false,
       selection_snap_guide_x: None,
       selection_snap_guide_y: None,
@@ -86,6 +91,7 @@ impl Default for SurfaceState {
         x: 0.0,
         y: 0.0,
       },
+      viewport_corners: PreviewSurfaceCorners::default(),
       workspace_allows_upscale: false,
       workspace_transform: WorkspaceTransform::default(),
       workspace_natural_size: None,
@@ -163,10 +169,9 @@ pub struct EditorCallbacks {
   pub annotation_text: Option<AnnotationTextCallback>,
   pub context_menu: Option<ContextMenuCallback>,
   pub gesture: Option<SelectionGestureCallback>,
-  pub pointer_down: Option<PointerDownCallback>,
+  pub pointer_press: Option<PointerPressCallback>,
   pub selection: Option<SelectionCallback>,
   pub object_pick: Option<screenwide_compositor::object_picking::ObjectPickCallback>,
-  pub transform: Option<TransformCallback>,
 }
 
 pub struct SurfaceInner {

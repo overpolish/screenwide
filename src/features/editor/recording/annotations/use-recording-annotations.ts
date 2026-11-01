@@ -12,6 +12,7 @@ import { useAnnotations } from "../../annotations/use-annotations";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { recordingTimelineLengthMs } from "../../timeline/editing/recording-timeline-time";
+import { type Playhead } from "../../timeline/scrub-playhead";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 
@@ -33,6 +34,7 @@ import {
   renumberedAnnotationClips,
 } from "./recording-annotations";
 import { withRecordingSpotlightBlurShared } from "./recording-spotlight-blur";
+import { useRecordingAnnotationPins } from "./use-recording-annotation-pins";
 import { useRecordingAnnotationSync } from "./use-recording-annotation-sync";
 import { useRecordingPinStatus } from "./use-recording-pin-status";
 
@@ -59,6 +61,7 @@ export function useRecordingAnnotations({
   getPositionMs,
   onEdit,
   onSelectTrack,
+  playhead,
   screenCaptureScale,
   sessionId,
   shownTracks,
@@ -80,6 +83,8 @@ export function useRecordingAnnotations({
   /** Where the playhead is, in source time: where a fresh pin is made. */
   getPositionMs: () => number;
   onEdit: (edit: RecordingTimelineEdit) => void;
+  /** The playhead, heard for how a pin stands where it is. */
+  playhead: Playhead;
   /** Captured pixels per logical point of the screen. */
   screenCaptureScale: number;
   sessionId: number | null;
@@ -149,12 +154,29 @@ export function useRecordingAnnotations({
     commit: commitClips,
     preview: setPreviewClips,
   });
+  const pinning = recordingAnnotationPinning({
+    clips,
+    edit,
+    getPositionMs,
+    pinStatus,
+    sessionId,
+    sourceDurationMs,
+    withClip,
+  });
+  const pins = useRecordingAnnotationPins({
+    clips,
+    getPositionMs,
+    pinStatus,
+    pinning,
+    playhead,
+  });
   const selection = useAnnotations({
     annotations: lane.clips.map((clip) => clip.annotation),
     groupable: (id) => !pinned.has(id),
     onCommit: (annotations) => {
       commitClips(withShownAnnotations(clips, annotations, shownTracks));
     },
+    pins,
     workspace: "recording",
   });
   useHiddenAnnotationsLetGo(shownTracks, selection);
@@ -228,15 +250,6 @@ export function useRecordingAnnotations({
     sourceDurationMs,
     tool,
     trackId,
-  });
-  const pinning = recordingAnnotationPinning({
-    clips,
-    edit,
-    getPositionMs,
-    pinStatus,
-    sessionId,
-    sourceDurationMs,
-    withClip,
   });
   return {
     ...selection,

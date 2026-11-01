@@ -3,12 +3,6 @@
 
 use super::*;
 
-pub(super) fn radius_point(frame: PreviewSurfaceRect, radius_percent: f64) -> (f64, f64) {
-  let offset =
-    frame.width.min(frame.height) * radius_percent.clamp(0.0, 50.0) / 100.0 * 0.55 + 10.0;
-  (frame.x + offset, frame.y + offset)
-}
-
 pub(super) fn shared_selection_hit(
   inner: &SurfaceInner,
   state: &SurfaceState,
@@ -51,8 +45,6 @@ pub(super) fn shared_selection_hit(
             width: rect.width,
             height: rect.height,
           },
-          radius_enabled: u8::from(selection.crop_mode == 0 && selection.radius_disabled == 0),
-          radius_percent: selection.radius_percent,
           z_order: index as i32,
           selected: u8::from(selected),
           visible: 1,
@@ -222,7 +214,6 @@ pub(super) fn cursor_for_state(
   let edges = shared_handle_edges(handle);
   match handle {
     0 => CursorKind::Move,
-    9 => CursorKind::ResizeNwse,
     _ if edges == 1 || edges == 2 => CursorKind::ResizeHorizontal,
     _ if edges == 4 || edges == 8 => CursorKind::ResizeVertical,
     _ if edges == (1 | 4) || edges == (2 | 8) => CursorKind::ResizeNwse,
@@ -233,9 +224,14 @@ pub(super) fn cursor_for_state(
 /// Whether a press while cropping draws a new crop window: one on nothing, or
 /// on the body of the active crop while it still covers its whole picture,
 /// which moving could not change. A grip resizes, and another layer's crop is
-/// chosen by the press.
+/// chosen by the press. A crop that is never drawn afresh (see
+/// [`crop_draws_afresh`]) takes the press as a move instead, which a press on
+/// nothing would otherwise turn into a pan of the whole view.
 pub(super) fn crop_press_draws(state: &SurfaceState, hit: Option<(PreviewSelection, u8)>) -> bool {
-  let Some(active) = state.selection.filter(|selection| selection.crop_mode != 0) else {
+  let Some(active) = state
+    .selection
+    .filter(|selection| crop_draws_afresh(*selection))
+  else {
     return false;
   };
   let Some((target, handle)) = hit else {
@@ -250,4 +246,10 @@ pub(super) fn crop_press_draws(state: &SurfaceState, hit: Option<(PreviewSelecti
     && target.pane_index == active.pane_index
     && target.layer_id == active.layer_id
     && uncropped
+}
+
+/// Whether `selection` is a crop a press can draw afresh: a scene's crop
+/// window keeps its box's shape, and a crop given a shape keeps that.
+pub(super) fn crop_draws_afresh(selection: PreviewSelection) -> bool {
+  selection.crop_mode != 0 && selection.framed == 0 && selection.crop_keeps_shape == 0
 }

@@ -3,7 +3,7 @@
 
 //! Where the cursor sits among the annotations, through a real GPU
 //! dispatch: over every mark, but lying on the picture as far as a spotlight
-//! and a loupe are concerned.
+//! and a lens are concerned.
 
 use screenwide_annotations::arrow::model::new_arrow;
 use screenwide_annotations::magnify::model::new_magnify;
@@ -114,15 +114,13 @@ fn spotlight(start: AnnotationPoint, end: AnnotationPoint, blur: bool) -> Annota
   annotation
 }
 
-/// A clear loupe 160 across at `loupe`, enlarging twice the zoom area
-/// centred at `area`.
-fn magnifier(area: AnnotationPoint, loupe: AnnotationPoint) -> Annotation {
-  let mut annotation = new_magnify("magnify".to_owned(), area, None);
+/// A clear square lens 160 across centred at `centre`, enlarging twice.
+fn lens(centre: AnnotationPoint) -> Annotation {
+  let mut annotation = new_magnify("magnify".to_owned(), centre, None, None);
   annotation.shape = AnnotationShape::Magnify {
-    start: point(area.x - 40.0, area.y - 40.0),
-    end: point(area.x + 40.0, area.y + 40.0),
-    loupe,
-    size: 160.0,
+    start: point(centre.x - 80.0, centre.y - 80.0),
+    end: point(centre.x + 80.0, centre.y + 80.0),
+    zoom: 2.0,
   };
   annotation.style.radius = 0.0;
   annotation.style.shadow = false;
@@ -221,38 +219,29 @@ fn a_blurred_cursor_fades_smoothly_rather_than_in_copies() {
 }
 
 #[test]
-fn a_loupe_shows_the_cursor_in_its_zoom_area_enlarged() {
-  let drawn = composed(
-    vec![magnifier(point(512.0, 412.0), point(800.0, 412.0))],
-    CURSOR,
-  );
-  // The loupe's middle is the zoom area's middle, where the cursor is; twice
-  // over, the cursor's 24 fill its middle 48.
+fn a_lens_shows_the_cursor_under_it_enlarged() {
+  let drawn = composed(vec![lens(point(512.0, 412.0))], CURSOR);
+  // The cursor's 24 under the lens's middle fill its middle 48: (530, 412)
+  // shows (521, 412), on the cursor, where the cursor itself does not reach.
   assert!(
-    pixel(&drawn, 800, 412)[2] > 240,
+    pixel(&drawn, 530, 412)[2] > 240,
     "{:?}",
-    pixel(&drawn, 800, 412)
+    pixel(&drawn, 530, 412)
   );
-  assert!(
-    pixel(&drawn, 780, 412)[2] > 240,
-    "{:?}",
-    pixel(&drawn, 780, 412)
-  );
+  let bare = composed(vec![], CURSOR);
+  assert!(pixel(&bare, 530, 412)[2] < 80);
 }
 
 #[test]
-fn a_loupe_hides_the_cursor_under_it() {
-  let drawn = composed(
-    vec![magnifier(point(300.0, 412.0), point(800.0, 412.0))],
-    (788.0, 400.0),
-  );
-  // Under the loupe is the enlarged grey of the zoom area, not the cursor.
+fn a_lens_hides_the_cursor_under_its_rim() {
+  // Under the rim of a lens at (512, 412), what shows is the grey nearer its
+  // middle, not the cursor lying there.
+  let drawn = composed(vec![lens(point(512.0, 412.0))], (570.0, 400.0));
   assert!(
-    pixel(&drawn, 800, 412)[2] < 80,
+    pixel(&drawn, 582, 412)[2] < 80,
     "{:?}",
-    pixel(&drawn, 800, 412)
+    pixel(&drawn, 582, 412)
   );
-  // Beside it, the same cursor shows.
-  let bare = composed(vec![], (788.0, 400.0));
-  assert!(pixel(&bare, 800, 412)[2] > 240);
+  let bare = composed(vec![], (570.0, 400.0));
+  assert!(pixel(&bare, 582, 412)[2] > 240);
 }

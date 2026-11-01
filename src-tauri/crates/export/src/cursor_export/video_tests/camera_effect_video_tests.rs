@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Annotations drawn on the camera through the real One video export: a
-//! redaction covers the camera's pixels and ends at its edge, and a
-//! magnifier's loupe, set beside the camera, shows the camera enlarged with
-//! what was drawn into it.
+//! redaction covers the camera's pixels and ends at its edge, and a lens
+//! over the camera shows it enlarged with what was drawn into it.
 
 use super::*;
 use screenwide_annotations::magnify::model::new_magnify;
@@ -217,27 +216,28 @@ fn a_camera_redaction_covers_the_camera_and_ends_at_its_edge() {
 }
 
 #[test]
-fn a_camera_magnifier_shows_the_camera_beside_it() {
-  // A green box in the camera's top-left corner, and a magnifier whose zoom
-  // area lies over the box and whose loupe sits on the screen left of the
-  // camera, in the camera's own pixels.
-  let mut magnifier = new_magnify("magnify".to_owned(), point(10.0, 10.0), None);
-  magnifier.shape = AnnotationShape::Magnify {
+fn a_camera_lens_enlarges_the_camera_under_it() {
+  // A green box in the camera's top-left corner, 30 across, and a lens over
+  // its corner at (20, 20), in the camera's own pixels: twice over, the box
+  // reaches (40, 40), past where it ends.
+  let mut lens = new_magnify("magnify".to_owned(), point(20.0, 20.0), None, None);
+  lens.shape = AnnotationShape::Magnify {
     start: point(0.0, 0.0),
-    end: point(20.0, 20.0),
-    loupe: point(-50.0, 30.0),
-    size: 40.0,
+    end: point(40.0, 40.0),
+    zoom: 2.0,
   };
-  let pixel = exported(
-    "magnifier",
-    vec![green_box(point(0.0, 0.0), point(30.0, 30.0)), magnifier],
-  );
+  lens.style.radius = 0.0;
+  lens.style.shadow = false;
+  let boxed = || green_box(point(0.0, 0.0), point(30.0, 30.0));
   let (x, y, _, _) = CAMERA;
-  // The loupe's middle, on the screen beside the camera: the green box the
-  // zoom area covers, enlarged.
-  assert!(green(pixel(x - 50, y + 30)), "{:?}", pixel(x - 50, y + 30));
-  // The screen around it is still the screen.
-  assert!(!green(pixel(x - 75, y + 85)) && !red(pixel(x - 75, y + 85)));
+  let lensed = exported("lens", vec![boxed(), lens]);
+  assert!(
+    green(lensed(x + 36, y + 36)),
+    "{:?}",
+    lensed(x + 36, y + 36)
+  );
+  let plain = exported("plain", vec![boxed()]);
+  assert!(!green(plain(x + 36, y + 36)), "{:?}", plain(x + 36, y + 36));
 }
 
 /// An erase fills its box with the surface around it, read from the

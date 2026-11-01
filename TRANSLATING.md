@@ -41,10 +41,10 @@ Placeholders such as `{ $name }` are filled in by the app. Keep them, moving the
 A message that depends on a count chooses a form with `$count`. Use the plural categories your language has (`zero`, `one`, `two`, `few`, `many`, `other`), whatever English uses:
 
 ```ftl
-editor-panels-annotations-selected =
+editor-island-keyboard-delete =
     { $count ->
-        [one] { $count } annotation selected
-       *[other] { $count } annotations selected
+        [one] Delete the shortcut
+       *[other] Delete { $count } shortcuts
     }
 ```
 

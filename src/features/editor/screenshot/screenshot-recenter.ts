@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import { sourceRect, SourceRect } from "./screenshot-geometry";
+import { screenshotInsetShare } from "./screenshot-inset";
 import {
   screenshotLayout,
   ScreenshotOutputSettings,
@@ -50,13 +51,7 @@ export const recenterScreenshotContent = (
   content: ScreenshotContentBounds,
 ): ScreenshotOutputSettings => {
   const layout = screenshotLayout(source, settings);
-  const inset = Math.max(
-    0,
-    Math.min(
-      (layout.crop.width - layout.sourceCrop.width) / 2,
-      (layout.crop.height - layout.sourceCrop.height) / 2,
-    ),
-  );
+  const share = screenshotInsetShare(settings, source);
   const sourceCrop = sourceRect({
     height: content.height / source.height,
     width: content.width / source.width,
@@ -69,6 +64,10 @@ export const recenterScreenshotContent = (
     x: layout.image.x + layout.image.width * sourceCrop.x,
     y: layout.image.y + layout.image.height * sourceCrop.y,
   };
+  // The padding is the content's share, so it keeps its proportion to the
+  // picture it now frames.
+  const inset =
+    share * Math.max(1, Math.min(contentRect.width, contentRect.height));
   const deltaX =
     layout.crop.x +
     layout.crop.width / 2 -
@@ -86,41 +85,8 @@ export const recenterScreenshotContent = (
       cropY: contentRect.y + deltaY - inset,
       imageX: settings.imageX + deltaX,
       imageY: settings.imageY + deltaY,
+      inset: share,
     },
     sourceCrop,
   );
-};
-
-/**
- * The layer's crop rect grown past its source crop by `inset` output pixels on
- * every side: the padded frame the Select tool treats as the layer.
- *
- * Nothing is clamped to the canvas. A padded layer is allowed to run past the
- * frame edges exactly as an unpadded one is, and the pad is filled with the
- * colour detected behind the content rather than cut to fit.
- */
-export const insetScreenshotPadding = (
-  settings: ScreenshotOutputSettings,
-  source: { height: number; width: number },
-  inset: number,
-): ScreenshotOutputSettings => {
-  const { sourceCrop } = screenshotLayout(source, settings);
-  const padding = Math.max(0, inset);
-  return {
-    ...settings,
-    cropHeight: sourceCrop.height + padding * 2,
-    cropWidth: sourceCrop.width + padding * 2,
-    cropX: sourceCrop.x - padding,
-    cropY: sourceCrop.y - padding,
-  };
-};
-
-/** The padding a layer is carrying now, in output pixels: half the difference
- * between its padded frame and the source crop inside it. */
-export const screenshotPaddingInset = (
-  settings: ScreenshotOutputSettings,
-  source: { height: number; width: number },
-) => {
-  const { crop, sourceCrop } = screenshotLayout(source, settings);
-  return Math.max(0, (crop.width - sourceCrop.width) / 2);
 };

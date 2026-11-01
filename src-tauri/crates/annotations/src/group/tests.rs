@@ -43,19 +43,18 @@ fn an_arrow_is_bounded_past_its_line_by_its_stroke() {
 }
 
 #[test]
-fn a_magnifier_is_bounded_round_its_loupe_as_well_as_its_zoom_area() {
-  let mut magnifier = new_arrow("m".to_owned(), point(0.0, 0.0), point(1.0, 1.0), None);
-  // A 100 by 50 zoom area enlarged to a 400-pixel loupe standing well away.
-  magnifier.shape = AnnotationShape::Magnify {
+fn a_lens_is_bounded_by_its_box() {
+  let mut lens = new_arrow("m".to_owned(), point(0.0, 0.0), point(1.0, 1.0), None);
+  lens.shape = AnnotationShape::Magnify {
     start: point(100.0, 100.0),
     end: point(200.0, 150.0),
-    loupe: point(800.0, 600.0),
-    size: 400.0,
+    zoom: 3.0,
   };
-  let bounds = annotation_bounds(&magnifier, 1.0).unwrap();
-  assert_eq!((bounds.x, bounds.y), (100.0, 100.0));
-  assert_eq!(bounds.x + bounds.width, 1000.0);
-  assert_eq!(bounds.y + bounds.height, 700.0);
+  let bounds = annotation_bounds(&lens, 1.0).unwrap();
+  assert_eq!(
+    (bounds.x, bounds.y, bounds.width, bounds.height),
+    (100.0, 100.0, 100.0, 50.0)
+  );
 }
 
 #[test]

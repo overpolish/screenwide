@@ -2,14 +2,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  canvasScale,
+  scaledCameraOverlay,
+  scaleScreenshotCanvas,
+  scaleScreenshotWorkspaceCanvas,
+} from "../../screenshot/screenshot-canvas-scale";
+import {
   RecordingOutputSettings,
-  resizeScreenshotCanvas,
-  resizeScreenshotWorkspaceCanvas,
   ScreenshotOutputSettings,
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
 } from "../../screenshot/screenshot-output";
-import { EditorArtifact, RecordingVideoTrackId } from "../../types";
+import {
+  CameraOverlaySettings,
+  EditorArtifact,
+  RecordingVideoTrackId,
+} from "../../types";
 import { ToolPanelHandlers } from "../tool-panel-handlers";
 import { ToolPanelFrame } from "../tool-panel-store";
 
@@ -28,7 +36,8 @@ import {
  * never has to know whether it is looking at a recording or a screenshot.
  */
 export type EditorFrameTarget = {
-  /** Commit a canvas of this size, leaving what is in it where it sits. */
+  /** Commit a canvas of this size, what is in it scaled with it so the
+   * composition keeps its proportions. */
   apply: (size: { height: number; width: number }) => void;
   /** Fill the canvas with this background, leaving the other kinds' values
    * where they were so a swap back finds them unchanged. */
@@ -37,7 +46,7 @@ export type EditorFrameTarget = {
   applyRadius: (radius: number) => void;
   /** The canvas's background, as the picker shows it. */
   background: Background;
-  /** Back to the source size, with what is in it refitted to the new canvas. */
+  /** Back to the source size, what is in it scaled with it. */
   reset: () => void;
   /** The canvas as the panel shows it. */
   snapshot: ToolPanelFrame;
@@ -46,6 +55,9 @@ export type EditorFrameTarget = {
 type FrameTargetInputs = {
   artifact: EditorArtifact | null;
   bakeCamera: boolean;
+  /** The camera drawn into the screen's canvas, which a new size scales as
+   * it does the screen. */
+  cameraOverlay: CameraOverlaySettings;
   /** The video tracks the workspace draws, which leave out a camera saved as
    * a separate file. */
   composedVideoTracks: RecordingVideoTrackId[];
@@ -53,6 +65,7 @@ type FrameTargetInputs = {
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
   selectedTrack: string | null;
+  onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
   onRecordingOutputChange?: (
     track: RecordingVideoTrackId,
@@ -114,31 +127,26 @@ const recordingFrameTarget = (
       ? { height: artifact.camera.height, width: artifact.camera.width }
       : { height: artifact.height, width: artifact.width };
   const settings = output[track];
-  return target({
-    // The inspector's own canvas resize: only the canvas changes size. What
-    // is placed in it, a baked camera overlay included, is measured in output
-    // pixels and so keeps the place in the picture it was put in.
-    apply: ({ height, width }) => {
-      inputs.onRecordingOutputChange?.(
-        track,
-        resizeScreenshotCanvas({ height, settings, width }),
+  // The canvas and everything in it scale together: the layer, and a camera
+  // drawn into the screen's canvas, measured in its pixels. Both change in
+  // one commit, so they are one undo step.
+  const resize = (size: { height: number; width: number }) => {
+    inputs.onRecordingOutputChange?.(
+      track,
+      scaleScreenshotCanvas({ ...size, settings }),
+    );
+    if (bakedCamera && track === "primary")
+      inputs.onCameraOverlayChange?.(
+        scaledCameraOverlay(inputs.cameraOverlay, canvasScale(settings, size)),
       );
-    },
+  };
+  return target({
+    apply: resize,
     applyOutput: (next) => {
       inputs.onRecordingOutputChange?.(track, next);
     },
-    // Resetting the frame is resizing it back to the source size and no
-    // more: the layer keeps the transform the Select tool gave it, as it
-    // would through a typed size.
     reset: () => {
-      inputs.onRecordingOutputChange?.(
-        track,
-        resizeScreenshotCanvas({
-          height: source.height,
-          settings,
-          width: source.width,
-        }),
-      );
+      resize(source);
     },
     settings,
     source,
@@ -161,7 +169,7 @@ const screenshotFrameTarget = (
   return target({
     apply: ({ height, width }) => {
       inputs.onCanvasResize?.(
-        resizeScreenshotWorkspaceCanvas({ height, settings: output, width }),
+        scaleScreenshotWorkspaceCanvas({ height, settings: output, width }),
       );
     },
     // The background is a property of the workspace canvas: every layer reads
@@ -169,12 +177,9 @@ const screenshotFrameTarget = (
     applyOutput: (next) => {
       inputs.onCanvasResize?.({ ...output, ...next });
     },
-    // Resetting the frame is resizing it back to the source size and no
-    // more: every layer keeps the transform the Select tool gave it, as it
-    // would through a typed size.
     reset: () => {
       inputs.onCanvasResize?.(
-        resizeScreenshotWorkspaceCanvas({
+        scaleScreenshotWorkspaceCanvas({
           height: source.height,
           settings: output,
           width: source.width,

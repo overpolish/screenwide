@@ -9,6 +9,7 @@ import { type TimelineShortcut } from "../shortcut-lane/shortcut-chip";
 import { type Span } from "../timeline-scale";
 
 import { type StripBeat, type StripLull } from "./strip-beat-row";
+import { partId } from "./strip-part";
 
 // Where the recording no longer plays straight on, whatever runs across the
 // place is drawn as parts, one each side, as the editor splits it when a
@@ -41,11 +42,6 @@ export function splitAt<T>(
   });
 }
 
-/** A part's id: the first keeps the item's, so what is chosen stays chosen;
- * each after it takes its own. */
-export const partId = (id: string, index: number) =>
-  index === 0 ? id : `${id}:${String(index)}`;
-
 const own = <T extends Span>(item: T) => item;
 
 /** Spans with ids, split at `edges`. */
@@ -71,10 +67,19 @@ export const clipped = (spans: Span[] | undefined, to: Span) =>
     }))
     .filter((each) => each.end > each.start);
 
-/** A line's share of `span`: the words said in it. */
+/** How short, in seconds, a part split at a jump is a sliver: an item's
+ * edge and a jump's this close are one moment, apart only by rounding. */
+export const SLIVER_S = 1e-3;
+
+/** A line's share of `span`: the words said in it. A word said where the
+ * span starts, give or take a sliver, is said in it: a jump a rounding
+ * after the line's start would otherwise leave its first word to the
+ * sliver before the jump, which is not drawn, and the line drawn blank. */
 export const captionPart = (line: TimelineCaption, span: Span) => {
   const words = line.words.filter(
-    ({ at }) => at >= span.start && at < span.end,
+    ({ at }) =>
+      at >= span.start - SLIVER_S &&
+      (span.end >= line.end || at < span.end - SLIVER_S),
   );
   return {
     ...line,

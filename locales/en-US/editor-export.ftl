@@ -7,6 +7,10 @@ editor-export-file-name = File name
 editor-export-save-to = Save to
 editor-export-format = Format
 editor-export-size = Size
+# Whether the camera is drawn into the screen's video or saved as its own file.
+editor-export-camera = Camera
+editor-export-camera-combined = One video
+editor-export-camera-separate = Separate files
 editor-export-output-size = Output size
 editor-export-camera-output-size = Camera output size
 editor-export-scale-original = Original

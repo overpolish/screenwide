@@ -42,7 +42,7 @@ import { layOutIsland } from "./island-stack-layout";
 // shape opens around it. Around a notch each side of the row is only as
 // wide as it needs, and the whole shape moves sideways by half the
 // difference so the notch stays over its gap. Hidden, it tucks into the
-// notch, or shrinks to a speck and fades where there is none.
+// notch, or shrinks to a speck, or nothing, and fades where there is none.
 //
 // The row is a toolbar: arrow keys move between its controls. The section is
 // outside it, so a list in the section keeps its own arrow keys. Nothing on
@@ -87,6 +87,9 @@ export type IslandProps = {
   /** Every section takes at least the row's width, so the island is one
    * block rather than a row with parts hanging off it. */
   sectionSpansRow?: boolean;
+  /** Without a notch, it shrinks on past a speck to nothing: for an island
+   * on a picture, where a speck would read as something left behind. */
+  shrinksToNothing?: boolean;
 };
 
 export function Island({
@@ -103,6 +106,7 @@ export function Island({
   rowFillsWidth = false,
   section,
   sectionSpansRow = false,
+  shrinksToNothing = false,
 }: IslandProps) {
   const [rowElement, setRowElement] = useState<HTMLDivElement | null>(null);
   const [sectionElement, setSectionElement] = useState<HTMLDivElement | null>(
@@ -150,6 +154,7 @@ export function Island({
     rowShift,
     rowSize,
     sectionSize,
+    shrinksToNothing,
     spansRow: sectionSpansRow,
   });
   const { flare, isOpen, radius, rowTarget, top, width } = layout;

@@ -10,6 +10,7 @@ import {
   editorIslandStoryMeta,
   type EditorIslandStoryProps,
 } from "../../editor-island-story-meta";
+import { storyPinAfter } from "../annotation-pin-story-fixtures";
 
 import { counterIsland, type CounterIslandProps } from "./counter-island";
 
@@ -29,9 +30,11 @@ const meta = {
     id: "counter",
     isShown: true,
     onDelete: fn(),
+    onPinAction: fn(),
     onRemoveColor: fn(),
     onSaveColor: fn(),
     onStyleChange: fn(),
+    pin: null,
     savedColors: [],
     style: { angle: 0, color: "#FFCC00", isAnimated: true, size: 36 },
   },
@@ -43,6 +46,10 @@ const meta = {
     return (
       <CounterIsland
         {...args}
+        onPinAction={(action) => {
+          args.onPinAction?.(action);
+          updateArgs({ pin: storyPinAfter(args.pin, action) });
+        }}
         onRemoveColor={(color) => {
           args.onRemoveColor(color);
           updateArgs({
@@ -70,4 +77,6 @@ type Story = StoryObj<typeof meta>;
 export const Recording: Story = {};
 
 // A screenshot is one instant, so there is nothing to pop in over.
-export const Screenshot: Story = { args: { canAnimate: false } };
+export const Screenshot: Story = {
+  args: { canAnimate: false, pin: undefined },
+};

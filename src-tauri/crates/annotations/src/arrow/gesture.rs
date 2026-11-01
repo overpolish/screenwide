@@ -48,10 +48,7 @@ pub(crate) fn drag(
     // delta, so the curve keeps its bend and its heads keep their aim. A
     // counter's tail grip or a box's grips mean nothing to an arrow and move
     // it likewise.
-    AnnotationHandle::Body
-    | AnnotationHandle::Tail
-    | AnnotationHandle::Edges(_)
-    | AnnotationHandle::Radius => {
+    AnnotationHandle::Body | AnnotationHandle::Tail | AnnotationHandle::Edges(_) => {
       let AnnotationShape::Arrow {
         start: from_start,
         control: from_control,

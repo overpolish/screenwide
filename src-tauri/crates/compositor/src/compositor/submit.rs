@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::canvas_pipelines::Target;
+use super::lens_ground::{GroundPlan, LensGround};
+use super::pipeline::{buffer, texture};
 use super::*;
 
 impl Compositor {
@@ -72,6 +74,10 @@ impl Compositor {
           .write_buffer(constants, 0, bytemuck::bytes_of(&plan.pass(values, part)));
       }
     }
+    let frame = layer.placement.map_or(size, |placement| placement.target);
+    // Where each lens's ground lies, written into its record before upload.
+    let focused = focus.is_some();
+    let grounds = GroundPlan::of(kinds, &mut annotations, prepared, &values, focused, frame);
     let annotation_buffer = self.annotations.write(gpu, &annotations)?;
     let sample_buffer = self.samples.write(gpu, &prepared.samples)?;
     let points_buffer = self.annotation_points.write(gpu, &prepared.points)?;
@@ -102,20 +108,23 @@ impl Compositor {
         layer.retained_source,
       )?
       .unwrap_or_else(|| source.view.clone());
+    // A lens on a layer laid over others shows them through a copy of the
+    // target as it stands, taken before this layer draws over it.
+    let under = match &grounds {
+      Some(plan) if composition.foreground_only => {
+        self
+          .lens_under
+          .record(gpu, &mut encoder, target.texture(), plan.under)?
+      }
+      _ => None,
+    };
+    let atlas = grounds
+      .as_ref()
+      .map(|plan| self.lens_ground.atlas(gpu, plan))
+      .transpose()?;
     let fallback = &self.fallback_view;
-    fn texture(binding: u32, view: &wgpu::TextureView) -> wgpu::BindGroupEntry<'_> {
-      wgpu::BindGroupEntry {
-        binding,
-        resource: wgpu::BindingResource::TextureView(view),
-      }
-    }
-    fn buffer(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
-      wgpu::BindGroupEntry {
-        binding,
-        resource: buffer.as_entire_binding(),
-      }
-    }
-    let bind = |constants: &wgpu::Buffer, [marks, cursor]: [&wgpu::TextureView; 2]| {
+    let lenses = atlas.as_ref().unwrap_or(fallback);
+    let bind = |constants: &wgpu::Buffer, [marks, cursor, lenses]: [&wgpu::TextureView; 3]| {
       gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Screenwide preview bindings"),
         layout: &self.layout,
@@ -152,20 +161,34 @@ impl Compositor {
           texture(15, marks),
           texture(16, cursor),
           texture(17, images.as_ref().unwrap_or(fallback)),
+          texture(18, under.as_ref().unwrap_or(fallback)),
+          texture(19, lenses),
         ],
       })
     };
+    // The grounds are drawn by the same variant as the layers, ahead of each
+    // pass that reads them: the marks' blur layer, which they are drawn
+    // under without, then the canvas, with it.
+    let delta = || self.canvas.get(Target::Delta, kinds, every, features);
+    let draw_grounds =
+      |encoder: &mut wgpu::CommandEncoder, slot: usize, [marks, cursor]: [_; 2]| {
+        if let (Some(plan), Some(atlas)) = (&grounds, &atlas) {
+          self.lens_ground.write(gpu, slot, values);
+          let bindings = bind(&self.lens_ground.constants[slot], [marks, cursor, fallback]);
+          LensGround::draw(encoder, atlas, plan, &delta(), &bindings);
+        }
+      };
     let blurred = blur
       .map(|plan| {
+        draw_grounds(&mut encoder, 0, [fallback, fallback]);
         let [marks, cursor] = &self.mark_blur.constants;
-        let delta = self.canvas.get(Target::Delta, kinds, every, features);
         self.mark_blur.record(
           gpu,
           &mut encoder,
-          &delta,
+          &delta(),
           [
-            &bind(marks, [fallback, fallback]),
-            &bind(cursor, [fallback, fallback]),
+            &bind(marks, [fallback, fallback, lenses]),
+            &bind(cursor, [fallback, fallback, lenses]),
           ],
           plan,
         )
@@ -174,6 +197,9 @@ impl Compositor {
     let layers = blurred
       .as_ref()
       .map_or([fallback, fallback], |[marks, cursor]| [marks, cursor]);
+    draw_grounds(&mut encoder, 1, layers);
+    let [marks, cursor] = layers;
+    let layers = [marks, cursor, lenses];
     // A layer keeps the layers drawn under it; a whole canvas is written over
     // every pixel, so what the target held is never read. A placed canvas
     // leaves the target as it was past its edge, under whatever lies there,
@@ -189,7 +215,6 @@ impl Compositor {
     // its edge is drawn too. A viewport would scale it instead, but one is
     // capped at the largest texture size, and a canvas zoomed far in is
     // drawn larger than that.
-    let frame = layer.placement.map_or(size, |placement| placement.target);
     let canvas_target = if blended {
       Target::Layer
     } else {
@@ -197,6 +222,7 @@ impl Compositor {
     };
     let canvas_pass = |encoder: &mut wgpu::CommandEncoder,
                        view: &wgpu::TextureView,
+                       viewport: (u32, u32),
                        load: wgpu::LoadOp<wgpu::Color>,
                        pipeline: Target,
                        bindings: &wgpu::BindGroup| {
@@ -213,7 +239,7 @@ impl Compositor {
         })],
         ..Default::default()
       });
-      pass.set_viewport(0.0, 0.0, frame.0 as f32, frame.1 as f32, 0.0, 1.0);
+      pass.set_viewport(0.0, 0.0, viewport.0 as f32, viewport.1 as f32, 0.0, 1.0);
       pass.set_pipeline(&self.canvas.get(pipeline, kinds, every, features));
       pass.set_bind_group(0, bindings, &[]);
       pass.draw(0..3, 0..1);
@@ -223,10 +249,12 @@ impl Compositor {
       // into the target, then what lies over it laid sharp on top.
       Some(plan) => {
         let [under, over] = &self.focus.constants;
-        let chain = self.focus.chain(gpu, frame, layer.redaction_slot)?;
+        let chain_size = super::focus::FocusPlan::chain_size(frame, layer.placement.is_some());
+        let chain = self.focus.chain(gpu, chain_size, layer.redaction_slot)?;
         canvas_pass(
           &mut encoder,
           &chain,
+          chain_size,
           wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
           canvas_target,
           &bind(under, layers),
@@ -247,6 +275,7 @@ impl Compositor {
           canvas_pass(
             &mut encoder,
             target,
+            frame,
             wgpu::LoadOp::Load,
             Target::Layer,
             &bind(over, layers),
@@ -256,6 +285,7 @@ impl Compositor {
       None => canvas_pass(
         &mut encoder,
         target,
+        frame,
         load,
         canvas_target,
         &bind(&self.constants, layers),

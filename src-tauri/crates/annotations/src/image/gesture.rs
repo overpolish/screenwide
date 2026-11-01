@@ -6,14 +6,14 @@
 //! Its grips are those of its own frame, turned and tilted with the picture,
 //! each moving the picture's own sides. A corner or an edge sizes the whole
 //! picture, keeping its proportions, with the frame's opposite side held
-//! where it was; the radius dot rounds its corners; the body carries it.
+//! where it was; the body carries it.
 //! Every sample is measured against the image the press began on, in that
 //! image's own frame, the hand carried back through its tilt.
 
 use super::model::{field_box, half_extents, MIN_IMAGE_SIZE};
 use super::tilt::{placed, unplaced};
 use super::ImageTilt;
-use crate::box_gesture::{carry, radius_at, EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP};
+use crate::box_gesture::{carry, EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP};
 use crate::gesture::{AnnotationDragOrigin, AnnotationHandle};
 use crate::snap::{SnapBox, SnapRequest, SnapResult};
 use crate::{Annotation, AnnotationPoint, AnnotationShape};
@@ -49,19 +49,6 @@ pub(crate) fn drag(
   // upright. A hand past the tilted picture's horizon reaches no side of it.
   let (half_width, half_height) = half_extents(from_size, aspect);
   let local = unplaced(from_center, from_angle, tilt, from_size, point);
-  if handle == AnnotationHandle::Radius {
-    let Some(local) = local else {
-      return SnapResult::default();
-    };
-    let own = SnapBox {
-      x: -half_width,
-      y: -half_height,
-      width: half_width * 2.0,
-      height: half_height * 2.0,
-    };
-    annotation.style.radius = radius_at(own, local, origin.source_per_point);
-    return SnapResult::default();
-  }
   let AnnotationShape::Image { center, size, .. } = &mut annotation.shape else {
     return SnapResult::default();
   };

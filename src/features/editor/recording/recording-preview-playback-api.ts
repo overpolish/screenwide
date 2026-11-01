@@ -10,15 +10,13 @@ export const playRecordingPreview = (
   playbackEndMs?: number,
   options?: {
     playbackRanges?: RecordingTimelinePlaybackRange[];
-    playbackRate?: number;
     startPositionMs?: number;
   },
 ) => {
-  const { playbackRanges, playbackRate, startPositionMs } = options ?? {};
+  const { playbackRanges, startPositionMs } = options ?? {};
   return invoke<null>("play_recording_preview", {
     playbackEndMs,
     playbackRanges,
-    playbackRate,
     sessionId,
     startPositionMs,
   });

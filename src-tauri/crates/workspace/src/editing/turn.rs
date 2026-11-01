@@ -22,7 +22,7 @@ pub(super) use drag::{cancel, down, pointer_move, up};
 /// through the turn.
 mod chrome;
 pub(super) use chrome::{
-  carried_box, carried_point, carried_rect, carried_segment, chrome, TurnChrome, RING_KIND,
+  carried_point, carried_rect, carried_segment, chrome, TurnChrome, RING_KIND,
 };
 
 /// A ring held: the drag, the selection as the press found it, where the
@@ -106,6 +106,25 @@ pub(super) fn selected_layer_point(state: &SurfaceState, point: (f64, f64)) -> (
     .map_or(point, |selection| unturned_point(state, selection, point))
 }
 
+/// `point`, read on the selected layer standing upright, as it lands on
+/// `layer` standing upright. Each layer is turned its own way, so an
+/// annotation on a layer other than the selected one is measured here, not
+/// against the selected layer's reading of the press.
+pub(super) fn point_on_layer(
+  state: &SurfaceState,
+  layer: PreviewSelection,
+  point: (f64, f64),
+) -> (f64, f64) {
+  let Some(selected) = state.selection else {
+    return unturned_point(state, layer, point);
+  };
+  if selected.pane_index == layer.pane_index && selected.layer_id == layer.layer_id {
+    return point;
+  }
+  let display = homographies(state, selected).map_or(point, |(forward, _)| carry(forward, point));
+  unturned_point(state, layer, display)
+}
+
 /// Whether `selection`'s chrome is drawn and pressed through a turn.
 pub(super) fn selection_is_turned(state: &SurfaceState, selection: PreviewSelection) -> bool {
   homographies(state, selection).is_some()
@@ -131,7 +150,6 @@ pub(super) fn layer_point(inner: &SurfaceInner, point: (f64, f64)) -> (f64, f64)
 /// layer a scene turns.
 fn rings_shown(state: &SurfaceState) -> bool {
   state.editor_active
-    && state.selection_visible
     && state
       .selection
       .is_some_and(|selection| selection.turnable != 0 && selection.crop_mode == 0)

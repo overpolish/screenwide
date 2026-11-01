@@ -1,44 +1,48 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef } from "react";
+import { useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { useAnnotationDraft } from "../annotations/annotation-draft";
 import { useToolFollowsAnnotation } from "../annotations/use-tool-follows-annotation";
 import { placeScreenshotImage } from "../images/image-api";
 import { useIncomingImages } from "../images/use-incoming-images";
+import { useEditorIslandWindow } from "../island/host/use-editor-island-window";
 import { PreviewViewport } from "../preview/preview-viewport";
-import { usePreviewZoom } from "../preview/use-preview-zoom";
+import {
+  screenshotBetween,
+  useTweenedOutput,
+} from "../preview/use-tweened-output";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
-  screenshotWorkspaceItemOutput,
-  ScreenshotOutputSettings,
-} from "../screenshot/screenshot-output";
-import { ScreenshotStatusBar } from "../screenshot/screenshot-status-bar";
-import {
+  columnMode,
+  columnTool,
+  screenshotIsland,
   ScreenshotTool,
-  useScreenshotTools,
-} from "../screenshot/screenshot-tools";
+} from "../screenshot/screenshot-column";
+import { screenshotWorkspaceItemOutput } from "../screenshot/screenshot-output";
 import { useScreenshotAnnotations } from "../screenshot/use-screenshot-annotations";
 import { useScreenshotLayerActions } from "../screenshot/use-screenshot-layer-actions";
+import { useScreenshotNudge } from "../screenshot/use-screenshot-nudge";
 import { useScreenshotRecenter } from "../screenshot/use-screenshot-recenter";
 import { useScreenshotTool } from "../screenshot/use-screenshot-tool";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
+import { useSelectHold } from "../shortcuts/use-select-hold";
+import { usePublishEditorModes } from "../title-bar/editor-title-modes";
 import {
-  EditorToolId,
+  cropAspectKey,
+  keepsShape,
+  useCropAspectStore,
+} from "../tool-panels/crop/crop-aspect-store";
+import {
   drawingToolKind,
   isAnnotationTool,
 } from "../tool-panels/tool-registry";
-import { useCanvasTool } from "../tool-panels/use-canvas-tool";
-import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
+import { NO_CAPTURE_PARTS } from "../toolbar/editor-modes";
+import { EditorToolColumn } from "../toolbar/editor-tool-column";
 
 import { ScreenshotSectionProps } from "./editor-preview-section-props";
-import { useProvideEditorToolbarTools } from "./editor-toolbar-context";
-
-/** The toolbar's own name for a tool, in the registry's vocabulary. */
-const screenshotToolId = (tool: ScreenshotTool): EditorToolId | null =>
-  tool === "canvas" ? "frame" : tool;
 
 /**
  * The screenshot section. Sibling to `RecordingSection`, and the reason the
@@ -48,24 +52,34 @@ export function ScreenshotSection({
   artifact,
   isSaving = false,
   isSheetOpen = false,
-  onBackgroundRadiusChange,
-  onBackgroundRadiusChangeEnd,
   onCanvasResize,
   onOutputChange,
-  onRadiusChangeEnd,
   onSelectedItemChange,
   screenshotOutput,
   selectedItemId = null,
 }: ScreenshotSectionProps) {
-  const { reportZoom, requestZoom, zoomPercent, zoomRequest } =
-    usePreviewZoom();
-  const [activeTool, setActiveTool] = useCanvasTool<
-    Exclude<ScreenshotTool, null>
-  >("screenshot", "select");
+  // Select is what is in hand when nothing else is: a tool put down, by its
+  // button pressed again or by Escape, leaves Select.
+  const [activeTool, setActiveTool] =
+    useState<Exclude<ScreenshotTool, null>>("select");
   const tool = activeTool;
+  // ⌘ (Ctrl) held over a pen puts Select on the picture until it is let go;
+  // a press under it that takes hold of something puts Select in hand.
+  const isSelectHeld = useSelectHold({
+    canHold: drawingToolKind(tool) !== null && !isSheetOpen,
+    onTook: () => {
+      setActiveTool("select");
+    },
+  });
+  const pictureTool = isSelectHeld ? "select" : tool;
   const selectedItem = artifact.items.find(
     (item) => item.id === selectedItemId,
   );
+  // The Screenshot mode is Select on a chosen layer, however it was chosen
+  // (`columnMode`): putting the layer down or taking up another tool puts
+  // it away.
+  const mode = columnMode(tool, selectedItem !== undefined);
+  const isScreenOpen = mode === "screen";
   const selectedOutput =
     screenshotOutput && selectedItem
       ? screenshotWorkspaceItemOutput(screenshotOutput, selectedItem.id)
@@ -81,29 +95,38 @@ export function ScreenshotSection({
     sourceWidths: new Map(artifact.items.map((item) => [item.id, item.width])),
     workspace: screenshotOutput,
   });
-  // The panel follows the tool in hand, so choosing one is all a button or a
-  // shortcut has to do - except while an arrow is chosen, whose own panel
-  // stands in front of the tool's until it is let go of.
-  useToolPanelFollowsTool(
-    "screenshot",
-    screenshotToolId(tool),
-    annotations.hasSelection,
-  );
-  // What a drawing tool's panel shows while nothing is chosen: the dress its
-  // next annotation is drawn in.
-  useAnnotationDraft("screenshot", screenshotToolId(tool));
+  // What a pen's island shows while nothing is chosen: the dress its next
+  // annotation is drawn in.
+  useAnnotationDraft("screenshot", drawingToolKind(tool));
   const setTool = useScreenshotTool({
     chooseSelection: annotations.onSelectedIdsChange,
     clearSelection: annotations.clearSelection,
     selectedIds: annotations.selectedIds,
     selectedKind: annotations.selectedKind,
-    setActiveTool,
+    setActiveTool: (next) => {
+      setActiveTool(next ?? "select");
+    },
     tool,
   });
-  // Both drawing tools pick up either shape, so the tool follows the annotation
-  // that was chosen with it: the panel and the next press never disagree.
+  // Choosing an annotation takes up its pen, whose island shows it.
   useToolFollowsAnnotation(annotations.selectedKind, tool, setTool);
-  const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
+  const island = screenshotIsland({
+    annotationCount: annotations.selectedIds.size,
+    hasSelectedLayer: selectedItem !== undefined,
+    selectedKind: annotations.selectedKind,
+    tool,
+  });
+  useEditorIslandWindow({ island, workspace: "screenshot" });
+  const newestItemId =
+    artifact.items.length > 0
+      ? artifact.items[artifact.items.length - 1].id
+      : null;
+  const cropLayer = selectedItemId ?? newestItemId;
+  const cropAspect = useCropAspectStore((state) =>
+    cropLayer === null
+      ? undefined
+      : state.aspects[cropAspectKey("screenshot", cropLayer)],
+  );
   const { deleteLayer: deleteSelectedLayer, moveLayer: moveSelectedLayer } =
     useScreenshotLayerActions({
       onCanvasResize,
@@ -117,89 +140,63 @@ export function ScreenshotSection({
     selectedItem,
     selectedOutput,
   });
-  // A keyboard nudge writes exactly the fields a select-tool drag writes - the
-  // `move` branch of `selectionGesture` in preview-viewport.tsx. It is not
-  // wrapped in an edit gesture on purpose: the history hook already groups
-  // same-key edits that land within its grouping delay, so a held arrow folds
-  // into one undo step while a pause starts the next. No snapping: the arrows
-  // are the way to place a layer precisely.
-  const nudgeRef = useRef<{
-    after: ScreenshotOutputSettings;
-    beforeX: number;
-    beforeY: number;
-    itemId: number;
-  } | null>(null);
-  const nudgeSelectedLayer = (
-    directionX: number,
-    directionY: number,
-    coarse: boolean,
-  ) => {
-    if (!selectedItem || !selectedOutput) return;
-    const pixels = coarse ? 10 : 1;
-    const deltaX = directionX * pixels;
-    const deltaY = directionY * pixels;
-    // Key repeat can outrun React. While the committed settings have not come
-    // back yet the props still hold the previous press's starting point, so
-    // continue from what that press sent instead of repeating it.
-    const pending = nudgeRef.current;
-    const base =
-      pending &&
-      pending.itemId === selectedItem.id &&
-      pending.beforeX === selectedOutput.cropX &&
-      pending.beforeY === selectedOutput.cropY
-        ? pending.after
-        : selectedOutput;
-    const next = {
-      ...base,
-      cropX: base.cropX + deltaX,
-      cropY: base.cropY + deltaY,
-      imageX: base.imageX + deltaX,
-      imageY: base.imageY + deltaY,
-    };
-    nudgeRef.current = {
-      after: next,
-      beforeX: selectedOutput.cropX,
-      beforeY: selectedOutput.cropY,
-      itemId: selectedItem.id,
-    };
-    onOutputChange?.(next, selectedItem.id);
-  };
-  const tools = useScreenshotTools({
-    newestItemId,
-    onSelectedItemChange,
-    selectedItemId,
-    setTool,
-    tool,
+  // A setting chosen on an island is drawn as the picture moving to it.
+  const drawnOutput = useTweenedOutput(
+    screenshotOutput,
+    { part: "picture", workspace: "screenshot" },
+    screenshotBetween,
+  );
+  const nudgeSelectedLayer = useScreenshotNudge({
+    onOutputChange,
+    selectedItem,
+    selectedOutput,
   });
-  // The tools are drawn in the title bar, the way a unified toolbar carries
-  // them, while their behaviour stays here with the picture they act on.
-  useProvideEditorToolbarTools(tools);
   // The crop tool is the one tool you are "in": Enter accepts what is framed
-  // and Escape backs out of it, and both simply put the tool down - the crop
-  // itself was committed as each handle was released.
+  // and puts it down, the crop itself committed as each handle was released.
   const isCropping = tool === "crop";
-  // A drawing tool is the other kind you are "in": Escape puts it down.
-  const isAnnotating = drawingToolKind(tool) !== null;
-  // Every one of them hit-tests the annotations on the layer; only a drawing
-  // tool makes a new one, and only it takes every press over the picture. The
+  // Every one of these hit-tests the annotations on the layer; only a pen
+  // makes a new one, and only it takes every press over the picture. The
   // marquee draws a band over the picture instead.
-  const annotationTool = isAnnotationTool(tool) ? tool : undefined;
+  const annotationTool = isAnnotationTool(pictureTool)
+    ? pictureTool
+    : undefined;
   const hasSelectedAnnotation = annotations.hasSelection;
-  const leaveCropTool = () => {
-    setTool((current) => (current === "crop" ? null : current));
+  // Select first, then nothing chosen: taken up, Select would bring back the
+  // annotations it held when it was put down (`useSelectToolMemory`). The
+  // Screenshot mode put away lets its layer go, so its island leaves.
+  const backToSelect = () => {
+    setTool("select");
+    annotations.clearSelection();
+    if (isScreenOpen) onSelectedItemChange?.(null);
   };
-  // Escape backs out one layer at a time: an arrow in hand is let go first,
-  // and only a second press puts the tool itself down.
-  const leaveModalTool = () => {
-    if (hasSelectedAnnotation) {
-      annotations.clearSelection();
-      return;
-    }
-    setTool((current) =>
-      drawingToolKind(current) !== null || current === "crop" ? null : current,
-    );
+  // A tool that draws on a layer takes one in hand, the newest where none
+  // is chosen.
+  const takeUp = (next: ScreenshotTool) => {
+    if (next !== "select" && next !== "canvas" && selectedItemId === null)
+      onSelectedItemChange?.(newestItemId);
+    setTool(next);
   };
-  // The Select panel's padding controls reach this workspace's analysis
+  const toggle = (next: ScreenshotTool) => {
+    takeUp(tool === next ? "select" : next);
+  };
+  usePublishEditorModes({
+    kind: "screenshot",
+    mode,
+    onModeChange: (next) => {
+      if (next === null) backToSelect();
+      else if (next === "frame") takeUp("canvas");
+      else {
+        // The Screenshot mode is Select on a layer, the newest where none
+        // is chosen, with the annotations let go as any mode lets them go.
+        if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
+        setTool("select");
+        annotations.clearSelection();
+      }
+    },
+    parts: NO_CAPTURE_PARTS,
+    tracks: null,
+  });
+  // The Screenshot island's padding controls reach this workspace's analysis
   // through here, alongside the refresh a crop drag ends with.
   useRecenterInsetControls("screenshot", recenter);
   useEditorWindowShortcuts({
@@ -208,85 +205,86 @@ export function ScreenshotSection({
     onArrange: (move) => {
       if (!annotations.arrangeSelected(move)) moveSelectedLayer(move);
     },
-    onConfirm: isCropping ? leaveCropTool : undefined,
+    onConfirm: isCropping ? backToSelect : undefined,
     // Backspace and Delete take away the annotation the hand is pointing at
     // first, and only the layer when there is no annotation under them.
     onDelete: () => {
       if (!annotations.deleteTargeted()) deleteSelectedLayer();
     },
+    // Escape puts Select back in hand with nothing chosen.
     onDeselect:
-      isCropping || isAnnotating || hasSelectedAnnotation
-        ? leaveModalTool
+      tool !== "select" || hasSelectedAnnotation || isScreenOpen
+        ? backToSelect
         : undefined,
+    // ⌘D lets go of everything chosen, the layer as well, with Select in
+    // hand.
+    onDeselectAll: () => {
+      backToSelect();
+      onSelectedItemChange?.(null);
+    },
     onMarqueeTool: () => {
-      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
-      setTool((current) => (current === "marquee" ? null : "marquee"));
+      toggle("marquee");
     },
     onNudge:
       tool === "select" && selectedItem && selectedOutput
         ? nudgeSelectedLayer
         : undefined,
     onResizeCanvas: () => {
-      setTool((current) => (current === "canvas" ? null : "canvas"));
+      toggle("canvas");
     },
-    onSelectTool: () => {
-      setTool((current) => (current === "select" ? null : "select"));
-    },
+    onSelectTool: backToSelect,
     onToggleCrop: () => {
-      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
-      setTool((current) => (current === "crop" ? null : "crop"));
+      toggle("crop");
     },
-    // A drawing tool draws on a layer, so its key takes one in hand the way
-    // the crop key does.
-    onTool: (next) => {
-      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
-      setTool((current) => (current === next ? null : next));
-    },
-    ownsEscape: isCropping || isAnnotating || hasSelectedAnnotation,
+    onTool: toggle,
+    ownsEscape: tool !== "select" || hasSelectedAnnotation || isScreenOpen,
   });
   useIncomingImages("screenshot", placeScreenshotImage, {
-    // The image placed is chosen; a tool that shows it is put in hand,
-    // unless the select tool or the image tool already is.
+    // The image placed is chosen, and its pen taken up with it.
     onPlaced: () => {
-      setTool((current) =>
-        current === "select" || current === "image" ? current : "image",
-      );
+      setTool("image");
     },
   });
 
   return (
-    <div className="flex min-h-0 min-w-0 grow flex-col">
-      <PreviewViewport
-        alt={t("editor-screenshot-preview")}
-        annotationTool={annotationTool}
-        artifactId={artifact.id}
-        isEditing={tool === "crop"}
-        isResizingCanvas={tool === "canvas"}
-        isSaving={isSaving}
-        isSelecting={tool === "select"}
-        isSheetOpen={isSheetOpen}
-        items={artifact.items}
-        naturalHeight={artifact.height}
-        naturalWidth={artifact.width}
-        onAnnotationHover={annotations.onHoverChange}
-        onBackgroundRadiusChange={onBackgroundRadiusChange}
-        onBackgroundRadiusChangeEnd={onBackgroundRadiusChangeEnd}
-        onCanvasResize={onCanvasResize}
-        onCropChangeEnd={recenter.refresh}
-        onItemSelect={onSelectedItemChange}
-        onOutputChange={onOutputChange}
-        onRadiusChangeEnd={onRadiusChangeEnd}
-        onSelectedAnnotationsChange={annotations.onSelectedIdsChange}
-        onZoomChange={reportZoom}
-        screenshotOutput={screenshotOutput}
-        selectedAnnotationIds={[...annotations.selectedIds]}
-        selectedItemId={selectedItemId}
-        zoomRequest={zoomRequest}
+    <div className="flex min-h-0 min-w-0 grow gap-inline">
+      <EditorToolColumn
+        isModeOpen={mode !== null}
+        kind="screenshot"
+        onToolChange={(next) => {
+          if (next === "select") backToSelect();
+          else takeUp(next);
+        }}
+        tool={isSelectHeld ? "select" : columnTool(tool)}
       />
-      <ScreenshotStatusBar
-        onZoomChange={requestZoom}
-        zoomPercent={zoomPercent}
-      />
+      {/* The picture meets the tool column and the title bar on a rounded
+          corner; the viewport takes it up, and the native drawables are
+          clipped to it. */}
+      <div className="flex min-h-0 min-w-0 grow flex-col rounded-ss-panel">
+        <PreviewViewport
+          alt={t("editor-screenshot-preview")}
+          annotationTool={annotationTool}
+          artifactId={artifact.id}
+          cropKeepsShape={keepsShape(cropAspect)}
+          isEditing={isCropping}
+          isResizingCanvas={tool === "canvas"}
+          isSaving={isSaving}
+          isSelecting={pictureTool === "select"}
+          isSheetOpen={isSheetOpen}
+          items={artifact.items}
+          naturalHeight={artifact.height}
+          naturalWidth={artifact.width}
+          onAnnotationHover={annotations.onHoverChange}
+          onCanvasResize={onCanvasResize}
+          onCropChangeEnd={recenter.refresh}
+          onItemSelect={onSelectedItemChange}
+          onOutputChange={onOutputChange}
+          onSelectedAnnotationsChange={annotations.onSelectedIdsChange}
+          screenshotOutput={drawnOutput}
+          selectedAnnotationIds={[...annotations.selectedIds]}
+          selectedItemId={selectedItemId}
+        />
+      </div>
     </div>
   );
 }

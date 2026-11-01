@@ -13,6 +13,7 @@ const hooks = vi.hoisted(() => ({
   refs: [] as { current: unknown }[],
   send: vi.fn(),
   text: false,
+  typing: false,
 }));
 vi.mock("react", () => ({
   useEffect: (effect: () => () => void) => hooks.effects.push(effect()),
@@ -24,6 +25,7 @@ vi.mock("../shortcuts/escape-focus", () => ({
 }));
 vi.mock("../shortcuts/keyboard-target", () => ({
   arrowsOnlyMoveFocus: () => hooks.focusOnly,
+  editsText: () => hooks.typing,
   ownsActivationKeys: () => hooks.activation,
   ownsArrowKeys: () => hooks.arrows,
   ownsPopupInteractionKeys: () => hooks.popup,
@@ -49,6 +51,7 @@ beforeEach(() => {
   hooks.refs = [];
   hooks.index = 0;
   hooks.text =
+    hooks.typing =
     hooks.arrows =
     hooks.activation =
     hooks.popup =
@@ -100,6 +103,20 @@ describe("panel editor shortcuts", () => {
     expect(hooks.send).not.toHaveBeenCalled();
   });
 
+  // The transcript's words take the keys that edit text, but Escape there
+  // puts the mode away; only text being typed keeps it, to cancel the edit.
+  it("forwards Escape from the words, not from text being typed", () => {
+    usePanelShortcuts("recording");
+    hooks.text = true;
+    expect(key("Escape").event.defaultPrevented).toBe(true);
+    hooks.typing = true;
+    expect(key("Escape").event.defaultPrevented).toBe(false);
+    expect(hooks.send).toHaveBeenCalledExactlyOnceWith("recording", {
+      event: { code: "Escape" },
+      type: "shortcut",
+    });
+  });
+
   it("leaves Tab, widget arrows and keyboard activation with panel controls", () => {
     usePanelShortcuts("recording");
     expect(key("Tab").stop).not.toHaveBeenCalled();
@@ -132,6 +149,18 @@ describe("panel editor shortcuts", () => {
     hooks.text = true;
     key("KeyZ", { metaKey: true });
     expect(hooks.send).toHaveBeenCalledTimes(2);
+  });
+
+  it("forwards ⌘D, which lets go of everything chosen, outside text fields", () => {
+    usePanelShortcuts("screenshot");
+    key("KeyD", { metaKey: true });
+    expect(hooks.send).toHaveBeenCalledExactlyOnceWith("screenshot", {
+      event: { code: "KeyD", ctrlKey: true },
+      type: "shortcut",
+    });
+    hooks.text = true;
+    key("KeyD", { metaKey: true });
+    expect(hooks.send).toHaveBeenCalledOnce();
   });
 
   // A tool picked from a toolbar with the pointer keeps focus, but the

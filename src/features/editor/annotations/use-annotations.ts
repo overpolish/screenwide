@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { SceneRotation } from "../layer-rotation";
 import { sweptTimelineItems } from "../timeline/tracks/timeline-item-selection";
@@ -12,7 +12,6 @@ import {
   usePublishAnnotationSelection,
 } from "./annotation-channel";
 import {
-  rememberAnnotationAngle,
   rememberAnnotationAnimated,
   rememberAnnotationImage,
   rememberAnnotationStyle,
@@ -25,11 +24,13 @@ import {
 } from "./annotation-selection";
 import {
   freshSeed,
+  dressedShape,
+  relookedFocus,
   reversedShape,
   shuffledShape,
   swayedShape,
 } from "./annotation-shape-edits";
-import { textSelection, withEmphasis } from "./annotation-text-selection";
+import { withEmphasis } from "./annotation-text-selection";
 import {
   Annotation,
   AnnotationShape,
@@ -37,8 +38,12 @@ import {
   ImageArt,
   TextSpan,
 } from "./annotations";
-import { relaidHighlight } from "./highlight-strokes";
 import { imageRotation, withImageRotation } from "./image-rotation";
+import {
+  type AnnotationPins,
+  publishedAnnotation,
+} from "./published-annotation";
+import { useRememberedShape } from "./use-remembered-shape";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
 
@@ -55,6 +60,7 @@ export function useAnnotations({
   annotations,
   groupable = anyGroupable,
   onCommit: commit,
+  pins,
   workspace,
 }: {
   annotations: Annotation[];
@@ -62,6 +68,7 @@ export function useAnnotations({
   workspace: EditorKind;
   /** Whether an annotation may be chosen together with others. */
   groupable?: (id: string) => boolean;
+  pins?: AnnotationPins;
 }) {
   const [chosen, setChosen] = useState(NOTHING_CHOSEN);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -72,14 +79,7 @@ export function useAnnotations({
   const selected =
     annotations.find((annotation) => annotation.id === selectedId) ?? null;
 
-  // Where a counter's tail points is remembered however it was turned - by
-  // its grip on the picture or by the panel's own control - so the next one
-  // is dropped aiming the same way.
-  const counterAngle =
-    selected?.shape.kind === "counter" ? selected.shape.angle : null;
-  useEffect(() => {
-    if (counterAngle !== null) rememberAnnotationAngle(counterAngle);
-  }, [counterAngle]);
+  const { counterAngle, lensZoom } = useRememberedShape(selected);
 
   // Give the chosen annotation `shape` in one edit; null leaves it as it is.
   const reshape = (shape: AnnotationShape | null) => {
@@ -102,6 +102,11 @@ export function useAnnotations({
           : annotation,
       ),
     );
+  };
+  /** Set how many times the chosen lens enlarges. */
+  const applyZoom = (zoom: number) => {
+    if (selected?.shape.kind === "magnify" && zoom > 0 && zoom !== lensZoom)
+      reshape({ ...selected.shape, zoom });
   };
   // An image is turned flat by its angle and in depth by its tilt, which the
   // Rotation row's dials show as one turn about three axes.
@@ -154,7 +159,7 @@ export function useAnnotations({
     if (!selected) return;
     const dressed = { ...selected.style, ...style };
     rememberAnnotationStyle(dressed, selected.shape.kind);
-    const shape = relaidHighlight(selected, dressed) ?? selected.shape;
+    const shape = dressedShape(selected, dressed);
     commit(
       annotations.map((annotation) =>
         annotation.id === selected.id
@@ -198,6 +203,16 @@ export function useAnnotations({
   const applyShuffle = () => {
     if (selected) reshape(shuffledShape(selected.shape, freshSeed()));
   };
+  // A focus and a spotlight are one pen with two looks (`relookedFocus`).
+  const applyKind = (kind: "focus" | "spotlight") => {
+    const relooked = selected && relookedFocus(selected, kind);
+    if (relooked)
+      commit(
+        annotations.map((annotation) =>
+          annotation.id === relooked.id ? relooked : annotation,
+        ),
+      );
+  };
 
   // A deleted annotation stays in the choice while it is gone: the choice
   // only ever shows annotations that are there, so it reads as let go, and an
@@ -207,17 +222,6 @@ export function useAnnotations({
     if (hoveredId !== null && targets.has(hoveredId)) setHoveredId(null);
   };
 
-  // Everything the pen made goes in one commit, so one undo brings it all
-  // back: its strokes, and what held strokes were taken for. A stroke from
-  // before the flag existed is still the pen's. Other annotations stay, and
-  // so does the hover unless the pen made it.
-  const penMade = (annotation: Annotation) =>
-    annotation.pen === true || annotation.shape.kind === "draw";
-  const canClearDrawings = annotations.some(penMade);
-  const applyClearDrawings = () => {
-    if (!canClearDrawings) return;
-    remove(new Set(annotations.filter(penMade).map(({ id }) => id)));
-  };
   const applyDelete = () => {
     if (selectedIds.size > 0) remove(selectedIds);
   };
@@ -225,37 +229,33 @@ export function useAnnotations({
   usePublishAnnotationSelection(
     workspace,
     {
-      canClearDrawings,
       count: selectedIds.size,
-      selection: selected
-        ? {
-            angle: counterAngle ?? undefined,
-            animated: selected.animated,
-            id: selected.id,
-            image: art ?? undefined,
-            kind: selected.shape.kind,
-            ...textSelection(selected.shape),
-            style: selected.style,
-            ...(selected.shape.kind === "image"
-              ? { rotation, sway: selected.shape.sway !== undefined }
-              : {}),
-          }
-        : null,
+      selection:
+        selected &&
+        publishedAnnotation(selected, {
+          angle: counterAngle,
+          art,
+          pin: pins?.viewOf(selected.id),
+          rotation,
+          zoom: lensZoom,
+        }),
     },
     {
       applyAngle,
       applyAnimated,
-      applyClearDrawings,
       applyDelete,
       applyEmphasis,
       applyImage,
       applyImagePlay,
+      applyKind,
       applyLook,
+      applyPin: (action) => selected && pins?.apply(selected.id, action),
       applyReverse,
       applyRotation,
       applyShuffle,
       applyStyle,
       applySway,
+      applyZoom,
     },
   );
 

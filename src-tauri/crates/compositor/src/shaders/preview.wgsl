@@ -82,7 +82,8 @@ struct Canvas {
   camera_motion_frame: vec4<f32>,
   camera_motion_crop: vec4<f32>,
   // How opaque the screen and the camera are drawn, which a scene fades as it
-  // hides or shows them.
+  // hides or shows them, then how strong each casts its shadow, which the
+  // preview fades as one is turned on or off.
   scene_opacity: vec4<f32>,
   // What the screen's and the camera's pictures say of themselves: whether
   // each is enlarged along its edges where drawn larger than it is
@@ -100,7 +101,11 @@ struct Canvas {
   // it lies in the run above the camera.
   focus: vec4<f32>,
   // How opaque what lies past the canvas's edge is drawn (`x`), as the
-  // workspace shows a placed canvas, none of it at zero; the rest are spare.
+  // workspace shows a placed canvas, none of it at zero; `y` whether this
+  // pass draws the lenses' grounds (`compositor/lens_ground.rs`) rather than
+  // the canvas, and `zw` how far into the target this pass's own target
+  // starts, which a lens reads the layers under it at: the focus chain's
+  // shift, else none.
   overflow: vec4<f32>,
 }
 
@@ -258,9 +263,9 @@ struct Keyboard {
 @group(0) @binding(15) var annotation_blur_layer: texture_2d<f32>;
 @group(0) @binding(16) var annotation_cursor_layer: texture_2d<f32>;
 
-// Where a magnifier reads the picture it enlarges: the source, after its
-// redactions, placed at `image_rect` and showing where the canvas crop and the
-// source's own crop, both in output pixels, overlap.
+// Where the highlights read the picture to find each glyph's ink: the
+// source, after its redactions, placed at `image_rect` and showing where the
+// canvas crop and the source's own crop, both in output pixels, overlap.
 fn annotation_magnify_placement() -> AnnotationMagnifyPlacement {
   var at: AnnotationMagnifyPlacement;
   at.image = canvas.image_rect;
@@ -279,6 +284,79 @@ fn annotation_magnify_placement() -> AnnotationMagnifyPlacement {
 
 fn annotation_magnify_fetch(texel: vec2<i32>) -> vec4<f32> {
   return textureLoad(source_image, texel, 0);
+}
+
+// What the target held before this layer was drawn, copied for a lens on a
+// layer laid over others to show them; one transparent texel otherwise.
+@group(0) @binding(18) var lens_under: texture_2d<f32>;
+
+// What each lens shows, drawn ahead of the canvas by the pass that draws the
+// lenses' grounds (`compositor/lens_ground.rs`), each where its record says;
+// one transparent texel in that pass itself, and wherever no lens is drawn.
+@group(0) @binding(19) var lens_grounds: texture_2d<f32>;
+
+// While a lens's ground is being read, how many canvas pixels one of its
+// drawn pixels spans, which the screen's picture is enlarged over as crisp
+// texels; zero otherwise.
+var<private> lens_span: vec2<f32> = vec2<f32>(0.0);
+
+// The layers under this one at canvas pixel `pixel`, premultiplied, as the
+// target held them: `overflow.zw` is how far into the target this pass's
+// own target starts, which only the focus chain shifts.
+fn lens_under_at(pixel: vec2<f32>) -> vec4<f32> {
+  let drawn = pixel / max(canvas.placement.zw, vec2<f32>(1e-6)) + canvas.placement.xy -
+      canvas.overflow.zw;
+  let texel = vec2<i32>(floor(drawn));
+  let size = vec2<i32>(textureDimensions(lens_under));
+  if (any(texel < vec2<i32>(0)) || any(texel >= size)) {
+    return vec4<f32>(0.0);
+  }
+  return textureLoad(lens_under, texel, 0);
+}
+
+// The screen's picture at `uv` enlarged under a lens: each texel a crisp
+// square, with only the drawn pixel across its edge blended, as a lens one
+// drawn pixel of spans `lens_span` canvas pixels.
+fn lens_source(uv: vec2<f32>) -> vec4<f32> {
+  let size = vec2<f32>(textureDimensions(source_image));
+  let per = size / max(canvas.image_rect.zw, vec2<f32>(1e-4));
+  let centred = uv * size - 0.5;
+  let base = floor(centred);
+  let footprint = min(max(lens_span * per, vec2<f32>(1e-4)), vec2<f32>(1.0));
+  let blend = saturate((centred - base - 0.5) / footprint + 0.5);
+  let last = max(vec2<i32>(size) - 1, vec2<i32>(0));
+  let first = clamp(vec2<i32>(base), vec2<i32>(0), last);
+  let second = clamp(vec2<i32>(base) + 1, vec2<i32>(0), last);
+  let top = mix(textureLoad(source_image, first, 0),
+                textureLoad(source_image, vec2<i32>(second.x, first.y), 0), blend.x);
+  let bottom = mix(textureLoad(source_image, vec2<i32>(first.x, second.y), 0),
+                   textureLoad(source_image, second, 0), blend.x);
+  return mix(top, bottom, blend.y);
+}
+
+// What a lens shows at `point`, in the space the annotations being drawn lie
+// in, of the canvas under every annotation, premultiplied: the layers under
+// this one or the background, the camera where it lies behind the screen,
+// and the screen as the canvas draws it - cropped, inset, rounded, shadowed
+// and turned - so nothing cropped away shows. One drawn pixel of the lens
+// spans `span` canvas pixels there.
+fn annotation_lens_ground(point: vec2<f32>, span: vec2<f32>) -> vec4<f32> {
+  let pixel = probed_drawn(point);
+  var ground: vec4<f32>;
+  if (canvas.cursor_options.w != 0u) {
+    ground = lens_under_at(pixel);
+  } else {
+    ground = vec4<f32>(background(pixel), 1.0) *
+        rounded_coverage(pixel, vec4<f32>(0.0, 0.0, canvas.output_source.xy), canvas.effects.y);
+  }
+  if (feature_kept(feature_camera) && canvas.camera_effects.y != 0.0 &&
+      canvas.camera_effects.w < 0.5) {
+    ground = camera_layer(ground, pixel);
+  }
+  lens_span = span;
+  ground = screen_pane(ground, screen_point(pixel), false);
+  lens_span = vec2<f32>(0.0);
+  return ground;
 }
 
 fn hash(position: vec2<f32>, seed: u32) -> f32 {
@@ -400,7 +478,7 @@ fn crop_preview_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
     let distance = max(rounded_distance(shadow_pixel, canvas.crop_preview_rect, radius), 0.0);
     // The shadow belongs to what lies outside the layer, so the layer itself
     // is never tinted by it.
-    let shadow = drop_shadow(distance, sigma);
+    let shadow = drop_shadow(distance, sigma) * canvas.scene_opacity.z;
     result = vec4<f32>(result.rgb * (1.0 - shadow * (1.0 - coverage)), result.a);
   }
   if (coverage > 0.0) {
@@ -589,7 +667,7 @@ fn annotation_spotlight_blur() -> AnnotationSpotlightBlur {
                                  select(0u, canvas.annotation_options.y, blurs));
 }
 
-// The first annotation drawn over the camera, which a loupe showing what
+// The first annotation drawn over the camera, which a lens showing what
 // lies under it lays the camera under; past every annotation where the camera
 // is not drawn over them. While a scene crosses the order over, the nearer
 // order stands.
@@ -601,7 +679,7 @@ fn annotation_camera_run() -> u32 {
 }
 
 // The camera laid over `rgba` where the canvas draws it, without the
-// averaging a moving layout adds: a loupe shows it enlarged, standing still.
+// averaging a moving layout adds: a lens shows it enlarged, standing still.
 // The camera is never turned with the screen, so a point of a turned screen
 // finds it where the turn draws that point.
 fn annotation_camera_over(rgba: vec4<f32>, point: vec2<f32>) -> vec4<f32> {
@@ -761,12 +839,12 @@ fn camera_layer_at(result_in: vec4<f32>, pixel: vec2<f32>, frame: vec4<f32>,
       // lies inside the frame, so nothing farther out is reached.
       if (rounded_distance(pixel, frame, 0.0) < 4.5 * sigma) {
         let shadow = cut_out_shadow(camera_image, pixel, frame, crop, frame, vec2<f32>(0.0), sigma);
-        result = shadowed(result, shadow);
+        result = shadowed(result, shadow * canvas.scene_opacity.w);
       }
     } else {
       let shadow_pixel = pixel - vec2<f32>(0.0, sigma * 0.35);
       let distance = max(rounded_distance(shadow_pixel, frame, canvas.camera_effects.x), 0.0);
-      let shadow = drop_shadow(distance, sigma);
+      let shadow = drop_shadow(distance, sigma) * canvas.scene_opacity.w;
       result = shadowed(result, shadow * (1.0 - camera_alpha));
     }
   }
@@ -840,6 +918,8 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
     } else {
       shadow = visible_shadow(box_pixel, image_pixel, sigma);
     }
+    // Faded in or out by the screen's shadow strength.
+    shadow *= canvas.scene_opacity.z;
     if (foreground_only) {
       result.a = shadow * under;
     } else {
@@ -853,9 +933,11 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
   if (image_alpha > 0.0) {
     var video = vec4<f32>(0.0);
     // Upright, or averaged over the motion's own steps, one tap reads the
-    // picture; sharpened while it is enlarged.
+    // picture; sharpened while it is enlarged, and crisp under a lens.
     let single = all(span_x == vec2<f32>(0.0)) && all(span_y == vec2<f32>(0.0));
-    if (single) {
+    if (single && any(lens_span > vec2<f32>(0.0))) {
+      video = lens_source(uv);
+    } else if (single) {
       video = textureSampleLevel(source_image, linear_sampler, uv, 0.0);
       if (canvas.source_flags.x > 0.5 &&
           is_enlarged(canvas.image_rect.zw, canvas.output_source.zw)) {
@@ -1386,6 +1468,12 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     }
     let pointer = annotation_cursor_sample(screen.at);
     return vec4<f32>(pointer.rgb * pointer.a, pointer.a);
+  }
+  if (annotations_drawn && annotation_kind_drawn(annotation_magnify_kind) &&
+      canvas.overflow.y != 0.0) {
+    return annotation_lens_grounds_at(position.xy, max(canvas.motion.z, 1e-4) * 0.5,
+                                      AnnotationTextAtlas(canvas.annotation_options.zw,
+                                                          canvas.motion.w));
   }
   let foreground_only = canvas.cursor_options.w != 0u;
   let background_alpha = rounded_coverage(pixel, vec4<f32>(0.0, 0.0, canvas.output_source.xy),

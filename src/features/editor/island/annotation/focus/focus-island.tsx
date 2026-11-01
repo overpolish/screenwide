@@ -11,6 +11,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import type { EditorIslandContent } from "../../editor-island";
 
@@ -33,7 +38,7 @@ type FocusStyle = {
   radius: number;
 };
 
-export type FocusIslandProps = {
+export type FocusIslandProps = AnnotationPinProps & {
   /** Whether it can deepen in: a recording's annotations can, a
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
@@ -49,6 +54,7 @@ export function focusIsland(props: FocusIslandProps): EditorIslandContent {
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -63,20 +69,23 @@ export function focusIsland(props: FocusIslandProps): EditorIslandContent {
     anchor: "end",
     key: `focus-${id}`,
     section: (
-      <AnnotationLine>
-        <CornerChoice
-          onChange={(radius) => {
-            onStyleChange({ radius });
-          }}
-          value={style.radius}
-        />
-        <DimToggle
-          dims={style.dims}
-          onChange={(dims) => {
-            onStyleChange({ dims });
-          }}
-        />
-      </AnnotationLine>
+      <div className="flex flex-col gap-separate">
+        <AnnotationLine>
+          <CornerChoice
+            onChange={(radius) => {
+              onStyleChange({ radius });
+            }}
+            value={style.radius}
+          />
+          <DimToggle
+            dims={style.dims}
+            onChange={(dims) => {
+              onStyleChange({ dims });
+            }}
+          />
+        </AnnotationLine>
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+      </div>
     ),
     title: (
       <IslandRowTitle

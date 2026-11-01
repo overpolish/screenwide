@@ -33,6 +33,10 @@ export const WHOLE_FRAMING: SceneFraming = {
 /** The furthest a scene zooms into a picture. */
 export const MAX_SCENE_ZOOM = 8;
 
+/** The furthest a scene pads its screen, as a share of its box's shorter
+ * side on every side; the twin of `MAX_SCENE_INSET` in `model.rs`. */
+export const MAX_SCENE_INSET = 0.5;
+
 /** `clip` turning the screen by `rotation`, each angle held to what a scene
  * can turn it; one that leaves it upright keeps no turn at all. */
 export const rotatedSceneClip = (

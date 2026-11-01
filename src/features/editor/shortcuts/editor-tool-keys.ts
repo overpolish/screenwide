@@ -131,6 +131,8 @@ export const editorToolKeyAction = (
 export type EditorCommandKeys = {
   onCopy?: () => void;
   onCutTimeline?: () => void;
+  /** ⌘D or Ctrl+D: let go of everything chosen in the window. */
+  onDeselectAll?: () => void;
   onExport?: () => void;
   /** ⌘V or Ctrl+V outside a text field. */
   onPaste?: () => void;
@@ -149,6 +151,7 @@ export const editorCommandKeyAction = (
     : {
         KeyB: keys.onCutTimeline,
         KeyC: keys.onCopy,
+        KeyD: keys.onDeselectAll,
         KeyE: keys.onExport,
         KeyV: keys.onPaste,
       }[code]) ?? null;

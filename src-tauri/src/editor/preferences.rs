@@ -155,41 +155,6 @@ pub(super) fn validate_screenshot_radius(radius: f64) -> Result<f64, String> {
   Ok(radius)
 }
 
-pub(super) fn remember_screenshot_radius(app: &AppHandle, radius: f64) -> Result<f64, String> {
-  let radius = validate_screenshot_radius(radius)?;
-  *app
-    .state::<EditorState>()
-    .screenshot_radius_percent
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner()) = radius;
-  let mut preferences = load_preferences(app).unwrap_or_default();
-  preferences.screenshot_radius_percent = radius;
-  if let Some(output) = &mut preferences.screenshot_output {
-    output.radius_percent = radius;
-  }
-  store_preferences(app, &preferences)?;
-  Ok(radius)
-}
-
-pub(super) fn remember_screenshot_background_radius(
-  app: &AppHandle,
-  radius: f64,
-) -> Result<f64, String> {
-  let radius = validate_screenshot_radius(radius)?;
-  *app
-    .state::<EditorState>()
-    .screenshot_background_radius_percent
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner()) = radius;
-  let mut preferences = load_preferences(app).unwrap_or_default();
-  preferences.screenshot_background_radius_percent = radius;
-  if let Some(output) = &mut preferences.screenshot_output {
-    output.background_radius_percent = radius;
-  }
-  store_preferences(app, &preferences)?;
-  Ok(radius)
-}
-
 pub(super) fn remember_screenshot_output(
   app: &AppHandle,
   output: ScreenshotOutputSettings,

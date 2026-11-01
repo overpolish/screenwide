@@ -9,7 +9,7 @@ use super::*;
 /// What the pointer does over the picture, from the tool React has in hand,
 /// and which shape a drawing mode makes, declared once beside the gesture
 /// model.
-use screenwide_annotations::gesture::{drawing_kind, hovers_nothing, MODE_NONE};
+use screenwide_annotations::gesture::{drawing_kind, hovers_nothing, MODE_NONE, MODE_SELECT};
 use screenwide_annotations::handles::{
   NativeAnnotationHandles, NativeAnnotationSnap, NativeGapSpan, SNAP_FLAG_ANCHOR, SNAP_FLAG_GAP_X,
   SNAP_FLAG_GAP_Y, SNAP_FLAG_GUIDE_X, SNAP_FLAG_GUIDE_Y,
@@ -29,7 +29,6 @@ const TARGET_TOGGLE: u32 = 5;
 const TARGET_MARQUEE: u32 = 6;
 
 /// Which grip a press took hold of, matching `ScreenwideAnnotationHandle`.
-const HANDLE_MIDDLE: u32 = 1;
 const HANDLE_END: u32 = 2;
 const HANDLE_BODY: u32 = 3;
 const HANDLE_TAIL: u32 = 4;
@@ -145,7 +144,15 @@ impl WorkspaceEditor {
     state.annotation.selected = selected_index;
     let changed = state.annotation.mode != mode;
     state.annotation.mode = mode;
-    // A new tool or list, no tool, or the pen: the halo goes, since the
+    // Select taken up while the shortcut modifier is down is that modifier's
+    // hold: it is no toggle or snap for the presses under it, and the layer's
+    // chrome waits for a press.
+    if changed {
+      let held = mode == MODE_SELECT && self.inner.host.modifiers().shortcut;
+      state.shortcut_spent = held;
+      state.select_held = held;
+    }
+    // A new tool or list, or no tool: the halo goes, since the
     // pointer may never move again to retire it, and a pulse still running
     // must stop reporting it.
     if changed || recounted || hovers_nothing(mode) {
@@ -158,9 +165,14 @@ impl WorkspaceEditor {
       self.inner.host.finish_typing();
     }
     // The grips are chrome: publishing them is what moves them on screen,
-    // and what stands the layer's own chrome up or down. The cursor needs no
-    // push - the window re-asks on the next pointer move.
+    // and what stands the layer's own chrome up or down.
     draw_selection(&self.inner, &state);
+    // A new tool shows its own cursor and halo over what the pointer rests
+    // on without waiting for it to move: holding the shortcut modifier for
+    // Select changes the tool under a still pointer.
+    if changed {
+      self.inner.host.hover_again();
+    }
   }
 
   pub fn set_annotation_gesture_callback(&self, callback: AnnotationGestureCallback) {
@@ -188,23 +200,24 @@ mod picking_chrome;
 /// How far a press is from each kind of annotation.
 mod picking_distance;
 use picking::{
-  handle_at_point, image_frame, item_image_frame, layer_selection, selected_item, shaft_at_point,
+  display_on_item_layer, grip_pick, handle_at_point, image_frame, item_image_frame,
+  layer_selection, pick_at_point, selected_item, shaft_at_point,
 };
-pub(super) use picking::{layer_image_rect, take_drawing_layer};
+pub(super) use picking::{drawing_pictures, take_drawing_layer};
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
 
-/// A redaction's box, grips and radius dot.
+/// A redaction's box and grips.
 mod redact_chrome;
 pub(super) use redact_chrome::selected_box as selected_redaction;
 
-/// A magnifier's loupe: where it is picked and the grip that sets its size.
+/// Lenses: where one is picked, and seeing through them to what lies under.
 mod magnify_chrome;
 
 /// A text box's box and tail, which its grip and its picking read.
 mod text_chrome;
 use text_chrome::text_geometry;
 
-/// An image's turned picture, its own frame and its radius dot.
+/// An image's turned picture and its own frame.
 mod image_chrome;
 pub(super) use image_chrome::selected_frame as selected_image_frame;
 
@@ -239,3 +252,12 @@ pub(crate) use typing::{
 };
 pub(super) use typing::{handle_typing_input, sync_typing_marks};
 pub(crate) use typing::{pointer_move as typing_move, up as typing_up};
+
+/// Whether the press in hand took hold of annotations already there, rather
+/// than drawing a new one or a marquee band.
+pub(super) fn holds_existing(state: &SurfaceState) -> bool {
+  state
+    .annotation
+    .drag
+    .is_some_and(|drag| !matches!(drag.target_kind, TARGET_NEW | TARGET_MARQUEE))
+}

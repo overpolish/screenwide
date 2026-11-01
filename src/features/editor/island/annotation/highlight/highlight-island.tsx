@@ -13,6 +13,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import type { EditorIslandContent } from "../../editor-island";
 
@@ -33,16 +38,17 @@ type HighlightStyle = {
   isManual: boolean;
 };
 
-export type HighlightIslandProps = AnnotationColorProps & {
-  /** Whether it can draw itself in: a recording's annotations can, a
-   * screenshot's, being one instant, cannot. */
-  canAnimate: boolean;
-  id: string;
-  onStyleChange: (style: Partial<HighlightStyle>) => void;
-  style: HighlightStyle;
-  /** Left out for the pen in hand with nothing chosen. */
-  onDelete?: () => void;
-};
+export type HighlightIslandProps = AnnotationColorProps &
+  AnnotationPinProps & {
+    /** Whether it can draw itself in: a recording's annotations can, a
+     * screenshot's, being one instant, cannot. */
+    canAnimate: boolean;
+    id: string;
+    onStyleChange: (style: Partial<HighlightStyle>) => void;
+    style: HighlightStyle;
+    /** Left out for the pen in hand with nothing chosen. */
+    onDelete?: () => void;
+  };
 
 export function highlightIsland(
   props: HighlightIslandProps,
@@ -51,6 +57,7 @@ export function highlightIsland(
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -90,6 +97,7 @@ export function highlightIsland(
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </div>
     ),
     title: (

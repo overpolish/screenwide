@@ -16,7 +16,7 @@ import type { IslandTranscript } from "../island-transcript";
  * transcript; several at once are one step of the edit history. */
 type OnCorrect = (corrections: TranscriptCorrection[]) => void;
 
-/** The script beside the Captions island, as the captions break it. */
+/** The script out with the Captions island, as the captions break it. */
 export type ScriptCaptionsProps = {
   captions: RecordingCaptions;
   /** The recording's length, which breaks and choices are shares of. */

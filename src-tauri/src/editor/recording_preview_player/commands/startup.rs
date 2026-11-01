@@ -60,16 +60,7 @@ pub async fn start_recording_preview_player(
         });
       }));
     }
-    let event_app = app.clone();
-    surface.enable_editor(Box::new(move |zoom_percent| {
-      let _ = event_app.emit(
-        "recording-preview://transform",
-        RecordingPreviewTransformEvent {
-          session_id,
-          zoom_percent,
-        },
-      );
-    }));
+    surface.enable_editor();
     let event_app = app.clone();
     surface.set_selection_callback(Box::new(move |pane_index| {
       let _ = event_app.emit(
@@ -84,12 +75,9 @@ pub async fn start_recording_preview_player(
       app.get_webview_window(EditorKind::Recording.window_label().as_str())
     {
       let menu_window = event_window.clone();
-      surface.set_pointer_down_callback(Box::new(move || {
-        let _ = event_window.emit(
-          crate::editor::preview_platform::NATIVE_POINTER_DOWN_EVENT,
-          (),
-        );
-      }));
+      surface.set_pointer_press_callback(crate::editor::preview_platform::pointer_press_callback(
+        event_window,
+      ));
       let menu_app = app.clone();
       surface.set_context_menu_callback(Box::new(move |pane_index, annotation, x, y| {
         // A press on a word of the caption opens the captions' word menu.
@@ -248,7 +236,6 @@ pub async fn start_recording_preview_player(
   manager.event_channel = Some(event_channel);
   manager.latest_layout_request = 0;
   manager.latest_seek_request = 0;
-  manager.playback_rate = 1.0;
   manager.position_ms = 0;
   manager.sources = Some(sources);
   manager.session_id = Some(session_id);

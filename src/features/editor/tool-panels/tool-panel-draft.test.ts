@@ -8,6 +8,7 @@ import { DEFAULT_CURSOR_EFFECTS } from "../export/recording-export-settings";
 import { resolveToolPanelSnapshot, ToolPanelDraft } from "./tool-panel-draft";
 import {
   DEFAULT_TOOL_PANEL_SNAPSHOT,
+  ToolPanelMicrophone,
   ToolPanelSnapshot,
 } from "./tool-panel-store";
 
@@ -33,21 +34,14 @@ const draft = (size: OverlaySize, seq: number): ToolPanelDraft => ({
 const resolve = (value: ToolPanelSnapshot, pending: ToolPanelDraft | null) =>
   resolveToolPanelSnapshot(value, pending, "recording");
 
-const placed = (
-  placement: { height: number; width: number; x: number; y: number },
-  acknowledgedSeq = 0,
-): ToolPanelSnapshot => ({
+const layered = (acknowledgedSeq = 0): ToolPanelSnapshot => ({
   ...snapshot("standard", acknowledgedSeq),
   selection: {
-    ...placement,
     dropShadow: true,
     inset: 0,
-    insetMaximum: 2338,
     kind: "primary",
     label: "Screen",
     radius: 0,
-    sourceHeight: 2338,
-    sourceWidth: 3600,
   },
 });
 
@@ -108,45 +102,65 @@ describe("panel input during delayed editor replies", () => {
   });
 });
 
-describe("selection placement while a field is open", () => {
-  const live = { height: 2338, width: 3600, x: 0, y: 0 };
-
-  it("holds only the field being edited over a live drag", () => {
-    const editing: ToolPanelDraft = {
-      seq: 4,
-      values: { selectionOutput: { width: 1800 } },
-      workspace: "recording",
-    };
-    const dragged = placed({ height: 1200, width: 1849, x: 40, y: 12 });
-
-    expect(resolve(dragged, editing).selection).toMatchObject({
-      height: 1200,
-      width: 1800,
-      x: 40,
-      y: 12,
-    });
-  });
-
-  it("lets the editor's answer through once it is acknowledged", () => {
-    const editing: ToolPanelDraft = {
-      seq: 4,
-      values: { selectionOutput: { width: 1800 } },
-      workspace: "recording",
-    };
-
-    expect(resolve(placed(live, 4), editing).selection).toMatchObject(live);
-  });
-
-  it("never shows a reset as a local value", () => {
-    const reset: ToolPanelDraft = {
+describe("actions while the editor answers", () => {
+  it("never shows an action as a local value", () => {
+    const acting: ToolPanelDraft = {
       seq: 5,
-      values: { resetSelection: true },
+      values: {
+        cutStripItem: true,
+        deleteChosenShortcuts: true,
+        lullPlay: "squeeze",
+        reverseAnnotation: true,
+        shuffleAnnotation: true,
+        trackEnabled: { isEnabled: false, trackId: "camera" },
+        trackVolume: { decibels: -6, trackId: "audio:0" },
+        trimLullToBreath: true,
+      },
       workspace: "recording",
     };
-    const resolved = resolve(placed(live), reset);
+    const resolved = resolve(layered(), acting);
 
-    expect(resolved.selection).toMatchObject(live);
-    expect(resolved).not.toHaveProperty("resetSelection");
+    for (const key of Object.keys(acting.values))
+      expect(resolved).not.toHaveProperty(key);
+  });
+});
+
+describe("the Sound island's switches while the editor answers", () => {
+  const microphone: ToolPanelMicrophone = {
+    autoVolume: "on",
+    autoVolumeProgress: 0,
+    ducking: null,
+    noise: "off",
+    noiseProgress: 0,
+    silences: { count: 0, durationMs: 0, progress: null, status: "idle" },
+    studio: "off",
+    studioModel: null,
+    studioProgress: 0,
+    voice: "on",
+    voiceProgress: 0,
+  };
+  const sounding: ToolPanelSnapshot = {
+    ...snapshot("standard"),
+    soundTracks: [
+      { decibels: 0, id: "audio:0", label: "Microphone", microphone },
+      { decibels: 0, id: "audio:1", label: "System audio" },
+    ],
+  };
+
+  it("flips the microphone's switches at once, with nothing selected", () => {
+    const flipping: ToolPanelDraft = {
+      seq: 1,
+      values: { autoVolume: false, reduceNoise: true },
+      workspace: "recording",
+    };
+    const [voice, system] = resolve(sounding, flipping).soundTracks ?? [];
+
+    expect(voice.microphone).toMatchObject({
+      autoVolume: "off",
+      noise: "cleaning",
+      voice: "on",
+    });
+    expect(system).toEqual(sounding.soundTracks?.[1]);
   });
 });
 
@@ -206,46 +220,11 @@ describe("canvas size while a field is open", () => {
       workspace: "recording",
     };
 
-    expect(
-      resolve(placed({ height: 2338, width: 3600, x: 0, y: 0 }), editing),
-    ).toMatchObject({ frame: null, selection: { width: 3600 } });
-  });
-  it("keeps the output choice flipped until the editor answers", () => {
-    const flipping: ToolPanelDraft = {
-      seq: 7,
-      values: { bakeCamera: true },
-      workspace: "recording",
-    };
-    const separate: ToolPanelSnapshot = {
-      ...snapshot("standard"),
-      cameraOutput: "separate",
-    };
-
-    expect(resolve(separate, flipping).cameraOutput).toBe("combined");
-    // Once the editor has answered, the row shows what it committed.
-    expect(
-      resolve({ ...separate, acknowledgedSeq: 7 }, flipping).cameraOutput,
-    ).toBe("separate");
-    // Where there is no choice to make, a stray request offers none.
-    expect(resolve(snapshot("standard"), flipping).cameraOutput).toBeNull();
-  });
-
-  it("keeps a dragged volume until the editor answers", () => {
-    const dragging: ToolPanelDraft = {
-      seq: 8,
-      values: { audioVolume: -9 },
-      workspace: "recording",
-    };
-    const audio: ToolPanelSnapshot = {
-      ...snapshot("standard"),
-      selection: { decibels: 0, kind: "audio", label: "Microphone" },
-    };
-
-    expect(resolve(audio, dragging).selection).toMatchObject({ decibels: -9 });
-    // Once acknowledged, the knob shows the level the editor committed.
-    expect(
-      resolve({ ...audio, acknowledgedSeq: 8 }, dragging).selection,
-    ).toMatchObject({ decibels: 0 });
+    const reply = layered();
+    expect(resolve(reply, editing)).toMatchObject({
+      frame: null,
+      selection: reply.selection,
+    });
   });
 });
 

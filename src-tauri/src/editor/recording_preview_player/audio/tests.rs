@@ -23,7 +23,6 @@ fn decodes_tracks_into_independent_pcm_channels() {
       playback_rate: 1.0,
     }],
     &config,
-    1.0,
   )
   .join(" ");
 
@@ -59,7 +58,6 @@ fn concatenates_retained_ranges_before_opening_the_output_stream() {
       },
     ],
     &config,
-    1.0,
   )
   .join(" ");
 
@@ -99,7 +97,6 @@ fn trims_reordered_ranges_from_the_earliest_source_start() {
       },
     ],
     &config,
-    1.0,
   )
   .join(" ");
 
@@ -123,10 +120,9 @@ fn applies_atempo_and_scales_audio_duration() {
     &[RecordingPreviewPlaybackRange {
       source_start_ms: 0,
       source_end_ms: 1_000,
-      playback_rate: 1.0,
+      playback_rate: 2.0,
     }],
     &config,
-    2.0,
   )
   .join(" ");
   assert!(rendered.contains("atempo=2.0"));
@@ -135,7 +131,7 @@ fn applies_atempo_and_scales_audio_duration() {
 }
 
 #[test]
-fn scales_cut_fades_by_the_effective_playback_rate() {
+fn scales_cut_fades_by_the_range_playback_rate() {
   let mut sources = test_sources();
   sources.audio_tracks.truncate(1);
   let config = StreamConfig {
@@ -147,15 +143,15 @@ fn scales_cut_fades_by_the_effective_playback_rate() {
     RecordingPreviewPlaybackRange {
       source_start_ms: 0,
       source_end_ms: 500,
-      playback_rate: 2.0,
+      playback_rate: 4.0,
     },
     RecordingPreviewPlaybackRange {
       source_start_ms: 500,
       source_end_ms: 1_000,
-      playback_rate: 1.0,
+      playback_rate: 2.0,
     },
   ];
-  let rendered = args(&sources, &channels(&sources), &ranges, &config, 2.0).join(" ");
+  let rendered = args(&sources, &channels(&sources), &ranges, &config).join(" ");
 
   assert!(rendered.contains("afade=t=out:st=0.122:d=0.003"));
   assert!(rendered.contains("apad=whole_dur=0.375"));

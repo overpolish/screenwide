@@ -34,6 +34,13 @@ boxes?: SceneBoxes,
  */
 radius?: SceneRadius, 
 /**
+ * How far the scene pads its screen's box, as a share of the box's
+ * shorter side: the box grows outwards by it, filled with the colour found
+ * behind the recording's content, as the recording's own inset pads its
+ * crop. None where unset.
+ */
+inset?: number, 
+/**
  * How the scene turns the screen in depth, with everything drawn on it;
  * upright where unset.
  */

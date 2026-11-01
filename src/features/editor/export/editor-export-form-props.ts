@@ -37,6 +37,7 @@ export type EditorExportFormProps = {
   isEstimatingSize?: boolean;
   isSaving?: boolean;
   onCameraCompressionChange?: (compression: number) => void;
+  onCameraOutputChange?: (output: CameraOutput) => void;
   onCameraResolutionScaleChange?: (scale: number) => void;
   onCollapseAudioChange?: (collapse: boolean) => void;
   onCompressionChange?: (compression: number) => void;

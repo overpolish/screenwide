@@ -80,13 +80,19 @@ impl SceneBox {
     }
   }
 
+  /// How far a select gesture may scale the box: as far as keeps it between
+  /// the smallest and largest a box may be.
+  fn held_scale(self, scale: f64) -> f64 {
+    let low = MIN_BOX_SHARE / self.width.min(self.height).max(f64::EPSILON);
+    let high = MAX_BOX_SHARE / self.width.max(self.height).max(f64::EPSILON);
+    scale.max(low).min(high)
+  }
+
   /// The box a select gesture leaves: its corner moved `delta` shares of the
   /// canvas and its size scaled by `scale`, its shape kept. It stays between
   /// the smallest and largest a box may be, its middle on the canvas.
   pub fn moved(self, (dx, dy): (f64, f64), scale: f64) -> Self {
-    let low = MIN_BOX_SHARE / self.width.min(self.height).max(f64::EPSILON);
-    let high = MAX_BOX_SHARE / self.width.max(self.height).max(f64::EPSILON);
-    let scale = scale.max(low).min(high);
+    let scale = self.held_scale(scale);
     let width = self.width * scale;
     let height = self.height * scale;
     Self {
@@ -95,6 +101,15 @@ impl SceneBox {
       width,
       height,
     }
+  }
+
+  /// [`SceneBox::moved`] by a gesture on the box padded outwards by `pad`
+  /// shares of the canvas on each side, where a scene's inset draws the
+  /// handles. The padding scales with the box, so the box's corner travels
+  /// the padding's growth further than the padded corner the gesture reports.
+  pub fn moved_padded(self, (dx, dy): (f64, f64), scale: f64, (pad_x, pad_y): (f64, f64)) -> Self {
+    let grown = self.held_scale(scale) - 1.0;
+    self.moved((dx + pad_x * grown, dy + pad_y * grown), scale)
   }
 }
 
@@ -182,6 +197,13 @@ pub struct RecordingSceneClip {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub radius: Option<SceneRadius>,
+  /// How far the scene pads its screen's box, as a share of the box's
+  /// shorter side: the box grows outwards by it, filled with the colour found
+  /// behind the recording's content, as the recording's own inset pads its
+  /// crop. None where unset.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub inset: Option<f64>,
   /// How the scene turns the screen in depth, with everything drawn on it;
   /// upright where unset.
   #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -218,6 +240,10 @@ impl RecordingSceneClip {
   }
 }
 
+/// The furthest a scene pads its screen, as a share of the box's shorter
+/// side, on every side.
+pub const MAX_SCENE_INSET: f64 = 0.5;
+
 /// Whether a recording's scene clips can be played: each spans time, has an
 /// id of its own and framings a scene can hold, and they run in order without
 /// overlapping, because only one scene can be on screen at a time. Bounds are
@@ -236,6 +262,9 @@ pub fn validate_clips(clips: &[RecordingSceneClip]) -> Result<(), String> {
         .any(|framing| !framing.is_valid())
       || clip.boxes.is_some_and(|boxes| !boxes.is_valid())
       || clip.radius.is_some_and(|radius| !radius.is_valid())
+      || clip
+        .inset
+        .is_some_and(|inset| !inset.is_finite() || !(0.0..=MAX_SCENE_INSET).contains(&inset))
       || clip.rotation.is_some_and(|rotation| !rotation.is_valid())
     {
       return Err("The scene clips are invalid".to_owned());

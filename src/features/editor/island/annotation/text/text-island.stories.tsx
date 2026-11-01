@@ -15,6 +15,7 @@ import {
   editorIslandStoryMeta,
   type EditorIslandStoryProps,
 } from "../../editor-island-story-meta";
+import { storyPinAfter } from "../annotation-pin-story-fixtures";
 
 import { textIsland, type TextIslandProps } from "./text-island";
 
@@ -58,9 +59,11 @@ const meta = {
     onEditGestureStart: fn(),
     onEmphasisChange: fn(),
     onLookChange: fn(),
+    onPinAction: fn(),
     onRemoveColor: fn(),
     onSaveColor: fn(),
     onStyleChange: fn(),
+    pin: null,
     savedColors: [],
     style: { align: "center", isAnimated: true, size: 24 },
     templates: STORY_TEXT_TEMPLATES,
@@ -81,6 +84,10 @@ const meta = {
         onLookChange={(patch) => {
           args.onLookChange(patch);
           updateArgs({ look: { ...args.look, ...patch } });
+        }}
+        onPinAction={(action) => {
+          args.onPinAction?.(action);
+          updateArgs({ pin: storyPinAfter(args.pin, action) });
         }}
         onRemoveColor={(color) => {
           args.onRemoveColor(color);
@@ -118,4 +125,6 @@ export const Accent: Story = {
 };
 
 // A screenshot is one instant: nothing grows in or comes on word by word.
-export const Screenshot: Story = { args: { canAnimate: false } };
+export const Screenshot: Story = {
+  args: { canAnimate: false, pin: undefined },
+};

@@ -22,7 +22,7 @@ use screenwide_annotations::text::geometry::{prepare_text, HEAD_TAIL_PLACED};
 use screenwide_text::TailShape;
 
 /// `annotation` prepared at `reveal`, its points `p0`, `p1` and `p2` placed at
-/// `a`, `b` and `c` by a placement that stretches a length `scale` times.
+/// `a`, `b` and `c`.
 ///
 /// A counter keeps its centre in `p0` and its aim in `p1[0]`, so only the
 /// centre is placed: the disc's diameter is in output pixels, as an arrow's
@@ -30,10 +30,9 @@ use screenwide_text::TailShape;
 /// keeps its tail's tip in `p1`, held against the box and never placed
 /// unless its `head` says it was put on the picture, its text block's size,
 /// in output pixels, in `p2`, which is never placed, and its tail's shape in
-/// `params`. A shape's and a
-/// spotlight's `p1` is never placed either. A magnifier places all three -
-/// its zoom area's corners and its loupe's centre - and reads its loupe's
-/// size out of `params`, stretched by `scale`, and its rounding beside it. An
+/// `params`. A shape's and a spotlight's `p1` is never placed either. A lens
+/// places its box's corners and reads its zoom, a ratio no placement
+/// stretches, and its rounding out of `params`. An
 /// image places all three - its middle and the middles of its right and
 /// bottom sides - and reads its rounding out of `params`, its mirroring out
 /// of `head` and its tilt, an angle the same in either space, out of `p3`.
@@ -41,7 +40,6 @@ pub(super) fn prepared_geometry(
   annotation: &NativeAnnotation,
   [a, b, c]: [[f32; 2]; 3],
   reveal: AnnotationReveal,
-  scale: f32,
 ) -> ArrowGeometry {
   match annotation.shape_kind() {
     AnnotationKind::Counter => prepare_counter(a, annotation.width, annotation.p1[0], reveal),
@@ -84,9 +82,8 @@ pub(super) fn prepared_geometry(
     AnnotationKind::Draw => prepare_freehand(a, b, c, annotation.width, reveal),
     AnnotationKind::Magnify => prepare_magnify(
       a,
-      b,
       c,
-      annotation.params[0] * scale,
+      annotation.params[0],
       annotation.params[1],
       annotation.width,
       reveal,

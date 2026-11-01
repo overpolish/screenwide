@@ -36,6 +36,7 @@ fn custom(preset: RecordingScenePreset, camera: Option<SceneBox>) -> RecordingSc
       camera_behind: false,
     }),
     radius: None,
+    inset: None,
     rotation: None,
     variant: None,
     follow_face: None,
@@ -161,6 +162,22 @@ fn a_box_dragged_away_keeps_its_middle_on_the_canvas() {
   let shrunk = CAMERA.moved((0.0, 0.0), 0.001);
   assert!((shrunk.width - 0.02).abs() < 1e-9);
   assert!((shrunk.height / shrunk.width - 1.5).abs() < 1e-9);
+}
+
+#[test]
+fn a_padded_box_resized_keeps_the_padded_corner_the_gesture_holds() {
+  // Padded by 0.05 of the canvas across and 0.08 down, doubled about the
+  // padded top-left corner, which the gesture reports as not moving.
+  let pad = (0.05, 0.08);
+  let grown = SCREEN.moved_padded((0.0, 0.0), 2.0, pad);
+  assert!((grown.width - 1.0).abs() < 1e-9);
+  assert!((grown.x - pad.0 * 2.0 - (SCREEN.x - pad.0)).abs() < 1e-9);
+  assert!((grown.y - pad.1 * 2.0 - (SCREEN.y - pad.1)).abs() < 1e-9);
+  // A move carries the box as far as the padded box travels.
+  assert_eq!(
+    SCREEN.moved_padded((0.1, 0.0), 1.0, pad),
+    SCREEN.moved((0.1, 0.0), 1.0)
+  );
 }
 
 #[test]

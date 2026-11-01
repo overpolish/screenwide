@@ -27,9 +27,27 @@ import {
 const HISTORY_LIMIT = 100;
 const GROUP_DELAY_MS = 300;
 
-type EditorEditGesture = {
+export type EditorEditGesture = {
   beginGesture: () => void;
   endGesture: () => void;
+};
+
+/** Ends `gesture` once `settled` has, and a frame later. Some edits finish
+ * with a change that arrives on its own, such as the padding colour read off
+ * the picture after a crop or a pad; it belongs to the step that asked for
+ * it, and React commits it the frame after it lands. `before` runs in that
+ * frame, just ahead of the end. */
+export const endGestureAfter = (
+  gesture: EditorEditGesture,
+  settled: Promise<unknown>,
+  before?: () => void,
+) => {
+  void settled.finally(() => {
+    requestAnimationFrame(() => {
+      before?.();
+      gesture.endGesture();
+    });
+  });
 };
 
 export const EditorEditGestureContext = createContext<EditorEditGesture>({
@@ -175,6 +193,11 @@ export function useEditorEditHistory<State extends object>({
       )
         pendingRef.current = null;
       finishGroup();
+      // The step ends at the last state rendered, which React may not have
+      // run this hook's effects for yet (a change landing just before the
+      // end, such as the padding colour read off the picture). Count it as
+      // seen, or its effect would find it new and make it a step of its own.
+      observedRef.current = currentRef.current;
     }, 0);
   }, [finishGroup]);
 

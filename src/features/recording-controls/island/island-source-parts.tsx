@@ -92,7 +92,8 @@ export function ModeCards({
 
 /** Each display by its picture, to choose one. Past two they go three
  * across, so a desk of them stays a row or two tall rather than pushing the
- * island down the screen. */
+ * island down the screen. A lone display is centred at the size it has
+ * beside a second, so the picture never hugs one side. */
 export function DisplayGrid({
   displays,
   onDisplayChange,
@@ -112,7 +113,11 @@ export function DisplayGrid({
       {displays.map((display) => (
         <button
           aria-pressed={display.id === selectedDisplayId}
-          className="flex flex-col gap-1 text-start"
+          className={cn(
+            "flex flex-col gap-1 text-start",
+            displays.length === 1 &&
+              "col-span-2 w-[calc((100%-var(--spacing-inline))/2)] justify-self-center",
+          )}
           key={display.id}
           onClick={() => onDisplayChange?.(display.id)}
           type="button"

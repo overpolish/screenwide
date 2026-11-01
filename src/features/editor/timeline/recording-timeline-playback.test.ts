@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import { RecordingTimelineEdit } from "./editing/recording-timeline-edit";
 import {
   recordingTimelinePlaybackDurationMs,
+  recordingTimelinePlaybackPosition,
   recordingTimelinePlaybackRangeAt,
+  recordingTimelinePlaybackRangeFrom,
   recordingTimelinePlaybackRanges,
   recordingTimelinePlaybackRangesFrom,
 } from "./recording-timeline-playback";
@@ -49,6 +51,15 @@ describe("recording timeline playback", () => {
     expect(recordingTimelinePlaybackRangesFrom(ranges, 5_000)).toEqual([
       { playbackRate: 1, sourceEndMs: 8_000, sourceStartMs: 6_000 },
     ]);
+  });
+
+  it("starts over from the still the recording's end shows", () => {
+    const ranges = recordingTimelinePlaybackRanges(edit, 8_000);
+    // The still at the end is its last decodable millisecond.
+    const end = recordingTimelinePlaybackPosition(7_999, 8_000);
+    expect(end).toBe(8_000);
+    expect(recordingTimelinePlaybackRangeFrom(ranges, end).index).toBe(0);
+    expect(recordingTimelinePlaybackPosition(7_998, 8_000)).toBe(7_998);
   });
 
   it("carries rates and does not coalesce adjacent ranges with different rates", () => {

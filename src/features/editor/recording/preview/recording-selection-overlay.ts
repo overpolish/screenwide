@@ -12,7 +12,7 @@ import {
 } from "../../tool-panels/tool-registry";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
-import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { normalizedRecordingSelection } from "./recording-selection";
 
 import type { AnnotationKind } from "../../../annotations/types";

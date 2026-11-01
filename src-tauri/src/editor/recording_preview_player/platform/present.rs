@@ -74,7 +74,10 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
       &sources.held_fills,
     );
   }
-  sources.arrange_scene(&mut settings, timestamp_ms, frame_ms);
+  let placed = sources.arrange_scene(&mut settings, timestamp_ms, frame_ms);
+  // The chrome over a pane a scene places moves with the frame it outlines,
+  // drawn with it in one batch.
+  let selection = sources.selection_for_frame(&settings, placed, (timestamp_ms, frame_ms));
   annotation_preview::carry_camera_annotations(&mut settings, sources.annotation_pictures());
   // The shortcut strip is fitted against the full recording canvas, before
   // the composition shrinks toward the pane.
@@ -186,6 +189,11 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
       source_is_camera: true,
     });
   }
+  let _batch = selection.map(|selection| {
+    let batch = surface.present_batch();
+    surface.set_selection(Some(selection));
+    batch
+  });
   surface
     .present_recording_workspace(&layers)
     .unwrap_or(false)

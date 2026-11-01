@@ -25,7 +25,6 @@ pub(super) struct RunContext {
   pub(super) event_channel: Channel<RecordingPreviewPlayerEvent>,
   pub(super) mode: PlaybackMode,
   pub(super) playback_end_ms: Option<u64>,
-  pub(super) playback_rate: f64,
   pub(super) playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pub(super) position_ms: Arc<AtomicU64>,
   pub(super) request_id: u64,
@@ -43,19 +42,14 @@ fn output_duration_ms(source_duration_ms: u64, playback_rate: f64) -> u64 {
   ((source_duration_ms as f64) / playback_rate).ceil() as u64
 }
 
-fn effective_rate(range: RecordingPreviewPlaybackRange, global_rate: f64) -> f64 {
-  range.playback_rate * global_rate
-}
-
 fn position_at_elapsed(
   ranges: &[RecordingPreviewPlaybackRange],
   elapsed_ms: u64,
-  playback_rate: f64,
   fallback_ms: u64,
 ) -> u64 {
   let mut remaining = elapsed_ms;
   for range in ranges {
-    let rate = effective_rate(*range, playback_rate);
+    let rate = range.playback_rate;
     let output_duration = output_duration_ms(range.duration_ms(), rate);
     if remaining < output_duration {
       return range
@@ -77,7 +71,6 @@ pub(super) fn run(context: RunContext) {
     event_channel,
     mode,
     playback_end_ms,
-    playback_rate,
     playback_ranges,
     position_ms,
     request_id,
@@ -115,7 +108,6 @@ pub(super) fn run(context: RunContext) {
     selected_audio,
     audio_volumes,
     &ranges,
-    playback_rate,
     Arc::clone(&cancelled),
     Arc::clone(&audio_child),
   ) {
@@ -142,7 +134,7 @@ pub(super) fn run(context: RunContext) {
   let mut last_presented = start_ms;
   let output_duration_ms = ranges
     .iter()
-    .map(|range| output_duration_ms(range.duration_ms(), effective_rate(*range, playback_rate)))
+    .map(|range| output_duration_ms(range.duration_ms(), range.playback_rate))
     .sum::<u64>();
   while !cancelled.load(Ordering::Acquire) {
     let elapsed = (audio.clock.seconds() * 1000.0) as u64;
@@ -152,7 +144,7 @@ pub(super) fn run(context: RunContext) {
       present_audio_position(&sources, end);
       break;
     }
-    let current = position_at_elapsed(&ranges, elapsed, playback_rate, start_ms);
+    let current = position_at_elapsed(&ranges, elapsed, start_ms);
     if !announced_playing && elapsed > 0 {
       announced_playing = true;
       let _ = event_channel.send(RecordingPreviewPlayerEvent::Playing {
@@ -200,18 +192,18 @@ mod tests {
       RecordingPreviewPlaybackRange {
         source_end_ms: 1_000,
         source_start_ms: 0,
-        playback_rate: 1.0,
+        playback_rate: 2.0,
       },
       RecordingPreviewPlaybackRange {
         source_end_ms: 3_000,
         source_start_ms: 2_000,
-        playback_rate: 1.0,
+        playback_rate: 2.0,
       },
     ];
     assert_eq!(output_duration_ms(1_000, 2.0), 500);
-    assert_eq!(position_at_elapsed(&ranges, 250, 2.0, 0), 500);
-    assert_eq!(position_at_elapsed(&ranges, 500, 2.0, 0), 2_000);
-    assert_eq!(position_at_elapsed(&ranges, 750, 2.0, 0), 2_500);
+    assert_eq!(position_at_elapsed(&ranges, 250, 0), 500);
+    assert_eq!(position_at_elapsed(&ranges, 500, 0), 2_000);
+    assert_eq!(position_at_elapsed(&ranges, 750, 0), 2_500);
   }
 
   #[test]
@@ -228,8 +220,8 @@ mod tests {
         playback_rate: 0.5,
       },
     ];
-    assert_eq!(position_at_elapsed(&ranges, 500, 1.0, 0), 2_000);
-    assert_eq!(position_at_elapsed(&ranges, 1_500, 1.0, 0), 2_500);
+    assert_eq!(position_at_elapsed(&ranges, 500, 0), 2_000);
+    assert_eq!(position_at_elapsed(&ranges, 1_500, 0), 2_500);
   }
 
   #[test]
@@ -242,15 +234,15 @@ mod tests {
     // The trace showed 130 ms of startup delay before the sample clock moved.
     // Repeated polls during that delay must all present the same source frame.
     for _ in 0..10 {
-      assert_eq!(position_at_elapsed(&ranges, 0, 1.0, 7_018), 7_018);
+      assert_eq!(position_at_elapsed(&ranges, 0, 7_018), 7_018);
     }
-    assert_eq!(position_at_elapsed(&ranges, 21, 1.0, 7_018), 7_039);
+    assert_eq!(position_at_elapsed(&ranges, 21, 7_018), 7_039);
     let resumed = [RecordingPreviewPlaybackRange {
       source_start_ms: 7_039,
       ..ranges[0]
     }];
-    assert_eq!(position_at_elapsed(&resumed, 0, 1.0, 7_039), 7_039);
-    assert_eq!(position_at_elapsed(&resumed, 21, 1.0, 7_039), 7_060);
+    assert_eq!(position_at_elapsed(&resumed, 0, 7_039), 7_039);
+    assert_eq!(position_at_elapsed(&resumed, 21, 7_039), 7_060);
   }
 
   #[test]

@@ -76,21 +76,45 @@ export const showPopupPanel = ({
  * Re-places an open panel against its parent's content, without re-showing it.
  *
  * A tool panel hangs off the preview rather than the window frame, so an
- * editor resize moves the corner it sits in. Only its position changes: a
- * fresh `showPopupPanel` would re-attach and re-order the panel window for
- * what is a move.
+ * editor resize moves the corner it sits in; the editor's island covers the
+ * preview, so it takes the preview's new `size` too. A fresh
+ * `showPopupPanel` would re-attach and re-order the panel window for what is
+ * a move.
  */
-export const movePopupPanel = (
-  parentWindowLabel: string,
-  offset: LogicalPosition,
-  panel?: string,
-) =>
+export const movePopupPanel = ({
+  offset,
+  panel,
+  parentWindowLabel,
+  size,
+}: {
+  offset: LogicalPosition;
+  parentWindowLabel: string;
+  panel?: string;
+  size?: LogicalSize;
+}) =>
   invoke<null>("move_standalone_listbox", {
     offset,
     pageHeight: window.innerHeight,
     panel: panel ?? null,
     parentWindowLabel,
+    size: size ?? null,
   });
+
+/** A part of a panel, in CSS pixels from its window's top left. */
+export type PopupPanelPart = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+/** Where a panel larger than what it shows has its parts, so clicks on them
+ * reach it and clicks anywhere else in its window pass through; null makes
+ * it take every click again. */
+export const setPopupPanelHitArea = (
+  panel: string,
+  parts: PopupPanelPart[] | null,
+) => invoke<null>("set_standalone_listbox_hit_area", { panel, rects: parts });
 
 /** A fitted panel's content reporting the height it needs. The window is
  * sized to it and, if it opened unseen, revealed once the resize has landed. */

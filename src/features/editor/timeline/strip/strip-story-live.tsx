@@ -9,18 +9,20 @@ import { type Span } from "../timeline-scale";
 import { storyFrameAspect } from "../timeline-story-fixtures";
 
 import { type StripLull } from "./strip-beat-row";
-import { type StripSelection } from "./strip-selection";
+import { selectionSpan, type StripSelection } from "./strip-selection";
 import { type LiveLull, useStoryContent } from "./strip-story-content";
 import { type StoryRecording } from "./strip-story-fixtures";
 import { jumpsOf, playedTime } from "./strip-story-order";
+import { screenlessContent } from "./strip-story-screen";
 import { TimelineStrip } from "./timeline-strip";
 import { type TimelineStripProps } from "./timeline-strip-props";
 import { useAltKey } from "./use-alt-key";
 
 // The strip over a story recording, kept as the editor would keep it: what
 // is chosen, the playhead, the squeeze, each lull's play and trim, the
-// scenes, the annotations, the shortcuts, the splits and the order it plays
-// in. Drags are logged to Actions once they rest.
+// cuts, the scenes, the annotations, the shortcuts, the splits and the
+// order it plays in. Delete cuts what is chosen, as the strip's island
+// does. Drags are logged to Actions once they rest.
 //
 // A lull plays at one speed throughout. Squeezed, it is hurried by the same
 // share of what it can give as every other: up to four times as fast, or
@@ -52,10 +54,16 @@ export type LiveStripProps = Pick<
 > & {
   /** Whether ⌥ is held, besides the key itself. */
   isAltHeld: boolean;
+  /** Whether the annotations are left out, as with the screen's track off. */
+  isAnnotationsHidden: boolean;
   isCaptionsHidden: boolean;
   /** Whether the Cut tool is on. */
   isCutting: boolean;
   isPlaying: boolean;
+  /** Whether the screen's track is in the export. */
+  isScreenShown: boolean;
+  /** Whether the shortcuts are left out. */
+  isShortcutsHidden: boolean;
   /** Stretches moved before the story opens, each to play before a
    * recorded moment, or at the end for null. */
   moves: { before: number | null; span: Span }[];
@@ -74,7 +82,11 @@ const roomIn = (lull: LiveLull) =>
 export function LiveStrip(props: LiveStripProps) {
   const { recording } = props;
   const edit = useStoryContent(recording, props.moves);
-  const { content } = edit;
+  // With the screen out, the strip is made of what is left without it, and
+  // annotations, drawn on the screen, go with it.
+  const content = props.isScreenShown
+    ? edit.content
+    : screenlessContent(edit.content, recording.duration);
   const maxSqueeze = content.lulls.reduce((sum, lull) => sum + roomIn(lull), 0);
   const [squeeze, setSqueeze] = useState(props.squeeze * maxSqueeze);
   const [selection, setSelection] = useState(props.selection);
@@ -105,6 +117,28 @@ export function LiveStrip(props: LiveStripProps) {
       plays,
     };
   });
+  // Read when the key is pressed, so the listener is added once.
+  const cutRef = useRef(() => {});
+  cutRef.current = () => {
+    const span = selectionSpan(selection, {
+      annotation: [],
+      beat: content.beats,
+      lull: lulls,
+      scene: [],
+    });
+    if (!span) return;
+    edit.cut(span);
+    setSelection(null);
+  };
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Backspace" || event.key === "Delete") cutRef.current();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
   const map = playedTime(content.order, [
     ...lulls.map(({ plays, span }) => ({ ...span, plays })),
     ...content.cuts.map((cut) => ({ ...cut, plays: 0 })),
@@ -138,10 +172,16 @@ export function LiveStrip(props: LiveStripProps) {
   return (
     <TimelineStrip
       {...content}
+      annotations={
+        props.isAnnotationsHidden || !props.isScreenShown
+          ? []
+          : content.annotations
+      }
       isAltHeld={props.isAltHeld || altKey}
       isCaptionsHidden={props.isCaptionsHidden}
       isCutting={props.isCutting}
       isPlaying={props.isPlaying}
+      isScreenShown={props.isScreenShown}
       jumps={jumpsOf(content.order)}
       lulls={lulls}
       map={map}
@@ -220,7 +260,8 @@ export function LiveStrip(props: LiveStripProps) {
       playhead={playhead}
       recorded={recording.duration}
       selection={selection}
-      squeeze={squeeze}
+      shortcuts={props.isShortcutsHidden ? [] : content.shortcuts}
+      squeeze={share * maxSqueeze}
     />
   );
 }

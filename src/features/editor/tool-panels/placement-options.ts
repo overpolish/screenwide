@@ -12,15 +12,15 @@ import type { PositionGridItem } from "../../../primitives/position-grid/positio
 /** The nine places an overlay sits at, in reading order, as `PositionGrid`
  * lays them out. Captions and shortcuts offer the same ones. */
 export const placementOptions = (): PositionGridItem<Placement>[] => [
-  { id: "top-left", label: t("editor-panels-position-top-left") },
-  { id: "top", label: t("editor-panels-position-top") },
-  { id: "top-right", label: t("editor-panels-position-top-right") },
-  { id: "left", label: t("editor-panels-position-left") },
-  { id: "center", label: t("editor-panels-position-center") },
-  { id: "right", label: t("editor-panels-position-right") },
-  { id: "bottom-left", label: t("editor-panels-position-bottom-left") },
-  { id: "bottom", label: t("editor-panels-position-bottom") },
-  { id: "bottom-right", label: t("editor-panels-position-bottom-right") },
+  { id: "top-left", label: t("editor-island-position-top-left") },
+  { id: "top", label: t("editor-island-position-top") },
+  { id: "top-right", label: t("editor-island-position-top-right") },
+  { id: "left", label: t("editor-island-position-left") },
+  { id: "center", label: t("editor-island-position-center") },
+  { id: "right", label: t("editor-island-position-right") },
+  { id: "bottom-left", label: t("editor-island-position-bottom-left") },
+  { id: "bottom", label: t("editor-island-position-bottom") },
+  { id: "bottom-right", label: t("editor-island-position-bottom-right") },
 ];
 
 /** The sizes the shortcuts and the cursor are drawn at, smallest first: their

@@ -26,6 +26,7 @@ use super::{platform, transient_popover::TransientPopover, WindowLabel};
 
 mod attachment;
 pub(crate) mod dismissal;
+pub(crate) mod hit_area;
 pub(crate) mod lifecycle;
 pub(crate) mod placement;
 use attachment::{attach_to_parent, detach_from_parent};

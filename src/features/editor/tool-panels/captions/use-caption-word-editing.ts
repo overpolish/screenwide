@@ -10,11 +10,7 @@ import { normalizeText } from "../transcript/transcript-units";
 import { CaptionText, CaptionTextWord } from "./caption-text";
 import { CaptionTextPart, CaptionWordEdit } from "./caption-text-view";
 import { canBreakIn, withBreak, withChoice } from "./caption-word-choices";
-import {
-  captionWordParts,
-  hasLetters,
-  withCaptionPunctuation,
-} from "./caption-word-parts";
+import { editedWordText } from "./caption-word-parts";
 import {
   CaptionMenuAction,
   captionMenuItems,
@@ -160,18 +156,13 @@ export function useCaptionWordEditing({
       setEditing(null);
       if (typed === null || !text) return;
       const word = text.words[index];
-      const left = normalizeText(typed);
       // No letters left is the word taken out of the captions, as Backspace
-      // takes it; the recording keeps it. A word that was only a mark goes
-      // only when emptied.
-      if (left === "" || (hasLetters(word.text) && !hasLetters(left))) {
+      // takes it; the recording keeps it.
+      const corrected = editedWordText(word.text, normalizeText(typed));
+      if (corrected === null) {
         if (text.isMarked && isShown(index)) act("hide", index);
         return;
       }
-      const corrected = withCaptionPunctuation(
-        captionWordParts(word.text),
-        left,
-      );
       if (corrected !== normalizeText(word.text)) onCorrect(word, corrected);
     },
     onEditStart: setEditing,

@@ -7,6 +7,7 @@ import { type TimelineScene } from "../scene-rail/scene-clip";
 import { type Playhead } from "../scrub-playhead";
 import { type TimelineShortcut } from "../shortcut-lane/shortcut-chip";
 import { type Span, type TimeMap } from "../timeline-scale";
+import { type ScrubPhase } from "../timeline-seek";
 
 import {
   type StripBeat,
@@ -24,7 +25,6 @@ export type TimelineStripProps = Pick<
   | "onLullPlayChange"
   | "onLullTrim"
   | "onRestore"
-  | "onSeek"
   | "pictureAspect"
   | "selection"
 > & {
@@ -39,6 +39,10 @@ export type TimelineStripProps = Pick<
   isCutting: boolean;
   /** Whether the recording plays, which the view follows. */
   isPlaying: boolean;
+  /** Whether the screen's track is in the export. Out, the strip holds
+   * only what is left without it; switching it reshapes the strip as one
+   * rearrangement. */
+  isScreenShown: boolean;
   /** The recorded moments where play jumps, each the start of a stretch
    * that does not follow what plays before it. */
   jumps: number[];
@@ -63,6 +67,9 @@ export type TimelineStripProps = Pick<
   onRemoveSplit: (at: number) => void;
   onSceneDraw: (from: number, to: number) => void;
   onSceneRetime: (id: string, start: number, end: number) => void;
+  /** Told the recorded moment to move the playhead to: where in a scrub it
+   * falls, or, with no phase, a jump there. */
+  onSeek: (seconds: number, phase?: ScrubPhase) => void;
   /** Told what is chosen, or null when the choice is let go. */
   onSelect: (selection: StripSelection | null) => void;
   /** Told the scissors pressed without drawing, to split the recording at

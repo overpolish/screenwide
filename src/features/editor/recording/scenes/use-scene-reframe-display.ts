@@ -26,7 +26,10 @@ const sendSceneCrop = (
  * crop tool is reframing, so it draws that pane unzoomed beneath the crop
  * window, and how much of the scene's turn of the screen to draw as the
  * selection's `cropTurn` eases it out before the reframe and back in after.
- * Both are let go with the session.
+ * Both live in the session's sources, which stopping the session drops, so
+ * nothing is sent to let them go: the hook only goes with its session, and a
+ * reset sent then reached a session already stopped (as an export's
+ * suspension stops it) and failed.
  */
 export function useSceneReframeDisplay(
   sessionId: number | null,
@@ -37,10 +40,4 @@ export function useSceneReframeDisplay(
     if (sessionId === null) return;
     void sendSceneCrop(sessionId, reframePane, screenTurn);
   }, [reframePane, screenTurn, sessionId]);
-  useEffect(() => {
-    if (sessionId === null) return;
-    return () => {
-      void sendSceneCrop(sessionId, null, 1);
-    };
-  }, [sessionId]);
 }

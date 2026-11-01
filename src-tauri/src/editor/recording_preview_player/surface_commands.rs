@@ -4,19 +4,6 @@
 //! Native preview surface layout and visibility commands.
 
 mod geometry_helpers;
-mod view_controls;
-pub use view_controls::reset_recording_preview_view;
-pub use view_controls::set_recording_preview_fit_basis;
-pub use view_controls::set_recording_preview_zoom;
-pub use view_controls::{
-  __cmd__reset_recording_preview_view, __tauri_command_name_reset_recording_preview_view,
-};
-pub use view_controls::{
-  __cmd__set_recording_preview_fit_basis, __tauri_command_name_set_recording_preview_fit_basis,
-};
-pub use view_controls::{
-  __cmd__set_recording_preview_zoom, __tauri_command_name_set_recording_preview_zoom,
-};
 
 #[cfg(test)]
 mod tests;
@@ -36,7 +23,7 @@ use super::*;
 
 use crate::editor::preview_workspace_model::WorkspacePane;
 use screenwide_compositor::workspace_editor::WorldRect;
-use screenwide_compositor::PreviewSurfaceRect;
+use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
 use screenwide_scenes::CameraOverlaySettings;
 
 #[derive(serde::Deserialize)]
@@ -55,8 +42,6 @@ pub struct RecordingPreviewSurfaceLayout {
   annotation_tool: Option<String>,
   backdrop: Option<[f64; 4]>,
   bake_camera: bool,
-  #[serde(default)]
-  fit_width: Option<f64>,
   camera_overlay: CameraOverlaySettings,
   native_editor: bool,
   panes: Vec<PreviewSurfacePane>,
@@ -67,4 +52,6 @@ pub struct RecordingPreviewSurfaceLayout {
   selection_targets: Option<Vec<RecordingPreviewSelection>>,
   session_id: u64,
   viewport: PreviewSurfaceRect,
+  /// How round the viewport's corners are where it meets the chrome.
+  viewport_corners: PreviewSurfaceCorners,
 }

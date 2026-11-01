@@ -13,7 +13,7 @@ use screenwide_osc::turn::ring_basis;
 /// The rings' vertex kind in `osc.wgsl`, one quad drawing all three.
 pub(in super::super) const RING_KIND: u32 = 60;
 /// A ring's coloured core, half across, and its dark outline, in points.
-const RING_CORE: f64 = 2.0;
+const RING_CORE: f64 = 1.5;
 const RING_OUTLINE: f64 = 1.0;
 /// How far the ring under the pointer, and the ring being dragged, are lit
 /// toward white.
@@ -29,11 +29,11 @@ pub(in super::super) struct Rings {
 }
 
 /// What the overlay draws of a turned layer: its frame, corners clockwise
-/// from its own top-left then its radius dot, in device pixels; the rings;
-/// and the turn, in display points, the annotation chrome is carried through.
+/// from its own top-left, in device pixels; the rings; and the turn, in
+/// display points, the annotation chrome is carried through.
 #[derive(Default)]
 pub(in super::super) struct TurnChrome {
-  pub(in super::super) frame: Option<[[f32; 2]; 5]>,
+  pub(in super::super) frame: Option<[[f32; 2]; 4]>,
   pub(in super::super) rings: Option<Rings>,
   pub(in super::super) annotations: Option<Homography>,
 }
@@ -55,19 +55,17 @@ fn turned_frame(
   selection: PreviewSelection,
   forward: Homography,
   scale: f64,
-) -> Option<[[f32; 2]; 5]> {
+) -> Option<[[f32; 2]; 4]> {
   if selection.crop_mode != 0 {
     return None;
   }
   let frame = display_selection(state, selection)?;
   let (right, bottom) = (frame.x + frame.width, frame.y + frame.height);
-  // The radius dot sits where the upright selection draws it.
   let points = [
     (frame.x, frame.y),
     (right, frame.y),
     (right, bottom),
     (frame.x, bottom),
-    radius_point(frame, selection.radius_percent),
   ];
   Some(points.map(|point| {
     let (x, y) = carry(forward, point);
@@ -145,29 +143,6 @@ pub(in super::super) fn carried_rect(forward: Homography, rect: Rect) -> [Point;
   let (right, bottom) = (rect.right(), rect.bottom());
   [(left, top), (right, top), (right, bottom), (left, bottom)]
     .map(|(x, y)| carried_point(forward, Point { x, y }))
-}
-
-/// An upright box's corners, clockwise from its top-left, and its radius dot
-/// where `radius_percent` gives one, as the layer selection places it,
-/// carried through `forward`. A turned layer's box annotation wears these as
-/// soft lines: its upright chrome is pixel-snapped quads, which carried
-/// through the turn would step along every side.
-pub(in super::super) fn carried_box(
-  forward: Homography,
-  frame: Rect,
-  radius_percent: Option<f64>,
-) -> ([Point; 4], Option<Point>) {
-  let dot = radius_percent.map(|percent| {
-    let offset = frame.size.width.min(frame.size.height) * percent / 100.0 * 0.55 + 10.0;
-    carried_point(
-      forward,
-      Point {
-        x: frame.origin.x + offset,
-        y: frame.origin.y + offset,
-      },
-    )
-  });
-  (carried_rect(forward, frame), dot)
 }
 
 /// How far past the view a carried guide may run, in points, so its caps

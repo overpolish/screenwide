@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! An image's chrome: where its tilted, turned picture is picked, its own
+//! An image's chrome: where its tilted, turned picture is picked, and its own
 //! frame - tilted and turned with the picture, whose eight grips move the
-//! picture's own sides - and its radius dot. The frame is `image::frame`'s.
+//! picture's own sides. The frame is `image::frame`'s.
 
 use super::*;
 use screenwide_annotations::geometry::ArrowGeometry;
-use screenwide_annotations::gesture::{BOX_HANDLES, RADIUS_HANDLE};
+use screenwide_annotations::gesture::BOX_HANDLES;
 use screenwide_annotations::image::frame::{cursor_sides, ImageFrame};
 use screenwide_annotations::image::geometry::{image_distance, prepare_image};
 use screenwide_annotations::image::ImageTilt;
@@ -65,9 +65,7 @@ pub(super) fn distance(
   image_distance([point.0 as f32, point.1 as f32], &geometry(image, item))
 }
 
-/// The grip under `point`, as the handle it reports: the frame's eight,
-/// then its radius dot. The frame's come first, so on a picture too small to
-/// keep them apart a corner wins over the dot.
+/// The frame grip under `point`, as the handle it reports.
 pub(super) fn grip_at(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -76,30 +74,25 @@ pub(super) fn grip_at(
   let near =
     |(x, y): (f64, f64)| (point.0 - x).abs() <= HANDLE_HIT && (point.1 - y).abs() <= HANDLE_HIT;
   own_frame(image, item)
-    .grips(item.radius)
+    .grips()
     .into_iter()
     .find(|(grip, _)| near((grip.x, grip.y)))
     .map(|(_, handle)| handle)
 }
 
-/// The resize cursor a frame grip or the radius dot shows, turned with the
-/// picture; `None` for any other grip. The radius dot drags along the
-/// picture's own diagonal, as a box's dot drags along its upright one.
+/// The resize cursor a frame grip shows, turned with the picture; `None` for
+/// any other grip.
 pub(super) fn grip_cursor(item: &NativeAnnotationHandles, handle: u32) -> Option<u32> {
-  let sides = if handle == RADIUS_HANDLE {
-    1 | 4
-  } else {
-    handle
-      .checked_sub(BOX_HANDLES)
-      .filter(|sides| *sides < 16)?
-  };
+  let sides = handle
+    .checked_sub(BOX_HANDLES)
+    .filter(|sides| *sides < 16)?;
   Some(BOX_HANDLES + cursor_sides(sides, item.start_head))
 }
 
 /// The chosen image's frame in device pixels: its four corners, clockwise
-/// from the picture's own top-left, then its radius dot. `None` when no image
-/// is chosen or the annotation tool has no say.
-pub(crate) fn selected_frame(state: &SurfaceState, scale: f64) -> Option<[[f32; 2]; 5]> {
+/// from the picture's own top-left. `None` when no image is chosen or the
+/// annotation tool has no say.
+pub(crate) fn selected_frame(state: &SurfaceState, scale: f64) -> Option<[[f32; 2]; 4]> {
   if state.annotation.mode == MODE_NONE {
     return None;
   }
@@ -107,8 +100,6 @@ pub(crate) fn selected_frame(state: &SurfaceState, scale: f64) -> Option<[[f32; 
   if item.shape_kind() != AnnotationKind::Image {
     return None;
   }
-  let frame = own_frame(image_frame(state)?, item);
   let device = |point: AnnotationPoint| [(point.x * scale) as f32, (point.y * scale) as f32];
-  let [a, b, c, d] = frame.corners().map(device);
-  Some([a, b, c, d, device(frame.radius_dot(item.radius))])
+  Some(own_frame(image_frame(state)?, item).corners().map(device))
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  PREVIEW_DISPLAYS,
   PREVIEW_MANY_DISPLAYS,
   PREVIEW_REGIONS,
   PREVIEW_WINDOWS,
@@ -20,6 +21,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Screen: Story = { args: { initialMode: "screen" } };
+
+export const ScreenOneDisplay: Story = {
+  args: { displays: PREVIEW_DISPLAYS.slice(0, 1), initialMode: "screen" },
+};
 
 export const ScreenFiveDisplays: Story = {
   args: { displays: PREVIEW_MANY_DISPLAYS, initialMode: "screen" },

@@ -49,10 +49,11 @@ pub fn annotation_mode(tool: Option<&str>) -> u32 {
 }
 
 /// Whether the tool in hand halos nothing: with no tool there is nothing to
-/// pick, and the pen picks nothing up. Taking one up retires any halo, since
-/// the pointer may never move again to do it.
+/// pick. Every pen picks up whatever is under it, so every pen halos it.
+/// Putting the tools down retires any halo, since the pointer may never move
+/// again to do it.
 pub fn hovers_nothing(mode: u32) -> bool {
-  mode == MODE_NONE || mode == MODE_DRAW
+  mode == MODE_NONE
 }
 
 /// The shape the tool in hand draws, or `None` where the tool draws nothing.

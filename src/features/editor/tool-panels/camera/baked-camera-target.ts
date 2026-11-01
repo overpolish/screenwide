@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
-import { defaultCameraOverlay } from "../../export/recording-export-settings";
-import { withCameraOverlaySize } from "../../preview/camera-overlay-placement";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings, EditorArtifact } from "../../types";
 import { EditorSelectionTarget } from "../selection/placed-selection-target";
@@ -21,8 +19,6 @@ type BakedCameraTargetInputs = {
     next: ScreenshotOutputSettings,
   ) => void;
 };
-
-const whole = (value: number) => Math.round(value);
 
 /**
  * The camera as the compositor draws it: one picture, with the camera in it.
@@ -56,34 +52,19 @@ export const bakedCameraSelectionTarget = ({
       // A baked camera is placed in the screen's picture rather than padded
       // against a colour of its own, so it carries no pad.
     },
-    applyPlacement: (placement) => {
-      onCameraOverlayChange?.(withCameraOverlaySize(cameraOverlay, placement));
-    },
     applyRadius: (radiusPercent) => {
       onCameraOverlayChange?.({ ...cameraOverlay, radiusPercent });
     },
     recenter: () => {
       // Nothing to recentre: there is no pad to put the camera back inside of.
     },
-    // Back to where the camera is put when a recording is opened, which is
-    // what the canvas resets it to as well.
-    reset: () => {
-      onCameraOverlayChange?.(defaultCameraOverlay(artifact));
-    },
     selection: {
       dropShadow: cameraOutput.dropShadow,
       followsFace: cameraOverlay.followFace ?? false,
-      height: whole(cameraOverlay.frameHeight),
       inset: 0,
-      insetMaximum: 0,
       kind: "camera",
-      label: t("editor-panels-camera"),
+      label: t("editor-island-camera"),
       radius: cameraOverlay.radiusPercent,
-      sourceHeight: camera.height,
-      sourceWidth: camera.width,
-      width: whole(cameraOverlay.frameWidth),
-      x: whole(cameraOverlay.frameX),
-      y: whole(cameraOverlay.frameY),
     },
   };
 };

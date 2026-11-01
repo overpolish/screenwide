@@ -32,6 +32,10 @@ struct FocusConstants {
   // whole canvas rather than a layer laid over others; and how opaque what
   // lies past its edge is laid, sharp as the canvas pass drew it, if at all.
   edge: vec4<f32>,
+  // Where a target pixel lies in the chain: `xy` added to it, so the canvas
+  // starts on a multiple of the coarsest level's texel however the view is
+  // panned, and the levels average the same pixels of the picture.
+  chain: vec4<f32>,
 }
 
 @group(0) @binding(0) var chain: texture_2d<f32>;
@@ -104,18 +108,20 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let scale = max(constants.placement.z, 1e-6);
   let pixel = (position.xy - constants.placement.xy) * constants.placement.zw;
   let coverage = frame_coverage(pixel);
+  let at = position.xy + constants.chain.xy;
   // Nothing past the canvas's edge is exported, so the focus leaves it be,
   // faded as the canvas pass fades it.
-  let sharp = textureLoad(chain, vec2<i32>(position.xy), 0) * constants.edge.w;
+  let sharp = textureLoad(chain, vec2<i32>(at), 0) * constants.edge.w;
   if (coverage <= 0.0) {
     return sharp;
   }
   // The blur in target pixels, which the chain is laid in.
   let radius = circle_of_confusion(pixel) / scale;
   // Taps stay on the canvas, so its edge never draws in what lies past it.
-  let low = max(constants.placement.xy, vec2<f32>(0.0)) + 0.5;
-  let high = min(constants.placement.xy + constants.output_source.xy / scale, size) - 0.5;
-  var blurred = disc_blur(chain, linear, position.xy, radius, low, max(low, high));
+  let corner = constants.placement.xy + constants.chain.xy;
+  let low = max(corner, vec2<f32>(0.0)) + 0.5;
+  let high = min(corner + constants.output_source.xy / scale, size) - 0.5;
+  var blurred = disc_blur(chain, linear, at, radius, low, max(low, high));
   // A whole canvas is opaque to its edge. Where a coarse level averages in
   // what lies past the edge, its colour is read back at full strength, so
   // the edge neither darkens nor thins; then the frame is clipped, sharp.

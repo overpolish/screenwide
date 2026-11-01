@@ -3,8 +3,6 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
-import { t } from "../../../../i18n/i18n";
-import { NativeRecordingWorkspaceViewport } from "../../recording/preview/native-recording-workspace-viewport";
 import { PreparedAudioTrack } from "../../types";
 
 import { AudioTrackVolumes } from "./audio-level";
@@ -24,10 +22,12 @@ const envelopeId = (waveform: number[]) => {
 };
 
 /**
- * The audio-only preview.
+ * The audio-only preview's bars.
  *
- * Uploads the enabled tracks' envelopes and gains. The native playback
- * worker owns the position and follows the audio clock used by video.
+ * Uploads the enabled tracks' envelopes and gains, and draws nothing in the
+ * page: the bars fill the stage's viewport, which the picture uses when there
+ * is video. The native playback worker owns the position and follows the
+ * audio clock used by video.
  */
 export function NativeAudioRibbon({
   artifactId,
@@ -82,14 +82,5 @@ export function NativeAudioRibbon({
     };
   }, [artifactId, send, tracksKey]);
 
-  return (
-    <NativeRecordingWorkspaceViewport
-      ariaLabel={t("editor-timeline-audio-visualizer")}
-      audioOnly
-      isBusy={false}
-      panes={[]}
-      workspaceHeight={0}
-      workspaceWidth={0}
-    />
-  );
+  return null;
 }

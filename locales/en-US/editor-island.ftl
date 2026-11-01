@@ -34,6 +34,11 @@ editor-island-sound-volume = { $track } volume
 # Puts a track back at the level it was recorded at. $track is the track's name, such as Microphone.
 editor-island-sound-reset-volume = Reset { $track } volume
 
+## The recording's tracks, each held in the export and the preview or left out
+
+# The island the transport's Tracks button brings out: a switch for each recorded track.
+editor-island-tracks = Tracks
+
 ## The recording's shortcuts, every one at once
 
 # Deletes the shortcuts chosen on the strip. $count is how many are chosen.
@@ -164,12 +169,28 @@ editor-island-range = Range
 editor-island-range-cut = Cut the range
 editor-island-range-confirm-cut = Confirm cutting
 
+## Several beats and lulls gathered on the strip with Shift
+
+# $count is how many beats and lulls are chosen, two or more.
+editor-island-strip-group =
+    { $count ->
+        [one] 1 item
+       *[other] { $count } items
+    }
+# Cuts every chosen beat and lull and the time they take.
+editor-island-strip-group-cut = Cut the items
+editor-island-strip-group-confirm-cut = Confirm cutting
+
 ## A beat on the strip: something that happens in the recording, said as it happens there
 
 # A click on a control. $label is the control's name, such as a button's.
 editor-island-beat-click = Click “{ $label }”
 # Typing. $label is what was typed.
 editor-island-beat-type = Type “{ $label }”
+# A click on something the recording does not name.
+editor-island-beat-click-unnamed = Click
+# Typing whose text the recording does not keep, as typed text never is.
+editor-island-beat-type-unnamed = Typing
 # Keys pressed together. $keys is the keys, drawn as keycaps.
 editor-island-beat-press = Press { $keys }
 # Switching apps. $app is the app's name.
@@ -201,8 +222,6 @@ editor-island-transcription = Transcription
 # While the recording or a voice note is transcribed, on the Captions, Script and Moment islands.
 editor-island-transcribing = Transcribing
 editor-island-transcribe-failed = Could not transcribe the recording.
-# Transcribing heard nothing: there are no words to caption or show.
-editor-island-no-speech = No words detected.
 
 ## A scene on the strip: how a stretch of the recording is framed
 
@@ -287,6 +306,26 @@ editor-island-annotation-delete = Delete the annotation
 editor-island-annotation-confirm-delete = Confirm deleting
 # Whether the annotation draws itself in as its bar on the strip begins, rather than appearing whole.
 editor-island-annotation-animate = Animate
+# Turns on or off whether the annotation follows the content under it as the recording moves, such as a button on a page that scrolls.
+editor-island-annotation-pin = Pin to content
+# Under a pinned annotation's island while it follows its content at the playhead.
+editor-island-annotation-pin-following = Following the content
+# Under a pinned annotation's island where its content is out of view at the playhead, so the annotation is hidden there.
+editor-island-annotation-pin-out-of-view = Content out of view here
+# Beside a progress bar while the path a pinned annotation follows is worked out.
+editor-island-annotation-pin-tracking = Tracking the content
+# A warning under a pinned annotation's island where the tracker lost the content it follows at the playhead, so where the annotation is there is a guess to check.
+editor-island-annotation-pin-lost = Tracking lost the content here
+# A warning under a pinned annotation's island where the content it follows is outside the recorded frame at the playhead, so the tracker is unsure of it there.
+editor-island-annotation-pin-off-frame = Content off the frame here
+# A warning under a pinned annotation's island where the content it follows went under something that stays put on screen, such as a page's sticky header, at the playhead, so the tracker is unsure of it there.
+editor-island-annotation-pin-under-cover = Content under a cover here
+# Says the pinned annotation's content went out of view at the playhead, hiding the annotation from there.
+editor-island-annotation-pin-hide = Out of view
+# Says the pinned annotation's content is back in view at the playhead, showing the annotation again from there.
+editor-island-annotation-pin-show = Back in view
+# Takes away every place the pinned annotation was put by hand, leaving it to follow its content alone.
+editor-island-annotation-pin-clear = Clear corrections
 editor-island-arrow = Arrow
 # Turns the arrow round, so its head points the other way.
 editor-island-arrow-reverse = Reverse
@@ -301,7 +340,7 @@ editor-island-image = Image
 editor-island-image-replace = Replace
 # Mirrors the image across its upright axis.
 editor-island-image-flip = Flip
-# A loupe that shows part of the picture larger.
+# A lens that shows the part of the picture under it larger.
 editor-island-magnifier = Magnifier
 # A box that hides what is under it, by erasing, filling, pixelating or blurring it.
 editor-island-redaction = Redaction
@@ -334,21 +373,23 @@ editor-island-text-outline = Outline
 editor-island-text-word-by-word = Word by word
 # Which of a text's colours the grid below sets: its type, its box, its accent and so on.
 editor-island-text-color-role = Colour for
-# The island for the screen of a recording: the shape it is cropped to, how far its edges are extended, its own corners and its shadow.
+# The island for the screen of a recording: how far its edges are extended, its own corners, its shadow and its turn.
 editor-island-screen = Screen
 # The same island for a screenshot, which is what was captured.
 editor-island-screenshot = Screenshot
-# The shape a crop keeps as its handles are dragged, on the Screen and Camera islands.
+# The shape a crop keeps as its handles are dragged, on the Crop tool's island.
 editor-island-crop-aspect = Aspect ratio
 # A crop with no shape kept: its handles drag freely.
 editor-island-crop-free = Free
+# A crop that keeps the shape a freely drawn crop had, offered after Free on the Crop tool's island once a free crop is drawn.
+editor-island-crop-locked = Locked
 # A crop that keeps the shape of the whole capture.
 editor-island-crop-original = Original
 # An aspect ratio as it is written, such as "16:9".
 editor-island-crop-ratio = { $width }:{ $height }
 # An aspect ratio as it is spoken, such as "16 by 9".
 editor-island-crop-ratio-name = { $width } by { $height }
-# Gives a layer's whole capture back, free of any crop, on the Screen and Camera islands.
+# Gives a layer's whole capture back, free of any crop, on the Crop tool's island.
 editor-island-reset-crop = Reset crop
 # Downloads the model a tool needs, on any island whose tool needs one.
 editor-island-model-download = Download
@@ -362,15 +403,199 @@ editor-island-screen-inset-medium = Medium
 editor-island-screen-inset-large = Large
 # Puts what was captured back in the middle of its box, after a crop or an inset moved it off centre.
 editor-island-screen-recenter = Recenter
-# The island for the camera, for the whole recording: its crop, its effects, its corners, its shadow and whether it follows the face.
+# The island for the camera, for the whole recording: its effects, its corners, its shadow and whether it follows the face.
 editor-island-camera = Camera
 # Shown while picking objects on the preview, where a drag paints a line over an object. $key is the key held to remove instead, drawn as a keycap: Option on a Mac, Alt on Windows.
 editor-island-camera-objects-hint = Click or paint to keep. Hold { $key } to remove.
-# At the foot of the Screen island while the playhead is in a scene, which can round the screen its own way.
-editor-island-corners-in-scene = Corners apply to this scene only.
+# At the foot of the Screen island while the playhead is in a scene, which can pad, round, turn and recenter the screen its own way.
+editor-island-screen-in-scene = Inset, corners, rotation and Recenter apply to this scene only.
+# At the foot of the Crop tool's island while the playhead is in a scene, which crops the screen and the camera its own way.
+editor-island-crop-in-scene = This crop applies to this scene only.
 # At the foot of the Camera island while the playhead is in a scene, which can round the camera and have it follow the face its own way.
 editor-island-camera-in-scene = Corners and Follow face apply to this scene only.
 # A dice that makes a frame's background again: a new colour, or new colours for a mesh's unlocked ones, in a mood picked at random.
 editor-island-frame-randomise = Randomise
 # Puts the frame's size back to the size of what was captured, leaving its background and corners as they are.
 editor-island-frame-original-size = Original size
+
+## Shared rows: names, sizes and places several islands use.
+
+editor-island-size = Size
+# The two fields of a size, and the toggle between them that keeps their proportions when one is changed.
+editor-island-width = Width
+editor-island-height = Height
+editor-island-keep-aspect-ratio = Keep aspect ratio
+editor-island-position = Position
+# The nine places on the picture an overlay such as captions or shortcuts can sit, each the accessible name of its cell in the Position grid.
+editor-island-position-top-left = Top left
+editor-island-position-top = Top
+editor-island-position-top-right = Top right
+editor-island-position-left = Left
+editor-island-position-center = Centre
+editor-island-position-right = Right
+editor-island-position-bottom-left = Bottom left
+editor-island-position-bottom = Bottom
+editor-island-position-bottom-right = Bottom right
+editor-island-audio = Audio
+# A layer of a screenshot, counted from the bottom of the stack.
+editor-island-layer = Layer { $number }
+
+## Images placed as annotations
+
+editor-island-replace = Replace
+
+## Cursor
+
+editor-island-cursor = Cursor
+editor-island-cursor-size = Cursor size
+editor-island-cursor-clip = Keep cursor inside the recording
+editor-island-cursor-smooth = Smooth movement
+editor-island-cursor-motion-blur = Motion blur
+editor-island-cursor-click-animation = Click animation
+
+## Keyboard shortcuts drawn over a recording
+
+editor-island-keyboard = Keyboard
+editor-island-keyboard-show = Show shortcuts
+editor-island-keyboard-light = Light
+editor-island-keyboard-restore = Restore all shortcuts
+
+## Transcript: the recording's microphone as words, chosen and cut, or corrected in place
+
+# The tool's tooltip and the transcript's accessible name.
+editor-island-transcript = Transcript
+# Shown under Transcribe when transcribing the recording failed.
+editor-island-transcript-failed = Could not transcribe the recording. Try again.
+# The accessible name of the word or words being edited in place.
+editor-island-transcript-editing = Word being edited
+# The accessible name of the menu a right click on the transcript's words opens.
+editor-island-transcript-actions = Word actions
+# Menu item: remove the chosen words from the video.
+editor-island-transcript-remove = Remove
+# Menu item: edit the chosen words in place.
+editor-island-transcript-edit = Edit
+# Menu item: bring back the struck-through words chosen.
+editor-island-transcript-restore = Restore
+# Menu item: put the chosen words back to the text that was heard.
+editor-island-transcript-restore-spelling = Restore spelling
+# The row that removes every filler word: its title.
+editor-island-transcript-fillers = Filler words
+# The row that removes every word marked as profanity: its title.
+editor-island-transcript-profanity = Profanity
+# Menu item on a filler or profane word: cut every word written the same way. $text is the word as the transcript shows it.
+editor-island-transcript-remove-same = Remove every “{ $text }”
+# Menu item on a filler: cut every filler word in the transcript.
+editor-island-transcript-remove-fillers = Remove all filler words
+# Menu item on a profane word: cut every word marked as profanity.
+editor-island-transcript-remove-profanity = Remove all profanity
+# Menu item on a word marked as profanity: stop marking it anywhere in this recording.
+editor-island-transcript-not-profanity = Not profanity
+# Heading over the scene layouts in the words' menu, where the chosen words sit outside every scene: picking one adds a scene over them.
+editor-island-transcript-add-scene = Add scene
+# Heading over the scene layouts in the words' menu, where the chosen words sit in a scene: picking one changes that scene's layout and fits its timing to the words.
+editor-island-transcript-change-scene = Change scene
+
+## Captions: the transcript's words shown a few at a time, timed to the voice
+
+# The accessible name of the transcript as the captions break it, under Show captions.
+editor-island-captions-text = Caption text
+# The menu a right click on a word of the caption text opens: its accessible name, then each item. A break starts a new caption between two words; a join keeps them in one caption. A key word is the word of its caption set apart in the accent's font, size and colour.
+editor-island-captions-actions = Caption actions
+editor-island-captions-split = Start a new caption here
+editor-island-captions-join = Join with the previous caption
+editor-island-captions-clear-split = Clear this break
+editor-island-captions-remove-join = Allow a break here
+editor-island-captions-hide-word = Hide from captions
+editor-island-captions-show-word = Show in captions
+editor-island-captions-make-key-word = Make key word
+editor-island-captions-not-key-word = Not a key word
+editor-island-text-template-box = Box
+editor-island-text-template-clean = Clean
+editor-island-text-template-pop = Pop
+editor-island-text-template-highlight = Highlight
+editor-island-text-template-karaoke = Karaoke
+editor-island-text-template-punch = Punch
+editor-island-text-template-editorial = Editorial
+editor-island-text-template-supersize = Supersize
+editor-island-text-template-stack = Stack
+editor-island-text-template-staircase = Staircase
+editor-island-text-template-rise = Rise
+editor-island-text-template-stagger = Stagger
+editor-island-text-template-shadow = Shadow
+editor-island-text-template-offset = Offset
+editor-island-text-template-underline = Underline
+editor-island-text-template-glow = Glow
+editor-island-text-template-flip = Flip
+# The few words each template's preview shows, said a couple at a time; short, so they fit a small tile.
+editor-island-text-sample = Captions that move with every word
+# The app's own font in the font list, ahead of the ones installed on the computer.
+editor-island-text-font-built-in = Inter (built in)
+editor-island-text-weight-thin = Thin
+editor-island-text-weight-extra-light = Extra light
+editor-island-text-weight-light = Light
+editor-island-text-weight-regular = Regular
+editor-island-text-weight-medium = Medium
+editor-island-text-weight-semibold = Semibold
+editor-island-text-weight-bold = Bold
+editor-island-text-weight-extra-bold = Extra bold
+editor-island-text-weight-black = Black
+# The same weights set in the font's italic, for fonts that have one.
+editor-island-text-weight-thin-italic = Thin italic
+editor-island-text-weight-extra-light-italic = Extra light italic
+editor-island-text-weight-light-italic = Light italic
+editor-island-text-weight-regular-italic = Italic
+editor-island-text-weight-medium-italic = Medium italic
+editor-island-text-weight-semibold-italic = Semibold italic
+editor-island-text-weight-bold-italic = Bold italic
+editor-island-text-weight-extra-bold-italic = Extra bold italic
+editor-island-text-weight-black-italic = Black italic
+editor-island-text-color-text = Text
+editor-island-text-color-highlight = Highlight
+editor-island-text-color-accent = Accent
+editor-island-text-color-outline = Outline
+editor-island-text-color-background = Box
+editor-island-text-color-shadow = Shadow
+
+## Scenes: how the screen and camera are laid out over time
+
+# A camera switch that cuts the person out of the room behind them, by a downloaded model.
+editor-island-remove-background = Remove background
+editor-island-remove-background-working = Removing background
+# What is behind the person once the room is removed: nothing, the room blurred, or a picture.
+editor-island-camera-background = Background
+editor-island-camera-background-none = None
+editor-island-camera-background-blur = Blur
+editor-island-camera-background-picture = Picture
+editor-island-replace-camera-picture = Replace the background picture
+# Objects on camera, picked to keep with the person or to remove with the room.
+editor-island-camera-objects = Objects
+editor-island-camera-objects-pick = Pick
+editor-island-camera-objects-done = Done
+# Laying the objects followed into the cutout of the person.
+editor-island-camera-objects-working = Applying objects
+# A dot standing for one object picked; pressing it goes to where it was picked.
+editor-island-camera-object-kept = Kept object
+editor-island-camera-object-removed = Removed object
+# The ring round a dot while its object is followed through the recording.
+editor-island-camera-object-following = Following through the recording
+# The bin beside the dots, for the object chosen among them.
+editor-island-camera-object-remove = Remove the chosen object
+editor-island-camera-object-confirm-remove = Confirm removing the object
+# A camera switch that sharpens the camera, enlarges it along its edges where it is drawn larger than it was recorded, and corrects its white balance and exposure with a natural look.
+editor-island-enhance = Enhance
+# Shown on the Enhance switch while the recording is measured for its colour.
+editor-island-enhance-working = Measuring colour
+
+## Audio
+
+editor-island-studio-sound = Studio sound
+editor-island-studio-sound-working = Rebuilding voice
+editor-island-reduce-noise = Reduce noise
+editor-island-noise-cleaning = Removing noise
+editor-island-vocal-cleanup = Vocal cleanup
+editor-island-voice-cleaning = Cleaning up voice
+editor-island-auto-volume = Auto volume
+editor-island-auto-volume-measuring = Measuring volume
+# A microphone switch that lowers background audio, singers and speakers most, so the person talking stays clear.
+editor-island-studio-ducking = Studio ducking
+editor-island-studio-ducking-working = Finding vocals

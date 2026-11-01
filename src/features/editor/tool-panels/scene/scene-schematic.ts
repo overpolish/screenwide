@@ -10,7 +10,7 @@ import { RecordingScenePreset } from "../../recording/scenes/recording-scenes";
 
 /** A pane's place as shares of the canvas: `x` and `width` of its width,
  * `y` and `height` of its height. */
-export type SchematicRect = SceneRect;
+type SchematicRect = SceneRect;
 
 /** Where a scene puts the screen and the camera as shares of the canvas,
  * null for a pane it does not show, and whether the camera is drawn behind

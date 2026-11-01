@@ -13,4 +13,6 @@ pub(super) struct Gpu {
   pub(super) _editor_target: IDCompositionTarget,
   pub(super) _target: IDCompositionTarget,
   pub(super) workspace: WorkspaceView,
+  /// The viewport's rounded corners, over the picture and the chrome.
+  pub(super) viewport_clip: viewport_clip::ViewportClip,
 }

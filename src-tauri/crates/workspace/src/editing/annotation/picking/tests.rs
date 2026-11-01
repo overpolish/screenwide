@@ -39,6 +39,18 @@ fn arrow() -> NativeAnnotationHandles {
   }
 }
 
+/// The grip under `point` with no lens over the annotation.
+fn grip_at_point(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+  point: (f64, f64),
+) -> Option<u32> {
+  grip_seen(image, item, point, LensView::IDENTITY, |grip| {
+    (grip, LensView::IDENTITY)
+  })
+  .map(|(handle, _)| handle)
+}
+
 #[test]
 fn each_grip_is_picked_over_its_own_hit_box() {
   let item = arrow();
@@ -70,6 +82,29 @@ fn the_grip_hit_box_is_square_and_stops_at_its_edge() {
 #[test]
 fn a_press_away_from_every_grip_picks_none() {
   assert_eq!(grip_at_point(IMAGE, &arrow(), (100.0, 5.0)), None);
+}
+
+#[test]
+fn a_grip_seen_through_a_lens_is_picked_where_it_shows() {
+  // A lens enlarging twice about (100, 50) shows the start grip at (20, 50)
+  // at (-60, 50), and a drag of it is read back through the lens.
+  let view = LensView {
+    scale: 0.5,
+    offset: [50.0, 25.0],
+  };
+  let seen = |(x, y): (f64, f64)| {
+    let [x, y] = view.seen([x, y]);
+    ((x, y), view)
+  };
+  let item = arrow();
+  assert_eq!(
+    grip_seen(IMAGE, &item, (-60.0, 50.0), LensView::IDENTITY, seen),
+    Some((0, view))
+  );
+  assert_eq!(
+    grip_seen(IMAGE, &item, (20.0, 50.0), LensView::IDENTITY, seen),
+    None
+  );
 }
 
 #[test]
@@ -121,4 +156,82 @@ fn a_head_is_part_of_the_arrow_it_points_with() {
     arrow_distance(IMAGE, &arrow(), inside_the_head) > 0.0,
     "without the head the same press must miss"
   );
+}
+
+/// Two layers filling the picture: an upright one and one turned a quarter
+/// in its plane, back to front as `stacked` lists them, the arrow on
+/// `arrow_layer`, and either in hand or under the arrow.
+fn stacked(stacked: [u32; 2], arrow_layer: u32, chosen: Option<u32>) -> SurfaceState {
+  let whole = PreviewSelection {
+    width: 1.0,
+    height: 1.0,
+    image_width: 1.0,
+    image_height: 1.0,
+    turnable: 1,
+    ..Default::default()
+  };
+  let upright = PreviewSelection {
+    layer_id: 1,
+    ..whole
+  };
+  let turned = PreviewSelection {
+    layer_id: 2,
+    rotation_z: 90.0,
+    ..whole
+  };
+  let mut state = SurfaceState {
+    panes: vec![Some(crate::editing::Pane {
+      base_rect: IMAGE,
+      seen: true,
+      ..Default::default()
+    })],
+    selection_targets: stacked
+      .iter()
+      .map(|layer| if *layer == 1 { upright } else { turned })
+      .collect(),
+    ..Default::default()
+  };
+  state.selection = chosen.and_then(|layer| layer_selection(&state, layer as i32));
+  state.annotation.handles = vec![NativeAnnotationHandles {
+    layer_id: arrow_layer as i32,
+    ..arrow()
+  }];
+  state
+}
+
+/// [`stacked`] with the arrow's layer in front, where nothing hides it.
+fn layered(arrow_layer: u32, chosen: Option<u32>) -> SurfaceState {
+  stacked([3 - arrow_layer, arrow_layer], arrow_layer, chosen)
+}
+
+#[test]
+fn an_annotation_is_picked_where_its_own_layer_draws_it_whichever_layer_is_chosen() {
+  // The upright arrow runs along y = 50; the turned layer, in hand, reads
+  // the press at (60, 50) as (100, 10) or (100, 90), off the arrow.
+  let state = layered(1, Some(2));
+  let point = crate::editing::turn::selected_layer_point(&state, (60.0, 50.0));
+  assert_eq!(shaft_at_point(&state, point), Some(0));
+  // On the turned layer the arrow is drawn upright from (100, 10) to
+  // (100, 90): a press there picks it with nothing chosen and with the
+  // upright layer in hand, and the press on its upright place does not.
+  for chosen in [None, Some(1)] {
+    let state = layered(2, chosen);
+    let on = crate::editing::turn::selected_layer_point(&state, (100.0, 30.0));
+    let off = crate::editing::turn::selected_layer_point(&state, (60.0, 50.0));
+    assert_eq!(shaft_at_point(&state, on), Some(0), "chosen {chosen:?}");
+    assert_eq!(shaft_at_point(&state, off), None, "chosen {chosen:?}");
+  }
+}
+
+#[test]
+fn an_annotation_a_layer_in_front_hides_is_not_picked_there() {
+  // The turned layer stands in front over (50, -50) to (150, 150): the arrow
+  // on the upright layer behind is picked only where it shows.
+  for chosen in [None, Some(1), Some(2)] {
+    let state = stacked([1, 2], 1, chosen);
+    let hidden = crate::editing::turn::selected_layer_point(&state, (60.0, 50.0));
+    let shown = crate::editing::turn::selected_layer_point(&state, (40.0, 50.0));
+    assert_eq!(shaft_at_point(&state, hidden), None, "chosen {chosen:?}");
+    assert_eq!(shaft_at_point(&state, shown), Some(0), "chosen {chosen:?}");
+  }
 }

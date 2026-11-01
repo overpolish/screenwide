@@ -137,8 +137,9 @@ export const ANNOTATION_SIZES: Record<
     sizeMeasure: "size",
     sizes: [1],
   },
-  // A loupe's rim is always an arrow's pen, the twin of `NEW_MAGNIFY_WIDTH`,
-  // and offers no size to choose.
+  // A lens's rim is always an arrow's pen wide, the twin of
+  // `NEW_MAGNIFY_WIDTH`, and offers no size to choose: how many times it
+  // enlarges is its shape's zoom, which the island offers as its own looks.
   magnify: {
     defaultSize: DEFAULT_ANNOTATION_WIDTH,
     sizeMeasure: "width",

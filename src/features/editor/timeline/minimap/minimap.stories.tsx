@@ -7,6 +7,7 @@ import { fn } from "storybook/test";
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { useRestingAction } from "../../../../storybook/use-resting-action";
 import { createPlayhead } from "../scrub-playhead";
+import { takenOut } from "../strip/taken-out";
 import { clampView, type View } from "../timeline-scale";
 import {
   STORY_BEATS,
@@ -67,8 +68,8 @@ function LiveMinimap({ playheadAt, ...props }: StoryProps) {
           setView(clampView(next, FEWEST_S / map.duration));
         }}
         playhead={playhead}
-        recorded={STORY_DURATION}
         squeeze={squeeze}
+        taken={takenOut([], map.duration, STORY_DURATION)}
         view={view}
       />
     </div>

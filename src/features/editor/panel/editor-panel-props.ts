@@ -50,6 +50,7 @@ export type EditorPanelProps = {
   isPreviewPreparing?: boolean;
   isSaving?: boolean;
   keyboardEffects?: KeyboardEffectSettings;
+  /** Draws the camera into the video, or saves it as a file of its own. */
   onBakeCameraChange?: (bake: boolean) => void;
   onBrowse?: () => void;
   onCameraCompressionChange?: (compression: number) => void;
@@ -76,15 +77,14 @@ export type EditorPanelProps = {
   onRenameProject?: (title: string) => void;
   onResolutionScaleChange?: (scale: number) => void;
   onSave?: () => void;
-  onScreenshotBackgroundRadiusChange?: (radiusPercent: number) => void;
-  onScreenshotBackgroundRadiusChangeEnd?: () => void;
   onScreenshotOutputChange?: ScreenshotOutputChange;
-  onScreenshotRadiusChangeEnd?: () => void;
   onSelectedScreenshotItemChange?: (itemId: number | null) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
-  onSelectedTrackVolumeChange?: (decibels: number) => void;
   onSubtitlesChange?: (subtitles: ExportSubtitles) => void;
   onToggleMaximize?: () => void;
+  /** Plays the audio stream `streamIndex` this much louder or quieter than
+   * it was recorded, in decibels. */
+  onTrackVolumeChange?: (streamIndex: number, decibels: number) => void;
   recordingOutput?: RecordingOutputSettings;
   recordingPreviewError?: string | null;
   recordingPreviewLayout?: RecordingPreviewLayout;

@@ -15,6 +15,11 @@ import {
   AnnotationDelete,
   AnnotationLine,
 } from "../annotation-island-parts";
+import {
+  AnnotationPinNote,
+  type AnnotationPinProps,
+  AnnotationPinToggle,
+} from "../annotation-pin";
 
 import type { EditorIslandContent } from "../../editor-island";
 
@@ -34,22 +39,24 @@ type CounterStyle = {
   size: number;
 };
 
-export type CounterIslandProps = AnnotationColorProps & {
-  /** Whether it can pop in: a recording's annotations can, a screenshot's,
-   * being one instant, cannot. */
-  canAnimate: boolean;
-  id: string;
-  onStyleChange: (style: Partial<CounterStyle>) => void;
-  style: CounterStyle;
-  /** Left out for the pen in hand with nothing chosen. */
-  onDelete?: () => void;
-};
+export type CounterIslandProps = AnnotationColorProps &
+  AnnotationPinProps & {
+    /** Whether it can pop in: a recording's annotations can, a screenshot's,
+     * being one instant, cannot. */
+    canAnimate: boolean;
+    id: string;
+    onStyleChange: (style: Partial<CounterStyle>) => void;
+    style: CounterStyle;
+    /** Left out for the pen in hand with nothing chosen. */
+    onDelete?: () => void;
+  };
 
 export function counterIsland(props: CounterIslandProps): EditorIslandContent {
   const { canAnimate, id, onDelete, onStyleChange, style } = props;
   return {
     actions: (
       <>
+        <AnnotationPinToggle onPinAction={props.onPinAction} pin={props.pin} />
         {canAnimate ? (
           <AnnotationAnimateToggle
             isAnimated={style.isAnimated}
@@ -88,6 +95,7 @@ export function counterIsland(props: CounterIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </div>
     ),
     title: (

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useState } from "react";
+import { useArgs } from "storybook/preview-api";
+import { fn } from "storybook/test";
 
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { recording, screenshot } from "../../panel/editor-story-fixtures";
@@ -51,6 +53,7 @@ function EditorExportPreview({
   hasTranscript = true,
   includeCamera = false,
   isEstimatingSize = false,
+  onCameraOutputChange,
   progress,
   recordingOutput,
   withPreview = false,
@@ -63,6 +66,7 @@ function EditorExportPreview({
   hasTranscript?: boolean;
   includeCamera?: boolean;
   isEstimatingSize?: boolean;
+  onCameraOutputChange?: (output: CameraOutput) => void;
   /** When given, the window shows the running save instead of the form. */
   progress?: ExportProgressProps;
   recordingOutput?: RecordingOutputSettings;
@@ -107,6 +111,7 @@ function EditorExportPreview({
           );
         },
         onCameraCompressionChange: setCameraCompression,
+        onCameraOutputChange,
         onCameraResolutionScaleChange: setCameraResolution,
         onCancel: () => undefined,
         onCollapseAudioChange: setCollapseAudio,
@@ -141,7 +146,7 @@ function EditorExportPreview({
 }
 
 const meta = {
-  args: { artifact: recording },
+  args: { artifact: recording, onCameraOutputChange: fn() },
   component: EditorExportPreview,
   decorators: [
     // The window fits its height to the form at runtime, so the config's
@@ -152,6 +157,18 @@ const meta = {
     })),
   ],
   parameters: { layout: "fullscreen" },
+  render: function Render(args) {
+    const [, updateArgs] = useArgs<typeof args>();
+    return (
+      <EditorExportPreview
+        {...args}
+        onCameraOutputChange={(cameraOutput) => {
+          args.onCameraOutputChange?.(cameraOutput);
+          updateArgs({ cameraOutput });
+        }}
+      />
+    );
+  },
   title: "Legacy/Editor/Export/Export Window",
 } satisfies Meta<typeof EditorExportPreview>;
 

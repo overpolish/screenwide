@@ -12,7 +12,6 @@ pub(super) fn zoom_at(inner: &Arc<SurfaceInner>, point: (f64, f64), factor: f64)
   if !factor.is_finite() || factor <= 0.0 {
     return;
   }
-  let mut zoom = None;
   if let Ok(mut state) = inner.state.lock() {
     state.last_pointer = point;
     let old = state.workspace_transform.zoom;
@@ -25,10 +24,6 @@ pub(super) fn zoom_at(inner: &Arc<SurfaceInner>, point: (f64, f64), factor: f64)
       point.1 - center.1 - (point.1 - center.1 - state.workspace_transform.pan_y) * ratio;
     state.workspace_transform.zoom = next;
     apply_workspace_transform(inner, &mut state, false);
-    zoom = Some(next);
-  }
-  if let Some(zoom) = zoom {
-    emit_transform(inner, zoom);
   }
 }
 

@@ -30,7 +30,7 @@ const manifests = import.meta.glob<Manifest>(
 /** The templates as the app ships them, read from the same manifests, for
  * stories, which have no app to ask: each one's options over the base, as
  * `parse_manifest` sets them. */
-export const STORY_TEXT_STYLES: TextStyle[] = index.templates.map((id) => {
+const STORY_TEXT_STYLES: TextStyle[] = index.templates.map((id) => {
   const manifest = Object.values(manifests).find((each) => each.id === id);
   if (!manifest) throw new Error(`No bundled manifest for "${id}"`);
   const { motion, ...options } = manifest.style;
