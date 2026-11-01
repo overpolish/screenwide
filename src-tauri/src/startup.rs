@@ -100,7 +100,6 @@ fn hide_unrequested_windows(app: &AppHandle) -> tauri::Result<()> {
     app_windows::WindowLabel::Projects,
     app_windows::WindowLabel::Settings,
   ];
-  labels.extend(editor::export_window::LABELS);
   labels.extend(editor::EditorKind::ALL.map(editor::EditorKind::window_label));
   app.run_on_main_thread(move || {
     for label in &labels {

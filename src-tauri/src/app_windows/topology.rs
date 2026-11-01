@@ -47,11 +47,7 @@ const fn policy(label: WindowLabel) -> Policy {
     #[cfg(target_os = "macos")]
     WindowLabel::Permissions => Policy::Recoverable,
     WindowLabel::Island => Policy::Island,
-    // An export options window is derived from the editor it hangs off and is
-    // recentred on it whenever that moves, so it never carries stale geometry.
     WindowLabel::Tooltip
-    | WindowLabel::ExportRecording
-    | WindowLabel::ExportScreenshot
     | WindowLabel::Glide
     | WindowLabel::StandaloneListbox
     | WindowLabel::ToolPanelRecording

@@ -30,7 +30,7 @@ pub use background_image::{
   background_image_canvas, background_image_swatch, load as load_background_image,
 };
 pub use capture::Capture;
-pub use encoding::{encode_png, rounded_corners};
+pub use encoding::{encode_jpeg, encode_png, rounded_corners};
 pub use hex_colour::parse_hex_colour;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use mesh::validate_mesh;

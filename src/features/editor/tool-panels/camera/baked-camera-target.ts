@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
+import { defaultCameraOverlay } from "../../export/recording-export-settings";
+import {
+  isOverlayAtDefaultPlacement,
+  overlayAtDefaultPlacement,
+} from "../../layer-placement";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings, EditorArtifact } from "../../types";
 import { EditorSelectionTarget } from "../selection/placed-selection-target";
@@ -13,6 +18,9 @@ type BakedCameraTargetInputs = {
   cameraOutput: ScreenshotOutputSettings;
   /** Where the camera is drawn in the screen's picture, in its output pixels. */
   cameraOverlay: CameraOverlaySettings;
+  /** The screen's canvas the camera is drawn into, which a fresh project
+   * places it on. */
+  canvas: { height: number; width: number };
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onRecordingOutputChange?: (
     track: "camera",
@@ -33,11 +41,13 @@ export const bakedCameraSelectionTarget = ({
   artifact,
   cameraOutput,
   cameraOverlay,
+  canvas,
   onCameraOverlayChange,
   onRecordingOutputChange,
 }: BakedCameraTargetInputs): EditorSelectionTarget | null => {
   const camera = artifact.camera;
   if (!camera) return null;
+  const fresh = defaultCameraOverlay(artifact, canvas);
   return {
     applyDropShadow: (dropShadow) => {
       onRecordingOutputChange?.("camera", { ...cameraOutput, dropShadow });
@@ -58,10 +68,14 @@ export const bakedCameraSelectionTarget = ({
     recenter: () => {
       // Nothing to recentre: there is no pad to put the camera back inside of.
     },
+    resetPlacement: () => {
+      onCameraOverlayChange?.(overlayAtDefaultPlacement(cameraOverlay, fresh));
+    },
     selection: {
       dropShadow: cameraOutput.dropShadow,
       followsFace: cameraOverlay.followFace ?? false,
       inset: 0,
+      isAtDefaultPlacement: isOverlayAtDefaultPlacement(cameraOverlay, fresh),
       kind: "camera",
       label: t("editor-island-camera"),
       radius: cameraOverlay.radiusPercent,

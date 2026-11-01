@@ -81,8 +81,8 @@ impl SourceAnnotations {
       self.native.clone(),
       (placement.image_x, placement.image_y),
       (
-        f64::from(placement.image_width) / f64::from(source.0),
-        f64::from(placement.image_height) / f64::from(source.1),
+        placement.image_width / f64::from(source.0),
+        placement.image_height / f64::from(source.1),
       ),
       halo,
       typing,

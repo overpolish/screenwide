@@ -67,7 +67,7 @@ pub(super) fn carry_camera_annotations(
     &composition.recording_output.camera.annotations,
     pictures[1],
     composition.camera_overlay,
-    (f64::from(primary.width), f64::from(primary.height)),
+    screenwide_export::media_preview::FrameFit::unscaled(primary.width, primary.height),
     primary,
     pictures[0],
   );

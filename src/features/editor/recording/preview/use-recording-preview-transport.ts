@@ -85,8 +85,7 @@ export function useRecordingPreviewTransport(
     cameraOverlay,
     cursorEffects,
     durationMs,
-    isSaving,
-    isSheetOpen,
+    isExportOpen,
     keyboardEffects,
     onRecordingOutputChange,
     onRecordingTimelineEditChange,
@@ -105,17 +104,12 @@ export function useRecordingPreviewTransport(
   // Storybook renders a fixed layout with no backend session behind it; every
   // other caller lets the native workspace editor own the layout.
   const nativeEditorOwnsLayout = previewLayout === undefined;
-  // A running save covers the viewport with the progress overlay, whose Cancel
-  // button is a DOM control - and the native interaction view is inserted
-  // above the webview, so it would swallow that click and pan the workspace
-  // instead. Suspending takes the interaction view and the native chrome off
-  // screen for the duration of the save (every path that clears `isSaving`:
-  // success, failure and cancel) and changes nothing else: the editor stays
-  // enabled, the panes keep rendering natively, and the workspace zoom and pan
-  // are exactly where the user left them when the overlay goes away. An export
-  // or confirm sheet over the editor covers the workspace in the same way, and
-  // is suspended for the same reason.
-  const isEditorSuspended = nativeEditorOwnsLayout && (isSaving || isSheetOpen);
+  // While the Export island stands over the editor nothing on the picture is
+  // edited: the picture is the export's preview. Suspending takes the native
+  // interaction view and chrome off screen and changes nothing else: the
+  // panes keep rendering and playing natively, and the workspace zoom and pan
+  // are exactly where the user left them when the island goes away.
+  const isEditorSuspended = nativeEditorOwnsLayout && isExportOpen;
   const { previewCameraOverlay, previewRecordingOutput } =
     useRecordingCropPreview({
       activeVideoTrack,

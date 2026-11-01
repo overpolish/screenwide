@@ -24,6 +24,7 @@ fn save_recording_media(
     bake_camera,
     camera_compression,
     camera_overlay,
+    camera_key,
     camera_resolution_scale_percent,
     captions,
     collapse_audio,
@@ -267,7 +268,9 @@ fn save_recording_media(
       screen_progress_share,
       camera_compression,
       camera_resolution_scale_percent,
-      camera_output,
+      // Saved as a file of its own, the camera's canvas is a screen colour,
+      // which is what shows where its background is taken away.
+      &camera_key.keyed(camera_output),
       timeline.as_ref(),
       camera_effects,
     )

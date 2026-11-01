@@ -17,23 +17,33 @@ import { cn, focusStyles, groupFocusVisible } from "../../lib/styling";
 // hover and press as a checked box does. Off takes no hover, as a native
 // switch takes none.
 const trackStyles = cn(
-  "relative inline-flex h-part-height w-9 shrink-0 transform-gpu items-center rounded-full bg-fill-strong p-0.5 transition-[background-color,box-shadow]",
-  "group-data-[selected]:bg-primary group-data-[selected]:primary-raised",
+  "relative inline-flex h-part-height w-9 shrink-0 transform-gpu items-center rounded-full bg-fill-strong p-0.5 transition-[background-color]",
+  "group-data-[selected]:bg-primary",
   "group-data-[selected]:group-data-[hovered]:bg-primary-hover",
-  "group-data-[selected]:group-data-[pressed]:bg-primary-pressed group-data-[selected]:group-data-[pressed]:primary-raised-pressed",
+  "group-data-[selected]:group-data-[pressed]:bg-primary-pressed",
   focusStyles,
   groupFocusVisible,
 );
 
+// The primary fill's sheen and bevel, on a layer of their own that fades in
+// and out with the fill: a sheen is a background image, which cannot be
+// tweened, so on the track itself it appeared and vanished at once while the
+// fill's colour was still changing, which read as a snap, worst going off.
+const sheenStyles = cn(
+  "pointer-events-none absolute inset-0 rounded-full opacity-0 primary-raised transition-opacity",
+  "group-data-[selected]:opacity-100 group-data-[selected]:group-data-[pressed]:primary-raised-pressed",
+);
+
 // A 20 by 14 capsule in the knob material, sliding the 12px the track leaves
 // it. On the primary fill it takes `on-primary`, which in dark is the warm
-// black, so it stands off the near-white track.
+// black, so it stands off the near-white track; the colour changes over the
+// slide rather than at its start.
 const knobStyles = cn(
   // On its own compositor layer for good: a layer that appears only while
   // the slide runs is rasterised at whatever fraction of a pixel it lands on
   // and its edge snaps differently from the track's, which shows as a jagged
   // rim on the knob and the track.
-  "h-3.5 w-5 transform-gpu rounded-full backface-hidden transition-[translate] ease-out will-change-transform control-knob",
+  "relative h-3.5 w-5 transform-gpu rounded-full backface-hidden transition-[translate,background-color] ease-out will-change-transform control-knob",
   "group-data-[selected]:translate-x-3 group-data-[selected]:bg-on-primary rtl:group-data-[selected]:-translate-x-3",
 );
 
@@ -46,9 +56,11 @@ type SwitchProps = Omit<AriaSwitchFieldProps, "children" | "className"> & {
 // Disabled, the whole switch fades, label and all, as a checkbox does.
 export const Switch = ({ children, className, ...props }: SwitchProps) => {
   const prefersReducedMotion = useReducedMotion();
+  // The knob travels, so it takes the travel timing a native switch is close
+  // to; at the quicker state timing it read as a snap.
   const transitionDuration = prefersReducedMotion
     ? "0s"
-    : motionDurationCss("state");
+    : motionDurationCss("travel");
 
   return (
     <AriaSwitchField {...props} className="contents">
@@ -60,6 +72,7 @@ export const Switch = ({ children, className, ...props }: SwitchProps) => {
       >
         {children}
         <span className={trackStyles} style={{ transitionDuration }}>
+          <span className={sheenStyles} style={{ transitionDuration }} />
           <span className={knobStyles} style={{ transitionDuration }} />
         </span>
       </AriaSwitchButton>

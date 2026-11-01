@@ -3,7 +3,6 @@
 
 import { EditorSync } from "../features/editor/editor-sync";
 import { EditorWindow } from "../features/editor/editor-window";
-import { ExportOptionsSync } from "../features/editor/export/options-window/export-options-sync";
 import { ToolPanelSync } from "../features/editor/tool-panels/tool-panel-sync";
 import { PopupPanelSync } from "../features/popup-panel/popup-panel-sync";
 
@@ -12,7 +11,6 @@ export function EditorEntry() {
   return (
     <>
       <EditorSync />
-      <ExportOptionsSync />
       <ToolPanelSync />
       <PopupPanelSync />
       <EditorWindow />

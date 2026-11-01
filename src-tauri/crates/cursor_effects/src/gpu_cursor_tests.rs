@@ -52,7 +52,7 @@ fn a_moving_cursor_carries_its_frame_travel_as_its_blur() {
   records.extend((0..=50).map(|step| position(step * 20_000, 80.0 + f64::from(step as u32) * 3.2)));
   let cursor = CursorCompositor::from_records(&records, &[]).unwrap();
   let settings = CursorEffectSettings::default();
-  let moving = cursor.gpu_cursor(500, (320, 180), settings).unwrap();
+  let moving = cursor.gpu_cursor(500, (320.0, 180.0), settings).unwrap();
   assert!(moving.blur_delta_y.abs() < 0.001);
   // 160 output pixels per second at 60 Hz is a fraction under three pixels
   // of travel per frame.
@@ -65,7 +65,7 @@ fn a_moving_cursor_carries_its_frame_travel_as_its_blur() {
     motion_blur: false,
     ..settings
   };
-  let unblurred = cursor.gpu_cursor(500, (320, 180), still).unwrap();
+  let unblurred = cursor.gpu_cursor(500, (320.0, 180.0), still).unwrap();
   assert_eq!((unblurred.blur_delta_x, unblurred.blur_delta_y), (0.0, 0.0));
 }
 
@@ -89,15 +89,15 @@ fn a_held_button_shrinks_the_cursor_only_with_the_click_animation() {
   ];
   let cursor = CursorCompositor::from_records(&records, &[]).unwrap();
   let settings = CursorEffectSettings::default();
-  let resting = cursor.gpu_cursor(100, (320, 180), settings).unwrap();
-  let clicked = cursor.gpu_cursor(600, (320, 180), settings).unwrap();
+  let resting = cursor.gpu_cursor(100, (320.0, 180.0), settings).unwrap();
+  let clicked = cursor.gpu_cursor(600, (320.0, 180.0), settings).unwrap();
   assert!(clicked.scale < resting.scale);
   let without_animation = CursorEffectSettings {
     click_animation: false,
     ..settings
   };
   let unanimated = cursor
-    .gpu_cursor(600, (320, 180), without_animation)
+    .gpu_cursor(600, (320.0, 180.0), without_animation)
     .unwrap();
   assert_eq!(unanimated.scale, resting.scale);
 }
@@ -117,7 +117,7 @@ fn every_style_indexes_an_artwork_that_fills_its_bitmap() {
     ];
     let cursor = CursorCompositor::from_records(&records, &[]).unwrap();
     let evaluated = cursor
-      .gpu_cursor(100, (320, 180), CursorEffectSettings::default())
+      .gpu_cursor(100, (320.0, 180.0), CursorEffectSettings::default())
       .unwrap();
     let artwork = &artworks[evaluated.style as usize];
     assert!(artwork.width > 0 && artwork.height > 0, "{style:?}");

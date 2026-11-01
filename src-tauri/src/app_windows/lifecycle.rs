@@ -22,15 +22,6 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
           WindowLabel::EditorScreenshot => {
             crate::editor::close(&app, crate::editor::EditorKind::Screenshot);
           }
-          // Closing an export options window returns to its editor.
-          WindowLabel::ExportRecording => {
-            let _ =
-              crate::editor::hide_export_options_for(&app, crate::editor::EditorKind::Recording);
-          }
-          WindowLabel::ExportScreenshot => {
-            let _ =
-              crate::editor::hide_export_options_for(&app, crate::editor::EditorKind::Screenshot);
-          }
           WindowLabel::Settings => {
             let _ = crate::settings::hide_settings(app.clone());
           }
@@ -123,14 +114,13 @@ pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
   let app = window.app_handle().clone();
   let export = window.clone();
   window.on_window_event(move |event| {
+    // A panel attached to this editor follows it on Windows, where the
+    // system does not move an owned window with its owner.
+    #[cfg(target_os = "windows")]
     if matches!(
       event,
       WindowEvent::Moved(_) | WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
     ) {
-      // An open export options window is a child of this one, so it follows
-      // the editor's frame rather than keeping the place it was opened at.
-      crate::editor::export_window::recenter_for_editor_label(&app, export.label());
-      #[cfg(target_os = "windows")]
       super::options::placement_windows::follow_parent(&app, &export);
     }
     // A panel attached to this editor follows it around the screen by itself.

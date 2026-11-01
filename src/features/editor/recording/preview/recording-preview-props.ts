@@ -28,8 +28,7 @@ export type ResolvedScrubPreviewProps = ScrubPreviewProps &
       | "hasKeyboardData"
       | "isPreparingAudio"
       | "isPreparingPreview"
-      | "isSaving"
-      | "isSheetOpen"
+      | "isExportOpen"
       | "keyboardEffects"
       | "recorded"
       | "selectedTrack"
@@ -58,10 +57,9 @@ export function resolveScrubPreviewProps(
     hasAnnotations = true,
     hasCursorData = false,
     hasKeyboardData = false,
+    isExportOpen = false,
     isPreparingAudio = false,
     isPreparingPreview = false,
-    isSaving = false,
-    isSheetOpen = false,
     keyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
     recorded = NOTHING_RECORDED,
     selectedTrack = null,
@@ -77,10 +75,9 @@ export function resolveScrubPreviewProps(
     hasAnnotations,
     hasCursorData,
     hasKeyboardData,
+    isExportOpen,
     isPreparingAudio,
     isPreparingPreview,
-    isSaving,
-    isSheetOpen,
     keyboardEffects,
     recorded,
     selectedTrack,

@@ -10,6 +10,7 @@ import { ToolbarTool } from "../../../primitives/toolbar/toolbar-tool";
 import { TooltipTrigger } from "../../../primitives/tooltip/tooltip-trigger";
 import { formatDuration } from "../duration";
 import { EDITOR_LEFT_COLUMN } from "../editor-left-column";
+import { ChromeSetBack } from "../panel/chrome-set-back";
 
 import { Playhead } from "./scrub-playhead";
 import { ElapsedTime } from "./timeline-elapsed-time";
@@ -17,7 +18,8 @@ import { ElapsedTime } from "./timeline-elapsed-time";
 // The strip's own controls, centred in the editor's left column under the
 // tools: play at the top, where the playhead is over how long the recording
 // is, and at the foot the scissors, beside the strip they cut. Tracks is in
-// the title bar with the modes (`EditorModeBar`).
+// the title bar with the modes (`EditorModeBar`). While the Export island
+// stands over the editor only play answers: the scissors are set back.
 
 export type EditorTransportProps = {
   /** How long the recording plays, in the edited time: it shortens as
@@ -31,11 +33,14 @@ export type EditorTransportProps = {
   /** Where the playhead is, in the same edited time; its time is written
    * straight to the readout, so playing never renders the transport. */
   playhead: Playhead;
+  /** Only play answers: nothing is cut. */
+  isLocked?: boolean;
 };
 
 export function EditorTransport({
   durationMs,
   isCutting,
+  isLocked = false,
   isPlaying,
   onCuttingChange,
   onPlayingChange,
@@ -73,18 +78,21 @@ export function EditorTransport({
         </span>
         <span className="text-fg-tertiary">{formatDuration(durationMs)}</span>
       </span>
-      <div className="mt-auto flex flex-col items-center gap-inline">
+      <ChromeSetBack
+        className="mt-auto flex flex-col items-center gap-inline"
+        isSetBack={isLocked}
+      >
         {/* Held, ⌥ draws a stretch to cut for one drag without the toggle. */}
         <ToolbarTool
           aria-label={t("editor-timeline-cut-name")}
-          isSelected={isCutting}
+          isSelected={isCutting && !isLocked}
           label={t("editor-timeline-cut")}
           onChange={onCuttingChange}
           shortcut="Alt"
         >
           <Scissors />
         </ToolbarTool>
-      </div>
+      </ChromeSetBack>
     </div>
   );
 }

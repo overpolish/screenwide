@@ -83,14 +83,6 @@ pub struct ExportCameraEffects {
   pub on_screen: bool,
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-fn output_dimensions(width: u32, height: u32, video: VideoExportOptions) -> (u32, u32) {
-  let scale = u64::from(video.resolution_scale_percent);
-  let source_scale = u64::from(video.source_scale_percent.max(1));
-  let scaled = |value: u32| ((u64::from(value) * scale / source_scale) as u32 & !1).max(2);
-  (scaled(width), scaled(height))
-}
-
 fn video_bitrate(width: u32, height: u32, compression: u8) -> u64 {
   // Bits per pixel per frame. Mesh gradient backgrounds are the hardest
   // content H.264 sees here: starving them visibly bands and blocks, so the
@@ -116,12 +108,16 @@ pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, Strin
   platform::export(request)
 }
 
-/// The bytes the video stream of `request`'s export takes, before its audio
-/// and its MP4 tables, as the platform's encoder would write it. The
+/// The bytes the video stream of `request`'s export takes at each of
+/// `looks`, in order, before its audio and its MP4 tables, as the platform's
+/// encoder would write it; the request's own `video` is not read. The
 /// request's destination is never written.
-pub fn estimate_video_bytes(request: CursorExportRequest<'_>) -> Result<u64, String> {
+pub fn estimate_video_bytes(
+  request: CursorExportRequest<'_>,
+  looks: &[VideoExportOptions],
+) -> Result<Vec<u64>, String> {
   check_request(&request)?;
-  platform::estimate_video_bytes(request)
+  platform::estimate_video_bytes(request, looks)
 }
 
 /// The frame at `output_us` of `request`'s edited video, written to `png` as

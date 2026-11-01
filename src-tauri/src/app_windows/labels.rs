@@ -7,10 +7,6 @@ pub enum WindowLabel {
   /// own so a recording can wait for a decision while a screenshot is edited.
   EditorRecording,
   EditorScreenshot,
-  /// Each editor workspace's export options window, a non-movable child of the
-  /// editor it belongs to.
-  ExportRecording,
-  ExportScreenshot,
   /// Each editor workspace's tool panel window, a sticky panel attached to
   /// the editor it belongs to. One per workspace, so a tool in hand in one
   /// editor cannot take the other's panel away.
@@ -40,8 +36,6 @@ impl WindowLabel {
   pub const ALL: &'static [Self] = &[
     Self::EditorRecording,
     Self::EditorScreenshot,
-    Self::ExportRecording,
-    Self::ExportScreenshot,
     Self::ToolPanelRecording,
     Self::ToolPanelScreenshot,
     Self::Tooltip,
@@ -64,8 +58,6 @@ impl WindowLabel {
     match self {
       Self::EditorRecording => "editor-recording",
       Self::EditorScreenshot => "editor-screenshot",
-      Self::ExportRecording => "export-recording",
-      Self::ExportScreenshot => "export-screenshot",
       Self::ToolPanelRecording => "tool-panel-recording",
       Self::ToolPanelScreenshot => "tool-panel-screenshot",
       Self::Tooltip => "tooltip",
@@ -93,8 +85,6 @@ impl WindowLabel {
     use screenwide_i18n::t;
     match self {
       Self::EditorRecording | Self::EditorScreenshot => t!("window-titles-editor"),
-      Self::ExportRecording => t!("window-titles-export-recording"),
-      Self::ExportScreenshot => t!("window-titles-export-screenshot"),
       Self::ToolPanelRecording => t!("window-titles-tool-panel-recording"),
       Self::ToolPanelScreenshot => t!("window-titles-tool-panel-screenshot"),
       #[cfg(target_os = "macos")]

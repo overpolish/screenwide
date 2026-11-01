@@ -36,6 +36,7 @@ export const scenePanelHandlers = (
   | "onSceneFollowFaceChange"
   | "onSceneInsetChange"
   | "onScenePanesSwap"
+  | "onScenePlacementReset"
   | "onScenePresetChoose"
   | "onSceneRadiusChange"
   | "onSceneRecenter"
@@ -71,6 +72,9 @@ export const scenePanelHandlers = (
   },
   onScenePanesSwap: () => {
     recordingSceneControls(workspace)?.swapPanes();
+  },
+  onScenePlacementReset: (pane) => {
+    recordingSceneControls(workspace)?.resetPanePlacement(pane);
   },
   onScenePresetChoose: (preset) => {
     recordingSceneControls(workspace)?.choosePreset(preset);

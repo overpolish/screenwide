@@ -1,0 +1,27 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { invoke } from "@tauri-apps/api/core";
+
+import { EditorKind } from "../types";
+
+// The finished export's file, acted on by Rust from the file it kept: never
+// a path the page names. Reveal, Copy and the drag are asked from the Export
+// island's window, which the drag starts from.
+
+/** Puts the finished island away, and the editor with it, as the export
+ * used to the moment it was done. */
+export const closeExportedEditor = () => invoke<null>("close_exported_editor");
+
+/** Lets go of the size estimate still being made, once the island is away. */
+export const stopExportEstimate = () => invoke<null>("stop_export_estimate");
+
+export const revealExportFile = (workspace: EditorKind) =>
+  invoke<null>("reveal_export_file", { workspace });
+
+export const copyExportFile = (workspace: EditorKind) =>
+  invoke<null>("copy_export_file", { workspace });
+
+/** Starts dragging the file out of this window, from the press under way. */
+export const dragExportFile = (workspace: EditorKind) =>
+  invoke<null>("drag_export_file", { workspace });

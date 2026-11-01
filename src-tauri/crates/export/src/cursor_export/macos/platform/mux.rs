@@ -7,6 +7,9 @@
 use super::*;
 use std::ffi::OsString;
 
+mod measured;
+use measured::measured_args;
+
 /// How many threads x264 encodes with. Four more than doubled the media
 /// engine at 4K (143 against 60 frames a second on an M4 Pro) while keeping
 /// about a quarter of its cores busy; every core was twice as fast again but
@@ -47,22 +50,34 @@ struct RawVideo {
 }
 
 /// Where an x264 run's video goes: into the exported MP4 beside its audio,
-/// or alone into a raw stream an estimate only measures. A preview's Original
+/// or alone into raw streams an estimate only measures. A preview's Original
 /// frame skips x264 altogether.
 pub(super) enum X264Output {
   /// FFmpeg writes `temporary` until the file is whole; see
   /// `remux_temp_path`.
   Export { audio: Audio, temporary: PathBuf },
+  /// Each of `outputs` encoded from the same frames, drawn once;
   /// `stretch_starts` being when each stretch after the first begins, in
   /// the form `-force_key_frames` takes.
   Measured {
-    path: PathBuf,
+    outputs: Vec<MeasuredOutput>,
     stretch_starts: Option<String>,
   },
   /// The one frame drawn, as a PPM picture at `path`, never encoded. FFmpeg
   /// still turns it from NV12 into RGB, as it does the encoded frame it is
   /// compared with, so the two differ by the encoder alone.
   Picture { path: PathBuf },
+}
+
+/// One raw stream an estimate measures: the drawn frames scaled to `width`
+/// by `height`, where smaller, and encoded as the export encodes at
+/// `compression` and `bitrate`, into `path`.
+pub(super) struct MeasuredOutput {
+  pub(super) path: PathBuf,
+  pub(super) width: u32,
+  pub(super) height: u32,
+  pub(super) compression: u8,
+  pub(super) bitrate: u64,
 }
 
 /// An export encoded with x264, waiting for the loop to know its frame rate.
@@ -86,18 +101,19 @@ impl X264Plan {
       bitrate: self.bitrate,
     };
     match &self.output {
-      X264Output::Export { audio, temporary } => {
-        media_preview::StreamedExport::start(audio.x264_args(&video, temporary), temporary)
-      }
+      X264Output::Export { audio, temporary } => media_preview::StreamedExport::start(
+        audio.x264_args(&video, temporary),
+        vec![temporary.clone()],
+      ),
       X264Output::Measured {
-        path,
+        outputs,
         stretch_starts,
       } => media_preview::StreamedExport::start(
-        measured_args(&video, path, stretch_starts.as_deref()),
-        path,
+        measured_args(&video, outputs, stretch_starts.as_deref()),
+        outputs.iter().map(|output| output.path.clone()).collect(),
       ),
       X264Output::Picture { path } => {
-        media_preview::StreamedExport::start(picture_args(&video, path), path)
+        media_preview::StreamedExport::start(picture_args(&video, path), vec![path.clone()])
       }
     }
   }
@@ -149,7 +165,9 @@ impl Audio {
   /// into `temporary`. The colour stays untagged, as the media engine's
   /// files were, so players read the BT.709 frames the same way.
   fn x264_args(&self, video: &RawVideo, temporary: &Path) -> Vec<OsString> {
-    self.finish(raw_input_args(video), x264_codec_args(video), temporary)
+    let mut codec = strings(&["-map", "0:v:0"]);
+    codec.extend(x264_codec_args(video));
+    self.finish(raw_input_args(video), codec, temporary)
   }
 
   /// `inputs` with the audio after them, then `video`, which maps and
@@ -191,11 +209,9 @@ fn raw_input_args(video: &RawVideo) -> Vec<OsString> {
   args
 }
 
-/// The export's x264 settings for `video`, mapping the first input.
+/// The export's x264 settings for `video`, for the stream mapped before them.
 fn x264_codec_args(video: &RawVideo) -> Vec<OsString> {
   let mut codec = strings(&[
-    "-map",
-    "0:v:0",
     "-c:v",
     "libx264",
     "-preset",
@@ -224,23 +240,6 @@ fn x264_codec_args(video: &RawVideo) -> Vec<OsString> {
 /// seconds, as the media engine wrote.
 pub(super) fn keyframe_interval(frame_rate: u32) -> u64 {
   u64::from(frame_rate) * 4
-}
-
-/// `video` encoded as the export encodes it into a raw stream at `path`,
-/// for an estimate to measure. The stretches it joins would look like scene
-/// cuts to x264, so scene detection is off and each stretch after the first
-/// opens on a keyframe at `stretch_starts`, which the estimate counts apart
-/// from the frames between.
-fn measured_args(video: &RawVideo, path: &Path, stretch_starts: Option<&str>) -> Vec<OsString> {
-  let mut args = raw_input_args(video);
-  args.extend(x264_codec_args(video));
-  args.extend(strings(&["-sc_threshold", "0"]));
-  if let Some(starts) = stretch_starts {
-    args.extend(strings(&["-force_key_frames", starts]));
-  }
-  args.extend(strings(&["-f", "h264"]));
-  args.push(path.into());
-  args
 }
 
 /// The one frame of `video` written to `path` as a PPM picture.

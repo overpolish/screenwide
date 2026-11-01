@@ -1,70 +1,91 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-### The export window: saving a finished recording or screenshot.
+### The Export island: saving a finished recording or screenshot from over the editor's picture.
 
+## Before the export: the file, its quality and options.
+
+editor-export-title-recording = Export recording
+editor-export-title-audio = Export audio
+editor-export-title-screenshot = Export screenshot
+# Names the field the file's name is typed in.
 editor-export-file-name = File name
-editor-export-save-to = Save to
+# Names the folder field the file is saved in.
+editor-export-folder = Folder
+# Names the choice of picture format.
 editor-export-format = Format
-editor-export-size = Size
-# Whether the camera is drawn into the screen's video or saved as its own file.
-editor-export-camera = Camera
-editor-export-camera-combined = One video
-editor-export-camera-separate = Separate files
-editor-export-output-size = Output size
-editor-export-camera-output-size = Camera output size
-editor-export-scale-original = Original
-# $ratio is a size relative to the original, such as "0.5".
-editor-export-scale = { $ratio }×
-editor-export-compression = Compression
-editor-export-camera-compression = Camera compression
+editor-export-format-png = PNG
+editor-export-format-jpeg = JPEG
+# Names the four looks, which trade the file's size against its quality.
 editor-export-quality = Quality
-editor-export-quality-original = Original
-editor-export-quality-high = High quality
-editor-export-quality-balanced = Balanced
-editor-export-quality-smaller = Smaller file
-editor-export-quality-smallest = Smallest file
-editor-export-collapse-audio = Collapse audio tracks
-editor-export-collapse-audio-description = Mix the selected tracks into one.
+editor-export-look-smallest = Smallest
+editor-export-look-smaller = Smaller
+editor-export-look-balanced = Balanced
+editor-export-look-original = Original
+# A look's picture size, in pixels.
+editor-export-dimensions = { $width } × { $height }
+# Shown in place of a file size while it is being measured.
+editor-export-measuring = Measuring
 # A subtitle file made from the transcript, written beside the exported video.
-editor-export-subtitles = Subtitles
-editor-export-subtitles-description = Saved beside the video, with the same name.
-# Shown in place of the description while the recording has no transcript.
-editor-export-subtitles-needs-transcript = Transcribe the recording to add subtitles.
-editor-export-subtitles-none = None
+editor-export-subtitles = Save subtitles
+# Names the choice of subtitle file format, beside Save subtitles.
+editor-export-subtitles-format = Subtitle format
 editor-export-subtitles-srt = SRT
 editor-export-subtitles-vtt = WebVTT
-editor-export-open-folder = Open folder after saving
-editor-export-delete-project = Delete project
-editor-export-delete-project-description = After saving, moves it to Recently Deleted.
-editor-export-delete-project-copy-description = After saving or copying, moves it to Recently Deleted.
-# $size is a file size, or the word below.
-editor-export-estimated-size = Estimated size { $size }
-# Shown beside a spinner while the size is being estimated.
-editor-export-estimated-size-label = Estimated size
-editor-export-estimating = Estimating size
-editor-export-unavailable = Unavailable
-editor-export-cancel = Cancel
-editor-export-confirm-cancel = Confirm cancel
-editor-export-canceling = Canceling
-editor-export-progress = Save progress
+editor-export-camera-separate = Save the camera as its own file
+# Names the colour that fills a separate camera file where its background is taken away, a colour another editor keys out.
+editor-export-camera-key = Background colour
+editor-export-camera-key-green = Green
+editor-export-camera-key-blue = Blue
+editor-export-mix-audio = Mix the audio tracks into one
+# $platform is windows or macos: the file manager is Explorer or Finder.
+editor-export-reveal-when-done =
+    { $platform ->
+        [windows] Show in Explorer when done
+       *[other] Show in Finder when done
+    }
+# The project is moved to the system's bin once the export is written. $platform is windows or macos.
+editor-export-delete-after =
+    { $platform ->
+        [windows] Move to the Recycle Bin after exporting
+       *[other] Move to Recently Deleted after exporting
+    }
+editor-export-action = Export
+# $reason is the system's own explanation, in English.
+editor-export-failed = The export failed. { $reason }
+editor-export-try-again = Try again
+# The picture as drawn beside it as the export writes it, compared across a divider.
+editor-export-compare-original = Original
+editor-export-compare-export = Export
+# Names the divider dragged across the compared picture.
+editor-export-compare-divider = Divider between original and export
+editor-export-compare-making = Making the comparison
+editor-export-compare-failed = The comparison could not be made.
+
+## While the export runs.
+
 editor-export-saving-audio = Saving audio
 editor-export-saving-screenshot = Saving screenshot
 editor-export-saving-camera = Saving camera
 editor-export-saving-recording = Saving recording
 editor-export-finalizing = Finalizing recording
+# Shown under the work while the export has no figure yet.
+editor-export-starting = Starting
+editor-export-progress = Save progress
+editor-export-cancel = Cancel export
+# Pressed a second time, it stops the export and throws the partial file away.
+editor-export-confirm-cancel = Stop and discard
+editor-export-canceling = Canceling
 
-## The preview beside the options: the frame under the playhead at Original
-## and as the export will write it, split by a line dragged across it.
+## Once the file is written.
 
-# Names the side of the compared frame shown at Original size and compression.
-editor-export-preview-original = Original
-# Names the side of the compared frame shown as the export will write it.
-editor-export-preview-export = Export
-# Accessible name of the line dragged across the frame to compare its sides.
-editor-export-preview-divider = Comparison divider
-# Accessible name of the frame, which is dragged, or moved with the arrow
-# keys, to look at another part of it.
-editor-export-preview-frame = Frame at the playhead
-editor-export-preview-making = Making the preview
-editor-export-preview-failed = The preview could not be made.
+editor-export-done = Exported
+# $platform is windows or macos: the file manager is Explorer or Finder.
+editor-export-reveal =
+    { $platform ->
+        [windows] Show in Explorer
+       *[other] Show in Finder
+    }
+editor-export-copy = Copy the file
+# Names the written file, which is dragged out into another app. $name is the file's name.
+editor-export-drag-file = Drag { $name } to another app

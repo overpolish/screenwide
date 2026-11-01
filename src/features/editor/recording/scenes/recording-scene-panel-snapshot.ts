@@ -11,6 +11,7 @@ import {
   ScenePaneFraming,
   scenePaneFraming,
 } from "./recording-scene-pane-framing";
+import { isScenePaneAtLayout } from "./recording-scene-pane-reset";
 import { SceneCamera } from "./recording-scene-placement";
 import { RecordingSceneClip } from "./recording-scenes";
 
@@ -123,6 +124,7 @@ export function toolPanelSceneOf({
       ? {
           framing: found.framing,
           inset: pane === "screen" ? (current.inset ?? 0) : 0,
+          isAtLayout: isScenePaneAtLayout(current, pane, { camera, output }),
           radius: radiusOf(current, pane),
         }
       : null;

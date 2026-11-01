@@ -35,11 +35,13 @@ const meta = {
     capture: "recording",
     hasShadow: true,
     inset: 0,
+    isAtDefaultPlacement: false,
     isInScene: false,
     isShown: true,
     onInsetChange: fn(),
     onRadiusChange: fn(),
     onRecenter: fn(),
+    onResetPlacement: fn(),
     onShadowChange: fn(),
     radius: 4,
   },
@@ -59,6 +61,10 @@ const meta = {
           args.onRadiusChange(radius);
           updateArgs({ radius });
         }}
+        onResetPlacement={() => {
+          args.onResetPlacement();
+          updateArgs({ isAtDefaultPlacement: true });
+        }}
         onShadowChange={(hasShadow) => {
           args.onShadowChange(hasShadow);
           updateArgs({ hasShadow });
@@ -74,6 +80,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-// Over a scene, the inset, corners, turn and Recenter are the scene's own;
-// the note says so.
+// Already where a fresh project places it, Reset placement has nothing to
+// put back.
+export const AtDefaultPlacement: Story = {
+  args: { isAtDefaultPlacement: true },
+};
+
+// Over a scene, the inset, corners, turn, Recenter and Reset placement are
+// the scene's own; the note says so.
 export const InScene: Story = { args: { isInScene: true } };

@@ -26,6 +26,7 @@ mod audio;
 mod bake;
 mod encode;
 mod estimate;
+mod frame_fit;
 #[cfg(target_os = "macos")]
 mod macos;
 mod output;
@@ -50,6 +51,7 @@ pub use encode::{
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use encode::{remux_temp_path, run_export};
 pub use estimate::{estimate_compressed_video_bytes, supports_compression};
+pub use frame_fit::FrameFit;
 #[cfg(target_os = "macos")]
 pub use macos::recording_info;
 pub use output::duration_ms;

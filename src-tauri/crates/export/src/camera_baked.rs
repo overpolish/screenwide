@@ -30,6 +30,8 @@ use screenwide_annotations::{Annotation, AnnotationKind, AnnotationPoint};
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::CameraOverlaySettings;
 
+use crate::media_preview::FrameFit;
+
 /// How far a camera annotation's weight follows the camera down.
 const SMALLEST_WEIGHT: f64 = 0.5;
 
@@ -69,14 +71,14 @@ pub fn baked_places(camera: &[Annotation]) -> Vec<BakedPlace> {
 
 /// `camera`'s annotations, in `camera_source` pixels, split between the
 /// camera's own picture and the screen's composition over it. `overlay`
-/// places the camera image in a canvas `overlay_canvas` pixels in size;
-/// `screen` is the screen's output and `screen_source` the pixels its
-/// annotations are in.
+/// places the camera image on a canvas that `onto` carries onto `screen`,
+/// the screen's output; `screen_source` is the pixels its annotations are
+/// in.
 pub fn baked_camera_annotations(
   camera: &[Annotation],
   camera_source: (u32, u32),
   overlay: CameraOverlaySettings,
-  overlay_canvas: (f64, f64),
+  onto: FrameFit,
   screen: &ScreenshotOutputSettings,
   screen_source: (u32, u32),
 ) -> BakedCameraAnnotations {
@@ -84,19 +86,17 @@ pub fn baked_camera_annotations(
     || camera_source.0 == 0
     || camera_source.1 == 0
     || screen_source.0 == 0
-    || overlay_canvas.0 <= 0.0
-    || overlay_canvas.1 <= 0.0
+    || !(onto.scale.is_finite() && onto.scale > 0.0)
   {
     return BakedCameraAnnotations::default();
   }
   // The overlay is placed on the screen output it was set up against, which
   // a scaled export draws at another size.
-  let horizontal = f64::from(screen.width) / overlay_canvas.0;
-  let vertical = f64::from(screen.height) / overlay_canvas.1;
+  let horizontal = onto.scale;
   let image_width = overlay.camera_width * horizontal;
   let image_height = image_width * f64::from(camera_source.1) / f64::from(camera_source.0);
-  let left = overlay.camera_x * horizontal - image_width / 2.0;
-  let top = overlay.camera_y * vertical - image_height / 2.0;
+  let left = onto.x(overlay.camera_x) - image_width / 2.0;
+  let top = onto.y(overlay.camera_y) - image_height / 2.0;
   let camera_scale = image_width / f64::from(camera_source.0);
   let screen_scale = screen.image_width / f64::from(screen_source.0);
   if !(camera_scale.is_finite()
@@ -147,15 +147,11 @@ mod tests {
   /// drawn at half size from (0, 0), with a 400 by 300 camera image drawn
   /// `camera_width` pixels wide centred on (800, 400).
   fn split(camera: &[Annotation], camera_width: f64) -> BakedCameraAnnotations {
-    split_on(camera, camera_width, (1_000.0, 500.0))
+    split_on(camera, camera_width, FrameFit::unscaled(1_000, 500))
   }
 
-  /// `split`, with the camera set up on a canvas `overlay_canvas` in size.
-  fn split_on(
-    camera: &[Annotation],
-    camera_width: f64,
-    overlay_canvas: (f64, f64),
-  ) -> BakedCameraAnnotations {
+  /// `split`, with the camera set up on a canvas `onto` carries onto it.
+  fn split_on(camera: &[Annotation], camera_width: f64, onto: FrameFit) -> BakedCameraAnnotations {
     let mut screen = screenwide_output::fixtures::test_output_settings(1_000, 500);
     screen.image_x = 0.0;
     screen.image_y = 0.0;
@@ -171,14 +167,7 @@ mod tests {
       radius_percent: 50.0,
       follow_face: false,
     };
-    baked_camera_annotations(
-      camera,
-      (400, 300),
-      overlay,
-      overlay_canvas,
-      &screen,
-      (2_000, 1_000),
-    )
+    baked_camera_annotations(camera, (400, 300), overlay, onto, &screen, (2_000, 1_000))
   }
 
   fn arrow(id: &str) -> Annotation {
@@ -221,7 +210,12 @@ mod tests {
   #[test]
   fn an_export_drawn_smaller_scales_the_weight_it_was_set_up_with() {
     let full = arrow("a").style.width;
-    let over = split_on(&[arrow("a")], 320.0, (2_000.0, 1_000.0)).over;
+    let half = crate::media_preview::VideoExportOptions {
+      compression: 0,
+      resolution_scale_percent: 50,
+      source_scale_percent: 100,
+    };
+    let over = split_on(&[arrow("a")], 320.0, FrameFit::of(2_000, 1_000, half)).over;
     assert!((over[0].style.width - full * 0.4).abs() < 1e-9);
   }
 

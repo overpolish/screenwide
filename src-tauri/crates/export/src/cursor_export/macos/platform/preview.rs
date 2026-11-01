@@ -24,7 +24,17 @@ pub(in super::super::super) fn preview_frame(
     media_preview::PreviewPicture::Encoded => (
       media_preview::PreviewStretch::leading_to(&whole, output_us)?,
       mux::X264Output::Measured {
-        path: media_preview::estimate_temp_path(),
+        outputs: vec![mux::MeasuredOutput {
+          path: media_preview::estimate_temp_path(),
+          width: request.output.width,
+          height: request.output.height,
+          compression: request.video.compression,
+          bitrate: super::super::super::video_bitrate(
+            request.output.width,
+            request.output.height,
+            request.video.compression,
+          ),
+        }],
         stretch_starts: None,
       },
     ),
@@ -64,7 +74,7 @@ pub(in super::super::super) fn preview_frame(
     }
     (ExportRunResult::Cancelled, _) => None,
   };
-  let Some(written) = written else {
+  let Some(written) = written.and_then(|streams| streams.into_iter().next()) else {
     return Ok(ExportRunResult::Cancelled);
   };
   match picture {

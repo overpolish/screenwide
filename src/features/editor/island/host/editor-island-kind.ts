@@ -13,7 +13,8 @@ import type { EditorKind } from "../../types";
 // moment or range chosen on the strip brings out its own, and several
 // beats and lulls gathered with Shift the strip group's, over what is
 // chosen at the picture's foot; the transport's Tracks button brings out
-// the Tracks island.
+// the Tracks island. The title bar's Export button brings out the Export
+// island, which stands in for any other while it is out.
 
 export type EditorIslandKind =
   | "annotation"
@@ -22,6 +23,7 @@ export type EditorIslandKind =
   | "captions"
   | "crop"
   | "cursor"
+  | "export"
   | "frame"
   | "keyboard"
   | "lull"
@@ -46,16 +48,26 @@ const STRIP_ISLANDS: readonly EditorIslandKind[] = [
 export const isStripIsland = (island: EditorIslandKind | null) =>
   island !== null && STRIP_ISLANDS.includes(island);
 
+/** How far the picture's edges stand in from the island window's, in px. */
+export type PictureInset = {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+};
+
 /** The editor's island, over the picture of the editor that owns it: which
  * island it is, put away when null. It stands at the picture's top end
  * corner, but for a strip item's, which stands over the item. The panel
- * window covers the picture and lets clicks through everywhere but the
- * island. */
+ * window covers the editor's whole content area under its title bar and
+ * lets clicks through everywhere but the island. */
 export type PopupPanelIslandContent = {
+  /** Where the picture lies in the window. */
+  inset: PictureInset;
   island: EditorIslandKind | null;
   kind: "island";
   workspace: EditorKind;
-  /** How far along the picture the chosen strip items' middle sits, in px
+  /** How far along the window the chosen strip items' middle sits, in px
    * from its left edge: where a strip item's island stands. The items
    * carry `data-strip-island` for it to find them. */
   x: number;

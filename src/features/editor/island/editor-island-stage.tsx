@@ -4,10 +4,12 @@
 import { ISLAND } from "../../../primitives/island/island-geometry";
 
 import { EditorIsland, type EditorIslandContent } from "./editor-island";
+import { islandRoomStyle } from "./island-room";
 
 /** An editor island as its window shows it, hung at the top of the canvas
- * as it hangs under what opened it. Laid out left to right, like the strip
- * and the picture it reads. */
+ * as it hangs under what opened it, with the canvas's height as its room
+ * (`island-room.ts`). Laid out left to right, like the strip and the
+ * picture it reads. */
 export function EditorIslandStage({
   content,
   isShown = true,
@@ -16,8 +18,21 @@ export function EditorIslandStage({
   isShown?: boolean;
 }) {
   return (
-    <div className="relative size-full" dir="ltr">
-      <div className="absolute inset-x-0" style={{ top: ISLAND.screenGap }}>
+    <div
+      className="relative size-full"
+      dir="ltr"
+      style={{ containerType: "size" }}
+    >
+      <div
+        className="absolute inset-x-0"
+        data-island-room
+        style={{
+          ...islandRoomStyle(
+            `calc(100cqh - ${String(ISLAND.screenGap * 2)}px)`,
+          ),
+          top: ISLAND.screenGap,
+        }}
+      >
         <EditorIsland content={content} isShown={isShown} />
       </div>
     </div>

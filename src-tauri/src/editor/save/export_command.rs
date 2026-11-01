@@ -3,13 +3,24 @@
 
 use super::*;
 
+/// The file an export wrote, for the Export island to show as done.
+#[derive(Debug, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ExportedFile {
+  /// How large the file came out, in bytes.
+  #[ts(type = "number")]
+  pub bytes: u64,
+  pub path: String,
+}
+
 #[tauri::command]
 pub async fn save_export(
   app: AppHandle,
   window: tauri::WebviewWindow,
   file_stem: String,
   options: RecordingExportOptions,
-) -> Result<Option<PathBuf>, String> {
+) -> Result<Option<ExportedFile>, String> {
   let kind = kind_of_window(&window)?;
   let job_options = options.clone();
   let RecordingExportOptions {
@@ -19,6 +30,7 @@ pub async fn save_export(
     cursor_effects,
     keyboard_effects,
     recording_output,
+    screenshot_format,
     screenshot_output,
     ..
   } = options;
@@ -79,11 +91,18 @@ pub async fn save_export(
 
       match &artifact {
         EditorArtifact::Screenshot { items, .. } => {
-          let path = unique_path(&writing, &stem, SCREENSHOT_EXTENSION, &|candidate| {
-            candidate.exists()
-          });
+          let path = unique_path(
+            &writing,
+            &stem,
+            screenshot_format.extension(),
+            &|candidate| candidate.exists(),
+          );
           let composed = compose_screenshot_workspace(items, &screenshot_output)?;
-          std::fs::write(&path, encode_png(&composed)?).map_err(|error| error.to_string())?;
+          let bytes = match screenshot_format {
+            ScreenshotFormat::Png => encode_png(&composed)?,
+            ScreenshotFormat::Jpeg => encode_jpeg(&composed)?,
+          };
+          std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
           Ok(Some(path))
         }
         EditorArtifact::Recording { .. } => export_job::save_recording_artifact(
@@ -109,7 +128,7 @@ pub async fn save_export(
     unfinished => {
       restore(&app, kind, artifact);
       emit_snapshot(&app, kind);
-      return unfinished;
+      return unfinished.map(|_| None);
     }
   };
 
@@ -120,17 +139,16 @@ pub async fn save_export(
     recording_preference,
     screenshot_preference.map(|output| output.canvas),
   );
-  // Saving is transactional: keep the native player alive while the artifact
-  // may still be restored by Cancel or an export error, then retire it only
-  // once the finished files have been published. A recording opened while
-  // this one exported owns the window now, and stays in it.
-  if !is_occupied(&app, kind) {
-    if kind == EditorKind::Recording {
-      artifact::clear_recording_preview(&app);
-    }
-    let _ = window::hide(&app, kind);
-    emit_snapshot(&app, kind);
-  }
+  // The editor stays as it is, showing the finished file on its Export
+  // island, until the island is put away (`close_exported_editor`): only then
+  // is the native player retired and the window hidden. A recording opened
+  // while this one exported owns the window by then, and stays in it.
+  *app
+    .state::<EditorState>()
+    .slot(kind)
+    .exported
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(path.clone());
   // Only once the files are published and the editor has let go of it.
   if kind == EditorKind::Screenshot {
     if let Err(error) =
@@ -151,21 +169,15 @@ pub async fn save_export(
     super::super::project_name::settle_name(&app, project);
   }
   if crate::settings::current(&app).open_location_after_export {
-    if let Err(error) = location::open_containing_folder(&path) {
+    if let Err(error) = location::reveal(&path) {
       eprintln!("Could not open the export location: {error}");
     }
   }
-  Ok(Some(path))
-}
-
-fn is_occupied(app: &AppHandle, kind: EditorKind) -> bool {
-  app
-    .state::<EditorState>()
-    .slot(kind)
-    .artifact
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-    .is_some()
+  let bytes = std::fs::metadata(&path).map_or(0, |metadata| metadata.len());
+  Ok(Some(ExportedFile {
+    bytes,
+    path: path.to_string_lossy().into_owned(),
+  }))
 }
 
 /// Puts back an artifact whose export did not finish, so it can be tried

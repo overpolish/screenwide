@@ -15,6 +15,7 @@ import {
   showPopupPanel,
 } from "../../../popup-panel/api";
 import { usePopupPanelStore } from "../../../popup-panel/store";
+import { useExportIslandStore } from "../../export/export-island-store";
 import { toolPanelLabel } from "../../tool-panels/tool-panel-window";
 import { EditorKind } from "../../types";
 
@@ -23,60 +24,61 @@ import {
   isStripIsland,
   type PopupPanelIslandContent,
 } from "./editor-island-kind";
+import {
+  editorContent,
+  islandContent,
+  type IslandWindowPlace,
+  islandWindowPlace,
+  previewViewport,
+} from "./island-window-place";
 
 // The editor's island lives in the editor's panel window, which is laid over
-// the picture, as large as it, and lets clicks through everywhere but the
-// island (`editor-island-panel.tsx`). The picture is drawn natively under the
-// page and takes every press over it, so the island cannot be part of the
-// page. The window stays up while the editor is, so the island comes and
-// goes inside it as what is in hand changes, and follows the picture as the
-// editor is resized.
+// the editor's content area under its title bar and lets clicks through
+// everywhere but the island (`editor-island-panel.tsx`). The picture is
+// drawn natively under the page and takes every press over it, so the
+// island cannot be part of the page. The window stays up while the editor
+// is, so the island comes and goes inside it as what is in hand changes,
+// and the window never changes with the island (`island-window-place.ts`);
+// it follows the content area as the editor is resized, and the island the
+// picture inside it as the editor's layout changes.
 
 const ISLAND_ID = "island";
 
-/** Both workspaces mark their picture area with this; the island stands
- * over it. */
-const previewViewport = () =>
-  document.querySelector<HTMLElement>("[data-recording-preview-viewport]");
-
-/** How far along the picture, in px from its left edge, the middle of the
- * chosen strip items stands, which their island stands over. Several
- * marked alike, as the strip's gathered items and the parts of one split
- * at a jump are, stand as one, from the first one's start to the last
- * one's end. */
-const stripPlace = (viewport: DOMRect) => {
-  const marked = [...document.querySelectorAll("[data-strip-island]")].map(
-    (element) => element.getBoundingClientRect(),
-  );
-  if (marked.length === 0) return 0;
-  const left = Math.min(...marked.map((bounds) => bounds.left));
-  const right = Math.max(...marked.map((bounds) => bounds.right));
-  return (left + right) / 2 - viewport.left;
+/** Hands the island window what to show. */
+const publish = (panel: string, content: PopupPanelIslandContent) => {
+  usePopupPanelStore.getState().open(panel, {
+    content,
+    focusContents: false,
+    id: ISLAND_ID,
+  });
 };
 
-const islandContent = (
-  island: EditorIslandKind | null,
-  viewport: DOMRect,
-  workspace: EditorKind,
-): PopupPanelIslandContent => ({
-  island,
-  kind: "island",
-  workspace,
-  x: isStripIsland(island) ? stripPlace(viewport) : 0,
-});
+/** Moves and sizes the island window to `place`. */
+const fit = (panel: string, { bounds }: IslandWindowPlace) =>
+  movePopupPanel({
+    offset: new LogicalPosition(bounds.left, bounds.top),
+    panel,
+    parentWindowLabel: getCurrentWindow().label,
+    size: new LogicalSize(bounds.width, bounds.height),
+  }).catch(() => undefined);
 
-/** Shows `island` in the window over the editor's picture, or puts it away
+/** Shows `island` in the window over the editor's content, or puts it away
  * when `island` is null. `anchorKey` names the strip item a strip island
- * stands over, so the island finds the new one when another is chosen. */
+ * stands over, so the island finds the new one when another is chosen.
+ * The Export island, out or showing its finish, stands in for `island`. */
 export function useEditorIslandWindow({
   anchorKey = null,
-  island,
+  island: asked,
   workspace,
 }: {
   island: EditorIslandKind | null;
   workspace: EditorKind;
   anchorKey?: string | null;
 }) {
+  const isExportOut = useExportIslandStore(
+    (state) => state.isOpen || state.exported !== null,
+  );
+  const island = isExportOut ? "export" : asked;
   const panel = toolPanelLabel(workspace);
   const islandRef = useRef(island);
   useEffect(() => {
@@ -90,18 +92,14 @@ export function useEditorIslandWindow({
     let disposed = false;
     let frame = 0;
     const settle = async () => {
-      const viewport = previewViewport()?.getBoundingClientRect();
-      if (!viewport) {
+      const place = islandWindowPlace();
+      if (!place) {
         frame = requestAnimationFrame(() => {
           void settle();
         });
         return;
       }
-      usePopupPanelStore.getState().open(panel, {
-        content: islandContent(island, viewport, workspace),
-        focusContents: false,
-        id: ISLAND_ID,
-      });
+      publish(panel, islandContent(island, place, workspace));
       if (island === null) return;
       const isShowing = (
         await openPopupPanels().catch((): string[] => [])
@@ -109,10 +107,10 @@ export function useEditorIslandWindow({
       if (disposed || isShowing) return;
       await showPopupPanel({
         focusContents: false,
-        offset: new LogicalPosition(viewport.left, viewport.top),
+        offset: new LogicalPosition(place.bounds.left, place.bounds.top),
         panel,
         parentWindowLabel: getCurrentWindow().label,
-        size: new LogicalSize(viewport.width, viewport.height),
+        size: new LogicalSize(place.bounds.width, place.bounds.height),
         // The editor keeps working under the island, so a press outside it
         // must not take it away.
         sticky: true,
@@ -133,13 +131,10 @@ export function useEditorIslandWindow({
     if (!followsScroll) return;
     let frame = 0;
     const follow = () => {
-      const viewport = previewViewport()?.getBoundingClientRect();
-      if (!viewport) return;
-      usePopupPanelStore.getState().open(panel, {
-        content: islandContent(islandRef.current, viewport, workspace),
-        focusContents: false,
-        id: ISLAND_ID,
-      });
+      const place = islandWindowPlace();
+      if (place) {
+        publish(panel, islandContent(islandRef.current, place, workspace));
+      }
     };
     const onScroll = () => {
       cancelAnimationFrame(frame);
@@ -155,16 +150,20 @@ export function useEditorIslandWindow({
     };
   }, [followsScroll, panel, workspace]);
 
-  // The picture moving or changing size, as the editor is resized, takes
-  // the window with it. The picture's element can arrive after the editor
-  // (a recording shows its preparing state first) or be replaced by a new
-  // one, which a watch on the old one would never hear of, so it is looked
-  // up again whenever the picture or the window changes size, and looked
-  // for each frame while there is none, as the island's placing above does.
+  // The content area moving or changing size, as the editor is resized,
+  // takes the window with it; the picture changing inside it, as the strip
+  // or a column folds, moves the island alone. The picture's element can
+  // arrive after the editor (a recording shows its preparing state first)
+  // or be replaced by a new one, which a watch on the old one would never
+  // hear of, so it is looked up again whenever the picture or the window
+  // changes size, and looked for each frame while there is none, as the
+  // island's placing above does. Only a change of the content area's
+  // bounds moves the window.
   useEffect(() => {
     if (typeof ResizeObserver === "undefined") return;
     let frame = 0;
     let watched: HTMLElement | null = null;
+    let fitted = "";
     const follow = () => {
       const viewport = previewViewport();
       if (viewport !== watched) {
@@ -176,28 +175,26 @@ export function useEditorIslandWindow({
           return;
         }
       }
-      if (!viewport) {
+      const place = islandWindowPlace();
+      if (!place) {
         schedule();
         return;
       }
-      const bounds = viewport.getBoundingClientRect();
-      usePopupPanelStore.getState().open(panel, {
-        content: islandContent(islandRef.current, bounds, workspace),
-        focusContents: false,
-        id: ISLAND_ID,
-      });
-      void movePopupPanel({
-        offset: new LogicalPosition(bounds.left, bounds.top),
-        panel,
-        parentWindowLabel: getCurrentWindow().label,
-        size: new LogicalSize(bounds.width, bounds.height),
-      }).catch(() => undefined);
+      publish(panel, islandContent(islandRef.current, place, workspace));
+      const { height, left, top, width } = place.bounds;
+      const bounds = [left, top, width, height].join();
+      if (bounds !== fitted) {
+        fitted = bounds;
+        void fit(panel, place);
+      }
     };
     const schedule = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(follow);
     };
     const observer = new ResizeObserver(schedule);
+    const content = editorContent();
+    if (content) observer.observe(content);
     window.addEventListener("resize", schedule);
     schedule();
     return () => {

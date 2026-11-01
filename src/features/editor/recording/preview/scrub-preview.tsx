@@ -36,10 +36,11 @@ export type ScrubPreviewProps = {
   hasAnnotations?: boolean;
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
+  /** The Export island stands over the editor: open, exporting or done.
+   * The picture stays to look through, but nothing on it is edited. */
+  isExportOpen?: boolean;
   isPreparingAudio?: boolean;
   isPreparingPreview?: boolean;
-  isSaving?: boolean;
-  isSheetOpen?: boolean;
   keyboardEffects?: KeyboardEffectSettings;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onEnabledTracksChange?: (streamIndices: number[]) => void;

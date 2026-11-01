@@ -87,4 +87,7 @@ export type TimelineStripProps = Pick<
   splits: number[];
   /** How many seconds the lulls are squeezed by now. */
   squeeze: number;
+  /** Nothing on the strip is edited or chosen, while the Export island
+   * stands over the editor: only the playhead still scrubs. */
+  isLocked?: boolean;
 };

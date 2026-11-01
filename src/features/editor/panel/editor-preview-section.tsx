@@ -42,6 +42,7 @@ import {
 import { NO_CAPTURE_PARTS } from "../toolbar/editor-modes";
 import { EditorToolColumn } from "../toolbar/editor-tool-column";
 
+import { ChromeSetBack } from "./chrome-set-back";
 import { ScreenshotSectionProps } from "./editor-preview-section-props";
 
 /**
@@ -50,8 +51,7 @@ import { ScreenshotSectionProps } from "./editor-preview-section-props";
  */
 export function ScreenshotSection({
   artifact,
-  isSaving = false,
-  isSheetOpen = false,
+  isExportOpen = false,
   onCanvasResize,
   onOutputChange,
   onSelectedItemChange,
@@ -66,7 +66,7 @@ export function ScreenshotSection({
   // ⌘ (Ctrl) held over a pen puts Select on the picture until it is let go;
   // a press under it that takes hold of something puts Select in hand.
   const isSelectHeld = useSelectHold({
-    canHold: drawingToolKind(tool) !== null && !isSheetOpen,
+    canHold: drawingToolKind(tool) !== null && !isExportOpen,
     onTook: () => {
       setActiveTool("select");
     },
@@ -248,15 +248,17 @@ export function ScreenshotSection({
 
   return (
     <div className="flex min-h-0 min-w-0 grow gap-inline">
-      <EditorToolColumn
-        isModeOpen={mode !== null}
-        kind="screenshot"
-        onToolChange={(next) => {
-          if (next === "select") backToSelect();
-          else takeUp(next);
-        }}
-        tool={isSelectHeld ? "select" : columnTool(tool)}
-      />
+      <ChromeSetBack className="flex" isSetBack={isExportOpen}>
+        <EditorToolColumn
+          isModeOpen={mode !== null}
+          kind="screenshot"
+          onToolChange={(next) => {
+            if (next === "select") backToSelect();
+            else takeUp(next);
+          }}
+          tool={isSelectHeld ? "select" : columnTool(tool)}
+        />
+      </ChromeSetBack>
       {/* The picture meets the tool column and the title bar on a rounded
           corner; the viewport takes it up, and the native drawables are
           clipped to it. */}
@@ -267,10 +269,9 @@ export function ScreenshotSection({
           artifactId={artifact.id}
           cropKeepsShape={keepsShape(cropAspect)}
           isEditing={isCropping}
+          isExportOpen={isExportOpen}
           isResizingCanvas={tool === "canvas"}
-          isSaving={isSaving}
           isSelecting={pictureTool === "select"}
-          isSheetOpen={isSheetOpen}
           items={artifact.items}
           naturalHeight={artifact.height}
           naturalWidth={artifact.width}

@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  isLayerAtDefaultPlacement,
+  layerAtDefaultPlacement,
+} from "../../layer-placement";
+import {
   SceneRotation,
   UPRIGHT_ROTATION,
   withRotation,
@@ -37,6 +41,9 @@ export type EditorSelectionTarget = {
   applyRadius: (radius: number) => void;
   /** Put the layer's content in the middle of its padded frame. */
   recenter: () => void;
+  /** Put the layer back where a fresh project places it, keeping what it
+   * shows (`layer-placement.ts`). */
+  resetPlacement: () => void;
   selection: ToolPanelLayerSelection;
   /** Have the camera follow the face, or stop, where the layer is a camera
    * drawn into the screen's picture. */
@@ -108,12 +115,16 @@ export const placedSelectionTarget = ({
     recenter: () => {
       if (workspace) recenterWorkspaceContent(workspace);
     },
+    resetPlacement: () => {
+      apply(layerAtDefaultPlacement(settings));
+    },
     selection: {
       dropShadow: settings.dropShadow,
       // A share of the layer's own picture, its source crop, rather than of
       // its padded frame, so it does not move as the padding changes, and a
       // large look is large whatever the layer's size.
       inset: screenshotInsetShare(settings, source),
+      isAtDefaultPlacement: isLayerAtDefaultPlacement(settings),
       kind,
       label,
       radius: settings.radiusPercent,

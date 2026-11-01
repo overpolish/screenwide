@@ -25,6 +25,11 @@ export type TextFieldProps = Omit<
   /** Ends the field with the clear button a search field has, once
    * something is typed. Needs `value` and `onChange`. */
   isClearable?: boolean;
+  /** Keeps the sunken frame on the island too, where a field otherwise
+   * shows its frame only under the pointer: for a value that must read as
+   * typed into at a glance, such as the name of a file about to be
+   * written. */
+  isFramed?: boolean;
   label?: string;
   placeholder?: string;
 };
@@ -33,6 +38,7 @@ export function TextField({
   className,
   icon,
   isClearable = false,
+  isFramed = false,
   label,
   placeholder,
   ...props
@@ -46,7 +52,7 @@ export function TextField({
     label: labelSlot,
     section,
   } = fieldVariants({
-    material: useSkin() === "island" ? "island" : "sunken",
+    material: useSkin() === "island" && !isFramed ? "island" : "sunken",
   });
   const showsClear = isClearable && Boolean(props.value);
 

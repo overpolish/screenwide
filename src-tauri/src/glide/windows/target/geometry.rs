@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use windows::Win32::{
+  Foundation::LPARAM,
+  UI::WindowsAndMessaging::{SendMessageW, MINMAXINFO, WM_GETMINMAXINFO},
+};
 
 /// How far the window's invisible resize border extends past its visible
 /// frame on each side. `GetWindowRect` and `SetWindowPos` speak in the outer
@@ -61,4 +65,29 @@ pub(super) fn frame(rect: RECT) -> GlideFrame {
     width: f64::from(rect.right - rect.left),
     height: f64::from(rect.bottom - rect.top),
   }
+}
+
+/// The smallest visible size one of our windows accepts, from the minimum
+/// track size it answers `WM_GETMINMAXINFO` with. Tao's subclass handles
+/// `WM_WINDOWPOSCHANGING` without the default procedure, which is where
+/// Windows would otherwise clamp a `SetWindowPos` to that minimum, so our own
+/// placements are not held to it unless they ask. A window with no minimum
+/// leaves the track size untouched and answers `None`.
+pub(super) fn min_visible_size(hwnd: HWND, insets: FrameInsets) -> Option<(f64, f64)> {
+  let mut info = MINMAXINFO::default();
+  unsafe {
+    SendMessageW(
+      hwnd,
+      WM_GETMINMAXINFO,
+      None,
+      Some(LPARAM(std::ptr::from_mut(&mut info) as isize)),
+    )
+  };
+  let min = info.ptMinTrackSize;
+  (min.x > 0 || min.y > 0).then(|| {
+    (
+      (f64::from(min.x) - insets.left - insets.right).max(0.0),
+      (f64::from(min.y) - insets.top - insets.bottom).max(0.0),
+    )
+  })
 }

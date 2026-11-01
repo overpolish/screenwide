@@ -71,6 +71,7 @@ const recordingSelectionTarget = (
       artifact,
       cameraOutput: output.camera,
       cameraOverlay: inputs.cameraOverlay,
+      canvas: { height: output.primary.height, width: output.primary.width },
       onCameraOverlayChange: inputs.onCameraOverlayChange,
       onRecordingOutputChange: inputs.onRecordingOutputChange,
     });

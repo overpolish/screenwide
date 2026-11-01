@@ -138,8 +138,8 @@ impl CursorCompositor {
   fn output_cursor(
     &self,
     position_ms: u64,
-    width: usize,
-    height: usize,
+    width: f64,
+    height: f64,
     settings: CursorEffectSettings,
   ) -> Option<OutputCursor> {
     let timestamp_us = position_ms
@@ -152,38 +152,34 @@ impl CursorCompositor {
       .filter(|previous| previous.segment == cursor.segment)
       .map_or((0.0, 0.0), |previous| {
         (
-          (cursor.x - previous.x) / self.source.width * width as f64,
-          (cursor.y - previous.y) / self.source.height * height as f64,
+          (cursor.x - previous.x) / self.source.width * width,
+          (cursor.y - previous.y) / self.source.height * height,
         )
       });
     Some(OutputCursor {
       cursor,
       delta_x,
       delta_y,
-      height: cursor.appearance.height / self.source.height * height as f64,
-      hotspot_x: hotspot_x / self.source.width * width as f64,
-      hotspot_y: hotspot_y / self.source.height * height as f64,
-      width: cursor.appearance.width / self.source.width * width as f64,
-      x: (cursor.x - self.source.x) / self.source.width * width as f64,
-      y: (cursor.y - self.source.y) / self.source.height * height as f64,
+      height: cursor.appearance.height / self.source.height * height,
+      hotspot_x: hotspot_x / self.source.width * width,
+      hotspot_y: hotspot_y / self.source.height * height,
+      width: cursor.appearance.width / self.source.width * width,
+      x: (cursor.x - self.source.x) / self.source.width * width,
+      y: (cursor.y - self.source.y) / self.source.height * height,
     })
   }
 
-  /// Evaluates the event timeline for one output frame. The result carries no
-  /// pixels: the native compositor scales, rotates, blurs and blends the
-  /// style's artwork from these few numbers.
+  /// Evaluates the event timeline for one output frame on a picture
+  /// `source_size` output pixels in size, which may fall between pixels. The
+  /// result carries no pixels: the native compositor scales, rotates, blurs
+  /// and blends the style's artwork from these few numbers.
   pub fn gpu_cursor(
     &self,
     position_ms: u64,
-    source_size: (u32, u32),
+    source_size: (f64, f64),
     settings: CursorEffectSettings,
   ) -> Option<GpuCursor> {
-    let output = self.output_cursor(
-      position_ms,
-      source_size.0 as usize,
-      source_size.1 as usize,
-      settings,
-    )?;
+    let output = self.output_cursor(position_ms, source_size.0, source_size.1, settings)?;
     let artwork = raster::artwork_index(output.cursor.appearance.style);
     let rotation_adjustment = raster::gpu_rotation_radians(output.cursor.appearance.style);
     Some(GpuCursor {

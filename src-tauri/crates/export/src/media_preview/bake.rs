@@ -5,43 +5,25 @@
 
 use super::*;
 
-fn even_scaled(value: u32, numerator: u16, denominator: u16) -> u32 {
-  let scaled = u64::from(value)
-    .saturating_mul(u64::from(numerator))
-    .checked_div(u64::from(denominator.max(1)))
-    .unwrap_or(0)
-    .max(2);
-  (scaled.min(u64::from(u32::MAX)) as u32) & !1
-}
-
 fn even(value: f64) -> u32 {
   ((value.round().max(2.0) as u32) & !1).max(2)
 }
 
 pub fn bake_geometry(options: BakedVideoExportOptions) -> Result<BakeGeometry, String> {
-  let output_width = even_scaled(
-    options.screen_width,
-    options.video.resolution_scale_percent,
-    options.video.source_scale_percent,
-  );
-  let output_height = even_scaled(
-    options.screen_height,
-    options.video.resolution_scale_percent,
-    options.video.source_scale_percent,
-  );
   // The overlay is placed in the screen output's own pixels. A bake may render
-  // at a scaled size, so carry the placement across at that same scale.
-  let horizontal = f64::from(output_width) / f64::from(options.screen_width.max(1));
-  let vertical = f64::from(output_height) / f64::from(options.screen_height.max(1));
-  let frame_x = options.overlay.frame_x * horizontal;
-  let frame_y = options.overlay.frame_y * vertical;
-  let frame_width = options.overlay.frame_width * horizontal;
-  let frame_height = options.overlay.frame_height * vertical;
-  let camera_width = options.overlay.camera_width * horizontal;
+  // at a scaled size, so carry the placement across as the screen is.
+  let fit = FrameFit::of(options.screen_width, options.screen_height, options.video);
+  let (output_width, output_height) = (fit.width, fit.height);
+  let overlay = fit.overlay(options.overlay);
+  let frame_x = overlay.frame_x;
+  let frame_y = overlay.frame_y;
+  let frame_width = overlay.frame_width;
+  let frame_height = overlay.frame_height;
+  let camera_width = overlay.camera_width;
   let camera_height =
     camera_width * f64::from(options.camera_height) / f64::from(options.camera_width.max(1));
-  let camera_x = options.overlay.camera_x * horizontal - camera_width / 2.0;
-  let camera_y = options.overlay.camera_y * vertical - camera_height / 2.0;
+  let camera_x = overlay.camera_x - camera_width / 2.0;
+  let camera_y = overlay.camera_y - camera_height / 2.0;
   // The frame is gently clamped into the camera image instead of rejected:
   // aspect-dependent defaults (and a crop-tool reset) can land the frame
   // slightly outside the camera, and failing every composition over that

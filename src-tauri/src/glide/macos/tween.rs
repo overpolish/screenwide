@@ -54,6 +54,10 @@ impl GlideWindow for WindowTarget {
     WindowTarget::frame(self).map(glide_frame)
   }
 
+  fn min_size(&self) -> Option<(f64, f64)> {
+    WindowTarget::min_size(self)
+  }
+
   /// An application clamps a move against the size it still has, so a window
   /// travelling to a smaller region stops short of the destination, and the
   /// resize that follows can shift the origin again as the window is pulled

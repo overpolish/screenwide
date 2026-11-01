@@ -29,6 +29,9 @@ pub(crate) mod dismissal;
 pub(crate) mod hit_area;
 pub(crate) mod lifecycle;
 pub(crate) mod placement;
+// Panels and the tooltip are put on screen concealed and revealed once they
+// are fitted, and a sticky panel hangs off its parent as a native child.
+pub(crate) mod presentation;
 use attachment::{attach_to_parent, detach_from_parent};
 #[cfg(any(test, target_os = "windows"))]
 mod placement_geometry;
@@ -172,7 +175,7 @@ pub fn show_standalone_listbox(
   // attached.
   let conceal = fitted.unwrap_or(false) && !window.is_visible().unwrap_or(false);
   if conceal {
-    crate::editor::export_window::presentation::conceal(&app, &window)?;
+    presentation::conceal(&app, &window)?;
   }
   let attached_to = if sticky {
     attach_to_parent(&app, &parent, &window)?;
@@ -235,7 +238,7 @@ pub fn fit_standalone_listbox(
   let scale = window.scale_factor()?;
   let width = window.inner_size()?.to_logical::<f64>(scale).width;
   window.set_size(LogicalSize::new(width, height.ceil()))?;
-  crate::editor::export_window::presentation::reveal_after_resize(&window)
+  presentation::reveal_after_resize(&window)
 }
 
 /// The panel windows showing something right now, by label. A webview that

@@ -18,6 +18,7 @@ import {
   ScenePaneFraming,
   scenePaneFraming,
 } from "./recording-scene-pane-framing";
+import { scenePaneAtLayout } from "./recording-scene-pane-reset";
 import { SceneCamera } from "./recording-scene-placement";
 import { SceneChoice } from "./recording-scene-span";
 import {
@@ -207,6 +208,11 @@ export function recordingSceneEdits({
     remove: () => {
       const target = timedSpanClipAt(clips, getTimelineMs());
       if (target) commit(clips.filter((clip) => clip.id !== target.id));
+    },
+    resetPanePlacement: (pane) => {
+      reframeCurrent((clip) =>
+        scenePaneAtLayout(clip, pane, { camera, output }),
+      );
     },
     resetScreenCrop,
     // Following starts with the face in the middle of the camera's box at

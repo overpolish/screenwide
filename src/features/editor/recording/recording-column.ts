@@ -26,6 +26,10 @@ import type { RecordingCanvasTool } from "./preview/recording-canvas-tool";
 export type RecordingPanelMode =
   "captions" | "cursor" | "keyboard" | "sound" | "transcript";
 
+/** What a recording's own picture is of: its screen, the camera where it
+ * is of the camera alone, or none for audio. */
+export type RecordingPicture = "camera" | "screen" | null;
+
 /** The pen, Crop or Select the column shows pressed for `tool`. */
 export const columnTool = (tool: RecordingCanvasTool): EditorTool => {
   if (tool === "crop") return "crop";
@@ -37,13 +41,18 @@ export const columnTool = (tool: RecordingCanvasTool): EditorTool => {
 /** The mode the title bar shows open: the one the picture's tool belongs to,
  * else, under Select, the chosen track's (so choosing the screen or the
  * camera opens Screen or Camera, the other switches, and letting it go puts
- * it away), else the island-only mode open. */
+ * it away), else the island-only mode open. A recording of the camera alone
+ * has its camera as its own picture, the primary track, which opens
+ * Camera. */
 export const columnMode = ({
   panel,
+  picture,
   tool,
   track,
 }: {
   panel: RecordingPanelMode | null;
+  /** What the recording's own picture is of. */
+  picture: RecordingPicture;
   tool: RecordingCanvasTool;
   track: RecordingVideoTrackId | null;
 }): EditorMode | null => {
@@ -53,7 +62,7 @@ export const columnMode = ({
     case "scene":
       return "scene";
     case "select":
-      return track === "camera"
+      return track === "camera" || (track === "primary" && picture === "camera")
         ? "camera"
         : track === "primary"
           ? "screen"
@@ -65,9 +74,11 @@ export const columnMode = ({
 
 /** What a mode takes up: the picture's tool, the track it chooses (none for
  * an island-only mode, which a chosen track would override; left as it is
- * for Frame and Scene), and the island-only mode; none goes back to Select. */
+ * for Frame and Scene), and the island-only mode; none goes back to Select.
+ * Camera chooses the recording's own track where that is the camera. */
 export const modeTool = (
   mode: EditorMode | null,
+  picture: RecordingPicture,
 ): {
   panel: RecordingPanelMode | null;
   tool: RecordingCanvasTool;
@@ -76,7 +87,11 @@ export const modeTool = (
   if (mode === null) return { panel: null, tool: "select" };
   switch (mode) {
     case "camera":
-      return { panel: null, tool: "select", track: "camera" };
+      return {
+        panel: null,
+        tool: "select",
+        track: picture === "camera" ? "primary" : "camera",
+      };
     case "frame":
       return { panel: null, tool: "canvas" };
     case "scene":

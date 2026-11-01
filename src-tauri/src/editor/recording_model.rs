@@ -26,6 +26,59 @@ impl ExportSubtitles {
   }
 }
 
+/// What fills a camera saved as a file of its own where its background is
+/// taken away. MP4 has no transparency, so the room is filled with a screen
+/// colour another editor keys out: green, or blue for someone wearing green.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "kebab-case")]
+#[ts(export)]
+pub enum CameraKey {
+  #[default]
+  Green,
+  Blue,
+}
+
+impl CameraKey {
+  /// The broadcast chroma colours, which keyers are tuned to.
+  pub const fn color(self) -> &'static str {
+    match self {
+      Self::Green => "#00b140",
+      Self::Blue => "#0047bb",
+    }
+  }
+
+  /// `output` with its canvas filled with the key colour: where the camera's
+  /// background is taken away, the canvas is what shows.
+  pub fn keyed(self, output: &ScreenshotOutputSettings) -> ScreenshotOutputSettings {
+    ScreenshotOutputSettings {
+      background_color: self.color().to_owned(),
+      background_image_path: None,
+      background_radius_percent: 0.0,
+      background_type: "solid".to_owned(),
+      ..output.clone()
+    }
+  }
+}
+
+/// The picture file a screenshot is saved as.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "kebab-case")]
+#[ts(export)]
+pub enum ScreenshotFormat {
+  #[default]
+  Png,
+  Jpeg,
+}
+
+impl ScreenshotFormat {
+  pub const fn extension(self) -> &'static str {
+    match self {
+      Self::Png => "png",
+      Self::Jpeg => "jpg",
+    }
+  }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingExportOptions {
@@ -33,6 +86,9 @@ pub struct RecordingExportOptions {
   pub bake_camera: bool,
   pub camera_compression: u8,
   pub camera_overlay: CameraOverlaySettings,
+  /// What fills a separate camera file where its background is taken away.
+  #[serde(default)]
+  pub camera_key: CameraKey,
   pub camera_resolution_scale_percent: u16,
   pub collapse_audio: bool,
   pub compression: u8,
@@ -47,6 +103,9 @@ pub struct RecordingExportOptions {
   pub resolution_scale_percent: u16,
   pub recording_output: RecordingOutputSettings,
   pub screenshot_output: ScreenshotWorkspaceOutputSettings,
+  /// The file a screenshot is saved as.
+  #[serde(default)]
+  pub screenshot_format: ScreenshotFormat,
   #[serde(default)]
   pub subtitles: ExportSubtitles,
   #[serde(default)]
@@ -85,5 +144,27 @@ impl EditorArtifact {
           scale: 1.0,
         }),
     ]
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn a_keyed_camera_canvas_is_the_screen_colour_alone() {
+    let mut output = screenwide_output::fixtures::test_output_settings(640, 360);
+    output.background_type = "image".to_owned();
+    output.background_image_path = Some("/tmp/room.png".to_owned());
+    output.background_radius_percent = 4.0;
+    for (key, color) in [(CameraKey::Green, "#00b140"), (CameraKey::Blue, "#0047bb")] {
+      let keyed = key.keyed(&output);
+      assert_eq!(keyed.background_type, "solid");
+      assert_eq!(keyed.background_color, color);
+      assert_eq!(keyed.background_image_path, None);
+      assert_eq!(keyed.background_radius_percent, 0.0);
+      assert_eq!(keyed.width, output.width);
+      assert_eq!(keyed.crop_width, output.crop_width);
+    }
   }
 }

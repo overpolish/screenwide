@@ -4,6 +4,7 @@
 import { Video } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
+import { Button } from "../../../../primitives/button/button";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
@@ -13,8 +14,10 @@ import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
 import { AnnotationLine } from "../annotation/annotation-island-parts";
 import { FollowFaceToggle } from "../follow-face-toggle";
 import { IslandModelLine } from "../island-model-line";
+import { IslandRotation } from "../island-rotation";
 import { IslandWorkLine } from "../island-work-line";
 import { SceneOnlyNote } from "../scene-only-note";
+import { ScreenInsetChoice } from "../screen/screen-inset-choice";
 
 import { CameraBackgroundLine } from "./camera-background-line";
 import { EnhanceGlyph, RemoveBackgroundGlyph } from "./camera-glyphs";
@@ -22,6 +25,7 @@ import { CameraObjectsLine } from "./camera-objects-line";
 
 import type { ToolPanelCameraEffects } from "../../tool-panels/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
+import type { ScreenIslandProps } from "../screen/screen-island";
 
 // The camera, for the whole recording, as the Screen island is the
 // screen's; its crop is the Crop tool's. One line of animated toggles and
@@ -36,7 +40,11 @@ import type { EditorIslandContent } from "../editor-island";
 // that comes and goes as the others glide (`IslandFlow`). Over a scene,
 // which may round the camera and have it follow the face its own way, the
 // corners and the following are that scene's, and a note at the island's
-// foot says so.
+// foot says so. Reset placement, at the foot, puts the camera back where a
+// fresh project places it. A recording of the camera alone has the camera
+// as its own picture, which this island works on too, with what the Screen
+// island offers a picture that still applies: its inset beside the
+// corners, its turn, and Recenter beside Reset placement.
 
 export type CameraIslandProps = {
   effects: ToolPanelCameraEffects;
@@ -46,6 +54,9 @@ export type CameraIslandProps = {
   followFace: boolean;
   /** Whether the camera casts a shadow onto what is behind it. */
   hasShadow: boolean;
+  /** Whether the camera sits where a fresh project places it, the scene's
+   * own pane where its layout puts it while `isInScene`. */
+  isAtDefaultPlacement: boolean;
   /** While the face is first looked for, once `followFace` is turned on. */
   isFindingFace: boolean;
   /** Whether the playhead is in a scene, whose own corners and following
@@ -64,16 +75,33 @@ export type CameraIslandProps = {
   onPickObjects: (isPicking: boolean) => void;
   onRadiusChange: (radius: number) => void;
   onRemoveObject: (id: number) => void;
+  /** Puts the camera back where a fresh project places it, its crop,
+   * corners and shadow kept; the scene's pane back in the box its layout
+   * gives it while `isInScene`. */
+  onResetPlacement: () => void;
   onShadowChange: (hasShadow: boolean) => void;
   /** Goes to where an object was picked, choosing it. */
   onShowObject: (id: number) => void;
   /** Percent of the camera's shorter side, the scene's own while
    * `isInScene`; half is a circle. */
   radius: number;
+  /** Where the recording is of the camera alone, the camera is its own
+   * picture, padded, turned and recentred as a screen is; absent for a
+   * camera beside the screen. Such a camera has no box of its own to follow
+   * the face in, so it offers no Follow face. */
+  picture?: CameraPictureRows;
 };
 
+/** What a camera that is the recording's own picture adds to the island:
+ * the Screen island's inset, turn and Recenter, the scene's own over a
+ * scene. */
+type CameraPictureRows = Pick<
+  ScreenIslandProps,
+  "inset" | "onInsetChange" | "onRecenter" | "onRotationChange" | "rotation"
+>;
+
 export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
-  const { effects } = props;
+  const { effects, picture } = props;
   const isRemoved = effects.background !== "kept";
   const hasBackgroundModel = effects.model?.status === "downloaded";
   const { objects } = effects;
@@ -98,6 +126,12 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
               }}
             />
           ) : null}
+          {picture ? (
+            <ScreenInsetChoice
+              inset={picture.inset}
+              onChange={picture.onInsetChange}
+            />
+          ) : null}
           {/* Square, rounded and round: a camera is often drawn as a
               circle, so its corners run all the way to one. */}
           <CornerChoice onChange={props.onRadiusChange} value={props.radius} />
@@ -105,11 +139,13 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
             hasShadow={props.hasShadow}
             onChange={props.onShadowChange}
           />
-          <FollowFaceToggle
-            isFindingFace={props.isFindingFace}
-            isFollowing={props.followFace}
-            onChange={props.onFollowFaceChange}
-          />
+          {picture ? null : (
+            <FollowFaceToggle
+              isFindingFace={props.isFindingFace}
+              isFollowing={props.followFace}
+              onChange={props.onFollowFaceChange}
+            />
+          )}
         </AnnotationLine>
         {effects.working.colour ? (
           <IslandWorkLine
@@ -174,9 +210,34 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
             value={objects.progress}
           />
         ) : null}
-        {props.isInScene ? (
-          <SceneOnlyNote key="scene-note" layer="camera" />
+        {picture?.rotation && picture.onRotationChange ? (
+          <IslandRotation
+            key="rotation"
+            onChange={picture.onRotationChange}
+            rotation={picture.rotation}
+          />
         ) : null}
+        {props.isInScene ? (
+          // Over a scene the own picture is the scene's screen pane, padded,
+          // rounded, turned and recentred as a screen is there.
+          <SceneOnlyNote
+            key="scene-note"
+            layer={picture ? "screen" : "camera"}
+          />
+        ) : null}
+        <div className="flex justify-end gap-separate" key="actions">
+          {picture ? (
+            <Button onPress={picture.onRecenter}>
+              {t("editor-island-screen-recenter")}
+            </Button>
+          ) : null}
+          <Button
+            isDisabled={props.isAtDefaultPlacement}
+            onPress={props.onResetPlacement}
+          >
+            {t("editor-island-reset-placement")}
+          </Button>
+        </div>
       </IslandFlow>
     ),
     title: (

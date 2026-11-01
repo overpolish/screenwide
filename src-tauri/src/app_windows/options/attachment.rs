@@ -5,7 +5,7 @@ use super::*;
 
 /// A sticky panel stands with the window it belongs to instead of floating
 /// over every other application: it drops to the ordinary window level and
-/// becomes a native child, the way the confirm sheet does.
+/// becomes a native child of its parent.
 #[cfg(target_os = "macos")]
 pub(super) fn attach_to_parent(
   app: &AppHandle,
@@ -13,7 +13,7 @@ pub(super) fn attach_to_parent(
   panel: &tauri::WebviewWindow,
 ) -> tauri::Result<()> {
   platform::set_normal_level(panel)?;
-  crate::editor::export_window::presentation::attach(app, parent, panel)
+  super::presentation::attach(app, parent, panel)
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -33,7 +33,7 @@ pub(super) fn detach_from_parent(
   parent: &tauri::WebviewWindow,
   panel: &tauri::WebviewWindow,
 ) -> tauri::Result<()> {
-  crate::editor::export_window::presentation::detach(app, parent, panel)
+  super::presentation::detach(app, parent, panel)
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -46,7 +46,7 @@ pub(super) fn detach_from_parent(
 }
 
 /// Owned top-level windows stay above their owner and minimize with it.
-/// Unlike a modal export sheet, a tool panel never disables the editor.
+/// A tool panel never disables the editor it belongs to.
 #[cfg(target_os = "windows")]
 pub(super) fn attach_to_parent(
   _app: &AppHandle,

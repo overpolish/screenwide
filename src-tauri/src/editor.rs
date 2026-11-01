@@ -16,7 +16,6 @@ pub(crate) mod captions;
 pub(crate) mod commands;
 mod directory;
 mod export_picture;
-pub(crate) mod export_window;
 /// The pictures images show.
 pub(crate) mod images;
 mod naming;
@@ -62,7 +61,7 @@ pub use project_thumbnail::project_thumbnail;
 mod recording_model;
 mod screenshot_composition;
 pub(crate) mod screenshot_project;
-pub use recording_model::{ExportSubtitles, RecordingExportOptions};
+pub use recording_model::{ExportSubtitles, RecordingExportOptions, ScreenshotFormat};
 use screenwide_export::recording_model::{
   AudioTrackKind, RecordingAudioTrack, RecordingCamera, RecordingOutputSettings,
 };
@@ -82,7 +81,6 @@ pub use artifact_snapshot::EditorArtifactSnapshot;
 use camera_save::validate_camera_overlay;
 use commands::store_export_directory;
 use directory::current_directory;
-pub use export_window::hide as hide_export_options_for;
 pub(crate) use naming::sanitize_file_stem;
 use preferences::{
   load_cursor_effects, load_keyboard_effects, load_recording_choices, load_recording_output,
@@ -120,7 +118,7 @@ use ts_rs::TS;
 use crate::screenshots::compose_screenshot;
 use crate::screenshots::{screenshot_directory, unique_path};
 use screenwide_capture::FinalizeInfo;
-use screenwide_output::{encode_png, ScreenshotOutputSettings};
+use screenwide_output::{encode_jpeg, encode_png, ScreenshotOutputSettings};
 use screenwide_project::PrimaryRecordingKind;
 
 pub(crate) fn initialize_cursor_artwork() {
@@ -255,6 +253,9 @@ struct EditorWorkspaceSlot {
   active_export: Mutex<Option<ActiveExportJob>>,
   artifact: Mutex<Option<EditorArtifact>>,
   directory: Mutex<Option<PathBuf>>,
+  /// The file the last export wrote, which the Export island's finish
+  /// reveals, copies, shares and drags out; never a path the webview names.
+  exported: Mutex<Option<PathBuf>>,
 }
 
 #[derive(Default)]

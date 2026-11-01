@@ -105,7 +105,7 @@ export function TimelineStrip(props: TimelineStripProps) {
   const range = useRangeCut({
     fractionOf: scrub.fractionOf,
     // The scissors are in hand with the Cut tool on, or while ⌥ is held.
-    isCutting: props.isCutting || props.isAltHeld,
+    isCutting: !props.isLocked && (props.isCutting || props.isAltHeld),
     onChoose: (span) => {
       choose({ kind: "range", ...span });
     },
@@ -177,86 +177,88 @@ export function TimelineStrip(props: TimelineStripProps) {
               style={{ width }}
               {...scrub.handlers}
             >
-              <SceneRail
-                duration={props.recorded}
-                onDraw={props.onSceneDraw}
-                onGuide={setSceneGuide}
-                onRetime={props.onSceneRetime}
-                onSelect={(id) => {
-                  choose({ id, kind: "scene" });
-                }}
-                scale={shown}
-                scenes={drawn.scenes}
-                selected={chosenId("scene")}
-                snap={snap}
-                width={width}
-              />
-              <StripLane>
-                {drawn.annotations.length > 0 ? (
-                  <AnnotationLane
-                    annotations={drawn.annotations}
-                    onRestack={props.onAnnotationRestack}
-                    onRetime={props.onAnnotationRetime}
-                    onSelect={(id) => {
-                      choose({ id, kind: "annotation" });
-                    }}
-                    scale={shown}
-                    selected={chosenId("annotation")}
-                    snap={snap}
-                    width={width}
-                  />
-                ) : null}
-              </StripLane>
-              <StripLane>
-                {drawn.shortcuts.length > 0 ? (
-                  <ShortcutLane
-                    onDelete={(ids) => {
-                      props.onDeleteShortcuts(ids);
-                      choose(null);
-                    }}
-                    onSelect={(ids) => {
-                      choose(
-                        ids.length > 0 ? { ids, kind: "shortcuts" } : null,
-                      );
-                    }}
-                    scale={shown}
-                    selected={chosenShortcuts}
-                    shortcuts={drawn.shortcuts}
-                    width={width}
-                  />
-                ) : null}
-              </StripLane>
-              <StripBeats
-                {...drawn}
-                draft={range.draft}
-                lifted={reorder.lifted}
-                onGrab={reorder.grab}
-                onPutBack={props.onPutBack}
-                onRemoveSplit={props.onRemoveSplit}
-                onSelect={choose}
-                pxPerSecond={view.pxPerSecond}
-                reshape={reshape}
-                rowRef={reorder.rowRef}
-                scale={shown}
-                taken={taken}
-                width={width}
-              />
-              <StripLane>
-                {drawn.captions ? (
-                  <CaptionLane
-                    isHidden={props.isCaptionsHidden}
-                    lines={drawn.captions}
-                    // The playhead goes to the line, so the caption is on the
-                    // picture.
-                    onPress={(line) => {
-                      props.onSeek(line.start);
-                      props.onCaptionPress(line);
-                    }}
-                    scale={shown}
-                    width={width}
-                  />
-                ) : null}
-              </StripLane>
+              {/* Locked, a press falls through the lanes and scrubs. */}
+              <div className="contents" inert={props.isLocked}>
+                <SceneRail
+                  duration={props.recorded}
+                  onDraw={props.onSceneDraw}
+                  onGuide={setSceneGuide}
+                  onRetime={props.onSceneRetime}
+                  onSelect={(id) => {
+                    choose({ id, kind: "scene" });
+                  }}
+                  scale={shown}
+                  scenes={drawn.scenes}
+                  selected={chosenId("scene")}
+                  snap={snap}
+                  width={width}
+                />
+                <StripLane>
+                  {drawn.annotations.length > 0 ? (
+                    <AnnotationLane
+                      annotations={drawn.annotations}
+                      onRestack={props.onAnnotationRestack}
+                      onRetime={props.onAnnotationRetime}
+                      onSelect={(id) => {
+                        choose({ id, kind: "annotation" });
+                      }}
+                      scale={shown}
+                      selected={chosenId("annotation")}
+                      snap={snap}
+                      width={width}
+                    />
+                  ) : null}
+                </StripLane>
+                <StripLane>
+                  {drawn.shortcuts.length > 0 ? (
+                    <ShortcutLane
+                      onDelete={(ids) => {
+                        props.onDeleteShortcuts(ids);
+                        choose(null);
+                      }}
+                      onSelect={(ids) => {
+                        choose(
+                          ids.length > 0 ? { ids, kind: "shortcuts" } : null,
+                        );
+                      }}
+                      scale={shown}
+                      selected={chosenShortcuts}
+                      shortcuts={drawn.shortcuts}
+                      width={width}
+                    />
+                  ) : null}
+                </StripLane>
+                <StripBeats
+                  {...drawn}
+                  draft={range.draft}
+                  lifted={reorder.lifted}
+                  onGrab={reorder.grab}
+                  onPutBack={props.onPutBack}
+                  onRemoveSplit={props.onRemoveSplit}
+                  onSelect={choose}
+                  pxPerSecond={view.pxPerSecond}
+                  reshape={reshape}
+                  rowRef={reorder.rowRef}
+                  scale={shown}
+                  taken={taken}
+                  width={width}
+                />
+                <StripLane>
+                  {drawn.captions ? (
+                    <CaptionLane
+                      isHidden={props.isCaptionsHidden}
+                      lines={drawn.captions}
+                      // The playhead goes to the line, to show its caption.
+                      onPress={(line) => {
+                        props.onSeek(line.start);
+                        props.onCaptionPress(line);
+                      }}
+                      scale={shown}
+                      width={width}
+                    />
+                  ) : null}
+                </StripLane>
+              </div>
               {/* Over the scenes, which its line crosses, but pressed only by
                 its knob. */}
               <span className="pointer-events-none absolute inset-x-0 top-1.5 bottom-0 z-20">
@@ -276,7 +278,7 @@ export function TimelineStrip(props: TimelineStripProps) {
           </div>
         </ScrollArea>
       </div>
-      <div className={cn("px-2", GLIDE)}>
+      <div className={cn("px-2", GLIDE)} inert={props.isLocked}>
         <Minimap
           beats={drawn.beats.map(({ beat, span }) => ({
             ...span,

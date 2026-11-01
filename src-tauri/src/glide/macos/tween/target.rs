@@ -9,7 +9,7 @@
 use cidre::{arc, ax, cf, cg};
 use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
 
-use super::super::own_window::{decoration_size, logical_frame};
+use super::super::own_window::{decoration_size, logical_frame, min_outer_size};
 
 /// The longest a single Accessibility set may block the tween thread. The
 /// default runs to seconds, which an unresponsive application would spend the
@@ -115,6 +115,16 @@ impl WindowTarget {
     match self {
       Self::Ax(element) => element.is_settable(ax::attr::size()).unwrap_or(false),
       Self::Own(window) => window.is_resizable().unwrap_or(false),
+    }
+  }
+
+  /// The smallest outer size one of our windows accepts. Tauri's resize goes
+  /// around AppKit's minimum, so Glide has to keep to it; a foreign
+  /// application clamps an Accessibility resize itself.
+  pub(in crate::glide) fn min_size(&self) -> Option<(f64, f64)> {
+    match self {
+      Self::Ax(_) => None,
+      Self::Own(window) => min_outer_size(window),
     }
   }
 

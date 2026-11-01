@@ -22,6 +22,7 @@ import { CursorEffectSettings, KeyboardEffectSettings } from "../types";
 import { Background, BackgroundPreset } from "./frame/background/background";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
+import type { ToolPanelExportPatch } from "./tool-panel-export";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 import type { CropAspect } from "../island/crop-aspect-choice";
@@ -31,6 +32,7 @@ import type { CropAspect } from "../island/crop-aspect-choice";
  * exists, so a control in a panel and the same control in the editor take the
  * identical path through the workspace's state.
  */
+
 export type ToolPanelHandlers = {
   /** Draw the chosen annotation in and out over its clip, or leave it standing.
    */
@@ -103,6 +105,8 @@ export type ToolPanelHandlers = {
   /** Show the whole source again, the committed crop taken away. */
   onCropReset?: () => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  /** Do what the Export island asks: a setting, or a step of the export. */
+  onExportPatch?: (patch: ToolPanelExportPatch) => void;
   /** Round the output canvas corners by this share of its shorter side. */
   onFrameRadiusChange?: (radius: number) => void;
   onFrameReset?: () => void;
@@ -141,6 +145,9 @@ export type ToolPanelHandlers = {
   onSceneInsetChange?: (inset: number) => void;
   /** Trade the panes of the custom scene under the playhead. */
   onScenePanesSwap?: () => void;
+  /** Put the pane of the scene under the playhead back in the box its
+   * layout gives it. */
+  onScenePlacementReset?: (pane: "camera" | "screen") => void;
   /** Give the scene under the playhead this preset, or add a scene there
    * with it where there is none. */
   onScenePresetChoose?: (preset: RecordingScenePreset) => void;
@@ -167,6 +174,8 @@ export type ToolPanelHandlers = {
   onSelectionFollowFaceChange?: (follow: boolean) => void;
   /** Pad the selected layer by this many output pixels on each side. */
   onSelectionInsetChange?: (inset: number) => void;
+  /** Put the selected layer back where a fresh project places it. */
+  onSelectionPlacementReset?: () => void;
   /** Round the selected layer's corners by this share of its shorter side. */
   onSelectionRadiusChange?: (radius: number) => void;
   /** Put the layer's content in the middle of its padded frame. */

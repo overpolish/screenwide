@@ -5,8 +5,6 @@
 
 window-titles-app = Screenwide
 window-titles-editor = Screenwide Editor
-window-titles-export-recording = Export recording
-window-titles-export-screenshot = Export screenshot
 window-titles-tool-panel-recording = Screenwide Tool Panel (Recording)
 window-titles-tool-panel-screenshot = Screenwide Tool Panel (Screenshot)
 window-titles-permissions = Screenwide Permissions

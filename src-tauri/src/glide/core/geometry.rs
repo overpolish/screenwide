@@ -43,6 +43,25 @@ pub fn corrected_origin(
   )
 }
 
+/// `frame` grown to at least `min`, anchored by `gravity` so the edge a region
+/// was snapped to stays where it was asked to be: a left-half snap narrower
+/// than the window's minimum keeps its left edge and spills right. Planning
+/// with this, rather than letting the window refuse the size, is what keeps a
+/// window whose size we write directly - which bypasses its own minimum - from
+/// ever being made smaller than it allows.
+pub fn grown_to_min(frame: GlideFrame, min: (f64, f64), gravity: RegionGravity) -> GlideFrame {
+  let grown = GlideFrame {
+    width: frame.width.max(min.0),
+    height: frame.height.max(min.1),
+    ..frame
+  };
+  if grown == frame {
+    return frame;
+  }
+  let (x, y) = corrected_origin(frame, grown, gravity);
+  GlideFrame { x, y, ..grown }
+}
+
 pub fn frame_fractions(
   frame: GlideFrame,
   work_origin: (f64, f64),

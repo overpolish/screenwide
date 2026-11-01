@@ -26,7 +26,7 @@ use crate::glide::{
   core::GlideFrame,
   region_rect::{region_gravity, region_rect, PlacedRegion, RegionGravity},
 };
-use geometry::{frame, frame_insets, outer_frame, visible_frame, FrameInsets};
+use geometry::{frame, frame_insets, min_visible_size, outer_frame, visible_frame, FrameInsets};
 
 const WINDOWS_DPI: f64 = 96.0;
 
@@ -42,6 +42,9 @@ pub(super) struct WindowTarget {
   resizable: bool,
   movable: bool,
   was_maximized: bool,
+  /// Whether the window is one of Screenwide's own, whose minimum size our
+  /// placements have to keep to themselves.
+  own: bool,
 }
 
 /// Where a region places this window: the rectangle asked for and the edge it
@@ -84,6 +87,7 @@ impl WindowTarget {
       resizable: unsafe { GetWindowLongPtrW(hwnd, GWL_STYLE) } & WS_THICKFRAME.0 as isize != 0,
       movable: probe_movable(hwnd),
       was_maximized: unsafe { IsZoomed(hwnd) }.as_bool(),
+      own: titlebar::process_id(hwnd) == Some(std::process::id()),
     })
   }
 
@@ -159,6 +163,16 @@ impl WindowTarget {
 
   pub fn is_resizable(self) -> bool {
     self.resizable
+  }
+
+  /// The smallest visible size the window accepts, for one of ours. A foreign
+  /// window's default procedure clamps `SetWindowPos` to its minimum itself.
+  pub fn min_size(self) -> Option<(f64, f64)> {
+    if self.own {
+      min_visible_size(self.hwnd(), self.insets)
+    } else {
+      None
+    }
   }
 
   /// Whether this window will accept placement from us at all.

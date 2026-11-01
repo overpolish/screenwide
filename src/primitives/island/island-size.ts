@@ -3,6 +3,8 @@
 
 import { useLayoutEffect, useState } from "react";
 
+import { isScrollAreaChrome } from "../scroll-area/scroll-area-chrome";
+
 type Size = { height: number; width: number };
 
 /** An element's size, read where it is laid out. `isNatural` reads its
@@ -29,9 +31,11 @@ const readSize = (element: HTMLElement, isNatural: boolean): Size => {
   const width = element.offsetWidth;
   element.style.minWidth = minWidth;
   element.style.maxWidth = maxWidth;
+  // Only a box the narrower layout moved is put back: setting a scroll that
+  // has not moved still interrupts one under way in WebKit.
   for (const { box, left, top } of scrolled) {
-    box.scrollTop = top;
-    box.scrollLeft = left;
+    if (box.scrollTop !== top) box.scrollTop = top;
+    if (box.scrollLeft !== left) box.scrollLeft = left;
   }
   return { height, width };
 };
@@ -93,7 +97,18 @@ export function useSize(
     // not the states a pointer passing over sets, which change nothing's
     // size and would read it at every move.
     if (isNatural) {
-      mutations = new MutationObserver(measure);
+      mutations = new MutationObserver((records) => {
+        // A scroll area's fade and scrollbars change as it scrolls, never
+        // what it needs (`isScrollAreaChrome`).
+        if (
+          records.every(
+            (record) =>
+              record.type === "attributes" && isScrollAreaChrome(record.target),
+          )
+        )
+          return;
+        measure();
+      });
       mutations.observe(element, {
         attributeFilter: ["class", "style"],
         characterData: true,

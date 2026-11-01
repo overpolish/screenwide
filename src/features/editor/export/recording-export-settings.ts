@@ -69,8 +69,12 @@ const cameraOverlayForDimensions = ({
   };
 };
 
+/** Where a fresh project draws the camera into the screen's picture, on
+ * `canvas`, the recording's own size where unset: a canvas resized since
+ * places it as a fresh one of that size would. */
 export const defaultCameraOverlay = (
   artifact?: EditorArtifact | null,
+  canvas?: { height: number; width: number },
 ): CameraOverlaySettings => {
   const recording = artifact?.kind === "recording" ? artifact : null;
   const camera = recording?.camera;
@@ -80,8 +84,8 @@ export const defaultCameraOverlay = (
   return cameraOverlayForDimensions({
     cameraHeight: camera?.height || 1_080,
     cameraWidth: camera?.width || 1_920,
-    screenHeight: recording?.height || 1_080,
-    screenWidth: recording?.width || 1_920,
+    screenHeight: canvas?.height || recording?.height || 1_080,
+    screenWidth: canvas?.width || recording?.width || 1_920,
   });
 };
 

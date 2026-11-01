@@ -185,7 +185,7 @@ mod tests {
       let gpu = compositor
         .gpu_cursor(
           (310_000 + SCREEN_REACTION_US).div_ceil(1000),
-          (1000, 1000),
+          (1_000.0, 1_000.0),
           settings,
         )
         .unwrap();

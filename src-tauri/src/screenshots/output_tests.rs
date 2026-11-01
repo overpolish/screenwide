@@ -31,12 +31,15 @@ fn snaps_a_one_pixel_preview_rounding_gap_but_keeps_a_real_crop() {
   let snapped = output_placement(200, 100, &output_settings).unwrap();
   assert_eq!(snapped.crop_x, exact.image_x.round() as i32);
   assert_eq!(snapped.crop_y, exact.image_y.round() as i32);
-  assert_eq!(snapped.crop_width, exact.image_width);
-  assert_eq!(snapped.crop_height, exact.image_height);
+  assert_eq!(snapped.crop_width, exact.image_width.round() as u32);
+  assert_eq!(snapped.crop_height, exact.image_height.round() as u32);
 
   output_settings.crop_height += 3.0;
   let deliberate = output_placement(200, 100, &output_settings).unwrap();
-  assert_ne!(deliberate.crop_height, deliberate.image_height);
+  assert_ne!(
+    deliberate.crop_height,
+    deliberate.image_height.round() as u32
+  );
 }
 
 #[test]

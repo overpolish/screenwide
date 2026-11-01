@@ -2,9 +2,77 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::glide::{
-  core::{corrected_origin, frame_fits, frame_fractions, frames_match, landing_point, GlideFrame},
+  core::{
+    corrected_origin, frame_fits, frame_fractions, frames_match, grown_to_min, landing_point,
+    GlideFrame,
+  },
   region_rect::{Gravity, RegionGravity},
 };
+
+fn gravity(horizontal: Gravity, vertical: Gravity) -> RegionGravity {
+  RegionGravity {
+    horizontal,
+    vertical,
+  }
+}
+
+#[test]
+fn a_left_half_below_the_minimum_keeps_its_left_edge() {
+  // A 1280-point display: half is 640, the editor's minimum frame is 800x628.
+  assert_eq!(
+    grown_to_min(
+      frame(0.0, 25.0, 640.0, 875.0),
+      (800.0, 628.0),
+      gravity(Gravity::Start, Gravity::Center),
+    ),
+    frame(0.0, 25.0, 800.0, 875.0)
+  );
+}
+
+#[test]
+fn a_right_half_below_the_minimum_keeps_its_right_edge() {
+  assert_eq!(
+    grown_to_min(
+      frame(640.0, 25.0, 640.0, 875.0),
+      (800.0, 628.0),
+      gravity(Gravity::End, Gravity::Center),
+    ),
+    frame(480.0, 25.0, 800.0, 875.0)
+  );
+}
+
+#[test]
+fn a_quarter_below_the_minimum_grows_away_from_its_corner_on_both_axes() {
+  assert_eq!(
+    grown_to_min(
+      frame(640.0, 462.0, 640.0, 438.0),
+      (800.0, 628.0),
+      gravity(Gravity::End, Gravity::End),
+    ),
+    frame(480.0, 272.0, 800.0, 628.0)
+  );
+}
+
+#[test]
+fn a_centered_region_below_the_minimum_grows_about_its_middle() {
+  assert_eq!(
+    grown_to_min(
+      frame(400.0, 25.0, 480.0, 875.0),
+      (800.0, 628.0),
+      gravity(Gravity::Center, Gravity::Center),
+    ),
+    frame(240.0, 25.0, 800.0, 875.0)
+  );
+}
+
+#[test]
+fn a_region_at_or_above_the_minimum_is_left_alone() {
+  let region = frame(13.5, 25.0, 800.0, 875.0);
+  assert_eq!(
+    grown_to_min(region, (800.0, 628.0), gravity(Gravity::End, Gravity::End)),
+    region
+  );
+}
 
 #[test]
 fn matching_frames_include_position_and_size_with_rounding_tolerance() {

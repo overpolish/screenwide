@@ -18,6 +18,7 @@ import {
 import { createWorkspaceMirror } from "../workspace-mirror";
 
 import { Background, BackgroundPreset } from "./frame/background/background";
+import { ToolPanelExport } from "./tool-panel-export";
 import { ToolPanelFrame } from "./tool-panel-frame";
 import { ToolPanelPatch } from "./tool-panel-patch";
 import { ToolPanelScene } from "./tool-panel-scene";
@@ -105,6 +106,9 @@ export type ToolPanelSnapshot = {
   /** How many shortcuts are chosen in the strip's shortcut lane, for the
    * Keyboard island to delete; absent or 0 where none are. */
   chosenShortcuts?: number;
+  /** What the Export island shows, while it can be brought out; absent or
+   * null otherwise. */
+  export?: ToolPanelExport | null;
   /** Every recorded audio track, for the Sound island; absent or empty
    * where there is none. */
   soundTracks?: ToolPanelSoundTrack[];

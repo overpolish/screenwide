@@ -114,6 +114,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onSelectionRotationChange?.(values.selectionRotation);
   }
   if (values.recenterSelection) on.onSelectionRecenter?.();
+  if (values.resetPlacement) on.onSelectionPlacementReset?.();
   if (values.keyboardEffects !== undefined) {
     on.onKeyboardEffectsChange?.(values.keyboardEffects);
   }
@@ -130,6 +131,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.sceneRadius !== undefined)
     on.onSceneRadiusChange?.(values.sceneRadius);
   if (values.sceneRecenter) on.onSceneRecenter?.();
+  if (values.scenePlacementReset)
+    on.onScenePlacementReset?.(values.scenePlacementReset);
   if (values.sceneRotation !== undefined)
     on.onSceneRotationChange?.(values.sceneRotation);
   if (values.sceneVariant) on.onSceneVariantChange?.(values.sceneVariant);
@@ -155,6 +158,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
       values.trackEnabled.trackId,
       values.trackEnabled.isEnabled,
     );
+  if (values.exportPatch) on.onExportPatch?.(values.exportPatch);
 };
 
 /**

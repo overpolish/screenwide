@@ -28,10 +28,9 @@ export function RecordingSection({
   enabledVideoTracks,
   hasCursorData,
   hasKeyboardData,
+  isExportOpen,
   isPreparingRecordingAudio,
   isPreparingRecordingPreview,
-  isSaving,
-  isSheetOpen,
   keyboardEffects,
   onCameraOverlayChange,
   onEnabledTracksChange,
@@ -86,10 +85,9 @@ export function RecordingSection({
         hasAnnotations={artifact.primaryKind !== "audio"}
         hasCursorData={hasCursorData}
         hasKeyboardData={hasKeyboardData}
+        isExportOpen={isExportOpen}
         isPreparingAudio={isPreparingRecordingAudio}
         isPreparingPreview={isPreparingRecordingPreview}
-        isSaving={isSaving}
-        isSheetOpen={isSheetOpen}
         key={artifact.id}
         keyboardEffects={keyboardEffects}
         onCameraOverlayChange={onCameraOverlayChange}

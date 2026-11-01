@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The bytes each exported video file's picture takes, found the way the
-//! export makes that file: drawn by the compositor, re-encoded by FFmpeg,
-//! or copied as recorded.
+//! The bytes each exported video file's picture takes at each look, found
+//! the way the export makes that file: drawn by the compositor, re-encoded
+//! by FFmpeg, or copied as recorded. Every look is measured from one pass
+//! over the picture: drawn or decoded once, encoded at each look at once.
 
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
@@ -33,23 +34,20 @@ pub(super) struct Estimate<'a> {
 }
 
 impl Estimate<'_> {
-  /// The screen's file, `source` being the recording with `tracks` and
-  /// `video` the scale and compression it is exported at.
+  /// The screen's file at each of `videos`, `source` being the recording
+  /// with `tracks`.
   pub(super) fn screen(
     &self,
     picture: ExportPicture<'_>,
     source: &Path,
     tracks: &[RecordingAudioTrack],
-    video: VideoExportOptions,
-  ) -> Result<u64, String> {
+    videos: &[VideoExportOptions],
+  ) -> Result<Vec<u64>, String> {
     if picture.is_composed() {
-      return self.composed(picture);
+      return self.composed(picture, videos);
     }
-    if self.timeline.is_none()
-      && video.compression == 0
-      && video.resolution_scale_percent >= video.source_scale_percent
-    {
-      // The recording's own video, copied: its file less its audio.
+    // The recording's own video, copied: its file less its audio.
+    let copied = || {
       let all = tracks
         .iter()
         .map(|track| track.stream_index)
@@ -60,49 +58,45 @@ impl Estimate<'_> {
         self.duration_ms,
       );
       let recorded = std::fs::metadata(source).map_or(0, |metadata| metadata.len());
-      return Ok(recorded.saturating_sub(audio));
-    }
-    let bytes = self.reencoded(
-      0,
-      source,
-      self.duration_ms,
-      video.compression,
-      (video.source_scale_percent, video.resolution_scale_percent),
-    )?;
-    Ok(self.to_output(bytes))
+      recorded.saturating_sub(audio)
+    };
+    self.each(videos, copied, |reencoded| {
+      self.reencoded(0, source, self.duration_ms, reencoded)
+    })
   }
 
-  /// The camera's own file.
+  /// The camera's own file at each of `videos`.
   pub(super) fn camera(
     &self,
     picture: ExportPicture<'_>,
     camera: &RecordingCamera,
-    compression: u8,
-    resolution_scale_percent: u16,
-  ) -> Result<u64, String> {
+    videos: &[VideoExportOptions],
+  ) -> Result<Vec<u64>, String> {
     if picture.is_composed() {
-      return self.composed(picture);
+      return self.composed(picture, videos);
     }
-    if self.timeline.is_none() && compression == 0 && resolution_scale_percent == 100 {
-      return Ok(camera.original_size_bytes);
-    }
-    let bytes = self.reencoded(
-      CAMERA_FILE,
-      &camera.path,
-      camera.duration_ms,
-      compression,
-      (100, resolution_scale_percent),
-    )?;
-    Ok(self.to_output(bytes))
+    self.each(
+      videos,
+      || camera.original_size_bytes,
+      |reencoded| self.reencoded(CAMERA_FILE, &camera.path, camera.duration_ms, reencoded),
+    )
   }
 
-  /// A picture the compositor draws, measured by the platform's encoder.
-  pub(super) fn composed(&self, picture: ExportPicture<'_>) -> Result<u64, String> {
-    cursor_export::estimate_video_bytes(picture.request(Run {
-      cancelled: self.cancelled,
-      destination: Path::new(""),
-      on_progress: &mut |_| {},
-    }))
+  /// A picture the compositor draws, measured by the platform's encoder at
+  /// each of `videos`.
+  pub(super) fn composed(
+    &self,
+    picture: ExportPicture<'_>,
+    videos: &[VideoExportOptions],
+  ) -> Result<Vec<u64>, String> {
+    cursor_export::estimate_video_bytes(
+      picture.request(Run {
+        cancelled: self.cancelled,
+        destination: Path::new(""),
+        on_progress: &mut |_| {},
+      }),
+      videos,
+    )
   }
 
   /// `bytes` of the whole recording carried onto the edited video's length.
@@ -112,39 +106,90 @@ impl Estimate<'_> {
     })
   }
 
-  /// `source` re-encoded by FFmpeg, over its whole length, kept for the
-  /// next estimate that asks the same.
+  /// The file at each of `videos`: `copied` where it is the recording's own
+  /// video, copied as it is, and the rest from `reencode`, which re-encodes
+  /// them together.
+  fn each(
+    &self,
+    videos: &[VideoExportOptions],
+    copied: impl Fn() -> u64,
+    reencode: impl FnOnce(&[VideoExportOptions]) -> Result<Vec<u64>, String>,
+  ) -> Result<Vec<u64>, String> {
+    let is_copied = |video: &VideoExportOptions| {
+      self.timeline.is_none()
+        && video.compression == 0
+        && video.resolution_scale_percent >= video.source_scale_percent
+    };
+    let reencoded = videos
+      .iter()
+      .filter(|video| !is_copied(video))
+      .copied()
+      .collect::<Vec<_>>();
+    let mut reencoded = reencode(&reencoded)?.into_iter();
+    videos
+      .iter()
+      .map(|video| {
+        if is_copied(video) {
+          Ok(copied())
+        } else {
+          reencoded
+            .next()
+            .ok_or_else(|| "The estimate measured too few looks".to_owned())
+        }
+      })
+      .collect()
+  }
+
+  /// `source` re-encoded by FFmpeg at each of `videos`, over its whole
+  /// length, each kept for the next estimate that asks the same.
   fn reencoded(
     &self,
     file: u8,
     source: &Path,
     duration_ms: u64,
-    compression: u8,
-    (source_scale_percent, resolution_scale_percent): (u16, u16),
-  ) -> Result<u64, String> {
+    videos: &[VideoExportOptions],
+  ) -> Result<Vec<u64>, String> {
     let follows_timeline = self.timeline.is_some();
-    let key = (
-      self.artifact_id,
-      file
-        | if follows_timeline {
-          FOLLOWS_TIMELINE
-        } else {
-          0
-        },
-      compression,
-      resolution_scale_percent,
-    );
-    if let Some(bytes) = estimate_helpers::kept_estimate(self.state, &key) {
-      return Ok(bytes);
-    }
-    let bytes = media_preview::estimate_compressed_video_bytes(
+    let key = |video: &VideoExportOptions| {
+      (
+        self.artifact_id,
+        file
+          | if follows_timeline {
+            FOLLOWS_TIMELINE
+          } else {
+            0
+          },
+        video.compression,
+        video.resolution_scale_percent,
+      )
+    };
+    let kept = videos
+      .iter()
+      .map(|video| estimate_helpers::kept_estimate(self.state, &key(video)))
+      .collect::<Vec<_>>();
+    let missing = videos
+      .iter()
+      .zip(&kept)
+      .filter(|(_, kept)| kept.is_none())
+      .map(|(video, _)| *video)
+      .collect::<Vec<_>>();
+    let mut measured = media_preview::estimate_compressed_video_bytes(
       source,
       duration_ms,
-      compression,
-      source_scale_percent,
-      resolution_scale_percent,
+      &missing,
       follows_timeline,
-    )?;
-    Ok(estimate_helpers::keep_estimate(self.state, key, bytes))
+    )?
+    .into_iter()
+    .zip(&missing)
+    .map(|(bytes, video)| estimate_helpers::keep_estimate(self.state, key(video), bytes));
+    kept
+      .into_iter()
+      .map(|kept| {
+        kept
+          .or_else(|| measured.next())
+          .map(|bytes| self.to_output(bytes))
+          .ok_or_else(|| "The estimate measured too few looks".to_owned())
+      })
+      .collect()
   }
 }

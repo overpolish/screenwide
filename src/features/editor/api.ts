@@ -30,7 +30,11 @@ import {
   KeyboardEffectSettings,
 } from "./types";
 
+import type { CameraKey } from "../../bindings/CameraKey";
+import type { ExportedFile } from "../../bindings/ExportedFile";
+import type { ExportLookQuality } from "../../bindings/ExportLookQuality";
 import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
+import type { ScreenshotFormat } from "../../bindings/ScreenshotFormat";
 import type { TextStyle } from "../../bindings/TextStyle";
 
 type PreviewSelectionLayout = {
@@ -377,7 +381,7 @@ export type RecordingProcessingOptions = {
   screenshotOutput: ScreenshotWorkspaceOutputSettings;
   timelineEdit?: RecordingTimelineEdit | null;
 };
-/** The options of a recording's export as the estimate and the preview
+/** The options of a recording's export as the estimate and the compared
  * frame read them, normalized as Rust expects. */
 export const recordingProcessingPayload = (
   options: RecordingProcessingOptions,
@@ -392,18 +396,27 @@ export const recordingProcessingPayload = (
     options.screenshotOutput,
   ),
 });
+/** The recording's size, in bytes, at each of `looks`, in order. */
 export const estimateRecordingExport = ({
   artifactId,
+  looks,
   ...options
-}: RecordingProcessingOptions & { artifactId: number }) =>
-  invoke<number>("estimate_recording_export", {
+}: RecordingProcessingOptions & {
+  artifactId: number;
+  looks: ExportLookQuality[];
+}) =>
+  invoke<number[]>("estimate_recording_export", {
     artifactId,
+    looks,
     options: recordingProcessingPayload(options),
   });
 type SaveExportOptions = RecordingProcessingOptions & {
+  /** What fills a separate camera file where its background is taken away. */
+  cameraKey: CameraKey;
   /** Moves the recording's project to the Trash once the export is saved. */
   deleteProjectAfterExport: boolean;
   fileStem: string;
+  screenshotFormat: ScreenshotFormat;
   /** The subtitle file written beside a recording's video. */
   subtitles: ExportSubtitles;
 };
@@ -412,6 +425,7 @@ export const saveExport = ({
   audioTrackVolumes,
   bakeCamera,
   cameraCompression,
+  cameraKey,
   cameraOverlay,
   cameraResolutionScalePercent,
   collapseAudio,
@@ -425,16 +439,18 @@ export const saveExport = ({
   keyboardEffects,
   recordingOutput,
   resolutionScalePercent,
+  screenshotFormat,
   screenshotOutput,
   subtitles,
   timelineEdit,
 }: SaveExportOptions) =>
-  invoke<string | null>("save_export", {
+  invoke<ExportedFile | null>("save_export", {
     fileStem,
     options: {
       audioTrackVolumes,
       bakeCamera,
       cameraCompression,
+      cameraKey,
       cameraOverlay,
       cameraResolutionScalePercent,
       collapseAudio,
@@ -450,6 +466,7 @@ export const saveExport = ({
         primary: normalizedScreenshotOutput(recordingOutput.primary),
       },
       resolutionScalePercent,
+      screenshotFormat,
       screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
       subtitles,
       timelineEdit,

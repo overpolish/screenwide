@@ -9,8 +9,11 @@ pub struct OutputPlacement {
   pub crop_width: u32,
   pub crop_x: i32,
   pub crop_y: i32,
-  pub image_height: u32,
-  pub image_width: u32,
+  /// The image's size as placed, not rounded: its height follows its width
+  /// by the source's aspect, so the picture keeps one scale on both axes,
+  /// as a scaled video export relies on (see `FrameFit` in the export).
+  pub image_height: f64,
+  pub image_width: f64,
   pub image_x: f64,
   pub image_y: f64,
   pub source_crop_height: u32,
@@ -23,7 +26,7 @@ pub struct OutputPlacement {
 ///
 /// Placement arrives in the output's own pixels, so the work here is limited
 /// to validating it, deriving the image's height from the source's aspect and
-/// rounding to the integer rectangles the compositor draws.
+/// rounding the crops to the integer rectangles the compositor clips by.
 pub fn output_placement(
   source_width: u32,
   source_height: u32,
@@ -58,10 +61,8 @@ pub fn output_placement(
   {
     return Err("The screenshot placement is not valid".to_owned());
   }
-  let image_width = settings.image_width.round().max(1.0) as u32;
-  let image_height = (f64::from(image_width) * f64::from(source_height) / f64::from(source_width))
-    .round()
-    .max(1.0) as u32;
+  let image_width = settings.image_width.max(1.0);
+  let image_height = (image_width * f64::from(source_height) / f64::from(source_width)).max(1.0);
   let mut crop_height = settings.crop_height.round().max(1.0) as u32;
   let mut crop_width = settings.crop_width.round().max(1.0) as u32;
   let mut crop_x = settings.crop_x.round() as i32;
@@ -69,10 +70,10 @@ pub fn output_placement(
   let image_x = settings.image_x;
   let image_y = settings.image_y;
   let source = [
-    image_x + f64::from(image_width) * source_crop.x,
-    image_y + f64::from(image_height) * source_crop.y,
-    f64::from(image_width) * source_crop.width,
-    f64::from(image_height) * source_crop.height,
+    image_x + image_width * source_crop.x,
+    image_y + image_height * source_crop.y,
+    image_width * source_crop.width,
+    image_height * source_crop.height,
   ];
   // A scene that pads its box shows the picture only in the window it
   // padded; the rest of the crop is the inset colour.
@@ -84,8 +85,8 @@ pub fn output_placement(
   // Preview scaling can round otherwise coincident frame/source edges apart.
   let image_left = image_x.round() as i32;
   let image_top = image_y.round() as i32;
-  let image_right = image_left.saturating_add(image_width as i32);
-  let image_bottom = image_top.saturating_add(image_height as i32);
+  let image_right = image_left.saturating_add(image_width.round() as i32);
+  let image_bottom = image_top.saturating_add(image_height.round() as i32);
   let crop_right = crop_x.saturating_add(crop_width as i32);
   let crop_bottom = crop_y.saturating_add(crop_height as i32);
   if (crop_x - image_left).abs() <= 1
@@ -95,8 +96,8 @@ pub fn output_placement(
   {
     crop_x = image_left;
     crop_y = image_top;
-    crop_width = image_width;
-    crop_height = image_height;
+    crop_width = image_width.round() as u32;
+    crop_height = image_height.round() as u32;
   }
   Ok(OutputPlacement {
     crop_height,

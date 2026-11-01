@@ -25,6 +25,10 @@ impl GlideWindow for WindowTarget {
     WindowTarget::frame(*self).ok()
   }
 
+  fn min_size(&self) -> Option<(f64, f64)> {
+    WindowTarget::min_size(*self)
+  }
+
   fn prepare_for_move(&mut self) -> Option<GlideFrame> {
     WindowTarget::prepare_for_move(*self)
       .map_err(|error| eprintln!("Could not move the Glide window: {error}"))

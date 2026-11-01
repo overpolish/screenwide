@@ -30,6 +30,11 @@ type ScrollAreaProps = {
    * after mounting: what is to be scrolled into view first waits for it. */
   onInitialized?: (viewport: HTMLElement) => void;
   orientation?: "horizontal" | "vertical";
+  /** Whether scrolling past an end springs back, as it does on macOS, or
+   * stops there. `none` suits a box whose height follows its window: it can
+   * be a few px short of its content, and a spring larger than all there is
+   * to scroll reads as the content jumping. */
+  overscroll?: "bounce" | "none";
   rootClassName?: string;
   scrollbarAutoHide?: "scroll" | "never";
   /** Scroll without a visible scrollbar, for strips with no room for one. */
@@ -50,6 +55,7 @@ export function ScrollArea({
   inWindowCorner = false,
   onInitialized,
   orientation = "vertical",
+  overscroll = "bounce",
   rootClassName,
   scrollbarAutoHide = "scroll",
   scrollbarHidden = false,
@@ -101,6 +107,10 @@ export function ScrollArea({
         // The bar stops a corner's radius short of its ends, as native
         // overlay scrollbars do, so the corner never clips it.
         inWindowCorner && "[--scrollbar-inset:var(--radius-window)]",
+        // The viewport is the library's, a child of its host, never one
+        // nested further in.
+        overscroll === "none" &&
+          "[&>*>[data-overlayscrollbars-viewport]]:overscroll-none",
         rootClassName,
       )}
       dir={dir}

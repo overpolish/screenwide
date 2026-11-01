@@ -66,6 +66,7 @@ const meta = {
     effects: EFFECTS,
     followFace: false,
     hasShadow: false,
+    isAtDefaultPlacement: false,
     isFindingFace: false,
     isInScene: false,
     isShown: true,
@@ -78,6 +79,7 @@ const meta = {
     onPickObjects: fn(),
     onRadiusChange: fn(),
     onRemoveObject: fn(),
+    onResetPlacement: fn(),
     onShadowChange: fn(),
     onShowObject: fn(),
     radius: 50,
@@ -89,7 +91,7 @@ const meta = {
   // once and a picture is chosen as soon as it is asked for.
   render: function Render(args) {
     const [, updateArgs] = useArgs<CameraIslandProps>();
-    const { effects } = args;
+    const { effects, picture } = args;
     const objects = effects.objects ?? NO_OBJECTS;
     const change = (next: Partial<ToolPanelCameraEffects>) => {
       updateArgs({ effects: { ...effects, ...next } });
@@ -139,10 +141,29 @@ const meta = {
             },
           });
         }}
+        onResetPlacement={() => {
+          args.onResetPlacement();
+          updateArgs({ isAtDefaultPlacement: true });
+        }}
         onShadowChange={(hasShadow) => {
           args.onShadowChange(hasShadow);
           updateArgs({ hasShadow });
         }}
+        {...(picture
+          ? {
+              picture: {
+                ...picture,
+                onInsetChange: (inset) => {
+                  picture.onInsetChange(inset);
+                  updateArgs({ picture: { ...picture, inset } });
+                },
+                onRotationChange: (rotation) => {
+                  picture.onRotationChange?.(rotation);
+                  updateArgs({ picture: { ...picture, rotation } });
+                },
+              },
+            }
+          : {})}
         onShowObject={(id) => {
           args.onShowObject(id);
           change({ objects: { ...objects, chosen: id } });
@@ -158,7 +179,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-// Over a scene, the corners are the scene's own; the note says so.
+// Over a scene, the corners, Follow face and Reset placement are the
+// scene's own; the note says so.
 export const InScene: Story = { args: { isInScene: true } };
 
 export const FindingFace: Story = {
@@ -280,4 +302,31 @@ export const ManyObjects: Story = {
       },
     },
   },
+};
+
+// Already where a fresh project places it, Reset placement has nothing to
+// put back.
+export const AtDefaultPlacement: Story = {
+  args: { isAtDefaultPlacement: true },
+};
+
+// A recording of the camera alone: the camera is its own picture, padded,
+// turned and recentred as a screen is, with no Follow face.
+export const CameraOnly: Story = {
+  args: {
+    picture: {
+      inset: 0.03,
+      onInsetChange: fn(),
+      onRecenter: fn(),
+      onRotationChange: fn(),
+      rotation: { x: 0, y: 0, z: 0 },
+    },
+    radius: 4,
+  },
+};
+
+// Over a scene, the camera-only recording's inset, corners, turn, Recenter
+// and Reset placement are the scene's own; the note says so.
+export const CameraOnlyInScene: Story = {
+  args: { ...CameraOnly.args, isInScene: true },
 };

@@ -31,7 +31,9 @@ export const scaledVideoDimensions = ({
   sourceScale: number;
   width: number;
 }) => {
-  const even = (value: number) => Math.max(2, Math.floor(value / 2) * 2);
+  // Each side to the nearest even, a half pixel down, as the export's
+  // FrameFit sizes the frame it draws the scaled canvas into.
+  const even = (value: number) => Math.max(2, Math.ceil(value / 2 - 0.5) * 2);
 
   return {
     height: even((height * scale) / sourceScale),

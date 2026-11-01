@@ -9,6 +9,7 @@ import {
   modeTool,
   recordingIsland,
   type RecordingPanelMode,
+  type RecordingPicture,
 } from "../recording-column";
 
 import type { RecordingCanvasTool } from "./recording-canvas-tool";
@@ -34,6 +35,7 @@ export function useRecordingColumn({
   canvasTool,
   changeCanvasTool,
   onSelectedTrackChange,
+  picture,
 }: {
   activeVideoTrack: RecordingVideoTrackId | null;
   annotations: {
@@ -44,12 +46,19 @@ export function useRecordingColumn({
   };
   canvasTool: RecordingCanvasTool;
   changeCanvasTool: (tool: RecordingCanvasTool) => void;
+  /** What the recording's own picture is of, which names its mode. */
+  picture: RecordingPicture;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
 }) {
   const [panel, setPanel] = useState<RecordingPanelMode | null>(null);
   if (panel !== null && (canvasTool !== "select" || activeVideoTrack !== null))
     setPanel(null);
-  const mode = columnMode({ panel, tool: canvasTool, track: activeVideoTrack });
+  const mode = columnMode({
+    panel,
+    picture,
+    tool: canvasTool,
+    track: activeVideoTrack,
+  });
   const island = recordingIsland({
     annotationCount: annotations.selectedIds.size,
     mode,
@@ -74,7 +83,7 @@ export function useRecordingColumn({
       backToSelect();
       return;
     }
-    const taken = modeTool(next);
+    const taken = modeTool(next, picture);
     annotations.clearSelection();
     // An island-only mode lets the video track go, which would open its own
     // mode over it; an audio track chosen stays.

@@ -21,14 +21,20 @@ pub(super) fn compression_crf(compression: u8) -> Option<u16> {
   }
 }
 
+/// The scale FFmpeg gives a recording it writes smaller: each side to the
+/// nearest even, as `FrameFit::of` sizes the compositor's frame. FFmpeg can
+/// only stretch to whole pixels, so the picture fills the frame, at most
+/// half a pixel taller or wider at each edge than one scale would make it;
+/// the compare is told so (see `FrameFit::canvas`'s callers).
 pub(super) fn resolution_filter(
   source_scale_percent: u16,
   resolution_scale_percent: u16,
 ) -> Option<String> {
   (resolution_scale_percent < source_scale_percent).then(|| {
-    format!(
-      "scale=trunc(iw*{resolution_scale_percent}/{source_scale_percent}/2)*2:trunc(ih*{resolution_scale_percent}/{source_scale_percent}/2)*2:flags=lanczos"
-    )
+    let side = |input: &str| {
+      format!("ceil({input}*{resolution_scale_percent}/{source_scale_percent}/2-0.5)*2")
+    };
+    format!("scale={}:{}:flags=lanczos", side("iw"), side("ih"))
   })
 }
 
@@ -63,7 +69,10 @@ static ESTIMATE_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 /// across a longer video. A screen recording spends its bits in bursts, a
 /// scroll or a zoom, between long still stretches, so many short stretches
 /// see the bursts in proportion where a few longer ones over- or
-/// under-count whichever they happen to land on.
+/// under-count whichever they happen to land on. Measured against whole
+/// encodes, fewer or shorter stretches missed a recording's bursts and
+/// under-counted it by half, so the Export island gains its speed from
+/// measuring every look in one pass instead.
 const SAMPLE_US: u64 = 1_000_000;
 const SAMPLES: u64 = 12;
 
@@ -98,7 +107,10 @@ pub(crate) fn estimate_temp_path() -> PathBuf {
   ))
 }
 
-pub(super) fn estimate_filter(sample_count: usize, scale_filter: Option<&str>) -> String {
+/// The graph joining the `sample_count` seeked stretches and handing them to
+/// one encoder per entry of `scale_filters`, labelled `estimated<index>`,
+/// each scaled by its filter where it has one.
+pub(super) fn estimate_filter(sample_count: usize, scale_filters: &[Option<String>]) -> String {
   let mut filter = String::new();
   if sample_count == 1 {
     filter.push_str("[0:v:0]setpts=PTS-STARTPTS");
@@ -111,32 +123,52 @@ pub(super) fn estimate_filter(sample_count: usize, scale_filter: Option<&str>) -
     }
     filter.push_str(&format!("concat=n={sample_count}:v=1:a=0"));
   }
-  if let Some(scale_filter) = scale_filter {
-    filter.push(',');
-    filter.push_str(scale_filter);
+  if let [scale_filter] = scale_filters {
+    if let Some(scale_filter) = scale_filter {
+      filter.push(',');
+      filter.push_str(scale_filter);
+    }
+    filter.push_str("[estimated0]");
+    return filter;
   }
-  filter.push_str("[estimated]");
-
+  filter.push_str(&format!(",split={}", scale_filters.len()));
+  for index in 0..scale_filters.len() {
+    filter.push_str(&format!("[joined{index}]"));
+  }
+  for (index, scale_filter) in scale_filters.iter().enumerate() {
+    let scale_filter = scale_filter.as_deref().unwrap_or("null");
+    filter.push_str(&format!(";[joined{index}]{scale_filter}[estimated{index}]"));
+  }
   filter
 }
 
-/// Estimates compressed video size from stretches spread across the source
-/// rather than assuming a screen is equally busy throughout. The seeked
-/// pieces are joined before one encoder, so they pay the mandatory opening
-/// I-frame once rather than once per sample. The output is raw H.264 so MP4
-/// headers cannot be multiplied into the estimate. An export that follows a
-/// timeline always re-encodes, as `follows_timeline` says it will.
+/// Estimates compressed video size at each of `looks`, in order, from
+/// stretches spread across the source rather than assuming a screen is
+/// equally busy throughout. The seeked pieces are decoded once and joined
+/// before the encoders, one per look, so they pay the mandatory opening
+/// I-frame once rather than once per sample. The outputs are raw H.264 so
+/// MP4 headers cannot be multiplied into the estimate. An export that
+/// follows a timeline always re-encodes, as `follows_timeline` says it
+/// will; every look must re-encode.
 pub fn estimate_compressed_video_bytes(
   source: &Path,
   duration_ms: u64,
-  compression: u8,
-  source_scale_percent: u16,
-  resolution_scale_percent: u16,
+  looks: &[VideoExportOptions],
   follows_timeline: bool,
-) -> Result<u64, String> {
-  let scale_filter = resolution_filter(source_scale_percent, resolution_scale_percent);
-  let crf = export_crf(compression, scale_filter.is_some() || follows_timeline)
-    .ok_or_else(|| "Original video does not need a compression estimate".to_owned())?;
+) -> Result<Vec<u64>, String> {
+  let encodes = looks
+    .iter()
+    .map(|look| {
+      let scale_filter =
+        resolution_filter(look.source_scale_percent, look.resolution_scale_percent);
+      let crf = export_crf(look.compression, scale_filter.is_some() || follows_timeline)
+        .ok_or_else(|| "Original video does not need a compression estimate".to_owned())?;
+      Ok((scale_filter, crf))
+    })
+    .collect::<Result<Vec<_>, String>>()?;
+  if encodes.is_empty() {
+    return Ok(Vec::new());
+  }
   if !supports_compression() {
     return Err("This FFmpeg build does not include the H.264 encoder".to_owned());
   }
@@ -145,7 +177,15 @@ pub fn estimate_compressed_video_bytes(
   }
 
   let windows = sample_windows(duration_ms.saturating_mul(1_000));
-  let temporary = estimate_temp_path();
+  let temporaries = encodes
+    .iter()
+    .map(|_| estimate_temp_path())
+    .collect::<Vec<_>>();
+  let remove_temporaries = || {
+    for temporary in &temporaries {
+      let _ = std::fs::remove_file(temporary);
+    }
+  };
   let mut command = ffmpeg_command();
   command.args(["-hide_banner", "-loglevel", "error", "-nostdin", "-y"]);
   for [start, end] in &windows {
@@ -157,45 +197,46 @@ pub fn estimate_compressed_video_bytes(
       .arg("-i")
       .arg(source);
   }
-  command
-    .args([
-      "-filter_complex",
-      &estimate_filter(windows.len(), scale_filter.as_deref()),
-    ])
-    .args([
-      "-map",
-      "[estimated]",
-      "-an",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "medium",
-      "-crf",
-    ])
-    .arg(crf.to_string())
-    // Joining distant screen moments can look like a scene cut that does not
-    // exist in the real timeline. Each joined stretch opens on a keyframe
-    // instead, which the frame count below sets apart from the rest.
-    .args([
-      "-sc_threshold",
-      "0",
-      "-pix_fmt",
-      "yuv420p",
-      "-profile:v",
-      "high",
-    ]);
+  let scale_filters = encodes
+    .iter()
+    .map(|(scale_filter, _)| scale_filter.clone())
+    .collect::<Vec<_>>();
+  command.args([
+    "-filter_complex",
+    &estimate_filter(windows.len(), &scale_filters),
+  ]);
   let lengths = windows.iter().map(|[start, end]| end - start);
-  if let Some(starts) = stretch_starts(lengths.clone()) {
-    command.arg("-force_key_frames").arg(starts);
+  let starts = stretch_starts(lengths.clone());
+  for (index, ((_, crf), temporary)) in encodes.iter().zip(&temporaries).enumerate() {
+    command
+      .arg("-map")
+      .arg(format!("[estimated{index}]"))
+      .args(["-an", "-c:v", "libx264", "-preset", "medium", "-crf"])
+      .arg(crf.to_string())
+      // Joining distant screen moments can look like a scene cut that does
+      // not exist in the real timeline. Each joined stretch opens on a
+      // keyframe instead, which the frame count below sets apart from the
+      // rest.
+      .args([
+        "-sc_threshold",
+        "0",
+        "-pix_fmt",
+        "yuv420p",
+        "-profile:v",
+        "high",
+      ]);
+    if let Some(starts) = &starts {
+      command.arg("-force_key_frames").arg(starts);
+    }
+    command.args(["-f", "h264"]).arg(temporary);
   }
-  command.args(["-f", "h264"]).arg(&temporary);
   let output = command.output().map_err(|error| {
-    let _ = std::fs::remove_file(&temporary);
+    remove_temporaries();
     format!("FFmpeg could not start the size estimate: {error}")
   })?;
 
   if !output.status.success() {
-    let _ = std::fs::remove_file(&temporary);
+    remove_temporaries();
     let detail = String::from_utf8_lossy(&output.stderr);
     let detail = detail.trim();
     return Err(if detail.is_empty() {
@@ -204,14 +245,26 @@ pub fn estimate_compressed_video_bytes(
       format!("FFmpeg could not estimate the compressed video: {detail}")
     });
   }
-  let stream = std::fs::read(&temporary);
-  let _ = std::fs::remove_file(&temporary);
-  let stream = stream.map_err(|error| error.to_string())?;
+  let streams = temporaries
+    .iter()
+    .map(|temporary| std::fs::read(temporary))
+    .collect::<Result<Vec<_>, _>>();
+  remove_temporaries();
+  let streams = streams.map_err(|error| error.to_string())?;
   let whole_us = duration_ms * 1_000;
-  if windows.len() == 1 {
-    return Ok(stream.len() as u64);
-  }
-  Ok(SampleFrames::of(&stream).whole_bytes(lengths.sum(), whole_us, X264_KEYFRAME_INTERVAL))
+  let sampled_us = lengths.sum();
+  Ok(
+    streams
+      .iter()
+      .map(|stream| {
+        if windows.len() == 1 {
+          stream.len() as u64
+        } else {
+          SampleFrames::of(stream).whole_bytes(sampled_us, whole_us, X264_KEYFRAME_INTERVAL)
+        }
+      })
+      .collect(),
+  )
 }
 
 /// x264's own keyframe spacing, which the FFmpeg export leaves as it is.

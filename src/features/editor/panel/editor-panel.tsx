@@ -1,128 +1,99 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useEffect } from "react";
+
 import { WindowShell } from "../../../composites/window-shell/window-shell";
 import { t } from "../../../i18n/i18n";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { cameraOutputChoice } from "../export/camera-output";
-import { useExportOptionsBridge } from "../export/options-window/use-export-options-bridge";
 import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
 } from "../export/recording-export-settings";
+import { useEditorExportIsland } from "../export/use-editor-export-island";
 import { EditorTitleModeBar } from "../title-bar/editor-mode-bar";
 import { EditorTitleBar } from "../title-bar/editor-title-bar";
 import { useEditorToolPanels } from "../tool-panels/use-editor-tool-panels";
 import { currentEditorKind } from "../window-kind";
 
+import { ChromeSetBack } from "./chrome-set-back";
 import { EditorPanelProps } from "./editor-panel-props";
 import { ScreenshotSection } from "./editor-preview-section";
 import { RecordingSection } from "./recording-section";
-import { useEditorSheets } from "./use-editor-sheets";
 
 /**
  * The editor window: the title bar with its modes, then the recording's or
  * the screenshot's picture with its tool column, islands and, for a
- * recording, the timeline strip. The islands and the export options window
+ * recording, the timeline strip. The islands, the Export island among them,
  * are fed the editor's settings from here and hand changes back through
  * these props.
  */
-export function EditorPanel({
-  artifact,
-  audioTrackVolumes = [],
-  bakeCamera = false,
-  cameraCompression = 0,
-  cameraOverlay = defaultCameraOverlay(),
-  cameraResolutionScalePercent = 100,
-  collapseAudio = false,
-  compression = 0,
-  cursorEffects = DEFAULT_CURSOR_EFFECTS,
-  deleteProjectAfterExport = false,
-  directory,
-  enabledAudioTrackCount,
-  enabledStreamIndices,
-  enabledVideoTracks = [],
-  estimatedSizeBytes,
-  fileStem,
-  isCancelingSave = false,
-  isEstimatingSize,
-  isPreparingRecordingAudio,
-  isPreparingRecordingPreview,
-  isPreviewPreparing,
-  isSaving,
-  keyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
-  onBakeCameraChange,
-  onBrowse,
-  onCameraCompressionChange,
-  onCameraOverlayChange,
-  onCameraResolutionScaleChange,
-  onCancel,
-  onCancelSave,
-  onCanvasResize,
-  onCollapseAudioChange,
-  onCompressionChange,
-  onCopy,
-  onCursorEffectsChange,
-  onDeleteProject,
-  onDeleteProjectAfterExportChange,
-  onEnabledTracksChange,
-  onEnabledVideoTracksChange,
-  onFileStemChange,
-  onKeyboardEffectsChange,
-  onMinimize,
-  onRecordingOutputChange,
-  onRecordingTimelineEditChange,
-  onRenameProject,
-  onResolutionScaleChange,
-  onSave,
-  onScreenshotOutputChange,
-  onSelectedScreenshotItemChange,
-  onSelectedTrackChange,
-  onSubtitlesChange,
-  onToggleMaximize,
-  onTrackVolumeChange,
-  recordingOutput,
-  recordingPreviewError,
-  recordingPreviewLayout,
-  recordingPreviewTracks,
-  recordingTimelineEdit,
-  resolutionScalePercent,
-  screenshotOutput,
-  selectedScreenshotItemId = null,
-  selectedTrack = null,
-  subtitles = "none",
-}: EditorPanelProps) {
+export function EditorPanel(props: EditorPanelProps) {
+  const {
+    artifact,
+    audioTrackVolumes = [],
+    bakeCamera = false,
+    cameraOverlay = defaultCameraOverlay(),
+    cameraResolutionScalePercent = 100,
+    cursorEffects = DEFAULT_CURSOR_EFFECTS,
+    enabledAudioTrackCount,
+    enabledStreamIndices,
+    enabledVideoTracks = [],
+    isPreparingRecordingAudio,
+    isPreparingRecordingPreview,
+    isPreviewPreparing,
+    isSaving,
+    keyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
+    onCameraOverlayChange,
+    onCancel,
+    onCanvasResize,
+    onCopy,
+    onCursorEffectsChange,
+    onDeleteProject,
+    onEnabledTracksChange,
+    onEnabledVideoTracksChange,
+    onKeyboardEffectsChange,
+    onMinimize,
+    onRecordingOutputChange,
+    onRecordingTimelineEditChange,
+    onRenameProject,
+    onScreenshotOutputChange,
+    onSelectedScreenshotItemChange,
+    onSelectedTrackChange,
+    onToggleMaximize,
+    onTrackVolumeChange,
+    recordingOutput,
+    recordingPreviewError,
+    recordingPreviewLayout,
+    recordingPreviewTracks,
+    recordingTimelineEdit,
+    resolutionScalePercent,
+    screenshotOutput,
+    selectedScreenshotItemId = null,
+    selectedTrack = null,
+  } = props;
   const isRecording = artifact?.kind === "recording";
   const enabledVideoTrackCount = enabledVideoTracks.length;
-  const isAudioOnly = isRecording && enabledVideoTrackCount === 0;
   const hasContent =
     !isRecording || enabledVideoTrackCount + (enabledAudioTrackCount ?? 0) > 0;
-  // The titlebar button, its shortcut and the form all gate on this one test.
-  const canExport =
-    Boolean(artifact) &&
-    hasContent &&
-    fileStem.trim().length > 0 &&
-    !isPreviewPreparing &&
-    !isSaving;
-  // The options window is a separate webview owning none of this: it is shown
-  // what the editor holds and asks the editor to change it, keyed on this
-  // window's own workspace rather than the artifact's, so an editor with
-  // nothing in it cannot publish over the other workspace's settings.
+  // The title bar's button brings the Export island out; its own Export
+  // button is what checks the name and the rest.
+  const canOpenExport = Boolean(artifact) && hasContent && !isPreviewPreparing;
   const workspace = currentEditorKind() ?? artifact?.kind ?? "recording";
-  const { isSheetOpen, openExportOptions } = useEditorSheets(
-    workspace,
-    Boolean(isSaving),
-  );
-  // A save or a sheet over the editor puts its tools out of reach, in the title
-  // bar and on the islands alike, while leaving them in view.
-  const isLocked = Boolean(isSaving) || isSheetOpen;
   const cameraOutput = cameraOutputChoice({
     artifact,
     bakeCamera,
     enabledVideoTracks,
   });
-  // The islands work as the options window does: settings the editor owns,
+  const exportIsland = useEditorExportIsland(props, {
+    cameraOutput,
+    canOpen: canOpenExport,
+    isAudioOnly: isRecording && enabledVideoTrackCount === 0,
+  });
+  const { isExportOpen } = exportIsland;
+  // The islands work as the Export island does: settings the editor owns,
   // shown in a window of their own over the picture and changed from there.
   const { hasTranscript } = useEditorToolPanels({
     artifact,
@@ -132,7 +103,8 @@ export function EditorPanel({
     cameraOverlay,
     cursorEffects,
     enabledVideoTracks,
-    isLocked,
+    exportIsland: exportIsland.island,
+    isLocked: isExportOpen,
     keyboardEffects,
     onCameraOverlayChange,
     onCanvasResize,
@@ -154,61 +126,29 @@ export function EditorPanel({
     },
     workspace,
   });
-  useExportOptionsBridge(
-    workspace,
-    {
-      cameraCompression,
-      cameraOutput,
-      cameraResolutionScalePercent,
-      canExport,
-      collapseAudio,
-      compression,
-      deleteProjectAfterExport,
-      directory,
-      enabledAudioTrackCount: enabledAudioTrackCount ?? 0,
-      estimatedSizeBytes: estimatedSizeBytes ?? null,
-      extension: isAudioOnly ? "m4a" : (artifact?.extension ?? ""),
-      fileStem,
-      hasTranscript,
-      includeCamera: enabledVideoTracks.includes("camera"),
-      isAudioOnly,
-      isCancelingSave,
-      isEstimatingSize: Boolean(isEstimatingSize),
-      isSaving: Boolean(isSaving),
-      recordingOutput: recordingOutput ?? null,
-      resolutionScalePercent: resolutionScalePercent ?? 100,
-      subtitles,
-    },
-    {
-      onBrowse,
-      onCameraCompressionChange,
-      onCameraOutputChange: (output) => {
-        onBakeCameraChange?.(output === "combined");
-      },
-      onCameraResolutionScaleChange,
-      onCancelSave,
-      onCollapseAudioChange,
-      onCompressionChange,
-      onDeleteProjectAfterExportChange,
-      onExport: onSave,
-      onFileStemChange,
-      onResolutionScaleChange,
-      onSubtitlesChange,
-    },
-  );
+  const { setHasTranscript } = exportIsland;
+  useEffect(() => {
+    setHasTranscript(hasTranscript);
+  }, [hasTranscript, setHasTranscript]);
   return (
     <WindowShell
       className="relative"
       header={
         <EditorTitleBar
           artifact={artifact}
-          canExport={canExport}
+          canExport={canOpenExport}
+          exportProgress={exportIsland.saveProgress}
+          isExportOpen={exportIsland.isOpen}
           isSaving={isSaving}
-          modes={<EditorTitleModeBar isDisabled={isSaving || isSheetOpen} />}
+          modes={
+            <ChromeSetBack isSetBack={isExportOpen}>
+              <EditorTitleModeBar isDisabled={isExportOpen} />
+            </ChromeSetBack>
+          }
           onClose={onCancel}
           onCopy={onCopy}
           onDelete={onDeleteProject}
-          onExport={openExportOptions}
+          onExport={exportIsland.toggle}
           onMinimize={onMinimize}
           onRename={onRenameProject}
           onToggleMaximize={onToggleMaximize}
@@ -221,12 +161,8 @@ export function EditorPanel({
         data-preview-backdrop
         data-preview-window-backdrop
       />
-      {/* The export sheet is modal to the content the way a native sheet is:
-        nothing below the title bar responds, and nothing dims. The title
-        bar stays live so the window can still be moved. The picture runs
-        to the window's bottom edge; the recording's strip keeps the
-        window's inset from it. */}
-      <div className="flex min-h-0 grow flex-col" inert={isSheetOpen}>
+      {/* The island window covers this (`island-window-place.ts`). */}
+      <div className="flex min-h-0 grow flex-col" data-editor-content>
         {artifact?.kind === "recording" ? (
           <RecordingSection
             artifact={artifact}
@@ -239,10 +175,9 @@ export function EditorPanel({
             enabledVideoTracks={enabledVideoTracks}
             hasCursorData={artifact.hasCursorData}
             hasKeyboardData={artifact.hasKeyboardData}
+            isExportOpen={isExportOpen}
             isPreparingRecordingAudio={isPreparingRecordingAudio}
             isPreparingRecordingPreview={isPreparingRecordingPreview}
-            isSaving={isSaving}
-            isSheetOpen={isSheetOpen}
             key={artifact.id}
             keyboardEffects={keyboardEffects}
             onCameraOverlayChange={onCameraOverlayChange}
@@ -263,8 +198,7 @@ export function EditorPanel({
           <section className="flex min-h-0 grow flex-col">
             <ScreenshotSection
               artifact={artifact}
-              isSaving={isSaving}
-              isSheetOpen={isSheetOpen}
+              isExportOpen={isExportOpen}
               onCanvasResize={onCanvasResize}
               onOutputChange={onScreenshotOutputChange}
               onSelectedItemChange={onSelectedScreenshotItemChange}

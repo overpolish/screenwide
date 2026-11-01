@@ -17,6 +17,9 @@ import { SchematicComposition } from "./scene/scene-schematic";
 export type ToolPanelScenePane = {
   framing: SceneFraming;
   inset: number;
+  /** Whether the pane sits in the box the scene's layout gives it, so
+   * Reset placement has nothing to put back: always so for a preset's. */
+  isAtLayout: boolean;
   radius: number;
 };
 

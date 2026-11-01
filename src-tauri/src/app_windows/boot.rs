@@ -35,8 +35,6 @@ const DISMISSED_ON_CLOSE: &[WindowLabel] = &[
 const TITLE_BAR_IN_PAGE: &[WindowLabel] = &[
   WindowLabel::EditorRecording,
   WindowLabel::EditorScreenshot,
-  WindowLabel::ExportRecording,
-  WindowLabel::ExportScreenshot,
   WindowLabel::Projects,
   WindowLabel::Settings,
   WindowLabel::Update,
@@ -68,7 +66,6 @@ pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
       initialize_normal_window(&window)?;
     }
   }
-  crate::editor::export_window::initialize(app)?;
   for kind in crate::editor::EditorKind::ALL {
     let label = kind.window_label();
     if let Some(window) = app.get_webview_window(label.as_str()) {

@@ -5,8 +5,6 @@
   "windows": [
     "editor-recording",
     "editor-screenshot",
-    "export-recording",
-    "export-screenshot",
     "glide",
     "glide-picker-*",
     "island",

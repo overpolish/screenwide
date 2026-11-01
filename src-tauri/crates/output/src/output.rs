@@ -155,8 +155,9 @@ pub fn compose_screenshot(
     return Err("The screenshot canvas settings are not valid".to_owned());
   }
   let placement = output_placement(image.width, image.height, settings)?;
-  let image_width = placement.image_width;
-  let image_height = placement.image_height;
+  // The CPU resamples to whole pixels.
+  let image_width = placement.image_width.round() as u32;
+  let image_height = placement.image_height.round() as u32;
   if u64::from(image_width) * u64::from(image_height) > MAX_OUTPUT_PIXELS * 4 {
     return Err("The scaled screenshot is too large".to_owned());
   }

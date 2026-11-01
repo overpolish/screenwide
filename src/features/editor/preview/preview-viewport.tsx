@@ -53,11 +53,11 @@ type PreviewViewportProps = {
   /** The crop in hand keeps its shape as its handles are dragged. */
   cropKeepsShape?: boolean;
   isEditing?: boolean;
+  /** The Export island stands over the editor: native input stands down
+   * under it, open, exporting or done. */
+  isExportOpen?: boolean;
   isResizingCanvas?: boolean;
-  isSaving?: boolean;
   isSelecting?: boolean;
-  /** An export or confirm sheet is up: native input stands down under it. */
-  isSheetOpen?: boolean;
   onAnnotationHover?: (annotationId: string | null) => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
   onCropChangeEnd?: (crop: SourceRect) => Promise<void>;
@@ -82,10 +82,9 @@ export function PreviewViewport({
   artifactId,
   cropKeepsShape = false,
   isEditing = false,
+  isExportOpen = false,
   isResizingCanvas = false,
-  isSaving = false,
   isSelecting = false,
-  isSheetOpen = false,
   items,
   naturalHeight,
   naturalWidth,
@@ -403,7 +402,7 @@ export function PreviewViewport({
     artifactId,
     canvasRef: nativeFrameRef,
     interactionOutput: workspaceOutput,
-    isEditorSuspended: isSaving || isSheetOpen,
+    isEditorSuspended: isExportOpen,
     isEnabled: workspaceOutput !== undefined,
     onAnnotationChange: annotationChange,
     onAnnotationHover,

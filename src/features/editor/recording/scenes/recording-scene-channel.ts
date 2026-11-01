@@ -51,6 +51,9 @@ export type RecordingSceneControls = {
    * preset's. */
   recenterScreen: () => void;
   remove: () => void;
+  /** Put `pane` of the custom scene back in the box its preset gives it,
+   * keeping what it shows. */
+  resetPanePlacement: (pane: ScenePane) => void;
   /** Take the scene's crop of the screen away. */
   resetScreenCrop: () => void;
   /** Have the camera follow the face, which starts it in the middle of the
@@ -137,6 +140,9 @@ export function usePublishRecordingScene(
         },
         remove: () => {
           controlsRef.current.remove();
+        },
+        resetPanePlacement: (pane) => {
+          controlsRef.current.resetPanePlacement(pane);
         },
         resetScreenCrop: () => {
           controlsRef.current.resetScreenCrop();

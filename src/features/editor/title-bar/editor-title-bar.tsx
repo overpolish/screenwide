@@ -8,6 +8,7 @@ import { ConfirmActionButton } from "../../../composites/confirm-action-button/c
 import { WindowHeader } from "../../../composites/window-header/window-header";
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
+import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { useRecordingFrameCopy } from "../recording/use-copy-recording-frame";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorArtifact } from "../types";
@@ -15,6 +16,8 @@ import { EditorArtifact } from "../types";
 export function EditorTitleBar({
   artifact,
   canExport,
+  exportProgress,
+  isExportOpen = false,
   isSaving,
   modes,
   onClose,
@@ -27,6 +30,11 @@ export function EditorTitleBar({
 }: {
   artifact: EditorArtifact | null;
   canExport: boolean;
+  /** The save's whole percent while it runs (null while it reports none),
+   * drawn as a small ring on Export so it shows with the island away. */
+  exportProgress?: number | null;
+  /** The Export island is out: the button stays pressed. */
+  isExportOpen?: boolean;
   isSaving?: boolean;
   /** The editor's modes, centred in the bar (`EditorModeBar`). */
   modes?: ReactNode;
@@ -100,8 +108,27 @@ export function EditorTitleBar({
                 : t("editor-copy")}
             </Button>
           ) : null}
-          <Button color="primary" isDisabled={!canExport} onPress={onExport}>
-            <Upload />
+          <Button
+            aria-pressed={isExportOpen}
+            className={isExportOpen ? "primary-raised-pressed" : undefined}
+            color="primary"
+            // A press on it toggles the Export island, rather than being
+            // a press off the island that puts it away.
+            data-export-toggle
+            isDisabled={!canExport}
+            onPress={onExport}
+          >
+            {exportProgress === undefined ? (
+              <Upload />
+            ) : (
+              <CircularProgress
+                aria-label={t("editor-export-progress")}
+                color="on-primary"
+                isIndeterminate={exportProgress === null}
+                size="small"
+                value={exportProgress ?? 0}
+              />
+            )}
             {t("editor-export")}
           </Button>
         </div>

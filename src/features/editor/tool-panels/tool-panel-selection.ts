@@ -22,6 +22,9 @@ export type ToolPanelLayerSelection = {
   /** How far the padded frame runs past the layer's own picture on each
    * side, as a share of the picture's shorter side. */
   inset: number;
+  /** Whether the layer sits where a fresh project places it, so Reset
+   * placement has nothing to put back. */
+  isAtDefaultPlacement: boolean;
   /** Which of the workspace's layers this is, for wording that fits it. */
   kind: "camera" | "layer" | "primary";
   label: string;

@@ -20,7 +20,13 @@ import {
   cameraOutputChoice,
   exportedRecordingEdits,
 } from "./export/camera-output";
-import { useRecordingExportPreview } from "./export/preview/use-recording-export-preview";
+import { exportLookQualities } from "./export/editor-export";
+import {
+  clearExportFailure,
+  failExport,
+  finishExport,
+  useExportIslandStore,
+} from "./export/export-island-store";
 import { seededExportChoices } from "./export/recording-export-choices";
 import {
   cameraExportSettings,
@@ -30,6 +36,7 @@ import {
   defaultCameraOverlay,
   recordingSavePlan,
 } from "./export/recording-export-settings";
+import { useExportCompare } from "./export/use-export-compare";
 import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingExportEstimate } from "./export/use-recording-export-estimate";
 import { openProjectActions } from "./open-project-actions";
@@ -81,7 +88,9 @@ import {
 } from "./use-editor-edit-history";
 import { currentEditorKind } from "./window-kind";
 
+import type { CameraKey } from "../../bindings/CameraKey";
 import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
+import type { ScreenshotFormat } from "../../bindings/ScreenshotFormat";
 
 const EMPTY_AUDIO_TRACK_VOLUMES: AudioTrackVolume[] = [];
 
@@ -103,6 +112,9 @@ export function EditorWindow() {
   } = useEditorStore(selectSnapshot(kind));
   const [fileStem, setFileStem] = useState("");
   const [collapseAudio, setCollapseAudio] = useState(false);
+  const [cameraKey, setCameraKey] = useState<CameraKey>("green");
+  const [screenshotFormat, setScreenshotFormat] =
+    useState<ScreenshotFormat>("png");
   const [deleteProjectAfterExport, setDeleteProjectAfterExport] =
     useState(false);
   const [subtitles, setSubtitles] = useState<ExportSubtitles>("none");
@@ -168,8 +180,7 @@ export function EditorWindow() {
     values: AudioTrackVolume[];
   } | null>(null);
   const seenScreenshotItemIdsRef = useRef<Set<number>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  const openProject = openProjectActions(setError);
+  const openProject = openProjectActions();
 
   // Keyed on the capture rather than the object, so a replacement always
   // refetches - including the full-resolution copy, whose cached URL belongs to
@@ -318,7 +329,7 @@ export function EditorWindow() {
       setScreenshotOutput(next.screenshotOutput);
       setTrackSelection(next.trackSelection);
       setVideoTrackSelection(next.videoTrackSelection);
-      setError(null);
+      clearExportFailure();
     },
     [setTimelineEdit],
   );
@@ -354,9 +365,19 @@ export function EditorWindow() {
     recordingTimelineEdit: exportEdits.timelineEdit,
     resolutionScalePercent,
   };
-  const { estimatedSizeBytes, isEstimatingSize } =
-    useRecordingExportEstimate(exportInputs);
-  useRecordingExportPreview(exportInputs);
+  const isExportIslandOpen = useExportIslandStore((state) => state.isOpen);
+  const lookQualities = exportLookQualities(
+    artifact,
+    cameraOutputChoice({ artifact, bakeCamera, enabledVideoTracks }),
+  );
+  const lookSizeBytes = useRecordingExportEstimate(exportInputs, {
+    isOpen: isExportIslandOpen,
+    looks: lookQualities,
+  });
+  const exportCompare = useExportCompare(exportInputs, {
+    isOpen: isExportIslandOpen,
+    screenshot: { format: screenshotFormat, output: screenshotOutput },
+  });
 
   const onEnabledTracksChange = useCallback(
     (streamIndices: number[]) => {
@@ -492,13 +513,11 @@ export function EditorWindow() {
   useEffect(() => {
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setFileStem(artifact?.suggestedFileStem ?? "");
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setError(null);
   }, [artifact?.suggestedFileStem]);
 
   const report = (action: string) => (cause: unknown) => {
     console.error(`Could not ${action} the export`, cause);
-    setError(cause instanceof Error ? cause.message : String(cause));
+    failExport(cause instanceof Error ? cause.message : String(cause));
     setIsSaving(false);
     setIsCancelingSave(false);
     saveProgress.reset();
@@ -511,6 +530,7 @@ export function EditorWindow() {
         audioTrackVolumes={currentAudioTrackVolumes}
         bakeCamera={effectiveBakeCamera}
         cameraCompression={cameraCompression}
+        cameraKey={cameraKey}
         cameraOverlay={cameraOverlay}
         cameraResolutionScalePercent={cameraResolutionScalePercent}
         collapseAudio={collapseAudio}
@@ -521,16 +541,16 @@ export function EditorWindow() {
         enabledAudioTrackCount={enabledStreamIndices?.length ?? 0}
         enabledStreamIndices={enabledStreamIndices ?? undefined}
         enabledVideoTracks={enabledVideoTracks}
-        error={error}
-        estimatedSizeBytes={estimatedSizeBytes}
+        exportCompare={exportCompare}
         fileStem={fileStem}
         isCancelingSave={isCancelingSave}
-        isEstimatingSize={isEstimatingSize}
         isPreparingRecordingAudio={isPreparingRecordingPreview}
         isPreparingRecordingPreview={isPreparingRecordingPreview}
         isPreviewPreparing={isPreparingRecordingPreview}
         isSaving={isSaving}
         keyboardEffects={keyboardEffects}
+        lookQualities={lookQualities}
+        lookSizeBytes={lookSizeBytes}
         onBakeCameraChange={setBakeCamera}
         onBrowse={() => {
           browseExportDirectory()
@@ -543,15 +563,16 @@ export function EditorWindow() {
           const next = Math.round(value);
           setCameraCompression(next);
           if (next === 0) setCameraResolutionScalePercent(100);
-          setError(null);
+          clearExportFailure();
         }}
+        onCameraKeyChange={setCameraKey}
         onCameraOverlayChange={setCameraOverlay}
         onCameraResolutionScaleChange={(scale) => {
           setCameraResolutionScalePercent(scale);
           if (scale < 100 && cameraCompression === 0) {
             setCameraCompression(1);
           }
-          setError(null);
+          clearExportFailure();
         }}
         onCancel={closeEditorWindow}
         onCancelSave={() => {
@@ -562,7 +583,9 @@ export function EditorWindow() {
             })
             .catch((cause: unknown) => {
               console.error("Could not cancel the active export", cause);
-              setError(cause instanceof Error ? cause.message : String(cause));
+              failExport(
+                cause instanceof Error ? cause.message : String(cause),
+              );
               setIsCancelingSave(false);
             });
         }}
@@ -572,7 +595,7 @@ export function EditorWindow() {
           const next = Math.round(value);
           setCompression(next);
           if (next === 0) setResolutionScalePercent(originalResolutionScale);
-          setError(null);
+          clearExportFailure();
         }}
         onCopy={() => {
           copyEditorToClipboard(
@@ -590,7 +613,7 @@ export function EditorWindow() {
         }}
         onFileStemChange={(value) => {
           setFileStem(value);
-          setError(null);
+          clearExportFailure();
         }}
         onKeyboardEffectsChange={setKeyboardEffects}
         onMinimize={minimizeEditorWindow}
@@ -599,7 +622,7 @@ export function EditorWindow() {
             ...current,
             [trackId]: { ...settings, backgroundRadiusPercent: 0 },
           }));
-          setError(null);
+          clearExportFailure();
         }}
         onRecordingTimelineEditChange={commitTimelineEdit}
         onRenameProject={openProject.onRenameProject}
@@ -608,7 +631,7 @@ export function EditorWindow() {
           if (scale < originalResolutionScale && compression === 0) {
             setCompression(1);
           }
-          setError(null);
+          clearExportFailure();
         }}
         onSave={() => {
           const plan = recordingSavePlan({
@@ -631,39 +654,33 @@ export function EditorWindow() {
           setIsSaving(true);
           setIsCancelingSave(false);
           saveProgress.begin(plan.showsMeasuredProgress);
-          setError(null);
+          clearExportFailure();
           saveExport({
             ...plan.options,
+            cameraKey,
             deleteProjectAfterExport,
             fileStem,
+            screenshotFormat,
             screenshotOutput,
             subtitles,
             timelineEdit: exportEdits.timelineEdit,
           })
-            .then((path) => {
-              if (path === null) {
-                saveProgress.reset();
-                setIsCancelingSave(false);
-                setIsSaving(false);
-                return;
-              }
+            .then((file) => {
               saveProgress.complete();
-              // Let the determinate ring visibly reach its completed state.
-              // Closing it in the same React batch left the animated stroke at
-              // whatever fraction it had reached during the final mux.
-              window.setTimeout(() => {
-                setIsCancelingSave(false);
-                setIsSaving(false);
-              }, 200);
+              setIsCancelingSave(false);
+              setIsSaving(false);
+              if (file) finishExport(file);
+              else saveProgress.reset();
             })
             .catch(report("save"));
         }}
+        onScreenshotFormatChange={setScreenshotFormat}
         onScreenshotOutputChange={(settings, itemId) => {
           const targetItemId = itemId ?? selectedScreenshotItemId;
           setScreenshotOutput((current) =>
             withScreenshotWorkspaceItemOutput(current, settings, targetItemId),
           );
-          setError(null);
+          clearExportFailure();
         }}
         onSelectedScreenshotItemChange={setSelectedScreenshotItemId}
         onSelectedTrackChange={(trackId) => {
@@ -687,6 +704,7 @@ export function EditorWindow() {
         recordingPreviewTracks={recordingPreviewTracks}
         recordingTimelineEdit={recordingTimelineEdit}
         resolutionScalePercent={resolutionScalePercent}
+        screenshotFormat={screenshotFormat}
         screenshotOutput={screenshotOutput}
         selectedScreenshotItemId={selectedScreenshotItemId}
         selectedTrack={selectedTrackId}

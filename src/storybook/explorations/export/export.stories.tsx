@@ -21,9 +21,11 @@ const meta = {
   },
   component: ExportWindow,
   decorators: [
+    // The export window it explored is gone, for the Export island; its
+    // stage keeps that window's size.
     featureStage(({ args }) => ({
-      window:
-        args.kind === "screenshot" ? "export-screenshot" : "export-recording",
+      height: args.kind === "screenshot" ? 420 : 640,
+      width: 480,
     })),
   ],
   parameters: { layout: "fullscreen" },

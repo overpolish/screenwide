@@ -144,7 +144,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
   output.image_y = 0.0;
   for baked in [false, true] {
     for scale in [100, 75, 50] {
-      let (width, height) = super::super::output_dimensions(
+      let fit = crate::media_preview::FrameFit::of(
         320,
         180,
         VideoExportOptions {
@@ -153,6 +153,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
           source_scale_percent: 100,
         },
       );
+      let (width, height) = (fit.width, fit.height);
       let cancelled = AtomicBool::new(false);
       assert_eq!(
         export(CursorExportRequest {

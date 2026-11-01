@@ -11,6 +11,7 @@ import {
   EditorToolKeys,
 } from "./editor-tool-keys";
 import { preserveEscapeFocus } from "./escape-focus";
+import { exportIslandOwnsKey } from "./export-island-keys";
 import {
   editsText,
   ownsActivationKeys,
@@ -19,7 +20,6 @@ import {
   ownsPopupInteractionKeys,
   ownsTextEditingKeys,
 } from "./keyboard-target";
-import { sheetOwnsKey } from "./sheet-escape";
 import {
   useWindowKeyListeners,
   WindowKeyHandlers,
@@ -123,7 +123,7 @@ export function useEditorWindowShortcuts({
       onTool,
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (sheetOwnsKey(event, consume)) return;
+      if (exportIslandOwnsKey(event, consume)) return;
       if (
         event.repeat &&
         consumedKeys.has(event.code) &&

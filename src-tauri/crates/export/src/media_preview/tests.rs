@@ -197,20 +197,24 @@ fn downsampling_uses_lanczos_and_requires_an_encode() {
   assert_eq!(resolution_filter(200, 200), None);
   assert_eq!(
     resolution_filter(200, 100).as_deref(),
-    Some("scale=trunc(iw*100/200/2)*2:trunc(ih*100/200/2)*2:flags=lanczos")
+    Some("scale=ceil(iw*100/200/2-0.5)*2:ceil(ih*100/200/2-0.5)*2:flags=lanczos")
   );
   assert_eq!(export_crf(0, true), Some(20));
 }
 
 #[test]
-fn estimate_joins_seeked_samples_before_one_encode() {
+fn estimate_joins_seeked_samples_before_its_encoders() {
   assert_eq!(
-    estimate_filter(3, Some("scale=iw/2:ih/2")),
-    "[0:v:0]setpts=PTS-STARTPTS[sample0];[1:v:0]setpts=PTS-STARTPTS[sample1];[2:v:0]setpts=PTS-STARTPTS[sample2];[sample0][sample1][sample2]concat=n=3:v=1:a=0,scale=iw/2:ih/2[estimated]"
+    estimate_filter(3, &[Some("scale=iw/2:ih/2".to_owned())]),
+    "[0:v:0]setpts=PTS-STARTPTS[sample0];[1:v:0]setpts=PTS-STARTPTS[sample1];[2:v:0]setpts=PTS-STARTPTS[sample2];[sample0][sample1][sample2]concat=n=3:v=1:a=0,scale=iw/2:ih/2[estimated0]"
   );
   assert_eq!(
-    estimate_filter(1, None),
-    "[0:v:0]setpts=PTS-STARTPTS[estimated]"
+    estimate_filter(1, &[None]),
+    "[0:v:0]setpts=PTS-STARTPTS[estimated0]"
+  );
+  assert_eq!(
+    estimate_filter(1, &[None, Some("scale=iw/2:ih/2".to_owned())]),
+    "[0:v:0]setpts=PTS-STARTPTS,split=2[joined0][joined1];[joined0]null[estimated0];[joined1]scale=iw/2:ih/2[estimated1]"
   );
 }
 
@@ -271,8 +275,15 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
 
   let available = tracks(2);
   let selection = TrackSelection::new(&available, &[0, 1]);
-  let estimated = estimate_compressed_video_bytes(&source, 3_000, 2, 200, 100, false).unwrap();
-  assert!(estimated > 0);
+  let look = |compression, resolution_scale_percent| VideoExportOptions {
+    compression,
+    resolution_scale_percent,
+    source_scale_percent: 200,
+  };
+  let estimated =
+    estimate_compressed_video_bytes(&source, 3_000, &[look(2, 100), look(4, 50)], false).unwrap();
+  assert_eq!(estimated.len(), 2);
+  assert!(estimated[0] > estimated[1] && estimated[1] > 0);
   let cancelled = AtomicBool::new(false);
   let mut progress = Vec::new();
   export_selected_recording(
@@ -305,7 +316,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
     .unwrap();
   assert!(String::from_utf8_lossy(&output.stderr).contains("160x120"));
   let estimated_audio = selection.estimated_audio_bytes(&available, AudioLayout::Mixdown, 3_000);
-  let estimated_media = estimated.saturating_add(estimated_audio);
+  let estimated_media = estimated[0].saturating_add(estimated_audio);
   let predicted = estimated_media
     .saturating_add(estimated_media / 200)
     .saturating_add(4_096);

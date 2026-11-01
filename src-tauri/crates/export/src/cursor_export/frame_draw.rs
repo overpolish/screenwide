@@ -18,7 +18,7 @@ use screenwide_text::captions::{CaptionMoment, CaptionTrack};
 use screenwide_timeline_edit::TimelinePlan;
 
 use super::camera_effects::FrameEffects;
-use super::export_output::on_canvas;
+use super::export_output;
 use super::frame_annotations::ExportAnnotations;
 use super::frame_scene::ExportScenes;
 use super::CursorExportRequest;
@@ -73,11 +73,10 @@ impl<'a> FrameDraw<'a> {
       .transpose()?;
     // The camera is placed at the output's reference size; a scaled export
     // draws on a canvas of another size.
-    let camera = request
-      .camera
-      .map(|(_, options)| {
+    let camera = export_output::camera_on_canvas(request)
+      .map(|options| {
         Ok::<_, String>((
-          on_canvas(media_preview::bake_geometry(options)?, request.output),
+          media_preview::bake_geometry(options)?,
           options.camera_drop_shadow,
           request.camera_on_top,
         ))
@@ -124,12 +123,11 @@ impl<'a> FrameDraw<'a> {
     let settings = arranged
       .as_ref()
       .map_or(self.output, |(settings, _)| settings);
+    // A scene's camera is already measured on this canvas.
     let placement = match (&arranged, self.camera) {
-      (Some((settings, Some(options))), Some((_, shadow, on_top))) => Some((
-        on_canvas(media_preview::bake_geometry(*options)?, settings),
-        shadow,
-        on_top,
-      )),
+      (Some((_, Some(options))), Some((_, shadow, on_top))) => {
+        Some((media_preview::bake_geometry(*options)?, shadow, on_top))
+      }
       _ => self.camera,
     };
     let annotations = self.annotations.with_camera_at(

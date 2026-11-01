@@ -18,15 +18,24 @@ const ANIMATION_DURATION = 1.25;
 
 // The arc is in the primary fill, the warm black (near-white in dark); the
 // track is the faint fill. The regular ring is this primitive's own size,
-// for a loading area; the small one sits beside text as an icon does.
+// for a loading area; the small one sits beside text as an icon does. On a
+// primary fill, such as the Export button while it saves, the ring takes the
+// on-primary ink instead.
 const circularProgressVariants = tv({
-  defaultVariants: { size: "regular" },
+  defaultVariants: { color: "primary", size: "regular" },
   slots: {
     base: "relative shrink-0",
-    progress: "stroke-primary [stroke-linecap:round]",
-    track: "stroke-fill",
+    progress: "[stroke-linecap:round]",
+    track: "",
   },
   variants: {
+    color: {
+      "on-primary": {
+        progress: "stroke-on-primary",
+        track: "stroke-on-primary/30",
+      },
+      primary: { progress: "stroke-primary", track: "stroke-fill" },
+    },
     size: {
       regular: { base: "size-8" },
       small: { base: "size-icon" },
@@ -53,11 +62,12 @@ type CircularProgressProps = Omit<ProgressBarProps, "children" | "className"> &
   VariantProps<typeof circularProgressVariants>;
 
 export function CircularProgress({
+  color = "primary",
   isIndeterminate = false,
   size = "regular",
   ...props
 }: CircularProgressProps) {
-  const { base, progress, track } = circularProgressVariants({ size });
+  const { base, progress, track } = circularProgressVariants({ color, size });
   // The stroke is specified in screen pixels but drawn in viewBox units: a
   // non-scaling stroke would make WebKit apply the dash pattern in pixels too,
   // which breaks the pathLength normalisation the ring animates with.

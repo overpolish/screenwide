@@ -6,7 +6,7 @@ import {
   useAnnotationSelection,
   useAnnotationSelectionCount,
 } from "../annotations/annotation-channel";
-import { CameraOutput, composedVideoTracks } from "../export/camera-output";
+import { composedVideoTracks } from "../export/camera-output";
 import { useCaptionCanvasEdits } from "../recording/captions/use-caption-canvas-edits";
 import { useCaptionTools } from "../recording/captions/use-caption-tools";
 import { useMicrophoneTools } from "../recording/microphone/use-microphone-tools";
@@ -15,29 +15,14 @@ import {
   useRecordingSceneSelection,
 } from "../recording/scenes/recording-scene-channel";
 import { useTranscriptTools } from "../recording/transcript/use-transcript-tools";
-import {
-  RecordingOutputSettings,
-  ScreenshotOutputSettings,
-  ScreenshotWorkspaceOutputSettings,
-} from "../screenshot/screenshot-output";
-import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
 import { useRestoreRecordingKeyboardShortcuts } from "../timeline/keyboard/use-restore-recording-keyboard-shortcuts";
 import { useStripIslandChoice } from "../timeline/recording-strip/strip-island-channel";
-import {
-  AudioTrackVolume,
-  CameraOverlaySettings,
-  CursorEffectSettings,
-  EditorArtifact,
-  EditorKind,
-  KeyboardEffectSettings,
-  recordingAudioStreamIndex,
-  RecordingTrackId,
-  RecordingVideoTrackId,
-} from "../types";
+import { recordingAudioStreamIndex, RecordingTrackId } from "../types";
 
 import { useCropAspectStore } from "./crop/crop-aspect-store";
 import { editorCropTarget } from "./crop/crop-target";
 import { editorToolPanelHandlers } from "./editor-tool-panel-handlers";
+import { EditorToolPanelInputs } from "./editor-tool-panel-inputs";
 import { BackgroundPreset } from "./frame/background/background";
 import { editorFrameTarget } from "./frame/frame-target";
 import {
@@ -47,42 +32,7 @@ import {
 import { useLayerSelectionTarget } from "./selection/use-layer-selection-target";
 import { useToolPanelBridge } from "./tool-panel-bridge";
 import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
-import { editorTracks, TrackInclusion } from "./tracks/editor-tracks";
-
-type EditorToolPanelInputs = {
-  artifact: EditorArtifact | null;
-  audioTrackVolumes: AudioTrackVolume[];
-  bakeCamera: boolean;
-  cameraOutput: CameraOutput | null;
-  cameraOverlay: CameraOverlaySettings;
-  cursorEffects: CursorEffectSettings;
-  enabledVideoTracks: RecordingVideoTrackId[];
-  isLocked: boolean;
-  keyboardEffects: KeyboardEffectSettings;
-  recordingOutput: RecordingOutputSettings | null | undefined;
-  recordingTimelineEdit: RecordingTimelineEdit | null | undefined;
-  screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
-  selectedScreenshotItemId: number | null;
-  selectedTrack: string | null;
-  trackInclusion: TrackInclusion;
-  workspace: EditorKind;
-  onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
-  onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
-  onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
-  onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
-  onRecordingOutputChange?: (
-    track: RecordingVideoTrackId,
-    next: ScreenshotOutputSettings,
-  ) => void;
-  onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
-  onScreenshotOutputChange?: (
-    next: ScreenshotOutputSettings,
-    itemId: number,
-  ) => void;
-  /** Plays the audio stream `streamIndex` this much louder or quieter than
-   * it was recorded, in decibels. */
-  onTrackVolumeChange?: (streamIndex: number, decibels: number) => void;
-};
+import { editorTracks } from "./tracks/editor-tracks";
 
 /**
  * What the editor shows the tool panels, and what it lets them change.
@@ -99,6 +49,7 @@ export function useEditorToolPanels({
   cameraOverlay,
   cursorEffects,
   enabledVideoTracks,
+  exportIsland,
   isLocked,
   keyboardEffects,
   onCameraOverlayChange,
@@ -242,6 +193,10 @@ export function useEditorToolPanels({
       chosenShortcuts: strip.shortcuts,
       crop: cropTarget?.snapshot ?? null,
       cursorEffects,
+      export: exportIsland.snapshot && {
+        ...exportIsland.snapshot,
+        revealWhenDone: general?.openLocationAfterExport ?? false,
+      },
       frame: frameTarget?.snapshot ?? null,
       hasCursorData: artifact?.kind === "recording" && artifact.hasCursorData,
       isLocked,
@@ -259,39 +214,49 @@ export function useEditorToolPanels({
       tracks: editorTracks(tracks),
       transcript: transcript.snapshot,
     },
-    editorToolPanelHandlers({
-      annotationColors,
-      backgroundPresets,
-      cropTarget,
-      frameTarget,
-      keyboardEffects,
-      microphone,
-      onCaptionDefaultsChange: captions.changeDefaults,
-      onCaptionsChange: captions.change,
-      onCursorEffectsChange,
-      onKeyboardEffectsChange,
-      // The Sound island names each track by its id, as the editor selects
-      // it, and the editor holds each stream's level.
-      onTrackVolumeChange: (trackId, decibels) => {
-        const streamIndex = recordingAudioStreamIndex(
-          trackId as RecordingTrackId,
-        );
-        if (streamIndex !== null) onTrackVolumeChange?.(streamIndex, decibels);
+    {
+      ...editorToolPanelHandlers({
+        annotationColors,
+        backgroundPresets,
+        cropTarget,
+        frameTarget,
+        keyboardEffects,
+        microphone,
+        onCaptionDefaultsChange: captions.changeDefaults,
+        onCaptionsChange: captions.change,
+        onCursorEffectsChange,
+        onKeyboardEffectsChange,
+        // The Sound island names each track by its id, as the editor selects
+        // it, and the editor holds each stream's level.
+        onTrackVolumeChange: (trackId, decibels) => {
+          const streamIndex = recordingAudioStreamIndex(
+            trackId as RecordingTrackId,
+          );
+          if (streamIndex !== null)
+            onTrackVolumeChange?.(streamIndex, decibels);
+        },
+        onTranscriptRequest: transcript.handle,
+        restoreShortcuts: shortcuts.restore,
+        saveSceneTemplates: (templates) => {
+          applyGeneralSettings({ sceneTemplates: templates });
+        },
+        sceneTemplates,
+        selectionTarget,
+        setAnnotationColors: (colors) => {
+          applyGeneralSettings({ annotationColors: colors });
+        },
+        setBackgroundPresets,
+        tracks,
+        workspace,
+      }),
+      onExportPatch: (patch) => {
+        if (patch.revealWhenDone !== undefined)
+          applyGeneralSettings({
+            openLocationAfterExport: patch.revealWhenDone,
+          });
+        exportIsland.onPatch(patch);
       },
-      onTranscriptRequest: transcript.handle,
-      restoreShortcuts: shortcuts.restore,
-      saveSceneTemplates: (templates) => {
-        applyGeneralSettings({ sceneTemplates: templates });
-      },
-      sceneTemplates,
-      selectionTarget,
-      setAnnotationColors: (colors) => {
-        applyGeneralSettings({ annotationColors: colors });
-      },
-      setBackgroundPresets,
-      tracks,
-      workspace,
-    }),
+    },
   );
   // Subtitles are made of the transcript, so the export offers them once
   // there is one.

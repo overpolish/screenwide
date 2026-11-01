@@ -217,6 +217,16 @@ impl<'a> ExportPicture<'a> {
     }
   }
 
+  /// Where the output's reference canvas lies in a frame of this picture,
+  /// as left, top, width and height, where the compositor draws it: at one
+  /// scale, centred. `None` where FFmpeg stretches the recording over the
+  /// whole frame, as it scales only to whole pixels.
+  pub(in crate::editor) fn canvas(&self) -> Option<[f64; 4]> {
+    self.is_composed().then(|| {
+      media_preview::FrameFit::of(self.output.width, self.output.height, self.video).canvas()
+    })
+  }
+
   /// The frame at `output_us` of this picture's edited video, at `png`, as
   /// `picture` asks: drawn by the compositor, or re-encoded or copied by
   /// FFmpeg, as the export writes it or as drawn.

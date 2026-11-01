@@ -184,6 +184,14 @@ export function editorModeGroups({
   const hasSpeech = parts.microphone && parts.transcript !== "silent";
   // The cursor and the keys are drawn over the screen.
   const hasScreen = parts.picture === "screen";
+  // A recording of the camera alone has its camera as its own picture,
+  // which the Camera mode works on with the camera's own tools; it has no
+  // screen, so no Screen.
+  const camera: EditorModeButton = {
+    icon: Video,
+    id: "camera",
+    label: t("editor-island-camera"),
+  };
   const groups: {
     id: EditorModeGroup["id"];
     modes: (EditorModeButton | false)[];
@@ -192,12 +200,8 @@ export function editorModeGroups({
       id: "picture",
       modes: [
         hasPicture && frame,
-        parts.picture !== null && screen,
-        parts.camera && {
-          icon: Video,
-          id: "camera",
-          label: t("editor-island-camera"),
-        },
+        hasScreen && screen,
+        (parts.camera || parts.picture === "camera") && camera,
         // A scene frames the picture, alone too: it zooms and moves it, and
         // the zooms planned from the cursor and keys are scenes.
         parts.picture !== null && {

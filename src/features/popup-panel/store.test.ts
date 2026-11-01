@@ -33,12 +33,13 @@ import {
 
 const RECORDING_PANEL = "tool-panel-recording";
 const SCREENSHOT_PANEL = "tool-panel-screenshot";
+const INSET = { bottom: 0, left: 0, right: 0, top: 0 };
 
 const islandPanel = (
   island: "cursor" | "frame",
   workspace: "recording" | "screenshot",
 ): OpenPopupPanel => ({
-  content: { island, kind: "island", workspace, x: 0 },
+  content: { inset: INSET, island, kind: "island", workspace, x: 0 },
   focusContents: false,
   id: `island:${island}`,
 });
@@ -98,6 +99,7 @@ describe("usePopupPanelStore", () => {
       activePopupPanel(usePopupPanelStore.getState(), SCREENSHOT_PANEL)
         ?.content,
     ).toEqual({
+      inset: INSET,
       island: "cursor",
       kind: "island",
       workspace: "screenshot",

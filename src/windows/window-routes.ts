@@ -18,10 +18,6 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
   "/annotate": null,
   "/editor": () =>
     import("./editor-entry").then((module) => module.EditorEntry),
-  "/export-options": () =>
-    import("./export-options-entry").then(
-      (module) => module.ExportOptionsEntry,
-    ),
   "/glide": () =>
     import("../features/glide/glide-window").then(
       (module) => module.GlideWindow,

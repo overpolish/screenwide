@@ -7,7 +7,10 @@ pub(super) fn export(_request: CursorExportRequest<'_>) -> Result<ExportRunResul
   Err("Cursor baking is not available on this platform yet".to_owned())
 }
 
-pub(super) fn estimate_video_bytes(_request: CursorExportRequest<'_>) -> Result<u64, String> {
+pub(super) fn estimate_video_bytes(
+  _request: CursorExportRequest<'_>,
+  _looks: &[VideoExportOptions],
+) -> Result<Vec<u64>, String> {
   Err("Cursor baking is not available on this platform yet".to_owned())
 }
 

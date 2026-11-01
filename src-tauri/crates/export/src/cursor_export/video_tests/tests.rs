@@ -184,7 +184,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
   // smaller than the canvas the cursor was recorded against. Read the
   // delivered size from the same helper the export sizes itself with, and
   // measure the cursor in those pixels rather than in the canvas's.
-  let (exported_width, exported_height) = super::super::output_dimensions(
+  let fit = crate::media_preview::FrameFit::of(
     320,
     180,
     VideoExportOptions {
@@ -193,6 +193,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       source_scale_percent: 100,
     },
   );
+  let (exported_width, exported_height) = (fit.width, fit.height);
   let scale = f64::from(exported_width) / 320.0;
   let scaled = |value: u32| (f64::from(value) * scale).round() as u32;
   for (timestamp, expected_x) in [("0", scaled(80)), ("0.5", scaled(160))] {

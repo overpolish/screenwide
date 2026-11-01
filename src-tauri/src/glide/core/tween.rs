@@ -19,7 +19,15 @@ use std::{
 use super::tween_completion as completion;
 use super::tween_motion::{self as motion, STEP_INTERVAL, TWEEN_SECONDS};
 use super::tween_settle::{settle, FitContext};
-use super::{activity::BusyLease, GlideFrame};
+use super::{activity::BusyLease, grown_to_min, GlideFrame};
+use crate::glide::region_rect::{Gravity, RegionGravity};
+
+/// Where a move with no region behind it grows from when the window cannot be
+/// as small as asked: its top-left corner stays put.
+const TOP_LEFT: RegionGravity = RegionGravity {
+  horizontal: Gravity::Start,
+  vertical: Gravity::Start,
+};
 
 /// A window Glide carries, in the platform's own units: logical points on
 /// macOS, physical pixels on Windows. Every call may block on the window's
@@ -40,6 +48,14 @@ pub(crate) trait GlideWindow: Send + 'static {
 
   /// The window's frame as it stands.
   fn frame(&self) -> Option<GlideFrame>;
+
+  /// The smallest size the window accepts, for a window whose size Glide
+  /// writes past its own minimum and so has to respect it in planning. `None`
+  /// for a window that holds its minimum itself: the settling step reads back
+  /// whatever size it chose instead.
+  fn min_size(&self) -> Option<(f64, f64)> {
+    None
+  }
 
   /// Readies the window to be moved and reads the frame it starts from. A
   /// window in a state that cannot be moved, maximized on Windows, leaves it
@@ -125,7 +141,9 @@ fn run() {
 /// context the settling step corrects and reports against; a move that is not
 /// a region placement passes `None`. A window its application refuses to
 /// resize keeps its size and travels anyway, as long as there is a region to
-/// align it inside.
+/// align it inside. A destination smaller than the window's minimum is grown
+/// to it here, before the curve is drawn, so every frame of the animation is
+/// one the window accepts and the snapped edge stays where it was aimed.
 pub(crate) fn animate_to(
   mut target: impl GlideWindow,
   destination: GlideFrame,
@@ -140,15 +158,22 @@ pub(crate) fn animate_to(
     return;
   };
   let resizable = target.is_resizable();
+  let planned = match target.min_size() {
+    Some(min) if resizable => {
+      let gravity = fit.as_ref().map_or(TOP_LEFT, |context| context.gravity);
+      grown_to_min(destination, min, gravity)
+    }
+    _ => destination,
+  };
   let (travel, resizes) = match fit.as_ref() {
-    Some(context) => motion::travel(start, destination, resizable, context.gravity),
+    Some(context) => motion::travel(start, planned, resizable, context.gravity),
     None => {
-      let resizes = start.width != destination.width || start.height != destination.height;
+      let resizes = start.width != planned.width || start.height != planned.height;
       if resizes && !resizable {
         eprintln!("The application does not allow resizing this window");
         return;
       }
-      (destination, resizes)
+      (planned, resizes)
     }
   };
   let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;

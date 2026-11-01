@@ -23,7 +23,11 @@ import {
   ScreenshotOutputChange,
 } from "./editor-content";
 
+import type { CameraKey } from "../../../bindings/CameraKey";
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
+import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
+import type { ExportLookQuality } from "../export/editor-export";
+import type { ToolPanelExportCompare } from "../tool-panels/tool-panel-export";
 
 export type EditorPanelProps = {
   artifact: EditorArtifact | null;
@@ -32,6 +36,7 @@ export type EditorPanelProps = {
   audioTrackVolumes?: AudioTrackVolume[];
   bakeCamera?: boolean;
   cameraCompression?: number;
+  cameraKey?: CameraKey;
   cameraOverlay?: CameraOverlaySettings;
   cameraResolutionScalePercent?: number;
   collapseAudio?: boolean;
@@ -41,19 +46,23 @@ export type EditorPanelProps = {
   enabledAudioTrackCount?: number;
   enabledStreamIndices?: number[];
   enabledVideoTracks?: RecordingVideoTrackId[];
-  error?: string | null;
-  estimatedSizeBytes?: number | null;
+  /** What the Export island compares, or null where there is nothing. */
+  exportCompare?: ToolPanelExportCompare | null;
   isCancelingSave?: boolean;
-  isEstimatingSize?: boolean;
   isPreparingRecordingAudio?: boolean;
   isPreparingRecordingPreview?: boolean;
   isPreviewPreparing?: boolean;
   isSaving?: boolean;
   keyboardEffects?: KeyboardEffectSettings;
+  /** What each of the Export island's looks sets. */
+  lookQualities?: ExportLookQuality[];
+  /** Each look's measured size, in look order. */
+  lookSizeBytes?: (number | null)[];
   /** Draws the camera into the video, or saves it as a file of its own. */
   onBakeCameraChange?: (bake: boolean) => void;
   onBrowse?: () => void;
   onCameraCompressionChange?: (compression: number) => void;
+  onCameraKeyChange?: (key: CameraKey) => void;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onCameraResolutionScaleChange?: (scale: number) => void;
   onCancel?: () => void;
@@ -77,6 +86,7 @@ export type EditorPanelProps = {
   onRenameProject?: (title: string) => void;
   onResolutionScaleChange?: (scale: number) => void;
   onSave?: () => void;
+  onScreenshotFormatChange?: (format: ScreenshotFormat) => void;
   onScreenshotOutputChange?: ScreenshotOutputChange;
   onSelectedScreenshotItemChange?: (itemId: number | null) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
@@ -91,6 +101,7 @@ export type EditorPanelProps = {
   recordingPreviewTracks?: PreparedAudioTrack[];
   recordingTimelineEdit?: RecordingTimelineEdit | null;
   resolutionScalePercent?: number;
+  screenshotFormat?: ScreenshotFormat;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
   selectedScreenshotItemId?: number | null;
   selectedTrack?: RecordingTrackId | null;

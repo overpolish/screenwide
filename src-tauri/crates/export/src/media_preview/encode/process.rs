@@ -103,14 +103,16 @@ pub(crate) struct StreamedExport {
   child: Option<Child>,
   stdin: Option<std::process::ChildStdin>,
   stderr_reader: Option<std::thread::JoinHandle<Vec<u8>>>,
-  temporary: PathBuf,
+  /// The files FFmpeg writes: the export's one, or each stream an estimate
+  /// measures, the frames read once and encoded into every one.
+  outputs: Vec<PathBuf>,
 }
 
 #[cfg(target_os = "macos")]
 impl StreamedExport {
   /// FFmpeg started with `args`, which read the video from standard input
-  /// and write `temporary`.
-  pub(crate) fn start(args: Vec<OsString>, temporary: &Path) -> Result<Self, String> {
+  /// and write `outputs`.
+  pub(crate) fn start(args: Vec<OsString>, outputs: Vec<PathBuf>) -> Result<Self, String> {
     let mut child = ffmpeg_command()
       .args(args)
       .stdin(Stdio::piped())
@@ -124,7 +126,7 @@ impl StreamedExport {
       child: Some(child),
       stdin,
       stderr_reader: Some(stderr_reader),
-      temporary: temporary.to_owned(),
+      outputs,
     })
   }
 
@@ -142,22 +144,20 @@ impl StreamedExport {
     cancelled: &AtomicBool,
   ) -> Result<ExportRunResult, String> {
     drop(self.stdin.take());
-    let (Some(child), Some(stderr_reader)) = (self.child.take(), self.stderr_reader.take()) else {
+    let (Some(child), Some(stderr_reader), Some(temporary)) = (
+      self.child.take(),
+      self.stderr_reader.take(),
+      self.outputs.first().cloned(),
+    ) else {
       return Err("FFmpeg was already stopped".to_owned());
     };
-    finish(
-      child,
-      stderr_reader,
-      &self.temporary,
-      destination,
-      cancelled,
-    )
+    finish(child, stderr_reader, &temporary, destination, cancelled)
   }
 
-  /// Ends the video and lets FFmpeg finish, answering what it wrote and
-  /// removing it: a sample to measure, not a file to keep. None where
-  /// `cancelled` stopped it first.
-  pub(crate) fn measure(mut self, cancelled: &AtomicBool) -> Result<Option<Vec<u8>>, String> {
+  /// Ends the video and lets FFmpeg finish, answering what it wrote to each
+  /// output, in order, and removing it: samples to measure, not files to
+  /// keep. None where `cancelled` stopped it first.
+  pub(crate) fn measure(mut self, cancelled: &AtomicBool) -> Result<Option<Vec<Vec<u8>>>, String> {
     drop(self.stdin.take());
     let (Some(mut child), Some(stderr_reader)) = (self.child.take(), self.stderr_reader.take())
     else {
@@ -168,14 +168,29 @@ impl StreamedExport {
     }
     let status = child.wait();
     let stderr = stderr_reader.join().unwrap_or_default();
-    let written = std::fs::read(&self.temporary);
-    let _ = std::fs::remove_file(&self.temporary);
+    let written = self
+      .outputs
+      .iter()
+      .map(|output| {
+        let stream = std::fs::read(output)
+          .ok()
+          .filter(|stream| !stream.is_empty());
+        let _ = std::fs::remove_file(output);
+        stream
+      })
+      .collect::<Option<Vec<_>>>();
     if cancelled.load(Ordering::Acquire) {
       return Ok(None);
     }
     match (status, written) {
-      (Ok(status), Ok(stream)) if status.success() && !stream.is_empty() => Ok(Some(stream)),
+      (Ok(status), Some(streams)) if status.success() => Ok(Some(streams)),
       _ => Err(remux_error(&stderr)),
+    }
+  }
+
+  fn remove_outputs(&self) {
+    for output in &self.outputs {
+      let _ = std::fs::remove_file(output);
     }
   }
 
@@ -186,7 +201,7 @@ impl StreamedExport {
     let mut child = self.child.take()?;
     let _ = child.kill();
     let _ = child.wait();
-    let _ = std::fs::remove_file(&self.temporary);
+    self.remove_outputs();
     let stderr = self.stderr_reader.take()?.join().unwrap_or_default();
     (!String::from_utf8_lossy(&stderr).trim().is_empty()).then(|| remux_error(&stderr))
   }
@@ -199,7 +214,7 @@ impl Drop for StreamedExport {
     if let Some(mut child) = self.child.take() {
       let _ = child.kill();
       let _ = child.wait();
-      let _ = std::fs::remove_file(&self.temporary);
+      self.remove_outputs();
     }
   }
 }

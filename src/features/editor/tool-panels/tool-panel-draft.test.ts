@@ -39,6 +39,7 @@ const layered = (acknowledgedSeq = 0): ToolPanelSnapshot => ({
   selection: {
     dropShadow: true,
     inset: 0,
+    isAtDefaultPlacement: true,
     kind: "primary",
     label: "Screen",
     radius: 0,

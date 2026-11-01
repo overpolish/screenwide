@@ -233,3 +233,33 @@ pub fn encode_png(image: &CapturedImage) -> Result<Vec<u8>, String> {
 
   encode_indexed_png(&palette, &indices, image.width, image.height)
 }
+
+/// How finely a screenshot saved as a JPEG keeps its detail: high enough
+/// that text keeps clean edges, where the size still falls well below a PNG.
+const JPEG_QUALITY: u8 = 90;
+
+/// The image as a JPEG. JPEG has no transparency, so whatever the image
+/// leaves see-through, such as rounded corners, is laid over white.
+pub fn encode_jpeg(image: &CapturedImage) -> Result<Vec<u8>, String> {
+  let over_white = |channel: u8, alpha: u8| {
+    let (channel, alpha) = (u32::from(channel), u32::from(alpha));
+    ((channel * alpha + 255 * (255 - alpha) + 127) / 255) as u8
+  };
+  let rgb: Vec<u8> = image
+    .rgba
+    .chunks_exact(4)
+    .flat_map(|pixel| {
+      let alpha = pixel[3];
+      [
+        over_white(pixel[0], alpha),
+        over_white(pixel[1], alpha),
+        over_white(pixel[2], alpha),
+      ]
+    })
+    .collect();
+  let mut bytes = Vec::new();
+  image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, JPEG_QUALITY)
+    .write_image(&rgb, image.width, image.height, ExtendedColorType::Rgb8)
+    .map_err(|error| error.to_string())?;
+  Ok(bytes)
+}

@@ -117,3 +117,13 @@
     var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
     var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }
+/* Editor chrome set back while the Export island stands over the picture:
+   faded, and softly out of focus where the system allows such effects, so
+   the picture, which stays sharp, reads as the export's preview. */
+@utility chrome-set-back {
+  opacity: 40%;
+  filter: blur(1.5px);
+  @media (prefers-reduced-transparency: reduce) {
+    filter: none;
+  }
+}

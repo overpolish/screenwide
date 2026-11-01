@@ -21,9 +21,10 @@ pub fn show(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
 }
 
 pub fn hide(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
-  // An open options window is a child of this one: left attached, it would
-  // come back with the editor the next time it is shown.
-  let _ = super::export_window::hide(app, kind);
+  // Nothing measures the export's size for a window that is away.
+  if kind == EditorKind::Recording {
+    super::preview::cancel_export_work(&app.state::<super::EditorState>());
+  }
   // A tool panel hangs off this window and stays up through an outside press,
   // so it has to be taken away with the editor it belongs to.
   app_windows::options::close_standalone_listbox_for_parent(app, kind.window_label().as_str());

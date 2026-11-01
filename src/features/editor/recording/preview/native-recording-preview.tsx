@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useAnnotationDraft } from "../../annotations/annotation-draft";
 import { useToolFollowsAnnotation } from "../../annotations/use-tool-follows-annotation";
+import { ChromeSetBack } from "../../panel/chrome-set-back";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -49,7 +50,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     artifactId,
     bakeCamera,
     hasAnnotations,
-    isSheetOpen,
+    isExportOpen,
     onSelectedTrackChange,
     previewOutputDimensions,
     recordingOutput,
@@ -69,7 +70,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   // ⌘ (Ctrl) held over a pen puts Select on the picture until it is let go;
   // a press under it that takes hold of something puts Select in hand.
   const isSelectHeld = useSelectHold({
-    canHold: drawingToolKind(canvasTool) !== null && !isSheetOpen,
+    canHold: drawingToolKind(canvasTool) !== null && !isExportOpen,
     onTook: () => {
       setCanvasTool("select");
     },
@@ -141,12 +142,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     player,
     visiblePaneEntries,
   } = transport;
-  // A sheet is modal to the editor, so the preview does not play on under it.
-  const isPlaying = player.isPlaying;
-  const pausePlayer = player.pause;
-  useEffect(() => {
-    if (isSheetOpen && isPlaying) pausePlayer();
-  }, [isPlaying, isSheetOpen, pausePlayer]);
   const sceneCanvas = useRecordingSceneCanvas({
     activeVideoTrack,
     otherSelectionMade:
@@ -197,6 +192,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     canvasTool,
     changeCanvasTool,
     onSelectedTrackChange,
+    picture: props.recorded.picture,
   });
   const { hasTrackChoice, kind, offered, parts } = useOfferedModes(
     props,
@@ -222,7 +218,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   useEffect(() => {
     playhead.publish(0, 0);
   }, [artifactId, playhead]);
-
   useRecordingPreviewShortcuts({
     annotations,
     arrangeScenePane: sceneCanvas.arrangeSelectedPane,
@@ -270,15 +265,16 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     annotationClips: annotations.clips,
     hasPicture: composedVideoTracks.has("primary"),
   });
-
   return (
     <div className="flex min-h-0 grow flex-col gap-separate">
       <div className="flex min-h-0 min-w-0 grow gap-inline">
-        <EditorToolColumn
-          {...column.column}
-          kind={kind}
-          tool={isSelectHeld ? "select" : column.column.tool}
-        />
+        <ChromeSetBack className="flex" isSetBack={isExportOpen}>
+          <EditorToolColumn
+            {...column.column}
+            kind={kind}
+            tool={isSelectHeld ? "select" : column.column.tool}
+          />
+        </ChromeSetBack>
         <RecordingPreviewStage
           {...props}
           {...transport}
@@ -292,7 +288,11 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
         />
       </div>
       {layout ? (
-        <RecordingStripBand strip={band.strip} transport={band.transport} />
+        <RecordingStripBand
+          isLocked={isExportOpen}
+          strip={band.strip}
+          transport={band.transport}
+        />
       ) : null}
     </div>
   );

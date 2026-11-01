@@ -9,10 +9,12 @@ import { folderName } from "../../lib/path-label";
 import { cn, elementFocusVisible } from "../../lib/styling";
 import { IconButton } from "../../primitives/button/icon-button";
 import { fieldVariants } from "../../primitives/field/field-variants";
+import { useSkin } from "../../primitives/skin/skin";
 import { TooltipTrigger } from "../../primitives/tooltip/tooltip-trigger";
 
-// Shows the folder's name, with its full path in the tooltip. The host opens
-// the system's picker and keeps the choice.
+// Shows the folder's name, with its full path in the tooltip; on an island,
+// which shows no tooltips, the path is in its accessible name alone. The
+// host opens the system's picker and keeps the choice.
 
 type PathFieldProps = {
   "aria-label": string;
@@ -47,6 +49,7 @@ export function PathField({
   value,
 }: PathFieldProps) {
   const empty = placeholder ?? t("controls-path-field-choose");
+  const isIsland = useSkin() === "island";
   return (
     <div className="flex min-w-0 items-center gap-inline">
       {/* Before the field, so the field never moves when it appears. */}
@@ -62,7 +65,7 @@ export function PathField({
       ) : null}
       <TooltipTrigger
         className={cn("w-40 min-w-0", className)}
-        isDisabled={value === null}
+        isDisabled={value === null || isIsland}
         tooltip={value ?? ""}
       >
         <Button

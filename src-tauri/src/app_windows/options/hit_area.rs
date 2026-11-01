@@ -3,9 +3,10 @@
 
 //! A panel window larger than what it shows, as the editor's island is: its
 //! page reports where its parts are, and clicks pass through the window
-//! everywhere else. The window covers the picture it hangs over and never
-//! resizes as the island changes shape inside it, so clicks on the picture
-//! around the island must reach the editor underneath.
+//! everywhere else. The editor's island window covers the editor's content
+//! area and never resizes as the island changes shape inside it, so clicks,
+//! hovers and scrolls on the picture, strip and columns around the island
+//! must reach the editor underneath.
 //!
 //! The pointer's position is read on a timer while any such panel is up, as
 //! the island's window does: a window that lets clicks through hears nothing

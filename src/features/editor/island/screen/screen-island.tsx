@@ -27,7 +27,9 @@ import type { EditorIslandContent } from "../editor-island";
 // recording but the inset, the corners and the turn, which over a scene
 // are that scene's, as a note under the lines says: a scene may pad, round
 // and turn the screen its own way over its stretch. Then putting what was
-// captured back in the middle of its box, the scene's box over a scene.
+// captured back in the middle of its box, the scene's box over a scene, and
+// the screen back where a fresh project places it, the scene's pane back in
+// its layout's box over a scene.
 
 export type ScreenIslandProps = {
   /** What was captured, which names the island. */
@@ -38,6 +40,9 @@ export type ScreenIslandProps = {
    * its picture's shorter side, the scene's own (a share of its box's)
    * while `isInScene`. */
   inset: number;
+  /** Whether the screen sits where a fresh project places it, the scene's
+   * own pane where its layout puts it while `isInScene`. */
+  isAtDefaultPlacement: boolean;
   /** Whether the playhead is in a recording's scene, whose own inset,
    * corners, turn and Recenter the island then sets. A screenshot has no
    * scenes. */
@@ -47,6 +52,10 @@ export type ScreenIslandProps = {
   /** Puts what was captured back in the middle of the screen's box, the
    * scene's while `isInScene`. */
   onRecenter: () => void;
+  /** Puts the screen back where a fresh project places it, its crop,
+   * padding, corners, shadow and turn kept; the scene's pane back in the
+   * box its layout gives it while `isInScene`. */
+  onResetPlacement: () => void;
   onShadowChange: (hasShadow: boolean) => void;
   /** Percent of the screen's shorter side, the scene's own while
    * `isInScene`. These are the screen's own corners, inside the canvas the
@@ -89,9 +98,15 @@ export function screenIsland(props: ScreenIslandProps): EditorIslandContent {
         {props.isInScene ? (
           <SceneOnlyNote key="scene-note" layer="screen" />
         ) : null}
-        <div className="flex justify-end" key="actions">
+        <div className="flex justify-end gap-separate" key="actions">
           <Button onPress={props.onRecenter}>
             {t("editor-island-screen-recenter")}
+          </Button>
+          <Button
+            isDisabled={props.isAtDefaultPlacement}
+            onPress={props.onResetPlacement}
+          >
+            {t("editor-island-reset-placement")}
           </Button>
         </div>
       </IslandFlow>

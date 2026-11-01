@@ -77,9 +77,9 @@ function SliderTickMarks({
 }
 
 // The knob on its own, for a slider laid out otherwise than `Slider`, such
-// as a divider dragged across a picture. It sits in a React Aria slider's
-// track, which places it. A 20 by 16 capsule in the knob material, which
-// stands lighter than the track in either appearance.
+// as the Export island's divider dragged across a picture. It sits in a
+// React Aria slider's track, which places it. A 20 by 16 capsule in the
+// knob material, which stands lighter than the track in either appearance.
 export function SliderKnob({
   className,
   valueText,

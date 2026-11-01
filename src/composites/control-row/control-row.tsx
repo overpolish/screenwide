@@ -7,7 +7,7 @@ import { cn } from "../../lib/styling";
 import { useSkin } from "../../primitives/skin/skin";
 import { Text } from "../../primitives/text/text";
 
-export type ControlRowControlProps = {
+type ControlRowControlProps = {
   "aria-labelledby": string;
   "aria-describedby"?: string;
 };
@@ -35,8 +35,10 @@ export type ControlRowProps = {
 // a few short rows under the row that names them, the name is a caption set
 // back the small inset, as the island's notes are from its edges, on one
 // line, so a row squeezed for a moment as the island's black glides runs its
-// name into the space before the control rather than wrapping it; the row is
-// an island control's height.
+// name into the space before the control rather than wrapping it; a note
+// stands under it on the same text column; the row is at least a switch's
+// height and a little (`island-row`) and otherwise as tall as its control,
+// so a list of switches sits close while a row of pills keeps their size.
 export function ControlRow({
   children,
   className,
@@ -55,7 +57,7 @@ export function ControlRow({
     <div
       className={cn(
         "flex items-center gap-separate",
-        isIsland ? "min-h-island-control" : "min-h-control-height",
+        isIsland ? "min-h-island-row" : "min-h-control-height",
         className,
       )}
       // Lets a search result find the row it names.
@@ -80,7 +82,11 @@ export function ControlRow({
           {titleAccessory}
         </div>
         {description ? (
-          <Text className="break-words" id={descriptionId} variant="caption">
+          <Text
+            className={cn("break-words", isIsland && "ps-inset-sm")}
+            id={descriptionId}
+            variant="caption"
+          >
             {description}
           </Text>
         ) : null}

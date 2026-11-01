@@ -403,16 +403,18 @@ editor-island-screen-inset-medium = Medium
 editor-island-screen-inset-large = Large
 # Puts what was captured back in the middle of its box, after a crop or an inset moved it off centre.
 editor-island-screen-recenter = Recenter
+# Puts the screen, a screenshot's layer or the camera back where a new project places it, at the size and in the place it starts at, keeping its crop, inset, corners, shadow and rotation. Over a scene, puts the scene's pane back where the scene's layout puts it.
+editor-island-reset-placement = Reset placement
 # The island for the camera, for the whole recording: its effects, its corners, its shadow and whether it follows the face.
 editor-island-camera = Camera
 # Shown while picking objects on the preview, where a drag paints a line over an object. $key is the key held to remove instead, drawn as a keycap: Option on a Mac, Alt on Windows.
 editor-island-camera-objects-hint = Click or paint to keep. Hold { $key } to remove.
-# At the foot of the Screen island while the playhead is in a scene, which can pad, round, turn and recenter the screen its own way.
-editor-island-screen-in-scene = Inset, corners, rotation and Recenter apply to this scene only.
+# At the foot of the Screen island while the playhead is in a scene, which can pad, round, turn, recenter and place the screen its own way; also on the Camera island of a recording of the camera alone, whose camera is padded and turned as a screen is.
+editor-island-screen-in-scene = Inset, corners, rotation, Recenter and Reset placement apply to this scene only.
 # At the foot of the Crop tool's island while the playhead is in a scene, which crops the screen and the camera its own way.
 editor-island-crop-in-scene = This crop applies to this scene only.
-# At the foot of the Camera island while the playhead is in a scene, which can round the camera and have it follow the face its own way.
-editor-island-camera-in-scene = Corners and Follow face apply to this scene only.
+# At the foot of the Camera island while the playhead is in a scene, which can round the camera, have it follow the face and place it its own way.
+editor-island-camera-in-scene = Corners, Follow face and Reset placement apply to this scene only.
 # A dice that makes a frame's background again: a new colour, or new colours for a mesh's unlocked ones, in a mood picked at random.
 editor-island-frame-randomise = Randomise
 # Puts the frame's size back to the size of what was captured, leaving its background and corners as they are.

@@ -18,6 +18,8 @@ const fontSizes = ["title", "heading", "body", "label", "caption"];
 const spacing = [
   "control-height",
   "part-height",
+  "island-control",
+  "island-row",
   "mark",
   "icon-xs",
   "icon-sm",
@@ -28,7 +30,6 @@ const spacing = [
   "inset",
   "inset-sm",
   "traffic-lights",
-  "export-form",
 ];
 
 /**

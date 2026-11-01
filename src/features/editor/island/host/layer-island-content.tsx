@@ -44,6 +44,9 @@ export function screenIslandContent({
     capture,
     hasShadow: selection.dropShadow,
     inset: scenePane ? scenePane.inset : selection.inset,
+    isAtDefaultPlacement: scenePane
+      ? scenePane.isAtLayout
+      : selection.isAtDefaultPlacement,
     isInScene: scenePane !== null,
     onInsetChange: (inset) => {
       change(scenePane ? { sceneInset: inset } : { selectionInset: inset });
@@ -53,6 +56,13 @@ export function screenIslandContent({
     },
     onRecenter: () => {
       change(scenePane ? { sceneRecenter: true } : { recenterSelection: true });
+    },
+    onResetPlacement: () => {
+      change(
+        scenePane
+          ? { scenePlacementReset: "screen" }
+          : { resetPlacement: true },
+      );
     },
     onShadowChange: (selectionDropShadow) => {
       change({ selectionDropShadow });
@@ -83,14 +93,29 @@ export function cameraIslandContent({
 }): EditorIslandContent | null {
   const { scene, selection } = snapshot;
   // Until the camera's track is in hand the selection is another layer's.
-  if (selection?.kind !== "camera" || !selection.cameraEffects) return null;
-  const scenePane = scene?.hasSceneAtPlayhead ? scene.panes.camera : null;
+  // The camera's effects come with the recording's own track only where
+  // the recording is of the camera alone, whose own picture it then is.
+  if (
+    !selection ||
+    selection.kind === "audio" ||
+    selection.kind === "layer" ||
+    !selection.cameraEffects
+  )
+    return null;
+  const isOwnPicture = selection.kind === "primary";
+  const paneName = isOwnPicture ? "screen" : "camera";
+  const scenePane = scene?.hasSceneAtPlayhead ? scene.panes[paneName] : null;
   const followFace =
     scene && scenePane ? scene.followsFace : (selection.followsFace ?? false);
+  const sceneRotation = scenePane ? scene?.rotation : null;
+  const rotation = sceneRotation ?? selection.rotation;
   return cameraIsland({
     effects: selection.cameraEffects,
     followFace,
     hasShadow: selection.dropShadow,
+    isAtDefaultPlacement: scenePane
+      ? scenePane.isAtLayout
+      : selection.isAtDefaultPlacement,
     isFindingFace: followFace && isFindingFace,
     isInScene: scenePane !== null,
     onBackgroundChange: (background) => {
@@ -124,12 +149,52 @@ export function cameraIslandContent({
     onRemoveObject: (id) => {
       change({ removeCameraObject: id });
     },
+    onResetPlacement: () => {
+      change(
+        scenePane
+          ? { scenePlacementReset: paneName }
+          : { resetPlacement: true },
+      );
+    },
     onShadowChange: (selectionDropShadow) => {
       change({ selectionDropShadow });
     },
     onShowObject: (id) => {
       change({ showCameraObject: id });
     },
+    // The recording's own picture is padded, turned and recentred as the
+    // screen is, the scene's screen pane over a scene.
+    ...(isOwnPicture
+      ? {
+          picture: {
+            inset: scenePane ? scenePane.inset : selection.inset,
+            onInsetChange: (inset) => {
+              change(
+                scenePane ? { sceneInset: inset } : { selectionInset: inset },
+              );
+            },
+            onRecenter: () => {
+              change(
+                scenePane
+                  ? { sceneRecenter: true }
+                  : { recenterSelection: true },
+              );
+            },
+            ...(rotation
+              ? {
+                  onRotationChange: (turn) => {
+                    change(
+                      sceneRotation
+                        ? { sceneRotation: turn }
+                        : { selectionRotation: turn },
+                    );
+                  },
+                  rotation,
+                }
+              : {}),
+          },
+        }
+      : {}),
     radius: scenePane?.radius ?? selection.radius,
   });
 }

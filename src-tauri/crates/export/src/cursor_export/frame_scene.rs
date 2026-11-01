@@ -5,7 +5,7 @@
 //! preview resolves it.
 
 use super::CursorExportRequest;
-use crate::media_preview::{BakedVideoExportOptions, VideoExportOptions};
+use crate::media_preview::BakedVideoExportOptions;
 use crate::scenes;
 use screenwide_annotations::timing::{covers, video_ms, FrameTime};
 use screenwide_output::ScreenshotOutputSettings;
@@ -34,7 +34,10 @@ impl ExportScenes {
       .is_some_and(|(_, options)| options.overlay.follow_face)
       || clips.iter().any(|clip| clip.follow_face == Some(true));
     Self {
-      camera: request.camera.map(|(_, options)| options),
+      // The camera is placed on the canvas it was measured against, which a
+      // scaled export draws at another size; it is carried onto the drawn
+      // canvas first, so both panes are arranged in the same pixels.
+      camera: super::export_output::camera_on_canvas(request),
       ranges: request
         .timeline
         .map_or(&[][..], |timeline| timeline.ranges())
@@ -78,32 +81,7 @@ impl ExportScenes {
     {
       return None;
     }
-    // The camera is placed on the canvas it was measured against, which a
-    // scaled export draws at another size; it is carried onto this canvas
-    // first, so both panes are arranged in the same pixels.
-    let mut camera = self.camera.map(|options| {
-      let sx = f64::from(output.width) / f64::from(options.screen_width.max(1));
-      let sy = f64::from(output.height) / f64::from(options.screen_height.max(1));
-      let mut overlay = options.overlay;
-      overlay.camera_x *= sx;
-      overlay.camera_y *= sy;
-      overlay.camera_width *= sx;
-      overlay.frame_x *= sx;
-      overlay.frame_y *= sy;
-      overlay.frame_width *= sx;
-      overlay.frame_height *= sy;
-      BakedVideoExportOptions {
-        overlay,
-        screen_height: output.height,
-        screen_width: output.width,
-        video: VideoExportOptions {
-          resolution_scale_percent: 100,
-          source_scale_percent: 100,
-          ..options.video
-        },
-        ..options
-      }
-    });
+    let mut camera = self.camera;
     let mut arranged = output.clone();
     let placed = scenes::arrange_following(
       &self.clips,

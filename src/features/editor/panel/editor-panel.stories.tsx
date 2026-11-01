@@ -173,7 +173,6 @@ export const Recording: Story = {
     compression: 2,
     enabledAudioTrackCount: 2,
     enabledVideoTracks: ["primary"],
-    estimatedSizeBytes: 74_200_000,
     fileStem: recording.suggestedFileStem,
     recordingPreviewLayout: screenPreviewLayout,
     recordingPreviewTracks: [
@@ -268,7 +267,6 @@ export const AudioRecording: Story = {
       width: 0,
     },
     enabledVideoTracks: [],
-    estimatedSizeBytes: null,
     recordingPreviewLayout: audioPreviewLayout,
     resolutionScalePercent: 100,
   },

@@ -15,6 +15,9 @@
 
 use cidre::cg;
 use core_graphics::geometry::CGPoint;
+use objc2::MainThreadMarker;
+use objc2_app_kit::NSWindow;
+use objc2_foundation::{NSPoint, NSRect};
 use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewWindow};
 
 use super::titlebar::{ax_titlebar_at, AxTitlebar, CHROME_MARGIN, FALLBACK_TITLEBAR_HEIGHT};
@@ -79,6 +82,40 @@ pub(super) fn decoration_size(window: &WebviewWindow) -> Option<LogicalSize<f64>
     outer.width - inner.width,
     outer.height - inner.height,
   ))
+}
+
+/// The smallest outer size the window accepts, in logical points. AppKit holds
+/// a user's drag to this but not a programmatic resize, which is what Tauri's
+/// `set_size` is, so a placement has to ask before sizing the window. Tao
+/// stores the configured minimum as the frame `minSize`; a content minimum is
+/// converted to a frame and honoured too, whichever is the larger. AppKit is
+/// read on the main thread, where a caller already there runs it directly.
+pub(super) fn min_outer_size(window: &WebviewWindow) -> Option<(f64, f64)> {
+  let read = {
+    let window = window.clone();
+    move || {
+      let raw = window.ns_window().ok()?;
+      let native: &NSWindow = unsafe { &*raw.cast() };
+      let frame = native.minSize();
+      let content = native
+        .frameRectForContentRect(NSRect::new(NSPoint::ZERO, native.contentMinSize()))
+        .size;
+      Some((
+        frame.width.max(content.width),
+        frame.height.max(content.height),
+      ))
+    }
+  };
+  if MainThreadMarker::new().is_some() {
+    return read();
+  }
+  let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+  window
+    .run_on_main_thread(move || {
+      let _ = sender.send(read());
+    })
+    .ok()?;
+  receiver.recv().ok().flatten()
 }
 
 /// The frame of a window the point lands on the titlebar of. A hidden or

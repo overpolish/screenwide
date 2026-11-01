@@ -61,9 +61,9 @@ describe("editorModeGroups", () => {
     ]);
   });
 
-  it("offers no Cursor or Keyboard over a camera-only recording's picture", () => {
+  it("offers Camera, no Screen, and no Cursor or Keyboard over a camera-only recording's picture", () => {
     expect(offered({ camera: false, picture: "camera" })).toEqual([
-      "picture: frame screen scene",
+      "picture: frame camera scene",
       "heard: captions transcript sound",
     ]);
   });

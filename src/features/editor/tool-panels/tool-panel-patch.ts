@@ -20,6 +20,7 @@ import {
 import { KeyboardEffectSettings } from "../types";
 
 import { BackgroundPreset } from "./frame/background/background";
+import { ToolPanelExportPatch } from "./tool-panel-export";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelSnapshot } from "./tool-panel-store";
@@ -114,6 +115,8 @@ export type ToolPanelPatch = Partial<
   downloadStudioDucking?: true;
   /** Download the model Studio sound rebuilds the microphone with. */
   downloadStudioSound?: true;
+  /** Something the Export island asks for. */
+  exportPatch?: ToolPanelExportPatch;
   /** Round the output canvas corners by this share of its shorter side. */
   frameRadius?: number;
   /** Size the output canvas, leaving what is in it where it sits. */
@@ -143,6 +146,9 @@ export type ToolPanelPatch = Partial<
   resetCrop?: true;
   /** Put the canvas back to the source size, refitting what is in it. */
   resetFrame?: true;
+  /** Put the selected layer back where a fresh project places it, keeping
+   * what it shows. */
+  resetPlacement?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
   /** Turn the chosen annotation round, so its head points the other way, or
@@ -165,6 +171,9 @@ export type ToolPanelPatch = Partial<
   /** Pad the screen in the scene under the playhead by this share of its
    * box's shorter side on each side. */
   sceneInset?: number;
+  /** Put the pane of the scene under the playhead back in the box its
+   * layout gives it, keeping what it shows. */
+  scenePlacementReset?: "camera" | "screen";
   /** Give the scene under the playhead this preset, or add a scene there
    * with it where there is none. */
   scenePreset?: RecordingScenePreset;

@@ -22,6 +22,8 @@ use screenwide_scenes::CameraOverlaySettings;
 use screenwide_text::captions::CaptionTrack;
 use screenwide_timeline_edit::TimelinePlan;
 
+mod looks;
+
 pub(super) struct ExportInputs {
   pub bake_camera: bool,
   pub camera: Option<RecordingCamera>,
@@ -61,6 +63,8 @@ impl ExportInputs {
       bake_camera,
       camera_compression,
       camera_overlay,
+      // A screen colour changes the camera file's size too little to measure.
+      camera_key: _,
       camera_resolution_scale_percent,
       collapse_audio,
       compression,
@@ -72,6 +76,7 @@ impl ExportInputs {
       include_primary_video,
       resolution_scale_percent,
       mut recording_output,
+      screenshot_format: _,
       screenshot_output: _,
       subtitles: _,
       timeline_edit: timeline_model,
@@ -223,15 +228,6 @@ impl ExportInputs {
       compression: self.compression,
       resolution_scale_percent: self.resolution_scale_percent,
       source_scale_percent: self.source_scale_percent,
-    }
-  }
-
-  /// The scale "Original" stands for: the capture's own, or the camera's
-  /// where the recording is of the camera alone.
-  pub(super) fn original_scale_percent(&self) -> u16 {
-    match self.primary_kind {
-      PrimaryRecordingKind::Camera => 100,
-      _ => self.source_scale_percent.clamp(100, 400),
     }
   }
 

@@ -40,11 +40,11 @@ pub fn carried_cursor(
   from: &OutputPlacement,
   to: &OutputPlacement,
 ) -> GpuCursor {
-  if from.image_width == 0 || from.image_height == 0 {
+  if from.image_width <= 0.0 || from.image_height <= 0.0 {
     return cursor;
   }
-  let sx = f64::from(to.image_width) / f64::from(from.image_width);
-  let sy = f64::from(to.image_height) / f64::from(from.image_height);
+  let sx = to.image_width / from.image_width;
+  let sy = to.image_height / from.image_height;
   cursor.x = (to.image_x + (f64::from(cursor.x) - from.image_x) * sx) as f32;
   cursor.y = (to.image_y + (f64::from(cursor.y) - from.image_y) * sy) as f32;
   cursor.width *= sx as f32;

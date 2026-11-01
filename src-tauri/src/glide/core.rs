@@ -36,7 +36,8 @@ pub(crate) use detector::{GlideDetection, GlideDetector, GlideSample};
 #[allow(unused_imports)]
 pub(crate) use folds::{GlideAction, GlideDetectorOptions};
 pub(crate) use geometry::{
-  corrected_origin, frame_fits, frame_fractions, frames_match, landing_point, GlideFrame,
+  corrected_origin, frame_fits, frame_fractions, frames_match, grown_to_min, landing_point,
+  GlideFrame,
 };
 #[allow(unused_imports)]
 pub(crate) use regions::GlideRegion;

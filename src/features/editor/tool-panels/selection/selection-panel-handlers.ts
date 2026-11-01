@@ -27,6 +27,7 @@ export const selectionPanelHandlers = (
   | "onSelectionDropShadowChange"
   | "onSelectionFollowFaceChange"
   | "onSelectionInsetChange"
+  | "onSelectionPlacementReset"
   | "onSelectionRadiusChange"
   | "onSelectionRecenter"
   | "onSelectionRotationChange"
@@ -62,6 +63,9 @@ export const selectionPanelHandlers = (
   // with the layer's output the way its size and position do.
   onSelectionInsetChange: (inset) => {
     target?.applyInset(inset);
+  },
+  onSelectionPlacementReset: () => {
+    target?.resetPlacement();
   },
   onSelectionRadiusChange: (radius) => {
     target?.applyRadius(Math.min(50, Math.max(0, radius)));

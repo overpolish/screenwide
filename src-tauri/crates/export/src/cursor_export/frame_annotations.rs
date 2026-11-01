@@ -6,7 +6,7 @@
 
 use super::CursorExportRequest;
 use crate::camera_baked::baked_camera_annotations;
-use crate::media_preview::BakedVideoExportOptions;
+use crate::media_preview::{BakedVideoExportOptions, FrameFit};
 use crate::{held_surfaces, pin_paths};
 use screenwide_annotations::timing::{
   lay_on_recording, revealed_annotations, AnnotationTrack, RecordingAnnotationClip,
@@ -22,9 +22,10 @@ pub(super) struct ExportAnnotations {
   track: AnnotationTrack,
   ranges: Vec<TimelineRange>,
   picture: (u32, u32),
-  /// Where the camera is drawn into the screen's video, in One video: its
+  /// Where the camera is drawn into the screen's video, in One video, and
+  /// how its reference canvas is carried onto the drawn one: its
   /// annotations are drawn over it there.
-  baked_camera: Option<BakedVideoExportOptions>,
+  baked_camera: Option<(BakedVideoExportOptions, FrameFit)>,
 }
 
 impl ExportAnnotations {
@@ -92,7 +93,10 @@ impl ExportAnnotations {
       baked_camera: request
         .camera
         .filter(|_| request.annotation_track == AnnotationTrack::Primary)
-        .map(|(_, options)| options),
+        .map(|(_, options)| {
+          let fit = FrameFit::of(options.screen_width, options.screen_height, request.video);
+          (options, fit)
+        }),
     }
   }
 
@@ -125,7 +129,13 @@ impl ExportAnnotations {
     scene_camera: Option<BakedVideoExportOptions>,
   ) -> FrameAnnotations {
     let mut annotations = self.at(position_ms, window_ms);
-    let Some(camera) = scene_camera.or(self.baked_camera) else {
+    // A scene's camera is measured on the drawn canvas already; the
+    // request's own on the reference one, carried as the screen is.
+    let scene_camera = scene_camera.map(|options| {
+      let fit = FrameFit::unscaled(options.screen_width, options.screen_height);
+      (options, fit)
+    });
+    let Some((camera, onto)) = scene_camera.or(self.baked_camera) else {
       return FrameAnnotations {
         screen: annotations,
         camera: None,
@@ -145,10 +155,7 @@ impl ExportAnnotations {
       &on_camera,
       picture,
       camera.overlay,
-      (
-        f64::from(camera.screen_width),
-        f64::from(camera.screen_height),
-      ),
+      onto,
       screen,
       self.picture,
     );
